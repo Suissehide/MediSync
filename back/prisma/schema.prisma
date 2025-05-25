@@ -1,0 +1,38 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  NONE
+  USER
+  ADMIN
+}
+
+model User {
+  id        String  @id @default(cuid())
+  email     String  @unique
+  password  String
+  salt      String
+  firstname String?
+  lastname  String?
+  role      Role    @default(NONE)
+}
+
+model Appointment {
+  id        String   @id @default(cuid())
+  startDate DateTime
+  endDate   DateTime
+}
+
+model Todo {
+  id          String   @id @default(cuid())
+  createDate  DateTime
+  title       String
+  description String?
+  completed   Boolean
+}

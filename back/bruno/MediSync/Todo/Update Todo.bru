@@ -1,0 +1,23 @@
+meta {
+  name: Update Todo
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{BASE_URL}}/todo/:todoID
+  body: json
+  auth: none
+}
+
+params:path {
+  todoID: cmab8o4r20000l5drg8wzsxbc
+}
+
+body:json {
+  {
+    "title": "Todo 2",
+    "description": "Test de description 2",
+    "completed": true
+  }
+}

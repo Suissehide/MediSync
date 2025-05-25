@@ -1,0 +1,447 @@
+{
+  "name": "medisync-backend",
+  "version": "0.0.1",
+  "description": "MediSync Backend",
+  "main": "src/main/index.ts",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "scripts": {
+    "build": "wireit",
+    "build:app": "wireit",
+    "build:check-typedefs": "wireit",
+    "build:transpile": "wireit",
+    "clean": "wireit",
+    "clean:npm": "wireit",
+    "clean:npm:cache": "wireit",
+    "clean:npm:cache:npx": "wireit",
+    "clean:npm:deps": "wireit",
+    "clean:wireit": "wireit",
+    "cover": "wireit",
+    "cover:ci": "wireit",
+    "cover:open": "wireit",
+    "cover:e2e": "wireit",
+    "cover:e2e:open": "wireit",
+    "cover:unit": "wireit",
+    "cover:unit:open": "wireit",
+    "check:unused-methods": "npm run with:tsx -- ./scripts/detect-unused-methods.ts",
+    "deps:check": "wireit",
+    "deps:cruiser:init": "npm run with:dependency-cruiser -- --init",
+    "deps:cruiser:build": "wireit",
+    "deps:cruiser:open": "npm run with:open dist/dependency-graph.svg",
+    "deps:version:check": "wireit",
+    "deps:version:check:ci": "wireit",
+    "deps:version:update": "wireit",
+    "deps:version:update:main": "wireit",
+    "dev": "npm run start:development --watch",
+    "lint": "wireit",
+    "lint:ci": "biome ci src",
+    "load-test": "npm run with:artillery -- run load-tests/scenario.yaml",
+    "prisma:generate": "wireit",
+    "prisma:migrate:create": "npm run with:dotenv -- -e .env -e .env.local prisma migrate dev --create-only",
+    "prisma:migrate:dev": "npm run with:dotenv -- -e .env -e .env.local prisma migrate dev",
+    "prisma:migrate:dev:test": "npm run with:dotenv -- -e .env.test prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:migrate:deploy:test": "npm run with:dotenv -- -e .env.test prisma migrate deploy",
+    "prisma:migrate:reset": "npm run with:dotenv -- -e .env -e .env.local prisma migrate reset",
+    "prisma:migrate:reset:test": "npm run with:dotenv -- -e .env.test prisma migrate reset",
+    "prisma:seed": "prisma db seed",
+    "prisma:seed:test": "npm run with:dotenv -- -e .env.test prisma db seed",
+    "prisma:studio": "prisma studio",
+    "sonar:scan": "wireit",
+    "sonar:scan:only": "wireit",
+    "start": "per-env",
+    "start:development": "wireit",
+    "start:production": "wireit",
+    "start:migrate:production": "npm run prisma:migrate:deploy && node lib/main/index.js",
+    "test": "wireit",
+    "test:open": "wireit",
+    "test:e2e": "wireit",
+    "test:e2e:open": "wireit",
+    "test:unit": "wireit",
+    "test:unit:open": "wireit",
+    "validate": "wireit",
+    "with:artillery": "npx -y artillery@2.0.6",
+    "with:depcheck": "npx -y depcheck@1.4.3",
+    "with:dotenv": "npx -y dotenv-cli@7.3.0",
+    "with:npm-check-updates": "npx -y npm-check-updates@16.7.12",
+    "with:open": "npx -y open-cli@8.0.0",
+    "with:redoc-cli": "npx -y @redocly/cli@1.0.0-beta.124",
+    "with:release-it": "npx -y release-it@15.8.0",
+    "with:tsx": "npx -y tsx@4.13.2"
+  },
+  "wireit": {
+    "build": {
+      "dependencies": [
+        "build:app"
+      ]
+    },
+    "build:app": {
+      "dependencies": [
+        "build:check-typedefs",
+        "build:transpile"
+      ]
+    },
+    "build:check-typedefs": {
+      "command": "tsc --noemit --preserveWatchOutput -p src/main/tsconfig.json",
+      "files": [
+        "tsconfig.json",
+        "src/tsconfig.json",
+        "src/**/*.ts"
+      ],
+      "dependencies": [
+        "prisma:generate"
+      ],
+      "output": []
+    },
+    "build:transpile": {
+      "command": "swc -s --strip-leading-paths -d lib src/main",
+      "files": [
+        "tsconfig.json",
+        "src/tsconfig.json",
+        "src/**/*.ts"
+      ],
+      "dependencies": [
+        "prisma:generate"
+      ],
+      "output": [
+        "lib/**"
+      ]
+    },
+    "clean": {
+      "command": "rimraf -g dist lib src/**/.swc src/**/tsconfig.tsbuildinfo"
+    },
+    "clean:npm": {
+      "dependencies": [
+        "clean:npm:deps",
+        "clean:npm:cache"
+      ]
+    },
+    "clean:npm:cache": {
+      "command": "npm cache clean --force",
+      "dependencies": [
+        "clean:npm:cache:npx"
+      ]
+    },
+    "clean:npm:cache:npx": {
+      "command": "npx -y clear-npx-cache"
+    },
+    "clean:npm:deps": {
+      "command": "rimraf node_modules python_modules package-lock.json"
+    },
+    "clean:wireit": {
+      "command": "rimraf .wireit"
+    },
+    "cover": {
+      "command": "jest --coverage --runInBand -c src/test/jest.config.ts",
+      "files": [
+        "src/**"
+      ],
+      "output": [
+        "dist/coverage/all/**"
+      ],
+      "dependencies": [],
+      "env": {
+        "CI": {
+          "external": true
+        },
+        "NODE_OPTIONS": "--experimental-vm-modules"
+      }
+    },
+    "cover:ci": {
+      "command": "npm run with:dotenv -- -e ./deploy/.env.test npm run cover",
+      "files": [
+        "src/**"
+      ],
+      "output": [
+        "dist/coverage/all/index.html"
+      ],
+      "dependencies": [
+        "prisma:migrate:dev:test:ci"
+      ],
+      "env": {
+        "CI": {
+          "external": true
+        }
+      }
+    },
+    "cover:open": {
+      "command": "npm run with:open dist/coverage/all/index.html"
+    },
+    "cover:e2e": {
+      "command": "jest --coverage --runInBand -c src/test/jest.config.ts --selectProjects e2e",
+      "files": [
+        "src/main/**",
+        "src/test/e2e/**",
+        "src/test/*"
+      ],
+      "output": [
+        "dist/coverage/e2e/index.html"
+      ],
+      "env": {
+        "CI": {
+          "external": true
+        },
+        "NODE_OPTIONS": "--experimental-vm-modules"
+      }
+    },
+    "cover:e2e:open": {
+      "command": "npm run with:open dist/coverage/e2e/index.html"
+    },
+    "cover:unit": {
+      "command": "jest --coverage --runInBand -c src/test/jest.config.ts --selectProjects unit",
+      "files": [
+        "src/test/unit/**",
+        "src/test/*",
+        "src/main/**/*.ts"
+      ],
+      "output": [
+        "dist/coverage/integration/index.html"
+      ],
+      "env": {
+        "CI": {
+          "external": true
+        },
+        "NODE_OPTIONS": "--experimental-vm-modules"
+      }
+    },
+    "cover:unit:open": {
+      "command": "npm run with:open dist/coverage/unit/index.html"
+    },
+    "deps:check": {
+      "command": "npm run with:depcheck",
+      "files": [
+        "src/**/*.[jt]s",
+        "package.json",
+        ".depcheckrc"
+      ],
+      "output": []
+    },
+    "deps:version:check": {
+      "command": "npm run with:npm-check-updates",
+      "files": [
+        "package.json"
+      ]
+    },
+    "deps:version:check:ci": {
+      "command": "npm run with:npm-check-updates -- --errorLevel 2 --dep prod",
+      "files": [
+        "package.json"
+      ]
+    },
+    "deps:version:update": {
+      "command": "npm run with:npm-check-updates -- -u",
+      "files": [
+        "package.json",
+        "package-lock.json"
+      ],
+      "output": []
+    },
+    "deps:version:update:main": {
+      "command": "npm run with:npm-check-updates -- --dep prod -u",
+      "files": [
+        "package.json",
+        "package-lock.json"
+      ],
+      "output": []
+    },
+    "lint": {
+      "command": "biome lint src/main",
+      "files": [
+        "biome.json",
+        "tsconfig.json",
+        "src/tsconfig.json",
+        "src/tsconfig.json",
+        "src/main/**"
+      ],
+      "output": []
+    },
+    "prisma:generate": {
+      "command": "prisma generate",
+      "files": [
+        "prisma/**"
+      ],
+      "output": [
+        "node_modules/.prisma/client/**"
+      ]
+    },
+    "prisma:migrate:dev:test:ci": {
+      "command": "npm run with:dotenv -- -e ./deploy/.env.test prisma migrate dev"
+    },
+    "prisma:db:seed:ci": {
+      "command": "npm run with:dotenv -- -e ./deploy/.env.test prisma db seed",
+      "dependencies": [
+        "prisma:migrate:dev:test:ci"
+      ]
+    },
+    "sonar:scan": {
+      "command": "bin/compose sonar up --force-recreate sonar-scanner",
+      "dependencies": [
+        "cover"
+      ]
+    },
+    "start:development": {
+      "command": "node -r @swc-node/register src/main",
+      "env": {
+        "NODE_ENV": "development"
+      },
+      "service": true,
+      "files": [
+        "src/main/**/*.ts",
+        ".env",
+        ".env.local",
+        ".envrc",
+        "package.json",
+        "package-lock.json"
+      ],
+      "dependencies": [
+        {
+          "script": "build:check-typedefs",
+          "cascade": false
+        }
+      ]
+    },
+    "start:production": {
+      "command": "node --enable-source-maps lib/main",
+      "env": {
+        "NODE_ENV": "production"
+      },
+      "service": true,
+      "files": [
+        "lib/main/**/*.js",
+        ".env",
+        ".env.local",
+        ".envrc",
+        "package.json",
+        "package-lock.json"
+      ]
+    },
+    "test": {
+      "command": "jest --runInBand -c src/test/jest.config.ts",
+      "files": [
+        "src/main/**",
+        "src/test/**"
+      ],
+      "output": [
+        "dist/test/**"
+      ],
+      "dependencies": [
+        "prisma:generate"
+      ],
+      "env": {
+        "CI": {
+          "external": true
+        },
+        "NODE_OPTIONS": "--experimental-vm-modules"
+      }
+    },
+    "test:open": {
+      "command": "npm run with:open dist/test/all-tests-report.html"
+    },
+    "test:e2e": {
+      "command": "jest --runInBand -c src/test/jest.config.ts --selectProjects e2e",
+      "files": [
+        "src/main/**",
+        "src/test/e2e/**",
+        "src/test/*"
+      ],
+      "output": [
+        "dist/test/e2e-tests-report.html"
+      ],
+      "dependencies": [
+        "prisma:generate"
+      ],
+      "env": {
+        "CI": {
+          "external": true
+        },
+        "NODE_OPTIONS": "--experimental-vm-modules"
+      }
+    },
+    "test:e2e:open": {
+      "command": "npm run with:open dist/test/e2e-tests-report.html"
+    },
+    "test:unit": {
+      "command": "jest --runInBand -c src/test/jest.config.ts --selectProjects unit",
+      "files": [
+        "src/test/unit/**",
+        "src/test/*"
+      ],
+      "output": [
+        "dist/test/unit-tests-report.html"
+      ],
+      "dependencies": [
+        "prisma:generate"
+      ],
+      "env": {
+        "CI": {
+          "external": true
+        },
+        "NODE_OPTIONS": "--experimental-vm-modules"
+      }
+    },
+    "test:unit:open": {
+      "command": "npm run with:open dist/test/unit-tests-report.html"
+    },
+    "validate": {
+      "dependencies": [
+        "deps:check",
+        "deps:version:check:ci",
+        "build",
+        "lint",
+        "cover"
+      ]
+    }
+  },
+  "engines": {
+    "node": "^22.14.0",
+    "npm": "^11.1.0"
+  },
+  "volta": {
+    "node": "22.14.0",
+    "npm": "11.3.0"
+  },
+  "dependencies": {
+    "@fastify/accepts": "^5.0.2",
+    "@fastify/awilix": "^7.0.0",
+    "@fastify/cookie": "11.0.2",
+    "@fastify/cors": "^11.0.0",
+    "@fastify/jwt": "^9.1.0",
+    "@fastify/static": "^8.1.1",
+    "@hapi/boom": "10.0.1",
+    "@prisma/client": "6.5.0",
+    "@swc-node/register": "1.10.10",
+    "awilix": "^12.0.5",
+    "chardet": "2.1.0",
+    "common-tags": "1.8.2",
+    "dayjs": "1.11.13",
+    "dotenv": "16.4.7",
+    "fastify": "5.2.1",
+    "fastify-graceful-shutdown": "4.0.1",
+    "fastify-plugin": "5.0.1",
+    "fastify-type-provider-zod": "4.0.2",
+    "find-root": "1.1.0",
+    "http-status-codes": "2.3.0",
+    "i": "0.3.7",
+    "jsonwebtoken": "9.0.2",
+    "npm": "11.3.0",
+    "per-env": "1.0.2",
+    "pino-pretty": "13.0.0",
+    "prisma": "6.5.0",
+    "zod": "3.24.2"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "1.9.4",
+    "@swc/cli": "0.6.0",
+    "@swc/core": "1.11.5",
+    "@swc/jest": "0.2.37",
+    "@types/common-tags": "1.8.4",
+    "@types/find-root": "1.1.4",
+    "@types/jest": "29.5.14",
+    "@types/jsonwebtoken": "9.0.9",
+    "husky": "9.1.7",
+    "jest": "29.7.0",
+    "typescript": "5.8.2",
+    "wireit": "0.14.11"
+  }
+}

@@ -1,0 +1,18 @@
+meta {
+  name: Add Todo
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{BASE_URL}}/todo
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "title": "Todo 3",
+    "description": "Test de description"
+  }
+}
