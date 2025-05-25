@@ -1,0 +1,121 @@
+.fc .fc-scrollgrid {
+  border: none !important;
+}
+
+/* TOOLBAR */
+
+.fc .fc-header-toolbar {
+  padding: 0 16px;
+}
+
+.fc .fc-header-toolbar .fc-toolbar-chunk {
+  display: flex;
+  flex: 1;
+}
+
+.fc .fc-header-toolbar .fc-toolbar-chunk:nth-child(2) {
+  justify-content: center;
+}
+
+.fc .fc-header-toolbar .fc-toolbar-chunk:nth-child(2) .fc-button-group {
+  padding: 3px;
+  background: var(--card);
+  border-radius: 10px;
+}
+
+.fc .fc-header-toolbar .fc-toolbar-chunk:nth-child(2) .fc-button {
+  border-radius: 10px;
+}
+
+.fc .fc-header-toolbar .fc-toolbar-chunk:last-child {
+  justify-content: flex-end;
+}
+
+.fc .fc-toolbar-title {
+  color: var(--text-light);
+  font-size: 16px;
+}
+
+.fc .fc-button {
+  font-size: 14px;
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--muted);
+  transition: ease 0.3s;
+}
+
+.fc .fc-button:hover {
+  border-color: var(--muted);
+  background: color-mix(in srgb, var(--primary) 70%, transparent);
+}
+
+.fc .fc-button:focus,
+.fc .fc-button-primary:not(:disabled).fc-button-active:focus {
+  box-shadow: none;
+}
+
+.fc .fc-button-primary:not(:disabled).fc-button-active {
+  border-color: var(--muted);
+  background: color-mix(in srgb, var(--primary) 50%, transparent);
+}
+
+thead .fc-theme-standard th {
+  border: none !important;
+}
+
+.fc .fc-col-header-cell-cushion {
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 12px;
+  padding-bottom: 8px;
+}
+
+.fc .fc-day-today .fc-col-header-cell-cushion {
+  color: var(--primary);
+}
+
+.fc .fc-timegrid-cols .fc-day-today {
+  background-color: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+.fc .fc-timegrid-slot-label-cushion {
+  color: var(--text-light);
+  font-size: 12px;
+  padding: 0 8px;
+}
+
+.fc .fc-timegrid-slot {
+  height: 4em;
+}
+
+.fc .fc-timegrid-slot.fc-timegrid-slot-label {
+  vertical-align: top;
+  border-top: none !important;
+  border-right-width: 2px;
+}
+
+.fc .fc-timegrid-slot.fc-timegrid-slot-label .fc-timegrid-slot-label-frame {
+  margin-top: -13px;
+}
+
+.fc-theme-standard th {
+  border-left: none !important;
+  border-right: none !important;
+}
+
+.fc-theme-standard th,
+.fc-theme-standard td {
+  border-color: var(--border);
+}
+
+.fc-event {
+  border-radius: 5px;
+}
+.fc-timegrid-event-harness-inset .fc-timegrid-event {
+  box-shadow: 0 0 0 1px var(--border);
+}
+
+.fc-timegrid-slots tr:first-child td:first-child .fc-timegrid-slot-label-frame {
+  display: none;
+}
