@@ -1,7 +1,7 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import DashboardLayout from '../components/dashboard.layout'
+import DashboardLayout from '../../components/dashboard.layout.tsx'
 
-export const Route = createFileRoute('/settings')({
+export const Route = createFileRoute('/settings/soignant')({
   beforeLoad: ({ context, location }) => {
     if (!context.authState.isAuthenticated) {
       throw redirect({
@@ -15,13 +15,13 @@ export const Route = createFileRoute('/settings')({
   shouldReload({ context }) {
     return !context.authState.isAuthenticated
   },
-  component: Settings,
+  component: Soignant,
 })
 
-function Settings() {
+function Soignant() {
   return (
     <DashboardLayout>
-      <div>Hello "/setting"!</div>
+      <div>Hello "/soignant"!</div>
     </DashboardLayout>
   )
 }

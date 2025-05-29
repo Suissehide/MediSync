@@ -1,9 +1,8 @@
-import { CircleHelp, Plus, Power, Settings, Stethoscope } from 'lucide-react'
+import { CircleHelp, Power, Settings } from 'lucide-react'
 import { useLogout } from '../../../hooks/queries/useAuth.ts'
 import { Button } from '../../ui/button.tsx'
 import { useRouter } from '@tanstack/react-router'
-import { useSoignantStore } from '../../../store/useSoignantStore.ts'
-import { useEffect } from 'react'
+import SidebarSoignant from './soignant.tsx'
 
 interface SidebarProps {
   isVisible: boolean
@@ -12,27 +11,12 @@ interface SidebarProps {
 function Sidebar({ isVisible }: SidebarProps) {
   const router = useRouter()
   const { logoutMutation } = useLogout()
-  const selectedSoignantId = useSoignantStore(
-    (state) => state.selectedSoignantId,
-  )
-  const soignants = useSoignantStore((state) => state.soignants)
-  const selectSoignant = useSoignantStore((state) => state.selectSoignant)
   const { authState } = router.options.context
-
-  useEffect(() => {
-    if (!selectedSoignantId && soignants.length > 0) {
-      selectSoignant(soignants[0].id)
-    }
-  }, [selectedSoignantId, soignants, selectSoignant])
 
   function getInitiales(firstname?: string, lastname?: string): string {
     return (
       (firstname?.trim()[0] ?? '') + (lastname?.trim()[0] ?? '')
     ).toUpperCase()
-  }
-
-  const handleSelectSoignant = (soignantID: string) => {
-    selectSoignant(soignantID)
   }
 
   const handleLogout = () => {
@@ -53,26 +37,7 @@ function Sidebar({ isVisible }: SidebarProps) {
             </h1>
           </div>
           <div>
-            <div className="flex justify-between items-center text-text-light px-2 mb-2">
-              <p>Soignants</p>
-              <button type="button" className="cursor-pointer">
-                <Plus className="w-4 h-4" />
-              </button>
-            </div>
-            <ol className="">
-              {soignants.map((soignant) => (
-                <li key={soignant.id}>
-                  <button
-                    className={`cursor-pointer w-full py-2 pl-2 flex items-center gap-2 rounded-lg ${selectedSoignantId === soignant.id ? 'bg-primary/10' : ''} hover:bg-primary/15`}
-                    type="button"
-                    onClick={() => handleSelectSoignant(soignant.id)}
-                  >
-                    <Stethoscope className="w-5 h-5" />
-                    {soignant.name}
-                  </button>
-                </li>
-              ))}
-            </ol>
+            <SidebarSoignant />
           </div>
         </div>
 

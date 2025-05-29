@@ -11,19 +11,14 @@
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
-import { Route as SettingsImport } from './routes/settings'
 import { Route as PatientImport } from './routes/patient'
 import { Route as DashboardImport } from './routes/dashboard'
 import { Route as IndexImport } from './routes/index'
+import { Route as SettingsSoignantImport } from './routes/settings/soignant'
+import { Route as SettingsPlanningImport } from './routes/settings/planning'
 import { Route as AuthLoginImport } from './routes/auth/login'
 
 // Create/Update Routes
-
-const SettingsRoute = SettingsImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => rootRoute,
-} as any)
 
 const PatientRoute = PatientImport.update({
   id: '/patient',
@@ -40,6 +35,18 @@ const DashboardRoute = DashboardImport.update({
 const IndexRoute = IndexImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const SettingsSoignantRoute = SettingsSoignantImport.update({
+  id: '/settings/soignant',
+  path: '/settings/soignant',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const SettingsPlanningRoute = SettingsPlanningImport.update({
+  id: '/settings/planning',
+  path: '/settings/planning',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -74,18 +81,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PatientImport
       parentRoute: typeof rootRoute
     }
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsImport
-      parentRoute: typeof rootRoute
-    }
     '/auth/login': {
       id: '/auth/login'
       path: '/auth/login'
       fullPath: '/auth/login'
       preLoaderRoute: typeof AuthLoginImport
+      parentRoute: typeof rootRoute
+    }
+    '/settings/planning': {
+      id: '/settings/planning'
+      path: '/settings/planning'
+      fullPath: '/settings/planning'
+      preLoaderRoute: typeof SettingsPlanningImport
+      parentRoute: typeof rootRoute
+    }
+    '/settings/soignant': {
+      id: '/settings/soignant'
+      path: '/settings/soignant'
+      fullPath: '/settings/soignant'
+      preLoaderRoute: typeof SettingsSoignantImport
       parentRoute: typeof rootRoute
     }
   }
@@ -97,16 +111,18 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/patient': typeof PatientRoute
-  '/settings': typeof SettingsRoute
   '/auth/login': typeof AuthLoginRoute
+  '/settings/planning': typeof SettingsPlanningRoute
+  '/settings/soignant': typeof SettingsSoignantRoute
 }
 
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/patient': typeof PatientRoute
-  '/settings': typeof SettingsRoute
   '/auth/login': typeof AuthLoginRoute
+  '/settings/planning': typeof SettingsPlanningRoute
+  '/settings/soignant': typeof SettingsSoignantRoute
 }
 
 export interface FileRoutesById {
@@ -114,16 +130,36 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/patient': typeof PatientRoute
-  '/settings': typeof SettingsRoute
   '/auth/login': typeof AuthLoginRoute
+  '/settings/planning': typeof SettingsPlanningRoute
+  '/settings/soignant': typeof SettingsSoignantRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dashboard' | '/patient' | '/settings' | '/auth/login'
+  fullPaths:
+    | '/'
+    | '/dashboard'
+    | '/patient'
+    | '/auth/login'
+    | '/settings/planning'
+    | '/settings/soignant'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard' | '/patient' | '/settings' | '/auth/login'
-  id: '__root__' | '/' | '/dashboard' | '/patient' | '/settings' | '/auth/login'
+  to:
+    | '/'
+    | '/dashboard'
+    | '/patient'
+    | '/auth/login'
+    | '/settings/planning'
+    | '/settings/soignant'
+  id:
+    | '__root__'
+    | '/'
+    | '/dashboard'
+    | '/patient'
+    | '/auth/login'
+    | '/settings/planning'
+    | '/settings/soignant'
   fileRoutesById: FileRoutesById
 }
 
@@ -131,16 +167,18 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRoute
   PatientRoute: typeof PatientRoute
-  SettingsRoute: typeof SettingsRoute
   AuthLoginRoute: typeof AuthLoginRoute
+  SettingsPlanningRoute: typeof SettingsPlanningRoute
+  SettingsSoignantRoute: typeof SettingsSoignantRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRoute,
   PatientRoute: PatientRoute,
-  SettingsRoute: SettingsRoute,
   AuthLoginRoute: AuthLoginRoute,
+  SettingsPlanningRoute: SettingsPlanningRoute,
+  SettingsSoignantRoute: SettingsSoignantRoute,
 }
 
 export const routeTree = rootRoute
@@ -156,8 +194,9 @@ export const routeTree = rootRoute
         "/",
         "/dashboard",
         "/patient",
-        "/settings",
-        "/auth/login"
+        "/auth/login",
+        "/settings/planning",
+        "/settings/soignant"
       ]
     },
     "/": {
@@ -169,11 +208,14 @@ export const routeTree = rootRoute
     "/patient": {
       "filePath": "patient.tsx"
     },
-    "/settings": {
-      "filePath": "settings.tsx"
-    },
     "/auth/login": {
       "filePath": "auth/login.tsx"
+    },
+    "/settings/planning": {
+      "filePath": "settings/planning.tsx"
+    },
+    "/settings/soignant": {
+      "filePath": "settings/soignant.tsx"
     }
   }
 }

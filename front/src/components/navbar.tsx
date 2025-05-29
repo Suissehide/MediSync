@@ -59,12 +59,6 @@ function Navbar({ toggleSidebar }: NavbarProps) {
           >
             Patients
           </Link>
-          <Link
-            to="/settings"
-            className="border-b-2 border-transparent [&.active]:font-bold [&.active]:border-primary"
-          >
-            Settings
-          </Link>
           <Link to="/auth/login" className="[&.active]:font-bold">
             Login
           </Link>
