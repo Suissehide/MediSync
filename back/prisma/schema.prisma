@@ -23,10 +23,97 @@ model User {
   role      Role    @default(NONE)
 }
 
+model PathwayTemplate {
+  id           String        @id @default(cuid())
+  name         String
+  createdAt    DateTime      @default(now())
+  appointments Appointment[]
+  Pathway      Pathway[]
+}
+
+model Pathway {
+  id         String   @id @default(cuid())
+  name       String
+  startDate  DateTime
+  templateId String?
+  createdAt  DateTime @default(now())
+
+  appointments Appointment[]
+  template     PathwayTemplate? @relation(fields: [templateId], references: [id])
+}
+
 model Appointment {
-  id        String   @id @default(cuid())
-  startDate DateTime
-  endDate   DateTime
+  id         String   @id @default(cuid())
+  title      String
+  startTime  DateTime
+  endTime    DateTime
+  soignantId String?
+  templateId String?
+  pathwayId  String?
+
+  soignant Soignant?        @relation(fields: [soignantId], references: [id])
+  pathway  Pathway?         @relation(fields: [pathwayId], references: [id])
+  template PathwayTemplate? @relation(fields: [templateId], references: [id])
+}
+
+model Soignant {
+  id   String @id @default(cuid())
+  name String
+
+  Appointment Appointment[]
+}
+
+model Patient {
+  id String @id @default(cuid())
+
+  // Identity
+  lastName  String
+  firstName String
+  gender    String?
+  birthDate DateTime?
+
+  // Contact
+  phone1 String?
+  phone2 String?
+  email  String?
+
+  // Personal & Social Info
+  homeDistanceKm  Float? // Distance d'habitation
+  educationLevel  String? // Niveau d’étude
+  occupation      String? // Profession
+  currentActivity String? // Activité actuelle
+
+  // Referrals & Context
+  referringCaregiver String? // Soignant référent
+  mhd                String? // MHD
+  followUpToDo       Boolean? // Suivi à régulariser
+  theraflow          String? // Theraflow
+
+  // Notes
+  notes   String?
+  details String?
+
+  // Inclusion Data
+  medicalDiagnosis     String?
+  entryDate            DateTime?
+  careMode             String? // Mode de prise en charge
+  orientation          String?
+  etpDecision          String? // ETP décision
+  programType          String?
+  nonInclusionDetails  String?
+  customContentDetails String?
+  goal                 String?
+
+  // Exit Data
+  exitDate        DateTime?
+  stopReason      String? // Motif d’arrêt de programme
+  etpFinalOutcome String? // Point final parcours ETP
+
+  // Relations
+  offers String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Todo {
