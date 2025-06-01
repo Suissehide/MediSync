@@ -1,27 +1,31 @@
 import { type Cradle, diContainer } from '@fastify/awilix'
 import { type AwilixContainer, asClass, asValue } from 'awilix'
 import type { Resolver } from 'awilix/lib/resolvers'
+import { AppointmentDomain } from '../../../domain/appointment.domain'
+import { AuthDomain } from '../../../domain/auth.domain'
+import { PathwayDomain } from '../../../domain/pathway.domain'
+import { PathwayTemplateDomain } from '../../../domain/pathwayTemplate.domain'
+import { PatientDomain } from '../../../domain/patient.domain'
+import { SlotDomain } from '../../../domain/slot.domain'
+import { SoignantDomain } from '../../../domain/soignant.domain'
+import { TodoDomain } from '../../../domain/todo.domain'
+import { UserDomain } from '../../../domain/user.domain'
 import { HttpClient } from '../../../infra/http/http-client'
 import { PinoLogger } from '../../../infra/logger/pino/pino-logger'
 import { PostgresOrm } from '../../../infra/orm/postgres-client'
+import { AppointmentRepository } from '../../../infra/orm/repositories/appointment.repository'
+import { PathwayRepository } from '../../../infra/orm/repositories/pathway.repository'
+import { PathwayTemplateRepository } from '../../../infra/orm/repositories/pathwayTemplate.repository'
+import { PatientRepository } from '../../../infra/orm/repositories/patient.repository'
+import { SlotRepository } from '../../../infra/orm/repositories/slot.repository'
+import { SoignantRepository } from '../../../infra/orm/repositories/soignant.repository'
+import { TodoRepository } from '../../../infra/orm/repositories/todo.repository'
+import { UserRepository } from '../../../infra/orm/repositories/user.repository'
 import { FastifyHttpServer } from '../../../interfaces/http/fastify/fastify-http-server'
 import type { Config } from '../../../types/application/config'
 import type { IocContainer } from '../../../types/application/ioc'
-import { recordToString } from '../../../utils/helper'
-import { AuthDomain } from '../../../domain/auth.domain'
-import { UserRepository } from '../../../infra/orm/repositories/user.repository'
-import { UserDomain } from '../../../domain/user.domain'
-import { PatientDomain } from '../../../domain/patient.domain'
-import { PathwayDomain } from '../../../domain/pathway.domain'
-import { SlotDomain } from '../../../domain/slot.domain'
-import { AppointmentDomain } from '../../../domain/appointment.domain'
-import { SlotRepository } from '../../../infra/orm/repositories/slot.repository'
-import { PathwayRepository } from '../../../infra/orm/repositories/pathway.repository'
-import { PatientRepository } from '../../../infra/orm/repositories/patient.repository'
-import { AppointmentRepository } from '../../../infra/orm/repositories/appointment.repository'
 import { ErrorHandler } from '../../../utils/error-handler'
-import { TodoRepository } from '../../../infra/orm/repositories/todo.repository'
-import { TodoDomain } from '../../../domain/todo.domain'
+import { recordToString } from '../../../utils/helper'
 
 declare module '@fastify/awilix' {
   interface Cradle extends IocContainer {}
@@ -59,10 +63,16 @@ class AwilixIocContainer {
     // Pathway
     this.#registerPathwayDomain()
     this.#registerPathwayRepository()
+    // PathwayTemplate
+    this.#registerPathwayTemplateDomain()
+    this.#registerPathwayTemplateRepository()
     // Patient
     this.#registerPatientDomain()
     this.#registerPatientRepository()
-    // Patient
+    // Soignant
+    this.#registerSoignantDomain()
+    this.#registerSoignantRepository()
+    // Todo
     this.#registerTodoDomain()
     this.#registerTodoRepository()
 
@@ -140,12 +150,34 @@ class AwilixIocContainer {
     this.register('pathwayRepository', asClass(PathwayRepository).singleton())
   }
 
+  // PathwayTemplate
+  #registerPathwayTemplateDomain(): void {
+    this.register(
+      'pathwayTemplateDomain',
+      asClass(PathwayTemplateDomain).singleton(),
+    )
+  }
+  #registerPathwayTemplateRepository(): void {
+    this.register(
+      'pathwayTemplateRepository',
+      asClass(PathwayTemplateRepository).singleton(),
+    )
+  }
+
   // Patient
   #registerPatientDomain(): void {
     this.register('patientDomain', asClass(PatientDomain).singleton())
   }
   #registerPatientRepository(): void {
     this.register('patientRepository', asClass(PatientRepository).singleton())
+  }
+
+  // Soignant
+  #registerSoignantDomain(): void {
+    this.register('soignantDomain', asClass(SoignantDomain).singleton())
+  }
+  #registerSoignantRepository(): void {
+    this.register('soignantRepository', asClass(SoignantRepository).singleton())
   }
 
   // Todo

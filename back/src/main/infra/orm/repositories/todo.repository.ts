@@ -1,12 +1,12 @@
+import type { IocContainer } from '../../../types/application/ioc'
 import type {
   TodoCreateEntityRepo,
+  TodoEntityRepo,
   TodoRepositoryInterface,
   TodoUpdateEntityRepo,
 } from '../../../types/infra/orm/repositories/todo.repository.interface'
-import type { TodoEntityDomain } from '../../../types/domain/todo.domain.interface'
-import type { PostgresPrismaClient } from '../postgres-client'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
-import type { IocContainer } from '../../../types/application/ioc'
+import type { PostgresPrismaClient } from '../postgres-client'
 
 class TodoRepository implements TodoRepositoryInterface {
   private readonly prisma: PostgresPrismaClient
@@ -17,13 +17,13 @@ class TodoRepository implements TodoRepositoryInterface {
     this.errorHandler = errorHandler
   }
 
-  findAll(): Promise<TodoEntityDomain[]> {
+  findAll(): Promise<TodoEntityRepo[]> {
     return this.prisma.todo.findMany({
       orderBy: [{ createDate: 'desc' }],
     })
   }
 
-  async findByID(todoID: string): Promise<TodoEntityDomain> {
+  async findByID(todoID: string): Promise<TodoEntityRepo> {
     try {
       return await this.prisma.todo.findUniqueOrThrow({
         where: { id: todoID },
@@ -38,7 +38,7 @@ class TodoRepository implements TodoRepositoryInterface {
 
   async create(
     todoCreateParams: TodoCreateEntityRepo,
-  ): Promise<TodoEntityDomain> {
+  ): Promise<TodoEntityRepo> {
     try {
       return await this.prisma.todo.create({
         data: todoCreateParams,
@@ -54,7 +54,7 @@ class TodoRepository implements TodoRepositoryInterface {
   async update(
     todoID: string,
     todoUpdateParams: TodoUpdateEntityRepo,
-  ): Promise<TodoEntityDomain> {
+  ): Promise<TodoEntityRepo> {
     try {
       return await this.prisma.todo.update({
         where: { id: todoID },
@@ -68,7 +68,7 @@ class TodoRepository implements TodoRepositoryInterface {
     }
   }
 
-  async delete(todoID: string): Promise<TodoEntityDomain> {
+  async delete(todoID: string): Promise<TodoEntityRepo> {
     try {
       return await this.prisma.todo.delete({
         where: { id: todoID },

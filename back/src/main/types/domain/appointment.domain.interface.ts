@@ -1,7 +1,20 @@
-import type { AppointmentEntityRepo } from '../infra/orm/repositories/appointment.repository.interface'
+import type { Appointment, Prisma } from '@prisma/client'
 
-export type AppointmentEntityDomain = AppointmentEntityRepo
+export type AppointmentEntityDomain = Appointment
+export type AppointmentCreateEntityDomain =
+  Prisma.AppointmentUncheckedCreateInput
+export type AppointmentUpdateEntityDomain =
+  Prisma.AppointmentUncheckedUpdateInput
 
-export type AppointmentDomainInterface = {
-  findByID: (id: string) => Promise<AppointmentEntityDomain>
+export interface AppointmentDomainInterface {
+  findAll: () => Promise<AppointmentEntityDomain[]>
+  findByID: (appointmentID: string) => Promise<AppointmentEntityDomain>
+  create: (
+    appointmentCreateParams: AppointmentCreateEntityDomain,
+  ) => Promise<AppointmentEntityDomain>
+  update: (
+    appointmentID: string,
+    appointmentUpdateParams: AppointmentUpdateEntityDomain,
+  ) => Promise<AppointmentEntityDomain>
+  delete: (appointmentID: string) => Promise<AppointmentEntityDomain>
 }
