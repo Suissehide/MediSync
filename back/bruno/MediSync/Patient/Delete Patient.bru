@@ -1,0 +1,15 @@
+meta {
+  name: Delete Patient
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{BASE_URL}}/patient/:patientID
+  body: none
+  auth: none
+}
+
+params:path {
+  patientID: cmc12qrpp0001l54eu8psht60
+}

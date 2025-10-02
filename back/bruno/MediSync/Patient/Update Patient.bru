@@ -1,0 +1,62 @@
+meta {
+  name: Update Patient
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{BASE_URL}}/patient/:patientID
+  body: json
+  auth: none
+}
+
+params:path {
+  patientID: cmc12qrpp0001l54eu8psht60
+}
+
+body:json {
+  {
+    "firstName": "Léo",
+    "lastName": "Couffinhal",
+    "gender": "masculine",
+    "birthdate": "1997-03-12T00:00:00.000Z",
+    "phone1": "",
+    "phone2": "",
+    "email": "leo.couffinhal@qwetle.fr",
+    
+    // Personal & Social Info
+    "distance": "distance", // Distance d'habitation
+    "educationLevel": "educationLevel", // Niveau d’étude
+    "occupation": "occupation", // Profession
+    "currentActivity": "currentActivity", // Activité actuelle
+    
+    // Referrals & Context
+    "referringCaregiver": "referringCaregiver", // Soignant référent
+    "mhd": "mhd", // MHD
+    "followUpToDo": false, // Suivi à régulariser
+    "theraflow": "theraflow", // Theraflow
+    
+    // Notes
+    "notes": "notes",
+    "details": "details",
+    
+    // Inclusion Data
+    "medicalDiagnosis": "medicalDiagnosis",
+    "entryDate": "2025-06-10T14:00:00.000Z",
+    "careMode": "careMode", // Mode de prise en charge
+    "orientation": "orientation",
+    "etpDecision": "etpDecision",
+    "programType": "programType",
+    "nonInclusionDetails": "nonInclusionDetails",
+    "customContentDetails": "customContentDetails",
+    "goal": "goal",
+    
+    // Exit Data
+    "exitDate": null,
+    "stopReason": "stopReason",
+    "etpFinalOutcome": "etpFinalOutcome",
+    
+    // Relations
+    "offers": "offers"
+  }
+}

@@ -1,0 +1,23 @@
+meta {
+  name: Update Pathway Template
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{BASE_URL}}/pathway-template/:todoTemplateID
+  body: json
+  auth: none
+}
+
+params:path {
+  todoTemplateID: 
+}
+
+body:json {
+  {
+    "title": "Todo 2",
+    "description": "Test de description 2",
+    "completed": true
+  }
+}

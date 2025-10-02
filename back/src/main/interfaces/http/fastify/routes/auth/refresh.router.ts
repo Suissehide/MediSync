@@ -1,11 +1,12 @@
-import { signInResponseSchema } from '../../schemas/auth/auth.schema'
+import { signInResponseSchema } from '../../schemas/auth.schema'
 import type { CookieSerializeOptions } from '@fastify/cookie'
-import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 import Boom from '@hapi/boom'
+import type { FastifyPluginAsync } from 'fastify'
 
-const refreshRouter: FastifyPluginAsyncZod = (fastify) => {
+const refreshRouter: FastifyPluginAsync = (fastify) => {
   const { iocContainer } = fastify
   const { authDomain } = iocContainer
+
   fastify.post(
     '/',
     {

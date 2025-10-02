@@ -1,7 +1,10 @@
 import type { Prisma, Soignant } from '@prisma/client'
 
 export type SoignantEntityDomain = Soignant
-export type SoignantCreateEntityDomain = Prisma.SoignantUncheckedCreateInput
+export type SoignantCreateEntityDomain = Omit<
+  Prisma.SoignantUncheckedCreateInput,
+  'slotTemplates'
+>
 export type SoignantUpdateEntityDomain = Prisma.SoignantUncheckedUpdateInput
 
 export interface SoignantDomainInterface {

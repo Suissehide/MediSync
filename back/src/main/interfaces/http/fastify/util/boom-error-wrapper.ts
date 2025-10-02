@@ -1,17 +1,19 @@
-import type { Boom } from "@hapi/boom";
-import {formatZodErrorFromBoomError, isZodError} from "../errors/normalizers/boom.error.normalizer";
+import type { Boom } from '@hapi/boom'
+import {
+  formatZodErrorFromBoomError,
+  isZodError,
+} from '../errors/normalizers/boom.error.normalizer'
 
 export class ErrorWithProps extends Error {
   extensions?: object
   statusCode?: number
 
-  constructor (message: string, extensions?: object, statusCode?: number) {
+  constructor(message: string, extensions?: object, statusCode?: number) {
     super(message)
     this.extensions = extensions
     this.statusCode = statusCode
   }
 }
-
 
 export const buildBoomError = (boomError: Boom): never => {
   let errorMessage = boomError.message

@@ -21,6 +21,8 @@ import type { HttpServer } from '../interfaces/http/server'
 import type { ErrorHandlerInterface } from '../utils/error-handler'
 import type { Logger } from '../utils/logger'
 import type { Config } from './config'
+import type { SlotTemplateDomainInterface } from '../domain/slotTemplate.domain.interface'
+import type { SlotTemplateRepositoryInterface } from '../infra/orm/repositories/slotTemplate.repository.interface'
 
 export interface IocContainer {
   readonly config: Config
@@ -41,6 +43,9 @@ export interface IocContainer {
   // Slot
   readonly slotDomain: SlotDomainInterface
   readonly slotRepository: SlotRepositoryInterface
+  // SlotTemplate
+  readonly slotTemplateDomain: SlotTemplateDomainInterface
+  readonly slotTemplateRepository: SlotTemplateRepositoryInterface
   // Pathway
   readonly pathwayDomain: PathwayDomainInterface
   readonly pathwayRepository: PathwayRepositoryInterface

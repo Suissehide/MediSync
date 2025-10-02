@@ -1,0 +1,23 @@
+meta {
+  name: Update Appointment
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{BASE_URL}}/appointment/:appointmentID
+  body: json
+  auth: none
+}
+
+params:path {
+  appointmentID: 
+}
+
+body:json {
+  {
+    "title": "Todo 2",
+    "description": "Test de description 2",
+    "completed": true
+  }
+}

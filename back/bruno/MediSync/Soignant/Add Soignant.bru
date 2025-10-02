@@ -1,0 +1,17 @@
+meta {
+  name: Add Soignant
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{BASE_URL}}/soignant
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "Aide-soignante"
+  }
+}

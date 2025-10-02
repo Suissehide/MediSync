@@ -1,8 +1,8 @@
 import HttpStatusCodes from 'http-status-codes'
-import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 import type { CookieSerializeOptions } from '@fastify/cookie'
+import type { FastifyPluginAsync } from 'fastify'
 
-const signOutRouter: FastifyPluginAsyncZod = (fastify) => {
+const signOutRouter: FastifyPluginAsync = (fastify) => {
   fastify.post('/', (__, reply) => {
     const cookieOptions: CookieSerializeOptions = {
       path: '/',

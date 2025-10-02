@@ -1,0 +1,23 @@
+meta {
+  name: Update Pathway
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{BASE_URL}}/pathway/:pathwayID
+  body: json
+  auth: none
+}
+
+params:path {
+  pathwayID: 
+}
+
+body:json {
+  {
+    "title": "Todo 2",
+    "description": "Test de description 2",
+    "completed": true
+  }
+}

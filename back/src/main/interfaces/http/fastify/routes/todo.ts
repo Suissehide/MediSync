@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { z } from 'zod/v4'
 import {
   todoResponseSchema,
   deleteTodoByIdParamsSchema,
@@ -6,11 +6,16 @@ import {
   updateTodoByIdSchema,
   todosResponseSchema,
   createTodoSchema,
-} from '../../schemas/todo/todo.schema'
+  type GetTodoByIdParams,
+  type DeleteTodoByIdParams,
+  type UpdateTodoParams,
+  type UpdateTodoBody,
+  type CreateTodoBody,
+} from '../schemas/todo.schema'
 import Boom from '@hapi/boom'
-import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
+import type { FastifyPluginAsync } from 'fastify'
 
-const todoRouter: FastifyPluginAsyncZod = (fastify) => {
+const todoRouter: FastifyPluginAsync = async (fastify) => {
   const { iocContainer } = fastify
   const { todoDomain, logger } = iocContainer
 
@@ -23,7 +28,6 @@ const todoRouter: FastifyPluginAsyncZod = (fastify) => {
           200: todosResponseSchema,
           404: z.object({ message: z.string() }),
         },
-        tags: ['Todo'],
       },
       onRequest: [fastify.verifySessionCookie],
     },
@@ -32,27 +36,8 @@ const todoRouter: FastifyPluginAsyncZod = (fastify) => {
     },
   )
 
-  // Create
-  fastify.post(
-    '/',
-    {
-      schema: {
-        body: createTodoSchema,
-        response: {
-          201: todoResponseSchema,
-        },
-        tags: ['Todo'],
-      },
-    },
-    async (request, reply) => {
-      const todo = await todoDomain.create(request.body)
-      reply.code(201)
-      return todo
-    },
-  )
-
   // Read by ID
-  fastify.get(
+  fastify.get<{ Params: GetTodoByIdParams }>(
     '/:todoID',
     {
       schema: {
@@ -61,7 +46,6 @@ const todoRouter: FastifyPluginAsyncZod = (fastify) => {
           200: todoResponseSchema,
           404: z.object({ message: z.string() }),
         },
-        tags: ['Todo'],
       },
     },
     async (request) => {
@@ -74,8 +58,29 @@ const todoRouter: FastifyPluginAsyncZod = (fastify) => {
     },
   )
 
+  // Create
+  fastify.post<{ Body: CreateTodoBody }>(
+    '/',
+    {
+      schema: {
+        body: createTodoSchema,
+        response: {
+          201: todoResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const todo = await todoDomain.create(request.body)
+      reply.code(201)
+      return todo
+    },
+  )
+
   // Update
-  fastify.patch(
+  fastify.patch<{
+    Params: UpdateTodoParams
+    Body: UpdateTodoBody
+  }>(
     '/:todoID',
     {
       schema: {
@@ -84,7 +89,6 @@ const todoRouter: FastifyPluginAsyncZod = (fastify) => {
           200: todoResponseSchema,
           404: z.object({ message: z.string() }),
         },
-        tags: ['Todo'],
       },
     },
     async (request) => {
@@ -98,7 +102,7 @@ const todoRouter: FastifyPluginAsyncZod = (fastify) => {
   )
 
   // Delete
-  fastify.delete(
+  fastify.delete<{ Params: DeleteTodoByIdParams }>(
     '/:todoID',
     {
       schema: {
@@ -107,7 +111,6 @@ const todoRouter: FastifyPluginAsyncZod = (fastify) => {
           204: z.null(),
           404: z.object({ message: z.string() }),
         },
-        tags: ['Todo'],
       },
     },
     async (request, reply) => {

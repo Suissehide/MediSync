@@ -1,0 +1,23 @@
+meta {
+  name: Update Slot
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{BASE_URL}}/slot/:slotID
+  body: json
+  auth: none
+}
+
+params:path {
+  slotID: 
+}
+
+body:json {
+  {
+    "title": "Todo 2",
+    "description": "Test de description 2",
+    "completed": true
+  }
+}

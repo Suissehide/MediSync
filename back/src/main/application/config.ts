@@ -3,7 +3,7 @@ import { join } from 'node:path'
 
 import { config as configDotenv } from 'dotenv'
 import { levels } from 'pino'
-import { z } from 'zod'
+import { z } from 'zod/v4'
 
 import baseDir from '../base-dir'
 import type { ConfigEnvVars } from '../types/application/config'
@@ -43,12 +43,12 @@ const configSchema = z.object({
   logLevel: z.enum(['silent', ...Object.values(levels.labels)]).default('info'),
   port: z
     .string()
-    .transform((val) => Number.parseInt(val))
-    .default('0'),
+    .default('0')
+    .transform((val) => Number.parseInt(val)),
   mockServerPort: z
     .string()
-    .transform((val) => Number.parseInt(val))
-    .default('4000'),
+    .default('4000')
+    .transform((val) => Number.parseInt(val, 10)),
   isTestRunning: z.boolean().default(false),
 })
 const envVarNames = [

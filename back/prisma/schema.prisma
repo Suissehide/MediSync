@@ -24,51 +24,78 @@ model User {
 }
 
 model PathwayTemplate {
-  id           String        @id @default(cuid())
-  name         String
-  createdAt    DateTime      @default(now())
-  appointments Appointment[]
-  Pathway      Pathway[]
+  id    String @id @default(cuid())
+  name  String
+  color String
+
+  pathways      Pathway[]
+  slotTemplates SlotTemplate[]
 }
 
 model Pathway {
   id         String   @id @default(cuid())
-  name       String
   startDate  DateTime
-  templateId String?
-  createdAt  DateTime @default(now())
+  templateID String?
 
-  appointments Appointment[]
-  template     PathwayTemplate? @relation(fields: [templateId], references: [id])
+  template PathwayTemplate? @relation(fields: [templateID], references: [id])
+  slots    Slot[]
 }
 
 model Appointment {
-  id         String   @id @default(cuid())
-  title      String
-  startTime  DateTime
-  endTime    DateTime
-  soignantId String?
-  templateId String?
-  pathwayId  String?
+  id        String   @id @default(cuid())
+  startDate DateTime
+  endDate   DateTime
+  slotID    String
 
-  soignant Soignant?        @relation(fields: [soignantId], references: [id])
-  pathway  Pathway?         @relation(fields: [pathwayId], references: [id])
-  template PathwayTemplate? @relation(fields: [templateId], references: [id])
+  slot Slot @relation(fields: [slotID], references: [id])
+}
+
+model SlotTemplate {
+  id         String   @id @default(cuid())
+  startTime  DateTime @db.Time()
+  endTime    DateTime @db.Time()
+  offsetDays Int
+
+  isIndividual Boolean
+  capacity     Int?
+  thematic     String?
+  location     String?
+  description  String?
+  color        String
+
+  slot       Slot?
+  soignantID String?
+  templateID String?
+
+  soignant Soignant?        @relation(fields: [soignantID], references: [id])
+  template PathwayTemplate? @relation(fields: [templateID], references: [id])
+}
+
+model Slot {
+  id             String        @id @default(cuid())
+  startDate      DateTime
+  endDate        DateTime
+  appointments   Appointment[]
+  pathwayID      String?
+  slotTemplateID String        @unique
+
+  pathway      Pathway?     @relation(fields: [pathwayID], references: [id])
+  slotTemplate SlotTemplate @relation(fields: [slotTemplateID], references: [id])
 }
 
 model Soignant {
   id   String @id @default(cuid())
   name String
 
-  Appointment Appointment[]
+  slotTemplates SlotTemplate[]
 }
 
 model Patient {
   id String @id @default(cuid())
 
   // Identity
-  lastName  String
   firstName String
+  lastName  String
   gender    String?
   birthDate DateTime?
 
@@ -78,16 +105,14 @@ model Patient {
   email  String?
 
   // Personal & Social Info
-  homeDistanceKm  Float? // Distance d'habitation
+  distance        String? // Distance d'habitation
   educationLevel  String? // Niveau d’étude
   occupation      String? // Profession
   currentActivity String? // Activité actuelle
 
   // Referrals & Context
   referringCaregiver String? // Soignant référent
-  mhd                String? // MHD
   followUpToDo       Boolean? // Suivi à régulariser
-  theraflow          String? // Theraflow
 
   // Notes
   notes   String?
@@ -109,11 +134,7 @@ model Patient {
   stopReason      String? // Motif d’arrêt de programme
   etpFinalOutcome String? // Point final parcours ETP
 
-  // Relations
-  offers String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createDate DateTime
 }
 
 model Todo {

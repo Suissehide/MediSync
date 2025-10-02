@@ -1,0 +1,15 @@
+meta {
+  name: Get Patient by ID
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{BASE_URL}}/patient/:patientID
+  body: none
+  auth: none
+}
+
+params:path {
+  patientID: cmc12qrpp0001l54eu8psht60
+}

@@ -1,0 +1,36 @@
+import type { SlotTemplate, Prisma } from '@prisma/client'
+import type { SoignantEntityRepo } from './soignant.repository.interface'
+import type { PathwayTemplateEntityRepo } from './pathwayTemplate.repository.interface'
+
+export type SlotTemplateEntityRepo = SlotTemplate
+export type SlotTemplateWithSoignantRepo = SlotTemplateEntityRepo & {
+  soignant: SoignantEntityRepo | null
+}
+export type SlotTemplateDTORepo = SlotTemplateEntityRepo & {
+  soignant: SoignantEntityRepo | null
+  template: PathwayTemplateEntityRepo | null
+}
+export type SlotTemplateCreateEntityRepo =
+  Prisma.SlotTemplateUncheckedCreateInput & {
+    soignantID?: string
+    templateID?: string
+  }
+export type SlotTemplateUpdateEntityRepo =
+  Prisma.SlotTemplateUncheckedUpdateInput & {
+    soignantID?: string
+    templateID?: string
+    slot?: string
+  }
+
+export interface SlotTemplateRepositoryInterface {
+  findAll: () => Promise<SlotTemplateDTORepo[]>
+  findByID: (id: string) => Promise<SlotTemplateDTORepo>
+  create: (
+    slotTemplateTemplateCreateParams: SlotTemplateCreateEntityRepo,
+  ) => Promise<SlotTemplateDTORepo>
+  update: (
+    slotTemplateID: string,
+    slotTemplateUpdateParams: SlotTemplateUpdateEntityRepo,
+  ) => Promise<SlotTemplateDTORepo>
+  delete: (slotTemplateID: string) => Promise<SlotTemplateDTORepo>
+}

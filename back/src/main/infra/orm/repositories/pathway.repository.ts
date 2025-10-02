@@ -39,7 +39,15 @@ class PathwayRepository implements PathwayRepositoryInterface {
   ): Promise<PathwayEntityRepo> {
     try {
       return await this.prisma.pathway.create({
-        data: pathwayCreateParams,
+        data: {
+          startDate: pathwayCreateParams.startDate,
+          template: {
+            connect: { id: pathwayCreateParams.templateID ?? undefined },
+          },
+          slots: {
+            connect: pathwayCreateParams.slotIDs.map((id) => ({ id })),
+          },
+        },
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({

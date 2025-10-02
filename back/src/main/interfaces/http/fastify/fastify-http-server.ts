@@ -17,6 +17,7 @@ import { plugins } from './plugins'
 import { routes } from './routes'
 import { notFoundHandler } from './util/not-found.handler'
 import {
+  type ZodTypeProvider,
   serializerCompiler,
   validatorCompiler,
 } from 'fastify-type-provider-zod'
@@ -47,6 +48,7 @@ class FastifyHttpServer implements HttpServer {
     this.fastify = Fastify(fastifyOptions)
     this.fastify.setValidatorCompiler(validatorCompiler)
     this.fastify.setSerializerCompiler(serializerCompiler)
+    this.fastify.withTypeProvider<ZodTypeProvider>()
     this.fastify.iocContainer = iocContainer
   }
 

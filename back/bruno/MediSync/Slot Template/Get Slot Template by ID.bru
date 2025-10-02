@@ -1,0 +1,15 @@
+meta {
+  name: Get Slot Template by ID
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{BASE_URL}}/slot-template/:slotTemplateID
+  body: none
+  auth: none
+}
+
+params:path {
+  slotTemplateID: 
+}

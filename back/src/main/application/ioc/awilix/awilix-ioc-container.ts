@@ -26,6 +26,8 @@ import type { Config } from '../../../types/application/config'
 import type { IocContainer } from '../../../types/application/ioc'
 import { ErrorHandler } from '../../../utils/error-handler'
 import { recordToString } from '../../../utils/helper'
+import { SlotTemplateDomain } from '../../../domain/slotTemplate.domain'
+import { SlotTemplateRepository } from '../../../infra/orm/repositories/slotTemplate.repository'
 
 declare module '@fastify/awilix' {
   interface Cradle extends IocContainer {}
@@ -60,6 +62,9 @@ class AwilixIocContainer {
     // Slot
     this.#registerSlotDomain()
     this.#registerSlotRepository()
+    // SlotTemplate
+    this.#registerSlotTemplateDomain()
+    this.#registerSlotTemplateRepository()
     // Pathway
     this.#registerPathwayDomain()
     this.#registerPathwayRepository()
@@ -140,6 +145,17 @@ class AwilixIocContainer {
   }
   #registerSlotRepository(): void {
     this.register('slotRepository', asClass(SlotRepository).singleton())
+  }
+
+  // Slot
+  #registerSlotTemplateDomain(): void {
+    this.register('slotTemplateDomain', asClass(SlotTemplateDomain).singleton())
+  }
+  #registerSlotTemplateRepository(): void {
+    this.register(
+      'slotTemplateRepository',
+      asClass(SlotTemplateRepository).singleton(),
+    )
   }
 
   // Pathway

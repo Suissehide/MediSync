@@ -1,8 +1,20 @@
 import type { Pathway, Prisma } from '@prisma/client'
 
 export type PathwayEntityDomain = Pathway
-export type PathwayCreateEntityDomain = Prisma.PathwayUncheckedCreateInput
-export type PathwayUpdateEntityDomain = Prisma.PathwayUncheckedUpdateInput
+export type PathwayCreateEntityDomain = Omit<
+  Prisma.PathwayUncheckedCreateInput,
+  'slots' | 'template'
+> & {
+  templateID?: string
+  slotIDs: string[]
+}
+export type PathwayUpdateEntityDomain = Omit<
+  Prisma.PathwayUncheckedUpdateInput,
+  'slots' | 'template'
+> & {
+  templateID?: string
+  slotIDs: string[]
+}
 
 export interface PathwayDomainInterface {
   findAll: () => Promise<PathwayEntityDomain[]>

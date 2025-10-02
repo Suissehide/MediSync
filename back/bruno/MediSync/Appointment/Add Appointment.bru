@@ -1,0 +1,18 @@
+meta {
+  name: Add Appointment
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{BASE_URL}}/appointment
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "title": "Todo 3",
+    "description": "Test de description"
+  }
+}

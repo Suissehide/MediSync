@@ -1,8 +1,14 @@
 import type { Patient, Prisma } from '@prisma/client'
 
 export type PatientEntityDomain = Patient
-export type PatientCreateEntityDomain = Prisma.PatientUncheckedCreateInput
-export type PatientUpdateEntityDomain = Prisma.PatientUncheckedUpdateInput
+export type PatientCreateEntityDomain = Omit<
+  Prisma.PatientUncheckedCreateInput,
+  'createDate'
+>
+export type PatientUpdateEntityDomain = Omit<
+  Prisma.PatientUncheckedUpdateInput,
+  'createDate'
+>
 
 export interface PatientDomainInterface {
   findAll: () => Promise<PatientEntityDomain[]>

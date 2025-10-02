@@ -1,0 +1,15 @@
+meta {
+  name: Delete Pathway Template
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{BASE_URL}}/pathway-template/:todoTemplateID
+  body: none
+  auth: none
+}
+
+params:path {
+  todoTemplateID: 
+}

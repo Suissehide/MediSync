@@ -6,8 +6,8 @@ import type { PatientRepositoryInterface } from '../types/infra/orm/repositories
 import type {
   PatientCreateEntityDomain,
   PatientEntityDomain,
-  PatientUpdateEntityDomain
-} from "../types/domain/patient.domain.interface";
+  PatientUpdateEntityDomain,
+} from '../types/domain/patient.domain.interface'
 
 class PatientDomain implements PatientDomainInterface {
   private readonly logger: Logger
@@ -32,7 +32,6 @@ class PatientDomain implements PatientDomainInterface {
     const patientInputParams = {
       ...patientCreateParams,
       createDate: new Date().toISOString(),
-      completed: false,
     }
     return this.patientRepository.create(patientInputParams)
   }
@@ -41,10 +40,7 @@ class PatientDomain implements PatientDomainInterface {
     patientID: string,
     patientUpdateParams: PatientUpdateEntityDomain,
   ): Promise<PatientEntityDomain> {
-    return this.patientRepository.update(
-      patientID,
-      patientUpdateParams,
-    )
+    return this.patientRepository.update(patientID, patientUpdateParams)
   }
 
   delete(patientID: string): Promise<PatientEntityDomain> {

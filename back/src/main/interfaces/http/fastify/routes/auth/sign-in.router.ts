@@ -3,13 +3,14 @@ import {
   type SignInInput,
   signInResponseSchema,
   signInSchema,
-} from '../../schemas/auth/auth.schema'
+} from '../../schemas/auth.schema'
 import type { CookieSerializeOptions } from '@fastify/cookie'
-import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
+import type { FastifyPluginAsync } from 'fastify'
 
-const signInRouter: FastifyPluginAsyncZod = (fastify) => {
+const signInRouter: FastifyPluginAsync = (fastify) => {
   const { iocContainer } = fastify
   const { authDomain, logger } = iocContainer
+
   fastify.post<{ Body: SignInInput }>(
     '/',
     {

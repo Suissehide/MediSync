@@ -1,12 +1,10 @@
-import { z } from 'zod'
+import { z } from 'zod/v4'
 
 const userEntity = {
-  email: z
-    .string({
-      required_error: 'Email is required',
-      invalid_type_error: 'Email is not valid',
-    })
-    .email(),
+  email: z.email({
+    error: (issue) =>
+      issue.input === undefined ? 'Email is required' : 'Email is not valid',
+  }),
   firstname: z.string(),
   lastname: z.string(),
 }
@@ -14,7 +12,7 @@ const userEntity = {
 export const registerSchema = z.object({
   ...userEntity,
   password: z.string({
-    required_error: 'Password is required',
+    error: () => 'Password is required',
   }),
 })
 export const registerResponseSchema = z.object({
@@ -23,12 +21,10 @@ export const registerResponseSchema = z.object({
 })
 
 export const signInSchema = z.object({
-  email: z
-    .string({
-      required_error: 'Email is required',
-      invalid_type_error: 'Email is not valid',
-    })
-    .email(),
+  email: z.email({
+    error: (issue) =>
+      issue.input === undefined ? 'Email is required' : 'Email is not valid',
+  }),
   password: z.string(),
 })
 export const signInResponseSchema = z.object({

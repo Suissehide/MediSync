@@ -1,7 +1,10 @@
 import type { Pathway, Prisma } from '@prisma/client'
 
 export type PathwayEntityRepo = Pathway
-export type PathwayCreateEntityRepo = Prisma.PathwayUncheckedCreateInput
+export type PathwayCreateEntityRepo = Prisma.PathwayUncheckedCreateInput & {
+  slotIDs: string[]
+  templateID?: string
+}
 export type PathwayUpdateEntityRepo = Prisma.PathwayUncheckedUpdateInput
 
 export interface PathwayRepositoryInterface {

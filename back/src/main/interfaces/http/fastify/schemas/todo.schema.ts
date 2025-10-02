@@ -1,28 +1,23 @@
-import { z } from 'zod'
-
-const todoEntity = {
-  title: z.string().min(1),
-  description: z.string().nullable().optional(),
-  completed: z.boolean().default(false),
-  createDate: z.coerce.date(),
-}
+import { z } from 'zod/v4'
 
 export const todoSchema = z.object({
-  ...todoEntity,
+  title: z.string().min(1),
+  description: z.string().optional().nullable(),
+  completed: z.boolean().default(false),
+  createDate: z.coerce.date(),
 })
 
-export const todoResponseSchema = z.object({
-  id: z.string().cuid(),
-  ...todoEntity,
+export const todoResponseSchema = todoSchema.extend({
+  id: z.cuid(),
 })
 
 export const todosResponseSchema = z.array(todoResponseSchema)
 
 export const getTodoByIdParamsSchema = z.object({
-  todoID: z.string().cuid(),
+  todoID: z.cuid(),
 })
 
-export const createTodoSchema = z.object(todoEntity).pick({
+export const createTodoSchema = todoSchema.pick({
   title: true,
   description: true,
 })
@@ -40,4 +35,9 @@ export const updateTodoByIdSchema = {
 }
 
 export type TodoInput = z.infer<typeof todoSchema>
+export type GetTodoByIdParams = z.infer<typeof getTodoByIdParamsSchema>
+export type CreateTodoBody = z.infer<typeof createTodoSchema>
+export type UpdateTodoParams = z.infer<typeof updateTodoByIdSchema.params>
+export type UpdateTodoBody = z.infer<typeof updateTodoByIdSchema.body>
+export type DeleteTodoByIdParams = z.infer<typeof deleteTodoByIdParamsSchema>
 export type TodoResponse = z.infer<typeof todoResponseSchema>

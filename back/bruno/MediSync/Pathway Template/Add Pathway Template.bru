@@ -1,0 +1,19 @@
+meta {
+  name: Add Pathway Template
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{BASE_URL}}/pathway-template
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "Parcours 1",
+    "color": "#2563eb",
+    "slotTemplateIDs": []
+  }
+}

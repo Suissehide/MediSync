@@ -1,25 +1,15 @@
 import type { Boom } from '@hapi/boom'
-import z, { type ZodError } from 'zod'
 import type {
   ErrorNormalizer,
   ErrorResponse,
 } from '../../../../../types/interfaces/http/fastify/errors'
+import { ZodError } from 'zod/v4'
 
-const isBoomError = (error: unknown): error is Boom => {
-  const boomError = error as { isBoom?: boolean }
-  return !!boomError.isBoom
+const isZodError = (error: unknown): error is ZodError => {
+  return error instanceof ZodError
 }
 
-export const isZodError = (error: unknown): error is ZodError => {
-  try {
-    z.ZodError.assert(error)
-    return true
-  } catch {
-    return false
-  }
-}
-
-export const formatZodErrorFromBoomError = (error: Boom & ZodError) => {
+const formatZodErrorFromBoomError = (error: Boom & ZodError) => {
   const message = error.issues
     .map((issue) => {
       const pathPrefix = issue.path.length ? `${issue.path.join('/')}: ` : ''
@@ -28,9 +18,14 @@ export const formatZodErrorFromBoomError = (error: Boom & ZodError) => {
     .join(' and ')
   return {
     error: error.output.payload.error,
-    statusCode: error.output.payload.statusCode,
     message,
+    statusCode: error.output.payload.statusCode,
   }
+}
+
+const isBoomError = (error: unknown): error is Boom => {
+  const boomError = error as { isBoom?: boolean }
+  return !!boomError.isBoom
 }
 
 const boomErrorNormalizer: ErrorNormalizer = (
@@ -49,4 +44,9 @@ const boomErrorNormalizer: ErrorNormalizer = (
   return undefined
 }
 
-export { boomErrorNormalizer, isBoomError }
+export {
+  boomErrorNormalizer,
+  isBoomError,
+  isZodError,
+  formatZodErrorFromBoomError,
+}

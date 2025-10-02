@@ -30,8 +30,6 @@ class SoignantDomain implements SoignantDomainInterface {
   ): Promise<SoignantEntityDomain> {
     const soignantInputParams = {
       ...soignantCreateParams,
-      createDate: new Date().toISOString(),
-      completed: false,
     }
     return this.soignantRepository.create(soignantInputParams)
   }

@@ -3,6 +3,7 @@ import type {
   PathwayTemplateCreateEntityDomain,
   PathwayTemplateEntityDomain,
   PathwayTemplateUpdateEntityDomain,
+  PathwayTemplateWithSlotTemplatesDomain,
 } from '../types/domain/pathwayTemplate.domain.interface'
 import type { PathwayTemplateDomainInterface } from '../types/domain/pathwayTemplate.domain.interface'
 import type { PathwayTemplateRepositoryInterface } from '../types/infra/orm/repositories/pathwayTemplate.repository.interface'
@@ -21,7 +22,9 @@ class PathwayTemplateDomain implements PathwayTemplateDomainInterface {
     return this.pathwayTemplateRepository.findAll()
   }
 
-  findByID(pathwayTemplateID: string): Promise<PathwayTemplateEntityDomain> {
+  findByID(
+    pathwayTemplateID: string,
+  ): Promise<PathwayTemplateWithSlotTemplatesDomain> {
     return this.pathwayTemplateRepository.findByID(pathwayTemplateID)
   }
 
@@ -30,8 +33,6 @@ class PathwayTemplateDomain implements PathwayTemplateDomainInterface {
   ): Promise<PathwayTemplateEntityDomain> {
     const pathwayTemplateInputParams = {
       ...pathwayTemplateCreateParams,
-      createDate: new Date().toISOString(),
-      completed: false,
     }
     return this.pathwayTemplateRepository.create(pathwayTemplateInputParams)
   }

@@ -1,0 +1,15 @@
+meta {
+  name: Delete Soignant
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{BASE_URL}}/soignant/:soignantID
+  body: none
+  auth: none
+}
+
+params:path {
+  soignantID: 1
+}

@@ -1,0 +1,18 @@
+meta {
+  name: Add Pathway
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{BASE_URL}}/pathway
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "title": "Todo 3",
+    "description": "Test de description"
+  }
+}

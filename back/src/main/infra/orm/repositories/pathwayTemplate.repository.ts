@@ -1,5 +1,8 @@
 import type { IocContainer } from '../../../types/application/ioc'
-import type { PathwayTemplateRepositoryInterface } from '../../../types/infra/orm/repositories/pathwayTemplate.repository.interface'
+import type {
+  PathwayTemplateRepositoryInterface,
+  PathwayTemplateWithSlotTemplatesRepo,
+} from '../../../types/infra/orm/repositories/pathwayTemplate.repository.interface'
 import type {
   PathwayTemplateCreateEntityRepo,
   PathwayTemplateEntityRepo,
@@ -18,15 +21,30 @@ class PathwayTemplateRepository implements PathwayTemplateRepositoryInterface {
   }
 
   findAll(): Promise<PathwayTemplateEntityRepo[]> {
-    return this.prisma.pathwayTemplate.findMany()
+    return this.prisma.pathwayTemplate.findMany({
+      include: {
+        slotTemplates: {
+          include: {
+            soignant: true,
+          },
+        },
+      },
+    })
   }
 
   async findByID(
     pathwayTemplateID: string,
-  ): Promise<PathwayTemplateEntityRepo> {
+  ): Promise<PathwayTemplateWithSlotTemplatesRepo> {
     try {
       return await this.prisma.pathwayTemplate.findUniqueOrThrow({
         where: { id: pathwayTemplateID },
+        include: {
+          slotTemplates: {
+            include: {
+              soignant: true,
+            },
+          },
+        },
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
@@ -39,9 +57,24 @@ class PathwayTemplateRepository implements PathwayTemplateRepositoryInterface {
   async create(
     pathwayTemplateCreateParams: PathwayTemplateCreateEntityRepo,
   ): Promise<PathwayTemplateEntityRepo> {
+    const { slotTemplateIDs, ...pathwayTemplateData } =
+      pathwayTemplateCreateParams
+
     try {
       return await this.prisma.pathwayTemplate.create({
-        data: pathwayTemplateCreateParams,
+        data: {
+          ...pathwayTemplateData,
+          slotTemplates: {
+            connect: slotTemplateIDs.map((id) => ({ id })),
+          },
+        },
+        include: {
+          slotTemplates: {
+            include: {
+              soignant: true,
+            },
+          },
+        },
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
@@ -59,6 +92,13 @@ class PathwayTemplateRepository implements PathwayTemplateRepositoryInterface {
       return await this.prisma.pathwayTemplate.update({
         where: { id: pathwayTemplateID },
         data: pathwayTemplateUpdateParams,
+        include: {
+          slotTemplates: {
+            include: {
+              soignant: true,
+            },
+          },
+        },
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
@@ -72,6 +112,13 @@ class PathwayTemplateRepository implements PathwayTemplateRepositoryInterface {
     try {
       return await this.prisma.pathwayTemplate.delete({
         where: { id: pathwayTemplateID },
+        include: {
+          slotTemplates: {
+            include: {
+              soignant: true,
+            },
+          },
+        },
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({

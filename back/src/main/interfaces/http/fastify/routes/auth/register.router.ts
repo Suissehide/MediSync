@@ -3,13 +3,14 @@ import {
   type CreateUserInput,
   registerResponseSchema,
   registerSchema,
-} from '../../schemas/auth/auth.schema'
+} from '../../schemas/auth.schema'
 import HttpStatusCodes from 'http-status-codes'
-import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
+import type { FastifyPluginAsync } from 'fastify'
 
-const registerRouter: FastifyPluginAsyncZod = (fastify) => {
+const registerRouter: FastifyPluginAsync = (fastify) => {
   const { iocContainer } = fastify
   const { authDomain, logger } = iocContainer
+
   fastify.post<{ Body: CreateUserInput }>(
     '/',
     {

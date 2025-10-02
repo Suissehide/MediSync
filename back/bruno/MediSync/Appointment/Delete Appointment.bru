@@ -1,0 +1,15 @@
+meta {
+  name: Delete Appointment
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{BASE_URL}}/appointment/:appointmentID
+  body: none
+  auth: none
+}
+
+params:path {
+  appointmentID: 
+}

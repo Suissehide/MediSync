@@ -1,0 +1,15 @@
+meta {
+  name: Delete Pathway
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{BASE_URL}}/pathway/:pathwayID
+  body: none
+  auth: none
+}
+
+params:path {
+  pathwayID: 
+}
