@@ -11,13 +11,10 @@ import { useShallow } from 'zustand/react/shallow'
 import { ScrollArea } from '@radix-ui/themes'
 import TodoItem from './todoItem.tsx'
 import dayjs from 'dayjs'
-import localizedFormat from 'dayjs/plugin/localizedFormat'
 import { useEffect, useState } from 'react'
-import { useTodoQueries } from '../../../hooks/queries/useTodo.ts'
+import { useTodoQueries } from '../../../queries/useTodo.ts'
 import { FilterButton } from './todoFilterButton.tsx'
 import TodoAddSheet from './todoAddSheet.tsx'
-
-dayjs.extend(localizedFormat)
 
 export default function TodoSheet() {
   const [isParentOpen, setIsParentOpen] = useState(false)

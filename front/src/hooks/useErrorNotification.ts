@@ -12,8 +12,9 @@ export const useErrorNotification = (
 
   useEffect(() => {
     if (isError && error) {
-      const message = error.message || fallbackMessage
-      const title = isApiError(error) ? error.title : 'Erreur inconnue'
+      const errorTitle = isApiError(error) ? error.title : 'Erreur inconnue'
+      const message = error.message
+      const title = fallbackMessage || errorTitle
       toast({
         title,
         message,

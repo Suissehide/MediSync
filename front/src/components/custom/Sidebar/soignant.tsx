@@ -1,46 +1,61 @@
-import { Plus, Stethoscope } from 'lucide-react'
-import { useEffect } from 'react'
+import { Stethoscope } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useSoignantStore } from '../../../store/useSoignantStore.ts'
+import AddSoignantForm from '../Popup/addSoignantForm.tsx'
+import DeleteSoignantForm from '../Popup/deleteSoignantForm.tsx'
+import { useSoignantQueries } from '../../../queries/useSoignant.ts'
 
 function SidebarSoignant() {
-  const selectedSoignantId = useSoignantStore(
-    (state) => state.selectedSoignantId,
-  )
+  useSoignantQueries()
   const soignants = useSoignantStore((state) => state.soignants)
   const selectSoignant = useSoignantStore((state) => state.selectSoignant)
+  const selectedSoignantID = useSoignantStore(
+    (state) => state.selectedSoignantID,
+  )
+
+  const [isHovered, setIsHovered] = useState('')
 
   const handleSelectSoignant = (soignantID: string) => {
     selectSoignant(soignantID)
   }
 
   useEffect(() => {
-    if (!selectedSoignantId && soignants.length > 0) {
+    if (!selectedSoignantID && soignants.length > 0) {
       selectSoignant(soignants[0].id)
     }
-  }, [selectedSoignantId, soignants, selectSoignant])
+  }, [selectedSoignantID, soignants, selectSoignant])
 
   return (
     <>
-      <div className="flex justify-between items-center text-text-light px-2 mb-2">
+      <div className="flex justify-between items-center text-text-light pl-2 mb-2">
         <p>Soignants</p>
-        <button type="button" className="cursor-pointer">
-          <Plus className="w-4 h-4" />
-        </button>
+        <AddSoignantForm />
       </div>
-      <ol className="">
+      <ul>
         {soignants.map((soignant) => (
-          <li key={soignant.id}>
+          <li
+            key={soignant.id}
+            onMouseEnter={() => setIsHovered(soignant.id)}
+            onMouseLeave={() => setIsHovered('')}
+            className={`w-full flex justify-between items-center gap-2 rounded-lg ${selectedSoignantID === soignant.id ? 'bg-primary/10' : ''} hover:bg-primary/15`}
+          >
             <button
-              className={`cursor-pointer w-full py-2 pl-2 flex items-center gap-2 rounded-lg ${selectedSoignantId === soignant.id ? 'bg-primary/10' : ''} hover:bg-primary/15`}
               type="button"
               onClick={() => handleSelectSoignant(soignant.id)}
+              className={'cursor-pointer w-full py-2 pl-2'}
             >
-              <Stethoscope className="w-5 h-5" />
-              {soignant.name}
+              <span className="flex items-center gap-2">
+                <Stethoscope className="w-5 h-5" />
+                {soignant.name}
+              </span>
             </button>
+
+            {isHovered === soignant.id && (
+              <DeleteSoignantForm soignant={soignant} />
+            )}
           </li>
         ))}
-      </ol>
+      </ul>
     </>
   )
 }

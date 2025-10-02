@@ -1,5 +1,8 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import DashboardLayout from '../components/dashboard.layout.tsx'
+import ReactTable from '../components/table/reactTable.tsx'
+import { getPatientColumns } from '../columns/patient.column.ts'
+import { usePatientQueries } from '../queries/usePatient.ts'
 
 export const Route = createFileRoute('/patient')({
   beforeLoad: ({ context, location }) => {
@@ -19,9 +22,19 @@ export const Route = createFileRoute('/patient')({
 })
 
 function Patient() {
+  const { patients } = usePatientQueries()
+  const columns = getPatientColumns()
+
   return (
     <DashboardLayout>
-      <div>Hello "/patient"!</div>
+      <div>
+        <ReactTable
+          data={patients ?? []}
+          columns={columns}
+          filterId="patient"
+          title={'Liste des patients'}
+        />
+      </div>
     </DashboardLayout>
   )
 }

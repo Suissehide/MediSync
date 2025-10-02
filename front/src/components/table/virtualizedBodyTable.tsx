@@ -1,0 +1,110 @@
+import {
+  flexRender,
+  type Table,
+  type Column,
+  type Row,
+} from '@tanstack/react-table'
+import { useVirtualizer } from '@tanstack/react-virtual'
+import type React from 'react'
+import { useEffect, type RefObject } from 'react'
+import type { CustomMeta } from './reactTable.tsx'
+
+type VirtualizedBodyTableProps<TData, TValue> = {
+  table: Table<TData>
+  getCommonPinningStyles: (column: Column<TData, TValue>) => React.CSSProperties
+  rowHeight: number
+  parentRef: RefObject<HTMLElement | null>
+}
+
+export function VirtualizedBodyTable<TData, TValue>({
+  table,
+  getCommonPinningStyles,
+  rowHeight,
+  parentRef,
+}: VirtualizedBodyTableProps<TData, TValue>) {
+  const rows = table.getRowModel().rows
+  const rowCount = rows.length
+
+  const rowVirtualizer = useVirtualizer({
+    count: rowCount,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => rowHeight,
+    overscan: 3,
+  })
+
+  const virtualRows = rowVirtualizer.getVirtualItems()
+  const paddingTop = virtualRows.length > 0 ? virtualRows[0].start : 0
+  const paddingBottom =
+    virtualRows.length > 0
+      ? rowVirtualizer.getTotalSize() - virtualRows[virtualRows.length - 1].end
+      : 0
+
+  useEffect(() => {
+    rowVirtualizer.scrollToIndex(0)
+    rowVirtualizer.measure()
+  }, [rowVirtualizer])
+
+  if (rowCount === 0) {
+    return (
+      <tbody>
+        <tr className="h-[30em] bg-secondary text-center border border-border">
+          <td colSpan={table.getAllLeafColumns().length}>Pas de données</td>
+        </tr>
+      </tbody>
+    )
+  }
+
+  return (
+    <tbody>
+      {paddingTop > 0 && (
+        <tr style={{ height: paddingTop }}>
+          <td colSpan={table.getAllLeafColumns().length} />
+        </tr>
+      )}
+
+      {virtualRows.map((virtualRow) => {
+        const row: Row<TData> = rows[virtualRow.index]
+
+        return (
+          <tr
+            data-index={virtualRow.index} // needed for dynamic row height measurement
+            ref={(node) => {
+              if (node) {
+                rowVirtualizer.measureElement(node)
+              }
+            }} // measure dynamic row height
+            key={row.id}
+            style={{ height: rowHeight }}
+          >
+            {row.getVisibleCells().map((cell) => {
+              const { column } = cell
+              const meta = column.columnDef.meta as CustomMeta<TData, TValue>
+              const grow = meta?.grow
+
+              return (
+                <td
+                  key={cell.id}
+                  className="px-4 py-2 border border-border"
+                  style={{
+                    ...getCommonPinningStyles(column),
+                    width: grow ? 'auto' : column.getSize(),
+                    minWidth: column.getSize(),
+                    height: rowHeight,
+                  }}
+                >
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </td>
+              )
+            })}
+          </tr>
+        )
+      })}
+
+      {paddingBottom > 0 && (
+        <tr style={{ height: paddingBottom }}>
+          <td colSpan={table.getAllLeafColumns().length} />
+        </tr>
+      )}
+    </tbody>
+  )
+}

@@ -1,12 +1,21 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import DashboardLayout from '../components/dashboard.layout.tsx'
-import FullCalendar from '@fullcalendar/react'
-import dayGridPlugin from '@fullcalendar/daygrid'
-import timeGridPlugin from '@fullcalendar/timegrid'
-import listPlugin from '@fullcalendar/list'
-import frLocale from '@fullcalendar/core/locales/fr'
 import { useSoignantStore } from '../store/useSoignantStore.ts'
 import { CalendarRange } from 'lucide-react'
+import Calendar, {
+  type CalendarEvent,
+} from '../components/custom/Calendar/calendar.tsx'
+import { useAllSlotsQuery } from '../queries/useSlot.ts'
+import { useEffect, useState } from 'react'
+import {
+  buildCalendarEventsFromAppointments,
+  buildCalendarEventsFromSlots,
+} from '../libs/utils.ts'
+import AddAppointmentForm from '../components/custom/Popup/addAppointmentForm.tsx'
+import type { CreateAppointmentParams } from '../types/appointment.ts'
+import type { DateSelectArg } from '@fullcalendar/core'
+import { useAppointmentMutations } from '../queries/useAppointment.ts'
+import dayjs from 'dayjs'
 
 export const Route = createFileRoute('/dashboard')({
   beforeLoad: ({ context, location }) => {
@@ -26,89 +35,112 @@ export const Route = createFileRoute('/dashboard')({
 })
 
 function Dashboard() {
-  const selectedId = useSoignantStore((state) => state.selectedSoignantId)
+  const selectedID = useSoignantStore((state) => state.selectedSoignantID)
   const soignant = useSoignantStore((state) =>
-    state.soignants.find((s) => s.id === selectedId),
+    state.soignants.find((s) => s.id === selectedID),
   )
 
+  const { slots } = useAllSlotsQuery()
+  const { createAppointment } = useAppointmentMutations()
+  const [events, setEvents] = useState<CalendarEvent[]>([])
+  const [selectedDate, setSelectedDate] = useState({ startStr: '', endStr: '' })
+  const [openCreateAppointmentModal, setOpenCreateAppointmentModal] =
+    useState(false)
+  const [selectedEvent, setSelectedEvent] = useState('')
+  const [maxDate, setMaxDate] = useState('')
+  const [type, setType] = useState('')
+
+  useEffect(() => {
+    if (slots) {
+      const filtered = selectedID
+        ? slots.filter((slot) => slot.slotTemplate?.soignant?.id === selectedID)
+        : slots
+
+      const slotEvents = buildCalendarEventsFromSlots(filtered, ['fillable'])
+      const allAppointments = filtered.flatMap(
+        (slot) => slot.appointments ?? [],
+      )
+      const appointmentEvents =
+        buildCalendarEventsFromAppointments(allAppointments)
+
+      setEvents([...slotEvents, ...appointmentEvents])
+    }
+  }, [slots, selectedID])
+
+  const handleSelectAppointment = (dateSelectArg: DateSelectArg) => {
+    setSelectedDate({
+      startStr: dateSelectArg.startStr,
+      endStr: dateSelectArg.endStr,
+    })
+    setType('individual')
+  }
+
+  const handleAddAppointment = (eventID: string) => {
+    setType('multiple')
+    setSelectedEvent(eventID)
+    const event = getEventById(eventID)
+    setMaxDate(event?.end ?? '')
+    selectedDate.startStr = event?.start ?? ''
+    selectedDate.endStr = event?.end ?? ''
+    setOpenCreateAppointmentModal(true)
+  }
+
+  const handleCreateAppointment = (newAppointment: CreateAppointmentParams) => {
+    createAppointment.mutate(newAppointment)
+    setOpenCreateAppointmentModal(false)
+  }
+
+  const getEventById = (id: string) => {
+    return events.find((event) => event.id === id)
+  }
+
   return (
-    <DashboardLayout>
+    <DashboardLayout component={'soignant'}>
       <div className="flex flex-col h-full">
-        <h2 className="flex gap-2 items-center px-4 m-0! text-text">
+        <h2 className="flex gap-2 items-center px-4 mt-0 mb-1 text-text">
           <CalendarRange />
           {soignant ? soignant.name : ''}
         </h2>
 
         <div className="flex-1 min-h-0 overflow-hidden">
-          <FullCalendar
-            plugins={[dayGridPlugin, timeGridPlugin, listPlugin]}
-            initialView="timeGridWeek"
-            locale={frLocale}
-            weekends={false}
-            allDaySlot={false}
-            headerToolbar={{
-              left: 'title',
-              center: 'dayGridMonth,timeGridWeek,listWeek',
-              right: 'prev,next today',
+          <Calendar
+            events={events}
+            editable={false}
+            handleSelectEvent={handleSelectAppointment}
+            handleClickEvent={handleAddAppointment}
+            selectAllow={(selectInfo) => {
+              const { start, end } = selectInfo
+
+              return events
+                .filter((e) => e.extendedProps?.type === 'slot')
+                .some((slot) => {
+                  const slotStart = dayjs(slot.start)
+                  const slotEnd = dayjs(slot.end)
+                  const selectionStart = dayjs(start)
+                  const selectionEnd = dayjs(end)
+
+                  return (
+                    selectionStart.isSameOrAfter(slotStart) &&
+                    selectionEnd.isSameOrBefore(slotEnd)
+                  )
+                })
             }}
-            titleFormat={{
-              day: '2-digit',
-              month: 'long',
-            }}
-            dayHeaderFormat={{
-              weekday: 'short',
-              day: 'numeric',
-            }}
-            slotLabelFormat={(arg) => {
-              const hour = arg.date.hour.toString()
-              const minute = arg.date.minute.toString().padStart(2, '0')
-              return minute === '00' ? `${hour}h` : `${hour}:${minute}`
-            }}
-            height="100%"
-            slotMinTime="06:00:00"
-            slotDuration="01:00:00"
-            slotLabelInterval="01:00"
-            // eventContent={(arg) => {
-            //   const { soignant, location } = arg.event.extendedProps
-            //
-            //   return {
-            //     html: `
-            //         <div>${arg.event.title}</div>
-            //         <small>
-            //           ${soignant ? `${soignant} |` : ''}
-            //           ${location ? `${location}` : ''}
-            //         </small>
-            //     `,
-            //   }
-            // }}
-            events={[
-              {
-                id: '1',
-                title: 'Événement 1',
-                start: '2025-04-29T10:00:00',
-                end: '2025-04-29T11:00:00',
-                textColor: '#334155',
-                backgroundColor: '#FFADAD',
-                borderColor: '#FFADAD',
-                editable: true,
-                extendedProps: {
-                  location: 'A-102',
-                  soignant: 'Jean Dupont',
-                },
-              },
-              {
-                id: '2',
-                title: 'Événement 2',
-                start: '2025-04-29T14:30:00',
-                end: '2025-04-29T17:00:00',
-                textColor: '#334155',
-                backgroundColor: '#DEDAF4',
-                borderColor: '#DEDAF4',
-              },
-            ]}
           />
         </div>
       </div>
+
+      {openCreateAppointmentModal && (
+        <AddAppointmentForm
+          open={openCreateAppointmentModal}
+          setOpen={setOpenCreateAppointmentModal}
+          startDate={selectedDate.startStr}
+          endDate={selectedDate.endStr}
+          maxDate={maxDate}
+          slotID={selectedEvent}
+          type={type}
+          handleCreateAppointment={handleCreateAppointment}
+        />
+      )}
     </DashboardLayout>
   )
 }

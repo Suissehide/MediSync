@@ -4,3 +4,9 @@ export type Soignant = {
   color?: string
   active: boolean
 }
+
+export type CreateSoignantParams = Pick<Soignant, 'name' | 'color'>
+export type UpdateSoignantParams = Pick<
+  Soignant,
+  'id' | 'name' | 'color' | 'active'
+>

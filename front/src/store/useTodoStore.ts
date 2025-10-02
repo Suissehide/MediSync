@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { Todo } from '../types/todo.ts'
+import { devtools } from 'zustand/middleware'
 
 interface TodoState {
   todos: Todo[]
@@ -12,21 +13,32 @@ interface TodoActions {
   markTodosAsSeen: () => void
 }
 
-export const useTodoStore = create<TodoState & TodoActions>((set) => ({
-  todos: [],
-  hasNewTodos: false,
+export const useTodoStore = create<TodoState & TodoActions>()(
+  devtools((set) => ({
+    todos: [],
+    hasNewTodos: false,
 
-  setTodos: (todos: Todo[]) =>
-    set(() => ({
-      todos: todos,
-      hasNewTodos: true,
-    })),
+    setTodos: (todos: Todo[]) =>
+      set(
+        () => ({
+          todos: todos,
+          hasNewTodos: true,
+        }),
+        false,
+        'setTodos',
+      ),
 
-  addTodo: (todo: Todo) =>
-    set((state) => ({
-      todos: [...state.todos, todo],
-      hasNewTodos: true,
-    })),
+    addTodo: (todo: Todo) =>
+      set(
+        (state) => ({
+          todos: [...state.todos, todo],
+          hasNewTodos: true,
+        }),
+        false,
+        'addTodo',
+      ),
 
-  markTodosAsSeen: () => set({ hasNewTodos: false }),
-}))
+    markTodosAsSeen: () =>
+      set({ hasNewTodos: false }, false, 'markTodosAsSeen'),
+  })),
+)

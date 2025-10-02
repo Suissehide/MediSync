@@ -1,14 +1,16 @@
 import { CircleHelp, Power, Settings } from 'lucide-react'
-import { useLogout } from '../../../hooks/queries/useAuth.ts'
+import { useLogout } from '../../../queries/useAuth.ts'
 import { Button } from '../../ui/button.tsx'
 import { useRouter } from '@tanstack/react-router'
 import SidebarSoignant from './soignant.tsx'
+import SidebarPathway from './pathway.tsx'
 
 interface SidebarProps {
+  component?: string
   isVisible: boolean
 }
 
-function Sidebar({ isVisible }: SidebarProps) {
+function Sidebar({ component, isVisible }: SidebarProps) {
   const router = useRouter()
   const { logoutMutation } = useLogout()
   const { authState } = router.options.context
@@ -37,7 +39,8 @@ function Sidebar({ isVisible }: SidebarProps) {
             </h1>
           </div>
           <div>
-            <SidebarSoignant />
+            {component === 'soignant' ? <SidebarSoignant /> : null}
+            {component === 'pathway' ? <SidebarPathway /> : null}
           </div>
         </div>
 

@@ -5,7 +5,7 @@ import { fetchWithAuth } from './fetchWithAuth.ts'
 
 export const TodoApi = {
   getAll: async (): Promise<Todo[]> => {
-    const response = await fetchWithAuth(`${apiUrl}/todo`, {
+    const response = await fetchWithAuth(`${apiUrl}/todo?action=getAllTodos`, {
       method: 'GET',
     })
     if (!response.ok) {
@@ -20,7 +20,7 @@ export const TodoApi = {
   },
 
   create: async (createTodoParams: CreateTodoParams): Promise<Todo> => {
-    const response = await fetchWithAuth(`${apiUrl}/todo`, {
+    const response = await fetchWithAuth(`${apiUrl}/todo?action=createTodo`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(createTodoParams),
@@ -33,11 +33,14 @@ export const TodoApi = {
 
   update: async (updateTodoParams: UpdateTodoParams): Promise<Todo> => {
     const { id: todoID, ...updateTodoInputs } = updateTodoParams
-    const response = await fetchWithAuth(`${apiUrl}/todo/${todoID}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updateTodoInputs),
-    })
+    const response = await fetchWithAuth(
+      `${apiUrl}/todo/${todoID}?action=updateTodo`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateTodoInputs),
+      },
+    )
     if (!response.ok) {
       handleHttpError(response, {}, 'Impossible de modifier la tâche')
     }
@@ -45,9 +48,12 @@ export const TodoApi = {
   },
 
   delete: async (todoID: string): Promise<Todo> => {
-    const response = await fetchWithAuth(`${apiUrl}/todo/${todoID}`, {
-      method: 'DELETE',
-    })
+    const response = await fetchWithAuth(
+      `${apiUrl}/todo/${todoID}?action=deleteTodo`,
+      {
+        method: 'DELETE',
+      },
+    )
     if (!response.ok) {
       handleHttpError(response, {}, 'Impossible de supprimer la tâche')
     }

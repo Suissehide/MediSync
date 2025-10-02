@@ -4,7 +4,7 @@ import { create } from 'zustand'
 
 interface SoignantState {
   soignants: Soignant[]
-  selectedSoignantId: string | null
+  selectedSoignantID: string | null
 }
 
 interface SoignantActions {
@@ -17,7 +17,7 @@ interface SoignantActions {
   unselectSoignant: () => void
 }
 
-type PersistedSoignantState = Pick<SoignantState, 'selectedSoignantId'>
+type PersistedSoignantState = Pick<SoignantState, 'selectedSoignantID'>
 
 const soignants: Soignant[] = [
   { id: '1', name: 'Educ IDE', active: true },
@@ -30,8 +30,8 @@ const soignants: Soignant[] = [
 export const useSoignantStore = create<SoignantState & SoignantActions>()(
   persist(
     (set) => ({
-      soignants: [...soignants],
-      selectedSoignantId: null,
+      soignants: [],
+      selectedSoignantID: null,
 
       setSoignants: (liste) => set({ soignants: liste }),
       addSoignant: (soignant) =>
@@ -41,18 +41,18 @@ export const useSoignantStore = create<SoignantState & SoignantActions>()(
       removeSoignant: (id) =>
         set((state) => ({
           soignants: state.soignants.filter((s) => s.id !== id),
-          selectedSoignantId:
-            state.selectedSoignantId === id ? null : state.selectedSoignantId,
+          selectedSoignantID:
+            state.selectedSoignantID === id ? null : state.selectedSoignantID,
         })),
-      clearSoignants: () => set({ soignants: [], selectedSoignantId: null }),
+      clearSoignants: () => set({ soignants: [], selectedSoignantID: null }),
 
-      selectSoignant: (id) => set({ selectedSoignantId: id }),
-      unselectSoignant: () => set({ selectedSoignantId: null }),
+      selectSoignant: (id) => set({ selectedSoignantID: id }),
+      unselectSoignant: () => set({ selectedSoignantID: null }),
     }),
     {
       name: 'soignant-store',
       partialize: (state): PersistedSoignantState => ({
-        selectedSoignantId: state.selectedSoignantId,
+        selectedSoignantID: state.selectedSoignantID,
       }),
     },
   ),

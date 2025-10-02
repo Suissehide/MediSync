@@ -16,11 +16,22 @@ import dayjs from 'dayjs'
 import 'dayjs/locale/fr'
 import isoWeek from 'dayjs/plugin/isoWeek'
 import advancedFormat from 'dayjs/plugin/advancedFormat'
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore'
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter'
+import utc from 'dayjs/plugin/utc'
 import { Loader2Icon } from 'lucide-react'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+import { LocalizationProvider } from '@mui/x-date-pickers'
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
+import { GlobalStyles, StyledEngineProvider } from '@mui/material'
+import localizedFormat from 'dayjs/plugin/localizedFormat'
 
 dayjs.extend(isoWeek)
 dayjs.extend(advancedFormat)
+dayjs.extend(isSameOrBefore)
+dayjs.extend(isSameOrAfter)
+dayjs.extend(utc)
+dayjs.extend(localizedFormat)
 dayjs.locale('fr')
 
 const queryClient = new QueryClient({
@@ -54,12 +65,17 @@ if (rootElement && !rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement)
   root.render(
     <StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <RootLayout>
-          <AppRoutes />
-          <ReactQueryDevtools initialIsOpen={false} position={'right'} />
-        </RootLayout>
-      </QueryClientProvider>
+      <StyledEngineProvider enableCssLayer>
+        <QueryClientProvider client={queryClient}>
+          <RootLayout>
+            <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="fr">
+              <AppRoutes />
+              <GlobalStyles styles="@layer theme, base, mui, components, utilities;" />
+              <ReactQueryDevtools initialIsOpen={false} position={'right'} />
+            </LocalizationProvider>
+          </RootLayout>
+        </QueryClientProvider>
+      </StyledEngineProvider>
     </StrictMode>,
   )
 }

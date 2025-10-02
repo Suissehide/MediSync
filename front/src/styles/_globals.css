@@ -1,5 +1,9 @@
-@import "tailwindcss";
 @import "@radix-ui/themes/styles.css";
+@import "@radix-ui/themes/tokens.css";
+@import "@radix-ui/themes/components.css";
+@import "@radix-ui/themes/utilities.css";
+
+@import "tailwindcss";
 @import "./_colors.css";
 @import "./_variables.css";
 @import "./fullcalendar.css";
@@ -94,4 +98,49 @@ h4 {
 
 .subtle-bounce {
   animation: subtleBounce 5s ease-in-out infinite;
+}
+
+.select-content {
+  width: var(--radix-select-trigger-width);
+}
+
+.w-color-compact {
+  --compact-background-color: var(--color-card) !important;
+}
+
+.MuiPopper-root {
+  pointer-events: auto;
+}
+
+.MuiPickersSectionList-root {
+  width: auto !important;
+  min-width: 0 !important;
+}
+
+.MuiButtonBase-root {
+  font-size: 14px;
+  text-transform: capitalize;
+}
+
+.fc-event.event--readonly {
+  opacity: 0.3;
+}
+
+.fc-event.event--template {
+  opacity: 1;
+  border-style: dashed;
+  box-shadow: inset 0 0 0 2px white;
+}
+
+.fc .fc-list-event-title {
+  vertical-align: middle;
+}
+
+.edit-mode .fc-view-harness::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 2px var(--color-destructive);
 }

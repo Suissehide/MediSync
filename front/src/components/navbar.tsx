@@ -24,10 +24,14 @@ const SettingsMenu = () => (
     <DropdownMenuCustomContent sideOffset={12} align={'end'}>
       <DropdownMenu.Sub>
         <DropdownMenuCustomItem>
-          <Link to="/planning">Planning</Link>
+          <Link to="/settings/planning" className="w-full">
+            Planning
+          </Link>
         </DropdownMenuCustomItem>
         <DropdownMenuCustomItem>
-          <Link to="/soignant">Soignants</Link>
+          <Link to="/settings/soignant" className="w-full">
+            Soignants
+          </Link>
         </DropdownMenuCustomItem>
       </DropdownMenu.Sub>
     </DropdownMenuCustomContent>

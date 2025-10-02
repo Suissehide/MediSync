@@ -12,7 +12,7 @@ import { Input } from '../../ui/input.tsx'
 import { Label } from '../../ui/label.tsx'
 import { FieldInfo } from '../../ui/fieldInfo.tsx'
 import { FormField } from '../../ui/formField.tsx'
-import { useTodoMutations } from '../../../hooks/queries/useTodo.ts'
+import { useTodoMutations } from '../../../queries/useTodo.ts'
 
 export default function TodoAddSheet({
   open,

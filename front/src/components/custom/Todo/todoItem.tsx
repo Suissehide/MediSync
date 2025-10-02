@@ -1,7 +1,7 @@
 import type { Todo } from '../../../types/todo.ts'
 import dayjs from 'dayjs'
 import { Calendar, Check, UserRound, Trash2 } from 'lucide-react'
-import { useTodoMutations } from '../../../hooks/queries/useTodo.ts'
+import { useTodoMutations } from '../../../queries/useTodo.ts'
 
 interface checkboxProps {
   checked: boolean

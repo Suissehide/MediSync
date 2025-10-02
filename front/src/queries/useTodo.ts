@@ -1,15 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AUTH_MESSAGES } from '../../constants/message.constant'
-import { TODO } from '../../constants/process.constant.ts'
-import { useDataFetching } from '../useDataFetching.ts'
-import { TodoApi } from '../../api/todo.ts'
-import type {
-  CreateTodoParams,
-  Todo,
-  UpdateTodoParams,
-} from '../../types/todo.ts'
+import { AUTH_MESSAGES } from '../constants/message.constant.ts'
+import { TODO } from '../constants/process.constant.ts'
+import { useDataFetching } from '../hooks/useDataFetching.ts'
+import { TodoApi } from '../api/todo.ts'
+import type { CreateTodoParams, Todo, UpdateTodoParams } from '../types/todo.ts'
 import { useEffect } from 'react'
-import { useTodoStore } from '../../store/useTodoStore.ts'
+import { useTodoStore } from '../store/useTodoStore.ts'
 
 // * QUERIES
 
@@ -80,12 +76,12 @@ export const useTodoMutations = () => {
   const deleteTodo = useMutation({
     mutationKey: [TODO.DELETE],
     mutationFn: TodoApi.delete,
-    onMutate: async (todoId) => {
+    onMutate: async (todoID) => {
       await queryClient.cancelQueries({ queryKey: [TODO.GET_ALL] })
 
       const previousTodos = queryClient.getQueryData([TODO.GET_ALL])
       queryClient.setQueryData([TODO.GET_ALL], (oldTodos: Todo[]) =>
-        oldTodos?.filter((todo: Todo) => todo.id !== todoId),
+        oldTodos?.filter((todo: Todo) => todo.id !== todoID),
       )
 
       return { previousTodos }
