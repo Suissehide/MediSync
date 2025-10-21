@@ -70,7 +70,7 @@ export const PathwayTemplateApi = {
     return response.json()
   },
 
-  delete: async (pathwayTemplateID: string): Promise<PathwayTemplate> => {
+  delete: async (pathwayTemplateID: string): Promise<void> => {
     const response = await fetchWithAuth(
       `${apiUrl}/pathway-template/${pathwayTemplateID}?action=deletePathwayTemplate`,
       {
@@ -84,6 +84,6 @@ export const PathwayTemplateApi = {
         'Impossible de supprimer le template de parcours',
       )
     }
-    return response.json()
+    return
   },
 }

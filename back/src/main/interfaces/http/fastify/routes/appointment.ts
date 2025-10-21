@@ -53,6 +53,7 @@ const appointmentRouter: FastifyPluginAsync = (fastify) => {
     async (request) => {
       const { appointmentID } = request.params
       const appointment = await appointmentDomain.findByID(appointmentID)
+      console.log(appointment)
       if (!appointment) {
         throw Boom.notFound('Appointment not found')
       }
@@ -73,6 +74,7 @@ const appointmentRouter: FastifyPluginAsync = (fastify) => {
     },
     async (request, reply) => {
       const appointment = await appointmentDomain.create(request.body)
+      console.log('appointment', appointment)
       reply.code(201)
       return appointment
     },

@@ -34,7 +34,11 @@ class SlotRepository implements SlotRepositoryInterface {
           },
         },
         pathway: true,
-        appointments: true,
+        appointments: {
+          include: {
+            patients: true,
+          },
+        },
       },
     })
   }
@@ -50,7 +54,11 @@ class SlotRepository implements SlotRepositoryInterface {
             },
           },
           pathway: true,
-          appointments: true,
+          appointments: {
+            include: {
+              patients: true,
+            },
+          },
         },
       })
     } catch (err) {
@@ -72,7 +80,11 @@ class SlotRepository implements SlotRepositoryInterface {
             },
           },
           pathway: true,
-          appointments: true,
+          appointments: {
+            include: {
+              patients: true,
+            },
+          },
         },
       })
     } catch (err) {
@@ -109,7 +121,11 @@ class SlotRepository implements SlotRepositoryInterface {
               },
             },
             pathway: true,
-            appointments: true,
+            appointments: {
+              include: {
+                patients: true,
+              },
+            },
           },
         })
       })

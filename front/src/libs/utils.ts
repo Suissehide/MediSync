@@ -5,6 +5,7 @@ import type { Slot } from '../types/slot.ts'
 import dayjs from 'dayjs'
 import type { SlotTemplate } from '../types/slotTemplate.ts'
 import type { Appointment } from '../types/appointment.ts'
+import { APPOINTMENT_THEMATIC_OPTIONS } from '../constants/appointment.constant.ts'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -50,9 +51,12 @@ export const buildCalendarEventsFromSlots = (
       )
     }
 
-    const display = containsKeyword(slotStates, ['individual', 'editable'])
-      ? 'background'
-      : 'block'
+    const display =
+      containsKeyword(slotStates, ['individual', 'editable']) ||
+      (containsKeyword(slotStates, ['multiple']) &&
+        slot.appointments.length > 0)
+        ? 'background'
+        : 'block'
 
     return {
       id: slot.id,
@@ -68,6 +72,7 @@ export const buildCalendarEventsFromSlots = (
         type: 'slot',
         states: slotStates,
         templateID: slot.slotTemplate.id,
+        appointments: slot.appointments,
       },
     }
   })
@@ -80,14 +85,21 @@ export const buildCalendarEventsFromAppointments = (
     return []
   }
   return appointments.map((appointment) => {
+    const thematicOption = APPOINTMENT_THEMATIC_OPTIONS.find(
+      (option) => option.value === appointment.thematic,
+    )
+
     return {
       id: appointment.id,
-      title: '',
+      title: thematicOption ? thematicOption.label : '',
       start: appointment.startDate,
       end: appointment.endDate,
-      color: '#2563eb50',
+      color: '#7CA2F3',
+      display: 'block',
+      className: 'cursor-pointer transition duration-300 hover:bg-primary!',
       extendedProps: {
         type: 'appointment',
+        patients: appointment.patients,
       },
     }
   })

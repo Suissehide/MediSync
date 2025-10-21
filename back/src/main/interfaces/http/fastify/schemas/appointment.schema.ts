@@ -1,8 +1,14 @@
 import { z } from 'zod/v4'
 import { appointmentSchema } from './index'
+import { patientResponseSchema } from './patient.schema'
 
 export const appointmentResponseSchema = appointmentSchema.extend({
   id: z.cuid(),
+  patients: z.array(
+    patientResponseSchema.extend({
+      id: z.cuid(),
+    }),
+  ),
 })
 
 export const appointmentsResponseSchema = z.array(appointmentResponseSchema)
@@ -15,9 +21,16 @@ export const createAppointmentSchema = appointmentSchema
   .pick({
     startDate: true,
     endDate: true,
+    thematic: true,
+    type: true,
+    accompanying: true,
+    status: true,
+    rejectionReason: true,
+    transmissionNotes: true,
   })
   .extend({
     slotID: z.cuid(),
+    patientIDs: z.array(z.cuid()),
   })
 
 export const deleteAppointmentByIdParamsSchema = getAppointmentByIdParamsSchema
@@ -25,13 +38,11 @@ export const deleteAppointmentByIdParamsSchema = getAppointmentByIdParamsSchema
 export const updateAppointmentByIdSchema = {
   params: getAppointmentByIdParamsSchema,
   body: appointmentSchema
-    .omit({ slot: true })
+    .omit({ slot: true, patients: true })
     .partial()
     .extend({
       slotID: z.cuid().optional(),
-    })
-    .refine((data) => Object.keys(data).length > 0, {
-      message: 'At least one field must be updated',
+      patientIDs: z.array(z.cuid()),
     }),
 }
 

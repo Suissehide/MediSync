@@ -35,6 +35,10 @@ export function MultiSelect({
   const filteredOptions = options.filter((o) =>
     o.label.toLowerCase().includes(searchTerm.toLowerCase()),
   )
+  const selectedOptions = filteredOptions.filter((o) => value.includes(o.value))
+  const unselectedOptions = filteredOptions.filter(
+    (o) => !value.includes(o.value),
+  )
 
   return (
     <Popover.Root>
@@ -43,7 +47,7 @@ export function MultiSelect({
           type="button"
           className="inline-flex w-full h-[36px] items-center justify-between rounded-md border border-border bg-white px-3 py-2 text-sm text-text"
         >
-          <span>
+          <span className="truncate">
             {value.length > 0
               ? options
                   .filter((o) => value.includes(o.value))
@@ -72,7 +76,30 @@ export function MultiSelect({
 
           {/* Options */}
           <ul className="p-1">
-            {filteredOptions.map((option) => {
+            {selectedOptions.map((option) => {
+              const checked = true
+              return (
+                <li
+                  key={option.value}
+                  className="relative flex select-none items-center rounded text-sm hover:bg-gray-100"
+                >
+                  <button
+                    type="button"
+                    onClick={() => toggle(option.value)}
+                    className="cursor-pointer flex w-full items-center justify-between rounded px-2 py-1.5"
+                  >
+                    <span>{option.label}</span>
+                    {checked && <Check className="h-4 w-4 text-primary" />}
+                  </button>
+                </li>
+              )
+            })}
+
+            {selectedOptions.length > 0 && unselectedOptions.length > 0 && (
+              <hr className="my-1 border-t border-gray-200" />
+            )}
+
+            {unselectedOptions.map((option) => {
               const checked = value.includes(option.value)
               return (
                 <li

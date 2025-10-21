@@ -54,7 +54,6 @@ function AddAppointmentForm({
     })) ?? []
 
   const durationOptions = generateDurationOptions(startDate, maxDate)
-  console.log(durationOptions, startDate, maxDate)
 
   const form = useForm({
     defaultValues: {
@@ -146,6 +145,7 @@ function AddAppointmentForm({
                         value={field.state.value}
                         onValueChange={(value) => field.handleChange(value)}
                         disabled={type === 'multiple'}
+                        clearable={false}
                       />
                       <FieldInfo field={field} />
                     </div>

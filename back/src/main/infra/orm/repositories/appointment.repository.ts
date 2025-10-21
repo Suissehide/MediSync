@@ -18,13 +18,20 @@ class AppointmentRepository implements AppointmentRepositoryInterface {
   }
 
   findAll(): Promise<AppointmentEntityRepo[]> {
-    return this.prisma.appointment.findMany()
+    return this.prisma.appointment.findMany({
+      include: {
+        patients: true,
+      },
+    })
   }
 
   findByID(appointmentID: string): Promise<AppointmentEntityRepo> {
     try {
       return this.prisma.appointment.findUniqueOrThrow({
         where: { id: appointmentID },
+        include: {
+          patients: true,
+        },
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
@@ -37,9 +44,20 @@ class AppointmentRepository implements AppointmentRepositoryInterface {
   async create(
     appointmentCreateParams: AppointmentCreateEntityRepo,
   ): Promise<AppointmentEntityRepo> {
+    console.log('appointmentCreateParams', appointmentCreateParams)
     try {
+      const { patientIDs, ...rest } = appointmentCreateParams
+
       return await this.prisma.appointment.create({
-        data: appointmentCreateParams,
+        data: {
+          ...rest,
+          patients: {
+            connect: patientIDs?.map((id) => ({ id })) || [],
+          },
+        },
+        include: {
+          patients: true,
+        },
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
@@ -54,9 +72,22 @@ class AppointmentRepository implements AppointmentRepositoryInterface {
     appointmentUpdateParams: AppointmentUpdateEntityRepo,
   ): Promise<AppointmentEntityRepo> {
     try {
+      const { patientIDs, ...rest } = appointmentUpdateParams
+
       return await this.prisma.appointment.update({
         where: { id: appointmentID },
-        data: appointmentUpdateParams,
+        data: {
+          ...rest,
+          ...(patientIDs && {
+            patients: {
+              set: [],
+              connect: patientIDs.map((id) => ({ id })),
+            },
+          }),
+        },
+        include: {
+          patients: true,
+        },
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({

@@ -39,18 +39,15 @@ class AwilixIocContainer {
   }
 
   constructor(config: Config) {
-    const container = this.#registerLogger()
+    // Config
     this.#registerConfig(config)
+    // Logger
+    const container = this.#registerLogger()
     const logger = container.resolve('logger')
     logger.debug('Initializing IoC container…')
     logger.debug(`Loaded config:\n\t${recordToString(config)}`)
     // DB
     this.#registerPrismaOrm()
-    // Server
-    this.#registerHttpServer()
-    this.#registerHttpClient()
-    // Error
-    this.registerErrorHandler()
     // Auth
     this.#registerAuthDomain()
     // User
@@ -80,6 +77,12 @@ class AwilixIocContainer {
     // Todo
     this.#registerTodoDomain()
     this.#registerTodoRepository()
+
+    // Server
+    this.#registerHttpServer()
+    this.#registerHttpClient()
+    // Error
+    this.registerErrorHandler()
 
     logger.info('IoC container initialized.')
   }

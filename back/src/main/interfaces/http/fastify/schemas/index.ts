@@ -1,12 +1,23 @@
 import { z } from 'zod/v4'
 import { soignantSchema } from './soignant.schema'
+import { patientSchema } from './patient.schema'
 
 export const appointmentSchema = z.object({
   startDate: z.coerce.date(),
   endDate: z.coerce.date(),
+  thematic: z.string().optional().nullable(),
+  type: z.string().optional().nullable(),
+  accompanying: z.string().optional().nullable(),
+  status: z.string().optional().nullable(),
+  rejectionReason: z.string().optional().nullable(),
+  transmissionNotes: z.string().optional().nullable(),
 
   get slot() {
-    return z.object(slotSchema)
+    return z.object(slotSchema).optional().nullable()
+  },
+
+  get patients() {
+    return z.array(patientSchema).optional().nullable()
   },
 })
 
@@ -33,6 +44,7 @@ export const pathwaySchema = z.object({
   },
 })
 
+/** Slot Template Schema */
 export const slotTemplateSchema = z.object({
   startTime: z.coerce.date(),
   endTime: z.coerce.date(),
@@ -56,6 +68,7 @@ export const slotTemplateSchema = z.object({
   },
 })
 
+/** Slot Schema */
 export const slotSchema = z.object({
   startDate: z.coerce.date(),
   endDate: z.coerce.date(),

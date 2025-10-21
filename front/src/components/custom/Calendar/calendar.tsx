@@ -11,11 +11,11 @@ import type {
   DateSpanApi,
   EventDropArg,
 } from '@fullcalendar/core'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { EventContent } from './eventContent.tsx'
 import { usePlanningStore } from '../../../store/usePlanningStore.ts'
-import EventSheet from './eventSheet.tsx'
 import dayjs from 'dayjs'
+import type { Appointment } from '../../../types/appointment.ts'
 
 export interface CalendarEvent {
   id: string
@@ -32,6 +32,7 @@ export interface CalendarEvent {
     soignant?: string
     location?: string
     states?: string[]
+    appointments?: Appointment[]
   }
 }
 
@@ -39,9 +40,9 @@ interface CalendarProps {
   events: CalendarEvent[]
   handleSelectEvent?: (arg: DateSelectArg) => void
   handleEditEvent?: (arg: EventDropArg | EventResizeDoneArg) => void
-  handleDeleteEvent?: (eventID: string) => void
   handleClickEvent?: (eventID: string) => void
   handleDropEvent?: (pathwayTemplateID: string, startDate: string) => void
+  handleOpenEvent: (eventId: string) => void
   selectAllow?: (selectInfo: DateSpanApi) => boolean
   editMode?: boolean
   editable?: boolean
@@ -51,14 +52,13 @@ function Calendar({
   events,
   handleSelectEvent,
   handleEditEvent,
-  handleDeleteEvent,
   handleDropEvent,
   handleClickEvent,
+  handleOpenEvent,
   selectAllow,
   editMode,
   editable = false,
 }: CalendarProps) {
-  const [openEventId, setOpenEventId] = useState('')
   const lastDropTimeRef = useRef<number>(0)
 
   const handleSelect = (dateSelectArg: DateSelectArg) => {
@@ -155,7 +155,7 @@ function Calendar({
         events={events}
         eventContent={(eventContent) => (
           <EventContent
-            setOpenEventId={setOpenEventId}
+            setOpenEventId={handleOpenEvent}
             eventContent={eventContent}
           />
         )}
@@ -205,13 +205,6 @@ function Calendar({
             }
           }
         }}
-      />
-
-      <EventSheet
-        open={!!openEventId}
-        setOpen={setOpenEventId}
-        eventID={openEventId}
-        handleDeleteEvent={handleDeleteEvent}
       />
     </div>
   )

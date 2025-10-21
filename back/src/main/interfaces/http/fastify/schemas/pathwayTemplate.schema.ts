@@ -39,7 +39,7 @@ export const updatePathwayTemplateByIdSchema = {
       // pathways: true
     })
     .partial()
-    .extend({
+    .safeExtend({
       pathwayIDs: z.array(z.cuid()),
       slotTemplateIDs: z.array(z.cuid()),
     })

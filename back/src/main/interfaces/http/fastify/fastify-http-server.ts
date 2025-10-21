@@ -5,7 +5,6 @@ import type {
   FastifyServerOptions,
 } from 'fastify'
 import Fastify from 'fastify'
-import type pino from 'pino'
 import type { IocContainer } from '../../../types/application/ioc'
 import type { HttpServer } from '../../../types/interfaces/http/server'
 import { toLocalhostIfLinux } from '../../../utils/url-helper'
@@ -21,6 +20,7 @@ import {
   serializerCompiler,
   validatorCompiler,
 } from 'fastify-type-provider-zod'
+import type { PinoLogger } from '../../../infra/logger/pino/pino-logger'
 
 declare module 'fastify' {
   export interface FastifyInstance {
@@ -36,9 +36,11 @@ class FastifyHttpServer implements HttpServer {
     return this._baseUrl
   }
 
-  constructor(iocContainer: IocContainer, logger: pino.Logger) {
+  constructor(iocContainer: IocContainer) {
+    const pino = iocContainer.logger as PinoLogger
+
     const fastifyOptions: FastifyServerOptions = {
-      logger,
+      loggerInstance: pino.pinoLogger,
       disableRequestLogging: true,
       exposeHeadRoutes: false,
       forceCloseConnections: 'idle',

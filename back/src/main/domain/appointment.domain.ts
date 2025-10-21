@@ -28,12 +28,7 @@ class AppointmentDomain implements AppointmentDomainInterface {
   create(
     appointmentCreateParams: AppointmentCreateEntityDomain,
   ): Promise<AppointmentEntityDomain> {
-    const appointmentInputParams = {
-      ...appointmentCreateParams,
-      createDate: new Date().toISOString(),
-      completed: false,
-    }
-    return this.appointmentRepository.create(appointmentInputParams)
+    return this.appointmentRepository.create(appointmentCreateParams)
   }
 
   update(

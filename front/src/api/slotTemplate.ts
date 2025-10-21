@@ -62,7 +62,7 @@ export const SlotTemplateApi = {
     return response.json()
   },
 
-  delete: async (slotTemplateID: string): Promise<SlotTemplate> => {
+  delete: async (slotTemplateID: string): Promise<void> => {
     const response = await fetchWithAuth(
       `${apiUrl}/slot-template/${slotTemplateID}?action=deleteSlotTemplate`,
       {
@@ -72,6 +72,6 @@ export const SlotTemplateApi = {
     if (!response.ok) {
       handleHttpError(response, {}, 'Impossible de supprimer la tâche')
     }
-    return response.json()
+    return
   },
 }

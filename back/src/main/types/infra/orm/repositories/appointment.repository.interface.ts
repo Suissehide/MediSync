@@ -1,10 +1,20 @@
 import type { Appointment, Prisma } from '@prisma/client'
+import type { PatientEntityRepo } from './patient.repository.interface'
 
 export type AppointmentEntityRepo = Appointment
+export type AppointmentWithPatientsRepo = AppointmentEntityRepo & {
+  patients: PatientEntityRepo[]
+}
 export type AppointmentCreateEntityRepo =
-  Prisma.AppointmentUncheckedCreateInput & { slotID: string }
+  Prisma.AppointmentUncheckedCreateInput & {
+    slotID: string
+    patientIDs: string[]
+  }
 export type AppointmentUpdateEntityRepo =
-  Prisma.AppointmentUncheckedUpdateInput & { slotID?: string }
+  Prisma.AppointmentUncheckedUpdateInput & {
+    slotID?: string
+    patientIDs: string[]
+  }
 
 export interface AppointmentRepositoryInterface {
   findAll: () => Promise<AppointmentEntityRepo[]>

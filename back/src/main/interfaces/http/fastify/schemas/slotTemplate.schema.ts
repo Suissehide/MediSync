@@ -38,15 +38,10 @@ export const deleteSlotTemplateByIdParamsSchema =
 
 export const updateSlotTemplateByIdSchema = {
   params: getSlotTemplateByIdParamsSchema,
-  body: slotTemplateSchema
-    .partial()
-    .extend({
-      soignantID: z.cuid().optional(),
-      templateID: z.cuid().optional(),
-    })
-    .refine((data) => Object.keys(data).length > 0, {
-      message: 'At least one field must be updated',
-    }),
+  body: slotTemplateSchema.partial().extend({
+    soignantID: z.cuid().optional(),
+    templateID: z.cuid().optional(),
+  }),
 }
 
 export type SlotTemplateInput = z.infer<typeof slotTemplateSchema>

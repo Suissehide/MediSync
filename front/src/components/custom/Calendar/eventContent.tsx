@@ -1,8 +1,9 @@
 import type { EventContentArg } from '@fullcalendar/core'
-import { MoreVertical, Plus } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { Button } from '../../ui/button.tsx'
 import { clsx } from 'clsx'
 import { containsKeyword } from '../../../libs/utils.ts'
+import type { Patient } from '../../../types/patient.ts'
 
 type Props = {
   setOpenEventId: (eventId: string) => void
@@ -15,7 +16,11 @@ export const EventContent = ({ eventContent, setOpenEventId }: Props) => {
 
   return (
     <div
-      data-event-id={event.id}
+      {...(event.id ? { 'data-event-id': event.id } : {})}
+      {...(containsKeyword(states, ['default']) ||
+      event.extendedProps.type === 'appointment'
+        ? { onClick: () => setOpenEventId(event.id) }
+        : {})}
       className={clsx(
         'fc-event-hero relative group h-full w-full p-0 user-select-none',
         {
@@ -25,33 +30,46 @@ export const EventContent = ({ eventContent, setOpenEventId }: Props) => {
         },
       )}
     >
-      {!containsKeyword(states, ['multiple']) && (
-        <div className="text-[0.65rem] whitespace-nowrap">{timeText}</div>
-      )}
-      <div className="text-xs">{event.title}</div>
+      {!containsKeyword(states, ['multiple']) &&
+        event.extendedProps.type !== 'appointment' && (
+          <div className="text-[0.65rem] whitespace-nowrap">{timeText}</div>
+        )}
 
-      {containsKeyword(states, ['multiple']) && (
-        <div className="z-100 cursor-pointer absolute inset-0 flex justify-center items-center">
-          <Button variant="transparent" className="w-full h-full">
-            <div className="p-2 rounded-full bg-primary text-neutral-50 hover:bg-primary/70 transition-colors duration-300">
-              <Plus className="w-6 h-6" />
+      {!containsKeyword(states, ['multiple', 'individual']) && (
+        <>
+          <div className="text-xs">{event.title}</div>
+
+          {event.extendedProps.type === 'appointment' && (
+            <div className="text-xs space-y-0.5 mt-0.5 max-h-20 overflow-y-auto">
+              {event.extendedProps.patients?.length > 0 ? (
+                event.extendedProps.patients.map((patient: Patient) => (
+                  <div
+                    key={patient.id}
+                    className="text-[0.7rem] text-neutral-200 truncate"
+                  >
+                    {patient.firstName} {patient.lastName}
+                  </div>
+                ))
+              ) : (
+                <div className="text-xs italic text-neutral-200">
+                  Aucun patient
+                </div>
+              )}
             </div>
-          </Button>
-        </div>
+          )}
+        </>
       )}
 
-      {containsKeyword(states, ['default']) && (
-        <div className="transition opacity-0 group-hover:opacity-100">
-          <Button
-            onClick={() => setOpenEventId(event.id)}
-            variant="transparent"
-            size="icon-sm"
-            className="group/trigger absolute left-0 bottom-1"
-          >
-            <MoreVertical className="w-4 h-4 text-white cursor-pointer transition group-hover/trigger:text-gray-800" />
-          </Button>
-        </div>
-      )}
+      {containsKeyword(states, ['multiple']) &&
+        event.extendedProps.appointments?.length === 0 && (
+          <div className="z-100 cursor-pointer absolute inset-0 flex justify-center items-center">
+            <Button variant="transparent" className="w-full h-full">
+              <div className="p-2 rounded-full bg-neutral-50 text-primary hover:bg-neutral-400 transition-colors duration-300">
+                <Plus className="w-6 h-6" />
+              </div>
+            </Button>
+          </div>
+        )}
     </div>
   )
 }

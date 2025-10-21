@@ -30,9 +30,6 @@ export const updatePathwayByIdSchema = {
     .extend({
       templateID: z.cuid().optional(),
       slotIDs: z.array(z.cuid()),
-    })
-    .refine((data) => Object.keys(data).length > 0, {
-      message: 'At least one field must be updated',
     }),
 }
 

@@ -10,12 +10,16 @@ import { useEffect, useState } from 'react'
 import {
   buildCalendarEventsFromAppointments,
   buildCalendarEventsFromSlots,
+  containsKeyword,
 } from '../libs/utils.ts'
 import AddAppointmentForm from '../components/custom/Popup/addAppointmentForm.tsx'
 import type { CreateAppointmentParams } from '../types/appointment.ts'
 import type { DateSelectArg } from '@fullcalendar/core'
 import { useAppointmentMutations } from '../queries/useAppointment.ts'
 import dayjs from 'dayjs'
+import AppointmentSheet from '../components/custom/Calendar/sheet/appointmentSheet.tsx'
+import { useQueryClient } from '@tanstack/react-query'
+import { SLOT } from '../constants/process.constant.ts'
 
 export const Route = createFileRoute('/dashboard')({
   beforeLoad: ({ context, location }) => {
@@ -35,13 +39,15 @@ export const Route = createFileRoute('/dashboard')({
 })
 
 function Dashboard() {
+  const queryClient = useQueryClient()
+  const [openEventId, setOpenEventId] = useState('')
   const selectedID = useSoignantStore((state) => state.selectedSoignantID)
   const soignant = useSoignantStore((state) =>
     state.soignants.find((s) => s.id === selectedID),
   )
 
   const { slots } = useAllSlotsQuery()
-  const { createAppointment } = useAppointmentMutations()
+  const { createAppointment, deleteAppointment } = useAppointmentMutations()
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [selectedDate, setSelectedDate] = useState({ startStr: '', endStr: '' })
   const [openCreateAppointmentModal, setOpenCreateAppointmentModal] =
@@ -76,18 +82,40 @@ function Dashboard() {
   }
 
   const handleAddAppointment = (eventID: string) => {
-    setType('multiple')
     setSelectedEvent(eventID)
     const event = getEventById(eventID)
-    setMaxDate(event?.end ?? '')
-    selectedDate.startStr = event?.start ?? ''
-    selectedDate.endStr = event?.end ?? ''
-    setOpenCreateAppointmentModal(true)
+    if (!event) {
+      return
+    }
+
+    if (
+      event.extendedProps?.type === 'appointment' ||
+      (event.extendedProps?.states &&
+        containsKeyword(event.extendedProps.states, ['multiple']) &&
+        event.extendedProps.appointments?.length)
+    ) {
+      console.log('appointment')
+    } else {
+      setType('multiple')
+      setMaxDate(event?.end ?? '')
+      selectedDate.startStr = event?.start ?? ''
+      selectedDate.endStr = event?.end ?? ''
+      setOpenCreateAppointmentModal(true)
+    }
   }
 
   const handleCreateAppointment = (newAppointment: CreateAppointmentParams) => {
-    createAppointment.mutate(newAppointment)
+    createAppointment.mutate(newAppointment, {
+      onSuccess: async () => {
+        await queryClient.invalidateQueries({ queryKey: [SLOT.GET_ALL] })
+      },
+    })
     setOpenCreateAppointmentModal(false)
+  }
+
+  const handleDeleteEvent = (id: string) => {
+    setEvents((prev) => prev.filter((event) => event.id !== id))
+    deleteAppointment.mutate(id)
   }
 
   const getEventById = (id: string) => {
@@ -108,6 +136,7 @@ function Dashboard() {
             editable={false}
             handleSelectEvent={handleSelectAppointment}
             handleClickEvent={handleAddAppointment}
+            handleOpenEvent={setOpenEventId}
             selectAllow={(selectInfo) => {
               const { start, end } = selectInfo
 
@@ -141,6 +170,13 @@ function Dashboard() {
           handleCreateAppointment={handleCreateAppointment}
         />
       )}
+
+      <AppointmentSheet
+        open={!!openEventId}
+        setOpen={setOpenEventId}
+        eventID={openEventId}
+        handleDeleteEvent={handleDeleteEvent}
+      />
     </DashboardLayout>
   )
 }

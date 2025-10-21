@@ -26,12 +26,7 @@ export const deleteTodoByIdParamsSchema = getTodoByIdParamsSchema
 
 export const updateTodoByIdSchema = {
   params: getTodoByIdParamsSchema,
-  body: todoSchema
-    .omit({ createDate: true })
-    .partial()
-    .refine((data) => Object.keys(data).length > 0, {
-      message: 'At least one field must be updated',
-    }),
+  body: todoSchema.omit({ createDate: true }).partial(),
 }
 
 export type TodoInput = z.infer<typeof todoSchema>

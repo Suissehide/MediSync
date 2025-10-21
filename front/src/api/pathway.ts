@@ -67,13 +67,13 @@ export const PathwayApi = {
     return response.json()
   },
 
-  delete: async (pathwayID: string): Promise<Pathway> => {
+  delete: async (pathwayID: string): Promise<void> => {
     const response = await fetchWithAuth(`${apiUrl}/pathway/${pathwayID}`, {
       method: 'DELETE',
     })
     if (!response.ok) {
       handleHttpError(response, {}, 'Impossible de supprimer la tâche')
     }
-    return response.json()
+    return
   },
 }

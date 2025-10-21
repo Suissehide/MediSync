@@ -47,7 +47,7 @@ export const TodoApi = {
     return response.json()
   },
 
-  delete: async (todoID: string): Promise<Todo> => {
+  delete: async (todoID: string): Promise<void> => {
     const response = await fetchWithAuth(
       `${apiUrl}/todo/${todoID}?action=deleteTodo`,
       {
@@ -57,6 +57,6 @@ export const TodoApi = {
     if (!response.ok) {
       handleHttpError(response, {}, 'Impossible de supprimer la tâche')
     }
-    return response.json()
+    return
   },
 }

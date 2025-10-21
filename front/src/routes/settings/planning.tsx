@@ -5,7 +5,6 @@ import Calendar, {
 } from '../../components/custom/Calendar/calendar.tsx'
 import { useEffect, useMemo, useState } from 'react'
 import { useAllSlotsQuery, useSlotMutations } from '../../queries/useSlot.ts'
-import {} from '../../types/slot.ts'
 import type { DateSelectArg, EventDropArg } from '@fullcalendar/core'
 import {
   buildCalendarEventsFromSlots,
@@ -18,6 +17,7 @@ import { useSlotTemplateMutations } from '../../queries/useSlotTemplate.ts'
 import type { CreateSlotParamsWithTemplateData } from '../../types/slot.ts'
 import dayjs from 'dayjs'
 import { usePathwayMutations } from '../../queries/usePathway.ts'
+import EventSheet from '../../components/custom/Calendar/sheet/eventSheet.tsx'
 
 export const Route = createFileRoute('/settings/planning')({
   beforeLoad: ({ context, location }) => {
@@ -48,6 +48,7 @@ function Planning() {
     (state) => state.currentPathwayTemplate,
   )
 
+  const [openEventId, setOpenEventId] = useState('')
   const [openCreateSlotModal, setOpenCreateSlotModal] = useState(false)
   const [selectedDate, setSelectedDate] = useState<DateSelectArg | null>(null)
   const [events, setEvents] = useState<CalendarEvent[]>([])
@@ -170,8 +171,8 @@ function Planning() {
             events={mergedEvents}
             handleSelectEvent={handleSelectSlot}
             handleEditEvent={handleEditSlot}
-            handleDeleteEvent={handleDeleteEvent}
             handleDropEvent={handleInstantiatePathway}
+            handleOpenEvent={setOpenEventId}
             editMode={editMode}
             editable={true}
           />
@@ -185,6 +186,13 @@ function Planning() {
         endDate={selectedDate?.endStr}
         color={currentPathwayTemplate?.color}
         handleCreateSlot={handleCreateSlot}
+      />
+
+      <EventSheet
+        open={!!openEventId}
+        setOpen={setOpenEventId}
+        eventID={openEventId}
+        handleDeleteEvent={handleDeleteEvent}
       />
     </DashboardLayout>
   )

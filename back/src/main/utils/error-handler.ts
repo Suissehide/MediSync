@@ -1,5 +1,4 @@
 import { Boom, conflict, internal, notFound } from '@hapi/boom'
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
 import PrismaErrorCodes from '../infra/orm/error-codes-prisma'
 import type { IocContainer } from '../types/application/ioc'
 import type {
@@ -11,6 +10,7 @@ import {
   buildBoomError,
   type ErrorWithProps,
 } from '../interfaces/http/fastify/util/boom-error-wrapper'
+import { Prisma } from '@prisma/client'
 
 class ErrorHandler implements ErrorHandlerInterface {
   private readonly logger: Logger
@@ -27,8 +27,8 @@ class ErrorHandler implements ErrorHandlerInterface {
     let boomError: Boom<unknown> = internal(`Something went wrong! ${error}`)
     if (error instanceof Boom) {
       boomError = error
-    } else if (error instanceof PrismaClientKnownRequestError) {
-      const { code, message } = error as PrismaClientKnownRequestError
+    } else if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      const { code, message } = error
       this.logger.debug(`Error Code: ${code}`)
       this.logger.debug(message)
       if (code === PrismaErrorCodes.OPERATION_DEPENDS_ON_MISSING_RECORD) {

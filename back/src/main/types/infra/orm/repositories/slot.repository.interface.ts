@@ -1,6 +1,6 @@
 import type { Slot, Prisma } from '@prisma/client'
 import type { PathwayEntityRepo } from './pathway.repository.interface'
-import type { AppointmentEntityRepo } from './appointment.repository.interface'
+import type { AppointmentWithPatientsRepo } from './appointment.repository.interface'
 import type {
   SlotTemplateUpdateEntityRepo,
   SlotTemplateWithSoignantRepo,
@@ -10,7 +10,7 @@ export type SlotEntityRepo = Slot
 export type SlotDTORepo = SlotEntityRepo & {
   pathway: PathwayEntityRepo | null
   slotTemplate: SlotTemplateWithSoignantRepo
-  appointments: AppointmentEntityRepo[]
+  appointments: AppointmentWithPatientsRepo[]
 }
 export type SlotCreateEntityRepo = Omit<
   Prisma.SlotUncheckedCreateInput,

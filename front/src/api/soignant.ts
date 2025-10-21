@@ -61,7 +61,7 @@ export const SoignantApi = {
     return response.json()
   },
 
-  delete: async (soignantID: string): Promise<Soignant> => {
+  delete: async (soignantID: string): Promise<void> => {
     const response = await fetchWithAuth(
       `${apiUrl}/soignant/${soignantID}?action=deleteSoignant`,
       {
@@ -71,6 +71,6 @@ export const SoignantApi = {
     if (!response.ok) {
       handleHttpError(response, {}, 'Impossible de supprimer la tâche')
     }
-    return response.json()
+    return
   },
 }

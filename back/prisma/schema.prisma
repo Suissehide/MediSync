@@ -42,10 +42,17 @@ model Pathway {
 }
 
 model Appointment {
-  id        String   @id @default(cuid())
-  startDate DateTime
-  endDate   DateTime
-  slotID    String
+  id                String    @id @default(cuid())
+  startDate         DateTime
+  endDate           DateTime
+  thematic          String?
+  type              String?
+  accompanying      String?
+  status            String?
+  rejectionReason   String?
+  transmissionNotes String?
+  slotID            String
+  patients          Patient[]
 
   slot Slot @relation(fields: [slotID], references: [id])
 }
@@ -135,6 +142,8 @@ model Patient {
   etpFinalOutcome String? // Point final parcours ETP
 
   createDate DateTime
+
+  Appointment Appointment[]
 }
 
 model Todo {

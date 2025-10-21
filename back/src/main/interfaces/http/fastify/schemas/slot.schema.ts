@@ -5,12 +5,18 @@ import {
   slotTemplateResponseSchema,
   updateSlotTemplateByIdSchema,
 } from './slotTemplate.schema'
+import { appointmentResponseSchema } from './appointment.schema'
 
 export const slotResponseSchema = slotSchema.extend({
   id: z.cuid(),
   slotTemplate: slotTemplateResponseSchema.extend({
     id: z.cuid(),
   }),
+  appointments: z.array(
+    appointmentResponseSchema.extend({
+      id: z.cuid(),
+    }),
+  ),
 })
 
 export const slotsResponseSchema = z.array(slotResponseSchema)
@@ -45,17 +51,12 @@ export const deleteSlotByIdParamsSchema = getSlotByIdParamsSchema
 
 export const updateSlotByIdSchema = {
   params: getSlotByIdParamsSchema,
-  body: slotSchema
-    .partial()
-    .extend({
-      soignantId: z.cuid().optional(),
-      slotTemplate: updateSlotTemplateByIdSchema.body.extend({
-        id: z.cuid(),
-      }),
-    })
-    .refine((data) => Object.keys(data).length > 0, {
-      message: 'At least one field must be updated',
+  body: slotSchema.partial().extend({
+    soignantId: z.cuid().optional(),
+    slotTemplate: updateSlotTemplateByIdSchema.body.extend({
+      id: z.cuid(),
     }),
+  }),
 }
 
 export type SlotInput = z.infer<typeof slotSchema>

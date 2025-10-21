@@ -10,7 +10,7 @@ export type Slot = {
   id: string
   startDate: string
   endDate: string
-  appointments?: Appointment
+  appointments: Appointment[]
   pathway?: Pathway
   slotTemplate: SlotTemplate
 }

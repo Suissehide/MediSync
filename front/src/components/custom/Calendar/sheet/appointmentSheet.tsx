@@ -3,22 +3,32 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-} from '../../ui/sheet.tsx'
+} from '../../../ui/sheet.tsx'
 import { Loader2Icon } from 'lucide-react'
 import dayjs from 'dayjs'
 import { useForm } from '@tanstack/react-form'
-import { FormField } from '../../ui/formField.tsx'
-import { FieldInfo } from '../../ui/fieldInfo.tsx'
-import { Label } from '../../ui/label.tsx'
-import { Input } from '../../ui/input.tsx'
-import { Button } from '../../ui/button.tsx'
+import { FormField } from '../../../ui/formField.tsx'
+import { FieldInfo } from '../../../ui/fieldInfo.tsx'
+import { Label } from '../../../ui/label.tsx'
+import { Input, Select, TextArea } from '../../../ui/input.tsx'
+import { Button } from '../../../ui/button.tsx'
 import { useEffect } from 'react'
-import { formatDuration } from '../../../libs/utils.ts'
+import { formatDuration } from '../../../../libs/utils.ts'
 import {
   useAppointmentByIDQuery,
   useAppointmentMutations,
-} from '../../../queries/useAppointment.ts'
-import type { UpdateAppointmentParams } from '../../../types/appointment.ts'
+} from '../../../../queries/useAppointment.ts'
+import type { UpdateAppointmentParams } from '../../../../types/appointment.ts'
+import {
+  APPOINTMENT_ACCOMPANYING_OPTIONS,
+  APPOINTMENT_STATUS_OPTIONS,
+  APPOINTMENT_THEMATIC_OPTIONS,
+  APPOINTMENT_TYPE_OPTIONS,
+} from '../../../../constants/appointment.constant.ts'
+import { MultiSelect } from '../../../ui/multiSelect.tsx'
+import { usePatientQueries } from '../../../../queries/usePatient.ts'
+import { SLOT } from '../../../../constants/process.constant.ts'
+import { useQueryClient } from '@tanstack/react-query'
 
 interface AppointmentSheetProps {
   open: boolean
@@ -33,18 +43,30 @@ export default function AppointmentSheet({
   eventID,
   handleDeleteEvent,
 }: AppointmentSheetProps) {
+  const queryClient = useQueryClient()
   const { isPending, appointment, refetch } = useAppointmentByIDQuery(eventID, {
     enabled: false,
   })
   const { updateAppointment } = useAppointmentMutations()
+  const patients = usePatientQueries().patients
+  const patientOptions =
+    patients
+      ?.slice()
+      .sort((a, b) => a.lastName.localeCompare(b.lastName))
+      .map((patient) => ({
+        value: patient.id,
+        label: `${patient.firstName} ${patient.lastName}`,
+      })) ?? []
 
   const form = useForm({
     defaultValues: {
+      thematic: '',
+      type: '',
       accompanying: '',
       status: '',
       rejectionReason: '',
       transmissionNotes: '',
-      patientIDs: [],
+      patientIDs: [] as string[],
     },
     onSubmit: ({ value }) => {
       if (!appointment?.id) {
@@ -53,6 +75,8 @@ export default function AppointmentSheet({
 
       const updateAppointmentData: UpdateAppointmentParams = {
         id: appointment.id,
+        thematic: value.thematic,
+        type: value.type,
         accompanying: value.accompanying,
         status: value.status,
         rejectionReason: value.rejectionReason,
@@ -60,7 +84,11 @@ export default function AppointmentSheet({
         patientIDs: value.patientIDs,
       }
 
-      updateAppointment.mutate(updateAppointmentData)
+      updateAppointment.mutate(updateAppointmentData, {
+        onSuccess: async () => {
+          await queryClient.invalidateQueries({ queryKey: [SLOT.GET_ALL] })
+        },
+      })
       setOpen('')
     },
   })
@@ -78,11 +106,13 @@ export default function AppointmentSheet({
         if (data) {
           form.reset(
             {
+              thematic: data.thematic || '',
+              type: data.type || '',
               accompanying: data.accompanying || '',
               status: data.status || '',
               rejectionReason: data.rejectionReason || '',
               transmissionNotes: data.transmissionNotes || '',
-              patientIDs: [],
+              patientIDs: data.patients.map((p) => p.id),
             },
             { keepDefaultValues: true },
           )
@@ -99,7 +129,9 @@ export default function AppointmentSheet({
       <SheetContent>
         <SheetHeader className="flex flex-row justify-between items-center mb-6">
           <div className="m-0">
-            <SheetTitle className="font-bold text-2xl m-0!">Créneau</SheetTitle>
+            <SheetTitle className="font-bold text-2xl m-0!">
+              Rendez-vous
+            </SheetTitle>
           </div>
         </SheetHeader>
 
@@ -122,15 +154,60 @@ export default function AppointmentSheet({
                   {`Le ${dayjs(appointment?.startDate).format('dddd D MMMM à hh:mm')} ${formatDuration(appointment?.startDate, appointment?.endDate)}`}
                 </div>
 
+                <form.Field name="thematic">
+                  {(field) => (
+                    <FormField>
+                      <Label htmlFor={field.name}>Thématique</Label>
+                      <Select
+                        id={field.name}
+                        options={APPOINTMENT_THEMATIC_OPTIONS}
+                        value={field.state.value}
+                        onValueChange={(value) => field.handleChange(value)}
+                      />
+                      <FieldInfo field={field} />
+                    </FormField>
+                  )}
+                </form.Field>
+
+                <form.Field name="type">
+                  {(field) => (
+                    <FormField>
+                      <Label htmlFor={field.name}>Type</Label>
+                      <Select
+                        id={field.name}
+                        options={APPOINTMENT_TYPE_OPTIONS}
+                        value={field.state.value}
+                        onValueChange={(value) => field.handleChange(value)}
+                      />
+                      <FieldInfo field={field} />
+                    </FormField>
+                  )}
+                </form.Field>
+
                 <form.Field name="status">
                   {(field) => (
                     <FormField>
                       <Label htmlFor={field.name}>Présence</Label>
-                      <Input
+                      <Select
                         id={field.name}
+                        options={APPOINTMENT_STATUS_OPTIONS}
                         value={field.state.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        onBlur={field.handleBlur}
+                        onValueChange={(value) => field.handleChange(value)}
+                      />
+                      <FieldInfo field={field} />
+                    </FormField>
+                  )}
+                </form.Field>
+
+                <form.Field name="accompanying">
+                  {(field) => (
+                    <FormField>
+                      <Label htmlFor={field.name}>Présence</Label>
+                      <Select
+                        id={field.name}
+                        options={APPOINTMENT_ACCOMPANYING_OPTIONS}
+                        value={field.state.value}
+                        onValueChange={(value) => field.handleChange(value)}
                       />
                       <FieldInfo field={field} />
                     </FormField>
@@ -152,11 +229,43 @@ export default function AppointmentSheet({
                   )}
                 </form.Field>
 
+                <form.Field
+                  name="patientIDs"
+                  validators={{
+                    onSubmit: ({ value }) => {
+                      if (!value.length) {
+                        return 'Au moins un patient est requis'
+                      }
+                      return undefined
+                    },
+                  }}
+                >
+                  {(field) => (
+                    <FormField>
+                      <Label htmlFor={field.name}>Patients</Label>
+                      <MultiSelect
+                        options={patientOptions}
+                        value={field.state.value}
+                        onChange={(val) => field.handleChange(val)}
+                        placeholder={
+                          appointment?.type === 'individual'
+                            ? 'Sélectionner un patient'
+                            : 'Sélectionner un ou plusieurs patients'
+                        }
+                        maxSelected={
+                          appointment?.type === 'individual' ? 1 : undefined
+                        }
+                      />
+                      <FieldInfo field={field} />
+                    </FormField>
+                  )}
+                </form.Field>
+
                 <form.Field name="transmissionNotes">
                   {(field) => (
                     <FormField>
                       <Label htmlFor={field.name}>Notes de transmission</Label>
-                      <Input
+                      <TextArea
                         id={field.name}
                         value={field.state.value}
                         onChange={(e) => field.handleChange(e.target.value)}

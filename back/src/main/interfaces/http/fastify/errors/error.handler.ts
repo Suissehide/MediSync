@@ -36,7 +36,7 @@ const buildErrorHandler = (...errorNormalizers: ErrorNormalizer[]) => {
     request: FastifyRequest,
     reply: FastifyReply,
   ): string | { error: string; message: string; statusCode: number } {
-    this.log.trace(error)
+    this.log.debug(error)
     const errorResponse = normalizeResponse(error, errorNormalizers)
     this.log.error(`Error: ${JSON.stringify(errorResponse)}`)
     reply.status(errorResponse.statusCode)

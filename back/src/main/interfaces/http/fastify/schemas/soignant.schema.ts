@@ -27,11 +27,7 @@ export const deleteSoignantByIdParamsSchema = getSoignantByIdParamsSchema
 
 export const updateSoignantByIdSchema = {
   params: getSoignantByIdParamsSchema,
-  body: soignantSchema
-    .partial()
-    .refine((data) => Object.keys(data).length > 0, {
-      message: 'At least one field must be updated',
-    }),
+  body: soignantSchema.partial(),
 }
 
 export type SoignantInput = z.infer<typeof soignantSchema>

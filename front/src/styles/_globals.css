@@ -4,14 +4,16 @@
 @import "@radix-ui/themes/utilities.css";
 
 @import "tailwindcss";
+@import "./fullcalendar.css";
 @import "./_colors.css";
 @import "./_variables.css";
-@import "./fullcalendar.css";
 
 @plugin "tailwindcss-animate";
 
 @theme {
+  --color-primary-light: var(--primary-light);
   --color-primary: var(--primary);
+  --color-primary-dark: var(--primary-dark);
   --color-primary-foreground: var(--primary-foreground);
 
   --color-secondary: var(--secondary);

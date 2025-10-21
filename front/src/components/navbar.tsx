@@ -53,18 +53,22 @@ function Navbar({ toggleSidebar }: NavbarProps) {
         <div className="flex gap-4">
           <Link
             to="/dashboard"
-            className="border-b-2 border-transparent [&.active]:font-bold [&.active]:border-primary"
+            className="relative cursor-pointer
+               transition-colors duration-300
+               after:content-[''] after:absolute after:left-0 after:top-full after:w-full after:h-[3px] after:bg-primary after:scale-x-0 after:origin-right after:transition-transform after:duration-300
+               hover:after:scale-x-100 hover:after:origin-left"
           >
             Dashboard
           </Link>
+
           <Link
             to="/patient"
-            className="border-b-2 border-transparent [&.active]:font-bold [&.active]:border-primary"
+            className="relative cursor-pointer
+               transition-colors duration-300
+               after:content-[''] after:absolute after:left-0 after:top-full after:w-full after:h-[3px] after:bg-primary after:scale-x-0 after:origin-right after:transition-transform after:duration-300
+               hover:after:scale-x-100 hover:after:origin-left"
           >
             Patients
-          </Link>
-          <Link to="/auth/login" className="[&.active]:font-bold">
-            Login
           </Link>
         </div>
       </div>

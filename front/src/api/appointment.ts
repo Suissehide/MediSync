@@ -80,7 +80,7 @@ export const AppointmentApi = {
     return response.json()
   },
 
-  delete: async (appointmentID: string): Promise<Appointment> => {
+  delete: async (appointmentID: string): Promise<void> => {
     const response = await fetchWithAuth(
       `${apiUrl}/appointment/${appointmentID}?action=deleteAppointment`,
       {
@@ -90,6 +90,6 @@ export const AppointmentApi = {
     if (!response.ok) {
       handleHttpError(response, {}, 'Impossible de supprimer le rendez-vous')
     }
-    return response.json()
+    return
   },
 }

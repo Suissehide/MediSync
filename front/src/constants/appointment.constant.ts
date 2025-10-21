@@ -12,6 +12,20 @@ export const APPOINTMENT_TYPE = {
   telephonic: 'Téléphonique',
 }
 
+export const APPOINTMENT_STATUS = {
+  yes: 'Oui',
+  no: 'Non',
+}
+
+export const APPOINTMENT_ACCOMPANYING = {
+  yes: 'Oui',
+  no: 'Non',
+}
+
 export const APPOINTMENT_THEMATIC_OPTIONS =
   toSelectOptions(APPOINTMENT_THEMATIC)
 export const APPOINTMENT_TYPE_OPTIONS = toSelectOptions(APPOINTMENT_TYPE)
+export const APPOINTMENT_STATUS_OPTIONS = toSelectOptions(APPOINTMENT_STATUS)
+export const APPOINTMENT_ACCOMPANYING_OPTIONS = toSelectOptions(
+  APPOINTMENT_ACCOMPANYING,
+)

@@ -63,9 +63,7 @@ export const deletePatientByIdParamsSchema = getPatientByIdParamsSchema
 
 export const updatePatientByIdSchema = {
   params: getPatientByIdParamsSchema,
-  body: patientSchema.partial().refine((data) => Object.keys(data).length > 0, {
-    message: 'At least one field must be updated',
-  }),
+  body: patientSchema.partial(),
 }
 
 export type PatientInput = z.infer<typeof patientSchema>

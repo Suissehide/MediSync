@@ -3,21 +3,24 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-} from '../../ui/sheet.tsx'
+} from '../../../ui/sheet.tsx'
 import { Loader2Icon } from 'lucide-react'
 import dayjs from 'dayjs'
-import { useSlotByIDQuery, useSlotMutations } from '../../../queries/useSlot.ts'
-import { useSoignantStore } from '../../../store/useSoignantStore.ts'
+import {
+  useSlotByIDQuery,
+  useSlotMutations,
+} from '../../../../queries/useSlot.ts'
+import { useSoignantStore } from '../../../../store/useSoignantStore.ts'
 import { useForm } from '@tanstack/react-form'
-import { FormField } from '../../ui/formField.tsx'
-import { FieldInfo } from '../../ui/fieldInfo.tsx'
-import { Label } from '../../ui/label.tsx'
-import { Checkbox, Input, Select, TextArea } from '../../ui/input.tsx'
+import { FormField } from '../../../ui/formField.tsx'
+import { FieldInfo } from '../../../ui/fieldInfo.tsx'
+import { Label } from '../../../ui/label.tsx'
+import { Checkbox, Input, Select, TextArea } from '../../../ui/input.tsx'
 import { Compact } from '@uiw/react-color'
-import { Button } from '../../ui/button.tsx'
-import { useSoignantQueries } from '../../../queries/useSoignant.ts'
+import { Button } from '../../../ui/button.tsx'
+import { useSoignantQueries } from '../../../../queries/useSoignant.ts'
 import { useEffect } from 'react'
-import { formatDuration } from '../../../libs/utils.ts'
+import { formatDuration } from '../../../../libs/utils.ts'
 
 interface EventSheetProps {
   open: boolean
