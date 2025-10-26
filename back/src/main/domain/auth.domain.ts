@@ -59,8 +59,8 @@ class AuthDomain implements AuthDomainInterface {
       accessToken,
       refreshToken,
       email: user.email,
-      firstname: user.firstname,
-      lastname: user.lastname,
+      firstName: user.firstName,
+      lastName: user.lastName,
     }
   }
 
@@ -76,7 +76,7 @@ class AuthDomain implements AuthDomainInterface {
       throw Boom.unauthorized('Invalid refresh token')
     }
 
-    const user = await this.userRepository.findById(payload.userID)
+    const user = await this.userRepository.findByID(payload.userID)
     if (!user) {
       this.logger.error('User not found for this refresh token')
       throw Boom.unauthorized('Invalid refresh token')
@@ -94,8 +94,8 @@ class AuthDomain implements AuthDomainInterface {
       accessToken: newAccessToken,
       refreshToken: newRefreshToken,
       email: user.email,
-      firstname: user.firstname,
-      lastname: user.lastname,
+      firstName: user.firstName,
+      lastName: user.lastName,
     }
   }
 

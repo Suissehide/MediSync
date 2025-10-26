@@ -1,16 +1,14 @@
-import type {} from '../types/domain/appointment.domain.interface'
 import type { IocContainer } from '../types/application/ioc'
-import type { Logger } from '../types/utils/logger'
+import type {} from '../types/domain/appointment.domain.interface'
 import type {
+  SlotCreateEntityDomain,
   SlotDomainInterface,
   SlotDTODomain,
   SlotEntityDomain,
-} from '../types/domain/slot.domain.interface'
-import type { SlotRepositoryInterface } from '../types/infra/orm/repositories/slot.repository.interface'
-import type {
-  SlotCreateEntityDomain,
   SlotUpdateEntityDomain,
 } from '../types/domain/slot.domain.interface'
+import type { SlotRepositoryInterface } from '../types/infra/orm/repositories/slot.repository.interface'
+import type { Logger } from '../types/utils/logger'
 
 class SlotDomain implements SlotDomainInterface {
   private readonly logger: Logger

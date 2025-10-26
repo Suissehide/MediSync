@@ -1,12 +1,13 @@
 import { z } from 'zod/v4'
 
-const userEntity = {
+export const userEntity = {
   email: z.email({
     error: (issue) =>
       issue.input === undefined ? 'Email is required' : 'Email is not valid',
   }),
-  firstname: z.string(),
-  lastname: z.string(),
+  firstName: z.string(),
+  lastName: z.string(),
+  role: z.enum(['NONE', 'USER', 'ADMIN']).optional(),
 }
 
 export const registerSchema = z.object({
@@ -29,8 +30,8 @@ export const signInSchema = z.object({
 })
 export const signInResponseSchema = z.object({
   email: z.string(),
-  firstname: z.string().nullish(),
-  lastname: z.string().nullish(),
+  firstName: z.string().nullish(),
+  lastName: z.string().nullish(),
 })
 
 export type SignInInput = z.infer<typeof signInSchema>

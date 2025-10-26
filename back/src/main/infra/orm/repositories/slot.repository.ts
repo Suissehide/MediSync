@@ -1,5 +1,3 @@
-import type { PostgresPrismaClient } from '../postgres-client'
-import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { IocContainer } from '../../../types/application/ioc'
 import type {
   SlotCreateEntityRepo,
@@ -8,21 +6,16 @@ import type {
   SlotRepositoryInterface,
   SlotUpdateEntityRepo,
 } from '../../../types/infra/orm/repositories/slot.repository.interface'
-import type { SlotTemplateRepositoryInterface } from '../../../types/infra/orm/repositories/slotTemplate.repository.interface'
+import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
+import type { PostgresPrismaClient } from '../postgres-client'
 
 class SlotRepository implements SlotRepositoryInterface {
   private readonly prisma: PostgresPrismaClient
   private readonly errorHandler: ErrorHandlerInterface
-  private readonly slotTemplateRepository: SlotTemplateRepositoryInterface
 
-  constructor({
-    postgresOrm,
-    errorHandler,
-    slotTemplateRepository,
-  }: IocContainer) {
+  constructor({ postgresOrm, errorHandler }: IocContainer) {
     this.prisma = postgresOrm.prisma
     this.errorHandler = errorHandler
-    this.slotTemplateRepository = slotTemplateRepository
   }
 
   findAll(): Promise<SlotDTORepo[]> {

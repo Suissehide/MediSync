@@ -10,6 +10,10 @@ import {
   type Row,
   type ColumnDef as TanstackColumnDef,
   useReactTable,
+  type ColumnFiltersState,
+  type VisibilityState,
+  type RowSelectionState,
+  type PaginationState,
 } from '@tanstack/react-table'
 import {
   type CSSProperties,
@@ -74,12 +78,13 @@ export function ReactTable<TData extends { id: string }, TValue = unknown>({
     {},
   )
 
-  const [columnFilters, setColumnFilters] = useState(initialColumnFilters)
-  const [columnVisibility, setColumnVisibility] = useState(
+  const [columnFilters, setColumnFilters] =
+    useState<ColumnFiltersState>(initialColumnFilters)
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
     initialColumnVisibility,
   )
-  const [rowSelection, setRowSelection] = useState({})
-  const [pagination, setPagination] = useState({
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
+  const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 50,
   })
@@ -140,8 +145,8 @@ export function ReactTable<TData extends { id: string }, TValue = unknown>({
     )
   }, [columnVisibility, filterId])
 
-  const getCommonPinningStyles = (
-    column: Column<TData, unknown>,
+  const getCommonPinningStyles = <TData, TValue>(
+    column: Column<TData, TValue>,
   ): CSSProperties => {
     const isPinned = column.getIsPinned()
 

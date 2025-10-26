@@ -1,18 +1,21 @@
+import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
+
+import { appointmentRouter } from './appointment'
 import { authRouter } from './auth'
 import { healthcheckRouter } from './healthcheck'
-import { appointmentRouter } from './appointment'
-import { todoRouter } from './todo'
-import { soignantRouter } from './soignant'
-import { slotRouter } from './slot'
-import { slotTemplateRouter } from './slotTemplate'
 import { pathwayRouter } from './pathway'
 import { pathwayTemplateRouter } from './pathwayTemplate'
 import { patientRouter } from './patient'
-import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
+import { slotRouter } from './slot'
+import { slotTemplateRouter } from './slotTemplate'
+import { soignantRouter } from './soignant'
+import { todoRouter } from './todo'
+import { userRouter } from './user'
 
 const routes: FastifyPluginAsyncZod = async (fastify) => {
   await fastify.register(healthcheckRouter)
   await fastify.register(authRouter, { prefix: '/auth' })
+  await fastify.register(userRouter, { prefix: '/user' })
   await fastify.register(todoRouter, { prefix: '/todo' })
   await fastify.register(appointmentRouter, { prefix: '/appointment' })
   await fastify.register(slotRouter, { prefix: '/slot' })

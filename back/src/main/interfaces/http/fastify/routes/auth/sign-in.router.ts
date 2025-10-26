@@ -31,7 +31,7 @@ const signInRouter: FastifyPluginAsync = (fastify) => {
       }
       const { email: inputEmail, password: inputPassword } = data
 
-      const { accessToken, refreshToken, email, firstname, lastname } =
+      const { accessToken, refreshToken, email, firstName, lastName } =
         await authDomain.signIn(inputEmail, inputPassword)
 
       const cookieOptions: CookieSerializeOptions = {
@@ -50,7 +50,7 @@ const signInRouter: FastifyPluginAsync = (fastify) => {
           maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days in ms
         })
 
-      return { email, firstname, lastname }
+      return { email, firstName, lastName }
     },
   )
   return Promise.resolve()

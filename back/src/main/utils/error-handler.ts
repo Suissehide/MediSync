@@ -1,16 +1,17 @@
 import { Boom, conflict, internal, notFound } from '@hapi/boom'
+import { Prisma } from '@prisma/client'
+
 import PrismaErrorCodes from '../infra/orm/error-codes-prisma'
+import {
+  buildBoomError,
+  type ErrorWithProps,
+} from '../interfaces/http/fastify/util/boom-error-wrapper'
 import type { IocContainer } from '../types/application/ioc'
 import type {
   ErrorHandlerInterface,
   InputErrorHandler,
 } from '../types/utils/error-handler'
 import type { Logger } from '../types/utils/logger'
-import {
-  buildBoomError,
-  type ErrorWithProps,
-} from '../interfaces/http/fastify/util/boom-error-wrapper'
-import { Prisma } from '@prisma/client'
 
 class ErrorHandler implements ErrorHandlerInterface {
   private readonly logger: Logger

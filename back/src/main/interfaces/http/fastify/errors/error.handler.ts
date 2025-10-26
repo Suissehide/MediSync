@@ -6,6 +6,7 @@ import type {
   FastifyReply,
   FastifyRequest,
 } from 'fastify'
+
 import type {
   ErrorNormalizer,
   ErrorResponse,

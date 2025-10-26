@@ -1,4 +1,7 @@
+import Boom from '@hapi/boom'
+import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod/v4'
+
 import {
   type CreateSlotBody,
   createSlotWithTemplateSchema,
@@ -9,11 +12,9 @@ import {
   slotResponseSchema,
   slotsResponseSchema,
   type UpdateSlotBody,
-  updateSlotByIdSchema,
   type UpdateSlotParams,
+  updateSlotByIdSchema,
 } from '../schemas/slot.schema'
-import Boom from '@hapi/boom'
-import type { FastifyPluginAsync } from 'fastify'
 
 const slotRouter: FastifyPluginAsync = (fastify) => {
   const { iocContainer } = fastify

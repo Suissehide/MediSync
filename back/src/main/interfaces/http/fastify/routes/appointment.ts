@@ -1,4 +1,7 @@
+import Boom from '@hapi/boom'
+import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod/v4'
+
 import type {
   CreateAppointmentBody,
   DeleteAppointmentByIdParams,
@@ -6,16 +9,14 @@ import type {
   UpdateAppointmentBody,
   UpdateAppointmentParams,
 } from '../schemas/appointment.schema'
-import Boom from '@hapi/boom'
 import {
+  appointmentResponseSchema,
+  appointmentsResponseSchema,
   createAppointmentSchema,
   deleteAppointmentByIdParamsSchema,
   getAppointmentByIdParamsSchema,
-  appointmentResponseSchema,
-  appointmentsResponseSchema,
   updateAppointmentByIdSchema,
 } from '../schemas/appointment.schema'
-import type { FastifyPluginAsync } from 'fastify'
 
 const appointmentRouter: FastifyPluginAsync = (fastify) => {
   const { iocContainer } = fastify

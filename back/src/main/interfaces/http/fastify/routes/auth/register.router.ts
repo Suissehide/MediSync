@@ -1,11 +1,12 @@
 import Boom from '@hapi/boom'
+import type { FastifyPluginAsync } from 'fastify'
+import HttpStatusCodes from 'http-status-codes'
+
 import {
   type CreateUserInput,
   registerResponseSchema,
   registerSchema,
 } from '../../schemas/auth.schema'
-import HttpStatusCodes from 'http-status-codes'
-import type { FastifyPluginAsync } from 'fastify'
 
 const registerRouter: FastifyPluginAsync = (fastify) => {
   const { iocContainer } = fastify

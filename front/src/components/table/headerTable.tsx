@@ -1,19 +1,17 @@
 import type React from 'react'
-import { flexRender, type Table, type Header } from '@tanstack/react-table'
+import { flexRender, type Table, type Column } from '@tanstack/react-table'
 import { ChevronDown, ChevronsUpDown, ChevronUp } from 'lucide-react'
 import type { CustomMeta } from './reactTable.tsx'
 
-type HeaderTableProps<TData, TValue> = {
+type HeaderTableProps<TData> = {
   table: Table<TData>
-  getCommonPinningStyles: (
-    column: Header<TData, TValue>['column'],
-  ) => React.CSSProperties
+  getCommonPinningStyles: (column: Column<TData>) => React.CSSProperties
 }
 
-export function HeaderTable<TData, TValue>({
+export function HeaderTable<TData>({
   table,
   getCommonPinningStyles,
-}: HeaderTableProps<TData, TValue>) {
+}: HeaderTableProps<TData>) {
   return (
     <thead className="sticky top-0 z-10 bg-card">
       {table.getHeaderGroups().map((headerGroup) => (
@@ -22,7 +20,7 @@ export function HeaderTable<TData, TValue>({
             const { column } = header
             const meta = header.column.columnDef.meta as CustomMeta<
               TData,
-              TValue
+              unknown
             >
             const headerClass = meta?.headerClass ?? ''
             const grow = meta?.grow
@@ -46,7 +44,7 @@ export function HeaderTable<TData, TValue>({
                   width: grow ? 'auto' : header.getSize(),
                   minWidth: header.getSize(),
                 }}
-                className="border border-border"
+                className="border-b border-border"
               >
                 {header.isPlaceholder ? null : (
                   <>

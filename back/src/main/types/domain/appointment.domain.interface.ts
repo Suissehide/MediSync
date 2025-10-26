@@ -1,4 +1,5 @@
 import type { Appointment } from '@prisma/client'
+
 import type {
   AppointmentCreateEntityRepo,
   AppointmentUpdateEntityRepo,

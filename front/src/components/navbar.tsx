@@ -33,6 +33,11 @@ const SettingsMenu = () => (
             Soignants
           </Link>
         </DropdownMenuCustomItem>
+        <DropdownMenuCustomItem>
+          <Link to="/settings/user" className="w-full">
+            Utilisateurs
+          </Link>
+        </DropdownMenuCustomItem>
       </DropdownMenu.Sub>
     </DropdownMenuCustomContent>
   </DropdownMenu.Root>

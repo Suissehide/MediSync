@@ -1,13 +1,15 @@
-import type { IocContainer } from '../../../types/application/ioc'
-import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
-import type { PostgresPrismaClient } from '../postgres-client'
-import { hashPassword } from '../../../utils/hash'
 import { Role } from '@prisma/client'
+
+import type { IocContainer } from '../../../types/application/ioc'
 import type {
-  UserEntityCreate,
+  UserCreateEntityRepo,
   UserEntityRepo,
   UserRepositoryInterface,
+  UserUpdateEntityRepo,
 } from '../../../types/infra/orm/repositories/user.repository.interface'
+import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
+import { hashPassword } from '../../../utils/hash'
+import type { PostgresPrismaClient } from '../postgres-client'
 
 class UserRepository implements UserRepositoryInterface {
   private readonly prisma: PostgresPrismaClient
@@ -18,7 +20,11 @@ class UserRepository implements UserRepositoryInterface {
     this.errorHandler = errorHandler
   }
 
-  async findById(userID: string): Promise<UserEntityRepo> {
+  findAll(): Promise<UserEntityRepo[]> {
+    return this.prisma.user.findMany()
+  }
+
+  async findByID(userID: string): Promise<UserEntityRepo> {
     try {
       return await this.prisma.user.findUniqueOrThrow({
         where: { id: userID },
@@ -44,7 +50,7 @@ class UserRepository implements UserRepositoryInterface {
     }
   }
 
-  async create(input: UserEntityCreate): Promise<UserEntityRepo> {
+  async create(input: UserCreateEntityRepo): Promise<UserEntityRepo> {
     const { password, ...user } = input
     const { hash, salt } = hashPassword(password)
     try {
@@ -58,6 +64,38 @@ class UserRepository implements UserRepositoryInterface {
       })
     } catch (err) {
       throw this.errorHandler.errorFromPrismaError({
+        entityName: 'User',
+        error: err,
+      })
+    }
+  }
+
+  async update(
+    userID: string,
+    userUpdateParams: UserUpdateEntityRepo,
+  ): Promise<UserEntityRepo> {
+    try {
+      return await this.prisma.user.update({
+        where: { id: userID },
+        data: {
+          ...userUpdateParams,
+        },
+      })
+    } catch (err) {
+      throw this.errorHandler.boomErrorFromPrismaError({
+        entityName: 'User',
+        error: err,
+      })
+    }
+  }
+
+  async delete(userID: string): Promise<UserEntityRepo> {
+    try {
+      return await this.prisma.user.delete({
+        where: { id: userID },
+      })
+    } catch (err) {
+      throw this.errorHandler.boomErrorFromPrismaError({
         entityName: 'User',
         error: err,
       })

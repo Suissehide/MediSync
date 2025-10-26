@@ -1,9 +1,16 @@
-export type AuthState = { isAuthenticated: boolean; user: User | null }
-
 export type User = {
+  id: string
   email: string
-  firstname?: string
-  lastname?: string
+  firstName?: string
+  lastName?: string
+  role?: Role
+}
+
+export type Role = 'NONE' | 'USER' | 'ADMIN'
+
+export type AuthState = {
+  isAuthenticated: boolean
+  user: User | null
 }
 
 export type RegisterInput = {
@@ -14,3 +21,5 @@ export type LoginInput = {
   email: string
   password: string
 }
+
+export type UpdateUserParams = User

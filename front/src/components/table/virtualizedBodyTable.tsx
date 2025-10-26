@@ -9,19 +9,19 @@ import type React from 'react'
 import { useEffect, type RefObject } from 'react'
 import type { CustomMeta } from './reactTable.tsx'
 
-type VirtualizedBodyTableProps<TData, TValue> = {
+type VirtualizedBodyTableProps<TData> = {
   table: Table<TData>
-  getCommonPinningStyles: (column: Column<TData, TValue>) => React.CSSProperties
+  getCommonPinningStyles: (column: Column<TData>) => React.CSSProperties
   rowHeight: number
   parentRef: RefObject<HTMLElement | null>
 }
 
-export function VirtualizedBodyTable<TData, TValue>({
+export function VirtualizedBodyTable<TData>({
   table,
   getCommonPinningStyles,
   rowHeight,
   parentRef,
-}: VirtualizedBodyTableProps<TData, TValue>) {
+}: VirtualizedBodyTableProps<TData>) {
   const rows = table.getRowModel().rows
   const rowCount = rows.length
 
@@ -78,13 +78,13 @@ export function VirtualizedBodyTable<TData, TValue>({
           >
             {row.getVisibleCells().map((cell) => {
               const { column } = cell
-              const meta = column.columnDef.meta as CustomMeta<TData, TValue>
+              const meta = column.columnDef.meta as CustomMeta<TData, unknown>
               const grow = meta?.grow
 
               return (
                 <td
                   key={cell.id}
-                  className="px-4 py-2 border border-border"
+                  className="px-4 py-2 border-b border-border text-sm"
                   style={{
                     ...getCommonPinningStyles(column),
                     width: grow ? 'auto' : column.getSize(),

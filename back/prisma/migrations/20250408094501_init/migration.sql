@@ -7,8 +7,8 @@ CREATE TABLE "User" (
     "email" TEXT NOT NULL,
     "password" TEXT NOT NULL,
     "salt" TEXT NOT NULL,
-    "firstname" TEXT,
-    "lastname" TEXT,
+    "firstName" TEXT,
+    "lastName" TEXT,
     "role" "Role" NOT NULL DEFAULT 'NONE',
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")

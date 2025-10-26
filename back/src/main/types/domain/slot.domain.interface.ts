@@ -1,8 +1,9 @@
 import type { Prisma } from '@prisma/client'
+
 import type { SlotEntityRepo } from '../infra/orm/repositories/slot.repository.interface'
+import type { AppointmentWithPatients } from './appointment.domain.interface'
 import type { PathwayEntityDomain } from './pathway.domain.interface'
 import type { SlotTemplateWithSoignantDomain } from './slotTemplate.domain.interface'
-import type { AppointmentWithPatients } from './appointment.domain.interface'
 
 export type SlotEntityDomain = SlotEntityRepo
 export type SlotDTODomain = SlotEntityDomain & {

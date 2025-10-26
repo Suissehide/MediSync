@@ -1,6 +1,7 @@
-import type { Slot, Prisma } from '@prisma/client'
-import type { PathwayEntityRepo } from './pathway.repository.interface'
+import type { Prisma, Slot } from '@prisma/client'
+
 import type { AppointmentWithPatientsRepo } from './appointment.repository.interface'
+import type { PathwayEntityRepo } from './pathway.repository.interface'
 import type {
   SlotTemplateUpdateEntityRepo,
   SlotTemplateWithSoignantRepo,
