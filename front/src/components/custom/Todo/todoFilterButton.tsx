@@ -19,7 +19,7 @@ export const FilterButton = ({
     >
       <div
         className={`transition duration-200 ${
-          active ? 'text-primary font-semibold' : 'text-text-light'
+          active ? 'text-primary' : 'text-text-light'
         }`}
       >
         {label}

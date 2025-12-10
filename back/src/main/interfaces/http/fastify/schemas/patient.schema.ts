@@ -19,7 +19,7 @@ const patientEntity = {
 
   // Referrals & Context
   referringCaregiver: z.string().optional().nullable(), // Soignant référent
-  followUpToDo: z.boolean().optional().nullable(), // Suivi à régulariser
+  followUpToDo: z.string().optional().nullable(), // Suivi à régulariser
 
   // Notes
   notes: z.string().optional().nullable(),

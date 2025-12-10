@@ -7,7 +7,7 @@ type FormFieldProps = {
 }
 
 const FormField = ({ children, className }: FormFieldProps) => {
-  return <div className={clsx('space-y-1', className)}>{children}</div>
+  return <div className={clsx('', className)}>{children}</div>
 }
 
 export { FormField }

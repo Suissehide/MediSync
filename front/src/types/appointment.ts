@@ -1,5 +1,8 @@
+import type {
+  AppointmentPatient,
+  UpdateAppointmentPatientParams,
+} from './appointmentPatient.ts'
 import type { Slot } from './slot.ts'
-import type { Patient } from './patient.ts'
 
 export type Appointment = {
   id: string
@@ -8,24 +11,15 @@ export type Appointment = {
   slot: Slot
   thematic?: string
   type?: string
-  accompanying?: string
-  status?: string
-  rejectionReason?: string
-  transmissionNotes?: string
-  patients: Patient[]
+  appointmentPatients: AppointmentPatient[]
 }
 
 export type CreateAppointmentParams = Pick<
   Appointment,
-  'startDate' | 'endDate' | 'thematic' | 'type' | 'transmissionNotes'
+  'startDate' | 'endDate' | 'thematic' | 'type'
 > & { slotID: string; patientIDs: string[] }
+
 export type UpdateAppointmentParams = Pick<
   Appointment,
-  | 'id'
-  | 'thematic'
-  | 'type'
-  | 'accompanying'
-  | 'status'
-  | 'rejectionReason'
-  | 'transmissionNotes'
-> & { slotID?: string; patientIDs: string[] }
+  'id' | 'thematic' | 'type'
+> & { slotID?: string; appointmentPatients: UpdateAppointmentPatientParams[] }

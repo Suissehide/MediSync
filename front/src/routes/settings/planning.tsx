@@ -1,23 +1,24 @@
+import type { DateSelectArg, EventDropArg } from '@fullcalendar/core'
+import type { EventResizeDoneArg } from '@fullcalendar/interaction'
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import DashboardLayout from '../../components/dashboard.layout.tsx'
+import dayjs from 'dayjs'
+import { useEffect, useMemo, useState } from 'react'
+
 import Calendar, {
   type CalendarEvent,
 } from '../../components/custom/Calendar/calendar.tsx'
-import { useEffect, useMemo, useState } from 'react'
-import { useAllSlotsQuery, useSlotMutations } from '../../queries/useSlot.ts'
-import type { DateSelectArg, EventDropArg } from '@fullcalendar/core'
+import EventSheet from '../../components/custom/Calendar/sheet/eventSheet.tsx'
+import AddSlotForm from '../../components/custom/Popup/addSlotForm.tsx'
+import DashboardLayout from '../../components/dashboard.layout.tsx'
 import {
   buildCalendarEventsFromSlots,
   buildCalendarEventsFromSlotTemplates,
 } from '../../libs/utils.ts'
-import AddSlotForm from '../../components/custom/Popup/addSlotForm.tsx'
-import type { EventResizeDoneArg } from '@fullcalendar/interaction'
-import { usePathwayTemplateEditStore } from '../../store/usePathwayTemplateEditStore.ts'
-import { useSlotTemplateMutations } from '../../queries/useSlotTemplate.ts'
-import type { CreateSlotParamsWithTemplateData } from '../../types/slot.ts'
-import dayjs from 'dayjs'
 import { usePathwayMutations } from '../../queries/usePathway.ts'
-import EventSheet from '../../components/custom/Calendar/sheet/eventSheet.tsx'
+import { useAllSlotsQuery, useSlotMutations } from '../../queries/useSlot.ts'
+import { useSlotTemplateMutations } from '../../queries/useSlotTemplate.ts'
+import { usePathwayTemplateEditStore } from '../../store/usePathwayTemplateEditStore.ts'
+import type { CreateSlotParamsWithTemplateData } from '../../types/slot.ts'
 
 export const Route = createFileRoute('/settings/planning')({
   beforeLoad: ({ context, location }) => {
@@ -164,7 +165,11 @@ function Planning() {
   }, [events, eventTemplates, editMode])
 
   return (
-    <DashboardLayout component={'pathway'}>
+    <DashboardLayout components={['pathway']}>
+      <h2 className="flex gap-2 items-center px-4 pt-2 text-text text-lg font-semibold">
+        Planning
+      </h2>
+
       <div className="flex flex-col h-full">
         <div className="flex-1 min-h-0 overflow-hidden">
           <Calendar

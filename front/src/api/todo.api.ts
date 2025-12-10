@@ -1,6 +1,6 @@
-import type { CreateTodoParams, Todo, UpdateTodoParams } from '../types/todo.ts'
-import { handleHttpError } from '../libs/httpErrorHandler.ts'
 import { apiUrl } from '../constants/config.constant.ts'
+import { handleHttpError } from '../libs/httpErrorHandler.ts'
+import type { CreateTodoParams, Todo, UpdateTodoParams } from '../types/todo.ts'
 import { fetchWithAuth } from './fetchWithAuth.ts'
 
 export const TodoApi = {
@@ -9,7 +9,6 @@ export const TodoApi = {
       method: 'GET',
     })
     if (!response.ok) {
-      console.log('error')
       handleHttpError(
         response,
         {},

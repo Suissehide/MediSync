@@ -1,18 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AUTH_MESSAGES } from '../constants/message.constant.ts'
-import { TODO } from '../constants/process.constant.ts'
-import { useDataFetching } from '../hooks/useDataFetching.ts'
-import { TodoApi } from '../api/todo.ts'
-import type { CreateTodoParams, Todo, UpdateTodoParams } from '../types/todo.ts'
 import { useEffect } from 'react'
+
+import { TodoApi } from '../api/todo.api.ts'
+import { TODO } from '../constants/process.constant.ts'
+import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
+import { useDataFetching } from '../hooks/useDataFetching.ts'
+import { useToast } from '../hooks/useToast.ts'
 import { useTodoStore } from '../store/useTodoStore.ts'
+import type { CreateTodoParams, Todo, UpdateTodoParams } from '../types/todo.ts'
 
 // * QUERIES
 
 export const useTodoQueries = () => {
   const setTodos = useTodoStore((state) => state.setTodos)
 
-  const defaultErrorMessage = AUTH_MESSAGES.ERROR_FETCHING
   const getAllTodos = async () => {
     return await TodoApi.getAll()
   }
@@ -33,14 +34,10 @@ export const useTodoQueries = () => {
     }
   }, [setTodos, todos])
 
-  const errorMessageText =
-    isError && error instanceof Error ? error.message : defaultErrorMessage
-
   useDataFetching({
     isPending,
     isError,
     error,
-    errorMessage: errorMessageText,
   })
 
   return { todos, isPending, error }
@@ -50,6 +47,7 @@ export const useTodoQueries = () => {
 
 export const useTodoMutations = () => {
   const queryClient = useQueryClient()
+  const { toast } = useToast()
 
   const createTodo = useMutation({
     mutationKey: [TODO.CREATE],
@@ -65,8 +63,20 @@ export const useTodoMutations = () => {
 
       return { previousTodos }
     },
-    onError: (_, __, context) => {
+    onSuccess: () => {
+      toast({
+        title: 'Todo créé avec succès',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
+    },
+    onError: (error, __, context) => {
       queryClient.setQueryData([TODO.GET_ALL], context?.previousTodos)
+
+      toast({
+        title: 'Erreur lors de la création du todo',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: [TODO.GET_ALL] })
@@ -86,8 +96,20 @@ export const useTodoMutations = () => {
 
       return { previousTodos }
     },
-    onError: (_, __, context) => {
+    onSuccess: () => {
+      toast({
+        title: 'Todo supprimé avec succès',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
+    },
+    onError: (error, __, context) => {
       queryClient.setQueryData([TODO.GET_ALL], context?.previousTodos)
+
+      toast({
+        title: 'Erreur lors de la suppression du todo',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: [TODO.GET_ALL] })
@@ -109,8 +131,20 @@ export const useTodoMutations = () => {
 
       return { previousTodos }
     },
-    onError: (_, __, context) => {
+    onSuccess: () => {
+      toast({
+        title: 'Todo modifié avec succès',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
+    },
+    onError: (error, __, context) => {
       queryClient.setQueryData([TODO.GET_ALL], context?.previousTodos)
+
+      toast({
+        title: 'Erreur lors de la mise à jour du todo',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: [TODO.GET_ALL] })

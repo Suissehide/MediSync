@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AUTH_MESSAGES } from '../constants/message.constant.ts'
+
+import { SlotTemplateApi } from '../api/slotTemplate.api.ts'
 import { SLOT_TEMPLATE } from '../constants/process.constant.ts'
+import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
-import { SlotTemplateApi } from '../api/slotTemplate.ts'
+import { useToast } from '../hooks/useToast.ts'
 import type {
   CreateSlotTemplateParams,
   SlotTemplate,
@@ -12,7 +14,6 @@ import type {
 // * QUERIES
 
 export const useSlotTemplateQueries = () => {
-  const defaultErrorMessage = AUTH_MESSAGES.ERROR_FETCHING
   const getAllSlotTemplates = async () => {
     return await SlotTemplateApi.getAll()
   }
@@ -27,14 +28,10 @@ export const useSlotTemplateQueries = () => {
     retry: 0,
   })
 
-  const errorMessageText =
-    isError && error instanceof Error ? error.message : defaultErrorMessage
-
   useDataFetching({
     isPending,
     isError,
     error,
-    errorMessage: errorMessageText,
   })
 
   return { slotTemplates, isPending, error }
@@ -44,6 +41,7 @@ export const useSlotTemplateQueries = () => {
 
 export const useSlotTemplateMutations = () => {
   const queryClient = useQueryClient()
+  const { toast } = useToast()
 
   const createSlotTemplate = useMutation({
     mutationKey: [SLOT_TEMPLATE.CREATE],
@@ -64,11 +62,23 @@ export const useSlotTemplateMutations = () => {
 
       return { previousSlotTemplates }
     },
-    onError: (_, __, context) => {
+    onSuccess: () => {
+      toast({
+        title: 'Template de créneau créé avec succès',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
+    },
+    onError: (error, __, context) => {
       queryClient.setQueryData(
         [SLOT_TEMPLATE.GET_ALL],
         context?.previousSlotTemplates,
       )
+
+      toast({
+        title: 'Erreur lors de la création du template de créneau',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: [SLOT_TEMPLATE.GET_ALL] })
@@ -94,11 +104,23 @@ export const useSlotTemplateMutations = () => {
 
       return { previousSlotTemplates }
     },
-    onError: (_, __, context) => {
+    onSuccess: () => {
+      toast({
+        title: 'Template de créneau supprimé avec succès',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
+    },
+    onError: (error, __, context) => {
       queryClient.setQueryData(
         [SLOT_TEMPLATE.GET_ALL],
         context?.previousSlotTemplates,
       )
+
+      toast({
+        title: 'Erreur lors de la suppression du template de créneau',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: [SLOT_TEMPLATE.GET_ALL] })
@@ -126,36 +148,27 @@ export const useSlotTemplateMutations = () => {
 
       return { previousSlotTemplates }
     },
-    onError: (_, __, context) => {
+    onSuccess: () => {
+      toast({
+        title: 'Template de créneau modifié avec succès',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
+    },
+    onError: (error, __, context) => {
       queryClient.setQueryData(
         [SLOT_TEMPLATE.GET_ALL],
         context?.previousSlotTemplates,
       )
+
+      toast({
+        title: 'Erreur lors de la mise à jour du template de créneau',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: [SLOT_TEMPLATE.GET_ALL] })
     },
-  })
-
-  useDataFetching({
-    isPending: createSlotTemplate.isPending,
-    isError: createSlotTemplate.isError,
-    error: createSlotTemplate.error,
-    errorMessage: 'Erreur lors de la création du template de créneau',
-  })
-
-  useDataFetching({
-    isPending: updateSlotTemplate.isPending,
-    isError: updateSlotTemplate.isError,
-    error: updateSlotTemplate.error,
-    errorMessage: 'Erreur lors de la modification du template de créneau',
-  })
-
-  useDataFetching({
-    isPending: deleteSlotTemplate.isPending,
-    isError: deleteSlotTemplate.isError,
-    error: deleteSlotTemplate.error,
-    errorMessage: 'Erreur lors de la suppression du template de créneau',
   })
 
   return { createSlotTemplate, deleteSlotTemplate, updateSlotTemplate }

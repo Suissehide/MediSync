@@ -1,7 +1,8 @@
-import type { Todo } from '../../../types/todo.ts'
 import dayjs from 'dayjs'
-import { Calendar, Check, UserRound, Trash2 } from 'lucide-react'
+import { Calendar, Check, Trash2, UserRound } from 'lucide-react'
+
 import { useTodoMutations } from '../../../queries/useTodo.ts'
+import type { Todo } from '../../../types/todo.ts'
 
 interface checkboxProps {
   checked: boolean
@@ -35,9 +36,11 @@ export default function TodoItem({ todo }: todoItemProps) {
 
   return (
     <div
-      className={`group text-sm bg-background px-6 py-4 rounded-lg ${todo.completed ? 'bg-border' : ''}`}
+      className={`group text-sm bg-background px-6 rounded-lg border border-border ${todo.completed ? 'bg-border py-2' : 'py-4'}`}
     >
-      <div className="flex justify-between items-center">
+      <div
+        className={`flex justify-between ${todo.completed ? 'items-center' : 'items-start'}`}
+      >
         <div className={`flex gap-4 ${todo.completed ? 'items-center' : ''}`}>
           <div className="pt-0.5">
             <Checkbox
@@ -72,13 +75,15 @@ export default function TodoItem({ todo }: todoItemProps) {
             </span>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => deleteTodo.mutate(todo.id)}
-          className="cursor-pointer flex opacity-0 items-center p-2 rounded-full text-destructive group-hover:opacity-100 hover:bg-card"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
+        <div className="flex">
+          <button
+            type="button"
+            onClick={() => deleteTodo.mutate(todo.id)}
+            className="cursor-pointer opacity-0  p-2 rounded-full text-destructive group-hover:opacity-100 hover:bg-card"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     </div>
   )

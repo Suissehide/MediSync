@@ -1,5 +1,7 @@
 import {
   type Column,
+  type ColumnDef,
+  type ColumnFiltersState,
   getCoreRowModel,
   getFacetedMinMaxValues,
   getFacetedRowModel,
@@ -7,13 +9,11 @@ import {
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
-  type Row,
-  type ColumnDef as TanstackColumnDef,
-  useReactTable,
-  type ColumnFiltersState,
-  type VisibilityState,
-  type RowSelectionState,
   type PaginationState,
+  type Row,
+  type RowSelectionState,
+  useReactTable,
+  type VisibilityState,
 } from '@tanstack/react-table'
 import {
   type CSSProperties,
@@ -23,6 +23,9 @@ import {
   useRef,
   useState,
 } from 'react'
+
+import { safeParse } from '../../libs/utils.ts'
+import { ColumnVisibilityMenu } from './columnVisibilityMenu'
 import {
   dateFilterFn,
   dateRangeFilterFn,
@@ -32,10 +35,8 @@ import {
   selectFilterFn,
   textFilterFn,
 } from './filtersFns'
-import { ColumnVisibilityMenu } from './columnVisibilityMenu'
 import { HeaderTable } from './headerTable.js'
 import { VirtualizedBodyTable } from './virtualizedBodyTable'
-import { safeParse } from '../../libs/utils.ts'
 
 export type CustomMeta<TData, TValue> = {
   pin?: 'left' | 'right'
@@ -44,15 +45,12 @@ export type CustomMeta<TData, TValue> = {
   filter?: FC<{ column: Column<TData, TValue> }>
 }
 
-type CustomColumnDef<TData, TValue = unknown> = TanstackColumnDef<
-  TData,
-  TValue
-> & {
+type CustomColumnDef<TData, TValue = unknown> = ColumnDef<TData, TValue> & {
   meta?: CustomMeta<TData, TValue>
 }
 
-type ReactTableProps<TData extends { id: string }, TValue = unknown> = {
-  columns: CustomColumnDef<TData, TValue>[]
+type ReactTableProps<TData extends { id: string }> = {
+  columns: CustomColumnDef<TData, any>[]
   data: TData[]
   customButtons?: ReactNode[]
   title?: string
@@ -61,14 +59,14 @@ type ReactTableProps<TData extends { id: string }, TValue = unknown> = {
   infiniteScroll?: boolean
 }
 
-export function ReactTable<TData extends { id: string }, TValue = unknown>({
+export function ReactTable<TData extends { id: string }>({
   columns,
   data,
   title,
   customHeader,
   filterId = 'default',
   infiniteScroll = true,
-}: ReactTableProps<TData, TValue>) {
+}: ReactTableProps<TData>) {
   const initialColumnFilters = safeParse(
     localStorage.getItem(`filters/${filterId}`),
     [],
@@ -145,8 +143,8 @@ export function ReactTable<TData extends { id: string }, TValue = unknown>({
     )
   }, [columnVisibility, filterId])
 
-  const getCommonPinningStyles = <TData, TValue>(
-    column: Column<TData, TValue>,
+  const getCommonPinningStyles = <TData,>(
+    column: Column<TData, unknown>,
   ): CSSProperties => {
     const isPinned = column.getIsPinned()
 
@@ -161,7 +159,7 @@ export function ReactTable<TData extends { id: string }, TValue = unknown>({
 
   useEffect(() => {
     for (const column of table.getAllLeafColumns()) {
-      const meta = column.columnDef.meta as CustomMeta<TData, TValue>
+      const meta = column.columnDef.meta as CustomMeta<TData, unknown>
       const pin = meta?.pin
       if (pin) {
         column.pin(pin)

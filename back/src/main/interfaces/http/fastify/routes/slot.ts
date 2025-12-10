@@ -75,6 +75,7 @@ const slotRouter: FastifyPluginAsync = (fastify) => {
 
       if (!('slotTemplateID' in createSlotInput)) {
         const { slotTemplate, ...rest } = createSlotInput
+
         const createdTemplate = await slotTemplateDomain.create({
           ...slotTemplate,
         })

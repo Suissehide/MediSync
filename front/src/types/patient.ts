@@ -2,10 +2,10 @@ export type Patient = {
   id: string
 
   // Identity
-  lastName: string
   firstName: string
+  lastName: string
   gender?: string
-  birthDate: Date
+  birthDate?: string
 
   // Contact
   phone1?: string
@@ -20,7 +20,7 @@ export type Patient = {
 
   // Referrals & Context
   referringCaregiver?: string // Soignant référent
-  followUpToDo?: boolean // Suivi à régulariser
+  followUpToDo?: string // Suivi à régulariser
 
   // Notes
   notes?: string
@@ -28,7 +28,7 @@ export type Patient = {
 
   // Inclusion Data
   medicalDiagnosis?: string
-  entryDate?: Date
+  entryDate?: string
   careMode?: string // Mode de prise en charge
   orientation?: string
   etpDecision?: string // ETP décision
@@ -38,7 +38,7 @@ export type Patient = {
   goal?: string
 
   // Exit Data
-  exitDate?: Date
+  exitDate?: string
   stopReason?: string // Motif d’arrêt de programme
   etpFinalOutcome?: string // Point final parcours ETP
 }

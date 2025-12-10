@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AUTH_MESSAGES } from '../constants/message.constant.ts'
+
+import { PathwayApi } from '../api/pathway.api.ts'
 import { PATHWAY, SLOT } from '../constants/process.constant.ts'
+import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
-import { PathwayApi } from '../api/pathway.ts'
+import { useToast } from '../hooks/useToast.ts'
 import type {
   CreatePathwayParams,
   InstantiatePathwayParams,
@@ -13,7 +15,6 @@ import type {
 // * QUERIES
 
 export const usePathwayQueries = () => {
-  const defaultErrorMessage = AUTH_MESSAGES.ERROR_FETCHING
   const getAllPathways = async () => {
     return await PathwayApi.getAll()
   }
@@ -28,14 +29,10 @@ export const usePathwayQueries = () => {
     retry: 0,
   })
 
-  const errorMessageText =
-    isError && error instanceof Error ? error.message : defaultErrorMessage
-
   useDataFetching({
     isPending,
     isError,
     error,
-    errorMessage: errorMessageText,
   })
 
   return { pathways, isPending, error }
@@ -45,6 +42,7 @@ export const usePathwayQueries = () => {
 
 export const usePathwayMutations = () => {
   const queryClient = useQueryClient()
+  const { toast } = useToast()
 
   const createPathway = useMutation({
     mutationKey: [PATHWAY.CREATE],
@@ -60,8 +58,20 @@ export const usePathwayMutations = () => {
 
       return { previousPathways }
     },
-    onError: (_, __, context) => {
+    onSuccess: () => {
+      toast({
+        title: 'Parcours créé avec succès',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
+    },
+    onError: (error, __, context) => {
       queryClient.setQueryData([PATHWAY.GET_ALL], context?.previousPathways)
+
+      toast({
+        title: 'Erreur lors de la création du parcours',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({
@@ -86,13 +96,59 @@ export const usePathwayMutations = () => {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: [SLOT.GET_ALL] })
+
+      toast({
+        title: 'Parcours instancié avec succès',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
     },
-    onError: (_, __, context) => {
+    onError: (error, __, context) => {
       queryClient.setQueryData([PATHWAY.INSTANTIATE], context?.previousPathways)
+
+      toast({
+        title: "Erreur lors de l'instanciation du parcours",
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({
         queryKey: [PATHWAY.INSTANTIATE],
+      })
+    },
+  })
+
+  const deletePathway = useMutation({
+    mutationKey: [PATHWAY.DELETE],
+    mutationFn: PathwayApi.delete,
+    onMutate: async (pathwayID) => {
+      await queryClient.cancelQueries({ queryKey: [PATHWAY.GET_ALL] })
+
+      const previousPathways = queryClient.getQueryData([PATHWAY.GET_ALL])
+      queryClient.setQueryData([PATHWAY.GET_ALL], (oldPathways: Pathway[]) =>
+        oldPathways?.filter((pathway: Pathway) => pathway.id !== pathwayID),
+      )
+
+      return { previousPathways }
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Parcours supprimé avec succès',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
+    },
+    onError: (error, __, context) => {
+      queryClient.setQueryData([PATHWAY.GET_ALL], context?.previousPathways)
+
+      toast({
+        title: 'Erreur lors de la suppression du parcours',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: [PATHWAY.GET_ALL],
       })
     },
   })
@@ -112,65 +168,26 @@ export const usePathwayMutations = () => {
 
       return { previousPathways }
     },
-    onError: (_, __, context) => {
+    onSuccess: () => {
+      toast({
+        title: 'Parcours modifié avec succès',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
+    },
+    onError: (error, __, context) => {
       queryClient.setQueryData([PATHWAY.GET_ALL], context?.previousPathways)
+
+      toast({
+        title: 'Erreur lors de la mise à jour du parcours',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({
         queryKey: [PATHWAY.GET_ALL],
       })
     },
-  })
-
-  const deletePathway = useMutation({
-    mutationKey: [PATHWAY.DELETE],
-    mutationFn: PathwayApi.delete,
-    onMutate: async (pathwayID) => {
-      await queryClient.cancelQueries({ queryKey: [PATHWAY.GET_ALL] })
-
-      const previousPathways = queryClient.getQueryData([PATHWAY.GET_ALL])
-      queryClient.setQueryData([PATHWAY.GET_ALL], (oldPathways: Pathway[]) =>
-        oldPathways?.filter((pathway: Pathway) => pathway.id !== pathwayID),
-      )
-
-      return { previousPathways }
-    },
-    onError: (_, __, context) => {
-      queryClient.setQueryData([PATHWAY.GET_ALL], context?.previousPathways)
-    },
-    onSettled: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: [PATHWAY.GET_ALL],
-      })
-    },
-  })
-
-  useDataFetching({
-    isPending: createPathway.isPending,
-    isError: createPathway.isError,
-    error: createPathway.error,
-    errorMessage: 'Erreur lors de la création du parcours',
-  })
-
-  useDataFetching({
-    isPending: updatePathway.isPending,
-    isError: updatePathway.isError,
-    error: updatePathway.error,
-    errorMessage: 'Erreur lors de la modification du parcours',
-  })
-
-  useDataFetching({
-    isPending: deletePathway.isPending,
-    isError: deletePathway.isError,
-    error: deletePathway.error,
-    errorMessage: 'Erreur lors de la suppression du parcours',
-  })
-
-  useDataFetching({
-    isPending: instantiatePathway.isPending,
-    isError: instantiatePathway.isError,
-    error: instantiatePathway.error,
-    errorMessage: "Erreur lors de l'instanciation du parcours",
   })
 
   return { createPathway, deletePathway, updatePathway, instantiatePathway }

@@ -1,11 +1,12 @@
 import { type ClassValue, clsx } from 'clsx'
-import { twMerge } from 'tailwind-merge'
-import type { CalendarEvent } from '../components/custom/Calendar/calendar.tsx'
-import type { Slot } from '../types/slot.ts'
 import dayjs from 'dayjs'
-import type { SlotTemplate } from '../types/slotTemplate.ts'
-import type { Appointment } from '../types/appointment.ts'
+import { twMerge } from 'tailwind-merge'
+
+import type { CalendarEvent } from '../components/custom/Calendar/calendar.tsx'
 import { APPOINTMENT_THEMATIC_OPTIONS } from '../constants/appointment.constant.ts'
+import type { Appointment } from '../types/appointment.ts'
+import type { Slot } from '../types/slot.ts'
+import type { SlotTemplate } from '../types/slotTemplate.ts'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -30,6 +31,17 @@ export function toSelectOptions<T extends Record<string, string>>(dict: T) {
     value,
     label,
   }))
+}
+
+export function getLabel<T extends Record<string, string>>(
+  dict: T,
+  value: string | null | undefined,
+  fallback: string = '-',
+): string {
+  if (!value) {
+    return fallback
+  }
+  return dict[value] || value
 }
 
 /**
@@ -99,7 +111,7 @@ export const buildCalendarEventsFromAppointments = (
       className: 'cursor-pointer transition duration-300 hover:bg-primary!',
       extendedProps: {
         type: 'appointment',
-        patients: appointment.patients,
+        appointmentPatients: appointment.appointmentPatients,
       },
     }
   })
@@ -159,9 +171,14 @@ export const formatDuration = (start?: Date | string, end?: Date | string) => {
   const hours = Math.floor(diffInMinutes / 60)
   const minutes = diffInMinutes % 60
 
+  if (hours === 0) {
+    return `(${minutes}min)`
+  }
+
   if (minutes === 0) {
     return `(${hours}h)`
   }
+
   return `(${hours}h${minutes})`
 }
 

@@ -1,3 +1,3 @@
 export const AUTH_MESSAGES = {
-  ERROR_FETCHING: 'errorFetching',
+  ERROR_FETCHING: 'Erreur de récupération',
 }

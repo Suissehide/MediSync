@@ -1,7 +1,8 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
+
+import { getUserColumns } from '../../columns/user.column.tsx'
 import DashboardLayout from '../../components/dashboard.layout.tsx'
 import ReactTable from '../../components/table/reactTable.tsx'
-import { getUserColumns } from '../../columns/user.column.tsx'
 import { useAllUsersQuery, useUserMutations } from '../../queries/useUser.ts'
 import type { User } from '../../types/auth.ts'
 
@@ -41,12 +42,15 @@ function UserList() {
 
   return (
     <DashboardLayout>
+      <h2 className="mt-2 flex gap-2 items-center px-4 mb-4 text-text text-lg font-semibold">
+        Liste des utilisateurs
+      </h2>
+
       <div>
-        <ReactTable
+        <ReactTable<User>
           data={users ?? []}
           columns={columns}
           filterId="user"
-          title={'Liste des utilisateurs'}
         />
       </div>
     </DashboardLayout>

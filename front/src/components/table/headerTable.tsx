@@ -1,6 +1,7 @@
-import type React from 'react'
-import { flexRender, type Table, type Column } from '@tanstack/react-table'
+import { type Column, flexRender, type Table } from '@tanstack/react-table'
 import { ChevronDown, ChevronsUpDown, ChevronUp } from 'lucide-react'
+import type React from 'react'
+
 import type { CustomMeta } from './reactTable.tsx'
 
 type HeaderTableProps<TData> = {

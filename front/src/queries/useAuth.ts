@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
-import { AuthApi } from '../api/auth.ts'
+import { AuthApi } from '../api/auth.api.ts'
 import { AUTH_MESSAGES } from '../constants/message.constant.ts'
 import type { LoginInput } from '../types/auth.ts'
 import { useAuthStore } from '../store/useAuthStore.ts'

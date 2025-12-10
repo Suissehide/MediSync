@@ -1,16 +1,19 @@
+import { useRouter } from '@tanstack/react-router'
 import { CircleHelp, Power, Settings } from 'lucide-react'
+import { Fragment, type JSX } from 'react'
+
 import { useLogout } from '../../../queries/useAuth.ts'
 import { Button } from '../../ui/button.tsx'
-import { useRouter } from '@tanstack/react-router'
-import SidebarSoignant from './soignant.tsx'
-import SidebarPathway from './pathway.tsx'
+import SidebarPathway from './pathway.sidebar.tsx'
+import SidebarPatient from './patient.sidebar.tsx'
+import SidebarSoignant from './soignant.sidebar.tsx'
 
 interface SidebarProps {
-  component?: string
+  components: string[]
   isVisible: boolean
 }
 
-function Sidebar({ component, isVisible }: SidebarProps) {
+function Sidebar({ isVisible, components }: SidebarProps) {
   const router = useRouter()
   const { logoutMutation } = useLogout()
   const { authState } = router.options.context
@@ -25,6 +28,12 @@ function Sidebar({ component, isVisible }: SidebarProps) {
     logoutMutation()
   }
 
+  const componentMap: Record<string, JSX.Element> = {
+    soignant: <SidebarSoignant />,
+    pathway: <SidebarPathway />,
+    patient: <SidebarPatient />,
+  }
+
   return (
     <div
       className={`fixed h-full w-64 transition-all duration-300 ${
@@ -32,15 +41,16 @@ function Sidebar({ component, isVisible }: SidebarProps) {
       } bg-card text-text text-sm`}
     >
       <div className="flex flex-col justify-between h-full px-2 py-4">
-        <div className="">
-          <div className="flex justify-between items-center mb-8">
-            <h1 className="my-0! ml-2!">
+        <div>
+          <div className="flex justify-between items-center mb-6 mt-2">
+            <h1 className="px-2 text-3xl font-bold">
               <span className="text-primary">Medi</span>Sync
             </h1>
           </div>
           <div>
-            {component === 'soignant' ? <SidebarSoignant /> : null}
-            {component === 'pathway' ? <SidebarPathway /> : null}
+            {components.map((key) => (
+              <Fragment key={key}>{componentMap[key] || null}</Fragment>
+            ))}
           </div>
         </div>
 

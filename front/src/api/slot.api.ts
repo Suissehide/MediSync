@@ -1,6 +1,6 @@
-import type { CreateSlotParams, Slot, UpdateSlotParams } from '../types/slot.ts'
-import { handleHttpError } from '../libs/httpErrorHandler.ts'
 import { apiUrl } from '../constants/config.constant.ts'
+import { handleHttpError } from '../libs/httpErrorHandler.ts'
+import type { CreateSlotParams, Slot, UpdateSlotParams } from '../types/slot.ts'
 import { fetchWithAuth } from './fetchWithAuth.ts'
 
 export const SlotApi = {
@@ -9,7 +9,6 @@ export const SlotApi = {
       method: 'GET',
     })
     if (!response.ok) {
-      console.log('error')
       handleHttpError(
         response,
         {},
@@ -27,11 +26,10 @@ export const SlotApi = {
       },
     )
     if (!response.ok) {
-      console.log('error')
       handleHttpError(
         response,
         {},
-        `Impossible de récupérer le créneau avec l\'id : ${slotID}`,
+        `Impossible de récupérer le créneau avec l'id : ${slotID}`,
       )
     }
     return response.json()

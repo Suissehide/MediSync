@@ -1,4 +1,4 @@
-import { AuthApi } from './auth.ts'
+import { AuthApi } from './auth.api.ts'
 
 let isRefreshing = false
 let refreshPromise: Promise<Response> | null = null

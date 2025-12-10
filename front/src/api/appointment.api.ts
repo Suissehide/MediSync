@@ -1,10 +1,10 @@
+import { apiUrl } from '../constants/config.constant.ts'
+import { handleHttpError } from '../libs/httpErrorHandler.ts'
 import type {
-  CreateAppointmentParams,
   Appointment,
+  CreateAppointmentParams,
   UpdateAppointmentParams,
 } from '../types/appointment.ts'
-import { handleHttpError } from '../libs/httpErrorHandler.ts'
-import { apiUrl } from '../constants/config.constant.ts'
 import { fetchWithAuth } from './fetchWithAuth.ts'
 
 export const AppointmentApi = {
@@ -16,7 +16,6 @@ export const AppointmentApi = {
       },
     )
     if (!response.ok) {
-      console.log('error')
       handleHttpError(
         response,
         {},
@@ -34,11 +33,10 @@ export const AppointmentApi = {
       },
     )
     if (!response.ok) {
-      console.log('error')
       handleHttpError(
         response,
         {},
-        `Impossible de récupérer le rendez-vous avec l\'id : ${appointmentID}`,
+        `Impossible de récupérer le rendez-vous avec l'id : ${appointmentID}`,
       )
     }
     return response.json()

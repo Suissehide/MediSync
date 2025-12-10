@@ -1,22 +1,21 @@
-import type {
-  CreateSoignantParams,
-  Soignant,
-  UpdateSoignantParams,
-} from '../types/soignant.ts'
-import { handleHttpError } from '../libs/httpErrorHandler.ts'
 import { apiUrl } from '../constants/config.constant.ts'
+import { handleHttpError } from '../libs/httpErrorHandler.ts'
+import type {
+  CreateSlotTemplateParams,
+  SlotTemplate,
+  UpdateSlotTemplateParams,
+} from '../types/slotTemplate.ts'
 import { fetchWithAuth } from './fetchWithAuth.ts'
 
-export const SoignantApi = {
-  getAll: async (): Promise<Soignant[]> => {
+export const SlotTemplateApi = {
+  getAll: async (): Promise<SlotTemplate[]> => {
     const response = await fetchWithAuth(
-      `${apiUrl}/soignant?action=getAllSoignants`,
+      `${apiUrl}/slot-template?action=getAllSlotTemplates`,
       {
         method: 'GET',
       },
     )
     if (!response.ok) {
-      console.log('error')
       handleHttpError(
         response,
         {},
@@ -27,14 +26,14 @@ export const SoignantApi = {
   },
 
   create: async (
-    createSoignantParams: CreateSoignantParams,
-  ): Promise<Soignant> => {
+    createSlotTemplateParams: CreateSlotTemplateParams,
+  ): Promise<SlotTemplate> => {
     const response = await fetchWithAuth(
-      `${apiUrl}/soignant?action=createSoignant`,
+      `${apiUrl}/slot-template?action=createSlotTemplate`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(createSoignantParams),
+        body: JSON.stringify(createSlotTemplateParams),
       },
     )
     if (!response.ok) {
@@ -44,15 +43,16 @@ export const SoignantApi = {
   },
 
   update: async (
-    updateSoignantParams: UpdateSoignantParams,
-  ): Promise<Soignant> => {
-    const { id: soignantID, ...updateSoignantInputs } = updateSoignantParams
+    updateSlotTemplateParams: UpdateSlotTemplateParams,
+  ): Promise<SlotTemplate> => {
+    const { id: slotTemplateID, ...updateSlotTemplateInputs } =
+      updateSlotTemplateParams
     const response = await fetchWithAuth(
-      `${apiUrl}/soignant/${soignantID}?action=updateSoignant`,
+      `${apiUrl}/slot-template/${slotTemplateID}?action=updateSlotTemplate`,
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updateSoignantInputs),
+        body: JSON.stringify(updateSlotTemplateInputs),
       },
     )
     if (!response.ok) {
@@ -61,9 +61,9 @@ export const SoignantApi = {
     return response.json()
   },
 
-  delete: async (soignantID: string): Promise<void> => {
+  delete: async (slotTemplateID: string): Promise<void> => {
     const response = await fetchWithAuth(
-      `${apiUrl}/soignant/${soignantID}?action=deleteSoignant`,
+      `${apiUrl}/slot-template/${slotTemplateID}?action=deleteSlotTemplate`,
       {
         method: 'DELETE',
       },

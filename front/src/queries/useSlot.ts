@@ -1,15 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AUTH_MESSAGES } from '../constants/message.constant.ts'
+
+import { SlotApi } from '../api/slot.api.ts'
 import { SLOT } from '../constants/process.constant.ts'
+import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
-import { SlotApi } from '../api/slot.ts'
+import { useToast } from '../hooks/useToast.ts'
 import type { CreateSlotParams, Slot, UpdateSlotParams } from '../types/slot.ts'
 
 // * QUERIES
 
 export const useAllSlotsQuery = () => {
-  const defaultErrorMessage = AUTH_MESSAGES.ERROR_FETCHING
-
   const {
     data: slots,
     isPending,
@@ -21,22 +21,16 @@ export const useAllSlotsQuery = () => {
     retry: 0,
   })
 
-  const errorMessageText =
-    isError && error instanceof Error ? error.message : defaultErrorMessage
-
   useDataFetching({
     isPending,
     isError,
     error,
-    errorMessage: errorMessageText,
   })
 
   return { slots, isPending, isError, error }
 }
 
 export const useSlotByIDQuery = (slotID: string, options = {}) => {
-  const defaultErrorMessage = AUTH_MESSAGES.ERROR_FETCHING
-
   const {
     data: slot,
     isPending,
@@ -52,14 +46,10 @@ export const useSlotByIDQuery = (slotID: string, options = {}) => {
     ...options,
   })
 
-  const errorMessageText =
-    isError && error instanceof Error ? error.message : defaultErrorMessage
-
   useDataFetching({
     isPending,
     isError,
     error,
-    errorMessage: errorMessageText,
   })
 
   return { slot, isPending, isError, error, refetch, isFetched }
@@ -69,6 +59,7 @@ export const useSlotByIDQuery = (slotID: string, options = {}) => {
 
 export const useSlotMutations = () => {
   const queryClient = useQueryClient()
+  const { toast } = useToast()
 
   const createSlot = useMutation({
     mutationKey: [SLOT.CREATE],
@@ -84,8 +75,20 @@ export const useSlotMutations = () => {
 
       return { previousSlots }
     },
-    onError: (_, __, context) => {
+    onSuccess: () => {
+      toast({
+        title: 'Créneau créé avec succès',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
+    },
+    onError: (error, __, context) => {
       queryClient.setQueryData([SLOT.GET_ALL], context?.previousSlots)
+
+      toast({
+        title: 'Erreur lors de la création du créneau',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: [SLOT.GET_ALL] })
@@ -105,8 +108,20 @@ export const useSlotMutations = () => {
 
       return { previousSlots }
     },
-    onError: (_, __, context) => {
+    onSuccess: () => {
+      toast({
+        title: 'Créneau supprimé avec succès',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
+    },
+    onError: (error, __, context) => {
       queryClient.setQueryData([SLOT.GET_ALL], context?.previousSlots)
+
+      toast({
+        title: 'Erreur lors de la suppression du créneau',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: [SLOT.GET_ALL] })
@@ -118,7 +133,6 @@ export const useSlotMutations = () => {
     mutationFn: SlotApi.update,
     onMutate: async (updatedSlot: UpdateSlotParams) => {
       await queryClient.cancelQueries({ queryKey: [SLOT.GET_ALL] })
-
       const previousSlots = queryClient.getQueryData([SLOT.GET_ALL])
       queryClient.setQueryData([SLOT.GET_ALL], (oldSlots: Slot[]) =>
         oldSlots?.map((slot: Slot) =>
@@ -126,35 +140,32 @@ export const useSlotMutations = () => {
         ),
       )
 
-      return { previousSlots }
+      await queryClient.cancelQueries({ queryKey: [SLOT.GET_BY_ID] })
+      const previousSlot = queryClient.getQueryData([SLOT.GET_BY_ID])
+      queryClient.setQueryData([SLOT.GET_BY_ID, updatedSlot.id], updatedSlot)
+
+      return { previousSlots, previousSlot }
     },
-    onError: (_, __, context) => {
+    onSuccess: () => {
+      toast({
+        title: 'Créneau modifié avec succès',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
+    },
+    onError: (error, __, context) => {
       queryClient.setQueryData([SLOT.GET_ALL], context?.previousSlots)
+      queryClient.setQueryData([SLOT.GET_BY_ID], context?.previousSlot)
+
+      toast({
+        title: 'Erreur lors de la mise à jour du créneau',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: [SLOT.GET_ALL] })
+      await queryClient.invalidateQueries({ queryKey: [SLOT.GET_BY_ID] })
     },
-  })
-
-  useDataFetching({
-    isPending: createSlot.isPending,
-    isError: createSlot.isError,
-    error: createSlot.error,
-    errorMessage: 'Erreur lors de la création du créneau',
-  })
-
-  useDataFetching({
-    isPending: updateSlot.isPending,
-    isError: updateSlot.isError,
-    error: updateSlot.error,
-    errorMessage: 'Erreur lors de la modification du créneau',
-  })
-
-  useDataFetching({
-    isPending: deleteSlot.isPending,
-    isError: deleteSlot.isError,
-    error: deleteSlot.error,
-    errorMessage: 'Erreur lors de la suppression du créneau',
   })
 
   return { createSlot, deleteSlot, updateSlot }

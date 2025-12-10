@@ -1,3 +1,7 @@
+import { Check, Shrimp, X } from 'lucide-react'
+
+import { TOAST_SEVERITY } from '../../constants/ui.constant.ts'
+import { useToast } from '../../hooks/useToast.ts'
 import {
   Toast,
   ToastClose,
@@ -7,9 +11,6 @@ import {
   ToastTitle,
   ToastViewport,
 } from './toast.tsx'
-import { useToast } from '../../hooks/useToast.ts'
-import { Check, Shrimp, X } from 'lucide-react'
-import { TOAST_SEVERITY } from '../../constants/ui.constant.ts'
 
 export function Toaster() {
   const { toasts } = useToast()

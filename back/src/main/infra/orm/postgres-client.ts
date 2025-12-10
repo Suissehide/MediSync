@@ -1,12 +1,12 @@
 import { Prisma, PrismaClient } from '@prisma/client'
 
 import type { IocContainer } from '../../types/application/ioc'
-import { normalizeEmail, normalizePhone } from '../../utils/helper'
 import type {
   PostgresORMInterface,
   PrimaTransactionClient,
 } from '../../types/infra/orm/client'
 import type { Logger } from '../../types/utils/logger'
+import { normalizeEmail, normalizePhone } from '../../utils/helper'
 
 const normalizerExtension = Prisma.defineExtension({
   name: 'normalizer',

@@ -1,23 +1,51 @@
+import { apiUrl } from '../constants/config.constant.ts'
+import {
+  ApiError,
+  handleHttpError,
+  isApiError,
+} from '../libs/httpErrorHandler.ts'
 import type {
   CreatePatientParams,
   Patient,
   UpdatePatientParams,
 } from '../types/patient.ts'
-import { handleHttpError } from '../libs/httpErrorHandler.ts'
-import { apiUrl } from '../constants/config.constant.ts'
 import { fetchWithAuth } from './fetchWithAuth.ts'
 
 export const PatientApi = {
   getAll: async (): Promise<Patient[]> => {
-    const response = await fetchWithAuth(`${apiUrl}/patient`, {
-      method: 'GET',
-    })
+    try {
+      const response = await fetchWithAuth(`${apiUrl}/patient`, {
+        method: 'GET',
+      })
+
+      if (!response.ok) {
+        handleHttpError(
+          response,
+          {},
+          'Impossible de récupérer la liste des patients',
+        )
+      }
+      return response.json()
+    } catch (error) {
+      if (isApiError(error)) {
+        throw error
+      }
+      throw new ApiError(0, 'Impossible de récupérer la liste des patients')
+    }
+  },
+
+  getByID: async (patientID: string): Promise<Patient> => {
+    const response = await fetchWithAuth(
+      `${apiUrl}/patient/${patientID}?action=getPatientByID`,
+      {
+        method: 'GET',
+      },
+    )
     if (!response.ok) {
-      console.log('error')
       handleHttpError(
         response,
         {},
-        'Impossible de récupérer la liste des tâches',
+        `Impossible de récupérer le patient avec l'id : ${patientID}`,
       )
     }
     return response.json()
@@ -32,7 +60,7 @@ export const PatientApi = {
       body: JSON.stringify(createPatientParams),
     })
     if (!response.ok) {
-      handleHttpError(response, {}, 'Impossible de créer une tâche')
+      handleHttpError(response, {}, 'Impossible de créer un patient')
     }
     return response.json()
   },
@@ -47,7 +75,7 @@ export const PatientApi = {
       body: JSON.stringify(updatePatientInputs),
     })
     if (!response.ok) {
-      handleHttpError(response, {}, 'Impossible de modifier la tâche')
+      handleHttpError(response, {}, 'Impossible de modifier le patient')
     }
     return response.json()
   },
@@ -57,7 +85,7 @@ export const PatientApi = {
       method: 'DELETE',
     })
     if (!response.ok) {
-      handleHttpError(response, {}, 'Impossible de supprimer la tâche')
+      handleHttpError(response, {}, 'Impossible de supprimer le patient')
     }
     return
   },

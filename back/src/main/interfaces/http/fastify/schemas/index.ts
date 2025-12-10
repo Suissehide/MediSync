@@ -1,23 +1,31 @@
 import { z } from 'zod/v4'
-import { soignantSchema } from './soignant.schema'
+
 import { patientSchema } from './patient.schema'
+import { soignantSchema } from './soignant.schema'
 
 export const appointmentSchema = z.object({
   startDate: z.coerce.date(),
   endDate: z.coerce.date(),
   thematic: z.string().optional().nullable(),
   type: z.string().optional().nullable(),
-  accompanying: z.string().optional().nullable(),
-  status: z.string().optional().nullable(),
-  rejectionReason: z.string().optional().nullable(),
-  transmissionNotes: z.string().optional().nullable(),
 
   get slot() {
     return z.object(slotSchema).optional().nullable()
   },
 
-  get patients() {
-    return z.array(patientSchema).optional().nullable()
+  get appointmentPatients() {
+    return z.array(appointmentPatientSchema).optional().nullable()
+  },
+})
+
+export const appointmentPatientSchema = z.object({
+  accompanying: z.string().optional().nullable(),
+  status: z.string().optional().nullable(),
+  rejectionReason: z.string().optional().nullable(),
+  transmissionNotes: z.string().optional().nullable(),
+
+  get patient() {
+    return patientSchema.optional().nullable()
   },
 })
 
@@ -29,7 +37,7 @@ export const pathwayTemplateSchema = z.object({
     return z.array(slotTemplateSchema).optional().nullable()
   },
   // get pathways() {
-  //   return z.array(pathwaySchema)
+  //   return z.array(pathwaySchema).optional().nullable()
   // },
 })
 

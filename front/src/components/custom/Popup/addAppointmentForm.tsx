@@ -1,4 +1,21 @@
+import { useForm } from '@tanstack/react-form'
+import dayjs from 'dayjs'
+import { Check, X } from 'lucide-react'
 import { useEffect } from 'react'
+
+import {
+  APPOINTMENT_THEMATIC_OPTIONS,
+  APPOINTMENT_TYPE_OPTIONS,
+} from '../../../constants/appointment.constant.ts'
+import { generateDurationOptions } from '../../../libs/utils.ts'
+import { usePatientQueries } from '../../../queries/usePatient.ts'
+import type { CreateAppointmentParams } from '../../../types/appointment.ts'
+import { Button } from '../../ui/button.tsx'
+import { FieldInfo } from '../../ui/fieldInfo.tsx'
+import { FormField } from '../../ui/formField.tsx'
+import { Select } from '../../ui/input.tsx'
+import { Label } from '../../ui/label.tsx'
+import { MultiSelect } from '../../ui/multiSelect.tsx'
 import {
   Popup,
   PopupBody,
@@ -7,22 +24,7 @@ import {
   PopupHeader,
   PopupTitle,
 } from '../../ui/popup.tsx'
-import { Button } from '../../ui/button.tsx'
-import { FormField } from '../../ui/formField.tsx'
-import { Label } from '../../ui/label.tsx'
-import { FieldInfo } from '../../ui/fieldInfo.tsx'
-import { useForm } from '@tanstack/react-form'
-import dayjs from 'dayjs'
-import { Select, TextArea } from '../../ui/input.tsx'
 import { TimePicker } from '../../ui/timePicker.tsx'
-import type { CreateAppointmentParams } from '../../../types/appointment.ts'
-import { usePatientQueries } from '../../../queries/usePatient.ts'
-import { generateDurationOptions } from '../../../libs/utils.ts'
-import {
-  APPOINTMENT_THEMATIC_OPTIONS,
-  APPOINTMENT_TYPE_OPTIONS,
-} from '../../../constants/appointment.constant.ts'
-import { MultiSelect } from '../../ui/multiSelect.tsx'
 
 interface AddAppointmentFormProps {
   open: boolean
@@ -64,19 +66,17 @@ function AddAppointmentForm({
           : '',
       thematic: '',
       type: '',
-      transmissionNotes: '',
       patientIDs: [] as string[],
     },
     onSubmit: ({ value }) => {
       const newAppointment: CreateAppointmentParams = {
         startDate: value.startTime.toISOString(),
         endDate: value.startTime
-          .add(Number.parseInt(value.duration), 'minute')
+          .add(Number.parseInt(value.duration, 10), 'minute')
           .toISOString(),
         slotID,
         thematic: value.thematic,
         type: value.type,
-        transmissionNotes: value.transmissionNotes,
         patientIDs: value.patientIDs,
       }
       handleCreateAppointment(newAppointment)
@@ -93,9 +93,7 @@ function AddAppointmentForm({
     <Popup modal={true} open={open} onOpenChange={setOpen}>
       <PopupContent>
         <PopupHeader>
-          <PopupTitle className="font-bold text-2xl m-0!">
-            Nouveau rendez-vous
-          </PopupTitle>
+          <PopupTitle>Nouveau rendez-vous</PopupTitle>
         </PopupHeader>
 
         <PopupBody>
@@ -213,29 +211,16 @@ function AddAppointmentForm({
                 </FormField>
               )}
             </form.Field>
-
-            <form.Field name="transmissionNotes">
-              {(field) => (
-                <FormField>
-                  <Label htmlFor={field.name}>Notes de transmission</Label>
-                  <TextArea
-                    id={field.name}
-                    value={field.state.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    onBlur={field.handleBlur}
-                  />
-                  <FieldInfo field={field} />
-                </FormField>
-              )}
-            </form.Field>
           </form>
         </PopupBody>
 
         <PopupFooter>
           <Button variant="default" onClick={() => form.handleSubmit()}>
+            <Check className="w-4 h-4" />
             Ajouter
           </Button>
-          <Button variant="secondary" onClick={() => setOpen(false)}>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            <X className="w-4 h-4" />
             Annuler
           </Button>
         </PopupFooter>

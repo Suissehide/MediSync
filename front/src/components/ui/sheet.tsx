@@ -1,14 +1,15 @@
-import { type VariantProps, cva } from 'class-variance-authority'
+import { cva, type VariantProps } from 'class-variance-authority'
 import { X } from 'lucide-react'
 import { Dialog } from 'radix-ui'
 import React from 'react'
+
 import { cn } from '../../libs/utils.ts'
 import { type ButtonProps, buttonVariants } from './button.tsx'
 
 const Sheet = Dialog.Root
 
 const sheetVariants = cva(
-  'fixed z-100 gap-4 bg-card pt-13 pb-8 px-6 border-border shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500',
+  'fixed z-100 gap-4 bg-primary-foreground border-border shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500',
   {
     variants: {
       side: {
@@ -99,7 +100,7 @@ const SheetHeader = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      'flex flex-col space-y-2 text-center sm:text-left',
+      'px-4 pt-4 flex flex-col space-y-2 text-center sm:text-left',
       className,
     )}
     {...props}

@@ -1,4 +1,20 @@
+import { useForm } from '@tanstack/react-form'
+import { Compact } from '@uiw/react-color'
+import dayjs from 'dayjs'
+import { Check, X } from 'lucide-react'
 import { useEffect } from 'react'
+
+import { SLOT_LOCATION_OPTIONS } from '../../../constants/slot.constant.ts'
+import { combineDateAndTime } from '../../../libs/utils.ts'
+import { useSoignantQueries } from '../../../queries/useSoignant.ts'
+import { useSoignantStore } from '../../../store/useSoignantStore.ts'
+import type { CreateSlotParamsWithTemplateData } from '../../../types/slot.ts'
+import { Button } from '../../ui/button.tsx'
+import { DatePicker } from '../../ui/datePicker.tsx'
+import { FieldInfo } from '../../ui/fieldInfo.tsx'
+import { FormField } from '../../ui/formField.tsx'
+import { Checkbox, Input, Select, TextArea } from '../../ui/input.tsx'
+import { Label } from '../../ui/label.tsx'
 import {
   Popup,
   PopupBody,
@@ -7,21 +23,7 @@ import {
   PopupHeader,
   PopupTitle,
 } from '../../ui/popup.tsx'
-import { Button } from '../../ui/button.tsx'
-import { FormField } from '../../ui/formField.tsx'
-import { Label } from '../../ui/label.tsx'
-import { FieldInfo } from '../../ui/fieldInfo.tsx'
-import { useForm } from '@tanstack/react-form'
-import { combineDateAndTime } from '../../../libs/utils.ts'
-import dayjs from 'dayjs'
-import { Compact } from '@uiw/react-color'
-import { DatePicker } from '../../ui/datePicker.tsx'
-import { Checkbox, Input, Select, TextArea } from '../../ui/input.tsx'
-import { useSoignantStore } from '../../../store/useSoignantStore.ts'
 import { TimePicker } from '../../ui/timePicker.tsx'
-import { useSoignantQueries } from '../../../queries/useSoignant.ts'
-import type { CreateSlotParamsWithTemplateData } from '../../../types/slot.ts'
-import { SLOT_LOCATION_OPTIONS } from '../../../constants/slot.constant.ts'
 
 interface AddSlotFormProps {
   open: boolean
@@ -281,9 +283,11 @@ function AddSlotForm({
 
         <PopupFooter>
           <Button variant="default" onClick={() => form.handleSubmit()}>
+            <Check className="w-4 h-4" />
             Ajouter
           </Button>
-          <Button variant="secondary" onClick={() => setOpen(false)}>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            <X className="w-4 h-4" />
             Annuler
           </Button>
         </PopupFooter>

@@ -1,8 +1,8 @@
 import type { IocContainer } from '../../../types/application/ioc'
-import type { AppointmentRepositoryInterface } from '../../../types/infra/orm/repositories/appointment.repository.interface'
 import type {
   AppointmentCreateEntityRepo,
   AppointmentEntityRepo,
+  AppointmentRepositoryInterface,
   AppointmentUpdateEntityRepo,
 } from '../../../types/infra/orm/repositories/appointment.repository.interface'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
@@ -20,7 +20,11 @@ class AppointmentRepository implements AppointmentRepositoryInterface {
   findAll(): Promise<AppointmentEntityRepo[]> {
     return this.prisma.appointment.findMany({
       include: {
-        patients: true,
+        appointmentPatients: {
+          include: {
+            patient: true,
+          },
+        },
       },
     })
   }
@@ -30,7 +34,11 @@ class AppointmentRepository implements AppointmentRepositoryInterface {
       return this.prisma.appointment.findUniqueOrThrow({
         where: { id: appointmentID },
         include: {
-          patients: true,
+          appointmentPatients: {
+            include: {
+              patient: true,
+            },
+          },
         },
       })
     } catch (err) {
@@ -44,19 +52,25 @@ class AppointmentRepository implements AppointmentRepositoryInterface {
   async create(
     appointmentCreateParams: AppointmentCreateEntityRepo,
   ): Promise<AppointmentEntityRepo> {
-    console.log('appointmentCreateParams', appointmentCreateParams)
     try {
       const { patientIDs, ...rest } = appointmentCreateParams
 
       return await this.prisma.appointment.create({
         data: {
           ...rest,
-          patients: {
-            connect: patientIDs?.map((id) => ({ id })) || [],
+          appointmentPatients: {
+            create:
+              patientIDs?.map((id) => ({
+                patient: { connect: { id } },
+              })) || [],
           },
         },
         include: {
-          patients: true,
+          appointmentPatients: {
+            include: {
+              patient: true,
+            },
+          },
         },
       })
     } catch (err) {
@@ -71,27 +85,67 @@ class AppointmentRepository implements AppointmentRepositoryInterface {
     appointmentID: string,
     appointmentUpdateParams: AppointmentUpdateEntityRepo,
   ): Promise<AppointmentEntityRepo> {
-    try {
-      const { patientIDs, ...rest } = appointmentUpdateParams
+    const { appointmentPatients, ...appointmentData } = appointmentUpdateParams
 
-      return await this.prisma.appointment.update({
-        where: { id: appointmentID },
-        data: {
-          ...rest,
-          ...(patientIDs && {
-            patients: {
-              set: [],
-              connect: patientIDs.map((id) => ({ id })),
+    console.log('appointmentUpdateParams:', appointmentUpdateParams)
+
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        // Met à jour le rendez-vous principal
+        await tx.appointment.update({
+          where: { id: appointmentID },
+          data: appointmentData,
+        })
+
+        // Supprime les patients qui ne sont plus présents
+        const incomingIDs = appointmentPatients
+          .map((ap) => ap.id)
+          .filter((id): id is string => !!id)
+
+        await tx.appointmentPatient.deleteMany({
+          where: {
+            appointmentId: appointmentID,
+            id: { notIn: incomingIDs.length ? incomingIDs : [''] },
+          },
+        })
+
+        // Upsert chaque patient lié
+        for (const ap of appointmentPatients) {
+          await tx.appointmentPatient.upsert({
+            where: {
+              id: ap.id ?? '',
             },
-          }),
-        },
-        include: {
-          patients: true,
-        },
+            update: {
+              accompanying: ap.accompanying,
+              status: ap.status,
+              rejectionReason: ap.rejectionReason,
+              transmissionNotes: ap.transmissionNotes,
+            },
+            create: {
+              accompanying: ap.accompanying,
+              status: ap.status,
+              rejectionReason: ap.rejectionReason,
+              transmissionNotes: ap.transmissionNotes,
+              appointment: { connect: { id: appointmentID } },
+              patient: { connect: { id: ap.patientID } },
+            },
+          })
+        }
+
+        // 3️⃣ Retourne le rendez-vous complet avec patients
+        return tx.appointment.findUniqueOrThrow({
+          where: { id: appointmentID },
+          include: {
+            appointmentPatients: {
+              include: { patient: true },
+            },
+          },
+        })
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
         entityName: 'Appointment',
+        parentEntityName: 'AppointmentPatient',
         error: err,
       })
     }

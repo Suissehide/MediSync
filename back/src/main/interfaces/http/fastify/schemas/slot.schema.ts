@@ -1,11 +1,12 @@
 import { z } from 'zod/v4'
+
+import { appointmentResponseSchema } from './appointment.schema'
 import { slotSchema } from './index'
 import {
   createSlotTemplateSchema,
   slotTemplateResponseSchema,
   updateSlotTemplateByIdSchema,
 } from './slotTemplate.schema'
-import { appointmentResponseSchema } from './appointment.schema'
 
 export const slotResponseSchema = slotSchema.extend({
   id: z.cuid(),

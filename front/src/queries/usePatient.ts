@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AUTH_MESSAGES } from '../constants/message.constant.ts'
+
+import { PatientApi } from '../api/patient.api.ts'
 import { PATIENT } from '../constants/process.constant.ts'
+import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
-import { PatientApi } from '../api/patient.ts'
+import { useToast } from '../hooks/useToast.ts'
 import type {
   CreatePatientParams,
   Patient,
@@ -12,10 +14,8 @@ import type {
 // * QUERIES
 
 export const usePatientQueries = () => {
-  const defaultErrorMessage = AUTH_MESSAGES.ERROR_FETCHING
-  const getAllPatients = async () => {
-    return await PatientApi.getAll()
-  }
+  const getAllPatients = async () => await PatientApi.getAll()
+
   const {
     data: patients,
     isPending,
@@ -27,23 +27,45 @@ export const usePatientQueries = () => {
     retry: 0,
   })
 
-  const errorMessageText =
-    isError && error instanceof Error ? error.message : defaultErrorMessage
+  useDataFetching({
+    isPending,
+    isError,
+    error,
+  })
+
+  return { patients, isPending, isError, error }
+}
+
+export const usePatientByIDQuery = (patientID: string, options = {}) => {
+  const {
+    data: patient,
+    isPending,
+    isError,
+    error,
+    refetch,
+    isFetched,
+  } = useQuery({
+    queryKey: [PATIENT.GET_BY_ID, patientID],
+    queryFn: () => PatientApi.getByID(patientID),
+    enabled: !!patientID,
+    retry: 0,
+    ...options,
+  })
 
   useDataFetching({
     isPending,
     isError,
     error,
-    errorMessage: errorMessageText,
   })
 
-  return { patients, isPending, error }
+  return { patient, isPending, isError, error, refetch, isFetched }
 }
 
 // * MUTATIONS
 
 export const usePatientMutations = () => {
   const queryClient = useQueryClient()
+  const { toast } = useToast()
 
   const createPatient = useMutation({
     mutationKey: [PATIENT.CREATE],
@@ -59,8 +81,20 @@ export const usePatientMutations = () => {
 
       return { previousPatients }
     },
-    onError: (_, __, context) => {
+    onSuccess: () => {
+      toast({
+        title: 'Patient créé avec succès',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
+    },
+    onError: (error, __, context) => {
       queryClient.setQueryData([PATIENT.GET_ALL], context?.previousPatients)
+
+      toast({
+        title: 'Erreur lors de la création du patient',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: [PATIENT.GET_ALL] })
@@ -80,8 +114,20 @@ export const usePatientMutations = () => {
 
       return { previousPatients }
     },
-    onError: (_, __, context) => {
+    onSuccess: () => {
+      toast({
+        title: 'Patient supprimé avec succès',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
+    },
+    onError: (error, __, context) => {
       queryClient.setQueryData([PATIENT.GET_ALL], context?.previousPatients)
+
+      toast({
+        title: 'Erreur lors de la suppression du patient',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: [PATIENT.GET_ALL] })
@@ -93,7 +139,6 @@ export const usePatientMutations = () => {
     mutationFn: PatientApi.update,
     onMutate: async (updatedPatient: UpdatePatientParams) => {
       await queryClient.cancelQueries({ queryKey: [PATIENT.GET_ALL] })
-
       const previousPatients = queryClient.getQueryData([PATIENT.GET_ALL])
       queryClient.setQueryData([PATIENT.GET_ALL], (oldPatients: Patient[]) =>
         oldPatients?.map((patient: Patient) =>
@@ -101,13 +146,37 @@ export const usePatientMutations = () => {
         ),
       )
 
-      return { previousPatients }
+      await queryClient.cancelQueries({ queryKey: [PATIENT.GET_BY_ID] })
+      const previousPatient = queryClient.getQueryData([
+        PATIENT.GET_BY_ID,
+        updatedPatient.id,
+      ])
+      queryClient.setQueryData(
+        [PATIENT.GET_BY_ID, updatedPatient.id],
+        updatedPatient,
+      )
+
+      return { previousPatients, previousPatient }
     },
-    onError: (_, __, context) => {
+    onSuccess: () => {
+      toast({
+        title: 'Patient modifié avec succès',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
+    },
+    onError: (error, __, context) => {
       queryClient.setQueryData([PATIENT.GET_ALL], context?.previousPatients)
+      queryClient.setQueryData([PATIENT.GET_BY_ID], context?.previousPatient)
+
+      toast({
+        title: 'Erreur lors de la mise à jour du patient',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: [PATIENT.GET_ALL] })
+      await queryClient.invalidateQueries({ queryKey: [PATIENT.GET_BY_ID] })
     },
   })
 

@@ -29,7 +29,11 @@ class SlotRepository implements SlotRepositoryInterface {
         pathway: true,
         appointments: {
           include: {
-            patients: true,
+            appointmentPatients: {
+              include: {
+                patient: true,
+              },
+            },
           },
         },
       },
@@ -49,7 +53,11 @@ class SlotRepository implements SlotRepositoryInterface {
           pathway: true,
           appointments: {
             include: {
-              patients: true,
+              appointmentPatients: {
+                include: {
+                  patient: true,
+                },
+              },
             },
           },
         },
@@ -75,7 +83,11 @@ class SlotRepository implements SlotRepositoryInterface {
           pathway: true,
           appointments: {
             include: {
-              patients: true,
+              appointmentPatients: {
+                include: {
+                  patient: true,
+                },
+              },
             },
           },
         },
@@ -116,7 +128,11 @@ class SlotRepository implements SlotRepositoryInterface {
             pathway: true,
             appointments: {
               include: {
-                patients: true,
+                appointmentPatients: {
+                  include: {
+                    patient: true,
+                  },
+                },
               },
             },
           },

@@ -98,6 +98,9 @@ const appointmentRouter: FastifyPluginAsync = (fastify) => {
     },
     async (request) => {
       const { appointmentID } = request.params
+
+      console.log('request.body', request.body)
+
       const updated = await appointmentDomain.update(
         appointmentID,
         request.body,

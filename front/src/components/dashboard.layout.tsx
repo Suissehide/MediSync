@@ -1,14 +1,15 @@
 import type React from 'react'
 import { useState } from 'react'
-import Navbar from './navbar.tsx'
+
 import Sidebar from './custom/Sidebar/sidebar.tsx'
+import Navbar from './navbar.tsx'
 
 interface DashboardLayoutProps {
-  component?: string
+  components?: string[]
 }
 
 function DashboardLayout({
-  component,
+  components,
   children,
 }: DashboardLayoutProps & {
   children: React.ReactNode
@@ -21,7 +22,7 @@ function DashboardLayout({
 
   return (
     <div className="flex h-screen">
-      <Sidebar component={component} isVisible={sidebarVisible} />
+      <Sidebar components={components ?? []} isVisible={sidebarVisible} />
       <div
         className={`flex-1 ${sidebarVisible ? 'ml-64' : ''} flex flex-col transition-all duration-300`}
       >

@@ -11,21 +11,16 @@
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
-import { Route as PatientImport } from './routes/patient'
 import { Route as DashboardImport } from './routes/dashboard'
 import { Route as IndexImport } from './routes/index'
+import { Route as PatientIndexImport } from './routes/patient/index'
 import { Route as SettingsUserImport } from './routes/settings/user'
 import { Route as SettingsSoignantImport } from './routes/settings/soignant'
 import { Route as SettingsPlanningImport } from './routes/settings/planning'
+import { Route as PatientPatientIDImport } from './routes/patient/$patientID'
 import { Route as AuthLoginImport } from './routes/auth/login'
 
 // Create/Update Routes
-
-const PatientRoute = PatientImport.update({
-  id: '/patient',
-  path: '/patient',
-  getParentRoute: () => rootRoute,
-} as any)
 
 const DashboardRoute = DashboardImport.update({
   id: '/dashboard',
@@ -36,6 +31,12 @@ const DashboardRoute = DashboardImport.update({
 const IndexRoute = IndexImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const PatientIndexRoute = PatientIndexImport.update({
+  id: '/patient/',
+  path: '/patient/',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -54,6 +55,12 @@ const SettingsSoignantRoute = SettingsSoignantImport.update({
 const SettingsPlanningRoute = SettingsPlanningImport.update({
   id: '/settings/planning',
   path: '/settings/planning',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const PatientPatientIDRoute = PatientPatientIDImport.update({
+  id: '/patient/$patientID',
+  path: '/patient/$patientID',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -81,18 +88,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardImport
       parentRoute: typeof rootRoute
     }
-    '/patient': {
-      id: '/patient'
-      path: '/patient'
-      fullPath: '/patient'
-      preLoaderRoute: typeof PatientImport
-      parentRoute: typeof rootRoute
-    }
     '/auth/login': {
       id: '/auth/login'
       path: '/auth/login'
       fullPath: '/auth/login'
       preLoaderRoute: typeof AuthLoginImport
+      parentRoute: typeof rootRoute
+    }
+    '/patient/$patientID': {
+      id: '/patient/$patientID'
+      path: '/patient/$patientID'
+      fullPath: '/patient/$patientID'
+      preLoaderRoute: typeof PatientPatientIDImport
       parentRoute: typeof rootRoute
     }
     '/settings/planning': {
@@ -116,6 +123,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsUserImport
       parentRoute: typeof rootRoute
     }
+    '/patient/': {
+      id: '/patient/'
+      path: '/patient'
+      fullPath: '/patient'
+      preLoaderRoute: typeof PatientIndexImport
+      parentRoute: typeof rootRoute
+    }
   }
 }
 
@@ -124,32 +138,35 @@ declare module '@tanstack/react-router' {
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
-  '/patient': typeof PatientRoute
   '/auth/login': typeof AuthLoginRoute
+  '/patient/$patientID': typeof PatientPatientIDRoute
   '/settings/planning': typeof SettingsPlanningRoute
   '/settings/soignant': typeof SettingsSoignantRoute
   '/settings/user': typeof SettingsUserRoute
+  '/patient': typeof PatientIndexRoute
 }
 
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
-  '/patient': typeof PatientRoute
   '/auth/login': typeof AuthLoginRoute
+  '/patient/$patientID': typeof PatientPatientIDRoute
   '/settings/planning': typeof SettingsPlanningRoute
   '/settings/soignant': typeof SettingsSoignantRoute
   '/settings/user': typeof SettingsUserRoute
+  '/patient': typeof PatientIndexRoute
 }
 
 export interface FileRoutesById {
   __root__: typeof rootRoute
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
-  '/patient': typeof PatientRoute
   '/auth/login': typeof AuthLoginRoute
+  '/patient/$patientID': typeof PatientPatientIDRoute
   '/settings/planning': typeof SettingsPlanningRoute
   '/settings/soignant': typeof SettingsSoignantRoute
   '/settings/user': typeof SettingsUserRoute
+  '/patient/': typeof PatientIndexRoute
 }
 
 export interface FileRouteTypes {
@@ -157,50 +174,55 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/dashboard'
-    | '/patient'
     | '/auth/login'
+    | '/patient/$patientID'
     | '/settings/planning'
     | '/settings/soignant'
     | '/settings/user'
+    | '/patient'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/dashboard'
-    | '/patient'
     | '/auth/login'
+    | '/patient/$patientID'
     | '/settings/planning'
     | '/settings/soignant'
     | '/settings/user'
+    | '/patient'
   id:
     | '__root__'
     | '/'
     | '/dashboard'
-    | '/patient'
     | '/auth/login'
+    | '/patient/$patientID'
     | '/settings/planning'
     | '/settings/soignant'
     | '/settings/user'
+    | '/patient/'
   fileRoutesById: FileRoutesById
 }
 
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRoute
-  PatientRoute: typeof PatientRoute
   AuthLoginRoute: typeof AuthLoginRoute
+  PatientPatientIDRoute: typeof PatientPatientIDRoute
   SettingsPlanningRoute: typeof SettingsPlanningRoute
   SettingsSoignantRoute: typeof SettingsSoignantRoute
   SettingsUserRoute: typeof SettingsUserRoute
+  PatientIndexRoute: typeof PatientIndexRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRoute,
-  PatientRoute: PatientRoute,
   AuthLoginRoute: AuthLoginRoute,
+  PatientPatientIDRoute: PatientPatientIDRoute,
   SettingsPlanningRoute: SettingsPlanningRoute,
   SettingsSoignantRoute: SettingsSoignantRoute,
   SettingsUserRoute: SettingsUserRoute,
+  PatientIndexRoute: PatientIndexRoute,
 }
 
 export const routeTree = rootRoute
@@ -215,11 +237,12 @@ export const routeTree = rootRoute
       "children": [
         "/",
         "/dashboard",
-        "/patient",
         "/auth/login",
+        "/patient/$patientID",
         "/settings/planning",
         "/settings/soignant",
-        "/settings/user"
+        "/settings/user",
+        "/patient/"
       ]
     },
     "/": {
@@ -228,11 +251,11 @@ export const routeTree = rootRoute
     "/dashboard": {
       "filePath": "dashboard.tsx"
     },
-    "/patient": {
-      "filePath": "patient.tsx"
-    },
     "/auth/login": {
       "filePath": "auth/login.tsx"
+    },
+    "/patient/$patientID": {
+      "filePath": "patient/$patientID.tsx"
     },
     "/settings/planning": {
       "filePath": "settings/planning.tsx"
@@ -242,6 +265,9 @@ export const routeTree = rootRoute
     },
     "/settings/user": {
       "filePath": "settings/user.tsx"
+    },
+    "/patient/": {
+      "filePath": "patient/index.tsx"
     }
   }
 }

@@ -1,10 +1,17 @@
-import React from 'react'
-import { Toast as ToastPrimitives } from 'radix-ui'
-import { cva, type VariantProps } from 'class-variance-authority'
-import { cn } from '../../libs/utils.ts'
 import { Cross2Icon } from '@radix-ui/react-icons'
+import { cva, type VariantProps } from 'class-variance-authority'
+import { Toast as ToastPrimitives } from 'radix-ui'
+import React from 'react'
+import { createPortal } from 'react-dom'
 
-const ToastProvider = ToastPrimitives.Provider
+import { cn } from '../../libs/utils.ts'
+
+const ToastProvider = ({ children }: { children: React.ReactNode }) => {
+  return createPortal(
+    <ToastPrimitives.Provider>{children}</ToastPrimitives.Provider>,
+    document.body,
+  )
+}
 
 const ToastViewport = React.forwardRef<
   React.ComponentRef<typeof ToastPrimitives.Viewport>,
@@ -13,7 +20,7 @@ const ToastViewport = React.forwardRef<
   <ToastPrimitives.Viewport
     ref={ref}
     className={cn(
-      'fixed top-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px]',
+      'fixed top-0 z-[999] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px]',
       className,
     )}
     {...props}

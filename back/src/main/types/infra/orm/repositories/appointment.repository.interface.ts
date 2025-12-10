@@ -1,9 +1,16 @@
 import type { Appointment, Prisma } from '@prisma/client'
+
+import type {
+  AppointmentPatientEntityRepo,
+  AppointmentPatientUpdateEntityRepo,
+} from './appointmentPatient.repository.interface'
 import type { PatientEntityRepo } from './patient.repository.interface'
 
 export type AppointmentEntityRepo = Appointment
 export type AppointmentWithPatientsRepo = AppointmentEntityRepo & {
-  patients: PatientEntityRepo[]
+  appointmentPatients: (AppointmentPatientEntityRepo & {
+    patient: PatientEntityRepo
+  })[]
 }
 export type AppointmentCreateEntityRepo =
   Prisma.AppointmentUncheckedCreateInput & {
@@ -13,7 +20,7 @@ export type AppointmentCreateEntityRepo =
 export type AppointmentUpdateEntityRepo =
   Prisma.AppointmentUncheckedUpdateInput & {
     slotID?: string
-    patientIDs: string[]
+    appointmentPatients: AppointmentPatientUpdateEntityRepo[]
   }
 
 export interface AppointmentRepositoryInterface {

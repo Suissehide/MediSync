@@ -1,4 +1,9 @@
+import { Check, Trash, X } from 'lucide-react'
 import { useState } from 'react'
+
+import { useSoignantMutations } from '../../../queries/useSoignant.ts'
+import type { Soignant } from '../../../types/soignant.ts'
+import { Button } from '../../ui/button.tsx'
 import {
   Popup,
   PopupBody,
@@ -8,10 +13,6 @@ import {
   PopupTitle,
   PopupTrigger,
 } from '../../ui/popup.tsx'
-import { Button } from '../../ui/button.tsx'
-import { Trash } from 'lucide-react'
-import { useSoignantMutations } from '../../../queries/useSoignant.ts'
-import type { Soignant } from '../../../types/soignant.ts'
 
 interface DeleteSoignantFormProps {
   soignant: Soignant
@@ -46,9 +47,11 @@ function DeleteSoignantForm({ soignant }: DeleteSoignantFormProps) {
 
         <PopupFooter>
           <Button variant="default" onClick={() => handleDelete()}>
+            <Check className="w-4 h-4" />
             Supprimer
           </Button>
           <Button variant="secondary" onClick={() => setOpen(false)}>
+            <X className="w-4 h-4" />
             Annuler
           </Button>
         </PopupFooter>

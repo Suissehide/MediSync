@@ -1,22 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AUTH_MESSAGES } from '../constants/message.constant.ts'
+import { useEffect } from 'react'
+
+import { SoignantApi } from '../api/soignant.api.ts'
 import { SOIGNANT } from '../constants/process.constant.ts'
+import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
-import { SoignantApi } from '../api/soignant.ts'
+import { useToast } from '../hooks/useToast.ts'
+import { useSoignantStore } from '../store/useSoignantStore.ts'
 import type {
   CreateSoignantParams,
   Soignant,
   UpdateSoignantParams,
 } from '../types/soignant.ts'
-import { useEffect } from 'react'
-import { useSoignantStore } from '../store/useSoignantStore.ts'
 
 // * QUERIES
 
 export const useSoignantQueries = () => {
   const setSoignants = useSoignantStore((state) => state.setSoignants)
 
-  const defaultErrorMessage = AUTH_MESSAGES.ERROR_FETCHING
   const getAllSoignants = async () => {
     return await SoignantApi.getAll()
   }
@@ -37,14 +38,10 @@ export const useSoignantQueries = () => {
     }
   }, [setSoignants, soignants])
 
-  const errorMessageText =
-    isError && error instanceof Error ? error.message : defaultErrorMessage
-
   useDataFetching({
     isPending,
     isError,
     error,
-    errorMessage: errorMessageText,
   })
 
   return { soignants, isPending, error }
@@ -54,6 +51,7 @@ export const useSoignantQueries = () => {
 
 export const useSoignantMutations = () => {
   const queryClient = useQueryClient()
+  const { toast } = useToast()
 
   const createSoignant = useMutation({
     mutationKey: [SOIGNANT.CREATE],
@@ -69,8 +67,20 @@ export const useSoignantMutations = () => {
 
       return { previousSoignants }
     },
-    onError: (_, __, context) => {
+    onSuccess: () => {
+      toast({
+        title: 'Soignant créé avec succès',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
+    },
+    onError: (error, __, context) => {
       queryClient.setQueryData([SOIGNANT.GET_ALL], context?.previousSoignants)
+
+      toast({
+        title: 'Erreur lors de la création du soignant',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: [SOIGNANT.GET_ALL] })
@@ -92,8 +102,20 @@ export const useSoignantMutations = () => {
 
       return { previousSoignants }
     },
-    onError: (_, __, context) => {
+    onSuccess: () => {
+      toast({
+        title: 'Soignant supprimé avec succès',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
+    },
+    onError: (error, __, context) => {
       queryClient.setQueryData([SOIGNANT.GET_ALL], context?.previousSoignants)
+
+      toast({
+        title: 'Erreur lors de la suppression du soignant',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: [SOIGNANT.GET_ALL] })
@@ -115,8 +137,20 @@ export const useSoignantMutations = () => {
 
       return { previousSoignants }
     },
-    onError: (_, __, context) => {
+    onSuccess: () => {
+      toast({
+        title: 'Soignant modifié avec succès',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
+    },
+    onError: (error, __, context) => {
       queryClient.setQueryData([SOIGNANT.GET_ALL], context?.previousSoignants)
+
+      toast({
+        title: 'Erreur lors de la mise à jour du soignant',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: [SOIGNANT.GET_ALL] })

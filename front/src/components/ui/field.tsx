@@ -1,8 +1,9 @@
-import React from 'react'
 import { Form } from 'radix-ui'
+import React from 'react'
+
 import { cn } from '../../libs/utils.ts'
-import { labelVariants } from './label.tsx'
 import { inputVariants } from './input.tsx'
+import { labelVariants } from './label.tsx'
 
 export interface FieldProps
   extends React.InputHTMLAttributes<HTMLInputElement> {

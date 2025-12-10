@@ -1,6 +1,6 @@
-import type { UpdateUserParams, User } from '../types/auth.ts'
-import { handleHttpError } from '../libs/httpErrorHandler.ts'
 import { apiUrl } from '../constants/config.constant.ts'
+import { handleHttpError } from '../libs/httpErrorHandler.ts'
+import type { UpdateUserParams, User } from '../types/auth.ts'
 import { fetchWithAuth } from './fetchWithAuth.ts'
 
 export const UserApi = {
@@ -9,7 +9,6 @@ export const UserApi = {
       method: 'GET',
     })
     if (!response.ok) {
-      console.log('error')
       handleHttpError(
         response,
         {},
@@ -27,11 +26,10 @@ export const UserApi = {
       },
     )
     if (!response.ok) {
-      console.log('error')
       handleHttpError(
         response,
         {},
-        `Impossible de récupérer le rendez-vous avec l\'id : ${userID}`,
+        `Impossible de récupérer le rendez-vous avec l'id : ${userID}`,
       )
     }
     return response.json()

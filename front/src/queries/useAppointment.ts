@@ -1,19 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AUTH_MESSAGES } from '../constants/message.constant.ts'
+
+import { AppointmentApi } from '../api/appointment.api.ts'
 import { APPOINTMENT } from '../constants/process.constant.ts'
+import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
-import { AppointmentApi } from '../api/appointment.ts'
+import { useToast } from '../hooks/useToast.ts'
 import type {
-  CreateAppointmentParams,
   Appointment,
+  CreateAppointmentParams,
   UpdateAppointmentParams,
 } from '../types/appointment.ts'
 
 // * QUERIES
 
 export const useAllAppointmentsQuery = () => {
-  const defaultErrorMessage = AUTH_MESSAGES.ERROR_FETCHING
-
   const {
     data: appointments,
     isPending,
@@ -25,14 +25,10 @@ export const useAllAppointmentsQuery = () => {
     retry: 0,
   })
 
-  const errorMessageText =
-    isError && error instanceof Error ? error.message : defaultErrorMessage
-
   useDataFetching({
     isPending,
     isError,
     error,
-    errorMessage: errorMessageText,
   })
 
   return { appointments, isPending, isError, error }
@@ -42,8 +38,6 @@ export const useAppointmentByIDQuery = (
   appointmentID: string,
   options = {},
 ) => {
-  const defaultErrorMessage = AUTH_MESSAGES.ERROR_FETCHING
-
   const {
     data: appointment,
     isPending,
@@ -59,14 +53,10 @@ export const useAppointmentByIDQuery = (
     ...options,
   })
 
-  const errorMessageText =
-    isError && error instanceof Error ? error.message : defaultErrorMessage
-
   useDataFetching({
     isPending,
     isError,
     error,
-    errorMessage: errorMessageText,
   })
 
   return { appointment, isPending, isError, error, refetch, isFetched }
@@ -76,6 +66,7 @@ export const useAppointmentByIDQuery = (
 
 export const useAppointmentMutations = () => {
   const queryClient = useQueryClient()
+  const { toast } = useToast()
 
   const createAppointment = useMutation({
     mutationKey: [APPOINTMENT.CREATE],
@@ -96,11 +87,23 @@ export const useAppointmentMutations = () => {
 
       return { previousAppointments }
     },
-    onError: (_, __, context) => {
+    onSuccess: () => {
+      toast({
+        title: 'Rendez-vous créé avec succès',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
+    },
+    onError: (error, __, context) => {
       queryClient.setQueryData(
         [APPOINTMENT.GET_ALL],
         context?.previousAppointments,
       )
+
+      toast({
+        title: 'Erreur lors de la création du rendez-vous',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: [APPOINTMENT.GET_ALL] })
@@ -126,11 +129,23 @@ export const useAppointmentMutations = () => {
 
       return { previousAppointments }
     },
-    onError: (_, __, context) => {
+    onSuccess: () => {
+      toast({
+        title: 'Rendez-vous supprimé avec succès',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
+    },
+    onError: (error, __, context) => {
       queryClient.setQueryData(
         [APPOINTMENT.GET_ALL],
         context?.previousAppointments,
       )
+
+      toast({
+        title: 'Erreur lors de la suppression du rendez-vous',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: [APPOINTMENT.GET_ALL] })
@@ -158,36 +173,27 @@ export const useAppointmentMutations = () => {
 
       return { previousAppointments }
     },
-    onError: (_, __, context) => {
+    onSuccess: () => {
+      toast({
+        title: 'Rendez-vous modifié avec succès',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
+    },
+    onError: (error, __, context) => {
       queryClient.setQueryData(
         [APPOINTMENT.GET_ALL],
         context?.previousAppointments,
       )
+
+      toast({
+        title: 'Erreur lors de la mise à jour du rendez-vous',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: [APPOINTMENT.GET_ALL] })
     },
-  })
-
-  useDataFetching({
-    isPending: createAppointment.isPending,
-    isError: createAppointment.isError,
-    error: createAppointment.error,
-    errorMessage: 'Erreur lors de la création du rendez-vous',
-  })
-
-  useDataFetching({
-    isPending: updateAppointment.isPending,
-    isError: updateAppointment.isError,
-    error: updateAppointment.error,
-    errorMessage: 'Erreur lors de la modification du rendez-vous',
-  })
-
-  useDataFetching({
-    isPending: deleteAppointment.isPending,
-    isError: deleteAppointment.isError,
-    error: deleteAppointment.error,
-    errorMessage: 'Erreur lors de la suppression du rendez-vous',
   })
 
   return { createAppointment, deleteAppointment, updateAppointment }

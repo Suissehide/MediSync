@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AUTH_MESSAGES } from '../constants/message.constant.ts'
+
+import { PathwayTemplateApi } from '../api/pathwayTemplate.api.ts'
 import { PATHWAY_TEMPLATE } from '../constants/process.constant.ts'
+import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
-import { PathwayTemplateApi } from '../api/pathwayTemplate.ts'
+import { useToast } from '../hooks/useToast.ts'
 import type {
   CreatePathwayTemplateParams,
   PathwayTemplate,
@@ -12,7 +14,6 @@ import type {
 // * QUERIES
 
 export const usePathwayTemplateQueries = () => {
-  const defaultErrorMessage = AUTH_MESSAGES.ERROR_FETCHING
   const getAllPathwayTemplates = async () => {
     return await PathwayTemplateApi.getAll()
   }
@@ -27,14 +28,10 @@ export const usePathwayTemplateQueries = () => {
     retry: 0,
   })
 
-  const errorMessageText =
-    isError && error instanceof Error ? error.message : defaultErrorMessage
-
   useDataFetching({
     isPending,
     isError,
     error,
-    errorMessage: errorMessageText,
   })
 
   return { pathwayTemplates, isPending, error }
@@ -44,6 +41,7 @@ export const usePathwayTemplateQueries = () => {
 
 export const usePathwayTemplateMutations = () => {
   const queryClient = useQueryClient()
+  const { toast } = useToast()
 
   const createPathwayTemplate = useMutation({
     mutationKey: [PATHWAY_TEMPLATE.CREATE],
@@ -64,45 +62,23 @@ export const usePathwayTemplateMutations = () => {
 
       return { previousPathwayTemplates }
     },
-    onError: (_, __, context) => {
-      queryClient.setQueryData(
-        [PATHWAY_TEMPLATE.GET_ALL],
-        context?.previousPathwayTemplates,
-      )
-    },
-    onSettled: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: [PATHWAY_TEMPLATE.GET_ALL],
+    onSuccess: () => {
+      toast({
+        title: 'Template de parcours créé avec succès',
+        severity: TOAST_SEVERITY.SUCCESS,
       })
     },
-  })
-
-  const updatePathwayTemplate = useMutation({
-    mutationKey: [PATHWAY_TEMPLATE.UPDATE],
-    mutationFn: PathwayTemplateApi.update,
-    onMutate: async (updatedPathwayTemplate: UpdatePathwayTemplateParams) => {
-      await queryClient.cancelQueries({ queryKey: [PATHWAY_TEMPLATE.GET_ALL] })
-
-      const previousPathwayTemplates = queryClient.getQueryData([
-        PATHWAY_TEMPLATE.GET_ALL,
-      ])
-      queryClient.setQueryData(
-        [PATHWAY_TEMPLATE.GET_ALL],
-        (oldPathwayTemplates: PathwayTemplate[]) =>
-          oldPathwayTemplates?.map((pathwayTemplate: PathwayTemplate) =>
-            pathwayTemplate.id === updatedPathwayTemplate.id
-              ? updatedPathwayTemplate
-              : pathwayTemplate,
-          ),
-      )
-
-      return { previousPathwayTemplates }
-    },
-    onError: (_, __, context) => {
+    onError: (error, __, context) => {
       queryClient.setQueryData(
         [PATHWAY_TEMPLATE.GET_ALL],
         context?.previousPathwayTemplates,
       )
+
+      toast({
+        title: 'Erreur lors de la création du template de parcours',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({
@@ -131,11 +107,23 @@ export const usePathwayTemplateMutations = () => {
 
       return { previousPathwayTemplates }
     },
-    onError: (_, __, context) => {
+    onSuccess: () => {
+      toast({
+        title: 'Template de parcours modifié avec succès',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
+    },
+    onError: (error, __, context) => {
       queryClient.setQueryData(
         [PATHWAY_TEMPLATE.GET_ALL],
         context?.previousPathwayTemplates,
       )
+
+      toast({
+        title: 'Erreur lors de la mise à jour du template de parcours',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({
@@ -144,25 +132,49 @@ export const usePathwayTemplateMutations = () => {
     },
   })
 
-  useDataFetching({
-    isPending: createPathwayTemplate.isPending,
-    isError: createPathwayTemplate.isError,
-    error: createPathwayTemplate.error,
-    errorMessage: 'Erreur lors de la création du template de parcours',
-  })
+  const updatePathwayTemplate = useMutation({
+    mutationKey: [PATHWAY_TEMPLATE.UPDATE],
+    mutationFn: PathwayTemplateApi.update,
+    onMutate: async (updatedPathwayTemplate: UpdatePathwayTemplateParams) => {
+      await queryClient.cancelQueries({ queryKey: [PATHWAY_TEMPLATE.GET_ALL] })
+      const previousPathwayTemplates = queryClient.getQueryData([
+        PATHWAY_TEMPLATE.GET_ALL,
+      ])
+      queryClient.setQueryData(
+        [PATHWAY_TEMPLATE.GET_ALL],
+        (oldPathwayTemplates: PathwayTemplate[]) =>
+          oldPathwayTemplates?.map((pathwayTemplate: PathwayTemplate) =>
+            pathwayTemplate.id === updatedPathwayTemplate.id
+              ? updatedPathwayTemplate
+              : pathwayTemplate,
+          ),
+      )
 
-  useDataFetching({
-    isPending: updatePathwayTemplate.isPending,
-    isError: updatePathwayTemplate.isError,
-    error: updatePathwayTemplate.error,
-    errorMessage: 'Erreur lors de la modification du template de parcours',
-  })
+      return { previousPathwayTemplates }
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Template de parcours supprimé avec succès',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
+    },
+    onError: (error, __, context) => {
+      queryClient.setQueryData(
+        [PATHWAY_TEMPLATE.GET_ALL],
+        context?.previousPathwayTemplates,
+      )
 
-  useDataFetching({
-    isPending: deletePathwayTemplate.isPending,
-    isError: deletePathwayTemplate.isError,
-    error: deletePathwayTemplate.error,
-    errorMessage: 'Erreur lors de la suppression du template de parcours',
+      toast({
+        title: 'Erreur lors de la suppression du template de parcours',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: [PATHWAY_TEMPLATE.GET_ALL],
+      })
+    },
   })
 
   return { createPathwayTemplate, deletePathwayTemplate, updatePathwayTemplate }

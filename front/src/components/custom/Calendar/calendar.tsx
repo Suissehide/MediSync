@@ -1,21 +1,26 @@
-import dayGridPlugin from '@fullcalendar/daygrid'
-import timeGridPlugin from '@fullcalendar/timegrid'
-import listPlugin from '@fullcalendar/list'
-import interactionPlugin, {
-  type EventResizeDoneArg,
-} from '@fullcalendar/interaction'
-import frLocale from '@fullcalendar/core/locales/fr'
-import FullCalendar from '@fullcalendar/react'
 import type {
   DateSelectArg,
   DateSpanApi,
   EventDropArg,
+  ToolbarInput,
 } from '@fullcalendar/core'
-import { useEffect, useRef } from 'react'
-import { EventContent } from './eventContent.tsx'
+import frLocale from '@fullcalendar/core/locales/fr'
+import dayGridPlugin from '@fullcalendar/daygrid'
+import interactionPlugin, {
+  type EventResizeDoneArg,
+} from '@fullcalendar/interaction'
+import listPlugin from '@fullcalendar/list'
+import FullCalendar from '@fullcalendar/react'
+import timeGridPlugin from '@fullcalendar/timegrid'
+import dayjs, { type Dayjs } from 'dayjs'
+import { CalendarIcon } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { createRoot } from 'react-dom/client'
+
 import { usePlanningStore } from '../../../store/usePlanningStore.ts'
-import dayjs from 'dayjs'
 import type { Appointment } from '../../../types/appointment.ts'
+import CalendarDatePickerButton from './calendarDatePickerButton.tsx'
+import { EventContent } from './eventContent.tsx'
 
 export interface CalendarEvent {
   id: string
@@ -42,9 +47,10 @@ interface CalendarProps {
   handleEditEvent?: (arg: EventDropArg | EventResizeDoneArg) => void
   handleClickEvent?: (eventID: string) => void
   handleDropEvent?: (pathwayTemplateID: string, startDate: string) => void
-  handleOpenEvent: (eventId: string) => void
+  handleOpenEvent?: (eventId: string) => void
   selectAllow?: (selectInfo: DateSpanApi) => boolean
   editMode?: boolean
+  headerToolbar?: ToolbarInput
   editable?: boolean
 }
 
@@ -57,9 +63,37 @@ function Calendar({
   handleOpenEvent,
   selectAllow,
   editMode,
+  headerToolbar,
   editable = false,
 }: CalendarProps) {
   const lastDropTimeRef = useRef<number>(0)
+  const calendarRef = useRef<FullCalendar | null>(null)
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
+
+  const handleOpenDatePicker = (ev: MouseEvent) => {
+    const target = ev.currentTarget
+    if (target instanceof HTMLElement) {
+      setAnchorEl(target)
+    }
+  }
+
+  const handleDateChange = (date: Dayjs | null) => {
+    if (!date) {
+      return
+    }
+
+    const api = calendarRef.current?.getApi() ?? null
+    api?.gotoDate(date.toDate())
+    setAnchorEl(null)
+  }
+
+  useEffect(() => {
+    const button = document.querySelector('.fc-selectDateButton-button')
+    if (button && !button.querySelector('svg')) {
+      const root = createRoot(button)
+      root.render(<CalendarIcon size={18} />)
+    }
+  }, [])
 
   const handleSelect = (dateSelectArg: DateSelectArg) => {
     handleSelectEvent?.(dateSelectArg)
@@ -117,6 +151,7 @@ function Calendar({
   return (
     <div className={`${editMode ? 'edit-mode' : ''} h-full`}>
       <FullCalendar
+        ref={calendarRef}
         plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
         initialView="timeGridWeek"
         locale={frLocale}
@@ -126,11 +161,20 @@ function Calendar({
         selectMirror={true}
         selectable={true}
         unselectAuto={true}
-        headerToolbar={{
-          left: 'title',
-          center: 'dayGridMonth,timeGridWeek,listWeek',
-          right: 'prev,next today',
+        nowIndicator={true}
+        customButtons={{
+          selectDateButton: {
+            text: '',
+            click: handleOpenDatePicker,
+          },
         }}
+        headerToolbar={
+          headerToolbar ?? {
+            left: 'title',
+            center: 'dayGridMonth,timeGridWeek,listWeek',
+            right: 'selectDateButton prev,next today',
+          }
+        }
         titleFormat={{
           day: '2-digit',
           month: 'long',
@@ -205,6 +249,12 @@ function Calendar({
             }
           }
         }}
+      />
+
+      <CalendarDatePickerButton
+        anchorEl={anchorEl}
+        setAnchorEl={setAnchorEl}
+        onChange={handleDateChange}
       />
     </div>
   )

@@ -1,12 +1,13 @@
 import {
-  flexRender,
-  type Table,
   type Column,
+  flexRender,
   type Row,
+  type Table,
 } from '@tanstack/react-table'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import type React from 'react'
-import { useEffect, type RefObject } from 'react'
+import { type RefObject, useEffect } from 'react'
+
 import type { CustomMeta } from './reactTable.tsx'
 
 type VirtualizedBodyTableProps<TData> = {
@@ -47,7 +48,7 @@ export function VirtualizedBodyTable<TData>({
   if (rowCount === 0) {
     return (
       <tbody>
-        <tr className="h-[30em] bg-secondary text-center border border-border">
+        <tr className="h-[20em] bg-primary-foreground text-sm border-b border-border text-center">
           <td colSpan={table.getAllLeafColumns().length}>Pas de données</td>
         </tr>
       </tbody>

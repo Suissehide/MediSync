@@ -4,27 +4,29 @@ import type {
   AppointmentCreateEntityRepo,
   AppointmentUpdateEntityRepo,
 } from '../infra/orm/repositories/appointment.repository.interface'
+import type {
+  AppointmentPatientEntityDomain,
+  AppointmentPatientUpdateEntityDomain,
+} from './appointmentPatient.domain.interface'
 import type { PatientEntityDomain } from './patient.domain.interface'
 
 export type AppointmentEntityDomain = Appointment
 export type AppointmentWithPatients = AppointmentEntityDomain & {
-  patients: PatientEntityDomain[]
+  appointmentPatients: (AppointmentPatientEntityDomain & {
+    patient: PatientEntityDomain
+  })[]
 }
 export type AppointmentCreateEntityDomain = Pick<
   AppointmentCreateEntityRepo,
-  'startDate' | 'endDate' | 'type' | 'thematic' | 'transmissionNotes'
+  'startDate' | 'endDate' | 'type' | 'thematic'
 > & { slotID: string; patientIDs: string[] }
 export type AppointmentUpdateEntityDomain = Pick<
   AppointmentUpdateEntityRepo,
-  | 'startDate'
-  | 'endDate'
-  | 'type'
-  | 'thematic'
-  | 'transmissionNotes'
-  | 'status'
-  | 'rejectionReason'
-  | 'accompanying'
-> & { slotID?: string; patientIDs: string[] }
+  'startDate' | 'endDate' | 'type' | 'thematic'
+> & {
+  slotID?: string
+  appointmentPatients: AppointmentPatientUpdateEntityDomain[]
+}
 
 export interface AppointmentDomainInterface {
   findAll: () => Promise<AppointmentEntityDomain[]>

@@ -1,6 +1,7 @@
 import { Slot } from '@radix-ui/react-slot'
-import { type VariantProps, cva } from 'class-variance-authority'
+import { cva, type VariantProps } from 'class-variance-authority'
 import React from 'react'
+
 import { cn } from '../../libs/utils'
 
 const buttonVariants = cva(
@@ -10,12 +11,12 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          'bg-primary text-primary-foreground shadow hover:bg-primary/90',
+          'bg-primary text-primary-foreground shadow hover:bg-primary/70',
         destructive:
           'bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/70',
         outline:
-          'border border-border bg-transparent hover:bg-primary hover:text-accent-foreground',
-        secondary: 'bg-secondary text-text shadow-sm hover:bg-secondary/80',
+          'border border-border bg-transparent hover:bg-card hover:text-text-light',
+        secondary: 'bg-secondary text-text shadow-sm hover:bg-border',
         ghost:
           'bg-card border border-muted hover:text-primary hover:border-primary/20',
         link: 'text-primary underline-offset-4 hover:underline',
@@ -29,8 +30,8 @@ const buttonVariants = cva(
         default: 'h-9 px-4 py-2',
         sm: 'h-8 rounded-md px-3 text-xs',
         lg: 'h-10 rounded-md px-8',
-        icon: 'h-9 w-9 rounded-xl',
-        'icon-sm': 'h-6 w-6 p-1 rounded-xl',
+        icon: 'h-9 w-9 rounded-lg',
+        'icon-sm': 'h-6 w-6 p-1 rounded-lg',
       },
     },
     defaultVariants: {

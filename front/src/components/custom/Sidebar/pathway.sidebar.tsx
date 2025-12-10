@@ -1,18 +1,19 @@
+import { Draggable } from '@fullcalendar/interaction'
 import { Loader2Icon, Pencil, Route, Settings } from 'lucide-react'
-import AddPathwayForm from '../Popup/addPathwayForm.tsx'
-import { usePathwayTemplateQueries } from '../../../queries/usePathwayTemplate.ts'
-import { Button } from '../../ui/button.tsx'
+import { useEffect, useRef } from 'react'
+import { useShallow } from 'zustand/react/shallow'
+
 import {
   getContrastTextColor,
   hexToRGBA,
   parseRGBA,
 } from '../../../libs/color.ts'
-import type { PathwayTemplate } from '../../../types/pathwayTemplate.ts'
+import { usePathwayTemplateQueries } from '../../../queries/usePathwayTemplate.ts'
 import { usePathwayTemplateEditStore } from '../../../store/usePathwayTemplateEditStore.ts'
-import { useShallow } from 'zustand/react/shallow'
 import { usePlanningStore } from '../../../store/usePlanningStore.ts'
-import { useEffect, useRef } from 'react'
-import { Draggable } from '@fullcalendar/interaction'
+import type { PathwayTemplate } from '../../../types/pathwayTemplate.ts'
+import { Button } from '../../ui/button.tsx'
+import AddPathwayForm from '../Popup/addPathwayForm.tsx'
 
 function SidebarPathway() {
   const containerRef = useRef<HTMLDivElement>(null)

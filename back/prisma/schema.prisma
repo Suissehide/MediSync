@@ -42,19 +42,31 @@ model Pathway {
 }
 
 model Appointment {
-  id                String    @id @default(cuid())
-  startDate         DateTime
-  endDate           DateTime
-  thematic          String?
-  type              String?
+  id                  String               @id @default(cuid())
+  startDate           DateTime
+  endDate             DateTime
+  thematic            String?
+  type                String?
+  slotID              String
+  appointmentPatients AppointmentPatient[]
+
+  slot Slot @relation(fields: [slotID], references: [id])
+}
+
+model AppointmentPatient {
+  id            String @id @default(cuid())
+  appointmentId String
+  patientId     String
+
   accompanying      String?
   status            String?
   rejectionReason   String?
   transmissionNotes String?
-  slotID            String
-  patients          Patient[]
 
-  slot Slot @relation(fields: [slotID], references: [id])
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+  patient     Patient     @relation(fields: [patientId], references: [id])
+
+  @@unique([appointmentId, patientId])
 }
 
 model SlotTemplate {
@@ -119,7 +131,7 @@ model Patient {
 
   // Referrals & Context
   referringCaregiver String? // Soignant référent
-  followUpToDo       Boolean? // Suivi à régulariser
+  followUpToDo       String? // Suivi à régulariser
 
   // Notes
   notes   String?
@@ -143,7 +155,7 @@ model Patient {
 
   createDate DateTime
 
-  Appointment Appointment[]
+  appointmentPatients AppointmentPatient[]
 }
 
 model Todo {

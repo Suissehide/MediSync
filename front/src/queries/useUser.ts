@@ -1,15 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AUTH_MESSAGES } from '../constants/message.constant.ts'
+
+import { UserApi } from '../api/user.api.ts'
 import { APPOINTMENT } from '../constants/process.constant.ts'
+import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
-import { UserApi } from '../api/user.ts'
-import type { User, UpdateUserParams } from '../types/auth.ts'
+import { useToast } from '../hooks/useToast.ts'
+import type { UpdateUserParams, User } from '../types/auth.ts'
 
 // * QUERIES
 
 export const useAllUsersQuery = () => {
-  const defaultErrorMessage = AUTH_MESSAGES.ERROR_FETCHING
-
   const {
     data: users,
     isPending,
@@ -21,22 +21,16 @@ export const useAllUsersQuery = () => {
     retry: 0,
   })
 
-  const errorMessageText =
-    isError && error instanceof Error ? error.message : defaultErrorMessage
-
   useDataFetching({
     isPending,
     isError,
     error,
-    errorMessage: errorMessageText,
   })
 
   return { users, isPending, isError, error }
 }
 
 export const useUserByIDQuery = (userID: string, options = {}) => {
-  const defaultErrorMessage = AUTH_MESSAGES.ERROR_FETCHING
-
   const {
     data: user,
     isPending,
@@ -52,14 +46,10 @@ export const useUserByIDQuery = (userID: string, options = {}) => {
     ...options,
   })
 
-  const errorMessageText =
-    isError && error instanceof Error ? error.message : defaultErrorMessage
-
   useDataFetching({
     isPending,
     isError,
     error,
-    errorMessage: errorMessageText,
   })
 
   return { user, isPending, isError, error, refetch, isFetched }
@@ -69,6 +59,7 @@ export const useUserByIDQuery = (userID: string, options = {}) => {
 
 export const useUserMutations = () => {
   const queryClient = useQueryClient()
+  const { toast } = useToast()
 
   const deleteUser = useMutation({
     mutationKey: [APPOINTMENT.DELETE],
@@ -83,8 +74,20 @@ export const useUserMutations = () => {
 
       return { previousUsers }
     },
-    onError: (_, __, context) => {
+    onSuccess: () => {
+      toast({
+        title: 'Utilisateur supprimé avec succès',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
+    },
+    onError: (error, __, context) => {
       queryClient.setQueryData([APPOINTMENT.GET_ALL], context?.previousUsers)
+
+      toast({
+        title: "Erreur lors de la suppression de l'utilisateur",
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: [APPOINTMENT.GET_ALL] })
@@ -106,26 +109,24 @@ export const useUserMutations = () => {
 
       return { previousUsers }
     },
-    onError: (_, __, context) => {
+    onSuccess: () => {
+      toast({
+        title: 'Utilisateur modifié avec succès',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
+    },
+    onError: (error, __, context) => {
       queryClient.setQueryData([APPOINTMENT.GET_ALL], context?.previousUsers)
+
+      toast({
+        title: "Erreur lors de la mise à jour de l'utilisateur",
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: [APPOINTMENT.GET_ALL] })
     },
-  })
-
-  useDataFetching({
-    isPending: updateUser.isPending,
-    isError: updateUser.isError,
-    error: updateUser.error,
-    errorMessage: 'Erreur lors de la modification du rendez-vous',
-  })
-
-  useDataFetching({
-    isPending: deleteUser.isPending,
-    isError: deleteUser.isError,
-    error: deleteUser.error,
-    errorMessage: 'Erreur lors de la suppression du rendez-vous',
   })
 
   return { deleteUser, updateUser }

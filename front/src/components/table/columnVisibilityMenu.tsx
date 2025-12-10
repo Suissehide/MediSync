@@ -1,6 +1,8 @@
+import { Menu, MenuItem } from '@mui/material'
 import { flexRender } from '@tanstack/react-table'
-import { useEffect, useState } from 'react'
 import { ChevronDown, ChevronsUp } from 'lucide-react'
+import { useEffect, useState } from 'react'
+
 import { Button } from '../ui/button.tsx'
 
 export const ColumnVisibilityMenu = ({ table, initialColumnVisibility }) => {

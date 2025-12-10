@@ -1,3 +1,12 @@
+import { useForm } from '@tanstack/react-form'
+import { Plus } from 'lucide-react'
+
+import { useTodoMutations } from '../../../queries/useTodo.ts'
+import { Button } from '../../ui/button.tsx'
+import { FieldInfo } from '../../ui/fieldInfo.tsx'
+import { FormField } from '../../ui/formField.tsx'
+import { Input } from '../../ui/input.tsx'
+import { Label } from '../../ui/label.tsx'
 import {
   Sheet,
   SheetContent,
@@ -5,14 +14,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '../../ui/sheet.tsx'
-import { Plus } from 'lucide-react'
-import { Button } from '../../ui/button.tsx'
-import { useForm } from '@tanstack/react-form'
-import { Input } from '../../ui/input.tsx'
-import { Label } from '../../ui/label.tsx'
-import { FieldInfo } from '../../ui/fieldInfo.tsx'
-import { FormField } from '../../ui/formField.tsx'
-import { useTodoMutations } from '../../../queries/useTodo.ts'
 
 export default function TodoAddSheet({
   open,
@@ -58,19 +59,17 @@ export default function TodoAddSheet({
       >
         <SheetHeader className="flex flex-row justify-between items-center mb-6">
           <div className="m-0">
-            <SheetTitle className="font-bold text-2xl m-0!">
-              Ajouter une tâche
-            </SheetTitle>
+            <SheetTitle>Ajouter une tâche</SheetTitle>
           </div>
         </SheetHeader>
 
-        <div className="h-full">
+        <div className="px-4 h-full">
           <form
             onSubmit={async (e) => {
               e.preventDefault()
               await form.handleSubmit()
             }}
-            className="space-y-4 max-w-md"
+            className="space-y-2"
           >
             <form.Field
               name="title"
@@ -123,7 +122,9 @@ export default function TodoAddSheet({
               )}
             </form.Field>
 
-            <Button type="submit">Ajouter</Button>
+            <Button type="submit" className="mt-2">
+              Ajouter
+            </Button>
           </form>
         </div>
       </SheetContent>

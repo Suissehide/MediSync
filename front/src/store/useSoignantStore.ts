@@ -1,6 +1,7 @@
-import type { Soignant } from '../types/soignant.ts'
-import { persist } from 'zustand/middleware'
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
+
+import type { Soignant } from '../types/soignant.ts'
 
 interface SoignantState {
   soignants: Soignant[]
@@ -18,14 +19,6 @@ interface SoignantActions {
 }
 
 type PersistedSoignantState = Pick<SoignantState, 'selectedSoignantID'>
-
-const soignants: Soignant[] = [
-  { id: '1', name: 'Educ IDE', active: true },
-  { id: '2', name: 'Psychologue', active: true },
-  { id: '3', name: 'Pharmacienne', active: true },
-  { id: '4', name: 'Aide-soignante', active: true },
-  { id: '5', name: 'Diététicienne', active: true },
-]
 
 export const useSoignantStore = create<SoignantState & SoignantActions>()(
   persist(

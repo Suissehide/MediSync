@@ -1,4 +1,5 @@
 import { useCallback } from 'react'
+
 import { type ToasterToast, useToastStore } from '../store/useToastStore'
 
 type Toast = Omit<ToasterToast, 'id'>

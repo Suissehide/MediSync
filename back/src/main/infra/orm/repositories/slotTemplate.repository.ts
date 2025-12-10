@@ -1,14 +1,12 @@
-import type { PostgresPrismaClient } from '../postgres-client'
-import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { IocContainer } from '../../../types/application/ioc'
 import type {
+  SlotTemplateCreateEntityRepo,
   SlotTemplateDTORepo,
   SlotTemplateRepositoryInterface,
-} from '../../../types/infra/orm/repositories/slotTemplate.repository.interface'
-import type {
-  SlotTemplateCreateEntityRepo,
   SlotTemplateUpdateEntityRepo,
 } from '../../../types/infra/orm/repositories/slotTemplate.repository.interface'
+import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
+import type { PostgresPrismaClient } from '../postgres-client'
 
 class SlotTemplateRepository implements SlotTemplateRepositoryInterface {
   private readonly prisma: PostgresPrismaClient

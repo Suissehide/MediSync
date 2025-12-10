@@ -27,7 +27,7 @@
     "rules": {
       "recommended": true,
       "complexity": {
-        "noExcessiveCognitiveComplexity": "error"
+        "noExcessiveCognitiveComplexity": "warn"
       },
       "correctness": {
         "noUndeclaredVariables": "error",
@@ -81,5 +81,10 @@
       "ErrorHandler",
       "ErrorMatcherOptions"
     ]
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
   }
 }

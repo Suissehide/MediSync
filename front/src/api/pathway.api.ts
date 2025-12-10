@@ -1,11 +1,11 @@
+import { apiUrl } from '../constants/config.constant.ts'
+import { handleHttpError } from '../libs/httpErrorHandler.ts'
 import type {
   CreatePathwayParams,
   InstantiatePathwayParams,
   Pathway,
   UpdatePathwayParams,
 } from '../types/pathway.ts'
-import { handleHttpError } from '../libs/httpErrorHandler.ts'
-import { apiUrl } from '../constants/config.constant.ts'
 import { fetchWithAuth } from './fetchWithAuth.ts'
 
 export const PathwayApi = {
@@ -14,7 +14,6 @@ export const PathwayApi = {
       method: 'GET',
     })
     if (!response.ok) {
-      console.log('error')
       handleHttpError(
         response,
         {},

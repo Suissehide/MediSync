@@ -1,8 +1,9 @@
-import React from 'react'
-import { cn } from '../../libs/utils.ts'
 import { cva } from 'class-variance-authority'
 import { Check, ChevronDown, X } from 'lucide-react'
 import { Select as RadixUiSelect } from 'radix-ui'
+import React from 'react'
+
+import { cn } from '../../libs/utils.ts'
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {}
 interface TextAreaProps

@@ -1,4 +1,14 @@
+import { useForm } from '@tanstack/react-form'
+import { Compact } from '@uiw/react-color'
+import { Check, Plus, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
+
+import { usePathwayTemplateMutations } from '../../../queries/usePathwayTemplate.ts'
+import { Button } from '../../ui/button.tsx'
+import { FieldInfo } from '../../ui/fieldInfo.tsx'
+import { FormField } from '../../ui/formField.tsx'
+import { Input } from '../../ui/input.tsx'
+import { Label } from '../../ui/label.tsx'
 import {
   Popup,
   PopupBody,
@@ -8,15 +18,6 @@ import {
   PopupTitle,
   PopupTrigger,
 } from '../../ui/popup.tsx'
-import { Button } from '../../ui/button.tsx'
-import { Plus } from 'lucide-react'
-import { FormField } from '../../ui/formField.tsx'
-import { Label } from '../../ui/label.tsx'
-import { Input } from '../../ui/input.tsx'
-import { FieldInfo } from '../../ui/fieldInfo.tsx'
-import { useForm } from '@tanstack/react-form'
-import { Compact } from '@uiw/react-color'
-import { usePathwayTemplateMutations } from '../../../queries/usePathwayTemplate.ts'
 
 function AddPathwayForm() {
   const [open, setOpen] = useState(false)
@@ -105,9 +106,11 @@ function AddPathwayForm() {
 
         <PopupFooter>
           <Button variant="default" onClick={() => form.handleSubmit()}>
+            <Check className="w-4 h-4" />
             Ajouter
           </Button>
-          <Button variant="secondary" onClick={() => setOpen(false)}>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            <X className="w-4 h-4" />
             Annuler
           </Button>
         </PopupFooter>

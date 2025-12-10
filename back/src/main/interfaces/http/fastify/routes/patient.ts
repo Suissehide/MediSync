@@ -1,19 +1,20 @@
-import { z } from 'zod/v4'
-import {
-  patientResponseSchema,
-  deletePatientByIdParamsSchema,
-  getPatientByIdParamsSchema,
-  updatePatientByIdSchema,
-  patientsResponseSchema,
-  createPatientSchema,
-  type GetPatientByIdParams,
-  type CreatePatientBody,
-  type UpdatePatientParams,
-  type UpdatePatientBody,
-  type DeletePatientByIdParams,
-} from '../schemas/patient.schema'
 import Boom from '@hapi/boom'
 import type { FastifyPluginAsync } from 'fastify'
+import { z } from 'zod/v4'
+
+import {
+  type CreatePatientBody,
+  createPatientSchema,
+  type DeletePatientByIdParams,
+  deletePatientByIdParamsSchema,
+  type GetPatientByIdParams,
+  getPatientByIdParamsSchema,
+  patientResponseSchema,
+  patientsResponseSchema,
+  type UpdatePatientBody,
+  type UpdatePatientParams,
+  updatePatientByIdSchema,
+} from '../schemas/patient.schema'
 
 const patientRouter: FastifyPluginAsync = (fastify) => {
   const { iocContainer } = fastify

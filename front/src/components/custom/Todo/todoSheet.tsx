@@ -1,3 +1,11 @@
+import { ScrollArea } from '@radix-ui/themes'
+import dayjs from 'dayjs'
+import { BellIcon, FilePlus, Loader2Icon } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { useShallow } from 'zustand/react/shallow'
+
+import { useTodoQueries } from '../../../queries/useTodo.ts'
+import { useTodoStore } from '../../../store/useTodoStore.ts'
 import {
   Sheet,
   SheetContent,
@@ -5,16 +13,9 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '../../ui/sheet.tsx'
-import { BellIcon, Loader2Icon } from 'lucide-react'
-import { useTodoStore } from '../../../store/useTodoStore.ts'
-import { useShallow } from 'zustand/react/shallow'
-import { ScrollArea } from '@radix-ui/themes'
-import TodoItem from './todoItem.tsx'
-import dayjs from 'dayjs'
-import { useEffect, useState } from 'react'
-import { useTodoQueries } from '../../../queries/useTodo.ts'
-import { FilterButton } from './todoFilterButton.tsx'
 import TodoAddSheet from './todoAddSheet.tsx'
+import { FilterButton } from './todoFilterButton.tsx'
+import TodoItem from './todoItem.tsx'
 
 export default function TodoSheet() {
   const [isParentOpen, setIsParentOpen] = useState(false)
@@ -26,18 +27,25 @@ export default function TodoSheet() {
     useShallow((state) => ({ todos: state.todos })),
   )
   const hasNewTodos = useTodoStore((state) => state.hasNewTodos)
-  const today = dayjs().format('dddd DD MMM')
+  const today = dayjs().format('dddd DD MMMM')
   const [filter, setFilter] = useState('all')
 
-  const filteredTodos = todos.filter((todo) => {
-    if (filter === 'opened') {
-      return !todo.completed
-    }
-    if (filter === 'closed') {
-      return todo.completed
-    }
-    return true
-  })
+  const filteredTodos = todos
+    .filter((todo) => {
+      if (filter === 'opened') {
+        return !todo.completed
+      }
+      if (filter === 'closed') {
+        return todo.completed
+      }
+      return true
+    })
+    .sort((a, b) => {
+      if (a.completed === b.completed) {
+        return 0
+      }
+      return a.completed ? 1 : -1
+    })
 
   useEffect(() => {
     if (!isChildOpen && shouldCloseParent) {
@@ -69,17 +77,28 @@ export default function TodoSheet() {
 
       <SheetContent>
         <SheetHeader className="flex flex-row justify-between items-center mb-6">
-          <div className="m-0">
-            <SheetTitle className="font-bold text-2xl m-0!">
-              Liste des tâches
-            </SheetTitle>
-            <span className="text-text-light capitalize">{today}</span>
+          <div className="flex items-center gap-6">
+            <div className="pl-2 relative flex justify-center items-center before:z-[-1] before:absolute before:bg-primary/30 before:rounded-full before:w-6.5 before:h-6.5 after:z-[-1] after:absolute after:bg-primary/10 after:rounded-full after:w-9.5 after:h-9.5">
+              <FilePlus
+                fill="#2563eb"
+                strokeWidth={1}
+                className="h-4 w-4 text-card z-1"
+              />
+            </div>
+            <div>
+              <SheetTitle className="mb-[-4px]">Liste des tâches</SheetTitle>
+              <span className="text-sm text-text-light capitalize">
+                {today}
+              </span>
+            </div>
           </div>
-
-          <TodoAddSheet open={isChildOpen} onOpenChange={setIsChildOpen} />
         </SheetHeader>
 
-        <div className="flex justify-between text-sm">
+        <div className="px-4 mb-8">
+          <TodoAddSheet open={isChildOpen} onOpenChange={setIsChildOpen} />
+        </div>
+
+        <div className="px-4 flex gap-6 text-sm">
           <FilterButton
             label="Toutes"
             count={todos.length}
@@ -104,14 +123,14 @@ export default function TodoSheet() {
           />
         </div>
 
-        <div className="h-full">
+        <div className="px-4 h-full">
           {isPending ? (
             <div className="h-full flex justify-center items-center">
               <Loader2Icon className="size-10 animate-spin text-foreground" />
             </div>
           ) : (
             <ScrollArea className="h-full">
-              <div className="flex flex-col gap-4 my-4 mb-8">
+              <div className="flex flex-col gap-2 my-4 mb-8">
                 {filteredTodos?.map((todo) => (
                   <TodoItem key={todo.id} todo={todo} />
                 ))}

@@ -28,9 +28,11 @@ export class ApiError extends Error {
     defaultMessage: string,
     override?: Partial<ApiErrorInfo>,
   ) {
+    console.error('TEST', status, defaultMessage, override)
+
     const base = ApiError.defaultErrorCases(status, defaultMessage)
     const final = {
-      title: override?.title ?? base.title,
+      title: override?.title ?? defaultMessage ?? base.title,
       message: override?.message ?? base.message,
     }
 
@@ -46,6 +48,12 @@ export class ApiError extends Error {
     defaultMessage: string,
   ): ApiErrorInfo {
     switch (status) {
+      case 0:
+        return {
+          title: 'Erreur de connexion',
+          message:
+            'Impossible de contacter le serveur. Vérifiez votre connexion internet.',
+        }
       case 400:
         return {
           title: 'Requête invalide',

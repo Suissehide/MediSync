@@ -20,10 +20,7 @@ export const deleteUserByIdParamsSchema = getUserByIdParamsSchema
 
 export const updateUserByIdSchema = {
   params: getUserByIdParamsSchema,
-  body: userSchema.partial().extend({
-    slotID: z.cuid().optional(),
-    patientIDs: z.array(z.cuid()),
-  }),
+  body: userSchema.partial().extend({}),
 }
 
 export type UserInput = z.infer<typeof userSchema>
