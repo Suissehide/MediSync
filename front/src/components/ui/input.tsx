@@ -72,6 +72,7 @@ const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
     return (
       <div className="relative w-full">
         <RadixUiSelect.Root
+          key={value}
           value={value}
           onValueChange={onValueChange}
           {...props}
@@ -79,8 +80,11 @@ const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
           <RadixUiSelect.Trigger
             ref={ref}
             className={cn(
-              'inline-flex w-full h-[36px] items-center justify-between rounded-md border border-border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring',
-              props.disabled ? 'text-gray-300' : 'text-text',
+              'inline-flex w-full h-[36px] items-center justify-between rounded-md border border-border bg-white px-3 py-2 text-sm ' +
+                'focus:outline-none focus:ring-1 focus:ring-ring',
+              props.disabled
+                ? 'bg-gray-200 text-gray-300'
+                : 'cursor-pointer text-text',
               className,
             )}
           >

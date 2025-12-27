@@ -19,7 +19,24 @@ export const SlotTemplateApi = {
       handleHttpError(
         response,
         {},
-        'Impossible de récupérer la liste des tâches',
+        'Impossible de récupérer la liste des templates de créneau',
+      )
+    }
+    return response.json()
+  },
+
+  getByID: async (slotTemplateID: string): Promise<SlotTemplate> => {
+    const response = await fetchWithAuth(
+      `${apiUrl}/slot-template/${slotTemplateID}?action=getSlotTemplateByID`,
+      {
+        method: 'GET',
+      },
+    )
+    if (!response.ok) {
+      handleHttpError(
+        response,
+        {},
+        'Impossible de récupérer le template de créneau',
       )
     }
     return response.json()

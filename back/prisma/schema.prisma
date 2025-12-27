@@ -77,6 +77,7 @@ model SlotTemplate {
 
   isIndividual Boolean
   capacity     Int?
+  duration     Int?
   thematic     String?
   location     String?
   description  String?

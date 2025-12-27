@@ -5,6 +5,10 @@ import type {
   AppointmentRepositoryInterface,
   AppointmentUpdateEntityRepo,
 } from '../../../types/infra/orm/repositories/appointment.repository.interface'
+import type {
+  AppointmentPatientEntityRepo,
+  AppointmentPatientUpdateEntityRepo,
+} from '../../../types/infra/orm/repositories/appointmentPatient.repository.interface'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { PostgresPrismaClient } from '../postgres-client'
 
@@ -146,6 +150,26 @@ class AppointmentRepository implements AppointmentRepositoryInterface {
       throw this.errorHandler.boomErrorFromPrismaError({
         entityName: 'Appointment',
         parentEntityName: 'AppointmentPatient',
+        error: err,
+      })
+    }
+  }
+
+  async addPatientToAppointment(
+    appointmentPatientUpdateParams: AppointmentPatientUpdateEntityRepo,
+  ): Promise<AppointmentPatientEntityRepo> {
+    try {
+      const { appointmentID, patientID } = appointmentPatientUpdateParams
+      return await this.prisma.appointmentPatient.create({
+        data: {
+          appointment: { connect: { id: appointmentID } },
+          patient: { connect: { id: patientID } },
+          ...appointmentPatientUpdateParams,
+        },
+      })
+    } catch (err) {
+      throw this.errorHandler.boomErrorFromPrismaError({
+        entityName: 'AppointmentPatient',
         error: err,
       })
     }

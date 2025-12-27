@@ -7,14 +7,16 @@ import { useEffect, useMemo, useState } from 'react'
 import Calendar, {
   type CalendarEvent,
 } from '../../components/custom/Calendar/calendar.tsx'
-import EventSheet from '../../components/custom/Calendar/sheet/eventSheet.tsx'
-import AddSlotForm from '../../components/custom/Popup/addSlotForm.tsx'
+import AddSlotForm from '../../components/custom/popup/addSlotForm.tsx'
+import EventSheet from '../../components/custom/sheet/eventSheet.tsx'
+import EventTemplateSheet from '../../components/custom/sheet/eventTemplateSheet.tsx'
 import DashboardLayout from '../../components/dashboard.layout.tsx'
 import {
   buildCalendarEventsFromSlots,
   buildCalendarEventsFromSlotTemplates,
 } from '../../libs/utils.ts'
 import { usePathwayMutations } from '../../queries/usePathway.ts'
+import { usePathwayTemplateQueries } from '../../queries/usePathwayTemplate.ts'
 import { useAllSlotsQuery, useSlotMutations } from '../../queries/useSlot.ts'
 import { useSlotTemplateMutations } from '../../queries/useSlotTemplate.ts'
 import { usePathwayTemplateEditStore } from '../../store/usePathwayTemplateEditStore.ts'
@@ -39,14 +41,18 @@ export const Route = createFileRoute('/settings/planning')({
 
 function Planning() {
   const { slots } = useAllSlotsQuery()
+  const { pathwayTemplates } = usePathwayTemplateQueries()
   const { createSlot, updateSlot, deleteSlot } = useSlotMutations()
   const { instantiatePathway } = usePathwayMutations()
   const { createSlotTemplate, updateSlotTemplate, deleteSlotTemplate } =
     useSlotTemplateMutations()
   const editMode = usePathwayTemplateEditStore((state) => state.editMode)
   const startDate = usePathwayTemplateEditStore((state) => state.startDate)
-  const currentPathwayTemplate = usePathwayTemplateEditStore(
-    (state) => state.currentPathwayTemplate,
+  const currentPathwayTemplateId = usePathwayTemplateEditStore(
+    (state) => state.currentPathwayTemplate?.id,
+  )
+  const currentPathwayTemplate = pathwayTemplates?.find(
+    (template) => template.id === currentPathwayTemplateId,
   )
 
   const [openEventId, setOpenEventId] = useState('')
@@ -107,11 +113,15 @@ function Planning() {
         soignantID: newSlot.slotTemplate.soignantID,
         templateID: currentPathwayTemplate?.id,
       }
-      createSlotTemplate.mutate(slotTemplate)
+      createSlotTemplate.mutate(slotTemplate, {
+        onSuccess: () => {
+          setOpenCreateSlotModal(false)
+        },
+      })
     } else {
       createSlot.mutate(newSlot)
+      setOpenCreateSlotModal(false)
     }
-    setOpenCreateSlotModal(false)
   }
 
   const handleEditSlot = (eventDropArg: EventDropArg | EventResizeDoneArg) => {
@@ -123,18 +133,15 @@ function Planning() {
     } = eventDropArg.event
 
     if (editMode) {
-      setEventTemplates((prev) =>
-        prev.map((evt) => (evt.id === id ? { ...evt, start, end } : evt)),
-      )
+      const newOffsetDays = dayjs(start).diff(dayjs(startDate), 'day')
+
       updateSlotTemplate.mutate({
         id,
+        offsetDays: newOffsetDays,
         startTime: start,
         endTime: end,
       })
     } else {
-      setEvents((prev) =>
-        prev.map((evt) => (evt.id === id ? { ...evt, start, end } : evt)),
-      )
       updateSlot.mutate({
         id,
         startDate: start,
@@ -150,9 +157,6 @@ function Planning() {
 
   const handleDeleteEvent = (id: string) => {
     if (editMode) {
-      setEventTemplates((prev) =>
-        prev.filter((eventTemplate) => eventTemplate.id !== id),
-      )
       deleteSlotTemplate.mutate(id)
     } else {
       setEvents((prev) => prev.filter((event) => event.id !== id))
@@ -163,6 +167,9 @@ function Planning() {
   const mergedEvents = useMemo(() => {
     return editMode ? [...events, ...(eventTemplates ?? [])] : events
   }, [events, eventTemplates, editMode])
+
+  const isSlot = openEventId.startsWith('slot_')
+  const slotId = isSlot ? openEventId.replace('slot_', '') : ''
 
   return (
     <DashboardLayout components={['pathway']}>
@@ -194,9 +201,16 @@ function Planning() {
       />
 
       <EventSheet
-        open={!!openEventId}
+        open={isSlot && !editMode}
         setOpen={setOpenEventId}
-        eventID={openEventId}
+        eventID={slotId}
+        handleDeleteEvent={handleDeleteEvent}
+      />
+
+      <EventTemplateSheet
+        open={isSlot && editMode}
+        setOpen={setOpenEventId}
+        eventTemplateID={slotId}
         handleDeleteEvent={handleDeleteEvent}
       />
     </DashboardLayout>

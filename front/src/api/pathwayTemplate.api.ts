@@ -25,6 +25,23 @@ export const PathwayTemplateApi = {
     return response.json()
   },
 
+  getByID: async (pathwayTemplateID: string): Promise<PathwayTemplate> => {
+    const response = await fetchWithAuth(
+      `${apiUrl}/pathway-template/${pathwayTemplateID}?action=getPathwayTemplateByID`,
+      {
+        method: 'GET',
+      },
+    )
+    if (!response.ok) {
+      handleHttpError(
+        response,
+        {},
+        `Impossible de récupérer le template de parcours avec l'id : ${pathwayTemplateID}`,
+      )
+    }
+    return response.json()
+  },
+
   create: async (
     createPathwayTemplateParams: CreatePathwayTemplateParams,
   ): Promise<PathwayTemplate> => {

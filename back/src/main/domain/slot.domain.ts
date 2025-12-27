@@ -8,15 +8,12 @@ import type {
   SlotUpdateEntityDomain,
 } from '../types/domain/slot.domain.interface'
 import type { SlotRepositoryInterface } from '../types/infra/orm/repositories/slot.repository.interface'
-import type { Logger } from '../types/utils/logger'
 
 class SlotDomain implements SlotDomainInterface {
-  private readonly logger: Logger
   private readonly slotRepository: SlotRepositoryInterface
 
-  constructor({ slotRepository, logger }: IocContainer) {
+  constructor({ slotRepository }: IocContainer) {
     this.slotRepository = slotRepository
-    this.logger = logger
   }
 
   findAll(): Promise<SlotDTODomain[]> {

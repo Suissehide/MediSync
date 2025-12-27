@@ -1,21 +1,24 @@
 import type { IocContainer } from '../types/application/ioc'
 import type {
   PathwayTemplateCreateEntityDomain,
+  PathwayTemplateDomainInterface,
   PathwayTemplateEntityDomain,
   PathwayTemplateUpdateEntityDomain,
   PathwayTemplateWithSlotTemplatesDomain,
 } from '../types/domain/pathwayTemplate.domain.interface'
-import type { PathwayTemplateDomainInterface } from '../types/domain/pathwayTemplate.domain.interface'
 import type { PathwayTemplateRepositoryInterface } from '../types/infra/orm/repositories/pathwayTemplate.repository.interface'
-import type { Logger } from '../types/utils/logger'
+import type { SlotTemplateRepositoryInterface } from '../types/infra/orm/repositories/slotTemplate.repository.interface'
 
 class PathwayTemplateDomain implements PathwayTemplateDomainInterface {
-  private readonly logger: Logger
   private readonly pathwayTemplateRepository: PathwayTemplateRepositoryInterface
+  private readonly slotTemplateRepository: SlotTemplateRepositoryInterface
 
-  constructor({ pathwayTemplateRepository, logger }: IocContainer) {
+  constructor({
+    pathwayTemplateRepository,
+    slotTemplateRepository,
+  }: IocContainer) {
     this.pathwayTemplateRepository = pathwayTemplateRepository
-    this.logger = logger
+    this.slotTemplateRepository = slotTemplateRepository
   }
 
   findAll(): Promise<PathwayTemplateEntityDomain[]> {
@@ -37,14 +40,33 @@ class PathwayTemplateDomain implements PathwayTemplateDomainInterface {
     return this.pathwayTemplateRepository.create(pathwayTemplateInputParams)
   }
 
-  update(
+  async update(
     pathwayTemplateID: string,
     pathwayTemplateUpdateParams: PathwayTemplateUpdateEntityDomain,
   ): Promise<PathwayTemplateEntityDomain> {
-    return this.pathwayTemplateRepository.update(
+    const current =
+      await this.pathwayTemplateRepository.findByID(pathwayTemplateID)
+    if (!current) {
+      throw new Error('PathwayTemplate not found')
+    }
+
+    const updated = this.pathwayTemplateRepository.update(
       pathwayTemplateID,
       pathwayTemplateUpdateParams,
     )
+
+    if (
+      pathwayTemplateUpdateParams.color &&
+      pathwayTemplateUpdateParams.color !== current.color &&
+      current.slotTemplates.length > 0
+    ) {
+      await this.slotTemplateRepository.updateMany(
+        current.slotTemplates.map((st) => st.id),
+        { color: pathwayTemplateUpdateParams.color },
+      )
+    }
+
+    return updated
   }
 
   delete(pathwayTemplateID: string): Promise<PathwayTemplateEntityDomain> {

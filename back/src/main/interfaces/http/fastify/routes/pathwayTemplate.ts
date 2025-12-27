@@ -1,19 +1,20 @@
-import { z } from 'zod/v4'
-import {
-  pathwayTemplateResponseSchema,
-  deletePathwayTemplateByIdParamsSchema,
-  getPathwayTemplateByIdParamsSchema,
-  updatePathwayTemplateByIdSchema,
-  pathwayTemplatesResponseSchema,
-  createPathwayTemplateSchema,
-  type GetPathwayTemplateByIdParams,
-  type CreatePathwayTemplateBody,
-  type UpdatePathwayTemplateParams,
-  type UpdatePathwayTemplateBody,
-  type DeletePathwayTemplateByIdParams,
-} from '../schemas/pathwayTemplate.schema'
 import Boom from '@hapi/boom'
 import type { FastifyPluginAsync } from 'fastify'
+import { z } from 'zod/v4'
+
+import {
+  type CreatePathwayTemplateBody,
+  createPathwayTemplateSchema,
+  type DeletePathwayTemplateByIdParams,
+  deletePathwayTemplateByIdParamsSchema,
+  type GetPathwayTemplateByIdParams,
+  getPathwayTemplateByIdParamsSchema,
+  pathwayTemplateResponseSchema,
+  pathwayTemplatesResponseSchema,
+  type UpdatePathwayTemplateBody,
+  type UpdatePathwayTemplateParams,
+  updatePathwayTemplateByIdSchema,
+} from '../schemas/pathwayTemplate.schema'
 
 const pathwayTemplateRouter: FastifyPluginAsync = (fastify) => {
   const { iocContainer } = fastify
@@ -34,7 +35,7 @@ const pathwayTemplateRouter: FastifyPluginAsync = (fastify) => {
     () => pathwayTemplateDomain.findAll(),
   )
 
-  // Read by ID
+  // Get by ID
   fastify.get<{ Params: GetPathwayTemplateByIdParams }>(
     '/:pathwayTemplateID',
     {

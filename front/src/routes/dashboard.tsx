@@ -8,8 +8,8 @@ import { useEffect, useState } from 'react'
 import Calendar, {
   type CalendarEvent,
 } from '../components/custom/Calendar/calendar.tsx'
-import AppointmentSheet from '../components/custom/Calendar/sheet/appointmentSheet.tsx'
-import AddAppointmentForm from '../components/custom/Popup/addAppointmentForm.tsx'
+import AddAppointmentForm from '../components/custom/popup/addAppointmentForm.tsx'
+import AppointmentSheet from '../components/custom/sheet/appointmentSheet.tsx'
 import DashboardLayout from '../components/dashboard.layout.tsx'
 import DropdownFilter from '../components/ui/dropdownFilter.tsx'
 import { SLOT } from '../constants/process.constant.ts'
@@ -101,6 +101,8 @@ function Dashboard() {
   }
 
   const handleAddAppointment = (eventID: string) => {
+    console.log('ADD', eventID)
+
     setSelectedEvent(eventID)
     const event = getEventById(eventID)
     if (!event) {
@@ -140,6 +142,11 @@ function Dashboard() {
   const getEventById = (id: string) => {
     return events.find((event) => event.id === id)
   }
+
+  const isAppointment = openEventId.startsWith('appointment_')
+  const appointmentId = isAppointment
+    ? openEventId.replace('appointment_', '')
+    : ''
 
   return (
     <DashboardLayout components={['patient', 'soignant']}>
@@ -184,23 +191,23 @@ function Dashboard() {
         </div>
       </div>
 
-      {openCreateAppointmentModal && (
-        <AddAppointmentForm
-          open={openCreateAppointmentModal}
-          setOpen={setOpenCreateAppointmentModal}
-          startDate={selectedDate.startStr}
-          endDate={selectedDate.endStr}
-          maxDate={maxDate}
-          slotID={selectedEvent}
-          type={type}
-          handleCreateAppointment={handleCreateAppointment}
-        />
-      )}
+      <AddAppointmentForm
+        open={openCreateAppointmentModal}
+        setOpen={setOpenCreateAppointmentModal}
+        startDate={selectedDate.startStr}
+        endDate={selectedDate.endStr}
+        maxDate={maxDate}
+        soignant={soignant}
+        slotID={selectedEvent}
+        type={type}
+        handleCreateAppointment={handleCreateAppointment}
+      />
 
       <AppointmentSheet
-        open={!!openEventId}
+        open={isAppointment}
         setOpen={setOpenEventId}
-        eventID={openEventId}
+        eventID={appointmentId}
+        soignant={soignant}
         handleDeleteEvent={handleDeleteEvent}
       />
     </DashboardLayout>

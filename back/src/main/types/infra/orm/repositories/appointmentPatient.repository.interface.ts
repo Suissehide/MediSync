@@ -7,5 +7,6 @@ export type AppointmentPatientUpdateEntityRepo = Pick<
   'accompanying' | 'status' | 'rejectionReason' | 'transmissionNotes'
 > & {
   id?: string
+  appointmentID?: string
   patientID?: string
 }

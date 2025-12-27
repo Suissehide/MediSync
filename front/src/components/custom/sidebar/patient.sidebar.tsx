@@ -1,6 +1,6 @@
 import { usePatientMutations } from '../../../queries/usePatient.ts'
 import type { CreatePatientParams } from '../../../types/patient.ts'
-import AddPatientForm from '../Popup/addPatientForm.tsx'
+import AddPatientForm from '../popup/addPatientForm.tsx'
 
 function SidebarPatient() {
   const { createPatient } = usePatientMutations()

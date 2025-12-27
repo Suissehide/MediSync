@@ -9,7 +9,8 @@ import { type ButtonProps, buttonVariants } from './button.tsx'
 const Sheet = Dialog.Root
 
 const sheetVariants = cva(
-  'fixed z-100 gap-4 bg-primary-foreground border-border shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500',
+  'fixed z-100 gap-4 bg-primary-foreground border-border shadow-lg transition ease-in-out focus:outline-none focus:ring-0 focus-visible:outline-none ' +
+    'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500',
   {
     variants: {
       side: {

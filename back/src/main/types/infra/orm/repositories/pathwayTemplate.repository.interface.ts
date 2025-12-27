@@ -1,4 +1,5 @@
 import type { PathwayTemplate, Prisma } from '@prisma/client'
+
 import type { SlotTemplateWithSoignantRepo } from './slotTemplate.repository.interface'
 
 export type PathwayTemplateEntityRepo = PathwayTemplate
@@ -9,14 +10,14 @@ export type PathwayTemplateCreateEntityRepo = Omit<
   Prisma.PathwayTemplateUncheckedCreateInput,
   'slots' | 'template'
 > & {
-  slotTemplateIDs: string[]
+  slotTemplateIDs?: string[]
 }
 export type PathwayTemplateUpdateEntityRepo = Omit<
   Prisma.PathwayTemplateUncheckedUpdateInput,
   'slots' | 'template'
 > & {
-  pathwayIDs: string[]
-  slotTemplateIDs: string[]
+  pathwayIDs?: string[]
+  slotTemplateIDs?: string[]
 }
 
 export interface PathwayTemplateRepositoryInterface {

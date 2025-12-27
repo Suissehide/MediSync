@@ -1,22 +1,20 @@
 import { Draggable } from '@fullcalendar/interaction'
 import { Loader2Icon, Pencil, Route, Settings } from 'lucide-react'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 
-import {
-  getContrastTextColor,
-  hexToRGBA,
-  parseRGBA,
-} from '../../../libs/color.ts'
+import { hexToRGBA } from '../../../libs/color.ts'
 import { usePathwayTemplateQueries } from '../../../queries/usePathwayTemplate.ts'
 import { usePathwayTemplateEditStore } from '../../../store/usePathwayTemplateEditStore.ts'
 import { usePlanningStore } from '../../../store/usePlanningStore.ts'
 import type { PathwayTemplate } from '../../../types/pathwayTemplate.ts'
 import { Button } from '../../ui/button.tsx'
-import AddPathwayForm from '../Popup/addPathwayForm.tsx'
+import AddPathwayForm from '../popup/addPathwayForm.tsx'
+import PathwayTemplateSheet from '../sheet/pathwayTemplateSheet.tsx'
 
 function SidebarPathway() {
   const containerRef = useRef<HTMLDivElement>(null)
+  const [openSheetId, setOpenSheetId] = useState('')
 
   const { pathwayTemplates, isPending } = usePathwayTemplateQueries()
   const { currentPathwayTemplate, setPathwayTemplate, clearPathwayTemplate } =
@@ -62,59 +60,68 @@ function SidebarPathway() {
             <Loader2Icon className="size-10 animate-spin text-foreground" />
           </div>
         ) : (
-          <ul>
+          <ul className="space-y-2">
             {pathwayTemplates?.map((pathwayTemplate) => {
-              const backgroundColor =
+              const isSelected =
                 currentPathwayTemplate?.id === pathwayTemplate.id
-                  ? hexToRGBA(pathwayTemplate.color, 1)
-                  : hexToRGBA(pathwayTemplate.color, 0.6)
-              const contrastedColor = getContrastTextColor(
-                parseRGBA(backgroundColor),
-              )
 
               return (
                 <li
                   key={pathwayTemplate.id}
                   data-pathway-id={pathwayTemplate.id}
                   data-pathway-name={pathwayTemplate.name}
-                  className="w-full py-2 px-2 flex items-center justify-between rounded-lg hover:bg-primary/15 cursor-pointer"
+                  className={`group rounded border border-border bg-white transition-all cursor-pointer
+                    hover:shadow-md
+                    ${isSelected ? 'ring-2 ring-primary ring-offset-1' : ''}
+                  `}
                   style={{
-                    backgroundColor,
-                    color: contrastedColor,
+                    borderLeftColor: pathwayTemplate.color,
+                    borderLeftWidth: '6px',
                   }}
                 >
-                  <div className="flex items-center gap-2">
-                    <Route className="w-5 h-5" />
-                    {pathwayTemplate.name}
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="none"
-                      size="icon-sm"
-                      onClick={() => {
-                        console.log('edit')
+                  <div className="relative flex items-center gap-3 px-3 py-2">
+                    <div
+                      className="flex-shrink-0 w-8 h-8 rounded-md flex items-center justify-center"
+                      style={{
+                        backgroundColor: hexToRGBA(pathwayTemplate.color, 0.15),
+                        color: pathwayTemplate.color,
                       }}
                     >
-                      <Pencil
-                        className="w-4 h-4 text-primary"
-                        style={{
-                          color: contrastedColor,
+                      <Route className="w-4 h-4" />
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-text truncate">
+                        {pathwayTemplate.name}
+                      </div>
+                    </div>
+
+                    <div className="absolute right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setOpenSheetId(pathwayTemplate.id)
                         }}
-                      />
-                    </Button>
-                    <Button
-                      variant="none"
-                      size="icon-sm"
-                      onClick={() => handleEditPathwayTemplate(pathwayTemplate)}
-                    >
-                      <Settings
-                        className="w-4 h-4 text-primary"
-                        style={{
-                          color: contrastedColor,
+                        className="flex-shrink-0"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleEditPathwayTemplate(pathwayTemplate)
                         }}
-                      />
-                    </Button>
+                        className="flex-shrink-0"
+                      >
+                        <Settings className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 </li>
               )
@@ -122,6 +129,12 @@ function SidebarPathway() {
           </ul>
         )}
       </div>
+
+      <PathwayTemplateSheet
+        open={!!openSheetId}
+        setOpen={setOpenSheetId}
+        pathwayTemplateID={openSheetId}
+      />
     </>
   )
 }

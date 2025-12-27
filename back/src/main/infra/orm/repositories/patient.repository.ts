@@ -1,10 +1,9 @@
 import type { IocContainer } from '../../../types/application/ioc'
-import type {
-  PatientEntityRepo,
-  PatientRepositoryInterface,
-} from '../../../types/infra/orm/repositories/patient.repository.interface'
+import type { PatientWithAppointmentsDomain } from '../../../types/domain/patient.domain.interface'
 import type {
   PatientCreateEntityRepo,
+  PatientEntityRepo,
+  PatientRepositoryInterface,
   PatientUpdateEntityRepo,
 } from '../../../types/infra/orm/repositories/patient.repository.interface'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
@@ -23,10 +22,17 @@ class PatientRepository implements PatientRepositoryInterface {
     return this.prisma.patient.findMany()
   }
 
-  async findByID(patientID: string): Promise<PatientEntityRepo> {
+  async findByID(patientID: string): Promise<PatientWithAppointmentsDomain> {
     try {
       return await this.prisma.patient.findUniqueOrThrow({
         where: { id: patientID },
+        include: {
+          appointmentPatients: {
+            include: {
+              appointment: true,
+            },
+          },
+        },
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({

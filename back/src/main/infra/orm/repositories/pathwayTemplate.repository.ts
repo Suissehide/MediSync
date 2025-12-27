@@ -1,12 +1,10 @@
 import type { IocContainer } from '../../../types/application/ioc'
 import type {
-  PathwayTemplateRepositoryInterface,
-  PathwayTemplateWithSlotTemplatesRepo,
-} from '../../../types/infra/orm/repositories/pathwayTemplate.repository.interface'
-import type {
   PathwayTemplateCreateEntityRepo,
   PathwayTemplateEntityRepo,
+  PathwayTemplateRepositoryInterface,
   PathwayTemplateUpdateEntityRepo,
+  PathwayTemplateWithSlotTemplatesRepo,
 } from '../../../types/infra/orm/repositories/pathwayTemplate.repository.interface'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { PostgresPrismaClient } from '../postgres-client'
@@ -65,7 +63,7 @@ class PathwayTemplateRepository implements PathwayTemplateRepositoryInterface {
         data: {
           ...pathwayTemplateData,
           slotTemplates: {
-            connect: slotTemplateIDs.map((id) => ({ id })),
+            connect: slotTemplateIDs?.map((id) => ({ id })),
           },
         },
         include: {
@@ -89,9 +87,18 @@ class PathwayTemplateRepository implements PathwayTemplateRepositoryInterface {
     pathwayTemplateUpdateParams: PathwayTemplateUpdateEntityRepo,
   ): Promise<PathwayTemplateEntityRepo> {
     try {
+      const { slotTemplateIDs, ...data } = pathwayTemplateUpdateParams
+
       return await this.prisma.pathwayTemplate.update({
         where: { id: pathwayTemplateID },
-        data: pathwayTemplateUpdateParams,
+        data: {
+          ...data,
+          ...(slotTemplateIDs && {
+            slotTemplates: {
+              connect: slotTemplateIDs.map((id) => ({ id })),
+            },
+          }),
+        },
         include: {
           slotTemplates: {
             include: {

@@ -85,6 +85,25 @@ class SlotTemplateRepository implements SlotTemplateRepositoryInterface {
     }
   }
 
+  async updateMany(
+    slotTemplateIDs: string[],
+    slotTemplateUpdateParams: SlotTemplateUpdateEntityRepo,
+  ): Promise<void> {
+    try {
+      await this.prisma.slotTemplate.updateMany({
+        where: {
+          id: { in: slotTemplateIDs },
+        },
+        data: slotTemplateUpdateParams,
+      })
+    } catch (err) {
+      throw this.errorHandler.boomErrorFromPrismaError({
+        entityName: 'SlotTemplate',
+        error: err,
+      })
+    }
+  }
+
   async delete(slotTemplateID: string): Promise<SlotTemplateDTORepo> {
     try {
       return await this.prisma.slotTemplate.delete({

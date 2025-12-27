@@ -18,9 +18,13 @@ export const EventContent = ({ eventContent, setOpenEventId }: Props) => {
   return (
     <div
       {...(event.id ? { 'data-event-id': event.id } : {})}
-      {...(containsKeyword(states, ['default']) ||
-      event.extendedProps.type === 'appointment'
-        ? { onClick: () => setOpenEventId?.(event.id) }
+      {...(!containsKeyword(states, ['editable']) &&
+      (event.extendedProps.type === 'slot' ||
+        event.extendedProps.type === 'appointment')
+        ? {
+            onClick: () =>
+              setOpenEventId?.(`${event.extendedProps.type}_${event.id}`),
+          }
         : {})}
       className={clsx(
         'fc-event-hero relative group h-full w-full p-0 user-select-none',

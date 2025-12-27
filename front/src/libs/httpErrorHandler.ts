@@ -28,8 +28,6 @@ export class ApiError extends Error {
     defaultMessage: string,
     override?: Partial<ApiErrorInfo>,
   ) {
-    console.error('TEST', status, defaultMessage, override)
-
     const base = ApiError.defaultErrorCases(status, defaultMessage)
     const final = {
       title: override?.title ?? defaultMessage ?? base.title,

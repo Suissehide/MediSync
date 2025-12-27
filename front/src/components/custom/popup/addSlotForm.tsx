@@ -1,10 +1,14 @@
-import { useForm } from '@tanstack/react-form'
-import { Compact } from '@uiw/react-color'
+import { useStore } from '@tanstack/react-form'
 import dayjs from 'dayjs'
 import { Check, X } from 'lucide-react'
 import { useEffect } from 'react'
 
-import { SLOT_LOCATION_OPTIONS } from '../../../constants/slot.constant.ts'
+import {
+  getThemeOptionsByRole,
+  SLOT_LOCATION_OPTIONS,
+  THEMATICS,
+} from '../../../constants/slot.constant.ts'
+import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { combineDateAndTime } from '../../../libs/utils.ts'
 import { useSoignantQueries } from '../../../queries/useSoignant.ts'
 import { useSoignantStore } from '../../../store/useSoignantStore.ts'
@@ -13,7 +17,7 @@ import { Button } from '../../ui/button.tsx'
 import { DatePicker } from '../../ui/datePicker.tsx'
 import { FieldInfo } from '../../ui/fieldInfo.tsx'
 import { FormField } from '../../ui/formField.tsx'
-import { Checkbox, Input, Select, TextArea } from '../../ui/input.tsx'
+import { Select } from '../../ui/input.tsx'
 import { Label } from '../../ui/label.tsx'
 import {
   Popup,
@@ -51,7 +55,7 @@ function AddSlotForm({
 
   const today = dayjs()
 
-  const form = useForm({
+  const form = useAppForm({
     defaultValues: {
       startDate: startDate ? dayjs(startDate) : today,
       startTime: startDate ? dayjs(startDate) : today,
@@ -61,9 +65,10 @@ function AddSlotForm({
       location: '',
       description: '',
       soignant: '',
-      color: color ?? '',
+      color: color ?? '#2563eb',
       isIndividual: false,
     },
+
     onSubmit: ({ value }) => {
       const startDate = combineDateAndTime(
         value.startDate.toISOString(),
@@ -99,6 +104,21 @@ function AddSlotForm({
       form.reset()
     }
   }, [open, form])
+
+  const selectedSoignantId = useStore(
+    form.store,
+    (state) => state.values.soignant,
+  )
+  const selectedSoignant = soignants.find((s) => s.id === selectedSoignantId)
+  const thematicOptions = selectedSoignant
+    ? getThemeOptionsByRole(THEMATICS, selectedSoignant.name)
+    : []
+
+  useEffect(() => {
+    if (selectedSoignantId) {
+      form.setFieldValue('thematic', '')
+    }
+  }, [selectedSoignantId, form])
 
   return (
     <Popup modal={true} open={open} onOpenChange={setOpen}>
@@ -179,36 +199,6 @@ function AddSlotForm({
               </form.Field>
             </div>
 
-            <form.Field name="thematic">
-              {(field) => (
-                <FormField>
-                  <Label htmlFor={field.name}>Thématique</Label>
-                  <Input
-                    id={field.name}
-                    value={field.state.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    onBlur={field.handleBlur}
-                  />
-                  <FieldInfo field={field} />
-                </FormField>
-              )}
-            </form.Field>
-
-            <form.Field name="location">
-              {(field) => (
-                <FormField>
-                  <Label htmlFor={field.name}>Lieu</Label>
-                  <Select
-                    id={field.name}
-                    options={SLOT_LOCATION_OPTIONS}
-                    value={field.state.value}
-                    onValueChange={(value) => field.handleChange(value)}
-                  />
-                  <FieldInfo field={field} />
-                </FormField>
-              )}
-            </form.Field>
-
             <form.Field
               name="soignant"
               validators={{
@@ -234,50 +224,40 @@ function AddSlotForm({
               )}
             </form.Field>
 
-            <form.Field name="isIndividual">
+            <form.AppField name="thematic">
               {(field) => (
-                <FormField>
-                  <Label htmlFor={field.name}>Individuel</Label>
-                  <Checkbox
-                    id={field.name}
-                    checked={field.state.value}
-                    onChange={(e) => field.handleChange(e.target.checked)}
-                    onBlur={field.handleBlur}
-                  />
-                  <FieldInfo field={field} />
-                </FormField>
+                <field.Select
+                  options={thematicOptions}
+                  label="Thématique"
+                  disabled={!selectedSoignant}
+                />
               )}
-            </form.Field>
+            </form.AppField>
+
+            <form.AppField name="location">
+              {(field) => (
+                <field.Select options={SLOT_LOCATION_OPTIONS} label="Lieu" />
+              )}
+            </form.AppField>
+
+            <form.AppField name="isIndividual">
+              {(field) => (
+                <field.Toggle
+                  options={['Individuel', 'Multiple']}
+                  label="Type"
+                />
+              )}
+            </form.AppField>
 
             <div className="flex gap-4 items-center">
-              <form.Field name="color">
-                {(field) => (
-                  <FormField>
-                    <Label>Couleur</Label>
-                    <Compact
-                      className="bg-primary"
-                      color={field.state.value}
-                      onChange={(color) => field.handleChange(color.hex)}
-                    />
-                  </FormField>
-                )}
-              </form.Field>
+              <form.AppField name="color">
+                {(field) => <field.ColorPicker label="Couleur" />}
+              </form.AppField>
             </div>
 
-            <form.Field name="description">
-              {(field) => (
-                <FormField>
-                  <Label htmlFor={field.name}>Description</Label>
-                  <TextArea
-                    id={field.name}
-                    value={field.state.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    onBlur={field.handleBlur}
-                  />
-                  <FieldInfo field={field} />
-                </FormField>
-              )}
-            </form.Field>
+            <form.AppField name="description">
+              {(field) => <field.TextArea label="Description" />}
+            </form.AppField>
           </form>
         </PopupBody>
 

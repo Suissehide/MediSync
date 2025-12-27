@@ -1,6 +1,6 @@
 import type { PathwayTemplate } from './pathwayTemplate.ts'
-import type { Soignant } from './soignant.ts'
 import type { Slot } from './slot.ts'
+import type { Soignant } from './soignant.ts'
 
 export type SlotTemplate = {
   id: string
@@ -27,8 +27,10 @@ export type CreateSlotTemplateParams = Omit<
 }
 export type UpdateSlotTemplateParams = Omit<
   SlotTemplate,
-  'slot' | 'startTime' | 'endTime'
+  'slot' | 'soignant' | 'template' | 'startTime' | 'endTime'
 > & {
+  offsetDays?: number
   startTime?: string
   endTime?: string
+  soignantID?: string
 }

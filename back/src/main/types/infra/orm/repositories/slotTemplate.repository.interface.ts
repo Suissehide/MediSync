@@ -33,5 +33,9 @@ export interface SlotTemplateRepositoryInterface {
     slotTemplateID: string,
     slotTemplateUpdateParams: SlotTemplateUpdateEntityRepo,
   ) => Promise<SlotTemplateDTORepo>
+  updateMany: (
+    slotTemplateIDs: string[],
+    slotTemplateUpdateParams: SlotTemplateUpdateEntityRepo,
+  ) => Promise<void>
   delete: (slotTemplateID: string) => Promise<SlotTemplateDTORepo>
 }

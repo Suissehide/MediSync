@@ -1,4 +1,5 @@
 import { z } from 'zod/v4'
+
 import { pathwayTemplateSchema } from './index'
 import { slotTemplateResponseSchema } from './slotTemplate.schema'
 
@@ -39,9 +40,9 @@ export const updatePathwayTemplateByIdSchema = {
       // pathways: true
     })
     .partial()
-    .safeExtend({
-      pathwayIDs: z.array(z.cuid()),
-      slotTemplateIDs: z.array(z.cuid()),
+    .extend({
+      slotTemplateIDs: z.array(z.cuid()).optional().default([]),
+      // pathwayIDs: z.array(z.cuid()).optional().default([]),
     })
     .refine((data) => Object.keys(data).length > 0, {
       message: 'At least one field must be updated',

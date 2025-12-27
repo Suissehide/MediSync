@@ -1,4 +1,3 @@
-import { useForm } from '@tanstack/react-form'
 import { useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 import {
@@ -13,33 +12,39 @@ import { useEffect, useState } from 'react'
 import {
   APPOINTMENT_ACCOMPANYING_OPTIONS,
   APPOINTMENT_STATUS_OPTIONS,
-  APPOINTMENT_THEMATIC_OPTIONS,
   APPOINTMENT_TYPE_OPTIONS,
-} from '../../../../constants/appointment.constant.ts'
-import { SLOT } from '../../../../constants/process.constant.ts'
-import { formatDuration } from '../../../../libs/utils.ts'
+} from '../../../constants/appointment.constant.ts'
+import { SLOT } from '../../../constants/process.constant.ts'
+import {
+  getThemeOptionsByRole,
+  THEMATICS,
+} from '../../../constants/slot.constant.ts'
+import { useAppForm } from '../../../hooks/formConfig.tsx'
+import { formatDuration } from '../../../libs/utils.ts'
 import {
   useAppointmentByIDQuery,
   useAppointmentMutations,
-} from '../../../../queries/useAppointment.ts'
-import { usePatientQueries } from '../../../../queries/usePatient.ts'
-import type { UpdateAppointmentParams } from '../../../../types/appointment.ts'
-import { Button } from '../../../ui/button.tsx'
-import { FieldInfo } from '../../../ui/fieldInfo.tsx'
-import { FormField } from '../../../ui/formField.tsx'
-import { Input, Select } from '../../../ui/input.tsx'
-import { Label } from '../../../ui/label.tsx'
+} from '../../../queries/useAppointment.ts'
+import { usePatientQueries } from '../../../queries/usePatient.ts'
+import type { UpdateAppointmentParams } from '../../../types/appointment.ts'
+import type { Soignant } from '../../../types/soignant.ts'
+import { Button } from '../../ui/button.tsx'
+import { FieldInfo } from '../../ui/fieldInfo.tsx'
+import { FormField } from '../../ui/formField.tsx'
+import { Input, Select } from '../../ui/input.tsx'
+import { Label } from '../../ui/label.tsx'
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
-} from '../../../ui/sheet.tsx'
+} from '../../ui/sheet.tsx'
 
 interface AppointmentSheetProps {
   open: boolean
   setOpen: (openEventId: string) => void
   eventID: string
+  soignant?: Soignant
   handleDeleteEvent?: (eventID: string) => void
 }
 
@@ -47,6 +52,7 @@ export default function AppointmentSheet({
   open,
   setOpen,
   eventID,
+  soignant,
   handleDeleteEvent,
 }: AppointmentSheetProps) {
   const queryClient = useQueryClient()
@@ -61,7 +67,7 @@ export default function AppointmentSheet({
     Record<number, boolean>
   >({})
 
-  const form = useForm({
+  const form = useAppForm({
     defaultValues: {
       thematic: '',
       type: '',
@@ -146,6 +152,10 @@ export default function AppointmentSheet({
     }
   }, [open, form, refetch])
 
+  const thematicOptions = soignant
+    ? getThemeOptionsByRole(THEMATICS, soignant.name)
+    : []
+
   return (
     <Sheet
       open={open}
@@ -189,20 +199,14 @@ export default function AppointmentSheet({
                 }}
                 className="w-full flex-1 flex flex-col min-h-0 gap-2 px-4"
               >
-                <form.Field name="thematic">
+                <form.AppField name="thematic">
                   {(field) => (
-                    <FormField>
-                      <Label htmlFor={field.name}>Thématique</Label>
-                      <Select
-                        id={field.name}
-                        options={APPOINTMENT_THEMATIC_OPTIONS}
-                        value={field.state.value}
-                        onValueChange={(value) => field.handleChange(value)}
-                      />
-                      <FieldInfo field={field} />
-                    </FormField>
+                    <field.Select
+                      options={thematicOptions}
+                      label="Thématique"
+                    />
                   )}
-                </form.Field>
+                </form.AppField>
 
                 <form.Field name="type">
                   {(field) => (

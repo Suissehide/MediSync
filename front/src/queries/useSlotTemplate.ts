@@ -1,7 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { SlotTemplateApi } from '../api/slotTemplate.api.ts'
-import { SLOT_TEMPLATE } from '../constants/process.constant.ts'
+import {
+  PATHWAY_TEMPLATE,
+  SLOT_TEMPLATE,
+} from '../constants/process.constant.ts'
 import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
 import { useToast } from '../hooks/useToast.ts'
@@ -35,6 +38,34 @@ export const useSlotTemplateQueries = () => {
   })
 
   return { slotTemplates, isPending, error }
+}
+
+export const useSlotTemplateByIDQuery = (
+  slotTemplateID: string,
+  options = {},
+) => {
+  const {
+    data: slotTemplate,
+    isPending,
+    isError,
+    error,
+    refetch,
+    isFetched,
+  } = useQuery({
+    queryKey: [SLOT_TEMPLATE.GET_BY_ID, slotTemplateID],
+    queryFn: () => SlotTemplateApi.getByID(slotTemplateID),
+    enabled: !!slotTemplateID,
+    retry: 0,
+    ...options,
+  })
+
+  useDataFetching({
+    isPending,
+    isError,
+    error,
+  })
+
+  return { slotTemplate, isPending, isError, error, refetch, isFetched }
 }
 
 // * MUTATIONS
@@ -82,6 +113,9 @@ export const useSlotTemplateMutations = () => {
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: [SLOT_TEMPLATE.GET_ALL] })
+      await queryClient.invalidateQueries({
+        queryKey: [PATHWAY_TEMPLATE.GET_ALL],
+      })
     },
   })
 
@@ -124,6 +158,9 @@ export const useSlotTemplateMutations = () => {
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: [SLOT_TEMPLATE.GET_ALL] })
+      await queryClient.invalidateQueries({
+        queryKey: [PATHWAY_TEMPLATE.GET_ALL],
+      })
     },
   })
 
@@ -168,6 +205,9 @@ export const useSlotTemplateMutations = () => {
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: [SLOT_TEMPLATE.GET_ALL] })
+      await queryClient.invalidateQueries({
+        queryKey: [PATHWAY_TEMPLATE.GET_ALL],
+      })
     },
   })
 

@@ -46,6 +46,7 @@ export const SLOT = {
 
 export const SLOT_TEMPLATE = {
   GET_ALL: 'get_all_slot_templates',
+  GET_BY_ID: 'get_by_id_slot_template',
   GET: 'get_slot_template',
   CREATE: 'create_slot_template',
   UPDATE: 'update_slot_template',
@@ -64,6 +65,7 @@ export const PATHWAY = {
 
 export const PATHWAY_TEMPLATE = {
   GET_ALL: 'get_all_pathway_templates',
+  GET_BY_ID: 'get_by_id_pathway_template',
   GET: 'get_pathway_template',
   CREATE: 'create_pathway_template',
   UPDATE: 'update_pathway_template',

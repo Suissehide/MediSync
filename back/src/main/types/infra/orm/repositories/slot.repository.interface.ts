@@ -8,6 +8,10 @@ import type {
 } from './slotTemplate.repository.interface'
 
 export type SlotEntityRepo = Slot
+export type SlotWithTemplateAndAppointmentsRepo = SlotEntityRepo & {
+  slotTemplate: SlotTemplateWithSoignantRepo
+  appointments: AppointmentWithPatientsRepo[]
+}
 export type SlotDTORepo = SlotEntityRepo & {
   pathway: PathwayEntityRepo | null
   slotTemplate: SlotTemplateWithSoignantRepo

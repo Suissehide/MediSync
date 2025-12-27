@@ -37,6 +37,34 @@ export const usePathwayTemplateQueries = () => {
   return { pathwayTemplates, isPending, error }
 }
 
+export const usePathwayTemplateByIDQuery = (
+  pathwayTemplateID: string,
+  options = {},
+) => {
+  const {
+    data: pathwayTemplate,
+    isPending,
+    isError,
+    error,
+    refetch,
+    isFetched,
+  } = useQuery({
+    queryKey: [PATHWAY_TEMPLATE.GET_BY_ID, pathwayTemplateID],
+    queryFn: () => PathwayTemplateApi.getByID(pathwayTemplateID),
+    enabled: !!pathwayTemplateID,
+    retry: 0,
+    ...options,
+  })
+
+  useDataFetching({
+    isPending,
+    isError,
+    error,
+  })
+
+  return { pathwayTemplate, isPending, isError, error, refetch, isFetched }
+}
+
 // * MUTATIONS
 
 export const usePathwayTemplateMutations = () => {
@@ -109,7 +137,7 @@ export const usePathwayTemplateMutations = () => {
     },
     onSuccess: () => {
       toast({
-        title: 'Template de parcours modifié avec succès',
+        title: 'Template de parcours supprimé avec succès',
         severity: TOAST_SEVERITY.SUCCESS,
       })
     },
@@ -120,7 +148,7 @@ export const usePathwayTemplateMutations = () => {
       )
 
       toast({
-        title: 'Erreur lors de la mise à jour du template de parcours',
+        title: 'Erreur lors de la supression du template de parcours',
         message: error.message,
         severity: TOAST_SEVERITY.ERROR,
       })
@@ -154,7 +182,7 @@ export const usePathwayTemplateMutations = () => {
     },
     onSuccess: () => {
       toast({
-        title: 'Template de parcours supprimé avec succès',
+        title: 'Template de parcours modifié avec succès',
         severity: TOAST_SEVERITY.SUCCESS,
       })
     },
@@ -165,7 +193,7 @@ export const usePathwayTemplateMutations = () => {
       )
 
       toast({
-        title: 'Erreur lors de la suppression du template de parcours',
+        title: 'Erreur lors de la mise à jour du template de parcours',
         message: error.message,
         severity: TOAST_SEVERITY.ERROR,
       })

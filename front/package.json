@@ -31,7 +31,7 @@
     "@tanstack/react-router": "^1.114.23",
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/react-virtual": "^3.13.10",
-    "@uiw/react-color": "^2.6.0",
+    "@uiw/react-color": "^2.9.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dayjs": "^1.11.13",

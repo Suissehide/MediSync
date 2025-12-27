@@ -1,9 +1,10 @@
 import type { IocContainer } from '../../../types/application/ioc'
-import type { PathwayRepositoryInterface } from '../../../types/infra/orm/repositories/pathway.repository.interface'
 import type {
   PathwayCreateEntityRepo,
   PathwayEntityRepo,
+  PathwayRepositoryInterface,
   PathwayUpdateEntityRepo,
+  PathwayWithSlotsRepo,
 } from '../../../types/infra/orm/repositories/pathway.repository.interface'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { PostgresPrismaClient } from '../postgres-client'
@@ -25,6 +26,50 @@ class PathwayRepository implements PathwayRepositoryInterface {
     try {
       return await this.prisma.pathway.findUniqueOrThrow({
         where: { id: pathwayID },
+      })
+    } catch (err) {
+      throw this.errorHandler.boomErrorFromPrismaError({
+        entityName: 'Pathway',
+        error: err,
+      })
+    }
+  }
+
+  async findByTemplateIDAndDate(
+    pathwayTemplateID: string,
+    startDate: Date,
+  ): Promise<PathwayWithSlotsRepo[]> {
+    try {
+      return await this.prisma.pathway.findMany({
+        where: {
+          startDate: { gte: startDate },
+          template: {
+            id: pathwayTemplateID,
+          },
+        },
+        orderBy: {
+          startDate: 'asc',
+        },
+        include: {
+          slots: {
+            include: {
+              slotTemplate: {
+                include: {
+                  soignant: true,
+                },
+              },
+              appointments: {
+                include: {
+                  appointmentPatients: {
+                    include: {
+                      patient: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({

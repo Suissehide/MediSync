@@ -75,3 +75,52 @@ export type DeletePatientByIdParams = z.infer<
   typeof deletePatientByIdParamsSchema
 >
 export type PatientResponse = z.infer<typeof patientResponseSchema>
+
+export const timeOfDaySchema = z.enum(['ALL_DAY', 'MORNING', 'AFTERNOON'])
+
+export const pathwayEnrollmentSchema = z.object({
+  slotTemplateID: z.cuid(),
+  timeOfDay: timeOfDaySchema,
+  thematic: z.string().optional(),
+  type: z.string().optional(),
+})
+
+export const enrollPatientInPathwaysSchema = z.object({
+  patientData: patientSchema,
+  startDate: z.coerce.date(),
+  pathways: z.array(pathwayEnrollmentSchema).min(1),
+})
+
+export const enrollExistingPatientInPathwaysSchema = z.object({
+  patientID: z.cuid(),
+  startDate: z.coerce.date(),
+  pathways: z.array(pathwayEnrollmentSchema).min(1),
+})
+
+export const enrollmentResultItemSchema = z.object({
+  slotTemplateID: z.cuid(),
+  success: z.boolean(),
+  appointmentID: z.cuid().optional(),
+  error: z.string().optional(),
+})
+
+export const failedEnrollmentSchema = z.object({
+  slotTemplateID: z.cuid(),
+  reason: z.string(),
+})
+
+export const enrollmentResultSchema = z.object({
+  patient: patientResponseSchema,
+  enrollments: z.array(enrollmentResultItemSchema),
+  failedEnrollments: z.array(failedEnrollmentSchema),
+})
+
+export type TimeOfDay = z.infer<typeof timeOfDaySchema>
+export type PathwayEnrollment = z.infer<typeof pathwayEnrollmentSchema>
+export type EnrollPatientInPathwaysBody = z.infer<
+  typeof enrollPatientInPathwaysSchema
+>
+export type EnrollExistingPatientInPathwaysBody = z.infer<
+  typeof enrollExistingPatientInPathwaysSchema
+>
+export type EnrollmentResult = z.infer<typeof enrollmentResultSchema>

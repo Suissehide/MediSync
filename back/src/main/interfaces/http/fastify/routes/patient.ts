@@ -7,6 +7,11 @@ import {
   createPatientSchema,
   type DeletePatientByIdParams,
   deletePatientByIdParamsSchema,
+  type EnrollExistingPatientInPathwaysBody,
+  type EnrollPatientInPathwaysBody,
+  enrollExistingPatientInPathwaysSchema,
+  enrollmentResultSchema,
+  enrollPatientInPathwaysSchema,
   type GetPatientByIdParams,
   getPatientByIdParamsSchema,
   patientResponseSchema,
@@ -119,6 +124,49 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
         throw Boom.notFound('Patient not found')
       }
       reply.code(204).send()
+    },
+  )
+
+  fastify.post<{ Body: EnrollPatientInPathwaysBody }>(
+    '/enroll',
+    {
+      schema: {
+        body: enrollPatientInPathwaysSchema,
+        response: {
+          201: enrollmentResultSchema,
+          400: z.object({ message: z.string() }),
+        },
+      },
+    },
+    async (request, reply) => {
+      const result = await patientDomain.enrollPatientInPathways({
+        patientData: request.body.patientData,
+        startDate: request.body.startDate,
+        pathways: request.body.pathways,
+      })
+      reply.code(201)
+      return result
+    },
+  )
+
+  fastify.post<{ Body: EnrollExistingPatientInPathwaysBody }>(
+    '/:patientID/enroll',
+    {
+      schema: {
+        body: enrollExistingPatientInPathwaysSchema,
+        response: {
+          200: enrollmentResultSchema,
+          400: z.object({ message: z.string() }),
+          404: z.object({ message: z.string() }),
+        },
+      },
+    },
+    async (request) => {
+      return await patientDomain.enrollExistingPatientInPathways({
+        patientID: request.body.patientID,
+        startDate: request.body.startDate,
+        pathways: request.body.pathways,
+      })
     },
   )
 

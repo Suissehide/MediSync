@@ -1,8 +1,8 @@
 import { createFormHook } from '@tanstack/react-form'
-import { Compact } from '@uiw/react-color'
+import { Github } from '@uiw/react-color'
 import type { Dayjs } from 'dayjs'
 import dayjs from 'dayjs'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { Button } from '../components/ui/button.tsx'
 import { DatePicker } from '../components/ui/datePicker.tsx'
@@ -19,10 +19,15 @@ import {
 
 export interface FieldComponentProps {
   label?: string
+  disabled?: boolean
 }
 
 interface SelectFieldProps extends FieldComponentProps {
   options: Array<{ value: string; label: string }>
+}
+
+interface ToggleFieldProps extends FieldComponentProps {
+  options: string[]
 }
 
 const TextField = ({ label }: FieldComponentProps) => {
@@ -30,7 +35,7 @@ const TextField = ({ label }: FieldComponentProps) => {
   const value = field.state.value ?? ''
 
   return (
-    <>
+    <div>
       {label && <Label htmlFor={field.name}>{label}</Label>}
       <Input
         id={field.name}
@@ -39,25 +44,26 @@ const TextField = ({ label }: FieldComponentProps) => {
         onBlur={field.handleBlur}
       />
       <FieldInfo field={field} />
-    </>
+    </div>
   )
 }
 
-function SelectField({ label, options }: SelectFieldProps) {
+function SelectField({ label, options, disabled }: SelectFieldProps) {
   const field = useFieldContext<string>()
   const value = field.state.value ?? ''
 
   return (
-    <>
+    <div>
       {label && <Label htmlFor={field.name}>{label}</Label>}
       <Select
         id={field.name}
         options={options}
         value={value}
+        disabled={disabled}
         onValueChange={(value: string) => field.handleChange(value)}
       />
       <FieldInfo field={field} />
-    </>
+    </div>
   )
 }
 
@@ -77,11 +83,11 @@ function DatePickerField({ label }: FieldComponentProps) {
   }
 
   return (
-    <>
+    <div>
       {label && <Label htmlFor={field.name}>{label}</Label>}
       <DatePicker value={value} onChange={handleChange} />
       <FieldInfo field={field} />
-    </>
+    </div>
   )
 }
 
@@ -90,14 +96,14 @@ function TimePickerField({ label }: FieldComponentProps) {
   const value = field.state.value
 
   return (
-    <>
+    <div>
       {label && <Label htmlFor={field.name}>{label}</Label>}
       <TimePicker
         value={value}
         onChange={(time: Dayjs | null) => field.handleChange(time ?? dayjs())}
       />
       <FieldInfo field={field} />
-    </>
+    </div>
   )
 }
 
@@ -106,7 +112,7 @@ function CheckboxField({ label }: FieldComponentProps) {
   const value = field.state.value
 
   return (
-    <>
+    <div>
       {label && <Label htmlFor={field.name}>{label}</Label>}
       <Checkbox
         id={field.name}
@@ -117,7 +123,7 @@ function CheckboxField({ label }: FieldComponentProps) {
         onBlur={field.handleBlur}
       />
       <FieldInfo field={field} />
-    </>
+    </div>
   )
 }
 
@@ -126,7 +132,7 @@ function TextAreaField({ label }: FieldComponentProps) {
   const value = field.state.value ?? ''
 
   return (
-    <>
+    <div>
       {label && <Label htmlFor={field.name}>{label}</Label>}
       <TextArea
         id={field.name}
@@ -137,23 +143,126 @@ function TextAreaField({ label }: FieldComponentProps) {
         onBlur={field.handleBlur}
       />
       <FieldInfo field={field} />
-    </>
+    </div>
   )
 }
 
 function ColorPickerField({ label }: FieldComponentProps) {
+  const [open, setOpen] = useState(false)
   const field = useFieldContext<string>()
-  const value = field.state.value ?? ''
+  const value = field.state.value ?? '#000000'
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) {
+      return
+    }
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        containerRef.current &&
+        event.target instanceof Node &&
+        !containerRef.current.contains(event.target)
+      ) {
+        setOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [open])
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value
+    if (/^#[0-9A-Fa-f]{0,6}$/.test(newValue) || newValue === '') {
+      field.handleChange(newValue)
+    }
+  }
 
   return (
-    <>
+    <div ref={containerRef} className="flex flex-col gap-2">
       {label && <Label htmlFor={field.name}>{label}</Label>}
-      <Compact
-        className="bg-primary"
-        color={value}
-        onChange={(color: { hex: string }) => field.handleChange(color.hex)}
-      />
-    </>
+
+      <div className="relative">
+        <div className="flex items-center">
+          <button
+            type="button"
+            className="flex-shrink-0 w-9 h-9 rounded border border-border cursor-pointer rounded-tr-none rounded-br-none"
+            style={{ backgroundColor: value }}
+            onClick={() => setOpen(true)}
+            aria-label="Ouvrir le sélecteur de couleur"
+          />
+
+          <Input
+            type="text"
+            id={field.name}
+            value={value}
+            onChange={handleInputChange}
+            onFocus={() => setOpen(true)}
+            placeholder="#000000"
+            maxLength={7}
+            className="border-l-0 rounded-tl-none rounded-bl-none"
+          />
+        </div>
+
+        {open && (
+          <div className="absolute z-50 mt-2">
+            <Github
+              className="bg-primary"
+              color={value}
+              style={{ width: '212px' }}
+              onChange={(color: { hex: string }) => {
+                field.handleChange(color.hex)
+                setOpen(false)
+              }}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function ToggleField({ label, options }: ToggleFieldProps) {
+  const field = useFieldContext<boolean>()
+  const [option1, option2] = options
+
+  const handleToggle = (value: boolean) => {
+    field.handleChange(value)
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      {label && <Label htmlFor={field.name}>{label}</Label>}
+
+      <div className="relative w-fit flex items-center border border-border rounded overflow-hidden">
+        <div
+          className={`absolute inset-y-0 w-1/2 bg-primary rounded transition-transform duration-200 ease-in-out ${
+            field.state.value ? 'translate-x-0' : 'translate-x-full'
+          }`}
+        />
+
+        <button
+          type="button"
+          onClick={() => handleToggle(true)}
+          className={`relative z-10 cursor-pointer px-4 py-2 text-sm rounded transition-colors ${
+            field.state.value ? 'text-white' : 'text-text'
+          }`}
+        >
+          {option1}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleToggle(false)}
+          className={`relative z-10 cursor-pointer px-4 py-2 text-sm transition-colors ${
+            field.state.value ? 'text-text' : 'text-white'
+          }`}
+        >
+          {option2}
+        </button>
+      </div>
+    </div>
   )
 }
 
@@ -204,6 +313,7 @@ export const { useAppForm, withForm } = createFormHook({
     Checkbox: CheckboxField,
     TextArea: TextAreaField,
     ColorPicker: ColorPickerField,
+    Toggle: ToggleField,
   },
   formComponents: {
     SubmitButton,

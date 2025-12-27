@@ -1,9 +1,10 @@
 import { Stethoscope } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { useSoignantStore } from '../../../store/useSoignantStore.ts'
-import AddSoignantForm from '../Popup/addSoignantForm.tsx'
-import DeleteSoignantForm from '../Popup/deleteSoignantForm.tsx'
+
 import { useSoignantQueries } from '../../../queries/useSoignant.ts'
+import { useSoignantStore } from '../../../store/useSoignantStore.ts'
+import AddSoignantForm from '../popup/addSoignantForm.tsx'
+import DeleteSoignantForm from '../popup/deleteSoignantForm.tsx'
 
 function SidebarSoignant() {
   useSoignantQueries()

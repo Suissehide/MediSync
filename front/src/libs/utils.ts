@@ -3,7 +3,6 @@ import dayjs from 'dayjs'
 import { twMerge } from 'tailwind-merge'
 
 import type { CalendarEvent } from '../components/custom/Calendar/calendar.tsx'
-import { APPOINTMENT_THEMATIC_OPTIONS } from '../constants/appointment.constant.ts'
 import type { Appointment } from '../types/appointment.ts'
 import type { Slot } from '../types/slot.ts'
 import type { SlotTemplate } from '../types/slotTemplate.ts'
@@ -90,33 +89,6 @@ export const buildCalendarEventsFromSlots = (
   })
 }
 
-export const buildCalendarEventsFromAppointments = (
-  appointments: Appointment[],
-): CalendarEvent[] => {
-  if (!appointments) {
-    return []
-  }
-  return appointments.map((appointment) => {
-    const thematicOption = APPOINTMENT_THEMATIC_OPTIONS.find(
-      (option) => option.value === appointment.thematic,
-    )
-
-    return {
-      id: appointment.id,
-      title: thematicOption ? thematicOption.label : '',
-      start: appointment.startDate,
-      end: appointment.endDate,
-      color: '#7CA2F3',
-      display: 'block',
-      className: 'cursor-pointer transition duration-300 hover:bg-primary!',
-      extendedProps: {
-        type: 'appointment',
-        appointmentPatients: appointment.appointmentPatients,
-      },
-    }
-  })
-}
-
 export const buildCalendarEventsFromSlotTemplates = (
   slotTemplates: SlotTemplate[],
   startDate: string,
@@ -139,6 +111,33 @@ export const buildCalendarEventsFromSlotTemplates = (
       color: slotTemplate.color ?? '#2563eb',
       extendedProps: {
         type: 'slot',
+      },
+    }
+  })
+}
+
+export const buildCalendarEventsFromAppointments = (
+  appointments: Appointment[],
+): CalendarEvent[] => {
+  if (!appointments) {
+    return []
+  }
+  return appointments.map((appointment) => {
+    // const thematicOption = APPOINTMENT_THEMATIC_OPTIONS.find(
+    //   (option) => option.value === appointment.thematic,
+    // )
+
+    return {
+      id: appointment.id,
+      title: appointment.thematic ?? '',
+      start: appointment.startDate,
+      end: appointment.endDate,
+      color: '#7CA2F3',
+      display: 'block',
+      className: 'cursor-pointer transition duration-300 hover:bg-primary!',
+      extendedProps: {
+        type: 'appointment',
+        appointmentPatients: appointment.appointmentPatients,
       },
     }
   })

@@ -1,15 +1,17 @@
-import { useForm } from '@tanstack/react-form'
 import dayjs from 'dayjs'
 import { Check, X } from 'lucide-react'
 import { useEffect } from 'react'
 
+import { APPOINTMENT_TYPE_OPTIONS } from '../../../constants/appointment.constant.ts'
 import {
-  APPOINTMENT_THEMATIC_OPTIONS,
-  APPOINTMENT_TYPE_OPTIONS,
-} from '../../../constants/appointment.constant.ts'
+  getThemeOptionsByRole,
+  THEMATICS,
+} from '../../../constants/slot.constant.ts'
+import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { generateDurationOptions } from '../../../libs/utils.ts'
 import { usePatientQueries } from '../../../queries/usePatient.ts'
 import type { CreateAppointmentParams } from '../../../types/appointment.ts'
+import type { Soignant } from '../../../types/soignant.ts'
 import { Button } from '../../ui/button.tsx'
 import { FieldInfo } from '../../ui/fieldInfo.tsx'
 import { FormField } from '../../ui/formField.tsx'
@@ -33,6 +35,7 @@ interface AddAppointmentFormProps {
   endDate: string
   maxDate: string
   slotID: string
+  soignant?: Soignant
   type: string
   handleCreateAppointment: (newAppointment: CreateAppointmentParams) => void
 }
@@ -44,6 +47,7 @@ function AddAppointmentForm({
   endDate,
   maxDate,
   slotID,
+  soignant,
   type,
   handleCreateAppointment,
 }: AddAppointmentFormProps) {
@@ -57,7 +61,7 @@ function AddAppointmentForm({
 
   const durationOptions = generateDurationOptions(startDate, maxDate)
 
-  const form = useForm({
+  const form = useAppForm({
     defaultValues: {
       startTime: startDate ? dayjs.utc(startDate) : today,
       duration:
@@ -88,6 +92,10 @@ function AddAppointmentForm({
       form.reset()
     }
   }, [open, form])
+
+  const thematicOptions = soignant
+    ? getThemeOptionsByRole(THEMATICS, soignant.name)
+    : []
 
   return (
     <Popup modal={true} open={open} onOpenChange={setOpen}>
@@ -152,20 +160,11 @@ function AddAppointmentForm({
               </form.Field>
             </div>
 
-            <form.Field name="thematic">
+            <form.AppField name="thematic">
               {(field) => (
-                <FormField>
-                  <Label htmlFor={field.name}>Thématique</Label>
-                  <Select
-                    id={field.name}
-                    options={APPOINTMENT_THEMATIC_OPTIONS}
-                    value={field.state.value}
-                    onValueChange={(value) => field.handleChange(value)}
-                  />
-                  <FieldInfo field={field} />
-                </FormField>
+                <field.Select options={thematicOptions} label="Thématique" />
               )}
-            </form.Field>
+            </form.AppField>
 
             <form.Field name="type">
               {(field) => (
