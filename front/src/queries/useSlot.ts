@@ -142,7 +142,22 @@ export const useSlotMutations = () => {
 
       await queryClient.cancelQueries({ queryKey: [SLOT.GET_BY_ID] })
       const previousSlot = queryClient.getQueryData([SLOT.GET_BY_ID])
-      queryClient.setQueryData([SLOT.GET_BY_ID, updatedSlot.id], updatedSlot)
+      queryClient.setQueryData(
+        [SLOT.GET_BY_ID, updatedSlot.id],
+        (oldSlot: Slot) => {
+          if (!oldSlot) {
+            return updatedSlot
+          }
+          return {
+            ...oldSlot,
+            slotTemplate: {
+              ...oldSlot.slotTemplate,
+              ...updatedSlot.slotTemplate,
+              soignant: oldSlot.slotTemplate.soignant,
+            },
+          }
+        },
+      )
 
       return { previousSlots, previousSlot }
     },

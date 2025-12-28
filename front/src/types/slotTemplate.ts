@@ -9,9 +9,11 @@ export type SlotTemplate = {
   offsetDays?: number
   thematic?: string
   location?: string
-  description?: string
-  color?: string
   isIndividual?: boolean
+  capacity?: number
+  duration?: number
+  color?: string
+  description?: string
 
   slot: Slot
   soignant?: Soignant

@@ -24,7 +24,10 @@ export type CreateSlotParamsWithTemplateID = CreateSlotParams & {
 export type CreateSlotParamsWithTemplateData = CreateSlotParams & {
   slotTemplate: CreateSlotTemplateParams
 }
-export type UpdateSlotParams = Pick<Slot, 'id'> & {
+export type UpdateSlotParams = Omit<
+  Slot,
+  'startDate' | 'endDate' | 'appointments' | 'pathway' | 'slotTemplate'
+> & {
   startDate?: string
   endDate?: string
   slotTemplate?: UpdateSlotTemplateParams

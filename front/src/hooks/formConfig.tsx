@@ -23,7 +23,7 @@ export interface FieldComponentProps {
 }
 
 interface SelectFieldProps extends FieldComponentProps {
-  options: Array<{ value: string; label: string }>
+  options: Array<{ value: string | number; label: string }>
 }
 
 interface ToggleFieldProps extends FieldComponentProps {
@@ -49,7 +49,7 @@ const TextField = ({ label }: FieldComponentProps) => {
 }
 
 function SelectField({ label, options, disabled }: SelectFieldProps) {
-  const field = useFieldContext<string>()
+  const field = useFieldContext<string | number>()
   const value = field.state.value ?? ''
 
   return (
@@ -58,10 +58,33 @@ function SelectField({ label, options, disabled }: SelectFieldProps) {
       <Select
         id={field.name}
         options={options}
-        value={value}
+        value={value.toString()}
         disabled={disabled}
-        onValueChange={(value: string) => field.handleChange(value)}
+        onValueChange={(value) => field.handleChange(value)}
       />
+      <FieldInfo field={field} />
+    </div>
+  )
+}
+
+const NumberField = ({ label }: FieldComponentProps) => {
+  const field = useFieldContext<number | undefined>()
+  const value = field.state.value ?? ''
+
+  return (
+    <div>
+      {label && <Label htmlFor={field.name}>{label}</Label>}
+      <Input
+        id={field.name}
+        type="number"
+        value={value}
+        onChange={(e) => {
+          const val = e.target.value
+          field.handleChange(val === '' ? undefined : Number(val))
+        }}
+        onBlur={field.handleBlur}
+      />
+
       <FieldInfo field={field} />
     </div>
   )
@@ -308,6 +331,7 @@ export const { useAppForm, withForm } = createFormHook({
   fieldComponents: {
     Input: TextField,
     Select: SelectField,
+    Number: NumberField,
     DatePicker: DatePickerField,
     TimePicker: TimePickerField,
     Checkbox: CheckboxField,

@@ -3,6 +3,7 @@ import { useMemo } from 'react'
 
 import {
   getThemeOptionsByRole,
+  SLOT_DURATION_OPTIONS,
   SLOT_LOCATION_OPTIONS,
   THEMATICS,
 } from '../../../../constants/slot.constant.ts'
@@ -18,6 +19,11 @@ export const EventFormFields = withForm({
       value: soignant.id,
       label: soignant.name,
     }))
+
+    const isIndividual = useStore(
+      form.store,
+      (state) => state.values.isIndividual,
+    )
 
     const selectedSoignantId = useStore(
       form.store,
@@ -70,6 +76,21 @@ export const EventFormFields = withForm({
             <field.Toggle options={['Individuel', 'Multiple']} label="Type" />
           )}
         </form.AppField>
+
+        {isIndividual ? (
+          <form.AppField name="duration">
+            {(field) => (
+              <field.Select
+                options={SLOT_DURATION_OPTIONS}
+                label="Durée par défaut"
+              />
+            )}
+          </form.AppField>
+        ) : (
+          <form.AppField name="capacity">
+            {(field) => <field.Number label="Capacité maximum" />}
+          </form.AppField>
+        )}
 
         <form.AppField name="color">
           {(field) => <field.ColorPicker label="Couleur" />}

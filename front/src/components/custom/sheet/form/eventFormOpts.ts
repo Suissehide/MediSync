@@ -3,6 +3,8 @@ export interface EventFormValues {
   location: string
   description: string
   isIndividual: boolean
+  capacity: number
+  duration: number
   soignant: string
   color: string
 }
@@ -13,6 +15,8 @@ export const eventFormOpts: { defaultValues: EventFormValues } = {
     location: '',
     description: '',
     isIndividual: false,
+    capacity: 15,
+    duration: 1,
     soignant: '',
     color: '',
   },

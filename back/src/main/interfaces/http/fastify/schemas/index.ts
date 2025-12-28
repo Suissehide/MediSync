@@ -64,6 +64,7 @@ export const slotTemplateSchema = z.object({
   color: z.string(),
   isIndividual: z.boolean(),
   capacity: z.number().optional().nullable(),
+  duration: z.number().optional().nullable(),
 
   get soignant() {
     return soignantSchema.optional().nullable()

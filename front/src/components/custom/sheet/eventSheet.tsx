@@ -39,12 +39,14 @@ export default function EventSheet({
   const form = useAppForm({
     ...eventFormOpts,
     defaultValues: {
+      soignant: slot?.slotTemplate.soignant?.id ?? '',
       thematic: slot?.slotTemplate.thematic ?? '',
       location: slot?.slotTemplate.location ?? '',
-      description: slot?.slotTemplate.description ?? '',
       isIndividual: slot?.slotTemplate.isIndividual ?? false,
-      soignant: slot?.slotTemplate.soignant?.id ?? '',
+      capacity: slot?.slotTemplate.capacity ?? 1,
+      duration: slot?.slotTemplate.duration ?? 15,
       color: slot?.slotTemplate.color ?? '',
+      description: slot?.slotTemplate.description ?? '',
     },
     onSubmit: ({ value }) => {
       if (!slot?.id) {
@@ -59,13 +61,18 @@ export default function EventSheet({
           location: value.location,
           description: value.description,
           isIndividual: value.isIndividual,
+          capacity: Number(value.capacity),
+          duration: Number(value.duration),
           soignantID: value.soignant,
           color: value.color,
         },
       } satisfies UpdateSlotParams
 
-      updateSlot.mutate(updatedSlotData)
-      setOpen('')
+      updateSlot.mutate(updatedSlotData, {
+        onSuccess: () => {
+          setOpen('')
+        },
+      })
     },
   })
 
@@ -85,21 +92,25 @@ export default function EventSheet({
   }, [open, refetch])
 
   useEffect(() => {
-    console.log('SLOT1')
     if (!slot || !open) {
       return
     }
 
-    console.log('SLOT2', slot.slotTemplate.thematic)
+    console.log('RESET', slot.slotTemplate)
 
-    reset({
-      thematic: slot.slotTemplate.thematic ?? '',
-      location: slot.slotTemplate.location ?? '',
-      description: slot.slotTemplate.description ?? '',
-      isIndividual: slot.slotTemplate.isIndividual ?? false,
-      soignant: slot.slotTemplate.soignant?.id ?? '',
-      color: slot.slotTemplate.color ?? '',
-    })
+    reset(
+      {
+        soignant: slot.slotTemplate.soignant?.id ?? '',
+        thematic: slot.slotTemplate.thematic ?? '',
+        location: slot.slotTemplate.location ?? '',
+        isIndividual: slot.slotTemplate.isIndividual ?? false,
+        capacity: slot.slotTemplate.capacity ?? 1,
+        duration: slot.slotTemplate.duration ?? 15,
+        description: slot.slotTemplate.description ?? '',
+        color: slot.slotTemplate.color ?? '',
+      },
+      { keepDefaultValues: true },
+    )
   }, [slot, open, reset])
 
   return (

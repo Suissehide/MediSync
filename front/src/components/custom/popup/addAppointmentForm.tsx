@@ -10,6 +10,7 @@ import {
 import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { generateDurationOptions } from '../../../libs/utils.ts'
 import { usePatientQueries } from '../../../queries/usePatient.ts'
+import { useSlotByIDQuery } from '../../../queries/useSlot.ts'
 import type { CreateAppointmentParams } from '../../../types/appointment.ts'
 import type { Soignant } from '../../../types/soignant.ts'
 import { Button } from '../../ui/button.tsx'
@@ -52,7 +53,8 @@ function AddAppointmentForm({
   handleCreateAppointment,
 }: AddAppointmentFormProps) {
   const today = dayjs()
-  const patients = usePatientQueries().patients
+  const { patients } = usePatientQueries()
+  const { slot } = useSlotByIDQuery(slotID)
   const patientOptions =
     patients?.map((patient) => ({
       value: patient.id,
@@ -96,6 +98,8 @@ function AddAppointmentForm({
   const thematicOptions = soignant
     ? getThemeOptionsByRole(THEMATICS, soignant.name)
     : []
+
+  const capacity = slot?.slotTemplate.capacity ?? 1
 
   return (
     <Popup modal={true} open={open} onOpenChange={setOpen}>
@@ -160,6 +164,13 @@ function AddAppointmentForm({
               </form.Field>
             </div>
 
+            {type === 'multiple' && (
+              <div className="text-sm text-text-light mb-0">
+                Capacité maximale de ce créneau :{' '}
+                <span className="text-text">{capacity}</span>
+              </div>
+            )}
+
             <form.AppField name="thematic">
               {(field) => (
                 <field.Select options={thematicOptions} label="Thématique" />
@@ -188,6 +199,9 @@ function AddAppointmentForm({
                   if (!value.length) {
                     return 'Au moins un patient est requis'
                   }
+                  if (type === 'multiple' && value.length > capacity) {
+                    return ''
+                  }
                   return undefined
                 },
               }}
@@ -204,7 +218,7 @@ function AddAppointmentForm({
                         ? 'Sélectionner un patient'
                         : 'Sélectionner un ou plusieurs patients'
                     }
-                    maxSelected={type === 'individual' ? 1 : undefined}
+                    maxSelected={type === 'individual' ? 1 : capacity}
                   />
                   <FieldInfo field={field} />
                 </FormField>

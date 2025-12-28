@@ -93,8 +93,6 @@ export default function AppointmentSheet({
         appointmentPatients: value.appointmentPatients,
       }
 
-      console.log('UpdateAppointmentParams', updateAppointmentData)
-
       updateAppointment.mutate(updateAppointmentData, {
         onSuccess: async () => {
           await queryClient.invalidateQueries({ queryKey: [SLOT.GET_ALL] })

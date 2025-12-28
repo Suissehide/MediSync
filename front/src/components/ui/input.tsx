@@ -10,7 +10,7 @@ interface TextAreaProps
   extends React.InputHTMLAttributes<HTMLTextAreaElement> {}
 export interface SelectProps extends RadixUiSelect.SelectProps {
   id: string
-  options: { label: string; value: string }[]
+  options: { value: string | number; label: string }[]
   placeholder?: string
   className?: string
   clearable?: boolean
@@ -104,7 +104,7 @@ const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
                 {options.map((option) => (
                   <RadixUiSelect.Item
                     key={option.value}
-                    value={option.value}
+                    value={option.value.toString()}
                     className="relative flex cursor-pointer select-none items-center rounded px-2 py-1.5 text-sm text-text hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
                   >
                     <RadixUiSelect.ItemText>

@@ -1,10 +1,11 @@
 import { useStore } from '@tanstack/react-form'
 import dayjs from 'dayjs'
 import { Check, X } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 
 import {
   getThemeOptionsByRole,
+  SLOT_DURATION_OPTIONS,
   SLOT_LOCATION_OPTIONS,
   THEMATICS,
 } from '../../../constants/slot.constant.ts'
@@ -13,6 +14,7 @@ import { combineDateAndTime } from '../../../libs/utils.ts'
 import { useSoignantQueries } from '../../../queries/useSoignant.ts'
 import { useSoignantStore } from '../../../store/useSoignantStore.ts'
 import type { CreateSlotParamsWithTemplateData } from '../../../types/slot.ts'
+import type { CreateSlotTemplateParams } from '../../../types/slotTemplate.ts'
 import { Button } from '../../ui/button.tsx'
 import { DatePicker } from '../../ui/datePicker.tsx'
 import { FieldInfo } from '../../ui/fieldInfo.tsx'
@@ -48,10 +50,14 @@ function AddSlotForm({
 }: AddSlotFormProps) {
   useSoignantQueries()
   const soignants = useSoignantStore((state) => state.soignants)
-  const soignantOptions = soignants.map((soignant) => ({
-    value: soignant.id,
-    label: soignant.name,
-  }))
+  const soignantOptions = useMemo(
+    () =>
+      soignants.map((soignant) => ({
+        value: soignant.id,
+        label: soignant.name,
+      })),
+    [soignants],
+  )
 
   const today = dayjs()
 
@@ -60,13 +66,14 @@ function AddSlotForm({
       startDate: startDate ? dayjs(startDate) : today,
       startTime: startDate ? dayjs(startDate) : today,
       endTime: endDate ? dayjs(endDate) : today,
+      soignant: '',
       thematic: '',
-      identifier: '',
       location: '',
       description: '',
-      soignant: '',
-      color: color ?? '#2563eb',
       isIndividual: false,
+      duration: 15,
+      capacity: 1,
+      color: color ?? '#2563eb',
     },
 
     onSubmit: ({ value }) => {
@@ -86,14 +93,15 @@ function AddSlotForm({
           startTime: startDate,
           endTime: endDate,
           offsetDays: 0,
-          thematic: value.thematic,
-          identifier: value.identifier,
-          location: value.location,
-          description: value.description,
           soignantID: value.soignant,
-          color: value.color,
+          thematic: value.thematic,
+          location: value.location,
           isIndividual: value.isIndividual,
-        },
+          duration: value.duration,
+          capacity: value.capacity,
+          description: value.description,
+          color: value.color,
+        } satisfies CreateSlotTemplateParams,
       }
       handleCreateSlot(newSlot)
     },
@@ -105,6 +113,10 @@ function AddSlotForm({
     }
   }, [open, form])
 
+  const isIndividual = useStore(
+    form.store,
+    (state) => state.values.isIndividual,
+  )
   const selectedSoignantId = useStore(
     form.store,
     (state) => state.values.soignant,
@@ -248,6 +260,21 @@ function AddSlotForm({
                 />
               )}
             </form.AppField>
+
+            {isIndividual ? (
+              <form.AppField name="duration">
+                {(field) => (
+                  <field.Select
+                    options={SLOT_DURATION_OPTIONS}
+                    label="Durée par défaut"
+                  />
+                )}
+              </form.AppField>
+            ) : (
+              <form.AppField name="capacity">
+                {(field) => <field.Number label="Capacité maximum" />}
+              </form.AppField>
+            )}
 
             <div className="flex gap-4 items-center">
               <form.AppField name="color">

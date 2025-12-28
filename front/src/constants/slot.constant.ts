@@ -1,5 +1,14 @@
 import { toSelectOptions } from '../libs/utils.ts'
 
+export const SLOT_DURATION = {
+  15: '15 minutes',
+  30: '30 minutes',
+  45: '45 minutes',
+  60: '60 minutes',
+  90: '90 minutes',
+  120: '120 minutes',
+}
+
 export const SLOT_LOCATION = {
   'office-1': 'Bureau 1',
   'office-5': 'Bureau 5',
@@ -17,6 +26,9 @@ export const SLOT_LOCATION = {
   'meeting-2': 'Salle réunion 2 (étage 2)',
 }
 
+export const SLOT_DURATION_OPTIONS = Object.entries(SLOT_DURATION).map(
+  ([value, label]) => ({ value: Number(value), label }),
+)
 export const SLOT_LOCATION_OPTIONS = toSelectOptions(SLOT_LOCATION)
 
 /* TODO: Api for thematics */
