@@ -16,7 +16,6 @@ jobs:
       - name: Deploy with Docker Compose
         working-directory: deploy
         run: |
-          cd $GITHUB_WORKSPACE/MediSync/deploy
           docker compose pull
           docker compose up -d --remove-orphans
           docker compose ps
