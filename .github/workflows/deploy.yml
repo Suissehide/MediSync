@@ -16,6 +16,7 @@ jobs:
       - name: Deploy with Docker Compose
         working-directory: deploy
         run: |
-          cd deploy
+          cd $GITHUB_WORKSPACE/deploy
           docker compose pull
           docker compose up -d --remove-orphans
+          docker compose ps
