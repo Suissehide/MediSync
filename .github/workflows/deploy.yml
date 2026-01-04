@@ -16,6 +16,8 @@ jobs:
       - name: Deploy with Docker Compose
         working-directory: deploy
         run: |
+          echo "Workspace: $GITHUB_WORKSPACE"
+          ls -R $GITHUB_WORKSPACE
           docker compose pull
           docker compose up -d --remove-orphans
           docker compose ps
