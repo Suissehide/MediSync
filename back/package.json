@@ -397,13 +397,8 @@
     "schema": "./prisma/schema.prisma",
     "seed": "npm run with:tsx -- ./prisma/seed/index.ts"
   },
-  "engines": {
-    "node": "^22.14.0",
-    "npm": "^11.1.0"
-  },
   "volta": {
-    "node": "22.14.0",
-    "npm": "11.3.0"
+    "node": "24.12.0"
   },
   "dependencies": {
     "@fastify/accepts": "5.0.3",
