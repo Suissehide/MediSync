@@ -16,7 +16,5 @@ jobs:
       - name: Deploy with Docker Compose
         working-directory: deploy
         run: |
-          echo "Workspace: $GITHUB_WORKSPACE"
-          docker compose --profile backend --profile db pull
-          docker compose --profile backend --profile db up -d --remove-orphans
-          docker compose --profile backend --profile db ps
+          docker compose --profile backend --profile db up -d --build --remove-orphans
+          docker compose ps
