@@ -12,21 +12,18 @@ FROM node-npm AS app-build
 WORKDIR /usr/src/app
 
 COPY package.json package-lock.json ./
+COPY build/conf/nginx.conf ./
 RUN npm ci --prefer-offline --ignore-scripts
 
 COPY . .
 RUN npm run build
 
-# Runtime image
+# Application image with dist
 FROM nginx:alpine
 
-# Supprime la config par défaut
 RUN rm /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Ajoute la config SPA
-COPY build/conf/nginx.conf /etc/nginx/conf.d/default.conf
-
-# Copie le build React
 COPY --from=app-build /usr/src/app/dist /usr/share/nginx/html
 
 EXPOSE 80
