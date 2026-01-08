@@ -13,6 +13,7 @@ WORKDIR /usr/src/app
 COPY ../package.json package-lock.json ./
 COPY ../deploy/conf/nginx.conf ./
 RUN npm ci --prefer-offline --ignore-scripts
+COPY ../tsconfig.json ./
 COPY ../src ./src
 RUN npm run build
 RUN npm prune --omit=dev --ignore-scripts
