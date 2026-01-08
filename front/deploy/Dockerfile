@@ -11,7 +11,7 @@ RUN npm i -g npm@${NPM_VERSION}
 FROM node-npm AS app-build
 WORKDIR /usr/src/app
 COPY ../package.json package-lock.json ./
-COPY ../build/conf/nginx.conf ./
+COPY ../deploy/conf/nginx.conf ./
 RUN npm ci --prefer-offline --ignore-scripts
 COPY ../src ./src
 RUN npm run build
@@ -24,7 +24,6 @@ WORKDIR /usr/src/app
 
 RUN rm /etc/nginx/conf.d/default.conf
 COPY --from=app-build /usr/src/app/nginx.conf /etc/nginx/conf.d/default.conf
-
 COPY --from=app-build /usr/src/app/dist /usr/share/nginx/html
 
 ENV NODE_ENV production
