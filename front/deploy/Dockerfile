@@ -24,7 +24,7 @@ FROM nginx:alpine
 RUN rm /etc/nginx/conf.d/default.conf
 
 # Ajoute la config SPA
-COPY conf/nginx.conf /etc/nginx/conf.d/default.conf
+COPY build/conf/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copie le build React
 COPY --from=app-build /usr/src/app/dist /usr/share/nginx/html
