@@ -21,11 +21,13 @@ RUN npm prune --omit=dev --ignore-scripts
 # Application image with dist
 FROM nginx:alpine AS app
 
-WORKDIR /usr/src/app
+WORKDIR /usr/share/nginx/html
+COPY --chown=node:node ../package.json package-lock.json ./
+COPY --chown=node:node --from=app-build /usr/src/app/node_modules/ ./node_modules
 
 RUN rm /etc/nginx/conf.d/default.conf
 COPY --from=app-build /usr/src/app/nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=app-build /usr/src/app/dist /usr/share/nginx/html
+COPY --from=app-build /usr/src/app/dist ./dist
 
 ENV NODE_ENV production
 EXPOSE 80
