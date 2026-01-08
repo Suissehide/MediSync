@@ -16,5 +16,5 @@ jobs:
       - name: Deploy with Docker Compose
         working-directory: deploy
         run: |
-          docker compose --profile backend --profile db up -d --build --remove-orphans
+          docker compose --profile backend --profile db --profile frontend up -d --build --remove-orphans
           docker compose ps
