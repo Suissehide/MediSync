@@ -7,7 +7,7 @@ services:
         DATABASE_URL: ${DATABASE_URL}
         NODE_VERSION: ${NODE_VERSION}
         NPM_VERSION: ${NPM_VERSION}
-      target: back
+      target: app
     image: "${CONTAINER_REGISTRY_PREFIX}${APP_IMAGE_NAME}-back:${VERSION:-latest}"
     container_name: "${APP_IMAGE_NAME}-back"
     ports:
@@ -54,6 +54,7 @@ services:
         DATABASE_URL: ${DATABASE_URL}
         NODE_VERSION: ${NODE_VERSION}
         NPM_VERSION: ${NPM_VERSION}
+      target: app
     image: "${CONTAINER_REGISTRY_PREFIX}${APP_IMAGE_NAME}-front:${VERSION:-latest}"
     container_name: "${APP_IMAGE_NAME}-front"
     profiles:
