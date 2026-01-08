@@ -1,5 +1,5 @@
 services:
-  app:
+  back:
     build:
       context: ../back
       dockerfile: deploy/Dockerfile
@@ -7,9 +7,9 @@ services:
         DATABASE_URL: ${DATABASE_URL}
         NODE_VERSION: ${NODE_VERSION}
         NPM_VERSION: ${NPM_VERSION}
-      target: app
-    image: "${CONTAINER_REGISTRY_PREFIX}${APP_IMAGE_NAME}:${VERSION:-latest}"
-    container_name: "${APP_IMAGE_NAME}"
+      target: back
+    image: "${CONTAINER_REGISTRY_PREFIX}${APP_IMAGE_NAME}-back:${VERSION:-latest}"
+    container_name: "${APP_IMAGE_NAME}-back"
     ports:
       - '${PORT}:${PORT}'
     profiles:
@@ -33,7 +33,7 @@ services:
       - PORT
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.${APP_IMAGE_NAME}.rule=Host(`${TRAEFIK_APP_VIRTUAL_HOST:-${APP_IMAGE_NAME}.localdomain}`)"
+      - "traefik.http.routers.${APP_IMAGE_NAME}.rule=Host(`${TRAEFIK_BACK_HOST:-${APP_IMAGE_NAME}.localdomain}`)"
       - "traefik.http.routers.${APP_IMAGE_NAME}.entrypoints=${TRAEFIK_APP_ENTRYPOINTS:-web}"
       - "traefik.http.routers.${APP_IMAGE_NAME}.tls=${TRAEFIK_APP_TLS:-false}"
       - "traefik.http.routers.${APP_IMAGE_NAME}.tls.certresolver=${TRAEFIK_APP_CERT_RESOLVER:-letsencrypt}"
@@ -44,6 +44,27 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    restart: unless-stopped
+
+  front:
+    build:
+      context: ../front
+      dockerfile: deploy/Dockerfile
+      args:
+        DATABASE_URL: ${DATABASE_URL}
+        NODE_VERSION: ${NODE_VERSION}
+        NPM_VERSION: ${NPM_VERSION}
+    image: "${CONTAINER_REGISTRY_PREFIX}${APP_IMAGE_NAME}-front:${VERSION:-latest}"
+    container_name: "${APP_IMAGE_NAME}-front"
+    profiles:
+      - frontend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.${APP_IMAGE_NAME}-front.rule=Host(`${TRAEFIK_FRONT_HOST}`)"
+      - "traefik.http.routers.${APP_IMAGE_NAME}-front.entrypoints=${TRAEFIK_APP_ENTRYPOINTS:-websecure}"
+      - "traefik.http.routers.${APP_IMAGE_NAME}-front.tls.certresolver=${TRAEFIK_APP_CERT_RESOLVER:-letsencrypt}"
+      - "traefik.http.services.${APP_IMAGE_NAME}-front.loadbalancer.server.port=80"
+    network_mode: "${DOCKER_NETWORK_MODE}"
     restart: unless-stopped
 
 
