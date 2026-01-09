@@ -13,6 +13,7 @@ WORKDIR /usr/src/app
 COPY ../package.json package-lock.json ./
 COPY ../deploy/conf/nginx.conf ./
 RUN npm ci --prefer-offline --include=dev --ignore-scripts --loglevel verbose
+COPY ../vite.config.ts ./
 COPY ../tsconfig.json tsconfig.app.json tsconfig.node.json  ./
 COPY ../src ./src
 RUN npm run build
