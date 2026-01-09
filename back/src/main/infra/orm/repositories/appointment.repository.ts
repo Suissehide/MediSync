@@ -91,8 +91,6 @@ class AppointmentRepository implements AppointmentRepositoryInterface {
   ): Promise<AppointmentEntityRepo> {
     const { appointmentPatients, ...appointmentData } = appointmentUpdateParams
 
-    console.log('appointmentUpdateParams:', appointmentUpdateParams)
-
     try {
       return await this.prisma.$transaction(async (tx) => {
         // Met à jour le rendez-vous principal

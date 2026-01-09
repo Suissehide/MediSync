@@ -114,11 +114,11 @@ class PatientDomain implements PatientDomainInterface {
       try {
         const pathwayTemplateInstance =
           await this.pathwayTemplateRepository.findByID(
-            pathwayTemplate.slotTemplateID,
+            pathwayTemplate.pathwayTemplateID,
           )
 
         const pathways = await this.pathwayRepository.findByTemplateIDAndDate(
-          pathwayTemplate.slotTemplateID,
+          pathwayTemplate.pathwayTemplateID,
           startDate,
         )
 
@@ -154,11 +154,11 @@ class PatientDomain implements PatientDomainInterface {
         }
       } catch (error) {
         this.logger.error(
-          `Erreur lors de l'inscription au parcours ${pathwayTemplate.slotTemplateID}: ${error instanceof Error ? error.message : String(error)}`,
+          `Erreur lors de l'inscription au parcours ${pathwayTemplate.pathwayTemplateID}: ${error instanceof Error ? error.message : String(error)}`,
         )
         failedEnrollments.push({
           slotTemplate: {
-            id: pathwayTemplate.slotTemplateID,
+            id: pathwayTemplate.pathwayTemplateID,
           },
           reason:
             error instanceof Error

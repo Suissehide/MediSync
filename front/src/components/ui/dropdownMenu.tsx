@@ -1,8 +1,9 @@
-import React from 'react'
-import { Check, Dot, ChevronRight } from 'lucide-react'
-import { cn } from '../../libs/utils'
 import { cva, type VariantProps } from 'class-variance-authority'
+import { Check, ChevronRight, Dot } from 'lucide-react'
 import { DropdownMenu } from 'radix-ui'
+import React from 'react'
+
+import { cn } from '../../libs/utils'
 
 const dropdownMenuContentVariants = cva(
   'z-50 min-w-[8rem] overflow-hidden rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md animate-in fade-in-0 slide-in-from-top-2',
@@ -34,7 +35,7 @@ const DropdownMenuCustomItem = React.forwardRef<
   <DropdownMenu.Item
     ref={ref}
     className={cn(
-      'relative flex cursor-pointer select-none items-center rounded-sm px-3 py-1.5 text-sm outline-none transition-colors hover:bg-primary/70 hover:text-accent-foreground focus:bg-primary/70 focus:text-accent-foreground',
+      'relative flex cursor-pointer select-none items-center rounded-sm px-3 py-1.5 outline-none transition-colors hover:bg-primary/70 hover:text-accent-foreground focus:bg-primary/70 focus:text-accent-foreground',
       className,
     )}
     {...props}

@@ -1,4 +1,9 @@
+import Boom from '@hapi/boom'
+import dayjs from 'dayjs'
+import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod/v4'
+
+import { combineDateAndTime } from '../../../../utils/date'
 import {
   type CreatePathwayBody,
   createPathwaySchema,
@@ -11,13 +16,9 @@ import {
   pathwayResponseSchema,
   pathwaysResponseSchema,
   type UpdatePathwayBody,
-  updatePathwayByIdSchema,
   type UpdatePathwayParams,
+  updatePathwayByIdSchema,
 } from '../schemas/pathway.schema'
-import Boom from '@hapi/boom'
-import type { FastifyPluginAsync } from 'fastify'
-import dayjs from 'dayjs'
-import { combineDateAndTime } from '../../../../utils/date'
 
 const pathwayRouter: FastifyPluginAsync = (fastify) => {
   const { iocContainer } = fastify
@@ -153,7 +154,7 @@ const pathwayRouter: FastifyPluginAsync = (fastify) => {
 
       const slotIDs: string[] = []
       for (const slotTemplate of pathwayTemplate.slotTemplates) {
-        const { id, soignant, ...rest } = slotTemplate
+        const { soignant, ...rest } = slotTemplate
         const clonedSlotTemplate = await slotTemplateDomain.create({
           ...rest,
           soignantID: soignant?.id ?? undefined,
@@ -165,8 +166,6 @@ const pathwayRouter: FastifyPluginAsync = (fastify) => {
 
         const start = combineDateAndTime(base, clonedSlotTemplate.startTime)
         const end = combineDateAndTime(base, clonedSlotTemplate.endTime)
-
-        console.log(start, end)
 
         const slot = await slotDomain.create({
           startDate: start,

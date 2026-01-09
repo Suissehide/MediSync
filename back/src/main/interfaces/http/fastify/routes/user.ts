@@ -52,7 +52,6 @@ const userRouter: FastifyPluginAsync = (fastify) => {
     async (request) => {
       const { userID } = request.params
       const user = await userDomain.findByID(userID)
-      console.log(user)
       if (!user) {
         throw Boom.notFound('User not found')
       }

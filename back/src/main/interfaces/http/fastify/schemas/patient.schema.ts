@@ -79,7 +79,7 @@ export type PatientResponse = z.infer<typeof patientResponseSchema>
 export const timeOfDaySchema = z.enum(['ALL_DAY', 'MORNING', 'AFTERNOON'])
 
 export const pathwayEnrollmentSchema = z.object({
-  slotTemplateID: z.cuid(),
+  pathwayTemplateID: z.cuid(),
   timeOfDay: timeOfDaySchema,
   thematic: z.string().optional(),
   type: z.string().optional(),
@@ -94,7 +94,7 @@ export const enrollPatientInPathwaysSchema = z.object({
 export const enrollExistingPatientInPathwaysSchema = z.object({
   patientID: z.cuid(),
   startDate: z.coerce.date(),
-  pathways: z.array(pathwayEnrollmentSchema).min(1),
+  pathways: z.array(pathwayEnrollmentSchema).optional().default([]),
 })
 
 export const enrollmentResultItemSchema = z.object({

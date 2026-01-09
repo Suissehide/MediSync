@@ -29,29 +29,6 @@ export const appointmentPatientSchema = z.object({
   },
 })
 
-export const pathwayTemplateSchema = z.object({
-  name: z.string().min(1),
-  color: z.string(),
-
-  get slotTemplates() {
-    return z.array(slotTemplateSchema).optional().nullable()
-  },
-  // get pathways() {
-  //   return z.array(pathwaySchema).optional().nullable()
-  // },
-})
-
-export const pathwaySchema = z.object({
-  startDate: z.coerce.date(),
-
-  get template() {
-    return pathwayTemplateSchema.optional().nullable()
-  },
-  get slots() {
-    return z.array(slotSchema).optional().nullable()
-  },
-})
-
 /** Slot Template Schema */
 export const slotTemplateSchema = z.object({
   startTime: z.coerce.date(),
@@ -90,5 +67,28 @@ export const slotSchema = z.object({
   },
   get slotTemplate() {
     return slotTemplateSchema.optional().nullable()
+  },
+})
+
+export const pathwayTemplateSchema = z.object({
+  name: z.string().min(1),
+  color: z.string(),
+
+  get slotTemplates() {
+    return z.array(slotTemplateSchema).optional().nullable()
+  },
+  // get pathways() {
+  //   return z.array(pathwaySchema).optional().nullable()
+  // },
+})
+
+export const pathwaySchema = z.object({
+  startDate: z.coerce.date(),
+
+  get template() {
+    return pathwayTemplateSchema.optional().nullable()
+  },
+  get slots() {
+    return z.array(slotSchema).optional().nullable()
   },
 })

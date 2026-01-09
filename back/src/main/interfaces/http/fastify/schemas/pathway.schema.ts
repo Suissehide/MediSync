@@ -1,4 +1,5 @@
 import { z } from 'zod/v4'
+
 import { pathwaySchema } from './index'
 
 export const pathwayResponseSchema = pathwaySchema.extend({

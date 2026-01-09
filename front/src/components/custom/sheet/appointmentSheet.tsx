@@ -1,4 +1,4 @@
-import { useQueryClient } from '@tanstack/react-query'
+import { useStore } from '@tanstack/react-form'
 import dayjs from 'dayjs'
 import {
   ChevronDown,
@@ -14,7 +14,6 @@ import {
   APPOINTMENT_STATUS_OPTIONS,
   APPOINTMENT_TYPE_OPTIONS,
 } from '../../../constants/appointment.constant.ts'
-import { SLOT } from '../../../constants/process.constant.ts'
 import {
   getThemeOptionsByRole,
   THEMATICS,
@@ -53,13 +52,11 @@ export default function AppointmentSheet({
   setOpen,
   eventID,
   soignant,
-  handleDeleteEvent,
 }: AppointmentSheetProps) {
-  const queryClient = useQueryClient()
   const { isPending, appointment, refetch } = useAppointmentByIDQuery(eventID, {
     enabled: false,
   })
-  const { updateAppointment } = useAppointmentMutations()
+  const { updateAppointment, deleteAppointment } = useAppointmentMutations()
   const patients = usePatientQueries().patients
 
   const [selectedPatient, setSelectedPatient] = useState('')
@@ -93,17 +90,16 @@ export default function AppointmentSheet({
         appointmentPatients: value.appointmentPatients,
       }
 
-      updateAppointment.mutate(updateAppointmentData, {
-        onSuccess: async () => {
-          await queryClient.invalidateQueries({ queryKey: [SLOT.GET_ALL] })
-        },
-      })
+      updateAppointment.mutate(updateAppointmentData)
       setOpen('')
     },
   })
 
-  const selectedPatientIDs =
-    form.state.values.appointmentPatients?.map((ap) => ap.patientID) ?? []
+  const selectedPatientIDs = useStore(
+    form.store,
+    (state) =>
+      state.values.appointmentPatients?.map((ap) => ap.patientID) ?? [],
+  )
   const patientOptions =
     patients
       ?.slice()
@@ -116,7 +112,7 @@ export default function AppointmentSheet({
 
   const handleDelete = () => {
     if (appointment) {
-      handleDeleteEvent?.(appointment.id)
+      deleteAppointment.mutate(appointment.id)
       setOpen('')
     }
   }
@@ -276,7 +272,7 @@ export default function AppointmentSheet({
 
                           return (
                             <div
-                              key={patientData?.id}
+                              key={`index_${patientData?.id}`}
                               className="border border-border rounded-md py-2 px-4"
                             >
                               <div className="flex justify-between items-center">

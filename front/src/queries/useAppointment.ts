@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { AppointmentApi } from '../api/appointment.api.ts'
-import { APPOINTMENT } from '../constants/process.constant.ts'
+import { APPOINTMENT, SLOT } from '../constants/process.constant.ts'
 import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
 import { useToast } from '../hooks/useToast.ts'
@@ -107,6 +107,7 @@ export const useAppointmentMutations = () => {
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: [APPOINTMENT.GET_ALL] })
+      await queryClient.invalidateQueries({ queryKey: [SLOT.GET_ALL] })
     },
   })
 
@@ -149,6 +150,7 @@ export const useAppointmentMutations = () => {
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: [APPOINTMENT.GET_ALL] })
+      await queryClient.invalidateQueries({ queryKey: [SLOT.GET_ALL] })
     },
   })
 
@@ -193,6 +195,7 @@ export const useAppointmentMutations = () => {
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: [APPOINTMENT.GET_ALL] })
+      await queryClient.invalidateQueries({ queryKey: [SLOT.GET_ALL] })
     },
   })
 

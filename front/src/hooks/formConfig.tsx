@@ -10,6 +10,7 @@ import { FieldInfo } from '../components/ui/fieldInfo.tsx'
 import { Checkbox, Input, Select, TextArea } from '../components/ui/input.tsx'
 import { Label } from '../components/ui/label.tsx'
 import { TimePicker } from '../components/ui/timePicker.tsx'
+import { cn } from '../libs/utils.ts'
 import {
   fieldContext,
   formContext,
@@ -20,6 +21,7 @@ import {
 export interface FieldComponentProps {
   label?: string
   disabled?: boolean
+  className?: string
 }
 
 interface SelectFieldProps extends FieldComponentProps {
@@ -30,16 +32,17 @@ interface ToggleFieldProps extends FieldComponentProps {
   options: string[]
 }
 
-const TextField = ({ label }: FieldComponentProps) => {
+const TextField = ({ label, disabled, className }: FieldComponentProps) => {
   const field = useFieldContext<string>()
   const value = field.state.value ?? ''
 
   return (
-    <div>
+    <div className={cn('flex flex-col gap-1', className)}>
       {label && <Label htmlFor={field.name}>{label}</Label>}
       <Input
         id={field.name}
         value={value}
+        disabled={disabled}
         onChange={(e) => field.handleChange(e.target.value)}
         onBlur={field.handleBlur}
       />
@@ -48,12 +51,17 @@ const TextField = ({ label }: FieldComponentProps) => {
   )
 }
 
-function SelectField({ label, options, disabled }: SelectFieldProps) {
+function SelectField({
+  label,
+  disabled,
+  className,
+  options,
+}: SelectFieldProps) {
   const field = useFieldContext<string | number>()
   const value = field.state.value ?? ''
 
   return (
-    <div>
+    <div className={cn('flex flex-col gap-1', className)}>
       {label && <Label htmlFor={field.name}>{label}</Label>}
       <Select
         id={field.name}
@@ -67,12 +75,12 @@ function SelectField({ label, options, disabled }: SelectFieldProps) {
   )
 }
 
-const NumberField = ({ label }: FieldComponentProps) => {
+const NumberField = ({ label, className }: FieldComponentProps) => {
   const field = useFieldContext<number | undefined>()
   const value = field.state.value ?? ''
 
   return (
-    <div>
+    <div className={cn('flex flex-col gap-1', className)}>
       {label && <Label htmlFor={field.name}>{label}</Label>}
       <Input
         id={field.name}
@@ -90,7 +98,7 @@ const NumberField = ({ label }: FieldComponentProps) => {
   )
 }
 
-function DatePickerField({ label }: FieldComponentProps) {
+function DatePickerField({ label, className }: FieldComponentProps) {
   const field = useFieldContext<string>()
   const value = useMemo(() => {
     const fieldValue = field.state.value
@@ -106,7 +114,7 @@ function DatePickerField({ label }: FieldComponentProps) {
   }
 
   return (
-    <div>
+    <div className={cn('flex flex-col gap-1', className)}>
       {label && <Label htmlFor={field.name}>{label}</Label>}
       <DatePicker value={value} onChange={handleChange} />
       <FieldInfo field={field} />
@@ -114,12 +122,12 @@ function DatePickerField({ label }: FieldComponentProps) {
   )
 }
 
-function TimePickerField({ label }: FieldComponentProps) {
+function TimePickerField({ label, className }: FieldComponentProps) {
   const field = useFieldContext<Dayjs | null>()
   const value = field.state.value
 
   return (
-    <div>
+    <div className={cn('flex flex-col gap-1', className)}>
       {label && <Label htmlFor={field.name}>{label}</Label>}
       <TimePicker
         value={value}
@@ -130,12 +138,12 @@ function TimePickerField({ label }: FieldComponentProps) {
   )
 }
 
-function CheckboxField({ label }: FieldComponentProps) {
+function CheckboxField({ label, className }: FieldComponentProps) {
   const field = useFieldContext<boolean>()
   const value = field.state.value
 
   return (
-    <div>
+    <div className={cn('flex flex-col gap-1', className)}>
       {label && <Label htmlFor={field.name}>{label}</Label>}
       <Checkbox
         id={field.name}
@@ -150,12 +158,12 @@ function CheckboxField({ label }: FieldComponentProps) {
   )
 }
 
-function TextAreaField({ label }: FieldComponentProps) {
+function TextAreaField({ label, className }: FieldComponentProps) {
   const field = useFieldContext<string>()
   const value = field.state.value ?? ''
 
   return (
-    <div>
+    <div className={cn('flex flex-col gap-1', className)}>
       {label && <Label htmlFor={field.name}>{label}</Label>}
       <TextArea
         id={field.name}
@@ -170,7 +178,7 @@ function TextAreaField({ label }: FieldComponentProps) {
   )
 }
 
-function ColorPickerField({ label }: FieldComponentProps) {
+function ColorPickerField({ label, className }: FieldComponentProps) {
   const [open, setOpen] = useState(false)
   const field = useFieldContext<string>()
   const value = field.state.value ?? '#000000'
@@ -203,7 +211,7 @@ function ColorPickerField({ label }: FieldComponentProps) {
   }
 
   return (
-    <div ref={containerRef} className="flex flex-col gap-2">
+    <div ref={containerRef} className={cn('flex flex-col gap-1', className)}>
       {label && <Label htmlFor={field.name}>{label}</Label>}
 
       <div className="relative">
@@ -246,7 +254,7 @@ function ColorPickerField({ label }: FieldComponentProps) {
   )
 }
 
-function ToggleField({ label, options }: ToggleFieldProps) {
+function ToggleField({ label, className, options }: ToggleFieldProps) {
   const field = useFieldContext<boolean>()
   const [option1, option2] = options
 
@@ -255,7 +263,7 @@ function ToggleField({ label, options }: ToggleFieldProps) {
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className={cn('flex flex-col gap-1', className)}>
       {label && <Label htmlFor={field.name}>{label}</Label>}
 
       <div className="relative w-fit flex items-center border border-border rounded overflow-hidden">
@@ -313,17 +321,6 @@ function SubmitButton({
       )}
     </form.Subscribe>
   )
-}
-
-export const validators = {
-  required: {
-    onSubmit: ({ value }: { value: unknown }) =>
-      value ? undefined : 'Ce champ est requis',
-  },
-  requiredDate: {
-    onSubmit: ({ value }: { value: Dayjs | null | undefined }) =>
-      value ? undefined : 'Ce champ est requis',
-  },
 }
 
 // Configuration centralisée avec types
