@@ -10,23 +10,24 @@ RUN npm i -g npm@${NPM_VERSION}
 # Built application image
 FROM node-npm AS app-build
 WORKDIR /usr/src/app
-COPY package.json package-lock.json .npmrc ./
+COPY ../package.json package-lock.json ./
+COPY ../deploy/conf/nginx.conf ./
 RUN npm ci --prefer-offline --include=dev --ignore-scripts --loglevel verbose
-COPY .swcrc tsconfig.json ./
-COPY src/ ./src
-COPY prisma/ ./prisma
+COPY ../tsconfig.json tsconfig.app.json tsconfig.node.json  ./
+COPY ../src ./src
 RUN npm run build
 RUN npm prune --omit=dev --ignore-scripts
 
 # Application image with dist
-FROM ${MIRROR_URL}node:${NODE_VERSION}-slim AS app
-RUN apt-get update -qq && apt-get install -y --no-install-recommends libssl-dev dumb-init
-WORKDIR /usr/src/app
-COPY --chown=node:node package.json package-lock.json ./
+FROM nginx:alpine AS app
+
+WORKDIR /usr/share/nginx/html
+COPY --chown=node:node ../package.json package-lock.json ./
 COPY --chown=node:node --from=app-build /usr/src/app/node_modules/ ./node_modules
-COPY --chown=node:node --from=app-build /usr/src/app/lib/ ./lib
-COPY --chown=node:node --from=app-build /usr/src/app/dist/apidoc/ ./dist/apidoc
-COPY --chown=node:node prisma/ ./prisma
+
+RUN rm /etc/nginx/conf.d/default.conf
+COPY --from=app-build /usr/src/app/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=app-build /usr/src/app/dist ./dist
+
 ENV NODE_ENV production
-EXPOSE 3000
-CMD ["dumb-init", "npm", "run", "start:migrate:production"]
+EXPOSE 80

@@ -25,7 +25,6 @@ import {
 } from 'react'
 
 import { safeParse } from '../../libs/utils.ts'
-import { ColumnVisibilityMenu } from './columnVisibilityMenu'
 import {
   dateFilterFn,
   dateRangeFilterFn,
@@ -176,10 +175,10 @@ export function ReactTable<TData extends { id: string }>({
 
       <div className="react-table__filter">
         <div className="above-table__container">
-          <ColumnVisibilityMenu
-            table={table}
-            initialColumnVisibility={initialColumnVisibility}
-          />
+          {/*<ColumnVisibilityMenu*/}
+          {/*  table={table}*/}
+          {/*  initialColumnVisibility={initialColumnVisibility}*/}
+          {/*/>*/}
         </div>
 
         {customHeader?.(table.getRowModel().rows)}

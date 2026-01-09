@@ -16,7 +16,7 @@ interface SidebarProps {
 function Sidebar({ isVisible, components }: SidebarProps) {
   const router = useRouter()
   const { logoutMutation } = useLogout()
-  const { authState } = router.options.context
+  const authState = router.options.context?.authState
 
   function getInitiales(firstName?: string, lastName?: string): string {
     return (
@@ -80,16 +80,16 @@ function Sidebar({ isVisible, components }: SidebarProps) {
             <div className="flex items-center gap-3">
               <div className="flex justify-center items-center rounded-full bg-primary w-8 h-8 text-white">
                 {getInitiales(
-                  authState.user?.firstName,
-                  authState.user?.lastName,
+                  authState?.user?.firstName,
+                  authState?.user?.lastName,
                 )}
               </div>
               <div>
                 <div className="font-bold">
-                  {authState.user?.firstName} {authState.user?.lastName}
+                  {authState?.user?.firstName} {authState?.user?.lastName}
                 </div>
                 <div className="text-light text-xs">
-                  {authState.user?.email}
+                  {authState?.user?.email}
                 </div>
               </div>
             </div>
