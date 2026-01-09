@@ -1,7 +1,7 @@
 import type React from 'react'
 import { useState } from 'react'
 
-import Sidebar from './custom/Sidebar/sidebar.tsx'
+import Sidebar from './custom/sidebar/sidebar.tsx'
 import Navbar from './navbar.tsx'
 
 interface DashboardLayoutProps {

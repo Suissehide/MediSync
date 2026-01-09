@@ -29,6 +29,7 @@ export const SOIGNANT = {
 
 export const PATIENT = {
   GET_ALL: 'get_all_patients',
+  GET_BY_ID: 'get_by_id_patient',
   GET: 'get_patient',
   CREATE: 'create_patient',
   UPDATE: 'update_patient',
