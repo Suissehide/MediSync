@@ -24,7 +24,7 @@ function DashboardLayout({
     <div className="flex h-screen">
       <Sidebar components={components ?? []} isVisible={sidebarVisible} />
       <div
-        className={`flex-1 ${sidebarVisible ? 'ml-64' : ''} flex flex-col transition-all duration-300`}
+        className={`flex-1 overflow-hidden ${sidebarVisible ? 'ml-64' : ''} flex flex-col transition-all duration-300`}
       >
         <Navbar toggleSidebar={toggleSidebar} />
         <main className="flex-1 overflow-auto">{children}</main>

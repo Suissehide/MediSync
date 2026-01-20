@@ -36,16 +36,16 @@ function Sidebar({ isVisible, components }: SidebarProps) {
 
   return (
     <div
-      className={`fixed h-full w-64 transition-all duration-300 ${
+      className={`z-100 fixed h-full w-64 transition-all duration-300 ${
         isVisible ? 'translate-x-0' : '-translate-x-64'
       } bg-card text-text text-sm`}
     >
       <div className="flex flex-col justify-between h-full px-2 py-4">
         <div>
           <div className="flex justify-between items-center mb-6 mt-2">
-            <h1 className="px-2 text-3xl font-bold">
+            <h2 className="px-2 text-3xl font-bold">
               <span className="text-primary">Medi</span>Sync
-            </h1>
+            </h2>
           </div>
           <div>
             {components.map((key) => (
@@ -68,6 +68,7 @@ function Sidebar({ isVisible, components }: SidebarProps) {
             <li className="">
               <button
                 type="button"
+                onClick={() => router.navigate({ to: '/user/settings' })}
                 className="cursor-pointer w-full py-2 pl-2 flex items-center gap-2 rounded-lg hover:bg-primary/15"
               >
                 <Settings className="w-5 h-5" />

@@ -11,218 +11,325 @@
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
-import { Route as DashboardImport } from './routes/dashboard'
-import { Route as IndexImport } from './routes/index'
-import { Route as PatientIndexImport } from './routes/patient/index'
-import { Route as SettingsUserImport } from './routes/settings/user'
-import { Route as SettingsSoignantImport } from './routes/settings/soignant'
-import { Route as SettingsPlanningImport } from './routes/settings/planning'
-import { Route as PatientPatientIDImport } from './routes/patient/$patientID'
-import { Route as AuthLoginImport } from './routes/auth/login'
+import { Route as PendingImport } from './routes/pending'
+import { Route as AuthenticatedImport } from './routes/_authenticated'
+import { Route as AuthIndexImport } from './routes/auth/index'
+import { Route as AuthenticatedIndexImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedDashboardImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedAdminImport } from './routes/_authenticated/_admin'
+import { Route as AuthenticatedPatientIndexImport } from './routes/_authenticated/patient/index'
+import { Route as AuthenticatedUserSettingsImport } from './routes/_authenticated/user/settings'
+import { Route as AuthenticatedPatientPatientIDImport } from './routes/_authenticated/patient/$patientID'
+import { Route as AuthenticatedAdminSettingsUserImport } from './routes/_authenticated/_admin/settings/user'
+import { Route as AuthenticatedAdminSettingsSoignantImport } from './routes/_authenticated/_admin/settings/soignant'
+import { Route as AuthenticatedAdminSettingsPlanningImport } from './routes/_authenticated/_admin/settings/planning'
 
 // Create/Update Routes
 
-const DashboardRoute = DashboardImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
+const PendingRoute = PendingImport.update({
+  id: '/pending',
+  path: '/pending',
   getParentRoute: () => rootRoute,
 } as any)
 
-const IndexRoute = IndexImport.update({
+const AuthenticatedRoute = AuthenticatedImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const AuthIndexRoute = AuthIndexImport.update({
+  id: '/auth/',
+  path: '/auth/',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const AuthenticatedIndexRoute = AuthenticatedIndexImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 
-const PatientIndexRoute = PatientIndexImport.update({
+const AuthenticatedDashboardRoute = AuthenticatedDashboardImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+
+const AuthenticatedAdminRoute = AuthenticatedAdminImport.update({
+  id: '/_admin',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+
+const AuthenticatedPatientIndexRoute = AuthenticatedPatientIndexImport.update({
   id: '/patient/',
   path: '/patient/',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 
-const SettingsUserRoute = SettingsUserImport.update({
-  id: '/settings/user',
-  path: '/settings/user',
-  getParentRoute: () => rootRoute,
+const AuthenticatedUserSettingsRoute = AuthenticatedUserSettingsImport.update({
+  id: '/user/settings',
+  path: '/user/settings',
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 
-const SettingsSoignantRoute = SettingsSoignantImport.update({
-  id: '/settings/soignant',
-  path: '/settings/soignant',
-  getParentRoute: () => rootRoute,
-} as any)
+const AuthenticatedPatientPatientIDRoute =
+  AuthenticatedPatientPatientIDImport.update({
+    id: '/patient/$patientID',
+    path: '/patient/$patientID',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 
-const SettingsPlanningRoute = SettingsPlanningImport.update({
-  id: '/settings/planning',
-  path: '/settings/planning',
-  getParentRoute: () => rootRoute,
-} as any)
+const AuthenticatedAdminSettingsUserRoute =
+  AuthenticatedAdminSettingsUserImport.update({
+    id: '/settings/user',
+    path: '/settings/user',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 
-const PatientPatientIDRoute = PatientPatientIDImport.update({
-  id: '/patient/$patientID',
-  path: '/patient/$patientID',
-  getParentRoute: () => rootRoute,
-} as any)
+const AuthenticatedAdminSettingsSoignantRoute =
+  AuthenticatedAdminSettingsSoignantImport.update({
+    id: '/settings/soignant',
+    path: '/settings/soignant',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 
-const AuthLoginRoute = AuthLoginImport.update({
-  id: '/auth/login',
-  path: '/auth/login',
-  getParentRoute: () => rootRoute,
-} as any)
+const AuthenticatedAdminSettingsPlanningRoute =
+  AuthenticatedAdminSettingsPlanningImport.update({
+    id: '/settings/planning',
+    path: '/settings/planning',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 
 // Populate the FileRoutesByPath interface
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexImport
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof AuthenticatedImport
       parentRoute: typeof rootRoute
     }
-    '/dashboard': {
-      id: '/dashboard'
+    '/pending': {
+      id: '/pending'
+      path: '/pending'
+      fullPath: '/pending'
+      preLoaderRoute: typeof PendingImport
+      parentRoute: typeof rootRoute
+    }
+    '/_authenticated/_admin': {
+      id: '/_authenticated/_admin'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof AuthenticatedAdminImport
+      parentRoute: typeof AuthenticatedImport
+    }
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
       path: '/dashboard'
       fullPath: '/dashboard'
-      preLoaderRoute: typeof DashboardImport
+      preLoaderRoute: typeof AuthenticatedDashboardImport
+      parentRoute: typeof AuthenticatedImport
+    }
+    '/_authenticated/': {
+      id: '/_authenticated/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedIndexImport
+      parentRoute: typeof AuthenticatedImport
+    }
+    '/auth/': {
+      id: '/auth/'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthIndexImport
       parentRoute: typeof rootRoute
     }
-    '/auth/login': {
-      id: '/auth/login'
-      path: '/auth/login'
-      fullPath: '/auth/login'
-      preLoaderRoute: typeof AuthLoginImport
-      parentRoute: typeof rootRoute
-    }
-    '/patient/$patientID': {
-      id: '/patient/$patientID'
+    '/_authenticated/patient/$patientID': {
+      id: '/_authenticated/patient/$patientID'
       path: '/patient/$patientID'
       fullPath: '/patient/$patientID'
-      preLoaderRoute: typeof PatientPatientIDImport
-      parentRoute: typeof rootRoute
+      preLoaderRoute: typeof AuthenticatedPatientPatientIDImport
+      parentRoute: typeof AuthenticatedImport
     }
-    '/settings/planning': {
-      id: '/settings/planning'
-      path: '/settings/planning'
-      fullPath: '/settings/planning'
-      preLoaderRoute: typeof SettingsPlanningImport
-      parentRoute: typeof rootRoute
+    '/_authenticated/user/settings': {
+      id: '/_authenticated/user/settings'
+      path: '/user/settings'
+      fullPath: '/user/settings'
+      preLoaderRoute: typeof AuthenticatedUserSettingsImport
+      parentRoute: typeof AuthenticatedImport
     }
-    '/settings/soignant': {
-      id: '/settings/soignant'
-      path: '/settings/soignant'
-      fullPath: '/settings/soignant'
-      preLoaderRoute: typeof SettingsSoignantImport
-      parentRoute: typeof rootRoute
-    }
-    '/settings/user': {
-      id: '/settings/user'
-      path: '/settings/user'
-      fullPath: '/settings/user'
-      preLoaderRoute: typeof SettingsUserImport
-      parentRoute: typeof rootRoute
-    }
-    '/patient/': {
-      id: '/patient/'
+    '/_authenticated/patient/': {
+      id: '/_authenticated/patient/'
       path: '/patient'
       fullPath: '/patient'
-      preLoaderRoute: typeof PatientIndexImport
-      parentRoute: typeof rootRoute
+      preLoaderRoute: typeof AuthenticatedPatientIndexImport
+      parentRoute: typeof AuthenticatedImport
+    }
+    '/_authenticated/_admin/settings/planning': {
+      id: '/_authenticated/_admin/settings/planning'
+      path: '/settings/planning'
+      fullPath: '/settings/planning'
+      preLoaderRoute: typeof AuthenticatedAdminSettingsPlanningImport
+      parentRoute: typeof AuthenticatedAdminImport
+    }
+    '/_authenticated/_admin/settings/soignant': {
+      id: '/_authenticated/_admin/settings/soignant'
+      path: '/settings/soignant'
+      fullPath: '/settings/soignant'
+      preLoaderRoute: typeof AuthenticatedAdminSettingsSoignantImport
+      parentRoute: typeof AuthenticatedAdminImport
+    }
+    '/_authenticated/_admin/settings/user': {
+      id: '/_authenticated/_admin/settings/user'
+      path: '/settings/user'
+      fullPath: '/settings/user'
+      preLoaderRoute: typeof AuthenticatedAdminSettingsUserImport
+      parentRoute: typeof AuthenticatedAdminImport
     }
   }
 }
 
 // Create and export the route tree
 
+interface AuthenticatedAdminRouteChildren {
+  AuthenticatedAdminSettingsPlanningRoute: typeof AuthenticatedAdminSettingsPlanningRoute
+  AuthenticatedAdminSettingsSoignantRoute: typeof AuthenticatedAdminSettingsSoignantRoute
+  AuthenticatedAdminSettingsUserRoute: typeof AuthenticatedAdminSettingsUserRoute
+}
+
+const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
+  AuthenticatedAdminSettingsPlanningRoute:
+    AuthenticatedAdminSettingsPlanningRoute,
+  AuthenticatedAdminSettingsSoignantRoute:
+    AuthenticatedAdminSettingsSoignantRoute,
+  AuthenticatedAdminSettingsUserRoute: AuthenticatedAdminSettingsUserRoute,
+}
+
+const AuthenticatedAdminRouteWithChildren =
+  AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
+
+interface AuthenticatedRouteChildren {
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedPatientPatientIDRoute: typeof AuthenticatedPatientPatientIDRoute
+  AuthenticatedUserSettingsRoute: typeof AuthenticatedUserSettingsRoute
+  AuthenticatedPatientIndexRoute: typeof AuthenticatedPatientIndexRoute
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedPatientPatientIDRoute: AuthenticatedPatientPatientIDRoute,
+  AuthenticatedUserSettingsRoute: AuthenticatedUserSettingsRoute,
+  AuthenticatedPatientIndexRoute: AuthenticatedPatientIndexRoute,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
+
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRoute
-  '/auth/login': typeof AuthLoginRoute
-  '/patient/$patientID': typeof PatientPatientIDRoute
-  '/settings/planning': typeof SettingsPlanningRoute
-  '/settings/soignant': typeof SettingsSoignantRoute
-  '/settings/user': typeof SettingsUserRoute
-  '/patient': typeof PatientIndexRoute
+  '': typeof AuthenticatedAdminRouteWithChildren
+  '/pending': typeof PendingRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/': typeof AuthenticatedIndexRoute
+  '/auth': typeof AuthIndexRoute
+  '/patient/$patientID': typeof AuthenticatedPatientPatientIDRoute
+  '/user/settings': typeof AuthenticatedUserSettingsRoute
+  '/patient': typeof AuthenticatedPatientIndexRoute
+  '/settings/planning': typeof AuthenticatedAdminSettingsPlanningRoute
+  '/settings/soignant': typeof AuthenticatedAdminSettingsSoignantRoute
+  '/settings/user': typeof AuthenticatedAdminSettingsUserRoute
 }
 
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRoute
-  '/auth/login': typeof AuthLoginRoute
-  '/patient/$patientID': typeof PatientPatientIDRoute
-  '/settings/planning': typeof SettingsPlanningRoute
-  '/settings/soignant': typeof SettingsSoignantRoute
-  '/settings/user': typeof SettingsUserRoute
-  '/patient': typeof PatientIndexRoute
+  '/pending': typeof PendingRoute
+  '': typeof AuthenticatedAdminRouteWithChildren
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/': typeof AuthenticatedIndexRoute
+  '/auth': typeof AuthIndexRoute
+  '/patient/$patientID': typeof AuthenticatedPatientPatientIDRoute
+  '/user/settings': typeof AuthenticatedUserSettingsRoute
+  '/patient': typeof AuthenticatedPatientIndexRoute
+  '/settings/planning': typeof AuthenticatedAdminSettingsPlanningRoute
+  '/settings/soignant': typeof AuthenticatedAdminSettingsSoignantRoute
+  '/settings/user': typeof AuthenticatedAdminSettingsUserRoute
 }
 
 export interface FileRoutesById {
   __root__: typeof rootRoute
-  '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRoute
-  '/auth/login': typeof AuthLoginRoute
-  '/patient/$patientID': typeof PatientPatientIDRoute
-  '/settings/planning': typeof SettingsPlanningRoute
-  '/settings/soignant': typeof SettingsSoignantRoute
-  '/settings/user': typeof SettingsUserRoute
-  '/patient/': typeof PatientIndexRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/pending': typeof PendingRoute
+  '/_authenticated/_admin': typeof AuthenticatedAdminRouteWithChildren
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/auth/': typeof AuthIndexRoute
+  '/_authenticated/patient/$patientID': typeof AuthenticatedPatientPatientIDRoute
+  '/_authenticated/user/settings': typeof AuthenticatedUserSettingsRoute
+  '/_authenticated/patient/': typeof AuthenticatedPatientIndexRoute
+  '/_authenticated/_admin/settings/planning': typeof AuthenticatedAdminSettingsPlanningRoute
+  '/_authenticated/_admin/settings/soignant': typeof AuthenticatedAdminSettingsSoignantRoute
+  '/_authenticated/_admin/settings/user': typeof AuthenticatedAdminSettingsUserRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
+    | ''
+    | '/pending'
     | '/dashboard'
-    | '/auth/login'
+    | '/'
+    | '/auth'
     | '/patient/$patientID'
+    | '/user/settings'
+    | '/patient'
     | '/settings/planning'
     | '/settings/soignant'
     | '/settings/user'
-    | '/patient'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
+    | '/pending'
+    | ''
     | '/dashboard'
-    | '/auth/login'
+    | '/'
+    | '/auth'
     | '/patient/$patientID'
+    | '/user/settings'
+    | '/patient'
     | '/settings/planning'
     | '/settings/soignant'
     | '/settings/user'
-    | '/patient'
   id:
     | '__root__'
-    | '/'
-    | '/dashboard'
-    | '/auth/login'
-    | '/patient/$patientID'
-    | '/settings/planning'
-    | '/settings/soignant'
-    | '/settings/user'
-    | '/patient/'
+    | '/_authenticated'
+    | '/pending'
+    | '/_authenticated/_admin'
+    | '/_authenticated/dashboard'
+    | '/_authenticated/'
+    | '/auth/'
+    | '/_authenticated/patient/$patientID'
+    | '/_authenticated/user/settings'
+    | '/_authenticated/patient/'
+    | '/_authenticated/_admin/settings/planning'
+    | '/_authenticated/_admin/settings/soignant'
+    | '/_authenticated/_admin/settings/user'
   fileRoutesById: FileRoutesById
 }
 
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  DashboardRoute: typeof DashboardRoute
-  AuthLoginRoute: typeof AuthLoginRoute
-  PatientPatientIDRoute: typeof PatientPatientIDRoute
-  SettingsPlanningRoute: typeof SettingsPlanningRoute
-  SettingsSoignantRoute: typeof SettingsSoignantRoute
-  SettingsUserRoute: typeof SettingsUserRoute
-  PatientIndexRoute: typeof PatientIndexRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  PendingRoute: typeof PendingRoute
+  AuthIndexRoute: typeof AuthIndexRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  DashboardRoute: DashboardRoute,
-  AuthLoginRoute: AuthLoginRoute,
-  PatientPatientIDRoute: PatientPatientIDRoute,
-  SettingsPlanningRoute: SettingsPlanningRoute,
-  SettingsSoignantRoute: SettingsSoignantRoute,
-  SettingsUserRoute: SettingsUserRoute,
-  PatientIndexRoute: PatientIndexRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  PendingRoute: PendingRoute,
+  AuthIndexRoute: AuthIndexRoute,
 }
 
 export const routeTree = rootRoute
@@ -235,39 +342,68 @@ export const routeTree = rootRoute
     "__root__": {
       "filePath": "__root.tsx",
       "children": [
-        "/",
-        "/dashboard",
-        "/auth/login",
-        "/patient/$patientID",
-        "/settings/planning",
-        "/settings/soignant",
-        "/settings/user",
-        "/patient/"
+        "/_authenticated",
+        "/pending",
+        "/auth/"
       ]
     },
-    "/": {
-      "filePath": "index.tsx"
+    "/_authenticated": {
+      "filePath": "_authenticated.tsx",
+      "children": [
+        "/_authenticated/_admin",
+        "/_authenticated/dashboard",
+        "/_authenticated/",
+        "/_authenticated/patient/$patientID",
+        "/_authenticated/user/settings",
+        "/_authenticated/patient/"
+      ]
     },
-    "/dashboard": {
-      "filePath": "dashboard.tsx"
+    "/pending": {
+      "filePath": "pending.tsx"
     },
-    "/auth/login": {
-      "filePath": "auth/login.tsx"
+    "/_authenticated/_admin": {
+      "filePath": "_authenticated/_admin.tsx",
+      "parent": "/_authenticated",
+      "children": [
+        "/_authenticated/_admin/settings/planning",
+        "/_authenticated/_admin/settings/soignant",
+        "/_authenticated/_admin/settings/user"
+      ]
     },
-    "/patient/$patientID": {
-      "filePath": "patient/$patientID.tsx"
+    "/_authenticated/dashboard": {
+      "filePath": "_authenticated/dashboard.tsx",
+      "parent": "/_authenticated"
     },
-    "/settings/planning": {
-      "filePath": "settings/planning.tsx"
+    "/_authenticated/": {
+      "filePath": "_authenticated/index.tsx",
+      "parent": "/_authenticated"
     },
-    "/settings/soignant": {
-      "filePath": "settings/soignant.tsx"
+    "/auth/": {
+      "filePath": "auth/index.tsx"
     },
-    "/settings/user": {
-      "filePath": "settings/user.tsx"
+    "/_authenticated/patient/$patientID": {
+      "filePath": "_authenticated/patient/$patientID.tsx",
+      "parent": "/_authenticated"
     },
-    "/patient/": {
-      "filePath": "patient/index.tsx"
+    "/_authenticated/user/settings": {
+      "filePath": "_authenticated/user/settings.tsx",
+      "parent": "/_authenticated"
+    },
+    "/_authenticated/patient/": {
+      "filePath": "_authenticated/patient/index.tsx",
+      "parent": "/_authenticated"
+    },
+    "/_authenticated/_admin/settings/planning": {
+      "filePath": "_authenticated/_admin/settings/planning.tsx",
+      "parent": "/_authenticated/_admin"
+    },
+    "/_authenticated/_admin/settings/soignant": {
+      "filePath": "_authenticated/_admin/settings/soignant.tsx",
+      "parent": "/_authenticated/_admin"
+    },
+    "/_authenticated/_admin/settings/user": {
+      "filePath": "_authenticated/_admin/settings/user.tsx",
+      "parent": "/_authenticated/_admin"
     }
   }
 }

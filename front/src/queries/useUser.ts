@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { UserApi } from '../api/user.api.ts'
-import { APPOINTMENT } from '../constants/process.constant.ts'
+import { USER } from '../constants/process.constant.ts'
 import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
 import { useToast } from '../hooks/useToast.ts'
+import { useAuthStore } from '../store/useAuthStore.ts'
 import type { UpdateUserParams, User } from '../types/auth.ts'
 
 // * QUERIES
@@ -16,7 +17,7 @@ export const useAllUsersQuery = () => {
     isError,
     error,
   } = useQuery({
-    queryKey: [APPOINTMENT.GET_ALL],
+    queryKey: [USER.GET_ALL],
     queryFn: UserApi.getAll,
     retry: 0,
   })
@@ -39,7 +40,7 @@ export const useUserByIDQuery = (userID: string, options = {}) => {
     refetch,
     isFetched,
   } = useQuery({
-    queryKey: [APPOINTMENT.GET_BY_ID, userID],
+    queryKey: [USER.GET_BY_ID, userID],
     queryFn: () => UserApi.getByID(userID),
     enabled: !!userID,
     retry: 0,
@@ -60,15 +61,16 @@ export const useUserByIDQuery = (userID: string, options = {}) => {
 export const useUserMutations = () => {
   const queryClient = useQueryClient()
   const { toast } = useToast()
+  const update = useAuthStore((state) => state.update)
 
   const deleteUser = useMutation({
-    mutationKey: [APPOINTMENT.DELETE],
+    mutationKey: [USER.DELETE],
     mutationFn: UserApi.delete,
     onMutate: async (userID) => {
-      await queryClient.cancelQueries({ queryKey: [APPOINTMENT.GET_ALL] })
+      await queryClient.cancelQueries({ queryKey: [USER.GET_ALL] })
 
-      const previousUsers = queryClient.getQueryData([APPOINTMENT.GET_ALL])
-      queryClient.setQueryData([APPOINTMENT.GET_ALL], (oldUsers: User[]) =>
+      const previousUsers = queryClient.getQueryData([USER.GET_ALL])
+      queryClient.setQueryData([USER.GET_ALL], (oldUsers: User[]) =>
         oldUsers?.filter((user: User) => user.id !== userID),
       )
 
@@ -81,7 +83,7 @@ export const useUserMutations = () => {
       })
     },
     onError: (error, __, context) => {
-      queryClient.setQueryData([APPOINTMENT.GET_ALL], context?.previousUsers)
+      queryClient.setQueryData([USER.GET_ALL], context?.previousUsers)
 
       toast({
         title: "Erreur lors de la suppression de l'utilisateur",
@@ -90,18 +92,18 @@ export const useUserMutations = () => {
       })
     },
     onSettled: async () => {
-      await queryClient.invalidateQueries({ queryKey: [APPOINTMENT.GET_ALL] })
+      await queryClient.invalidateQueries({ queryKey: [USER.GET_ALL] })
     },
   })
 
   const updateUser = useMutation({
-    mutationKey: [APPOINTMENT.UPDATE],
+    mutationKey: [USER.UPDATE],
     mutationFn: UserApi.update,
     onMutate: async (updatedUser: UpdateUserParams) => {
-      await queryClient.cancelQueries({ queryKey: [APPOINTMENT.GET_ALL] })
+      await queryClient.cancelQueries({ queryKey: [USER.GET_ALL] })
 
-      const previousUsers = queryClient.getQueryData([APPOINTMENT.GET_ALL])
-      queryClient.setQueryData([APPOINTMENT.GET_ALL], (oldUsers: User[]) =>
+      const previousUsers = queryClient.getQueryData([USER.GET_ALL])
+      queryClient.setQueryData([USER.GET_ALL], (oldUsers: User[]) =>
         oldUsers?.map((user: User) =>
           user.id === updatedUser.id ? updatedUser : user,
         ),
@@ -109,14 +111,15 @@ export const useUserMutations = () => {
 
       return { previousUsers }
     },
-    onSuccess: () => {
+    onSuccess: (updatedUser) => {
+      update(updatedUser)
       toast({
         title: 'Utilisateur modifié avec succès',
         severity: TOAST_SEVERITY.SUCCESS,
       })
     },
     onError: (error, __, context) => {
-      queryClient.setQueryData([APPOINTMENT.GET_ALL], context?.previousUsers)
+      queryClient.setQueryData([USER.GET_ALL], context?.previousUsers)
 
       toast({
         title: "Erreur lors de la mise à jour de l'utilisateur",
@@ -125,7 +128,7 @@ export const useUserMutations = () => {
       })
     },
     onSettled: async () => {
-      await queryClient.invalidateQueries({ queryKey: [APPOINTMENT.GET_ALL] })
+      await queryClient.invalidateQueries({ queryKey: [USER.GET_ALL] })
     },
   })
 

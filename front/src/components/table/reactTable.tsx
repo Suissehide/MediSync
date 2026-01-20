@@ -186,7 +186,7 @@ export function ReactTable<TData extends { id: string }>({
 
       <div className="flex-1 relative overflow-hidden">
         <div className="h-full w-full overflow-auto" ref={tableContainerRef}>
-          <table className="layout-table table table-fixed w-full border-collapse">
+          <table className="layout-table table table-fixed w-full border-collapse mb-2">
             <HeaderTable
               table={table}
               getCommonPinningStyles={getCommonPinningStyles}

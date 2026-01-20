@@ -1,13 +1,9 @@
-import { useForm } from '@tanstack/react-form'
 import { Check, Plus, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
+import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { useSoignantMutations } from '../../../queries/useSoignant.ts'
 import { Button } from '../../ui/button.tsx'
-import { FieldInfo } from '../../ui/fieldInfo.tsx'
-import { FormField } from '../../ui/formField.tsx'
-import { Input } from '../../ui/input.tsx'
-import { Label } from '../../ui/label.tsx'
 import {
   Popup,
   PopupBody,
@@ -22,12 +18,11 @@ function AddSoignantForm() {
   const [open, setOpen] = useState(false)
   const { createSoignant } = useSoignantMutations()
 
-  const form = useForm({
+  const form = useAppForm({
     defaultValues: {
       name: '',
     },
     onSubmit: ({ value }) => {
-      console.log('Submitting soignant:', value)
       createSoignant.mutate(value)
       setOpen(false)
     },
@@ -58,30 +53,20 @@ function AddSoignantForm() {
           <form
             onSubmit={async (e) => {
               e.preventDefault()
+              await form.validate('submit')
               await form.handleSubmit()
             }}
             className="space-y-4 max-w-md"
           >
-            <form.Field
+            <form.AppField
               name="name"
               validators={{
                 onSubmit: ({ value }) =>
                   value ? undefined : 'Le nom est nécessaire',
               }}
             >
-              {(field) => (
-                <FormField>
-                  <Label htmlFor={field.name}>Nom</Label>
-                  <Input
-                    id={field.name}
-                    value={field.state.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    onBlur={field.handleBlur}
-                  />
-                  <FieldInfo field={field} />
-                </FormField>
-              )}
-            </form.Field>
+              {(field) => <field.Input label="Nom" />}
+            </form.AppField>
           </form>
         </PopupBody>
 

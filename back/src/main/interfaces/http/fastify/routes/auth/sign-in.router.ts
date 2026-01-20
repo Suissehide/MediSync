@@ -1,11 +1,12 @@
+import type { CookieSerializeOptions } from '@fastify/cookie'
 import Boom from '@hapi/boom'
+import type { FastifyPluginAsync } from 'fastify'
+
 import {
   type SignInInput,
   signInResponseSchema,
   signInSchema,
 } from '../../schemas/auth.schema'
-import type { CookieSerializeOptions } from '@fastify/cookie'
-import type { FastifyPluginAsync } from 'fastify'
 
 const signInRouter: FastifyPluginAsync = (fastify) => {
   const { iocContainer } = fastify
@@ -31,8 +32,15 @@ const signInRouter: FastifyPluginAsync = (fastify) => {
       }
       const { email: inputEmail, password: inputPassword } = data
 
-      const { accessToken, refreshToken, email, firstName, lastName } =
-        await authDomain.signIn(inputEmail, inputPassword)
+      const {
+        accessToken,
+        refreshToken,
+        id,
+        email,
+        firstName,
+        lastName,
+        role,
+      } = await authDomain.signIn(inputEmail, inputPassword)
 
       const cookieOptions: CookieSerializeOptions = {
         path: '/',
@@ -50,7 +58,9 @@ const signInRouter: FastifyPluginAsync = (fastify) => {
           maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days in ms
         })
 
-      return { email, firstName, lastName }
+      console.log('ROLE', role)
+
+      return { id, email, firstName, lastName, role }
     },
   )
   return Promise.resolve()

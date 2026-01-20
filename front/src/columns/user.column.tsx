@@ -8,7 +8,7 @@ const columnHelper = createColumnHelper<User>()
 
 type UserActions = {
   onEdit: (user: User) => void
-  onDelete: (id: string) => void
+  onDelete: (user: User) => void
 }
 
 export const RoleLabel = ({ role }: { role: Role }) => {
@@ -70,7 +70,7 @@ export const getUserColumns = ({ onEdit, onDelete }: UserActions) => {
             <Button
               variant="destructive"
               size="sm"
-              onClick={() => onDelete(user.id)}
+              onClick={() => onDelete(user)}
             >
               <Trash className="w-3 h-3" />
             </Button>

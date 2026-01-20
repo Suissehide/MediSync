@@ -1,10 +1,6 @@
 import { z } from 'zod/v4'
 
-import { userEntity } from './auth.schema'
-
-export const userSchema = z.object({
-  ...userEntity,
-})
+import { userSchema } from './auth.schema'
 
 export const userResponseSchema = userSchema.extend({
   id: z.cuid(),

@@ -1,6 +1,6 @@
-import HttpStatusCodes from 'http-status-codes'
 import type { CookieSerializeOptions } from '@fastify/cookie'
 import type { FastifyPluginAsync } from 'fastify'
+import HttpStatusCodes from 'http-status-codes'
 
 const signOutRouter: FastifyPluginAsync = (fastify) => {
   fastify.post('/', (__, reply) => {

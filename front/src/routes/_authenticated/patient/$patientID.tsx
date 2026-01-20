@@ -1,6 +1,5 @@
 import {
   createFileRoute,
-  redirect,
   useNavigate,
   useParams,
 } from '@tanstack/react-router'
@@ -22,31 +21,18 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 
-import EditPatient from '../../components/custom/Patient/edit/edit.patient.tsx'
-import OutcomeReviewPatient from '../../components/custom/Patient/view/outcome-review.patient.tsx'
-import OverviewPatient from '../../components/custom/Patient/view/overview.patient.tsx'
-import PathwayInclusionPatient from '../../components/custom/Patient/view/pathway-inclusion.patient.tsx'
-import PlanningPatient from '../../components/custom/Patient/view/planning.patient.tsx'
-import ProfileContextPatient from '../../components/custom/Patient/view/profile-context.patient.tsx'
-import DashboardLayout from '../../components/dashboard.layout.tsx'
-import { Button } from '../../components/ui/button.tsx'
-import { GENDER } from '../../constants/patient.constant.ts'
-import { usePatientByIDQuery } from '../../queries/usePatient.ts'
+import EditPatient from '../../../components/custom/Patient/edit/edit.patient.tsx'
+import OutcomeReviewPatient from '../../../components/custom/Patient/view/outcome-review.patient.tsx'
+import OverviewPatient from '../../../components/custom/Patient/view/overview.patient.tsx'
+import PathwayInclusionPatient from '../../../components/custom/Patient/view/pathway-inclusion.patient.tsx'
+import PlanningPatient from '../../../components/custom/Patient/view/planning.patient.tsx'
+import ProfileContextPatient from '../../../components/custom/Patient/view/profile-context.patient.tsx'
+import DashboardLayout from '../../../components/dashboard.layout.tsx'
+import { Button } from '../../../components/ui/button.tsx'
+import { GENDER } from '../../../constants/patient.constant.ts'
+import { usePatientByIDQuery } from '../../../queries/usePatient.ts'
 
-export const Route = createFileRoute('/patient/$patientID')({
-  beforeLoad: ({ context, location }) => {
-    if (!context.authState.isAuthenticated) {
-      throw redirect({
-        to: '/auth/login',
-        search: {
-          redirect: location.href,
-        },
-      })
-    }
-  },
-  shouldReload({ context }) {
-    return !context.authState.isAuthenticated
-  },
+export const Route = createFileRoute('/_authenticated/patient/$patientID')({
   component: PatientDetails,
 })
 
@@ -59,7 +45,7 @@ export type MenuItem = {
 function PatientDetails() {
   const navigate = useNavigate()
 
-  const { patientID } = useParams({ from: '/patient/$patientID' })
+  const { patientID } = useParams({ from: '/_authenticated/patient/$patientID' })
   const { patient } = usePatientByIDQuery(patientID)
 
   const [editMode, setEditMode] = useState(false)

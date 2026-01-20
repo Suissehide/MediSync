@@ -3,12 +3,12 @@ import type { Prisma, User } from '@prisma/client'
 export type UserEntityRepo = User
 export type UserCreateEntityRepo = Pick<
   UserEntityRepo,
-  'email' | 'password' | 'firstName' | 'lastName'
->
+  'email' | 'password'
+> & { firstName?: string; lastName?: string }
 export type UserUpdateEntityRepo = Pick<
   Prisma.UserUncheckedUpdateInput,
-  'email' | 'role' | 'firstName' | 'lastName'
->
+  'email' | 'role'
+> & { firstName?: string; lastName?: string }
 
 export interface UserRepositoryInterface {
   findAll: () => Promise<UserEntityRepo[]>

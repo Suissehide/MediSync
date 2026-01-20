@@ -1,6 +1,6 @@
-import type { RegisterInput, User } from '../types/auth.ts'
-import { handleHttpError } from '../libs/httpErrorHandler.ts'
 import { apiUrl } from '../constants/config.constant.ts'
+import { handleHttpError } from '../libs/httpErrorHandler.ts'
+import type { RegisterInput, User } from '../types/auth.ts'
 
 export const AuthApi = {
   login: async (email: string, password: string): Promise<User> => {
@@ -59,7 +59,7 @@ export const AuthApi = {
     return response
   },
 
-  register: async (registerInput: RegisterInput): Promise<void> => {
+  register: async (registerInput: RegisterInput): Promise<Response> => {
     const response = await fetch(`${apiUrl}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -81,6 +81,6 @@ export const AuthApi = {
         'Erreur lors de l’inscription',
       )
     }
-    return response.json()
+    return response
   },
 }

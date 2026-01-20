@@ -1,14 +1,9 @@
-import { useForm } from '@tanstack/react-form'
-import { Compact } from '@uiw/react-color'
 import { Check, Plus, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
+import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { usePathwayTemplateMutations } from '../../../queries/usePathwayTemplate.ts'
 import { Button } from '../../ui/button.tsx'
-import { FieldInfo } from '../../ui/fieldInfo.tsx'
-import { FormField } from '../../ui/formField.tsx'
-import { Input } from '../../ui/input.tsx'
-import { Label } from '../../ui/label.tsx'
 import {
   Popup,
   PopupBody,
@@ -23,13 +18,12 @@ function AddPathwayForm() {
   const [open, setOpen] = useState(false)
   const { createPathwayTemplate } = usePathwayTemplateMutations()
 
-  const form = useForm({
+  const form = useAppForm({
     defaultValues: {
       name: '',
       color: '#2563eb',
     },
     onSubmit: ({ value }) => {
-      console.log('Submitting soignant:', value)
       createPathwayTemplate.mutate({
         name: value.name,
         color: value.color,
@@ -64,43 +58,24 @@ function AddPathwayForm() {
           <form
             onSubmit={async (e) => {
               e.preventDefault()
+              await form.validate('submit')
               await form.handleSubmit()
             }}
             className="space-y-4 max-w-md"
           >
-            <form.Field
+            <form.AppField
               name="name"
               validators={{
                 onSubmit: ({ value }) =>
                   value ? undefined : 'Le nom est nécessaire',
               }}
             >
-              {(field) => (
-                <FormField>
-                  <Label htmlFor={field.name}>Nom</Label>
-                  <Input
-                    id={field.name}
-                    value={field.state.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    onBlur={field.handleBlur}
-                  />
-                  <FieldInfo field={field} />
-                </FormField>
-              )}
-            </form.Field>
+              {(field) => <field.Input label="Nom" />}
+            </form.AppField>
 
-            <form.Field name="color">
-              {(field) => (
-                <FormField>
-                  <Label>Couleur</Label>
-                  <Compact
-                    className="bg-primary"
-                    color={field.state.value}
-                    onChange={(color) => field.handleChange(color.hex)}
-                  />
-                </FormField>
-              )}
-            </form.Field>
+            <form.AppField name="color">
+              {(field) => <field.ColorPicker label="Couleur" />}
+            </form.AppField>
           </form>
         </PopupBody>
 

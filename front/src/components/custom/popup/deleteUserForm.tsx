@@ -1,8 +1,7 @@
 import { Trash, X } from 'lucide-react'
-import { useState } from 'react'
 
-import { useSoignantMutations } from '../../../queries/useSoignant.ts'
-import type { Soignant } from '../../../types/soignant.ts'
+import { useUserMutations } from '../../../queries/useUser.ts'
+import type { User } from '../../../types/auth.ts'
 import { Button } from '../../ui/button.tsx'
 import {
   Popup,
@@ -11,29 +10,31 @@ import {
   PopupFooter,
   PopupHeader,
   PopupTitle,
-  PopupTrigger,
 } from '../../ui/popup.tsx'
 
-interface DeleteSoignantFormProps {
-  soignant: Soignant
+interface DeleteUserFormProps {
+  open: boolean
+  setOpen: (open: boolean) => void
+  user: User | null
 }
 
-function DeleteSoignantForm({ soignant }: DeleteSoignantFormProps) {
-  const [open, setOpen] = useState(false)
-  const { deleteSoignant } = useSoignantMutations()
+function DeleteUserForm({ open, setOpen, user }: DeleteUserFormProps) {
+  const { deleteUser } = useUserMutations()
 
   const handleDelete = () => {
-    deleteSoignant.mutate(soignant.id)
+    if (!user) {
+      return
+    }
+
+    deleteUser.mutate(user.id, {
+      onSuccess: () => {
+        setOpen(false)
+      },
+    })
   }
 
   return (
     <Popup modal={true} open={open} onOpenChange={setOpen}>
-      <PopupTrigger variant="absolute" size="icon" asChild>
-        <Button type="button" onClick={() => setOpen(true)}>
-          <Trash className="w-4 h-4 text-red-500" />
-        </Button>
-      </PopupTrigger>
-
       <PopupContent>
         <PopupHeader>
           <PopupTitle className="font-bold text-2xl m-0!">
@@ -42,7 +43,7 @@ function DeleteSoignantForm({ soignant }: DeleteSoignantFormProps) {
         </PopupHeader>
 
         <PopupBody>
-          <div>Voulez-vous supprimer ce soignant : {soignant.name} ?</div>
+          <div>Voulez-vous supprimer cet utilisateur : {user?.email} ?</div>
         </PopupBody>
 
         <PopupFooter>
@@ -60,4 +61,4 @@ function DeleteSoignantForm({ soignant }: DeleteSoignantFormProps) {
   )
 }
 
-export default DeleteSoignantForm
+export default DeleteUserForm

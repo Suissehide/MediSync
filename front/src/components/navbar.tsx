@@ -1,4 +1,4 @@
-import { Link, useMatchRoute } from '@tanstack/react-router'
+import { Link, useMatchRoute, useRouter } from '@tanstack/react-router'
 import { AlignJustify, Cog } from 'lucide-react'
 import { DropdownMenu } from 'radix-ui'
 
@@ -45,6 +45,9 @@ const SettingsMenu = () => (
 )
 
 function Navbar({ toggleSidebar }: NavbarProps) {
+  const router = useRouter()
+  const user = router.options.context?.authState?.user
+  const isAdmin = user?.role === 'ADMIN'
   const matchRoute = useMatchRoute()
   const isActive = (to: string) => !!matchRoute({ to, fuzzy: false })
 
@@ -84,7 +87,7 @@ function Navbar({ toggleSidebar }: NavbarProps) {
       <div className="flex gap-8">
         <ThemeToggle />
         <div className="flex items-center gap-2">
-          <SettingsMenu />
+          {isAdmin && <SettingsMenu />}
           <TodoSheet />
         </div>
       </div>

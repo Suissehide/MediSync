@@ -1,41 +1,28 @@
 import type { DateSelectArg, EventDropArg } from '@fullcalendar/core'
 import type { EventResizeDoneArg } from '@fullcalendar/interaction'
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import dayjs from 'dayjs'
 import { useEffect, useMemo, useState } from 'react'
 
 import Calendar, {
   type CalendarEvent,
-} from '../../components/custom/Calendar/calendar.tsx'
-import AddSlotForm from '../../components/custom/popup/addSlotForm.tsx'
-import EventSheet from '../../components/custom/sheet/eventSheet.tsx'
-import EventTemplateSheet from '../../components/custom/sheet/eventTemplateSheet.tsx'
-import DashboardLayout from '../../components/dashboard.layout.tsx'
+} from '../../../../components/custom/Calendar/calendar.tsx'
+import AddSlotForm from '../../../../components/custom/popup/addSlotForm.tsx'
+import EventSheet from '../../../../components/custom/sheet/eventSheet.tsx'
+import EventTemplateSheet from '../../../../components/custom/sheet/eventTemplateSheet.tsx'
+import DashboardLayout from '../../../../components/dashboard.layout.tsx'
 import {
   buildCalendarEventsFromSlots,
   buildCalendarEventsFromSlotTemplates,
-} from '../../libs/utils.ts'
-import { usePathwayMutations } from '../../queries/usePathway.ts'
-import { usePathwayTemplateQueries } from '../../queries/usePathwayTemplate.ts'
-import { useAllSlotsQuery, useSlotMutations } from '../../queries/useSlot.ts'
-import { useSlotTemplateMutations } from '../../queries/useSlotTemplate.ts'
-import { usePathwayTemplateEditStore } from '../../store/usePathwayTemplateEditStore.ts'
-import type { CreateSlotParamsWithTemplateData } from '../../types/slot.ts'
+} from '../../../../libs/utils.ts'
+import { usePathwayMutations } from '../../../../queries/usePathway.ts'
+import { usePathwayTemplateQueries } from '../../../../queries/usePathwayTemplate.ts'
+import { useAllSlotsQuery, useSlotMutations } from '../../../../queries/useSlot.ts'
+import { useSlotTemplateMutations } from '../../../../queries/useSlotTemplate.ts'
+import { usePathwayTemplateEditStore } from '../../../../store/usePathwayTemplateEditStore.ts'
+import type { CreateSlotParamsWithTemplateData } from '../../../../types/slot.ts'
 
-export const Route = createFileRoute('/settings/planning')({
-  beforeLoad: ({ context, location }) => {
-    if (!context.authState.isAuthenticated) {
-      throw redirect({
-        to: '/auth/login',
-        search: {
-          redirect: location.href,
-        },
-      })
-    }
-  },
-  shouldReload({ context }) {
-    return !context.authState.isAuthenticated
-  },
+export const Route = createFileRoute('/_authenticated/_admin/settings/planning')({
   component: Planning,
 })
 
@@ -132,18 +119,20 @@ function Planning() {
       extendedProps,
     } = eventDropArg.event
 
+    const slotId = id.replace(/^.*?_/, '')
+
     if (editMode) {
       const newOffsetDays = dayjs(start).diff(dayjs(startDate), 'day')
 
       updateSlotTemplate.mutate({
-        id,
+        id: slotId,
         offsetDays: newOffsetDays,
         startTime: start,
         endTime: end,
       })
     } else {
       updateSlot.mutate({
-        id,
+        id: slotId,
         startDate: start,
         endDate: end,
         slotTemplate: {
@@ -169,13 +158,13 @@ function Planning() {
   }, [events, eventTemplates, editMode])
 
   const isSlot = openEventId.startsWith('slot_')
-  const slotId = isSlot ? openEventId.replace('slot_', '') : ''
+  const slotId = openEventId.replace(/^.*?_/, '')
 
   return (
     <DashboardLayout components={['pathway']}>
-      <h2 className="flex gap-2 items-center px-4 pt-2 text-text text-lg font-semibold">
+      <h1 className="flex gap-2 items-center px-4 pt-2 text-text text-xl font-semibold">
         Planning
-      </h2>
+      </h1>
 
       <div className="flex flex-col h-full">
         <div className="flex-1 min-h-0 overflow-hidden">

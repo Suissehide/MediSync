@@ -1,23 +1,27 @@
 import { z } from 'zod/v4'
 
-export const userEntity = {
+export const userSchema = z.object({
   email: z.email({
     error: (issue) =>
       issue.input === undefined ? 'Email is required' : 'Email is not valid',
   }),
-  firstName: z.string(),
-  lastName: z.string(),
-  role: z.enum(['NONE', 'USER', 'ADMIN']).optional(),
-}
-
-export const registerSchema = z.object({
-  ...userEntity,
-  password: z.string({
-    error: () => 'Password is required',
-  }),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  role: z.enum(['NONE', 'USER', 'ADMIN']),
 })
-export const registerResponseSchema = z.object({
-  ...userEntity,
+
+export const registerSchema = userSchema
+  .pick({
+    email: true,
+    firstName: true,
+    lastName: true,
+  })
+  .extend({
+    password: z.string({
+      error: () => 'Password is required',
+    }),
+  })
+export const registerResponseSchema = userSchema.extend({
   id: z.string(),
 })
 

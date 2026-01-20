@@ -2,6 +2,7 @@ import { createFormHook } from '@tanstack/react-form'
 import { Github } from '@uiw/react-color'
 import type { Dayjs } from 'dayjs'
 import dayjs from 'dayjs'
+import { Eye, EyeOff } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { Button } from '../components/ui/button.tsx'
@@ -24,6 +25,10 @@ export interface FieldComponentProps {
   className?: string
 }
 
+interface InputFieldProps extends FieldComponentProps {
+  type?: string
+}
+
 interface SelectFieldProps extends FieldComponentProps {
   options: Array<{ value: string | number; label: string }>
 }
@@ -32,7 +37,7 @@ interface ToggleFieldProps extends FieldComponentProps {
   options: string[]
 }
 
-const TextField = ({ label, disabled, className }: FieldComponentProps) => {
+const TextField = ({ label, type, disabled, className }: InputFieldProps) => {
   const field = useFieldContext<string>()
   const value = field.state.value ?? ''
 
@@ -42,10 +47,49 @@ const TextField = ({ label, disabled, className }: FieldComponentProps) => {
       <Input
         id={field.name}
         value={value}
+        type={type}
         disabled={disabled}
         onChange={(e) => field.handleChange(e.target.value)}
         onBlur={field.handleBlur}
       />
+      <FieldInfo field={field} />
+    </div>
+  )
+}
+
+const PasswordField = ({ label, disabled, className }: FieldComponentProps) => {
+  const field = useFieldContext<string>()
+  const value = field.state.value ?? ''
+  const [showPassword, setShowPassword] = useState(false)
+
+  return (
+    <div className={cn('flex flex-col gap-1', className)}>
+      {label && <Label htmlFor={field.name}>{label}</Label>}
+      <div className="relative">
+        <Input
+          id={field.name}
+          type={showPassword ? 'text' : 'password'}
+          value={value}
+          disabled={disabled}
+          onChange={(e) => field.handleChange(e.target.value)}
+          onBlur={field.handleBlur}
+          className="pr-10"
+        />
+        <button
+          type="button"
+          onClick={() => setShowPassword(!showPassword)}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-text-light hover:text-text transition-colors"
+          aria-label={
+            showPassword ? 'Cacher le mot de passe' : 'Afficher le mot de passe'
+          }
+        >
+          {showPassword ? (
+            <Eye className="cursor-pointer text-text-light h-4 w-4" />
+          ) : (
+            <EyeOff className="cursor-pointer text-text-light h-4 w-4" />
+          )}
+        </button>
+      </div>
       <FieldInfo field={field} />
     </div>
   )
@@ -327,6 +371,7 @@ function SubmitButton({
 export const { useAppForm, withForm } = createFormHook({
   fieldComponents: {
     Input: TextField,
+    Password: PasswordField,
     Select: SelectField,
     Number: NumberField,
     DatePicker: DatePickerField,

@@ -1,4 +1,4 @@
-import { useForm } from '@tanstack/react-form'
+import dayjs from 'dayjs'
 import {
   ArrowLeft,
   ArrowRight,
@@ -12,6 +12,8 @@ import {
 import { useEffect, useState } from 'react'
 
 import { APPOINTMENT_TYPE_OPTIONS } from '../../../constants/appointment.constant.ts'
+import { GENDER_OPTIONS } from '../../../constants/patient.constant.ts'
+import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { usePathwayTemplateQueries } from '../../../queries/usePathwayTemplate.ts'
 import type { CreatePatientParams } from '../../../types/patient.ts'
 import { Button } from '../../ui/button.tsx'
@@ -74,7 +76,6 @@ function AddPatientForm({ handleCreatePatient }: AddAppointmentFormProps) {
       .filter((id) => !addedPathways.some((p) => p.pathwayTemplateId === id))
       .map((id) => {
         const template = pathwayTemplates?.find((pt) => pt.id === id)
-        console.log(template)
         return {
           id: `${id}-${Date.now()}`,
           pathwayTemplateId: id,
@@ -126,22 +127,35 @@ function AddPatientForm({ handleCreatePatient }: AddAppointmentFormProps) {
     setDraggedIndex(null)
   }
 
-  const form = useForm({
+  const form = useAppForm({
     defaultValues: {
       firstName: '',
       lastName: '',
       gender: '',
       birthDate: '',
+      startDate: dayjs(),
     },
     onSubmit: ({ value }) => {
-      const newPatient: CreatePatientParams = {
+      const newPatient = {
         firstName: value.firstName,
         lastName: value.lastName,
         gender: value.gender,
         birthDate: value.birthDate,
+      } satisfies CreatePatientParams
+
+      console.log('Submitting patient:', value, newPatient, addedPathways)
+
+      const enrollPatient = {
+        patientData: newPatient,
+        startDate: value.startDate,
+        pathway: addedPathways.map((p) => ({
+          slotTemplateID: p.pathwayTemplateId,
+          timeOfDay: p.period,
+          thematic: p.thematic,
+          type: p.type,
+        })),
       }
 
-      console.log('Submitting patient:', value, addedPathways)
       // handleCreatePatient(newPatient)
     },
   })
@@ -194,73 +208,34 @@ function AddPatientForm({ handleCreatePatient }: AddAppointmentFormProps) {
             {step === 1 && (
               <>
                 <div className="w-full flex gap-4">
-                  <form.Field name="firstName">
-                    {(field) => (
-                      <FormField className="flex-1">
-                        <Label htmlFor={field.name}>Prénom</Label>
-                        <Input
-                          id={field.name}
-                          value={field.state.value}
-                          onChange={(e) => field.handleChange(e.target.value)}
-                          onBlur={field.handleBlur}
-                        />
-                        <FieldInfo field={field} />
-                      </FormField>
-                    )}
-                  </form.Field>
+                  <form.AppField name="firstName">
+                    {(field) => <field.Input label="Prénom" />}
+                  </form.AppField>
 
-                  <form.Field name="lastName">
-                    {(field) => (
-                      <FormField className="flex-1">
-                        <Label htmlFor={field.name}>Nom</Label>
-                        <Input
-                          id={field.name}
-                          value={field.state.value}
-                          onChange={(e) => field.handleChange(e.target.value)}
-                          onBlur={field.handleBlur}
-                        />
-                        <FieldInfo field={field} />
-                      </FormField>
-                    )}
-                  </form.Field>
+                  <form.AppField name="lastName">
+                    {(field) => <field.Input label="Nom" />}
+                  </form.AppField>
                 </div>
 
-                <form.Field name="birthDate">
-                  {(field) => (
-                    <FormField className="fit-content">
-                      <Label htmlFor={field.name}>Date de naissance</Label>
-                      <Input
-                        id={field.name}
-                        type="date"
-                        value={field.state.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        onBlur={field.handleBlur}
-                      />
-                      <FieldInfo field={field} />
-                    </FormField>
-                  )}
-                </form.Field>
+                <form.AppField name="birthDate">
+                  {(field) => <field.DatePicker label="Date de naissance" />}
+                </form.AppField>
 
-                <form.Field name="gender">
+                <form.AppField name="gender">
                   {(field) => (
-                    <FormField>
-                      <Label htmlFor={field.name}>Genre</Label>
-                      <Input
-                        id={field.name}
-                        value={field.state.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        onBlur={field.handleBlur}
-                      />
-                      <FieldInfo field={field} />
-                    </FormField>
+                    <field.Select options={GENDER_OPTIONS} label="Genre" />
                   )}
-                </form.Field>
+                </form.AppField>
               </>
             )}
 
             {/* Étape 2 */}
             {step === 2 && (
               <>
+                <form.AppField name="startDate">
+                  {(field) => <field.DatePicker label="Date de début" />}
+                </form.AppField>
+
                 <em className="text-sm text-neutral-400 mb-2">
                   Ajoutez des parcours et organisez-les par ordre de priorité
                 </em>

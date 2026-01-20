@@ -1,7 +1,8 @@
-import { signInResponseSchema } from '../../schemas/auth.schema'
 import type { CookieSerializeOptions } from '@fastify/cookie'
 import Boom from '@hapi/boom'
 import type { FastifyPluginAsync } from 'fastify'
+
+import { signInResponseSchema } from '../../schemas/auth.schema'
 
 const refreshRouter: FastifyPluginAsync = (fastify) => {
   const { iocContainer } = fastify

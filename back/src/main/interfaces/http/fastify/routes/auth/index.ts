@@ -1,9 +1,9 @@
 import type { FastifyPluginAsync } from 'fastify'
 
+import { refreshRouter } from './refresh.router'
+import { registerRouter } from './register.router'
 import { signInRouter } from './sign-in.router'
 import { signOutRouter } from './sign-out.router'
-import { registerRouter } from './register.router'
-import { refreshRouter } from './refresh.router'
 
 const authRouter: FastifyPluginAsync = async (fastify) => {
   await fastify.register(signInRouter, { prefix: '/sign-in' })

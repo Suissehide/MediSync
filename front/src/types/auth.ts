@@ -13,13 +13,19 @@ export type AuthState = {
   user: User | null
 }
 
-export type RegisterInput = {
+export type RegisterInput = Pick<User, 'email' | 'firstName' | 'lastName'> & {
   password: string
-} & User
+}
 
 export type LoginInput = {
   email: string
   password: string
 }
 
-export type UpdateUserParams = User
+export type UpdateUserParams = {
+  id: string
+  email?: string
+  firstName?: string
+  lastName?: string
+  role?: Role
+}

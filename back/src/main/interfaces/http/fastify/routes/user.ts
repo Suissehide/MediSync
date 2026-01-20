@@ -1,4 +1,5 @@
 import Boom from '@hapi/boom'
+import { Role } from '@prisma/client'
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod/v4'
 
@@ -73,9 +74,23 @@ const userRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
+      onRequest: [fastify.verifySessionCookie],
     },
     async (request) => {
       const { userID } = request.params
+      const currentUser = await userDomain.findByID(request.user.userID)
+
+      const isSelf = request.user.userID === userID
+      const isAdmin = currentUser?.role === Role.ADMIN
+
+      if (!isSelf && !isAdmin) {
+        throw Boom.forbidden('You can only update your own profile')
+      }
+
+      if (request.body.role && !isAdmin) {
+        throw Boom.forbidden('Only admins can update roles')
+      }
+
       const updated = await userDomain.update(userID, request.body)
       if (!updated) {
         throw Boom.notFound('User not found')
@@ -98,6 +113,13 @@ const userRouter: FastifyPluginAsync = (fastify) => {
     },
     async (request, reply) => {
       const { userID } = request.params
+      const currentUser = await userDomain.findByID(request.user.userID)
+
+      const isAdmin = currentUser?.role === Role.ADMIN
+      if (!isAdmin) {
+        throw Boom.forbidden('Only admins can delete user')
+      }
+
       const deleted = await userDomain.delete(userID)
       if (!deleted) {
         logger.info('User not found')
