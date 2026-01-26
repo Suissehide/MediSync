@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useMemo } from 'react'
 
+import { useAllAppointmentsQuery } from '../../../../queries/useAppointment.ts'
 import type { Patient } from '../../../../types/patient.ts'
+import type { CalendarEvent } from '../../Calendar/calendar.tsx'
 import Calendar from '../../Calendar/calendar.tsx'
 
 interface PlanningPatientProps {
@@ -8,7 +10,32 @@ interface PlanningPatientProps {
 }
 
 export default function PlanningPatient({ patient }: PlanningPatientProps) {
-  const [events, setEvents] = useState([])
+  const { appointments } = useAllAppointmentsQuery()
+
+  const events: CalendarEvent[] = useMemo(() => {
+    if (!appointments || !patient) {
+      return []
+    }
+
+    return appointments
+      .filter((appointment) =>
+        appointment.appointmentPatients.some(
+          (ap) => ap.patient.id === patient.id,
+        ),
+      )
+      .map((appointment) => ({
+        id: appointment.id,
+        title:
+          appointment.slot?.slotTemplate?.thematic ||
+          appointment.thematic ||
+          appointment.type ||
+          'Rendez-vous',
+        start: appointment.startDate,
+        end: appointment.endDate,
+        backgroundColor: appointment.slot?.slotTemplate?.color,
+        borderColor: appointment.slot?.slotTemplate?.color,
+      }))
+  }, [appointments, patient])
 
   return (
     <div className="flex-1 px-4 py-4 flex flex-col gap-2 border border-border rounded-lg">

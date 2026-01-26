@@ -25,17 +25,17 @@ const SettingsMenu = () => (
     <DropdownMenuCustomContent sideOffset={12} align={'end'}>
       <DropdownMenu.Sub>
         <DropdownMenuCustomItem>
-          <Link to="/settings/planning" className="w-full">
+          <Link to="/settings/planning" className="w-full px-3 py-1.5">
             Planning
           </Link>
         </DropdownMenuCustomItem>
         <DropdownMenuCustomItem>
-          <Link to="/settings/soignant" className="w-full">
+          <Link to="/settings/soignant" className="w-full px-3 py-1.5">
             Soignants
           </Link>
         </DropdownMenuCustomItem>
         <DropdownMenuCustomItem>
-          <Link to="/settings/user" className="w-full">
+          <Link to="/settings/user" className="w-full px-3 py-1.5">
             Utilisateurs
           </Link>
         </DropdownMenuCustomItem>
@@ -58,7 +58,7 @@ function Navbar({ toggleSidebar }: NavbarProps) {
           variant="ghost"
           size="icon"
           onClick={toggleSidebar}
-          className="cursor-pointer text-background text-text"
+          className="cursor-pointer text-text"
         >
           <AlignJustify className="w-5 h-5" />
         </Button>

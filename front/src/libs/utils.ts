@@ -3,7 +3,6 @@ import dayjs from 'dayjs'
 import { twMerge } from 'tailwind-merge'
 
 import type { CalendarEvent } from '../components/custom/Calendar/calendar.tsx'
-import type { Appointment } from '../types/appointment.ts'
 import type { Slot } from '../types/slot.ts'
 import type { SlotTemplate } from '../types/slotTemplate.ts'
 
@@ -53,6 +52,7 @@ export const buildCalendarEventsFromSlots = (
   if (!slots) {
     return []
   }
+
   return slots.map((slot) => {
     const slotStates = [...states]
 
@@ -62,25 +62,21 @@ export const buildCalendarEventsFromSlots = (
       )
     }
 
-    const display =
-      containsKeyword(slotStates, ['individual', 'editable']) ||
-      (containsKeyword(slotStates, ['multiple']) &&
-        slot.appointments.length > 0)
-        ? 'background'
-        : 'block'
+    const display = containsKeyword(slotStates, ['individual', 'multiple'])
+      ? 'background'
+      : 'block'
 
     return {
-      id: slot.id,
+      id: `slot_${slot.id}`,
       title: slot.slotTemplate.soignant?.name ?? 'Soignant inconnu',
       start: slot.startDate,
       end: slot.endDate,
       color: slot.slotTemplate.color ?? '#2563eb',
       display,
-      className: containsKeyword(slotStates, ['multiple'])
-        ? 'event--readonly'
-        : '',
+      className: 'fc-slot',
       extendedProps: {
         type: 'slot',
+        thematic: slot.slotTemplate.thematic,
         states: slotStates,
         templateID: slot.slotTemplate.id,
         appointments: slot.appointments,
@@ -104,40 +100,14 @@ export const buildCalendarEventsFromSlotTemplates = (
     const end = combineDateAndTime(base, slotTemplate.endTime)
 
     return {
-      id: slotTemplate.id,
+      id: `template_${slotTemplate.id}`,
       title: slotTemplate.soignant?.name ?? 'Soignant inconnu',
       start: start.toISOString(),
       end: end.toISOString(),
       color: slotTemplate.color ?? '#2563eb',
       extendedProps: {
-        type: 'slot',
-      },
-    }
-  })
-}
-
-export const buildCalendarEventsFromAppointments = (
-  appointments: Appointment[],
-): CalendarEvent[] => {
-  if (!appointments) {
-    return []
-  }
-  return appointments.map((appointment) => {
-    // const thematicOption = APPOINTMENT_THEMATIC_OPTIONS.find(
-    //   (option) => option.value === appointment.thematic,
-    // )
-
-    return {
-      id: appointment.id,
-      title: appointment.thematic ?? '',
-      start: appointment.startDate,
-      end: appointment.endDate,
-      color: '#7CA2F3',
-      display: 'block',
-      className: 'cursor-pointer transition duration-300 hover:bg-primary!',
-      extendedProps: {
-        type: 'appointment',
-        appointmentPatients: appointment.appointmentPatients,
+        type: 'template',
+        thematic: slotTemplate.thematic,
       },
     }
   })

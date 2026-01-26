@@ -99,7 +99,16 @@ body {
 /*** FullCalendar ***/
 
 .fc-today-button {
-    cursor: pointer;
+  cursor: pointer;
+}
+
+.fc-timegrid-event-harness:hover {
+  transition: ease 0.2s;
+  left: 0 !important;
+}
+
+.fc-event.fc-event-draggable {
+  cursor: default;
 }
 
 .fc-event.event--readonly {
@@ -114,6 +123,10 @@ body {
 
 .fc .fc-list-event-title {
   vertical-align: middle;
+}
+
+.fc-slot {
+  opacity: 100 !important;
 }
 
 .edit-mode .fc-view-harness::before {

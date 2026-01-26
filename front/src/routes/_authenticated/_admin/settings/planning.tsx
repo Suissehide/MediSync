@@ -17,12 +17,17 @@ import {
 } from '../../../../libs/utils.ts'
 import { usePathwayMutations } from '../../../../queries/usePathway.ts'
 import { usePathwayTemplateQueries } from '../../../../queries/usePathwayTemplate.ts'
-import { useAllSlotsQuery, useSlotMutations } from '../../../../queries/useSlot.ts'
+import {
+  useAllSlotsQuery,
+  useSlotMutations,
+} from '../../../../queries/useSlot.ts'
 import { useSlotTemplateMutations } from '../../../../queries/useSlotTemplate.ts'
 import { usePathwayTemplateEditStore } from '../../../../store/usePathwayTemplateEditStore.ts'
 import type { CreateSlotParamsWithTemplateData } from '../../../../types/slot.ts'
 
-export const Route = createFileRoute('/_authenticated/_admin/settings/planning')({
+export const Route = createFileRoute(
+  '/_authenticated/_admin/settings/planning',
+)({
   component: Planning,
 })
 
@@ -158,6 +163,7 @@ function Planning() {
   }, [events, eventTemplates, editMode])
 
   const isSlot = openEventId.startsWith('slot_')
+  const isTemplate = openEventId.startsWith('template_')
   const slotId = openEventId.replace(/^.*?_/, '')
 
   return (
@@ -173,6 +179,7 @@ function Planning() {
             handleSelectEvent={handleSelectSlot}
             handleEditEvent={handleEditSlot}
             handleDropEvent={handleInstantiatePathway}
+            handleClickEvent={setOpenEventId}
             handleOpenEvent={setOpenEventId}
             editMode={editMode}
             editable={true}
@@ -197,7 +204,7 @@ function Planning() {
       />
 
       <EventTemplateSheet
-        open={isSlot && editMode}
+        open={isTemplate && editMode}
         setOpen={setOpenEventId}
         eventTemplateID={slotId}
         handleDeleteEvent={handleDeleteEvent}

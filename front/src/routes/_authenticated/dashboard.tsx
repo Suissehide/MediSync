@@ -12,7 +12,10 @@ import AddAppointmentForm from '../../components/custom/popup/addAppointmentForm
 import AppointmentSheet from '../../components/custom/sheet/appointmentSheet.tsx'
 import DashboardLayout from '../../components/dashboard.layout.tsx'
 import { SLOT } from '../../constants/process.constant.ts'
-import { buildCalendarEventsFromSlots, containsKeyword } from '../../libs/utils.ts'
+import {
+  buildCalendarEventsFromSlots,
+  containsKeyword,
+} from '../../libs/utils.ts'
 import { useAppointmentMutations } from '../../queries/useAppointment.ts'
 import { useAllSlotsQuery } from '../../queries/useSlot.ts'
 import { useSoignantStore } from '../../store/useSoignantStore.ts'
@@ -118,20 +121,46 @@ function Dashboard() {
             handleOpenEvent={setOpenEventId}
             selectAllow={(selectInfo) => {
               const { start, end } = selectInfo
+              const selectionStart = dayjs(start)
+              const selectionEnd = dayjs(end)
 
-              return events
-                .filter((e) => e.extendedProps?.type === 'slot')
-                .some((slot) => {
-                  const slotStart = dayjs(slot.start)
-                  const slotEnd = dayjs(slot.end)
-                  const selectionStart = dayjs(start)
-                  const selectionEnd = dayjs(end)
+              // Only allow selection within individual slots
+              const individualSlots = events.filter(
+                (e) =>
+                  e.extendedProps?.type === 'slot' &&
+                  containsKeyword(e.extendedProps?.states ?? [], [
+                    'individual',
+                  ]),
+              )
 
-                  return (
-                    selectionStart.isSameOrAfter(slotStart) &&
-                    selectionEnd.isSameOrBefore(slotEnd)
-                  )
-                })
+              return individualSlots.some((slot) => {
+                const slotStart = dayjs(slot.start)
+                const slotEnd = dayjs(slot.end)
+
+                // Check if selection is within slot bounds
+                const isWithinSlot =
+                  selectionStart.isSameOrAfter(slotStart) &&
+                  selectionEnd.isSameOrBefore(slotEnd)
+
+                if (!isWithinSlot) {
+                  return false
+                }
+
+                // Check if selection overlaps with existing appointments
+                const appointments = slot.extendedProps?.appointments ?? []
+                const overlapsAppointment = appointments.some(
+                  (apt: { startDate: string; endDate: string }) => {
+                    const aptStart = dayjs(apt.startDate)
+                    const aptEnd = dayjs(apt.endDate)
+                    return (
+                      selectionStart.isBefore(aptEnd) &&
+                      selectionEnd.isAfter(aptStart)
+                    )
+                  },
+                )
+
+                return !overlapsAppointment
+              })
             }}
           />
         </div>

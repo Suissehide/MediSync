@@ -1,6 +1,6 @@
 import dayjs from 'dayjs'
 import { Check, X } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 
 import { APPOINTMENT_TYPE_OPTIONS } from '../../../constants/appointment.constant.ts'
 import {
@@ -95,9 +95,9 @@ function AddAppointmentForm({
     }
   }, [open, form])
 
-  const thematicOptions = soignant
-    ? getThemeOptionsByRole(THEMATICS, soignant.name)
-    : []
+  const thematicOptions = useMemo(() => {
+    return soignant ? getThemeOptionsByRole(THEMATICS, soignant.name) : []
+  }, [soignant])
 
   const capacity = slot?.slotTemplate.capacity ?? 1
 

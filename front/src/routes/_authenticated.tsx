@@ -11,8 +11,6 @@ export const Route = createFileRoute('/_authenticated')({
       })
     }
 
-    console.log('ROLE', context.authState.user?.role)
-
     if (
       !context.authState.user?.role ||
       context.authState.user?.role === 'NONE'

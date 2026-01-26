@@ -96,8 +96,6 @@ export default function EventSheet({
       return
     }
 
-    console.log('RESET', slot.slotTemplate)
-
     reset(
       {
         soignant: slot.slotTemplate.soignant?.id ?? '',

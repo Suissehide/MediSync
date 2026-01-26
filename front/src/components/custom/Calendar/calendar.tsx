@@ -52,6 +52,7 @@ interface CalendarProps {
   editMode?: boolean
   headerToolbar?: ToolbarInput
   editable?: boolean
+  overlap?: boolean
 }
 
 function Calendar({
@@ -65,6 +66,7 @@ function Calendar({
   editMode,
   headerToolbar,
   editable = false,
+  overlap = true,
 }: CalendarProps) {
   const lastDropTimeRef = useRef<number>(0)
   const calendarRef = useRef<FullCalendar | null>(null)
@@ -160,6 +162,7 @@ function Calendar({
         allDaySlot={false}
         selectMirror={true}
         selectable={true}
+        selectOverlap={true}
         unselectAuto={true}
         nowIndicator={true}
         customButtons={{
@@ -197,10 +200,13 @@ function Calendar({
         eventDrop={handleEventDrop}
         eventResize={handleResize}
         events={events}
+        eventOverlap={overlap}
+        slotEventOverlap={overlap}
         eventContent={(eventContent) => (
           <EventContent
             setOpenEventId={handleOpenEvent}
             eventContent={eventContent}
+            editMode={editMode}
           />
         )}
         datesSet={(arg) => {
