@@ -18,6 +18,7 @@ import {
 } from '../../libs/utils.ts'
 import { useAppointmentMutations } from '../../queries/useAppointment.ts'
 import { useAllSlotsQuery } from '../../queries/useSlot.ts'
+import { usePlanningStore } from '../../store/usePlanningStore.ts'
 import { useSoignantStore } from '../../store/useSoignantStore.ts'
 import type { CreateAppointmentParams } from '../../types/appointment.ts'
 
@@ -29,6 +30,7 @@ function Dashboard() {
   const queryClient = useQueryClient()
   const [openEventId, setOpenEventId] = useState('')
   const selectedID = useSoignantStore((state) => state.selectedSoignantID)
+  const savedDate = usePlanningStore((state) => state.viewStart)
   const soignant = useSoignantStore((state) =>
     state.soignants.find((s) => s.id === selectedID),
   )
@@ -116,6 +118,7 @@ function Dashboard() {
             events={events}
             editable={false}
             overlap={false}
+            initialDate={savedDate}
             handleSelectEvent={handleSelectAppointment}
             handleClickEvent={handleAddAppointment}
             handleOpenEvent={setOpenEventId}

@@ -2,6 +2,7 @@ import { z } from 'zod/v4'
 
 import { appointmentResponseSchema } from './appointment.schema'
 import { slotSchema } from './index'
+import { pathwayResponseSchema } from './pathway.schema'
 import {
   createSlotTemplateSchema,
   slotTemplateResponseSchema,
@@ -13,6 +14,12 @@ export const slotResponseSchema = slotSchema.extend({
   slotTemplate: slotTemplateResponseSchema.extend({
     id: z.cuid(),
   }),
+  pathway: pathwayResponseSchema
+    .extend({
+      id: z.cuid(),
+    })
+    .optional()
+    .nullable(),
   appointments: z.array(
     appointmentResponseSchema.extend({
       id: z.cuid(),

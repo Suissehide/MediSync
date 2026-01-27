@@ -147,9 +147,8 @@ export const usePathwayMutations = () => {
       })
     },
     onSettled: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: [PATHWAY.GET_ALL],
-      })
+      await queryClient.invalidateQueries({ queryKey: [PATHWAY.GET_ALL] })
+      await queryClient.invalidateQueries({ queryKey: [SLOT.GET_ALL] })
     },
   })
 

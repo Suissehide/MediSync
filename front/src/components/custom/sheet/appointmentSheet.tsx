@@ -1,8 +1,10 @@
 import { useStore } from '@tanstack/react-form'
+import { useNavigate } from '@tanstack/react-router'
 import dayjs from 'dayjs'
 import {
   ChevronDown,
   ChevronUp,
+  EyeIcon,
   FilePlus,
   Loader2Icon,
   TrashIcon,
@@ -53,6 +55,8 @@ export default function AppointmentSheet({
   eventID,
   soignant,
 }: AppointmentSheetProps) {
+  const navigate = useNavigate()
+
   const { isPending, appointment, refetch } = useAppointmentByIDQuery(eventID, {
     enabled: false,
   })
@@ -119,6 +123,10 @@ export default function AppointmentSheet({
 
   const handleSelectPatient = (patientID: string) => {
     setSelectedPatient(patientID)
+  }
+
+  const handleRedirectToPatient = async (patientID?: string) => {
+    await navigate({ to: `/patient/${patientID}` })
   }
 
   useEffect(() => {
@@ -295,6 +303,16 @@ export default function AppointmentSheet({
                                     )}
                                   </Button>
                                   <div className="h-6 border-l border-border"></div>
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    type="button"
+                                    onClick={() =>
+                                      handleRedirectToPatient(patientData?.id)
+                                    }
+                                  >
+                                    <EyeIcon className="w-4 h-4" />
+                                  </Button>
                                   <Button
                                     variant="outline"
                                     size="icon"

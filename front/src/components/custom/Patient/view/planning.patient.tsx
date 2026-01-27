@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 
 import { useAllAppointmentsQuery } from '../../../../queries/useAppointment.ts'
+import { usePlanningStore } from '../../../../store/usePlanningStore.ts'
 import type { Patient } from '../../../../types/patient.ts'
 import type { CalendarEvent } from '../../Calendar/calendar.tsx'
 import Calendar from '../../Calendar/calendar.tsx'
@@ -11,6 +12,7 @@ interface PlanningPatientProps {
 
 export default function PlanningPatient({ patient }: PlanningPatientProps) {
   const { appointments } = useAllAppointmentsQuery()
+  const savedDate = usePlanningStore((state) => state.viewStart)
 
   const events: CalendarEvent[] = useMemo(() => {
     if (!appointments || !patient) {
@@ -49,6 +51,7 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
         <Calendar
           events={events}
           editable={false}
+          initialDate={savedDate}
           headerToolbar={{
             left: 'title',
             right: 'prev,next today',

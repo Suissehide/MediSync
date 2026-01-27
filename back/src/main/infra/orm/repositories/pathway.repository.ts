@@ -121,8 +121,37 @@ class PathwayRepository implements PathwayRepositoryInterface {
 
   async delete(pathwayID: string): Promise<PathwayEntityRepo> {
     try {
-      return await this.prisma.pathway.delete({
-        where: { id: pathwayID },
+      return await this.prisma.$transaction(async (tx) => {
+        // Find the pathway with its slots to get slotTemplateIDs
+        const pathway = await tx.pathway.findUniqueOrThrow({
+          where: { id: pathwayID },
+          include: {
+            slots: {
+              select: {
+                id: true,
+                slotTemplateID: true,
+              },
+            },
+          },
+        })
+
+        const slotIDs = pathway.slots.map((slot) => slot.id)
+        const slotTemplateIDs = pathway.slots.map((slot) => slot.slotTemplateID)
+
+        // Delete all slots
+        await tx.slot.deleteMany({
+          where: { id: { in: slotIDs } },
+        })
+
+        // Delete all slotTemplates
+        await tx.slotTemplate.deleteMany({
+          where: { id: { in: slotTemplateIDs } },
+        })
+
+        // Delete the pathway
+        return await tx.pathway.delete({
+          where: { id: pathwayID },
+        })
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({

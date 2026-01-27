@@ -1,13 +1,19 @@
 import dayjs from 'dayjs'
-import { FilePlus, Loader2Icon } from 'lucide-react'
+import { ChevronDown, FilePlus, Loader2Icon } from 'lucide-react'
+import { DropdownMenu } from 'radix-ui'
 import { useEffect } from 'react'
 
 import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { formatDuration } from '../../../libs/utils.ts'
+import { usePathwayMutations } from '../../../queries/usePathway.ts'
 import { useSlotByIDQuery, useSlotMutations } from '../../../queries/useSlot.ts'
 import { useSoignantQueries } from '../../../queries/useSoignant.ts'
 import type { UpdateSlotParams } from '../../../types/slot.ts'
 import { Button } from '../../ui/button.tsx'
+import {
+  DropdownMenuCustomContent,
+  DropdownMenuCustomItem,
+} from '../../ui/dropdownMenu.tsx'
 import {
   Sheet,
   SheetContent,
@@ -30,11 +36,14 @@ export default function EventSheet({
   eventID,
   handleDeleteEvent,
 }: EventSheetProps) {
+  useSoignantQueries()
   const { isPending, slot, refetch } = useSlotByIDQuery(eventID, {
     enabled: false,
   })
   const { updateSlot } = useSlotMutations()
-  useSoignantQueries()
+  const { deletePathway } = usePathwayMutations()
+
+  const hasPathway = slot?.pathway?.id
 
   const form = useAppForm({
     ...eventFormOpts,
@@ -76,9 +85,16 @@ export default function EventSheet({
     },
   })
 
-  const handleDelete = () => {
+  const handleDeleteSlot = () => {
     if (slot) {
       handleDeleteEvent?.(slot.id)
+      setOpen('')
+    }
+  }
+
+  const handleDeleteAllSlots = () => {
+    if (slot?.pathway?.id) {
+      deletePathway.mutate(slot.pathway.id)
       setOpen('')
     }
   }
@@ -159,11 +175,36 @@ export default function EventSheet({
               <div className="w-full border-t border-border"></div>
 
               <div className="px-4 py-4 flex justify-between gap-4 shrink-0">
-                <div>
-                  <Button variant="destructive" onClick={() => handleDelete()}>
+                <div className="flex">
+                  <Button
+                    variant="destructive"
+                    onClick={() => handleDeleteSlot()}
+                    className={`${hasPathway ? 'rounded-r-none' : ''}`}
+                  >
                     Supprimer
                   </Button>
+                  {hasPathway && (
+                    <DropdownMenu.Root>
+                      <DropdownMenu.Trigger asChild>
+                        <Button
+                          variant="destructive"
+                          className="border-l-1 border-destructive-foreground pl-0 pr-2.5 rounded-l-none"
+                        >
+                          <ChevronDown className="ml-2 h-4 w-4" />
+                        </Button>
+                      </DropdownMenu.Trigger>
+                      <DropdownMenuCustomContent align="end" className="z-1000">
+                        <DropdownMenuCustomItem
+                          className="px-3 py-2 text-sm text-destructive"
+                          onSelect={handleDeleteAllSlots}
+                        >
+                          Supprimer tout le parcours
+                        </DropdownMenuCustomItem>
+                      </DropdownMenuCustomContent>
+                    </DropdownMenu.Root>
+                  )}
                 </div>
+
                 <div className="flex gap-4">
                   <Button variant="default" onClick={() => form.handleSubmit()}>
                     Mettre à jour

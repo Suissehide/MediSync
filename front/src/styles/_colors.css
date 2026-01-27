@@ -1,12 +1,11 @@
 :root {
-  --fc-event-bg-color: #2563eb;
-  --fc-event-border-color: #2563eb;
-}
-:root {
   --primary-light: #7ca2f3;
   --primary: #2563eb;
   --primary-dark: #1147bb;
   --primary-foreground: #ffffff;
+
+  --fc-event-bg-color: #2563eb;
+  --fc-event-border-color: #2563eb;
 
   --secondary: #ec4899;
   --secondary-foreground: #ffffff;
@@ -35,7 +34,7 @@
   --text-light: #64748b;
 
   --destructive: #ef4444;
-  --destructive-foreground: #ffffff;
+  --destructive-foreground: #b21d1d;
 }
 
 @layer base {
@@ -71,6 +70,6 @@
     --text-light: #94a3b8;
 
     --destructive: #dc2626;
-    --destructive-foreground: #fef2f2;
+    --destructive-foreground: #b21d1d;
   }
 }

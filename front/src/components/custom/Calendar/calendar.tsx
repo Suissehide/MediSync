@@ -53,6 +53,7 @@ interface CalendarProps {
   headerToolbar?: ToolbarInput
   editable?: boolean
   overlap?: boolean
+  initialDate?: string
 }
 
 function Calendar({
@@ -67,6 +68,7 @@ function Calendar({
   headerToolbar,
   editable = false,
   overlap = true,
+  initialDate,
 }: CalendarProps) {
   const lastDropTimeRef = useRef<number>(0)
   const calendarRef = useRef<FullCalendar | null>(null)
@@ -156,6 +158,7 @@ function Calendar({
         ref={calendarRef}
         plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
         initialView="timeGridWeek"
+        initialDate={initialDate}
         locale={frLocale}
         timeZone={'UTC'}
         weekends={false}

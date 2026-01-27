@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 
 interface PlanningState {
   currentDate: string
@@ -14,13 +15,18 @@ interface PlanningActions {
   }) => void
 }
 
-export const usePlanningStore = create<PlanningState & PlanningActions>(
-  (set) => ({
-    currentDate: '',
-    viewStart: '',
-    viewEnd: '',
+export const usePlanningStore = create<PlanningState & PlanningActions>()(
+  persist(
+    (set) => ({
+      currentDate: '',
+      viewStart: '',
+      viewEnd: '',
 
-    setPlanningDates: ({ currentDate, viewStart, viewEnd }) =>
-      set(() => ({ currentDate, viewStart, viewEnd })),
-  }),
+      setPlanningDates: ({ currentDate, viewStart, viewEnd }) =>
+        set(() => ({ currentDate, viewStart, viewEnd })),
+    }),
+    {
+      name: 'planning-storage',
+    },
+  ),
 )

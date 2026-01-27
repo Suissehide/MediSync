@@ -154,7 +154,7 @@ const pathwayRouter: FastifyPluginAsync = (fastify) => {
 
       const slotIDs: string[] = []
       for (const slotTemplate of pathwayTemplate.slotTemplates) {
-        const { soignant, ...rest } = slotTemplate
+        const { soignant, id: _id, ...rest } = slotTemplate
         const clonedSlotTemplate = await slotTemplateDomain.create({
           ...rest,
           soignantID: soignant?.id ?? undefined,
