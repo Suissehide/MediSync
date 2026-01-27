@@ -3,11 +3,18 @@ import { useEffect, useState } from 'react'
 
 import { useSoignantQueries } from '../../../queries/useSoignant.ts'
 import { useSoignantStore } from '../../../store/useSoignantStore.ts'
+import type { User } from '../../../types/auth.ts'
 import AddSoignantForm from '../popup/addSoignantForm.tsx'
 import DeleteSoignantForm from '../popup/deleteSoignantForm.tsx'
 
-function SidebarSoignant() {
+interface SidebarSoignantProps {
+  user?: User | null
+}
+
+function SidebarSoignant({ user }: SidebarSoignantProps) {
   useSoignantQueries()
+
+  const isAdmin = user?.role === 'ADMIN'
   const soignants = useSoignantStore((state) => state.soignants)
   const selectSoignant = useSoignantStore((state) => state.selectSoignant)
   const selectedSoignantID = useSoignantStore(
@@ -30,7 +37,7 @@ function SidebarSoignant() {
     <>
       <div className="flex justify-between items-center text-text-light pl-2 mb-2">
         <p>Soignants</p>
-        <AddSoignantForm />
+        {isAdmin && <AddSoignantForm />}
       </div>
       <ul>
         {soignants.map((soignant) => (
@@ -51,7 +58,7 @@ function SidebarSoignant() {
               </span>
             </button>
 
-            {isHovered === soignant.id && (
+            {isAdmin && isHovered === soignant.id && (
               <DeleteSoignantForm soignant={soignant} />
             )}
           </li>

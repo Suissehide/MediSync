@@ -15,6 +15,7 @@ interface SidebarProps {
 
 function Sidebar({ isVisible, components }: SidebarProps) {
   const router = useRouter()
+  const user = router.options.context?.authState?.user
   const { logoutMutation } = useLogout()
   const authState = router.options.context?.authState
 
@@ -29,7 +30,7 @@ function Sidebar({ isVisible, components }: SidebarProps) {
   }
 
   const componentMap: Record<string, JSX.Element> = {
-    soignant: <SidebarSoignant />,
+    soignant: <SidebarSoignant user={user} />,
     pathway: <SidebarPathway />,
     patient: <SidebarPatient />,
   }
