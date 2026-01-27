@@ -1,12 +1,12 @@
+import type { IocContainer } from '../types/application/ioc'
 import type {
   TodoCreateEntityDomain,
   TodoDomainInterface,
   TodoEntityDomain,
   TodoUpdateEntityDomain,
 } from '../types/domain/todo.domain.interface'
-import type { IocContainer } from '../types/application/ioc'
-import type { Logger } from '../types/utils/logger'
 import type { TodoRepositoryInterface } from '../types/infra/orm/repositories/todo.repository.interface'
+import type { Logger } from '../types/utils/logger'
 
 class TodoDomain implements TodoDomainInterface {
   private readonly logger: Logger

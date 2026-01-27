@@ -20,6 +20,7 @@ class TodoRepository implements TodoRepositoryInterface {
   findAll(): Promise<TodoEntityRepo[]> {
     return this.prisma.todo.findMany({
       orderBy: [{ createDate: 'desc' }],
+      include: { soignant: true },
     })
   }
 
@@ -27,6 +28,7 @@ class TodoRepository implements TodoRepositoryInterface {
     try {
       return await this.prisma.todo.findUniqueOrThrow({
         where: { id: todoID },
+        include: { soignant: true },
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
@@ -42,6 +44,7 @@ class TodoRepository implements TodoRepositoryInterface {
     try {
       return await this.prisma.todo.create({
         data: todoCreateParams,
+        include: { soignant: true },
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
@@ -59,6 +62,7 @@ class TodoRepository implements TodoRepositoryInterface {
       return await this.prisma.todo.update({
         where: { id: todoID },
         data: todoUpdateParams,
+        include: { soignant: true },
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({

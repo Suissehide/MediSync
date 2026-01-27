@@ -39,7 +39,7 @@ export const createSlotSchemaBase = slotSchema
     endDate: true,
   })
   .extend({
-    soignantId: z.cuid().optional(),
+    soignantID: z.cuid().optional(),
   })
 
 const withTemplateID = createSlotSchemaBase.extend({
@@ -60,7 +60,7 @@ export const deleteSlotByIdParamsSchema = getSlotByIdParamsSchema
 export const updateSlotByIdSchema = {
   params: getSlotByIdParamsSchema,
   body: slotSchema.partial().extend({
-    soignantId: z.cuid().optional(),
+    soignantID: z.cuid().optional(),
     slotTemplate: updateSlotTemplateByIdSchema.body.extend({
       id: z.cuid(),
     }),

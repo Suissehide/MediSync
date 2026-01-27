@@ -1,21 +1,22 @@
-import { z } from 'zod/v4'
-import {
-  todoResponseSchema,
-  deleteTodoByIdParamsSchema,
-  getTodoByIdParamsSchema,
-  updateTodoByIdSchema,
-  todosResponseSchema,
-  createTodoSchema,
-  type GetTodoByIdParams,
-  type DeleteTodoByIdParams,
-  type UpdateTodoParams,
-  type UpdateTodoBody,
-  type CreateTodoBody,
-} from '../schemas/todo.schema'
 import Boom from '@hapi/boom'
 import type { FastifyPluginAsync } from 'fastify'
+import { z } from 'zod/v4'
 
-const todoRouter: FastifyPluginAsync = async (fastify) => {
+import {
+  type CreateTodoBody,
+  createTodoSchema,
+  type DeleteTodoByIdParams,
+  deleteTodoByIdParamsSchema,
+  type GetTodoByIdParams,
+  getTodoByIdParamsSchema,
+  todoResponseSchema,
+  todosResponseSchema,
+  type UpdateTodoBody,
+  type UpdateTodoParams,
+  updateTodoByIdSchema,
+} from '../schemas/todo.schema'
+
+const todoRouter: FastifyPluginAsync = (fastify) => {
   const { iocContainer } = fastify
   const { todoDomain, logger } = iocContainer
 

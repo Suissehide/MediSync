@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 
 import { useTodoQueries } from '../../../queries/useTodo.ts'
-import { useTodoStore } from '../../../store/useTodoStore.ts'
+import { selectHasNewTodos, useTodoStore } from '../../../store/useTodoStore.ts'
 import {
   Sheet,
   SheetContent,
@@ -23,10 +23,13 @@ export default function TodoSheet() {
   const [isChildOpen, setIsChildOpen] = useState(false)
 
   const { isPending } = useTodoQueries()
-  const { todos } = useTodoStore(
-    useShallow((state) => ({ todos: state.todos })),
+  const { todos, markTodosAsSeen } = useTodoStore(
+    useShallow((state) => ({
+      todos: state.todos,
+      markTodosAsSeen: state.markTodosAsSeen,
+    })),
   )
-  const hasNewTodos = useTodoStore((state) => state.hasNewTodos)
+  const hasNewTodos = useTodoStore(selectHasNewTodos)
   const today = dayjs().format('dddd DD MMMM')
   const [filter, setFilter] = useState('all')
 
@@ -63,6 +66,9 @@ export default function TodoSheet() {
       setShouldCloseParent(true)
     } else {
       setIsParentOpen(open)
+      if (open) {
+        markTodosAsSeen()
+      }
     }
   }
 
@@ -71,7 +77,7 @@ export default function TodoSheet() {
       <SheetTrigger variant="ghost" size="icon" className="relative">
         <BellIcon className="w-5 h-5" />
         {hasNewTodos ? (
-          <span className="absolute flex justify-center items-center -top-1 -right-1 h-4 w-4 rounded-full bg-background after:absolute after:bg-accent after:h-2 after:w-2 after:rounded-full" />
+          <span className="absolute flex justify-center items-center -top-1 -right-1 h-4 w-4 rounded-full bg-background after:absolute after:bg-destructive after:h-2 after:w-2 after:rounded-full" />
         ) : null}
       </SheetTrigger>
 

@@ -158,7 +158,7 @@ function Calendar({
         ref={calendarRef}
         plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
         initialView="timeGridWeek"
-        initialDate={initialDate}
+        initialDate={initialDate || dayjs().toISOString()}
         locale={frLocale}
         timeZone={'UTC'}
         weekends={false}

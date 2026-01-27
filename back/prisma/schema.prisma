@@ -108,6 +108,7 @@ model Soignant {
   name String
 
   slotTemplates SlotTemplate[]
+  todos         Todo[]
 }
 
 model Patient {
@@ -165,4 +166,8 @@ model Todo {
   title       String
   description String?
   completed   Boolean
+
+  soignantID String?
+
+  soignant Soignant? @relation(fields: [soignantID], references: [id], onDelete: SetNull)
 }

@@ -1,10 +1,11 @@
 import { create } from 'zustand'
+import { devtools, persist } from 'zustand/middleware'
+
 import type { Todo } from '../types/todo.ts'
-import { devtools } from 'zustand/middleware'
 
 interface TodoState {
   todos: Todo[]
-  hasNewTodos: boolean
+  seenTodoIds: Set<string>
 }
 
 interface TodoActions {
@@ -14,31 +15,50 @@ interface TodoActions {
 }
 
 export const useTodoStore = create<TodoState & TodoActions>()(
-  devtools((set) => ({
-    todos: [],
-    hasNewTodos: false,
+  devtools(
+    persist(
+      (set) => ({
+        todos: [],
+        seenTodoIds: new Set<string>(),
 
-    setTodos: (todos: Todo[]) =>
-      set(
-        () => ({
-          todos: todos,
-          hasNewTodos: true,
+        setTodos: (todos: Todo[]) =>
+          set(
+            () => ({
+              todos: todos,
+            }),
+            false,
+            'setTodos',
+          ),
+
+        addTodo: (todo: Todo) =>
+          set(
+            (state) => ({
+              todos: [...state.todos, todo],
+            }),
+            false,
+            'addTodo',
+          ),
+
+        markTodosAsSeen: () =>
+          set(
+            (state) => ({
+              seenTodoIds: new Set(state.todos.map((todo) => todo.id)),
+            }),
+            false,
+            'markTodosAsSeen',
+          ),
+      }),
+      {
+        name: 'todo-storage',
+        partialize: (state) => ({ seenTodoIds: Array.from(state.seenTodoIds) }),
+        merge: (persisted, current) => ({
+          ...current,
+          seenTodoIds: new Set((persisted as { seenTodoIds: string[] })?.seenTodoIds ?? []),
         }),
-        false,
-        'setTodos',
-      ),
-
-    addTodo: (todo: Todo) =>
-      set(
-        (state) => ({
-          todos: [...state.todos, todo],
-          hasNewTodos: true,
-        }),
-        false,
-        'addTodo',
-      ),
-
-    markTodosAsSeen: () =>
-      set({ hasNewTodos: false }, false, 'markTodosAsSeen'),
-  })),
+      },
+    ),
+  ),
 )
+
+export const selectHasNewTodos = (state: TodoState & TodoActions): boolean =>
+  state.todos.some((todo) => !state.seenTodoIds.has(todo.id))

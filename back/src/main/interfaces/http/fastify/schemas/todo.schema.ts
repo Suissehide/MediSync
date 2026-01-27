@@ -1,5 +1,7 @@
 import { z } from 'zod/v4'
 
+import { soignantResponseSchema } from './soignant.schema'
+
 export const todoSchema = z.object({
   title: z.string().min(1),
   description: z.string().optional().nullable(),
@@ -9,6 +11,7 @@ export const todoSchema = z.object({
 
 export const todoResponseSchema = todoSchema.extend({
   id: z.cuid(),
+  soignant: soignantResponseSchema.optional().nullable(),
 })
 
 export const todosResponseSchema = z.array(todoResponseSchema)
@@ -17,10 +20,14 @@ export const getTodoByIdParamsSchema = z.object({
   todoID: z.cuid(),
 })
 
-export const createTodoSchema = todoSchema.pick({
-  title: true,
-  description: true,
-})
+export const createTodoSchema = todoSchema
+  .pick({
+    title: true,
+    description: true,
+  })
+  .extend({
+    soignantID: z.cuid().optional(),
+  })
 
 export const deleteTodoByIdParamsSchema = getTodoByIdParamsSchema
 

@@ -62,12 +62,12 @@ export default function TodoItem({ todo }: todoItemProps) {
                   {date}
                 </div>
 
-                {todo.assignTo ? (
+                {todo.soignant ? (
                   <span className="flex items-center gap-2">
                     <span className="h-2 w-2 bg-text-light rounded-full" />
                     <div className="flex items-center gap-1">
                       <UserRound className="w-3 h-3" />
-                      <span>{todo.assignTo}</span>
+                      <span>{todo.soignant.name}</span>
                     </div>
                   </span>
                 ) : null}

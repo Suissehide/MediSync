@@ -1,11 +1,13 @@
 import { useForm } from '@tanstack/react-form'
 import { Plus } from 'lucide-react'
+import { useMemo } from 'react'
 
 import { useTodoMutations } from '../../../queries/useTodo.ts'
+import { useSoignantStore } from '../../../store/useSoignantStore.ts'
 import { Button } from '../../ui/button.tsx'
 import { FieldInfo } from '../../ui/fieldInfo.tsx'
 import { FormField } from '../../ui/formField.tsx'
-import { Input } from '../../ui/input.tsx'
+import { Input, Select } from '../../ui/input.tsx'
 import { Label } from '../../ui/label.tsx'
 import {
   Sheet,
@@ -23,16 +25,27 @@ export default function TodoAddSheet({
   onOpenChange: (open: boolean) => void
 }) {
   const { createTodo } = useTodoMutations()
+  const soignants = useSoignantStore((state) => state.soignants)
+  const soignantOptions = useMemo(
+    () =>
+      soignants.map((soignant) => ({
+        value: soignant.id,
+        label: soignant.name,
+      })),
+    [soignants],
+  )
 
   const form = useForm({
     defaultValues: {
       title: '',
       description: '',
-      assignTo: '',
+      soignant: '',
     },
     onSubmit: ({ value }) => {
-      console.log('Submitting todo:', value)
-      createTodo.mutate(value)
+      createTodo.mutate({
+        ...value,
+        soignantID: value.soignant,
+      })
       onOpenChange(false)
     },
   })
@@ -107,15 +120,15 @@ export default function TodoAddSheet({
               )}
             </form.Field>
 
-            <form.Field name="assignTo">
+            <form.Field name="soignant">
               {(field) => (
                 <FormField>
                   <Label htmlFor={field.name}>Assigné à</Label>
-                  <Input
+                  <Select
                     id={field.name}
+                    options={soignantOptions}
                     value={field.state.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    onBlur={field.handleBlur}
+                    onValueChange={(value) => field.handleChange(value)}
                   />
                   <FieldInfo field={field} />
                 </FormField>
