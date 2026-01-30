@@ -16,6 +16,7 @@ COPY ../.swcrc tsconfig.json ./
 COPY ../src ./src
 COPY ../prisma ./prisma
 RUN npm run build
+RUN mkdir -p /usr/src/app/dist/apidoc
 RUN npm prune --omit=dev --ignore-scripts
 
 # Application image with dist
