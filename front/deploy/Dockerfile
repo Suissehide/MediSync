@@ -13,7 +13,6 @@ WORKDIR /usr/src/app
 
 ARG VITE_API_BASE_URL
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
-RUN echo "VITE_API_BASE_URL: $VITE_API_BASE_URL"
 
 COPY ../package.json package-lock.json ./
 COPY ../deploy/conf/nginx.conf ./
