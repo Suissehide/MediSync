@@ -57,6 +57,7 @@ services:
       dockerfile: deploy/Dockerfile
       args:
         DATABASE_URL: ${DATABASE_URL}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
         NODE_VERSION: ${NODE_VERSION}
         NPM_VERSION: ${NPM_VERSION}
     image: "${CONTAINER_REGISTRY_PREFIX}${APP_IMAGE_NAME}-front:${VERSION:-latest}"

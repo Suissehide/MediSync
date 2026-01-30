@@ -1,5 +1,9 @@
 ARG NODE_VERSION
 ARG MIRROR_URL
+ARG VITE_API_BASE_URL
+
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+ENV NODE_ENV production
 
 # Base system image with specific version of node and npm
 FROM ${MIRROR_URL}node:${NODE_VERSION} AS node-npm
@@ -30,5 +34,4 @@ RUN rm /etc/nginx/conf.d/default.conf
 COPY --from=app-build /usr/src/app/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=app-build /usr/src/app/dist/ /usr/share/nginx/html/
 
-ENV NODE_ENV production
 EXPOSE 80

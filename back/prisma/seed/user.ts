@@ -1,7 +1,14 @@
-import crypto from 'node:crypto'
+import * as crypto from 'node:crypto'
 import { type PrismaClient, Role } from '@prisma/client'
 
-import { hashPassword } from '../../src/main/utils/hash'
+export function hashPassword(password: string) {
+  const salt = crypto.randomBytes(16).toString('hex')
+  const hash = crypto
+    .pbkdf2Sync(password, salt, 1000, 64, 'sha512')
+    .toString('hex')
+
+  return { hash, salt }
+}
 
 export default async function seedUsers(prisma: PrismaClient) {
   console.log('→ Seeding users...')
