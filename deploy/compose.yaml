@@ -44,8 +44,6 @@ services:
       - "traefik.http.services.${APP_IMAGE_NAME}.loadbalancer.server.port=${PORT}"
     networks:
       - proxy
-    links:
-      - postgres
     depends_on:
       postgres:
         condition: service_healthy
@@ -75,7 +73,7 @@ services:
 
 
   postgres:
-    container_name: postgres
+    container_name: "${APP_IMAGE_NAME}-postgres"
     image: postgres:16.2-alpine
     profiles:
       - db
