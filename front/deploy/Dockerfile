@@ -2,9 +2,6 @@ ARG NODE_VERSION
 ARG MIRROR_URL
 ARG VITE_API_BASE_URL
 
-ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
-ENV NODE_ENV production
-
 # Base system image with specific version of node and npm
 FROM ${MIRROR_URL}node:${NODE_VERSION} AS node-npm
 ARG NPM_VERSION
@@ -14,6 +11,9 @@ RUN npm i -g npm@${NPM_VERSION}
 # Built application image
 FROM node-npm AS app-build
 WORKDIR /usr/src/app
+
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+
 COPY ../package.json package-lock.json ./
 COPY ../deploy/conf/nginx.conf ./
 RUN npm ci --prefer-offline --include=dev --ignore-scripts --loglevel verbose
@@ -33,5 +33,7 @@ COPY --chown=node:node ../package.json package-lock.json ./
 RUN rm /etc/nginx/conf.d/default.conf
 COPY --from=app-build /usr/src/app/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=app-build /usr/src/app/dist/ /usr/share/nginx/html/
+
+ENV NODE_ENV production
 
 EXPOSE 80
