@@ -30,11 +30,13 @@ services:
       - JWT_REFRESH_SECRET
       - JWT_EXPIRES_IN
       - JWT_REFRESH_EXPIRES_IN
+      - COOKIE_SECRET
       - LOG_LEVEL
       - NODE_CLUSTER
       - NODE_ENV=production
       - NODE_TLS_REJECT_UNAUTHORIZED
       - PORT
+      - FRONT_URL
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.${APP_IMAGE_NAME}-back.rule=Host(`${TRAEFIK_BACK_HOST}`)"
@@ -60,12 +62,16 @@ services:
     container_name: "${APP_IMAGE_NAME}-front"
     profiles:
       - frontend
+    environment:
+      - VITE_API_BASE_URL
+      - VITE_ENVIRONMENT
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=proxy"
       - "traefik.http.routers.${APP_IMAGE_NAME}-front.rule=Host(`${TRAEFIK_FRONT_HOST}`)"
       - "traefik.http.routers.${APP_IMAGE_NAME}-front.entrypoints=https"
       - "traefik.http.routers.${APP_IMAGE_NAME}-front.tls=true"
+      - "traefik.http.routers.${APP_IMAGE_NAME}-front.tls.certresolver=ovh"
       - "traefik.http.services.${APP_IMAGE_NAME}-front.loadbalancer.server.port=80"
     networks:
       - proxy
