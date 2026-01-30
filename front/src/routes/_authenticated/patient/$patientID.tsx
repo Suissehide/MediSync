@@ -1,8 +1,4 @@
-import {
-  createFileRoute,
-  useNavigate,
-  useParams,
-} from '@tanstack/react-router'
+import { createFileRoute, useNavigate, useParams } from '@tanstack/react-router'
 import dayjs from 'dayjs'
 import {
   ArrowLeft,
@@ -13,15 +9,18 @@ import {
   CalendarPlus,
   ChevronRight,
   Ellipsis,
+  FileDown,
   LayoutTemplate,
   type LucideIcon,
   Pencil,
   Route as RouteIcon,
   User,
 } from 'lucide-react'
+import { DropdownMenu } from 'radix-ui'
 import { useState } from 'react'
 
 import EditPatient from '../../../components/custom/Patient/edit/edit.patient.tsx'
+import ProgrammePDFModal from '../../../components/custom/Patient/pdf/programme-pdf-modal.tsx'
 import OutcomeReviewPatient from '../../../components/custom/Patient/view/outcome-review.patient.tsx'
 import OverviewPatient from '../../../components/custom/Patient/view/overview.patient.tsx'
 import PathwayInclusionPatient from '../../../components/custom/Patient/view/pathway-inclusion.patient.tsx'
@@ -29,6 +28,10 @@ import PlanningPatient from '../../../components/custom/Patient/view/planning.pa
 import ProfileContextPatient from '../../../components/custom/Patient/view/profile-context.patient.tsx'
 import DashboardLayout from '../../../components/dashboard.layout.tsx'
 import { Button } from '../../../components/ui/button.tsx'
+import {
+  DropdownMenuCustomContent,
+  DropdownMenuCustomItem,
+} from '../../../components/ui/dropdownMenu.tsx'
 import { GENDER } from '../../../constants/patient.constant.ts'
 import { usePatientByIDQuery } from '../../../queries/usePatient.ts'
 
@@ -45,10 +48,13 @@ export type MenuItem = {
 function PatientDetails() {
   const navigate = useNavigate()
 
-  const { patientID } = useParams({ from: '/_authenticated/patient/$patientID' })
+  const { patientID } = useParams({
+    from: '/_authenticated/patient/$patientID',
+  })
   const { patient } = usePatientByIDQuery(patientID)
 
   const [editMode, setEditMode] = useState(false)
+  const [showPDFModal, setShowPDFModal] = useState(false)
 
   const [selected, setSelected] = useState<string>('overview')
   const menuItems: MenuItem[] = [
@@ -146,9 +152,22 @@ function PatientDetails() {
                   <Button type="button" variant="default" size="icon">
                     <CalendarPlus className="h-4 w-4" />
                   </Button>
-                  <Button type="button" variant="outline" size="icon">
-                    <Ellipsis className="h-4 w-4" />
-                  </Button>
+                  <DropdownMenu.Root>
+                    <DropdownMenu.Trigger asChild>
+                      <Button type="button" variant="outline" size="icon">
+                        <Ellipsis className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenu.Trigger>
+                    <DropdownMenuCustomContent align="end">
+                      <DropdownMenuCustomItem
+                        className="gap-2 px-2 py-1.5 text-sm"
+                        onClick={() => setShowPDFModal(true)}
+                      >
+                        <FileDown className="h-4 w-4" />
+                        Exporter le programme en PDF
+                      </DropdownMenuCustomItem>
+                    </DropdownMenuCustomContent>
+                  </DropdownMenu.Root>
                 </div>
               </div>
 
@@ -226,6 +245,13 @@ function PatientDetails() {
             </div>
           </div>
         </div>
+      )}
+
+      {showPDFModal && patient && (
+        <ProgrammePDFModal
+          patient={patient}
+          onClose={() => setShowPDFModal(false)}
+        />
       )}
     </DashboardLayout>
   )

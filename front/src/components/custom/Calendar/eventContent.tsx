@@ -108,13 +108,13 @@ export const EventContent = ({
             e.stopPropagation()
             setOpenEventId?.(`appointment_${appointments[0].id}`)
           }}
-          className="fc-event-hero z-1 flex-1 flex text-xs overflow-y-auto"
+          className={`fc-event-hero z-1 cursor-pointer flex-1 flex flex-col justify-start p-0.5 m-0.5 text-white bg-black/30 truncate px-1 border border-border rounded hover:opacity-80 transition-opacity overflow-hidden`}
         >
           {event.extendedProps.appointments[0].appointmentPatients?.map(
             (appointmentPatient: AppointmentPatient) => (
               <div
                 key={appointmentPatient.patient.id}
-                className={`flex-1 cursor-pointer text-left text-[0.6rem] text-white bg-primary truncate p-0.5 border border-border rounded transition duration-200 hover:bg-primary-dark`}
+                className={`text-left text-[0.6rem] text-white truncate`}
               >
                 {appointmentPatient.patient.firstName}{' '}
                 {appointmentPatient.patient.lastName}
