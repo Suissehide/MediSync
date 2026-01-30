@@ -1,3 +1,7 @@
+networks:
+  proxy:
+    external: true
+
 services:
   back:
     build:
@@ -38,7 +42,8 @@ services:
       - "traefik.http.routers.${APP_IMAGE_NAME}.tls=${TRAEFIK_APP_TLS:-false}"
       - "traefik.http.routers.${APP_IMAGE_NAME}.tls.certresolver=${TRAEFIK_APP_CERT_RESOLVER:-letsencrypt}"
       - "traefik.http.services.${APP_IMAGE_NAME}.loadbalancer.server.port=${PORT}"
-    network_mode: "${DOCKER_NETWORK_MODE}"
+    networks:
+      - proxy
     links:
       - postgres
     depends_on:
@@ -64,7 +69,8 @@ services:
       - "traefik.http.routers.${APP_IMAGE_NAME}-front.entrypoints=${TRAEFIK_APP_ENTRYPOINTS:-websecure}"
       - "traefik.http.routers.${APP_IMAGE_NAME}-front.tls.certresolver=${TRAEFIK_APP_CERT_RESOLVER:-letsencrypt}"
       - "traefik.http.services.${APP_IMAGE_NAME}-front.loadbalancer.server.port=80"
-    network_mode: "${DOCKER_NETWORK_MODE}"
+    networks:
+      - proxy
     restart: unless-stopped
 
 
@@ -75,7 +81,8 @@ services:
       - db
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -d $POSTGRES_DB_NAME -U postgres"]
-    network_mode: "${DOCKER_NETWORK_MODE}"
+    networks:
+      - proxy
     restart: always
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
