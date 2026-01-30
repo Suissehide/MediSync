@@ -19,7 +19,7 @@ services:
     profiles:
       - backend
     healthcheck:
-      test: node -e "require('http').get({hostname:'localhost',port:${PORT},path:'/health',timeout:3000})"
+      test: node -e "require('http').get({hostname:'localhost', port:${PORT}, path:'/health', timeout:3000})"
       retries: 3
       timeout: 3s
     environment:
@@ -37,11 +37,10 @@ services:
       - PORT
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.${APP_IMAGE_NAME}.rule=Host(`${TRAEFIK_BACK_HOST:-${APP_IMAGE_NAME}.localdomain}`)"
-      - "traefik.http.routers.${APP_IMAGE_NAME}.entrypoints=${TRAEFIK_APP_ENTRYPOINTS:-web}"
-      - "traefik.http.routers.${APP_IMAGE_NAME}.tls=${TRAEFIK_APP_TLS:-false}"
-      - "traefik.http.routers.${APP_IMAGE_NAME}.tls.certresolver=${TRAEFIK_APP_CERT_RESOLVER:-letsencrypt}"
-      - "traefik.http.services.${APP_IMAGE_NAME}.loadbalancer.server.port=${PORT}"
+      - "traefik.http.routers.${APP_IMAGE_NAME}-back.rule=Host(`${TRAEFIK_BACK_HOST}`)"
+      - "traefik.http.routers.${APP_IMAGE_NAME}-back.entrypoints=https"
+      - "traefik.http.routers.${APP_IMAGE_NAME}-back.tls=true"
+      - "traefik.http.services.${APP_IMAGE_NAME}-back.loadbalancer.server.port=${PORT}"
     networks:
       - proxy
     depends_on:
@@ -63,9 +62,10 @@ services:
       - frontend
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
       - "traefik.http.routers.${APP_IMAGE_NAME}-front.rule=Host(`${TRAEFIK_FRONT_HOST}`)"
-      - "traefik.http.routers.${APP_IMAGE_NAME}-front.entrypoints=${TRAEFIK_APP_ENTRYPOINTS:-websecure}"
-      - "traefik.http.routers.${APP_IMAGE_NAME}-front.tls.certresolver=${TRAEFIK_APP_CERT_RESOLVER:-letsencrypt}"
+      - "traefik.http.routers.${APP_IMAGE_NAME}-front.entrypoints=https"
+      - "traefik.http.routers.${APP_IMAGE_NAME}-front.tls=true"
       - "traefik.http.services.${APP_IMAGE_NAME}-front.loadbalancer.server.port=80"
     networks:
       - proxy

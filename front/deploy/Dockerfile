@@ -25,11 +25,10 @@ FROM nginx:alpine AS app
 
 WORKDIR /usr/share/nginx/html
 COPY --chown=node:node ../package.json package-lock.json ./
-COPY --chown=node:node --from=app-build /usr/src/app/node_modules/ ./node_modules
 
 RUN rm /etc/nginx/conf.d/default.conf
 COPY --from=app-build /usr/src/app/nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=app-build /usr/src/app/dist ./dist
+COPY --from=app-build /usr/src/app/dist /usr/share/nginx/html/dist
 
 ENV NODE_ENV production
 EXPOSE 80
