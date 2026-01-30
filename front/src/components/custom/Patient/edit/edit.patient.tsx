@@ -15,7 +15,7 @@ import { useState } from 'react'
 
 import { useAppForm } from '../../../../hooks/formConfig.tsx'
 import { usePatientMutations } from '../../../../queries/usePatient.ts'
-import type { MenuItem } from '../../../../routes/patient/$patientID.tsx'
+import type { MenuItem } from '../../../../routes/_authenticated/patient/$patientID.tsx'
 import type { Patient, UpdatePatientParams } from '../../../../types/patient.ts'
 import { Button } from '../../../ui/button.tsx'
 import { DetailsFields } from './details.patient.tsx'
