@@ -42,7 +42,7 @@ services:
       - "traefik.http.routers.${APP_IMAGE_NAME}-back.rule=Host(`${TRAEFIK_BACK_HOST}`)"
       - "traefik.http.routers.${APP_IMAGE_NAME}-back.entrypoints=https"
       - "traefik.http.routers.${APP_IMAGE_NAME}-back.tls=true"
-      - "traefik.http.routers.${APP_IMAGE_NAME}-front.tls.certresolver=ovh"
+      - "traefik.http.routers.${APP_IMAGE_NAME}-back.tls.certresolver=ovh"
       - "traefik.http.services.${APP_IMAGE_NAME}-back.loadbalancer.server.port=${PORT}"
     networks:
       - proxy

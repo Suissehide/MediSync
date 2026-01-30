@@ -28,7 +28,7 @@ COPY --chown=node:node ../package.json package-lock.json ./
 
 RUN rm /etc/nginx/conf.d/default.conf
 COPY --from=app-build /usr/src/app/nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=app-build /usr/src/app/dist/* /usr/share/nginx/html/
+COPY --from=app-build /usr/src/app/dist/ /usr/share/nginx/html/
 
 ENV NODE_ENV production
 EXPOSE 80
