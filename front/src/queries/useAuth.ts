@@ -25,7 +25,6 @@ export const useLogin = () => {
       return await AuthApi.login(email, password)
     },
     onSuccess: (user) => {
-      console.log('USER', user)
       if (!user) {
         return
       }

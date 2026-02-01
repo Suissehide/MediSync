@@ -1,15 +1,25 @@
 name: Deploy production
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type 'yes' to deploy"
+        required: true
+        default: "no"
 
 jobs:
   deploy:
     runs-on: self-hosted
 
     steps:
+      - name: Check confirmation
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "yes" ]; then
+            echo "Deployment cancelled"
+            exit 1
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
