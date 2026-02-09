@@ -9,6 +9,8 @@ RUN npm i -g npm@${NPM_VERSION}
 
 # Built application image
 FROM node-npm AS app-build
+ARG DATABASE_URL
+ENV DATABASE_URL=${DATABASE_URL}
 WORKDIR /usr/src/app
 COPY ../package.json package-lock.json .npmrc ./
 RUN npm ci --prefer-offline --include=dev --ignore-scripts --loglevel verbose
