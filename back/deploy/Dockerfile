@@ -12,7 +12,7 @@ FROM node-npm AS app-build
 WORKDIR /usr/src/app
 COPY ../package.json package-lock.json .npmrc ./
 RUN npm ci --prefer-offline --include=dev --ignore-scripts --loglevel verbose
-COPY ../.swcrc tsconfig.json ./
+COPY ../.swcrc tsconfig.json prisma.config.ts ./
 COPY ../src ./src
 COPY ../prisma ./prisma
 RUN npm run build
@@ -27,6 +27,7 @@ COPY --chown=node:node ../package.json package-lock.json ./
 COPY --chown=node:node --from=app-build /usr/src/app/node_modules/ ./node_modules
 COPY --chown=node:node --from=app-build /usr/src/app/lib/ ./lib
 COPY --chown=node:node --from=app-build /usr/src/app/dist/apidoc ./dist/apidoc
+COPY --chown=node:node ../prisma.config.ts ./
 COPY --chown=node:node ../prisma ./prisma
 ENV NODE_ENV production
 EXPOSE 3000
