@@ -31,7 +31,6 @@ COPY --chown=node:node --from=app-build /usr/src/app/lib/ ./lib
 COPY --chown=node:node --from=app-build /usr/src/app/dist/apidoc ./dist/apidoc
 COPY --chown=node:node ../prisma.config.ts ./
 COPY --chown=node:node ../prisma ./prisma
-COPY --chown=node:node --from=app-build /usr/src/app/prisma/generated ./prisma/generated
 ENV NODE_ENV production
 EXPOSE 3000
 CMD ["dumb-init", "npm", "run", "start:migrate:production"]

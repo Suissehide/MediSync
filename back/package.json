@@ -53,7 +53,7 @@
     "start": "per-env",
     "start:development": "wireit",
     "start:production": "wireit",
-    "start:migrate:production": "npm run prisma:migrate:deploy && node lib/main/index.js",
+    "start:migrate:production": "npx prisma generate && npm run prisma:migrate:deploy && node lib/main/index.js",
     "test": "wireit",
     "test:open": "wireit",
     "test:e2e": "wireit",
