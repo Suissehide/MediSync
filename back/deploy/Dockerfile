@@ -18,6 +18,7 @@ COPY ../.swcrc tsconfig.json prisma.config.ts ./
 COPY ../src ./src
 COPY ../prisma ./prisma
 RUN npm run build
+RUN npx prisma generate
 RUN mkdir -p /usr/src/app/dist/apidoc
 RUN npm prune --omit=dev --ignore-scripts
 
@@ -30,7 +31,7 @@ COPY --chown=node:node --from=app-build /usr/src/app/node_modules/ ./node_module
 COPY --chown=node:node --from=app-build /usr/src/app/lib/ ./lib
 COPY --chown=node:node --from=app-build /usr/src/app/dist/apidoc ./dist/apidoc
 COPY --chown=node:node ../prisma.config.ts ./
-COPY --chown=node:node ../prisma ./prisma
+COPY --chown=node:node --from=app-build /usr/src/app/prisma ./prisma
 ENV NODE_ENV production
 EXPOSE 3000
 CMD ["dumb-init", "npm", "run", "start:migrate:production"]
