@@ -1,4 +1,7 @@
-import type { Prisma, User } from '@prisma/client'
+import type {
+  Prisma,
+  User,
+} from '../../../../../../prisma/generated/prisma/client'
 
 export type UserEntityRepo = User
 export type UserCreateEntityRepo = Pick<

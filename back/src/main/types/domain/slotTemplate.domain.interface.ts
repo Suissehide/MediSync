@@ -1,7 +1,7 @@
-import type { Prisma } from '@prisma/client'
-import type { SoignantEntityDomain } from './soignant.domain.interface'
+import type { Prisma } from '../../../../prisma/generated/prisma/client'
 import type { SlotTemplateEntityRepo } from '../infra/orm/repositories/slotTemplate.repository.interface'
 import type { PathwayTemplateEntityDomain } from './pathwayTemplate.domain.interface'
+import type { SoignantEntityDomain } from './soignant.domain.interface'
 
 export type SlotTemplateEntityDomain = SlotTemplateEntityRepo
 export type SlotTemplateWithSoignantDomain = SlotTemplateEntityRepo & {

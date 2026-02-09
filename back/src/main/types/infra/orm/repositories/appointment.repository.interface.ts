@@ -1,5 +1,7 @@
-import type { Appointment, Prisma } from '@prisma/client'
-
+import type {
+  Appointment,
+  Prisma,
+} from '../../../../../../prisma/generated/prisma/client'
 import type {
   AppointmentPatientEntityRepo,
   AppointmentPatientUpdateEntityRepo,
@@ -37,4 +39,5 @@ export interface AppointmentRepositoryInterface {
     appointmentPatientUpdateParams: AppointmentPatientUpdateEntityRepo,
   ) => Promise<AppointmentPatientEntityRepo>
   delete: (appointmentID: string) => Promise<AppointmentEntityRepo>
+  deleteOrphanedByIds: (appointmentIDs: string[]) => Promise<number>
 }

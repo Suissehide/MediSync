@@ -1,4 +1,7 @@
-import type { AppointmentPatient, Prisma } from '@prisma/client'
+import type {
+  AppointmentPatient,
+  Prisma,
+} from '../../../../../../prisma/generated/prisma/client'
 
 export type AppointmentPatientEntityRepo = AppointmentPatient
 

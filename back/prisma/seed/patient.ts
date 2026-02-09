@@ -1,30 +1,22 @@
-import type { PrismaClient } from '@prisma/client'
+import type { PrismaClient } from '../generated/prisma/client'
+
+import { PATIENTS } from './data/patient'
 
 export default async function seedPatients(prisma: PrismaClient) {
   console.log('→ Seeding patients...')
 
-  await prisma.patient.createMany({
-    data: [
-      {
-        firstName: 'Claire',
-        lastName: 'Martin',
-        gender: 'female',
-        birthDate: new Date('1980-05-10'),
-        phone1: '0612345678',
-        email: 'claire.martin@example.com',
-        createDate: new Date(),
-        medicalDiagnosis: 'Diabète de type 2',
-      },
-      {
-        firstName: 'Julien',
-        lastName: 'Durand',
-        gender: 'male',
-        birthDate: new Date('1975-12-20'),
-        phone1: '0699887766',
-        email: 'julien.durand@example.com',
-        createDate: new Date(),
-        medicalDiagnosis: 'Hypertension',
-      },
-    ],
-  })
+  const createdPatients = await Promise.all(
+    PATIENTS.map((p) =>
+      prisma.patient.create({
+        data: {
+          ...p,
+          createDate: new Date(),
+        },
+      }),
+    ),
+  )
+
+  console.log(`✓ Created ${createdPatients.length} patients`)
+
+  return createdPatients
 }

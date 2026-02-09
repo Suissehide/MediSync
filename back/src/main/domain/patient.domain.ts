@@ -74,8 +74,19 @@ class PatientDomain implements PatientDomainInterface {
     return this.patientRepository.update(patientID, patientUpdateParams)
   }
 
-  delete(patientID: string): Promise<PatientEntityDomain> {
-    return this.patientRepository.delete(patientID)
+  async delete(patientID: string): Promise<PatientEntityDomain> {
+    const patient = await this.patientRepository.findByID(patientID)
+    const appointmentIDs = patient.appointmentPatients.map(
+      (ap) => ap.appointment.id,
+    )
+
+    const deleted = await this.patientRepository.delete(patientID)
+
+    if (appointmentIDs.length > 0) {
+      await this.appointmentRepository.deleteOrphanedByIds(appointmentIDs)
+    }
+
+    return deleted
   }
 
   async enrollPatientInPathways(
@@ -168,8 +179,19 @@ class PatientDomain implements PatientDomainInterface {
       }
     }
 
+    if (failedEnrollments.length > 0) {
+      const issues = failedEnrollments.map((f) => ({
+        pathwayName: f.slotTemplate.name,
+        pathwayTemplateID: f.slotTemplate.id,
+        reason: f.reason,
+      }))
+      await this.patientRepository.update(patient.id, {
+        enrollmentIssues: issues,
+      })
+    }
+
     return {
-      patient,
+      patient: await this.patientRepository.findByID(patient.id),
       enrollments,
       failedEnrollments,
     }

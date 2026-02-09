@@ -1,4 +1,5 @@
 import dayjs from 'dayjs'
+import { AlertTriangle } from 'lucide-react'
 import { useMemo } from 'react'
 
 import { SLOT_LOCATION } from '../../../../constants/slot.constant.ts'
@@ -75,8 +76,28 @@ export default function OverviewPatient({ patient }: OverviewPatientProps) {
     return { upcoming, past }
   }, [slots, patient])
 
+  const enrollmentIssues = patient?.enrollmentIssues
+
   return (
     <div className="relative h-fit flex-1 px-4 py-4 flex flex-col gap-2 border border-border rounded-lg">
+      {enrollmentIssues && enrollmentIssues.length > 0 && (
+        <div className="flex flex-col gap-1 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
+          <div className="flex items-center gap-2 font-medium text-amber-800">
+            <AlertTriangle className="h-4 w-4" />
+            Problèmes d'inscription ({enrollmentIssues.length})
+          </div>
+          <ul className="ml-6 list-disc text-sm text-amber-700">
+            {enrollmentIssues.map((issue) => (
+              <li key={issue.pathwayTemplateID}>
+                <span className="font-medium">{issue.pathwayName ?? issue.pathwayTemplateID}</span>
+                {' : '}
+                {issue.reason}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <ColorLegend
         title="Légende des couleurs"
         className="z-10 absolute right-3 top-3"
@@ -91,7 +112,7 @@ export default function OverviewPatient({ patient }: OverviewPatientProps) {
       <h5 className="mt-4 mb-2 text-sm text-text-light uppercase font-semibold">
         À venir ({patientSlots.upcoming.length})
       </h5>
-      <div className="flex flex-col gap-2 max-h-52 overflow-scroll">
+      <div className="flex flex-col gap-2 max-h-52 overflow-y-auto">
         {patientSlots.upcoming.length > 0 ? (
           patientSlots.upcoming.map((slot) => (
             <AppointmentCard key={slot.id} slot={slot} />
@@ -104,7 +125,7 @@ export default function OverviewPatient({ patient }: OverviewPatientProps) {
       <h5 className="my-2 text-sm text-text-light uppercase font-semibold">
         Passés ({patientSlots.past.length})
       </h5>
-      <div className="flex flex-col gap-2 max-h-52 overflow-scroll">
+      <div className="flex flex-col gap-2 max-h-52 overflow-y-auto">
         {patientSlots.past.length > 0 ? (
           patientSlots.past.map((slot) => (
             <AppointmentCard key={slot.id} slot={slot} />

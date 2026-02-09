@@ -1,4 +1,7 @@
-import type { Prisma, Soignant } from '@prisma/client'
+import type {
+  Prisma,
+  Soignant,
+} from '../../../../../../prisma/generated/prisma/client'
 
 export type SoignantEntityRepo = Soignant
 export type SoignantCreateEntityRepo = Omit<

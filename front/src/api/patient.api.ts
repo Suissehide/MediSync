@@ -6,6 +6,8 @@ import {
 } from '../libs/httpErrorHandler.ts'
 import type {
   CreatePatientParams,
+  EnrollmentResult,
+  EnrollPatientParams,
   Patient,
   UpdatePatientParams,
 } from '../types/patient.ts'
@@ -76,6 +78,20 @@ export const PatientApi = {
     })
     if (!response.ok) {
       handleHttpError(response, {}, 'Impossible de modifier le patient')
+    }
+    return response.json()
+  },
+
+  enroll: async (
+    enrollParams: EnrollPatientParams,
+  ): Promise<EnrollmentResult> => {
+    const response = await fetchWithAuth(`${apiUrl}/patient/enroll`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(enrollParams),
+    })
+    if (!response.ok) {
+      handleHttpError(response, {}, "Impossible d'inscrire le patient")
     }
     return response.json()
   },

@@ -179,3 +179,7 @@ body {
     left: auto;
     right: -4px;
 }
+
+.fc-scroller {
+    overflow: auto !important;
+}

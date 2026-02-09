@@ -1,5 +1,5 @@
 import * as crypto from 'node:crypto'
-import { type PrismaClient, Role } from '@prisma/client'
+import { type PrismaClient, Role } from '../generated/prisma/client'
 
 export function hashPassword(password: string) {
   const salt = crypto.randomBytes(16).toString('hex')
@@ -23,16 +23,16 @@ export default async function seedUsers(prisma: PrismaClient) {
         password: adminPass.hash,
         salt: adminPass.salt,
         firstName: 'Léo',
-        lastName: 'Admin',
+        lastName: 'Couffinhal',
         role: Role.ADMIN,
       },
       {
-        email: 'user@example.com',
+        email: 'sabrina.bernadet@example.com',
         password: userPass.hash,
         salt: userPass.salt,
         firstName: 'Sabrina',
-        lastName: 'User',
-        role: Role.USER,
+        lastName: 'Bernadet',
+        role: Role.ADMIN,
       },
     ],
     skipDuplicates: true,

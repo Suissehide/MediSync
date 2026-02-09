@@ -1,20 +1,23 @@
-import { PrismaClient } from '@prisma/client'
+import 'dotenv/config'
+import { PrismaPg } from '@prisma/adapter-pg'
 
-import seedPathways from './pathway'
+import { PrismaClient } from '../generated/prisma/client'
+import seedPathwayTemplates from './pathwayTemplate'
 import seedPatients from './patient'
 import seedSoignants from './soignant'
 import seedTodos from './todo'
 import seedUsers from './user'
 
-const prisma = new PrismaClient()
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL })
+const prisma = new PrismaClient({ adapter })
 
 async function main() {
   console.log('🌱 Starting database seeding...')
 
   await seedUsers(prisma)
-  const soignantIDs = await seedSoignants(prisma)
+  const soignants = await seedSoignants(prisma)
   await seedPatients(prisma)
-  await seedPathways(prisma, soignantIDs)
+  await seedPathwayTemplates(prisma, soignants)
   await seedTodos(prisma)
 
   console.log('✅ Seeding completed successfully!')

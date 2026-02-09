@@ -1,4 +1,4 @@
-import type { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
+import type { PrismaClientKnownRequestError } from '@prisma/client/runtime/client'
 
 import type {
   ErrorNormalizer,

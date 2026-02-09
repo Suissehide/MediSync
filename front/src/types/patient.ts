@@ -39,9 +39,45 @@ export type Patient = {
 
   // Exit Data
   exitDate?: string
-  stopReason?: string // Motif d’arrêt de programme
+  stopReason?: string // Motif d'arrêt de programme
   etpFinalOutcome?: string // Point final parcours ETP
+
+  // Enrollment
+  enrollmentIssues?: EnrollmentIssue[] | null
+}
+
+export type EnrollmentIssue = {
+  pathwayName?: string
+  pathwayTemplateID: string
+  reason: string
 }
 
 export type CreatePatientParams = Omit<Patient, 'id'>
 export type UpdatePatientParams = Patient
+
+export type TimeOfDay = 'ALL_DAY' | 'MORNING' | 'AFTERNOON'
+
+export type PathwayEnrollment = {
+  pathwayTemplateID: string
+  timeOfDay: TimeOfDay
+  thematic?: string
+  type?: string
+}
+
+export type EnrollPatientParams = {
+  patientData: CreatePatientParams
+  startDate: string
+  pathways: PathwayEnrollment[]
+}
+
+export type EnrollmentResult = {
+  patient: Patient
+  enrollments: {
+    slotTemplate: { id: string; name?: string }
+    appointments: { id?: string; startDate?: string; endDate?: string; success: boolean; error?: string }[]
+  }[]
+  failedEnrollments: {
+    slotTemplate: { id: string; name?: string }
+    reason: string
+  }[]
+}

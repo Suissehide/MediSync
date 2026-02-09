@@ -51,12 +51,17 @@ function PatientDetails() {
   const { patientID } = useParams({
     from: '/_authenticated/patient/$patientID',
   })
-  const { patient } = usePatientByIDQuery(patientID)
+  const { patient, isError, isFetched } = usePatientByIDQuery(patientID)
 
   const [editMode, setEditMode] = useState(false)
   const [showPDFModal, setShowPDFModal] = useState(false)
-
   const [selected, setSelected] = useState<string>('overview')
+
+  if (isFetched && (isError || !patient)) {
+    void navigate({ to: '/patient' })
+    return null
+  }
+
   const menuItems: MenuItem[] = [
     {
       id: 'overview',

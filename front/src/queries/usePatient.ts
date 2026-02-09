@@ -1,12 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { PatientApi } from '../api/patient.api.ts'
-import { PATIENT } from '../constants/process.constant.ts'
+import { APPOINTMENT, PATIENT, SLOT } from '../constants/process.constant.ts'
 import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
 import { useToast } from '../hooks/useToast.ts'
 import type {
   CreatePatientParams,
+  EnrollmentResult,
   Patient,
   UpdatePatientParams,
 } from '../types/patient.ts'
@@ -180,5 +181,41 @@ export const usePatientMutations = () => {
     },
   })
 
-  return { createPatient, deletePatient, updatePatient }
+  const enrollPatient = useMutation({
+    mutationKey: [PATIENT.ENROLL],
+    mutationFn: PatientApi.enroll,
+    onSuccess: (data: EnrollmentResult) => {
+      if (data.failedEnrollments.length > 0) {
+        const issues = data.failedEnrollments
+          .map((f) => `${f.slotTemplate.name ?? f.slotTemplate.id}: ${f.reason}`)
+          .join('\n')
+        toast({
+          title: 'Patient inscrit avec des erreurs',
+          message: issues,
+          severity: TOAST_SEVERITY.WARNING,
+        })
+      } else {
+        toast({
+          title: 'Patient inscrit avec succès',
+          severity: TOAST_SEVERITY.SUCCESS,
+        })
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: "Erreur lors de l'inscription du patient",
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
+    },
+    onSettled: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: [PATIENT.GET_ALL] }),
+        queryClient.invalidateQueries({ queryKey: [SLOT.GET_ALL] }),
+        queryClient.invalidateQueries({ queryKey: [APPOINTMENT.GET_ALL] }),
+      ])
+    },
+  })
+
+  return { createPatient, deletePatient, updatePatient, enrollPatient }
 }

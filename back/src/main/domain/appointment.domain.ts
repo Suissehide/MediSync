@@ -1,7 +1,7 @@
 import type { IocContainer } from '../types/application/ioc'
-import type { AppointmentDomainInterface } from '../types/domain/appointment.domain.interface'
 import type {
   AppointmentCreateEntityDomain,
+  AppointmentDomainInterface,
   AppointmentEntityDomain,
   AppointmentUpdateEntityDomain,
 } from '../types/domain/appointment.domain.interface'

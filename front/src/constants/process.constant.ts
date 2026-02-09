@@ -32,6 +32,7 @@ export const PATIENT = {
   GET_BY_ID: 'get_by_id_patient',
   GET: 'get_patient',
   CREATE: 'create_patient',
+  ENROLL: 'enroll_patient',
   UPDATE: 'update_patient',
   DELETE: 'delete_patient',
 }

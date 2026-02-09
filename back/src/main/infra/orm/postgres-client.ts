@@ -1,5 +1,9 @@
-import { Prisma, PrismaClient } from '@prisma/client'
+import { PrismaPg } from '@prisma/adapter-pg'
 
+import {
+  Prisma,
+  PrismaClient,
+} from '../../../../prisma/generated/prisma/client'
 import type { IocContainer } from '../../types/application/ioc'
 import type {
   PostgresORMInterface,
@@ -30,7 +34,8 @@ const normalizerExtension = Prisma.defineExtension({
 })
 
 function getExtendedClient() {
-  return new PrismaClient().$extends(normalizerExtension)
+  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL })
+  return new PrismaClient({ adapter }).$extends(normalizerExtension)
 }
 
 export type PostgresPrismaClient = ReturnType<typeof getExtendedClient>
@@ -41,39 +46,7 @@ class PostgresOrm implements PostgresORMInterface {
 
   constructor({ logger }: IocContainer) {
     this.logger = logger
-    const prisma = new PrismaClient({
-      log: [
-        {
-          emit: 'event',
-          level: 'query',
-        },
-        {
-          emit: 'event',
-          level: 'error',
-        },
-        {
-          emit: 'event',
-          level: 'info',
-        },
-        {
-          emit: 'event',
-          level: 'warn',
-        },
-      ],
-    })
     this.prisma = getExtendedClient()
-    prisma.$on('query', (e) => {
-      logger.trace(`prisma query: ${e.query} [${e.params}] (${e.duration}ms)`)
-    })
-    prisma.$on('error', (e) => {
-      logger.error(e.message)
-    })
-    prisma.$on('warn', (e) => {
-      logger.warn(e.message)
-    })
-    prisma.$on('info', (e) => {
-      logger.info(e.message)
-    })
   }
 
   async start(): Promise<void> {

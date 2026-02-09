@@ -1,4 +1,4 @@
-import type { PathwayTemplate, Prisma } from '@prisma/client'
+import type { PathwayTemplate, Prisma } from '../../../../prisma/generated/prisma/client'
 
 import type { SlotTemplateWithSoignantDomain } from './slotTemplate.domain.interface'
 

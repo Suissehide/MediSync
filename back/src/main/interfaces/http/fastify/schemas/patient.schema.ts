@@ -46,9 +46,16 @@ export const patientSchema = z.object({
   ...patientEntity,
 })
 
+export const enrollmentIssueSchema = z.object({
+  pathwayName: z.string().optional(),
+  pathwayTemplateID: z.string(),
+  reason: z.string(),
+})
+
 export const patientResponseSchema = z.object({
   id: z.cuid(),
   ...patientEntity,
+  enrollmentIssues: z.array(enrollmentIssueSchema).optional().nullable(),
 })
 
 export const patientsResponseSchema = z.array(patientResponseSchema)
@@ -97,15 +104,26 @@ export const enrollExistingPatientInPathwaysSchema = z.object({
   pathways: z.array(pathwayEnrollmentSchema).optional().default([]),
 })
 
-export const enrollmentResultItemSchema = z.object({
-  slotTemplateID: z.cuid(),
+export const enrollmentAppointmentSchema = z.object({
+  id: z.cuid().optional(),
+  startDate: z.coerce.date().optional(),
+  endDate: z.coerce.date().optional(),
   success: z.boolean(),
-  appointmentID: z.cuid().optional(),
   error: z.string().optional(),
 })
 
+export const slotTemplateRefSchema = z.object({
+  id: z.string(),
+  name: z.string().optional(),
+})
+
+export const enrollmentResultItemSchema = z.object({
+  slotTemplate: slotTemplateRefSchema,
+  appointments: z.array(enrollmentAppointmentSchema),
+})
+
 export const failedEnrollmentSchema = z.object({
-  slotTemplateID: z.cuid(),
+  slotTemplate: slotTemplateRefSchema,
   reason: z.string(),
 })
 

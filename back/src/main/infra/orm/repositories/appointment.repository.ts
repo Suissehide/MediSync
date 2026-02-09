@@ -173,6 +173,17 @@ class AppointmentRepository implements AppointmentRepositoryInterface {
     }
   }
 
+  async deleteOrphanedByIds(appointmentIDs: string[]): Promise<number> {
+    if (appointmentIDs.length === 0) return 0
+    const result = await this.prisma.appointment.deleteMany({
+      where: {
+        id: { in: appointmentIDs },
+        appointmentPatients: { none: {} },
+      },
+    })
+    return result.count
+  }
+
   async delete(appointmentID: string): Promise<AppointmentEntityRepo> {
     try {
       return await this.prisma.appointment.delete({

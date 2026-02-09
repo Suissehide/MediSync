@@ -1,5 +1,4 @@
-import { Role } from '@prisma/client'
-
+import { Role } from '../../../../../prisma/generated/prisma/enums'
 import type { IocContainer } from '../../../types/application/ioc'
 import type {
   UserCreateEntityRepo,

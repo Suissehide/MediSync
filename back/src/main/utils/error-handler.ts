@@ -1,6 +1,6 @@
 import { Boom, conflict, internal, notFound } from '@hapi/boom'
-import { Prisma } from '@prisma/client'
 
+import { Prisma } from '../../../prisma/generated/prisma/client'
 import PrismaErrorCodes from '../infra/orm/error-codes-prisma'
 import {
   buildBoomError,
@@ -29,19 +29,24 @@ class ErrorHandler implements ErrorHandlerInterface {
     if (error instanceof Boom) {
       boomError = error
     } else if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      const { code, message } = error
-      this.logger.debug(`Error Code: ${code}`)
-      this.logger.debug(message)
+      const { code, message, meta } = error
+      this.logger.debug(`Prisma Error [${code}] on ${entityName}: ${message}`)
+      if (meta) {
+        this.logger.debug(`Prisma meta: ${JSON.stringify(meta)}`)
+      }
       if (code === PrismaErrorCodes.OPERATION_DEPENDS_ON_MISSING_RECORD) {
-        boomError = notFound(`${entityName} with this ID doesn't exist`)
+        const cause = meta?.cause ?? `${entityName} with this ID doesn't exist`
+        boomError = notFound(`${entityName}: ${cause}`)
       }
       if (code === PrismaErrorCodes.FOREIGN_KEY_CONSTRAINT_FAILED) {
-        boomError = notFound(`${parentEntityName} with this ID doesn't exist`)
+        const field = parentEntityName ?? meta?.constraint ?? 'unknown relation'
+        boomError = conflict(
+          `${entityName} cannot be deleted because it has related records (${field})`,
+        )
       }
       if (code === PrismaErrorCodes.OPERATION_FAILED_ON_UNIQUE_CONSTRAINT) {
-        boomError = conflict(
-          `${entityName} cannot be created because it already exists`,
-        )
+        const target = meta?.target ?? 'unknown field'
+        boomError = conflict(`${entityName} already exists (${target})`)
       }
     }
     return boomError

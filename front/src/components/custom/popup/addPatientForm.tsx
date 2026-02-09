@@ -15,11 +15,11 @@ import { APPOINTMENT_TYPE_OPTIONS } from '../../../constants/appointment.constan
 import { GENDER_OPTIONS } from '../../../constants/patient.constant.ts'
 import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { usePathwayTemplateQueries } from '../../../queries/usePathwayTemplate.ts'
-import type { CreatePatientParams } from '../../../types/patient.ts'
+import { usePatientMutations } from '../../../queries/usePatient.ts'
+import type { CreatePatientParams, TimeOfDay } from '../../../types/patient.ts'
 import { Button } from '../../ui/button.tsx'
-import { FieldInfo } from '../../ui/fieldInfo.tsx'
 import { FormField } from '../../ui/formField.tsx'
-import { Input, Select } from '../../ui/input.tsx'
+import { Select } from '../../ui/input.tsx'
 import { Label } from '../../ui/label.tsx'
 import { MultiSelect } from '../../ui/multiSelect.tsx'
 import {
@@ -31,10 +31,6 @@ import {
   PopupTitle,
   PopupTrigger,
 } from '../../ui/popup.tsx'
-
-interface AddAppointmentFormProps {
-  handleCreatePatient: (newPatient: CreatePatientParams) => void
-}
 
 type PathwayPeriod = 'morning' | 'afternoon' | 'fullday'
 
@@ -48,10 +44,11 @@ interface AddedPathway {
   type: string
 }
 
-function AddPatientForm({ handleCreatePatient }: AddAppointmentFormProps) {
+function AddPatientForm() {
   const [open, setOpen] = useState(false)
   const [step, setStep] = useState(1)
   const { pathwayTemplates } = usePathwayTemplateQueries()
+  const { enrollPatient } = usePatientMutations()
 
   const [selectedPathways, setSelectedPathways] = useState([] as string[])
   const [addedPathways, setAddedPathways] = useState<AddedPathway[]>([])
@@ -135,28 +132,30 @@ function AddPatientForm({ handleCreatePatient }: AddAppointmentFormProps) {
       birthDate: '',
       startDate: dayjs(),
     },
-    onSubmit: ({ value }) => {
-      const newPatient = {
-        firstName: value.firstName,
-        lastName: value.lastName,
-        gender: value.gender,
-        birthDate: value.birthDate,
-      } satisfies CreatePatientParams
+    onSubmit: async ({ value }) => {
+      const periodToTimeOfDay: Record<PathwayPeriod, TimeOfDay> = {
+        morning: 'MORNING',
+        afternoon: 'AFTERNOON',
+        fullday: 'ALL_DAY',
+      }
 
-      console.log('Submitting patient:', value, newPatient, addedPathways)
-
-      const enrollPatient = {
-        patientData: newPatient,
-        startDate: value.startDate,
-        pathway: addedPathways.map((p) => ({
-          slotTemplateID: p.pathwayTemplateId,
-          timeOfDay: p.period,
+      await enrollPatient.mutateAsync({
+        patientData: {
+          firstName: value.firstName,
+          lastName: value.lastName,
+          gender: value.gender,
+          birthDate: value.birthDate,
+        } satisfies CreatePatientParams,
+        startDate: value.startDate.toISOString(),
+        pathways: addedPathways.map((p) => ({
+          pathwayTemplateID: p.pathwayTemplateId,
+          timeOfDay: periodToTimeOfDay[p.period],
           thematic: p.thematic,
           type: p.type,
         })),
-      }
+      })
 
-      // handleCreatePatient(newPatient)
+      setOpen(false)
     },
   })
 

@@ -1,10 +1,10 @@
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "./generated/prisma"
 }
 
 enum Role {
@@ -64,7 +64,7 @@ model AppointmentPatient {
   transmissionNotes String?
 
   appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
-  patient     Patient     @relation(fields: [patientId], references: [id])
+  patient     Patient     @relation(fields: [patientId], references: [id], onDelete: Cascade)
 
   @@unique([appointmentId, patientId])
 }
@@ -155,7 +155,8 @@ model Patient {
   stopReason      String? // Motif d’arrêt de programme
   etpFinalOutcome String? // Point final parcours ETP
 
-  createDate DateTime
+  createDate       DateTime
+  enrollmentIssues Json?
 
   appointmentPatients AppointmentPatient[]
 }
