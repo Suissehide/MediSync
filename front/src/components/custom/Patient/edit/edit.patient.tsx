@@ -67,11 +67,13 @@ export default function EditPatient({ patient, setEditMode }: PatientParam) {
     },
   ]
 
+  const { enrollmentIssues: _, id: __, ...patientFormValues } = patient ?? {}
+
   const form = useAppForm({
     ...patientFormOpts,
     defaultValues: {
       ...patientFormOpts.defaultValues,
-      ...patient,
+      ...patientFormValues,
     },
     onSubmit: ({ value }) => {
       if (!patient?.id) {
