@@ -1,5 +1,6 @@
 networks:
   proxy:
+    name: proxy
     external: true
 
 services:
@@ -78,7 +79,6 @@ services:
     networks:
       - proxy
     restart: unless-stopped
-
 
   postgres:
     container_name: "${APP_IMAGE_NAME}-postgres"
