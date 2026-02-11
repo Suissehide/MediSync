@@ -1,4 +1,4 @@
-import type { Prisma } from '../../../../prisma/generated/prisma/client'
+import type { Prisma } from 'generated/prisma/client'
 import type { SlotTemplateEntityRepo } from '../infra/orm/repositories/slotTemplate.repository.interface'
 import type { PathwayTemplateEntityDomain } from './pathwayTemplate.domain.interface'
 import type { SoignantEntityDomain } from './soignant.domain.interface'

@@ -1,6 +1,6 @@
 import { Boom, conflict, internal, notFound } from '@hapi/boom'
 
-import { Prisma } from '../../../prisma/generated/prisma/client'
+import { Prisma } from 'generated/prisma/client'
 import PrismaErrorCodes from '../infra/orm/error-codes-prisma'
 import {
   buildBoomError,

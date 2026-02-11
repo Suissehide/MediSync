@@ -1,6 +1,6 @@
 import type { ITXClientDenyList } from '@prisma/client/runtime/client'
 
-import type { Prisma } from '../../../../../prisma/generated/prisma/client'
+import type { Prisma } from 'generated/prisma/client'
 import type { PostgresPrismaClient } from '../../../infra/orm/postgres-client'
 
 export interface PostgresORMInterface extends Orm {

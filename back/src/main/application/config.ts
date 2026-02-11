@@ -1,14 +1,13 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
-
 import { config as configDotenv } from 'dotenv'
+import type { SignOptions } from 'jsonwebtoken'
 import { levels } from 'pino'
 import { z } from 'zod/v4'
 
 import baseDir from '../base-dir'
 import type { ConfigEnvVars } from '../types/application/config'
 import { pickFromDict, toCamelCase } from '../utils/helper'
-import type { SignOptions } from 'jsonwebtoken'
 
 const isDevelopment = process.env.NODE_ENV === 'development'
 const isTestRunning = process.env.JEST_RUNNING === 'true'
@@ -44,7 +43,7 @@ const configSchema = z.object({
   port: z
     .string()
     .default('0')
-    .transform((val) => Number.parseInt(val)),
+    .transform((val) => Number.parseInt(val, 10)),
   mockServerPort: z
     .string()
     .default('4000')

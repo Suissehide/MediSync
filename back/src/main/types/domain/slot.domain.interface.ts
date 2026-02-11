@@ -1,4 +1,4 @@
-import type { Prisma } from '../../../../prisma/generated/prisma/client'
+import type { Prisma } from 'generated/prisma/client'
 
 import type { SlotEntityRepo } from '../infra/orm/repositories/slot.repository.interface'
 import type { AppointmentWithPatients } from './appointment.domain.interface'

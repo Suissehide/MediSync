@@ -1,7 +1,7 @@
 import type {
   Patient,
   Prisma,
-} from '../../../../../../prisma/generated/prisma/client'
+} from 'generated/prisma/client'
 import type { PatientWithAppointmentsDomain } from '../../../domain/patient.domain.interface'
 
 export type PatientEntityRepo = Patient

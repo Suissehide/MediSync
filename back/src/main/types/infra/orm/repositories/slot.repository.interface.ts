@@ -1,7 +1,7 @@
 import type {
   Prisma,
   Slot,
-} from '../../../../../../prisma/generated/prisma/client'
+} from 'generated/prisma/client'
 import type { AppointmentWithPatientsRepo } from './appointment.repository.interface'
 import type { PathwayEntityRepo } from './pathway.repository.interface'
 import type {
