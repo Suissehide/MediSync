@@ -1,7 +1,7 @@
 import type {
   Prisma,
   Soignant,
-} from 'generated/prisma/client'
+} from '../../../../../../prisma/generated/prisma/client'
 
 export type SoignantEntityRepo = Soignant
 export type SoignantCreateEntityRepo = Omit<

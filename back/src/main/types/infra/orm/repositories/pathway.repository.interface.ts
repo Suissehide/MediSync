@@ -1,7 +1,7 @@
 import type {
   Pathway,
   Prisma,
-} from 'generated/prisma/client'
+} from '../../../../../../prisma/generated/prisma/client'
 import type { SlotWithTemplateAndAppointmentsRepo } from './slot.repository.interface'
 
 export type PathwayEntityRepo = Pathway

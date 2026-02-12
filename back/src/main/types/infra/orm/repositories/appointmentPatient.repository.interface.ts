@@ -1,7 +1,7 @@
 import type {
   AppointmentPatient,
   Prisma,
-} from 'generated/prisma/client'
+} from '../../../../../../prisma/generated/prisma/client'
 
 export type AppointmentPatientEntityRepo = AppointmentPatient
 

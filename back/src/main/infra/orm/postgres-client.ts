@@ -3,7 +3,7 @@ import { PrismaPg } from '@prisma/adapter-pg'
 import {
   Prisma,
   PrismaClient,
-} from 'generated/prisma/client'
+} from '../../../../prisma/generated/prisma/client'
 import type { IocContainer } from '../../types/application/ioc'
 import type {
   PostgresORMInterface,

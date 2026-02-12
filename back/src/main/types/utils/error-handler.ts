@@ -1,4 +1,5 @@
 import type { Boom } from '@hapi/boom'
+
 import type { ErrorWithProps } from '../../interfaces/http/fastify/util/boom-error-wrapper'
 
 export interface InputErrorHandler {

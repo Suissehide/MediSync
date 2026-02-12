@@ -1,4 +1,4 @@
-import type { AppointmentPatient } from 'generated/prisma/client'
+import type { AppointmentPatient } from '../../../../prisma/generated/prisma/client'
 import type { AppointmentPatientUpdateEntityRepo } from '../infra/orm/repositories/appointmentPatient.repository.interface'
 import type { AppointmentEntityDomain } from './appointment.domain.interface'
 

@@ -1,8 +1,8 @@
 import Boom from '@hapi/boom'
 import type { FastifyPluginAsync } from 'fastify'
-import { Role } from 'generated/prisma/enums'
 import { z } from 'zod/v4'
 
+import { Role } from '../../../../../../prisma/generated/prisma/enums'
 import type {
   DeleteUserByIdParams,
   GetUserByIdParams,

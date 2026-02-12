@@ -1,4 +1,4 @@
-import type { Pathway, Prisma } from 'generated/prisma/client'
+import type { Pathway, Prisma } from '../../../../prisma/generated/prisma/client'
 
 export type PathwayEntityDomain = Pathway
 export type PathwayCreateEntityDomain = Omit<
