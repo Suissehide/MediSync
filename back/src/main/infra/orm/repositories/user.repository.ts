@@ -1,4 +1,4 @@
-import { Role } from '../../../../../prisma/generated/prisma/enums'
+import { Role } from '../../../../generated/enums'
 import type { IocContainer } from '../../../types/application/ioc'
 import type {
   UserCreateEntityRepo,

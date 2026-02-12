@@ -1,4 +1,4 @@
-import type { Appointment } from '../../../../prisma/generated/prisma/client'
+import type { Appointment } from '../../../generated/client'
 import type {
   AppointmentCreateEntityRepo,
   AppointmentUpdateEntityRepo,

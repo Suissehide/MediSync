@@ -1,9 +1,6 @@
 import { PrismaPg } from '@prisma/adapter-pg'
 
-import {
-  Prisma,
-  PrismaClient,
-} from '../../../../prisma/generated/prisma/client'
+import { Prisma, PrismaClient } from '../../../generated/client'
 import type { IocContainer } from '../../types/application/ioc'
 import type {
   PostgresORMInterface,

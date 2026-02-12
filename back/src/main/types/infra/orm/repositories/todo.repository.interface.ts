@@ -1,7 +1,7 @@
 import type {
   Prisma,
   Todo,
-} from '../../../../../../prisma/generated/prisma/client'
+} from '../../../../../generated/client'
 
 export type TodoEntityRepo = Todo
 export type TodoCreateEntityRepo = Prisma.TodoUncheckedCreateInput
