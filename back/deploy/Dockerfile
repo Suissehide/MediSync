@@ -38,7 +38,6 @@ COPY --chown=node:node --from=app-build /usr/src/app/node_modules/ ./node_module
 COPY --chown=node:node --from=app-build /usr/src/app/lib ./lib
 COPY --chown=node:node --from=app-build /usr/src/app/dist/apidoc ./dist/apidoc
 COPY --chown=node:node --from=app-build /usr/src/app/prisma ./prisma
-COPY --chown=node:node --from=app-build /usr/src/app/src/generated ./lib/generated
 COPY --chown=node:node ../prisma.config.ts ./
 
 ENV NODE_ENV production

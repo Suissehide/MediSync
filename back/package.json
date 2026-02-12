@@ -95,7 +95,7 @@
       "output": []
     },
     "build:transpile": {
-      "command": "swc -s --strip-leading-paths -d lib src/main",
+      "command": "swc -s --strip-leading-paths -d lib src",
       "files": [
         "tsconfig.json",
         "src/tsconfig.json",
