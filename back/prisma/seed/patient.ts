@@ -1,5 +1,4 @@
-import type { PrismaClient } from '../generated/prisma/client'
-
+import type { PrismaClient } from '../../src/generated/client'
 import { PATIENTS } from './data/patient'
 
 export default async function seedPatients(prisma: PrismaClient) {

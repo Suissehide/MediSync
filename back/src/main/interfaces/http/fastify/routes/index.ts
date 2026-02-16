@@ -13,6 +13,10 @@ import { todoRouter } from './todo'
 import { userRouter } from './user'
 
 const routes: FastifyPluginAsyncZod = async (fastify) => {
+  fastify.get('/', async () => {
+    return { name: 'MediSync API', status: 'running' }
+  })
+
   await fastify.register(healthcheckRouter)
   await fastify.register(authRouter, { prefix: '/auth' })
   await fastify.register(userRouter, { prefix: '/user' })

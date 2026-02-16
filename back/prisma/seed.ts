@@ -1,12 +1,12 @@
 import 'dotenv/config'
 import { PrismaPg } from '@prisma/adapter-pg'
 
-import { PrismaClient } from '../generated/prisma/client'
-import seedPathwayTemplates from './pathwayTemplate'
-import seedPatients from './patient'
-import seedSoignants from './soignant'
-import seedTodos from './todo'
-import seedUsers from './user'
+import { PrismaClient } from '../src/generated/client'
+import seedPathwayTemplates from './seed/pathwayTemplate'
+import seedPatients from './seed/patient'
+import seedSoignants from './seed/soignant'
+import seedTodos from './seed/todo'
+import seedUsers from './seed/user'
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL })
 const prisma = new PrismaClient({ adapter })

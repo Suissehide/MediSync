@@ -22,6 +22,7 @@ COPY ../src ./src
 COPY ../prisma ./prisma
 
 RUN npx prisma generate
+RUN cp prisma/seed.ts src/seed.ts && cp -r prisma/seed src/seed
 RUN npm run build
 RUN mkdir -p /usr/src/app/dist/apidoc
 

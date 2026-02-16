@@ -1,21 +1,16 @@
-import type { PrismaClient, Soignant } from '../generated/prisma/client'
-
+import type { PrismaClient, Soignant } from '../../src/generated/client'
 import {
-  PATHWAYS,
   PATHWAY_DATA,
-  SOIGNANT_MAP,
+  PATHWAYS,
   type SlotData,
+  SOIGNANT_MAP,
 } from './data/pathwayTemplate'
 
 /**
  * Calculer offsetDays
  */
-function calculateOffsetDays(
-  weekCalendar: number,
-  weekStart: number,
-  dayOfWeek: number,
-): number {
-  return (weekCalendar - weekStart) * 7 + dayOfWeek
+function calculateOffsetDays(weekCalendar: number, dayOfWeek: number): number {
+  return weekCalendar * 7 + dayOfWeek
 }
 
 export default async function seedPathwayTemplates(
@@ -77,11 +72,7 @@ function createSlotTemplate(
   const endTime = new Date('1970-01-01T00:00:00Z')
   endTime.setUTCHours(endHour, endMinute, 0, 0)
 
-  const offsetDays = calculateOffsetDays(
-    data.weekCalendar,
-    data.weekStart,
-    data.dayOfWeek,
-  )
+  const offsetDays = calculateOffsetDays(data.weekCalendar, data.dayOfWeek)
 
   return {
     startTime,

@@ -1,4 +1,4 @@
-import type { PrismaClient } from '../generated/prisma/client'
+import type { PrismaClient } from '../../src/generated/client'
 
 export default async function seedTodos(prisma: PrismaClient) {
   console.log('→ Seeding todos...')

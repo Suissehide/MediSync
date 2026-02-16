@@ -3,12 +3,13 @@ import fastifyCors, { type FastifyCorsOptions } from '@fastify/cors'
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import fastifyGracefulShutdown from 'fastify-graceful-shutdown'
 import fastifyPlugin from 'fastify-plugin'
+
 import { registerPlugin } from '../util/fastify-plugin.registerer'
 import { apidocPlugin } from './apidoc.plugin'
 import { awilixPlugin } from './awilix.plugin'
+import { cookiePlugin } from './cookie.plugin'
 import { jwtPlugin } from './jwt.plugin'
 import { ormPlugin } from './orm.plugin'
-import { cookiePlugin } from './cookie.plugin'
 
 const plugins: FastifyPluginAsync = fastifyPlugin(
   async (fastify: FastifyInstance) => {

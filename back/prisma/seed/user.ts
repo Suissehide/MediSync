@@ -1,5 +1,6 @@
 import * as crypto from 'node:crypto'
-import { type PrismaClient, Role } from '../generated/prisma/client'
+
+import { type PrismaClient, Role } from '../../src/generated/client'
 
 export function hashPassword(password: string) {
   const salt = crypto.randomBytes(16).toString('hex')
