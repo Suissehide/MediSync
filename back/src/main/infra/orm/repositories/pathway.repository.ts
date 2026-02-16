@@ -5,6 +5,7 @@ import type {
   PathwayRepositoryInterface,
   PathwayUpdateEntityRepo,
   PathwayWithSlotsRepo,
+  PathwayWithTemplateAndSlotsRepo,
 } from '../../../types/infra/orm/repositories/pathway.repository.interface'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { PostgresPrismaClient } from '../postgres-client'
@@ -18,8 +19,13 @@ class PathwayRepository implements PathwayRepositoryInterface {
     this.errorHandler = errorHandler
   }
 
-  findAll(): Promise<PathwayEntityRepo[]> {
-    return this.prisma.pathway.findMany()
+  findAll(): Promise<PathwayWithTemplateAndSlotsRepo[]> {
+    return this.prisma.pathway.findMany({
+      include: {
+        template: true,
+        slots: true,
+      },
+    })
   }
 
   async findByID(pathwayID: string): Promise<PathwayEntityRepo> {

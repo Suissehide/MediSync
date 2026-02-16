@@ -39,7 +39,7 @@ function SidebarSoignant({ user }: SidebarSoignantProps) {
         <p>Soignants</p>
         {isAdmin && <AddSoignantForm />}
       </div>
-      <ul>
+      <ul className="flex-1 flex flex-col min-h-0 overflow-y-auto border-b border-border pb-2">
         {soignants.map((soignant) => (
           <li
             key={soignant.id}

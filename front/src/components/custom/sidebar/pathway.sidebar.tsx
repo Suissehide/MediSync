@@ -54,13 +54,13 @@ function SidebarPathway() {
         <p>Parcours</p>
         <AddPathwayForm />
       </div>
-      <div ref={containerRef}>
+      <div ref={containerRef} className="flex-1 flex flex-col min-h-0">
         {isPending ? (
           <div className="h-full flex justify-center items-center">
             <Loader2Icon className="size-10 animate-spin text-foreground" />
           </div>
         ) : (
-          <ul className="space-y-2">
+          <ul className="flex-1 flex flex-col min-h-0 space-y-2 overflow-y-auto border-b border-border pb-2">
             {pathwayTemplates?.map((pathwayTemplate) => {
               const isSelected =
                 currentPathwayTemplate?.id === pathwayTemplate.id

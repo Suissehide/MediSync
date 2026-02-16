@@ -5,6 +5,7 @@ import type {
   PathwayDomainInterface,
   PathwayEntityDomain,
   PathwayUpdateEntityDomain,
+  PathwayWithTemplateAndSlotsDomain,
 } from '../types/domain/pathway.domain.interface'
 import type { PathwayRepositoryInterface } from '../types/infra/orm/repositories/pathway.repository.interface'
 
@@ -15,7 +16,7 @@ class PathwayDomain implements PathwayDomainInterface {
     this.pathwayRepository = pathwayRepository
   }
 
-  findAll(): Promise<PathwayEntityDomain[]> {
+  findAll(): Promise<PathwayWithTemplateAndSlotsDomain[]> {
     return this.pathwayRepository.findAll()
   }
 

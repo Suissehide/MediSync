@@ -42,13 +42,13 @@ function Sidebar({ isVisible, components }: SidebarProps) {
       } bg-card text-text text-sm`}
     >
       <div className="flex flex-col justify-between h-full px-2 py-4">
-        <div>
+        <div className="flex flex-col flex-1 min-h-0">
           <div className="flex justify-between items-center mb-6 mt-2">
             <h2 className="px-2 text-3xl font-bold">
               <span className="text-primary">Medi</span>Sync
             </h2>
           </div>
-          <div>
+          <div className="flex flex-col flex-1 min-h-0">
             {components.map((key) => (
               <Fragment key={key}>{componentMap[key] || null}</Fragment>
             ))}

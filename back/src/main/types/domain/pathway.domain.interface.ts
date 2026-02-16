@@ -1,6 +1,10 @@
-import type { Pathway, Prisma } from '../../../generated/client'
+import type { Pathway, PathwayTemplate, Prisma, Slot } from '../../../generated/client'
 
 export type PathwayEntityDomain = Pathway
+export type PathwayWithTemplateAndSlotsDomain = PathwayEntityDomain & {
+  template: PathwayTemplate | null
+  slots: Slot[]
+}
 export type PathwayCreateEntityDomain = Omit<
   Prisma.PathwayUncheckedCreateInput,
   'slots' | 'template'
@@ -17,7 +21,7 @@ export type PathwayUpdateEntityDomain = Omit<
 }
 
 export interface PathwayDomainInterface {
-  findAll: () => Promise<PathwayEntityDomain[]>
+  findAll: () => Promise<PathwayWithTemplateAndSlotsDomain[]>
   findByID: (pathwayID: string) => Promise<PathwayEntityDomain>
   create: (
     pathwayCreateParams: PathwayCreateEntityDomain,

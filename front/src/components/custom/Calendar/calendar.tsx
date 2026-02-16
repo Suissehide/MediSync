@@ -177,7 +177,7 @@ function Calendar({
         headerToolbar={
           headerToolbar ?? {
             left: 'title',
-            center: 'dayGridMonth,timeGridWeek,listWeek',
+            center: 'timeGridWeek,dayGridDay,listWeek',
             right: 'selectDateButton prev,next today',
           }
         }
