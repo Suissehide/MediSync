@@ -1,6 +1,5 @@
 import '../styles/_globals.css'
 
-import { ToastProvider } from '@radix-ui/react-toast'
 import type React from 'react'
 
 import { ThemeProvider } from './themeProvider.tsx'
@@ -19,10 +18,8 @@ export default function RootLayout({
       scaling="100%"
       radius="medium"
     >
-      <ToastProvider>
-        {children}
-        <Toaster />
-      </ToastProvider>
+      {children}
+      <Toaster />
     </ThemeProvider>
   )
 }

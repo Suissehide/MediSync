@@ -1,5 +1,6 @@
 import { Trash, X } from 'lucide-react'
 import { useState } from 'react'
+import type React from 'react'
 
 import { useSoignantMutations } from '../../../queries/useSoignant.ts'
 import type { Soignant } from '../../../types/soignant.ts'
@@ -16,9 +17,13 @@ import {
 
 interface DeleteSoignantFormProps {
   soignant: Soignant
+  trigger?: React.ReactNode
 }
 
-function DeleteSoignantForm({ soignant }: DeleteSoignantFormProps) {
+function DeleteSoignantForm({
+  soignant,
+  trigger,
+}: DeleteSoignantFormProps) {
   const [open, setOpen] = useState(false)
   const { deleteSoignant } = useSoignantMutations()
 
@@ -28,10 +33,12 @@ function DeleteSoignantForm({ soignant }: DeleteSoignantFormProps) {
 
   return (
     <Popup modal={true} open={open} onOpenChange={setOpen}>
-      <PopupTrigger variant="absolute" size="icon" asChild>
-        <Button type="button" onClick={() => setOpen(true)}>
-          <Trash className="w-4 h-4 text-red-500" />
-        </Button>
+      <PopupTrigger asChild>
+        {trigger ?? (
+          <Button variant="absolute" size="icon" onClick={() => setOpen(true)}>
+            <Trash className="w-4 h-4 text-red-500" />
+          </Button>
+        )}
       </PopupTrigger>
 
       <PopupContent>

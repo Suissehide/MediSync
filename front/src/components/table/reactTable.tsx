@@ -35,12 +35,14 @@ import {
   textFilterFn,
 } from './filtersFns'
 import { HeaderTable } from './headerTable.js'
+import { PaginationTable } from './paginationTable.tsx'
 import { VirtualizedBodyTable } from './virtualizedBodyTable'
 
 export type CustomMeta<TData, TValue> = {
   pin?: 'left' | 'right'
   headerClass?: string
   grow?: boolean
+  align?: 'left' | 'center' | 'right'
   filter?: FC<{ column: Column<TData, TValue> }>
 }
 
@@ -55,7 +57,11 @@ type ReactTableProps<TData extends { id: string }> = {
   title?: string
   customHeader?: (rows: Row<TData>[]) => ReactNode
   filterId?: string
-  infiniteScroll?: boolean
+  pagination?: boolean
+  onRowClick?: (row: TData) => void
+  maxHeight?: string
+  emptyState?: ReactNode
+  isRowDisabled?: (row: TData) => boolean
 }
 
 export function ReactTable<TData extends { id: string }>({
@@ -64,7 +70,11 @@ export function ReactTable<TData extends { id: string }>({
   title,
   customHeader,
   filterId = 'default',
-  infiniteScroll = true,
+  pagination = false,
+  onRowClick,
+  maxHeight = '600px',
+  emptyState,
+  isRowDisabled,
 }: ReactTableProps<TData>) {
   const initialColumnFilters = safeParse(
     localStorage.getItem(`filters/${filterId}`),
@@ -81,9 +91,9 @@ export function ReactTable<TData extends { id: string }>({
     initialColumnVisibility,
   )
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
-  const [pagination, setPagination] = useState<PaginationState>({
+  const [paginationState, setPaginationState] = useState<PaginationState>({
     pageIndex: 0,
-    pageSize: 50,
+    pageSize: 25,
   })
 
   const table = useReactTable({
@@ -93,7 +103,7 @@ export function ReactTable<TData extends { id: string }>({
       columnVisibility,
       rowSelection,
       columnFilters,
-      ...(infiniteScroll ? {} : { pagination }),
+      ...(pagination ? { pagination: paginationState } : {}),
     },
     filterFns: {
       text: textFilterFn,
@@ -110,8 +120,8 @@ export function ReactTable<TData extends { id: string }>({
     },
     globalFilterFn: textFilterFn,
     manualPagination: false,
-    onPaginationChange: infiniteScroll ? undefined : setPagination,
-    getPaginationRowModel: infiniteScroll ? undefined : getPaginationRowModel(),
+    onPaginationChange: pagination ? setPaginationState : undefined,
+    getPaginationRowModel: pagination ? getPaginationRowModel() : undefined,
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
@@ -152,7 +162,13 @@ export function ReactTable<TData extends { id: string }>({
       right: isPinned === 'right' ? `${column.getAfter('right')}px` : undefined,
       position: isPinned ? 'sticky' : 'relative',
       zIndex: isPinned ? 1 : 0,
-      backgroundColor: isPinned ? 'var(--color-bg)' : 'transparent',
+      backgroundColor: isPinned ? 'var(--color-card)' : undefined,
+      boxShadow:
+        isPinned === 'left'
+          ? 'inset -1px 0 0 var(--color-border-dark)'
+          : isPinned === 'right'
+            ? 'inset 1px 0 0 var(--color-border-dark)'
+            : undefined,
     }
   }
 
@@ -170,23 +186,18 @@ export function ReactTable<TData extends { id: string }>({
   const tableContainerRef = useRef(null)
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col">
       {title && <div className="px-4 mb-4 text-2xl font-bold">{title}</div>}
 
       <div className="react-table__filter">
-        <div className="above-table__container">
-          {/*<ColumnVisibilityMenu*/}
-          {/*  table={table}*/}
-          {/*  initialColumnVisibility={initialColumnVisibility}*/}
-          {/*/>*/}
-        </div>
+        <div className="above-table__container"></div>
 
         {customHeader?.(table.getRowModel().rows)}
       </div>
 
-      <div className="flex-1 relative overflow-hidden">
-        <div className="h-full w-full overflow-auto" ref={tableContainerRef}>
-          <table className="layout-table table table-fixed w-full border-collapse mb-2">
+      <div className="relative rounded-lg border border-border-dark">
+        <div className="w-full overflow-auto rounded-lg" style={{ maxHeight }} ref={tableContainerRef}>
+          <table className="table w-max min-w-full border-separate border-spacing-0">
             <HeaderTable
               table={table}
               getCommonPinningStyles={getCommonPinningStyles}
@@ -197,17 +208,24 @@ export function ReactTable<TData extends { id: string }>({
               getCommonPinningStyles={getCommonPinningStyles}
               parentRef={tableContainerRef}
               rowHeight={40}
+              onRowClick={onRowClick}
+              emptyState={emptyState}
+              isRowDisabled={isRowDisabled}
             />
           </table>
         </div>
       </div>
 
-      <div className="w-full flex justify-end py-3 px-3">
-        <div className="text-sm text-text-light">
-          {table.getRowCount().toLocaleString()}{' '}
-          {totalRows > 1 ? 'résultats' : 'résultat'}
+      {pagination ? (
+        <PaginationTable table={table} totalRows={totalRows} />
+      ) : (
+        <div className="flex justify-end py-2">
+          <span className="text-text-light text-xs">
+            {totalRows.toLocaleString()}{' '}
+            {totalRows > 1 ? 'résultats' : 'résultat'}
+          </span>
         </div>
-      </div>
+      )}
     </div>
   )
 }

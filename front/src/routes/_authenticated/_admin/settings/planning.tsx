@@ -207,180 +207,183 @@ function Planning() {
 
   return (
     <DashboardLayout components={['pathway']}>
-      <div className="flex items-center justify-between px-4 pt-2">
-        <h1 className="flex gap-2 items-center text-text text-xl font-semibold">
-          Planning
-        </h1>
-      </div>
+      <div className="flex-1 bg-background rounded-lg flex flex-col w-full gap-4">
+        <div className="px-6 pt-6 flex items-center justify-between">
+          <h1 className="h-9 flex items-center text-text-dark text-xl font-semibold">
+            Planning
+          </h1>
 
-      <div className="flex justify-end px-4 pb-2">
-        {!editMode && (
-          <div className="flex gap-2">
-            <Button
-              variant={view === 'calendar' ? 'default' : 'outline'}
-              size="default"
-              onClick={() => setView('calendar')}
-            >
-              <CalendarDays className="h-4 w-4" />
-              Calendrier
-            </Button>
-            <Button
-              variant={view === 'timeline' ? 'default' : 'outline'}
-              size="default"
-              onClick={() => setView('timeline')}
-            >
-              <GanttChart className="h-4 w-4" />
-              Timeline
-            </Button>
+          <div className="flex justify-end">
+            {!editMode && (
+              <div className="flex gap-2">
+                <Button
+                  variant={view === 'calendar' ? 'default' : 'outline'}
+                  size="default"
+                  onClick={() => setView('calendar')}
+                >
+                  <CalendarDays className="h-4 w-4" />
+                  Calendrier
+                </Button>
+                <Button
+                  variant={view === 'timeline' ? 'default' : 'outline'}
+                  size="default"
+                  onClick={() => setView('timeline')}
+                >
+                  <GanttChart className="h-4 w-4" />
+                  Timeline
+                </Button>
+              </div>
+            )}
           </div>
-        )}
-      </div>
-
-      <div className="flex flex-col h-full">
-        <div className="flex-1 min-h-0 overflow-hidden">
-          {view === 'calendar' ? (
-            <Calendar
-              events={mergedEvents}
-              handleSelectEvent={handleSelectSlot}
-              handleEditEvent={handleEditSlot}
-              handleDropEvent={handleInstantiatePathway}
-              handleClickEvent={setOpenEventId}
-              handleOpenEvent={setOpenEventId}
-              editMode={editMode}
-              editable={true}
-            />
-          ) : (
-            <FullCalendar
-              plugins={[dayGridPlugin, multiMonthPlugin, interactionPlugin]}
-              initialView="multiMonthYear"
-              locale={frLocale}
-              timeZone="UTC"
-              weekends={true}
-              headerToolbar={{
-                left: 'title',
-                center: 'multiMonthYear,dayGridYear',
-                right: 'prev,next today',
-              }}
-              buttonText={{
-                multiMonthYear: 'Grille',
-                dayGridYear: 'Liste',
-              }}
-              multiMonthMinWidth={600}
-              dayMaxEvents={false}
-              dayMaxEventRows={false}
-              height="100%"
-              events={pathwayEvents}
-              editable={false}
-              selectable={false}
-              droppable={true}
-              drop={(info) => {
-                const now = Date.now()
-                if (now - lastDropTimeRef.current < 500) {
-                  return
-                }
-                lastDropTimeRef.current = now
-                const pathwayId = info.draggedEl.getAttribute('data-pathway-id')
-                const weekStart = dayjs(info.date)
-                  .isoWeekday(1)
-                  .utc()
-                  .startOf('day')
-                if (pathwayId) {
-                  handleInstantiatePathway(pathwayId, weekStart.toISOString())
-                }
-              }}
-              eventClick={(info) => {
-                const x = info.jsEvent.clientX
-                const rect = info.el.getBoundingClientRect()
-                const y = rect.top + rect.height / 2
-                setDeleteTarget({
-                  id: info.event.id,
-                  title: info.event.title,
-                  anchor: {
-                    getBoundingClientRect: () => new DOMRect(x, y, 0, 0),
-                  },
-                })
-              }}
-            />
-          )}
         </div>
+
+        <div className="flex flex-col h-full">
+          <div className="flex-1 min-h-0 overflow-hidden">
+            {view === 'calendar' ? (
+              <Calendar
+                events={mergedEvents}
+                handleSelectEvent={handleSelectSlot}
+                handleEditEvent={handleEditSlot}
+                handleDropEvent={handleInstantiatePathway}
+                handleClickEvent={setOpenEventId}
+                handleOpenEvent={setOpenEventId}
+                editMode={editMode}
+                editable={true}
+              />
+            ) : (
+              <FullCalendar
+                plugins={[dayGridPlugin, multiMonthPlugin, interactionPlugin]}
+                initialView="multiMonthYear"
+                locale={frLocale}
+                timeZone="UTC"
+                weekends={true}
+                headerToolbar={{
+                  left: 'title',
+                  center: 'multiMonthYear,dayGridYear',
+                  right: 'prev,next today',
+                }}
+                buttonText={{
+                  multiMonthYear: 'Grille',
+                  dayGridYear: 'Liste',
+                }}
+                multiMonthMinWidth={600}
+                dayMaxEvents={false}
+                dayMaxEventRows={false}
+                height="100%"
+                events={pathwayEvents}
+                editable={false}
+                selectable={false}
+                droppable={true}
+                drop={(info) => {
+                  const now = Date.now()
+                  if (now - lastDropTimeRef.current < 500) {
+                    return
+                  }
+                  lastDropTimeRef.current = now
+                  const pathwayId =
+                    info.draggedEl.getAttribute('data-pathway-id')
+                  const weekStart = dayjs(info.date)
+                    .isoWeekday(1)
+                    .utc()
+                    .startOf('day')
+                  if (pathwayId) {
+                    handleInstantiatePathway(pathwayId, weekStart.toISOString())
+                  }
+                }}
+                eventClick={(info) => {
+                  const x = info.jsEvent.clientX
+                  const rect = info.el.getBoundingClientRect()
+                  const y = rect.top + rect.height / 2
+                  setDeleteTarget({
+                    id: info.event.id,
+                    title: info.event.title,
+                    anchor: {
+                      getBoundingClientRect: () => new DOMRect(x, y, 0, 0),
+                    },
+                  })
+                }}
+              />
+            )}
+          </div>
+        </div>
+
+        <PopoverRoot
+          open={!!deleteTarget}
+          onOpenChange={(open) => {
+            if (!open) {
+              setDeleteTarget(null)
+            }
+          }}
+        >
+          {deleteTarget && (
+            <PopoverAnchor virtualRef={{ current: deleteTarget.anchor }} />
+          )}
+          <PopoverContent side="top" align="center" sideOffset={0}>
+            <PopoverClose className="absolute top-2 right-2 rounded-full p-1 text-text-light hover:text-text hover:bg-muted cursor-pointer transition-colors">
+              <X className="h-3.5 w-3.5" />
+            </PopoverClose>
+
+            <div className="flex items-center gap-3 mb-6 pr-4">
+              <div className="flex items-center justify-center h-8 w-8 rounded-full bg-destructive/10 shrink-0">
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-text">
+                  Supprimer ce parcours ?
+                </p>
+                <p className="text-xs text-text-light mt-0.5">
+                  {deleteTarget?.title}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setDeleteTarget(null)}
+              >
+                Annuler
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => {
+                  if (deleteTarget) {
+                    deletePathway.mutate(deleteTarget.id)
+                    setDeleteTarget(null)
+                  }
+                }}
+              >
+                Supprimer
+              </Button>
+            </div>
+          </PopoverContent>
+        </PopoverRoot>
+
+        <AddSlotForm
+          open={openCreateSlotModal}
+          setOpen={setOpenCreateSlotModal}
+          startDate={selectedDate?.startStr}
+          endDate={selectedDate?.endStr}
+          color={currentPathwayTemplate?.color}
+          handleCreateSlot={handleCreateSlot}
+        />
+
+        <EventSheet
+          open={isSlot && !editMode}
+          setOpen={setOpenEventId}
+          eventID={slotId}
+          handleDeleteEvent={handleDeleteEvent}
+        />
+
+        <EventTemplateSheet
+          open={isTemplate && editMode}
+          setOpen={setOpenEventId}
+          eventTemplateID={slotId}
+          handleDeleteEvent={handleDeleteEvent}
+        />
       </div>
-
-      <PopoverRoot
-        open={!!deleteTarget}
-        onOpenChange={(open) => {
-          if (!open) {
-            setDeleteTarget(null)
-          }
-        }}
-      >
-        {deleteTarget && (
-          <PopoverAnchor virtualRef={{ current: deleteTarget.anchor }} />
-        )}
-        <PopoverContent side="top" align="center" sideOffset={0}>
-          <PopoverClose className="absolute top-2 right-2 rounded-full p-1 text-text-light hover:text-text hover:bg-muted cursor-pointer transition-colors">
-            <X className="h-3.5 w-3.5" />
-          </PopoverClose>
-
-          <div className="flex items-center gap-3 mb-6 pr-4">
-            <div className="flex items-center justify-center h-8 w-8 rounded-full bg-destructive/10 shrink-0">
-              <Trash2 className="h-4 w-4 text-destructive" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-text">
-                Supprimer ce parcours ?
-              </p>
-              <p className="text-xs text-text-light mt-0.5">
-                {deleteTarget?.title}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setDeleteTarget(null)}
-            >
-              Annuler
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => {
-                if (deleteTarget) {
-                  deletePathway.mutate(deleteTarget.id)
-                  setDeleteTarget(null)
-                }
-              }}
-            >
-              Supprimer
-            </Button>
-          </div>
-        </PopoverContent>
-      </PopoverRoot>
-
-      <AddSlotForm
-        open={openCreateSlotModal}
-        setOpen={setOpenCreateSlotModal}
-        startDate={selectedDate?.startStr}
-        endDate={selectedDate?.endStr}
-        color={currentPathwayTemplate?.color}
-        handleCreateSlot={handleCreateSlot}
-      />
-
-      <EventSheet
-        open={isSlot && !editMode}
-        setOpen={setOpenEventId}
-        eventID={slotId}
-        handleDeleteEvent={handleDeleteEvent}
-      />
-
-      <EventTemplateSheet
-        open={isTemplate && editMode}
-        setOpen={setOpenEventId}
-        eventTemplateID={slotId}
-        handleDeleteEvent={handleDeleteEvent}
-      />
     </DashboardLayout>
   )
 }

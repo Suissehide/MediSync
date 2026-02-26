@@ -5,6 +5,7 @@ import { PrismaClient } from '../src/generated/client'
 import seedPathwayTemplates from './seed/pathwayTemplate'
 import seedPatients from './seed/patient'
 import seedSoignants from './seed/soignant'
+import seedThematics from './seed/thematic'
 import seedTodos from './seed/todo'
 import seedUsers from './seed/user'
 
@@ -16,6 +17,7 @@ async function main() {
 
   await seedUsers(prisma)
   const soignants = await seedSoignants(prisma)
+  await seedThematics(prisma, soignants)
   await seedPatients(prisma)
   await seedPathwayTemplates(prisma, soignants)
   await seedTodos(prisma)

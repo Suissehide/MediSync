@@ -16,10 +16,6 @@ import {
   APPOINTMENT_STATUS_OPTIONS,
   APPOINTMENT_TYPE_OPTIONS,
 } from '../../../constants/appointment.constant.ts'
-import {
-  getThemeOptionsByRole,
-  THEMATICS,
-} from '../../../constants/slot.constant.ts'
 import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { formatDuration } from '../../../libs/utils.ts'
 import {
@@ -27,12 +23,14 @@ import {
   useAppointmentMutations,
 } from '../../../queries/useAppointment.ts'
 import { usePatientQueries } from '../../../queries/usePatient.ts'
+import { useThematicQueries } from '../../../queries/useThematic.ts'
 import type { UpdateAppointmentParams } from '../../../types/appointment.ts'
 import type { Soignant } from '../../../types/soignant.ts'
 import { Button } from '../../ui/button.tsx'
 import { FieldInfo } from '../../ui/fieldInfo.tsx'
 import { FormField } from '../../ui/formField.tsx'
-import { Input, Select } from '../../ui/input.tsx'
+import { Input } from '../../ui/input.tsx'
+import { Select } from '../../ui/select.tsx'
 import { Label } from '../../ui/label.tsx'
 import {
   Sheet,
@@ -61,6 +59,7 @@ export default function AppointmentSheet({
     enabled: false,
   })
   const { updateAppointment, deleteAppointment } = useAppointmentMutations()
+  const { thematics } = useThematicQueries()
   const patients = usePatientQueries().patients
 
   const [selectedPatient, setSelectedPatient] = useState('')
@@ -155,7 +154,9 @@ export default function AppointmentSheet({
   }, [open, form, refetch])
 
   const thematicOptions = soignant
-    ? getThemeOptionsByRole(THEMATICS, soignant.name)
+    ? (thematics
+        ?.filter((t) => t.soignants.some((s) => s.id === soignant.id))
+        .map((t) => ({ value: t.name, label: t.name })) ?? [])
     : []
 
   return (

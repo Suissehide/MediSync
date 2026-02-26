@@ -8,8 +8,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '../components/ui/button.tsx'
 import { DatePicker } from '../components/ui/datePicker.tsx'
 import { FieldInfo } from '../components/ui/fieldInfo.tsx'
-import { Checkbox, Input, Select, TextArea } from '../components/ui/input.tsx'
+import { Checkbox, Input, TextArea } from '../components/ui/input.tsx'
 import { Label } from '../components/ui/label.tsx'
+import { Select } from '../components/ui/select.tsx'
 import { TimePicker } from '../components/ui/timePicker.tsx'
 import { cn } from '../libs/utils.ts'
 import {
@@ -23,6 +24,7 @@ export interface FieldComponentProps {
   label?: string
   disabled?: boolean
   className?: string
+  inputClassName?: string
 }
 
 interface InputFieldProps extends FieldComponentProps {
@@ -37,7 +39,13 @@ interface ToggleFieldProps extends FieldComponentProps {
   options: string[]
 }
 
-const TextField = ({ label, type, disabled, className }: InputFieldProps) => {
+const TextField = ({
+  label,
+  type,
+  disabled,
+  className,
+  inputClassName,
+}: InputFieldProps) => {
   const field = useFieldContext<string>()
   const value = field.state.value ?? ''
 
@@ -49,6 +57,7 @@ const TextField = ({ label, type, disabled, className }: InputFieldProps) => {
         value={value}
         type={type}
         disabled={disabled}
+        className={inputClassName}
         onChange={(e) => field.handleChange(e.target.value)}
         onBlur={field.handleBlur}
       />
@@ -57,7 +66,12 @@ const TextField = ({ label, type, disabled, className }: InputFieldProps) => {
   )
 }
 
-const PasswordField = ({ label, disabled, className }: FieldComponentProps) => {
+const PasswordField = ({
+  label,
+  disabled,
+  className,
+  inputClassName,
+}: FieldComponentProps) => {
   const field = useFieldContext<string>()
   const value = field.state.value ?? ''
   const [showPassword, setShowPassword] = useState(false)
@@ -65,7 +79,7 @@ const PasswordField = ({ label, disabled, className }: FieldComponentProps) => {
   return (
     <div className={cn('flex flex-col gap-1', className)}>
       {label && <Label htmlFor={field.name}>{label}</Label>}
-      <div className="relative">
+      <div className={cn('relative', inputClassName)}>
         <Input
           id={field.name}
           type={showPassword ? 'text' : 'password'}
@@ -73,7 +87,7 @@ const PasswordField = ({ label, disabled, className }: FieldComponentProps) => {
           disabled={disabled}
           onChange={(e) => field.handleChange(e.target.value)}
           onBlur={field.handleBlur}
-          className="pr-10"
+          className="w-full pr-10"
         />
         <button
           type="button"
@@ -99,6 +113,7 @@ function SelectField({
   label,
   disabled,
   className,
+  inputClassName,
   options,
 }: SelectFieldProps) {
   const field = useFieldContext<string | number>()
@@ -112,6 +127,7 @@ function SelectField({
         options={options}
         value={value.toString()}
         disabled={disabled}
+        className={inputClassName}
         onValueChange={(value) => field.handleChange(value)}
       />
       <FieldInfo field={field} />
@@ -119,7 +135,7 @@ function SelectField({
   )
 }
 
-const NumberField = ({ label, className }: FieldComponentProps) => {
+const NumberField = ({ label, className, inputClassName }: FieldComponentProps) => {
   const field = useFieldContext<number | undefined>()
   const value = field.state.value ?? ''
 
@@ -130,19 +146,19 @@ const NumberField = ({ label, className }: FieldComponentProps) => {
         id={field.name}
         type="number"
         value={value}
+        className={inputClassName}
         onChange={(e) => {
           const val = e.target.value
           field.handleChange(val === '' ? undefined : Number(val))
         }}
         onBlur={field.handleBlur}
       />
-
       <FieldInfo field={field} />
     </div>
   )
 }
 
-function DatePickerField({ label, className }: FieldComponentProps) {
+function DatePickerField({ label, className, inputClassName }: FieldComponentProps) {
   const field = useFieldContext<string>()
   const value = useMemo(() => {
     const fieldValue = field.state.value
@@ -160,13 +176,13 @@ function DatePickerField({ label, className }: FieldComponentProps) {
   return (
     <div className={cn('flex flex-col gap-1', className)}>
       {label && <Label htmlFor={field.name}>{label}</Label>}
-      <DatePicker value={value} onChange={handleChange} />
+      <DatePicker value={value} onChange={handleChange} className={inputClassName} />
       <FieldInfo field={field} />
     </div>
   )
 }
 
-function TimePickerField({ label, className }: FieldComponentProps) {
+function TimePickerField({ label, className, inputClassName }: FieldComponentProps) {
   const field = useFieldContext<Dayjs | null>()
   const value = field.state.value
 
@@ -176,13 +192,14 @@ function TimePickerField({ label, className }: FieldComponentProps) {
       <TimePicker
         value={value}
         onChange={(time: Dayjs | null) => field.handleChange(time ?? dayjs())}
+        className={inputClassName}
       />
       <FieldInfo field={field} />
     </div>
   )
 }
 
-function CheckboxField({ label, className }: FieldComponentProps) {
+function CheckboxField({ label, className, inputClassName }: FieldComponentProps) {
   const field = useFieldContext<boolean>()
   const value = field.state.value
 
@@ -192,6 +209,7 @@ function CheckboxField({ label, className }: FieldComponentProps) {
       <Checkbox
         id={field.name}
         checked={value}
+        className={inputClassName}
         onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
           field.handleChange(e.target.checked)
         }
@@ -202,7 +220,7 @@ function CheckboxField({ label, className }: FieldComponentProps) {
   )
 }
 
-function TextAreaField({ label, className }: FieldComponentProps) {
+function TextAreaField({ label, className, inputClassName }: FieldComponentProps) {
   const field = useFieldContext<string>()
   const value = field.state.value ?? ''
 
@@ -212,6 +230,7 @@ function TextAreaField({ label, className }: FieldComponentProps) {
       <TextArea
         id={field.name}
         value={value}
+        className={inputClassName}
         onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
           field.handleChange(e.target.value)
         }
@@ -222,7 +241,7 @@ function TextAreaField({ label, className }: FieldComponentProps) {
   )
 }
 
-function ColorPickerField({ label, className }: FieldComponentProps) {
+function ColorPickerField({ label, className, inputClassName }: FieldComponentProps) {
   const [open, setOpen] = useState(false)
   const field = useFieldContext<string>()
   const value = field.state.value ?? '#000000'
@@ -259,7 +278,7 @@ function ColorPickerField({ label, className }: FieldComponentProps) {
       {label && <Label htmlFor={field.name}>{label}</Label>}
 
       <div className="relative">
-        <div className="flex items-center">
+        <div className={cn('flex items-center', inputClassName)}>
           <button
             type="button"
             className="flex-shrink-0 w-9 h-9 rounded border border-border cursor-pointer rounded-tr-none rounded-br-none"
@@ -298,7 +317,7 @@ function ColorPickerField({ label, className }: FieldComponentProps) {
   )
 }
 
-function ToggleField({ label, className, options }: ToggleFieldProps) {
+function ToggleField({ label, className, inputClassName, options }: ToggleFieldProps) {
   const field = useFieldContext<boolean>()
   const [option1, option2] = options
 
@@ -310,7 +329,7 @@ function ToggleField({ label, className, options }: ToggleFieldProps) {
     <div className={cn('flex flex-col gap-1', className)}>
       {label && <Label htmlFor={field.name}>{label}</Label>}
 
-      <div className="relative w-fit flex items-center border border-border rounded overflow-hidden">
+      <div className={cn('relative w-fit flex items-center border border-border rounded overflow-hidden', inputClassName)}>
         <div
           className={`absolute inset-y-0 w-1/2 bg-primary rounded transition-transform duration-200 ease-in-out ${
             field.state.value ? 'translate-x-0' : 'translate-x-full'

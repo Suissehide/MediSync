@@ -74,10 +74,10 @@ export default function TodoSheet() {
 
   return (
     <Sheet open={isParentOpen} onOpenChange={handleParentChange}>
-      <SheetTrigger variant="ghost" size="icon" className="relative">
-        <BellIcon className="w-5 h-5" />
+      <SheetTrigger variant="none" size="icon" className="relative">
+        <BellIcon className="text-text w-5 h-5" />
         {hasNewTodos ? (
-          <span className="absolute flex justify-center items-center -top-1 -right-1 h-4 w-4 rounded-full bg-background after:absolute after:bg-destructive after:h-2 after:w-2 after:rounded-full" />
+          <span className="absolute flex justify-center items-center -top-0 -right-0 h-4 w-4 rounded-full bg-transparent after:absolute after:bg-destructive after:h-2 after:w-2 after:rounded-full" />
         ) : null}
       </SheetTrigger>
 

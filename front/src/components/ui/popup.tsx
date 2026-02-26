@@ -75,10 +75,11 @@ PopupOverlay.displayName = Dialog.Overlay.displayName
 const PopupTrigger = React.forwardRef<
   React.ComponentRef<typeof Dialog.Trigger>,
   PopupTriggerProps
->(({ className, variant, size, ...props }, ref) => (
+>(({ className, variant, size, asChild, ...props }, ref) => (
   <Dialog.Trigger
     ref={ref}
-    className={cn(buttonVariants({ variant, size, className }))}
+    asChild={asChild}
+    className={asChild ? className : cn(buttonVariants({ variant, size, className }))}
     {...props}
   />
 ))

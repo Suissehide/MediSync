@@ -109,6 +109,13 @@ model Soignant {
 
   slotTemplates SlotTemplate[]
   todos         Todo[]
+  thematics     Thematic[]     @relation("SoignantThematics")
+}
+
+model Thematic {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  soignants Soignant[] @relation("SoignantThematics")
 }
 
 model Patient {

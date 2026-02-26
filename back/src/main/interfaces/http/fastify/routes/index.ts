@@ -9,6 +9,7 @@ import { patientRouter } from './patient'
 import { slotRouter } from './slot'
 import { slotTemplateRouter } from './slotTemplate'
 import { soignantRouter } from './soignant'
+import { thematicRouter } from './thematic'
 import { todoRouter } from './todo'
 import { userRouter } from './user'
 
@@ -27,6 +28,7 @@ const routes: FastifyPluginAsyncZod = async (fastify) => {
   await fastify.register(pathwayRouter, { prefix: '/pathway' })
   await fastify.register(pathwayTemplateRouter, { prefix: '/pathway-template' })
   await fastify.register(soignantRouter, { prefix: '/soignant' })
+  await fastify.register(thematicRouter, { prefix: '/thematic' })
   await fastify.register(patientRouter, { prefix: '/patient' })
 }
 

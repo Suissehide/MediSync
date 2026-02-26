@@ -21,6 +21,7 @@ import { Route as AuthenticatedPatientIndexImport } from './routes/_authenticate
 import { Route as AuthenticatedUserSettingsImport } from './routes/_authenticated/user/settings'
 import { Route as AuthenticatedPatientPatientIDImport } from './routes/_authenticated/patient/$patientID'
 import { Route as AuthenticatedAdminSettingsUserImport } from './routes/_authenticated/_admin/settings/user'
+import { Route as AuthenticatedAdminSettingsThematicImport } from './routes/_authenticated/_admin/settings/thematic'
 import { Route as AuthenticatedAdminSettingsSoignantImport } from './routes/_authenticated/_admin/settings/soignant'
 import { Route as AuthenticatedAdminSettingsPlanningImport } from './routes/_authenticated/_admin/settings/planning'
 
@@ -83,6 +84,13 @@ const AuthenticatedAdminSettingsUserRoute =
   AuthenticatedAdminSettingsUserImport.update({
     id: '/settings/user',
     path: '/settings/user',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+
+const AuthenticatedAdminSettingsThematicRoute =
+  AuthenticatedAdminSettingsThematicImport.update({
+    id: '/settings/thematic',
+    path: '/settings/thematic',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 
@@ -181,6 +189,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminSettingsSoignantImport
       parentRoute: typeof AuthenticatedAdminImport
     }
+    '/_authenticated/_admin/settings/thematic': {
+      id: '/_authenticated/_admin/settings/thematic'
+      path: '/settings/thematic'
+      fullPath: '/settings/thematic'
+      preLoaderRoute: typeof AuthenticatedAdminSettingsThematicImport
+      parentRoute: typeof AuthenticatedAdminImport
+    }
     '/_authenticated/_admin/settings/user': {
       id: '/_authenticated/_admin/settings/user'
       path: '/settings/user'
@@ -196,6 +211,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminSettingsPlanningRoute: typeof AuthenticatedAdminSettingsPlanningRoute
   AuthenticatedAdminSettingsSoignantRoute: typeof AuthenticatedAdminSettingsSoignantRoute
+  AuthenticatedAdminSettingsThematicRoute: typeof AuthenticatedAdminSettingsThematicRoute
   AuthenticatedAdminSettingsUserRoute: typeof AuthenticatedAdminSettingsUserRoute
 }
 
@@ -204,6 +220,8 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
     AuthenticatedAdminSettingsPlanningRoute,
   AuthenticatedAdminSettingsSoignantRoute:
     AuthenticatedAdminSettingsSoignantRoute,
+  AuthenticatedAdminSettingsThematicRoute:
+    AuthenticatedAdminSettingsThematicRoute,
   AuthenticatedAdminSettingsUserRoute: AuthenticatedAdminSettingsUserRoute,
 }
 
@@ -243,6 +261,7 @@ export interface FileRoutesByFullPath {
   '/patient': typeof AuthenticatedPatientIndexRoute
   '/settings/planning': typeof AuthenticatedAdminSettingsPlanningRoute
   '/settings/soignant': typeof AuthenticatedAdminSettingsSoignantRoute
+  '/settings/thematic': typeof AuthenticatedAdminSettingsThematicRoute
   '/settings/user': typeof AuthenticatedAdminSettingsUserRoute
 }
 
@@ -257,6 +276,7 @@ export interface FileRoutesByTo {
   '/patient': typeof AuthenticatedPatientIndexRoute
   '/settings/planning': typeof AuthenticatedAdminSettingsPlanningRoute
   '/settings/soignant': typeof AuthenticatedAdminSettingsSoignantRoute
+  '/settings/thematic': typeof AuthenticatedAdminSettingsThematicRoute
   '/settings/user': typeof AuthenticatedAdminSettingsUserRoute
 }
 
@@ -273,6 +293,7 @@ export interface FileRoutesById {
   '/_authenticated/patient/': typeof AuthenticatedPatientIndexRoute
   '/_authenticated/_admin/settings/planning': typeof AuthenticatedAdminSettingsPlanningRoute
   '/_authenticated/_admin/settings/soignant': typeof AuthenticatedAdminSettingsSoignantRoute
+  '/_authenticated/_admin/settings/thematic': typeof AuthenticatedAdminSettingsThematicRoute
   '/_authenticated/_admin/settings/user': typeof AuthenticatedAdminSettingsUserRoute
 }
 
@@ -289,6 +310,7 @@ export interface FileRouteTypes {
     | '/patient'
     | '/settings/planning'
     | '/settings/soignant'
+    | '/settings/thematic'
     | '/settings/user'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -302,6 +324,7 @@ export interface FileRouteTypes {
     | '/patient'
     | '/settings/planning'
     | '/settings/soignant'
+    | '/settings/thematic'
     | '/settings/user'
   id:
     | '__root__'
@@ -316,6 +339,7 @@ export interface FileRouteTypes {
     | '/_authenticated/patient/'
     | '/_authenticated/_admin/settings/planning'
     | '/_authenticated/_admin/settings/soignant'
+    | '/_authenticated/_admin/settings/thematic'
     | '/_authenticated/_admin/settings/user'
   fileRoutesById: FileRoutesById
 }
@@ -367,6 +391,7 @@ export const routeTree = rootRoute
       "children": [
         "/_authenticated/_admin/settings/planning",
         "/_authenticated/_admin/settings/soignant",
+        "/_authenticated/_admin/settings/thematic",
         "/_authenticated/_admin/settings/user"
       ]
     },
@@ -399,6 +424,10 @@ export const routeTree = rootRoute
     },
     "/_authenticated/_admin/settings/soignant": {
       "filePath": "_authenticated/_admin/settings/soignant.tsx",
+      "parent": "/_authenticated/_admin"
+    },
+    "/_authenticated/_admin/settings/thematic": {
+      "filePath": "_authenticated/_admin/settings/thematic.tsx",
       "parent": "/_authenticated/_admin"
     },
     "/_authenticated/_admin/settings/user": {

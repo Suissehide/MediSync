@@ -7,7 +7,8 @@ import { useSoignantStore } from '../../../store/useSoignantStore.ts'
 import { Button } from '../../ui/button.tsx'
 import { FieldInfo } from '../../ui/fieldInfo.tsx'
 import { FormField } from '../../ui/formField.tsx'
-import { Input, Select } from '../../ui/input.tsx'
+import { Input } from '../../ui/input.tsx'
+import { Select } from '../../ui/select.tsx'
 import { Label } from '../../ui/label.tsx'
 import {
   Sheet,

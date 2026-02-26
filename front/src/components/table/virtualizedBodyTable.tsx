@@ -6,8 +6,9 @@ import {
 } from '@tanstack/react-table'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import type React from 'react'
-import { type RefObject, useEffect } from 'react'
+import { type ReactNode, type RefObject, useEffect } from 'react'
 
+import { cn } from '../../libs/utils.ts'
 import type { CustomMeta } from './reactTable.tsx'
 
 type VirtualizedBodyTableProps<TData> = {
@@ -15,6 +16,9 @@ type VirtualizedBodyTableProps<TData> = {
   getCommonPinningStyles: (column: Column<TData>) => React.CSSProperties
   rowHeight: number
   parentRef: RefObject<HTMLElement | null>
+  onRowClick?: (row: TData) => void
+  emptyState?: ReactNode
+  isRowDisabled?: (row: TData) => boolean
 }
 
 export function VirtualizedBodyTable<TData>({
@@ -22,6 +26,9 @@ export function VirtualizedBodyTable<TData>({
   getCommonPinningStyles,
   rowHeight,
   parentRef,
+  onRowClick,
+  emptyState,
+  isRowDisabled,
 }: VirtualizedBodyTableProps<TData>) {
   const rows = table.getRowModel().rows
   const rowCount = rows.length
@@ -48,15 +55,20 @@ export function VirtualizedBodyTable<TData>({
   if (rowCount === 0) {
     return (
       <tbody>
-        <tr className="h-[20em] bg-primary-foreground text-sm border-b border-border text-center">
-          <td colSpan={table.getAllLeafColumns().length}>Pas de données</td>
+        <tr>
+          <td
+            colSpan={table.getAllLeafColumns().length}
+            className="h-[20em] text-sm text-text-light text-center align-middle"
+          >
+            {emptyState ?? 'Pas de données'}
+          </td>
         </tr>
       </tbody>
     )
   }
 
   return (
-    <tbody>
+    <tbody className="[&_tr:last-child_td]:border-b-0">
       {paddingTop > 0 && (
         <tr style={{ height: paddingTop }}>
           <td colSpan={table.getAllLeafColumns().length} />
@@ -65,35 +77,60 @@ export function VirtualizedBodyTable<TData>({
 
       {virtualRows.map((virtualRow) => {
         const row: Row<TData> = rows[virtualRow.index]
+        const disabled = isRowDisabled?.(row.original)
+        const isSelected = row.getIsSelected()
 
         return (
           <tr
-            data-index={virtualRow.index} // needed for dynamic row height measurement
+            data-index={virtualRow.index}
             ref={(node) => {
               if (node) {
                 rowVirtualizer.measureElement(node)
               }
-            }} // measure dynamic row height
+            }}
             key={row.id}
             style={{ height: rowHeight }}
+            data-state={isSelected ? 'selected' : undefined}
+            onClick={
+              !disabled && onRowClick
+                ? () => onRowClick(row.original)
+                : undefined
+            }
+            className={cn(
+              'transition-colors data-[state=selected]:bg-primary/10',
+              disabled
+                ? 'opacity-50 cursor-not-allowed pointer-events-none'
+                : onRowClick
+                  ? 'cursor-pointer hover:bg-primary/5'
+                  : 'hover:bg-primary/5',
+            )}
           >
             {row.getVisibleCells().map((cell) => {
               const { column } = cell
               const meta = column.columnDef.meta as CustomMeta<TData, unknown>
               const grow = meta?.grow
+              const align = meta?.align ?? 'left'
 
               return (
                 <td
                   key={cell.id}
-                  className="px-4 py-2 border-b border-border text-sm"
+                  className="px-4 py-2 text-sm border-b border-border"
                   style={{
                     ...getCommonPinningStyles(column),
-                    width: grow ? 'auto' : column.getSize(),
                     minWidth: column.getSize(),
+                    width: grow ? '100%' : undefined,
                     height: rowHeight,
                   }}
                 >
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  <div
+                    className={cn(
+                      'flex items-center gap-2',
+                      align === 'right' && 'justify-end',
+                      align === 'center' && 'justify-center',
+                    )}
+                  >
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </div>
                 </td>
               )
             })}

@@ -36,29 +36,31 @@ function UserList() {
 
   return (
     <DashboardLayout>
-      <h1 className="mt-2 flex gap-2 items-center px-4 mb-4 text-text text-xl font-semibold">
-        Liste des utilisateurs
-      </h1>
+      <div className="flex-1 bg-background p-6 rounded-lg flex flex-col w-full gap-4">
+        <h1 className="h-9 flex items-center text-text-dark text-xl font-semibold">
+          Liste des utilisateurs
+        </h1>
 
-      <div>
-        <ReactTable<User>
-          data={users ?? []}
-          columns={columns}
-          filterId="user"
+        <div>
+          <ReactTable<User>
+            data={users ?? []}
+            columns={columns}
+            filterId="user"
+          />
+        </div>
+
+        <EditUserForm
+          open={isEditOpen}
+          setOpen={setIsEditOpen}
+          user={selectedUser}
+        />
+
+        <DeleteUserForm
+          open={isDeleteOpen}
+          setOpen={setIsDeleteOpen}
+          user={selectedUser}
         />
       </div>
-
-      <EditUserForm
-        open={isEditOpen}
-        setOpen={setIsEditOpen}
-        user={selectedUser}
-      />
-
-      <DeleteUserForm
-        open={isDeleteOpen}
-        setOpen={setIsDeleteOpen}
-        user={selectedUser}
-      />
     </DashboardLayout>
   )
 }

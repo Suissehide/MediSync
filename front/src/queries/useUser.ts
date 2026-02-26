@@ -112,7 +112,11 @@ export const useUserMutations = () => {
       return { previousUsers }
     },
     onSuccess: (updatedUser) => {
-      update(updatedUser)
+      // Only update auth store if the edited user is the currently logged-in user
+      const currentUser = useAuthStore.getState().user
+      if (currentUser?.id === updatedUser.id) {
+        update(updatedUser)
+      }
       toast({
         title: 'Utilisateur modifié avec succès',
         severity: TOAST_SEVERITY.SUCCESS,

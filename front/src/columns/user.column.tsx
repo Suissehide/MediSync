@@ -59,20 +59,21 @@ export const getUserColumns = ({ onEdit, onDelete }: UserActions) => {
     }),
     columnHelper.display({
       id: 'actions',
-      header: 'Actions',
+      header: '',
+      size: 120,
       cell: ({ row }) => {
         const user = row.original
         return (
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => onEdit(user)}>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" size="icon" onClick={() => onEdit(user)}>
               <Pen className="w-3 h-3" />
             </Button>
             <Button
-              variant="destructive"
-              size="sm"
+              variant="outline"
+              size="icon"
               onClick={() => onDelete(user)}
             >
-              <Trash className="w-3 h-3" />
+              <Trash className="w-4 h-4 text-destructive" />
             </Button>
           </div>
         )

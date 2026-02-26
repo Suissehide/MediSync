@@ -1,5 +1,6 @@
 import { Check, Plus, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import type React from 'react'
 
 import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { usePathwayTemplateMutations } from '../../../queries/usePathwayTemplate.ts'
@@ -14,7 +15,11 @@ import {
   PopupTrigger,
 } from '../../ui/popup.tsx'
 
-function AddPathwayForm() {
+interface AddPathwayFormProps {
+  trigger?: React.ReactNode
+}
+
+function AddPathwayForm({ trigger }: AddPathwayFormProps) {
   const [open, setOpen] = useState(false)
   const { createPathwayTemplate } = usePathwayTemplateMutations()
 
@@ -41,10 +46,12 @@ function AddPathwayForm() {
 
   return (
     <Popup modal={true} open={open} onOpenChange={setOpen}>
-      <PopupTrigger variant="none" size="icon" asChild>
-        <Button type="button" onClick={() => setOpen(true)}>
-          <Plus className="w-4 h-4" />
-        </Button>
+      <PopupTrigger asChild>
+        {trigger ?? (
+          <Button type="button" variant="none" size="icon" onClick={() => setOpen(true)}>
+            <Plus className="w-4 h-4" />
+          </Button>
+        )}
       </PopupTrigger>
 
       <PopupContent>

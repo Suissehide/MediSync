@@ -6,6 +6,7 @@ import type { PathwayTemplateDomainInterface } from '../domain/pathwayTemplate.d
 import type { PatientDomainInterface } from '../domain/patient.domain.interface'
 import type { SlotDomainInterface } from '../domain/slot.domain.interface'
 import type { SoignantDomainInterface } from '../domain/soignant.domain.interface'
+import type { ThematicDomainInterface } from '../domain/thematic.domain.interface'
 import type { TodoDomainInterface } from '../domain/todo.domain.interface'
 import type { UserDomainInterface } from '../domain/user.domain.interface'
 import type { HttpClientInterface } from '../infra/http/http-client'
@@ -15,6 +16,7 @@ import type { PathwayTemplateRepositoryInterface } from '../infra/orm/repositori
 import type { PatientRepositoryInterface } from '../infra/orm/repositories/patient.repository.interface'
 import type { SlotRepositoryInterface } from '../infra/orm/repositories/slot.repository.interface'
 import type { SoignantRepositoryInterface } from '../infra/orm/repositories/soignant.repository.interface'
+import type { ThematicRepositoryInterface } from '../infra/orm/repositories/thematic.repository.interface'
 import type { TodoRepositoryInterface } from '../infra/orm/repositories/todo.repository.interface'
 import type { UserRepositoryInterface } from '../infra/orm/repositories/user.repository.interface'
 import type { HttpServer } from '../interfaces/http/server'
@@ -58,6 +60,9 @@ export interface IocContainer {
   // Soignant
   readonly soignantDomain: SoignantDomainInterface
   readonly soignantRepository: SoignantRepositoryInterface
+  // Thematic
+  readonly thematicDomain: ThematicDomainInterface
+  readonly thematicRepository: ThematicRepositoryInterface
   // Todo
   readonly todoDomain: TodoDomainInterface
   readonly todoRepository: TodoRepositoryInterface

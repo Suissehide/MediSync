@@ -4,14 +4,13 @@ import { Check, X } from 'lucide-react'
 import { useEffect, useMemo } from 'react'
 
 import {
-  getThemeOptionsByRole,
   SLOT_DURATION_OPTIONS,
   SLOT_LOCATION_OPTIONS,
-  THEMATICS,
 } from '../../../constants/slot.constant.ts'
 import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { combineDateAndTime } from '../../../libs/utils.ts'
 import { useSoignantQueries } from '../../../queries/useSoignant.ts'
+import { useThematicQueries } from '../../../queries/useThematic.ts'
 import { useSoignantStore } from '../../../store/useSoignantStore.ts'
 import type { CreateSlotParamsWithTemplateData } from '../../../types/slot.ts'
 import type { CreateSlotTemplateParams } from '../../../types/slotTemplate.ts'
@@ -19,7 +18,7 @@ import { Button } from '../../ui/button.tsx'
 import { DatePicker } from '../../ui/datePicker.tsx'
 import { FieldInfo } from '../../ui/fieldInfo.tsx'
 import { FormField } from '../../ui/formField.tsx'
-import { Select } from '../../ui/input.tsx'
+import { Select } from '../../ui/select.tsx'
 import { Label } from '../../ui/label.tsx'
 import {
   Popup,
@@ -49,6 +48,7 @@ function AddSlotForm({
   handleCreateSlot,
 }: AddSlotFormProps) {
   useSoignantQueries()
+  const { thematics } = useThematicQueries()
   const soignants = useSoignantStore((state) => state.soignants)
   const soignantOptions = useMemo(
     () =>
@@ -123,7 +123,11 @@ function AddSlotForm({
   )
   const selectedSoignant = soignants.find((s) => s.id === selectedSoignantId)
   const thematicOptions = selectedSoignant
-    ? getThemeOptionsByRole(THEMATICS, selectedSoignant.name)
+    ? (thematics
+        ?.filter((t) =>
+          t.soignants.some((s) => s.id === selectedSoignant.id),
+        )
+        .map((t) => ({ value: t.name, label: t.name })) ?? [])
     : []
 
   useEffect(() => {

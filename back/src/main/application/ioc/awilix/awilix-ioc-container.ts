@@ -8,6 +8,7 @@ import { PathwayTemplateDomain } from '../../../domain/pathwayTemplate.domain'
 import { PatientDomain } from '../../../domain/patient.domain'
 import { SlotDomain } from '../../../domain/slot.domain'
 import { SoignantDomain } from '../../../domain/soignant.domain'
+import { ThematicDomain } from '../../../domain/thematic.domain'
 import { TodoDomain } from '../../../domain/todo.domain'
 import { UserDomain } from '../../../domain/user.domain'
 import { HttpClient } from '../../../infra/http/http-client'
@@ -19,6 +20,7 @@ import { PathwayTemplateRepository } from '../../../infra/orm/repositories/pathw
 import { PatientRepository } from '../../../infra/orm/repositories/patient.repository'
 import { SlotRepository } from '../../../infra/orm/repositories/slot.repository'
 import { SoignantRepository } from '../../../infra/orm/repositories/soignant.repository'
+import { ThematicRepository } from '../../../infra/orm/repositories/thematic.repository'
 import { TodoRepository } from '../../../infra/orm/repositories/todo.repository'
 import { UserRepository } from '../../../infra/orm/repositories/user.repository'
 import { FastifyHttpServer } from '../../../interfaces/http/fastify/fastify-http-server'
@@ -74,6 +76,9 @@ class AwilixIocContainer {
     // Soignant
     this.#registerSoignantDomain()
     this.#registerSoignantRepository()
+    // Thematic
+    this.#registerThematicDomain()
+    this.#registerThematicRepository()
     // Todo
     this.#registerTodoDomain()
     this.#registerTodoRepository()
@@ -197,6 +202,14 @@ class AwilixIocContainer {
   }
   #registerSoignantRepository(): void {
     this.register('soignantRepository', asClass(SoignantRepository).singleton())
+  }
+
+  // Thematic
+  #registerThematicDomain(): void {
+    this.register('thematicDomain', asClass(ThematicDomain).singleton())
+  }
+  #registerThematicRepository(): void {
+    this.register('thematicRepository', asClass(ThematicRepository).singleton())
   }
 
   // Todo

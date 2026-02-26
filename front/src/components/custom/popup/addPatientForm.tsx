@@ -9,6 +9,7 @@ import {
   Plus,
   X,
 } from 'lucide-react'
+import type React from 'react'
 import { useEffect, useState } from 'react'
 
 import { APPOINTMENT_TYPE_OPTIONS } from '../../../constants/appointment.constant.ts'
@@ -19,9 +20,7 @@ import { usePatientMutations } from '../../../queries/usePatient.ts'
 import type { CreatePatientParams, TimeOfDay } from '../../../types/patient.ts'
 import { Button } from '../../ui/button.tsx'
 import { FormField } from '../../ui/formField.tsx'
-import { Select } from '../../ui/input.tsx'
 import { Label } from '../../ui/label.tsx'
-import { MultiSelect } from '../../ui/multiSelect.tsx'
 import {
   Popup,
   PopupBody,
@@ -31,6 +30,7 @@ import {
   PopupTitle,
   PopupTrigger,
 } from '../../ui/popup.tsx'
+import { MultiSelect, Select } from '../../ui/select.tsx'
 
 type PathwayPeriod = 'morning' | 'afternoon' | 'fullday'
 
@@ -44,7 +44,11 @@ interface AddedPathway {
   type: string
 }
 
-function AddPatientForm() {
+interface AddPatientFormProps {
+  trigger?: React.ReactNode
+}
+
+function AddPatientForm({ trigger }: AddPatientFormProps) {
   const [open, setOpen] = useState(false)
   const [step, setStep] = useState(1)
   const { pathwayTemplates } = usePathwayTemplateQueries()
@@ -178,15 +182,17 @@ function AddPatientForm() {
   return (
     <Popup modal={true} open={open} onOpenChange={setOpen}>
       <PopupTrigger asChild>
-        <Button
-          type="button"
-          variant="default"
-          size="sm"
-          onClick={() => setOpen(true)}
-        >
-          <Plus className="w-4 h-4" />
-          Ajouter un patient
-        </Button>
+        {trigger ?? (
+          <Button
+            type="button"
+            variant="gradient"
+            size="sm"
+            className="w-full"
+            onClick={() => setOpen(true)}
+          >
+            Ajouter un patient
+          </Button>
+        )}
       </PopupTrigger>
 
       <PopupContent size="lg">

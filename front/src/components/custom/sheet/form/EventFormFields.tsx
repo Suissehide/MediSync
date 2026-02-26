@@ -2,12 +2,11 @@ import { useStore } from '@tanstack/react-form'
 import { useMemo } from 'react'
 
 import {
-  getThemeOptionsByRole,
   SLOT_DURATION_OPTIONS,
   SLOT_LOCATION_OPTIONS,
-  THEMATICS,
 } from '../../../../constants/slot.constant.ts'
 import { withForm } from '../../../../hooks/formConfig.tsx'
+import { useThematicQueries } from '../../../../queries/useThematic.ts'
 import { useSoignantStore } from '../../../../store/useSoignantStore.ts'
 import { eventFormOpts } from './eventFormOpts.ts'
 
@@ -19,6 +18,8 @@ export const EventFormFields = withForm({
       value: soignant.id,
       label: soignant.name,
     }))
+
+    const { thematics } = useThematicQueries()
 
     const isIndividual = useStore(
       form.store,
@@ -34,9 +35,13 @@ export const EventFormFields = withForm({
 
     const thematicOptions = useMemo(() => {
       return selectedSoignant
-        ? getThemeOptionsByRole(THEMATICS, selectedSoignant.name)
+        ? (thematics
+            ?.filter((t) =>
+              t.soignants.some((s) => s.id === selectedSoignant.id),
+            )
+            .map((t) => ({ value: t.name, label: t.name })) ?? [])
         : []
-    }, [selectedSoignant])
+    }, [selectedSoignant, thematics])
 
     return (
       <>

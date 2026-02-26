@@ -74,6 +74,13 @@ export const PATHWAY_TEMPLATE = {
   DELETE: 'delete_pathway_template',
 }
 
+export const THEMATIC = {
+  GET_ALL: 'get_all_thematics',
+  CREATE: 'create_thematic',
+  UPDATE: 'update_thematic',
+  DELETE: 'delete_thematic',
+}
+
 export const APPOINTMENT = {
   GET_ALL: 'get_all_appointments',
   GET_BY_ID: 'get_by_id_appointment',

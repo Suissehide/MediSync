@@ -9,6 +9,7 @@ import Calendar, {
   type CalendarEvent,
 } from '../../components/custom/Calendar/calendar.tsx'
 import AddAppointmentForm from '../../components/custom/popup/addAppointmentForm.tsx'
+import AddPatientForm from '../../components/custom/popup/addPatientForm.tsx'
 import AppointmentSheet from '../../components/custom/sheet/appointmentSheet.tsx'
 import DashboardLayout from '../../components/dashboard.layout.tsx'
 import { SLOT } from '../../constants/process.constant.ts'
@@ -106,91 +107,98 @@ function Dashboard() {
   const appointmentId = openEventId.replace(/^.*?_/, '')
 
   return (
-    <DashboardLayout components={['patient', 'soignant']}>
-      <div className="pt-2 flex flex-col h-full">
-        <h1 className="flex gap-2 items-center px-4 text-text text-xl font-semibold">
-          <CalendarRange />
-          {soignant ? soignant.name : ''}
-        </h1>
+    <DashboardLayout
+      components={['soignant']}
+      quickActions={[<AddPatientForm key="add-patient" />]}
+    >
+      <div className="flex-1 bg-background rounded-lg flex flex-col w-full gap-4">
+        <div className="flex flex-col h-full">
+          <div className="px-6 pt-6 flex gap-2 items-center ">
+            <CalendarRange className="h-4 w-4" />
+            <h1 className="text-text-dark text-xl font-semibold">
+              {soignant ? soignant.name : ''}
+            </h1>
+          </div>
 
-        <div className="flex-1 min-h-0 overflow-hidden">
-          <Calendar
-            events={events}
-            editable={false}
-            overlap={false}
-            initialDate={savedDate}
-            handleSelectEvent={handleSelectAppointment}
-            handleClickEvent={handleAddAppointment}
-            handleOpenEvent={setOpenEventId}
-            selectAllow={(selectInfo) => {
-              const { start, end } = selectInfo
-              const selectionStart = dayjs(start)
-              const selectionEnd = dayjs(end)
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <Calendar
+              events={events}
+              editable={false}
+              overlap={false}
+              initialDate={savedDate}
+              handleSelectEvent={handleSelectAppointment}
+              handleClickEvent={handleAddAppointment}
+              handleOpenEvent={setOpenEventId}
+              selectAllow={(selectInfo) => {
+                const { start, end } = selectInfo
+                const selectionStart = dayjs(start)
+                const selectionEnd = dayjs(end)
 
-              // Only allow selection within individual slots
-              const individualSlots = events.filter(
-                (e) =>
-                  e.extendedProps?.type === 'slot' &&
-                  containsKeyword(e.extendedProps?.states ?? [], [
-                    'individual',
-                  ]),
-              )
-
-              return individualSlots.some((slot) => {
-                const slotStart = dayjs(slot.start)
-                const slotEnd = dayjs(slot.end)
-
-                // Check if selection is within slot bounds
-                const isWithinSlot =
-                  selectionStart.isSameOrAfter(slotStart) &&
-                  selectionEnd.isSameOrBefore(slotEnd)
-
-                if (!isWithinSlot) {
-                  return false
-                }
-
-                // Check if selection overlaps with existing appointments
-                const appointments = slot.extendedProps?.appointments ?? []
-                const overlapsAppointment = appointments.some(
-                  (apt: { startDate: string; endDate: string }) => {
-                    const aptStart = dayjs(apt.startDate)
-                    const aptEnd = dayjs(apt.endDate)
-                    return (
-                      selectionStart.isBefore(aptEnd) &&
-                      selectionEnd.isAfter(aptStart)
-                    )
-                  },
+                // Only allow selection within individual slots
+                const individualSlots = events.filter(
+                  (e) =>
+                    e.extendedProps?.type === 'slot' &&
+                    containsKeyword(e.extendedProps?.states ?? [], [
+                      'individual',
+                    ]),
                 )
 
-                return !overlapsAppointment
-              })
-            }}
-          />
+                return individualSlots.some((slot) => {
+                  const slotStart = dayjs(slot.start)
+                  const slotEnd = dayjs(slot.end)
+
+                  // Check if selection is within slot bounds
+                  const isWithinSlot =
+                    selectionStart.isSameOrAfter(slotStart) &&
+                    selectionEnd.isSameOrBefore(slotEnd)
+
+                  if (!isWithinSlot) {
+                    return false
+                  }
+
+                  // Check if selection overlaps with existing appointments
+                  const appointments = slot.extendedProps?.appointments ?? []
+                  const overlapsAppointment = appointments.some(
+                    (apt: { startDate: string; endDate: string }) => {
+                      const aptStart = dayjs(apt.startDate)
+                      const aptEnd = dayjs(apt.endDate)
+                      return (
+                        selectionStart.isBefore(aptEnd) &&
+                        selectionEnd.isAfter(aptStart)
+                      )
+                    },
+                  )
+
+                  return !overlapsAppointment
+                })
+              }}
+            />
+          </div>
         </div>
+
+        {openCreateAppointmentModal && (
+          <AddAppointmentForm
+            open={openCreateAppointmentModal}
+            setOpen={setOpenCreateAppointmentModal}
+            startDate={selectedDate.startStr}
+            endDate={selectedDate.endStr}
+            maxDate={maxDate}
+            soignant={soignant}
+            slotID={selectedEvent}
+            type={type}
+            handleCreateAppointment={handleCreateAppointment}
+          />
+        )}
+
+        {isAppointment && (
+          <AppointmentSheet
+            open={isAppointment}
+            setOpen={setOpenEventId}
+            eventID={appointmentId}
+            soignant={soignant}
+          />
+        )}
       </div>
-
-      {openCreateAppointmentModal && (
-        <AddAppointmentForm
-          open={openCreateAppointmentModal}
-          setOpen={setOpenCreateAppointmentModal}
-          startDate={selectedDate.startStr}
-          endDate={selectedDate.endStr}
-          maxDate={maxDate}
-          soignant={soignant}
-          slotID={selectedEvent}
-          type={type}
-          handleCreateAppointment={handleCreateAppointment}
-        />
-      )}
-
-      {isAppointment && (
-        <AppointmentSheet
-          open={isAppointment}
-          setOpen={setOpenEventId}
-          eventID={appointmentId}
-          soignant={soignant}
-        />
-      )}
     </DashboardLayout>
   )
 }

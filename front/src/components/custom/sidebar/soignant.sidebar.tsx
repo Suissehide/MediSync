@@ -1,9 +1,10 @@
-import { Stethoscope } from 'lucide-react'
+import { Plus, Stethoscope, Trash } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { useSoignantQueries } from '../../../queries/useSoignant.ts'
 import { useSoignantStore } from '../../../store/useSoignantStore.ts'
 import type { User } from '../../../types/auth.ts'
+import { Button } from '../../ui/button.tsx'
 import AddSoignantForm from '../popup/addSoignantForm.tsx'
 import DeleteSoignantForm from '../popup/deleteSoignantForm.tsx'
 
@@ -35,17 +36,25 @@ function SidebarSoignant({ user }: SidebarSoignantProps) {
 
   return (
     <>
-      <div className="flex justify-between items-center text-text-light pl-2 mb-2">
+      <div className="pl-4 pr-2 flex justify-between items-center text-text-sidebar py-2">
         <p>Soignants</p>
-        {isAdmin && <AddSoignantForm />}
+        {isAdmin && (
+          <AddSoignantForm
+            trigger={
+              <Button variant="gradient" size="icon">
+                <Plus className="w-5 h-5" />
+              </Button>
+            }
+          />
+        )}
       </div>
-      <ul className="flex-1 flex flex-col min-h-0 overflow-y-auto border-b border-border pb-2">
+      <ul className="mx-2 px-2 py-2 bg-sidebar flex-1 flex flex-col min-h-0 overflow-y-auto rounded-lg [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {soignants.map((soignant) => (
           <li
             key={soignant.id}
             onMouseEnter={() => setIsHovered(soignant.id)}
             onMouseLeave={() => setIsHovered('')}
-            className={`w-full flex justify-between items-center gap-2 rounded-lg ${selectedSoignantID === soignant.id ? 'bg-primary/10' : ''} hover:bg-primary/15`}
+            className={`relative w-full flex justify-between items-center gap-2 rounded-lg text-white ${selectedSoignantID === soignant.id ? 'bg-[#ffffff10]' : ''} hover:bg-[#ffffff20]`}
           >
             <button
               type="button"
@@ -59,7 +68,14 @@ function SidebarSoignant({ user }: SidebarSoignantProps) {
             </button>
 
             {isAdmin && isHovered === soignant.id && (
-              <DeleteSoignantForm soignant={soignant} />
+              <DeleteSoignantForm
+                soignant={soignant}
+                trigger={
+                  <Button variant="absolute" size="icon">
+                    <Trash className="w-4 h-4 text-red-500" />
+                  </Button>
+                }
+              />
             )}
           </li>
         ))}

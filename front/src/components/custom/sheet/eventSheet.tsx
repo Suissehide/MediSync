@@ -1,6 +1,5 @@
 import dayjs from 'dayjs'
 import { ChevronDown, FilePlus, Loader2Icon } from 'lucide-react'
-import { DropdownMenu } from 'radix-ui'
 import { useEffect } from 'react'
 
 import { useAppForm } from '../../../hooks/formConfig.tsx'
@@ -11,9 +10,11 @@ import { useSoignantQueries } from '../../../queries/useSoignant.ts'
 import type { UpdateSlotParams } from '../../../types/slot.ts'
 import { Button } from '../../ui/button.tsx'
 import {
-  DropdownMenuCustomContent,
-  DropdownMenuCustomItem,
-} from '../../ui/dropdownMenu.tsx'
+  PopoverContent,
+  PopoverMenuItem,
+  PopoverRoot,
+  PopoverTrigger,
+} from '../../ui/popover.tsx'
 import {
   Sheet,
   SheetContent,
@@ -184,24 +185,24 @@ export default function EventSheet({
                     Supprimer
                   </Button>
                   {hasPathway && (
-                    <DropdownMenu.Root>
-                      <DropdownMenu.Trigger asChild>
+                    <PopoverRoot>
+                      <PopoverTrigger asChild>
                         <Button
                           variant="destructive"
                           className="border-l-1 border-destructive-foreground pl-0 pr-2.5 rounded-l-none"
                         >
                           <ChevronDown className="ml-2 h-4 w-4" />
                         </Button>
-                      </DropdownMenu.Trigger>
-                      <DropdownMenuCustomContent align="end" className="z-1000">
-                        <DropdownMenuCustomItem
-                          className="px-3 py-2 text-sm text-destructive"
-                          onSelect={handleDeleteAllSlots}
+                      </PopoverTrigger>
+                      <PopoverContent align="end" className="z-1000">
+                        <PopoverMenuItem
+                          variant="destructive"
+                          onClick={handleDeleteAllSlots}
                         >
                           Supprimer tout le parcours
-                        </DropdownMenuCustomItem>
-                      </DropdownMenuCustomContent>
-                    </DropdownMenu.Root>
+                        </PopoverMenuItem>
+                      </PopoverContent>
+                    </PopoverRoot>
                   )}
                 </div>
 

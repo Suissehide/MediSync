@@ -28,14 +28,18 @@ export const getPatientColumns = ({ onView }: PatientActions) => {
     ),
     columnHelper.display({
       id: 'actions',
-      header: 'Actions',
+      header: '',
+      size: 50,
+      meta: {
+        align: 'right',
+      },
       cell: ({ row }) => {
         const patient = row.original
         return (
-          <div className="flex gap-2">
+          <div className="flex justify-end gap-2">
             <Button
               variant="outline"
-              size="sm"
+              size="icon-sm"
               onClick={() => onView(patient.id)}
             >
               <Eye className="w-3 h-3" />

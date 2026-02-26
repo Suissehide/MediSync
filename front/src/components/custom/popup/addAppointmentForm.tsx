@@ -3,22 +3,19 @@ import { Check, X } from 'lucide-react'
 import { useEffect, useMemo } from 'react'
 
 import { APPOINTMENT_TYPE_OPTIONS } from '../../../constants/appointment.constant.ts'
-import {
-  getThemeOptionsByRole,
-  THEMATICS,
-} from '../../../constants/slot.constant.ts'
 import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { generateDurationOptions } from '../../../libs/utils.ts'
 import { usePatientQueries } from '../../../queries/usePatient.ts'
+import { useThematicQueries } from '../../../queries/useThematic.ts'
 import { useSlotByIDQuery } from '../../../queries/useSlot.ts'
 import type { CreateAppointmentParams } from '../../../types/appointment.ts'
 import type { Soignant } from '../../../types/soignant.ts'
 import { Button } from '../../ui/button.tsx'
 import { FieldInfo } from '../../ui/fieldInfo.tsx'
 import { FormField } from '../../ui/formField.tsx'
-import { Select } from '../../ui/input.tsx'
+import { Select } from '../../ui/select.tsx'
 import { Label } from '../../ui/label.tsx'
-import { MultiSelect } from '../../ui/multiSelect.tsx'
+import { MultiSelect } from '../../ui/select.tsx'
 import {
   Popup,
   PopupBody,
@@ -53,6 +50,7 @@ function AddAppointmentForm({
   handleCreateAppointment,
 }: AddAppointmentFormProps) {
   const today = dayjs()
+  const { thematics } = useThematicQueries()
   const { patients } = usePatientQueries()
   const { slot } = useSlotByIDQuery(slotID)
   const patientOptions =
@@ -96,8 +94,12 @@ function AddAppointmentForm({
   }, [open, form])
 
   const thematicOptions = useMemo(() => {
-    return soignant ? getThemeOptionsByRole(THEMATICS, soignant.name) : []
-  }, [soignant])
+    return soignant
+      ? (thematics
+          ?.filter((t) => t.soignants.some((s) => s.id === soignant.id))
+          .map((t) => ({ value: t.name, label: t.name })) ?? [])
+      : []
+  }, [soignant, thematics])
 
   const capacity = slot?.slotTemplate.capacity ?? 1
 

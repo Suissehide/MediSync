@@ -1,5 +1,5 @@
 import { Draggable } from '@fullcalendar/interaction'
-import { Loader2Icon, Pencil, Route, Settings } from 'lucide-react'
+import { Loader2Icon, Pencil, Plus, Route, Settings } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 
@@ -50,17 +50,26 @@ function SidebarPathway() {
 
   return (
     <>
-      <div className="flex justify-between items-center text-text-light pl-2 mb-2">
+      <div className="pl-4 pr-2 flex justify-between items-center text-text-sidebar py-2">
         <p>Parcours</p>
-        <AddPathwayForm />
+        <AddPathwayForm
+          trigger={
+            <Button variant="gradient" size="icon">
+              <Plus className="w-5 h-5" />
+            </Button>
+          }
+        />
       </div>
-      <div ref={containerRef} className="flex-1 flex flex-col min-h-0">
+      <div
+        ref={containerRef}
+        className="mx-2 px-2 pb-2 flex-1 flex flex-col min-h-0"
+      >
         {isPending ? (
           <div className="h-full flex justify-center items-center">
             <Loader2Icon className="size-10 animate-spin text-foreground" />
           </div>
         ) : (
-          <ul className="flex-1 flex flex-col min-h-0 space-y-2 overflow-y-auto border-b border-border pb-2">
+          <ul className="flex-1 flex flex-col min-h-0 space-y-2 overflow-y-auto">
             {pathwayTemplates?.map((pathwayTemplate) => {
               const isSelected =
                 currentPathwayTemplate?.id === pathwayTemplate.id
@@ -70,13 +79,17 @@ function SidebarPathway() {
                   key={pathwayTemplate.id}
                   data-pathway-id={pathwayTemplate.id}
                   data-pathway-name={pathwayTemplate.name}
-                  className={`group rounded border border-border bg-white transition-all cursor-pointer
-                    hover:shadow-md
-                    ${isSelected ? 'ring-2 ring-primary ring-offset-1' : ''}
-                  `}
+                  className={`group rounded border transition-all cursor-pointer hover:shadow-md ${
+                    isSelected
+                      ? 'border-border-dark shadow-sm'
+                      : 'border-border-sidebar bg-sidebar'
+                  }`}
                   style={{
                     borderLeftColor: pathwayTemplate.color,
                     borderLeftWidth: '6px',
+                    ...(isSelected && {
+                      backgroundColor: hexToRGBA(pathwayTemplate.color, 0.15),
+                    }),
                   }}
                 >
                   <div className="relative flex items-center gap-3 px-3 py-2">
@@ -98,9 +111,8 @@ function SidebarPathway() {
 
                     <div className="absolute right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Button
-                        type="button"
                         variant="ghost"
-                        size="sm"
+                        size="icon"
                         onClick={(e) => {
                           e.stopPropagation()
                           setOpenSheetId(pathwayTemplate.id)
@@ -110,9 +122,8 @@ function SidebarPathway() {
                         <Pencil className="w-4 h-4" />
                       </Button>
                       <Button
-                        type="button"
                         variant="ghost"
-                        size="sm"
+                        size="icon"
                         onClick={(e) => {
                           e.stopPropagation()
                           handleEditPathwayTemplate(pathwayTemplate)
