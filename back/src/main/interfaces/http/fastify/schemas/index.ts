@@ -73,6 +73,7 @@ export const slotSchema = z.object({
 export const pathwayTemplateSchema = z.object({
   name: z.string().min(1),
   color: z.string(),
+  tags: z.array(z.string()).default([]),
 
   get slotTemplates() {
     return z.array(slotTemplateSchema).optional().nullable()
@@ -91,4 +92,16 @@ export const pathwaySchema = z.object({
   get slots() {
     return z.array(slotSchema).optional().nullable()
   },
+})
+
+export const diagnosticEducatifTemplateSchema = z.object({
+  name: z.string().min(1),
+  activeFields: z.array(z.string()).default([]),
+})
+
+export const diagnosticEducatifSchema = z.object({
+  title: z.string().optional().nullable(),
+  activeFields: z.array(z.string()).default([]),
+  patientId: z.cuid(),
+  templateId: z.cuid().optional().nullable(),
 })
