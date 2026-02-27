@@ -1,8 +1,8 @@
 import { BriefcaseMedical } from 'lucide-react'
 import { useState } from 'react'
 import { DiagnosticForm } from '../../DiagnosticEducatif/diagnostic.form.tsx'
-import { DiagnosticSidebar } from '../../DiagnosticEducatif/diagnostic.sidebar.tsx'
 import { DiagnosticView } from '../../DiagnosticEducatif/diagnostic.view.tsx'
+import SidebarDiagnostic from '../../sidebar/diagnostic.sidebar.tsx'
 import {
   useDiagnosticMutations,
   useDiagnosticsByPatientQuery,
@@ -15,7 +15,7 @@ export default function DiagnosticPatient({ patient }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [editMode, setEditMode] = useState(false)
 
-  const { diagnostics } = useDiagnosticsByPatientQuery(patient.id)
+  const { diagnostics, isPending } = useDiagnosticsByPatientQuery(patient.id)
   const { createDiagnostic, updateDiagnostic } = useDiagnosticMutations(patient.id)
 
   const selected = diagnostics?.find((d) => d.id === selectedId) ?? null
@@ -37,9 +37,10 @@ export default function DiagnosticPatient({ patient }: Props) {
 
   return (
     <div className="flex gap-4 h-full">
-      <div className="border-r border-border pr-4">
-        <DiagnosticSidebar
-          diagnostics={diagnostics ?? []}
+      <div className="border-r border-border flex flex-col min-h-0">
+        <SidebarDiagnostic
+          diagnostics={diagnostics}
+          isPending={isPending}
           selectedId={selectedId}
           onSelect={(id) => { setSelectedId(id); setEditMode(false) }}
           onNew={handleNew}

@@ -91,11 +91,6 @@ function PatientDetails() {
       label: 'Planning',
       icon: Calendar,
     },
-    {
-      id: 'diagnostic',
-      label: 'Diagnostic éducatif',
-      icon: BriefcaseMedical,
-    },
   ]
 
   return (
