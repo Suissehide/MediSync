@@ -20,7 +20,7 @@ export type DiagnosticTemplateParams = z.infer<typeof diagnosticTemplateParamsSc
 // Diagnostic schemas
 export const diagnosticEducatifResponseSchema = diagnosticEducatifSchema.extend({ id: z.cuid(), createdAt: z.coerce.date() })
 export const diagnosticEducatifsResponseSchema = z.array(diagnosticEducatifResponseSchema)
-export const createDiagnosticEducatifSchema = diagnosticEducatifSchema
+export const createDiagnosticEducatifSchema = diagnosticEducatifSchema.omit({ patientId: true })
 export const updateDiagnosticEducatifSchema = {
   params: z.object({ patientId: z.cuid(), diagnosticId: z.cuid() }),
   body: diagnosticEducatifSchema.omit({ patientId: true }).partial(),

@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { Plus, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import DashboardLayout from '../../../../components/dashboard.layout.tsx'
 import { Button } from '../../../../components/ui/button.tsx'
 import { Switch } from '../../../../components/ui/switch.tsx'
@@ -19,8 +19,13 @@ function DiagnosticTemplateSettings() {
   const { templates } = useDiagnosticTemplatesQuery()
   const { createTemplate, updateTemplate, deleteTemplate } = useDiagnosticTemplateMutations()
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingName, setEditingName] = useState('')
 
   const editing = templates?.find((t) => t.id === editingId) ?? null
+
+  useEffect(() => {
+    if (editing) setEditingName(editing.name)
+  }, [editing?.id])
 
   const handleCreate = () => {
     createTemplate.mutate(
@@ -75,8 +80,13 @@ function DiagnosticTemplateSettings() {
             <div className="flex-1 border border-border rounded-lg p-4 flex flex-col gap-4">
               <input
                 className="h-9 rounded-md border border-border bg-background px-3 text-sm font-medium focus:outline-none focus:ring-1 focus:ring-ring w-64"
-                value={editing.name}
-                onChange={(e) => updateTemplate.mutate({ id: editing.id, name: e.target.value })}
+                value={editingName}
+                onChange={(e) => setEditingName(e.target.value)}
+                onBlur={() => {
+                  if (editingName !== editing.name) {
+                    updateTemplate.mutate({ id: editing.id, name: editingName })
+                  }
+                }}
               />
               {DIAGNOSTIC_SECTIONS.map((section) => (
                 <div key={section.id}>
