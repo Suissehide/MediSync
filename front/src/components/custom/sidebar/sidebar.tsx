@@ -11,6 +11,8 @@ import {
   PopoverSeparator,
   PopoverTrigger,
 } from '../../ui/popover.tsx'
+import SidebarDiagnostic from './diagnostic.sidebar.tsx'
+import SidebarDiagnosticTemplate from './diagnosticTemplate.sidebar.tsx'
 import SidebarPathway from './pathway.sidebar.tsx'
 import SidebarPatient from './patient.sidebar.tsx'
 import SidebarSoignant from './soignant.sidebar.tsx'
@@ -41,6 +43,8 @@ function Sidebar({ isVisible, components, quickActions }: SidebarProps) {
     soignant: <SidebarSoignant user={user} />,
     pathway: <SidebarPathway />,
     patient: <SidebarPatient />,
+    diagnostic: <SidebarDiagnostic />,
+    diagnosticTemplate: <SidebarDiagnosticTemplate />,
   }
 
   return (
