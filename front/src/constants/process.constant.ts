@@ -29,6 +29,7 @@ export const SOIGNANT = {
 
 export const PATIENT = {
   GET_ALL: 'get_all_patients',
+  GET_ALL_WITH_TAGS: 'get_all_patients_with_tags',
   GET_BY_ID: 'get_by_id_patient',
   GET: 'get_patient',
   CREATE: 'create_patient',
@@ -63,6 +64,7 @@ export const PATHWAY = {
   INSTANTIATE: 'instantiate_pathway',
   UPDATE: 'update_pathway',
   DELETE: 'delete_pathway',
+  GET_TRACKING: 'get_tracking_pathway',
 }
 
 export const PATHWAY_TEMPLATE = {
@@ -87,4 +89,20 @@ export const APPOINTMENT = {
   CREATE: 'create_appointment',
   UPDATE: 'update_appointment',
   DELETE: 'delete_appointment',
+}
+
+export const DIAGNOSTIC_EDUCATIF = {
+  GET_BY_PATIENT: 'get_diagnostics_by_patient',
+  GET_BY_ID: 'get_diagnostic_by_id',
+  CREATE: 'create_diagnostic',
+  UPDATE: 'update_diagnostic',
+  DELETE: 'delete_diagnostic',
+}
+
+export const DIAGNOSTIC_EDUCATIF_TEMPLATE = {
+  GET_ALL: 'get_all_diagnostic_templates',
+  GET_BY_ID: 'get_diagnostic_template_by_id',
+  CREATE: 'create_diagnostic_template',
+  UPDATE: 'update_diagnostic_template',
+  DELETE: 'delete_diagnostic_template',
 }
