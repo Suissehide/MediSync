@@ -1,5 +1,5 @@
 import { Link, useMatchRoute, useRouter } from '@tanstack/react-router'
-import { CalendarDays, Cog, PanelLeft, Tag, UserCog, Users } from 'lucide-react'
+import { BriefcaseMedical, CalendarDays, Cog, PanelLeft, Tag, UserCog, Users } from 'lucide-react'
 
 import TodoSheet from './custom/todo/todoSheet.tsx'
 import { Button } from './ui/button.tsx'
@@ -42,6 +42,12 @@ const SettingsMenu = () => {
           onClick={() => router.navigate({ to: '/settings/thematic' })}
         >
           Thématiques
+        </PopoverMenuItem>
+        <PopoverMenuItem
+          icon={<BriefcaseMedical className="w-4 h-4" />}
+          onClick={() => router.navigate({ to: '/settings/diagnostic-template' })}
+        >
+          Diagnostics éducatifs
         </PopoverMenuItem>
         <PopoverMenuItem
           icon={<UserCog className="w-4 h-4" />}
@@ -97,6 +103,16 @@ function Navbar({ toggleSidebar }: NavbarProps) {
                ${isActive('/patient') ? 'text-text after:scale-x-100' : 'text-text-light'}`}
           >
             Patients
+          </Link>
+
+          <Link
+            to="/suivi"
+            className={`relative cursor-pointer transition-colors duration-300
+               after:content-[''] after:absolute after:left-0 after:top-full after:w-full after:h-[3px] after:bg-primary after:scale-x-0 after:origin-right after:transition-transform after:duration-300
+               hover:after:scale-x-100 hover:after:origin-left
+               ${isActive('/suivi') ? 'text-text after:scale-x-100' : 'text-text-light'}`}
+          >
+            Suivi
           </Link>
         </div>
       </div>
