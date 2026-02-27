@@ -2,7 +2,7 @@ import type {
   DiagnosticEducatifCreateEntity,
   DiagnosticEducatifEntity,
   DiagnosticEducatifUpdateEntity,
-} from '../../domain/diagnosticEducatif.domain.interface'
+} from '../../../domain/diagnosticEducatif.domain.interface'
 
 export interface DiagnosticEducatifRepositoryInterface {
   findByPatientID: (patientId: string) => Promise<DiagnosticEducatifEntity[]>

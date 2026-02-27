@@ -2,7 +2,7 @@ import type {
   DiagnosticEducatifTemplateCreateEntity,
   DiagnosticEducatifTemplateEntity,
   DiagnosticEducatifTemplateUpdateEntity,
-} from '../../domain/diagnosticEducatifTemplate.domain.interface'
+} from '../../../domain/diagnosticEducatifTemplate.domain.interface'
 
 export interface DiagnosticEducatifTemplateRepositoryInterface {
   findAll: () => Promise<DiagnosticEducatifTemplateEntity[]>

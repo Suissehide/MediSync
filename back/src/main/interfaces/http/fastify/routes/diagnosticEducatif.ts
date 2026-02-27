@@ -60,7 +60,7 @@ const diagnosticEducatifRouter: FastifyPluginAsync = (fastify) => {
     const diag = await diagnosticEducatifDomain.create({
       ...rest,
       patientId: request.params.patientId,
-      templateId,
+      templateId: templateId ?? undefined,
       activeFields,
     })
     reply.code(201)
