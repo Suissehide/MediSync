@@ -24,9 +24,10 @@ model User {
 }
 
 model PathwayTemplate {
-  id    String @id @default(cuid())
+  id    String   @id @default(cuid())
   name  String
   color String
+  tags  String[]
 
   pathways      Pathway[]
   slotTemplates SlotTemplate[]
@@ -166,6 +167,28 @@ model Patient {
   enrollmentIssues Json?
 
   appointmentPatients AppointmentPatient[]
+  diagnostics         DiagnosticEducatif[]
+}
+
+model DiagnosticEducatifTemplate {
+  id           String   @id @default(cuid())
+  name         String
+  activeFields String[]
+
+  diagnostics DiagnosticEducatif[]
+}
+
+model DiagnosticEducatif {
+  id           String   @id @default(cuid())
+  createdAt    DateTime @default(now())
+  title        String?
+  activeFields String[]
+
+  patientId  String
+  templateId String?
+
+  patient  Patient                     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  template DiagnosticEducatifTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
 }
 
 model Todo {
