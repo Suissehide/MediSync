@@ -30,6 +30,10 @@ import { ErrorHandler } from '../../../utils/error-handler'
 import { recordToString } from '../../../utils/helper'
 import { SlotTemplateDomain } from '../../../domain/slotTemplate.domain'
 import { SlotTemplateRepository } from '../../../infra/orm/repositories/slotTemplate.repository'
+import { DiagnosticEducatifDomain } from '../../../domain/diagnosticEducatif.domain'
+import { DiagnosticEducatifTemplateDomain } from '../../../domain/diagnosticEducatifTemplate.domain'
+import { DiagnosticEducatifRepository } from '../../../infra/orm/repositories/diagnosticEducatif.repository'
+import { DiagnosticEducatifTemplateRepository } from '../../../infra/orm/repositories/diagnosticEducatifTemplate.repository'
 
 declare module '@fastify/awilix' {
   interface Cradle extends IocContainer {}
@@ -82,6 +86,12 @@ class AwilixIocContainer {
     // Todo
     this.#registerTodoDomain()
     this.#registerTodoRepository()
+    // DiagnosticEducatif
+    this.#registerDiagnosticEducatifDomain()
+    this.#registerDiagnosticEducatifRepository()
+    // DiagnosticEducatifTemplate
+    this.#registerDiagnosticEducatifTemplateDomain()
+    this.#registerDiagnosticEducatifTemplateRepository()
 
     // Server
     this.#registerHttpServer()
@@ -218,6 +228,21 @@ class AwilixIocContainer {
   }
   #registerTodoRepository(): void {
     this.register('todoRepository', asClass(TodoRepository).singleton())
+  }
+
+  // DiagnosticEducatif
+  #registerDiagnosticEducatifDomain(): void {
+    this.register('diagnosticEducatifDomain', asClass(DiagnosticEducatifDomain).singleton())
+  }
+  #registerDiagnosticEducatifRepository(): void {
+    this.register('diagnosticEducatifRepository', asClass(DiagnosticEducatifRepository).singleton())
+  }
+  // DiagnosticEducatifTemplate
+  #registerDiagnosticEducatifTemplateDomain(): void {
+    this.register('diagnosticEducatifTemplateDomain', asClass(DiagnosticEducatifTemplateDomain).singleton())
+  }
+  #registerDiagnosticEducatifTemplateRepository(): void {
+    this.register('diagnosticEducatifTemplateRepository', asClass(DiagnosticEducatifTemplateRepository).singleton())
   }
 }
 
