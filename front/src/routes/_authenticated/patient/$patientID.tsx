@@ -23,6 +23,7 @@ import ProgrammePDFModal from '../../../components/custom/Patient/pdf/programme-
 import OutcomeReviewPatient from '../../../components/custom/Patient/view/outcome-review.patient.tsx'
 import OverviewPatient from '../../../components/custom/Patient/view/overview.patient.tsx'
 import PathwayInclusionPatient from '../../../components/custom/Patient/view/pathway-inclusion.patient.tsx'
+import DiagnosticPatient from '../../../components/custom/Patient/view/diagnostic.patient.tsx'
 import PlanningPatient from '../../../components/custom/Patient/view/planning.patient.tsx'
 import ProfileContextPatient from '../../../components/custom/Patient/view/profile-context.patient.tsx'
 import AddPatientForm from '../../../components/custom/popup/addPatientForm.tsx'
@@ -90,6 +91,11 @@ function PatientDetails() {
       label: 'Planning',
       icon: Calendar,
     },
+    {
+      id: 'diagnostic',
+      label: 'Diagnostic éducatif',
+      icon: BriefcaseMedical,
+    },
   ]
 
   return (
@@ -145,6 +151,7 @@ function PatientDetails() {
                       variant="default"
                       size="default"
                       className="flex-1"
+                      onClick={() => setSelected('diagnostic')}
                     >
                       <BriefcaseMedical className="h-4 w-4" />
                       <span className="text-sm">Diagnostic éducatif</span>
@@ -236,7 +243,7 @@ function PatientDetails() {
               </div>
 
               <div
-                className={`flex-1 flex flex-col gap-4 ${selected !== 'planning' && 'h-fit max-w-xl'}`}
+                className={`flex-1 flex flex-col gap-4 ${selected !== 'planning' && selected !== 'diagnostic' && 'h-fit max-w-xl'}`}
               >
                 {selected === 'overview' && (
                   <OverviewPatient patient={patient} />
@@ -252,6 +259,9 @@ function PatientDetails() {
                 )}
                 {selected === 'planning' && (
                   <PlanningPatient patient={patient} />
+                )}
+                {selected === 'diagnostic' && patient && (
+                  <DiagnosticPatient patient={patient} />
                 )}
               </div>
             </div>
