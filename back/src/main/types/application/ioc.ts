@@ -25,6 +25,10 @@ import type { Logger } from '../utils/logger'
 import type { Config } from './config'
 import type { SlotTemplateDomainInterface } from '../domain/slotTemplate.domain.interface'
 import type { SlotTemplateRepositoryInterface } from '../infra/orm/repositories/slotTemplate.repository.interface'
+import type { DiagnosticEducatifDomainInterface } from '../domain/diagnosticEducatif.domain.interface'
+import type { DiagnosticEducatifTemplateDomainInterface } from '../domain/diagnosticEducatifTemplate.domain.interface'
+import type { DiagnosticEducatifRepositoryInterface } from '../infra/orm/repositories/diagnosticEducatif.repository.interface'
+import type { DiagnosticEducatifTemplateRepositoryInterface } from '../infra/orm/repositories/diagnosticEducatifTemplate.repository.interface'
 
 export interface IocContainer {
   readonly config: Config
@@ -66,4 +70,10 @@ export interface IocContainer {
   // Todo
   readonly todoDomain: TodoDomainInterface
   readonly todoRepository: TodoRepositoryInterface
+  // DiagnosticEducatif
+  readonly diagnosticEducatifDomain: DiagnosticEducatifDomainInterface
+  readonly diagnosticEducatifRepository: DiagnosticEducatifRepositoryInterface
+  // DiagnosticEducatifTemplate
+  readonly diagnosticEducatifTemplateDomain: DiagnosticEducatifTemplateDomainInterface
+  readonly diagnosticEducatifTemplateRepository: DiagnosticEducatifTemplateRepositoryInterface
 }

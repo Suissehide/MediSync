@@ -5,11 +5,13 @@ import type {
 import type { PatientWithAppointmentsDomain } from '../../../domain/patient.domain.interface'
 
 export type PatientEntityRepo = Patient
+export type PatientWithTagsEntityRepo = Patient & { pathwayTemplateTags: string[] }
 export type PatientCreateEntityRepo = Prisma.PatientUncheckedCreateInput
 export type PatientUpdateEntityRepo = Prisma.PatientUncheckedUpdateInput
 
 export interface PatientRepositoryInterface {
   findAll: () => Promise<PatientEntityRepo[]>
+  findAllWithTags: () => Promise<PatientWithTagsEntityRepo[]>
   findByID: (id: string) => Promise<PatientWithAppointmentsDomain>
   create: (
     patientCreateParams: PatientCreateEntityRepo,

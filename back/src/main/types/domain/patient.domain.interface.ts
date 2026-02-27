@@ -3,11 +3,13 @@ import type {
   PatientCreateEntityRepo,
   PatientEntityRepo,
   PatientUpdateEntityRepo,
+  PatientWithTagsEntityRepo,
 } from '../infra/orm/repositories/patient.repository.interface'
 import type { AppointmentEntityDomain } from './appointment.domain.interface'
 import type { AppointmentPatientEntityDomain } from './appointmentPatient.domain.interface'
 
 export type PatientEntityDomain = PatientEntityRepo
+export type PatientWithTagsDomain = PatientWithTagsEntityRepo
 export type PatientWithAppointmentsDomain = PatientEntityDomain & {
   appointmentPatients: (AppointmentPatientEntityDomain & {
     appointment: AppointmentEntityDomain
@@ -66,6 +68,7 @@ export type EnrollmentResult = {
 
 export interface PatientDomainInterface {
   findAll: () => Promise<PatientEntityDomain[]>
+  findAllWithTags: () => Promise<PatientWithTagsDomain[]>
   findByID: (patientID: string) => Promise<PatientEntityDomain>
   create: (
     patientCreateParams: PatientCreateEntityDomain,
