@@ -8,6 +8,7 @@ import { useThematicMutations } from '../../../queries/useThematic.ts'
 import type { Soignant } from '../../../types/soignant.ts'
 import type { Thematic } from '../../../types/thematic.ts'
 import { Button } from '../../ui/button.tsx'
+import { Label } from '../../ui/label.tsx'
 import {
   Popup,
   PopupBody,
@@ -109,8 +110,8 @@ function EditSoignantThematicsForm({
 
       <PopupContent>
         <PopupHeader>
-          <PopupTitle className="font-bold text-2xl m-0!">
-            Modifier {soignant.name}
+          <PopupTitle className="font-bold text-xl">
+            Modifier le soignant
           </PopupTitle>
         </PopupHeader>
 
@@ -127,7 +128,7 @@ function EditSoignantThematicsForm({
             </form.AppField>
 
             <div className="flex flex-col gap-1">
-              <span className="text-sm font-medium">Thématiques</span>
+              <Label className="text-sm font-medium">Thématiques</Label>
               <MultiSelect
                 options={thematicOptions}
                 value={selectedIDs}

@@ -38,8 +38,10 @@ function DashboardLayout({
           }`}
         >
           <div className="h-full bg-foreground p-2 flex flex-col overflow-hidden">
-            <div className="flex-1 min-h-0 bg-card p-6 rounded-xl flex flex-col overflow-auto">
-              {children}
+            <div className="flex-1 min-h-0 bg-card p-6 rounded-xl flex flex-col overflow-hidden">
+              <div className="flex-1 min-h-0 flex flex-col overflow-auto">
+                {children}
+              </div>
             </div>
           </div>
         </main>

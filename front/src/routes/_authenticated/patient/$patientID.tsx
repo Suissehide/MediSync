@@ -1,275 +1,125 @@
 import { createFileRoute, useNavigate, useParams } from '@tanstack/react-router'
-import dayjs from 'dayjs'
-import {
-  ArrowLeft,
-  ArrowRightFromLine,
-  Bookmark,
-  BriefcaseMedical,
-  Calendar,
-  CalendarPlus,
-  ChevronRight,
-  Ellipsis,
-  FileDown,
-  LayoutTemplate,
-  type LucideIcon,
-  Pencil,
-  Route as RouteIcon,
-  User,
-} from 'lucide-react'
-import { useState } from 'react'
+import { ArrowLeft, FileDown } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
 import EditPatient from '../../../components/custom/Patient/edit/edit.patient.tsx'
 import ProgrammePDFModal from '../../../components/custom/Patient/pdf/programme-pdf-modal.tsx'
-import OutcomeReviewPatient from '../../../components/custom/Patient/view/outcome-review.patient.tsx'
-import OverviewPatient from '../../../components/custom/Patient/view/overview.patient.tsx'
-import PathwayInclusionPatient from '../../../components/custom/Patient/view/pathway-inclusion.patient.tsx'
 import DiagnosticPatient from '../../../components/custom/Patient/view/diagnostic.patient.tsx'
+import OverviewPatient from '../../../components/custom/Patient/view/overview.patient.tsx'
 import PlanningPatient from '../../../components/custom/Patient/view/planning.patient.tsx'
-import ProfileContextPatient from '../../../components/custom/Patient/view/profile-context.patient.tsx'
 import AddPatientForm from '../../../components/custom/popup/addPatientForm.tsx'
+import { AddPatientToPathwayForm } from '../../../components/custom/popup/addPatientToPathwayForm.tsx'
 import DashboardLayout from '../../../components/dashboard.layout.tsx'
 import { Button } from '../../../components/ui/button.tsx'
 import {
-  PopoverContent,
-  PopoverMenuItem,
-  PopoverRoot,
-  PopoverTrigger,
-} from '../../../components/ui/popover.tsx'
-import { GENDER } from '../../../constants/patient.constant.ts'
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '../../../components/ui/tabs.tsx'
 import { usePatientByIDQuery } from '../../../queries/usePatient.ts'
+import { useDiagnosticStore } from '../../../store/useDiagnosticStore.ts'
 
 export const Route = createFileRoute('/_authenticated/patient/$patientID')({
   component: PatientDetails,
 })
 
-export type MenuItem = {
-  id: string
-  label: string
-  icon: LucideIcon
-}
-
 function PatientDetails() {
   const navigate = useNavigate()
+  const [selected, setSelected] = useState<string>('overview')
+  const [showPDF, setShowPDF] = useState(false)
+
+  const { selectedId: diagnosticSelectedId, setSelectedId } = useDiagnosticStore()
 
   const { patientID } = useParams({
     from: '/_authenticated/patient/$patientID',
   })
   const { patient, isError, isFetched } = usePatientByIDQuery(patientID)
 
-  const [editMode, setEditMode] = useState(false)
-  const [showPDFModal, setShowPDFModal] = useState(false)
-  const [selected, setSelected] = useState<string>('overview')
+  useEffect(() => {
+    if (diagnosticSelectedId) {
+      setSelected('diagnostic')
+    }
+  }, [diagnosticSelectedId])
+
+  useEffect(() => {
+    return () => {
+      setSelectedId(null)
+    }
+  }, [setSelectedId])
 
   if (isFetched && (isError || !patient)) {
     void navigate({ to: '/patient' })
     return null
   }
 
-  const menuItems: MenuItem[] = [
-    {
-      id: 'overview',
-      label: 'Aperçu général',
-      icon: LayoutTemplate,
-    },
-    {
-      id: 'profile',
-      label: 'Profil & Contexte',
-      icon: User,
-    },
-    {
-      id: 'pathway',
-      label: 'Parcours & Inclusion',
-      icon: RouteIcon,
-    },
-    {
-      id: 'outcome',
-      label: 'Sortie & Bilan',
-      icon: Bookmark,
-    },
-    {
-      id: 'planning',
-      label: 'Planning',
-      icon: Calendar,
-    },
-  ]
-
   return (
-    <DashboardLayout quickActions={[<AddPatientForm key="add-patient" />]}>
+    <DashboardLayout
+      components={['diagnostic']}
+      quickActions={[<AddPatientForm key="add-patient" />]}
+    >
       <div className="flex-1 bg-background p-2 rounded flex flex-col w-full">
-        {editMode ? (
-          <EditPatient patient={patient} setEditMode={setEditMode} />
-        ) : (
-          <div className="py-4 px-4 h-full flex flex-col gap-4">
-            <div className="flex gap-2 items-center text-sm">
-              <ArrowRightFromLine size={18} className="font-bold" />
-              <button
-                type="button"
-                className="cursor-pointer text-text-light transition duration-300 hover:underline"
-                onClick={() => navigate({ to: '/patient' })}
+        <div className="flex-1 bg-background p-6 rounded-lg flex flex-col w-full gap-4 min-h-0">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => navigate({ to: '/patient' })}
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+            <h2 className="text-text-foreground text-xl font-semibold">
+              {patient?.firstName} {patient?.lastName}
+            </h2>
+            <div className="ml-auto flex items-center gap-2">
+              {patient && <AddPatientToPathwayForm patient={patient} />}
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setShowPDF(true)}
               >
-                Patients
-              </button>
-              <div className="text-text-light italic text-xs">/</div>
-              <div>
-                {patient?.firstName} {patient?.lastName}
-              </div>
-            </div>
-
-            <div className="flex-1 flex gap-4">
-              <div className="h-fit w-[400px] border border-border rounded-lg">
-                <div className="px-4 py-4 flex justify-between items-center">
-                  <Button
-                    variant="outline"
-                    size="default"
-                    onClick={() => navigate({ to: '/patient' })}
-                  >
-                    <ArrowLeft size={16} />
-                    Retour
-                  </Button>
-                </div>
-
-                <div className="w-full border-t border-border" />
-                <div className="px-4 py-4">
-                  <h3 className="mt-2 text-2xl font-semibold">
-                    {patient?.firstName} {patient?.lastName}
-                  </h3>
-                  <div className="text-sm text-text-light">
-                    {patient?.gender &&
-                    GENDER[patient.gender as keyof typeof GENDER]
-                      ? GENDER[patient.gender as keyof typeof GENDER]
-                      : 'Non spécifié'}
-                    , {dayjs().diff(dayjs(patient?.birthDate), 'year')}
-                  </div>
-                  <div className="flex items-center gap-2 my-4">
-                    <Button
-                      type="button"
-                      variant="default"
-                      size="default"
-                      className="flex-1"
-                      onClick={() => setSelected('diagnostic')}
-                    >
-                      <BriefcaseMedical className="h-4 w-4" />
-                      <span className="text-sm">Diagnostic éducatif</span>
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="default"
-                      size="icon"
-                      onClick={() => setEditMode(true)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button type="button" variant="default" size="icon">
-                      <CalendarPlus className="h-4 w-4" />
-                    </Button>
-                    <PopoverRoot>
-                      <PopoverTrigger asChild>
-                        <Button type="button" variant="outline" size="icon">
-                          <Ellipsis className="h-4 w-4" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent align="end">
-                        <PopoverMenuItem
-                          icon={<FileDown className="h-4 w-4" />}
-                          onClick={() => setShowPDFModal(true)}
-                        >
-                          Exporter le programme en PDF
-                        </PopoverMenuItem>
-                      </PopoverContent>
-                    </PopoverRoot>
-                  </div>
-                </div>
-
-                <div className="w-full border-t border-border" />
-                <div className="px-4 py-4">
-                  <ul>
-                    {menuItems.map(({ id, label, icon: Icon }) => {
-                      const isActive = selected === id
-                      return (
-                        <li
-                          key={id}
-                          onClick={() => setSelected(id)}
-                          onKeyDown={() => setSelected(id)}
-                          className={`group cursor-pointer px-3 py-2 flex justify-between items-center rounded transition duration-300 ${
-                            isActive
-                              ? 'bg-primary/20 text-primary font-medium'
-                              : 'text-text hover:bg-primary/10 hover:text-primary'
-                          }`}
-                        >
-                          <div className="flex gap-2 items-center">
-                            <Icon
-                              className={`h-4 w-4 group-hover:text-primary ${isActive ? 'text-primary' : 'text-text'}`}
-                            />
-                            {label}
-                          </div>
-                          <ChevronRight
-                            className={`h-4 w-4 transition ${
-                              isActive
-                                ? 'text-primary'
-                                : 'group-hover:text-primary'
-                            }`}
-                          />
-                        </li>
-                      )
-                    })}
-                  </ul>
-                </div>
-
-                <div className="w-full border-t border-border" />
-                <div className="px-4 py-4">
-                  <div className="mb-4">
-                    <h4 className="text">Coordonnées</h4>
-                  </div>
-                  <div className="flex flex-col text-sm mt-2">
-                    <div className="flex justify-between">
-                      <div className="text-text-light">Email</div>
-                      <div className="text-base">{patient?.email}</div>
-                    </div>
-                    <div className="flex justify-between">
-                      <div className="text-text-light">Téléphone 1</div>
-                      <div className="text-base">{patient?.phone1}</div>
-                    </div>
-                    <div className="flex justify-between">
-                      <div className="text-text-light">Téléphone 2</div>
-                      <div className="text-base">{patient?.phone2}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div
-                className={`flex-1 flex flex-col gap-4 ${selected !== 'planning' && selected !== 'diagnostic' && 'h-fit max-w-xl'}`}
-              >
-                {selected === 'overview' && (
-                  <OverviewPatient patient={patient} />
-                )}
-                {selected === 'profile' && (
-                  <ProfileContextPatient patient={patient} />
-                )}
-                {selected === 'pathway' && (
-                  <PathwayInclusionPatient patient={patient} />
-                )}
-                {selected === 'outcome' && (
-                  <OutcomeReviewPatient patient={patient} />
-                )}
-                {selected === 'planning' && (
-                  <PlanningPatient patient={patient} />
-                )}
-                {selected === 'diagnostic' && patient && (
-                  <DiagnosticPatient patient={patient} />
-                )}
-              </div>
+                <FileDown className="w-4 h-4" />
+              </Button>
             </div>
           </div>
-        )}
 
-        {showPDFModal && patient && (
-          <ProgrammePDFModal
-            patient={patient}
-            onClose={() => setShowPDFModal(false)}
-          />
-        )}
+          <Tabs
+            value={selected}
+            onValueChange={setSelected}
+            className="flex-1 flex flex-col gap-4 min-h-0"
+          >
+            <TabsList>
+              <TabsTrigger value="overview">Aperçu général</TabsTrigger>
+              <TabsTrigger value="information">Informations</TabsTrigger>
+              <TabsTrigger value="planning">Planning</TabsTrigger>
+              <TabsTrigger value="diagnostic">Diagnostic éducatif</TabsTrigger>
+            </TabsList>
+
+            {patient && (
+              <>
+                <TabsContent value="overview">
+                  <OverviewPatient patient={patient} />
+                </TabsContent>
+                <TabsContent value="information" forceMount>
+                  <EditPatient patient={patient} />
+                </TabsContent>
+                <TabsContent value="planning">
+                  <PlanningPatient patient={patient} />
+                </TabsContent>
+                <TabsContent value="diagnostic">
+                  <DiagnosticPatient patient={patient} />
+                </TabsContent>
+              </>
+            )}
+          </Tabs>
+        </div>
       </div>
+      {showPDF && patient && (
+        <ProgrammePDFModal
+          patient={patient}
+          onClose={() => setShowPDF(false)}
+        />
+      )}
     </DashboardLayout>
   )
 }

@@ -31,7 +31,14 @@ interface PopupContentProps
   extends React.ComponentPropsWithoutRef<typeof Dialog.Content>,
     VariantProps<typeof popupVariants> {}
 
-const Popup = Dialog.Root
+const Popup = ({
+  modal = false,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof Dialog.Root>) => (
+  <Dialog.Root modal={modal} {...props} />
+)
+Popup.displayName = 'Popup'
+
 const PopupClose = Dialog.Close
 const PopupPortal = Dialog.Portal
 

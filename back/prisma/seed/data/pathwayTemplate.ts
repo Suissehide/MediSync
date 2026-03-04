@@ -10,17 +10,45 @@ export interface SlotData {
 }
 
 export const PATHWAYS = {
-  C_ETP_AM_1: { name: 'Contenu ETP AM 1', color: '#90EE90' }, // Vert clair (matin)
-  C_ETP_PM_1: { name: 'Contenu ETP PM 1', color: '#5FCF5F' }, // Vert moyen (après-midi)
-  C_ETP_AM_2: { name: 'Contenu ETP AM 2', color: '#87CEEB' }, // Bleu ciel (matin)
-  C_ETP_PM_2: { name: 'Contenu ETP PM 2', color: '#5FA8D3' }, // Bleu moyen (après-midi)
-  C_ETP_AM_3: { name: 'Contenu ETP AM 3', color: '#DDA0DD' }, // Prune clair (matin)
-  C_ETP_PM_3: { name: 'Contenu ETP PM 3', color: '#C77FC7' }, // Prune moyen (après-midi)
+  C_ETP_AM_1: {
+    name: 'Contenu ETP AM 1',
+    color: '#90EE90',
+    tags: ['ETP', 'Groupe 1', 'Matin'],
+  },
+  C_ETP_PM_1: {
+    name: 'Contenu ETP PM 1',
+    color: '#5FCF5F',
+    tags: ['ETP', 'Groupe 1', 'Après-midi'],
+  },
+  C_ETP_AM_2: {
+    name: 'Contenu ETP AM 2',
+    color: '#87CEEB',
+    tags: ['ETP', 'Groupe 2', 'Matin'],
+  },
+  C_ETP_PM_2: {
+    name: 'Contenu ETP PM 2',
+    color: '#5FA8D3',
+    tags: ['ETP', 'Groupe 2', 'Après-midi'],
+  },
+  C_ETP_AM_3: {
+    name: 'Contenu ETP AM 3',
+    color: '#DDA0DD',
+    tags: ['ETP', 'Groupe 3', 'Matin'],
+  },
+  C_ETP_PM_3: {
+    name: 'Contenu ETP PM 3',
+    color: '#C77FC7',
+    tags: ['ETP', 'Groupe 3', 'Après-midi'],
+  },
 
-  AC: { name: 'Ateliers à la carte', color: '#FFFF00' }, // Jaune
-  C_ETP_SA: { name: 'Contenu ETP sans réadaptation', color: '#FFD700' }, // Or
-  T2: { name: 'Parcours T1', color: '#FF8C00' }, // Orange dark
-  T1: { name: 'Parcours T2', color: '#FF6347' }, // Tomate
+  AC: { name: 'Ateliers à la carte', color: '#FFFF00', tags: ['Ateliers'] },
+  C_ETP_SA: {
+    name: 'Contenu ETP sans réadaptation',
+    color: '#FFD700',
+    tags: ['ETP', 'Sans réadaptation'],
+  },
+  T2: { name: 'Parcours T1', color: '#FF8C00', tags: ['T1/T2'] },
+  T1: { name: 'Parcours T2', color: '#FF6347', tags: ['T1/T2'] },
 }
 
 // Map soignant names from slot data to index in SOIGNANTS array
@@ -55,7 +83,7 @@ export const PATHWAY_DATA: Record<string, SlotData[]> = {
       isIndividual: false,
       startTime: '08:30',
       endTime: '09:45',
-      weekCalendar: 1,
+      weekCalendar: 0,
       dayOfWeek: 0,
     },
     {
@@ -65,7 +93,7 @@ export const PATHWAY_DATA: Record<string, SlotData[]> = {
       isIndividual: false,
       startTime: '09:45',
       endTime: '11:00',
-      weekCalendar: 1,
+      weekCalendar: 0,
       dayOfWeek: 0,
     },
 
@@ -77,7 +105,7 @@ export const PATHWAY_DATA: Record<string, SlotData[]> = {
       isIndividual: false,
       startTime: '08:30',
       endTime: '09:45',
-      weekCalendar: 1,
+      weekCalendar: 0,
       dayOfWeek: 1,
     },
     {
@@ -87,7 +115,7 @@ export const PATHWAY_DATA: Record<string, SlotData[]> = {
       isIndividual: false,
       startTime: '09:45',
       endTime: '11:00',
-      weekCalendar: 1,
+      weekCalendar: 0,
       dayOfWeek: 1,
     },
 
@@ -99,7 +127,7 @@ export const PATHWAY_DATA: Record<string, SlotData[]> = {
       isIndividual: false,
       startTime: '08:30',
       endTime: '09:45',
-      weekCalendar: 1,
+      weekCalendar: 0,
       dayOfWeek: 2,
     },
     {
@@ -108,7 +136,7 @@ export const PATHWAY_DATA: Record<string, SlotData[]> = {
       isIndividual: false,
       startTime: '09:45',
       endTime: '11:00',
-      weekCalendar: 1,
+      weekCalendar: 0,
       dayOfWeek: 2,
     },
 
@@ -120,7 +148,7 @@ export const PATHWAY_DATA: Record<string, SlotData[]> = {
       isIndividual: false,
       startTime: '08:30',
       endTime: '09:45',
-      weekCalendar: 1,
+      weekCalendar: 0,
       dayOfWeek: 3,
     },
     {
@@ -129,7 +157,7 @@ export const PATHWAY_DATA: Record<string, SlotData[]> = {
       isIndividual: false,
       startTime: '09:45',
       endTime: '11:00',
-      weekCalendar: 1,
+      weekCalendar: 0,
       dayOfWeek: 3,
     },
 
@@ -141,7 +169,7 @@ export const PATHWAY_DATA: Record<string, SlotData[]> = {
       isIndividual: false,
       startTime: '08:30',
       endTime: '09:45',
-      weekCalendar: 1,
+      weekCalendar: 0,
       dayOfWeek: 4,
     },
     {
@@ -150,7 +178,7 @@ export const PATHWAY_DATA: Record<string, SlotData[]> = {
       isIndividual: false,
       startTime: '09:45',
       endTime: '11:00',
-      weekCalendar: 1,
+      weekCalendar: 0,
       dayOfWeek: 4,
     },
 

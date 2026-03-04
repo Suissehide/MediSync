@@ -3,9 +3,9 @@ import dayjs from 'dayjs'
 import { Eye } from 'lucide-react'
 
 import { Button } from '../components/ui/button.tsx'
-import type { Patient } from '../types/patient.ts'
+import type { PatientWithTags } from '../types/patient.ts'
 
-const columnHelper = createColumnHelper<Patient>()
+const columnHelper = createColumnHelper<PatientWithTags>()
 
 type PatientActions = {
   onView: (id: string) => void
@@ -26,6 +26,28 @@ export const getPatientColumns = ({ onView }: PatientActions) => {
         header: "Date d'entrée",
       },
     ),
+    columnHelper.accessor('pathwayTemplateTags', {
+      id: 'pathwayTemplateTags',
+      header: 'Parcours',
+      cell: ({ getValue }) => {
+        const tags = getValue() ?? []
+        if (tags.length === 0) {
+          return null
+        }
+        return (
+          <div className="flex flex-wrap gap-1">
+            {tags.map((tag) => (
+              <span
+                key={tag}
+                className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary leading-none"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )
+      },
+    }),
     columnHelper.display({
       id: 'actions',
       header: '',

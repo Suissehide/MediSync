@@ -52,7 +52,7 @@ function AddThematicForm({ trigger }: AddThematicFormProps) {
 
       <PopupContent>
         <PopupHeader>
-          <PopupTitle className="font-bold text-2xl m-0!">
+          <PopupTitle className="font-bold text-xl">
             Ajouter une thématique
           </PopupTitle>
         </PopupHeader>

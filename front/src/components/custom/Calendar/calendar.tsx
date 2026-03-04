@@ -13,8 +13,8 @@ import listPlugin from '@fullcalendar/list'
 import FullCalendar from '@fullcalendar/react'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import dayjs, { type Dayjs } from 'dayjs'
-import { CalendarIcon } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { CalendarIcon, CalendarOff } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import { usePlanningStore } from '../../../store/usePlanningStore.ts'
@@ -73,6 +73,17 @@ function Calendar({
   const lastDropTimeRef = useRef<number>(0)
   const calendarRef = useRef<FullCalendar | null>(null)
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
+  const [currentView, setCurrentView] = useState('timeGridWeek')
+  const [currentViewStart, setCurrentViewStart] = useState<string>('')
+
+  const showDayEmptyState = useMemo(() => {
+    if (currentView !== 'dayGridDay' || !currentViewStart) return false
+    const dayStart = dayjs(currentViewStart).startOf('day')
+    const dayEnd = dayStart.endOf('day')
+    return !events.some(
+      (e) => dayjs(e.start).isBefore(dayEnd) && dayjs(e.end).isAfter(dayStart),
+    )
+  }, [currentView, currentViewStart, events])
 
   const handleOpenDatePicker = (ev: MouseEvent) => {
     const target = ev.currentTarget
@@ -153,7 +164,7 @@ function Calendar({
   }, [handleClickEvent])
 
   return (
-    <div className={`${editMode ? 'edit-mode' : ''} h-full`}>
+    <div className={`${editMode ? 'edit-mode' : ''} h-full relative`}>
       <FullCalendar
         ref={calendarRef}
         plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
@@ -212,7 +223,12 @@ function Calendar({
             editMode={editMode}
           />
         )}
+        noEventsContent={() => (
+          <NoEventsState label="Aucune séance planifiée cette semaine" />
+        )}
         datesSet={(arg) => {
+          setCurrentView(arg.view.type)
+          setCurrentViewStart(arg.view.currentStart.toISOString())
           usePlanningStore.getState().setPlanningDates({
             currentDate: arg.startStr,
             viewStart: arg.view.currentStart.toISOString(),
@@ -260,11 +276,31 @@ function Calendar({
         }}
       />
 
+      {showDayEmptyState && (
+        <div className="absolute inset-x-0 bottom-0 top-[68px] flex items-center justify-center pointer-events-none z-10">
+          <NoEventsState label="Aucune séance planifiée ce jour" />
+        </div>
+      )}
+
       <CalendarDatePickerButton
         anchorEl={anchorEl}
         setAnchorEl={setAnchorEl}
         onChange={handleDateChange}
       />
+    </div>
+  )
+}
+
+function NoEventsState({ label }: { label: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-3">
+      <div className="flex items-center justify-center h-12 w-12 rounded-full bg-card border border-border">
+        <CalendarOff className="h-5 w-5 text-text-light" />
+      </div>
+      <div className="text-center">
+        <p className="text-sm font-medium text-text-dark">Aucune séance</p>
+        <p className="text-xs text-text-light mt-0.5">{label}</p>
+      </div>
     </div>
   )
 }

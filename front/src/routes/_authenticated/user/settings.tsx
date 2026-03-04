@@ -89,7 +89,7 @@ function UserSettings() {
             <div className="mt-1 ml-1 flex-1 border-t border-border" />
           </div>
 
-          <div className="bg-input p-6 rounded-lg ">
+          <div className="bg-input p-6 rounded-lg">
             <form
               onSubmit={async (e) => {
                 e.preventDefault()

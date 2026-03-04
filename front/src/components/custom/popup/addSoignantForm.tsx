@@ -9,6 +9,7 @@ import {
   useThematicQueries,
 } from '../../../queries/useThematic.ts'
 import { Button } from '../../ui/button.tsx'
+import { Label } from '../../ui/label.tsx'
 import {
   Popup,
   PopupBody,
@@ -81,7 +82,7 @@ function AddSoignantForm({ trigger }: AddSoignantFormProps) {
 
       <PopupContent>
         <PopupHeader>
-          <PopupTitle className="font-bold text-2xl m-0!">
+          <PopupTitle className="font-bold text-xl">
             Ajouter un soignant
           </PopupTitle>
         </PopupHeader>
@@ -108,7 +109,7 @@ function AddSoignantForm({ trigger }: AddSoignantFormProps) {
             <form.Field name="thematicIDs">
               {(field) => (
                 <div className="flex flex-col gap-1">
-                  <span className="text-sm font-medium">Thématiques</span>
+                  <Label className="text-sm font-medium">Thématiques</Label>
                   <MultiSelect
                     options={thematicOptions}
                     value={field.state.value}

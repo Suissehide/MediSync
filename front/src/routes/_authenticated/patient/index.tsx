@@ -8,8 +8,8 @@ import DashboardLayout from '../../../components/dashboard.layout.tsx'
 import ReactTable from '../../../components/table/reactTable.tsx'
 import { Button } from '../../../components/ui/button.tsx'
 import { Input } from '../../../components/ui/input.tsx'
-import { usePatientQueries } from '../../../queries/usePatient.ts'
-import type { Patient } from '../../../types/patient.ts'
+import { usePatientWithTagsQuery } from '../../../queries/usePatient.ts'
+import type { PatientWithTags } from '../../../types/patient.ts'
 
 export const Route = createFileRoute('/_authenticated/patient/')({
   component: PatientList,
@@ -17,7 +17,7 @@ export const Route = createFileRoute('/_authenticated/patient/')({
 
 function PatientList() {
   const navigate = useNavigate()
-  const { patients } = usePatientQueries()
+  const { patients } = usePatientWithTagsQuery()
   const [searchTerm, setSearchTerm] = useState('')
 
   const handleRedirectPatient = async (patientID: string) => {
@@ -79,10 +79,11 @@ function PatientList() {
         </div>
 
         <div className="flex-1 flex flex-col">
-          <ReactTable<Patient>
+          <ReactTable<PatientWithTags>
             data={filteredPatients}
             columns={columns}
             filterId="patient"
+            pagination
             onRowClick={(patient) => handleRedirectPatient(patient.id)}
           />
         </div>

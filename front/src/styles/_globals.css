@@ -188,3 +188,7 @@ body {
 /*.fc-scroller {*/
 /*    overflow: auto !important;*/
 /*}*/
+
+.fc-list-event-time {
+    font-size: 14px;
+}

@@ -79,7 +79,7 @@ export default function OverviewPatient({ patient }: OverviewPatientProps) {
   const enrollmentIssues = patient?.enrollmentIssues
 
   return (
-    <div className="relative h-fit flex-1 px-4 py-4 flex flex-col gap-2 border border-border rounded-lg">
+    <div className="relative h-fit flex-1 flex flex-col gap-2">
       {enrollmentIssues && enrollmentIssues.length > 0 && (
         <div className="flex flex-col gap-1 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
           <div className="flex items-center gap-2 font-medium text-amber-800">
@@ -89,7 +89,9 @@ export default function OverviewPatient({ patient }: OverviewPatientProps) {
           <ul className="ml-6 list-disc text-sm text-amber-700">
             {enrollmentIssues.map((issue) => (
               <li key={issue.pathwayTemplateID}>
-                <span className="font-medium">{issue.pathwayName ?? issue.pathwayTemplateID}</span>
+                <span className="font-medium">
+                  {issue.pathwayName ?? issue.pathwayTemplateID}
+                </span>
                 {' : '}
                 {issue.reason}
               </li>
@@ -98,41 +100,44 @@ export default function OverviewPatient({ patient }: OverviewPatientProps) {
         </div>
       )}
 
-      <ColorLegend
-        title="Légende des couleurs"
-        className="z-10 absolute right-3 top-3"
-      />
-
-      <h4 className="relative mt-2 text-lg font-semibold w-full after:absolute after:bottom-[-3px] after:left-0 after:h-[1px] after:w-full after:bg-border">
-        <span className="relative inline-block z-10 before:absolute before:bottom-[-5px] before:left-0 before:h-[5px] before:w-full before:bg-primary before:rounded-full">
-          Rendez-vous
-        </span>
-      </h4>
-
-      <h5 className="mt-4 mb-2 text-sm text-text-light uppercase font-semibold">
-        À venir ({patientSlots.upcoming.length})
-      </h5>
-      <div className="flex flex-col gap-2 max-h-52 overflow-y-auto">
-        {patientSlots.upcoming.length > 0 ? (
-          patientSlots.upcoming.map((slot) => (
-            <AppointmentCard key={slot.id} slot={slot} />
-          ))
-        ) : (
-          <p className="text-text-light text-sm">Aucun rendez-vous à venir</p>
-        )}
+      <div className="flex items-center gap-2 mt-4">
+        <h4 className="relative text-md font-semibold">Rendez-vous</h4>
+        <div className="mt-1 ml-1 flex-1 border-t border-border" />
+        <ColorLegend />
       </div>
 
-      <h5 className="my-2 text-sm text-text-light uppercase font-semibold">
-        Passés ({patientSlots.past.length})
-      </h5>
-      <div className="flex flex-col gap-2 max-h-52 overflow-y-auto">
-        {patientSlots.past.length > 0 ? (
-          patientSlots.past.map((slot) => (
-            <AppointmentCard key={slot.id} slot={slot} />
-          ))
-        ) : (
-          <p className="text-text-light text-sm">Aucun rendez-vous passé</p>
-        )}
+      <div className="mt-2 bg-input rounded-lg p-6">
+        <div className="mb-2">
+          <h5 className="text-xs text-text-light uppercase font-semibold">
+            À venir ({patientSlots.upcoming.length})
+          </h5>
+        </div>
+        <div className="flex flex-col gap-2 max-h-52 overflow-y-auto">
+          {patientSlots.upcoming.length > 0 ? (
+            patientSlots.upcoming.map((slot) => (
+              <AppointmentCard key={slot.id} slot={slot} />
+            ))
+          ) : (
+            <p className="text-text-sidebar text-sm">
+              Aucun rendez-vous à venir
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="bg-input rounded-lg p-6">
+        <h5 className="mb-2 text-xs text-text-light uppercase font-semibold">
+          Passés ({patientSlots.past.length})
+        </h5>
+        <div className="flex flex-col gap-2 max-h-52 overflow-y-auto">
+          {patientSlots.past.length > 0 ? (
+            patientSlots.past.map((slot) => (
+              <AppointmentCard key={slot.id} slot={slot} />
+            ))
+          ) : (
+            <p className="text-text-sidebar text-sm">Aucun rendez-vous passé</p>
+          )}
+        </div>
       </div>
     </div>
   )

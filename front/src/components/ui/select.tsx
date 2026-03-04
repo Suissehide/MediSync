@@ -49,7 +49,7 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
               'focus:outline-none focus:ring-1 focus:ring-ring',
               props.disabled
                 ? 'opacity-50 cursor-not-allowed'
-                : 'cursor-pointer text-text',
+                : 'cursor-pointer text-text-dark',
               className,
             )}
           >
@@ -64,14 +64,15 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
               id={id}
               position="popper"
               sideOffset={4}
-              className="z-50 overflow-hidden rounded-md border border-border bg-popover shadow-md animate-in fade-in-0 slide-in-from-top-2"
+              onWheel={(e) => e.stopPropagation()}
+              className="z-[200] overflow-hidden rounded-md border border-border bg-popover shadow-md animate-in fade-in-0 slide-in-from-top-2"
             >
               <RadixSelect.Viewport className="p-1">
                 {options.map((option) => (
                   <RadixSelect.Item
                     key={option.value}
                     value={option.value.toString()}
-                    className="relative flex cursor-pointer select-none items-center rounded px-2 pr-7 py-1.5 text-sm text-text outline-none hover:bg-primary/20 focus:bg-primary/20 data-[state=checked]:text-primary"
+                    className="relative flex cursor-pointer select-none items-center rounded px-2 pr-7 py-1.5 text-sm text-text-sidebar outline-none hover:bg-primary/20 focus:bg-primary/20 data-[state=checked]:text-primary"
                   >
                     <RadixSelect.ItemText>{option.label}</RadixSelect.ItemText>
                     <RadixSelect.ItemIndicator className="absolute right-2">
@@ -144,7 +145,7 @@ export function MultiSelect({
       <Popover.Trigger asChild>
         <button
           type="button"
-          className="inline-flex w-full h-9 items-center justify-between rounded-md border border-border bg-background px-3 py-2 text-sm text-text cursor-pointer"
+          className="inline-flex w-full h-9 items-center justify-between rounded-md border border-border bg-background px-3 py-2 text-sm text-text-dark cursor-pointer"
         >
           <span className="truncate">
             {value.length === 0
@@ -166,7 +167,8 @@ export function MultiSelect({
       <Popover.Portal>
         <Popover.Content
           align="start"
-          className="z-50 w-[var(--radix-popover-trigger-width)] rounded-md border border-border bg-popover shadow-md"
+          onWheel={(e) => e.stopPropagation()}
+          className="z-[200] w-[var(--radix-popover-trigger-width)] rounded-md border border-border bg-popover shadow-md"
         >
           <div className="p-2">
             <input

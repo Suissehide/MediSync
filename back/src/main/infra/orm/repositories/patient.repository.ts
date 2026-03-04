@@ -5,6 +5,7 @@ import type {
   PatientEntityRepo,
   PatientRepositoryInterface,
   PatientUpdateEntityRepo,
+  PatientWithTagsEntityRepo,
 } from '../../../types/infra/orm/repositories/patient.repository.interface'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { PostgresPrismaClient } from '../postgres-client'
@@ -20,6 +21,41 @@ class PatientRepository implements PatientRepositoryInterface {
 
   findAll(): Promise<PatientEntityRepo[]> {
     return this.prisma.patient.findMany()
+  }
+
+  async findAllWithTags(): Promise<PatientWithTagsEntityRepo[]> {
+    const patients = await this.prisma.patient.findMany({
+      include: {
+        appointmentPatients: {
+          select: {
+            appointment: {
+              select: {
+                slot: {
+                  select: {
+                    pathway: {
+                      select: {
+                        template: { select: { tags: true } },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    })
+
+    return patients.map(({ appointmentPatients, ...patient }) => ({
+      ...patient,
+      pathwayTemplateTags: [
+        ...new Set(
+          appointmentPatients.flatMap(
+            (ap) => ap.appointment?.slot?.pathway?.template?.tags ?? [],
+          ),
+        ),
+      ],
+    }))
   }
 
   async findByID(patientID: string): Promise<PatientWithAppointmentsDomain> {

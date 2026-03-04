@@ -50,7 +50,7 @@ export function HeaderTable<TData>({
               minWidth: header.getSize(),
               width: grow ? '100%' : undefined,
               ...(pinningStyles.backgroundColor
-                ? { backgroundColor: 'var(--color-foreground)' }
+                ? { backgroundColor: 'var(--color-card)' }
                 : {}),
             }
 

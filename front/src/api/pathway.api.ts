@@ -4,6 +4,7 @@ import type {
   CreatePathwayParams,
   InstantiatePathwayParams,
   Pathway,
+  TrackingPathway,
   UpdatePathwayParams,
 } from '../types/pathway.ts'
 import { fetchWithAuth } from './fetchWithAuth.ts'
@@ -74,5 +75,16 @@ export const PathwayApi = {
       handleHttpError(response, {}, 'Impossible de supprimer la tâche')
     }
     return
+  },
+
+  getTracking: async (year: number, month: number): Promise<TrackingPathway[]> => {
+    const response = await fetchWithAuth(
+      `${apiUrl}/pathway/tracking?year=${year}&month=${month}`,
+      { method: 'GET' },
+    )
+    if (!response.ok) {
+      handleHttpError(response, {}, 'Impossible de récupérer le suivi')
+    }
+    return response.json()
   },
 }

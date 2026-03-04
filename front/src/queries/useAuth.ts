@@ -2,7 +2,6 @@ import { useMutation } from '@tanstack/react-query'
 import { useRouter } from '@tanstack/react-router'
 
 import { AuthApi } from '../api/auth.api.ts'
-import { AUTH_MESSAGES } from '../constants/message.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
 import { useAuthStore } from '../store/useAuthStore.ts'
 import type { LoginInput, RegisterInput } from '../types/auth.ts'
@@ -33,19 +32,13 @@ export const useLogin = () => {
     retry: 0,
   })
 
-  const errorMessageText =
-    isError && error instanceof Error
-      ? error.message
-      : AUTH_MESSAGES.ERROR_FETCHING
-
   useDataFetching({
     isPending,
     isError,
     error,
-    errorMessage: errorMessageText,
   })
 
-  return { loginMutation, credentials, isPending, error, errorMessageText }
+  return { loginMutation, credentials, isPending, error }
 }
 
 export const useLogout = () => {
@@ -71,19 +64,13 @@ export const useLogout = () => {
     retry: 0,
   })
 
-  const errorMessageText =
-    isError && error instanceof Error
-      ? error.message
-      : AUTH_MESSAGES.ERROR_FETCHING
-
   useDataFetching({
     isPending,
     isError,
     error,
-    errorMessage: errorMessageText,
   })
 
-  return { logoutMutation, isPending, error, errorMessageText }
+  return { logoutMutation, isPending, error }
 }
 
 export const useRegister = () => {
@@ -99,17 +86,11 @@ export const useRegister = () => {
     retry: 0,
   })
 
-  const errorMessageText =
-    isError && error instanceof Error
-      ? error.message
-      : AUTH_MESSAGES.ERROR_FETCHING
-
   useDataFetching({
     isPending,
     isError,
     error,
-    errorMessage: errorMessageText,
   })
 
-  return { registerMutation, isPending, error, errorMessageText }
+  return { registerMutation, isPending, error }
 }

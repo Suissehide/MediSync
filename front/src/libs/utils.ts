@@ -22,6 +22,13 @@ export function safeParse<T>(value: string | null, fallback: T): T {
 export const containsKeyword = (states: string[], keywords: string[]) =>
   states && keywords.some((keyword) => states.includes(keyword))
 
+export function hexToRgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
 /**
  * Transforme un objet {clé: label} en [{value, label}]
  */

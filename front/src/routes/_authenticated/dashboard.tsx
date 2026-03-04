@@ -113,8 +113,10 @@ function Dashboard() {
     >
       <div className="flex-1 bg-background rounded-lg flex flex-col w-full gap-4">
         <div className="flex flex-col h-full">
-          <div className="px-6 pt-6 flex gap-2 items-center ">
-            <CalendarRange className="h-4 w-4" />
+          <div className="px-6 mt-6 mb-4 flex gap-2 items-center">
+            <div className="flex items-center justify-center bg-foreground p-2 rounded-full">
+              <CalendarRange className="h-4 w-4 text-white" />
+            </div>
             <h1 className="text-text-dark text-xl font-semibold">
               {soignant ? soignant.name : ''}
             </h1>

@@ -9,6 +9,7 @@ import type {
   EnrollmentResult,
   EnrollPatientParams,
   Patient,
+  PatientWithTags,
   UpdatePatientParams,
 } from '../types/patient.ts'
 import { fetchWithAuth } from './fetchWithAuth.ts'
@@ -34,6 +35,20 @@ export const PatientApi = {
       }
       throw new ApiError(0, 'Impossible de récupérer la liste des patients')
     }
+  },
+
+  getAllWithTags: async (): Promise<PatientWithTags[]> => {
+    const response = await fetchWithAuth(`${apiUrl}/patient/with-tags`, {
+      method: 'GET',
+    })
+    if (!response.ok) {
+      handleHttpError(
+        response,
+        {},
+        'Impossible de récupérer la liste des patients',
+      )
+    }
+    return response.json()
   },
 
   getByID: async (patientID: string): Promise<Patient> => {

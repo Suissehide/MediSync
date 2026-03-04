@@ -60,6 +60,12 @@ export const patientResponseSchema = z.object({
 
 export const patientsResponseSchema = z.array(patientResponseSchema)
 
+export const patientWithTagsResponseSchema = patientResponseSchema.extend({
+  pathwayTemplateTags: z.array(z.string()),
+})
+
+export const patientsWithTagsResponseSchema = z.array(patientWithTagsResponseSchema)
+
 export const getPatientByIdParamsSchema = z.object({
   patientID: z.cuid(),
 })

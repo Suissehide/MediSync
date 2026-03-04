@@ -185,6 +185,10 @@ export function Toaster() {
       : collapsedHeight
     : newestHeight
 
+  if (toasts.length === 0) {
+    return <ToastProvider>{null}</ToastProvider>
+  }
+
   return (
     <ToastProvider>
       <button

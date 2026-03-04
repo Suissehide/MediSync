@@ -1,7 +1,7 @@
-import { Popover } from '@mui/material'
 import { DateCalendar } from '@mui/x-date-pickers'
 import dayjs, { type Dayjs } from 'dayjs'
 import type { Dispatch, SetStateAction } from 'react'
+import { createPortal } from 'react-dom'
 
 interface Props {
   anchorEl: HTMLElement | null
@@ -14,18 +14,28 @@ export default function CalendarDatePickerButton({
   setAnchorEl,
   onChange,
 }: Props) {
-  const handleClose = () => setAnchorEl(null)
+  if (!anchorEl) return null
 
-  return (
-    <Popover
-      open={Boolean(anchorEl)}
-      anchorEl={anchorEl}
-      onClose={handleClose}
-      anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-    >
-      <div style={{ padding: 16 }}>
+  const rect = anchorEl.getBoundingClientRect()
+
+  return createPortal(
+    <>
+      <div
+        className="fixed inset-0 z-[199]"
+        onClick={() => setAnchorEl(null)}
+      />
+      <div
+        style={{
+          position: 'fixed',
+          top: rect.bottom + 8,
+          left: rect.left,
+          zIndex: 200,
+        }}
+        className="rounded-md border border-border bg-popover shadow-md animate-in fade-in-0 zoom-in-95"
+      >
         <DateCalendar onChange={onChange} defaultValue={dayjs()} />
       </div>
-    </Popover>
+    </>,
+    document.body,
   )
 }

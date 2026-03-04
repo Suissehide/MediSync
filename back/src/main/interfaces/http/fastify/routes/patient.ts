@@ -16,6 +16,7 @@ import {
   getPatientByIdParamsSchema,
   patientResponseSchema,
   patientsResponseSchema,
+  patientsWithTagsResponseSchema,
   type UpdatePatientBody,
   type UpdatePatientParams,
   updatePatientByIdSchema,
@@ -40,6 +41,18 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
     () => {
       return patientDomain.findAll()
     },
+  )
+
+  // Get all with pathway template tags (must be before /:patientID)
+  fastify.get(
+    '/with-tags',
+    {
+      schema: {
+        response: { 200: patientsWithTagsResponseSchema },
+      },
+      onRequest: [fastify.verifySessionCookie],
+    },
+    () => patientDomain.findAllWithTags(),
   )
 
   // Read by ID

@@ -46,6 +46,8 @@ export type Patient = {
   enrollmentIssues?: EnrollmentIssue[] | null
 }
 
+export type PatientWithTags = Patient & { pathwayTemplateTags: string[] }
+
 export type EnrollmentIssue = {
   pathwayName?: string
   pathwayTemplateID: string

@@ -1,14 +1,17 @@
 import { Loader2Icon, Route } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { hexToRGBA } from '../../../libs/color.ts'
 import {
   usePathwayTemplateByIDQuery,
   usePathwayTemplateMutations,
+  usePathwayTemplateQueries,
 } from '../../../queries/usePathwayTemplate.ts'
 import type { UpdatePathwayTemplateParams } from '../../../types/pathwayTemplate.ts'
 import { Button } from '../../ui/button.tsx'
+import { Label } from '../../ui/label.tsx'
+import { TagInput } from '../../ui/tagInput.tsx'
 import {
   Sheet,
   SheetContent,
@@ -30,6 +33,14 @@ export default function PathwayTemplateSheet({
   const { pathwayTemplate } = usePathwayTemplateByIDQuery(pathwayTemplateID)
   const { updatePathwayTemplate, deletePathwayTemplate } =
     usePathwayTemplateMutations()
+  const { pathwayTemplates } = usePathwayTemplateQueries()
+
+  const [tags, setTags] = useState<string[]>([])
+
+  const tagSuggestions = useMemo(
+    () => [...new Set((pathwayTemplates ?? []).flatMap((t) => t.tags ?? []))],
+    [pathwayTemplates],
+  )
 
   const [isPending] = useState(false)
 
@@ -47,6 +58,7 @@ export default function PathwayTemplateSheet({
         id: pathwayTemplate.id,
         name: value.name,
         color: value.color,
+        tags,
       }
 
       updatePathwayTemplate.mutate(updatedPathwayTemplateData)
@@ -75,6 +87,7 @@ export default function PathwayTemplateSheet({
       },
       { keepDefaultValues: true },
     )
+    setTags(pathwayTemplate.tags ?? [])
   }, [pathwayTemplate, open, reset])
 
   return (
@@ -137,6 +150,16 @@ export default function PathwayTemplateSheet({
                 <form.AppField name="color">
                   {(field) => <field.ColorPicker label="Couleur" />}
                 </form.AppField>
+
+                <div className="flex flex-col gap-1">
+                  <Label>Tags</Label>
+                  <TagInput
+                    value={tags}
+                    onChange={setTags}
+                    suggestions={tagSuggestions}
+                    placeholder="Ajouter un tag..."
+                  />
+                </div>
               </form>
 
               <div className="w-full border-t border-border"></div>

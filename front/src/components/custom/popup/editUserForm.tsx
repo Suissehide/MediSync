@@ -66,7 +66,7 @@ function EditUserForm({ open, setOpen, user }: EditUserFormProps) {
     <Popup modal={true} open={open} onOpenChange={setOpen}>
       <PopupContent>
         <PopupHeader>
-          <PopupTitle className="font-bold text-2xl m-0!">
+          <PopupTitle className="font-bold text-xl">
             Modifier l'utilisateur
           </PopupTitle>
         </PopupHeader>

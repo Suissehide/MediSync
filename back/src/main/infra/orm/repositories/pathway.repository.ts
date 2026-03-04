@@ -6,6 +6,7 @@ import type {
   PathwayUpdateEntityRepo,
   PathwayWithSlotsRepo,
   PathwayWithTemplateAndSlotsRepo,
+  TrackingPathwayRepo,
 } from '../../../types/infra/orm/repositories/pathway.repository.interface'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { PostgresPrismaClient } from '../postgres-client'
@@ -83,6 +84,84 @@ class PathwayRepository implements PathwayRepositoryInterface {
         error: err,
       })
     }
+  }
+
+  async findTracking(year: number, month: number): Promise<TrackingPathwayRepo[]> {
+    const startOfMonth = new Date(year, month - 1, 1)
+    const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999)
+
+    const pathways = await this.prisma.pathway.findMany({
+      where: {
+        slots: {
+          some: {
+            startDate: {
+              gte: startOfMonth,
+              lte: endOfMonth,
+            },
+          },
+        },
+      },
+      include: {
+        template: true,
+        slots: {
+          where: {
+            startDate: {
+              gte: startOfMonth,
+              lte: endOfMonth,
+            },
+          },
+          include: {
+            appointments: {
+              include: {
+                appointmentPatients: {
+                  include: {
+                    patient: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    })
+
+    return pathways.map((pathway) => {
+      const patientMap = new Map<string, TrackingPathwayRepo['patients'][number]>()
+
+      for (const slot of pathway.slots) {
+        for (const appointment of slot.appointments) {
+          for (const ap of appointment.appointmentPatients) {
+            const patientId = ap.patient.id
+            if (!patientMap.has(patientId)) {
+              patientMap.set(patientId, {
+                id: ap.patient.id,
+                firstName: ap.patient.firstName,
+                lastName: ap.patient.lastName,
+                appointments: [],
+              })
+            }
+            patientMap.get(patientId)!.appointments.push({
+              date: appointment.startDate,
+              status: ap.status,
+            })
+          }
+        }
+      }
+
+      return {
+        id: pathway.id,
+        startDate: pathway.startDate,
+        template: pathway.template
+          ? {
+              id: pathway.template.id,
+              name: pathway.template.name,
+              color: pathway.template.color,
+              tags: pathway.template.tags,
+            }
+          : null,
+        patients: Array.from(patientMap.values()),
+      }
+    })
   }
 
   async create(

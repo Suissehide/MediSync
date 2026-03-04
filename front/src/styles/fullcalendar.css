@@ -6,11 +6,14 @@
 
 .fc .fc-header-toolbar {
   padding: 0 24px;
+  gap: 1em;
 }
 
 .fc .fc-header-toolbar .fc-toolbar-chunk {
   display: flex;
   flex: 1;
+  align-items: center;
+  gap: 4px;
 }
 
 .fc .fc-header-toolbar .fc-toolbar-chunk:nth-child(2) {
@@ -19,12 +22,19 @@
 
 .fc .fc-header-toolbar .fc-toolbar-chunk:nth-child(2) .fc-button-group {
   padding: 3px;
+  gap: 2px;
   background: var(--card);
   border-radius: 10px;
+  border: 1px solid var(--border);
 }
 
-.fc .fc-header-toolbar .fc-toolbar-chunk:nth-child(2) .fc-button {
-  border-radius: 10px;
+/* Les boutons dans le pill du sélecteur de vue n'ont pas de bordure propre */
+.fc .fc-header-toolbar
+  .fc-toolbar-chunk:nth-child(2)
+  .fc-button-group
+  .fc-button-primary {
+  --fc-button-border-color: transparent;
+  border-radius: 8px;
 }
 
 .fc .fc-header-toolbar .fc-toolbar-chunk:last-child {
@@ -32,32 +42,79 @@
 }
 
 .fc .fc-toolbar-title {
-  color: var(--text-light);
-  font-size: 16px;
+  color: var(--text-dark);
+  font-size: 15px;
+  font-weight: 600;
 }
 
-.fc .fc-button {
-  font-size: 14px;
+/* ── Surcharge des variables CSS de FullCalendar ──────────────────────────
+   Les variables sont résolues au moment du paint : elles s'appliquent
+   quelle que soit l'ordre de chargement du CSS de FullCalendar. */
+.fc {
+  --fc-button-text-color: var(--text-dark);
+  --fc-button-bg-color: var(--card);
+  --fc-button-border-color: var(--border);
+  --fc-button-hover-bg-color: color-mix(
+    in srgb,
+    var(--primary) 10%,
+    transparent
+  );
+  --fc-button-hover-border-color: color-mix(
+    in srgb,
+    var(--primary) 30%,
+    transparent
+  );
+  --fc-button-active-bg-color: var(--primary);
+  --fc-button-active-border-color: var(--primary);
+}
+
+/* Propriétés non couvertes par les variables FC (font, radius, transition, text hover/actif) */
+.fc .fc-button-primary {
+  font-size: 13px;
+  font-weight: 500;
   border-radius: 8px;
-  background: var(--card);
-  color: var(--text);
-  border: 1px solid var(--muted);
-  transition: ease 0.3s;
+  height: 32px;
+  padding: 0 12px;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
 }
 
-.fc .fc-button:hover {
-  border-color: var(--muted);
-  background: color-mix(in srgb, var(--primary) 70%, transparent);
+/* Boutons à l'intérieur d'un pill : la hauteur du pill est 40px (3px padding + 1px border × 2) */
+.fc .fc-button-group .fc-button-primary {
+  height: 26px;
 }
 
-.fc .fc-button:focus,
+.fc .fc-button-group .fc-button-primary.fc-prev-button,
+.fc .fc-button-group .fc-button-primary.fc-next-button {
+  height: 32px;
+}
+
+.fc .fc-button-primary:hover {
+  color: var(--primary);
+}
+
+.fc .fc-button-primary:active {
+  background-color: color-mix(
+    in srgb,
+    var(--primary) 20%,
+    transparent
+  ) !important;
+  border-color: var(--primary) !important;
+  color: var(--primary) !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.fc .fc-button-primary:focus,
 .fc .fc-button-primary:not(:disabled).fc-button-active:focus {
   box-shadow: none;
 }
 
-.fc .fc-button-primary:not(:disabled).fc-button-active {
-  border-color: var(--muted);
-  background: color-mix(in srgb, var(--primary) 50%, transparent);
+.fc .fc-button-primary:not(:disabled).fc-button-active,
+.fc .fc-button-primary:not(:disabled).fc-button-active:hover {
+  color: var(--primary-foreground);
 }
 
 thead .fc-theme-standard th {
@@ -118,4 +175,14 @@ thead .fc-theme-standard th {
 
 .fc-timegrid-slots tr:first-child td:first-child .fc-timegrid-slot-label-frame {
   display: none;
+}
+
+/* ── Empty state - vue Planning (listWeek) ───────────────────────────────── */
+.fc .fc-list-empty {
+  background-color: var(--background);
+}
+
+.fc .fc-list-empty-cushion {
+  padding: 0;
+  margin: 0;
 }

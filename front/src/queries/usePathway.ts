@@ -9,6 +9,7 @@ import type {
   CreatePathwayParams,
   InstantiatePathwayParams,
   Pathway,
+  TrackingPathway,
   UpdatePathwayParams,
 } from '../types/pathway.ts'
 
@@ -36,6 +37,23 @@ export const usePathwayQueries = () => {
   })
 
   return { pathways, isPending, error }
+}
+
+export const usePathwayTrackingQuery = (year: number, month: number) => {
+  const {
+    data: trackingPathways,
+    isPending,
+    isError,
+    error,
+  } = useQuery<TrackingPathway[]>({
+    queryKey: [PATHWAY.GET_TRACKING, year, month],
+    queryFn: () => PathwayApi.getTracking(year, month),
+    retry: 0,
+  })
+
+  useDataFetching({ isPending, isError, error })
+
+  return { trackingPathways, isPending }
 }
 
 // * MUTATIONS

@@ -19,6 +19,7 @@ import EventSheet from '../../../../components/custom/sheet/eventSheet.tsx'
 import EventTemplateSheet from '../../../../components/custom/sheet/eventTemplateSheet.tsx'
 import DashboardLayout from '../../../../components/dashboard.layout.tsx'
 import { Button } from '../../../../components/ui/button.tsx'
+import { ToggleGroup, ToggleGroupItem } from '../../../../components/ui/toggle-group.tsx'
 import {
   PopoverAnchor,
   PopoverClose,
@@ -215,24 +216,16 @@ function Planning() {
 
           <div className="flex justify-end">
             {!editMode && (
-              <div className="flex gap-2">
-                <Button
-                  variant={view === 'calendar' ? 'default' : 'outline'}
-                  size="default"
-                  onClick={() => setView('calendar')}
-                >
+              <ToggleGroup value={view} onValueChange={(v: string) => { if (v) { setView(v as 'calendar' | 'timeline') } }}>
+                <ToggleGroupItem value="calendar">
                   <CalendarDays className="h-4 w-4" />
                   Calendrier
-                </Button>
-                <Button
-                  variant={view === 'timeline' ? 'default' : 'outline'}
-                  size="default"
-                  onClick={() => setView('timeline')}
-                >
+                </ToggleGroupItem>
+                <ToggleGroupItem value="timeline">
                   <GanttChart className="h-4 w-4" />
                   Timeline
-                </Button>
-              </div>
+                </ToggleGroupItem>
+              </ToggleGroup>
             )}
           </div>
         </div>

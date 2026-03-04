@@ -9,6 +9,14 @@ import type {
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { PostgresPrismaClient } from '../postgres-client'
 
+const slotTemplateInclude = {
+  slotTemplates: {
+    include: {
+      soignant: true,
+    },
+  },
+}
+
 class PathwayTemplateRepository implements PathwayTemplateRepositoryInterface {
   private readonly prisma: PostgresPrismaClient
   private readonly errorHandler: ErrorHandlerInterface
@@ -20,13 +28,7 @@ class PathwayTemplateRepository implements PathwayTemplateRepositoryInterface {
 
   findAll(): Promise<PathwayTemplateEntityRepo[]> {
     return this.prisma.pathwayTemplate.findMany({
-      include: {
-        slotTemplates: {
-          include: {
-            soignant: true,
-          },
-        },
-      },
+      include: slotTemplateInclude,
     })
   }
 
@@ -36,13 +38,7 @@ class PathwayTemplateRepository implements PathwayTemplateRepositoryInterface {
     try {
       return await this.prisma.pathwayTemplate.findUniqueOrThrow({
         where: { id: pathwayTemplateID },
-        include: {
-          slotTemplates: {
-            include: {
-              soignant: true,
-            },
-          },
-        },
+        include: slotTemplateInclude,
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
@@ -66,13 +62,7 @@ class PathwayTemplateRepository implements PathwayTemplateRepositoryInterface {
             connect: slotTemplateIDs?.map((id) => ({ id })),
           },
         },
-        include: {
-          slotTemplates: {
-            include: {
-              soignant: true,
-            },
-          },
-        },
+        include: slotTemplateInclude,
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
@@ -99,13 +89,7 @@ class PathwayTemplateRepository implements PathwayTemplateRepositoryInterface {
             },
           }),
         },
-        include: {
-          slotTemplates: {
-            include: {
-              soignant: true,
-            },
-          },
-        },
+        include: slotTemplateInclude,
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
@@ -119,13 +103,7 @@ class PathwayTemplateRepository implements PathwayTemplateRepositoryInterface {
     try {
       return await this.prisma.pathwayTemplate.delete({
         where: { id: pathwayTemplateID },
-        include: {
-          slotTemplates: {
-            include: {
-              soignant: true,
-            },
-          },
-        },
+        include: slotTemplateInclude,
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({

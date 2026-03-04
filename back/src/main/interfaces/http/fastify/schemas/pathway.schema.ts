@@ -49,3 +49,39 @@ export type DeletePathwayByIdParams = z.infer<
 >
 export type InstantiatePathwayBody = z.infer<typeof instantiatePathwayBody>
 export type PathwayResponse = z.infer<typeof pathwayResponseSchema>
+
+export const trackingQuerySchema = z.object({
+  year: z.coerce.number().int().min(2000).max(2100),
+  month: z.coerce.number().int().min(1).max(12),
+})
+
+const trackingAppointmentSchema = z.object({
+  date: z.coerce.date(),
+  status: z.string().nullable(),
+})
+
+const trackingPatientSchema = z.object({
+  id: z.cuid(),
+  firstName: z.string(),
+  lastName: z.string(),
+  appointments: z.array(trackingAppointmentSchema),
+})
+
+const trackingPathwayTemplateSchema = z.object({
+  id: z.cuid(),
+  name: z.string(),
+  color: z.string(),
+  tags: z.array(z.string()),
+})
+
+export const trackingPathwaySchema = z.object({
+  id: z.cuid(),
+  startDate: z.coerce.date(),
+  template: trackingPathwayTemplateSchema.nullable(),
+  patients: z.array(trackingPatientSchema),
+})
+
+export const trackingResponseSchema = z.array(trackingPathwaySchema)
+
+export type TrackingQuery = z.infer<typeof trackingQuerySchema>
+export type TrackingResponse = z.infer<typeof trackingResponseSchema>

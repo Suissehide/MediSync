@@ -62,6 +62,23 @@ export const usePatientByIDQuery = (patientID: string, options = {}) => {
   return { patient, isPending, isError, error, refetch, isFetched }
 }
 
+export const usePatientWithTagsQuery = () => {
+  const {
+    data: patients,
+    isPending,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: [PATIENT.GET_ALL_WITH_TAGS],
+    queryFn: () => PatientApi.getAllWithTags(),
+    retry: 0,
+  })
+
+  useDataFetching({ isPending, isError, error })
+
+  return { patients, isPending }
+}
+
 // * MUTATIONS
 
 export const usePatientMutations = () => {
@@ -187,7 +204,9 @@ export const usePatientMutations = () => {
     onSuccess: (data: EnrollmentResult) => {
       if (data.failedEnrollments.length > 0) {
         const issues = data.failedEnrollments
-          .map((f) => `${f.slotTemplate.name ?? f.slotTemplate.id}: ${f.reason}`)
+          .map(
+            (f) => `${f.slotTemplate.name ?? f.slotTemplate.id}: ${f.reason}`,
+          )
           .join('\n')
         toast({
           title: 'Patient inscrit avec des erreurs',

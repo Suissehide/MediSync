@@ -5,6 +5,7 @@ import { slotTemplateResponseSchema } from './slotTemplate.schema'
 
 export const pathwayTemplateResponseSchema = pathwayTemplateSchema.extend({
   id: z.cuid(),
+  tags: z.array(z.string()),
   slotTemplates: z.array(
     slotTemplateResponseSchema.extend({
       id: z.cuid(),
@@ -27,6 +28,7 @@ export const createPathwayTemplateSchema = pathwayTemplateSchema
   })
   .extend({
     slotTemplateIDs: z.array(z.cuid()),
+    tags: z.array(z.string()).default([]),
   })
 
 export const deletePathwayTemplateByIdParamsSchema =
@@ -42,6 +44,7 @@ export const updatePathwayTemplateByIdSchema = {
     .partial()
     .extend({
       slotTemplateIDs: z.array(z.cuid()).optional().default([]),
+      tags: z.array(z.string()).optional(),
       // pathwayIDs: z.array(z.cuid()).optional().default([]),
     })
     .refine((data) => Object.keys(data).length > 0, {
@@ -68,3 +71,4 @@ export type DeletePathwayTemplateByIdParams = z.infer<
 export type PathwayTemplateResponse = z.infer<
   typeof pathwayTemplateResponseSchema
 >
+

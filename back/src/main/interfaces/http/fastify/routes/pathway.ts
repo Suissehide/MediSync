@@ -10,11 +10,13 @@ import {
   type DeletePathwayByIdParams,
   deletePathwayByIdParamsSchema,
   type GetPathwayByIdParams,
-  getPathwayByIdParamsSchema,
   type InstantiatePathwayBody,
   instantiatePathwayBody,
   pathwayResponseSchema,
   pathwaysResponseSchema,
+  type TrackingQuery,
+  trackingQuerySchema,
+  trackingResponseSchema,
   type UpdatePathwayBody,
   type UpdatePathwayParams,
   updatePathwayByIdSchema,
@@ -47,12 +49,30 @@ const pathwayRouter: FastifyPluginAsync = (fastify) => {
     },
   )
 
+  // Tracking (must be before /:pathwayID to avoid param collision)
+  fastify.get<{ Querystring: TrackingQuery }>(
+    '/tracking',
+    {
+      schema: {
+        querystring: trackingQuerySchema,
+        response: {
+          200: trackingResponseSchema,
+        },
+      },
+      onRequest: [fastify.verifySessionCookie],
+    },
+    (request) => {
+      const { year, month } = request.query
+      console.log('TRACKING', year, month)
+      return pathwayDomain.findTracking(year, month)
+    },
+  )
+
   // Read by ID
   fastify.get<{ Params: GetPathwayByIdParams }>(
     '/:pathwayID',
     {
       schema: {
-        params: getPathwayByIdParamsSchema,
         response: {
           200: pathwayResponseSchema,
           404: z.object({ message: z.string() }),

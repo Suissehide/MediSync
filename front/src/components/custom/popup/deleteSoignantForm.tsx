@@ -43,7 +43,7 @@ function DeleteSoignantForm({
 
       <PopupContent>
         <PopupHeader>
-          <PopupTitle className="font-bold text-2xl m-0!">
+          <PopupTitle className="font-bold text-xl">
             Suppression
           </PopupTitle>
         </PopupHeader>

@@ -34,6 +34,7 @@ export default async function seedPathwayTemplates(
       data: {
         name: pathway.name,
         color: pathway.color,
+        tags: pathway.tags,
         slotTemplates: {
           create: slotTemplates,
         },

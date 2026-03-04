@@ -1,11 +1,11 @@
 import type { IocContainer } from '../types/application/ioc'
-import type {} from '../types/domain/appointment.domain.interface'
 import type {
   PathwayCreateEntityDomain,
   PathwayDomainInterface,
   PathwayEntityDomain,
   PathwayUpdateEntityDomain,
   PathwayWithTemplateAndSlotsDomain,
+  TrackingPathwayDomain,
 } from '../types/domain/pathway.domain.interface'
 import type { PathwayRepositoryInterface } from '../types/infra/orm/repositories/pathway.repository.interface'
 
@@ -22,6 +22,10 @@ class PathwayDomain implements PathwayDomainInterface {
 
   findByID(pathwayID: string): Promise<PathwayEntityDomain> {
     return this.pathwayRepository.findByID(pathwayID)
+  }
+
+  findTracking(year: number, month: number): Promise<TrackingPathwayDomain[]> {
+    return this.pathwayRepository.findTracking(year, month)
   }
 
   create(

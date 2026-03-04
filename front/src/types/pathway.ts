@@ -20,3 +20,27 @@ export type InstantiatePathwayParams = Pick<
   'startDate' | 'pathwayTemplateID'
 >
 export type UpdatePathwayParams = Pick<Pathway, 'id' | 'startDate'>
+
+export type TrackingAppointment = {
+  date: string
+  status: string | null
+}
+
+export type TrackingPatient = {
+  id: string
+  firstName: string
+  lastName: string
+  appointments: TrackingAppointment[]
+}
+
+export type TrackingPathway = {
+  id: string
+  startDate: string
+  template: {
+    id: string
+    name: string
+    color: string
+    tags: string[]
+  } | null
+  patients: TrackingPatient[]
+}

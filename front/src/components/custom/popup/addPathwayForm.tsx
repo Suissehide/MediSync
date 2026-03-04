@@ -1,10 +1,14 @@
 import { Check, Plus, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
 import type React from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { useAppForm } from '../../../hooks/formConfig.tsx'
-import { usePathwayTemplateMutations } from '../../../queries/usePathwayTemplate.ts'
+import {
+  usePathwayTemplateMutations,
+  usePathwayTemplateQueries,
+} from '../../../queries/usePathwayTemplate.ts'
 import { Button } from '../../ui/button.tsx'
+import { Label } from '../../ui/label.tsx'
 import {
   Popup,
   PopupBody,
@@ -14,6 +18,7 @@ import {
   PopupTitle,
   PopupTrigger,
 } from '../../ui/popup.tsx'
+import { TagInput } from '../../ui/tagInput.tsx'
 
 interface AddPathwayFormProps {
   trigger?: React.ReactNode
@@ -21,7 +26,14 @@ interface AddPathwayFormProps {
 
 function AddPathwayForm({ trigger }: AddPathwayFormProps) {
   const [open, setOpen] = useState(false)
+  const [tags, setTags] = useState<string[]>([])
   const { createPathwayTemplate } = usePathwayTemplateMutations()
+  const { pathwayTemplates } = usePathwayTemplateQueries()
+
+  const tagSuggestions = useMemo(
+    () => [...new Set((pathwayTemplates ?? []).flatMap((t) => t.tags ?? []))],
+    [pathwayTemplates],
+  )
 
   const form = useAppForm({
     defaultValues: {
@@ -33,6 +45,7 @@ function AddPathwayForm({ trigger }: AddPathwayFormProps) {
         name: value.name,
         color: value.color,
         slotTemplateIDs: [],
+        tags,
       })
       setOpen(false)
     },
@@ -41,6 +54,7 @@ function AddPathwayForm({ trigger }: AddPathwayFormProps) {
   useEffect(() => {
     if (open) {
       form.reset()
+      setTags([])
     }
   }, [open, form])
 
@@ -48,7 +62,12 @@ function AddPathwayForm({ trigger }: AddPathwayFormProps) {
     <Popup modal={true} open={open} onOpenChange={setOpen}>
       <PopupTrigger asChild>
         {trigger ?? (
-          <Button type="button" variant="none" size="icon" onClick={() => setOpen(true)}>
+          <Button
+            type="button"
+            variant="none"
+            size="icon"
+            onClick={() => setOpen(true)}
+          >
             <Plus className="w-4 h-4" />
           </Button>
         )}
@@ -56,7 +75,7 @@ function AddPathwayForm({ trigger }: AddPathwayFormProps) {
 
       <PopupContent>
         <PopupHeader>
-          <PopupTitle className="font-bold text-2xl m-0!">
+          <PopupTitle className="font-bold text-xl">
             Créer un parcours
           </PopupTitle>
         </PopupHeader>
@@ -83,6 +102,16 @@ function AddPathwayForm({ trigger }: AddPathwayFormProps) {
             <form.AppField name="color">
               {(field) => <field.ColorPicker label="Couleur" />}
             </form.AppField>
+
+            <div className="flex flex-col gap-1">
+              <Label>Tags</Label>
+              <TagInput
+                value={tags}
+                onChange={setTags}
+                suggestions={tagSuggestions}
+                placeholder="Ajouter un tag..."
+              />
+            </div>
           </form>
         </PopupBody>
 

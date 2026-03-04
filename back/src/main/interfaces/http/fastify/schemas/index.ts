@@ -99,9 +99,113 @@ export const diagnosticEducatifTemplateSchema = z.object({
   activeFields: z.array(z.string()).default([]),
 })
 
+const s = z.string().optional().nullable()
+
 export const diagnosticEducatifSchema = z.object({
-  title: z.string().optional().nullable(),
+  title: s,
   activeFields: z.array(z.string()).default([]),
   patientId: z.cuid(),
   templateId: z.cuid().optional().nullable(),
+
+  // Facteurs de risque
+  facteursRisque: s,
+  contexte: s,
+
+  // Qualité de vie
+  qualiteVie: s,
+  qualiteVieLibre: s,
+  viePersonnelle: s,
+  vieProfessionnelle: s,
+  occupations: s,
+  loisirs: s,
+
+  // Implication
+  implication: s,
+  implicationLibre: s,
+
+  // Priorité de santé
+  prioriteSante: s,
+  prioriteSanteLibre: s,
+
+  // Connaissances maladie
+  connaissancesMaladie: s,
+  connaissancesMaladieLibre: s,
+  mecanismes: s,
+  localisations: s,
+  symptomes: s,
+  chronicite: s,
+  reagirSignesAlerte: s,
+
+  // Identification FDR
+  identificationFDR: s,
+  identificationFDRLibre: s,
+  ometFDR: s,
+
+  // Tension artérielle
+  gestionTensionArterielle: s,
+  gestionTensionArterielleLibre: s,
+  gestionTensionArterielleSentimentAutoEfficacite: s,
+  gestionTensionArterielleEtapeChangement: s,
+
+  // HbA1c
+  gestionHba1c: s,
+  gestionHba1cLibre: s,
+  gestionHba1cSentimentAutoEfficacite: s,
+  gestionHba1cEtapeChangement: s,
+
+  // LDL
+  gestionLDL: s,
+  gestionLDLLibre: s,
+  gestionLDLSentimentAutoEfficacite: s,
+  gestionLDLEtapeChangement: s,
+
+  // Adhésion traitement
+  adhesionTraitement: s,
+  adhesionTraitementLibre: s,
+  adhesionTraitementSentimentAutoEfficacite: s,
+  adhesionTraitementEtapeChangement: s,
+
+  // Alimentation
+  alimentation: s,
+  alimentationLibre: s,
+  alimentationSentimentAutoEfficacite: s,
+  alimentationEtapeChangement: s,
+
+  // Stress
+  gestionStress: s,
+  gestionStressLibre: s,
+  gestionStressSentimentAutoEfficacite: s,
+  gestionStressEtapeChangement: s,
+
+  // Tabac
+  consommationTabac: s,
+  consommationTabacNombreCigaretteJour: z.number().int().optional().nullable(),
+  consommationTabacLibre: s,
+  consommationTabacSentimentAutoEfficacite: s,
+  consommationTabacEtapeChangement: s,
+
+  // Tour de taille
+  gestionTourTaille: s,
+  gestionTourTailleLibre: s,
+  gestionTourTailleSentimentAutoEfficacite: s,
+  gestionTourTailleEtapeChangement: s,
+
+  // Activité physique
+  activitePhysique: s,
+  activitePhysiqueLibre: s,
+  activitePhysiqueSentimentAutoEfficacite: s,
+  activitePhysiqueEtapeChangement: s,
+
+  // Gestion globale FDR
+  gestionFDR: s,
+
+  // Qui est-il ?
+  impactSurQualiteVie: s,
+  stadeAcceptationMaladie: s,
+  soutienSocial: s,
+  projetDeVie: s,
+  objectifsPatient: s,
+  objectifsSoignants: s,
+  suiviEducatifNegocie: s,
+  rapatrier: s,
 })

@@ -187,6 +187,108 @@ model DiagnosticEducatif {
   patientId  String
   templateId String?
 
+  // Facteurs de risque
+  facteursRisque String?
+  contexte       String?
+
+  // Qu'est-ce qu'il fait ? — Qualité de vie
+  qualiteVie         String?
+  qualiteVieLibre    String?
+  viePersonnelle     String?
+  vieProfessionnelle String?
+  occupations        String?
+  loisirs            String?
+
+  // Qu'est-ce qu'il a ? — Implication
+  implication      String?
+  implicationLibre String?
+
+  // Qu'est-ce qu'il a ? — Priorité de santé
+  prioriteSante      String?
+  prioriteSanteLibre String?
+
+  // Qu'est-ce qu'il sait ? — Connaissances maladie
+  connaissancesMaladie      String?
+  connaissancesMaladieLibre String?
+  mecanismes                String?
+  localisations             String?
+  symptomes                 String?
+  chronicite                String?
+  reagirSignesAlerte        String?
+
+  // Qu'est-ce qu'il sait ? — Identification FDR
+  identificationFDR      String?
+  identificationFDRLibre String?
+  ometFDR                String?
+
+  // Savoir-faire — Tension artérielle
+  gestionTensionArterielle                        String?
+  gestionTensionArterielleLibre                   String?
+  gestionTensionArterielleSentimentAutoEfficacite String?
+  gestionTensionArterielleEtapeChangement         String?
+
+  // Savoir-faire — HbA1c
+  gestionHba1c                        String?
+  gestionHba1cLibre                   String?
+  gestionHba1cSentimentAutoEfficacite String?
+  gestionHba1cEtapeChangement         String?
+
+  // Savoir-faire — LDL
+  gestionLDL                        String?
+  gestionLDLLibre                   String?
+  gestionLDLSentimentAutoEfficacite String?
+  gestionLDLEtapeChangement         String?
+
+  // Savoir-faire — Adhésion traitement
+  adhesionTraitement                        String?
+  adhesionTraitementLibre                   String?
+  adhesionTraitementSentimentAutoEfficacite String?
+  adhesionTraitementEtapeChangement         String?
+
+  // Savoir-faire — Alimentation
+  alimentation                        String?
+  alimentationLibre                   String?
+  alimentationSentimentAutoEfficacite String?
+  alimentationEtapeChangement         String?
+
+  // Savoir-faire — Gestion du stress
+  gestionStress                        String?
+  gestionStressLibre                   String?
+  gestionStressSentimentAutoEfficacite String?
+  gestionStressEtapeChangement         String?
+
+  // Savoir-faire — Tabac
+  consommationTabac                        String?
+  consommationTabacNombreCigaretteJour     Int?
+  consommationTabacLibre                   String?
+  consommationTabacSentimentAutoEfficacite String?
+  consommationTabacEtapeChangement         String?
+
+  // Savoir-faire — Tour de taille
+  gestionTourTaille                        String?
+  gestionTourTailleLibre                   String?
+  gestionTourTailleSentimentAutoEfficacite String?
+  gestionTourTailleEtapeChangement         String?
+
+  // Savoir-faire — Activité physique
+  activitePhysique                        String?
+  activitePhysiqueLibre                   String?
+  activitePhysiqueSentimentAutoEfficacite String?
+  activitePhysiqueEtapeChangement         String?
+
+  // Savoir-faire — Gestion globale FDR
+  gestionFDR String?
+
+  // Qui est-il ?
+  impactSurQualiteVie     String?
+  stadeAcceptationMaladie String?
+  soutienSocial           String?
+  projetDeVie             String?
+  objectifsPatient        String?
+  objectifsSoignants      String?
+  suiviEducatifNegocie    String?
+  rapatrier               String?
+
   patient  Patient                     @relation(fields: [patientId], references: [id], onDelete: Cascade)
   template DiagnosticEducatifTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
 }

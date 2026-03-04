@@ -17,6 +17,7 @@ import type {
   PatientEntityDomain,
   PatientUpdateEntityDomain,
   PatientWithAppointmentsDomain,
+  PatientWithTagsDomain,
 } from '../types/domain/patient.domain.interface'
 import type { AppointmentRepositoryInterface } from '../types/infra/orm/repositories/appointment.repository.interface'
 import type {
@@ -51,6 +52,10 @@ class PatientDomain implements PatientDomainInterface {
 
   findAll(): Promise<PatientEntityDomain[]> {
     return this.patientRepository.findAll()
+  }
+
+  findAllWithTags(): Promise<PatientWithTagsDomain[]> {
+    return this.patientRepository.findAllWithTags()
   }
 
   findByID(patientID: string): Promise<PatientEntityDomain> {

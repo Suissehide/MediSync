@@ -107,6 +107,19 @@ function SidebarPathway() {
                       <div className="text-sm font-medium text-text truncate">
                         {pathwayTemplate.name}
                       </div>
+                      {pathwayTemplate.tags &&
+                        pathwayTemplate.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {pathwayTemplate.tags.map((tag) => (
+                              <span
+                                key={tag}
+                                className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium bg-white/10 leading-none"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                     </div>
 
                     <div className="absolute right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
