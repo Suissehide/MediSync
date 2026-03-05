@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, useParams } from '@tanstack/react-router'
-import { ArrowLeft, FileDown } from 'lucide-react'
+import { ArrowLeft, FileDown, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import EditPatient from '../../../components/custom/Patient/edit/edit.patient.tsx'
@@ -9,6 +9,7 @@ import OverviewPatient from '../../../components/custom/Patient/view/overview.pa
 import PlanningPatient from '../../../components/custom/Patient/view/planning.patient.tsx'
 import AddPatientForm from '../../../components/custom/popup/addPatientForm.tsx'
 import { AddPatientToPathwayForm } from '../../../components/custom/popup/addPatientToPathwayForm.tsx'
+import { ConfirmDeleteForm } from '../../../components/custom/popup/confirmDeleteForm.tsx'
 import DashboardLayout from '../../../components/dashboard.layout.tsx'
 import { Button } from '../../../components/ui/button.tsx'
 import {
@@ -17,7 +18,10 @@ import {
   TabsList,
   TabsTrigger,
 } from '../../../components/ui/tabs.tsx'
-import { usePatientByIDQuery } from '../../../queries/usePatient.ts'
+import {
+  usePatientByIDQuery,
+  usePatientMutations,
+} from '../../../queries/usePatient.ts'
 import { useDiagnosticStore } from '../../../store/useDiagnosticStore.ts'
 
 export const Route = createFileRoute('/_authenticated/patient/$patientID')({
@@ -28,8 +32,11 @@ function PatientDetails() {
   const navigate = useNavigate()
   const [selected, setSelected] = useState<string>('overview')
   const [showPDF, setShowPDF] = useState(false)
+  const [showDelete, setShowDelete] = useState(false)
+  const { deletePatient } = usePatientMutations()
 
-  const { selectedId: diagnosticSelectedId, setSelectedId } = useDiagnosticStore()
+  const { selectedId: diagnosticSelectedId, setSelectedId } =
+    useDiagnosticStore()
 
   const { patientID } = useParams({
     from: '/_authenticated/patient/$patientID',
@@ -80,6 +87,13 @@ function PatientDetails() {
               >
                 <FileDown className="w-4 h-4" />
               </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setShowDelete(true)}
+              >
+                <Trash2 className="w-4 h-4 text-destructive" />
+              </Button>
             </div>
           </div>
 
@@ -114,6 +128,22 @@ function PatientDetails() {
           </Tabs>
         </div>
       </div>
+
+      <ConfirmDeleteForm
+        open={showDelete}
+        setOpen={setShowDelete}
+        title="Supprimer le patient"
+        description={`Voulez-vous vraiment supprimer ${patient?.firstName} ${patient?.lastName} ? Cette action est irréversible.`}
+        loading={deletePatient.isPending}
+        onConfirm={() => {
+          if (!patient) {
+            return
+          }
+          deletePatient.mutate(patient.id, {
+            onSuccess: () => void navigate({ to: '/patient' }),
+          })
+        }}
+      />
       {showPDF && patient && (
         <ProgrammePDFModal
           patient={patient}

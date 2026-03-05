@@ -3,9 +3,13 @@ import type {
   Prisma,
 } from '../../../../../generated/client'
 import type { PatientWithAppointmentsDomain } from '../../../domain/patient.domain.interface'
+import type { EnrollmentIssueEntityRepo } from './enrollmentIssue.repository.interface'
 
 export type PatientEntityRepo = Patient
-export type PatientWithTagsEntityRepo = Patient & { pathwayTemplateTags: string[] }
+export type PatientWithTagsEntityRepo = Patient & {
+  pathwayTemplateTags: string[]
+  enrollmentIssues: EnrollmentIssueEntityRepo[]
+}
 export type PatientCreateEntityRepo = Prisma.PatientUncheckedCreateInput
 export type PatientUpdateEntityRepo = Prisma.PatientUncheckedUpdateInput
 

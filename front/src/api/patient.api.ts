@@ -6,6 +6,7 @@ import {
 } from '../libs/httpErrorHandler.ts'
 import type {
   CreatePatientParams,
+  EnrollExistingPatientParams,
   EnrollmentResult,
   EnrollPatientParams,
   Patient,
@@ -109,6 +110,41 @@ export const PatientApi = {
       handleHttpError(response, {}, "Impossible d'inscrire le patient")
     }
     return response.json()
+  },
+
+  enrollExisting: async (
+    params: EnrollExistingPatientParams,
+  ): Promise<EnrollmentResult> => {
+    const { patientID, ...body } = params
+    const response = await fetchWithAuth(
+      `${apiUrl}/patient/${patientID}/enroll`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patientID, ...body }),
+      },
+    )
+    if (!response.ok) {
+      handleHttpError(response, {}, "Impossible d'inscrire le patient")
+    }
+    return response.json()
+  },
+
+  dismissEnrollmentIssue: async (
+    patientID: string,
+    issueID: string,
+  ): Promise<void> => {
+    const response = await fetchWithAuth(
+      `${apiUrl}/patient/${patientID}/enrollment-issue/${issueID}`,
+      { method: 'DELETE' },
+    )
+    if (!response.ok) {
+      handleHttpError(
+        response,
+        {},
+        "Impossible de supprimer le problème d'inscription",
+      )
+    }
   },
 
   delete: async (patientID: string): Promise<void> => {

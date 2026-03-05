@@ -1,14 +1,9 @@
 import dayjs, { type Dayjs } from 'dayjs'
-import { Check, GitFork, X } from 'lucide-react'
+import { CalendarPlus, Check, X } from 'lucide-react'
 import { useState } from 'react'
 
 import { usePatientMutations } from '../../../queries/usePatient.ts'
 import type { Patient, TimeOfDay } from '../../../types/patient.ts'
-import {
-  PathwaySelector,
-  usePathwaySelector,
-  type PathwayPeriod,
-} from '../pathwaySelector.tsx'
 import { Button } from '../../ui/button.tsx'
 import { DatePicker } from '../../ui/datePicker.tsx'
 import { Label } from '../../ui/label.tsx'
@@ -21,6 +16,11 @@ import {
   PopupTitle,
   PopupTrigger,
 } from '../../ui/popup.tsx'
+import {
+  type PathwayPeriod,
+  PathwaySelector,
+  usePathwaySelector,
+} from '../pathwaySelector.tsx'
 
 interface AddPatientToPathwayFormProps {
   patient: Patient
@@ -32,7 +32,7 @@ export function AddPatientToPathwayForm({
   const [open, setOpen] = useState(false)
   const [startDate, setStartDate] = useState<Dayjs>(dayjs())
   const pathwayState = usePathwaySelector()
-  const { enrollPatient } = usePatientMutations()
+  const { enrollExistingPatient } = usePatientMutations()
 
   const periodToTimeOfDay: Record<PathwayPeriod, TimeOfDay> = {
     morning: 'MORNING',
@@ -41,11 +41,12 @@ export function AddPatientToPathwayForm({
   }
 
   const handleConfirm = () => {
-    if (!pathwayState.addedPathways.length) return
-    const { id: _id, ...patientData } = patient
-    enrollPatient.mutate(
+    if (!pathwayState.addedPathways.length) {
+      return
+    }
+    enrollExistingPatient.mutate(
       {
-        patientData,
+        patientID: patient.id,
         startDate: startDate.toISOString(),
         pathways: pathwayState.addedPathways.map((p) => ({
           pathwayTemplateID: p.pathwayTemplateId,
@@ -70,7 +71,7 @@ export function AddPatientToPathwayForm({
     <Popup modal open={open} onOpenChange={handleOpenChange}>
       <PopupTrigger asChild>
         <Button type="button" variant="outline" size="icon">
-          <GitFork className="w-4 h-4" />
+          <CalendarPlus className="w-4 h-4" />
         </Button>
       </PopupTrigger>
 
@@ -87,7 +88,9 @@ export function AddPatientToPathwayForm({
             <DatePicker
               value={startDate}
               onChange={(d) => {
-                if (d) setStartDate(d)
+                if (d) {
+                  setStartDate(d)
+                }
               }}
             />
           </div>
@@ -104,11 +107,12 @@ export function AddPatientToPathwayForm({
             variant="default"
             onClick={handleConfirm}
             disabled={
-              !pathwayState.addedPathways.length || enrollPatient.isPending
+              !pathwayState.addedPathways.length ||
+              enrollExistingPatient.isPending
             }
           >
             <Check className="w-4 h-4" />
-            {enrollPatient.isPending ? 'Inscription...' : 'Inscrire'}
+            {enrollExistingPatient.isPending ? 'Inscription...' : 'Inscrire'}
           </Button>
           <Button variant="outline" onClick={() => setOpen(false)}>
             <X className="w-4 h-4" />

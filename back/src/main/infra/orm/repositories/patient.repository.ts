@@ -43,6 +43,7 @@ class PatientRepository implements PatientRepositoryInterface {
             },
           },
         },
+        enrollmentIssues: true,
       },
     })
 
@@ -68,6 +69,7 @@ class PatientRepository implements PatientRepositoryInterface {
               appointment: true,
             },
           },
+          enrollmentIssues: true,
         },
       })
     } catch (err) {
@@ -122,6 +124,7 @@ class PatientRepository implements PatientRepositoryInterface {
       })
     }
   }
+
 }
 
 export { PatientRepository }

@@ -34,8 +34,10 @@ export const PATIENT = {
   GET: 'get_patient',
   CREATE: 'create_patient',
   ENROLL: 'enroll_patient',
+  ENROLL_EXISTING: 'enroll_existing_patient',
   UPDATE: 'update_patient',
   DELETE: 'delete_patient',
+  DISMISS_ENROLLMENT_ISSUE: 'dismiss_enrollment_issue',
 }
 
 export const SLOT = {

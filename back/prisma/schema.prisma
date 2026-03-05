@@ -163,11 +163,23 @@ model Patient {
   stopReason      String? // Motif d’arrêt de programme
   etpFinalOutcome String? // Point final parcours ETP
 
-  createDate       DateTime
-  enrollmentIssues Json?
+  createDate DateTime
 
   appointmentPatients AppointmentPatient[]
   diagnostics         DiagnosticEducatif[]
+  enrollmentIssues    EnrollmentIssue[]
+}
+
+model EnrollmentIssue {
+  id                String   @id @default(cuid())
+  patientId         String
+  pathwayTemplateID String
+  pathwayName       String?
+  reason            String
+  startDate         DateTime
+  createdAt         DateTime @default(now())
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
 }
 
 model DiagnosticEducatifTemplate {

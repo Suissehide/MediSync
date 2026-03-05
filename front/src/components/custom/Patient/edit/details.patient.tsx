@@ -14,7 +14,7 @@ export const DetailsFields = withForm({
       <>
         <div className="h-fit flex-1 flex flex-col gap-2">
           <div className="flex items-center gap-2 mt-2">
-            <h4 className="relative text-md font-semibold">
+            <h4 className="relative text-sm font-semibold">
               Informations personnelles et sociales
             </h4>
             <div className="mt-1 ml-1 flex-1 border-t border-border" />
@@ -54,7 +54,7 @@ export const DetailsFields = withForm({
 
         <div className="h-fit flex-1 flex flex-col gap-2">
           <div className="flex items-center gap-2 mt-2">
-            <h4 className="relative text-md font-semibold">
+            <h4 className="relative text-sm font-semibold">
               Références et contexte
             </h4>
             <div className="mt-1 ml-1 flex-1 border-t border-border" />
@@ -71,7 +71,7 @@ export const DetailsFields = withForm({
 
         <div className="h-fit flex-1 flex flex-col gap-2">
           <div className="flex items-center gap-2 mt-2">
-            <h4 className="relative text-md font-semibold">Notes</h4>
+            <h4 className="relative text-sm font-semibold">Notes</h4>
             <div className="mt-1 ml-1 flex-1 border-t border-border" />
           </div>
           <div className="mt-2 bg-input rounded-lg p-6 flex flex-col gap-3">

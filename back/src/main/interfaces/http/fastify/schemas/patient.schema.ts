@@ -47,15 +47,18 @@ export const patientSchema = z.object({
 })
 
 export const enrollmentIssueSchema = z.object({
-  pathwayName: z.string().optional(),
+  id: z.cuid(),
+  pathwayName: z.string().optional().nullable(),
   pathwayTemplateID: z.string(),
   reason: z.string(),
+  startDate: z.coerce.date(),
+  createdAt: z.coerce.date(),
 })
 
 export const patientResponseSchema = z.object({
   id: z.cuid(),
   ...patientEntity,
-  enrollmentIssues: z.array(enrollmentIssueSchema).optional().nullable(),
+  enrollmentIssues: z.array(enrollmentIssueSchema).optional(),
 })
 
 export const patientsResponseSchema = z.array(patientResponseSchema)
@@ -78,6 +81,7 @@ export const updatePatientByIdSchema = {
   params: getPatientByIdParamsSchema,
   body: patientSchema.partial(),
 }
+
 
 export type PatientInput = z.infer<typeof patientSchema>
 export type GetPatientByIdParams = z.infer<typeof getPatientByIdParamsSchema>

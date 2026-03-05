@@ -15,7 +15,7 @@ export const PathwayInclusionFields = withForm({
     return (
       <div className="h-fit flex-1 flex flex-col gap-2">
         <div className="flex items-center gap-2 mt-2">
-          <h4 className="relative text-md font-semibold">
+          <h4 className="relative text-sm font-semibold">
             Parcours et inclusion
           </h4>
           <div className="mt-1 ml-1 flex-1 border-t border-border" />
@@ -47,7 +47,10 @@ export const PathwayInclusionFields = withForm({
           </form.AppField>
           <form.AppField name="etpDecision">
             {(field) => (
-              <field.Select options={ETP_DECISION_OPTIONS} label="ETP décision" />
+              <field.Select
+                options={ETP_DECISION_OPTIONS}
+                label="ETP décision"
+              />
             )}
           </form.AppField>
           <form.AppField name="programType">
@@ -67,7 +70,9 @@ export const PathwayInclusionFields = withForm({
             )}
           </form.AppField>
           <form.AppField name="customContentDetails">
-            {(field) => <field.TextArea label="Précision contenu personnalisé" />}
+            {(field) => (
+              <field.TextArea label="Précision contenu personnalisé" />
+            )}
           </form.AppField>
           <form.AppField name="goal">
             {(field) => <field.TextArea label="Objectif" />}

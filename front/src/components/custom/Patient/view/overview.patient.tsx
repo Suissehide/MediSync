@@ -1,11 +1,12 @@
 import dayjs from 'dayjs'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, CalendarClock, Siren, X } from 'lucide-react'
 import { useMemo } from 'react'
 
 import { SLOT_LOCATION } from '../../../../constants/slot.constant.ts'
 import { getLabel } from '../../../../libs/utils.ts'
+import { usePatientMutations } from '../../../../queries/usePatient.ts'
 import { useAllSlotsQuery } from '../../../../queries/useSlot.ts'
-import type { Patient } from '../../../../types/patient.ts'
+import type { EnrollmentIssue, Patient } from '../../../../types/patient.ts'
 import type { Slot } from '../../../../types/slot.ts'
 import { ColorLegend } from '../../colorLegend.tsx'
 
@@ -26,30 +27,66 @@ function AppointmentCard({ slot }: { slot: Slot }) {
 
   return (
     <div
-      className="flex gap-2 rounded-lg px-3 py-2"
-      style={{ backgroundColor: `${color}20` }}
+      className="flex gap-3 rounded-lg px-3 py-3 border border-border transition-colors"
+      style={{ backgroundColor: `${color}18` }}
     >
-      <div className="border-2 rounded-lg" style={{ borderColor: color }} />
-      <div className="flex flex-col">
-        <div>
+      <div
+        className="w-1 self-stretch rounded-full flex-shrink-0"
+        style={{ backgroundColor: color }}
+      />
+      <div className="flex flex-col gap-1 min-w-0">
+        <span className="font-medium text-sm truncate">
           {soignant ?? thematic}
           {location && (
-            <>
-              {' - '}
-              <span className="">{getLabel(SLOT_LOCATION, location)}</span>
-            </>
+            <span className="text-text-light font-normal">
+              {' · '}
+              {getLabel(SLOT_LOCATION, location)}
+            </span>
           )}
-        </div>
-        <div className="text-text-light text-sm">
-          {formattedDate} - {endTime}
-        </div>
+        </span>
+        <span className="text-text-sidebar text-xs">
+          {formattedDate} – {endTime}
+        </span>
       </div>
+    </div>
+  )
+}
+
+function EnrollmentIssueRow({
+  issue,
+  onDismiss,
+  loading,
+}: {
+  issue: EnrollmentIssue
+  onDismiss: (issue: EnrollmentIssue) => void
+  loading: boolean
+}) {
+  const startDate = dayjs(issue.startDate).format('DD/MM/YYYY')
+  return (
+    <div className="flex justify-center items-center gap-2 rounded bg-amber-50 border border-amber-200 px-3 py-2">
+      <AlertTriangle className="h-3 w-3 text-amber-500" />
+      <div className="flex-1 min-w-0">
+        <span className="text-sm text-amber-700">
+          {issue.reason} à partir du{' '}
+          <span className="font-semibold">{startDate}</span>
+        </span>
+      </div>
+      <button
+        type="button"
+        onClick={() => onDismiss(issue)}
+        disabled={loading}
+        className="cursor-pointer flex-shrink-0 rounded p-0.5 text-amber-500 hover:bg-amber-100 hover:text-amber-700 disabled:opacity-40 transition-colors"
+        aria-label="Ignorer ce problème"
+      >
+        <X className="h-3.5 w-3.5" />
+      </button>
     </div>
   )
 }
 
 export default function OverviewPatient({ patient }: OverviewPatientProps) {
   const { slots } = useAllSlotsQuery()
+  const { dismissEnrollmentIssue } = usePatientMutations()
 
   const patientSlots = useMemo(() => {
     if (!slots || !patient) {
@@ -78,65 +115,84 @@ export default function OverviewPatient({ patient }: OverviewPatientProps) {
 
   const enrollmentIssues = patient?.enrollmentIssues
 
+  const handleDismissIssue = (issue: EnrollmentIssue) => {
+    if (!patient) {
+      return
+    }
+    dismissEnrollmentIssue.mutate({ patientID: patient.id, issueID: issue.id })
+  }
+
   return (
-    <div className="relative h-fit flex-1 flex flex-col gap-2">
-      {enrollmentIssues && enrollmentIssues.length > 0 && (
-        <div className="flex flex-col gap-1 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
-          <div className="flex items-center gap-2 font-medium text-amber-800">
-            <AlertTriangle className="h-4 w-4" />
-            Problèmes d'inscription ({enrollmentIssues.length})
+    <div className="mt-4">
+      <div className="relative h-fit flex-1 flex flex-col gap-4">
+        {enrollmentIssues && enrollmentIssues.length > 0 && (
+          <>
+            <div className="flex items-center gap-2">
+              <Siren className="h-4 w-4 flex-shrink-0" />
+              <h4 className="text-sm font-semibold text-text-dark">
+                Problèmes d'inscription ({enrollmentIssues.length})
+              </h4>
+              <div className="flex-1 border-t border-border" />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              {enrollmentIssues.map((issue) => (
+                <EnrollmentIssueRow
+                  key={issue.id}
+                  issue={issue}
+                  onDismiss={handleDismissIssue}
+                  loading={dismissEnrollmentIssue.isPending}
+                />
+              ))}
+            </div>
+          </>
+        )}
+
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <CalendarClock className="h-4 w-4 flex-shrink-0" />
+            <h4 className="text-sm font-semibold text-text-dark">
+              Rendez-vous
+            </h4>
+            <div className="flex-1 border-t border-border" />
+            <ColorLegend />
           </div>
-          <ul className="ml-6 list-disc text-sm text-amber-700">
-            {enrollmentIssues.map((issue) => (
-              <li key={issue.pathwayTemplateID}>
-                <span className="font-medium">
-                  {issue.pathwayName ?? issue.pathwayTemplateID}
-                </span>
-                {' : '}
-                {issue.reason}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
 
-      <div className="flex items-center gap-2 mt-4">
-        <h4 className="relative text-md font-semibold">Rendez-vous</h4>
-        <div className="mt-1 ml-1 flex-1 border-t border-border" />
-        <ColorLegend />
-      </div>
+          <div className="flex flex-col gap-3">
+            <div className="bg-input rounded-lg p-4 flex flex-col gap-4">
+              <h5 className="text-xs text-text-light uppercase font-semibold tracking-wide">
+                À venir ({patientSlots.upcoming.length})
+              </h5>
+              <div className="flex flex-col gap-1.5 max-h-64 overflow-y-auto">
+                {patientSlots.upcoming.length > 0 ? (
+                  patientSlots.upcoming.map((slot) => (
+                    <AppointmentCard key={slot.id} slot={slot} />
+                  ))
+                ) : (
+                  <p className="text-text-sidebar text-sm py-2">
+                    Aucun rendez-vous à venir
+                  </p>
+                )}
+              </div>
+            </div>
 
-      <div className="mt-2 bg-input rounded-lg p-6">
-        <div className="mb-2">
-          <h5 className="text-xs text-text-light uppercase font-semibold">
-            À venir ({patientSlots.upcoming.length})
-          </h5>
-        </div>
-        <div className="flex flex-col gap-2 max-h-52 overflow-y-auto">
-          {patientSlots.upcoming.length > 0 ? (
-            patientSlots.upcoming.map((slot) => (
-              <AppointmentCard key={slot.id} slot={slot} />
-            ))
-          ) : (
-            <p className="text-text-sidebar text-sm">
-              Aucun rendez-vous à venir
-            </p>
-          )}
-        </div>
-      </div>
-
-      <div className="bg-input rounded-lg p-6">
-        <h5 className="mb-2 text-xs text-text-light uppercase font-semibold">
-          Passés ({patientSlots.past.length})
-        </h5>
-        <div className="flex flex-col gap-2 max-h-52 overflow-y-auto">
-          {patientSlots.past.length > 0 ? (
-            patientSlots.past.map((slot) => (
-              <AppointmentCard key={slot.id} slot={slot} />
-            ))
-          ) : (
-            <p className="text-text-sidebar text-sm">Aucun rendez-vous passé</p>
-          )}
+            <div className="bg-input rounded-lg p-4 flex flex-col gap-4">
+              <h5 className="text-xs text-text-light uppercase font-semibold tracking-wide">
+                Passés ({patientSlots.past.length})
+              </h5>
+              <div className="flex flex-col gap-1.5 max-h-64 overflow-y-auto">
+                {patientSlots.past.length > 0 ? (
+                  patientSlots.past.map((slot) => (
+                    <AppointmentCard key={slot.id} slot={slot} />
+                  ))
+                ) : (
+                  <p className="text-text-sidebar text-sm py-2">
+                    Aucun rendez-vous passé
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

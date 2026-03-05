@@ -182,11 +182,11 @@ function SuiviPage() {
   return (
     <DashboardLayout>
       <div className="flex-1 bg-background rounded-lg flex flex-col w-full gap-4">
-        <div className="pl-6 mt-4 mb-6 flex justify-between items-center gap-4">
+        <div className="px-6 mt-4 mb-6 flex justify-between items-center gap-4">
           <h1 className="text-2xl font-bold">Suivi</h1>
 
           <div className="flex items-center gap-1">
-            <Button variant="none" size="icon" onClick={prevMonth}>
+            <Button variant="outline" size="icon" onClick={prevMonth}>
               <ChevronLeft className="w-5 h-5" />
             </Button>
 
@@ -196,7 +196,7 @@ function SuiviPage() {
 
             <PopoverRoot>
               <PopoverTrigger asChild>
-                <Button type="button" variant="none" size="icon">
+                <Button type="button" variant="outline" size="icon">
                   <CalendarDays className="w-4 h-4" />
                 </Button>
               </PopoverTrigger>
@@ -214,7 +214,7 @@ function SuiviPage() {
               </PopoverContent>
             </PopoverRoot>
 
-            <Button variant="none" size="icon" onClick={nextMonth}>
+            <Button variant="outline" size="icon" onClick={nextMonth}>
               <ChevronRight className="w-5 h-5" />
             </Button>
           </div>
@@ -309,7 +309,7 @@ function SuiviPage() {
                               <div
                                 className={
                                   isPinned
-                                    ? 'px-3 text-sm text-text whitespace-nowrap'
+                                    ? 'px-3 text-sm text-text-dark whitespace-nowrap'
                                     : 'flex items-center justify-center h-full'
                                 }
                               >

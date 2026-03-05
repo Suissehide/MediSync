@@ -19,13 +19,16 @@ import EventSheet from '../../../../components/custom/sheet/eventSheet.tsx'
 import EventTemplateSheet from '../../../../components/custom/sheet/eventTemplateSheet.tsx'
 import DashboardLayout from '../../../../components/dashboard.layout.tsx'
 import { Button } from '../../../../components/ui/button.tsx'
-import { ToggleGroup, ToggleGroupItem } from '../../../../components/ui/toggle-group.tsx'
 import {
   PopoverAnchor,
   PopoverClose,
   PopoverContent,
   PopoverRoot,
 } from '../../../../components/ui/popover.tsx'
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from '../../../../components/ui/toggle-group.tsx'
 import {
   buildCalendarEventsFromSlots,
   buildCalendarEventsFromSlotTemplates,
@@ -216,7 +219,14 @@ function Planning() {
 
           <div className="flex justify-end">
             {!editMode && (
-              <ToggleGroup value={view} onValueChange={(v: string) => { if (v) { setView(v as 'calendar' | 'timeline') } }}>
+              <ToggleGroup
+                value={view}
+                onValueChange={(v: string) => {
+                  if (v) {
+                    setView(v as 'calendar' | 'timeline')
+                  }
+                }}
+              >
                 <ToggleGroupItem value="calendar">
                   <CalendarDays className="h-4 w-4" />
                   Calendrier
@@ -252,12 +262,12 @@ function Planning() {
                 weekends={true}
                 headerToolbar={{
                   left: 'title',
-                  center: 'multiMonthYear,dayGridYear',
+                  center: 'dayGridYear,multiMonthYear',
                   right: 'prev,next today',
                 }}
                 buttonText={{
-                  multiMonthYear: 'Grille',
                   dayGridYear: 'Liste',
+                  multiMonthYear: 'Grille',
                 }}
                 multiMonthMinWidth={600}
                 dayMaxEvents={false}

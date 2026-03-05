@@ -25,6 +25,7 @@ import type {
   PathwayWithSlotsRepo,
 } from '../types/infra/orm/repositories/pathway.repository.interface'
 import type { PathwayTemplateRepositoryInterface } from '../types/infra/orm/repositories/pathwayTemplate.repository.interface'
+import type { EnrollmentIssueRepositoryInterface } from '../types/infra/orm/repositories/enrollmentIssue.repository.interface'
 import type { PatientRepositoryInterface } from '../types/infra/orm/repositories/patient.repository.interface'
 import type { SlotWithTemplateAndAppointmentsRepo } from '../types/infra/orm/repositories/slot.repository.interface'
 import type { Logger } from '../types/utils/logger'
@@ -35,18 +36,21 @@ class PatientDomain implements PatientDomainInterface {
   private readonly pathwayRepository: PathwayRepositoryInterface
   private readonly pathwayTemplateRepository: PathwayTemplateRepositoryInterface
   private readonly appointmentRepository: AppointmentRepositoryInterface
+  private readonly enrollmentIssueRepository: EnrollmentIssueRepositoryInterface
 
   constructor({
     patientRepository,
     pathwayRepository,
     pathwayTemplateRepository,
     appointmentRepository,
+    enrollmentIssueRepository,
     logger,
   }: IocContainer) {
     this.patientRepository = patientRepository
     this.pathwayRepository = pathwayRepository
     this.pathwayTemplateRepository = pathwayTemplateRepository
     this.appointmentRepository = appointmentRepository
+    this.enrollmentIssueRepository = enrollmentIssueRepository
     this.logger = logger
   }
 
@@ -79,6 +83,7 @@ class PatientDomain implements PatientDomainInterface {
     return this.patientRepository.update(patientID, patientUpdateParams)
   }
 
+
   async delete(patientID: string): Promise<PatientEntityDomain> {
     const patient = await this.patientRepository.findByID(patientID)
     const appointmentIDs = patient.appointmentPatients.map(
@@ -99,7 +104,7 @@ class PatientDomain implements PatientDomainInterface {
   ): Promise<EnrollmentResult> {
     const patient = await this.create(enrollmentData.patientData)
     return this.processEnrollments(
-      { ...patient, appointmentPatients: [] },
+      { ...patient, appointmentPatients: [], enrollmentIssues: [] },
       enrollmentData.pathways,
       enrollmentData.startDate,
     )
@@ -185,14 +190,15 @@ class PatientDomain implements PatientDomainInterface {
     }
 
     if (failedEnrollments.length > 0) {
-      const issues = failedEnrollments.map((f) => ({
-        pathwayName: f.slotTemplate.name,
-        pathwayTemplateID: f.slotTemplate.id,
-        reason: f.reason,
-      }))
-      await this.patientRepository.update(patient.id, {
-        enrollmentIssues: issues,
-      })
+      await this.enrollmentIssueRepository.create(
+        patient.id,
+        failedEnrollments.map((f) => ({
+          pathwayTemplateID: f.slotTemplate.id,
+          pathwayName: f.slotTemplate.name,
+          reason: f.reason,
+          startDate,
+        })),
+      )
     }
 
     return {

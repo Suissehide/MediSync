@@ -7,6 +7,7 @@ import type {
 } from '../infra/orm/repositories/patient.repository.interface'
 import type { AppointmentEntityDomain } from './appointment.domain.interface'
 import type { AppointmentPatientEntityDomain } from './appointmentPatient.domain.interface'
+import type { EnrollmentIssueEntityDomain } from './enrollmentIssue.domain.interface'
 
 export type PatientEntityDomain = PatientEntityRepo
 export type PatientWithTagsDomain = PatientWithTagsEntityRepo
@@ -14,6 +15,7 @@ export type PatientWithAppointmentsDomain = PatientEntityDomain & {
   appointmentPatients: (AppointmentPatientEntityDomain & {
     appointment: AppointmentEntityDomain
   })[]
+  enrollmentIssues: EnrollmentIssueEntityDomain[]
 }
 export type PatientCreateEntityDomain = Omit<
   PatientCreateEntityRepo,

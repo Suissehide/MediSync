@@ -43,15 +43,18 @@ export type Patient = {
   etpFinalOutcome?: string // Point final parcours ETP
 
   // Enrollment
-  enrollmentIssues?: EnrollmentIssue[] | null
+  enrollmentIssues?: EnrollmentIssue[]
 }
 
 export type PatientWithTags = Patient & { pathwayTemplateTags: string[] }
 
 export type EnrollmentIssue = {
-  pathwayName?: string
+  id: string
+  pathwayName?: string | null
   pathwayTemplateID: string
   reason: string
+  startDate: string
+  createdAt: string
 }
 
 export type CreatePatientParams = Omit<Patient, 'id'>
@@ -68,6 +71,12 @@ export type PathwayEnrollment = {
 
 export type EnrollPatientParams = {
   patientData: CreatePatientParams
+  startDate: string
+  pathways: PathwayEnrollment[]
+}
+
+export type EnrollExistingPatientParams = {
+  patientID: string
   startDate: string
   pathways: PathwayEnrollment[]
 }

@@ -7,6 +7,7 @@ import { useDataFetching } from '../hooks/useDataFetching.ts'
 import { useToast } from '../hooks/useToast.ts'
 import type {
   CreatePatientParams,
+  EnrollExistingPatientParams,
   EnrollmentResult,
   Patient,
   UpdatePatientParams,
@@ -236,5 +237,69 @@ export const usePatientMutations = () => {
     },
   })
 
-  return { createPatient, deletePatient, updatePatient, enrollPatient }
+  const enrollExistingPatient = useMutation({
+    mutationKey: [PATIENT.ENROLL_EXISTING],
+    mutationFn: (params: EnrollExistingPatientParams) =>
+      PatientApi.enrollExisting(params),
+    onSuccess: (data: EnrollmentResult) => {
+      if (data.failedEnrollments.length > 0) {
+        const issues = data.failedEnrollments
+          .map(
+            (f) => `${f.slotTemplate.name ?? f.slotTemplate.id}: ${f.reason}`,
+          )
+          .join('\n')
+        toast({
+          title: 'Patient inscrit avec des erreurs',
+          message: issues,
+          severity: TOAST_SEVERITY.WARNING,
+        })
+      } else {
+        toast({
+          title: 'Patient inscrit avec succès',
+          severity: TOAST_SEVERITY.SUCCESS,
+        })
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: "Erreur lors de l'inscription du patient",
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
+    },
+    onSettled: async (data) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: [PATIENT.GET_ALL] }),
+        queryClient.invalidateQueries({ queryKey: [SLOT.GET_ALL] }),
+        queryClient.invalidateQueries({ queryKey: [APPOINTMENT.GET_ALL] }),
+        ...(data?.patient.id
+          ? [
+              queryClient.invalidateQueries({
+                queryKey: [PATIENT.GET_BY_ID, data.patient.id],
+              }),
+            ]
+          : []),
+      ])
+    },
+  })
+
+  const dismissEnrollmentIssue = useMutation({
+    mutationKey: [PATIENT.DISMISS_ENROLLMENT_ISSUE],
+    mutationFn: ({ patientID, issueID }: { patientID: string; issueID: string }) =>
+      PatientApi.dismissEnrollmentIssue(patientID, issueID),
+    onError: (error) => {
+      toast({
+        title: "Erreur lors de la suppression du problème d'inscription",
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
+    },
+    onSettled: async (_, __, variables) => {
+      await queryClient.invalidateQueries({
+        queryKey: [PATIENT.GET_BY_ID, variables.patientID],
+      })
+    },
+  })
+
+  return { createPatient, deletePatient, updatePatient, enrollPatient, enrollExistingPatient, dismissEnrollmentIssue }
 }

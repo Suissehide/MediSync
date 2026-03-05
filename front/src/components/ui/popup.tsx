@@ -7,8 +7,8 @@ import { cn } from '../../libs/utils.ts'
 import { type ButtonProps, buttonVariants } from './button.tsx'
 
 const popupVariants = cva(
-  `fixed z-100 p-6 top-[20%] left-[50%] translate-x-[-50%] translate-y-[-20%] gap-4 bg-primary-foreground border border-border 
-  rounded-md shadow-xl transition ease-in-out`,
+  `fixed z-100 p-6 top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] gap-4 bg-primary-foreground border border-border
+  rounded-md shadow-xl transition ease-in-out flex flex-col max-h-[85vh]`,
   {
     variants: {
       size: {
@@ -144,7 +144,7 @@ const PopupBody = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn('h-full py-4', className)} {...props} />
+  <div ref={ref} className={cn('overflow-y-auto flex-1 min-h-0 py-4', className)} {...props} />
 ))
 PopupBody.displayName = 'PopupBody'
 

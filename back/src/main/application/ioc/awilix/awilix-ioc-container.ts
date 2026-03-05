@@ -32,8 +32,10 @@ import { SlotTemplateDomain } from '../../../domain/slotTemplate.domain'
 import { SlotTemplateRepository } from '../../../infra/orm/repositories/slotTemplate.repository'
 import { DiagnosticEducatifDomain } from '../../../domain/diagnosticEducatif.domain'
 import { DiagnosticEducatifTemplateDomain } from '../../../domain/diagnosticEducatifTemplate.domain'
+import { EnrollmentIssueDomain } from '../../../domain/enrollmentIssue.domain'
 import { DiagnosticEducatifRepository } from '../../../infra/orm/repositories/diagnosticEducatif.repository'
 import { DiagnosticEducatifTemplateRepository } from '../../../infra/orm/repositories/diagnosticEducatifTemplate.repository'
+import { EnrollmentIssueRepository } from '../../../infra/orm/repositories/enrollmentIssue.repository'
 
 declare module '@fastify/awilix' {
   interface Cradle extends IocContainer {}
@@ -92,6 +94,9 @@ class AwilixIocContainer {
     // DiagnosticEducatifTemplate
     this.#registerDiagnosticEducatifTemplateDomain()
     this.#registerDiagnosticEducatifTemplateRepository()
+    // EnrollmentIssue
+    this.#registerEnrollmentIssueDomain()
+    this.#registerEnrollmentIssueRepository()
 
     // Server
     this.#registerHttpServer()
@@ -243,6 +248,14 @@ class AwilixIocContainer {
   }
   #registerDiagnosticEducatifTemplateRepository(): void {
     this.register('diagnosticEducatifTemplateRepository', asClass(DiagnosticEducatifTemplateRepository).singleton())
+  }
+
+  // EnrollmentIssue
+  #registerEnrollmentIssueDomain(): void {
+    this.register('enrollmentIssueDomain', asClass(EnrollmentIssueDomain).singleton())
+  }
+  #registerEnrollmentIssueRepository(): void {
+    this.register('enrollmentIssueRepository', asClass(EnrollmentIssueRepository).singleton())
   }
 }
 
