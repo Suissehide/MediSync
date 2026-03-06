@@ -26,6 +26,7 @@ import { Route as AuthenticatedAdminSettingsThematicImport } from './routes/_aut
 import { Route as AuthenticatedAdminSettingsSoignantImport } from './routes/_authenticated/_admin/settings/soignant'
 import { Route as AuthenticatedAdminSettingsPlanningImport } from './routes/_authenticated/_admin/settings/planning'
 import { Route as AuthenticatedAdminSettingsDiagnosticTemplateImport } from './routes/_authenticated/_admin/settings/diagnostic-template'
+import { Route as AuthenticatedAdminSettingsActivityLogImport } from './routes/_authenticated/_admin/settings/activity-log'
 
 // Create/Update Routes
 
@@ -123,6 +124,13 @@ const AuthenticatedAdminSettingsDiagnosticTemplateRoute =
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 
+const AuthenticatedAdminSettingsActivityLogRoute =
+  AuthenticatedAdminSettingsActivityLogImport.update({
+    id: '/settings/activity-log',
+    path: '/settings/activity-log',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+
 // Populate the FileRoutesByPath interface
 
 declare module '@tanstack/react-router' {
@@ -197,6 +205,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPatientIndexImport
       parentRoute: typeof AuthenticatedImport
     }
+    '/_authenticated/_admin/settings/activity-log': {
+      id: '/_authenticated/_admin/settings/activity-log'
+      path: '/settings/activity-log'
+      fullPath: '/settings/activity-log'
+      preLoaderRoute: typeof AuthenticatedAdminSettingsActivityLogImport
+      parentRoute: typeof AuthenticatedAdminImport
+    }
     '/_authenticated/_admin/settings/diagnostic-template': {
       id: '/_authenticated/_admin/settings/diagnostic-template'
       path: '/settings/diagnostic-template'
@@ -238,6 +253,7 @@ declare module '@tanstack/react-router' {
 // Create and export the route tree
 
 interface AuthenticatedAdminRouteChildren {
+  AuthenticatedAdminSettingsActivityLogRoute: typeof AuthenticatedAdminSettingsActivityLogRoute
   AuthenticatedAdminSettingsDiagnosticTemplateRoute: typeof AuthenticatedAdminSettingsDiagnosticTemplateRoute
   AuthenticatedAdminSettingsPlanningRoute: typeof AuthenticatedAdminSettingsPlanningRoute
   AuthenticatedAdminSettingsSoignantRoute: typeof AuthenticatedAdminSettingsSoignantRoute
@@ -246,6 +262,8 @@ interface AuthenticatedAdminRouteChildren {
 }
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
+  AuthenticatedAdminSettingsActivityLogRoute:
+    AuthenticatedAdminSettingsActivityLogRoute,
   AuthenticatedAdminSettingsDiagnosticTemplateRoute:
     AuthenticatedAdminSettingsDiagnosticTemplateRoute,
   AuthenticatedAdminSettingsPlanningRoute:
@@ -294,6 +312,7 @@ export interface FileRoutesByFullPath {
   '/patient/$patientID': typeof AuthenticatedPatientPatientIDRoute
   '/user/settings': typeof AuthenticatedUserSettingsRoute
   '/patient': typeof AuthenticatedPatientIndexRoute
+  '/settings/activity-log': typeof AuthenticatedAdminSettingsActivityLogRoute
   '/settings/diagnostic-template': typeof AuthenticatedAdminSettingsDiagnosticTemplateRoute
   '/settings/planning': typeof AuthenticatedAdminSettingsPlanningRoute
   '/settings/soignant': typeof AuthenticatedAdminSettingsSoignantRoute
@@ -311,6 +330,7 @@ export interface FileRoutesByTo {
   '/patient/$patientID': typeof AuthenticatedPatientPatientIDRoute
   '/user/settings': typeof AuthenticatedUserSettingsRoute
   '/patient': typeof AuthenticatedPatientIndexRoute
+  '/settings/activity-log': typeof AuthenticatedAdminSettingsActivityLogRoute
   '/settings/diagnostic-template': typeof AuthenticatedAdminSettingsDiagnosticTemplateRoute
   '/settings/planning': typeof AuthenticatedAdminSettingsPlanningRoute
   '/settings/soignant': typeof AuthenticatedAdminSettingsSoignantRoute
@@ -330,6 +350,7 @@ export interface FileRoutesById {
   '/_authenticated/patient/$patientID': typeof AuthenticatedPatientPatientIDRoute
   '/_authenticated/user/settings': typeof AuthenticatedUserSettingsRoute
   '/_authenticated/patient/': typeof AuthenticatedPatientIndexRoute
+  '/_authenticated/_admin/settings/activity-log': typeof AuthenticatedAdminSettingsActivityLogRoute
   '/_authenticated/_admin/settings/diagnostic-template': typeof AuthenticatedAdminSettingsDiagnosticTemplateRoute
   '/_authenticated/_admin/settings/planning': typeof AuthenticatedAdminSettingsPlanningRoute
   '/_authenticated/_admin/settings/soignant': typeof AuthenticatedAdminSettingsSoignantRoute
@@ -349,6 +370,7 @@ export interface FileRouteTypes {
     | '/patient/$patientID'
     | '/user/settings'
     | '/patient'
+    | '/settings/activity-log'
     | '/settings/diagnostic-template'
     | '/settings/planning'
     | '/settings/soignant'
@@ -365,6 +387,7 @@ export interface FileRouteTypes {
     | '/patient/$patientID'
     | '/user/settings'
     | '/patient'
+    | '/settings/activity-log'
     | '/settings/diagnostic-template'
     | '/settings/planning'
     | '/settings/soignant'
@@ -382,6 +405,7 @@ export interface FileRouteTypes {
     | '/_authenticated/patient/$patientID'
     | '/_authenticated/user/settings'
     | '/_authenticated/patient/'
+    | '/_authenticated/_admin/settings/activity-log'
     | '/_authenticated/_admin/settings/diagnostic-template'
     | '/_authenticated/_admin/settings/planning'
     | '/_authenticated/_admin/settings/soignant'
@@ -436,6 +460,7 @@ export const routeTree = rootRoute
       "filePath": "_authenticated/_admin.tsx",
       "parent": "/_authenticated",
       "children": [
+        "/_authenticated/_admin/settings/activity-log",
         "/_authenticated/_admin/settings/diagnostic-template",
         "/_authenticated/_admin/settings/planning",
         "/_authenticated/_admin/settings/soignant",
@@ -469,6 +494,10 @@ export const routeTree = rootRoute
     "/_authenticated/patient/": {
       "filePath": "_authenticated/patient/index.tsx",
       "parent": "/_authenticated"
+    },
+    "/_authenticated/_admin/settings/activity-log": {
+      "filePath": "_authenticated/_admin/settings/activity-log.tsx",
+      "parent": "/_authenticated/_admin"
     },
     "/_authenticated/_admin/settings/diagnostic-template": {
       "filePath": "_authenticated/_admin/settings/diagnostic-template.tsx",

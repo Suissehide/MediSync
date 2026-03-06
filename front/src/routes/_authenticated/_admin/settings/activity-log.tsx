@@ -1,63 +1,58 @@
 import { createFileRoute } from '@tanstack/react-router'
 import dayjs from 'dayjs'
-import { useState } from 'react'
+import { RotateCcw, Search } from 'lucide-react'
+import { useMemo, useState } from 'react'
 
+import { activityLogColumns } from '../../../../columns/activityLog.column.tsx'
 import DashboardLayout from '../../../../components/dashboard.layout.tsx'
+import { ReactTable } from '../../../../components/table/reactTable.tsx'
 import { Button } from '../../../../components/ui/button.tsx'
+import { Input } from '../../../../components/ui/input.tsx'
+import { Select } from '../../../../components/ui/select.tsx'
 import {
-  useActivityLogMutations,
-  useActivityLogsQuery,
-} from '../../../../queries/useActivityLog.ts'
+  ACTION_OPTIONS,
+  PERIOD_OPTIONS,
+} from '../../../../constants/activityLog.constant.ts'
+import { useActivityLogsQuery } from '../../../../queries/useActivityLog.ts'
+import type { ActivityLog } from '../../../../types/activityLog.ts'
 
-const ACTION_LABELS: Record<string, string> = {
-  'patient.created': 'Patient créé',
-  'patient.updated': 'Patient modifié',
-  'patient.deleted': 'Patient supprimé',
-  'patient.enrolled': 'Patient inscrit à un parcours',
-  'diagnostic.created': 'Diagnostic créé',
-  'diagnostic.updated': 'Diagnostic modifié',
-  'appointment.created': 'Rendez-vous créé',
-  'appointment.updated': 'Rendez-vous modifié',
-}
-
-const ALL_ACTIONS = Object.keys(ACTION_LABELS)
-
-const PERIOD_OPTIONS = [
-  { label: '7 derniers jours', days: 7 },
-  { label: '30 derniers jours', days: 30 },
-  { label: '3 derniers mois', days: 90 },
-  { label: '12 derniers mois', days: 365 },
-]
-
-export const Route = createFileRoute('/_authenticated/_admin/settings/activity-log')({
+export const Route = createFileRoute(
+  '/_authenticated/_admin/settings/activity-log',
+)({
   component: ActivityLogPage,
 })
 
-function ActivityLogPage() {
-  const [page, setPage] = useState(1)
-  const [action, setAction] = useState('')
-  const [periodDays, setPeriodDays] = useState<number | undefined>(undefined)
-  const [userSearch, setUserSearch] = useState('')
+const DEFAULT_FILTERS = { action: '', periodDays: '', userSearch: '' }
 
-  const from = periodDays
-    ? dayjs().subtract(periodDays, 'day').toISOString()
+function ActivityLogPage() {
+  const [filters, setFilters] = useState(DEFAULT_FILTERS)
+
+  const hasActiveFilters = Object.values(filters).some(Boolean)
+
+  const from = filters.periodDays
+    ? dayjs().subtract(Number(filters.periodDays), 'day').toISOString()
     : undefined
 
   const { data } = useActivityLogsQuery({
-    page,
-    action: action || undefined,
+    action: filters.action || undefined,
     from,
   })
 
-  const { cleanup } = useActivityLogMutations()
+  const logs = useMemo(() => {
+    const all = data?.data ?? []
+    if (!filters.userSearch) {
+      return all
+    }
+    const q = filters.userSearch.toLowerCase()
+    return all.filter((log) => {
+      const fullName =
+        `${log.userFirstName ?? ''} ${log.userLastName ?? ''}`.toLowerCase()
+      return fullName.includes(q) || log.userID.toLowerCase().includes(q)
+    })
+  }, [data, filters.userSearch])
 
-  const logs = (data?.data ?? []).filter((log) => {
-    if (!userSearch) return true
-    const fullName = `${log.userFirstName ?? ''} ${log.userLastName ?? ''}`.toLowerCase()
-    return fullName.includes(userSearch.toLowerCase())
-  })
-
-  const totalPages = data ? Math.ceil(data.total / 50) : 1
+  const set = (key: keyof typeof DEFAULT_FILTERS) => (v: string) =>
+    setFilters((prev) => ({ ...prev, [key]: v }))
 
   return (
     <DashboardLayout>
@@ -66,125 +61,58 @@ function ActivityLogPage() {
           <h1 className="h-9 flex items-center text-text-dark text-xl font-semibold">
             Journal d'activité
           </h1>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              if (window.confirm('Supprimer tous les logs de plus de 12 mois ? Cette action est irréversible.')) {
-                cleanup.mutate()
-              }
-            }}
-            disabled={cleanup.isPending}
-          >
-            Nettoyer (&gt;12 mois)
-          </Button>
         </div>
 
-        {/* Filters */}
-        <div className="flex gap-3 flex-wrap">
-          <input
-            type="text"
-            placeholder="Rechercher un utilisateur..."
-            value={userSearch}
-            onChange={(e) => {
-              setUserSearch(e.target.value)
-              setPage(1)
-            }}
-            className="border border-border rounded px-3 py-1.5 text-sm w-56"
-          />
-          <select
-            value={action}
-            onChange={(e) => {
-              setAction(e.target.value)
-              setPage(1)
-            }}
-            className="border border-border rounded px-3 py-1.5 text-sm"
-          >
-            <option value="">Toutes les actions</option>
-            {ALL_ACTIONS.map((a) => (
-              <option key={a} value={a}>
-                {ACTION_LABELS[a]}
-              </option>
-            ))}
-          </select>
-          <select
-            value={periodDays ?? ''}
-            onChange={(e) => {
-              setPeriodDays(e.target.value ? Number(e.target.value) : undefined)
-              setPage(1)
-            }}
-            className="border border-border rounded px-3 py-1.5 text-sm"
-          >
-            <option value="">Toutes les périodes</option>
-            {PERIOD_OPTIONS.map((p) => (
-              <option key={p.days} value={p.days}>
-                {p.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left text-text-light">
-                <th className="py-2 pr-4">Date</th>
-                <th className="py-2 pr-4">Heure</th>
-                <th className="py-2 pr-4">Utilisateur</th>
-                <th className="py-2 pr-4">Action</th>
-                <th className="py-2">Entité</th>
-              </tr>
-            </thead>
-            <tbody>
-              {logs.map((log) => (
-                <tr key={log.id} className="border-b border-border hover:bg-muted/30">
-                  <td className="py-2 pr-4">{dayjs(log.createdAt).format('DD/MM/YYYY')}</td>
-                  <td className="py-2 pr-4">{dayjs(log.createdAt).format('HH:mm')}</td>
-                  <td className="py-2 pr-4">
-                    {log.userFirstName || log.userLastName
-                      ? `${log.userFirstName ?? ''} ${log.userLastName ?? ''}`.trim()
-                      : log.userID.slice(0, 8)}
-                  </td>
-                  <td className="py-2 pr-4">{ACTION_LABELS[log.action] ?? log.action}</td>
-                  <td className="py-2 text-text-light">
-                    {log.entityType} · {log.entityID.slice(0, 8)}…
-                  </td>
-                </tr>
-              ))}
-              {logs.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="py-8 text-center text-text-light">
-                    Aucune activité trouvée
-                  </td>
-                </tr>
+        <ReactTable<ActivityLog>
+          data={logs}
+          columns={activityLogColumns}
+          pagination
+          filterId="activity-log"
+          emptyState={
+            <div className="py-8 text-center text-text-light text-sm">
+              Aucune activité trouvée
+            </div>
+          }
+          customHeader={() => (
+            <div className="flex items-center gap-3 flex-wrap mb-3">
+              <Input
+                placeholder="Rechercher un utilisateur..."
+                value={filters.userSearch}
+                onChange={(e) => set('userSearch')(e.target.value)}
+                iconLeft={<Search className="h-4 w-4" />}
+                className="w-56"
+              />
+              <div className="w-60">
+                <Select
+                  value={filters.action}
+                  onValueChange={(v) => set('action')(v ?? '')}
+                  options={ACTION_OPTIONS}
+                  placeholder="Toutes les actions"
+                  clearable
+                />
+              </div>
+              <div className="w-48">
+                <Select
+                  value={filters.periodDays}
+                  onValueChange={(v) => set('periodDays')(v ?? '')}
+                  options={PERIOD_OPTIONS}
+                  placeholder="Toutes les périodes"
+                  clearable
+                />
+              </div>
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setFilters(DEFAULT_FILTERS)}
+                  className="text-text-light"
+                >
+                  <RotateCcw className="h-3 w-3" />
+                </Button>
               )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        <div className="flex items-center gap-2 justify-end text-sm">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page <= 1}
-          >
-            Précédent
-          </Button>
-          <span className="text-text-light">
-            Page {page} / {totalPages}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page >= totalPages}
-          >
-            Suivant
-          </Button>
-        </div>
+            </div>
+          )}
+        />
       </div>
     </DashboardLayout>
   )
