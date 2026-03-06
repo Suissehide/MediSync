@@ -324,7 +324,7 @@ model ActivityLog {
   userLastName  String?
   action        String
   entityType    String
-  entityId      String
+  entityID      String
   createdAt     DateTime @default(now())
 
   @@index([userID])
