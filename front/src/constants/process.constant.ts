@@ -108,3 +108,8 @@ export const DIAGNOSTIC_EDUCATIF_TEMPLATE = {
   UPDATE: 'update_diagnostic_template',
   DELETE: 'delete_diagnostic_template',
 }
+
+export const ACTIVITY_LOG = {
+  GET_ALL: 'get_all_activity_logs',
+  CLEANUP: 'cleanup_activity_logs',
+}
