@@ -32,10 +32,12 @@ export interface AppointmentDomainInterface {
   findByID: (appointmentID: string) => Promise<AppointmentEntityDomain>
   create: (
     appointmentCreateParams: AppointmentCreateEntityDomain,
+    userID: string,
   ) => Promise<AppointmentEntityDomain>
   update: (
     appointmentID: string,
     appointmentUpdateParams: AppointmentUpdateEntityDomain,
+    userID: string,
   ) => Promise<AppointmentEntityDomain>
   delete: (appointmentID: string) => Promise<AppointmentEntityDomain>
 }

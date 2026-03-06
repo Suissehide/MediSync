@@ -7,14 +7,17 @@ import type {
 } from '../types/domain/appointment.domain.interface'
 import type { AppointmentRepositoryInterface } from '../types/infra/orm/repositories/appointment.repository.interface'
 import type { Logger } from '../types/utils/logger'
+import type { AppEventBus } from '../utils/app-event-bus'
 
 class AppointmentDomain implements AppointmentDomainInterface {
   private readonly logger: Logger
   private readonly appointmentRepository: AppointmentRepositoryInterface
+  private readonly appEventBus: AppEventBus
 
-  constructor({ appointmentRepository, logger }: IocContainer) {
+  constructor({ appointmentRepository, logger, appEventBus }: IocContainer) {
     this.appointmentRepository = appointmentRepository
     this.logger = logger
+    this.appEventBus = appEventBus
   }
 
   findAll(): Promise<AppointmentEntityDomain[]> {
@@ -25,20 +28,26 @@ class AppointmentDomain implements AppointmentDomainInterface {
     return this.appointmentRepository.findByID(appointmentID)
   }
 
-  create(
+  async create(
     appointmentCreateParams: AppointmentCreateEntityDomain,
+    userID: string,
   ): Promise<AppointmentEntityDomain> {
-    return this.appointmentRepository.create(appointmentCreateParams)
+    const appointment = await this.appointmentRepository.create(appointmentCreateParams)
+    this.appEventBus.emit('appointment.created', { userID, appointmentId: appointment.id })
+    return appointment
   }
 
-  update(
+  async update(
     appointmentID: string,
     appointmentUpdateParams: AppointmentUpdateEntityDomain,
+    userID: string,
   ): Promise<AppointmentEntityDomain> {
-    return this.appointmentRepository.update(
+    const appointment = await this.appointmentRepository.update(
       appointmentID,
       appointmentUpdateParams,
     )
+    this.appEventBus.emit('appointment.updated', { userID, appointmentId: appointment.id })
+    return appointment
   }
 
   delete(appointmentID: string): Promise<AppointmentEntityDomain> {

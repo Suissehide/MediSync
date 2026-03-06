@@ -71,9 +71,10 @@ const appointmentRouter: FastifyPluginAsync = (fastify) => {
           201: appointmentResponseSchema,
         },
       },
+      onRequest: [fastify.verifySessionCookie],
     },
     async (request, reply) => {
-      const appointment = await appointmentDomain.create(request.body)
+      const appointment = await appointmentDomain.create(request.body, request.user.userID)
       reply.code(201)
       return appointment
     },
@@ -93,6 +94,7 @@ const appointmentRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
+      onRequest: [fastify.verifySessionCookie],
     },
     async (request) => {
       const { appointmentID } = request.params
@@ -100,6 +102,7 @@ const appointmentRouter: FastifyPluginAsync = (fastify) => {
       const updated = await appointmentDomain.update(
         appointmentID,
         request.body,
+        request.user.userID,
       )
       if (!updated) {
         throw Boom.notFound('Appointment not found')
