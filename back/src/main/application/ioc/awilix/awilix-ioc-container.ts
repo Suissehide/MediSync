@@ -103,6 +103,8 @@ class AwilixIocContainer {
     // EnrollmentIssue
     this.#registerEnrollmentIssueDomain()
     this.#registerEnrollmentIssueRepository()
+    // Error (must be before ActivityLog subscriber which depends on userRepository -> errorHandler)
+    this.registerErrorHandler()
     // ActivityLog
     this.#registerActivityLogDomain()
     this.#registerActivityLogRepository()
@@ -113,8 +115,6 @@ class AwilixIocContainer {
     // Server
     this.#registerHttpServer()
     this.#registerHttpClient()
-    // Error
-    this.registerErrorHandler()
 
     logger.info('IoC container initialized.')
   }
