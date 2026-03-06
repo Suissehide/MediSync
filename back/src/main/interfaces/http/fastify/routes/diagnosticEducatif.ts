@@ -57,12 +57,10 @@ const diagnosticEducatifRouter: FastifyPluginAsync = (fastify) => {
       activeFields = template.activeFields
     }
 
-    const diag = await diagnosticEducatifDomain.create({
-      ...rest,
-      patientId: request.params.patientId,
-      templateId: templateId ?? undefined,
-      activeFields,
-    })
+    const diag = await diagnosticEducatifDomain.create(
+      { ...rest, patientId: request.params.patientId, templateId: templateId ?? undefined, activeFields },
+      request.user.userID,
+    )
     reply.code(201)
     return diag
   })
@@ -72,7 +70,11 @@ const diagnosticEducatifRouter: FastifyPluginAsync = (fastify) => {
     schema: { ...updateDiagnosticEducatifSchema, response: { 200: diagnosticEducatifResponseSchema } },
     onRequest: [fastify.verifySessionCookie],
   }, async (request) => {
-    return diagnosticEducatifDomain.update(request.params.diagnosticId, request.body)
+    return diagnosticEducatifDomain.update(
+      request.params.diagnosticId,
+      request.body,
+      request.user.userID,
+    )
   })
 
   // Delete
