@@ -36,6 +36,10 @@ import { EnrollmentIssueDomain } from '../../../domain/enrollmentIssue.domain'
 import { DiagnosticEducatifRepository } from '../../../infra/orm/repositories/diagnosticEducatif.repository'
 import { DiagnosticEducatifTemplateRepository } from '../../../infra/orm/repositories/diagnosticEducatifTemplate.repository'
 import { EnrollmentIssueRepository } from '../../../infra/orm/repositories/enrollmentIssue.repository'
+import { AppEventBus } from '../../../utils/app-event-bus'
+import { ActivityLogDomain } from '../../../domain/activityLog.domain'
+import { ActivityLogRepository } from '../../../infra/orm/repositories/activityLog.repository'
+import { ActivityLogSubscriber } from '../../../services/activity-log.subscriber'
 
 declare module '@fastify/awilix' {
   interface Cradle extends IocContainer {}
@@ -97,6 +101,13 @@ class AwilixIocContainer {
     // EnrollmentIssue
     this.#registerEnrollmentIssueDomain()
     this.#registerEnrollmentIssueRepository()
+    // ActivityLog
+    this.#registerAppEventBus()
+    this.#registerActivityLogDomain()
+    this.#registerActivityLogRepository()
+    this.#registerActivityLogSubscriber()
+    // Force-instantiate subscriber to trigger subscriptions at startup
+    diContainer.resolve('activityLogSubscriber')
 
     // Server
     this.#registerHttpServer()
@@ -256,6 +267,20 @@ class AwilixIocContainer {
   }
   #registerEnrollmentIssueRepository(): void {
     this.register('enrollmentIssueRepository', asClass(EnrollmentIssueRepository).singleton())
+  }
+
+  // ActivityLog
+  #registerAppEventBus(): void {
+    this.register('appEventBus', asClass(AppEventBus).singleton())
+  }
+  #registerActivityLogDomain(): void {
+    this.register('activityLogDomain', asClass(ActivityLogDomain).singleton())
+  }
+  #registerActivityLogRepository(): void {
+    this.register('activityLogRepository', asClass(ActivityLogRepository).singleton())
+  }
+  #registerActivityLogSubscriber(): void {
+    this.register('activityLogSubscriber', asClass(ActivityLogSubscriber).singleton())
   }
 }
 

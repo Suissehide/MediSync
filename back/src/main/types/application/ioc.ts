@@ -31,6 +31,10 @@ import type { HttpServer } from '../interfaces/http/server'
 import type { ErrorHandlerInterface } from '../utils/error-handler'
 import type { Logger } from '../utils/logger'
 import type { Config } from './config'
+import type { AppEventBus } from '../../utils/app-event-bus'
+import type { ActivityLogDomainInterface } from '../domain/activityLog.domain.interface'
+import type { ActivityLogRepositoryInterface } from '../infra/orm/repositories/activityLog.repository.interface'
+import type { ActivityLogSubscriber } from '../../services/activity-log.subscriber'
 
 export interface IocContainer {
   readonly config: Config
@@ -81,4 +85,9 @@ export interface IocContainer {
   // EnrollmentIssue
   readonly enrollmentIssueDomain: EnrollmentIssueDomainInterface
   readonly enrollmentIssueRepository: EnrollmentIssueRepositoryInterface
+  // ActivityLog
+  readonly appEventBus: AppEventBus
+  readonly activityLogDomain: ActivityLogDomainInterface
+  readonly activityLogRepository: ActivityLogRepositoryInterface
+  readonly activityLogSubscriber: ActivityLogSubscriber
 }
