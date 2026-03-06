@@ -50,6 +50,7 @@ const appointmentRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
+      onRequest: [fastify.verifySessionCookie],
     },
     async (request) => {
       const { appointmentID } = request.params
@@ -122,11 +123,10 @@ const appointmentRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
+      onRequest: [fastify.verifySessionCookie],
     },
     async (request, reply) => {
       const { appointmentID } = request.params
-
-      console.log(appointmentID, 'appointmentID')
 
       const deleted = await appointmentDomain.delete(appointmentID)
       if (!deleted) {
