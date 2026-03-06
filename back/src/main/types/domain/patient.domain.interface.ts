@@ -74,16 +74,20 @@ export interface PatientDomainInterface {
   findByID: (patientID: string) => Promise<PatientEntityDomain>
   create: (
     patientCreateParams: PatientCreateEntityDomain,
+    userID: string,
   ) => Promise<PatientEntityDomain>
   update: (
     patientID: string,
     patientUpdateParams: PatientUpdateEntityDomain,
+    userID: string,
   ) => Promise<PatientEntityDomain>
-  delete: (patientID: string) => Promise<PatientEntityDomain>
+  delete: (patientID: string, userID: string) => Promise<PatientEntityDomain>
   enrollPatientInPathways: (
     enrollmentData: EnrollPatientInPathwaysInput,
+    userID: string,
   ) => Promise<EnrollmentResult>
   enrollExistingPatientInPathways: (
     enrollmentData: EnrollExistingPatientInPathwaysInput,
+    userID: string,
   ) => Promise<EnrollmentResult>
 }

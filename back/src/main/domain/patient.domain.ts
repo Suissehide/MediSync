@@ -29,6 +29,7 @@ import type { EnrollmentIssueRepositoryInterface } from '../types/infra/orm/repo
 import type { PatientRepositoryInterface } from '../types/infra/orm/repositories/patient.repository.interface'
 import type { SlotWithTemplateAndAppointmentsRepo } from '../types/infra/orm/repositories/slot.repository.interface'
 import type { Logger } from '../types/utils/logger'
+import type { AppEventBus } from '../utils/app-event-bus'
 
 class PatientDomain implements PatientDomainInterface {
   private readonly logger: Logger
@@ -37,6 +38,7 @@ class PatientDomain implements PatientDomainInterface {
   private readonly pathwayTemplateRepository: PathwayTemplateRepositoryInterface
   private readonly appointmentRepository: AppointmentRepositoryInterface
   private readonly enrollmentIssueRepository: EnrollmentIssueRepositoryInterface
+  private readonly appEventBus: AppEventBus
 
   constructor({
     patientRepository,
@@ -44,6 +46,7 @@ class PatientDomain implements PatientDomainInterface {
     pathwayTemplateRepository,
     appointmentRepository,
     enrollmentIssueRepository,
+    appEventBus,
     logger,
   }: IocContainer) {
     this.patientRepository = patientRepository
@@ -51,6 +54,7 @@ class PatientDomain implements PatientDomainInterface {
     this.pathwayTemplateRepository = pathwayTemplateRepository
     this.appointmentRepository = appointmentRepository
     this.enrollmentIssueRepository = enrollmentIssueRepository
+    this.appEventBus = appEventBus
     this.logger = logger
   }
 
@@ -66,25 +70,30 @@ class PatientDomain implements PatientDomainInterface {
     return this.patientRepository.findByID(patientID)
   }
 
-  create(
+  async create(
     patientCreateParams: PatientCreateEntityDomain,
+    userID: string,
   ): Promise<PatientEntityDomain> {
     const patientInputParams = {
       ...patientCreateParams,
       createDate: new Date().toISOString(),
     }
-    return this.patientRepository.create(patientInputParams)
+    const patient = await this.patientRepository.create(patientInputParams)
+    this.appEventBus.emit('patient.created', { userID, patientId: patient.id })
+    return patient
   }
 
-  update(
+  async update(
     patientID: string,
     patientUpdateParams: PatientUpdateEntityDomain,
+    userID: string,
   ): Promise<PatientEntityDomain> {
-    return this.patientRepository.update(patientID, patientUpdateParams)
+    const patient = await this.patientRepository.update(patientID, patientUpdateParams)
+    this.appEventBus.emit('patient.updated', { userID, patientId: patient.id })
+    return patient
   }
 
-
-  async delete(patientID: string): Promise<PatientEntityDomain> {
+  async delete(patientID: string, userID: string): Promise<PatientEntityDomain> {
     const patient = await this.patientRepository.findByID(patientID)
     const appointmentIDs = patient.appointmentPatients.map(
       (ap) => ap.appointment.id,
@@ -96,22 +105,26 @@ class PatientDomain implements PatientDomainInterface {
       await this.appointmentRepository.deleteOrphanedByIds(appointmentIDs)
     }
 
+    this.appEventBus.emit('patient.deleted', { userID, patientId: deleted.id })
     return deleted
   }
 
   async enrollPatientInPathways(
     enrollmentData: EnrollPatientInPathwaysInput,
+    userID: string,
   ): Promise<EnrollmentResult> {
-    const patient = await this.create(enrollmentData.patientData)
+    const patient = await this.create(enrollmentData.patientData, userID)
     return this.processEnrollments(
       { ...patient, appointmentPatients: [], enrollmentIssues: [] },
       enrollmentData.pathways,
       enrollmentData.startDate,
+      userID,
     )
   }
 
   async enrollExistingPatientInPathways(
     enrollmentData: EnrollExistingPatientInPathwaysInput,
+    userID: string,
   ): Promise<EnrollmentResult> {
     const patient = await this.patientRepository.findByID(
       enrollmentData.patientID,
@@ -120,6 +133,7 @@ class PatientDomain implements PatientDomainInterface {
       patient,
       enrollmentData.pathways,
       enrollmentData.startDate,
+      userID,
     )
   }
 
@@ -127,6 +141,7 @@ class PatientDomain implements PatientDomainInterface {
     patient: PatientWithAppointmentsDomain,
     pathwayTemplates: EnrollPatientInPathwaysInput['pathways'],
     startDate: Date,
+    userID: string,
   ): Promise<EnrollmentResult> {
     const enrollments: EnrollmentResult['enrollments'] = []
     const failedEnrollments: EnrollmentResult['failedEnrollments'] = []
@@ -200,6 +215,8 @@ class PatientDomain implements PatientDomainInterface {
         })),
       )
     }
+
+    this.appEventBus.emit('patient.enrolled', { userID, patientId: patient.id })
 
     return {
       patient: await this.patientRepository.findByID(patient.id),

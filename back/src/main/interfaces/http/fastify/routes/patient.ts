@@ -66,6 +66,7 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
+      onRequest: [fastify.verifySessionCookie],
     },
     async (request) => {
       const { patientID } = request.params
@@ -87,9 +88,10 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
           201: patientResponseSchema,
         },
       },
+      onRequest: [fastify.verifySessionCookie],
     },
     async (request, reply) => {
-      const patient = await patientDomain.create(request.body)
+      const patient = await patientDomain.create(request.body, request.user.userID)
       reply.code(201)
       return patient
     },
@@ -106,10 +108,11 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
+      onRequest: [fastify.verifySessionCookie],
     },
     async (request) => {
       const { patientID } = request.params
-      const updated = await patientDomain.update(patientID, request.body)
+      const updated = await patientDomain.update(patientID, request.body, request.user.userID)
       if (!updated) {
         throw Boom.notFound('Patient not found')
       }
@@ -128,10 +131,11 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
+      onRequest: [fastify.verifySessionCookie],
     },
     async (request, reply) => {
       const { patientID } = request.params
-      const deleted = await patientDomain.delete(patientID)
+      const deleted = await patientDomain.delete(patientID, request.user.userID)
       if (!deleted) {
         logger.info('Patient not found')
         throw Boom.notFound('Patient not found')
@@ -150,13 +154,14 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
           400: z.object({ message: z.string() }),
         },
       },
+      onRequest: [fastify.verifySessionCookie],
     },
     async (request, reply) => {
       const result = await patientDomain.enrollPatientInPathways({
         patientData: request.body.patientData,
         startDate: request.body.startDate,
         pathways: request.body.pathways,
-      })
+      }, request.user.userID)
       reply.code(201)
       return result
     },
@@ -173,13 +178,14 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
+      onRequest: [fastify.verifySessionCookie],
     },
     async (request) => {
       return await patientDomain.enrollExistingPatientInPathways({
         patientID: request.body.patientID,
         startDate: request.body.startDate,
         pathways: request.body.pathways,
-      })
+      }, request.user.userID)
     },
   )
 
