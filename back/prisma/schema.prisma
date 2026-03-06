@@ -316,3 +316,18 @@ model Todo {
 
   soignant Soignant? @relation(fields: [soignantID], references: [id], onDelete: SetNull)
 }
+
+model ActivityLog {
+  id            String   @id @default(cuid())
+  userID        String
+  userFirstName String?
+  userLastName  String?
+  action        String
+  entityType    String
+  entityId      String
+  createdAt     DateTime @default(now())
+
+  @@index([userID])
+  @@index([action])
+  @@index([createdAt])
+}
