@@ -160,29 +160,27 @@ function ActivityLogPage() {
         </div>
 
         {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center gap-2 justify-end text-sm">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page <= 1}
-            >
-              Précédent
-            </Button>
-            <span className="text-text-light">
-              Page {page} / {totalPages}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page >= totalPages}
-            >
-              Suivant
-            </Button>
-          </div>
-        )}
+        <div className="flex items-center gap-2 justify-end text-sm">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page <= 1}
+          >
+            Précédent
+          </Button>
+          <span className="text-text-light">
+            Page {page} / {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page >= totalPages}
+          >
+            Suivant
+          </Button>
+        </div>
       </div>
     </DashboardLayout>
   )
