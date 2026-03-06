@@ -60,6 +60,8 @@ class AwilixIocContainer {
     logger.debug(`Loaded config:\n\t${recordToString(config)}`)
     // DB
     this.#registerPrismaOrm()
+    // EventBus (registered early so all domains can rely on it)
+    this.#registerAppEventBus()
     // Auth
     this.#registerAuthDomain()
     // User
@@ -102,7 +104,6 @@ class AwilixIocContainer {
     this.#registerEnrollmentIssueDomain()
     this.#registerEnrollmentIssueRepository()
     // ActivityLog
-    this.#registerAppEventBus()
     this.#registerActivityLogDomain()
     this.#registerActivityLogRepository()
     this.#registerActivityLogSubscriber()

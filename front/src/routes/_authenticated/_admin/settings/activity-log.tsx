@@ -69,7 +69,11 @@ function ActivityLogPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => cleanup.mutate()}
+            onClick={() => {
+              if (window.confirm('Supprimer tous les logs de plus de 12 mois ? Cette action est irréversible.')) {
+                cleanup.mutate()
+              }
+            }}
             disabled={cleanup.isPending}
           >
             Nettoyer (&gt;12 mois)
