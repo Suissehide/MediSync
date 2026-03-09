@@ -23,7 +23,7 @@ export default function ProgrammePDFModal({
 
   const patientSlots = useMemo(() => {
     if (!slots || !patient) {
-      return { upcoming: [], past: [] }
+      return []
     }
 
     const now = dayjs()
@@ -35,15 +35,9 @@ export default function ProgrammePDFModal({
       ),
     )
 
-    const upcoming = filtered
+    return filtered
       .filter((s) => dayjs(s.startDate).isAfter(now))
       .sort((a, b) => dayjs(a.startDate).diff(dayjs(b.startDate)))
-
-    const past = filtered
-      .filter((s) => dayjs(s.startDate).isBefore(now))
-      .sort((a, b) => dayjs(b.startDate).diff(dayjs(a.startDate)))
-
-    return { upcoming, past }
   }, [slots, patient])
 
   const fileName = `programme-${patient.lastName}-${patient.firstName}-${dayjs().format('YYYY-MM-DD')}.pdf`
@@ -51,8 +45,7 @@ export default function ProgrammePDFModal({
   const pdfDocument = (
     <ProgrammePDF
       patient={patient}
-      upcomingSlots={patientSlots.upcoming}
-      pastSlots={patientSlots.past}
+      upcomingSlots={patientSlots}
     />
   )
 

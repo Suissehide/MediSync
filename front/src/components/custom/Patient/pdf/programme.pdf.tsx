@@ -177,7 +177,6 @@ function getLabel<T extends Record<string, string>>(
 interface ProgrammePDFProps {
   patient: Patient
   upcomingSlots: Slot[]
-  pastSlots: Slot[]
 }
 
 function CoverPage({ patient }: { patient: Patient }) {
@@ -374,7 +373,6 @@ function AppointmentsPage({
 export default function ProgrammePDF({
   patient,
   upcomingSlots,
-  pastSlots,
 }: ProgrammePDFProps) {
   return (
     <Document>
@@ -385,12 +383,6 @@ export default function ProgrammePDF({
         title="Rendez-vous à venir"
         slots={upcomingSlots}
         pageNumber={3}
-      />
-      <AppointmentsPage
-        patient={patient}
-        title="Rendez-vous passés"
-        slots={pastSlots}
-        pageNumber={4}
       />
     </Document>
   )
