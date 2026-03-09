@@ -291,7 +291,9 @@ function computeProgramDuration(slots: Slot[]): {
   startDate: dayjs.Dayjs
   endDate: dayjs.Dayjs
 } | null {
-  if (slots.length === 0) return null
+  if (slots.length === 0) {
+    return null
+  }
   const dates = slots.map((s) => dayjs(s.startDate))
   const startDate = dates.reduce((a, b) => (a.isBefore(b) ? a : b))
   const endDate = dates.reduce((a, b) => (a.isAfter(b) ? a : b))
@@ -300,7 +302,9 @@ function computeProgramDuration(slots: Slot[]): {
 }
 
 function groupSlotsByWeek(slots: Slot[]): WeekData[] {
-  if (slots.length === 0) return []
+  if (slots.length === 0) {
+    return []
+  }
 
   const sorted = [...slots].sort((a, b) =>
     dayjs(a.startDate).diff(dayjs(b.startDate)),
@@ -407,14 +411,14 @@ function WeekBlock({ weekData }: { weekData: WeekData }) {
         })}
       </View>
 
-      {weekData.timeRows.map((row, rowIdx) => (
-        <View key={rowIdx} style={styles.timeRow}>
+      {weekData.timeRows.map((row) => (
+        <View key={row.timeLabel} style={styles.timeRow}>
           <View style={styles.timeLabelCell}>
             <Text style={styles.timeLabelText}>{row.timeLabel}</Text>
           </View>
           {row.cells.map((slot, dayIdx) => (
             <View
-              key={dayIdx}
+              key={DAY_NAMES[dayIdx]}
               style={[styles.slotCell, slot ? styles.slotCellFilled : styles.slotCellEmpty]}
             >
               {slot && (
@@ -454,10 +458,10 @@ function CalendarPages({ upcomingSlots }: { upcomingSlots: Slot[] }) {
 
   return (
     <>
-      {pages.map((pageWeeks, pageIdx) => (
-        <Page key={pageIdx} size="A4" style={styles.calendarPage}>
-          {pageWeeks.map((weekData, i) => (
-            <WeekBlock key={i} weekData={weekData} />
+      {pages.map((pageWeeks) => (
+        <Page key={pageWeeks[0]?.weekLabel} size="A4" style={styles.calendarPage}>
+          {pageWeeks.map((weekData) => (
+            <WeekBlock key={weekData.weekLabel} weekData={weekData} />
           ))}
         </Page>
       ))}
@@ -528,8 +532,8 @@ function TipsPage() {
         {'Comment\nréussir\nson programme ?'}
       </Text>
 
-      {TIPS.map((tip, i) => (
-        <View key={i} style={styles.tipBlock}>
+      {TIPS.map((tip) => (
+        <View key={tip.title} style={styles.tipBlock}>
           <View style={styles.tipDot} />
           <View style={styles.tipContent}>
             <Text style={styles.tipTitle}>{tip.title}</Text>
