@@ -35,6 +35,8 @@ import type { AppEventBus } from '../../utils/app-event-bus'
 import type { ActivityLogDomainInterface } from '../domain/activityLog.domain.interface'
 import type { ActivityLogRepositoryInterface } from '../infra/orm/repositories/activityLog.repository.interface'
 import type { ActivityLogSubscriber } from '../../services/activity-log.subscriber'
+import type { ForbiddenWeekDomainInterface } from '../domain/forbiddenWeek.domain.interface'
+import type { ForbiddenWeekRepositoryInterface } from '../infra/orm/repositories/forbiddenWeek.repository.interface'
 
 export interface IocContainer {
   readonly config: Config
@@ -90,4 +92,7 @@ export interface IocContainer {
   readonly activityLogDomain: ActivityLogDomainInterface
   readonly activityLogRepository: ActivityLogRepositoryInterface
   readonly activityLogSubscriber: ActivityLogSubscriber
+  // ForbiddenWeek
+  readonly forbiddenWeekDomain: ForbiddenWeekDomainInterface
+  readonly forbiddenWeekRepository: ForbiddenWeekRepositoryInterface
 }

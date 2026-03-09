@@ -16,6 +16,7 @@ import { diagnosticEducatifRouter } from './diagnosticEducatif'
 import { diagnosticEducatifTemplateRouter } from './diagnosticEducatifTemplate'
 import { enrollmentIssueRouter } from './enrollmentIssue'
 import { activityLogRouter } from './activityLog'
+import { forbiddenWeekRouter } from './forbiddenWeek'
 
 const routes: FastifyPluginAsyncZod = async (fastify) => {
   fastify.get('/', async () => {
@@ -38,6 +39,7 @@ const routes: FastifyPluginAsyncZod = async (fastify) => {
   await fastify.register(diagnosticEducatifRouter, { prefix: '/patient/:patientId/diagnostic' })
   await fastify.register(enrollmentIssueRouter, { prefix: '/patient/:patientID/enrollment-issue' })
   await fastify.register(activityLogRouter, { prefix: '/activity-log' })
+  await fastify.register(forbiddenWeekRouter, { prefix: '/forbidden-week' })
 }
 
 export { routes }

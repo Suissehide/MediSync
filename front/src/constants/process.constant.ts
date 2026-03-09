@@ -113,3 +113,9 @@ export const ACTIVITY_LOG = {
   GET_ALL: 'get_all_activity_logs',
   CLEANUP: 'cleanup_activity_logs',
 }
+
+export const FORBIDDEN_WEEK = {
+  GET_ALL: 'get_all_forbidden_weeks',
+  CREATE: 'create_forbidden_week',
+  DELETE: 'delete_forbidden_week',
+}

@@ -40,6 +40,8 @@ import { AppEventBus } from '../../../utils/app-event-bus'
 import { ActivityLogDomain } from '../../../domain/activityLog.domain'
 import { ActivityLogRepository } from '../../../infra/orm/repositories/activityLog.repository'
 import { ActivityLogSubscriber } from '../../../services/activity-log.subscriber'
+import { ForbiddenWeekDomain } from '../../../domain/forbiddenWeek.domain'
+import { ForbiddenWeekRepository } from '../../../infra/orm/repositories/forbiddenWeek.repository'
 
 declare module '@fastify/awilix' {
   interface Cradle extends IocContainer {}
@@ -111,6 +113,9 @@ class AwilixIocContainer {
     this.#registerActivityLogSubscriber()
     // Force-instantiate subscriber to trigger subscriptions at startup
     diContainer.resolve('activityLogSubscriber')
+    // ForbiddenWeek
+    this.#registerForbiddenWeekDomain()
+    this.#registerForbiddenWeekRepository()
 
     // Server
     this.#registerHttpServer()
@@ -282,6 +287,14 @@ class AwilixIocContainer {
   }
   #registerActivityLogSubscriber(): void {
     this.register('activityLogSubscriber', asClass(ActivityLogSubscriber).singleton())
+  }
+
+  // ForbiddenWeek
+  #registerForbiddenWeekDomain(): void {
+    this.register('forbiddenWeekDomain', asClass(ForbiddenWeekDomain).singleton())
+  }
+  #registerForbiddenWeekRepository(): void {
+    this.register('forbiddenWeekRepository', asClass(ForbiddenWeekRepository).singleton())
   }
 }
 

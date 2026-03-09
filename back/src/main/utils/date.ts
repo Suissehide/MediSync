@@ -25,3 +25,11 @@ export const combineDateAndTime = (
     .millisecond(baseTime.millisecond())
     .toDate()
 }
+
+/** Returns the Monday (00:00 UTC) of the week containing the given date. */
+export function toStartOfWeek(date: Date): Date {
+  const d = dayjs.utc(date)
+  const day = d.day() // 0=Sun, 1=Mon, ..., 6=Sat
+  const daysToMonday = day === 0 ? -6 : 1 - day
+  return d.add(daysToMonday, 'day').startOf('day').toDate()
+}
