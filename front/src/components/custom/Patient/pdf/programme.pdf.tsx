@@ -164,6 +164,97 @@ const styles = StyleSheet.create({
   },
 })
 
+type WeekData = {
+  weekLabel: string
+  weekStart: dayjs.Dayjs
+  timeRows: {
+    timeLabel: string
+    cells: (Slot | null)[] // index 0=lundi..4=vendredi
+  }[]
+}
+
+function computeProgramDuration(slots: Slot[]): {
+  weeks: number
+  startDate: dayjs.Dayjs
+  endDate: dayjs.Dayjs
+} | null {
+  if (slots.length === 0) return null
+  const dates = slots.map((s) => dayjs(s.startDate))
+  const startDate = dates.reduce((a, b) => (a.isBefore(b) ? a : b))
+  const endDate = dates.reduce((a, b) => (a.isAfter(b) ? a : b))
+  const weeks = endDate.startOf('isoWeek').diff(startDate.startOf('isoWeek'), 'week') + 1
+  return { weeks, startDate, endDate }
+}
+
+function groupSlotsByWeek(slots: Slot[]): WeekData[] {
+  if (slots.length === 0) return []
+
+  const sorted = [...slots].sort((a, b) =>
+    dayjs(a.startDate).diff(dayjs(b.startDate)),
+  )
+
+  const programStart = dayjs(sorted[0].startDate).startOf('isoWeek')
+  const programEnd = dayjs(sorted[sorted.length - 1].startDate).startOf(
+    'isoWeek',
+  )
+
+  const result: WeekData[] = []
+  let current = programStart
+  let weekIndex = 1
+
+  while (current.isBefore(programEnd) || current.isSame(programEnd, 'day')) {
+    const weekSlots = slots.filter((s) => {
+      const d = dayjs(s.startDate)
+      return (
+        (d.isAfter(current) || d.isSame(current, 'day')) &&
+        d.isBefore(current.add(7, 'day'))
+      )
+    })
+
+    const timeKeys = Array.from(
+      new Set(
+        weekSlots.map((s) =>
+          `${dayjs(s.startDate).format('HH:mm')}-${dayjs(s.endDate).format('HH:mm')}`,
+        ),
+      ),
+    ).sort()
+
+    const timeRows = timeKeys.map((timeKey) => {
+      const [start, end] = timeKey.split('-')
+      const cells: (Slot | null)[] = Array.from({ length: 5 }, (_, i) => {
+        const day = current.add(i, 'day')
+        return (
+          weekSlots.find(
+            (s) =>
+              dayjs(s.startDate).isSame(day, 'day') &&
+              dayjs(s.startDate).format('HH:mm') === start &&
+              dayjs(s.endDate).format('HH:mm') === end,
+          ) ?? null
+        )
+      })
+      return { timeLabel: timeKey.replace('-', '\n'), cells }
+    })
+
+    if (timeRows.length === 0) {
+      timeRows.push({
+        timeLabel: '',
+        cells: [null, null, null, null, null],
+      })
+    }
+
+    result.push({
+      weekLabel: `Semaine ${weekIndex}`,
+      weekStart: current,
+      timeRows,
+    })
+
+    current = current.add(7, 'day')
+    weekIndex++
+  }
+
+  return result
+}
+
 function getLabel<T extends Record<string, string>>(
   obj: T,
   key: string | undefined,
