@@ -44,6 +44,12 @@ import {
   useSlotMutations,
 } from '../../../../queries/useSlot.ts'
 import { useSlotTemplateMutations } from '../../../../queries/useSlotTemplate.ts'
+import { CreateForbiddenWeekForm } from '../../../../components/custom/popup/createForbiddenWeekForm.tsx'
+import { DeleteForbiddenWeekForm } from '../../../../components/custom/popup/deleteForbiddenWeekForm.tsx'
+import {
+  useForbiddenWeekMutations,
+  useForbiddenWeekQueries,
+} from '../../../../queries/useForbiddenWeek.ts'
 import { usePathwayTemplateEditStore } from '../../../../store/usePathwayTemplateEditStore.ts'
 import type { CreateSlotParamsWithTemplateData } from '../../../../types/slot.ts'
 
@@ -62,6 +68,14 @@ function Planning() {
   const lastDropTimeRef = useRef<number>(0)
   const { createSlotTemplate, updateSlotTemplate, deleteSlotTemplate } =
     useSlotTemplateMutations()
+  const { forbiddenWeeks } = useForbiddenWeekQueries()
+  const { createForbiddenWeek, deleteForbiddenWeek } = useForbiddenWeekMutations()
+
+  const [createForbiddenWeekDate, setCreateForbiddenWeekDate] = useState<string | null>(null)
+  const [deleteForbiddenWeekTarget, setDeleteForbiddenWeekTarget] = useState<{
+    id: string
+    startOfWeek: string
+  } | null>(null)
   const editMode = usePathwayTemplateEditStore((state) => state.editMode)
   const startDate = usePathwayTemplateEditStore((state) => state.startDate)
   const currentPathwayTemplateId = usePathwayTemplateEditStore(
@@ -188,6 +202,17 @@ function Planning() {
     }
   }
 
+  const handleForbiddenWeekCreate = (date: string) => {
+    setCreateForbiddenWeekDate(date)
+  }
+
+  const handleForbiddenWeekDelete = (id: string) => {
+    const week = forbiddenWeeks?.find((fw) => fw.id === id)
+    if (week) {
+      setDeleteForbiddenWeekTarget({ id: week.id, startOfWeek: week.startOfWeek })
+    }
+  }
+
   const mergedEvents = useMemo(() => {
     return editMode ? [...events, ...(eventTemplates ?? [])] : events
   }, [events, eventTemplates, editMode])
@@ -252,6 +277,9 @@ function Planning() {
                 handleOpenEvent={setOpenEventId}
                 editMode={editMode}
                 editable={true}
+                forbiddenWeeks={forbiddenWeeks ?? []}
+                onForbiddenWeekCreate={handleForbiddenWeekCreate}
+                onForbiddenWeekDelete={handleForbiddenWeekDelete}
               />
             ) : (
               <FullCalendar
@@ -385,6 +413,32 @@ function Planning() {
           setOpen={setOpenEventId}
           eventTemplateID={slotId}
           handleDeleteEvent={handleDeleteEvent}
+        />
+
+        <CreateForbiddenWeekForm
+          open={!!createForbiddenWeekDate}
+          setOpen={(open) => { if (!open) setCreateForbiddenWeekDate(null) }}
+          date={createForbiddenWeekDate}
+          onConfirm={(date) => {
+            createForbiddenWeek.mutate(date, {
+              onSuccess: () => setCreateForbiddenWeekDate(null),
+            })
+          }}
+          loading={createForbiddenWeek.isPending}
+        />
+
+        <DeleteForbiddenWeekForm
+          open={!!deleteForbiddenWeekTarget}
+          setOpen={(open) => { if (!open) setDeleteForbiddenWeekTarget(null) }}
+          startOfWeek={deleteForbiddenWeekTarget?.startOfWeek ?? null}
+          onConfirm={() => {
+            if (deleteForbiddenWeekTarget) {
+              deleteForbiddenWeek.mutate(deleteForbiddenWeekTarget.id, {
+                onSuccess: () => setDeleteForbiddenWeekTarget(null),
+              })
+            }
+          }}
+          loading={deleteForbiddenWeek.isPending}
         />
       </div>
     </DashboardLayout>
