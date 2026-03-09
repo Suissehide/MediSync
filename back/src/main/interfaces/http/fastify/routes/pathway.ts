@@ -64,7 +64,6 @@ const pathwayRouter: FastifyPluginAsync = (fastify) => {
     },
     (request) => {
       const { year, month } = request.query
-      console.log('TRACKING', year, month)
       return pathwayDomain.findTracking(year, month)
     },
   )
@@ -193,7 +192,14 @@ const pathwayRouter: FastifyPluginAsync = (fastify) => {
           adjustedStart.add(st.offsetDays ?? 0, 'day'),
         )
 
+        let shiftCount = 0
         while (candidateDates.some((d) => isInForbiddenWeek(d))) {
+          if (shiftCount >= 52) {
+            throw Boom.conflict(
+              'Aucune date de début disponible dans les 52 prochaines semaines en raison des semaines interdites',
+            )
+          }
+          shiftCount++
           adjustedStart = adjustedStart.add(7, 'day')
           candidateDates.forEach((_, i) => {
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
