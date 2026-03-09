@@ -15,6 +15,8 @@ import Calendar, {
   type CalendarEvent,
 } from '../../../../components/custom/Calendar/calendar.tsx'
 import AddSlotForm from '../../../../components/custom/popup/addSlotForm.tsx'
+import { CreateForbiddenWeekForm } from '../../../../components/custom/popup/createForbiddenWeekForm.tsx'
+import { DeleteForbiddenWeekForm } from '../../../../components/custom/popup/deleteForbiddenWeekForm.tsx'
 import EventSheet from '../../../../components/custom/sheet/eventSheet.tsx'
 import EventTemplateSheet from '../../../../components/custom/sheet/eventTemplateSheet.tsx'
 import DashboardLayout from '../../../../components/dashboard.layout.tsx'
@@ -35,6 +37,10 @@ import {
   buildPathwayEvents,
 } from '../../../../libs/utils.ts'
 import {
+  useForbiddenWeekMutations,
+  useForbiddenWeekQueries,
+} from '../../../../queries/useForbiddenWeek.ts'
+import {
   usePathwayMutations,
   usePathwayQueries,
 } from '../../../../queries/usePathway.ts'
@@ -44,12 +50,6 @@ import {
   useSlotMutations,
 } from '../../../../queries/useSlot.ts'
 import { useSlotTemplateMutations } from '../../../../queries/useSlotTemplate.ts'
-import { CreateForbiddenWeekForm } from '../../../../components/custom/popup/createForbiddenWeekForm.tsx'
-import { DeleteForbiddenWeekForm } from '../../../../components/custom/popup/deleteForbiddenWeekForm.tsx'
-import {
-  useForbiddenWeekMutations,
-  useForbiddenWeekQueries,
-} from '../../../../queries/useForbiddenWeek.ts'
 import { usePathwayTemplateEditStore } from '../../../../store/usePathwayTemplateEditStore.ts'
 import type { CreateSlotParamsWithTemplateData } from '../../../../types/slot.ts'
 
