@@ -202,6 +202,94 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: '#9ca3af',
   },
+  calendarPage: {
+    padding: 28,
+    fontFamily: 'Helvetica',
+    fontSize: 8,
+    color: '#1f2937',
+  },
+  weekBlock: {
+    marginBottom: 14,
+  },
+  weekHeaderRow: {
+    flexDirection: 'row',
+  },
+  weekLabelCell: {
+    width: 52,
+    backgroundColor: '#f9a8d4',
+    padding: 4,
+    borderWidth: 0.5,
+    borderColor: '#e5e7eb',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  weekLabelText: {
+    fontSize: 8,
+    fontFamily: 'Helvetica-Bold',
+    color: '#be185d',
+    textAlign: 'center',
+  },
+  dayHeaderCell: {
+    flex: 1,
+    backgroundColor: '#c4b5fd',
+    padding: 4,
+    borderWidth: 0.5,
+    borderColor: '#e5e7eb',
+    alignItems: 'center',
+  },
+  dayHeaderName: {
+    fontSize: 8,
+    fontFamily: 'Helvetica-Bold',
+    color: '#4c1d95',
+    textAlign: 'center',
+  },
+  dayHeaderDate: {
+    fontSize: 7,
+    color: '#5b21b6',
+    textAlign: 'center',
+  },
+  timeRow: {
+    flexDirection: 'row',
+    minHeight: 36,
+  },
+  timeLabelCell: {
+    width: 52,
+    backgroundColor: '#fce7f3',
+    padding: 4,
+    borderWidth: 0.5,
+    borderColor: '#e5e7eb',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  timeLabelText: {
+    fontSize: 7,
+    fontFamily: 'Helvetica-Bold',
+    color: '#be185d',
+    textAlign: 'center',
+  },
+  slotCell: {
+    flex: 1,
+    padding: 4,
+    borderWidth: 0.5,
+    borderColor: '#e5e7eb',
+    justifyContent: 'center',
+  },
+  slotCellFilled: {
+    backgroundColor: '#fdf4ff',
+  },
+  slotCellEmpty: {
+    backgroundColor: '#f9fafb',
+  },
+  slotThematic: {
+    fontSize: 7,
+    fontFamily: 'Helvetica-Bold',
+    color: '#1f2937',
+  },
+  slotLocation: {
+    fontSize: 6,
+    color: '#7c3aed',
+    marginTop: 1,
+  },
 })
 
 type WeekData = {
@@ -251,9 +339,13 @@ function groupSlotsByWeek(slots: Slot[]): WeekData[] {
       )
     })
 
+    const weekdaySlots = weekSlots.filter((s) => {
+      const dow = dayjs(s.startDate).day()
+      return dow !== 0 && dow !== 6
+    })
     const timeKeys = Array.from(
       new Set(
-        weekSlots.map((s) =>
+        weekdaySlots.map((s) =>
           `${dayjs(s.startDate).format('HH:mm')}-${dayjs(s.endDate).format('HH:mm')}`,
         ),
       ),
@@ -264,7 +356,7 @@ function groupSlotsByWeek(slots: Slot[]): WeekData[] {
       const cells: (Slot | null)[] = Array.from({ length: 5 }, (_, i) => {
         const day = current.add(i, 'day')
         return (
-          weekSlots.find(
+          weekdaySlots.find(
             (s) =>
               dayjs(s.startDate).isSame(day, 'day') &&
               dayjs(s.startDate).format('HH:mm') === start &&
@@ -308,6 +400,84 @@ function getLabel<T extends Record<string, string>>(
 interface ProgrammePDFProps {
   patient: Patient
   upcomingSlots: Slot[]
+}
+
+const DAY_NAMES = ['LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI']
+
+function WeekBlock({ weekData }: { weekData: WeekData }) {
+  return (
+    <View style={styles.weekBlock}>
+      <View style={styles.weekHeaderRow}>
+        <View style={styles.weekLabelCell}>
+          <Text style={styles.weekLabelText}>{weekData.weekLabel}</Text>
+        </View>
+        {DAY_NAMES.map((name, i) => {
+          const date = weekData.weekStart.add(i, 'day')
+          return (
+            <View key={name} style={styles.dayHeaderCell}>
+              <Text style={styles.dayHeaderName}>{name}</Text>
+              <Text style={styles.dayHeaderDate}>{date.format('DD/MM')}</Text>
+            </View>
+          )
+        })}
+      </View>
+
+      {weekData.timeRows.map((row, rowIdx) => (
+        <View key={rowIdx} style={styles.timeRow}>
+          <View style={styles.timeLabelCell}>
+            <Text style={styles.timeLabelText}>{row.timeLabel}</Text>
+          </View>
+          {row.cells.map((slot, dayIdx) => (
+            <View
+              key={dayIdx}
+              style={[styles.slotCell, slot ? styles.slotCellFilled : styles.slotCellEmpty]}
+            >
+              {slot && (
+                <>
+                  <Text style={styles.slotThematic}>
+                    {slot.slotTemplate?.thematic ?? ''}
+                  </Text>
+                  {slot.slotTemplate?.location && (
+                    <Text style={styles.slotLocation}>
+                      {getLabel(SLOT_LOCATION, slot.slotTemplate.location)}
+                    </Text>
+                  )}
+                </>
+              )}
+            </View>
+          ))}
+        </View>
+      ))}
+    </View>
+  )
+}
+
+function CalendarPages({ upcomingSlots }: { upcomingSlots: Slot[] }) {
+  const weeks = groupSlotsByWeek(upcomingSlots)
+  const pages: WeekData[][] = []
+  for (let i = 0; i < weeks.length; i += 3) {
+    pages.push(weeks.slice(i, i + 3))
+  }
+
+  if (pages.length === 0) {
+    return (
+      <Page size="A4" style={styles.calendarPage}>
+        <Text style={styles.emptyMessage}>Aucun rendez-vous à venir.</Text>
+      </Page>
+    )
+  }
+
+  return (
+    <>
+      {pages.map((pageWeeks, pageIdx) => (
+        <Page key={pageIdx} size="A4" style={styles.calendarPage}>
+          {pageWeeks.map((weekData, i) => (
+            <WeekBlock key={i} weekData={weekData} />
+          ))}
+        </Page>
+      ))}
+    </>
+  )
 }
 
 function CoverPage({ patient, upcomingSlots }: { patient: Patient; upcomingSlots: Slot[] }) {
@@ -498,12 +668,7 @@ export default function ProgrammePDF({ patient, upcomingSlots }: ProgrammePDFPro
   return (
     <Document>
       <CoverPage patient={patient} upcomingSlots={upcomingSlots} />
-      <AppointmentsPage
-        patient={patient}
-        title="Rendez-vous à venir"
-        slots={upcomingSlots}
-        pageNumber={2}
-      />
+      <CalendarPages upcomingSlots={upcomingSlots} />
     </Document>
   )
 }
