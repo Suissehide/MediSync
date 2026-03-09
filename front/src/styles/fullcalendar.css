@@ -177,6 +177,27 @@ thead .fc-theme-standard th {
   display: none;
 }
 
+/* ── Forbidden weeks ─────────────────────────────────────────────────────── */
+
+/* FullCalendar applies opacity: 0.3 to all .fc-bg-event — override for
+   forbidden week events so the color is fully visible at the specified alpha */
+.fc .fc-bg-event.forbidden-week-bg {
+  opacity: 1 !important;
+}
+
+/* Hover preview: highlight the hovered week row when in forbidden-week-mode.
+   Use child combinator (>) so only the week-level <tr>'s direct td.fc-day
+   children are colored — prevents the outer month-level <tr> (which also
+   receives :hover) from highlighting the entire month in dayGridYear. */
+.forbidden-week-mode tr:hover > td.fc-day {
+  background-color: rgba(239, 68, 68, 0.20) !important;
+}
+
+/* Pointer cursor on day cells when in forbidden-week-mode */
+.forbidden-week-mode td.fc-day {
+  cursor: pointer;
+}
+
 /* ── Empty state - vue Planning (listWeek) ───────────────────────────────── */
 .fc .fc-list-empty {
   background-color: var(--background);

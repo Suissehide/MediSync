@@ -8,6 +8,7 @@ const PopoverTrigger = Popover.Trigger
 const PopoverAnchor = Popover.Anchor
 const PopoverPortal = Popover.Portal
 const PopoverClose = Popover.Close
+const PopoverArrow = Popover.Arrow
 
 // ─── Content ─────────────────────────────────────────────────────────────────
 
@@ -85,6 +86,7 @@ export {
   PopoverTrigger,
   PopoverContent,
   PopoverAnchor,
+  PopoverArrow,
   PopoverClose,
   PopoverMenuItem,
   PopoverSeparator,

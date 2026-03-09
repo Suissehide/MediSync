@@ -97,8 +97,9 @@ function Calendar({
       start: fw.startOfWeek,
       end: dayjs(fw.startOfWeek).add(7, 'day').toISOString(),
       display: 'background' as const,
-      backgroundColor: 'rgba(239, 68, 68, 0.12)',
+      backgroundColor: 'rgba(239, 68, 68, 0.15)',
       borderColor: 'transparent',
+      classNames: ['forbidden-week-bg'],
     }))
   }, [forbiddenWeeks])
 

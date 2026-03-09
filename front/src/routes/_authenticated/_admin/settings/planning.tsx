@@ -23,6 +23,7 @@ import DashboardLayout from '../../../../components/dashboard.layout.tsx'
 import { Button } from '../../../../components/ui/button.tsx'
 import {
   PopoverAnchor,
+  PopoverArrow,
   PopoverClose,
   PopoverContent,
   PopoverRoot,
@@ -69,9 +70,12 @@ function Planning() {
   const { createSlotTemplate, updateSlotTemplate, deleteSlotTemplate } =
     useSlotTemplateMutations()
   const { forbiddenWeeks } = useForbiddenWeekQueries()
-  const { createForbiddenWeek, deleteForbiddenWeek } = useForbiddenWeekMutations()
+  const { createForbiddenWeek, deleteForbiddenWeek } =
+    useForbiddenWeekMutations()
 
-  const [createForbiddenWeekDate, setCreateForbiddenWeekDate] = useState<string | null>(null)
+  const [createForbiddenWeekDate, setCreateForbiddenWeekDate] = useState<
+    string | null
+  >(null)
   const [deleteForbiddenWeekTarget, setDeleteForbiddenWeekTarget] = useState<{
     id: string
     startOfWeek: string
@@ -86,6 +90,7 @@ function Planning() {
   )
 
   const [view, setView] = useState<'calendar' | 'timeline'>('calendar')
+  const [isForbiddenWeekMode, setIsForbiddenWeekMode] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<{
     id: string
     title: string
@@ -209,7 +214,10 @@ function Planning() {
   const handleForbiddenWeekDelete = (id: string) => {
     const week = forbiddenWeeks?.find((fw) => fw.id === id)
     if (week) {
-      setDeleteForbiddenWeekTarget({ id: week.id, startOfWeek: week.startOfWeek })
+      setDeleteForbiddenWeekTarget({
+        id: week.id,
+        startOfWeek: week.startOfWeek,
+      })
     }
   }
 
@@ -230,12 +238,60 @@ function Planning() {
     return buildPathwayEvents(pathways)
   }, [pathways])
 
+  const forbiddenWeekBackgroundEvents = useMemo(() => {
+    return (forbiddenWeeks ?? []).map((fw) => ({
+      id: `forbidden_${fw.id}`,
+      start: dayjs.utc(fw.startOfWeek).format('YYYY-MM-DD'),
+      end: dayjs.utc(fw.startOfWeek).add(7, 'day').format('YYYY-MM-DD'),
+      display: 'background' as const,
+      backgroundColor: 'rgba(239, 68, 68, 0.20)',
+      classNames: ['forbidden-week-bg'],
+    }))
+  }, [forbiddenWeeks])
+
+  const handleTimelineDateClick = (info: { dateStr: string }) => {
+    if (!isForbiddenWeekMode) {
+      return
+    }
+    const clickedDate = dayjs(info.dateStr)
+    const matchingForbiddenWeek = (forbiddenWeeks ?? []).find((fw) => {
+      const start = dayjs(fw.startOfWeek)
+      return (
+        (clickedDate.isSame(start) || clickedDate.isAfter(start)) &&
+        clickedDate.isBefore(start.add(7, 'day'))
+      )
+    })
+    if (matchingForbiddenWeek) {
+      handleForbiddenWeekDelete(matchingForbiddenWeek.id)
+    } else {
+      handleForbiddenWeekCreate(info.dateStr)
+    }
+  }
+
   const isSlot = openEventId.startsWith('slot_')
   const isTemplate = openEventId.startsWith('template_')
   const slotId = openEventId.replace(/^.*?_/, '')
 
   return (
-    <DashboardLayout components={['pathway']}>
+    <DashboardLayout
+      components={['pathway']}
+      quickActions={[
+        <Button
+          key="forbidden-week-mode"
+          variant="gradient"
+          className={`w-full transition duration-200
+            ${isForbiddenWeekMode ? 'border border-border-dark' : ''}`}
+          onClick={() => {
+            if (view !== 'timeline') {
+              setView('timeline')
+            }
+            setIsForbiddenWeekMode((prev) => !prev)
+          }}
+        >
+          Planifier semaines interdites
+        </Button>,
+      ]}
+    >
       <div className="flex-1 bg-background rounded-lg flex flex-col w-full gap-4">
         <div className="px-6 pt-6 flex items-center justify-between">
           <h1 className="h-9 flex items-center text-text-dark text-xl font-semibold">
@@ -249,6 +305,9 @@ function Planning() {
                 onValueChange={(v: string) => {
                   if (v) {
                     setView(v as 'calendar' | 'timeline')
+                    if (v !== 'timeline') {
+                      setIsForbiddenWeekMode(false)
+                    }
                   }
                 }}
               >
@@ -278,62 +337,74 @@ function Planning() {
                 editMode={editMode}
                 editable={true}
                 forbiddenWeeks={forbiddenWeeks ?? []}
-                onForbiddenWeekCreate={handleForbiddenWeekCreate}
-                onForbiddenWeekDelete={handleForbiddenWeekDelete}
               />
             ) : (
-              <FullCalendar
-                plugins={[dayGridPlugin, multiMonthPlugin, interactionPlugin]}
-                initialView="multiMonthYear"
-                locale={frLocale}
-                timeZone="UTC"
-                weekends={true}
-                headerToolbar={{
-                  left: 'title',
-                  center: 'dayGridYear,multiMonthYear',
-                  right: 'prev,next today',
-                }}
-                buttonText={{
-                  dayGridYear: 'Liste',
-                  multiMonthYear: 'Grille',
-                }}
-                multiMonthMinWidth={600}
-                dayMaxEvents={false}
-                dayMaxEventRows={false}
-                height="100%"
-                events={pathwayEvents}
-                editable={false}
-                selectable={false}
-                droppable={true}
-                drop={(info) => {
-                  const now = Date.now()
-                  if (now - lastDropTimeRef.current < 500) {
-                    return
-                  }
-                  lastDropTimeRef.current = now
-                  const pathwayId =
-                    info.draggedEl.getAttribute('data-pathway-id')
-                  const weekStart = dayjs(info.date)
-                    .isoWeekday(1)
-                    .utc()
-                    .startOf('day')
-                  if (pathwayId) {
-                    handleInstantiatePathway(pathwayId, weekStart.toISOString())
-                  }
-                }}
-                eventClick={(info) => {
-                  const x = info.jsEvent.clientX
-                  const rect = info.el.getBoundingClientRect()
-                  const y = rect.top + rect.height / 2
-                  setDeleteTarget({
-                    id: info.event.id,
-                    title: info.event.title,
-                    anchor: {
-                      getBoundingClientRect: () => new DOMRect(x, y, 0, 0),
-                    },
-                  })
-                }}
-              />
+              <div
+                className={`h-full ${isForbiddenWeekMode ? 'forbidden-week-mode' : ''}`}
+              >
+                <FullCalendar
+                  plugins={[dayGridPlugin, multiMonthPlugin, interactionPlugin]}
+                  initialView="dayGridYear"
+                  locale={frLocale}
+                  timeZone="UTC"
+                  weekends={true}
+                  headerToolbar={{
+                    left: 'title',
+                    center: 'dayGridYear,multiMonthYear',
+                    right: 'prev,next today',
+                  }}
+                  buttonText={{
+                    dayGridYear: 'Liste',
+                    multiMonthYear: 'Grille',
+                  }}
+                  multiMonthMinWidth={600}
+                  dayMaxEvents={false}
+                  dayMaxEventRows={false}
+                  height="100%"
+                  events={[...pathwayEvents, ...forbiddenWeekBackgroundEvents]}
+                  editable={false}
+                  selectable={false}
+                  droppable={true}
+                  dateClick={handleTimelineDateClick}
+                  drop={(info) => {
+                    const now = Date.now()
+                    if (now - lastDropTimeRef.current < 500) {
+                      return
+                    }
+                    lastDropTimeRef.current = now
+                    const pathwayId =
+                      info.draggedEl.getAttribute('data-pathway-id')
+                    const weekStart = dayjs(info.date)
+                      .isoWeekday(1)
+                      .utc()
+                      .startOf('day')
+                    if (pathwayId) {
+                      handleInstantiatePathway(
+                        pathwayId,
+                        weekStart.toISOString(),
+                      )
+                    }
+                  }}
+                  eventClick={(info) => {
+                    if (isForbiddenWeekMode) {
+                      return
+                    }
+                    if (info.event.id.startsWith('forbidden_')) {
+                      return
+                    }
+                    const x = info.jsEvent.clientX
+                    const rect = info.el.getBoundingClientRect()
+                    const y = rect.top + rect.height / 2
+                    setDeleteTarget({
+                      id: info.event.id,
+                      title: info.event.title,
+                      anchor: {
+                        getBoundingClientRect: () => new DOMRect(x, y, 0, 0),
+                      },
+                    })
+                  }}
+                />
+              </div>
             )}
           </div>
         </div>
@@ -349,29 +420,45 @@ function Planning() {
           {deleteTarget && (
             <PopoverAnchor virtualRef={{ current: deleteTarget.anchor }} />
           )}
-          <PopoverContent side="top" align="center" sideOffset={0}>
-            <PopoverClose className="absolute top-2 right-2 rounded-full p-1 text-text-light hover:text-text hover:bg-muted cursor-pointer transition-colors">
-              <X className="h-3.5 w-3.5" />
-            </PopoverClose>
+          <PopoverContent
+            side="top"
+            align="center"
+            sideOffset={10}
+            className="w-56 p-0 shadow-lg"
+          >
+            <PopoverArrow
+              width={14}
+              height={7}
+              style={{
+                fill: 'var(--popover)',
+                stroke: 'var(--border)',
+                strokeWidth: 1,
+              }}
+            />
 
-            <div className="flex items-center gap-3 mb-6 pr-4">
-              <div className="flex items-center justify-center h-8 w-8 rounded-full bg-destructive/10 shrink-0">
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-text">
-                  Supprimer ce parcours ?
-                </p>
-                <p className="text-xs text-text-light mt-0.5">
-                  {deleteTarget?.title}
-                </p>
+            <div className="px-4 pt-4 pb-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-text-light">
+                    Supprimer le parcours
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-text-dark leading-snug line-clamp-2">
+                    {deleteTarget?.title}
+                  </p>
+                </div>
+                <PopoverClose className="mt-0.5 shrink-0 rounded p-0.5 text-text-light hover:text-text hover:bg-muted transition-colors cursor-pointer">
+                  <X className="h-3.5 w-3.5" />
+                </PopoverClose>
               </div>
             </div>
 
-            <div className="flex justify-end gap-2">
+            <div className="mx-4 border-t border-border" />
+
+            <div className="flex gap-2 p-3">
               <Button
                 variant="outline"
                 size="sm"
+                className="flex-1 h-8 text-xs"
                 onClick={() => setDeleteTarget(null)}
               >
                 Annuler
@@ -379,6 +466,7 @@ function Planning() {
               <Button
                 variant="destructive"
                 size="sm"
+                className="flex-1 h-8 text-xs gap-1.5"
                 onClick={() => {
                   if (deleteTarget) {
                     deletePathway.mutate(deleteTarget.id)
@@ -386,6 +474,7 @@ function Planning() {
                   }
                 }}
               >
+                <Trash2 className="h-3 w-3" />
                 Supprimer
               </Button>
             </div>
@@ -417,7 +506,11 @@ function Planning() {
 
         <CreateForbiddenWeekForm
           open={!!createForbiddenWeekDate}
-          setOpen={(open) => { if (!open) setCreateForbiddenWeekDate(null) }}
+          setOpen={(open) => {
+            if (!open) {
+              setCreateForbiddenWeekDate(null)
+            }
+          }}
           date={createForbiddenWeekDate}
           onConfirm={(date) => {
             createForbiddenWeek.mutate(date, {
@@ -429,7 +522,11 @@ function Planning() {
 
         <DeleteForbiddenWeekForm
           open={!!deleteForbiddenWeekTarget}
-          setOpen={(open) => { if (!open) setDeleteForbiddenWeekTarget(null) }}
+          setOpen={(open) => {
+            if (!open) {
+              setDeleteForbiddenWeekTarget(null)
+            }
+          }}
           startOfWeek={deleteForbiddenWeekTarget?.startOfWeek ?? null}
           onConfirm={() => {
             if (deleteForbiddenWeekTarget) {

@@ -26,9 +26,9 @@ export function CreateForbiddenWeekForm({
   onConfirm,
   loading = false,
 }: CreateForbiddenWeekFormProps) {
-  const weekLabel = date
-    ? dayjs(date).isoWeekday(1).format('DD MMMM YYYY')
-    : ''
+  const weekStart = date ? dayjs(date).isoWeekday(1) : null
+  const weekStartLabel = weekStart ? weekStart.format('DD MMMM YYYY') : ''
+  const weekEndLabel = weekStart ? weekStart.add(6, 'day').format('DD MMMM YYYY') : ''
 
   return (
     <Popup modal open={open} onOpenChange={setOpen}>
@@ -40,7 +40,8 @@ export function CreateForbiddenWeekForm({
         <PopupBody>
           <p className="text-sm text-text-light">
             Marquer la semaine du{' '}
-            <span className="font-medium text-text">{weekLabel}</span> comme
+            <span className="font-medium text-text">{weekStartLabel}</span> au{' '}
+            <span className="font-medium text-text">{weekEndLabel}</span> comme
             interdite ? Aucun slot ne pourra être planifié sur cette semaine.
           </p>
         </PopupBody>

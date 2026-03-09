@@ -7,11 +7,6 @@ import { GENDER_OPTIONS } from '../../../constants/patient.constant.ts'
 import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { usePatientMutations } from '../../../queries/usePatient.ts'
 import type { CreatePatientParams, TimeOfDay } from '../../../types/patient.ts'
-import {
-  PathwaySelector,
-  usePathwaySelector,
-  type PathwayPeriod,
-} from '../pathwaySelector.tsx'
 import { Button } from '../../ui/button.tsx'
 import {
   Popup,
@@ -22,6 +17,11 @@ import {
   PopupTitle,
   PopupTrigger,
 } from '../../ui/popup.tsx'
+import {
+  type PathwayPeriod,
+  PathwaySelector,
+  usePathwaySelector,
+} from '../pathwaySelector.tsx'
 
 interface AddPatientFormProps {
   trigger?: React.ReactNode
@@ -86,7 +86,6 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
           <Button
             type="button"
             variant="gradient"
-            size="sm"
             className="w-full"
             onClick={() => setOpen(true)}
           >
