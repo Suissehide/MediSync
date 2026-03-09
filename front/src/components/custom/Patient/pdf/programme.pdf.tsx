@@ -28,54 +28,94 @@ const styles = StyleSheet.create({
     color: '#1f2937',
   },
   coverPage: {
-    padding: 40,
+    padding: 0,
     fontFamily: 'Helvetica',
     position: 'relative',
+    backgroundColor: '#ffffff',
+    width: '100%',
     height: '100%',
   },
   coverLogo: {
     position: 'absolute',
-    top: 40,
-    left: 40,
+    top: 36,
+    left: 36,
+    width: 140,
+    height: 'auto',
+  },
+  linesTopRight: {
+    position: 'absolute',
+    top: -20,
+    right: -20,
+    width: 200,
+    height: 'auto',
+    transform: 'rotate(180deg)',
+  },
+  linesBottomRight: {
+    position: 'absolute',
+    bottom: 80,
+    right: -20,
     width: 160,
     height: 'auto',
   },
-  coverContent: {
+  purpleCircle: {
+    position: 'absolute',
+    bottom: -80,
+    left: -80,
+    width: 320,
+    height: 320,
+    borderRadius: 160,
+    backgroundColor: '#9333ea',
+  },
+  coverCenter: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'center',
     alignItems: 'center',
-    height: '100%',
   },
-  coverTitle: {
-    fontSize: 28,
+  coverMainTitle: {
+    fontSize: 72,
     fontFamily: 'Helvetica-Bold',
-    marginBottom: 8,
-    color: '#0f766e',
+    color: '#e05a5a',
+    textAlign: 'center',
+  },
+  coverTitleUnderline: {
+    height: 4,
+    width: 120,
+    backgroundColor: '#e05a5a',
+    marginTop: 4,
+    marginBottom: 16,
   },
   coverSubtitle: {
+    fontSize: 28,
+    fontFamily: 'Helvetica-Bold',
+    color: '#7c3aed',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  coverDuration: {
     fontSize: 16,
-    color: '#6b7280',
-    marginBottom: 40,
+    fontFamily: 'Helvetica-Bold',
+    color: '#1e3a5f',
+    textAlign: 'center',
+  },
+  coverDateRange: {
+    fontSize: 16,
+    fontFamily: 'Helvetica-Bold',
+    color: '#1e3a5f',
+    textAlign: 'center',
   },
   coverPatientName: {
-    fontSize: 24,
-    fontFamily: 'Helvetica-Bold',
-    marginBottom: 8,
-  },
-  coverPatientInfo: {
-    fontSize: 14,
-    color: '#6b7280',
-    marginBottom: 4,
-  },
-  coverDate: {
-    fontSize: 12,
-    color: '#9ca3af',
-    marginTop: 60,
-  },
-  lines: {
     position: 'absolute',
-    height: 'auto',
+    bottom: 48,
+    left: 36,
+    fontSize: 22,
+    fontFamily: 'Helvetica-Bold',
+    color: '#1e3a5f',
   },
   header: {
     marginBottom: 20,
@@ -270,44 +310,37 @@ interface ProgrammePDFProps {
   upcomingSlots: Slot[]
 }
 
-function CoverPage({ patient }: { patient: Patient }) {
-  const age = patient.birthDate
-    ? dayjs().diff(dayjs(patient.birthDate), 'year')
-    : null
+function CoverPage({ patient, upcomingSlots }: { patient: Patient; upcomingSlots: Slot[] }) {
+  const duration = computeProgramDuration(upcomingSlots)
+  const genderPrefix = patient.gender === 'female' ? 'Mme' : patient.gender === 'male' ? 'M.' : ''
+  const patientLabel = `${genderPrefix} ${patient.lastName}`.trim()
+  const programLabel = patient.programType
+    ? getLabel(PROGRAM_TYPE, patient.programType)
+    : 'Programme'
 
   return (
     <Page size="A4" style={styles.coverPage}>
       <Image src={logoCHU} style={styles.coverLogo} />
+      <Image src={lines} style={styles.linesTopRight} />
+      <Image src={lines} style={styles.linesBottomRight} />
+      <View style={styles.purpleCircle} />
 
-      <View>
-        <Image src={lines} style={[styles.lines, { top: -10, right: -10 }]} />
-        <Image src={lines} style={styles.lines} />
-        <Image src={lines} style={styles.lines} />
-      </View>
-
-      <View style={styles.coverContent}>
-        <Text style={styles.coverTitle}>Programme Patient</Text>
-        <Text style={styles.coverSubtitle}>MediSync - Suivi personnalisé</Text>
-
-        <View style={{ marginTop: 40 }}>
-          <Text style={styles.coverPatientName}>
-            {patient.firstName} {patient.lastName}
-          </Text>
-          <Text style={styles.coverPatientInfo}>
-            {getLabel(GENDER, patient.gender)}
-            {age ? `, ${age} ans` : ''}
-          </Text>
-          {patient.programType && (
-            <Text style={styles.coverPatientInfo}>
-              Programme : {getLabel(PROGRAM_TYPE, patient.programType)}
+      <View style={styles.coverCenter}>
+        <Text style={styles.coverMainTitle}>SMCV</Text>
+        <View style={styles.coverTitleUnderline} />
+        <Text style={styles.coverSubtitle}>{programLabel}</Text>
+        {duration && (
+          <>
+            <Text style={styles.coverDuration}>{duration.weeks} semaines</Text>
+            <Text style={styles.coverDateRange}>
+              Du {duration.startDate.format('DD/MM')} au{' '}
+              {duration.endDate.format('DD/MM/YYYY')}
             </Text>
-          )}
-        </View>
-
-        <Text style={styles.coverDate}>
-          Document généré le {dayjs().format('DD MMMM YYYY')}
-        </Text>
+          </>
+        )}
       </View>
+
+      <Text style={styles.coverPatientName}>{patientLabel}</Text>
     </Page>
   )
 }
@@ -461,19 +494,15 @@ function AppointmentsPage({
   )
 }
 
-export default function ProgrammePDF({
-  patient,
-  upcomingSlots,
-}: ProgrammePDFProps) {
+export default function ProgrammePDF({ patient, upcomingSlots }: ProgrammePDFProps) {
   return (
     <Document>
-      <CoverPage patient={patient} />
-      <PatientInfoPage patient={patient} />
+      <CoverPage patient={patient} upcomingSlots={upcomingSlots} />
       <AppointmentsPage
         patient={patient}
         title="Rendez-vous à venir"
         slots={upcomingSlots}
-        pageNumber={3}
+        pageNumber={2}
       />
     </Document>
   )
