@@ -54,6 +54,9 @@ interface CalendarProps {
   editable?: boolean
   overlap?: boolean
   initialDate?: string
+  forbiddenWeeks?: { id: string; startOfWeek: string }[]
+  onForbiddenWeekCreate?: (date: string) => void
+  onForbiddenWeekDelete?: (id: string) => void
 }
 
 function Calendar({
@@ -69,6 +72,9 @@ function Calendar({
   editable = false,
   overlap = true,
   initialDate,
+  forbiddenWeeks = [],
+  onForbiddenWeekCreate,
+  onForbiddenWeekDelete,
 }: CalendarProps) {
   const lastDropTimeRef = useRef<number>(0)
   const calendarRef = useRef<FullCalendar | null>(null)
@@ -84,6 +90,17 @@ function Calendar({
       (e) => dayjs(e.start).isBefore(dayEnd) && dayjs(e.end).isAfter(dayStart),
     )
   }, [currentView, currentViewStart, events])
+
+  const forbiddenWeekEvents = useMemo(() => {
+    return forbiddenWeeks.map((fw) => ({
+      id: `forbidden_${fw.id}`,
+      start: fw.startOfWeek,
+      end: dayjs(fw.startOfWeek).add(7, 'day').toISOString(),
+      display: 'background' as const,
+      backgroundColor: 'rgba(239, 68, 68, 0.12)',
+      borderColor: 'transparent',
+    }))
+  }, [forbiddenWeeks])
 
   const handleOpenDatePicker = (ev: MouseEvent) => {
     const target = ev.currentTarget
@@ -211,9 +228,29 @@ function Calendar({
         slotLabelInterval="01:00"
         editable={editable}
         select={handleSelect}
+        dateClick={(info) => {
+          if (!onForbiddenWeekCreate) return
+          const clickedDate = dayjs(info.date)
+          const alreadyForbidden = forbiddenWeeks.some((fw) => {
+            const start = dayjs(fw.startOfWeek)
+            return (
+              (clickedDate.isSame(start) || clickedDate.isAfter(start)) &&
+              clickedDate.isBefore(start.add(7, 'day'))
+            )
+          })
+          if (!alreadyForbidden) {
+            onForbiddenWeekCreate(info.dateStr)
+          }
+        }}
+        eventClick={(info) => {
+          if (info.event.display === 'background' && onForbiddenWeekDelete) {
+            const id = info.event.id.replace('forbidden_', '')
+            onForbiddenWeekDelete(id)
+          }
+        }}
         eventDrop={handleEventDrop}
         eventResize={handleResize}
-        events={events}
+        events={[...events, ...forbiddenWeekEvents]}
         eventOverlap={overlap}
         slotEventOverlap={overlap}
         eventContent={(eventContent) => (
