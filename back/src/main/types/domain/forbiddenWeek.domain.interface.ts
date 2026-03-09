@@ -1,6 +1,6 @@
-import type { ForbiddenWeekEntityRepo } from '../infra/orm/repositories/forbiddenWeek.repository.interface'
+import type { ForbiddenWeek } from '../../../generated/client'
 
-export type ForbiddenWeekEntityDomain = ForbiddenWeekEntityRepo
+export type ForbiddenWeekEntityDomain = ForbiddenWeek
 
 export interface ForbiddenWeekDomainInterface {
   findAll: () => Promise<ForbiddenWeekEntityDomain[]>

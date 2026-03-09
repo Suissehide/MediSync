@@ -1,12 +1,8 @@
-export type ForbiddenWeekEntityRepo = {
-  id: string
-  startOfWeek: Date
-  createdAt: Date
-}
+import type { ForbiddenWeek, Prisma } from '../../../../../generated/client'
 
-export type ForbiddenWeekCreateEntityRepo = {
-  startOfWeek: Date
-}
+export type ForbiddenWeekEntityRepo = ForbiddenWeek
+
+export type ForbiddenWeekCreateEntityRepo = Prisma.ForbiddenWeekUncheckedCreateInput
 
 export interface ForbiddenWeekRepositoryInterface {
   findAll: () => Promise<ForbiddenWeekEntityRepo[]>
