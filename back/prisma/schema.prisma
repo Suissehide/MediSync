@@ -331,3 +331,9 @@ model ActivityLog {
   @@index([action])
   @@index([createdAt])
 }
+
+model ForbiddenWeek {
+  id          String   @id @default(cuid())
+  startOfWeek DateTime @unique
+  createdAt   DateTime @default(now())
+}
