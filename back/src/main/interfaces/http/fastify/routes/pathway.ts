@@ -29,6 +29,7 @@ const pathwayRouter: FastifyPluginAsync = (fastify) => {
     pathwayTemplateDomain,
     slotDomain,
     slotTemplateDomain,
+    forbiddenWeekDomain,
     logger,
   } = iocContainer
 
@@ -172,6 +173,40 @@ const pathwayRouter: FastifyPluginAsync = (fastify) => {
         throw Boom.notFound('PathwayTemplate not found')
       }
 
+      // Shift startDate forward by weeks until no slot lands on a forbidden week
+      const forbiddenWeeks = await forbiddenWeekDomain.findAll()
+      let adjustedStart = dayjs(startDate)
+
+      if (forbiddenWeeks.length > 0) {
+        const isInForbiddenWeek = (date: dayjs.Dayjs): boolean => {
+          return forbiddenWeeks.some((fw) => {
+            const weekStart = dayjs(fw.startOfWeek)
+            const weekEnd = weekStart.add(7, 'day')
+            return (
+              (date.isSame(weekStart) || date.isAfter(weekStart)) &&
+              date.isBefore(weekEnd)
+            )
+          })
+        }
+
+        const candidateDates = pathwayTemplate.slotTemplates.map((st) =>
+          adjustedStart.add(st.offsetDays ?? 0, 'day'),
+        )
+
+        while (candidateDates.some((d) => isInForbiddenWeek(d))) {
+          adjustedStart = adjustedStart.add(7, 'day')
+          candidateDates.forEach((_, i) => {
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            candidateDates[i] = adjustedStart.add(
+              pathwayTemplate.slotTemplates[i]!.offsetDays ?? 0,
+              'day',
+            )
+          })
+        }
+      }
+
+      const effectiveStartDate = adjustedStart.toISOString()
+
       const slotIDs: string[] = []
       for (const slotTemplate of pathwayTemplate.slotTemplates) {
         const { soignant, id: _id, ...rest } = slotTemplate
@@ -182,7 +217,7 @@ const pathwayRouter: FastifyPluginAsync = (fastify) => {
         })
 
         const offset = clonedSlotTemplate.offsetDays ?? 0
-        const base = dayjs(startDate).add(offset, 'day').toISOString()
+        const base = dayjs(effectiveStartDate).add(offset, 'day').toISOString()
 
         const start = combineDateAndTime(base, clonedSlotTemplate.startTime)
         const end = combineDateAndTime(base, clonedSlotTemplate.endTime)
@@ -196,7 +231,7 @@ const pathwayRouter: FastifyPluginAsync = (fastify) => {
       }
 
       return await pathwayDomain.create({
-        startDate,
+        startDate: effectiveStartDate,
         templateID: pathwayTemplate.id,
         slotIDs,
       })
