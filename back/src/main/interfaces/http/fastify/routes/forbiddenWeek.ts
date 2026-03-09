@@ -15,6 +15,7 @@ import {
 const forbiddenWeekRouter: FastifyPluginAsync = (fastify) => {
   const { forbiddenWeekDomain, userDomain } = fastify.iocContainer
 
+  // Readable by any authenticated user (needed to display forbidden weeks in calendar)
   // Get all
   fastify.get(
     '/',
@@ -56,7 +57,6 @@ const forbiddenWeekRouter: FastifyPluginAsync = (fastify) => {
         response: {
           204: z.null(),
           403: z.object({ message: z.string() }),
-          404: z.object({ message: z.string() }),
         },
       },
       onRequest: [fastify.verifySessionCookie],
