@@ -1,5 +1,4 @@
 import dayjs from 'dayjs'
-import 'dayjs/locale/fr'
 import { CalendarX, X } from 'lucide-react'
 
 import { Button } from '../../ui/button.tsx'
@@ -28,7 +27,7 @@ export function CreateForbiddenWeekForm({
   loading = false,
 }: CreateForbiddenWeekFormProps) {
   const weekLabel = date
-    ? dayjs(date).locale('fr').isoWeekday(1).format('DD MMMM YYYY')
+    ? dayjs(date).isoWeekday(1).format('DD MMMM YYYY')
     : ''
 
   return (

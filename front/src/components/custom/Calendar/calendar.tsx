@@ -229,23 +229,19 @@ function Calendar({
         editable={editable}
         select={handleSelect}
         dateClick={(info) => {
-          if (!onForbiddenWeekCreate) return
+          if (!onForbiddenWeekCreate && !onForbiddenWeekDelete) return
           const clickedDate = dayjs(info.date)
-          const alreadyForbidden = forbiddenWeeks.some((fw) => {
+          const matchingForbiddenWeek = forbiddenWeeks.find((fw) => {
             const start = dayjs(fw.startOfWeek)
             return (
               (clickedDate.isSame(start) || clickedDate.isAfter(start)) &&
               clickedDate.isBefore(start.add(7, 'day'))
             )
           })
-          if (!alreadyForbidden) {
-            onForbiddenWeekCreate(info.dateStr)
-          }
-        }}
-        eventClick={(info) => {
-          if (info.event.display === 'background' && onForbiddenWeekDelete) {
-            const id = info.event.id.replace('forbidden_', '')
-            onForbiddenWeekDelete(id)
+          if (matchingForbiddenWeek) {
+            onForbiddenWeekDelete?.(matchingForbiddenWeek.id)
+          } else {
+            onForbiddenWeekCreate?.(info.dateStr)
           }
         }}
         eventDrop={handleEventDrop}
