@@ -5,8 +5,8 @@ import { Role } from '../../../../../generated/enums'
 import {
   activityLogsResponseSchema,
   cleanupResponseSchema,
-  getActivityLogsQuerySchema,
   type GetActivityLogsQuery,
+  getActivityLogsQuerySchema,
 } from '../schemas/activityLog.schema'
 
 const activityLogRouter: FastifyPluginAsync = (fastify) => {
@@ -23,7 +23,9 @@ const activityLogRouter: FastifyPluginAsync = (fastify) => {
     },
     async (request) => {
       const currentUser = await userDomain.findByID(request.user.userID)
-      if (currentUser?.role !== Role.ADMIN) throw Boom.forbidden('Forbidden')
+      if (currentUser?.role !== Role.ADMIN) {
+        throw Boom.forbidden('Forbidden')
+      }
       const { page, action, userID, from } = request.query
       return activityLogDomain.findMany({ page, action, userID, from })
     },
@@ -37,7 +39,9 @@ const activityLogRouter: FastifyPluginAsync = (fastify) => {
     },
     async (request) => {
       const currentUser = await userDomain.findByID(request.user.userID)
-      if (currentUser?.role !== Role.ADMIN) throw Boom.forbidden('Forbidden')
+      if (currentUser?.role !== Role.ADMIN) {
+        throw Boom.forbidden('Forbidden')
+      }
       return activityLogDomain.cleanup()
     },
   )

@@ -4,27 +4,26 @@ import {
   QueryClient,
   QueryClientProvider,
 } from '@tanstack/react-query'
-import { RouterProvider, createRouter } from '@tanstack/react-router'
+import { createRouter, RouterProvider } from '@tanstack/react-router'
+import dayjs from 'dayjs'
 import { StrictMode } from 'react'
 import ReactDOM from 'react-dom/client'
-import RootLayout from './components/root.layout.tsx'
 
+import RootLayout from './components/root.layout.tsx'
 import { routeTree } from './routeTree.gen.ts'
 import { useAuthStore } from './store/useAuthStore.ts'
-
-import dayjs from 'dayjs'
 import 'dayjs/locale/fr'
-import isoWeek from 'dayjs/plugin/isoWeek'
-import advancedFormat from 'dayjs/plugin/advancedFormat'
-import isSameOrBefore from 'dayjs/plugin/isSameOrBefore'
-import isSameOrAfter from 'dayjs/plugin/isSameOrAfter'
-import utc from 'dayjs/plugin/utc'
-import { Loader2Icon } from 'lucide-react'
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+import { GlobalStyles, StyledEngineProvider } from '@mui/material'
 import { LocalizationProvider } from '@mui/x-date-pickers'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
-import { GlobalStyles, StyledEngineProvider } from '@mui/material'
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+import advancedFormat from 'dayjs/plugin/advancedFormat'
+import isoWeek from 'dayjs/plugin/isoWeek'
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter'
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore'
 import localizedFormat from 'dayjs/plugin/localizedFormat'
+import utc from 'dayjs/plugin/utc'
+import { Loader2Icon } from 'lucide-react'
 
 dayjs.extend(isoWeek)
 dayjs.extend(advancedFormat)
