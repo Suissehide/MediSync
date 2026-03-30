@@ -36,6 +36,7 @@ interface AddAppointmentFormProps {
   soignant?: Soignant
   type: string
   handleCreateAppointment: (newAppointment: CreateAppointmentParams) => void
+  defaultPatientIDs?: string[]
 }
 
 function AddAppointmentForm({
@@ -48,6 +49,7 @@ function AddAppointmentForm({
   soignant,
   type,
   handleCreateAppointment,
+  defaultPatientIDs,
 }: AddAppointmentFormProps) {
   const today = dayjs()
   const { thematics } = useThematicQueries()
@@ -70,7 +72,7 @@ function AddAppointmentForm({
           : '',
       thematic: '',
       type: '',
-      patientIDs: [] as string[],
+      patientIDs: (defaultPatientIDs ?? []) as string[],
     },
     onSubmit: ({ value }) => {
       const newAppointment: CreateAppointmentParams = {
@@ -221,6 +223,7 @@ function AddAppointmentForm({
                         : 'Sélectionner un ou plusieurs patients'
                     }
                     maxSelected={type === 'individual' ? 1 : capacity}
+                    disabled={!!defaultPatientIDs?.length}
                   />
                   <FieldInfo field={field} />
                 </FormField>
