@@ -167,7 +167,7 @@ export default function EventTemplateSheet({
                   </Button>
                 </div>
                 <div className="flex gap-4">
-                  <Button variant="default" onClick={() => form.handleSubmit()}>
+                  <Button variant="default" onClick={() => form.handleSubmit()} isLoading={updateSlotTemplate.isPending}>
                     Mettre à jour
                   </Button>
                   <Button variant="outline" onClick={() => setOpen('')}>

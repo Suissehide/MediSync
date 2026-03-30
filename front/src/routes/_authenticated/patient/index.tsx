@@ -17,7 +17,7 @@ export const Route = createFileRoute('/_authenticated/patient/')({
 
 function PatientList() {
   const navigate = useNavigate()
-  const { patients } = usePatientWithTagsQuery()
+  const { patients, isPending } = usePatientWithTagsQuery()
   const [searchTerm, setSearchTerm] = useState('')
 
   const handleRedirectPatient = async (patientID: string) => {
@@ -84,6 +84,7 @@ function PatientList() {
             columns={columns}
             filterId="patient"
             pagination
+            isLoading={isPending}
             onRowClick={(patient) => handleRedirectPatient(patient.id)}
           />
         </div>

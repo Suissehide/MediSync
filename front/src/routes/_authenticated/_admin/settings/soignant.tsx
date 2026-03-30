@@ -16,7 +16,7 @@ export const Route = createFileRoute(
 })
 
 function SoignantSettings() {
-  const { soignants } = useSoignantQueries()
+  const { soignants, isPending } = useSoignantQueries()
   const { thematics } = useThematicQueries()
 
   const sortedSoignants = useMemo(
@@ -56,6 +56,7 @@ function SoignantSettings() {
           data={sortedSoignants}
           columns={columns}
           filterId="soignant"
+          isLoading={isPending}
         />
       </div>
     </DashboardLayout>

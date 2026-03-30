@@ -161,7 +161,7 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
                 Suivant <ArrowRight className="w-4 h-4" />
               </Button>
             ) : (
-              <Button variant="default" onClick={() => form.handleSubmit()}>
+              <Button variant="default" onClick={() => form.handleSubmit()} isLoading={enrollPatient.isPending}>
                 <Check className="w-4 h-4" /> Valider
               </Button>
             )}

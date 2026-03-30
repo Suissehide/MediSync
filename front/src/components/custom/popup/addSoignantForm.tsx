@@ -123,7 +123,7 @@ function AddSoignantForm({ trigger }: AddSoignantFormProps) {
         </PopupBody>
 
         <PopupFooter>
-          <Button variant="default" onClick={() => form.handleSubmit()}>
+          <Button variant="default" onClick={() => form.handleSubmit()} isLoading={createSoignant.isPending}>
             <Check className="w-4 h-4" />
             Ajouter
           </Button>

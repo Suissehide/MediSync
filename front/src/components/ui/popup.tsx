@@ -7,7 +7,7 @@ import { cn } from '../../libs/utils.ts'
 import { type ButtonProps, buttonVariants } from './button.tsx'
 
 const popupVariants = cva(
-  `fixed z-100 p-6 top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] gap-4 bg-primary-foreground border border-border
+  `fixed z-100 top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] bg-primary-foreground border border-border
   rounded-md shadow-xl transition ease-in-out flex flex-col max-h-[85vh]`,
   {
     variants: {
@@ -86,7 +86,9 @@ const PopupTrigger = React.forwardRef<
   <Dialog.Trigger
     ref={ref}
     asChild={asChild}
-    className={asChild ? className : cn(buttonVariants({ variant, size, className }))}
+    className={
+      asChild ? className : cn(buttonVariants({ variant, size, className }))
+    }
     {...props}
   />
 ))
@@ -98,7 +100,7 @@ const PopupHeader = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn('pb-4 border-b border-border', className)}
+    className={cn('px-6 py-6 border-b border-border', className)}
     {...props}
   />
 ))
@@ -144,7 +146,11 @@ const PopupBody = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn('overflow-y-auto flex-1 min-h-0 py-4', className)} {...props} />
+  <div
+    ref={ref}
+    className={cn('overflow-y-auto flex-1 min-h-0 px-6 py-6', className)}
+    {...props}
+  />
 ))
 PopupBody.displayName = 'PopupBody'
 
@@ -155,7 +161,7 @@ const PopupFooter = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      'flex justify-between gap-2 pt-4 border-t border-border',
+      'flex justify-between gap-2 px-6 py-4 border-t border-border',
       className,
     )}
     {...props}

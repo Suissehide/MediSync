@@ -1,8 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 
 import { getThematicColumns } from '../../../../columns/thematic.column.tsx'
 import AddThematicForm from '../../../../components/custom/popup/addThematicForm.tsx'
+import { ConfirmDeleteForm } from '../../../../components/custom/popup/confirmDeleteForm.tsx'
 import DashboardLayout from '../../../../components/dashboard.layout.tsx'
 import ReactTable from '../../../../components/table/reactTable.tsx'
 import {
@@ -18,8 +19,9 @@ export const Route = createFileRoute(
 })
 
 function ThematicSettings() {
-  const { thematics } = useThematicQueries()
+  const { thematics, isPending } = useThematicQueries()
   const { deleteThematic } = useThematicMutations()
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
 
   const sortedThematics = useMemo(
     () =>
@@ -28,7 +30,7 @@ function ThematicSettings() {
   )
 
   const columns = getThematicColumns({
-    onDelete: (id) => deleteThematic.mutate(id),
+    onDelete: (id) => setDeleteTargetId(id),
   })
 
   return (
@@ -45,6 +47,19 @@ function ThematicSettings() {
           data={sortedThematics}
           columns={columns}
           filterId="thematic"
+          isLoading={isPending}
+        />
+
+        <ConfirmDeleteForm
+          open={!!deleteTargetId}
+          setOpen={(open) => { if (!open) setDeleteTargetId(null) }}
+          onConfirm={() => {
+            if (deleteTargetId) deleteThematic.mutate(deleteTargetId)
+            setDeleteTargetId(null)
+          }}
+          loading={deleteThematic.isPending}
+          title="Supprimer la thématique"
+          description="Voulez-vous vraiment supprimer cette thématique ? Cette action est irréversible."
         />
       </div>
     </DashboardLayout>

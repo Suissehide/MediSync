@@ -12,6 +12,7 @@ import type { UpdatePathwayTemplateParams } from '../../../types/pathwayTemplate
 import { Button } from '../../ui/button.tsx'
 import { Label } from '../../ui/label.tsx'
 import { TagInput } from '../../ui/tagInput.tsx'
+import { ConfirmDeleteForm } from '../popup/confirmDeleteForm.tsx'
 import {
   Sheet,
   SheetContent,
@@ -30,7 +31,7 @@ export default function PathwayTemplateSheet({
   setOpen,
   pathwayTemplateID,
 }: PathwayTemplateSheetProps) {
-  const { pathwayTemplate } = usePathwayTemplateByIDQuery(pathwayTemplateID)
+  const { pathwayTemplate, isPending } = usePathwayTemplateByIDQuery(pathwayTemplateID)
   const { updatePathwayTemplate, deletePathwayTemplate } =
     usePathwayTemplateMutations()
   const { pathwayTemplates } = usePathwayTemplateQueries()
@@ -42,7 +43,7 @@ export default function PathwayTemplateSheet({
     [pathwayTemplates],
   )
 
-  const [isPending] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const form = useAppForm({
     defaultValues: {
@@ -166,12 +167,12 @@ export default function PathwayTemplateSheet({
 
               <div className="px-4 py-4 flex justify-between gap-4 shrink-0">
                 <div>
-                  <Button variant="destructive" onClick={() => handleDelete()}>
+                  <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)}>
                     Supprimer
                   </Button>
                 </div>
                 <div className="flex gap-4">
-                  <Button variant="default" onClick={() => form.handleSubmit()}>
+                  <Button variant="default" onClick={() => form.handleSubmit()} isLoading={updatePathwayTemplate.isPending}>
                     Mettre à jour
                   </Button>
                   <Button variant="outline" onClick={() => setOpen('')}>
@@ -183,6 +184,17 @@ export default function PathwayTemplateSheet({
           )}
         </div>
       </SheetContent>
+      <ConfirmDeleteForm
+        open={showDeleteConfirm}
+        setOpen={setShowDeleteConfirm}
+        onConfirm={() => {
+          handleDelete()
+          setShowDeleteConfirm(false)
+        }}
+        loading={deletePathwayTemplate.isPending}
+        title="Supprimer le modèle de parcours"
+        description="Voulez-vous vraiment supprimer ce modèle de parcours ? Cette action est irréversible."
+      />
     </Sheet>
   )
 }

@@ -79,7 +79,7 @@ function AddThematicForm({ trigger }: AddThematicFormProps) {
         </PopupBody>
 
         <PopupFooter>
-          <Button variant="default" onClick={() => form.handleSubmit()}>
+          <Button variant="default" isLoading={createThematic.isPending} onClick={() => form.handleSubmit()}>
             <Check className="w-4 h-4" />
             Ajouter
           </Button>

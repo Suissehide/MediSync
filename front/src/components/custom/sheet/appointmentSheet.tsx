@@ -32,6 +32,7 @@ import { FormField } from '../../ui/formField.tsx'
 import { Input } from '../../ui/input.tsx'
 import { Select } from '../../ui/select.tsx'
 import { Label } from '../../ui/label.tsx'
+import { ConfirmDeleteForm } from '../popup/confirmDeleteForm.tsx'
 import {
   Sheet,
   SheetContent,
@@ -63,9 +64,8 @@ export default function AppointmentSheet({
   const patients = usePatientQueries().patients
 
   const [selectedPatient, setSelectedPatient] = useState('')
-  const [expandedSections, setExpandedSections] = useState<
-    Record<number, boolean>
-  >({})
+  const [expandedSections, setExpandedSections] = useState<Record<number, boolean>>({})
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const form = useAppForm({
     defaultValues: {
@@ -431,12 +431,12 @@ export default function AppointmentSheet({
 
               <div className="px-4 py-4 flex justify-between gap-4 shrink-0">
                 <div>
-                  <Button variant="destructive" onClick={() => handleDelete()}>
+                  <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)}>
                     Supprimer
                   </Button>
                 </div>
                 <div className="flex gap-4">
-                  <Button variant="default" onClick={() => form.handleSubmit()}>
+                  <Button variant="default" onClick={() => form.handleSubmit()} isLoading={updateAppointment.isPending}>
                     Mettre à jour
                   </Button>
                   <Button variant="outline" onClick={() => setOpen('')}>
@@ -448,6 +448,17 @@ export default function AppointmentSheet({
           )}
         </div>
       </SheetContent>
+      <ConfirmDeleteForm
+        open={showDeleteConfirm}
+        setOpen={setShowDeleteConfirm}
+        onConfirm={() => {
+          handleDelete()
+          setShowDeleteConfirm(false)
+        }}
+        loading={deleteAppointment.isPending}
+        title="Supprimer le rendez-vous"
+        description="Voulez-vous vraiment supprimer ce rendez-vous ? Cette action est irréversible."
+      />
     </Sheet>
   )
 }

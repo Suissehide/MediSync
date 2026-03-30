@@ -14,7 +14,7 @@ export const Route = createFileRoute('/_authenticated/_admin/settings/user')({
 })
 
 function UserList() {
-  const { users } = useAllUsersQuery()
+  const { users, isPending } = useAllUsersQuery()
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
@@ -46,6 +46,7 @@ function UserList() {
             data={users ?? []}
             columns={columns}
             filterId="user"
+            isLoading={isPending}
           />
         </div>
 

@@ -107,7 +107,7 @@ function EditUserForm({ open, setOpen, user }: EditUserFormProps) {
         </PopupBody>
 
         <PopupFooter>
-          <Button variant="default" onClick={() => form.handleSubmit()}>
+          <Button variant="default" onClick={() => form.handleSubmit()} isLoading={updateUser.isPending}>
             <Check className="w-4 h-4" />
             Enregistrer
           </Button>

@@ -33,7 +33,7 @@ function ActivityLogPage() {
     ? dayjs().subtract(Number(filters.periodDays), 'day').toISOString()
     : undefined
 
-  const { data } = useActivityLogsQuery({
+  const { data, isPending } = useActivityLogsQuery({
     action: filters.action || undefined,
     from,
   })
@@ -68,6 +68,7 @@ function ActivityLogPage() {
           columns={activityLogColumns}
           pagination
           filterId="activity-log"
+          isLoading={isPending}
           emptyState={
             <div className="py-8 text-center text-text-light text-sm">
               Aucune activité trouvée

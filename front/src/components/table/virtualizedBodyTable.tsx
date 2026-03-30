@@ -19,6 +19,7 @@ type VirtualizedBodyTableProps<TData> = {
   onRowClick?: (row: TData) => void
   emptyState?: ReactNode
   isRowDisabled?: (row: TData) => boolean
+  isLoading?: boolean
 }
 
 export function VirtualizedBodyTable<TData>({
@@ -29,6 +30,7 @@ export function VirtualizedBodyTable<TData>({
   onRowClick,
   emptyState,
   isRowDisabled,
+  isLoading,
 }: VirtualizedBodyTableProps<TData>) {
   const rows = table.getRowModel().rows
   const rowCount = rows.length
@@ -51,6 +53,32 @@ export function VirtualizedBodyTable<TData>({
     rowVirtualizer.scrollToIndex(0)
     rowVirtualizer.measure()
   }, [rowVirtualizer])
+
+  if (isLoading) {
+    const visibleColumns = table.getVisibleLeafColumns()
+    return (
+      <tbody>
+        {Array.from({ length: 5 }).map((_, rowIndex) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: skeleton rows have no identity
+          <tr key={rowIndex} style={{ height: rowHeight }}>
+            {visibleColumns.map((column) => (
+              <td
+                key={column.id}
+                className="px-4 py-2 border-b border-border"
+                style={{
+                  ...getCommonPinningStyles(column),
+                  minWidth: column.getSize(),
+                  height: rowHeight,
+                }}
+              >
+                <div className="h-3.5 rounded bg-muted animate-pulse" style={{ width: `${50 + ((rowIndex * 13 + column.getIndex()) % 40)}%` }} />
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    )
+  }
 
   if (rowCount === 0) {
     return (

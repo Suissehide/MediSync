@@ -62,6 +62,7 @@ type ReactTableProps<TData extends { id: string }> = {
   maxHeight?: string
   emptyState?: ReactNode
   isRowDisabled?: (row: TData) => boolean
+  isLoading?: boolean
 }
 
 export function ReactTable<TData extends { id: string }>({
@@ -75,6 +76,7 @@ export function ReactTable<TData extends { id: string }>({
   maxHeight = '600px',
   emptyState,
   isRowDisabled,
+  isLoading,
 }: ReactTableProps<TData>) {
   const initialColumnFilters = safeParse(
     localStorage.getItem(`filters/${filterId}`),
@@ -211,6 +213,7 @@ export function ReactTable<TData extends { id: string }>({
               onRowClick={onRowClick}
               emptyState={emptyState}
               isRowDisabled={isRowDisabled}
+              isLoading={isLoading}
             />
           </table>
         </div>

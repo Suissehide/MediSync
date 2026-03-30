@@ -41,6 +41,7 @@ export default function EventSheet({
   handleDeleteEvent,
 }: EventSheetProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showDeletePathwayConfirm, setShowDeletePathwayConfirm] = useState(false)
 
   useSoignantQueries()
   const { isPending, slot, refetch } = useSlotByIDQuery(eventID, {
@@ -202,7 +203,7 @@ export default function EventSheet({
                       <PopoverContent align="end" className="z-1000">
                         <PopoverMenuItem
                           variant="destructive"
-                          onClick={handleDeleteAllSlots}
+                          onClick={() => setShowDeletePathwayConfirm(true)}
                         >
                           Supprimer tout le parcours
                         </PopoverMenuItem>
@@ -212,7 +213,7 @@ export default function EventSheet({
                 </div>
 
                 <div className="flex gap-4">
-                  <Button variant="default" onClick={() => form.handleSubmit()}>
+                  <Button variant="default" onClick={() => form.handleSubmit()} isLoading={updateSlot.isPending}>
                     Mettre à jour
                   </Button>
                   <Button variant="outline" onClick={() => setOpen('')}>
@@ -234,6 +235,17 @@ export default function EventSheet({
         loading={deleteSlot.isPending}
         title="Supprimer le créneau"
         description="Voulez-vous vraiment supprimer ce créneau ? Cette action est irréversible."
+      />
+      <ConfirmDeleteForm
+        open={showDeletePathwayConfirm}
+        setOpen={setShowDeletePathwayConfirm}
+        onConfirm={() => {
+          handleDeleteAllSlots()
+          setShowDeletePathwayConfirm(false)
+        }}
+        loading={deletePathway.isPending}
+        title="Supprimer tout le parcours"
+        description="Voulez-vous vraiment supprimer tous les créneaux de ce parcours ? Cette action est irréversible."
       />
     </Sheet>
   )
