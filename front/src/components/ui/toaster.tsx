@@ -164,8 +164,8 @@ export function Toaster() {
     })
   }, [toasts])
 
-  // Bottom offset for each toast in expanded mode
-  const getBottomOffset = (domIndex: number) => {
+  // Top offset for each toast in expanded mode
+  const getTopOffset = (domIndex: number) => {
     if (!expanded) {
       return 0
     }
@@ -193,7 +193,7 @@ export function Toaster() {
     <ToastProvider>
       <section
         aria-label="Notifications"
-        className="fixed bottom-4 right-4 z-[999] w-full sm:max-w-[400px]"
+        className="fixed top-4 right-4 z-[999] w-full sm:max-w-[400px]"
         onMouseEnter={() => hasMultiple && setExpanded(true)}
         onMouseLeave={() => setExpanded(false)}
       >
@@ -203,9 +203,9 @@ export function Toaster() {
         >
           {visible.map((toast, domIndex) => {
             const isNewest = domIndex === 0
-            const bottom = getBottomOffset(domIndex)
-            // In collapsed: pull older toasts up with translateY
-            const translateY = expanded ? 0 : -(domIndex * PEEK_SIZE)
+            const top = getTopOffset(domIndex)
+            // In collapsed: push older toasts down with translateY to peek below
+            const translateY = expanded ? 0 : domIndex * PEEK_SIZE
             const scale = expanded ? 1 : 1 - domIndex * SCALE_STEP
             const opacity = expanded ? 1 : 1 - domIndex * OPACITY_STEP
 
@@ -214,15 +214,15 @@ export function Toaster() {
                 key={toast.id}
                 className="absolute right-0 left-0"
                 style={{
-                  bottom,
+                  top,
                   transform: `translateY(${translateY}px) scale(${scale})`,
-                  transformOrigin: 'bottom center',
+                  transformOrigin: 'top center',
                   opacity,
                   zIndex: visible.length - domIndex,
                   // Only newest is interactive in collapsed mode
                   pointerEvents: expanded || isNewest ? 'auto' : 'none',
                   transition:
-                    'transform 300ms ease-in-out, opacity 300ms ease-in-out, bottom 300ms ease-in-out',
+                    'transform 300ms ease-in-out, opacity 300ms ease-in-out, top 300ms ease-in-out',
                 }}
               >
                 <ToastItem

@@ -1,6 +1,5 @@
-import { useMemo, useState } from 'react'
-
 import { useQueryClient } from '@tanstack/react-query'
+import { useMemo, useState } from 'react'
 
 import { SLOT } from '../../../../constants/process.constant.ts'
 import { hexToRGBA } from '../../../../libs/color.ts'
@@ -11,11 +10,11 @@ import { usePlanningStore } from '../../../../store/usePlanningStore.ts'
 import type { CreateAppointmentParams } from '../../../../types/appointment.ts'
 import type { Patient } from '../../../../types/patient.ts'
 import type { Soignant } from '../../../../types/soignant.ts'
+import { Switch } from '../../../ui/switch.tsx'
 import type { CalendarEvent } from '../../Calendar/calendar.tsx'
 import Calendar from '../../Calendar/calendar.tsx'
 import AddAppointmentForm from '../../popup/addAppointmentForm.tsx'
 import AppointmentSheet from '../../sheet/appointmentSheet.tsx'
-import { Switch } from '../../../ui/switch.tsx'
 
 interface PlanningPatientProps {
   patient?: Patient
@@ -26,12 +25,15 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
   const savedDate = usePlanningStore((state) => state.viewStart)
 
   const [showAvailableSlots, setShowAvailableSlots] = useState(false)
-  const [openCreateAppointmentModal, setOpenCreateAppointmentModal] = useState(false)
+  const [openCreateAppointmentModal, setOpenCreateAppointmentModal] =
+    useState(false)
   const [openAppointmentId, setOpenAppointmentId] = useState('')
   const [selectedSlotID, setSelectedSlotID] = useState('')
   const [selectedSlotStart, setSelectedSlotStart] = useState('')
   const [selectedSlotEnd, setSelectedSlotEnd] = useState('')
-  const [selectedSlotSoignant, setSelectedSlotSoignant] = useState<Soignant | undefined>()
+  const [selectedSlotSoignant, setSelectedSlotSoignant] = useState<
+    Soignant | undefined
+  >()
   const [selectedSlotType, setSelectedSlotType] = useState('')
 
   const queryClient = useQueryClient()
@@ -60,62 +62,69 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
       }))
   }, [slots, patient])
 
-  const { availableEvents, enrolledSlotIds, patientAppointmentBySlotId } = useMemo(() => {
-    if (!slots || !patient) {
-      return {
-        availableEvents: [] as CalendarEvent[],
-        enrolledSlotIds: new Set<string>(),
-        patientAppointmentBySlotId: new Map<string, string>(),
-      }
-    }
-
-    const enrolledSet = new Set<string>()
-    const appointmentMap = new Map<string, string>()
-
-    slots.forEach((slot) => {
-      const apt = slot.appointments?.find((a) =>
-        a.appointmentPatients?.some((ap) => ap.patient.id === patient.id),
-      )
-      if (apt) {
-        enrolledSet.add(slot.id)
-        appointmentMap.set(slot.id, apt.id)
-      }
-    })
-
-    const baseEvents = buildCalendarEventsFromSlots(slots, ['fillable'])
-    const events = baseEvents.map((event) => {
-      const slotId = event.id.replace('slot_', '')
-      if (enrolledSet.has(slotId)) {
+  const { availableEvents, enrolledSlotIds, patientAppointmentBySlotId } =
+    useMemo(() => {
+      if (!slots || !patient) {
         return {
-          ...event,
-          backgroundColor: hexToRGBA(event.color ?? '#2563eb', 0.3),
-          borderColor: hexToRGBA(event.color ?? '#2563eb', 0.3),
+          availableEvents: [] as CalendarEvent[],
+          enrolledSlotIds: new Set<string>(),
+          patientAppointmentBySlotId: new Map<string, string>(),
         }
       }
-      return event
-    })
 
-    return {
-      availableEvents: events,
-      enrolledSlotIds: enrolledSet,
-      patientAppointmentBySlotId: appointmentMap,
-    }
-  }, [slots, patient])
+      const enrolledSet = new Set<string>()
+      const appointmentMap = new Map<string, string>()
+
+      slots.forEach((slot) => {
+        const apt = slot.appointments?.find((a) =>
+          a.appointmentPatients?.some((ap) => ap.patient.id === patient.id),
+        )
+        if (apt) {
+          enrolledSet.add(slot.id)
+          appointmentMap.set(slot.id, apt.id)
+        }
+      })
+
+      const baseEvents = buildCalendarEventsFromSlots(slots, ['fillable'])
+      const events = baseEvents.map((event) => {
+        const slotId = event.id.replace('slot_', '')
+        if (enrolledSet.has(slotId)) {
+          return {
+            ...event,
+            backgroundColor: hexToRGBA(event.color ?? '#2563eb', 0.3),
+            borderColor: hexToRGBA(event.color ?? '#2563eb', 0.3),
+          }
+        }
+        return event
+      })
+
+      return {
+        availableEvents: events,
+        enrolledSlotIds: enrolledSet,
+        patientAppointmentBySlotId: appointmentMap,
+      }
+    }, [slots, patient])
 
   const handleClickSlot = (eventId: string) => {
     const slotId = eventId.replace('slot_', '')
     const slot = slots?.find((s) => s.id === slotId)
-    if (!slot) return
+    if (!slot) {
+      return
+    }
 
     if (enrolledSlotIds.has(slotId)) {
       const appointmentId = patientAppointmentBySlotId.get(slotId)
-      if (appointmentId) setOpenAppointmentId(appointmentId)
+      if (appointmentId) {
+        setOpenAppointmentId(appointmentId)
+      }
     } else {
       setSelectedSlotID(slotId)
       setSelectedSlotStart(slot.startDate)
       setSelectedSlotEnd(slot.endDate)
       setSelectedSlotSoignant(slot.slotTemplate.soignant ?? undefined)
-      setSelectedSlotType(slot.slotTemplate.isIndividual ? 'individual' : 'multiple')
+      setSelectedSlotType(
+        slot.slotTemplate.isIndividual ? 'individual' : 'multiple',
+      )
       setOpenCreateAppointmentModal(true)
     }
   }

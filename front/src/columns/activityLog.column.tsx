@@ -1,7 +1,7 @@
 import { createColumnHelper } from '@tanstack/react-table'
 import dayjs from 'dayjs'
 
-import { ACTION_LABELS } from '../constants/activityLog.constant.ts'
+import { ACTION_LABELS, TYPE_LABELS } from '../constants/activityLog.constant.ts'
 import type { ActivityLog } from '../types/activityLog.ts'
 
 const columnHelper = createColumnHelper<ActivityLog>()
@@ -36,11 +36,13 @@ export const activityLogColumns = [
   columnHelper.accessor('entityType', {
     header: 'Type',
     size: 140,
-  }),
-  columnHelper.accessor((row) => row.entityID.slice(0, 8) + '…', {
-    id: 'entityID',
-    header: 'Identifiant',
-    size: 120,
-    meta: { headerClass: 'text-text-light' },
+    cell: (info) => {
+      const label = TYPE_LABELS[info.getValue()] ?? info.getValue()
+      return (
+        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-primary/10 text-primary">
+          {label}
+        </span>
+      )
+    },
   }),
 ]

@@ -90,7 +90,7 @@ function Index() {
 
   return (
     <div className="overflow-hidden w-full h-screen flex relative">
-      <div className="absolute top-6 left-2">
+      <div className="absolute top-6 left-2 z-20">
         <h1 className="px-2 text-3xl font-bold">
           <span className="text-primary">Medi</span>Sync
         </h1>
@@ -99,10 +99,10 @@ function Index() {
       <div className="flex-1 flex justify-end">
         {/* Login Card */}
         <div
-          className={`z-10 w-[450px] top-1/2 -translate-y-1/2 bg-card/45 flex flex-col items-center px-12 py-8 rounded-2xl border border-gray-100 backdrop-blur-sm absolute transition-all duration-700 ease-in-out ${
+          className={`z-10 w-auto sm:w-[450px] left-4 right-4 sm:left-auto top-1/2 -translate-y-1/2 bg-card/45 flex flex-col items-center px-6 py-6 sm:px-12 sm:py-8 rounded-2xl border border-gray-100 backdrop-blur-sm absolute transition-all duration-700 ease-in-out ${
             mode === 'login'
-              ? 'right-8'
-              : 'right-[-600px] opacity-0 pointer-events-none'
+              ? 'sm:right-8'
+              : 'translate-x-[110%] sm:translate-x-0 sm:right-[-600px] opacity-0 pointer-events-none'
           }`}
         >
           <h2 className="text-left w-full text-2xl font-bold mb-8">
@@ -156,10 +156,10 @@ function Index() {
 
         {/* Register Card */}
         <div
-          className={`z-10 w-[450px] top-1/2 -translate-y-1/2 bg-card/35 flex flex-col items-center px-12 py-8 rounded-2xl border border-gray-100 backdrop-blur-sm absolute transition-all duration-700 ease-in-out ${
+          className={`z-10 w-auto sm:w-[450px] left-4 right-4 sm:left-auto top-1/2 -translate-y-1/2 bg-card/35 flex flex-col items-center px-6 py-6 sm:px-12 sm:py-8 rounded-2xl border border-gray-100 backdrop-blur-sm absolute transition-all duration-700 ease-in-out ${
             mode === 'register'
-              ? 'right-8'
-              : 'right-[-600px] opacity-0 pointer-events-none'
+              ? 'sm:right-8'
+              : 'translate-x-[110%] sm:translate-x-0 sm:right-[-600px] opacity-0 pointer-events-none'
           }`}
         >
           <h2 className="text-left w-full text-2xl font-bold mb-4">
@@ -215,14 +215,14 @@ function Index() {
         </div>
 
         {/* Decorative Squares */}
-        <div className="absolute left-[-10%] top-[200px] animate-bounce subtle-bounce">
-          <div className=" rotate-[60deg] w-[500px] h-[500px] bg-gradient-to-b from-primary to-primary-foreground p-6 rounded-[5rem]" />
+        <div className="absolute left-[-15%] top-[200px] animate-bounce subtle-bounce">
+          <div className="rotate-[60deg] w-[200px] h-[200px] sm:w-[500px] sm:h-[500px] bg-gradient-to-b from-primary to-primary-foreground p-6 rounded-[2rem] sm:rounded-[5rem]" />
         </div>
         <div
-          className="absolute right-[-15%] top-[-75px] animate-bounce subtle-bounce"
+          className="absolute right-[-15%] top-[-35px] sm:top-[-75px] animate-bounce subtle-bounce"
           style={{ animationDelay: '-1.7s' }}
         >
-          <div className="rotate-[210deg] w-[500px] h-[500px] bg-gradient-to-b from-primary to-primary-foreground p-6 rounded-[5rem]" />
+          <div className="rotate-[210deg] w-[200px] h-[200px] sm:w-[500px] sm:h-[500px] bg-gradient-to-b from-primary to-primary-foreground p-6 rounded-[2rem] sm:rounded-[5rem]" />
         </div>
       </div>
     </div>

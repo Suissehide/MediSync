@@ -13,6 +13,15 @@ export const ACTION_LABELS: Record<string, string> = {
 
 export const ACTION_OPTIONS = toSelectOptions(ACTION_LABELS)
 
+export const TYPE_LABELS: Record<string, string> = {
+  patient: 'Patient',
+  diagnostic: 'Diagnostic',
+  appointment: 'Rendez-vous',
+  slot: 'Créneau',
+  slotTemplate: 'Template',
+  pathway: 'Parcours',
+}
+
 export const PERIOD_DAYS: Record<string, string> = {
   '7': '7 derniers jours',
   '30': '30 derniers jours',
