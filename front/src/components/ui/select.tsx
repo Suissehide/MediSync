@@ -110,6 +110,7 @@ interface MultiSelectProps {
   onChange: (value: string[]) => void
   placeholder?: string
   maxSelected?: number
+  disabled?: boolean
 }
 
 export function MultiSelect({
@@ -118,10 +119,12 @@ export function MultiSelect({
   onChange,
   placeholder,
   maxSelected,
+  disabled,
 }: MultiSelectProps) {
   const [searchTerm, setSearchTerm] = useState('')
 
   const toggle = (val: string) => {
+    if (disabled) return
     const isSelected = value.includes(val)
     if (isSelected) {
       onChange(value.filter((v) => v !== val))
@@ -145,7 +148,8 @@ export function MultiSelect({
       <Popover.Trigger asChild>
         <button
           type="button"
-          className="inline-flex w-full h-9 items-center justify-between rounded-md border border-border bg-background px-3 py-2 text-sm text-text-dark cursor-pointer"
+          disabled={disabled}
+          className="inline-flex w-full h-9 items-center justify-between rounded-md border border-border bg-background px-3 py-2 text-sm text-text-dark cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <span className="truncate">
             {value.length === 0
