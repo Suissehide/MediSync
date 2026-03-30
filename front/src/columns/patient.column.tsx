@@ -3,15 +3,30 @@ import dayjs from 'dayjs'
 import { AlertTriangle, Eye } from 'lucide-react'
 
 import { Button } from '../components/ui/button.tsx'
+import { getContrastTextColor, hexToRGBA } from '../libs/color.ts'
+import type { PathwayTemplate } from '../types/pathwayTemplate.ts'
 import type { PatientWithTags } from '../types/patient.ts'
 
 const columnHelper = createColumnHelper<PatientWithTags>()
 
 type PatientActions = {
   onView: (id: string) => void
+  pathwayTemplates?: PathwayTemplate[]
 }
 
-export const getPatientColumns = ({ onView }: PatientActions) => {
+export const getPatientColumns = ({
+  onView,
+  pathwayTemplates = [],
+}: PatientActions) => {
+  const tagTemplateMap = new Map<string, { name: string; color: string }>()
+  for (const template of pathwayTemplates) {
+    for (const tag of template.tags ?? []) {
+      if (!tagTemplateMap.has(tag)) {
+        tagTemplateMap.set(tag, { name: template.name, color: template.color })
+      }
+    }
+  }
+
   return [
     columnHelper.display({
       id: 'enrollmentAlert',
@@ -19,7 +34,9 @@ export const getPatientColumns = ({ onView }: PatientActions) => {
       size: 32,
       cell: ({ row }) => {
         const count = row.original.enrollmentIssues?.length ?? 0
-        if (count === 0) return null
+        if (count === 0) {
+          return null
+        }
         return (
           <div className="flex items-center justify-center">
             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-700 leading-none">
@@ -48,20 +65,33 @@ export const getPatientColumns = ({ onView }: PatientActions) => {
       header: 'Parcours',
       cell: ({ getValue }) => {
         const tags = getValue() ?? []
-        if (tags.length === 0) {
+        const primaryTag = tags[0]
+        if (!primaryTag) {
           return null
         }
+
+        const template = tagTemplateMap.get(primaryTag)
+        const bgStyle = template?.color
+          ? {
+              backgroundColor: hexToRGBA(template.color, 0.15),
+              color: getContrastTextColor(template.color),
+              borderColor: hexToRGBA(template.color, 0.6),
+            }
+          : undefined
+
         return (
-          <div className="flex flex-wrap gap-1">
-            {tags.map((tag) => (
-              <span
-                key={tag}
-                className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary leading-none"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
+          <span
+            className="inline-block px-1.5 py-1.5 rounded text-[10px] border font-medium leading-none"
+            style={
+              bgStyle ?? {
+                backgroundColor: 'rgb(var(--primary) / 0.1)',
+                color: 'rgb(var(--primary))',
+                borderColor: 'rgb(var(--primary))',
+              }
+            }
+          >
+            {template?.name ?? primaryTag}
+          </span>
         )
       },
     }),

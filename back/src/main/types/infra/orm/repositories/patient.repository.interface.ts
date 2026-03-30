@@ -13,9 +13,15 @@ export type PatientWithTagsEntityRepo = Patient & {
 export type PatientCreateEntityRepo = Prisma.PatientUncheckedCreateInput
 export type PatientUpdateEntityRepo = Prisma.PatientUncheckedUpdateInput
 
+export type PatientExportFilters = {
+  search?: string
+  pathwayTemplateTags?: string[]
+}
+
 export interface PatientRepositoryInterface {
   findAll: () => Promise<PatientEntityRepo[]>
   findAllWithTags: () => Promise<PatientWithTagsEntityRepo[]>
+  findForExport: (filters: PatientExportFilters) => Promise<PatientWithTagsEntityRepo[]>
   findByID: (id: string) => Promise<PatientWithAppointmentsDomain>
   create: (
     patientCreateParams: PatientCreateEntityRepo,

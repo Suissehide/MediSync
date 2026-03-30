@@ -1,4 +1,5 @@
 import dayjs from 'dayjs'
+import * as XLSX from 'xlsx'
 
 import {
   type TimeOfDay,
@@ -15,6 +16,7 @@ import type {
   PatientCreateEntityDomain,
   PatientDomainInterface,
   PatientEntityDomain,
+  PatientExportFilters,
   PatientUpdateEntityDomain,
   PatientWithAppointmentsDomain,
   PatientWithTagsDomain,
@@ -68,6 +70,58 @@ class PatientDomain implements PatientDomainInterface {
 
   findByID(patientID: string): Promise<PatientEntityDomain> {
     return this.patientRepository.findByID(patientID)
+  }
+
+  async exportExcel(filters: PatientExportFilters): Promise<Buffer> {
+    const patients = await this.patientRepository.findForExport(filters)
+
+    const rows = patients.map((p) => ({
+      Prénom: p.firstName ?? '',
+      Nom: p.lastName ?? '',
+      Genre: p.gender ?? '',
+      'Date de naissance': p.birthDate ? dayjs(p.birthDate).format('DD/MM/YYYY') : '',
+      Téléphone: p.phone1 ?? '',
+      'Téléphone 2': p.phone2 ?? '',
+      Email: p.email ?? '',
+      "Date d'entrée": p.entryDate ? dayjs(p.entryDate).format('DD/MM/YYYY') : '',
+      'Date de sortie': p.exitDate ? dayjs(p.exitDate).format('DD/MM/YYYY') : '',
+      Parcours: p.pathwayTemplateTags.join(', '),
+      'Diagnostic médical': p.medicalDiagnosis ?? '',
+      'Mode de prise en charge': p.careMode ?? '',
+      Orientation: p.orientation ?? '',
+      Profession: p.occupation ?? '',
+      "Niveau d'étude": p.educationLevel ?? '',
+      Distance: p.distance ?? '',
+      'Motif de sortie': p.stopReason ?? '',
+      Notes: p.notes ?? '',
+    }))
+
+    const ws = XLSX.utils.json_to_sheet(rows)
+
+    ws['!cols'] = [
+      { wch: 16 }, // Prénom
+      { wch: 16 }, // Nom
+      { wch: 10 }, // Genre
+      { wch: 18 }, // Date de naissance
+      { wch: 16 }, // Téléphone
+      { wch: 16 }, // Téléphone 2
+      { wch: 28 }, // Email
+      { wch: 14 }, // Date d'entrée
+      { wch: 14 }, // Date de sortie
+      { wch: 30 }, // Parcours
+      { wch: 28 }, // Diagnostic médical
+      { wch: 24 }, // Mode de prise en charge
+      { wch: 18 }, // Orientation
+      { wch: 20 }, // Profession
+      { wch: 18 }, // Niveau d'étude
+      { wch: 14 }, // Distance
+      { wch: 22 }, // Motif de sortie
+      { wch: 40 }, // Notes
+    ]
+
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Patients')
+    return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer
   }
 
   async create(

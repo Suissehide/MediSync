@@ -68,10 +68,16 @@ export type EnrollmentResult = {
   }[]
 }
 
+export type PatientExportFilters = {
+  search?: string
+  pathwayTemplateTags?: string[]
+}
+
 export interface PatientDomainInterface {
   findAll: () => Promise<PatientEntityDomain[]>
   findAllWithTags: () => Promise<PatientWithTagsDomain[]>
   findByID: (patientID: string) => Promise<PatientEntityDomain>
+  exportExcel: (filters: PatientExportFilters) => Promise<Buffer>
   create: (
     patientCreateParams: PatientCreateEntityDomain,
     userID: string,

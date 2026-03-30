@@ -3,6 +3,7 @@ import type { PatientWithAppointmentsDomain } from '../../../types/domain/patien
 import type {
   PatientCreateEntityRepo,
   PatientEntityRepo,
+  PatientExportFilters,
   PatientRepositoryInterface,
   PatientUpdateEntityRepo,
   PatientWithTagsEntityRepo,
@@ -45,6 +46,70 @@ class PatientRepository implements PatientRepositoryInterface {
         },
         enrollmentIssues: true,
       },
+    })
+
+    return patients.map(({ appointmentPatients, ...patient }) => ({
+      ...patient,
+      pathwayTemplateTags: [
+        ...new Set(
+          appointmentPatients.flatMap(
+            (ap) => ap.appointment?.slot?.pathway?.template?.tags ?? [],
+          ),
+        ),
+      ],
+    }))
+  }
+
+  async findForExport(filters: PatientExportFilters): Promise<PatientWithTagsEntityRepo[]> {
+    const { search, pathwayTemplateTags } = filters
+
+    const patients = await this.prisma.patient.findMany({
+      where: {
+        ...(search
+          ? {
+              OR: [
+                { firstName: { contains: search, mode: 'insensitive' } },
+                { lastName: { contains: search, mode: 'insensitive' } },
+              ],
+            }
+          : {}),
+        ...(pathwayTemplateTags?.length
+          ? {
+              appointmentPatients: {
+                some: {
+                  appointment: {
+                    slot: {
+                      pathway: {
+                        template: { tags: { hasSome: pathwayTemplateTags } },
+                      },
+                    },
+                  },
+                },
+              },
+            }
+          : {}),
+      },
+      include: {
+        appointmentPatients: {
+          select: {
+            appointment: {
+              select: {
+                slot: {
+                  select: {
+                    pathway: {
+                      select: {
+                        template: { select: { tags: true } },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        enrollmentIssues: true,
+      },
+      orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
     })
 
     return patients.map(({ appointmentPatients, ...patient }) => ({

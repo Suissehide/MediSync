@@ -43,6 +43,40 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
     },
   )
 
+  // Export patients as Excel (must be before /:patientID)
+  fastify.get(
+    '/export',
+    {
+      schema: {
+        querystring: z.object({
+          search: z.string().optional(),
+          pathwayTemplateTags: z.union([z.string(), z.array(z.string())]).optional(),
+        }),
+      },
+      onRequest: [fastify.verifySessionCookie],
+    },
+    async (request, reply) => {
+      const { search, pathwayTemplateTags } = request.query as {
+        search?: string
+        pathwayTemplateTags?: string | string[]
+      }
+
+      const tags = pathwayTemplateTags
+        ? Array.isArray(pathwayTemplateTags)
+          ? pathwayTemplateTags
+          : [pathwayTemplateTags]
+        : []
+
+      const buffer = await patientDomain.exportExcel({ search, pathwayTemplateTags: tags })
+
+      const filename = `patients_${new Date().toISOString().slice(0, 10)}.xlsx`
+      await reply
+        .header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        .header('Content-Disposition', `attachment; filename="${filename}"`)
+        .send(buffer)
+    },
+  )
+
   // Get all with pathway template tags (must be before /:patientID)
   fastify.get(
     '/with-tags',

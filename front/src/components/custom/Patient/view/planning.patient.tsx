@@ -172,18 +172,24 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
           editable={false}
           initialDate={savedDate}
           handleClickEvent={showAvailableSlots ? handleClickSlot : undefined}
-          handleSelectEvent={showAvailableSlots ? handleSelectPatientSlot : undefined}
-          selectAllow={showAvailableSlots ? (selectInfo) => {
-            const selStart = dayjs(selectInfo.start)
-            const selEnd = dayjs(selectInfo.end)
-            return (slots ?? []).some(
-              (slot) =>
-                slot.slotTemplate.isIndividual &&
-                !enrolledSlotIds.has(slot.id) &&
-                selStart.isSameOrAfter(dayjs(slot.startDate)) &&
-                selEnd.isSameOrBefore(dayjs(slot.endDate)),
-            )
-          } : undefined}
+          handleSelectEvent={
+            showAvailableSlots ? handleSelectPatientSlot : undefined
+          }
+          selectAllow={
+            showAvailableSlots
+              ? (selectInfo) => {
+                  const selStart = dayjs(selectInfo.start)
+                  const selEnd = dayjs(selectInfo.end)
+                  return (slots ?? []).some(
+                    (slot) =>
+                      slot.slotTemplate.isIndividual &&
+                      !enrolledSlotIds.has(slot.id) &&
+                      selStart.isSameOrAfter(dayjs(slot.startDate)) &&
+                      selEnd.isSameOrBefore(dayjs(slot.endDate)),
+                  )
+                }
+              : undefined
+          }
           unselectRef={calendarUnselectRef}
           headerToolbar={{
             left: 'title',
@@ -196,7 +202,9 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
         <AddAppointmentForm
           open={openCreateAppointmentModal}
           setOpen={(open) => {
-            if (!open) calendarUnselectRef.current?.()
+            if (!open) {
+              calendarUnselectRef.current?.()
+            }
             setOpenCreateAppointmentModal(open)
           }}
           startDate={selectedSlotStart}

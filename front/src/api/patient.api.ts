@@ -147,6 +147,22 @@ export const PatientApi = {
     }
   },
 
+  exportExcel: async (filters?: { search?: string; pathwayTemplateTags?: string[] }): Promise<Blob> => {
+    const params = new URLSearchParams()
+    if (filters?.search) params.set('search', filters.search)
+    for (const tag of filters?.pathwayTemplateTags ?? []) {
+      params.append('pathwayTemplateTags', tag)
+    }
+    const qs = params.toString()
+    const response = await fetchWithAuth(`${apiUrl}/patient/export${qs ? `?${qs}` : ''}`, {
+      method: 'GET',
+    })
+    if (!response.ok) {
+      handleHttpError(response, {}, "Impossible d'exporter les patients")
+    }
+    return response.blob()
+  },
+
   delete: async (patientID: string): Promise<void> => {
     const response = await fetchWithAuth(`${apiUrl}/patient/${patientID}`, {
       method: 'DELETE',
