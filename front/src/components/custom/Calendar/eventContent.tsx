@@ -68,16 +68,17 @@ export const EventContent = ({
       {onDuplicate &&
         !containsKeyword(states, ['editable', 'individual', 'multiple']) &&
         (type === 'slot' || type === 'template') && (
-          <button
-            type="button"
+          <Button
+            variant="none"
+            className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10 h-auto w-auto p-0.5 rounded bg-black/20 hover:bg-black/40 text-white"
             onClick={(e) => {
               e.stopPropagation()
               onDuplicate(event.id)
             }}
-            className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10 p-0.5 rounded bg-black/20 hover:bg-black/40"
+            onMouseDown={(e) => e.stopPropagation()}
           >
-            <Copy className="w-2.5 h-2.5 text-white" />
-          </button>
+            <Copy className="w-2.5 h-2.5" />
+          </Button>
         )}
 
       {(!isFillable || (isFillable && appointments.length === 0)) && (
