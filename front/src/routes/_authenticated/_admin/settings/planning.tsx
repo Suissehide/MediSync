@@ -211,7 +211,7 @@ function Planning() {
     if (eventId.startsWith('slot_')) {
       const slotId = eventId.replace('slot_', '')
       const slot = slots?.find((s) => s.id === slotId)
-      if (!slot) return
+      if (!slot) { return }
       const duplicateParams: CreateSlotParamsWithTemplateData = {
         startDate: slot.startDate,
         endDate: slot.endDate,
@@ -232,7 +232,7 @@ function Planning() {
       const slotTemplate = currentPathwayTemplate?.slotTemplates?.find(
         (t) => t.id === templateId,
       )
-      if (!slotTemplate || !currentPathwayTemplate) return
+      if (!slotTemplate || !currentPathwayTemplate) { return }
       createSlotTemplate.mutate({
         startTime: slotTemplate.startTime,
         endTime: slotTemplate.endTime,
