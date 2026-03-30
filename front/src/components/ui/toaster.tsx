@@ -191,8 +191,8 @@ export function Toaster() {
 
   return (
     <ToastProvider>
-      {/* biome-ignore lint/a11y/noStaticElementInteractions: hover-only expand behavior, no keyboard interaction needed */}
-      <div
+      <section
+        aria-label="Notifications"
         className="fixed bottom-4 right-4 z-[999] w-full sm:max-w-[400px]"
         onMouseEnter={() => hasMultiple && setExpanded(true)}
         onMouseLeave={() => setExpanded(false)}
@@ -233,7 +233,7 @@ export function Toaster() {
             )
           })}
         </div>
-      </div>
+      </section>
     </ToastProvider>
   )
 }
