@@ -141,6 +141,7 @@ function Calendar({
   }
 
   const clickedEventRef = useRef<string | null>(null)
+  const isDraggingRef = useRef(false)
 
   useEffect(() => {
     const handleMouseDown = (e: MouseEvent) => {
@@ -169,7 +170,9 @@ function Calendar({
       }
 
       clickedEventRef.current = null
-      handleClickEvent?.(clicked)
+      if (!isDraggingRef.current) {
+        handleClickEvent?.(clicked)
+      }
     }
 
     document.addEventListener('mousedown', handleMouseDown)
@@ -248,6 +251,22 @@ function Calendar({
         }}
         eventDrop={handleEventDrop}
         eventResize={handleResize}
+        eventDragStart={() => {
+          isDraggingRef.current = true
+        }}
+        eventDragStop={() => {
+          setTimeout(() => {
+            isDraggingRef.current = false
+          }, 0)
+        }}
+        eventResizeStart={() => {
+          isDraggingRef.current = true
+        }}
+        eventResizeStop={() => {
+          setTimeout(() => {
+            isDraggingRef.current = false
+          }, 0)
+        }}
         events={[...events, ...forbiddenWeekEvents]}
         eventOverlap={overlap}
         slotEventOverlap={overlap}
