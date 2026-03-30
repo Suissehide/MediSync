@@ -1,7 +1,7 @@
 import type { EventContentArg } from '@fullcalendar/core'
 import { clsx } from 'clsx'
 import dayjs from 'dayjs'
-import { Plus } from 'lucide-react'
+import { Copy, Plus } from 'lucide-react'
 
 import { containsKeyword } from '../../../libs/utils.ts'
 import type { Appointment } from '../../../types/appointment.ts'
@@ -12,12 +12,14 @@ type Props = {
   setOpenEventId?: (eventId: string) => void
   eventContent: EventContentArg
   editMode?: boolean
+  onDuplicate?: (eventId: string) => void
 }
 
 export const EventContent = ({
   eventContent,
   setOpenEventId,
   editMode,
+  onDuplicate,
 }: Props) => {
   const { event, timeText } = eventContent
   const { states, appointments, thematic, type } = event.extendedProps
@@ -63,6 +65,21 @@ export const EventContent = ({
         },
       )}
     >
+      {onDuplicate &&
+        !containsKeyword(states, ['editable', 'individual', 'multiple']) &&
+        (type === 'slot' || type === 'template') && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onDuplicate(event.id)
+            }}
+            className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10 p-0.5 rounded bg-black/20 hover:bg-black/40"
+          >
+            <Copy className="w-2.5 h-2.5 text-white" />
+          </button>
+        )}
+
       {(!isFillable || (isFillable && appointments.length === 0)) && (
         <span className="p-0.5">
           <div className="text-[0.65rem] whitespace-nowrap">{timeText}</div>
