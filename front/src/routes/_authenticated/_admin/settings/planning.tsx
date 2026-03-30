@@ -207,6 +207,47 @@ function Planning() {
     }
   }
 
+  const handleDuplicateSlot = (eventId: string) => {
+    if (eventId.startsWith('slot_')) {
+      const slotId = eventId.replace('slot_', '')
+      const slot = slots?.find((s) => s.id === slotId)
+      if (!slot) return
+      const duplicateParams: CreateSlotParamsWithTemplateData = {
+        startDate: slot.startDate,
+        endDate: slot.endDate,
+        slotTemplate: {
+          startTime: slot.startDate,
+          endTime: slot.endDate,
+          thematic: slot.slotTemplate.thematic,
+          location: slot.slotTemplate.location,
+          description: slot.slotTemplate.description,
+          color: slot.slotTemplate.color,
+          isIndividual: slot.slotTemplate.isIndividual,
+          soignantID: slot.slotTemplate.soignant?.id ?? '',
+        },
+      }
+      createSlot.mutate(duplicateParams)
+    } else if (eventId.startsWith('template_')) {
+      const templateId = eventId.replace('template_', '')
+      const slotTemplate = currentPathwayTemplate?.slotTemplates?.find(
+        (t) => t.id === templateId,
+      )
+      if (!slotTemplate || !currentPathwayTemplate) return
+      createSlotTemplate.mutate({
+        startTime: slotTemplate.startTime,
+        endTime: slotTemplate.endTime,
+        offsetDays: slotTemplate.offsetDays,
+        thematic: slotTemplate.thematic,
+        location: slotTemplate.location,
+        description: slotTemplate.description,
+        color: slotTemplate.color,
+        isIndividual: slotTemplate.isIndividual,
+        soignantID: slotTemplate.soignant?.id ?? '',
+        templateID: currentPathwayTemplate.id,
+      })
+    }
+  }
+
   const handleForbiddenWeekCreate = (date: string) => {
     setCreateForbiddenWeekDate(date)
   }
@@ -337,6 +378,7 @@ function Planning() {
                 editMode={editMode}
                 editable={true}
                 forbiddenWeeks={forbiddenWeeks ?? []}
+                onDuplicate={handleDuplicateSlot}
               />
             ) : (
               <div
