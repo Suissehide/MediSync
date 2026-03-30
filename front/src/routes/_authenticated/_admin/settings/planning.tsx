@@ -53,7 +53,10 @@ import {
 } from '../../../../queries/useSlot.ts'
 import { useSlotTemplateMutations } from '../../../../queries/useSlotTemplate.ts'
 import { usePathwayTemplateEditStore } from '../../../../store/usePathwayTemplateEditStore.ts'
-import type { CreateSlotParamsWithTemplateData } from '../../../../types/slot.ts'
+import type {
+  CreateSlotParamsWithTemplateData,
+  CreateSlotParamsWithTemplateID,
+} from '../../../../types/slot.ts'
 
 export const Route = createFileRoute(
   '/_authenticated/_admin/settings/planning',
@@ -225,19 +228,10 @@ function Planning() {
       const slotId = eventId.replace('slot_', '')
       const slot = slots?.find((s) => s.id === slotId)
       if (!slot) { return }
-      const duplicateParams: CreateSlotParamsWithTemplateData = {
+      const duplicateParams: CreateSlotParamsWithTemplateID = {
         startDate: slot.startDate,
         endDate: slot.endDate,
-        slotTemplate: {
-          startTime: slot.startDate,
-          endTime: slot.endDate,
-          thematic: slot.slotTemplate.thematic,
-          location: slot.slotTemplate.location,
-          description: slot.slotTemplate.description,
-          color: slot.slotTemplate.color,
-          isIndividual: slot.slotTemplate.isIndividual,
-          soignantID: slot.slotTemplate.soignant?.id ?? '',
-        },
+        slotTemplateID: slot.slotTemplate.id,
       }
       createSlot.mutate(duplicateParams)
     } else if (eventId.startsWith('template_')) {
