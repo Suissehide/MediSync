@@ -227,6 +227,7 @@ function Calendar({
         slotMinTime="06:00:00"
         slotDuration="00:30:00"
         slotLabelInterval="01:00"
+        snapDuration="00:15:00"
         editable={editable}
         select={handleSelect}
         dateClick={(info) => {
