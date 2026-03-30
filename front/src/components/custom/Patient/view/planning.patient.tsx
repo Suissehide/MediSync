@@ -123,10 +123,10 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
   const handleCreateAppointment = (newAppointment: CreateAppointmentParams) => {
     createAppointment.mutate(newAppointment, {
       onSuccess: async () => {
+        setOpenCreateAppointmentModal(false)
         await queryClient.invalidateQueries({ queryKey: [SLOT.GET_ALL] })
       },
     })
-    setOpenCreateAppointmentModal(false)
   }
 
   return (
