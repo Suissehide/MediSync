@@ -125,6 +125,14 @@ class PathwayRepository implements PathwayRepositoryInterface {
       },
     })
 
+    const pathwayIds = pathways.map((p) => p.id)
+    const endDates = await this.prisma.slot.groupBy({
+      by: ['pathwayID'],
+      where: { pathwayID: { in: pathwayIds } },
+      _max: { endDate: true },
+    })
+    const endDateMap = new Map(endDates.map((e) => [e.pathwayID, e._max.endDate]))
+
     return pathways.map((pathway) => {
       const patientMap = new Map<string, TrackingPathwayRepo['patients'][number]>()
 
@@ -151,6 +159,7 @@ class PathwayRepository implements PathwayRepositoryInterface {
       return {
         id: pathway.id,
         startDate: pathway.startDate,
+        endDate: endDateMap.get(pathway.id) ?? null,
         template: pathway.template
           ? {
               id: pathway.template.id,

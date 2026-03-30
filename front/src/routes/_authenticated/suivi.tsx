@@ -1,5 +1,5 @@
 import { DateCalendar } from '@mui/x-date-pickers'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import {
   type Column,
   type ColumnDef,
@@ -20,7 +20,7 @@ import {
   PopoverRoot,
   PopoverTrigger,
 } from '../../components/ui/popover.tsx'
-import { hexToRgba } from '../../libs/utils.ts'
+import { hexToRGBA } from '../../libs/color.ts'
 import { usePathwayTrackingQuery } from '../../queries/usePathway.ts'
 
 export const Route = createFileRoute('/_authenticated/suivi')({
@@ -30,8 +30,11 @@ export const Route = createFileRoute('/_authenticated/suivi')({
 type SuiviRow = {
   id: string
   type: 'group' | 'patient'
+  patientId?: string
   pathwayColor: string
   pathwayName: string
+  pathwayStartDate?: string
+  pathwayEndDate?: string | null
   firstName: string
   lastName: string
   days: Map<number, { status: string | null }>
@@ -57,6 +60,7 @@ function getCommonPinningStyles(
 }
 
 function SuiviPage() {
+  const navigate = useNavigate()
   const [date, setDate] = useState<Dayjs>(dayjs())
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -89,6 +93,8 @@ function SuiviPage() {
         type: 'group',
         pathwayColor: color,
         pathwayName: name,
+        pathwayStartDate: pathway.startDate,
+        pathwayEndDate: pathway.endDate,
         firstName: '',
         lastName: '',
         days: new Map(),
@@ -97,6 +103,7 @@ function SuiviPage() {
       const patientRows: SuiviRow[] = pathway.patients.map((patient) => ({
         id: `${pathway.id}-${patient.id}`,
         type: 'patient',
+        patientId: patient.id,
         pathwayColor: color,
         pathwayName: name,
         firstName: patient.firstName,
@@ -249,7 +256,7 @@ function SuiviPage() {
                             colSpan={days.length + 1}
                             className="px-3 py-1.5 text-sm font-semibold border-b border-border"
                             style={{
-                              backgroundColor: hexToRgba(
+                              backgroundColor: hexToRGBA(
                                 row.original.pathwayColor,
                                 0.12,
                               ),
@@ -262,6 +269,15 @@ function SuiviPage() {
                               }}
                             />
                             {row.original.pathwayName}
+                            {row.original.pathwayStartDate && (
+                              <span className="ml-3 font-normal text-text-light">
+                                {dayjs(row.original.pathwayStartDate).format('DD/MM/YYYY')}
+                                {' – '}
+                                {row.original.pathwayEndDate
+                                  ? dayjs(row.original.pathwayEndDate).format('DD/MM/YYYY')
+                                  : '…'}
+                              </span>
+                            )}
                           </td>
                         </tr>
                       )
@@ -270,7 +286,8 @@ function SuiviPage() {
                     return (
                       <tr
                         key={row.id}
-                        className="border-b border-border hover:bg-primary/5 transition-colors"
+                        className="border-b border-border hover:bg-primary/5 transition-colors cursor-pointer"
+                        onClick={() => row.original.patientId && void navigate({ to: '/patient/$patientID', params: { patientID: row.original.patientId } })}
                       >
                         {row.getVisibleCells().map((cell) => {
                           const isPinned = cell.column.getIsPinned()
@@ -296,7 +313,7 @@ function SuiviPage() {
                                 height: 40,
                                 ...(apt
                                   ? {
-                                      backgroundColor: hexToRgba(
+                                      backgroundColor: hexToRGBA(
                                         row.original.pathwayColor,
                                         0.3,
                                       ),
@@ -326,6 +343,19 @@ function SuiviPage() {
                   })}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {trackingPathways && trackingPathways.length > 0 && (
+            <div className="mt-3 flex items-center gap-4 text-xs text-text-light">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-foreground inline-block" />
+                Présent
+              </span>
+              <span className="flex items-center gap-1.5">
+                <X className="w-3 h-3 text-red-500" />
+                Absent / refus
+              </span>
             </div>
           )}
         </div>

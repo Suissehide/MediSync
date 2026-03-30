@@ -77,6 +77,7 @@ const trackingPathwayTemplateSchema = z.object({
 export const trackingPathwaySchema = z.object({
   id: z.cuid(),
   startDate: z.coerce.date(),
+  endDate: z.coerce.date().nullable(),
   template: trackingPathwayTemplateSchema.nullable(),
   patients: z.array(trackingPatientSchema),
 })

@@ -36,6 +36,7 @@ export type TrackingPatient = {
 export type TrackingPathway = {
   id: string
   startDate: string
+  endDate: string | null
   template: {
     id: string
     name: string

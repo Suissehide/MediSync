@@ -125,6 +125,7 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
     if (enrolledSlotIds.has(slotId)) {
       const appointmentId = patientAppointmentBySlotId.get(slotId)
       if (appointmentId) {
+        setSelectedSlotSoignant(slot.slotTemplate.soignant ?? undefined)
         setOpenAppointmentId(appointmentId)
       }
     } else {
@@ -222,6 +223,7 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
         open={!!openAppointmentId}
         setOpen={setOpenAppointmentId}
         eventID={openAppointmentId}
+        soignant={selectedSlotSoignant}
       />
     </div>
   )

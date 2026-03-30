@@ -178,9 +178,9 @@ export default function AppointmentSheet({
               <SheetTitle className="mb-[-4px]">Rendez-vous</SheetTitle>
               <div className="text-sm text-text-light">
                 {`${dayjs(appointment?.startDate)
-                  .format('dddd D MMMM [de] hh:mm')
+                  .format('dddd D MMMM [de] HH:mm')
                   .replace(/^./, (c) => c.toUpperCase())}
-                    ${dayjs(appointment?.endDate).format('[à] hh:mm')}
+                    ${dayjs(appointment?.endDate).format('[à] HH:mm')}
                     ${formatDuration(appointment?.startDate, appointment?.endDate)}`}
               </div>
             </div>
