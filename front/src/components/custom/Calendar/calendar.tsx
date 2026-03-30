@@ -31,6 +31,7 @@ export interface CalendarEvent {
   textColor?: string
   backgroundColor?: string
   borderColor?: string
+  editable?: boolean
   extendedProps?: {
     type?: string
     templateID?: string
@@ -59,6 +60,7 @@ interface CalendarProps {
   onForbiddenWeekDelete?: (id: string) => void
   onDuplicate?: (eventId: string) => void
   onDelete?: (eventId: string) => void
+  unselectRef?: React.MutableRefObject<(() => void) | null>
 }
 
 function Calendar({
@@ -79,9 +81,16 @@ function Calendar({
   onForbiddenWeekDelete,
   onDuplicate,
   onDelete,
+  unselectRef,
 }: CalendarProps) {
   const lastDropTimeRef = useRef<number>(0)
   const calendarRef = useRef<FullCalendar | null>(null)
+
+  useEffect(() => {
+    if (unselectRef) {
+      unselectRef.current = () => calendarRef.current?.getApi().unselect()
+    }
+  }, [unselectRef])
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
   const [currentView, setCurrentView] = useState('timeGridWeek')
   const [currentViewStart, setCurrentViewStart] = useState<string>('')
@@ -200,7 +209,7 @@ function Calendar({
         weekends={false}
         allDaySlot={false}
         selectMirror={true}
-        selectable={true}
+        selectable={!!handleSelectEvent}
         selectOverlap={true}
         unselectAuto={true}
         nowIndicator={true}

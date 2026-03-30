@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import dayjs from 'dayjs'
 import { CalendarRange } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import Calendar, {
   type CalendarEvent,
@@ -45,6 +45,7 @@ function Dashboard() {
   const [selectedEvent, setSelectedEvent] = useState('')
   const [maxDate, setMaxDate] = useState('')
   const [type, setType] = useState('')
+  const calendarUnselectRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     if (slots) {
@@ -122,7 +123,7 @@ function Dashboard() {
             </h1>
           </div>
 
-          <div className="flex-1 min-h-0 overflow-hidden">
+          <div className="fc-dashboard flex-1 min-h-0 overflow-hidden">
             <Calendar
               events={events}
               editable={false}
@@ -174,6 +175,7 @@ function Dashboard() {
                   return !overlapsAppointment
                 })
               }}
+              unselectRef={calendarUnselectRef}
             />
           </div>
         </div>
@@ -181,7 +183,10 @@ function Dashboard() {
         {openCreateAppointmentModal && (
           <AddAppointmentForm
             open={openCreateAppointmentModal}
-            setOpen={setOpenCreateAppointmentModal}
+            setOpen={(open) => {
+              if (!open) calendarUnselectRef.current?.()
+              setOpenCreateAppointmentModal(open)
+            }}
             startDate={selectedDate.startStr}
             endDate={selectedDate.endStr}
             maxDate={maxDate}

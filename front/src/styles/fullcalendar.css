@@ -5,8 +5,12 @@
 /* TOOLBAR */
 
 .fc .fc-header-toolbar {
-  padding: 0 24px;
+  flex-wrap: wrap;
   gap: 1em;
+}
+
+.fc-dashboard .fc .fc-header-toolbar {
+  padding: 0 24px;
 }
 
 .fc .fc-header-toolbar .fc-toolbar-chunk {
@@ -190,7 +194,7 @@ thead .fc-theme-standard th {
    children are colored — prevents the outer month-level <tr> (which also
    receives :hover) from highlighting the entire month in dayGridYear. */
 .forbidden-week-mode tr:hover > td.fc-day {
-  background-color: rgba(239, 68, 68, 0.20) !important;
+  background-color: rgba(239, 68, 68, 0.2) !important;
 }
 
 /* Pointer cursor on day cells when in forbidden-week-mode */

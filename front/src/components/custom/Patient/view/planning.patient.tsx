@@ -1,5 +1,7 @@
+import type { DateSelectArg } from '@fullcalendar/core'
 import { useQueryClient } from '@tanstack/react-query'
-import { useMemo, useState } from 'react'
+import dayjs from 'dayjs'
+import { useMemo, useRef, useState } from 'react'
 
 import { SLOT } from '../../../../constants/process.constant.ts'
 import { hexToRGBA } from '../../../../libs/color.ts'
@@ -35,6 +37,8 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
     Soignant | undefined
   >()
   const [selectedSlotType, setSelectedSlotType] = useState('')
+  const [selectedSlotMaxDate, setSelectedSlotMaxDate] = useState('')
+  const calendarUnselectRef = useRef<(() => void) | null>(null)
 
   const queryClient = useQueryClient()
   const { createAppointment } = useAppointmentMutations()
@@ -105,6 +109,12 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
       }
     }, [slots, patient])
 
+  const handleSelectPatientSlot = (dateSelectArg: DateSelectArg) => {
+    setSelectedSlotStart(dateSelectArg.startStr)
+    setSelectedSlotEnd(dateSelectArg.endStr)
+    setSelectedSlotType('individual')
+  }
+
   const handleClickSlot = (eventId: string) => {
     const slotId = eventId.replace('slot_', '')
     const slot = slots?.find((s) => s.id === slotId)
@@ -118,13 +128,15 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
         setOpenAppointmentId(appointmentId)
       }
     } else {
+      const isIndividual = slot.slotTemplate.isIndividual
       setSelectedSlotID(slotId)
-      setSelectedSlotStart(slot.startDate)
-      setSelectedSlotEnd(slot.endDate)
       setSelectedSlotSoignant(slot.slotTemplate.soignant ?? undefined)
-      setSelectedSlotType(
-        slot.slotTemplate.isIndividual ? 'individual' : 'multiple',
-      )
+      setSelectedSlotMaxDate(slot.endDate)
+      setSelectedSlotType(isIndividual ? 'individual' : 'multiple')
+      if (!isIndividual) {
+        setSelectedSlotStart(slot.startDate)
+        setSelectedSlotEnd(slot.endDate)
+      }
       setOpenCreateAppointmentModal(true)
     }
   }
@@ -140,7 +152,7 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
 
   return (
     <div className="flex-1 min-h-0 overflow-hidden flex flex-col gap-3 mt-4">
-      <div className="flex items-center gap-2 px-1">
+      <div className="flex justify-end items-center gap-2 px-1">
         <Switch
           checked={showAvailableSlots}
           onCheckedChange={setShowAvailableSlots}
@@ -150,7 +162,7 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
           htmlFor="available-slots-switch"
           className="text-sm text-text-light cursor-pointer select-none"
         >
-          Créneaux disponibles
+          Afficher les créneaux disponibles
         </label>
       </div>
 
@@ -160,6 +172,19 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
           editable={false}
           initialDate={savedDate}
           handleClickEvent={showAvailableSlots ? handleClickSlot : undefined}
+          handleSelectEvent={showAvailableSlots ? handleSelectPatientSlot : undefined}
+          selectAllow={showAvailableSlots ? (selectInfo) => {
+            const selStart = dayjs(selectInfo.start)
+            const selEnd = dayjs(selectInfo.end)
+            return (slots ?? []).some(
+              (slot) =>
+                slot.slotTemplate.isIndividual &&
+                !enrolledSlotIds.has(slot.id) &&
+                selStart.isSameOrAfter(dayjs(slot.startDate)) &&
+                selEnd.isSameOrBefore(dayjs(slot.endDate)),
+            )
+          } : undefined}
+          unselectRef={calendarUnselectRef}
           headerToolbar={{
             left: 'title',
             right: 'prev,next today',
@@ -170,10 +195,13 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
       {openCreateAppointmentModal && (
         <AddAppointmentForm
           open={openCreateAppointmentModal}
-          setOpen={setOpenCreateAppointmentModal}
+          setOpen={(open) => {
+            if (!open) calendarUnselectRef.current?.()
+            setOpenCreateAppointmentModal(open)
+          }}
           startDate={selectedSlotStart}
           endDate={selectedSlotEnd}
-          maxDate={selectedSlotEnd}
+          maxDate={selectedSlotMaxDate}
           slotID={selectedSlotID}
           soignant={selectedSlotSoignant}
           type={selectedSlotType}
