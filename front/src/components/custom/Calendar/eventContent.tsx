@@ -1,7 +1,7 @@
 import type { EventContentArg } from '@fullcalendar/core'
 import { clsx } from 'clsx'
 import dayjs from 'dayjs'
-import { Copy, Plus } from 'lucide-react'
+import { Copy, Plus, Trash2 } from 'lucide-react'
 
 import { containsKeyword } from '../../../libs/utils.ts'
 import type { Appointment } from '../../../types/appointment.ts'
@@ -13,6 +13,7 @@ type Props = {
   eventContent: EventContentArg
   editMode?: boolean
   onDuplicate?: (eventId: string) => void
+  onDelete?: (eventId: string) => void
 }
 
 export const EventContent = ({
@@ -20,6 +21,7 @@ export const EventContent = ({
   setOpenEventId,
   editMode,
   onDuplicate,
+  onDelete,
 }: Props) => {
   const { event, timeText } = eventContent
   const { states, appointments, thematic, type } = event.extendedProps
@@ -78,6 +80,22 @@ export const EventContent = ({
             onMouseDown={(e) => e.stopPropagation()}
           >
             <Copy className="w-2.5 h-2.5" />
+          </Button>
+        )}
+
+      {onDelete &&
+        !containsKeyword(states, ['editable', 'individual', 'multiple']) &&
+        (type === 'slot' || type === 'template') && (
+          <Button
+            variant="none"
+            className="absolute top-5 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10 h-auto w-auto p-0.5 rounded bg-black/20 hover:bg-red-500 text-white"
+            onClick={(e) => {
+              e.stopPropagation()
+              onDelete(event.id)
+            }}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <Trash2 className="w-2.5 h-2.5" />
           </Button>
         )}
 

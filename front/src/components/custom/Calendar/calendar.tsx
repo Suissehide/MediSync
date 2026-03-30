@@ -58,6 +58,7 @@ interface CalendarProps {
   onForbiddenWeekCreate?: (date: string) => void
   onForbiddenWeekDelete?: (id: string) => void
   onDuplicate?: (eventId: string) => void
+  onDelete?: (eventId: string) => void
 }
 
 function Calendar({
@@ -77,6 +78,7 @@ function Calendar({
   onForbiddenWeekCreate,
   onForbiddenWeekDelete,
   onDuplicate,
+  onDelete,
 }: CalendarProps) {
   const lastDropTimeRef = useRef<number>(0)
   const calendarRef = useRef<FullCalendar | null>(null)
@@ -85,7 +87,7 @@ function Calendar({
   const [currentViewStart, setCurrentViewStart] = useState<string>('')
 
   const showDayEmptyState = useMemo(() => {
-    if (currentView !== 'dayGridDay' || !currentViewStart) return false
+    if (currentView !== 'dayGridDay' || !currentViewStart) { return false }
     const dayStart = dayjs(currentViewStart).startOf('day')
     const dayEnd = dayStart.endOf('day')
     return !events.some(
@@ -236,7 +238,7 @@ function Calendar({
         editable={editable}
         select={handleSelect}
         dateClick={(info) => {
-          if (!onForbiddenWeekCreate && !onForbiddenWeekDelete) return
+          if (!onForbiddenWeekCreate && !onForbiddenWeekDelete) { return }
           const clickedDate = dayjs(info.date)
           const matchingForbiddenWeek = forbiddenWeeks.find((fw) => {
             const start = dayjs(fw.startOfWeek)
@@ -278,6 +280,7 @@ function Calendar({
             eventContent={eventContent}
             editMode={editMode}
             onDuplicate={onDuplicate}
+            onDelete={onDelete}
           />
         )}
         noEventsContent={() => (

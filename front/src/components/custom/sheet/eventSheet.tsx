@@ -2,10 +2,13 @@ import dayjs from 'dayjs'
 import { ChevronDown, FilePlus, Loader2Icon } from 'lucide-react'
 import { useEffect } from 'react'
 
+import { useState } from 'react'
+
 import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { formatDuration } from '../../../libs/utils.ts'
 import { usePathwayMutations } from '../../../queries/usePathway.ts'
 import { useSlotByIDQuery, useSlotMutations } from '../../../queries/useSlot.ts'
+import { ConfirmDeleteForm } from '../popup/confirmDeleteForm.tsx'
 import { useSoignantQueries } from '../../../queries/useSoignant.ts'
 import type { UpdateSlotParams } from '../../../types/slot.ts'
 import { Button } from '../../ui/button.tsx'
@@ -37,11 +40,13 @@ export default function EventSheet({
   eventID,
   handleDeleteEvent,
 }: EventSheetProps) {
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
   useSoignantQueries()
   const { isPending, slot, refetch } = useSlotByIDQuery(eventID, {
     enabled: false,
   })
-  const { updateSlot } = useSlotMutations()
+  const { updateSlot, deleteSlot } = useSlotMutations()
   const { deletePathway } = usePathwayMutations()
 
   const hasPathway = slot?.pathway?.id
@@ -179,7 +184,7 @@ export default function EventSheet({
                 <div className="flex">
                   <Button
                     variant="destructive"
-                    onClick={() => handleDeleteSlot()}
+                    onClick={() => setShowDeleteConfirm(true)}
                     className={`${hasPathway ? 'rounded-r-none' : ''}`}
                   >
                     Supprimer
@@ -219,6 +224,17 @@ export default function EventSheet({
           )}
         </div>
       </SheetContent>
+      <ConfirmDeleteForm
+        open={showDeleteConfirm}
+        setOpen={setShowDeleteConfirm}
+        onConfirm={() => {
+          handleDeleteSlot()
+          setShowDeleteConfirm(false)
+        }}
+        loading={deleteSlot.isPending}
+        title="Supprimer le créneau"
+        description="Voulez-vous vraiment supprimer ce créneau ? Cette action est irréversible."
+      />
     </Sheet>
   )
 }

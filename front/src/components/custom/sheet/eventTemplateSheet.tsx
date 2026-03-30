@@ -1,6 +1,6 @@
 import dayjs from 'dayjs'
 import { FilePlus, Loader2Icon } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
 import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { formatDuration } from '../../../libs/utils.ts'
@@ -8,6 +8,7 @@ import {
   useSlotTemplateByIDQuery,
   useSlotTemplateMutations,
 } from '../../../queries/useSlotTemplate.ts'
+import { ConfirmDeleteForm } from '../popup/confirmDeleteForm.tsx'
 import { useSoignantQueries } from '../../../queries/useSoignant.ts'
 import type { UpdateSlotTemplateParams } from '../../../types/slotTemplate.ts'
 import { Button } from '../../ui/button.tsx'
@@ -33,11 +34,13 @@ export default function EventTemplateSheet({
   eventTemplateID,
   handleDeleteEvent,
 }: EventTemplateSheetProps) {
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
   const { isPending, slotTemplate, refetch } = useSlotTemplateByIDQuery(
     eventTemplateID,
     { enabled: false },
   )
-  const { updateSlotTemplate } = useSlotTemplateMutations()
+  const { updateSlotTemplate, deleteSlotTemplate } = useSlotTemplateMutations()
 
   useSoignantQueries()
 
@@ -159,7 +162,7 @@ export default function EventTemplateSheet({
 
               <div className="px-4 py-4 flex justify-between gap-4 shrink-0">
                 <div>
-                  <Button variant="destructive" onClick={() => handleDelete()}>
+                  <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)}>
                     Supprimer
                   </Button>
                 </div>
@@ -176,6 +179,17 @@ export default function EventTemplateSheet({
           )}
         </div>
       </SheetContent>
+      <ConfirmDeleteForm
+        open={showDeleteConfirm}
+        setOpen={setShowDeleteConfirm}
+        onConfirm={() => {
+          handleDelete()
+          setShowDeleteConfirm(false)
+        }}
+        loading={deleteSlotTemplate.isPending}
+        title="Supprimer le template"
+        description="Voulez-vous vraiment supprimer ce template de créneau ? Cette action est irréversible."
+      />
     </Sheet>
   )
 }

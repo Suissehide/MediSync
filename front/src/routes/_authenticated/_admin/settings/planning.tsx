@@ -15,6 +15,7 @@ import Calendar, {
   type CalendarEvent,
 } from '../../../../components/custom/Calendar/calendar.tsx'
 import AddSlotForm from '../../../../components/custom/popup/addSlotForm.tsx'
+import { ConfirmDeleteForm } from '../../../../components/custom/popup/confirmDeleteForm.tsx'
 import { CreateForbiddenWeekForm } from '../../../../components/custom/popup/createForbiddenWeekForm.tsx'
 import { DeleteForbiddenWeekForm } from '../../../../components/custom/popup/deleteForbiddenWeekForm.tsx'
 import EventSheet from '../../../../components/custom/sheet/eventSheet.tsx'
@@ -97,6 +98,7 @@ function Planning() {
     anchor: { getBoundingClientRect: () => DOMRect }
   } | null>(null)
   const [openEventId, setOpenEventId] = useState('')
+  const [deleteConfirmEventId, setDeleteConfirmEventId] = useState<string | null>(null)
   const [openCreateSlotModal, setOpenCreateSlotModal] = useState(false)
   const [selectedDate, setSelectedDate] = useState<DateSelectArg | null>(null)
   const [events, setEvents] = useState<CalendarEvent[]>([])
@@ -205,6 +207,17 @@ function Planning() {
       setEvents((prev) => prev.filter((event) => event.id !== id))
       deleteSlot.mutate(id)
     }
+  }
+
+  const handleDeleteHoverSlot = (eventId: string) => {
+    setDeleteConfirmEventId(eventId)
+  }
+
+  const handleConfirmDeleteHoverSlot = () => {
+    if (!deleteConfirmEventId) { return }
+    const id = deleteConfirmEventId.replace(/^.*?_/, '')
+    handleDeleteEvent(id)
+    setDeleteConfirmEventId(null)
   }
 
   const handleDuplicateSlot = (eventId: string) => {
@@ -379,6 +392,7 @@ function Planning() {
                 editable={true}
                 forbiddenWeeks={forbiddenWeeks ?? []}
                 onDuplicate={handleDuplicateSlot}
+                onDelete={handleDeleteHoverSlot}
               />
             ) : (
               <div
@@ -522,6 +536,15 @@ function Planning() {
             </div>
           </PopoverContent>
         </PopoverRoot>
+
+        <ConfirmDeleteForm
+          open={!!deleteConfirmEventId}
+          setOpen={(open) => { if (!open) { setDeleteConfirmEventId(null) } }}
+          onConfirm={handleConfirmDeleteHoverSlot}
+          loading={deleteSlot.isPending || deleteSlotTemplate.isPending}
+          title="Supprimer le créneau"
+          description="Voulez-vous vraiment supprimer ce créneau ? Cette action est irréversible."
+        />
 
         <AddSlotForm
           open={openCreateSlotModal}
