@@ -57,6 +57,7 @@ interface CalendarProps {
   forbiddenWeeks?: { id: string; startOfWeek: string }[]
   onForbiddenWeekCreate?: (date: string) => void
   onForbiddenWeekDelete?: (id: string) => void
+  onDuplicate?: (eventId: string) => void
 }
 
 function Calendar({
@@ -75,6 +76,7 @@ function Calendar({
   forbiddenWeeks = [],
   onForbiddenWeekCreate,
   onForbiddenWeekDelete,
+  onDuplicate,
 }: CalendarProps) {
   const lastDropTimeRef = useRef<number>(0)
   const calendarRef = useRef<FullCalendar | null>(null)
@@ -275,6 +277,7 @@ function Calendar({
             setOpenEventId={handleOpenEvent}
             eventContent={eventContent}
             editMode={editMode}
+            onDuplicate={onDuplicate}
           />
         )}
         noEventsContent={() => (
