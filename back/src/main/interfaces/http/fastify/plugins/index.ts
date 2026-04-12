@@ -5,7 +5,6 @@ import fastifyGracefulShutdown from 'fastify-graceful-shutdown'
 import fastifyPlugin from 'fastify-plugin'
 
 import { registerPlugin } from '../util/fastify-plugin.registerer'
-import { apidocPlugin } from './apidoc.plugin'
 import { awilixPlugin } from './awilix.plugin'
 import { cookiePlugin } from './cookie.plugin'
 import { jwtPlugin } from './jwt.plugin'
@@ -37,7 +36,6 @@ const plugins: FastifyPluginAsync = fastifyPlugin(
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     })
     await registerPlugin(fastify, 'accepts', fastifyAccepts)
-    await registerPlugin(fastify, 'apidoc', apidocPlugin)
     await registerPlugin(fastify, 'awilix', awilixPlugin)
     await registerPlugin(fastify, 'orm', ormPlugin)
 
