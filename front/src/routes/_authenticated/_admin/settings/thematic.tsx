@@ -6,6 +6,7 @@ import AddThematicForm from '../../../../components/custom/popup/addThematicForm
 import { ConfirmDeleteForm } from '../../../../components/custom/popup/confirmDeleteForm.tsx'
 import DashboardLayout from '../../../../components/dashboard.layout.tsx'
 import ReactTable from '../../../../components/table/reactTable.tsx'
+import { useSoignantQueries } from '../../../../queries/useSoignant.ts'
 import {
   useThematicMutations,
   useThematicQueries,
@@ -20,6 +21,7 @@ export const Route = createFileRoute(
 
 function ThematicSettings() {
   const { thematics, isPending } = useThematicQueries()
+  const { soignants } = useSoignantQueries()
   const { deleteThematic } = useThematicMutations()
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
 
@@ -29,9 +31,22 @@ function ThematicSettings() {
     [thematics],
   )
 
-  const columns = getThematicColumns({
-    onDelete: (id) => setDeleteTargetId(id),
-  })
+  const soignantOptions = useMemo(
+    () =>
+      [...(soignants ?? [])]
+        .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+        .map((s) => ({ value: s.id, label: s.name })),
+    [soignants],
+  )
+
+  const columns = useMemo(
+    () =>
+      getThematicColumns({
+        onDelete: (id) => setDeleteTargetId(id),
+        soignantOptions,
+      }),
+    [soignantOptions],
+  )
 
   return (
     <DashboardLayout>

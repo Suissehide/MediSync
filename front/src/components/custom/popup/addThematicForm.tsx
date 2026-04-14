@@ -1,10 +1,12 @@
 import { Check, Plus, X } from 'lucide-react'
 import type React from 'react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { useAppForm } from '../../../hooks/formConfig.tsx'
+import { useSoignantQueries } from '../../../queries/useSoignant.ts'
 import { useThematicMutations } from '../../../queries/useThematic.ts'
 import { Button } from '../../ui/button.tsx'
+import { Label } from '../../ui/label.tsx'
 import {
   Popup,
   PopupBody,
@@ -14,6 +16,7 @@ import {
   PopupTitle,
   PopupTrigger,
 } from '../../ui/popup.tsx'
+import { MultiSelect } from '../../ui/select.tsx'
 
 interface AddThematicFormProps {
   trigger?: React.ReactNode
@@ -22,13 +25,23 @@ interface AddThematicFormProps {
 function AddThematicForm({ trigger }: AddThematicFormProps) {
   const [open, setOpen] = useState(false)
   const { createThematic } = useThematicMutations()
+  const { soignants } = useSoignantQueries()
+
+  const soignantOptions = useMemo(
+    () =>
+      [...(soignants ?? [])]
+        .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+        .map((s) => ({ value: s.id, label: s.name })),
+    [soignants],
+  )
 
   const form = useAppForm({
     defaultValues: {
       name: '',
+      soignantIDs: [] as string[],
     },
     onSubmit: ({ value }) => {
-      createThematic.mutate({ name: value.name, soignantIDs: [] })
+      createThematic.mutate({ name: value.name, soignantIDs: value.soignantIDs })
       setOpen(false)
     },
   })
@@ -75,6 +88,20 @@ function AddThematicForm({ trigger }: AddThematicFormProps) {
             >
               {(field) => <field.Input label="Nom" />}
             </form.AppField>
+
+            <form.Field name="soignantIDs">
+              {(field) => (
+                <div className="flex flex-col gap-1">
+                  <Label className="text-sm font-medium">Soignants</Label>
+                  <MultiSelect
+                    options={soignantOptions}
+                    value={field.state.value}
+                    onChange={(val) => field.handleChange(val)}
+                    placeholder="Sélectionner des soignants"
+                  />
+                </div>
+              )}
+            </form.Field>
           </form>
         </PopupBody>
 
