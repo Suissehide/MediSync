@@ -1,12 +1,18 @@
 import type { EventContentArg } from '@fullcalendar/core'
 import { clsx } from 'clsx'
 import dayjs from 'dayjs'
-import { Copy, Plus, Trash2 } from 'lucide-react'
+import { Copy, MessageSquareTextIcon, Plus, Trash2 } from 'lucide-react'
 
 import { containsKeyword } from '../../../libs/utils.ts'
 import type { Appointment } from '../../../types/appointment.ts'
 import type { AppointmentPatient } from '../../../types/appointmentPatient.ts'
 import { Button } from '../../ui/button.tsx'
+import {
+  TooltipContent,
+  TooltipProvider,
+  TooltipRoot,
+  TooltipTrigger,
+} from '../../ui/tooltip.tsx'
 
 type Props = {
   setOpenEventId?: (eventId: string) => void
@@ -124,13 +130,10 @@ export const EventContent = ({
           >
             {appointment.appointmentPatients?.map(
               (appointmentPatient: AppointmentPatient) => (
-                <div
+                <PatientName
                   key={appointmentPatient.patient.id}
-                  className="text-[0.6rem] text-white truncate"
-                >
-                  {appointmentPatient.patient.firstName}{' '}
-                  {appointmentPatient.patient.lastName}
-                </div>
+                  appointmentPatient={appointmentPatient}
+                />
               ),
             )}
           </button>
@@ -144,17 +147,14 @@ export const EventContent = ({
             e.stopPropagation()
             setOpenEventId?.(`appointment_${appointments[0].id}`)
           }}
-          className={`fc-event-hero z-1 cursor-pointer flex-1 flex flex-col justify-start p-0.5 m-0.5 text-white bg-black/30 truncate px-1 border border-border rounded hover:opacity-80 transition-opacity overflow-hidden`}
+          className={`fc-event-hero z-1 cursor-pointer flex-1 flex flex-col justify-start p-0.5 m-0.5 text-white bg-black/30 px-1 border border-border rounded hover:opacity-80 transition-opacity overflow-hidden`}
         >
           {event.extendedProps.appointments[0].appointmentPatients?.map(
             (appointmentPatient: AppointmentPatient) => (
-              <div
+              <PatientName
                 key={appointmentPatient.patient.id}
-                className={`text-left text-[0.6rem] text-white truncate`}
-              >
-                {appointmentPatient.patient.firstName}{' '}
-                {appointmentPatient.patient.lastName}
-              </div>
+                appointmentPatient={appointmentPatient}
+              />
             ),
           )}
         </button>
@@ -171,5 +171,33 @@ export const EventContent = ({
         </div>
       )}
     </div>
+  )
+}
+
+function PatientName({ appointmentPatient }: { appointmentPatient: AppointmentPatient }) {
+  const name = `${appointmentPatient.patient.firstName} ${appointmentPatient.patient.lastName}`
+
+  if (!appointmentPatient.transmissionNotes) {
+    return (
+      <div className="flex-1 text-left text-[0.6rem] text-white truncate">
+        {name}
+      </div>
+    )
+  }
+
+  return (
+    <TooltipProvider>
+      <TooltipRoot>
+        <TooltipTrigger asChild>
+          <div className="flex-1 text-left text-[0.6rem] text-white truncate flex justify-between gap-0.5">
+            <span className="truncate">{name}</span>
+            <MessageSquareTextIcon className="w-2.5 h-2.5 shrink-0" />
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>
+          {appointmentPatient.transmissionNotes}
+        </TooltipContent>
+      </TooltipRoot>
+    </TooltipProvider>
   )
 }

@@ -1,5 +1,5 @@
 import { Draggable } from '@fullcalendar/interaction'
-import { Loader2Icon, Pencil, Plus, Route, Settings } from 'lucide-react'
+import { Loader2Icon, Pencil, Plus, Route } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 
@@ -79,6 +79,7 @@ function SidebarPathway() {
                   key={pathwayTemplate.id}
                   data-pathway-id={pathwayTemplate.id}
                   data-pathway-name={pathwayTemplate.name}
+                  onClick={() => handleEditPathwayTemplate(pathwayTemplate)}
                   className={`group rounded border transition-all cursor-pointer hover:shadow-md ${
                     isSelected
                       ? 'border-border-dark shadow-sm'
@@ -133,17 +134,6 @@ function SidebarPathway() {
                         className="flex-shrink-0"
                       >
                         <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleEditPathwayTemplate(pathwayTemplate)
-                        }}
-                        className="flex-shrink-0"
-                      >
-                        <Settings className="w-4 h-4" />
                       </Button>
                     </div>
                   </div>

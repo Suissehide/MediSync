@@ -204,7 +204,7 @@ function AddAppointmentForm({
                     return 'Au moins un patient est requis'
                   }
                   if (type === 'multiple' && value.length > capacity) {
-                    return ''
+                    return `Maximum ${capacity} patient${capacity > 1 ? 's' : ''} pour ce créneau`
                   }
                   return undefined
                 },

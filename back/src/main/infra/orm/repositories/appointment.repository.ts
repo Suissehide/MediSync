@@ -38,6 +38,11 @@ class AppointmentRepository implements AppointmentRepositoryInterface {
       return this.prisma.appointment.findUniqueOrThrow({
         where: { id: appointmentID },
         include: {
+          slot: {
+            include: {
+              slotTemplate: true,
+            },
+          },
           appointmentPatients: {
             include: {
               patient: true,

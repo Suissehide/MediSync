@@ -10,7 +10,7 @@ export const appointmentSchema = z.object({
   type: z.string().optional().nullable(),
 
   get slot() {
-    return z.object(slotSchema).optional().nullable()
+    return slotSchema.optional().nullable()
   },
 
   get appointmentPatients() {

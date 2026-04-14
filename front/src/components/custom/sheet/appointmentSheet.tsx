@@ -29,7 +29,7 @@ import type { Soignant } from '../../../types/soignant.ts'
 import { Button } from '../../ui/button.tsx'
 import { FieldInfo } from '../../ui/fieldInfo.tsx'
 import { FormField } from '../../ui/formField.tsx'
-import { Input } from '../../ui/input.tsx'
+import { Input, TextArea } from '../../ui/input.tsx'
 import { Select } from '../../ui/select.tsx'
 import { Label } from '../../ui/label.tsx'
 import { ConfirmDeleteForm } from '../popup/confirmDeleteForm.tsx'
@@ -56,7 +56,7 @@ export default function AppointmentSheet({
 }: AppointmentSheetProps) {
   const navigate = useNavigate()
 
-  const { isPending, appointment, refetch } = useAppointmentByIDQuery(eventID, {
+  const { isPending, appointment, refetch, isError } = useAppointmentByIDQuery(eventID, {
     enabled: false,
   })
   const { updateAppointment, deleteAppointment } = useAppointmentMutations()
@@ -149,9 +149,16 @@ export default function AppointmentSheet({
             { keepDefaultValues: true },
           )
         }
+      }).catch(() => {
+        setOpen('')
       })
     }
-  }, [open, form, refetch])
+  }, [open, form, refetch, setOpen])
+
+  const isIndividual = appointment?.slot?.slotTemplate?.isIndividual ?? true
+  const capacity = isIndividual ? 1 : (appointment?.slot?.slotTemplate?.capacity ?? 1)
+  const currentPatientCount = selectedPatientIDs.length
+  const isAtCapacity = currentPatientCount >= capacity
 
   const thematicOptions = soignant
     ? (thematics
@@ -161,7 +168,7 @@ export default function AppointmentSheet({
 
   return (
     <Sheet
-      open={open}
+      open={open && !isError}
       onOpenChange={(isOpen) => setOpen(isOpen ? eventID : '')}
     >
       <SheetContent className="flex flex-col h-full">
@@ -228,7 +235,21 @@ export default function AppointmentSheet({
 
                 <div className="mt-2 w-full border-t border-border"></div>
 
-                <form.Field name="appointmentPatients" mode="array">
+                <form.Field
+                name="appointmentPatients"
+                mode="array"
+                validators={{
+                  onSubmit: ({ value }) => {
+                    if (isIndividual && value.length > 1) {
+                      return 'Un seul patient autorisé pour un créneau individuel'
+                    }
+                    if (!isIndividual && value.length > capacity) {
+                      return `Maximum ${capacity} patient${capacity > 1 ? 's' : ''} pour ce créneau`
+                    }
+                    return undefined
+                  },
+                }}
+              >
                   {(field) => (
                     <div className="flex-1 flex flex-col min-h-0">
                       <div className="flex items-end gap-4 shrink-0">
@@ -241,11 +262,13 @@ export default function AppointmentSheet({
                             value={selectedPatient}
                             onValueChange={(v) => handleSelectPatient(v)}
                             options={patientOptions}
+                            disabled={isAtCapacity}
                           />
                         </div>
                         <Button
                           type="button"
                           variant="default"
+                          disabled={isAtCapacity}
                           onClick={() => {
                             if (!selectedPatient) {
                               return
@@ -263,6 +286,13 @@ export default function AppointmentSheet({
                           Ajouter
                         </Button>
                       </div>
+                      {isAtCapacity && (
+                        <div className="text-sm text-destructive">
+                          {isIndividual
+                            ? 'Un seul patient autorisé pour un créneau individuel'
+                            : `Capacité maximale atteinte (${capacity} patient${capacity > 1 ? 's' : ''})`}
+                        </div>
+                      )}
 
                       <div className="text-sm text-text-light mt-3 mb-0.5 shrink-0">
                         Liste des patients
@@ -404,7 +434,7 @@ export default function AppointmentSheet({
                                         <Label htmlFor={field.name}>
                                           Notes de transmission
                                         </Label>
-                                        <Input
+                                        <TextArea
                                           id={subField.name}
                                           value={subField.state.value}
                                           onChange={(e) =>
