@@ -33,6 +33,7 @@ Pour découvrir la liste des scripts NPM, exécuter `npm run`.
 
 ### Démarrage rapide
 
+- Avant le premier lancement, créez le réseau Docker externe requis : `docker network create proxy`
 - Pour démarrer les bases de données nécessaires au projet, allez dans le dossier deploy `cd deploy` et exécuter `docker compose --profile db up -d`
 - Pour démarrer le backend, exécuter `npm start`.
 - Pour démarrer le backend en mode développement avec watch, exécuter `npm run dev` :
