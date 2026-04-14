@@ -4,7 +4,9 @@ import { useEffect } from 'react'
 
 import { useState } from 'react'
 
+import { TOAST_SEVERITY } from '../../../constants/ui.constant.ts'
 import { useAppForm } from '../../../hooks/formConfig.tsx'
+import { useToast } from '../../../hooks/useToast.ts'
 import { formatDuration } from '../../../libs/utils.ts'
 import { usePathwayMutations } from '../../../queries/usePathway.ts'
 import { useSlotByIDQuery, useSlotMutations } from '../../../queries/useSlot.ts'
@@ -42,6 +44,7 @@ export default function EventSheet({
 }: EventSheetProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showDeletePathwayConfirm, setShowDeletePathwayConfirm] = useState(false)
+  const { toast } = useToast()
 
   useSoignantQueries()
   const { isPending, slot, refetch } = useSlotByIDQuery(eventID, {
@@ -94,6 +97,14 @@ export default function EventSheet({
 
   const handleDeleteSlot = () => {
     if (slot) {
+      if (slot.appointments && slot.appointments.length > 0) {
+        toast({
+          title: 'Suppression impossible',
+          message: 'Ce créneau contient des rendez-vous déjà programmés. Veuillez d\'abord supprimer les rendez-vous avant de supprimer le créneau.',
+          severity: TOAST_SEVERITY.ERROR,
+        })
+        return
+      }
       handleDeleteEvent?.(slot.id)
       setOpen('')
     }

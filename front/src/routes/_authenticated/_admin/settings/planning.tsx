@@ -22,6 +22,8 @@ import EventSheet from '../../../../components/custom/sheet/eventSheet.tsx'
 import EventTemplateSheet from '../../../../components/custom/sheet/eventTemplateSheet.tsx'
 import DashboardLayout from '../../../../components/dashboard.layout.tsx'
 import { Button } from '../../../../components/ui/button.tsx'
+import { TOAST_SEVERITY } from '../../../../constants/ui.constant.ts'
+import { useToast } from '../../../../hooks/useToast.ts'
 import {
   PopoverAnchor,
   PopoverArrow,
@@ -67,6 +69,7 @@ function Planning() {
   const { pathwayTemplates } = usePathwayTemplateQueries()
   const { createSlot, updateSlot, deleteSlot } = useSlotMutations()
   const { instantiatePathway, deletePathway } = usePathwayMutations()
+  const { toast } = useToast()
   const lastDropTimeRef = useRef<number>(0)
   const { createSlotTemplate, updateSlotTemplate, deleteSlotTemplate } =
     useSlotTemplateMutations()
@@ -204,6 +207,15 @@ function Planning() {
     if (editMode) {
       deleteSlotTemplate.mutate(id)
     } else {
+      const slot = slots?.find((s) => s.id === id)
+      if (slot && slot.appointments && slot.appointments.length > 0) {
+        toast({
+          title: 'Suppression impossible',
+          message: 'Ce créneau contient des rendez-vous déjà programmés. Veuillez d\'abord supprimer les rendez-vous avant de supprimer le créneau.',
+          severity: TOAST_SEVERITY.ERROR,
+        })
+        return
+      }
       setEvents((prev) => prev.filter((event) => event.id !== id))
       deleteSlot.mutate(id)
     }
