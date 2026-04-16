@@ -250,7 +250,6 @@ function Planning() {
           color: slot.slotTemplate.color,
           isIndividual: slot.slotTemplate.isIndividual,
           capacity: slot.slotTemplate.capacity ?? 1,
-          duration: slot.slotTemplate.duration ?? 15,
           soignantID: slot.slotTemplate.soignant?.id ?? '',
         },
       }

@@ -2,6 +2,7 @@ import { Check, Plus, X } from 'lucide-react'
 import type React from 'react'
 import { useEffect, useMemo, useState } from 'react'
 
+import { SLOT_DURATION_OPTIONS } from '../../../constants/slot.constant.ts'
 import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { useSoignantQueries } from '../../../queries/useSoignant.ts'
 import { useThematicMutations } from '../../../queries/useThematic.ts'
@@ -38,10 +39,11 @@ function AddThematicForm({ trigger }: AddThematicFormProps) {
   const form = useAppForm({
     defaultValues: {
       name: '',
+      duration: 15,
       soignantIDs: [] as string[],
     },
     onSubmit: ({ value }) => {
-      createThematic.mutate({ name: value.name, soignantIDs: value.soignantIDs })
+      createThematic.mutate({ name: value.name, duration: Number(value.duration), soignantIDs: value.soignantIDs })
       setOpen(false)
     },
   })
@@ -87,6 +89,15 @@ function AddThematicForm({ trigger }: AddThematicFormProps) {
               }}
             >
               {(field) => <field.Input label="Nom" />}
+            </form.AppField>
+
+            <form.AppField name="duration">
+              {(field) => (
+                <field.Select
+                  options={SLOT_DURATION_OPTIONS}
+                  label="Durée par défaut"
+                />
+              )}
             </form.AppField>
 
             <form.Field name="soignantIDs">

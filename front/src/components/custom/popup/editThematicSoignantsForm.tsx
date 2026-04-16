@@ -2,6 +2,7 @@ import { Check, Pencil, X } from 'lucide-react'
 import type React from 'react'
 import { useEffect, useState } from 'react'
 
+import { SLOT_DURATION_OPTIONS } from '../../../constants/slot.constant.ts'
 import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { useThematicMutations } from '../../../queries/useThematic.ts'
 import type { Thematic } from '../../../types/thematic.ts'
@@ -37,16 +38,16 @@ function EditThematicSoignantsForm({
   const [selectedIDs, setSelectedIDs] = useState<string[]>(currentSoignantIDs)
 
   const form = useAppForm({
-    defaultValues: { name: thematic.name },
+    defaultValues: { name: thematic.name, duration: thematic.duration ?? 15 },
     onSubmit: () => {},
   })
 
   useEffect(() => {
     if (open) {
       setSelectedIDs(currentSoignantIDs)
-      form.reset({ name: thematic.name })
+      form.reset({ name: thematic.name, duration: thematic.duration ?? 15 })
     }
-  }, [open, thematic.name, thematic.soignants, form])
+  }, [open, thematic.name, thematic.duration, thematic.soignants, form])
 
   const handleSave = async () => {
     await form.validate('submit')
@@ -55,15 +56,18 @@ function EditThematicSoignantsForm({
     }
 
     const name = form.state.values.name
+    const duration = Number(form.state.values.duration)
     const nameChanged = name !== thematic.name
+    const durationChanged = duration !== thematic.duration
     const soignantsChanged =
       selectedIDs.length !== currentSoignantIDs.length ||
       selectedIDs.some((id) => !currentSoignantIDs.includes(id))
 
-    if (nameChanged || soignantsChanged) {
+    if (nameChanged || durationChanged || soignantsChanged) {
       updateThematic.mutate({
         id: thematic.id,
         ...(nameChanged ? { name } : {}),
+        ...(durationChanged ? { duration } : {}),
         ...(soignantsChanged ? { soignantIDs: selectedIDs } : {}),
       })
     }
@@ -98,6 +102,15 @@ function EditThematicSoignantsForm({
               }}
             >
               {(field) => <field.Input label="Nom" />}
+            </form.AppField>
+
+            <form.AppField name="duration">
+              {(field) => (
+                <field.Select
+                  options={SLOT_DURATION_OPTIONS}
+                  label="Durée par défaut"
+                />
+              )}
             </form.AppField>
 
             <div className="flex flex-col gap-1">

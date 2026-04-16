@@ -2,6 +2,7 @@ import { createColumnHelper } from '@tanstack/react-table'
 import { Trash2 } from 'lucide-react'
 
 import EditThematicSoignantsForm from '../components/custom/popup/editThematicSoignantsForm.tsx'
+import { SLOT_DURATION } from '../constants/slot.constant.ts'
 import { Button } from '../components/ui/button.tsx'
 import type { Thematic } from '../types/thematic.ts'
 
@@ -16,6 +17,17 @@ export const getThematicColumns = ({ onDelete, soignantOptions }: ThematicAction
   return [
     columnHelper.accessor('name', {
       header: 'Nom',
+    }),
+    columnHelper.display({
+      id: 'duration',
+      header: 'Durée',
+      size: 120,
+      cell: ({ row }) => {
+        const duration = row.original.duration
+        return duration
+          ? SLOT_DURATION[duration as keyof typeof SLOT_DURATION] ?? `${duration} min`
+          : '—'
+      },
     }),
     columnHelper.display({
       id: 'soignants',

@@ -11,7 +11,6 @@ export type SlotTemplate = {
   location?: string
   isIndividual?: boolean
   capacity?: number
-  duration?: number
   color?: string
   description?: string
 

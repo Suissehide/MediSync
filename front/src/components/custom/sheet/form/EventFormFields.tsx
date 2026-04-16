@@ -1,10 +1,7 @@
 import { useStore } from '@tanstack/react-form'
 import { useMemo } from 'react'
 
-import {
-  SLOT_DURATION_OPTIONS,
-  SLOT_LOCATION_OPTIONS,
-} from '../../../../constants/slot.constant.ts'
+import { SLOT_LOCATION_OPTIONS } from '../../../../constants/slot.constant.ts'
 import { withForm } from '../../../../hooks/formConfig.tsx'
 import { useThematicQueries } from '../../../../queries/useThematic.ts'
 import { useSoignantStore } from '../../../../store/useSoignantStore.ts'
@@ -82,16 +79,7 @@ export const EventFormFields = withForm({
           )}
         </form.AppField>
 
-        {isIndividual ? (
-          <form.AppField name="duration">
-            {(field) => (
-              <field.Select
-                options={SLOT_DURATION_OPTIONS}
-                label="Durée par défaut"
-              />
-            )}
-          </form.AppField>
-        ) : (
+        {!isIndividual && (
           <form.AppField name="capacity">
             {(field) => <field.Number label="Capacité maximum" />}
           </form.AppField>

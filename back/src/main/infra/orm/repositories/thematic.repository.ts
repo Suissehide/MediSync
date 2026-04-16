@@ -43,6 +43,7 @@ class ThematicRepository implements ThematicRepositoryInterface {
       return await this.prisma.thematic.create({
         data: {
           name: thematicCreateParams.name,
+          duration: thematicCreateParams.duration,
           soignants: {
             connect: thematicCreateParams.soignantIDs.map((id) => ({ id })),
           },
@@ -66,6 +67,7 @@ class ThematicRepository implements ThematicRepositoryInterface {
         where: { id: thematicID },
         data: {
           name: thematicUpdateParams.name,
+          duration: thematicUpdateParams.duration,
           ...(thematicUpdateParams.soignantIDs && {
             soignants: {
               set: thematicUpdateParams.soignantIDs.map((id) => ({ id })),

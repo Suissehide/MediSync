@@ -3,10 +3,7 @@ import dayjs from 'dayjs'
 import { Check, X } from 'lucide-react'
 import { useEffect, useMemo } from 'react'
 
-import {
-  SLOT_DURATION_OPTIONS,
-  SLOT_LOCATION_OPTIONS,
-} from '../../../constants/slot.constant.ts'
+import { SLOT_LOCATION_OPTIONS } from '../../../constants/slot.constant.ts'
 import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { combineDateAndTime } from '../../../libs/utils.ts'
 import { useSoignantQueries } from '../../../queries/useSoignant.ts'
@@ -71,7 +68,6 @@ function AddSlotForm({
       location: '',
       description: '',
       isIndividual: false,
-      duration: 15,
       capacity: 1,
       color: color ?? '#2563eb',
     },
@@ -97,7 +93,6 @@ function AddSlotForm({
           thematic: value.thematic,
           location: value.location,
           isIndividual: value.isIndividual,
-          duration: value.duration,
           capacity: value.capacity,
           description: value.description,
           color: value.color,
@@ -265,16 +260,7 @@ function AddSlotForm({
               )}
             </form.AppField>
 
-            {isIndividual ? (
-              <form.AppField name="duration">
-                {(field) => (
-                  <field.Select
-                    options={SLOT_DURATION_OPTIONS}
-                    label="Durée par défaut"
-                  />
-                )}
-              </form.AppField>
-            ) : (
+            {!isIndividual && (
               <form.AppField name="capacity">
                 {(field) => <field.Number label="Capacité maximum" />}
               </form.AppField>

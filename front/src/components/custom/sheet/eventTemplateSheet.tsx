@@ -52,7 +52,6 @@ export default function EventTemplateSheet({
       description: slotTemplate?.description ?? '',
       isIndividual: slotTemplate?.isIndividual ?? false,
       capacity: slotTemplate?.capacity ?? 1,
-      duration: slotTemplate?.duration ?? 15,
       soignant: slotTemplate?.soignant?.id ?? '',
       color: slotTemplate?.color ?? '',
     },
@@ -68,7 +67,6 @@ export default function EventTemplateSheet({
         description: value.description,
         isIndividual: value.isIndividual,
         capacity: value.capacity ?? 1,
-        duration: value.duration ?? 15,
         soignantID: value.soignant,
         color: value.color,
       } satisfies UpdateSlotTemplateParams
@@ -105,7 +103,6 @@ export default function EventTemplateSheet({
         description: slotTemplate.description ?? '',
         isIndividual: slotTemplate.isIndividual ?? false,
         capacity: slotTemplate.capacity ?? 1,
-        duration: slotTemplate.duration ?? 15,
         soignant: slotTemplate.soignant?.id ?? '',
         color: slotTemplate.color ?? '',
       },

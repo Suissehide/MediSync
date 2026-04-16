@@ -18,6 +18,7 @@ export default async function seedThematics(
       return prisma.thematic.create({
         data: {
           name: t.name,
+          duration: 15,
           soignants: {
             connect: soignantIDs.map((id) => ({ id })),
           },

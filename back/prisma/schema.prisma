@@ -78,7 +78,6 @@ model SlotTemplate {
 
   isIndividual Boolean
   capacity     Int?
-  duration     Int?
   thematic     String?
   location     String?
   description  String?
@@ -116,6 +115,7 @@ model Soignant {
 model Thematic {
   id        String     @id @default(cuid())
   name      String     @unique
+  duration  Int?
   soignants Soignant[] @relation("SoignantThematics")
 }
 
