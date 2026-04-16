@@ -76,13 +76,14 @@ export const buildCalendarEventsFromSlots = (
       color: slot.slotTemplate.color ?? '#2563eb',
       display,
       className: 'fc-slot',
-      editable: !containsKeyword(slotStates, ['editable']),
+      editable: !containsKeyword(slotStates, ['editable']) && !slot.locked,
       extendedProps: {
         type: 'slot',
         thematic: slot.slotTemplate.thematic,
         states: slotStates,
         templateID: slot.slotTemplate.id,
         appointments: slot.appointments,
+        locked: slot.locked,
       },
     }
   })

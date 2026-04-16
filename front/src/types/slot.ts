@@ -10,6 +10,7 @@ export type Slot = {
   id: string
   startDate: string
   endDate: string
+  locked: boolean
   appointments: Appointment[]
   pathway?: Pathway
   slotTemplate: SlotTemplate
@@ -26,9 +27,10 @@ export type CreateSlotParamsWithTemplateData = CreateSlotParams & {
 }
 export type UpdateSlotParams = Omit<
   Slot,
-  'startDate' | 'endDate' | 'appointments' | 'pathway' | 'slotTemplate'
+  'startDate' | 'endDate' | 'appointments' | 'pathway' | 'slotTemplate' | 'locked'
 > & {
   startDate?: string
   endDate?: string
+  locked?: boolean
   slotTemplate?: UpdateSlotTemplateParams
 }

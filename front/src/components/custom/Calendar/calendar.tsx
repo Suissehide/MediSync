@@ -39,6 +39,7 @@ export interface CalendarEvent {
     location?: string
     states?: string[]
     appointments?: Appointment[]
+    locked?: boolean
   }
 }
 
@@ -60,6 +61,7 @@ interface CalendarProps {
   onForbiddenWeekDelete?: (id: string) => void
   onDuplicate?: (eventId: string) => void
   onDelete?: (eventId: string) => void
+  onToggleLock?: (eventId: string, locked: boolean) => void
   unselectRef?: React.MutableRefObject<(() => void) | null>
 }
 
@@ -81,6 +83,7 @@ function Calendar({
   onForbiddenWeekDelete,
   onDuplicate,
   onDelete,
+  onToggleLock,
   unselectRef,
 }: CalendarProps) {
   const lastDropTimeRef = useRef<number>(0)
@@ -290,6 +293,7 @@ function Calendar({
             editMode={editMode}
             onDuplicate={onDuplicate}
             onDelete={onDelete}
+            onToggleLock={onToggleLock}
           />
         )}
         noEventsContent={() => (

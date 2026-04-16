@@ -1,7 +1,14 @@
 import type { EventContentArg } from '@fullcalendar/core'
 import { clsx } from 'clsx'
 import dayjs from 'dayjs'
-import { Copy, MessageSquareTextIcon, Plus, Trash2 } from 'lucide-react'
+import {
+  Copy,
+  Lock,
+  LockOpen,
+  MessageSquareTextIcon,
+  Plus,
+  Trash2,
+} from 'lucide-react'
 
 import { containsKeyword } from '../../../libs/utils.ts'
 import type { Appointment } from '../../../types/appointment.ts'
@@ -20,6 +27,7 @@ type Props = {
   editMode?: boolean
   onDuplicate?: (eventId: string) => void
   onDelete?: (eventId: string) => void
+  onToggleLock?: (eventId: string, locked: boolean) => void
 }
 
 export const EventContent = ({
@@ -28,9 +36,10 @@ export const EventContent = ({
   editMode,
   onDuplicate,
   onDelete,
+  onToggleLock,
 }: Props) => {
   const { event, timeText } = eventContent
-  const { states, appointments, thematic, type } = event.extendedProps
+  const { states, appointments, thematic, type, locked } = event.extendedProps
 
   const isIndividual = containsKeyword(states, ['individual'])
   const isMultiple = containsKeyword(states, ['multiple'])
@@ -73,6 +82,43 @@ export const EventContent = ({
         },
       )}
     >
+      {locked && type === 'slot' && (
+        <div
+          className={clsx(
+            'absolute top-0.5 left-0.5 z-10 p-0.5 rounded bg-black/40 text-white pointer-events-none',
+            { 'pointer-events-auto cursor-pointer hover:bg-black/60': !!onToggleLock },
+          )}
+          onClick={(e) => {
+            if (!onToggleLock) { return }
+            e.stopPropagation()
+            onToggleLock(event.id, false)
+          }}
+          onMouseDown={(e) => {
+            if (!onToggleLock) { return }
+            e.stopPropagation()
+          }}
+        >
+          <Lock className="w-2.5 h-2.5" />
+        </div>
+      )}
+
+      {onToggleLock &&
+        !locked &&
+        !containsKeyword(states, ['editable', 'individual', 'multiple']) &&
+        type === 'slot' && (
+          <Button
+            variant="none"
+            className="absolute top-0.5 left-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10 h-auto w-auto p-0.5 rounded bg-black/20 hover:bg-black/40 text-white"
+            onClick={(e) => {
+              e.stopPropagation()
+              onToggleLock(event.id, true)
+            }}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <LockOpen className="w-2.5 h-2.5" />
+          </Button>
+        )}
+
       {onDuplicate &&
         !containsKeyword(states, ['editable', 'individual', 'multiple']) &&
         (type === 'slot' || type === 'template') && (
@@ -161,7 +207,7 @@ export const EventContent = ({
       )}
 
       {/* Bouton + pour slots multiple vides */}
-      {isMultiple && (!appointments || appointments.length === 0) && (
+      {isMultiple && !locked && (!appointments || appointments.length === 0) && (
         <div className="z-100 cursor-pointer absolute inset-0 flex justify-center items-center">
           <Button variant="transparent" className="w-full h-full">
             <div className="p-2 rounded-full bg-neutral-50 text-primary group-hover:bg-neutral-300 transition-colors duration-200">

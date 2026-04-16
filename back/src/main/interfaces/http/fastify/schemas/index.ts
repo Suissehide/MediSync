@@ -57,6 +57,7 @@ export const slotTemplateSchema = z.object({
 export const slotSchema = z.object({
   startDate: z.coerce.date(),
   endDate: z.coerce.date(),
+  locked: z.boolean().default(false),
 
   get appointments() {
     return z.array(appointmentSchema).optional().nullable()

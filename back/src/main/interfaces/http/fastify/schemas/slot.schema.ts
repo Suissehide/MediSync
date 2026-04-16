@@ -61,9 +61,11 @@ export const updateSlotByIdSchema = {
   params: getSlotByIdParamsSchema,
   body: slotSchema.partial().extend({
     soignantID: z.cuid().optional(),
-    slotTemplate: updateSlotTemplateByIdSchema.body.extend({
-      id: z.cuid(),
-    }),
+    slotTemplate: updateSlotTemplateByIdSchema.body
+      .extend({
+        id: z.cuid(),
+      })
+      .optional(),
   }),
 }
 

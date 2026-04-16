@@ -77,6 +77,9 @@ function Dashboard() {
     if (!event || eventID.startsWith('appointment_')) {
       return
     }
+    if (event.extendedProps?.locked) {
+      return
+    }
     if (
       containsKeyword(event.extendedProps?.states ?? [], ['multiple']) &&
       event.extendedProps?.appointments?.length
@@ -137,10 +140,11 @@ function Dashboard() {
                 const selectionStart = dayjs(start)
                 const selectionEnd = dayjs(end)
 
-                // Only allow selection within individual slots
+                // Only allow selection within individual slots that are not locked
                 const individualSlots = events.filter(
                   (e) =>
                     e.extendedProps?.type === 'slot' &&
+                    !e.extendedProps?.locked &&
                     containsKeyword(e.extendedProps?.states ?? [], [
                       'individual',
                     ]),

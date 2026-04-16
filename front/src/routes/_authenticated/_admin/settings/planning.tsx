@@ -275,6 +275,12 @@ function Planning() {
     }
   }
 
+  const handleToggleLock = (eventId: string, locked: boolean) => {
+    if (!eventId.startsWith('slot_')) { return }
+    const slotId = eventId.replace('slot_', '')
+    updateSlot.mutate({ id: slotId, locked })
+  }
+
   const handleForbiddenWeekCreate = (date: string) => {
     setCreateForbiddenWeekDate(date)
   }
@@ -407,6 +413,7 @@ function Planning() {
                 forbiddenWeeks={forbiddenWeeks ?? []}
                 onDuplicate={handleDuplicateSlot}
                 onDelete={handleDeleteHoverSlot}
+                onToggleLock={handleToggleLock}
               />
             ) : (
               <div

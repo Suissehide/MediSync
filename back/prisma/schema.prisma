@@ -95,6 +95,7 @@ model Slot {
   id             String        @id @default(cuid())
   startDate      DateTime
   endDate        DateTime
+  locked         Boolean       @default(false)
   appointments   Appointment[]
   pathwayID      String?
   slotTemplateID String        @unique

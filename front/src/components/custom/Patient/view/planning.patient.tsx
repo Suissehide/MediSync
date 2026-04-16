@@ -129,6 +129,7 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
         setOpenAppointmentId(appointmentId)
       }
     } else {
+      if (slot.locked) { return }
       const isIndividual = slot.slotTemplate.isIndividual
       setSelectedSlotID(slotId)
       setSelectedSlotSoignant(slot.slotTemplate.soignant ?? undefined)
@@ -184,6 +185,7 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
                   return (slots ?? []).some(
                     (slot) =>
                       slot.slotTemplate.isIndividual &&
+                      !slot.locked &&
                       !enrolledSlotIds.has(slot.id) &&
                       selStart.isSameOrAfter(dayjs(slot.startDate)) &&
                       selEnd.isSameOrBefore(dayjs(slot.endDate)),

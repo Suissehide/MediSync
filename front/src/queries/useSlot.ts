@@ -136,7 +136,7 @@ export const useSlotMutations = () => {
       const previousSlots = queryClient.getQueryData([SLOT.GET_ALL])
       queryClient.setQueryData([SLOT.GET_ALL], (oldSlots: Slot[]) =>
         oldSlots?.map((slot: Slot) =>
-          slot.id === updatedSlot.id ? updatedSlot : slot,
+          slot.id === updatedSlot.id ? { ...slot, ...updatedSlot } : slot,
         ),
       )
 
