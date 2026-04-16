@@ -122,11 +122,17 @@ export function buildPathwayEvents(pathways: Pathway[]): CalendarEvent[] {
       return dayjs(slot.endDate).isAfter(dayjs(max)) ? slot.endDate : max
     }, pathway.startDate)
 
+    const weekStart = dayjs(pathway.startDate).isoWeekday(1).startOf('day')
+    const weekEnd = dayjs(endDate ?? pathway.startDate)
+      .isoWeekday(1)
+      .add(7, 'day')
+      .startOf('day')
+
     return {
       id: pathway.id,
       title: pathway.template?.name ?? 'Parcours inconnu',
-      start: dayjs(pathway.startDate).format('YYYY-MM-DD'),
-      end: dayjs(endDate ?? pathway.startDate).format('YYYY-MM-DD'),
+      start: weekStart.format('YYYY-MM-DD'),
+      end: weekEnd.format('YYYY-MM-DD'),
       color: pathway.template?.color ?? '#2563eb',
       extendedProps: {
         type: 'pathway',
