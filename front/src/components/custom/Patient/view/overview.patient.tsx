@@ -4,7 +4,7 @@ import { useMemo } from 'react'
 
 import { SLOT_LOCATION } from '../../../../constants/slot.constant.ts'
 import { getLabel } from '../../../../libs/utils.ts'
-import { usePatientMutations } from '../../../../queries/usePatient.ts'
+import { usePatientMutations } from '../../../../queries/usePatient.tsx'
 import { useAllSlotsQuery } from '../../../../queries/useSlot.ts'
 import type { EnrollmentIssue, Patient } from '../../../../types/patient.ts'
 import type { Slot } from '../../../../types/slot.ts'

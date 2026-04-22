@@ -11,7 +11,7 @@ import { Button } from '../../../components/ui/button.tsx'
 import DropdownFilter from '../../../components/ui/dropdownFilter.tsx'
 import { Input } from '../../../components/ui/input.tsx'
 import { usePathwayTemplateQueries } from '../../../queries/usePathwayTemplate.ts'
-import { usePatientWithTagsQuery } from '../../../queries/usePatient.ts'
+import { usePatientWithTagsQuery } from '../../../queries/usePatient.tsx'
 import type { PatientWithTags } from '../../../types/patient.ts'
 
 export const Route = createFileRoute('/_authenticated/patient/')({

@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useCallback, useState } from 'react'
 
 import { PatientApi } from '../api/patient.api.ts'
+import { Button } from '../components/ui/button.tsx'
 import { APPOINTMENT, PATIENT, SLOT } from '../constants/process.constant.ts'
 import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
@@ -10,8 +12,11 @@ import type {
   EnrollExistingPatientParams,
   EnrollmentResult,
   Patient,
+  PatientWithTags,
   UpdatePatientParams,
 } from '../types/patient.ts'
+
+const UNDO_DELETE_DELAY = 5000
 
 // * QUERIES
 
@@ -120,38 +125,137 @@ export const usePatientMutations = () => {
     },
   })
 
-  const deletePatient = useMutation({
-    mutationKey: [PATIENT.DELETE],
-    mutationFn: PatientApi.delete,
-    onMutate: async (patientID) => {
-      await queryClient.cancelQueries({ queryKey: [PATIENT.GET_ALL] })
+  const [isDeletePending, setIsDeletePending] = useState(false)
 
-      const previousPatients = queryClient.getQueryData([PATIENT.GET_ALL])
-      queryClient.setQueryData([PATIENT.GET_ALL], (oldPatients: Patient[]) =>
-        oldPatients?.filter((patient: Patient) => patient.id !== patientID),
+  const deletePatient = useCallback(
+    (
+      patientID: string,
+      options?: { onOptimisticDelete?: () => void },
+    ) => {
+      setIsDeletePending(true)
+
+      // Snapshot the cache so we can restore on undo or on API error
+      const previousPatients = queryClient.getQueryData<Patient[]>([
+        PATIENT.GET_ALL,
+      ])
+      const previousPatientsWithTags = queryClient.getQueryData<
+        PatientWithTags[]
+      >([PATIENT.GET_ALL_WITH_TAGS])
+      const previousPatient = queryClient.getQueryData([
+        PATIENT.GET_BY_ID,
+        patientID,
+      ])
+
+      // Prevent React Query from refetching (and restoring the deleted patient)
+      // while the undo window is open.
+      queryClient.setQueryDefaults([PATIENT.GET_ALL], {
+        staleTime: UNDO_DELETE_DELAY + 1000,
+      })
+      queryClient.setQueryDefaults([PATIENT.GET_ALL_WITH_TAGS], {
+        staleTime: UNDO_DELETE_DELAY + 1000,
+      })
+      void queryClient.cancelQueries({ queryKey: [PATIENT.GET_ALL] })
+      void queryClient.cancelQueries({
+        queryKey: [PATIENT.GET_ALL_WITH_TAGS],
+      })
+
+      // Optimistically remove from caches
+      queryClient.setQueryData([PATIENT.GET_ALL], (oldPatients?: Patient[]) =>
+        oldPatients?.filter((patient) => patient.id !== patientID),
+      )
+      queryClient.setQueryData(
+        [PATIENT.GET_ALL_WITH_TAGS],
+        (oldPatients?: PatientWithTags[]) =>
+          oldPatients?.filter((patient) => patient.id !== patientID),
       )
 
-      return { previousPatients }
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Patient supprimé avec succès',
-        severity: TOAST_SEVERITY.SUCCESS,
-      })
-    },
-    onError: (error, __, context) => {
-      queryClient.setQueryData([PATIENT.GET_ALL], context?.previousPatients)
+      // Fire optional callback (e.g. navigate away) now that the UI has been updated
+      options?.onOptimisticDelete?.()
 
-      toast({
-        title: 'Erreur lors de la suppression du patient',
-        message: error.message,
-        severity: TOAST_SEVERITY.ERROR,
+      const restoreQueryDefaults = () => {
+        queryClient.setQueryDefaults([PATIENT.GET_ALL], { staleTime: 0 })
+        queryClient.setQueryDefaults([PATIENT.GET_ALL_WITH_TAGS], {
+          staleTime: 0,
+        })
+      }
+
+      let cancelled = false
+
+      const timeoutId = setTimeout(async () => {
+        if (cancelled) {
+          return
+        }
+        try {
+          await PatientApi.delete(patientID)
+          await Promise.all([
+            queryClient.invalidateQueries({ queryKey: [PATIENT.GET_ALL] }),
+            queryClient.invalidateQueries({
+              queryKey: [PATIENT.GET_ALL_WITH_TAGS],
+            }),
+          ])
+        } catch (error) {
+          // Restore on API failure
+          queryClient.setQueryData([PATIENT.GET_ALL], previousPatients)
+          queryClient.setQueryData(
+            [PATIENT.GET_ALL_WITH_TAGS],
+            previousPatientsWithTags,
+          )
+          queryClient.setQueryData(
+            [PATIENT.GET_BY_ID, patientID],
+            previousPatient,
+          )
+          toast({
+            title: 'Erreur lors de la suppression du patient',
+            message: error instanceof Error ? error.message : undefined,
+            severity: TOAST_SEVERITY.ERROR,
+          })
+        } finally {
+          restoreQueryDefaults()
+          setIsDeletePending(false)
+        }
+      }, UNDO_DELETE_DELAY)
+
+      const { dismiss } = toast({
+        title: 'Patient supprimé',
+        severity: TOAST_SEVERITY.SUCCESS,
+        duration: UNDO_DELETE_DELAY,
+        action: (
+          <Button
+            variant="none"
+            size="sm"
+            className="h-7 px-2 text-xs"
+            onClick={() => {
+              cancelled = true
+              clearTimeout(timeoutId)
+              // Restore caches
+              queryClient.setQueryData(
+                [PATIENT.GET_ALL],
+                previousPatients,
+              )
+              queryClient.setQueryData(
+                [PATIENT.GET_ALL_WITH_TAGS],
+                previousPatientsWithTags,
+              )
+              queryClient.setQueryData(
+                [PATIENT.GET_BY_ID, patientID],
+                previousPatient,
+              )
+              restoreQueryDefaults()
+              setIsDeletePending(false)
+              dismiss()
+              toast({
+                title: 'Suppression annulée',
+                severity: TOAST_SEVERITY.INFO,
+              })
+            }}
+          >
+            Annuler
+          </Button>
+        ),
       })
     },
-    onSettled: async () => {
-      await queryClient.invalidateQueries({ queryKey: [PATIENT.GET_ALL] })
-    },
-  })
+    [queryClient, toast],
+  )
 
   const updatePatient = useMutation({
     mutationKey: [PATIENT.UPDATE],
@@ -301,5 +405,13 @@ export const usePatientMutations = () => {
     },
   })
 
-  return { createPatient, deletePatient, updatePatient, enrollPatient, enrollExistingPatient, dismissEnrollmentIssue }
+  return {
+    createPatient,
+    deletePatient,
+    isDeletePending,
+    updatePatient,
+    enrollPatient,
+    enrollExistingPatient,
+    dismissEnrollmentIssue,
+  }
 }

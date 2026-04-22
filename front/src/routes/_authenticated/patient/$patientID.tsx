@@ -21,7 +21,7 @@ import {
 import {
   usePatientByIDQuery,
   usePatientMutations,
-} from '../../../queries/usePatient.ts'
+} from '../../../queries/usePatient.tsx'
 import { useDiagnosticStore } from '../../../store/useDiagnosticStore.ts'
 
 export const Route = createFileRoute('/_authenticated/patient/$patientID')({
@@ -33,7 +33,7 @@ function PatientDetails() {
   const [selected, setSelected] = useState<string>('overview')
   const [showPDF, setShowPDF] = useState(false)
   const [showDelete, setShowDelete] = useState(false)
-  const { deletePatient } = usePatientMutations()
+  const { deletePatient, isDeletePending } = usePatientMutations()
 
   const { selectedId: diagnosticSelectedId, setSelectedId } =
     useDiagnosticStore()
@@ -134,13 +134,16 @@ function PatientDetails() {
         setOpen={setShowDelete}
         title="Supprimer le patient"
         description={`Voulez-vous vraiment supprimer ${patient?.firstName} ${patient?.lastName} ? Cette action est irréversible.`}
-        loading={deletePatient.isPending}
+        loading={isDeletePending}
         onConfirm={() => {
           if (!patient) {
             return
           }
-          deletePatient.mutate(patient.id, {
-            onSuccess: () => void navigate({ to: '/patient' }),
+          deletePatient(patient.id, {
+            onOptimisticDelete: () => {
+              setShowDelete(false)
+              void navigate({ to: '/patient' })
+            },
           })
         }}
       />

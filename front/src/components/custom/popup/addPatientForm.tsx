@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 
 import { GENDER_OPTIONS } from '../../../constants/patient.constant.ts'
 import { useAppForm } from '../../../hooks/formConfig.tsx'
-import { usePatientMutations } from '../../../queries/usePatient.ts'
+import { usePatientMutations } from '../../../queries/usePatient.tsx'
 import type { CreatePatientParams, TimeOfDay } from '../../../types/patient.ts'
 import { Button } from '../../ui/button.tsx'
 import {

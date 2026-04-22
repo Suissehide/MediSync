@@ -10,7 +10,7 @@ import { useState } from 'react'
 
 import type { MenuItem } from '../../../../constants/ui.constant.ts'
 import { useAppForm } from '../../../../hooks/formConfig.tsx'
-import { usePatientMutations } from '../../../../queries/usePatient.ts'
+import { usePatientMutations } from '../../../../queries/usePatient.tsx'
 import type { Patient, UpdatePatientParams } from '../../../../types/patient.ts'
 import { FixedBar } from '../../../ui/fixedbar.tsx'
 import { ToggleGroup, ToggleGroupItem } from '../../../ui/toggle-group.tsx'

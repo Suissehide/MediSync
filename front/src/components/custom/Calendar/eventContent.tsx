@@ -83,23 +83,32 @@ export const EventContent = ({
       )}
     >
       {locked && type === 'slot' && (
-        <div
-          className={clsx(
-            'absolute top-0.5 left-0.5 z-10 p-0.5 rounded bg-black/40 text-white pointer-events-none',
-            { 'pointer-events-auto cursor-pointer hover:bg-black/60': !!onToggleLock },
-          )}
-          onClick={(e) => {
-            if (!onToggleLock) { return }
-            e.stopPropagation()
-            onToggleLock(event.id, false)
-          }}
-          onMouseDown={(e) => {
-            if (!onToggleLock) { return }
-            e.stopPropagation()
-          }}
-        >
-          <Lock className="w-2.5 h-2.5" />
-        </div>
+        <>
+          <div
+            className="absolute inset-0 z-[1] pointer-events-none rounded-sm"
+            style={{
+              backgroundImage:
+                'repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(0,0,0,0.12) 4px, rgba(0,0,0,0.12) 6px)',
+            }}
+          />
+          <div
+            className={clsx(
+              'absolute top-0.5 left-0.5 z-10 p-0.5 rounded bg-black/40 text-white pointer-events-none',
+              { 'pointer-events-auto cursor-pointer hover:bg-black/60': !!onToggleLock },
+            )}
+            onClick={(e) => {
+              if (!onToggleLock) { return }
+              e.stopPropagation()
+              onToggleLock(event.id, false)
+            }}
+            onMouseDown={(e) => {
+              if (!onToggleLock) { return }
+              e.stopPropagation()
+            }}
+          >
+            <Lock className="w-2.5 h-2.5" />
+          </div>
+        </>
       )}
 
       {onToggleLock &&

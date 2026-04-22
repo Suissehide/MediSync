@@ -2,7 +2,7 @@ import dayjs, { type Dayjs } from 'dayjs'
 import { CalendarPlus, Check, X } from 'lucide-react'
 import { useState } from 'react'
 
-import { usePatientMutations } from '../../../queries/usePatient.ts'
+import { usePatientMutations } from '../../../queries/usePatient.tsx'
 import type { Patient, TimeOfDay } from '../../../types/patient.ts'
 import { Button } from '../../ui/button.tsx'
 import { DatePicker } from '../../ui/datePicker.tsx'

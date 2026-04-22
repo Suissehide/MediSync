@@ -22,7 +22,7 @@ import {
   useAppointmentByIDQuery,
   useAppointmentMutations,
 } from '../../../queries/useAppointment.ts'
-import { usePatientQueries } from '../../../queries/usePatient.ts'
+import { usePatientQueries } from '../../../queries/usePatient.tsx'
 import { useThematicQueries } from '../../../queries/useThematic.ts'
 import type { UpdateAppointmentParams } from '../../../types/appointment.ts'
 import type { Soignant } from '../../../types/soignant.ts'
