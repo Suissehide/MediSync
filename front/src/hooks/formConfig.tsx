@@ -33,6 +33,7 @@ interface InputFieldProps extends FieldComponentProps {
 
 interface SelectFieldProps extends FieldComponentProps {
   options: Array<{ value: string | number; label: string }>
+  placeholder?: string
 }
 
 interface ToggleFieldProps extends FieldComponentProps {
@@ -115,6 +116,7 @@ function SelectField({
   className,
   inputClassName,
   options,
+  placeholder,
 }: SelectFieldProps) {
   const field = useFieldContext<string | number>()
   const value = field.state.value ?? ''
@@ -128,6 +130,7 @@ function SelectField({
         value={value.toString()}
         disabled={disabled}
         className={inputClassName}
+        placeholder={placeholder}
         onValueChange={(value) => field.handleChange(value)}
       />
       <FieldInfo field={field} />
