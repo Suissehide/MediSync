@@ -129,6 +129,15 @@ export function buildPathwayEvents(pathways: Pathway[]): CalendarEvent[] {
       .add(7, 'day')
       .startOf('day')
 
+    // Collect distinct weeks (as ISO monday dates) where slots exist
+    const slotWeeks = [
+      ...new Set(
+        (pathway.slots ?? []).map((slot) =>
+          dayjs(slot.startDate).isoWeekday(1).startOf('day').format('YYYY-MM-DD'),
+        ),
+      ),
+    ].sort()
+
     return {
       id: pathway.id,
       title: pathway.template?.name ?? 'Parcours inconnu',
@@ -137,6 +146,7 @@ export function buildPathwayEvents(pathways: Pathway[]): CalendarEvent[] {
       color: pathway.template?.color ?? '#2563eb',
       extendedProps: {
         type: 'pathway',
+        slotWeeks,
       },
     }
   })

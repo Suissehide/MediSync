@@ -100,6 +100,13 @@ function Planning() {
     title: string
     anchor: { getBoundingClientRect: () => DOMRect }
   } | null>(null)
+  const [hoveredPathway, setHoveredPathway] = useState<{
+    title: string
+    start: string
+    end: string
+    x: number
+    y: number
+  } | null>(null)
   const [openEventId, setOpenEventId] = useState('')
   const [deleteConfirmEventId, setDeleteConfirmEventId] = useState<string | null>(null)
   const [openCreateSlotModal, setOpenCreateSlotModal] = useState(false)
@@ -462,6 +469,49 @@ function Planning() {
                       )
                     }
                   }}
+                  eventDidMount={(info) => {
+                    if (info.event.extendedProps.type === 'pathway') {
+                      info.el.setAttribute('data-pathway-id', info.event.id)
+                      info.el.style.cursor = 'pointer'
+                    }
+                  }}
+                  eventMouseEnter={(info) => {
+                    if (
+                      info.event.extendedProps.type === 'pathway' &&
+                      info.event.start &&
+                      info.event.end
+                    ) {
+                      const rect = info.el.getBoundingClientRect()
+                      setHoveredPathway({
+                        title: info.event.title,
+                        start: dayjs(info.event.start).format('DD/MM/YYYY'),
+                        end: dayjs(info.event.end)
+                          .subtract(1, 'day')
+                          .format('DD/MM/YYYY'),
+                        x: rect.left + rect.width / 2,
+                        y: rect.top,
+                      })
+                      const segments = document.querySelectorAll<HTMLElement>(
+                        `[data-pathway-id="${info.event.id}"]`,
+                      )
+                      segments.forEach((el) => {
+                        el.style.filter =
+                          'brightness(1.15) drop-shadow(0 2px 8px rgba(0,0,0,0.25))'
+                        el.style.zIndex = '10'
+                        el.style.transition = 'filter 0.15s ease'
+                      })
+                    }
+                  }}
+                  eventMouseLeave={(info) => {
+                    setHoveredPathway(null)
+                    const segments = document.querySelectorAll<HTMLElement>(
+                      `[data-pathway-id="${info.event.id}"]`,
+                    )
+                    segments.forEach((el) => {
+                      el.style.filter = ''
+                      el.style.zIndex = ''
+                    })
+                  }}
                   eventClick={(info) => {
                     if (isForbiddenWeekMode) {
                       return
@@ -485,6 +535,22 @@ function Planning() {
             )}
           </div>
         </div>
+
+        {hoveredPathway && (
+          <div
+            className="pointer-events-none fixed z-[200] max-w-xs rounded-md border border-border bg-popover px-3 py-2 text-xs text-text-dark shadow-md"
+            style={{
+              left: hoveredPathway.x,
+              top: hoveredPathway.y,
+              transform: 'translate(-50%, -100%) translateY(-8px)',
+            }}
+          >
+            <p className="mb-1 font-semibold">{hoveredPathway.title}</p>
+            <p>
+              {hoveredPathway.start} – {hoveredPathway.end}
+            </p>
+          </div>
+        )}
 
         <PopoverRoot
           open={!!deleteTarget}

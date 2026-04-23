@@ -3,7 +3,7 @@ import dayjs from 'dayjs'
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod/v4'
 
-import { combineDateAndTime } from '../../../../utils/date'
+import { combineDateAndTime, toStartOfWeek } from '../../../../utils/date'
 import {
   type CreatePathwayBody,
   createPathwaySchema,
@@ -172,43 +172,46 @@ const pathwayRouter: FastifyPluginAsync = (fastify) => {
         throw Boom.notFound('PathwayTemplate not found')
       }
 
-      // Shift startDate forward by weeks until no slot lands on a forbidden week
+      // Build a week mapping that skips forbidden weeks so the pathway
+      // spans over them instead of being shifted entirely.
       const forbiddenWeeks = await forbiddenWeekDomain.findAll()
-      let adjustedStart = dayjs(startDate)
+      const adjustedStart = dayjs(startDate)
 
-      if (forbiddenWeeks.length > 0) {
-        const isInForbiddenWeek = (date: dayjs.Dayjs): boolean => {
-          return forbiddenWeeks.some((fw) => {
-            const weekStart = dayjs(fw.startOfWeek)
-            const weekEnd = weekStart.add(7, 'day')
-            return (
-              (date.isSame(weekStart) || date.isAfter(weekStart)) &&
-              date.isBefore(weekEnd)
-            )
-          })
-        }
+      const isWeekForbidden = (date: Date): boolean => {
+        const weekStart = dayjs(toStartOfWeek(date))
+        return forbiddenWeeks.some((fw) => {
+          return weekStart.isSame(dayjs(fw.startOfWeek), 'day')
+        })
+      }
 
-        const candidateDates = pathwayTemplate.slotTemplates.map((st) =>
-          adjustedStart.add(st.offsetDays ?? 0, 'day'),
-        )
+      // Determine the number of logical weeks the pathway spans
+      const maxOffsetDays = Math.max(
+        ...pathwayTemplate.slotTemplates.map((st) => st.offsetDays ?? 0),
+      )
+      const maxLogicalWeek = Math.floor(maxOffsetDays / 7)
 
-        let shiftCount = 0
-        while (candidateDates.some((d) => isInForbiddenWeek(d))) {
-          if (shiftCount >= 52) {
+      // Map each logical week index to an actual week offset (skipping forbidden weeks)
+      const weekMapping = new Map<number, number>()
+      let actualWeekOffset = 0
+      for (
+        let logicalWeek = 0;
+        logicalWeek <= maxLogicalWeek;
+        logicalWeek++
+      ) {
+        while (
+          isWeekForbidden(
+            adjustedStart.add(actualWeekOffset * 7, 'day').toDate(),
+          )
+        ) {
+          actualWeekOffset++
+          if (actualWeekOffset > logicalWeek + 52) {
             throw Boom.conflict(
               'Aucune date de début disponible dans les 52 prochaines semaines en raison des semaines interdites',
             )
           }
-          shiftCount++
-          adjustedStart = adjustedStart.add(7, 'day')
-          candidateDates.forEach((_, i) => {
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            candidateDates[i] = adjustedStart.add(
-              pathwayTemplate.slotTemplates[i]!.offsetDays ?? 0,
-              'day',
-            )
-          })
         }
+        weekMapping.set(logicalWeek, actualWeekOffset)
+        actualWeekOffset++
       }
 
       const effectiveStartDate = adjustedStart.toISOString()
@@ -216,14 +219,24 @@ const pathwayRouter: FastifyPluginAsync = (fastify) => {
       const slotIDs: string[] = []
       for (const slotTemplate of pathwayTemplate.slotTemplates) {
         const { soignant, id: _id, ...rest } = slotTemplate
+
+        // Compute the effective offset by adding the extra weeks from forbidden week skipping
+        const originalOffset = slotTemplate.offsetDays ?? 0
+        const logicalWeek = Math.floor(originalOffset / 7)
+        const dayInWeek = originalOffset % 7
+        const actualWeek = weekMapping.get(logicalWeek) ?? logicalWeek
+        const effectiveOffset = actualWeek * 7 + dayInWeek
+
         const clonedSlotTemplate = await slotTemplateDomain.create({
           ...rest,
+          offsetDays: effectiveOffset,
           soignantID: soignant?.id ?? undefined,
           templateID: undefined,
         })
 
-        const offset = clonedSlotTemplate.offsetDays ?? 0
-        const base = dayjs(effectiveStartDate).add(offset, 'day').toISOString()
+        const base = dayjs(effectiveStartDate)
+          .add(effectiveOffset, 'day')
+          .toISOString()
 
         const start = combineDateAndTime(base, clonedSlotTemplate.startTime)
         const end = combineDateAndTime(base, clonedSlotTemplate.endTime)

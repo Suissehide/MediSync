@@ -40,6 +40,7 @@ export interface CalendarEvent {
     states?: string[]
     appointments?: Appointment[]
     locked?: boolean
+    slotWeeks?: string[]
   }
 }
 
