@@ -1,7 +1,7 @@
 import dayjs from 'dayjs'
 import { ArrowLeft, ArrowRight, Check, X } from 'lucide-react'
 import type React from 'react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { GENDER_OPTIONS } from '../../../constants/patient.constant.ts'
 import { useAppForm } from '../../../hooks/formConfig.tsx'
@@ -68,13 +68,20 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
     },
   })
 
+  const formResetRef = useRef(form.reset.bind(form))
+  formResetRef.current = form.reset.bind(form)
+
+  const resetAll = useCallback(() => {
+    formResetRef.current()
+    setStep(1)
+    pathwayState.reset()
+  }, [pathwayState.reset])
+
   useEffect(() => {
     if (open) {
-      form.reset()
-      setStep(1)
-      pathwayState.reset()
+      resetAll()
     }
-  }, [open, form, pathwayState.reset])
+  }, [open, resetAll])
 
   const nextStep = () => setStep((s) => s + 1)
   const prevStep = () => setStep((s) => s - 1)

@@ -6,7 +6,7 @@ import {
   X,
 } from 'lucide-react'
 import type React from 'react'
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 
 import { APPOINTMENT_TYPE_OPTIONS } from '../../constants/appointment.constant.ts'
 import { usePathwayTemplateQueries } from '../../queries/usePathwayTemplate.ts'
@@ -113,13 +113,13 @@ export function usePathwaySelector() {
 
   const handleDragEnd = () => setDraggedIndex(null)
 
-  const reset = () => {
+  const reset = useCallback(() => {
     setSelectedTags([])
     setSelectedPathways([])
     setAddedPathways([])
     setExpandedPathwayId(null)
     setDraggedIndex(null)
-  }
+  }, [])
 
   return {
     allTags,
