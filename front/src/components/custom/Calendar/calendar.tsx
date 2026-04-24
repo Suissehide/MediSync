@@ -63,6 +63,8 @@ interface CalendarProps {
   onDuplicate?: (eventId: string) => void
   onDelete?: (eventId: string) => void
   onToggleLock?: (eventId: string, locked: boolean) => void
+  selectedSlotIds?: Set<string>
+  onToggleSelect?: (eventId: string) => void
   unselectRef?: React.MutableRefObject<(() => void) | null>
 }
 
@@ -85,6 +87,8 @@ function Calendar({
   onDuplicate,
   onDelete,
   onToggleLock,
+  selectedSlotIds,
+  onToggleSelect,
   unselectRef,
 }: CalendarProps) {
   const lastDropTimeRef = useRef<number>(0)
@@ -295,6 +299,8 @@ function Calendar({
             onDuplicate={onDuplicate}
             onDelete={onDelete}
             onToggleLock={onToggleLock}
+            selectedSlotIds={selectedSlotIds}
+            onToggleSelect={onToggleSelect}
           />
         )}
         noEventsContent={() => (

@@ -2,6 +2,7 @@ import type { EventContentArg } from '@fullcalendar/core'
 import { clsx } from 'clsx'
 import dayjs from 'dayjs'
 import {
+  Check,
   Copy,
   Lock,
   LockOpen,
@@ -28,6 +29,8 @@ type Props = {
   onDuplicate?: (eventId: string) => void
   onDelete?: (eventId: string) => void
   onToggleLock?: (eventId: string, locked: boolean) => void
+  selectedSlotIds?: Set<string>
+  onToggleSelect?: (eventId: string) => void
 }
 
 export const EventContent = ({
@@ -37,6 +40,8 @@ export const EventContent = ({
   onDuplicate,
   onDelete,
   onToggleLock,
+  selectedSlotIds,
+  onToggleSelect,
 }: Props) => {
   const { event, timeText } = eventContent
   const { states, appointments, thematic, type, locked } = event.extendedProps
@@ -44,6 +49,8 @@ export const EventContent = ({
   const isIndividual = containsKeyword(states, ['individual'])
   const isMultiple = containsKeyword(states, ['multiple'])
   const isFillable = containsKeyword(states, ['fillable'])
+  const isSelected = selectedSlotIds?.has(event.id) ?? false
+  const isSelectionMode = selectedSlotIds && selectedSlotIds.size > 0
 
   const calculateAppointmentStyle = (appointment: Appointment) => {
     if (!isIndividual) {
@@ -79,9 +86,31 @@ export const EventContent = ({
         {
           'pointer-events-none': containsKeyword(states, ['editable']),
           'opacity-45 bg-gray-400 rounded-sm': editMode && type === 'slot',
+          'slot-selected ring-2 ring-primary ring-offset-1 rounded-sm': isSelected,
         },
       )}
     >
+      {onToggleSelect && (type === 'slot' || type === 'template') &&
+        !containsKeyword(states, ['editable']) && (
+          <button
+            type="button"
+            className={clsx(
+              'absolute bottom-0.5 left-0.5 z-20 h-4 w-4 rounded border flex items-center justify-center transition-all cursor-pointer',
+              isSelected
+                ? 'bg-primary border-primary text-white'
+                : 'border-white/60 bg-black/20 text-transparent hover:border-white hover:bg-black/30',
+              isSelectionMode ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+            )}
+            onClick={(e) => {
+              e.stopPropagation()
+              onToggleSelect(event.id)
+            }}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <Check className="w-3 h-3" strokeWidth={3} />
+          </button>
+        )}
+
       {locked && type === 'slot' && (
         <>
           <div

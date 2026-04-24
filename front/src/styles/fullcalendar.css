@@ -202,6 +202,15 @@ thead .fc-theme-standard th {
   cursor: pointer;
 }
 
+/* ── Selected slots ─────────────────────────────────────────────────────── */
+
+/* The ring/outline on a selected event is clipped by adjacent harness
+   containers that FullCalendar stacks on top.  Elevate the harness when
+   it contains a selected event so the ring stays visible. */
+.fc-timegrid-event-harness:has(.slot-selected) {
+  z-index: 99 !important;
+}
+
 /* ── Empty state - vue Planning (listWeek) ───────────────────────────────── */
 .fc .fc-list-empty {
   background-color: var(--background);

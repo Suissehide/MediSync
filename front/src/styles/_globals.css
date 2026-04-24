@@ -107,11 +107,6 @@ body {
   cursor: pointer;
 }
 
-.fc-timegrid-event-harness:hover {
-  transition: ease 0.2s;
-  left: 0 !important;
-}
-
 .fc-event.fc-event-draggable {
   cursor: default;
 }

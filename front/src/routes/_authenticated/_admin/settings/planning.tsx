@@ -8,13 +8,14 @@ import multiMonthPlugin from '@fullcalendar/multimonth'
 import FullCalendar from '@fullcalendar/react'
 import { createFileRoute } from '@tanstack/react-router'
 import dayjs from 'dayjs'
-import { CalendarDays, GanttChart, Trash2, X } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { CalendarDays, CheckSquare, Copy, GanttChart, Trash2, X } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import Calendar, {
   type CalendarEvent,
 } from '../../../../components/custom/Calendar/calendar.tsx'
 import AddSlotForm from '../../../../components/custom/popup/addSlotForm.tsx'
+import { BulkDuplicateForm } from '../../../../components/custom/popup/bulkDuplicateForm.tsx'
 import { ConfirmDeleteForm } from '../../../../components/custom/popup/confirmDeleteForm.tsx'
 import { CreateForbiddenWeekForm } from '../../../../components/custom/popup/createForbiddenWeekForm.tsx'
 import { DeleteForbiddenWeekForm } from '../../../../components/custom/popup/deleteForbiddenWeekForm.tsx'
@@ -22,6 +23,7 @@ import EventSheet from '../../../../components/custom/sheet/eventSheet.tsx'
 import EventTemplateSheet from '../../../../components/custom/sheet/eventTemplateSheet.tsx'
 import DashboardLayout from '../../../../components/dashboard.layout.tsx'
 import { Button } from '../../../../components/ui/button.tsx'
+import { Select } from '../../../../components/ui/select.tsx'
 import { TOAST_SEVERITY } from '../../../../constants/ui.constant.ts'
 import { useToast } from '../../../../hooks/useToast.ts'
 import {
@@ -55,6 +57,7 @@ import {
 } from '../../../../queries/useSlot.ts'
 import { useSlotTemplateMutations } from '../../../../queries/useSlotTemplate.ts'
 import { usePathwayTemplateEditStore } from '../../../../store/usePathwayTemplateEditStore.ts'
+import { usePlanningStore } from '../../../../store/usePlanningStore.ts'
 import type { CreateSlotParamsWithTemplateData } from '../../../../types/slot.ts'
 
 export const Route = createFileRoute(
@@ -113,6 +116,28 @@ function Planning() {
   const [selectedDate, setSelectedDate] = useState<DateSelectArg | null>(null)
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [eventTemplates, setEventTemplates] = useState<CalendarEvent[]>([])
+  const [selectedSlotIds, setSelectedSlotIds] = useState<Set<string>>(new Set())
+  const [bulkAction, setBulkAction] = useState('')
+  const [duplicateWeekDate, setDuplicateWeekDate] = useState<dayjs.Dayjs | null>(null)
+  const [duplicateTargetWeek, setDuplicateTargetWeek] = useState(1)
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false)
+
+  const handleToggleSelect = useCallback((eventId: string) => {
+    setSelectedSlotIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(eventId)) {
+        next.delete(eventId)
+      } else {
+        next.add(eventId)
+      }
+      return next
+    })
+  }, [])
+
+  const handleClearSelection = useCallback(() => {
+    setSelectedSlotIds(new Set())
+    setBulkAction('')
+  }, [])
 
   useEffect(() => {
     if (slots) {
@@ -288,6 +313,95 @@ function Planning() {
     updateSlot.mutate({ id: slotId, locked })
   }
 
+  const handleBulkDuplicate = (targetDate: dayjs.Dayjs) => {
+    const targetWeekStart = targetDate.isoWeekday(1).utc().startOf('day')
+
+    for (const eventId of selectedSlotIds) {
+      if (!eventId.startsWith('slot_')) continue
+      const slotId = eventId.replace('slot_', '')
+      const slot = slots?.find((s) => s.id === slotId)
+      if (!slot) continue
+
+      const slotStart = dayjs(slot.startDate)
+      const slotWeekStart = slotStart.isoWeekday(1).utc().startOf('day')
+      const dayOffset = slotStart.diff(slotWeekStart, 'day')
+      const timeOfDay = slotStart.format('HH:mm:ss')
+      const duration = dayjs(slot.endDate).diff(slotStart, 'minute')
+
+      const newStart = targetWeekStart.add(dayOffset, 'day')
+      const newStartFull = dayjs(`${newStart.format('YYYY-MM-DD')}T${timeOfDay}`)
+      const newEnd = newStartFull.add(duration, 'minute')
+
+      const duplicateParams: CreateSlotParamsWithTemplateData = {
+        startDate: newStartFull.toISOString(),
+        endDate: newEnd.toISOString(),
+        slotTemplate: {
+          startTime: newStartFull.toISOString(),
+          endTime: newEnd.toISOString(),
+          offsetDays: 0,
+          thematic: slot.slotTemplate.thematic,
+          location: slot.slotTemplate.location,
+          description: slot.slotTemplate.description,
+          color: slot.slotTemplate.color,
+          isIndividual: slot.slotTemplate.isIndividual,
+          capacity: slot.slotTemplate.capacity ?? 1,
+          soignantID: slot.slotTemplate.soignant?.id ?? '',
+        },
+      }
+      createSlot.mutate(duplicateParams)
+    }
+
+    toast({
+      title: 'Duplication en cours',
+      message: `${selectedSlotIds.size} créneau(x) dupliqué(s) sur la semaine du ${targetWeekStart.format('DD/MM/YYYY')}`,
+      severity: TOAST_SEVERITY.SUCCESS,
+    })
+
+    handleClearSelection()
+    setShowDuplicateModal(false)
+    setDuplicateWeekDate(null)
+  }
+
+  const handleBulkDuplicateEditMode = (targetWeekNum: number) => {
+    if (!currentPathwayTemplate) return
+
+    for (const eventId of selectedSlotIds) {
+      if (!eventId.startsWith('template_')) continue
+      const templateId = eventId.replace('template_', '')
+      const slotTemplate = currentPathwayTemplate.slotTemplates?.find(
+        (t) => t.id === templateId,
+      )
+      if (!slotTemplate) continue
+
+      const currentOffsetDays = slotTemplate.offsetDays ?? 0
+      const dayInWeek = currentOffsetDays % 7
+      const newOffsetDays = (targetWeekNum - 1) * 7 + dayInWeek
+
+      createSlotTemplate.mutate({
+        startTime: slotTemplate.startTime,
+        endTime: slotTemplate.endTime,
+        offsetDays: newOffsetDays,
+        thematic: slotTemplate.thematic,
+        location: slotTemplate.location,
+        description: slotTemplate.description,
+        color: slotTemplate.color,
+        isIndividual: slotTemplate.isIndividual,
+        soignantID: slotTemplate.soignant?.id ?? '',
+        templateID: currentPathwayTemplate.id,
+      })
+    }
+
+    toast({
+      title: 'Duplication en cours',
+      message: `${selectedSlotIds.size} créneau(x) dupliqué(s) sur la semaine ${targetWeekNum}`,
+      severity: TOAST_SEVERITY.SUCCESS,
+    })
+
+    handleClearSelection()
+    setShowDuplicateModal(false)
+    setDuplicateTargetWeek(1)
+  }
+
   const handleForbiddenWeekCreate = (date: string) => {
     setCreateForbiddenWeekDate(date)
   }
@@ -310,6 +424,7 @@ function Planning() {
     if (editMode) {
       setView('calendar')
     }
+    handleClearSelection()
   }, [editMode])
 
   const pathwayEvents = useMemo<CalendarEvent[]>(() => {
@@ -405,6 +520,48 @@ function Planning() {
           </div>
         </div>
 
+        {selectedSlotIds.size > 0 && (
+          <div className="mx-6 flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-2">
+            <CheckSquare className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium text-text-dark">
+              {selectedSlotIds.size} créneau{selectedSlotIds.size > 1 ? 'x' : ''} sélectionné{selectedSlotIds.size > 1 ? 's' : ''}
+            </span>
+
+            <div className="w-48">
+              <Select
+                options={[
+                  { value: 'duplicate', label: 'Dupliquer sur une semaine' },
+                ]}
+                placeholder="Action..."
+                value={bulkAction}
+                onValueChange={(v) => {
+                  setBulkAction(v)
+                  if (v === 'duplicate') {
+                    if (editMode) {
+                      setDuplicateTargetWeek(1)
+                    } else {
+                      const { viewStart } = usePlanningStore.getState()
+                      setDuplicateWeekDate(viewStart ? dayjs(viewStart).isoWeekday(1) : dayjs().isoWeekday(1))
+                    }
+                    setShowDuplicateModal(true)
+                  }
+                }}
+                clearable={false}
+              />
+            </div>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              className="ml-auto text-text-light hover:text-text-dark"
+              onClick={handleClearSelection}
+            >
+              <X className="h-4 w-4" />
+              Désélectionner
+            </Button>
+          </div>
+        )}
+
         <div className="flex flex-col h-full">
           <div className="flex-1 min-h-0 overflow-hidden">
             {view === 'calendar' ? (
@@ -421,6 +578,8 @@ function Planning() {
                 onDuplicate={handleDuplicateSlot}
                 onDelete={handleDeleteHoverSlot}
                 onToggleLock={handleToggleLock}
+                selectedSlotIds={selectedSlotIds}
+                onToggleSelect={handleToggleSelect}
               />
             ) : (
               <div
@@ -689,6 +848,41 @@ function Planning() {
           }}
           loading={deleteForbiddenWeek.isPending}
         />
+
+        {editMode ? (
+          <BulkDuplicateForm
+            open={showDuplicateModal}
+            setOpen={(open) => {
+              setShowDuplicateModal(open)
+              if (!open) {
+                setBulkAction('')
+                setDuplicateTargetWeek(1)
+              }
+            }}
+            editMode
+            count={selectedSlotIds.size}
+            targetWeekNumber={duplicateTargetWeek}
+            onTargetWeekNumberChange={setDuplicateTargetWeek}
+            onConfirm={() => handleBulkDuplicateEditMode(duplicateTargetWeek)}
+          />
+        ) : (
+          <BulkDuplicateForm
+            open={showDuplicateModal}
+            setOpen={(open) => {
+              setShowDuplicateModal(open)
+              if (!open) {
+                setBulkAction('')
+                setDuplicateWeekDate(null)
+              }
+            }}
+            count={selectedSlotIds.size}
+            weekDate={duplicateWeekDate}
+            onWeekChange={setDuplicateWeekDate}
+            onConfirm={() => {
+              if (duplicateWeekDate) handleBulkDuplicate(duplicateWeekDate)
+            }}
+          />
+        )}
       </div>
     </DashboardLayout>
   )
