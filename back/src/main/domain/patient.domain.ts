@@ -30,6 +30,7 @@ import type { PathwayTemplateRepositoryInterface } from '../types/infra/orm/repo
 import type { EnrollmentIssueRepositoryInterface } from '../types/infra/orm/repositories/enrollmentIssue.repository.interface'
 import type { PatientRepositoryInterface } from '../types/infra/orm/repositories/patient.repository.interface'
 import type { SlotWithTemplateAndAppointmentsRepo } from '../types/infra/orm/repositories/slot.repository.interface'
+import type { ThematicRepositoryInterface } from '../types/infra/orm/repositories/thematic.repository.interface'
 import type { Logger } from '../types/utils/logger'
 import type { AppEventBus } from '../utils/app-event-bus'
 
@@ -40,6 +41,7 @@ class PatientDomain implements PatientDomainInterface {
   private readonly pathwayTemplateRepository: PathwayTemplateRepositoryInterface
   private readonly appointmentRepository: AppointmentRepositoryInterface
   private readonly enrollmentIssueRepository: EnrollmentIssueRepositoryInterface
+  private readonly thematicRepository: ThematicRepositoryInterface
   private readonly appEventBus: AppEventBus
 
   constructor({
@@ -48,6 +50,7 @@ class PatientDomain implements PatientDomainInterface {
     pathwayTemplateRepository,
     appointmentRepository,
     enrollmentIssueRepository,
+    thematicRepository,
     appEventBus,
     logger,
   }: IocContainer) {
@@ -56,6 +59,7 @@ class PatientDomain implements PatientDomainInterface {
     this.pathwayTemplateRepository = pathwayTemplateRepository
     this.appointmentRepository = appointmentRepository
     this.enrollmentIssueRepository = enrollmentIssueRepository
+    this.thematicRepository = thematicRepository
     this.appEventBus = appEventBus
     this.logger = logger
   }
@@ -200,23 +204,38 @@ class PatientDomain implements PatientDomainInterface {
     const enrollments: EnrollmentResult['enrollments'] = []
     const failedEnrollments: EnrollmentResult['failedEnrollments'] = []
 
-    for (const pathwayTemplate of pathwayTemplates) {
+    for (const enrollment of pathwayTemplates) {
       try {
-        const pathwayTemplateInstance =
-          await this.pathwayTemplateRepository.findByID(
-            pathwayTemplate.pathwayTemplateID,
-          )
+        // Résoudre la thématique si fournie
+        let thematicName: string | undefined
+        let thematicDuration = 30
+        if (enrollment.thematicID) {
+          const thematic = await this.thematicRepository.findByID(enrollment.thematicID)
+          thematicName = thematic.name
+          thematicDuration = thematic.duration ?? 30
+        }
 
-        const pathways = await this.pathwayRepository.findByTemplateIDAndDate(
-          pathwayTemplate.pathwayTemplateID,
+        // Trouver les parcours disponibles par tag
+        const pathways = await this.pathwayRepository.findByTemplateTagAndDate(
+          enrollment.tag,
           startDate,
         )
+
+        if (pathways.length === 0) {
+          failedEnrollments.push({
+            slotTemplate: { id: enrollment.tag },
+            reason: `Aucun parcours trouvé pour le tag "${enrollment.tag}"`,
+          })
+          continue
+        }
 
         const validPathway = pathways.find((pathway) =>
           this.isPathwayAvailable(
             pathway.slots,
-            pathwayTemplate.timeOfDay,
+            enrollment.timeOfDay,
             patient.appointmentPatients,
+            1,
+            thematicDuration,
           ),
         )
 
@@ -224,31 +243,33 @@ class PatientDomain implements PatientDomainInterface {
           const appointments = await this.enrollOnPathway(
             patient,
             validPathway,
-            pathwayTemplate,
+            enrollment,
+            thematicName,
+            thematicDuration,
           )
           enrollments.push({
             slotTemplate: {
-              id: pathwayTemplateInstance.id,
-              name: pathwayTemplateInstance.name,
+              id: enrollment.tag,
+              name: enrollment.tag,
             },
             appointments,
           })
         } else {
           failedEnrollments.push({
             slotTemplate: {
-              id: pathwayTemplateInstance.id,
-              name: pathwayTemplateInstance.name,
+              id: enrollment.tag,
+              name: enrollment.tag,
             },
-            reason: `Aucune disponibilité pour le parcours ${pathwayTemplateInstance.name}`,
+            reason: `Aucune disponibilité pour le tag "${enrollment.tag}"`,
           })
         }
       } catch (error) {
         this.logger.error(
-          `Erreur lors de l'inscription au parcours ${pathwayTemplate.pathwayTemplateID}: ${error instanceof Error ? error.message : String(error)}`,
+          `Erreur lors de l'inscription au parcours avec tag "${enrollment.tag}": ${error instanceof Error ? error.message : String(error)}`,
         )
         failedEnrollments.push({
           slotTemplate: {
-            id: pathwayTemplate.pathwayTemplateID,
+            id: enrollment.tag,
           },
           reason:
             error instanceof Error
@@ -284,6 +305,7 @@ class PatientDomain implements PatientDomainInterface {
     timeOfDay: TimeOfDay,
     patientAppointments: AppointmentPatientWithAppointmentDomain[],
     maxCapacity = 1,
+    appointmentDuration = 30,
   ): boolean {
     // Tous les slots doivent passer les vérifications
     return slots.every((slot) => {
@@ -319,7 +341,7 @@ class PatientDomain implements PatientDomainInterface {
           slotStart.toDate(),
           slotEnd.toDate(),
           slot.appointments,
-          30, //TODO: slot.duration
+          appointmentDuration,
         )
         if (!nextSlot) {
           return false
@@ -348,8 +370,10 @@ class PatientDomain implements PatientDomainInterface {
     patient: PatientEntityDomain,
     pathway: PathwayWithSlotsRepo,
     pathwayTemplate: PathwayEnrollmentInput,
+    thematicName?: string,
+    appointmentDuration = 30,
   ): Promise<EnrollmentAppointment[]> {
-    const { thematic, type } = pathwayTemplate
+    const { type } = pathwayTemplate
     const slots = pathway.slots
     const enrollmentAppointments: EnrollmentAppointment[] = []
 
@@ -362,13 +386,13 @@ class PatientDomain implements PatientDomainInterface {
             slot.startDate,
             slot.endDate,
             slot.appointments,
-            30, //TODO: slot.duration
+            appointmentDuration,
           )
           if (nextSlot) {
             const appointment = await this.appointmentRepository.create({
               startDate: nextSlot.startDate,
               endDate: nextSlot.endDate,
-              thematic: thematic ?? undefined,
+              thematic: thematicName ?? undefined,
               type: type ?? undefined,
               slotID: slot.id,
               patientIDs: [patient.id],

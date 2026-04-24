@@ -32,6 +32,7 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
   const [step, setStep] = useState(1)
   const { enrollPatient } = usePatientMutations()
   const pathwayState = usePathwaySelector()
+  const { reset: resetPathways } = pathwayState
 
   const form = useAppForm({
     defaultValues: {
@@ -57,9 +58,9 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
         } satisfies CreatePatientParams,
         startDate: value.startDate.toISOString(),
         pathways: pathwayState.addedPathways.map((p) => ({
-          pathwayTemplateID: p.pathwayTemplateId,
+          tag: p.tag,
           timeOfDay: periodToTimeOfDay[p.period],
-          thematic: p.thematic,
+          thematicID: p.thematicID || undefined,
           type: p.type,
         })),
       })
@@ -74,8 +75,8 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
   const resetAll = useCallback(() => {
     formResetRef.current()
     setStep(1)
-    pathwayState.reset()
-  }, [pathwayState.reset])
+    resetPathways()
+  }, [resetPathways])
 
   useEffect(() => {
     if (open) {
@@ -119,11 +120,11 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
               <>
                 <div className="w-full flex gap-4">
                   <form.AppField name="firstName">
-                    {(field) => <field.Input label="Prénom" />}
+                    {(field) => <field.Input label="Prénom" className="w-full" />}
                   </form.AppField>
 
                   <form.AppField name="lastName">
-                    {(field) => <field.Input label="Nom" />}
+                    {(field) => <field.Input label="Nom" className="w-full" />}
                   </form.AppField>
                 </div>
 

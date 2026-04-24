@@ -63,9 +63,9 @@ export type UpdatePatientParams = Patient
 export type TimeOfDay = 'ALL_DAY' | 'MORNING' | 'AFTERNOON'
 
 export type PathwayEnrollment = {
-  pathwayTemplateID: string
+  tag: string
   timeOfDay: TimeOfDay
-  thematic?: string
+  thematicID?: string
   type?: string
 }
 

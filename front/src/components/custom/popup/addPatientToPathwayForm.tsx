@@ -49,9 +49,9 @@ export function AddPatientToPathwayForm({
         patientID: patient.id,
         startDate: startDate.toISOString(),
         pathways: pathwayState.addedPathways.map((p) => ({
-          pathwayTemplateID: p.pathwayTemplateId,
+          tag: p.tag,
           timeOfDay: periodToTimeOfDay[p.period],
-          thematic: p.thematic,
+          thematicID: p.thematicID || undefined,
           type: p.type,
         })),
       },

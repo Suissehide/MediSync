@@ -24,9 +24,9 @@ export type PatientCreateEntityDomain = Omit<
 export type PatientUpdateEntityDomain = PatientUpdateEntityRepo
 
 export type PathwayEnrollmentInput = {
-  pathwayTemplateID: string
+  tag: string
   timeOfDay: TimeOfDay
-  thematic?: string
+  thematicID?: string
   type?: string
 }
 

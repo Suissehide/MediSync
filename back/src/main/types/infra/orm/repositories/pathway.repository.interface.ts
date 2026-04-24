@@ -50,6 +50,10 @@ export interface PathwayRepositoryInterface {
     pathwayTemplateID: string,
     startDate: Date,
   ) => Promise<PathwayWithSlotsRepo[]>
+  findByTemplateTagAndDate: (
+    tag: string,
+    startDate: Date,
+  ) => Promise<PathwayWithSlotsRepo[]>
   findTracking: (
     year: number,
     month: number,

@@ -96,9 +96,9 @@ export type PatientResponse = z.infer<typeof patientResponseSchema>
 export const timeOfDaySchema = z.enum(['ALL_DAY', 'MORNING', 'AFTERNOON'])
 
 export const pathwayEnrollmentSchema = z.object({
-  pathwayTemplateID: z.cuid(),
+  tag: z.string().min(1),
   timeOfDay: timeOfDaySchema,
-  thematic: z.string().optional(),
+  thematicID: z.cuid().optional(),
   type: z.string().optional(),
 })
 
