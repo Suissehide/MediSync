@@ -26,7 +26,11 @@ class SlotRepository implements SlotRepositoryInterface {
             soignant: true,
           },
         },
-        pathway: true,
+        pathway: {
+          include: {
+            template: true,
+          },
+        },
         appointments: {
           include: {
             appointmentPatients: {
@@ -50,7 +54,11 @@ class SlotRepository implements SlotRepositoryInterface {
               soignant: true,
             },
           },
-          pathway: true,
+          pathway: {
+            include: {
+              template: true,
+            },
+          },
           appointments: {
             include: {
               appointmentPatients: {
@@ -80,7 +88,11 @@ class SlotRepository implements SlotRepositoryInterface {
               soignant: true,
             },
           },
-          pathway: true,
+          pathway: {
+            include: {
+              template: true,
+            },
+          },
           appointments: {
             include: {
               appointmentPatients: {
@@ -125,7 +137,11 @@ class SlotRepository implements SlotRepositoryInterface {
                 soignant: true,
               },
             },
-            pathway: true,
+            pathway: {
+            include: {
+              template: true,
+            },
+          },
             appointments: {
               include: {
                 appointmentPatients: {

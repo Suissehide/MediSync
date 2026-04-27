@@ -1,4 +1,5 @@
 import type {
+  PathwayTemplate,
   Prisma,
   Slot,
 } from '../../../../../generated/client'
@@ -14,8 +15,11 @@ export type SlotWithTemplateAndAppointmentsRepo = SlotEntityRepo & {
   slotTemplate: SlotTemplateWithSoignantRepo
   appointments: AppointmentWithPatientsRepo[]
 }
+export type PathwayWithTemplateRepo = PathwayEntityRepo & {
+  template: PathwayTemplate | null
+}
 export type SlotDTORepo = SlotEntityRepo & {
-  pathway: PathwayEntityRepo | null
+  pathway: PathwayWithTemplateRepo | null
   slotTemplate: SlotTemplateWithSoignantRepo
   appointments: AppointmentWithPatientsRepo[]
 }
