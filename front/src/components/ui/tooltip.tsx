@@ -3,8 +3,13 @@ import React from 'react'
 
 import { cn } from '../../libs/utils.ts'
 
-const TooltipProvider = ({ children, ...props }: React.ComponentPropsWithoutRef<typeof Tooltip.Provider>) => (
-  <Tooltip.Provider delayDuration={0} {...props}>{children}</Tooltip.Provider>
+const TooltipProvider = ({
+  children,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof Tooltip.Provider>) => (
+  <Tooltip.Provider delayDuration={0} {...props}>
+    {children}
+  </Tooltip.Provider>
 )
 const TooltipRoot = Tooltip.Root
 const TooltipTrigger = Tooltip.Trigger

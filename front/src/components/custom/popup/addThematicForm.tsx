@@ -43,7 +43,11 @@ function AddThematicForm({ trigger }: AddThematicFormProps) {
       soignantIDs: [] as string[],
     },
     onSubmit: ({ value }) => {
-      createThematic.mutate({ name: value.name, duration: Number(value.duration), soignantIDs: value.soignantIDs })
+      createThematic.mutate({
+        name: value.name,
+        duration: Number(value.duration),
+        soignantIDs: value.soignantIDs,
+      })
       setOpen(false)
     },
   })
@@ -117,7 +121,11 @@ function AddThematicForm({ trigger }: AddThematicFormProps) {
         </PopupBody>
 
         <PopupFooter>
-          <Button variant="default" isLoading={createThematic.isPending} onClick={() => form.handleSubmit()}>
+          <Button
+            variant="default"
+            isLoading={createThematic.isPending}
+            onClick={() => form.handleSubmit()}
+          >
             <Check className="w-4 h-4" />
             Ajouter
           </Button>

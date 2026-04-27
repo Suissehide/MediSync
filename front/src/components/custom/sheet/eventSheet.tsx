@@ -1,8 +1,6 @@
 import dayjs from 'dayjs'
 import { ChevronDown, FilePlus, Loader2Icon } from 'lucide-react'
-import { useEffect } from 'react'
-
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { TOAST_SEVERITY } from '../../../constants/ui.constant.ts'
 import { useAppForm } from '../../../hooks/formConfig.tsx'
@@ -10,7 +8,6 @@ import { useToast } from '../../../hooks/useToast.ts'
 import { formatDuration } from '../../../libs/utils.ts'
 import { usePathwayMutations } from '../../../queries/usePathway.ts'
 import { useSlotByIDQuery, useSlotMutations } from '../../../queries/useSlot.ts'
-import { ConfirmDeleteForm } from '../popup/confirmDeleteForm.tsx'
 import { useSoignantQueries } from '../../../queries/useSoignant.ts'
 import type { UpdateSlotParams } from '../../../types/slot.ts'
 import { Button } from '../../ui/button.tsx'
@@ -26,6 +23,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '../../ui/sheet.tsx'
+import { ConfirmDeleteForm } from '../popup/confirmDeleteForm.tsx'
 import { EventFormFields } from './form/EventFormFields.tsx'
 import { eventFormOpts } from './form/eventFormOpts.ts'
 
@@ -43,7 +41,8 @@ export default function EventSheet({
   handleDeleteEvent,
 }: EventSheetProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [showDeletePathwayConfirm, setShowDeletePathwayConfirm] = useState(false)
+  const [showDeletePathwayConfirm, setShowDeletePathwayConfirm] =
+    useState(false)
   const { toast } = useToast()
 
   useSoignantQueries()
@@ -98,7 +97,8 @@ export default function EventSheet({
       if (slot.appointments && slot.appointments.length > 0) {
         toast({
           title: 'Suppression impossible',
-          message: 'Ce créneau contient des rendez-vous déjà programmés. Veuillez d\'abord supprimer les rendez-vous avant de supprimer le créneau.',
+          message:
+            "Ce créneau contient des rendez-vous déjà programmés. Veuillez d'abord supprimer les rendez-vous avant de supprimer le créneau.",
           severity: TOAST_SEVERITY.ERROR,
         })
         return
@@ -221,7 +221,11 @@ export default function EventSheet({
                 </div>
 
                 <div className="flex gap-4">
-                  <Button variant="default" onClick={() => form.handleSubmit()} isLoading={updateSlot.isPending}>
+                  <Button
+                    variant="default"
+                    onClick={() => form.handleSubmit()}
+                    isLoading={updateSlot.isPending}
+                  >
                     Mettre à jour
                   </Button>
                   <Button variant="outline" onClick={() => setOpen('')}>

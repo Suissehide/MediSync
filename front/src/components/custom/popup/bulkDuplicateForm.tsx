@@ -1,8 +1,8 @@
 import type { Dayjs } from 'dayjs'
 import { Copy, Minus, Plus, X } from 'lucide-react'
 
-import { WeekPicker } from '../../ui/weekPicker.tsx'
 import { Button } from '../../ui/button.tsx'
+import { Label } from '../../ui/label.tsx'
 import {
   Popup,
   PopupBody,
@@ -11,6 +11,7 @@ import {
   PopupHeader,
   PopupTitle,
 } from '../../ui/popup.tsx'
+import { WeekPicker } from '../../ui/weekPicker.tsx'
 
 interface BulkDuplicateFormBaseProps {
   open: boolean
@@ -51,8 +52,9 @@ export function BulkDuplicateForm(props: BulkDuplicateFormProps) {
 
         <PopupBody>
           <p className="text-sm text-text-light mb-4">
-            {count} créneau{count > 1 ? 'x' : ''} sélectionné{count > 1 ? 's' : ''}.
-            Choisissez la semaine cible pour la duplication.
+            {count} créneau{count > 1 ? 'x' : ''} sélectionné
+            {count > 1 ? 's' : ''}. Choisissez la semaine cible pour la
+            duplication.
           </p>
 
           {editMode ? (
@@ -102,16 +104,16 @@ function NormalModeContent({
 
   return (
     <>
-      <label className="block text-sm font-medium text-text-dark mb-1">
+      <Label className="block text-sm font-medium text-text-dark mb-1">
         Semaine cible
-      </label>
+      </Label>
       <WeekPicker value={weekDate} onChange={onWeekChange} />
 
       {weekStart && (
         <p className="mt-2 text-sm text-text-light">
           Semaine du{' '}
-          <span className="font-medium text-text-dark">{weekStartLabel}</span> au{' '}
-          <span className="font-medium text-text-dark">{weekEndLabel}</span>
+          <span className="font-medium text-text-dark">{weekStartLabel}</span>{' '}
+          au <span className="font-medium text-text-dark">{weekEndLabel}</span>
         </p>
       )}
     </>
@@ -127,13 +129,15 @@ function EditModeContent({
 }) {
   return (
     <>
-      <label className="block text-sm font-medium text-text-dark mb-2">
+      <Label className="block text-sm font-medium text-text-dark mb-2">
         Semaine cible du parcours
-      </label>
+      </Label>
       <div className="flex items-center gap-3">
         <button
           type="button"
-          onClick={() => onTargetWeekNumberChange(Math.max(1, targetWeekNumber - 1))}
+          onClick={() =>
+            onTargetWeekNumberChange(Math.max(1, targetWeekNumber - 1))
+          }
           className="flex items-center justify-center h-9 w-9 rounded-md border border-border bg-background hover:bg-muted transition-colors cursor-pointer"
         >
           <Minus className="h-4 w-4 text-text-dark" />
@@ -147,7 +151,9 @@ function EditModeContent({
             value={targetWeekNumber}
             onChange={(e) => {
               const v = parseInt(e.target.value, 10)
-              if (!isNaN(v) && v >= 1) onTargetWeekNumberChange(v)
+              if (!Number.isNaN(v) && v >= 1) {
+                onTargetWeekNumberChange(v)
+              }
             }}
             className="w-16 h-9 rounded-md border border-border bg-background px-2 text-center text-sm font-medium text-text-dark focus:outline-none focus:ring-1 focus:ring-ring"
           />

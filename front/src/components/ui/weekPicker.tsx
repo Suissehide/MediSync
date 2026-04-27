@@ -1,4 +1,8 @@
-import { DateCalendar, PickersDay, type PickersDayProps } from '@mui/x-date-pickers'
+import {
+  DateCalendar,
+  PickersDay,
+  type PickersDayProps,
+} from '@mui/x-date-pickers'
 import dayjs, { type Dayjs } from 'dayjs'
 import isoWeek from 'dayjs/plugin/isoWeek'
 import { useState } from 'react'
@@ -22,7 +26,9 @@ function WeekDay(props: PickersDayProps & WeekDayExtraProps) {
     selectedWeekStart && day.isSame(selectedWeekStart, 'week')
 
   const isInHoveredWeek =
-    hoveredWeekStart && !isInSelectedWeek && day.isSame(hoveredWeekStart, 'week')
+    hoveredWeekStart &&
+    !isInSelectedWeek &&
+    day.isSame(hoveredWeekStart, 'week')
 
   const isWeekStart = day.isoWeekday() === 1
   const isWeekEnd = day.isoWeekday() === 5
@@ -111,7 +117,10 @@ export function WeekPicker({ value, onChange }: WeekPickerProps) {
         sx={{
           margin: 0,
           width: 280,
-          '& .MuiPickersCalendarHeader-root': { paddingLeft: '16px', paddingRight: '8px' },
+          '& .MuiPickersCalendarHeader-root': {
+            paddingLeft: '16px',
+            paddingRight: '8px',
+          },
         }}
       />
 
