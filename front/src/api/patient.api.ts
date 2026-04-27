@@ -163,6 +163,42 @@ export const PatientApi = {
     return response.blob()
   },
 
+  getAppointmentsCountInPathway: async (
+    patientID: string,
+    pathwayID: string,
+  ): Promise<{ count: number }> => {
+    const response = await fetchWithAuth(
+      `${apiUrl}/patient/${patientID}/pathway/${pathwayID}/appointments-count`,
+      { method: 'GET' },
+    )
+    if (!response.ok) {
+      handleHttpError(
+        response,
+        {},
+        'Impossible de récupérer le nombre de rendez-vous',
+      )
+    }
+    return response.json()
+  },
+
+  removeFromPathway: async (
+    patientID: string,
+    pathwayID: string,
+  ): Promise<{ deletedAppointments: number; removedFromGroup: number }> => {
+    const response = await fetchWithAuth(
+      `${apiUrl}/patient/${patientID}/pathway/${pathwayID}`,
+      { method: 'DELETE' },
+    )
+    if (!response.ok) {
+      handleHttpError(
+        response,
+        {},
+        'Impossible de retirer le patient du parcours',
+      )
+    }
+    return response.json()
+  },
+
   delete: async (patientID: string): Promise<void> => {
     const response = await fetchWithAuth(`${apiUrl}/patient/${patientID}`, {
       method: 'DELETE',

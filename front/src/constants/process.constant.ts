@@ -38,6 +38,7 @@ export const PATIENT = {
   UPDATE: 'update_patient',
   DELETE: 'delete_patient',
   DISMISS_ENROLLMENT_ISSUE: 'dismiss_enrollment_issue',
+  REMOVE_FROM_PATHWAY: 'remove_patient_from_pathway',
 }
 
 export const SLOT = {

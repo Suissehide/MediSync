@@ -3,7 +3,7 @@ import { useCallback, useState } from 'react'
 
 import { PatientApi } from '../api/patient.api.ts'
 import { Button } from '../components/ui/button.tsx'
-import { APPOINTMENT, PATIENT, SLOT } from '../constants/process.constant.ts'
+import { APPOINTMENT, PATHWAY, PATIENT, SLOT } from '../constants/process.constant.ts'
 import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
 import { useToast } from '../hooks/useToast.ts'
@@ -405,6 +405,35 @@ export const usePatientMutations = () => {
     },
   })
 
+  const removeFromPathway = useMutation({
+    mutationKey: [PATIENT.REMOVE_FROM_PATHWAY],
+    mutationFn: ({
+      patientID,
+      pathwayID,
+    }: {
+      patientID: string
+      pathwayID: string
+    }) => PatientApi.removeFromPathway(patientID, pathwayID),
+    onSuccess: () => {
+      toast({
+        title: 'Patient retiré du parcours',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
+      queryClient.invalidateQueries({ queryKey: [PATIENT.GET_BY_ID] })
+      queryClient.invalidateQueries({ queryKey: [PATIENT.GET_ALL] })
+      queryClient.invalidateQueries({ queryKey: [PATIENT.GET_ALL_WITH_TAGS] })
+      queryClient.invalidateQueries({ queryKey: [SLOT.GET_ALL] })
+      queryClient.invalidateQueries({ queryKey: [APPOINTMENT.GET_ALL] })
+      queryClient.invalidateQueries({ queryKey: [PATHWAY.GET_TRACKING] })
+    },
+    onError: () => {
+      toast({
+        title: 'Impossible de retirer le patient du parcours',
+        severity: TOAST_SEVERITY.ERROR,
+      })
+    },
+  })
+
   return {
     createPatient,
     deletePatient,
@@ -413,5 +442,6 @@ export const usePatientMutations = () => {
     enrollPatient,
     enrollExistingPatient,
     dismissEnrollmentIssue,
+    removeFromPathway,
   }
 }
