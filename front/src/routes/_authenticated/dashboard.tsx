@@ -49,7 +49,7 @@ function Dashboard() {
 
   useEffect(() => {
     if (slots) {
-      const filtered = selectedID
+      const filtered = selectedID && selectedID !== 'all'
         ? slots.filter((slot) => slot.slotTemplate?.soignant?.id === selectedID)
         : slots
 
@@ -122,7 +122,7 @@ function Dashboard() {
               <CalendarRange className="h-4 w-4 text-white" />
             </div>
             <h1 className="text-text-dark text-xl font-semibold">
-              {soignant ? soignant.name : ''}
+              {selectedID === 'all' ? 'Tous les soignants' : soignant ? soignant.name : ''}
             </h1>
           </div>
 

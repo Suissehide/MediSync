@@ -6,16 +6,14 @@ import { APPOINTMENT_TYPE_OPTIONS } from '../../../constants/appointment.constan
 import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { generateDurationOptions } from '../../../libs/utils.ts'
 import { usePatientQueries } from '../../../queries/usePatient.tsx'
-import { useThematicQueries } from '../../../queries/useThematic.ts'
 import { useSlotByIDQuery } from '../../../queries/useSlot.ts'
+import { useThematicQueries } from '../../../queries/useThematic.ts'
 import type { CreateAppointmentParams } from '../../../types/appointment.ts'
 import type { Soignant } from '../../../types/soignant.ts'
 import { Button } from '../../ui/button.tsx'
 import { FieldInfo } from '../../ui/fieldInfo.tsx'
 import { FormField } from '../../ui/formField.tsx'
-import { Select } from '../../ui/select.tsx'
 import { Label } from '../../ui/label.tsx'
-import { MultiSelect } from '../../ui/select.tsx'
 import {
   Popup,
   PopupBody,
@@ -24,6 +22,7 @@ import {
   PopupHeader,
   PopupTitle,
 } from '../../ui/popup.tsx'
+import { MultiSelect, Select } from '../../ui/select.tsx'
 import { TimePicker } from '../../ui/timePicker.tsx'
 
 interface AddAppointmentFormProps {
@@ -171,13 +170,22 @@ function AddAppointmentForm({
             {type === 'multiple' && (
               <div className="text-sm text-text-light mb-0">
                 Capacité maximale de ce créneau :{' '}
-                <span className="text-text">{capacity}</span>
+                <span className="text-text-darkComm">{capacity}</span>
               </div>
             )}
 
             <form.AppField name="thematic">
               {(field) => (
-                <field.Select options={thematicOptions} label="Thématique" />
+                <field.Select
+                  options={thematicOptions}
+                  label="Thématique"
+                  disabled={thematicOptions.length === 0}
+                  placeholder={
+                    thematicOptions.length === 0
+                      ? 'Aucune thématique associée'
+                      : 'Sélectionnez une thématique'
+                  }
+                />
               )}
             </form.AppField>
 

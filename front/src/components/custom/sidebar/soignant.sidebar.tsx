@@ -1,4 +1,4 @@
-import { Plus, Stethoscope, Trash } from 'lucide-react'
+import { Plus, Stethoscope, Trash, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { useSoignantQueries } from '../../../queries/useSoignant.ts'
@@ -49,6 +49,20 @@ function SidebarSoignant({ user }: SidebarSoignantProps) {
         )}
       </div>
       <ul className="mx-2 px-2 py-2 bg-sidebar flex-1 flex flex-col min-h-0 overflow-y-auto rounded-lg [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <li
+          className={`relative w-full flex justify-between items-center gap-2 rounded-lg text-white ${selectedSoignantID === 'all' ? 'bg-[#ffffff10]' : ''} hover:bg-[#ffffff20]`}
+        >
+          <button
+            type="button"
+            onClick={() => selectSoignant('all')}
+            className={'cursor-pointer w-full py-2 pl-2'}
+          >
+            <span className="flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Tous les soignants
+            </span>
+          </button>
+        </li>
         {soignants.map((soignant) => (
           <li
             key={soignant.id}

@@ -30,15 +30,15 @@ import { Button } from '../../ui/button.tsx'
 import { FieldInfo } from '../../ui/fieldInfo.tsx'
 import { FormField } from '../../ui/formField.tsx'
 import { Input, TextArea } from '../../ui/input.tsx'
-import { Select } from '../../ui/select.tsx'
 import { Label } from '../../ui/label.tsx'
-import { ConfirmDeleteForm } from '../popup/confirmDeleteForm.tsx'
+import { Select } from '../../ui/select.tsx'
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
 } from '../../ui/sheet.tsx'
+import { ConfirmDeleteForm } from '../popup/confirmDeleteForm.tsx'
 
 interface AppointmentSheetProps {
   open: boolean
@@ -56,15 +56,20 @@ export default function AppointmentSheet({
 }: AppointmentSheetProps) {
   const navigate = useNavigate()
 
-  const { isPending, appointment, refetch, isError } = useAppointmentByIDQuery(eventID, {
-    enabled: false,
-  })
+  const { isPending, appointment, refetch, isError } = useAppointmentByIDQuery(
+    eventID,
+    {
+      enabled: false,
+    },
+  )
   const { updateAppointment, deleteAppointment } = useAppointmentMutations()
   const { thematics } = useThematicQueries()
   const patients = usePatientQueries().patients
 
   const [selectedPatient, setSelectedPatient] = useState('')
-  const [expandedSections, setExpandedSections] = useState<Record<number, boolean>>({})
+  const [expandedSections, setExpandedSections] = useState<
+    Record<number, boolean>
+  >({})
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const form = useAppForm({
@@ -130,33 +135,37 @@ export default function AppointmentSheet({
 
   useEffect(() => {
     if (open) {
-      refetch().then(({ data }) => {
-        if (data) {
-          form.reset(
-            {
-              thematic: data.thematic ?? '',
-              type: data.type ?? '',
-              appointmentPatients:
-                data.appointmentPatients?.map((ap) => ({
-                  id: ap.id ?? '',
-                  accompanying: ap.accompanying ?? '',
-                  status: ap.status ?? '',
-                  rejectionReason: ap.rejectionReason ?? '',
-                  transmissionNotes: ap.transmissionNotes ?? '',
-                  patientID: ap.patient.id,
-                })) ?? [],
-            },
-            { keepDefaultValues: true },
-          )
-        }
-      }).catch(() => {
-        setOpen('')
-      })
+      refetch()
+        .then(({ data }) => {
+          if (data) {
+            form.reset(
+              {
+                thematic: data.thematic ?? '',
+                type: data.type ?? '',
+                appointmentPatients:
+                  data.appointmentPatients?.map((ap) => ({
+                    id: ap.id ?? '',
+                    accompanying: ap.accompanying ?? '',
+                    status: ap.status ?? '',
+                    rejectionReason: ap.rejectionReason ?? '',
+                    transmissionNotes: ap.transmissionNotes ?? '',
+                    patientID: ap.patient.id,
+                  })) ?? [],
+              },
+              { keepDefaultValues: true },
+            )
+          }
+        })
+        .catch(() => {
+          setOpen('')
+        })
     }
   }, [open, form, refetch, setOpen])
 
   const isIndividual = appointment?.slot?.slotTemplate?.isIndividual ?? true
-  const capacity = isIndividual ? 1 : (appointment?.slot?.slotTemplate?.capacity ?? 1)
+  const capacity = isIndividual
+    ? 1
+    : (appointment?.slot?.slotTemplate?.capacity ?? 1)
   const currentPatientCount = selectedPatientIDs.length
   const isAtCapacity = currentPatientCount >= capacity
 
@@ -214,6 +223,12 @@ export default function AppointmentSheet({
                     <field.Select
                       options={thematicOptions}
                       label="Thématique"
+                      disabled={thematicOptions.length === 0}
+                      placeholder={
+                        thematicOptions.length === 0
+                          ? 'Aucune thématique associée'
+                          : 'Sélectionnez une thématique'
+                      }
                     />
                   )}
                 </form.AppField>
@@ -236,20 +251,20 @@ export default function AppointmentSheet({
                 <div className="mt-2 w-full border-t border-border"></div>
 
                 <form.Field
-                name="appointmentPatients"
-                mode="array"
-                validators={{
-                  onSubmit: ({ value }) => {
-                    if (isIndividual && value.length > 1) {
-                      return 'Un seul patient autorisé pour un créneau individuel'
-                    }
-                    if (!isIndividual && value.length > capacity) {
-                      return `Maximum ${capacity} patient${capacity > 1 ? 's' : ''} pour ce créneau`
-                    }
-                    return undefined
-                  },
-                }}
-              >
+                  name="appointmentPatients"
+                  mode="array"
+                  validators={{
+                    onSubmit: ({ value }) => {
+                      if (isIndividual && value.length > 1) {
+                        return 'Un seul patient autorisé pour un créneau individuel'
+                      }
+                      if (!isIndividual && value.length > capacity) {
+                        return `Maximum ${capacity} patient${capacity > 1 ? 's' : ''} pour ce créneau`
+                      }
+                      return undefined
+                    },
+                  }}
+                >
                   {(field) => (
                     <div className="flex-1 flex flex-col min-h-0">
                       <div className="flex items-end gap-4 shrink-0">
@@ -461,12 +476,19 @@ export default function AppointmentSheet({
 
               <div className="px-4 py-4 flex justify-between gap-4 shrink-0">
                 <div>
-                  <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)}>
+                  <Button
+                    variant="destructive"
+                    onClick={() => setShowDeleteConfirm(true)}
+                  >
                     Supprimer
                   </Button>
                 </div>
                 <div className="flex gap-4">
-                  <Button variant="default" onClick={() => form.handleSubmit()} isLoading={updateAppointment.isPending}>
+                  <Button
+                    variant="default"
+                    onClick={() => form.handleSubmit()}
+                    isLoading={updateAppointment.isPending}
+                  >
                     Mettre à jour
                   </Button>
                   <Button variant="outline" onClick={() => setOpen('')}>

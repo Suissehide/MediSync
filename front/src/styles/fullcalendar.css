@@ -177,6 +177,16 @@ thead .fc-theme-standard th {
   box-shadow: 0 0 0 1px var(--border);
 }
 
+/* ── Slot borders — visual separation between adjacent slots ────────────── */
+.fc .fc-bg-event.fc-slot {
+  border: 1.5px solid rgba(0, 0, 0, 0.1);
+  border-radius: 5px;
+}
+
+.fc .fc-timegrid-event.fc-slot {
+  border: 1.5px solid rgba(0, 0, 0, 0.1);
+}
+
 .fc-timegrid-slots tr:first-child td:first-child .fc-timegrid-slot-label-frame {
   display: none;
 }
