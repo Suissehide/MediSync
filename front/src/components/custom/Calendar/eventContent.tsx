@@ -82,13 +82,14 @@ export const EventContent = ({
     <div
       {...(event.id ? { 'data-event-id': `${event.id}` } : {})}
       className={clsx(
-        'fc-event-hero relative group cursor-pointer h-full w-full flex flex-col text-left p-0.5 text-text-dark transition duration-200',
+        'fc-event-hero relative group cursor-pointer h-full w-full flex flex-col text-left p-0.5 transition duration-200',
         {
           'pointer-events-none': containsKeyword(states, ['editable']),
           'opacity-45 bg-gray-400 rounded-sm': editMode && type === 'slot',
           'slot-selected ring-2 ring-primary ring-offset-1 rounded-sm': isSelected,
         },
       )}
+      style={{ color: event.textColor || undefined }}
     >
       {onToggleSelect && (type === 'slot' || type === 'template') &&
         !containsKeyword(states, ['editable']) && (

@@ -15,8 +15,14 @@ export default async function seedThematics(
         .map((name) => soignantByName.get(name)?.id)
         .filter((id): id is string => !!id)
 
-      return prisma.thematic.create({
-        data: {
+      return prisma.thematic.upsert({
+        where: { name: t.name },
+        update: {
+          soignants: {
+            set: soignantIDs.map((id) => ({ id })),
+          },
+        },
+        create: {
           name: t.name,
           duration: 15,
           soignants: {

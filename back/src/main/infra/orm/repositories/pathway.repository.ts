@@ -46,10 +46,12 @@ class PathwayRepository implements PathwayRepositoryInterface {
     pathwayTemplateID: string,
     startDate: Date,
   ): Promise<PathwayWithSlotsRepo[]> {
+    const startOfDay = new Date(startDate)
+    startOfDay.setHours(0, 0, 0, 0)
     try {
       return await this.prisma.pathway.findMany({
         where: {
-          startDate: { gte: startDate },
+          startDate: { gte: startOfDay },
           template: {
             id: pathwayTemplateID,
           },
@@ -90,10 +92,12 @@ class PathwayRepository implements PathwayRepositoryInterface {
     tag: string,
     startDate: Date,
   ): Promise<PathwayWithSlotsRepo[]> {
+    const startOfDay = new Date(startDate)
+    startOfDay.setHours(0, 0, 0, 0)
     try {
       return await this.prisma.pathway.findMany({
         where: {
-          startDate: { gte: startDate },
+          startDate: { gte: startOfDay },
           template: {
             tags: { has: tag },
           },

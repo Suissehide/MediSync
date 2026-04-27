@@ -3,6 +3,7 @@ import dayjs from 'dayjs'
 import { twMerge } from 'tailwind-merge'
 
 import type { CalendarEvent } from '../components/custom/Calendar/calendar.tsx'
+import { getContrastTextColor } from './color.ts'
 import type { Pathway } from '../types/pathway.ts'
 import type { Slot } from '../types/slot.ts'
 import type { SlotTemplate } from '../types/slotTemplate.ts'
@@ -68,12 +69,14 @@ export const buildCalendarEventsFromSlots = (
       ? 'background'
       : 'block'
 
+    const slotColor = slot.slotTemplate.color ?? '#2563eb'
     return {
       id: `slot_${slot.id}`,
       title: slot.slotTemplate.soignant?.name ?? 'Soignant inconnu',
       start: slot.startDate,
       end: slot.endDate,
-      color: slot.slotTemplate.color ?? '#2563eb',
+      color: slotColor,
+      textColor: getContrastTextColor(slotColor),
       display,
       className: 'fc-slot',
       editable: !containsKeyword(slotStates, ['editable']) && !slot.locked,
@@ -103,12 +106,14 @@ export const buildCalendarEventsFromSlotTemplates = (
     const start = combineDateAndTime(base, slotTemplate.startTime)
     const end = combineDateAndTime(base, slotTemplate.endTime)
 
+    const templateColor = slotTemplate.color ?? '#2563eb'
     return {
       id: `template_${slotTemplate.id}`,
       title: slotTemplate.soignant?.name ?? 'Soignant inconnu',
       start: start.toISOString(),
       end: end.toISOString(),
-      color: slotTemplate.color ?? '#2563eb',
+      color: templateColor,
+      textColor: getContrastTextColor(templateColor),
       extendedProps: {
         type: 'template',
         thematic: slotTemplate.thematic,

@@ -80,6 +80,7 @@ function createSlotTemplate(
     endTime,
     offsetDays,
     isIndividual: data.isIndividual,
+    capacity: data.isIndividual ? null : (data.capacity ?? 1),
     color,
     description: data.title,
     thematic: data.title,
