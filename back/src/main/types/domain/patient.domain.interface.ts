@@ -73,6 +73,11 @@ export type PatientExportFilters = {
   pathwayTemplateTags?: string[]
 }
 
+export type RemoveFromPathwayResult = {
+  deletedAppointments: number
+  removedFromGroup: number
+}
+
 export interface PatientDomainInterface {
   findAll: () => Promise<PatientEntityDomain[]>
   findAllWithTags: () => Promise<PatientWithTagsDomain[]>
@@ -96,4 +101,13 @@ export interface PatientDomainInterface {
     enrollmentData: EnrollExistingPatientInPathwaysInput,
     userID: string,
   ) => Promise<EnrollmentResult>
+  countAppointmentsInPathway: (
+    patientID: string,
+    pathwayID: string,
+  ) => Promise<{ count: number }>
+  removeFromPathway: (
+    patientID: string,
+    pathwayID: string,
+    userID: string,
+  ) => Promise<RemoveFromPathwayResult>
 }

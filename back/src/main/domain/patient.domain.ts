@@ -20,6 +20,7 @@ import type {
   PatientUpdateEntityDomain,
   PatientWithAppointmentsDomain,
   PatientWithTagsDomain,
+  RemoveFromPathwayResult,
 } from '../types/domain/patient.domain.interface'
 import type { AppointmentRepositoryInterface } from '../types/infra/orm/repositories/appointment.repository.interface'
 import type {
@@ -165,6 +166,36 @@ class PatientDomain implements PatientDomainInterface {
 
     this.appEventBus.emit('patient.deleted', { userID, patientId: deleted.id })
     return deleted
+  }
+
+  async countAppointmentsInPathway(
+    patientID: string,
+    pathwayID: string,
+  ): Promise<{ count: number }> {
+    const count = await this.patientRepository.countAppointmentsInPathway(
+      patientID,
+      pathwayID,
+    )
+    return { count }
+  }
+
+  async removeFromPathway(
+    patientID: string,
+    pathwayID: string,
+    userID: string,
+  ): Promise<RemoveFromPathwayResult> {
+    const result = await this.patientRepository.removeFromPathway(
+      patientID,
+      pathwayID,
+    )
+
+    this.appEventBus.emit('patient.removedFromPathway', {
+      userID,
+      patientId: patientID,
+      pathwayId: pathwayID,
+    })
+
+    return result
   }
 
   async enrollPatientInPathways(

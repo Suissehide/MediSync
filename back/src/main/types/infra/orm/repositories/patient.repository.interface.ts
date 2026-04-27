@@ -31,4 +31,12 @@ export interface PatientRepositoryInterface {
     patientUpdateParams: PatientUpdateEntityRepo,
   ) => Promise<PatientEntityRepo>
   delete: (patientID: string) => Promise<PatientEntityRepo>
+  removeFromPathway: (
+    patientID: string,
+    pathwayID: string,
+  ) => Promise<{ deletedAppointments: number; removedFromGroup: number }>
+  countAppointmentsInPathway: (
+    patientID: string,
+    pathwayID: string,
+  ) => Promise<number>
 }
