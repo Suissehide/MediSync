@@ -1,14 +1,17 @@
 import dayjs from 'dayjs'
-import { AlertTriangle, CalendarClock, Siren, X } from 'lucide-react'
-import { useMemo } from 'react'
+import { AlertTriangle, CalendarClock, Route, Siren, X } from 'lucide-react'
+import { useCallback, useMemo, useState } from 'react'
 
+import { PatientApi } from '../../../../api/patient.api.ts'
 import { SLOT_LOCATION } from '../../../../constants/slot.constant.ts'
+import { hexToRGBA, getContrastTextColor } from '../../../../libs/color.ts'
 import { getLabel } from '../../../../libs/utils.ts'
 import { usePatientMutations } from '../../../../queries/usePatient.tsx'
 import { useAllSlotsQuery } from '../../../../queries/useSlot.ts'
 import type { EnrollmentIssue, Patient } from '../../../../types/patient.ts'
 import type { Slot } from '../../../../types/slot.ts'
 import { ColorLegend } from '../../colorLegend.tsx'
+import { ConfirmDeleteForm } from '../../popup/confirmDeleteForm.tsx'
 
 interface OverviewPatientProps {
   patient?: Patient
@@ -84,9 +87,54 @@ function EnrollmentIssueRow({
   )
 }
 
+function PathwayCard({
+  pathwayID,
+  templateName,
+  templateColor,
+  startDate,
+  onRemove,
+}: {
+  pathwayID: string
+  templateName: string
+  templateColor: string | null
+  startDate: string
+  onRemove: (pathwayID: string) => void
+}) {
+  const color = templateColor ?? '#6b7280'
+  const formattedDate = dayjs(startDate)
+    .format('D MMMM YYYY')
+    .replace(/^./, (c) => c.toUpperCase())
+
+  return (
+    <div className="flex items-center gap-3 rounded-lg px-3 py-2 border border-border">
+      <span
+        className="inline-block px-2 py-1 rounded text-xs font-medium border"
+        style={{
+          backgroundColor: hexToRGBA(color, 0.15),
+          color: getContrastTextColor(color),
+          borderColor: hexToRGBA(color, 0.6),
+        }}
+      >
+        {templateName}
+      </span>
+      <span className="text-xs text-text-sidebar flex-1">
+        Début : {formattedDate}
+      </span>
+      <button
+        type="button"
+        onClick={() => onRemove(pathwayID)}
+        className="cursor-pointer flex-shrink-0 rounded p-1 text-text-light hover:bg-destructive/10 hover:text-destructive transition-colors"
+        aria-label={`Retirer du parcours ${templateName}`}
+      >
+        <X className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  )
+}
+
 export default function OverviewPatient({ patient }: OverviewPatientProps) {
   const { slots } = useAllSlotsQuery()
-  const { dismissEnrollmentIssue } = usePatientMutations()
+  const { dismissEnrollmentIssue, removeFromPathway } = usePatientMutations()
 
   const patientSlots = useMemo(() => {
     if (!slots || !patient) {
@@ -112,6 +160,68 @@ export default function OverviewPatient({ patient }: OverviewPatientProps) {
 
     return { upcoming, past }
   }, [slots, patient])
+
+  const patientPathways = useMemo(() => {
+    if (!slots || !patient) return []
+
+    const pathwayMap = new Map<
+      string,
+      { id: string; templateName: string; templateColor: string | null; startDate: string }
+    >()
+
+    for (const slot of slots) {
+      if (!slot.pathway) continue
+      const hasPatient = slot.appointments?.some((appointment) =>
+        appointment.appointmentPatients?.some(
+          (ap) => ap.patient.id === patient.id,
+        ),
+      )
+      if (!hasPatient) continue
+
+      const pathwayID = slot.pathway.id
+      if (!pathwayMap.has(pathwayID)) {
+        pathwayMap.set(pathwayID, {
+          id: pathwayID,
+          templateName: slot.pathway.template?.name ?? 'Parcours sans template',
+          templateColor: slot.pathway.template?.color ?? null,
+          startDate: slot.pathway.startDate,
+        })
+      }
+    }
+
+    return Array.from(pathwayMap.values())
+  }, [slots, patient])
+
+  const [removeTarget, setRemoveTarget] = useState<{
+    pathwayID: string
+    name: string
+    count: number
+  } | null>(null)
+
+  const handleRemoveClick = useCallback(
+    async (pathwayID: string) => {
+      if (!patient) return
+      const { count } = await PatientApi.getAppointmentsCountInPathway(
+        patient.id,
+        pathwayID,
+      )
+      const pathway = patientPathways.find((p) => p.id === pathwayID)
+      setRemoveTarget({
+        pathwayID,
+        name: pathway?.templateName ?? 'Parcours',
+        count,
+      })
+    },
+    [patient, patientPathways],
+  )
+
+  const handleConfirmRemove = useCallback(() => {
+    if (!patient || !removeTarget) return
+    removeFromPathway.mutate(
+      { patientID: patient.id, pathwayID: removeTarget.pathwayID },
+      { onSettled: () => setRemoveTarget(null) },
+    )
+  }, [patient, removeTarget, removeFromPathway])
 
   const enrollmentIssues = patient?.enrollmentIssues
 
@@ -147,6 +257,46 @@ export default function OverviewPatient({ patient }: OverviewPatientProps) {
             </div>
           </>
         )}
+
+        {patientPathways.length > 0 && (
+          <>
+            <div className="flex items-center gap-2">
+              <Route className="h-4 w-4 flex-shrink-0" />
+              <h4 className="text-sm font-semibold text-text-dark">
+                Parcours ({patientPathways.length})
+              </h4>
+              <div className="flex-1 border-t border-border" />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              {patientPathways.map((pathway) => (
+                <PathwayCard
+                  key={pathway.id}
+                  pathwayID={pathway.id}
+                  templateName={pathway.templateName}
+                  templateColor={pathway.templateColor}
+                  startDate={pathway.startDate}
+                  onRemove={handleRemoveClick}
+                />
+              ))}
+            </div>
+          </>
+        )}
+
+        <ConfirmDeleteForm
+          open={removeTarget !== null}
+          setOpen={(open) => {
+            if (!open) setRemoveTarget(null)
+          }}
+          onConfirm={handleConfirmRemove}
+          loading={removeFromPathway.isPending}
+          title="Retirer du parcours"
+          description={
+            removeTarget
+              ? `Voulez-vous vraiment retirer ce patient du parcours ${removeTarget.name} ? ${removeTarget.count} rendez-vous seront supprimés. Cette action est irréversible.`
+              : ''
+          }
+        />
 
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-2">
