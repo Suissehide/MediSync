@@ -20,6 +20,10 @@ import {
   type UpdatePatientBody,
   type UpdatePatientParams,
   updatePatientByIdSchema,
+  type PatientPathwayParams,
+  patientPathwayParamsSchema,
+  appointmentsCountResponseSchema,
+  removeFromPathwayResponseSchema,
 } from '../schemas/patient.schema'
 
 const patientRouter: FastifyPluginAsync = (fastify) => {
@@ -220,6 +224,46 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
         startDate: request.body.startDate,
         pathways: request.body.pathways,
       }, request.user.userID)
+    },
+  )
+
+  // Count appointments for patient in pathway (for confirmation modal)
+  fastify.get<{ Params: PatientPathwayParams }>(
+    '/:patientID/pathway/:pathwayID/appointments-count',
+    {
+      schema: {
+        params: patientPathwayParamsSchema,
+        response: {
+          200: appointmentsCountResponseSchema,
+        },
+      },
+      onRequest: [fastify.verifySessionCookie],
+    },
+    async (request) => {
+      const { patientID, pathwayID } = request.params
+      return patientDomain.countAppointmentsInPathway(patientID, pathwayID)
+    },
+  )
+
+  // Remove patient from pathway
+  fastify.delete<{ Params: PatientPathwayParams }>(
+    '/:patientID/pathway/:pathwayID',
+    {
+      schema: {
+        params: patientPathwayParamsSchema,
+        response: {
+          200: removeFromPathwayResponseSchema,
+        },
+      },
+      onRequest: [fastify.verifySessionCookie],
+    },
+    async (request) => {
+      const { patientID, pathwayID } = request.params
+      return patientDomain.removeFromPathway(
+        patientID,
+        pathwayID,
+        request.user.userID,
+      )
     },
   )
 

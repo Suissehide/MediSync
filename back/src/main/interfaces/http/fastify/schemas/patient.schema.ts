@@ -152,3 +152,18 @@ export type EnrollExistingPatientInPathwaysBody = z.infer<
   typeof enrollExistingPatientInPathwaysSchema
 >
 export type EnrollmentResult = z.infer<typeof enrollmentResultSchema>
+
+export const patientPathwayParamsSchema = z.object({
+  patientID: z.cuid(),
+  pathwayID: z.cuid(),
+})
+export type PatientPathwayParams = z.infer<typeof patientPathwayParamsSchema>
+
+export const appointmentsCountResponseSchema = z.object({
+  count: z.number(),
+})
+
+export const removeFromPathwayResponseSchema = z.object({
+  deletedAppointments: z.number(),
+  removedFromGroup: z.number(),
+})
