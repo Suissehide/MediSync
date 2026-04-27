@@ -32,6 +32,8 @@ class ActivityLogSubscriber {
       this.#log('patient.deleted', 'patient', p.userID, p.patientId))
     this.appEventBus.on('patient.enrolled', (p) =>
       this.#log('patient.enrolled', 'patient', p.userID, p.patientId))
+    this.appEventBus.on('patient.removedFromPathway', (p) =>
+      this.#log('patient.removedFromPathway', 'patient', p.userID, p.patientId))
     this.appEventBus.on('diagnostic.created', (p) =>
       this.#log('diagnostic.created', 'diagnostic', p.userID, p.diagnosticId))
     this.appEventBus.on('diagnostic.updated', (p) =>

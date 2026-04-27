@@ -5,6 +5,7 @@ type AppEvents = {
   'patient.updated':    { userID: string; patientId: string }
   'patient.deleted':    { userID: string; patientId: string }
   'patient.enrolled':   { userID: string; patientId: string }
+  'patient.removedFromPathway': { userID: string; patientId: string; pathwayId: string }
   'diagnostic.created': { userID: string; diagnosticId: string }
   'diagnostic.updated': { userID: string; diagnosticId: string }
   'appointment.created': { userID: string; appointmentId: string }

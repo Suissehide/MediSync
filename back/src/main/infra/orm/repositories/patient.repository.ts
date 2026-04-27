@@ -194,25 +194,8 @@ class PatientRepository implements PatientRepositoryInterface {
     patientID: string,
     pathwayID: string,
   ): Promise<number> {
-    const count = await this.prisma.appointmentPatient.count({
-      where: {
-        patientId: patientID,
-        appointment: {
-          slot: {
-            pathwayID: pathwayID,
-          },
-        },
-      },
-    })
-    return count
-  }
-
-  async removeFromPathway(
-    patientID: string,
-    pathwayID: string,
-  ): Promise<{ deletedAppointments: number; removedFromGroup: number }> {
-    return await this.prisma.$transaction(async (tx) => {
-      const appointmentPatients = await tx.appointmentPatient.findMany({
+    try {
+      const count = await this.prisma.appointmentPatient.count({
         where: {
           patientId: patientID,
           appointment: {
@@ -221,43 +204,73 @@ class PatientRepository implements PatientRepositoryInterface {
             },
           },
         },
-        include: {
-          appointment: {
-            include: {
-              appointmentPatients: true,
-            },
-          },
-        },
       })
-
-      if (appointmentPatients.length === 0) {
-        return { deletedAppointments: 0, removedFromGroup: 0 }
-      }
-
-      let deletedAppointments = 0
-      let removedFromGroup = 0
-
-      for (const ap of appointmentPatients) {
-        const isOnlyPatient = ap.appointment.appointmentPatients.length <= 1
-
-        await tx.appointmentPatient.delete({
-          where: { id: ap.id },
-        })
-
-        if (isOnlyPatient) {
-          await tx.appointment.delete({
-            where: { id: ap.appointment.id },
-          })
-          deletedAppointments++
-        } else {
-          removedFromGroup++
-        }
-      }
-
-      return { deletedAppointments, removedFromGroup }
-    })
+      return count
+    } catch (err) {
+      throw this.errorHandler.boomErrorFromPrismaError({
+        entityName: 'Patient',
+        error: err,
+      })
+    }
   }
 
+  async removeFromPathway(
+    patientID: string,
+    pathwayID: string,
+  ): Promise<{ deletedAppointments: number; removedFromGroup: number }> {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const appointmentPatients = await tx.appointmentPatient.findMany({
+          where: {
+            patientId: patientID,
+            appointment: {
+              slot: {
+                pathwayID: pathwayID,
+              },
+            },
+          },
+          include: {
+            appointment: {
+              include: {
+                appointmentPatients: true,
+              },
+            },
+          },
+        })
+
+        if (appointmentPatients.length === 0) {
+          return { deletedAppointments: 0, removedFromGroup: 0 }
+        }
+
+        let deletedAppointments = 0
+        let removedFromGroup = 0
+
+        for (const ap of appointmentPatients) {
+          const isOnlyPatient = ap.appointment.appointmentPatients.length <= 1
+
+          await tx.appointmentPatient.delete({
+            where: { id: ap.id },
+          })
+
+          if (isOnlyPatient) {
+            await tx.appointment.delete({
+              where: { id: ap.appointment.id },
+            })
+            deletedAppointments++
+          } else {
+            removedFromGroup++
+          }
+        }
+
+        return { deletedAppointments, removedFromGroup }
+      })
+    } catch (err) {
+      throw this.errorHandler.boomErrorFromPrismaError({
+        entityName: 'Patient',
+        error: err,
+      })
+    }
+  }
 }
 
 export { PatientRepository }
