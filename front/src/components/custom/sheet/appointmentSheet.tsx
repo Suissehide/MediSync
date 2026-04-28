@@ -193,10 +193,10 @@ export default function AppointmentSheet({
             <div>
               <SheetTitle className="mb-[-4px]">Rendez-vous</SheetTitle>
               <div className="text-sm text-text-light">
-                {`${dayjs(appointment?.startDate)
+                {`${dayjs.utc(appointment?.startDate)
                   .format('dddd D MMMM [de] HH:mm')
                   .replace(/^./, (c) => c.toUpperCase())}
-                    ${dayjs(appointment?.endDate).format('[à] HH:mm')}
+                    ${dayjs.utc(appointment?.endDate).format('[à] HH:mm')}
                     ${formatDuration(appointment?.startDate, appointment?.endDate)}`}
               </div>
             </div>

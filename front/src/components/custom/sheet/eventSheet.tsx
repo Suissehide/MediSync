@@ -160,10 +160,10 @@ export default function EventSheet({
             <div>
               <SheetTitle className="mb-[-4px]">Créneau</SheetTitle>
               <div className="text-sm text-text-light">
-                {`${dayjs(slot?.startDate)
-                  .format('dddd D MMMM [de] hh:mm')
+                {`${dayjs.utc(slot?.startDate)
+                  .format('dddd D MMMM [de] HH:mm')
                   .replace(/^./, (c) => c.toUpperCase())}
-                    ${dayjs(slot?.endDate).format('[à] hh:mm')}
+                    ${dayjs.utc(slot?.endDate).format('[à] HH:mm')}
                     ${formatDuration(slot?.startDate, slot?.endDate)}`}
               </div>
             </div>

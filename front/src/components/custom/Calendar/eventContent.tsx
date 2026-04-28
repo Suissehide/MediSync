@@ -43,8 +43,9 @@ export const EventContent = ({
   selectedSlotIds,
   onToggleSelect,
 }: Props) => {
-  const { event, timeText } = eventContent
+  const { event, timeText, view } = eventContent
   const { states, appointments, thematic, type, locked } = event.extendedProps
+  const isWeekView = view.type === 'timeGridWeek'
 
   const isIndividual = containsKeyword(states, ['individual'])
   const isMultiple = containsKeyword(states, ['multiple'])
@@ -82,14 +83,19 @@ export const EventContent = ({
     <div
       {...(event.id ? { 'data-event-id': `${event.id}` } : {})}
       className={clsx(
-        'fc-event-hero relative group cursor-pointer h-full w-full flex flex-col text-left p-0.5 transition duration-200',
+        'fc-event-hero relative group cursor-pointer h-full w-full flex text-left p-0.5 transition duration-200',
+        !isWeekView && isFillable && appointments && appointments.length > 0 ? 'flex-row gap-2' : 'flex-col',
         {
           'pointer-events-none': containsKeyword(states, ['editable']),
           'opacity-45 bg-gray-400 rounded-sm': editMode && type === 'slot',
           'slot-selected ring-2 ring-primary ring-offset-1 rounded-sm': isSelected,
         },
       )}
-      style={{ color: event.textColor || undefined }}
+      style={{
+        color: event.textColor || undefined,
+        backgroundColor: event.display !== 'background' ? event.backgroundColor || event.borderColor : undefined,
+        borderRadius: event.display !== 'background' ? '4px' : undefined,
+      }}
     >
       {onToggleSelect && (type === 'slot' || type === 'template') &&
         !containsKeyword(states, ['editable']) && (
@@ -190,30 +196,57 @@ export const EventContent = ({
           </Button>
         )}
 
-      {(!isFillable || (isFillable && appointments.length === 0)) && (
-        <span className="p-0.5">
-          <div className="text-[0.65rem] whitespace-nowrap">{timeText}</div>
-          <div className="text-[0.6rem]">{event.title}</div>
-          <div className="text-[0.6rem] font-semibold truncate">{thematic}</div>
-        </span>
-      )}
+      <span className="p-0.5">
+        {view.type === 'dayGridDay' && event.start && event.end && (
+          <div className="text-[0.65rem] whitespace-nowrap">
+            {`${dayjs.utc(event.start).format('H:mm')} - ${dayjs.utc(event.end).format('H:mm')}`}
+          </div>
+        )}
+        <div className="text-[0.6rem]">{event.title}</div>
+        <div className="text-[0.6rem] font-semibold truncate">{thematic}</div>
+      </span>
 
       {/* Individual */}
       {isIndividual &&
         appointments &&
-        appointments.length > 0 &&
-        appointments.map((appointment: Appointment) => (
+        appointments.length > 0 && (
+        <div className="flex-1 flex flex-col relative">
+          {appointments.map((appointment: Appointment) => (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                setOpenEventId?.(`appointment_${appointment.id}`)
+              }}
+              key={appointment.id}
+              style={calculateAppointmentStyle(appointment)}
+              className={`fc-event-hero z-1 bg-black/30 cursor-pointer flex justify-start p-0.5 m-0.5 text-white truncate px-1 border border-border rounded hover:opacity-80 transition-opacity overflow-hidden`}
+            >
+              {appointment.appointmentPatients?.map(
+                (appointmentPatient: AppointmentPatient) => (
+                  <PatientName
+                    key={appointmentPatient.patient.id}
+                    appointmentPatient={appointmentPatient}
+                  />
+                ),
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Multiple */}
+      {isMultiple && appointments && appointments.length > 0 && (
+        <div className="flex-1 flex flex-col">
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation()
-              setOpenEventId?.(`appointment_${appointment.id}`)
+              setOpenEventId?.(`appointment_${appointments[0].id}`)
             }}
-            key={appointment.id}
-            style={calculateAppointmentStyle(appointment)}
-            className={`fc-event-hero z-1 bg-black/30 cursor-pointer flex justify-start p-0.5 m-0.5 text-white truncate px-1 border border-border rounded hover:opacity-80 transition-opacity overflow-hidden`}
+            className={`fc-event-hero z-1 cursor-pointer flex-1 flex flex-col justify-start p-0.5 m-0.5 text-white bg-black/30 px-1 border border-border rounded hover:opacity-80 transition-opacity overflow-hidden`}
           >
-            {appointment.appointmentPatients?.map(
+            {event.extendedProps.appointments[0].appointmentPatients?.map(
               (appointmentPatient: AppointmentPatient) => (
                 <PatientName
                   key={appointmentPatient.patient.id}
@@ -222,35 +255,15 @@ export const EventContent = ({
               ),
             )}
           </button>
-        ))}
-
-      {/* Multiple */}
-      {isMultiple && appointments && appointments.length > 0 && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation()
-            setOpenEventId?.(`appointment_${appointments[0].id}`)
-          }}
-          className={`fc-event-hero z-1 cursor-pointer flex-1 flex flex-col justify-start p-0.5 m-0.5 text-white bg-black/30 px-1 border border-border rounded hover:opacity-80 transition-opacity overflow-hidden`}
-        >
-          {event.extendedProps.appointments[0].appointmentPatients?.map(
-            (appointmentPatient: AppointmentPatient) => (
-              <PatientName
-                key={appointmentPatient.patient.id}
-                appointmentPatient={appointmentPatient}
-              />
-            ),
-          )}
-        </button>
+        </div>
       )}
 
       {/* Bouton + pour slots multiple vides */}
       {isMultiple && !locked && (!appointments || appointments.length === 0) && (
         <div className="z-100 cursor-pointer absolute inset-0 flex justify-center items-center">
           <Button variant="transparent" className="w-full h-full">
-            <div className="p-2 rounded-full bg-neutral-50 text-primary group-hover:bg-neutral-300 transition-colors duration-200">
-              <Plus className="w-6 h-6" />
+            <div className="p-1 rounded-full bg-neutral-50 text-primary group-hover:bg-neutral-300 transition-colors duration-200">
+              <Plus className="w-4 h-4" />
             </div>
           </Button>
         </div>

@@ -23,10 +23,10 @@ function AppointmentCard({ slot }: { slot: Slot }) {
   const location = slot.slotTemplate?.location
   const soignant = slot.slotTemplate?.soignant?.name
 
-  const formattedDate = dayjs(slot.startDate)
+  const formattedDate = dayjs.utc(slot.startDate)
     .format('dddd D MMMM YYYY [de] HH:mm')
     .replace(/^./, (c) => c.toUpperCase())
-  const endTime = dayjs(slot.endDate).format('HH:mm')
+  const endTime = dayjs.utc(slot.endDate).format('HH:mm')
 
   return (
     <div

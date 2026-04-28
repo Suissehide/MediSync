@@ -22,6 +22,81 @@ import type { Appointment } from '../../../types/appointment.ts'
 import CalendarDatePickerButton from './calendarDatePickerButton.tsx'
 import { EventContent } from './eventContent.tsx'
 
+/**
+ * Compute column layout for overlapping slot events.
+ * Returns a Map of event ID → { column, totalColumns }.
+ */
+function computeSlotLayout(events: CalendarEvent[]) {
+  const slots = events
+    .filter((e) => e.extendedProps?.type === 'slot' && e.start && e.end)
+    .sort((a, b) => {
+      const diff = dayjs(a.start).diff(dayjs(b.start))
+      if (diff !== 0) return diff
+      // Longer events first so they get column 0
+      return dayjs(b.end).diff(dayjs(b.start)) - dayjs(a.end).diff(dayjs(a.start))
+    })
+
+  // Greedy column assignment
+  const columnEnds: Dayjs[] = []
+  const columnMap = new Map<string, number>()
+
+  for (const slot of slots) {
+    const start = dayjs(slot.start)
+    const end = dayjs(slot.end)
+
+    let col = columnEnds.findIndex((ce) => !ce.isAfter(start))
+    if (col === -1) {
+      col = columnEnds.length
+      columnEnds.push(end)
+    } else {
+      columnEnds[col] = end
+    }
+    columnMap.set(slot.id, col)
+  }
+
+  // Find connected components via BFS to determine totalColumns per group
+  const visited = new Set<string>()
+  const result = new Map<string, { column: number; totalColumns: number }>()
+
+  for (const slot of slots) {
+    if (visited.has(slot.id)) continue
+
+    const component: string[] = []
+    const queue = [slot.id]
+    while (queue.length > 0) {
+      const id = queue.shift()!
+      if (visited.has(id)) continue
+      visited.add(id)
+      component.push(id)
+      const s = slots.find((e) => e.id === id)!
+      for (const other of slots) {
+        if (
+          !visited.has(other.id) &&
+          dayjs(other.start).isBefore(dayjs(s.end)) &&
+          dayjs(other.end).isAfter(dayjs(s.start))
+        ) {
+          queue.push(other.id)
+        }
+      }
+    }
+
+    let maxCol = 0
+    for (const id of component) {
+      maxCol = Math.max(maxCol, columnMap.get(id) ?? 0)
+    }
+    const totalColumns = maxCol + 1
+
+    for (const id of component) {
+      result.set(id, {
+        column: columnMap.get(id) ?? 0,
+        totalColumns,
+      })
+    }
+  }
+
+  return result
+}
+
 export interface CalendarEvent {
   id: string
   title: string
@@ -102,6 +177,17 @@ function Calendar({
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
   const [currentView, setCurrentView] = useState('timeGridWeek')
   const [currentViewStart, setCurrentViewStart] = useState<string>('')
+
+  const slotLayout = useMemo(() => computeSlotLayout(events), [events])
+
+  // In day/list views, background events are hidden by FullCalendar.
+  // Override display to 'auto' so slots remain visible in those views.
+  const viewEvents = useMemo(() => {
+    if (currentView === 'timeGridWeek') return events
+    return events.map((e) =>
+      e.display === 'background' ? { ...e, display: 'auto' as const } : e,
+    )
+  }, [events, currentView])
 
   const showDayEmptyState = useMemo(() => {
     if (currentView !== 'dayGridDay' || !currentViewStart) { return false }
@@ -214,6 +300,7 @@ function Calendar({
         initialDate={initialDate || dayjs().toISOString()}
         locale={frLocale}
         timeZone={'UTC'}
+        eventTimeFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
         weekends={false}
         allDaySlot={false}
         selectMirror={true}
@@ -288,7 +375,7 @@ function Calendar({
             isDraggingRef.current = false
           }, 0)
         }}
-        events={[...events, ...forbiddenWeekEvents]}
+        events={[...viewEvents, ...forbiddenWeekEvents]}
         eventOverlap={overlap}
         slotEventOverlap={overlap}
         eventContent={(eventContent) => (
@@ -334,23 +421,26 @@ function Calendar({
         }}
         eventDidMount={(info) => {
           if (info.event.display === 'background') {
-            const overlapping = events.filter(
-              (e) =>
-                e.extendedProps?.type === 'slot' &&
-                e.start &&
-                e.end &&
-                info.event.start &&
-                info.event.end &&
-                dayjs(e.start).isBefore(dayjs(info.event.end)) &&
-                dayjs(e.end).isAfter(dayjs(info.event.start)),
-            )
+            info.el.setAttribute('data-slot-id', info.event.id)
 
-            if (overlapping.length > 1) {
-              const index = overlapping.findIndex((s) => s.id === info.event.id)
-              const width = 100 / overlapping.length
+            const current = slotLayout.get(info.event.id)
+            if (!current || current.totalColumns <= 1) return
 
-              info.el.style.width = index === 0 ? '100%' : `${width}%`
-              info.el.style.left = `${index * width}%`
+            const width = 100 / current.totalColumns
+            info.el.style.width = `${width}%`
+            info.el.style.left = `${current.column * width}%`
+
+            // Also update already-mounted siblings in the same group
+            for (const [id, { column, totalColumns }] of slotLayout) {
+              if (id === info.event.id || totalColumns <= 1) continue
+              const el = document.querySelector<HTMLElement>(
+                `[data-slot-id="${id}"]`,
+              )
+              if (el) {
+                const w = 100 / totalColumns
+                el.style.width = `${w}%`
+                el.style.left = `${column * w}%`
+              }
             }
           }
         }}
