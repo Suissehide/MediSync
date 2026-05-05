@@ -18,11 +18,11 @@ export const getPatientColumns = ({
   onView,
   pathwayTemplates = [],
 }: PatientActions) => {
-  const tagTemplateMap = new Map<string, { name: string; color: string }>()
+  const tagColorMap = new Map<string, string>()
   for (const template of pathwayTemplates) {
     for (const tag of template.tags ?? []) {
-      if (!tagTemplateMap.has(tag)) {
-        tagTemplateMap.set(tag, { name: template.name, color: template.color })
+      if (!tagColorMap.has(tag)) {
+        tagColorMap.set(tag, template.color)
       }
     }
   }
@@ -39,7 +39,7 @@ export const getPatientColumns = ({
         }
         return (
           <div className="flex items-center justify-center">
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-700 leading-none">
+            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold bg-amber-100 text-amber-700 leading-none">
               <AlertTriangle className="w-2.5 h-2.5" />
               {count}
             </span>
@@ -65,33 +65,37 @@ export const getPatientColumns = ({
       header: 'Parcours',
       cell: ({ getValue }) => {
         const tags = getValue() ?? []
-        const primaryTag = tags[0]
-        if (!primaryTag) {
+        if (tags.length === 0) {
           return null
         }
 
-        const template = tagTemplateMap.get(primaryTag)
-        const bgStyle = template?.color
-          ? {
-              backgroundColor: hexToRGBA(template.color, 0.15),
-              color: getContrastTextColor(template.color),
-              borderColor: hexToRGBA(template.color, 0.6),
-            }
-          : undefined
-
         return (
-          <span
-            className="inline-block px-1.5 py-1.5 rounded text-[10px] border font-medium leading-none"
-            style={
-              bgStyle ?? {
-                backgroundColor: 'rgb(var(--primary) / 0.1)',
-                color: 'rgb(var(--primary))',
-                borderColor: 'rgb(var(--primary))',
-              }
-            }
-          >
-            {template?.name ?? primaryTag}
-          </span>
+          <div className="flex flex-wrap gap-1">
+            {tags.map((tag) => {
+              const color = tagColorMap.get(tag)
+              return (
+                <span
+                  key={tag}
+                  className="inline-block px-2 py-1 rounded-md text-[10px] font-medium leading-none"
+                  style={
+                    color
+                      ? {
+                          backgroundColor: hexToRGBA(color, 0.4),
+                          color: getContrastTextColor(color),
+                          border: `1px solid ${hexToRGBA(color, 0.8)}`,
+                        }
+                      : {
+                          backgroundColor: 'hsl(var(--muted))',
+                          color: 'hsl(var(--muted-foreground))',
+                          border: '1px solid hsl(var(--border))',
+                        }
+                  }
+                >
+                  {tag}
+                </span>
+              )
+            })}
+          </div>
         )
       },
     }),

@@ -6,12 +6,22 @@ import { cn } from '../../libs/utils'
 
 // ─── Select ──────────────────────────────────────────────────────────────────
 
-export interface SelectProps extends RadixSelect.SelectProps {
+export interface SelectOption {
+  value: string | number
+  label: string
+  group?: string
+}
+
+export interface SelectProps {
   id?: string
-  options: { value: string | number; label: string }[]
+  options: SelectOption[]
   placeholder?: string
   className?: string
   clearable?: boolean
+  searchable?: boolean
+  value?: string | number
+  onValueChange?: (value: string) => void
+  disabled?: boolean
 }
 
 export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
@@ -24,22 +34,140 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
       value,
       onValueChange,
       clearable = true,
-      ...props
+      searchable = false,
+      disabled,
     },
     ref,
   ) => {
+    const [searchTerm, setSearchTerm] = useState('')
+    const [open, setOpen] = useState(false)
+
     const handleClear = (e: React.MouseEvent) => {
       e.stopPropagation()
       onValueChange?.('')
+      setSearchTerm('')
     }
 
+    // ─── Searchable mode (Popover-based) ───
+    if (searchable) {
+      const filteredOptions = options.filter((o) =>
+        o.label.toLowerCase().includes(searchTerm.toLowerCase()),
+      )
+      const selectedLabel = options.find(
+        (o) => o.value.toString() === value?.toString(),
+      )?.label
+
+      const handleSelect = (val: string) => {
+        onValueChange?.(val)
+        setOpen(false)
+        setSearchTerm('')
+      }
+
+      return (
+        <Popover.Root open={open} onOpenChange={setOpen}>
+          <Popover.Trigger asChild>
+            <button
+              ref={ref}
+              type="button"
+              id={id}
+              disabled={disabled}
+              className={cn(
+                'inline-flex w-full h-9 items-center justify-between rounded-md border border-border bg-background px-3 py-2 text-sm cursor-pointer',
+                'focus:outline-none focus:ring-1 focus:ring-inset focus:ring-ring',
+                disabled
+                  ? 'opacity-50 cursor-not-allowed'
+                  : 'text-text-dark',
+                className,
+              )}
+            >
+              <span
+                className={cn(
+                  'truncate',
+                  !selectedLabel && 'text-muted-foreground',
+                )}
+              >
+                {selectedLabel || placeholder}
+              </span>
+              <div className="flex items-center gap-1 ml-2 shrink-0">
+                {clearable && value && (
+                  <span
+                    role="button"
+                    tabIndex={-1}
+                    onClick={handleClear}
+                    onKeyDown={() => {}}
+                    className="text-text-light hover:text-text"
+                  >
+                    <X className="h-4 w-4" />
+                  </span>
+                )}
+                <ChevronDown className="h-4 w-4 text-text-light" />
+              </div>
+            </button>
+          </Popover.Trigger>
+
+          <Popover.Portal>
+            <Popover.Content
+              align="start"
+              sideOffset={4}
+              onWheel={(e) => e.stopPropagation()}
+              className="z-[200] w-[var(--radix-popover-trigger-width)] rounded-md border border-border bg-popover shadow-md animate-in fade-in-0 slide-in-from-top-2"
+            >
+              <div className="p-2">
+                <input
+                  type="text"
+                  placeholder="Rechercher..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full rounded border border-border px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+
+              <ul className="p-1 max-h-52 overflow-y-auto">
+                {filteredOptions.length === 0 ? (
+                  <li className="px-2 py-1.5 text-sm text-text-light">
+                    Aucun résultat
+                  </li>
+                ) : (
+                  filteredOptions.map((option, idx) => {
+                    const prevGroup = idx > 0 ? filteredOptions[idx - 1].group : undefined
+                    const showSeparator = idx > 0 && option.group !== prevGroup
+
+                    return (
+                      <React.Fragment key={option.value}>
+                        {showSeparator && (
+                          <hr className="my-1 border-t border-border" />
+                        )}
+                        <li className="relative flex select-none items-center rounded text-sm hover:bg-primary/20">
+                          <button
+                            type="button"
+                            onClick={() => handleSelect(option.value.toString())}
+                            className="cursor-pointer flex w-full items-center justify-between rounded px-2 py-1.5"
+                          >
+                            <span>{option.label}</span>
+                            {option.value.toString() === value?.toString() && (
+                              <Check className="h-4 w-4 text-primary" />
+                            )}
+                          </button>
+                        </li>
+                      </React.Fragment>
+                    )
+                  })
+                )}
+              </ul>
+            </Popover.Content>
+          </Popover.Portal>
+        </Popover.Root>
+      )
+    }
+
+    // ─── Standard mode (RadixSelect-based) ───
     return (
-      <div className="relative w-full">
+      <div className="relative w-full overflow-visible">
         <RadixSelect.Root
           key={value as string}
           value={value as string}
           onValueChange={onValueChange}
-          {...props}
+          disabled={disabled}
         >
           <RadixSelect.Trigger
             ref={ref}
@@ -47,7 +175,7 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
             className={cn(
               'inline-flex w-full h-9 items-center justify-between rounded-md border border-border bg-background px-3 py-2 text-sm',
               'focus:outline-none focus:ring-1 focus:ring-ring',
-              props.disabled
+              disabled
                 ? 'opacity-50 cursor-not-allowed'
                 : 'cursor-pointer text-text-dark',
               className,
@@ -65,16 +193,18 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
               position="popper"
               sideOffset={4}
               onWheel={(e) => e.stopPropagation()}
-              className="z-[200] overflow-hidden rounded-md border border-border bg-popover shadow-md animate-in fade-in-0 slide-in-from-top-2"
+              className="z-[200] w-[var(--radix-select-trigger-width)] max-h-60 overflow-hidden rounded-md border border-border bg-popover shadow-md animate-in fade-in-0 slide-in-from-top-2"
             >
-              <RadixSelect.Viewport className="p-1">
+              <RadixSelect.Viewport className="p-1 max-h-60 overflow-y-auto">
                 {options.map((option) => (
                   <RadixSelect.Item
                     key={option.value}
                     value={option.value.toString()}
                     className="relative flex cursor-pointer select-none items-center rounded px-2 pr-7 py-1.5 text-sm text-text-sidebar outline-none hover:bg-primary/20 focus:bg-primary/20 data-[state=checked]:text-primary"
                   >
-                    <RadixSelect.ItemText>{option.label}</RadixSelect.ItemText>
+                    <RadixSelect.ItemText>
+                      {option.label}
+                    </RadixSelect.ItemText>
                     <RadixSelect.ItemIndicator className="absolute right-2">
                       <Check className="h-4 w-4 text-primary" />
                     </RadixSelect.ItemIndicator>

@@ -7,12 +7,13 @@ import { SLOT } from '../../../../constants/process.constant.ts'
 import { hexToRGBA } from '../../../../libs/color.ts'
 import { buildCalendarEventsFromSlots } from '../../../../libs/utils.ts'
 import { useAppointmentMutations } from '../../../../queries/useAppointment.ts'
+import { usePathwayTemplateQueries } from '../../../../queries/usePathwayTemplate.ts'
 import { useAllSlotsQuery } from '../../../../queries/useSlot.ts'
 import { usePlanningStore } from '../../../../store/usePlanningStore.ts'
 import type { CreateAppointmentParams } from '../../../../types/appointment.ts'
 import type { Patient } from '../../../../types/patient.ts'
 import type { Soignant } from '../../../../types/soignant.ts'
-import { Switch } from '../../../ui/switch.tsx'
+import { Select } from '../../../ui/select.tsx'
 import type { CalendarEvent } from '../../Calendar/calendar.tsx'
 import Calendar from '../../Calendar/calendar.tsx'
 import AddAppointmentForm from '../../popup/addAppointmentForm.tsx'
@@ -26,7 +27,13 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
   const { slots } = useAllSlotsQuery()
   const savedDate = usePlanningStore((state) => state.viewStart)
 
-  const [showAvailableSlots, setShowAvailableSlots] = useState(false)
+  const { pathwayTemplates } = usePathwayTemplateQueries()
+  const allTags = useMemo(
+    () => [...new Set((pathwayTemplates ?? []).flatMap((t) => t.tags ?? []))],
+    [pathwayTemplates],
+  )
+
+  const [selectedTag, setSelectedTag] = useState('')
   const [openCreateAppointmentModal, setOpenCreateAppointmentModal] =
     useState(false)
   const [openAppointmentId, setOpenAppointmentId] = useState('')
@@ -89,7 +96,16 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
         }
       })
 
-      const baseEvents = buildCalendarEventsFromSlots(slots, ['fillable'])
+      const filteredSlots =
+        selectedTag === '__all__'
+          ? slots
+          : slots.filter((slot) =>
+              slot.pathway?.template?.tags?.includes(selectedTag),
+            )
+
+      const baseEvents = buildCalendarEventsFromSlots(filteredSlots, [
+        'fillable',
+      ])
       const events = baseEvents.map((event) => {
         const slotId = event.id.replace('slot_', '')
         if (enrolledSet.has(slotId)) {
@@ -107,7 +123,7 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
         enrolledSlotIds: enrolledSet,
         patientAppointmentBySlotId: appointmentMap,
       }
-    }, [slots, patient])
+    }, [slots, patient, selectedTag])
 
   const handleSelectPatientSlot = (dateSelectArg: DateSelectArg) => {
     setSelectedSlotStart(dateSelectArg.startStr)
@@ -129,7 +145,9 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
         setOpenAppointmentId(appointmentId)
       }
     } else {
-      if (slot.locked) { return }
+      if (slot.locked) {
+        return
+      }
       const isIndividual = slot.slotTemplate.isIndividual
       setSelectedSlotID(slotId)
       setSelectedSlotSoignant(slot.slotTemplate.soignant ?? undefined)
@@ -154,31 +172,32 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
 
   return (
     <div className="flex-1 min-h-0 overflow-hidden flex flex-col gap-3 mt-4">
-      <div className="flex justify-end items-center gap-2 px-1">
-        <Switch
-          checked={showAvailableSlots}
-          onCheckedChange={setShowAvailableSlots}
-          id="available-slots-switch"
-        />
-        <label
-          htmlFor="available-slots-switch"
-          className="text-sm text-text-light cursor-pointer select-none"
-        >
-          Afficher les créneaux disponibles
-        </label>
+      <div className="flex justify-end items-center gap-2">
+        <div className="w-64">
+          <Select
+            searchable
+            value={selectedTag}
+            onValueChange={setSelectedTag}
+            placeholder="Filtrer les créneaux par tag"
+            options={[
+              { value: '__all__', label: 'Tout afficher', group: 'all' },
+              ...allTags
+                .sort((a, b) => a.localeCompare(b))
+                .map((tag) => ({ value: tag, label: tag, group: 'tags' })),
+            ]}
+          />
+        </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden [&_.fc_.fc-header-toolbar]:!p-0">
         <Calendar
-          events={showAvailableSlots ? availableEvents : appointmentEvents}
+          events={selectedTag ? availableEvents : appointmentEvents}
           editable={false}
           initialDate={savedDate}
-          handleClickEvent={showAvailableSlots ? handleClickSlot : undefined}
-          handleSelectEvent={
-            showAvailableSlots ? handleSelectPatientSlot : undefined
-          }
+          handleClickEvent={selectedTag ? handleClickSlot : undefined}
+          handleSelectEvent={selectedTag ? handleSelectPatientSlot : undefined}
           selectAllow={
-            showAvailableSlots
+            selectedTag
               ? (selectInfo) => {
                   const selStart = dayjs(selectInfo.start)
                   const selEnd = dayjs(selectInfo.end)

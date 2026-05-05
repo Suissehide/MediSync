@@ -6,6 +6,7 @@ export type Pathway = {
     id: string
     name: string
     color: string
+    tags: string[]
   } | null
   slots?: {
     id: string

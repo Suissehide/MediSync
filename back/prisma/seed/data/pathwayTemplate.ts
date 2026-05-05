@@ -12,42 +12,42 @@ export interface SlotData {
 
 export const PATHWAYS = {
   G1_VERT_CLAIR_RC: {
-    name: 'Groupe 1 - RC',
+    name: 'Groupe 1 - RC1',
     color: '#90EE90',
     tags: ['Groupe 1', 'Vert clair', 'RC'],
   },
   G1_VERT_CLAIR_RI: {
-    name: 'Groupe 1 - RI',
+    name: 'Groupe 1 - RI1',
     color: '#90EE90',
     tags: ['Groupe 1', 'Vert clair', 'RI'],
   },
   G1_VERT_FONCE_RC: {
-    name: 'Groupe 1 - RC',
+    name: 'Groupe 1 - RC2',
     color: '#228B22',
     tags: ['Groupe 1', 'Vert foncé', 'RC'],
   },
   G1_VERT_FONCE_RI: {
-    name: 'Groupe 1 - RI',
+    name: 'Groupe 1 - RI2',
     color: '#228B22',
     tags: ['Groupe 1', 'Vert foncé', 'RI'],
   },
   G3_BLEU_CLAIR_RC: {
-    name: 'Groupe 3 - RC',
+    name: 'Groupe 3 - RC1',
     color: '#87CEEB',
     tags: ['Groupe 3', 'Bleu clair', 'RC'],
   },
   G3_BLEU_CLAIR_RI: {
-    name: 'Groupe 3 - RI',
+    name: 'Groupe 3 - RI1',
     color: '#87CEEB',
     tags: ['Groupe 3', 'Bleu clair', 'RI'],
   },
   G3_BLEU_FONCE_RC: {
-    name: 'Groupe 3 - RC',
+    name: 'Groupe 3 - RC2',
     color: '#1E40AF',
     tags: ['Groupe 3', 'Bleu foncé', 'RC'],
   },
   G3_BLEU_FONCE_RI: {
-    name: 'Groupe 3 - RI',
+    name: 'Groupe 3 - RI2',
     color: '#1E40AF',
     tags: ['Groupe 3', 'Bleu foncé', 'RI'],
   },
@@ -4713,5 +4713,4 @@ export const PATHWAY_DATA: Record<string, SlotData[]> = {
       dayOfWeek: 1,
     },
   ],
-
 }
