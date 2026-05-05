@@ -8,7 +8,7 @@ import multiMonthPlugin from '@fullcalendar/multimonth'
 import FullCalendar from '@fullcalendar/react'
 import { createFileRoute } from '@tanstack/react-router'
 import dayjs from 'dayjs'
-import { CalendarDays, CheckSquare, Copy, GanttChart, Trash2, X } from 'lucide-react'
+import { CalendarDays, CheckSquare, Copy, GanttChart, MoveRight, Trash2, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import Calendar, {
@@ -16,6 +16,7 @@ import Calendar, {
 } from '../../../../components/custom/Calendar/calendar.tsx'
 import AddSlotForm from '../../../../components/custom/popup/addSlotForm.tsx'
 import { BulkDuplicateForm } from '../../../../components/custom/popup/bulkDuplicateForm.tsx'
+import { BulkMoveForm } from '../../../../components/custom/popup/bulkMoveForm.tsx'
 import { ConfirmDeleteForm } from '../../../../components/custom/popup/confirmDeleteForm.tsx'
 import { CreateForbiddenWeekForm } from '../../../../components/custom/popup/createForbiddenWeekForm.tsx'
 import { DeleteForbiddenWeekForm } from '../../../../components/custom/popup/deleteForbiddenWeekForm.tsx'
@@ -121,6 +122,9 @@ function Planning() {
   const [duplicateWeekDate, setDuplicateWeekDate] = useState<dayjs.Dayjs | null>(null)
   const [duplicateTargetWeek, setDuplicateTargetWeek] = useState(1)
   const [showDuplicateModal, setShowDuplicateModal] = useState(false)
+  const [moveWeekDate, setMoveWeekDate] = useState<dayjs.Dayjs | null>(null)
+  const [moveTargetWeek, setMoveTargetWeek] = useState(1)
+  const [showMoveModal, setShowMoveModal] = useState(false)
 
   const handleToggleSelect = useCallback((eventId: string) => {
     setSelectedSlotIds((prev) => {
@@ -402,6 +406,82 @@ function Planning() {
     setDuplicateTargetWeek(1)
   }
 
+  const handleBulkMove = (targetDate: dayjs.Dayjs) => {
+    const targetWeekStart = targetDate.isoWeekday(1).utc().startOf('day')
+
+    for (const eventId of selectedSlotIds) {
+      if (!eventId.startsWith('slot_')) continue
+      const slotId = eventId.replace('slot_', '')
+      const slot = slots?.find((s) => s.id === slotId)
+      if (!slot) continue
+
+      const slotStart = dayjs(slot.startDate)
+      const slotWeekStart = slotStart.isoWeekday(1).utc().startOf('day')
+      const dayOffset = slotStart.diff(slotWeekStart, 'day')
+      const timeOfDay = slotStart.format('HH:mm:ss')
+      const duration = dayjs(slot.endDate).diff(slotStart, 'minute')
+
+      const newStart = targetWeekStart.add(dayOffset, 'day')
+      const newStartFull = dayjs(`${newStart.format('YYYY-MM-DD')}T${timeOfDay}`)
+      const newEnd = newStartFull.add(duration, 'minute')
+
+      updateSlot.mutate({
+        id: slotId,
+        startDate: newStartFull.toISOString(),
+        endDate: newEnd.toISOString(),
+        slotTemplate: {
+          id: slot.slotTemplate.id,
+          startTime: newStartFull.toISOString(),
+          endTime: newEnd.toISOString(),
+        },
+      })
+    }
+
+    toast({
+      title: 'Déplacement en cours',
+      message: `${selectedSlotIds.size} créneau(x) déplacé(s) sur la semaine du ${targetWeekStart.format('DD/MM/YYYY')}`,
+      severity: TOAST_SEVERITY.SUCCESS,
+    })
+
+    handleClearSelection()
+    setShowMoveModal(false)
+    setMoveWeekDate(null)
+  }
+
+  const handleBulkMoveEditMode = (targetWeekNum: number) => {
+    if (!currentPathwayTemplate) return
+
+    for (const eventId of selectedSlotIds) {
+      if (!eventId.startsWith('template_')) continue
+      const templateId = eventId.replace('template_', '')
+      const slotTemplate = currentPathwayTemplate.slotTemplates?.find(
+        (t) => t.id === templateId,
+      )
+      if (!slotTemplate) continue
+
+      const currentOffsetDays = slotTemplate.offsetDays ?? 0
+      const dayInWeek = currentOffsetDays % 7
+      const newOffsetDays = (targetWeekNum - 1) * 7 + dayInWeek
+
+      updateSlotTemplate.mutate({
+        id: templateId,
+        offsetDays: newOffsetDays,
+        startTime: slotTemplate.startTime,
+        endTime: slotTemplate.endTime,
+      })
+    }
+
+    toast({
+      title: 'Déplacement en cours',
+      message: `${selectedSlotIds.size} créneau(x) déplacé(s) sur la semaine ${targetWeekNum}`,
+      severity: TOAST_SEVERITY.SUCCESS,
+    })
+
+    handleClearSelection()
+    setShowMoveModal(false)
+    setMoveTargetWeek(1)
+  }
+
   const handleForbiddenWeekCreate = (date: string) => {
     setCreateForbiddenWeekDate(date)
   }
@@ -531,6 +611,7 @@ function Planning() {
               <Select
                 options={[
                   { value: 'duplicate', label: 'Dupliquer sur une semaine' },
+                  { value: 'move', label: 'Déplacer sur une semaine' },
                 ]}
                 placeholder="Action..."
                 value={bulkAction}
@@ -544,6 +625,14 @@ function Planning() {
                       setDuplicateWeekDate(viewStart ? dayjs(viewStart).isoWeekday(1) : dayjs().isoWeekday(1))
                     }
                     setShowDuplicateModal(true)
+                  } else if (v === 'move') {
+                    if (editMode) {
+                      setMoveTargetWeek(1)
+                    } else {
+                      const { viewStart } = usePlanningStore.getState()
+                      setMoveWeekDate(viewStart ? dayjs(viewStart).isoWeekday(1) : dayjs().isoWeekday(1))
+                    }
+                    setShowMoveModal(true)
                   }
                 }}
                 clearable={false}
@@ -880,6 +969,41 @@ function Planning() {
             onWeekChange={setDuplicateWeekDate}
             onConfirm={() => {
               if (duplicateWeekDate) handleBulkDuplicate(duplicateWeekDate)
+            }}
+          />
+        )}
+
+        {editMode ? (
+          <BulkMoveForm
+            open={showMoveModal}
+            setOpen={(open) => {
+              setShowMoveModal(open)
+              if (!open) {
+                setBulkAction('')
+                setMoveTargetWeek(1)
+              }
+            }}
+            editMode
+            count={selectedSlotIds.size}
+            targetWeekNumber={moveTargetWeek}
+            onTargetWeekNumberChange={setMoveTargetWeek}
+            onConfirm={() => handleBulkMoveEditMode(moveTargetWeek)}
+          />
+        ) : (
+          <BulkMoveForm
+            open={showMoveModal}
+            setOpen={(open) => {
+              setShowMoveModal(open)
+              if (!open) {
+                setBulkAction('')
+                setMoveWeekDate(null)
+              }
+            }}
+            count={selectedSlotIds.size}
+            weekDate={moveWeekDate}
+            onWeekChange={setMoveWeekDate}
+            onConfirm={() => {
+              if (moveWeekDate) handleBulkMove(moveWeekDate)
             }}
           />
         )}
