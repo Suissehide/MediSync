@@ -146,10 +146,14 @@ export const useSlotMutations = () => {
         [SLOT.GET_BY_ID, updatedSlot.id],
         (oldSlot: Slot) => {
           if (!oldSlot) {
-            return updatedSlot
+            return undefined
+          }
+          if (!oldSlot.slotTemplate) {
+            return { ...oldSlot, ...updatedSlot }
           }
           return {
             ...oldSlot,
+            ...updatedSlot,
             slotTemplate: {
               ...oldSlot.slotTemplate,
               ...updatedSlot.slotTemplate,

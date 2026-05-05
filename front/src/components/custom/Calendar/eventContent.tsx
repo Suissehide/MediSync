@@ -128,9 +128,10 @@ export const EventContent = ({
             }}
           />
           <div
+            data-lock-toggle
             className={clsx(
-              'absolute top-0.5 left-0.5 z-10 p-0.5 rounded bg-black/40 text-white pointer-events-none',
-              { 'pointer-events-auto cursor-pointer hover:bg-black/60': !!onToggleLock },
+              'absolute top-0.5 left-0.5 z-10 p-0.5 rounded bg-black/40 text-white',
+              onToggleLock ? 'pointer-events-auto cursor-pointer hover:bg-black/60' : 'pointer-events-none',
             )}
             onClick={(e) => {
               if (!onToggleLock) { return }
@@ -152,6 +153,7 @@ export const EventContent = ({
         !containsKeyword(states, ['editable', 'individual', 'multiple']) &&
         type === 'slot' && (
           <Button
+            data-lock-toggle
             variant="none"
             className="absolute top-0.5 left-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10 h-auto w-auto p-0.5 rounded bg-black/20 hover:bg-black/40 text-white"
             onClick={(e) => {

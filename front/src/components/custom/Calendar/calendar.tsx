@@ -258,6 +258,10 @@ function Calendar({
         return
       }
 
+      if (target.closest('[data-lock-toggle]')) {
+        return
+      }
+
       const el = target.closest('.fc-event-hero')
       if (!el) {
         return

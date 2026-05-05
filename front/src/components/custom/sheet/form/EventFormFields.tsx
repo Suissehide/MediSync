@@ -62,7 +62,14 @@ export const EventFormFields = withForm({
             <field.Select
               options={thematicOptions}
               label="Thématique"
-              disabled={!selectedSoignant}
+              disabled={!selectedSoignant || thematicOptions.length === 0}
+              placeholder={
+                !selectedSoignant
+                  ? 'Sélectionnez un soignant'
+                  : thematicOptions.length === 0
+                    ? 'Aucune thématique associée'
+                    : 'Sélectionnez une thématique'
+              }
             />
           )}
         </form.AppField>

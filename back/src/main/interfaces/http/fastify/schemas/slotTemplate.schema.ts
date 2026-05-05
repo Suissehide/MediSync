@@ -7,7 +7,7 @@ export const slotTemplateResponseSchema = slotTemplateSchema.extend({
   id: z.cuid(),
   soignant: soignantResponseSchema.extend({
     id: z.cuid(),
-  }),
+  }).optional().nullable(),
 })
 
 export const slotTemplatesResponseSchema = z.array(slotTemplateResponseSchema)

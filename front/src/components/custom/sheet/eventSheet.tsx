@@ -57,13 +57,13 @@ export default function EventSheet({
   const form = useAppForm({
     ...eventFormOpts,
     defaultValues: {
-      soignant: slot?.slotTemplate.soignant?.id ?? '',
-      thematic: slot?.slotTemplate.thematic ?? '',
-      location: slot?.slotTemplate.location ?? '',
-      isIndividual: slot?.slotTemplate.isIndividual ?? false,
-      capacity: slot?.slotTemplate.capacity ?? 1,
-      color: slot?.slotTemplate.color ?? '',
-      description: slot?.slotTemplate.description ?? '',
+      soignant: slot?.slotTemplate?.soignant?.id ?? '',
+      thematic: slot?.slotTemplate?.thematic ?? '',
+      location: slot?.slotTemplate?.location ?? '',
+      isIndividual: slot?.slotTemplate?.isIndividual ?? false,
+      capacity: slot?.slotTemplate?.capacity ?? 1,
+      color: slot?.slotTemplate?.color ?? '',
+      description: slot?.slotTemplate?.description ?? '',
     },
     onSubmit: ({ value }) => {
       if (!slot?.id) {
@@ -73,7 +73,7 @@ export default function EventSheet({
       const updatedSlotData = {
         id: slot.id,
         slotTemplate: {
-          id: slot.slotTemplate.id,
+          id: slot.slotTemplate?.id,
           thematic: value.thematic,
           location: value.location,
           description: value.description,
@@ -130,13 +130,13 @@ export default function EventSheet({
 
     reset(
       {
-        soignant: slot.slotTemplate.soignant?.id ?? '',
-        thematic: slot.slotTemplate.thematic ?? '',
-        location: slot.slotTemplate.location ?? '',
-        isIndividual: slot.slotTemplate.isIndividual ?? false,
-        capacity: slot.slotTemplate.capacity ?? 1,
-        description: slot.slotTemplate.description ?? '',
-        color: slot.slotTemplate.color ?? '',
+        soignant: slot.slotTemplate?.soignant?.id ?? '',
+        thematic: slot.slotTemplate?.thematic ?? '',
+        location: slot.slotTemplate?.location ?? '',
+        isIndividual: slot.slotTemplate?.isIndividual ?? false,
+        capacity: slot.slotTemplate?.capacity ?? 1,
+        description: slot.slotTemplate?.description ?? '',
+        color: slot.slotTemplate?.color ?? '',
       },
       { keepDefaultValues: true },
     )

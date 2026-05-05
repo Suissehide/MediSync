@@ -61,7 +61,7 @@ export const buildCalendarEventsFromSlots = (
 
     if (containsKeyword(slotStates, ['fillable'])) {
       slotStates.push(
-        slot.slotTemplate.isIndividual ? 'individual' : 'multiple',
+        slot.slotTemplate?.isIndividual ? 'individual' : 'multiple',
       )
     }
 
@@ -69,10 +69,10 @@ export const buildCalendarEventsFromSlots = (
       ? 'background'
       : 'block'
 
-    const slotColor = slot.slotTemplate.color ?? '#2563eb'
+    const slotColor = slot.slotTemplate?.color ?? '#2563eb'
     return {
       id: `slot_${slot.id}`,
-      title: slot.slotTemplate.soignant?.name ?? 'Soignant inconnu',
+      title: slot.slotTemplate?.soignant?.name ?? 'Soignant inconnu',
       start: slot.startDate,
       end: slot.endDate,
       color: slotColor,
@@ -82,9 +82,9 @@ export const buildCalendarEventsFromSlots = (
       editable: !containsKeyword(slotStates, ['editable']) && !slot.locked,
       extendedProps: {
         type: 'slot',
-        thematic: slot.slotTemplate.thematic,
+        thematic: slot.slotTemplate?.thematic,
         states: slotStates,
-        templateID: slot.slotTemplate.id,
+        templateID: slot.slotTemplate?.id,
         appointments: slot.appointments,
         locked: slot.locked,
       },
