@@ -191,6 +191,7 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
 
       <div className="flex-1 min-h-0 overflow-hidden [&_.fc_.fc-header-toolbar]:!p-0">
         <Calendar
+          key={selectedTag}
           events={selectedTag ? availableEvents : appointmentEvents}
           editable={false}
           initialDate={savedDate}
