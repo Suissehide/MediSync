@@ -205,5 +205,55 @@ export const usePathwayTemplateMutations = () => {
     },
   })
 
-  return { createPathwayTemplate, deletePathwayTemplate, updatePathwayTemplate }
+  const reorderPathwayTemplates = useMutation({
+    mutationKey: [PATHWAY_TEMPLATE.REORDER],
+    mutationFn: PathwayTemplateApi.reorder,
+    onMutate: async (orderedIds: string[]) => {
+      await queryClient.cancelQueries({ queryKey: [PATHWAY_TEMPLATE.GET_ALL] })
+
+      const previousPathwayTemplates = queryClient.getQueryData([
+        PATHWAY_TEMPLATE.GET_ALL,
+      ])
+      queryClient.setQueryData(
+        [PATHWAY_TEMPLATE.GET_ALL],
+        (oldPathwayTemplates: PathwayTemplate[]) => {
+          if (!oldPathwayTemplates) return oldPathwayTemplates
+          const orderMap = new Map(
+            orderedIds.map((id, index) => [id, index]),
+          )
+          return [...oldPathwayTemplates]
+            .map((pt) => ({
+              ...pt,
+              displayOrder: orderMap.get(pt.id) ?? pt.displayOrder,
+            }))
+            .sort((a, b) => a.displayOrder - b.displayOrder)
+        },
+      )
+
+      return { previousPathwayTemplates }
+    },
+    onError: (_, __, context) => {
+      queryClient.setQueryData(
+        [PATHWAY_TEMPLATE.GET_ALL],
+        context?.previousPathwayTemplates,
+      )
+
+      toast({
+        title: 'Erreur lors de la réorganisation des parcours',
+        severity: TOAST_SEVERITY.ERROR,
+      })
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: [PATHWAY_TEMPLATE.GET_ALL],
+      })
+    },
+  })
+
+  return {
+    createPathwayTemplate,
+    deletePathwayTemplate,
+    updatePathwayTemplate,
+    reorderPathwayTemplates,
+  }
 }

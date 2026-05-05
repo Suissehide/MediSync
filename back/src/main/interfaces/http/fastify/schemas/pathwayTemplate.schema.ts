@@ -6,6 +6,7 @@ import { slotTemplateResponseSchema } from './slotTemplate.schema'
 export const pathwayTemplateResponseSchema = pathwayTemplateSchema.extend({
   id: z.cuid(),
   tags: z.array(z.string()),
+  displayOrder: z.number(),
   slotTemplates: z.array(
     slotTemplateResponseSchema.extend({
       id: z.cuid(),

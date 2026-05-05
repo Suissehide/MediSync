@@ -102,4 +102,22 @@ export const PathwayTemplateApi = {
     }
     return
   },
+
+  reorder: async (orderedIds: string[]): Promise<void> => {
+    const response = await fetchWithAuth(
+      `${apiUrl}/pathway-template/reorder?action=reorderPathwayTemplates`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderedIds }),
+      },
+    )
+    if (!response.ok) {
+      handleHttpError(
+        response,
+        {},
+        'Impossible de réorganiser les templates de parcours',
+      )
+    }
+  },
 }
