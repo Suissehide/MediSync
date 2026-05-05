@@ -1,5 +1,5 @@
 import { useStore } from '@tanstack/react-form'
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 
 import { SLOT_LOCATION_OPTIONS } from '../../../../constants/slot.constant.ts'
 import { withForm } from '../../../../hooks/formConfig.tsx'
@@ -30,6 +30,11 @@ export const EventFormFields = withForm({
 
     const selectedSoignant = soignants.find((s) => s.id === selectedSoignantId)
 
+    const currentThematic = useStore(
+      form.store,
+      (state) => state.values.thematic,
+    )
+
     const thematicOptions = useMemo(() => {
       return selectedSoignant
         ? (thematics
@@ -39,6 +44,16 @@ export const EventFormFields = withForm({
             .map((t) => ({ value: t.name, label: t.name })) ?? [])
         : []
     }, [selectedSoignant, thematics])
+
+    useEffect(() => {
+      if (
+        currentThematic &&
+        selectedSoignant &&
+        !thematicOptions.some((o) => o.value === currentThematic)
+      ) {
+        form.setFieldValue('thematic', '')
+      }
+    }, [currentThematic, selectedSoignant, thematicOptions, form])
 
     return (
       <>

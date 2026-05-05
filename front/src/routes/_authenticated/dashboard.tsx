@@ -22,6 +22,7 @@ import { useAllSlotsQuery } from '../../queries/useSlot.ts'
 import { usePlanningStore } from '../../store/usePlanningStore.ts'
 import { useSoignantStore } from '../../store/useSoignantStore.ts'
 import type { CreateAppointmentParams } from '../../types/appointment.ts'
+import type { Soignant } from '../../types/soignant.ts'
 
 export const Route = createFileRoute('/_authenticated/dashboard')({
   component: Dashboard,
@@ -45,6 +46,7 @@ function Dashboard() {
   const [selectedEvent, setSelectedEvent] = useState('')
   const [maxDate, setMaxDate] = useState('')
   const [type, setType] = useState('')
+  const [slotSoignant, setSlotSoignant] = useState<Soignant | undefined>(undefined)
   const calendarUnselectRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
@@ -72,7 +74,8 @@ function Dashboard() {
   }
 
   const handleAddAppointment = (eventID: string) => {
-    setSelectedEvent(eventID.replace(/^.*?_/, ''))
+    const slotId = eventID.replace(/^.*?_/, '')
+    setSelectedEvent(slotId)
     const event = getEventById(eventID)
     if (!event || eventID.startsWith('appointment_')) {
       return
@@ -86,6 +89,9 @@ function Dashboard() {
     ) {
       return
     }
+
+    const slot = slots?.find((s) => s.id === slotId)
+    setSlotSoignant(slot?.slotTemplate?.soignant ?? undefined)
 
     setType('multiple')
     setMaxDate(event?.end ?? '')
@@ -105,6 +111,17 @@ function Dashboard() {
 
   const getEventById = (id: string) => {
     return events.find((event) => event.id === id)
+  }
+
+  const handleOpenEvent = (eventId: string) => {
+    if (eventId.startsWith('appointment_')) {
+      const aptId = eventId.replace(/^.*?_/, '')
+      const slot = slots?.find((s) =>
+        s.appointments?.some((a) => a.id === aptId),
+      )
+      setSlotSoignant(slot?.slotTemplate?.soignant ?? undefined)
+    }
+    setOpenEventId(eventId)
   }
 
   const isAppointment = openEventId.startsWith('appointment_')
@@ -134,7 +151,7 @@ function Dashboard() {
               initialDate={savedDate}
               handleSelectEvent={handleSelectAppointment}
               handleClickEvent={handleAddAppointment}
-              handleOpenEvent={setOpenEventId}
+              handleOpenEvent={handleOpenEvent}
               selectAllow={(selectInfo) => {
                 const { start, end } = selectInfo
                 const selectionStart = dayjs(start)
@@ -194,7 +211,7 @@ function Dashboard() {
             startDate={selectedDate.startStr}
             endDate={selectedDate.endStr}
             maxDate={maxDate}
-            soignant={soignant}
+            soignant={slotSoignant}
             slotID={selectedEvent}
             type={type}
             handleCreateAppointment={handleCreateAppointment}
@@ -206,7 +223,7 @@ function Dashboard() {
             open={isAppointment}
             setOpen={setOpenEventId}
             eventID={appointmentId}
-            soignant={soignant}
+            soignant={slotSoignant}
           />
         )}
       </div>

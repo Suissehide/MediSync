@@ -218,6 +218,14 @@ export default function AppointmentSheet({
                 }}
                 className="w-full flex-1 flex flex-col min-h-0 gap-2 px-4"
               >
+                <FormField>
+                  <Label>Soignant</Label>
+                  <Input
+                    value={soignant?.name ?? 'Aucun soignant associé'}
+                    disabled
+                  />
+                </FormField>
+
                 <form.AppField name="thematic">
                   {(field) => (
                     <field.Select

@@ -13,6 +13,7 @@ import type { Soignant } from '../../../types/soignant.ts'
 import { Button } from '../../ui/button.tsx'
 import { FieldInfo } from '../../ui/fieldInfo.tsx'
 import { FormField } from '../../ui/formField.tsx'
+import { Input } from '../../ui/input.tsx'
 import { Label } from '../../ui/label.tsx'
 import {
   Popup,
@@ -173,6 +174,14 @@ function AddAppointmentForm({
                 <span className="text-text-darkComm">{capacity}</span>
               </div>
             )}
+
+            <FormField>
+              <Label>Soignant</Label>
+              <Input
+                value={soignant?.name ?? 'Aucun soignant associé'}
+                disabled
+              />
+            </FormField>
 
             <form.AppField name="thematic">
               {(field) => (
