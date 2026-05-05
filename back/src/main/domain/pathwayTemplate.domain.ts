@@ -72,6 +72,10 @@ class PathwayTemplateDomain implements PathwayTemplateDomainInterface {
   delete(pathwayTemplateID: string): Promise<PathwayTemplateEntityDomain> {
     return this.pathwayTemplateRepository.delete(pathwayTemplateID)
   }
+
+  reorder(orderedIds: string[]): Promise<void> {
+    return this.pathwayTemplateRepository.reorder(orderedIds)
+  }
 }
 
 export { PathwayTemplateDomain }

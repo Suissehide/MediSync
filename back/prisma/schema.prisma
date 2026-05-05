@@ -24,10 +24,11 @@ model User {
 }
 
 model PathwayTemplate {
-  id    String   @id @default(cuid())
-  name  String
-  color String
-  tags  String[]
+  id           String   @id @default(cuid())
+  name         String
+  color        String
+  tags         String[]
+  displayOrder Int      @default(0)
 
   pathways      Pathway[]
   slotTemplates SlotTemplate[]

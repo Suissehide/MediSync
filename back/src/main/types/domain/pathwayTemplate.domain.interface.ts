@@ -36,4 +36,5 @@ export interface PathwayTemplateDomainInterface {
     pathwayTemplateUpdateParams: PathwayTemplateUpdateEntityDomain,
   ) => Promise<PathwayTemplateEntityDomain>
   delete: (pathwayTemplateID: string) => Promise<PathwayTemplateEntityDomain>
+  reorder: (orderedIds: string[]) => Promise<void>
 }

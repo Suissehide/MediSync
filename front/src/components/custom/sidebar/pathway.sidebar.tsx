@@ -1,10 +1,13 @@
 import { Draggable } from '@fullcalendar/interaction'
-import { Loader2Icon, Pencil, Plus, Route } from 'lucide-react'
+import { GripVertical, Loader2Icon, Pencil, Plus, Route } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 
 import { hexToRGBA } from '../../../libs/color.ts'
-import { usePathwayTemplateQueries } from '../../../queries/usePathwayTemplate.ts'
+import {
+  usePathwayTemplateMutations,
+  usePathwayTemplateQueries,
+} from '../../../queries/usePathwayTemplate.ts'
 import { usePathwayTemplateEditStore } from '../../../store/usePathwayTemplateEditStore.ts'
 import { usePlanningStore } from '../../../store/usePlanningStore.ts'
 import type { PathwayTemplate } from '../../../types/pathwayTemplate.ts'
@@ -15,8 +18,10 @@ import PathwayTemplateSheet from '../sheet/pathwayTemplateSheet.tsx'
 function SidebarPathway() {
   const containerRef = useRef<HTMLDivElement>(null)
   const [openSheetId, setOpenSheetId] = useState('')
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
 
   const { pathwayTemplates, isPending } = usePathwayTemplateQueries()
+  const { reorderPathwayTemplates } = usePathwayTemplateMutations()
   const { currentPathwayTemplate, setPathwayTemplate, clearPathwayTemplate } =
     usePathwayTemplateEditStore(
       useShallow((state) => ({
@@ -36,14 +41,37 @@ function SidebarPathway() {
     }
   }
 
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index)
+  }
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault()
+    if (draggedIndex === null || draggedIndex === index) return
+    // Visual reorder is handled by optimistic update in the mutation
+  }
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault()
+    if (draggedIndex === null || draggedIndex === dropIndex) return
+    if (!pathwayTemplates) return
+
+    const newOrder = [...pathwayTemplates]
+    const [movedItem] = newOrder.splice(draggedIndex, 1)
+    newOrder.splice(dropIndex, 0, movedItem)
+
+    reorderPathwayTemplates.mutate(newOrder.map((t) => t.id))
+    setDraggedIndex(null)
+  }
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null)
+  }
+
   useEffect(() => {
     if (containerRef.current) {
       new Draggable(containerRef.current, {
         itemSelector: 'li[data-pathway-id]',
-        // eventData: (el) => ({
-        //   id: el.getAttribute('data-pathway-id'),
-        //   title: el.getAttribute('data-pathway-name'),
-        // }),
       })
     }
   }, [])
@@ -70,21 +98,27 @@ function SidebarPathway() {
           </div>
         ) : (
           <ul className="flex-1 flex flex-col min-h-0 space-y-2 overflow-y-auto">
-            {pathwayTemplates?.map((pathwayTemplate) => {
+            {pathwayTemplates?.map((pathwayTemplate, index) => {
               const isSelected =
                 currentPathwayTemplate?.id === pathwayTemplate.id
+              const isDragged = draggedIndex === index
 
               return (
                 <li
                   key={pathwayTemplate.id}
                   data-pathway-id={pathwayTemplate.id}
                   data-pathway-name={pathwayTemplate.name}
+                  draggable
+                  onDragStart={() => handleDragStart(index)}
+                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDrop={(e) => handleDrop(e, index)}
+                  onDragEnd={handleDragEnd}
                   onClick={() => handleEditPathwayTemplate(pathwayTemplate)}
                   className={`group rounded border transition-all cursor-pointer hover:shadow-md ${
                     isSelected
                       ? 'border-border-dark shadow-sm'
                       : 'border-border-sidebar bg-sidebar'
-                  }`}
+                  } ${isDragged ? 'opacity-50' : ''}`}
                   style={{
                     borderLeftColor: pathwayTemplate.color,
                     borderLeftWidth: '6px',
@@ -94,10 +128,17 @@ function SidebarPathway() {
                   }}
                 >
                   <div className="relative flex items-center gap-3 px-3 py-2">
+                    <div className="flex-shrink-0 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground">
+                      <GripVertical className="w-4 h-4" />
+                    </div>
+
                     <div
                       className="flex-shrink-0 w-8 h-8 rounded-md flex items-center justify-center"
                       style={{
-                        backgroundColor: hexToRGBA(pathwayTemplate.color, 0.15),
+                        backgroundColor: hexToRGBA(
+                          pathwayTemplate.color,
+                          0.15,
+                        ),
                         color: pathwayTemplate.color,
                       }}
                     >

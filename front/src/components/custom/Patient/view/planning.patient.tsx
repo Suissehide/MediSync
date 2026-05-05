@@ -63,14 +63,19 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
           ),
         ),
       )
-      .map((slot) => ({
-        id: slot.id,
-        title: slot.slotTemplate?.thematic || 'Rendez-vous',
-        start: slot.startDate,
-        end: slot.endDate,
-        backgroundColor: slot.slotTemplate?.color,
-        borderColor: slot.slotTemplate?.color,
-      }))
+      .map((slot) => {
+        const apt = slot.appointments?.find((a) =>
+          a.appointmentPatients?.some((ap) => ap.patient.id === patient.id),
+        )
+        return {
+          id: `apt_${apt?.id}`,
+          title: slot.slotTemplate?.thematic || 'Rendez-vous',
+          start: slot.startDate,
+          end: slot.endDate,
+          backgroundColor: slot.slotTemplate?.color,
+          borderColor: slot.slotTemplate?.color,
+        }
+      })
   }, [slots, patient])
 
   const { availableEvents, enrolledSlotIds, patientAppointmentBySlotId } =
@@ -111,8 +116,8 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
         if (enrolledSet.has(slotId)) {
           return {
             ...event,
-            backgroundColor: hexToRGBA(event.color ?? '#2563eb', 0.3),
-            borderColor: hexToRGBA(event.color ?? '#2563eb', 0.3),
+            backgroundColor: hexToRGBA(event.color ?? '#2563eb', 1),
+            borderColor: hexToRGBA(event.color ?? '#2563eb', 1),
           }
         }
         return event
@@ -129,6 +134,17 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
     setSelectedSlotStart(dateSelectArg.startStr)
     setSelectedSlotEnd(dateSelectArg.endStr)
     setSelectedSlotType('individual')
+  }
+
+  const handleClickAppointmentEvent = (eventId: string) => {
+    const appointmentId = eventId.replace('apt_', '')
+    const slot = slots?.find((s) =>
+      s.appointments?.some((a) => a.id === appointmentId),
+    )
+    if (slot) {
+      setSelectedSlotSoignant(slot.slotTemplate?.soignant ?? undefined)
+      setOpenAppointmentId(appointmentId)
+    }
   }
 
   const handleClickSlot = (eventId: string) => {
@@ -195,7 +211,9 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
           events={selectedTag ? availableEvents : appointmentEvents}
           editable={false}
           initialDate={savedDate}
-          handleClickEvent={selectedTag ? handleClickSlot : undefined}
+          handleClickEvent={
+            selectedTag ? handleClickSlot : handleClickAppointmentEvent
+          }
           handleSelectEvent={selectedTag ? handleSelectPatientSlot : undefined}
           selectAllow={
             selectedTag

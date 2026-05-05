@@ -35,4 +35,5 @@ export interface PathwayTemplateRepositoryInterface {
     pathwayTemplateUpdateParams: PathwayTemplateUpdateEntityRepo,
   ) => Promise<PathwayTemplateEntityRepo>
   delete: (pathwayTemplateID: string) => Promise<PathwayTemplateEntityRepo>
+  reorder: (orderedIds: string[]) => Promise<void>
 }

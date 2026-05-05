@@ -29,7 +29,19 @@ class PathwayTemplateRepository implements PathwayTemplateRepositoryInterface {
   findAll(): Promise<PathwayTemplateEntityRepo[]> {
     return this.prisma.pathwayTemplate.findMany({
       include: slotTemplateInclude,
+      orderBy: { displayOrder: 'asc' },
     })
+  }
+
+  async reorder(orderedIds: string[]): Promise<void> {
+    await this.prisma.$transaction(
+      orderedIds.map((id, index) =>
+        this.prisma.pathwayTemplate.update({
+          where: { id },
+          data: { displayOrder: index },
+        }),
+      ),
+    )
   }
 
   async findByID(

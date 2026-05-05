@@ -104,6 +104,24 @@ const pathwayTemplateRouter: FastifyPluginAsync = (fastify) => {
     },
   )
 
+  // Reorder
+  fastify.patch<{ Body: { orderedIds: string[] } }>(
+    '/reorder',
+    {
+      schema: {
+        body: z.object({ orderedIds: z.array(z.cuid()) }),
+        response: {
+          204: z.null(),
+        },
+      },
+      onRequest: [fastify.verifySessionCookie],
+    },
+    async (request, reply) => {
+      await pathwayTemplateDomain.reorder(request.body.orderedIds)
+      reply.code(204).send()
+    },
+  )
+
   // Delete
   fastify.delete<{ Params: DeletePathwayTemplateByIdParams }>(
     '/:pathwayTemplateID',

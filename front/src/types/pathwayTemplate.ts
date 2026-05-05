@@ -5,6 +5,7 @@ export type PathwayTemplate = {
   name: string
   color: string
   tags: string[]
+  displayOrder: number
   slotTemplates?: SlotTemplate[]
 }
 
