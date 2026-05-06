@@ -98,6 +98,18 @@ class AppointmentRepository implements AppointmentRepositoryInterface {
 
     try {
       return await this.prisma.$transaction(async (tx) => {
+        // Si plus aucun patient, supprimer le rendez-vous entier
+        if (appointmentPatients.length === 0) {
+          return tx.appointment.delete({
+            where: { id: appointmentID },
+            include: {
+              appointmentPatients: {
+                include: { patient: true },
+              },
+            },
+          })
+        }
+
         // Met à jour le rendez-vous principal
         await tx.appointment.update({
           where: { id: appointmentID },
@@ -139,7 +151,7 @@ class AppointmentRepository implements AppointmentRepositoryInterface {
           })
         }
 
-        // 3️⃣ Retourne le rendez-vous complet avec patients
+        // Retourne le rendez-vous complet avec patients
         return tx.appointment.findUniqueOrThrow({
           where: { id: appointmentID },
           include: {

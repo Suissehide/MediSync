@@ -147,6 +147,17 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
     }
   }
 
+  const handleOpenEvent = (eventId: string) => {
+    const appointmentId = eventId.replace('appointment_', '')
+    const slot = slots?.find((s) =>
+      s.appointments?.some((a) => a.id === appointmentId),
+    )
+    if (slot) {
+      setSelectedSlotSoignant(slot.slotTemplate?.soignant ?? undefined)
+      setOpenAppointmentId(appointmentId)
+    }
+  }
+
   const handleClickSlot = (eventId: string) => {
     const slotId = eventId.replace('slot_', '')
     const slot = slots?.find((s) => s.id === slotId)
@@ -165,6 +176,11 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
         return
       }
       const isIndividual = slot.slotTemplate.isIndividual
+      if (!isIndividual && slot.appointments && slot.appointments.length > 0) {
+        setSelectedSlotSoignant(slot.slotTemplate.soignant ?? undefined)
+        setOpenAppointmentId(slot.appointments[0].id)
+        return
+      }
       setSelectedSlotID(slotId)
       setSelectedSlotSoignant(slot.slotTemplate.soignant ?? undefined)
       setSelectedSlotMaxDate(slot.endDate)
@@ -214,6 +230,7 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
           handleClickEvent={
             selectedTag ? handleClickSlot : handleClickAppointmentEvent
           }
+          handleOpenEvent={handleOpenEvent}
           handleSelectEvent={selectedTag ? handleSelectPatientSlot : undefined}
           selectAllow={
             selectedTag
