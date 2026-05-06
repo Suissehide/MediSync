@@ -8,7 +8,7 @@ import multiMonthPlugin from '@fullcalendar/multimonth'
 import FullCalendar from '@fullcalendar/react'
 import { createFileRoute } from '@tanstack/react-router'
 import dayjs from 'dayjs'
-import { CalendarDays, CheckSquare, Copy, GanttChart, MoveRight, Trash2, X } from 'lucide-react'
+import { CalendarDays, CheckSquare, GanttChart, Trash2, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import Calendar, {
@@ -24,9 +24,6 @@ import EventSheet from '../../../../components/custom/sheet/eventSheet.tsx'
 import EventTemplateSheet from '../../../../components/custom/sheet/eventTemplateSheet.tsx'
 import DashboardLayout from '../../../../components/dashboard.layout.tsx'
 import { Button } from '../../../../components/ui/button.tsx'
-import { Select } from '../../../../components/ui/select.tsx'
-import { TOAST_SEVERITY } from '../../../../constants/ui.constant.ts'
-import { useToast } from '../../../../hooks/useToast.ts'
 import {
   PopoverAnchor,
   PopoverArrow,
@@ -34,10 +31,13 @@ import {
   PopoverContent,
   PopoverRoot,
 } from '../../../../components/ui/popover.tsx'
+import { Select } from '../../../../components/ui/select.tsx'
 import {
   ToggleGroup,
   ToggleGroupItem,
 } from '../../../../components/ui/toggle-group.tsx'
+import { TOAST_SEVERITY } from '../../../../constants/ui.constant.ts'
+import { useToast } from '../../../../hooks/useToast.ts'
 import {
   buildCalendarEventsFromSlots,
   buildCalendarEventsFromSlotTemplates,
@@ -112,14 +112,17 @@ function Planning() {
     y: number
   } | null>(null)
   const [openEventId, setOpenEventId] = useState('')
-  const [deleteConfirmEventId, setDeleteConfirmEventId] = useState<string | null>(null)
+  const [deleteConfirmEventId, setDeleteConfirmEventId] = useState<
+    string | null
+  >(null)
   const [openCreateSlotModal, setOpenCreateSlotModal] = useState(false)
   const [selectedDate, setSelectedDate] = useState<DateSelectArg | null>(null)
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [eventTemplates, setEventTemplates] = useState<CalendarEvent[]>([])
   const [selectedSlotIds, setSelectedSlotIds] = useState<Set<string>>(new Set())
   const [bulkAction, setBulkAction] = useState('')
-  const [duplicateWeekDate, setDuplicateWeekDate] = useState<dayjs.Dayjs | null>(null)
+  const [duplicateWeekDate, setDuplicateWeekDate] =
+    useState<dayjs.Dayjs | null>(null)
   const [duplicateTargetWeek, setDuplicateTargetWeek] = useState(1)
   const [showDuplicateModal, setShowDuplicateModal] = useState(false)
   const [moveWeekDate, setMoveWeekDate] = useState<dayjs.Dayjs | null>(null)
@@ -180,28 +183,54 @@ function Planning() {
     setOpenCreateSlotModal(true)
   }
 
-  const handleCreateSlot = (newSlot: CreateSlotParamsWithTemplateData) => {
+  const handleCreateSlot = (
+    newSlot: CreateSlotParamsWithTemplateData,
+    recurrenceWeeks?: number,
+  ) => {
+    const weeks = recurrenceWeeks ?? 1
+
     if (editMode) {
-      const offsetDays = dayjs(newSlot.startDate).diff(dayjs(startDate), 'day')
-      const slotTemplate = {
-        startTime: newSlot.startDate,
-        endTime: newSlot.endDate,
-        offsetDays,
-        thematic: newSlot.slotTemplate.thematic,
-        location: newSlot.slotTemplate.location,
-        description: newSlot.slotTemplate.description,
-        color: newSlot.slotTemplate.color,
-        isIndividual: newSlot.slotTemplate.isIndividual,
-        soignantID: newSlot.slotTemplate.soignantID,
-        templateID: currentPathwayTemplate?.id,
+      const baseOffsetDays = dayjs(newSlot.startDate).diff(
+        dayjs(startDate),
+        'day',
+      )
+      for (let w = 0; w < weeks; w++) {
+        const offsetDays = baseOffsetDays + w * 7
+        const slotTemplate = {
+          startTime: newSlot.startDate,
+          endTime: newSlot.endDate,
+          offsetDays,
+          thematic: newSlot.slotTemplate.thematic,
+          location: newSlot.slotTemplate.location,
+          description: newSlot.slotTemplate.description,
+          color: newSlot.slotTemplate.color,
+          isIndividual: newSlot.slotTemplate.isIndividual,
+          soignantID: newSlot.slotTemplate.soignantID,
+          templateID: currentPathwayTemplate?.id,
+        }
+        createSlotTemplate.mutate(slotTemplate, {
+          onSuccess: () => {
+            if (w === weeks - 1) {
+              setOpenCreateSlotModal(false)
+            }
+          },
+        })
       }
-      createSlotTemplate.mutate(slotTemplate, {
-        onSuccess: () => {
-          setOpenCreateSlotModal(false)
-        },
-      })
     } else {
-      createSlot.mutate(newSlot)
+      for (let w = 0; w < weeks; w++) {
+        const weekStart = dayjs(newSlot.startDate).add(w * 7, 'day')
+        const weekEnd = dayjs(newSlot.endDate).add(w * 7, 'day')
+        const weekSlot: CreateSlotParamsWithTemplateData = {
+          startDate: weekStart.toISOString(),
+          endDate: weekEnd.toISOString(),
+          slotTemplate: {
+            ...newSlot.slotTemplate,
+            startTime: weekStart.toISOString(),
+            endTime: weekEnd.toISOString(),
+          },
+        }
+        createSlot.mutate(weekSlot)
+      }
       setOpenCreateSlotModal(false)
     }
   }
@@ -247,7 +276,8 @@ function Planning() {
       if (slot && slot.appointments && slot.appointments.length > 0) {
         toast({
           title: 'Suppression impossible',
-          message: 'Ce créneau contient des rendez-vous déjà programmés. Veuillez d\'abord supprimer les rendez-vous avant de supprimer le créneau.',
+          message:
+            "Ce créneau contient des rendez-vous déjà programmés. Veuillez d'abord supprimer les rendez-vous avant de supprimer le créneau.",
           severity: TOAST_SEVERITY.ERROR,
         })
         return
@@ -262,40 +292,69 @@ function Planning() {
   }
 
   const handleConfirmDeleteHoverSlot = () => {
-    if (!deleteConfirmEventId) { return }
+    if (!deleteConfirmEventId) {
+      return
+    }
     const id = deleteConfirmEventId.replace(/^.*?_/, '')
     handleDeleteEvent(id)
     setDeleteConfirmEventId(null)
+  }
+
+  const buildSlotDuplicateParams = (
+    slot: NonNullable<typeof slots>[number],
+    newStartDate: string,
+    newEndDate: string,
+  ): CreateSlotParamsWithTemplateData => ({
+    startDate: newStartDate,
+    endDate: newEndDate,
+    slotTemplate: {
+      startTime: newStartDate,
+      endTime: newEndDate,
+      offsetDays: 0,
+      thematic: slot.slotTemplate.thematic,
+      location: slot.slotTemplate.location,
+      description: slot.slotTemplate.description,
+      color: slot.slotTemplate.color,
+      isIndividual: slot.slotTemplate.isIndividual,
+      capacity: slot.slotTemplate.capacity ?? 1,
+      soignantID: slot.slotTemplate.soignant?.id ?? '',
+    },
+  })
+
+  const computeSlotNewDates = (
+    slot: { startDate: string; endDate: string },
+    targetWeekStart: dayjs.Dayjs,
+  ) => {
+    const slotStart = dayjs(slot.startDate)
+    const slotWeekStart = slotStart.isoWeekday(1).utc().startOf('day')
+    const dayOffset = slotStart.diff(slotWeekStart, 'day')
+    const timeOfDay = slotStart.format('HH:mm:ss')
+    const duration = dayjs(slot.endDate).diff(slotStart, 'minute')
+
+    const newStart = targetWeekStart.add(dayOffset, 'day')
+    const newStartFull = dayjs(`${newStart.format('YYYY-MM-DD')}T${timeOfDay}`)
+    const newEnd = newStartFull.add(duration, 'minute')
+    return { newStart: newStartFull, newEnd }
   }
 
   const handleDuplicateSlot = (eventId: string) => {
     if (eventId.startsWith('slot_')) {
       const slotId = eventId.replace('slot_', '')
       const slot = slots?.find((s) => s.id === slotId)
-      if (!slot) { return }
-      const duplicateParams: CreateSlotParamsWithTemplateData = {
-        startDate: slot.startDate,
-        endDate: slot.endDate,
-        slotTemplate: {
-          startTime: slot.startDate,
-          endTime: slot.endDate,
-          offsetDays: 0,
-          thematic: slot.slotTemplate.thematic,
-          location: slot.slotTemplate.location,
-          description: slot.slotTemplate.description,
-          color: slot.slotTemplate.color,
-          isIndividual: slot.slotTemplate.isIndividual,
-          capacity: slot.slotTemplate.capacity ?? 1,
-          soignantID: slot.slotTemplate.soignant?.id ?? '',
-        },
+      if (!slot) {
+        return
       }
-      createSlot.mutate(duplicateParams)
+      createSlot.mutate(
+        buildSlotDuplicateParams(slot, slot.startDate, slot.endDate),
+      )
     } else if (eventId.startsWith('template_')) {
       const templateId = eventId.replace('template_', '')
       const slotTemplate = currentPathwayTemplate?.slotTemplates?.find(
         (t) => t.id === templateId,
       )
-      if (!slotTemplate || !currentPathwayTemplate) { return }
+      if (!slotTemplate || !currentPathwayTemplate) {
+        return
+      }
       createSlotTemplate.mutate({
         startTime: slotTemplate.startTime,
         endTime: slotTemplate.endTime,
@@ -312,174 +371,138 @@ function Planning() {
   }
 
   const handleToggleLock = (eventId: string, locked: boolean) => {
-    if (!eventId.startsWith('slot_')) { return }
+    if (!eventId.startsWith('slot_')) {
+      return
+    }
     const slotId = eventId.replace('slot_', '')
     updateSlot.mutate({ id: slotId, locked })
   }
 
-  const handleBulkDuplicate = (targetDate: dayjs.Dayjs) => {
+  const handleBulkSlotOperation = (
+    targetDate: dayjs.Dayjs,
+    action: 'duplicate' | 'move',
+  ) => {
     const targetWeekStart = targetDate.isoWeekday(1).utc().startOf('day')
 
     for (const eventId of selectedSlotIds) {
-      if (!eventId.startsWith('slot_')) continue
-      const slotId = eventId.replace('slot_', '')
-      const slot = slots?.find((s) => s.id === slotId)
-      if (!slot) continue
-
-      const slotStart = dayjs(slot.startDate)
-      const slotWeekStart = slotStart.isoWeekday(1).utc().startOf('day')
-      const dayOffset = slotStart.diff(slotWeekStart, 'day')
-      const timeOfDay = slotStart.format('HH:mm:ss')
-      const duration = dayjs(slot.endDate).diff(slotStart, 'minute')
-
-      const newStart = targetWeekStart.add(dayOffset, 'day')
-      const newStartFull = dayjs(`${newStart.format('YYYY-MM-DD')}T${timeOfDay}`)
-      const newEnd = newStartFull.add(duration, 'minute')
-
-      const duplicateParams: CreateSlotParamsWithTemplateData = {
-        startDate: newStartFull.toISOString(),
-        endDate: newEnd.toISOString(),
-        slotTemplate: {
-          startTime: newStartFull.toISOString(),
-          endTime: newEnd.toISOString(),
-          offsetDays: 0,
-          thematic: slot.slotTemplate.thematic,
-          location: slot.slotTemplate.location,
-          description: slot.slotTemplate.description,
-          color: slot.slotTemplate.color,
-          isIndividual: slot.slotTemplate.isIndividual,
-          capacity: slot.slotTemplate.capacity ?? 1,
-          soignantID: slot.slotTemplate.soignant?.id ?? '',
-        },
+      if (!eventId.startsWith('slot_')) {
+        continue
       }
-      createSlot.mutate(duplicateParams)
-    }
-
-    toast({
-      title: 'Duplication en cours',
-      message: `${selectedSlotIds.size} créneau(x) dupliqué(s) sur la semaine du ${targetWeekStart.format('DD/MM/YYYY')}`,
-      severity: TOAST_SEVERITY.SUCCESS,
-    })
-
-    handleClearSelection()
-    setShowDuplicateModal(false)
-    setDuplicateWeekDate(null)
-  }
-
-  const handleBulkDuplicateEditMode = (targetWeekNum: number) => {
-    if (!currentPathwayTemplate) return
-
-    for (const eventId of selectedSlotIds) {
-      if (!eventId.startsWith('template_')) continue
-      const templateId = eventId.replace('template_', '')
-      const slotTemplate = currentPathwayTemplate.slotTemplates?.find(
-        (t) => t.id === templateId,
-      )
-      if (!slotTemplate) continue
-
-      const currentOffsetDays = slotTemplate.offsetDays ?? 0
-      const dayInWeek = currentOffsetDays % 7
-      const newOffsetDays = (targetWeekNum - 1) * 7 + dayInWeek
-
-      createSlotTemplate.mutate({
-        startTime: slotTemplate.startTime,
-        endTime: slotTemplate.endTime,
-        offsetDays: newOffsetDays,
-        thematic: slotTemplate.thematic,
-        location: slotTemplate.location,
-        description: slotTemplate.description,
-        color: slotTemplate.color,
-        isIndividual: slotTemplate.isIndividual,
-        soignantID: slotTemplate.soignant?.id ?? '',
-        templateID: currentPathwayTemplate.id,
-      })
-    }
-
-    toast({
-      title: 'Duplication en cours',
-      message: `${selectedSlotIds.size} créneau(x) dupliqué(s) sur la semaine ${targetWeekNum}`,
-      severity: TOAST_SEVERITY.SUCCESS,
-    })
-
-    handleClearSelection()
-    setShowDuplicateModal(false)
-    setDuplicateTargetWeek(1)
-  }
-
-  const handleBulkMove = (targetDate: dayjs.Dayjs) => {
-    const targetWeekStart = targetDate.isoWeekday(1).utc().startOf('day')
-
-    for (const eventId of selectedSlotIds) {
-      if (!eventId.startsWith('slot_')) continue
       const slotId = eventId.replace('slot_', '')
       const slot = slots?.find((s) => s.id === slotId)
-      if (!slot) continue
+      if (!slot) {
+        continue
+      }
 
-      const slotStart = dayjs(slot.startDate)
-      const slotWeekStart = slotStart.isoWeekday(1).utc().startOf('day')
-      const dayOffset = slotStart.diff(slotWeekStart, 'day')
-      const timeOfDay = slotStart.format('HH:mm:ss')
-      const duration = dayjs(slot.endDate).diff(slotStart, 'minute')
+      const { newStart, newEnd } = computeSlotNewDates(slot, targetWeekStart)
 
-      const newStart = targetWeekStart.add(dayOffset, 'day')
-      const newStartFull = dayjs(`${newStart.format('YYYY-MM-DD')}T${timeOfDay}`)
-      const newEnd = newStartFull.add(duration, 'minute')
-
-      updateSlot.mutate({
-        id: slotId,
-        startDate: newStartFull.toISOString(),
-        endDate: newEnd.toISOString(),
-        slotTemplate: {
-          id: slot.slotTemplate.id,
-          startTime: newStartFull.toISOString(),
-          endTime: newEnd.toISOString(),
-        },
-      })
+      if (action === 'duplicate') {
+        createSlot.mutate(
+          buildSlotDuplicateParams(
+            slot,
+            newStart.toISOString(),
+            newEnd.toISOString(),
+          ),
+        )
+      } else {
+        updateSlot.mutate({
+          id: slotId,
+          startDate: newStart.toISOString(),
+          endDate: newEnd.toISOString(),
+          slotTemplate: {
+            id: slot.slotTemplate.id,
+            startTime: newStart.toISOString(),
+            endTime: newEnd.toISOString(),
+          },
+        })
+      }
     }
 
+    const label = action === 'duplicate' ? 'dupliqué' : 'déplacé'
     toast({
-      title: 'Déplacement en cours',
-      message: `${selectedSlotIds.size} créneau(x) déplacé(s) sur la semaine du ${targetWeekStart.format('DD/MM/YYYY')}`,
+      title:
+        action === 'duplicate'
+          ? 'Duplication en cours'
+          : 'Déplacement en cours',
+      message: `${selectedSlotIds.size} créneau(x) ${label}(s) sur la semaine du ${targetWeekStart.format('DD/MM/YYYY')}`,
       severity: TOAST_SEVERITY.SUCCESS,
     })
 
     handleClearSelection()
-    setShowMoveModal(false)
-    setMoveWeekDate(null)
+    if (action === 'duplicate') {
+      setShowDuplicateModal(false)
+      setDuplicateWeekDate(null)
+    } else {
+      setShowMoveModal(false)
+      setMoveWeekDate(null)
+    }
   }
 
-  const handleBulkMoveEditMode = (targetWeekNum: number) => {
-    if (!currentPathwayTemplate) return
+  const handleBulkTemplateOperation = (
+    targetWeekNum: number,
+    action: 'duplicate' | 'move',
+  ) => {
+    if (!currentPathwayTemplate) {
+      return
+    }
 
     for (const eventId of selectedSlotIds) {
-      if (!eventId.startsWith('template_')) continue
+      if (!eventId.startsWith('template_')) {
+        continue
+      }
       const templateId = eventId.replace('template_', '')
       const slotTemplate = currentPathwayTemplate.slotTemplates?.find(
         (t) => t.id === templateId,
       )
-      if (!slotTemplate) continue
+      if (!slotTemplate) {
+        continue
+      }
 
       const currentOffsetDays = slotTemplate.offsetDays ?? 0
       const dayInWeek = currentOffsetDays % 7
       const newOffsetDays = (targetWeekNum - 1) * 7 + dayInWeek
 
-      updateSlotTemplate.mutate({
-        id: templateId,
-        offsetDays: newOffsetDays,
-        startTime: slotTemplate.startTime,
-        endTime: slotTemplate.endTime,
-      })
+      if (action === 'duplicate') {
+        createSlotTemplate.mutate({
+          startTime: slotTemplate.startTime,
+          endTime: slotTemplate.endTime,
+          offsetDays: newOffsetDays,
+          thematic: slotTemplate.thematic,
+          location: slotTemplate.location,
+          description: slotTemplate.description,
+          color: slotTemplate.color,
+          isIndividual: slotTemplate.isIndividual,
+          soignantID: slotTemplate.soignant?.id ?? '',
+          templateID: currentPathwayTemplate.id,
+        })
+      } else {
+        updateSlotTemplate.mutate({
+          id: templateId,
+          offsetDays: newOffsetDays,
+          startTime: slotTemplate.startTime,
+          endTime: slotTemplate.endTime,
+        })
+      }
     }
 
+    const label = action === 'duplicate' ? 'dupliqué' : 'déplacé'
     toast({
-      title: 'Déplacement en cours',
-      message: `${selectedSlotIds.size} créneau(x) déplacé(s) sur la semaine ${targetWeekNum}`,
+      title:
+        action === 'duplicate'
+          ? 'Duplication en cours'
+          : 'Déplacement en cours',
+      message: `${selectedSlotIds.size} créneau(x) ${label}(s) sur la semaine ${targetWeekNum}`,
       severity: TOAST_SEVERITY.SUCCESS,
     })
 
     handleClearSelection()
-    setShowMoveModal(false)
-    setMoveTargetWeek(1)
+    if (action === 'duplicate') {
+      setShowDuplicateModal(false)
+      setDuplicateTargetWeek(1)
+    } else {
+      setShowMoveModal(false)
+      setMoveTargetWeek(1)
+    }
   }
 
   const handleForbiddenWeekCreate = (date: string) => {
@@ -604,7 +627,9 @@ function Planning() {
           <div className="mx-6 flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-2">
             <CheckSquare className="h-4 w-4 text-primary" />
             <span className="text-sm font-medium text-text-dark">
-              {selectedSlotIds.size} créneau{selectedSlotIds.size > 1 ? 'x' : ''} sélectionné{selectedSlotIds.size > 1 ? 's' : ''}
+              {selectedSlotIds.size} créneau
+              {selectedSlotIds.size > 1 ? 'x' : ''} sélectionné
+              {selectedSlotIds.size > 1 ? 's' : ''}
             </span>
 
             <div className="w-48">
@@ -622,7 +647,11 @@ function Planning() {
                       setDuplicateTargetWeek(1)
                     } else {
                       const { viewStart } = usePlanningStore.getState()
-                      setDuplicateWeekDate(viewStart ? dayjs(viewStart).isoWeekday(1) : dayjs().isoWeekday(1))
+                      setDuplicateWeekDate(
+                        viewStart
+                          ? dayjs(viewStart).isoWeekday(1)
+                          : dayjs().isoWeekday(1),
+                      )
                     }
                     setShowDuplicateModal(true)
                   } else if (v === 'move') {
@@ -630,7 +659,11 @@ function Planning() {
                       setMoveTargetWeek(1)
                     } else {
                       const { viewStart } = usePlanningStore.getState()
-                      setMoveWeekDate(viewStart ? dayjs(viewStart).isoWeekday(1) : dayjs().isoWeekday(1))
+                      setMoveWeekDate(
+                        viewStart
+                          ? dayjs(viewStart).isoWeekday(1)
+                          : dayjs().isoWeekday(1),
+                      )
                     }
                     setShowMoveModal(true)
                   }
@@ -874,7 +907,11 @@ function Planning() {
 
         <ConfirmDeleteForm
           open={!!deleteConfirmEventId}
-          setOpen={(open) => { if (!open) { setDeleteConfirmEventId(null) } }}
+          setOpen={(open) => {
+            if (!open) {
+              setDeleteConfirmEventId(null)
+            }
+          }}
           onConfirm={handleConfirmDeleteHoverSlot}
           loading={deleteSlot.isPending || deleteSlotTemplate.isPending}
           title="Supprimer le créneau"
@@ -952,7 +989,9 @@ function Planning() {
             count={selectedSlotIds.size}
             targetWeekNumber={duplicateTargetWeek}
             onTargetWeekNumberChange={setDuplicateTargetWeek}
-            onConfirm={() => handleBulkDuplicateEditMode(duplicateTargetWeek)}
+            onConfirm={() =>
+              handleBulkTemplateOperation(duplicateTargetWeek, 'duplicate')
+            }
           />
         ) : (
           <BulkDuplicateForm
@@ -968,7 +1007,9 @@ function Planning() {
             weekDate={duplicateWeekDate}
             onWeekChange={setDuplicateWeekDate}
             onConfirm={() => {
-              if (duplicateWeekDate) handleBulkDuplicate(duplicateWeekDate)
+              if (duplicateWeekDate) {
+                handleBulkSlotOperation(duplicateWeekDate, 'duplicate')
+              }
             }}
           />
         )}
@@ -987,7 +1028,9 @@ function Planning() {
             count={selectedSlotIds.size}
             targetWeekNumber={moveTargetWeek}
             onTargetWeekNumberChange={setMoveTargetWeek}
-            onConfirm={() => handleBulkMoveEditMode(moveTargetWeek)}
+            onConfirm={() =>
+              handleBulkTemplateOperation(moveTargetWeek, 'move')
+            }
           />
         ) : (
           <BulkMoveForm
@@ -1003,7 +1046,9 @@ function Planning() {
             weekDate={moveWeekDate}
             onWeekChange={setMoveWeekDate}
             onConfirm={() => {
-              if (moveWeekDate) handleBulkMove(moveWeekDate)
+              if (moveWeekDate) {
+                handleBulkSlotOperation(moveWeekDate, 'move')
+              }
             }}
           />
         )}

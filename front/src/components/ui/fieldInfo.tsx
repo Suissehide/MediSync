@@ -10,6 +10,10 @@ const FieldInfo = ({ field, className }: FieldInfoProps) => {
   const showError = field.state.meta.isTouched && !field.state.meta.isValid
   const isValidating = field.state.meta.isValidating
 
+  if (!showError && !isValidating) {
+    return null
+  }
+
   return (
     <div className={clsx(`text-xs ${showError ? 'font-medium': ''}`, className)}>
       {showError && (

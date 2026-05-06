@@ -79,11 +79,11 @@ export const EventFormFields = withForm({
               label="Thématique"
               disabled={!selectedSoignant || thematicOptions.length === 0}
               placeholder={
-                !selectedSoignant
-                  ? 'Sélectionnez un soignant'
-                  : thematicOptions.length === 0
+                selectedSoignant
+                  ? thematicOptions.length === 0
                     ? 'Aucune thématique associée'
                     : 'Sélectionnez une thématique'
+                  : 'Sélectionnez un soignant'
               }
             />
           )}
@@ -95,17 +95,21 @@ export const EventFormFields = withForm({
           )}
         </form.AppField>
 
-        <form.AppField name="isIndividual">
-          {(field) => (
-            <field.Toggle options={['Individuel', 'Multiple']} label="Type" />
-          )}
-        </form.AppField>
-
-        {!isIndividual && (
-          <form.AppField name="capacity">
-            {(field) => <field.Number label="Capacité maximum" />}
+        <div className="flex gap-2 items-center">
+          <form.AppField name="isIndividual">
+            {(field) => (
+              <field.Toggle options={['Individuel', 'Multiple']} label="Type" />
+            )}
           </form.AppField>
-        )}
+
+          {!isIndividual && (
+            <form.AppField name="capacity">
+              {(field) => (
+                <field.Number label="Capacité maximum" className="w-full" />
+              )}
+            </form.AppField>
+          )}
+        </div>
 
         <form.AppField name="color">
           {(field) => <field.ColorPicker label="Couleur" />}

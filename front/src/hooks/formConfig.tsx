@@ -138,7 +138,7 @@ function SelectField({
   )
 }
 
-const NumberField = ({ label, className, inputClassName }: FieldComponentProps) => {
+const NumberField = ({ label, className, inputClassName, min, max }: FieldComponentProps & { min?: number; max?: number }) => {
   const field = useFieldContext<number | undefined>()
   const value = field.state.value ?? ''
 
@@ -149,6 +149,8 @@ const NumberField = ({ label, className, inputClassName }: FieldComponentProps) 
         id={field.name}
         type="number"
         value={value}
+        min={min}
+        max={max}
         className={inputClassName}
         onChange={(e) => {
           const val = e.target.value

@@ -15,8 +15,6 @@ import { Button } from '../../ui/button.tsx'
 import { DatePicker } from '../../ui/datePicker.tsx'
 import { FieldInfo } from '../../ui/fieldInfo.tsx'
 import { FormField } from '../../ui/formField.tsx'
-import { Select } from '../../ui/select.tsx'
-import { Label } from '../../ui/label.tsx'
 import {
   Popup,
   PopupBody,
@@ -33,7 +31,10 @@ interface AddSlotFormProps {
   startDate?: string
   endDate?: string
   color?: string
-  handleCreateSlot: (newSlot: CreateSlotParamsWithTemplateData) => void
+  handleCreateSlot: (
+    newSlot: CreateSlotParamsWithTemplateData,
+    recurrenceWeeks?: number,
+  ) => void
 }
 
 function AddSlotForm({
@@ -70,6 +71,8 @@ function AddSlotForm({
       isIndividual: false,
       capacity: 1,
       color: color ?? '#2563eb',
+      recurrence: false,
+      recurrenceWeeks: 2,
     },
 
     onSubmit: ({ value }) => {
@@ -98,7 +101,10 @@ function AddSlotForm({
           color: value.color,
         } satisfies CreateSlotTemplateParams,
       }
-      handleCreateSlot(newSlot)
+      handleCreateSlot(
+        newSlot,
+        value.recurrence ? value.recurrenceWeeks : undefined,
+      )
     },
   })
 
@@ -112,6 +118,7 @@ function AddSlotForm({
     form.store,
     (state) => state.values.isIndividual,
   )
+  const isRecurrence = useStore(form.store, (state) => state.values.recurrence)
   const selectedSoignantId = useStore(
     form.store,
     (state) => state.values.soignant,
@@ -119,9 +126,7 @@ function AddSlotForm({
   const selectedSoignant = soignants.find((s) => s.id === selectedSoignantId)
   const thematicOptions = selectedSoignant
     ? (thematics
-        ?.filter((t) =>
-          t.soignants.some((s) => s.id === selectedSoignant.id),
-        )
+        ?.filter((t) => t.soignants.some((s) => s.id === selectedSoignant.id))
         .map((t) => ({ value: t.name, label: t.name })) ?? [])
     : []
 
@@ -210,7 +215,28 @@ function AddSlotForm({
               </form.Field>
             </div>
 
-            <form.Field
+            <div className="flex gap-2 items-center">
+              <form.AppField name="recurrence">
+                {(field) => (
+                  <field.Toggle options={['Oui', 'Non']} label="Récurrence" />
+                )}
+              </form.AppField>
+
+              {isRecurrence && (
+                <form.AppField name="recurrenceWeeks">
+                  {(field) => (
+                    <field.Number
+                      label="Nombre de semaines"
+                      className="w-full"
+                      min={2}
+                      max={52}
+                    />
+                  )}
+                </form.AppField>
+              )}
+            </div>
+
+            <form.AppField
               name="soignant"
               validators={{
                 onSubmit: ({ value }) => {
@@ -222,18 +248,9 @@ function AddSlotForm({
               }}
             >
               {(field) => (
-                <FormField>
-                  <Label htmlFor={field.name}>Soignant</Label>
-                  <Select
-                    id={field.name}
-                    options={soignantOptions}
-                    value={field.state.value}
-                    onValueChange={(value) => field.handleChange(value)}
-                  />
-                  <FieldInfo field={field} />
-                </FormField>
+                <field.Select options={soignantOptions} label="Soignant" />
               )}
-            </form.Field>
+            </form.AppField>
 
             <form.AppField name="thematic">
               {(field) => (
@@ -242,11 +259,11 @@ function AddSlotForm({
                   label="Thématique"
                   disabled={!selectedSoignant || thematicOptions.length === 0}
                   placeholder={
-                    !selectedSoignant
-                      ? 'Sélectionnez un soignant'
-                      : thematicOptions.length === 0
+                    selectedSoignant
+                      ? thematicOptions.length === 0
                         ? 'Aucune thématique associée'
                         : 'Sélectionnez une thématique'
+                      : 'Sélectionnez un soignant'
                   }
                 />
               )}
@@ -258,20 +275,24 @@ function AddSlotForm({
               )}
             </form.AppField>
 
-            <form.AppField name="isIndividual">
-              {(field) => (
-                <field.Toggle
-                  options={['Individuel', 'Multiple']}
-                  label="Type"
-                />
-              )}
-            </form.AppField>
-
-            {!isIndividual && (
-              <form.AppField name="capacity">
-                {(field) => <field.Number label="Capacité maximum" />}
+            <div className="flex gap-2 items-center">
+              <form.AppField name="isIndividual">
+                {(field) => (
+                  <field.Toggle
+                    options={['Individuel', 'Multiple']}
+                    label="Type"
+                  />
+                )}
               </form.AppField>
-            )}
+
+              {!isIndividual && (
+                <form.AppField name="capacity">
+                  {(field) => (
+                    <field.Number label="Capacité maximum" className="w-full" />
+                  )}
+                </form.AppField>
+              )}
+            </div>
 
             <div className="flex gap-4 items-center">
               <form.AppField name="color">
