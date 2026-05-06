@@ -294,7 +294,7 @@ function computeProgramDuration(slots: Slot[]): {
   if (slots.length === 0) {
     return null
   }
-  const dates = slots.map((s) => dayjs(s.startDate))
+  const dates = slots.map((s) => dayjs.utc(s.startDate))
   const startDate = dates.reduce((a, b) => (a.isBefore(b) ? a : b))
   const endDate = dates.reduce((a, b) => (a.isAfter(b) ? a : b))
   const weeks = endDate.startOf('isoWeek').diff(startDate.startOf('isoWeek'), 'week') + 1
@@ -307,11 +307,11 @@ function groupSlotsByWeek(slots: Slot[]): WeekData[] {
   }
 
   const sorted = [...slots].sort((a, b) =>
-    dayjs(a.startDate).diff(dayjs(b.startDate)),
+    dayjs.utc(a.startDate).diff(dayjs.utc(b.startDate)),
   )
 
-  const programStart = dayjs(sorted[0].startDate).startOf('isoWeek')
-  const programEnd = dayjs(sorted[sorted.length - 1].startDate).startOf(
+  const programStart = dayjs.utc(sorted[0].startDate).startOf('isoWeek')
+  const programEnd = dayjs.utc(sorted[sorted.length - 1].startDate).startOf(
     'isoWeek',
   )
 
@@ -321,7 +321,7 @@ function groupSlotsByWeek(slots: Slot[]): WeekData[] {
 
   while (current.isBefore(programEnd) || current.isSame(programEnd, 'day')) {
     const weekSlots = slots.filter((s) => {
-      const d = dayjs(s.startDate)
+      const d = dayjs.utc(s.startDate)
       return (
         (d.isAfter(current) || d.isSame(current, 'day')) &&
         d.isBefore(current.add(7, 'day'))
@@ -329,13 +329,13 @@ function groupSlotsByWeek(slots: Slot[]): WeekData[] {
     })
 
     const weekdaySlots = weekSlots.filter((s) => {
-      const dow = dayjs(s.startDate).day()
+      const dow = dayjs.utc(s.startDate).day()
       return dow !== 0 && dow !== 6
     })
     const timeKeys = Array.from(
       new Set(
         weekdaySlots.map((s) =>
-          `${dayjs(s.startDate).format('HH:mm')}-${dayjs(s.endDate).format('HH:mm')}`,
+          `${dayjs.utc(s.startDate).format('HH:mm')}-${dayjs.utc(s.endDate).format('HH:mm')}`,
         ),
       ),
     ).sort()
@@ -347,9 +347,9 @@ function groupSlotsByWeek(slots: Slot[]): WeekData[] {
         return (
           weekdaySlots.find(
             (s) =>
-              dayjs(s.startDate).isSame(day, 'day') &&
-              dayjs(s.startDate).format('HH:mm') === start &&
-              dayjs(s.endDate).format('HH:mm') === end,
+              dayjs.utc(s.startDate).isSame(day, 'day') &&
+              dayjs.utc(s.startDate).format('HH:mm') === start &&
+              dayjs.utc(s.endDate).format('HH:mm') === end,
           ) ?? null
         )
       })
@@ -441,11 +441,36 @@ function WeekBlock({ weekData }: { weekData: WeekData }) {
   )
 }
 
+const PAGE_HEIGHT = 842 // A4 height in pt
+const PAGE_PADDING = 28
+const WEEK_MARGIN = 14
+const HEADER_ROW_HEIGHT = 20
+const TIME_ROW_HEIGHT = 36
+const AVAILABLE_HEIGHT = PAGE_HEIGHT - PAGE_PADDING * 2
+
+function estimateWeekHeight(week: WeekData): number {
+  return HEADER_ROW_HEIGHT + week.timeRows.length * TIME_ROW_HEIGHT + WEEK_MARGIN
+}
+
 function CalendarPages({ upcomingSlots }: { upcomingSlots: Slot[] }) {
   const weeks = groupSlotsByWeek(upcomingSlots)
   const pages: WeekData[][] = []
-  for (let i = 0; i < weeks.length; i += 3) {
-    pages.push(weeks.slice(i, i + 3))
+  let currentPage: WeekData[] = []
+  let currentHeight = 0
+
+  for (const week of weeks) {
+    const weekHeight = estimateWeekHeight(week)
+    if (currentPage.length > 0 && currentHeight + weekHeight > AVAILABLE_HEIGHT) {
+      pages.push(currentPage)
+      currentPage = [week]
+      currentHeight = weekHeight
+    } else {
+      currentPage.push(week)
+      currentHeight += weekHeight
+    }
+  }
+  if (currentPage.length > 0) {
+    pages.push(currentPage)
   }
 
   if (pages.length === 0) {
