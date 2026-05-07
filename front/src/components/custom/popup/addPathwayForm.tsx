@@ -39,6 +39,7 @@ function AddPathwayForm({ trigger }: AddPathwayFormProps) {
     defaultValues: {
       name: '',
       color: '#2563eb',
+      motifRequired: false,
     },
     onSubmit: ({ value }) => {
       createPathwayTemplate.mutate({
@@ -46,6 +47,7 @@ function AddPathwayForm({ trigger }: AddPathwayFormProps) {
         color: value.color,
         slotTemplateIDs: [],
         tags,
+        motifRequired: value.motifRequired,
       })
       setOpen(false)
     },
@@ -112,6 +114,12 @@ function AddPathwayForm({ trigger }: AddPathwayFormProps) {
                 placeholder="Ajouter un tag..."
               />
             </div>
+
+            <form.AppField name="motifRequired">
+              {(field) => (
+                <field.CheckboxField label="Motif obligatoire" />
+              )}
+            </form.AppField>
           </form>
         </PopupBody>
 
