@@ -15,6 +15,7 @@ export type AppointmentCreateEntityRepo =
   Prisma.AppointmentUncheckedCreateInput & {
     slotID: string
     patientIDs: string[]
+    transmissionNotes?: string
   }
 export type AppointmentUpdateEntityRepo =
   Prisma.AppointmentUncheckedUpdateInput & {

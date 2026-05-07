@@ -62,7 +62,7 @@ class AppointmentRepository implements AppointmentRepositoryInterface {
     appointmentCreateParams: AppointmentCreateEntityRepo,
   ): Promise<AppointmentEntityRepo> {
     try {
-      const { patientIDs, ...rest } = appointmentCreateParams
+      const { patientIDs, transmissionNotes, ...rest } = appointmentCreateParams
 
       return await this.prisma.appointment.create({
         data: {
@@ -71,6 +71,7 @@ class AppointmentRepository implements AppointmentRepositoryInterface {
             create:
               patientIDs?.map((id) => ({
                 patient: { connect: { id } },
+                transmissionNotes: transmissionNotes ?? undefined,
               })) || [],
           },
         },
