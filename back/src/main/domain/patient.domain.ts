@@ -404,7 +404,7 @@ class PatientDomain implements PatientDomainInterface {
     thematicName?: string,
     appointmentDuration = 30,
   ): Promise<EnrollmentAppointment[]> {
-    const { type } = pathwayTemplate
+    const { type, motif } = pathwayTemplate
     const slots = pathway.slots
     const enrollmentAppointments: EnrollmentAppointment[] = []
 
@@ -427,6 +427,7 @@ class PatientDomain implements PatientDomainInterface {
               type: type ?? undefined,
               slotID: slot.id,
               patientIDs: [patient.id],
+              transmissionNotes: motif ?? undefined,
             })
 
             enrollmentAppointments.push({
@@ -456,6 +457,7 @@ class PatientDomain implements PatientDomainInterface {
             await this.appointmentRepository.addPatientToAppointment({
               appointmentID: existingAppointment.id,
               patientID: patient.id,
+              transmissionNotes: motif ?? undefined,
             })
 
             enrollmentAppointments.push({
@@ -471,6 +473,7 @@ class PatientDomain implements PatientDomainInterface {
               endDate: slot.endDate,
               slotID: slot.id,
               patientIDs: [patient.id],
+              transmissionNotes: motif ?? undefined,
             })
 
             enrollmentAppointments.push({
