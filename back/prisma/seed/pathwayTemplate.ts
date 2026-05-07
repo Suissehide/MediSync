@@ -17,6 +17,10 @@ export default async function seedPathwayTemplates(
   prisma: PrismaClient,
   soignants: Soignant[],
 ) {
+  console.log('→ Deleting old pathway templates...')
+  await prisma.slotTemplate.deleteMany({ where: { templateID: { not: null } } })
+  await prisma.pathwayTemplate.deleteMany()
+
   console.log('→ Seeding pathway templates...')
 
   const createdTemplates = []
