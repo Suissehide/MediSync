@@ -28,6 +28,7 @@ export type PathwayEnrollmentInput = {
   timeOfDay: TimeOfDay
   thematicID?: string
   type?: string
+  motif?: string
 }
 
 export type EnrollPatientInPathwaysInput = {
