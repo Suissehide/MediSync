@@ -6,17 +6,19 @@ export type PathwayTemplate = {
   color: string
   tags: string[]
   displayOrder: number
+  motifRequired: boolean
   slotTemplates?: SlotTemplate[]
 }
 
 export type CreatePathwayTemplateParams = Pick<
   PathwayTemplate,
   'name' | 'color'
-> & { slotTemplateIDs?: string[]; tags?: string[] }
+> & { slotTemplateIDs?: string[]; tags?: string[]; motifRequired?: boolean }
 export type UpdatePathwayTemplateParams = Pick<
   PathwayTemplate,
   'id' | 'name' | 'color'
 > & {
   slotTemplateIDs?: string[]
   tags?: string[]
+  motifRequired?: boolean
 }
