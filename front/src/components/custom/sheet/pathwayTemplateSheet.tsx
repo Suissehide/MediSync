@@ -49,6 +49,7 @@ export default function PathwayTemplateSheet({
     defaultValues: {
       name: '',
       color: '',
+      motifRequired: false,
     },
     onSubmit: ({ value }) => {
       if (!pathwayTemplate?.id) {
@@ -60,6 +61,7 @@ export default function PathwayTemplateSheet({
         name: value.name,
         color: value.color,
         tags,
+        motifRequired: value.motifRequired,
       }
 
       updatePathwayTemplate.mutate(updatedPathwayTemplateData)
@@ -85,6 +87,7 @@ export default function PathwayTemplateSheet({
       {
         name: pathwayTemplate.name ?? '',
         color: pathwayTemplate.color ?? '',
+        motifRequired: pathwayTemplate.motifRequired ?? false,
       },
       { keepDefaultValues: true },
     )
@@ -161,6 +164,12 @@ export default function PathwayTemplateSheet({
                     placeholder="Ajouter un tag..."
                   />
                 </div>
+
+                <form.AppField name="motifRequired">
+                  {(field) => (
+                    <field.CheckboxField label="Motif obligatoire" />
+                  )}
+                </form.AppField>
               </form>
 
               <div className="w-full border-t border-border"></div>
