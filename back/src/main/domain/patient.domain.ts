@@ -246,6 +246,17 @@ class PatientDomain implements PatientDomainInterface {
           thematicDuration = thematic.duration ?? 30
         }
 
+        // Vérifier si le motif est requis
+        const allTemplates = await this.pathwayTemplateRepository.findAll()
+        const matchingTemplate = allTemplates.find((t) => t.tags?.includes(enrollment.tag))
+        if (matchingTemplate?.motifRequired && (!enrollment.motif || !enrollment.motif.trim())) {
+          failedEnrollments.push({
+            slotTemplate: { id: enrollment.tag, name: enrollment.tag },
+            reason: `Le motif est obligatoire pour le parcours "${enrollment.tag}"`,
+          })
+          continue
+        }
+
         // Trouver les parcours disponibles par tag
         const pathways = await this.pathwayRepository.findByTemplateTagAndDate(
           enrollment.tag,
