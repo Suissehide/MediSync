@@ -53,6 +53,7 @@ export function AddPatientToPathwayForm({
           timeOfDay: periodToTimeOfDay[p.period],
           thematicID: p.thematicID || undefined,
           type: p.type,
+          motif: p.motif || undefined,
         })),
       },
       { onSuccess: () => setOpen(false) },
@@ -108,7 +109,10 @@ export function AddPatientToPathwayForm({
             onClick={handleConfirm}
             disabled={
               !pathwayState.addedPathways.length ||
-              enrollExistingPatient.isPending
+              enrollExistingPatient.isPending ||
+              pathwayState.addedPathways.some(
+                (p) => p.motifRequired && !p.motif.trim(),
+              )
             }
           >
             <Check className="w-4 h-4" />
