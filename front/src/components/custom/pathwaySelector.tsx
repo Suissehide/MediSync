@@ -8,6 +8,7 @@ import { usePathwayTemplateQueries } from '../../queries/usePathwayTemplate.ts'
 import { useThematicQueries } from '../../queries/useThematic.ts'
 import { Button } from '../ui/button.tsx'
 import { FormField } from '../ui/formField.tsx'
+import { Input } from '../ui/input.tsx'
 import { Label } from '../ui/label.tsx'
 import { MultiSelect, Select } from '../ui/select.tsx'
 
@@ -311,14 +312,12 @@ function PathwayItem({
           {pathway.motifRequired && (
             <FormField className="flex-1">
               <Label htmlFor={`motif-${pathway.id}`}>Motif *</Label>
-              <input
+              <Input
                 id={`motif-${pathway.id}`}
                 type="text"
                 value={pathway.motif}
                 onChange={(e) => onUpdate({ motif: e.target.value })}
                 placeholder="Saisir le motif..."
-                className="flex h-9 w-full rounded-md border border-border bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                required
               />
             </FormField>
           )}
