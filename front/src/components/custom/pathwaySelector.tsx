@@ -28,6 +28,8 @@ export interface AddedPathway {
   thematicName: string
   thematicDuration: number | null
   type: string
+  motif: string
+  motifRequired: boolean
 }
 
 export function usePathwaySelector() {
@@ -51,17 +53,29 @@ export function usePathwaySelector() {
   const tagOptions = allTags.map((tag) => ({ value: tag, label: tag }))
 
   const handleAddTags = () => {
-    const newPathways = selectedTags.map((tag) => ({
-      id: `${tag}-${Date.now()}-${Math.random()}`,
-      tag,
-      period: 'fullday' as PathwayPeriod,
-      thematicID: '',
-      thematicName: '',
-      thematicDuration: null,
-      type: '',
-    }))
+    const newPathways = selectedTags.map((tag) => {
+      const template = (pathwayTemplates ?? []).find((t) =>
+        t.tags?.includes(tag),
+      )
+      return {
+        id: `${tag}-${Date.now()}-${Math.random()}`,
+        tag,
+        period: 'fullday' as PathwayPeriod,
+        thematicID: '',
+        thematicName: '',
+        thematicDuration: null,
+        type: '',
+        motif: '',
+        motifRequired: template?.motifRequired ?? false,
+      }
+    })
     setAddedPathways((prev) => [...prev, ...newPathways])
     setSelectedTags([])
+
+    const firstMotifRequired = newPathways.find((p) => p.motifRequired)
+    if (firstMotifRequired) {
+      setExpandedPathwayId(firstMotifRequired.id)
+    }
   }
 
   const toggleExpand = (pathwayId: string) => {
@@ -195,6 +209,12 @@ function PathwayItem({
                 </span>
               </>
             )}
+            {pathway.motif && (
+              <>
+                <span>•</span>
+                <span>Motif: {pathway.motif}</span>
+              </>
+            )}
           </div>
         </div>
         <Button
@@ -287,6 +307,21 @@ function PathwayItem({
               />
             </FormField>
           </div>
+
+          {pathway.motifRequired && (
+            <FormField className="flex-1">
+              <Label htmlFor={`motif-${pathway.id}`}>Motif *</Label>
+              <input
+                id={`motif-${pathway.id}`}
+                type="text"
+                value={pathway.motif}
+                onChange={(e) => onUpdate({ motif: e.target.value })}
+                placeholder="Saisir le motif..."
+                className="flex h-9 w-full rounded-md border border-border bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                required
+              />
+            </FormField>
+          )}
         </div>
       )}
     </li>
