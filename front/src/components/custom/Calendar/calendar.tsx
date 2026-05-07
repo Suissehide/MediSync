@@ -31,9 +31,13 @@ function computeSlotLayout(events: CalendarEvent[]) {
     .filter((e) => e.extendedProps?.type === 'slot' && e.start && e.end)
     .sort((a, b) => {
       const diff = dayjs(a.start).diff(dayjs(b.start))
-      if (diff !== 0) return diff
+      if (diff !== 0) {
+        return diff
+      }
       // Longer events first so they get column 0
-      return dayjs(b.end).diff(dayjs(b.start)) - dayjs(a.end).diff(dayjs(a.start))
+      return (
+        dayjs(b.end).diff(dayjs(b.start)) - dayjs(a.end).diff(dayjs(a.start))
+      )
     })
 
   // Greedy column assignment
@@ -59,13 +63,17 @@ function computeSlotLayout(events: CalendarEvent[]) {
   const result = new Map<string, { column: number; totalColumns: number }>()
 
   for (const slot of slots) {
-    if (visited.has(slot.id)) continue
+    if (visited.has(slot.id)) {
+      continue
+    }
 
     const component: string[] = []
     const queue = [slot.id]
     while (queue.length > 0) {
       const id = queue.shift()!
-      if (visited.has(id)) continue
+      if (visited.has(id)) {
+        continue
+      }
       visited.add(id)
       component.push(id)
       const s = slots.find((e) => e.id === id)!
@@ -184,14 +192,18 @@ function Calendar({
   // In day/list views, background events are hidden by FullCalendar.
   // Override display to 'auto' so slots remain visible in those views.
   const viewEvents = useMemo(() => {
-    if (currentView === 'timeGridWeek') return events
+    if (currentView === 'timeGridWeek') {
+      return events
+    }
     return events.map((e) =>
       e.display === 'background' ? { ...e, display: 'auto' as const } : e,
     )
   }, [events, currentView])
 
   const showDayEmptyState = useMemo(() => {
-    if (currentView !== 'dayGridDay' || !currentViewStart) { return false }
+    if (currentView !== 'dayGridDay' || !currentViewStart) {
+      return false
+    }
     const dayStart = dayjs(currentViewStart).startOf('day')
     const dayEnd = dayStart.endOf('day')
     return !events.some(
@@ -347,7 +359,9 @@ function Calendar({
         editable={editable}
         select={handleSelect}
         dateClick={(info) => {
-          if (!onForbiddenWeekCreate && !onForbiddenWeekDelete) { return }
+          if (!onForbiddenWeekCreate && !onForbiddenWeekDelete) {
+            return
+          }
           const clickedDate = dayjs(info.date)
           const matchingForbiddenWeek = forbiddenWeeks.find((fw) => {
             const start = dayjs(fw.startOfWeek)
@@ -429,7 +443,9 @@ function Calendar({
             info.el.setAttribute('data-slot-id', info.event.id)
 
             const current = slotLayout.get(info.event.id)
-            if (!current || current.totalColumns <= 1) return
+            if (!current || current.totalColumns <= 1) {
+              return
+            }
 
             const width = 100 / current.totalColumns
             info.el.style.width = `${width}%`
@@ -437,7 +453,9 @@ function Calendar({
 
             // Also update already-mounted siblings in the same group
             for (const [id, { column, totalColumns }] of slotLayout) {
-              if (id === info.event.id || totalColumns <= 1) continue
+              if (id === info.event.id || totalColumns <= 1) {
+                continue
+              }
               const el = document.querySelector<HTMLElement>(
                 `[data-slot-id="${id}"]`,
               )

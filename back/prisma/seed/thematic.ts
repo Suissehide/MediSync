@@ -15,16 +15,20 @@ export default async function seedThematics(
         .map((name) => soignantByName.get(name)?.id)
         .filter((id): id is string => !!id)
 
+      // Use the first (smallest) duration as default
+      const duration = t.durations.length > 0 ? t.durations[0] : 15
+
       return prisma.thematic.upsert({
         where: { name: t.name },
         update: {
+          duration,
           soignants: {
             set: soignantIDs.map((id) => ({ id })),
           },
         },
         create: {
           name: t.name,
-          duration: 15,
+          duration,
           soignants: {
             connect: soignantIDs.map((id) => ({ id })),
           },

@@ -82,8 +82,8 @@ function createSlotTemplate(
     isIndividual: data.isIndividual,
     capacity: data.isIndividual ? null : (data.capacity ?? 1),
     color,
-    description: data.title,
-    thematic: data.title,
+    description: data.description,
+    thematic: data.thematic,
     location: data.location,
     soignantID: soignant.id,
   }
