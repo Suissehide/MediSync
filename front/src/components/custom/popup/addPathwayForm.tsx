@@ -117,7 +117,7 @@ function AddPathwayForm({ trigger }: AddPathwayFormProps) {
 
             <form.AppField name="motifRequired">
               {(field) => (
-                <field.CheckboxField label="Motif obligatoire" />
+                <field.Checkbox label="Motif obligatoire" />
               )}
             </form.AppField>
           </form>
