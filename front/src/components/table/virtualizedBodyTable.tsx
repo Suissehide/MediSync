@@ -68,6 +68,7 @@ export function VirtualizedBodyTable<TData>({
                 style={{
                   ...getCommonPinningStyles(column),
                   minWidth: column.getSize(),
+                  maxWidth: column.columnDef.maxSize || undefined,
                   height: rowHeight,
                 }}
               >
@@ -146,6 +147,7 @@ export function VirtualizedBodyTable<TData>({
                   style={{
                     ...getCommonPinningStyles(column),
                     minWidth: column.getSize(),
+                    maxWidth: column.columnDef.maxSize || undefined,
                     width: grow ? '100%' : undefined,
                     height: rowHeight,
                   }}

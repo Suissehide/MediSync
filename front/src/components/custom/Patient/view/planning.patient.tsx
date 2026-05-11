@@ -210,7 +210,7 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
             searchable
             value={selectedTag}
             onValueChange={setSelectedTag}
-            placeholder="Filtrer les créneaux par tag"
+            placeholder="Afficher les créneaux par tag"
             options={[
               { value: '__all__', label: 'Tout afficher', group: 'all' },
               ...allTags

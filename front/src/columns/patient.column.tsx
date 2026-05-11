@@ -63,6 +63,8 @@ export const getPatientColumns = ({
     columnHelper.accessor('pathwayTemplateTags', {
       id: 'pathwayTemplateTags',
       header: 'Parcours',
+      size: 250,
+      maxSize: 250,
       cell: ({ getValue }) => {
         const tags = getValue() ?? []
         if (tags.length === 0) {

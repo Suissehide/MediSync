@@ -45,9 +45,11 @@ export function HeaderTable<TData>({
 
             const pinningStyles = getCommonPinningStyles(column)
             // Override sticky bg to match thead background
+            const maxSize = column.columnDef.maxSize
             const thStyle: React.CSSProperties = {
               ...pinningStyles,
               minWidth: header.getSize(),
+              maxWidth: maxSize ? maxSize : undefined,
               width: grow ? '100%' : undefined,
               ...(pinningStyles.backgroundColor
                 ? { backgroundColor: 'var(--color-card)' }

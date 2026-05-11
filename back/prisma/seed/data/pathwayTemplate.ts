@@ -110,32 +110,32 @@ export const PATHWAYS = {
   I_AS: {
     name: 'SMCV AS',
     color: '#A0522D',
-    tags: ['Individuel', 'AS'],
+    tags: ['AS'],
   },
   I_DIET: {
     name: 'SMCV Diét',
     color: '#FFD700',
-    tags: ['Individuel', 'Dieteticienne'],
+    tags: ['Dieteticienne'],
   },
   I_IDE_EDUC1: {
     name: 'SMCV IDE Educ1',
     color: '#9ACD32',
-    tags: ['Individuel', 'IDE Educ1'],
+    tags: ['IDE Educ1'],
   },
   I_IDE_EDUC2: {
     name: 'SMCV IDE Educ2',
     color: '#3CB371',
-    tags: ['Individuel', 'IDE Educ2'],
+    tags: ['IDE Educ2'],
   },
   I_IDE_SSR: {
     name: 'SMCV IDE SSR',
     color: '#20B2AA',
-    tags: ['Individuel', 'IDE SSR'],
+    tags: ['IDE SSR'],
   },
   I_PSY: {
     name: 'SMCV Psy',
     color: '#9370DB',
-    tags: ['Individuel', 'Psychologue'],
+    tags: ['Psychologue'],
   },
 }
 
