@@ -28,6 +28,14 @@ export function rgbaToHex(r: number, g: number, b: number, a = 1): string {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}${toHex(alpha)}`
 }
 
+export function darkenHex(hex: string, amount = 0.3): string {
+  const r = Math.round(Number.parseInt(hex.slice(1, 3), 16) * (1 - amount))
+  const g = Math.round(Number.parseInt(hex.slice(3, 5), 16) * (1 - amount))
+  const b = Math.round(Number.parseInt(hex.slice(5, 7), 16) * (1 - amount))
+  const toHex = (n: number) => n.toString(16).padStart(2, '0')
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`
+}
+
 export function getContrastTextColor(hex: string): string {
   const r = Number.parseInt(hex.slice(1, 3), 16)
   const g = Number.parseInt(hex.slice(3, 5), 16)

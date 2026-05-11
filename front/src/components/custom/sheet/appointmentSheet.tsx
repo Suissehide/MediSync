@@ -31,7 +31,7 @@ import { FieldInfo } from '../../ui/fieldInfo.tsx'
 import { FormField } from '../../ui/formField.tsx'
 import { Input, TextArea } from '../../ui/input.tsx'
 import { Label } from '../../ui/label.tsx'
-import { Select } from '../../ui/select.tsx'
+import { MultiSelect, Select } from '../../ui/select.tsx'
 import {
   Sheet,
   SheetContent,
@@ -66,7 +66,7 @@ export default function AppointmentSheet({
   const { thematics } = useThematicQueries()
   const patients = usePatientQueries().patients
 
-  const [selectedPatient, setSelectedPatient] = useState('')
+  const [selectedPatients, setSelectedPatients] = useState<string[]>([])
   const [expandedSections, setExpandedSections] = useState<
     Record<number, boolean>
   >({})
@@ -123,10 +123,6 @@ export default function AppointmentSheet({
       deleteAppointment.mutate(appointment.id)
       setOpen('')
     }
-  }
-
-  const handleSelectPatient = (patientID: string) => {
-    setSelectedPatient(patientID)
   }
 
   const handleRedirectToPatient = async (patientID?: string) => {
@@ -278,44 +274,49 @@ export default function AppointmentSheet({
                       <div className="flex items-end gap-4 shrink-0">
                         <div className="flex-1">
                           <Label htmlFor={'patient-selection'}>
-                            Ajouter un patient
+                            Ajouter des patients
                           </Label>
-                          <Select
-                            id={'patient-selection'}
-                            value={selectedPatient}
-                            onValueChange={(v) => handleSelectPatient(v)}
+                          <MultiSelect
                             options={patientOptions}
+                            value={selectedPatients}
+                            onChange={setSelectedPatients}
+                            placeholder="Sélectionner un ou plusieurs patients"
+                            maxSelected={
+                              isIndividual
+                                ? Math.max(0, 1 - currentPatientCount)
+                                : Math.max(0, capacity - currentPatientCount)
+                            }
                             disabled={isAtCapacity}
                           />
                         </div>
                         <Button
                           type="button"
                           variant="default"
-                          disabled={isAtCapacity}
+                          disabled={isAtCapacity || selectedPatients.length === 0}
                           onClick={() => {
-                            if (!selectedPatient) {
-                              return
+                            for (const patientID of selectedPatients) {
+                              field.pushValue({
+                                accompanying: '',
+                                status: '',
+                                rejectionReason: '',
+                                transmissionNotes: '',
+                                patientID,
+                              })
                             }
-                            field.pushValue({
-                              accompanying: '',
-                              status: '',
-                              rejectionReason: '',
-                              transmissionNotes: '',
-                              patientID: selectedPatient,
-                            })
-                            setSelectedPatient('')
+                            setSelectedPatients([])
                           }}
                         >
                           Ajouter
                         </Button>
                       </div>
-                      {isAtCapacity && (
-                        <div className="text-sm text-destructive">
-                          {isIndividual
-                            ? 'Un seul patient autorisé pour un créneau individuel'
-                            : `Capacité maximale atteinte (${capacity} patient${capacity > 1 ? 's' : ''})`}
-                        </div>
-                      )}
+                      <div className="text-sm text-text-light mt-1">
+                        {currentPatientCount}/{capacity} patient{capacity > 1 ? 's' : ''}
+                        {isAtCapacity && (
+                          <span className="text-destructive ml-1">
+                            — capacité maximale atteinte
+                          </span>
+                        )}
+                      </div>
 
                       <div className="text-sm text-text-light mt-3 mb-0.5 shrink-0">
                         Liste des patients

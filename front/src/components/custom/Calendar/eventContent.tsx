@@ -11,6 +11,7 @@ import {
   Trash2,
 } from 'lucide-react'
 
+import { darkenHex } from '../../../libs/color.ts'
 import { containsKeyword } from '../../../libs/utils.ts'
 import type { Appointment } from '../../../types/appointment.ts'
 import type { AppointmentPatient } from '../../../types/appointmentPatient.ts'
@@ -43,19 +44,22 @@ export const EventContent = ({
   selectedSlotIds,
   onToggleSelect,
 }: Props) => {
-  const { event, timeText, view } = eventContent
+  const { event, view } = eventContent
   const { states, appointments, thematic, type, locked } = event.extendedProps
   const isWeekView = view.type === 'timeGridWeek'
+  const isRowLayout = !isWeekView
 
   const isIndividual = containsKeyword(states, ['individual'])
   const isMultiple = containsKeyword(states, ['multiple'])
-  const isFillable = containsKeyword(states, ['fillable'])
   const isSelected = selectedSlotIds?.has(event.id) ?? false
   const isSelectionMode = selectedSlotIds && selectedSlotIds.size > 0
 
+  const slotColor = event.backgroundColor || event.borderColor || '#2563eb'
+  const appointmentColor = darkenHex(slotColor, 0.3)
+
   const calculateAppointmentStyle = (appointment: Appointment) => {
     if (!isIndividual) {
-      return {}
+      return { backgroundColor: appointmentColor }
     }
 
     const slotStart = dayjs(event.start)
@@ -72,10 +76,11 @@ export const EventContent = ({
 
     return {
       position: 'absolute' as const,
-      top: `${topPercent}%`,
-      height: `calc(${heightPercent}% - 4px)`,
+      top: `calc(${topPercent}% + 1px)`,
+      height: `calc(${heightPercent}% - 2px)`,
       left: 0,
       right: 0,
+      backgroundColor: appointmentColor,
     }
   }
 
@@ -84,20 +89,25 @@ export const EventContent = ({
       {...(event.id ? { 'data-event-id': `${event.id}` } : {})}
       className={clsx(
         'fc-event-hero relative group cursor-pointer h-full w-full flex text-left p-0.5 transition duration-200',
-        !isWeekView && isFillable && appointments && appointments.length > 0 ? 'flex-row gap-2' : 'flex-col',
+        isRowLayout ? 'flex-row' : 'flex-col',
         {
           'pointer-events-none': containsKeyword(states, ['editable']),
           'opacity-45 bg-gray-400 rounded-sm': editMode && type === 'slot',
-          'slot-selected ring-2 ring-primary ring-offset-1 rounded-sm': isSelected,
+          'slot-selected ring-2 ring-primary ring-offset-1 rounded-sm':
+            isSelected,
         },
       )}
       style={{
         color: event.textColor || undefined,
-        backgroundColor: event.display !== 'background' ? event.backgroundColor || event.borderColor : undefined,
+        backgroundColor:
+          event.display !== 'background'
+            ? event.backgroundColor || event.borderColor
+            : undefined,
         borderRadius: event.display !== 'background' ? '4px' : undefined,
       }}
     >
-      {onToggleSelect && (type === 'slot' || type === 'template') &&
+      {onToggleSelect &&
+        (type === 'slot' || type === 'template') &&
         !containsKeyword(states, ['editable']) && (
           <button
             type="button"
@@ -106,7 +116,9 @@ export const EventContent = ({
               isSelected
                 ? 'bg-primary border-primary text-white'
                 : 'border-white/60 bg-black/20 text-transparent hover:border-white hover:bg-black/30',
-              isSelectionMode ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+              isSelectionMode
+                ? 'opacity-100'
+                : 'opacity-0 group-hover:opacity-100',
             )}
             onClick={(e) => {
               e.stopPropagation()
@@ -121,30 +133,37 @@ export const EventContent = ({
       {locked && type === 'slot' && (
         <>
           <div
-            className="absolute inset-0 z-[1] pointer-events-none rounded-sm"
+            className="absolute inset-0 z-10 pointer-events-none rounded-sm"
             style={{
               backgroundImage:
                 'repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(0,0,0,0.12) 4px, rgba(0,0,0,0.12) 6px)',
             }}
           />
-          <div
+          <button
+            type="button"
             data-lock-toggle
             className={clsx(
               'absolute top-0.5 left-0.5 z-10 p-0.5 rounded bg-black/40 text-white',
-              onToggleLock ? 'pointer-events-auto cursor-pointer hover:bg-black/60' : 'pointer-events-none',
+              onToggleLock
+                ? 'pointer-events-auto cursor-pointer hover:bg-black/60'
+                : 'pointer-events-none',
             )}
             onClick={(e) => {
-              if (!onToggleLock) { return }
+              if (!onToggleLock) {
+                return
+              }
               e.stopPropagation()
               onToggleLock(event.id, false)
             }}
             onMouseDown={(e) => {
-              if (!onToggleLock) { return }
+              if (!onToggleLock) {
+                return
+              }
               e.stopPropagation()
             }}
           >
             <Lock className="w-2.5 h-2.5" />
-          </div>
+          </button>
         </>
       )}
 
@@ -198,7 +217,12 @@ export const EventContent = ({
           </Button>
         )}
 
-      <span className="p-0.5">
+      <span
+        className={clsx(
+          'relative z-10 p-0.5 pointer-events-none',
+          isRowLayout ? 'w-48 shrink-0' : '',
+        )}
+      >
         {view.type === 'dayGridDay' && event.start && event.end && (
           <div className="text-[0.65rem] whitespace-nowrap">
             {`${dayjs.utc(event.start).format('H:mm')} - ${dayjs.utc(event.end).format('H:mm')}`}
@@ -209,10 +233,14 @@ export const EventContent = ({
       </span>
 
       {/* Individual */}
-      {isIndividual &&
-        appointments &&
-        appointments.length > 0 && (
-        <div className="flex-1 flex flex-col relative">
+      {isIndividual && appointments && appointments.length > 0 && (
+        <div
+          className={clsx(
+            isRowLayout
+              ? 'flex-1 min-w-0 flex flex-row gap-0.5'
+              : 'absolute inset-0',
+          )}
+        >
           {appointments.map((appointment: Appointment) => (
             <button
               type="button"
@@ -221,8 +249,15 @@ export const EventContent = ({
                 setOpenEventId?.(`appointment_${appointment.id}`)
               }}
               key={appointment.id}
-              style={calculateAppointmentStyle(appointment)}
-              className={`fc-event-hero z-1 bg-black/30 cursor-pointer flex justify-start p-0.5 m-0.5 text-white truncate px-1 border border-border rounded hover:opacity-80 transition-opacity overflow-hidden`}
+              style={
+                isRowLayout
+                  ? { backgroundColor: appointmentColor }
+                  : calculateAppointmentStyle(appointment)
+              }
+              className={clsx(
+                'fc-event-hero z-10 cursor-pointer flex justify-start p-0.5 text-white truncate px-1 border border-white/30 rounded hover:brightness-90 transition-all',
+                isRowLayout ? 'flex-1 min-w-0' : 'overflow-hidden',
+              )}
             >
               {appointment.appointmentPatients?.map(
                 (appointmentPatient: AppointmentPatient) => (
@@ -239,42 +274,72 @@ export const EventContent = ({
 
       {/* Multiple */}
       {isMultiple && appointments && appointments.length > 0 && (
-        <div className="flex-1 flex flex-col">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              setOpenEventId?.(`appointment_${appointments[0].id}`)
-            }}
-            className={`fc-event-hero z-1 cursor-pointer flex-1 flex flex-col justify-start p-0.5 m-0.5 text-white bg-black/30 px-1 border border-border rounded hover:opacity-80 transition-opacity overflow-hidden`}
-          >
-            {event.extendedProps.appointments[0].appointmentPatients?.map(
-              (appointmentPatient: AppointmentPatient) => (
-                <PatientName
-                  key={appointmentPatient.patient.id}
-                  appointmentPatient={appointmentPatient}
-                />
-              ),
-            )}
-          </button>
+        <div
+          className={clsx(
+            'flex-1 min-h-0 gap-0.5 overflow-y-auto',
+            isRowLayout ? 'flex flex-row min-w-0' : 'flex flex-col mt-0.5',
+          )}
+        >
+          {appointments.map((appointment: Appointment) => (
+            <button
+              type="button"
+              key={appointment.id}
+              onClick={(e) => {
+                e.stopPropagation()
+                setOpenEventId?.(`appointment_${appointment.id}`)
+              }}
+              style={calculateAppointmentStyle(appointment)}
+              className={clsx(
+                'fc-event-hero z-10 cursor-pointer flex-1 min-h-0 basis-0 flex justify-start p-0.5 text-white px-1 border border-white/30 rounded hover:brightness-90 transition-all',
+                isRowLayout
+                  ? 'flex-row min-w-0'
+                  : 'flex-col mx-0.5 overflow-y-auto',
+              )}
+            >
+              {appointment.appointmentPatients?.map(
+                (appointmentPatient: AppointmentPatient, idx: number) => (
+                  <div
+                    key={appointmentPatient.patient.id}
+                    className={clsx(
+                      'flex-1',
+                      idx > 0 &&
+                        isRowLayout &&
+                        'border-l border-white/30 pl-1 ml-1',
+                      idx > 0 &&
+                        !isRowLayout &&
+                        'border-t border-white/30 pt-0.5 mt-0.5',
+                    )}
+                  >
+                    <PatientName appointmentPatient={appointmentPatient} />
+                  </div>
+                ),
+              )}
+            </button>
+          ))}
         </div>
       )}
 
       {/* Bouton + pour slots multiple vides */}
-      {isMultiple && !locked && (!appointments || appointments.length === 0) && (
-        <div className="z-100 cursor-pointer absolute inset-0 flex justify-center items-center">
-          <Button variant="transparent" className="w-full h-full">
-            <div className="p-1 rounded-full bg-neutral-50 text-primary group-hover:bg-neutral-300 transition-colors duration-200">
-              <Plus className="w-4 h-4" />
-            </div>
-          </Button>
-        </div>
-      )}
+      {isMultiple &&
+        !locked &&
+        (!appointments || appointments.length === 0) && (
+          <div className="z-100 cursor-pointer absolute inset-0 flex justify-center items-center">
+            <Button variant="transparent" className="w-full h-full">
+              <div className="p-1 rounded-full bg-neutral-50 text-primary group-hover:bg-neutral-300 transition-colors duration-200">
+                <Plus className="w-4 h-4" />
+              </div>
+            </Button>
+          </div>
+        )}
     </div>
   )
 }
 
-function PatientName({ appointmentPatient }: { appointmentPatient: AppointmentPatient }) {
+function PatientName({
+  appointmentPatient,
+}: {
+  appointmentPatient: AppointmentPatient
+}) {
   const name = `${appointmentPatient.patient.firstName} ${appointmentPatient.patient.lastName}`
 
   if (!appointmentPatient.transmissionNotes) {
@@ -294,9 +359,7 @@ function PatientName({ appointmentPatient }: { appointmentPatient: AppointmentPa
             <MessageSquareTextIcon className="w-2.5 h-2.5 shrink-0" />
           </div>
         </TooltipTrigger>
-        <TooltipContent>
-          {appointmentPatient.transmissionNotes}
-        </TooltipContent>
+        <TooltipContent>{appointmentPatient.transmissionNotes}</TooltipContent>
       </TooltipRoot>
     </TooltipProvider>
   )
