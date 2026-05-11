@@ -101,6 +101,7 @@ export const pathwayEnrollmentSchema = z.object({
   thematicID: z.cuid().optional(),
   type: z.string().optional(),
   motif: z.string().optional(),
+  duration: z.number().positive().optional(),
 })
 
 export const enrollPatientInPathwaysSchema = z.object({

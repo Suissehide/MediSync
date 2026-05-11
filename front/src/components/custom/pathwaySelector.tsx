@@ -3,7 +3,7 @@ import type React from 'react'
 import { useCallback, useMemo, useState } from 'react'
 
 import { APPOINTMENT_TYPE_OPTIONS } from '../../constants/appointment.constant.ts'
-import { SLOT_DURATION } from '../../constants/slot.constant.ts'
+import { SLOT_DURATIONS } from '../../constants/slot.constant.ts'
 import { usePathwayTemplateQueries } from '../../queries/usePathwayTemplate.ts'
 import { useThematicQueries } from '../../queries/useThematic.ts'
 import { Button } from '../ui/button.tsx'
@@ -12,12 +12,10 @@ import { Input } from '../ui/input.tsx'
 import { Label } from '../ui/label.tsx'
 import { MultiSelect, Select } from '../ui/select.tsx'
 
-const DURATION_OPTIONS = Object.entries(SLOT_DURATION).map(
-  ([value, label]) => ({
-    value,
-    label,
-  }),
-)
+const DURATION_OPTIONS = SLOT_DURATIONS.map((d) => ({
+  value: String(d),
+  label: `${d} minutes`,
+}))
 
 export type PathwayPeriod = 'morning' | 'afternoon' | 'fullday'
 
@@ -268,21 +266,12 @@ function PathwayItem({
             </div>
           </FormField>
 
-          <FormField className="flex-1">
-            <Label htmlFor={`type-${pathway.id}`}>Type</Label>
-            <Select
-              id={`type-${pathway.id}`}
-              value={pathway.type}
-              options={APPOINTMENT_TYPE_OPTIONS}
-              onValueChange={(value) => onUpdate({ type: value })}
-            />
-          </FormField>
-
           <div className="flex gap-4">
             <FormField className="flex-1">
               <Label htmlFor={`thematic-${pathway.id}`}>Thématique</Label>
               <Select
                 id={`thematic-${pathway.id}`}
+                searchable
                 value={pathway.thematicID}
                 options={thematicOptions}
                 onValueChange={(value) => {
@@ -296,18 +285,41 @@ function PathwayItem({
               />
             </FormField>
 
-            <FormField className="w-32">
+            <FormField className="w-48">
               <Label htmlFor={`duration-${pathway.id}`}>Durée</Label>
               <Select
                 id={`duration-${pathway.id}`}
                 value={String(pathway.thematicDuration ?? '')}
-                options={DURATION_OPTIONS}
+                options={
+                  pathway.thematicDuration &&
+                  !DURATION_OPTIONS.some(
+                    (o) => o.value === String(pathway.thematicDuration),
+                  )
+                    ? [
+                        ...DURATION_OPTIONS,
+                        {
+                          value: String(pathway.thematicDuration),
+                          label: `${pathway.thematicDuration} minutes`,
+                        },
+                      ].sort((a, b) => Number(a.value) - Number(b.value))
+                    : DURATION_OPTIONS
+                }
                 onValueChange={(value) =>
                   onUpdate({ thematicDuration: Number(value) })
                 }
               />
             </FormField>
           </div>
+
+          <FormField className="flex-1">
+            <Label htmlFor={`type-${pathway.id}`}>Type</Label>
+            <Select
+              id={`type-${pathway.id}`}
+              value={pathway.type}
+              options={APPOINTMENT_TYPE_OPTIONS}
+              onValueChange={(value) => onUpdate({ type: value })}
+            />
+          </FormField>
 
           {pathway.motifRequired && (
             <FormField className="flex-1">

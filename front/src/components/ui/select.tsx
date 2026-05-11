@@ -74,9 +74,7 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
               className={cn(
                 'inline-flex w-full h-9 items-center justify-between rounded-md border border-border bg-background px-3 py-2 text-sm cursor-pointer',
                 'focus:outline-none focus:ring-1 focus:ring-inset focus:ring-ring',
-                disabled
-                  ? 'opacity-50 cursor-not-allowed'
-                  : 'text-text-dark',
+                disabled ? 'opacity-50 cursor-not-allowed' : 'text-text-dark',
                 className,
               )}
             >
@@ -90,15 +88,14 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
               </span>
               <div className="flex items-center gap-1 ml-2 shrink-0">
                 {clearable && value && (
-                  <span
-                    role="button"
+                  <button
+                    type="button"
                     tabIndex={-1}
                     onClick={handleClear}
-                    onKeyDown={() => {}}
-                    className="text-text-light hover:text-text"
+                    className="text-text-light hover:text-text cursor-pointer"
                   >
                     <X className="h-4 w-4" />
-                  </span>
+                  </button>
                 )}
                 <ChevronDown className="h-4 w-4 text-text-light" />
               </div>
@@ -129,7 +126,8 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
                   </li>
                 ) : (
                   filteredOptions.map((option, idx) => {
-                    const prevGroup = idx > 0 ? filteredOptions[idx - 1].group : undefined
+                    const prevGroup =
+                      idx > 0 ? filteredOptions[idx - 1].group : undefined
                     const showSeparator = idx > 0 && option.group !== prevGroup
 
                     return (
@@ -140,7 +138,9 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
                         <li className="relative flex select-none items-center rounded text-sm hover:bg-primary/20">
                           <button
                             type="button"
-                            onClick={() => handleSelect(option.value.toString())}
+                            onClick={() =>
+                              handleSelect(option.value.toString())
+                            }
                             className="cursor-pointer flex w-full items-center justify-between rounded px-2 py-1.5"
                           >
                             <span>{option.label}</span>
@@ -202,9 +202,7 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
                     value={option.value.toString()}
                     className="relative flex cursor-pointer select-none items-center rounded px-2 pr-7 py-1.5 text-sm text-text-sidebar outline-none hover:bg-primary/20 focus:bg-primary/20 data-[state=checked]:text-primary"
                   >
-                    <RadixSelect.ItemText>
-                      {option.label}
-                    </RadixSelect.ItemText>
+                    <RadixSelect.ItemText>{option.label}</RadixSelect.ItemText>
                     <RadixSelect.ItemIndicator className="absolute right-2">
                       <Check className="h-4 w-4 text-primary" />
                     </RadixSelect.ItemIndicator>
@@ -254,7 +252,9 @@ export function MultiSelect({
   const [searchTerm, setSearchTerm] = useState('')
 
   const toggle = (val: string) => {
-    if (disabled) return
+    if (disabled) {
+      return
+    }
     const isSelected = value.includes(val)
     if (isSelected) {
       onChange(value.filter((v) => v !== val))

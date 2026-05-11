@@ -54,6 +54,7 @@ export function AddPatientToPathwayForm({
           thematicID: p.thematicID || undefined,
           type: p.type,
           motif: p.motif || undefined,
+          duration: p.thematicDuration ?? undefined,
         })),
       },
       { onSuccess: () => setOpen(false) },

@@ -69,9 +69,9 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
         )
         return {
           id: `apt_${apt?.id}`,
-          title: slot.slotTemplate?.thematic || 'Rendez-vous',
-          start: slot.startDate,
-          end: slot.endDate,
+          title: apt?.thematic || slot.slotTemplate?.thematic || 'Rendez-vous',
+          start: apt?.startDate ?? slot.startDate,
+          end: apt?.endDate ?? slot.endDate,
           backgroundColor: slot.slotTemplate?.color,
           borderColor: slot.slotTemplate?.color,
         }

@@ -68,6 +68,7 @@ export type PathwayEnrollment = {
   thematicID?: string
   type?: string
   motif?: string
+  duration?: number
 }
 
 export type EnrollPatientParams = {

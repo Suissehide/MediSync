@@ -239,11 +239,13 @@ class PatientDomain implements PatientDomainInterface {
       try {
         // Résoudre la thématique si fournie
         let thematicName: string | undefined
-        let thematicDuration = 30
+        let thematicDuration = enrollment.duration ?? 30
         if (enrollment.thematicID) {
           const thematic = await this.thematicRepository.findByID(enrollment.thematicID)
           thematicName = thematic.name
-          thematicDuration = thematic.duration ?? 30
+          if (!enrollment.duration) {
+            thematicDuration = thematic.duration ?? 30
+          }
         }
 
         // Vérifier si le motif est requis
@@ -482,6 +484,8 @@ class PatientDomain implements PatientDomainInterface {
             const appointment = await this.appointmentRepository.create({
               startDate: slot.startDate,
               endDate: slot.endDate,
+              thematic: thematicName ?? undefined,
+              type: type ?? undefined,
               slotID: slot.id,
               patientIDs: [patient.id],
               transmissionNotes: motif ?? undefined,
