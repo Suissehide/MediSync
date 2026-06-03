@@ -50,6 +50,7 @@ export default function PathwayTemplateSheet({
       name: '',
       color: '',
       motifRequired: false,
+      firstAppointmentOnly: false,
     },
     onSubmit: ({ value }) => {
       if (!pathwayTemplate?.id) {
@@ -62,6 +63,7 @@ export default function PathwayTemplateSheet({
         color: value.color,
         tags,
         motifRequired: value.motifRequired,
+        firstAppointmentOnly: value.firstAppointmentOnly,
       }
 
       updatePathwayTemplate.mutate(updatedPathwayTemplateData)
@@ -88,6 +90,7 @@ export default function PathwayTemplateSheet({
         name: pathwayTemplate.name ?? '',
         color: pathwayTemplate.color ?? '',
         motifRequired: pathwayTemplate.motifRequired ?? false,
+        firstAppointmentOnly: pathwayTemplate.firstAppointmentOnly ?? false,
       },
       { keepDefaultValues: true },
     )
@@ -168,6 +171,12 @@ export default function PathwayTemplateSheet({
                 <form.AppField name="motifRequired">
                   {(field) => (
                     <field.Checkbox label="Motif obligatoire" />
+                  )}
+                </form.AppField>
+
+                <form.AppField name="firstAppointmentOnly">
+                  {(field) => (
+                    <field.Checkbox label="Inscription au premier RDV uniquement" />
                   )}
                 </form.AppField>
               </form>
