@@ -23,13 +23,10 @@ function UserSettings() {
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false)
 
   const soignantOptions = useMemo(() => {
-    const options = [{ value: '', label: 'Aucune' }]
-    if (soignants) {
-      for (const s of soignants) {
-        options.push({ value: s.id, label: s.name })
-      }
+    if (!soignants) {
+      return []
     }
-    return options
+    return soignants.map((s) => ({ value: s.id, label: s.name }))
   }, [soignants])
 
   const profileForm = useAppForm({
@@ -120,7 +117,7 @@ function UserSettings() {
                 </profileForm.AppField>
               </div>
 
-              <div className="mb-6">
+              <div className="grid grid-cols-2 mb-4">
                 <profileForm.AppField name="soignantId">
                   {(field) => (
                     <field.Select label="Fonction" options={soignantOptions} />

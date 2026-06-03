@@ -27,13 +27,8 @@ function EditUserForm({ open, setOpen, user }: EditUserFormProps) {
   const { soignants } = useSoignantQueries()
 
   const soignantOptions = useMemo(() => {
-    const options = [{ value: '', label: 'Aucune' }]
-    if (soignants) {
-      for (const s of soignants) {
-        options.push({ value: s.id, label: s.name })
-      }
-    }
-    return options
+    if (!soignants) return []
+    return soignants.map((s) => ({ value: s.id, label: s.name }))
   }, [soignants])
 
   const form = useAppForm({
