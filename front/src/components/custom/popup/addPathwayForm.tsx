@@ -40,6 +40,7 @@ function AddPathwayForm({ trigger }: AddPathwayFormProps) {
       name: '',
       color: '#2563eb',
       motifRequired: false,
+      firstAppointmentOnly: false,
     },
     onSubmit: ({ value }) => {
       createPathwayTemplate.mutate({
@@ -48,6 +49,7 @@ function AddPathwayForm({ trigger }: AddPathwayFormProps) {
         slotTemplateIDs: [],
         tags,
         motifRequired: value.motifRequired,
+        firstAppointmentOnly: value.firstAppointmentOnly,
       })
       setOpen(false)
     },
@@ -118,6 +120,12 @@ function AddPathwayForm({ trigger }: AddPathwayFormProps) {
             <form.AppField name="motifRequired">
               {(field) => (
                 <field.Checkbox label="Motif obligatoire" />
+              )}
+            </form.AppField>
+
+            <form.AppField name="firstAppointmentOnly">
+              {(field) => (
+                <field.Checkbox label="Inscription au premier RDV uniquement" />
               )}
             </form.AppField>
           </form>
