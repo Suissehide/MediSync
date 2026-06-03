@@ -4,7 +4,6 @@ import dayjs from 'dayjs'
 import { useMemo, useRef, useState } from 'react'
 
 import { SLOT } from '../../../../constants/process.constant.ts'
-import { hexToRGBA } from '../../../../libs/color.ts'
 import { buildCalendarEventsFromSlots } from '../../../../libs/utils.ts'
 import { useAppointmentMutations } from '../../../../queries/useAppointment.ts'
 import { usePathwayTemplateQueries } from '../../../../queries/usePathwayTemplate.ts'
@@ -114,10 +113,11 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
       const events = baseEvents.map((event) => {
         const slotId = event.id.replace('slot_', '')
         if (enrolledSet.has(slotId)) {
+          const color = event.color ?? '#2563eb'
           return {
             ...event,
-            backgroundColor: hexToRGBA(event.color ?? '#2563eb', 1),
-            borderColor: hexToRGBA(event.color ?? '#2563eb', 1),
+            backgroundColor: color,
+            borderColor: color,
           }
         }
         return event
