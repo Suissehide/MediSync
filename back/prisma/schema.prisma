@@ -32,7 +32,8 @@ model PathwayTemplate {
   color        String
   tags         String[]
   displayOrder  Int      @default(0)
-  motifRequired Boolean  @default(false)
+  motifRequired        Boolean  @default(false)
+  firstAppointmentOnly Boolean  @default(false)
 
   pathways      Pathway[]
   slotTemplates SlotTemplate[]
