@@ -275,7 +275,7 @@ class PatientDomain implements PatientDomainInterface {
         if (pathways.length === 0) {
           failedEnrollments.push({
             slotTemplate: { id: enrollment.tag },
-            reason: `Aucun parcours trouvé pour le tag "${enrollment.tag}"`,
+            reason: `Aucun parcours disponible ou complet pour "${enrollment.tag}"`,
           })
           continue
         }
@@ -334,7 +334,7 @@ class PatientDomain implements PatientDomainInterface {
               id: enrollment.tag,
               name: enrollment.tag,
             },
-            reason: `Aucune disponibilité pour le tag "${enrollment.tag}"`,
+            reason: `Aucun parcours disponible ou complet pour "${enrollment.tag}"`,
           })
         }
       } catch (error) {
