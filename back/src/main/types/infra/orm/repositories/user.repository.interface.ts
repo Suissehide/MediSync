@@ -7,11 +7,11 @@ export type UserEntityRepo = User
 export type UserCreateEntityRepo = Pick<
   UserEntityRepo,
   'email' | 'password'
-> & { firstName?: string; lastName?: string }
+> & { firstName?: string; lastName?: string; soignantId?: string | null }
 export type UserUpdateEntityRepo = Pick<
   Prisma.UserUncheckedUpdateInput,
   'email' | 'role'
-> & { firstName?: string; lastName?: string }
+> & { firstName?: string; lastName?: string; soignantId?: string | null }
 
 export interface UserRepositoryInterface {
   findAll: () => Promise<UserEntityRepo[]>

@@ -5,6 +5,7 @@ export type CreateUserInput = {
   password: string
   firstName?: string
   lastName?: string
+  soignantId?: string | null
 }
 export type SignInResponse = {
   accessToken: string

@@ -1,8 +1,9 @@
 import { Check, X } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 
 import { ROLE_OPTIONS } from '../../../constants/user.constant.ts'
 import { useAppForm } from '../../../hooks/formConfig.tsx'
+import { useSoignantQueries } from '../../../queries/useSoignant.ts'
 import { useUserMutations } from '../../../queries/useUser.ts'
 import type { Role, User } from '../../../types/auth.ts'
 import { Button } from '../../ui/button.tsx'
@@ -23,6 +24,17 @@ interface EditUserFormProps {
 
 function EditUserForm({ open, setOpen, user }: EditUserFormProps) {
   const { updateUser } = useUserMutations()
+  const { soignants } = useSoignantQueries()
+
+  const soignantOptions = useMemo(() => {
+    const options = [{ value: '', label: 'Aucune' }]
+    if (soignants) {
+      for (const s of soignants) {
+        options.push({ value: s.id, label: s.name })
+      }
+    }
+    return options
+  }, [soignants])
 
   const form = useAppForm({
     defaultValues: {
@@ -30,6 +42,7 @@ function EditUserForm({ open, setOpen, user }: EditUserFormProps) {
       lastName: user?.lastName ?? '',
       email: user?.email ?? '',
       role: user?.role ?? 'NONE',
+      soignantId: user?.soignantId ?? '',
     },
     onSubmit: ({ value }) => {
       if (!user) {
@@ -42,6 +55,7 @@ function EditUserForm({ open, setOpen, user }: EditUserFormProps) {
         lastName: value.lastName,
         email: value.email,
         role: value.role as Role,
+        soignantId: value.soignantId || null,
       })
       setOpen(false)
     },
@@ -54,6 +68,7 @@ function EditUserForm({ open, setOpen, user }: EditUserFormProps) {
         lastName: user.lastName ?? '',
         email: user.email ?? '',
         role: user.role ?? 'NONE',
+        soignantId: user.soignantId ?? '',
       })
     }
   }, [open, user, form])
@@ -102,6 +117,12 @@ function EditUserForm({ open, setOpen, user }: EditUserFormProps) {
 
             <form.AppField name="role">
               {(field) => <field.Select label="Rôle" options={ROLE_OPTIONS} />}
+            </form.AppField>
+
+            <form.AppField name="soignantId">
+              {(field) => (
+                <field.Select label="Fonction" options={soignantOptions} />
+              )}
             </form.AppField>
           </form>
         </PopupBody>

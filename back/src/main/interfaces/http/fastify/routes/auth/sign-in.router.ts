@@ -40,6 +40,7 @@ const signInRouter: FastifyPluginAsync = (fastify) => {
         firstName,
         lastName,
         role,
+        soignantId,
       } = await authDomain.signIn(inputEmail, inputPassword)
 
       const cookieOptions: CookieSerializeOptions = {
@@ -60,7 +61,7 @@ const signInRouter: FastifyPluginAsync = (fastify) => {
 
       console.log('ROLE', role)
 
-      return { id, email, firstName, lastName, role }
+      return { id, email, firstName, lastName, role, soignantId }
     },
   )
   return Promise.resolve()

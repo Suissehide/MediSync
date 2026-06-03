@@ -73,6 +73,7 @@ class AuthDomain implements AuthDomainInterface {
       firstName: user.firstName,
       lastName: user.lastName,
       role: user.role,
+      soignantId: user.soignantId,
     }
   }
 
@@ -103,6 +104,7 @@ class AuthDomain implements AuthDomainInterface {
       firstName: user.firstName,
       lastName: user.lastName,
       role: user.role,
+      soignantId: user.soignantId,
     }
   }
 

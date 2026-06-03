@@ -3,12 +3,14 @@ import { Ban, Pen, Shield, Trash, UserRound } from 'lucide-react'
 
 import { Button } from '../components/ui/button.tsx'
 import type { Role, User } from '../types/auth.ts'
+import type { Soignant } from '../types/soignant.ts'
 
 const columnHelper = createColumnHelper<User>()
 
 type UserActions = {
   onEdit: (user: User) => void
   onDelete: (user: User) => void
+  soignants?: Soignant[]
 }
 
 export const RoleLabel = ({ role }: { role: Role }) => {
@@ -42,7 +44,7 @@ export const RoleLabel = ({ role }: { role: Role }) => {
   )
 }
 
-export const getUserColumns = ({ onEdit, onDelete }: UserActions) => {
+export const getUserColumns = ({ onEdit, onDelete, soignants }: UserActions) => {
   return [
     columnHelper.accessor('firstName', {
       header: 'Prénom',
@@ -56,6 +58,13 @@ export const getUserColumns = ({ onEdit, onDelete }: UserActions) => {
     columnHelper.accessor('role', {
       header: 'Rôle',
       cell: ({ row }) => <RoleLabel role={row.original.role} />,
+    }),
+    columnHelper.accessor('soignantId', {
+      header: 'Fonction',
+      cell: ({ row }) => {
+        const soignant = soignants?.find((s) => s.id === row.original.soignantId)
+        return soignant?.name ?? '-'
+      },
     }),
     columnHelper.display({
       id: 'actions',

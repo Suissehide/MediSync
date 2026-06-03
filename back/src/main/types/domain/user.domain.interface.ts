@@ -6,13 +6,16 @@ import type {
 export type UserEntityDomain = UserEntityRepo
 export type UserDTO = Pick<
   UserEntityRepo,
-  'id' | 'email' | 'firstName' | 'lastName' | 'role'
+  'id' | 'email' | 'firstName' | 'lastName' | 'role' | 'soignantId'
 >
 
-export type UserUpdateEntityDomain = Pick<
-  UserUpdateEntityRepo,
-  'email' | 'firstName' | 'lastName' | 'role'
->
+export type UserUpdateEntityDomain = {
+  email?: string
+  firstName?: string
+  lastName?: string
+  role?: 'NONE' | 'USER' | 'ADMIN'
+  soignantId?: string | null
+}
 
 export interface UserDomainInterface {
   findAll: () => Promise<UserEntityDomain[]>

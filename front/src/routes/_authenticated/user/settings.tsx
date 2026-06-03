@@ -1,10 +1,11 @@
 import { createFileRoute, useNavigate, useRouter } from '@tanstack/react-router'
 import { ArrowLeft, Shield, UserRoundPen } from 'lucide-react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 
 import DashboardLayout from '../../../components/dashboard.layout.tsx'
 import { Button } from '../../../components/ui/button.tsx'
 import { useAppForm } from '../../../hooks/formConfig.tsx'
+import { useSoignantQueries } from '../../../queries/useSoignant.ts'
 import { useUserMutations } from '../../../queries/useUser.ts'
 
 export const Route = createFileRoute('/_authenticated/user/settings')({
@@ -17,18 +18,29 @@ function UserSettings() {
   const authState = router.options.context?.authState
   const user = authState?.user
   const { updateUser } = useUserMutations()
+  const { soignants } = useSoignantQueries()
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false)
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false)
+
+  const soignantOptions = useMemo(() => {
+    const options = [{ value: '', label: 'Aucune' }]
+    if (soignants) {
+      for (const s of soignants) {
+        options.push({ value: s.id, label: s.name })
+      }
+    }
+    return options
+  }, [soignants])
 
   const profileForm = useAppForm({
     defaultValues: {
       firstName: user?.firstName || '',
       lastName: user?.lastName || '',
+      soignantId: user?.soignantId || '',
     },
     onSubmit: async ({ value }) => {
       setIsUpdatingProfile(true)
       try {
-        console.log(user)
         if (!user?.id) {
           return
         }
@@ -37,6 +49,7 @@ function UserSettings() {
           id: user.id,
           firstName: value.firstName,
           lastName: value.lastName,
+          soignantId: value.soignantId || null,
         })
       } finally {
         setIsUpdatingProfile(false)
@@ -97,13 +110,21 @@ function UserSettings() {
                 await profileForm.handleSubmit()
               }}
             >
-              <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="grid grid-cols-2 gap-4 mb-4">
                 <profileForm.AppField name="firstName">
                   {(field) => <field.Input label="Prénom" />}
                 </profileForm.AppField>
 
                 <profileForm.AppField name="lastName">
                   {(field) => <field.Input label="Nom" />}
+                </profileForm.AppField>
+              </div>
+
+              <div className="mb-6">
+                <profileForm.AppField name="soignantId">
+                  {(field) => (
+                    <field.Select label="Fonction" options={soignantOptions} />
+                  )}
                 </profileForm.AppField>
               </div>
 

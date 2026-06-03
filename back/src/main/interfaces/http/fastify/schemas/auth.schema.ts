@@ -8,6 +8,7 @@ export const userSchema = z.object({
   firstName: z.string().optional(),
   lastName: z.string().optional(),
   role: z.enum(['NONE', 'USER', 'ADMIN']),
+  soignantId: z.string().nullish(),
 })
 
 export const registerSchema = userSchema
@@ -15,6 +16,7 @@ export const registerSchema = userSchema
     email: true,
     firstName: true,
     lastName: true,
+    soignantId: true,
   })
   .extend({
     password: z.string({
@@ -36,6 +38,7 @@ export const signInResponseSchema = z.object({
   email: z.string(),
   firstName: z.string().nullish(),
   lastName: z.string().nullish(),
+  soignantId: z.string().nullish(),
 })
 
 export type SignInInput = z.infer<typeof signInSchema>

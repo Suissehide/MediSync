@@ -6,6 +6,7 @@ import DeleteUserForm from '../../../../components/custom/popup/deleteUserForm.t
 import EditUserForm from '../../../../components/custom/popup/editUserForm.tsx'
 import DashboardLayout from '../../../../components/dashboard.layout.tsx'
 import ReactTable from '../../../../components/table/reactTable.tsx'
+import { useSoignantQueries } from '../../../../queries/useSoignant.ts'
 import { useAllUsersQuery } from '../../../../queries/useUser.ts'
 import type { User } from '../../../../types/auth.ts'
 
@@ -15,6 +16,7 @@ export const Route = createFileRoute('/_authenticated/_admin/settings/user')({
 
 function UserList() {
   const { users, isPending } = useAllUsersQuery()
+  const { soignants } = useSoignantQueries()
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
@@ -32,6 +34,7 @@ function UserList() {
   const columns = getUserColumns({
     onEdit: handleOpenEditUser,
     onDelete: handleOpenDeleteUser,
+    soignants,
   })
 
   return (

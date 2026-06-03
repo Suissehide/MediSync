@@ -28,7 +28,7 @@ export default async function seedUsers(prisma: PrismaClient) {
         role: Role.ADMIN,
       },
       {
-        email: 'sabrina.bernadet@example.com',
+        email: 'sabrina.bernadet@cepta.fr',
         password: userPass.hash,
         salt: userPass.salt,
         firstName: 'Sabrina',
