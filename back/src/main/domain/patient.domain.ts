@@ -262,10 +262,15 @@ class PatientDomain implements PatientDomainInterface {
         const firstAppointmentOnly = matchingTemplate?.firstAppointmentOnly ?? false
 
         // Trouver les parcours disponibles par tag
-        const pathways = await this.pathwayRepository.findByTemplateTagAndDate(
-          enrollment.tag,
-          startDate,
-        )
+        const pathways = firstAppointmentOnly
+          ? await this.pathwayRepository.findByTemplateTagWithFutureSlots(
+              enrollment.tag,
+              startDate,
+            )
+          : await this.pathwayRepository.findByTemplateTagAndDate(
+              enrollment.tag,
+              startDate,
+            )
 
         if (pathways.length === 0) {
           failedEnrollments.push({
@@ -278,8 +283,11 @@ class PatientDomain implements PatientDomainInterface {
         let validPathway: PathwayWithSlotsRepo | undefined
 
         if (firstAppointmentOnly) {
+          const startOfDay = new Date(startDate)
+          startOfDay.setHours(0, 0, 0, 0)
           validPathway = pathways.find((pathway) =>
             pathway.slots
+              .filter((slot) => new Date(slot.startDate) >= startOfDay)
               .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
               .some((slot) =>
                 this.isSlotAvailable(
@@ -311,6 +319,7 @@ class PatientDomain implements PatientDomainInterface {
             thematicName,
             thematicDuration,
             firstAppointmentOnly,
+            startDate,
           )
           enrollments.push({
             slotTemplate: {
@@ -443,11 +452,20 @@ class PatientDomain implements PatientDomainInterface {
     thematicName?: string,
     appointmentDuration = 30,
     firstAppointmentOnly = false,
+    enrollmentDate?: Date,
   ): Promise<EnrollmentAppointment[]> {
     const { type, motif } = pathwayTemplate
-    const slots = [...pathway.slots].sort(
+    let slots = [...pathway.slots].sort(
       (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
     )
+
+    // En mode firstAppointmentOnly, ne considérer que les slots futurs
+    if (firstAppointmentOnly && enrollmentDate) {
+      const startOfDay = new Date(enrollmentDate)
+      startOfDay.setHours(0, 0, 0, 0)
+      slots = slots.filter((slot) => new Date(slot.startDate) >= startOfDay)
+    }
+
     const enrollmentAppointments: EnrollmentAppointment[] = []
 
     for (const slot of slots) {
