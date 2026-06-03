@@ -259,6 +259,8 @@ class PatientDomain implements PatientDomainInterface {
           continue
         }
 
+        const firstAppointmentOnly = matchingTemplate?.firstAppointmentOnly ?? false
+
         // Trouver les parcours disponibles par tag
         const pathways = await this.pathwayRepository.findByTemplateTagAndDate(
           enrollment.tag,
@@ -273,15 +275,33 @@ class PatientDomain implements PatientDomainInterface {
           continue
         }
 
-        const validPathway = pathways.find((pathway) =>
-          this.isPathwayAvailable(
-            pathway.slots,
-            enrollment.timeOfDay,
-            patient.appointmentPatients,
-            1,
-            thematicDuration,
-          ),
-        )
+        let validPathway: PathwayWithSlotsRepo | undefined
+
+        if (firstAppointmentOnly) {
+          validPathway = pathways.find((pathway) =>
+            pathway.slots
+              .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
+              .some((slot) =>
+                this.isSlotAvailable(
+                  slot,
+                  enrollment.timeOfDay,
+                  patient.appointmentPatients,
+                  1,
+                  thematicDuration,
+                ),
+              ),
+          )
+        } else {
+          validPathway = pathways.find((pathway) =>
+            this.isPathwayAvailable(
+              pathway.slots,
+              enrollment.timeOfDay,
+              patient.appointmentPatients,
+              1,
+              thematicDuration,
+            ),
+          )
+        }
 
         if (validPathway) {
           const appointments = await this.enrollOnPathway(
@@ -290,6 +310,7 @@ class PatientDomain implements PatientDomainInterface {
             enrollment,
             thematicName,
             thematicDuration,
+            firstAppointmentOnly,
           )
           enrollments.push({
             slotTemplate: {
@@ -344,6 +365,65 @@ class PatientDomain implements PatientDomainInterface {
     }
   }
 
+  private isSlotAvailable(
+    slot: SlotWithTemplateAndAppointmentsRepo,
+    timeOfDay: TimeOfDay,
+    patientAppointments: AppointmentPatientWithAppointmentDomain[],
+    maxCapacity = 1,
+    appointmentDuration = 30,
+  ): boolean {
+    const slotStart = dayjs(slot.startDate)
+    const slotEnd = dayjs(slot.endDate)
+    const slotHour = slotStart.hour()
+
+    if (
+      (timeOfDay === timeOfDaySchema.enum.MORNING && slotHour >= 13) ||
+      (timeOfDay === timeOfDaySchema.enum.AFTERNOON && slotHour < 13)
+    ) {
+      return false
+    }
+
+    const overlapsPatient = patientAppointments.some((patientAppointment) => {
+      const appointment = patientAppointment.appointment
+      const appointmentStart = dayjs(appointment.startDate)
+      const appointmentEnd = dayjs(appointment.endDate)
+      return (
+        slotStart.isBefore(appointmentEnd) &&
+        slotEnd.isAfter(appointmentStart)
+      )
+    })
+    if (overlapsPatient) {
+      return false
+    }
+
+    if (slot.slotTemplate.isIndividual) {
+      const nextSlot = this.getNextAvailableAppointment(
+        slotStart.toDate(),
+        slotEnd.toDate(),
+        slot.appointments,
+        appointmentDuration,
+      )
+      if (!nextSlot) {
+        return false
+      }
+    }
+
+    if (!slot.slotTemplate.isIndividual) {
+      if (slot.appointments && slot.appointments.length > 0) {
+        const allFull = slot.appointments.every(
+          (appointment) =>
+            (appointment.appointmentPatients?.length ?? 0) >=
+            (slot.slotTemplate.capacity ?? maxCapacity),
+        )
+        if (allFull) {
+          return false
+        }
+      }
+    }
+
+    return true
+  }
+
   private isPathwayAvailable(
     slots: SlotWithTemplateAndAppointmentsRepo[],
     timeOfDay: TimeOfDay,
@@ -351,63 +431,9 @@ class PatientDomain implements PatientDomainInterface {
     maxCapacity = 1,
     appointmentDuration = 30,
   ): boolean {
-    // Tous les slots doivent passer les vérifications
-    return slots.every((slot) => {
-      const slotStart = dayjs(slot.startDate)
-      const slotEnd = dayjs(slot.endDate)
-      const slotHour = slotStart.hour()
-
-      // 1️⃣ Vérifier le moment de la journée
-      if (
-        (timeOfDay === timeOfDaySchema.enum.MORNING && slotHour >= 13) ||
-        (timeOfDay === timeOfDaySchema.enum.AFTERNOON && slotHour < 13)
-      ) {
-        return false
-      }
-
-      // 2️⃣ Vérifier si le patient n'a pas déjà un appointment qui chevauche
-      const overlapsPatient = patientAppointments.some((patientAppointment) => {
-        const appointment = patientAppointment.appointment
-        const appointmentStart = dayjs(appointment.startDate)
-        const appointmentEnd = dayjs(appointment.endDate)
-        return (
-          slotStart.isBefore(appointmentEnd) &&
-          slotEnd.isAfter(appointmentStart)
-        )
-      })
-      if (overlapsPatient) {
-        return false
-      }
-
-      // 3️⃣ Slots individuels : vérifier qu'un créneau libre existe
-      if (slot.slotTemplate.isIndividual) {
-        const nextSlot = this.getNextAvailableAppointment(
-          slotStart.toDate(),
-          slotEnd.toDate(),
-          slot.appointments,
-          appointmentDuration,
-        )
-        if (!nextSlot) {
-          return false
-        }
-      }
-
-      // 4️⃣ Slots multiples : vérifier la capacité
-      if (!slot.slotTemplate.isIndividual) {
-        if (slot.appointments && slot.appointments.length > 0) {
-          const allFull = slot.appointments.every(
-            (appointment) =>
-              (appointment.appointmentPatients?.length ?? 0) >=
-              (slot.slotTemplate.capacity ?? maxCapacity),
-          )
-          if (allFull) {
-            return false
-          }
-        }
-      }
-
-      return true
-    })
+    return slots.every((slot) =>
+      this.isSlotAvailable(slot, timeOfDay, patientAppointments, maxCapacity, appointmentDuration),
+    )
   }
 
   private async enrollOnPathway(
@@ -416,9 +442,12 @@ class PatientDomain implements PatientDomainInterface {
     pathwayTemplate: PathwayEnrollmentInput,
     thematicName?: string,
     appointmentDuration = 30,
+    firstAppointmentOnly = false,
   ): Promise<EnrollmentAppointment[]> {
     const { type, motif } = pathwayTemplate
-    const slots = pathway.slots
+    const slots = [...pathway.slots].sort(
+      (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
+    )
     const enrollmentAppointments: EnrollmentAppointment[] = []
 
     for (const slot of slots) {
@@ -449,11 +478,17 @@ class PatientDomain implements PatientDomainInterface {
               endDate: appointment.endDate,
               success: true,
             })
+
+            if (firstAppointmentOnly) {
+              return enrollmentAppointments
+            }
           } else {
-            enrollmentAppointments.push({
-              success: false,
-              error: `Erreur lors de l'inscription au créneau du ${slot.startDate}`,
-            })
+            if (!firstAppointmentOnly) {
+              enrollmentAppointments.push({
+                success: false,
+                error: `Erreur lors de l'inscription au créneau du ${slot.startDate}`,
+              })
+            }
           }
         } else {
           // Créneau multiple : rejoindre un rendez-vous existant ou en créer un
@@ -479,6 +514,10 @@ class PatientDomain implements PatientDomainInterface {
               endDate: existingAppointment.endDate,
               success: true,
             })
+
+            if (firstAppointmentOnly) {
+              return enrollmentAppointments
+            }
           } else {
             // Créer un nouveau rendez-vous
             const appointment = await this.appointmentRepository.create({
@@ -497,6 +536,10 @@ class PatientDomain implements PatientDomainInterface {
               endDate: appointment.endDate,
               success: true,
             })
+
+            if (firstAppointmentOnly) {
+              return enrollmentAppointments
+            }
           }
         }
       } catch {
