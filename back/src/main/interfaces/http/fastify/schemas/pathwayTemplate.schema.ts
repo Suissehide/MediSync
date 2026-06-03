@@ -27,6 +27,7 @@ export const createPathwayTemplateSchema = pathwayTemplateSchema
     name: true,
     color: true,
     motifRequired: true,
+    firstAppointmentOnly: true,
   })
   .extend({
     slotTemplateIDs: z.array(z.cuid()),
