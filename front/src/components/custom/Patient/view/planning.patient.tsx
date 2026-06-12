@@ -77,6 +77,25 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
       })
   }, [slots, patient])
 
+  const nextAppointmentDate = useMemo(() => {
+    if (!slots || !patient) {
+      return undefined
+    }
+    const now = dayjs.utc()
+    const nextApt = slots
+      .flatMap((s) => s.appointments ?? [])
+      .filter(
+        (apt) =>
+          apt.appointmentPatients?.some(
+            (ap) => ap.patient.id === patient.id,
+          ) && dayjs.utc(apt.startDate).isAfter(now),
+      )
+      .sort((a, b) =>
+        dayjs.utc(a.startDate).diff(dayjs.utc(b.startDate)),
+      )[0]
+    return nextApt?.startDate
+  }, [slots, patient])
+
   const { availableEvents, enrolledSlotIds, patientAppointmentBySlotId } =
     useMemo(() => {
       if (!slots || !patient) {
@@ -222,38 +241,42 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
       </div>
 
       <div className="flex-1 min-h-0 overflow-hidden [&_.fc_.fc-header-toolbar]:!p-0">
-        <Calendar
-          key={selectedTag}
-          events={selectedTag ? availableEvents : appointmentEvents}
-          editable={false}
-          initialDate={savedDate}
-          handleClickEvent={
-            selectedTag ? handleClickSlot : handleClickAppointmentEvent
-          }
-          handleOpenEvent={handleOpenEvent}
-          handleSelectEvent={selectedTag ? handleSelectPatientSlot : undefined}
-          selectAllow={
-            selectedTag
-              ? (selectInfo) => {
-                  const selStart = dayjs.utc(selectInfo.start)
-                  const selEnd = dayjs.utc(selectInfo.end)
-                  return (slots ?? []).some(
-                    (slot) =>
-                      slot.slotTemplate.isIndividual &&
-                      !slot.locked &&
-                      !enrolledSlotIds.has(slot.id) &&
-                      selStart.isSameOrAfter(dayjs.utc(slot.startDate)) &&
-                      selEnd.isSameOrBefore(dayjs.utc(slot.endDate)),
-                  )
-                }
-              : undefined
-          }
-          unselectRef={calendarUnselectRef}
-          headerToolbar={{
-            left: 'title',
-            right: 'prev,next today',
-          }}
-        />
+        {slots && (
+          <Calendar
+            key={selectedTag}
+            events={selectedTag ? availableEvents : appointmentEvents}
+            editable={false}
+            initialDate={nextAppointmentDate ?? savedDate}
+            handleClickEvent={
+              selectedTag ? handleClickSlot : handleClickAppointmentEvent
+            }
+            handleOpenEvent={handleOpenEvent}
+            handleSelectEvent={
+              selectedTag ? handleSelectPatientSlot : undefined
+            }
+            selectAllow={
+              selectedTag
+                ? (selectInfo) => {
+                    const selStart = dayjs.utc(selectInfo.start)
+                    const selEnd = dayjs.utc(selectInfo.end)
+                    return (slots ?? []).some(
+                      (slot) =>
+                        slot.slotTemplate.isIndividual &&
+                        !slot.locked &&
+                        !enrolledSlotIds.has(slot.id) &&
+                        selStart.isSameOrAfter(dayjs.utc(slot.startDate)) &&
+                        selEnd.isSameOrBefore(dayjs.utc(slot.endDate)),
+                    )
+                  }
+                : undefined
+            }
+            unselectRef={calendarUnselectRef}
+            headerToolbar={{
+              left: 'title',
+              right: 'prev,next today',
+            }}
+          />
+        )}
       </div>
 
       {openCreateAppointmentModal && (
