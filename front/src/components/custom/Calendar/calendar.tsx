@@ -150,6 +150,7 @@ interface CalendarProps {
   selectedSlotIds?: Set<string>
   onToggleSelect?: (eventId: string) => void
   unselectRef?: React.MutableRefObject<(() => void) | null>
+  weekAnchorDate?: string
 }
 
 function Calendar({
@@ -174,7 +175,15 @@ function Calendar({
   selectedSlotIds,
   onToggleSelect,
   unselectRef,
+  weekAnchorDate,
 }: CalendarProps) {
+  const anchorMonday = useMemo(
+    () =>
+      weekAnchorDate
+        ? dayjs.utc(weekAnchorDate).isoWeekday(1).startOf('day')
+        : null,
+    [weekAnchorDate],
+  )
   const lastDropTimeRef = useRef<number>(0)
   const calendarRef = useRef<FullCalendar | null>(null)
 
@@ -314,7 +323,10 @@ function Calendar({
         ref={calendarRef}
         plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
         initialView="timeGridWeek"
-        initialDate={initialDate || dayjs().toISOString()}
+        initialDate={
+          initialDate || anchorMonday?.toISOString() || dayjs().toISOString()
+        }
+        validRange={anchorMonday ? { start: anchorMonday.toDate() } : undefined}
         locale={frLocale}
         timeZone={'UTC'}
         eventTimeFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
@@ -340,6 +352,11 @@ function Calendar({
         }
         titleFormat={(arg) => {
           const start = dayjs.utc(arg.start.marker)
+          if (anchorMonday) {
+            const weekNum =
+              start.startOf('isoWeek').diff(anchorMonday, 'week') + 1
+            return `Semaine ${weekNum}`
+          }
           const week = start.isoWeek()
           const startStr = start.format('DD MMMM')
           if (!arg.end) {

@@ -525,7 +525,7 @@ function Planning() {
   }
 
   const mergedEvents = useMemo(() => {
-    return editMode ? [...events, ...(eventTemplates ?? [])] : events
+    return editMode ? (eventTemplates ?? []) : events
   }, [events, eventTemplates, editMode])
 
   useEffect(() => {
@@ -701,12 +701,18 @@ function Planning() {
                 handleOpenEvent={setOpenEventId}
                 editMode={editMode}
                 editable={true}
-                forbiddenWeeks={forbiddenWeeks ?? []}
+                forbiddenWeeks={editMode ? [] : (forbiddenWeeks ?? [])}
                 onDuplicate={handleDuplicateSlot}
                 onDelete={handleDeleteHoverSlot}
                 onToggleLock={handleToggleLock}
                 selectedSlotIds={selectedSlotIds}
                 onToggleSelect={handleToggleSelect}
+                weekAnchorDate={editMode ? startDate : undefined}
+                headerToolbar={
+                  editMode
+                    ? { left: 'title', right: 'prev,next' }
+                    : undefined
+                }
               />
             ) : (
               <div
