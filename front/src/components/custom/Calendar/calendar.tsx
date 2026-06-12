@@ -338,9 +338,18 @@ function Calendar({
             right: 'selectDateButton prev,next today',
           }
         }
-        titleFormat={{
-          day: '2-digit',
-          month: 'long',
+        titleFormat={(arg) => {
+          const start = dayjs.utc(arg.start.marker)
+          const week = start.isoWeek()
+          const startStr = start.format('DD MMMM')
+          if (!arg.end) {
+            return `s${week} • ${startStr}`
+          }
+          const endStr = dayjs
+            .utc(arg.end.marker)
+            .subtract(1, 'day')
+            .format('DD MMMM')
+          return `s${week} • ${startStr} - ${endStr}`
         }}
         dayHeaderFormat={{
           weekday: 'short',
@@ -352,6 +361,7 @@ function Calendar({
           return minute === '00' ? `${hour}h` : `${hour}:${minute}`
         }}
         height="100%"
+        scrollTimeReset={false}
         slotMinTime="06:00:00"
         slotDuration="00:30:00"
         slotLabelInterval="01:00"
