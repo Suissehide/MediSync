@@ -367,6 +367,7 @@ function Planning() {
         description: slotTemplate.description,
         color: slotTemplate.color,
         isIndividual: slotTemplate.isIndividual,
+        capacity: slotTemplate.capacity,
         soignantID: slotTemplate.soignant?.id ?? '',
         templateID: currentPathwayTemplate.id,
       })
@@ -475,6 +476,7 @@ function Planning() {
           description: slotTemplate.description,
           color: slotTemplate.color,
           isIndividual: slotTemplate.isIndividual,
+          capacity: slotTemplate.capacity,
           soignantID: slotTemplate.soignant?.id ?? '',
           templateID: currentPathwayTemplate.id,
         })
