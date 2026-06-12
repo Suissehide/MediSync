@@ -235,15 +235,15 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
           selectAllow={
             selectedTag
               ? (selectInfo) => {
-                  const selStart = dayjs(selectInfo.start)
-                  const selEnd = dayjs(selectInfo.end)
+                  const selStart = dayjs.utc(selectInfo.start)
+                  const selEnd = dayjs.utc(selectInfo.end)
                   return (slots ?? []).some(
                     (slot) =>
                       slot.slotTemplate.isIndividual &&
                       !slot.locked &&
                       !enrolledSlotIds.has(slot.id) &&
-                      selStart.isSameOrAfter(dayjs(slot.startDate)) &&
-                      selEnd.isSameOrBefore(dayjs(slot.endDate)),
+                      selStart.isSameOrAfter(dayjs.utc(slot.startDate)) &&
+                      selEnd.isSameOrBefore(dayjs.utc(slot.endDate)),
                   )
                 }
               : undefined

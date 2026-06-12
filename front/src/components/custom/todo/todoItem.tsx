@@ -28,7 +28,7 @@ interface todoItemProps {
 export default function TodoItem({ todo }: todoItemProps) {
   const { updateTodo, deleteTodo } = useTodoMutations()
 
-  const date = dayjs(todo.createDate).format('dddd DD MMM')
+  const date = dayjs.utc(todo.createDate).format('dddd DD MMM')
 
   const handleUpdateTodo = (todo: Todo) => {
     updateTodo.mutate(todo)

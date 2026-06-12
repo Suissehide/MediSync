@@ -57,13 +57,13 @@ function AddSlotForm({
     [soignants],
   )
 
-  const today = dayjs()
+  const today = dayjs.utc()
 
   const form = useAppForm({
     defaultValues: {
-      startDate: startDate ? dayjs(startDate) : today,
-      startTime: startDate ? dayjs(startDate) : today,
-      endTime: endDate ? dayjs(endDate) : today,
+      startDate: startDate ? dayjs.utc(startDate) : today,
+      startTime: startDate ? dayjs.utc(startDate) : today,
+      endTime: endDate ? dayjs.utc(endDate) : today,
       soignant: '',
       thematic: '',
       location: '',
@@ -174,7 +174,9 @@ function AddSlotForm({
                     <div>
                       <DatePicker
                         value={field.state.value}
-                        onChange={(date) => field.handleChange(date ?? dayjs())}
+                        onChange={(date) =>
+                          field.handleChange(date ?? dayjs.utc())
+                        }
                       />
                       <FieldInfo field={field} />
                     </div>
@@ -191,7 +193,9 @@ function AddSlotForm({
                     <div>
                       <TimePicker
                         value={field.state.value}
-                        onChange={(time) => field.handleChange(time ?? dayjs())}
+                        onChange={(time) =>
+                          field.handleChange(time ?? dayjs.utc())
+                        }
                       />
                       <FieldInfo field={field} />
                     </div>
@@ -206,7 +210,9 @@ function AddSlotForm({
                     <div>
                       <TimePicker
                         value={field.state.value}
-                        onChange={(time) => field.handleChange(time ?? dayjs())}
+                        onChange={(time) =>
+                          field.handleChange(time ?? dayjs.utc())
+                        }
                       />
                       <FieldInfo field={field} />
                     </div>

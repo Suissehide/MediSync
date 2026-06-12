@@ -128,10 +128,11 @@ export default function EventTemplateSheet({
             <div>
               <SheetTitle className="mb-[-4px]">Template de créneau</SheetTitle>
               <div className="text-sm text-text-light">
-                {`${dayjs(slotTemplate?.startTime)
-                  .format('dddd D MMMM [de] hh:mm')
+                {`${dayjs
+                  .utc(slotTemplate?.startTime)
+                  .format('dddd D MMMM [de] HH:mm')
                   .replace(/^./, (c) => c.toUpperCase())}
-                    ${dayjs(slotTemplate?.endTime).format('[à] hh:mm')}
+                    ${dayjs.utc(slotTemplate?.endTime).format('[à] HH:mm')}
                     ${formatDuration(slotTemplate?.startTime, slotTemplate?.endTime)}`}
               </div>
             </div>

@@ -104,6 +104,7 @@ export function WeekPicker({ value, onChange }: WeekPickerProps) {
       <DateCalendar
         value={value}
         onChange={(date) => onChange(date)}
+        timezone="UTC"
         showDaysOutsideCurrentMonth
         slots={{ day: WeekDay as React.ComponentType<PickersDayProps> }}
         slotProps={{

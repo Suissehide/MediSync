@@ -61,7 +61,7 @@ function getCommonPinningStyles(
 
 function SuiviPage() {
   const navigate = useNavigate()
-  const [date, setDate] = useState<Dayjs>(dayjs())
+  const [date, setDate] = useState<Dayjs>(dayjs.utc())
   const containerRef = useRef<HTMLDivElement>(null)
 
   const { trackingPathways, isPending } = usePathwayTrackingQuery(
@@ -76,8 +76,8 @@ function SuiviPage() {
   )
 
   const today =
-    dayjs().year() === date.year() && dayjs().month() === date.month()
-      ? dayjs().date()
+    dayjs.utc().year() === date.year() && dayjs.utc().month() === date.month()
+      ? dayjs.utc().date()
       : null
 
   const rows = useMemo<SuiviRow[]>(() => {
@@ -110,7 +110,7 @@ function SuiviPage() {
         lastName: patient.lastName,
         days: new Map(
           patient.appointments.map((apt) => [
-            dayjs(apt.date).date(),
+            dayjs.utc(apt.date).date(),
             { status: apt.status },
           ]),
         ),
@@ -271,10 +271,10 @@ function SuiviPage() {
                             {row.original.pathwayName}
                             {row.original.pathwayStartDate && (
                               <span className="ml-3 font-normal text-text-light">
-                                {dayjs(row.original.pathwayStartDate).format('DD/MM/YYYY')}
+                                {dayjs.utc(row.original.pathwayStartDate).format('DD/MM/YYYY')}
                                 {' – '}
                                 {row.original.pathwayEndDate
-                                  ? dayjs(row.original.pathwayEndDate).format('DD/MM/YYYY')
+                                  ? dayjs.utc(row.original.pathwayEndDate).format('DD/MM/YYYY')
                                   : '…'}
                               </span>
                             )}

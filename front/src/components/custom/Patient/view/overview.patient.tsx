@@ -64,7 +64,7 @@ function EnrollmentIssueRow({
   onDismiss: (issue: EnrollmentIssue) => void
   loading: boolean
 }) {
-  const startDate = dayjs(issue.startDate).format('DD/MM/YYYY')
+  const startDate = dayjs.utc(issue.startDate).format('DD/MM/YYYY')
   return (
     <div className="flex justify-center items-center gap-2 rounded bg-amber-50 border border-amber-200 px-3 py-2">
       <AlertTriangle className="h-3 w-3 text-amber-500" />
@@ -101,7 +101,8 @@ function PathwayCard({
   onRemove: (pathwayID: string) => void
 }) {
   const color = templateColor ?? '#6b7280'
-  const formattedDate = dayjs(startDate)
+  const formattedDate = dayjs
+    .utc(startDate)
     .format('D MMMM YYYY')
     .replace(/^./, (c) => c.toUpperCase())
 

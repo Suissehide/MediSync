@@ -40,7 +40,7 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
       lastName: '',
       gender: '',
       birthDate: '',
-      startDate: dayjs(),
+      startDate: dayjs.utc(),
     },
     onSubmit: async ({ value }) => {
       const periodToTimeOfDay: Record<PathwayPeriod, TimeOfDay> = {

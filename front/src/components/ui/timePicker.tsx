@@ -23,6 +23,7 @@ export const TimePicker = ({
       onChange={onChange}
       label={label}
       ampm={false}
+      timezone="UTC"
       {...props}
       slotProps={{
         popper: {

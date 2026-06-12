@@ -64,7 +64,7 @@ export function AddPatientToPathwayForm({
   const handleOpenChange = (next: boolean) => {
     setOpen(next)
     if (next) {
-      setStartDate(dayjs())
+      setStartDate(dayjs.utc())
       pathwayState.reset()
     }
   }

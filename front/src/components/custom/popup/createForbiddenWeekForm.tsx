@@ -26,7 +26,7 @@ export function CreateForbiddenWeekForm({
   onConfirm,
   loading = false,
 }: CreateForbiddenWeekFormProps) {
-  const weekStart = date ? dayjs(date).isoWeekday(1) : null
+  const weekStart = date ? dayjs.utc(date).isoWeekday(1) : null
   const weekStartLabel = weekStart ? weekStart.format('DD MMMM YYYY') : ''
   const weekEndLabel = weekStart ? weekStart.add(6, 'day').format('DD MMMM YYYY') : ''
 

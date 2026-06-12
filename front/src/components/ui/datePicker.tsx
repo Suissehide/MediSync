@@ -23,6 +23,7 @@ export const DatePicker = ({
       value={value}
       onChange={onChange}
       label={label}
+      timezone="UTC"
       slots={{
         openPickerIcon: () => <CalendarDays className="h-4 w-4 text-primary" />,
         ...slots,

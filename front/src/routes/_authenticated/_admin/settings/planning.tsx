@@ -190,10 +190,9 @@ function Planning() {
     const weeks = recurrenceWeeks ?? 1
 
     if (editMode) {
-      const baseOffsetDays = dayjs(newSlot.startDate).diff(
-        dayjs(startDate),
-        'day',
-      )
+      const baseOffsetDays = dayjs
+        .utc(newSlot.startDate)
+        .diff(dayjs.utc(startDate), 'day')
       for (let w = 0; w < weeks; w++) {
         const offsetDays = baseOffsetDays + w * 7
         const slotTemplate = {
@@ -218,8 +217,8 @@ function Planning() {
       }
     } else {
       for (let w = 0; w < weeks; w++) {
-        const weekStart = dayjs(newSlot.startDate).add(w * 7, 'day')
-        const weekEnd = dayjs(newSlot.endDate).add(w * 7, 'day')
+        const weekStart = dayjs.utc(newSlot.startDate).add(w * 7, 'day')
+        const weekEnd = dayjs.utc(newSlot.endDate).add(w * 7, 'day')
         const weekSlot: CreateSlotParamsWithTemplateData = {
           startDate: weekStart.toISOString(),
           endDate: weekEnd.toISOString(),
@@ -246,7 +245,9 @@ function Planning() {
     const slotId = id.replace(/^.*?_/, '')
 
     if (editMode) {
-      const newOffsetDays = dayjs(start).diff(dayjs(startDate), 'day')
+      const newOffsetDays = dayjs
+        .utc(start)
+        .diff(dayjs.utc(startDate), 'day')
 
       updateSlotTemplate.mutate({
         id: slotId,
@@ -325,14 +326,16 @@ function Planning() {
     slot: { startDate: string; endDate: string },
     targetWeekStart: dayjs.Dayjs,
   ) => {
-    const slotStart = dayjs(slot.startDate)
-    const slotWeekStart = slotStart.isoWeekday(1).utc().startOf('day')
+    const slotStart = dayjs.utc(slot.startDate)
+    const slotWeekStart = slotStart.isoWeekday(1).startOf('day')
     const dayOffset = slotStart.diff(slotWeekStart, 'day')
     const timeOfDay = slotStart.format('HH:mm:ss')
-    const duration = dayjs(slot.endDate).diff(slotStart, 'minute')
+    const duration = dayjs.utc(slot.endDate).diff(slotStart, 'minute')
 
     const newStart = targetWeekStart.add(dayOffset, 'day')
-    const newStartFull = dayjs(`${newStart.format('YYYY-MM-DD')}T${timeOfDay}`)
+    const newStartFull = dayjs.utc(
+      `${newStart.format('YYYY-MM-DD')}T${timeOfDay}`,
+    )
     const newEnd = newStartFull.add(duration, 'minute')
     return { newStart: newStartFull, newEnd }
   }
@@ -552,9 +555,9 @@ function Planning() {
     if (!isForbiddenWeekMode) {
       return
     }
-    const clickedDate = dayjs(info.dateStr)
+    const clickedDate = dayjs.utc(info.dateStr)
     const matchingForbiddenWeek = (forbiddenWeeks ?? []).find((fw) => {
-      const start = dayjs(fw.startOfWeek)
+      const start = dayjs.utc(fw.startOfWeek)
       return (
         (clickedDate.isSame(start) || clickedDate.isAfter(start)) &&
         clickedDate.isBefore(start.add(7, 'day'))
@@ -649,8 +652,8 @@ function Planning() {
                       const { viewStart } = usePlanningStore.getState()
                       setDuplicateWeekDate(
                         viewStart
-                          ? dayjs(viewStart).isoWeekday(1)
-                          : dayjs().isoWeekday(1),
+                          ? dayjs.utc(viewStart).isoWeekday(1)
+                          : dayjs.utc().isoWeekday(1),
                       )
                     }
                     setShowDuplicateModal(true)
@@ -661,8 +664,8 @@ function Planning() {
                       const { viewStart } = usePlanningStore.getState()
                       setMoveWeekDate(
                         viewStart
-                          ? dayjs(viewStart).isoWeekday(1)
-                          : dayjs().isoWeekday(1),
+                          ? dayjs.utc(viewStart).isoWeekday(1)
+                          : dayjs.utc().isoWeekday(1),
                       )
                     }
                     setShowMoveModal(true)
@@ -739,9 +742,9 @@ function Planning() {
                     lastDropTimeRef.current = now
                     const pathwayId =
                       info.draggedEl.getAttribute('data-pathway-id')
-                    const weekStart = dayjs(info.date)
+                    const weekStart = dayjs
+                      .utc(info.date)
                       .isoWeekday(1)
-                      .utc()
                       .startOf('day')
                     if (pathwayId) {
                       handleInstantiatePathway(
@@ -765,8 +768,11 @@ function Planning() {
                       const rect = info.el.getBoundingClientRect()
                       setHoveredPathway({
                         title: info.event.title,
-                        start: dayjs(info.event.start).format('DD/MM/YYYY'),
-                        end: dayjs(info.event.end)
+                        start: dayjs
+                          .utc(info.event.start)
+                          .format('DD/MM/YYYY'),
+                        end: dayjs
+                          .utc(info.event.end)
                           .subtract(1, 'day')
                           .format('DD/MM/YYYY'),
                         x: rect.left + rect.width / 2,

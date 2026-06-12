@@ -30,7 +30,7 @@ export default function TodoSheet() {
     })),
   )
   const hasNewTodos = useTodoStore(selectHasNewTodos)
-  const today = dayjs().format('dddd DD MMMM')
+  const today = dayjs.utc().format('dddd DD MMMM')
   const [filter, setFilter] = useState('all')
 
   const filteredTodos = todos

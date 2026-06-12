@@ -51,7 +51,7 @@ function AddAppointmentForm({
   handleCreateAppointment,
   defaultPatientIDs,
 }: AddAppointmentFormProps) {
-  const today = dayjs()
+  const today = dayjs.utc()
   const { thematics } = useThematicQueries()
   const { patients } = usePatientQueries()
   const { slot } = useSlotByIDQuery(slotID)
@@ -68,7 +68,7 @@ function AddAppointmentForm({
       startTime: startDate ? dayjs.utc(startDate) : today,
       duration:
         startDate && endDate
-          ? dayjs(endDate).diff(dayjs(startDate), 'minute').toString()
+          ? dayjs.utc(endDate).diff(dayjs.utc(startDate), 'minute').toString()
           : '',
       thematic: '',
       type: '',
@@ -123,7 +123,8 @@ function AddAppointmentForm({
           >
             <div className="flex flex-wrap gap-2 items-center">
               <div className="text-sm font-medium">
-                {dayjs(startDate)
+                {dayjs
+                  .utc(startDate)
                   .format('dddd D MMMM')
                   .replace(/^./, (c) => c.toUpperCase())}
               </div>
@@ -137,7 +138,9 @@ function AddAppointmentForm({
                     <div>
                       <TimePicker
                         value={field.state.value}
-                        onChange={(time) => field.handleChange(time ?? dayjs())}
+                        onChange={(time) =>
+                          field.handleChange(time ?? dayjs.utc())
+                        }
                         disabled={type === 'multiple'}
                       />
                       <FieldInfo field={field} />

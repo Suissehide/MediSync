@@ -54,7 +54,8 @@ export const getPatientColumns = ({
       header: 'Nom',
     }),
     columnHelper.accessor(
-      (row) => (row.entryDate ? dayjs(row.entryDate).format('DD/MM/YYYY') : ''),
+      (row) =>
+        row.entryDate ? dayjs.utc(row.entryDate).format('DD/MM/YYYY') : '',
       {
         id: 'entryDate',
         header: "Date d'entrée",

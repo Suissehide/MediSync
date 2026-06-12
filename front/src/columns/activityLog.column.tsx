@@ -9,10 +9,10 @@ const columnHelper = createColumnHelper<ActivityLog>()
 export const activityLogColumns = [
   columnHelper.accessor('createdAt', {
     header: 'Date',
-    cell: (info) => dayjs(info.getValue()).format('DD/MM/YYYY'),
+    cell: (info) => dayjs.utc(info.getValue()).format('DD/MM/YYYY'),
     size: 110,
   }),
-  columnHelper.accessor((row) => dayjs(row.createdAt).format('HH:mm'), {
+  columnHelper.accessor((row) => dayjs.utc(row.createdAt).format('HH:mm'), {
     id: 'time',
     header: 'Heure',
     size: 80,

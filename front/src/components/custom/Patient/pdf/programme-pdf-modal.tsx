@@ -40,7 +40,7 @@ export default function ProgrammePDFModal({
       .sort((a, b) => dayjs(a.startDate).diff(dayjs(b.startDate)))
   }, [slots, patient])
 
-  const fileName = `programme-${patient.lastName}-${patient.firstName}-${dayjs().format('YYYY-MM-DD')}.pdf`
+  const fileName = `programme-${patient.lastName}-${patient.firstName}-${dayjs.utc().format('YYYY-MM-DD')}.pdf`
 
   const pdfDocument = (
     <ProgrammePDF
