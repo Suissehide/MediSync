@@ -296,7 +296,7 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
             unselectRef={calendarUnselectRef}
             headerToolbar={{
               left: 'title',
-              right: 'prev,next today',
+              right: 'selectDateButton prev,next today',
             }}
           />
         )}
