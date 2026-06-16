@@ -1,8 +1,8 @@
 import { useStore } from '@tanstack/react-form'
 import { useEffect, useMemo } from 'react'
 
-import { SLOT_LOCATION_OPTIONS } from '../../../../constants/slot.constant.ts'
 import { withForm } from '../../../../hooks/formConfig.tsx'
+import { useLocationQueries } from '../../../../queries/useLocation.ts'
 import { useThematicQueries } from '../../../../queries/useThematic.ts'
 import { useSoignantStore } from '../../../../store/useSoignantStore.ts'
 import { eventFormOpts } from './eventFormOpts.ts'
@@ -11,12 +11,26 @@ export const EventFormFields = withForm({
   ...eventFormOpts,
   render: ({ form }) => {
     const soignants = useSoignantStore((state) => state.soignants)
-    const soignantOptions = soignants.map((soignant) => ({
-      value: soignant.id,
-      label: soignant.name,
-    }))
+    const soignantOptions = useMemo(
+      () =>
+        [...soignants]
+          .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+          .map((soignant) => ({
+            value: soignant.id,
+            label: soignant.name,
+          })),
+      [soignants],
+    )
 
     const { thematics } = useThematicQueries()
+    const { locations } = useLocationQueries()
+    const locationOptions = useMemo(
+      () =>
+        [...(locations ?? [])]
+          .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+          .map((l) => ({ value: l.id, label: l.name })),
+      [locations],
+    )
 
     const isIndividual = useStore(
       form.store,
@@ -41,6 +55,8 @@ export const EventFormFields = withForm({
             ?.filter((t) =>
               t.soignants.some((s) => s.id === selectedSoignant.id),
             )
+            .slice()
+            .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
             .map((t) => ({ value: t.name, label: t.name })) ?? [])
         : []
     }, [selectedSoignant, thematics])
@@ -89,10 +105,8 @@ export const EventFormFields = withForm({
           )}
         </form.AppField>
 
-        <form.AppField name="location">
-          {(field) => (
-            <field.Select options={SLOT_LOCATION_OPTIONS} label="Lieu" />
-          )}
+        <form.AppField name="locationID">
+          {(field) => <field.Select options={locationOptions} label="Lieu" />}
         </form.AppField>
 
         <div className="flex gap-2 items-center">

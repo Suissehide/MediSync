@@ -3,9 +3,9 @@ import dayjs from 'dayjs'
 import { Check, X } from 'lucide-react'
 import { useEffect, useMemo } from 'react'
 
-import { SLOT_LOCATION_OPTIONS } from '../../../constants/slot.constant.ts'
 import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { combineDateAndTime } from '../../../libs/utils.ts'
+import { useLocationQueries } from '../../../queries/useLocation.ts'
 import { useSoignantQueries } from '../../../queries/useSoignant.ts'
 import { useThematicQueries } from '../../../queries/useThematic.ts'
 import { useSoignantStore } from '../../../store/useSoignantStore.ts'
@@ -47,14 +47,24 @@ function AddSlotForm({
 }: AddSlotFormProps) {
   useSoignantQueries()
   const { thematics } = useThematicQueries()
+  const { locations } = useLocationQueries()
   const soignants = useSoignantStore((state) => state.soignants)
   const soignantOptions = useMemo(
     () =>
-      soignants.map((soignant) => ({
-        value: soignant.id,
-        label: soignant.name,
-      })),
+      [...soignants]
+        .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+        .map((soignant) => ({
+          value: soignant.id,
+          label: soignant.name,
+        })),
     [soignants],
+  )
+  const locationOptions = useMemo(
+    () =>
+      [...(locations ?? [])]
+        .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+        .map((l) => ({ value: l.id, label: l.name })),
+    [locations],
   )
 
   const today = dayjs.utc()
@@ -66,7 +76,7 @@ function AddSlotForm({
       endTime: endDate ? dayjs.utc(endDate) : today,
       soignant: '',
       thematic: '',
-      location: '',
+      locationID: '',
       description: '',
       isIndividual: false,
       capacity: 1,
@@ -94,7 +104,7 @@ function AddSlotForm({
           offsetDays: 0,
           soignantID: value.soignant,
           thematic: value.thematic,
-          location: value.location,
+          locationID: value.locationID || null,
           isIndividual: value.isIndividual,
           capacity: value.capacity,
           description: value.description,
@@ -127,6 +137,8 @@ function AddSlotForm({
   const thematicOptions = selectedSoignant
     ? (thematics
         ?.filter((t) => t.soignants.some((s) => s.id === selectedSoignant.id))
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
         .map((t) => ({ value: t.name, label: t.name })) ?? [])
     : []
 
@@ -275,9 +287,9 @@ function AddSlotForm({
               )}
             </form.AppField>
 
-            <form.AppField name="location">
+            <form.AppField name="locationID">
               {(field) => (
-                <field.Select options={SLOT_LOCATION_OPTIONS} label="Lieu" />
+                <field.Select options={locationOptions} label="Lieu" />
               )}
             </form.AppField>
 

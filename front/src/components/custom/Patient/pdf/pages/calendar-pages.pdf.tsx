@@ -1,13 +1,7 @@
-import {
-  Page,
-  StyleSheet,
-  Text,
-  View,
-} from '@react-pdf/renderer'
+import { Page, StyleSheet, Text, View } from '@react-pdf/renderer'
 
-import { SLOT_LOCATION } from '../../../../../constants/slot.constant.ts'
 import type { Slot } from '../../../../../types/slot.ts'
-import { getLabel, groupSlotsByWeek, type WeekData } from '../programme-pdf.utils.ts'
+import { groupSlotsByWeek, type WeekData } from '../programme-pdf.utils.ts'
 
 const styles = StyleSheet.create({
   calendarPage: {
@@ -116,7 +110,9 @@ const TIME_ROW_HEIGHT = 36
 const AVAILABLE_HEIGHT = PAGE_HEIGHT - PAGE_PADDING * 2
 
 function estimateWeekHeight(week: WeekData): number {
-  return HEADER_ROW_HEIGHT + week.timeRows.length * TIME_ROW_HEIGHT + WEEK_MARGIN
+  return (
+    HEADER_ROW_HEIGHT + week.timeRows.length * TIME_ROW_HEIGHT + WEEK_MARGIN
+  )
 }
 
 function WeekBlock({ weekData }: { weekData: WeekData }) {
@@ -145,16 +141,19 @@ function WeekBlock({ weekData }: { weekData: WeekData }) {
           {row.cells.map((slot, dayIdx) => (
             <View
               key={DAY_NAMES[dayIdx]}
-              style={[styles.slotCell, slot ? styles.slotCellFilled : styles.slotCellEmpty]}
+              style={[
+                styles.slotCell,
+                slot ? styles.slotCellFilled : styles.slotCellEmpty,
+              ]}
             >
               {slot && (
                 <>
                   <Text style={styles.slotThematic}>
                     {slot.slotTemplate?.thematic ?? ''}
                   </Text>
-                  {slot.slotTemplate?.location && (
+                  {slot.slotTemplate?.location?.name && (
                     <Text style={styles.slotLocation}>
-                      {getLabel(SLOT_LOCATION, slot.slotTemplate.location)}
+                      {slot.slotTemplate.location.name}
                     </Text>
                   )}
                 </>
@@ -167,7 +166,11 @@ function WeekBlock({ weekData }: { weekData: WeekData }) {
   )
 }
 
-export default function CalendarPages({ upcomingSlots }: { upcomingSlots: Slot[] }) {
+export default function CalendarPages({
+  upcomingSlots,
+}: {
+  upcomingSlots: Slot[]
+}) {
   const weeks = groupSlotsByWeek(upcomingSlots)
   const pages: WeekData[][] = []
   let currentPage: WeekData[] = []
@@ -175,7 +178,10 @@ export default function CalendarPages({ upcomingSlots }: { upcomingSlots: Slot[]
 
   for (const week of weeks) {
     const weekHeight = estimateWeekHeight(week)
-    if (currentPage.length > 0 && currentHeight + weekHeight > AVAILABLE_HEIGHT) {
+    if (
+      currentPage.length > 0 &&
+      currentHeight + weekHeight > AVAILABLE_HEIGHT
+    ) {
       pages.push(currentPage)
       currentPage = [week]
       currentHeight = weekHeight
@@ -199,7 +205,11 @@ export default function CalendarPages({ upcomingSlots }: { upcomingSlots: Slot[]
   return (
     <>
       {pages.map((pageWeeks) => (
-        <Page key={pageWeeks[0]?.weekLabel} size="A4" style={styles.calendarPage}>
+        <Page
+          key={pageWeeks[0]?.weekLabel}
+          size="A4"
+          style={styles.calendarPage}
+        >
           {pageWeeks.map((weekData) => (
             <WeekBlock key={weekData.weekLabel} weekData={weekData} />
           ))}

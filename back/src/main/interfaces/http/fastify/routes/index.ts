@@ -3,6 +3,7 @@ import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 import { appointmentRouter } from './appointment'
 import { authRouter } from './auth'
 import { healthcheckRouter } from './healthcheck'
+import { locationRouter } from './location'
 import { pathwayRouter } from './pathway'
 import { pathwayTemplateRouter } from './pathwayTemplate'
 import { patientRouter } from './patient'
@@ -34,6 +35,7 @@ const routes: FastifyPluginAsyncZod = async (fastify) => {
   await fastify.register(pathwayTemplateRouter, { prefix: '/pathway-template' })
   await fastify.register(soignantRouter, { prefix: '/soignant' })
   await fastify.register(thematicRouter, { prefix: '/thematic' })
+  await fastify.register(locationRouter, { prefix: '/location' })
   await fastify.register(patientRouter, { prefix: '/patient' })
   await fastify.register(diagnosticEducatifTemplateRouter, { prefix: '/diagnostic-template' })
   await fastify.register(diagnosticEducatifRouter, { prefix: '/patient/:patientId/diagnostic' })

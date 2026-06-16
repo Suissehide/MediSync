@@ -200,7 +200,7 @@ function Planning() {
           endTime: newSlot.endDate,
           offsetDays,
           thematic: newSlot.slotTemplate.thematic,
-          location: newSlot.slotTemplate.location,
+          locationID: newSlot.slotTemplate.locationID,
           description: newSlot.slotTemplate.description,
           color: newSlot.slotTemplate.color,
           isIndividual: newSlot.slotTemplate.isIndividual,
@@ -245,9 +245,7 @@ function Planning() {
     const slotId = id.replace(/^.*?_/, '')
 
     if (editMode) {
-      const newOffsetDays = dayjs
-        .utc(start)
-        .diff(dayjs.utc(startDate), 'day')
+      const newOffsetDays = dayjs.utc(start).diff(dayjs.utc(startDate), 'day')
 
       updateSlotTemplate.mutate({
         id: slotId,
@@ -313,7 +311,7 @@ function Planning() {
       endTime: newEndDate,
       offsetDays: 0,
       thematic: slot.slotTemplate.thematic,
-      location: slot.slotTemplate.location,
+      locationID: slot.slotTemplate.locationID,
       description: slot.slotTemplate.description,
       color: slot.slotTemplate.color,
       isIndividual: slot.slotTemplate.isIndividual,
@@ -363,7 +361,7 @@ function Planning() {
         endTime: slotTemplate.endTime,
         offsetDays: slotTemplate.offsetDays,
         thematic: slotTemplate.thematic,
-        location: slotTemplate.location,
+        locationID: slotTemplate.locationID,
         description: slotTemplate.description,
         color: slotTemplate.color,
         isIndividual: slotTemplate.isIndividual,
@@ -472,7 +470,7 @@ function Planning() {
           endTime: slotTemplate.endTime,
           offsetDays: newOffsetDays,
           thematic: slotTemplate.thematic,
-          location: slotTemplate.location,
+          locationID: slotTemplate.locationID,
           description: slotTemplate.description,
           color: slotTemplate.color,
           isIndividual: slotTemplate.isIndividual,
@@ -709,9 +707,7 @@ function Planning() {
                 onToggleSelect={handleToggleSelect}
                 weekAnchorDate={editMode ? startDate : undefined}
                 headerToolbar={
-                  editMode
-                    ? { left: 'title', right: 'prev,next' }
-                    : undefined
+                  editMode ? { left: 'title', right: 'prev,next' } : undefined
                 }
               />
             ) : (
@@ -776,9 +772,7 @@ function Planning() {
                       const rect = info.el.getBoundingClientRect()
                       setHoveredPathway({
                         title: info.event.title,
-                        start: dayjs
-                          .utc(info.event.start)
-                          .format('DD/MM/YYYY'),
+                        start: dayjs.utc(info.event.start).format('DD/MM/YYYY'),
                         end: dayjs
                           .utc(info.event.end)
                           .subtract(1, 'day')

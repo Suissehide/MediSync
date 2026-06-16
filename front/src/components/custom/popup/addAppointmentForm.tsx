@@ -56,10 +56,14 @@ function AddAppointmentForm({
   const { patients } = usePatientQueries()
   const { slot } = useSlotByIDQuery(slotID)
   const patientOptions =
-    patients?.map((patient) => ({
-      value: patient.id,
-      label: `${patient.firstName} ${patient.lastName}`,
-    })) ?? []
+    patients
+      ?.map((patient) => ({
+        value: patient.id,
+        label: `${patient.firstName} ${patient.lastName}`,
+        sortKey: `${patient.lastName} ${patient.firstName}`,
+      }))
+      .sort((a, b) => a.sortKey.localeCompare(b.sortKey, 'fr'))
+      .map(({ value, label }) => ({ value, label })) ?? []
 
   const durationOptions = generateDurationOptions(startDate, maxDate)
 
@@ -99,6 +103,8 @@ function AddAppointmentForm({
     return soignant
       ? (thematics
           ?.filter((t) => t.soignants.some((s) => s.id === soignant.id))
+          .slice()
+          .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
           .map((t) => ({ value: t.name, label: t.name })) ?? [])
       : []
   }, [soignant, thematics])

@@ -44,7 +44,11 @@ export const RoleLabel = ({ role }: { role: Role }) => {
   )
 }
 
-export const getUserColumns = ({ onEdit, onDelete, soignants }: UserActions) => {
+export const getUserColumns = ({
+  onEdit,
+  onDelete,
+  soignants,
+}: UserActions) => {
   return [
     columnHelper.accessor('firstName', {
       header: 'Prénom',
@@ -62,7 +66,9 @@ export const getUserColumns = ({ onEdit, onDelete, soignants }: UserActions) => 
     columnHelper.accessor('soignantId', {
       header: 'Fonction',
       cell: ({ row }) => {
-        const soignant = soignants?.find((s) => s.id === row.original.soignantId)
+        const soignant = soignants?.find(
+          (s) => s.id === row.original.soignantId,
+        )
         return soignant?.name ?? '-'
       },
     }),
@@ -70,6 +76,7 @@ export const getUserColumns = ({ onEdit, onDelete, soignants }: UserActions) => 
       id: 'actions',
       header: '',
       size: 120,
+      meta: { align: 'right' },
       cell: ({ row }) => {
         const user = row.original
         return (

@@ -33,47 +33,43 @@ function EditThematicSoignantsForm({
   const [open, setOpen] = useState(false)
   const { updateThematic } = useThematicMutations()
 
-  const currentSoignantIDs = thematic.soignants.map((s) => s.id)
-
-  const [selectedIDs, setSelectedIDs] = useState<string[]>(currentSoignantIDs)
-
   const form = useAppForm({
-    defaultValues: { name: thematic.name, duration: thematic.duration ?? 15 },
-    onSubmit: () => {},
+    defaultValues: {
+      name: thematic.name,
+      duration: thematic.duration ?? 15,
+      soignantIDs: thematic.soignants.map((s) => s.id),
+    },
+    onSubmit: ({ value }) => {
+      const currentSoignantIDs = thematic.soignants.map((s) => s.id)
+      const duration = Number(value.duration)
+      const nameChanged = value.name !== thematic.name
+      const durationChanged = duration !== thematic.duration
+      const soignantsChanged =
+        value.soignantIDs.length !== currentSoignantIDs.length ||
+        value.soignantIDs.some((id) => !currentSoignantIDs.includes(id))
+
+      if (nameChanged || durationChanged || soignantsChanged) {
+        updateThematic.mutate({
+          id: thematic.id,
+          ...(nameChanged ? { name: value.name } : {}),
+          ...(durationChanged ? { duration } : {}),
+          ...(soignantsChanged ? { soignantIDs: value.soignantIDs } : {}),
+        })
+      }
+
+      setOpen(false)
+    },
   })
 
   useEffect(() => {
     if (open) {
-      setSelectedIDs(currentSoignantIDs)
-      form.reset({ name: thematic.name, duration: thematic.duration ?? 15 })
-    }
-  }, [open, thematic.name, thematic.duration, thematic.soignants, form])
-
-  const handleSave = async () => {
-    await form.validate('submit')
-    if (!form.state.isValid) {
-      return
-    }
-
-    const name = form.state.values.name
-    const duration = Number(form.state.values.duration)
-    const nameChanged = name !== thematic.name
-    const durationChanged = duration !== thematic.duration
-    const soignantsChanged =
-      selectedIDs.length !== currentSoignantIDs.length ||
-      selectedIDs.some((id) => !currentSoignantIDs.includes(id))
-
-    if (nameChanged || durationChanged || soignantsChanged) {
-      updateThematic.mutate({
-        id: thematic.id,
-        ...(nameChanged ? { name } : {}),
-        ...(durationChanged ? { duration } : {}),
-        ...(soignantsChanged ? { soignantIDs: selectedIDs } : {}),
+      form.reset({
+        name: thematic.name,
+        duration: thematic.duration ?? 15,
+        soignantIDs: thematic.soignants.map((s) => s.id),
       })
     }
-
-    setOpen(false)
-  }
+  }, [open, thematic, form])
 
   return (
     <Popup modal={true} open={open} onOpenChange={setOpen}>
@@ -113,20 +109,24 @@ function EditThematicSoignantsForm({
               )}
             </form.AppField>
 
-            <div className="flex flex-col gap-1">
-              <Label className="text-sm font-medium">Soignants</Label>
-              <MultiSelect
-                options={soignantOptions}
-                value={selectedIDs}
-                onChange={setSelectedIDs}
-                placeholder="Sélectionner des soignants"
-              />
-            </div>
+            <form.Field name="soignantIDs">
+              {(field) => (
+                <div className="flex flex-col gap-1">
+                  <Label className="text-sm font-medium">Soignants</Label>
+                  <MultiSelect
+                    options={soignantOptions}
+                    value={field.state.value}
+                    onChange={(val) => field.handleChange(val)}
+                    placeholder="Sélectionner des soignants"
+                  />
+                </div>
+              )}
+            </form.Field>
           </div>
         </PopupBody>
 
         <PopupFooter>
-          <Button variant="default" onClick={handleSave}>
+          <Button variant="default" onClick={() => form.handleSubmit()}>
             <Check className="w-4 h-4" />
             Enregistrer
           </Button>

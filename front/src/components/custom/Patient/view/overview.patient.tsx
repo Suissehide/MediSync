@@ -3,9 +3,7 @@ import { AlertTriangle, CalendarClock, Route, Siren, X } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
 
 import { PatientApi } from '../../../../api/patient.api.ts'
-import { SLOT_LOCATION } from '../../../../constants/slot.constant.ts'
-import { hexToRGBA, getContrastTextColor } from '../../../../libs/color.ts'
-import { getLabel } from '../../../../libs/utils.ts'
+import { getContrastTextColor, hexToRGBA } from '../../../../libs/color.ts'
 import { usePatientMutations } from '../../../../queries/usePatient.tsx'
 import { useAllSlotsQuery } from '../../../../queries/useSlot.ts'
 import type { EnrollmentIssue, Patient } from '../../../../types/patient.ts'
@@ -20,10 +18,11 @@ interface OverviewPatientProps {
 function AppointmentCard({ slot }: { slot: Slot }) {
   const color = slot.slotTemplate?.color ?? '#6b7280'
   const thematic = slot.slotTemplate?.thematic || 'Rendez-vous'
-  const location = slot.slotTemplate?.location
+  const location = slot.slotTemplate?.location?.name
   const soignant = slot.slotTemplate?.soignant?.name
 
-  const formattedDate = dayjs.utc(slot.startDate)
+  const formattedDate = dayjs
+    .utc(slot.startDate)
     .format('dddd D MMMM YYYY [de] HH:mm')
     .replace(/^./, (c) => c.toUpperCase())
   const endTime = dayjs.utc(slot.endDate).format('HH:mm')
@@ -43,7 +42,7 @@ function AppointmentCard({ slot }: { slot: Slot }) {
           {location && (
             <span className="text-text-light font-normal">
               {' · '}
-              {getLabel(SLOT_LOCATION, location)}
+              {location}
             </span>
           )}
         </span>
@@ -167,7 +166,12 @@ export default function OverviewPatient({ patient }: OverviewPatientProps) {
 
     const pathwayMap = new Map<
       string,
-      { id: string; templateName: string; templateColor: string | null; startDate: string }
+      {
+        id: string
+        templateName: string
+        templateColor: string | null
+        startDate: string
+      }
     >()
 
     for (const slot of slots) {

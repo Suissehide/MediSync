@@ -25,6 +25,7 @@ import { Route as AuthenticatedAdminSettingsUserImport } from './routes/_authent
 import { Route as AuthenticatedAdminSettingsThematicImport } from './routes/_authenticated/_admin/settings/thematic'
 import { Route as AuthenticatedAdminSettingsSoignantImport } from './routes/_authenticated/_admin/settings/soignant'
 import { Route as AuthenticatedAdminSettingsPlanningImport } from './routes/_authenticated/_admin/settings/planning'
+import { Route as AuthenticatedAdminSettingsLocationImport } from './routes/_authenticated/_admin/settings/location'
 import { Route as AuthenticatedAdminSettingsDiagnosticTemplateImport } from './routes/_authenticated/_admin/settings/diagnostic-template'
 import { Route as AuthenticatedAdminSettingsActivityLogImport } from './routes/_authenticated/_admin/settings/activity-log'
 
@@ -114,6 +115,13 @@ const AuthenticatedAdminSettingsPlanningRoute =
   AuthenticatedAdminSettingsPlanningImport.update({
     id: '/settings/planning',
     path: '/settings/planning',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+
+const AuthenticatedAdminSettingsLocationRoute =
+  AuthenticatedAdminSettingsLocationImport.update({
+    id: '/settings/location',
+    path: '/settings/location',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 
@@ -219,6 +227,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminSettingsDiagnosticTemplateImport
       parentRoute: typeof AuthenticatedAdminImport
     }
+    '/_authenticated/_admin/settings/location': {
+      id: '/_authenticated/_admin/settings/location'
+      path: '/settings/location'
+      fullPath: '/settings/location'
+      preLoaderRoute: typeof AuthenticatedAdminSettingsLocationImport
+      parentRoute: typeof AuthenticatedAdminImport
+    }
     '/_authenticated/_admin/settings/planning': {
       id: '/_authenticated/_admin/settings/planning'
       path: '/settings/planning'
@@ -255,6 +270,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminSettingsActivityLogRoute: typeof AuthenticatedAdminSettingsActivityLogRoute
   AuthenticatedAdminSettingsDiagnosticTemplateRoute: typeof AuthenticatedAdminSettingsDiagnosticTemplateRoute
+  AuthenticatedAdminSettingsLocationRoute: typeof AuthenticatedAdminSettingsLocationRoute
   AuthenticatedAdminSettingsPlanningRoute: typeof AuthenticatedAdminSettingsPlanningRoute
   AuthenticatedAdminSettingsSoignantRoute: typeof AuthenticatedAdminSettingsSoignantRoute
   AuthenticatedAdminSettingsThematicRoute: typeof AuthenticatedAdminSettingsThematicRoute
@@ -266,6 +282,8 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
     AuthenticatedAdminSettingsActivityLogRoute,
   AuthenticatedAdminSettingsDiagnosticTemplateRoute:
     AuthenticatedAdminSettingsDiagnosticTemplateRoute,
+  AuthenticatedAdminSettingsLocationRoute:
+    AuthenticatedAdminSettingsLocationRoute,
   AuthenticatedAdminSettingsPlanningRoute:
     AuthenticatedAdminSettingsPlanningRoute,
   AuthenticatedAdminSettingsSoignantRoute:
@@ -314,6 +332,7 @@ export interface FileRoutesByFullPath {
   '/patient': typeof AuthenticatedPatientIndexRoute
   '/settings/activity-log': typeof AuthenticatedAdminSettingsActivityLogRoute
   '/settings/diagnostic-template': typeof AuthenticatedAdminSettingsDiagnosticTemplateRoute
+  '/settings/location': typeof AuthenticatedAdminSettingsLocationRoute
   '/settings/planning': typeof AuthenticatedAdminSettingsPlanningRoute
   '/settings/soignant': typeof AuthenticatedAdminSettingsSoignantRoute
   '/settings/thematic': typeof AuthenticatedAdminSettingsThematicRoute
@@ -332,6 +351,7 @@ export interface FileRoutesByTo {
   '/patient': typeof AuthenticatedPatientIndexRoute
   '/settings/activity-log': typeof AuthenticatedAdminSettingsActivityLogRoute
   '/settings/diagnostic-template': typeof AuthenticatedAdminSettingsDiagnosticTemplateRoute
+  '/settings/location': typeof AuthenticatedAdminSettingsLocationRoute
   '/settings/planning': typeof AuthenticatedAdminSettingsPlanningRoute
   '/settings/soignant': typeof AuthenticatedAdminSettingsSoignantRoute
   '/settings/thematic': typeof AuthenticatedAdminSettingsThematicRoute
@@ -352,6 +372,7 @@ export interface FileRoutesById {
   '/_authenticated/patient/': typeof AuthenticatedPatientIndexRoute
   '/_authenticated/_admin/settings/activity-log': typeof AuthenticatedAdminSettingsActivityLogRoute
   '/_authenticated/_admin/settings/diagnostic-template': typeof AuthenticatedAdminSettingsDiagnosticTemplateRoute
+  '/_authenticated/_admin/settings/location': typeof AuthenticatedAdminSettingsLocationRoute
   '/_authenticated/_admin/settings/planning': typeof AuthenticatedAdminSettingsPlanningRoute
   '/_authenticated/_admin/settings/soignant': typeof AuthenticatedAdminSettingsSoignantRoute
   '/_authenticated/_admin/settings/thematic': typeof AuthenticatedAdminSettingsThematicRoute
@@ -372,6 +393,7 @@ export interface FileRouteTypes {
     | '/patient'
     | '/settings/activity-log'
     | '/settings/diagnostic-template'
+    | '/settings/location'
     | '/settings/planning'
     | '/settings/soignant'
     | '/settings/thematic'
@@ -389,6 +411,7 @@ export interface FileRouteTypes {
     | '/patient'
     | '/settings/activity-log'
     | '/settings/diagnostic-template'
+    | '/settings/location'
     | '/settings/planning'
     | '/settings/soignant'
     | '/settings/thematic'
@@ -407,6 +430,7 @@ export interface FileRouteTypes {
     | '/_authenticated/patient/'
     | '/_authenticated/_admin/settings/activity-log'
     | '/_authenticated/_admin/settings/diagnostic-template'
+    | '/_authenticated/_admin/settings/location'
     | '/_authenticated/_admin/settings/planning'
     | '/_authenticated/_admin/settings/soignant'
     | '/_authenticated/_admin/settings/thematic'
@@ -462,6 +486,7 @@ export const routeTree = rootRoute
       "children": [
         "/_authenticated/_admin/settings/activity-log",
         "/_authenticated/_admin/settings/diagnostic-template",
+        "/_authenticated/_admin/settings/location",
         "/_authenticated/_admin/settings/planning",
         "/_authenticated/_admin/settings/soignant",
         "/_authenticated/_admin/settings/thematic",
@@ -501,6 +526,10 @@ export const routeTree = rootRoute
     },
     "/_authenticated/_admin/settings/diagnostic-template": {
       "filePath": "_authenticated/_admin/settings/diagnostic-template.tsx",
+      "parent": "/_authenticated/_admin"
+    },
+    "/_authenticated/_admin/settings/location": {
+      "filePath": "_authenticated/_admin/settings/location.tsx",
       "parent": "/_authenticated/_admin"
     },
     "/_authenticated/_admin/settings/planning": {

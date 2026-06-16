@@ -2,6 +2,7 @@ import 'dotenv/config'
 import { PrismaPg } from '@prisma/adapter-pg'
 
 import { PrismaClient } from '../src/generated/client'
+import seedLocations from './seed/location'
 import seedPathwayTemplates from './seed/pathwayTemplate'
 import seedPatients from './seed/patient'
 import seedSoignants from './seed/soignant'
@@ -19,7 +20,8 @@ async function main() {
   const soignants = await seedSoignants(prisma)
   await seedThematics(prisma, soignants)
   await seedPatients(prisma)
-  await seedPathwayTemplates(prisma, soignants)
+  const locations = await seedLocations(prisma)
+  await seedPathwayTemplates(prisma, soignants, locations)
   await seedTodos(prisma)
 
   console.log('✅ Seeding completed successfully!')

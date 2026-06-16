@@ -87,6 +87,13 @@ export const THEMATIC = {
   DELETE: 'delete_thematic',
 }
 
+export const LOCATION = {
+  GET_ALL: 'get_all_locations',
+  CREATE: 'create_location',
+  UPDATE: 'update_location',
+  DELETE: 'delete_location',
+}
+
 export const APPOINTMENT = {
   GET_ALL: 'get_all_appointments',
   GET_BY_ID: 'get_by_id_appointment',

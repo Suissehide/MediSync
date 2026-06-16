@@ -1,5 +1,6 @@
 import { z } from 'zod/v4'
 
+import { locationResponseSchema } from './location.schema'
 import { patientSchema } from './patient.schema'
 import { soignantSchema } from './soignant.schema'
 
@@ -36,7 +37,7 @@ export const slotTemplateSchema = z.object({
   offsetDays: z.number(),
 
   thematic: z.string().optional().nullable(),
-  location: z.string().optional().nullable(),
+  locationID: z.cuid().optional().nullable(),
   description: z.string().optional().nullable(),
   color: z.string(),
   isIndividual: z.boolean(),
@@ -50,6 +51,9 @@ export const slotTemplateSchema = z.object({
   },
   get slots() {
     return slotSchema.optional().nullable()
+  },
+  get location() {
+    return locationResponseSchema.optional().nullable()
   },
 })
 

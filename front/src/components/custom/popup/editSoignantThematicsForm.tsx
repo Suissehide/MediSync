@@ -45,58 +45,61 @@ function EditSoignantThematicsForm({
     [thematics, soignant.id],
   )
 
-  const [selectedIDs, setSelectedIDs] = useState<string[]>(currentThematicIDs)
-
   const form = useAppForm({
-    defaultValues: { name: soignant.name },
-    onSubmit: () => {},
+    defaultValues: {
+      name: soignant.name,
+      thematicIDs: currentThematicIDs,
+    },
+    onSubmit: ({ value }) => {
+      if (value.name !== soignant.name) {
+        updateSoignant.mutate({
+          id: soignant.id,
+          name: value.name,
+          active: true,
+        })
+      }
+
+      const added = value.thematicIDs.filter(
+        (id) => !currentThematicIDs.includes(id),
+      )
+      const removed = currentThematicIDs.filter(
+        (id) => !value.thematicIDs.includes(id),
+      )
+
+      for (const thematicID of added) {
+        const thematic = thematics.find((t) => t.id === thematicID)
+        if (thematic) {
+          updateThematic.mutate({
+            id: thematicID,
+            soignantIDs: [...thematic.soignants.map((s) => s.id), soignant.id],
+          })
+        }
+      }
+
+      for (const thematicID of removed) {
+        const thematic = thematics.find((t) => t.id === thematicID)
+        if (thematic) {
+          updateThematic.mutate({
+            id: thematicID,
+            soignantIDs: thematic.soignants
+              .filter((s) => s.id !== soignant.id)
+              .map((s) => s.id),
+          })
+        }
+      }
+
+      setOpen(false)
+    },
   })
 
   useEffect(() => {
     if (open) {
-      setSelectedIDs(currentThematicIDs)
-      form.reset({ name: soignant.name })
+      form.reset({
+        name: soignant.name,
+        thematicIDs: currentThematicIDs,
+      })
     }
   }, [open, currentThematicIDs, soignant.name, form])
-
-  const handleSave = async () => {
-    await form.validate('submit')
-    if (!form.state.isValid) {
-      return
-    }
-
-    const name = form.state.values.name
-    if (name !== soignant.name) {
-      updateSoignant.mutate({ id: soignant.id, name, active: true })
-    }
-
-    const added = selectedIDs.filter((id) => !currentThematicIDs.includes(id))
-    const removed = currentThematicIDs.filter((id) => !selectedIDs.includes(id))
-
-    for (const thematicID of added) {
-      const thematic = thematics.find((t) => t.id === thematicID)
-      if (thematic) {
-        updateThematic.mutate({
-          id: thematicID,
-          soignantIDs: [...thematic.soignants.map((s) => s.id), soignant.id],
-        })
-      }
-    }
-
-    for (const thematicID of removed) {
-      const thematic = thematics.find((t) => t.id === thematicID)
-      if (thematic) {
-        updateThematic.mutate({
-          id: thematicID,
-          soignantIDs: thematic.soignants
-            .filter((s) => s.id !== soignant.id)
-            .map((s) => s.id),
-        })
-      }
-    }
-
-    setOpen(false)
-  }
 
   return (
     <Popup modal={true} open={open} onOpenChange={setOpen}>
@@ -127,20 +130,24 @@ function EditSoignantThematicsForm({
               {(field) => <field.Input label="Nom" />}
             </form.AppField>
 
-            <div className="flex flex-col gap-1">
-              <Label className="text-sm font-medium">Thématiques</Label>
-              <MultiSelect
-                options={thematicOptions}
-                value={selectedIDs}
-                onChange={setSelectedIDs}
-                placeholder="Sélectionner des thématiques"
-              />
-            </div>
+            <form.Field name="thematicIDs">
+              {(field) => (
+                <div className="flex flex-col gap-1">
+                  <Label className="text-sm font-medium">Thématiques</Label>
+                  <MultiSelect
+                    options={thematicOptions}
+                    value={field.state.value}
+                    onChange={(val) => field.handleChange(val)}
+                    placeholder="Sélectionner des thématiques"
+                  />
+                </div>
+              )}
+            </form.Field>
           </div>
         </PopupBody>
 
         <PopupFooter>
-          <Button variant="default" onClick={handleSave}>
+          <Button variant="default" onClick={() => form.handleSubmit()}>
             <Check className="w-4 h-4" />
             Enregistrer
           </Button>

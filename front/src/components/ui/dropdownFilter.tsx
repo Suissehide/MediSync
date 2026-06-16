@@ -26,9 +26,10 @@ const DropdownFilter = ({
 
       <DropdownMenu.Portal>
         <DropdownMenu.Content
-          className="min-w-[220px] bg-primary-foreground rounded shadow-md border border-border p-2 z-50"
+          className="min-w-[220px] max-h-80 overflow-y-auto bg-primary-foreground rounded shadow-md border border-border p-2 z-50"
           align="end"
           sideOffset={5}
+          collisionPadding={8}
         >
           {filters.map((filter) => (
             <DropdownMenu.CheckboxItem

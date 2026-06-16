@@ -85,7 +85,7 @@ model SlotTemplate {
   isIndividual Boolean
   capacity     Int?
   thematic     String?
-  location     String?
+  locationID   String?
   description  String?
   color        String
 
@@ -95,6 +95,7 @@ model SlotTemplate {
 
   soignant Soignant?        @relation(fields: [soignantID], references: [id])
   template PathwayTemplate? @relation(fields: [templateID], references: [id])
+  location Location?        @relation(fields: [locationID], references: [id], onDelete: SetNull)
 }
 
 model Slot {
@@ -125,6 +126,13 @@ model Thematic {
   name      String     @unique
   duration  Int?
   soignants Soignant[] @relation("SoignantThematics")
+}
+
+model Location {
+  id   String @id @default(cuid())
+  name String @unique
+
+  slotTemplates SlotTemplate[]
 }
 
 model Patient {
