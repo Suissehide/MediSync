@@ -204,6 +204,7 @@ function Planning() {
           description: newSlot.slotTemplate.description,
           color: newSlot.slotTemplate.color,
           isIndividual: newSlot.slotTemplate.isIndividual,
+          capacity: newSlot.slotTemplate.capacity,
           soignantID: newSlot.slotTemplate.soignantID,
           templateID: currentPathwayTemplate?.id,
         }
