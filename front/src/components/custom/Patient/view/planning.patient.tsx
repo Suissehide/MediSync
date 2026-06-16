@@ -149,6 +149,31 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
       }
     }, [slots, patient, selectedTag])
 
+  const calendarEvents = useMemo(() => {
+    if (!selectedTag) {
+      return appointmentEvents
+    }
+    const availableSlotIds = new Set(
+      availableEvents.map((e) => e.id.replace('slot_', '')),
+    )
+    const appointmentsOutsideTag = appointmentEvents.filter((apt) => {
+      const aptId = apt.id.replace('apt_', '')
+      const slot = slots?.find((s) =>
+        s.appointments?.some((a) => a.id === aptId),
+      )
+      return !slot || !availableSlotIds.has(slot.id)
+    })
+    return [...availableEvents, ...appointmentsOutsideTag]
+  }, [selectedTag, availableEvents, appointmentEvents, slots])
+
+  const handleClickCalendarEvent = (eventId: string) => {
+    if (eventId.startsWith('apt_')) {
+      handleClickAppointmentEvent(eventId)
+    } else {
+      handleClickSlot(eventId)
+    }
+  }
+
   const handleSelectPatientSlot = (dateSelectArg: DateSelectArg) => {
     setSelectedSlotStart(dateSelectArg.startStr)
     setSelectedSlotEnd(dateSelectArg.endStr)
@@ -244,12 +269,10 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
         {slots && (
           <Calendar
             key={selectedTag}
-            events={selectedTag ? availableEvents : appointmentEvents}
+            events={calendarEvents}
             editable={false}
             initialDate={nextAppointmentDate ?? savedDate}
-            handleClickEvent={
-              selectedTag ? handleClickSlot : handleClickAppointmentEvent
-            }
+            handleClickEvent={handleClickCalendarEvent}
             handleOpenEvent={handleOpenEvent}
             handleSelectEvent={
               selectedTag ? handleSelectPatientSlot : undefined
