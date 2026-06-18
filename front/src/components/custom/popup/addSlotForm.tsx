@@ -23,6 +23,7 @@ import {
   PopupHeader,
   PopupTitle,
 } from '../../ui/popup.tsx'
+import { MultiSelect } from '../../ui/select.tsx'
 import { TimePicker } from '../../ui/timePicker.tsx'
 
 interface AddSlotFormProps {
@@ -74,7 +75,7 @@ function AddSlotForm({
       startDate: startDate ? dayjs.utc(startDate) : today,
       startTime: startDate ? dayjs.utc(startDate) : today,
       endTime: endDate ? dayjs.utc(endDate) : today,
-      soignant: '',
+      soignantIDs: [] as string[],
       thematic: '',
       locationID: '',
       description: '',
@@ -102,7 +103,7 @@ function AddSlotForm({
           startTime: startDate,
           endTime: endDate,
           offsetDays: 0,
-          soignantID: value.soignant,
+          soignantIDs: value.soignantIDs,
           thematic: value.thematic,
           locationID: value.locationID || null,
           isIndividual: value.isIndividual,
@@ -129,24 +130,34 @@ function AddSlotForm({
     (state) => state.values.isIndividual,
   )
   const isRecurrence = useStore(form.store, (state) => state.values.recurrence)
-  const selectedSoignantId = useStore(
+  const selectedSoignantIds = useStore(
     form.store,
-    (state) => state.values.soignant,
+    (state) => state.values.soignantIDs,
   )
-  const selectedSoignant = soignants.find((s) => s.id === selectedSoignantId)
-  const thematicOptions = selectedSoignant
-    ? (thematics
-        ?.filter((t) => t.soignants.some((s) => s.id === selectedSoignant.id))
-        .slice()
-        .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
-        .map((t) => ({ value: t.name, label: t.name })) ?? [])
-    : []
+  const selectedSoignants = soignants.filter((s) =>
+    selectedSoignantIds.includes(s.id),
+  )
+  const thematicOptions = useMemo(() => {
+    const set = new Map<string, { value: string; label: string }>()
+    for (const soignant of selectedSoignants) {
+      for (const t of
+        thematics?.filter((t) =>
+          t.soignants.some((ss) => ss.id === soignant.id),
+        ) ?? []) {
+        set.set(t.id, { value: t.name, label: t.name })
+      }
+    }
+    return [...set.values()].sort((a, b) =>
+      a.label.localeCompare(b.label, 'fr'),
+    )
+  }, [selectedSoignants, thematics])
 
   useEffect(() => {
-    if (selectedSoignantId) {
+    const current = form.state.values.thematic
+    if (current && !thematicOptions.some((o) => o.value === current)) {
       form.setFieldValue('thematic', '')
     }
-  }, [selectedSoignantId, form])
+  }, [thematicOptions, form])
 
   return (
     <Popup modal={true} open={open} onOpenChange={setOpen}>
@@ -254,34 +265,35 @@ function AddSlotForm({
               )}
             </div>
 
-            <form.AppField
-              name="soignant"
-              validators={{
-                onSubmit: ({ value }) => {
-                  if (!value) {
-                    return 'Ce champ est requis'
-                  }
-                  return undefined
-                },
-              }}
-            >
+            <form.Field name="soignantIDs">
               {(field) => (
-                <field.Select options={soignantOptions} label="Soignant" />
+                <FormField>
+                  <div className="text-sm text-text-light font-medium">Soignants</div>
+                  <MultiSelect
+                    options={soignantOptions}
+                    value={field.state.value}
+                    onChange={(values) => field.handleChange(values)}
+                    placeholder="Sélectionnez un ou plusieurs soignants"
+                  />
+                  <FieldInfo field={field} />
+                </FormField>
               )}
-            </form.AppField>
+            </form.Field>
 
             <form.AppField name="thematic">
               {(field) => (
                 <field.Select
                   options={thematicOptions}
                   label="Thématique"
-                  disabled={!selectedSoignant || thematicOptions.length === 0}
+                  disabled={
+                    selectedSoignants.length === 0 || thematicOptions.length === 0
+                  }
                   placeholder={
-                    selectedSoignant
-                      ? thematicOptions.length === 0
+                    selectedSoignants.length === 0
+                      ? 'Sélectionnez un soignant'
+                      : thematicOptions.length === 0
                         ? 'Aucune thématique associée'
                         : 'Sélectionnez une thématique'
-                      : 'Sélectionnez un soignant'
                   }
                 />
               )}
