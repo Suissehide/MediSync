@@ -16,24 +16,24 @@ export type SlotTemplate = {
   description?: string
 
   slot: Slot
-  soignant?: Soignant
+  soignants: Soignant[]
   template?: PathwayTemplate
   location?: Location | null
 }
 
 export type CreateSlotTemplateParams = Omit<
   SlotTemplate,
-  'id' | 'slot' | 'soignant' | 'template' | 'location'
+  'id' | 'slot' | 'soignants' | 'template' | 'location'
 > & {
-  soignantID: string
+  soignantIDs: string[]
   templateID?: string
 }
 export type UpdateSlotTemplateParams = Omit<
   SlotTemplate,
-  'slot' | 'soignant' | 'template' | 'location' | 'startTime' | 'endTime'
+  'slot' | 'soignants' | 'template' | 'location' | 'startTime' | 'endTime'
 > & {
   offsetDays?: number
   startTime?: string
   endTime?: string
-  soignantID?: string
+  soignantIDs?: string[]
 }
