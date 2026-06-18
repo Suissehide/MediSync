@@ -3,6 +3,7 @@ import dayjs from 'dayjs'
 import { Download, X } from 'lucide-react'
 import { useMemo } from 'react'
 
+import { usePatientPathwaysQuery } from '../../../../queries/usePatient.tsx'
 import { useAllSlotsQuery } from '../../../../queries/useSlot.ts'
 import type { Patient } from '../../../../types/patient.ts'
 import { Button } from '../../../ui/button.tsx'
@@ -20,6 +21,7 @@ export default function ProgrammePDFModal({
   previewMode = true,
 }: ProgrammePDFModalProps) {
   const { slots } = useAllSlotsQuery()
+  const { pathways = [] } = usePatientPathwaysQuery(patient.id)
 
   const patientSlots = useMemo(() => {
     if (!slots || !patient) {
@@ -46,6 +48,7 @@ export default function ProgrammePDFModal({
     <ProgrammePDF
       patient={patient}
       upcomingSlots={patientSlots}
+      pathways={pathways}
     />
   )
 
