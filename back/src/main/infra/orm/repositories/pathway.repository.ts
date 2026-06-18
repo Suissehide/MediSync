@@ -64,7 +64,7 @@ class PathwayRepository implements PathwayRepositoryInterface {
             include: {
               slotTemplate: {
                 include: {
-                  soignant: true,
+                  soignants: true,
                 },
               },
               appointments: {
@@ -110,7 +110,7 @@ class PathwayRepository implements PathwayRepositoryInterface {
             include: {
               slotTemplate: {
                 include: {
-                  soignant: true,
+                  soignants: true,
                 },
               },
               appointments: {
@@ -160,7 +160,7 @@ class PathwayRepository implements PathwayRepositoryInterface {
             include: {
               slotTemplate: {
                 include: {
-                  soignant: true,
+                  soignants: true,
                 },
               },
               appointments: {

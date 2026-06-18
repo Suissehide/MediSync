@@ -12,7 +12,7 @@ import type { PostgresPrismaClient } from '../postgres-client'
 const slotTemplateInclude = {
   slotTemplates: {
     include: {
-      soignant: true,
+      soignants: true,
       location: true,
     },
   },

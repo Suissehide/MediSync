@@ -37,10 +37,13 @@ export const deleteSlotTemplateByIdParamsSchema =
 
 export const updateSlotTemplateByIdSchema = {
   params: getSlotTemplateByIdParamsSchema,
-  body: slotTemplateSchema.partial().extend({
-    soignantIDs: z.array(z.cuid()).optional(),
-    templateID: z.cuid().optional(),
-  }),
+  body: slotTemplateSchema
+    .omit({ soignants: true })
+    .partial()
+    .extend({
+      soignantIDs: z.array(z.cuid()).optional(),
+      templateID: z.cuid().optional(),
+    }),
 }
 
 export type SlotTemplateInput = z.infer<typeof slotTemplateSchema>
