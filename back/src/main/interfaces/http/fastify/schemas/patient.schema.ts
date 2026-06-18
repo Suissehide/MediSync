@@ -169,3 +169,24 @@ export const removeFromPathwayResponseSchema = z.object({
   deletedAppointments: z.number(),
   removedFromGroup: z.number(),
 })
+
+export const patientPathwayItemSchema = z.object({
+  pathwayID: z.cuid(),
+  templateID: z.string().nullable(),
+  templateName: z.string().nullable(),
+  templateColor: z.string().nullable(),
+  templateTags: z.array(z.string()),
+  startDate: z.coerce.date(),
+  priority: z.number().int().nullable(),
+})
+
+export const patientPathwaysResponseSchema = z.array(patientPathwayItemSchema)
+
+export const reorderPatientPathwaysBodySchema = z.object({
+  pathwayIDs: z.array(z.cuid()),
+})
+
+export type PatientPathwayItem = z.infer<typeof patientPathwayItemSchema>
+export type ReorderPatientPathwaysBody = z.infer<
+  typeof reorderPatientPathwaysBodySchema
+>

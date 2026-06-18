@@ -4,6 +4,7 @@ import type {
   PatientCreateEntityRepo,
   PatientEntityRepo,
   PatientExportFilters,
+  PatientPathwayEntityRepo,
   PatientRepositoryInterface,
   PatientUpdateEntityRepo,
   PatientWithTagsEntityRepo,
@@ -185,6 +186,87 @@ class PatientRepository implements PatientRepositoryInterface {
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
         entityName: 'Patient',
+        error: err,
+      })
+    }
+  }
+
+  async getPathwaysForPatient(
+    patientID: string,
+  ): Promise<PatientPathwayEntityRepo[]> {
+    try {
+      const pathways = await this.prisma.pathway.findMany({
+        where: {
+          slots: {
+            some: {
+              appointments: {
+                some: {
+                  appointmentPatients: { some: { patientId: patientID } },
+                },
+              },
+            },
+          },
+        },
+        include: {
+          template: {
+            select: { id: true, name: true, color: true, tags: true },
+          },
+          patientPriorities: {
+            where: { patientID },
+            select: { priority: true },
+          },
+        },
+      })
+
+      const result: PatientPathwayEntityRepo[] = pathways.map((p) => ({
+        pathwayID: p.id,
+        templateID: p.template?.id ?? null,
+        templateName: p.template?.name ?? null,
+        templateColor: p.template?.color ?? null,
+        templateTags: p.template?.tags ?? [],
+        startDate: p.startDate,
+        priority: p.patientPriorities[0]?.priority ?? null,
+      }))
+
+      result.sort((a, b) => {
+        const ap = a.priority ?? Number.POSITIVE_INFINITY
+        const bp = b.priority ?? Number.POSITIVE_INFINITY
+        if (ap !== bp) {
+          return ap - bp
+        }
+        return a.startDate.getTime() - b.startDate.getTime()
+      })
+
+      return result
+    } catch (err) {
+      throw this.errorHandler.boomErrorFromPrismaError({
+        entityName: 'Pathway',
+        error: err,
+      })
+    }
+  }
+
+  async setPathwayPriorities(
+    patientID: string,
+    orderedPathwayIDs: string[],
+  ): Promise<void> {
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.patientPathwayPriority.deleteMany({ where: { patientID } })
+        if (orderedPathwayIDs.length === 0) {
+          return
+        }
+        await tx.patientPathwayPriority.createMany({
+          data: orderedPathwayIDs.map((pathwayID, index) => ({
+            patientID,
+            pathwayID,
+            priority: index,
+          })),
+        })
+      })
+    } catch (err) {
+      throw this.errorHandler.boomErrorFromPrismaError({
+        entityName: 'PatientPathwayPriority',
         error: err,
       })
     }

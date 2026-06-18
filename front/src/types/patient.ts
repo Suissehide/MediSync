@@ -94,3 +94,13 @@ export type EnrollmentResult = {
     reason: string
   }[]
 }
+
+export type PatientPathway = {
+  pathwayID: string
+  templateID: string | null
+  templateName: string | null
+  templateColor: string | null
+  templateTags: string[]
+  startDate: string
+  priority: number | null
+}

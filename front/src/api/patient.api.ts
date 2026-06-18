@@ -10,6 +10,7 @@ import type {
   EnrollmentResult,
   EnrollPatientParams,
   Patient,
+  PatientPathway,
   PatientWithTags,
   UpdatePatientParams,
 } from '../types/patient.ts'
@@ -207,5 +208,41 @@ export const PatientApi = {
       handleHttpError(response, {}, 'Impossible de supprimer le patient')
     }
     return
+  },
+
+  getPathways: async (patientID: string): Promise<PatientPathway[]> => {
+    const response = await fetchWithAuth(
+      `${apiUrl}/patient/${patientID}/pathways`,
+      { method: 'GET' },
+    )
+    if (!response.ok) {
+      handleHttpError(
+        response,
+        {},
+        'Impossible de récupérer les parcours du patient',
+      )
+    }
+    return response.json()
+  },
+
+  reorderPathways: async (
+    patientID: string,
+    pathwayIDs: string[],
+  ): Promise<void> => {
+    const response = await fetchWithAuth(
+      `${apiUrl}/patient/${patientID}/pathway-priorities`,
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pathwayIDs }),
+      },
+    )
+    if (!response.ok) {
+      handleHttpError(
+        response,
+        {},
+        'Impossible de réordonner les parcours du patient',
+      )
+    }
   },
 }

@@ -2,7 +2,7 @@ import { Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer'
 
 import lines from '../../../../../assets/images/pdf/lines.png'
 import logoCHU from '../../../../../assets/images/pdf/logo_chx-bdx.png'
-import type { Patient } from '../../../../../types/patient.ts'
+import type { Patient, PatientPathway } from '../../../../../types/patient.ts'
 import type { Slot } from '../../../../../types/slot.ts'
 import { computeProgramDuration } from '../programme-pdf.utils.ts'
 
@@ -103,19 +103,24 @@ const styles = StyleSheet.create({
 export default function CoverPage({
   patient,
   upcomingSlots,
+  pathways,
 }: {
   patient: Patient
   upcomingSlots: Slot[]
+  pathways: PatientPathway[]
 }) {
   const duration = computeProgramDuration(upcomingSlots)
   const patientLabel = `${patient.firstName} ${patient.lastName}`
-  const pathwayNames = Array.from(
-    new Set(
-      upcomingSlots.map((s) => s.pathway?.template?.name).filter(Boolean),
-    ),
-  )
-  const programLabel =
-    pathwayNames.length > 0 ? pathwayNames.join(' / ') : 'Programme'
+
+  const firstPathway = pathways[0]
+  let programLabel = 'Programme'
+  if (firstPathway) {
+    if (firstPathway.templateTags.length > 0) {
+      programLabel = firstPathway.templateTags.join(' / ')
+    } else if (firstPathway.templateName) {
+      programLabel = firstPathway.templateName
+    }
+  }
 
   return (
     <Page size="A4" style={styles.coverPage}>
