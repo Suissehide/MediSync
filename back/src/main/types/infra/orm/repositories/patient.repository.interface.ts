@@ -18,6 +18,16 @@ export type PatientExportFilters = {
   pathwayTemplateTags?: string[]
 }
 
+export type PatientPathwayEntityRepo = {
+  pathwayID: string
+  templateID: string | null
+  templateName: string | null
+  templateColor: string | null
+  templateTags: string[]
+  startDate: Date
+  priority: number | null
+}
+
 export interface PatientRepositoryInterface {
   findAll: () => Promise<PatientEntityRepo[]>
   findAllWithTags: () => Promise<PatientWithTagsEntityRepo[]>
@@ -39,4 +49,9 @@ export interface PatientRepositoryInterface {
     patientID: string,
     pathwayID: string,
   ) => Promise<number>
+  getPathwaysForPatient: (patientID: string) => Promise<PatientPathwayEntityRepo[]>
+  setPathwayPriorities: (
+    patientID: string,
+    orderedPathwayIDs: string[],
+  ) => Promise<void>
 }
