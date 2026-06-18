@@ -84,7 +84,7 @@ export default function ProgrammePDFModal({
                   return (
                     <div
                       key={page.id}
-                      className="flex items-center gap-2 text-sm cursor-pointer"
+                      className="flex items-center gap-2 text-sm"
                     >
                       <Switch
                         checked={checked}
