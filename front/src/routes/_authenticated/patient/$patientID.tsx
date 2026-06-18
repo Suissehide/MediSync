@@ -82,17 +82,19 @@ function PatientDetails() {
               {patient && <AddPatientToPathwayForm patient={patient} />}
               <Button
                 variant="outline"
-                size="icon"
+                size="default"
                 onClick={() => setShowPDF(true)}
               >
                 <FileDown className="w-4 h-4" />
+                Générer le programme
               </Button>
               <Button
                 variant="outline"
-                size="icon"
+                size="default"
                 onClick={() => setShowDelete(true)}
               >
                 <Trash2 className="w-4 h-4 text-destructive" />
+                Supprimer le patient
               </Button>
             </div>
           </div>

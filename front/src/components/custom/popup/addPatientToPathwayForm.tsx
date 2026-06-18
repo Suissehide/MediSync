@@ -72,8 +72,9 @@ export function AddPatientToPathwayForm({
   return (
     <Popup modal open={open} onOpenChange={handleOpenChange}>
       <PopupTrigger asChild>
-        <Button type="button" variant="outline" size="icon">
+        <Button type="button" variant="outline" size="default">
           <CalendarPlus className="w-4 h-4" />
+          Inscrire à un parcours
         </Button>
       </PopupTrigger>
 
