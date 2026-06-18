@@ -157,7 +157,7 @@ export const useSlotMutations = () => {
             slotTemplate: {
               ...oldSlot.slotTemplate,
               ...updatedSlot.slotTemplate,
-              soignant: oldSlot.slotTemplate.soignant,
+              soignants: oldSlot.slotTemplate.soignants,
             },
           }
         },
