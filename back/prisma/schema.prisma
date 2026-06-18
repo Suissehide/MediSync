@@ -44,8 +44,21 @@ model Pathway {
   startDate  DateTime
   templateID String?
 
-  template PathwayTemplate? @relation(fields: [templateID], references: [id])
-  slots    Slot[]
+  template          PathwayTemplate?          @relation(fields: [templateID], references: [id])
+  slots             Slot[]
+  patientPriorities PatientPathwayPriority[]
+}
+
+model PatientPathwayPriority {
+  patientID String
+  pathwayID String
+  priority  Int
+
+  patient Patient @relation(fields: [patientID], references: [id], onDelete: Cascade)
+  pathway Pathway @relation(fields: [pathwayID], references: [id], onDelete: Cascade)
+
+  @@id([patientID, pathwayID])
+  @@index([patientID, priority])
 }
 
 model Appointment {
@@ -184,6 +197,7 @@ model Patient {
   appointmentPatients AppointmentPatient[]
   diagnostics         DiagnosticEducatif[]
   enrollmentIssues    EnrollmentIssue[]
+  pathwayPriorities   PatientPathwayPriority[]
 }
 
 model EnrollmentIssue {
