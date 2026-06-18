@@ -57,7 +57,7 @@ export default function EventSheet({
   const form = useAppForm({
     ...eventFormOpts,
     defaultValues: {
-      soignant: slot?.slotTemplate?.soignant?.id ?? '',
+      soignantIDs: slot?.slotTemplate?.soignants?.map((s) => s.id) ?? [],
       thematic: slot?.slotTemplate?.thematic ?? '',
       locationID: slot?.slotTemplate?.locationID ?? '',
       isIndividual: slot?.slotTemplate?.isIndividual ?? false,
@@ -79,7 +79,7 @@ export default function EventSheet({
           description: value.description,
           isIndividual: value.isIndividual,
           capacity: Number(value.capacity),
-          soignantID: value.soignant,
+          soignantIDs: value.soignantIDs,
           color: value.color,
         },
       } satisfies UpdateSlotParams
@@ -130,7 +130,7 @@ export default function EventSheet({
 
     reset(
       {
-        soignant: slot.slotTemplate?.soignant?.id ?? '',
+        soignantIDs: slot.slotTemplate?.soignants?.map((s) => s.id) ?? [],
         thematic: slot.slotTemplate?.thematic ?? '',
         locationID: slot.slotTemplate?.locationID ?? '',
         isIndividual: slot.slotTemplate?.isIndividual ?? false,
