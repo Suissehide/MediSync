@@ -43,8 +43,8 @@ export const slotTemplateSchema = z.object({
   isIndividual: z.boolean(),
   capacity: z.number().optional().nullable(),
 
-  get soignant() {
-    return soignantSchema.optional().nullable()
+  get soignants() {
+    return z.array(soignantSchema)
   },
   get template() {
     return pathwayTemplateSchema.optional().nullable()

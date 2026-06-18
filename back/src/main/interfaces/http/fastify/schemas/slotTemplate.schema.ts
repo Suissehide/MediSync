@@ -5,9 +5,7 @@ import { soignantResponseSchema } from './soignant.schema'
 
 export const slotTemplateResponseSchema = slotTemplateSchema.extend({
   id: z.cuid(),
-  soignant: soignantResponseSchema.extend({
-    id: z.cuid(),
-  }).optional().nullable(),
+  soignants: z.array(soignantResponseSchema.extend({ id: z.cuid() })),
 })
 
 export const slotTemplatesResponseSchema = z.array(slotTemplateResponseSchema)
@@ -30,7 +28,7 @@ export const createSlotTemplateSchema = slotTemplateSchema
     capacity: true,
   })
   .extend({
-    soignantID: z.cuid().optional(),
+    soignantIDs: z.array(z.cuid()).optional(),
     templateID: z.cuid().optional(),
   })
 
@@ -40,7 +38,7 @@ export const deleteSlotTemplateByIdParamsSchema =
 export const updateSlotTemplateByIdSchema = {
   params: getSlotTemplateByIdParamsSchema,
   body: slotTemplateSchema.partial().extend({
-    soignantID: z.cuid().optional(),
+    soignantIDs: z.array(z.cuid()).optional(),
     templateID: z.cuid().optional(),
   }),
 }
