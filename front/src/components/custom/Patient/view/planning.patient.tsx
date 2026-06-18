@@ -39,9 +39,7 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
   const [selectedSlotID, setSelectedSlotID] = useState('')
   const [selectedSlotStart, setSelectedSlotStart] = useState('')
   const [selectedSlotEnd, setSelectedSlotEnd] = useState('')
-  const [selectedSlotSoignant, setSelectedSlotSoignant] = useState<
-    Soignant | undefined
-  >()
+  const [selectedSlotSoignants, setSelectedSlotSoignants] = useState<Soignant[]>([])
   const [selectedSlotType, setSelectedSlotType] = useState('')
   const [selectedSlotMaxDate, setSelectedSlotMaxDate] = useState('')
   const calendarUnselectRef = useRef<(() => void) | null>(null)
@@ -186,7 +184,7 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
       s.appointments?.some((a) => a.id === appointmentId),
     )
     if (slot) {
-      setSelectedSlotSoignant(slot.slotTemplate?.soignant ?? undefined)
+      setSelectedSlotSoignants(slot.slotTemplate?.soignants ?? [])
       setOpenAppointmentId(appointmentId)
     }
   }
@@ -197,7 +195,7 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
       s.appointments?.some((a) => a.id === appointmentId),
     )
     if (slot) {
-      setSelectedSlotSoignant(slot.slotTemplate?.soignant ?? undefined)
+      setSelectedSlotSoignants(slot.slotTemplate?.soignants ?? [])
       setOpenAppointmentId(appointmentId)
     }
   }
@@ -212,7 +210,7 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
     if (enrolledSlotIds.has(slotId)) {
       const appointmentId = patientAppointmentBySlotId.get(slotId)
       if (appointmentId) {
-        setSelectedSlotSoignant(slot.slotTemplate.soignant ?? undefined)
+        setSelectedSlotSoignants(slot.slotTemplate?.soignants ?? [])
         setOpenAppointmentId(appointmentId)
       }
     } else {
@@ -221,12 +219,12 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
       }
       const isIndividual = slot.slotTemplate.isIndividual
       if (!isIndividual && slot.appointments && slot.appointments.length > 0) {
-        setSelectedSlotSoignant(slot.slotTemplate.soignant ?? undefined)
+        setSelectedSlotSoignants(slot.slotTemplate?.soignants ?? [])
         setOpenAppointmentId(slot.appointments[0].id)
         return
       }
       setSelectedSlotID(slotId)
-      setSelectedSlotSoignant(slot.slotTemplate.soignant ?? undefined)
+      setSelectedSlotSoignants(slot.slotTemplate?.soignants ?? [])
       setSelectedSlotMaxDate(slot.endDate)
       setSelectedSlotType(isIndividual ? 'individual' : 'multiple')
       if (!isIndividual) {
@@ -315,7 +313,7 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
           endDate={selectedSlotEnd}
           maxDate={selectedSlotMaxDate}
           slotID={selectedSlotID}
-          soignant={selectedSlotSoignant}
+          soignants={selectedSlotSoignants}
           type={selectedSlotType}
           handleCreateAppointment={handleCreateAppointment}
           defaultPatientIDs={patient ? [patient.id] : []}
@@ -326,7 +324,7 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
         open={!!openAppointmentId}
         setOpen={setOpenAppointmentId}
         eventID={openAppointmentId}
-        soignant={selectedSlotSoignant}
+        soignants={selectedSlotSoignants}
       />
     </div>
   )
