@@ -205,7 +205,7 @@ function Planning() {
           color: newSlot.slotTemplate.color,
           isIndividual: newSlot.slotTemplate.isIndividual,
           capacity: newSlot.slotTemplate.capacity,
-          soignantID: newSlot.slotTemplate.soignantID,
+          soignantIDs: newSlot.slotTemplate.soignantIDs,
           templateID: currentPathwayTemplate?.id,
         }
         createSlotTemplate.mutate(slotTemplate, {
@@ -317,7 +317,7 @@ function Planning() {
       color: slot.slotTemplate.color,
       isIndividual: slot.slotTemplate.isIndividual,
       capacity: slot.slotTemplate.capacity ?? 1,
-      soignantID: slot.slotTemplate.soignant?.id ?? '',
+      soignantIDs: slot.slotTemplate.soignants?.map((s) => s.id) ?? [],
     },
   })
 
@@ -367,7 +367,7 @@ function Planning() {
         color: slotTemplate.color,
         isIndividual: slotTemplate.isIndividual,
         capacity: slotTemplate.capacity,
-        soignantID: slotTemplate.soignant?.id ?? '',
+        soignantIDs: slotTemplate.soignants?.map((s) => s.id) ?? [],
         templateID: currentPathwayTemplate.id,
       })
     }
@@ -476,7 +476,7 @@ function Planning() {
           color: slotTemplate.color,
           isIndividual: slotTemplate.isIndividual,
           capacity: slotTemplate.capacity,
-          soignantID: slotTemplate.soignant?.id ?? '',
+          soignantIDs: slotTemplate.soignants?.map((s) => s.id) ?? [],
           templateID: currentPathwayTemplate.id,
         })
       } else {
