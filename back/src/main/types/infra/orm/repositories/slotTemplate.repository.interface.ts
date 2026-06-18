@@ -7,22 +7,22 @@ import type { PathwayTemplateEntityRepo } from './pathwayTemplate.repository.int
 import type { SoignantEntityRepo } from './soignant.repository.interface'
 
 export type SlotTemplateEntityRepo = SlotTemplate
-export type SlotTemplateWithSoignantRepo = SlotTemplateEntityRepo & {
-  soignant: SoignantEntityRepo | null
+export type SlotTemplateWithSoignantsRepo = SlotTemplateEntityRepo & {
+  soignants: SoignantEntityRepo[]
 }
 export type SlotTemplateDTORepo = SlotTemplateEntityRepo & {
-  soignant: SoignantEntityRepo | null
+  soignants: SoignantEntityRepo[]
   template: PathwayTemplateEntityRepo | null
   location: LocationEntityRepo | null
 }
 export type SlotTemplateCreateEntityRepo =
   Prisma.SlotTemplateUncheckedCreateInput & {
-    soignantID?: string
+    soignantIDs?: string[]
     templateID?: string
   }
 export type SlotTemplateUpdateEntityRepo =
   Prisma.SlotTemplateUncheckedUpdateInput & {
-    soignantID?: string
+    soignantIDs?: string[]
     templateID?: string
     slot?: string
   }

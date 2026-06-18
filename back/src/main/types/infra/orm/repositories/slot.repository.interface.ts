@@ -7,12 +7,12 @@ import type { AppointmentWithPatientsRepo } from './appointment.repository.inter
 import type { PathwayEntityRepo } from './pathway.repository.interface'
 import type {
   SlotTemplateUpdateEntityRepo,
-  SlotTemplateWithSoignantRepo,
+  SlotTemplateWithSoignantsRepo,
 } from './slotTemplate.repository.interface'
 
 export type SlotEntityRepo = Slot
 export type SlotWithTemplateAndAppointmentsRepo = SlotEntityRepo & {
-  slotTemplate: SlotTemplateWithSoignantRepo
+  slotTemplate: SlotTemplateWithSoignantsRepo
   appointments: AppointmentWithPatientsRepo[]
 }
 export type PathwayWithTemplateRepo = PathwayEntityRepo & {
@@ -20,7 +20,7 @@ export type PathwayWithTemplateRepo = PathwayEntityRepo & {
 }
 export type SlotDTORepo = SlotEntityRepo & {
   pathway: PathwayWithTemplateRepo | null
-  slotTemplate: SlotTemplateWithSoignantRepo
+  slotTemplate: SlotTemplateWithSoignantsRepo
   appointments: AppointmentWithPatientsRepo[]
 }
 export type SlotCreateEntityRepo = Omit<

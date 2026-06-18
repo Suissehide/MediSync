@@ -4,25 +4,25 @@ import type { PathwayTemplateEntityDomain } from './pathwayTemplate.domain.inter
 import type { SoignantEntityDomain } from './soignant.domain.interface'
 
 export type SlotTemplateEntityDomain = SlotTemplateEntityRepo
-export type SlotTemplateWithSoignantDomain = SlotTemplateEntityRepo & {
-  soignant: SoignantEntityDomain | null
+export type SlotTemplateWithSoignantsDomain = SlotTemplateEntityRepo & {
+  soignants: SoignantEntityDomain[]
 }
 export type SlotTemplateDTODomain = SlotTemplateEntityDomain & {
-  soignant: SoignantEntityDomain | null
+  soignants: SoignantEntityDomain[]
   template: PathwayTemplateEntityDomain | null
 }
 export type SlotTemplateCreateEntityDomain = Omit<
   Prisma.SlotTemplateUncheckedCreateInput,
   'slot'
 > & {
-  soignantID?: string
+  soignantIDs?: string[]
   templateID?: string
 }
 export type SlotTemplateUpdateEntityDomain = Omit<
   Prisma.SlotTemplateUncheckedUpdateInput,
   'slot'
 > & {
-  soignantID?: string
+  soignantIDs?: string[]
   templateID?: string
   slotID?: string
 }

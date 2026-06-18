@@ -2,11 +2,11 @@ import type {
   PathwayTemplate,
   Prisma,
 } from '../../../../../generated/client'
-import type { SlotTemplateWithSoignantRepo } from './slotTemplate.repository.interface'
+import type { SlotTemplateWithSoignantsRepo } from './slotTemplate.repository.interface'
 
 export type PathwayTemplateEntityRepo = PathwayTemplate
 export type PathwayTemplateWithSlotTemplatesRepo = PathwayTemplateEntityRepo & {
-  slotTemplates: SlotTemplateWithSoignantRepo[]
+  slotTemplates: SlotTemplateWithSoignantsRepo[]
 }
 export type PathwayTemplateCreateEntityRepo = Omit<
   Prisma.PathwayTemplateUncheckedCreateInput,

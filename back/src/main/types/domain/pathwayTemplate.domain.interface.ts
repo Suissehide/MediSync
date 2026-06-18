@@ -1,11 +1,11 @@
 import type { PathwayTemplate, Prisma } from '../../../generated/client'
 
-import type { SlotTemplateWithSoignantDomain } from './slotTemplate.domain.interface'
+import type { SlotTemplateWithSoignantsDomain } from './slotTemplate.domain.interface'
 
 export type PathwayTemplateEntityDomain = PathwayTemplate
 export type PathwayTemplateWithSlotTemplatesDomain =
   PathwayTemplateEntityDomain & {
-    slotTemplates: SlotTemplateWithSoignantDomain[]
+    slotTemplates: SlotTemplateWithSoignantsDomain[]
   }
 export type PathwayTemplateCreateEntityDomain = Omit<
   Prisma.PathwayTemplateUncheckedCreateInput,
