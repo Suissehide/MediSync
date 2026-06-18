@@ -1,11 +1,16 @@
 import { PDFDownloadLink, PDFViewer } from '@react-pdf/renderer'
 import dayjs from 'dayjs'
 import { Download, X } from 'lucide-react'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 
 import { useAllSlotsQuery } from '../../../../queries/useSlot.ts'
 import type { Patient } from '../../../../types/patient.ts'
 import { Button } from '../../../ui/button.tsx'
+import { Switch } from '../../../ui/switch.tsx'
+import {
+  getDefaultEnabledOptionalPageIds,
+  OPTIONAL_PAGES,
+} from './optional-pages.ts'
 import ProgrammePDF from './programme.pdf.tsx'
 
 interface ProgrammePDFModalProps {
@@ -20,6 +25,16 @@ export default function ProgrammePDFModal({
   previewMode = true,
 }: ProgrammePDFModalProps) {
   const { slots } = useAllSlotsQuery()
+
+  const [enabledOptionalPageIds, setEnabledOptionalPageIds] = useState<
+    string[]
+  >(() => getDefaultEnabledOptionalPageIds())
+
+  const toggleOptionalPage = (id: string) => {
+    setEnabledOptionalPageIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    )
+  }
 
   const patientSlots = useMemo(() => {
     if (!slots || !patient) {
@@ -42,11 +57,15 @@ export default function ProgrammePDFModal({
 
   const fileName = `programme-${patient.lastName}-${patient.firstName}-${dayjs.utc().format('YYYY-MM-DD')}.pdf`
 
-  const pdfDocument = (
-    <ProgrammePDF
-      patient={patient}
-      upcomingSlots={patientSlots}
-    />
+  const pdfDocument = useMemo(
+    () => (
+      <ProgrammePDF
+        patient={patient}
+        upcomingSlots={patientSlots}
+        enabledOptionalPageIds={enabledOptionalPageIds}
+      />
+    ),
+    [patient, patientSlots, enabledOptionalPageIds],
   )
 
   return (
@@ -57,7 +76,26 @@ export default function ProgrammePDFModal({
           <h2 className="text-lg font-semibold">
             Aperçu du programme - {patient.firstName} {patient.lastName}
           </h2>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
+            {OPTIONAL_PAGES.length > 0 && (
+              <div className="flex items-center gap-3">
+                {OPTIONAL_PAGES.map((page) => {
+                  const checked = enabledOptionalPageIds.includes(page.id)
+                  return (
+                    <div
+                      key={page.id}
+                      className="flex items-center gap-2 text-sm cursor-pointer"
+                    >
+                      <Switch
+                        checked={checked}
+                        onCheckedChange={() => toggleOptionalPage(page.id)}
+                      />
+                      <span>{page.label}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
             <PDFDownloadLink document={pdfDocument} fileName={fileName}>
               {({ loading }) => (
                 <Button variant="default" size="default" disabled={loading}>
