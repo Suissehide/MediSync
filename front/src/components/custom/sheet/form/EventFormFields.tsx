@@ -5,6 +5,9 @@ import { withForm } from '../../../../hooks/formConfig.tsx'
 import { useLocationQueries } from '../../../../queries/useLocation.ts'
 import { useThematicQueries } from '../../../../queries/useThematic.ts'
 import { useSoignantStore } from '../../../../store/useSoignantStore.ts'
+import { FieldInfo } from '../../../ui/fieldInfo.tsx'
+import { FormField } from '../../../ui/formField.tsx'
+import { MultiSelect } from '../../../ui/select.tsx'
 import { eventFormOpts } from './eventFormOpts.ts'
 
 export const EventFormFields = withForm({
@@ -37,12 +40,10 @@ export const EventFormFields = withForm({
       (state) => state.values.isIndividual,
     )
 
-    const selectedSoignantId = useStore(
+    const selectedSoignantIds = useStore(
       form.store,
-      (state) => state.values.soignant,
+      (state) => state.values.soignantIDs,
     )
-
-    const selectedSoignant = soignants.find((s) => s.id === selectedSoignantId)
 
     const currentThematic = useStore(
       form.store,
@@ -50,56 +51,64 @@ export const EventFormFields = withForm({
     )
 
     const thematicOptions = useMemo(() => {
-      return selectedSoignant
-        ? (thematics
-            ?.filter((t) =>
-              t.soignants.some((s) => s.id === selectedSoignant.id),
-            )
-            .slice()
-            .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
-            .map((t) => ({ value: t.name, label: t.name })) ?? [])
-        : []
-    }, [selectedSoignant, thematics])
+      const selected = soignants.filter((s) =>
+        selectedSoignantIds.includes(s.id),
+      )
+      const map = new Map<string, { value: string; label: string }>()
+      for (const soignant of selected) {
+        for (const t of
+          thematics?.filter((t) =>
+            t.soignants.some((ss) => ss.id === soignant.id),
+          ) ?? []) {
+          map.set(t.id, { value: t.name, label: t.name })
+        }
+      }
+      return [...map.values()].sort((a, b) =>
+        a.label.localeCompare(b.label, 'fr'),
+      )
+    }, [selectedSoignantIds, soignants, thematics])
 
     useEffect(() => {
       if (
         currentThematic &&
-        selectedSoignant &&
         !thematicOptions.some((o) => o.value === currentThematic)
       ) {
         form.setFieldValue('thematic', '')
       }
-    }, [currentThematic, selectedSoignant, thematicOptions, form])
+    }, [currentThematic, thematicOptions, form])
 
     return (
       <>
-        <form.AppField
-          name="soignant"
-          listeners={{
-            onChange: ({ value }) => {
-              if (value) {
-                form.setFieldValue('thematic', '')
-              }
-            },
-          }}
-        >
+        <form.Field name="soignantIDs">
           {(field) => (
-            <field.Select options={soignantOptions} label="Soignant" />
+            <FormField>
+              <div className="text-sm text-text-light font-medium">Soignants</div>
+              <MultiSelect
+                options={soignantOptions}
+                value={field.state.value}
+                onChange={(values) => field.handleChange(values)}
+                placeholder="Sélectionnez un ou plusieurs soignants"
+              />
+              <FieldInfo field={field} />
+            </FormField>
           )}
-        </form.AppField>
+        </form.Field>
 
         <form.AppField name="thematic">
           {(field) => (
             <field.Select
               options={thematicOptions}
               label="Thématique"
-              disabled={!selectedSoignant || thematicOptions.length === 0}
+              disabled={
+                selectedSoignantIds.length === 0 ||
+                thematicOptions.length === 0
+              }
               placeholder={
-                selectedSoignant
-                  ? thematicOptions.length === 0
+                selectedSoignantIds.length === 0
+                  ? 'Sélectionnez un soignant'
+                  : thematicOptions.length === 0
                     ? 'Aucune thématique associée'
                     : 'Sélectionnez une thématique'
-                  : 'Sélectionnez un soignant'
               }
             />
           )}

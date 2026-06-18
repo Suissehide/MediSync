@@ -52,7 +52,7 @@ export default function EventTemplateSheet({
       description: slotTemplate?.description ?? '',
       isIndividual: slotTemplate?.isIndividual ?? false,
       capacity: slotTemplate?.capacity ?? 1,
-      soignant: slotTemplate?.soignant?.id ?? '',
+      soignantIDs: slotTemplate?.soignants?.map((s) => s.id) ?? [],
       color: slotTemplate?.color ?? '',
     },
     onSubmit: ({ value }) => {
@@ -67,7 +67,7 @@ export default function EventTemplateSheet({
         description: value.description,
         isIndividual: value.isIndividual,
         capacity: value.capacity ?? 1,
-        soignantID: value.soignant,
+        soignantIDs: value.soignantIDs,
         color: value.color,
       } satisfies UpdateSlotTemplateParams
 
@@ -103,7 +103,7 @@ export default function EventTemplateSheet({
         description: slotTemplate.description ?? '',
         isIndividual: slotTemplate.isIndividual ?? false,
         capacity: slotTemplate.capacity ?? 1,
-        soignant: slotTemplate.soignant?.id ?? '',
+        soignantIDs: slotTemplate.soignants?.map((s) => s.id) ?? [],
         color: slotTemplate.color ?? '',
       },
       { keepDefaultValues: true },
