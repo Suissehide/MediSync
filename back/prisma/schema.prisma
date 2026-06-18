@@ -103,10 +103,9 @@ model SlotTemplate {
   color        String
 
   slot       Slot?
-  soignantID String?
   templateID String?
 
-  soignant Soignant?        @relation(fields: [soignantID], references: [id])
+  soignants Soignant[]      @relation("SlotTemplateSoignants")
   template PathwayTemplate? @relation(fields: [templateID], references: [id])
   location Location?        @relation(fields: [locationID], references: [id], onDelete: SetNull)
 }
@@ -128,7 +127,7 @@ model Soignant {
   id   String @id @default(cuid())
   name String
 
-  slotTemplates SlotTemplate[]
+  slotTemplates SlotTemplate[] @relation("SlotTemplateSoignants")
   todos         Todo[]
   thematics     Thematic[]     @relation("SoignantThematics")
   users         User[]
