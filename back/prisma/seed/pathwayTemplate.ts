@@ -107,6 +107,6 @@ function createSlotTemplate(
     description: data.description,
     thematic: data.thematic,
     locationID,
-    soignantID: soignant.id,
+    soignants: { connect: [{ id: soignant.id }] },
   }
 }
