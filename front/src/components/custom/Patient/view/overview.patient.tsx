@@ -34,7 +34,9 @@ function AppointmentCard({ slot }: { slot: Slot }) {
   const color = slot.slotTemplate?.color ?? '#6b7280'
   const thematic = slot.slotTemplate?.thematic || 'Rendez-vous'
   const location = slot.slotTemplate?.location?.name
-  const soignant = slot.slotTemplate?.soignant?.name
+  const soignant = slot.slotTemplate?.soignants?.length
+    ? slot.slotTemplate.soignants.map((s) => s.name).join(', ')
+    : undefined
 
   const formattedDate = dayjs
     .utc(slot.startDate)
