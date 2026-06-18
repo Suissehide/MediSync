@@ -72,7 +72,9 @@ export const buildCalendarEventsFromSlots = (
     const slotColor = slot.slotTemplate?.color ?? '#2563eb'
     return {
       id: `slot_${slot.id}`,
-      title: slot.slotTemplate?.soignant?.name ?? 'Soignant inconnu',
+      title: slot.slotTemplate?.soignants?.length
+        ? slot.slotTemplate.soignants.map((s) => s.name).join(', ')
+        : 'Soignant inconnu',
       start: slot.startDate,
       end: slot.endDate,
       color: slotColor,
@@ -109,7 +111,9 @@ export const buildCalendarEventsFromSlotTemplates = (
     const templateColor = slotTemplate.color ?? '#2563eb'
     return {
       id: `template_${slotTemplate.id}`,
-      title: slotTemplate.soignant?.name ?? 'Soignant inconnu',
+      title: slotTemplate.soignants?.length
+        ? slotTemplate.soignants.map((s) => s.name).join(', ')
+        : 'Soignant inconnu',
       start: start.toISOString(),
       end: end.toISOString(),
       color: templateColor,
