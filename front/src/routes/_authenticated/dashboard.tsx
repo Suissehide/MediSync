@@ -46,13 +46,15 @@ function Dashboard() {
   const [selectedEvent, setSelectedEvent] = useState('')
   const [maxDate, setMaxDate] = useState('')
   const [type, setType] = useState('')
-  const [slotSoignant, setSlotSoignant] = useState<Soignant | undefined>(undefined)
+  const [slotSoignants, setSlotSoignants] = useState<Soignant[]>([])
   const calendarUnselectRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     if (slots) {
       const filtered = selectedID && selectedID !== 'all'
-        ? slots.filter((slot) => slot.slotTemplate?.soignant?.id === selectedID)
+        ? slots.filter((slot) =>
+            slot.slotTemplate?.soignants?.some((s) => s.id === selectedID),
+          )
         : slots
 
       const slotEvents = buildCalendarEventsFromSlots(filtered, ['fillable'])
@@ -91,7 +93,7 @@ function Dashboard() {
     }
 
     const slot = slots?.find((s) => s.id === slotId)
-    setSlotSoignant(slot?.slotTemplate?.soignant ?? undefined)
+    setSlotSoignants(slot?.slotTemplate?.soignants ?? [])
 
     setType('multiple')
     setMaxDate(event?.end ?? '')
@@ -119,7 +121,7 @@ function Dashboard() {
       const slot = slots?.find((s) =>
         s.appointments?.some((a) => a.id === aptId),
       )
-      setSlotSoignant(slot?.slotTemplate?.soignant ?? undefined)
+      setSlotSoignants(slot?.slotTemplate?.soignants ?? [])
     }
     setOpenEventId(eventId)
   }
@@ -211,7 +213,7 @@ function Dashboard() {
             startDate={selectedDate.startStr}
             endDate={selectedDate.endStr}
             maxDate={maxDate}
-            soignant={slotSoignant}
+            soignants={slotSoignants}
             slotID={selectedEvent}
             type={type}
             handleCreateAppointment={handleCreateAppointment}
@@ -223,7 +225,7 @@ function Dashboard() {
             open={isAppointment}
             setOpen={setOpenEventId}
             eventID={appointmentId}
-            soignant={slotSoignant}
+            soignants={slotSoignants}
           />
         )}
       </div>
