@@ -23,7 +23,7 @@ class SlotRepository implements SlotRepositoryInterface {
       include: {
         slotTemplate: {
           include: {
-            soignant: true,
+            soignants: true,
           },
         },
         pathway: {
@@ -51,7 +51,7 @@ class SlotRepository implements SlotRepositoryInterface {
         include: {
           slotTemplate: {
             include: {
-              soignant: true,
+              soignants: true,
             },
           },
           pathway: {
@@ -85,7 +85,7 @@ class SlotRepository implements SlotRepositoryInterface {
         include: {
           slotTemplate: {
             include: {
-              soignant: true,
+              soignants: true,
             },
           },
           pathway: {
@@ -122,9 +122,17 @@ class SlotRepository implements SlotRepositoryInterface {
         const { slotTemplate: slotTemplateData, ...slotData } = slotUpdateParams
 
         if (slotTemplateData?.id) {
+          const { soignantIDs, id: _id, ...templateRest } = slotTemplateData
+          const data =
+            soignantIDs === undefined
+              ? templateRest
+              : {
+                  ...templateRest,
+                  soignants: { set: soignantIDs.map((id) => ({ id })) },
+                }
           await tx.slotTemplate.update({
             where: { id: slotTemplateData.id },
-            data: slotTemplateData,
+            data,
           })
         }
 
@@ -134,7 +142,7 @@ class SlotRepository implements SlotRepositoryInterface {
           include: {
             slotTemplate: {
               include: {
-                soignant: true,
+                soignants: true,
               },
             },
             pathway: {
