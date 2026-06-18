@@ -83,6 +83,7 @@ function PatientDetails() {
               <Button
                 variant="outline"
                 size="default"
+                className="font-normal leading-tight"
                 onClick={() => setShowPDF(true)}
               >
                 <FileDown className="w-4 h-4" />
@@ -91,6 +92,7 @@ function PatientDetails() {
               <Button
                 variant="outline"
                 size="default"
+                className="font-normal leading-tight"
                 onClick={() => setShowDelete(true)}
               >
                 <Trash2 className="w-4 h-4 text-destructive" />
