@@ -17,6 +17,7 @@ import type {
   PatientDomainInterface,
   PatientEntityDomain,
   PatientExportFilters,
+  PatientPathwayDomain,
   PatientUpdateEntityDomain,
   PatientWithAppointmentsDomain,
   PatientWithTagsDomain,
@@ -196,6 +197,20 @@ class PatientDomain implements PatientDomainInterface {
     })
 
     return result
+  }
+
+  async getPathways(patientID: string): Promise<PatientPathwayDomain[]> {
+    return this.patientRepository.getPathwaysForPatient(patientID)
+  }
+
+  async setPathwayPriorities(
+    patientID: string,
+    orderedPathwayIDs: string[],
+  ): Promise<void> {
+    await this.patientRepository.setPathwayPriorities(
+      patientID,
+      orderedPathwayIDs,
+    )
   }
 
   async enrollPatientInPathways(
