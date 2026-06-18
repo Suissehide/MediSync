@@ -8,6 +8,24 @@ import type {
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { PostgresPrismaClient } from '../postgres-client'
 
+function applyConnect(params: SlotTemplateCreateEntityRepo) {
+  const { soignantIDs, ...rest } = params
+  if (soignantIDs === undefined) return rest
+  return {
+    ...rest,
+    soignants: { connect: soignantIDs.map((id) => ({ id })) },
+  }
+}
+
+function applySet(params: SlotTemplateUpdateEntityRepo) {
+  const { soignantIDs, ...rest } = params
+  if (soignantIDs === undefined) return rest
+  return {
+    ...rest,
+    soignants: { set: soignantIDs.map((id) => ({ id })) },
+  }
+}
+
 class SlotTemplateRepository implements SlotTemplateRepositoryInterface {
   private readonly prisma: PostgresPrismaClient
   private readonly errorHandler: ErrorHandlerInterface
@@ -20,7 +38,7 @@ class SlotTemplateRepository implements SlotTemplateRepositoryInterface {
   findAll(): Promise<SlotTemplateDTORepo[]> {
     return this.prisma.slotTemplate.findMany({
       include: {
-        soignant: true,
+        soignants: true,
         template: true,
         location: true,
       },
@@ -32,7 +50,7 @@ class SlotTemplateRepository implements SlotTemplateRepositoryInterface {
       return await this.prisma.slotTemplate.findUniqueOrThrow({
         where: { id: slotTemplateID },
         include: {
-          soignant: true,
+          soignants: true,
           template: true,
           location: true,
         },
@@ -50,9 +68,9 @@ class SlotTemplateRepository implements SlotTemplateRepositoryInterface {
   ): Promise<SlotTemplateDTORepo> {
     try {
       return await this.prisma.slotTemplate.create({
-        data: slotTemplateCreateParams,
+        data: applyConnect(slotTemplateCreateParams),
         include: {
-          soignant: true,
+          soignants: true,
           template: true,
           location: true,
         },
@@ -74,9 +92,9 @@ class SlotTemplateRepository implements SlotTemplateRepositoryInterface {
     try {
       return await this.prisma.slotTemplate.update({
         where: { id: slotTemplateID },
-        data: slotTemplateUpdateParams,
+        data: applySet(slotTemplateUpdateParams),
         include: {
-          soignant: true,
+          soignants: true,
           template: true,
           location: true,
         },
@@ -93,6 +111,11 @@ class SlotTemplateRepository implements SlotTemplateRepositoryInterface {
     slotTemplateIDs: string[],
     slotTemplateUpdateParams: SlotTemplateUpdateEntityRepo,
   ): Promise<void> {
+    if (slotTemplateUpdateParams.soignantIDs !== undefined) {
+      throw new Error(
+        'updateMany cannot set soignantIDs — use update() per record',
+      )
+    }
     try {
       await this.prisma.slotTemplate.updateMany({
         where: {
@@ -113,7 +136,7 @@ class SlotTemplateRepository implements SlotTemplateRepositoryInterface {
       return await this.prisma.slotTemplate.delete({
         where: { id: slotTemplateID },
         include: {
-          soignant: true,
+          soignants: true,
           template: true,
           location: true,
         },
