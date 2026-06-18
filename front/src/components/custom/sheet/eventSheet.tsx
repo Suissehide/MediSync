@@ -59,7 +59,7 @@ export default function EventSheet({
     defaultValues: {
       soignant: slot?.slotTemplate?.soignant?.id ?? '',
       thematic: slot?.slotTemplate?.thematic ?? '',
-      location: slot?.slotTemplate?.location ?? '',
+      locationID: slot?.slotTemplate?.locationID ?? '',
       isIndividual: slot?.slotTemplate?.isIndividual ?? false,
       capacity: slot?.slotTemplate?.capacity ?? 1,
       color: slot?.slotTemplate?.color ?? '',
@@ -75,7 +75,7 @@ export default function EventSheet({
         slotTemplate: {
           id: slot.slotTemplate?.id,
           thematic: value.thematic,
-          location: value.location,
+          locationID: value.locationID || null,
           description: value.description,
           isIndividual: value.isIndividual,
           capacity: Number(value.capacity),
@@ -132,7 +132,7 @@ export default function EventSheet({
       {
         soignant: slot.slotTemplate?.soignant?.id ?? '',
         thematic: slot.slotTemplate?.thematic ?? '',
-        location: slot.slotTemplate?.location ?? '',
+        locationID: slot.slotTemplate?.locationID ?? '',
         isIndividual: slot.slotTemplate?.isIndividual ?? false,
         capacity: slot.slotTemplate?.capacity ?? 1,
         description: slot.slotTemplate?.description ?? '',
@@ -160,7 +160,8 @@ export default function EventSheet({
             <div>
               <SheetTitle className="mb-[-4px]">Créneau</SheetTitle>
               <div className="text-sm text-text-light">
-                {`${dayjs.utc(slot?.startDate)
+                {`${dayjs
+                  .utc(slot?.startDate)
                   .format('dddd D MMMM [de] HH:mm')
                   .replace(/^./, (c) => c.toUpperCase())}
                     ${dayjs.utc(slot?.endDate).format('[à] HH:mm')}

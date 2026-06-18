@@ -32,7 +32,10 @@ function AddSoignantForm({ trigger }: AddSoignantFormProps) {
   const { updateThematic } = useThematicMutations()
 
   const thematicOptions =
-    thematics?.map((t) => ({ value: t.id, label: t.name })) ?? []
+    thematics
+      ?.slice()
+      .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+      .map((t) => ({ value: t.id, label: t.name })) ?? []
 
   const form = useAppForm({
     defaultValues: {
@@ -123,7 +126,11 @@ function AddSoignantForm({ trigger }: AddSoignantFormProps) {
         </PopupBody>
 
         <PopupFooter>
-          <Button variant="default" onClick={() => form.handleSubmit()} isLoading={createSoignant.isPending}>
+          <Button
+            variant="default"
+            onClick={() => form.handleSubmit()}
+            isLoading={createSoignant.isPending}
+          >
             <Check className="w-4 h-4" />
             Ajouter
           </Button>

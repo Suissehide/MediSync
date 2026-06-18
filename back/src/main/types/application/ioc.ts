@@ -8,6 +8,7 @@ import type { DiagnosticEducatifDomainInterface } from '../domain/diagnosticEduc
 import type { DiagnosticEducatifTemplateDomainInterface } from '../domain/diagnosticEducatifTemplate.domain.interface'
 import type { EnrollmentIssueDomainInterface } from '../domain/enrollmentIssue.domain.interface'
 import type { ForbiddenWeekDomainInterface } from '../domain/forbiddenWeek.domain.interface'
+import type { LocationDomainInterface } from '../domain/location.domain.interface'
 import type { PathwayDomainInterface } from '../domain/pathway.domain.interface'
 import type { PathwayTemplateDomainInterface } from '../domain/pathwayTemplate.domain.interface'
 import type { PatientDomainInterface } from '../domain/patient.domain.interface'
@@ -24,6 +25,7 @@ import type { DiagnosticEducatifRepositoryInterface } from '../infra/orm/reposit
 import type { DiagnosticEducatifTemplateRepositoryInterface } from '../infra/orm/repositories/diagnosticEducatifTemplate.repository.interface'
 import type { EnrollmentIssueRepositoryInterface } from '../infra/orm/repositories/enrollmentIssue.repository.interface'
 import type { ForbiddenWeekRepositoryInterface } from '../infra/orm/repositories/forbiddenWeek.repository.interface'
+import type { LocationRepositoryInterface } from '../infra/orm/repositories/location.repository.interface'
 import type { PathwayRepositoryInterface } from '../infra/orm/repositories/pathway.repository.interface'
 import type { PathwayTemplateRepositoryInterface } from '../infra/orm/repositories/pathwayTemplate.repository.interface'
 import type { PatientRepositoryInterface } from '../infra/orm/repositories/patient.repository.interface'
@@ -75,6 +77,9 @@ export interface IocContainer {
   // Thematic
   readonly thematicDomain: ThematicDomainInterface
   readonly thematicRepository: ThematicRepositoryInterface
+  // Location
+  readonly locationDomain: LocationDomainInterface
+  readonly locationRepository: LocationRepositoryInterface
   // Todo
   readonly todoDomain: TodoDomainInterface
   readonly todoRepository: TodoRepositoryInterface

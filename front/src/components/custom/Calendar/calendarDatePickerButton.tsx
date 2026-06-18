@@ -33,7 +33,11 @@ export default function CalendarDatePickerButton({
         }}
         className="rounded-md border border-border bg-popover shadow-md animate-in fade-in-0 zoom-in-95"
       >
-        <DateCalendar onChange={onChange} defaultValue={dayjs()} />
+        <DateCalendar
+          onChange={onChange}
+          defaultValue={dayjs.utc()}
+          timezone="UTC"
+        />
       </div>
     </>,
     document.body,

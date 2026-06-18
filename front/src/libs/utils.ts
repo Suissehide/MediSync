@@ -101,7 +101,7 @@ export const buildCalendarEventsFromSlotTemplates = (
   }
   return slotTemplates.map((slotTemplate) => {
     const offset = slotTemplate.offsetDays ?? 0
-    const base = dayjs(startDate).add(offset, 'day').toISOString()
+    const base = dayjs.utc(startDate).add(offset, 'day').toISOString()
 
     const start = combineDateAndTime(base, slotTemplate.startTime)
     const end = combineDateAndTime(base, slotTemplate.endTime)
@@ -125,11 +125,12 @@ export const buildCalendarEventsFromSlotTemplates = (
 export function buildPathwayEvents(pathways: Pathway[]): CalendarEvent[] {
   return pathways.map((pathway) => {
     const endDate = pathway.slots?.reduce((max, slot) => {
-      return dayjs(slot.endDate).isAfter(dayjs(max)) ? slot.endDate : max
+      return dayjs.utc(slot.endDate).isAfter(dayjs.utc(max)) ? slot.endDate : max
     }, pathway.startDate)
 
-    const weekStart = dayjs(pathway.startDate).isoWeekday(1).startOf('day')
-    const weekEnd = dayjs(endDate ?? pathway.startDate)
+    const weekStart = dayjs.utc(pathway.startDate).isoWeekday(1).startOf('day')
+    const weekEnd = dayjs
+      .utc(endDate ?? pathway.startDate)
       .isoWeekday(1)
       .add(7, 'day')
       .startOf('day')
@@ -138,7 +139,11 @@ export function buildPathwayEvents(pathways: Pathway[]): CalendarEvent[] {
     const slotWeeks = [
       ...new Set(
         (pathway.slots ?? []).map((slot) =>
-          dayjs(slot.startDate).isoWeekday(1).startOf('day').format('YYYY-MM-DD'),
+          dayjs
+            .utc(slot.startDate)
+            .isoWeekday(1)
+            .startOf('day')
+            .format('YYYY-MM-DD'),
         ),
       ),
     ].sort()

@@ -12,7 +12,10 @@ type ThematicActions = {
   soignantOptions: { value: string; label: string }[]
 }
 
-export const getThematicColumns = ({ onDelete, soignantOptions }: ThematicActions) => {
+export const getThematicColumns = ({
+  onDelete,
+  soignantOptions,
+}: ThematicActions) => {
   return [
     columnHelper.accessor('name', {
       header: 'Nom',
@@ -23,9 +26,7 @@ export const getThematicColumns = ({ onDelete, soignantOptions }: ThematicAction
       size: 120,
       cell: ({ row }) => {
         const duration = row.original.duration
-        return duration
-          ? `${duration} minutes`
-          : '—'
+        return duration ? `${duration} minutes` : '—'
       },
     }),
     columnHelper.display({
@@ -59,6 +60,7 @@ export const getThematicColumns = ({ onDelete, soignantOptions }: ThematicAction
       id: 'actions',
       header: '',
       size: 60,
+      meta: { align: 'right' },
       cell: ({ row }) => {
         const thematic = row.original
         return (

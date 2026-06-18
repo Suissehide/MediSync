@@ -64,7 +64,7 @@ export function AddPatientToPathwayForm({
   const handleOpenChange = (next: boolean) => {
     setOpen(next)
     if (next) {
-      setStartDate(dayjs())
+      setStartDate(dayjs.utc())
       pathwayState.reset()
     }
   }
@@ -72,8 +72,14 @@ export function AddPatientToPathwayForm({
   return (
     <Popup modal open={open} onOpenChange={handleOpenChange}>
       <PopupTrigger asChild>
-        <Button type="button" variant="outline" size="icon">
+        <Button
+          type="button"
+          variant="outline"
+          size="default"
+          className="font-normal leading-tight"
+        >
           <CalendarPlus className="w-4 h-4" />
+          Inscrire à un parcours
         </Button>
       </PopupTrigger>
 

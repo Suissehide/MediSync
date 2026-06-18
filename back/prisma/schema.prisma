@@ -44,8 +44,21 @@ model Pathway {
   startDate  DateTime
   templateID String?
 
-  template PathwayTemplate? @relation(fields: [templateID], references: [id])
-  slots    Slot[]
+  template          PathwayTemplate?          @relation(fields: [templateID], references: [id])
+  slots             Slot[]
+  patientPriorities PatientPathwayPriority[]
+}
+
+model PatientPathwayPriority {
+  patientID String
+  pathwayID String
+  priority  Int
+
+  patient Patient @relation(fields: [patientID], references: [id], onDelete: Cascade)
+  pathway Pathway @relation(fields: [pathwayID], references: [id], onDelete: Cascade)
+
+  @@id([patientID, pathwayID])
+  @@index([patientID, priority])
 }
 
 model Appointment {
@@ -85,7 +98,7 @@ model SlotTemplate {
   isIndividual Boolean
   capacity     Int?
   thematic     String?
-  location     String?
+  locationID   String?
   description  String?
   color        String
 
@@ -95,6 +108,7 @@ model SlotTemplate {
 
   soignant Soignant?        @relation(fields: [soignantID], references: [id])
   template PathwayTemplate? @relation(fields: [templateID], references: [id])
+  location Location?        @relation(fields: [locationID], references: [id], onDelete: SetNull)
 }
 
 model Slot {
@@ -125,6 +139,13 @@ model Thematic {
   name      String     @unique
   duration  Int?
   soignants Soignant[] @relation("SoignantThematics")
+}
+
+model Location {
+  id   String @id @default(cuid())
+  name String @unique
+
+  slotTemplates SlotTemplate[]
 }
 
 model Patient {
@@ -176,6 +197,7 @@ model Patient {
   appointmentPatients AppointmentPatient[]
   diagnostics         DiagnosticEducatif[]
   enrollmentIssues    EnrollmentIssue[]
+  pathwayPriorities   PatientPathwayPriority[]
 }
 
 model EnrollmentIssue {

@@ -110,13 +110,14 @@ export default function AppointmentSheet({
   )
   const patientOptions =
     patients
-      ?.slice()
-      .sort((a, b) => a.lastName.localeCompare(b.lastName))
-      .filter((patient) => !selectedPatientIDs.includes(patient.id))
+      ?.filter((patient) => !selectedPatientIDs.includes(patient.id))
       .map((patient) => ({
         value: patient.id,
         label: `${patient.firstName} ${patient.lastName}`,
-      })) ?? []
+        sortKey: `${patient.lastName} ${patient.firstName}`,
+      }))
+      .sort((a, b) => a.sortKey.localeCompare(b.sortKey, 'fr'))
+      .map(({ value, label }) => ({ value, label })) ?? []
 
   const handleDelete = () => {
     if (appointment) {
@@ -168,6 +169,8 @@ export default function AppointmentSheet({
   const thematicOptions = soignant
     ? (thematics
         ?.filter((t) => t.soignants.some((s) => s.id === soignant.id))
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
         .map((t) => ({ value: t.name, label: t.name })) ?? [])
     : []
 
@@ -189,7 +192,8 @@ export default function AppointmentSheet({
             <div>
               <SheetTitle className="mb-[-4px]">Rendez-vous</SheetTitle>
               <div className="text-sm text-text-light">
-                {`${dayjs.utc(appointment?.startDate)
+                {`${dayjs
+                  .utc(appointment?.startDate)
                   .format('dddd D MMMM [de] HH:mm')
                   .replace(/^./, (c) => c.toUpperCase())}
                     ${dayjs.utc(appointment?.endDate).format('[à] HH:mm')}
@@ -292,7 +296,9 @@ export default function AppointmentSheet({
                         <Button
                           type="button"
                           variant="default"
-                          disabled={isAtCapacity || selectedPatients.length === 0}
+                          disabled={
+                            isAtCapacity || selectedPatients.length === 0
+                          }
                           onClick={() => {
                             for (const patientID of selectedPatients) {
                               field.pushValue({
@@ -310,7 +316,8 @@ export default function AppointmentSheet({
                         </Button>
                       </div>
                       <div className="text-sm text-text-light mt-1">
-                        {currentPatientCount}/{capacity} patient{capacity > 1 ? 's' : ''}
+                        {currentPatientCount}/{capacity} patient
+                        {capacity > 1 ? 's' : ''}
                         {isAtCapacity && (
                           <span className="text-destructive ml-1">
                             — capacité maximale atteinte

@@ -80,6 +80,16 @@ export type RemoveFromPathwayResult = {
   removedFromGroup: number
 }
 
+export type PatientPathwayDomain = {
+  pathwayID: string
+  templateID: string | null
+  templateName: string | null
+  templateColor: string | null
+  templateTags: string[]
+  startDate: Date
+  priority: number | null
+}
+
 export interface PatientDomainInterface {
   findAll: () => Promise<PatientEntityDomain[]>
   findAllWithTags: () => Promise<PatientWithTagsDomain[]>
@@ -112,4 +122,9 @@ export interface PatientDomainInterface {
     pathwayID: string,
     userID: string,
   ) => Promise<RemoveFromPathwayResult>
+  getPathways: (patientID: string) => Promise<PatientPathwayDomain[]>
+  setPathwayPriorities: (
+    patientID: string,
+    orderedPathwayIDs: string[],
+  ) => Promise<void>
 }

@@ -28,7 +28,9 @@ function EditUserForm({ open, setOpen, user }: EditUserFormProps) {
 
   const soignantOptions = useMemo(() => {
     if (!soignants) return []
-    return soignants.map((s) => ({ value: s.id, label: s.name }))
+    return [...soignants]
+      .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+      .map((s) => ({ value: s.id, label: s.name }))
   }, [soignants])
 
   const form = useAppForm({
@@ -123,7 +125,11 @@ function EditUserForm({ open, setOpen, user }: EditUserFormProps) {
         </PopupBody>
 
         <PopupFooter>
-          <Button variant="default" onClick={() => form.handleSubmit()} isLoading={updateUser.isPending}>
+          <Button
+            variant="default"
+            onClick={() => form.handleSubmit()}
+            isLoading={updateUser.isPending}
+          >
             <Check className="w-4 h-4" />
             Enregistrer
           </Button>

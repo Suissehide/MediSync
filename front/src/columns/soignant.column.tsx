@@ -56,6 +56,7 @@ export const getSoignantColumns = ({
       id: 'actions',
       header: '',
       size: 60,
+      meta: { align: 'right' },
       cell: ({ row }) => {
         const soignant = row.original
         return (

@@ -190,10 +190,9 @@ function Planning() {
     const weeks = recurrenceWeeks ?? 1
 
     if (editMode) {
-      const baseOffsetDays = dayjs(newSlot.startDate).diff(
-        dayjs(startDate),
-        'day',
-      )
+      const baseOffsetDays = dayjs
+        .utc(newSlot.startDate)
+        .diff(dayjs.utc(startDate), 'day')
       for (let w = 0; w < weeks; w++) {
         const offsetDays = baseOffsetDays + w * 7
         const slotTemplate = {
@@ -201,10 +200,11 @@ function Planning() {
           endTime: newSlot.endDate,
           offsetDays,
           thematic: newSlot.slotTemplate.thematic,
-          location: newSlot.slotTemplate.location,
+          locationID: newSlot.slotTemplate.locationID,
           description: newSlot.slotTemplate.description,
           color: newSlot.slotTemplate.color,
           isIndividual: newSlot.slotTemplate.isIndividual,
+          capacity: newSlot.slotTemplate.capacity,
           soignantID: newSlot.slotTemplate.soignantID,
           templateID: currentPathwayTemplate?.id,
         }
@@ -218,8 +218,8 @@ function Planning() {
       }
     } else {
       for (let w = 0; w < weeks; w++) {
-        const weekStart = dayjs(newSlot.startDate).add(w * 7, 'day')
-        const weekEnd = dayjs(newSlot.endDate).add(w * 7, 'day')
+        const weekStart = dayjs.utc(newSlot.startDate).add(w * 7, 'day')
+        const weekEnd = dayjs.utc(newSlot.endDate).add(w * 7, 'day')
         const weekSlot: CreateSlotParamsWithTemplateData = {
           startDate: weekStart.toISOString(),
           endDate: weekEnd.toISOString(),
@@ -246,7 +246,7 @@ function Planning() {
     const slotId = id.replace(/^.*?_/, '')
 
     if (editMode) {
-      const newOffsetDays = dayjs(start).diff(dayjs(startDate), 'day')
+      const newOffsetDays = dayjs.utc(start).diff(dayjs.utc(startDate), 'day')
 
       updateSlotTemplate.mutate({
         id: slotId,
@@ -312,7 +312,7 @@ function Planning() {
       endTime: newEndDate,
       offsetDays: 0,
       thematic: slot.slotTemplate.thematic,
-      location: slot.slotTemplate.location,
+      locationID: slot.slotTemplate.locationID,
       description: slot.slotTemplate.description,
       color: slot.slotTemplate.color,
       isIndividual: slot.slotTemplate.isIndividual,
@@ -325,14 +325,16 @@ function Planning() {
     slot: { startDate: string; endDate: string },
     targetWeekStart: dayjs.Dayjs,
   ) => {
-    const slotStart = dayjs(slot.startDate)
-    const slotWeekStart = slotStart.isoWeekday(1).utc().startOf('day')
+    const slotStart = dayjs.utc(slot.startDate)
+    const slotWeekStart = slotStart.isoWeekday(1).startOf('day')
     const dayOffset = slotStart.diff(slotWeekStart, 'day')
     const timeOfDay = slotStart.format('HH:mm:ss')
-    const duration = dayjs(slot.endDate).diff(slotStart, 'minute')
+    const duration = dayjs.utc(slot.endDate).diff(slotStart, 'minute')
 
     const newStart = targetWeekStart.add(dayOffset, 'day')
-    const newStartFull = dayjs(`${newStart.format('YYYY-MM-DD')}T${timeOfDay}`)
+    const newStartFull = dayjs.utc(
+      `${newStart.format('YYYY-MM-DD')}T${timeOfDay}`,
+    )
     const newEnd = newStartFull.add(duration, 'minute')
     return { newStart: newStartFull, newEnd }
   }
@@ -360,10 +362,11 @@ function Planning() {
         endTime: slotTemplate.endTime,
         offsetDays: slotTemplate.offsetDays,
         thematic: slotTemplate.thematic,
-        location: slotTemplate.location,
+        locationID: slotTemplate.locationID,
         description: slotTemplate.description,
         color: slotTemplate.color,
         isIndividual: slotTemplate.isIndividual,
+        capacity: slotTemplate.capacity,
         soignantID: slotTemplate.soignant?.id ?? '',
         templateID: currentPathwayTemplate.id,
       })
@@ -468,10 +471,11 @@ function Planning() {
           endTime: slotTemplate.endTime,
           offsetDays: newOffsetDays,
           thematic: slotTemplate.thematic,
-          location: slotTemplate.location,
+          locationID: slotTemplate.locationID,
           description: slotTemplate.description,
           color: slotTemplate.color,
           isIndividual: slotTemplate.isIndividual,
+          capacity: slotTemplate.capacity,
           soignantID: slotTemplate.soignant?.id ?? '',
           templateID: currentPathwayTemplate.id,
         })
@@ -520,7 +524,7 @@ function Planning() {
   }
 
   const mergedEvents = useMemo(() => {
-    return editMode ? [...events, ...(eventTemplates ?? [])] : events
+    return editMode ? (eventTemplates ?? []) : events
   }, [events, eventTemplates, editMode])
 
   useEffect(() => {
@@ -552,9 +556,9 @@ function Planning() {
     if (!isForbiddenWeekMode) {
       return
     }
-    const clickedDate = dayjs(info.dateStr)
+    const clickedDate = dayjs.utc(info.dateStr)
     const matchingForbiddenWeek = (forbiddenWeeks ?? []).find((fw) => {
-      const start = dayjs(fw.startOfWeek)
+      const start = dayjs.utc(fw.startOfWeek)
       return (
         (clickedDate.isSame(start) || clickedDate.isAfter(start)) &&
         clickedDate.isBefore(start.add(7, 'day'))
@@ -649,8 +653,8 @@ function Planning() {
                       const { viewStart } = usePlanningStore.getState()
                       setDuplicateWeekDate(
                         viewStart
-                          ? dayjs(viewStart).isoWeekday(1)
-                          : dayjs().isoWeekday(1),
+                          ? dayjs.utc(viewStart).isoWeekday(1)
+                          : dayjs.utc().isoWeekday(1),
                       )
                     }
                     setShowDuplicateModal(true)
@@ -661,8 +665,8 @@ function Planning() {
                       const { viewStart } = usePlanningStore.getState()
                       setMoveWeekDate(
                         viewStart
-                          ? dayjs(viewStart).isoWeekday(1)
-                          : dayjs().isoWeekday(1),
+                          ? dayjs.utc(viewStart).isoWeekday(1)
+                          : dayjs.utc().isoWeekday(1),
                       )
                     }
                     setShowMoveModal(true)
@@ -696,12 +700,16 @@ function Planning() {
                 handleOpenEvent={setOpenEventId}
                 editMode={editMode}
                 editable={true}
-                forbiddenWeeks={forbiddenWeeks ?? []}
+                forbiddenWeeks={editMode ? [] : (forbiddenWeeks ?? [])}
                 onDuplicate={handleDuplicateSlot}
                 onDelete={handleDeleteHoverSlot}
                 onToggleLock={handleToggleLock}
                 selectedSlotIds={selectedSlotIds}
                 onToggleSelect={handleToggleSelect}
+                weekAnchorDate={editMode ? startDate : undefined}
+                headerToolbar={
+                  editMode ? { left: 'title', right: 'prev,next' } : undefined
+                }
               />
             ) : (
               <div
@@ -739,9 +747,9 @@ function Planning() {
                     lastDropTimeRef.current = now
                     const pathwayId =
                       info.draggedEl.getAttribute('data-pathway-id')
-                    const weekStart = dayjs(info.date)
+                    const weekStart = dayjs
+                      .utc(info.date)
                       .isoWeekday(1)
-                      .utc()
                       .startOf('day')
                     if (pathwayId) {
                       handleInstantiatePathway(
@@ -765,8 +773,9 @@ function Planning() {
                       const rect = info.el.getBoundingClientRect()
                       setHoveredPathway({
                         title: info.event.title,
-                        start: dayjs(info.event.start).format('DD/MM/YYYY'),
-                        end: dayjs(info.event.end)
+                        start: dayjs.utc(info.event.start).format('DD/MM/YYYY'),
+                        end: dayjs
+                          .utc(info.event.end)
                           .subtract(1, 'day')
                           .format('DD/MM/YYYY'),
                         x: rect.left + rect.width / 2,

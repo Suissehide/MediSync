@@ -16,6 +16,7 @@ export interface SelectProps {
   id?: string
   options: SelectOption[]
   placeholder?: string
+  emptyMessage?: string
   className?: string
   clearable?: boolean
   searchable?: boolean
@@ -29,6 +30,7 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
     {
       options,
       placeholder,
+      emptyMessage = 'Aucune option',
       className,
       id,
       value,
@@ -122,7 +124,7 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
               <ul className="p-1 max-h-52 overflow-y-auto">
                 {filteredOptions.length === 0 ? (
                   <li className="px-2 py-1.5 text-sm text-text-light">
-                    Aucun résultat
+                    {options.length === 0 ? emptyMessage : 'Aucun résultat'}
                   </li>
                 ) : (
                   filteredOptions.map((option, idx) => {
@@ -196,18 +198,26 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
               className="z-[200] w-[var(--radix-select-trigger-width)] max-h-60 overflow-hidden rounded-md border border-border bg-popover shadow-md animate-in fade-in-0 slide-in-from-top-2"
             >
               <RadixSelect.Viewport className="p-1 max-h-60 overflow-y-auto">
-                {options.map((option) => (
-                  <RadixSelect.Item
-                    key={option.value}
-                    value={option.value.toString()}
-                    className="relative flex cursor-pointer select-none items-center rounded px-2 pr-7 py-1.5 text-sm text-text-sidebar outline-none hover:bg-primary/20 focus:bg-primary/20 data-[state=checked]:text-primary"
-                  >
-                    <RadixSelect.ItemText>{option.label}</RadixSelect.ItemText>
-                    <RadixSelect.ItemIndicator className="absolute right-2">
-                      <Check className="h-4 w-4 text-primary" />
-                    </RadixSelect.ItemIndicator>
-                  </RadixSelect.Item>
-                ))}
+                {options.length === 0 ? (
+                  <div className="px-2 py-1.5 text-sm text-text-light">
+                    {emptyMessage}
+                  </div>
+                ) : (
+                  options.map((option) => (
+                    <RadixSelect.Item
+                      key={option.value}
+                      value={option.value.toString()}
+                      className="relative flex cursor-pointer select-none items-center rounded px-2 pr-7 py-1.5 text-sm text-text-sidebar outline-none hover:bg-primary/20 focus:bg-primary/20 data-[state=checked]:text-primary"
+                    >
+                      <RadixSelect.ItemText>
+                        {option.label}
+                      </RadixSelect.ItemText>
+                      <RadixSelect.ItemIndicator className="absolute right-2">
+                        <Check className="h-4 w-4 text-primary" />
+                      </RadixSelect.ItemIndicator>
+                    </RadixSelect.Item>
+                  ))
+                )}
               </RadixSelect.Viewport>
             </RadixSelect.Content>
           </RadixSelect.Portal>
@@ -237,6 +247,7 @@ interface MultiSelectProps {
   value: string[]
   onChange: (value: string[]) => void
   placeholder?: string
+  emptyMessage?: string
   maxSelected?: number
   disabled?: boolean
 }
@@ -246,6 +257,7 @@ export function MultiSelect({
   value,
   onChange,
   placeholder,
+  emptyMessage = 'Aucune option',
   maxSelected,
   disabled,
 }: MultiSelectProps) {
@@ -315,6 +327,11 @@ export function MultiSelect({
           </div>
 
           <ul className="p-1 max-h-52 overflow-y-auto">
+            {filteredOptions.length === 0 && (
+              <li className="px-2 py-1.5 text-sm text-text-light">
+                {options.length === 0 ? emptyMessage : 'Aucun résultat'}
+              </li>
+            )}
             {selectedOptions.map((option) => (
               <li
                 key={option.value}

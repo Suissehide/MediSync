@@ -23,7 +23,7 @@ export const createSlotTemplateSchema = slotTemplateSchema
     offsetDays: true,
 
     thematic: true,
-    location: true,
+    locationID: true,
     description: true,
     color: true,
     isIndividual: true,

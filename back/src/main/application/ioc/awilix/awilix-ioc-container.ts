@@ -42,6 +42,8 @@ import { ActivityLogRepository } from '../../../infra/orm/repositories/activityL
 import { ActivityLogSubscriber } from '../../../services/activity-log.subscriber'
 import { ForbiddenWeekDomain } from '../../../domain/forbiddenWeek.domain'
 import { ForbiddenWeekRepository } from '../../../infra/orm/repositories/forbiddenWeek.repository'
+import { LocationDomain } from '../../../domain/location.domain'
+import { LocationRepository } from '../../../infra/orm/repositories/location.repository'
 
 declare module '@fastify/awilix' {
   interface Cradle extends IocContainer {}
@@ -93,6 +95,9 @@ class AwilixIocContainer {
     // Thematic
     this.#registerThematicDomain()
     this.#registerThematicRepository()
+    // Location
+    this.#registerLocationDomain()
+    this.#registerLocationRepository()
     // Todo
     this.#registerTodoDomain()
     this.#registerTodoRepository()
@@ -242,6 +247,14 @@ class AwilixIocContainer {
   }
   #registerThematicRepository(): void {
     this.register('thematicRepository', asClass(ThematicRepository).singleton())
+  }
+
+  // Location
+  #registerLocationDomain(): void {
+    this.register('locationDomain', asClass(LocationDomain).singleton())
+  }
+  #registerLocationRepository(): void {
+    this.register('locationRepository', asClass(LocationRepository).singleton())
   }
 
   // Todo

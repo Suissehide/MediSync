@@ -1,5 +1,15 @@
 import { Link, useMatchRoute, useRouter } from '@tanstack/react-router'
-import { Activity, BriefcaseMedical, CalendarDays, Cog, PanelLeft, Tag, UserCog, Users } from 'lucide-react'
+import {
+  Activity,
+  BriefcaseMedical,
+  CalendarDays,
+  Cog,
+  DoorOpen,
+  PanelLeft,
+  Tag,
+  UserCog,
+  Users,
+} from 'lucide-react'
 
 import TodoSheet from './custom/todo/todoSheet.tsx'
 import { Button } from './ui/button.tsx'
@@ -44,8 +54,16 @@ const SettingsMenu = () => {
           Thématiques
         </PopoverMenuItem>
         <PopoverMenuItem
+          icon={<DoorOpen className="w-4 h-4" />}
+          onClick={() => router.navigate({ to: '/settings/location' })}
+        >
+          Salles
+        </PopoverMenuItem>
+        <PopoverMenuItem
           icon={<BriefcaseMedical className="w-4 h-4" />}
-          onClick={() => router.navigate({ to: '/settings/diagnostic-template' })}
+          onClick={() =>
+            router.navigate({ to: '/settings/diagnostic-template' })
+          }
         >
           Diagnostics éducatifs
         </PopoverMenuItem>

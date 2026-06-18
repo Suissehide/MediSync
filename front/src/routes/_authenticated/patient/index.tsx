@@ -85,7 +85,12 @@ function PatientList() {
         selectedTags.some((tag) => p.pathwayTemplateTags?.includes(tag)),
       )
     }
-    return result
+    return [...result].sort((a, b) =>
+      `${a.lastName ?? ''} ${a.firstName ?? ''}`.localeCompare(
+        `${b.lastName ?? ''} ${b.firstName ?? ''}`,
+        'fr',
+      ),
+    )
   }, [patients, searchTerm, selectedTags])
 
   return (

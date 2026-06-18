@@ -39,6 +39,8 @@ export const PATIENT = {
   DELETE: 'delete_patient',
   DISMISS_ENROLLMENT_ISSUE: 'dismiss_enrollment_issue',
   REMOVE_FROM_PATHWAY: 'remove_patient_from_pathway',
+  GET_PATHWAYS: 'get_patient_pathways',
+  REORDER_PATHWAYS: 'reorder_patient_pathways',
 }
 
 export const SLOT = {
@@ -85,6 +87,13 @@ export const THEMATIC = {
   CREATE: 'create_thematic',
   UPDATE: 'update_thematic',
   DELETE: 'delete_thematic',
+}
+
+export const LOCATION = {
+  GET_ALL: 'get_all_locations',
+  CREATE: 'create_location',
+  UPDATE: 'update_location',
+  DELETE: 'delete_location',
 }
 
 export const APPOINTMENT = {

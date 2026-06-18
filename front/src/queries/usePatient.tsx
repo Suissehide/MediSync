@@ -12,6 +12,7 @@ import type {
   EnrollExistingPatientParams,
   EnrollmentResult,
   Patient,
+  PatientPathway,
   PatientWithTags,
   UpdatePatientParams,
 } from '../types/patient.ts'
@@ -66,6 +67,24 @@ export const usePatientByIDQuery = (patientID: string, options = {}) => {
   })
 
   return { patient, isPending, isError, error, refetch, isFetched }
+}
+
+export const usePatientPathwaysQuery = (patientID: string) => {
+  const {
+    data: pathways,
+    isPending,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: [PATIENT.GET_PATHWAYS, patientID],
+    queryFn: () => PatientApi.getPathways(patientID),
+    enabled: !!patientID,
+    retry: 0,
+  })
+
+  useDataFetching({ isPending, isError, error })
+
+  return { pathways, isPending, isError, error }
 }
 
 export const usePatientWithTagsQuery = () => {
@@ -434,6 +453,64 @@ export const usePatientMutations = () => {
     },
   })
 
+  const reorderPathways = useMutation({
+    mutationKey: [PATIENT.REORDER_PATHWAYS],
+    mutationFn: ({
+      patientID,
+      pathwayIDs,
+    }: {
+      patientID: string
+      pathwayIDs: string[]
+    }) => PatientApi.reorderPathways(patientID, pathwayIDs),
+    onMutate: async ({ patientID, pathwayIDs }) => {
+      await queryClient.cancelQueries({
+        queryKey: [PATIENT.GET_PATHWAYS, patientID],
+      })
+
+      const previousPathways = queryClient.getQueryData<PatientPathway[]>([
+        PATIENT.GET_PATHWAYS,
+        patientID,
+      ])
+
+      queryClient.setQueryData<PatientPathway[]>(
+        [PATIENT.GET_PATHWAYS, patientID],
+        (old) => {
+          if (!old) return old
+          const byID = new Map(old.map((p) => [p.pathwayID, p]))
+          const reordered: PatientPathway[] = []
+          pathwayIDs.forEach((id, index) => {
+            const p = byID.get(id)
+            if (p) {
+              reordered.push({ ...p, priority: index })
+              byID.delete(id)
+            }
+          })
+          byID.forEach((p) => reordered.push(p))
+          return reordered
+        },
+      )
+
+      return { previousPathways, patientID }
+    },
+    onError: (_, __, context) => {
+      if (context?.previousPathways) {
+        queryClient.setQueryData(
+          [PATIENT.GET_PATHWAYS, context.patientID],
+          context.previousPathways,
+        )
+      }
+      toast({
+        title: 'Erreur lors de la réorganisation des parcours',
+        severity: TOAST_SEVERITY.ERROR,
+      })
+    },
+    onSettled: async (_, __, variables) => {
+      await queryClient.invalidateQueries({
+        queryKey: [PATIENT.GET_PATHWAYS, variables.patientID],
+      })
+    },
+  })
+
   return {
     createPatient,
     deletePatient,
@@ -443,5 +520,6 @@ export const usePatientMutations = () => {
     enrollExistingPatient,
     dismissEnrollmentIssue,
     removeFromPathway,
+    reorderPathways,
   }
 }

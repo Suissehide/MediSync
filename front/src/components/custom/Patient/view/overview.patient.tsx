@@ -1,14 +1,27 @@
 import dayjs from 'dayjs'
-import { AlertTriangle, CalendarClock, Route, Siren, X } from 'lucide-react'
+import {
+  AlertTriangle,
+  CalendarClock,
+  GripVertical,
+  Route,
+  Siren,
+  X,
+} from 'lucide-react'
+import type React from 'react'
 import { useCallback, useMemo, useState } from 'react'
 
 import { PatientApi } from '../../../../api/patient.api.ts'
-import { SLOT_LOCATION } from '../../../../constants/slot.constant.ts'
-import { hexToRGBA, getContrastTextColor } from '../../../../libs/color.ts'
-import { getLabel } from '../../../../libs/utils.ts'
-import { usePatientMutations } from '../../../../queries/usePatient.tsx'
+import { getContrastTextColor, hexToRGBA } from '../../../../libs/color.ts'
+import {
+  usePatientMutations,
+  usePatientPathwaysQuery,
+} from '../../../../queries/usePatient.tsx'
 import { useAllSlotsQuery } from '../../../../queries/useSlot.ts'
-import type { EnrollmentIssue, Patient } from '../../../../types/patient.ts'
+import type {
+  EnrollmentIssue,
+  Patient,
+  PatientPathway,
+} from '../../../../types/patient.ts'
 import type { Slot } from '../../../../types/slot.ts'
 import { ColorLegend } from '../../colorLegend.tsx'
 import { ConfirmDeleteForm } from '../../popup/confirmDeleteForm.tsx'
@@ -20,10 +33,11 @@ interface OverviewPatientProps {
 function AppointmentCard({ slot }: { slot: Slot }) {
   const color = slot.slotTemplate?.color ?? '#6b7280'
   const thematic = slot.slotTemplate?.thematic || 'Rendez-vous'
-  const location = slot.slotTemplate?.location
+  const location = slot.slotTemplate?.location?.name
   const soignant = slot.slotTemplate?.soignant?.name
 
-  const formattedDate = dayjs.utc(slot.startDate)
+  const formattedDate = dayjs
+    .utc(slot.startDate)
     .format('dddd D MMMM YYYY [de] HH:mm')
     .replace(/^./, (c) => c.toUpperCase())
   const endTime = dayjs.utc(slot.endDate).format('HH:mm')
@@ -43,7 +57,7 @@ function AppointmentCard({ slot }: { slot: Slot }) {
           {location && (
             <span className="text-text-light font-normal">
               {' · '}
-              {getLabel(SLOT_LOCATION, location)}
+              {location}
             </span>
           )}
         </span>
@@ -64,7 +78,7 @@ function EnrollmentIssueRow({
   onDismiss: (issue: EnrollmentIssue) => void
   loading: boolean
 }) {
-  const startDate = dayjs(issue.startDate).format('DD/MM/YYYY')
+  const startDate = dayjs.utc(issue.startDate).format('DD/MM/YYYY')
   return (
     <div className="flex justify-center items-center gap-2 rounded bg-amber-50 border border-amber-200 px-3 py-2">
       <AlertTriangle className="h-3 w-3 text-amber-500" />
@@ -88,53 +102,80 @@ function EnrollmentIssueRow({
 }
 
 function PathwayCard({
-  pathwayID,
-  templateName,
-  templateColor,
-  startDate,
+  pathway,
+  index,
+  isDragged,
+  onDragStart,
+  onDragOver,
+  onDragEnd,
   onRemove,
 }: {
-  pathwayID: string
-  templateName: string
-  templateColor: string | null
-  startDate: string
+  pathway: PatientPathway
+  index: number
+  isDragged: boolean
+  onDragStart: (index: number) => void
+  onDragOver: (e: React.DragEvent, index: number) => void
+  onDragEnd: () => void
   onRemove: (pathwayID: string) => void
 }) {
-  const color = templateColor ?? '#6b7280'
-  const formattedDate = dayjs(startDate)
+  const color = pathway.templateColor ?? '#6b7280'
+  const formattedDate = dayjs
+    .utc(pathway.startDate)
     .format('D MMMM YYYY')
     .replace(/^./, (c) => c.toUpperCase())
 
+  const hasTags = pathway.templateTags.length > 0
+  const fallbackLabel = pathway.templateName ?? 'Parcours'
+  const labels = hasTags ? pathway.templateTags : [fallbackLabel]
+
   return (
-    <div className="flex items-center gap-3 rounded-lg px-3 py-2 border border-border">
-      <span
-        className="inline-block px-2 py-1 rounded text-xs font-medium border"
-        style={{
-          backgroundColor: hexToRGBA(color, 0.15),
-          color: getContrastTextColor(color),
-          borderColor: hexToRGBA(color, 0.6),
-        }}
-      >
-        {templateName}
-      </span>
-      <span className="text-xs text-text-sidebar flex-1">
+    <li
+      draggable
+      onDragStart={() => onDragStart(index)}
+      onDragOver={(e) => onDragOver(e, index)}
+      onDragEnd={onDragEnd}
+      className={`flex items-center gap-2 rounded-lg px-3 py-2 border border-border bg-white transition-all ${
+        isDragged ? 'opacity-50' : 'opacity-100'
+      }`}
+    >
+      <GripVertical className="h-4 w-4 text-text-light flex-shrink-0 cursor-move" />
+      <div className="flex flex-wrap gap-1 flex-1 min-w-0">
+        {labels.map((label) => (
+          <span
+            key={label}
+            className="inline-block px-2 py-1 rounded text-xs font-medium border"
+            style={{
+              backgroundColor: hexToRGBA(color, 0.15),
+              color: getContrastTextColor(color),
+              borderColor: hexToRGBA(color, 0.6),
+            }}
+          >
+            {label}
+          </span>
+        ))}
+      </div>
+      <span className="text-xs text-text-sidebar flex-shrink-0">
         Début : {formattedDate}
       </span>
       <button
         type="button"
-        onClick={() => onRemove(pathwayID)}
+        onClick={() => onRemove(pathway.pathwayID)}
         className="cursor-pointer flex-shrink-0 rounded p-1 text-text-light hover:bg-destructive/10 hover:text-destructive transition-colors"
-        aria-label={`Retirer du parcours ${templateName}`}
+        aria-label="Retirer du parcours"
       >
         <X className="h-3.5 w-3.5" />
       </button>
-    </div>
+    </li>
   )
 }
 
 export default function OverviewPatient({ patient }: OverviewPatientProps) {
   const { slots } = useAllSlotsQuery()
-  const { dismissEnrollmentIssue, removeFromPathway } = usePatientMutations()
+  const { dismissEnrollmentIssue, removeFromPathway, reorderPathways } =
+    usePatientMutations()
+  const { pathways: patientPathways = [] } = usePatientPathwaysQuery(
+    patient?.id ?? '',
+  )
 
   const patientSlots = useMemo(() => {
     if (!slots || !patient) {
@@ -161,42 +202,40 @@ export default function OverviewPatient({ patient }: OverviewPatientProps) {
     return { upcoming, past }
   }, [slots, patient])
 
-  const patientPathways = useMemo(() => {
-    if (!slots || !patient) return []
-
-    const pathwayMap = new Map<
-      string,
-      { id: string; templateName: string; templateColor: string | null; startDate: string }
-    >()
-
-    for (const slot of slots) {
-      if (!slot.pathway) continue
-      const hasPatient = slot.appointments?.some((appointment) =>
-        appointment.appointmentPatients?.some(
-          (ap) => ap.patient.id === patient.id,
-        ),
-      )
-      if (!hasPatient) continue
-
-      const pathwayID = slot.pathway.id
-      if (!pathwayMap.has(pathwayID)) {
-        pathwayMap.set(pathwayID, {
-          id: pathwayID,
-          templateName: slot.pathway.template?.name ?? 'Parcours sans template',
-          templateColor: slot.pathway.template?.color ?? null,
-          startDate: slot.pathway.startDate,
-        })
-      }
-    }
-
-    return Array.from(pathwayMap.values())
-  }, [slots, patient])
-
   const [removeTarget, setRemoveTarget] = useState<{
     pathwayID: string
     name: string
     count: number
   } | null>(null)
+
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
+
+  const handleDragStart = useCallback(
+    (index: number) => setDraggedIndex(index),
+    [],
+  )
+
+  const handleDragOver = useCallback(
+    (e: React.DragEvent, index: number) => {
+      e.preventDefault()
+      if (!patient || draggedIndex === null || draggedIndex === index) {
+        return
+      }
+
+      const next = [...patientPathways]
+      const [moved] = next.splice(draggedIndex, 1)
+      next.splice(index, 0, moved)
+      setDraggedIndex(index)
+
+      reorderPathways.mutate({
+        patientID: patient.id,
+        pathwayIDs: next.map((p) => p.pathwayID),
+      })
+    },
+    [draggedIndex, patientPathways, patient, reorderPathways],
+  )
+
+  const handleDragEnd = useCallback(() => setDraggedIndex(null), [])
 
   const handleRemoveClick = useCallback(
     async (pathwayID: string) => {
@@ -205,10 +244,14 @@ export default function OverviewPatient({ patient }: OverviewPatientProps) {
         patient.id,
         pathwayID,
       )
-      const pathway = patientPathways.find((p) => p.id === pathwayID)
+      const pathway = patientPathways.find((p) => p.pathwayID === pathwayID)
+      const label =
+        pathway && pathway.templateTags.length > 0
+          ? pathway.templateTags.join(' / ')
+          : (pathway?.templateName ?? 'Parcours')
       setRemoveTarget({
         pathwayID,
-        name: pathway?.templateName ?? 'Parcours',
+        name: label,
         count,
       })
     },
@@ -268,18 +311,20 @@ export default function OverviewPatient({ patient }: OverviewPatientProps) {
               <div className="flex-1 border-t border-border" />
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              {patientPathways.map((pathway) => (
+            <ul className="flex flex-col gap-1.5">
+              {patientPathways.map((pathway, index) => (
                 <PathwayCard
-                  key={pathway.id}
-                  pathwayID={pathway.id}
-                  templateName={pathway.templateName}
-                  templateColor={pathway.templateColor}
-                  startDate={pathway.startDate}
+                  key={pathway.pathwayID}
+                  pathway={pathway}
+                  index={index}
+                  isDragged={draggedIndex === index}
+                  onDragStart={handleDragStart}
+                  onDragOver={handleDragOver}
+                  onDragEnd={handleDragEnd}
                   onRemove={handleRemoveClick}
                 />
               ))}
-            </div>
+            </ul>
           </>
         )}
 

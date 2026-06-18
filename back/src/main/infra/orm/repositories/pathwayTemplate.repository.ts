@@ -13,6 +13,7 @@ const slotTemplateInclude = {
   slotTemplates: {
     include: {
       soignant: true,
+      location: true,
     },
   },
 }

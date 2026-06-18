@@ -1,5 +1,5 @@
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
-import { Check, Filter } from 'lucide-react'
+import { Check, Filter, type LucideIcon } from 'lucide-react'
 
 import { cn } from '../../libs/utils.ts'
 import { Button } from './button'
@@ -7,9 +7,13 @@ import { Button } from './button'
 const DropdownFilter = ({
   filters,
   onFilterChange,
+  triggerLabel = 'Filtres',
+  TriggerIcon = Filter,
 }: {
   filters: { id: string; label: string; checked: boolean }[]
   onFilterChange: (id: string, checked: boolean) => void
+  triggerLabel?: string
+  TriggerIcon?: LucideIcon
 }) => {
   return (
     <DropdownMenu.Root>
@@ -19,16 +23,17 @@ const DropdownFilter = ({
           size="default"
           className="font-normal rounded-lg"
         >
-          <Filter size={16} />
-          Filtres
+          <TriggerIcon size={16} />
+          {triggerLabel}
         </Button>
       </DropdownMenu.Trigger>
 
       <DropdownMenu.Portal>
         <DropdownMenu.Content
-          className="min-w-[220px] bg-primary-foreground rounded shadow-md border border-border p-2 z-50"
+          className="min-w-[220px] max-h-80 overflow-y-auto bg-primary-foreground rounded shadow-md border border-border p-2 z-50"
           align="end"
           sideOffset={5}
+          collisionPadding={8}
         >
           {filters.map((filter) => (
             <DropdownMenu.CheckboxItem

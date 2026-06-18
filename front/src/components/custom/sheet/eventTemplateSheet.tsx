@@ -8,7 +8,6 @@ import {
   useSlotTemplateByIDQuery,
   useSlotTemplateMutations,
 } from '../../../queries/useSlotTemplate.ts'
-import { ConfirmDeleteForm } from '../popup/confirmDeleteForm.tsx'
 import { useSoignantQueries } from '../../../queries/useSoignant.ts'
 import type { UpdateSlotTemplateParams } from '../../../types/slotTemplate.ts'
 import { Button } from '../../ui/button.tsx'
@@ -18,6 +17,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '../../ui/sheet.tsx'
+import { ConfirmDeleteForm } from '../popup/confirmDeleteForm.tsx'
 import { EventFormFields } from './form/EventFormFields.tsx'
 import { eventFormOpts } from './form/eventFormOpts.ts'
 
@@ -48,7 +48,7 @@ export default function EventTemplateSheet({
     ...eventFormOpts,
     defaultValues: {
       thematic: slotTemplate?.thematic ?? '',
-      location: slotTemplate?.location ?? '',
+      locationID: slotTemplate?.locationID ?? '',
       description: slotTemplate?.description ?? '',
       isIndividual: slotTemplate?.isIndividual ?? false,
       capacity: slotTemplate?.capacity ?? 1,
@@ -63,7 +63,7 @@ export default function EventTemplateSheet({
       const updatedSlotTemplateData = {
         id: slotTemplate.id,
         thematic: value.thematic,
-        location: value.location,
+        locationID: value.locationID || null,
         description: value.description,
         isIndividual: value.isIndividual,
         capacity: value.capacity ?? 1,
@@ -99,7 +99,7 @@ export default function EventTemplateSheet({
     reset(
       {
         thematic: slotTemplate.thematic ?? '',
-        location: slotTemplate.location ?? '',
+        locationID: slotTemplate.locationID ?? '',
         description: slotTemplate.description ?? '',
         isIndividual: slotTemplate.isIndividual ?? false,
         capacity: slotTemplate.capacity ?? 1,
@@ -128,10 +128,11 @@ export default function EventTemplateSheet({
             <div>
               <SheetTitle className="mb-[-4px]">Template de créneau</SheetTitle>
               <div className="text-sm text-text-light">
-                {`${dayjs(slotTemplate?.startTime)
-                  .format('dddd D MMMM [de] hh:mm')
+                {`${dayjs
+                  .utc(slotTemplate?.startTime)
+                  .format('dddd D MMMM [de] HH:mm')
                   .replace(/^./, (c) => c.toUpperCase())}
-                    ${dayjs(slotTemplate?.endTime).format('[à] hh:mm')}
+                    ${dayjs.utc(slotTemplate?.endTime).format('[à] HH:mm')}
                     ${formatDuration(slotTemplate?.startTime, slotTemplate?.endTime)}`}
               </div>
             </div>
@@ -159,12 +160,19 @@ export default function EventTemplateSheet({
 
               <div className="px-4 py-4 flex justify-between gap-4 shrink-0">
                 <div>
-                  <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)}>
+                  <Button
+                    variant="destructive"
+                    onClick={() => setShowDeleteConfirm(true)}
+                  >
                     Supprimer
                   </Button>
                 </div>
                 <div className="flex gap-4">
-                  <Button variant="default" onClick={() => form.handleSubmit()} isLoading={updateSlotTemplate.isPending}>
+                  <Button
+                    variant="default"
+                    onClick={() => form.handleSubmit()}
+                    isLoading={updateSlotTemplate.isPending}
+                  >
                     Mettre à jour
                   </Button>
                   <Button variant="outline" onClick={() => setOpen('')}>

@@ -24,6 +24,9 @@ import {
   patientPathwayParamsSchema,
   appointmentsCountResponseSchema,
   removeFromPathwayResponseSchema,
+  patientPathwaysResponseSchema,
+  reorderPatientPathwaysBodySchema,
+  type ReorderPatientPathwaysBody,
 } from '../schemas/patient.schema'
 
 const patientRouter: FastifyPluginAsync = (fastify) => {
@@ -264,6 +267,48 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
         pathwayID,
         request.user.userID,
       )
+    },
+  )
+
+  // Get all pathways for a patient (with priority order)
+  fastify.get<{ Params: GetPatientByIdParams }>(
+    '/:patientID/pathways',
+    {
+      schema: {
+        params: getPatientByIdParamsSchema,
+        response: {
+          200: patientPathwaysResponseSchema,
+        },
+      },
+      onRequest: [fastify.verifySessionCookie],
+    },
+    async (request) => {
+      return patientDomain.getPathways(request.params.patientID)
+    },
+  )
+
+  // Reorder patient pathways by priority
+  fastify.put<{
+    Params: GetPatientByIdParams
+    Body: ReorderPatientPathwaysBody
+  }>(
+    '/:patientID/pathway-priorities',
+    {
+      schema: {
+        params: getPatientByIdParamsSchema,
+        body: reorderPatientPathwaysBodySchema,
+        response: {
+          204: z.null(),
+        },
+      },
+      onRequest: [fastify.verifySessionCookie],
+    },
+    async (request, reply) => {
+      await patientDomain.setPathwayPriorities(
+        request.params.patientID,
+        request.body.pathwayIDs,
+      )
+      return reply.code(204).send()
     },
   )
 

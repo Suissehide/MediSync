@@ -1,11 +1,17 @@
 import { PDFDownloadLink, PDFViewer } from '@react-pdf/renderer'
 import dayjs from 'dayjs'
-import { Download, X } from 'lucide-react'
-import { useMemo } from 'react'
+import { Download, FilePlus, X } from 'lucide-react'
+import { useMemo, useState } from 'react'
 
+import { usePatientPathwaysQuery } from '../../../../queries/usePatient.tsx'
 import { useAllSlotsQuery } from '../../../../queries/useSlot.ts'
 import type { Patient } from '../../../../types/patient.ts'
 import { Button } from '../../../ui/button.tsx'
+import DropdownFilter from '../../../ui/dropdownFilter.tsx'
+import {
+  getDefaultEnabledOptionalPageIds,
+  OPTIONAL_PAGES,
+} from './optional-pages.ts'
 import ProgrammePDF from './programme.pdf.tsx'
 
 interface ProgrammePDFModalProps {
@@ -20,6 +26,31 @@ export default function ProgrammePDFModal({
   previewMode = true,
 }: ProgrammePDFModalProps) {
   const { slots } = useAllSlotsQuery()
+  const { pathways = [] } = usePatientPathwaysQuery(patient.id)
+
+  const [enabledOptionalPageIds, setEnabledOptionalPageIds] = useState<
+    string[]
+  >(() => getDefaultEnabledOptionalPageIds())
+
+  const handleOptionalPageChange = (id: string, checked: boolean) => {
+    setEnabledOptionalPageIds((prev) =>
+      checked
+        ? prev.includes(id)
+          ? prev
+          : [...prev, id]
+        : prev.filter((existingId) => existingId !== id),
+    )
+  }
+
+  const optionalPageFilters = useMemo(
+    () =>
+      OPTIONAL_PAGES.map((page) => ({
+        id: page.id,
+        label: page.label,
+        checked: enabledOptionalPageIds.includes(page.id),
+      })),
+    [enabledOptionalPageIds],
+  )
 
   const patientSlots = useMemo(() => {
     if (!slots || !patient) {
@@ -40,13 +71,18 @@ export default function ProgrammePDFModal({
       .sort((a, b) => dayjs(a.startDate).diff(dayjs(b.startDate)))
   }, [slots, patient])
 
-  const fileName = `programme-${patient.lastName}-${patient.firstName}-${dayjs().format('YYYY-MM-DD')}.pdf`
+  const fileName = `programme-${patient.lastName}-${patient.firstName}-${dayjs.utc().format('YYYY-MM-DD')}.pdf`
 
-  const pdfDocument = (
-    <ProgrammePDF
-      patient={patient}
-      upcomingSlots={patientSlots}
-    />
+  const pdfDocument = useMemo(
+    () => (
+      <ProgrammePDF
+        patient={patient}
+        upcomingSlots={patientSlots}
+        pathways={pathways}
+        enabledOptionalPageIds={enabledOptionalPageIds}
+      />
+    ),
+    [patient, patientSlots, pathways, enabledOptionalPageIds],
   )
 
   return (
@@ -57,7 +93,15 @@ export default function ProgrammePDFModal({
           <h2 className="text-lg font-semibold">
             Aperçu du programme - {patient.firstName} {patient.lastName}
           </h2>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
+            {OPTIONAL_PAGES.length > 0 && (
+              <DropdownFilter
+                filters={optionalPageFilters}
+                onFilterChange={handleOptionalPageChange}
+                triggerLabel="Pages additionnelles"
+                TriggerIcon={FilePlus}
+              />
+            )}
             <PDFDownloadLink document={pdfDocument} fileName={fileName}>
               {({ loading }) => (
                 <Button variant="default" size="default" disabled={loading}>

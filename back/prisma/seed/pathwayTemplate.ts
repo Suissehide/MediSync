@@ -1,4 +1,9 @@
-import type { PrismaClient, Soignant } from '../../src/generated/client'
+import type {
+  Location,
+  PrismaClient,
+  Soignant,
+} from '../../src/generated/client'
+import { resolveLocationName } from './data/location'
 import {
   PATHWAY_DATA,
   PATHWAYS,
@@ -16,6 +21,7 @@ function calculateOffsetDays(weekCalendar: number, dayOfWeek: number): number {
 export default async function seedPathwayTemplates(
   prisma: PrismaClient,
   soignants: Soignant[],
+  locations: Location[],
 ) {
   console.log('→ Deleting old pathway templates...')
   await prisma.slotTemplate.deleteMany({ where: { templateID: { not: null } } })
@@ -23,6 +29,7 @@ export default async function seedPathwayTemplates(
 
   console.log('→ Seeding pathway templates...')
 
+  const locationByName = new Map(locations.map((l) => [l.name, l]))
   const createdTemplates = []
 
   for (const [pathwayKey, slots] of Object.entries(PATHWAY_DATA)) {
@@ -31,7 +38,7 @@ export default async function seedPathwayTemplates(
     console.log(`Creating pathway ${pathway.name} with ${slots.length} slots`)
 
     const slotTemplates = slots.map((slot) =>
-      createSlotTemplate(slot, pathway.color, soignants),
+      createSlotTemplate(slot, pathway.color, soignants, locationByName),
     )
 
     const template = await prisma.pathwayTemplate.create({
@@ -64,6 +71,7 @@ function createSlotTemplate(
   data: SlotData,
   color: string,
   soignants: Soignant[],
+  locationByName: Map<string, Location>,
 ) {
   const soignantIndex = SOIGNANT_MAP[data.soignant] ?? 0
   const soignant = soignants[soignantIndex]
@@ -79,6 +87,16 @@ function createSlotTemplate(
 
   const offsetDays = calculateOffsetDays(data.weekCalendar, data.dayOfWeek)
 
+  const canonicalName = resolveLocationName(data.location)
+  const locationID = canonicalName
+    ? (locationByName.get(canonicalName)?.id ?? null)
+    : null
+  if (data.location && !locationID) {
+    console.warn(
+      `  ⚠ Unknown location "${data.location}" (resolved to "${canonicalName}") — slot will have no location`,
+    )
+  }
+
   return {
     startTime,
     endTime,
@@ -88,7 +106,7 @@ function createSlotTemplate(
     color,
     description: data.description,
     thematic: data.thematic,
-    location: data.location,
+    locationID,
     soignantID: soignant.id,
   }
 }

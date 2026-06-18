@@ -22,6 +22,7 @@ class SlotTemplateRepository implements SlotTemplateRepositoryInterface {
       include: {
         soignant: true,
         template: true,
+        location: true,
       },
     })
   }
@@ -33,6 +34,7 @@ class SlotTemplateRepository implements SlotTemplateRepositoryInterface {
         include: {
           soignant: true,
           template: true,
+          location: true,
         },
       })
     } catch (err) {
@@ -52,6 +54,7 @@ class SlotTemplateRepository implements SlotTemplateRepositoryInterface {
         include: {
           soignant: true,
           template: true,
+          location: true,
         },
       })
     } catch (err) {
@@ -75,6 +78,7 @@ class SlotTemplateRepository implements SlotTemplateRepositoryInterface {
         include: {
           soignant: true,
           template: true,
+          location: true,
         },
       })
     } catch (err) {
@@ -111,6 +115,7 @@ class SlotTemplateRepository implements SlotTemplateRepositoryInterface {
         include: {
           soignant: true,
           template: true,
+          location: true,
         },
       })
     } catch (err) {

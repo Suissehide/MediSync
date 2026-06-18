@@ -71,7 +71,7 @@ function SidebarDiagnostic() {
                           {diag.title ?? 'Sans titre'}
                         </div>
                         <div className="text-xs text-text-light">
-                          {dayjs(diag.createdAt).format('DD/MM/YYYY')}
+                          {dayjs.utc(diag.createdAt).format('DD/MM/YYYY')}
                         </div>
                       </div>
                     </div>
