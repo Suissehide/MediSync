@@ -33,7 +33,7 @@ interface AddAppointmentFormProps {
   endDate: string
   maxDate: string
   slotID: string
-  soignant?: Soignant
+  soignants?: Soignant[]
   type: string
   handleCreateAppointment: (newAppointment: CreateAppointmentParams) => void
   defaultPatientIDs?: string[]
@@ -46,7 +46,7 @@ function AddAppointmentForm({
   endDate,
   maxDate,
   slotID,
-  soignant,
+  soignants = [],
   type,
   handleCreateAppointment,
   defaultPatientIDs,
@@ -100,14 +100,19 @@ function AddAppointmentForm({
   }, [open, form])
 
   const thematicOptions = useMemo(() => {
-    return soignant
-      ? (thematics
-          ?.filter((t) => t.soignants.some((s) => s.id === soignant.id))
-          .slice()
-          .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
-          .map((t) => ({ value: t.name, label: t.name })) ?? [])
-      : []
-  }, [soignant, thematics])
+    const map = new Map<string, { value: string; label: string }>()
+    for (const soignant of soignants) {
+      for (const t of
+        thematics?.filter((t) =>
+          t.soignants.some((ss) => ss.id === soignant.id),
+        ) ?? []) {
+        map.set(t.id, { value: t.name, label: t.name })
+      }
+    }
+    return [...map.values()].sort((a, b) =>
+      a.label.localeCompare(b.label, 'fr'),
+    )
+  }, [soignants, thematics])
 
   const capacity = slot?.slotTemplate.capacity ?? 1
 
@@ -185,9 +190,13 @@ function AddAppointmentForm({
             )}
 
             <FormField>
-              <Label>Soignant</Label>
+              <Label>Soignants</Label>
               <Input
-                value={soignant?.name ?? 'Aucun soignant associé'}
+                value={
+                  soignants.length > 0
+                    ? soignants.map((s) => s.name).join(', ')
+                    : 'Aucun soignant associé'
+                }
                 disabled
               />
             </FormField>
