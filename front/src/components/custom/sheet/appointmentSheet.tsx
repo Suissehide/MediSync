@@ -9,7 +9,7 @@ import {
   Loader2Icon,
   TrashIcon,
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import {
   APPOINTMENT_ACCOMPANYING_OPTIONS,
@@ -44,7 +44,7 @@ interface AppointmentSheetProps {
   open: boolean
   setOpen: (openEventId: string) => void
   eventID: string
-  soignant?: Soignant
+  soignants?: Soignant[]
   handleDeleteEvent?: (eventID: string) => void
 }
 
@@ -52,7 +52,7 @@ export default function AppointmentSheet({
   open,
   setOpen,
   eventID,
-  soignant,
+  soignants = [],
 }: AppointmentSheetProps) {
   const navigate = useNavigate()
 
@@ -166,13 +166,20 @@ export default function AppointmentSheet({
   const currentPatientCount = selectedPatientIDs.length
   const isAtCapacity = currentPatientCount >= capacity
 
-  const thematicOptions = soignant
-    ? (thematics
-        ?.filter((t) => t.soignants.some((s) => s.id === soignant.id))
-        .slice()
-        .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
-        .map((t) => ({ value: t.name, label: t.name })) ?? [])
-    : []
+  const thematicOptions = useMemo(() => {
+    const map = new Map<string, { value: string; label: string }>()
+    for (const soignant of soignants) {
+      for (const t of
+        thematics?.filter((t) =>
+          t.soignants.some((ss) => ss.id === soignant.id),
+        ) ?? []) {
+        map.set(t.id, { value: t.name, label: t.name })
+      }
+    }
+    return [...map.values()].sort((a, b) =>
+      a.label.localeCompare(b.label, 'fr'),
+    )
+  }, [soignants, thematics])
 
   return (
     <Sheet
@@ -219,9 +226,13 @@ export default function AppointmentSheet({
                 className="w-full flex-1 flex flex-col min-h-0 gap-2 px-4"
               >
                 <FormField>
-                  <Label>Soignant</Label>
+                  <Label>Soignants</Label>
                   <Input
-                    value={soignant?.name ?? 'Aucun soignant associé'}
+                    value={
+                      soignants.length > 0
+                        ? soignants.map((s) => s.name).join(', ')
+                        : 'Aucun soignant associé'
+                    }
                     disabled
                   />
                 </FormField>
