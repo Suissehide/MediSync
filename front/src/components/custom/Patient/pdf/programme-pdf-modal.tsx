@@ -1,12 +1,12 @@
 import { PDFDownloadLink, PDFViewer } from '@react-pdf/renderer'
 import dayjs from 'dayjs'
-import { Download, X } from 'lucide-react'
+import { Download, FilePlus, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import { useAllSlotsQuery } from '../../../../queries/useSlot.ts'
 import type { Patient } from '../../../../types/patient.ts'
 import { Button } from '../../../ui/button.tsx'
-import { Switch } from '../../../ui/switch.tsx'
+import DropdownFilter from '../../../ui/dropdownFilter.tsx'
 import {
   getDefaultEnabledOptionalPageIds,
   OPTIONAL_PAGES,
@@ -30,11 +30,25 @@ export default function ProgrammePDFModal({
     string[]
   >(() => getDefaultEnabledOptionalPageIds())
 
-  const toggleOptionalPage = (id: string) => {
+  const handleOptionalPageChange = (id: string, checked: boolean) => {
     setEnabledOptionalPageIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+      checked
+        ? prev.includes(id)
+          ? prev
+          : [...prev, id]
+        : prev.filter((existingId) => existingId !== id),
     )
   }
+
+  const optionalPageFilters = useMemo(
+    () =>
+      OPTIONAL_PAGES.map((page) => ({
+        id: page.id,
+        label: page.label,
+        checked: enabledOptionalPageIds.includes(page.id),
+      })),
+    [enabledOptionalPageIds],
+  )
 
   const patientSlots = useMemo(() => {
     if (!slots || !patient) {
@@ -78,23 +92,12 @@ export default function ProgrammePDFModal({
           </h2>
           <div className="flex items-center gap-4">
             {OPTIONAL_PAGES.length > 0 && (
-              <div className="flex items-center gap-3">
-                {OPTIONAL_PAGES.map((page) => {
-                  const checked = enabledOptionalPageIds.includes(page.id)
-                  return (
-                    <div
-                      key={page.id}
-                      className="flex items-center gap-2 text-sm"
-                    >
-                      <Switch
-                        checked={checked}
-                        onCheckedChange={() => toggleOptionalPage(page.id)}
-                      />
-                      <span>{page.label}</span>
-                    </div>
-                  )
-                })}
-              </div>
+              <DropdownFilter
+                filters={optionalPageFilters}
+                onFilterChange={handleOptionalPageChange}
+                triggerLabel="Pages additionnelles"
+                TriggerIcon={FilePlus}
+              />
             )}
             <PDFDownloadLink document={pdfDocument} fileName={fileName}>
               {({ loading }) => (
