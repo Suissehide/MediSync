@@ -218,8 +218,6 @@ const pathwayRouter: FastifyPluginAsync = (fastify) => {
 
       const slotIDs: string[] = []
       for (const slotTemplate of pathwayTemplate.slotTemplates) {
-        const { soignants, id: _id, ...rest } = slotTemplate
-
         // Compute the effective offset by adding the extra weeks from forbidden week skipping
         const originalOffset = slotTemplate.offsetDays ?? 0
         const logicalWeek = Math.floor(originalOffset / 7)
@@ -228,10 +226,16 @@ const pathwayRouter: FastifyPluginAsync = (fastify) => {
         const effectiveOffset = actualWeek * 7 + dayInWeek
 
         const clonedSlotTemplate = await slotTemplateDomain.create({
-          ...rest,
+          startTime: slotTemplate.startTime,
+          endTime: slotTemplate.endTime,
           offsetDays: effectiveOffset,
-          soignantIDs: soignants.map((s) => s.id),
-          templateID: undefined,
+          isIndividual: slotTemplate.isIndividual,
+          capacity: slotTemplate.capacity,
+          thematic: slotTemplate.thematic,
+          locationID: slotTemplate.locationID,
+          description: slotTemplate.description,
+          color: slotTemplate.color,
+          soignantIDs: slotTemplate.soignants.map((s) => s.id),
         })
 
         const base = dayjs(effectiveStartDate)
