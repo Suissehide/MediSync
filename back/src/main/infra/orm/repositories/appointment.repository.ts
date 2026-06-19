@@ -43,6 +43,7 @@ class AppointmentRepository implements AppointmentRepositoryInterface {
               slotTemplate: {
                 include: {
                   soignants: true,
+                  location: true,
                 },
               },
             },
