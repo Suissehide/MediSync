@@ -237,6 +237,17 @@ export default function AppointmentSheet({
                   />
                 </FormField>
 
+                <FormField>
+                  <Label>Salle</Label>
+                  <Input
+                    value={
+                      appointment?.slot?.slotTemplate?.location?.name ??
+                      'Aucune salle associée'
+                    }
+                    disabled
+                  />
+                </FormField>
+
                 <form.AppField name="thematic">
                   {(field) => (
                     <field.Select
