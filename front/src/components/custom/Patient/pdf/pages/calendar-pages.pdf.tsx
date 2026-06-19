@@ -102,23 +102,10 @@ const styles = StyleSheet.create({
 
 const DAY_NAMES = ['LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI']
 
-const PAGE_HEIGHT = 842 // A4 height in pt
-const PAGE_PADDING = 28
-const WEEK_MARGIN = 14
-const HEADER_ROW_HEIGHT = 20
-const TIME_ROW_HEIGHT = 36
-const AVAILABLE_HEIGHT = PAGE_HEIGHT - PAGE_PADDING * 2
-
-function estimateWeekHeight(week: WeekData): number {
-  return (
-    HEADER_ROW_HEIGHT + week.timeRows.length * TIME_ROW_HEIGHT + WEEK_MARGIN
-  )
-}
-
 function WeekBlock({ weekData }: { weekData: WeekData }) {
   return (
     <View style={styles.weekBlock}>
-      <View style={styles.weekHeaderRow}>
+      <View style={styles.weekHeaderRow} wrap={false}>
         <View style={styles.weekLabelCell}>
           <Text style={styles.weekLabelText}>{weekData.weekLabel}</Text>
         </View>
@@ -134,7 +121,7 @@ function WeekBlock({ weekData }: { weekData: WeekData }) {
       </View>
 
       {weekData.timeRows.map((row) => (
-        <View key={row.timeLabel} style={styles.timeRow}>
+        <View key={row.timeLabel} style={styles.timeRow} wrap={false}>
           <View style={styles.timeLabelCell}>
             <Text style={styles.timeLabelText}>{row.timeLabel}</Text>
           </View>
@@ -172,29 +159,8 @@ export default function CalendarPages({
   upcomingSlots: Slot[]
 }) {
   const weeks = groupSlotsByWeek(upcomingSlots)
-  const pages: WeekData[][] = []
-  let currentPage: WeekData[] = []
-  let currentHeight = 0
 
-  for (const week of weeks) {
-    const weekHeight = estimateWeekHeight(week)
-    if (
-      currentPage.length > 0 &&
-      currentHeight + weekHeight > AVAILABLE_HEIGHT
-    ) {
-      pages.push(currentPage)
-      currentPage = [week]
-      currentHeight = weekHeight
-    } else {
-      currentPage.push(week)
-      currentHeight += weekHeight
-    }
-  }
-  if (currentPage.length > 0) {
-    pages.push(currentPage)
-  }
-
-  if (pages.length === 0) {
+  if (weeks.length === 0) {
     return (
       <Page size="A4" style={styles.calendarPage}>
         <Text style={styles.emptyMessage}>Aucun rendez-vous à venir.</Text>
@@ -203,18 +169,10 @@ export default function CalendarPages({
   }
 
   return (
-    <>
-      {pages.map((pageWeeks) => (
-        <Page
-          key={pageWeeks[0]?.weekLabel}
-          size="A4"
-          style={styles.calendarPage}
-        >
-          {pageWeeks.map((weekData) => (
-            <WeekBlock key={weekData.weekLabel} weekData={weekData} />
-          ))}
-        </Page>
+    <Page size="A4" style={styles.calendarPage}>
+      {weeks.map((weekData) => (
+        <WeekBlock key={weekData.weekLabel} weekData={weekData} />
       ))}
-    </>
+    </Page>
   )
 }
