@@ -64,13 +64,21 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
         const apt = slot.appointments?.find((a) =>
           a.appointmentPatients?.some((ap) => ap.patient.id === patient.id),
         )
+        const thematic =
+          apt?.thematic || slot.slotTemplate?.thematic || 'Rendez-vous'
+        const soignantsLabel = slot.slotTemplate?.soignants?.length
+          ? slot.slotTemplate.soignants.map((s) => s.name).join(', ')
+          : ''
         return {
           id: `apt_${apt?.id}`,
-          title: apt?.thematic || slot.slotTemplate?.thematic || 'Rendez-vous',
+          title: soignantsLabel || thematic,
           start: apt?.startDate ?? slot.startDate,
           end: apt?.endDate ?? slot.endDate,
           backgroundColor: slot.slotTemplate?.color,
           borderColor: slot.slotTemplate?.color,
+          extendedProps: {
+            thematic: soignantsLabel ? thematic : undefined,
+          },
         }
       })
   }, [slots, patient])

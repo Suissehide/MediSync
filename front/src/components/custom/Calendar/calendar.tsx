@@ -125,6 +125,7 @@ export interface CalendarEvent {
     appointments?: Appointment[]
     locked?: boolean
     slotWeeks?: string[]
+    thematic?: string
   }
 }
 
