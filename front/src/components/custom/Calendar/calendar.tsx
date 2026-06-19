@@ -361,13 +361,13 @@ function Calendar({
           const week = start.isoWeek()
           const startStr = start.format('DD MMMM')
           if (!arg.end) {
-            return `s${week} • ${startStr}`
+            return `s${week} / ${startStr}`
           }
           const endStr = dayjs
             .utc(arg.end.marker)
             .subtract(1, 'day')
             .format('DD MMMM')
-          return `s${week} • ${startStr} - ${endStr}`
+          return `s${week} / ${startStr} - ${endStr}`
         }}
         dayHeaderFormat={{
           weekday: 'short',
