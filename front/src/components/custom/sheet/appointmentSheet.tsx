@@ -27,11 +27,10 @@ import { useThematicQueries } from '../../../queries/useThematic.ts'
 import type { UpdateAppointmentParams } from '../../../types/appointment.ts'
 import type { Soignant } from '../../../types/soignant.ts'
 import { Button } from '../../ui/button.tsx'
-import { FieldInfo } from '../../ui/fieldInfo.tsx'
 import { FormField } from '../../ui/formField.tsx'
-import { Input, TextArea } from '../../ui/input.tsx'
+import { Input } from '../../ui/input.tsx'
 import { Label } from '../../ui/label.tsx'
-import { MultiSelect, Select } from '../../ui/select.tsx'
+import { MultiSelect } from '../../ui/select.tsx'
 import {
   Sheet,
   SheetContent,
@@ -169,10 +168,9 @@ export default function AppointmentSheet({
   const thematicOptions = useMemo(() => {
     const map = new Map<string, { value: string; label: string }>()
     for (const soignant of soignants) {
-      for (const t of
-        thematics?.filter((t) =>
-          t.soignants.some((ss) => ss.id === soignant.id),
-        ) ?? []) {
+      for (const t of thematics?.filter((t) =>
+        t.soignants.some((ss) => ss.id === soignant.id),
+      ) ?? []) {
         map.set(t.id, { value: t.name, label: t.name })
       }
     }
@@ -223,26 +221,15 @@ export default function AppointmentSheet({
                   await form.validate('submit')
                   await form.handleSubmit()
                 }}
-                className="w-full flex-1 flex flex-col min-h-0 gap-2 px-4"
+                className="w-full flex-1 flex flex-col min-h-0 gap-3 px-4"
               >
-                <FormField>
+                <FormField className="flex flex-col gap-1">
                   <Label>Soignants</Label>
                   <Input
                     value={
                       soignants.length > 0
                         ? soignants.map((s) => s.name).join(', ')
                         : 'Aucun soignant associé'
-                    }
-                    disabled
-                  />
-                </FormField>
-
-                <FormField>
-                  <Label>Salle</Label>
-                  <Input
-                    value={
-                      appointment?.slot?.slotTemplate?.location?.name ??
-                      'Aucune salle associée'
                     }
                     disabled
                   />
@@ -263,20 +250,25 @@ export default function AppointmentSheet({
                   )}
                 </form.AppField>
 
-                <form.Field name="type">
+                <form.AppField name="type">
                   {(field) => (
-                    <FormField>
-                      <Label htmlFor={field.name}>Type</Label>
-                      <Select
-                        id={field.name}
-                        options={APPOINTMENT_TYPE_OPTIONS}
-                        value={field.state.value}
-                        onValueChange={(value) => field.handleChange(value)}
-                      />
-                      <FieldInfo field={field} />
-                    </FormField>
+                    <field.Select
+                      options={APPOINTMENT_TYPE_OPTIONS}
+                      label="Type"
+                    />
                   )}
-                </form.Field>
+                </form.AppField>
+
+                <FormField className="flex flex-col gap-1">
+                  <Label>Salle</Label>
+                  <Input
+                    value={
+                      appointment?.slot?.slotTemplate?.location?.name ??
+                      'Aucune salle associée'
+                    }
+                    disabled
+                  />
+                </FormField>
 
                 <div className="mt-2 w-full border-t border-border"></div>
 
@@ -409,96 +401,54 @@ export default function AppointmentSheet({
                               </div>
 
                               {isExpanded && (
-                                <div className="flex flex-col gap-2 pb-2">
+                                <div className="flex flex-col gap-3 pb-2 pt-2">
                                   <div className="w-full flex gap-4">
                                     {/* accompanying */}
-                                    <form.Field
+                                    <form.AppField
                                       name={`appointmentPatients[${index}].accompanying`}
                                     >
                                       {(subField) => (
-                                        <FormField className={'flex-1'}>
-                                          <Label htmlFor={field.name}>
-                                            Accompagnant
-                                          </Label>
-                                          <Select
-                                            id={subField.name}
-                                            value={subField.state.value ?? ''}
-                                            onValueChange={(v) =>
-                                              subField.handleChange(v)
-                                            }
-                                            options={
-                                              APPOINTMENT_ACCOMPANYING_OPTIONS
-                                            }
-                                          />
-                                        </FormField>
+                                        <subField.Select
+                                          label="Accompagnant"
+                                          className="flex-1"
+                                          options={
+                                            APPOINTMENT_ACCOMPANYING_OPTIONS
+                                          }
+                                        />
                                       )}
-                                    </form.Field>
+                                    </form.AppField>
 
                                     {/* status */}
-                                    <form.Field
+                                    <form.AppField
                                       name={`appointmentPatients[${index}].status`}
                                     >
                                       {(subField) => (
-                                        <FormField className={'flex-1'}>
-                                          <Label htmlFor={field.name}>
-                                            Présence
-                                          </Label>
-                                          <Select
-                                            id={subField.name}
-                                            value={subField.state.value ?? ''}
-                                            onValueChange={(v) =>
-                                              subField.handleChange(v)
-                                            }
-                                            options={APPOINTMENT_STATUS_OPTIONS}
-                                          />
-                                        </FormField>
+                                        <subField.Select
+                                          label="Présence"
+                                          className="flex-1"
+                                          options={APPOINTMENT_STATUS_OPTIONS}
+                                        />
                                       )}
-                                    </form.Field>
+                                    </form.AppField>
                                   </div>
 
                                   {/* rejectionReason */}
-                                  <form.Field
+                                  <form.AppField
                                     name={`appointmentPatients[${index}].rejectionReason`}
                                   >
                                     {(subField) => (
-                                      <FormField>
-                                        <Label htmlFor={field.name}>
-                                          Raison de refus
-                                        </Label>
-                                        <Input
-                                          id={subField.name}
-                                          value={subField.state.value}
-                                          onChange={(e) =>
-                                            subField.handleChange(
-                                              e.target.value,
-                                            )
-                                          }
-                                        />
-                                      </FormField>
+                                      <subField.Input label="Raison de refus" />
                                     )}
-                                  </form.Field>
+                                  </form.AppField>
 
                                   {/* transmissionNotes */}
-                                  <form.Field
+                                  <form.AppField
                                     name={`appointmentPatients[${index}].transmissionNotes`}
                                   >
                                     {(subField) => (
-                                      <FormField>
-                                        <Label htmlFor={field.name}>
-                                          Notes de transmission
-                                        </Label>
-                                        <TextArea
-                                          id={subField.name}
-                                          value={subField.state.value}
-                                          onChange={(e) =>
-                                            subField.handleChange(
-                                              e.target.value,
-                                            )
-                                          }
-                                        />
-                                      </FormField>
+                                      <subField.TextArea label="Notes de transmission" />
                                     )}
-                                  </form.Field>
+                                  </form.AppField>
                                 </div>
                               )}
                             </div>
