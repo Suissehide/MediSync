@@ -49,7 +49,7 @@ export function ColorLegend({
             <p className="text-sm text-text-light">{title}</p>
           </div>
 
-          <div className="p-2 flex flex-col gap-0.5">
+          <div className="p-2 flex flex-col gap-0.5 max-h-80 overflow-y-auto">
             {pathwayTemplates.map((pathwayTemplate) => (
               <div
                 key={pathwayTemplate.id}
