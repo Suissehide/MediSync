@@ -40,7 +40,11 @@ class AppointmentRepository implements AppointmentRepositoryInterface {
         include: {
           slot: {
             include: {
-              slotTemplate: true,
+              slotTemplate: {
+                include: {
+                  soignants: true,
+                },
+              },
             },
           },
           appointmentPatients: {
