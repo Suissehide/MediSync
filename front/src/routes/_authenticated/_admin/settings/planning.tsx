@@ -717,18 +717,18 @@ function Planning() {
               >
                 <FullCalendar
                   plugins={[dayGridPlugin, multiMonthPlugin, interactionPlugin]}
-                  initialView="dayGridYear"
+                  initialView="multiMonthYear"
                   locale={frLocale}
                   timeZone="UTC"
                   weekends={true}
                   headerToolbar={{
                     left: 'title',
-                    center: 'dayGridYear,multiMonthYear',
+                    center: 'multiMonthYear,dayGridYear',
                     right: 'prev,next today',
                   }}
                   buttonText={{
-                    dayGridYear: 'Liste',
                     multiMonthYear: 'Grille',
+                    dayGridYear: 'Liste',
                   }}
                   multiMonthMinWidth={600}
                   dayMaxEvents={false}
