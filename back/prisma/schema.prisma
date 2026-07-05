@@ -24,6 +24,8 @@ model User {
   soignantId String?
 
   soignant Soignant? @relation(fields: [soignantId], references: [id], onDelete: SetNull)
+
+  @@index([soignantId])
 }
 
 model PathwayTemplate {
@@ -47,6 +49,9 @@ model Pathway {
   template          PathwayTemplate?          @relation(fields: [templateID], references: [id])
   slots             Slot[]
   patientPriorities PatientPathwayPriority[]
+
+  @@index([startDate])
+  @@index([templateID])
 }
 
 model PatientPathwayPriority {
@@ -70,7 +75,12 @@ model Appointment {
   slotID              String
   appointmentPatients AppointmentPatient[]
 
-  slot Slot @relation(fields: [slotID], references: [id])
+  // Cascade : supprimer un créneau supprime ses rendez-vous (et, en cascade,
+  // les AppointmentPatient). Sans cela, supprimer un créneau/parcours avec
+  // des rendez-vous échoue sur une violation de clé étrangère.
+  slot Slot @relation(fields: [slotID], references: [id], onDelete: Cascade)
+
+  @@index([slotID])
 }
 
 model AppointmentPatient {
@@ -87,6 +97,7 @@ model AppointmentPatient {
   patient     Patient     @relation(fields: [patientId], references: [id], onDelete: Cascade)
 
   @@unique([appointmentId, patientId])
+  @@index([patientId])
 }
 
 model SlotTemplate {
@@ -108,6 +119,9 @@ model SlotTemplate {
   soignants Soignant[]      @relation("SlotTemplateSoignants")
   template PathwayTemplate? @relation(fields: [templateID], references: [id])
   location Location?        @relation(fields: [locationID], references: [id], onDelete: SetNull)
+
+  @@index([templateID])
+  @@index([locationID])
 }
 
 model Slot {
@@ -121,6 +135,9 @@ model Slot {
 
   pathway      Pathway?     @relation(fields: [pathwayID], references: [id])
   slotTemplate SlotTemplate @relation(fields: [slotTemplateID], references: [id])
+
+  @@index([startDate])
+  @@index([pathwayID])
 }
 
 model Soignant {
@@ -209,6 +226,8 @@ model EnrollmentIssue {
   createdAt         DateTime @default(now())
 
   patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
 }
 
 model DiagnosticEducatifTemplate {
@@ -332,6 +351,9 @@ model DiagnosticEducatif {
 
   patient  Patient                     @relation(fields: [patientId], references: [id], onDelete: Cascade)
   template DiagnosticEducatifTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  @@index([patientId])
+  @@index([templateId])
 }
 
 model Todo {
@@ -344,6 +366,8 @@ model Todo {
   soignantID String?
 
   soignant Soignant? @relation(fields: [soignantID], references: [id], onDelete: SetNull)
+
+  @@index([soignantID])
 }
 
 model ActivityLog {
