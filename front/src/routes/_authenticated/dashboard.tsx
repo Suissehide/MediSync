@@ -97,8 +97,10 @@ function Dashboard() {
 
     setType('multiple')
     setMaxDate(event?.end ?? '')
-    selectedDate.startStr = event?.start ?? ''
-    selectedDate.endStr = event?.end ?? ''
+    setSelectedDate({
+      startStr: event?.start ?? '',
+      endStr: event?.end ?? '',
+    })
     setOpenCreateAppointmentModal(true)
   }
 
@@ -217,6 +219,7 @@ function Dashboard() {
             slotID={selectedEvent}
             type={type}
             handleCreateAppointment={handleCreateAppointment}
+            isPending={createAppointment.isPending}
           />
         )}
 

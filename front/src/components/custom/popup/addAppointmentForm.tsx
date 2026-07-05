@@ -36,6 +36,7 @@ interface AddAppointmentFormProps {
   soignants?: Soignant[]
   type: string
   handleCreateAppointment: (newAppointment: CreateAppointmentParams) => void
+  isPending?: boolean
   defaultPatientIDs?: string[]
 }
 
@@ -49,6 +50,7 @@ function AddAppointmentForm({
   soignants = [],
   type,
   handleCreateAppointment,
+  isPending = false,
   defaultPatientIDs,
 }: AddAppointmentFormProps) {
   const today = dayjs.utc()
@@ -268,7 +270,11 @@ function AddAppointmentForm({
         </PopupBody>
 
         <PopupFooter>
-          <Button variant="default" onClick={() => form.handleSubmit()}>
+          <Button
+            variant="default"
+            onClick={() => form.handleSubmit()}
+            isLoading={isPending}
+          >
             <Check className="w-4 h-4" />
             Ajouter
           </Button>

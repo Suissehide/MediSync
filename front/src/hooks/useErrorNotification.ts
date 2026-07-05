@@ -14,7 +14,7 @@ export const useErrorNotification = (
 
   useEffect(() => {
     if (isError && error) {
-      const errorId = `${error.message}-${Date.now()}`
+      const errorId = error.message
 
       if (errorShownRef.current !== errorId) {
         errorShownRef.current = errorId

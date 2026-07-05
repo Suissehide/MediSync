@@ -1,21 +1,19 @@
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 
 export const useLoading = (
   isLoading: boolean,
-  setIsLoading: (loading: boolean) => void,
+  startLoading: () => void,
+  stopLoading: () => void,
 ) => {
-  const previousLoadingRef = useRef<boolean | null>(null)
-
   useEffect(() => {
-    if (previousLoadingRef.current !== isLoading) {
-      setIsLoading(isLoading)
-      previousLoadingRef.current = isLoading
+    if (!isLoading) {
+      return
     }
+
+    startLoading()
 
     return () => {
-      if (isLoading) {
-        setIsLoading(false)
-      }
+      stopLoading()
     }
-  }, [isLoading, setIsLoading])
+  }, [isLoading, startLoading, stopLoading])
 }

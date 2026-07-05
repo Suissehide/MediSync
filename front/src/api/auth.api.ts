@@ -32,6 +32,7 @@ export const AuthApi = {
   logout: async (): Promise<void> => {
     const response = await fetch(`${apiUrl}/auth/sign-out`, {
       method: 'POST',
+      credentials: 'include',
     })
     if (!response.ok) {
       handleHttpError(

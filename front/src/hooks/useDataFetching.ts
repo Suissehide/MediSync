@@ -16,7 +16,8 @@ export const useDataFetching = ({
   error,
   errorMessage,
 }: UseDataFetchingParams) => {
-  const { setIsLoading } = useLoaderStore()
+  const startLoading = useLoaderStore((state) => state.startLoading)
+  const stopLoading = useLoaderStore((state) => state.stopLoading)
   useErrorNotification(isError, error, errorMessage)
-  useLoading(isPending, setIsLoading)
+  useLoading(isPending, startLoading, stopLoading)
 }
