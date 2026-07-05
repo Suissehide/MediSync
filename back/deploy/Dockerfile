@@ -9,8 +9,10 @@ RUN npm i -g npm@${NPM_VERSION}
 
 # Built application image
 FROM node-npm AS app-build
-ARG DATABASE_URL
-ENV DATABASE_URL=${DATABASE_URL}
+# `prisma generate` ne se connecte pas à la base : une URL factice suffit au build
+# et évite de graver le vrai mot de passe DB dans les layers de l'image.
+# La vraie DATABASE_URL est fournie au runtime (voir `environment` dans compose.yaml).
+ENV DATABASE_URL="postgresql://user:password@localhost:5432/db?schema=public"
 
 WORKDIR /usr/src/app
 
@@ -40,5 +42,8 @@ COPY --chown=node:node ../prisma.config.ts ./
 
 ENV NODE_ENV production
 EXPOSE 3000
+
+# Ne pas tourner en root : les fichiers de l'app sont déjà en node:node (--chown).
+USER node
 
 CMD ["dumb-init", "npm", "run", "start:migrate:production"]

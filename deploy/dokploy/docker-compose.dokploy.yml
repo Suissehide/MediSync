@@ -5,7 +5,8 @@ services:
       dockerfile: deploy/Dockerfile
       target: app
       args:
-        DATABASE_URL: ${DATABASE_URL}
+        # Pas de DATABASE_URL au build (prisma generate n'en a pas besoin) : la
+        # vraie URL est fournie au runtime via `environment`.
         NODE_VERSION: ${NODE_VERSION}
         NPM_VERSION: ${NPM_VERSION}
     image: ${APP_IMAGE_NAME}-back:${VERSION:-latest}
@@ -25,9 +26,16 @@ services:
       - PORT=${PORT}
       - FRONT_URL=${FRONT_URL}
     healthcheck:
-      test: node -e "require('http').get({hostname:'localhost', port:${PORT}, path:'/health', timeout:3000})"
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:${PORT}/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
       retries: 3
-      timeout: 3s
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     depends_on:
       postgres:
         condition: service_healthy
@@ -45,10 +53,15 @@ services:
     environment:
       - VITE_API_BASE_URL=${VITE_API_BASE_URL}
       - VITE_ENVIRONMENT=${VITE_ENVIRONMENT}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     restart: unless-stopped
 
   postgres:
-    image: postgres:16.2-alpine
+    image: postgres:16-alpine
     restart: always
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
@@ -57,9 +70,37 @@ services:
     volumes:
       - postgres:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -d $POSTGRES_DB_NAME -U postgres"]
-      retries: 3
-      timeout: 3s
+      test: ["CMD-SHELL", "pg_isready -d $POSTGRES_DB_NAME -U ${POSTGRES_USER}"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Sauvegarde locale : pg_dump quotidien avec rétention (7j + 4 hebdo + 6 mensuels).
+  # NOTE: copie chiffrée hors-serveur (ex. rclone vers stockage objet) à ajouter manuellement.
+  postgres-backup:
+    image: prodrigestivill/postgres-backup-local:16-alpine
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_DB=${POSTGRES_DB_NAME}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - SCHEDULE=@daily
+      - BACKUP_KEEP_DAYS=7
+      - BACKUP_KEEP_WEEKS=4
+      - BACKUP_KEEP_MONTHS=6
+    volumes:
+      - postgres-backups:/backups
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
 
 volumes:
   postgres:
+  postgres-backups:

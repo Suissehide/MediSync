@@ -25,7 +25,7 @@ RUN npm run build
 RUN npm prune --omit=dev --ignore-scripts
 
 # Application image with dist
-FROM nginx:alpine AS app
+FROM nginx:1.27-alpine AS app
 
 WORKDIR /usr/share/nginx/html
 COPY --chown=node:node ../package.json package-lock.json ./
