@@ -40,7 +40,9 @@ const diagnosticEducatifRouter: FastifyPluginAsync = (fastify) => {
     onRequest: [fastify.verifySessionCookie],
   }, async (request) => {
     const diag = await diagnosticEducatifDomain.findByID(request.params.diagnosticId)
-    if (!diag) throw Boom.notFound('DiagnosticEducatif not found')
+    if (!diag) {
+      throw Boom.notFound('DiagnosticEducatif not found')
+    }
     return diag
   })
 
@@ -73,7 +75,7 @@ const diagnosticEducatifRouter: FastifyPluginAsync = (fastify) => {
   fastify.patch<{ Params: UpdateDiagnosticEducatifParams; Body: UpdateDiagnosticEducatifBody }>('/:diagnosticId', {
     schema: { ...updateDiagnosticEducatifSchema, response: { 200: diagnosticEducatifResponseSchema } },
     onRequest: [fastify.verifySessionCookie],
-  }, async (request) => {
+  }, (request) => {
     return diagnosticEducatifDomain.update(
       request.params.diagnosticId,
       request.body,

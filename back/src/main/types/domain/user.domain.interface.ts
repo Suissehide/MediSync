@@ -1,7 +1,4 @@
-import type {
-  UserEntityRepo,
-  UserUpdateEntityRepo,
-} from '../infra/orm/repositories/user.repository.interface'
+import type { UserEntityRepo } from '../infra/orm/repositories/user.repository.interface'
 
 export type UserEntityDomain = UserEntityRepo
 export type UserDTO = Pick<

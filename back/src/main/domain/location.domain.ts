@@ -6,15 +6,12 @@ import type {
   LocationUpdateEntityDomain,
 } from '../types/domain/location.domain.interface'
 import type { LocationRepositoryInterface } from '../types/infra/orm/repositories/location.repository.interface'
-import type { Logger } from '../types/utils/logger'
 
 class LocationDomain implements LocationDomainInterface {
-  private readonly logger: Logger
   private readonly locationRepository: LocationRepositoryInterface
 
-  constructor({ locationRepository, logger }: IocContainer) {
+  constructor({ locationRepository }: IocContainer) {
     this.locationRepository = locationRepository
-    this.logger = logger
   }
 
   findAll(): Promise<LocationEntityDomain[]> {

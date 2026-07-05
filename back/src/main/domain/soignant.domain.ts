@@ -6,15 +6,12 @@ import type {
   SoignantUpdateEntityDomain,
 } from '../types/domain/soignant.domain.interface'
 import type { SoignantRepositoryInterface } from '../types/infra/orm/repositories/soignant.repository.interface'
-import type { Logger } from '../types/utils/logger'
 
 class SoignantDomain implements SoignantDomainInterface {
-  private readonly logger: Logger
   private readonly soignantRepository: SoignantRepositoryInterface
 
-  constructor({ soignantRepository, logger }: IocContainer) {
+  constructor({ soignantRepository }: IocContainer) {
     this.soignantRepository = soignantRepository
-    this.logger = logger
   }
 
   findAll(): Promise<SoignantEntityDomain[]> {

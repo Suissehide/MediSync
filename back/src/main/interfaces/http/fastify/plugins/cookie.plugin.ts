@@ -75,9 +75,8 @@ const cookiePlugin: FastifyPluginAsync = fastifyPlugin(
     // Fabrique un preHandler exigeant un rôle minimum. `request.user` est déjà
     // renseigné par la garde d'authentification globale (onRequest).
     fastify.decorate('requireMinRole', function (this: FastifyInstance, minRole: Role) {
-      const instance = this
       return async (request: FastifyRequest): Promise<void> => {
-        const { userDomain } = instance.iocContainer
+        const { userDomain } = this.iocContainer
         const currentUser = await userDomain.findByID(request.user.userID)
         if (!currentUser || roleRank[currentUser.role] < roleRank[minRole]) {
           throw Boom.forbidden('Insufficient role')

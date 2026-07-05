@@ -6,15 +6,12 @@ import type {
   TodoUpdateEntityDomain,
 } from '../types/domain/todo.domain.interface'
 import type { TodoRepositoryInterface } from '../types/infra/orm/repositories/todo.repository.interface'
-import type { Logger } from '../types/utils/logger'
 
 class TodoDomain implements TodoDomainInterface {
-  private readonly logger: Logger
   private readonly todoRepository: TodoRepositoryInterface
 
-  constructor({ todoRepository, logger }: IocContainer) {
+  constructor({ todoRepository }: IocContainer) {
     this.todoRepository = todoRepository
-    this.logger = logger
   }
 
   findAll(): Promise<TodoEntityDomain[]> {

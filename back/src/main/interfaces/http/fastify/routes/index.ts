@@ -34,7 +34,7 @@ const routes: FastifyPluginAsyncZod = async (fastify) => {
     await fastify.verifySessionCookie.call(fastify, request, reply)
   })
 
-  fastify.get('/', async () => {
+  fastify.get('/', () => {
     return { name: 'MediSync API', status: 'running' }
   })
 

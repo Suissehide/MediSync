@@ -41,7 +41,9 @@ const forbiddenWeekRouter: FastifyPluginAsync = (fastify) => {
     },
     async (request, reply) => {
       const currentUser = await userDomain.findByID(request.user.userID)
-      if (currentUser?.role !== Role.ADMIN) throw Boom.forbidden('Forbidden')
+      if (currentUser?.role !== Role.ADMIN) {
+        throw Boom.forbidden('Forbidden')
+      }
       const forbiddenWeek = await forbiddenWeekDomain.create(request.body.date)
       reply.code(201)
       return forbiddenWeek
@@ -63,7 +65,9 @@ const forbiddenWeekRouter: FastifyPluginAsync = (fastify) => {
     },
     async (request, reply) => {
       const currentUser = await userDomain.findByID(request.user.userID)
-      if (currentUser?.role !== Role.ADMIN) throw Boom.forbidden('Forbidden')
+      if (currentUser?.role !== Role.ADMIN) {
+        throw Boom.forbidden('Forbidden')
+      }
       await forbiddenWeekDomain.delete(request.params.id)
       reply.code(204).send()
     },

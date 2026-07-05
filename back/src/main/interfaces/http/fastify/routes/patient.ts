@@ -247,7 +247,7 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
       },
       onRequest: [fastify.verifySessionCookie],
     },
-    async (request) => {
+    (request) => {
       const { patientID, pathwayID } = request.params
       return patientDomain.countAppointmentsInPathway(patientID, pathwayID)
     },
@@ -265,7 +265,7 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
       },
       onRequest: [fastify.verifySessionCookie],
     },
-    async (request) => {
+    (request) => {
       const { patientID, pathwayID } = request.params
       return patientDomain.removeFromPathway(
         patientID,
@@ -287,7 +287,7 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
       },
       onRequest: [fastify.verifySessionCookie],
     },
-    async (request) => {
+    (request) => {
       return patientDomain.getPathways(request.params.patientID)
     },
   )

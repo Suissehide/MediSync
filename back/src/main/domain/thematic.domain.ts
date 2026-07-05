@@ -7,15 +7,12 @@ import type {
   ThematicWithSoignantsEntityDomain,
 } from '../types/domain/thematic.domain.interface'
 import type { ThematicRepositoryInterface } from '../types/infra/orm/repositories/thematic.repository.interface'
-import type { Logger } from '../types/utils/logger'
 
 class ThematicDomain implements ThematicDomainInterface {
-  private readonly logger: Logger
   private readonly thematicRepository: ThematicRepositoryInterface
 
-  constructor({ thematicRepository, logger }: IocContainer) {
+  constructor({ thematicRepository }: IocContainer) {
     this.thematicRepository = thematicRepository
-    this.logger = logger
   }
 
   findAll(): Promise<ThematicWithSoignantsEntityDomain[]> {

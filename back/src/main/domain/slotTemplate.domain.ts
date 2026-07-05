@@ -1,6 +1,4 @@
-import type {} from '../types/domain/appointment.domain.interface'
 import type { IocContainer } from '../types/application/ioc'
-import type { Logger } from '../types/utils/logger'
 import type {
   SlotTemplateDomainInterface,
   SlotTemplateDTODomain,
@@ -12,12 +10,10 @@ import type {
 } from '../types/domain/slotTemplate.domain.interface'
 
 class SlotTemplateDomain implements SlotTemplateDomainInterface {
-  private readonly logger: Logger
   private readonly slotTemplateRepository: SlotTemplateRepositoryInterface
 
-  constructor({ slotTemplateRepository, logger }: IocContainer) {
+  constructor({ slotTemplateRepository }: IocContainer) {
     this.slotTemplateRepository = slotTemplateRepository
-    this.logger = logger
   }
 
   findAll(): Promise<SlotTemplateDTODomain[]> {

@@ -234,24 +234,28 @@ class PathwayRepository implements PathwayRepositoryInterface {
     return pathways.map((pathway) => {
       const patientMap = new Map<string, TrackingPathwayRepo['patients'][number]>()
 
-      for (const slot of pathway.slots) {
-        for (const appointment of slot.appointments) {
-          for (const ap of appointment.appointmentPatients) {
-            const patientId = ap.patient.id
-            if (!patientMap.has(patientId)) {
-              patientMap.set(patientId, {
-                id: ap.patient.id,
-                firstName: ap.patient.firstName,
-                lastName: ap.patient.lastName,
-                appointments: [],
-              })
-            }
-            patientMap.get(patientId)!.appointments.push({
-              date: appointment.startDate,
-              status: ap.status,
-            })
+      const appointmentEntries = pathway.slots.flatMap((slot) =>
+        slot.appointments.flatMap((appointment) =>
+          appointment.appointmentPatients.map((ap) => ({ appointment, ap })),
+        ),
+      )
+
+      for (const { appointment, ap } of appointmentEntries) {
+        const patientId = ap.patient.id
+        let patientEntry = patientMap.get(patientId)
+        if (!patientEntry) {
+          patientEntry = {
+            id: ap.patient.id,
+            firstName: ap.patient.firstName,
+            lastName: ap.patient.lastName,
+            appointments: [],
           }
+          patientMap.set(patientId, patientEntry)
         }
+        patientEntry.appointments.push({
+          date: appointment.startDate,
+          status: ap.status,
+        })
       }
 
       return {

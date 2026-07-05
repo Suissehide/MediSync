@@ -31,7 +31,9 @@ const diagnosticEducatifTemplateRouter: FastifyPluginAsync = (fastify) => {
     onRequest: [fastify.verifySessionCookie],
   }, async (request) => {
     const template = await diagnosticEducatifTemplateDomain.findByID(request.params.templateId)
-    if (!template) throw Boom.notFound('Template not found')
+    if (!template) {
+      throw Boom.notFound('Template not found')
+    }
     return template
   })
 
@@ -49,7 +51,7 @@ const diagnosticEducatifTemplateRouter: FastifyPluginAsync = (fastify) => {
   fastify.patch<{ Params: UpdateDiagnosticEducatifTemplateParams; Body: UpdateDiagnosticEducatifTemplateBody }>('/:templateId', {
     schema: { ...updateDiagnosticEducatifTemplateSchema, response: { 200: diagnosticEducatifTemplateResponseSchema } },
     onRequest: [fastify.verifySessionCookie],
-  }, async (request) => {
+  }, (request) => {
     return diagnosticEducatifTemplateDomain.update(request.params.templateId, request.body)
   })
 

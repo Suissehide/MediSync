@@ -10,7 +10,9 @@ import type { PostgresPrismaClient } from '../postgres-client'
 
 function applyConnect(params: SlotTemplateCreateEntityRepo) {
   const { soignantIDs, ...rest } = params
-  if (soignantIDs === undefined) return rest
+  if (soignantIDs === undefined) {
+    return rest
+  }
   return {
     ...rest,
     soignants: { connect: soignantIDs.map((id) => ({ id })) },
@@ -19,7 +21,9 @@ function applyConnect(params: SlotTemplateCreateEntityRepo) {
 
 function applySet(params: SlotTemplateUpdateEntityRepo) {
   const { soignantIDs, ...rest } = params
-  if (soignantIDs === undefined) return rest
+  if (soignantIDs === undefined) {
+    return rest
+  }
   return {
     ...rest,
     soignants: { set: soignantIDs.map((id) => ({ id })) },

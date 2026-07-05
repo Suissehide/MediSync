@@ -9,11 +9,9 @@ import type {
 } from '../types/domain/appointment.domain.interface'
 import type { SlotDomainInterface } from '../types/domain/slot.domain.interface'
 import type { AppointmentRepositoryInterface } from '../types/infra/orm/repositories/appointment.repository.interface'
-import type { Logger } from '../types/utils/logger'
 import type { AppEventBus } from '../utils/app-event-bus'
 
 class AppointmentDomain implements AppointmentDomainInterface {
-  private readonly logger: Logger
   private readonly appointmentRepository: AppointmentRepositoryInterface
   private readonly slotDomain: SlotDomainInterface
   private readonly appEventBus: AppEventBus
@@ -21,12 +19,10 @@ class AppointmentDomain implements AppointmentDomainInterface {
   constructor({
     appointmentRepository,
     slotDomain,
-    logger,
     appEventBus,
   }: IocContainer) {
     this.appointmentRepository = appointmentRepository
     this.slotDomain = slotDomain
-    this.logger = logger
     this.appEventBus = appEventBus
   }
 

@@ -36,6 +36,10 @@ import type { ThematicRepositoryInterface } from '../types/infra/orm/repositorie
 import type { Logger } from '../types/utils/logger'
 import type { AppEventBus } from '../utils/app-event-bus'
 
+const orEmpty = (value: string | null | undefined): string => value ?? ''
+const formatDate = (value: Date | string | null | undefined): string =>
+  value ? dayjs(value).format('DD/MM/YYYY') : ''
+
 class PatientDomain implements PatientDomainInterface {
   private readonly logger: Logger
   private readonly patientRepository: PatientRepositoryInterface
@@ -82,24 +86,24 @@ class PatientDomain implements PatientDomainInterface {
     const patients = await this.patientRepository.findForExport(filters)
 
     const rows = patients.map((p) => ({
-      Prénom: p.firstName ?? '',
-      Nom: p.lastName ?? '',
-      Genre: p.gender ?? '',
-      'Date de naissance': p.birthDate ? dayjs(p.birthDate).format('DD/MM/YYYY') : '',
-      Téléphone: p.phone1 ?? '',
-      'Téléphone 2': p.phone2 ?? '',
-      Email: p.email ?? '',
-      "Date d'entrée": p.entryDate ? dayjs(p.entryDate).format('DD/MM/YYYY') : '',
-      'Date de sortie': p.exitDate ? dayjs(p.exitDate).format('DD/MM/YYYY') : '',
+      Prénom: orEmpty(p.firstName),
+      Nom: orEmpty(p.lastName),
+      Genre: orEmpty(p.gender),
+      'Date de naissance': formatDate(p.birthDate),
+      Téléphone: orEmpty(p.phone1),
+      'Téléphone 2': orEmpty(p.phone2),
+      Email: orEmpty(p.email),
+      "Date d'entrée": formatDate(p.entryDate),
+      'Date de sortie': formatDate(p.exitDate),
       Parcours: p.pathwayTemplateTags.join(', '),
-      'Diagnostic médical': p.medicalDiagnosis ?? '',
-      'Mode de prise en charge': p.careMode ?? '',
-      Orientation: p.orientation ?? '',
-      Profession: p.occupation ?? '',
-      "Niveau d'étude": p.educationLevel ?? '',
-      Distance: p.distance ?? '',
-      'Motif de sortie': p.stopReason ?? '',
-      Notes: p.notes ?? '',
+      'Diagnostic médical': orEmpty(p.medicalDiagnosis),
+      'Mode de prise en charge': orEmpty(p.careMode),
+      Orientation: orEmpty(p.orientation),
+      Profession: orEmpty(p.occupation),
+      "Niveau d'étude": orEmpty(p.educationLevel),
+      Distance: orEmpty(p.distance),
+      'Motif de sortie': orEmpty(p.stopReason),
+      Notes: orEmpty(p.notes),
     }))
 
     const ws = XLSX.utils.json_to_sheet(rows)
@@ -199,7 +203,7 @@ class PatientDomain implements PatientDomainInterface {
     return result
   }
 
-  async getPathways(patientID: string): Promise<PatientPathwayDomain[]> {
+  getPathways(patientID: string): Promise<PatientPathwayDomain[]> {
     return this.patientRepository.getPathwaysForPatient(patientID)
   }
 
@@ -241,6 +245,150 @@ class PatientDomain implements PatientDomainInterface {
     )
   }
 
+  private async resolveThematic(
+    enrollment: PathwayEnrollmentInput,
+  ): Promise<{ name?: string; duration: number }> {
+    let name: string | undefined
+    let duration = enrollment.duration ?? 30
+    if (enrollment.thematicID) {
+      const thematic = await this.thematicRepository.findByID(
+        enrollment.thematicID,
+      )
+      name = thematic.name
+      if (!enrollment.duration) {
+        duration = thematic.duration ?? 30
+      }
+    }
+    return { name, duration }
+  }
+
+  private selectValidPathway(
+    pathways: PathwayWithSlotsRepo[],
+    enrollment: PathwayEnrollmentInput,
+    patient: PatientWithAppointmentsDomain,
+    thematicDuration: number,
+    firstAppointmentOnly: boolean,
+    startDate: Date,
+  ): PathwayWithSlotsRepo | undefined {
+    if (!firstAppointmentOnly) {
+      return pathways.find((pathway) =>
+        this.isPathwayAvailable(
+          pathway.slots,
+          enrollment.timeOfDay,
+          patient.appointmentPatients,
+          1,
+          thematicDuration,
+        ),
+      )
+    }
+    const startOfDay = new Date(startDate)
+    startOfDay.setHours(0, 0, 0, 0)
+    return pathways.find((pathway) =>
+      pathway.slots
+        .filter((slot) => new Date(slot.startDate) >= startOfDay)
+        .sort(
+          (a, b) =>
+            new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
+        )
+        .some((slot) =>
+          this.isSlotAvailable(
+            slot,
+            enrollment.timeOfDay,
+            patient.appointmentPatients,
+            1,
+            thematicDuration,
+          ),
+        ),
+    )
+  }
+
+  // Traite l'inscription du patient pour un tag de parcours donné et retourne
+  // soit une inscription réussie, soit un échec (jamais les deux).
+  private async enrollPatientInTag(
+    patient: PatientWithAppointmentsDomain,
+    enrollment: PathwayEnrollmentInput,
+    startDate: Date,
+  ): Promise<{
+    enrollment?: EnrollmentResult['enrollments'][number]
+    failure?: EnrollmentResult['failedEnrollments'][number]
+  }> {
+    const { name: thematicName, duration: thematicDuration } =
+      await this.resolveThematic(enrollment)
+
+    // Vérifier si le motif est requis
+    const allTemplates = await this.pathwayTemplateRepository.findAll()
+    const matchingTemplate = allTemplates.find((t) =>
+      t.tags?.includes(enrollment.tag),
+    )
+    if (
+      matchingTemplate?.motifRequired &&
+      (!enrollment.motif || !enrollment.motif.trim())
+    ) {
+      return {
+        failure: {
+          slotTemplate: { id: enrollment.tag, name: enrollment.tag },
+          reason: `Le motif est obligatoire pour le parcours "${enrollment.tag}"`,
+        },
+      }
+    }
+
+    const firstAppointmentOnly = matchingTemplate?.firstAppointmentOnly ?? false
+
+    // Trouver les parcours disponibles par tag
+    const pathways = firstAppointmentOnly
+      ? await this.pathwayRepository.findByTemplateTagWithFutureSlots(
+          enrollment.tag,
+          startDate,
+        )
+      : await this.pathwayRepository.findByTemplateTagAndDate(
+          enrollment.tag,
+          startDate,
+        )
+
+    if (pathways.length === 0) {
+      return {
+        failure: {
+          slotTemplate: { id: enrollment.tag },
+          reason: `Aucun parcours disponible ou complet pour "${enrollment.tag}"`,
+        },
+      }
+    }
+
+    const validPathway = this.selectValidPathway(
+      pathways,
+      enrollment,
+      patient,
+      thematicDuration,
+      firstAppointmentOnly,
+      startDate,
+    )
+
+    if (!validPathway) {
+      return {
+        failure: {
+          slotTemplate: { id: enrollment.tag, name: enrollment.tag },
+          reason: `Aucun parcours disponible ou complet pour "${enrollment.tag}"`,
+        },
+      }
+    }
+
+    const appointments = await this.enrollOnPathway(
+      patient,
+      validPathway,
+      enrollment,
+      thematicName,
+      thematicDuration,
+      firstAppointmentOnly,
+      startDate,
+    )
+    return {
+      enrollment: {
+        slotTemplate: { id: enrollment.tag, name: enrollment.tag },
+        appointments,
+      },
+    }
+  }
+
   private async processEnrollments(
     patient: PatientWithAppointmentsDomain,
     pathwayTemplates: EnrollPatientInPathwaysInput['pathways'],
@@ -252,105 +400,16 @@ class PatientDomain implements PatientDomainInterface {
 
     for (const enrollment of pathwayTemplates) {
       try {
-        // Résoudre la thématique si fournie
-        let thematicName: string | undefined
-        let thematicDuration = enrollment.duration ?? 30
-        if (enrollment.thematicID) {
-          const thematic = await this.thematicRepository.findByID(enrollment.thematicID)
-          thematicName = thematic.name
-          if (!enrollment.duration) {
-            thematicDuration = thematic.duration ?? 30
-          }
+        const outcome = await this.enrollPatientInTag(
+          patient,
+          enrollment,
+          startDate,
+        )
+        if (outcome.enrollment) {
+          enrollments.push(outcome.enrollment)
         }
-
-        // Vérifier si le motif est requis
-        const allTemplates = await this.pathwayTemplateRepository.findAll()
-        const matchingTemplate = allTemplates.find((t) => t.tags?.includes(enrollment.tag))
-        if (matchingTemplate?.motifRequired && (!enrollment.motif || !enrollment.motif.trim())) {
-          failedEnrollments.push({
-            slotTemplate: { id: enrollment.tag, name: enrollment.tag },
-            reason: `Le motif est obligatoire pour le parcours "${enrollment.tag}"`,
-          })
-          continue
-        }
-
-        const firstAppointmentOnly = matchingTemplate?.firstAppointmentOnly ?? false
-
-        // Trouver les parcours disponibles par tag
-        const pathways = firstAppointmentOnly
-          ? await this.pathwayRepository.findByTemplateTagWithFutureSlots(
-              enrollment.tag,
-              startDate,
-            )
-          : await this.pathwayRepository.findByTemplateTagAndDate(
-              enrollment.tag,
-              startDate,
-            )
-
-        if (pathways.length === 0) {
-          failedEnrollments.push({
-            slotTemplate: { id: enrollment.tag },
-            reason: `Aucun parcours disponible ou complet pour "${enrollment.tag}"`,
-          })
-          continue
-        }
-
-        let validPathway: PathwayWithSlotsRepo | undefined
-
-        if (firstAppointmentOnly) {
-          const startOfDay = new Date(startDate)
-          startOfDay.setHours(0, 0, 0, 0)
-          validPathway = pathways.find((pathway) =>
-            pathway.slots
-              .filter((slot) => new Date(slot.startDate) >= startOfDay)
-              .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
-              .some((slot) =>
-                this.isSlotAvailable(
-                  slot,
-                  enrollment.timeOfDay,
-                  patient.appointmentPatients,
-                  1,
-                  thematicDuration,
-                ),
-              ),
-          )
-        } else {
-          validPathway = pathways.find((pathway) =>
-            this.isPathwayAvailable(
-              pathway.slots,
-              enrollment.timeOfDay,
-              patient.appointmentPatients,
-              1,
-              thematicDuration,
-            ),
-          )
-        }
-
-        if (validPathway) {
-          const appointments = await this.enrollOnPathway(
-            patient,
-            validPathway,
-            enrollment,
-            thematicName,
-            thematicDuration,
-            firstAppointmentOnly,
-            startDate,
-          )
-          enrollments.push({
-            slotTemplate: {
-              id: enrollment.tag,
-              name: enrollment.tag,
-            },
-            appointments,
-          })
-        } else {
-          failedEnrollments.push({
-            slotTemplate: {
-              id: enrollment.tag,
-              name: enrollment.tag,
-            },
-            reason: `Aucun parcours disponible ou complet pour "${enrollment.tag}"`,
-          })
+        if (outcome.failure) {
+          failedEnrollments.push(outcome.failure)
         }
       } catch (error) {
         this.logger.error(
@@ -460,6 +519,102 @@ class PatientDomain implements PatientDomainInterface {
     )
   }
 
+  // Inscrit le patient sur un créneau donné et retourne les rendez-vous
+  // produits (0 ou 1). En mode firstAppointmentOnly, un créneau individuel
+  // sans place disponible ne produit pas d'échec (retourne un tableau vide).
+  private async enrollInSlot(
+    slot: SlotWithTemplateAndAppointmentsRepo,
+    patient: PatientEntityDomain,
+    options: {
+      type?: string | null
+      motif?: string | null
+      thematicName?: string
+      appointmentDuration: number
+      firstAppointmentOnly: boolean
+    },
+  ): Promise<EnrollmentAppointment[]> {
+    const { type, motif, thematicName, appointmentDuration, firstAppointmentOnly } =
+      options
+
+    if (slot.slotTemplate.isIndividual) {
+      const nextSlot = this.getNextAvailableAppointment(
+        slot.startDate,
+        slot.endDate,
+        slot.appointments,
+        appointmentDuration,
+      )
+      if (!nextSlot) {
+        return firstAppointmentOnly
+          ? []
+          : [
+              {
+                success: false,
+                error: `Erreur lors de l'inscription au créneau du ${slot.startDate}`,
+              },
+            ]
+      }
+      const appointment = await this.appointmentRepository.create({
+        startDate: nextSlot.startDate,
+        endDate: nextSlot.endDate,
+        thematic: thematicName ?? undefined,
+        type: type ?? undefined,
+        slotID: slot.id,
+        patientIDs: [patient.id],
+        transmissionNotes: motif ?? undefined,
+      })
+      return [
+        {
+          id: appointment.id,
+          startDate: appointment.startDate,
+          endDate: appointment.endDate,
+          success: true,
+        },
+      ]
+    }
+
+    // Créneau multiple : rejoindre un rendez-vous existant avec de la place,
+    // sinon en créer un nouveau.
+    const existingAppointment = slot.appointments.find((apt) => {
+      const currentCapacity = apt.appointmentPatients?.length || 0
+      const maxCapacity = slot.slotTemplate.capacity || Number.POSITIVE_INFINITY
+      return currentCapacity < maxCapacity
+    })
+
+    if (existingAppointment) {
+      await this.appointmentRepository.addPatientToAppointment({
+        appointmentID: existingAppointment.id,
+        patientID: patient.id,
+        transmissionNotes: motif ?? undefined,
+      })
+      return [
+        {
+          id: existingAppointment.id,
+          startDate: existingAppointment.startDate,
+          endDate: existingAppointment.endDate,
+          success: true,
+        },
+      ]
+    }
+
+    const appointment = await this.appointmentRepository.create({
+      startDate: slot.startDate,
+      endDate: slot.endDate,
+      thematic: thematicName ?? undefined,
+      type: type ?? undefined,
+      slotID: slot.id,
+      patientIDs: [patient.id],
+      transmissionNotes: motif ?? undefined,
+    })
+    return [
+      {
+        id: appointment.id,
+        startDate: appointment.startDate,
+        endDate: appointment.endDate,
+        success: true,
+      },
+    ]
+  }
+
   private async enrollOnPathway(
     patient: PatientEntityDomain,
     pathway: PathwayWithSlotsRepo,
@@ -485,95 +640,18 @@ class PatientDomain implements PatientDomainInterface {
 
     for (const slot of slots) {
       try {
-        // Vérifier si le créneau est individuel ou multiple
-        if (slot.slotTemplate.isIndividual) {
-          // Créneau individuel : créer un nouveau rendez-vous
-          const nextSlot = this.getNextAvailableAppointment(
-            slot.startDate,
-            slot.endDate,
-            slot.appointments,
-            appointmentDuration,
-          )
-          if (nextSlot) {
-            const appointment = await this.appointmentRepository.create({
-              startDate: nextSlot.startDate,
-              endDate: nextSlot.endDate,
-              thematic: thematicName ?? undefined,
-              type: type ?? undefined,
-              slotID: slot.id,
-              patientIDs: [patient.id],
-              transmissionNotes: motif ?? undefined,
-            })
+        const slotAppointments = await this.enrollInSlot(slot, patient, {
+          type,
+          motif,
+          thematicName,
+          appointmentDuration,
+          firstAppointmentOnly,
+        })
+        enrollmentAppointments.push(...slotAppointments)
 
-            enrollmentAppointments.push({
-              id: appointment.id,
-              startDate: appointment.startDate,
-              endDate: appointment.endDate,
-              success: true,
-            })
-
-            if (firstAppointmentOnly) {
-              return enrollmentAppointments
-            }
-          } else {
-            if (!firstAppointmentOnly) {
-              enrollmentAppointments.push({
-                success: false,
-                error: `Erreur lors de l'inscription au créneau du ${slot.startDate}`,
-              })
-            }
-          }
-        } else {
-          // Créneau multiple : rejoindre un rendez-vous existant ou en créer un
-          // Vérifier s'il existe déjà des rendez-vous avec de la place
-          const existingAppointment = slot.appointments.find((apt) => {
-            const currentCapacity = apt.appointmentPatients?.length || 0
-            const maxCapacity =
-              slot.slotTemplate.capacity || Number.POSITIVE_INFINITY
-            return currentCapacity < maxCapacity
-          })
-
-          if (existingAppointment) {
-            // Rejoindre le rendez-vous existant
-            await this.appointmentRepository.addPatientToAppointment({
-              appointmentID: existingAppointment.id,
-              patientID: patient.id,
-              transmissionNotes: motif ?? undefined,
-            })
-
-            enrollmentAppointments.push({
-              id: existingAppointment.id,
-              startDate: existingAppointment.startDate,
-              endDate: existingAppointment.endDate,
-              success: true,
-            })
-
-            if (firstAppointmentOnly) {
-              return enrollmentAppointments
-            }
-          } else {
-            // Créer un nouveau rendez-vous
-            const appointment = await this.appointmentRepository.create({
-              startDate: slot.startDate,
-              endDate: slot.endDate,
-              thematic: thematicName ?? undefined,
-              type: type ?? undefined,
-              slotID: slot.id,
-              patientIDs: [patient.id],
-              transmissionNotes: motif ?? undefined,
-            })
-
-            enrollmentAppointments.push({
-              id: appointment.id,
-              startDate: appointment.startDate,
-              endDate: appointment.endDate,
-              success: true,
-            })
-
-            if (firstAppointmentOnly) {
-              return enrollmentAppointments
-            }
-          }
+        // En mode firstAppointmentOnly, on s'arrête au premier créneau réussi.
+        if (firstAppointmentOnly && slotAppointments.some((a) => a.success)) {
+          return enrollmentAppointments
         }
       } catch {
         enrollmentAppointments.push({
