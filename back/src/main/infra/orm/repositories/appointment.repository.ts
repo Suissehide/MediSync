@@ -33,9 +33,9 @@ class AppointmentRepository implements AppointmentRepositoryInterface {
     })
   }
 
-  findByID(appointmentID: string): Promise<AppointmentEntityRepo> {
+  async findByID(appointmentID: string): Promise<AppointmentEntityRepo> {
     try {
-      return this.prisma.appointment.findUniqueOrThrow({
+      return await this.prisma.appointment.findUniqueOrThrow({
         where: { id: appointmentID },
         include: {
           slot: {
@@ -57,7 +57,7 @@ class AppointmentRepository implements AppointmentRepositoryInterface {
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
-        entityName: 'User',
+        entityName: 'Appointment',
         error: err,
       })
     }
@@ -104,8 +104,8 @@ class AppointmentRepository implements AppointmentRepositoryInterface {
 
     try {
       return await this.prisma.$transaction(async (tx) => {
-        // Si plus aucun patient, supprimer le rendez-vous entier
-        if (appointmentPatients.length === 0) {
+        // Suppression explicite : le client a fourni une liste de patients vide.
+        if (appointmentPatients && appointmentPatients.length === 0) {
           return tx.appointment.delete({
             where: { id: appointmentID },
             include: {
@@ -121,6 +121,19 @@ class AppointmentRepository implements AppointmentRepositoryInterface {
           where: { id: appointmentID },
           data: appointmentData,
         })
+
+        // Mise à jour partielle : la liste des patients n'est pas fournie,
+        // on ne touche pas aux participants existants.
+        if (!appointmentPatients) {
+          return tx.appointment.findUniqueOrThrow({
+            where: { id: appointmentID },
+            include: {
+              appointmentPatients: {
+                include: { patient: true },
+              },
+            },
+          })
+        }
 
         // Supprime les patients qui ne sont plus présents
         const incomingIDs = appointmentPatients
@@ -180,12 +193,22 @@ class AppointmentRepository implements AppointmentRepositoryInterface {
     appointmentPatientUpdateParams: AppointmentPatientUpdateEntityRepo,
   ): Promise<AppointmentPatientEntityRepo> {
     try {
-      const { appointmentID, patientID } = appointmentPatientUpdateParams
+      const {
+        appointmentID,
+        patientID,
+        accompanying,
+        status,
+        rejectionReason,
+        transmissionNotes,
+      } = appointmentPatientUpdateParams
       return await this.prisma.appointmentPatient.create({
         data: {
           appointment: { connect: { id: appointmentID } },
           patient: { connect: { id: patientID } },
-          ...appointmentPatientUpdateParams,
+          accompanying,
+          status,
+          rejectionReason,
+          transmissionNotes,
         },
       })
     } catch (err) {

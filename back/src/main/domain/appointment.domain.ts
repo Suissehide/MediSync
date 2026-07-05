@@ -66,11 +66,17 @@ class AppointmentDomain implements AppointmentDomainInterface {
         )
       }
     }
+    // Une liste de patients vide supprime le rendez-vous : dans ce cas on
+    // n'émet pas d'événement « updated » sur une entité qui n'existe plus.
+    const wasDeleted =
+      appointmentUpdateParams.appointmentPatients?.length === 0
     const appointment = await this.appointmentRepository.update(
       appointmentID,
       appointmentUpdateParams,
     )
-    this.appEventBus.emit('appointment.updated', { userID, appointmentId: appointment.id })
+    if (!wasDeleted) {
+      this.appEventBus.emit('appointment.updated', { userID, appointmentId: appointment.id })
+    }
     return appointment
   }
 

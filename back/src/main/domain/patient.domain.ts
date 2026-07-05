@@ -600,16 +600,32 @@ class PatientDomain implements PatientDomainInterface {
     let nextAvailableStart = dayjs(slotStart)
     const slotEndDayjs = dayjs(slotEnd)
 
-    for (const appointment of sortedAppointments) {
-      const appointmentStart = dayjs(appointment.startDate)
-      const appointmentEnd = dayjs(appointment.endDate)
+    // Avance la fenêtre candidate [start, start+durée] tant qu'elle chevauche
+    // un rendez-vous existant. On ré-itère car repousser le début après un
+    // rendez-vous peut faire entrer la fenêtre en collision avec le suivant.
+    let collisionFound = true
+    while (collisionFound) {
+      collisionFound = false
+      const candidateEnd = nextAvailableStart.add(durationMinutes, 'minute')
 
-      // Si le créneau chevauche le rendez-vous existant
-      if (
-        nextAvailableStart.isBefore(appointmentEnd) &&
-        nextAvailableStart.isAfter(appointmentStart.subtract(1, 'ms'))
-      ) {
-        nextAvailableStart = appointmentEnd
+      for (const appointment of sortedAppointments) {
+        const appointmentStart = dayjs(appointment.startDate)
+        const appointmentEnd = dayjs(appointment.endDate)
+
+        // Chevauchement d'intervalles : start < apptEnd && candidateEnd > apptStart
+        if (
+          nextAvailableStart.isBefore(appointmentEnd) &&
+          candidateEnd.isAfter(appointmentStart)
+        ) {
+          nextAvailableStart = appointmentEnd
+          collisionFound = true
+          break
+        }
+      }
+
+      // Sortie si la fenêtre ne tient plus dans le créneau.
+      if (nextAvailableStart.add(durationMinutes, 'minute').isAfter(slotEndDayjs)) {
+        return null
       }
     }
 

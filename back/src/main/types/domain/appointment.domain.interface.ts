@@ -24,7 +24,9 @@ export type AppointmentUpdateEntityDomain = Pick<
   'startDate' | 'endDate' | 'type' | 'thematic'
 > & {
   slotID?: string
-  appointmentPatients: AppointmentPatientUpdateEntityDomain[]
+  // Optionnel : si absent, les participants ne sont pas modifiés ;
+  // un tableau vide supprime explicitement le rendez-vous.
+  appointmentPatients?: AppointmentPatientUpdateEntityDomain[]
 }
 
 export interface AppointmentDomainInterface {

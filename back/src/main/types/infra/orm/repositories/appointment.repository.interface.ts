@@ -20,7 +20,9 @@ export type AppointmentCreateEntityRepo =
 export type AppointmentUpdateEntityRepo =
   Prisma.AppointmentUncheckedUpdateInput & {
     slotID?: string
-    appointmentPatients: AppointmentPatientUpdateEntityRepo[]
+    // Optionnel : si absent, les participants ne sont pas modifiés ;
+    // un tableau vide supprime explicitement le rendez-vous.
+    appointmentPatients?: AppointmentPatientUpdateEntityRepo[]
   }
 
 export interface AppointmentRepositoryInterface {

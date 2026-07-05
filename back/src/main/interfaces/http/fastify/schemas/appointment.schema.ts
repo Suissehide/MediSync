@@ -35,12 +35,16 @@ export const updateAppointmentByIdSchema = {
     .partial()
     .extend({
       slotID: z.cuid().optional(),
-      appointmentPatients: z.array(
-        appointmentPatientSchema.omit({ patient: true }).partial().extend({
-          id: z.cuid().optional(),
-          patientID: z.cuid(),
-        }),
-      ),
+      // Optionnel : omettre ce champ ne touche pas aux participants ;
+      // un tableau vide supprime explicitement le rendez-vous.
+      appointmentPatients: z
+        .array(
+          appointmentPatientSchema.omit({ patient: true }).partial().extend({
+            id: z.cuid().optional(),
+            patientID: z.cuid(),
+          }),
+        )
+        .optional(),
     }),
 }
 
