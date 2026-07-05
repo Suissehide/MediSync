@@ -21,13 +21,16 @@ const registerRouter: FastifyPluginAsync = (fastify) => {
           201: registerResponseSchema,
         },
       },
+      config: {
+        // Anti-abus sur la création de comptes.
+        rateLimit: { max: 5, timeWindow: '1 minute' },
+      },
     },
     async (request, reply) => {
       const { success, data, error } = registerSchema.safeParse(request.body)
       if (!success) {
-        logger.debug(
-          `req body: ${JSON.stringify(request.body)}, error: ${error.message}`,
-        )
+        // Ne jamais logger le corps de requête (contient le mot de passe).
+        logger.debug(`Invalid register payload: ${error.message}`)
         throw Boom.badRequest(error)
       }
       await authDomain.register(data)

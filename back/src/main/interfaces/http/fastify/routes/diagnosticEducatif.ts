@@ -1,6 +1,7 @@
 import Boom from '@hapi/boom'
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod/v4'
+import { Role } from '../../../../../generated/enums'
 import {
   type CreateDiagnosticEducatifBody,
   type DiagnosticParams,
@@ -17,6 +18,9 @@ import {
 
 const diagnosticEducatifRouter: FastifyPluginAsync = (fastify) => {
   const { diagnosticEducatifDomain, diagnosticEducatifTemplateDomain } = fastify.iocContainer
+
+  // Données médicales sensibles : réservé aux comptes validés (rôle >= USER).
+  fastify.addHook('preHandler', fastify.requireMinRole(Role.USER))
 
   // Get all by patient
   fastify.get<{ Params: DiagnosticPatientParams }>('/', {

@@ -21,13 +21,16 @@ const signInRouter: FastifyPluginAsync = (fastify) => {
           201: signInResponseSchema,
         },
       },
+      config: {
+        // Anti brute-force sur l'authentification.
+        rateLimit: { max: 10, timeWindow: '1 minute' },
+      },
     },
     async (request, reply) => {
       const { success, data, error } = signInSchema.safeParse(request.body)
       if (!success) {
-        logger.debug(
-          `req body: ${JSON.stringify(request.body)}, error: ${error.message}`,
-        )
+        // Ne jamais logger le corps de requête (contient le mot de passe).
+        logger.debug(`Invalid sign-in payload: ${error.message}`)
         throw Boom.badRequest(error)
       }
       const { email: inputEmail, password: inputPassword } = data
@@ -58,8 +61,6 @@ const signInRouter: FastifyPluginAsync = (fastify) => {
           ...cookieOptions,
           maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days in ms
         })
-
-      console.log('ROLE', role)
 
       return { id, email, firstName, lastName, role, soignantId }
     },

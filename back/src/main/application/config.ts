@@ -34,8 +34,8 @@ const configSchema = z.object({
 
   jwtSecret: z.string().default('medisync-jwt'),
   jwtRefreshSecret: z.string().default('medisync-refresh'),
-  jwtExpiresIn: z.custom<SignOptions['expiresIn']>().default('60m'),
-  jwtRefreshExpiresIn: z.custom<SignOptions['expiresIn']>().default('180d'),
+  jwtExpiresIn: z.custom<SignOptions['expiresIn']>().default('15m'),
+  jwtRefreshExpiresIn: z.custom<SignOptions['expiresIn']>().default('7d'),
 
   cookieSecret: z.string().default('medisync-cookie'),
 

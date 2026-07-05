@@ -19,9 +19,11 @@ export const registerSchema = userSchema
     soignantId: true,
   })
   .extend({
-    password: z.string({
-      error: () => 'Password is required',
-    }),
+    password: z
+      .string({
+        error: () => 'Password is required',
+      })
+      .min(12, 'Password must be at least 12 characters long'),
   })
 export const registerResponseSchema = userSchema.extend({
   id: z.string(),

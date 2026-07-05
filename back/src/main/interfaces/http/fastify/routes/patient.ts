@@ -2,6 +2,7 @@ import Boom from '@hapi/boom'
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod/v4'
 
+import { Role } from '../../../../../generated/enums'
 import {
   type CreatePatientBody,
   createPatientSchema,
@@ -32,6 +33,10 @@ import {
 const patientRouter: FastifyPluginAsync = (fastify) => {
   const { iocContainer } = fastify
   const { patientDomain, logger } = iocContainer
+
+  // Toutes les routes patients exigent au moins le rôle USER : un compte
+  // auto-enregistré (rôle NONE, non validé) ne doit pas accéder aux dossiers.
+  fastify.addHook('preHandler', fastify.requireMinRole(Role.USER))
 
   // Get all
   fastify.get(

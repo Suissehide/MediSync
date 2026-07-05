@@ -1,5 +1,7 @@
 import fastifyAccepts from '@fastify/accepts'
 import fastifyCors, { type FastifyCorsOptions } from '@fastify/cors'
+import fastifyHelmet from '@fastify/helmet'
+import fastifyRateLimit from '@fastify/rate-limit'
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import fastifyGracefulShutdown from 'fastify-graceful-shutdown'
 import fastifyPlugin from 'fastify-plugin'
@@ -30,8 +32,17 @@ const plugins: FastifyPluginAsync = fastifyPlugin(
     if (config.jwtSecret) {
       await registerPlugin(fastify, 'jwt', jwtPlugin)
     }
+    await registerPlugin(fastify, 'helmet', fastifyHelmet, {})
+    // Limite de débit globale (anti-abus). Les routes d'auth ont une limite
+    // plus stricte via leur `config.rateLimit`.
+    await registerPlugin(fastify, 'rateLimit', fastifyRateLimit, {
+      max: 300,
+      timeWindow: '1 minute',
+    })
     await registerPlugin<FastifyCorsOptions>(fastify, 'cors', fastifyCors, {
-      origin: config.corsOrigin,
+      // Ne jamais refléter une origine arbitraire avec credentials: on retombe
+      // sur l'URL du front (toujours définie) si CORS_ORIGIN est absent.
+      origin: config.corsOrigin ?? config.frontUrl,
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     })
