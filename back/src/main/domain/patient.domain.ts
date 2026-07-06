@@ -1,6 +1,8 @@
 import dayjs from 'dayjs'
 import * as XLSX from 'xlsx'
 
+import type { AppointmentType } from '../../generated/enums'
+
 import {
   type TimeOfDay,
   timeOfDaySchema,
@@ -526,7 +528,7 @@ class PatientDomain implements PatientDomainInterface {
     slot: SlotWithTemplateAndAppointmentsRepo,
     patient: PatientEntityDomain,
     options: {
-      type?: string | null
+      type?: AppointmentType | null
       motif?: string | null
       thematicName?: string
       appointmentDuration: number

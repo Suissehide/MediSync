@@ -4,11 +4,23 @@ import { locationResponseSchema } from './location.schema'
 import { patientSchema } from './patient.schema'
 import { soignantSchema } from './soignant.schema'
 
+// Les formulaires front initialisent ces champs à '' ; on le traite comme
+// "non renseigné" (null) avant la validation par enum.
+const emptyToNull = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess((value) => (value === '' ? null : value), schema)
+
+export const appointmentTypeSchema = emptyToNull(
+  z.enum(['ambulatory', 'hospital', 'telephonic']).nullish(),
+)
+export const appointmentStatusSchema = emptyToNull(
+  z.enum(['yes', 'no']).nullish(),
+)
+
 export const appointmentSchema = z.object({
   startDate: z.coerce.date(),
   endDate: z.coerce.date(),
   thematic: z.string().optional().nullable(),
-  type: z.string().optional().nullable(),
+  type: appointmentTypeSchema,
 
   get slot() {
     return slotSchema.optional().nullable()
@@ -21,7 +33,7 @@ export const appointmentSchema = z.object({
 
 export const appointmentPatientSchema = z.object({
   accompanying: z.string().optional().nullable(),
-  status: z.string().optional().nullable(),
+  status: appointmentStatusSchema,
   rejectionReason: z.string().optional().nullable(),
   transmissionNotes: z.string().optional().nullable(),
 

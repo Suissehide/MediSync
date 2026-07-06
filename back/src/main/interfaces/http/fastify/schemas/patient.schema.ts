@@ -99,7 +99,10 @@ export const pathwayEnrollmentSchema = z.object({
   tag: z.string().min(1),
   timeOfDay: timeOfDaySchema,
   thematicID: z.cuid().optional(),
-  type: z.string().optional(),
+  type: z.preprocess(
+    (value) => (value === '' ? undefined : value),
+    z.enum(['ambulatory', 'hospital', 'telephonic']).optional(),
+  ),
   motif: z.string().optional(),
   duration: z.number().positive().optional(),
 })

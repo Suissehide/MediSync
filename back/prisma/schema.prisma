@@ -13,6 +13,17 @@ enum Role {
   ADMIN
 }
 
+enum AppointmentType {
+  ambulatory
+  hospital
+  telephonic
+}
+
+enum AppointmentStatus {
+  yes
+  no
+}
+
 model User {
   id         String    @id @default(cuid())
   email      String    @unique
@@ -71,7 +82,7 @@ model Appointment {
   startDate           DateTime
   endDate             DateTime
   thematic            String?
-  type                String?
+  type                AppointmentType?
   slotID              String
   appointmentPatients AppointmentPatient[]
 
@@ -89,7 +100,7 @@ model AppointmentPatient {
   patientId     String
 
   accompanying      String?
-  status            String?
+  status            AppointmentStatus?
   rejectionReason   String?
   transmissionNotes String?
 
