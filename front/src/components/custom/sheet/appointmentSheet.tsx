@@ -73,7 +73,7 @@ export default function AppointmentSheet({
 
   const form = useAppForm({
     defaultValues: {
-      thematic: '',
+      thematicId: '',
       type: '',
       appointmentPatients: [
         {
@@ -92,7 +92,7 @@ export default function AppointmentSheet({
 
       const updateAppointmentData: UpdateAppointmentParams = {
         id: appointment.id,
-        thematic: value.thematic,
+        thematicId: value.thematicId,
         type: value.type,
         appointmentPatients: value.appointmentPatients,
       }
@@ -136,7 +136,7 @@ export default function AppointmentSheet({
           if (data) {
             form.reset(
               {
-                thematic: data.thematic ?? '',
+                thematicId: data.thematicId ?? '',
                 type: data.type ?? '',
                 appointmentPatients:
                   data.appointmentPatients?.map((ap) => ({
@@ -171,7 +171,7 @@ export default function AppointmentSheet({
       for (const t of thematics?.filter((t) =>
         t.soignants.some((ss) => ss.id === soignant.id),
       ) ?? []) {
-        map.set(t.id, { value: t.name, label: t.name })
+        map.set(t.id, { value: t.id, label: t.name })
       }
     }
     return [...map.values()].sort((a, b) =>
@@ -235,7 +235,7 @@ export default function AppointmentSheet({
                   />
                 </FormField>
 
-                <form.AppField name="thematic">
+                <form.AppField name="thematicId">
                   {(field) => (
                     <field.Select
                       options={thematicOptions}

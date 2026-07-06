@@ -14,6 +14,7 @@ const slotTemplateInclude = {
     include: {
       soignants: true,
       location: true,
+      thematic: true,
     },
   },
 }

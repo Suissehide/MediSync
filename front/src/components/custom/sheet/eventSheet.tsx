@@ -58,7 +58,7 @@ export default function EventSheet({
     ...eventFormOpts,
     defaultValues: {
       soignantIDs: slot?.slotTemplate?.soignants?.map((s) => s.id) ?? [],
-      thematic: slot?.slotTemplate?.thematic ?? '',
+      thematicId: slot?.slotTemplate?.thematicId ?? '',
       locationID: slot?.slotTemplate?.locationID ?? '',
       isIndividual: slot?.slotTemplate?.isIndividual ?? false,
       capacity: slot?.slotTemplate?.capacity ?? 1,
@@ -74,7 +74,7 @@ export default function EventSheet({
         id: slot.id,
         slotTemplate: {
           id: slot.slotTemplate?.id,
-          thematic: value.thematic,
+          thematicId: value.thematicId,
           locationID: value.locationID || null,
           description: value.description,
           isIndividual: value.isIndividual,
@@ -131,7 +131,7 @@ export default function EventSheet({
     reset(
       {
         soignantIDs: slot.slotTemplate?.soignants?.map((s) => s.id) ?? [],
-        thematic: slot.slotTemplate?.thematic ?? '',
+        thematicId: slot.slotTemplate?.thematicId ?? '',
         locationID: slot.slotTemplate?.locationID ?? '',
         isIndividual: slot.slotTemplate?.isIndividual ?? false,
         capacity: slot.slotTemplate?.capacity ?? 1,

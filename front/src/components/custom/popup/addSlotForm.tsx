@@ -76,7 +76,7 @@ function AddSlotForm({
       startTime: startDate ? dayjs.utc(startDate) : today,
       endTime: endDate ? dayjs.utc(endDate) : today,
       soignantIDs: [] as string[],
-      thematic: '',
+      thematicId: '',
       locationID: '',
       description: '',
       isIndividual: false,
@@ -104,7 +104,7 @@ function AddSlotForm({
           endTime: endDate,
           offsetDays: 0,
           soignantIDs: value.soignantIDs,
-          thematic: value.thematic,
+          thematicId: value.thematicId,
           locationID: value.locationID || null,
           isIndividual: value.isIndividual,
           capacity: value.capacity,
@@ -144,7 +144,7 @@ function AddSlotForm({
         thematics?.filter((t) =>
           t.soignants.some((ss) => ss.id === soignant.id),
         ) ?? []) {
-        set.set(t.id, { value: t.name, label: t.name })
+        set.set(t.id, { value: t.id, label: t.name })
       }
     }
     return [...set.values()].sort((a, b) =>
@@ -153,9 +153,9 @@ function AddSlotForm({
   }, [selectedSoignants, thematics])
 
   useEffect(() => {
-    const current = form.state.values.thematic
+    const current = form.state.values.thematicId
     if (current && !thematicOptions.some((o) => o.value === current)) {
-      form.setFieldValue('thematic', '')
+      form.setFieldValue('thematicId', '')
     }
   }, [thematicOptions, form])
 
@@ -280,7 +280,7 @@ function AddSlotForm({
               )}
             </form.Field>
 
-            <form.AppField name="thematic">
+            <form.AppField name="thematicId">
               {(field) => (
                 <field.Select
                   options={thematicOptions}

@@ -247,21 +247,16 @@ class PatientDomain implements PatientDomainInterface {
     )
   }
 
-  private async resolveThematic(
+  private async resolveDuration(
     enrollment: PathwayEnrollmentInput,
-  ): Promise<{ name?: string; duration: number }> {
-    let name: string | undefined
-    let duration = enrollment.duration ?? 30
-    if (enrollment.thematicID) {
+  ): Promise<number> {
+    if (enrollment.thematicID && !enrollment.duration) {
       const thematic = await this.thematicRepository.findByID(
         enrollment.thematicID,
       )
-      name = thematic.name
-      if (!enrollment.duration) {
-        duration = thematic.duration ?? 30
-      }
+      return thematic.duration ?? 30
     }
-    return { name, duration }
+    return enrollment.duration ?? 30
   }
 
   private selectValidPathway(
@@ -314,8 +309,7 @@ class PatientDomain implements PatientDomainInterface {
     enrollment?: EnrollmentResult['enrollments'][number]
     failure?: EnrollmentResult['failedEnrollments'][number]
   }> {
-    const { name: thematicName, duration: thematicDuration } =
-      await this.resolveThematic(enrollment)
+    const thematicDuration = await this.resolveDuration(enrollment)
 
     // Vérifier si le motif est requis
     const allTemplates = await this.pathwayTemplateRepository.findAll()
@@ -378,7 +372,7 @@ class PatientDomain implements PatientDomainInterface {
       patient,
       validPathway,
       enrollment,
-      thematicName,
+      enrollment.thematicID,
       thematicDuration,
       firstAppointmentOnly,
       startDate,
@@ -530,12 +524,12 @@ class PatientDomain implements PatientDomainInterface {
     options: {
       type?: AppointmentType | null
       motif?: string | null
-      thematicName?: string
+      thematicId?: string | null
       appointmentDuration: number
       firstAppointmentOnly: boolean
     },
   ): Promise<EnrollmentAppointment[]> {
-    const { type, motif, thematicName, appointmentDuration, firstAppointmentOnly } =
+    const { type, motif, thematicId, appointmentDuration, firstAppointmentOnly } =
       options
 
     if (slot.slotTemplate.isIndividual) {
@@ -558,7 +552,7 @@ class PatientDomain implements PatientDomainInterface {
       const appointment = await this.appointmentRepository.create({
         startDate: nextSlot.startDate,
         endDate: nextSlot.endDate,
-        thematic: thematicName ?? undefined,
+        thematicId: thematicId ?? undefined,
         type: type ?? undefined,
         slotID: slot.id,
         patientIDs: [patient.id],
@@ -601,7 +595,7 @@ class PatientDomain implements PatientDomainInterface {
     const appointment = await this.appointmentRepository.create({
       startDate: slot.startDate,
       endDate: slot.endDate,
-      thematic: thematicName ?? undefined,
+      thematicId: thematicId ?? undefined,
       type: type ?? undefined,
       slotID: slot.id,
       patientIDs: [patient.id],
@@ -621,7 +615,7 @@ class PatientDomain implements PatientDomainInterface {
     patient: PatientEntityDomain,
     pathway: PathwayWithSlotsRepo,
     pathwayTemplate: PathwayEnrollmentInput,
-    thematicName?: string,
+    thematicId?: string,
     appointmentDuration = 30,
     firstAppointmentOnly = false,
     enrollmentDate?: Date,
@@ -645,7 +639,7 @@ class PatientDomain implements PatientDomainInterface {
         const slotAppointments = await this.enrollInSlot(slot, patient, {
           type,
           motif,
-          thematicName,
+          thematicId,
           appointmentDuration,
           firstAppointmentOnly,
         })

@@ -47,7 +47,7 @@ export default function EventTemplateSheet({
   const form = useAppForm({
     ...eventFormOpts,
     defaultValues: {
-      thematic: slotTemplate?.thematic ?? '',
+      thematicId: slotTemplate?.thematicId ?? '',
       locationID: slotTemplate?.locationID ?? '',
       description: slotTemplate?.description ?? '',
       isIndividual: slotTemplate?.isIndividual ?? false,
@@ -62,7 +62,7 @@ export default function EventTemplateSheet({
 
       const updatedSlotTemplateData = {
         id: slotTemplate.id,
-        thematic: value.thematic,
+        thematicId: value.thematicId,
         locationID: value.locationID || null,
         description: value.description,
         isIndividual: value.isIndividual,
@@ -98,7 +98,7 @@ export default function EventTemplateSheet({
 
     reset(
       {
-        thematic: slotTemplate.thematic ?? '',
+        thematicId: slotTemplate.thematicId ?? '',
         locationID: slotTemplate.locationID ?? '',
         description: slotTemplate.description ?? '',
         isIndividual: slotTemplate.isIndividual ?? false,

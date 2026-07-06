@@ -10,16 +10,17 @@ export type Appointment = {
   endDate: string
   slot: Slot
   thematic?: string
+  thematicId?: string | null
   type?: string
   appointmentPatients: AppointmentPatient[]
 }
 
 export type CreateAppointmentParams = Pick<
   Appointment,
-  'startDate' | 'endDate' | 'thematic' | 'type'
+  'startDate' | 'endDate' | 'thematicId' | 'type'
 > & { slotID: string; patientIDs: string[] }
 
 export type UpdateAppointmentParams = Pick<
   Appointment,
-  'id' | 'thematic' | 'type'
+  'id' | 'thematicId' | 'type'
 > & { slotID?: string; appointmentPatients: UpdateAppointmentPatientParams[] }

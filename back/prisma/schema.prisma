@@ -81,7 +81,7 @@ model Appointment {
   id                  String               @id @default(cuid())
   startDate           DateTime
   endDate             DateTime
-  thematic            String?
+  thematicId          String?
   type                AppointmentType?
   slotID              String
   appointmentPatients AppointmentPatient[]
@@ -89,9 +89,11 @@ model Appointment {
   // Cascade : supprimer un créneau supprime ses rendez-vous (et, en cascade,
   // les AppointmentPatient). Sans cela, supprimer un créneau/parcours avec
   // des rendez-vous échoue sur une violation de clé étrangère.
-  slot Slot @relation(fields: [slotID], references: [id], onDelete: Cascade)
+  slot     Slot      @relation(fields: [slotID], references: [id], onDelete: Cascade)
+  thematic Thematic? @relation(fields: [thematicId], references: [id], onDelete: SetNull)
 
   @@index([slotID])
+  @@index([thematicId])
 }
 
 model AppointmentPatient {
@@ -119,7 +121,7 @@ model SlotTemplate {
 
   isIndividual Boolean
   capacity     Int?
-  thematic     String?
+  thematicId   String?
   locationID   String?
   description  String?
   color        String
@@ -130,9 +132,11 @@ model SlotTemplate {
   soignants Soignant[]      @relation("SlotTemplateSoignants")
   template PathwayTemplate? @relation(fields: [templateID], references: [id])
   location Location?        @relation(fields: [locationID], references: [id], onDelete: SetNull)
+  thematic Thematic?        @relation(fields: [thematicId], references: [id], onDelete: SetNull)
 
   @@index([templateID])
   @@index([locationID])
+  @@index([thematicId])
 }
 
 model Slot {
@@ -166,6 +170,9 @@ model Thematic {
   name      String     @unique
   duration  Int?
   soignants Soignant[] @relation("SoignantThematics")
+
+  appointments  Appointment[]
+  slotTemplates SlotTemplate[]
 }
 
 model Location {

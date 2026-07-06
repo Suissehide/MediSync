@@ -15,11 +15,23 @@ export const appointmentTypeSchema = emptyToNull(
 export const appointmentStatusSchema = emptyToNull(
   z.enum(['yes', 'no']).nullish(),
 )
+// En écriture, les formulaires envoient '' quand aucune thématique n'est
+// choisie : on le convertit en null avant la validation cuid.
+export const thematicIdInputSchema = emptyToNull(z.cuid().nullish())
+
+// En réponse, `thematic` est aplati depuis la relation Thematic vers son nom
+// (le contrat d'API reste une string) ; l'écriture se fait via `thematicId`.
+const thematicNameFromRelation = z
+  .object({ name: z.string() })
+  .nullish()
+  .transform((value) => value?.name ?? null)
 
 export const appointmentSchema = z.object({
   startDate: z.coerce.date(),
   endDate: z.coerce.date(),
-  thematic: z.string().optional().nullable(),
+  // `thematic` = nom (affichage) ; `thematicId` = FK (pré-sélection formulaire).
+  thematic: thematicNameFromRelation,
+  thematicId: z.cuid().nullish(),
   type: appointmentTypeSchema,
 
   get slot() {
@@ -48,7 +60,8 @@ export const slotTemplateSchema = z.object({
   endTime: z.coerce.date(),
   offsetDays: z.number(),
 
-  thematic: z.string().optional().nullable(),
+  thematic: thematicNameFromRelation,
+  thematicId: z.cuid().nullish(),
   locationID: z.cuid().optional().nullable(),
   description: z.string().optional().nullable(),
   color: z.string(),

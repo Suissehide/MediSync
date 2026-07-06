@@ -24,6 +24,7 @@ class SlotRepository implements SlotRepositoryInterface {
         slotTemplate: {
           include: {
             soignants: true,
+            thematic: true,
           },
         },
         pathway: {
@@ -33,6 +34,7 @@ class SlotRepository implements SlotRepositoryInterface {
         },
         appointments: {
           include: {
+            thematic: true,
             appointmentPatients: {
               include: {
                 patient: true,
@@ -52,6 +54,7 @@ class SlotRepository implements SlotRepositoryInterface {
           slotTemplate: {
             include: {
               soignants: true,
+              thematic: true,
             },
           },
           pathway: {
@@ -61,6 +64,7 @@ class SlotRepository implements SlotRepositoryInterface {
           },
           appointments: {
             include: {
+              thematic: true,
               appointmentPatients: {
                 include: {
                   patient: true,
@@ -86,6 +90,7 @@ class SlotRepository implements SlotRepositoryInterface {
           slotTemplate: {
             include: {
               soignants: true,
+              thematic: true,
             },
           },
           pathway: {
@@ -95,6 +100,7 @@ class SlotRepository implements SlotRepositoryInterface {
           },
           appointments: {
             include: {
+              thematic: true,
               appointmentPatients: {
                 include: {
                   patient: true,
@@ -143,6 +149,7 @@ class SlotRepository implements SlotRepositoryInterface {
             slotTemplate: {
               include: {
                 soignants: true,
+                thematic: true,
               },
             },
             pathway: {
@@ -152,6 +159,7 @@ class SlotRepository implements SlotRepositoryInterface {
           },
             appointments: {
               include: {
+                thematic: true,
                 appointmentPatients: {
                   include: {
                     patient: true,

@@ -24,6 +24,7 @@ class AppointmentRepository implements AppointmentRepositoryInterface {
   findAll(): Promise<AppointmentEntityRepo[]> {
     return this.prisma.appointment.findMany({
       include: {
+        thematic: true,
         appointmentPatients: {
           include: {
             patient: true,
@@ -38,12 +39,14 @@ class AppointmentRepository implements AppointmentRepositoryInterface {
       return await this.prisma.appointment.findUniqueOrThrow({
         where: { id: appointmentID },
         include: {
+          thematic: true,
           slot: {
             include: {
               slotTemplate: {
                 include: {
                   soignants: true,
                   location: true,
+                  thematic: true,
                 },
               },
             },
@@ -81,6 +84,7 @@ class AppointmentRepository implements AppointmentRepositoryInterface {
           },
         },
         include: {
+          thematic: true,
           appointmentPatients: {
             include: {
               patient: true,
@@ -109,6 +113,7 @@ class AppointmentRepository implements AppointmentRepositoryInterface {
           return tx.appointment.delete({
             where: { id: appointmentID },
             include: {
+              thematic: true,
               appointmentPatients: {
                 include: { patient: true },
               },
@@ -128,6 +133,7 @@ class AppointmentRepository implements AppointmentRepositoryInterface {
           return tx.appointment.findUniqueOrThrow({
             where: { id: appointmentID },
             include: {
+              thematic: true,
               appointmentPatients: {
                 include: { patient: true },
               },

@@ -9,6 +9,7 @@ export type SlotTemplate = {
   endTime: string
   offsetDays?: number
   thematic?: string
+  thematicId?: string | null
   locationID?: string | null
   isIndividual?: boolean
   capacity?: number
@@ -23,14 +24,20 @@ export type SlotTemplate = {
 
 export type CreateSlotTemplateParams = Omit<
   SlotTemplate,
-  'id' | 'slot' | 'soignants' | 'template' | 'location'
+  'id' | 'slot' | 'soignants' | 'template' | 'location' | 'thematic'
 > & {
   soignantIDs: string[]
   templateID?: string
 }
 export type UpdateSlotTemplateParams = Omit<
   SlotTemplate,
-  'slot' | 'soignants' | 'template' | 'location' | 'startTime' | 'endTime'
+  | 'slot'
+  | 'soignants'
+  | 'template'
+  | 'location'
+  | 'startTime'
+  | 'endTime'
+  | 'thematic'
 > & {
   offsetDays?: number
   startTime?: string

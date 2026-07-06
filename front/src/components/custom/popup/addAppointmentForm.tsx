@@ -76,7 +76,7 @@ function AddAppointmentForm({
         startDate && endDate
           ? dayjs.utc(endDate).diff(dayjs.utc(startDate), 'minute').toString()
           : '',
-      thematic: '',
+      thematicId: '',
       type: '',
       patientIDs: (defaultPatientIDs ?? []) as string[],
     },
@@ -87,7 +87,7 @@ function AddAppointmentForm({
           .add(Number.parseInt(value.duration, 10), 'minute')
           .toISOString(),
         slotID,
-        thematic: value.thematic,
+        thematicId: value.thematicId,
         type: value.type,
         patientIDs: value.patientIDs,
       }
@@ -108,7 +108,7 @@ function AddAppointmentForm({
         thematics?.filter((t) =>
           t.soignants.some((ss) => ss.id === soignant.id),
         ) ?? []) {
-        map.set(t.id, { value: t.name, label: t.name })
+        map.set(t.id, { value: t.id, label: t.name })
       }
     }
     return [...map.values()].sort((a, b) =>
@@ -203,7 +203,7 @@ function AddAppointmentForm({
               />
             </FormField>
 
-            <form.AppField name="thematic">
+            <form.AppField name="thematicId">
               {(field) => (
                 <field.Select
                   options={thematicOptions}

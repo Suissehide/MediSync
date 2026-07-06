@@ -47,7 +47,7 @@ export const EventFormFields = withForm({
 
     const currentThematic = useStore(
       form.store,
-      (state) => state.values.thematic,
+      (state) => state.values.thematicId,
     )
 
     const thematicOptions = useMemo(() => {
@@ -60,7 +60,7 @@ export const EventFormFields = withForm({
           thematics?.filter((t) =>
             t.soignants.some((ss) => ss.id === soignant.id),
           ) ?? []) {
-          map.set(t.id, { value: t.name, label: t.name })
+          map.set(t.id, { value: t.id, label: t.name })
         }
       }
       return [...map.values()].sort((a, b) =>
@@ -73,7 +73,7 @@ export const EventFormFields = withForm({
         currentThematic &&
         !thematicOptions.some((o) => o.value === currentThematic)
       ) {
-        form.setFieldValue('thematic', '')
+        form.setFieldValue('thematicId', '')
       }
     }, [currentThematic, thematicOptions, form])
 
@@ -94,7 +94,7 @@ export const EventFormFields = withForm({
           )}
         </form.Field>
 
-        <form.AppField name="thematic">
+        <form.AppField name="thematicId">
           {(field) => (
             <field.Select
               options={thematicOptions}

@@ -1,6 +1,6 @@
 import { z } from 'zod/v4'
 
-import { slotTemplateSchema } from './index'
+import { slotTemplateSchema, thematicIdInputSchema } from './index'
 import { soignantResponseSchema } from './soignant.schema'
 
 export const slotTemplateResponseSchema = slotTemplateSchema.extend({
@@ -20,7 +20,6 @@ export const createSlotTemplateSchema = slotTemplateSchema
     endTime: true,
     offsetDays: true,
 
-    thematic: true,
     locationID: true,
     description: true,
     color: true,
@@ -30,6 +29,7 @@ export const createSlotTemplateSchema = slotTemplateSchema
   .extend({
     soignantIDs: z.array(z.cuid()).optional(),
     templateID: z.cuid().optional(),
+    thematicId: thematicIdInputSchema,
   })
 
 export const deleteSlotTemplateByIdParamsSchema =
@@ -38,11 +38,12 @@ export const deleteSlotTemplateByIdParamsSchema =
 export const updateSlotTemplateByIdSchema = {
   params: getSlotTemplateByIdParamsSchema,
   body: slotTemplateSchema
-    .omit({ soignants: true })
+    .omit({ soignants: true, thematic: true })
     .partial()
     .extend({
       soignantIDs: z.array(z.cuid()).optional(),
       templateID: z.cuid().optional(),
+      thematicId: thematicIdInputSchema,
     }),
 }
 

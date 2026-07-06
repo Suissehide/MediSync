@@ -1,5 +1,5 @@
 export interface EventFormValues {
-  thematic: string
+  thematicId: string
   locationID: string
   description: string
   isIndividual: boolean
@@ -10,7 +10,7 @@ export interface EventFormValues {
 
 export const eventFormOpts: { defaultValues: EventFormValues } = {
   defaultValues: {
-    thematic: '',
+    thematicId: '',
     locationID: '',
     description: '',
     isIndividual: false,

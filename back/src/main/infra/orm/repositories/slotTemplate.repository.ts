@@ -45,6 +45,7 @@ class SlotTemplateRepository implements SlotTemplateRepositoryInterface {
         soignants: true,
         template: true,
         location: true,
+        thematic: true,
       },
     })
   }
@@ -57,6 +58,7 @@ class SlotTemplateRepository implements SlotTemplateRepositoryInterface {
           soignants: true,
           template: true,
           location: true,
+          thematic: true,
         },
       })
     } catch (err) {
@@ -77,6 +79,7 @@ class SlotTemplateRepository implements SlotTemplateRepositoryInterface {
           soignants: true,
           template: true,
           location: true,
+          thematic: true,
         },
       })
     } catch (err) {
@@ -101,6 +104,7 @@ class SlotTemplateRepository implements SlotTemplateRepositoryInterface {
           soignants: true,
           template: true,
           location: true,
+          thematic: true,
         },
       })
     } catch (err) {
@@ -143,6 +147,7 @@ class SlotTemplateRepository implements SlotTemplateRepositoryInterface {
           soignants: true,
           template: true,
           location: true,
+          thematic: true,
         },
       })
     } catch (err) {
