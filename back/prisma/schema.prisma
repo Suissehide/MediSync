@@ -43,7 +43,7 @@ model PathwayTemplate {
 
 model Pathway {
   id         String   @id @default(cuid())
-  startDate  DateTime
+  startDate  DateTime @db.Date
   templateID String?
 
   template          PathwayTemplate?          @relation(fields: [templateID], references: [id])
@@ -171,7 +171,7 @@ model Patient {
   firstName String
   lastName  String
   gender    String?
-  birthDate DateTime?
+  birthDate DateTime? @db.Date
 
   // Contact
   phone1 String?
@@ -194,7 +194,7 @@ model Patient {
 
   // Inclusion Data
   medicalDiagnosis     String?
-  entryDate            DateTime?
+  entryDate            DateTime? @db.Date
   careMode             String? // Mode de prise en charge
   orientation          String?
   etpDecision          String? // ETP décision
@@ -204,7 +204,7 @@ model Patient {
   goal                 String?
 
   // Exit Data
-  exitDate        DateTime?
+  exitDate        DateTime? @db.Date
   stopReason      String? // Motif d’arrêt de programme
   etpFinalOutcome String? // Point final parcours ETP
 
@@ -387,6 +387,6 @@ model ActivityLog {
 
 model ForbiddenWeek {
   id          String   @id @default(cuid())
-  startOfWeek DateTime @unique
+  startOfWeek DateTime @unique @db.Date
   createdAt   DateTime @default(now())
 }

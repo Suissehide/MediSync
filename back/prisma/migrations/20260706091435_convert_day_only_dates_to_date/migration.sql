@@ -1,0 +1,10 @@
+-- AlterTable
+ALTER TABLE "ForbiddenWeek" ALTER COLUMN "startOfWeek" SET DATA TYPE DATE;
+
+-- AlterTable
+ALTER TABLE "Pathway" ALTER COLUMN "startDate" SET DATA TYPE DATE;
+
+-- AlterTable
+ALTER TABLE "Patient" ALTER COLUMN "birthDate" SET DATA TYPE DATE,
+ALTER COLUMN "entryDate" SET DATA TYPE DATE,
+ALTER COLUMN "exitDate" SET DATA TYPE DATE;
