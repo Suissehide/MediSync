@@ -363,11 +363,14 @@ function Calendar({
           if (!arg.end) {
             return `s${week} / ${startStr}`
           }
-          const endStr = dayjs
-            .utc(arg.end.marker)
-            .subtract(1, 'day')
-            .format('DD MMMM')
-          return `s${week} / ${startStr} - ${endStr}`
+          // arg.end.marker est la fin INCLUSIVE de la plage (23:59:59.999 du
+          // dernier jour visible), donc on n'enlève pas de jour.
+          const end = dayjs.utc(arg.end.marker)
+          // Vue "Jour" (plage d'un seul jour) : afficher le jour seul.
+          if (end.isSame(start, 'day')) {
+            return `s${week} / ${startStr}`
+          }
+          return `s${week} / ${startStr} - ${end.format('DD MMMM')}`
         }}
         dayHeaderFormat={{
           weekday: 'short',
