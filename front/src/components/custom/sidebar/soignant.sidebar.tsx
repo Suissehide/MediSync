@@ -1,5 +1,5 @@
-import { Plus, Stethoscope, Trash, Users } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Check, Plus, Stethoscope, Trash } from 'lucide-react'
+import { useState } from 'react'
 
 import { useSoignantQueries } from '../../../queries/useSoignant.ts'
 import { useSoignantStore } from '../../../store/useSoignantStore.ts'
@@ -17,22 +17,12 @@ function SidebarSoignant({ user }: SidebarSoignantProps) {
 
   const isAdmin = user?.role === 'ADMIN'
   const soignants = useSoignantStore((state) => state.soignants)
-  const selectSoignant = useSoignantStore((state) => state.selectSoignant)
-  const selectedSoignantID = useSoignantStore(
-    (state) => state.selectedSoignantID,
+  const toggleSoignant = useSoignantStore((state) => state.toggleSoignant)
+  const selectedSoignantIDs = useSoignantStore(
+    (state) => state.selectedSoignantIDs,
   )
 
   const [isHovered, setIsHovered] = useState('')
-
-  const handleSelectSoignant = (soignantID: string) => {
-    selectSoignant(soignantID)
-  }
-
-  useEffect(() => {
-    if (!selectedSoignantID && soignants.length > 0) {
-      selectSoignant(soignants[0].id)
-    }
-  }, [selectedSoignantID, soignants, selectSoignant])
 
   return (
     <>
@@ -49,35 +39,24 @@ function SidebarSoignant({ user }: SidebarSoignantProps) {
         )}
       </div>
       <ul className="mx-2 px-2 py-2 bg-sidebar flex-1 flex flex-col min-h-0 overflow-y-auto rounded-lg [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <li
-          className={`relative w-full flex justify-between items-center gap-2 rounded-lg text-white ${selectedSoignantID === 'all' ? 'bg-[#ffffff10]' : ''} hover:bg-[#ffffff20]`}
-        >
-          <button
-            type="button"
-            onClick={() => selectSoignant('all')}
-            className={'cursor-pointer w-full py-2 pl-2'}
-          >
-            <span className="flex items-center gap-2">
-              <Users className="w-5 h-5" />
-              Tous les soignants
-            </span>
-          </button>
-        </li>
-        {soignants.map((soignant) => (
+        {soignants.map((soignant) => {
+          const isSelected = selectedSoignantIDs.includes(soignant.id)
+          return (
           <li
             key={soignant.id}
             onMouseEnter={() => setIsHovered(soignant.id)}
             onMouseLeave={() => setIsHovered('')}
-            className={`relative w-full flex justify-between items-center gap-2 rounded-lg text-white ${selectedSoignantID === soignant.id ? 'bg-[#ffffff10]' : ''} hover:bg-[#ffffff20]`}
+            className={`relative w-full flex justify-between items-center gap-2 rounded-lg text-white ${isSelected ? 'bg-[#ffffff10]' : ''} hover:bg-[#ffffff20]`}
           >
             <button
               type="button"
-              onClick={() => handleSelectSoignant(soignant.id)}
+              onClick={() => toggleSoignant(soignant.id)}
               className={'cursor-pointer w-full py-2 pl-2'}
             >
               <span className="flex items-center gap-2">
                 <Stethoscope className="w-5 h-5" />
                 {soignant.name}
+                {isSelected && <Check className="w-4 h-4" />}
               </span>
             </button>
 
@@ -92,7 +71,8 @@ function SidebarSoignant({ user }: SidebarSoignantProps) {
               />
             )}
           </li>
-        ))}
+          )
+        })}
       </ul>
     </>
   )

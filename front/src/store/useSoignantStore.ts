@@ -5,7 +5,7 @@ import type { Soignant } from '../types/soignant.ts'
 
 interface SoignantState {
   soignants: Soignant[]
-  selectedSoignantID: string | null
+  selectedSoignantIDs: string[]
 }
 
 interface SoignantActions {
@@ -14,17 +14,17 @@ interface SoignantActions {
   removeSoignant: (id: string) => void
   clearSoignants: () => void
 
-  selectSoignant: (id: string) => void
+  toggleSoignant: (id: string) => void
   unselectSoignant: () => void
 }
 
-type PersistedSoignantState = Pick<SoignantState, 'selectedSoignantID'>
+type PersistedSoignantState = Pick<SoignantState, 'selectedSoignantIDs'>
 
 export const useSoignantStore = create<SoignantState & SoignantActions>()(
   persist(
     (set) => ({
       soignants: [],
-      selectedSoignantID: null,
+      selectedSoignantIDs: [],
 
       setSoignants: (liste) => set({ soignants: liste }),
       addSoignant: (soignant) =>
@@ -34,18 +34,24 @@ export const useSoignantStore = create<SoignantState & SoignantActions>()(
       removeSoignant: (id) =>
         set((state) => ({
           soignants: state.soignants.filter((s) => s.id !== id),
-          selectedSoignantID:
-            state.selectedSoignantID === id ? null : state.selectedSoignantID,
+          selectedSoignantIDs: state.selectedSoignantIDs.filter(
+            (selectedID) => selectedID !== id,
+          ),
         })),
-      clearSoignants: () => set({ soignants: [], selectedSoignantID: null }),
+      clearSoignants: () => set({ soignants: [], selectedSoignantIDs: [] }),
 
-      selectSoignant: (id) => set({ selectedSoignantID: id }),
-      unselectSoignant: () => set({ selectedSoignantID: null }),
+      toggleSoignant: (id) =>
+        set((state) => ({
+          selectedSoignantIDs: state.selectedSoignantIDs.includes(id)
+            ? state.selectedSoignantIDs.filter((selectedID) => selectedID !== id)
+            : [...state.selectedSoignantIDs, id],
+        })),
+      unselectSoignant: () => set({ selectedSoignantIDs: [] }),
     }),
     {
       name: 'soignant-store',
       partialize: (state): PersistedSoignantState => ({
-        selectedSoignantID: state.selectedSoignantID,
+        selectedSoignantIDs: state.selectedSoignantIDs,
       }),
     },
   ),

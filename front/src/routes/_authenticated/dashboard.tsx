@@ -2,7 +2,7 @@ import type { DateSelectArg } from '@fullcalendar/core'
 import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import dayjs from 'dayjs'
-import { CalendarRange } from 'lucide-react'
+import { CalendarRange, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import Calendar, {
@@ -31,11 +31,11 @@ export const Route = createFileRoute('/_authenticated/dashboard')({
 function Dashboard() {
   const queryClient = useQueryClient()
   const [openEventId, setOpenEventId] = useState('')
-  const selectedID = useSoignantStore((state) => state.selectedSoignantID)
+  const selectedIDs = useSoignantStore((state) => state.selectedSoignantIDs)
+  const soignants = useSoignantStore((state) => state.soignants)
+  const unselectSoignant = useSoignantStore((state) => state.unselectSoignant)
   const savedDate = usePlanningStore((state) => state.viewStart)
-  const soignant = useSoignantStore((state) =>
-    state.soignants.find((s) => s.id === selectedID),
-  )
+  const selectedSoignants = soignants.filter((s) => selectedIDs.includes(s.id))
 
   const { slots } = useAllSlotsQuery()
   const { createAppointment } = useAppointmentMutations()
@@ -51,11 +51,14 @@ function Dashboard() {
 
   useEffect(() => {
     if (slots) {
-      const filtered = selectedID && selectedID !== 'all'
-        ? slots.filter((slot) =>
-            slot.slotTemplate?.soignants?.some((s) => s.id === selectedID),
-          )
-        : slots
+      const filtered =
+        selectedIDs.length > 0
+          ? slots.filter((slot) =>
+              slot.slotTemplate?.soignants?.some((s) =>
+                selectedIDs.includes(s.id),
+              ),
+            )
+          : []
 
       const slotEvents = buildCalendarEventsFromSlots(filtered, ['fillable'])
 
@@ -65,7 +68,7 @@ function Dashboard() {
         ),
       )
     }
-  }, [slots, selectedID])
+  }, [slots, selectedIDs])
 
   const handleSelectAppointment = (dateSelectArg: DateSelectArg) => {
     setSelectedDate({
@@ -143,8 +146,20 @@ function Dashboard() {
               <CalendarRange className="h-4 w-4 text-white" />
             </div>
             <h1 className="text-text-dark text-xl font-semibold">
-              {selectedID === 'all' ? 'Tous les soignants' : soignant ? soignant.name : ''}
+              {selectedSoignants.length > 0
+                ? selectedSoignants.map((s) => s.name).join(', ')
+                : 'Sélectionnez un soignant'}
             </h1>
+            {selectedSoignants.length > 0 && (
+              <button
+                type="button"
+                onClick={() => unselectSoignant()}
+                aria-label="Effacer la sélection"
+                className="cursor-pointer text-text-dark/60 hover:text-text-dark transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
 
           <div className="fc-dashboard flex-1 min-h-0 overflow-hidden">
