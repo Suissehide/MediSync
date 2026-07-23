@@ -214,122 +214,121 @@ export default function AppointmentSheet({
               <Loader2Icon className="size-10 animate-spin text-foreground" />
             </div>
           ) : (
-            <>
-              <form
-                onSubmit={async (e) => {
-                  e.preventDefault()
-                  await form.validate('submit')
-                  await form.handleSubmit()
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault()
+                await form.validate('submit')
+                await form.handleSubmit()
+              }}
+              className="w-full flex-1 flex flex-col min-h-0 gap-3 px-4"
+            >
+              <FormField className="flex flex-col gap-1">
+                <Label>Soignants</Label>
+                <Input
+                  value={
+                    soignants.length > 0
+                      ? soignants.map((s) => s.name).join(', ')
+                      : 'Aucun soignant associé'
+                  }
+                  disabled
+                />
+              </FormField>
+
+              <form.AppField name="thematicId">
+                {(field) => (
+                  <field.Select
+                    options={thematicOptions}
+                    label="Thématique"
+                    disabled={thematicOptions.length === 0}
+                    placeholder={
+                      thematicOptions.length === 0
+                        ? 'Aucune thématique associée'
+                        : 'Sélectionnez une thématique'
+                    }
+                  />
+                )}
+              </form.AppField>
+
+              <form.AppField name="type">
+                {(field) => (
+                  <field.Select
+                    options={APPOINTMENT_TYPE_OPTIONS}
+                    label="Type"
+                  />
+                )}
+              </form.AppField>
+
+              <FormField className="flex flex-col gap-1">
+                <Label>Salle</Label>
+                <Input
+                  value={
+                    appointment?.slot?.slotTemplate?.location?.name ??
+                    'Aucune salle associée'
+                  }
+                  disabled
+                />
+              </FormField>
+
+              <div className="mt-2 w-full border-t border-border"></div>
+
+              <form.Field
+                name="appointmentPatients"
+                mode="array"
+                validators={{
+                  onSubmit: ({ value }) => {
+                    if (isIndividual && value.length > 1) {
+                      return 'Un seul patient autorisé pour un créneau individuel'
+                    }
+                    if (!isIndividual && value.length > capacity) {
+                      return `Maximum ${capacity} patient${capacity > 1 ? 's' : ''} pour ce créneau`
+                    }
+                    return undefined
+                  },
                 }}
-                className="w-full flex-1 flex flex-col min-h-0 gap-3 px-4"
               >
-                <FormField className="flex flex-col gap-1">
-                  <Label>Soignants</Label>
-                  <Input
-                    value={
-                      soignants.length > 0
-                        ? soignants.map((s) => s.name).join(', ')
-                        : 'Aucun soignant associé'
-                    }
-                    disabled
-                  />
-                </FormField>
-
-                <form.AppField name="thematicId">
-                  {(field) => (
-                    <field.Select
-                      options={thematicOptions}
-                      label="Thématique"
-                      disabled={thematicOptions.length === 0}
-                      placeholder={
-                        thematicOptions.length === 0
-                          ? 'Aucune thématique associée'
-                          : 'Sélectionnez une thématique'
-                      }
-                    />
-                  )}
-                </form.AppField>
-
-                <form.AppField name="type">
-                  {(field) => (
-                    <field.Select
-                      options={APPOINTMENT_TYPE_OPTIONS}
-                      label="Type"
-                    />
-                  )}
-                </form.AppField>
-
-                <FormField className="flex flex-col gap-1">
-                  <Label>Salle</Label>
-                  <Input
-                    value={
-                      appointment?.slot?.slotTemplate?.location?.name ??
-                      'Aucune salle associée'
-                    }
-                    disabled
-                  />
-                </FormField>
-
-                <div className="mt-2 w-full border-t border-border"></div>
-
-                <form.Field
-                  name="appointmentPatients"
-                  mode="array"
-                  validators={{
-                    onSubmit: ({ value }) => {
-                      if (isIndividual && value.length > 1) {
-                        return 'Un seul patient autorisé pour un créneau individuel'
-                      }
-                      if (!isIndividual && value.length > capacity) {
-                        return `Maximum ${capacity} patient${capacity > 1 ? 's' : ''} pour ce créneau`
-                      }
-                      return undefined
-                    },
-                  }}
-                >
-                  {(field) => (
-                    <div className="flex-1 flex flex-col min-h-0">
-                      <div className="flex items-end gap-4 shrink-0">
-                        <div className="flex-1">
-                          <Label htmlFor={'patient-selection'}>
-                            Ajouter des patients
-                          </Label>
-                          <MultiSelect
-                            options={patientOptions}
-                            value={selectedPatients}
-                            onChange={setSelectedPatients}
-                            placeholder="Sélectionner un ou plusieurs patients"
-                            maxSelected={
-                              isIndividual
-                                ? Math.max(0, 1 - currentPatientCount)
-                                : Math.max(0, capacity - currentPatientCount)
-                            }
-                            disabled={isAtCapacity}
-                          />
-                        </div>
-                        <Button
-                          type="button"
-                          variant="default"
-                          disabled={
-                            isAtCapacity || selectedPatients.length === 0
+                {(field) => (
+                  <div className="flex-1 flex flex-col min-h-0">
+                    <div className="flex items-end gap-4 shrink-0">
+                      <div className="flex-1">
+                        <Label htmlFor={'patient-selection'}>
+                          Ajouter des patients
+                        </Label>
+                        <MultiSelect
+                          options={patientOptions}
+                          value={selectedPatients}
+                          onChange={setSelectedPatients}
+                          placeholder="Sélectionner un ou plusieurs patients"
+                          maxSelected={
+                            isIndividual
+                              ? Math.max(0, 1 - currentPatientCount)
+                              : Math.max(0, capacity - currentPatientCount)
                           }
-                          onClick={() => {
-                            for (const patientID of selectedPatients) {
-                              field.pushValue({
-                                accompanying: '',
-                                status: '',
-                                rejectionReason: '',
-                                transmissionNotes: '',
-                                patientID,
-                              })
-                            }
-                            setSelectedPatients([])
-                          }}
-                        >
-                          Ajouter
-                        </Button>
+                          disabled={isAtCapacity}
+                        />
                       </div>
-                      <div className="text-sm text-text-light mt-1">
+                      <Button
+                        type="button"
+                        variant="default"
+                        disabled={isAtCapacity || selectedPatients.length === 0}
+                        onClick={() => {
+                          for (const patientID of selectedPatients) {
+                            field.pushValue({
+                              accompanying: '',
+                              status: '',
+                              rejectionReason: '',
+                              transmissionNotes: '',
+                              patientID,
+                            })
+                          }
+                          setSelectedPatients([])
+                        }}
+                      >
+                        Ajouter
+                      </Button>
+                    </div>
+                    <div className="flex justify-between items-center gap-2 text-sm text-text-light mt-3 mb-0.5 shrink-0">
+                      <span>Liste des patients</span>
+                      <span className="shrink-0">
                         {currentPatientCount}/{capacity} patient
                         {capacity > 1 ? 's' : ''}
                         {isAtCapacity && (
@@ -337,156 +336,156 @@ export default function AppointmentSheet({
                             — capacité maximale atteinte
                           </span>
                         )}
-                      </div>
-
-                      <div className="text-sm text-text-light mt-3 mb-0.5 shrink-0">
-                        Liste des patients
-                      </div>
-                      <div className="flex-1 min-h-0 overflow-y-scroll pr-2 space-y-2">
-                        {field.state.value.map((appointmentPatient, index) => {
-                          const patientData = patients?.find(
-                            (p) => p.id === appointmentPatient.patientID,
-                          )
-                          const isExpanded = expandedSections[index] ?? false
-                          const toggleExpand = () =>
-                            setExpandedSections((prev) => ({
-                              ...prev,
-                              [index]: !prev[index],
-                            }))
-
-                          return (
-                            <div
-                              key={`index_${patientData?.id}`}
-                              className="border border-border rounded-md py-2 px-4"
-                            >
-                              <div className="flex justify-between items-center">
-                                <div className="text-sm">
-                                  {patientData
-                                    ? `${patientData.firstName} ${patientData.lastName}`
-                                    : ``}
-                                </div>
-                                <div className="flex gap-2 items-center">
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    type="button"
-                                    onClick={toggleExpand}
-                                  >
-                                    {isExpanded ? (
-                                      <ChevronUp className="w-4 h-4 text-muted-foreground" />
-                                    ) : (
-                                      <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                                    )}
-                                  </Button>
-                                  <div className="h-6 border-l border-border"></div>
-                                  <Button
-                                    variant="outline"
-                                    size="icon"
-                                    type="button"
-                                    onClick={() =>
-                                      handleRedirectToPatient(patientData?.id)
-                                    }
-                                  >
-                                    <EyeIcon className="w-4 h-4" />
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="icon"
-                                    type="button"
-                                    onClick={() => field.removeValue(index)}
-                                  >
-                                    <TrashIcon className="w-4 h-4 text-destructive" />
-                                  </Button>
-                                </div>
-                              </div>
-
-                              {isExpanded && (
-                                <div className="flex flex-col gap-3 pb-2 pt-2">
-                                  <div className="w-full flex gap-4">
-                                    {/* accompanying */}
-                                    <form.AppField
-                                      name={`appointmentPatients[${index}].accompanying`}
-                                    >
-                                      {(subField) => (
-                                        <subField.Select
-                                          label="Accompagnant"
-                                          className="flex-1"
-                                          options={
-                                            APPOINTMENT_ACCOMPANYING_OPTIONS
-                                          }
-                                        />
-                                      )}
-                                    </form.AppField>
-
-                                    {/* status */}
-                                    <form.AppField
-                                      name={`appointmentPatients[${index}].status`}
-                                    >
-                                      {(subField) => (
-                                        <subField.Select
-                                          label="Présence"
-                                          className="flex-1"
-                                          options={APPOINTMENT_STATUS_OPTIONS}
-                                        />
-                                      )}
-                                    </form.AppField>
-                                  </div>
-
-                                  {/* rejectionReason */}
-                                  <form.AppField
-                                    name={`appointmentPatients[${index}].rejectionReason`}
-                                  >
-                                    {(subField) => (
-                                      <subField.Input label="Raison de refus" />
-                                    )}
-                                  </form.AppField>
-
-                                  {/* transmissionNotes */}
-                                  <form.AppField
-                                    name={`appointmentPatients[${index}].transmissionNotes`}
-                                  >
-                                    {(subField) => (
-                                      <subField.TextArea label="Notes de transmission" />
-                                    )}
-                                  </form.AppField>
-                                </div>
-                              )}
-                            </div>
-                          )
-                        })}
-                      </div>
+                      </span>
                     </div>
-                  )}
-                </form.Field>
-              </form>
+                    <div className="flex-1 min-h-0 overflow-y-scroll pr-2 space-y-2">
+                      {field.state.value.map((appointmentPatient, index) => {
+                        const patientData = patients?.find(
+                          (p) => p.id === appointmentPatient.patientID,
+                        )
+                        const isExpanded = expandedSections[index] ?? false
+                        const toggleExpand = () =>
+                          setExpandedSections((prev) => ({
+                            ...prev,
+                            [index]: !prev[index],
+                          }))
 
-              <div className="w-full border-t border-border"></div>
+                        return (
+                          <div
+                            key={`index_${patientData?.id}`}
+                            className="border border-border rounded-md py-2 px-4"
+                          >
+                            <div className="flex justify-between items-center">
+                              <div className="text-sm">
+                                {patientData
+                                  ? `${patientData.firstName} ${patientData.lastName}`
+                                  : ``}
+                              </div>
+                              <div className="flex gap-2 items-center">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  type="button"
+                                  onClick={toggleExpand}
+                                >
+                                  {isExpanded ? (
+                                    <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                                  ) : (
+                                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                                  )}
+                                </Button>
+                                <div className="h-6 border-l border-border"></div>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  type="button"
+                                  onClick={() =>
+                                    handleRedirectToPatient(patientData?.id)
+                                  }
+                                >
+                                  <EyeIcon className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  type="button"
+                                  onClick={() => field.removeValue(index)}
+                                >
+                                  <TrashIcon className="w-4 h-4 text-destructive" />
+                                </Button>
+                              </div>
+                            </div>
 
-              <div className="px-4 py-4 flex justify-between gap-4 shrink-0">
-                <div>
-                  <Button
-                    variant="destructive"
-                    onClick={() => setShowDeleteConfirm(true)}
-                  >
-                    Supprimer
-                  </Button>
-                </div>
-                <div className="flex gap-4">
-                  <Button
-                    variant="default"
-                    onClick={() => form.handleSubmit()}
-                    isLoading={updateAppointment.isPending}
-                  >
-                    Mettre à jour
-                  </Button>
-                  <Button variant="outline" onClick={() => setOpen('')}>
-                    Annuler
-                  </Button>
-                </div>
-              </div>
-            </>
+                            {isExpanded && (
+                              <div className="flex flex-col gap-3 pb-2 pt-2">
+                                <div className="w-full flex gap-4">
+                                  {/* accompanying */}
+                                  <form.AppField
+                                    name={`appointmentPatients[${index}].accompanying`}
+                                  >
+                                    {(subField) => (
+                                      <subField.Select
+                                        label="Accompagnant"
+                                        className="flex-1"
+                                        options={
+                                          APPOINTMENT_ACCOMPANYING_OPTIONS
+                                        }
+                                      />
+                                    )}
+                                  </form.AppField>
+
+                                  {/* status */}
+                                  <form.AppField
+                                    name={`appointmentPatients[${index}].status`}
+                                  >
+                                    {(subField) => (
+                                      <subField.Select
+                                        label="Présence"
+                                        className="flex-1"
+                                        options={APPOINTMENT_STATUS_OPTIONS}
+                                      />
+                                    )}
+                                  </form.AppField>
+                                </div>
+
+                                {/* rejectionReason */}
+                                <form.AppField
+                                  name={`appointmentPatients[${index}].rejectionReason`}
+                                >
+                                  {(subField) => (
+                                    <subField.Input label="Raison de refus" />
+                                  )}
+                                </form.AppField>
+
+                                {/* transmissionNotes */}
+                                <form.AppField
+                                  name={`appointmentPatients[${index}].transmissionNotes`}
+                                >
+                                  {(subField) => (
+                                    <subField.TextArea label="Notes de transmission" />
+                                  )}
+                                </form.AppField>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+              </form.Field>
+            </form>
           )}
         </div>
+
+        {!isPending && (
+          <div className="shrink-0">
+            <div className="w-full border-t border-border-dark"></div>
+
+            <div className="px-4 py-4 flex justify-between gap-4">
+              <div>
+                <Button
+                  variant="destructive"
+                  onClick={() => setShowDeleteConfirm(true)}
+                >
+                  Supprimer
+                </Button>
+              </div>
+              <div className="flex gap-4">
+                <Button
+                  variant="default"
+                  onClick={() => form.handleSubmit()}
+                  isLoading={updateAppointment.isPending}
+                >
+                  Mettre à jour
+                </Button>
+                <Button variant="outline" onClick={() => setOpen('')}>
+                  Annuler
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </SheetContent>
       <ConfirmDeleteForm
         open={showDeleteConfirm}

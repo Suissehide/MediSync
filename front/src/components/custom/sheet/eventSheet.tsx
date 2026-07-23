@@ -188,7 +188,7 @@ export default function EventSheet({
                 <EventFormFields form={form} />
               </form>
 
-              <div className="w-full border-t border-border"></div>
+              <div className="w-full border-t border-border-dark"></div>
 
               <div className="px-4 py-4 flex justify-between gap-4 shrink-0">
                 <div className="flex">
