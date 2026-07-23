@@ -3,7 +3,11 @@ import dayjs from 'dayjs'
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod/v4'
 
-import { combineDateAndTime, toStartOfWeek } from '../../../../utils/date'
+import { combineDateAndTime } from '../../../../utils/date'
+import {
+  buildWeekMapping,
+  computeEffectiveOffset,
+} from '../../../../utils/pathway-schedule'
 import {
   type CreatePathwayBody,
   createPathwaySchema,
@@ -175,55 +179,27 @@ const pathwayRouter: FastifyPluginAsync = (fastify) => {
       // Build a week mapping that skips forbidden weeks so the pathway
       // spans over them instead of being shifted entirely.
       const forbiddenWeeks = await forbiddenWeekDomain.findAll()
-      const adjustedStart = dayjs(startDate)
 
-      const isWeekForbidden = (date: Date): boolean => {
-        const weekStart = dayjs(toStartOfWeek(date))
-        return forbiddenWeeks.some((fw) => {
-          return weekStart.isSame(dayjs(fw.startOfWeek), 'day')
-        })
-      }
-
-      // Determine the number of logical weeks the pathway spans
-      const maxOffsetDays = Math.max(
-        ...pathwayTemplate.slotTemplates.map((st) => st.offsetDays ?? 0),
-      )
-      const maxLogicalWeek = Math.floor(maxOffsetDays / 7)
-
-      // Map each logical week index to an actual week offset (skipping forbidden weeks)
-      const weekMapping = new Map<number, number>()
-      let actualWeekOffset = 0
-      for (
-        let logicalWeek = 0;
-        logicalWeek <= maxLogicalWeek;
-        logicalWeek++
-      ) {
-        while (
-          isWeekForbidden(
-            adjustedStart.add(actualWeekOffset * 7, 'day').toDate(),
-          )
-        ) {
-          actualWeekOffset++
-          if (actualWeekOffset > logicalWeek + 52) {
-            throw Boom.conflict(
-              'Aucune date de début disponible dans les 52 prochaines semaines en raison des semaines interdites',
+      const maxOffsetDays =
+        pathwayTemplate.slotTemplates.length > 0
+          ? Math.max(
+              ...pathwayTemplate.slotTemplates.map((st) => st.offsetDays ?? 0),
             )
-          }
-        }
-        weekMapping.set(logicalWeek, actualWeekOffset)
-        actualWeekOffset++
-      }
+          : 0
+      const weekMapping = buildWeekMapping(
+        startDate,
+        maxOffsetDays,
+        forbiddenWeeks,
+      )
 
-      const effectiveStartDate = adjustedStart.toISOString()
+      const effectiveStartDate = dayjs(startDate).toISOString()
 
       const slotIDs: string[] = []
       for (const slotTemplate of pathwayTemplate.slotTemplates) {
-        // Compute the effective offset by adding the extra weeks from forbidden week skipping
-        const originalOffset = slotTemplate.offsetDays ?? 0
-        const logicalWeek = Math.floor(originalOffset / 7)
-        const dayInWeek = originalOffset % 7
-        const actualWeek = weekMapping.get(logicalWeek) ?? logicalWeek
-        const effectiveOffset = actualWeek * 7 + dayInWeek
+        const effectiveOffset = computeEffectiveOffset(
+          slotTemplate.offsetDays ?? 0,
+          weekMapping,
+        )
 
         const clonedSlotTemplate = await slotTemplateDomain.create({
           startTime: slotTemplate.startTime,
