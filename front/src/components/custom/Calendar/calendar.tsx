@@ -372,10 +372,11 @@ function Calendar({
           }
           return `s${week} / ${startStr} - ${end.format('DD MMMM')}`
         }}
-        dayHeaderFormat={{
-          weekday: 'short',
-          day: 'numeric',
-        }}
+        dayHeaderFormat={
+          anchorMonday
+            ? { weekday: 'long' }
+            : { weekday: 'short', day: 'numeric' }
+        }
         slotLabelFormat={(arg) => {
           const hour = arg.date.hour.toString()
           const minute = arg.date.minute.toString().padStart(2, '0')
