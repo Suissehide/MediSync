@@ -45,7 +45,8 @@ export const EventContent = ({
   onToggleSelect,
 }: Props) => {
   const { event, view } = eventContent
-  const { states, appointments, thematic, type, locked } = event.extendedProps
+  const { states, appointments, thematic, type, locked, capacity } =
+    event.extendedProps
   const isWeekView = view.type === 'timeGridWeek'
   const isRowLayout = !isWeekView
 
@@ -290,30 +291,40 @@ export const EventContent = ({
               }}
               style={calculateAppointmentStyle(appointment)}
               className={clsx(
-                'fc-event-hero z-10 cursor-pointer flex-1 min-h-0 basis-0 flex justify-start p-0.5 text-white px-1 border border-white/30 rounded hover:brightness-90 transition-all',
-                isRowLayout
-                  ? 'flex-row min-w-0'
-                  : 'flex-col mx-0.5 overflow-y-auto',
+                'fc-event-hero relative z-10 cursor-pointer flex-1 min-h-0 basis-0 flex justify-start p-0.5 text-white px-1 border border-white/30 rounded hover:brightness-90 transition-all',
+                isRowLayout ? 'flex-row min-w-0' : 'flex-col mx-0.5',
               )}
             >
-              {appointment.appointmentPatients?.map(
-                (appointmentPatient: AppointmentPatient, idx: number) => (
-                  <div
-                    key={appointmentPatient.patient.id}
-                    className={clsx(
-                      'flex-1',
-                      idx > 0 &&
-                        isRowLayout &&
-                        'border-l border-white/30 pl-1 ml-1',
-                      idx > 0 &&
-                        !isRowLayout &&
-                        'border-t border-white/30 pt-0.5 mt-0.5',
-                    )}
-                  >
-                    <PatientName appointmentPatient={appointmentPatient} />
-                  </div>
-                ),
-              )}
+              <span className="absolute top-0 right-0 z-20 rounded-bl rounded-tr bg-black/40 px-1 text-[0.55rem] font-semibold leading-tight text-white pointer-events-none">
+                {capacity != null
+                  ? `${appointment.appointmentPatients?.length ?? 0}/${capacity}`
+                  : (appointment.appointmentPatients?.length ?? 0)}
+              </span>
+              <div
+                className={clsx(
+                  'flex flex-1 min-h-0 min-w-0 w-full',
+                  isRowLayout ? 'flex-row' : 'flex-col overflow-y-auto',
+                )}
+              >
+                {appointment.appointmentPatients?.map(
+                  (appointmentPatient: AppointmentPatient, idx: number) => (
+                    <div
+                      key={appointmentPatient.patient.id}
+                      className={clsx(
+                        'flex-1',
+                        idx > 0 &&
+                          isRowLayout &&
+                          'border-l border-white/30 pl-1 ml-1',
+                        idx > 0 &&
+                          !isRowLayout &&
+                          'border-t border-white/30 pt-0.5 mt-0.5',
+                      )}
+                    >
+                      <PatientName appointmentPatient={appointmentPatient} />
+                    </div>
+                  ),
+                )}
+              </div>
             </button>
           ))}
         </div>

@@ -87,6 +87,7 @@ export const buildCalendarEventsFromSlots = (
         thematic: slot.slotTemplate?.thematic,
         states: slotStates,
         templateID: slot.slotTemplate?.id,
+        capacity: slot.slotTemplate?.capacity,
         appointments: slot.appointments,
         locked: slot.locked,
       },
