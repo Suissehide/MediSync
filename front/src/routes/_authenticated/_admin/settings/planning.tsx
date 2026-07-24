@@ -7,8 +7,17 @@ import interactionPlugin, {
 import multiMonthPlugin from '@fullcalendar/multimonth'
 import FullCalendar from '@fullcalendar/react'
 import { createFileRoute } from '@tanstack/react-router'
-import dayjs from 'dayjs'
-import { CalendarDays, CheckSquare, GanttChart, Trash2, X } from 'lucide-react'
+import dayjs, { type Dayjs } from 'dayjs'
+import {
+  CalendarDays,
+  CheckSquare,
+  GanttChart,
+  RefreshCw,
+  Settings2,
+  Trash2,
+  X,
+} from 'lucide-react'
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import Calendar, {
@@ -20,6 +29,7 @@ import { BulkMoveForm } from '../../../../components/custom/popup/bulkMoveForm.t
 import { ConfirmDeleteForm } from '../../../../components/custom/popup/confirmDeleteForm.tsx'
 import { CreateForbiddenWeekForm } from '../../../../components/custom/popup/createForbiddenWeekForm.tsx'
 import { DeleteForbiddenWeekForm } from '../../../../components/custom/popup/deleteForbiddenWeekForm.tsx'
+import { RegeneratePathwaysForm } from '../../../../components/custom/popup/regeneratePathwaysForm.tsx'
 import EventSheet from '../../../../components/custom/sheet/eventSheet.tsx'
 import EventTemplateSheet from '../../../../components/custom/sheet/eventTemplateSheet.tsx'
 import DashboardLayout from '../../../../components/dashboard.layout.tsx'
@@ -72,7 +82,8 @@ function Planning() {
   const { pathways } = usePathwayQueries()
   const { pathwayTemplates } = usePathwayTemplateQueries()
   const { createSlot, updateSlot, deleteSlot } = useSlotMutations()
-  const { instantiatePathway, deletePathway } = usePathwayMutations()
+  const { instantiatePathway, deletePathway, regeneratePathways } =
+    usePathwayMutations()
   const { toast } = useToast()
   const lastDropTimeRef = useRef<number>(0)
   const { createSlotTemplate, updateSlotTemplate, deleteSlotTemplate } =
@@ -80,6 +91,31 @@ function Planning() {
   const { forbiddenWeeks } = useForbiddenWeekQueries()
   const { createForbiddenWeek, deleteForbiddenWeek } =
     useForbiddenWeekMutations()
+
+  const [regenerateOpen, setRegenerateOpen] = useState(false)
+  const [regenerateTemplateID, setRegenerateTemplateID] = useState('')
+  const [regenerateFromDate, setRegenerateFromDate] = useState<Dayjs | null>(
+    null,
+  )
+
+  const handleRegenerate = () => {
+    if (!regenerateTemplateID || !regenerateFromDate) {
+      return
+    }
+    regeneratePathways.mutate(
+      {
+        pathwayTemplateID: regenerateTemplateID,
+        fromDate: regenerateFromDate.toISOString(),
+      },
+      {
+        onSuccess: () => {
+          setRegenerateOpen(false)
+          setRegenerateTemplateID('')
+          setRegenerateFromDate(null)
+        },
+      },
+    )
+  }
 
   const [createForbiddenWeekDate, setCreateForbiddenWeekDate] = useState<
     string | null
@@ -601,7 +637,34 @@ function Planning() {
             Planning
           </h1>
 
-          <div className="flex justify-end">
+          <div className="flex justify-end items-center gap-2">
+            {!editMode && (
+              <DropdownMenu.Root>
+                <DropdownMenu.Trigger asChild>
+                  <Button variant="outline" className="font-normal rounded-lg">
+                    <Settings2 size={16} />
+                    Actions
+                  </Button>
+                </DropdownMenu.Trigger>
+                <DropdownMenu.Portal>
+                  <DropdownMenu.Content
+                    className="min-w-[280px] bg-primary-foreground rounded shadow-md border border-border p-2 z-50"
+                    align="end"
+                    sideOffset={5}
+                    collisionPadding={8}
+                  >
+                    <DropdownMenu.Item
+                      onSelect={() => setRegenerateOpen(true)}
+                      className="flex items-center gap-2 px-3 py-2 rounded cursor-pointer outline-none hover:bg-primary/20 text-sm select-none"
+                    >
+                      <RefreshCw size={16} />
+                      Mettre à jour les parcours instanciés
+                    </DropdownMenu.Item>
+                  </DropdownMenu.Content>
+                </DropdownMenu.Portal>
+              </DropdownMenu.Root>
+            )}
+
             {!editMode && (
               <ToggleGroup
                 value={view}
@@ -1061,6 +1124,18 @@ function Planning() {
             }}
           />
         )}
+
+        <RegeneratePathwaysForm
+          open={regenerateOpen}
+          setOpen={setRegenerateOpen}
+          templates={pathwayTemplates ?? []}
+          templateID={regenerateTemplateID}
+          onTemplateChange={setRegenerateTemplateID}
+          fromDate={regenerateFromDate}
+          onFromDateChange={setRegenerateFromDate}
+          onConfirm={handleRegenerate}
+          isPending={regeneratePathways.isPending}
+        />
       </div>
     </DashboardLayout>
   )
