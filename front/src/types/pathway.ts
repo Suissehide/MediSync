@@ -22,6 +22,18 @@ export type InstantiatePathwayParams = Pick<
 >
 export type UpdatePathwayParams = Pick<Pathway, 'id' | 'startDate'>
 
+export type RegeneratePathwaysParams = {
+  pathwayTemplateID: string
+  fromDate: string
+}
+
+export type RegeneratePathwaysResult = {
+  pathwaysUpdated: number
+  slotsDeleted: number
+  slotsKept: number
+  slotsCreated: number
+}
+
 export type TrackingAppointment = {
   date: string
   status: string | null

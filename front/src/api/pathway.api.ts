@@ -4,6 +4,8 @@ import type {
   CreatePathwayParams,
   InstantiatePathwayParams,
   Pathway,
+  RegeneratePathwaysParams,
+  RegeneratePathwaysResult,
   TrackingPathway,
   UpdatePathwayParams,
 } from '../types/pathway.ts'
@@ -48,6 +50,24 @@ export const PathwayApi = {
     })
     if (!response.ok) {
       handleHttpError(response, {}, 'Impossible de créer une tâche')
+    }
+    return response.json()
+  },
+
+  regenerate: async (
+    params: RegeneratePathwaysParams,
+  ): Promise<RegeneratePathwaysResult> => {
+    const response = await fetchWithAuth(`${apiUrl}/pathway/regenerate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    })
+    if (!response.ok) {
+      handleHttpError(
+        response,
+        {},
+        'Impossible de mettre à jour les parcours',
+      )
     }
     return response.json()
   },

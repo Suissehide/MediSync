@@ -67,6 +67,7 @@ export const PATHWAY = {
   GET: 'get_pathway',
   CREATE: 'create_pathway',
   INSTANTIATE: 'instantiate_pathway',
+  REGENERATE: 'regenerate_pathways',
   UPDATE: 'update_pathway',
   DELETE: 'delete_pathway',
   GET_TRACKING: 'get_tracking_pathway',
