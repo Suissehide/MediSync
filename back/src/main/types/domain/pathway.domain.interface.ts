@@ -1,5 +1,8 @@
 import type { Pathway, PathwayTemplate, Prisma, Slot } from '../../../generated/client'
-import type { TrackingPathwayRepo } from '../infra/orm/repositories/pathway.repository.interface'
+import type {
+  RegeneratePathwaysResultRepo,
+  TrackingPathwayRepo,
+} from '../infra/orm/repositories/pathway.repository.interface'
 
 export type PathwayEntityDomain = Pathway
 export type PathwayWithTemplateAndSlotsDomain = PathwayEntityDomain & {
@@ -21,6 +24,7 @@ export type PathwayUpdateEntityDomain = Omit<
   slotIDs: string[]
 }
 export type TrackingPathwayDomain = TrackingPathwayRepo
+export type RegeneratePathwaysResultDomain = RegeneratePathwaysResultRepo
 
 export interface PathwayDomainInterface {
   findAll: () => Promise<PathwayWithTemplateAndSlotsDomain[]>
@@ -37,4 +41,8 @@ export interface PathwayDomainInterface {
     pathwayUpdateParams: PathwayUpdateEntityDomain,
   ) => Promise<PathwayEntityDomain>
   delete: (pathwayID: string) => Promise<PathwayEntityDomain>
+  regenerate: (
+    pathwayTemplateID: string,
+    fromDate: Date,
+  ) => Promise<RegeneratePathwaysResultDomain>
 }

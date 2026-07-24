@@ -5,6 +5,7 @@ import type {
   PathwayEntityDomain,
   PathwayUpdateEntityDomain,
   PathwayWithTemplateAndSlotsDomain,
+  RegeneratePathwaysResultDomain,
   TrackingPathwayDomain,
 } from '../types/domain/pathway.domain.interface'
 import type { PathwayRepositoryInterface } from '../types/infra/orm/repositories/pathway.repository.interface'
@@ -46,6 +47,13 @@ class PathwayDomain implements PathwayDomainInterface {
 
   delete(pathwayID: string): Promise<PathwayEntityDomain> {
     return this.pathwayRepository.delete(pathwayID)
+  }
+
+  regenerate(
+    pathwayTemplateID: string,
+    fromDate: Date,
+  ): Promise<RegeneratePathwaysResultDomain> {
+    return this.pathwayRepository.regenerate(pathwayTemplateID, fromDate)
   }
 }
 

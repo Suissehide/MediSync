@@ -1,3 +1,6 @@
+import Boom from '@hapi/boom'
+import dayjs from 'dayjs'
+
 import type { IocContainer } from '../../../types/application/ioc'
 import type {
   PathwayCreateEntityRepo,
@@ -6,10 +9,16 @@ import type {
   PathwayUpdateEntityRepo,
   PathwayWithSlotsRepo,
   PathwayWithTemplateAndSlotsRepo,
+  RegeneratePathwaysResultRepo,
   TrackingPathwayRepo,
 } from '../../../types/infra/orm/repositories/pathway.repository.interface'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { PostgresPrismaClient } from '../postgres-client'
+import { combineDateAndTime } from '../../../utils/date'
+import {
+  buildWeekMapping,
+  computeEffectiveOffset,
+} from '../../../utils/pathway-schedule'
 
 class PathwayRepository implements PathwayRepositoryInterface {
   private readonly prisma: PostgresPrismaClient
@@ -79,6 +88,138 @@ class PathwayRepository implements PathwayRepositoryInterface {
             },
           },
         },
+      })
+    } catch (err) {
+      throw this.errorHandler.boomErrorFromPrismaError({
+        entityName: 'Pathway',
+        error: err,
+      })
+    }
+  }
+
+  async regenerate(
+    pathwayTemplateID: string,
+    fromDate: Date,
+  ): Promise<RegeneratePathwaysResultRepo> {
+    const template = await this.prisma.pathwayTemplate.findUnique({
+      where: { id: pathwayTemplateID },
+      include: { slotTemplates: { include: { soignants: true } } },
+    })
+    if (!template) {
+      throw Boom.notFound('PathwayTemplate not found')
+    }
+
+    const startOfDay = new Date(fromDate)
+    startOfDay.setHours(0, 0, 0, 0)
+
+    const maxOffsetDays =
+      template.slotTemplates.length > 0
+        ? Math.max(...template.slotTemplates.map((st) => st.offsetDays ?? 0))
+        : 0
+
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const forbiddenWeeks = await tx.forbiddenWeek.findMany()
+
+        const pathways = await tx.pathway.findMany({
+          where: {
+            templateID: pathwayTemplateID,
+            startDate: { gte: startOfDay },
+          },
+          include: {
+            slots: {
+              include: { appointments: { select: { id: true } } },
+            },
+          },
+        })
+
+        let slotsDeleted = 0
+        let slotsKept = 0
+        let slotsCreated = 0
+
+        for (const pathway of pathways) {
+          const occupiedSlots = pathway.slots.filter(
+            (slot) => slot.appointments.length > 0,
+          )
+          const emptySlots = pathway.slots.filter(
+            (slot) => slot.appointments.length === 0,
+          )
+
+          // Remove empty slots and their cloned slot templates.
+          if (emptySlots.length > 0) {
+            const emptySlotIDs = emptySlots.map((slot) => slot.id)
+            const emptyTemplateIDs = emptySlots.map(
+              (slot) => slot.slotTemplateID,
+            )
+            await tx.slot.deleteMany({ where: { id: { in: emptySlotIDs } } })
+            await tx.slotTemplate.deleteMany({
+              where: { id: { in: emptyTemplateIDs } },
+            })
+            slotsDeleted += emptySlots.length
+          }
+
+          slotsKept += occupiedSlots.length
+
+          const weekMapping = buildWeekMapping(
+            pathway.startDate,
+            maxOffsetDays,
+            forbiddenWeeks,
+          )
+
+          for (const slotTemplate of template.slotTemplates) {
+            const effectiveOffset = computeEffectiveOffset(
+              slotTemplate.offsetDays ?? 0,
+              weekMapping,
+            )
+            const base = dayjs(pathway.startDate)
+              .add(effectiveOffset, 'day')
+              .toISOString()
+            const start = combineDateAndTime(base, slotTemplate.startTime)
+            const end = combineDateAndTime(base, slotTemplate.endTime)
+
+            // Skip regenerating a step already covered by a kept slot.
+            const alreadyCovered = occupiedSlots.some(
+              (slot) => slot.startDate.getTime() === start.getTime(),
+            )
+            if (alreadyCovered) {
+              continue
+            }
+
+            const clonedSlotTemplate = await tx.slotTemplate.create({
+              data: {
+                startTime: slotTemplate.startTime,
+                endTime: slotTemplate.endTime,
+                offsetDays: effectiveOffset,
+                isIndividual: slotTemplate.isIndividual,
+                capacity: slotTemplate.capacity,
+                thematicId: slotTemplate.thematicId,
+                locationID: slotTemplate.locationID,
+                description: slotTemplate.description,
+                color: slotTemplate.color,
+                soignants: {
+                  connect: slotTemplate.soignants.map((s) => ({ id: s.id })),
+                },
+              },
+            })
+
+            await tx.slot.create({
+              data: {
+                startDate: start,
+                endDate: end,
+                slotTemplateID: clonedSlotTemplate.id,
+                pathwayID: pathway.id,
+              },
+            })
+            slotsCreated += 1
+          }
+        }
+
+        return {
+          pathwaysUpdated: pathways.length,
+          slotsDeleted,
+          slotsKept,
+          slotsCreated,
+        }
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({

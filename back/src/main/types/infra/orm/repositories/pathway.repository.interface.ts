@@ -20,6 +20,13 @@ export type PathwayCreateEntityRepo = Prisma.PathwayUncheckedCreateInput & {
 }
 export type PathwayUpdateEntityRepo = Prisma.PathwayUncheckedUpdateInput
 
+export type RegeneratePathwaysResultRepo = {
+  pathwaysUpdated: number
+  slotsDeleted: number
+  slotsKept: number
+  slotsCreated: number
+}
+
 export type TrackingAppointmentRepo = {
   date: Date
   status: string | null
@@ -70,4 +77,8 @@ export interface PathwayRepositoryInterface {
     pathwayUpdateParams: PathwayUpdateEntityRepo,
   ) => Promise<PathwayEntityRepo>
   delete: (pathwayID: string) => Promise<PathwayEntityRepo>
+  regenerate: (
+    pathwayTemplateID: string,
+    fromDate: Date,
+  ) => Promise<RegeneratePathwaysResultRepo>
 }
