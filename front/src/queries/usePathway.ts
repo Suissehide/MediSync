@@ -208,5 +208,33 @@ export const usePathwayMutations = () => {
     },
   })
 
-  return { createPathway, deletePathway, updatePathway, instantiatePathway }
+  const regeneratePathways = useMutation({
+    mutationKey: [PATHWAY.REGENERATE],
+    mutationFn: PathwayApi.regenerate,
+    onSuccess: async (result) => {
+      await queryClient.invalidateQueries({ queryKey: [SLOT.GET_ALL] })
+      await queryClient.invalidateQueries({ queryKey: [PATHWAY.GET_ALL] })
+
+      toast({
+        title: 'Parcours mis à jour',
+        message: `${result.pathwaysUpdated} parcours traité(s) · ${result.slotsCreated} créneau(x) régénéré(s) · ${result.slotsKept} conservé(s)`,
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
+    },
+    onError: (error) => {
+      toast({
+        title: 'Erreur lors de la mise à jour des parcours',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
+    },
+  })
+
+  return {
+    createPathway,
+    deletePathway,
+    updatePathway,
+    instantiatePathway,
+    regeneratePathways,
+  }
 }
