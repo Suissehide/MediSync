@@ -39,6 +39,18 @@ export const instantiatePathwayBody = z.object({
   startDate: z.coerce.date(),
 })
 
+export const regeneratePathwaysBody = z.object({
+  pathwayTemplateID: z.cuid(),
+  fromDate: z.coerce.date(),
+})
+
+export const regeneratePathwaysResponseSchema = z.object({
+  pathwaysUpdated: z.number().int(),
+  slotsDeleted: z.number().int(),
+  slotsKept: z.number().int(),
+  slotsCreated: z.number().int(),
+})
+
 export type PathwayInput = z.infer<typeof pathwaySchema>
 export type GetPathwayByIdParams = z.infer<typeof getPathwayByIdParamsSchema>
 export type CreatePathwayBody = z.infer<typeof createPathwaySchema>
@@ -49,6 +61,10 @@ export type DeletePathwayByIdParams = z.infer<
 >
 export type InstantiatePathwayBody = z.infer<typeof instantiatePathwayBody>
 export type PathwayResponse = z.infer<typeof pathwayResponseSchema>
+export type RegeneratePathwaysBody = z.infer<typeof regeneratePathwaysBody>
+export type RegeneratePathwaysResponse = z.infer<
+  typeof regeneratePathwaysResponseSchema
+>
 
 export const trackingQuerySchema = z.object({
   year: z.coerce.number().int().min(2000).max(2100),

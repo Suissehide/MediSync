@@ -18,6 +18,9 @@ import {
   instantiatePathwayBody,
   pathwayResponseSchema,
   pathwaysResponseSchema,
+  type RegeneratePathwaysBody,
+  regeneratePathwaysBody,
+  regeneratePathwaysResponseSchema,
   type TrackingQuery,
   trackingQuerySchema,
   trackingResponseSchema,
@@ -234,6 +237,24 @@ const pathwayRouter: FastifyPluginAsync = (fastify) => {
         templateID: pathwayTemplate.id,
         slotIDs,
       })
+    },
+  )
+
+  // Regenerate instantiated pathways from the current template
+  fastify.post<{ Body: RegeneratePathwaysBody }>(
+    '/regenerate',
+    {
+      schema: {
+        body: regeneratePathwaysBody,
+        response: {
+          200: regeneratePathwaysResponseSchema,
+          404: z.object({ message: z.string() }),
+        },
+      },
+    },
+    (request) => {
+      const { pathwayTemplateID, fromDate } = request.body
+      return pathwayDomain.regenerate(pathwayTemplateID, fromDate)
     },
   )
 
