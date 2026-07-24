@@ -152,8 +152,10 @@ class PathwayRepository implements PathwayRepositoryInterface {
               (slot) => slot.slotTemplateID,
             )
             await tx.slot.deleteMany({ where: { id: { in: emptySlotIDs } } })
+            // Guard: only cloned slot templates (templateID null) are ever
+            // deleted — never a master template shared by a PathwayTemplate.
             await tx.slotTemplate.deleteMany({
-              where: { id: { in: emptyTemplateIDs } },
+              where: { id: { in: emptyTemplateIDs }, templateID: null },
             })
             slotsDeleted += emptySlots.length
           }
