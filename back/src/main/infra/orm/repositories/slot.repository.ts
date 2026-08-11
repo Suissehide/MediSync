@@ -25,6 +25,7 @@ class SlotRepository implements SlotRepositoryInterface {
           include: {
             soignants: true,
             thematic: true,
+            location: true,
           },
         },
         pathway: {
@@ -55,6 +56,7 @@ class SlotRepository implements SlotRepositoryInterface {
             include: {
               soignants: true,
               thematic: true,
+              location: true,
             },
           },
           pathway: {
@@ -91,6 +93,7 @@ class SlotRepository implements SlotRepositoryInterface {
             include: {
               soignants: true,
               thematic: true,
+              location: true,
             },
           },
           pathway: {
@@ -150,6 +153,7 @@ class SlotRepository implements SlotRepositoryInterface {
               include: {
                 soignants: true,
                 thematic: true,
+                location: true,
               },
             },
             pathway: {
