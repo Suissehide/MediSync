@@ -55,7 +55,9 @@ function Agenda() {
               <CalendarDays className="h-4 w-4 text-white" />
             </div>
             <h1 className="h-9 flex items-center text-text-dark text-xl font-semibold">
-              {selectedDay.format('dddd D MMMM YYYY')}
+              {selectedDay
+                .format('dddd D MMMM YYYY')
+                .replace(/^./, (c) => c.toUpperCase())}
             </h1>
           </div>
 
