@@ -137,9 +137,9 @@ bouton `Aujourd'hui`.
   courant réel porte un point discret sous le libellé, y compris quand il n'est
   pas sélectionné.
 - Le bouton `Aujourd'hui` n'est rendu que si `value` n'est pas le jour courant.
-- La semaine est délimitée par `dayjs.utc(value).startOf('isoWeek')` : le plugin
-  `isoWeek` est déjà chargé dans `main.tsx`, tout comme `dayjs.locale('fr')` qui
-  produit les libellés `lun`, `mar`, etc.
+- La semaine est délimitée par `value.isoWeekday(1)`, idiome déjà employé dans
+  `libs/utils.ts` : le plugin `isoWeek` est chargé dans `main.tsx`, tout comme
+  `dayjs.locale('fr')` qui produit les libellés `lun`, `mar`, etc.
 
 ### Colonnes
 
