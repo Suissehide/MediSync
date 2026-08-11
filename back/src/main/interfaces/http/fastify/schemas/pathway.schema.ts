@@ -1,9 +1,13 @@
 import { z } from 'zod/v4'
 
-import { pathwaySchema } from './index'
+import { pathwaySchema, pathwayTemplateSchema } from './index'
 
 export const pathwayResponseSchema = pathwaySchema.extend({
   id: z.cuid(),
+  template: pathwayTemplateSchema
+    .extend({ id: z.cuid() })
+    .optional()
+    .nullable(),
 })
 
 export const pathwaysResponseSchema = z.array(pathwayResponseSchema)
