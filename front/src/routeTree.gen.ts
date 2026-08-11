@@ -16,6 +16,7 @@ import { Route as AuthenticatedImport } from './routes/_authenticated'
 import { Route as AuthIndexImport } from './routes/auth/index'
 import { Route as AuthenticatedIndexImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedSuiviImport } from './routes/_authenticated/suivi'
+import { Route as AuthenticatedJourneeImport } from './routes/_authenticated/journee'
 import { Route as AuthenticatedDashboardImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAdminImport } from './routes/_authenticated/_admin'
 import { Route as AuthenticatedPatientIndexImport } from './routes/_authenticated/patient/index'
@@ -57,6 +58,12 @@ const AuthenticatedIndexRoute = AuthenticatedIndexImport.update({
 const AuthenticatedSuiviRoute = AuthenticatedSuiviImport.update({
   id: '/suivi',
   path: '/suivi',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+
+const AuthenticatedJourneeRoute = AuthenticatedJourneeImport.update({
+  id: '/journee',
+  path: '/journee',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 
@@ -169,6 +176,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardImport
+      parentRoute: typeof AuthenticatedImport
+    }
+    '/_authenticated/journee': {
+      id: '/_authenticated/journee'
+      path: '/journee'
+      fullPath: '/journee'
+      preLoaderRoute: typeof AuthenticatedJourneeImport
       parentRoute: typeof AuthenticatedImport
     }
     '/_authenticated/suivi': {
@@ -299,6 +313,7 @@ const AuthenticatedAdminRouteWithChildren =
 interface AuthenticatedRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedJourneeRoute: typeof AuthenticatedJourneeRoute
   AuthenticatedSuiviRoute: typeof AuthenticatedSuiviRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedPatientPatientIDRoute: typeof AuthenticatedPatientPatientIDRoute
@@ -309,6 +324,7 @@ interface AuthenticatedRouteChildren {
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedJourneeRoute: AuthenticatedJourneeRoute,
   AuthenticatedSuiviRoute: AuthenticatedSuiviRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedPatientPatientIDRoute: AuthenticatedPatientPatientIDRoute,
@@ -324,6 +340,7 @@ export interface FileRoutesByFullPath {
   '': typeof AuthenticatedAdminRouteWithChildren
   '/pending': typeof PendingRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/journee': typeof AuthenticatedJourneeRoute
   '/suivi': typeof AuthenticatedSuiviRoute
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthIndexRoute
@@ -343,6 +360,7 @@ export interface FileRoutesByTo {
   '/pending': typeof PendingRoute
   '': typeof AuthenticatedAdminRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/journee': typeof AuthenticatedJourneeRoute
   '/suivi': typeof AuthenticatedSuiviRoute
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthIndexRoute
@@ -364,6 +382,7 @@ export interface FileRoutesById {
   '/pending': typeof PendingRoute
   '/_authenticated/_admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/journee': typeof AuthenticatedJourneeRoute
   '/_authenticated/suivi': typeof AuthenticatedSuiviRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/auth/': typeof AuthIndexRoute
@@ -385,6 +404,7 @@ export interface FileRouteTypes {
     | ''
     | '/pending'
     | '/dashboard'
+    | '/journee'
     | '/suivi'
     | '/'
     | '/auth'
@@ -403,6 +423,7 @@ export interface FileRouteTypes {
     | '/pending'
     | ''
     | '/dashboard'
+    | '/journee'
     | '/suivi'
     | '/'
     | '/auth'
@@ -422,6 +443,7 @@ export interface FileRouteTypes {
     | '/pending'
     | '/_authenticated/_admin'
     | '/_authenticated/dashboard'
+    | '/_authenticated/journee'
     | '/_authenticated/suivi'
     | '/_authenticated/'
     | '/auth/'
@@ -470,6 +492,7 @@ export const routeTree = rootRoute
       "children": [
         "/_authenticated/_admin",
         "/_authenticated/dashboard",
+        "/_authenticated/journee",
         "/_authenticated/suivi",
         "/_authenticated/",
         "/_authenticated/patient/$patientID",
@@ -495,6 +518,10 @@ export const routeTree = rootRoute
     },
     "/_authenticated/dashboard": {
       "filePath": "_authenticated/dashboard.tsx",
+      "parent": "/_authenticated"
+    },
+    "/_authenticated/journee": {
+      "filePath": "_authenticated/journee.tsx",
       "parent": "/_authenticated"
     },
     "/_authenticated/suivi": {

@@ -64,9 +64,11 @@ La page consomme `useAllSlotsQuery()`, déjà utilisée par le dashboard et par
 partagé : aucune requête supplémentaire, et les mutations existantes qui
 invalident cette clé rafraîchissent aussi l'agenda.
 
-Aucune modification back n'est nécessaire : `GET /slots` renvoie déjà
-`slot.appointments[].appointmentPatients[].patient`, `slot.slotTemplate.soignants`
-et `slot.slotTemplate.location`.
+`GET /slots` renvoie déjà `slot.appointments[].appointmentPatients[].patient`
+et `slot.slotTemplate.soignants`. En revanche `slot.slotTemplate.location`
+n'était pas inclus : il a fallu ajouter `location: true` aux quatre `include`
+de `slotTemplate` dans `slot.repository.ts`. Modification purement additive,
+sans migration, le schéma de réponse autorisant déjà le champ.
 
 #### Helper d'aplatissement
 
@@ -266,4 +268,7 @@ Le front n'a pas d'infrastructure de test (`front/package.json` ne définit que
 - Filtres de colonne et filtre soignant global.
 - Persistance du jour sélectionné entre deux visites ou dans l'URL.
 - Export ou impression du tableau.
-- Toute modification back : ni schéma, ni route, ni repository.
+- Toute modification back, à une exception près : `slot.repository.ts` a dû
+  ajouter `location: true` aux quatre `include` de `slotTemplate` pour que
+  `GET /slots` renvoie le lieu du créneau (voir section Données). Ni schéma,
+  ni route, ni autre repository n'ont été touchés.

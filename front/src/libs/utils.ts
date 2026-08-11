@@ -1,12 +1,14 @@
 import { type ClassValue, clsx } from 'clsx'
-import dayjs from 'dayjs'
+import dayjs, { type Dayjs } from 'dayjs'
 import { twMerge } from 'tailwind-merge'
 
 import type { CalendarEvent } from '../components/custom/Calendar/calendar.tsx'
 import { getContrastTextColor } from './color.ts'
+import type { AppointmentPatient } from '../types/appointmentPatient.ts'
 import type { Pathway } from '../types/pathway.ts'
 import type { Slot } from '../types/slot.ts'
 import type { SlotTemplate } from '../types/slotTemplate.ts'
+import type { Soignant } from '../types/soignant.ts'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -93,6 +95,55 @@ export const buildCalendarEventsFromSlots = (
       },
     }
   })
+}
+
+/**
+ * Une ligne du tableau Agenda : un rendez-vous, enrichi des informations
+ * portées par son créneau (lieu, soignants).
+ */
+export type DayAppointmentRow = {
+  id: string
+  slotId: string
+  startDate: string
+  endDate: string
+  thematic: string
+  location: string
+  soignants: Soignant[]
+  patients: AppointmentPatient[]
+  type?: string
+}
+
+/**
+ * Aplatit les créneaux en rendez-vous, ne garde que ceux du jour demandé
+ * (comparaison en UTC), et trie par heure de début croissante.
+ */
+export const buildDayAppointmentRows = (
+  slots: Slot[] | undefined,
+  day: Dayjs,
+): DayAppointmentRow[] => {
+  if (!slots) {
+    return []
+  }
+
+  return slots
+    .flatMap((slot) =>
+      (slot.appointments ?? [])
+        .filter((appointment) =>
+          dayjs.utc(appointment.startDate).isSame(day, 'day'),
+        )
+        .map((appointment) => ({
+          id: appointment.id,
+          slotId: slot.id,
+          startDate: appointment.startDate,
+          endDate: appointment.endDate,
+          thematic: appointment.thematic ?? slot.slotTemplate?.thematic ?? '',
+          location: slot.slotTemplate?.location?.name ?? '',
+          soignants: slot.slotTemplate?.soignants ?? [],
+          patients: appointment.appointmentPatients ?? [],
+          type: appointment.type,
+        })),
+    )
+    .sort((a, b) => dayjs(a.startDate).valueOf() - dayjs(b.startDate).valueOf())
 }
 
 export const buildCalendarEventsFromSlotTemplates = (
