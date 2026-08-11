@@ -1,9 +1,10 @@
 # Page Agenda : tableau des rendez-vous du jour
 
 Date : 2026-08-11
-Portée : front uniquement. Nouvelle route, nouveau composant sélecteur de jour,
-nouveau fichier de colonnes, un helper dans `libs/utils.ts`, un lien de
-navigation. Aucun changement back, aucune migration.
+Portée : essentiellement front — nouvelle route, nouveau composant sélecteur de
+jour, nouveau fichier de colonnes, un helper dans `libs/utils.ts`, un lien de
+navigation. Côté back, une seule ligne additive (`location: true` dans les
+`include` de `slot.repository.ts`, voir « Données »). Aucune migration.
 
 ## Problème
 
