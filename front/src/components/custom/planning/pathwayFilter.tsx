@@ -1,7 +1,8 @@
-import { Route } from 'lucide-react'
+import { EyeOff, RotateCcw, Route } from 'lucide-react'
 
 import type { PathwayTemplate } from '../../../types/pathwayTemplate.ts'
 import DropdownFilter, {
+  type DropdownFilterAction,
   type DropdownFilterItem,
 } from '../../ui/dropdownFilter.tsx'
 
@@ -14,6 +15,7 @@ type PathwayFilterProps = {
   hiddenIds: Set<string>
   onToggle: (id: string, checked: boolean) => void
   onReset: () => void
+  onHideAll: () => void
 }
 
 function PathwayFilter({
@@ -21,6 +23,7 @@ function PathwayFilter({
   hiddenIds,
   onToggle,
   onReset,
+  onHideAll,
 }: PathwayFilterProps) {
   const toItem = (template: PathwayTemplate): DropdownFilterItem => ({
     id: template.id,
@@ -49,13 +52,20 @@ function PathwayFilter({
       ? `Parcours · ${hiddenCount} masqué${hiddenCount > 1 ? 's' : ''}`
       : 'Parcours'
 
+  // Exactly one of the two actions is offered: reset once something is
+  // hidden, hide-all when everything is visible.
+  const footerAction: DropdownFilterAction =
+    hiddenCount > 0
+      ? { label: 'Tout afficher', icon: RotateCcw, onSelect: onReset }
+      : { label: 'Tout décocher', icon: EyeOff, onSelect: onHideAll }
+
   return (
     <DropdownFilter
       filters={filters}
       onFilterChange={onToggle}
       triggerLabel={triggerLabel}
       TriggerIcon={Route}
-      onReset={hiddenCount > 0 ? onReset : undefined}
+      footerAction={footerAction}
     />
   )
 }

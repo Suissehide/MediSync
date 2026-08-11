@@ -1,5 +1,5 @@
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
-import { Check, Filter, type LucideIcon, RotateCcw } from 'lucide-react'
+import { Check, Filter, type LucideIcon } from 'lucide-react'
 import { Fragment } from 'react'
 
 import { cn } from '../../libs/utils.ts'
@@ -13,21 +13,28 @@ export type DropdownFilterItem = {
   color?: string
 }
 
+/** Single action rendered under a separator at the bottom of the menu. */
+export type DropdownFilterAction = {
+  label: string
+  icon?: LucideIcon
+  onSelect: () => void
+}
+
 const DropdownFilter = ({
   filters,
   onFilterChange,
   triggerLabel = 'Filtres',
   TriggerIcon = Filter,
-  onReset,
-  resetLabel = 'Tout afficher',
+  footerAction,
 }: {
   filters: DropdownFilterItem[]
   onFilterChange: (id: string, checked: boolean) => void
   triggerLabel?: string
   TriggerIcon?: LucideIcon
-  onReset?: () => void
-  resetLabel?: string
+  footerAction?: DropdownFilterAction
 }) => {
+  const FooterIcon = footerAction?.icon
+
   return (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>
@@ -95,18 +102,18 @@ const DropdownFilter = ({
             )
           })}
 
-          {onReset && (
+          {footerAction && (
             <>
               <DropdownMenu.Separator className="my-2 h-px bg-border" />
               <DropdownMenu.Item
                 onSelect={(e) => {
                   e.preventDefault()
-                  onReset()
+                  footerAction.onSelect()
                 }}
                 className="flex items-center gap-2 px-3 py-2 rounded cursor-pointer outline-none hover:bg-primary/20 text-sm select-none"
               >
-                <RotateCcw size={14} />
-                {resetLabel}
+                {FooterIcon && <FooterIcon size={14} />}
+                {footerAction.label}
               </DropdownMenu.Item>
             </>
           )}

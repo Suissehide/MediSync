@@ -181,6 +181,15 @@ function Planning() {
   const handleResetPathwayFilter = useCallback(() => {
     setHiddenPathwayIds(new Set())
   }, [])
+
+  const handleHideAllPathways = useCallback(() => {
+    setHiddenPathwayIds(
+      new Set([
+        NO_PATHWAY_KEY,
+        ...(pathwayTemplates ?? []).map((template) => template.id),
+      ]),
+    )
+  }, [pathwayTemplates])
   const [bulkAction, setBulkAction] = useState('')
   const [duplicateWeekDate, setDuplicateWeekDate] =
     useState<dayjs.Dayjs | null>(null)
@@ -680,6 +689,7 @@ function Planning() {
                 hiddenIds={hiddenPathwayIds}
                 onToggle={handleTogglePathwayFilter}
                 onReset={handleResetPathwayFilter}
+                onHideAll={handleHideAllPathways}
               />
             )}
 
