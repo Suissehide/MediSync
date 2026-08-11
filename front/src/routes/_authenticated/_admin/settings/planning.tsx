@@ -33,6 +33,9 @@ import { RegeneratePathwaysForm } from '../../../../components/custom/popup/rege
 import EventSheet from '../../../../components/custom/sheet/eventSheet.tsx'
 import EventTemplateSheet from '../../../../components/custom/sheet/eventTemplateSheet.tsx'
 import DashboardLayout from '../../../../components/dashboard.layout.tsx'
+import PathwayFilter, {
+  NO_PATHWAY_KEY,
+} from '../../../../components/custom/planning/pathwayFilter.tsx'
 import { Button } from '../../../../components/ui/button.tsx'
 import {
   PopoverAnchor,
@@ -156,6 +159,28 @@ function Planning() {
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [eventTemplates, setEventTemplates] = useState<CalendarEvent[]>([])
   const [selectedSlotIds, setSelectedSlotIds] = useState<Set<string>>(new Set())
+  const [hiddenPathwayIds, setHiddenPathwayIds] = useState<Set<string>>(
+    new Set(),
+  )
+
+  const handleTogglePathwayFilter = useCallback(
+    (id: string, checked: boolean) => {
+      setHiddenPathwayIds((prev) => {
+        const next = new Set(prev)
+        if (checked) {
+          next.delete(id)
+        } else {
+          next.add(id)
+        }
+        return next
+      })
+    },
+    [],
+  )
+
+  const handleResetPathwayFilter = useCallback(() => {
+    setHiddenPathwayIds(new Set())
+  }, [])
   const [bulkAction, setBulkAction] = useState('')
   const [duplicateWeekDate, setDuplicateWeekDate] =
     useState<dayjs.Dayjs | null>(null)
@@ -182,16 +207,27 @@ function Planning() {
     setBulkAction('')
   }, [])
 
-  useEffect(() => {
-    if (slots) {
-      setEvents(
-        buildCalendarEventsFromSlots(
-          slots,
-          editMode ? ['editable'] : ['default'],
-        ),
-      )
+  const visibleSlots = useMemo(() => {
+    if (!slots) {
+      return []
     }
-  }, [slots, editMode])
+    if (hiddenPathwayIds.size === 0) {
+      return slots
+    }
+    return slots.filter(
+      (slot) =>
+        !hiddenPathwayIds.has(slot.pathway?.template?.id ?? NO_PATHWAY_KEY),
+    )
+  }, [slots, hiddenPathwayIds])
+
+  useEffect(() => {
+    setEvents(
+      buildCalendarEventsFromSlots(
+        visibleSlots,
+        editMode ? ['editable'] : ['default'],
+      ),
+    )
+  }, [visibleSlots, editMode])
 
   useEffect(() => {
     if (currentPathwayTemplate?.slotTemplates) {
@@ -638,6 +674,15 @@ function Planning() {
           </h1>
 
           <div className="flex justify-end items-center gap-2">
+            {!editMode && view === 'calendar' && (
+              <PathwayFilter
+                templates={pathwayTemplates ?? []}
+                hiddenIds={hiddenPathwayIds}
+                onToggle={handleTogglePathwayFilter}
+                onReset={handleResetPathwayFilter}
+              />
+            )}
+
             {!editMode && (
               <DropdownMenu.Root>
                 <DropdownMenu.Trigger asChild>
