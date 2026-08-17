@@ -29,8 +29,9 @@ function Agenda() {
   const [deleteTarget, setDeleteTarget] = useState<DayAppointmentRow | null>(
     null,
   )
-  const [addPatientTarget, setAddPatientTarget] =
-    useState<DayAppointmentRow | null>(null)
+  const [addPatientTargetId, setAddPatientTargetId] = useState<string | null>(
+    null,
+  )
 
   const { slots, isPending } = useAllSlotsQuery()
   const { deleteAppointment, updateAppointment } = useAppointmentMutations()
@@ -40,12 +41,14 @@ function Agenda() {
     [slots, selectedDay],
   )
 
+  const addPatientTarget = rows.find((row) => row.id === addPatientTargetId) ?? null
+
   const columns = useMemo(
     () =>
       getDayAppointmentColumns({
         onOpen: (row) => setOpenedRow(row),
         onDelete: (row) => setDeleteTarget(row),
-        onAddPatient: (row) => setAddPatientTarget(row),
+        onAddPatient: (row) => setAddPatientTargetId(row.id),
       }),
     [],
   )
@@ -90,14 +93,14 @@ function Agenda() {
             open={!!addPatientTarget}
             setOpen={(open) => {
               if (!open) {
-                setAddPatientTarget(null)
+                setAddPatientTargetId(null)
               }
             }}
             row={addPatientTarget}
             isPending={updateAppointment.isPending}
             onConfirm={(params) => {
               updateAppointment.mutate(params)
-              setAddPatientTarget(null)
+              setAddPatientTargetId(null)
             }}
           />
         )}
