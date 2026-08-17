@@ -44,6 +44,7 @@ export default function AddPatientToAppointmentForm({
   }, [open])
 
   const remaining = row.capacity - row.patients.length
+  const isFull = remaining <= 0
 
   const patientOptions = useMemo(() => {
     const alreadyIn = new Set(row.patients.map((ap) => ap.patient.id))
@@ -61,6 +62,10 @@ export default function AddPatientToAppointmentForm({
   const handleConfirm = () => {
     if (selectedIDs.length === 0) {
       setError('Au moins un patient est requis')
+      return
+    }
+    if (isFull) {
+      setError('Le rendez-vous est complet')
       return
     }
 
@@ -96,6 +101,12 @@ export default function AddPatientToAppointmentForm({
               {row.capacity > 1 ? 's' : ''}
             </p>
 
+            {isFull && (
+              <p className="text-xs text-destructive">
+                Le rendez-vous est complet
+              </p>
+            )}
+
             <FormField>
               <Label htmlFor="add-patient-select">Patients</Label>
               <MultiSelect
@@ -107,6 +118,7 @@ export default function AddPatientToAppointmentForm({
                 }}
                 placeholder="Sélectionner un ou plusieurs patients"
                 maxSelected={remaining}
+                disabled={isFull}
               />
               {error && <p className="text-xs text-destructive">{error}</p>}
             </FormField>
