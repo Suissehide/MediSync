@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { createColumnHelper } from '@tanstack/react-table'
 import dayjs from 'dayjs'
-import { Eye, Trash2 } from 'lucide-react'
+import { Eye, Plus, Trash2 } from 'lucide-react'
 
 import { Button } from '../components/ui/button.tsx'
 import { APPOINTMENT_TYPE } from '../constants/appointment.constant.ts'
@@ -17,11 +17,13 @@ const MAX_VISIBLE_CHIPS = 3
 type DayAppointmentActions = {
   onOpen: (row: DayAppointmentRow) => void
   onDelete: (row: DayAppointmentRow) => void
+  onAddPatient: (row: DayAppointmentRow) => void
 }
 
 export const getDayAppointmentColumns = ({
   onOpen,
   onDelete,
+  onAddPatient,
 }: DayAppointmentActions) => {
   return [
     columnHelper.accessor('startDate', {
@@ -75,30 +77,54 @@ export const getDayAppointmentColumns = ({
       header: 'Patients',
       size: 280,
       cell: ({ row }) => {
-        const patients = row.original.patients
+        const { patients, isIndividual, capacity } = row.original
+        const canAddPatient = !isIndividual && patients.length < capacity
+
+        const addButton = canAddPatient ? (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Ajouter un patient"
+            className="shrink-0"
+            onClick={() => onAddPatient(row.original)}
+          >
+            <Plus className="w-3 h-3" />
+          </Button>
+        ) : null
+
         if (patients.length === 0) {
-          return '—'
+          return (
+            <div className="flex items-center gap-1">
+              <span>—</span>
+              {addButton}
+            </div>
+          )
         }
+
         const visible = patients.slice(0, MAX_VISIBLE_CHIPS)
         const rest = patients.length - visible.length
+
         return (
-          <div className="flex items-center gap-1 overflow-hidden">
-            {visible.map((appointmentPatient) => (
-              <Link
-                key={appointmentPatient.patient.id}
-                to="/patient/$patientID"
-                params={{ patientID: appointmentPatient.patient.id }}
-                className={`${CHIP_CLASS} hover:bg-primary/20`}
-              >
-                {appointmentPatient.patient.firstName}{' '}
-                {appointmentPatient.patient.lastName}
-              </Link>
-            ))}
-            {rest > 0 && (
-              <span className="shrink-0 text-xs text-muted-foreground font-medium">
-                +{rest}
-              </span>
-            )}
+          <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 overflow-hidden">
+              {visible.map((appointmentPatient) => (
+                <Link
+                  key={appointmentPatient.patient.id}
+                  to="/patient/$patientID"
+                  params={{ patientID: appointmentPatient.patient.id }}
+                  className={`${CHIP_CLASS} hover:bg-primary/20`}
+                >
+                  {appointmentPatient.patient.firstName}{' '}
+                  {appointmentPatient.patient.lastName}
+                </Link>
+              ))}
+              {rest > 0 && (
+                <span className="shrink-0 text-xs text-muted-foreground font-medium">
+                  +{rest}
+                </span>
+              )}
+            </div>
+            {addButton}
           </div>
         )
       },

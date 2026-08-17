@@ -4,6 +4,7 @@ import { CalendarDays } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import { getDayAppointmentColumns } from '../../columns/dayAppointment.column.tsx'
+import AddPatientToAppointmentForm from '../../components/custom/popup/addPatientToAppointmentForm.tsx'
 import { ConfirmDeleteForm } from '../../components/custom/popup/confirmDeleteForm.tsx'
 import AppointmentSheet from '../../components/custom/sheet/appointmentSheet.tsx'
 import WeekDayStrip from '../../components/custom/weekDayStrip.tsx'
@@ -28,9 +29,11 @@ function Agenda() {
   const [deleteTarget, setDeleteTarget] = useState<DayAppointmentRow | null>(
     null,
   )
+  const [addPatientTarget, setAddPatientTarget] =
+    useState<DayAppointmentRow | null>(null)
 
   const { slots, isPending } = useAllSlotsQuery()
-  const { deleteAppointment } = useAppointmentMutations()
+  const { deleteAppointment, updateAppointment } = useAppointmentMutations()
 
   const rows = useMemo(
     () => buildDayAppointmentRows(slots, selectedDay),
@@ -42,6 +45,7 @@ function Agenda() {
       getDayAppointmentColumns({
         onOpen: (row) => setOpenedRow(row),
         onDelete: (row) => setDeleteTarget(row),
+        onAddPatient: (row) => setAddPatientTarget(row),
       }),
     [],
   )
@@ -78,6 +82,23 @@ function Agenda() {
             setOpen={() => setOpenedRow(null)}
             eventID={openedRow.id}
             soignants={openedRow.soignants}
+          />
+        )}
+
+        {addPatientTarget && (
+          <AddPatientToAppointmentForm
+            open={!!addPatientTarget}
+            setOpen={(open) => {
+              if (!open) {
+                setAddPatientTarget(null)
+              }
+            }}
+            row={addPatientTarget}
+            isPending={updateAppointment.isPending}
+            onConfirm={(params) => {
+              updateAppointment.mutate(params)
+              setAddPatientTarget(null)
+            }}
           />
         )}
 
