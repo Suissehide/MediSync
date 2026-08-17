@@ -107,10 +107,13 @@ export type DayAppointmentRow = {
   startDate: string
   endDate: string
   thematic: string
+  thematicId?: string | null
   location: string
   soignants: Soignant[]
   patients: AppointmentPatient[]
   type?: string
+  isIndividual: boolean
+  capacity: number
 }
 
 /**
@@ -137,10 +140,13 @@ export const buildDayAppointmentRows = (
           startDate: appointment.startDate,
           endDate: appointment.endDate,
           thematic: appointment.thematic ?? slot.slotTemplate?.thematic ?? '',
+          thematicId: appointment.thematicId,
           location: slot.slotTemplate?.location?.name ?? '',
           soignants: slot.slotTemplate?.soignants ?? [],
           patients: appointment.appointmentPatients ?? [],
           type: appointment.type,
+          isIndividual: slot.slotTemplate?.isIndividual ?? false,
+          capacity: slot.slotTemplate?.capacity ?? 1,
         })),
     )
     .sort((a, b) => dayjs(a.startDate).valueOf() - dayjs(b.startDate).valueOf())
