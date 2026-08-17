@@ -108,7 +108,7 @@ export default function AddPatientToAppointmentForm({
             )}
 
             <FormField>
-              <Label htmlFor="add-patient-select">Patients</Label>
+              <Label>Patients</Label>
               <MultiSelect
                 options={patientOptions}
                 value={selectedIDs}
