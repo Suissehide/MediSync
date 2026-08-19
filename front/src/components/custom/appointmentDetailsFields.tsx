@@ -19,6 +19,10 @@ interface AppointmentTimeFieldsProps {
   durationFieldId?: string
   startTimeInfo?: ReactNode
   durationInfo?: ReactNode
+  /** Borne inférieure du TimePicker — restreint le choix à un intervalle libre. */
+  minTime?: Dayjs
+  /** Borne supérieure du TimePicker — restreint le choix à un intervalle libre. */
+  maxTime?: Dayjs
 }
 
 export function AppointmentTimeFields({
@@ -32,6 +36,8 @@ export function AppointmentTimeFields({
   durationFieldId,
   startTimeInfo,
   durationInfo,
+  minTime,
+  maxTime,
 }: AppointmentTimeFieldsProps) {
   return (
     <div className="flex flex-wrap gap-2 items-center">
@@ -49,6 +55,8 @@ export function AppointmentTimeFields({
             value={startTime}
             onChange={(time) => onStartTimeChange(time ?? dayjs.utc())}
             disabled={disabled}
+            minTime={minTime}
+            maxTime={maxTime}
           />
           {startTimeInfo}
         </div>
