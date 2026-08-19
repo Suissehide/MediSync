@@ -1,5 +1,5 @@
 import dayjs from 'dayjs'
-import { CalendarPlus, X } from 'lucide-react'
+import { CalendarPlus, Check, X } from 'lucide-react'
 import type React from 'react'
 import { useMemo, useState } from 'react'
 
@@ -7,6 +7,8 @@ import {
   getUpcomingSlotSuggestions,
   type SlotSuggestion,
 } from '../../../libs/slotAvailability.ts'
+import { generateDurationOptions } from '../../../libs/utils.ts'
+import { useAppointmentMutations } from '../../../queries/useAppointment.ts'
 import { usePatientQueries } from '../../../queries/usePatient.tsx'
 import { useAllSlotsQuery } from '../../../queries/useSlot.ts'
 import { useThematicQueries } from '../../../queries/useThematic.ts'
@@ -24,6 +26,10 @@ import {
   PopupTrigger,
 } from '../../ui/popup.tsx'
 import { Select } from '../../ui/select.tsx'
+import {
+  AppointmentTimeFields,
+  AppointmentTypeField,
+} from '../appointmentDetailsFields.tsx'
 
 interface AddPatientToSlotFormProps {
   trigger?: React.ReactNode
@@ -43,6 +49,64 @@ const formatSoignants = (slot: Slot) =>
     ? slot.slotTemplate.soignants.map((soignant) => soignant.name).join(', ')
     : 'Aucun soignant associé'
 
+const roundDownToStep = (minutes: number) =>
+  Math.max(15, Math.floor(minutes / 15) * 15)
+
+/**
+ * Valeurs par défaut d'heure, de durée et de type pour un créneau choisi :
+ * on rejoint le rendez-vous collectif existant s'il y en a un, sinon on
+ * propose l'intervalle libre (individuel) ou le créneau entier (collectif
+ * vide).
+ */
+const getSuggestionDefaults = (
+  suggestion: SlotSuggestion,
+  thematicDuration?: number | null,
+) => {
+  const { slot, isIndividual, freeInterval, joinableAppointmentID } = suggestion
+
+  if (joinableAppointmentID) {
+    // On rejoint un rendez-vous collectif existant : ses valeurs font foi.
+    const existing = slot.appointments?.find(
+      (appointment) => appointment.id === joinableAppointmentID,
+    )
+    return {
+      startTime: dayjs.utc(existing?.startDate ?? slot.startDate),
+      duration: roundDownToStep(
+        dayjs
+          .utc(existing?.endDate ?? slot.endDate)
+          .diff(dayjs.utc(existing?.startDate ?? slot.startDate), 'minute'),
+      ).toString(),
+      appointmentType: existing?.type ?? '',
+    }
+  }
+
+  if (isIndividual && freeInterval) {
+    const intervalStart = dayjs.utc(freeInterval.start)
+    const intervalMinutes = dayjs
+      .utc(freeInterval.end)
+      .diff(intervalStart, 'minute')
+    const defaultDuration =
+      thematicDuration && thematicDuration <= intervalMinutes
+        ? thematicDuration
+        : intervalMinutes
+
+    return {
+      startTime: intervalStart,
+      duration: roundDownToStep(defaultDuration).toString(),
+      appointmentType: '',
+    }
+  }
+
+  // Créneau collectif encore vide : le rendez-vous occupe tout le créneau.
+  return {
+    startTime: dayjs.utc(slot.startDate),
+    duration: roundDownToStep(
+      dayjs.utc(slot.endDate).diff(dayjs.utc(slot.startDate), 'minute'),
+    ).toString(),
+    appointmentType: '',
+  }
+}
+
 const getSuggestionBadge = (suggestion: SlotSuggestion) => {
   if (suggestion.alreadyBooked) {
     return 'déjà inscrit'
@@ -59,6 +123,11 @@ function AddPatientToSlotForm({ trigger }: AddPatientToSlotFormProps) {
   const [patientID, setPatientID] = useState('')
   const [thematicID, setThematicID] = useState('')
   const [selected, setSelected] = useState<SlotSuggestion | null>(null)
+  const [startTime, setStartTime] = useState(dayjs.utc())
+  const [duration, setDuration] = useState('')
+  const [appointmentType, setAppointmentType] = useState('')
+
+  const { createAppointment, updateAppointment } = useAppointmentMutations()
 
   const { slots } = useAllSlotsQuery()
   const { patients } = usePatientQueries()
@@ -95,6 +164,31 @@ function AddPatientToSlotForm({ trigger }: AddPatientToSlotFormProps) {
     (thematic) => thematic.id === thematicID,
   )
 
+  const joinedAppointment = selected?.joinableAppointmentID
+    ? selected.slot.appointments?.find(
+        (appointment) => appointment.id === selected.joinableAppointmentID,
+      )
+    : undefined
+
+  const isJoining = !!joinedAppointment
+  const areTimeFieldsDisabled = isJoining || !selected?.isIndividual
+
+  const durationOptions = useMemo(() => {
+    if (!selected) {
+      return []
+    }
+    if (selected.isIndividual && selected.freeInterval) {
+      return generateDurationOptions(
+        selected.freeInterval.start,
+        selected.freeInterval.end,
+      )
+    }
+    return generateDurationOptions(
+      selected.slot.startDate,
+      selected.slot.endDate,
+    )
+  }, [selected])
+
   const handleOpenChange = (next: boolean) => {
     setOpen(next)
     if (!next) {
@@ -102,6 +196,9 @@ function AddPatientToSlotForm({ trigger }: AddPatientToSlotFormProps) {
       setPatientID('')
       setThematicID('')
       setSelected(null)
+      setStartTime(dayjs.utc())
+      setDuration('')
+      setAppointmentType('')
     }
   }
 
@@ -109,6 +206,15 @@ function AddPatientToSlotForm({ trigger }: AddPatientToSlotFormProps) {
     if (suggestion.alreadyBooked) {
       return
     }
+
+    const defaults = getSuggestionDefaults(
+      suggestion,
+      selectedThematic?.duration,
+    )
+    setStartTime(defaults.startTime)
+    setDuration(defaults.duration)
+    setAppointmentType(defaults.appointmentType)
+
     setSelected(suggestion)
     setStep(2)
   }
@@ -116,6 +222,56 @@ function AddPatientToSlotForm({ trigger }: AddPatientToSlotFormProps) {
   const handleBack = () => {
     setSelected(null)
     setStep(1)
+  }
+
+  const handleConfirm = () => {
+    if (!selected || !patientID) {
+      return
+    }
+
+    if (joinedAppointment) {
+      updateAppointment.mutate(
+        {
+          id: joinedAppointment.id,
+          thematicId: joinedAppointment.thematicId ?? thematicID,
+          type: joinedAppointment.type,
+          appointmentPatients: [
+            ...(joinedAppointment.appointmentPatients ?? []).map(
+              (appointmentPatient) => ({
+                id: appointmentPatient.id,
+                patientID: appointmentPatient.patient.id,
+                accompanying: appointmentPatient.accompanying,
+                status: appointmentPatient.status,
+                rejectionReason: appointmentPatient.rejectionReason,
+                transmissionNotes: appointmentPatient.transmissionNotes,
+              }),
+            ),
+            { patientID },
+          ],
+        },
+        { onSuccess: () => handleOpenChange(false) },
+      )
+      return
+    }
+
+    const start = selected.isIndividual
+      ? startTime
+      : dayjs.utc(selected.slot.startDate)
+    const end = selected.isIndividual
+      ? start.add(Number.parseInt(duration, 10), 'minute')
+      : dayjs.utc(selected.slot.endDate)
+
+    createAppointment.mutate(
+      {
+        startDate: start.toISOString(),
+        endDate: end.toISOString(),
+        slotID: selected.slot.id,
+        thematicId: thematicID,
+        type: appointmentType,
+        patientIDs: [patientID],
+      },
+      { onSuccess: () => handleOpenChange(false) },
+    )
   }
 
   return (
@@ -233,11 +389,48 @@ function AddPatientToSlotForm({ trigger }: AddPatientToSlotFormProps) {
                 <span className="text-text-light">Soignants : </span>
                 {formatSoignants(selected.slot)}
               </div>
+
+              {isJoining && (
+                <p className="text-sm text-text-light">
+                  Vous rejoignez un rendez-vous existant ({selected.bookedCount}
+                  /{selected.capacity} patients).
+                </p>
+              )}
+
+              <AppointmentTimeFields
+                date={selected.slot.startDate}
+                startTime={startTime}
+                onStartTimeChange={setStartTime}
+                duration={duration}
+                onDurationChange={setDuration}
+                durationOptions={durationOptions}
+                disabled={areTimeFieldsDisabled}
+                durationFieldId="appointment-duration"
+              />
+
+              <AppointmentTypeField
+                id="appointment-type"
+                value={appointmentType}
+                onChange={setAppointmentType}
+                disabled={isJoining}
+              />
             </div>
           )}
         </PopupBody>
 
         <PopupFooter>
+          {step === 2 && (
+            <Button
+              variant="default"
+              onClick={handleConfirm}
+              isLoading={
+                createAppointment.isPending || updateAppointment.isPending
+              }
+            >
+              <Check className="w-4 h-4" />
+              Ajouter
+            </Button>
+          )}
           {step === 2 && (
             <Button variant="outline" onClick={handleBack}>
               Retour
