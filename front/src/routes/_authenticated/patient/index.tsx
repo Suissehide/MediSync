@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react'
 import { PatientApi } from '../../../api/patient.api.ts'
 import { getPatientColumns } from '../../../columns/patient.column.tsx'
 import AddPatientForm from '../../../components/custom/popup/addPatientForm.tsx'
+import AddPatientToSlotForm from '../../../components/custom/popup/addPatientToSlotForm.tsx'
 import DashboardLayout from '../../../components/dashboard.layout.tsx'
 import ReactTable from '../../../components/table/reactTable.tsx'
 import { Button } from '../../../components/ui/button.tsx'
@@ -94,7 +95,12 @@ function PatientList() {
   }, [patients, searchTerm, selectedTags])
 
   return (
-    <DashboardLayout quickActions={[<AddPatientForm key="add-patient" />]}>
+    <DashboardLayout
+      quickActions={[
+        <AddPatientForm key="add-patient" />,
+        <AddPatientToSlotForm key="add-patient-to-slot" />,
+      ]}
+    >
       <div className="flex-1 bg-background p-6 rounded-lg flex flex-col w-full gap-3">
         <div className="flex items-center gap-3">
           <Button

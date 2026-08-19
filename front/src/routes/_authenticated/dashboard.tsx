@@ -10,6 +10,7 @@ import Calendar, {
 } from '../../components/custom/Calendar/calendar.tsx'
 import AddAppointmentForm from '../../components/custom/popup/addAppointmentForm.tsx'
 import AddPatientForm from '../../components/custom/popup/addPatientForm.tsx'
+import AddPatientToSlotForm from '../../components/custom/popup/addPatientToSlotForm.tsx'
 import AppointmentSheet from '../../components/custom/sheet/appointmentSheet.tsx'
 import DashboardLayout from '../../components/dashboard.layout.tsx'
 import { SLOT } from '../../constants/process.constant.ts'
@@ -137,7 +138,10 @@ function Dashboard() {
   return (
     <DashboardLayout
       components={['soignant']}
-      quickActions={[<AddPatientForm key="add-patient" />]}
+      quickActions={[
+        <AddPatientForm key="add-patient" />,
+        <AddPatientToSlotForm key="add-patient-to-slot" />,
+      ]}
     >
       <div className="flex-1 bg-background rounded-lg flex flex-col w-full gap-4">
         <div className="flex flex-col h-full">
