@@ -2,7 +2,6 @@ import dayjs from 'dayjs'
 import { Check, X } from 'lucide-react'
 import { useEffect, useMemo } from 'react'
 
-import { APPOINTMENT_TYPE_OPTIONS } from '../../../constants/appointment.constant.ts'
 import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { generateDurationOptions } from '../../../libs/utils.ts'
 import { usePatientQueries } from '../../../queries/usePatient.tsx'
@@ -23,8 +22,11 @@ import {
   PopupHeader,
   PopupTitle,
 } from '../../ui/popup.tsx'
-import { MultiSelect, Select } from '../../ui/select.tsx'
-import { TimePicker } from '../../ui/timePicker.tsx'
+import { MultiSelect } from '../../ui/select.tsx'
+import {
+  AppointmentTimeFields,
+  AppointmentTypeField,
+} from '../appointmentDetailsFields.tsx'
 
 interface AddAppointmentFormProps {
   open: boolean
@@ -134,55 +136,30 @@ function AddAppointmentForm({
             }}
             className="flex flex-col gap-2 max-w-md"
           >
-            <div className="flex flex-wrap gap-2 items-center">
-              <div className="text-sm font-medium">
-                {dayjs
-                  .utc(startDate)
-                  .format('dddd D MMMM')
-                  .replace(/^./, (c) => c.toUpperCase())}
-              </div>
-
-              <form.Field name="startTime">
-                {(field) => (
-                  <FormField className="flex items-center gap-2">
-                    <div className="text-sm text-text-light font-medium mb-0">
-                      à
-                    </div>
-                    <div>
-                      <TimePicker
-                        value={field.state.value}
-                        onChange={(time) =>
-                          field.handleChange(time ?? dayjs.utc())
-                        }
-                        disabled={type === 'multiple'}
-                      />
-                      <FieldInfo field={field} />
-                    </div>
-                  </FormField>
-                )}
-              </form.Field>
-
-              <form.Field name="duration">
-                {(field) => (
-                  <FormField className="flex items-center gap-2">
-                    <div className="text-sm text-text-light font-medium mb-0">
-                      pendant
-                    </div>
-                    <div>
-                      <Select
-                        id={field.name}
-                        options={durationOptions}
-                        value={field.state.value}
-                        onValueChange={(value) => field.handleChange(value)}
-                        disabled={type === 'multiple'}
-                        clearable={false}
-                      />
-                      <FieldInfo field={field} />
-                    </div>
-                  </FormField>
-                )}
-              </form.Field>
-            </div>
+            <form.Field name="startTime">
+              {(startTimeField) => (
+                <form.Field name="duration">
+                  {(durationField) => (
+                    <AppointmentTimeFields
+                      date={startDate}
+                      startTime={startTimeField.state.value}
+                      onStartTimeChange={(time) =>
+                        startTimeField.handleChange(time)
+                      }
+                      duration={durationField.state.value}
+                      onDurationChange={(value) =>
+                        durationField.handleChange(value)
+                      }
+                      durationOptions={durationOptions}
+                      disabled={type === 'multiple'}
+                      durationFieldId={durationField.name}
+                      startTimeInfo={<FieldInfo field={startTimeField} />}
+                      durationInfo={<FieldInfo field={durationField} />}
+                    />
+                  )}
+                </form.Field>
+              )}
+            </form.Field>
 
             {type === 'multiple' && (
               <div className="text-sm text-text-light mb-0">
@@ -220,16 +197,12 @@ function AddAppointmentForm({
 
             <form.Field name="type">
               {(field) => (
-                <FormField>
-                  <Label htmlFor={field.name}>Type</Label>
-                  <Select
-                    id={field.name}
-                    options={APPOINTMENT_TYPE_OPTIONS}
-                    value={field.state.value}
-                    onValueChange={(value) => field.handleChange(value)}
-                  />
-                  <FieldInfo field={field} />
-                </FormField>
+                <AppointmentTypeField
+                  id={field.name}
+                  value={field.state.value}
+                  onChange={(value) => field.handleChange(value)}
+                  info={<FieldInfo field={field} />}
+                />
               )}
             </form.Field>
 
