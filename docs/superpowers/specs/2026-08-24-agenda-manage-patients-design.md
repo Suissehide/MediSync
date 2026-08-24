@@ -77,7 +77,7 @@ Changements par rapport à l'état actuel de
 | --- | --- |
 | `selectedIDs` initialisé à `[]` | initialisé aux ids des patients inscrits |
 | les patients inscrits sont retirés des options | ils y figurent, et sont cochés |
-| `maxSelected={remaining}` | `maxSelected={row.capacity}` — total, pas restant |
+| `maxSelected={remaining}` | prop retirée ; le plafond est appliqué dans `onChange` |
 | `disabled={isFull}` sur le `MultiSelect` | supprimé |
 | bandeau « Le rendez-vous est complet » | supprimé |
 | garde `isFull` dans `handleConfirm` | supprimée |
@@ -86,10 +86,34 @@ Changements par rapport à l'état actuel de
 
 **Le garde-fou `isFull` doit disparaître.** Il avait été ajouté pour contourner
 le fait que `MultiSelect` traite `maxSelected={0}` comme « pas de limite »
-(`select.tsx`, `!maxSelected || value.length < maxSelected`). Ce contournement
-n'a plus lieu d'être : `maxSelected` vaut maintenant `capacity`, qui n'est jamais
-nul. Le conserver rendrait un rendez-vous complet impossible à modifier — soit
-exactement l'inverse du but recherché.
+(`select.tsx`, `!maxSelected || value.length < maxSelected`). Le conserver
+rendrait un rendez-vous complet impossible à modifier — soit exactement
+l'inverse du but recherché.
+
+**Le plafond est appliqué dans la popup, pas délégué à `MultiSelect`.** La prop
+`maxSelected` n'est plus passée du tout, et `onChange` filtre :
+
+```tsx
+onChange={(next) => {
+  if (next.length <= selectedIDs.length || next.length <= row.capacity) {
+    setSelectedIDs(next)
+  }
+}}
+```
+
+La première clause autorise toujours une désélection, la seconde plafonne les
+ajouts. Deux raisons de ne pas s'en remettre à `maxSelected` :
+
+- avec `maxSelected === 1`, `select.tsx` **remplace** la sélection au lieu de la
+  bloquer. Or `capacity` est `Int?` sans minimum côté Prisma comme côté Zod, et
+  `buildDayAppointmentRows` retombe sur `1` : un modèle collectif à capacité
+  vide se présente donc comme capacité 1, et un simple clic écraserait un
+  participant — avec ses transmissions — sans confirmation ;
+- avec `maxSelected === 0`, `!maxSelected` étant vrai, le plafond disparaîtrait
+  entièrement. Le `?? 1` de `buildDayAppointmentRows` n'intercepte pas un `0`
+  littéral.
+
+Ne plus passer la prop rend ces deux branches inatteignables depuis cette popup.
 
 **Initialisation.** Le `useEffect` de remise à zéro sur `open` est remplacé par
 un initialiseur paresseux de `useState` :
