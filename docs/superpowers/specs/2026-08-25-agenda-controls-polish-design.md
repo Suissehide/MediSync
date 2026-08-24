@@ -48,6 +48,29 @@ Nouvel ordre dans l'en-tête de `/agenda` :
   instable   stable      ← le bandeau, à droite, ne bouge jamais
 ```
 
+### Une limite au raisonnement : le bord droit n'est pinné que sans retour à la ligne
+
+Le raisonnement ci-dessus suppose que le bord droit du groupe est fixe. C'est
+vrai tant que le titre et le groupe de contrôles tiennent sur une seule ligne.
+Mais le conteneur qui les porte est `flex justify-between items-center gap-3
+flex-wrap` : sous ~1200–1320px de largeur de viewport, il retourne à la ligne,
+et **chaque ligne flex se justifie alors indépendamment**. Une ligne qui ne
+contient plus qu'un seul élément — le groupe de contrôles, une fois le titre
+passé sur sa propre ligne — voit cet élément posé à `flex-start`, pas à
+`flex-end`. Le bord gauche du groupe devient le bord fixe, et insérer un
+élément instable en tête du groupe pousse alors tout ce qui le suit vers la
+droite : c'est exactement le bug d'origine, reproduit dans ce régime de
+largeur plutôt que dans l'autre.
+
+Réordonner ne suffit donc pas à lui seul. La correction retenue ne s'appuie
+pas sur cette prémisse : voir « Conséquence structurelle » ci-dessous, le
+bouton `Aujourd'hui` reste **toujours monté** et seule sa visibilité change,
+si bien que la largeur du groupe ne varie jamais — ni quand la ligne est
+justifiée à droite, ni quand elle est justifiée à gauche. Le réordonnancement
+en tête de groupe est conservé (il rapproche les contrôles connexes et prépare
+la cohérence avec `/suivi`), mais ce n'est plus lui qui empêche le bandeau de
+bouger.
+
 ### Conséquence structurelle : `Aujourd'hui` sort de `WeekDayStrip`
 
 Le bouton vit aujourd'hui **dans** `front/src/components/custom/weekDayStrip.tsx`,
@@ -58,18 +81,32 @@ page — il faut le remonter dans la page.
 bandeau : flèches et sept jours. Ses props (`value`, `onChange`) ne changent
 pas.
 
-La page porte désormais les deux contrôles auxiliaires. Elle recalcule le jour
-courant pour décider d'afficher le bouton :
+La page porte désormais les deux contrôles auxiliaires. Le bouton n'est plus
+rendu conditionnellement : il reste toujours monté, pour que la largeur du
+groupe ne dépende jamais de sa présence, et seule sa visibilité change selon
+le jour courant :
 
 ```tsx
 const today = dayjs.utc().startOf('day')
 // …
-{!selectedDay.isSame(today, 'day') && (
-  <Button variant="outline" onClick={() => handleDayChange(today)}>
-    Aujourd&apos;hui
-  </Button>
-)}
+<Button
+  variant="outline"
+  onClick={() => handleDayChange(today)}
+  className={
+    selectedDay.isSame(today, 'day')
+      ? 'invisible pointer-events-none'
+      : undefined
+  }
+>
+  Aujourd&apos;hui
+</Button>
 ```
+
+`visibility: hidden` conserve la boîte de l'élément dans le flux — la largeur
+du groupe ne varie donc jamais, quel que soit le régime de justification —
+tout en le retirant de l'ordre de tabulation et de l'arbre d'accessibilité.
+`pointer-events-none` neutralise la zone morte. Aucune gestion manuelle
+d'`aria-hidden` ou de `tabIndex` n'est nécessaire.
 
 Les trois éléments restent dans le conteneur `flex items-center gap-2` déjà
 présent à droite de l'en-tête ; seul leur ordre change, et le bouton calendrier
