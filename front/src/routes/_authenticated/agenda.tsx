@@ -103,11 +103,17 @@ function Agenda() {
           </div>
 
           <div className="flex items-center gap-2">
-            {!selectedDay.isSame(today, 'day') && (
-              <Button variant="outline" onClick={() => handleDayChange(today)}>
-                Aujourd&apos;hui
-              </Button>
-            )}
+            <Button
+              variant="outline"
+              onClick={() => handleDayChange(today)}
+              className={
+                selectedDay.isSame(today, 'day')
+                  ? 'invisible pointer-events-none'
+                  : undefined
+              }
+            >
+              Aujourd&apos;hui
+            </Button>
 
             <PopoverRoot>
               <PopoverTrigger asChild>

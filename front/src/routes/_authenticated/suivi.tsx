@@ -202,7 +202,12 @@ function SuiviPage() {
           <div className="flex items-center gap-1">
             <PopoverRoot>
               <PopoverTrigger asChild>
-                <Button type="button" variant="outline" size="icon">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  aria-label="Choisir un mois"
+                >
                   <CalendarDays className="w-4 h-4" />
                 </Button>
               </PopoverTrigger>
