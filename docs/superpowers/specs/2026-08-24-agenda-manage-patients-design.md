@@ -179,10 +179,14 @@ la ligne. Aucune UI nouvelle, et la suppression emprunte le chemin explicite.
 - `DayAppointmentRow` et `buildDayAppointmentRows` : aucun champ nouveau.
 - Les colonnes autres que Patients.
 - Le bandeau semaine `WeekDayStrip`.
-- `front/src/components/ui/select.tsx` : toujours partagé, toujours pas touché.
-  Conséquence connue et acceptée : sur un créneau de capacité 1, `MultiSelect`
-  bascule dans sa branche `maxSelected === 1` et remplace la sélection au lieu de
-  la bloquer. C'est cohérent avec le comportement du panneau latéral.
+- `front/src/components/ui/select.tsx` : toujours partagé, toujours pas touché
+  — d'autres écrans dépendent de sa branche `maxSelected === 1`, qui bascule la
+  sélection au lieu de la bloquer. Cette branche reste inutilisée ici : la
+  popup n'appelle plus `maxSelected`, et son propre `onChange` plafonne
+  localement les ajouts à `row.capacity` (une désélection est toujours
+  acceptée, un ajout au-delà de la capacité est ignoré). Le risque de swap
+  silencieux décrit plus haut est ainsi neutralisé dans la popup elle-même,
+  sans dépendre du comportement du panneau latéral.
 - L'absence d'invalidation de cache dans la page : `updateAppointment` et
   `deleteAppointment` invalident déjà `[APPOINTMENT.GET_ALL]` et
   `[SLOT.GET_ALL]` et affichent leurs propres toasts.
