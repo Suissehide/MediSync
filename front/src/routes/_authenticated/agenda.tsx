@@ -118,6 +118,7 @@ function Agenda() {
           filterId="day-appointment"
           isLoading={isPending}
           emptyState="Aucun rendez-vous ce jour-là"
+          autoRowHeight
         />
 
         {openedRow && (
