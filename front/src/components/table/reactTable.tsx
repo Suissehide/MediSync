@@ -63,6 +63,7 @@ type ReactTableProps<TData extends { id: string }> = {
   emptyState?: ReactNode
   isRowDisabled?: (row: TData) => boolean
   isLoading?: boolean
+  autoRowHeight?: boolean
 }
 
 export function ReactTable<TData extends { id: string }>({
@@ -77,6 +78,7 @@ export function ReactTable<TData extends { id: string }>({
   emptyState,
   isRowDisabled,
   isLoading,
+  autoRowHeight,
 }: ReactTableProps<TData>) {
   const initialColumnFilters = safeParse(
     localStorage.getItem(`filters/${filterId}`),
@@ -210,6 +212,7 @@ export function ReactTable<TData extends { id: string }>({
               getCommonPinningStyles={getCommonPinningStyles}
               parentRef={tableContainerRef}
               rowHeight={40}
+              autoRowHeight={autoRowHeight}
               onRowClick={onRowClick}
               emptyState={emptyState}
               isRowDisabled={isRowDisabled}
