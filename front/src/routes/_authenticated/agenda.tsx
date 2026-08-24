@@ -24,7 +24,7 @@ import {
   type DayAppointmentRow,
 } from '../../libs/utils.ts'
 import { useAppointmentMutations } from '../../queries/useAppointment.ts'
-import { useAllSlotsQuery } from '../../queries/useSlot.ts'
+import { useSlotsInRangeQuery } from '../../queries/useSlot.ts'
 
 export const Route = createFileRoute('/_authenticated/agenda')({
   component: Agenda,
@@ -52,7 +52,16 @@ function Agenda() {
     localStorage.setItem(SELECTED_DAY_STORAGE_KEY, day.format('YYYY-MM-DD'))
   }
 
-  const { slots, isPending } = useAllSlotsQuery()
+  // L'agenda n'affiche qu'une journée : inutile de charger tout l'historique.
+  // `to` est exclusive, donc le lendemain, sinon la journée serait amputée.
+  const dayRange = useMemo(
+    () => ({
+      from: selectedDay.utc().format('YYYY-MM-DD'),
+      to: selectedDay.utc().add(1, 'day').format('YYYY-MM-DD'),
+    }),
+    [selectedDay],
+  )
+  const { slots, isPending } = useSlotsInRangeQuery(dayRange)
   const { deleteAppointment, updateAppointment } = useAppointmentMutations()
 
   const rows = useMemo(

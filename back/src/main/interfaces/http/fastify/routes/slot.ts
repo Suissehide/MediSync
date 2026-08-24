@@ -9,6 +9,8 @@ import {
   deleteSlotByIdParamsSchema,
   type GetSlotByIdParams,
   getSlotByIdParamsSchema,
+  type GetSlotsQuery,
+  getSlotsQuerySchema,
   slotResponseSchema,
   slotsResponseSchema,
   type UpdateSlotBody,
@@ -21,10 +23,11 @@ const slotRouter: FastifyPluginAsync = (fastify) => {
   const { slotDomain, slotTemplateDomain, logger } = iocContainer
 
   // Get all
-  fastify.get(
+  fastify.get<{ Querystring: GetSlotsQuery }>(
     '/',
     {
       schema: {
+        querystring: getSlotsQuerySchema,
         response: {
           200: slotsResponseSchema,
           404: z.object({ message: z.string() }),
@@ -32,8 +35,9 @@ const slotRouter: FastifyPluginAsync = (fastify) => {
       },
       onRequest: [fastify.verifySessionCookie],
     },
-    async () => {
-      return await slotDomain.findAll()
+    async (request) => {
+      const { from, to } = request.query
+      return await slotDomain.findAll({ from, to })
     },
   )
 

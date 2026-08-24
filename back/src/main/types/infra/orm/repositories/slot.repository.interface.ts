@@ -40,8 +40,14 @@ export type SlotUpdateEntityRepo = Omit<
   }
 }
 
+/** Fenêtre temporelle optionnelle, bornes incluses ou non renseignées. */
+export type SlotDateRangeRepo = {
+  from?: Date
+  to?: Date
+}
+
 export interface SlotRepositoryInterface {
-  findAll: () => Promise<SlotDTORepo[]>
+  findAll: (dateRange?: SlotDateRangeRepo) => Promise<SlotDTORepo[]>
   findByID: (id: string) => Promise<SlotDTORepo>
   create: (slotCreateParams: SlotCreateEntityRepo) => Promise<SlotDTORepo>
   update: (

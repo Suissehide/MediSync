@@ -66,13 +66,16 @@ import {
 } from '../../../../queries/usePathway.ts'
 import { usePathwayTemplateQueries } from '../../../../queries/usePathwayTemplate.ts'
 import {
-  useAllSlotsQuery,
   useSlotMutations,
+  useSlotsInRangeQuery,
 } from '../../../../queries/useSlot.ts'
 import { useSlotTemplateMutations } from '../../../../queries/useSlotTemplate.ts'
 import { usePathwayTemplateEditStore } from '../../../../store/usePathwayTemplateEditStore.ts'
 import { usePlanningStore } from '../../../../store/usePlanningStore.ts'
-import type { CreateSlotParamsWithTemplateData } from '../../../../types/slot.ts'
+import type {
+  CreateSlotParamsWithTemplateData,
+  SlotDateRange,
+} from '../../../../types/slot.ts'
 
 export const Route = createFileRoute(
   '/_authenticated/_admin/settings/planning',
@@ -81,7 +84,15 @@ export const Route = createFileRoute(
 })
 
 function Planning() {
-  const { slots } = useAllSlotsQuery()
+  // La plage n'est connue qu'une fois le calendrier monté : la page s'affiche
+  // d'abord, les créneaux de la semaine visible arrivent ensuite.
+  const [visibleRange, setVisibleRange] = useState<SlotDateRange | null>(null)
+  const handleRangeChange = useCallback((next: SlotDateRange) => {
+    setVisibleRange((prev) =>
+      prev && prev.from === next.from && prev.to === next.to ? prev : next,
+    )
+  }, [])
+  const { slots } = useSlotsInRangeQuery(visibleRange)
   const { pathways } = usePathwayQueries()
   const { pathwayTemplates } = usePathwayTemplateQueries()
   const { createSlot, updateSlot, deleteSlot } = useSlotMutations()
@@ -824,6 +835,7 @@ function Planning() {
                 onToggleLock={handleToggleLock}
                 selectedSlotIds={selectedSlotIds}
                 onToggleSelect={handleToggleSelect}
+                onRangeChange={handleRangeChange}
                 weekAnchorDate={editMode ? startDate : undefined}
                 headerToolbar={
                   editMode ? { left: 'title', right: 'prev,next' } : undefined

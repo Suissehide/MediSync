@@ -1,6 +1,7 @@
 import type { IocContainer } from '../../../types/application/ioc'
 import type {
   SlotCreateEntityRepo,
+  SlotDateRangeRepo,
   SlotDTORepo,
   SlotEntityRepo,
   SlotRepositoryInterface,
@@ -18,8 +19,14 @@ class SlotRepository implements SlotRepositoryInterface {
     this.errorHandler = errorHandler
   }
 
-  findAll(): Promise<SlotDTORepo[]> {
+  findAll(dateRange?: SlotDateRangeRepo): Promise<SlotDTORepo[]> {
     return this.prisma.slot.findMany({
+      // Un créneau est retenu dès qu'il chevauche la fenêtre : il doit finir
+      // après le début demandé et commencer avant la fin demandée.
+      where: {
+        ...(dateRange?.from ? { endDate: { gt: dateRange.from } } : {}),
+        ...(dateRange?.to ? { startDate: { lt: dateRange.to } } : {}),
+      },
       include: {
         slotTemplate: {
           include: {

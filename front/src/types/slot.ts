@@ -16,6 +16,15 @@ export type Slot = {
   slotTemplate: SlotTemplate
 }
 
+/**
+ * Fenêtre demandée au serveur. Bornes en date seule (YYYY-MM-DD), interprétées
+ * en UTC : `to` est exclusive, comme la fin de plage de FullCalendar.
+ */
+export type SlotDateRange = {
+  from: string
+  to: string
+}
+
 export type CreateSlotParams = Pick<Slot, 'startDate' | 'endDate'> & {
   pathwayID?: string
 }
