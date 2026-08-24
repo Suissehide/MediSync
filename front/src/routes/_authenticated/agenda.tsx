@@ -5,7 +5,9 @@ import { CalendarDays } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import { getDayAppointmentColumns } from '../../columns/dayAppointment.column.tsx'
+import AddPatientForm from '../../components/custom/popup/addPatientForm.tsx'
 import AddPatientToAppointmentForm from '../../components/custom/popup/addPatientToAppointmentForm.tsx'
+import AddPatientToSlotForm from '../../components/custom/popup/addPatientToSlotForm.tsx'
 import { ConfirmDeleteForm } from '../../components/custom/popup/confirmDeleteForm.tsx'
 import AppointmentSheet from '../../components/custom/sheet/appointmentSheet.tsx'
 import WeekDayStrip from '../../components/custom/weekDayStrip.tsx'
@@ -61,7 +63,12 @@ function Agenda() {
   )
 
   return (
-    <DashboardLayout>
+    <DashboardLayout
+      quickActions={[
+        <AddPatientForm key="add-patient" />,
+        <AddPatientToSlotForm key="add-patient-to-slot" />,
+      ]}
+    >
       <div className="flex-1 bg-background p-6 rounded-lg flex flex-col w-full gap-4">
         <div className="flex justify-between items-center gap-3 flex-wrap">
           <div className="flex gap-2 items-center">

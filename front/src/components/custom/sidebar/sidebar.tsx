@@ -70,15 +70,8 @@ function Sidebar({ isVisible, components, quickActions }: SidebarProps) {
               <div className="flex items-center gap-2 px-4 py-2 mt-4 uppercase text-xs text-text-sidebar">
                 Actions rapides <Zap className="w-3 h-3" />
               </div>
-              <div className="flex flex-col border-t border-border-sidebar">
-                {quickActions.map((action, i) => (
-                  <Fragment key={i}>
-                    {i > 0 && (
-                      <div className="border-t border-border-sidebar" />
-                    )}
-                    <div className="px-3 py-2 w-full">{action}</div>
-                  </Fragment>
-                ))}
+              <div className="flex flex-col gap-2 px-3 py-2 border-t border-border-sidebar">
+                {quickActions}
               </div>
             </div>
           )}

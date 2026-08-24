@@ -11,6 +11,8 @@ import dayjs, { type Dayjs } from 'dayjs'
 import { CalendarDays, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react'
 
+import AddPatientForm from '../../components/custom/popup/addPatientForm.tsx'
+import AddPatientToSlotForm from '../../components/custom/popup/addPatientToSlotForm.tsx'
 import DashboardLayout from '../../components/dashboard.layout.tsx'
 import { HeaderTable } from '../../components/table/headerTable.tsx'
 import type { CustomMeta } from '../../components/table/reactTable.tsx'
@@ -187,7 +189,12 @@ function SuiviPage() {
   const nextMonth = () => setDate((d) => d.add(1, 'month'))
 
   return (
-    <DashboardLayout>
+    <DashboardLayout
+      quickActions={[
+        <AddPatientForm key="add-patient" />,
+        <AddPatientToSlotForm key="add-patient-to-slot" />,
+      ]}
+    >
       <div className="flex-1 bg-background rounded-lg flex flex-col w-full gap-4">
         <div className="px-6 mt-4 mb-6 flex justify-between items-center gap-4">
           <h1 className="text-2xl font-bold">Suivi</h1>
