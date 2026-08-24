@@ -115,10 +115,10 @@ export default function CoverPage({
   const firstPathway = pathways[0]
   let programLabel = 'Programme'
   if (firstPathway) {
-    if (firstPathway.templateTags.length > 0) {
-      programLabel = firstPathway.templateTags.join(' / ')
-    } else if (firstPathway.templateName) {
+    if (firstPathway.templateName) {
       programLabel = firstPathway.templateName
+    } else if (firstPathway.templateTags.length > 0) {
+      programLabel = firstPathway.templateTags.join(' / ')
     }
   }
 
