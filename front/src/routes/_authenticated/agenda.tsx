@@ -136,6 +136,10 @@ function Agenda() {
               updateAppointment.mutate(params)
               setAddPatientTargetId(null)
             }}
+            onRequestDelete={() => {
+              setDeleteTarget(addPatientTarget)
+              setAddPatientTargetId(null)
+            }}
           />
         )}
 

@@ -77,14 +77,14 @@ export const getDayAppointmentColumns = ({
       header: 'Patients',
       size: 280,
       cell: ({ row }) => {
-        const { patients, isIndividual, capacity } = row.original
-        const canAddPatient = !isIndividual && patients.length < capacity
+        const { patients, isIndividual } = row.original
+        const canAddPatient = !isIndividual
 
         const addButton = canAddPatient ? (
           <Button
             variant="ghost"
             size="icon-sm"
-            aria-label="Ajouter un patient"
+            aria-label="Gérer les patients"
             className="shrink-0"
             onClick={() => onAddPatient(row.original)}
           >

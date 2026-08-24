@@ -1,5 +1,5 @@
 import { Check, X } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 
 import type { DayAppointmentRow } from '../../../libs/utils.ts'
 import { usePatientQueries } from '../../../queries/usePatient.tsx'
@@ -22,6 +22,7 @@ type AddPatientToAppointmentFormProps = {
   setOpen: (open: boolean) => void
   row: DayAppointmentRow
   onConfirm: (params: UpdateAppointmentParams) => void
+  onRequestDelete: () => void
   isPending?: boolean
 }
 
@@ -30,26 +31,16 @@ export default function AddPatientToAppointmentForm({
   setOpen,
   row,
   onConfirm,
+  onRequestDelete,
   isPending = false,
 }: AddPatientToAppointmentFormProps) {
   const { patients } = usePatientQueries()
-  const [selectedIDs, setSelectedIDs] = useState<string[]>([])
-  const [error, setError] = useState('')
-
-  useEffect(() => {
-    if (open) {
-      setSelectedIDs([])
-      setError('')
-    }
-  }, [open])
-
-  const remaining = row.capacity - row.patients.length
-  const isFull = remaining <= 0
+  const [selectedIDs, setSelectedIDs] = useState<string[]>(() =>
+    row.patients.map((appointmentPatient) => appointmentPatient.patient.id),
+  )
 
   const patientOptions = useMemo(() => {
-    const alreadyIn = new Set(row.patients.map((ap) => ap.patient.id))
     return (patients ?? [])
-      .filter((patient) => !alreadyIn.has(patient.id))
       .map((patient) => ({
         value: patient.id,
         label: `${patient.firstName} ${patient.lastName}`,
@@ -57,15 +48,11 @@ export default function AddPatientToAppointmentForm({
       }))
       .sort((a, b) => a.sortKey.localeCompare(b.sortKey, 'fr'))
       .map(({ value, label }) => ({ value, label }))
-  }, [patients, row.patients])
+  }, [patients])
 
   const handleConfirm = () => {
     if (selectedIDs.length === 0) {
-      setError('Au moins un patient est requis')
-      return
-    }
-    if (isFull) {
-      setError('Le rendez-vous est complet')
+      onRequestDelete()
       return
     }
 
@@ -73,17 +60,22 @@ export default function AddPatientToAppointmentForm({
       id: row.id,
       thematicId: row.thematicId,
       type: row.type,
-      appointmentPatients: [
-        ...row.patients.map((appointmentPatient) => ({
-          id: appointmentPatient.id,
-          patientID: appointmentPatient.patient.id,
-          accompanying: appointmentPatient.accompanying,
-          status: appointmentPatient.status,
-          rejectionReason: appointmentPatient.rejectionReason,
-          transmissionNotes: appointmentPatient.transmissionNotes,
-        })),
-        ...selectedIDs.map((patientID) => ({ patientID })),
-      ],
+      appointmentPatients: selectedIDs.map((patientID) => {
+        const existing = row.patients.find(
+          (appointmentPatient) => appointmentPatient.patient.id === patientID,
+        )
+
+        return existing
+          ? {
+              id: existing.id,
+              patientID,
+              accompanying: existing.accompanying,
+              status: existing.status,
+              rejectionReason: existing.rejectionReason,
+              transmissionNotes: existing.transmissionNotes,
+            }
+          : { patientID }
+      }),
     })
   }
 
@@ -91,36 +83,25 @@ export default function AddPatientToAppointmentForm({
     <Popup modal open={open} onOpenChange={setOpen}>
       <PopupContent>
         <PopupHeader>
-          <PopupTitle>Ajouter un patient</PopupTitle>
+          <PopupTitle>Patients du rendez-vous</PopupTitle>
         </PopupHeader>
 
         <PopupBody>
           <div className="flex flex-col gap-2 max-w-md">
             <p className="text-sm text-text-light">
-              {row.patients.length}/{row.capacity} patient
+              {selectedIDs.length}/{row.capacity} patient
               {row.capacity > 1 ? 's' : ''}
             </p>
-
-            {isFull && (
-              <p className="text-xs text-destructive">
-                Le rendez-vous est complet
-              </p>
-            )}
 
             <FormField>
               <Label>Patients</Label>
               <MultiSelect
                 options={patientOptions}
                 value={selectedIDs}
-                onChange={(value) => {
-                  setSelectedIDs(value)
-                  setError('')
-                }}
+                onChange={setSelectedIDs}
                 placeholder="Sélectionner un ou plusieurs patients"
-                maxSelected={remaining}
-                disabled={isFull}
+                maxSelected={row.capacity}
               />
-              {error && <p className="text-xs text-destructive">{error}</p>}
             </FormField>
           </div>
         </PopupBody>
@@ -132,7 +113,7 @@ export default function AddPatientToAppointmentForm({
             isLoading={isPending}
           >
             <Check className="w-4 h-4" />
-            Ajouter
+            Valider
           </Button>
           <Button variant="outline" onClick={() => setOpen(false)}>
             <X className="w-4 h-4" />
