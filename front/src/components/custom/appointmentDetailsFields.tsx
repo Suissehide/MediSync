@@ -10,6 +10,8 @@ import { TimePicker } from '../ui/timePicker.tsx'
 interface AppointmentTimeFieldsProps {
   /** Date ISO du créneau, affichée en toutes lettres. */
   date: string
+  /** Masque la date quand le contexte l'affiche déjà ailleurs. */
+  showDate?: boolean
   startTime: Dayjs
   onStartTimeChange: (value: Dayjs) => void
   duration: string
@@ -27,6 +29,7 @@ interface AppointmentTimeFieldsProps {
 
 export function AppointmentTimeFields({
   date,
+  showDate = true,
   startTime,
   onStartTimeChange,
   duration,
@@ -41,12 +44,14 @@ export function AppointmentTimeFields({
 }: AppointmentTimeFieldsProps) {
   return (
     <div className="flex flex-wrap gap-2 items-center">
-      <div className="text-sm font-medium">
-        {dayjs
-          .utc(date)
-          .format('dddd D MMMM')
-          .replace(/^./, (c) => c.toUpperCase())}
-      </div>
+      {showDate && (
+        <div className="text-sm font-medium">
+          {dayjs
+            .utc(date)
+            .format('dddd D MMMM')
+            .replace(/^./, (c) => c.toUpperCase())}
+        </div>
+      )}
 
       <FormField className="flex items-center gap-2">
         <div className="text-sm text-text-light font-medium mb-0">à</div>

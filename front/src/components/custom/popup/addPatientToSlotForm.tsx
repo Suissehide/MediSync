@@ -1,5 +1,5 @@
 import dayjs, { type Dayjs } from 'dayjs'
-import { CalendarPlus, Check, X } from 'lucide-react'
+import { Check, X } from 'lucide-react'
 import type React from 'react'
 import { useMemo, useState } from 'react'
 
@@ -10,7 +10,7 @@ import {
   getUpcomingSlotSuggestions,
   type SlotSuggestion,
 } from '../../../libs/slotAvailability.ts'
-import { generateDurationOptions } from '../../../libs/utils.ts'
+import { cn, generateDurationOptions } from '../../../libs/utils.ts'
 import { useAppointmentMutations } from '../../../queries/useAppointment.ts'
 import { usePatientQueries } from '../../../queries/usePatient.tsx'
 import { useAllSlotsQuery } from '../../../queries/useSlot.ts'
@@ -37,6 +37,77 @@ import {
 
 interface AddPatientToSlotFormProps {
   trigger?: React.ReactNode
+}
+
+/**
+ * Message d'attente à la place de la liste des créneaux — cadre en pointillés
+ * pour le distinguer d'un libellé de champ.
+ */
+const EmptySlotList = ({ children }: { children: React.ReactNode }) => (
+  <div className="flex items-center justify-center px-4 py-8 text-sm text-center text-text-light border border-dashed border-border rounded-lg">
+    {children}
+  </div>
+)
+
+/**
+ * Une ligne de la liste des créneaux. Un créneau complet s'affiche en rouge et
+ * un créneau déjà pris par le patient s'estompe ; ni l'un ni l'autre n'est
+ * cliquable.
+ */
+const SlotSuggestionRow = ({
+  suggestion,
+  onSelect,
+}: {
+  suggestion: SlotSuggestion
+  onSelect: (suggestion: SlotSuggestion) => void
+}) => {
+  const isSelectable = !suggestion.alreadyBooked && !suggestion.isFull
+
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={() => onSelect(suggestion)}
+        disabled={!isSelectable}
+        className={cn(
+          'flex items-center gap-3 w-full text-left px-3 py-2 transition-colors',
+          isSelectable ? 'cursor-pointer hover:bg-card' : 'cursor-not-allowed',
+          suggestion.isFull && 'text-destructive',
+          suggestion.alreadyBooked && !suggestion.isFull && 'opacity-50',
+        )}
+      >
+        <span
+          className="w-2.5 h-2.5 rounded-full shrink-0"
+          style={{
+            backgroundColor: suggestion.slot.slotTemplate?.color ?? '#2563eb',
+          }}
+        />
+        <span className="flex flex-col min-w-0 flex-1">
+          <span className="text-sm font-medium">
+            {`${formatSlotDate(suggestion.slot.startDate)} · ${formatSlotRange(suggestion.slot.startDate, suggestion.slot.endDate)}`}
+          </span>
+          <span
+            className={cn(
+              'text-xs truncate',
+              suggestion.isFull ? 'text-destructive/80' : 'text-text-light',
+            )}
+          >
+            {formatSoignants(suggestion.slot)}
+          </span>
+        </span>
+        <span
+          className={cn(
+            'text-xs shrink-0',
+            suggestion.isFull
+              ? 'text-destructive font-medium'
+              : 'text-text-light',
+          )}
+        >
+          {getSuggestionBadge(suggestion)}
+        </span>
+      </button>
+    </li>
+  )
 }
 
 const formatSlotDate = (date: string) =>
@@ -114,6 +185,11 @@ const getSuggestionDefaults = (
 const getSuggestionBadge = (suggestion: SlotSuggestion) => {
   if (suggestion.alreadyBooked) {
     return 'déjà inscrit'
+  }
+  if (suggestion.isFull) {
+    return suggestion.isIndividual
+      ? 'complet'
+      : `complet · ${suggestion.bookedCount}/${suggestion.capacity}`
   }
   if (suggestion.isIndividual) {
     return ''
@@ -212,9 +288,13 @@ function AddPatientToSlotForm({ trigger }: AddPatientToSlotFormProps) {
     <Popup modal open={open} onOpenChange={setOpen}>
       <PopupTrigger asChild>
         {trigger ?? (
-          <Button type="button" variant="outline" className="w-full">
-            <CalendarPlus className="w-4 h-4" />
-            Ajouter un patient à un RDV
+          <Button
+            type="button"
+            variant="gradient"
+            className="w-full"
+            onClick={() => setOpen(true)}
+          >
+            Nouveau rendez-vous
           </Button>
         )}
       </PopupTrigger>
@@ -314,7 +394,7 @@ function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
   }, [selected, individualFreeInterval, startTime])
 
   const handleSelectSuggestion = (suggestion: SlotSuggestion) => {
-    if (suggestion.alreadyBooked) {
+    if (suggestion.alreadyBooked || suggestion.isFull) {
       return
     }
 
@@ -416,52 +496,31 @@ function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
                 options={thematicOptions}
                 value={thematicID}
                 onValueChange={setThematicID}
-                disabled={!patientID}
+                searchable
                 placeholder="Sélectionnez une thématique"
               />
             </FormField>
 
             <div className="flex flex-col gap-2">
-              <Label>Prochains créneaux disponibles</Label>
+              <Label>Prochains créneaux</Label>
 
               {!patientID || !thematicID ? (
-                <p className="text-sm text-text-light">
-                  Sélectionnez un patient et une thématique.
-                </p>
+                <EmptySlotList>
+                  Sélectionnez un patient et une thématique pour voir les
+                  créneaux à venir.
+                </EmptySlotList>
               ) : suggestions.length === 0 ? (
-                <p className="text-sm text-text-light">
-                  Aucun créneau disponible pour cette thématique.
-                </p>
+                <EmptySlotList>
+                  Aucun créneau à venir pour cette thématique.
+                </EmptySlotList>
               ) : (
                 <ul className="flex flex-col max-h-72 overflow-y-auto border border-border rounded-lg divide-y divide-border">
                   {suggestions.map((suggestion) => (
-                    <li key={suggestion.slot.id}>
-                      <button
-                        type="button"
-                        onClick={() => handleSelectSuggestion(suggestion)}
-                        disabled={suggestion.alreadyBooked}
-                        className="flex items-center gap-3 w-full text-left px-3 py-2 hover:bg-card disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                      >
-                        <span
-                          className="w-2.5 h-2.5 rounded-full shrink-0"
-                          style={{
-                            backgroundColor:
-                              suggestion.slot.slotTemplate?.color ?? '#2563eb',
-                          }}
-                        />
-                        <span className="flex flex-col min-w-0 flex-1">
-                          <span className="text-sm font-medium">
-                            {`${formatSlotDate(suggestion.slot.startDate)} · ${formatSlotRange(suggestion.slot.startDate, suggestion.slot.endDate)}`}
-                          </span>
-                          <span className="text-xs text-text-light truncate">
-                            {formatSoignants(suggestion.slot)}
-                          </span>
-                        </span>
-                        <span className="text-xs text-text-light shrink-0">
-                          {getSuggestionBadge(suggestion)}
-                        </span>
-                      </button>
-                    </li>
+                    <SlotSuggestionRow
+                      key={suggestion.slot.id}
+                      suggestion={suggestion}
+                      onSelect={handleSelectSuggestion}
+                    />
                   ))}
                 </ul>
               )}
@@ -471,6 +530,9 @@ function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
 
         {step === 2 && selected && (
           <div className="flex flex-col gap-2">
+            <div className="text-xs uppercase text-text-light">
+              Récapitulatif
+            </div>
             <div className="text-sm">
               <span className="text-text-light">Patient : </span>
               {selectedPatient
@@ -481,10 +543,20 @@ function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
               <span className="text-text-light">Thématique : </span>
               {selectedThematic?.name ?? ''}
             </div>
-            <div className="text-sm">
-              <span className="text-text-light">Créneau : </span>
-              {formatSlotDate(selected.slot.startDate)}{' '}
-              {formatSlotRange(selected.slot.startDate, selected.slot.endDate)}
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <span>
+                <span className="text-text-light">Créneau : </span>
+                {formatSlotDate(selected.slot.startDate)}{' '}
+                {formatSlotRange(selected.slot.startDate, selected.slot.endDate)}
+              </span>
+              <Button
+                type="button"
+                variant="transparent"
+                onClick={handleBack}
+                className="h-auto p-0 text-sm underline underline-offset-4 hover:no-underline"
+              >
+                Modifier
+              </Button>
             </div>
             <div className="text-sm">
               <span className="text-text-light">Soignants : </span>
@@ -493,23 +565,28 @@ function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
 
             {isJoining && (
               <p className="text-sm text-text-light">
-                Vous rejoignez un rendez-vous existant ({selected.bookedCount}
+                Ajout à un rendez-vous existant ({selected.bookedCount}
                 /{selected.capacity} patients).
               </p>
             )}
 
-            <AppointmentTimeFields
-              date={selected.slot.startDate}
-              startTime={startTime}
-              onStartTimeChange={handleStartTimeChange}
-              duration={duration}
-              onDurationChange={setDuration}
-              durationOptions={durationOptions}
-              disabled={areTimeFieldsDisabled}
-              durationFieldId="appointment-duration"
-              minTime={minTime}
-              maxTime={maxTime}
-            />
+            {/* Sur un créneau collectif, l'horaire est celui du créneau : les
+            champs seraient figés et répéteraient le récapitulatif. On ne les
+            montre que là où ils servent, sur un créneau individuel. */}
+            {!areTimeFieldsDisabled && (
+              <AppointmentTimeFields
+                date={selected.slot.startDate}
+                showDate={false}
+                startTime={startTime}
+                onStartTimeChange={handleStartTimeChange}
+                duration={duration}
+                onDurationChange={setDuration}
+                durationOptions={durationOptions}
+                durationFieldId="appointment-duration"
+                minTime={minTime}
+                maxTime={maxTime}
+              />
+            )}
 
             <AppointmentTypeField
               id="appointment-type"
@@ -522,6 +599,10 @@ function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
       </PopupBody>
 
       <PopupFooter>
+        <Button variant="outline" onClick={onClose}>
+          <X className="w-4 h-4" />
+          Annuler
+        </Button>
         {step === 2 && (
           <Button
             variant="default"
@@ -534,15 +615,6 @@ function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
             Ajouter
           </Button>
         )}
-        {step === 2 && (
-          <Button variant="outline" onClick={handleBack}>
-            Retour
-          </Button>
-        )}
-        <Button variant="outline" onClick={onClose}>
-          <X className="w-4 h-4" />
-          Annuler
-        </Button>
       </PopupFooter>
     </>
   )

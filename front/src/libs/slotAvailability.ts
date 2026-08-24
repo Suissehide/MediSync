@@ -15,6 +15,8 @@ export type SlotSuggestion = {
   slot: Slot
   /** Le patient sélectionné a déjà un rendez-vous sur ce créneau. */
   alreadyBooked: boolean
+  /** Plus de place : capacité atteinte, ou plus aucun intervalle libre. */
+  isFull: boolean
   bookedCount: number
   capacity: number
   isIndividual: boolean
@@ -89,9 +91,10 @@ export const hasSlotAvailability = (slot: Slot): boolean =>
     : getBookedPatientCount(slot) < getSlotCapacity(slot)
 
 /**
- * Les prochains créneaux proposables pour un patient et une thématique.
- * Un créneau où le patient est déjà inscrit reste dans la liste — il sera
- * affiché non cliquable — même s'il est complet.
+ * Les prochains créneaux d'une thématique, disponibles ou non. Les créneaux
+ * complets (`isFull`) et ceux où le patient est déjà inscrit (`alreadyBooked`)
+ * restent dans la liste — la vue les affiche non cliquables — pour que
+ * l'utilisateur voie l'agenda réel plutôt qu'une liste trouée.
  */
 export const getUpcomingSlotSuggestions = (
   slots: Slot[] | undefined,
@@ -110,8 +113,7 @@ export const getUpcomingSlotSuggestions = (
       (slot) =>
         slot.slotTemplate?.thematicId === thematicID &&
         !slot.locked &&
-        dayjs.utc(slot.startDate).isAfter(now) &&
-        (isPatientBookedOnSlot(slot, patientID) || hasSlotAvailability(slot)),
+        dayjs.utc(slot.startDate).isAfter(now),
     )
     .sort((a, b) => dayjs.utc(a.startDate).diff(dayjs.utc(b.startDate)))
     .slice(0, limit)
@@ -122,6 +124,7 @@ export const getUpcomingSlotSuggestions = (
       return {
         slot,
         alreadyBooked: isPatientBookedOnSlot(slot, patientID),
+        isFull: !hasSlotAvailability(slot),
         bookedCount: getBookedPatientCount(slot),
         capacity: getSlotCapacity(slot),
         isIndividual,
