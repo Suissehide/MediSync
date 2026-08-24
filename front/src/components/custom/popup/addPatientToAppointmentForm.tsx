@@ -93,14 +93,34 @@ export default function AddPatientToAppointmentForm({
               {row.capacity > 1 ? 's' : ''}
             </p>
 
+            {selectedIDs.length >= row.capacity && (
+              <p className="text-xs text-text-light">
+                Capacité atteinte — décochez un patient pour en ajouter un
+                autre.
+              </p>
+            )}
+
+            {selectedIDs.length === 0 && (
+              <p className="text-xs text-destructive">
+                Aucun patient sélectionné : valider supprimera le
+                rendez-vous.
+              </p>
+            )}
+
             <FormField>
               <Label>Patients</Label>
               <MultiSelect
                 options={patientOptions}
                 value={selectedIDs}
-                onChange={setSelectedIDs}
+                onChange={(next) => {
+                  if (
+                    next.length <= selectedIDs.length ||
+                    next.length <= row.capacity
+                  ) {
+                    setSelectedIDs(next)
+                  }
+                }}
                 placeholder="Sélectionner un ou plusieurs patients"
-                maxSelected={row.capacity}
               />
             </FormField>
           </div>
@@ -113,7 +133,7 @@ export default function AddPatientToAppointmentForm({
             isLoading={isPending}
           >
             <Check className="w-4 h-4" />
-            Valider
+            {selectedIDs.length === 0 ? 'Supprimer le rendez-vous' : 'Valider'}
           </Button>
           <Button variant="outline" onClick={() => setOpen(false)}>
             <X className="w-4 h-4" />
