@@ -1,3 +1,4 @@
+import { DateCalendar } from '@mui/x-date-pickers'
 import { createFileRoute } from '@tanstack/react-router'
 import dayjs from 'dayjs'
 import { CalendarDays } from 'lucide-react'
@@ -10,6 +11,12 @@ import AppointmentSheet from '../../components/custom/sheet/appointmentSheet.tsx
 import WeekDayStrip from '../../components/custom/weekDayStrip.tsx'
 import DashboardLayout from '../../components/dashboard.layout.tsx'
 import ReactTable from '../../components/table/reactTable.tsx'
+import { Button } from '../../components/ui/button.tsx'
+import {
+  PopoverContent,
+  PopoverRoot,
+  PopoverTrigger,
+} from '../../components/ui/popover.tsx'
 import {
   buildDayAppointmentRows,
   type DayAppointmentRow,
@@ -68,7 +75,34 @@ function Agenda() {
             </h1>
           </div>
 
-          <WeekDayStrip value={selectedDay} onChange={setSelectedDay} />
+          <div className="flex items-center gap-2">
+            <WeekDayStrip value={selectedDay} onChange={setSelectedDay} />
+
+            <PopoverRoot>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  aria-label="Choisir une date"
+                >
+                  <CalendarDays className="w-4 h-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="p-0 w-auto">
+                <DateCalendar
+                  value={selectedDay}
+                  onChange={(newDate) => {
+                    if (newDate) {
+                      setSelectedDay(
+                        dayjs.utc(newDate.format('YYYY-MM-DD')).startOf('day'),
+                      )
+                    }
+                  }}
+                />
+              </PopoverContent>
+            </PopoverRoot>
+          </div>
         </div>
 
         <ReactTable<DayAppointmentRow>
