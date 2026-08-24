@@ -200,14 +200,6 @@ function SuiviPage() {
           <h1 className="text-2xl font-bold">Suivi</h1>
 
           <div className="flex items-center gap-1">
-            <Button variant="outline" size="icon" onClick={prevMonth}>
-              <ChevronLeft className="w-5 h-5" />
-            </Button>
-
-            <span className="min-w-36 text-center font-medium capitalize">
-              {date.format('MMMM YYYY')}
-            </span>
-
             <PopoverRoot>
               <PopoverTrigger asChild>
                 <Button type="button" variant="outline" size="icon">
@@ -227,6 +219,14 @@ function SuiviPage() {
                 />
               </PopoverContent>
             </PopoverRoot>
+
+            <Button variant="outline" size="icon" onClick={prevMonth}>
+              <ChevronLeft className="w-5 h-5" />
+            </Button>
+
+            <span className="min-w-36 text-center font-medium capitalize">
+              {date.format('MMMM YYYY')}
+            </span>
 
             <Button variant="outline" size="icon" onClick={nextMonth}>
               <ChevronRight className="w-5 h-5" />

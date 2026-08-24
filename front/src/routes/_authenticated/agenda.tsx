@@ -52,6 +52,8 @@ function Agenda() {
     localStorage.setItem(SELECTED_DAY_STORAGE_KEY, day.format('YYYY-MM-DD'))
   }
 
+  const today = dayjs.utc().startOf('day')
+
   // `to` exclusive : le lendemain, sinon la journée serait amputée.
   const dayRange = useMemo(
     () => ({
@@ -101,7 +103,11 @@ function Agenda() {
           </div>
 
           <div className="flex items-center gap-2">
-            <WeekDayStrip value={selectedDay} onChange={handleDayChange} />
+            {!selectedDay.isSame(today, 'day') && (
+              <Button variant="outline" onClick={() => handleDayChange(today)}>
+                Aujourd&apos;hui
+              </Button>
+            )}
 
             <PopoverRoot>
               <PopoverTrigger asChild>
@@ -127,6 +133,8 @@ function Agenda() {
                 />
               </PopoverContent>
             </PopoverRoot>
+
+            <WeekDayStrip value={selectedDay} onChange={handleDayChange} />
           </div>
         </div>
 

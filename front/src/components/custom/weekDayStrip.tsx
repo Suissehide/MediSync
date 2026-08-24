@@ -15,7 +15,6 @@ export default function WeekDayStrip({ value, onChange }: WeekDayStripProps) {
     weekStart.add(index, 'day'),
   )
   const today = dayjs.utc().startOf('day')
-  const isOnToday = value.isSame(today, 'day')
 
   return (
     <div className="flex items-center gap-2">
@@ -69,12 +68,6 @@ export default function WeekDayStrip({ value, onChange }: WeekDayStripProps) {
       >
         <ChevronRight className="w-4 h-4" />
       </Button>
-
-      {!isOnToday && (
-        <Button variant="outline" onClick={() => onChange(today)}>
-          Aujourd&apos;hui
-        </Button>
-      )}
     </div>
   )
 }
