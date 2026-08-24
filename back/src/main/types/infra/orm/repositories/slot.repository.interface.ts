@@ -40,7 +40,6 @@ export type SlotUpdateEntityRepo = Omit<
   }
 }
 
-/** Fenêtre temporelle optionnelle, bornes incluses ou non renseignées. */
 export type SlotDateRangeRepo = {
   from?: Date
   to?: Date

@@ -42,10 +42,8 @@ export const useAllSlotsQuery = () => {
 }
 
 /**
- * Ne charge que les créneaux chevauchant la fenêtre affichée. La fenêtre est
- * dans la clé de cache : chaque semaine déjà visitée est resservie
- * instantanément, et `keepPreviousData` garde la semaine courante à l'écran
- * pendant le chargement de la suivante plutôt que de vider le calendrier.
+ * La fenêtre fait partie de la clé de cache, et `keepPreviousData` garde la
+ * semaine courante à l'écran pendant le chargement de la suivante.
  */
 export const useSlotsInRangeQuery = (range: SlotDateRange | null) => {
   const {
@@ -99,9 +97,8 @@ export const useSlotByIDQuery = (slotID: string, options = {}) => {
 // * MUTATIONS
 
 /**
- * Les créneaux sont cachés par fenêtre de dates ([SLOT.GET_ALL, from, to]), en
- * plus de la liste complète ([SLOT.GET_ALL]). Une mise à jour optimiste doit
- * donc toucher toutes les fenêtres déjà chargées, pas la seule clé nue.
+ * Les créneaux sont cachés par fenêtre en plus de la liste complète : une mise
+ * à jour optimiste doit toucher toutes les fenêtres chargées, pas la clé nue.
  */
 const snapshotSlotCaches = (queryClient: QueryClient) =>
   queryClient.getQueriesData<Slot[]>({ queryKey: [SLOT.GET_ALL] })

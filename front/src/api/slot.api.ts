@@ -9,10 +9,6 @@ import type {
 import { fetchWithAuth } from './fetchWithAuth.ts'
 
 export const SlotApi = {
-  /**
-   * Sans `range`, tous les créneaux sont renvoyés. Avec, seuls ceux qui
-   * chevauchent la fenêtre demandée.
-   */
   getAll: async (range?: SlotDateRange): Promise<Slot[]> => {
     const params = new URLSearchParams({ action: 'getAllSlots' })
     if (range?.from) {

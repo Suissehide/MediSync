@@ -39,8 +39,6 @@ function Dashboard() {
   const savedDate = usePlanningStore((state) => state.viewStart)
   const selectedSoignants = soignants.filter((s) => selectedIDs.includes(s.id))
 
-  // Comme le planning : la page s'affiche, puis le calendrier annonce la
-  // plage qu'il rend et seule celle-ci est chargée.
   const [visibleRange, setVisibleRange] = useState<SlotDateRange | null>(null)
   const handleRangeChange = useCallback((next: SlotDateRange) => {
     setVisibleRange((prev) =>

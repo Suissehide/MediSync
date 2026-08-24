@@ -16,10 +16,7 @@ export type Slot = {
   slotTemplate: SlotTemplate
 }
 
-/**
- * Fenêtre demandée au serveur. Bornes en date seule (YYYY-MM-DD), interprétées
- * en UTC : `to` est exclusive, comme la fin de plage de FullCalendar.
- */
+/** Dates seules (YYYY-MM-DD) en UTC, `to` exclusive. */
 export type SlotDateRange = {
   from: string
   to: string

@@ -52,8 +52,7 @@ function Agenda() {
     localStorage.setItem(SELECTED_DAY_STORAGE_KEY, day.format('YYYY-MM-DD'))
   }
 
-  // L'agenda n'affiche qu'une journée : inutile de charger tout l'historique.
-  // `to` est exclusive, donc le lendemain, sinon la journée serait amputée.
+  // `to` exclusive : le lendemain, sinon la journée serait amputée.
   const dayRange = useMemo(
     () => ({
       from: selectedDay.utc().format('YYYY-MM-DD'),

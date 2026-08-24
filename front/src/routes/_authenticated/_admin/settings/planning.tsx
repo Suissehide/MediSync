@@ -84,8 +84,8 @@ export const Route = createFileRoute(
 })
 
 function Planning() {
-  // La plage n'est connue qu'une fois le calendrier monté : la page s'affiche
-  // d'abord, les créneaux de la semaine visible arrivent ensuite.
+  // Plage connue seulement une fois le calendrier monté : la page s'affiche
+  // d'abord, les créneaux suivent.
   const [visibleRange, setVisibleRange] = useState<SlotDateRange | null>(null)
   const handleRangeChange = useCallback((next: SlotDateRange) => {
     setVisibleRange((prev) =>

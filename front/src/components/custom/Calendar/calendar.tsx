@@ -22,7 +22,6 @@ import type { Appointment } from '../../../types/appointment.ts'
 import CalendarDatePickerButton from './calendarDatePickerButton.tsx'
 import { EventContent } from './eventContent.tsx'
 
-/** Jour calendaire d'un marqueur FullCalendar, qui est en UTC. */
 const toUtcDay = (date: Date) => date.toISOString().slice(0, 10)
 
 type SlotLayout = Map<string, { column: number; totalColumns: number }>
@@ -56,7 +55,6 @@ function computeSlotLayout(events: CalendarEvent[]): SlotLayout {
 
   const result: SlotLayout = new Map()
 
-  // Groupe de chevauchement en cours
   const columnEnds: number[] = []
   let group: { id: string; column: number }[] = []
   let groupMaxEnd = Number.NEGATIVE_INFINITY
@@ -70,7 +68,7 @@ function computeSlotLayout(events: CalendarEvent[]): SlotLayout {
   }
 
   for (const slot of slots) {
-    // Un créneau qui commence à la fin du groupe ne le chevauche pas
+    // Commencer pile à la fin du groupe ne compte pas comme un chevauchement
     if (group.length > 0 && slot.start >= groupMaxEnd) {
       flushGroup()
       group = []
@@ -194,9 +192,7 @@ function Calendar({
   const [currentView, setCurrentView] = useState('timeGridWeek')
   const [currentViewStart, setCurrentViewStart] = useState<string>('')
 
-  // Le layout n'est exploité que par eventDidMount, pour les events affichés en
-  // fond. Les vues qui n'en produisent aucun (planning admin) n'ont rien à
-  // calculer.
+  // Seul eventDidMount lit ce layout, et uniquement pour les events en fond.
   const slotLayout = useMemo(
     () =>
       events.some((e) => e.display === 'background')
@@ -458,11 +454,8 @@ function Calendar({
             viewStart: arg.view.currentStart.toISOString(),
             viewEnd: arg.view.currentEnd.toISOString(),
           })
-          // arg.start/end couvrent les jours réellement rendus, débordements
-          // de mois compris, là où currentStart/End s'arrêtent à la période.
-          // Le calendrier est en UTC et ses bornes tombent toujours sur un
-          // début de journée : la date seule suffit, et garde des clés de
-          // cache stables.
+          // arg.start/end, pas currentStart/End : ils incluent les jours
+          // débordant de la période et réellement rendus. Fin exclusive.
           onRangeChange?.({
             from: toUtcDay(arg.start),
             to: toUtcDay(arg.end),
