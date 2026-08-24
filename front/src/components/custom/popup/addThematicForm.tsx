@@ -121,6 +121,10 @@ function AddThematicForm({ trigger }: AddThematicFormProps) {
         </PopupBody>
 
         <PopupFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            <X className="w-4 h-4" />
+            Annuler
+          </Button>
           <Button
             variant="default"
             isLoading={createThematic.isPending}
@@ -128,10 +132,6 @@ function AddThematicForm({ trigger }: AddThematicFormProps) {
           >
             <Check className="w-4 h-4" />
             Ajouter
-          </Button>
-          <Button variant="outline" onClick={() => setOpen(false)}>
-            <X className="w-4 h-4" />
-            Annuler
           </Button>
         </PopupFooter>
       </PopupContent>

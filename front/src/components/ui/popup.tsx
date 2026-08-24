@@ -161,7 +161,9 @@ const PopupFooter = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      'flex justify-between gap-2 px-6 py-4 border-t border-border',
+      // Actions groupées à droite, action principale en dernier : l'ordre du
+      // DOM suit l'ordre visuel, donc aussi l'ordre de tabulation.
+      'flex justify-end gap-2 px-6 py-4 border-t border-border',
       className,
     )}
     {...props}

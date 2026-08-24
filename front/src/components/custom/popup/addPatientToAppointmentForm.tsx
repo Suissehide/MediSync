@@ -127,6 +127,10 @@ export default function AddPatientToAppointmentForm({
         </PopupBody>
 
         <PopupFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            <X className="w-4 h-4" />
+            Annuler
+          </Button>
           <Button
             variant="default"
             onClick={handleConfirm}
@@ -134,10 +138,6 @@ export default function AddPatientToAppointmentForm({
           >
             <Check className="w-4 h-4" />
             {selectedIDs.length === 0 ? 'Supprimer le rendez-vous' : 'Valider'}
-          </Button>
-          <Button variant="outline" onClick={() => setOpen(false)}>
-            <X className="w-4 h-4" />
-            Annuler
           </Button>
         </PopupFooter>
       </PopupContent>

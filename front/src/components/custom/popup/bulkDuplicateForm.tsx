@@ -71,6 +71,10 @@ export function BulkDuplicateForm(props: BulkDuplicateFormProps) {
         </PopupBody>
 
         <PopupFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            <X className="w-4 h-4" />
+            Annuler
+          </Button>
           <Button
             variant="default"
             onClick={onConfirm}
@@ -78,10 +82,6 @@ export function BulkDuplicateForm(props: BulkDuplicateFormProps) {
           >
             <Copy className="w-4 h-4" />
             Dupliquer
-          </Button>
-          <Button variant="outline" onClick={() => setOpen(false)}>
-            <X className="w-4 h-4" />
-            Annuler
           </Button>
         </PopupFooter>
       </PopupContent>

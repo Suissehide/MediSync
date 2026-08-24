@@ -147,13 +147,13 @@ function EditSoignantThematicsForm({
         </PopupBody>
 
         <PopupFooter>
-          <Button variant="default" onClick={() => form.handleSubmit()}>
-            <Check className="w-4 h-4" />
-            Enregistrer
-          </Button>
           <Button variant="outline" onClick={() => setOpen(false)}>
             <X className="w-4 h-4" />
             Annuler
+          </Button>
+          <Button variant="default" onClick={() => form.handleSubmit()}>
+            <Check className="w-4 h-4" />
+            Enregistrer
           </Button>
         </PopupFooter>
       </PopupContent>

@@ -71,6 +71,10 @@ export function BulkMoveForm(props: BulkMoveFormProps) {
         </PopupBody>
 
         <PopupFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            <X className="w-4 h-4" />
+            Annuler
+          </Button>
           <Button
             variant="default"
             onClick={onConfirm}
@@ -78,10 +82,6 @@ export function BulkMoveForm(props: BulkMoveFormProps) {
           >
             <MoveRight className="w-4 h-4" />
             Déplacer
-          </Button>
-          <Button variant="outline" onClick={() => setOpen(false)}>
-            <X className="w-4 h-4" />
-            Annuler
           </Button>
         </PopupFooter>
       </PopupContent>

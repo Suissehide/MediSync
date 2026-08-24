@@ -39,13 +39,13 @@ export function ConfirmDeleteForm({
         </PopupBody>
 
         <PopupFooter>
-          <Button variant="outline" onClick={onConfirm} disabled={loading}>
-            <Trash className="w-4 h-4 text-destructive" />
-            {loading ? 'Suppression...' : 'Supprimer'}
-          </Button>
           <Button variant="outline" onClick={() => setOpen(false)}>
             <X className="w-4 h-4" />
             Annuler
+          </Button>
+          <Button variant="outline" onClick={onConfirm} disabled={loading}>
+            <Trash className="w-4 h-4 text-destructive" />
+            {loading ? 'Suppression...' : 'Supprimer'}
           </Button>
         </PopupFooter>
       </PopupContent>

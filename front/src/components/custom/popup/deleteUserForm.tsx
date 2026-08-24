@@ -47,13 +47,13 @@ function DeleteUserForm({ open, setOpen, user }: DeleteUserFormProps) {
         </PopupBody>
 
         <PopupFooter>
-          <Button variant="destructive" onClick={() => handleDelete()}>
-            <Trash className="w-4 h-4" />
-            Supprimer
-          </Button>
           <Button variant="outline" onClick={() => setOpen(false)}>
             <X className="w-4 h-4" />
             Annuler
+          </Button>
+          <Button variant="destructive" onClick={() => handleDelete()}>
+            <Trash className="w-4 h-4" />
+            Supprimer
           </Button>
         </PopupFooter>
       </PopupContent>

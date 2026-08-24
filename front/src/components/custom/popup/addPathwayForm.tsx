@@ -132,13 +132,13 @@ function AddPathwayForm({ trigger }: AddPathwayFormProps) {
         </PopupBody>
 
         <PopupFooter>
-          <Button variant="default" onClick={() => form.handleSubmit()}>
-            <Check className="w-4 h-4" />
-            Ajouter
-          </Button>
           <Button variant="outline" onClick={() => setOpen(false)}>
             <X className="w-4 h-4" />
             Annuler
+          </Button>
+          <Button variant="default" onClick={() => form.handleSubmit()}>
+            <Check className="w-4 h-4" />
+            Ajouter
           </Button>
         </PopupFooter>
       </PopupContent>

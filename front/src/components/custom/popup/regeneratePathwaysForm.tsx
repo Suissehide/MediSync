@@ -87,6 +87,10 @@ export function RegeneratePathwaysForm({
         </PopupBody>
 
         <PopupFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            <X className="w-4 h-4" />
+            Annuler
+          </Button>
           <Button
             variant="default"
             onClick={onConfirm}
@@ -94,10 +98,6 @@ export function RegeneratePathwaysForm({
           >
             <RefreshCw className="w-4 h-4" />
             Appliquer
-          </Button>
-          <Button variant="outline" onClick={() => setOpen(false)}>
-            <X className="w-4 h-4" />
-            Annuler
           </Button>
         </PopupFooter>
       </PopupContent>

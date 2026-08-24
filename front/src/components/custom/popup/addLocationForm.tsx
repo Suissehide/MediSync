@@ -79,6 +79,10 @@ function AddLocationForm({ trigger }: AddLocationFormProps) {
         </PopupBody>
 
         <PopupFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            <X className="w-4 h-4" />
+            Annuler
+          </Button>
           <Button
             variant="default"
             isLoading={createLocation.isPending}
@@ -86,10 +90,6 @@ function AddLocationForm({ trigger }: AddLocationFormProps) {
           >
             <Check className="w-4 h-4" />
             Ajouter
-          </Button>
-          <Button variant="outline" onClick={() => setOpen(false)}>
-            <X className="w-4 h-4" />
-            Annuler
           </Button>
         </PopupFooter>
       </PopupContent>

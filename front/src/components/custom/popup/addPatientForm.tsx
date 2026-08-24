@@ -156,28 +156,26 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
           </form>
         </PopupBody>
 
-        <PopupFooter className="flex justify-between">
-          <div className="flex gap-4">
-            {step > 1 && (
-              <Button variant="outline" onClick={prevStep}>
-                <ArrowLeft className="w-4 h-4" /> Précédent
-              </Button>
-            )}
-
-            {step < 2 ? (
-              <Button variant="default" onClick={nextStep}>
-                Suivant <ArrowRight className="w-4 h-4" />
-              </Button>
-            ) : (
-              <Button variant="default" onClick={() => form.handleSubmit()} isLoading={enrollPatient.isPending}>
-                <Check className="w-4 h-4" /> Valider
-              </Button>
-            )}
-          </div>
-
+        <PopupFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>
             <X className="w-4 h-4" /> Annuler
           </Button>
+
+          {step > 1 && (
+            <Button variant="outline" onClick={prevStep}>
+              <ArrowLeft className="w-4 h-4" /> Précédent
+            </Button>
+          )}
+
+          {step < 2 ? (
+            <Button variant="default" onClick={nextStep}>
+              Suivant <ArrowRight className="w-4 h-4" />
+            </Button>
+          ) : (
+            <Button variant="default" onClick={() => form.handleSubmit()} isLoading={enrollPatient.isPending}>
+              <Check className="w-4 h-4" /> Valider
+            </Button>
+          )}
         </PopupFooter>
       </PopupContent>
     </Popup>

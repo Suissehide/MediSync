@@ -47,6 +47,10 @@ export function CreateForbiddenWeekForm({
         </PopupBody>
 
         <PopupFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            <X className="w-4 h-4" />
+            Annuler
+          </Button>
           <Button
             variant="outline"
             onClick={() => date && onConfirm(date)}
@@ -54,10 +58,6 @@ export function CreateForbiddenWeekForm({
           >
             <CalendarX className="w-4 h-4" />
             {loading ? 'En cours...' : 'Confirmer'}
-          </Button>
-          <Button variant="outline" onClick={() => setOpen(false)}>
-            <X className="w-4 h-4" />
-            Annuler
           </Button>
         </PopupFooter>
       </PopupContent>

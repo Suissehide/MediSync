@@ -111,6 +111,10 @@ export function AddPatientToPathwayForm({
         </PopupBody>
 
         <PopupFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            <X className="w-4 h-4" />
+            Annuler
+          </Button>
           <Button
             variant="default"
             onClick={handleConfirm}
@@ -124,10 +128,6 @@ export function AddPatientToPathwayForm({
           >
             <Check className="w-4 h-4" />
             {enrollExistingPatient.isPending ? 'Inscription...' : 'Inscrire'}
-          </Button>
-          <Button variant="outline" onClick={() => setOpen(false)}>
-            <X className="w-4 h-4" />
-            Annuler
           </Button>
         </PopupFooter>
       </PopupContent>

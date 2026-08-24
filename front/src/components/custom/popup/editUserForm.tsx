@@ -125,6 +125,10 @@ function EditUserForm({ open, setOpen, user }: EditUserFormProps) {
         </PopupBody>
 
         <PopupFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            <X className="w-4 h-4" />
+            Annuler
+          </Button>
           <Button
             variant="default"
             onClick={() => form.handleSubmit()}
@@ -132,10 +136,6 @@ function EditUserForm({ open, setOpen, user }: EditUserFormProps) {
           >
             <Check className="w-4 h-4" />
             Enregistrer
-          </Button>
-          <Button variant="outline" onClick={() => setOpen(false)}>
-            <X className="w-4 h-4" />
-            Annuler
           </Button>
         </PopupFooter>
       </PopupContent>
