@@ -26,7 +26,28 @@ export function computeProgramDuration(slots: Slot[]): {
   return { weeks, startDate, endDate }
 }
 
-export function groupSlotsByWeek(slots: Slot[]): WeekData[] {
+// Pour un créneau individuel, chaque patient a son propre rendez-vous (une
+// sous-plage du créneau). On affiche alors l'horaire du rendez-vous du patient
+// plutôt que celui du créneau entier. Sinon, on garde l'horaire du créneau.
+function getSlotDisplayRange(
+  slot: Slot,
+  patientId?: string,
+): { start: string; end: string } {
+  if (slot.slotTemplate?.isIndividual && patientId) {
+    const appointment = slot.appointments?.find((a) =>
+      a.appointmentPatients?.some((ap) => ap.patient.id === patientId),
+    )
+    if (appointment) {
+      return { start: appointment.startDate, end: appointment.endDate }
+    }
+  }
+  return { start: slot.startDate, end: slot.endDate }
+}
+
+export function groupSlotsByWeek(
+  slots: Slot[],
+  patientId?: string,
+): WeekData[] {
   if (slots.length === 0) {
     return []
   }
@@ -59,9 +80,10 @@ export function groupSlotsByWeek(slots: Slot[]): WeekData[] {
     })
     const timeKeys = Array.from(
       new Set(
-        weekdaySlots.map((s) =>
-          `${dayjs.utc(s.startDate).format('HH:mm')}-${dayjs.utc(s.endDate).format('HH:mm')}`,
-        ),
+        weekdaySlots.map((s) => {
+          const { start, end } = getSlotDisplayRange(s, patientId)
+          return `${dayjs.utc(start).format('HH:mm')}-${dayjs.utc(end).format('HH:mm')}`
+        }),
       ),
     ).sort()
 
@@ -70,29 +92,28 @@ export function groupSlotsByWeek(slots: Slot[]): WeekData[] {
       const cells: (Slot | null)[] = Array.from({ length: 5 }, (_, i) => {
         const day = current.add(i, 'day')
         return (
-          weekdaySlots.find(
-            (s) =>
-              dayjs.utc(s.startDate).isSame(day, 'day') &&
-              dayjs.utc(s.startDate).format('HH:mm') === start &&
-              dayjs.utc(s.endDate).format('HH:mm') === end,
-          ) ?? null
+          weekdaySlots.find((s) => {
+            const range = getSlotDisplayRange(s, patientId)
+            return (
+              dayjs.utc(range.start).isSame(day, 'day') &&
+              dayjs.utc(range.start).format('HH:mm') === start &&
+              dayjs.utc(range.end).format('HH:mm') === end
+            )
+          }) ?? null
         )
       })
       return { timeLabel: timeKey.replace('-', '\n'), cells }
     })
 
-    if (timeRows.length === 0) {
-      timeRows.push({
-        timeLabel: '',
-        cells: [null, null, null, null, null],
+    // Semaine sans aucun rendez-vous (ex. semaine interdite) : on n'affiche pas
+    // de tableau vide, mais on conserve la numérotation réelle des semaines.
+    if (timeRows.length > 0) {
+      result.push({
+        weekLabel: `Semaine ${weekIndex}`,
+        weekStart: current,
+        timeRows,
       })
     }
-
-    result.push({
-      weekLabel: `Semaine ${weekIndex}`,
-      weekStart: current,
-      timeRows,
-    })
 
     current = current.add(7, 'day')
     weekIndex++

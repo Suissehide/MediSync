@@ -155,10 +155,12 @@ function WeekBlock({ weekData }: { weekData: WeekData }) {
 
 export default function CalendarPages({
   upcomingSlots,
+  patientId,
 }: {
   upcomingSlots: Slot[]
+  patientId?: string
 }) {
-  const weeks = groupSlotsByWeek(upcomingSlots)
+  const weeks = groupSlotsByWeek(upcomingSlots, patientId)
 
   if (weeks.length === 0) {
     return (

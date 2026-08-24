@@ -31,7 +31,7 @@ export default function ProgrammePDF({
         upcomingSlots={upcomingSlots}
         pathways={pathways}
       />
-      <CalendarPages upcomingSlots={upcomingSlots} />
+      <CalendarPages upcomingSlots={upcomingSlots} patientId={patient.id} />
       <TipsPage />
       {optionalPages.map((p) => (
         <p.Component
