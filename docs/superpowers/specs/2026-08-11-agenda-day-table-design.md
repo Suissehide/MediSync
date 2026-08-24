@@ -213,6 +213,9 @@ reste disponible si un filtre soignant ou type s'avère nécessaire ensuite.
 - `selectedDay` : `useState(dayjs.utc().startOf('day'))`. Pas de persistance, ni
   en store ni en URL : ouvrir la page ramène toujours au jour courant, ce qui est
   le comportement attendu d'une vue « journée ».
+  > **Décision renversée le 2026-08-24** : voir
+  > `2026-08-24-agenda-cell-expansion-and-day-persistence-design.md`, qui ajoute
+  > la persistance du jour sélectionné (`localStorage`).
 - `rows` : `useMemo(() => buildDayAppointmentRows(slots, selectedDay), [slots, selectedDay])`.
 - `columns` : `useMemo` sur la factory, avec les callbacks `onOpen` / `onDelete`.
 - `emptyState` : « Aucun rendez-vous ce jour-là ».
@@ -250,6 +253,9 @@ Le front n'a pas d'infrastructure de test (`front/package.json` ne définit que
    - le lien `Agenda` apparaît dans la navbar et marque l'onglet actif ;
    - à l'ouverture, le jour courant est sélectionné et le bouton `Aujourd'hui`
      est masqué ;
+     (**décision renversée le 2026-08-24** : le jour sélectionné est désormais
+     persisté, voir
+     `2026-08-24-agenda-cell-expansion-and-day-persistence-design.md`)
    - les flèches changent de semaine, le bouton `Aujourd'hui` réapparaît et
      ramène au jour courant ;
    - un jour avec rendez-vous affiche une ligne par rendez-vous, horaires et

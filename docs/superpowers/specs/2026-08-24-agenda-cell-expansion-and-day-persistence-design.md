@@ -230,3 +230,14 @@ dette préexistante sans rapport. Vérification par :
   virtualisation.
 - Rendre `MAX_VISIBLE_CHIPS` configurable.
 - Toute modification back.
+- Faire correspondre le libellé visible du bouton de dépliage (`+N`) à son nom
+  accessible (`aria-label`) : c'est un écart WCAG 2.5.3 « Label in Name », qui
+  gêne les utilisateurs de commande vocale. Accepté en l'état : le nom
+  accessible est réellement plus utile aux utilisateurs de lecteur d'écran, et
+  si l'écart est corrigé un jour, la bonne forme est un libellé visible
+  complété d'un texte visuellement masqué, pas un `aria-label` raccourci.
+- Ajouter `stopPropagation` au clic sur le bouton de dépliage : sans effet
+  aujourd'hui puisque le `ReactTable` de l'agenda ne reçoit pas de
+  `onRowClick`, mais quiconque câblera plus tard l'ouverture du rendez-vous au
+  clic sur la ligne devra l'ajouter, sous peine que cliquer sur `+N` ouvre
+  aussi le rendez-vous.
