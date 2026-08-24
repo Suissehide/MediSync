@@ -12,12 +12,23 @@ const defaultErrorResponse: ErrorResponse = {
 
 const isError = (error: unknown): error is Error => error instanceof Error
 
-const errorNormalizer: ErrorNormalizer = (error) =>
-  isError(error)
-    ? {
-        error: error.name,
-        message: error.message,
-      }
-    : undefined
+const statusCodeOf = (error: Error): number | undefined => {
+  const { statusCode } = error as Error & { statusCode?: unknown }
+  return typeof statusCode === 'number' ? statusCode : undefined
+}
+
+const errorNormalizer: ErrorNormalizer = (error) => {
+  if (!isError(error)) {
+    return undefined
+  }
+  // ErrorWithProps (errorFromPrismaError) transporte le statut du Boom
+  // d'origine : sans ça, un 404 ressort en 500 par défaut.
+  const statusCode = statusCodeOf(error)
+  return {
+    error: error.name,
+    message: error.message,
+    ...(statusCode === undefined ? {} : { statusCode }),
+  }
+}
 
 export { defaultErrorResponse, errorNormalizer }

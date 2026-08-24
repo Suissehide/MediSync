@@ -31,6 +31,15 @@ const roleRank: Record<Role, number> = {
   [Role.ADMIN]: 2,
 }
 
+// Les repositories lèvent tantôt un Boom, tantôt une Error portant statusCode.
+const statusCodeOf = (error: unknown): number | undefined => {
+  if (Boom.isBoom(error)) {
+    return error.output.statusCode
+  }
+  const { statusCode } = error as { statusCode?: unknown }
+  return typeof statusCode === 'number' ? statusCode : undefined
+}
+
 const cookiePreHandler = async function (
   this: FastifyInstance,
   request: FastifyRequest,
@@ -77,7 +86,17 @@ const cookiePlugin: FastifyPluginAsync = fastifyPlugin(
     fastify.decorate('requireMinRole', function (this: FastifyInstance, minRole: Role) {
       return async (request: FastifyRequest): Promise<void> => {
         const { userDomain } = this.iocContainer
-        const currentUser = await userDomain.findByID(request.user.userID)
+        const currentUser = await userDomain
+          .findByID(request.user.userID)
+          .catch((error: unknown) => {
+            // Jeton signé mais compte disparu (base réinitialisée, utilisateur
+            // supprimé) : il faut se réauthentifier, ce n'est pas une panne.
+            // Le front ne redirige vers /auth que sur 401.
+            if (statusCodeOf(error) === 404) {
+              throw Boom.unauthorized('Unknown user')
+            }
+            throw error
+          })
         if (!currentUser || roleRank[currentUser.role] < roleRank[minRole]) {
           throw Boom.forbidden('Insufficient role')
         }
