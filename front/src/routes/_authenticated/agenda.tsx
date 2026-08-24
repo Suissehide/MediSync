@@ -1,6 +1,6 @@
 import { DateCalendar } from '@mui/x-date-pickers'
 import { createFileRoute } from '@tanstack/react-router'
-import dayjs from 'dayjs'
+import dayjs, { type Dayjs } from 'dayjs'
 import { CalendarDays } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
@@ -30,10 +30,15 @@ export const Route = createFileRoute('/_authenticated/agenda')({
   component: Agenda,
 })
 
+const SELECTED_DAY_STORAGE_KEY = 'agenda/selected-day'
+
 function Agenda() {
-  const [selectedDay, setSelectedDay] = useState(() =>
-    dayjs.utc().startOf('day'),
-  )
+  const [selectedDay, setSelectedDay] = useState(() => {
+    const stored = localStorage.getItem(SELECTED_DAY_STORAGE_KEY)
+    const parsed = stored ? dayjs.utc(stored) : null
+
+    return parsed?.isValid() ? parsed.startOf('day') : dayjs.utc().startOf('day')
+  })
   const [openedRow, setOpenedRow] = useState<DayAppointmentRow | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<DayAppointmentRow | null>(
     null,
@@ -41,6 +46,11 @@ function Agenda() {
   const [addPatientTargetId, setAddPatientTargetId] = useState<string | null>(
     null,
   )
+
+  const handleDayChange = (day: Dayjs) => {
+    setSelectedDay(day)
+    localStorage.setItem(SELECTED_DAY_STORAGE_KEY, day.format('YYYY-MM-DD'))
+  }
 
   // L'agenda n'affiche qu'une journée : inutile de charger tout l'historique.
   // `to` est exclusive, donc le lendemain, sinon la journée serait amputée.
@@ -92,7 +102,7 @@ function Agenda() {
           </div>
 
           <div className="flex items-center gap-2">
-            <WeekDayStrip value={selectedDay} onChange={setSelectedDay} />
+            <WeekDayStrip value={selectedDay} onChange={handleDayChange} />
 
             <PopoverRoot>
               <PopoverTrigger asChild>
@@ -110,7 +120,7 @@ function Agenda() {
                   value={selectedDay}
                   onChange={(newDate) => {
                     if (newDate) {
-                      setSelectedDay(
+                      handleDayChange(
                         dayjs.utc(newDate.format('YYYY-MM-DD')).startOf('day'),
                       )
                     }
@@ -127,6 +137,7 @@ function Agenda() {
           filterId="day-appointment"
           isLoading={isPending}
           emptyState="Aucun rendez-vous ce jour-là"
+          autoRowHeight
         />
 
         {openedRow && (

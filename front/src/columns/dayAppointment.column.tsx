@@ -1,18 +1,17 @@
-import { Link } from '@tanstack/react-router'
 import { createColumnHelper } from '@tanstack/react-table'
 import dayjs from 'dayjs'
-import { Eye, Plus, Trash2 } from 'lucide-react'
+import { Eye, Trash2 } from 'lucide-react'
 
+import {
+  CHIP_CLASS,
+  MAX_VISIBLE_CHIPS,
+} from '../components/custom/agenda/chip.ts'
+import PatientCell from '../components/custom/agenda/patientCell.tsx'
 import { Button } from '../components/ui/button.tsx'
 import { APPOINTMENT_TYPE } from '../constants/appointment.constant.ts'
 import type { DayAppointmentRow } from '../libs/utils.ts'
 
 const columnHelper = createColumnHelper<DayAppointmentRow>()
-
-const CHIP_CLASS =
-  'inline-flex items-center shrink-0 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary'
-
-const MAX_VISIBLE_CHIPS = 3
 
 type DayAppointmentActions = {
   onOpen: (row: DayAppointmentRow) => void
@@ -76,58 +75,9 @@ export const getDayAppointmentColumns = ({
       id: 'patients',
       header: 'Patients',
       size: 280,
-      cell: ({ row }) => {
-        const { patients, isIndividual } = row.original
-        const canAddPatient = !isIndividual
-
-        const addButton = canAddPatient ? (
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Gérer les patients"
-            className="shrink-0"
-            onClick={() => onAddPatient(row.original)}
-          >
-            <Plus className="w-3 h-3" />
-          </Button>
-        ) : null
-
-        if (patients.length === 0) {
-          return (
-            <div className="flex items-center gap-1">
-              <span>—</span>
-              {addButton}
-            </div>
-          )
-        }
-
-        const visible = patients.slice(0, MAX_VISIBLE_CHIPS)
-        const rest = patients.length - visible.length
-
-        return (
-          <div className="flex items-center gap-1">
-            <div className="flex items-center gap-1 overflow-hidden">
-              {visible.map((appointmentPatient) => (
-                <Link
-                  key={appointmentPatient.patient.id}
-                  to="/patient/$patientID"
-                  params={{ patientID: appointmentPatient.patient.id }}
-                  className={`${CHIP_CLASS} hover:bg-primary/20`}
-                >
-                  {appointmentPatient.patient.firstName}{' '}
-                  {appointmentPatient.patient.lastName}
-                </Link>
-              ))}
-              {rest > 0 && (
-                <span className="shrink-0 text-xs text-muted-foreground font-medium">
-                  +{rest}
-                </span>
-              )}
-            </div>
-            {addButton}
-          </div>
-        )
-      },
+      cell: ({ row }) => (
+        <PatientCell row={row.original} onAddPatient={onAddPatient} />
+      ),
     }),
     columnHelper.accessor('type', {
       header: 'Type',

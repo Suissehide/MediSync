@@ -15,6 +15,7 @@ type VirtualizedBodyTableProps<TData> = {
   table: Table<TData>
   getCommonPinningStyles: (column: Column<TData>) => React.CSSProperties
   rowHeight: number
+  autoRowHeight?: boolean
   parentRef: RefObject<HTMLElement | null>
   onRowClick?: (row: TData) => void
   emptyState?: ReactNode
@@ -26,6 +27,7 @@ export function VirtualizedBodyTable<TData>({
   table,
   getCommonPinningStyles,
   rowHeight,
+  autoRowHeight = false,
   parentRef,
   onRowClick,
   emptyState,
@@ -118,7 +120,9 @@ export function VirtualizedBodyTable<TData>({
               }
             }}
             key={row.id}
-            style={{ height: rowHeight }}
+            style={
+              autoRowHeight ? { minHeight: rowHeight } : { height: rowHeight }
+            }
             data-state={isSelected ? 'selected' : undefined}
             onClick={
               !disabled && onRowClick
@@ -149,7 +153,9 @@ export function VirtualizedBodyTable<TData>({
                     minWidth: column.getSize(),
                     maxWidth: column.columnDef.maxSize || undefined,
                     width: grow ? '100%' : undefined,
-                    height: rowHeight,
+                    ...(autoRowHeight
+                      ? { minHeight: rowHeight }
+                      : { height: rowHeight }),
                   }}
                 >
                   <div
