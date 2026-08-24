@@ -22,84 +22,75 @@ import type { Appointment } from '../../../types/appointment.ts'
 import CalendarDatePickerButton from './calendarDatePickerButton.tsx'
 import { EventContent } from './eventContent.tsx'
 
+type SlotLayout = Map<string, { column: number; totalColumns: number }>
+
+const EMPTY_SLOT_LAYOUT: SlotLayout = new Map()
+
 /**
  * Compute column layout for overlapping slot events.
  * Returns a Map of event ID → { column, totalColumns }.
+ *
+ * Les créneaux sont triés par début, donc un groupe de chevauchement se ferme
+ * dès qu'un créneau commence après la fin la plus tardive du groupe courant :
+ * un simple balayage suffit, là où un parcours de graphe coûterait O(n²).
  */
-function computeSlotLayout(events: CalendarEvent[]) {
+function computeSlotLayout(events: CalendarEvent[]): SlotLayout {
   const slots = events
     .filter((e) => e.extendedProps?.type === 'slot' && e.start && e.end)
+    .map((e) => ({
+      id: e.id,
+      start: dayjs(e.start).valueOf(),
+      end: dayjs(e.end).valueOf(),
+    }))
     .sort((a, b) => {
-      const diff = dayjs(a.start).diff(dayjs(b.start))
+      const diff = a.start - b.start
       if (diff !== 0) {
         return diff
       }
       // Longer events first so they get column 0
-      return (
-        dayjs(b.end).diff(dayjs(b.start)) - dayjs(a.end).diff(dayjs(a.start))
-      )
+      return b.end - b.start - (a.end - a.start)
     })
 
-  // Greedy column assignment
-  const columnEnds: Dayjs[] = []
-  const columnMap = new Map<string, number>()
+  const result: SlotLayout = new Map()
 
-  for (const slot of slots) {
-    const start = dayjs(slot.start)
-    const end = dayjs(slot.end)
+  // Groupe de chevauchement en cours
+  const columnEnds: number[] = []
+  let group: { id: string; column: number }[] = []
+  let groupMaxEnd = Number.NEGATIVE_INFINITY
+  let groupMaxColumn = 0
 
-    let col = columnEnds.findIndex((ce) => !ce.isAfter(start))
-    if (col === -1) {
-      col = columnEnds.length
-      columnEnds.push(end)
-    } else {
-      columnEnds[col] = end
+  const flushGroup = () => {
+    const totalColumns = groupMaxColumn + 1
+    for (const { id, column } of group) {
+      result.set(id, { column, totalColumns })
     }
-    columnMap.set(slot.id, col)
   }
 
-  // Find connected components via BFS to determine totalColumns per group
-  const visited = new Set<string>()
-  const result = new Map<string, { column: number; totalColumns: number }>()
-
   for (const slot of slots) {
-    if (visited.has(slot.id)) {
-      continue
+    // Un créneau qui commence à la fin du groupe ne le chevauche pas
+    if (group.length > 0 && slot.start >= groupMaxEnd) {
+      flushGroup()
+      group = []
+      groupMaxColumn = 0
+      columnEnds.length = 0
     }
 
-    const component: string[] = []
-    const queue = [slot.id]
-    while (queue.length > 0) {
-      const id = queue.shift()!
-      if (visited.has(id)) {
-        continue
-      }
-      visited.add(id)
-      component.push(id)
-      const s = slots.find((e) => e.id === id)!
-      for (const other of slots) {
-        if (
-          !visited.has(other.id) &&
-          dayjs(other.start).isBefore(dayjs(s.end)) &&
-          dayjs(other.end).isAfter(dayjs(s.start))
-        ) {
-          queue.push(other.id)
-        }
-      }
+    // Greedy column assignment
+    let column = columnEnds.findIndex((end) => end <= slot.start)
+    if (column === -1) {
+      column = columnEnds.length
+      columnEnds.push(slot.end)
+    } else {
+      columnEnds[column] = slot.end
     }
 
-    let maxCol = 0
-    for (const id of component) {
-      maxCol = Math.max(maxCol, columnMap.get(id) ?? 0)
-    }
-    const totalColumns = maxCol + 1
+    group.push({ id: slot.id, column })
+    groupMaxColumn = Math.max(groupMaxColumn, column)
+    groupMaxEnd = Math.max(groupMaxEnd, slot.end)
+  }
 
-    for (const id of component) {
-      result.set(id, {
-        column: columnMap.get(id) ?? 0,
-        totalColumns,
-      })
-    }
+  if (group.length > 0) {
+    flushGroup()
   }
 
   return result
@@ -152,6 +143,8 @@ interface CalendarProps {
   onToggleSelect?: (eventId: string) => void
   unselectRef?: React.MutableRefObject<(() => void) | null>
   weekAnchorDate?: string
+  /** Notifie la plage réellement affichée, pour ne charger que celle-ci. */
+  onRangeChange?: (range: { from: string; to: string }) => void
 }
 
 function Calendar({
@@ -177,6 +170,7 @@ function Calendar({
   onToggleSelect,
   unselectRef,
   weekAnchorDate,
+  onRangeChange,
 }: CalendarProps) {
   const anchorMonday = useMemo(
     () =>
@@ -197,7 +191,16 @@ function Calendar({
   const [currentView, setCurrentView] = useState('timeGridWeek')
   const [currentViewStart, setCurrentViewStart] = useState<string>('')
 
-  const slotLayout = useMemo(() => computeSlotLayout(events), [events])
+  // Le layout n'est exploité que par eventDidMount, pour les events affichés en
+  // fond. Les vues qui n'en produisent aucun (planning admin) n'ont rien à
+  // calculer.
+  const slotLayout = useMemo(
+    () =>
+      events.some((e) => e.display === 'background')
+        ? computeSlotLayout(events)
+        : EMPTY_SLOT_LAYOUT,
+    [events],
+  )
 
   // In day/list views, background events are hidden by FullCalendar.
   // Override display to 'auto' so slots remain visible in those views.
@@ -451,6 +454,12 @@ function Calendar({
             currentDate: arg.startStr,
             viewStart: arg.view.currentStart.toISOString(),
             viewEnd: arg.view.currentEnd.toISOString(),
+          })
+          // arg.start/end couvrent les jours réellement rendus, débordements
+          // de mois compris, là où currentStart/End s'arrêtent à la période.
+          onRangeChange?.({
+            from: arg.start.toISOString(),
+            to: arg.end.toISOString(),
           })
         }}
         selectAllow={selectAllow}

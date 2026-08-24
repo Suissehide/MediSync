@@ -1,11 +1,27 @@
 import { apiUrl } from '../constants/config.constant.ts'
 import { handleHttpError } from '../libs/httpErrorHandler.ts'
-import type { CreateSlotParams, Slot, UpdateSlotParams } from '../types/slot.ts'
+import type {
+  CreateSlotParams,
+  Slot,
+  SlotDateRange,
+  UpdateSlotParams,
+} from '../types/slot.ts'
 import { fetchWithAuth } from './fetchWithAuth.ts'
 
 export const SlotApi = {
-  getAll: async (): Promise<Slot[]> => {
-    const response = await fetchWithAuth(`${apiUrl}/slot?action=getAllSlots`, {
+  /**
+   * Sans `range`, tous les créneaux sont renvoyés. Avec, seuls ceux qui
+   * chevauchent la fenêtre demandée.
+   */
+  getAll: async (range?: SlotDateRange): Promise<Slot[]> => {
+    const params = new URLSearchParams({ action: 'getAllSlots' })
+    if (range?.from) {
+      params.set('from', range.from)
+    }
+    if (range?.to) {
+      params.set('to', range.to)
+    }
+    const response = await fetchWithAuth(`${apiUrl}/slot?${params}`, {
       method: 'GET',
     })
     if (!response.ok) {

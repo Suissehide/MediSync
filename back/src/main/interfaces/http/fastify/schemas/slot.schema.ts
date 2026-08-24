@@ -33,6 +33,15 @@ export const getSlotByIdParamsSchema = z.object({
   slotID: z.cuid(),
 })
 
+/**
+ * Fenêtre temporelle optionnelle : sans elle, tous les créneaux sont renvoyés.
+ * Un créneau est retenu dès qu'il chevauche la fenêtre, même partiellement.
+ */
+export const getSlotsQuerySchema = z.object({
+  from: z.coerce.date().optional(),
+  to: z.coerce.date().optional(),
+})
+
 export const createSlotSchemaBase = slotSchema
   .pick({
     startDate: true,
@@ -71,6 +80,7 @@ export const updateSlotByIdSchema = {
 
 export type SlotInput = z.infer<typeof slotSchema>
 export type GetSlotByIdParams = z.infer<typeof getSlotByIdParamsSchema>
+export type GetSlotsQuery = z.infer<typeof getSlotsQuerySchema>
 export type CreateSlotBody = z.infer<typeof createSlotWithTemplateSchema>
 export type UpdateSlotParams = z.infer<typeof updateSlotByIdSchema.params>
 export type UpdateSlotBody = z.infer<typeof updateSlotByIdSchema.body>

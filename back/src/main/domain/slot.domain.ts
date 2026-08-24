@@ -2,6 +2,7 @@ import type { IocContainer } from '../types/application/ioc'
 import type {} from '../types/domain/appointment.domain.interface'
 import type {
   SlotCreateEntityDomain,
+  SlotDateRangeDomain,
   SlotDomainInterface,
   SlotDTODomain,
   SlotEntityDomain,
@@ -16,8 +17,8 @@ class SlotDomain implements SlotDomainInterface {
     this.slotRepository = slotRepository
   }
 
-  findAll(): Promise<SlotDTODomain[]> {
-    return this.slotRepository.findAll()
+  findAll(dateRange?: SlotDateRangeDomain): Promise<SlotDTODomain[]> {
+    return this.slotRepository.findAll(dateRange)
   }
 
   findByID(slotID: string): Promise<SlotDTODomain> {

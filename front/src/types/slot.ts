@@ -16,6 +16,12 @@ export type Slot = {
   slotTemplate: SlotTemplate
 }
 
+/** Fenêtre temporelle demandée au serveur, bornes en ISO 8601. */
+export type SlotDateRange = {
+  from: string
+  to: string
+}
+
 export type CreateSlotParams = Pick<Slot, 'startDate' | 'endDate'> & {
   pathwayID?: string
 }

@@ -1,11 +1,15 @@
 import type { Prisma } from '../../../generated/client'
 
-import type { SlotEntityRepo } from '../infra/orm/repositories/slot.repository.interface'
+import type {
+  SlotDateRangeRepo,
+  SlotEntityRepo,
+} from '../infra/orm/repositories/slot.repository.interface'
 import type { AppointmentWithPatients } from './appointment.domain.interface'
 import type { PathwayEntityDomain } from './pathway.domain.interface'
 import type { SlotTemplateWithSoignantsDomain } from './slotTemplate.domain.interface'
 
 export type SlotEntityDomain = SlotEntityRepo
+export type SlotDateRangeDomain = SlotDateRangeRepo
 export type SlotDTODomain = SlotEntityDomain & {
   pathway: PathwayEntityDomain | null
   slotTemplate: SlotTemplateWithSoignantsDomain
@@ -27,7 +31,7 @@ export type SlotUpdateEntityDomain = Omit<
 }
 
 export interface SlotDomainInterface {
-  findAll: () => Promise<SlotDTODomain[]>
+  findAll: (dateRange?: SlotDateRangeDomain) => Promise<SlotDTODomain[]>
   findByID: (slotID: string) => Promise<SlotDTODomain>
   create: (slotCreateParams: SlotCreateEntityDomain) => Promise<SlotDTODomain>
   update: (
