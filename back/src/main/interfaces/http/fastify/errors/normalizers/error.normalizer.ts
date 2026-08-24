@@ -21,8 +21,7 @@ const errorNormalizer: ErrorNormalizer = (error) => {
   if (!isError(error)) {
     return undefined
   }
-  // ErrorWithProps (errorFromPrismaError) transporte le statut du Boom
-  // d'origine : sans ça, un 404 ressort en 500 par défaut.
+  // Une erreur qui porte son statut le garde, au lieu du 500 par défaut.
   const statusCode = statusCodeOf(error)
   return {
     error: error.name,

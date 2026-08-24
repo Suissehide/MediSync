@@ -9,11 +9,13 @@ import { hashSecret, verifyJwt } from '../../../../utils/auth-helper'
 import fastifyCookie, { type FastifyCookieOptions } from '@fastify/cookie'
 import Boom from '@hapi/boom'
 import { Role } from '../../../../../generated/enums'
+import type { UserEntityDomain } from '../../../../types/domain/user.domain.interface'
 import type { JwtPayload } from '../../../../types/interfaces/http/fastify/plugins/jwt.plugin'
 
 declare module 'fastify' {
   export interface FastifyRequest {
     user: JwtPayload
+    currentUser: UserEntityDomain
   }
 }
 
@@ -38,7 +40,14 @@ const cookiePreHandler = async function (
   this: FastifyInstance,
   request: FastifyRequest,
 ): Promise<void> {
-  const { config } = this.iocContainer
+  // La garde globale de routes/index.ts couvre déjà toute requête protégée ;
+  // les routes qui déclarent aussi `verifySessionCookie` en local ne doivent
+  // pas relancer la vérification.
+  if (request.currentUser) {
+    return
+  }
+
+  const { config, userDomain } = this.iocContainer
   const { jwtSecret } = config
   if (!jwtSecret) {
     throw Boom.unauthorized('missing jwtSecret in config')
@@ -53,10 +62,22 @@ const cookiePreHandler = async function (
     const jwtPayload = verifyJwt<JwtPayload>(accessToken, jwtSecret)
     this.log.trace({ jwtPayload }, 'JWT payload in cookiePreHandler')
     request.user = jwtPayload
-    return await Promise.resolve()
   } catch {
     throw Boom.unauthorized('Invalid cookie')
   }
+
+  // Une signature valide ne prouve pas que le compte existe encore : sans ce
+  // contrôle, un utilisateur supprimé garde l'accès jusqu'à expiration du
+  // jeton. Hors du try ci-dessus, pour ne pas masquer l'erreur en « Invalid
+  // cookie ».
+  request.currentUser = await userDomain
+    .findByID(request.user.userID)
+    .catch((error: unknown) => {
+      if (isNotFound(error)) {
+        throw Boom.unauthorized('Unknown user')
+      }
+      throw error
+    })
 }
 
 const cookiePlugin: FastifyPluginAsync = fastifyPlugin(
@@ -75,26 +96,14 @@ const cookiePlugin: FastifyPluginAsync = fastifyPlugin(
     }
     await fastify.register(fastifyCookie, cookieOptions)
     fastify.decorate('verifySessionCookie', cookiePreHandler)
-    // Fabrique un preHandler exigeant un rôle minimum. `request.user` est déjà
-    // renseigné par la garde d'authentification globale (onRequest).
-    fastify.decorate('requireMinRole', function (this: FastifyInstance, minRole: Role) {
-      return async (request: FastifyRequest): Promise<void> => {
-        const { userDomain } = this.iocContainer
-        const currentUser = await userDomain
-          .findByID(request.user.userID)
-          .catch((error: unknown) => {
-            // Jeton signé mais compte disparu (base réinitialisée, utilisateur
-            // supprimé) : il faut se réauthentifier, ce n'est pas une panne.
-            // Le front ne redirige vers /auth que sur 401.
-            if (isNotFound(error)) {
-              throw Boom.unauthorized('Unknown user')
-            }
-            throw error
-          })
-        if (!currentUser || roleRank[currentUser.role] < roleRank[minRole]) {
-          throw Boom.forbidden('Insufficient role')
-        }
-      }
+    // Fabrique un preHandler exigeant un rôle minimum. `request.currentUser`
+    // est déjà chargé par la garde d'authentification globale (onRequest),
+    // inutile de réinterroger la base.
+    fastify.decorate('requireMinRole', (minRole: Role) => {
+      return (request: FastifyRequest): Promise<void> =>
+        roleRank[request.currentUser.role] < roleRank[minRole]
+          ? Promise.reject(Boom.forbidden('Insufficient role'))
+          : Promise.resolve()
     })
     log.debug('Cookie plugin successfully registered')
   },

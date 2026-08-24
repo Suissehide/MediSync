@@ -2,10 +2,6 @@ import { Boom, conflict, internal, notFound } from '@hapi/boom'
 
 import { Prisma } from '../../generated/client'
 import PrismaErrorCodes from '../infra/orm/error-codes-prisma'
-import {
-  buildBoomError,
-  type ErrorWithProps,
-} from '../interfaces/http/fastify/util/boom-error-wrapper'
 import type { IocContainer } from '../types/application/ioc'
 import type {
   ErrorHandlerInterface,
@@ -50,11 +46,6 @@ class ErrorHandler implements ErrorHandlerInterface {
       }
     }
     return boomError
-  }
-
-  errorFromPrismaError(errorInput: InputErrorHandler): ErrorWithProps {
-    const boomError = this.boomErrorFromPrismaError(errorInput)
-    return buildBoomError(boomError)
   }
 }
 
