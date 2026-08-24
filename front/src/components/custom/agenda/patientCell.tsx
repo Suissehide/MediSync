@@ -43,9 +43,17 @@ export default function PatientCell({ row, onAddPatient }: PatientCellProps) {
   return (
     <div className="flex items-center gap-1">
       <div
+        // The table uses `table w-max min-w-full` (auto layout at max-content
+        // width), so a flex-wrap container's max-content contribution is the
+        // sum of all items on one line — wrapping alone won't shrink it.
+        // An explicit max-width forces the wrap. 216px comes from the
+        // `patients` column's declared size (280, see
+        // dayAppointment.column.tsx) minus the <td> horizontal padding
+        // (px-4 = 32px) minus the manage "+" button and its gap (~28px):
+        // 280 − 32 − 28 ≈ 216.
         className={
           expanded
-            ? 'flex flex-wrap items-center gap-1'
+            ? 'flex flex-wrap items-center gap-1 max-w-[216px]'
             : 'flex items-center gap-1 overflow-hidden'
         }
       >
@@ -65,10 +73,13 @@ export default function PatientCell({ row, onAddPatient }: PatientCellProps) {
           <button
             type="button"
             onClick={() => setExpanded((value) => !value)}
+            aria-expanded={expanded}
             aria-label={
               expanded
                 ? 'Réduire la liste des patients'
-                : `Afficher les ${hidden} patients masqués`
+                : hidden > 1
+                  ? `Afficher les ${hidden} patients masqués`
+                  : 'Afficher le patient masqué'
             }
             className="shrink-0 text-xs text-muted-foreground font-medium cursor-pointer hover:text-primary transition-colors"
           >
