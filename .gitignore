@@ -2,3 +2,7 @@
 /.npm/
 /.claude/worktrees/
 /.superpowers/
+
+# Configuration locale : seuls les .env.example sont versionnes
+.env
+.env.local

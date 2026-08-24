@@ -33,6 +33,13 @@ Pour découvrir la liste des scripts NPM, exécuter `npm run`.
 
 ### Démarrage rapide
 
+- Les fichiers `.env` ne sont pas versionnés : créez les vôtres à partir des exemples, puis ajustez-les à votre
+  machine (le port Postgres publié, par exemple, s'il est déjà pris) :
+  ```shell
+  cp back/.env.example back/.env
+  cp front/.env.example front/.env
+  cp deploy/.env.example deploy/.env
+  ```
 - Avant le premier lancement, créez le réseau Docker externe requis : `docker network create proxy`
 - Pour démarrer les bases de données nécessaires au projet, allez dans le dossier deploy `cd deploy` et exécuter `docker compose --profile db up -d`
 - Pour démarrer le backend, exécuter `npm start`.
