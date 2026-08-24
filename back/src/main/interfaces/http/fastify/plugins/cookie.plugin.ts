@@ -31,14 +31,8 @@ const roleRank: Record<Role, number> = {
   [Role.ADMIN]: 2,
 }
 
-// Les repositories lèvent tantôt un Boom, tantôt une Error portant statusCode.
-const statusCodeOf = (error: unknown): number | undefined => {
-  if (Boom.isBoom(error)) {
-    return error.output.statusCode
-  }
-  const { statusCode } = error as { statusCode?: unknown }
-  return typeof statusCode === 'number' ? statusCode : undefined
-}
+const isNotFound = (error: unknown): boolean =>
+  Boom.isBoom(error) && error.output.statusCode === 404
 
 const cookiePreHandler = async function (
   this: FastifyInstance,
@@ -92,7 +86,7 @@ const cookiePlugin: FastifyPluginAsync = fastifyPlugin(
             // Jeton signé mais compte disparu (base réinitialisée, utilisateur
             // supprimé) : il faut se réauthentifier, ce n'est pas une panne.
             // Le front ne redirige vers /auth que sur 401.
-            if (statusCodeOf(error) === 404) {
+            if (isNotFound(error)) {
               throw Boom.unauthorized('Unknown user')
             }
             throw error

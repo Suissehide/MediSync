@@ -29,7 +29,7 @@ class UserRepository implements UserRepositoryInterface {
         where: { id: userID },
       })
     } catch (err) {
-      throw this.errorHandler.errorFromPrismaError({
+      throw this.errorHandler.boomErrorFromPrismaError({
         entityName: 'User',
         error: err,
       })
@@ -42,7 +42,7 @@ class UserRepository implements UserRepositoryInterface {
         where: { email },
       })
     } catch (err) {
-      throw this.errorHandler.errorFromPrismaError({
+      throw this.errorHandler.boomErrorFromPrismaError({
         entityName: 'User',
         error: err,
       })
@@ -62,7 +62,7 @@ class UserRepository implements UserRepositoryInterface {
         },
       })
     } catch (err) {
-      throw this.errorHandler.errorFromPrismaError({
+      throw this.errorHandler.boomErrorFromPrismaError({
         entityName: 'User',
         error: err,
       })

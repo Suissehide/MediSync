@@ -88,7 +88,16 @@ class AuthDomain implements AuthDomainInterface {
       throw Boom.unauthorized('Invalid refresh token')
     }
 
-    const user = await this.userRepository.findByID(payload.userID)
+    // findByID lève un 404 quand le compte a disparu ; ici c'est le jeton qui
+    // n'est plus valide, pas une ressource manquante.
+    const user = await this.userRepository
+      .findByID(payload.userID)
+      .catch((err: unknown) => {
+        if (Boom.isBoom(err) && err.output.statusCode === 404) {
+          return null
+        }
+        throw err
+      })
     if (!user) {
       this.logger.warn('User not found for this refresh token')
       throw Boom.unauthorized('Invalid refresh token')
