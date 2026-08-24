@@ -7,7 +7,10 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   base: '/',
   server: {
-    port: 4269,
+    port: 4270,
+    // Sans strictPort, vite se rabat en silence sur le port suivant et le
+    // CORS du back ne correspond plus : tout échoue en « Failed to fetch ».
+    strictPort: true,
   },
   plugins: [
     TanStackRouterVite({ target: 'react', autoCodeSplitting: true }),
