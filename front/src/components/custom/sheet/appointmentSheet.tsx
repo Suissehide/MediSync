@@ -338,7 +338,7 @@ export default function AppointmentSheet({
                         )}
                       </span>
                     </div>
-                    <div className="flex-1 min-h-0 overflow-y-scroll pr-2 space-y-2">
+                    <div className="flex-1 min-h-0 overflow-y-scroll space-y-2">
                       {field.state.value.map((appointmentPatient, index) => {
                         const patientData = patients?.find(
                           (p) => p.id === appointmentPatient.patientID,
