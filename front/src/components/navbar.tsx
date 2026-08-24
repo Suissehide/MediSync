@@ -120,11 +120,11 @@ function Navbar({ toggleSidebar }: NavbarProps) {
           </Link>
 
           <Link
-            to="/journee"
+            to="/agenda"
             className={`relative cursor-pointer transition-colors duration-300
                after:content-[''] after:absolute after:left-0 after:top-full after:w-full after:h-[3px] after:bg-primary after:scale-x-0 after:origin-right after:transition-transform after:duration-300
                hover:after:scale-x-100 hover:after:origin-left
-               ${isActive('/journee') ? 'text-text after:scale-x-100' : 'text-text-light'}`}
+               ${isActive('/agenda') ? 'text-text after:scale-x-100' : 'text-text-light'}`}
           >
             Agenda
           </Link>

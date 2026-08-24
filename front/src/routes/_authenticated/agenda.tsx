@@ -17,7 +17,7 @@ import {
 import { useAppointmentMutations } from '../../queries/useAppointment.ts'
 import { useAllSlotsQuery } from '../../queries/useSlot.ts'
 
-export const Route = createFileRoute('/_authenticated/journee')({
+export const Route = createFileRoute('/_authenticated/agenda')({
   component: Agenda,
 })
 
