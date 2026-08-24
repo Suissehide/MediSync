@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import dayjs from 'dayjs'
 import { CalendarRange, X } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import Calendar, {
   type CalendarEvent,
@@ -19,11 +19,12 @@ import {
   containsKeyword,
 } from '../../libs/utils.ts'
 import { useAppointmentMutations } from '../../queries/useAppointment.ts'
-import { useAllSlotsQuery } from '../../queries/useSlot.ts'
+import { useSlotsInRangeQuery } from '../../queries/useSlot.ts'
 import { usePlanningStore } from '../../store/usePlanningStore.ts'
 import { useSoignantStore } from '../../store/useSoignantStore.ts'
 import type { CreateAppointmentParams } from '../../types/appointment.ts'
 import type { Soignant } from '../../types/soignant.ts'
+import type { SlotDateRange } from '../../types/slot.ts'
 
 export const Route = createFileRoute('/_authenticated/dashboard')({
   component: Dashboard,
@@ -38,7 +39,15 @@ function Dashboard() {
   const savedDate = usePlanningStore((state) => state.viewStart)
   const selectedSoignants = soignants.filter((s) => selectedIDs.includes(s.id))
 
-  const { slots } = useAllSlotsQuery()
+  // Comme le planning : la page s'affiche, puis le calendrier annonce la
+  // plage qu'il rend et seule celle-ci est chargée.
+  const [visibleRange, setVisibleRange] = useState<SlotDateRange | null>(null)
+  const handleRangeChange = useCallback((next: SlotDateRange) => {
+    setVisibleRange((prev) =>
+      prev && prev.from === next.from && prev.to === next.to ? prev : next,
+    )
+  }, [])
+  const { slots } = useSlotsInRangeQuery(visibleRange)
   const { createAppointment } = useAppointmentMutations()
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [selectedDate, setSelectedDate] = useState({ startStr: '', endStr: '' })
@@ -172,6 +181,7 @@ function Dashboard() {
               editable={false}
               overlap={false}
               initialDate={savedDate}
+              onRangeChange={handleRangeChange}
               handleSelectEvent={handleSelectAppointment}
               handleClickEvent={handleAddAppointment}
               handleOpenEvent={handleOpenEvent}

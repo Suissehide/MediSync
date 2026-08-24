@@ -22,6 +22,9 @@ import type { Appointment } from '../../../types/appointment.ts'
 import CalendarDatePickerButton from './calendarDatePickerButton.tsx'
 import { EventContent } from './eventContent.tsx'
 
+/** Jour calendaire d'un marqueur FullCalendar, qui est en UTC. */
+const toUtcDay = (date: Date) => date.toISOString().slice(0, 10)
+
 type SlotLayout = Map<string, { column: number; totalColumns: number }>
 
 const EMPTY_SLOT_LAYOUT: SlotLayout = new Map()
@@ -457,9 +460,12 @@ function Calendar({
           })
           // arg.start/end couvrent les jours réellement rendus, débordements
           // de mois compris, là où currentStart/End s'arrêtent à la période.
+          // Le calendrier est en UTC et ses bornes tombent toujours sur un
+          // début de journée : la date seule suffit, et garde des clés de
+          // cache stables.
           onRangeChange?.({
-            from: arg.start.toISOString(),
-            to: arg.end.toISOString(),
+            from: toUtcDay(arg.start),
+            to: toUtcDay(arg.end),
           })
         }}
         selectAllow={selectAllow}

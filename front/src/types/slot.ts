@@ -16,7 +16,10 @@ export type Slot = {
   slotTemplate: SlotTemplate
 }
 
-/** Fenêtre temporelle demandée au serveur, bornes en ISO 8601. */
+/**
+ * Fenêtre demandée au serveur. Bornes en date seule (YYYY-MM-DD), interprétées
+ * en UTC : `to` est exclusive, comme la fin de plage de FullCalendar.
+ */
 export type SlotDateRange = {
   from: string
   to: string

@@ -36,6 +36,11 @@ export const getSlotByIdParamsSchema = z.object({
 /**
  * Fenêtre temporelle optionnelle : sans elle, tous les créneaux sont renvoyés.
  * Un créneau est retenu dès qu'il chevauche la fenêtre, même partiellement.
+ *
+ * `from` est inclusive, `to` est EXCLUSIVE. Une date seule est acceptée et
+ * vaut minuit UTC, donc une semaine du lundi au vendredi se demande
+ * `from=2026-08-31&to=2026-09-05` : le samedi exclu couvre le vendredi
+ * jusqu'à 23:59. Borner `to` au dernier jour affiché amputerait ce jour-là.
  */
 export const getSlotsQuerySchema = z.object({
   from: z.coerce.date().optional(),
