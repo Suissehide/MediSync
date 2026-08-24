@@ -6,6 +6,13 @@ import type { DayAppointmentRow } from '../../../libs/utils.ts'
 import { Button } from '../../ui/button.tsx'
 import { CHIP_CLASS, MAX_VISIBLE_CHIPS } from './chip.ts'
 
+/**
+ * Le bouton de dépliage : même famille visuelle que les pastilles patients,
+ * mais neutre et bordé, pour qu'il se lise comme un contrôle avant tout survol.
+ */
+const TOGGLE_CHIP_CLASS =
+  'inline-flex items-center shrink-0 rounded-full border border-border px-2 py-0.5 text-xs font-medium text-muted-foreground cursor-pointer transition-colors hover:border-primary/40 hover:text-primary hover:bg-primary/5'
+
 type PatientCellProps = {
   row: DayAppointmentRow
   onAddPatient: (row: DayAppointmentRow) => void
@@ -18,7 +25,7 @@ export default function PatientCell({ row, onAddPatient }: PatientCellProps) {
 
   const addButton = isIndividual ? null : (
     <Button
-      variant="ghost"
+      variant="outline"
       size="icon-sm"
       aria-label="Gérer les patients"
       className="shrink-0"
@@ -81,7 +88,7 @@ export default function PatientCell({ row, onAddPatient }: PatientCellProps) {
                   ? `Afficher les ${hidden} patients masqués`
                   : 'Afficher le patient masqué'
             }
-            className="shrink-0 text-xs text-muted-foreground font-medium cursor-pointer hover:text-primary transition-colors"
+            className={TOGGLE_CHIP_CLASS}
           >
             {expanded ? 'Voir moins' : `+${hidden}`}
           </button>
