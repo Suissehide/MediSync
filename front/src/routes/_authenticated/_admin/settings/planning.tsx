@@ -861,6 +861,8 @@ function Planning() {
                     dayGridYear: 'Liste',
                   }}
                   multiMonthMinWidth={600}
+                  weekNumbers={true}
+                  weekNumberFormat={{ week: 'numeric' }}
                   dayMaxEvents={false}
                   dayMaxEventRows={false}
                   height="100%"
