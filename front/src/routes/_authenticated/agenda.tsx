@@ -90,12 +90,12 @@ function Agenda() {
       ]}
     >
       <div className="flex-1 bg-background p-6 rounded-lg flex flex-col w-full gap-4">
-        <div className="flex justify-between items-center gap-3 flex-wrap">
+        <div className="min-h-9 flex justify-between items-center gap-3 flex-wrap">
           <div className="flex gap-2 items-center">
             <div className="flex items-center justify-center bg-foreground p-2 rounded-full">
               <CalendarDays className="h-4 w-4 text-white" />
             </div>
-            <h1 className="h-9 flex items-center text-text-dark text-xl font-semibold">
+            <h1 className="text-text-dark text-xl font-semibold">
               {selectedDay
                 .format('dddd D MMMM YYYY')
                 .replace(/^./, (c) => c.toUpperCase())}
