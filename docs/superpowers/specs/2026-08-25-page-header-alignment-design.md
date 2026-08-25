@@ -92,10 +92,24 @@ globalement.
 **Limite à connaître.** `min-h-9` est un plancher, pas un verrou. Une ligne dont
 un enfant dépasserait 36 px grandirait, et son titre se recentrerait — l'aligne­
 ment ne survit donc pas à l'ajout d'un contrôle plus haut, ni au retour à la
-ligne autorisé par `flex-wrap` sur une fenêtre étroite. C'est acceptable ici :
-tous les contrôles d'en-tête du projet sont des boutons `size="icon"` (36 px) ou
-`size="default"` (36 px). Mais la propriété est conditionnelle, pas absolue, et
-il vaut mieux que ce soit écrit que découvert.
+ligne autorisé par `flex-wrap` sur une fenêtre étroite. Ce n'est pas hypothétique :
+`/agenda` porte déjà un tel enfant. Les boutons de jour de `WeekDayStrip`, dans
+son groupe de contrôles à droite, mesurent 50 px (`py-1` + un `span` `text-xs` +
+un `span` `text-sm` + `mt-0.5` + un point `h-1`), et non 36 px comme les autres
+contrôles d'en-tête du projet. Sur `/agenda`, la ligne de titre calcule donc
+naturellement 50 px : le plancher `min-h-9` ne joue jamais son rôle, et
+`items-center` centrerait le titre de 36 px dans cette ligne de 50 px au lieu de
+le poser à la même hauteur que sur les trois autres pages.
+
+C'est pourquoi le bloc de titre de `/agenda` (la pastille et le `h1`, premier
+enfant de la ligne) porte `self-start min-h-9` en plus de `flex gap-2
+items-center`. `self-start` annule localement le `items-center` de la ligne
+pour ce seul bloc, qui redevient une boîte de 36 px calée en haut de la ligne —
+indépendamment de la hauteur que prend le reste de la ligne. Le titre retombe
+ainsi au même endroit que sur les trois autres pages, et le procédé a un
+bénéfice annexe : il rend aussi ce bloc immun au retour à la ligne de
+`flex-wrap` évoqué ci-dessus, puisqu'il n'a plus besoin d'être centré par
+rapport au reste de la ligne pour tomber au bon endroit.
 
 ### Le piège de la marge basse
 
@@ -173,7 +187,10 @@ dette préexistante sans rapport. Vérification par :
    - dans les outils de développement, inspecter le `<h1>` de chaque page et
      relever le `top` de sa boîte englobante. Les quatre valeurs doivent être
      identiques ;
-   - relever aussi la hauteur calculée de chaque ligne de titre : 36 px partout ;
+   - le critère décisif est ce `top`, pas la hauteur de la ligne : relever aussi
+     la hauteur calculée de chaque ligne de titre, qui est 36 px sur
+     `/dashboard`, `/patient` et `/suivi`, et légitimement ~50 px sur `/agenda`
+     à cause des boutons de jour de `WeekDayStrip` — voir « Pourquoi `min-h-9` » ;
    - vérifier que les quatre titres partagent la même taille, la même graisse et
      la même couleur ;
    - vérifier l'espace sous le titre : 16 px avant le bloc suivant sur les quatre

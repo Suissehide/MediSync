@@ -229,7 +229,12 @@ Attendu : `tsc` exit 0, build réussi. Sur `suivi.tsx`, attendez-vous à **exact
 Lancer `cd front && npm run dev`, se connecter, puis, **sans redimensionner la fenêtre entre les pages** :
 
 1. Ouvrir tour à tour `/dashboard`, `/agenda`, `/patient` et `/suivi`. Sur chacune, inspecter le `<h1>` dans les outils de développement et relever le `top` de sa boîte englobante. **Les quatre valeurs doivent être identiques.** C'est le contrôle qui valide tout le lot ; un écart de 2 px est précisément le défaut d'origine, et il ne se voit pas à l'œil nu.
-2. Relever la hauteur calculée de chaque ligne de titre : 36 px sur les quatre.
+2. Relever la hauteur calculée de chaque ligne de titre : 36 px sur `/dashboard`,
+   `/patient` et `/suivi` ; ~50 px sur `/agenda`, à cause des boutons de jour de
+   `WeekDayStrip` (50 px de haut). C'est attendu et ne doit **pas** être « corrigé »
+   en réduisant `WeekDayStrip` — le point décisif reste le point 1 : le bloc de
+   titre de `/agenda` porte `self-start min-h-9`, qui le cale en haut de sa ligne
+   comme une boîte de 36 px indépendamment de la hauteur de cette ligne.
 3. Vérifier que les quatre titres partagent la même taille, la même graisse et la même couleur.
 4. Mesurer l'espace entre le bas de la ligne de titre et le bloc suivant : 16 px sur les quatre. C'est le point où `/suivi` produisait 40 px.
 5. **Contrôle anti-régression, le plus important après le point 1 :** sur `/dashboard`, le calendrier doit toujours toucher les bords du cadre ; sur `/suivi`, le tableau doit garder son retrait de 24 px. Ni l'un ni l'autre ne doit avoir gagné de padding.
