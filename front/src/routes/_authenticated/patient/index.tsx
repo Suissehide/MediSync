@@ -101,8 +101,8 @@ function PatientList() {
         <AddPatientToSlotForm key="add-patient-to-slot" />,
       ]}
     >
-      <div className="flex-1 bg-background p-6 rounded-lg flex flex-col w-full gap-3">
-        <div className="flex items-center gap-3">
+      <div className="flex-1 bg-background p-6 rounded-lg flex flex-col w-full gap-4">
+        <div className="min-h-9 flex items-center gap-3">
           <Button
             variant="outline"
             size="icon"
@@ -110,9 +110,9 @@ function PatientList() {
           >
             <ArrowLeft className="w-4 h-4" />
           </Button>
-          <h2 className="text-text-foreground text-xl font-semibold">
+          <h1 className="text-text-dark text-xl font-semibold">
             Liste des patients
-          </h2>
+          </h1>
         </div>
 
         <div className="flex items-center justify-between gap-3">

@@ -196,8 +196,8 @@ function SuiviPage() {
       ]}
     >
       <div className="flex-1 bg-background rounded-lg flex flex-col w-full gap-4">
-        <div className="px-6 mt-4 mb-6 flex justify-between items-center gap-4">
-          <h1 className="text-2xl font-bold">Suivi</h1>
+        <div className="px-6 mt-6 min-h-9 flex justify-between items-center gap-3">
+          <h1 className="text-text-dark text-xl font-semibold">Suivi</h1>
 
           <div className="flex items-center gap-1">
             <PopoverRoot>
