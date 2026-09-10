@@ -10,6 +10,22 @@ import { computeProgramDuration } from '../programme-pdf.utils.ts'
 // définit pas (mauve historique).
 const DEFAULT_CIRCLE_COLOR = '#e6aff6'
 
+const PAGE_SIDE_MARGIN = 36
+
+// react-pdf césure les mots par défaut : un nom un peu long se coupait en plein
+// milieu (« Vandenboss-che »). On garde les mots entiers pour que la coupure
+// tombe sur l'espace entre le prénom et le nom. Seul un mot trop large pour une
+// ligne à lui seul est coupé, sans quoi il déborderait de la page.
+const MAX_NAME_WORD_LENGTH = 18
+
+function hyphenatePatientName(word: string) {
+  if (word.length <= MAX_NAME_WORD_LENGTH) {
+    return [word]
+  }
+  const cut = Math.ceil(word.length / 2)
+  return [word.slice(0, cut), word.slice(cut)]
+}
+
 const styles = StyleSheet.create({
   coverPage: {
     padding: 0,
@@ -90,7 +106,9 @@ const styles = StyleSheet.create({
   coverPatientName: {
     position: 'absolute',
     bottom: 48,
-    left: 36,
+    left: PAGE_SIDE_MARGIN,
+    // Sans bord droit, un nom long reste sur une seule ligne et sort de la page.
+    right: PAGE_SIDE_MARGIN,
     fontSize: 32,
     fontFamily: 'Helvetica-Bold',
     color: '#221755',
@@ -139,7 +157,12 @@ export default function CoverPage({
         )}
       </View>
 
-      <Text style={styles.coverPatientName}>{patientLabel}</Text>
+      <Text
+        style={styles.coverPatientName}
+        hyphenationCallback={hyphenatePatientName}
+      >
+        {patientLabel}
+      </Text>
     </Page>
   )
 }
