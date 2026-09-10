@@ -10,6 +10,7 @@ export interface SelectOption {
   value: string | number
   label: string
   group?: string
+  color?: string
 }
 
 export interface SelectProps {
@@ -24,6 +25,14 @@ export interface SelectProps {
   onValueChange?: (value: string) => void
   disabled?: boolean
 }
+
+const ColorDot = ({ color }: { color?: string }) =>
+  color ? (
+    <span
+      className="w-2.5 h-2.5 rounded-full shrink-0"
+      style={{ backgroundColor: color }}
+    />
+  ) : null
 
 export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
   (
@@ -55,9 +64,10 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
       const filteredOptions = options.filter((o) =>
         o.label.toLowerCase().includes(searchTerm.toLowerCase()),
       )
-      const selectedLabel = options.find(
+      const selectedOption = options.find(
         (o) => o.value.toString() === value?.toString(),
-      )?.label
+      )
+      const selectedLabel = selectedOption?.label
 
       const handleSelect = (val: string) => {
         onValueChange?.(val)
@@ -82,11 +92,12 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
             >
               <span
                 className={cn(
-                  'truncate',
+                  'flex items-center gap-2 min-w-0',
                   !selectedLabel && 'text-muted-foreground',
                 )}
               >
-                {selectedLabel || placeholder}
+                <ColorDot color={selectedOption?.color} />
+                <span className="truncate">{selectedLabel || placeholder}</span>
               </span>
               <div className="flex items-center gap-1 ml-2 shrink-0">
                 {clearable && value && (
@@ -143,11 +154,14 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
                             onClick={() =>
                               handleSelect(option.value.toString())
                             }
-                            className="cursor-pointer flex w-full items-center justify-between rounded px-2 py-1.5"
+                            className="cursor-pointer flex w-full items-center justify-between gap-2 rounded px-2 py-1.5"
                           >
-                            <span>{option.label}</span>
+                            <span className="flex items-center gap-2 min-w-0">
+                              <ColorDot color={option.color} />
+                              <span className="truncate">{option.label}</span>
+                            </span>
                             {option.value.toString() === value?.toString() && (
-                              <Check className="h-4 w-4 text-primary" />
+                              <Check className="h-4 w-4 text-primary shrink-0" />
                             )}
                           </button>
                         </li>
@@ -210,7 +224,10 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
                       className="relative flex cursor-pointer select-none items-center rounded px-2 pr-7 py-1.5 text-sm text-text-sidebar outline-none hover:bg-primary/20 focus:bg-primary/20 data-[state=checked]:text-primary"
                     >
                       <RadixSelect.ItemText>
-                        {option.label}
+                        <span className="flex items-center gap-2">
+                          <ColorDot color={option.color} />
+                          {option.label}
+                        </span>
                       </RadixSelect.ItemText>
                       <RadixSelect.ItemIndicator className="absolute right-2">
                         <Check className="h-4 w-4 text-primary" />
