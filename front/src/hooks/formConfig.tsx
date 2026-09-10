@@ -40,6 +40,10 @@ interface ToggleFieldProps extends FieldComponentProps {
   options: string[]
 }
 
+interface CheckboxFieldProps extends FieldComponentProps {
+  description?: string
+}
+
 const TextField = ({
   label,
   type,
@@ -204,7 +208,12 @@ function TimePickerField({ label, className, inputClassName }: FieldComponentPro
   )
 }
 
-function CheckboxField({ label, className, inputClassName }: FieldComponentProps) {
+function CheckboxField({
+  label,
+  description,
+  className,
+  inputClassName,
+}: CheckboxFieldProps) {
   const field = useFieldContext<boolean>()
   const value = field.state.value
 
@@ -220,6 +229,9 @@ function CheckboxField({ label, className, inputClassName }: FieldComponentProps
         }
         onBlur={field.handleBlur}
       />
+      {description && (
+        <p className="text-xs text-text-light font-light">{description}</p>
+      )}
       <FieldInfo field={field} />
     </div>
   )
