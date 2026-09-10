@@ -6,6 +6,10 @@ import type { Patient, PatientPathway } from '../../../../../types/patient.ts'
 import type { Slot } from '../../../../../types/slot.ts'
 import { computeProgramDuration } from '../programme-pdf.utils.ts'
 
+// Couleur du rond de la page de garde quand le parcours du patient n'en
+// définit pas (mauve historique).
+const DEFAULT_CIRCLE_COLOR = '#e6aff6'
+
 const styles = StyleSheet.create({
   coverPage: {
     padding: 0,
@@ -38,14 +42,13 @@ const styles = StyleSheet.create({
     height: 'auto',
     transform: 'rotate(220deg)',
   },
-  lavenderCircle: {
+  coverCircle: {
     position: 'absolute',
     bottom: -180,
     left: -60,
     width: 380,
     height: 380,
     borderRadius: 260,
-    backgroundColor: '#e6aff6',
   },
   coverCenter: {
     position: 'absolute',
@@ -107,6 +110,7 @@ export default function CoverPage({
   const patientLabel = `${patient.firstName} ${patient.lastName}`
 
   const firstPathway = pathways[0]
+  const circleColor = firstPathway?.templateColor ?? DEFAULT_CIRCLE_COLOR
   let programLabel = 'Programme'
   if (firstPathway) {
     if (firstPathway.templateName) {
@@ -121,7 +125,7 @@ export default function CoverPage({
       <Image src={logoCHU} style={styles.coverLogo} />
       <Image src={lines} style={styles.linesTopRight} />
       <Image src={lines} style={styles.linesBottomRight} />
-      <View style={styles.lavenderCircle} />
+      <View style={[styles.coverCircle, { backgroundColor: circleColor }]} />
 
       <View style={styles.coverCenter}>
         <Text style={styles.coverMainTitle}>SMCV</Text>
