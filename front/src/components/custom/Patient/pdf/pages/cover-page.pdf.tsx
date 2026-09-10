@@ -78,12 +78,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 24,
   },
-  coverDuration: {
-    fontSize: 16,
-    fontFamily: 'Helvetica-Bold',
-    color: '#221755',
-    textAlign: 'center',
-  },
   coverDateRange: {
     fontSize: 16,
     fontFamily: 'Helvetica-Bold',
@@ -134,13 +128,10 @@ export default function CoverPage({
         <View style={styles.coverTitleUnderline} />
         <Text style={styles.coverSubtitle}>{programLabel}</Text>
         {duration && (
-          <>
-            <Text style={styles.coverDuration}>{duration.weeks} semaines</Text>
-            <Text style={styles.coverDateRange}>
-              Du {duration.startDate.format('DD/MM')} au{' '}
-              {duration.endDate.format('DD/MM/YYYY')}
-            </Text>
-          </>
+          <Text style={styles.coverDateRange}>
+            Du {duration.startDate.format('DD/MM')} au{' '}
+            {duration.endDate.format('DD/MM/YYYY')}
+          </Text>
         )}
       </View>
 

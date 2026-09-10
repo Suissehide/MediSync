@@ -12,7 +12,6 @@ export type WeekData = {
 }
 
 export function computeProgramDuration(slots: Slot[]): {
-  weeks: number
   startDate: dayjs.Dayjs
   endDate: dayjs.Dayjs
 } | null {
@@ -22,8 +21,7 @@ export function computeProgramDuration(slots: Slot[]): {
   const dates = slots.map((s) => dayjs.utc(s.startDate))
   const startDate = dates.reduce((a, b) => (a.isBefore(b) ? a : b))
   const endDate = dates.reduce((a, b) => (a.isAfter(b) ? a : b))
-  const weeks = endDate.startOf('isoWeek').diff(startDate.startOf('isoWeek'), 'week') + 1
-  return { weeks, startDate, endDate }
+  return { startDate, endDate }
 }
 
 // Pour un créneau individuel, chaque patient a son propre rendez-vous (une
