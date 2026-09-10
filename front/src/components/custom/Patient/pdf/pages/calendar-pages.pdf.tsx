@@ -3,9 +3,32 @@ import { Page, StyleSheet, Text, View } from '@react-pdf/renderer'
 import type { Slot } from '../../../../../types/slot.ts'
 import { groupSlotsByWeek, type WeekData } from '../programme-pdf.utils.ts'
 
+const PAGE_PADDING = 28
+const A4_HEIGHT = 841.89
+const PAGE_CONTENT_HEIGHT = A4_HEIGHT - PAGE_PADDING * 2
+
+// Majorants de hauteur : l'en-tête d'une semaine, une ligne d'horaire (le
+// libellé d'un créneau peut passer à la ligne et dépasser le `minHeight` de 36)
+// et la marge basse d'un bloc.
+const WEEK_HEADER_MAX_HEIGHT = 30
+const TIME_ROW_MAX_HEIGHT = 60
+const WEEK_BLOCK_MARGIN_BOTTOM = 14
+
+// Sans `wrap={false}`, react-pdf coupe volontiers la page juste après la ligne
+// d'en-tête et laisse le titre du tableau orphelin en bas de page. On garde
+// donc chaque semaine d'un seul tenant, sauf si elle est trop haute pour tenir
+// sur une page : `wrap={false}` la ferait alors tronquer.
+function weekFitsOnOnePage(rowCount: number) {
+  const height =
+    WEEK_HEADER_MAX_HEIGHT +
+    rowCount * TIME_ROW_MAX_HEIGHT +
+    WEEK_BLOCK_MARGIN_BOTTOM
+  return height <= PAGE_CONTENT_HEIGHT
+}
+
 const styles = StyleSheet.create({
   calendarPage: {
-    padding: 28,
+    padding: PAGE_PADDING,
     fontFamily: 'Helvetica',
     fontSize: 8,
     color: '#1f2937',
@@ -17,7 +40,7 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   weekBlock: {
-    marginBottom: 14,
+    marginBottom: WEEK_BLOCK_MARGIN_BOTTOM,
   },
   weekHeaderRow: {
     flexDirection: 'row',
@@ -104,7 +127,10 @@ const DAY_NAMES = ['LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI']
 
 function WeekBlock({ weekData }: { weekData: WeekData }) {
   return (
-    <View style={styles.weekBlock}>
+    <View
+      style={styles.weekBlock}
+      wrap={!weekFitsOnOnePage(weekData.timeRows.length)}
+    >
       <View style={styles.weekHeaderRow} wrap={false}>
         <View style={styles.weekLabelCell}>
           <Text style={styles.weekLabelText}>{weekData.weekLabel}</Text>
