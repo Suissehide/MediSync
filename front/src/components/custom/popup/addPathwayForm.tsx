@@ -125,7 +125,10 @@ function AddPathwayForm({ trigger }: AddPathwayFormProps) {
 
             <form.AppField name="firstAppointmentOnly">
               {(field) => (
-                <field.Checkbox label="Inscription au premier RDV uniquement" />
+                <field.Checkbox
+                  label="Inscription au premier RDV uniquement"
+                  description="Le parcours devient individuel : le patient est inscrit uniquement au premier créneau disponible, au lieu de l’ensemble des créneaux du parcours."
+                />
               )}
             </form.AppField>
           </form>
