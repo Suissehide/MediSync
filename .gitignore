@@ -6,3 +6,7 @@
 # Configuration locale : seuls les .env.example sont versionnes
 .env
 .env.local
+
+# Sauvegardes de base : contiennent des donnees patients, jamais versionnees
+*.dump
+*.sql.gz

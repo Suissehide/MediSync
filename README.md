@@ -56,3 +56,31 @@ Pour découvrir la liste des scripts NPM, exécuter `npm run`.
 - Pour démarrer le backend en mode développement, exécuter `npm run start:development`.
 - Pour démarrer le backend en mode production, exécuter `npm run start:production` (prérequis : avoir construit le
   projet).
+
+### Récupérer la base d'un environnement déployé
+
+Le service `postgres-backup` de la stack produit un `pg_dump` quotidien, téléchargeable depuis l'interface Dokploy.
+Pour rejouer une de ces sauvegardes en local :
+
+```shell
+deploy/scripts/restore-db-dump.sh ~/Downloads/2026-09-09T22:00:00.057Z.sql.gz
+```
+
+Le script recrée la base du conteneur `medisync-postgres` et y restaure le dump. **L'opération est destructive** : la
+base de développement locale est supprimée, d'où la confirmation demandée (contournable avec `--yes`).
+
+Quelques points à connaître :
+
+- Malgré leur extension `.sql.gz`, ces sauvegardes sont au **format custom** (`pg_dump -Fc`), pas du SQL brut : `psql`
+  ne sait pas les lire, il faut `pg_restore`. Le script détecte le format et la compression tout seul.
+- Aucun client Postgres n'est requis sur votre machine : `pg_restore` est exécuté depuis un conteneur jetable attaché
+  au réseau du conteneur cible, ce qui évite au passage qu'un client plus ancien que le serveur d'origine refuse
+  l'archive.
+- Le dump embarque un `CREATE DATABASE … LOCALE 'en_US.utf8'` inapplicable sur les images Alpine ; le script crée donc
+  la base lui-même et restaure sans `-C`.
+- Pensez à vérifier ensuite que le schéma correspond à votre branche : `cd back && npx prisma migrate status`.
+- Ces sauvegardes contiennent des données patients réelles. Elles n'ont rien à faire dans le dépôt ni sur un service
+  tiers.
+
+Variables d'environnement disponibles pour cibler une autre base : `CONTAINER`, `DB_NAME`, `DB_USER`,
+`PG_CLIENT_IMAGE`.
