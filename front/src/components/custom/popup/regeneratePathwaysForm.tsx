@@ -41,6 +41,7 @@ export function RegeneratePathwaysForm({
   const options = templates.map((template) => ({
     value: template.id,
     label: template.name,
+    color: template.color,
   }))
 
   return (
