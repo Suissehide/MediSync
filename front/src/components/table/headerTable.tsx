@@ -61,7 +61,7 @@ export function HeaderTable<TData>({
                 key={header.id}
                 colSpan={header.colSpan}
                 style={thStyle}
-                className="h-10 border-b border-border-dark"
+                className="h-10 border-b border-border-dark bg-card"
               >
                 {header.isPlaceholder ? null : (
                   <>
