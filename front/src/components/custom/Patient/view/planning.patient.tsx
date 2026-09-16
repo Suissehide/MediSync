@@ -215,7 +215,12 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
       return
     }
 
-    if (enrolledSlotIds.has(slotId)) {
+    const isIndividual = slot.slotTemplate.isIndividual
+
+    // Sur un créneau collectif, le patient inscrit rouvre son rendez-vous.
+    // Sur un créneau individuel, ses rendez-vous existants sont déjà
+    // cliquables un par un : un clic sur le créneau en crée un nouveau.
+    if (!isIndividual && enrolledSlotIds.has(slotId)) {
       const appointmentId = patientAppointmentBySlotId.get(slotId)
       if (appointmentId) {
         setSelectedSlotSoignants(slot.slotTemplate?.soignants ?? [])
@@ -225,7 +230,6 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
       if (slot.locked) {
         return
       }
-      const isIndividual = slot.slotTemplate.isIndividual
       if (!isIndividual && slot.appointments && slot.appointments.length > 0) {
         setSelectedSlotSoignants(slot.slotTemplate?.soignants ?? [])
         setOpenAppointmentId(slot.appointments[0].id)
@@ -292,7 +296,6 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
                       (slot) =>
                         slot.slotTemplate.isIndividual &&
                         !slot.locked &&
-                        !enrolledSlotIds.has(slot.id) &&
                         selStart.isSameOrAfter(dayjs.utc(slot.startDate)) &&
                         selEnd.isSameOrBefore(dayjs.utc(slot.endDate)),
                     )
