@@ -221,7 +221,7 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
                     <RadixSelect.Item
                       key={option.value}
                       value={option.value.toString()}
-                      className="relative flex cursor-pointer select-none items-center rounded px-2 pr-7 py-1.5 text-sm text-text-sidebar outline-none hover:bg-primary/20 focus:bg-primary/20 data-[state=checked]:text-primary"
+                      className="relative flex cursor-pointer select-none items-center rounded px-2 pr-7 py-1.5 text-sm text-text-dark outline-none hover:bg-primary/20 focus:bg-primary/20 data-[state=checked]:text-primary"
                     >
                       <RadixSelect.ItemText>
                         <span className="flex items-center gap-2">
