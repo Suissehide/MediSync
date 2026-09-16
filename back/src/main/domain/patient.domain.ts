@@ -466,6 +466,20 @@ class PatientDomain implements PatientDomainInterface {
       return false
     }
 
+    // Créneau individuel : disponible s'il reste une sous-fenêtre libre en
+    // tenant compte des rendez-vous du créneau et de ceux du patient.
+    if (slot.slotTemplate.isIndividual) {
+      const nextSlot = this.getNextAvailableAppointment(
+        slotStart.toDate(),
+        slotEnd.toDate(),
+        this.busyIntervals(slot, patientAppointments),
+        appointmentDuration,
+      )
+      return nextSlot !== null
+    }
+
+    // Créneau multiple : le rendez-vous occupe tout le créneau, il ne doit
+    // chevaucher aucun rendez-vous du patient.
     const overlapsPatient = patientAppointments.some((patientAppointment) => {
       const appointment = patientAppointment.appointment
       const appointmentStart = dayjs(appointment.startDate)
@@ -479,28 +493,14 @@ class PatientDomain implements PatientDomainInterface {
       return false
     }
 
-    if (slot.slotTemplate.isIndividual) {
-      const nextSlot = this.getNextAvailableAppointment(
-        slotStart.toDate(),
-        slotEnd.toDate(),
-        slot.appointments,
-        appointmentDuration,
+    if (slot.appointments && slot.appointments.length > 0) {
+      const allFull = slot.appointments.every(
+        (appointment) =>
+          (appointment.appointmentPatients?.length ?? 0) >=
+          (slot.slotTemplate.capacity ?? maxCapacity),
       )
-      if (!nextSlot) {
+      if (allFull) {
         return false
-      }
-    }
-
-    if (!slot.slotTemplate.isIndividual) {
-      if (slot.appointments && slot.appointments.length > 0) {
-        const allFull = slot.appointments.every(
-          (appointment) =>
-            (appointment.appointmentPatients?.length ?? 0) >=
-            (slot.slotTemplate.capacity ?? maxCapacity),
-        )
-        if (allFull) {
-          return false
-        }
       }
     }
 
@@ -524,7 +524,7 @@ class PatientDomain implements PatientDomainInterface {
   // sans place disponible ne produit pas d'échec (retourne un tableau vide).
   private async enrollInSlot(
     slot: SlotWithTemplateAndAppointmentsRepo,
-    patient: PatientEntityDomain,
+    patient: PatientWithAppointmentsDomain,
     options: {
       type?: AppointmentType | null
       motif?: string | null
@@ -540,7 +540,7 @@ class PatientDomain implements PatientDomainInterface {
       const nextSlot = this.getNextAvailableAppointment(
         slot.startDate,
         slot.endDate,
-        slot.appointments,
+        this.busyIntervals(slot, patient.appointmentPatients),
         appointmentDuration,
       )
       if (!nextSlot) {
@@ -675,6 +675,19 @@ class PatientDomain implements PatientDomainInterface {
     }
 
     return enrollmentAppointments
+  }
+
+  // Intervalles à éviter dans un créneau individuel : les rendez-vous déjà
+  // pris dans le créneau (tous patients) et les rendez-vous du patient
+  // (parcours multiples, autres créneaux).
+  private busyIntervals(
+    slot: SlotWithTemplateAndAppointmentsRepo,
+    patientAppointments: AppointmentPatientWithAppointmentDomain[],
+  ): { startDate: Date; endDate: Date }[] {
+    return [
+      ...slot.appointments,
+      ...patientAppointments.map((ap) => ap.appointment),
+    ]
   }
 
   private getNextAvailableAppointment(
