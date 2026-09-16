@@ -12,6 +12,7 @@ import {
   CalendarDays,
   CheckSquare,
   GanttChart,
+  Printer,
   RefreshCw,
   Settings2,
   Trash2,
@@ -36,6 +37,7 @@ import DashboardLayout from '../../../../components/dashboard.layout.tsx'
 import PathwayFilter, {
   NO_PATHWAY_KEY,
 } from '../../../../components/custom/planning/pathwayFilter.tsx'
+import PlanningExportModal from '../../../../components/custom/planning/pdf/planning-export-modal.tsx'
 import { Button } from '../../../../components/ui/button.tsx'
 import {
   PopoverAnchor,
@@ -106,6 +108,7 @@ function Planning() {
   const { createForbiddenWeek, deleteForbiddenWeek } =
     useForbiddenWeekMutations()
 
+  const [exportOpen, setExportOpen] = useState(false)
   const [regenerateOpen, setRegenerateOpen] = useState(false)
   const [regenerateTemplateID, setRegenerateTemplateID] = useState('')
   const [regenerateFromDate, setRegenerateFromDate] = useState<Dayjs | null>(
@@ -738,6 +741,13 @@ function Planning() {
                       <RefreshCw size={16} />
                       Mettre à jour les parcours instanciés
                     </DropdownMenu.Item>
+                    <DropdownMenu.Item
+                      onSelect={() => setExportOpen(true)}
+                      className="flex items-center gap-2 px-3 py-2 rounded cursor-pointer outline-none hover:bg-primary/20 text-sm select-none"
+                    >
+                      <Printer size={16} />
+                      Exporter le planning (PDF)
+                    </DropdownMenu.Item>
                   </DropdownMenu.Content>
                 </DropdownMenu.Portal>
               </DropdownMenu.Root>
@@ -1217,6 +1227,13 @@ function Planning() {
           onConfirm={handleRegenerate}
           isPending={regeneratePathways.isPending}
         />
+
+        {exportOpen && (
+          <PlanningExportModal
+            initialDate={usePlanningStore.getState().viewStart}
+            onClose={() => setExportOpen(false)}
+          />
+        )}
       </div>
     </DashboardLayout>
   )
