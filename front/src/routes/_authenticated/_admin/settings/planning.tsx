@@ -630,8 +630,20 @@ function Planning() {
     if (!pathways) {
       return []
     }
-    return buildPathwayEvents(pathways)
-  }, [pathways])
+    if (hiddenPathwayIds.size === 0) {
+      return buildPathwayEvents(pathways)
+    }
+    return buildPathwayEvents(
+      pathways.filter(
+        (pathway) =>
+          !hiddenPathwayIds.has(
+            pathway.template?.id ??
+              pathway.pathwayTemplateID ??
+              NO_PATHWAY_KEY,
+          ),
+      ),
+    )
+  }, [pathways, hiddenPathwayIds])
 
   const forbiddenWeekBackgroundEvents = useMemo(() => {
     return (forbiddenWeeks ?? []).map((fw) => ({
@@ -694,7 +706,7 @@ function Planning() {
           </h1>
 
           <div className="flex justify-end items-center gap-2">
-            {!editMode && view === 'calendar' && (
+            {!editMode && (
               <PathwayFilter
                 templates={pathwayTemplates ?? []}
                 hiddenIds={hiddenPathwayIds}
