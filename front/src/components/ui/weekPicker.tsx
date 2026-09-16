@@ -100,7 +100,7 @@ export function WeekPicker({ value, onChange }: WeekPickerProps) {
   }
 
   return (
-    <div className="flex items-start">
+    <div className="flex flex-col items-center">
       <DateCalendar
         value={value}
         onChange={(date) => onChange(date)}
@@ -125,9 +125,9 @@ export function WeekPicker({ value, onChange }: WeekPickerProps) {
         }}
       />
 
-      <div className="self-stretch w-px bg-border mx-1" />
+      <div className="h-px w-full bg-border my-2" />
 
-      <div className="flex flex-col gap-2 pt-14 pl-3">
+      <div className="flex gap-2">
         <button
           type="button"
           onClick={selectPrevWeek}
