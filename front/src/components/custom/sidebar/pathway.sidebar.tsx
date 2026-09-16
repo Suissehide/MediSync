@@ -157,7 +157,7 @@ function SidebarPathway() {
                             e.stopPropagation()
                             handleMove(index, 'up')
                           }}
-                          className="flex-shrink-0 h-6 w-6"
+                          className="flex-shrink-0 h-6 w-6 text-text-dark"
                         >
                           <ChevronUp className="w-4 h-4" />
                         </Button>
@@ -171,7 +171,7 @@ function SidebarPathway() {
                               e.stopPropagation()
                               handleMove(index, 'down')
                             }}
-                            className="flex-shrink-0 h-6 w-6"
+                            className="flex-shrink-0 h-6 w-6 text-text-dark"
                           >
                             <ChevronDown className="w-4 h-4" />
                           </Button>
@@ -183,7 +183,7 @@ function SidebarPathway() {
                           e.stopPropagation()
                           setOpenSheetId(pathwayTemplate.id)
                         }}
-                        className="flex-shrink-0 h-6 w-6"
+                        className="flex-shrink-0 h-6 w-6 text-text-dark"
                       >
                         <Pencil className="w-4 h-4" />
                       </Button>
