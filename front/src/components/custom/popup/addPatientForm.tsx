@@ -1,5 +1,5 @@
 import dayjs from 'dayjs'
-import { ArrowLeft, ArrowRight, Check, X } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, Save, X } from 'lucide-react'
 import type React from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
@@ -30,7 +30,7 @@ interface AddPatientFormProps {
 function AddPatientForm({ trigger }: AddPatientFormProps) {
   const [open, setOpen] = useState(false)
   const [step, setStep] = useState(1)
-  const { enrollPatient } = usePatientMutations()
+  const { enrollPatient, createPatient } = usePatientMutations()
   const pathwayState = usePathwaySelector()
   const { reset: resetPathways } = pathwayState
 
@@ -86,6 +86,19 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
 
   const nextStep = () => setStep((s) => s + 1)
   const prevStep = () => setStep((s) => s - 1)
+
+  const saveWithoutPathway = async () => {
+    const { firstName, lastName, gender, birthDate } = form.state.values
+
+    await createPatient.mutateAsync({
+      firstName,
+      lastName,
+      gender,
+      birthDate,
+    } satisfies CreatePatientParams)
+
+    setOpen(false)
+  }
 
   return (
     <Popup modal={true} open={open} onOpenChange={setOpen}>
@@ -168,9 +181,22 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
           )}
 
           {step < 2 ? (
-            <Button variant="default" onClick={nextStep}>
-              Suivant <ArrowRight className="w-4 h-4" />
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                onClick={saveWithoutPathway}
+                isLoading={createPatient.isPending}
+              >
+                <Save className="w-4 h-4" /> Enregistrer
+              </Button>
+              <Button
+                variant="default"
+                onClick={nextStep}
+                disabled={createPatient.isPending}
+              >
+                Suivant <ArrowRight className="w-4 h-4" />
+              </Button>
+            </>
           ) : (
             <Button variant="default" onClick={() => form.handleSubmit()} isLoading={enrollPatient.isPending}>
               <Check className="w-4 h-4" /> Valider
