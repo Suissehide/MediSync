@@ -9,6 +9,7 @@ import {
   MessageSquareTextIcon,
   Plus,
   Trash2,
+  Users,
 } from 'lucide-react'
 
 import { darkenHex } from '../../../libs/color.ts'
@@ -45,8 +46,15 @@ export const EventContent = ({
   onToggleSelect,
 }: Props) => {
   const { event, view } = eventContent
-  const { states, appointments, thematic, type, locked, capacity } =
-    event.extendedProps
+  const {
+    states,
+    appointments,
+    thematic,
+    type,
+    locked,
+    capacity,
+    isIndividual: isIndividualTemplate,
+  } = event.extendedProps
   const isWeekView = view.type === 'timeGridWeek'
   const isRowLayout = !isWeekView
 
@@ -185,6 +193,15 @@ export const EventContent = ({
             <LockOpen className="w-2.5 h-2.5" />
           </Button>
         )}
+
+      {/* Nombre de places, en mode édition de parcours. Masqué au survol pour
+          laisser la place aux boutons Dupliquer / Supprimer. */}
+      {type === 'template' && !isIndividualTemplate && capacity != null && (
+        <span className="absolute top-0.5 right-0.5 z-10 flex items-center gap-0.5 rounded bg-black/40 px-1 text-[0.55rem] font-semibold leading-tight text-white pointer-events-none transition-opacity group-hover:opacity-0">
+          <Users className="w-2 h-2" />
+          {capacity}
+        </span>
+      )}
 
       {onDuplicate &&
         !containsKeyword(states, ['editable', 'individual', 'multiple']) &&
