@@ -258,6 +258,22 @@ function TextAreaField({ label, className, inputClassName }: FieldComponentProps
   )
 }
 
+// Palette du sélecteur de couleur : 8 teintes x 6 nuances, puis une ligne
+// de neutres. L'ordre est celui de l'affichage (8 pastilles par ligne).
+const COLOR_PICKER_PALETTE = [
+  // Nuances soutenues
+  '#b91c1c', '#c2410c', '#b45309', '#047857', '#0e7490', '#1d4ed8', '#6d28d9', '#be185d',
+  '#dc2626', '#ea580c', '#d97706', '#059669', '#0891b2', '#2563eb', '#7c3aed', '#db2777',
+  // Nuances vives
+  '#ef4444', '#f97316', '#f59e0b', '#10b981', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899',
+  '#f87171', '#fb923c', '#fbbf24', '#34d399', '#22d3ee', '#60a5fa', '#a78bfa', '#f472b6',
+  // Nuances claires
+  '#fca5a5', '#fdba74', '#fcd34d', '#6ee7b7', '#67e8f9', '#93c5fd', '#c4b5fd', '#f9a8d4',
+  '#fecaca', '#fed7aa', '#fde68a', '#a7f3d0', '#a5f3fc', '#bfdbfe', '#ddd6fe', '#fbcfe8',
+  // Neutres
+  '#000000', '#374151', '#6b7280', '#9ca3af', '#d1d5db', '#e5e7eb', '#f3f4f6', '#ffffff',
+]
+
 function ColorPickerField({ label, className, inputClassName }: FieldComponentProps) {
   const [open, setOpen] = useState(false)
   const field = useFieldContext<string>()
@@ -321,6 +337,7 @@ function ColorPickerField({ label, className, inputClassName }: FieldComponentPr
             <Github
               className="bg-primary"
               color={value}
+              colors={COLOR_PICKER_PALETTE}
               style={{ width: '212px' }}
               onChange={(color: { hex: string }) => {
                 field.handleChange(color.hex)
