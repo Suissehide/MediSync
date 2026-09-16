@@ -195,7 +195,7 @@ function SuiviPage() {
         <AddPatientToSlotForm key="add-patient-to-slot" />,
       ]}
     >
-      <div className="flex-1 bg-background rounded-lg flex flex-col w-full gap-4">
+      <div className="flex-1 min-h-0 bg-background rounded-lg flex flex-col w-full gap-4 overflow-hidden">
         <div className="px-6 mt-6 min-h-9 flex justify-between items-center gap-3">
           <h1 className="text-text-dark text-xl font-semibold">Suivi</h1>
 
@@ -239,7 +239,7 @@ function SuiviPage() {
           </div>
         </div>
 
-        <div className="px-6">
+        <div className="px-6 pb-6 flex-1 min-h-0 flex flex-col">
           {isPending ? (
             <div className="text-center text-text-light text-sm px-6">
               Chargement...
@@ -251,7 +251,7 @@ function SuiviPage() {
           ) : (
             <div
               ref={containerRef}
-              className="overflow-x-auto rounded-md border border-border"
+              className="flex-1 min-h-0 overflow-auto rounded-md border border-border"
             >
               <table className="w-max min-w-full border-separate border-spacing-0">
                 <HeaderTable
@@ -359,7 +359,7 @@ function SuiviPage() {
           )}
 
           {trackingPathways && trackingPathways.length > 0 && (
-            <div className="mt-3 flex items-center gap-4 text-xs text-text-light">
+            <div className="mt-3 shrink-0 flex items-center gap-4 text-xs text-text-light">
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-foreground inline-block" />
                 Présent
