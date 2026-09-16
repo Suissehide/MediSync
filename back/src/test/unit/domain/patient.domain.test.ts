@@ -21,17 +21,26 @@ const overlaps = (
   b: { startDate: Date; endDate: Date },
 ) => a.startDate < b.endDate && a.endDate > b.startDate
 
+// Rendez-vous déjà présents dans un créneau, indexés par identifiant de créneau.
+type SlotAppointments = Record<string, CreatedAppointment[]>
+
 const buildSlot = (
   id: string,
   startDate: Date,
   endDate: Date,
   isIndividual: boolean,
+  slotAppointments: SlotAppointments,
 ) => ({
   id,
   startDate,
   endDate,
   slotTemplate: { id: `tpl-${id}`, isIndividual, capacity: 10, soignants: [] },
-  appointments: [],
+  appointments: (slotAppointments[id] ?? []).map((a) => ({
+    id: a.id,
+    startDate: a.startDate,
+    endDate: a.endDate,
+    appointmentPatients: a.patientIDs.map((patientID) => ({ patientID })),
+  })),
 })
 
 const buildPathway = (
@@ -40,20 +49,35 @@ const buildPathway = (
   slots: ReturnType<typeof buildSlot>[],
 ) => ({ id, startDate, slots }) as unknown as PathwayWithSlotsRepo
 
-// Parcours multiple : un seul créneau le lundi 10h-11h.
-const groupPathway = buildPathway('pw-group', monday(10), [
-  buildSlot('slot-group-mon', monday(10), monday(11), false),
-])
-
-// Parcours individuel "premier créneau dispo" : lundi 10h-12h puis mardi 14h-16h.
-const individualPathway = buildPathway('pw-indiv', monday(10), [
-  buildSlot('slot-indiv-mon', monday(10), monday(12), true),
-  buildSlot('slot-indiv-tue', tuesday(14), tuesday(16), true),
-])
-
-const buildDomain = (initialAppointments: CreatedAppointment[] = []) => {
+const buildDomain = (
+  initialAppointments: CreatedAppointment[] = [],
+  slotAppointments: SlotAppointments = {},
+) => {
   const created: CreatedAppointment[] = [...initialAppointments]
   let nextId = created.length + 1
+
+  // Parcours multiple : un seul créneau le lundi 10h-11h.
+  const groupPathway = buildPathway('pw-group', monday(10), [
+    buildSlot(
+      'slot-group-mon',
+      monday(10),
+      monday(11),
+      false,
+      slotAppointments,
+    ),
+  ])
+
+  // Parcours individuel "premier créneau dispo" : lundi 10h-12h puis mardi 14h-16h.
+  const individualPathway = buildPathway('pw-indiv', monday(10), [
+    buildSlot('slot-indiv-mon', monday(10), monday(12), true, slotAppointments),
+    buildSlot(
+      'slot-indiv-tue',
+      tuesday(14),
+      tuesday(16),
+      true,
+      slotAppointments,
+    ),
+  ])
 
   const patient = { id: 'patient-1', firstName: 'Ada', lastName: 'Lovelace' }
 
@@ -165,10 +189,13 @@ describe('PatientDomain – parcours individuel "premier créneau dispo"', () =>
     ]
     expect(groupApt.slotID).toBe('slot-group-mon')
     expect(overlaps(groupApt, indivApt)).toBe(false)
-    expect(indivApt.slotID).toBe('slot-indiv-tue')
+    // Sous-fenêtre libre du créneau du lundi, juste après le parcours multiple.
+    expect(indivApt.slotID).toBe('slot-indiv-mon')
+    expect(indivApt.startDate).toEqual(monday(11))
+    expect(indivApt.endDate).toEqual(monday(11, 30))
   })
 
-  it('ne chevauche pas un rendez-vous existant du patient', async () => {
+  it('prend la première sous-fenêtre libre après un rendez-vous existant du patient', async () => {
     const { domain, created } = buildDomain([
       {
         id: 'apt-existing',
@@ -195,6 +222,70 @@ describe('PatientDomain – parcours individuel "premier créneau dispo"', () =>
       CreatedAppointment,
     ]
     expect(overlaps(existingApt, indivApt)).toBe(false)
+    expect(indivApt.slotID).toBe('slot-indiv-mon')
+    expect(indivApt.startDate).toEqual(monday(11))
+    expect(indivApt.endDate).toEqual(monday(11, 30))
+  })
+
+  it('combine les rendez-vous du créneau et ceux du patient pour trouver la sous-fenêtre', async () => {
+    const otherPatientApt = {
+      id: 'apt-other',
+      startDate: monday(11),
+      endDate: monday(11, 30),
+      slotID: 'slot-indiv-mon',
+      patientIDs: ['patient-2'],
+    }
+    const { domain, created } = buildDomain(
+      [
+        {
+          id: 'apt-existing',
+          startDate: monday(10),
+          endDate: monday(11),
+          slotID: 'slot-group-mon',
+          patientIDs: ['patient-1'],
+        },
+      ],
+      { 'slot-indiv-mon': [otherPatientApt] },
+    )
+
+    const result = await domain.enrollExistingPatientInPathways(
+      {
+        patientID: 'patient-1',
+        startDate: monday(0),
+        pathways: [{ tag: 'INDIV', timeOfDay: 'ALL_DAY', duration: 30 }],
+      },
+      'user-1',
+    )
+
+    expect(result.failedEnrollments).toEqual([])
+    const indivApt = created.at(-1) as CreatedAppointment
+    expect(indivApt.slotID).toBe('slot-indiv-mon')
+    expect(indivApt.startDate).toEqual(monday(11, 30))
+    expect(indivApt.endDate).toEqual(monday(12))
+  })
+
+  it('passe au créneau suivant si aucune sous-fenêtre ne tient', async () => {
+    const { domain, created } = buildDomain([
+      {
+        id: 'apt-existing',
+        startDate: monday(10),
+        endDate: monday(11, 45),
+        slotID: 'slot-group-mon',
+        patientIDs: ['patient-1'],
+      },
+    ])
+
+    const result = await domain.enrollExistingPatientInPathways(
+      {
+        patientID: 'patient-1',
+        startDate: monday(0),
+        pathways: [{ tag: 'INDIV', timeOfDay: 'ALL_DAY', duration: 30 }],
+      },
+      'user-1',
+    )
+
+    expect(result.failedEnrollments).toEqual([])
+    const indivApt = created.at(-1) as CreatedAppointment
     expect(indivApt.slotID).toBe('slot-indiv-tue')
   })
 
