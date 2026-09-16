@@ -227,7 +227,9 @@ export default function PlanningExportModal({
           </aside>
 
           <div className="flex-1 min-w-0">
-            <PDFViewer width="100%" height="100%" showToolbar={false}>
+            {/* Barre d'outils conservée : l'export fait une page par semaine,
+                il faut pouvoir naviguer entre elles et zoomer. */}
+            <PDFViewer width="100%" height="100%">
               {pdfDocument}
             </PDFViewer>
           </div>

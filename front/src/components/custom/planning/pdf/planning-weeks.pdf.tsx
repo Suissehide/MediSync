@@ -7,12 +7,22 @@ import type { PlanningWeek } from './planning-pdf.utils.ts'
 const PAGE_PADDING = 22
 const DAY_HEADER_HEIGHT = 24
 
-// Les lignes d'horaires se partagent la hauteur restante de la page : plutôt
-// que d'estimer la hauteur de l'en-tête à la main, on laisse flexbox la mesurer
-// et répartir le reste. Le plancher garde une ligne lisible quand la semaine en
-// compte beaucoup ; le plafond évite la bande géante quand elle n'en a qu'une.
-const MIN_ROW_HEIGHT = 32
+// Plafond de hauteur d'une ligne, pour éviter la bande géante quand la semaine
+// n'en compte qu'une ou deux.
 const MAX_ROW_HEIGHT = 170
+
+// Hauteur restant aux lignes une fois l'en-tête et la ligne des jours posés,
+// mesurée sur un rendu réel (16 lignes de 31 pt tenaient tout juste). react-pdf
+// pagine avant de résoudre flexbox : `flexShrink` ne comprime donc rien, et
+// c'est cette hauteur explicite qui garantit une semaine par page.
+const AVAILABLE_ROWS_HEIGHT = 496
+
+// Tailles de police à densité confortable, et hauteur qu'occupent les deux
+// lignes d'un créneau à cette échelle (interligne ~1,25, marges et bordures).
+const BASE_FONT_SIZES = { thematic: 8.5, details: 7.5 }
+const BASE_BLOCK_HEIGHT = 28
+const BASE_TIME_LABEL_SIZE = 8
+const MIN_FONT_SCALE = 0.55
 
 const DAY_NAMES = ['LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI']
 
@@ -95,10 +105,12 @@ const styles = StyleSheet.create({
   },
   timeRow: {
     flexDirection: 'row',
-    flexGrow: 1,
-    flexBasis: 0,
-    minHeight: MIN_ROW_HEIGHT,
-    maxHeight: MAX_ROW_HEIGHT,
+    // La hauteur exacte est posée à l'affichage (`computeRowHeight`) : elle
+    // dépend du nombre de lignes de la semaine. `overflow: 'hidden'` garde un
+    // texte trop long à l'intérieur de sa case plutôt que par-dessus la
+    // voisine.
+    flexShrink: 0,
+    overflow: 'hidden',
   },
   timeLabelCell: {
     width: 54,
@@ -109,16 +121,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   timeLabelText: {
-    fontSize: 8,
     fontFamily: 'Helvetica-Bold',
     color: '#374151',
     textAlign: 'center',
   },
   dayCell: {
+    // En paysage la largeur abonde et la hauteur manque : deux parcours en
+    // parallèle se placent côte à côte, chacun gardant toute la hauteur de la
+    // ligne, au lieu de se partager une demi-hauteur illisible.
+    flexDirection: 'row',
     flex: 1,
     borderWidth: 0.5,
     borderColor: '#d1d5db',
     padding: 1.5,
+    overflow: 'hidden',
   },
   slotBlock: {
     // `flexBasis: 'auto'` — avec une base à 0, react-pdf mesure le bloc avant
@@ -129,23 +145,50 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 2,
     paddingHorizontal: 3,
-    marginBottom: 1.5,
+    marginRight: 1.5,
+    overflow: 'hidden',
   },
   slotThematic: {
-    fontSize: 8.5,
     fontFamily: 'Helvetica-Bold',
+    textOverflow: 'ellipsis',
   },
-  slotSoignants: {
-    fontSize: 7.5,
+  slotDetails: {
     marginTop: 1,
-  },
-  slotLocation: {
-    fontSize: 7,
-    marginTop: 1,
+    // Une seule ligne, tronquée proprement : sans cela le texte repart à la
+    // ligne et `overflow: 'hidden'` le coupe en plein milieu d'un mot.
+    maxLines: 1,
+    textOverflow: 'ellipsis',
   },
 })
 
-function SlotBlock({ slot }: { slot: Slot }) {
+/** Les lignes de la semaine se partagent à parts égales la hauteur restante. */
+function computeRowHeight(rowCount: number) {
+  return Math.min(MAX_ROW_HEIGHT, AVAILABLE_ROWS_HEIGHT / rowCount)
+}
+
+/**
+ * Plus la semaine compte de lignes, plus chacune est basse : on réduit la
+ * police d'autant pour que les deux lignes d'un créneau continuent d'y tenir
+ * sans être rognées.
+ */
+function computeFontScale(rowHeight: number) {
+  return Math.max(MIN_FONT_SCALE, Math.min(1, rowHeight / BASE_BLOCK_HEIGHT))
+}
+
+/** La thématique ne s'autorise deux lignes que si la ligne est assez haute. */
+function computeThematicMaxLines(rowHeight: number) {
+  return rowHeight >= BASE_BLOCK_HEIGHT * 1.5 ? 2 : 1
+}
+
+function SlotBlock({
+  slot,
+  fontScale,
+  thematicMaxLines,
+}: {
+  slot: Slot
+  fontScale: number
+  thematicMaxLines: number
+}) {
   const background =
     slot.slotTemplate?.color ??
     slot.pathway?.template?.color ??
@@ -155,23 +198,43 @@ function SlotBlock({ slot }: { slot: Slot }) {
     ?.map((soignant) => soignant.name)
     .join(', ')
   const location = slot.slotTemplate?.location?.name
+  // Soignants et salle sur une seule ligne : en hauteur, chaque ligne gagnée
+  // permet une police plus grande sur une semaine dense.
+  const details = [soignants, location].filter(Boolean).join(' - ')
 
   return (
     <View style={[styles.slotBlock, { backgroundColor: background }]}>
-      <Text style={[styles.slotThematic, { color }]}>
+      <Text
+        style={[
+          styles.slotThematic,
+          {
+            color,
+            fontSize: BASE_FONT_SIZES.thematic * fontScale,
+            maxLines: thematicMaxLines,
+          },
+        ]}
+      >
         {slot.slotTemplate?.thematic ?? 'Sans thématique'}
       </Text>
-      {soignants && (
-        <Text style={[styles.slotSoignants, { color }]}>{soignants}</Text>
-      )}
-      {location && (
-        <Text style={[styles.slotLocation, { color }]}>{location}</Text>
+      {details && (
+        <Text
+          style={[
+            styles.slotDetails,
+            { color, fontSize: BASE_FONT_SIZES.details * fontScale },
+          ]}
+        >
+          {details}
+        </Text>
       )}
     </View>
   )
 }
 
 function WeekPage({ week }: { week: PlanningWeek }) {
+  const rowHeight = computeRowHeight(week.timeRows.length)
+  const fontScale = computeFontScale(rowHeight)
+  const thematicMaxLines = computeThematicMaxLines(rowHeight)
+
   return (
     <Page size="A4" orientation="landscape" style={styles.page}>
       <View style={styles.header}>
@@ -210,14 +273,30 @@ function WeekPage({ week }: { week: PlanningWeek }) {
           </View>
 
           {week.timeRows.map((row) => (
-            <View key={row.timeLabel} style={styles.timeRow} wrap={false}>
+            <View
+              key={row.timeLabel}
+              style={[styles.timeRow, { height: rowHeight }]}
+              wrap={false}
+            >
               <View style={styles.timeLabelCell}>
-                <Text style={styles.timeLabelText}>{row.timeLabel}</Text>
+                <Text
+                  style={[
+                    styles.timeLabelText,
+                    { fontSize: BASE_TIME_LABEL_SIZE * fontScale },
+                  ]}
+                >
+                  {row.timeLabel}
+                </Text>
               </View>
               {row.cells.map((slots, dayIndex) => (
                 <View key={DAY_NAMES[dayIndex]} style={styles.dayCell}>
                   {slots.map((slot) => (
-                    <SlotBlock key={slot.id} slot={slot} />
+                    <SlotBlock
+                      key={slot.id}
+                      slot={slot}
+                      fontScale={fontScale}
+                      thematicMaxLines={thematicMaxLines}
+                    />
                   ))}
                 </View>
               ))}
