@@ -12,6 +12,7 @@ interface ProgrammePDFProps {
   upcomingSlots: Slot[]
   pathways: PatientPathway[]
   enabledOptionalPageIds: string[]
+  forbiddenWeekStarts: string[]
 }
 
 export default function ProgrammePDF({
@@ -19,6 +20,7 @@ export default function ProgrammePDF({
   upcomingSlots,
   pathways,
   enabledOptionalPageIds,
+  forbiddenWeekStarts,
 }: ProgrammePDFProps) {
   const optionalPages = OPTIONAL_PAGES.filter((p) =>
     enabledOptionalPageIds.includes(p.id),
@@ -31,7 +33,11 @@ export default function ProgrammePDF({
         upcomingSlots={upcomingSlots}
         pathways={pathways}
       />
-      <CalendarPages upcomingSlots={upcomingSlots} patientId={patient.id} />
+      <CalendarPages
+        upcomingSlots={upcomingSlots}
+        patientId={patient.id}
+        forbiddenWeekStarts={forbiddenWeekStarts}
+      />
       <TipsPage />
       {optionalPages.map((p) => (
         <p.Component

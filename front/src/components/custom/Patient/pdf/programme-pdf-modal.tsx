@@ -3,6 +3,7 @@ import dayjs from 'dayjs'
 import { Download, FilePlus, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
+import { useForbiddenWeekQueries } from '../../../../queries/useForbiddenWeek.ts'
 import { usePatientPathwaysQuery } from '../../../../queries/usePatient.tsx'
 import { useAllSlotsQuery } from '../../../../queries/useSlot.ts'
 import type { Patient } from '../../../../types/patient.ts'
@@ -27,6 +28,7 @@ export default function ProgrammePDFModal({
 }: ProgrammePDFModalProps) {
   const { slots } = useAllSlotsQuery()
   const { pathways = [] } = usePatientPathwaysQuery(patient.id)
+  const { forbiddenWeeks } = useForbiddenWeekQueries()
 
   const [enabledOptionalPageIds, setEnabledOptionalPageIds] = useState<
     string[]
@@ -71,6 +73,13 @@ export default function ProgrammePDFModal({
       .sort((a, b) => dayjs(a.startDate).diff(dayjs(b.startDate)))
   }, [slots, patient])
 
+  // Les semaines interdites signalent les fermetures du service entre deux
+  // semaines du programme.
+  const forbiddenWeekStarts = useMemo(
+    () => (forbiddenWeeks ?? []).map((week) => week.startOfWeek),
+    [forbiddenWeeks],
+  )
+
   const fileName = `programme-${patient.lastName}-${patient.firstName}-${dayjs.utc().format('YYYY-MM-DD')}.pdf`
 
   const pdfDocument = useMemo(
@@ -80,9 +89,16 @@ export default function ProgrammePDFModal({
         upcomingSlots={patientSlots}
         pathways={pathways}
         enabledOptionalPageIds={enabledOptionalPageIds}
+        forbiddenWeekStarts={forbiddenWeekStarts}
       />
     ),
-    [patient, patientSlots, pathways, enabledOptionalPageIds],
+    [
+      patient,
+      patientSlots,
+      pathways,
+      enabledOptionalPageIds,
+      forbiddenWeekStarts,
+    ],
   )
 
   return (
