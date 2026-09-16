@@ -481,7 +481,9 @@ export const usePatientMutations = () => {
       queryClient.setQueryData<PatientPathway[]>(
         [PATIENT.GET_PATHWAYS, patientID],
         (old) => {
-          if (!old) return old
+          if (!old) {
+            return old
+          }
           const byID = new Map(old.map((p) => [p.pathwayID, p]))
           const reordered: PatientPathway[] = []
           pathwayIDs.forEach((id, index) => {
@@ -491,7 +493,7 @@ export const usePatientMutations = () => {
               byID.delete(id)
             }
           })
-          byID.forEach((p) => reordered.push(p))
+          reordered.push(...byID.values())
           return reordered
         },
       )
