@@ -266,7 +266,7 @@ function SuiviPage() {
                         <tr key={row.id}>
                           <td
                             colSpan={days.length + 1}
-                            className="px-3 py-1.5 text-sm font-semibold border-b border-border"
+                            className="py-1.5 text-sm font-semibold border-b border-border"
                             style={{
                               backgroundColor: hexToRGBA(
                                 row.original.pathwayColor,
@@ -274,22 +274,30 @@ function SuiviPage() {
                               ),
                             }}
                           >
-                            <span
-                              className="inline-block w-2.5 h-2.5 rounded-full mr-2 align-middle"
-                              style={{
-                                backgroundColor: row.original.pathwayColor,
-                              }}
-                            />
-                            {row.original.pathwayName}
-                            {row.original.pathwayStartDate && (
-                              <span className="ml-3 font-normal text-text-light">
-                                {dayjs.utc(row.original.pathwayStartDate).format('DD/MM/YYYY')}
-                                {' – '}
-                                {row.original.pathwayEndDate
-                                  ? dayjs.utc(row.original.pathwayEndDate).format('DD/MM/YYYY')
-                                  : '…'}
+                            <div className="sticky left-0 w-fit px-3 flex items-center">
+                              <span
+                                className="w-2.5 h-2.5 rounded-full mr-2 shrink-0"
+                                style={{
+                                  backgroundColor: row.original.pathwayColor,
+                                }}
+                              />
+                              <span className="whitespace-nowrap">
+                                {row.original.pathwayName}
                               </span>
-                            )}
+                              {row.original.pathwayStartDate && (
+                                <span className="ml-3 font-normal text-text-light whitespace-nowrap">
+                                  {dayjs
+                                    .utc(row.original.pathwayStartDate)
+                                    .format('DD/MM/YYYY')}
+                                  {' – '}
+                                  {row.original.pathwayEndDate
+                                    ? dayjs
+                                        .utc(row.original.pathwayEndDate)
+                                        .format('DD/MM/YYYY')
+                                    : '…'}
+                                </span>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       )
