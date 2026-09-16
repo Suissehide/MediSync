@@ -25,6 +25,7 @@ import {
 } from '../../libs/utils.ts'
 import { useAppointmentMutations } from '../../queries/useAppointment.ts'
 import { useSlotsInRangeQuery } from '../../queries/useSlot.ts'
+import { useSoignantStore } from '../../store/useSoignantStore.ts'
 
 export const Route = createFileRoute('/_authenticated/agenda')({
   component: Agenda,
@@ -64,11 +65,21 @@ function Agenda() {
   )
   const { slots, isPending } = useSlotsInRangeQuery(dayRange)
   const { deleteAppointment, updateAppointment } = useAppointmentMutations()
-
-  const rows = useMemo(
-    () => buildDayAppointmentRows(slots, selectedDay),
-    [slots, selectedDay],
+  const selectedSoignantIDs = useSoignantStore(
+    (state) => state.selectedSoignantIDs,
   )
+
+  // Sans sélection, on affiche tout ; sinon on garde les rendez-vous
+  // dont au moins un soignant est coché dans la barre latérale.
+  const rows = useMemo(() => {
+    const allRows = buildDayAppointmentRows(slots, selectedDay)
+    if (selectedSoignantIDs.length === 0) {
+      return allRows
+    }
+    return allRows.filter((row) =>
+      row.soignants.some((s) => selectedSoignantIDs.includes(s.id)),
+    )
+  }, [slots, selectedDay, selectedSoignantIDs])
 
   const addPatientTarget = rows.find((row) => row.id === addPatientTargetId) ?? null
 
@@ -84,6 +95,7 @@ function Agenda() {
 
   return (
     <DashboardLayout
+      components={['soignant']}
       quickActions={[
         <AddPatientForm key="add-patient" />,
         <AddPatientToSlotForm key="add-patient-to-slot" />,
