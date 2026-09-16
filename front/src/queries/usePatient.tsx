@@ -400,6 +400,9 @@ export const usePatientMutations = () => {
               queryClient.invalidateQueries({
                 queryKey: [PATIENT.GET_BY_ID, data.patient.id],
               }),
+              queryClient.invalidateQueries({
+                queryKey: [PATIENT.GET_PATHWAYS, data.patient.id],
+              }),
             ]
           : []),
       ])
@@ -433,10 +436,13 @@ export const usePatientMutations = () => {
       patientID: string
       pathwayID: string
     }) => PatientApi.removeFromPathway(patientID, pathwayID),
-    onSuccess: () => {
+    onSuccess: (_, { patientID }) => {
       toast({
         title: 'Patient retiré du parcours',
         severity: TOAST_SEVERITY.SUCCESS,
+      })
+      queryClient.invalidateQueries({
+        queryKey: [PATIENT.GET_PATHWAYS, patientID],
       })
       queryClient.invalidateQueries({ queryKey: [PATIENT.GET_BY_ID] })
       queryClient.invalidateQueries({ queryKey: [PATIENT.GET_ALL] })
