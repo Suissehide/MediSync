@@ -1,7 +1,11 @@
 import { Page, StyleSheet, Text, View } from '@react-pdf/renderer'
 
 import type { Slot } from '../../../../../types/slot.ts'
-import { groupSlotsByWeek, type WeekData } from '../programme-pdf.utils.ts'
+import {
+  buildCalendarEntries,
+  type ClosureData,
+  type WeekData,
+} from '../programme-pdf.utils.ts'
 
 const PAGE_PADDING = 28
 const A4_HEIGHT = 841.89
@@ -41,6 +45,20 @@ const styles = StyleSheet.create({
   },
   weekBlock: {
     marginBottom: WEEK_BLOCK_MARGIN_BOTTOM,
+  },
+  closureBlock: {
+    marginBottom: WEEK_BLOCK_MARGIN_BOTTOM,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    backgroundColor: '#f3f4f6',
+    borderWidth: 0.5,
+    borderColor: '#e5e7eb',
+  },
+  closureText: {
+    fontSize: 8,
+    fontFamily: 'Helvetica-Bold',
+    color: '#4b5563',
+    textAlign: 'center',
   },
   weekHeaderRow: {
     flexDirection: 'row',
@@ -179,16 +197,33 @@ function WeekBlock({ weekData }: { weekData: WeekData }) {
   )
 }
 
+function ClosureNotice({ closure }: { closure: ClosureData }) {
+  return (
+    <View style={styles.closureBlock} wrap={false}>
+      <Text style={styles.closureText}>
+        Service fermé du {closure.start.format('DD/MM/YYYY')} au{' '}
+        {closure.end.format('DD/MM/YYYY')}
+      </Text>
+    </View>
+  )
+}
+
 export default function CalendarPages({
   upcomingSlots,
   patientId,
+  forbiddenWeekStarts,
 }: {
   upcomingSlots: Slot[]
   patientId?: string
+  forbiddenWeekStarts?: string[]
 }) {
-  const weeks = groupSlotsByWeek(upcomingSlots, patientId)
+  const entries = buildCalendarEntries(
+    upcomingSlots,
+    patientId,
+    forbiddenWeekStarts,
+  )
 
-  if (weeks.length === 0) {
+  if (entries.length === 0) {
     return (
       <Page size="A4" style={styles.calendarPage}>
         <Text style={styles.emptyMessage}>Aucun rendez-vous à venir.</Text>
@@ -198,9 +233,16 @@ export default function CalendarPages({
 
   return (
     <Page size="A4" style={styles.calendarPage}>
-      {weeks.map((weekData) => (
-        <WeekBlock key={weekData.weekLabel} weekData={weekData} />
-      ))}
+      {entries.map((entry) =>
+        entry.kind === 'week' ? (
+          <WeekBlock key={entry.weekLabel} weekData={entry} />
+        ) : (
+          <ClosureNotice
+            key={`fermeture-${entry.start.format('YYYY-MM-DD')}`}
+            closure={entry}
+          />
+        ),
+      )}
     </Page>
   )
 }

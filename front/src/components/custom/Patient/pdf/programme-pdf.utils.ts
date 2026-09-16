@@ -11,6 +11,16 @@ export type WeekData = {
   }[]
 }
 
+// Période de fermeture du service intercalée entre deux semaines du programme.
+export type ClosureData = {
+  start: dayjs.Dayjs
+  end: dayjs.Dayjs
+}
+
+export type CalendarEntry =
+  | ({ kind: 'week' } & WeekData)
+  | ({ kind: 'closure' } & ClosureData)
+
 export function computeProgramDuration(slots: Slot[]): {
   startDate: dayjs.Dayjs
   endDate: dayjs.Dayjs
@@ -42,10 +52,15 @@ function getSlotDisplayRange(
   return { start: slot.startDate, end: slot.endDate }
 }
 
-export function groupSlotsByWeek(
+// Les semaines du calendrier n'affichent que le lundi au vendredi : une
+// fermeture court donc du lundi au vendredi de la semaine interdite.
+const CLOSURE_LAST_WEEKDAY_OFFSET = 4
+
+export function buildCalendarEntries(
   slots: Slot[],
   patientId?: string,
-): WeekData[] {
+  forbiddenWeekStarts: string[] = [],
+): CalendarEntry[] {
   if (slots.length === 0) {
     return []
   }
@@ -55,13 +70,30 @@ export function groupSlotsByWeek(
   )
 
   const programStart = dayjs.utc(sorted[0].startDate).startOf('isoWeek')
-  const programEnd = dayjs.utc(sorted[sorted.length - 1].startDate).startOf(
-    'isoWeek',
+  const programEnd = dayjs
+    .utc(sorted[sorted.length - 1].startDate)
+    .startOf('isoWeek')
+
+  const forbiddenWeekKeys = new Set(
+    forbiddenWeekStarts.map((date) =>
+      dayjs.utc(date).startOf('isoWeek').format('YYYY-MM-DD'),
+    ),
   )
 
-  const result: WeekData[] = []
+  const entries: CalendarEntry[] = []
   let current = programStart
   let weekIndex = 1
+  let pendingClosure: ClosureData | null = null
+
+  // Une fermeture ne se justifie qu'entre deux semaines du programme : on ne
+  // l'ajoute qu'une fois qu'une semaine la précède, et jamais en fin de
+  // programme (la boucle s'arrête sur la dernière semaine avec rendez-vous).
+  const flushClosure = () => {
+    if (pendingClosure && entries.length > 0) {
+      entries.push({ kind: 'closure', ...pendingClosure })
+    }
+    pendingClosure = null
+  }
 
   while (current.isBefore(programEnd) || current.isSame(programEnd, 'day')) {
     const weekSlots = slots.filter((s) => {
@@ -103,21 +135,35 @@ export function groupSlotsByWeek(
       return { timeLabel: timeKey.replace('-', '\n'), cells }
     })
 
-    // Semaine sans aucun rendez-vous (ex. semaine interdite) : on n'affiche pas
-    // de tableau vide, mais on conserve la numérotation réelle des semaines.
     if (timeRows.length > 0) {
-      result.push({
+      flushClosure()
+      entries.push({
+        kind: 'week',
         weekLabel: `Semaine ${weekIndex}`,
         weekStart: current,
         timeRows,
       })
+      // La numérotation ne compte que les semaines affichées : une semaine
+      // interdite ne crée pas de trou entre « Semaine 2 » et « Semaine 4 ».
+      weekIndex++
+    } else if (forbiddenWeekKeys.has(current.format('YYYY-MM-DD'))) {
+      const closureEnd = current.add(CLOSURE_LAST_WEEKDAY_OFFSET, 'day')
+      // Des semaines interdites qui se suivent ne donnent qu'une seule mention.
+      if (pendingClosure?.end.add(3, 'day').isSame(current, 'day')) {
+        pendingClosure = { start: pendingClosure.start, end: closureEnd }
+      } else {
+        flushClosure()
+        pendingClosure = { start: current, end: closureEnd }
+      }
+    } else {
+      // Semaine sans rendez-vous alors que le service est ouvert : rien à dire.
+      flushClosure()
     }
 
     current = current.add(7, 'day')
-    weekIndex++
   }
 
-  return result
+  return entries
 }
 
 export function getLabel<T extends Record<string, string>>(
