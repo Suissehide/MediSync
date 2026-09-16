@@ -13,7 +13,7 @@ export type DropdownFilterItem = {
   color?: string
 }
 
-/** Single action rendered under a separator at the bottom of the menu. */
+/** Single action rendered above a separator at the top of the menu. */
 export type DropdownFilterAction = {
   label: string
   icon?: LucideIcon
@@ -25,15 +25,15 @@ const DropdownFilter = ({
   onFilterChange,
   triggerLabel = 'Filtres',
   TriggerIcon = Filter,
-  footerAction,
+  headerAction,
 }: {
   filters: DropdownFilterItem[]
   onFilterChange: (id: string, checked: boolean) => void
   triggerLabel?: string
   TriggerIcon?: LucideIcon
-  footerAction?: DropdownFilterAction
+  headerAction?: DropdownFilterAction
 }) => {
-  const FooterIcon = footerAction?.icon
+  const HeaderIcon = headerAction?.icon
 
   return (
     <DropdownMenu.Root>
@@ -55,6 +55,22 @@ const DropdownFilter = ({
           sideOffset={5}
           collisionPadding={8}
         >
+          {headerAction && (
+            <>
+              <DropdownMenu.Item
+                onSelect={(e) => {
+                  e.preventDefault()
+                  headerAction.onSelect()
+                }}
+                className="flex items-center gap-2 px-3 py-2 rounded cursor-pointer outline-none hover:bg-primary/20 text-sm select-none"
+              >
+                {HeaderIcon && <HeaderIcon size={14} />}
+                {headerAction.label}
+              </DropdownMenu.Item>
+              <DropdownMenu.Separator className="my-2 h-px bg-border" />
+            </>
+          )}
+
           {filters.map((filter, index) => {
             const startsGroup =
               Boolean(filter.group) && filter.group !== filters[index - 1]?.group
@@ -101,22 +117,6 @@ const DropdownFilter = ({
               </Fragment>
             )
           })}
-
-          {footerAction && (
-            <>
-              <DropdownMenu.Separator className="my-2 h-px bg-border" />
-              <DropdownMenu.Item
-                onSelect={(e) => {
-                  e.preventDefault()
-                  footerAction.onSelect()
-                }}
-                className="flex items-center gap-2 px-3 py-2 rounded cursor-pointer outline-none hover:bg-primary/20 text-sm select-none"
-              >
-                {FooterIcon && <FooterIcon size={14} />}
-                {footerAction.label}
-              </DropdownMenu.Item>
-            </>
-          )}
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>

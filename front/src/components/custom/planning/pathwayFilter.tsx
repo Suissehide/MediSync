@@ -54,7 +54,7 @@ function PathwayFilter({
 
   // Exactly one of the two actions is offered: reset once something is
   // hidden, hide-all when everything is visible.
-  const footerAction: DropdownFilterAction =
+  const headerAction: DropdownFilterAction =
     hiddenCount > 0
       ? { label: 'Tout afficher', icon: RotateCcw, onSelect: onReset }
       : { label: 'Tout décocher', icon: EyeOff, onSelect: onHideAll }
@@ -65,7 +65,7 @@ function PathwayFilter({
       onFilterChange={onToggle}
       triggerLabel={triggerLabel}
       TriggerIcon={Route}
-      footerAction={footerAction}
+      headerAction={headerAction}
     />
   )
 }
