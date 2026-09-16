@@ -1,4 +1,4 @@
-import { Plus, Stethoscope, Trash, X } from 'lucide-react'
+import { CheckCheck, Plus, Stethoscope, Trash, X } from 'lucide-react'
 import { useState } from 'react'
 
 import { useSoignantQueries } from '../../../queries/useSoignant.ts'
@@ -7,6 +7,9 @@ import type { User } from '../../../types/auth.ts'
 import { Button } from '../../ui/button.tsx'
 import AddSoignantForm from '../popup/addSoignantForm.tsx'
 import DeleteSoignantForm from '../popup/deleteSoignantForm.tsx'
+
+const selectionPillClass =
+  'cursor-pointer shrink-0 flex items-center gap-1 rounded-full bg-[#ffffff10] hover:bg-[#ffffff20] px-2 py-0.5 text-[11px] text-white/70 hover:text-white transition-colors'
 
 interface SidebarSoignantProps {
   user?: User | null
@@ -18,6 +21,9 @@ function SidebarSoignant({ user }: SidebarSoignantProps) {
   const isAdmin = user?.role === 'ADMIN'
   const soignants = useSoignantStore((state) => state.soignants)
   const toggleSoignant = useSoignantStore((state) => state.toggleSoignant)
+  const selectAllSoignants = useSoignantStore(
+    (state) => state.selectAllSoignants,
+  )
   const unselectSoignant = useSoignantStore((state) => state.unselectSoignant)
   const selectedSoignantIDs = useSoignantStore(
     (state) => state.selectedSoignantIDs,
@@ -30,16 +36,26 @@ function SidebarSoignant({ user }: SidebarSoignantProps) {
       <div className="pl-4 pr-2 flex justify-between items-center text-text-sidebar py-2">
         <div className="flex items-center gap-2 min-w-0">
           <p>Soignants</p>
-          {selectedSoignantIDs.length > 0 && (
-            <button
-              type="button"
-              onClick={() => unselectSoignant()}
-              className="cursor-pointer shrink-0 flex items-center gap-1 rounded-full bg-[#ffffff10] hover:bg-[#ffffff20] px-2 py-0.5 text-[11px] text-white/70 hover:text-white transition-colors"
-            >
-              <X className="w-3 h-3" />
-              Tout décocher
-            </button>
-          )}
+          {soignants.length > 0 &&
+            (selectedSoignantIDs.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => unselectSoignant()}
+                className={selectionPillClass}
+              >
+                <X className="w-3 h-3" />
+                Tout décocher
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => selectAllSoignants()}
+                className={selectionPillClass}
+              >
+                <CheckCheck className="w-3 h-3" />
+                Tout cocher
+              </button>
+            ))}
         </div>
         {isAdmin && (
           <AddSoignantForm
