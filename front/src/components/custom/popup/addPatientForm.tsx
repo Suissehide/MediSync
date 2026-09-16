@@ -187,14 +187,14 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
                 onClick={saveWithoutPathway}
                 isLoading={createPatient.isPending}
               >
-                <Save className="w-4 h-4" /> Enregistrer
+                <Save className="w-4 h-4" /> Créer sans parcours
               </Button>
               <Button
                 variant="default"
                 onClick={nextStep}
                 disabled={createPatient.isPending}
               >
-                Suivant <ArrowRight className="w-4 h-4" />
+                Ajouter des parcours <ArrowRight className="w-4 h-4" />
               </Button>
             </>
           ) : (
