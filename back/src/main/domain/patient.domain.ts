@@ -393,16 +393,20 @@ class PatientDomain implements PatientDomainInterface {
   ): Promise<EnrollmentResult> {
     const enrollments: EnrollmentResult['enrollments'] = []
     const failedEnrollments: EnrollmentResult['failedEnrollments'] = []
+    let currentPatient = patient
 
     for (const enrollment of pathwayTemplates) {
       try {
         const outcome = await this.enrollPatientInTag(
-          patient,
+          currentPatient,
           enrollment,
           startDate,
         )
         if (outcome.enrollment) {
           enrollments.push(outcome.enrollment)
+          // Recharger les rendez-vous du patient pour que les parcours
+          // suivants de la même requête voient ceux qui viennent d'être créés.
+          currentPatient = await this.patientRepository.findByID(patient.id)
         }
         if (outcome.failure) {
           failedEnrollments.push(outcome.failure)
@@ -612,7 +616,7 @@ class PatientDomain implements PatientDomainInterface {
   }
 
   private async enrollOnPathway(
-    patient: PatientEntityDomain,
+    patient: PatientWithAppointmentsDomain,
     pathway: PathwayWithSlotsRepo,
     pathwayTemplate: PathwayEnrollmentInput,
     thematicId?: string,
@@ -620,16 +624,29 @@ class PatientDomain implements PatientDomainInterface {
     firstAppointmentOnly = false,
     enrollmentDate?: Date,
   ): Promise<EnrollmentAppointment[]> {
-    const { type, motif } = pathwayTemplate
+    const { type, motif, timeOfDay } = pathwayTemplate
     let slots = [...pathway.slots].sort(
       (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
     )
 
-    // En mode firstAppointmentOnly, ne considérer que les slots futurs
+    // En mode firstAppointmentOnly, ne considérer que les slots futurs qui
+    // respectent le moment de la journée et ne chevauchent pas les rendez-vous
+    // existants du patient (le parcours a été choisi parce qu'au moins un de
+    // ses slots convient, pas forcément le premier).
     if (firstAppointmentOnly && enrollmentDate) {
       const startOfDay = new Date(enrollmentDate)
       startOfDay.setHours(0, 0, 0, 0)
-      slots = slots.filter((slot) => new Date(slot.startDate) >= startOfDay)
+      slots = slots.filter(
+        (slot) =>
+          new Date(slot.startDate) >= startOfDay &&
+          this.isSlotAvailable(
+            slot,
+            timeOfDay,
+            patient.appointmentPatients,
+            1,
+            appointmentDuration,
+          ),
+      )
     }
 
     const enrollmentAppointments: EnrollmentAppointment[] = []
