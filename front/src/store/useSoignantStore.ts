@@ -15,6 +15,7 @@ interface SoignantActions {
   clearSoignants: () => void
 
   toggleSoignant: (id: string) => void
+  selectAllSoignants: () => void
   unselectSoignant: () => void
 }
 
@@ -45,6 +46,10 @@ export const useSoignantStore = create<SoignantState & SoignantActions>()(
           selectedSoignantIDs: state.selectedSoignantIDs.includes(id)
             ? state.selectedSoignantIDs.filter((selectedID) => selectedID !== id)
             : [...state.selectedSoignantIDs, id],
+        })),
+      selectAllSoignants: () =>
+        set((state) => ({
+          selectedSoignantIDs: state.soignants.map((s) => s.id),
         })),
       unselectSoignant: () => set({ selectedSoignantIDs: [] }),
     }),
