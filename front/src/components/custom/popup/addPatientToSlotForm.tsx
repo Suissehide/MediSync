@@ -331,15 +331,20 @@ function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
   const { patients } = usePatientQueries()
   const { thematics } = useThematicQueries()
 
+  // `useAppForm` réapplique ses options à chaque rendu : des valeurs par défaut
+  // recréées à chaque fois (ici un Dayjs, donc une nouvelle identité) le font
+  // boucler à l'infini. On ne les construit qu'une fois.
+  const [defaultValues] = useState(() => ({
+    patientID: '',
+    thematicID: '',
+    startTime: dayjs.utc(),
+    duration: '',
+    appointmentType: '',
+    motif: '',
+  }))
+
   const form = useAppForm({
-    defaultValues: {
-      patientID: '',
-      thematicID: '',
-      startTime: dayjs.utc(),
-      duration: '',
-      appointmentType: '',
-      motif: '',
-    },
+    defaultValues,
     onSubmit: ({ value }) => handleConfirm(value),
   })
 
