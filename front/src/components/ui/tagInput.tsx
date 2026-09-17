@@ -10,7 +10,10 @@ interface TagInputProps {
   suggestions?: string[]
   placeholder?: string
   className?: string
-  /** Nombre maximum de tags. Une fois atteint, la saisie est masquée. */
+  /**
+   * Nombre maximum de tags. Une fois atteint, ajouter un tag remplace le
+   * dernier, ce qui permet de changer de valeur sans la retirer d'abord.
+   */
   maxTags?: number
 }
 
@@ -37,8 +40,9 @@ export function TagInput({
 
   const addTag = (tag: string) => {
     const trimmed = tag.trim()
-    if (trimmed && !value.includes(trimmed) && !isFull) {
-      onChange([...value, trimmed])
+    if (trimmed && !value.includes(trimmed)) {
+      const kept = isFull ? value.slice(0, value.length - 1) : value
+      onChange([...kept, trimmed])
     }
     setInputValue('')
     setShowSuggestions(false)
@@ -106,20 +110,20 @@ export function TagInput({
         ))}
         <input
           ref={inputRef}
-          hidden={isFull}
           value={inputValue}
           onChange={(e) => {
             setInputValue(e.target.value)
             setShowSuggestions(true)
           }}
           onFocus={() => setShowSuggestions(true)}
+          onClick={() => setShowSuggestions(true)}
           onKeyDown={handleKeyDown}
           placeholder={value.length === 0 ? placeholder : ''}
           className="flex-1 min-w-24 outline-none bg-transparent placeholder:text-muted-foreground text-sm"
         />
       </div>
 
-      {showSuggestions && !isFull && filteredSuggestions.length > 0 && (
+      {showSuggestions && filteredSuggestions.length > 0 && (
         <div
           className="absolute z-[200] w-full mt-1 rounded-md border border-border bg-popover shadow-md"
           onWheel={(e) => e.stopPropagation()}
