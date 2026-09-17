@@ -10,6 +10,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import dayjs, { type Dayjs } from 'dayjs'
 import {
   CalendarDays,
+  CalendarRange,
   CheckSquare,
   GanttChart,
   Printer,
@@ -30,6 +31,7 @@ import { BulkMoveForm } from '../../../../components/custom/popup/bulkMoveForm.t
 import { ConfirmDeleteForm } from '../../../../components/custom/popup/confirmDeleteForm.tsx'
 import { CreateForbiddenWeekForm } from '../../../../components/custom/popup/createForbiddenWeekForm.tsx'
 import { DeleteForbiddenWeekForm } from '../../../../components/custom/popup/deleteForbiddenWeekForm.tsx'
+import { PlanningCycleForm } from '../../../../components/custom/popup/planningCycleForm.tsx'
 import { RegeneratePathwaysForm } from '../../../../components/custom/popup/regeneratePathwaysForm.tsx'
 import EventSheet from '../../../../components/custom/sheet/eventSheet.tsx'
 import EventTemplateSheet from '../../../../components/custom/sheet/eventTemplateSheet.tsx'
@@ -62,6 +64,10 @@ import {
   useForbiddenWeekMutations,
   useForbiddenWeekQueries,
 } from '../../../../queries/useForbiddenWeek.ts'
+import {
+  usePlanningCycleMutations,
+  usePlanningCycleQueries,
+} from '../../../../queries/usePlanningCycle.ts'
 import {
   usePathwayMutations,
   usePathwayQueries,
@@ -109,6 +115,9 @@ function Planning() {
     useForbiddenWeekMutations()
 
   const [exportOpen, setExportOpen] = useState(false)
+  const [cycleOpen, setCycleOpen] = useState(false)
+  const { planningCycle } = usePlanningCycleQueries()
+  const { savePlanningCycle, resetPlanningCycle } = usePlanningCycleMutations()
   const [regenerateOpen, setRegenerateOpen] = useState(false)
   const [regenerateTemplateID, setRegenerateTemplateID] = useState('')
   const [regenerateFromDate, setRegenerateFromDate] = useState<Dayjs | null>(
@@ -748,6 +757,13 @@ function Planning() {
                       <Printer size={16} />
                       Exporter le planning (PDF)
                     </DropdownMenu.Item>
+                    <DropdownMenu.Item
+                      onSelect={() => setCycleOpen(true)}
+                      className="flex items-center gap-2 px-3 py-2 rounded cursor-pointer outline-none hover:bg-primary/20 text-sm select-none"
+                    >
+                      <CalendarRange size={16} />
+                      Configurer le cycle de semaines
+                    </DropdownMenu.Item>
                   </DropdownMenu.Content>
                 </DropdownMenu.Portal>
               </DropdownMenu.Root>
@@ -1226,6 +1242,23 @@ function Planning() {
           onFromDateChange={setRegenerateFromDate}
           onConfirm={handleRegenerate}
           isPending={regeneratePathways.isPending}
+        />
+
+        <PlanningCycleForm
+          open={cycleOpen}
+          setOpen={setCycleOpen}
+          cycle={planningCycle}
+          onSave={(cycle) =>
+            savePlanningCycle.mutate(cycle, {
+              onSuccess: () => setCycleOpen(false),
+            })
+          }
+          onReset={() =>
+            resetPlanningCycle.mutate(undefined, {
+              onSuccess: () => setCycleOpen(false),
+            })
+          }
+          isPending={savePlanningCycle.isPending || resetPlanningCycle.isPending}
         />
 
         {exportOpen && (
