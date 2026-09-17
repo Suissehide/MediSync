@@ -1055,7 +1055,8 @@ if (cycleWeekNumber('2026-06-15', start, 1) !== 1) {
 
 console.log(ok ? 'OK toutes les dates' : 'ECHEC')
 EOF
-node /tmp/check-week-cycle.mjs```
+node /tmp/check-week-cycle.mjs
+```
 
 Attendu : `OK toutes les dates`. Si une ligne `KO` apparaît, le modulo positif est cassé — corriger `weekCycle.ts` avant d'aller plus loin. Supprimer ensuite le fichier temporaire : `rm /tmp/check-week-cycle.mjs`.
 
