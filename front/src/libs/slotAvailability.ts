@@ -134,3 +134,24 @@ export const getUpcomingSlotSuggestions = (
       }
     })
 }
+
+/**
+ * Plage horaire à afficher pour un patient. Sur un créneau individuel, chaque
+ * patient a son propre rendez-vous (une sous-plage du créneau) : on affiche
+ * l'horaire de ce rendez-vous plutôt que celui du créneau entier. Sinon, on
+ * garde l'horaire du créneau.
+ */
+export const getSlotDisplayRange = (
+  slot: Slot,
+  patientID?: string,
+): { start: string; end: string } => {
+  if (slot.slotTemplate?.isIndividual && patientID) {
+    const appointment = slot.appointments?.find((appointment) =>
+      appointment.appointmentPatients?.some((ap) => ap.patient.id === patientID),
+    )
+    if (appointment) {
+      return { start: appointment.startDate, end: appointment.endDate }
+    }
+  }
+  return { start: slot.startDate, end: slot.endDate }
+}
