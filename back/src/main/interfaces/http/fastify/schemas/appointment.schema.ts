@@ -23,6 +23,7 @@ export const createAppointmentSchema = appointmentSchema
     startDate: true,
     endDate: true,
     type: true,
+    motif: true,
   })
   .extend({
     slotID: z.cuid(),

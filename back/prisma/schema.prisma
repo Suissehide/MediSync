@@ -84,6 +84,8 @@ model Appointment {
   endDate             DateTime
   thematicId          String?
   type                AppointmentType?
+  // Texte libre saisi à la prise de rendez-vous sur un créneau individuel.
+  motif               String?
   slotID              String
   appointmentPatients AppointmentPatient[]
 

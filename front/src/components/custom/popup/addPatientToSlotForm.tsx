@@ -18,7 +18,9 @@ import { useThematicQueries } from '../../../queries/useThematic.ts'
 import type { Appointment } from '../../../types/appointment.ts'
 import type { Slot } from '../../../types/slot.ts'
 import { Button } from '../../ui/button.tsx'
+import { DatePicker } from '../../ui/datePicker.tsx'
 import { FormField } from '../../ui/formField.tsx'
+import { Input } from '../../ui/input.tsx'
 import { Label } from '../../ui/label.tsx'
 import {
   Popup,
@@ -321,9 +323,11 @@ function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
   const [patientID, setPatientID] = useState('')
   const [thematicID, setThematicID] = useState('')
   const [selected, setSelected] = useState<SlotSuggestion | null>(null)
+  const [fromDate, setFromDate] = useState<Dayjs>(dayjs.utc().startOf('day'))
   const [startTime, setStartTime] = useState(dayjs.utc())
   const [duration, setDuration] = useState('')
   const [appointmentType, setAppointmentType] = useState('')
+  const [motif, setMotif] = useState('')
 
   const { toast } = useToast()
   const { createAppointment, updateAppointment } = useAppointmentMutations()
@@ -354,8 +358,14 @@ function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
   )
 
   const suggestions = useMemo(
-    () => getUpcomingSlotSuggestions(slots, thematicID, patientID),
-    [slots, thematicID, patientID],
+    () =>
+      getUpcomingSlotSuggestions(
+        slots,
+        thematicID,
+        patientID,
+        fromDate.toISOString(),
+      ),
+    [slots, thematicID, patientID, fromDate],
   )
 
   const selectedPatient = patients?.find((patient) => patient.id === patientID)
@@ -405,6 +415,7 @@ function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
     setStartTime(defaults.startTime)
     setDuration(defaults.duration)
     setAppointmentType(defaults.appointmentType)
+    setMotif('')
 
     setSelected(suggestion)
     setStep(2)
@@ -466,6 +477,9 @@ function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
         slotID: selected.slot.id,
         thematicId: thematicID,
         type: appointmentType,
+        // Le motif ne concerne que les créneaux individuels ; ailleurs le
+        // champ n'est pas affiché et rien ne doit être enregistré.
+        motif: selected.isIndividual ? motif.trim() || null : null,
         patientIDs: [patientID],
       },
       { onSuccess: onClose },
@@ -501,6 +515,17 @@ function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
               />
             </FormField>
 
+            <FormField>
+              <Label>À partir du</Label>
+              <DatePicker
+                value={fromDate}
+                onChange={(value) =>
+                  setFromDate((value ?? dayjs.utc()).startOf('day'))
+                }
+                minDate={dayjs.utc().startOf('day')}
+              />
+            </FormField>
+
             <div className="flex flex-col gap-2">
               <Label>Prochains créneaux</Label>
 
@@ -511,7 +536,7 @@ function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
                 </EmptySlotList>
               ) : suggestions.length === 0 ? (
                 <EmptySlotList>
-                  Aucun créneau à venir pour cette thématique.
+                  Aucun créneau à partir de cette date pour cette thématique.
                 </EmptySlotList>
               ) : (
                 <ul className="flex flex-col max-h-72 overflow-y-auto border border-border rounded-lg divide-y divide-border">
@@ -594,6 +619,21 @@ function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
               onChange={setAppointmentType}
               disabled={isJoining}
             />
+
+            {/* Le motif porte sur le rendez-vous d'un seul patient : il n'a de
+            sens que sur un créneau individuel, où chaque patient a son propre
+            rendez-vous. */}
+            {selected.isIndividual && (
+              <FormField>
+                <Label htmlFor="appointment-motif">Motif</Label>
+                <Input
+                  id="appointment-motif"
+                  value={motif}
+                  onChange={(event) => setMotif(event.target.value)}
+                  placeholder="Saisir le motif..."
+                />
+              </FormField>
+            )}
           </div>
         )}
       </PopupBody>

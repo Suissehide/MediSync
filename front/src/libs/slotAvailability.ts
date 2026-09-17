@@ -95,11 +95,16 @@ export const hasSlotAvailability = (slot: Slot): boolean =>
  * complets (`isFull`) et ceux où le patient est déjà inscrit (`alreadyBooked`)
  * restent dans la liste — la vue les affiche non cliquables — pour que
  * l'utilisateur voie l'agenda réel plutôt qu'une liste trouée.
+ *
+ * `from` (date ISO) décale le début de la recherche : on part du début de ce
+ * jour-là, jamais avant maintenant — un créneau déjà écoulé n'est proposé dans
+ * aucun cas, y compris quand `from` vaut aujourd'hui.
  */
 export const getUpcomingSlotSuggestions = (
   slots: Slot[] | undefined,
   thematicID: string,
   patientID: string,
+  from?: string,
   limit: number = UPCOMING_SLOT_LIMIT,
 ): SlotSuggestion[] => {
   if (!slots || !thematicID || !patientID) {
@@ -107,13 +112,15 @@ export const getUpcomingSlotSuggestions = (
   }
 
   const now = dayjs.utc()
+  const fromStartOfDay = from ? dayjs.utc(from).startOf('day') : now
+  const lowerBound = fromStartOfDay.isAfter(now) ? fromStartOfDay : now
 
   return slots
     .filter(
       (slot) =>
         slot.slotTemplate?.thematicId === thematicID &&
         !slot.locked &&
-        dayjs.utc(slot.startDate).isAfter(now),
+        dayjs.utc(slot.startDate).isAfter(lowerBound),
     )
     .sort((a, b) => dayjs.utc(a.startDate).diff(dayjs.utc(b.startDate)))
     .slice(0, limit)
