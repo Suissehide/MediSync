@@ -28,7 +28,7 @@ export const PlanningCycleApi = {
       handleHttpError(
         response,
         {},
-        'Impossible d\'enregistrer le cycle de semaines',
+        "Impossible d'enregistrer le cycle de semaines",
       )
     }
     return response.json()
