@@ -408,3 +408,10 @@ model ForbiddenWeek {
   startOfWeek DateTime @unique @db.Date
   createdAt   DateTime @default(now())
 }
+
+model PlanningCycle {
+  id          String   @id @default("default")
+  startOfWeek DateTime @db.Date
+  weekCount   Int
+  updatedAt   DateTime @updatedAt
+}
