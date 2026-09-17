@@ -6,7 +6,7 @@ ALTER TABLE "PathwayTemplate" ADD COLUMN "mainTag" TEXT;
 ALTER TABLE "PathwayTemplate" ADD COLUMN "secondaryTags" TEXT[];
 
 UPDATE "PathwayTemplate"
-SET "mainTag" = COALESCE("tags"[1], "name"),
+SET "mainTag" = COALESCE(NULLIF(BTRIM("tags"[1]), ''), "name"),
     "secondaryTags" = COALESCE("tags"[2:array_length("tags", 1)], '{}');
 
 ALTER TABLE "PathwayTemplate" ALTER COLUMN "mainTag" SET NOT NULL;
