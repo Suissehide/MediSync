@@ -233,6 +233,7 @@ function Dashboard() {
               events={events}
               editable={false}
               overlap={false}
+              showSecondaryTags={false}
               initialDate={savedDate}
               onRangeChange={handleRangeChange}
               handleSelectEvent={handleSelectAppointment}
