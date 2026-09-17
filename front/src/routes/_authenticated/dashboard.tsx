@@ -32,6 +32,17 @@ export const Route = createFileRoute('/_authenticated/dashboard')({
   component: Dashboard,
 })
 
+/** Au-delà, les noms sont résumés pour ne pas déborder sur le calendrier. */
+const MAX_TITLE_LABELS = 3
+
+function formatTitleLabels(labels: string[]) {
+  if (labels.length <= MAX_TITLE_LABELS) {
+    return labels.join(', ')
+  }
+  const shown = labels.slice(0, MAX_TITLE_LABELS).join(', ')
+  return `${shown} +${labels.length - MAX_TITLE_LABELS}`
+}
+
 function filterSlotsBySoignants(slots: Slot[], soignantIDs: string[]) {
   if (soignantIDs.length === 0) {
     return []
@@ -202,7 +213,7 @@ function Dashboard() {
             </div>
             <h1 className="text-text-dark text-xl font-semibold">
               {selectedLabels.length > 0
-                ? selectedLabels.join(', ')
+                ? formatTitleLabels(selectedLabels)
                 : emptyLabel}
             </h1>
             {selectedLabels.length > 0 && (

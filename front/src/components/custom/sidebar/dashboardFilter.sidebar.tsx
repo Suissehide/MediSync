@@ -36,8 +36,8 @@ function SidebarDashboardFilter({ user }: SidebarDashboardFilterProps) {
 
   const title = (
     <PopoverRoot open={isOpen} onOpenChange={setIsOpen}>
-      <PopoverTrigger className="cursor-pointer flex items-center gap-1 rounded hover:text-white transition-colors min-w-0">
-        <span className="truncate">{modeLabels[mode]}</span>
+      <PopoverTrigger className="cursor-pointer shrink-0 flex items-center gap-1 rounded hover:text-white transition-colors">
+        <span>{modeLabels[mode]}</span>
         <ChevronDown
           className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
         />
