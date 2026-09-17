@@ -1,5 +1,6 @@
 import dayjs from 'dayjs'
 
+import { getSlotDisplayRange } from '../../../../libs/slotAvailability.ts'
 import type { Slot } from '../../../../types/slot.ts'
 
 export type WeekData = {
@@ -32,24 +33,6 @@ export function computeProgramDuration(slots: Slot[]): {
   const startDate = dates.reduce((a, b) => (a.isBefore(b) ? a : b))
   const endDate = dates.reduce((a, b) => (a.isAfter(b) ? a : b))
   return { startDate, endDate }
-}
-
-// Pour un créneau individuel, chaque patient a son propre rendez-vous (une
-// sous-plage du créneau). On affiche alors l'horaire du rendez-vous du patient
-// plutôt que celui du créneau entier. Sinon, on garde l'horaire du créneau.
-function getSlotDisplayRange(
-  slot: Slot,
-  patientId?: string,
-): { start: string; end: string } {
-  if (slot.slotTemplate?.isIndividual && patientId) {
-    const appointment = slot.appointments?.find((a) =>
-      a.appointmentPatients?.some((ap) => ap.patient.id === patientId),
-    )
-    if (appointment) {
-      return { start: appointment.startDate, end: appointment.endDate }
-    }
-  }
-  return { start: slot.startDate, end: slot.endDate }
 }
 
 // Les semaines du calendrier n'affichent que le lundi au vendredi : une

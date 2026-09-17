@@ -12,6 +12,7 @@ import { useCallback, useMemo, useState } from 'react'
 
 import { PatientApi } from '../../../../api/patient.api.ts'
 import { getContrastTextColor, hexToRGBA } from '../../../../libs/color.ts'
+import { getSlotDisplayRange } from '../../../../libs/slotAvailability.ts'
 import {
   usePatientMutations,
   usePatientPathwaysQuery,
@@ -30,7 +31,13 @@ interface OverviewPatientProps {
   patient?: Patient
 }
 
-function AppointmentCard({ slot }: { slot: Slot }) {
+function AppointmentCard({
+  slot,
+  patientID,
+}: {
+  slot: Slot
+  patientID?: string
+}) {
   const color = slot.slotTemplate?.color ?? '#6b7280'
   const thematic = slot.slotTemplate?.thematic || 'Rendez-vous'
   const location = slot.slotTemplate?.location?.name
@@ -38,11 +45,14 @@ function AppointmentCard({ slot }: { slot: Slot }) {
     ? slot.slotTemplate.soignants.map((s) => s.name).join(', ')
     : undefined
 
+  // Sur un créneau individuel, l'horaire affiché est celui du rendez-vous du
+  // patient, pas celui du créneau entier.
+  const { start, end } = getSlotDisplayRange(slot, patientID)
   const formattedDate = dayjs
-    .utc(slot.startDate)
+    .utc(start)
     .format('dddd D MMMM YYYY [de] HH:mm')
     .replace(/^./, (c) => c.toUpperCase())
-  const endTime = dayjs.utc(slot.endDate).format('HH:mm')
+  const endTime = dayjs.utc(end).format('HH:mm')
 
   return (
     <div
@@ -363,7 +373,11 @@ export default function OverviewPatient({ patient }: OverviewPatientProps) {
               <div className="flex flex-col gap-1.5 max-h-64 overflow-y-auto">
                 {patientSlots.upcoming.length > 0 ? (
                   patientSlots.upcoming.map((slot) => (
-                    <AppointmentCard key={slot.id} slot={slot} />
+                    <AppointmentCard
+                      key={slot.id}
+                      slot={slot}
+                      patientID={patient?.id}
+                    />
                   ))
                 ) : (
                   <p className="text-text-sidebar text-sm py-2">
@@ -380,7 +394,11 @@ export default function OverviewPatient({ patient }: OverviewPatientProps) {
               <div className="flex flex-col gap-1.5 max-h-64 overflow-y-auto">
                 {patientSlots.past.length > 0 ? (
                   patientSlots.past.map((slot) => (
-                    <AppointmentCard key={slot.id} slot={slot} />
+                    <AppointmentCard
+                      key={slot.id}
+                      slot={slot}
+                      patientID={patient?.id}
+                    />
                   ))
                 ) : (
                   <p className="text-text-sidebar text-sm py-2">
