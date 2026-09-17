@@ -1,20 +1,21 @@
-import { CheckCheck, Loader2Icon, Plus, Route, X } from 'lucide-react'
+import { CheckCheck, Loader2Icon, Route, X } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 import { hexToRGBA } from '../../../libs/color.ts'
 import { usePathwayTemplateQueries } from '../../../queries/usePathwayTemplate.ts'
 import { useDashboardFilterStore } from '../../../store/useDashboardFilterStore.ts'
-import { Button } from '../../ui/button.tsx'
-import AddPathwayForm from '../popup/addPathwayForm.tsx'
 import { selectionPillClass } from './sidebarFilter.styles.ts'
 
 interface PathwayTemplateFilterSectionProps {
   /** Titre de la section : texte simple ou sélecteur de mode. */
   title: ReactNode
+  /** Bouton d'ajout facultatif, aligné à droite du titre. */
+  addAction?: ReactNode
 }
 
 function PathwayTemplateFilterSection({
   title,
+  addAction,
 }: PathwayTemplateFilterSectionProps) {
   const { pathwayTemplates, isPending } = usePathwayTemplateQueries()
 
@@ -61,13 +62,7 @@ function PathwayTemplateFilterSection({
               </button>
             ))}
         </div>
-        <AddPathwayForm
-          trigger={
-            <Button variant="gradient" size="icon">
-              <Plus className="w-5 h-5" />
-            </Button>
-          }
-        />
+        {addAction}
       </div>
 
       {isPending ? (
