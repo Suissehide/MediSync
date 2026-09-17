@@ -38,8 +38,15 @@ export function AddPatientToPathwayForm({
     fullday: 'ALL_DAY',
   }
 
+  // Valeurs par défaut construites une seule fois : `useAppForm` réapplique ses
+  // options à chaque rendu et une date recalculée (les millisecondes changent)
+  // le ferait boucler.
+  const [defaultValues] = useState(() => ({
+    startDate: dayjs.utc().toISOString(),
+  }))
+
   const form = useAppForm({
-    defaultValues: { startDate: dayjs.utc().toISOString() },
+    defaultValues,
     onSubmit: ({ value }) => {
       if (!pathwayState.addedPathways.length) {
         return
