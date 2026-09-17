@@ -8,6 +8,7 @@ import {
   usePathwayTemplateQueries,
 } from '../../../queries/usePathwayTemplate.ts'
 import { Button } from '../../ui/button.tsx'
+import { FieldInfo } from '../../ui/fieldInfo.tsx'
 import { Label } from '../../ui/label.tsx'
 import {
   Popup,
@@ -126,18 +127,19 @@ function AddPathwayForm({ trigger }: AddPathwayFormProps) {
               }}
             >
               {(field) => (
-                <field.Input
-                  label="Tag principal"
-                  placeholder="Affiché sur la liste des patients"
-                  list="main-tag-suggestions"
-                />
+                <div className="flex flex-col gap-1">
+                  <Label>Tag principal</Label>
+                  <TagInput
+                    value={field.state.value ? [field.state.value] : []}
+                    onChange={(tags) => field.handleChange(tags[0] ?? '')}
+                    suggestions={mainTagSuggestions}
+                    maxTags={1}
+                    placeholder="Affiché sur la liste des patients..."
+                  />
+                  <FieldInfo field={field} />
+                </div>
               )}
             </form.AppField>
-            <datalist id="main-tag-suggestions">
-              {mainTagSuggestions.map((tag) => (
-                <option key={tag} value={tag} />
-              ))}
-            </datalist>
 
             <div className="flex flex-col gap-1">
               <Label>Tags secondaires</Label>

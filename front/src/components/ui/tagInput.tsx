@@ -10,6 +10,8 @@ interface TagInputProps {
   suggestions?: string[]
   placeholder?: string
   className?: string
+  /** Nombre maximum de tags. Une fois atteint, la saisie est masquée. */
+  maxTags?: number
 }
 
 export function TagInput({
@@ -18,11 +20,14 @@ export function TagInput({
   suggestions = [],
   placeholder = 'Ajouter un tag...',
   className,
+  maxTags,
 }: TagInputProps) {
   const [inputValue, setInputValue] = useState('')
   const [showSuggestions, setShowSuggestions] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+
+  const isFull = maxTags !== undefined && value.length >= maxTags
 
   const filteredSuggestions = suggestions.filter(
     (s) =>
@@ -32,7 +37,7 @@ export function TagInput({
 
   const addTag = (tag: string) => {
     const trimmed = tag.trim()
-    if (trimmed && !value.includes(trimmed)) {
+    if (trimmed && !value.includes(trimmed) && !isFull) {
       onChange([...value, trimmed])
     }
     setInputValue('')
@@ -101,6 +106,7 @@ export function TagInput({
         ))}
         <input
           ref={inputRef}
+          hidden={isFull}
           value={inputValue}
           onChange={(e) => {
             setInputValue(e.target.value)
@@ -113,7 +119,7 @@ export function TagInput({
         />
       </div>
 
-      {showSuggestions && filteredSuggestions.length > 0 && (
+      {showSuggestions && !isFull && filteredSuggestions.length > 0 && (
         <div
           className="absolute z-[200] w-full mt-1 rounded-md border border-border bg-popover shadow-md"
           onWheel={(e) => e.stopPropagation()}
