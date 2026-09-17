@@ -1,10 +1,9 @@
-import type { Dayjs } from 'dayjs'
 import { RefreshCw, X } from 'lucide-react'
 
+import { useAppForm } from '../../../hooks/formConfig.tsx'
+import { usePathwayMutations } from '../../../queries/usePathway.ts'
 import type { PathwayTemplate } from '../../../types/pathwayTemplate.ts'
 import { Button } from '../../ui/button.tsx'
-import { DatePicker } from '../../ui/datePicker.tsx'
-import { Label } from '../../ui/label.tsx'
 import {
   Popup,
   PopupBody,
@@ -13,36 +12,46 @@ import {
   PopupHeader,
   PopupTitle,
 } from '../../ui/popup.tsx'
-import { Select } from '../../ui/select.tsx'
 
 interface RegeneratePathwaysFormProps {
   open: boolean
   setOpen: (open: boolean) => void
   templates: PathwayTemplate[]
-  templateID: string
-  onTemplateChange: (value: string) => void
-  fromDate: Dayjs | null
-  onFromDateChange: (value: Dayjs | null) => void
-  onConfirm: () => void
-  isPending: boolean
 }
 
 export function RegeneratePathwaysForm({
   open,
   setOpen,
   templates,
-  templateID,
-  onTemplateChange,
-  fromDate,
-  onFromDateChange,
-  onConfirm,
-  isPending,
 }: RegeneratePathwaysFormProps) {
+  const { regeneratePathways } = usePathwayMutations()
+
   const options = templates.map((template) => ({
     value: template.id,
     label: template.name,
     color: template.color,
   }))
+
+  const form = useAppForm({
+    defaultValues: { templateID: '', fromDate: '' },
+    onSubmit: ({ value }) => {
+      if (!value.templateID || !value.fromDate) {
+        return
+      }
+      regeneratePathways.mutate(
+        {
+          pathwayTemplateID: value.templateID,
+          fromDate: value.fromDate,
+        },
+        {
+          onSuccess: () => {
+            setOpen(false)
+            form.reset()
+          },
+        },
+      )
+    },
+  })
 
   return (
     <Popup modal open={open} onOpenChange={setOpen}>
@@ -61,29 +70,21 @@ export function RegeneratePathwaysForm({
           </p>
 
           <div className="flex flex-col gap-4 max-w-md">
-            <div>
-              <Label className="block text-sm font-medium text-text-dark mb-1">
-                Modèle de parcours
-              </Label>
-              <Select
-                options={options}
-                placeholder="Choisir un modèle..."
-                value={templateID}
-                onValueChange={onTemplateChange}
-                searchable
-                clearable={false}
-              />
-            </div>
+            <form.AppField name="templateID">
+              {(field) => (
+                <field.Select
+                  label="Modèle de parcours"
+                  options={options}
+                  placeholder="Choisir un modèle..."
+                  searchable
+                  clearable={false}
+                />
+              )}
+            </form.AppField>
 
-            <div>
-              <Label className="block text-sm font-medium text-text-dark mb-1">
-                À partir du
-              </Label>
-              <DatePicker
-                value={fromDate}
-                onChange={(value) => onFromDateChange(value)}
-              />
-            </div>
+            <form.AppField name="fromDate">
+              {(field) => <field.DatePicker label="À partir du" />}
+            </form.AppField>
           </div>
         </PopupBody>
 
@@ -92,14 +93,25 @@ export function RegeneratePathwaysForm({
             <X className="w-4 h-4" />
             Annuler
           </Button>
-          <Button
-            variant="default"
-            onClick={onConfirm}
-            disabled={!templateID || !fromDate || isPending}
+          <form.Subscribe
+            selector={(state) => ({
+              templateID: state.values.templateID,
+              fromDate: state.values.fromDate,
+            })}
           >
-            <RefreshCw className="w-4 h-4" />
-            Appliquer
-          </Button>
+            {({ templateID, fromDate }) => (
+              <Button
+                variant="default"
+                onClick={() => form.handleSubmit()}
+                disabled={
+                  !templateID || !fromDate || regeneratePathways.isPending
+                }
+              >
+                <RefreshCw className="w-4 h-4" />
+                Appliquer
+              </Button>
+            )}
+          </form.Subscribe>
         </PopupFooter>
       </PopupContent>
     </Popup>

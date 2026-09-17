@@ -2,14 +2,13 @@ import { BriefcaseMedical, Check, X } from 'lucide-react'
 import type React from 'react'
 import { useState } from 'react'
 
+import { useAppForm } from '../../../hooks/formConfig.tsx'
 import {
   useDiagnosticMutations,
   useDiagnosticTemplatesQuery,
 } from '../../../queries/useDiagnosticEducatif.ts'
 import { useDiagnosticStore } from '../../../store/useDiagnosticStore.ts'
 import { Button } from '../../ui/button.tsx'
-import { Input } from '../../ui/input.tsx'
-import { Label } from '../../ui/label.tsx'
 import {
   Popup,
   PopupBody,
@@ -30,30 +29,31 @@ function AddDiagnosticForm({ patientId, trigger }: Props) {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(
     null,
   )
-  const [title, setTitle] = useState('')
-
   const { templates } = useDiagnosticTemplatesQuery()
   const { createDiagnostic } = useDiagnosticMutations(patientId)
   const { setSelectedId } = useDiagnosticStore()
 
-  const handleCreate = () => {
-    createDiagnostic.mutate(
-      {
-        patientId,
-        activeFields: [],
-        templateId: selectedTemplateId ?? undefined,
-        title: title || undefined,
-      },
-      {
-        onSuccess: (created) => {
-          setSelectedId(created.id)
-          setSelectedTemplateId(null)
-          setTitle('')
-          setOpen(false)
+  const form = useAppForm({
+    defaultValues: { title: '' },
+    onSubmit: ({ value }) => {
+      createDiagnostic.mutate(
+        {
+          patientId,
+          activeFields: [],
+          templateId: selectedTemplateId ?? undefined,
+          title: value.title || undefined,
         },
-      },
-    )
-  }
+        {
+          onSuccess: (created) => {
+            setSelectedId(created.id)
+            setSelectedTemplateId(null)
+            form.reset()
+            setOpen(false)
+          },
+        },
+      )
+    },
+  })
 
   return (
     <Popup
@@ -63,7 +63,7 @@ function AddDiagnosticForm({ patientId, trigger }: Props) {
         setOpen(o)
         if (!o) {
           setSelectedTemplateId(null)
-          setTitle('')
+          form.reset()
         }
       }}
     >
@@ -93,7 +93,7 @@ function AddDiagnosticForm({ patientId, trigger }: Props) {
                   type="button"
                   onClick={() => {
                     setSelectedTemplateId(null)
-                    setTitle('')
+                    form.setFieldValue('title', '')
                   }}
                   className={`cursor-pointer bg-background w-full text-left px-3 py-2.5 rounded-lg border transition-colors ${
                     selectedTemplateId === null
@@ -123,7 +123,7 @@ function AddDiagnosticForm({ patientId, trigger }: Props) {
                     type="button"
                     onClick={() => {
                       setSelectedTemplateId(t.id)
-                      setTitle(t.name)
+                      form.setFieldValue('title', t.name)
                     }}
                     className={`cursor-pointer bg-background w-full text-left px-3 py-2.5 rounded-lg border transition-colors ${
                       selectedTemplateId === t.id
@@ -153,14 +153,15 @@ function AddDiagnosticForm({ patientId, trigger }: Props) {
             </ul>
           </div>
 
-          <div className="flex flex-col gap-1.5 mb-4 mt-4">
-            <Label>Titre</Label>
-            <Input
-              placeholder="Sans titre"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-          </div>
+          <form.AppField name="title">
+            {(field) => (
+              <field.Input
+                label="Titre"
+                placeholder="Sans titre"
+                className="mb-4 mt-4"
+              />
+            )}
+          </form.AppField>
         </PopupBody>
 
         <PopupFooter>
@@ -170,7 +171,7 @@ function AddDiagnosticForm({ patientId, trigger }: Props) {
           </Button>
           <Button
             variant="default"
-            onClick={handleCreate}
+            onClick={() => form.handleSubmit()}
             disabled={createDiagnostic.isPending}
           >
             <Check className="w-4 h-4" />
