@@ -1193,6 +1193,7 @@ function Planning() {
             count={selectedSlotIds.size}
             weekDate={duplicateWeekDate}
             onWeekChange={setDuplicateWeekDate}
+            planningCycle={planningCycle}
             onConfirm={() => {
               if (duplicateWeekDate) {
                 handleBulkSlotOperation(duplicateWeekDate, 'duplicate')
@@ -1232,6 +1233,7 @@ function Planning() {
             count={selectedSlotIds.size}
             weekDate={moveWeekDate}
             onWeekChange={setMoveWeekDate}
+            planningCycle={planningCycle}
             onConfirm={() => {
               if (moveWeekDate) {
                 handleBulkSlotOperation(moveWeekDate, 'move')

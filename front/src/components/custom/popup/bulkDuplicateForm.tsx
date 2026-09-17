@@ -12,6 +12,8 @@ import {
   PopupTitle,
 } from '../../ui/popup.tsx'
 import { WeekPicker } from '../../ui/weekPicker.tsx'
+import type { PlanningCycle } from '../../../types/planningCycle.ts'
+import { cycleWeekNumber } from '../../../utils/weekCycle.ts'
 
 interface BulkDuplicateFormBaseProps {
   open: boolean
@@ -24,6 +26,7 @@ interface NormalModeProps extends BulkDuplicateFormBaseProps {
   editMode?: false
   weekDate: Dayjs | null
   onWeekChange: (value: Dayjs | null) => void
+  planningCycle?: PlanningCycle | null
   targetWeekNumber?: never
   onTargetWeekNumberChange?: never
 }
@@ -66,6 +69,7 @@ export function BulkDuplicateForm(props: BulkDuplicateFormProps) {
             <NormalModeContent
               weekDate={props.weekDate}
               onWeekChange={props.onWeekChange}
+              planningCycle={props.planningCycle}
             />
           )}
         </PopupBody>
@@ -92,15 +96,21 @@ export function BulkDuplicateForm(props: BulkDuplicateFormProps) {
 function NormalModeContent({
   weekDate,
   onWeekChange,
+  planningCycle,
 }: {
   weekDate: Dayjs | null
   onWeekChange: (value: Dayjs | null) => void
+  planningCycle?: PlanningCycle | null
 }) {
   const weekStart = weekDate?.isoWeekday(1) ?? null
   const weekStartLabel = weekStart ? weekStart.format('DD MMMM YYYY') : ''
   const weekEndLabel = weekStart
     ? weekStart.add(4, 'day').format('DD MMMM YYYY')
     : ''
+  const cycleLabel =
+    weekStart && planningCycle
+      ? `S${cycleWeekNumber(weekStart, planningCycle)} — `
+      : ''
 
   return (
     <>
@@ -111,6 +121,7 @@ function NormalModeContent({
 
       {weekStart && (
         <p className="mt-2 text-sm text-text-light">
+          <span className="font-medium text-text-dark">{cycleLabel}</span>
           Semaine du{' '}
           <span className="font-medium text-text-dark">{weekStartLabel}</span>{' '}
           au <span className="font-medium text-text-dark">{weekEndLabel}</span>
