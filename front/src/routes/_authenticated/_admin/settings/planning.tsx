@@ -887,6 +887,7 @@ function Planning() {
                 selectedSlotIds={selectedSlotIds}
                 onToggleSelect={handleToggleSelect}
                 onRangeChange={handleRangeChange}
+                showSecondaryTags={false}
                 weekAnchorDate={editMode ? startDate : undefined}
                 planningCycle={editMode ? undefined : planningCycle}
                 headerToolbar={
