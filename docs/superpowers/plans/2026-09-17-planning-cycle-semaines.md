@@ -325,9 +325,8 @@ describe('PlanningCycleDomain', () => {
     })
 
     expect(upserts).toHaveLength(1)
-    expect(upserts[0].startOfWeek.toISOString()).toBe(
-      '2026-01-05T00:00:00.000Z',
-    )
+    const [entry] = upserts
+    expect(entry?.startOfWeek.toISOString()).toBe('2026-01-05T00:00:00.000Z')
   })
 
   it('laisse un lundi inchange', async () => {
@@ -338,9 +337,8 @@ describe('PlanningCycleDomain', () => {
       weekCount: 4,
     })
 
-    expect(upserts[0].startOfWeek.toISOString()).toBe(
-      '2026-01-05T00:00:00.000Z',
-    )
+    const [entry] = upserts
+    expect(entry?.startOfWeek.toISOString()).toBe('2026-01-05T00:00:00.000Z')
   })
 
   it('ramene un dimanche au lundi qui precede', async () => {
@@ -352,9 +350,8 @@ describe('PlanningCycleDomain', () => {
       weekCount: 6,
     })
 
-    expect(upserts[0].startOfWeek.toISOString()).toBe(
-      '2026-01-05T00:00:00.000Z',
-    )
+    const [entry] = upserts
+    expect(entry?.startOfWeek.toISOString()).toBe('2026-01-05T00:00:00.000Z')
   })
 
   it('rejette un weekCount inferieur a 1', async () => {
