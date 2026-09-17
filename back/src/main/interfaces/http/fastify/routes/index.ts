@@ -18,6 +18,7 @@ import { diagnosticEducatifTemplateRouter } from './diagnosticEducatifTemplate'
 import { enrollmentIssueRouter } from './enrollmentIssue'
 import { activityLogRouter } from './activityLog'
 import { forbiddenWeekRouter } from './forbiddenWeek'
+import { planningCycleRouter } from './planningCycle'
 
 // Routes publiques (sans session) : racine, healthcheck et authentification.
 const PUBLIC_ROUTES = new Set(['/', '/health'])
@@ -56,6 +57,7 @@ const routes: FastifyPluginAsyncZod = async (fastify) => {
   await fastify.register(enrollmentIssueRouter, { prefix: '/patient/:patientID/enrollment-issue' })
   await fastify.register(activityLogRouter, { prefix: '/activity-log' })
   await fastify.register(forbiddenWeekRouter, { prefix: '/forbidden-week' })
+  await fastify.register(planningCycleRouter, { prefix: '/planning-cycle' })
 }
 
 export { routes }
