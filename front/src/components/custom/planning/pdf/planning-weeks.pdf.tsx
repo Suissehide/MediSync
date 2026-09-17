@@ -238,7 +238,7 @@ function WeekPage({ week }: { week: PlanningWeek }) {
   return (
     <Page size="A4" orientation="landscape" style={styles.page}>
       <View style={styles.header}>
-        <Text style={styles.title}>Semaine {week.isoWeek}</Text>
+        <Text style={styles.title}>Semaine {week.weekLabel}</Text>
         <Text style={styles.subtitle}>
           du {week.weekStart.format('DD/MM/YYYY')} au{' '}
           {week.weekStart.add(4, 'day').format('DD/MM/YYYY')}

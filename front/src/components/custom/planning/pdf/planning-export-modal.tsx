@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from 'react'
 
 import { useForbiddenWeekQueries } from '../../../../queries/useForbiddenWeek.ts'
 import { usePathwayTemplateQueries } from '../../../../queries/usePathwayTemplate.ts'
+import { usePlanningCycleQueries } from '../../../../queries/usePlanningCycle.ts'
 import { useSlotsInRangeQuery } from '../../../../queries/useSlot.ts'
 import { Button } from '../../../ui/button.tsx'
 import { Label } from '../../../ui/label.tsx'
@@ -42,6 +43,7 @@ export default function PlanningExportModal({
   )
 
   const { pathwayTemplates } = usePathwayTemplateQueries()
+  const { planningCycle } = usePlanningCycleQueries()
   const { forbiddenWeeks } = useForbiddenWeekQueries()
 
   const range = useMemo(
@@ -106,8 +108,9 @@ export default function PlanningExportModal({
         weekStart,
         weekCount,
         forbiddenWeekStarts,
+        planningCycle,
       ),
-    [selectedSlots, weekStart, weekCount, forbiddenWeekStarts],
+    [selectedSlots, weekStart, weekCount, forbiddenWeekStarts, planningCycle],
   )
 
   const pdfDocument = useMemo(
