@@ -519,9 +519,14 @@ function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
               <Label>À partir du</Label>
               <DatePicker
                 value={fromDate}
-                onChange={(value) =>
-                  setFromDate((value ?? dayjs.utc()).startOf('day'))
-                }
+                // Pendant la saisie au clavier, le champ émet des dates
+                // incomplètes donc invalides : les ignorer, sinon le rendu
+                // suivant casse sur `toISOString()`.
+                onChange={(value) => {
+                  if (value?.isValid()) {
+                    setFromDate(value.startOf('day'))
+                  }
+                }}
                 minDate={dayjs.utc().startOf('day')}
               />
             </FormField>
