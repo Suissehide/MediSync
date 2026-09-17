@@ -75,6 +75,7 @@ export default function AppointmentSheet({
     defaultValues: {
       thematicId: '',
       type: '',
+      motif: '',
       appointmentPatients: [
         {
           accompanying: '',
@@ -94,6 +95,7 @@ export default function AppointmentSheet({
         id: appointment.id,
         thematicId: value.thematicId,
         type: value.type,
+        motif: value.motif.trim() || null,
         appointmentPatients: value.appointmentPatients,
       }
 
@@ -138,6 +140,7 @@ export default function AppointmentSheet({
               {
                 thematicId: data.thematicId ?? '',
                 type: data.type ?? '',
+                motif: data.motif ?? '',
                 appointmentPatients:
                   data.appointmentPatients?.map((ap) => ({
                     id: ap.id ?? '',
@@ -257,6 +260,14 @@ export default function AppointmentSheet({
                   />
                 )}
               </form.AppField>
+
+              {/* Le motif porte sur le rendez-vous d'un seul patient : il n'a
+              de sens que sur un créneau individuel. */}
+              {isIndividual && (
+                <form.AppField name="motif">
+                  {(field) => <field.Input label="Motif" />}
+                </form.AppField>
+              )}
 
               <FormField className="flex flex-col gap-1">
                 <Label>Salle</Label>

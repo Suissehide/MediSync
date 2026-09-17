@@ -17,11 +17,11 @@ export type AppointmentWithPatients = AppointmentEntityDomain & {
 }
 export type AppointmentCreateEntityDomain = Pick<
   AppointmentCreateEntityRepo,
-  'startDate' | 'endDate' | 'type' | 'thematicId'
+  'startDate' | 'endDate' | 'type' | 'thematicId' | 'motif'
 > & { slotID: string; patientIDs: string[] }
 export type AppointmentUpdateEntityDomain = Pick<
   AppointmentUpdateEntityRepo,
-  'startDate' | 'endDate' | 'type' | 'thematicId'
+  'startDate' | 'endDate' | 'type' | 'thematicId' | 'motif'
 > & {
   slotID?: string
   // Optionnel : si absent, les participants ne sont pas modifiés ;

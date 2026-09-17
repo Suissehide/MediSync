@@ -33,6 +33,8 @@ export const appointmentSchema = z.object({
   thematic: thematicNameFromRelation,
   thematicId: z.cuid().nullish(),
   type: appointmentTypeSchema,
+  // Motif du rendez-vous — renseigné sur un créneau individuel uniquement.
+  motif: z.string().trim().optional().nullable(),
 
   get slot() {
     return slotSchema.optional().nullable()
