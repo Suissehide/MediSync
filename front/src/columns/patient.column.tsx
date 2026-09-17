@@ -18,12 +18,11 @@ export const getPatientColumns = ({
   onView,
   pathwayTemplates = [],
 }: PatientActions) => {
+  // Couleur d'un tag principal : celle du premier parcours qui le porte.
   const tagColorMap = new Map<string, string>()
   for (const template of pathwayTemplates) {
-    for (const tag of template.tags ?? []) {
-      if (!tagColorMap.has(tag)) {
-        tagColorMap.set(tag, template.color)
-      }
+    if (!tagColorMap.has(template.mainTag)) {
+      tagColorMap.set(template.mainTag, template.color)
     }
   }
 

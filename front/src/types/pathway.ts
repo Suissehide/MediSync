@@ -6,7 +6,8 @@ export type Pathway = {
     id: string
     name: string
     color: string
-    tags: string[]
+    mainTag: string
+    secondaryTags: string[]
   } | null
   slots?: {
     id: string
@@ -54,7 +55,8 @@ export type TrackingPathway = {
     id: string
     name: string
     color: string
-    tags: string[]
+    mainTag: string
+    secondaryTags: string[]
   } | null
   patients: TrackingPatient[]
 }

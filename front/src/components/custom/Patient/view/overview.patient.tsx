@@ -126,9 +126,8 @@ function PathwayCard({
     .format('D MMMM YYYY')
     .replace(/^./, (c) => c.toUpperCase())
 
-  const hasTags = pathway.templateTags.length > 0
-  const fallbackLabel = pathway.templateName ?? 'Parcours'
-  const labels = hasTags ? pathway.templateTags : [fallbackLabel]
+  const label =
+    pathway.templateMainTag ?? pathway.templateName ?? 'Parcours'
 
   return (
     <li
@@ -142,19 +141,16 @@ function PathwayCard({
     >
       <GripVertical className="h-4 w-4 text-text-light flex-shrink-0 cursor-move" />
       <div className="flex flex-wrap gap-1 flex-1 min-w-0">
-        {labels.map((label) => (
-          <span
-            key={label}
-            className="inline-block px-2 py-1 rounded text-xs font-medium border"
-            style={{
-              backgroundColor: hexToRGBA(color, 0.15),
-              color: getContrastTextColor(color),
-              borderColor: hexToRGBA(color, 0.6),
-            }}
-          >
-            {label}
-          </span>
-        ))}
+        <span
+          className="inline-block px-2 py-1 rounded text-xs font-medium border"
+          style={{
+            backgroundColor: hexToRGBA(color, 0.15),
+            color: getContrastTextColor(color),
+            borderColor: hexToRGBA(color, 0.6),
+          }}
+        >
+          {label}
+        </span>
       </div>
       <span className="text-xs text-text-sidebar flex-shrink-0">
         Début : {formattedDate}
@@ -248,9 +244,7 @@ export default function OverviewPatient({ patient }: OverviewPatientProps) {
       )
       const pathway = patientPathways.find((p) => p.pathwayID === pathwayID)
       const label =
-        pathway && pathway.templateTags.length > 0
-          ? pathway.templateTags.join(' / ')
-          : (pathway?.templateName ?? 'Parcours')
+        pathway?.templateMainTag ?? pathway?.templateName ?? 'Parcours'
       setRemoveTarget({
         pathwayID,
         name: label,

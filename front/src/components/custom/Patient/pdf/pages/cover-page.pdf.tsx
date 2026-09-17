@@ -133,8 +133,8 @@ export default function CoverPage({
   if (firstPathway) {
     if (firstPathway.templateName) {
       programLabel = firstPathway.templateName
-    } else if (firstPathway.templateTags.length > 0) {
-      programLabel = firstPathway.templateTags.join(' / ')
+    } else if (firstPathway.templateMainTag) {
+      programLabel = firstPathway.templateMainTag
     }
   }
 

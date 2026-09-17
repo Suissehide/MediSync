@@ -45,7 +45,8 @@ export default async function seedPathwayTemplates(
       data: {
         name: pathway.name,
         color: pathway.color,
-        tags: pathway.tags,
+        mainTag: pathway.tags[0] ?? pathway.name,
+        secondaryTags: pathway.tags.slice(1),
         slotTemplates: {
           create: slotTemplates,
         },

@@ -43,9 +43,7 @@ export function usePathwaySelector() {
 
   const allTags = useMemo(
     () =>
-      [
-        ...new Set((pathwayTemplates ?? []).flatMap((t) => t.tags ?? [])),
-      ].sort(),
+      [...new Set((pathwayTemplates ?? []).map((t) => t.mainTag))].sort(),
     [pathwayTemplates],
   )
 
@@ -53,9 +51,7 @@ export function usePathwaySelector() {
 
   const handleAddTags = () => {
     const newPathways = selectedTags.map((tag) => {
-      const template = (pathwayTemplates ?? []).find((t) =>
-        t.tags?.includes(tag),
-      )
+      const template = (pathwayTemplates ?? []).find((t) => t.mainTag === tag)
       return {
         id: `${tag}-${Date.now()}-${Math.random()}`,
         tag,

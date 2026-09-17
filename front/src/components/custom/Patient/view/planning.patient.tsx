@@ -28,7 +28,7 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
 
   const { pathwayTemplates } = usePathwayTemplateQueries()
   const allTags = useMemo(
-    () => [...new Set((pathwayTemplates ?? []).flatMap((t) => t.tags ?? []))],
+    () => [...new Set((pathwayTemplates ?? []).map((t) => t.mainTag))],
     [pathwayTemplates],
   )
 
@@ -128,8 +128,8 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
       const filteredSlots =
         selectedTag === '__all__'
           ? slots
-          : slots.filter((slot) =>
-              slot.pathway?.template?.tags?.includes(selectedTag),
+          : slots.filter(
+              (slot) => slot.pathway?.template?.mainTag === selectedTag,
             )
 
       const baseEvents = buildCalendarEventsFromSlots(filteredSlots, [

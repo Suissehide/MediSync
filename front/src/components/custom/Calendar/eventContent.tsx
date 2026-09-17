@@ -54,6 +54,7 @@ export const EventContent = ({
     locked,
     capacity,
     isIndividual: isIndividualTemplate,
+    secondaryTags = [],
   } = event.extendedProps
   const isWeekView = view.type === 'timeGridWeek'
   const isRowLayout = !isWeekView
@@ -248,6 +249,18 @@ export const EventContent = ({
         )}
         <div className="text-[0.6rem]">{event.title}</div>
         <div className="text-[0.6rem] font-semibold truncate">{thematic}</div>
+        {secondaryTags.length > 0 && (
+          <div className="flex flex-wrap gap-0.5 mt-0.5">
+            {secondaryTags.map((tag: string) => (
+              <span
+                key={tag}
+                className="inline-block rounded bg-black/25 px-1 text-[0.5rem] font-medium leading-tight"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
       </span>
 
       {/* Individual */}

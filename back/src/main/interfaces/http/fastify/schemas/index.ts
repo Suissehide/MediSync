@@ -102,7 +102,8 @@ export const slotSchema = z.object({
 export const pathwayTemplateSchema = z.object({
   name: z.string().min(1),
   color: z.string(),
-  tags: z.array(z.string()).default([]),
+  mainTag: z.string().trim().min(1),
+  secondaryTags: z.array(z.string()).default([]),
   motifRequired: z.boolean().default(false),
   firstAppointmentOnly: z.boolean().default(false),
 

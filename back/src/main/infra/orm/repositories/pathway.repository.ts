@@ -242,7 +242,7 @@ class PathwayRepository implements PathwayRepositoryInterface {
         where: {
           startDate: { gte: startOfDay },
           template: {
-            tags: { has: tag },
+            mainTag: tag,
           },
         },
         orderBy: {
@@ -287,7 +287,7 @@ class PathwayRepository implements PathwayRepositoryInterface {
       return await this.prisma.pathway.findMany({
         where: {
           template: {
-            tags: { has: tag },
+            mainTag: tag,
           },
           slots: {
             some: {
@@ -410,7 +410,8 @@ class PathwayRepository implements PathwayRepositoryInterface {
               id: pathway.template.id,
               name: pathway.template.name,
               color: pathway.template.color,
-              tags: pathway.template.tags,
+              mainTag: pathway.template.mainTag,
+              secondaryTags: pathway.template.secondaryTags,
             }
           : null,
         patients: Array.from(patientMap.values()),

@@ -87,6 +87,7 @@ export const buildCalendarEventsFromSlots = (
       extendedProps: {
         type: 'slot',
         thematic: slot.slotTemplate?.thematic,
+        secondaryTags: slot.pathway?.template?.secondaryTags ?? [],
         states: slotStates,
         templateID: slot.slotTemplate?.id,
         capacity: slot.slotTemplate?.capacity,

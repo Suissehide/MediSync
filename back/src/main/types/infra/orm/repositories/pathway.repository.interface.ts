@@ -45,7 +45,8 @@ export type TrackingPathwayRepo = {
     id: string
     name: string
     color: string
-    tags: string[]
+    mainTag: string
+    secondaryTags: string[]
   } | null
   patients: TrackingPatientRepo[]
 }
