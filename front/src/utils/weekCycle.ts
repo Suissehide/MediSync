@@ -17,6 +17,13 @@ dayjs.extend(utc)
  * doit afficher S6.
  */
 export function cycleWeekNumber(date: Dayjs, cycle: PlanningCycle): number {
+  // L'API borne déjà weekCount à un entier 1..52 (Zod et domaine back), mais
+  // une valeur invalide écrite directement en base donnerait NaN via un
+  // modulo par zéro : on s'en protège ici.
+  if (!Number.isInteger(cycle.weekCount) || cycle.weekCount < 1) {
+    return 1
+  }
+
   const start = dayjs.utc(cycle.startOfWeek).startOf('isoWeek')
   const current = dayjs.utc(date.format('YYYY-MM-DD')).startOf('isoWeek')
 

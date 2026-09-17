@@ -276,3 +276,12 @@ mutation.
   et inchangée.
 - Tout historique ou versionnement du réglage : une seule valeur courante.
 - Plusieurs cycles simultanés (par service, par parcours) : un seul cycle global.
+- Le tableau de bord (`dashboard.tsx`) et la vue planning du dossier patient
+  (`planning.patient.tsx`) restent en numérotation ISO : ils rendent le même
+  composant `Calendar` sans lui passer `planningCycle`. C'est une limitation
+  assumée de cette itération, la spec n'énumérant que les quatre emplacements
+  de la page planning ci-dessus. Cette page est elle-même sous le garde de
+  route `_admin`, donc tous les emplacements branchés sont réservés aux
+  ADMIN : un soignant non-ADMIN ne voit jamais la numérotation de cycle.
+  Étendre le tableau de bord et la vue patient coûterait deux lignes par vue,
+  le composant `Calendar` acceptant déjà la prop.

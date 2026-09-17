@@ -669,6 +669,18 @@ function Planning() {
     }))
   }, [forbiddenWeeks])
 
+  // FullCalendar compare ses options par identité : une fonction recréée à
+  // chaque rendu ferait rater le cache de dateEnv et reconstruirait toute la
+  // grille annuelle à chaque rendu. On mémoïse donc la fonction elle-même,
+  // pas seulement son résultat.
+  const weekNumberCalculation = useMemo<'ISO' | ((date: Date) => number)>(
+    () =>
+      planningCycle
+        ? (date: Date) => cycleWeekNumber(dayjs.utc(date), planningCycle)
+        : 'ISO',
+    [planningCycle],
+  )
+
   const handleTimelineDateClick = (info: { dateStr: string }) => {
     if (!isForbiddenWeekMode) {
       return
@@ -903,12 +915,14 @@ function Planning() {
                   multiMonthMinWidth={600}
                   weekNumbers={true}
                   weekNumberFormat={{ week: 'numeric' }}
-                  weekNumberCalculation={
-                    planningCycle
-                      ? (date: Date) =>
-                          cycleWeekNumber(dayjs.utc(date), planningCycle)
-                      : 'ISO'
-                  }
+                  // FullCalendar transmet ici dateEnv.toDate(marker), pas le
+                  // marker interne : le Date obtenu porte ses champs dans le
+                  // fuseau de dateEnv. Le dayjs.utc(date) ci-dessous ne donne
+                  // le bon résultat que parce que cette instance a
+                  // timeZone="UTC" — avec 'local' (le défaut FullCalendar),
+                  // toute la grille annuelle se décalerait d'une semaine en
+                  // Europe/Paris.
+                  weekNumberCalculation={weekNumberCalculation}
                   dayMaxEvents={false}
                   dayMaxEventRows={false}
                   height="100%"
