@@ -19,6 +19,8 @@ import { createRoot } from 'react-dom/client'
 
 import { usePlanningStore } from '../../../store/usePlanningStore.ts'
 import type { Appointment } from '../../../types/appointment.ts'
+import type { PlanningCycle } from '../../../types/planningCycle.ts'
+import { cycleWeekNumber } from '../../../utils/weekCycle.ts'
 import CalendarDatePickerButton from './calendarDatePickerButton.tsx'
 import { EventContent } from './eventContent.tsx'
 
@@ -144,6 +146,8 @@ interface CalendarProps {
   onToggleSelect?: (eventId: string) => void
   unselectRef?: React.MutableRefObject<(() => void) | null>
   weekAnchorDate?: string
+  /** Cycle de numérotation du service ; absent = numéros de semaine ISO. */
+  planningCycle?: PlanningCycle | null
   /** Notifie la plage réellement affichée, pour ne charger que celle-ci. */
   onRangeChange?: (range: { from: string; to: string }) => void
 }
@@ -171,6 +175,7 @@ function Calendar({
   onToggleSelect,
   unselectRef,
   weekAnchorDate,
+  planningCycle,
   onRangeChange,
 }: CalendarProps) {
   const anchorMonday = useMemo(
@@ -360,19 +365,22 @@ function Calendar({
               start.startOf('isoWeek').diff(anchorMonday, 'week') + 1
             return `Semaine ${weekNum}`
           }
-          const week = start.isoWeek()
+          // Cycle du service s'il est configuré, numéro ISO sinon.
+          const weekLabel = planningCycle
+            ? `S${cycleWeekNumber(start, planningCycle)}`
+            : `s${start.isoWeek()}`
           const startStr = start.format('DD MMMM')
           if (!arg.end) {
-            return `s${week} / ${startStr}`
+            return `${weekLabel} / ${startStr}`
           }
           // arg.end.marker est la fin INCLUSIVE de la plage (23:59:59.999 du
           // dernier jour visible), donc on n'enlève pas de jour.
           const end = dayjs.utc(arg.end.marker)
           // Vue "Jour" (plage d'un seul jour) : afficher le jour seul.
           if (end.isSame(start, 'day')) {
-            return `s${week} / ${startStr}`
+            return `${weekLabel} / ${startStr}`
           }
-          return `s${week} / ${startStr} - ${end.format('DD MMMM')}`
+          return `${weekLabel} / ${startStr} - ${end.format('DD MMMM')}`
         }}
         dayHeaderFormat={
           anchorMonday

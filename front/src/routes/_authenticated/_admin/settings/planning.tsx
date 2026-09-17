@@ -875,6 +875,7 @@ function Planning() {
                 onToggleSelect={handleToggleSelect}
                 onRangeChange={handleRangeChange}
                 weekAnchorDate={editMode ? startDate : undefined}
+                planningCycle={editMode ? undefined : planningCycle}
                 headerToolbar={
                   editMode ? { left: 'title', right: 'prev,next' } : undefined
                 }
