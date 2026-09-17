@@ -118,6 +118,7 @@ export interface CalendarEvent {
     locked?: boolean
     slotWeeks?: string[]
     thematic?: string
+    secondaryTags?: string[]
   }
 }
 

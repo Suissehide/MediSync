@@ -36,10 +36,19 @@ export default function PathwayTemplateSheet({
     usePathwayTemplateMutations()
   const { pathwayTemplates } = usePathwayTemplateQueries()
 
-  const [tags, setTags] = useState<string[]>([])
+  const [secondaryTags, setSecondaryTags] = useState<string[]>([])
 
-  const tagSuggestions = useMemo(
-    () => [...new Set((pathwayTemplates ?? []).flatMap((t) => t.tags ?? []))],
+  const mainTagSuggestions = useMemo(
+    () => [...new Set((pathwayTemplates ?? []).map((t) => t.mainTag))].sort(),
+    [pathwayTemplates],
+  )
+  const secondaryTagSuggestions = useMemo(
+    () =>
+      [
+        ...new Set(
+          (pathwayTemplates ?? []).flatMap((t) => t.secondaryTags ?? []),
+        ),
+      ].sort(),
     [pathwayTemplates],
   )
 
@@ -49,6 +58,7 @@ export default function PathwayTemplateSheet({
     defaultValues: {
       name: '',
       color: '',
+      mainTag: '',
       motifRequired: false,
       firstAppointmentOnly: false,
     },
@@ -61,7 +71,8 @@ export default function PathwayTemplateSheet({
         id: pathwayTemplate.id,
         name: value.name,
         color: value.color,
-        tags,
+        mainTag: value.mainTag.trim(),
+        secondaryTags,
         motifRequired: value.motifRequired,
         firstAppointmentOnly: value.firstAppointmentOnly,
       }
@@ -89,12 +100,13 @@ export default function PathwayTemplateSheet({
       {
         name: pathwayTemplate.name ?? '',
         color: pathwayTemplate.color ?? '',
+        mainTag: pathwayTemplate.mainTag ?? '',
         motifRequired: pathwayTemplate.motifRequired ?? false,
         firstAppointmentOnly: pathwayTemplate.firstAppointmentOnly ?? false,
       },
       { keepDefaultValues: true },
     )
-    setTags(pathwayTemplate.tags ?? [])
+    setSecondaryTags(pathwayTemplate.secondaryTags ?? [])
   }, [pathwayTemplate, open, reset])
 
   return (
@@ -158,13 +170,36 @@ export default function PathwayTemplateSheet({
                   {(field) => <field.ColorPicker label="Couleur" />}
                 </form.AppField>
 
+                <form.AppField
+                  name="mainTag"
+                  validators={{
+                    onSubmit: ({ value }) =>
+                      value.trim()
+                        ? undefined
+                        : 'Le tag principal est nécessaire',
+                  }}
+                >
+                  {(field) => (
+                    <field.Input
+                      label="Tag principal"
+                      placeholder="Affiché sur la liste des patients"
+                      list="main-tag-suggestions-edit"
+                    />
+                  )}
+                </form.AppField>
+                <datalist id="main-tag-suggestions-edit">
+                  {mainTagSuggestions.map((tag) => (
+                    <option key={tag} value={tag} />
+                  ))}
+                </datalist>
+
                 <div className="flex flex-col gap-1">
-                  <Label>Tags</Label>
+                  <Label>Tags secondaires</Label>
                   <TagInput
-                    value={tags}
-                    onChange={setTags}
-                    suggestions={tagSuggestions}
-                    placeholder="Ajouter un tag..."
+                    value={secondaryTags}
+                    onChange={setSecondaryTags}
+                    suggestions={secondaryTagSuggestions}
+                    placeholder="Affichés sur le planning..."
                   />
                 </div>
 

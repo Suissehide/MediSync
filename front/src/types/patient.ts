@@ -100,7 +100,7 @@ export type PatientPathway = {
   templateID: string | null
   templateName: string | null
   templateColor: string | null
-  templateTags: string[]
+  templateMainTag: string | null
   startDate: string
   priority: number | null
 }

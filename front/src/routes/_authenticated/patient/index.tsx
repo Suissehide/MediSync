@@ -35,9 +35,7 @@ function PatientList() {
 
   const allTags = useMemo(
     () =>
-      [
-        ...new Set((pathwayTemplates ?? []).flatMap((t) => t.tags ?? [])),
-      ].sort(),
+      [...new Set((pathwayTemplates ?? []).map((t) => t.mainTag))].sort(),
     [pathwayTemplates],
   )
 
