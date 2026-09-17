@@ -14,7 +14,7 @@ import FullCalendar from '@fullcalendar/react'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import dayjs, { type Dayjs } from 'dayjs'
 import { CalendarIcon, CalendarOff } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import { usePlanningStore } from '../../../store/usePlanningStore.ts'
@@ -196,7 +196,6 @@ function Calendar({
   const [currentView, setCurrentView] = useState('timeGridWeek')
   const [currentViewStart, setCurrentViewStart] = useState<string>('')
 
-  // Seul eventDidMount lit ce layout, et uniquement pour les events en fond.
   const slotLayout = useMemo(
     () =>
       events.some((e) => e.display === 'background')
@@ -204,6 +203,36 @@ function Calendar({
         : EMPTY_SLOT_LAYOUT,
     [events],
   )
+
+  /**
+   * Les colonnes des créneaux en fond sont posées en styles inline, que
+   * FullCalendar ne remet pas à zéro. Sans ce balayage, un créneau garde la
+   * largeur d'un groupe auquel il n'appartient plus dès que la liste
+   * d'événements change (changement de filtre, par exemple).
+   */
+  const applySlotLayout = useCallback(() => {
+    const elements =
+      document.querySelectorAll<HTMLElement>('[data-slot-id]') ?? []
+
+    for (const element of elements) {
+      const slotId = element.getAttribute('data-slot-id')
+      const layout = slotId ? slotLayout.get(slotId) : undefined
+
+      if (!layout || layout.totalColumns <= 1) {
+        element.style.width = ''
+        element.style.left = ''
+        continue
+      }
+
+      const width = 100 / layout.totalColumns
+      element.style.width = `${width}%`
+      element.style.left = `${layout.column * width}%`
+    }
+  }, [slotLayout])
+
+  useEffect(() => {
+    applySlotLayout()
+  }, [applySlotLayout])
 
   // In day/list views, background events are hidden by FullCalendar.
   // Override display to 'auto' so slots remain visible in those views.
@@ -486,30 +515,8 @@ function Calendar({
         eventDidMount={(info) => {
           if (info.event.display === 'background') {
             info.el.setAttribute('data-slot-id', info.event.id)
-
-            const current = slotLayout.get(info.event.id)
-            if (!current || current.totalColumns <= 1) {
-              return
-            }
-
-            const width = 100 / current.totalColumns
-            info.el.style.width = `${width}%`
-            info.el.style.left = `${current.column * width}%`
-
-            // Also update already-mounted siblings in the same group
-            for (const [id, { column, totalColumns }] of slotLayout) {
-              if (id === info.event.id || totalColumns <= 1) {
-                continue
-              }
-              const el = document.querySelector<HTMLElement>(
-                `[data-slot-id="${id}"]`,
-              )
-              if (el) {
-                const w = 100 / totalColumns
-                el.style.width = `${w}%`
-                el.style.left = `${column * w}%`
-              }
-            }
+            // Repose aussi les colonnes des voisins déjà montés du groupe.
+            applySlotLayout()
           }
         }}
       />
