@@ -195,21 +195,30 @@ export default function OverviewPatient({ patient }: OverviewPatientProps) {
     }
 
     const now = dayjs()
-    const filtered = slots.filter((slot) =>
-      slot.appointments?.some((appointment) =>
-        appointment.appointmentPatients?.some(
-          (ap) => ap.patient.id === patient.id,
+    // Le classement suit l'horaire affiché : sur un créneau individuel, celui
+    // du rendez-vous du patient et non celui du créneau entier.
+    const filtered = slots
+      .filter((slot) =>
+        slot.appointments?.some((appointment) =>
+          appointment.appointmentPatients?.some(
+            (ap) => ap.patient.id === patient.id,
+          ),
         ),
-      ),
-    )
+      )
+      .map((slot) => ({
+        slot,
+        start: dayjs(getSlotDisplayRange(slot, patient.id).start),
+      }))
 
     const upcoming = filtered
-      .filter((s) => dayjs(s.startDate).isAfter(now))
-      .sort((a, b) => dayjs(a.startDate).diff(dayjs(b.startDate)))
+      .filter((s) => s.start.isAfter(now))
+      .sort((a, b) => a.start.diff(b.start))
+      .map((s) => s.slot)
 
     const past = filtered
-      .filter((s) => dayjs(s.startDate).isBefore(now))
-      .sort((a, b) => dayjs(b.startDate).diff(dayjs(a.startDate)))
+      .filter((s) => s.start.isBefore(now))
+      .sort((a, b) => b.start.diff(a.start))
+      .map((s) => s.slot)
 
     return { upcoming, past }
   }, [slots, patient])
