@@ -2,7 +2,7 @@ import type { DateSelectArg } from '@fullcalendar/core'
 import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import dayjs from 'dayjs'
-import { CalendarRange, X } from 'lucide-react'
+import { CalendarRange, Route as RouteIcon, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import Calendar, {
@@ -19,16 +19,38 @@ import {
   containsKeyword,
 } from '../../libs/utils.ts'
 import { useAppointmentMutations } from '../../queries/useAppointment.ts'
+import { usePathwayTemplateQueries } from '../../queries/usePathwayTemplate.ts'
 import { useSlotsInRangeQuery } from '../../queries/useSlot.ts'
+import { useDashboardFilterStore } from '../../store/useDashboardFilterStore.ts'
 import { usePlanningStore } from '../../store/usePlanningStore.ts'
 import { useSoignantStore } from '../../store/useSoignantStore.ts'
 import type { CreateAppointmentParams } from '../../types/appointment.ts'
 import type { Soignant } from '../../types/soignant.ts'
-import type { SlotDateRange } from '../../types/slot.ts'
+import type { Slot, SlotDateRange } from '../../types/slot.ts'
 
 export const Route = createFileRoute('/_authenticated/dashboard')({
   component: Dashboard,
 })
+
+function filterSlotsBySoignants(slots: Slot[], soignantIDs: string[]) {
+  if (soignantIDs.length === 0) {
+    return []
+  }
+  return slots.filter((slot) =>
+    slot.slotTemplate?.soignants?.some((s) => soignantIDs.includes(s.id)),
+  )
+}
+
+function filterSlotsByPathwayTemplates(slots: Slot[], templateIDs: string[]) {
+  if (templateIDs.length === 0) {
+    return []
+  }
+  return slots.filter((slot) => {
+    const templateID =
+      slot.pathway?.template?.id ?? slot.pathway?.pathwayTemplateID
+    return !!templateID && templateIDs.includes(templateID)
+  })
+}
 
 function Dashboard() {
   const queryClient = useQueryClient()
@@ -38,6 +60,19 @@ function Dashboard() {
   const unselectSoignant = useSoignantStore((state) => state.unselectSoignant)
   const savedDate = usePlanningStore((state) => state.viewStart)
   const selectedSoignants = soignants.filter((s) => selectedIDs.includes(s.id))
+
+  const mode = useDashboardFilterStore((state) => state.mode)
+  const selectedPathwayTemplateIDs = useDashboardFilterStore(
+    (state) => state.selectedPathwayTemplateIDs,
+  )
+  const unselectPathwayTemplates = useDashboardFilterStore(
+    (state) => state.unselectPathwayTemplates,
+  )
+  const { pathwayTemplates } = usePathwayTemplateQueries()
+  const isPathwayMode = mode === 'pathway'
+  const selectedPathwayTemplates = (pathwayTemplates ?? []).filter((t) =>
+    selectedPathwayTemplateIDs.includes(t.id),
+  )
 
   const [visibleRange, setVisibleRange] = useState<SlotDateRange | null>(null)
   const handleRangeChange = useCallback((next: SlotDateRange) => {
@@ -59,14 +94,9 @@ function Dashboard() {
 
   useEffect(() => {
     if (slots) {
-      const filtered =
-        selectedIDs.length > 0
-          ? slots.filter((slot) =>
-              slot.slotTemplate?.soignants?.some((s) =>
-                selectedIDs.includes(s.id),
-              ),
-            )
-          : []
+      const filtered = isPathwayMode
+        ? filterSlotsByPathwayTemplates(slots, selectedPathwayTemplateIDs)
+        : filterSlotsBySoignants(slots, selectedIDs)
 
       const slotEvents = buildCalendarEventsFromSlots(filtered, ['fillable'])
 
@@ -76,7 +106,7 @@ function Dashboard() {
         ),
       )
     }
-  }, [slots, selectedIDs])
+  }, [slots, selectedIDs, isPathwayMode, selectedPathwayTemplateIDs])
 
   const handleSelectAppointment = (dateSelectArg: DateSelectArg) => {
     setSelectedDate({
@@ -142,9 +172,19 @@ function Dashboard() {
   const isAppointment = openEventId.startsWith('appointment_')
   const appointmentId = openEventId.replace(/^.*?_/, '')
 
+  const selectedLabels = isPathwayMode
+    ? selectedPathwayTemplates.map((t) => t.name)
+    : selectedSoignants.map((s) => s.name)
+  const emptyLabel = isPathwayMode
+    ? 'Sélectionnez un parcours'
+    : 'Sélectionnez un soignant'
+  const clearSelection = isPathwayMode
+    ? unselectPathwayTemplates
+    : unselectSoignant
+
   return (
     <DashboardLayout
-      components={['soignant']}
+      components={['dashboardFilter']}
       quickActions={[
         <AddPatientForm key="add-patient" />,
         <AddPatientToSlotForm key="add-patient-to-slot" />,
@@ -154,17 +194,21 @@ function Dashboard() {
         <div className="flex flex-col h-full">
           <div className="px-6 mt-6 mb-4 min-h-9 flex gap-2 items-center">
             <div className="flex items-center justify-center bg-foreground p-2 rounded-full">
-              <CalendarRange className="h-4 w-4 text-white" />
+              {isPathwayMode ? (
+                <RouteIcon className="h-4 w-4 text-white" />
+              ) : (
+                <CalendarRange className="h-4 w-4 text-white" />
+              )}
             </div>
             <h1 className="text-text-dark text-xl font-semibold">
-              {selectedSoignants.length > 0
-                ? selectedSoignants.map((s) => s.name).join(', ')
-                : 'Sélectionnez un soignant'}
+              {selectedLabels.length > 0
+                ? selectedLabels.join(', ')
+                : emptyLabel}
             </h1>
-            {selectedSoignants.length > 0 && (
+            {selectedLabels.length > 0 && (
               <button
                 type="button"
-                onClick={() => unselectSoignant()}
+                onClick={() => clearSelection()}
                 aria-label="Effacer la sélection"
                 className="cursor-pointer text-text-dark/60 hover:text-text-dark transition-colors"
               >
