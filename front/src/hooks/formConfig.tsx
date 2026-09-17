@@ -10,7 +10,7 @@ import { DatePicker } from '../components/ui/datePicker.tsx'
 import { FieldInfo } from '../components/ui/fieldInfo.tsx'
 import { Checkbox, Input, TextArea } from '../components/ui/input.tsx'
 import { Label } from '../components/ui/label.tsx'
-import { Select } from '../components/ui/select.tsx'
+import { Select, type SelectOption } from '../components/ui/select.tsx'
 import { TimePicker } from '../components/ui/timePicker.tsx'
 import { cn } from '../libs/utils.ts'
 import {
@@ -29,11 +29,14 @@ export interface FieldComponentProps {
 
 interface InputFieldProps extends FieldComponentProps {
   type?: string
+  placeholder?: string
 }
 
 interface SelectFieldProps extends FieldComponentProps {
-  options: Array<{ value: string | number; label: string }>
+  options: SelectOption[]
   placeholder?: string
+  searchable?: boolean
+  clearable?: boolean
 }
 
 interface ToggleFieldProps extends FieldComponentProps {
@@ -50,6 +53,7 @@ const TextField = ({
   disabled,
   className,
   inputClassName,
+  placeholder,
 }: InputFieldProps) => {
   const field = useFieldContext<string>()
   const value = field.state.value ?? ''
@@ -63,6 +67,7 @@ const TextField = ({
         type={type}
         disabled={disabled}
         className={inputClassName}
+        placeholder={placeholder}
         onChange={(e) => field.handleChange(e.target.value)}
         onBlur={field.handleBlur}
       />
@@ -121,6 +126,8 @@ function SelectField({
   inputClassName,
   options,
   placeholder,
+  searchable,
+  clearable,
 }: SelectFieldProps) {
   const field = useFieldContext<string | number>()
   const value = field.state.value ?? ''
@@ -135,6 +142,8 @@ function SelectField({
         disabled={disabled}
         className={inputClassName}
         placeholder={placeholder}
+        searchable={searchable}
+        clearable={clearable}
         onValueChange={(value) => field.handleChange(value)}
       />
       <FieldInfo field={field} />

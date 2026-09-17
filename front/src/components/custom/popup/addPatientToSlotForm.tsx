@@ -1,9 +1,12 @@
+import { useStore } from '@tanstack/react-form'
 import dayjs, { type Dayjs } from 'dayjs'
 import { Check, X } from 'lucide-react'
 import type React from 'react'
 import { useMemo, useState } from 'react'
 
+import { APPOINTMENT_TYPE_OPTIONS } from '../../../constants/appointment.constant.ts'
 import { TOAST_SEVERITY } from '../../../constants/ui.constant.ts'
+import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { useToast } from '../../../hooks/useToast.ts'
 import {
   type FreeInterval,
@@ -20,7 +23,6 @@ import type { Slot } from '../../../types/slot.ts'
 import { Button } from '../../ui/button.tsx'
 import { DatePicker } from '../../ui/datePicker.tsx'
 import { FormField } from '../../ui/formField.tsx'
-import { Input } from '../../ui/input.tsx'
 import { Label } from '../../ui/label.tsx'
 import {
   Popup,
@@ -31,11 +33,8 @@ import {
   PopupTitle,
   PopupTrigger,
 } from '../../ui/popup.tsx'
-import { Select, type SelectOption } from '../../ui/select.tsx'
-import {
-  AppointmentTimeFields,
-  AppointmentTypeField,
-} from '../appointmentDetailsFields.tsx'
+import type { SelectOption } from '../../ui/select.tsx'
+import { AppointmentTimeFields } from '../appointmentDetailsFields.tsx'
 
 interface AddPatientToSlotFormProps {
   trigger?: React.ReactNode
@@ -319,15 +318,11 @@ interface AddPatientToSlotContentProps {
 }
 
 function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
+  // État d'interface : la navigation de l'assistant, le créneau retenu et le
+  // filtre de recherche ne sont pas des valeurs envoyées au serveur.
   const [step, setStep] = useState(1)
-  const [patientID, setPatientID] = useState('')
-  const [thematicID, setThematicID] = useState('')
   const [selected, setSelected] = useState<SlotSuggestion | null>(null)
   const [fromDate, setFromDate] = useState<Dayjs>(dayjs.utc().startOf('day'))
-  const [startTime, setStartTime] = useState(dayjs.utc())
-  const [duration, setDuration] = useState('')
-  const [appointmentType, setAppointmentType] = useState('')
-  const [motif, setMotif] = useState('')
 
   const { toast } = useToast()
   const { createAppointment, updateAppointment } = useAppointmentMutations()
@@ -335,6 +330,22 @@ function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
   const { slots } = useAllSlotsQuery()
   const { patients } = usePatientQueries()
   const { thematics } = useThematicQueries()
+
+  const form = useAppForm({
+    defaultValues: {
+      patientID: '',
+      thematicID: '',
+      startTime: dayjs.utc(),
+      duration: '',
+      appointmentType: '',
+      motif: '',
+    },
+    onSubmit: ({ value }) => handleConfirm(value),
+  })
+
+  const patientID = useStore(form.store, (state) => state.values.patientID)
+  const thematicID = useStore(form.store, (state) => state.values.thematicID)
+  const startTime = useStore(form.store, (state) => state.values.startTime)
 
   const patientOptions = useMemo(
     () =>
@@ -412,17 +423,17 @@ function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
       suggestion,
       selectedThematic?.duration,
     )
-    setStartTime(defaults.startTime)
-    setDuration(defaults.duration)
-    setAppointmentType(defaults.appointmentType)
-    setMotif('')
+    form.setFieldValue('startTime', defaults.startTime)
+    form.setFieldValue('duration', defaults.duration)
+    form.setFieldValue('appointmentType', defaults.appointmentType)
+    form.setFieldValue('motif', '')
 
     setSelected(suggestion)
     setStep(2)
   }
 
   const handleStartTimeChange = (value: Dayjs) => {
-    setStartTime(value)
+    form.setFieldValue('startTime', value)
 
     if (!individualFreeInterval) {
       return
@@ -432,7 +443,9 @@ function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
       value.toISOString(),
       individualFreeInterval.end,
     )
-    setDuration((current) => clampDurationToOptions(current, nextOptions))
+    form.setFieldValue('duration', (current) =>
+      clampDurationToOptions(current, nextOptions),
+    )
   }
 
   const handleBack = () => {
@@ -440,8 +453,15 @@ function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
     setStep(1)
   }
 
-  const handleConfirm = () => {
-    if (!selected || !patientID) {
+  function handleConfirm(value: {
+    patientID: string
+    thematicID: string
+    startTime: Dayjs
+    duration: string
+    appointmentType: string
+    motif: string
+  }) {
+    if (!selected || !value.patientID) {
       return
     }
 
@@ -457,17 +477,17 @@ function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
         return
       }
 
-      updateAppointment.mutate(buildJoinPayload(target, patientID), {
+      updateAppointment.mutate(buildJoinPayload(target, value.patientID), {
         onSuccess: onClose,
       })
       return
     }
 
     const start = selected.isIndividual
-      ? startTime
+      ? value.startTime
       : dayjs.utc(selected.slot.startDate)
     const end = selected.isIndividual
-      ? start.add(Number.parseInt(duration, 10), 'minute')
+      ? start.add(Number.parseInt(value.duration, 10), 'minute')
       : dayjs.utc(selected.slot.endDate)
 
     createAppointment.mutate(
@@ -475,12 +495,12 @@ function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
         startDate: start.toISOString(),
         endDate: end.toISOString(),
         slotID: selected.slot.id,
-        thematicId: thematicID,
-        type: appointmentType,
+        thematicId: value.thematicID,
+        type: value.appointmentType,
         // Le motif ne concerne que les créneaux individuels ; ailleurs le
         // champ n'est pas affiché et rien ne doit être enregistré.
-        motif: selected.isIndividual ? motif.trim() || null : null,
-        patientIDs: [patientID],
+        motif: selected.isIndividual ? value.motif.trim() || null : null,
+        patientIDs: [value.patientID],
       },
       { onSuccess: onClose },
     )
@@ -491,29 +511,27 @@ function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
       <PopupBody>
         {step === 1 && (
           <div className="flex flex-col gap-3">
-            <FormField>
-              <Label htmlFor="patient-selection">Patient</Label>
-              <Select
-                id="patient-selection"
-                options={patientOptions}
-                value={patientID}
-                onValueChange={setPatientID}
-                searchable
-                placeholder="Sélectionnez un patient"
-              />
-            </FormField>
+            <form.AppField name="patientID">
+              {(field) => (
+                <field.Select
+                  label="Patient"
+                  options={patientOptions}
+                  searchable
+                  placeholder="Sélectionnez un patient"
+                />
+              )}
+            </form.AppField>
 
-            <FormField>
-              <Label htmlFor="thematic-selection">Thématique</Label>
-              <Select
-                id="thematic-selection"
-                options={thematicOptions}
-                value={thematicID}
-                onValueChange={setThematicID}
-                searchable
-                placeholder="Sélectionnez une thématique"
-              />
-            </FormField>
+            <form.AppField name="thematicID">
+              {(field) => (
+                <field.Select
+                  label="Thématique"
+                  options={thematicOptions}
+                  searchable
+                  placeholder="Sélectionnez une thématique"
+                />
+              )}
+            </form.AppField>
 
             <FormField className="flex flex-col gap-1">
               <Label>À partir du</Label>
@@ -602,42 +620,50 @@ function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
 
             {/* Sur un créneau collectif, l'horaire est celui du créneau : les
             champs seraient figés et répéteraient le récapitulatif. On ne les
-            montre que là où ils servent, sur un créneau individuel. */}
+            montre que là où ils servent, sur un créneau individuel. Ils gardent
+            le composant partagé plutôt que `field.*` pour conserver la mise en
+            page en ligne (« à 09h00 pendant 30min »), que des champs empilés
+            sous un libellé chacun casseraient. */}
             {!areTimeFieldsDisabled && (
-              <AppointmentTimeFields
-                date={selected.slot.startDate}
-                showDate={false}
-                startTime={startTime}
-                onStartTimeChange={handleStartTimeChange}
-                duration={duration}
-                onDurationChange={setDuration}
-                durationOptions={durationOptions}
-                durationFieldId="appointment-duration"
-                minTime={minTime}
-                maxTime={maxTime}
-              />
+              <form.Subscribe selector={(state) => state.values.duration}>
+                {(duration) => (
+                  <AppointmentTimeFields
+                    date={selected.slot.startDate}
+                    showDate={false}
+                    startTime={startTime}
+                    onStartTimeChange={handleStartTimeChange}
+                    duration={duration}
+                    onDurationChange={(next) =>
+                      form.setFieldValue('duration', next)
+                    }
+                    durationOptions={durationOptions}
+                    durationFieldId="appointment-duration"
+                    minTime={minTime}
+                    maxTime={maxTime}
+                  />
+                )}
+              </form.Subscribe>
             )}
 
-            <AppointmentTypeField
-              id="appointment-type"
-              value={appointmentType}
-              onChange={setAppointmentType}
-              disabled={isJoining}
-            />
+            <form.AppField name="appointmentType">
+              {(field) => (
+                <field.Select
+                  label="Type"
+                  options={APPOINTMENT_TYPE_OPTIONS}
+                  disabled={isJoining}
+                />
+              )}
+            </form.AppField>
 
             {/* Le motif porte sur le rendez-vous d'un seul patient : il n'a de
             sens que sur un créneau individuel, où chaque patient a son propre
             rendez-vous. */}
             {selected.isIndividual && (
-              <FormField>
-                <Label htmlFor="appointment-motif">Motif</Label>
-                <Input
-                  id="appointment-motif"
-                  value={motif}
-                  onChange={(event) => setMotif(event.target.value)}
-                  placeholder="Saisir le motif..."
-                />
-              </FormField>
+              <form.AppField name="motif">
+                {(field) => (
+                  <field.Input label="Motif" placeholder="Saisir le motif..." />
+                )}
+              </form.AppField>
             )}
           </div>
         )}
@@ -651,7 +677,7 @@ function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
         {step === 2 && (
           <Button
             variant="default"
-            onClick={handleConfirm}
+            onClick={() => form.handleSubmit()}
             isLoading={
               createAppointment.isPending || updateAppointment.isPending
             }

@@ -7,7 +7,7 @@ import interactionPlugin, {
 import multiMonthPlugin from '@fullcalendar/multimonth'
 import FullCalendar from '@fullcalendar/react'
 import { createFileRoute } from '@tanstack/react-router'
-import dayjs, { type Dayjs } from 'dayjs'
+import dayjs from 'dayjs'
 import {
   CalendarDays,
   CalendarRange,
@@ -105,8 +105,7 @@ function Planning() {
   const { pathways } = usePathwayQueries()
   const { pathwayTemplates } = usePathwayTemplateQueries()
   const { createSlot, updateSlot, deleteSlot } = useSlotMutations()
-  const { instantiatePathway, deletePathway, regeneratePathways } =
-    usePathwayMutations()
+  const { instantiatePathway, deletePathway } = usePathwayMutations()
   const { toast } = useToast()
   const lastDropTimeRef = useRef<number>(0)
   const { createSlotTemplate, updateSlotTemplate, deleteSlotTemplate } =
@@ -120,29 +119,6 @@ function Planning() {
   const { planningCycle } = usePlanningCycleQueries()
   const { savePlanningCycle, resetPlanningCycle } = usePlanningCycleMutations()
   const [regenerateOpen, setRegenerateOpen] = useState(false)
-  const [regenerateTemplateID, setRegenerateTemplateID] = useState('')
-  const [regenerateFromDate, setRegenerateFromDate] = useState<Dayjs | null>(
-    null,
-  )
-
-  const handleRegenerate = () => {
-    if (!regenerateTemplateID || !regenerateFromDate) {
-      return
-    }
-    regeneratePathways.mutate(
-      {
-        pathwayTemplateID: regenerateTemplateID,
-        fromDate: regenerateFromDate.toISOString(),
-      },
-      {
-        onSuccess: () => {
-          setRegenerateOpen(false)
-          setRegenerateTemplateID('')
-          setRegenerateFromDate(null)
-        },
-      },
-    )
-  }
 
   const [createForbiddenWeekDate, setCreateForbiddenWeekDate] = useState<
     string | null
@@ -1261,12 +1237,6 @@ function Planning() {
           open={regenerateOpen}
           setOpen={setRegenerateOpen}
           templates={pathwayTemplates ?? []}
-          templateID={regenerateTemplateID}
-          onTemplateChange={setRegenerateTemplateID}
-          fromDate={regenerateFromDate}
-          onFromDateChange={setRegenerateFromDate}
-          onConfirm={handleRegenerate}
-          isPending={regeneratePathways.isPending}
         />
 
         <PlanningCycleForm
