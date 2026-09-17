@@ -148,6 +148,13 @@ export function WeekPicker({ value, onChange }: WeekPickerProps) {
         sx={{
           margin: 0,
           width: 280,
+          // La grille des années porte en dur les 320 px de MUI, quelle que soit
+          // la largeur du calendrier : dans une racine réduite à 280 px et mise
+          // en `overflow: hidden`, sa dernière colonne était amputée de son
+          // dernier chiffre. On la fait suivre la largeur du calendrier.
+          '& .MuiYearCalendar-root': {
+            width: '100%',
+          },
           // Les jours portent `disableMargin` pour que la semaine sélectionnée
           // forme une bande continue. Sans le même retrait sur les libellés de
           // l'en-tête, ceux-ci gardent le pas de 40 px de MUI (36 px + 2 × 2 px
