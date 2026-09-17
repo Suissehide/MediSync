@@ -456,7 +456,11 @@ class PlanningCycleDomain implements PlanningCycleDomainInterface {
     return this.planningCycleRepository.find()
   }
 
-  save({
+  // `async` est volontaire : le garde-fou doit produire une promesse rejetee,
+  // pas une exception synchrone, sinon les appelants (et les tests, qui
+  // utilisent `rejects.toThrow`) ne la voient pas passer par le chemin
+  // asynchrone. Le `return await` satisfait aussi la regle Biome `useAwait`.
+  async save({
     startOfWeek,
     weekCount,
   }: SavePlanningCycleParams): Promise<PlanningCycleEntityDomain> {
@@ -472,7 +476,7 @@ class PlanningCycleDomain implements PlanningCycleDomainInterface {
 
     // La semaine de depart est toujours stockee sur son lundi : le front
     // n'a alors aucune normalisation a refaire avant de calculer le modulo.
-    return this.planningCycleRepository.upsert({
+    return await this.planningCycleRepository.upsert({
       startOfWeek: toStartOfWeek(startOfWeek),
       weekCount,
     })
