@@ -115,15 +115,19 @@ const buildDomain = (
     },
     pathwayTemplateRepository: {
       findAll: jest.fn(async () => [
+        // Le tag secondaire 'INDIV' du parcours multiple ne doit jamais servir
+        // à résoudre une inscription : seul le tag principal compte.
         {
           id: 'tpl-group',
-          tags: ['GROUPE'],
+          mainTag: 'GROUPE',
+          secondaryTags: ['INDIV'],
           firstAppointmentOnly: false,
           motifRequired: false,
         },
         {
           id: 'tpl-indiv',
-          tags: ['INDIV'],
+          mainTag: 'INDIV',
+          secondaryTags: [],
           firstAppointmentOnly: true,
           motifRequired: false,
         },
@@ -164,6 +168,27 @@ const buildDomain = (
   const domain = new PatientDomain(container as unknown as IocContainer)
   return { domain, created }
 }
+
+describe('PatientDomain – résolution du parcours par tag principal', () => {
+  it("résout le parcours par son tag principal, pas par un tag secondaire d'un autre parcours", async () => {
+    const { domain, created } = buildDomain()
+
+    const result = await domain.enrollExistingPatientInPathways(
+      {
+        patientID: 'patient-1',
+        startDate: monday(0),
+        pathways: [{ tag: 'INDIV', timeOfDay: 'ALL_DAY', duration: 30 }],
+      },
+      'user-1',
+    )
+
+    expect(result.failedEnrollments).toEqual([])
+    expect(created).toHaveLength(1)
+    // Le parcours individuel est "premier créneau dispo" : la résolution par
+    // tag principal doit donc passer par la recherche de créneaux futurs.
+    expect((created[0] as CreatedAppointment).slotID).toBe('slot-indiv-mon')
+  })
+})
 
 describe('PatientDomain – parcours individuel "premier créneau dispo"', () => {
   it('ne chevauche pas le parcours multiple inscrit dans la même requête', async () => {

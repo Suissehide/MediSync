@@ -91,7 +91,8 @@ const trackingPathwayTemplateSchema = z.object({
   id: z.cuid(),
   name: z.string(),
   color: z.string(),
-  tags: z.array(z.string()),
+  mainTag: z.string(),
+  secondaryTags: z.array(z.string()),
 })
 
 export const trackingPathwaySchema = z.object({

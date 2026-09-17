@@ -313,8 +313,8 @@ class PatientDomain implements PatientDomainInterface {
 
     // Vérifier si le motif est requis
     const allTemplates = await this.pathwayTemplateRepository.findAll()
-    const matchingTemplate = allTemplates.find((t) =>
-      t.tags?.includes(enrollment.tag),
+    const matchingTemplate = allTemplates.find(
+      (t) => t.mainTag === enrollment.tag,
     )
     if (
       matchingTemplate?.motifRequired &&

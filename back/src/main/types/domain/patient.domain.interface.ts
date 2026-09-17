@@ -86,7 +86,7 @@ export type PatientPathwayDomain = {
   templateID: string | null
   templateName: string | null
   templateColor: string | null
-  templateTags: string[]
+  templateMainTag: string | null
   startDate: Date
   priority: number | null
 }

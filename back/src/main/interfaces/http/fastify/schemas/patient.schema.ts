@@ -178,7 +178,7 @@ export const patientPathwayItemSchema = z.object({
   templateID: z.string().nullable(),
   templateName: z.string().nullable(),
   templateColor: z.string().nullable(),
-  templateTags: z.array(z.string()),
+  templateMainTag: z.string().nullable(),
   startDate: z.coerce.date(),
   priority: z.number().int().nullable(),
 })

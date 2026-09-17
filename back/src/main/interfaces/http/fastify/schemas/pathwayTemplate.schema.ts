@@ -5,7 +5,7 @@ import { slotTemplateResponseSchema } from './slotTemplate.schema'
 
 export const pathwayTemplateResponseSchema = pathwayTemplateSchema.extend({
   id: z.cuid(),
-  tags: z.array(z.string()),
+  secondaryTags: z.array(z.string()),
   displayOrder: z.number(),
   slotTemplates: z.array(
     slotTemplateResponseSchema.extend({
@@ -26,12 +26,13 @@ export const createPathwayTemplateSchema = pathwayTemplateSchema
   .pick({
     name: true,
     color: true,
+    mainTag: true,
     motifRequired: true,
     firstAppointmentOnly: true,
   })
   .extend({
     slotTemplateIDs: z.array(z.cuid()),
-    tags: z.array(z.string()).default([]),
+    secondaryTags: z.array(z.string()).default([]),
   })
 
 export const deletePathwayTemplateByIdParamsSchema =
@@ -47,7 +48,7 @@ export const updatePathwayTemplateByIdSchema = {
     .partial()
     .extend({
       slotTemplateIDs: z.array(z.cuid()).optional().default([]),
-      tags: z.array(z.string()).optional(),
+      secondaryTags: z.array(z.string()).optional(),
       // pathwayIDs: z.array(z.cuid()).optional().default([]),
     })
     .refine((data) => Object.keys(data).length > 0, {

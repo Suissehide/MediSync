@@ -12,6 +12,24 @@ import type {
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { PostgresPrismaClient } from '../postgres-client'
 
+type AppointmentPatientWithMainTag = {
+  appointment: {
+    slot: { pathway: { template: { mainTag: string } | null } | null } | null
+  } | null
+}
+
+// Tags principaux distincts des parcours auxquels un patient est inscrit.
+const distinctMainTags = (
+  appointmentPatients: AppointmentPatientWithMainTag[],
+): string[] => [
+  ...new Set(
+    appointmentPatients.flatMap((ap) => {
+      const mainTag = ap.appointment?.slot?.pathway?.template?.mainTag
+      return mainTag ? [mainTag] : []
+    }),
+  ),
+]
+
 class PatientRepository implements PatientRepositoryInterface {
   private readonly prisma: PostgresPrismaClient
   private readonly errorHandler: ErrorHandlerInterface
@@ -36,7 +54,7 @@ class PatientRepository implements PatientRepositoryInterface {
                   select: {
                     pathway: {
                       select: {
-                        template: { select: { tags: true } },
+                        template: { select: { mainTag: true } },
                       },
                     },
                   },
@@ -51,13 +69,7 @@ class PatientRepository implements PatientRepositoryInterface {
 
     return patients.map(({ appointmentPatients, ...patient }) => ({
       ...patient,
-      pathwayTemplateTags: [
-        ...new Set(
-          appointmentPatients.flatMap(
-            (ap) => ap.appointment?.slot?.pathway?.template?.tags ?? [],
-          ),
-        ),
-      ],
+      pathwayTemplateTags: distinctMainTags(appointmentPatients),
     }))
   }
 
@@ -81,7 +93,7 @@ class PatientRepository implements PatientRepositoryInterface {
                   appointment: {
                     slot: {
                       pathway: {
-                        template: { tags: { hasSome: pathwayTemplateTags } },
+                        template: { mainTag: { in: pathwayTemplateTags } },
                       },
                     },
                   },
@@ -99,7 +111,7 @@ class PatientRepository implements PatientRepositoryInterface {
                   select: {
                     pathway: {
                       select: {
-                        template: { select: { tags: true } },
+                        template: { select: { mainTag: true } },
                       },
                     },
                   },
@@ -115,13 +127,7 @@ class PatientRepository implements PatientRepositoryInterface {
 
     return patients.map(({ appointmentPatients, ...patient }) => ({
       ...patient,
-      pathwayTemplateTags: [
-        ...new Set(
-          appointmentPatients.flatMap(
-            (ap) => ap.appointment?.slot?.pathway?.template?.tags ?? [],
-          ),
-        ),
-      ],
+      pathwayTemplateTags: distinctMainTags(appointmentPatients),
     }))
   }
 
@@ -209,7 +215,7 @@ class PatientRepository implements PatientRepositoryInterface {
         },
         include: {
           template: {
-            select: { id: true, name: true, color: true, tags: true },
+            select: { id: true, name: true, color: true, mainTag: true },
           },
           patientPriorities: {
             where: { patientID },
@@ -223,7 +229,7 @@ class PatientRepository implements PatientRepositoryInterface {
         templateID: p.template?.id ?? null,
         templateName: p.template?.name ?? null,
         templateColor: p.template?.color ?? null,
-        templateTags: p.template?.tags ?? [],
+        templateMainTag: p.template?.mainTag ?? null,
         startDate: p.startDate,
         priority: p.patientPriorities[0]?.priority ?? null,
       }))
