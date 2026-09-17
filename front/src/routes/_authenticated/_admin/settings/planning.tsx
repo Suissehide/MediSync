@@ -84,6 +84,7 @@ import type {
   CreateSlotParamsWithTemplateData,
   SlotDateRange,
 } from '../../../../types/slot.ts'
+import { cycleWeekNumber } from '../../../../utils/weekCycle.ts'
 
 export const Route = createFileRoute(
   '/_authenticated/_admin/settings/planning',
@@ -902,6 +903,12 @@ function Planning() {
                   multiMonthMinWidth={600}
                   weekNumbers={true}
                   weekNumberFormat={{ week: 'numeric' }}
+                  weekNumberCalculation={
+                    planningCycle
+                      ? (date: Date) =>
+                          cycleWeekNumber(dayjs.utc(date), planningCycle)
+                      : 'ISO'
+                  }
                   dayMaxEvents={false}
                   dayMaxEventRows={false}
                   height="100%"
