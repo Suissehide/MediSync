@@ -42,6 +42,8 @@ import { ActivityLogRepository } from '../../../infra/orm/repositories/activityL
 import { ActivityLogSubscriber } from '../../../services/activity-log.subscriber'
 import { ForbiddenWeekDomain } from '../../../domain/forbiddenWeek.domain'
 import { ForbiddenWeekRepository } from '../../../infra/orm/repositories/forbiddenWeek.repository'
+import { PlanningCycleDomain } from '../../../domain/planningCycle.domain'
+import { PlanningCycleRepository } from '../../../infra/orm/repositories/planningCycle.repository'
 import { LocationDomain } from '../../../domain/location.domain'
 import { LocationRepository } from '../../../infra/orm/repositories/location.repository'
 
@@ -121,6 +123,9 @@ class AwilixIocContainer {
     // ForbiddenWeek
     this.#registerForbiddenWeekDomain()
     this.#registerForbiddenWeekRepository()
+    // PlanningCycle
+    this.#registerPlanningCycleDomain()
+    this.#registerPlanningCycleRepository()
 
     // Server
     this.#registerHttpServer()
@@ -308,6 +313,18 @@ class AwilixIocContainer {
   }
   #registerForbiddenWeekRepository(): void {
     this.register('forbiddenWeekRepository', asClass(ForbiddenWeekRepository).singleton())
+  }
+
+  // PlanningCycle
+  #registerPlanningCycleDomain(): void {
+    this.register('planningCycleDomain', asClass(PlanningCycleDomain).singleton())
+  }
+
+  #registerPlanningCycleRepository(): void {
+    this.register(
+      'planningCycleRepository',
+      asClass(PlanningCycleRepository).singleton(),
+    )
   }
 }
 
