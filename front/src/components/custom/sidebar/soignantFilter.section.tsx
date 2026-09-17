@@ -1,10 +1,9 @@
-import { CheckCheck, Plus, Stethoscope, Trash, X } from 'lucide-react'
+import { CheckCheck, Stethoscope, Trash, X } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
 
 import { useSoignantQueries } from '../../../queries/useSoignant.ts'
 import { useSoignantStore } from '../../../store/useSoignantStore.ts'
 import { Button } from '../../ui/button.tsx'
-import AddSoignantForm from '../popup/addSoignantForm.tsx'
 import DeleteSoignantForm from '../popup/deleteSoignantForm.tsx'
 import { selectionPillClass } from './sidebarFilter.styles.ts'
 
@@ -12,9 +11,15 @@ interface SoignantFilterSectionProps {
   isAdmin: boolean
   /** Titre de la section : texte simple ou sélecteur de mode. */
   title: ReactNode
+  /** Bouton d'ajout facultatif, aligné à droite du titre. */
+  addAction?: ReactNode
 }
 
-function SoignantFilterSection({ isAdmin, title }: SoignantFilterSectionProps) {
+function SoignantFilterSection({
+  isAdmin,
+  title,
+  addAction,
+}: SoignantFilterSectionProps) {
   useSoignantQueries()
 
   const soignants = useSoignantStore((state) => state.soignants)
@@ -55,15 +60,7 @@ function SoignantFilterSection({ isAdmin, title }: SoignantFilterSectionProps) {
               </button>
             ))}
         </div>
-        {isAdmin && (
-          <AddSoignantForm
-            trigger={
-              <Button variant="gradient" size="icon">
-                <Plus className="w-5 h-5" />
-              </Button>
-            }
-          />
-        )}
+        {addAction}
       </div>
       <ul className="mx-2 px-2 py-2 bg-sidebar flex-1 flex flex-col min-h-0 overflow-y-auto rounded-lg [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {soignants.map((soignant) => {
