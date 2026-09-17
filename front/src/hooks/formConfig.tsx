@@ -29,8 +29,6 @@ export interface FieldComponentProps {
 
 interface InputFieldProps extends FieldComponentProps {
   type?: string
-  placeholder?: string
-  list?: string
 }
 
 interface SelectFieldProps extends FieldComponentProps {
@@ -52,8 +50,6 @@ const TextField = ({
   disabled,
   className,
   inputClassName,
-  placeholder,
-  list,
 }: InputFieldProps) => {
   const field = useFieldContext<string>()
   const value = field.state.value ?? ''
@@ -66,8 +62,6 @@ const TextField = ({
         value={value}
         type={type}
         disabled={disabled}
-        placeholder={placeholder}
-        list={list}
         className={inputClassName}
         onChange={(e) => field.handleChange(e.target.value)}
         onBlur={field.handleBlur}
