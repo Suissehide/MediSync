@@ -5,9 +5,28 @@ import {
 } from '@mui/x-date-pickers'
 import dayjs, { type Dayjs } from 'dayjs'
 import isoWeek from 'dayjs/plugin/isoWeek'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 dayjs.extend(isoWeek)
+
+/** Hauteur d'une ligne de semaine chez MUI : 36 px de jour + 2 × 2 px de marge. */
+const WEEK_ROW_HEIGHT = 40
+
+/**
+ * Nombre de lignes de semaine qu'occupe un mois dans la grille.
+ *
+ * MUI rend la grille du mois en `position: absolute` dans un conteneur en
+ * `position: relative` : elle ne contribue donc aucune hauteur à son parent, et
+ * seule la `min-height` de ce conteneur lui en donne une. La valeur par défaut
+ * réserve six lignes quel que soit le mois, d'où une bande vide sous les mois
+ * qui n'en occupent que cinq — mais la passer à `auto` ferait tout s'effondrer.
+ * On calcule donc la hauteur réellement nécessaire.
+ */
+function weekRowsInMonth(month: Dayjs): number {
+  const firstRow = month.startOf('month').isoWeekday(1)
+  const lastRow = month.endOf('month').isoWeekday(1)
+  return lastRow.diff(firstRow, 'week') + 1
+}
 
 interface WeekPickerProps {
   value: Dayjs | null
@@ -86,6 +105,16 @@ function WeekDay(props: PickersDayProps & WeekDayExtraProps) {
 export function WeekPicker({ value, onChange }: WeekPickerProps) {
   const [hoveredDay, setHoveredDay] = useState<Dayjs | null>(null)
 
+  // Le mois affiché change de deux façons : par les flèches du calendrier
+  // (`onMonthChange`) et par une sélection qui le déborde, y compris via les
+  // boutons « Semaine précédente / suivante ». On suit les deux.
+  const [visibleMonth, setVisibleMonth] = useState<Dayjs>(() => value ?? dayjs())
+  useEffect(() => {
+    if (value) {
+      setVisibleMonth(value)
+    }
+  }, [value])
+
   const selectedWeekStart = value ? value.isoWeekday(1) : null
   const hoveredWeekStart = hoveredDay ? hoveredDay.isoWeekday(1) : null
 
@@ -105,6 +134,7 @@ export function WeekPicker({ value, onChange }: WeekPickerProps) {
         value={value}
         onChange={(date) => onChange(date)}
         timezone="UTC"
+        onMonthChange={setVisibleMonth}
         showDaysOutsideCurrentMonth
         slots={{ day: WeekDay as React.ComponentType<PickersDayProps> }}
         slotProps={{
@@ -118,6 +148,21 @@ export function WeekPicker({ value, onChange }: WeekPickerProps) {
         sx={{
           margin: 0,
           width: 280,
+          // Les jours portent `disableMargin` pour que la semaine sélectionnée
+          // forme une bande continue. Sans le même retrait sur les libellés de
+          // l'en-tête, ceux-ci gardent le pas de 40 px de MUI (36 px + 2 × 2 px
+          // de marge) contre 36 px pour les jours : les deux lignes étant
+          // centrées, elles s'écartent jusqu'à 12 px sur les colonnes de bord.
+          '& .MuiDayCalendar-weekDayLabel': {
+            width: 36,
+            margin: 0,
+          },
+          // La racine a elle aussi une hauteur fixe (336 px) qu'il faut libérer,
+          // sans quoi elle continuerait de réserver la place des six lignes.
+          height: 'auto',
+          '& .MuiDayCalendar-slideTransition': {
+            minHeight: weekRowsInMonth(visibleMonth) * WEEK_ROW_HEIGHT,
+          },
           '& .MuiPickersCalendarHeader-root': {
             paddingLeft: '16px',
             paddingRight: '8px',
