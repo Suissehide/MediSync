@@ -33,6 +33,8 @@ type Props = {
   onToggleLock?: (eventId: string, locked: boolean) => void
   selectedSlotIds?: Set<string>
   onToggleSelect?: (eventId: string) => void
+  /** Tags secondaires du parcours, affichés sur le créneau. */
+  showSecondaryTags?: boolean
 }
 
 export const EventContent = ({
@@ -44,6 +46,7 @@ export const EventContent = ({
   onToggleLock,
   selectedSlotIds,
   onToggleSelect,
+  showSecondaryTags = true,
 }: Props) => {
   const { event, view } = eventContent
   const {
@@ -249,7 +252,7 @@ export const EventContent = ({
         )}
         <div className="text-[0.6rem]">{event.title}</div>
         <div className="text-[0.6rem] font-semibold truncate">{thematic}</div>
-        {secondaryTags.length > 0 && (
+        {showSecondaryTags && secondaryTags.length > 0 && (
           <div className="flex flex-wrap gap-0.5 mt-0.5">
             {secondaryTags.map((tag: string) => (
               <span

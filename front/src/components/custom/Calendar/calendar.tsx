@@ -143,6 +143,8 @@ interface CalendarProps {
   onToggleLock?: (eventId: string, locked: boolean) => void
   selectedSlotIds?: Set<string>
   onToggleSelect?: (eventId: string) => void
+  /** Tags secondaires du parcours, affichés sur le créneau. */
+  showSecondaryTags?: boolean
   unselectRef?: React.MutableRefObject<(() => void) | null>
   weekAnchorDate?: string
   /** Notifie la plage réellement affichée, pour ne charger que celle-ci. */
@@ -170,6 +172,7 @@ function Calendar({
   onToggleLock,
   selectedSlotIds,
   onToggleSelect,
+  showSecondaryTags = true,
   unselectRef,
   weekAnchorDate,
   onRangeChange,
@@ -442,6 +445,7 @@ function Calendar({
             onToggleLock={onToggleLock}
             selectedSlotIds={selectedSlotIds}
             onToggleSelect={onToggleSelect}
+            showSecondaryTags={showSecondaryTags}
           />
         )}
         noEventsContent={() => (
