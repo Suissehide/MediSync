@@ -515,7 +515,7 @@ function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
               />
             </FormField>
 
-            <FormField>
+            <FormField className="flex flex-col gap-1">
               <Label>À partir du</Label>
               <DatePicker
                 value={fromDate}
