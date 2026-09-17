@@ -253,15 +253,22 @@ mutation.
 
 ## Tests
 
-- **Unitaires (front)** : `weekCycle.ts`, en TDD, avec les cas listés plus haut.
-- **Unitaires (back)** : normalisation de `startOfWeek` sur le lundi ISO et
-  validation de `weekCount` dans `PlanningCycleDomain`.
-- **e2e (back)** : `GET` renvoie `null` quand rien n'est configuré ; `PUT` en
-  ADMIN écrit puis `GET` relit ; `PUT` en non-ADMIN renvoie 403 ; `DELETE`
-  ramène `GET` à `null`.
-- **Vérification manuelle** : configurer un cycle de 6 semaines, vérifier la
-  cohérence des quatre affichages et le retour aux numéros ISO après
-  réinitialisation.
+- **Unitaires (back)** : `PlanningCycleDomain`, en TDD avec un repository
+  factice, sur le modèle de `src/test/unit/domain/patient.domain.test.ts` —
+  normalisation de `startOfWeek` sur le lundi ISO, et rejet d'un `weekCount`
+  hors bornes.
+- **Front** : le projet n'a aucun runner de test (ni script `test`, ni fichier
+  de test). Décision prise : on n'en introduit pas dans le cadre de cette
+  feature. `cycleWeekNumber` est donc couvert par une **vérification manuelle
+  scriptée**, avec les dates de la table « Numérotation » ci-dessus contrôlées
+  une à une dans l'interface — en particulier les semaines **antérieures** à la
+  semaine de départ, où une erreur de modulo négatif ne se verrait pas
+  autrement.
+- **Routes back** : vérification manuelle via Bruno (`back/bruno/`), le harnais
+  e2e n'existant pas encore dans le projet.
+- **Vérification manuelle d'ensemble** : configurer un cycle de 6 semaines,
+  contrôler la cohérence des quatre affichages, puis le retour aux numéros ISO
+  après réinitialisation.
 
 ## Hors périmètre
 
