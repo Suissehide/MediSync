@@ -1,6 +1,8 @@
 import dayjs, { type Dayjs } from 'dayjs'
 
+import type { PlanningCycle } from '../../../../types/planningCycle.ts'
 import type { Slot } from '../../../../types/slot.ts'
+import { cycleWeekNumber } from '../../../../utils/weekCycle.ts'
 
 /**
  * Une case de la grille. Contrairement au programme d'un patient, le planning
@@ -16,6 +18,8 @@ export type PlanningTimeRow = {
 export type PlanningWeek = {
   weekStart: Dayjs
   isoWeek: number
+  /** Libellé affiché en titre de page : numéro de cycle ou numéro ISO. */
+  weekLabel: string
   /** Semaine interdite : le service est fermé. */
   isClosed: boolean
   timeRows: PlanningTimeRow[]
@@ -46,6 +50,7 @@ export function buildPlanningWeeks(
   firstWeekStart: Dayjs,
   weekCount: number,
   forbiddenWeekStarts: string[] = [],
+  cycle?: PlanningCycle | null,
 ): PlanningWeek[] {
   const closedWeekKeys = new Set(
     forbiddenWeekStarts.map((date) =>
@@ -83,6 +88,9 @@ export function buildPlanningWeeks(
     return {
       weekStart,
       isoWeek: weekStart.isoWeek(),
+      weekLabel: cycle
+        ? `${cycleWeekNumber(weekStart, cycle)}`
+        : `${weekStart.isoWeek()}`,
       isClosed: closedWeekKeys.has(weekStart.format('YYYY-MM-DD')),
       timeRows,
     }

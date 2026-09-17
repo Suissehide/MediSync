@@ -131,3 +131,9 @@ export const FORBIDDEN_WEEK = {
   CREATE: 'create_forbidden_week',
   DELETE: 'delete_forbidden_week',
 }
+
+export const PLANNING_CYCLE = {
+  GET: 'get_planning_cycle',
+  SAVE: 'save_planning_cycle',
+  RESET: 'reset_planning_cycle',
+}

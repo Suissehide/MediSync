@@ -10,6 +10,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import dayjs, { type Dayjs } from 'dayjs'
 import {
   CalendarDays,
+  CalendarRange,
   CheckSquare,
   GanttChart,
   Printer,
@@ -30,6 +31,7 @@ import { BulkMoveForm } from '../../../../components/custom/popup/bulkMoveForm.t
 import { ConfirmDeleteForm } from '../../../../components/custom/popup/confirmDeleteForm.tsx'
 import { CreateForbiddenWeekForm } from '../../../../components/custom/popup/createForbiddenWeekForm.tsx'
 import { DeleteForbiddenWeekForm } from '../../../../components/custom/popup/deleteForbiddenWeekForm.tsx'
+import { PlanningCycleForm } from '../../../../components/custom/popup/planningCycleForm.tsx'
 import { RegeneratePathwaysForm } from '../../../../components/custom/popup/regeneratePathwaysForm.tsx'
 import EventSheet from '../../../../components/custom/sheet/eventSheet.tsx'
 import EventTemplateSheet from '../../../../components/custom/sheet/eventTemplateSheet.tsx'
@@ -63,6 +65,10 @@ import {
   useForbiddenWeekQueries,
 } from '../../../../queries/useForbiddenWeek.ts'
 import {
+  usePlanningCycleMutations,
+  usePlanningCycleQueries,
+} from '../../../../queries/usePlanningCycle.ts'
+import {
   usePathwayMutations,
   usePathwayQueries,
 } from '../../../../queries/usePathway.ts'
@@ -78,6 +84,7 @@ import type {
   CreateSlotParamsWithTemplateData,
   SlotDateRange,
 } from '../../../../types/slot.ts'
+import { cycleWeekNumber } from '../../../../utils/weekCycle.ts'
 
 export const Route = createFileRoute(
   '/_authenticated/_admin/settings/planning',
@@ -109,6 +116,9 @@ function Planning() {
     useForbiddenWeekMutations()
 
   const [exportOpen, setExportOpen] = useState(false)
+  const [cycleOpen, setCycleOpen] = useState(false)
+  const { planningCycle } = usePlanningCycleQueries()
+  const { savePlanningCycle, resetPlanningCycle } = usePlanningCycleMutations()
   const [regenerateOpen, setRegenerateOpen] = useState(false)
   const [regenerateTemplateID, setRegenerateTemplateID] = useState('')
   const [regenerateFromDate, setRegenerateFromDate] = useState<Dayjs | null>(
@@ -659,6 +669,18 @@ function Planning() {
     }))
   }, [forbiddenWeeks])
 
+  // FullCalendar compare ses options par identité : une fonction recréée à
+  // chaque rendu ferait rater le cache de dateEnv et reconstruirait toute la
+  // grille annuelle à chaque rendu. On mémoïse donc la fonction elle-même,
+  // pas seulement son résultat.
+  const weekNumberCalculation = useMemo<'ISO' | ((date: Date) => number)>(
+    () =>
+      planningCycle
+        ? (date: Date) => cycleWeekNumber(dayjs.utc(date), planningCycle)
+        : 'ISO',
+    [planningCycle],
+  )
+
   const handleTimelineDateClick = (info: { dateStr: string }) => {
     if (!isForbiddenWeekMode) {
       return
@@ -747,6 +769,13 @@ function Planning() {
                     >
                       <Printer size={16} />
                       Exporter le planning (PDF)
+                    </DropdownMenu.Item>
+                    <DropdownMenu.Item
+                      onSelect={() => setCycleOpen(true)}
+                      className="flex items-center gap-2 px-3 py-2 rounded cursor-pointer outline-none hover:bg-primary/20 text-sm select-none"
+                    >
+                      <CalendarRange size={16} />
+                      Configurer le cycle de semaines
                     </DropdownMenu.Item>
                   </DropdownMenu.Content>
                 </DropdownMenu.Portal>
@@ -859,6 +888,7 @@ function Planning() {
                 onToggleSelect={handleToggleSelect}
                 onRangeChange={handleRangeChange}
                 weekAnchorDate={editMode ? startDate : undefined}
+                planningCycle={editMode ? undefined : planningCycle}
                 headerToolbar={
                   editMode ? { left: 'title', right: 'prev,next' } : undefined
                 }
@@ -885,6 +915,14 @@ function Planning() {
                   multiMonthMinWidth={600}
                   weekNumbers={true}
                   weekNumberFormat={{ week: 'numeric' }}
+                  // FullCalendar transmet ici dateEnv.toDate(marker), pas le
+                  // marker interne : le Date obtenu porte ses champs dans le
+                  // fuseau de dateEnv. Le dayjs.utc(date) ci-dessous ne donne
+                  // le bon résultat que parce que cette instance a
+                  // timeZone="UTC" — avec 'local' (le défaut FullCalendar),
+                  // toute la grille annuelle se décalerait d'une semaine en
+                  // Europe/Paris.
+                  weekNumberCalculation={weekNumberCalculation}
                   dayMaxEvents={false}
                   dayMaxEventRows={false}
                   height="100%"
@@ -1169,6 +1207,7 @@ function Planning() {
             count={selectedSlotIds.size}
             weekDate={duplicateWeekDate}
             onWeekChange={setDuplicateWeekDate}
+            planningCycle={planningCycle}
             onConfirm={() => {
               if (duplicateWeekDate) {
                 handleBulkSlotOperation(duplicateWeekDate, 'duplicate')
@@ -1208,6 +1247,7 @@ function Planning() {
             count={selectedSlotIds.size}
             weekDate={moveWeekDate}
             onWeekChange={setMoveWeekDate}
+            planningCycle={planningCycle}
             onConfirm={() => {
               if (moveWeekDate) {
                 handleBulkSlotOperation(moveWeekDate, 'move')
@@ -1226,6 +1266,23 @@ function Planning() {
           onFromDateChange={setRegenerateFromDate}
           onConfirm={handleRegenerate}
           isPending={regeneratePathways.isPending}
+        />
+
+        <PlanningCycleForm
+          open={cycleOpen}
+          setOpen={setCycleOpen}
+          cycle={planningCycle}
+          onSave={(cycle) =>
+            savePlanningCycle.mutate(cycle, {
+              onSuccess: () => setCycleOpen(false),
+            })
+          }
+          onReset={() =>
+            resetPlanningCycle.mutate(undefined, {
+              onSuccess: () => setCycleOpen(false),
+            })
+          }
+          isPending={savePlanningCycle.isPending || resetPlanningCycle.isPending}
         />
 
         {exportOpen && (
