@@ -1,15 +1,56 @@
 # MediSync
 
-MediSync est une application moderne de gestion des rendez-vous et du suivi des patients, spécialement conçue pour les 
-infirmières libérales. Elle permet une organisation fluide, une gestion optimisée des consultations et un suivi
-efficace des patients.
+MediSync est l'outil interne d'un **service de réadaptation** qui anime un programme d'**éducation thérapeutique
+du patient (ETP)**. Il sert à construire les parcours du programme (séances collectives et rendez-vous individuels),
+à les planifier sur l'année, à suivre la participation des patients inclus et à tenir leur dossier éducatif.
+
+L'application est en français, à usage interne du service : elle manipule des **données de santé réelles**.
+
+## Le domaine en bref
+
+| Terme | Ce que c'est |
+| --- | --- |
+| **Modèle de parcours** (`PathwayTemplate`) | La trame d'un programme : un nom, une couleur, des tags et la liste des séances qui le composent. |
+| **Modèle de créneau** (`SlotTemplate`) | Une séance de la trame, positionnée en jour/heure relatifs au début du parcours (`offsetDays`), collective (avec une capacité) ou individuelle, rattachée à une thématique, un lieu et un ou plusieurs soignants. |
+| **Parcours** (`Pathway`) | Une instance datée d'un modèle : le modèle « déroulé » à partir d'une date de début. |
+| **Créneau** (`Slot`) | Une séance réelle dans l'agenda, issue d'un modèle de créneau. Peut être verrouillée. |
+| **Rendez-vous** (`Appointment`) | Ce qui est posé dans un créneau, avec ses patients (`AppointmentPatient` : présence, motif de refus, accompagnant, transmissions). |
+| **Patient** | Identité, contact, contexte social, données d'inclusion ETP (décision ETP, type de programme, orientation, objectif) et de sortie (date, motif d'arrêt, point final du parcours). |
+| **Diagnostic éducatif** | Le bilan éducatif partagé, structuré par un modèle qui décide des champs actifs. |
+| **Thématique / Soignant / Lieu** | Référentiels utilisés par les créneaux (un soignant est relié aux thématiques qu'il anime). |
+| **Semaine interdite** (`ForbiddenWeek`) | Une semaine neutralisée dans la planification (congés, fermeture…). |
+| **Cycle de planning** (`PlanningCycle`) | La semaine de départ et le nombre de semaines du cycle de répétition des parcours. |
 
 ## Fonctionnalités
 
-- Agenda intelligent : Planification et gestion des rendez-vous avec rappels automatiques.
-- Dossier patient : Stockage sécurisé des informations médicales essentielles.
-- Notifications : Alertes pour les consultations à venir.
-- Gestion administrative : Notes, facturation et suivi.
+- **Dashboard** — calendrier des créneaux, filtrable par soignants et par modèles de parcours, avec prise de
+  rendez-vous et ajout de patients directement depuis le calendrier.
+- **Agenda** — la journée sous forme de tableau : rendez-vous, patients attendus, présence/absence, accompagnant et
+  notes de transmission.
+- **Patients** — liste des patients et dossier complet (identité, social, inclusion, sortie), planning individuel,
+  diagnostics éducatifs et **export PDF du programme** remis au patient (couverture, calendrier des séances à
+  venir, page de conseils, plus des pages optionnelles activables à l'export).
+- **Diagnostic éducatif** — formulaire structuré (qualité de vie, connaissances de la maladie, identification des
+  facteurs de risque, savoir-faire par facteur — tension artérielle, HbA1c, LDL, adhésion au traitement, alimentation,
+  stress, tabac, tour de taille, activité physique — puis objectifs patient/soignants et suivi négocié). Les modèles de
+  diagnostic permettent de n'activer que les champs pertinents.
+- **Suivi** — vue mensuelle croisant parcours, patients et jours du mois pour lire la participation d'un coup d'œil.
+- **Administration** (réservée aux comptes `ADMIN`) — construction du planning des modèles de parcours (calendrier
+  annuel, duplication et déplacement en masse de créneaux, régénération des parcours déjà instanciés, export PDF du
+  planning), semaines interdites, cycle de semaines, thématiques, soignants, lieux, utilisateurs et rôles, modèles de
+  diagnostic, et **journal d'activité** (qui a créé/modifié/supprimé quoi).
+- **Tâches** — pense-bête par soignant, accessible depuis la barre de navigation.
+- **Comptes** — authentification par JWT dans un cookie `httpOnly`. Un compte fraîchement créé a le rôle `NONE` et
+  reste en attente d'approbation par un administrateur (`USER` puis `ADMIN`).
+
+## Architecture
+
+| Dossier | Contenu |
+| --- | --- |
+| `back/` | API Node/Fastify (TypeScript, architecture en couches avec IoC Awilix, validation Zod, Prisma/PostgreSQL). Voir `back/CLAUDE.md` pour le détail des couches et des scripts. |
+| `front/` | SPA React 19 + Vite (TanStack Router/Query/Table/Form, Radix Themes + Tailwind, FullCalendar, `@react-pdf/renderer`). |
+| `deploy/` | Stack Docker Compose (PostgreSQL, back, front, sauvegardes) et scripts d'exploitation. |
+| `docs/` | Specs et plans d'implémentation des fonctionnalités, par date. |
 
 ## Prérequis
 
@@ -56,6 +97,18 @@ Pour découvrir la liste des scripts NPM, exécuter `npm run`.
 - Pour démarrer le backend en mode développement, exécuter `npm run start:development`.
 - Pour démarrer le backend en mode production, exécuter `npm run start:production` (prérequis : avoir construit le
   projet).
+
+### Démarrer le frontend
+
+```shell
+cd front
+npm install
+npm run dev     # http://localhost:4270
+```
+
+Le port 4270 est **strict** (`strictPort` dans `vite.config.ts`) : Vite refuse de démarrer plutôt que de glisser
+silencieusement sur le port suivant, ce qui casserait le CORS du back (`CORS_ORIGIN` / `FRONT_URL` dans `back/.env`).
+Un seul serveur de dev à la fois, donc : si le port est occupé, arrêtez l'instance précédente.
 
 ### Récupérer la base d'un environnement déployé
 
