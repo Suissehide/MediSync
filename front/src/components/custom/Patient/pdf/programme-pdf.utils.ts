@@ -18,9 +18,19 @@ export type ClosureData = {
   end: dayjs.Dayjs
 }
 
+// Consigne portée par une thématique, rappelée juste avant la semaine qui la
+// contient.
+export type NoticeData = {
+  // La meme consigne peut revenir a plusieurs semaines : l'identifiant porte
+  // la semaine qu'elle precede.
+  id: string
+  text: string
+}
+
 export type CalendarEntry =
   | ({ kind: 'week' } & WeekData)
   | ({ kind: 'closure' } & ClosureData)
+  | ({ kind: 'notice' } & NoticeData)
 
 export function computeProgramDuration(slots: Slot[]): {
   startDate: dayjs.Dayjs
@@ -39,10 +49,34 @@ export function computeProgramDuration(slots: Slot[]): {
 // fermeture court donc du lundi au vendredi de la semaine interdite.
 const CLOSURE_LAST_WEEKDAY_OFFSET = 4
 
+// Les consignes d'une semaine, dans l'ordre chronologique des créneaux qui les
+// portent. Une même consigne n'est rappelée qu'une fois par semaine, même si
+// la thématique y revient plusieurs fois.
+function collectWeekNotices(
+  weekdaySlots: Slot[],
+  noticeByThematicId: Map<string, string>,
+): string[] {
+  const notices: string[] = []
+  const chronological = [...weekdaySlots].sort((a, b) =>
+    dayjs.utc(a.startDate).diff(dayjs.utc(b.startDate)),
+  )
+
+  for (const slot of chronological) {
+    const thematicId = slot.slotTemplate?.thematicId
+    const notice = thematicId ? noticeByThematicId.get(thematicId) : undefined
+    if (notice && !notices.includes(notice)) {
+      notices.push(notice)
+    }
+  }
+
+  return notices
+}
+
 export function buildCalendarEntries(
   slots: Slot[],
   patientId?: string,
   forbiddenWeekStarts: string[] = [],
+  noticeByThematicId: Map<string, string> = new Map(),
 ): CalendarEntry[] {
   if (slots.length === 0) {
     return []
@@ -120,6 +154,14 @@ export function buildCalendarEntries(
 
     if (timeRows.length > 0) {
       flushClosure()
+      const notices = collectWeekNotices(weekdaySlots, noticeByThematicId)
+      notices.forEach((text, noticeIndex) => {
+        entries.push({
+          kind: 'notice',
+          id: `semaine-${weekIndex}-${noticeIndex}`,
+          text,
+        })
+      })
       entries.push({
         kind: 'week',
         weekLabel: `Semaine ${weekIndex}`,

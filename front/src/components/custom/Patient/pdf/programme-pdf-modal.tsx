@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react'
 import { useForbiddenWeekQueries } from '../../../../queries/useForbiddenWeek.ts'
 import { usePatientPathwaysQuery } from '../../../../queries/usePatient.tsx'
 import { useAllSlotsQuery } from '../../../../queries/useSlot.ts'
+import { useThematicQueries } from '../../../../queries/useThematic.ts'
 import type { Patient } from '../../../../types/patient.ts'
 import { Button } from '../../../ui/button.tsx'
 import DropdownFilter from '../../../ui/dropdownFilter.tsx'
@@ -29,6 +30,7 @@ export default function ProgrammePDFModal({
   const { slots } = useAllSlotsQuery()
   const { pathways = [] } = usePatientPathwaysQuery(patient.id)
   const { forbiddenWeeks } = useForbiddenWeekQueries()
+  const { thematics } = useThematicQueries()
 
   const [enabledOptionalPageIds, setEnabledOptionalPageIds] = useState<
     string[]
@@ -80,6 +82,17 @@ export default function ProgrammePDFModal({
     [forbiddenWeeks],
   )
 
+  // Les thematiques sans consigne n'entrent pas dans la map : le calendrier
+  // n'a ainsi qu'un seul cas a tester par creneau.
+  const noticeByThematicId = useMemo(() => {
+    const entries = (thematics ?? [])
+      .filter((thematic) => thematic.pdfNotice?.trim())
+      .map(
+        (thematic) => [thematic.id, thematic.pdfNotice?.trim() ?? ''] as const,
+      )
+    return new Map(entries)
+  }, [thematics])
+
   const fileName = `programme-${patient.lastName}-${patient.firstName}-${dayjs.utc().format('YYYY-MM-DD')}.pdf`
 
   const pdfDocument = useMemo(
@@ -90,6 +103,7 @@ export default function ProgrammePDFModal({
         pathways={pathways}
         enabledOptionalPageIds={enabledOptionalPageIds}
         forbiddenWeekStarts={forbiddenWeekStarts}
+        noticeByThematicId={noticeByThematicId}
       />
     ),
     [
@@ -98,6 +112,7 @@ export default function ProgrammePDFModal({
       pathways,
       enabledOptionalPageIds,
       forbiddenWeekStarts,
+      noticeByThematicId,
     ],
   )
 

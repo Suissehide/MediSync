@@ -1,8 +1,8 @@
 import type { IocContainer } from '../../../types/application/ioc'
 import type {
-  ThematicRepositoryInterface,
   ThematicCreateEntityRepo,
   ThematicEntityRepo,
+  ThematicRepositoryInterface,
   ThematicUpdateEntityRepo,
   ThematicWithSoignantsEntityRepo,
 } from '../../../types/infra/orm/repositories/thematic.repository.interface'
@@ -44,6 +44,7 @@ class ThematicRepository implements ThematicRepositoryInterface {
         data: {
           name: thematicCreateParams.name,
           duration: thematicCreateParams.duration,
+          pdfNotice: thematicCreateParams.pdfNotice,
           soignants: {
             connect: thematicCreateParams.soignantIDs.map((id) => ({ id })),
           },
@@ -68,6 +69,7 @@ class ThematicRepository implements ThematicRepositoryInterface {
         data: {
           name: thematicUpdateParams.name,
           duration: thematicUpdateParams.duration,
+          pdfNotice: thematicUpdateParams.pdfNotice,
           ...(thematicUpdateParams.soignantIDs && {
             soignants: {
               set: thematicUpdateParams.soignantIDs.map((id) => ({ id })),

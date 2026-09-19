@@ -25,13 +25,13 @@ enum AppointmentStatus {
 }
 
 model User {
-  id         String    @id @default(cuid())
-  email      String    @unique
+  id         String  @id @default(cuid())
+  email      String  @unique
   password   String
   salt       String
   firstName  String?
   lastName   String?
-  role       Role      @default(NONE)
+  role       Role    @default(NONE)
   soignantId String?
 
   soignant Soignant? @relation(fields: [soignantId], references: [id], onDelete: SetNull)
@@ -40,12 +40,12 @@ model User {
 }
 
 model PathwayTemplate {
-  id           String   @id @default(cuid())
-  name         String
-  color        String
-  mainTag       String
-  secondaryTags String[]
-  displayOrder  Int      @default(0)
+  id                   String   @id @default(cuid())
+  name                 String
+  color                String
+  mainTag              String
+  secondaryTags        String[]
+  displayOrder         Int      @default(0)
   motifRequired        Boolean  @default(false)
   firstAppointmentOnly Boolean  @default(false)
 
@@ -58,7 +58,7 @@ model Pathway {
   startDate  DateTime @db.Date
   templateID String?
 
-  template          PathwayTemplate?          @relation(fields: [templateID], references: [id])
+  template          PathwayTemplate?         @relation(fields: [templateID], references: [id])
   slots             Slot[]
   patientPriorities PatientPathwayPriority[]
 
@@ -132,10 +132,10 @@ model SlotTemplate {
   slot       Slot?
   templateID String?
 
-  soignants Soignant[]      @relation("SlotTemplateSoignants")
-  template PathwayTemplate? @relation(fields: [templateID], references: [id])
-  location Location?        @relation(fields: [locationID], references: [id], onDelete: SetNull)
-  thematic Thematic?        @relation(fields: [thematicId], references: [id], onDelete: SetNull)
+  soignants Soignant[]       @relation("SlotTemplateSoignants")
+  template  PathwayTemplate? @relation(fields: [templateID], references: [id])
+  location  Location?        @relation(fields: [locationID], references: [id], onDelete: SetNull)
+  thematic  Thematic?        @relation(fields: [thematicId], references: [id], onDelete: SetNull)
 
   @@index([templateID])
   @@index([locationID])
@@ -172,6 +172,9 @@ model Thematic {
   id        String     @id @default(cuid())
   name      String     @unique
   duration  Int?
+  // Consigne affichee au patient dans le PDF du programme, avant chaque
+  // semaine contenant un creneau de cette thematique.
+  pdfNotice String?
   soignants Soignant[] @relation("SoignantThematics")
 
   appointments  Appointment[]
