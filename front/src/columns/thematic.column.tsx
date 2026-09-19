@@ -38,8 +38,14 @@ export const getThematicColumns = ({
         if (!notice) {
           return '—'
         }
+        // Le tableau ne tient pas compte de `size` : sans largeur explicite,
+        // une consigne de plusieurs lignes repousse les colonnes suivantes
+        // hors de l'écran.
         return (
-          <span className="block truncate text-text-light" title={notice}>
+          <span
+            className="block max-w-[280px] truncate text-text-light"
+            title={notice}
+          >
             {notice}
           </span>
         )
