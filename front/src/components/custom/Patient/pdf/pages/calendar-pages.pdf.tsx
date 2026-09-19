@@ -4,6 +4,7 @@ import type { Slot } from '../../../../../types/slot.ts'
 import {
   buildCalendarEntries,
   type ClosureData,
+  type NoticeData,
   type WeekData,
 } from '../programme-pdf.utils.ts'
 
@@ -59,6 +60,22 @@ const styles = StyleSheet.create({
     fontFamily: 'Helvetica-Bold',
     color: '#4b5563',
     textAlign: 'center',
+  },
+  noticeBlock: {
+    marginBottom: WEEK_BLOCK_MARGIN_BOTTOM,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    backgroundColor: '#fef9c3',
+    borderWidth: 0.5,
+    borderColor: '#fde047',
+  },
+  // Une consigne fait plusieurs lignes : alignée à gauche, elle se lit mieux
+  // que centrée comme la mention de fermeture.
+  noticeText: {
+    fontSize: 8,
+    fontFamily: 'Helvetica-Bold',
+    color: '#713f12',
+    lineHeight: 1.4,
   },
   weekHeaderRow: {
     flexDirection: 'row',
@@ -197,6 +214,14 @@ function WeekBlock({ weekData }: { weekData: WeekData }) {
   )
 }
 
+function NoticeBlock({ notice }: { notice: NoticeData }) {
+  return (
+    <View style={styles.noticeBlock} wrap={false}>
+      <Text style={styles.noticeText}>{notice.text}</Text>
+    </View>
+  )
+}
+
 function ClosureNotice({ closure }: { closure: ClosureData }) {
   return (
     <View style={styles.closureBlock} wrap={false}>
@@ -212,15 +237,18 @@ export default function CalendarPages({
   upcomingSlots,
   patientId,
   forbiddenWeekStarts,
+  noticeByThematicId,
 }: {
   upcomingSlots: Slot[]
   patientId?: string
   forbiddenWeekStarts?: string[]
+  noticeByThematicId?: Map<string, string>
 }) {
   const entries = buildCalendarEntries(
     upcomingSlots,
     patientId,
     forbiddenWeekStarts,
+    noticeByThematicId,
   )
 
   if (entries.length === 0) {
@@ -233,16 +261,20 @@ export default function CalendarPages({
 
   return (
     <Page size="A4" style={styles.calendarPage}>
-      {entries.map((entry) =>
-        entry.kind === 'week' ? (
-          <WeekBlock key={entry.weekLabel} weekData={entry} />
-        ) : (
+      {entries.map((entry) => {
+        if (entry.kind === 'week') {
+          return <WeekBlock key={entry.weekLabel} weekData={entry} />
+        }
+        if (entry.kind === 'notice') {
+          return <NoticeBlock key={`consigne-${entry.id}`} notice={entry} />
+        }
+        return (
           <ClosureNotice
             key={`fermeture-${entry.start.format('YYYY-MM-DD')}`}
             closure={entry}
           />
-        ),
-      )}
+        )
+      })}
     </Page>
   )
 }

@@ -3,12 +3,14 @@ import { z } from 'zod/v4'
 const thematicEntity = {
   name: z.string().min(1),
   duration: z.number().optional().nullable(),
+  pdfNotice: z.string().optional().nullable(),
 }
 
 export const thematicResponseSchema = z.object({
   id: z.cuid(),
   name: z.string(),
   duration: z.number().optional().nullable(),
+  pdfNotice: z.string().optional().nullable(),
   soignants: z.array(z.object({ id: z.cuid(), name: z.string() })),
 })
 
@@ -26,6 +28,7 @@ export const createThematicSchema = z.object({
 export const updateThematicSchema = z.object({
   name: z.string().min(1).optional(),
   duration: z.number().optional().nullable(),
+  pdfNotice: z.string().optional().nullable(),
   soignantIDs: z.array(z.cuid()).optional(),
 })
 

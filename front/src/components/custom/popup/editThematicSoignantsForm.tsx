@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { SLOT_DURATION_OPTIONS } from '../../../constants/slot.constant.ts'
 import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { useThematicMutations } from '../../../queries/useThematic.ts'
-import type { Thematic } from '../../../types/thematic.ts'
+import type { Thematic, UpdateThematicParams } from '../../../types/thematic.ts'
 import { Button } from '../../ui/button.tsx'
 import { Label } from '../../ui/label.tsx'
 import {
@@ -18,6 +18,44 @@ import {
   PopupTrigger,
 } from '../../ui/popup.tsx'
 import { MultiSelect } from '../../ui/select.tsx'
+
+type ThematicFormValues = {
+  name: string
+  duration: number
+  pdfNotice: string
+  soignantIDs: string[]
+}
+
+// Seuls les champs reellement modifies partent dans le PATCH.
+function buildThematicPatch(
+  thematic: Thematic,
+  value: ThematicFormValues,
+): Omit<UpdateThematicParams, 'id'> {
+  const patch: Omit<UpdateThematicParams, 'id'> = {}
+  const duration = Number(value.duration)
+  // Une consigne vide vaut « pas de consigne » : on stocke null plutot qu'une
+  // chaine vide pour que le PDF n'ait qu'un cas a tester.
+  const pdfNotice = value.pdfNotice.trim() || null
+  const currentSoignantIDs = thematic.soignants.map((s) => s.id)
+
+  if (value.name !== thematic.name) {
+    patch.name = value.name
+  }
+  if (duration !== thematic.duration) {
+    patch.duration = duration
+  }
+  if (pdfNotice !== (thematic.pdfNotice ?? null)) {
+    patch.pdfNotice = pdfNotice
+  }
+  if (
+    value.soignantIDs.length !== currentSoignantIDs.length ||
+    value.soignantIDs.some((id) => !currentSoignantIDs.includes(id))
+  ) {
+    patch.soignantIDs = value.soignantIDs
+  }
+
+  return patch
+}
 
 interface EditThematicSoignantsFormProps {
   thematic: Thematic
@@ -37,24 +75,14 @@ function EditThematicSoignantsForm({
     defaultValues: {
       name: thematic.name,
       duration: thematic.duration ?? 15,
+      pdfNotice: thematic.pdfNotice ?? '',
       soignantIDs: thematic.soignants.map((s) => s.id),
     },
     onSubmit: ({ value }) => {
-      const currentSoignantIDs = thematic.soignants.map((s) => s.id)
-      const duration = Number(value.duration)
-      const nameChanged = value.name !== thematic.name
-      const durationChanged = duration !== thematic.duration
-      const soignantsChanged =
-        value.soignantIDs.length !== currentSoignantIDs.length ||
-        value.soignantIDs.some((id) => !currentSoignantIDs.includes(id))
+      const patch = buildThematicPatch(thematic, value)
 
-      if (nameChanged || durationChanged || soignantsChanged) {
-        updateThematic.mutate({
-          id: thematic.id,
-          ...(nameChanged ? { name: value.name } : {}),
-          ...(durationChanged ? { duration } : {}),
-          ...(soignantsChanged ? { soignantIDs: value.soignantIDs } : {}),
-        })
+      if (Object.keys(patch).length > 0) {
+        updateThematic.mutate({ id: thematic.id, ...patch })
       }
 
       setOpen(false)
@@ -66,6 +94,7 @@ function EditThematicSoignantsForm({
       form.reset({
         name: thematic.name,
         duration: thematic.duration ?? 15,
+        pdfNotice: thematic.pdfNotice ?? '',
         soignantIDs: thematic.soignants.map((s) => s.id),
       })
     }
@@ -106,6 +135,12 @@ function EditThematicSoignantsForm({
                   options={SLOT_DURATION_OPTIONS}
                   label="Durée par défaut"
                 />
+              )}
+            </form.AppField>
+
+            <form.AppField name="pdfNotice">
+              {(field) => (
+                <field.TextArea label="Consigne affichée dans le programme PDF" />
               )}
             </form.AppField>
 

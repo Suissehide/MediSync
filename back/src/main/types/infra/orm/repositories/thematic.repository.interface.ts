@@ -7,11 +7,13 @@ export type ThematicWithSoignantsEntityRepo = Thematic & {
 export type ThematicCreateEntityRepo = {
   name: string
   duration?: number | null
+  pdfNotice?: string | null
   soignantIDs: string[]
 }
 export type ThematicUpdateEntityRepo = {
   name?: string
   duration?: number | null
+  pdfNotice?: string | null
   soignantIDs?: string[]
 }
 

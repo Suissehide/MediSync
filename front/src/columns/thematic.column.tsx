@@ -30,6 +30,22 @@ export const getThematicColumns = ({
       },
     }),
     columnHelper.display({
+      id: 'pdfNotice',
+      header: 'Consigne PDF',
+      size: 280,
+      cell: ({ row }) => {
+        const notice = row.original.pdfNotice
+        if (!notice) {
+          return '—'
+        }
+        return (
+          <span className="block truncate text-text-light" title={notice}>
+            {notice}
+          </span>
+        )
+      },
+    }),
+    columnHelper.display({
       id: 'soignants',
       header: 'Soignants',
       size: 300,

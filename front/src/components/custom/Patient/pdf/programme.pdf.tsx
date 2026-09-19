@@ -13,6 +13,7 @@ interface ProgrammePDFProps {
   pathways: PatientPathway[]
   enabledOptionalPageIds: string[]
   forbiddenWeekStarts: string[]
+  noticeByThematicId: Map<string, string>
 }
 
 export default function ProgrammePDF({
@@ -21,6 +22,7 @@ export default function ProgrammePDF({
   pathways,
   enabledOptionalPageIds,
   forbiddenWeekStarts,
+  noticeByThematicId,
 }: ProgrammePDFProps) {
   const optionalPages = OPTIONAL_PAGES.filter((p) =>
     enabledOptionalPageIds.includes(p.id),
@@ -37,6 +39,7 @@ export default function ProgrammePDF({
         upcomingSlots={upcomingSlots}
         patientId={patient.id}
         forbiddenWeekStarts={forbiddenWeekStarts}
+        noticeByThematicId={noticeByThematicId}
       />
       <TipsPage />
       {optionalPages.map((p) => (

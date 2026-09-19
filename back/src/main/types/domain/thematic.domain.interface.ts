@@ -7,11 +7,13 @@ export type ThematicWithSoignantsEntityDomain = Thematic & {
 export type ThematicCreateEntityDomain = {
   name: string
   duration?: number | null
+  pdfNotice?: string | null
   soignantIDs: string[]
 }
 export type ThematicUpdateEntityDomain = {
   name?: string
   duration?: number | null
+  pdfNotice?: string | null
   soignantIDs?: string[]
 }
 
