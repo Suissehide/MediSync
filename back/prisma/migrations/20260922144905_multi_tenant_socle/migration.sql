@@ -174,9 +174,28 @@ DECLARE
   est_id TEXT;
   svc_id TEXT;
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM "User")
+  -- Garde de neutralité : ne rien faire si aucune des tables ci-dessous n'a de ligne.
+  -- Cette liste doit porter EXACTEMENT les mêmes tables, dans le même ordre, que les
+  -- ALTER COLUMN ... SET NOT NULL du temps 3 ci-dessous (ActivityLog exclue : ses
+  -- colonnes de tenant restent nullables, elle n'a donc besoin d'aucune garde ici).
+  -- Toute table ajoutée à l'une des deux listes doit être ajoutée à l'autre.
+  IF NOT EXISTS (SELECT 1 FROM "Appointment")
+     AND NOT EXISTS (SELECT 1 FROM "AppointmentPatient")
+     AND NOT EXISTS (SELECT 1 FROM "DiagnosticEducatif")
+     AND NOT EXISTS (SELECT 1 FROM "DiagnosticEducatifTemplate")
+     AND NOT EXISTS (SELECT 1 FROM "EnrollmentIssue")
+     AND NOT EXISTS (SELECT 1 FROM "ForbiddenWeek")
+     AND NOT EXISTS (SELECT 1 FROM "Location")
+     AND NOT EXISTS (SELECT 1 FROM "Pathway")
+     AND NOT EXISTS (SELECT 1 FROM "PathwayTemplate")
      AND NOT EXISTS (SELECT 1 FROM "Patient")
-     AND NOT EXISTS (SELECT 1 FROM "PathwayTemplate") THEN
+     AND NOT EXISTS (SELECT 1 FROM "PatientPathwayPriority")
+     AND NOT EXISTS (SELECT 1 FROM "PlanningCycle")
+     AND NOT EXISTS (SELECT 1 FROM "Slot")
+     AND NOT EXISTS (SELECT 1 FROM "SlotTemplate")
+     AND NOT EXISTS (SELECT 1 FROM "Soignant")
+     AND NOT EXISTS (SELECT 1 FROM "Thematic")
+     AND NOT EXISTS (SELECT 1 FROM "Todo") THEN
     RETURN;
   END IF;
 
