@@ -1,25 +1,23 @@
-import type { UserEntityRepo } from '../infra/orm/repositories/user.repository.interface'
-
-export type UserEntityDomain = UserEntityRepo
-export type UserDTO = Pick<
+import type {
   UserEntityRepo,
-  'id' | 'email' | 'firstName' | 'lastName' | 'role' | 'soignantId'
->
+  UserWithMemberships,
+} from '../infra/orm/repositories/user.repository.interface'
 
-export type UserUpdateEntityDomain = {
-  email?: string
-  firstName?: string
-  lastName?: string
-  role?: 'NONE' | 'USER' | 'ADMIN'
-  soignantId?: string | null
+export type UserEntityDomain = UserWithMemberships
+export type UserProfileUpdateDomain = { firstName?: string; lastName?: string }
+export type PasswordChangeDomain = {
+  currentPassword: string
+  newPassword: string
 }
 
 export interface UserDomainInterface {
-  findAll: () => Promise<UserEntityDomain[]>
   findByID: (userID: string) => Promise<UserEntityDomain>
-  update: (
+  updateProfile: (
     userID: string,
-    userUpdateParams: UserUpdateEntityDomain,
-  ) => Promise<UserEntityDomain>
-  delete: (userID: string) => Promise<UserEntityDomain>
+    params: UserProfileUpdateDomain,
+  ) => Promise<UserEntityRepo>
+  changePassword: (
+    userID: string,
+    params: PasswordChangeDomain,
+  ) => Promise<void>
 }

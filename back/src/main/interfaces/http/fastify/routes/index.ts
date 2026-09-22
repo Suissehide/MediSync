@@ -4,6 +4,7 @@ import { appointmentRouter } from './appointment'
 import { authRouter } from './auth'
 import { healthcheckRouter } from './healthcheck'
 import { locationRouter } from './location'
+import { meRouter } from './me'
 import { pathwayRouter } from './pathway'
 import { pathwayTemplateRouter } from './pathwayTemplate'
 import { patientRouter } from './patient'
@@ -41,6 +42,7 @@ const routes: FastifyPluginAsyncZod = async (fastify) => {
 
   await fastify.register(healthcheckRouter)
   await fastify.register(authRouter, { prefix: '/auth' })
+  await fastify.register(meRouter, { prefix: '/me' })
   await fastify.register(userRouter, { prefix: '/user' })
   await fastify.register(todoRouter, { prefix: '/todo' })
   await fastify.register(appointmentRouter, { prefix: '/appointment' })
@@ -52,9 +54,15 @@ const routes: FastifyPluginAsyncZod = async (fastify) => {
   await fastify.register(thematicRouter, { prefix: '/thematic' })
   await fastify.register(locationRouter, { prefix: '/location' })
   await fastify.register(patientRouter, { prefix: '/patient' })
-  await fastify.register(diagnosticEducatifTemplateRouter, { prefix: '/diagnostic-template' })
-  await fastify.register(diagnosticEducatifRouter, { prefix: '/patient/:patientId/diagnostic' })
-  await fastify.register(enrollmentIssueRouter, { prefix: '/patient/:patientID/enrollment-issue' })
+  await fastify.register(diagnosticEducatifTemplateRouter, {
+    prefix: '/diagnostic-template',
+  })
+  await fastify.register(diagnosticEducatifRouter, {
+    prefix: '/patient/:patientId/diagnostic',
+  })
+  await fastify.register(enrollmentIssueRouter, {
+    prefix: '/patient/:patientID/enrollment-issue',
+  })
   await fastify.register(activityLogRouter, { prefix: '/activity-log' })
   await fastify.register(forbiddenWeekRouter, { prefix: '/forbidden-week' })
   await fastify.register(planningCycleRouter, { prefix: '/planning-cycle' })

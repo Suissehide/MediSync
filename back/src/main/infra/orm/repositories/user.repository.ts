@@ -1,14 +1,26 @@
-import { Role } from '../../../../generated/enums'
 import type { IocContainer } from '../../../types/application/ioc'
 import type {
   UserCreateEntityRepo,
   UserEntityRepo,
+  UserProfileUpdateRepo,
   UserRepositoryInterface,
-  UserUpdateEntityRepo,
+  UserWithMemberships,
 } from '../../../types/infra/orm/repositories/user.repository.interface'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import { hashPassword } from '../../../utils/hash'
 import type { PostgresPrismaClient } from '../postgres-client'
+
+// Inclusion de l'arbre des appartenances (établissements puis services).
+// Autorisée par le garde-fou tenant uniquement sur un findUnique(OrThrow) :
+// voir GLOBAL_TENANT_RELATIONS dans tenant-guard.ts.
+const membershipsInclude = {
+  establishmentMemberships: {
+    include: {
+      establishment: true,
+      serviceMemberships: { include: { service: true } },
+    },
+  },
+} as const
 
 class UserRepository implements UserRepositoryInterface {
   private readonly prisma: PostgresPrismaClient
@@ -19,14 +31,11 @@ class UserRepository implements UserRepositoryInterface {
     this.errorHandler = errorHandler
   }
 
-  findAll(): Promise<UserEntityRepo[]> {
-    return this.prisma.user.findMany()
-  }
-
-  async findByID(userID: string): Promise<UserEntityRepo> {
+  async findByID(userID: string): Promise<UserWithMemberships> {
     try {
       return await this.prisma.user.findUniqueOrThrow({
         where: { id: userID },
+        include: membershipsInclude,
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
@@ -58,7 +67,6 @@ class UserRepository implements UserRepositoryInterface {
           ...user,
           salt,
           password: hash,
-          role: Role.NONE,
         },
       })
     } catch (err) {
@@ -69,16 +77,14 @@ class UserRepository implements UserRepositoryInterface {
     }
   }
 
-  async update(
+  async updateProfile(
     userID: string,
-    userUpdateParams: UserUpdateEntityRepo,
+    params: UserProfileUpdateRepo,
   ): Promise<UserEntityRepo> {
     try {
       return await this.prisma.user.update({
         where: { id: userID },
-        data: {
-          ...userUpdateParams,
-        },
+        data: params,
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
@@ -88,10 +94,29 @@ class UserRepository implements UserRepositoryInterface {
     }
   }
 
-  async delete(userID: string): Promise<UserEntityRepo> {
+  async updatePassword(userID: string, password: string): Promise<void> {
+    const { hash, salt } = hashPassword(password)
     try {
-      return await this.prisma.user.delete({
+      await this.prisma.user.update({
         where: { id: userID },
+        data: { password: hash, salt },
+      })
+    } catch (err) {
+      throw this.errorHandler.boomErrorFromPrismaError({
+        entityName: 'User',
+        error: err,
+      })
+    }
+  }
+
+  async setDeactivated(
+    userID: string,
+    at: Date | null,
+  ): Promise<UserEntityRepo> {
+    try {
+      return await this.prisma.user.update({
+        where: { id: userID },
+        data: { deactivatedAt: at },
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({

@@ -1,26 +1,34 @@
 import type {
-  Prisma,
+  Establishment,
+  EstablishmentMembership,
+  Service,
+  ServiceMembership,
   User,
 } from '../../../../../generated/client'
 
 export type UserEntityRepo = User
-export type UserCreateEntityRepo = Pick<
-  UserEntityRepo,
-  'email' | 'password'
-> & { firstName?: string; lastName?: string; soignantId?: string | null }
-export type UserUpdateEntityRepo = Pick<
-  Prisma.UserUncheckedUpdateInput,
-  'email' | 'role'
-> & { firstName?: string; lastName?: string; soignantId?: string | null }
+export type UserWithMemberships = User & {
+  establishmentMemberships: (EstablishmentMembership & {
+    establishment: Establishment
+    serviceMemberships: (ServiceMembership & { service: Service })[]
+  })[]
+}
+export type UserCreateEntityRepo = {
+  email: string
+  password: string
+  firstName?: string
+  lastName?: string
+}
+export type UserProfileUpdateRepo = { firstName?: string; lastName?: string }
 
 export interface UserRepositoryInterface {
-  findAll: () => Promise<UserEntityRepo[]>
-  findByID: (userId: string) => Promise<UserEntityRepo>
+  findByID: (userId: string) => Promise<UserWithMemberships>
   findByEmail: (email: string) => Promise<UserEntityRepo>
   create: (user: UserCreateEntityRepo) => Promise<UserEntityRepo>
-  update: (
+  updateProfile: (
     userID: string,
-    userUpdateParams: UserUpdateEntityRepo,
+    params: UserProfileUpdateRepo,
   ) => Promise<UserEntityRepo>
-  delete: (userID: string) => Promise<UserEntityRepo>
+  updatePassword: (userID: string, password: string) => Promise<void>
+  setDeactivated: (userID: string, at: Date | null) => Promise<UserEntityRepo>
 }

@@ -8,7 +8,6 @@ import type {
 import { hashSecret, verifyJwt } from '../../../../utils/auth-helper'
 import fastifyCookie, { type FastifyCookieOptions } from '@fastify/cookie'
 import Boom from '@hapi/boom'
-import { Role } from '../../../../../generated/enums'
 import type { UserEntityDomain } from '../../../../types/domain/user.domain.interface'
 import type { JwtPayload } from '../../../../types/interfaces/http/fastify/plugins/jwt.plugin'
 
@@ -22,15 +21,7 @@ declare module 'fastify' {
 declare module 'fastify' {
   export interface FastifyInstance {
     verifySessionCookie: preHandlerAsyncHookHandler
-    requireMinRole: (minRole: Role) => preHandlerAsyncHookHandler
   }
-}
-
-// Hiérarchie des rôles : un utilisateur satisfait `minRole` si son rang est >=.
-const roleRank: Record<Role, number> = {
-  [Role.NONE]: 0,
-  [Role.USER]: 1,
-  [Role.ADMIN]: 2,
 }
 
 const isNotFound = (error: unknown): boolean =>
@@ -78,6 +69,12 @@ const cookiePreHandler = async function (
       }
       throw error
     })
+
+  // Un compte désactivé garde un jeton valide jusqu'à son expiration : ce
+  // contrôle lui refuse l'accès dès la prochaine requête authentifiée.
+  if (request.currentUser.deactivatedAt) {
+    throw Boom.unauthorized('Account deactivated')
+  }
 }
 
 const cookiePlugin: FastifyPluginAsync = fastifyPlugin(
@@ -96,15 +93,6 @@ const cookiePlugin: FastifyPluginAsync = fastifyPlugin(
     }
     await fastify.register(fastifyCookie, cookieOptions)
     fastify.decorate('verifySessionCookie', cookiePreHandler)
-    // Fabrique un preHandler exigeant un rôle minimum. `request.currentUser`
-    // est déjà chargé par la garde d'authentification globale (onRequest),
-    // inutile de réinterroger la base.
-    fastify.decorate('requireMinRole', (minRole: Role) => {
-      return (request: FastifyRequest): Promise<void> =>
-        roleRank[request.currentUser.role] < roleRank[minRole]
-          ? Promise.reject(Boom.forbidden('Insufficient role'))
-          : Promise.resolve()
-    })
     log.debug('Cookie plugin successfully registered')
   },
 )

@@ -1,16 +1,16 @@
-import type { UserDTO } from './user.domain.interface'
+import type { MeResponse } from '../../utils/me-mapper'
 
 export type CreateUserInput = {
   email: string
   password: string
   firstName?: string
   lastName?: string
-  soignantId?: string | null
 }
 export type SignInResponse = {
   accessToken: string
   refreshToken: string
-} & UserDTO
+  me: MeResponse
+}
 export type SignOutResponse = {
   success: boolean
 }
@@ -19,7 +19,7 @@ export type RegisterResponse = {
 }
 
 export interface AuthDomainInterface {
-  signIn: (authCode: string, redirectUri: string) => Promise<SignInResponse>
+  signIn: (email: string, password: string) => Promise<SignInResponse>
   refresh: (refreshToken: string) => Promise<SignInResponse>
   signOut: () => SignOutResponse
   register: (createUserInput: CreateUserInput) => Promise<RegisterResponse>

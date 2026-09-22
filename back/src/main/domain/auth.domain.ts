@@ -14,6 +14,10 @@ import type { JwtPayload } from '../types/interfaces/http/fastify/plugins/jwt.pl
 import type { Logger } from '../types/utils/logger'
 import { generateJwt, verifyJwt } from '../utils/auth-helper'
 import { verifyPassword } from '../utils/hash'
+import { toMeResponse } from '../utils/me-mapper'
+
+const isNotFound = (error: unknown): boolean =>
+  Boom.isBoom(error) && error.output.statusCode === 404
 
 class AuthDomain implements AuthDomainInterface {
   private readonly logger: Logger
@@ -49,9 +53,25 @@ class AuthDomain implements AuthDomainInterface {
   }
 
   async signIn(email: string, password: string): Promise<SignInResponse> {
-    const user = await this.userRepository.findByEmail(email)
+    // Adresse inconnue : `findByEmail` lève un 404 (findUniqueOrThrow), qu'on
+    // intercepte ici pour retomber sur `null`, exactement comme `refresh` le
+    // fait déjà pour un utilisateur disparu. On garde ainsi une seule forme
+    // d'interface (`findByEmail` continue de renvoyer `UserEntityRepo`, sans
+    // `| null`) et un seul endroit qui sait transformer « absent » en
+    // « identifiants invalides ».
+    const user = await this.userRepository
+      .findByEmail(email)
+      .catch((err: unknown) => {
+        if (isNotFound(err)) {
+          return null
+        }
+        throw err
+      })
 
-    // Protection contre les timing attacks : toujours vérifier le mot de passe
+    // Protection contre les timing attacks : la vérification du mot de passe
+    // s'exécute toujours, même quand l'utilisateur n'existe pas, pour que les
+    // deux chemins (adresse inconnue / mot de passe erroné) coûtent le même
+    // temps et renvoient la même erreur.
     const isValidPassword = verifyPassword({
       password,
       salt: user?.salt ?? this.DUMMY_SALT,
@@ -63,18 +83,17 @@ class AuthDomain implements AuthDomainInterface {
       throw Boom.unauthorized('Invalid email or password')
     }
 
+    // Ce contrôle n'intervient qu'une fois le mot de passe vérifié : il ne
+    // révèle donc rien à quiconque ne connaît pas déjà les identifiants
+    // valides, et ne rouvre pas la fuite corrigée ci-dessus.
+    if (user.deactivatedAt) {
+      throw Boom.unauthorized('Account deactivated')
+    }
+
+    const full = await this.userRepository.findByID(user.id)
     const { accessToken, refreshToken } = this.generateTokens(user.id)
 
-    return {
-      accessToken,
-      refreshToken,
-      id: user.id,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      role: user.role,
-      soignantId: user.soignantId,
-    }
+    return { accessToken, refreshToken, me: toMeResponse(full) }
   }
 
   async refresh(currentRefreshToken: string): Promise<SignInResponse> {
@@ -93,7 +112,7 @@ class AuthDomain implements AuthDomainInterface {
     const user = await this.userRepository
       .findByID(payload.userID)
       .catch((err: unknown) => {
-        if (Boom.isBoom(err) && err.output.statusCode === 404) {
+        if (isNotFound(err)) {
           return null
         }
         throw err
@@ -103,18 +122,13 @@ class AuthDomain implements AuthDomainInterface {
       throw Boom.unauthorized('Invalid refresh token')
     }
 
+    if (user.deactivatedAt) {
+      throw Boom.unauthorized('Account deactivated')
+    }
+
     const { accessToken, refreshToken } = this.generateTokens(user.id)
 
-    return {
-      accessToken,
-      refreshToken,
-      id: user.id,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      role: user.role,
-      soignantId: user.soignantId,
-    }
+    return { accessToken, refreshToken, me: toMeResponse(user) }
   }
 
   async register(createUserInput: CreateUserInput): Promise<RegisterResponse> {
