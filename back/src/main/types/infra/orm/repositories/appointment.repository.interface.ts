@@ -11,19 +11,27 @@ export type AppointmentWithPatientsRepo = AppointmentEntityRepo & {
     patient: PatientEntityRepo
   })[]
 }
-export type AppointmentCreateEntityRepo =
-  Prisma.AppointmentUncheckedCreateInput & {
-    slotID: string
-    patientIDs: string[]
-    transmissionNotes?: string
-  }
-export type AppointmentUpdateEntityRepo =
-  Prisma.AppointmentUncheckedUpdateInput & {
-    slotID?: string
-    // Optionnel : si absent, les participants ne sont pas modifiés ;
-    // un tableau vide supprime explicitement le rendez-vous.
-    appointmentPatients?: AppointmentPatientUpdateEntityRepo[]
-  }
+// Le repository pose serviceId/establishmentId (tenant) lui-même :
+// l'appelant ne les fournit pas. `appointmentPatients` (la relation brute
+// Prisma) est omise au profit du seul `patientIDs` ci-dessous, converti en
+// écriture imbriquée par le repository.
+export type AppointmentCreateEntityRepo = Omit<
+  Prisma.AppointmentUncheckedCreateInput,
+  'establishmentId' | 'serviceId' | 'appointmentPatients'
+> & {
+  slotID: string
+  patientIDs: string[]
+  transmissionNotes?: string
+}
+export type AppointmentUpdateEntityRepo = Omit<
+  Prisma.AppointmentUncheckedUpdateInput,
+  'establishmentId' | 'serviceId' | 'appointmentPatients'
+> & {
+  slotID?: string
+  // Optionnel : si absent, les participants ne sont pas modifiés ;
+  // un tableau vide supprime explicitement le rendez-vous.
+  appointmentPatients?: AppointmentPatientUpdateEntityRepo[]
+}
 
 export interface AppointmentRepositoryInterface {
   findAll: () => Promise<AppointmentEntityRepo[]>

@@ -1,4 +1,5 @@
 import { ActivityLogRepository } from '../../../main/infra/orm/repositories/activityLog.repository'
+import { AppointmentRepository } from '../../../main/infra/orm/repositories/appointment.repository'
 import { DiagnosticEducatifRepository } from '../../../main/infra/orm/repositories/diagnosticEducatif.repository'
 import { DiagnosticEducatifTemplateRepository } from '../../../main/infra/orm/repositories/diagnosticEducatifTemplate.repository'
 import { LocationRepository } from '../../../main/infra/orm/repositories/location.repository'
@@ -639,6 +640,106 @@ describe('scoping pathwayTemplate et pathway', () => {
     expect(calls[3]).toMatchObject({
       model: 'pathway', op: 'delete',
       args: { where: { id_serviceId: { id: 'pw1', serviceId: 's1' } } },
+    })
+  })
+})
+
+describe('scoping appointment', () => {
+  it('cree le rendez-vous et ses patients avec les colonnes de tenant', async () => {
+    const { prisma, calls } = buildFakePrisma()
+    const ctx = new TenantContext()
+    const repo = new AppointmentRepository(buildContainer(prisma, ctx))
+    await ctx.run(tenant, async () => {
+      await repo.create({ startDate: new Date(), endDate: new Date(), slotID: 'sl', patientIDs: ['p1'] } as never)
+      await repo.addPatientToAppointment({ appointmentID: 'a1', patientID: 'p2' } as never)
+      await repo.deleteOrphanedByIds(['a1'])
+    })
+    expect(calls[0]).toMatchObject({
+      model: 'appointment', op: 'create',
+      args: {
+        data: {
+          serviceId: 's1', establishmentId: 'e1', slotID: 'sl',
+          appointmentPatients: { create: [{ patientId: 'p1', serviceId: 's1', establishmentId: 'e1' }] },
+        },
+      },
+    })
+    expect(calls[1]).toMatchObject({
+      model: 'appointmentPatient', op: 'create',
+      args: { data: { appointmentId: 'a1', patientId: 'p2', serviceId: 's1', establishmentId: 'e1' } },
+    })
+    expect(calls[2]).toMatchObject({
+      model: 'appointment', op: 'deleteMany',
+      args: { where: { id: { in: ['a1'] }, serviceId: 's1', appointmentPatients: { none: {} } } },
+    })
+  })
+
+  it('update supprime le rendez-vous quand la liste de patients est vide', async () => {
+    const { prisma, calls } = buildFakePrisma()
+    const ctx = new TenantContext()
+    const repo = new AppointmentRepository(buildContainer(prisma, ctx))
+
+    await ctx.run(tenant, () => repo.update('a1', { motif: 'x', appointmentPatients: [] } as never))
+
+    // Une seule operation : la suppression, filtree par la cle composite.
+    // Ni mise a jour du rendez-vous ni ecriture sur les participants.
+    expect(calls).toHaveLength(1)
+    expect(calls[0]).toMatchObject({
+      model: 'appointment', op: 'delete',
+      args: { where: { id_serviceId: { id: 'a1', serviceId: 's1' } } },
+    })
+  })
+
+  it('update ne touche pas aux participants quand la liste est absente', async () => {
+    const { prisma, calls } = buildFakePrisma()
+    const ctx = new TenantContext()
+    const repo = new AppointmentRepository(buildContainer(prisma, ctx))
+
+    await ctx.run(tenant, () => repo.update('a1', { motif: 'y' } as never))
+
+    expect(calls).toHaveLength(2)
+    expect(calls[0]).toMatchObject({
+      model: 'appointment', op: 'update',
+      args: { where: { id_serviceId: { id: 'a1', serviceId: 's1' } }, data: { motif: 'y' } },
+    })
+    expect(calls[1]).toMatchObject({
+      model: 'appointment', op: 'findUniqueOrThrow',
+      args: { where: { id_serviceId: { id: 'a1', serviceId: 's1' } } },
+    })
+  })
+
+  it('update retire les patients disparus puis insere ou met a jour les autres avec la cle composite', async () => {
+    const { prisma, calls } = buildFakePrisma()
+    const ctx = new TenantContext()
+    const repo = new AppointmentRepository(buildContainer(prisma, ctx))
+
+    await ctx.run(tenant, () =>
+      repo.update('a1', {
+        appointmentPatients: [{ id: 'ap1', patientID: 'p1', accompanying: null, status: null, rejectionReason: null, transmissionNotes: null }],
+      } as never),
+    )
+
+    expect(calls).toHaveLength(4)
+    expect(calls[0]).toMatchObject({
+      model: 'appointment', op: 'update',
+      args: { where: { id_serviceId: { id: 'a1', serviceId: 's1' } } },
+    })
+    expect(calls[1]).toMatchObject({
+      model: 'appointmentPatient', op: 'deleteMany',
+      args: { where: { appointmentId: 'a1', serviceId: 's1', id: { notIn: ['ap1'] } } },
+    })
+    expect(calls[2]).toMatchObject({
+      model: 'appointmentPatient', op: 'upsert',
+      args: {
+        where: { id_serviceId: { id: 'ap1', serviceId: 's1' } },
+        create: {
+          serviceId: 's1', establishmentId: 'e1',
+          appointmentId: 'a1', patientId: 'p1',
+        },
+      },
+    })
+    expect(calls[3]).toMatchObject({
+      model: 'appointment', op: 'findUniqueOrThrow',
+      args: { where: { id_serviceId: { id: 'a1', serviceId: 's1' } } },
     })
   })
 })
