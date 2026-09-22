@@ -15,17 +15,22 @@ export type SlotTemplateDTORepo = SlotTemplateEntityRepo & {
   template: PathwayTemplateEntityRepo | null
   location: LocationEntityRepo | null
 }
-export type SlotTemplateCreateEntityRepo =
-  Prisma.SlotTemplateUncheckedCreateInput & {
-    soignantIDs?: string[]
-    templateID?: string
-  }
-export type SlotTemplateUpdateEntityRepo =
-  Prisma.SlotTemplateUncheckedUpdateInput & {
-    soignantIDs?: string[]
-    templateID?: string
-    slot?: string
-  }
+// Le repository pose serviceId/establishmentId (tenant) lui-même : l'appelant
+// ne les fournit pas.
+export type SlotTemplateCreateEntityRepo = Omit<
+  Prisma.SlotTemplateUncheckedCreateInput,
+  'establishmentId' | 'serviceId'
+> & {
+  soignantIDs?: string[]
+  templateID?: string
+}
+export type SlotTemplateUpdateEntityRepo = Omit<
+  Prisma.SlotTemplateUncheckedUpdateInput,
+  'establishmentId' | 'serviceId'
+> & {
+  soignantIDs?: string[]
+  templateID?: string
+}
 
 export interface SlotTemplateRepositoryInterface {
   findAll: () => Promise<SlotTemplateDTORepo[]>

@@ -4,6 +4,8 @@ import { DiagnosticEducatifTemplateRepository } from '../../../main/infra/orm/re
 import { LocationRepository } from '../../../main/infra/orm/repositories/location.repository'
 import { PatientRepository } from '../../../main/infra/orm/repositories/patient.repository'
 import { PlanningCycleRepository } from '../../../main/infra/orm/repositories/planningCycle.repository'
+import { SlotRepository } from '../../../main/infra/orm/repositories/slot.repository'
+import { SlotTemplateRepository } from '../../../main/infra/orm/repositories/slotTemplate.repository'
 import { SoignantRepository } from '../../../main/infra/orm/repositories/soignant.repository'
 import { ThematicRepository } from '../../../main/infra/orm/repositories/thematic.repository'
 import { TodoRepository } from '../../../main/infra/orm/repositories/todo.repository'
@@ -390,6 +392,52 @@ describe('scoping des repositories de diagnostic', () => {
     expect(calls[4]).toMatchObject({
       model: 'diagnosticEducatifTemplate', op: 'delete',
       args: { where: { id_serviceId: { id: 'dt1', serviceId: 's1' } } },
+    })
+  })
+})
+
+describe('scoping slotTemplate et slot', () => {
+  it('SlotTemplateRepository cree avec liens et scope, filtre updateMany', async () => {
+    const { prisma, calls } = buildFakePrisma()
+    const ctx = new TenantContext()
+    const repo = new SlotTemplateRepository(buildContainer(prisma, ctx))
+    await ctx.run(tenant, async () => {
+      await repo.create({
+        startTime: new Date(), endTime: new Date(), offsetDays: 0,
+        isIndividual: true, color: '#fff', soignantIDs: ['so1'],
+      } as never)
+      await repo.updateMany(['a', 'b'], { color: '#000' })
+    })
+    expect(calls[0]).toMatchObject({
+      model: 'slotTemplate', op: 'create',
+      args: {
+        data: {
+          serviceId: 's1', establishmentId: 'e1',
+          soignantLinks: { create: [{ soignantId: 'so1', serviceId: 's1', establishmentId: 'e1' }] },
+        },
+      },
+    })
+    expect(calls[1]).toMatchObject({
+      model: 'slotTemplate', op: 'updateMany',
+      args: { where: { id: { in: ['a', 'b'] }, serviceId: 's1' } },
+    })
+  })
+
+  it('SlotRepository filtre la fenetre de dates par service', async () => {
+    const { prisma, calls } = buildFakePrisma()
+    const ctx = new TenantContext()
+    const repo = new SlotRepository(buildContainer(prisma, ctx))
+    await ctx.run(tenant, async () => {
+      await repo.findAll({ from: new Date('2026-01-01'), to: new Date('2026-02-01') })
+      await repo.delete('sl1')
+    })
+    expect(calls[0]).toMatchObject({
+      model: 'slot', op: 'findMany',
+      args: { where: { serviceId: 's1', endDate: { gt: expect.any(Date) } } },
+    })
+    expect(calls[1]).toMatchObject({
+      model: 'slot', op: 'delete',
+      args: { where: { id_serviceId: { id: 'sl1', serviceId: 's1' } } },
     })
   })
 })
