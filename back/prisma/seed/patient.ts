@@ -1,7 +1,11 @@
 import type { PrismaClient } from '../../src/generated/client'
 import { PATIENTS } from './data/patient'
+import type { SeedTenant } from './tenant'
 
-export default async function seedPatients(prisma: PrismaClient) {
+export default async function seedPatients(
+  prisma: PrismaClient,
+  tenant: SeedTenant,
+) {
   console.log('→ Seeding patients...')
 
   const createdPatients = await Promise.all(
@@ -10,6 +14,7 @@ export default async function seedPatients(prisma: PrismaClient) {
         data: {
           ...p,
           createDate: new Date(),
+          establishmentId: tenant.establishmentId,
         },
       }),
     ),

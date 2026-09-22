@@ -2,6 +2,7 @@ import type {
   Location,
   PrismaClient,
   Soignant,
+  Thematic,
 } from '../../src/generated/client'
 import { resolveLocationName } from './data/location'
 import {
@@ -10,6 +11,7 @@ import {
   type SlotData,
   SOIGNANT_MAP,
 } from './data/pathwayTemplate'
+import type { SeedTenant } from './tenant'
 
 /**
  * Calculer offsetDays
@@ -22,6 +24,8 @@ export default async function seedPathwayTemplates(
   prisma: PrismaClient,
   soignants: Soignant[],
   locations: Location[],
+  thematics: Thematic[],
+  tenant: SeedTenant,
 ) {
   console.log('→ Deleting old pathway templates...')
   await prisma.slotTemplate.deleteMany({ where: { templateID: { not: null } } })
@@ -30,6 +34,7 @@ export default async function seedPathwayTemplates(
   console.log('→ Seeding pathway templates...')
 
   const locationByName = new Map(locations.map((l) => [l.name, l]))
+  const thematicByName = new Map(thematics.map((t) => [t.name, t]))
   const createdTemplates = []
 
   for (const [pathwayKey, slots] of Object.entries(PATHWAY_DATA)) {
@@ -38,7 +43,14 @@ export default async function seedPathwayTemplates(
     console.log(`Creating pathway ${pathway.name} with ${slots.length} slots`)
 
     const slotTemplates = slots.map((slot) =>
-      createSlotTemplate(slot, pathway.color, soignants, locationByName),
+      createSlotTemplate(
+        slot,
+        pathway.color,
+        soignants,
+        locationByName,
+        thematicByName,
+        tenant,
+      ),
     )
 
     const template = await prisma.pathwayTemplate.create({
@@ -47,6 +59,8 @@ export default async function seedPathwayTemplates(
         color: pathway.color,
         mainTag: pathway.tags[0] ?? pathway.name,
         secondaryTags: pathway.tags.slice(1),
+        establishmentId: tenant.establishmentId,
+        serviceId: tenant.serviceId,
         slotTemplates: {
           create: slotTemplates,
         },
@@ -73,6 +87,8 @@ function createSlotTemplate(
   color: string,
   soignants: Soignant[],
   locationByName: Map<string, Location>,
+  thematicByName: Map<string, Thematic>,
+  tenant: SeedTenant,
 ) {
   const soignantIndex = SOIGNANT_MAP[data.soignant] ?? 0
   const soignant = soignants[soignantIndex]
@@ -98,6 +114,13 @@ function createSlotTemplate(
     )
   }
 
+  const thematicId = thematicByName.get(data.thematic)?.id ?? null
+  if (data.thematic && !thematicId) {
+    console.warn(
+      `  ⚠ Unknown thematic "${data.thematic}" — slot will have no thematic`,
+    )
+  }
+
   return {
     startTime,
     endTime,
@@ -106,8 +129,19 @@ function createSlotTemplate(
     capacity: data.isIndividual ? null : (data.capacity ?? 1),
     color,
     description: data.description,
-    thematic: data.thematic,
+    establishmentId: tenant.establishmentId,
+    serviceId: tenant.serviceId,
+    thematicId,
     locationID,
-    soignants: { connect: [{ id: soignant.id }] },
+    // serviceId est déduit de la relation vers SlotTemplate (clé composite),
+    // Prisma le refuse comme champ explicite dans cette création imbriquée.
+    soignantLinks: {
+      create: [
+        {
+          soignantId: soignant.id,
+          establishmentId: tenant.establishmentId,
+        },
+      ],
+    },
   }
 }
