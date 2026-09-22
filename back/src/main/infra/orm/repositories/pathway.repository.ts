@@ -519,10 +519,13 @@ class PathwayRepository implements PathwayRepositoryInterface {
           where: { id: { in: slotIDs }, serviceId: this.scope.serviceId },
         })
 
-        // Delete all slotTemplates
+        // Delete all slotTemplates — même garde qu'en régénération : seuls
+        // les clones (templateID null) sont supprimés, jamais un modèle
+        // maître partagé.
         await tx.slotTemplate.deleteMany({
           where: {
             id: { in: slotTemplateIDs },
+            templateID: null,
             serviceId: this.scope.serviceId,
           },
         })

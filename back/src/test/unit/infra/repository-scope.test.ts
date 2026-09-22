@@ -604,9 +604,11 @@ describe('scoping pathwayTemplate et pathway', () => {
       model: 'slot', op: 'deleteMany',
       args: { where: { id: { in: ['sl1'] }, serviceId: 's1' } },
     })
+    // Meme condition de surete que regenerate() : ne jamais supprimer un
+    // modele maitre partage par un PathwayTemplate, seulement un clone.
     expect(calls[2]).toMatchObject({
       model: 'slotTemplate', op: 'deleteMany',
-      args: { where: { id: { in: ['st1'] }, serviceId: 's1' } },
+      args: { where: { id: { in: ['st1'] }, templateID: null, serviceId: 's1' } },
     })
     expect(calls[3]).toMatchObject({
       model: 'pathway', op: 'delete',
