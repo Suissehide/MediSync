@@ -440,4 +440,44 @@ describe('scoping slotTemplate et slot', () => {
       args: { where: { id_serviceId: { id: 'sl1', serviceId: 's1' } } },
     })
   })
+
+  it('SlotRepository.update remplace les liens soignants du modele puis filtre la mise a jour du creneau', async () => {
+    // Reponse explicite pour `slot.update` : la relation `slotTemplate` est
+    // a un seul enregistrement, pas une liste — le faux client par defaut
+    // (tableau vide sur toute cle incluse) ne convient pas ici.
+    const { prisma, calls } = buildFakePrisma({
+      'slot.update': { id: 'sl1', slotTemplate: { soignantLinks: [] } },
+    })
+    const ctx = new TenantContext()
+    const repo = new SlotRepository(buildContainer(prisma, ctx))
+    await ctx.run(tenant, () =>
+      repo.update('sl1', {
+        locked: true,
+        slotTemplate: { id: 'st1', soignantIDs: ['so2'] },
+      } as never),
+    )
+    expect(calls[0]).toMatchObject({
+      model: 'slotTemplate', op: 'update',
+      args: {
+        where: { id_serviceId: { id: 'st1', serviceId: 's1' } },
+        data: {
+          soignantLinks: {
+            deleteMany: {},
+            create: [{ soignantId: 'so2', serviceId: 's1', establishmentId: 'e1' }],
+          },
+        },
+      },
+    })
+    // La suppression des anciens liens doit precéder la creation des
+    // nouveaux dans l'objet d'ecriture imbriquee (ordre des cles).
+    const soignantLinksWrite = (calls[0].args.data as { soignantLinks: object }).soignantLinks
+    expect(Object.keys(soignantLinksWrite)).toEqual(['deleteMany', 'create'])
+    expect(calls[1]).toMatchObject({
+      model: 'slot', op: 'update',
+      args: {
+        where: { id_serviceId: { id: 'sl1', serviceId: 's1' } },
+        data: { locked: true },
+      },
+    })
+  })
 })
