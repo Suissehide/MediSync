@@ -142,11 +142,16 @@ model SoignantThematic {
 
 Relations composites nullables : Prisma exige que tous les champs d'une relation composite soient nullables ou
 tous requis. Pour `SlotTemplate.locationId?` avec `establishmentId` requis, la relation composite n'est pas
-déclarable telle quelle. Règle retenue : **la clé composite est posée en SQL brut dans la migration** pour ces
-cas (`locationId`, `thematicId`, `templateID`, `pathwayID`, `soignantID` de `Todo`, `thematicId` de
-`Appointment`), et Prisma garde la relation simple. La contrainte SQL existe, Prisma ne la connaît pas. Un
-commentaire dans `schema.prisma` liste ces contraintes pour qu'un `migrate dev` futur ne les perde pas (Prisma
-ne supprime pas une contrainte qu'il ne connaît pas, mais la documentation évite la surprise).
+déclarable. Cas concernés : `SlotTemplate.locationId`, `SlotTemplate.thematicId`, `SlotTemplate.templateID`,
+`Slot.pathwayID`, `Pathway.templateID`, `Appointment.thematicId`, `Todo.soignantID`,
+`EstablishmentMembership.soignantId`.
+
+Règle retenue pour ces cas : **la garantie est applicative**. Avant de poser la référence, le domaine charge
+l'entité référencée par son repository filtré (`locationRepository.findById(locationId)`), ce qui renvoie 404 si
+elle appartient à un autre tenant. Prisma garde la relation simple. Une contrainte SQL composite ajoutée à la main
+n'est pas retenue : la génération de la migration suivante par `migrate dev` la supprimerait probablement, faute
+de la connaître dans le schéma. Le plan inclut une vérification de ce comportement ; si Prisma préserve la
+contrainte, elle sera ajoutée en plus, sans retirer le contrôle applicatif.
 
 ### 2.4 Migration `multi_tenant_socle`
 
