@@ -13,6 +13,11 @@ import { TenantContext } from '../../../main/utils/tenant-context'
 // concurrents dont le chevauchement est force par une porte de
 // synchronisation (pas une simple absence d'erreur sur une execution qui
 // serait en realite sequentielle).
+//
+// Volontairement pas via le harnais e2e (`buildTestApp`) : celui-ci monte
+// `routes/index.ts` en entier (auth, DB, tous les routeurs), ce qui melangerait
+// ces preoccupations avec celle testee ici. Un serveur Fastify minimal avec le
+// vrai plugin et le vrai `TenantContext` isole precisement ce qu'on veut prouver.
 
 const now = new Date()
 
