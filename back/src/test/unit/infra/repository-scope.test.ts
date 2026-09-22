@@ -494,9 +494,18 @@ describe('scoping pathwayTemplate et pathway', () => {
       await repo.reorder(['a', 'b'])
       await repo.create({ name: 'N', color: '#fff', mainTag: 't' } as never)
     })
-    expect(calls[0].args).toMatchObject({ where: { serviceId: 's1' }, orderBy: { displayOrder: 'asc' } })
-    expect(calls[1].args).toMatchObject({ where: { id_serviceId: { id: 'a', serviceId: 's1' } }, data: { displayOrder: 0 } })
-    expect(calls[3].args).toMatchObject({ data: { name: 'N', serviceId: 's1', establishmentId: 'e1' } })
+    expect(calls[0]).toMatchObject({
+      model: 'pathwayTemplate', op: 'findMany',
+      args: { where: { serviceId: 's1' }, orderBy: { displayOrder: 'asc' } },
+    })
+    expect(calls[1]).toMatchObject({
+      model: 'pathwayTemplate', op: 'update',
+      args: { where: { id_serviceId: { id: 'a', serviceId: 's1' } }, data: { displayOrder: 0 } },
+    })
+    expect(calls[3]).toMatchObject({
+      model: 'pathwayTemplate', op: 'create',
+      args: { data: { name: 'N', serviceId: 's1', establishmentId: 'e1' } },
+    })
   })
 
   it('PathwayRepository filtre les recherches par tag et le suivi mensuel', async () => {
@@ -508,10 +517,27 @@ describe('scoping pathwayTemplate et pathway', () => {
       await repo.findTracking(2026, 3)
       await repo.create({ startDate: '2026-03-02', templateID: 'pt', slotIDs: ['sl'] } as never)
     })
-    expect(calls[0].args).toMatchObject({ where: { serviceId: 's1', template: { mainTag: 'tag' } } })
-    expect(calls[1].args).toMatchObject({ where: { serviceId: 's1' } })
-    expect(calls[2].args).toMatchObject({ where: { pathwayID: { in: [] }, serviceId: 's1' } })
-    expect(calls[3].args).toMatchObject({ data: { serviceId: 's1', establishmentId: 'e1', templateID: 'pt', slots: { connect: [{ id_serviceId: { id: 'sl', serviceId: 's1' } }] } } })
+    expect(calls[0]).toMatchObject({
+      model: 'pathway', op: 'findMany',
+      args: { where: { serviceId: 's1', template: { mainTag: 'tag' } } },
+    })
+    expect(calls[1]).toMatchObject({
+      model: 'pathway', op: 'findMany',
+      args: { where: { serviceId: 's1' } },
+    })
+    expect(calls[2]).toMatchObject({
+      model: 'slot', op: 'groupBy',
+      args: { where: { pathwayID: { in: [] }, serviceId: 's1' } },
+    })
+    expect(calls[3]).toMatchObject({
+      model: 'pathway', op: 'create',
+      args: {
+        data: {
+          serviceId: 's1', establishmentId: 'e1', templateID: 'pt',
+          slots: { connect: [{ id_serviceId: { id: 'sl', serviceId: 's1' } }] },
+        },
+      },
+    })
   })
 
   it('PathwayRepository.regenerate filtre chaque operation de la transaction et protege les modeles maitres', async () => {

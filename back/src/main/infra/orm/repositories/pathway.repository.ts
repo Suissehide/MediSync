@@ -81,6 +81,10 @@ class PathwayRepository implements PathwayRepositoryInterface {
     return this.prisma.pathway.findMany({
       where: this.scope,
       include: {
+        // `template` : scalaire `templateID`, relation à un seul
+        // enregistrement — même sûreté que `template`/`location`/`thematic`
+        // dans slot-template.include.ts. `slots` : voir la note en tête de
+        // fichier.
         template: true,
         slots: true,
       },
@@ -369,6 +373,10 @@ class PathwayRepository implements PathwayRepositoryInterface {
         },
       },
       include: {
+        // `template` : même sûreté que dans findAll ci-dessus (scalaire,
+        // un seul enregistrement). `slots` : voir la note en tête de
+        // fichier — le `where` ci-dessous ne filtre que par date, pas par
+        // tenant.
         template: true,
         slots: {
           where: {
