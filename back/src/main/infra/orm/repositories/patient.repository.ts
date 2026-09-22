@@ -79,7 +79,7 @@ class PatientRepository implements PatientRepositoryInterface {
             },
           },
         },
-        enrollmentIssues: true,
+        enrollmentIssues: { where: { serviceId: this.scope.serviceId } },
       },
     })
 
@@ -139,7 +139,7 @@ class PatientRepository implements PatientRepositoryInterface {
             },
           },
         },
-        enrollmentIssues: true,
+        enrollmentIssues: { where: { serviceId: this.scope.serviceId } },
       },
       orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
     })
