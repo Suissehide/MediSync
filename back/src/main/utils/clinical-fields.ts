@@ -21,17 +21,29 @@ export const CLINICAL_FIELDS: readonly string[] = [
 
 const CLINICAL_FIELD_SET: ReadonlySet<string> = new Set(CLINICAL_FIELDS)
 
-const isPlainObject = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' &&
-  value !== null &&
-  !Array.isArray(value) &&
-  !(value instanceof Date) &&
-  !Buffer.isBuffer(value)
+// Strictement les objets simples : une instance de classe est laissee telle
+// quelle. La recopier champ par champ la degraderait en objet nu, et la
+// reponse differerait alors pour les seuls roles sans acces clinique — une
+// divergence de comportement difficile a diagnostiquer. Date et Buffer sont
+// deja exclus par la meme regle, comme toute instance.
+const isPlainObject = (value: unknown): value is Record<string, unknown> => {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+  const prototype: unknown = Object.getPrototypeOf(value)
+  return prototype === Object.prototype || prototype === null
+}
 
 // Copie la charge utile en retirant les champs cliniques, à tous les niveaux
 // d'imbrication : un patient reste filtré même quand il est embarqué par un
 // rendez-vous, lui-même embarqué par un créneau, lui-même embarqué par un
 // parcours. Ne modifie jamais l'objet reçu.
+//
+// Sert dans les deux sens : en sortie, pour ne pas livrer ce que l'appelant
+// n'a pas le droit de lire ; en entrée, pour ne pas écrire ce qu'il n'a pas
+// le droit de modifier. Retirer la clé d'un corps de requête laisse la
+// colonne **inchangée** en base — Prisma ignore `undefined` dans un `update`
+// — là où l'envoyer à vide l'écraserait.
 export const withoutClinicalFields = <T>(payload: T): T => {
   if (Array.isArray(payload)) {
     return payload.map((item) => withoutClinicalFields(item)) as unknown as T

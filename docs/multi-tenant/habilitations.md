@@ -60,8 +60,15 @@ associe les permissions aux rôles. C'est cette matrice qui fait foi.
 
 Règles associées :
 
-- Les champs cliniques sont filtrés **dans les schémas de réponse du back**
-  selon `clinical:read`, pas seulement masqués côté front. Concrètement :
+- Les champs cliniques sont filtrés **par le back, dans les deux sens**, pas
+  seulement masqués côté front. En sortie, un hook de sérialisation les
+  retire de toute réponse quand l'appelant n'a pas `clinical:read` ; en
+  entrée, un hook de validation les retire du corps de la requête quand il
+  n'a pas `clinical:write`, de sorte qu'un rôle qui ne peut pas les lire ne
+  puisse pas non plus les écraser (la clé retirée laisse la colonne
+  inchangée, elle ne la vide pas). Les deux hooks sont posés sur les plugins
+  de routes, pas sur chaque route : une route nouvelle est couverte par
+  défaut. Concrètement :
   `notes`, `details` et `medicalDiagnosis` sur le patient, `transmissionNotes`
   sur un patient inscrit à un rendez-vous — y compris quand le patient est
   embarqué par une autre réponse (rendez-vous, créneau, parcours) et dans

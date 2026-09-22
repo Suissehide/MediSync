@@ -137,10 +137,13 @@ describe('scoping des repositories d etablissement', () => {
     })
   })
 
-  // Journal *de l'etablissement* : la lecture ne filtre pas sur le service
-  // courant, sans quoi les entrees ecrites depuis le contexte
-  // d'administration (gestion des membres, sans service) seraient invisibles.
-  it('ActivityLogRepository.findMany filtre par etablissement, jamais par service', async () => {
+  // Le service courant PLUS les entrees sans service : les operations de
+  // gestion des membres se font dans le contexte d'administration, qui n'a
+  // pas de service, et seraient invisibles sinon. On n'ouvre pas pour autant
+  // l'activite des autres services.
+  const serviceOrNull = { OR: [{ serviceId: 's1' }, { serviceId: null }] }
+
+  it('ActivityLogRepository.findMany filtre par etablissement, service courant ou sans service', async () => {
     const { prisma, calls } = buildFakePrisma()
     const ctx = new TenantContext()
     const repo = new ActivityLogRepository(buildContainer(prisma, ctx))
@@ -149,14 +152,12 @@ describe('scoping des repositories d etablissement', () => {
 
     expect(calls[0]).toMatchObject({
       model: 'activityLog', op: 'findMany',
-      args: { where: { establishmentId: 'e1' } },
+      args: { where: { establishmentId: 'e1', ...serviceOrNull } },
     })
-    expect(calls[0]?.args.where).not.toHaveProperty('serviceId')
     expect(calls[1]).toMatchObject({
       model: 'activityLog', op: 'count',
-      args: { where: { establishmentId: 'e1' } },
+      args: { where: { establishmentId: 'e1', ...serviceOrNull } },
     })
-    expect(calls[1]?.args.where).not.toHaveProperty('serviceId')
   })
 
   it('ActivityLogRepository.deleteOlderThan purge le tenant courant, ou toute la table hors requete', async () => {
@@ -168,9 +169,11 @@ describe('scoping des repositories d etablissement', () => {
     await ctx.run(tenant, () => repo.deleteOlderThan(date))
     await ctx.runAsSystem(() => repo.deleteOlderThan(date))
 
+    // Meme perimetre que la lecture : tout ce qui s'affiche est purgeable,
+    // et rien d'autre ne l'est.
     expect(calls[0]).toMatchObject({
       model: 'activityLog', op: 'deleteMany',
-      args: { where: { establishmentId: 'e1', serviceId: 's1', createdAt: { lt: date } } },
+      args: { where: { establishmentId: 'e1', ...serviceOrNull, createdAt: { lt: date } } },
     })
     expect(calls[1]).toMatchObject({
       model: 'activityLog', op: 'deleteMany',

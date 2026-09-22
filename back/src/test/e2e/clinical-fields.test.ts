@@ -32,6 +32,17 @@ describe('filtrage des champs cliniques selon clinical:read', () => {
       headers: { cookie },
     })
 
+  const patch = (cookie: string, url: string, payload: unknown) =>
+    testApp.app.inject({
+      method: 'PATCH',
+      url: `/e/${establishmentId}/s/${serviceId}${url}`,
+      headers: { cookie },
+      payload: payload as never,
+    })
+
+  const storedPatient = () =>
+    testDb.patient.findUniqueOrThrow({ where: { id: patientId } })
+
   beforeAll(async () => {
     await truncateAll()
     const { hash, salt } = hashPassword(password)
@@ -191,5 +202,44 @@ describe('filtrage des champs cliniques selon clinical:read', () => {
     expect(withoutClinical.rawPayload.length).toBeLessThan(
       withClinical.rawPayload.length,
     )
+  })
+
+  // Pendant du filtrage de sortie : un role qui ne peut pas lire le contenu
+  // clinique ne doit pas pouvoir l'ecraser a l'aveugle.
+  it('ignore les champs cliniques envoyes par un secretariat, sans les vider', async () => {
+    const cookie = await signIn('secretariat@b.fr')
+
+    const res = await patch(cookie, `/patient/${patientId}`, {
+      firstName: 'Jeanne',
+      notes: 'ECRASE',
+      details: 'ECRASE',
+      medicalDiagnosis: 'ECRASE',
+    })
+    expect(res.statusCode).toBe(200)
+
+    const stored = await storedPatient()
+    // Le champ non clinique est bien modifie : la requete n'a pas ete rejetee.
+    expect(stored.firstName).toBe('Jeanne')
+    // Les champs cliniques sont INCHANGES — ni ecrases par la valeur envoyee,
+    // ni vides par le retrait de la cle.
+    expect(stored.notes).toBe('NOTE-SECRETE')
+    expect(stored.details).toBe('DETAIL-SECRET')
+    expect(stored.medicalDiagnosis).toBe('DIAGNOSTIC-SECRET')
+  })
+
+  it('applique les champs cliniques envoyes par un intervenant, qui a clinical:write', async () => {
+    const cookie = await signIn('intervenant@b.fr')
+
+    const res = await patch(cookie, `/patient/${patientId}`, {
+      notes: 'NOTE-MODIFIEE',
+      medicalDiagnosis: 'DIAGNOSTIC-MODIFIE',
+    })
+    expect(res.statusCode).toBe(200)
+
+    const stored = await storedPatient()
+    expect(stored.notes).toBe('NOTE-MODIFIEE')
+    expect(stored.medicalDiagnosis).toBe('DIAGNOSTIC-MODIFIE')
+    // Non envoye : inchange.
+    expect(stored.details).toBe('DETAIL-SECRET')
   })
 })

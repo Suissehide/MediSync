@@ -25,6 +25,10 @@ const tenantRoutes: FastifyPluginAsyncZod = async (fastify) => {
   fastify.addHook('onRoute', assertRoutePermission)
   fastify.addHook('onRequest', fastify.resolveTenant)
   fastify.addHook('preHandler', fastify.enforcePermission)
+  // Retire les champs cliniques du corps de la requête quand l'appelant n'a
+  // pas `clinical:write` : il ne doit pas pouvoir écraser ce qu'il ne peut
+  // pas lire. Voir tenant.plugin.ts.
+  fastify.addHook('preValidation', fastify.stripClinicalInput)
   // Retire les champs cliniques des réponses quand l'appelant n'a pas
   // `clinical:read` (secrétariat, lecture seule). Voir tenant.plugin.ts.
   fastify.addHook('preSerialization', fastify.stripClinicalFields)
