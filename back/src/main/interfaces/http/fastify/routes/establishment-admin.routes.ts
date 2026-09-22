@@ -9,6 +9,11 @@ const establishmentAdminRoutes: FastifyPluginAsyncZod = async (fastify) => {
   fastify.addHook('onRoute', assertRoutePermission)
   fastify.addHook('onRequest', fastify.resolveEstablishmentAdmin)
   fastify.addHook('preHandler', fastify.enforcePermission)
+  // Même filtre de sortie que sous le préfixe de service : aucune route
+  // d'administration ne renvoie aujourd'hui de contenu clinique, mais
+  // `Patient` est un modèle d'établissement — une route future pourrait en
+  // renvoyer, et elle serait filtrée sans qu'on ait à y penser.
+  fastify.addHook('preSerialization', fastify.stripClinicalFields)
 
   await fastify.register(membersRouter, { prefix: '/members' })
   await fastify.register(soignantAdminRouter, { prefix: '/soignant' })

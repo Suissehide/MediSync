@@ -137,7 +137,10 @@ describe('scoping des repositories d etablissement', () => {
     })
   })
 
-  it('ActivityLogRepository.findMany filtre par etablissement et service courant', async () => {
+  // Journal *de l'etablissement* : la lecture ne filtre pas sur le service
+  // courant, sans quoi les entrees ecrites depuis le contexte
+  // d'administration (gestion des membres, sans service) seraient invisibles.
+  it('ActivityLogRepository.findMany filtre par etablissement, jamais par service', async () => {
     const { prisma, calls } = buildFakePrisma()
     const ctx = new TenantContext()
     const repo = new ActivityLogRepository(buildContainer(prisma, ctx))
@@ -146,12 +149,14 @@ describe('scoping des repositories d etablissement', () => {
 
     expect(calls[0]).toMatchObject({
       model: 'activityLog', op: 'findMany',
-      args: { where: { establishmentId: 'e1', serviceId: 's1' } },
+      args: { where: { establishmentId: 'e1' } },
     })
+    expect(calls[0]?.args.where).not.toHaveProperty('serviceId')
     expect(calls[1]).toMatchObject({
       model: 'activityLog', op: 'count',
-      args: { where: { establishmentId: 'e1', serviceId: 's1' } },
+      args: { where: { establishmentId: 'e1' } },
     })
+    expect(calls[1]?.args.where).not.toHaveProperty('serviceId')
   })
 
   it('ActivityLogRepository.deleteOlderThan purge le tenant courant, ou toute la table hors requete', async () => {

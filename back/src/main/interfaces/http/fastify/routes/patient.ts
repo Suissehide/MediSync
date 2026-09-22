@@ -2,6 +2,8 @@ import Boom from '@hapi/boom'
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod/v4'
 
+import { hasPermission } from '../../../../utils/permissions'
+
 import {
   type CreatePatientBody,
   createPatientSchema,
@@ -74,7 +76,19 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
           : [pathwayTemplateTags]
         : []
 
-      const buffer = await patientDomain.exportExcel({ search, pathwayTemplateTags: tags })
+      // L'export est un Buffer : le hook `preSerialization` qui retire les
+      // champs cliniques des réponses JSON ne s'y applique pas, il faut donc
+      // décider ici de la présence des colonnes cliniques.
+      const { serviceRole, establishmentRole } = request.tenant
+      const buffer = await patientDomain.exportExcel(
+        { search, pathwayTemplateTags: tags },
+        {
+          includeClinicalFields: hasPermission(
+            { serviceRole, establishmentRole },
+            'clinical:read',
+          ),
+        },
+      )
 
       const filename = `patients_${new Date().toISOString().slice(0, 10)}.xlsx`
       await reply
@@ -172,7 +186,7 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
-      config: { permission: 'patient:write' },
+      config: { permission: 'patient:delete' },
     },
     async (request, reply) => {
       const { patientID } = request.params

@@ -50,6 +50,7 @@ associe les permissions aux rôles. C'est cette matrice qui fait foi.
 | `referentials:write` | Thématiques, modèles de diagnostic éducatif | ✔ | | | |
 | `patient:read` | Identité, contact, contexte social, sous-dossier hors champs cliniques, planning individuel, suivi | ✔ | ✔ | ✔ | ✔ |
 | `patient:write` | Création et modification de l'identité, du contact, du social et du sous-dossier hors champs cliniques | ✔ | ✔ | ✔ | |
+| `patient:delete` | Suppression d'un dossier patient | ✔ | | | |
 | `clinical:read` | Diagnostics éducatifs, transmissions, notes et détails du sous-dossier | ✔ | ✔ | | |
 | `clinical:write` | Idem en écriture | ✔ | ✔ | | |
 | `appointment:write` | Rendez-vous, ajout et retrait de patients d'un créneau, présences, motif de refus, accompagnant | ✔ | ✔ | ✔ | |
@@ -60,7 +61,20 @@ associe les permissions aux rôles. C'est cette matrice qui fait foi.
 Règles associées :
 
 - Les champs cliniques sont filtrés **dans les schémas de réponse du back**
-  selon `clinical:read`, pas seulement masqués côté front.
+  selon `clinical:read`, pas seulement masqués côté front. Concrètement :
+  `notes`, `details` et `medicalDiagnosis` sur le patient, `transmissionNotes`
+  sur un patient inscrit à un rendez-vous — y compris quand le patient est
+  embarqué par une autre réponse (rendez-vous, créneau, parcours) et dans
+  l'export Excel de la liste des patients. `etpDecision`, `goal`,
+  `programType` et `stopReason` ne sont **pas** filtrés : ce sont des données
+  administratives du programme, que le secrétariat a de bonnes raisons de
+  voir.
+- La suppression d'un dossier patient (`patient:delete`) est réservée au
+  coordinateur : ni le secrétariat ni l'intervenant ne peuvent supprimer un
+  dossier, même s'ils peuvent le modifier.
+- La purge du journal d'activité relève d'un droit d'écriture
+  (`activity-log:write`) distinct de sa lecture : supprimer des entrées
+  d'audit ne peut pas passer pour une consultation.
 - La mise à jour d'un patient dans un créneau (`AppointmentPatient`) sépare
   les champs de présence (`appointment:write`) des transmissions
   (`clinical:write`).
@@ -69,6 +83,16 @@ Règles associées :
   l'utilisateur, l'établissement, le service et le patient.
 - Un compte se désactive (`User.deactivatedAt`), il ne se supprime pas, pour
   conserver l'imputabilité des actions passées dans les journaux.
+- `User.deactivatedAt` porte sur l'**identité globale**, partagée entre tous
+  les établissements auxquels le compte appartient. Un administrateur
+  d'établissement ne peut donc désactiver ni réactiver un compte qui possède
+  des appartenances dans plus d'un établissement : il agirait hors de son
+  périmètre. Le cas est refusé explicitement, en attendant une désactivation
+  par appartenance.
+- Toute opération de gestion des membres (rattachement, changement de rôle,
+  affectation de service, désactivation, réactivation, retrait) écrit une
+  ligne dans le journal d'activité, avec l'utilisateur qui l'a effectuée :
+  c'est la surface qui accorde les droits, elle doit être imputable.
 
 ## Permissions d'établissement et de plateforme
 
@@ -79,6 +103,7 @@ Règles associées :
 | `soignants:manage` (profils soignants de l'établissement) | ✔ | |
 | `members:manage` (rattacher un compte, affecter aux services, changer les rôles, désactiver) | ✔ | |
 | `activity-log:read` (journal d'activité de l'établissement) | ✔ | |
+| `activity-log:write` (purge des entrées du journal d'activité) | ✔ | |
 | `access-log:read` (journal des accès aux dossiers patients) | ✔ | |
 | `establishments:manage` (créer un établissement, nommer son premier administrateur) | | ✔ |
 

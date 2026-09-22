@@ -35,7 +35,8 @@ const activityLogRouter: FastifyPluginAsync = (fastify) => {
     '/cleanup',
     {
       schema: { response: { 200: cleanupResponseSchema } },
-      config: { permission: 'activity-log:read' },
+      // Supprimer des entrées d'audit n'est pas une consultation.
+      config: { permission: 'activity-log:write' },
     },
     () => activityLogDomain.cleanup(),
   )

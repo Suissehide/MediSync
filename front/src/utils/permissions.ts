@@ -12,6 +12,7 @@ export type ServicePermission =
   | 'referentials:write'
   | 'patient:read'
   | 'patient:write'
+  | 'patient:delete'
   | 'clinical:read'
   | 'clinical:write'
   | 'appointment:write'
@@ -25,6 +26,7 @@ export type EstablishmentPermission =
   | 'soignants:manage'
   | 'members:manage'
   | 'activity-log:read'
+  | 'activity-log:write'
   | 'access-log:read'
 
 export type Permission = ServicePermission | EstablishmentPermission
@@ -43,6 +45,7 @@ export const SERVICE_PERMISSIONS: Record<ServiceRole, readonly ServicePermission
     'planning:write',
     'referentials:write',
     'patient:write',
+    'patient:delete',
     'clinical:read',
     'clinical:write',
     'appointment:write',
@@ -67,6 +70,7 @@ export const ESTABLISHMENT_PERMISSIONS: Record<EstablishmentRole, readonly Estab
     'soignants:manage',
     'members:manage',
     'activity-log:read',
+    'activity-log:write',
     'access-log:read',
   ],
   MEMBER: [],

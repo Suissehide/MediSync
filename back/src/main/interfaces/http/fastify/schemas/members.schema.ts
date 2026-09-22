@@ -12,6 +12,16 @@ const assignmentSchema = z.object({
   role: serviceRoleSchema,
 })
 
+// Un membre n'a qu'un rôle par service : deux affectations au même service
+// sont une erreur de la requête, pas un conflit de base de données.
+const assignmentsSchema = z
+  .array(assignmentSchema)
+  .refine(
+    (assignments) =>
+      new Set(assignments.map((a) => a.serviceId)).size === assignments.length,
+    { message: 'Un service ne peut apparaitre qu une fois' },
+  )
+
 export const memberResponseSchema = z.object({
   id: z.string(),
   role: establishmentRoleSchema,
@@ -35,12 +45,12 @@ export const addMemberSchema = z.object({
   email: z.email(),
   role: establishmentRoleSchema,
   soignantId: z.cuid().nullable().default(null),
-  services: z.array(assignmentSchema).default([]),
+  services: assignmentsSchema.default([]),
 })
 export const updateMemberSchema = z.object({
   role: establishmentRoleSchema.optional(),
   soignantId: z.cuid().nullable().optional(),
-  services: z.array(assignmentSchema).optional(),
+  services: assignmentsSchema.optional(),
 })
 export const memberParamsSchema = z.object({ membershipId: z.cuid() })
 

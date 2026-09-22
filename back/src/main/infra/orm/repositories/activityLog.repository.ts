@@ -38,9 +38,15 @@ class ActivityLogRepository implements ActivityLogRepositoryInterface {
     userID,
     from,
   }: ActivityLogFindManyParams): Promise<ActivityLogFindManyResult> {
+    // Journal *de l'établissement* (document d'habilitations) : le filtre
+    // porte sur l'établissement seul, jamais sur le service courant. Sans
+    // cela, les entrées écrites depuis le contexte d'administration —
+    // la gestion des membres, qui n'a pas de service — seraient invisibles
+    // depuis l'écran, monté sous le préfixe de service. La lecture est de
+    // toute façon réservée à l'administrateur d'établissement
+    // (`activity-log:read`), qui a droit à tout l'établissement.
     const where = {
       ...this.tenantContext.establishmentScope(),
-      serviceId: this.tenantContext.current().serviceId ?? undefined,
       ...(action ? { action } : {}),
       ...(userID ? { userID } : {}),
       ...(from ? { createdAt: { gte: from } } : {}),

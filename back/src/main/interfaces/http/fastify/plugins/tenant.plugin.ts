@@ -1,10 +1,17 @@
 import Boom from '@hapi/boom'
-import type { FastifyInstance, FastifyRequest, onRequestAsyncHookHandler, preHandlerAsyncHookHandler } from 'fastify'
+import type {
+  FastifyInstance,
+  FastifyRequest,
+  onRequestAsyncHookHandler,
+  preHandlerAsyncHookHandler,
+  preSerializationAsyncHookHandler,
+} from 'fastify'
 import fastifyPlugin from 'fastify-plugin'
 import type { FastifyPluginAsync } from 'fastify/types/plugin'
 
 import type { UserWithMemberships } from '../../../../types/infra/orm/repositories/user.repository.interface'
 import type { Tenant } from '../../../../types/utils/tenant-context'
+import { withoutClinicalFields } from '../../../../utils/clinical-fields'
 import { hasPermission, type Permission } from '../../../../utils/permissions'
 
 declare module 'fastify' {
@@ -18,6 +25,7 @@ declare module 'fastify' {
     resolveTenant: onRequestAsyncHookHandler
     resolveEstablishmentAdmin: onRequestAsyncHookHandler
     enforcePermission: preHandlerAsyncHookHandler
+    stripClinicalFields: preSerializationAsyncHookHandler
   }
 }
 
@@ -105,6 +113,21 @@ const tenantPlugin: FastifyPluginAsync = fastifyPlugin((fastify: FastifyInstance
     }
     return Promise.resolve()
   })
+  // Filtre de sortie des champs cliniques. Posé en hook plutôt que recopié
+  // dans chaque handler : une route nouvelle qui renverrait un patient — ou
+  // qui en embarquerait un via un rendez-vous, un créneau ou un parcours —
+  // est filtrée sans que son auteur ait à y penser. C'est le même parti pris
+  // de refus par défaut que le garde `onRoute` des permissions.
+  fastify.decorate(
+    'stripClinicalFields',
+    function (this: FastifyInstance, request: FastifyRequest, _reply: unknown, payload: unknown) {
+      const { serviceRole, establishmentRole } = request.tenant
+      if (hasPermission({ serviceRole, establishmentRole }, 'clinical:read')) {
+        return Promise.resolve(payload)
+      }
+      return Promise.resolve(withoutClinicalFields(payload))
+    },
+  )
   return Promise.resolve()
 })
 

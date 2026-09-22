@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
+import { EstablishmentRole, ServiceRole } from '../../../generated/enums'
 import {
   ESTABLISHMENT_PERMISSIONS,
   hasPermission,
@@ -50,6 +51,19 @@ describe('permissions', () => {
     // jamais le role de service.
     expect(hasPermission(roles, 'activity-log:read')).toBe(true)
     expect(hasPermission({ serviceRole: 'COORDINATEUR', establishmentRole: 'MEMBER' }, 'activity-log:read')).toBe(false)
+  })
+
+  // Les roles sont declares a trois endroits : les enums Prisma, cette
+  // matrice, et le schema HTTP des membres. Ce test empeche la matrice de
+  // diverger du schema en silence — un role ajoute cote Prisma et oublie ici
+  // n'aurait aucune permission sans que rien ne le signale.
+  it('couvre exactement les roles des enums Prisma', () => {
+    expect(Object.keys(SERVICE_PERMISSIONS).sort()).toEqual(
+      Object.values(ServiceRole).sort(),
+    )
+    expect(Object.keys(ESTABLISHMENT_PERMISSIONS).sort()).toEqual(
+      Object.values(EstablishmentRole).sort(),
+    )
   })
 
   it('est identique a la copie du front', () => {

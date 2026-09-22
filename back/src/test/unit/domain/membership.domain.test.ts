@@ -5,6 +5,17 @@ import type { IocContainer } from '../../../main/types/application/ioc'
 import type { MembershipRow } from '../../../main/types/infra/orm/repositories/membership.repository.interface'
 import { TenantContext } from '../../../main/utils/tenant-context'
 
+const user = (
+  over: Partial<MembershipRow['user']> = {},
+): MembershipRow['user'] => ({
+  id: 'u1',
+  email: 'a@b.fr',
+  firstName: null,
+  lastName: null,
+  deactivatedAt: null,
+  ...over,
+})
+
 const row = (over: Partial<MembershipRow>): MembershipRow => ({
   id: 'em1',
   userId: 'u1',
@@ -12,22 +23,25 @@ const row = (over: Partial<MembershipRow>): MembershipRow => ({
   role: 'ADMIN',
   soignantId: null,
   createdAt: new Date(),
-  user: {
-    id: 'u1',
-    email: 'a@b.fr',
-    firstName: null,
-    lastName: null,
-    deactivatedAt: null,
-  },
+  user: user(),
   serviceMemberships: [],
   ...over,
 })
 
-const build = (rows: MembershipRow[], admins = 1) => {
+// `admins` est le nombre d'administrateurs **actifs** (ce que compte le
+// repository) ; `establishments` le nombre d'etablissements de l'identite
+// visee, que le domaine lit via userRepository.findByID.
+const build = (rows: MembershipRow[], admins = 1, establishments = 1) => {
   const ctx = new TenantContext()
   const calls: string[] = []
+  const events: string[] = []
   const container = {
     tenantContext: ctx,
+    appEventBus: {
+      emit: (event: string) => {
+        events.push(event)
+      },
+    },
     membershipRepository: {
       findAll: () => Promise.resolve(rows),
       findByID: (id: string) => {
@@ -56,6 +70,13 @@ const build = (rows: MembershipRow[], admins = 1) => {
         email === 'new@b.fr'
           ? Promise.resolve({ id: 'u2' })
           : Promise.reject(Boom.notFound()),
+      findByID: () =>
+        Promise.resolve({
+          establishmentMemberships: Array.from(
+            { length: establishments },
+            () => ({}),
+          ),
+        }),
       setDeactivated: () => {
         calls.push('deactivate')
         return Promise.resolve({})
@@ -68,7 +89,7 @@ const build = (rows: MembershipRow[], admins = 1) => {
           : Promise.reject(Boom.notFound()),
     },
   } as unknown as IocContainer
-  return { domain: new MembershipDomain(container), ctx, calls }
+  return { domain: new MembershipDomain(container), ctx, calls, events }
 }
 
 const asAdmin = (ctx: TenantContext, fn: () => Promise<unknown>) =>
@@ -84,9 +105,25 @@ const asAdmin = (ctx: TenantContext, fn: () => Promise<unknown>) =>
     fn,
   )
 
+// Les deux regles metier rendent toutes deux un 409 : on verrouille donc le
+// message, sans quoi un test ne saurait pas laquelle s'est declenchee.
+const LAST_ADMIN = 'Cannot remove the last administrator'
+const SELF = 'Cannot apply this action to your own account'
+const MULTI_ESTABLISHMENT =
+  'This account belongs to several establishments; its activation cannot be changed from here'
+
+const rejectsWith = (
+  promise: Promise<unknown>,
+  statusCode: number,
+  message: string,
+) =>
+  expect(promise).rejects.toMatchObject({
+    output: { payload: { statusCode, message } },
+  })
+
 describe('MembershipDomain', () => {
   it('rattache une identite existante par e-mail', async () => {
-    const { domain, ctx, calls } = build([row({})])
+    const { domain, ctx, calls, events } = build([row({})])
     await asAdmin(ctx, () =>
       domain.addByEmail({
         email: 'new@b.fr',
@@ -96,21 +133,12 @@ describe('MembershipDomain', () => {
       }),
     )
     expect(calls).toEqual(['create'])
+    expect(events).toEqual(['member.added'])
   })
 
-  it('refuse un e-mail inconnu, un service etranger, un soignant etranger', async () => {
+  it('refuse un service etranger et un soignant etranger', async () => {
     const { domain, ctx } = build([row({})])
-    await expect(
-      asAdmin(ctx, () =>
-        domain.addByEmail({
-          email: 'x@b.fr',
-          role: 'MEMBER',
-          soignantId: null,
-          services: [],
-        }),
-      ),
-    ).rejects.toMatchObject({ output: { statusCode: 404 } })
-    await expect(
+    await rejectsWith(
       asAdmin(ctx, () =>
         domain.addByEmail({
           email: 'new@b.fr',
@@ -119,7 +147,9 @@ describe('MembershipDomain', () => {
           services: [{ serviceId: 'zz', role: 'LECTURE' }],
         }),
       ),
-    ).rejects.toMatchObject({ output: { statusCode: 404 } })
+      404,
+      'Service zz not found',
+    )
     await expect(
       asAdmin(ctx, () =>
         domain.addByEmail({
@@ -132,29 +162,159 @@ describe('MembershipDomain', () => {
     ).rejects.toMatchObject({ output: { statusCode: 404 } })
   })
 
-  it('refuse de retrograder ou retirer le dernier administrateur, et de se desactiver soi-meme', async () => {
-    const { domain, ctx } = build([row({})], 1)
-    await expect(
-      asAdmin(ctx, () => domain.update('em1', { role: 'MEMBER' })),
-    ).rejects.toMatchObject({ output: { statusCode: 409 } })
-    await expect(
+  // Sinon un administrateur peut deviner quelles adresses ont un compte sur
+  // la plateforme, en lisant la difference entre les deux refus.
+  it('rend le meme refus pour une adresse inconnue et une adresse deja membre', async () => {
+    const { domain, ctx, calls } = build([row({ userId: 'u2' })])
+    const add = (email: string) =>
+      asAdmin(ctx, () =>
+        domain.addByEmail({
+          email,
+          role: 'MEMBER',
+          soignantId: null,
+          services: [],
+        }),
+      ).catch((err: { output: { payload: unknown } }) => err.output.payload)
+
+    const unknownEmail = await add('inconnu@b.fr')
+    const alreadyMember = await add('new@b.fr')
+
+    expect(unknownEmail).toEqual(alreadyMember)
+    expect(unknownEmail).toMatchObject({ statusCode: 400 })
+    expect(calls).toEqual([])
+  })
+
+  // Cible : un AUTRE administrateur, et il n'en reste qu'un actif. Seule la
+  // regle du dernier administrateur peut se declencher.
+  it('refuse de retrograder, retirer ou desactiver le dernier administrateur', async () => {
+    const build1 = () =>
+      build(
+        [row({}), row({ id: 'em2', userId: 'u2', user: user({ id: 'u2' }) })],
+        1,
+      )
+    const a = build1()
+    await rejectsWith(
+      asAdmin(a.ctx, () => a.domain.update('em2', { role: 'MEMBER' })),
+      409,
+      LAST_ADMIN,
+    )
+    const b = build1()
+    await rejectsWith(
+      asAdmin(b.ctx, () => b.domain.remove('em2')),
+      409,
+      LAST_ADMIN,
+    )
+    const c = build1()
+    await rejectsWith(
+      asAdmin(c.ctx, () => c.domain.setDeactivated('em2', true)),
+      409,
+      LAST_ADMIN,
+    )
+    expect([...a.calls, ...b.calls, ...c.calls]).toEqual([])
+  })
+
+  // Cible : soi-meme, et il reste deux administrateurs actifs. Seule la regle
+  // du soi-meme peut se declencher.
+  it('refuse de se retirer et de se desactiver soi-meme meme quand un autre administrateur subsiste', async () => {
+    const { domain, ctx, calls } = build(
+      [row({}), row({ id: 'em2', userId: 'u2', user: user({ id: 'u2' }) })],
+      2,
+    )
+    await rejectsWith(
       asAdmin(ctx, () => domain.remove('em1')),
-    ).rejects.toMatchObject({
-      output: { statusCode: 409 },
-    })
-    await expect(
+      409,
+      SELF,
+    )
+    await rejectsWith(
       asAdmin(ctx, () => domain.setDeactivated('em1', true)),
-    ).rejects.toMatchObject({ output: { statusCode: 409 } })
+      409,
+      SELF,
+    )
+    expect(calls).toEqual([])
+  })
+
+  // Contrepartie de la regle precedente : se retirer son propre role reste
+  // permis tant que l'etablissement garde un administrateur actif.
+  it('autorise l auto-retrogradation quand un autre administrateur subsiste', async () => {
+    const { domain, ctx, calls } = build(
+      [row({}), row({ id: 'em2', userId: 'u2', user: user({ id: 'u2' }) })],
+      2,
+    )
+    await asAdmin(ctx, () => domain.update('em1', { role: 'MEMBER' }))
+    expect(calls).toEqual(['update'])
   })
 
   it('autorise ces operations sur un autre membre quand il reste un administrateur', async () => {
-    const { domain, ctx, calls } = build(
-      [row({}), row({ id: 'em2', userId: 'u2', role: 'ADMIN' })],
+    const { domain, ctx, calls, events } = build(
+      [
+        row({}),
+        row({
+          id: 'em2',
+          userId: 'u2',
+          role: 'ADMIN',
+          user: user({ id: 'u2' }),
+        }),
+      ],
       2,
     )
     await asAdmin(ctx, () => domain.update('em2', { role: 'MEMBER' }))
     await asAdmin(ctx, () => domain.setDeactivated('em2', true))
     await asAdmin(ctx, () => domain.remove('em2'))
     expect(calls).toEqual(['update', 'deactivate', 'delete'])
+    expect(events).toEqual([
+      'member.updated',
+      'member.deactivated',
+      'member.removed',
+    ])
+  })
+
+  // Un compte deja desactive ne compte pas parmi les administrateurs actifs :
+  // le refuser ne protegerait rien et empecherait le menage.
+  it('n oppose pas la regle du dernier administrateur a un compte deja desactive', async () => {
+    const off = row({
+      id: 'em2',
+      userId: 'u2',
+      role: 'ADMIN',
+      user: user({ id: 'u2', deactivatedAt: new Date() }),
+    })
+    const { domain, ctx, calls } = build([row({}), off], 1)
+    await asAdmin(ctx, () => domain.remove('em2'))
+    await asAdmin(ctx, () => domain.update('em2', { role: 'MEMBER' }))
+    expect(calls).toEqual(['delete', 'update'])
+  })
+
+  // `User.deactivatedAt` est porte par l'identite globale : l'ecrire depuis
+  // un etablissement couperait aussi les autres.
+  it('refuse de changer l activation d un compte appartenant a plusieurs etablissements', async () => {
+    const other = row({
+      id: 'em2',
+      userId: 'u2',
+      role: 'MEMBER',
+      user: user({ id: 'u2' }),
+    })
+    const { domain, ctx, calls } = build([row({}), other], 2, 2)
+    await rejectsWith(
+      asAdmin(ctx, () => domain.setDeactivated('em2', true)),
+      409,
+      MULTI_ESTABLISHMENT,
+    )
+    await rejectsWith(
+      asAdmin(ctx, () => domain.setDeactivated('em2', false)),
+      409,
+      MULTI_ESTABLISHMENT,
+    )
+    expect(calls).toEqual([])
+  })
+
+  it('journalise la reactivation', async () => {
+    const other = row({
+      id: 'em2',
+      userId: 'u2',
+      role: 'MEMBER',
+      user: user({ id: 'u2' }),
+    })
+    const { domain, ctx, events } = build([row({}), other], 2)
+    await asAdmin(ctx, () => domain.setDeactivated('em2', false))
+    expect(events).toEqual(['member.reactivated'])
   })
 })
