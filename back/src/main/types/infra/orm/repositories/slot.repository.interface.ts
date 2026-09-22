@@ -23,16 +23,18 @@ export type SlotDTORepo = SlotEntityRepo & {
   slotTemplate: SlotTemplateWithSoignantsRepo
   appointments: AppointmentWithPatientsRepo[]
 }
+// Le repository pose serviceId/establishmentId (tenant) lui-même : l'appelant
+// ne les fournit pas.
 export type SlotCreateEntityRepo = Omit<
   Prisma.SlotUncheckedCreateInput,
-  'appointments'
+  'appointments' | 'establishmentId' | 'serviceId'
 > & {
   pathwayID?: string
   slotTemplateID: string
 }
 export type SlotUpdateEntityRepo = Omit<
   Prisma.SlotUncheckedUpdateInput,
-  'appointments'
+  'appointments' | 'establishmentId' | 'serviceId'
 > & {
   pathwayID?: string
   slotTemplate?: SlotTemplateUpdateEntityRepo & {

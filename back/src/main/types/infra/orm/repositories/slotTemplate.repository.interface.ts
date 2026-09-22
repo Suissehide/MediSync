@@ -5,6 +5,7 @@ import type {
 import type { LocationEntityRepo } from './location.repository.interface'
 import type { PathwayTemplateEntityRepo } from './pathwayTemplate.repository.interface'
 import type { SoignantEntityRepo } from './soignant.repository.interface'
+import type { ThematicEntityRepo } from './thematic.repository.interface'
 
 export type SlotTemplateEntityRepo = SlotTemplate
 export type SlotTemplateWithSoignantsRepo = SlotTemplateEntityRepo & {
@@ -14,6 +15,7 @@ export type SlotTemplateDTORepo = SlotTemplateEntityRepo & {
   soignants: SoignantEntityRepo[]
   template: PathwayTemplateEntityRepo | null
   location: LocationEntityRepo | null
+  thematic: ThematicEntityRepo | null
 }
 // Le repository pose serviceId/establishmentId (tenant) lui-même : l'appelant
 // ne les fournit pas.
