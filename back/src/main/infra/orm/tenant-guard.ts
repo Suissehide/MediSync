@@ -36,7 +36,9 @@ export const ESTABLISHMENT_MODELS: readonly string[] = [
   'ActivityLog',
 ]
 
-// Relations dont les créations imbriquées sont vérifiées (parent → champ → enfant).
+// Relations dont les écritures imbriquées sont vérifiées (parent → champ → enfant). C'est une
+// liste blanche qui EXIGE : toute écriture imbriquée sur une relation absente d'ici est refusée
+// (voir assertNestedRelations), plutôt que laissée sans contrôle.
 const NESTED_RELATIONS: Record<string, Record<string, string>> = {
   Appointment: { appointmentPatients: 'AppointmentPatient' },
   Slot: { appointments: 'Appointment' },
@@ -49,11 +51,31 @@ const NESTED_RELATIONS: Record<string, Record<string, string>> = {
   Patient: { appointmentPatients: 'AppointmentPatient', diagnostics: 'DiagnosticEducatif' },
 }
 
+// Relations d'un modèle global qui exposent des données de tenant. Un include/select dessus ne
+// peut être laissé passer que sur une opération ciblant une seule ligne (findUnique(OrThrow)) :
+// c'est la seule façon de garantir que les enfants renvoyés appartiennent à un seul tenant.
+const GLOBAL_TENANT_RELATIONS: Record<string, readonly string[]> = {
+  User: ['soignant', 'establishmentMemberships'],
+}
+const UNIQUE_READ_OPERATIONS = new Set(['findUnique', 'findUniqueOrThrow'])
+
 const READ_OPERATIONS = new Set([
   'findMany', 'findFirst', 'findFirstOrThrow', 'findUnique', 'findUniqueOrThrow',
-  'update', 'updateMany', 'delete', 'deleteMany', 'upsert', 'count', 'aggregate', 'groupBy',
+  'update', 'updateMany', 'updateManyAndReturn',
+  'delete', 'deleteMany', 'upsert', 'count', 'aggregate', 'groupBy',
 ])
-const WRITE_OPERATIONS = new Set(['create', 'createMany', 'upsert'])
+const WRITE_OPERATIONS = new Set(['create', 'createMany', 'createManyAndReturn', 'upsert'])
+// Sous-ensemble des opérations de lecture dont le `data` peut déplacer une ligne d'un tenant à
+// l'autre (voir assertNoTenantMove). Le `update` d'un upsert est traité séparément : sa clé
+// (args.update) ne coïncide pas avec args.data.
+const UPDATE_OPERATIONS = new Set(['update', 'updateMany', 'updateManyAndReturn'])
+
+// Verbes Prisma d'écriture imbriquée : la présence de l'un d'eux dans la valeur d'un champ
+// signale une relation à vérifier plutôt qu'une simple colonne scalaire.
+const WRITE_VERBS = [
+  'create', 'createMany', 'connectOrCreate', 'connect', 'set',
+  'update', 'updateMany', 'upsert', 'delete', 'deleteMany', 'disconnect',
+]
 
 type Family = 'service' | 'establishment' | 'global'
 
@@ -71,7 +93,12 @@ type Dict = Record<string, unknown>
 const isDict = (value: unknown): value is Dict =>
   typeof value === 'object' && value !== null && !Array.isArray(value) && !(value instanceof Date)
 
-// Lit `field` au premier niveau du where, ou dans une clé composite `id_<field>`.
+// Lit `field` au premier niveau du where, ou dans une clé composite (convention Prisma : les
+// clés uniques composées concatènent leurs champs avec `_`, ex. `id_serviceId`,
+// `appointmentId_patientId`). On exige cette `_` avant de descendre dans une valeur objet :
+// aucun nom de champ ou de relation de ce schéma n'en contient, ce qui exclut naturellement les
+// opérateurs logiques (OR/AND/NOT) et les filtres de relation (`{ slot: { serviceId: … } }`),
+// qui doivent continuer à être refusés faute de filtre direct sur la ligne elle-même.
 const whereValue = (where: unknown, field: string): unknown => {
   if (!isDict(where)) {
     return undefined
@@ -79,8 +106,12 @@ const whereValue = (where: unknown, field: string): unknown => {
   if (field in where) {
     return where[field]
   }
-  const composite = where[`id_${field}`]
-  return isDict(composite) ? composite[field] : undefined
+  for (const [key, value] of Object.entries(where)) {
+    if (key.includes('_') && isDict(value) && field in value) {
+      return value[field]
+    }
+  }
+  return undefined
 }
 
 const expectedValue = (store: TenantStore, field: string, model: string, operation: string): string => {
@@ -88,16 +119,44 @@ const expectedValue = (store: TenantStore, field: string, model: string, operati
     throw new TenantScopeMissingError(model, operation, field)
   }
   const value = field === 'serviceId' ? store.tenant.serviceId : store.tenant.establishmentId
-  if (value === null) {
+  // Refuse toute valeur qui n'est pas une chaîne non vide : un champ absent plutôt qu'à `null`
+  // ne doit jamais se comparer par accident à un `where` sans filtre (les deux valant
+  // `undefined`).
+  if (typeof value !== 'string' || value.length === 0) {
     throw new TenantScopeMissingError(model, operation, field)
   }
   return value
 }
 
-const assertWhere = (model: string, operation: string, args: Dict, field: string, store: TenantStore): void => {
+const assertWhereLike = (
+  model: string,
+  operation: string,
+  where: unknown,
+  field: string,
+  store: TenantStore,
+): void => {
   const expected = expectedValue(store, field, model, operation)
-  if (whereValue(args.where, field) !== expected) {
+  if (whereValue(where, field) !== expected) {
     throw new TenantScopeMissingError(model, operation, field)
+  }
+}
+
+const assertWhere = (model: string, operation: string, args: Dict, field: string, store: TenantStore): void =>
+  assertWhereLike(model, operation, args.where, field, store)
+
+// Empêche un update de déplacer une ligne d'un tenant à l'autre : si serviceId ou
+// establishmentId figure dans les données, sa valeur doit être celle du tenant courant. Absent,
+// c'est le cas normal (l'update ne touche pas à ces colonnes) et on laisse passer.
+const assertNoTenantMove = (model: string, operation: string, data: unknown, store: TenantStore): void => {
+  if (!isDict(data)) {
+    return
+  }
+  const family = familyOf(model)
+  if (family === 'service' && 'serviceId' in data && data.serviceId !== expectedValue(store, 'serviceId', model, operation)) {
+    throw new TenantScopeMissingError(model, operation, 'serviceId')
+  }
+  if (family !== 'global' && 'establishmentId' in data && data.establishmentId !== expectedValue(store, 'establishmentId', model, operation)) {
+    throw new TenantScopeMissingError(model, operation, 'establishmentId')
   }
 }
 
@@ -112,20 +171,87 @@ const assertRowScope = (model: string, operation: string, row: Dict, store: Tena
   }
 }
 
-// Redescend dans les créations imbriquées déclarées par NESTED_RELATIONS.
-const assertNestedRelations = (model: string, operation: string, row: Dict, store: TenantStore): void => {
-  const relations = NESTED_RELATIONS[model] ?? {}
-  for (const [relationField, childModel] of Object.entries(relations)) {
-    const relation = row[relationField]
-    if (!isDict(relation)) {
+const isNestedWrite = (value: unknown): value is Dict =>
+  isDict(value) && WRITE_VERBS.some((verb) => verb in value)
+
+// `connect` / `set` : chaque entrée doit porter, directement ou via une clé composite, la
+// colonne de tenant de la famille de l'enfant — sinon on pourrait rattacher à la ligne courante
+// un enregistrement d'un autre tenant qui existe déjà.
+const assertConnectEntries = (
+  model: string,
+  operation: string,
+  value: unknown,
+  field: string,
+  store: TenantStore,
+): void => {
+  const entries = Array.isArray(value) ? value : [value]
+  for (const entry of entries) {
+    assertWhereLike(model, operation, entry, field, store)
+  }
+}
+
+// `connectOrCreate` : la branche `create` est vérifiée comme un create (récursif, colonnes
+// exigées), la branche `where` comme un connect (colonne de tenant exigée).
+const assertConnectOrCreate = (
+  model: string,
+  operation: string,
+  value: unknown,
+  field: string,
+  store: TenantStore,
+): void => {
+  const entries = Array.isArray(value) ? value : [value]
+  for (const entry of entries) {
+    if (!isDict(entry)) {
       continue
     }
-    if ('create' in relation) {
-      assertData(childModel, `${operation}>${relationField}.create`, relation.create, store)
+    if ('create' in entry) {
+      assertData(model, `${operation}.create`, entry.create, store)
     }
-    if (isDict(relation.createMany) && 'data' in relation.createMany) {
-      assertData(childModel, `${operation}>${relationField}.createMany`, relation.createMany.data, store)
+    assertWhereLike(model, `${operation}.where`, entry.where, field, store)
+  }
+}
+
+// Vérifie une écriture imbriquée déclarée, verbe par verbe.
+const assertNestedWrite = (childModel: string, operation: string, value: Dict, store: TenantStore): void => {
+  const field = familyOf(childModel) === 'service' ? 'serviceId' : 'establishmentId'
+  if ('create' in value) {
+    assertData(childModel, `${operation}.create`, value.create, store)
+  }
+  if (isDict(value.createMany) && 'data' in value.createMany) {
+    assertData(childModel, `${operation}.createMany`, value.createMany.data, store)
+  }
+  if ('connectOrCreate' in value) {
+    assertConnectOrCreate(childModel, `${operation}.connectOrCreate`, value.connectOrCreate, field, store)
+  }
+  if ('connect' in value) {
+    assertConnectEntries(childModel, `${operation}.connect`, value.connect, field, store)
+  }
+  if ('set' in value) {
+    assertConnectEntries(childModel, `${operation}.set`, value.set, field, store)
+  }
+  // update / updateMany / upsert / delete / deleteMany / disconnect imbriqués : aucun contrôle
+  // supplémentaire ici. Prisma ne peut les résoudre que parmi les enfants déjà rattachés à la
+  // ligne parente (par la relation, pas par un identifiant libre), et le `where` de cette ligne
+  // parente est déjà vérifié ailleurs — ces enfants sont donc déjà dans le bon tenant.
+}
+
+// Toute écriture imbriquée doit porter sur une relation déclarée dans NESTED_RELATIONS : une
+// relation absente de la liste est refusée plutôt que laissée sans contrôle.
+const assertNestedRelations = (model: string, operation: string, row: Dict, store: TenantStore): void => {
+  const relations = NESTED_RELATIONS[model] ?? {}
+  for (const [relationField, value] of Object.entries(row)) {
+    if (!isNestedWrite(value)) {
+      continue
     }
+    const childModel = relations[relationField]
+    if (!childModel) {
+      throw new TenantScopeMissingError(
+        model,
+        operation,
+        `relation '${relationField}' non déclarée — l'ajouter à NESTED_RELATIONS['${model}']`,
+      )
+    }
+    assertNestedWrite(childModel, `${operation}>${relationField}`, value, store)
   }
 }
 
@@ -140,6 +266,28 @@ const assertData = (model: string, operation: string, data: unknown, store: Tena
   }
 }
 
+const includedRelationKeys = (value: unknown): string[] =>
+  isDict(value) ? Object.entries(value).filter(([, included]) => included !== false).map(([key]) => key) : []
+
+// Un include/select depuis un modèle global qui touche une relation de tenant n'est sûr que sur
+// une opération à une seule ligne (findUnique/findUniqueOrThrow) : c'est la seule garantie que
+// les données incluses appartiennent à un seul tenant.
+const assertGlobalInclude = (model: string, operation: string, args: Dict): void => {
+  const tenantRelations = GLOBAL_TENANT_RELATIONS[model]
+  if (!tenantRelations) {
+    return
+  }
+  const requested = [...includedRelationKeys(args.include), ...includedRelationKeys(args.select)]
+  const touchesTenantData = requested.some((key) => tenantRelations.includes(key))
+  if (touchesTenantData && !UNIQUE_READ_OPERATIONS.has(operation)) {
+    throw new TenantScopeMissingError(
+      model,
+      operation,
+      'include/select sur une relation de tenant hors findUnique(OrThrow)',
+    )
+  }
+}
+
 // Vérifie qu'une opération Prisma porte le filtre de tenant attendu.
 // Pure : testable sans client Prisma.
 export const assertTenantScope = (
@@ -149,6 +297,7 @@ export const assertTenantScope = (
   const { model, operation, args } = input
   const family = familyOf(model)
   if (family === 'global') {
+    assertGlobalInclude(model, operation, args)
     return
   }
   if (!store) {
@@ -157,13 +306,26 @@ export const assertTenantScope = (
   if (store.kind === 'system') {
     return
   }
-  const field = family === 'service' ? 'serviceId' : 'establishmentId'
-  if (READ_OPERATIONS.has(operation)) {
-    assertWhere(model, operation, args, field, store)
+  const isRead = READ_OPERATIONS.has(operation)
+  const isWrite = WRITE_OPERATIONS.has(operation)
+  // Une opération qui n'appartient à aucun des deux ensembles connus est refusée : mieux vaut
+  // bloquer une opération légitime que laisser filer une opération future non vérifiée.
+  if (!isRead && !isWrite) {
+    throw new TenantScopeMissingError(model, operation, 'operation')
   }
-  if (WRITE_OPERATIONS.has(operation)) {
+  const field = family === 'service' ? 'serviceId' : 'establishmentId'
+  if (isRead) {
+    assertWhere(model, operation, args, field, store)
+    if (UPDATE_OPERATIONS.has(operation)) {
+      assertNoTenantMove(model, operation, args.data, store)
+    }
+  }
+  if (isWrite) {
     const data = operation === 'upsert' ? args.create : args.data
     assertData(model, operation, data, store)
+  }
+  if (operation === 'upsert') {
+    assertNoTenantMove(model, `${operation}.update`, args.update, store)
   }
 }
 

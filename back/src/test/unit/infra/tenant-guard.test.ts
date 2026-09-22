@@ -119,4 +119,248 @@ describe('assertTenantScope', () => {
       assertTenantScope({ model: 'ActivityLog', operation: 'deleteMany', args: { where: {} } }, { kind: 'system' }),
     ).not.toThrow()
   })
+
+  // Correction 1 : createManyAndReturn / updateManyAndReturn, et refus des operations inconnues.
+  it('soumet createManyAndReturn et updateManyAndReturn aux memes exigences que leurs equivalents', () => {
+    expect(() =>
+      assertTenantScope({ model: 'Slot', operation: 'updateManyAndReturn', args: { where: {} } }, store),
+    ).toThrow(TenantScopeMissingError)
+    expect(() =>
+      assertTenantScope(
+        { model: 'Slot', operation: 'updateManyAndReturn', args: { where: { serviceId: 's1' } } },
+        store,
+      ),
+    ).not.toThrow()
+    expect(() =>
+      assertTenantScope(
+        { model: 'Todo', operation: 'createManyAndReturn', args: { data: [{ title: 't' }] } },
+        store,
+      ),
+    ).toThrow(TenantScopeMissingError)
+    expect(() =>
+      assertTenantScope(
+        {
+          model: 'Todo',
+          operation: 'createManyAndReturn',
+          args: { data: [{ title: 't', serviceId: 's1', establishmentId: 'e1' }] },
+        },
+        store,
+      ),
+    ).not.toThrow()
+  })
+
+  it('refuse une operation inconnue sur un modele de tenant', () => {
+    expect(() =>
+      assertTenantScope({ model: 'Slot', operation: 'inconnue', args: {} }, store),
+    ).toThrow(TenantScopeMissingError)
+  })
+
+  // Correction 2 : relations imbriquees non declarees refusees, verbes d'ecriture imbriquee.
+  it('refuse une relation imbriquee non declaree, accepte une relation declaree', () => {
+    const withUndeclared = {
+      startDate: new Date(),
+      serviceId: 's1',
+      establishmentId: 'e1',
+      slot: { create: { startDate: new Date(), serviceId: 's1', establishmentId: 'e1' } },
+    }
+    expect(() =>
+      assertTenantScope({ model: 'Appointment', operation: 'create', args: { data: withUndeclared } }, store),
+    ).toThrow(TenantScopeMissingError)
+    const withDeclared = {
+      startDate: new Date(),
+      serviceId: 's1',
+      establishmentId: 'e1',
+      appointmentPatients: { create: [{ patientId: 'p', serviceId: 's1', establishmentId: 'e1' }] },
+    }
+    expect(() =>
+      assertTenantScope({ model: 'Appointment', operation: 'create', args: { data: withDeclared } }, store),
+    ).not.toThrow()
+  })
+
+  it('verifie connect et connectOrCreate, laisse passer un update imbrique', () => {
+    const base = { startDate: new Date(), serviceId: 's1', establishmentId: 'e1' }
+
+    const bareConnect = { ...base, appointmentPatients: { connect: { id: 'ap1' } } }
+    expect(() =>
+      assertTenantScope({ model: 'Appointment', operation: 'create', args: { data: bareConnect } }, store),
+    ).toThrow(TenantScopeMissingError)
+
+    const compositeConnect = {
+      ...base,
+      appointmentPatients: { connect: { id_serviceId: { id: 'ap1', serviceId: 's1' } } },
+    }
+    expect(() =>
+      assertTenantScope({ model: 'Appointment', operation: 'create', args: { data: compositeConnect } }, store),
+    ).not.toThrow()
+
+    const connectOrCreateOk = {
+      ...base,
+      appointmentPatients: {
+        connectOrCreate: {
+          where: { id_serviceId: { id: 'ap1', serviceId: 's1' } },
+          create: { patientId: 'p', serviceId: 's1', establishmentId: 'e1' },
+        },
+      },
+    }
+    expect(() =>
+      assertTenantScope({ model: 'Appointment', operation: 'create', args: { data: connectOrCreateOk } }, store),
+    ).not.toThrow()
+
+    const connectOrCreateBadCreate = {
+      ...base,
+      appointmentPatients: {
+        connectOrCreate: {
+          where: { id_serviceId: { id: 'ap1', serviceId: 's1' } },
+          create: { patientId: 'p' },
+        },
+      },
+    }
+    expect(() =>
+      assertTenantScope(
+        { model: 'Appointment', operation: 'create', args: { data: connectOrCreateBadCreate } },
+        store,
+      ),
+    ).toThrow(TenantScopeMissingError)
+
+    const connectOrCreateBadWhere = {
+      ...base,
+      appointmentPatients: {
+        connectOrCreate: {
+          where: { id: 'ap1' },
+          create: { patientId: 'p', serviceId: 's1', establishmentId: 'e1' },
+        },
+      },
+    }
+    expect(() =>
+      assertTenantScope(
+        { model: 'Appointment', operation: 'create', args: { data: connectOrCreateBadWhere } },
+        store,
+      ),
+    ).toThrow(TenantScopeMissingError)
+
+    const nestedUpdate = {
+      ...base,
+      appointmentPatients: { update: { where: { id: 'ap1' }, data: { patientId: 'p2' } } },
+    }
+    expect(() =>
+      assertTenantScope({ model: 'Appointment', operation: 'create', args: { data: nestedUpdate } }, store),
+    ).not.toThrow()
+  })
+
+  // Correction 3 : include/select sur une relation de tenant depuis un modele global.
+  it('refuse un include de relation de tenant hors findUnique(OrThrow)', () => {
+    expect(() =>
+      assertTenantScope(
+        { model: 'User', operation: 'findMany', args: { include: { soignant: true } } },
+        store,
+      ),
+    ).toThrow(TenantScopeMissingError)
+    expect(() =>
+      assertTenantScope(
+        { model: 'User', operation: 'findUniqueOrThrow', args: { include: { soignant: true } } },
+        store,
+      ),
+    ).not.toThrow()
+    expect(() =>
+      assertTenantScope({ model: 'User', operation: 'findMany', args: {} }, store),
+    ).not.toThrow()
+  })
+
+  // Correction 4 : deplacement d'une ligne vers un autre tenant via update.
+  it('refuse un update qui change le tenant de la ligne', () => {
+    expect(() =>
+      assertTenantScope(
+        {
+          model: 'Patient',
+          operation: 'update',
+          args: { where: { establishmentId: 'e1' }, data: { establishmentId: 'autre' } },
+        },
+        store,
+      ),
+    ).toThrow(TenantScopeMissingError)
+    expect(() =>
+      assertTenantScope(
+        {
+          model: 'Patient',
+          operation: 'update',
+          args: { where: { establishmentId: 'e1' }, data: { name: 'x' } },
+        },
+        store,
+      ),
+    ).not.toThrow()
+  })
+
+  it('verifie les deux branches d un upsert', () => {
+    expect(() =>
+      assertTenantScope(
+        {
+          model: 'Slot',
+          operation: 'upsert',
+          args: {
+            where: { id_serviceId: { id: 'x', serviceId: 's1' } },
+            create: { startDate: new Date(), serviceId: 's1', establishmentId: 'e1' },
+            update: { establishmentId: 'e1' },
+          },
+        },
+        store,
+      ),
+    ).not.toThrow()
+    expect(() =>
+      assertTenantScope(
+        {
+          model: 'Slot',
+          operation: 'upsert',
+          args: {
+            where: { id_serviceId: { id: 'x', serviceId: 's1' } },
+            create: { startDate: new Date() },
+            update: {},
+          },
+        },
+        store,
+      ),
+    ).toThrow(TenantScopeMissingError)
+    expect(() =>
+      assertTenantScope(
+        {
+          model: 'Slot',
+          operation: 'upsert',
+          args: {
+            where: { id_serviceId: { id: 'x', serviceId: 's1' } },
+            create: { startDate: new Date(), serviceId: 's1', establishmentId: 'e1' },
+            update: { establishmentId: 'autre' },
+          },
+        },
+        store,
+      ),
+    ).toThrow(TenantScopeMissingError)
+  })
+
+  // Correction 5 : durcissements de whereValue / expectedValue.
+  it('refuse un where sans filtre direct : valeur indirecte, operateur logique, cle composite incomplete', () => {
+    expect(() =>
+      assertTenantScope({ model: 'Slot', operation: 'findMany', args: { where: { serviceId: undefined } } }, store),
+    ).toThrow(TenantScopeMissingError)
+    expect(() =>
+      assertTenantScope(
+        { model: 'Slot', operation: 'findMany', args: { where: { serviceId: { in: ['s1'] } } } },
+        store,
+      ),
+    ).toThrow(TenantScopeMissingError)
+    expect(() =>
+      assertTenantScope(
+        { model: 'Slot', operation: 'findMany', args: { where: { OR: [{ serviceId: 's1' }] } } },
+        store,
+      ),
+    ).toThrow(TenantScopeMissingError)
+    expect(() =>
+      assertTenantScope(
+        {
+          model: 'AppointmentPatient',
+          operation: 'findMany',
+          args: { where: { appointmentId_patientId: { appointmentId: 'a1', patientId: 'p1' } } },
+        },
+        store,
+      ),
+    ).toThrow(TenantScopeMissingError)
+  })
 })
