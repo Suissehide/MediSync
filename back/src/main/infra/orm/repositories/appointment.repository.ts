@@ -7,8 +7,8 @@ import type {
   AppointmentUpdateEntityRepo,
 } from '../../../types/infra/orm/repositories/appointment.repository.interface'
 import type {
+  AppointmentPatientAddEntityRepo,
   AppointmentPatientEntityRepo,
-  AppointmentPatientUpdateEntityRepo,
 } from '../../../types/infra/orm/repositories/appointmentPatient.repository.interface'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { TenantContextInterface } from '../../../types/utils/tenant-context'
@@ -204,7 +204,7 @@ class AppointmentRepository implements AppointmentRepositoryInterface {
   }
 
   async addPatientToAppointment(
-    appointmentPatientUpdateParams: AppointmentPatientUpdateEntityRepo,
+    appointmentPatientUpdateParams: AppointmentPatientAddEntityRepo,
   ): Promise<AppointmentPatientEntityRepo> {
     try {
       const {

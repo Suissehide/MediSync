@@ -1,5 +1,6 @@
 import type { Appointment, Prisma } from '../../../../../generated/client'
 import type {
+  AppointmentPatientAddEntityRepo,
   AppointmentPatientEntityRepo,
   AppointmentPatientUpdateEntityRepo,
 } from './appointmentPatient.repository.interface'
@@ -44,7 +45,7 @@ export interface AppointmentRepositoryInterface {
     appointmentUpdateParams: AppointmentUpdateEntityRepo,
   ) => Promise<AppointmentEntityRepo>
   addPatientToAppointment: (
-    appointmentPatientUpdateParams: AppointmentPatientUpdateEntityRepo,
+    appointmentPatientUpdateParams: AppointmentPatientAddEntityRepo,
   ) => Promise<AppointmentPatientEntityRepo>
   delete: (appointmentID: string) => Promise<AppointmentEntityRepo>
   deleteOrphanedByIds: (appointmentIDs: string[]) => Promise<number>

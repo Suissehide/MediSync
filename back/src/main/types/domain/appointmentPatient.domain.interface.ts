@@ -8,7 +8,10 @@ export type AppointmentPatientWithAppointmentDomain =
     appointment: AppointmentEntityDomain
   }
 
+// Miroir du type repository : `patientID` y est requis pour la même
+// raison (jamais omis par les schémas HTTP correspondants), `id` reste
+// optionnel (nouveau participant vs participant déjà inscrit).
 export type AppointmentPatientUpdateEntityDomain = Pick<
   AppointmentPatientUpdateEntityRepo,
   'accompanying' | 'status' | 'rejectionReason' | 'transmissionNotes'
-> & { id?: string; patientID?: string }
+> & { id?: string; patientID: string }
