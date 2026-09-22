@@ -9,13 +9,20 @@ import { TenantContext } from '../../../main/utils/tenant-context'
 type Call = { model: string; op: string; args: Record<string, unknown> }
 
 // Faux client : chaque `prisma.<model>.<op>(args)` est enregistré et renvoie
-// une valeur neutre. `$transaction(fn)` rappelle fn avec le même faux client.
-export const buildFakePrisma = () => {
+// une valeur neutre (ou celle fournie dans `responses`, indexée par
+// `<model>.<op>`, pour les tests qui ont besoin de faire boucler le
+// repository sur un résultat précis). `$transaction(fn)` rappelle fn avec le
+// même faux client.
+export const buildFakePrisma = (responses: Partial<Record<string, unknown>> = {}) => {
   const calls: Call[] = []
   const handler = (model: string) =>
     new Proxy({}, {
       get: (_t, op: string) => (args: Record<string, unknown>) => {
         calls.push({ model, op, args })
+        const key = `${model}.${op}`
+        if (key in responses) {
+          return Promise.resolve(responses[key])
+        }
         return Promise.resolve(op === 'findMany' ? [] : op === 'count' ? 0 : { id: 'x', ...(args.data as object) })
       },
     })
@@ -132,5 +139,86 @@ describe('scoping des repositories d etablissement', () => {
       args: { where: { createdAt: { lt: date } } },
     })
     expect(calls[1].args.where).not.toHaveProperty('establishmentId')
+  })
+})
+
+describe('PatientRepository couvre les methodes de parcours', () => {
+  it('getPathwaysForPatient filtre les parcours par service et les priorites par patient+service', async () => {
+    const { prisma, calls } = buildFakePrisma()
+    const ctx = new TenantContext()
+    const repo = new PatientRepository(buildContainer(prisma, ctx))
+
+    await ctx.run(tenant, () => repo.getPathwaysForPatient('p1'))
+
+    expect(calls[0]).toMatchObject({
+      model: 'pathway', op: 'findMany',
+      args: {
+        where: { serviceId: 's1', establishmentId: 'e1' },
+        include: { patientPriorities: { where: { patientID: 'p1', serviceId: 's1' } } },
+      },
+    })
+  })
+
+  it('setPathwayPriorities supprime et recree les priorites avec les deux colonnes de tenant', async () => {
+    const { prisma, calls } = buildFakePrisma()
+    const ctx = new TenantContext()
+    const repo = new PatientRepository(buildContainer(prisma, ctx))
+
+    await ctx.run(tenant, () => repo.setPathwayPriorities('p1', ['pw1', 'pw2']))
+
+    expect(calls[0]).toMatchObject({
+      model: 'patientPathwayPriority', op: 'deleteMany',
+      args: { where: { patientID: 'p1', serviceId: 's1', establishmentId: 'e1' } },
+    })
+    expect(calls[1]).toMatchObject({
+      model: 'patientPathwayPriority', op: 'createMany',
+      args: {
+        data: [
+          { patientID: 'p1', pathwayID: 'pw1', priority: 0, serviceId: 's1', establishmentId: 'e1' },
+          { patientID: 'p1', pathwayID: 'pw2', priority: 1, serviceId: 's1', establishmentId: 'e1' },
+        ],
+      },
+    })
+  })
+
+  it('countAppointmentsInPathway compte avec le filtre de service', async () => {
+    const { prisma, calls } = buildFakePrisma()
+    const ctx = new TenantContext()
+    const repo = new PatientRepository(buildContainer(prisma, ctx))
+
+    await ctx.run(tenant, () => repo.countAppointmentsInPathway('p1', 'pw1'))
+
+    expect(calls[0]).toMatchObject({
+      model: 'appointmentPatient', op: 'count',
+      args: { where: { serviceId: 's1', establishmentId: 'e1', patientId: 'p1' } },
+    })
+  })
+
+  it('removeFromPathway filtre la recherche par service et supprime via les cles composites id_serviceId', async () => {
+    // Un seul rendez-vous, avec ce patient comme unique participant : la
+    // branche "dernier patient" doit aussi supprimer le rendez-vous.
+    const { prisma, calls } = buildFakePrisma({
+      'appointmentPatient.findMany': [
+        { id: 'ap1', appointment: { id: 'appt1', appointmentPatients: [{ id: 'ap1' }] } },
+      ],
+    })
+    const ctx = new TenantContext()
+    const repo = new PatientRepository(buildContainer(prisma, ctx))
+
+    const result = await ctx.run(tenant, () => repo.removeFromPathway('p1', 'pw1'))
+
+    expect(calls[0]).toMatchObject({
+      model: 'appointmentPatient', op: 'findMany',
+      args: { where: { serviceId: 's1', establishmentId: 'e1', patientId: 'p1' } },
+    })
+    expect(calls[1]).toMatchObject({
+      model: 'appointmentPatient', op: 'delete',
+      args: { where: { id_serviceId: { id: 'ap1', serviceId: 's1' } } },
+    })
+    expect(calls[2]).toMatchObject({
+      model: 'appointment', op: 'delete',
+      args: { where: { id_serviceId: { id: 'appt1', serviceId: 's1' } } },
+    })
+    expect(result).toEqual({ deletedAppointments: 1, removedFromGroup: 0 })
   })
 })
