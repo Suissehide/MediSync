@@ -133,9 +133,10 @@
       "command": "rimraf .wireit"
     },
     "cover": {
-      "command": "npm run with:dotenv -- -e .env.test -- jest --coverage --runInBand -c src/test/jest.config.ts",
+      "command": "npm run with:dotenv -- -e .env.test.local -e .env.test -- jest --coverage --runInBand -c src/test/jest.config.ts",
       "files": [
         "src/**",
+        ".env.test.local",
         ".env.test"
       ],
       "output": [
@@ -173,11 +174,12 @@
       "command": "npm run with:open dist/coverage/all/index.html"
     },
     "cover:e2e": {
-      "command": "npm run with:dotenv -- -e .env.test -- jest --coverage --runInBand -c src/test/jest.config.ts --selectProjects e2e",
+      "command": "npm run with:dotenv -- -e .env.test.local -e .env.test -- jest --coverage --runInBand -c src/test/jest.config.ts --selectProjects e2e",
       "files": [
         "src/main/**",
         "src/test/e2e/**",
         "src/test/*",
+        ".env.test.local",
         ".env.test"
       ],
       "output": [
@@ -276,9 +278,10 @@
       ]
     },
     "prisma:migrate:deploy:test": {
-      "command": "npm run with:dotenv -- -e .env.test prisma migrate deploy",
+      "command": "npm run with:dotenv -- -e .env.test.local -e .env.test -- prisma migrate deploy",
       "files": [
         "prisma/migrations/**",
+        ".env.test.local",
         ".env.test"
       ],
       "output": []
@@ -335,10 +338,11 @@
       ]
     },
     "test": {
-      "command": "npm run with:dotenv -- -e .env.test -- jest --runInBand -c src/test/jest.config.ts",
+      "command": "npm run with:dotenv -- -e .env.test.local -e .env.test -- jest --runInBand -c src/test/jest.config.ts",
       "files": [
         "src/main/**",
         "src/test/**",
+        ".env.test.local",
         ".env.test"
       ],
       "output": [
@@ -359,11 +363,12 @@
       "command": "npm run with:open dist/test/all-tests-report.html"
     },
     "test:e2e": {
-      "command": "npm run with:dotenv -- -e .env.test -- jest --runInBand -c src/test/jest.config.ts --selectProjects e2e",
+      "command": "npm run with:dotenv -- -e .env.test.local -e .env.test -- jest --runInBand -c src/test/jest.config.ts --selectProjects e2e",
       "files": [
         "src/main/**",
         "src/test/e2e/**",
         "src/test/*",
+        ".env.test.local",
         ".env.test"
       ],
       "output": [
