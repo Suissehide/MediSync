@@ -1,8 +1,12 @@
-import { hashPassword } from '../../main/utils/hash'
 import { buildTestApp, type TestApp } from './setup/app'
 import { testDb, truncateAll } from './setup/db'
-
-const password = 'Motdepasse1!'
+import {
+  adminUrl,
+  createEstablishment,
+  createService,
+  createUser,
+  signIn,
+} from './setup/fixtures'
 
 // Les deux regles metier rendent toutes deux un 409 : on verrouille donc le
 // message, sans quoi un test ne saurait pas laquelle s'est declenchee.
@@ -11,7 +15,7 @@ const SELF = 'Cannot apply this action to your own account'
 
 describe('routes membres', () => {
   let testApp: TestApp
-  let cookie: string
+  let cookies: { access_token: string }
   let establishmentId: string
   let serviceId: string
   let soignantId: string
@@ -19,63 +23,37 @@ describe('routes membres', () => {
 
   beforeAll(async () => {
     await truncateAll()
-    const { hash, salt } = hashPassword(password)
-    const establishment = await testDb.establishment.create({
-      data: { name: 'E' },
-    })
+    const establishment = await createEstablishment('E')
     establishmentId = establishment.id
-    const service = await testDb.service.create({
-      data: { establishmentId, name: 'S' },
-    })
+    const service = await createService(establishmentId, 'S')
     serviceId = service.id
     const soignant = await testDb.soignant.create({
       data: { establishmentId, name: 'So' },
     })
     soignantId = soignant.id
 
-    const admin = await testDb.user.create({
-      data: {
-        email: 'admin@b.fr',
-        password: hash,
-        salt,
-        firstName: 'A',
-        lastName: 'D',
-      },
-    })
     // Le compte administrateur est aussi coordinateur du service : c'est ce
     // qui lui permet d'atteindre le journal d'activite, monte sous le prefixe
     // de service.
-    const membership = await testDb.establishmentMembership.create({
-      data: {
-        userId: admin.id,
-        establishmentId,
-        role: 'ADMIN',
-        serviceMemberships: {
-          create: [{ establishmentId, serviceId, role: 'COORDINATEUR' }],
+    const admin = await createUser({
+      email: 'admin@b.fr',
+      memberships: [
+        {
+          establishmentId,
+          role: 'ADMIN',
+          services: [{ serviceId, role: 'COORDINATEUR' }],
         },
-      },
+      ],
     })
-    selfMembershipId = membership.id
-    await testDb.user.create({
-      data: {
-        email: 'new@b.fr',
-        password: hash,
-        salt,
-        firstName: 'N',
-        lastName: 'W',
-      },
-    })
+    const adminMembership =
+      await testDb.establishmentMembership.findFirstOrThrow({
+        where: { userId: admin.id, establishmentId },
+      })
+    selfMembershipId = adminMembership.id
+    await createUser({ email: 'new@b.fr' })
 
     testApp = await buildTestApp()
-    const res = await testApp.app.inject({
-      method: 'POST',
-      url: '/auth/sign-in',
-      payload: { email: 'admin@b.fr', password },
-    })
-    expect(res.statusCode).toBe(200)
-    cookie = (res.cookies as { name: string; value: string }[])
-      .map((c) => `${c.name}=${c.value}`)
-      .join('; ')
+    cookies = await signIn(testApp.app, 'admin@b.fr')
   })
 
   afterAll(async () => {
@@ -90,8 +68,8 @@ describe('routes membres', () => {
   ) =>
     testApp.app.inject({
       method,
-      url: `/e/${establishmentId}/admin/members${url}`,
-      headers: { cookie },
+      url: adminUrl(establishmentId, `/members${url}`),
+      cookies,
       payload: payload as never,
     })
 
@@ -143,13 +121,17 @@ describe('routes membres', () => {
 
   // Le journal est ecrit de façon asynchrone par le souscripteur : on laisse
   // un court delai plutot que de supposer l'ecriture immediate.
+  //
+  // Place avant le test de connexion qui suit : celui-ci ajoute puis retire
+  // un second administrateur et emettrait des evenements supplementaires
+  // qui fausseraient le compte de 5 actions attendu ici.
   it('journalise les operations de gestion des membres', async () => {
     const read = async () => {
       for (let attempt = 0; attempt < 30; attempt += 1) {
         const res = await testApp.app.inject({
           method: 'GET',
           url: `/e/${establishmentId}/s/${serviceId}/activity-log`,
-          headers: { cookie },
+          cookies,
         })
         expect(res.statusCode).toBe(200)
         const actions = (
@@ -174,6 +156,29 @@ describe('routes membres', () => {
     ])
   })
 
+  // Le pendant cote session du test precedent : un membre desactive doit
+  // perdre l'acces, pas seulement porter un champ `deactivatedAt`.
+  it('un membre desactive ne peut plus se connecter, et le retrouve apres reactivation', async () => {
+    const membershipId = await addSecondAdmin()
+
+    expect((await call('POST', `/${membershipId}/deactivate`)).statusCode).toBe(
+      200,
+    )
+    await expect(signIn(testApp.app, 'new@b.fr')).rejects.toThrow(
+      'sign-in failed: 401',
+    )
+
+    expect((await call('POST', `/${membershipId}/reactivate`)).statusCode).toBe(
+      200,
+    )
+    await expect(signIn(testApp.app, 'new@b.fr')).resolves.toEqual(
+      expect.objectContaining({ access_token: expect.any(String) }),
+    )
+
+    // Nettoyage : les tests suivants attendent 'new@b.fr' sans appartenance.
+    expect((await call('DELETE', `/${membershipId}`)).statusCode).toBe(204)
+  })
+
   // Sinon un administrateur peut deviner quelles adresses ont un compte sur
   // la plateforme, en lisant la difference entre les deux refus.
   it('rend le meme refus pour une adresse inconnue et une adresse deja membre', async () => {
@@ -194,9 +199,7 @@ describe('routes membres', () => {
   it('refuse un soignant etranger et deux affectations au meme service', async () => {
     const foreignSoignant = await testDb.soignant.create({
       data: {
-        establishmentId: (
-          await testDb.establishment.create({ data: { name: 'Autre' } })
-        ).id,
+        establishmentId: (await createEstablishment('Autre')).id,
         name: 'Etranger',
       },
     })
@@ -251,9 +254,7 @@ describe('routes membres', () => {
   // etablissement couperait aussi les autres.
   it('refuse de changer l activation d un compte appartenant a plusieurs etablissements', async () => {
     const membershipId = await addSecondAdmin()
-    const other = await testDb.establishment.create({
-      data: { name: 'Ailleurs' },
-    })
+    const other = await createEstablishment('Ailleurs')
     const account = await testDb.user.findUniqueOrThrow({
       where: { email: 'new@b.fr' },
     })
@@ -266,5 +267,28 @@ describe('routes membres', () => {
       expect(res.statusCode).toBe(409)
       expect(res.json().message).toContain('several establishments')
     }
+  })
+
+  // Une route d'administration reste hors de portee d'un role de service,
+  // meme le plus outille : seul le role d'etablissement ADMIN y donne acces.
+  it('refuse a un intervenant sans role ADMIN d etablissement l acces aux routes membres', async () => {
+    await createUser({
+      email: 'intervenant@b.fr',
+      memberships: [
+        {
+          establishmentId,
+          role: 'MEMBER',
+          services: [{ serviceId, role: 'INTERVENANT' }],
+        },
+      ],
+    })
+    const intervenantCookies = await signIn(testApp.app, 'intervenant@b.fr')
+
+    const res = await testApp.app.inject({
+      method: 'GET',
+      url: adminUrl(establishmentId, '/members'),
+      cookies: intervenantCookies,
+    })
+    expect(res.statusCode).toBe(404)
   })
 })

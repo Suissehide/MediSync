@@ -1,42 +1,45 @@
-import { hashPassword } from '../../main/utils/hash'
 import { buildTestApp, type TestApp } from './setup/app'
 import { testDb, truncateAll } from './setup/db'
+import {
+  createEstablishment,
+  createService,
+  createUser,
+  signIn,
+} from './setup/fixtures'
 
-const password = 'Motdepasse1!'
+type Cookies = { access_token: string }
 
 // Le document d'habilitations reserve le contenu clinique a `clinical:read` :
 // ni le secretariat ni la lecture seule ne doivent le voir, y compris quand
 // le patient est embarque par une autre reponse.
-describe('filtrage des champs cliniques selon clinical:read', () => {
+describe('filtrage des champs cliniques selon clinical:read / clinical:write', () => {
   let testApp: TestApp
   let establishmentId: string
   let serviceId: string
   let patientId: string
+  let appointmentId: string
+  let appointmentPatientId: string
 
-  const signIn = async (email: string) => {
-    const res = await testApp.app.inject({
-      method: 'POST',
-      url: '/auth/sign-in',
-      payload: { email, password },
-    })
-    expect(res.statusCode).toBe(200)
-    return (res.cookies as { name: string; value: string }[])
-      .map((c) => `${c.name}=${c.value}`)
-      .join('; ')
-  }
-
-  const get = (cookie: string, url: string) =>
+  const get = (cookies: Cookies, url: string) =>
     testApp.app.inject({
       method: 'GET',
       url: `/e/${establishmentId}/s/${serviceId}${url}`,
-      headers: { cookie },
+      cookies,
     })
 
-  const patch = (cookie: string, url: string, payload: unknown) =>
+  const patch = (cookies: Cookies, url: string, payload: unknown) =>
     testApp.app.inject({
       method: 'PATCH',
       url: `/e/${establishmentId}/s/${serviceId}${url}`,
-      headers: { cookie },
+      cookies,
+      payload: payload as never,
+    })
+
+  const post = (cookies: Cookies, url: string, payload: unknown) =>
+    testApp.app.inject({
+      method: 'POST',
+      url: `/e/${establishmentId}/s/${serviceId}${url}`,
+      cookies,
       payload: payload as never,
     })
 
@@ -45,14 +48,9 @@ describe('filtrage des champs cliniques selon clinical:read', () => {
 
   beforeAll(async () => {
     await truncateAll()
-    const { hash, salt } = hashPassword(password)
-    const establishment = await testDb.establishment.create({
-      data: { name: 'E' },
-    })
+    const establishment = await createEstablishment('E')
     establishmentId = establishment.id
-    const service = await testDb.service.create({
-      data: { establishmentId, name: 'S' },
-    })
+    const service = await createService(establishmentId, 'S')
     serviceId = service.id
     const tenant = { establishmentId, serviceId }
 
@@ -60,18 +58,11 @@ describe('filtrage des champs cliniques selon clinical:read', () => {
       ['secretariat@b.fr', 'SECRETARIAT'],
       ['intervenant@b.fr', 'INTERVENANT'],
     ] as const) {
-      const account = await testDb.user.create({
-        data: { email, password: hash, salt },
-      })
-      await testDb.establishmentMembership.create({
-        data: {
-          userId: account.id,
-          establishmentId,
-          role: 'MEMBER',
-          serviceMemberships: {
-            create: [{ establishmentId, serviceId, role }],
-          },
-        },
+      await createUser({
+        email,
+        memberships: [
+          { establishmentId, role: 'MEMBER', services: [{ serviceId, role }] },
+        ],
       })
     }
 
@@ -119,7 +110,8 @@ describe('filtrage des champs cliniques selon clinical:read', () => {
         slotID: slot.id,
       },
     })
-    await testDb.appointmentPatient.create({
+    appointmentId = appointment.id
+    const appointmentPatient = await testDb.appointmentPatient.create({
       data: {
         ...tenant,
         appointmentId: appointment.id,
@@ -128,6 +120,7 @@ describe('filtrage des champs cliniques selon clinical:read', () => {
         transmissionNotes: 'TRANSMISSION-SECRETE',
       },
     })
+    appointmentPatientId = appointmentPatient.id
 
     testApp = await buildTestApp()
   })
@@ -138,9 +131,9 @@ describe('filtrage des champs cliniques selon clinical:read', () => {
   })
 
   it('les retire pour un secretariat, sur la fiche, la liste et le creneau', async () => {
-    const cookie = await signIn('secretariat@b.fr')
+    const cookies = await signIn(testApp.app, 'secretariat@b.fr')
 
-    const one = (await get(cookie, `/patient/${patientId}`)).json()
+    const one = (await get(cookies, `/patient/${patientId}`)).json()
     expect(one).toMatchObject({
       firstName: 'Jean',
       etpDecision: 'oui',
@@ -150,12 +143,12 @@ describe('filtrage des champs cliniques selon clinical:read', () => {
     expect(one).not.toHaveProperty('details')
     expect(one).not.toHaveProperty('medicalDiagnosis')
 
-    const list = (await get(cookie, '/patient')).json()
+    const list = (await get(cookies, '/patient')).json()
     expect(list).toHaveLength(1)
     expect(list[0]).not.toHaveProperty('notes')
 
     // Patient embarque par un creneau : rendez-vous -> participant -> patient.
-    const slots = await get(cookie, '/slot')
+    const slots = await get(cookies, '/slot')
     const serialized = slots.body
     expect(slots.statusCode).toBe(200)
     expect(serialized).not.toContain('NOTE-SECRETE')
@@ -167,27 +160,27 @@ describe('filtrage des champs cliniques selon clinical:read', () => {
   })
 
   it('les conserve pour un intervenant, qui a clinical:read', async () => {
-    const cookie = await signIn('intervenant@b.fr')
+    const cookies = await signIn(testApp.app, 'intervenant@b.fr')
 
-    const one = (await get(cookie, `/patient/${patientId}`)).json()
+    const one = (await get(cookies, `/patient/${patientId}`)).json()
     expect(one).toMatchObject({
       notes: 'NOTE-SECRETE',
       details: 'DETAIL-SECRET',
       medicalDiagnosis: 'DIAGNOSTIC-SECRET',
     })
 
-    const slots = await get(cookie, '/slot')
+    const slots = await get(cookies, '/slot')
     expect(slots.statusCode).toBe(200)
     expect(slots.body).toContain('TRANSMISSION-SECRETE')
   })
 
   it('retire les colonnes cliniques de l export Excel pour un secretariat', async () => {
     const withoutClinical = await get(
-      await signIn('secretariat@b.fr'),
+      await signIn(testApp.app, 'secretariat@b.fr'),
       '/patient/export',
     )
     const withClinical = await get(
-      await signIn('intervenant@b.fr'),
+      await signIn(testApp.app, 'intervenant@b.fr'),
       '/patient/export',
     )
 
@@ -207,9 +200,9 @@ describe('filtrage des champs cliniques selon clinical:read', () => {
   // Pendant du filtrage de sortie : un role qui ne peut pas lire le contenu
   // clinique ne doit pas pouvoir l'ecraser a l'aveugle.
   it('ignore les champs cliniques envoyes par un secretariat, sans les vider', async () => {
-    const cookie = await signIn('secretariat@b.fr')
+    const cookies = await signIn(testApp.app, 'secretariat@b.fr')
 
-    const res = await patch(cookie, `/patient/${patientId}`, {
+    const res = await patch(cookies, `/patient/${patientId}`, {
       firstName: 'Jeanne',
       notes: 'ECRASE',
       details: 'ECRASE',
@@ -228,9 +221,9 @@ describe('filtrage des champs cliniques selon clinical:read', () => {
   })
 
   it('applique les champs cliniques envoyes par un intervenant, qui a clinical:write', async () => {
-    const cookie = await signIn('intervenant@b.fr')
+    const cookies = await signIn(testApp.app, 'intervenant@b.fr')
 
-    const res = await patch(cookie, `/patient/${patientId}`, {
+    const res = await patch(cookies, `/patient/${patientId}`, {
       notes: 'NOTE-MODIFIEE',
       medicalDiagnosis: 'DIAGNOSTIC-MODIFIE',
     })
@@ -241,5 +234,79 @@ describe('filtrage des champs cliniques selon clinical:read', () => {
     expect(stored.medicalDiagnosis).toBe('DIAGNOSTIC-MODIFIE')
     // Non envoye : inchange.
     expect(stored.details).toBe('DETAIL-SECRET')
+  })
+
+  // Chemin peu exerce jusqu'ici : la transmission d'un patient deja inscrit a
+  // un rendez-vous se modifie via PATCH /appointment, pas via PATCH /patient.
+  // `appointment:write` (que le secretariat detient) ne doit pas suffire a
+  // ecrire ce champ clinique-la non plus.
+  it('ignore la transmission envoyee par un secretariat sur un rendez-vous existant', async () => {
+    const cookies = await signIn(testApp.app, 'secretariat@b.fr')
+
+    const res = await patch(cookies, `/appointment/${appointmentId}`, {
+      appointmentPatients: [
+        {
+          id: appointmentPatientId,
+          patientID: patientId,
+          transmissionNotes: 'ECRASE',
+        },
+      ],
+    })
+    expect(res.statusCode).toBe(200)
+
+    const stored = await testDb.appointmentPatient.findUniqueOrThrow({
+      where: { id: appointmentPatientId },
+    })
+    expect(stored.transmissionNotes).toBe('TRANSMISSION-SECRETE')
+    // Le reste du participant n'est pas touche par le retrait du champ.
+    expect(stored.accompanying).toBe('Conjoint')
+  })
+
+  it('applique la transmission envoyee par un intervenant, qui a clinical:write', async () => {
+    const cookies = await signIn(testApp.app, 'intervenant@b.fr')
+
+    const res = await patch(cookies, `/appointment/${appointmentId}`, {
+      appointmentPatients: [
+        {
+          id: appointmentPatientId,
+          patientID: patientId,
+          transmissionNotes: 'TRANSMISSION-MISE-A-JOUR',
+        },
+      ],
+    })
+    expect(res.statusCode).toBe(200)
+
+    const stored = await testDb.appointmentPatient.findUniqueOrThrow({
+      where: { id: appointmentPatientId },
+    })
+    expect(stored.transmissionNotes).toBe('TRANSMISSION-MISE-A-JOUR')
+
+    // Remet l'etat initial pour ne pas influencer un test precedent qui
+    // s'executerait dans un autre ordre (Jest ne le garantit qu'au sein d'un
+    // meme fichier, mais autant ne pas en dependre).
+    await testDb.appointmentPatient.update({
+      where: { id: appointmentPatientId },
+      data: { transmissionNotes: 'TRANSMISSION-SECRETE' },
+    })
+  })
+
+  // Second chemin peu exerce : la creation, pas seulement la modification,
+  // d'un patient par un role sans `clinical:write`.
+  it('cree un patient sans les champs cliniques envoyes par un secretariat', async () => {
+    const cookies = await signIn(testApp.app, 'secretariat@b.fr')
+
+    const res = await post(cookies, '/patient', {
+      firstName: 'Nouveau',
+      lastName: 'Patient',
+      notes: 'NE-DOIT-PAS-ETRE-STOCKE',
+    })
+    expect(res.statusCode).toBe(201)
+    expect(res.json()).not.toHaveProperty('notes')
+
+    const created = await testDb.patient.findUniqueOrThrow({
+      where: { id: res.json().id },
+    })
+    expect(created.firstName).toBe('Nouveau')
+    expect(created.notes).toBeNull()
   })
 })
