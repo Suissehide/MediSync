@@ -363,4 +363,102 @@ describe('assertTenantScope', () => {
       ),
     ).toThrow(TenantScopeMissingError)
   })
+
+  // Correction 2, tour 2 : descente dans les relations imbriquees sous update/updateMany/upsert.
+  it('accepte une creation imbriquee sous update avec les bonnes colonnes', () => {
+    const okData = {
+      soignantLinks: { create: [{ soignantId: 'so1', serviceId: 's1', establishmentId: 'e1' }] },
+    }
+    expect(() =>
+      assertTenantScope(
+        {
+          model: 'Thematic',
+          operation: 'update',
+          args: { where: { id_serviceId: { id: 't1', serviceId: 's1' } }, data: okData },
+        },
+        store,
+      ),
+    ).not.toThrow()
+  })
+
+  it('refuse une creation imbriquee sous update sans les colonnes de tenant', () => {
+    const missingColumns = {
+      soignantLinks: { create: [{ soignantId: 'so1' }] },
+    }
+    expect(() =>
+      assertTenantScope(
+        {
+          model: 'Thematic',
+          operation: 'update',
+          args: { where: { id_serviceId: { id: 't1', serviceId: 's1' } }, data: missingColumns },
+        },
+        store,
+      ),
+    ).toThrow(TenantScopeMissingError)
+  })
+
+  it('refuse une creation imbriquee sous update pour un tenant different', () => {
+    const wrongTenant = {
+      soignantLinks: { create: [{ soignantId: 'so1', serviceId: 'autre', establishmentId: 'e1' }] },
+    }
+    expect(() =>
+      assertTenantScope(
+        {
+          model: 'Thematic',
+          operation: 'update',
+          args: { where: { id_serviceId: { id: 't1', serviceId: 's1' } }, data: wrongTenant },
+        },
+        store,
+      ),
+    ).toThrow(TenantScopeMissingError)
+  })
+
+  it('refuse une relation non declaree sous update', () => {
+    const undeclared = { pathwayTemplates: { create: [{ name: 'x' }] } }
+    expect(() =>
+      assertTenantScope(
+        {
+          model: 'Thematic',
+          operation: 'update',
+          args: { where: { id_serviceId: { id: 't1', serviceId: 's1' } }, data: undeclared },
+        },
+        store,
+      ),
+    ).toThrow(TenantScopeMissingError)
+  })
+
+  it('laisse passer un deleteMany imbrique sous update', () => {
+    expect(() =>
+      assertTenantScope(
+        {
+          model: 'Thematic',
+          operation: 'update',
+          args: {
+            where: { id_serviceId: { id: 't1', serviceId: 's1' } },
+            data: { soignantLinks: { deleteMany: {} } },
+          },
+        },
+        store,
+      ),
+    ).not.toThrow()
+  })
+
+  it('accepte le cas reel de la tache 10 : deleteMany puis create imbriques', () => {
+    const replaceLinks = {
+      soignantLinks: {
+        deleteMany: {},
+        create: [{ soignantId: 'so1', serviceId: 's1', establishmentId: 'e1' }],
+      },
+    }
+    expect(() =>
+      assertTenantScope(
+        {
+          model: 'Thematic',
+          operation: 'update',
+          args: { where: { id_serviceId: { id: 't1', serviceId: 's1' } }, data: replaceLinks },
+        },
+        store,
+      ),
+    ).not.toThrow()
+  })
 })

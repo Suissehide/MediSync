@@ -288,6 +288,18 @@ const assertGlobalInclude = (model: string, operation: string, args: Dict): void
   }
 }
 
+// Descend dans les relations imbriquées d'un `data` de mise à jour (update / updateMany /
+// updateManyAndReturn, ou la branche `update` d'un upsert), avec les mêmes règles que pour une
+// création : relation non déclarée refusée, create/createMany/connectOrCreate/connect/set
+// vérifiés. Ne vérifie PAS les colonnes de tenant de `data` lui-même — un `data` de mise à jour
+// n'en porte normalement aucune, et le cas où il en porte une est déjà couvert par
+// assertNoTenantMove.
+const assertNestedRelationsInUpdate = (model: string, operation: string, data: unknown, store: TenantStore): void => {
+  if (isDict(data)) {
+    assertNestedRelations(model, operation, data, store)
+  }
+}
+
 // Vérifie qu'une opération Prisma porte le filtre de tenant attendu.
 // Pure : testable sans client Prisma.
 export const assertTenantScope = (
@@ -318,6 +330,7 @@ export const assertTenantScope = (
     assertWhere(model, operation, args, field, store)
     if (UPDATE_OPERATIONS.has(operation)) {
       assertNoTenantMove(model, operation, args.data, store)
+      assertNestedRelationsInUpdate(model, operation, args.data, store)
     }
   }
   if (isWrite) {
@@ -326,6 +339,7 @@ export const assertTenantScope = (
   }
   if (operation === 'upsert') {
     assertNoTenantMove(model, `${operation}.update`, args.update, store)
+    assertNestedRelationsInUpdate(model, `${operation}.update`, args.update, store)
   }
 }
 
