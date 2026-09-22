@@ -46,7 +46,9 @@ import { ForbiddenWeekRepository } from '../../../infra/orm/repositories/forbidd
 import { PlanningCycleDomain } from '../../../domain/planningCycle.domain'
 import { PlanningCycleRepository } from '../../../infra/orm/repositories/planningCycle.repository'
 import { LocationDomain } from '../../../domain/location.domain'
+import { MembershipDomain } from '../../../domain/membership.domain'
 import { LocationRepository } from '../../../infra/orm/repositories/location.repository'
+import { MembershipRepository } from '../../../infra/orm/repositories/membership.repository'
 
 declare module '@fastify/awilix' {
   interface Cradle extends IocContainer {}
@@ -76,6 +78,9 @@ class AwilixIocContainer {
     // User
     this.#registerUserDomain()
     this.#registerUserRepository()
+    // Membership
+    this.#registerMembershipDomain()
+    this.#registerMembershipRepository()
     // Appointment
     this.#registerAppointmentDomain()
     this.#registerAppointmentRepository()
@@ -184,6 +189,17 @@ class AwilixIocContainer {
   }
   #registerUserRepository(): void {
     this.register('userRepository', asClass(UserRepository).singleton())
+  }
+
+  // Membership
+  #registerMembershipDomain(): void {
+    this.register('membershipDomain', asClass(MembershipDomain).singleton())
+  }
+  #registerMembershipRepository(): void {
+    this.register(
+      'membershipRepository',
+      asClass(MembershipRepository).singleton(),
+    )
   }
 
   // Appointment

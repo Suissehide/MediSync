@@ -1,8 +1,6 @@
-import Boom from '@hapi/boom'
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod/v4'
 
-import { Role } from '../../../../../generated/enums'
 import {
   planningCycleNullableResponseSchema,
   planningCycleResponseSchema,
@@ -11,27 +9,20 @@ import {
 } from '../schemas/planningCycle.schema'
 
 const planningCycleRouter: FastifyPluginAsync = (fastify) => {
-  const { planningCycleDomain, userDomain } = fastify.iocContainer
+  const { planningCycleDomain } = fastify.iocContainer
 
-  const assertAdmin = async (userID: string) => {
-    const currentUser = await userDomain.findByID(userID)
-    if (currentUser?.role !== Role.ADMIN) {
-      throw Boom.forbidden('Forbidden')
-    }
-  }
-
-  // Lisible par tout utilisateur authentifie : la numerotation des semaines
+  // Lisible par tout membre du service : la numerotation des semaines
   // s'affiche pour tout le monde, seule sa configuration est reservee.
   fastify.get(
     '/',
     {
       schema: { response: { 200: planningCycleNullableResponseSchema } },
-      onRequest: [fastify.verifySessionCookie],
+      config: { permission: 'planning:read' },
     },
     () => planningCycleDomain.find(),
   )
 
-  // Enregistrer / mettre a jour (admin uniquement)
+  // Enregistrer / mettre a jour
   fastify.put<{ Body: SavePlanningCycleBody }>(
     '/',
     {
@@ -42,10 +33,9 @@ const planningCycleRouter: FastifyPluginAsync = (fastify) => {
           403: z.object({ message: z.string() }),
         },
       },
-      onRequest: [fastify.verifySessionCookie],
+      config: { permission: 'planning:write' },
     },
-    async (request) => {
-      await assertAdmin(request.user.userID)
+    (request) => {
       return planningCycleDomain.save({
         startOfWeek: request.body.startOfWeek,
         weekCount: request.body.weekCount,
@@ -53,7 +43,7 @@ const planningCycleRouter: FastifyPluginAsync = (fastify) => {
     },
   )
 
-  // Reinitialiser : le planning repasse en numerotation ISO (admin uniquement)
+  // Reinitialiser : le planning repasse en numerotation ISO
   fastify.delete(
     '/',
     {
@@ -63,10 +53,9 @@ const planningCycleRouter: FastifyPluginAsync = (fastify) => {
           403: z.object({ message: z.string() }),
         },
       },
-      onRequest: [fastify.verifySessionCookie],
+      config: { permission: 'planning:write' },
     },
-    async (request, reply) => {
-      await assertAdmin(request.user.userID)
+    async (_request, reply) => {
       await planningCycleDomain.delete()
       reply.code(204).send()
     },

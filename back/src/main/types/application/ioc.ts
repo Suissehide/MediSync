@@ -10,6 +10,7 @@ import type { EnrollmentIssueDomainInterface } from '../domain/enrollmentIssue.d
 import type { ForbiddenWeekDomainInterface } from '../domain/forbiddenWeek.domain.interface'
 import type { PlanningCycleDomainInterface } from '../domain/planningCycle.domain.interface'
 import type { LocationDomainInterface } from '../domain/location.domain.interface'
+import type { MembershipDomainInterface } from '../domain/membership.domain.interface'
 import type { PathwayDomainInterface } from '../domain/pathway.domain.interface'
 import type { PathwayTemplateDomainInterface } from '../domain/pathwayTemplate.domain.interface'
 import type { PatientDomainInterface } from '../domain/patient.domain.interface'
@@ -28,6 +29,7 @@ import type { EnrollmentIssueRepositoryInterface } from '../infra/orm/repositori
 import type { ForbiddenWeekRepositoryInterface } from '../infra/orm/repositories/forbiddenWeek.repository.interface'
 import type { PlanningCycleRepositoryInterface } from '../infra/orm/repositories/planningCycle.repository.interface'
 import type { LocationRepositoryInterface } from '../infra/orm/repositories/location.repository.interface'
+import type { MembershipRepositoryInterface } from '../infra/orm/repositories/membership.repository.interface'
 import type { PathwayRepositoryInterface } from '../infra/orm/repositories/pathway.repository.interface'
 import type { PathwayTemplateRepositoryInterface } from '../infra/orm/repositories/pathwayTemplate.repository.interface'
 import type { PatientRepositoryInterface } from '../infra/orm/repositories/patient.repository.interface'
@@ -57,6 +59,9 @@ export interface IocContainer {
   // User
   readonly userDomain: UserDomainInterface
   readonly userRepository: UserRepositoryInterface
+  // Membership (membres d'un établissement)
+  readonly membershipDomain: MembershipDomainInterface
+  readonly membershipRepository: MembershipRepositoryInterface
   // Appointment
   readonly appointmentDomain: AppointmentDomainInterface
   readonly appointmentRepository: AppointmentRepositoryInterface

@@ -30,7 +30,7 @@ const todoRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
-      onRequest: [fastify.verifySessionCookie],
+      config: { permission: 'todo:own' },
     },
     () => {
       return todoDomain.findAll()
@@ -48,6 +48,7 @@ const todoRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
+      config: { permission: 'todo:own' },
     },
     async (request) => {
       const { todoID } = request.params
@@ -69,6 +70,7 @@ const todoRouter: FastifyPluginAsync = (fastify) => {
           201: todoResponseSchema,
         },
       },
+      config: { permission: 'todo:own' },
     },
     async (request, reply) => {
       const todo = await todoDomain.create(request.body)
@@ -91,6 +93,7 @@ const todoRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
+      config: { permission: 'todo:own' },
     },
     async (request) => {
       const { todoID } = request.params
@@ -113,6 +116,7 @@ const todoRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
+      config: { permission: 'todo:own' },
     },
     async (request, reply) => {
       const { todoID } = request.params

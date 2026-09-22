@@ -32,7 +32,7 @@ const appointmentRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
-      onRequest: [fastify.verifySessionCookie],
+      config: { permission: 'patient:read' },
     },
     () => {
       return appointmentDomain.findAll()
@@ -50,7 +50,7 @@ const appointmentRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
-      onRequest: [fastify.verifySessionCookie],
+      config: { permission: 'patient:read' },
     },
     async (request) => {
       const { appointmentID } = request.params
@@ -72,7 +72,7 @@ const appointmentRouter: FastifyPluginAsync = (fastify) => {
           201: appointmentResponseSchema,
         },
       },
-      onRequest: [fastify.verifySessionCookie],
+      config: { permission: 'appointment:write' },
     },
     async (request, reply) => {
       const appointment = await appointmentDomain.create(request.body, request.user.userID)
@@ -95,7 +95,7 @@ const appointmentRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
-      onRequest: [fastify.verifySessionCookie],
+      config: { permission: 'appointment:write' },
     },
     async (request) => {
       const { appointmentID } = request.params
@@ -123,7 +123,7 @@ const appointmentRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
-      onRequest: [fastify.verifySessionCookie],
+      config: { permission: 'appointment:write' },
     },
     async (request, reply) => {
       const { appointmentID } = request.params

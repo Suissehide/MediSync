@@ -18,7 +18,7 @@ const enrollmentIssueRouter: FastifyPluginAsync = (fastify) => {
       params: enrollmentIssuePatientParamsSchema,
       response: { 200: enrollmentIssuesResponseSchema },
     },
-    onRequest: [fastify.verifySessionCookie],
+    config: { permission: 'patient:read' },
   }, (request) => enrollmentIssueDomain.findByPatientID(request.params.patientID))
 
   // Delete (dismiss)
@@ -27,7 +27,7 @@ const enrollmentIssueRouter: FastifyPluginAsync = (fastify) => {
       params: enrollmentIssueParamsSchema,
       response: { 204: z.null() },
     },
-    onRequest: [fastify.verifySessionCookie],
+    config: { permission: 'appointment:write' },
   }, async (request, reply) => {
     await enrollmentIssueDomain.delete(request.params.issueID)
     reply.code(204).send()

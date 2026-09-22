@@ -1,7 +1,5 @@
-import Boom from '@hapi/boom'
 import type { FastifyPluginAsync } from 'fastify'
 
-import { Role } from '../../../../../generated/enums'
 import {
   activityLogsResponseSchema,
   cleanupResponseSchema,
@@ -10,7 +8,7 @@ import {
 } from '../schemas/activityLog.schema'
 
 const activityLogRouter: FastifyPluginAsync = (fastify) => {
-  const { activityLogDomain, userDomain } = fastify.iocContainer
+  const { activityLogDomain } = fastify.iocContainer
 
   fastify.get<{ Querystring: GetActivityLogsQuery }>(
     '/',
@@ -19,13 +17,9 @@ const activityLogRouter: FastifyPluginAsync = (fastify) => {
         querystring: getActivityLogsQuerySchema,
         response: { 200: activityLogsResponseSchema },
       },
-      onRequest: [fastify.verifySessionCookie],
+      config: { permission: 'planning:write' },
     },
-    async (request) => {
-      const currentUser = await userDomain.findByID(request.user.userID)
-      if (currentUser?.role !== Role.ADMIN) {
-        throw Boom.forbidden('Forbidden')
-      }
+    (request) => {
       const { page, action, userID, from } = request.query
       return activityLogDomain.findMany({ page, action, userID, from })
     },
@@ -35,15 +29,9 @@ const activityLogRouter: FastifyPluginAsync = (fastify) => {
     '/cleanup',
     {
       schema: { response: { 200: cleanupResponseSchema } },
-      onRequest: [fastify.verifySessionCookie],
+      config: { permission: 'planning:write' },
     },
-    async (request) => {
-      const currentUser = await userDomain.findByID(request.user.userID)
-      if (currentUser?.role !== Role.ADMIN) {
-        throw Boom.forbidden('Forbidden')
-      }
-      return activityLogDomain.cleanup()
-    },
+    () => activityLogDomain.cleanup(),
   )
 
   return Promise.resolve()

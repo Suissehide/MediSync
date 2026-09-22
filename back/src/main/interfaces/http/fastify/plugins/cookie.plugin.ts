@@ -31,9 +31,10 @@ const cookiePreHandler = async function (
   this: FastifyInstance,
   request: FastifyRequest,
 ): Promise<void> {
-  // La garde globale de routes/index.ts couvre déjà toute requête protégée ;
-  // les routes qui déclarent aussi `verifySessionCookie` en local ne doivent
-  // pas relancer la vérification.
+  // La garde globale de routes/index.ts couvre toute requête protégée ; plus
+  // aucune route ne déclare `verifySessionCookie` en local (tâche 15). Le
+  // court-circuit reste par sûreté : une double déclaration ne doit pas
+  // relancer la vérification.
   if (request.currentUser) {
     return
   }

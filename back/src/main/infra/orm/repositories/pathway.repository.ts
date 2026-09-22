@@ -1,6 +1,8 @@
 import Boom from '@hapi/boom'
 import dayjs from 'dayjs'
 
+import type { Slot, SlotTemplate, Soignant } from '../../../../generated/client'
+
 import {
   flattenSlot,
   soignantLinksInclude,
@@ -16,6 +18,7 @@ import type {
   RegeneratePathwaysResultRepo,
   TrackingPathwayRepo,
 } from '../../../types/infra/orm/repositories/pathway.repository.interface'
+import type { AppointmentWithPatientsRepo } from '../../../types/infra/orm/repositories/appointment.repository.interface'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { TenantContextInterface } from '../../../types/utils/tenant-context'
 import type { PostgresPrismaClient } from '../postgres-client'
@@ -52,14 +55,20 @@ const slotsWithTemplateInclude = {
     },
   },
 } as const
-const flattenSlots = <
-  T extends { slots: Parameters<typeof flattenSlot>[0][] },
->({
+// Ligne de créneau telle que la ramène `slotsWithTemplateInclude`. La
+// nommer ici plutôt que de la déduire de la contrainte de `flattenSlot`
+// (qui, elle, ignore `appointments`) préserve les rendez-vous dans le
+// résultat aplati.
+type SlotRowWithAppointments = Slot & {
+  slotTemplate: SlotTemplate & { soignantLinks: { soignant: Soignant }[] }
+  appointments: AppointmentWithPatientsRepo[]
+}
+const flattenSlots = <T extends { slots: SlotRowWithAppointments[] }>({
   slots,
   ...rest
 }: T) => ({
   ...rest,
-  slots: slots.map(flattenSlot),
+  slots: slots.map((slot) => flattenSlot(slot)),
 })
 
 class PathwayRepository implements PathwayRepositoryInterface {

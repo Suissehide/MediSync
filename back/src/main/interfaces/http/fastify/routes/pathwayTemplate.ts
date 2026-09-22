@@ -30,7 +30,7 @@ const pathwayTemplateRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
-      onRequest: [fastify.verifySessionCookie],
+      config: { permission: 'planning:read' },
     },
     () => pathwayTemplateDomain.findAll(),
   )
@@ -46,6 +46,7 @@ const pathwayTemplateRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
+      config: { permission: 'planning:read' },
     },
     async (request) => {
       const { pathwayTemplateID } = request.params
@@ -68,6 +69,7 @@ const pathwayTemplateRouter: FastifyPluginAsync = (fastify) => {
           201: pathwayTemplateResponseSchema,
         },
       },
+      config: { permission: 'planning:write' },
     },
     async (request, reply) => {
       const pathwayTemplate = await pathwayTemplateDomain.create(request.body)
@@ -90,6 +92,7 @@ const pathwayTemplateRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
+      config: { permission: 'planning:write' },
     },
     async (request) => {
       const { pathwayTemplateID } = request.params
@@ -114,7 +117,7 @@ const pathwayTemplateRouter: FastifyPluginAsync = (fastify) => {
           204: z.null(),
         },
       },
-      onRequest: [fastify.verifySessionCookie],
+      config: { permission: 'planning:write' },
     },
     async (request, reply) => {
       await pathwayTemplateDomain.reorder(request.body.orderedIds)
@@ -133,6 +136,7 @@ const pathwayTemplateRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
+      config: { permission: 'planning:write' },
     },
     async (request, reply) => {
       const { pathwayTemplateID } = request.params

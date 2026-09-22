@@ -19,7 +19,7 @@ const diagnosticEducatifTemplateRouter: FastifyPluginAsync = (fastify) => {
   // Get all
   fastify.get('/', {
     schema: { response: { 200: diagnosticEducatifTemplatesResponseSchema } },
-    onRequest: [fastify.verifySessionCookie],
+    config: { permission: 'referentials:read' },
   }, () => diagnosticEducatifTemplateDomain.findAll())
 
   // Get by ID
@@ -28,7 +28,7 @@ const diagnosticEducatifTemplateRouter: FastifyPluginAsync = (fastify) => {
       params: diagnosticTemplateParamsSchema,
       response: { 200: diagnosticEducatifTemplateResponseSchema, 404: z.object({ message: z.string() }) },
     },
-    onRequest: [fastify.verifySessionCookie],
+    config: { permission: 'referentials:read' },
   }, async (request) => {
     const template = await diagnosticEducatifTemplateDomain.findByID(request.params.templateId)
     if (!template) {
@@ -40,7 +40,7 @@ const diagnosticEducatifTemplateRouter: FastifyPluginAsync = (fastify) => {
   // Create
   fastify.post<{ Body: CreateDiagnosticEducatifTemplateBody }>('/', {
     schema: { body: createDiagnosticEducatifTemplateSchema, response: { 201: diagnosticEducatifTemplateResponseSchema } },
-    onRequest: [fastify.verifySessionCookie],
+    config: { permission: 'referentials:write' },
   }, async (request, reply) => {
     const template = await diagnosticEducatifTemplateDomain.create(request.body)
     reply.code(201)
@@ -50,7 +50,7 @@ const diagnosticEducatifTemplateRouter: FastifyPluginAsync = (fastify) => {
   // Update
   fastify.patch<{ Params: UpdateDiagnosticEducatifTemplateParams; Body: UpdateDiagnosticEducatifTemplateBody }>('/:templateId', {
     schema: { ...updateDiagnosticEducatifTemplateSchema, response: { 200: diagnosticEducatifTemplateResponseSchema } },
-    onRequest: [fastify.verifySessionCookie],
+    config: { permission: 'referentials:write' },
   }, (request) => {
     return diagnosticEducatifTemplateDomain.update(request.params.templateId, request.body)
   })
@@ -58,7 +58,7 @@ const diagnosticEducatifTemplateRouter: FastifyPluginAsync = (fastify) => {
   // Delete
   fastify.delete<{ Params: DiagnosticTemplateParams }>('/:templateId', {
     schema: { params: diagnosticTemplateParamsSchema, response: { 204: z.null() } },
-    onRequest: [fastify.verifySessionCookie],
+    config: { permission: 'referentials:write' },
   }, async (request, reply) => {
     await diagnosticEducatifTemplateDomain.delete(request.params.templateId)
     reply.code(204).send()

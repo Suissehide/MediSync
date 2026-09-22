@@ -3,6 +3,7 @@ import { AppointmentRepository } from '../../../main/infra/orm/repositories/appo
 import { DiagnosticEducatifRepository } from '../../../main/infra/orm/repositories/diagnosticEducatif.repository'
 import { DiagnosticEducatifTemplateRepository } from '../../../main/infra/orm/repositories/diagnosticEducatifTemplate.repository'
 import { LocationRepository } from '../../../main/infra/orm/repositories/location.repository'
+import { MembershipRepository } from '../../../main/infra/orm/repositories/membership.repository'
 import { PathwayRepository } from '../../../main/infra/orm/repositories/pathway.repository'
 import { PathwayTemplateRepository } from '../../../main/infra/orm/repositories/pathwayTemplate.repository'
 import { PatientRepository } from '../../../main/infra/orm/repositories/patient.repository'
@@ -12,6 +13,7 @@ import { SlotTemplateRepository } from '../../../main/infra/orm/repositories/slo
 import { SoignantRepository } from '../../../main/infra/orm/repositories/soignant.repository'
 import { ThematicRepository } from '../../../main/infra/orm/repositories/thematic.repository'
 import { TodoRepository } from '../../../main/infra/orm/repositories/todo.repository'
+import { assertTenantScope } from '../../../main/infra/orm/tenant-guard'
 import type { IocContainer } from '../../../main/types/application/ioc'
 import type { Tenant } from '../../../main/types/utils/tenant-context'
 import { TenantContext } from '../../../main/utils/tenant-context'
@@ -108,9 +110,9 @@ describe('scoping des repositories d etablissement', () => {
       await soignants.update('so1', { name: 'N' })
       await locations.delete('l1')
     })
-    expect(calls[0].args).toMatchObject({ where: { establishmentId: 'e1' } })
-    expect(calls[1].args).toMatchObject({ where: { id_establishmentId: { id: 'so1', establishmentId: 'e1' } } })
-    expect(calls[2].args).toMatchObject({ where: { id_establishmentId: { id: 'l1', establishmentId: 'e1' } } })
+    expect(calls[0]?.args).toMatchObject({ where: { establishmentId: 'e1' } })
+    expect(calls[1]?.args).toMatchObject({ where: { id_establishmentId: { id: 'so1', establishmentId: 'e1' } } })
+    expect(calls[2]?.args).toMatchObject({ where: { id_establishmentId: { id: 'l1', establishmentId: 'e1' } } })
   })
 
   it('ActivityLogRepository pose le contexte du tenant a l ecriture, null hors requete', async () => {
@@ -169,7 +171,154 @@ describe('scoping des repositories d etablissement', () => {
       model: 'activityLog', op: 'deleteMany',
       args: { where: { createdAt: { lt: date } } },
     })
-    expect(calls[1].args.where).not.toHaveProperty('establishmentId')
+    expect(calls[1]?.args.where).not.toHaveProperty('establishmentId')
+  })
+})
+
+describe('MembershipRepository (gestion des membres)', () => {
+  it('filtre lecture, comptage et suppression par establishmentId', async () => {
+    const { prisma, calls } = buildFakePrisma()
+    const ctx = new TenantContext()
+    const repo = new MembershipRepository(buildContainer(prisma, ctx))
+
+    await ctx.run(tenant, async () => {
+      await repo.findAll()
+      await repo.findByID('em1')
+      await repo.findByUserID('u9')
+      await repo.countAdmins()
+      await repo.serviceExists('sv1')
+      await repo.delete('em1')
+    })
+
+    expect(calls[0]).toMatchObject({
+      model: 'establishmentMembership', op: 'findMany',
+      args: {
+        where: { establishmentId: 'e1' },
+        // La relation serviceMemberships porte une cle etrangere simple :
+        // elle doit etre filtree explicitement (regle B).
+        include: { serviceMemberships: { where: { establishmentId: 'e1' } } },
+      },
+    })
+    expect(calls[1]).toMatchObject({
+      model: 'establishmentMembership', op: 'findUniqueOrThrow',
+      args: { where: { id_establishmentId: { id: 'em1', establishmentId: 'e1' } } },
+    })
+    expect(calls[2]).toMatchObject({
+      model: 'establishmentMembership', op: 'findFirst',
+      args: { where: { userId: 'u9', establishmentId: 'e1' } },
+    })
+    expect(calls[3]).toMatchObject({
+      model: 'establishmentMembership', op: 'count',
+      args: { where: { establishmentId: 'e1', role: 'ADMIN', user: { deactivatedAt: null } } },
+    })
+    expect(calls[4]).toMatchObject({
+      model: 'service', op: 'count',
+      args: { where: { id: 'sv1', establishmentId: 'e1', deactivatedAt: null } },
+    })
+    expect(calls[5]).toMatchObject({
+      model: 'establishmentMembership', op: 'deleteMany',
+      args: { where: { id: 'em1', establishmentId: 'e1' } },
+    })
+  })
+
+  it('pose establishmentId sur l appartenance et sur chaque affectation creee', async () => {
+    const { prisma, calls } = buildFakePrisma()
+    const ctx = new TenantContext()
+    const repo = new MembershipRepository(buildContainer(prisma, ctx))
+
+    await ctx.run(tenant, () =>
+      repo.create({
+        userId: 'u9', role: 'MEMBER', soignantId: null,
+        services: [{ serviceId: 'sv1', role: 'LECTURE' }],
+      }))
+
+    expect(calls[0]).toMatchObject({
+      model: 'establishmentMembership', op: 'create',
+      args: {
+        data: {
+          userId: 'u9', establishmentId: 'e1',
+          serviceMemberships: {
+            create: [{ serviceId: 'sv1', role: 'LECTURE', establishmentId: 'e1' }],
+          },
+        },
+      },
+    })
+  })
+
+  // Le garde-fou est en refus par defaut : ce test fait passer chaque
+  // operation du repository par assertTenantScope, pour qu'une requete que
+  // le garde-fou refuserait echoue ici plutot qu'en production.
+  it('toutes ses operations passent le garde-fou de tenant', async () => {
+    const modelOf: Record<string, string> = {
+      establishmentMembership: 'EstablishmentMembership',
+      serviceMembership: 'ServiceMembership',
+      service: 'Service',
+    }
+    const ctx = new TenantContext()
+    const guarded = (model: string) =>
+      new Proxy({}, {
+        get: (_t, op: string) => (args: Record<string, unknown>) => {
+          assertTenantScope({ model: modelOf[model] ?? model, operation: op, args: args ?? {} }, ctx.peek())
+          return Promise.resolve(op === 'findMany' ? [] : op === 'count' ? 0 : { id: 'x' })
+        },
+      })
+    const prisma: Record<string, unknown> = new Proxy({}, {
+      get: (_t, model: string) =>
+        model === '$transaction'
+          ? (fn: (client: unknown) => unknown) => fn(prisma)
+          : guarded(model),
+    })
+    const repo = new MembershipRepository(buildContainer(prisma, ctx))
+
+    // Contexte d'administration d'etablissement : pas de service courant.
+    await expect(
+      ctx.run({ ...tenant, serviceId: null, serviceRole: null }, async () => {
+        await repo.findAll()
+        await repo.findByID('em1')
+        await repo.findByUserID('u9')
+        await repo.countAdmins()
+        await repo.serviceExists('sv1')
+        await repo.create({ userId: 'u9', role: 'MEMBER', soignantId: null, services: [{ serviceId: 'sv1', role: 'LECTURE' }] })
+        await repo.update('em1', { role: 'ADMIN', services: [{ serviceId: 'sv1', role: 'LECTURE' }] })
+        await repo.delete('em1')
+      }),
+    ).resolves.toBeUndefined()
+  })
+
+  it('update verifie l appartenance dans le tenant avant de rebattre les affectations', async () => {
+    const { prisma, calls } = buildFakePrisma()
+    const ctx = new TenantContext()
+    const repo = new MembershipRepository(buildContainer(prisma, ctx))
+
+    await ctx.run(tenant, () =>
+      repo.update('em1', { role: 'ADMIN', services: [{ serviceId: 'sv1', role: 'LECTURE' }] }))
+
+    // L'identifiant d'appartenance sert de cle etrangere aux ServiceMembership
+    // ecrits ensuite : il est d'abord prouve appartenir a l'etablissement.
+    expect(calls[0]).toMatchObject({
+      model: 'establishmentMembership', op: 'findUniqueOrThrow',
+      args: { where: { id_establishmentId: { id: 'em1', establishmentId: 'e1' } } },
+    })
+    expect(calls[1]).toMatchObject({
+      model: 'serviceMembership', op: 'deleteMany',
+      args: { where: { establishmentMembershipId: 'em1', establishmentId: 'e1' } },
+    })
+    expect(calls[2]).toMatchObject({
+      model: 'serviceMembership', op: 'createMany',
+      args: {
+        data: [{
+          establishmentMembershipId: 'em1', serviceId: 'sv1',
+          role: 'LECTURE', establishmentId: 'e1',
+        }],
+      },
+    })
+    expect(calls[3]).toMatchObject({
+      model: 'establishmentMembership', op: 'update',
+      args: {
+        where: { id_establishmentId: { id: 'em1', establishmentId: 'e1' } },
+        data: { role: 'ADMIN' },
+      },
+    })
   })
 })
 
@@ -473,7 +622,7 @@ describe('scoping slotTemplate et slot', () => {
     })
     // La suppression des anciens liens doit precéder la creation des
     // nouveaux dans l'objet d'ecriture imbriquee (ordre des cles).
-    const soignantLinksWrite = (calls[0].args.data as { soignantLinks: object }).soignantLinks
+    const soignantLinksWrite = (calls[0]?.args.data as { soignantLinks: object }).soignantLinks
     expect(Object.keys(soignantLinksWrite)).toEqual(['deleteMany', 'create'])
     expect(calls[1]).toMatchObject({
       model: 'slot', op: 'update',
