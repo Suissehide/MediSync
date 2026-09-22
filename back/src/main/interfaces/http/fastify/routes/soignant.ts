@@ -1,23 +1,24 @@
-import { z } from 'zod/v4'
-import {
-  soignantResponseSchema,
-  deleteSoignantByIdParamsSchema,
-  getSoignantByIdParamsSchema,
-  updateSoignantByIdSchema,
-  soignantsResponseSchema,
-  createSoignantSchema,
-  type GetSoignantByIdParams,
-  type CreateSoignantBody,
-  type UpdateSoignantParams,
-  type UpdateSoignantBody,
-  type DeleteSoignantByIdParams,
-} from '../schemas/soignant.schema'
 import Boom from '@hapi/boom'
 import type { FastifyPluginAsync } from 'fastify'
+import { z } from 'zod/v4'
 
-const soignantRouter: FastifyPluginAsync = (fastify) => {
-  const { iocContainer } = fastify
-  const { soignantDomain, logger } = iocContainer
+import {
+  createSoignantSchema,
+  deleteSoignantByIdParamsSchema,
+  getSoignantByIdParamsSchema,
+  soignantResponseSchema,
+  soignantsResponseSchema,
+  updateSoignantByIdSchema,
+  type CreateSoignantBody,
+  type DeleteSoignantByIdParams,
+  type GetSoignantByIdParams,
+  type UpdateSoignantBody,
+  type UpdateSoignantParams,
+} from '../schemas/soignant.schema'
+
+// Lecture, sous le préfixe de service : /e/:establishmentId/s/:serviceId/soignant.
+const soignantReadRouter: FastifyPluginAsync = (fastify) => {
+  const { soignantDomain } = fastify.iocContainer
 
   // Get all
   fastify.get(
@@ -29,7 +30,7 @@ const soignantRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
-      onRequest: [fastify.verifySessionCookie],
+      config: { permission: 'referentials:read' },
     },
     () => {
       return soignantDomain.findAll()
@@ -47,6 +48,7 @@ const soignantRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
+      config: { permission: 'referentials:read' },
     },
     async (request) => {
       const { soignantID } = request.params
@@ -58,6 +60,13 @@ const soignantRouter: FastifyPluginAsync = (fastify) => {
     },
   )
 
+  return Promise.resolve()
+}
+
+// Administration, sous le préfixe d'établissement : /e/:establishmentId/soignant.
+const soignantAdminRouter: FastifyPluginAsync = (fastify) => {
+  const { soignantDomain, logger } = fastify.iocContainer
+
   // Create
   fastify.post<{ Body: CreateSoignantBody }>(
     '/',
@@ -68,6 +77,7 @@ const soignantRouter: FastifyPluginAsync = (fastify) => {
           201: soignantResponseSchema,
         },
       },
+      config: { permission: 'soignants:manage' },
     },
     async (request, reply) => {
       const soignant = await soignantDomain.create(request.body)
@@ -87,6 +97,7 @@ const soignantRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
+      config: { permission: 'soignants:manage' },
     },
     async (request) => {
       const { soignantID } = request.params
@@ -109,6 +120,7 @@ const soignantRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
+      config: { permission: 'soignants:manage' },
     },
     async (request, reply) => {
       const { soignantID } = request.params
@@ -124,4 +136,4 @@ const soignantRouter: FastifyPluginAsync = (fastify) => {
   return Promise.resolve()
 }
 
-export { soignantRouter }
+export { soignantReadRouter, soignantAdminRouter }
