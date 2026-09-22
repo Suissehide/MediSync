@@ -290,7 +290,7 @@ déclarent donc qu'une fois, dans `config`.
 | `appointment` | `GET *` | `patient:read` |
 | idem | écritures | `appointment:write` |
 | `todo` | tout | `todo:own` (filtré sur le `soignantId` du tenant) |
-| `activityLog` (sous le préfixe de service) | `GET` | `planning:write` (coordinateur) ; `POST` supprimé si inutilisé par le front, sinon `todo:own` |
+| `activityLog` (sous le préfixe de service) | `GET`, `POST /cleanup` | `planning:write` (coordinateur). La purge manuelle ne touche que les entrées du service courant ; la purge planifiée du démarrage tourne sous `runAsSystem` et couvre tout. |
 | `/e/:establishmentId/admin/members` | tout | `members:manage` |
 | `/e/:establishmentId/admin/soignant`, `/admin/location` | écritures | `soignants:manage`, `locations:manage` |
 
