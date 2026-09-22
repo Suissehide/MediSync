@@ -21,13 +21,9 @@ const withSoignants = {
 
 type ThematicRow = Thematic & { soignantLinks: { soignant: Soignant }[] }
 
-// `Array.isArray` protège le faux client Prisma des tests, qui renvoie par
-// défaut les données écrites telles quelles (donc `soignantLinks` y vaut la
-// clause d'écriture imbriquée, pas un tableau) : le vrai client, lui, résout
-// toujours l'`include` en tableau.
 const flatten = ({ soignantLinks, ...thematic }: ThematicRow): ThematicWithSoignantsEntityRepo => ({
   ...thematic,
-  soignants: Array.isArray(soignantLinks) ? soignantLinks.map((link) => link.soignant) : [],
+  soignants: soignantLinks.map((link) => link.soignant),
 })
 
 class ThematicRepository implements ThematicRepositoryInterface {

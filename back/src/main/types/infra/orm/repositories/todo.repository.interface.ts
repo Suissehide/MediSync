@@ -12,7 +12,7 @@ export type TodoCreateEntityRepo = Omit<
 >
 export type TodoUpdateEntityRepo = Omit<
   Prisma.TodoUncheckedUpdateInput,
-  'serviceId' | 'establishmentId'
+  'serviceId' | 'establishmentId' | 'soignantID'
 >
 
 export interface TodoRepositoryInterface {
