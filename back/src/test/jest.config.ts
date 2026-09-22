@@ -8,7 +8,10 @@ const rootDir = path.resolve(
 )
 
 const swcTransform: Config['transform'] = {
-  '^.+\\.ts$': ['@swc/jest', {}],
+  '^.+\\.ts$': [
+    '@swc/jest',
+    { module: { type: 'commonjs', ignoreDynamic: true } },
+  ],
 }
 
 const config: Config = {

@@ -42,7 +42,7 @@
     "prisma:migrate:dev": "npm run with:dotenv -- -e .env -e .env.local prisma migrate dev",
     "prisma:migrate:dev:test": "npm run with:dotenv -- -e .env.test prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
-    "prisma:migrate:deploy:test": "npm run with:dotenv -- -e .env.test prisma migrate deploy",
+    "prisma:migrate:deploy:test": "wireit",
     "prisma:migrate:reset": "npm run with:dotenv -- -e .env -e .env.local prisma migrate reset",
     "prisma:migrate:reset:test": "npm run with:dotenv -- -e .env.test prisma migrate reset",
     "prisma:seed": "prisma db seed",
@@ -133,14 +133,18 @@
       "command": "rimraf .wireit"
     },
     "cover": {
-      "command": "jest --coverage --runInBand -c src/test/jest.config.ts",
+      "command": "npm run with:dotenv -- -e .env.test -- jest --coverage --runInBand -c src/test/jest.config.ts",
       "files": [
-        "src/**"
+        "src/**",
+        ".env.test"
       ],
       "output": [
         "dist/coverage/all/**"
       ],
-      "dependencies": [],
+      "dependencies": [
+        "prisma:generate",
+        "prisma:migrate:deploy:test"
+      ],
       "env": {
         "CI": {
           "external": true
@@ -169,14 +173,19 @@
       "command": "npm run with:open dist/coverage/all/index.html"
     },
     "cover:e2e": {
-      "command": "jest --coverage --runInBand -c src/test/jest.config.ts --selectProjects e2e",
+      "command": "npm run with:dotenv -- -e .env.test -- jest --coverage --runInBand -c src/test/jest.config.ts --selectProjects e2e",
       "files": [
         "src/main/**",
         "src/test/e2e/**",
-        "src/test/*"
+        "src/test/*",
+        ".env.test"
       ],
       "output": [
         "dist/coverage/e2e/index.html"
+      ],
+      "dependencies": [
+        "prisma:generate",
+        "prisma:migrate:deploy:test"
       ],
       "env": {
         "CI": {
@@ -266,6 +275,14 @@
         "prisma/generated/**"
       ]
     },
+    "prisma:migrate:deploy:test": {
+      "command": "npm run with:dotenv -- -e .env.test prisma migrate deploy",
+      "files": [
+        "prisma/migrations/**",
+        ".env.test"
+      ],
+      "output": []
+    },
     "prisma:migrate:dev:test:ci": {
       "command": "npm run with:dotenv -- -e ./deploy/.env.test prisma migrate dev"
     },
@@ -318,16 +335,18 @@
       ]
     },
     "test": {
-      "command": "jest --runInBand -c src/test/jest.config.ts",
+      "command": "npm run with:dotenv -- -e .env.test -- jest --runInBand -c src/test/jest.config.ts",
       "files": [
         "src/main/**",
-        "src/test/**"
+        "src/test/**",
+        ".env.test"
       ],
       "output": [
         "dist/test/**"
       ],
       "dependencies": [
-        "prisma:generate"
+        "prisma:generate",
+        "prisma:migrate:deploy:test"
       ],
       "env": {
         "CI": {
@@ -340,17 +359,19 @@
       "command": "npm run with:open dist/test/all-tests-report.html"
     },
     "test:e2e": {
-      "command": "jest --runInBand -c src/test/jest.config.ts --selectProjects e2e",
+      "command": "npm run with:dotenv -- -e .env.test -- jest --runInBand -c src/test/jest.config.ts --selectProjects e2e",
       "files": [
         "src/main/**",
         "src/test/e2e/**",
-        "src/test/*"
+        "src/test/*",
+        ".env.test"
       ],
       "output": [
         "dist/test/e2e-tests-report.html"
       ],
       "dependencies": [
-        "prisma:generate"
+        "prisma:generate",
+        "prisma:migrate:deploy:test"
       ],
       "env": {
         "CI": {

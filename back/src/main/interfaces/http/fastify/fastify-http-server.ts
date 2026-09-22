@@ -36,6 +36,10 @@ class FastifyHttpServer implements HttpServer {
     return this._baseUrl
   }
 
+  get instance(): FastifyInstance {
+    return this.fastify
+  }
+
   constructor(iocContainer: IocContainer) {
     const pino = iocContainer.logger as PinoLogger
 
