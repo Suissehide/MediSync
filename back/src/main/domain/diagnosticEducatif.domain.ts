@@ -6,14 +6,21 @@ import type {
   DiagnosticEducatifUpdateEntity,
 } from '../types/domain/diagnosticEducatif.domain.interface'
 import type { DiagnosticEducatifRepositoryInterface } from '../types/infra/orm/repositories/diagnosticEducatif.repository.interface'
+import type { DiagnosticEducatifTemplateRepositoryInterface } from '../types/infra/orm/repositories/diagnosticEducatifTemplate.repository.interface'
 import type { AppEventBus } from '../utils/app-event-bus'
 
 class DiagnosticEducatifDomain implements DiagnosticEducatifDomainInterface {
   private readonly diagnosticEducatifRepository: DiagnosticEducatifRepositoryInterface
+  private readonly diagnosticEducatifTemplateRepository: DiagnosticEducatifTemplateRepositoryInterface
   private readonly appEventBus: AppEventBus
 
-  constructor({ diagnosticEducatifRepository, appEventBus }: IocContainer) {
+  constructor({
+    diagnosticEducatifRepository,
+    diagnosticEducatifTemplateRepository,
+    appEventBus,
+  }: IocContainer) {
     this.diagnosticEducatifRepository = diagnosticEducatifRepository
+    this.diagnosticEducatifTemplateRepository = diagnosticEducatifTemplateRepository
     this.appEventBus = appEventBus
   }
 
@@ -26,12 +33,22 @@ class DiagnosticEducatifDomain implements DiagnosticEducatifDomainInterface {
   }
 
   async create(params: DiagnosticEducatifCreateEntity, userID: string): Promise<DiagnosticEducatifEntity> {
+    // `templateId` n'a pas de clé composite en base (nullable) : on vérifie
+    // que le modèle appartient au tenant en le chargeant par son repository
+    // filtré, qui répond 404 si il appartient à un autre service.
+    if (params.templateId) {
+      await this.diagnosticEducatifTemplateRepository.findByID(params.templateId)
+    }
     const diag = await this.diagnosticEducatifRepository.create(params)
     this.appEventBus.emit('diagnostic.created', { userID, diagnosticId: diag.id })
     return diag
   }
 
   async update(id: string, params: DiagnosticEducatifUpdateEntity, userID: string): Promise<DiagnosticEducatifEntity> {
+    // Voir create() : même vérification d'appartenance au tenant.
+    if (typeof params.templateId === 'string') {
+      await this.diagnosticEducatifTemplateRepository.findByID(params.templateId)
+    }
     const diag = await this.diagnosticEducatifRepository.update(id, params)
     this.appEventBus.emit('diagnostic.updated', { userID, diagnosticId: diag.id })
     return diag

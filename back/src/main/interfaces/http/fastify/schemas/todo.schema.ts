@@ -20,14 +20,12 @@ export const getTodoByIdParamsSchema = z.object({
   todoID: z.cuid(),
 })
 
-export const createTodoSchema = todoSchema
-  .pick({
-    title: true,
-    description: true,
-  })
-  .extend({
-    soignantID: z.cuid().optional(),
-  })
+// soignantID n'est plus dans le schéma de création : le repository le pose
+// lui-même depuis le soignant du tenant courant, jamais depuis le client.
+export const createTodoSchema = todoSchema.pick({
+  title: true,
+  description: true,
+})
 
 export const deleteTodoByIdParamsSchema = getTodoByIdParamsSchema
 

@@ -1,3 +1,5 @@
+import Boom from '@hapi/boom'
+
 import { PatientDomain } from '../../../main/domain/patient.domain'
 import type { IocContainer } from '../../../main/types/application/ioc'
 import type { PathwayWithSlotsRepo } from '../../../main/types/infra/orm/repositories/pathway.repository.interface'
@@ -52,6 +54,7 @@ const buildPathway = (
 const buildDomain = (
   initialAppointments: CreatedAppointment[] = [],
   slotAppointments: SlotAppointments = {},
+  knownThematicIDs: string[] = [],
 ) => {
   const created: CreatedAppointment[] = [...initialAppointments]
   let nextId = created.length + 1
@@ -162,7 +165,13 @@ const buildDomain = (
       ),
     },
     enrollmentIssueRepository: { create: jest.fn(async () => undefined) },
-    thematicRepository: { findByID: jest.fn() },
+    thematicRepository: {
+      findByID: jest.fn((id: string) =>
+        knownThematicIDs.includes(id)
+          ? Promise.resolve({ id, duration: 30 })
+          : Promise.reject(Boom.notFound(`Thematic ${id} not found`)),
+      ),
+    },
   }
 
   const domain = new PatientDomain(container as unknown as IocContainer)
@@ -329,5 +338,47 @@ describe('PatientDomain – parcours individuel "premier créneau dispo"', () =>
     expect(result.failedEnrollments).toEqual([])
     expect(created).toHaveLength(1)
     expect((created[0] as CreatedAppointment).slotID).toBe('slot-indiv-tue')
+  })
+})
+
+describe('PatientDomain – thematicID d\'une inscription', () => {
+  it('cree le rendez-vous quand la thematique est connue du tenant', async () => {
+    const { domain, created } = buildDomain([], {}, ['them-1'])
+
+    const result = await domain.enrollExistingPatientInPathways(
+      {
+        patientID: 'patient-1',
+        startDate: monday(0),
+        pathways: [
+          { tag: 'INDIV', timeOfDay: 'ALL_DAY', duration: 30, thematicID: 'them-1' },
+        ],
+      },
+      'user-1',
+    )
+
+    expect(result.failedEnrollments).toEqual([])
+    expect(created).toHaveLength(1)
+  })
+
+  // `thematicID` finit directement dans Appointment.thematicId via
+  // appointmentRepository.create, sans passer par AppointmentDomain : cette
+  // référence doit donc être vérifiée par PatientDomain lui-même.
+  it("echoue en inscription plutot que d'ecrire une thematique etrangere au tenant", async () => {
+    const { domain, created } = buildDomain([], {}, [])
+
+    const result = await domain.enrollExistingPatientInPathways(
+      {
+        patientID: 'patient-1',
+        startDate: monday(0),
+        pathways: [
+          { tag: 'INDIV', timeOfDay: 'ALL_DAY', duration: 30, thematicID: 'them-etranger' },
+        ],
+      },
+      'user-1',
+    )
+
+    expect(created).toHaveLength(0)
+    expect(result.failedEnrollments).toHaveLength(1)
+    expect(result.failedEnrollments[0]?.reason).toMatch(/not found/i)
   })
 })

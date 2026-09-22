@@ -9,20 +9,24 @@ import type {
 } from '../types/domain/appointment.domain.interface'
 import type { SlotDomainInterface } from '../types/domain/slot.domain.interface'
 import type { AppointmentRepositoryInterface } from '../types/infra/orm/repositories/appointment.repository.interface'
+import type { ThematicRepositoryInterface } from '../types/infra/orm/repositories/thematic.repository.interface'
 import type { AppEventBus } from '../utils/app-event-bus'
 
 class AppointmentDomain implements AppointmentDomainInterface {
   private readonly appointmentRepository: AppointmentRepositoryInterface
   private readonly slotDomain: SlotDomainInterface
+  private readonly thematicRepository: ThematicRepositoryInterface
   private readonly appEventBus: AppEventBus
 
   constructor({
     appointmentRepository,
     slotDomain,
+    thematicRepository,
     appEventBus,
   }: IocContainer) {
     this.appointmentRepository = appointmentRepository
     this.slotDomain = slotDomain
+    this.thematicRepository = thematicRepository
     this.appEventBus = appEventBus
   }
 
@@ -44,6 +48,12 @@ class AppointmentDomain implements AppointmentDomainInterface {
         'Ce créneau est verrouillé : impossible d\'y ajouter un rendez-vous.',
       )
     }
+    // `thematicId` n'a pas de clé composite en base (nullable) : on vérifie
+    // que la thématique appartient au tenant en la chargeant par son
+    // repository filtré, qui répond 404 si elle appartient à un autre service.
+    if (appointmentCreateParams.thematicId) {
+      await this.thematicRepository.findByID(appointmentCreateParams.thematicId)
+    }
     const appointment = await this.appointmentRepository.create(appointmentCreateParams)
     this.appEventBus.emit('appointment.created', { userID, appointmentId: appointment.id })
     return appointment
@@ -61,6 +71,10 @@ class AppointmentDomain implements AppointmentDomainInterface {
           'Ce créneau est verrouillé : impossible de déplacer un rendez-vous dessus.',
         )
       }
+    }
+    // Voir create() : même vérification d'appartenance au tenant.
+    if (typeof appointmentUpdateParams.thematicId === 'string') {
+      await this.thematicRepository.findByID(appointmentUpdateParams.thematicId)
     }
     // Une liste de patients vide supprime le rendez-vous : dans ce cas on
     // n'émet pas d'événement « updated » sur une entité qui n'existe plus.

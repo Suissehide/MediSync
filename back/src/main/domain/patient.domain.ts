@@ -259,6 +259,19 @@ class PatientDomain implements PatientDomainInterface {
     return enrollment.duration ?? 30
   }
 
+  // `thematicID` finit en Appointment.thematicId (référence simple, sans
+  // clé composite) sans passer par AppointmentDomain.create ici : on vérifie
+  // donc nous-mêmes qu'il appartient au tenant, en le chargeant par son
+  // repository filtré. Indépendant de resolveDuration ci-dessus, qui ne fait
+  // ce même chargement que lorsque `duration` est absent.
+  private async assertThematicBelongsToTenant(
+    enrollment: PathwayEnrollmentInput,
+  ): Promise<void> {
+    if (enrollment.thematicID) {
+      await this.thematicRepository.findByID(enrollment.thematicID)
+    }
+  }
+
   private selectValidPathway(
     pathways: PathwayWithSlotsRepo[],
     enrollment: PathwayEnrollmentInput,
@@ -309,6 +322,7 @@ class PatientDomain implements PatientDomainInterface {
     enrollment?: EnrollmentResult['enrollments'][number]
     failure?: EnrollmentResult['failedEnrollments'][number]
   }> {
+    await this.assertThematicBelongsToTenant(enrollment)
     const thematicDuration = await this.resolveDuration(enrollment)
 
     // Vérifier si le motif est requis

@@ -9,12 +9,15 @@ import type {
   TrackingPathwayDomain,
 } from '../types/domain/pathway.domain.interface'
 import type { PathwayRepositoryInterface } from '../types/infra/orm/repositories/pathway.repository.interface'
+import type { PathwayTemplateRepositoryInterface } from '../types/infra/orm/repositories/pathwayTemplate.repository.interface'
 
 class PathwayDomain implements PathwayDomainInterface {
   private readonly pathwayRepository: PathwayRepositoryInterface
+  private readonly pathwayTemplateRepository: PathwayTemplateRepositoryInterface
 
-  constructor({ pathwayRepository }: IocContainer) {
+  constructor({ pathwayRepository, pathwayTemplateRepository }: IocContainer) {
     this.pathwayRepository = pathwayRepository
+    this.pathwayTemplateRepository = pathwayTemplateRepository
   }
 
   findAll(): Promise<PathwayWithTemplateAndSlotsDomain[]> {
@@ -29,20 +32,30 @@ class PathwayDomain implements PathwayDomainInterface {
     return this.pathwayRepository.findTracking(year, month)
   }
 
-  create(
+  async create(
     pathwayCreateParams: PathwayCreateEntityDomain,
   ): Promise<PathwayEntityDomain> {
+    // `templateID` n'a pas de clé composite en base (nullable) : on vérifie
+    // que le modèle de parcours appartient au tenant en le chargeant par son
+    // repository filtré, qui répond 404 si il appartient à un autre service.
+    if (pathwayCreateParams.templateID) {
+      await this.pathwayTemplateRepository.findByID(pathwayCreateParams.templateID)
+    }
     const pathwayInputParams = {
       ...pathwayCreateParams,
     }
-    return this.pathwayRepository.create(pathwayInputParams)
+    return await this.pathwayRepository.create(pathwayInputParams)
   }
 
-  update(
+  async update(
     pathwayID: string,
     pathwayUpdateParams: PathwayUpdateEntityDomain,
   ): Promise<PathwayEntityDomain> {
-    return this.pathwayRepository.update(pathwayID, pathwayUpdateParams)
+    // Voir create() : même vérification d'appartenance au tenant.
+    if (pathwayUpdateParams.templateID) {
+      await this.pathwayTemplateRepository.findByID(pathwayUpdateParams.templateID)
+    }
+    return await this.pathwayRepository.update(pathwayID, pathwayUpdateParams)
   }
 
   delete(pathwayID: string): Promise<PathwayEntityDomain> {
