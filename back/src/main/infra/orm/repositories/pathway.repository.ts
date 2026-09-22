@@ -1,6 +1,10 @@
 import Boom from '@hapi/boom'
 import dayjs from 'dayjs'
 
+import {
+  flattenSlot,
+  soignantLinksInclude,
+} from '../includes/slot-template.include'
 import type { IocContainer } from '../../../types/application/ioc'
 import type {
   PathwayCreateEntityRepo,
@@ -13,6 +17,7 @@ import type {
   TrackingPathwayRepo,
 } from '../../../types/infra/orm/repositories/pathway.repository.interface'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
+import type { TenantContextInterface } from '../../../types/utils/tenant-context'
 import type { PostgresPrismaClient } from '../postgres-client'
 import { combineDateAndTime } from '../../../utils/date'
 import {
@@ -20,17 +25,61 @@ import {
   computeEffectiveOffset,
 } from '../../../utils/pathway-schedule'
 
+// Include partagé : un parcours embarque ses créneaux, chacun avec son
+// modèle de créneau (liens soignants aplatis par flattenSlot) et ses
+// rendez-vous. `slotTemplate` est atteint par la clé composite
+// (slotTemplateID, serviceId) : sûre par construction, la colonne de tenant
+// est déjà dans la clé étrangère. `appointments` (clé composite (slotID,
+// serviceId)), `appointmentPatients` (clé composite (appointmentId,
+// serviceId)) et `patient` (clé composite (patientId, establishmentId))
+// sont sûres pour la même raison.
+//
+// `slots` elle-même est la relation inverse Pathway → Slot, portée par le
+// FK scalaire `pathwayID` (pas de clé composite avec serviceId) : voir la
+// note dans pathwayTemplate.repository.ts sur `slotTemplates`, le même
+// raisonnement s'applique ici à l'identique (sûre tant que `pathwayID`
+// n'est jamais écrit inter-service sans vérification — garanti par le
+// `connect` composite de `create` ci-dessous et par la construction interne
+// de `regenerate`/`delete`, mais dépend de la tâche 14 pour la voie
+// SlotRepository.create/update qui accepte `pathwayID` en scalaire brut).
+const slotsWithTemplateInclude = {
+  slots: {
+    include: {
+      slotTemplate: { include: soignantLinksInclude },
+      appointments: {
+        include: { appointmentPatients: { include: { patient: true } } },
+      },
+    },
+  },
+} as const
+const flattenSlots = <
+  T extends { slots: Parameters<typeof flattenSlot>[0][] },
+>({
+  slots,
+  ...rest
+}: T) => ({
+  ...rest,
+  slots: slots.map(flattenSlot),
+})
+
 class PathwayRepository implements PathwayRepositoryInterface {
   private readonly prisma: PostgresPrismaClient
   private readonly errorHandler: ErrorHandlerInterface
+  private readonly tenantContext: TenantContextInterface
 
-  constructor({ postgresOrm, errorHandler }: IocContainer) {
+  constructor({ postgresOrm, errorHandler, tenantContext }: IocContainer) {
     this.prisma = postgresOrm.prisma
     this.errorHandler = errorHandler
+    this.tenantContext = tenantContext
+  }
+
+  private get scope() {
+    return this.tenantContext.scope()
   }
 
   findAll(): Promise<PathwayWithTemplateAndSlotsRepo[]> {
     return this.prisma.pathway.findMany({
+      where: this.scope,
       include: {
         template: true,
         slots: true,
@@ -41,7 +90,9 @@ class PathwayRepository implements PathwayRepositoryInterface {
   async findByID(pathwayID: string): Promise<PathwayEntityRepo> {
     try {
       return await this.prisma.pathway.findUniqueOrThrow({
-        where: { id: pathwayID },
+        where: {
+          id_serviceId: { id: pathwayID, serviceId: this.scope.serviceId },
+        },
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
@@ -58,8 +109,9 @@ class PathwayRepository implements PathwayRepositoryInterface {
     const startOfDay = new Date(startDate)
     startOfDay.setHours(0, 0, 0, 0)
     try {
-      return await this.prisma.pathway.findMany({
+      const rows = await this.prisma.pathway.findMany({
         where: {
+          ...this.scope,
           startDate: { gte: startOfDay },
           template: {
             id: pathwayTemplateID,
@@ -68,27 +120,9 @@ class PathwayRepository implements PathwayRepositoryInterface {
         orderBy: {
           startDate: 'asc',
         },
-        include: {
-          slots: {
-            include: {
-              slotTemplate: {
-                include: {
-                  soignants: true,
-                },
-              },
-              appointments: {
-                include: {
-                  appointmentPatients: {
-                    include: {
-                      patient: true,
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
+        include: slotsWithTemplateInclude,
       })
+      return rows.map(flattenSlots)
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
         entityName: 'Pathway',
@@ -102,8 +136,13 @@ class PathwayRepository implements PathwayRepositoryInterface {
     fromDate: Date,
   ): Promise<RegeneratePathwaysResultRepo> {
     const template = await this.prisma.pathwayTemplate.findUnique({
-      where: { id: pathwayTemplateID },
-      include: { slotTemplates: { include: { soignants: true } } },
+      where: {
+        id_serviceId: {
+          id: pathwayTemplateID,
+          serviceId: this.scope.serviceId,
+        },
+      },
+      include: { slotTemplates: { include: soignantLinksInclude } },
     })
     if (!template) {
       throw Boom.notFound('PathwayTemplate not found')
@@ -119,10 +158,13 @@ class PathwayRepository implements PathwayRepositoryInterface {
 
     try {
       return await this.prisma.$transaction(async (tx) => {
-        const forbiddenWeeks = await tx.forbiddenWeek.findMany()
+        const forbiddenWeeks = await tx.forbiddenWeek.findMany({
+          where: this.scope,
+        })
 
         const pathways = await tx.pathway.findMany({
           where: {
+            ...this.scope,
             templateID: pathwayTemplateID,
             startDate: { gte: startOfDay },
           },
@@ -151,11 +193,20 @@ class PathwayRepository implements PathwayRepositoryInterface {
             const emptyTemplateIDs = emptySlots.map(
               (slot) => slot.slotTemplateID,
             )
-            await tx.slot.deleteMany({ where: { id: { in: emptySlotIDs } } })
+            await tx.slot.deleteMany({
+              where: {
+                id: { in: emptySlotIDs },
+                serviceId: this.scope.serviceId,
+              },
+            })
             // Guard: only cloned slot templates (templateID null) are ever
             // deleted — never a master template shared by a PathwayTemplate.
             await tx.slotTemplate.deleteMany({
-              where: { id: { in: emptyTemplateIDs }, templateID: null },
+              where: {
+                id: { in: emptyTemplateIDs },
+                templateID: null,
+                serviceId: this.scope.serviceId,
+              },
             })
             slotsDeleted += emptySlots.length
           }
@@ -189,6 +240,7 @@ class PathwayRepository implements PathwayRepositoryInterface {
 
             const clonedSlotTemplate = await tx.slotTemplate.create({
               data: {
+                ...this.scope,
                 startTime: slotTemplate.startTime,
                 endTime: slotTemplate.endTime,
                 offsetDays: effectiveOffset,
@@ -198,14 +250,18 @@ class PathwayRepository implements PathwayRepositoryInterface {
                 locationID: slotTemplate.locationID,
                 description: slotTemplate.description,
                 color: slotTemplate.color,
-                soignants: {
-                  connect: slotTemplate.soignants.map((s) => ({ id: s.id })),
+                soignantLinks: {
+                  create: slotTemplate.soignantLinks.map((l) => ({
+                    soignantId: l.soignantId,
+                    ...this.scope,
+                  })),
                 },
               },
             })
 
             await tx.slot.create({
               data: {
+                ...this.scope,
                 startDate: start,
                 endDate: end,
                 slotTemplateID: clonedSlotTemplate.id,
@@ -238,8 +294,9 @@ class PathwayRepository implements PathwayRepositoryInterface {
     const startOfDay = new Date(startDate)
     startOfDay.setHours(0, 0, 0, 0)
     try {
-      return await this.prisma.pathway.findMany({
+      const rows = await this.prisma.pathway.findMany({
         where: {
+          ...this.scope,
           startDate: { gte: startOfDay },
           template: {
             mainTag: tag,
@@ -248,27 +305,9 @@ class PathwayRepository implements PathwayRepositoryInterface {
         orderBy: {
           startDate: 'asc',
         },
-        include: {
-          slots: {
-            include: {
-              slotTemplate: {
-                include: {
-                  soignants: true,
-                },
-              },
-              appointments: {
-                include: {
-                  appointmentPatients: {
-                    include: {
-                      patient: true,
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
+        include: slotsWithTemplateInclude,
       })
+      return rows.map(flattenSlots)
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
         entityName: 'Pathway',
@@ -284,8 +323,9 @@ class PathwayRepository implements PathwayRepositoryInterface {
     const startOfDay = new Date(date)
     startOfDay.setHours(0, 0, 0, 0)
     try {
-      return await this.prisma.pathway.findMany({
+      const rows = await this.prisma.pathway.findMany({
         where: {
+          ...this.scope,
           template: {
             mainTag: tag,
           },
@@ -298,27 +338,9 @@ class PathwayRepository implements PathwayRepositoryInterface {
         orderBy: {
           startDate: 'asc',
         },
-        include: {
-          slots: {
-            include: {
-              slotTemplate: {
-                include: {
-                  soignants: true,
-                },
-              },
-              appointments: {
-                include: {
-                  appointmentPatients: {
-                    include: {
-                      patient: true,
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
+        include: slotsWithTemplateInclude,
       })
+      return rows.map(flattenSlots)
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
         entityName: 'Pathway',
@@ -327,12 +349,16 @@ class PathwayRepository implements PathwayRepositoryInterface {
     }
   }
 
-  async findTracking(year: number, month: number): Promise<TrackingPathwayRepo[]> {
+  async findTracking(
+    year: number,
+    month: number,
+  ): Promise<TrackingPathwayRepo[]> {
     const startOfMonth = new Date(year, month - 1, 1)
     const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999)
 
     const pathways = await this.prisma.pathway.findMany({
       where: {
+        ...this.scope,
         slots: {
           some: {
             startDate: {
@@ -369,13 +395,18 @@ class PathwayRepository implements PathwayRepositoryInterface {
     const pathwayIds = pathways.map((p) => p.id)
     const endDates = await this.prisma.slot.groupBy({
       by: ['pathwayID'],
-      where: { pathwayID: { in: pathwayIds } },
+      where: { pathwayID: { in: pathwayIds }, serviceId: this.scope.serviceId },
       _max: { endDate: true },
     })
-    const endDateMap = new Map(endDates.map((e) => [e.pathwayID, e._max.endDate]))
+    const endDateMap = new Map(
+      endDates.map((e) => [e.pathwayID, e._max.endDate]),
+    )
 
     return pathways.map((pathway) => {
-      const patientMap = new Map<string, TrackingPathwayRepo['patients'][number]>()
+      const patientMap = new Map<
+        string,
+        TrackingPathwayRepo['patients'][number]
+      >()
 
       const appointmentEntries = pathway.slots.flatMap((slot) =>
         slot.appointments.flatMap((appointment) =>
@@ -425,12 +456,13 @@ class PathwayRepository implements PathwayRepositoryInterface {
     try {
       return await this.prisma.pathway.create({
         data: {
+          ...this.scope,
           startDate: pathwayCreateParams.startDate,
-          template: {
-            connect: { id: pathwayCreateParams.templateID ?? undefined },
-          },
+          templateID: pathwayCreateParams.templateID ?? null,
           slots: {
-            connect: pathwayCreateParams.slotIDs.map((id) => ({ id })),
+            connect: pathwayCreateParams.slotIDs.map((id) => ({
+              id_serviceId: { id, serviceId: this.scope.serviceId },
+            })),
           },
         },
       })
@@ -448,7 +480,9 @@ class PathwayRepository implements PathwayRepositoryInterface {
   ): Promise<PathwayEntityRepo> {
     try {
       return await this.prisma.pathway.update({
-        where: { id: pathwayID },
+        where: {
+          id_serviceId: { id: pathwayID, serviceId: this.scope.serviceId },
+        },
         data: pathwayUpdateParams,
       })
     } catch (err) {
@@ -464,7 +498,9 @@ class PathwayRepository implements PathwayRepositoryInterface {
       return await this.prisma.$transaction(async (tx) => {
         // Find the pathway with its slots to get slotTemplateIDs
         const pathway = await tx.pathway.findUniqueOrThrow({
-          where: { id: pathwayID },
+          where: {
+            id_serviceId: { id: pathwayID, serviceId: this.scope.serviceId },
+          },
           include: {
             slots: {
               select: {
@@ -480,17 +516,22 @@ class PathwayRepository implements PathwayRepositoryInterface {
 
         // Delete all slots
         await tx.slot.deleteMany({
-          where: { id: { in: slotIDs } },
+          where: { id: { in: slotIDs }, serviceId: this.scope.serviceId },
         })
 
         // Delete all slotTemplates
         await tx.slotTemplate.deleteMany({
-          where: { id: { in: slotTemplateIDs } },
+          where: {
+            id: { in: slotTemplateIDs },
+            serviceId: this.scope.serviceId,
+          },
         })
 
         // Delete the pathway
         return await tx.pathway.delete({
-          where: { id: pathwayID },
+          where: {
+            id_serviceId: { id: pathwayID, serviceId: this.scope.serviceId },
+          },
         })
       })
     } catch (err) {

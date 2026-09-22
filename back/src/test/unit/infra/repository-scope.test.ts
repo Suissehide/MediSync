@@ -2,6 +2,8 @@ import { ActivityLogRepository } from '../../../main/infra/orm/repositories/acti
 import { DiagnosticEducatifRepository } from '../../../main/infra/orm/repositories/diagnosticEducatif.repository'
 import { DiagnosticEducatifTemplateRepository } from '../../../main/infra/orm/repositories/diagnosticEducatifTemplate.repository'
 import { LocationRepository } from '../../../main/infra/orm/repositories/location.repository'
+import { PathwayRepository } from '../../../main/infra/orm/repositories/pathway.repository'
+import { PathwayTemplateRepository } from '../../../main/infra/orm/repositories/pathwayTemplate.repository'
 import { PatientRepository } from '../../../main/infra/orm/repositories/patient.repository'
 import { PlanningCycleRepository } from '../../../main/infra/orm/repositories/planningCycle.repository'
 import { SlotRepository } from '../../../main/infra/orm/repositories/slot.repository'
@@ -41,7 +43,7 @@ export const buildFakePrisma = (responses: Partial<Record<string, unknown>> = {}
         if (key in responses) {
           return Promise.resolve(responses[key])
         }
-        if (op === 'findMany') {
+        if (op === 'findMany' || op === 'groupBy') {
           return Promise.resolve([])
         }
         if (op === 'count') {
@@ -478,6 +480,137 @@ describe('scoping slotTemplate et slot', () => {
         where: { id_serviceId: { id: 'sl1', serviceId: 's1' } },
         data: { locked: true },
       },
+    })
+  })
+})
+
+describe('scoping pathwayTemplate et pathway', () => {
+  it('PathwayTemplateRepository filtre et reordonne dans le service', async () => {
+    const { prisma, calls } = buildFakePrisma()
+    const ctx = new TenantContext()
+    const repo = new PathwayTemplateRepository(buildContainer(prisma, ctx))
+    await ctx.run(tenant, async () => {
+      await repo.findAll()
+      await repo.reorder(['a', 'b'])
+      await repo.create({ name: 'N', color: '#fff', mainTag: 't' } as never)
+    })
+    expect(calls[0].args).toMatchObject({ where: { serviceId: 's1' }, orderBy: { displayOrder: 'asc' } })
+    expect(calls[1].args).toMatchObject({ where: { id_serviceId: { id: 'a', serviceId: 's1' } }, data: { displayOrder: 0 } })
+    expect(calls[3].args).toMatchObject({ data: { name: 'N', serviceId: 's1', establishmentId: 'e1' } })
+  })
+
+  it('PathwayRepository filtre les recherches par tag et le suivi mensuel', async () => {
+    const { prisma, calls } = buildFakePrisma()
+    const ctx = new TenantContext()
+    const repo = new PathwayRepository(buildContainer(prisma, ctx))
+    await ctx.run(tenant, async () => {
+      await repo.findByTemplateTagAndDate('tag', new Date())
+      await repo.findTracking(2026, 3)
+      await repo.create({ startDate: '2026-03-02', templateID: 'pt', slotIDs: ['sl'] } as never)
+    })
+    expect(calls[0].args).toMatchObject({ where: { serviceId: 's1', template: { mainTag: 'tag' } } })
+    expect(calls[1].args).toMatchObject({ where: { serviceId: 's1' } })
+    expect(calls[2].args).toMatchObject({ where: { pathwayID: { in: [] }, serviceId: 's1' } })
+    expect(calls[3].args).toMatchObject({ data: { serviceId: 's1', establishmentId: 'e1', templateID: 'pt', slots: { connect: [{ id_serviceId: { id: 'sl', serviceId: 's1' } }] } } })
+  })
+
+  it('PathwayRepository.regenerate filtre chaque operation de la transaction et protege les modeles maitres', async () => {
+    // Une thematique existante et un modele de creneau maitre, avec un
+    // parcours deja instancie qui porte un creneau vide (aucun rendez-vous)
+    // sur un modele clone (templateID null) : la regeneration doit purger
+    // ce creneau vide et son clone, puis recreer le pas de programme.
+    const { prisma, calls } = buildFakePrisma({
+      'pathwayTemplate.findUnique': {
+        id: 'pt1',
+        slotTemplates: [{
+          id: 'stMaster1',
+          startTime: new Date('1970-01-01T09:00:00.000Z'),
+          endTime: new Date('1970-01-01T10:00:00.000Z'),
+          offsetDays: 0,
+          isIndividual: true,
+          capacity: null,
+          thematicId: null,
+          locationID: null,
+          description: null,
+          color: '#fff',
+          soignantLinks: [{ soignantId: 'so1' }],
+        }],
+      },
+      'pathway.findMany': [{
+        id: 'pw1',
+        startDate: new Date('2026-03-02'),
+        slots: [{ id: 'slot-empty', slotTemplateID: 'st-empty', appointments: [] }],
+      }],
+    })
+    const ctx = new TenantContext()
+    const repo = new PathwayRepository(buildContainer(prisma, ctx))
+
+    await ctx.run(tenant, () => repo.regenerate('pt1', new Date('2026-03-01')))
+
+    expect(calls[0]).toMatchObject({
+      model: 'pathwayTemplate', op: 'findUnique',
+      args: { where: { id_serviceId: { id: 'pt1', serviceId: 's1' } } },
+    })
+    expect(calls[1]).toMatchObject({
+      model: 'forbiddenWeek', op: 'findMany',
+      args: { where: { serviceId: 's1', establishmentId: 'e1' } },
+    })
+    expect(calls[2]).toMatchObject({
+      model: 'pathway', op: 'findMany',
+      args: { where: { serviceId: 's1', templateID: 'pt1', startDate: { gte: expect.any(Date) } } },
+    })
+    expect(calls[3]).toMatchObject({
+      model: 'slot', op: 'deleteMany',
+      args: { where: { id: { in: ['slot-empty'] }, serviceId: 's1' } },
+    })
+    // Condition de surete : seuls les modeles clones (templateID null) sont
+    // supprimes, jamais un modele maitre partage par le PathwayTemplate.
+    expect(calls[4]).toMatchObject({
+      model: 'slotTemplate', op: 'deleteMany',
+      args: { where: { id: { in: ['st-empty'] }, templateID: null, serviceId: 's1' } },
+    })
+    expect(calls[5]).toMatchObject({
+      model: 'slotTemplate', op: 'create',
+      args: {
+        data: {
+          serviceId: 's1', establishmentId: 'e1',
+          soignantLinks: { create: [{ soignantId: 'so1', serviceId: 's1', establishmentId: 'e1' }] },
+        },
+      },
+    })
+    expect(calls[6]).toMatchObject({
+      model: 'slot', op: 'create',
+      args: { data: { serviceId: 's1', establishmentId: 'e1', pathwayID: 'pw1' } },
+    })
+  })
+
+  it('PathwayRepository.delete filtre la suppression des slots, modeles clones et du parcours', async () => {
+    const { prisma, calls } = buildFakePrisma({
+      'pathway.findUniqueOrThrow': {
+        id: 'pw1',
+        slots: [{ id: 'sl1', slotTemplateID: 'st1' }],
+      },
+    })
+    const ctx = new TenantContext()
+    const repo = new PathwayRepository(buildContainer(prisma, ctx))
+
+    await ctx.run(tenant, () => repo.delete('pw1'))
+
+    expect(calls[0]).toMatchObject({
+      model: 'pathway', op: 'findUniqueOrThrow',
+      args: { where: { id_serviceId: { id: 'pw1', serviceId: 's1' } } },
+    })
+    expect(calls[1]).toMatchObject({
+      model: 'slot', op: 'deleteMany',
+      args: { where: { id: { in: ['sl1'] }, serviceId: 's1' } },
+    })
+    expect(calls[2]).toMatchObject({
+      model: 'slotTemplate', op: 'deleteMany',
+      args: { where: { id: { in: ['st1'] }, serviceId: 's1' } },
+    })
+    expect(calls[3]).toMatchObject({
+      model: 'pathway', op: 'delete',
+      args: { where: { id_serviceId: { id: 'pw1', serviceId: 's1' } } },
     })
   })
 })
