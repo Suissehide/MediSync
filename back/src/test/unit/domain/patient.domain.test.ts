@@ -381,4 +381,26 @@ describe('PatientDomain – thematicID d\'une inscription', () => {
     expect(result.failedEnrollments).toHaveLength(1)
     expect(result.failedEnrollments[0]?.reason).toMatch(/not found/i)
   })
+
+  // Même vérification que ci-dessus, mais sur le second point d'entrée
+  // (nouveau patient, pas encore en base) : les deux passent par la même
+  // méthode privée partagée (enrollPatientInTag), ce test le démontre.
+  it("echoue aussi a l'inscription d'un nouveau patient sur une thematique etrangere au tenant", async () => {
+    const { domain, created } = buildDomain([], {}, [])
+
+    const result = await domain.enrollPatientInPathways(
+      {
+        patientData: { firstName: 'Ada', lastName: 'Lovelace' } as never,
+        startDate: monday(0),
+        pathways: [
+          { tag: 'INDIV', timeOfDay: 'ALL_DAY', duration: 30, thematicID: 'them-etranger' },
+        ],
+      },
+      'user-1',
+    )
+
+    expect(created).toHaveLength(0)
+    expect(result.failedEnrollments).toHaveLength(1)
+    expect(result.failedEnrollments[0]?.reason).toMatch(/not found/i)
+  })
 })
