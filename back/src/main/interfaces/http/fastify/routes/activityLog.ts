@@ -7,6 +7,12 @@ import {
   getActivityLogsQuerySchema,
 } from '../schemas/activityLog.schema'
 
+// Le journal d'activité est une prérogative de l'administrateur
+// d'établissement (document d'habilitations) : `activity-log:read` conserve
+// exactement les comptes qui y avaient accès avant la refonte multi-tenant.
+// Le routeur reste sous le préfixe de service ; c'est sans conséquence, car
+// le tenant résolu sous ce préfixe porte aussi `establishmentRole`, seul
+// champ que `hasPermission` consulte pour une permission d'établissement.
 const activityLogRouter: FastifyPluginAsync = (fastify) => {
   const { activityLogDomain } = fastify.iocContainer
 
@@ -17,7 +23,7 @@ const activityLogRouter: FastifyPluginAsync = (fastify) => {
         querystring: getActivityLogsQuerySchema,
         response: { 200: activityLogsResponseSchema },
       },
-      config: { permission: 'planning:write' },
+      config: { permission: 'activity-log:read' },
     },
     (request) => {
       const { page, action, userID, from } = request.query
@@ -29,7 +35,7 @@ const activityLogRouter: FastifyPluginAsync = (fastify) => {
     '/cleanup',
     {
       schema: { response: { 200: cleanupResponseSchema } },
-      config: { permission: 'planning:write' },
+      config: { permission: 'activity-log:read' },
     },
     () => activityLogDomain.cleanup(),
   )

@@ -45,6 +45,11 @@ describe('permissions', () => {
     expect(hasPermission(roles, 'clinical:write')).toBe(false)
     expect(hasPermission(roles, 'members:manage')).toBe(true)
     expect(hasPermission({ serviceRole: null, establishmentRole: 'MEMBER' }, 'patient:read')).toBe(false)
+    // Le journal d'activite est monte sous le prefixe de service mais porte
+    // une permission d'etablissement : c'est establishmentRole qui tranche,
+    // jamais le role de service.
+    expect(hasPermission(roles, 'activity-log:read')).toBe(true)
+    expect(hasPermission({ serviceRole: 'COORDINATEUR', establishmentRole: 'MEMBER' }, 'activity-log:read')).toBe(false)
   })
 
   it('est identique a la copie du front', () => {
