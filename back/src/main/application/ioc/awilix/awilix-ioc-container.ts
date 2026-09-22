@@ -28,6 +28,7 @@ import type { Config } from '../../../types/application/config'
 import type { IocContainer } from '../../../types/application/ioc'
 import { ErrorHandler } from '../../../utils/error-handler'
 import { recordToString } from '../../../utils/helper'
+import { TenantContext } from '../../../utils/tenant-context'
 import { SlotTemplateDomain } from '../../../domain/slotTemplate.domain'
 import { SlotTemplateRepository } from '../../../infra/orm/repositories/slotTemplate.repository'
 import { DiagnosticEducatifDomain } from '../../../domain/diagnosticEducatif.domain'
@@ -64,6 +65,8 @@ class AwilixIocContainer {
     const logger = container.resolve('logger')
     logger.debug('Initializing IoC container…')
     logger.debug(`Loaded config:\n\t${recordToString(config)}`)
+    // Tenant context (avant l'ORM : le garde-fou Prisma en dépend)
+    this.#registerTenantContext()
     // DB
     this.#registerPrismaOrm()
     // EventBus (registered early so all domains can rely on it)
@@ -158,6 +161,11 @@ class AwilixIocContainer {
 
   #registerPrismaOrm(): void {
     this.register('postgresOrm', asClass(PostgresOrm).singleton())
+  }
+
+  // Tenant context
+  #registerTenantContext(): void {
+    this.register('tenantContext', asClass(TenantContext).singleton())
   }
 
   // Error

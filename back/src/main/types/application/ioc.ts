@@ -40,6 +40,7 @@ import type { UserRepositoryInterface } from '../infra/orm/repositories/user.rep
 import type { HttpServer } from '../interfaces/http/server'
 import type { ErrorHandlerInterface } from '../utils/error-handler'
 import type { Logger } from '../utils/logger'
+import type { TenantContextInterface } from '../utils/tenant-context'
 import type { Config } from './config'
 
 export interface IocContainer {
@@ -48,6 +49,7 @@ export interface IocContainer {
   readonly httpClient: HttpClientInterface
   readonly logger: Logger
   readonly errorHandler: ErrorHandlerInterface
+  readonly tenantContext: TenantContextInterface
   // DB
   readonly postgresOrm: PostgresOrm
   // Auth
