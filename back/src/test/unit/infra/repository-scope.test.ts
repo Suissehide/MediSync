@@ -1,7 +1,10 @@
 import { ActivityLogRepository } from '../../../main/infra/orm/repositories/activityLog.repository'
 import { LocationRepository } from '../../../main/infra/orm/repositories/location.repository'
 import { PatientRepository } from '../../../main/infra/orm/repositories/patient.repository'
+import { PlanningCycleRepository } from '../../../main/infra/orm/repositories/planningCycle.repository'
 import { SoignantRepository } from '../../../main/infra/orm/repositories/soignant.repository'
+import { ThematicRepository } from '../../../main/infra/orm/repositories/thematic.repository'
+import { TodoRepository } from '../../../main/infra/orm/repositories/todo.repository'
 import type { IocContainer } from '../../../main/types/application/ioc'
 import type { Tenant } from '../../../main/types/utils/tenant-context'
 import { TenantContext } from '../../../main/utils/tenant-context'
@@ -220,5 +223,58 @@ describe('PatientRepository couvre les methodes de parcours', () => {
       args: { where: { id_serviceId: { id: 'appt1', serviceId: 's1' } } },
     })
     expect(result).toEqual({ deletedAppointments: 1, removedFromGroup: 0 })
+  })
+})
+
+describe('scoping des repositories de service simples', () => {
+  it('ThematicRepository filtre, cree les liens soignants et aplatit la reponse', async () => {
+    const { prisma, calls } = buildFakePrisma()
+    const ctx = new TenantContext()
+    const repo = new ThematicRepository(buildContainer(prisma, ctx))
+    await ctx.run(tenant, async () => {
+      await repo.findAll()
+      await repo.create({ name: 'T', soignantIDs: ['so1', 'so2'] })
+      await repo.update('t1', { soignantIDs: ['so3'] })
+    })
+    expect(calls[0].args).toMatchObject({ where: { serviceId: 's1' } })
+    expect(calls[1].args).toMatchObject({
+      data: {
+        name: 'T', serviceId: 's1', establishmentId: 'e1',
+        soignantLinks: { create: [
+          { soignantId: 'so1', serviceId: 's1', establishmentId: 'e1' },
+          { soignantId: 'so2', serviceId: 's1', establishmentId: 'e1' },
+        ] },
+      },
+    })
+    expect(calls[2].args).toMatchObject({
+      where: { id_serviceId: { id: 't1', serviceId: 's1' } },
+      data: { soignantLinks: { deleteMany: {}, create: [{ soignantId: 'so3' }] } },
+    })
+  })
+
+  it('TodoRepository ne voit que les taches du soignant courant', async () => {
+    const { prisma, calls } = buildFakePrisma()
+    const ctx = new TenantContext()
+    const repo = new TodoRepository(buildContainer(prisma, ctx))
+    await ctx.run(tenant, async () => {
+      await repo.findAll()
+      await repo.create({ title: 't', createDate: new Date().toISOString(), completed: false } as never)
+    })
+    expect(calls[0].args).toMatchObject({ where: { serviceId: 's1', soignantID: 'so1' } })
+    expect(calls[1].args).toMatchObject({ data: { serviceId: 's1', establishmentId: 'e1', soignantID: 'so1' } })
+  })
+
+  it('PlanningCycleRepository travaille par serviceId', async () => {
+    const { prisma, calls } = buildFakePrisma()
+    const ctx = new TenantContext()
+    const repo = new PlanningCycleRepository(buildContainer(prisma, ctx))
+    await ctx.run(tenant, async () => {
+      await repo.find()
+      await repo.upsert({ startOfWeek: new Date(), weekCount: 6 })
+      await repo.delete()
+    })
+    expect(calls[0].args).toMatchObject({ where: { serviceId: 's1' } })
+    expect(calls[1].args).toMatchObject({ where: { serviceId: 's1' }, create: { serviceId: 's1', establishmentId: 'e1', weekCount: 6 } })
+    expect(calls[2].args).toMatchObject({ where: { serviceId: 's1' } })
   })
 })
