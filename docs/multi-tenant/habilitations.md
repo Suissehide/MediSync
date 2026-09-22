@@ -44,7 +44,9 @@ associe les permissions aux rôles. C'est cette matrice qui fait foi.
 
 | Permission | Périmètre | Coordinateur | Intervenant | Secrétariat | Lecture |
 | --- | --- | :-: | :-: | :-: | :-: |
+| `planning:read` | Lecture des modèles de parcours et de créneaux, parcours, créneaux, cycle de planification, semaines interdites | ✔ | ✔ | ✔ | ✔ |
 | `planning:write` | Modèles de parcours et de créneaux, parcours, créneaux, cycle de planification, semaines interdites | ✔ | | | |
+| `referentials:read` | Lecture des thématiques, modèles de diagnostic, soignants et lieux | ✔ | ✔ | ✔ | ✔ |
 | `referentials:write` | Thématiques, modèles de diagnostic éducatif | ✔ | | | |
 | `patient:read` | Identité, contact, contexte social, sous-dossier hors champs cliniques, planning individuel, suivi | ✔ | ✔ | ✔ | ✔ |
 | `patient:write` | Création et modification de l'identité, du contact, du social et du sous-dossier hors champs cliniques | ✔ | ✔ | ✔ | |

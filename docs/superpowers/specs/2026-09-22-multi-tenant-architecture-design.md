@@ -174,12 +174,14 @@ des transmissions (`clinical:write`).
 
 ### 5.1 Injection du contexte
 
-Le container Awilix gagne un scope par requête via `@fastify/awilix` (déjà présent). `resolveTenant` enregistre
-`tenant` dans ce scope. Les repositories des modèles rattachés à un service ou à un établissement sont enregistrés
-en scope requête et reçoivent `tenant` par le constructeur, comme ils reçoivent `postgresOrm` aujourd'hui. Leurs
-signatures publiques ne changent pas : `slotRepository.findById(id)` filtre en interne sur `tenant.serviceId`. Les
-domaines ignorent le tenant, sauf pour les règles métier qui en dépendent (création automatique du sous-dossier,
-par exemple).
+Tous les domaines et repositories sont des singletons Awilix, capturés par les routes à l'enregistrement. Plutôt
+que de les re-scoper par requête, le tenant est porté par un stockage asynchrone (`@fastify/request-context`,
+fondé sur `AsyncLocalStorage`). `resolveTenant` y pose `tenant` ; un singleton `TenantContext` l'expose aux
+repositories (`current()`, `currentService()`) et fournit `runAsSystem()` pour les traitements hors requête
+(purge périodique, scripts). Les repositories des modèles rattachés à un service ou à un établissement lisent le
+tenant au moment de chaque requête et filtrent en interne. Leurs signatures publiques ne changent pas :
+`slotRepository.findById(id)` filtre sur `tenant.serviceId`. Les domaines ignorent le tenant, sauf pour les
+règles métier qui en dépendent (création automatique du sous-dossier, par exemple).
 
 Trois familles de repositories :
 
@@ -215,7 +217,7 @@ l'`ErrorHandler` existant. Le domaine n'a rien à vérifier.
 
 ### 5.5 Tests
 
-- **Isolation générique (e2e, Testcontainers)** : pour chaque route de service listée, créer une ressource dans un
+- **Isolation générique (e2e, base PostgreSQL de test dédiée, Fastify `inject`)** : pour chaque route de service listée, créer une ressource dans un
   service B, la demander depuis un membre du service A, attendre 404. Même schéma entre deux établissements pour
   les routes d'établissement.
 - **Garde-fou (unitaire)** : pour chaque modèle déclaré, une requête sans filtre est rejetée ; une requête filtrée
@@ -335,10 +337,12 @@ redéployer l'image précédente et restaurer avec `deploy/scripts/restore-db-du
 
 ### 7.5 Vérification
 
-Un test de migration jetable restaure un extrait anonymisé de la base actuelle dans Testcontainers, applique la
-migration et vérifie les invariants : aucune colonne de tenant nulle, un utilisateur `ADMIN` devenu administrateur
-d'établissement et coordinateur, les soignants d'un modèle de créneau retrouvés dans la table de liaison, et à
-l'étape 3 autant de sous-dossiers que de patients. Ce test est retiré après le déploiement de l'étape concernée.
+Il n'existe pas aujourd'hui de harnais e2e ni de Testcontainers ; l'étape 1 pose un harnais sur une base de test
+dédiée. La vérification d'une migration de données se fait donc **manuellement, une fois, sur une copie de la base
+de production** restaurée localement (`deploy/scripts/restore-db-dump.sh`) : application de la migration, puis
+exécution d'un fichier SQL d'invariants conservé dans `back/prisma/checks/` (aucune colonne de tenant nulle,
+correspondance des rôles, cardinalités des tables de liaison, et à l'étape 3 autant de sous-dossiers que de
+patients), puis connexion avec un compte de chaque ancien rôle.
 
 ## 8. Découpage en étapes
 
@@ -351,12 +355,14 @@ service). L'étape 1 est un prérequis des trois autres ; les étapes 2 et 3 son
 - Migration : `Establishment`, `Service`, appartenances, rôles, colonnes de tenant partout, tables de liaison
   explicites, clés composites, conversion des utilisateurs, `PlanningCycle` par service, `ActivityLog` contextualisé.
   `Patient` reste à plat et gagne `establishmentId`.
-- Back : `/me`, `resolveTenant`, scope Awilix par requête, repositories filtrés, garde-fou Prisma,
-  `requirePermission` et matrice, routes préfixées. L'ancienne API non préfixée disparaît.
+- Back : `/me`, `resolveTenant`, contexte de tenant par stockage asynchrone, repositories filtrés, garde-fou
+  Prisma, `requirePermission` et matrice, routes préfixées, routes d'administration des membres. L'ancienne API
+  non préfixée disparaît.
 - Front minimal : le store d'authentification retient l'unique contexte renvoyé par `/me` ; le préfixe d'API est
-  dérivé de ce store en un seul endroit. Aucune route ni clé de cache ne change. Le layout `_admin` teste
-  `planning:write`.
-- Seed avec un établissement et un service. Tests : isolation générique, garde-fou, permissions, migration jetable.
+  dérivé de ce store en un seul endroit. Aucune route ni clé de cache ne change. `useCan()` remplace les tests de
+  rôle existants (layout `_admin`, barre de navigation, filtres). L'écran Utilisateurs devient l'écran Membres.
+- Seed avec un établissement et un service. Harnais e2e (base de test, `inject`). Tests : isolation générique,
+  garde-fou, permissions. Vérification manuelle de la migration sur une copie de la base.
 - **Sortie** : application indiscernable d'aujourd'hui pour un utilisateur ; un membre du service A reçoit 404 sur
   toute ressource du service B.
 
