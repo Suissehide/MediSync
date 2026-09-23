@@ -62,6 +62,12 @@ function RootErrorComponent({ error }: ErrorComponentProps) {
   )
 }
 
+// INVARIANT MULTI-TENANT : un composant place ici ne doit jamais interroger
+// l'API. Ce qui survit au changement d'etablissement/service garde
+// l'observateur qu'il avait, donc l'ANCIEN client de requetes (React Query
+// fige le client a la creation de l'observateur) : il continuerait d'afficher,
+// ou de recharger, la donnee d'un autre service. Les ecrans qui lisent l'API
+// vivent sous `$serviceId` / `admin`, qui sont demontes au changement.
 function Root() {
   return (
     <>

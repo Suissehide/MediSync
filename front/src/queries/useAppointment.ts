@@ -5,6 +5,10 @@ import { APPOINTMENT, SLOT } from '../constants/process.constant.ts'
 import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
 import { useToast } from '../hooks/useToast.ts'
+import {
+  restoreForTenant,
+  snapshotForTenant,
+} from '../hooks/useTenantSwitch.ts'
 import type {
   Appointment,
   CreateAppointmentParams,
@@ -74,7 +78,7 @@ export const useAppointmentMutations = () => {
     onMutate: async (newAppointment: CreateAppointmentParams) => {
       await queryClient.cancelQueries({ queryKey: [APPOINTMENT.GET_ALL] })
 
-      const previousAppointments = queryClient.getQueryData([
+      const previousAppointments = snapshotForTenant(queryClient, [
         APPOINTMENT.GET_ALL,
       ])
       queryClient.setQueryData(
@@ -94,10 +98,7 @@ export const useAppointmentMutations = () => {
       })
     },
     onError: (error, __, context) => {
-      queryClient.setQueryData(
-        [APPOINTMENT.GET_ALL],
-        context?.previousAppointments,
-      )
+      restoreForTenant(queryClient, context?.previousAppointments)
 
       toast({
         title: 'Erreur lors de la création du rendez-vous',
@@ -117,7 +118,7 @@ export const useAppointmentMutations = () => {
     onMutate: async (appointmentID) => {
       await queryClient.cancelQueries({ queryKey: [APPOINTMENT.GET_ALL] })
 
-      const previousAppointments = queryClient.getQueryData([
+      const previousAppointments = snapshotForTenant(queryClient, [
         APPOINTMENT.GET_ALL,
       ])
       queryClient.setQueryData(
@@ -137,10 +138,7 @@ export const useAppointmentMutations = () => {
       })
     },
     onError: (error, __, context) => {
-      queryClient.setQueryData(
-        [APPOINTMENT.GET_ALL],
-        context?.previousAppointments,
-      )
+      restoreForTenant(queryClient, context?.previousAppointments)
 
       toast({
         title: 'Erreur lors de la suppression du rendez-vous',
@@ -160,7 +158,7 @@ export const useAppointmentMutations = () => {
     onMutate: async (updatedAppointment: UpdateAppointmentParams) => {
       await queryClient.cancelQueries({ queryKey: [APPOINTMENT.GET_ALL] })
 
-      const previousAppointments = queryClient.getQueryData([
+      const previousAppointments = snapshotForTenant(queryClient, [
         APPOINTMENT.GET_ALL,
       ])
       queryClient.setQueryData(
@@ -182,10 +180,7 @@ export const useAppointmentMutations = () => {
       })
     },
     onError: (error, __, context) => {
-      queryClient.setQueryData(
-        [APPOINTMENT.GET_ALL],
-        context?.previousAppointments,
-      )
+      restoreForTenant(queryClient, context?.previousAppointments)
 
       toast({
         title: 'Erreur lors de la mise à jour du rendez-vous',

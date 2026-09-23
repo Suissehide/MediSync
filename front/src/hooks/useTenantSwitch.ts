@@ -1,3 +1,4 @@
+import type { QueryKey } from '@tanstack/react-query'
 import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 
@@ -40,6 +41,52 @@ export const tenantKey = (context: TenantContext | null): string =>
 // ete programmees.
 export const currentTenantKey = (): string => tenantKey(useAuthStore.getState().context)
 
+// Photo d'un ou plusieurs emplacements du cache, prise AVEC le couple du
+// moment. Une mutation optimiste photographie l'etat avant de le modifier,
+// puis le restaure si l'appel echoue.
+export type TenantSnapshot = {
+  tenant: string
+  entries: { key: QueryKey; data: unknown }[]
+}
+
+export const snapshotForTenant = (
+  client: QueryClient,
+  ...keys: QueryKey[]
+): TenantSnapshot => ({
+  tenant: currentTenantKey(),
+  entries: keys.map((key) => ({ key, data: client.getQueryData(key) })),
+})
+
+// LE point d'application unique des restaurations. Il renonce si le couple a
+// change depuis la prise de la photo.
+//
+// Pourquoi c'est necessaire alors qu'un client neuf est construit a chaque
+// changement : une mutation DEJA EN VOL ne reste pas sur l'ancien client.
+// React Query reassocie ses options des que le composant qui l'heberge rend
+// une fois de plus avec le nouveau client (query-core,
+// `mutationObserver.js` : `this.#currentMutation.setOptions(this.options)`
+// quand la mutation est `pending`), et il lit `onError` AU MOMENT DU
+// REGLEMENT, pas au depart (`mutation.js`). Le rappel est une fermeture
+// recreee a chaque rendu sur le `queryClient` de ce rendu : la photo prise
+// sur l'ancien client serait donc reecrite dans le NOUVEAU, et ce qui
+// reapparait n'est pas une ligne mais la liste entiere du service precedent,
+// sous une cle que le nouveau service lit.
+//
+// Passer par cette fonction plutot que par une condition recopiee a chaque
+// point : une `TenantSnapshot` ne se restaure pas autrement, donc un point
+// de restauration ne peut pas oublier la garde sans cesser de compiler.
+export const restoreForTenant = (
+  client: QueryClient,
+  snapshot: TenantSnapshot | undefined,
+): void => {
+  if (!snapshot || snapshot.tenant !== currentTenantKey()) {
+    return
+  }
+  for (const { key, data } of snapshot.entries) {
+    client.setQueryData(key, data)
+  }
+}
+
 // Les cinq stores qui tiennent en memoire vive de la donnee du service : deux
 // selections, une edition en cours, et surtout deux MIROIRS de donnees du
 // service (`soignants`, `todos`). Ces deux-la sont exclus de leur
@@ -60,13 +107,18 @@ export const resetTenantStores = (): void => {
 // mais il reste utile : il garantit que plus rien de l'ancien service n'est
 // lisible, y compris par un observateur qui serait reste abonne a ce client.
 export const resetOnTenantChange = async (previousClient: QueryClient): Promise<void> => {
+  // Les stores AVANT toute attente, de facon synchrone. Les miroirs sont
+  // realimentes par un effet des que la requete du nouveau service revient :
+  // remis a zero apres une frontiere asynchrone, un miroir fraichement rempli
+  // serait vide, et l'effet ne se rejouerait pas (la donnee de requete n'a pas
+  // change) — l'utilisateur resterait devant une liste vide.
+  resetTenantStores()
+
   // L'annulation precede le vidage : sans elle, une reponse en vol
   // reecrirait dans le cache qu'on vient de vider. Elle evite aussi de
   // laisser courir des requetes reseau devenues inutiles.
   await previousClient.cancelQueries()
   previousClient.clear()
-
-  resetTenantStores()
 }
 
 type CurrentClient = {

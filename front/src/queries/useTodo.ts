@@ -6,6 +6,10 @@ import { TODO } from '../constants/process.constant.ts'
 import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
 import { useToast } from '../hooks/useToast.ts'
+import {
+  restoreForTenant,
+  snapshotForTenant,
+} from '../hooks/useTenantSwitch.ts'
 import { useTodoStore } from '../store/useTodoStore.ts'
 import type { CreateTodoParams, Todo, UpdateTodoParams } from '../types/todo.ts'
 
@@ -55,7 +59,7 @@ export const useTodoMutations = () => {
     onMutate: async (newTodo: CreateTodoParams) => {
       await queryClient.cancelQueries({ queryKey: [TODO.GET_ALL] })
 
-      const previousTodos = queryClient.getQueryData([TODO.GET_ALL])
+      const previousTodos = snapshotForTenant(queryClient, [TODO.GET_ALL])
       queryClient.setQueryData([TODO.GET_ALL], (oldTodos: Todo[]) => [
         ...(oldTodos || []),
         newTodo,
@@ -70,7 +74,7 @@ export const useTodoMutations = () => {
       })
     },
     onError: (error, __, context) => {
-      queryClient.setQueryData([TODO.GET_ALL], context?.previousTodos)
+      restoreForTenant(queryClient, context?.previousTodos)
 
       toast({
         title: 'Erreur lors de la création du todo',
@@ -89,7 +93,7 @@ export const useTodoMutations = () => {
     onMutate: async (todoID) => {
       await queryClient.cancelQueries({ queryKey: [TODO.GET_ALL] })
 
-      const previousTodos = queryClient.getQueryData([TODO.GET_ALL])
+      const previousTodos = snapshotForTenant(queryClient, [TODO.GET_ALL])
       queryClient.setQueryData([TODO.GET_ALL], (oldTodos: Todo[]) =>
         oldTodos?.filter((todo: Todo) => todo.id !== todoID),
       )
@@ -103,7 +107,7 @@ export const useTodoMutations = () => {
       })
     },
     onError: (error, __, context) => {
-      queryClient.setQueryData([TODO.GET_ALL], context?.previousTodos)
+      restoreForTenant(queryClient, context?.previousTodos)
 
       toast({
         title: 'Erreur lors de la suppression du todo',
@@ -122,7 +126,7 @@ export const useTodoMutations = () => {
     onMutate: async (updatedTodo: UpdateTodoParams) => {
       await queryClient.cancelQueries({ queryKey: [TODO.GET_ALL] })
 
-      const previousTodos = queryClient.getQueryData([TODO.GET_ALL])
+      const previousTodos = snapshotForTenant(queryClient, [TODO.GET_ALL])
       queryClient.setQueryData([TODO.GET_ALL], (oldTodos: Todo[]) =>
         oldTodos?.map((todo: Todo) =>
           todo.id === updatedTodo.id ? updatedTodo : todo,
@@ -138,7 +142,7 @@ export const useTodoMutations = () => {
       })
     },
     onError: (error, __, context) => {
-      queryClient.setQueryData([TODO.GET_ALL], context?.previousTodos)
+      restoreForTenant(queryClient, context?.previousTodos)
 
       toast({
         title: 'Erreur lors de la mise à jour du todo',

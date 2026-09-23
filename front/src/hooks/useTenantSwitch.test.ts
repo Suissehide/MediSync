@@ -11,6 +11,8 @@ import type { Todo } from '@/types/todo.ts'
 import {
   createTenantQueryClient,
   resetOnTenantChange,
+  restoreForTenant,
+  snapshotForTenant,
   tenantKey,
   useTenantQueryClient,
 } from '@/hooks/useTenantSwitch.ts'
@@ -101,6 +103,50 @@ describe('changement de contexte', () => {
     expect(useSoignantStore.getState().soignants).toEqual([])
     expect(useSoignantStore.getState().selectedSoignantIDs).toEqual([])
     expect(useTodoStore.getState().todos).toEqual([])
+  })
+
+  // Les miroirs sont realimentes par un effet des que la requete du nouveau
+  // service revient. Remis a zero apres une frontiere asynchrone, un miroir
+  // deja rempli serait vide sans que l'effet se rejoue : liste vide a l'ecran.
+  it('reinitialise les stores avant toute attente, sans ceder la main', () => {
+    const queryClient = new QueryClient()
+    // Annulation qui ne se resout jamais pendant le test : tout ce qui suit
+    // l'attente est hors de portee.
+    vi.spyOn(queryClient, 'cancelQueries').mockImplementation(() => new Promise(() => undefined))
+    useSoignantStore.setState({ soignants: [soignantDuServiceA] })
+
+    void resetOnTenantChange(queryClient)
+
+    expect(useSoignantStore.getState().soignants).toEqual([])
+  })
+})
+
+describe('restauration d une photo de cache', () => {
+  beforeEach(() => {
+    useAuthStore.setState({ context: serviceA })
+  })
+
+  it('renonce si le couple a change depuis la prise de la photo', () => {
+    const queryClient = new QueryClient()
+    queryClient.setQueryData(['patients'], [{ id: 'p1', nom: 'Service A' }])
+    const photo = snapshotForTenant(queryClient, ['patients'])
+    queryClient.removeQueries({ queryKey: ['patients'] })
+
+    useAuthStore.setState({ context: serviceB })
+    restoreForTenant(queryClient, photo)
+
+    expect(queryClient.getQueryData(['patients'])).toBeUndefined()
+  })
+
+  it('restaure quand le couple est le meme', () => {
+    const queryClient = new QueryClient()
+    queryClient.setQueryData(['patients'], [{ id: 'p1', nom: 'Service A' }])
+    const photo = snapshotForTenant(queryClient, ['patients'])
+    queryClient.setQueryData(['patients'], [])
+
+    restoreForTenant(queryClient, photo)
+
+    expect(queryClient.getQueryData(['patients'])).toEqual([{ id: 'p1', nom: 'Service A' }])
   })
 })
 

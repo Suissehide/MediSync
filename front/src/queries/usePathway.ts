@@ -5,6 +5,10 @@ import { PATHWAY, SLOT } from '../constants/process.constant.ts'
 import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
 import { useToast } from '../hooks/useToast.ts'
+import {
+  restoreForTenant,
+  snapshotForTenant,
+} from '../hooks/useTenantSwitch.ts'
 import type {
   CreatePathwayParams,
   InstantiatePathwayParams,
@@ -68,7 +72,7 @@ export const usePathwayMutations = () => {
     onMutate: async (newPathway: CreatePathwayParams) => {
       await queryClient.cancelQueries({ queryKey: [PATHWAY.GET_ALL] })
 
-      const previousPathways = queryClient.getQueryData([PATHWAY.GET_ALL])
+      const previousPathways = snapshotForTenant(queryClient, [PATHWAY.GET_ALL])
       queryClient.setQueryData([PATHWAY.GET_ALL], (oldPathways: Pathway[]) => [
         ...(oldPathways || []),
         newPathway,
@@ -83,7 +87,7 @@ export const usePathwayMutations = () => {
       })
     },
     onError: (error, __, context) => {
-      queryClient.setQueryData([PATHWAY.GET_ALL], context?.previousPathways)
+      restoreForTenant(queryClient, context?.previousPathways)
 
       toast({
         title: 'Erreur lors de la création du parcours',
@@ -104,7 +108,7 @@ export const usePathwayMutations = () => {
     onMutate: async (newPathway: InstantiatePathwayParams) => {
       await queryClient.cancelQueries({ queryKey: [PATHWAY.INSTANTIATE] })
 
-      const previousPathways = queryClient.getQueryData([PATHWAY.INSTANTIATE])
+      const previousPathways = snapshotForTenant(queryClient, [PATHWAY.INSTANTIATE])
       queryClient.setQueryData(
         [PATHWAY.INSTANTIATE],
         (oldPathways: Pathway[]) => [...(oldPathways || []), newPathway],
@@ -122,7 +126,7 @@ export const usePathwayMutations = () => {
       })
     },
     onError: (error, __, context) => {
-      queryClient.setQueryData([PATHWAY.INSTANTIATE], context?.previousPathways)
+      restoreForTenant(queryClient, context?.previousPathways)
 
       toast({
         title: "Erreur lors de l'instanciation du parcours",
@@ -143,7 +147,7 @@ export const usePathwayMutations = () => {
     onMutate: async (pathwayID) => {
       await queryClient.cancelQueries({ queryKey: [PATHWAY.GET_ALL] })
 
-      const previousPathways = queryClient.getQueryData([PATHWAY.GET_ALL])
+      const previousPathways = snapshotForTenant(queryClient, [PATHWAY.GET_ALL])
       queryClient.setQueryData([PATHWAY.GET_ALL], (oldPathways: Pathway[]) =>
         oldPathways?.filter((pathway: Pathway) => pathway.id !== pathwayID),
       )
@@ -157,7 +161,7 @@ export const usePathwayMutations = () => {
       })
     },
     onError: (error, __, context) => {
-      queryClient.setQueryData([PATHWAY.GET_ALL], context?.previousPathways)
+      restoreForTenant(queryClient, context?.previousPathways)
 
       toast({
         title: 'Erreur lors de la suppression du parcours',
@@ -177,7 +181,7 @@ export const usePathwayMutations = () => {
     onMutate: async (updatedPathway: UpdatePathwayParams) => {
       await queryClient.cancelQueries({ queryKey: [PATHWAY.GET_ALL] })
 
-      const previousPathways = queryClient.getQueryData([PATHWAY.GET_ALL])
+      const previousPathways = snapshotForTenant(queryClient, [PATHWAY.GET_ALL])
       queryClient.setQueryData([PATHWAY.GET_ALL], (oldPathways: Pathway[]) =>
         oldPathways?.map((pathway: Pathway) =>
           pathway.id === updatedPathway.id ? updatedPathway : pathway,
@@ -193,7 +197,7 @@ export const usePathwayMutations = () => {
       })
     },
     onError: (error, __, context) => {
-      queryClient.setQueryData([PATHWAY.GET_ALL], context?.previousPathways)
+      restoreForTenant(queryClient, context?.previousPathways)
 
       toast({
         title: 'Erreur lors de la mise à jour du parcours',

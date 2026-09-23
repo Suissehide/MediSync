@@ -1,4 +1,4 @@
-import type { QueryClient, QueryKey } from '@tanstack/react-query'
+import type { QueryClient } from '@tanstack/react-query'
 import {
   keepPreviousData,
   useMutation,
@@ -11,6 +11,10 @@ import { SLOT } from '../constants/process.constant.ts'
 import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
 import { useToast } from '../hooks/useToast.ts'
+import {
+  restoreForTenant,
+  snapshotForTenant,
+} from '../hooks/useTenantSwitch.ts'
 import type {
   CreateSlotParams,
   Slot,
@@ -101,22 +105,18 @@ export const useSlotByIDQuery = (slotID: string, options = {}) => {
  * à jour optimiste doit toucher toutes les fenêtres chargées, pas la clé nue.
  */
 const snapshotSlotCaches = (queryClient: QueryClient) =>
-  queryClient.getQueriesData<Slot[]>({ queryKey: [SLOT.GET_ALL] })
+  snapshotForTenant(
+    queryClient,
+    ...queryClient
+      .getQueriesData<Slot[]>({ queryKey: [SLOT.GET_ALL] })
+      .map(([queryKey]) => queryKey),
+  )
 
 const updateSlotCaches = (
   queryClient: QueryClient,
   updater: (slots: Slot[] | undefined) => Slot[] | undefined,
 ) => {
   queryClient.setQueriesData<Slot[]>({ queryKey: [SLOT.GET_ALL] }, updater)
-}
-
-const restoreSlotCaches = (
-  queryClient: QueryClient,
-  snapshot: [QueryKey, Slot[] | undefined][] | undefined,
-) => {
-  for (const [queryKey, slots] of snapshot ?? []) {
-    queryClient.setQueryData(queryKey, slots)
-  }
 }
 
 export const useSlotMutations = () => {
@@ -144,7 +144,7 @@ export const useSlotMutations = () => {
       })
     },
     onError: (error, __, context) => {
-      restoreSlotCaches(queryClient, context?.previousSlots)
+      restoreForTenant(queryClient, context?.previousSlots)
 
       toast({
         title: 'Erreur lors de la création du créneau',
@@ -177,7 +177,7 @@ export const useSlotMutations = () => {
       })
     },
     onError: (error, __, context) => {
-      restoreSlotCaches(queryClient, context?.previousSlots)
+      restoreForTenant(queryClient, context?.previousSlots)
 
       toast({
         title: 'Erreur lors de la suppression du créneau',
@@ -214,7 +214,7 @@ export const useSlotMutations = () => {
       )
 
       await queryClient.cancelQueries({ queryKey: [SLOT.GET_BY_ID] })
-      const previousSlot = queryClient.getQueryData([SLOT.GET_BY_ID])
+      const previousSlot = snapshotForTenant(queryClient, [SLOT.GET_BY_ID])
       queryClient.setQueryData(
         [SLOT.GET_BY_ID, updatedSlot.id],
         (oldSlot: Slot) => {
@@ -245,8 +245,8 @@ export const useSlotMutations = () => {
       })
     },
     onError: (error, __, context) => {
-      restoreSlotCaches(queryClient, context?.previousSlots)
-      queryClient.setQueryData([SLOT.GET_BY_ID], context?.previousSlot)
+      restoreForTenant(queryClient, context?.previousSlots)
+      restoreForTenant(queryClient, context?.previousSlot)
 
       toast({
         title: 'Erreur lors de la mise à jour du créneau',

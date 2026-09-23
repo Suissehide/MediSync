@@ -5,6 +5,10 @@ import { THEMATIC } from '../constants/process.constant.ts'
 import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
 import { useToast } from '../hooks/useToast.ts'
+import {
+  restoreForTenant,
+  snapshotForTenant,
+} from '../hooks/useTenantSwitch.ts'
 import type {
   CreateThematicParams,
   Thematic,
@@ -46,7 +50,7 @@ export const useThematicMutations = () => {
     onMutate: async (newThematic: CreateThematicParams) => {
       await queryClient.cancelQueries({ queryKey: [THEMATIC.GET_ALL] })
 
-      const previousThematics = queryClient.getQueryData([THEMATIC.GET_ALL])
+      const previousThematics = snapshotForTenant(queryClient, [THEMATIC.GET_ALL])
       queryClient.setQueryData(
         [THEMATIC.GET_ALL],
         (oldThematics: Thematic[]) => [
@@ -64,7 +68,7 @@ export const useThematicMutations = () => {
       })
     },
     onError: (error, __, context) => {
-      queryClient.setQueryData([THEMATIC.GET_ALL], context?.previousThematics)
+      restoreForTenant(queryClient, context?.previousThematics)
 
       toast({
         title: 'Erreur lors de la création de la thématique',
@@ -83,7 +87,7 @@ export const useThematicMutations = () => {
     onMutate: async (thematicID) => {
       await queryClient.cancelQueries({ queryKey: [THEMATIC.GET_ALL] })
 
-      const previousThematics = queryClient.getQueryData([THEMATIC.GET_ALL])
+      const previousThematics = snapshotForTenant(queryClient, [THEMATIC.GET_ALL])
       queryClient.setQueryData(
         [THEMATIC.GET_ALL],
         (oldThematics: Thematic[]) =>
@@ -101,7 +105,7 @@ export const useThematicMutations = () => {
       })
     },
     onError: (error, __, context) => {
-      queryClient.setQueryData([THEMATIC.GET_ALL], context?.previousThematics)
+      restoreForTenant(queryClient, context?.previousThematics)
 
       toast({
         title: 'Erreur lors de la suppression de la thématique',
@@ -120,7 +124,7 @@ export const useThematicMutations = () => {
     onMutate: async (updatedThematic: UpdateThematicParams) => {
       await queryClient.cancelQueries({ queryKey: [THEMATIC.GET_ALL] })
 
-      const previousThematics = queryClient.getQueryData([THEMATIC.GET_ALL])
+      const previousThematics = snapshotForTenant(queryClient, [THEMATIC.GET_ALL])
       queryClient.setQueryData(
         [THEMATIC.GET_ALL],
         (oldThematics: Thematic[]) =>
@@ -140,7 +144,7 @@ export const useThematicMutations = () => {
       })
     },
     onError: (error, __, context) => {
-      queryClient.setQueryData([THEMATIC.GET_ALL], context?.previousThematics)
+      restoreForTenant(queryClient, context?.previousThematics)
 
       toast({
         title: 'Erreur lors de la mise à jour de la thématique',
