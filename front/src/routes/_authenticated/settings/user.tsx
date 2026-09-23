@@ -14,6 +14,9 @@ export const Route = createFileRoute('/_authenticated/settings/user')({
     throw redirect({
       to: '/e/$establishmentId/admin/members',
       params: { establishmentId: tenant.establishmentId },
+      // Meme regle que `redirectToDefaultService` : conserver les
+      // parametres de recherche entrants.
+      search: true,
     })
   },
 })

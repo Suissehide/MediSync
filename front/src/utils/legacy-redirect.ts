@@ -17,5 +17,9 @@ export const redirectToDefaultService = (user: User | null, to: string, extra?: 
       serviceId: tenant.serviceId,
       ...extra,
     },
+    // `search: true` reprend tels quels les parametres de recherche de
+    // l'URL entrante (voir la resolution dans `buildLocation` du routeur) :
+    // un favori du type `/agenda?date=...` ne doit pas perdre `date`.
+    search: true,
   })
 }
