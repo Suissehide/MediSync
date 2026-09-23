@@ -5,8 +5,10 @@ import dayjs from 'dayjs'
 import { StrictMode } from 'react'
 import ReactDOM from 'react-dom/client'
 
+import { registerStaleTenantHandler } from './api/fetchWithAuth.ts'
 import RootLayout from './components/root.layout.tsx'
 import { createTenantQueryClient, useTenantQueryClient } from './hooks/useTenantSwitch.ts'
+import { meQueryOptions } from './queries/useMe.ts'
 import { routeTree } from './routeTree.gen.ts'
 import { useAuthStore } from './store/useAuthStore.ts'
 import 'dayjs/locale/fr'
@@ -49,6 +51,24 @@ declare module '@tanstack/react-router' {
     router: typeof router
   }
 }
+
+// Un 404 de tenant perime (cf. fetchWithAuth.ts) recharge l'arbre des
+// appartenances puis renvoie au choix de contexte. Enregistre ici, et non
+// dans fetchWithAuth.ts, pour que ce dernier ne depende ni du routeur ni du
+// client de requetes.
+//
+// `router.options.context.queryClient`, jamais une variable capturee au
+// chargement du module : un client neuf est construit a chaque changement
+// de contexte (tache 10), et `AppRoutes` ne le pose sur
+// `router.options.context` qu'au rendu suivant (meme mecanisme que
+// `context.queryClient` dans `_authenticated.tsx`). Lire cette propriete au
+// moment ou le rappel se declenche, plutot qu'une reference figee a l'appel
+// de `registerStaleTenantHandler`, garantit de toujours viser le cache en
+// usage — jamais un cache devenu inerte apres un changement de contexte.
+registerStaleTenantHandler(() => {
+  void router.options.context?.queryClient.invalidateQueries(meQueryOptions)
+  void router.navigate({ to: '/choose-context' })
+})
 
 const rootElement = document.getElementById('root')
 if (rootElement && !rootElement.innerHTML) {
