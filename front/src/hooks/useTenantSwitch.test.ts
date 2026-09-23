@@ -17,6 +17,7 @@ import {
   tenantKey,
   useTenantQueryClient,
 } from '@/hooks/useTenantSwitch.ts'
+import { scopedStorageName } from '@/store/scoped-storage.ts'
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import { useDashboardFilterStore } from '@/store/useDashboardFilterStore.ts'
 import { useDiagnosticStore } from '@/store/useDiagnosticStore.ts'
@@ -276,10 +277,18 @@ describe('stores persistes rehydrates au changement de service', () => {
     // precede l'attente de ce qui la suit.
     vi.spyOn(queryClient, 'cancelQueries').mockImplementation(() => new Promise(() => undefined))
 
+    // `rehydratePersistedStores()` active d'abord le tiroir de A (jamais
+    // visite avant ce test) avant d'y ecrire une selection : sans cet appel,
+    // l'ecriture viserait le tiroir encore actif d'un test precedent, pas
+    // celui de A.
     useAuthStore.setState({ context: serviceA })
+    rehydratePersistedStores()
     useSoignantStore.setState({ selectedSoignantIDs: ['so1'] })
+
     // Contexte change SANS passer par `resetOnTenantChange` : rien ne
-    // rehydrate tout seul, la valeur du service A reste en memoire vive.
+    // rehydrate tout seul, la valeur du service A reste en memoire vive, ET
+    // le tiroir actif reste celui de A (il ne bouge que depuis
+    // `rehydratePersistedStores`).
     useAuthStore.setState({ context: serviceB })
     expect(useSoignantStore.getState().selectedSoignantIDs).toEqual(['so1'])
 
@@ -293,6 +302,7 @@ describe('stores persistes rehydrates au changement de service', () => {
   // pourrait pas offrir.
   it('retrouve la selection d un service deja visite en y revenant', () => {
     useAuthStore.setState({ context: serviceA })
+    rehydratePersistedStores()
     useSoignantStore.setState({ selectedSoignantIDs: ['so1'] })
 
     useAuthStore.setState({ context: serviceB })
@@ -310,11 +320,11 @@ describe('stores persistes rehydrates au changement de service', () => {
   // l autre dans celui qui n a jamais ete visite.
   it('isole les quatre stores persistes entre deux services jamais visites l un par l autre', () => {
     useAuthStore.setState({ context: serviceA })
+    rehydratePersistedStores()
     useDashboardFilterStore.setState({
       mode: 'pathway',
       selectedPathwayTemplateIDs: ['pt1'],
     })
-    useTodoStore.getState().markTodosAsSeen()
     useTodoStore.setState({ todos: [tacheDuServiceA] })
     useTodoStore.getState().markTodosAsSeen()
     usePlanningStore.getState().setPlanningDates({
@@ -332,5 +342,41 @@ describe('stores persistes rehydrates au changement de service', () => {
     expect(usePlanningStore.getState().currentDate).toBe('')
     expect(usePlanningStore.getState().viewStart).toBe('')
     expect(usePlanningStore.getState().viewEnd).toBe('')
+  })
+
+  // Correction de revue (tour 1) : le tiroir etait recalcule depuis le
+  // contexte a CHAQUE acces au stockage. Or `useTenantQueryClient` bascule le
+  // contexte PENDANT le rendu, et ne rehydrate que dans l'effet du PARENT —
+  // qui s'execute apres les effets des enfants. Toute ecriture programmee
+  // par un enfant deja rendu avec le nouveau contexte (le calendrier, qui
+  // reecrit ses dates de vue a chaque montage, en est un exemple reel)
+  // visait donc deja le tiroir du nouveau service, avec une valeur encore
+  // tiree de la memoire vive de l'ancien. `scoped-storage.ts` fige desormais
+  // le tiroir : il ne bouge que depuis `switchScopedStorageContext`, appelee
+  // par `rehydratePersistedStores` — jamais tout seul au fil d'un acces.
+  it('n ecrit jamais dans le tiroir du nouveau service avant que la rehydratation ne l active', () => {
+    useAuthStore.setState({ context: serviceA })
+    rehydratePersistedStores()
+    usePlanningStore.getState().setPlanningDates({
+      currentDate: '2026-01-01',
+      viewStart: '2026-01-01',
+      viewEnd: '2026-01-07',
+    })
+
+    // Le rendu bascule le contexte ; l'effet qui rehydrate n'a pas encore
+    // tourne. Un enfant deja rendu avec le nouveau contexte peut ecrire ici,
+    // avec des valeurs qui viennent encore de la memoire vive du service A
+    // (exactement ce que fait le calendrier au montage, via `datesSet`).
+    useAuthStore.setState({ context: serviceB })
+    const { currentDate, viewStart, viewEnd } = usePlanningStore.getState()
+    usePlanningStore.getState().setPlanningDates({ currentDate, viewStart, viewEnd })
+
+    // Rien de cette ecriture ne doit atteindre le tiroir de B : il doit
+    // rester intact (jamais visite) jusqu'a ce que la rehydratation
+    // l'active explicitement.
+    expect(localStorage.getItem(scopedStorageName('planning-storage', serviceB))).toBeNull()
+
+    rehydratePersistedStores()
+    expect(usePlanningStore.getState().currentDate).toBe('')
   })
 })

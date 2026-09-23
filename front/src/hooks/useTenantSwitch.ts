@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 
 import type { TenantContext } from '@/types/auth.ts'
 
+import { switchScopedStorageContext } from '@/store/scoped-storage.ts'
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import { useDashboardFilterStore } from '@/store/useDashboardFilterStore.ts'
 import { useDiagnosticStore } from '@/store/useDiagnosticStore.ts'
@@ -128,11 +129,19 @@ export const resetTenantStores = (): void => {
 // continuerait d'ecrire dans le nouveau tiroir tout en gardant en memoire les
 // valeurs de l'ancien.
 //
+// `switchScopedStorageContext()` PUIS les `rehydrate()`, dans cette
+// instruction : le tiroir de chaque store scinde ne bouge qu'ici, donc rien
+// entre-temps (aucune ecriture programmee ailleurs, entre le rendu qui
+// bascule le contexte et cet appel) ne peut viser le tiroir du nouveau
+// service avec une valeur qui n'en vient pas — cf. le commentaire de
+// `scoped-storage.ts`.
+//
 // Appelee au meme moment synchrone que `resetTenantStores`, pour la meme
 // raison : un miroir ou un filtre remis a jour apres une frontiere
 // asynchrone peut arriver apres la reponse du nouveau service et l'effacer a
 // l'ecran.
 export const rehydratePersistedStores = (): void => {
+  switchScopedStorageContext()
   useSoignantStore.persist.rehydrate()
   useDashboardFilterStore.persist.rehydrate()
   useTodoStore.persist.rehydrate()
