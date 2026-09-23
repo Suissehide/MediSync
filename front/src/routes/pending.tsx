@@ -3,7 +3,7 @@ import { Lock } from 'lucide-react'
 
 import { Button } from '../components/ui/button.tsx'
 import { useLogout } from '../queries/useAuth.ts'
-import { deriveContext } from '../store/useAuthStore.ts'
+import { defaultTenantContext } from '../utils/tenant-context.ts'
 
 export const Route = createFileRoute('/pending')({
   beforeLoad: ({ context, location }) => {
@@ -19,7 +19,7 @@ export const Route = createFileRoute('/pending')({
   shouldReload({ context }) {
     return (
       !context.authState.isAuthenticated ||
-      deriveContext(context.authState.user) !== null
+      defaultTenantContext(context.authState.user) !== null
     )
   },
   component: Pending,
