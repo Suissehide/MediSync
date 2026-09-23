@@ -15,6 +15,9 @@ export type TenantStore = { kind: 'tenant'; tenant: Tenant } | { kind: 'system' 
 
 export interface TenantContextInterface {
   enter(tenant: Tenant): void
+  // Referme la portée du tenant : toute opération sur un modèle de tenant
+  // est refusée jusqu'au prochain `enter`.
+  clear(): void
   run<T>(tenant: Tenant, fn: () => Promise<T>): Promise<T>
   peek(): TenantStore | undefined
   current(): Tenant

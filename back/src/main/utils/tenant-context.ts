@@ -11,12 +11,24 @@ import { TenantContextMissingError } from './tenant-errors'
 // Porte le tenant de la requête courante. `enter` est appelé par le hook
 // onRequest du plugin tenant (même mécanisme que @fastify/request-context) ;
 // `run` sert aux tests et aux traitements encadrés ; `runAsSystem` aux
-// tâches hors requête (purge planifiée).
+// tâches hors requête (purge planifiée) ; `clear` referme la portée en tête
+// de chaque requête.
+//
+// Le stockage est typé `TenantStore | undefined` : `enterWith` teinte le
+// contexte asynchrone jusqu'à la fin de la chaîne, sans refermer sa portée.
+// Sur un worker réutilisé, une requête sans tenant hériterait donc du tenant
+// de la précédente. `clear()` pose explicitement l'absence de tenant, et le
+// hook onRequest global (interfaces/http/fastify/routes/index.ts) l'appelle
+// en toute première instruction : chaque requête démarre sans tenant.
 class TenantContext implements TenantContextInterface {
-  private readonly storage = new AsyncLocalStorage<TenantStore>()
+  private readonly storage = new AsyncLocalStorage<TenantStore | undefined>()
 
   enter(tenant: Tenant): void {
     this.storage.enterWith({ kind: 'tenant', tenant })
+  }
+
+  clear(): void {
+    this.storage.enterWith(undefined)
   }
 
   run<T>(tenant: Tenant, fn: () => Promise<T>): Promise<T> {

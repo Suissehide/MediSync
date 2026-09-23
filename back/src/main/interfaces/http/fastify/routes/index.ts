@@ -10,10 +10,19 @@ import { tenantRoutes } from './tenant.routes'
 const PUBLIC_ROUTES = new Set(['/', '/health'])
 
 const routes: FastifyPluginAsyncZod = async (fastify) => {
+  const { tenantContext } = fastify.iocContainer
+
   // Garde d'authentification globale : toute route est protégée par défaut,
   // sauf les routes publiques et le préfixe /auth/*. Ainsi une route qui
   // oublierait `verifySessionCookie` reste protégée (fail-safe).
   fastify.addHook('onRequest', async (request, reply) => {
+    // Première instruction, avant même le test des routes publiques :
+    // `enterWith` teinte le contexte asynchrone sans refermer sa portée, une
+    // requête sans tenant pourrait donc hériter du tenant de la précédente
+    // sur un worker réutilisé. Refermer ici garantit que toute requête
+    // démarre sans tenant, et donc que « sans tenant, toute opération sur un
+    // modèle de tenant est refusée » reste vrai.
+    tenantContext.clear()
     const url = request.routeOptions.url ?? request.url
     if (PUBLIC_ROUTES.has(url) || url.startsWith('/auth/')) {
       return

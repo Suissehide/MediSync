@@ -48,6 +48,20 @@ describe('TenantContext', () => {
     expect(ctx.peek()).toBeUndefined()
   })
 
+  // `enter` utilise `enterWith`, qui teinte le contexte asynchrone jusqu'a
+  // la fin de la chaine sans refermer sa portee : sans `clear`, une requete
+  // suivante sur le meme worker heriterait du tenant de la precedente.
+  it('clear referme la portee posee par enter', () => {
+    const ctx = new TenantContext()
+    ctx.enter(tenant)
+    expect(ctx.peek()).toEqual({ kind: 'tenant', tenant })
+
+    ctx.clear()
+
+    expect(ctx.peek()).toBeUndefined()
+    expect(() => ctx.current()).toThrow(TenantContextMissingError)
+  })
+
   it('isole deux flux concurrents', async () => {
     const ctx = new TenantContext()
     const a = ctx.run({ ...tenant, serviceId: 'a' }, async () => {
