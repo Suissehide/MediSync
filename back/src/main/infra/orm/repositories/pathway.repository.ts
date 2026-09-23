@@ -40,11 +40,12 @@ import {
 // `slots` elle-même est la relation inverse Pathway → Slot, portée par le
 // FK scalaire `pathwayID` (pas de clé composite avec serviceId) : voir la
 // note dans pathwayTemplate.repository.ts sur `slotTemplates`, le même
-// raisonnement s'applique ici à l'identique (sûre tant que `pathwayID`
-// n'est jamais écrit inter-service sans vérification — garanti par le
-// `connect` composite de `create` ci-dessous et par la construction interne
-// de `regenerate`/`delete`, mais dépend de la tâche 14 pour la voie
-// SlotRepository.create/update qui accepte `pathwayID` en scalaire brut).
+// raisonnement s'applique ici à l'identique. Elle est sûre parce que
+// `pathwayID` n'est jamais écrit depuis l'extérieur : les types d'entrée de
+// SlotRepository/SlotDomain l'excluent, et la seule écriture de cette
+// colonne est le `connect` composite de `create` ci-dessous, complété par la
+// construction interne de `regenerate`/`delete`. Aucun identifiant de
+// parcours venu d'un client ne peut donc atteindre cette colonne.
 const slotsWithTemplateInclude = {
   slots: {
     include: {

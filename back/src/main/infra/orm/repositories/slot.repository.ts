@@ -25,6 +25,19 @@ const slotInclude = {
   },
 } as const
 
+// `pathwayID` n'est plus accepté en entrée (voir SlotCreateEntityRepo) : le
+// seul rattachement légitime d'un créneau à un parcours est le `connect`
+// composite interne à PathwayRepository. On le retire aussi à l'exécution,
+// avant le passage à Prisma : les paramètres viennent d'un corps de requête,
+// et l'invariant ne doit pas reposer sur le seul typage ni sur l'effet de
+// bord d'un schéma Zod qui, aujourd'hui, ne déclare pas la clé.
+const withoutPathwayID = <T extends object>(params: T): T => {
+  const { pathwayID: _pathwayID, ...rest } = params as T & {
+    pathwayID?: string
+  }
+  return rest as T
+}
+
 class SlotRepository implements SlotRepositoryInterface {
   private readonly prisma: PostgresPrismaClient
   private readonly errorHandler: ErrorHandlerInterface
@@ -72,7 +85,7 @@ class SlotRepository implements SlotRepositoryInterface {
   async create(slotCreateParams: SlotCreateEntityRepo): Promise<SlotDTORepo> {
     try {
       const row = await this.prisma.slot.create({
-        data: { ...slotCreateParams, ...this.scope },
+        data: { ...withoutPathwayID(slotCreateParams), ...this.scope },
         include: slotInclude,
       })
       return flattenSlot(row)
@@ -111,7 +124,7 @@ class SlotRepository implements SlotRepositoryInterface {
 
         const row = await tx.slot.update({
           where: { id_serviceId: { id: slotID, serviceId: this.scope.serviceId } },
-          data: slotData,
+          data: withoutPathwayID(slotData),
           include: slotInclude,
         })
         return flattenSlot(row)

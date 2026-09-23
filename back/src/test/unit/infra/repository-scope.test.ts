@@ -601,6 +601,36 @@ describe('scoping slotTemplate et slot', () => {
     })
   })
 
+  // `Slot.pathwayID` est une reference scalaire simple (la cle etrangere ne
+  // porte pas serviceId) : un identifiant de parcours d'un autre service y
+  // passerait sans controle. Il n'est plus accepte en entree, ni au typage ni
+  // a l'execution — le seul rattachement legitime est le `connect` composite
+  // interne a PathwayRepository.
+  it('SlotRepository ne transmet jamais pathwayID a Prisma', async () => {
+    // Reponses explicites : la relation `slotTemplate` est a un seul
+    // enregistrement, le faux client par defaut (tableau vide sur toute cle
+    // incluse) ne convient pas a `flattenSlot`.
+    const { prisma, calls } = buildFakePrisma({
+      'slot.create': { id: 'sl1', slotTemplate: { soignantLinks: [] } },
+      'slot.update': { id: 'sl1', slotTemplate: { soignantLinks: [] } },
+    })
+    const ctx = new TenantContext()
+    const repo = new SlotRepository(buildContainer(prisma, ctx))
+    await ctx.run(tenant, async () => {
+      await repo.create({
+        startDate: new Date(),
+        endDate: new Date(),
+        slotTemplateID: 'st1',
+        pathwayID: 'pw-etranger',
+      } as never)
+      await repo.update('sl1', { locked: true, pathwayID: 'pw-etranger' } as never)
+    })
+    expect(calls[0]?.args.data).not.toHaveProperty('pathwayID')
+    expect(calls[0]?.args.data).toMatchObject({ serviceId: 's1', establishmentId: 'e1' })
+    expect(calls[1]?.args.data).not.toHaveProperty('pathwayID')
+    expect(calls[1]?.args.data).toMatchObject({ locked: true })
+  })
+
   it('SlotRepository.update remplace les liens soignants du modele puis filtre la mise a jour du creneau', async () => {
     // Reponse explicite pour `slot.update` : la relation `slotTemplate` est
     // a un seul enregistrement, pas une liste — le faux client par defaut
