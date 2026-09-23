@@ -3,9 +3,12 @@
 Cette migration convertit chaque compte existant en une appartenance d'établissement et une
 appartenance de service (voir `docs/multi-tenant/habilitations.md`, § « Correspondance avec les
 anciens rôles »), sans changer ce qu'un compte migré voit ou peut faire. Elle a déjà été répétée
-avec succès sur une copie de la base de production réelle pendant le développement (détail dans
-`.superpowers/sdd/2026-09-22-multi-tenant-etape-1-socle/task-5-report.md`) ; cette procédure la
-répète une deuxième fois, juste avant le déploiement, sur les données les plus fraîches possibles.
+avec succès pendant le développement, sur une copie jetable des données réelles (restaurée depuis
+un `pg_dump`, jamais sur la base elle-même) : la migration est passée, tous les invariants sont
+revenus à la valeur attendue, et les comptes de lignes des dix-huit tables métier étaient
+identiques valeur pour valeur avant et après, contrôlés par un `diff` des deux sorties. Cette
+procédure répète la même vérification une deuxième fois, juste avant le déploiement, sur les
+données les plus fraîches possibles.
 
 Chaque étape est numérotée, dit ce qu'on doit observer, et ce qu'il faut faire si ce n'est pas le
 cas. En cas de doute à n'importe quelle étape : s'arrêter et passer à l'étape 6 (retour arrière)
@@ -84,9 +87,9 @@ DATABASE_URL="postgres://postgres:postgres@localhost:5432/medisync_deploy_check?
 
 **Attendu** : `All migrations have been successfully applied.` La migration s'exécute dans une
 transaction : un échec ne laisse pas la base à moitié migrée. Si elle échoue, lire le message
-d'erreur et le comparer au diagnostic déjà mené pendant le développement
-(`task-5-report.md` ci-dessus) avant de retenter — ne pas rejouer la commande en boucle sans
-comprendre l'erreur.
+d'erreur et le comprendre avant de retenter : la même migration est déjà passée sur une copie des
+données réelles, un échec ici signale donc un écart entre cette copie-ci et celle de la répétition,
+pas un défaut de la migration. Ne pas rejouer la commande en boucle.
 
 Jouer le fichier d'invariants « après » et comparer à la main, ligne à ligne (mêmes libellés que le
 fichier « avant »), les comptes de lignes par table qu'il donne en seconde moitié de sortie :
