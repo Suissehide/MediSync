@@ -6,6 +6,7 @@ import AddThematicForm from '../../../../components/custom/popup/addThematicForm
 import { ConfirmDeleteForm } from '../../../../components/custom/popup/confirmDeleteForm.tsx'
 import DashboardLayout from '../../../../components/dashboard.layout.tsx'
 import ReactTable from '../../../../components/table/reactTable.tsx'
+import { useCan } from '../../../../hooks/useCan.ts'
 import { useSoignantQueries } from '../../../../queries/useSoignant.ts'
 import {
   useThematicMutations,
@@ -20,6 +21,10 @@ export const Route = createFileRoute(
 })
 
 function ThematicSettings() {
+  // Le menu ne montre cette page qu'aux détenteurs de `referentials:write`,
+  // mais l'URL se tape à la main : les actions d'écriture se gardent aussi
+  // ici, indépendamment du menu.
+  const canManage = useCan('referentials:write')
   const { thematics, isPending } = useThematicQueries()
   const { soignants } = useSoignantQueries()
   const { deleteThematic } = useThematicMutations()
@@ -44,8 +49,9 @@ function ThematicSettings() {
       getThematicColumns({
         onDelete: (id) => setDeleteTargetId(id),
         soignantOptions,
+        canManage,
       }),
-    [soignantOptions],
+    [soignantOptions, canManage],
   )
 
   return (
@@ -55,7 +61,7 @@ function ThematicSettings() {
           <h1 className="h-9 flex items-center text-text-dark text-xl font-semibold">
             Thématiques
           </h1>
-          <AddThematicForm />
+          {canManage && <AddThematicForm />}
         </div>
 
         <ReactTable<Thematic>
@@ -67,9 +73,15 @@ function ThematicSettings() {
 
         <ConfirmDeleteForm
           open={!!deleteTargetId}
-          setOpen={(open) => { if (!open) setDeleteTargetId(null) }}
+          setOpen={(open) => {
+            if (!open) {
+              setDeleteTargetId(null)
+            }
+          }}
           onConfirm={() => {
-            if (deleteTargetId) deleteThematic.mutate(deleteTargetId)
+            if (deleteTargetId) {
+              deleteThematic.mutate(deleteTargetId)
+            }
             setDeleteTargetId(null)
           }}
           loading={deleteThematic.isPending}

@@ -12,13 +12,18 @@ const columnHelper = createColumnHelper<Soignant>()
 type SoignantColumnOptions = {
   thematics: Thematic[]
   thematicOptions: { value: string; label: string }[]
+  // L'écran reste consultable par lecture seule ; sans `soignants:manage`,
+  // les actions d'écriture ne doivent pas apparaître (le menu n'est pas la
+  // seule barrière, une URL se tape à la main).
+  canManage: boolean
 }
 
 export const getSoignantColumns = ({
   thematics,
   thematicOptions,
+  canManage,
 }: SoignantColumnOptions) => {
-  return [
+  const columns = [
     columnHelper.accessor('name', {
       header: 'Nom',
     }),
@@ -52,6 +57,14 @@ export const getSoignantColumns = ({
         )
       },
     }),
+  ]
+
+  if (!canManage) {
+    return columns
+  }
+
+  return [
+    ...columns,
     columnHelper.display({
       id: 'actions',
       header: '',

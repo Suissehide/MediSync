@@ -7,6 +7,7 @@ import { Input } from '../../../../components/ui/input.tsx'
 import { Label } from '../../../../components/ui/label.tsx'
 import { Switch } from '../../../../components/ui/switch.tsx'
 import { DIAGNOSTIC_SECTIONS } from '../../../../constants/diagnosticEducatif.constant.ts'
+import { useCan } from '../../../../hooks/useCan.ts'
 import {
   useDiagnosticTemplateMutations,
   useDiagnosticTemplatesQuery,
@@ -19,6 +20,10 @@ export const Route = createFileRoute(
 )({ component: DiagnosticTemplateSettings })
 
 function DiagnosticTemplateSettings() {
+  // Le menu ne montre cet écran qu'aux détenteurs de `referentials:write`,
+  // mais l'URL se tape à la main : les contrôles d'édition se désactivent
+  // aussi ici, indépendamment du menu.
+  const canManage = useCan('referentials:write')
   const { selectedId } = useDiagnosticTemplateStore()
   const { templates } = useDiagnosticTemplatesQuery()
   const { updateTemplate } = useDiagnosticTemplateMutations()
@@ -66,6 +71,7 @@ function DiagnosticTemplateSettings() {
                 <Input
                   className="h-9 rounded-md border border-border bg-background px-3 text-sm font-medium focus:outline-none focus:ring-1 focus:ring-ring w-72"
                   value={editingName}
+                  disabled={!canManage}
                   onChange={(e) => setEditingName(e.target.value)}
                   onBlur={() => {
                     if (editingName !== editing.name) {
@@ -92,6 +98,7 @@ function DiagnosticTemplateSettings() {
                       <div key={field.id} className="flex items-center gap-3">
                         <Switch
                           checked={editing.activeFields.includes(field.id)}
+                          disabled={!canManage}
                           onCheckedChange={() =>
                             handleToggleField(editing, field.id)
                           }

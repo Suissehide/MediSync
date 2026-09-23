@@ -25,11 +25,28 @@ interface NavbarProps {
   toggleSidebar: () => void
 }
 
+// Chaque entrée du menu est gardée par la permission que son écran exige
+// réellement côté back, pas par une permission globale : Planning et
+// Diagnostics éducatifs sont de niveau service (coordinateur), les autres de
+// niveau établissement (administrateur d'établissement). Un même compte peut
+// détenir l'une sans l'autre.
 interface SettingsMenuProps {
+  canPlanning: boolean
+  canManageSoignants: boolean
+  canManageReferentials: boolean
+  canManageLocations: boolean
   canManageMembers: boolean
+  canReadActivityLog: boolean
 }
 
-const SettingsMenu = ({ canManageMembers }: SettingsMenuProps) => {
+const SettingsMenu = ({
+  canPlanning,
+  canManageSoignants,
+  canManageReferentials,
+  canManageLocations,
+  canManageMembers,
+  canReadActivityLog,
+}: SettingsMenuProps) => {
   const router = useRouter()
 
   return (
@@ -40,38 +57,48 @@ const SettingsMenu = ({ canManageMembers }: SettingsMenuProps) => {
         </Button>
       </PopoverTrigger>
       <PopoverContent sideOffset={2} align="end">
-        <PopoverMenuItem
-          icon={<CalendarDays className="w-4 h-4" />}
-          onClick={() => router.navigate({ to: '/settings/planning' })}
-        >
-          Planning
-        </PopoverMenuItem>
-        <PopoverMenuItem
-          icon={<Users className="w-4 h-4" />}
-          onClick={() => router.navigate({ to: '/settings/soignant' })}
-        >
-          Soignants
-        </PopoverMenuItem>
-        <PopoverMenuItem
-          icon={<Tag className="w-4 h-4" />}
-          onClick={() => router.navigate({ to: '/settings/thematic' })}
-        >
-          Thématiques
-        </PopoverMenuItem>
-        <PopoverMenuItem
-          icon={<DoorOpen className="w-4 h-4" />}
-          onClick={() => router.navigate({ to: '/settings/location' })}
-        >
-          Salles
-        </PopoverMenuItem>
-        <PopoverMenuItem
-          icon={<BriefcaseMedical className="w-4 h-4" />}
-          onClick={() =>
-            router.navigate({ to: '/settings/diagnostic-template' })
-          }
-        >
-          Diagnostics éducatifs
-        </PopoverMenuItem>
+        {canPlanning && (
+          <PopoverMenuItem
+            icon={<CalendarDays className="w-4 h-4" />}
+            onClick={() => router.navigate({ to: '/settings/planning' })}
+          >
+            Planning
+          </PopoverMenuItem>
+        )}
+        {canManageSoignants && (
+          <PopoverMenuItem
+            icon={<Users className="w-4 h-4" />}
+            onClick={() => router.navigate({ to: '/settings/soignant' })}
+          >
+            Soignants
+          </PopoverMenuItem>
+        )}
+        {canManageReferentials && (
+          <PopoverMenuItem
+            icon={<Tag className="w-4 h-4" />}
+            onClick={() => router.navigate({ to: '/settings/thematic' })}
+          >
+            Thématiques
+          </PopoverMenuItem>
+        )}
+        {canManageLocations && (
+          <PopoverMenuItem
+            icon={<DoorOpen className="w-4 h-4" />}
+            onClick={() => router.navigate({ to: '/settings/location' })}
+          >
+            Salles
+          </PopoverMenuItem>
+        )}
+        {canManageReferentials && (
+          <PopoverMenuItem
+            icon={<BriefcaseMedical className="w-4 h-4" />}
+            onClick={() =>
+              router.navigate({ to: '/settings/diagnostic-template' })
+            }
+          >
+            Diagnostics éducatifs
+          </PopoverMenuItem>
+        )}
         {canManageMembers && (
           <PopoverMenuItem
             icon={<UserCog className="w-4 h-4" />}
@@ -80,20 +107,33 @@ const SettingsMenu = ({ canManageMembers }: SettingsMenuProps) => {
             Membres
           </PopoverMenuItem>
         )}
-        <PopoverMenuItem
-          icon={<Activity className="w-4 h-4" />}
-          onClick={() => router.navigate({ to: '/settings/activity-log' })}
-        >
-          Activité
-        </PopoverMenuItem>
+        {canReadActivityLog && (
+          <PopoverMenuItem
+            icon={<Activity className="w-4 h-4" />}
+            onClick={() => router.navigate({ to: '/settings/activity-log' })}
+          >
+            Activité
+          </PopoverMenuItem>
+        )}
       </PopoverContent>
     </PopoverRoot>
   )
 }
 
 function Navbar({ toggleSidebar }: NavbarProps) {
-  const isAdmin = useCan('planning:write')
+  const canPlanning = useCan('planning:write')
+  const canManageSoignants = useCan('soignants:manage')
+  const canManageReferentials = useCan('referentials:write')
+  const canManageLocations = useCan('locations:manage')
   const canManageMembers = useCan('members:manage')
+  const canReadActivityLog = useCan('activity-log:read')
+  const hasSettingsAccess =
+    canPlanning ||
+    canManageSoignants ||
+    canManageReferentials ||
+    canManageLocations ||
+    canManageMembers ||
+    canReadActivityLog
   const matchRoute = useMatchRoute()
   const isActive = (to: string) => !!matchRoute({ to, fuzzy: false })
 
@@ -158,7 +198,16 @@ function Navbar({ toggleSidebar }: NavbarProps) {
       </div>
       <div className="flex gap-8 pl-4 border-l border-border-sidebar">
         <div className="flex items-center gap-2">
-          {isAdmin && <SettingsMenu canManageMembers={canManageMembers} />}
+          {hasSettingsAccess && (
+            <SettingsMenu
+              canPlanning={canPlanning}
+              canManageSoignants={canManageSoignants}
+              canManageReferentials={canManageReferentials}
+              canManageLocations={canManageLocations}
+              canManageMembers={canManageMembers}
+              canReadActivityLog={canReadActivityLog}
+            />
+          )}
           <TodoSheet />
         </div>
       </div>

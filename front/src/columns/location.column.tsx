@@ -9,13 +9,25 @@ const columnHelper = createColumnHelper<Location>()
 
 type LocationActions = {
   onDelete: (id: string) => void
+  // L'écran reste consultable par lecture seule ; sans `locations:manage`,
+  // les actions d'écriture ne doivent pas apparaître (le menu n'est pas la
+  // seule barrière, une URL se tape à la main).
+  canManage: boolean
 }
 
-export const getLocationColumns = ({ onDelete }: LocationActions) => {
-  return [
+export const getLocationColumns = ({ onDelete, canManage }: LocationActions) => {
+  const columns = [
     columnHelper.accessor('name', {
       header: 'Nom',
     }),
+  ]
+
+  if (!canManage) {
+    return columns
+  }
+
+  return [
+    ...columns,
     columnHelper.display({
       id: 'actions',
       header: '',

@@ -6,6 +6,7 @@ import AddLocationForm from '../../../../components/custom/popup/addLocationForm
 import { ConfirmDeleteForm } from '../../../../components/custom/popup/confirmDeleteForm.tsx'
 import DashboardLayout from '../../../../components/dashboard.layout.tsx'
 import ReactTable from '../../../../components/table/reactTable.tsx'
+import { useCan } from '../../../../hooks/useCan.ts'
 import {
   useLocationMutations,
   useLocationQueries,
@@ -19,6 +20,10 @@ export const Route = createFileRoute(
 })
 
 function LocationSettings() {
+  // Le menu ne montre cette page qu'aux détenteurs de `locations:manage`,
+  // mais l'URL se tape à la main : les actions d'écriture se gardent aussi
+  // ici, indépendamment du menu.
+  const canManage = useCan('locations:manage')
   const { locations, isPending } = useLocationQueries()
   const { deleteLocation } = useLocationMutations()
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
@@ -33,8 +38,9 @@ function LocationSettings() {
     () =>
       getLocationColumns({
         onDelete: (id) => setDeleteTargetId(id),
+        canManage,
       }),
-    [],
+    [canManage],
   )
 
   return (
@@ -44,7 +50,7 @@ function LocationSettings() {
           <h1 className="h-9 flex items-center text-text-dark text-xl font-semibold">
             Salles
           </h1>
-          <AddLocationForm />
+          {canManage && <AddLocationForm />}
         </div>
 
         <ReactTable<Location>

@@ -10,13 +10,18 @@ const columnHelper = createColumnHelper<Thematic>()
 type ThematicActions = {
   onDelete: (id: string) => void
   soignantOptions: { value: string; label: string }[]
+  // L'écran reste consultable par lecture seule ; sans `referentials:write`,
+  // les actions d'écriture ne doivent pas apparaître (le menu n'est pas la
+  // seule barrière, une URL se tape à la main).
+  canManage: boolean
 }
 
 export const getThematicColumns = ({
   onDelete,
   soignantOptions,
+  canManage,
 }: ThematicActions) => {
-  return [
+  const columns = [
     columnHelper.accessor('name', {
       header: 'Nom',
     }),
@@ -78,6 +83,14 @@ export const getThematicColumns = ({
         )
       },
     }),
+  ]
+
+  if (!canManage) {
+    return columns
+  }
+
+  return [
+    ...columns,
     columnHelper.display({
       id: 'actions',
       header: '',

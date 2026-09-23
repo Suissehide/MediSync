@@ -1,5 +1,6 @@
 import { LayoutTemplate, Loader2Icon, Plus, Trash2 } from 'lucide-react'
 
+import { useCan } from '../../../hooks/useCan.ts'
 import {
   useDiagnosticTemplateMutations,
   useDiagnosticTemplatesQuery,
@@ -8,6 +9,10 @@ import { useDiagnosticTemplateStore } from '../../../store/useDiagnosticTemplate
 import { Button } from '../../ui/button.tsx'
 
 function SidebarDiagnosticTemplate() {
+  // Le menu ne montre cet écran qu'aux détenteurs de `referentials:write`,
+  // mais l'URL se tape à la main : les actions d'écriture se gardent aussi
+  // ici, indépendamment du menu.
+  const canManage = useCan('referentials:write')
   const { selectedId, setSelectedId } = useDiagnosticTemplateStore()
   const { templates, isPending } = useDiagnosticTemplatesQuery()
   const { createTemplate, deleteTemplate } = useDiagnosticTemplateMutations()
@@ -23,9 +28,11 @@ function SidebarDiagnosticTemplate() {
     <>
       <div className="pl-4 pr-2 flex justify-between items-center text-text-sidebar py-2">
         <p>Templates</p>
-        <Button variant="gradient" size="icon" onClick={handleCreate}>
-          <Plus className="w-5 h-5" />
-        </Button>
+        {canManage && (
+          <Button variant="gradient" size="icon" onClick={handleCreate}>
+            <Plus className="w-5 h-5" />
+          </Button>
+        )}
       </div>
 
       <div className="px-2 pb-2 flex-1 flex flex-col min-h-0">
@@ -68,20 +75,24 @@ function SidebarDiagnosticTemplate() {
                         </div>
                       </div>
                     </button>
-                    <Button
-                      variant="none"
-                      size="icon-sm"
-                      className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                      onClick={() => {
-                        deleteTemplate.mutate(t.id, {
-                          onSuccess: () => {
-                            if (selectedId === t.id) setSelectedId(null)
-                          },
-                        })
-                      }}
-                    >
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
+                    {canManage && (
+                      <Button
+                        variant="none"
+                        size="icon-sm"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                        onClick={() => {
+                          deleteTemplate.mutate(t.id, {
+                            onSuccess: () => {
+                              if (selectedId === t.id) {
+                                setSelectedId(null)
+                              }
+                            },
+                          })
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    )}
                   </div>
                 </li>
               )
