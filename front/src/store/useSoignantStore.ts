@@ -17,6 +17,8 @@ interface SoignantActions {
   toggleSoignant: (id: string) => void
   selectAllSoignants: () => void
   unselectSoignant: () => void
+
+  reset: () => void
 }
 
 type PersistedSoignantState = Pick<SoignantState, 'selectedSoignantIDs'>
@@ -52,6 +54,13 @@ export const useSoignantStore = create<SoignantState & SoignantActions>()(
           selectedSoignantIDs: state.soignants.map((s) => s.id),
         })),
       unselectSoignant: () => set({ selectedSoignantIDs: [] }),
+
+      // Appelee au changement de contexte. `soignants` est un miroir en
+      // memoire de la donnee du service, affiche par plusieurs ecrans et
+      // exclu du `partialize` : rien d'autre ne le remet a zero. La selection
+      // designe des soignants de l'ancien service, elle ne veut rien dire
+      // dans le nouveau.
+      reset: () => set({ soignants: [], selectedSoignantIDs: [] }),
     }),
     {
       name: 'soignant-store',

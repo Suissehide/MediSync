@@ -1,16 +1,12 @@
-import {
-  MutationCache,
-  QueryCache,
-  QueryClient,
-  QueryClientProvider,
-} from '@tanstack/react-query'
+import type { QueryClient } from '@tanstack/react-query'
+import { QueryClientProvider } from '@tanstack/react-query'
 import { createRouter, RouterProvider } from '@tanstack/react-router'
 import dayjs from 'dayjs'
 import { StrictMode } from 'react'
 import ReactDOM from 'react-dom/client'
 
 import RootLayout from './components/root.layout.tsx'
-import { useTenantSwitch } from './hooks/useTenantSwitch.ts'
+import { createTenantQueryClient, useTenantQueryClient } from './hooks/useTenantSwitch.ts'
 import { routeTree } from './routeTree.gen.ts'
 import { useAuthStore } from './store/useAuthStore.ts'
 import 'dayjs/locale/fr'
@@ -34,22 +30,16 @@ dayjs.extend(utc)
 dayjs.extend(localizedFormat)
 dayjs.locale('fr')
 
-const queryClient = new QueryClient({
-  queryCache: new QueryCache({
-    onError: (error: unknown) => {
-      console.error('Query cache: ', JSON.stringify(error))
-    },
-  }),
-  mutationCache: new MutationCache({
-    onError: (error: unknown) => {
-      console.error('Mutation cache: ', JSON.stringify(error))
-    },
-  }),
-})
+// Premier client : celui d'avant tout contexte. Les suivants sont construits
+// par `useTenantQueryClient`, un par couple etablissement/service.
+const initialQueryClient = createTenantQueryClient()
 
 const router = createRouter({
   routeTree,
-  context: { queryClient, authState: { user: null, isAuthenticated: false } },
+  context: {
+    queryClient: initialQueryClient,
+    authState: { user: null, isAuthenticated: false },
+  },
   defaultPreload: 'intent',
 })
 
@@ -66,25 +56,33 @@ if (rootElement && !rootElement.innerHTML) {
   root.render(
     <StrictMode>
       <StyledEngineProvider enableCssLayer>
-        <QueryClientProvider client={queryClient}>
-          <RootLayout>
-            <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="fr">
-              <AppRoutes />
-              <GlobalStyles styles="@layer theme, base, mui, components, utilities;" />
-              <ReactQueryDevtools initialIsOpen={false} position={'right'} />
-            </LocalizationProvider>
-          </RootLayout>
-        </QueryClientProvider>
+        <App />
       </StyledEngineProvider>
     </StrictMode>,
   )
 }
 
-function AppRoutes() {
-  // Monte le crochet une seule fois, sous `QueryClientProvider` : il observe
-  // le contexte pose par les layouts de route et vide tout ce qui appartenait
-  // au service precedent.
-  useTenantSwitch()
+// Detient le client courant. Il est expose a la fois au fournisseur de
+// requetes et au contexte du routeur : la garde de `_authenticated` s'en sert
+// pour `ensureQueryData`, et lire l'ancien client la ferait travailler dans
+// un cache devenu inerte.
+function App() {
+  const queryClient = useTenantQueryClient(initialQueryClient)
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <RootLayout>
+        <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="fr">
+          <AppRoutes queryClient={queryClient} />
+          <GlobalStyles styles="@layer theme, base, mui, components, utilities;" />
+          <ReactQueryDevtools initialIsOpen={false} position={'right'} />
+        </LocalizationProvider>
+      </RootLayout>
+    </QueryClientProvider>
+  )
+}
+
+function AppRoutes({ queryClient }: { queryClient: QueryClient }) {
   const user = useAuthStore((state) => state.user)
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const isInitialLoading = useAuthStore((state) => state.isInitialLoading)
