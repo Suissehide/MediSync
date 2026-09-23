@@ -756,6 +756,37 @@ describe('assertTenantScope', () => {
       ).not.toThrow()
     })
 
+    // Inclusion conditionnelle : la branche negative laisse la valeur indefinie, ce que Prisma
+    // traite exactement comme une cle non ecrite. Aucune ligne n'est ramenee, il n'y a donc rien
+    // a filtrer — refuser ici refuserait du code legitime.
+    it('laisse passer une relation laissee indefinie par une inclusion conditionnelle', () => {
+      const withIssues = (demande: boolean) =>
+        assertTenantScope(
+          {
+            model: 'Patient',
+            operation: 'findMany',
+            args: {
+              where: { establishmentId: 'e1' },
+              include: { enrollmentIssues: demande ? { where: { serviceId: 's1' } } : undefined },
+            },
+          },
+          store,
+        )
+      expect(() => withIssues(false)).not.toThrow()
+      expect(() => withIssues(true)).not.toThrow()
+      // Meme idiome sous un contexte sans service : la branche negative reste legitime.
+      expect(() =>
+        assertTenantScope(
+          {
+            model: 'Patient',
+            operation: 'findMany',
+            args: { where: { establishmentId: 'e1' }, include: { enrollmentIssues: undefined } },
+          },
+          adminStore,
+        ),
+      ).not.toThrow()
+    })
+
     // Sous le prefixe d'administration d'etablissement, il n'existe aucun service courant :
     // rien ne peut filtrer l'inclusion, elle est donc refusee.
     it('refuse une inclusion de service depuis un contexte sans service', () => {

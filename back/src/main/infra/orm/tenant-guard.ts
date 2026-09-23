@@ -79,7 +79,12 @@ const GLOBAL_TENANT_RELATIONS: Record<string, readonly string[]> = {
 // service ramène sinon les enfants de TOUS les services. C'est exactement la fuite trouvée à
 // l'étape 1 (un patient remontait les problèmes d'inscription de tous les services), corrigée
 // alors repository par repository.
-const TENANT_CHILD_RELATIONS: Record<string, Record<string, string>> = {
+//
+// Exportée pour `tenant-guard-schema.test.ts`, qui relit prisma/schema.prisma et échoue si une
+// relation y a été ajoutée, renommée ou supprimée sans être répercutée ici. C'est ce test qui
+// garantit l'exhaustivité de la table, et donc que le contrôle du `select` ci-dessous — qui ne
+// peut pas, lui, exiger la déclaration — ne laisse rien passer.
+export const TENANT_CHILD_RELATIONS: Record<string, Record<string, string>> = {
   Patient: {
     establishment: 'Establishment',
     appointmentPatients: 'AppointmentPatient',
@@ -378,9 +383,15 @@ const assertData = (model: string, operation: string, data: unknown, store: Tena
   }
 }
 
-// Entrées d'un include/select, `false` (relation explicitement écartée) exclu.
+// Entrées effectivement demandées par un include/select. `false` écarte explicitement la
+// relation ; `undefined` la laisse absente — c'est l'idiome d'une inclusion conditionnelle
+// (`{ enrollmentIssues: withIssues ? { where } : undefined }`), que Prisma traite exactement
+// comme une clé non écrite. Ni l'une ni l'autre ne ramène de ligne, donc ni l'une ni l'autre
+// n'a à être filtrée.
 const includedRelationEntries = (value: unknown): [string, unknown][] =>
-  isDict(value) ? Object.entries(value).filter(([, included]) => included !== false) : []
+  isDict(value)
+    ? Object.entries(value).filter(([, included]) => included !== false && included !== undefined)
+    : []
 
 const includedRelationKeys = (value: unknown): string[] =>
   includedRelationEntries(value).map(([key]) => key)
@@ -431,6 +442,33 @@ const assertServiceRelationFilter = (
 // Contrôle les include/select d'un modèle d'établissement. Complément symétrique de
 // assertGlobalInclude, qui ne couvrait que les lectures partant d'un modèle global : une lecture
 // partant d'un modèle d'établissement et incluant un modèle de service échappait à tout contrôle.
+//
+// LIMITE CONNUE, VOLONTAIREMENT LAISSÉE OUVERTE — à lire avant d'écrire une lecture imbriquée.
+// Ce contrôle n'inspecte que le PREMIER niveau des arguments, c'est-à-dire `args.include` et
+// `args.select` du modèle sur lequel porte l'opération. Il ne descend pas dans les include
+// imbriqués. La condition exacte qui rouvre le trou est donc celle-ci, et elle seule :
+//
+//   une lecture qui ATTEINT un modèle d'établissement par une relation incluse depuis un autre
+//   modèle — au lieu de partir de lui — puis qui, DEPUIS ce modèle d'établissement, redescend
+//   vers un modèle de service.
+//
+// Concrètement, les chaînes du dépôt qui atteignent déjà un modèle d'établissement en profondeur
+// sont : slot > appointments > appointmentPatients > patient (slot.repository), pathway > slots >
+// appointments > appointmentPatients > patient (pathway.repository), appointment >
+// appointmentPatients > patient (appointment.repository), todo > soignant (todo.repository),
+// thematic|slotTemplate|pathwayTemplate > soignantLinks > soignant et slotTemplate > location
+// (slot-template.include). Aucune ne redescend aujourd'hui : toutes s'arrêtent sur le patient, le
+// soignant ou le lieu, qui n'embarquent rien de plus. Le jour où l'une d'elles s'écrira
+// `patient: { include: { enrollmentIssues: … } }` (ou `diagnostics`, `pathwayPriorities`,
+// `appointmentPatients`), `soignant: { include: { todos: … } }` (ou `thematicLinks`,
+// `slotTemplateLinks`) ou `location: { include: { slotTemplates: … } }`, l'inclusion de service
+// ne sera PAS vue ici et devra porter son `where: { serviceId }` à la main — exactement la
+// situation d'avant cette fonction.
+//
+// Fermer ce cas suppose de suivre la famille du modèle courant le long de la descente, donc une
+// table parent → relation → cible pour TOUS les modèles et non pour les seuls modèles
+// d'établissement. C'est un chantier en soi, repoussé à l'étape 3, qui produira précisément la
+// forme patient → sous-dossier de service.
 const assertChildInclude = (model: string, operation: string, args: Dict, store: TenantStore): void => {
   const relations = TENANT_CHILD_RELATIONS[model]
   if (!relations) {
