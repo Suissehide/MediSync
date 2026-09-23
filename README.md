@@ -10,6 +10,9 @@ L'application est en français, à usage interne du service : elle manipule des 
 
 | Terme | Ce que c'est |
 | --- | --- |
+| **Établissement** (`Establishment`) | Une structure de soins. Racine de l'isolation des données : chaque service, chaque patient, chaque dossier appartient à un établissement, et deux établissements ne se voient jamais l'un l'autre. |
+| **Service** (`Service`) | Un service au sein d'un établissement (ex. un service de réadaptation). Les modèles de parcours, créneaux, thématiques, patients etc. sont rattachés à un service : deux services d'un même établissement ne partagent pas leurs données. |
+| **Appartenance** (`EstablishmentMembership` / `ServiceMembership`) | Le rattachement d'un compte à un établissement (rôle `ADMIN` ou `MEMBER`), puis, sous cette appartenance, à un ou plusieurs services avec un rôle (coordinateur, intervenant, secrétariat, lecture seule). Voir « Comptes » ci-dessous. |
 | **Modèle de parcours** (`PathwayTemplate`) | La trame d'un programme : un nom, une couleur, des tags et la liste des séances qui le composent. |
 | **Modèle de créneau** (`SlotTemplate`) | Une séance de la trame, positionnée en jour/heure relatifs au début du parcours (`offsetDays`), collective (avec une capacité) ou individuelle, rattachée à une thématique, un lieu et un ou plusieurs soignants. |
 | **Parcours** (`Pathway`) | Une instance datée d'un modèle : le modèle « déroulé » à partir d'une date de début. |
@@ -40,8 +43,24 @@ L'application est en français, à usage interne du service : elle manipule des 
   planning), semaines interdites, cycle de semaines, thématiques, soignants, lieux, utilisateurs et rôles, modèles de
   diagnostic, et **journal d'activité** (qui a créé/modifié/supprimé quoi).
 - **Tâches** — pense-bête par soignant, accessible depuis la barre de navigation.
-- **Comptes** — authentification par JWT dans un cookie `httpOnly`. Un compte fraîchement créé a le rôle `NONE` et
-  reste en attente d'approbation par un administrateur (`USER` puis `ADMIN`).
+
+## Comptes
+
+Un compte (`User`) est une identité globale (e-mail unique sur la plateforme), authentifiée par JWT dans un cookie
+`httpOnly`. Il n'a par lui-même aucun droit : ceux-ci viennent de ses **appartenances**.
+
+- **Inscription** — un compte fraîchement créé n'a aucune appartenance. Il est redirigé vers une page d'attente
+  (« Compte en attente d'approbation ») tant qu'aucun administrateur d'établissement ne l'a rattaché.
+- **Rattachement** — un administrateur d'établissement (rôle `ADMIN` sur l'appartenance d'établissement) rattache
+  le compte à son établissement depuis l'écran Membres, puis l'affecte à un ou plusieurs services avec un rôle :
+  **coordinateur** (tous les droits du service — modèles de parcours, planning, patients, contenu clinique),
+  **intervenant** (agenda, patients, diagnostics éducatifs, tâches), **secrétariat** (identité et rendez-vous des
+  patients, sans le contenu clinique), **lecture seule** (consultation, sans modification ni contenu clinique). Un
+  compte peut cumuler des rôles dans plusieurs services et appartenir à plusieurs établissements.
+- **Désactivation** — porte sur l'identité globale (`User.deactivatedAt`), pas sur une seule appartenance : un
+  compte rattaché à plusieurs établissements ne peut donc pas être désactivé ou réactivé depuis un seul d'entre eux.
+
+Détail des rôles, permissions et règles associées : `docs/multi-tenant/habilitations.md`.
 
 ## Architecture
 
@@ -109,6 +128,16 @@ npm run dev     # http://localhost:4270
 Le port 4270 est **strict** (`strictPort` dans `vite.config.ts`) : Vite refuse de démarrer plutôt que de glisser
 silencieusement sur le port suivant, ce qui casserait le CORS du back (`CORS_ORIGIN` / `FRONT_URL` dans `back/.env`).
 Un seul serveur de dev à la fois, donc : si le port est occupé, arrêtez l'instance précédente.
+
+### Tests de bout en bout du back
+
+Les tests de bout en bout (`back/src/test/e2e/`) visent une base séparée, `medisync_test`, configurée par
+`back/.env.test` (jamais celle de développement) :
+
+```shell
+cd back
+npm run test:e2e
+```
 
 ### Récupérer la base d'un environnement déployé
 

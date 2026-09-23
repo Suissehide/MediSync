@@ -1,12 +1,16 @@
 # Habilitations MediSync multi-établissement
 
+Implémenté à l'étape 1 du chantier multi-tenant : ce document décrit le système de rôles et de
+permissions réellement en place, pas une cible à venir.
+
 Document de référence de la grille des rôles et des permissions. Il formalise
 qui peut faire quoi dans l'application, par niveau de rattachement. C'est le
 document à présenter lors d'un audit (RGPD article 32, référentiels PGSSI-S
 sur les habilitations et l'imputabilité).
 
-Statut : cible de la refonte multi-tenant (établissement → services → modèles
-de parcours). Voir la spec d'architecture dans `docs/superpowers/specs/`.
+Statut : socle implémenté (établissement → services → modèles de parcours). L'écran de gestion
+des établissements et le rôle super-admin restent à construire (étape 4). Voir la spec
+d'architecture dans `docs/superpowers/specs/`.
 
 ## Niveaux de rattachement
 
