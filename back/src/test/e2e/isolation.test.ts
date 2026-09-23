@@ -411,4 +411,35 @@ describe('isolation par tenant', () => {
       expect(own.statusCode).toBe(200)
     })
   })
+
+  // Le statut ne suffit pas : le corps du 404 doit rester neutre. Les hooks
+  // qui suivent `resolveTenant` (permission, filtres cliniques) s'executent
+  // aussi sur la charge d'une reponse d'erreur, donc sans tenant. Quand ils
+  // destructuraient `request.tenant` sans le verifier, le corps du 404
+  // devenait « Cannot destructure property 'serviceRole' … » : une erreur
+  // interne rendue a qui sonde des identifiants de tenant au hasard.
+  describe('le corps du 404 ne revele rien', () => {
+    beforeEach(truncateAll)
+
+    it('un tenant inconnu renvoie un 404 neutre, sans message interne', async () => {
+      const est = await createEstablishment('E1')
+      await createUser({
+        email: 'admin@test.fr',
+        memberships: [{ establishmentId: est.id, role: 'ADMIN' }],
+      })
+      const cookies = await signIn(t.app, 'admin@test.fr')
+
+      const urls = [
+        tenantUrl(est.id, 'svc_inconnu', '/patient'),
+        tenantUrl('est_inconnu', 'svc_inconnu', '/patient'),
+        adminUrl('est_inconnu', '/members'),
+      ]
+
+      for (const url of urls) {
+        const res = await t.app.inject({ method: 'GET', url, cookies })
+        expect(res.statusCode).toBe(404)
+        expect(res.body).not.toMatch(/destructure|request\.tenant|serviceRole/i)
+      }
+    })
+  })
 })

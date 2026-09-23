@@ -3,8 +3,9 @@ import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod/v4'
 
 import { hasPermission } from '../../../../utils/permissions'
-
+import { requireTenant } from '../plugins/tenant.plugin'
 import {
+  appointmentsCountResponseSchema,
   type CreatePatientBody,
   createPatientSchema,
   type DeletePatientByIdParams,
@@ -16,19 +17,18 @@ import {
   enrollPatientInPathwaysSchema,
   type GetPatientByIdParams,
   getPatientByIdParamsSchema,
+  type PatientPathwayParams,
+  patientPathwayParamsSchema,
+  patientPathwaysResponseSchema,
   patientResponseSchema,
   patientsResponseSchema,
   patientsWithTagsResponseSchema,
+  type ReorderPatientPathwaysBody,
+  removeFromPathwayResponseSchema,
+  reorderPatientPathwaysBodySchema,
   type UpdatePatientBody,
   type UpdatePatientParams,
   updatePatientByIdSchema,
-  type PatientPathwayParams,
-  patientPathwayParamsSchema,
-  appointmentsCountResponseSchema,
-  removeFromPathwayResponseSchema,
-  patientPathwaysResponseSchema,
-  reorderPatientPathwaysBodySchema,
-  type ReorderPatientPathwaysBody,
 } from '../schemas/patient.schema'
 
 const patientRouter: FastifyPluginAsync = (fastify) => {
@@ -59,7 +59,9 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
       schema: {
         querystring: z.object({
           search: z.string().optional(),
-          pathwayTemplateTags: z.union([z.string(), z.array(z.string())]).optional(),
+          pathwayTemplateTags: z
+            .union([z.string(), z.array(z.string())])
+            .optional(),
         }),
       },
       config: { permission: 'patient:read' },
@@ -79,7 +81,7 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
       // L'export est un Buffer : le hook `preSerialization` qui retire les
       // champs cliniques des réponses JSON ne s'y applique pas, il faut donc
       // décider ici de la présence des colonnes cliniques.
-      const { serviceRole, establishmentRole } = request.tenant
+      const { serviceRole, establishmentRole } = requireTenant(request)
       const buffer = await patientDomain.exportExcel(
         { search, pathwayTemplateTags: tags },
         {
@@ -92,7 +94,10 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
 
       const filename = `patients_${new Date().toISOString().slice(0, 10)}.xlsx`
       await reply
-        .header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        .header(
+          'Content-Type',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
         .header('Content-Disposition', `attachment; filename="${filename}"`)
         .send(buffer)
     },
@@ -146,7 +151,10 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
       config: { permission: 'patient:write' },
     },
     async (request, reply) => {
-      const patient = await patientDomain.create(request.body, request.user.userID)
+      const patient = await patientDomain.create(
+        request.body,
+        request.user.userID,
+      )
       reply.code(201)
       return patient
     },
@@ -167,7 +175,11 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
     },
     async (request) => {
       const { patientID } = request.params
-      const updated = await patientDomain.update(patientID, request.body, request.user.userID)
+      const updated = await patientDomain.update(
+        patientID,
+        request.body,
+        request.user.userID,
+      )
       if (!updated) {
         throw Boom.notFound('Patient not found')
       }
@@ -212,11 +224,14 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
       config: { permission: 'appointment:write' },
     },
     async (request, reply) => {
-      const result = await patientDomain.enrollPatientInPathways({
-        patientData: request.body.patientData,
-        startDate: request.body.startDate,
-        pathways: request.body.pathways,
-      }, request.user.userID)
+      const result = await patientDomain.enrollPatientInPathways(
+        {
+          patientData: request.body.patientData,
+          startDate: request.body.startDate,
+          pathways: request.body.pathways,
+        },
+        request.user.userID,
+      )
       reply.code(201)
       return result
     },
@@ -236,11 +251,14 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
       config: { permission: 'appointment:write' },
     },
     async (request) => {
-      return await patientDomain.enrollExistingPatientInPathways({
-        patientID: request.body.patientID,
-        startDate: request.body.startDate,
-        pathways: request.body.pathways,
-      }, request.user.userID)
+      return await patientDomain.enrollExistingPatientInPathways(
+        {
+          patientID: request.body.patientID,
+          startDate: request.body.startDate,
+          pathways: request.body.pathways,
+        },
+        request.user.userID,
+      )
     },
   )
 

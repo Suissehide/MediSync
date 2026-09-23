@@ -7,8 +7,8 @@ import type {
   preSerializationAsyncHookHandler,
   preValidationAsyncHookHandler,
 } from 'fastify'
-import fastifyPlugin from 'fastify-plugin'
 import type { FastifyPluginAsync } from 'fastify/types/plugin'
+import fastifyPlugin from 'fastify-plugin'
 
 import type { UserWithMemberships } from '../../../../types/infra/orm/repositories/user.repository.interface'
 import type { Tenant } from '../../../../types/utils/tenant-context'
@@ -17,7 +17,12 @@ import { hasPermission, type Permission } from '../../../../utils/permissions'
 
 declare module 'fastify' {
   export interface FastifyRequest {
-    tenant: Tenant
+    // Optionnel, et c'est important : le tenant n'existe qu'une fois
+    // `resolveTenant` passé. Sur le chemin d'échec — établissement ou service
+    // qui ne correspond à aucune appartenance — il n'est jamais posé, et les
+    // hooks suivants s'exécutent quand même sur la réponse d'erreur. Le
+    // déclarer non optionnel faisait passer les déstructurations pour sûres.
+    tenant?: Tenant
   }
   export interface FastifyContextConfig {
     permission?: Permission
@@ -95,6 +100,17 @@ export const assertRoutePermission = (route: {
   }
 }
 
+// À utiliser dans un handler qui a besoin du tenant. `enforcePermission` l'a
+// déjà exigé en `preHandler`, donc il est présent — mais le type ne le sait
+// pas, et le faire croire par une assertion rendrait muette la prochaine route
+// qui oublierait le hook. Ici l'absence coûte un 404, comme partout ailleurs.
+export const requireTenant = (request: FastifyRequest): Tenant => {
+  if (!request.tenant) {
+    throw Boom.notFound()
+  }
+  return request.tenant
+}
+
 const tenantPlugin: FastifyPluginAsync = fastifyPlugin(
   (fastify: FastifyInstance) => {
     const { tenantContext } = fastify.iocContainer
@@ -136,6 +152,12 @@ const tenantPlugin: FastifyPluginAsync = fastifyPlugin(
         if (!permission) {
           throw Boom.internal('Route without permission')
         }
+        // Sans tenant, on ne peut rien autoriser : même 404 que
+        // `resolveTenantFromUser`, pour ne pas distinguer « service inconnu »
+        // de « service auquel vous n'appartenez pas ».
+        if (!request.tenant) {
+          throw Boom.notFound()
+        }
         const { serviceRole, establishmentRole } = request.tenant
         if (!hasPermission({ serviceRole, establishmentRole }, permission)) {
           throw Boom.forbidden('Insufficient permission')
@@ -156,6 +178,13 @@ const tenantPlugin: FastifyPluginAsync = fastifyPlugin(
         _reply: unknown,
         payload: unknown,
       ) {
+        // Ce hook s'exécute aussi sur la charge d'une réponse d'erreur, donc
+        // sur le chemin où le tenant n'a jamais été résolu. Sans tenant, on
+        // filtre : refus par défaut, et surtout pas une exception, qui
+        // remplacerait le corps du 404 par un message interne.
+        if (!request.tenant) {
+          return Promise.resolve(withoutClinicalFields(payload))
+        }
         const { serviceRole, establishmentRole } = request.tenant
         if (
           hasPermission({ serviceRole, establishmentRole }, 'clinical:read')
@@ -175,6 +204,11 @@ const tenantPlugin: FastifyPluginAsync = fastifyPlugin(
     fastify.decorate(
       'stripClinicalInput',
       function (this: FastifyInstance, request: FastifyRequest) {
+        // Même parti pris que le filtre de sortie : sans tenant, on retire.
+        if (!request.tenant) {
+          request.body = withoutClinicalFields(request.body)
+          return Promise.resolve()
+        }
         const { serviceRole, establishmentRole } = request.tenant
         if (
           !hasPermission({ serviceRole, establishmentRole }, 'clinical:write')
