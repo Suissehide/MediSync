@@ -25,6 +25,12 @@ plutôt que d'improviser sur une base qui contient de vrais dossiers patients.
   insèrent sans vérifier l'existant : le relancer produit un second arbre de données en double.
   Ne jamais l'exécuter (`npm run prisma:seed`, `npm run prisma:migrate:reset`) sur une base de
   production ou de démonstration déjà peuplée.
+- **Une base de développement déjà migrée peut devoir être réinitialisée.** La migration
+  `20260922144905_multi_tenant_socle` a été corrigée après une première application sur des bases
+  jetables : son empreinte a donc changé. La production n'est pas concernée (elle ne l'a jamais
+  appliquée), mais toute base de développement qui l'aurait déjà appliquée verra
+  `prisma migrate deploy` signaler une migration modifiée. La réponse est de réinitialiser cette
+  base de développement, jamais de forcer la production.
 
 ## 1. Sauvegarde manuelle
 
