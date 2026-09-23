@@ -14,6 +14,15 @@ export const TODO = {
 
 export const SOIGNANT = {
   GET_ALL: 'get_all_soignants',
+  // Distincte de GET_ALL : celle-ci vise le prefixe d'etablissement
+  // (`establishmentApiUrl`), pas celui de service — necessaire sur les
+  // ecrans sans service en contexte (voir `admin/members.tsx`), qui ne
+  // peuvent pas appeler `tenantApiUrl`. Meme ensemble de soignants cote
+  // back (le repository filtre par etablissement dans les deux cas), mais
+  // une cle de cache distincte pour ne pas confondre les deux permissions
+  // differentes qui les gardent (`referentials:read` contre
+  // `soignants:manage`).
+  GET_ALL_ESTABLISHMENT: 'get_all_soignants_establishment',
   GET: 'get_soignant',
   CREATE: 'create_soignant',
   UPDATE: 'update_soignant',

@@ -9,7 +9,7 @@ import {
 import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { toSelectOptions } from '../../../libs/utils.ts'
 import { useMemberMutations } from '../../../queries/useMembers.ts'
-import { useSoignantQueries } from '../../../queries/useSoignant.ts'
+import { useEstablishmentSoignantsQuery } from '../../../queries/useSoignant.ts'
 import { useAuthStore } from '../../../store/useAuthStore.ts'
 import type { EstablishmentRole, ServiceRole } from '../../../types/auth.ts'
 import { Button } from '../../ui/button.tsx'
@@ -43,7 +43,10 @@ const SERVICE_ROLE_OPTIONS = [
 function AddMemberForm({ trigger }: AddMemberFormProps) {
   const [open, setOpen] = useState(false)
   const { addMember } = useMemberMutations()
-  const { soignants } = useSoignantQueries()
+  // Prefixe d'etablissement : ce formulaire s'ouvre sur un ecran sans
+  // service en contexte (voir `admin/members.tsx`), ou `useSoignantQueries`
+  // (prefixe de service) leverait.
+  const { soignants } = useEstablishmentSoignantsQuery()
   const user = useAuthStore((state) => state.user)
   const context = useAuthStore((state) => state.context)
 

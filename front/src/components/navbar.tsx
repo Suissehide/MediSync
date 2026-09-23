@@ -279,7 +279,15 @@ function Navbar({ toggleSidebar }: NavbarProps) {
               canReadActivityLog={canReadActivityLog}
             />
           )}
-          <TodoSheet />
+          {/* Les todos sont un objet de service (`todo:own` est une
+          permission de service, pas d'etablissement) : sans service en
+          contexte (ecrans d'administration atteints par un role sans
+          affectation, voir `admin.tsx`), `useTodoQueries` appellerait
+          `tenantApiUrl`, qui leve volontairement — meme defaut que celui
+          corrige sur la liste des soignants (tache 8, tour de correction
+          1), ici referme en masquant le widget plutot qu'en lui trouvant un
+          equivalent d'etablissement qui n'existe pas. */}
+          {context?.serviceId && <TodoSheet />}
         </div>
       </div>
     </div>

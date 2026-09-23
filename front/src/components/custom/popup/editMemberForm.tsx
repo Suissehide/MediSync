@@ -8,7 +8,7 @@ import {
 import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { toSelectOptions } from '../../../libs/utils.ts'
 import { useMemberMutations } from '../../../queries/useMembers.ts'
-import { useSoignantQueries } from '../../../queries/useSoignant.ts'
+import { useEstablishmentSoignantsQuery } from '../../../queries/useSoignant.ts'
 import type { EstablishmentRole, ServiceRole } from '../../../types/auth.ts'
 import type { Member } from '../../../types/member.ts'
 import { Button } from '../../ui/button.tsx'
@@ -42,7 +42,10 @@ const SERVICE_ROLE_OPTIONS = [
 function EditMemberForm({ member, serviceId }: EditMemberFormProps) {
   const [open, setOpen] = useState(false)
   const { updateMember } = useMemberMutations()
-  const { soignants } = useSoignantQueries()
+  // Prefixe d'etablissement : ce formulaire s'ouvre sur un ecran sans
+  // service en contexte (voir `admin/members.tsx`), ou `useSoignantQueries`
+  // (prefixe de service) leverait.
+  const { soignants } = useEstablishmentSoignantsQuery()
 
   const soignantOptions = useMemo(
     () =>

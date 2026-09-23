@@ -47,6 +47,33 @@ export const useSoignantQueries = () => {
   return { soignants, isPending, error }
 }
 
+// Même donnée que `useSoignantQueries`, mais lue par le préfixe
+// d'établissement : à utiliser depuis un écran sans service en contexte
+// (l'écran des membres, `admin/members.tsx`, et les formulaires qu'il
+// ouvre), où `useSoignantQueries` échouerait (`tenantApiUrl` lève sans
+// service). N'écrit pas dans `useSoignantStore` : ce store sert les filtres
+// des écrans de service, hors du périmètre de cet écran d'administration.
+export const useEstablishmentSoignantsQuery = () => {
+  const {
+    data: soignants,
+    isPending,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: [SOIGNANT.GET_ALL_ESTABLISHMENT],
+    queryFn: SoignantApi.getAllForEstablishment,
+    retry: 0,
+  })
+
+  useDataFetching({
+    isPending,
+    isError,
+    error,
+  })
+
+  return { soignants, isPending, error }
+}
+
 // * MUTATIONS
 
 export const useSoignantMutations = () => {

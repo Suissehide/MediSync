@@ -11,7 +11,7 @@ import {
   useMemberMutations,
   useMembersQuery,
 } from '@/queries/useMembers.ts'
-import { useSoignantQueries } from '@/queries/useSoignant.ts'
+import { useEstablishmentSoignantsQuery } from '@/queries/useSoignant.ts'
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { Member } from '@/types/member.ts'
 import { resolveEstablishmentContext } from '@/utils/tenant-context.ts'
@@ -38,7 +38,10 @@ function MemberSettings() {
   const context = useAuthStore((state) => state.context)
 
   const { members, isPending } = useMembersQuery()
-  const { soignants } = useSoignantQueries()
+  // Prefixe d'etablissement, pas de service : ce layout n'en porte aucun
+  // (voir `admin.tsx`), et `useSoignantQueries` (prefixe de service) leverait
+  // ici. Voir le commentaire de `useEstablishmentSoignantsQuery`.
+  const { soignants } = useEstablishmentSoignantsQuery()
   const { removeMember, deactivateMember, reactivateMember } =
     useMemberMutations()
 
