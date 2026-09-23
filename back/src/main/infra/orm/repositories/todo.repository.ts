@@ -24,20 +24,43 @@ class TodoRepository implements TodoRepositoryInterface {
     return this.tenantContext.scope()
   }
 
-  // Les taches sont personnelles : chaque soignant ne voit que les siennes
-  // (et celles sans soignant, a soignantID null) au sein de son service.
+  // Les taches sont personnelles (permission `todo:own`, voir
+  // docs/multi-tenant/habilitations.md) : chaque soignant ne voit que les
+  // siennes au sein de son service. Quand le compte courant n'est rattache a
+  // aucun soignant, le filtre ne disparait pas — il porte sur
+  // `soignantID: null`, les taches sans soignant.
+  private get ownScope() {
+    return {
+      ...this.scope,
+      soignantID: this.tenantContext.currentService().soignantId,
+    }
+  }
+
   findAll(): Promise<TodoEntityRepo[]> {
     return this.prisma.todo.findMany({
-      where: { ...this.scope, soignantID: this.tenantContext.currentService().soignantId },
+      where: this.ownScope,
       orderBy: [{ createDate: 'desc' }],
       include: { soignant: true },
     })
   }
 
+  // La cle unique composite `id_serviceId` ne permet pas d'ajouter le filtre
+  // non unique `soignantID` a un findUnique/update/delete : la lecture passe
+  // donc par `findFirstOrThrow`, et les ecritures par une lecture de garde
+  // prealable. L'absence de droit se presente ainsi comme une absence de
+  // ressource (404 via `boomErrorFromPrismaError`), pas comme une erreur
+  // distincte qui revelerait l'existence de la tache d'un collegue.
+  private async assertOwned(todoID: string): Promise<void> {
+    await this.prisma.todo.findFirstOrThrow({
+      where: { id: todoID, ...this.ownScope },
+      select: { id: true },
+    })
+  }
+
   async findByID(todoID: string): Promise<TodoEntityRepo> {
     try {
-      return await this.prisma.todo.findUniqueOrThrow({
-        where: { id_serviceId: { id: todoID, serviceId: this.scope.serviceId } },
+      return await this.prisma.todo.findFirstOrThrow({
+        where: { id: todoID, ...this.ownScope },
         include: { soignant: true },
       })
     } catch (err) {
@@ -73,6 +96,7 @@ class TodoRepository implements TodoRepositoryInterface {
     todoUpdateParams: TodoUpdateEntityRepo,
   ): Promise<TodoEntityRepo> {
     try {
+      await this.assertOwned(todoID)
       return await this.prisma.todo.update({
         where: { id_serviceId: { id: todoID, serviceId: this.scope.serviceId } },
         data: todoUpdateParams,
@@ -88,6 +112,7 @@ class TodoRepository implements TodoRepositoryInterface {
 
   async delete(todoID: string): Promise<TodoEntityRepo> {
     try {
+      await this.assertOwned(todoID)
       return await this.prisma.todo.delete({
         where: { id_serviceId: { id: todoID, serviceId: this.scope.serviceId } },
       })
