@@ -171,6 +171,17 @@ transaction (elle n'a rien pu appliquer partiellement) — passer directement à
 
 ## 4. Vérifier en production
 
+> **Tout le monde sera déconnecté une fois, c'est attendu.** Le navigateur conserve l'utilisateur
+> dans son stockage local, et cet utilisateur a changé de forme avec le multi-tenant. Le store est
+> versionné : au premier chargement de la nouvelle version, l'état hérité est purgé et l'écran de
+> connexion s'affiche. Le cookie de session étant toujours valide, se reconnecter est immédiat.
+> Prévenir les utilisateurs, et ne pas prendre cette déconnexion pour un échec du déploiement.
+>
+> Si à la place l'application affiche « Une erreur est survenue » avec
+> `user.establishments is not iterable`, c'est que la version déployée est antérieure au
+> correctif du versionnement : contournement immédiat côté navigateur, vider le stockage local du
+> site (outils de développement, Application, Local Storage), puis déployer une image à jour.
+
 Se connecter avec un compte existant et vérifier, dans l'ordre : la connexion, l'agenda (une
 journée avec des rendez-vous), le planning (calendrier des créneaux), une fiche patient (identité
 et dossier), l'écran Membres (menu Administration, `/settings/user` : la liste des comptes de
