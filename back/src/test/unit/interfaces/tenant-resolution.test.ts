@@ -1,6 +1,6 @@
 import Boom from '@hapi/boom'
 
-import { assertRoutePermission, resolveTenantFromUser } from '../../../main/interfaces/http/fastify/plugins/tenant.plugin'
+import { assertRoutePermission, assertTenantShapedRoute, resolveTenantFromUser } from '../../../main/interfaces/http/fastify/plugins/tenant.plugin'
 import type { UserWithMemberships } from '../../../main/types/infra/orm/repositories/user.repository.interface'
 
 const now = new Date()
@@ -42,6 +42,27 @@ describe('resolveTenantFromUser', () => {
   it('assertRoutePermission refuse une route sans permission', () => {
     expect(() => assertRoutePermission({ method: 'GET', url: '/x', config: {} })).toThrow(/without permission/)
     expect(() => assertRoutePermission({ method: 'GET', url: '/x', config: { permission: 'planning:read' } })).not.toThrow()
+  })
+
+  // Garde de racine : `assertRoutePermission` ne voit que les routes posees
+  // sous les deux plugins de tenant. Celle-ci juge sur la forme de l'URL, donc
+  // couvre une route de forme multi-tenant enregistree ailleurs, qui
+  // echapperait sinon a la resolution, a la permission et au filtrage
+  // clinique sans que rien ne le signale.
+  it('assertTenantShapedRoute exige une permission des que l URL porte un etablissement', () => {
+    const tenantUrl = '/e/:establishmentId/s/:serviceId/patient'
+    const adminUrl = '/e/:establishmentId/admin/members'
+    expect(() => assertTenantShapedRoute({ method: 'GET', url: tenantUrl, config: {} }))
+      .toThrow(/without permission/)
+    expect(() => assertTenantShapedRoute({ method: 'GET', url: adminUrl, config: {} }))
+      .toThrow(/without permission/)
+    expect(() => assertTenantShapedRoute({ method: 'GET', url: tenantUrl, config: { permission: 'patient:read' } }))
+      .not.toThrow()
+    // Une route hors tenant reste libre de ne rien declarer.
+    expect(() => assertTenantShapedRoute({ method: 'GET', url: '/health', config: {} }))
+      .not.toThrow()
+    expect(() => assertTenantShapedRoute({ method: 'POST', url: '/auth/sign-in', config: {} }))
+      .not.toThrow()
   })
 
   it('exige le role ADMIN pour le contexte d administration', () => {

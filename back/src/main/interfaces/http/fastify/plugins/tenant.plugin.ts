@@ -100,6 +100,24 @@ export const assertRoutePermission = (route: {
   }
 }
 
+// Second fail-safe, posé à la racine des routes plutôt que dans les deux
+// plugins de tenant. `assertRoutePermission` ne voit que les routes déclarées
+// *sous* ces plugins, donc sous leurs hooks de résolution, de permission et de
+// filtrage clinique. Une route dont l'URL porte un identifiant
+// d'établissement mais qui serait enregistrée ailleurs échapperait à tous ces
+// hooks sans que rien ne le signale : elle lirait la base sans tenant, et le
+// garde-fou Prisma serait la seule barrière restante. Ici, la forme de l'URL
+// suffit à exiger la déclaration, où que la route soit posée.
+export const assertTenantShapedRoute = (route: {
+  method: unknown
+  url: string
+  config?: { permission?: Permission }
+}): void => {
+  if (route.url.includes(':establishmentId')) {
+    assertRoutePermission(route)
+  }
+}
+
 // À utiliser dans un handler qui a besoin du tenant. `enforcePermission` l'a
 // déjà exigé en `preHandler`, donc il est présent — mais le type ne le sait
 // pas, et le faire croire par une assertion rendrait muette la prochaine route

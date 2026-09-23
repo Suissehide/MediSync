@@ -97,7 +97,14 @@ Key cross-cutting concerns:
   still run on the handler's return value.
 - **Permissions**: routes under `/e/:establishmentId/s/:serviceId` and `/e/:establishmentId/admin` MUST declare
   `config: { permission }` (matrix in `utils/permissions.ts`, mirrored in `front/src/utils/permissions.ts`; a unit
-  test checks both copies are identical). Server startup fails otherwise.
+  test checks both copies are identical). Server startup fails otherwise. Two `onRoute` fail-safes enforce this:
+  `assertRoutePermission` on each of the two route plugins, and `assertTenantShapedRoute` at the root of
+  `routes/index.ts`, which judges on the URL shape — so a route carrying `:establishmentId` registered *outside*
+  those plugins, and therefore outside the resolution, permission and clinical-filtering hooks, also fails the boot.
+- **`request.tenant` is optional on purpose.** It only exists once `resolveTenant` has run. On the failure path it is
+  never set, and later hooks still execute on the error payload — the three tenant hooks therefore check it and fail
+  closed (clinical filters strip, permission returns the same 404 as resolution). In a handler, use `requireTenant`
+  rather than a non-null assertion: an assertion would silence the next route that forgets the hook.
 - **Composite keys**: lookups by id use `where: { id_serviceId: { id, serviceId } }`. Nullable references
   (`locationID`, `thematicId`, `templateID`…) have no composite FK: domains verify the target via its repository.
 - **E2E tests** (`src/test/e2e/`): shared fixtures and app/db harness live in `src/test/e2e/setup/` (`buildTestApp`,
