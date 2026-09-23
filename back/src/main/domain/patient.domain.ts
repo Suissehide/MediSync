@@ -37,7 +37,9 @@ import type { PatientRepositoryInterface } from '../types/infra/orm/repositories
 import type { SlotWithTemplateAndAppointmentsRepo } from '../types/infra/orm/repositories/slot.repository.interface'
 import type { ThematicRepositoryInterface } from '../types/infra/orm/repositories/thematic.repository.interface'
 import type { Logger } from '../types/utils/logger'
+import type { TenantContextInterface } from '../types/utils/tenant-context'
 import type { AppEventBus } from '../utils/app-event-bus'
+import { hasPermission } from '../utils/permissions'
 
 const orEmpty = (value: string | null | undefined): string => value ?? ''
 const formatDate = (value: Date | string | null | undefined): string =>
@@ -51,6 +53,7 @@ class PatientDomain implements PatientDomainInterface {
   private readonly appointmentRepository: AppointmentRepositoryInterface
   private readonly enrollmentIssueRepository: EnrollmentIssueRepositoryInterface
   private readonly thematicRepository: ThematicRepositoryInterface
+  private readonly tenantContext: TenantContextInterface
   private readonly appEventBus: AppEventBus
 
   constructor({
@@ -60,6 +63,7 @@ class PatientDomain implements PatientDomainInterface {
     appointmentRepository,
     enrollmentIssueRepository,
     thematicRepository,
+    tenantContext,
     appEventBus,
     logger,
   }: IocContainer) {
@@ -69,6 +73,7 @@ class PatientDomain implements PatientDomainInterface {
     this.appointmentRepository = appointmentRepository
     this.enrollmentIssueRepository = enrollmentIssueRepository
     this.thematicRepository = thematicRepository
+    this.tenantContext = tenantContext
     this.appEventBus = appEventBus
     this.logger = logger
   }
@@ -559,6 +564,20 @@ class PatientDomain implements PatientDomainInterface {
   ): Promise<EnrollmentAppointment[]> {
     const { type, motif, thematicId, appointmentDuration, firstAppointmentOnly } =
       options
+    // `motif` vient du corps de la requête d'inscription : c'est du texte
+    // libre saisi par l'utilisateur. `transmissionNotes` est une colonne
+    // clinique, que le hook `stripClinicalInput` refuse en entrée à qui n'a
+    // pas `clinical:write` — mais il ne reconnaît pas ce champ-ci, qui la
+    // remplit sous un autre nom. Le report est donc soumis ici à la même
+    // permission, sans quoi un compte SECRETARIAT ou LECTURE écrirait dans
+    // une transmission clinique par la porte de service. Calculé une fois et
+    // appliqué aux trois écritures ci-dessous.
+    const { serviceRole, establishmentRole } = this.tenantContext.current()
+    const canWriteClinical = hasPermission(
+      { serviceRole, establishmentRole },
+      'clinical:write',
+    )
+    const transmissionNotes = canWriteClinical ? (motif ?? undefined) : undefined
 
     if (slot.slotTemplate.isIndividual) {
       const nextSlot = this.getNextAvailableAppointment(
@@ -584,7 +603,7 @@ class PatientDomain implements PatientDomainInterface {
         type: type ?? undefined,
         slotID: slot.id,
         patientIDs: [patient.id],
-        transmissionNotes: motif ?? undefined,
+        transmissionNotes,
       })
       return [
         {
@@ -608,7 +627,7 @@ class PatientDomain implements PatientDomainInterface {
       await this.appointmentRepository.addPatientToAppointment({
         appointmentID: existingAppointment.id,
         patientID: patient.id,
-        transmissionNotes: motif ?? undefined,
+        transmissionNotes,
       })
       return [
         {
@@ -627,7 +646,7 @@ class PatientDomain implements PatientDomainInterface {
       type: type ?? undefined,
       slotID: slot.id,
       patientIDs: [patient.id],
-      transmissionNotes: motif ?? undefined,
+      transmissionNotes,
     })
     return [
       {
