@@ -1,18 +1,25 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useMemo } from 'react'
 
-import { getSoignantColumns } from '../../../../columns/soignant.column.tsx'
-import AddSoignantForm from '../../../../components/custom/popup/addSoignantForm.tsx'
-import DashboardLayout from '../../../../components/dashboard.layout.tsx'
-import ReactTable from '../../../../components/table/reactTable.tsx'
-import { useCan } from '../../../../hooks/useCan.ts'
-import { useSoignantQueries } from '../../../../queries/useSoignant.ts'
-import { useThematicQueries } from '../../../../queries/useThematic.ts'
-import type { Soignant } from '../../../../types/soignant.ts'
+import { getSoignantColumns } from '@/columns/soignant.column.tsx'
+import AddSoignantForm from '@/components/custom/popup/addSoignantForm.tsx'
+import DashboardLayout from '@/components/dashboard.layout.tsx'
+import ReactTable from '@/components/table/reactTable.tsx'
+import { can, useCan } from '@/hooks/useCan.ts'
+import { useSoignantQueries } from '@/queries/useSoignant.ts'
+import { useThematicQueries } from '@/queries/useThematic.ts'
+import type { Soignant } from '@/types/soignant.ts'
+import { resolveTenantContext } from '@/utils/tenant-context.ts'
 
 export const Route = createFileRoute(
-  '/_authenticated/_admin/settings/soignant',
+  '/_authenticated/e/$establishmentId/s/$serviceId/_settings/soignant',
 )({
+  beforeLoad: ({ context, params }) => {
+    const tenant = resolveTenantContext(context.authState.user, params)
+    if (!can(tenant, 'soignants:manage')) {
+      throw redirect({ to: '/e/$establishmentId/s/$serviceId/dashboard', params })
+    }
+  },
   component: SoignantSettings,
 })
 

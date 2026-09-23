@@ -1,24 +1,32 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 import dayjs from 'dayjs'
 import { RotateCcw, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
-import { activityLogColumns } from '../../../../columns/activityLog.column.tsx'
-import DashboardLayout from '../../../../components/dashboard.layout.tsx'
-import { ReactTable } from '../../../../components/table/reactTable.tsx'
-import { Button } from '../../../../components/ui/button.tsx'
-import { Input } from '../../../../components/ui/input.tsx'
-import { Select } from '../../../../components/ui/select.tsx'
+import { activityLogColumns } from '@/columns/activityLog.column.tsx'
+import DashboardLayout from '@/components/dashboard.layout.tsx'
+import { ReactTable } from '@/components/table/reactTable.tsx'
+import { Button } from '@/components/ui/button.tsx'
+import { Input } from '@/components/ui/input.tsx'
+import { Select } from '@/components/ui/select.tsx'
 import {
   ACTION_OPTIONS,
   PERIOD_OPTIONS,
-} from '../../../../constants/activityLog.constant.ts'
-import { useActivityLogsQuery } from '../../../../queries/useActivityLog.ts'
-import type { ActivityLog } from '../../../../types/activityLog.ts'
+} from '@/constants/activityLog.constant.ts'
+import { can } from '@/hooks/useCan.ts'
+import { useActivityLogsQuery } from '@/queries/useActivityLog.ts'
+import type { ActivityLog } from '@/types/activityLog.ts'
+import { resolveTenantContext } from '@/utils/tenant-context.ts'
 
 export const Route = createFileRoute(
-  '/_authenticated/_admin/settings/activity-log',
+  '/_authenticated/e/$establishmentId/s/$serviceId/_settings/activity-log',
 )({
+  beforeLoad: ({ context, params }) => {
+    const tenant = resolveTenantContext(context.authState.user, params)
+    if (!can(tenant, 'activity-log:read')) {
+      throw redirect({ to: '/e/$establishmentId/s/$serviceId/dashboard', params })
+    }
+  },
   component: ActivityLogPage,
 })
 

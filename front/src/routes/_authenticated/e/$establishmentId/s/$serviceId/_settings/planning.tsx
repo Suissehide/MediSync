@@ -24,86 +24,82 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import Calendar, {
   type CalendarEvent,
-} from '../../../../components/custom/Calendar/calendar.tsx'
-import AddSlotForm from '../../../../components/custom/popup/addSlotForm.tsx'
-import { BulkDuplicateForm } from '../../../../components/custom/popup/bulkDuplicateForm.tsx'
-import { BulkMoveForm } from '../../../../components/custom/popup/bulkMoveForm.tsx'
-import { ConfirmDeleteForm } from '../../../../components/custom/popup/confirmDeleteForm.tsx'
-import { CreateForbiddenWeekForm } from '../../../../components/custom/popup/createForbiddenWeekForm.tsx'
-import { DeleteForbiddenWeekForm } from '../../../../components/custom/popup/deleteForbiddenWeekForm.tsx'
-import { PlanningCycleForm } from '../../../../components/custom/popup/planningCycleForm.tsx'
-import { RegeneratePathwaysForm } from '../../../../components/custom/popup/regeneratePathwaysForm.tsx'
-import EventSheet from '../../../../components/custom/sheet/eventSheet.tsx'
-import EventTemplateSheet from '../../../../components/custom/sheet/eventTemplateSheet.tsx'
-import DashboardLayout from '../../../../components/dashboard.layout.tsx'
+} from '@/components/custom/Calendar/calendar.tsx'
+import AddSlotForm from '@/components/custom/popup/addSlotForm.tsx'
+import { BulkDuplicateForm } from '@/components/custom/popup/bulkDuplicateForm.tsx'
+import { BulkMoveForm } from '@/components/custom/popup/bulkMoveForm.tsx'
+import { ConfirmDeleteForm } from '@/components/custom/popup/confirmDeleteForm.tsx'
+import { CreateForbiddenWeekForm } from '@/components/custom/popup/createForbiddenWeekForm.tsx'
+import { DeleteForbiddenWeekForm } from '@/components/custom/popup/deleteForbiddenWeekForm.tsx'
+import { PlanningCycleForm } from '@/components/custom/popup/planningCycleForm.tsx'
+import { RegeneratePathwaysForm } from '@/components/custom/popup/regeneratePathwaysForm.tsx'
+import EventSheet from '@/components/custom/sheet/eventSheet.tsx'
+import EventTemplateSheet from '@/components/custom/sheet/eventTemplateSheet.tsx'
+import DashboardLayout from '@/components/dashboard.layout.tsx'
 import PathwayFilter, {
   NO_PATHWAY_KEY,
-} from '../../../../components/custom/planning/pathwayFilter.tsx'
-import PlanningExportModal from '../../../../components/custom/planning/pdf/planning-export-modal.tsx'
-import { Button } from '../../../../components/ui/button.tsx'
+} from '@/components/custom/planning/pathwayFilter.tsx'
+import PlanningExportModal from '@/components/custom/planning/pdf/planning-export-modal.tsx'
+import { Button } from '@/components/ui/button.tsx'
 import {
   PopoverAnchor,
   PopoverArrow,
   PopoverClose,
   PopoverContent,
   PopoverRoot,
-} from '../../../../components/ui/popover.tsx'
-import { Select } from '../../../../components/ui/select.tsx'
+} from '@/components/ui/popover.tsx'
+import { Select } from '@/components/ui/select.tsx'
 import {
   ToggleGroup,
   ToggleGroupItem,
-} from '../../../../components/ui/toggle-group.tsx'
-import { TOAST_SEVERITY } from '../../../../constants/ui.constant.ts'
-import { can } from '../../../../hooks/useCan.ts'
-import { useToast } from '../../../../hooks/useToast.ts'
+} from '@/components/ui/toggle-group.tsx'
+import { TOAST_SEVERITY } from '@/constants/ui.constant.ts'
+import { can } from '@/hooks/useCan.ts'
+import { useToast } from '@/hooks/useToast.ts'
 import {
   buildCalendarEventsFromSlots,
   buildCalendarEventsFromSlotTemplates,
   buildPathwayEvents,
-} from '../../../../libs/utils.ts'
+} from '@/libs/utils.ts'
 import {
   useForbiddenWeekMutations,
   useForbiddenWeekQueries,
-} from '../../../../queries/useForbiddenWeek.ts'
+} from '@/queries/useForbiddenWeek.ts'
 import {
   usePlanningCycleMutations,
   usePlanningCycleQueries,
-} from '../../../../queries/usePlanningCycle.ts'
+} from '@/queries/usePlanningCycle.ts'
 import {
   usePathwayMutations,
   usePathwayQueries,
-} from '../../../../queries/usePathway.ts'
-import { usePathwayTemplateQueries } from '../../../../queries/usePathwayTemplate.ts'
+} from '@/queries/usePathway.ts'
+import { usePathwayTemplateQueries } from '@/queries/usePathwayTemplate.ts'
 import {
   useSlotMutations,
   useSlotsInRangeQuery,
-} from '../../../../queries/useSlot.ts'
-import { useSlotTemplateMutations } from '../../../../queries/useSlotTemplate.ts'
-import { deriveContext } from '../../../../store/useAuthStore.ts'
-import { usePathwayTemplateEditStore } from '../../../../store/usePathwayTemplateEditStore.ts'
-import { usePlanningStore } from '../../../../store/usePlanningStore.ts'
+} from '@/queries/useSlot.ts'
+import { useSlotTemplateMutations } from '@/queries/useSlotTemplate.ts'
+import { usePathwayTemplateEditStore } from '@/store/usePathwayTemplateEditStore.ts'
+import { usePlanningStore } from '@/store/usePlanningStore.ts'
 import type {
   CreateSlotParamsWithTemplateData,
   SlotDateRange,
-} from '../../../../types/slot.ts'
-import { cycleWeekNumber } from '../../../../utils/weekCycle.ts'
+} from '@/types/slot.ts'
+import { resolveTenantContext } from '@/utils/tenant-context.ts'
+import { cycleWeekNumber } from '@/utils/weekCycle.ts'
 
 export const Route = createFileRoute(
-  '/_authenticated/_admin/settings/planning',
+  '/_authenticated/e/$establishmentId/s/$serviceId/_settings/planning',
 )({
-  // La branche `_admin` admet quiconque détient au moins une des six
-  // permissions de réglages ; cet écran, lui, exige spécifiquement
-  // `planning:write` (il ne contient que des actions d'écriture de
-  // planning : créneaux, modèles, parcours, semaines interdites, cycle).
-  // Vu le nombre de contrôles concernés, on garde l'écran entier plutôt que
-  // chaque bouton un par un.
-  beforeLoad: ({ context }) => {
-    if (!can(deriveContext(context.authState.user), 'planning:write')) {
-      throw redirect({ to: '/' })
+  // Cet écran, lui, exige spécifiquement `planning:write` (il ne contient
+  // que des actions d'écriture de planning : créneaux, modèles, parcours,
+  // semaines interdites, cycle). Vu le nombre de contrôles concernés, on
+  // garde l'écran entier plutôt que chaque bouton un par un.
+  beforeLoad: ({ context, params }) => {
+    const tenant = resolveTenantContext(context.authState.user, params)
+    if (!can(tenant, 'planning:write')) {
+      throw redirect({ to: '/e/$establishmentId/s/$serviceId/dashboard', params })
     }
-  },
-  shouldReload({ context }) {
-    return !can(deriveContext(context.authState.user), 'planning:write')
   },
   component: Planning,
 })

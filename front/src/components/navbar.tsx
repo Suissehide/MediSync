@@ -32,6 +32,8 @@ interface NavbarProps {
 // niveau établissement (administrateur d'établissement). Un même compte peut
 // détenir l'une sans l'autre.
 interface SettingsMenuProps {
+  establishmentId: string
+  serviceId: string
   canPlanning: boolean
   canManageSoignants: boolean
   canManageReferentials: boolean
@@ -41,6 +43,8 @@ interface SettingsMenuProps {
 }
 
 const SettingsMenu = ({
+  establishmentId,
+  serviceId,
   canPlanning,
   canManageSoignants,
   canManageReferentials,
@@ -49,6 +53,11 @@ const SettingsMenu = ({
   canReadActivityLog,
 }: SettingsMenuProps) => {
   const router = useRouter()
+  // Les six écrans de réglages de service vivent désormais sous
+  // /e/:establishmentId/s/:serviceId : la navigation prend les mêmes
+  // paramètres que les onglets Dashboard/Agenda/Patients/Suivi. Membres
+  // (`/settings/user`) reste hors de ce périmètre, sa route n'a pas bougé.
+  const params = { establishmentId, serviceId }
 
   return (
     <PopoverRoot>
@@ -61,7 +70,12 @@ const SettingsMenu = ({
         {canPlanning && (
           <PopoverMenuItem
             icon={<CalendarDays className="w-4 h-4" />}
-            onClick={() => router.navigate({ to: '/settings/planning' })}
+            onClick={() =>
+              router.navigate({
+                to: '/e/$establishmentId/s/$serviceId/planning',
+                params,
+              })
+            }
           >
             Planning
           </PopoverMenuItem>
@@ -69,7 +83,12 @@ const SettingsMenu = ({
         {canManageSoignants && (
           <PopoverMenuItem
             icon={<Users className="w-4 h-4" />}
-            onClick={() => router.navigate({ to: '/settings/soignant' })}
+            onClick={() =>
+              router.navigate({
+                to: '/e/$establishmentId/s/$serviceId/soignant',
+                params,
+              })
+            }
           >
             Soignants
           </PopoverMenuItem>
@@ -77,7 +96,12 @@ const SettingsMenu = ({
         {canManageReferentials && (
           <PopoverMenuItem
             icon={<Tag className="w-4 h-4" />}
-            onClick={() => router.navigate({ to: '/settings/thematic' })}
+            onClick={() =>
+              router.navigate({
+                to: '/e/$establishmentId/s/$serviceId/thematic',
+                params,
+              })
+            }
           >
             Thématiques
           </PopoverMenuItem>
@@ -85,7 +109,12 @@ const SettingsMenu = ({
         {canManageLocations && (
           <PopoverMenuItem
             icon={<DoorOpen className="w-4 h-4" />}
-            onClick={() => router.navigate({ to: '/settings/location' })}
+            onClick={() =>
+              router.navigate({
+                to: '/e/$establishmentId/s/$serviceId/location',
+                params,
+              })
+            }
           >
             Salles
           </PopoverMenuItem>
@@ -94,7 +123,10 @@ const SettingsMenu = ({
           <PopoverMenuItem
             icon={<BriefcaseMedical className="w-4 h-4" />}
             onClick={() =>
-              router.navigate({ to: '/settings/diagnostic-template' })
+              router.navigate({
+                to: '/e/$establishmentId/s/$serviceId/diagnostic-template',
+                params,
+              })
             }
           >
             Diagnostics éducatifs
@@ -111,7 +143,12 @@ const SettingsMenu = ({
         {canReadActivityLog && (
           <PopoverMenuItem
             icon={<Activity className="w-4 h-4" />}
-            onClick={() => router.navigate({ to: '/settings/activity-log' })}
+            onClick={() =>
+              router.navigate({
+                to: '/e/$establishmentId/s/$serviceId/activity-log',
+                params,
+              })
+            }
           >
             Activité
           </PopoverMenuItem>
@@ -224,8 +261,10 @@ function Navbar({ toggleSidebar }: NavbarProps) {
       </div>
       <div className="flex gap-8 pl-4 border-l border-border-sidebar">
         <div className="flex items-center gap-2">
-          {hasSettingsAccess && (
+          {hasSettingsAccess && context?.establishmentId && context.serviceId && (
             <SettingsMenu
+              establishmentId={context.establishmentId}
+              serviceId={context.serviceId}
               canPlanning={canPlanning}
               canManageSoignants={canManageSoignants}
               canManageReferentials={canManageReferentials}

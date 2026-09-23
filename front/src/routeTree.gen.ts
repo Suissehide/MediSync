@@ -15,22 +15,22 @@ import { Route as PendingImport } from './routes/pending'
 import { Route as AuthenticatedImport } from './routes/_authenticated'
 import { Route as AuthIndexImport } from './routes/auth/index'
 import { Route as AuthenticatedIndexImport } from './routes/_authenticated/index'
-import { Route as AuthenticatedAdminImport } from './routes/_authenticated/_admin'
 import { Route as AuthenticatedUserSettingsImport } from './routes/_authenticated/user/settings'
 import { Route as AuthenticatedAdminSettingsUserImport } from './routes/_authenticated/_admin/settings/user'
-import { Route as AuthenticatedAdminSettingsThematicImport } from './routes/_authenticated/_admin/settings/thematic'
-import { Route as AuthenticatedAdminSettingsSoignantImport } from './routes/_authenticated/_admin/settings/soignant'
-import { Route as AuthenticatedAdminSettingsPlanningImport } from './routes/_authenticated/_admin/settings/planning'
-import { Route as AuthenticatedAdminSettingsLocationImport } from './routes/_authenticated/_admin/settings/location'
-import { Route as AuthenticatedAdminSettingsDiagnosticTemplateImport } from './routes/_authenticated/_admin/settings/diagnostic-template'
-import { Route as AuthenticatedAdminSettingsActivityLogImport } from './routes/_authenticated/_admin/settings/activity-log'
 import { Route as AuthenticatedEEstablishmentIdSServiceIdImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId'
 import { Route as AuthenticatedEEstablishmentIdSServiceIdIndexImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/index'
 import { Route as AuthenticatedEEstablishmentIdSServiceIdSuiviImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/suivi'
 import { Route as AuthenticatedEEstablishmentIdSServiceIdDashboardImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/dashboard'
 import { Route as AuthenticatedEEstablishmentIdSServiceIdAgendaImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/agenda'
+import { Route as AuthenticatedEEstablishmentIdSServiceIdSettingsImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/_settings'
 import { Route as AuthenticatedEEstablishmentIdSServiceIdPatientIndexImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/patient/index'
 import { Route as AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID'
+import { Route as AuthenticatedEEstablishmentIdSServiceIdSettingsThematicImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/_settings/thematic'
+import { Route as AuthenticatedEEstablishmentIdSServiceIdSettingsSoignantImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/_settings/soignant'
+import { Route as AuthenticatedEEstablishmentIdSServiceIdSettingsPlanningImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/_settings/planning'
+import { Route as AuthenticatedEEstablishmentIdSServiceIdSettingsLocationImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/_settings/location'
+import { Route as AuthenticatedEEstablishmentIdSServiceIdSettingsDiagnosticTemplateImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/_settings/diagnostic-template'
+import { Route as AuthenticatedEEstablishmentIdSServiceIdSettingsActivityLogImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/_settings/activity-log'
 
 // Create/Update Routes
 
@@ -57,11 +57,6 @@ const AuthenticatedIndexRoute = AuthenticatedIndexImport.update({
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 
-const AuthenticatedAdminRoute = AuthenticatedAdminImport.update({
-  id: '/_admin',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
-
 const AuthenticatedUserSettingsRoute = AuthenticatedUserSettingsImport.update({
   id: '/user/settings',
   path: '/user/settings',
@@ -70,51 +65,9 @@ const AuthenticatedUserSettingsRoute = AuthenticatedUserSettingsImport.update({
 
 const AuthenticatedAdminSettingsUserRoute =
   AuthenticatedAdminSettingsUserImport.update({
-    id: '/settings/user',
+    id: '/_admin/settings/user',
     path: '/settings/user',
-    getParentRoute: () => AuthenticatedAdminRoute,
-  } as any)
-
-const AuthenticatedAdminSettingsThematicRoute =
-  AuthenticatedAdminSettingsThematicImport.update({
-    id: '/settings/thematic',
-    path: '/settings/thematic',
-    getParentRoute: () => AuthenticatedAdminRoute,
-  } as any)
-
-const AuthenticatedAdminSettingsSoignantRoute =
-  AuthenticatedAdminSettingsSoignantImport.update({
-    id: '/settings/soignant',
-    path: '/settings/soignant',
-    getParentRoute: () => AuthenticatedAdminRoute,
-  } as any)
-
-const AuthenticatedAdminSettingsPlanningRoute =
-  AuthenticatedAdminSettingsPlanningImport.update({
-    id: '/settings/planning',
-    path: '/settings/planning',
-    getParentRoute: () => AuthenticatedAdminRoute,
-  } as any)
-
-const AuthenticatedAdminSettingsLocationRoute =
-  AuthenticatedAdminSettingsLocationImport.update({
-    id: '/settings/location',
-    path: '/settings/location',
-    getParentRoute: () => AuthenticatedAdminRoute,
-  } as any)
-
-const AuthenticatedAdminSettingsDiagnosticTemplateRoute =
-  AuthenticatedAdminSettingsDiagnosticTemplateImport.update({
-    id: '/settings/diagnostic-template',
-    path: '/settings/diagnostic-template',
-    getParentRoute: () => AuthenticatedAdminRoute,
-  } as any)
-
-const AuthenticatedAdminSettingsActivityLogRoute =
-  AuthenticatedAdminSettingsActivityLogImport.update({
-    id: '/settings/activity-log',
-    path: '/settings/activity-log',
-    getParentRoute: () => AuthenticatedAdminRoute,
+    getParentRoute: () => AuthenticatedRoute,
   } as any)
 
 const AuthenticatedEEstablishmentIdSServiceIdRoute =
@@ -152,6 +105,12 @@ const AuthenticatedEEstablishmentIdSServiceIdAgendaRoute =
     getParentRoute: () => AuthenticatedEEstablishmentIdSServiceIdRoute,
   } as any)
 
+const AuthenticatedEEstablishmentIdSServiceIdSettingsRoute =
+  AuthenticatedEEstablishmentIdSServiceIdSettingsImport.update({
+    id: '/_settings',
+    getParentRoute: () => AuthenticatedEEstablishmentIdSServiceIdRoute,
+  } as any)
+
 const AuthenticatedEEstablishmentIdSServiceIdPatientIndexRoute =
   AuthenticatedEEstablishmentIdSServiceIdPatientIndexImport.update({
     id: '/patient/',
@@ -164,6 +123,51 @@ const AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDRoute =
     id: '/patient/$patientID',
     path: '/patient/$patientID',
     getParentRoute: () => AuthenticatedEEstablishmentIdSServiceIdRoute,
+  } as any)
+
+const AuthenticatedEEstablishmentIdSServiceIdSettingsThematicRoute =
+  AuthenticatedEEstablishmentIdSServiceIdSettingsThematicImport.update({
+    id: '/thematic',
+    path: '/thematic',
+    getParentRoute: () => AuthenticatedEEstablishmentIdSServiceIdSettingsRoute,
+  } as any)
+
+const AuthenticatedEEstablishmentIdSServiceIdSettingsSoignantRoute =
+  AuthenticatedEEstablishmentIdSServiceIdSettingsSoignantImport.update({
+    id: '/soignant',
+    path: '/soignant',
+    getParentRoute: () => AuthenticatedEEstablishmentIdSServiceIdSettingsRoute,
+  } as any)
+
+const AuthenticatedEEstablishmentIdSServiceIdSettingsPlanningRoute =
+  AuthenticatedEEstablishmentIdSServiceIdSettingsPlanningImport.update({
+    id: '/planning',
+    path: '/planning',
+    getParentRoute: () => AuthenticatedEEstablishmentIdSServiceIdSettingsRoute,
+  } as any)
+
+const AuthenticatedEEstablishmentIdSServiceIdSettingsLocationRoute =
+  AuthenticatedEEstablishmentIdSServiceIdSettingsLocationImport.update({
+    id: '/location',
+    path: '/location',
+    getParentRoute: () => AuthenticatedEEstablishmentIdSServiceIdSettingsRoute,
+  } as any)
+
+const AuthenticatedEEstablishmentIdSServiceIdSettingsDiagnosticTemplateRoute =
+  AuthenticatedEEstablishmentIdSServiceIdSettingsDiagnosticTemplateImport.update(
+    {
+      id: '/diagnostic-template',
+      path: '/diagnostic-template',
+      getParentRoute: () =>
+        AuthenticatedEEstablishmentIdSServiceIdSettingsRoute,
+    } as any,
+  )
+
+const AuthenticatedEEstablishmentIdSServiceIdSettingsActivityLogRoute =
+  AuthenticatedEEstablishmentIdSServiceIdSettingsActivityLogImport.update({
+    id: '/activity-log',
+    path: '/activity-log',
+    getParentRoute: () => AuthenticatedEEstablishmentIdSServiceIdSettingsRoute,
   } as any)
 
 // Populate the FileRoutesByPath interface
@@ -183,13 +187,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/pending'
       preLoaderRoute: typeof PendingImport
       parentRoute: typeof rootRoute
-    }
-    '/_authenticated/_admin': {
-      id: '/_authenticated/_admin'
-      path: ''
-      fullPath: ''
-      preLoaderRoute: typeof AuthenticatedAdminImport
-      parentRoute: typeof AuthenticatedImport
     }
     '/_authenticated/': {
       id: '/_authenticated/'
@@ -212,54 +209,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedUserSettingsImport
       parentRoute: typeof AuthenticatedImport
     }
-    '/_authenticated/_admin/settings/activity-log': {
-      id: '/_authenticated/_admin/settings/activity-log'
-      path: '/settings/activity-log'
-      fullPath: '/settings/activity-log'
-      preLoaderRoute: typeof AuthenticatedAdminSettingsActivityLogImport
-      parentRoute: typeof AuthenticatedAdminImport
-    }
-    '/_authenticated/_admin/settings/diagnostic-template': {
-      id: '/_authenticated/_admin/settings/diagnostic-template'
-      path: '/settings/diagnostic-template'
-      fullPath: '/settings/diagnostic-template'
-      preLoaderRoute: typeof AuthenticatedAdminSettingsDiagnosticTemplateImport
-      parentRoute: typeof AuthenticatedAdminImport
-    }
-    '/_authenticated/_admin/settings/location': {
-      id: '/_authenticated/_admin/settings/location'
-      path: '/settings/location'
-      fullPath: '/settings/location'
-      preLoaderRoute: typeof AuthenticatedAdminSettingsLocationImport
-      parentRoute: typeof AuthenticatedAdminImport
-    }
-    '/_authenticated/_admin/settings/planning': {
-      id: '/_authenticated/_admin/settings/planning'
-      path: '/settings/planning'
-      fullPath: '/settings/planning'
-      preLoaderRoute: typeof AuthenticatedAdminSettingsPlanningImport
-      parentRoute: typeof AuthenticatedAdminImport
-    }
-    '/_authenticated/_admin/settings/soignant': {
-      id: '/_authenticated/_admin/settings/soignant'
-      path: '/settings/soignant'
-      fullPath: '/settings/soignant'
-      preLoaderRoute: typeof AuthenticatedAdminSettingsSoignantImport
-      parentRoute: typeof AuthenticatedAdminImport
-    }
-    '/_authenticated/_admin/settings/thematic': {
-      id: '/_authenticated/_admin/settings/thematic'
-      path: '/settings/thematic'
-      fullPath: '/settings/thematic'
-      preLoaderRoute: typeof AuthenticatedAdminSettingsThematicImport
-      parentRoute: typeof AuthenticatedAdminImport
-    }
     '/_authenticated/_admin/settings/user': {
       id: '/_authenticated/_admin/settings/user'
       path: '/settings/user'
       fullPath: '/settings/user'
       preLoaderRoute: typeof AuthenticatedAdminSettingsUserImport
-      parentRoute: typeof AuthenticatedAdminImport
+      parentRoute: typeof AuthenticatedImport
     }
     '/_authenticated/e/$establishmentId/s/$serviceId': {
       id: '/_authenticated/e/$establishmentId/s/$serviceId'
@@ -267,6 +222,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/e/$establishmentId/s/$serviceId'
       preLoaderRoute: typeof AuthenticatedEEstablishmentIdSServiceIdImport
       parentRoute: typeof AuthenticatedImport
+    }
+    '/_authenticated/e/$establishmentId/s/$serviceId/_settings': {
+      id: '/_authenticated/e/$establishmentId/s/$serviceId/_settings'
+      path: ''
+      fullPath: '/e/$establishmentId/s/$serviceId'
+      preLoaderRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsImport
+      parentRoute: typeof AuthenticatedEEstablishmentIdSServiceIdImport
     }
     '/_authenticated/e/$establishmentId/s/$serviceId/agenda': {
       id: '/_authenticated/e/$establishmentId/s/$serviceId/agenda'
@@ -296,6 +258,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEEstablishmentIdSServiceIdIndexImport
       parentRoute: typeof AuthenticatedEEstablishmentIdSServiceIdImport
     }
+    '/_authenticated/e/$establishmentId/s/$serviceId/_settings/activity-log': {
+      id: '/_authenticated/e/$establishmentId/s/$serviceId/_settings/activity-log'
+      path: '/activity-log'
+      fullPath: '/e/$establishmentId/s/$serviceId/activity-log'
+      preLoaderRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsActivityLogImport
+      parentRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsImport
+    }
+    '/_authenticated/e/$establishmentId/s/$serviceId/_settings/diagnostic-template': {
+      id: '/_authenticated/e/$establishmentId/s/$serviceId/_settings/diagnostic-template'
+      path: '/diagnostic-template'
+      fullPath: '/e/$establishmentId/s/$serviceId/diagnostic-template'
+      preLoaderRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsDiagnosticTemplateImport
+      parentRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsImport
+    }
+    '/_authenticated/e/$establishmentId/s/$serviceId/_settings/location': {
+      id: '/_authenticated/e/$establishmentId/s/$serviceId/_settings/location'
+      path: '/location'
+      fullPath: '/e/$establishmentId/s/$serviceId/location'
+      preLoaderRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsLocationImport
+      parentRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsImport
+    }
+    '/_authenticated/e/$establishmentId/s/$serviceId/_settings/planning': {
+      id: '/_authenticated/e/$establishmentId/s/$serviceId/_settings/planning'
+      path: '/planning'
+      fullPath: '/e/$establishmentId/s/$serviceId/planning'
+      preLoaderRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsPlanningImport
+      parentRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsImport
+    }
+    '/_authenticated/e/$establishmentId/s/$serviceId/_settings/soignant': {
+      id: '/_authenticated/e/$establishmentId/s/$serviceId/_settings/soignant'
+      path: '/soignant'
+      fullPath: '/e/$establishmentId/s/$serviceId/soignant'
+      preLoaderRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsSoignantImport
+      parentRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsImport
+    }
+    '/_authenticated/e/$establishmentId/s/$serviceId/_settings/thematic': {
+      id: '/_authenticated/e/$establishmentId/s/$serviceId/_settings/thematic'
+      path: '/thematic'
+      fullPath: '/e/$establishmentId/s/$serviceId/thematic'
+      preLoaderRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsThematicImport
+      parentRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsImport
+    }
     '/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID': {
       id: '/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID'
       path: '/patient/$patientID'
@@ -315,36 +319,38 @@ declare module '@tanstack/react-router' {
 
 // Create and export the route tree
 
-interface AuthenticatedAdminRouteChildren {
-  AuthenticatedAdminSettingsActivityLogRoute: typeof AuthenticatedAdminSettingsActivityLogRoute
-  AuthenticatedAdminSettingsDiagnosticTemplateRoute: typeof AuthenticatedAdminSettingsDiagnosticTemplateRoute
-  AuthenticatedAdminSettingsLocationRoute: typeof AuthenticatedAdminSettingsLocationRoute
-  AuthenticatedAdminSettingsPlanningRoute: typeof AuthenticatedAdminSettingsPlanningRoute
-  AuthenticatedAdminSettingsSoignantRoute: typeof AuthenticatedAdminSettingsSoignantRoute
-  AuthenticatedAdminSettingsThematicRoute: typeof AuthenticatedAdminSettingsThematicRoute
-  AuthenticatedAdminSettingsUserRoute: typeof AuthenticatedAdminSettingsUserRoute
+interface AuthenticatedEEstablishmentIdSServiceIdSettingsRouteChildren {
+  AuthenticatedEEstablishmentIdSServiceIdSettingsActivityLogRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsActivityLogRoute
+  AuthenticatedEEstablishmentIdSServiceIdSettingsDiagnosticTemplateRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsDiagnosticTemplateRoute
+  AuthenticatedEEstablishmentIdSServiceIdSettingsLocationRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsLocationRoute
+  AuthenticatedEEstablishmentIdSServiceIdSettingsPlanningRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsPlanningRoute
+  AuthenticatedEEstablishmentIdSServiceIdSettingsSoignantRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsSoignantRoute
+  AuthenticatedEEstablishmentIdSServiceIdSettingsThematicRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsThematicRoute
 }
 
-const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
-  AuthenticatedAdminSettingsActivityLogRoute:
-    AuthenticatedAdminSettingsActivityLogRoute,
-  AuthenticatedAdminSettingsDiagnosticTemplateRoute:
-    AuthenticatedAdminSettingsDiagnosticTemplateRoute,
-  AuthenticatedAdminSettingsLocationRoute:
-    AuthenticatedAdminSettingsLocationRoute,
-  AuthenticatedAdminSettingsPlanningRoute:
-    AuthenticatedAdminSettingsPlanningRoute,
-  AuthenticatedAdminSettingsSoignantRoute:
-    AuthenticatedAdminSettingsSoignantRoute,
-  AuthenticatedAdminSettingsThematicRoute:
-    AuthenticatedAdminSettingsThematicRoute,
-  AuthenticatedAdminSettingsUserRoute: AuthenticatedAdminSettingsUserRoute,
-}
+const AuthenticatedEEstablishmentIdSServiceIdSettingsRouteChildren: AuthenticatedEEstablishmentIdSServiceIdSettingsRouteChildren =
+  {
+    AuthenticatedEEstablishmentIdSServiceIdSettingsActivityLogRoute:
+      AuthenticatedEEstablishmentIdSServiceIdSettingsActivityLogRoute,
+    AuthenticatedEEstablishmentIdSServiceIdSettingsDiagnosticTemplateRoute:
+      AuthenticatedEEstablishmentIdSServiceIdSettingsDiagnosticTemplateRoute,
+    AuthenticatedEEstablishmentIdSServiceIdSettingsLocationRoute:
+      AuthenticatedEEstablishmentIdSServiceIdSettingsLocationRoute,
+    AuthenticatedEEstablishmentIdSServiceIdSettingsPlanningRoute:
+      AuthenticatedEEstablishmentIdSServiceIdSettingsPlanningRoute,
+    AuthenticatedEEstablishmentIdSServiceIdSettingsSoignantRoute:
+      AuthenticatedEEstablishmentIdSServiceIdSettingsSoignantRoute,
+    AuthenticatedEEstablishmentIdSServiceIdSettingsThematicRoute:
+      AuthenticatedEEstablishmentIdSServiceIdSettingsThematicRoute,
+  }
 
-const AuthenticatedAdminRouteWithChildren =
-  AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
+const AuthenticatedEEstablishmentIdSServiceIdSettingsRouteWithChildren =
+  AuthenticatedEEstablishmentIdSServiceIdSettingsRoute._addFileChildren(
+    AuthenticatedEEstablishmentIdSServiceIdSettingsRouteChildren,
+  )
 
 interface AuthenticatedEEstablishmentIdSServiceIdRouteChildren {
+  AuthenticatedEEstablishmentIdSServiceIdSettingsRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsRouteWithChildren
   AuthenticatedEEstablishmentIdSServiceIdAgendaRoute: typeof AuthenticatedEEstablishmentIdSServiceIdAgendaRoute
   AuthenticatedEEstablishmentIdSServiceIdDashboardRoute: typeof AuthenticatedEEstablishmentIdSServiceIdDashboardRoute
   AuthenticatedEEstablishmentIdSServiceIdSuiviRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSuiviRoute
@@ -355,6 +361,8 @@ interface AuthenticatedEEstablishmentIdSServiceIdRouteChildren {
 
 const AuthenticatedEEstablishmentIdSServiceIdRouteChildren: AuthenticatedEEstablishmentIdSServiceIdRouteChildren =
   {
+    AuthenticatedEEstablishmentIdSServiceIdSettingsRoute:
+      AuthenticatedEEstablishmentIdSServiceIdSettingsRouteWithChildren,
     AuthenticatedEEstablishmentIdSServiceIdAgendaRoute:
       AuthenticatedEEstablishmentIdSServiceIdAgendaRoute,
     AuthenticatedEEstablishmentIdSServiceIdDashboardRoute:
@@ -375,16 +383,16 @@ const AuthenticatedEEstablishmentIdSServiceIdRouteWithChildren =
   )
 
 interface AuthenticatedRouteChildren {
-  AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedUserSettingsRoute: typeof AuthenticatedUserSettingsRoute
+  AuthenticatedAdminSettingsUserRoute: typeof AuthenticatedAdminSettingsUserRoute
   AuthenticatedEEstablishmentIdSServiceIdRoute: typeof AuthenticatedEEstablishmentIdSServiceIdRouteWithChildren
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
-  AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedUserSettingsRoute: AuthenticatedUserSettingsRoute,
+  AuthenticatedAdminSettingsUserRoute: AuthenticatedAdminSettingsUserRoute,
   AuthenticatedEEstablishmentIdSServiceIdRoute:
     AuthenticatedEEstablishmentIdSServiceIdRouteWithChildren,
 }
@@ -394,44 +402,43 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 )
 
 export interface FileRoutesByFullPath {
-  '': typeof AuthenticatedAdminRouteWithChildren
+  '': typeof AuthenticatedRouteWithChildren
   '/pending': typeof PendingRoute
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthIndexRoute
   '/user/settings': typeof AuthenticatedUserSettingsRoute
-  '/settings/activity-log': typeof AuthenticatedAdminSettingsActivityLogRoute
-  '/settings/diagnostic-template': typeof AuthenticatedAdminSettingsDiagnosticTemplateRoute
-  '/settings/location': typeof AuthenticatedAdminSettingsLocationRoute
-  '/settings/planning': typeof AuthenticatedAdminSettingsPlanningRoute
-  '/settings/soignant': typeof AuthenticatedAdminSettingsSoignantRoute
-  '/settings/thematic': typeof AuthenticatedAdminSettingsThematicRoute
   '/settings/user': typeof AuthenticatedAdminSettingsUserRoute
-  '/e/$establishmentId/s/$serviceId': typeof AuthenticatedEEstablishmentIdSServiceIdRouteWithChildren
+  '/e/$establishmentId/s/$serviceId': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsRouteWithChildren
   '/e/$establishmentId/s/$serviceId/agenda': typeof AuthenticatedEEstablishmentIdSServiceIdAgendaRoute
   '/e/$establishmentId/s/$serviceId/dashboard': typeof AuthenticatedEEstablishmentIdSServiceIdDashboardRoute
   '/e/$establishmentId/s/$serviceId/suivi': typeof AuthenticatedEEstablishmentIdSServiceIdSuiviRoute
   '/e/$establishmentId/s/$serviceId/': typeof AuthenticatedEEstablishmentIdSServiceIdIndexRoute
+  '/e/$establishmentId/s/$serviceId/activity-log': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsActivityLogRoute
+  '/e/$establishmentId/s/$serviceId/diagnostic-template': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsDiagnosticTemplateRoute
+  '/e/$establishmentId/s/$serviceId/location': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsLocationRoute
+  '/e/$establishmentId/s/$serviceId/planning': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsPlanningRoute
+  '/e/$establishmentId/s/$serviceId/soignant': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsSoignantRoute
+  '/e/$establishmentId/s/$serviceId/thematic': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsThematicRoute
   '/e/$establishmentId/s/$serviceId/patient/$patientID': typeof AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDRoute
   '/e/$establishmentId/s/$serviceId/patient': typeof AuthenticatedEEstablishmentIdSServiceIdPatientIndexRoute
 }
 
 export interface FileRoutesByTo {
   '/pending': typeof PendingRoute
-  '': typeof AuthenticatedAdminRouteWithChildren
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthIndexRoute
   '/user/settings': typeof AuthenticatedUserSettingsRoute
-  '/settings/activity-log': typeof AuthenticatedAdminSettingsActivityLogRoute
-  '/settings/diagnostic-template': typeof AuthenticatedAdminSettingsDiagnosticTemplateRoute
-  '/settings/location': typeof AuthenticatedAdminSettingsLocationRoute
-  '/settings/planning': typeof AuthenticatedAdminSettingsPlanningRoute
-  '/settings/soignant': typeof AuthenticatedAdminSettingsSoignantRoute
-  '/settings/thematic': typeof AuthenticatedAdminSettingsThematicRoute
   '/settings/user': typeof AuthenticatedAdminSettingsUserRoute
+  '/e/$establishmentId/s/$serviceId': typeof AuthenticatedEEstablishmentIdSServiceIdIndexRoute
   '/e/$establishmentId/s/$serviceId/agenda': typeof AuthenticatedEEstablishmentIdSServiceIdAgendaRoute
   '/e/$establishmentId/s/$serviceId/dashboard': typeof AuthenticatedEEstablishmentIdSServiceIdDashboardRoute
   '/e/$establishmentId/s/$serviceId/suivi': typeof AuthenticatedEEstablishmentIdSServiceIdSuiviRoute
-  '/e/$establishmentId/s/$serviceId': typeof AuthenticatedEEstablishmentIdSServiceIdIndexRoute
+  '/e/$establishmentId/s/$serviceId/activity-log': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsActivityLogRoute
+  '/e/$establishmentId/s/$serviceId/diagnostic-template': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsDiagnosticTemplateRoute
+  '/e/$establishmentId/s/$serviceId/location': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsLocationRoute
+  '/e/$establishmentId/s/$serviceId/planning': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsPlanningRoute
+  '/e/$establishmentId/s/$serviceId/soignant': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsSoignantRoute
+  '/e/$establishmentId/s/$serviceId/thematic': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsThematicRoute
   '/e/$establishmentId/s/$serviceId/patient/$patientID': typeof AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDRoute
   '/e/$establishmentId/s/$serviceId/patient': typeof AuthenticatedEEstablishmentIdSServiceIdPatientIndexRoute
 }
@@ -440,22 +447,22 @@ export interface FileRoutesById {
   __root__: typeof rootRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/pending': typeof PendingRoute
-  '/_authenticated/_admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/auth/': typeof AuthIndexRoute
   '/_authenticated/user/settings': typeof AuthenticatedUserSettingsRoute
-  '/_authenticated/_admin/settings/activity-log': typeof AuthenticatedAdminSettingsActivityLogRoute
-  '/_authenticated/_admin/settings/diagnostic-template': typeof AuthenticatedAdminSettingsDiagnosticTemplateRoute
-  '/_authenticated/_admin/settings/location': typeof AuthenticatedAdminSettingsLocationRoute
-  '/_authenticated/_admin/settings/planning': typeof AuthenticatedAdminSettingsPlanningRoute
-  '/_authenticated/_admin/settings/soignant': typeof AuthenticatedAdminSettingsSoignantRoute
-  '/_authenticated/_admin/settings/thematic': typeof AuthenticatedAdminSettingsThematicRoute
   '/_authenticated/_admin/settings/user': typeof AuthenticatedAdminSettingsUserRoute
   '/_authenticated/e/$establishmentId/s/$serviceId': typeof AuthenticatedEEstablishmentIdSServiceIdRouteWithChildren
+  '/_authenticated/e/$establishmentId/s/$serviceId/_settings': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsRouteWithChildren
   '/_authenticated/e/$establishmentId/s/$serviceId/agenda': typeof AuthenticatedEEstablishmentIdSServiceIdAgendaRoute
   '/_authenticated/e/$establishmentId/s/$serviceId/dashboard': typeof AuthenticatedEEstablishmentIdSServiceIdDashboardRoute
   '/_authenticated/e/$establishmentId/s/$serviceId/suivi': typeof AuthenticatedEEstablishmentIdSServiceIdSuiviRoute
   '/_authenticated/e/$establishmentId/s/$serviceId/': typeof AuthenticatedEEstablishmentIdSServiceIdIndexRoute
+  '/_authenticated/e/$establishmentId/s/$serviceId/_settings/activity-log': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsActivityLogRoute
+  '/_authenticated/e/$establishmentId/s/$serviceId/_settings/diagnostic-template': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsDiagnosticTemplateRoute
+  '/_authenticated/e/$establishmentId/s/$serviceId/_settings/location': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsLocationRoute
+  '/_authenticated/e/$establishmentId/s/$serviceId/_settings/planning': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsPlanningRoute
+  '/_authenticated/e/$establishmentId/s/$serviceId/_settings/soignant': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsSoignantRoute
+  '/_authenticated/e/$establishmentId/s/$serviceId/_settings/thematic': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsThematicRoute
   '/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID': typeof AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDRoute
   '/_authenticated/e/$establishmentId/s/$serviceId/patient/': typeof AuthenticatedEEstablishmentIdSServiceIdPatientIndexRoute
 }
@@ -468,60 +475,59 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/user/settings'
-    | '/settings/activity-log'
-    | '/settings/diagnostic-template'
-    | '/settings/location'
-    | '/settings/planning'
-    | '/settings/soignant'
-    | '/settings/thematic'
     | '/settings/user'
     | '/e/$establishmentId/s/$serviceId'
     | '/e/$establishmentId/s/$serviceId/agenda'
     | '/e/$establishmentId/s/$serviceId/dashboard'
     | '/e/$establishmentId/s/$serviceId/suivi'
     | '/e/$establishmentId/s/$serviceId/'
+    | '/e/$establishmentId/s/$serviceId/activity-log'
+    | '/e/$establishmentId/s/$serviceId/diagnostic-template'
+    | '/e/$establishmentId/s/$serviceId/location'
+    | '/e/$establishmentId/s/$serviceId/planning'
+    | '/e/$establishmentId/s/$serviceId/soignant'
+    | '/e/$establishmentId/s/$serviceId/thematic'
     | '/e/$establishmentId/s/$serviceId/patient/$patientID'
     | '/e/$establishmentId/s/$serviceId/patient'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/pending'
-    | ''
     | '/'
     | '/auth'
     | '/user/settings'
-    | '/settings/activity-log'
-    | '/settings/diagnostic-template'
-    | '/settings/location'
-    | '/settings/planning'
-    | '/settings/soignant'
-    | '/settings/thematic'
     | '/settings/user'
+    | '/e/$establishmentId/s/$serviceId'
     | '/e/$establishmentId/s/$serviceId/agenda'
     | '/e/$establishmentId/s/$serviceId/dashboard'
     | '/e/$establishmentId/s/$serviceId/suivi'
-    | '/e/$establishmentId/s/$serviceId'
+    | '/e/$establishmentId/s/$serviceId/activity-log'
+    | '/e/$establishmentId/s/$serviceId/diagnostic-template'
+    | '/e/$establishmentId/s/$serviceId/location'
+    | '/e/$establishmentId/s/$serviceId/planning'
+    | '/e/$establishmentId/s/$serviceId/soignant'
+    | '/e/$establishmentId/s/$serviceId/thematic'
     | '/e/$establishmentId/s/$serviceId/patient/$patientID'
     | '/e/$establishmentId/s/$serviceId/patient'
   id:
     | '__root__'
     | '/_authenticated'
     | '/pending'
-    | '/_authenticated/_admin'
     | '/_authenticated/'
     | '/auth/'
     | '/_authenticated/user/settings'
-    | '/_authenticated/_admin/settings/activity-log'
-    | '/_authenticated/_admin/settings/diagnostic-template'
-    | '/_authenticated/_admin/settings/location'
-    | '/_authenticated/_admin/settings/planning'
-    | '/_authenticated/_admin/settings/soignant'
-    | '/_authenticated/_admin/settings/thematic'
     | '/_authenticated/_admin/settings/user'
     | '/_authenticated/e/$establishmentId/s/$serviceId'
+    | '/_authenticated/e/$establishmentId/s/$serviceId/_settings'
     | '/_authenticated/e/$establishmentId/s/$serviceId/agenda'
     | '/_authenticated/e/$establishmentId/s/$serviceId/dashboard'
     | '/_authenticated/e/$establishmentId/s/$serviceId/suivi'
     | '/_authenticated/e/$establishmentId/s/$serviceId/'
+    | '/_authenticated/e/$establishmentId/s/$serviceId/_settings/activity-log'
+    | '/_authenticated/e/$establishmentId/s/$serviceId/_settings/diagnostic-template'
+    | '/_authenticated/e/$establishmentId/s/$serviceId/_settings/location'
+    | '/_authenticated/e/$establishmentId/s/$serviceId/_settings/planning'
+    | '/_authenticated/e/$establishmentId/s/$serviceId/_settings/soignant'
+    | '/_authenticated/e/$establishmentId/s/$serviceId/_settings/thematic'
     | '/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID'
     | '/_authenticated/e/$establishmentId/s/$serviceId/patient/'
   fileRoutesById: FileRoutesById
@@ -557,27 +563,14 @@ export const routeTree = rootRoute
     "/_authenticated": {
       "filePath": "_authenticated.tsx",
       "children": [
-        "/_authenticated/_admin",
         "/_authenticated/",
         "/_authenticated/user/settings",
+        "/_authenticated/_admin/settings/user",
         "/_authenticated/e/$establishmentId/s/$serviceId"
       ]
     },
     "/pending": {
       "filePath": "pending.tsx"
-    },
-    "/_authenticated/_admin": {
-      "filePath": "_authenticated/_admin.tsx",
-      "parent": "/_authenticated",
-      "children": [
-        "/_authenticated/_admin/settings/activity-log",
-        "/_authenticated/_admin/settings/diagnostic-template",
-        "/_authenticated/_admin/settings/location",
-        "/_authenticated/_admin/settings/planning",
-        "/_authenticated/_admin/settings/soignant",
-        "/_authenticated/_admin/settings/thematic",
-        "/_authenticated/_admin/settings/user"
-      ]
     },
     "/_authenticated/": {
       "filePath": "_authenticated/index.tsx",
@@ -590,44 +583,33 @@ export const routeTree = rootRoute
       "filePath": "_authenticated/user/settings.tsx",
       "parent": "/_authenticated"
     },
-    "/_authenticated/_admin/settings/activity-log": {
-      "filePath": "_authenticated/_admin/settings/activity-log.tsx",
-      "parent": "/_authenticated/_admin"
-    },
-    "/_authenticated/_admin/settings/diagnostic-template": {
-      "filePath": "_authenticated/_admin/settings/diagnostic-template.tsx",
-      "parent": "/_authenticated/_admin"
-    },
-    "/_authenticated/_admin/settings/location": {
-      "filePath": "_authenticated/_admin/settings/location.tsx",
-      "parent": "/_authenticated/_admin"
-    },
-    "/_authenticated/_admin/settings/planning": {
-      "filePath": "_authenticated/_admin/settings/planning.tsx",
-      "parent": "/_authenticated/_admin"
-    },
-    "/_authenticated/_admin/settings/soignant": {
-      "filePath": "_authenticated/_admin/settings/soignant.tsx",
-      "parent": "/_authenticated/_admin"
-    },
-    "/_authenticated/_admin/settings/thematic": {
-      "filePath": "_authenticated/_admin/settings/thematic.tsx",
-      "parent": "/_authenticated/_admin"
-    },
     "/_authenticated/_admin/settings/user": {
       "filePath": "_authenticated/_admin/settings/user.tsx",
-      "parent": "/_authenticated/_admin"
+      "parent": "/_authenticated"
     },
     "/_authenticated/e/$establishmentId/s/$serviceId": {
       "filePath": "_authenticated/e/$establishmentId/s/$serviceId.tsx",
       "parent": "/_authenticated",
       "children": [
+        "/_authenticated/e/$establishmentId/s/$serviceId/_settings",
         "/_authenticated/e/$establishmentId/s/$serviceId/agenda",
         "/_authenticated/e/$establishmentId/s/$serviceId/dashboard",
         "/_authenticated/e/$establishmentId/s/$serviceId/suivi",
         "/_authenticated/e/$establishmentId/s/$serviceId/",
         "/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID",
         "/_authenticated/e/$establishmentId/s/$serviceId/patient/"
+      ]
+    },
+    "/_authenticated/e/$establishmentId/s/$serviceId/_settings": {
+      "filePath": "_authenticated/e/$establishmentId/s/$serviceId/_settings.tsx",
+      "parent": "/_authenticated/e/$establishmentId/s/$serviceId",
+      "children": [
+        "/_authenticated/e/$establishmentId/s/$serviceId/_settings/activity-log",
+        "/_authenticated/e/$establishmentId/s/$serviceId/_settings/diagnostic-template",
+        "/_authenticated/e/$establishmentId/s/$serviceId/_settings/location",
+        "/_authenticated/e/$establishmentId/s/$serviceId/_settings/planning",
+        "/_authenticated/e/$establishmentId/s/$serviceId/_settings/soignant",
+        "/_authenticated/e/$establishmentId/s/$serviceId/_settings/thematic"
       ]
     },
     "/_authenticated/e/$establishmentId/s/$serviceId/agenda": {
@@ -645,6 +627,30 @@ export const routeTree = rootRoute
     "/_authenticated/e/$establishmentId/s/$serviceId/": {
       "filePath": "_authenticated/e/$establishmentId/s/$serviceId/index.tsx",
       "parent": "/_authenticated/e/$establishmentId/s/$serviceId"
+    },
+    "/_authenticated/e/$establishmentId/s/$serviceId/_settings/activity-log": {
+      "filePath": "_authenticated/e/$establishmentId/s/$serviceId/_settings/activity-log.tsx",
+      "parent": "/_authenticated/e/$establishmentId/s/$serviceId/_settings"
+    },
+    "/_authenticated/e/$establishmentId/s/$serviceId/_settings/diagnostic-template": {
+      "filePath": "_authenticated/e/$establishmentId/s/$serviceId/_settings/diagnostic-template.tsx",
+      "parent": "/_authenticated/e/$establishmentId/s/$serviceId/_settings"
+    },
+    "/_authenticated/e/$establishmentId/s/$serviceId/_settings/location": {
+      "filePath": "_authenticated/e/$establishmentId/s/$serviceId/_settings/location.tsx",
+      "parent": "/_authenticated/e/$establishmentId/s/$serviceId/_settings"
+    },
+    "/_authenticated/e/$establishmentId/s/$serviceId/_settings/planning": {
+      "filePath": "_authenticated/e/$establishmentId/s/$serviceId/_settings/planning.tsx",
+      "parent": "/_authenticated/e/$establishmentId/s/$serviceId/_settings"
+    },
+    "/_authenticated/e/$establishmentId/s/$serviceId/_settings/soignant": {
+      "filePath": "_authenticated/e/$establishmentId/s/$serviceId/_settings/soignant.tsx",
+      "parent": "/_authenticated/e/$establishmentId/s/$serviceId/_settings"
+    },
+    "/_authenticated/e/$establishmentId/s/$serviceId/_settings/thematic": {
+      "filePath": "_authenticated/e/$establishmentId/s/$serviceId/_settings/thematic.tsx",
+      "parent": "/_authenticated/e/$establishmentId/s/$serviceId/_settings"
     },
     "/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID": {
       "filePath": "_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID.tsx",
