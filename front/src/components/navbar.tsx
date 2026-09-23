@@ -32,7 +32,7 @@ interface NavbarProps {
 // Diagnostics éducatifs sont de niveau service (coordinateur), les autres de
 // niveau établissement (administrateur d'établissement). Un même compte peut
 // détenir l'une sans l'autre.
-interface SettingsMenuProps {
+export interface SettingsMenuProps {
   establishmentId: string
   // Nul sur un écran d'administration sans service (administrateur sans
   // affectation, voir `admin.tsx`) : les cinq écrans qui vivent sous
@@ -48,7 +48,10 @@ interface SettingsMenuProps {
   canReadActivityLog: boolean
 }
 
-const SettingsMenu = ({
+// Exporté pour être testé isolément : c'est le seul composant de la navbar
+// qui décide de la visibilité du lien Membres, et il ne prend que des
+// propriétés primitives (aucun hook de permission à doubler).
+export const SettingsMenu = ({
   establishmentId,
   serviceId,
   canPlanning,
