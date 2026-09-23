@@ -32,6 +32,11 @@ const CONFLICT_MESSAGES: Record<string, { title: string; message: string }> = {
     message:
       'Vous ne pouvez pas retirer ni désactiver votre propre compte depuis cet écran. Demandez à un autre administrateur de le faire.',
   },
+  'Cannot remove all of your own services': {
+    title: 'Retrait de vos propres services',
+    message:
+      "Vous ne pouvez pas retirer tous vos propres services : vous perdriez l'accès à tous les écrans, y compris celui des membres qui vous permettrait de vous réaffecter. Demandez à un autre administrateur de le faire.",
+  },
   'This account belongs to several establishments; its activation cannot be changed from here':
     {
       title: 'Compte rattaché à plusieurs établissements',

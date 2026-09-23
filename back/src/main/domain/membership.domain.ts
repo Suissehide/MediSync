@@ -23,6 +23,11 @@ import type { AppEventBus } from '../utils/app-event-bus'
 // de passe erroné.
 const UNADDABLE_EMAIL = 'This e-mail address cannot be added as a member'
 
+// Message lu tel quel par `front/src/api/members.api.ts`, qui le fait
+// correspondre au texte français affiché : le modifier ici sans mettre à jour
+// la table du front ferait retomber l'écran sur son message générique.
+const OWN_SERVICES_REQUIRED = 'Cannot remove all of your own services'
+
 class MembershipDomain implements MembershipDomainInterface {
   private readonly membershipRepository: MembershipRepositoryInterface
   private readonly userRepository: UserRepositoryInterface
@@ -114,23 +119,34 @@ class MembershipDomain implements MembershipDomainInterface {
     }
   }
 
-  // Un administrateur qui vide sa propre liste de services perd tout contexte
-  // de service, donc l'accès à tous les écrans — y compris l'écran Membres,
-  // le seul qui lui permettrait de se réaffecter. S'il est le dernier
-  // administrateur, la sortie passe par du SQL en production. Il peut
+  // Un administrateur qui retire sa propre liste de services perd tout
+  // contexte de service, donc l'accès à tous les écrans — y compris l'écran
+  // Membres, le seul qui lui permettrait de se réaffecter. S'il est le
+  // dernier administrateur, la sortie passe par du SQL en production. Il peut
   // toujours vider la liste d'un tiers, et modifier la sienne tant qu'il
-  // garde au moins un service. Le correctif de fond (un contexte
-  // d'établissement sans service) relève de l'étape 2.
+  // garde au moins un service.
+  //
+  // La règle porte sur le *retrait*, pas sur l'état vide : un administrateur
+  // qui n'a déjà aucun service (configuration que le formulaire d'ajout
+  // permet de créer, et dont le formulaire d'édition renvoie `services: []` à
+  // chaque enregistrement) doit pouvoir continuer à modifier sa propre ligne.
+  // Le correctif de fond (un contexte d'établissement sans service) relève de
+  // l'étape 2.
   private assertKeepsOwnService(
     membership: MembershipRowDomain,
     services: ServiceAssignment[] | undefined,
   ): void {
-    if (services === undefined || services.length > 0 || !this.isSelf(membership)) {
+    if (
+      services === undefined ||
+      services.length > 0 ||
+      !this.isSelf(membership)
+    ) {
       return
     }
-    throw Boom.conflict(
-      'Vous ne pouvez pas retirer tous vos propres services : vous perdriez l\'accès à tous les écrans, y compris celui des membres qui permettrait de vous réaffecter',
-    )
+    if (membership.serviceMemberships.length === 0) {
+      return
+    }
+    throw Boom.conflict(OWN_SERVICES_REQUIRED)
   }
 
   // `User.deactivatedAt` porte sur l'identité globale, partagée par tous les

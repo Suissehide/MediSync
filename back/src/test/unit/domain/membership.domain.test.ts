@@ -111,8 +111,7 @@ const LAST_ADMIN = 'Cannot remove the last administrator'
 const SELF = 'Cannot apply this action to your own account'
 const MULTI_ESTABLISHMENT =
   'This account belongs to several establishments; its activation cannot be changed from here'
-const SELF_WITHOUT_SERVICE =
-  'Vous ne pouvez pas retirer tous vos propres services : vous perdriez l\'accès à tous les écrans, y compris celui des membres qui permettrait de vous réaffecter'
+const SELF_WITHOUT_SERVICE = 'Cannot remove all of your own services'
 
 const rejectsWith = (
   promise: Promise<unknown>,
@@ -313,13 +312,28 @@ describe('MembershipDomain', () => {
   // permettrait de se reaffecter : s'il etait le dernier administrateur, la
   // sortie passait par du SQL en production.
   it('refuse a l utilisateur courant de vider sa propre liste de services', async () => {
-    const { domain, ctx, calls } = build([row({})], 2)
+    const { domain, ctx, calls } = build(
+      [row({ serviceMemberships: [{ serviceId: 's1', role: 'INTERVENANT' }] })],
+      2,
+    )
     await rejectsWith(
       asAdmin(ctx, () => domain.update('em1', { services: [] })),
       409,
       SELF_WITHOUT_SERVICE,
     )
     expect(calls).toEqual([])
+  })
+
+  // La regle porte sur le RETRAIT, pas sur l'etat vide. Un administrateur
+  // sans aucun service est une configuration que le formulaire d'ajout permet
+  // de creer, et le formulaire d'edition renvoie `services: []` a chaque
+  // enregistrement : sans cette distinction, un tel compte ne pourrait plus
+  // modifier sa propre ligne du tout, avec un message decrivant une action
+  // qu'il n'a pas demandee.
+  it('laisse l utilisateur courant enregistrer sa propre ligne quand il n avait deja aucun service', async () => {
+    const { domain, ctx, calls } = build([row({ serviceMemberships: [] })], 2)
+    await asAdmin(ctx, () => domain.update('em1', { services: [] }))
+    expect(calls).toEqual(['update'])
   })
 
   it('laisse vider la liste de services d un tiers', async () => {
