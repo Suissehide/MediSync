@@ -2,15 +2,19 @@ import type { DiagnosticEducatif, Prisma } from '../../../generated/client'
 
 export type DiagnosticEducatifEntity = DiagnosticEducatif
 
+// Le repository pose serviceId/establishmentId lui-même : l'appelant ne les fournit pas.
 export type DiagnosticEducatifCreateEntity = Omit<
   Prisma.DiagnosticEducatifUncheckedCreateInput,
-  'patient' | 'template'
+  'patient' | 'template' | 'serviceId' | 'establishmentId'
 > & {
   templateId?: string
 }
 
 export type DiagnosticEducatifUpdateEntity = Partial<
-  Omit<Prisma.DiagnosticEducatifUncheckedUpdateInput, 'patient' | 'template'>
+  Omit<
+    Prisma.DiagnosticEducatifUncheckedUpdateInput,
+    'patient' | 'template' | 'serviceId' | 'establishmentId'
+  >
 >
 
 export interface DiagnosticEducatifDomainInterface {

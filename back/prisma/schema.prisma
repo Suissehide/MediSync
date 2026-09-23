@@ -1,3 +1,9 @@
+// Multi-tenant : toute table de service porte establishmentId + serviceId,
+// toute table d'établissement porte establishmentId. Les références vers un
+// autre modèle de tenant sont composites (xId, serviceId|establishmentId)
+// sauf quand le champ référent est nullable (Prisma l'interdit) : la
+// cohérence est alors vérifiée par le domaine. Voir docs/multi-tenant/.
+
 datasource db {
   provider = "postgresql"
 }
@@ -7,10 +13,16 @@ generator client {
   output   = "../src/generated"
 }
 
-enum Role {
-  NONE
-  USER
+enum EstablishmentRole {
   ADMIN
+  MEMBER
+}
+
+enum ServiceRole {
+  COORDINATEUR
+  INTERVENANT
+  SECRETARIAT
+  LECTURE
 }
 
 enum AppointmentType {
@@ -24,23 +36,114 @@ enum AppointmentStatus {
   no
 }
 
-model User {
-  id         String  @id @default(cuid())
-  email      String  @unique
-  password   String
-  salt       String
-  firstName  String?
-  lastName   String?
-  role       Role    @default(NONE)
-  soignantId String?
+model Establishment {
+  id            String    @id @default(cuid())
+  name          String
+  createdAt     DateTime  @default(now())
+  deactivatedAt DateTime?
 
-  soignant Soignant? @relation(fields: [soignantId], references: [id], onDelete: SetNull)
+  services    Service[]
+  memberships EstablishmentMembership[]
+  patients    Patient[]
+  soignants   Soignant[]
+  locations   Location[]
+}
 
+model Service {
+  id              String    @id @default(cuid())
+  establishmentId String
+  name            String
+  createdAt       DateTime  @default(now())
+  deactivatedAt   DateTime?
+
+  establishment Establishment       @relation(fields: [establishmentId], references: [id])
+  memberships   ServiceMembership[]
+
+  @@unique([establishmentId, name])
+  @@unique([id, establishmentId])
+}
+
+model EstablishmentMembership {
+  id              String            @id @default(cuid())
+  userId          String
+  establishmentId String
+  role            EstablishmentRole @default(MEMBER)
+  soignantId      String?
+  createdAt       DateTime          @default(now())
+
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  establishment      Establishment       @relation(fields: [establishmentId], references: [id])
+  // Référence simple (composite impossible : soignantId nullable, establishmentId requis).
+  // La cohérence d'établissement est vérifiée par MembershipDomain.
+  soignant           Soignant?           @relation(fields: [soignantId], references: [id], onDelete: SetNull)
+  serviceMemberships ServiceMembership[]
+
+  @@unique([userId, establishmentId])
+  @@unique([id, establishmentId])
+  @@index([establishmentId])
   @@index([soignantId])
+}
+
+model ServiceMembership {
+  id                        String      @id @default(cuid())
+  establishmentMembershipId String
+  serviceId                 String
+  establishmentId           String
+  role                      ServiceRole
+  createdAt                 DateTime    @default(now())
+
+  establishmentMembership EstablishmentMembership @relation(fields: [establishmentMembershipId], references: [id], onDelete: Cascade)
+  service                 Service                 @relation(fields: [serviceId, establishmentId], references: [id, establishmentId])
+
+  @@unique([establishmentMembershipId, serviceId])
+  @@index([serviceId])
+}
+
+model SlotTemplateSoignant {
+  slotTemplateId  String
+  soignantId      String
+  serviceId       String
+  establishmentId String
+
+  slotTemplate SlotTemplate @relation(fields: [slotTemplateId, serviceId], references: [id, serviceId], onDelete: Cascade)
+  soignant     Soignant     @relation(fields: [soignantId, establishmentId], references: [id, establishmentId], onDelete: Cascade)
+
+  @@id([slotTemplateId, soignantId])
+  @@index([soignantId])
+  @@index([serviceId])
+}
+
+model SoignantThematic {
+  soignantId      String
+  thematicId      String
+  serviceId       String
+  establishmentId String
+
+  soignant Soignant @relation(fields: [soignantId, establishmentId], references: [id, establishmentId], onDelete: Cascade)
+  thematic Thematic @relation(fields: [thematicId, serviceId], references: [id, serviceId], onDelete: Cascade)
+
+  @@id([soignantId, thematicId])
+  @@index([thematicId])
+  @@index([serviceId])
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  salt          String
+  firstName     String?
+  lastName      String?
+  isSuperAdmin  Boolean   @default(false)
+  deactivatedAt DateTime?
+
+  establishmentMemberships EstablishmentMembership[]
 }
 
 model PathwayTemplate {
   id                   String   @id @default(cuid())
+  establishmentId      String
+  serviceId            String
   name                 String
   color                String
   mainTag              String
@@ -51,35 +154,48 @@ model PathwayTemplate {
 
   pathways      Pathway[]
   slotTemplates SlotTemplate[]
+
+  @@unique([id, serviceId])
+  @@index([serviceId])
 }
 
 model Pathway {
-  id         String   @id @default(cuid())
-  startDate  DateTime @db.Date
-  templateID String?
+  id              String   @id @default(cuid())
+  establishmentId String
+  serviceId       String
+  startDate       DateTime @db.Date
+  templateID      String?
 
+  // Référence simple (templateID nullable) : cohérence vérifiée par PathwayDomain.
   template          PathwayTemplate?         @relation(fields: [templateID], references: [id])
   slots             Slot[]
   patientPriorities PatientPathwayPriority[]
 
+  @@unique([id, serviceId])
   @@index([startDate])
   @@index([templateID])
+  @@index([serviceId])
 }
 
 model PatientPathwayPriority {
-  patientID String
-  pathwayID String
-  priority  Int
+  patientID       String
+  pathwayID       String
+  establishmentId String
+  serviceId       String
+  priority        Int
 
-  patient Patient @relation(fields: [patientID], references: [id], onDelete: Cascade)
-  pathway Pathway @relation(fields: [pathwayID], references: [id], onDelete: Cascade)
+  patient Patient @relation(fields: [patientID, establishmentId], references: [id, establishmentId], onDelete: Cascade)
+  pathway Pathway @relation(fields: [pathwayID, serviceId], references: [id, serviceId], onDelete: Cascade)
 
   @@id([patientID, pathwayID])
   @@index([patientID, priority])
+  @@index([serviceId])
 }
 
 model Appointment {
   id                  String               @id @default(cuid())
+  establishmentId     String
+  serviceId           String
   startDate           DateTime
   endDate             DateTime
   thematicId          String?
@@ -92,35 +208,43 @@ model Appointment {
   // Cascade : supprimer un créneau supprime ses rendez-vous (et, en cascade,
   // les AppointmentPatient). Sans cela, supprimer un créneau/parcours avec
   // des rendez-vous échoue sur une violation de clé étrangère.
-  slot     Slot      @relation(fields: [slotID], references: [id], onDelete: Cascade)
+  slot     Slot      @relation(fields: [slotID, serviceId], references: [id, serviceId], onDelete: Cascade)
   thematic Thematic? @relation(fields: [thematicId], references: [id], onDelete: SetNull)
 
+  @@unique([id, serviceId])
   @@index([slotID])
   @@index([thematicId])
+  @@index([serviceId])
 }
 
 model AppointmentPatient {
-  id            String @id @default(cuid())
-  appointmentId String
-  patientId     String
+  id              String @id @default(cuid())
+  establishmentId String
+  serviceId       String
+  appointmentId   String
+  patientId       String
 
   accompanying      String?
   status            AppointmentStatus?
   rejectionReason   String?
   transmissionNotes String?
 
-  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
-  patient     Patient     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  appointment Appointment @relation(fields: [appointmentId, serviceId], references: [id, serviceId], onDelete: Cascade)
+  patient     Patient     @relation(fields: [patientId, establishmentId], references: [id, establishmentId], onDelete: Cascade)
 
   @@unique([appointmentId, patientId])
+  @@unique([id, serviceId])
   @@index([patientId])
+  @@index([serviceId])
 }
 
 model SlotTemplate {
-  id         String   @id @default(cuid())
-  startTime  DateTime @db.Time()
-  endTime    DateTime @db.Time()
-  offsetDays Int
+  id              String   @id @default(cuid())
+  establishmentId String
+  serviceId       String
+  startTime       DateTime @db.Time()
+  endTime         DateTime @db.Time()
+  offsetDays      Int
 
   isIndividual Boolean
   capacity     Int?
@@ -132,64 +256,92 @@ model SlotTemplate {
   slot       Slot?
   templateID String?
 
-  soignants Soignant[]       @relation("SlotTemplateSoignants")
-  template  PathwayTemplate? @relation(fields: [templateID], references: [id])
-  location  Location?        @relation(fields: [locationID], references: [id], onDelete: SetNull)
-  thematic  Thematic?        @relation(fields: [thematicId], references: [id], onDelete: SetNull)
+  soignantLinks SlotTemplateSoignant[]
+  template      PathwayTemplate?       @relation(fields: [templateID], references: [id])
+  location      Location?              @relation(fields: [locationID], references: [id], onDelete: SetNull)
+  thematic      Thematic?              @relation(fields: [thematicId], references: [id], onDelete: SetNull)
 
+  @@unique([id, serviceId])
   @@index([templateID])
   @@index([locationID])
   @@index([thematicId])
+  @@index([serviceId])
 }
 
 model Slot {
-  id             String        @id @default(cuid())
-  startDate      DateTime
-  endDate        DateTime
-  locked         Boolean       @default(false)
-  appointments   Appointment[]
-  pathwayID      String?
-  slotTemplateID String        @unique
+  id              String        @id @default(cuid())
+  establishmentId String
+  serviceId       String
+  startDate       DateTime
+  endDate         DateTime
+  locked          Boolean       @default(false)
+  appointments    Appointment[]
+  pathwayID       String?
+  slotTemplateID  String        @unique
 
   pathway      Pathway?     @relation(fields: [pathwayID], references: [id])
-  slotTemplate SlotTemplate @relation(fields: [slotTemplateID], references: [id])
+  slotTemplate SlotTemplate @relation(fields: [slotTemplateID, serviceId], references: [id, serviceId])
 
+  @@unique([id, serviceId])
+  // Requis par Prisma pour la relation un-à-un composite ci-dessus (le champ
+  // doit être couvert par une unicité portant exactement sur ce couple de
+  // colonnes) ; redondant avec le @unique sur slotTemplateID seul, conservé
+  // pour la garantie plus forte (un modèle de créneau n'a jamais deux slots).
+  @@unique([slotTemplateID, serviceId])
   @@index([startDate])
   @@index([pathwayID])
+  @@index([serviceId])
 }
 
 model Soignant {
-  id   String @id @default(cuid())
-  name String
+  id              String @id @default(cuid())
+  establishmentId String
+  name            String
 
-  slotTemplates SlotTemplate[] @relation("SlotTemplateSoignants")
-  todos         Todo[]
-  thematics     Thematic[]     @relation("SoignantThematics")
-  users         User[]
+  establishment     Establishment             @relation(fields: [establishmentId], references: [id])
+  slotTemplateLinks SlotTemplateSoignant[]
+  thematicLinks     SoignantThematic[]
+  todos             Todo[]
+  memberships       EstablishmentMembership[]
+
+  @@unique([id, establishmentId])
+  @@index([establishmentId])
 }
 
 model Thematic {
-  id        String     @id @default(cuid())
-  name      String     @unique
-  duration  Int?
+  id              String  @id @default(cuid())
+  establishmentId String
+  serviceId       String
+  name            String
+  duration        Int?
   // Consigne affichee au patient dans le PDF du programme, avant chaque
   // semaine contenant un creneau de cette thematique.
-  pdfNotice String?
-  soignants Soignant[] @relation("SoignantThematics")
+  pdfNotice       String?
 
+  soignantLinks SoignantThematic[]
   appointments  Appointment[]
   slotTemplates SlotTemplate[]
+
+  @@unique([serviceId, name])
+  @@unique([id, serviceId])
+  @@index([serviceId])
 }
 
 model Location {
-  id   String @id @default(cuid())
-  name String @unique
+  id              String @id @default(cuid())
+  establishmentId String
+  name            String
 
+  establishment Establishment  @relation(fields: [establishmentId], references: [id])
   slotTemplates SlotTemplate[]
+
+  @@unique([establishmentId, name])
+  @@unique([id, establishmentId])
 }
 
 model Patient {
-  id String @id @default(cuid())
+  id              String @id @default(cuid())
+  establishmentId String
 
   // Identity
   firstName String
@@ -234,14 +386,20 @@ model Patient {
 
   createDate DateTime
 
+  establishment       Establishment            @relation(fields: [establishmentId], references: [id])
   appointmentPatients AppointmentPatient[]
   diagnostics         DiagnosticEducatif[]
   enrollmentIssues    EnrollmentIssue[]
   pathwayPriorities   PatientPathwayPriority[]
+
+  @@unique([id, establishmentId])
+  @@index([establishmentId])
 }
 
 model EnrollmentIssue {
   id                String   @id @default(cuid())
+  establishmentId   String
+  serviceId         String
   patientId         String
   pathwayTemplateID String
   pathwayName       String?
@@ -249,24 +407,33 @@ model EnrollmentIssue {
   startDate         DateTime
   createdAt         DateTime @default(now())
 
-  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patient Patient @relation(fields: [patientId, establishmentId], references: [id, establishmentId], onDelete: Cascade)
 
+  @@unique([id, serviceId])
   @@index([patientId])
+  @@index([serviceId])
 }
 
 model DiagnosticEducatifTemplate {
-  id           String   @id @default(cuid())
-  name         String
-  activeFields String[]
+  id              String   @id @default(cuid())
+  establishmentId String
+  serviceId       String
+  name            String
+  activeFields    String[]
 
   diagnostics DiagnosticEducatif[]
+
+  @@unique([id, serviceId])
+  @@index([serviceId])
 }
 
 model DiagnosticEducatif {
-  id           String   @id @default(cuid())
-  createdAt    DateTime @default(now())
-  title        String?
-  activeFields String[]
+  id              String   @id @default(cuid())
+  establishmentId String
+  serviceId       String
+  createdAt       DateTime @default(now())
+  title           String?
+  activeFields    String[]
 
   patientId  String
   templateId String?
@@ -373,51 +540,70 @@ model DiagnosticEducatif {
   suiviEducatifNegocie    String?
   rapatrier               String?
 
-  patient  Patient                     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patient  Patient                     @relation(fields: [patientId, establishmentId], references: [id, establishmentId], onDelete: Cascade)
+  // Référence simple (templateId nullable) : cohérence vérifiée par le domaine.
   template DiagnosticEducatifTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
 
+  @@unique([id, serviceId])
   @@index([patientId])
   @@index([templateId])
+  @@index([serviceId])
 }
 
 model Todo {
-  id          String   @id @default(cuid())
-  createDate  DateTime
-  title       String
-  description String?
-  completed   Boolean
+  id              String   @id @default(cuid())
+  establishmentId String
+  serviceId       String
+  createDate      DateTime
+  title           String
+  description     String?
+  completed       Boolean
 
   soignantID String?
 
   soignant Soignant? @relation(fields: [soignantID], references: [id], onDelete: SetNull)
 
+  @@unique([id, serviceId])
   @@index([soignantID])
+  @@index([serviceId])
 }
 
 model ActivityLog {
-  id            String   @id @default(cuid())
-  userID        String
-  userFirstName String?
-  userLastName  String?
-  action        String
-  entityType    String
-  entityID      String
-  createdAt     DateTime @default(now())
+  id              String   @id @default(cuid())
+  establishmentId String?
+  serviceId       String?
+  userID          String
+  userFirstName   String?
+  userLastName    String?
+  action          String
+  entityType      String
+  entityID        String
+  createdAt       DateTime @default(now())
 
   @@index([userID])
   @@index([action])
   @@index([createdAt])
+  @@index([establishmentId])
+  @@index([serviceId])
 }
 
 model ForbiddenWeek {
-  id          String   @id @default(cuid())
-  startOfWeek DateTime @unique @db.Date
-  createdAt   DateTime @default(now())
+  id              String   @id @default(cuid())
+  establishmentId String
+  serviceId       String
+  startOfWeek     DateTime @db.Date
+  createdAt       DateTime @default(now())
+
+  @@unique([id, serviceId])
+  @@unique([serviceId, startOfWeek])
+  @@index([serviceId])
 }
 
 model PlanningCycle {
-  id          String   @id @default("default")
-  startOfWeek DateTime @db.Date
-  weekCount   Int
-  updatedAt   DateTime @updatedAt
+  id              String   @id @default(cuid())
+  establishmentId String
+  serviceId       String   @unique
+  startOfWeek     DateTime @db.Date
+  weekCount       Int
+  updatedAt       DateTime @updatedAt
 }

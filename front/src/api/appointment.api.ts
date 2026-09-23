@@ -1,4 +1,4 @@
-import { apiUrl } from '../constants/config.constant.ts'
+import { tenantApiUrl } from '../constants/config.constant.ts'
 import { handleHttpError } from '../libs/httpErrorHandler.ts'
 import type {
   Appointment,
@@ -10,7 +10,7 @@ import { fetchWithAuth } from './fetchWithAuth.ts'
 export const AppointmentApi = {
   getAll: async (): Promise<Appointment[]> => {
     const response = await fetchWithAuth(
-      `${apiUrl}/appointment?action=getAllAppointments`,
+      `${tenantApiUrl()}/appointment?action=getAllAppointments`,
       {
         method: 'GET',
       },
@@ -27,7 +27,7 @@ export const AppointmentApi = {
 
   getByID: async (appointmentID: string): Promise<Appointment> => {
     const response = await fetchWithAuth(
-      `${apiUrl}/appointment/${appointmentID}?action=getAppointmentByID`,
+      `${tenantApiUrl()}/appointment/${appointmentID}?action=getAppointmentByID`,
       {
         method: 'GET',
       },
@@ -46,7 +46,7 @@ export const AppointmentApi = {
     createAppointmentParams: CreateAppointmentParams,
   ): Promise<Appointment> => {
     const response = await fetchWithAuth(
-      `${apiUrl}/appointment?action=createAppointment`,
+      `${tenantApiUrl()}/appointment?action=createAppointment`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -65,7 +65,7 @@ export const AppointmentApi = {
     const { id: appointmentID, ...updateAppointmentInputs } =
       updateAppointmentParams
     const response = await fetchWithAuth(
-      `${apiUrl}/appointment/${appointmentID}?action=updateAppointment`,
+      `${tenantApiUrl()}/appointment/${appointmentID}?action=updateAppointment`,
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -80,7 +80,7 @@ export const AppointmentApi = {
 
   delete: async (appointmentID: string): Promise<void> => {
     const response = await fetchWithAuth(
-      `${apiUrl}/appointment/${appointmentID}?action=deleteAppointment`,
+      `${tenantApiUrl()}/appointment/${appointmentID}?action=deleteAppointment`,
       {
         method: 'DELETE',
       },

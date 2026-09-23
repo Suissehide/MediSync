@@ -16,9 +16,9 @@ import {
   updateLocationByIdSchema,
 } from '../schemas/location.schema'
 
-const locationRouter: FastifyPluginAsync = (fastify) => {
-  const { iocContainer } = fastify
-  const { locationDomain, logger } = iocContainer
+// Lecture, sous le préfixe de service : /e/:establishmentId/s/:serviceId/location.
+const locationReadRouter: FastifyPluginAsync = (fastify) => {
+  const { locationDomain } = fastify.iocContainer
 
   // Get all
   fastify.get(
@@ -30,7 +30,7 @@ const locationRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
-      onRequest: [fastify.verifySessionCookie],
+      config: { permission: 'referentials:read' },
     },
     () => {
       return locationDomain.findAll()
@@ -48,6 +48,7 @@ const locationRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
+      config: { permission: 'referentials:read' },
     },
     async (request) => {
       const { locationID } = request.params
@@ -59,6 +60,13 @@ const locationRouter: FastifyPluginAsync = (fastify) => {
     },
   )
 
+  return Promise.resolve()
+}
+
+// Administration, sous le préfixe d'établissement : /e/:establishmentId/location.
+const locationAdminRouter: FastifyPluginAsync = (fastify) => {
+  const { locationDomain, logger } = fastify.iocContainer
+
   // Create
   fastify.post<{ Body: CreateLocationBody }>(
     '/',
@@ -69,6 +77,7 @@ const locationRouter: FastifyPluginAsync = (fastify) => {
           201: locationResponseSchema,
         },
       },
+      config: { permission: 'locations:manage' },
     },
     async (request, reply) => {
       const location = await locationDomain.create(request.body)
@@ -88,6 +97,7 @@ const locationRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
+      config: { permission: 'locations:manage' },
     },
     async (request) => {
       const { locationID } = request.params
@@ -110,6 +120,7 @@ const locationRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
+      config: { permission: 'locations:manage' },
     },
     async (request, reply) => {
       const { locationID } = request.params
@@ -125,4 +136,4 @@ const locationRouter: FastifyPluginAsync = (fastify) => {
   return Promise.resolve()
 }
 
-export { locationRouter }
+export { locationReadRouter, locationAdminRouter }

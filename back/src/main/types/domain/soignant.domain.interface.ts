@@ -4,11 +4,16 @@ import type {
 } from '../../../generated/client'
 
 export type SoignantEntityDomain = Soignant
+// Miroir de SoignantCreateEntityRepo/SoignantUpdateEntityRepo : le repository
+// pose establishmentId lui-même, l'appelant ne le fournit pas.
 export type SoignantCreateEntityDomain = Omit<
   Prisma.SoignantUncheckedCreateInput,
-  'slotTemplates'
+  'establishmentId' | 'slotTemplateLinks'
 >
-export type SoignantUpdateEntityDomain = Prisma.SoignantUncheckedUpdateInput
+export type SoignantUpdateEntityDomain = Omit<
+  Prisma.SoignantUncheckedUpdateInput,
+  'establishmentId'
+>
 
 export interface SoignantDomainInterface {
   findAll: () => Promise<SoignantEntityDomain[]>

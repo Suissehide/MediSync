@@ -1,38 +1,50 @@
-import type { PostgresPrismaClient } from '../infra/orm/postgres-client'
+import Boom from '@hapi/boom'
+
 import type { IocContainer } from '../types/application/ioc'
 import type {
+  PasswordChangeDomain,
   UserDomainInterface,
   UserEntityDomain,
-  UserUpdateEntityDomain,
+  UserProfileUpdateDomain,
 } from '../types/domain/user.domain.interface'
-import type { UserRepositoryInterface } from '../types/infra/orm/repositories/user.repository.interface'
+import type {
+  UserEntityRepo,
+  UserRepositoryInterface,
+} from '../types/infra/orm/repositories/user.repository.interface'
+import { verifyPassword } from '../utils/hash'
 
 class UserDomain implements UserDomainInterface {
-  private readonly prisma: PostgresPrismaClient
   private readonly userRepository: UserRepositoryInterface
 
-  constructor({ postgresOrm, userRepository }: IocContainer) {
-    this.prisma = postgresOrm.prisma
+  constructor({ userRepository }: IocContainer) {
     this.userRepository = userRepository
-  }
-
-  findAll(): Promise<UserEntityDomain[]> {
-    return this.userRepository.findAll()
   }
 
   findByID(userID: string): Promise<UserEntityDomain> {
     return this.userRepository.findByID(userID)
   }
 
-  update(
+  updateProfile(
     userID: string,
-    userUpdateParams: UserUpdateEntityDomain,
-  ): Promise<UserEntityDomain> {
-    return this.userRepository.update(userID, userUpdateParams)
+    params: UserProfileUpdateDomain,
+  ): Promise<UserEntityRepo> {
+    return this.userRepository.updateProfile(userID, params)
   }
 
-  delete(userID: string): Promise<UserEntityDomain> {
-    return this.userRepository.delete(userID)
+  async changePassword(
+    userID: string,
+    { currentPassword, newPassword }: PasswordChangeDomain,
+  ): Promise<void> {
+    const user = await this.userRepository.findByID(userID)
+    const valid = verifyPassword({
+      password: currentPassword,
+      salt: user.salt,
+      hash: user.password,
+    })
+    if (!valid) {
+      throw Boom.forbidden('Current password is incorrect')
+    }
+    await this.userRepository.updatePassword(userID, newPassword)
   }
 }
 

@@ -5,6 +5,7 @@ import { getSoignantColumns } from '../../../../columns/soignant.column.tsx'
 import AddSoignantForm from '../../../../components/custom/popup/addSoignantForm.tsx'
 import DashboardLayout from '../../../../components/dashboard.layout.tsx'
 import ReactTable from '../../../../components/table/reactTable.tsx'
+import { useCan } from '../../../../hooks/useCan.ts'
 import { useSoignantQueries } from '../../../../queries/useSoignant.ts'
 import { useThematicQueries } from '../../../../queries/useThematic.ts'
 import type { Soignant } from '../../../../types/soignant.ts'
@@ -16,6 +17,10 @@ export const Route = createFileRoute(
 })
 
 function SoignantSettings() {
+  // Le menu ne montre cette page qu'aux détenteurs de `soignants:manage`,
+  // mais l'URL se tape à la main : les actions d'écriture se gardent aussi
+  // ici, indépendamment du menu.
+  const canManage = useCan('soignants:manage')
   const { soignants, isPending } = useSoignantQueries()
   const { thematics } = useThematicQueries()
 
@@ -38,8 +43,9 @@ function SoignantSettings() {
       getSoignantColumns({
         thematics: thematics ?? [],
         thematicOptions,
+        canManage,
       }),
-    [thematics, thematicOptions],
+    [thematics, thematicOptions, canManage],
   )
 
   return (
@@ -49,7 +55,7 @@ function SoignantSettings() {
           <h1 className="h-9 flex items-center text-text-dark text-xl font-semibold">
             Soignants
           </h1>
-          <AddSoignantForm />
+          {canManage && <AddSoignantForm />}
         </div>
 
         <ReactTable<Soignant>

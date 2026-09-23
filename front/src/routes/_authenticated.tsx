@@ -1,5 +1,7 @@
 import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
 
+import { deriveContext } from '../store/useAuthStore.ts'
+
 export const Route = createFileRoute('/_authenticated')({
   beforeLoad: ({ context, location }) => {
     if (!context.authState.isAuthenticated) {
@@ -11,10 +13,7 @@ export const Route = createFileRoute('/_authenticated')({
       })
     }
 
-    if (
-      !context.authState.user?.role ||
-      context.authState.user?.role === 'NONE'
-    ) {
+    if (deriveContext(context.authState.user) === null) {
       throw redirect({
         to: '/pending',
       })
@@ -23,7 +22,7 @@ export const Route = createFileRoute('/_authenticated')({
   shouldReload({ context }) {
     return (
       !context.authState.isAuthenticated ||
-      context.authState.user?.role === 'NONE'
+      deriveContext(context.authState.user) === null
     )
   },
   component: () => <Outlet />,

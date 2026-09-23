@@ -23,18 +23,25 @@ export type SlotDTORepo = SlotEntityRepo & {
   slotTemplate: SlotTemplateWithSoignantsRepo
   appointments: AppointmentWithPatientsRepo[]
 }
+// Le repository pose serviceId/establishmentId (tenant) lui-même : l'appelant
+// ne les fournit pas.
+//
+// `pathwayID` est exclu lui aussi. C'est une référence scalaire simple : la
+// clé étrangère ne porte pas `serviceId`, un identifiant de parcours d'un
+// autre service passerait donc sans aucun contrôle. L'unique voie légitime
+// pour rattacher un créneau à un parcours est le `connect` composite interne
+// à PathwayRepository — l'invariant est ainsi vrai par construction, sans
+// vérification applicative à maintenir.
 export type SlotCreateEntityRepo = Omit<
   Prisma.SlotUncheckedCreateInput,
-  'appointments'
+  'appointments' | 'establishmentId' | 'pathwayID' | 'serviceId'
 > & {
-  pathwayID?: string
   slotTemplateID: string
 }
 export type SlotUpdateEntityRepo = Omit<
   Prisma.SlotUncheckedUpdateInput,
-  'appointments'
+  'appointments' | 'establishmentId' | 'pathwayID' | 'serviceId'
 > & {
-  pathwayID?: string
   slotTemplate?: SlotTemplateUpdateEntityRepo & {
     id?: string
   }

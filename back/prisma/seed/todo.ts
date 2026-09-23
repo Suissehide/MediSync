@@ -1,6 +1,10 @@
 import type { PrismaClient } from '../../src/generated/client'
+import type { SeedTenant } from './tenant'
 
-export default async function seedTodos(prisma: PrismaClient) {
+export default async function seedTodos(
+  prisma: PrismaClient,
+  tenant: SeedTenant,
+) {
   console.log('→ Seeding todos...')
 
   await prisma.todo.createMany({
@@ -10,6 +14,8 @@ export default async function seedTodos(prisma: PrismaClient) {
         description: 'S’assurer que les derniers résultats sont à jour.',
         createDate: new Date(),
         completed: false,
+        establishmentId: tenant.establishmentId,
+        serviceId: tenant.serviceId,
       },
       {
         title: 'Préparer atelier nutrition',
@@ -17,6 +23,8 @@ export default async function seedTodos(prisma: PrismaClient) {
           'Réviser la présentation PowerPoint et les supports imprimés.',
         createDate: new Date(),
         completed: true,
+        establishmentId: tenant.establishmentId,
+        serviceId: tenant.serviceId,
       },
     ],
   })

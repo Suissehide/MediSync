@@ -3,14 +3,6 @@ export const AUTH = {
   LOGOUT: 'logout',
 }
 
-export const USER = {
-  GET_ALL: 'get_all_users',
-  GET_BY_ID: 'get_by_id_user',
-  CREATE: 'create_user',
-  UPDATE: 'update_user',
-  DELETE: 'delete_user',
-}
-
 export const TODO = {
   GET_ALL: 'get_all_todos',
   GET: 'get_todo',
@@ -88,6 +80,14 @@ export const THEMATIC = {
   CREATE: 'create_thematic',
   UPDATE: 'update_thematic',
   DELETE: 'delete_thematic',
+}
+
+export const MEMBER = {
+  GET_ALL: 'get_all_members',
+  ADD: 'add_member',
+  UPDATE: 'update_member',
+  REMOVE: 'remove_member',
+  DEACTIVATE: 'deactivate_member',
 }
 
 export const LOCATION = {

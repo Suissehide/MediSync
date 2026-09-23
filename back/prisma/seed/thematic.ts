@@ -1,9 +1,11 @@
 import type { PrismaClient, Soignant } from '../../src/generated/client'
 import { THEMATICS } from './data/thematic'
+import type { SeedTenant } from './tenant'
 
 export default async function seedThematics(
   prisma: PrismaClient,
   soignants: Soignant[],
+  tenant: SeedTenant,
 ) {
   console.log('→ Seeding thematics...')
 
@@ -18,19 +20,31 @@ export default async function seedThematics(
       // Use the first (smallest) duration as default
       const duration = t.durations.length > 0 ? t.durations[0] : 15
 
+      // serviceId est déduit de la relation vers Thematic (clé composite),
+      // Prisma le refuse comme champ explicite dans cette création imbriquée.
+      const soignantLinks = soignantIDs.map((soignantId) => ({
+        soignantId,
+        establishmentId: tenant.establishmentId,
+      }))
+
       return prisma.thematic.upsert({
-        where: { name: t.name },
+        where: {
+          serviceId_name: { serviceId: tenant.serviceId, name: t.name },
+        },
         update: {
           duration,
-          soignants: {
-            set: soignantIDs.map((id) => ({ id })),
+          soignantLinks: {
+            deleteMany: {},
+            create: soignantLinks,
           },
         },
         create: {
           name: t.name,
           duration,
-          soignants: {
-            connect: soignantIDs.map((id) => ({ id })),
+          establishmentId: tenant.establishmentId,
+          serviceId: tenant.serviceId,
+          soignantLinks: {
+            create: soignantLinks,
           },
         },
       })

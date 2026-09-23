@@ -18,6 +18,7 @@ import {
   TabsList,
   TabsTrigger,
 } from '../../../components/ui/tabs.tsx'
+import { useCan } from '../../../hooks/useCan.ts'
 import {
   usePatientByIDQuery,
   usePatientMutations,
@@ -30,6 +31,10 @@ export const Route = createFileRoute('/_authenticated/patient/$patientID')({
 
 function PatientDetails() {
   const navigate = useNavigate()
+  // `pdf:export` n'a aucune route back : c'est une action purement front
+  // (export généré dans le navigateur), gardée ici, seul endroit où elle
+  // s'utilise.
+  const canExportPdf = useCan('pdf:export')
   const [selected, setSelected] = useState<string>('overview')
   const [showPDF, setShowPDF] = useState(false)
   const [showDelete, setShowDelete] = useState(false)
@@ -80,15 +85,17 @@ function PatientDetails() {
             </h2>
             <div className="ml-auto flex items-center gap-2">
               {patient && <AddPatientToPathwayForm patient={patient} />}
-              <Button
-                variant="outline"
-                size="default"
-                className="font-normal leading-tight"
-                onClick={() => setShowPDF(true)}
-              >
-                <FileDown className="w-4 h-4" />
-                Générer le programme
-              </Button>
+              {canExportPdf && (
+                <Button
+                  variant="outline"
+                  size="default"
+                  className="font-normal leading-tight"
+                  onClick={() => setShowPDF(true)}
+                >
+                  <FileDown className="w-4 h-4" />
+                  Générer le programme
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="default"

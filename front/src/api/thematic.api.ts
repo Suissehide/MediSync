@@ -1,4 +1,4 @@
-import { apiUrl } from '../constants/config.constant.ts'
+import { tenantApiUrl } from '../constants/config.constant.ts'
 import { handleHttpError } from '../libs/httpErrorHandler.ts'
 import type {
   CreateThematicParams,
@@ -10,7 +10,7 @@ import { fetchWithAuth } from './fetchWithAuth.ts'
 export const ThematicApi = {
   getAll: async (): Promise<Thematic[]> => {
     const response = await fetchWithAuth(
-      `${apiUrl}/thematic?action=getAllThematics`,
+      `${tenantApiUrl()}/thematic?action=getAllThematics`,
       {
         method: 'GET',
       },
@@ -29,7 +29,7 @@ export const ThematicApi = {
     createThematicParams: CreateThematicParams,
   ): Promise<Thematic> => {
     const response = await fetchWithAuth(
-      `${apiUrl}/thematic?action=createThematic`,
+      `${tenantApiUrl()}/thematic?action=createThematic`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -47,7 +47,7 @@ export const ThematicApi = {
   ): Promise<Thematic> => {
     const { id: thematicID, ...updateThematicInputs } = updateThematicParams
     const response = await fetchWithAuth(
-      `${apiUrl}/thematic/${thematicID}?action=updateThematic`,
+      `${tenantApiUrl()}/thematic/${thematicID}?action=updateThematic`,
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -62,7 +62,7 @@ export const ThematicApi = {
 
   delete: async (thematicID: string): Promise<void> => {
     const response = await fetchWithAuth(
-      `${apiUrl}/thematic/${thematicID}?action=deleteThematic`,
+      `${tenantApiUrl()}/thematic/${thematicID}?action=deleteThematic`,
       {
         method: 'DELETE',
       },

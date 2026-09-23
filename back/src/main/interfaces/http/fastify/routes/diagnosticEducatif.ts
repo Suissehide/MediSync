@@ -1,7 +1,6 @@
 import Boom from '@hapi/boom'
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod/v4'
-import { Role } from '../../../../../generated/enums'
 import {
   type CreateDiagnosticEducatifBody,
   type DiagnosticParams,
@@ -19,16 +18,13 @@ import {
 const diagnosticEducatifRouter: FastifyPluginAsync = (fastify) => {
   const { diagnosticEducatifDomain, diagnosticEducatifTemplateDomain } = fastify.iocContainer
 
-  // Données médicales sensibles : réservé aux comptes validés (rôle >= USER).
-  fastify.addHook('preHandler', fastify.requireMinRole(Role.USER))
-
   // Get all by patient
   fastify.get<{ Params: DiagnosticPatientParams }>('/', {
     schema: {
       params: diagnosticPatientParamsSchema,
       response: { 200: diagnosticEducatifsResponseSchema },
     },
-    onRequest: [fastify.verifySessionCookie],
+    config: { permission: 'clinical:read' },
   }, (request) => diagnosticEducatifDomain.findByPatientID(request.params.patientId))
 
   // Get by ID
@@ -37,7 +33,7 @@ const diagnosticEducatifRouter: FastifyPluginAsync = (fastify) => {
       params: diagnosticParamsSchema,
       response: { 200: diagnosticEducatifResponseSchema, 404: z.object({ message: z.string() }) },
     },
-    onRequest: [fastify.verifySessionCookie],
+    config: { permission: 'clinical:read' },
   }, async (request) => {
     const diag = await diagnosticEducatifDomain.findByID(request.params.diagnosticId)
     if (!diag) {
@@ -53,7 +49,7 @@ const diagnosticEducatifRouter: FastifyPluginAsync = (fastify) => {
       body: createDiagnosticEducatifSchema,
       response: { 201: diagnosticEducatifResponseSchema },
     },
-    onRequest: [fastify.verifySessionCookie],
+    config: { permission: 'clinical:write' },
   }, async (request, reply) => {
     const { templateId, ...rest } = request.body
     let activeFields: string[] = rest.activeFields ?? []
@@ -74,7 +70,7 @@ const diagnosticEducatifRouter: FastifyPluginAsync = (fastify) => {
   // Update
   fastify.patch<{ Params: UpdateDiagnosticEducatifParams; Body: UpdateDiagnosticEducatifBody }>('/:diagnosticId', {
     schema: { ...updateDiagnosticEducatifSchema, response: { 200: diagnosticEducatifResponseSchema } },
-    onRequest: [fastify.verifySessionCookie],
+    config: { permission: 'clinical:write' },
   }, (request) => {
     return diagnosticEducatifDomain.update(
       request.params.diagnosticId,
@@ -86,7 +82,7 @@ const diagnosticEducatifRouter: FastifyPluginAsync = (fastify) => {
   // Delete
   fastify.delete<{ Params: DiagnosticParams }>('/:diagnosticId', {
     schema: { params: diagnosticParamsSchema, response: { 204: z.null() } },
-    onRequest: [fastify.verifySessionCookie],
+    config: { permission: 'clinical:write' },
   }, async (request, reply) => {
     await diagnosticEducatifDomain.delete(request.params.diagnosticId)
     reply.code(204).send()

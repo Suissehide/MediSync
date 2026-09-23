@@ -10,8 +10,9 @@ export type PatientWithTagsEntityRepo = Patient & {
   pathwayTemplateTags: string[]
   enrollmentIssues: EnrollmentIssueEntityRepo[]
 }
-export type PatientCreateEntityRepo = Prisma.PatientUncheckedCreateInput
-export type PatientUpdateEntityRepo = Prisma.PatientUncheckedUpdateInput
+// Le repository pose establishmentId lui-même : l'appelant ne le fournit pas.
+export type PatientCreateEntityRepo = Omit<Prisma.PatientUncheckedCreateInput, 'establishmentId'>
+export type PatientUpdateEntityRepo = Omit<Prisma.PatientUncheckedUpdateInput, 'establishmentId'>
 
 export type PatientExportFilters = {
   search?: string

@@ -9,16 +9,18 @@ export type PathwayWithTemplateAndSlotsDomain = PathwayEntityDomain & {
   template: PathwayTemplate | null
   slots: Slot[]
 }
+// Le repository pose serviceId/establishmentId (tenant) lui-même : l'appelant
+// ne les fournit pas. Miroir de PathwayCreateEntityRepo/PathwayUpdateEntityRepo.
 export type PathwayCreateEntityDomain = Omit<
   Prisma.PathwayUncheckedCreateInput,
-  'slots' | 'template'
+  'establishmentId' | 'serviceId' | 'slots' | 'template'
 > & {
   templateID?: string
   slotIDs: string[]
 }
 export type PathwayUpdateEntityDomain = Omit<
   Prisma.PathwayUncheckedUpdateInput,
-  'slots' | 'template'
+  'establishmentId' | 'serviceId' | 'slots' | 'template'
 > & {
   templateID?: string
   slotIDs: string[]

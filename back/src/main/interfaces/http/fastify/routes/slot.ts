@@ -33,7 +33,7 @@ const slotRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
-      onRequest: [fastify.verifySessionCookie],
+      config: { permission: 'planning:read' },
     },
     async (request) => {
       const { from, to } = request.query
@@ -52,6 +52,7 @@ const slotRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
+      config: { permission: 'planning:read' },
     },
     async (request) => {
       const { slotID } = request.params
@@ -73,6 +74,7 @@ const slotRouter: FastifyPluginAsync = (fastify) => {
           201: slotResponseSchema,
         },
       },
+      config: { permission: 'planning:write' },
     },
     async (request, reply) => {
       let createSlotInput = request.body
@@ -106,6 +108,7 @@ const slotRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
+      config: { permission: 'planning:write' },
     },
     async (request) => {
       const { slotID } = request.params
@@ -128,6 +131,7 @@ const slotRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
+      config: { permission: 'planning:write' },
     },
     async (request, reply) => {
       const { slotID } = request.params

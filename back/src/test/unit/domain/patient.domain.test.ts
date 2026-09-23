@@ -1,6 +1,9 @@
+import Boom from '@hapi/boom'
+
 import { PatientDomain } from '../../../main/domain/patient.domain'
 import type { IocContainer } from '../../../main/types/application/ioc'
 import type { PathwayWithSlotsRepo } from '../../../main/types/infra/orm/repositories/pathway.repository.interface'
+import type { ServiceRole } from '../../../main/utils/permissions'
 
 type CreatedAppointment = {
   id: string
@@ -52,6 +55,10 @@ const buildPathway = (
 const buildDomain = (
   initialAppointments: CreatedAppointment[] = [],
   slotAppointments: SlotAppointments = {},
+  knownThematicIDs: string[] = [],
+  // Role de service du contexte de tenant courant. INTERVENANT par defaut :
+  // il a `clinical:write`, comme le coordinateur.
+  serviceRole: ServiceRole = 'INTERVENANT',
 ) => {
   const created: CreatedAppointment[] = [...initialAppointments]
   let nextId = created.length + 1
@@ -94,6 +101,11 @@ const buildDomain = (
   })
 
   const container = {
+    // Contexte de tenant minimal : seuls les roles sont lus par le domaine
+    // (report du motif dans une transmission clinique).
+    tenantContext: {
+      current: () => ({ serviceRole, establishmentRole: 'MEMBER' }),
+    },
     logger: {
       error: jest.fn(),
       info: jest.fn(),
@@ -162,11 +174,17 @@ const buildDomain = (
       ),
     },
     enrollmentIssueRepository: { create: jest.fn(async () => undefined) },
-    thematicRepository: { findByID: jest.fn() },
+    thematicRepository: {
+      findByID: jest.fn((id: string) =>
+        knownThematicIDs.includes(id)
+          ? Promise.resolve({ id, duration: 30 })
+          : Promise.reject(Boom.notFound(`Thematic ${id} not found`)),
+      ),
+    },
   }
 
   const domain = new PatientDomain(container as unknown as IocContainer)
-  return { domain, created }
+  return { domain, created, container }
 }
 
 describe('PatientDomain – résolution du parcours par tag principal', () => {
@@ -329,5 +347,130 @@ describe('PatientDomain – parcours individuel "premier créneau dispo"', () =>
     expect(result.failedEnrollments).toEqual([])
     expect(created).toHaveLength(1)
     expect((created[0] as CreatedAppointment).slotID).toBe('slot-indiv-tue')
+  })
+})
+
+describe('PatientDomain – thematicID d\'une inscription', () => {
+  it('cree le rendez-vous quand la thematique est connue du tenant', async () => {
+    const { domain, created } = buildDomain([], {}, ['them-1'])
+
+    const result = await domain.enrollExistingPatientInPathways(
+      {
+        patientID: 'patient-1',
+        startDate: monday(0),
+        pathways: [
+          { tag: 'INDIV', timeOfDay: 'ALL_DAY', duration: 30, thematicID: 'them-1' },
+        ],
+      },
+      'user-1',
+    )
+
+    expect(result.failedEnrollments).toEqual([])
+    expect(created).toHaveLength(1)
+  })
+
+  // `thematicID` finit directement dans Appointment.thematicId via
+  // appointmentRepository.create, sans passer par AppointmentDomain : cette
+  // référence doit donc être vérifiée par PatientDomain lui-même.
+  it("echoue en inscription plutot que d'ecrire une thematique etrangere au tenant", async () => {
+    const { domain, created } = buildDomain([], {}, [])
+
+    const result = await domain.enrollExistingPatientInPathways(
+      {
+        patientID: 'patient-1',
+        startDate: monday(0),
+        pathways: [
+          { tag: 'INDIV', timeOfDay: 'ALL_DAY', duration: 30, thematicID: 'them-etranger' },
+        ],
+      },
+      'user-1',
+    )
+
+    expect(created).toHaveLength(0)
+    expect(result.failedEnrollments).toHaveLength(1)
+    expect(result.failedEnrollments[0]?.reason).toMatch(/not found/i)
+  })
+
+  // Même vérification que ci-dessus, mais sur le second point d'entrée
+  // (nouveau patient, pas encore en base) : les deux passent par la même
+  // méthode privée partagée (enrollPatientInTag), ce test le démontre.
+  it("echoue aussi a l'inscription d'un nouveau patient sur une thematique etrangere au tenant", async () => {
+    const { domain, created } = buildDomain([], {}, [])
+
+    const result = await domain.enrollPatientInPathways(
+      {
+        patientData: { firstName: 'Ada', lastName: 'Lovelace' } as never,
+        startDate: monday(0),
+        pathways: [
+          { tag: 'INDIV', timeOfDay: 'ALL_DAY', duration: 30, thematicID: 'them-etranger' },
+        ],
+      },
+      'user-1',
+    )
+
+    expect(created).toHaveLength(0)
+    expect(result.failedEnrollments).toHaveLength(1)
+    expect(result.failedEnrollments[0]?.reason).toMatch(/not found/i)
+  })
+})
+
+// `transmissionNotes` est une colonne clinique : le hook `stripClinicalInput`
+// la refuse en entree pour qui n'a pas `clinical:write`. L'inscription la
+// remplissait sous le nom `motif`, que le hook ne reconnait pas — un compte
+// SECRETARIAT ou LECTURE ecrivait donc dans une transmission clinique par la
+// porte de service.
+describe('PatientDomain – report du motif dans une transmission clinique', () => {
+  const enroll = (domain: PatientDomain) =>
+    domain.enrollExistingPatientInPathways(
+      {
+        patientID: 'patient-1',
+        startDate: monday(0),
+        pathways: [
+          { tag: 'INDIV', timeOfDay: 'ALL_DAY', duration: 30, motif: 'douleur' },
+        ],
+      },
+      'user-1',
+    )
+
+  const transmissionNotesOfCreate = (container: {
+    appointmentRepository: { create: jest.Mock }
+  }) =>
+    (container.appointmentRepository.create.mock.calls[0]?.[0] as {
+      transmissionNotes?: string
+    })?.transmissionNotes
+
+  it('reporte le motif pour un role qui a clinical:write', async () => {
+    const { domain, created, container } = buildDomain([], {}, [], 'INTERVENANT')
+
+    const result = await enroll(domain)
+
+    expect(result.failedEnrollments).toEqual([])
+    expect(created).toHaveLength(1)
+    expect(
+      transmissionNotesOfCreate(container as never),
+    ).toBe('douleur')
+  })
+
+  it('inscrit sans ecrire de transmission pour un role sans clinical:write', async () => {
+    const { domain, created, container } = buildDomain([], {}, [], 'SECRETARIAT')
+
+    const result = await enroll(domain)
+
+    // L'inscription reussit : seule la transmission clinique est refusee.
+    expect(result.failedEnrollments).toEqual([])
+    expect(created).toHaveLength(1)
+    expect(
+      transmissionNotesOfCreate(container as never),
+    ).toBeUndefined()
+  })
+
+  it('n ecrit pas non plus de transmission en lecture seule', async () => {
+    const { domain, container } = buildDomain([], {}, [], 'LECTURE')
+
+    await enroll(domain)
+
+    expect(
+      transmissionNotesOfCreate(container as never),
+    ).toBeUndefined()
   })
 })

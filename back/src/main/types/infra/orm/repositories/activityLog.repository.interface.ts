@@ -1,5 +1,7 @@
 export type ActivityLogEntityRepo = {
   id: string
+  establishmentId: string | null
+  serviceId: string | null
   userID: string
   userFirstName: string | null
   userLastName: string | null
@@ -9,7 +11,10 @@ export type ActivityLogEntityRepo = {
   createdAt: Date
 }
 
-export type ActivityLogCreateEntityRepo = Omit<ActivityLogEntityRepo, 'id' | 'createdAt'>
+export type ActivityLogCreateEntityRepo = Omit<
+  ActivityLogEntityRepo,
+  'id' | 'createdAt' | 'establishmentId' | 'serviceId'
+>
 
 export type ActivityLogFindManyParams = {
   page: number

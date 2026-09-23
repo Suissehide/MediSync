@@ -1,8 +1,6 @@
-import Boom from '@hapi/boom'
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod/v4'
 
-import { Role } from '../../../../../generated/enums'
 import {
   type CreateForbiddenWeekBody,
   createForbiddenWeekBodySchema,
@@ -13,20 +11,21 @@ import {
 } from '../schemas/forbiddenWeek.schema'
 
 const forbiddenWeekRouter: FastifyPluginAsync = (fastify) => {
-  const { forbiddenWeekDomain, userDomain } = fastify.iocContainer
+  const { forbiddenWeekDomain } = fastify.iocContainer
 
-  // Readable by any authenticated user (needed to display forbidden weeks in calendar)
+  // Lisible par tout membre du service (affichage des semaines interdites
+  // dans le calendrier) ; l'ecriture demande planning:write.
   // Get all
   fastify.get(
     '/',
     {
       schema: { response: { 200: forbiddenWeeksResponseSchema } },
-      onRequest: [fastify.verifySessionCookie],
+      config: { permission: 'planning:read' },
     },
     () => forbiddenWeekDomain.findAll(),
   )
 
-  // Create (admin only)
+  // Create
   fastify.post<{ Body: CreateForbiddenWeekBody }>(
     '/',
     {
@@ -37,20 +36,16 @@ const forbiddenWeekRouter: FastifyPluginAsync = (fastify) => {
           403: z.object({ message: z.string() }),
         },
       },
-      onRequest: [fastify.verifySessionCookie],
+      config: { permission: 'planning:write' },
     },
     async (request, reply) => {
-      const currentUser = await userDomain.findByID(request.user.userID)
-      if (currentUser?.role !== Role.ADMIN) {
-        throw Boom.forbidden('Forbidden')
-      }
       const forbiddenWeek = await forbiddenWeekDomain.create(request.body.date)
       reply.code(201)
       return forbiddenWeek
     },
   )
 
-  // Delete (admin only)
+  // Delete
   fastify.delete<{ Params: DeleteForbiddenWeekParams }>(
     '/:id',
     {
@@ -61,13 +56,9 @@ const forbiddenWeekRouter: FastifyPluginAsync = (fastify) => {
           403: z.object({ message: z.string() }),
         },
       },
-      onRequest: [fastify.verifySessionCookie],
+      config: { permission: 'planning:write' },
     },
     async (request, reply) => {
-      const currentUser = await userDomain.findByID(request.user.userID)
-      if (currentUser?.role !== Role.ADMIN) {
-        throw Boom.forbidden('Forbidden')
-      }
       await forbiddenWeekDomain.delete(request.params.id)
       reply.code(204).send()
     },

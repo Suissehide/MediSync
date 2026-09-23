@@ -73,6 +73,33 @@ export const useLogout = () => {
   return { logoutMutation, isPending, error }
 }
 
+export const useUpdateMe = () => {
+  const update = useAuthStore((state) => state.update)
+
+  const mutation = useMutation({
+    mutationFn: async (params: {
+      firstName?: string
+      lastName?: string
+      currentPassword?: string
+      newPassword?: string
+    }) => {
+      return await AuthApi.updateMe(params)
+    },
+    onSuccess: (user) => {
+      update(user)
+    },
+    retry: 0,
+  })
+
+  useDataFetching({
+    isPending: mutation.isPending,
+    isError: mutation.isError,
+    error: mutation.error,
+  })
+
+  return mutation
+}
+
 export const useRegister = () => {
   const {
     mutate: registerMutation,

@@ -1,11 +1,11 @@
 import { ChevronDown, Route, Stethoscope } from 'lucide-react'
 import { useState } from 'react'
 
+import { useCan } from '../../../hooks/useCan.ts'
 import {
   type DashboardFilterMode,
   useDashboardFilterStore,
 } from '../../../store/useDashboardFilterStore.ts'
-import type { User } from '../../../types/auth.ts'
 import {
   PopoverContent,
   PopoverMenuItem,
@@ -20,11 +20,8 @@ const modeLabels: Record<DashboardFilterMode, string> = {
   pathway: 'Parcours',
 }
 
-interface SidebarDashboardFilterProps {
-  user?: User | null
-}
-
-function SidebarDashboardFilter({ user }: SidebarDashboardFilterProps) {
+function SidebarDashboardFilter() {
+  const isAdmin = useCan('soignants:manage')
   const mode = useDashboardFilterStore((state) => state.mode)
   const setMode = useDashboardFilterStore((state) => state.setMode)
   const [isOpen, setIsOpen] = useState(false)
@@ -63,9 +60,7 @@ function SidebarDashboardFilter({ user }: SidebarDashboardFilterProps) {
     return <PathwayTemplateFilterSection title={title} />
   }
 
-  return (
-    <SoignantFilterSection isAdmin={user?.role === 'ADMIN'} title={title} />
-  )
+  return <SoignantFilterSection isAdmin={isAdmin} title={title} />
 }
 
 export default SidebarDashboardFilter

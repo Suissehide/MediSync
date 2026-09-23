@@ -4,6 +4,16 @@ import type { UserRepositoryInterface } from '../types/infra/orm/repositories/us
 import type { AppEventBus } from '../utils/app-event-bus'
 import type { Logger } from '../types/utils/logger'
 
+// Les cinq operations de gestion des membres partagent la meme forme de
+// charge utile : une seule boucle suffit a les journaliser toutes.
+const MEMBER_ACTIONS = [
+  'member.added',
+  'member.updated',
+  'member.removed',
+  'member.deactivated',
+  'member.reactivated',
+] as const
+
 class ActivityLogSubscriber {
   private readonly appEventBus: AppEventBus
   private readonly activityLogRepository: ActivityLogRepositoryInterface
@@ -42,6 +52,10 @@ class ActivityLogSubscriber {
       this.#log('appointment.created', 'appointment', p.userID, p.appointmentId))
     this.appEventBus.on('appointment.updated', (p) =>
       this.#log('appointment.updated', 'appointment', p.userID, p.appointmentId))
+    for (const action of MEMBER_ACTIONS) {
+      this.appEventBus.on(action, (p) =>
+        this.#log(action, 'member', p.userID, p.membershipId))
+    }
   }
 
   async #log(

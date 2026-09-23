@@ -10,6 +10,7 @@ import type {
   PatientWithTagsEntityRepo,
 } from '../../../types/infra/orm/repositories/patient.repository.interface'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
+import type { TenantContextInterface } from '../../../types/utils/tenant-context'
 import type { PostgresPrismaClient } from '../postgres-client'
 
 type AppointmentPatientWithMainTag = {
@@ -33,20 +34,35 @@ const distinctMainTags = (
 class PatientRepository implements PatientRepositoryInterface {
   private readonly prisma: PostgresPrismaClient
   private readonly errorHandler: ErrorHandlerInterface
+  private readonly tenantContext: TenantContextInterface
 
-  constructor({ postgresOrm, errorHandler }: IocContainer) {
+  constructor({ postgresOrm, errorHandler, tenantContext }: IocContainer) {
     this.prisma = postgresOrm.prisma
     this.errorHandler = errorHandler
+    this.tenantContext = tenantContext
+  }
+
+  private get establishmentScope() {
+    return this.tenantContext.establishmentScope()
+  }
+
+  // Le patient est un modèle d'établissement, mais plusieurs de ses méthodes
+  // interrogent des modèles de service (parcours, rendez-vous, priorités) :
+  // `scope` fournit le filtre service + établissement pour ces requêtes-là.
+  private get scope() {
+    return this.tenantContext.scope()
   }
 
   findAll(): Promise<PatientEntityRepo[]> {
-    return this.prisma.patient.findMany()
+    return this.prisma.patient.findMany({ where: this.establishmentScope })
   }
 
   async findAllWithTags(): Promise<PatientWithTagsEntityRepo[]> {
     const patients = await this.prisma.patient.findMany({
+      where: this.establishmentScope,
       include: {
         appointmentPatients: {
+          where: { serviceId: this.scope.serviceId },
           select: {
             appointment: {
               select: {
@@ -63,7 +79,7 @@ class PatientRepository implements PatientRepositoryInterface {
             },
           },
         },
-        enrollmentIssues: true,
+        enrollmentIssues: { where: { serviceId: this.scope.serviceId } },
       },
     })
 
@@ -78,6 +94,7 @@ class PatientRepository implements PatientRepositoryInterface {
 
     const patients = await this.prisma.patient.findMany({
       where: {
+        ...this.establishmentScope,
         ...(search
           ? {
               OR: [
@@ -90,6 +107,7 @@ class PatientRepository implements PatientRepositoryInterface {
           ? {
               appointmentPatients: {
                 some: {
+                  serviceId: this.scope.serviceId,
                   appointment: {
                     slot: {
                       pathway: {
@@ -104,6 +122,7 @@ class PatientRepository implements PatientRepositoryInterface {
       },
       include: {
         appointmentPatients: {
+          where: { serviceId: this.scope.serviceId },
           select: {
             appointment: {
               select: {
@@ -120,7 +139,7 @@ class PatientRepository implements PatientRepositoryInterface {
             },
           },
         },
-        enrollmentIssues: true,
+        enrollmentIssues: { where: { serviceId: this.scope.serviceId } },
       },
       orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
     })
@@ -134,14 +153,15 @@ class PatientRepository implements PatientRepositoryInterface {
   async findByID(patientID: string): Promise<PatientWithAppointmentsDomain> {
     try {
       return await this.prisma.patient.findUniqueOrThrow({
-        where: { id: patientID },
+        where: { id_establishmentId: { id: patientID, ...this.establishmentScope } },
         include: {
           appointmentPatients: {
+            where: { serviceId: this.scope.serviceId },
             include: {
               appointment: true,
             },
           },
-          enrollmentIssues: true,
+          enrollmentIssues: { where: { serviceId: this.scope.serviceId } },
         },
       })
     } catch (err) {
@@ -157,7 +177,7 @@ class PatientRepository implements PatientRepositoryInterface {
   ): Promise<PatientEntityRepo> {
     try {
       return await this.prisma.patient.create({
-        data: patientCreateParams,
+        data: { ...patientCreateParams, ...this.establishmentScope },
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
@@ -173,7 +193,7 @@ class PatientRepository implements PatientRepositoryInterface {
   ): Promise<PatientEntityRepo> {
     try {
       return await this.prisma.patient.update({
-        where: { id: patientID },
+        where: { id_establishmentId: { id: patientID, ...this.establishmentScope } },
         data: patientUpdateParams,
       })
     } catch (err) {
@@ -187,7 +207,7 @@ class PatientRepository implements PatientRepositoryInterface {
   async delete(patientID: string): Promise<PatientEntityRepo> {
     try {
       return await this.prisma.patient.delete({
-        where: { id: patientID },
+        where: { id_establishmentId: { id: patientID, ...this.establishmentScope } },
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
@@ -203,6 +223,7 @@ class PatientRepository implements PatientRepositoryInterface {
     try {
       const pathways = await this.prisma.pathway.findMany({
         where: {
+          ...this.scope,
           slots: {
             some: {
               appointments: {
@@ -218,7 +239,7 @@ class PatientRepository implements PatientRepositoryInterface {
             select: { id: true, name: true, color: true, mainTag: true },
           },
           patientPriorities: {
-            where: { patientID },
+            where: { patientID, serviceId: this.scope.serviceId },
             select: { priority: true },
           },
         },
@@ -258,7 +279,7 @@ class PatientRepository implements PatientRepositoryInterface {
   ): Promise<void> {
     try {
       await this.prisma.$transaction(async (tx) => {
-        await tx.patientPathwayPriority.deleteMany({ where: { patientID } })
+        await tx.patientPathwayPriority.deleteMany({ where: { patientID, ...this.scope } })
         if (orderedPathwayIDs.length === 0) {
           return
         }
@@ -267,6 +288,7 @@ class PatientRepository implements PatientRepositoryInterface {
             patientID,
             pathwayID,
             priority: index,
+            ...this.scope,
           })),
         })
       })
@@ -285,6 +307,7 @@ class PatientRepository implements PatientRepositoryInterface {
     try {
       const count = await this.prisma.appointmentPatient.count({
         where: {
+          ...this.scope,
           patientId: patientID,
           appointment: {
             slot: {
@@ -310,6 +333,7 @@ class PatientRepository implements PatientRepositoryInterface {
       return await this.prisma.$transaction(async (tx) => {
         const appointmentPatients = await tx.appointmentPatient.findMany({
           where: {
+            ...this.scope,
             patientId: patientID,
             appointment: {
               slot: {
@@ -337,12 +361,12 @@ class PatientRepository implements PatientRepositoryInterface {
           const isOnlyPatient = ap.appointment.appointmentPatients.length <= 1
 
           await tx.appointmentPatient.delete({
-            where: { id: ap.id },
+            where: { id_serviceId: { id: ap.id, serviceId: this.scope.serviceId } },
           })
 
           if (isOnlyPatient) {
             await tx.appointment.delete({
-              where: { id: ap.appointment.id },
+              where: { id_serviceId: { id: ap.appointment.id, serviceId: this.scope.serviceId } },
             })
             deletedAppointments++
           } else {

@@ -26,11 +26,13 @@ interface SidebarProps {
 
 function Sidebar({ isVisible, components, quickActions }: SidebarProps) {
   const router = useRouter()
-  const user = router.options.context?.authState?.user
   const { logoutMutation } = useLogout()
   const authState = router.options.context?.authState
 
-  function getInitiales(firstName?: string, lastName?: string): string {
+  function getInitiales(
+    firstName?: string | null,
+    lastName?: string | null,
+  ): string {
     return (
       (firstName?.trim()[0] ?? '') + (lastName?.trim()[0] ?? '')
     ).toUpperCase()
@@ -41,8 +43,8 @@ function Sidebar({ isVisible, components, quickActions }: SidebarProps) {
   }
 
   const componentMap: Record<string, JSX.Element> = {
-    soignant: <SidebarSoignant user={user} />,
-    dashboardFilter: <SidebarDashboardFilter user={user} />,
+    soignant: <SidebarSoignant />,
+    dashboardFilter: <SidebarDashboardFilter />,
     pathway: <SidebarPathway />,
     patient: <SidebarPatient />,
     diagnostic: <SidebarDiagnostic />,

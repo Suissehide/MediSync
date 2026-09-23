@@ -76,6 +76,11 @@ export type PatientExportFilters = {
   pathwayTemplateTags?: string[]
 }
 
+// L'export Excel est un Buffer : le hook `preSerialization` qui retire les
+// champs cliniques des réponses JSON ne le voit pas. L'appelant doit donc
+// dire explicitement s'il a `clinical:read`.
+export type PatientExportOptions = { includeClinicalFields: boolean }
+
 export type RemoveFromPathwayResult = {
   deletedAppointments: number
   removedFromGroup: number
@@ -95,7 +100,10 @@ export interface PatientDomainInterface {
   findAll: () => Promise<PatientEntityDomain[]>
   findAllWithTags: () => Promise<PatientWithTagsDomain[]>
   findByID: (patientID: string) => Promise<PatientEntityDomain>
-  exportExcel: (filters: PatientExportFilters) => Promise<Buffer>
+  exportExcel: (
+    filters: PatientExportFilters,
+    options: PatientExportOptions,
+  ) => Promise<Buffer>
   create: (
     patientCreateParams: PatientCreateEntityDomain,
     userID: string,

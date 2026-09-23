@@ -6,7 +6,7 @@ import interactionPlugin, {
 } from '@fullcalendar/interaction'
 import multiMonthPlugin from '@fullcalendar/multimonth'
 import FullCalendar from '@fullcalendar/react'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 import dayjs from 'dayjs'
 import {
   CalendarDays,
@@ -54,6 +54,7 @@ import {
   ToggleGroupItem,
 } from '../../../../components/ui/toggle-group.tsx'
 import { TOAST_SEVERITY } from '../../../../constants/ui.constant.ts'
+import { can } from '../../../../hooks/useCan.ts'
 import { useToast } from '../../../../hooks/useToast.ts'
 import {
   buildCalendarEventsFromSlots,
@@ -78,6 +79,7 @@ import {
   useSlotsInRangeQuery,
 } from '../../../../queries/useSlot.ts'
 import { useSlotTemplateMutations } from '../../../../queries/useSlotTemplate.ts'
+import { deriveContext } from '../../../../store/useAuthStore.ts'
 import { usePathwayTemplateEditStore } from '../../../../store/usePathwayTemplateEditStore.ts'
 import { usePlanningStore } from '../../../../store/usePlanningStore.ts'
 import type {
@@ -89,6 +91,20 @@ import { cycleWeekNumber } from '../../../../utils/weekCycle.ts'
 export const Route = createFileRoute(
   '/_authenticated/_admin/settings/planning',
 )({
+  // La branche `_admin` admet quiconque détient au moins une des six
+  // permissions de réglages ; cet écran, lui, exige spécifiquement
+  // `planning:write` (il ne contient que des actions d'écriture de
+  // planning : créneaux, modèles, parcours, semaines interdites, cycle).
+  // Vu le nombre de contrôles concernés, on garde l'écran entier plutôt que
+  // chaque bouton un par un.
+  beforeLoad: ({ context }) => {
+    if (!can(deriveContext(context.authState.user), 'planning:write')) {
+      throw redirect({ to: '/' })
+    }
+  },
+  shouldReload({ context }) {
+    return !can(deriveContext(context.authState.user), 'planning:write')
+  },
   component: Planning,
 })
 

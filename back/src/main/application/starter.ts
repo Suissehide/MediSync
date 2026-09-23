@@ -11,12 +11,14 @@ const startIocContainer = (config: Config): AwilixIocContainer => {
 const ONE_DAY_MS = 24 * 60 * 60 * 1000
 
 // Purge périodique du journal d'activité (rétention 12 mois côté domaine),
-// pour éviter une croissance non bornée de la table.
+// pour éviter une croissance non bornée de la table. Hors de toute requête :
+// encadrée par runAsSystem pour que le repository purge toute la table plutôt
+// qu'un tenant particulier.
 const scheduleActivityLogCleanup = (instances: IocContainer): void => {
-  const { activityLogDomain, logger } = instances
+  const { activityLogDomain, logger, tenantContext } = instances
   const run = (): void => {
-    activityLogDomain
-      .cleanup()
+    tenantContext
+      .runAsSystem(() => activityLogDomain.cleanup())
       .then(({ deleted }) =>
         logger.info(`ActivityLog cleanup: ${deleted} entrées supprimées`),
       )

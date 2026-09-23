@@ -50,7 +50,7 @@ const pathwayRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
-      onRequest: [fastify.verifySessionCookie],
+      config: { permission: 'planning:read' },
     },
     () => {
       return pathwayDomain.findAll()
@@ -67,7 +67,7 @@ const pathwayRouter: FastifyPluginAsync = (fastify) => {
           200: trackingResponseSchema,
         },
       },
-      onRequest: [fastify.verifySessionCookie],
+      config: { permission: 'planning:read' },
     },
     (request) => {
       const { year, month } = request.query
@@ -85,6 +85,7 @@ const pathwayRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
+      config: { permission: 'planning:read' },
     },
     async (request) => {
       const { pathwayID } = request.params
@@ -106,6 +107,7 @@ const pathwayRouter: FastifyPluginAsync = (fastify) => {
           201: pathwayResponseSchema,
         },
       },
+      config: { permission: 'planning:write' },
     },
     async (request, reply) => {
       const pathway = await pathwayDomain.create(request.body)
@@ -125,6 +127,7 @@ const pathwayRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
+      config: { permission: 'planning:write' },
     },
     async (request) => {
       const { pathwayID } = request.params
@@ -147,6 +150,7 @@ const pathwayRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
+      config: { permission: 'planning:write' },
     },
     async (request, reply) => {
       const { pathwayID } = request.params
@@ -170,6 +174,7 @@ const pathwayRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
+      config: { permission: 'planning:write' },
     },
     async (request) => {
       const { pathwayTemplateID, startDate } = request.body
@@ -251,6 +256,7 @@ const pathwayRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
+      config: { permission: 'planning:write' },
     },
     (request) => {
       const { pathwayTemplateID, fromDate } = request.body

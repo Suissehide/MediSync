@@ -4,8 +4,16 @@ import type {
 } from '../../../../../generated/client'
 
 export type TodoEntityRepo = Todo
-export type TodoCreateEntityRepo = Prisma.TodoUncheckedCreateInput
-export type TodoUpdateEntityRepo = Prisma.TodoUncheckedUpdateInput
+// Le repository pose serviceId/establishmentId (tenant) et soignantID (profil
+// soignant courant) lui-meme : l'appelant ne les fournit pas.
+export type TodoCreateEntityRepo = Omit<
+  Prisma.TodoUncheckedCreateInput,
+  'serviceId' | 'establishmentId' | 'soignantID'
+>
+export type TodoUpdateEntityRepo = Omit<
+  Prisma.TodoUncheckedUpdateInput,
+  'serviceId' | 'establishmentId' | 'soignantID'
+>
 
 export interface TodoRepositoryInterface {
   findAll: () => Promise<TodoEntityRepo[]>

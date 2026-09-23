@@ -1,4 +1,4 @@
-import { apiUrl } from '../constants/config.constant.ts'
+import { tenantApiUrl } from '../constants/config.constant.ts'
 import { handleHttpError } from '../libs/httpErrorHandler.ts'
 import type { ActivityLogsResponse } from '../types/activityLog.ts'
 import { fetchWithAuth } from './fetchWithAuth.ts'
@@ -17,13 +17,13 @@ export const ActivityLogApi = {
     if (params.action) query.set('action', params.action)
     if (params.userID) query.set('userID', params.userID)
     if (params.from) query.set('from', params.from)
-    const response = await fetchWithAuth(`${apiUrl}/activity-log?${query}`, { method: 'GET' })
+    const response = await fetchWithAuth(`${tenantApiUrl()}/activity-log?${query}`, { method: 'GET' })
     if (!response.ok) handleHttpError(response, {}, "Impossible de récupérer les logs d'activité")
     return response.json()
   },
 
   cleanup: async (): Promise<{ deleted: number }> => {
-    const response = await fetchWithAuth(`${apiUrl}/activity-log/cleanup`, { method: 'POST' })
+    const response = await fetchWithAuth(`${tenantApiUrl()}/activity-log/cleanup`, { method: 'POST' })
     if (!response.ok) handleHttpError(response, {}, 'Impossible de nettoyer les logs')
     return response.json()
   },

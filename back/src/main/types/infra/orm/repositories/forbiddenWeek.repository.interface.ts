@@ -2,7 +2,11 @@ import type { ForbiddenWeek, Prisma } from '../../../../../generated/client'
 
 export type ForbiddenWeekEntityRepo = ForbiddenWeek
 
-export type ForbiddenWeekCreateEntityRepo = Prisma.ForbiddenWeekUncheckedCreateInput
+// Le repository pose serviceId/establishmentId lui-même : l'appelant ne les fournit pas.
+export type ForbiddenWeekCreateEntityRepo = Omit<
+  Prisma.ForbiddenWeekUncheckedCreateInput,
+  'serviceId' | 'establishmentId'
+>
 
 export interface ForbiddenWeekRepositoryInterface {
   findAll: () => Promise<ForbiddenWeekEntityRepo[]>

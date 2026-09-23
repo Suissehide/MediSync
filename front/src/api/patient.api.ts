@@ -1,4 +1,4 @@
-import { apiUrl } from '../constants/config.constant.ts'
+import { tenantApiUrl } from '../constants/config.constant.ts'
 import {
   ApiError,
   handleHttpError,
@@ -19,7 +19,7 @@ import { fetchWithAuth } from './fetchWithAuth.ts'
 export const PatientApi = {
   getAll: async (): Promise<Patient[]> => {
     try {
-      const response = await fetchWithAuth(`${apiUrl}/patient`, {
+      const response = await fetchWithAuth(`${tenantApiUrl()}/patient`, {
         method: 'GET',
       })
 
@@ -40,7 +40,7 @@ export const PatientApi = {
   },
 
   getAllWithTags: async (): Promise<PatientWithTags[]> => {
-    const response = await fetchWithAuth(`${apiUrl}/patient/with-tags`, {
+    const response = await fetchWithAuth(`${tenantApiUrl()}/patient/with-tags`, {
       method: 'GET',
     })
     if (!response.ok) {
@@ -55,7 +55,7 @@ export const PatientApi = {
 
   getByID: async (patientID: string): Promise<Patient> => {
     const response = await fetchWithAuth(
-      `${apiUrl}/patient/${patientID}?action=getPatientByID`,
+      `${tenantApiUrl()}/patient/${patientID}?action=getPatientByID`,
       {
         method: 'GET',
       },
@@ -73,7 +73,7 @@ export const PatientApi = {
   create: async (
     createPatientParams: CreatePatientParams,
   ): Promise<Patient> => {
-    const response = await fetchWithAuth(`${apiUrl}/patient`, {
+    const response = await fetchWithAuth(`${tenantApiUrl()}/patient`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(createPatientParams),
@@ -88,7 +88,7 @@ export const PatientApi = {
     updatePatientParams: UpdatePatientParams,
   ): Promise<Patient> => {
     const { id: patientID, ...updatePatientInputs } = updatePatientParams
-    const response = await fetchWithAuth(`${apiUrl}/patient/${patientID}`, {
+    const response = await fetchWithAuth(`${tenantApiUrl()}/patient/${patientID}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updatePatientInputs),
@@ -102,7 +102,7 @@ export const PatientApi = {
   enroll: async (
     enrollParams: EnrollPatientParams,
   ): Promise<EnrollmentResult> => {
-    const response = await fetchWithAuth(`${apiUrl}/patient/enroll`, {
+    const response = await fetchWithAuth(`${tenantApiUrl()}/patient/enroll`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(enrollParams),
@@ -118,7 +118,7 @@ export const PatientApi = {
   ): Promise<EnrollmentResult> => {
     const { patientID, ...body } = params
     const response = await fetchWithAuth(
-      `${apiUrl}/patient/${patientID}/enroll`,
+      `${tenantApiUrl()}/patient/${patientID}/enroll`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -136,7 +136,7 @@ export const PatientApi = {
     issueID: string,
   ): Promise<void> => {
     const response = await fetchWithAuth(
-      `${apiUrl}/patient/${patientID}/enrollment-issue/${issueID}`,
+      `${tenantApiUrl()}/patient/${patientID}/enrollment-issue/${issueID}`,
       { method: 'DELETE' },
     )
     if (!response.ok) {
@@ -155,7 +155,7 @@ export const PatientApi = {
       params.append('pathwayTemplateTags', tag)
     }
     const qs = params.toString()
-    const response = await fetchWithAuth(`${apiUrl}/patient/export${qs ? `?${qs}` : ''}`, {
+    const response = await fetchWithAuth(`${tenantApiUrl()}/patient/export${qs ? `?${qs}` : ''}`, {
       method: 'GET',
     })
     if (!response.ok) {
@@ -169,7 +169,7 @@ export const PatientApi = {
     pathwayID: string,
   ): Promise<{ count: number }> => {
     const response = await fetchWithAuth(
-      `${apiUrl}/patient/${patientID}/pathway/${pathwayID}/appointments-count`,
+      `${tenantApiUrl()}/patient/${patientID}/pathway/${pathwayID}/appointments-count`,
       { method: 'GET' },
     )
     if (!response.ok) {
@@ -187,7 +187,7 @@ export const PatientApi = {
     pathwayID: string,
   ): Promise<{ deletedAppointments: number; removedFromGroup: number }> => {
     const response = await fetchWithAuth(
-      `${apiUrl}/patient/${patientID}/pathway/${pathwayID}`,
+      `${tenantApiUrl()}/patient/${patientID}/pathway/${pathwayID}`,
       { method: 'DELETE' },
     )
     if (!response.ok) {
@@ -201,7 +201,7 @@ export const PatientApi = {
   },
 
   delete: async (patientID: string): Promise<void> => {
-    const response = await fetchWithAuth(`${apiUrl}/patient/${patientID}`, {
+    const response = await fetchWithAuth(`${tenantApiUrl()}/patient/${patientID}`, {
       method: 'DELETE',
     })
     if (!response.ok) {
@@ -212,7 +212,7 @@ export const PatientApi = {
 
   getPathways: async (patientID: string): Promise<PatientPathway[]> => {
     const response = await fetchWithAuth(
-      `${apiUrl}/patient/${patientID}/pathways`,
+      `${tenantApiUrl()}/patient/${patientID}/pathways`,
       { method: 'GET' },
     )
     if (!response.ok) {
@@ -230,7 +230,7 @@ export const PatientApi = {
     pathwayIDs: string[],
   ): Promise<void> => {
     const response = await fetchWithAuth(
-      `${apiUrl}/patient/${patientID}/pathway-priorities`,
+      `${tenantApiUrl()}/patient/${patientID}/pathway-priorities`,
       {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },

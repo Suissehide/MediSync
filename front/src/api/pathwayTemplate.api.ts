@@ -1,4 +1,4 @@
-import { apiUrl } from '../constants/config.constant.ts'
+import { tenantApiUrl } from '../constants/config.constant.ts'
 import { handleHttpError } from '../libs/httpErrorHandler.ts'
 import type {
   CreatePathwayTemplateParams,
@@ -10,7 +10,7 @@ import { fetchWithAuth } from './fetchWithAuth.ts'
 export const PathwayTemplateApi = {
   getAll: async (): Promise<PathwayTemplate[]> => {
     const response = await fetchWithAuth(
-      `${apiUrl}/pathway-template?action=getAllPathwayTemplates`,
+      `${tenantApiUrl()}/pathway-template?action=getAllPathwayTemplates`,
       {
         method: 'GET',
       },
@@ -27,7 +27,7 @@ export const PathwayTemplateApi = {
 
   getByID: async (pathwayTemplateID: string): Promise<PathwayTemplate> => {
     const response = await fetchWithAuth(
-      `${apiUrl}/pathway-template/${pathwayTemplateID}?action=getPathwayTemplateByID`,
+      `${tenantApiUrl()}/pathway-template/${pathwayTemplateID}?action=getPathwayTemplateByID`,
       {
         method: 'GET',
       },
@@ -46,7 +46,7 @@ export const PathwayTemplateApi = {
     createPathwayTemplateParams: CreatePathwayTemplateParams,
   ): Promise<PathwayTemplate> => {
     const response = await fetchWithAuth(
-      `${apiUrl}/pathway-template?action=createPathwayTemplate`,
+      `${tenantApiUrl()}/pathway-template?action=createPathwayTemplate`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -69,7 +69,7 @@ export const PathwayTemplateApi = {
     const { id: pathwayTemplateID, ...updatePathwayTemplateInputs } =
       updatePathwayTemplateParams
     const response = await fetchWithAuth(
-      `${apiUrl}/pathway-template/${pathwayTemplateID}?action=updatePathwayTemplate`,
+      `${tenantApiUrl()}/pathway-template/${pathwayTemplateID}?action=updatePathwayTemplate`,
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -88,7 +88,7 @@ export const PathwayTemplateApi = {
 
   delete: async (pathwayTemplateID: string): Promise<void> => {
     const response = await fetchWithAuth(
-      `${apiUrl}/pathway-template/${pathwayTemplateID}?action=deletePathwayTemplate`,
+      `${tenantApiUrl()}/pathway-template/${pathwayTemplateID}?action=deletePathwayTemplate`,
       {
         method: 'DELETE',
       },
@@ -105,7 +105,7 @@ export const PathwayTemplateApi = {
 
   reorder: async (orderedIds: string[]): Promise<void> => {
     const response = await fetchWithAuth(
-      `${apiUrl}/pathway-template/reorder?action=reorderPathwayTemplates`,
+      `${tenantApiUrl()}/pathway-template/reorder?action=reorderPathwayTemplates`,
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },

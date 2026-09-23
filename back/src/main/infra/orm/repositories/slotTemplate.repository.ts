@@ -1,3 +1,4 @@
+import { flattenSlotTemplate, slotTemplateInclude } from '../includes/slot-template.include'
 import type { IocContainer } from '../../../types/application/ioc'
 import type {
   SlotTemplateCreateEntityRepo,
@@ -6,61 +7,62 @@ import type {
   SlotTemplateUpdateEntityRepo,
 } from '../../../types/infra/orm/repositories/slotTemplate.repository.interface'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
+import type { TenantContextInterface } from '../../../types/utils/tenant-context'
 import type { PostgresPrismaClient } from '../postgres-client'
-
-function applyConnect(params: SlotTemplateCreateEntityRepo) {
-  const { soignantIDs, ...rest } = params
-  if (soignantIDs === undefined) {
-    return rest
-  }
-  return {
-    ...rest,
-    soignants: { connect: soignantIDs.map((id) => ({ id })) },
-  }
-}
-
-function applySet(params: SlotTemplateUpdateEntityRepo) {
-  const { soignantIDs, ...rest } = params
-  if (soignantIDs === undefined) {
-    return rest
-  }
-  return {
-    ...rest,
-    soignants: { set: soignantIDs.map((id) => ({ id })) },
-  }
-}
 
 class SlotTemplateRepository implements SlotTemplateRepositoryInterface {
   private readonly prisma: PostgresPrismaClient
   private readonly errorHandler: ErrorHandlerInterface
+  private readonly tenantContext: TenantContextInterface
 
-  constructor({ postgresOrm, errorHandler }: IocContainer) {
+  constructor({ postgresOrm, errorHandler, tenantContext }: IocContainer) {
     this.prisma = postgresOrm.prisma
     this.errorHandler = errorHandler
+    this.tenantContext = tenantContext
   }
 
-  findAll(): Promise<SlotTemplateDTORepo[]> {
-    return this.prisma.slotTemplate.findMany({
-      include: {
-        soignants: true,
-        template: true,
-        location: true,
-        thematic: true,
-      },
+  private get scope() {
+    return this.tenantContext.scope()
+  }
+
+  private links(soignantIDs: string[]) {
+    return soignantIDs.map((soignantId) => ({ soignantId, ...this.scope }))
+  }
+
+  private createData(params: SlotTemplateCreateEntityRepo) {
+    const { soignantIDs, ...rest } = params
+    return {
+      ...rest,
+      ...this.scope,
+      ...(soignantIDs !== undefined && { soignantLinks: { create: this.links(soignantIDs) } }),
+    }
+  }
+
+  private updateData(params: SlotTemplateUpdateEntityRepo) {
+    const { soignantIDs, ...rest } = params
+    return {
+      ...rest,
+      ...(soignantIDs !== undefined && {
+        soignantLinks: { deleteMany: {}, create: this.links(soignantIDs) },
+      }),
+    }
+  }
+
+  async findAll(): Promise<SlotTemplateDTORepo[]> {
+    const rows = await this.prisma.slotTemplate.findMany({
+      where: this.scope,
+      include: slotTemplateInclude,
     })
+    return rows.map(flattenSlotTemplate)
   }
 
   async findByID(slotTemplateID: string): Promise<SlotTemplateDTORepo> {
     try {
-      return await this.prisma.slotTemplate.findUniqueOrThrow({
-        where: { id: slotTemplateID },
-        include: {
-          soignants: true,
-          template: true,
-          location: true,
-          thematic: true,
-        },
+      const row = await this.prisma.slotTemplate.findUniqueOrThrow({
+        where: { id_serviceId: { id: slotTemplateID, serviceId: this.scope.serviceId } },
+        include: slotTemplateInclude,
       })
+      return flattenSlotTemplate(row)
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
         entityName: 'SlotTemplate',
@@ -73,17 +75,12 @@ class SlotTemplateRepository implements SlotTemplateRepositoryInterface {
     slotTemplateCreateParams: SlotTemplateCreateEntityRepo,
   ): Promise<SlotTemplateDTORepo> {
     try {
-      return await this.prisma.slotTemplate.create({
-        data: applyConnect(slotTemplateCreateParams),
-        include: {
-          soignants: true,
-          template: true,
-          location: true,
-          thematic: true,
-        },
+      const row = await this.prisma.slotTemplate.create({
+        data: this.createData(slotTemplateCreateParams),
+        include: slotTemplateInclude,
       })
+      return flattenSlotTemplate(row)
     } catch (err) {
-      console.error('Prisma error:', err)
       throw this.errorHandler.boomErrorFromPrismaError({
         entityName: 'SlotTemplate',
         parentEntityName: 'Soignant',
@@ -97,16 +94,12 @@ class SlotTemplateRepository implements SlotTemplateRepositoryInterface {
     slotTemplateUpdateParams: SlotTemplateUpdateEntityRepo,
   ): Promise<SlotTemplateDTORepo> {
     try {
-      return await this.prisma.slotTemplate.update({
-        where: { id: slotTemplateID },
-        data: applySet(slotTemplateUpdateParams),
-        include: {
-          soignants: true,
-          template: true,
-          location: true,
-          thematic: true,
-        },
+      const row = await this.prisma.slotTemplate.update({
+        where: { id_serviceId: { id: slotTemplateID, serviceId: this.scope.serviceId } },
+        data: this.updateData(slotTemplateUpdateParams),
+        include: slotTemplateInclude,
       })
+      return flattenSlotTemplate(row)
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
         entityName: 'SlotTemplate',
@@ -128,6 +121,7 @@ class SlotTemplateRepository implements SlotTemplateRepositoryInterface {
       await this.prisma.slotTemplate.updateMany({
         where: {
           id: { in: slotTemplateIDs },
+          serviceId: this.scope.serviceId,
         },
         data: slotTemplateUpdateParams,
       })
@@ -141,15 +135,11 @@ class SlotTemplateRepository implements SlotTemplateRepositoryInterface {
 
   async delete(slotTemplateID: string): Promise<SlotTemplateDTORepo> {
     try {
-      return await this.prisma.slotTemplate.delete({
-        where: { id: slotTemplateID },
-        include: {
-          soignants: true,
-          template: true,
-          location: true,
-          thematic: true,
-        },
+      const row = await this.prisma.slotTemplate.delete({
+        where: { id_serviceId: { id: slotTemplateID, serviceId: this.scope.serviceId } },
+        include: slotTemplateInclude,
       })
+      return flattenSlotTemplate(row)
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
         entityName: 'SlotTemplate',

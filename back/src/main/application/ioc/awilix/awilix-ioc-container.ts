@@ -28,6 +28,7 @@ import type { Config } from '../../../types/application/config'
 import type { IocContainer } from '../../../types/application/ioc'
 import { ErrorHandler } from '../../../utils/error-handler'
 import { recordToString } from '../../../utils/helper'
+import { TenantContext } from '../../../utils/tenant-context'
 import { SlotTemplateDomain } from '../../../domain/slotTemplate.domain'
 import { SlotTemplateRepository } from '../../../infra/orm/repositories/slotTemplate.repository'
 import { DiagnosticEducatifDomain } from '../../../domain/diagnosticEducatif.domain'
@@ -45,7 +46,9 @@ import { ForbiddenWeekRepository } from '../../../infra/orm/repositories/forbidd
 import { PlanningCycleDomain } from '../../../domain/planningCycle.domain'
 import { PlanningCycleRepository } from '../../../infra/orm/repositories/planningCycle.repository'
 import { LocationDomain } from '../../../domain/location.domain'
+import { MembershipDomain } from '../../../domain/membership.domain'
 import { LocationRepository } from '../../../infra/orm/repositories/location.repository'
+import { MembershipRepository } from '../../../infra/orm/repositories/membership.repository'
 
 declare module '@fastify/awilix' {
   interface Cradle extends IocContainer {}
@@ -64,6 +67,8 @@ class AwilixIocContainer {
     const logger = container.resolve('logger')
     logger.debug('Initializing IoC container…')
     logger.debug(`Loaded config:\n\t${recordToString(config)}`)
+    // Tenant context (avant l'ORM : le garde-fou Prisma en dépend)
+    this.#registerTenantContext()
     // DB
     this.#registerPrismaOrm()
     // EventBus (registered early so all domains can rely on it)
@@ -73,6 +78,9 @@ class AwilixIocContainer {
     // User
     this.#registerUserDomain()
     this.#registerUserRepository()
+    // Membership
+    this.#registerMembershipDomain()
+    this.#registerMembershipRepository()
     // Appointment
     this.#registerAppointmentDomain()
     this.#registerAppointmentRepository()
@@ -160,6 +168,11 @@ class AwilixIocContainer {
     this.register('postgresOrm', asClass(PostgresOrm).singleton())
   }
 
+  // Tenant context
+  #registerTenantContext(): void {
+    this.register('tenantContext', asClass(TenantContext).singleton())
+  }
+
   // Error
   private registerErrorHandler(): void {
     this.register('errorHandler', asClass(ErrorHandler).singleton())
@@ -176,6 +189,17 @@ class AwilixIocContainer {
   }
   #registerUserRepository(): void {
     this.register('userRepository', asClass(UserRepository).singleton())
+  }
+
+  // Membership
+  #registerMembershipDomain(): void {
+    this.register('membershipDomain', asClass(MembershipDomain).singleton())
+  }
+  #registerMembershipRepository(): void {
+    this.register(
+      'membershipRepository',
+      asClass(MembershipRepository).singleton(),
+    )
   }
 
   // Appointment

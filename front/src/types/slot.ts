@@ -22,9 +22,9 @@ export type SlotDateRange = {
   to: string
 }
 
-export type CreateSlotParams = Pick<Slot, 'startDate' | 'endDate'> & {
-  pathwayID?: string
-}
+// Pas de `pathwayID` : le back ne l'accepte pas en entree, le seul
+// rattachement d'un creneau a un parcours se fait cote serveur.
+export type CreateSlotParams = Pick<Slot, 'startDate' | 'endDate'>
 export type CreateSlotParamsWithTemplateID = CreateSlotParams & {
   slotTemplateID: string
 }

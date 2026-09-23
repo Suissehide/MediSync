@@ -7,7 +7,9 @@ import type {
   PrimaTransactionClient,
 } from '../../types/infra/orm/client'
 import type { Logger } from '../../types/utils/logger'
+import type { TenantContextInterface } from '../../types/utils/tenant-context'
 import { normalizeEmail, normalizePhone } from '../../utils/helper'
+import { buildTenantGuardExtension } from './tenant-guard'
 
 const normalizerExtension = Prisma.defineExtension({
   name: 'normalizer',
@@ -30,9 +32,11 @@ const normalizerExtension = Prisma.defineExtension({
   },
 })
 
-function getExtendedClient() {
+function getExtendedClient(tenantContext: TenantContextInterface) {
   const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL })
-  return new PrismaClient({ adapter }).$extends(normalizerExtension)
+  return new PrismaClient({ adapter })
+    .$extends(normalizerExtension)
+    .$extends(buildTenantGuardExtension(tenantContext))
 }
 
 export type PostgresPrismaClient = ReturnType<typeof getExtendedClient>
@@ -41,9 +45,9 @@ class PostgresOrm implements PostgresORMInterface {
   private readonly logger: Logger
   readonly prisma: PostgresPrismaClient
 
-  constructor({ logger }: IocContainer) {
+  constructor({ logger, tenantContext }: IocContainer) {
     this.logger = logger
-    this.prisma = getExtendedClient()
+    this.prisma = getExtendedClient(tenantContext)
   }
 
   async start(): Promise<void> {

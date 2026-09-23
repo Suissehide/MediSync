@@ -5,23 +5,27 @@ import type {
   PlanningCycleUpsertEntityRepo,
 } from '../../../types/infra/orm/repositories/planningCycle.repository.interface'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
+import type { TenantContextInterface } from '../../../types/utils/tenant-context'
 import type { PostgresPrismaClient } from '../postgres-client'
-
-/** Identifiant de la ligne unique : la configuration est globale au service. */
-const PLANNING_CYCLE_ID = 'default'
 
 class PlanningCycleRepository implements PlanningCycleRepositoryInterface {
   private readonly prisma: PostgresPrismaClient
   private readonly errorHandler: ErrorHandlerInterface
+  private readonly tenantContext: TenantContextInterface
 
-  constructor({ postgresOrm, errorHandler }: IocContainer) {
+  constructor({ postgresOrm, errorHandler, tenantContext }: IocContainer) {
     this.prisma = postgresOrm.prisma
     this.errorHandler = errorHandler
+    this.tenantContext = tenantContext
+  }
+
+  private get scope() {
+    return this.tenantContext.scope()
   }
 
   find(): Promise<PlanningCycleEntityRepo | null> {
     return this.prisma.planningCycle.findUnique({
-      where: { id: PLANNING_CYCLE_ID },
+      where: { serviceId: this.scope.serviceId },
     })
   }
 
@@ -30,8 +34,8 @@ class PlanningCycleRepository implements PlanningCycleRepositoryInterface {
   ): Promise<PlanningCycleEntityRepo> {
     try {
       return await this.prisma.planningCycle.upsert({
-        where: { id: PLANNING_CYCLE_ID },
-        create: { id: PLANNING_CYCLE_ID, ...params },
+        where: { serviceId: this.scope.serviceId },
+        create: { ...this.scope, ...params },
         update: params,
       })
     } catch (err) {
@@ -47,7 +51,7 @@ class PlanningCycleRepository implements PlanningCycleRepositoryInterface {
   async delete(): Promise<void> {
     try {
       await this.prisma.planningCycle.deleteMany({
-        where: { id: PLANNING_CYCLE_ID },
+        where: { serviceId: this.scope.serviceId },
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({

@@ -4,11 +4,15 @@ import type {
 } from '../../../../../generated/client'
 
 export type SoignantEntityRepo = Soignant
+// Le repository pose establishmentId lui-même : l'appelant ne le fournit pas.
 export type SoignantCreateEntityRepo = Omit<
   Prisma.SoignantUncheckedCreateInput,
-  'slotTemplates'
+  'establishmentId' | 'slotTemplateLinks'
 >
-export type SoignantUpdateEntityRepo = Prisma.SoignantUncheckedUpdateInput
+export type SoignantUpdateEntityRepo = Omit<
+  Prisma.SoignantUncheckedUpdateInput,
+  'establishmentId'
+>
 
 export interface SoignantRepositoryInterface {
   findAll: () => Promise<SoignantEntityRepo[]>

@@ -2,7 +2,8 @@ import Boom from '@hapi/boom'
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod/v4'
 
-import { Role } from '../../../../../generated/enums'
+import { hasPermission } from '../../../../utils/permissions'
+
 import {
   type CreatePatientBody,
   createPatientSchema,
@@ -34,10 +35,6 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
   const { iocContainer } = fastify
   const { patientDomain, logger } = iocContainer
 
-  // Toutes les routes patients exigent au moins le rôle USER : un compte
-  // auto-enregistré (rôle NONE, non validé) ne doit pas accéder aux dossiers.
-  fastify.addHook('preHandler', fastify.requireMinRole(Role.USER))
-
   // Get all
   fastify.get(
     '/',
@@ -48,7 +45,7 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
-      onRequest: [fastify.verifySessionCookie],
+      config: { permission: 'patient:read' },
     },
     () => {
       return patientDomain.findAll()
@@ -65,7 +62,7 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
           pathwayTemplateTags: z.union([z.string(), z.array(z.string())]).optional(),
         }),
       },
-      onRequest: [fastify.verifySessionCookie],
+      config: { permission: 'patient:read' },
     },
     async (request, reply) => {
       const { search, pathwayTemplateTags } = request.query as {
@@ -79,7 +76,19 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
           : [pathwayTemplateTags]
         : []
 
-      const buffer = await patientDomain.exportExcel({ search, pathwayTemplateTags: tags })
+      // L'export est un Buffer : le hook `preSerialization` qui retire les
+      // champs cliniques des réponses JSON ne s'y applique pas, il faut donc
+      // décider ici de la présence des colonnes cliniques.
+      const { serviceRole, establishmentRole } = request.tenant
+      const buffer = await patientDomain.exportExcel(
+        { search, pathwayTemplateTags: tags },
+        {
+          includeClinicalFields: hasPermission(
+            { serviceRole, establishmentRole },
+            'clinical:read',
+          ),
+        },
+      )
 
       const filename = `patients_${new Date().toISOString().slice(0, 10)}.xlsx`
       await reply
@@ -96,7 +105,7 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
       schema: {
         response: { 200: patientsWithTagsResponseSchema },
       },
-      onRequest: [fastify.verifySessionCookie],
+      config: { permission: 'patient:read' },
     },
     () => patientDomain.findAllWithTags(),
   )
@@ -112,7 +121,7 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
-      onRequest: [fastify.verifySessionCookie],
+      config: { permission: 'patient:read' },
     },
     async (request) => {
       const { patientID } = request.params
@@ -134,7 +143,7 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
           201: patientResponseSchema,
         },
       },
-      onRequest: [fastify.verifySessionCookie],
+      config: { permission: 'patient:write' },
     },
     async (request, reply) => {
       const patient = await patientDomain.create(request.body, request.user.userID)
@@ -154,7 +163,7 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
-      onRequest: [fastify.verifySessionCookie],
+      config: { permission: 'patient:write' },
     },
     async (request) => {
       const { patientID } = request.params
@@ -177,7 +186,7 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
-      onRequest: [fastify.verifySessionCookie],
+      config: { permission: 'patient:delete' },
     },
     async (request, reply) => {
       const { patientID } = request.params
@@ -200,7 +209,7 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
           400: z.object({ message: z.string() }),
         },
       },
-      onRequest: [fastify.verifySessionCookie],
+      config: { permission: 'appointment:write' },
     },
     async (request, reply) => {
       const result = await patientDomain.enrollPatientInPathways({
@@ -224,7 +233,7 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
-      onRequest: [fastify.verifySessionCookie],
+      config: { permission: 'appointment:write' },
     },
     async (request) => {
       return await patientDomain.enrollExistingPatientInPathways({
@@ -245,7 +254,7 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
           200: appointmentsCountResponseSchema,
         },
       },
-      onRequest: [fastify.verifySessionCookie],
+      config: { permission: 'patient:read' },
     },
     (request) => {
       const { patientID, pathwayID } = request.params
@@ -263,7 +272,7 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
           200: removeFromPathwayResponseSchema,
         },
       },
-      onRequest: [fastify.verifySessionCookie],
+      config: { permission: 'appointment:write' },
     },
     (request) => {
       const { patientID, pathwayID } = request.params
@@ -285,7 +294,7 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
           200: patientPathwaysResponseSchema,
         },
       },
-      onRequest: [fastify.verifySessionCookie],
+      config: { permission: 'patient:read' },
     },
     (request) => {
       return patientDomain.getPathways(request.params.patientID)
@@ -306,7 +315,7 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
           204: z.null(),
         },
       },
-      onRequest: [fastify.verifySessionCookie],
+      config: { permission: 'patient:write' },
     },
     async (request, reply) => {
       await patientDomain.setPathwayPriorities(

@@ -14,11 +14,23 @@ export type PathwayWithTemplateAndSlotsRepo = PathwayEntityRepo & {
 export type PathwayWithSlotsRepo = PathwayEntityRepo & {
   slots: SlotWithTemplateAndAppointmentsRepo[]
 }
-export type PathwayCreateEntityRepo = Prisma.PathwayUncheckedCreateInput & {
+// Le repository pose serviceId/establishmentId (tenant) lui-même. Le
+// `connect` composite sur `template` n'est pas utilisé (cohérence de
+// service vérifiée par le domaine, tâche 14) : la relation brute `template`
+// est donc omise au profit du seul scalaire `templateID`. `slots` est
+// remplacé par `slotIDs`, converti en `connect` par clé composite dans le
+// repository.
+export type PathwayCreateEntityRepo = Omit<
+  Prisma.PathwayUncheckedCreateInput,
+  'establishmentId' | 'serviceId' | 'slots' | 'template'
+> & {
   slotIDs: string[]
   templateID?: string
 }
-export type PathwayUpdateEntityRepo = Prisma.PathwayUncheckedUpdateInput
+export type PathwayUpdateEntityRepo = Omit<
+  Prisma.PathwayUncheckedUpdateInput,
+  'establishmentId' | 'serviceId' | 'slots' | 'template'
+>
 
 export type RegeneratePathwaysResultRepo = {
   pathwaysUpdated: number
@@ -66,10 +78,7 @@ export interface PathwayRepositoryInterface {
     tag: string,
     date: Date,
   ) => Promise<PathwayWithSlotsRepo[]>
-  findTracking: (
-    year: number,
-    month: number,
-  ) => Promise<TrackingPathwayRepo[]>
+  findTracking: (year: number, month: number) => Promise<TrackingPathwayRepo[]>
   create: (
     pathwayCreateParams: PathwayCreateEntityRepo,
   ) => Promise<PathwayEntityRepo>

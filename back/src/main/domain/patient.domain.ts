@@ -19,6 +19,7 @@ import type {
   PatientDomainInterface,
   PatientEntityDomain,
   PatientExportFilters,
+  PatientExportOptions,
   PatientPathwayDomain,
   PatientUpdateEntityDomain,
   PatientWithAppointmentsDomain,
@@ -36,7 +37,9 @@ import type { PatientRepositoryInterface } from '../types/infra/orm/repositories
 import type { SlotWithTemplateAndAppointmentsRepo } from '../types/infra/orm/repositories/slot.repository.interface'
 import type { ThematicRepositoryInterface } from '../types/infra/orm/repositories/thematic.repository.interface'
 import type { Logger } from '../types/utils/logger'
+import type { TenantContextInterface } from '../types/utils/tenant-context'
 import type { AppEventBus } from '../utils/app-event-bus'
+import { hasPermission } from '../utils/permissions'
 
 const orEmpty = (value: string | null | undefined): string => value ?? ''
 const formatDate = (value: Date | string | null | undefined): string =>
@@ -50,6 +53,7 @@ class PatientDomain implements PatientDomainInterface {
   private readonly appointmentRepository: AppointmentRepositoryInterface
   private readonly enrollmentIssueRepository: EnrollmentIssueRepositoryInterface
   private readonly thematicRepository: ThematicRepositoryInterface
+  private readonly tenantContext: TenantContextInterface
   private readonly appEventBus: AppEventBus
 
   constructor({
@@ -59,6 +63,7 @@ class PatientDomain implements PatientDomainInterface {
     appointmentRepository,
     enrollmentIssueRepository,
     thematicRepository,
+    tenantContext,
     appEventBus,
     logger,
   }: IocContainer) {
@@ -68,6 +73,7 @@ class PatientDomain implements PatientDomainInterface {
     this.appointmentRepository = appointmentRepository
     this.enrollmentIssueRepository = enrollmentIssueRepository
     this.thematicRepository = thematicRepository
+    this.tenantContext = tenantContext
     this.appEventBus = appEventBus
     this.logger = logger
   }
@@ -84,7 +90,10 @@ class PatientDomain implements PatientDomainInterface {
     return this.patientRepository.findByID(patientID)
   }
 
-  async exportExcel(filters: PatientExportFilters): Promise<Buffer> {
+  async exportExcel(
+    filters: PatientExportFilters,
+    { includeClinicalFields }: PatientExportOptions,
+  ): Promise<Buffer> {
     const patients = await this.patientRepository.findForExport(filters)
 
     const rows = patients.map((p) => ({
@@ -98,14 +107,19 @@ class PatientDomain implements PatientDomainInterface {
       "Date d'entrée": formatDate(p.entryDate),
       'Date de sortie': formatDate(p.exitDate),
       Parcours: p.pathwayTemplateTags.join(', '),
-      'Diagnostic médical': orEmpty(p.medicalDiagnosis),
       'Mode de prise en charge': orEmpty(p.careMode),
       Orientation: orEmpty(p.orientation),
       Profession: orEmpty(p.occupation),
       "Niveau d'étude": orEmpty(p.educationLevel),
       Distance: orEmpty(p.distance),
       'Motif de sortie': orEmpty(p.stopReason),
-      Notes: orEmpty(p.notes),
+      // Colonnes cliniques : présentes seulement pour qui a `clinical:read`.
+      ...(includeClinicalFields
+        ? {
+            'Diagnostic médical': orEmpty(p.medicalDiagnosis),
+            Notes: orEmpty(p.notes),
+          }
+        : {}),
     }))
 
     const ws = XLSX.utils.json_to_sheet(rows)
@@ -121,14 +135,15 @@ class PatientDomain implements PatientDomainInterface {
       { wch: 14 }, // Date d'entrée
       { wch: 14 }, // Date de sortie
       { wch: 30 }, // Parcours
-      { wch: 28 }, // Diagnostic médical
       { wch: 24 }, // Mode de prise en charge
       { wch: 18 }, // Orientation
       { wch: 20 }, // Profession
       { wch: 18 }, // Niveau d'étude
       { wch: 14 }, // Distance
       { wch: 22 }, // Motif de sortie
-      { wch: 40 }, // Notes
+      ...(includeClinicalFields
+        ? [{ wch: 28 }, { wch: 40 }] // Diagnostic médical, Notes
+        : []),
     ]
 
     const wb = XLSX.utils.book_new()
@@ -259,6 +274,19 @@ class PatientDomain implements PatientDomainInterface {
     return enrollment.duration ?? 30
   }
 
+  // `thematicID` finit en Appointment.thematicId (référence simple, sans
+  // clé composite) sans passer par AppointmentDomain.create ici : on vérifie
+  // donc nous-mêmes qu'il appartient au tenant, en le chargeant par son
+  // repository filtré. Indépendant de resolveDuration ci-dessus, qui ne fait
+  // ce même chargement que lorsque `duration` est absent.
+  private async assertThematicBelongsToTenant(
+    enrollment: PathwayEnrollmentInput,
+  ): Promise<void> {
+    if (enrollment.thematicID) {
+      await this.thematicRepository.findByID(enrollment.thematicID)
+    }
+  }
+
   private selectValidPathway(
     pathways: PathwayWithSlotsRepo[],
     enrollment: PathwayEnrollmentInput,
@@ -309,6 +337,7 @@ class PatientDomain implements PatientDomainInterface {
     enrollment?: EnrollmentResult['enrollments'][number]
     failure?: EnrollmentResult['failedEnrollments'][number]
   }> {
+    await this.assertThematicBelongsToTenant(enrollment)
     const thematicDuration = await this.resolveDuration(enrollment)
 
     // Vérifier si le motif est requis
@@ -535,6 +564,20 @@ class PatientDomain implements PatientDomainInterface {
   ): Promise<EnrollmentAppointment[]> {
     const { type, motif, thematicId, appointmentDuration, firstAppointmentOnly } =
       options
+    // `motif` vient du corps de la requête d'inscription : c'est du texte
+    // libre saisi par l'utilisateur. `transmissionNotes` est une colonne
+    // clinique, que le hook `stripClinicalInput` refuse en entrée à qui n'a
+    // pas `clinical:write` — mais il ne reconnaît pas ce champ-ci, qui la
+    // remplit sous un autre nom. Le report est donc soumis ici à la même
+    // permission, sans quoi un compte SECRETARIAT ou LECTURE écrirait dans
+    // une transmission clinique par la porte de service. Calculé une fois et
+    // appliqué aux trois écritures ci-dessous.
+    const { serviceRole, establishmentRole } = this.tenantContext.current()
+    const canWriteClinical = hasPermission(
+      { serviceRole, establishmentRole },
+      'clinical:write',
+    )
+    const transmissionNotes = canWriteClinical ? (motif ?? undefined) : undefined
 
     if (slot.slotTemplate.isIndividual) {
       const nextSlot = this.getNextAvailableAppointment(
@@ -560,7 +603,7 @@ class PatientDomain implements PatientDomainInterface {
         type: type ?? undefined,
         slotID: slot.id,
         patientIDs: [patient.id],
-        transmissionNotes: motif ?? undefined,
+        transmissionNotes,
       })
       return [
         {
@@ -584,7 +627,7 @@ class PatientDomain implements PatientDomainInterface {
       await this.appointmentRepository.addPatientToAppointment({
         appointmentID: existingAppointment.id,
         patientID: patient.id,
-        transmissionNotes: motif ?? undefined,
+        transmissionNotes,
       })
       return [
         {
@@ -603,7 +646,7 @@ class PatientDomain implements PatientDomainInterface {
       type: type ?? undefined,
       slotID: slot.id,
       patientIDs: [patient.id],
-      transmissionNotes: motif ?? undefined,
+      transmissionNotes,
     })
     return [
       {
