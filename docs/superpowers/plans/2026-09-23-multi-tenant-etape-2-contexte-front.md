@@ -16,7 +16,8 @@
 - **Ne jamais migrer, réinitialiser ou écrire dans la base `medisync`.** Les tests back passent par `.env.test` et `medisync_test` uniquement.
 - Commentaires, documentation et messages de commit en français. Les messages d'erreur `Boom` du back restent en anglais : `front/src/api/members.api.ts` les fait correspondre par égalité exacte au texte français affiché, et un message non répertorié fait retomber l'écran sur un texte générique.
 - `front/src/utils/permissions.ts` et `back/src/main/utils/permissions.ts` sont identiques octet pour octet ; un test unitaire l'exige. Toute modification de l'un se fait dans l'autre.
-- **`npm run validate` ne passe pas et n'est pas un critère.** `npm run lint:ci` (back) et `npm run lint` (front) échouent déjà sur `main`, dette antérieure à ce chantier. Les portes réelles sont : `cd back && npm run build && npm run lint && npm run test:unit && npm run test:e2e`, et `cd front && npm run build && npm run lint && npm run test`.
+- **`npm run validate` ne passe pas et n'est pas un critère.** `npm run lint:ci` (back) et `npm run lint` (front) échouent déjà sur `main`, dette antérieure à ce chantier. Les portes réelles sont : `cd back && npm run build && npm run lint && npm run test:unit && npm run test:e2e`, et `cd front && npm run build && npm run test`.
+- **`cd front && npm run lint` n'est pas une porte non plus.** Il échoue déjà sur `main` : trente-deux erreurs relevées le 2026-09-23. Le critère n'est donc pas qu'il passe, mais que la branche **n'en ajoute aucune**. Comparer le décompte de `npx biome lint src` entre la branche et `main`, et ramener l'écart à zéro avant la fusion.
 - Le back tourne en mode veille sur le port 3000 pendant la session ; ne pas le tuer, ne pas en lancer un second.
 - Terminer chaque message de commit par : `Claude-Session: https://claude.ai/code/session_01G1JrhGqWHmVH6XB2XTTwJe`
 
@@ -2028,7 +2029,7 @@ Créer `docs/multi-tenant/verification-etape-2.md` : une liste numérotée, chaq
 
 ```bash
 cd back && npm run build && npm run lint && npm run test:unit -- --ci && npm run test:e2e
-cd ../front && npm run build && npm run lint && npm test
+cd ../front && npm run build && npm test
 ```
 Attendu : tout vert. Rappel : `npm run validate` n'est pas un critère, il échoue déjà sur `main`.
 
