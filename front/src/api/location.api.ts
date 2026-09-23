@@ -1,4 +1,4 @@
-import { apiUrl } from '../constants/config.constant.ts'
+import { establishmentApiUrl, tenantApiUrl } from '../constants/config.constant.ts'
 import { handleHttpError } from '../libs/httpErrorHandler.ts'
 import type {
   CreateLocationParams,
@@ -10,7 +10,7 @@ import { fetchWithAuth } from './fetchWithAuth.ts'
 export const LocationApi = {
   getAll: async (): Promise<Location[]> => {
     const response = await fetchWithAuth(
-      `${apiUrl}/location?action=getAllLocations`,
+      `${tenantApiUrl()}/location?action=getAllLocations`,
       {
         method: 'GET',
       },
@@ -29,7 +29,7 @@ export const LocationApi = {
     createLocationParams: CreateLocationParams,
   ): Promise<Location> => {
     const response = await fetchWithAuth(
-      `${apiUrl}/location?action=createLocation`,
+      `${establishmentApiUrl()}/location?action=createLocation`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -47,7 +47,7 @@ export const LocationApi = {
   ): Promise<Location> => {
     const { id: locationID, ...updateLocationInputs } = updateLocationParams
     const response = await fetchWithAuth(
-      `${apiUrl}/location/${locationID}?action=updateLocation`,
+      `${establishmentApiUrl()}/location/${locationID}?action=updateLocation`,
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -62,7 +62,7 @@ export const LocationApi = {
 
   delete: async (locationID: string): Promise<void> => {
     const response = await fetchWithAuth(
-      `${apiUrl}/location/${locationID}?action=deleteLocation`,
+      `${establishmentApiUrl()}/location/${locationID}?action=deleteLocation`,
       {
         method: 'DELETE',
       },

@@ -1,4 +1,4 @@
-import { apiUrl } from '../constants/config.constant.ts'
+import { tenantApiUrl } from '../constants/config.constant.ts'
 import { handleHttpError } from '../libs/httpErrorHandler.ts'
 import type {
   CreateSlotParams,
@@ -17,7 +17,7 @@ export const SlotApi = {
     if (range?.to) {
       params.set('to', range.to)
     }
-    const response = await fetchWithAuth(`${apiUrl}/slot?${params}`, {
+    const response = await fetchWithAuth(`${tenantApiUrl()}/slot?${params}`, {
       method: 'GET',
     })
     if (!response.ok) {
@@ -32,7 +32,7 @@ export const SlotApi = {
 
   getByID: async (slotID: string): Promise<Slot> => {
     const response = await fetchWithAuth(
-      `${apiUrl}/slot/${slotID}?action=getSlotByID`,
+      `${tenantApiUrl()}/slot/${slotID}?action=getSlotByID`,
       {
         method: 'GET',
       },
@@ -48,7 +48,7 @@ export const SlotApi = {
   },
 
   create: async (createSlotParams: CreateSlotParams): Promise<Slot> => {
-    const response = await fetchWithAuth(`${apiUrl}/slot?action=createSlot`, {
+    const response = await fetchWithAuth(`${tenantApiUrl()}/slot?action=createSlot`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(createSlotParams),
@@ -62,7 +62,7 @@ export const SlotApi = {
   update: async (updateSlotParams: UpdateSlotParams): Promise<Slot> => {
     const { id: slotID, ...updateSlotInputs } = updateSlotParams
     const response = await fetchWithAuth(
-      `${apiUrl}/slot/${slotID}?action=updateSlot`,
+      `${tenantApiUrl()}/slot/${slotID}?action=updateSlot`,
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -77,7 +77,7 @@ export const SlotApi = {
 
   delete: async (slotID: string): Promise<void> => {
     const response = await fetchWithAuth(
-      `${apiUrl}/slot/${slotID}?action=deleteSlot`,
+      `${tenantApiUrl()}/slot/${slotID}?action=deleteSlot`,
       {
         method: 'DELETE',
       },

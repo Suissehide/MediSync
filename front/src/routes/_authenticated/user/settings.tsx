@@ -1,12 +1,11 @@
 import { createFileRoute, useNavigate, useRouter } from '@tanstack/react-router'
 import { ArrowLeft, Shield, UserRoundPen } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 
 import DashboardLayout from '../../../components/dashboard.layout.tsx'
 import { Button } from '../../../components/ui/button.tsx'
 import { useAppForm } from '../../../hooks/formConfig.tsx'
-import { useSoignantQueries } from '../../../queries/useSoignant.ts'
-import { useUserMutations } from '../../../queries/useUser.ts'
+import { useUpdateMe } from '../../../queries/useAuth.ts'
 
 export const Route = createFileRoute('/_authenticated/user/settings')({
   component: UserSettings,
@@ -17,36 +16,21 @@ function UserSettings() {
   const navigate = useNavigate()
   const authState = router.options.context?.authState
   const user = authState?.user
-  const { updateUser } = useUserMutations()
-  const { soignants } = useSoignantQueries()
+  const updateMe = useUpdateMe()
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false)
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false)
-
-  const soignantOptions = useMemo(() => {
-    if (!soignants) {
-      return []
-    }
-    return soignants.map((s) => ({ value: s.id, label: s.name }))
-  }, [soignants])
 
   const profileForm = useAppForm({
     defaultValues: {
       firstName: user?.firstName || '',
       lastName: user?.lastName || '',
-      soignantId: user?.soignantId || '',
     },
     onSubmit: async ({ value }) => {
       setIsUpdatingProfile(true)
       try {
-        if (!user?.id) {
-          return
-        }
-
-        await updateUser.mutateAsync({
-          id: user.id,
+        await updateMe.mutateAsync({
           firstName: value.firstName,
           lastName: value.lastName,
-          soignantId: value.soignantId || null,
         })
       } finally {
         setIsUpdatingProfile(false)
@@ -60,12 +44,13 @@ function UserSettings() {
       newPassword: '',
       confirmPassword: '',
     },
-    onSubmit: ({ value }) => {
+    onSubmit: async ({ value }) => {
       setIsUpdatingPassword(true)
       try {
-        // TODO: Implémenter l'API de changement de mot de passe
-        console.log('Changement de mot de passe:', value)
-        // Réinitialiser le formulaire après succès
+        await updateMe.mutateAsync({
+          currentPassword: value.currentPassword,
+          newPassword: value.newPassword,
+        })
         passwordForm.reset()
       } finally {
         setIsUpdatingPassword(false)
@@ -114,14 +99,6 @@ function UserSettings() {
 
                 <profileForm.AppField name="lastName">
                   {(field) => <field.Input label="Nom" />}
-                </profileForm.AppField>
-              </div>
-
-              <div className="grid grid-cols-2 mb-4">
-                <profileForm.AppField name="soignantId">
-                  {(field) => (
-                    <field.Select label="Fonction" options={soignantOptions} />
-                  )}
                 </profileForm.AppField>
               </div>
 
@@ -179,8 +156,8 @@ function UserSettings() {
                       if (!value || value.length === 0) {
                         return 'Le nouveau mot de passe est requis'
                       }
-                      if (value.length < 8) {
-                        return 'Le mot de passe doit contenir au moins 8 caractères'
+                      if (value.length < 12) {
+                        return 'Le mot de passe doit contenir au moins 12 caractères'
                       }
                       return undefined
                     },

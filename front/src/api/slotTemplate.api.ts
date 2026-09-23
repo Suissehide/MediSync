@@ -1,4 +1,4 @@
-import { apiUrl } from '../constants/config.constant.ts'
+import { tenantApiUrl } from '../constants/config.constant.ts'
 import { handleHttpError } from '../libs/httpErrorHandler.ts'
 import type {
   CreateSlotTemplateParams,
@@ -10,7 +10,7 @@ import { fetchWithAuth } from './fetchWithAuth.ts'
 export const SlotTemplateApi = {
   getAll: async (): Promise<SlotTemplate[]> => {
     const response = await fetchWithAuth(
-      `${apiUrl}/slot-template?action=getAllSlotTemplates`,
+      `${tenantApiUrl()}/slot-template?action=getAllSlotTemplates`,
       {
         method: 'GET',
       },
@@ -27,7 +27,7 @@ export const SlotTemplateApi = {
 
   getByID: async (slotTemplateID: string): Promise<SlotTemplate> => {
     const response = await fetchWithAuth(
-      `${apiUrl}/slot-template/${slotTemplateID}?action=getSlotTemplateByID`,
+      `${tenantApiUrl()}/slot-template/${slotTemplateID}?action=getSlotTemplateByID`,
       {
         method: 'GET',
       },
@@ -46,7 +46,7 @@ export const SlotTemplateApi = {
     createSlotTemplateParams: CreateSlotTemplateParams,
   ): Promise<SlotTemplate> => {
     const response = await fetchWithAuth(
-      `${apiUrl}/slot-template?action=createSlotTemplate`,
+      `${tenantApiUrl()}/slot-template?action=createSlotTemplate`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -65,7 +65,7 @@ export const SlotTemplateApi = {
     const { id: slotTemplateID, ...updateSlotTemplateInputs } =
       updateSlotTemplateParams
     const response = await fetchWithAuth(
-      `${apiUrl}/slot-template/${slotTemplateID}?action=updateSlotTemplate`,
+      `${tenantApiUrl()}/slot-template/${slotTemplateID}?action=updateSlotTemplate`,
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -80,7 +80,7 @@ export const SlotTemplateApi = {
 
   delete: async (slotTemplateID: string): Promise<void> => {
     const response = await fetchWithAuth(
-      `${apiUrl}/slot-template/${slotTemplateID}?action=deleteSlotTemplate`,
+      `${tenantApiUrl()}/slot-template/${slotTemplateID}?action=deleteSlotTemplate`,
       {
         method: 'DELETE',
       },

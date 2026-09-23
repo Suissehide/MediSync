@@ -1,4 +1,4 @@
-import { apiUrl } from '../constants/config.constant.ts'
+import { establishmentApiUrl, tenantApiUrl } from '../constants/config.constant.ts'
 import { handleHttpError } from '../libs/httpErrorHandler.ts'
 import type {
   CreateSoignantParams,
@@ -10,7 +10,7 @@ import { fetchWithAuth } from './fetchWithAuth.ts'
 export const SoignantApi = {
   getAll: async (): Promise<Soignant[]> => {
     const response = await fetchWithAuth(
-      `${apiUrl}/soignant?action=getAllSoignants`,
+      `${tenantApiUrl()}/soignant?action=getAllSoignants`,
       {
         method: 'GET',
       },
@@ -29,7 +29,7 @@ export const SoignantApi = {
     createSoignantParams: CreateSoignantParams,
   ): Promise<Soignant> => {
     const response = await fetchWithAuth(
-      `${apiUrl}/soignant?action=createSoignant`,
+      `${establishmentApiUrl()}/soignant?action=createSoignant`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -47,7 +47,7 @@ export const SoignantApi = {
   ): Promise<Soignant> => {
     const { id: soignantID, ...updateSoignantInputs } = updateSoignantParams
     const response = await fetchWithAuth(
-      `${apiUrl}/soignant/${soignantID}?action=updateSoignant`,
+      `${establishmentApiUrl()}/soignant/${soignantID}?action=updateSoignant`,
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -62,7 +62,7 @@ export const SoignantApi = {
 
   delete: async (soignantID: string): Promise<void> => {
     const response = await fetchWithAuth(
-      `${apiUrl}/soignant/${soignantID}?action=deleteSoignant`,
+      `${establishmentApiUrl()}/soignant/${soignantID}?action=deleteSoignant`,
       {
         method: 'DELETE',
       },

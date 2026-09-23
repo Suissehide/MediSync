@@ -11,6 +11,7 @@ import {
   Users,
 } from 'lucide-react'
 
+import { useCan } from '../hooks/useCan.ts'
 import TodoSheet from './custom/todo/todoSheet.tsx'
 import { Button } from './ui/button.tsx'
 import {
@@ -24,7 +25,11 @@ interface NavbarProps {
   toggleSidebar: () => void
 }
 
-const SettingsMenu = () => {
+interface SettingsMenuProps {
+  canManageMembers: boolean
+}
+
+const SettingsMenu = ({ canManageMembers }: SettingsMenuProps) => {
   const router = useRouter()
 
   return (
@@ -67,12 +72,14 @@ const SettingsMenu = () => {
         >
           Diagnostics éducatifs
         </PopoverMenuItem>
-        <PopoverMenuItem
-          icon={<UserCog className="w-4 h-4" />}
-          onClick={() => router.navigate({ to: '/settings/user' })}
-        >
-          Utilisateurs
-        </PopoverMenuItem>
+        {canManageMembers && (
+          <PopoverMenuItem
+            icon={<UserCog className="w-4 h-4" />}
+            onClick={() => router.navigate({ to: '/settings/user' })}
+          >
+            Membres
+          </PopoverMenuItem>
+        )}
         <PopoverMenuItem
           icon={<Activity className="w-4 h-4" />}
           onClick={() => router.navigate({ to: '/settings/activity-log' })}
@@ -85,9 +92,8 @@ const SettingsMenu = () => {
 }
 
 function Navbar({ toggleSidebar }: NavbarProps) {
-  const router = useRouter()
-  const user = router.options.context?.authState?.user
-  const isAdmin = user?.role === 'ADMIN'
+  const isAdmin = useCan('planning:write')
+  const canManageMembers = useCan('members:manage')
   const matchRoute = useMatchRoute()
   const isActive = (to: string) => !!matchRoute({ to, fuzzy: false })
 
@@ -152,7 +158,7 @@ function Navbar({ toggleSidebar }: NavbarProps) {
       </div>
       <div className="flex gap-8 pl-4 border-l border-border-sidebar">
         <div className="flex items-center gap-2">
-          {isAdmin && <SettingsMenu />}
+          {isAdmin && <SettingsMenu canManageMembers={canManageMembers} />}
           <TodoSheet />
         </div>
       </div>

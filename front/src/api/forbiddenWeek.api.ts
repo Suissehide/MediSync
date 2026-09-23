@@ -1,11 +1,11 @@
-import { apiUrl } from '../constants/config.constant.ts'
+import { tenantApiUrl } from '../constants/config.constant.ts'
 import { handleHttpError } from '../libs/httpErrorHandler.ts'
 import type { ForbiddenWeek } from '../types/forbiddenWeek.ts'
 import { fetchWithAuth } from './fetchWithAuth.ts'
 
 export const ForbiddenWeekApi = {
   getAll: async (): Promise<ForbiddenWeek[]> => {
-    const response = await fetchWithAuth(`${apiUrl}/forbidden-week`, {
+    const response = await fetchWithAuth(`${tenantApiUrl()}/forbidden-week`, {
       method: 'GET',
     })
     if (!response.ok) {
@@ -15,7 +15,7 @@ export const ForbiddenWeekApi = {
   },
 
   create: async (date: string): Promise<ForbiddenWeek> => {
-    const response = await fetchWithAuth(`${apiUrl}/forbidden-week`, {
+    const response = await fetchWithAuth(`${tenantApiUrl()}/forbidden-week`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ date }),
@@ -27,7 +27,7 @@ export const ForbiddenWeekApi = {
   },
 
   delete: async (id: string): Promise<void> => {
-    const response = await fetchWithAuth(`${apiUrl}/forbidden-week/${id}`, {
+    const response = await fetchWithAuth(`${tenantApiUrl()}/forbidden-week/${id}`, {
       method: 'DELETE',
     })
     if (!response.ok) {

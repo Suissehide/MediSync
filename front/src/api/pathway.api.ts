@@ -1,4 +1,4 @@
-import { apiUrl } from '../constants/config.constant.ts'
+import { tenantApiUrl } from '../constants/config.constant.ts'
 import { handleHttpError } from '../libs/httpErrorHandler.ts'
 import type {
   CreatePathwayParams,
@@ -13,7 +13,7 @@ import { fetchWithAuth } from './fetchWithAuth.ts'
 
 export const PathwayApi = {
   getAll: async (): Promise<Pathway[]> => {
-    const response = await fetchWithAuth(`${apiUrl}/pathway`, {
+    const response = await fetchWithAuth(`${tenantApiUrl()}/pathway`, {
       method: 'GET',
     })
     if (!response.ok) {
@@ -29,7 +29,7 @@ export const PathwayApi = {
   create: async (
     createPathwayParams: CreatePathwayParams,
   ): Promise<Pathway> => {
-    const response = await fetchWithAuth(`${apiUrl}/pathway`, {
+    const response = await fetchWithAuth(`${tenantApiUrl()}/pathway`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(createPathwayParams),
@@ -43,7 +43,7 @@ export const PathwayApi = {
   instantiate: async (
     instantiatePathwayParams: InstantiatePathwayParams,
   ): Promise<Pathway> => {
-    const response = await fetchWithAuth(`${apiUrl}/pathway/instantiate`, {
+    const response = await fetchWithAuth(`${tenantApiUrl()}/pathway/instantiate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(instantiatePathwayParams),
@@ -57,7 +57,7 @@ export const PathwayApi = {
   regenerate: async (
     params: RegeneratePathwaysParams,
   ): Promise<RegeneratePathwaysResult> => {
-    const response = await fetchWithAuth(`${apiUrl}/pathway/regenerate`, {
+    const response = await fetchWithAuth(`${tenantApiUrl()}/pathway/regenerate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(params),
@@ -76,7 +76,7 @@ export const PathwayApi = {
     updatePathwayParams: UpdatePathwayParams,
   ): Promise<Pathway> => {
     const { id: pathwayID, ...updatePathwayInputs } = updatePathwayParams
-    const response = await fetchWithAuth(`${apiUrl}/pathway/${pathwayID}`, {
+    const response = await fetchWithAuth(`${tenantApiUrl()}/pathway/${pathwayID}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updatePathwayInputs),
@@ -88,7 +88,7 @@ export const PathwayApi = {
   },
 
   delete: async (pathwayID: string): Promise<void> => {
-    const response = await fetchWithAuth(`${apiUrl}/pathway/${pathwayID}`, {
+    const response = await fetchWithAuth(`${tenantApiUrl()}/pathway/${pathwayID}`, {
       method: 'DELETE',
     })
     if (!response.ok) {
@@ -99,7 +99,7 @@ export const PathwayApi = {
 
   getTracking: async (year: number, month: number): Promise<TrackingPathway[]> => {
     const response = await fetchWithAuth(
-      `${apiUrl}/pathway/tracking?year=${year}&month=${month}`,
+      `${tenantApiUrl()}/pathway/tracking?year=${year}&month=${month}`,
       { method: 'GET' },
     )
     if (!response.ok) {

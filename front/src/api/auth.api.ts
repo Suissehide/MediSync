@@ -1,6 +1,7 @@
 import { apiUrl } from '../constants/config.constant.ts'
 import { handleHttpError } from '../libs/httpErrorHandler.ts'
 import type { RegisterInput, User } from '../types/auth.ts'
+import { fetchWithAuth } from './fetchWithAuth.ts'
 
 export const AuthApi = {
   login: async (email: string, password: string): Promise<User> => {
@@ -83,5 +84,30 @@ export const AuthApi = {
       )
     }
     return response
+  },
+
+  me: async (): Promise<User> => {
+    const response = await fetchWithAuth(`${apiUrl}/me`, { method: 'GET' })
+    if (!response.ok) {
+      handleHttpError(response, {}, "Impossible de récupérer l'utilisateur")
+    }
+    return response.json()
+  },
+
+  updateMe: async (params: {
+    firstName?: string
+    lastName?: string
+    currentPassword?: string
+    newPassword?: string
+  }): Promise<User> => {
+    const response = await fetchWithAuth(`${apiUrl}/me`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    })
+    if (!response.ok) {
+      handleHttpError(response, {}, 'Impossible de mettre à jour le compte')
+    }
+    return response.json()
   },
 }

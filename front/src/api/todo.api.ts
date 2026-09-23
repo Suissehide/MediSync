@@ -1,11 +1,11 @@
-import { apiUrl } from '../constants/config.constant.ts'
+import { tenantApiUrl } from '../constants/config.constant.ts'
 import { handleHttpError } from '../libs/httpErrorHandler.ts'
 import type { CreateTodoParams, Todo, UpdateTodoParams } from '../types/todo.ts'
 import { fetchWithAuth } from './fetchWithAuth.ts'
 
 export const TodoApi = {
   getAll: async (): Promise<Todo[]> => {
-    const response = await fetchWithAuth(`${apiUrl}/todo?action=getAllTodos`, {
+    const response = await fetchWithAuth(`${tenantApiUrl()}/todo?action=getAllTodos`, {
       method: 'GET',
     })
     if (!response.ok) {
@@ -19,7 +19,7 @@ export const TodoApi = {
   },
 
   create: async (createTodoParams: CreateTodoParams): Promise<Todo> => {
-    const response = await fetchWithAuth(`${apiUrl}/todo?action=createTodo`, {
+    const response = await fetchWithAuth(`${tenantApiUrl()}/todo?action=createTodo`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(createTodoParams),
@@ -33,7 +33,7 @@ export const TodoApi = {
   update: async (updateTodoParams: UpdateTodoParams): Promise<Todo> => {
     const { id: todoID, ...updateTodoInputs } = updateTodoParams
     const response = await fetchWithAuth(
-      `${apiUrl}/todo/${todoID}?action=updateTodo`,
+      `${tenantApiUrl()}/todo/${todoID}?action=updateTodo`,
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -48,7 +48,7 @@ export const TodoApi = {
 
   delete: async (todoID: string): Promise<void> => {
     const response = await fetchWithAuth(
-      `${apiUrl}/todo/${todoID}?action=deleteTodo`,
+      `${tenantApiUrl()}/todo/${todoID}?action=deleteTodo`,
       {
         method: 'DELETE',
       },

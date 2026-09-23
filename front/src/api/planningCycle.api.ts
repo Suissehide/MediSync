@@ -1,11 +1,11 @@
-import { apiUrl } from '../constants/config.constant.ts'
+import { tenantApiUrl } from '../constants/config.constant.ts'
 import { handleHttpError } from '../libs/httpErrorHandler.ts'
 import type { PlanningCycle } from '../types/planningCycle.ts'
 import { fetchWithAuth } from './fetchWithAuth.ts'
 
 export const PlanningCycleApi = {
   get: async (): Promise<PlanningCycle | null> => {
-    const response = await fetchWithAuth(`${apiUrl}/planning-cycle`, {
+    const response = await fetchWithAuth(`${tenantApiUrl()}/planning-cycle`, {
       method: 'GET',
     })
     if (!response.ok) {
@@ -19,7 +19,7 @@ export const PlanningCycleApi = {
   },
 
   save: async (cycle: PlanningCycle): Promise<PlanningCycle> => {
-    const response = await fetchWithAuth(`${apiUrl}/planning-cycle`, {
+    const response = await fetchWithAuth(`${tenantApiUrl()}/planning-cycle`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(cycle),
@@ -35,7 +35,7 @@ export const PlanningCycleApi = {
   },
 
   reset: async (): Promise<void> => {
-    const response = await fetchWithAuth(`${apiUrl}/planning-cycle`, {
+    const response = await fetchWithAuth(`${tenantApiUrl()}/planning-cycle`, {
       method: 'DELETE',
     })
     if (!response.ok) {

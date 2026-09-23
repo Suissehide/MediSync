@@ -1,69 +1,24 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useState } from 'react'
 
-import { getUserColumns } from '../../../../columns/user.column.tsx'
-import DeleteUserForm from '../../../../components/custom/popup/deleteUserForm.tsx'
-import EditUserForm from '../../../../components/custom/popup/editUserForm.tsx'
 import DashboardLayout from '../../../../components/dashboard.layout.tsx'
-import ReactTable from '../../../../components/table/reactTable.tsx'
-import { useSoignantQueries } from '../../../../queries/useSoignant.ts'
-import { useAllUsersQuery } from '../../../../queries/useUser.ts'
-import type { User } from '../../../../types/auth.ts'
 
 export const Route = createFileRoute('/_authenticated/_admin/settings/user')({
   component: UserList,
 })
 
+// Écran obsolète : la gestion des utilisateurs par rôle global n'existe
+// plus (tâche 17, socle multi-tenant). Il sera remplacé par l'écran des
+// membres d'établissement/service en tâche 18.
 function UserList() {
-  const { users, isPending } = useAllUsersQuery()
-  const { soignants } = useSoignantQueries()
-  const [selectedUser, setSelectedUser] = useState<User | null>(null)
-  const [isEditOpen, setIsEditOpen] = useState(false)
-  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
-
-  const handleOpenEditUser = (user: User) => {
-    setSelectedUser(user)
-    setIsEditOpen(true)
-  }
-
-  const handleOpenDeleteUser = (user: User) => {
-    setSelectedUser(user)
-    setIsDeleteOpen(true)
-  }
-
-  const columns = getUserColumns({
-    onEdit: handleOpenEditUser,
-    onDelete: handleOpenDeleteUser,
-    soignants,
-  })
-
   return (
     <DashboardLayout>
       <div className="flex-1 bg-background p-6 rounded-lg flex flex-col w-full gap-4">
         <h1 className="h-9 flex items-center text-text-dark text-xl font-semibold">
-          Liste des utilisateurs
+          Membres
         </h1>
-
-        <div>
-          <ReactTable<User>
-            data={users ?? []}
-            columns={columns}
-            filterId="user"
-            isLoading={isPending}
-          />
-        </div>
-
-        <EditUserForm
-          open={isEditOpen}
-          setOpen={setIsEditOpen}
-          user={selectedUser}
-        />
-
-        <DeleteUserForm
-          open={isDeleteOpen}
-          setOpen={setIsDeleteOpen}
-          user={selectedUser}
-        />
+        <p className="text-text-light">
+          Cet écran sera bientôt remplacé par la gestion des membres.
+        </p>
       </div>
     </DashboardLayout>
   )
