@@ -68,6 +68,54 @@ const GLOBAL_TENANT_RELATIONS: Record<string, readonly string[]> = {
     'locations',
   ],
 }
+
+// Relations d'un modèle d'ÉTABLISSEMENT (parent → champ → modèle cible). Noms repris un par un
+// des modèles correspondants de prisma/schema.prisma : toute relation ajoutée là-bas doit l'être
+// ici. La table est exhaustive et c'est une liste blanche : un `include` sur une relation absente
+// d'ici est refusé (voir assertChildInclude) plutôt que laissé sans contrôle.
+//
+// Les entrées dont le modèle cible appartient à SERVICE_MODELS exigent en plus un filtre explicite
+// sur le service courant : partir d'une ligne d'établissement et descendre dans un modèle de
+// service ramène sinon les enfants de TOUS les services. C'est exactement la fuite trouvée à
+// l'étape 1 (un patient remontait les problèmes d'inscription de tous les services), corrigée
+// alors repository par repository.
+const TENANT_CHILD_RELATIONS: Record<string, Record<string, string>> = {
+  Patient: {
+    establishment: 'Establishment',
+    appointmentPatients: 'AppointmentPatient',
+    diagnostics: 'DiagnosticEducatif',
+    enrollmentIssues: 'EnrollmentIssue',
+    pathwayPriorities: 'PatientPathwayPriority',
+  },
+  Soignant: {
+    establishment: 'Establishment',
+    slotTemplateLinks: 'SlotTemplateSoignant',
+    thematicLinks: 'SoignantThematic',
+    todos: 'Todo',
+    memberships: 'EstablishmentMembership',
+  },
+  Location: {
+    establishment: 'Establishment',
+    slotTemplates: 'SlotTemplate',
+  },
+  Service: {
+    establishment: 'Establishment',
+    memberships: 'ServiceMembership',
+  },
+  EstablishmentMembership: {
+    user: 'User',
+    establishment: 'Establishment',
+    soignant: 'Soignant',
+    serviceMemberships: 'ServiceMembership',
+  },
+  ServiceMembership: {
+    establishmentMembership: 'EstablishmentMembership',
+    service: 'Service',
+  },
+  // `ActivityLog` ne déclare aucune relation dans le schéma : tout include y est donc refusé.
+  ActivityLog: {},
+}
+
 const UNIQUE_READ_OPERATIONS = new Set(['findUnique', 'findUniqueOrThrow'])
 
 const READ_OPERATIONS = new Set([
@@ -330,8 +378,12 @@ const assertData = (model: string, operation: string, data: unknown, store: Tena
   }
 }
 
+// Entrées d'un include/select, `false` (relation explicitement écartée) exclu.
+const includedRelationEntries = (value: unknown): [string, unknown][] =>
+  isDict(value) ? Object.entries(value).filter(([, included]) => included !== false) : []
+
 const includedRelationKeys = (value: unknown): string[] =>
-  isDict(value) ? Object.entries(value).filter(([, included]) => included !== false).map(([key]) => key) : []
+  includedRelationEntries(value).map(([key]) => key)
 
 // Un include/select depuis un modèle global qui touche une relation de tenant n'est sûr que sur
 // une opération à une seule ligne (findUnique/findUniqueOrThrow) : c'est la seule garantie que
@@ -349,6 +401,65 @@ const assertGlobalInclude = (model: string, operation: string, args: Dict): void
       operation,
       'include/select sur une relation de tenant hors findUnique(OrThrow)',
     )
+  }
+}
+
+// Une relation d'un modèle d'établissement vers un modèle de service doit porter son propre
+// `where` sur le service courant : la ligne parente est filtrée par établissement, rien ne
+// restreint ses enfants au service du tenant.
+const assertServiceRelationFilter = (
+  model: string,
+  operation: string,
+  relationField: string,
+  value: unknown,
+  store: TenantStore,
+): void => {
+  const detail =
+    `include/select '${relationField}' vers un modèle de service sans filtre` +
+    ` — ajouter { where: { serviceId } } sur '${relationField}'`
+  // Le tenant courant peut n'avoir aucun service (administration d'établissement) : il n'existe
+  // alors aucun service par lequel filtrer, et l'inclusion est refusée.
+  const expected = store.kind === 'tenant' ? store.tenant.serviceId : null
+  if (typeof expected !== 'string' || expected.length === 0) {
+    throw new TenantScopeMissingError(model, operation, detail)
+  }
+  if (!isDict(value) || whereValue(value.where, 'serviceId') !== expected) {
+    throw new TenantScopeMissingError(model, operation, detail)
+  }
+}
+
+// Contrôle les include/select d'un modèle d'établissement. Complément symétrique de
+// assertGlobalInclude, qui ne couvrait que les lectures partant d'un modèle global : une lecture
+// partant d'un modèle d'établissement et incluant un modèle de service échappait à tout contrôle.
+const assertChildInclude = (model: string, operation: string, args: Dict, store: TenantStore): void => {
+  const relations = TENANT_CHILD_RELATIONS[model]
+  if (!relations) {
+    return
+  }
+  // `include` n'accepte que des relations : toute clé doit donc être déclarée. Une clé inconnue
+  // est refusée plutôt que laissée sans contrôle — y compris `_count`, qui compte des enfants
+  // sans les filtrer.
+  for (const [relationField, value] of includedRelationEntries(args.include)) {
+    const childModel = relations[relationField]
+    if (!childModel) {
+      throw new TenantScopeMissingError(
+        model,
+        operation,
+        `relation '${relationField}' non déclarée — l'ajouter à TENANT_CHILD_RELATIONS['${model}']`,
+      )
+    }
+    if (familyOf(childModel) === 'service') {
+      assertServiceRelationFilter(model, operation, relationField, value, store)
+    }
+  }
+  // `select` mêle colonnes scalaires et relations, et rien ne permet ici de les distinguer : on
+  // n'y exige donc pas la déclaration, seules les relations déclarées y sont vérifiées. La
+  // complétude de la table reste garantie par `include` ci-dessus.
+  for (const [relationField, value] of includedRelationEntries(args.select)) {
+    const childModel = relations[relationField]
+    if (childModel && familyOf(childModel) === 'service') {
+      assertServiceRelationFilter(model, operation, relationField, value, store)
+    }
   }
 }
 
@@ -399,6 +510,11 @@ export const assertTenantScope = (
   // bloquer une opération légitime que laisser filer une opération future non vérifiée.
   if (!isRead && !isWrite) {
     throw new TenantScopeMissingError(model, operation, 'operation')
+  }
+  // Vaut pour les lectures comme pour les écritures : un `create ... include` renvoie les mêmes
+  // données qu'un `findMany ... include`, et expose donc la même chose.
+  if (family === 'establishment') {
+    assertChildInclude(model, operation, args, store)
   }
   const field = family === 'service' ? 'serviceId' : 'establishmentId'
   if (isRead) {
