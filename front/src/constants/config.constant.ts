@@ -15,6 +15,11 @@ const requireContext = () => {
 // n'existe pas encore quand les modules sont importés.
 export const tenantApiUrl = () => {
   const { establishmentId, serviceId } = requireContext()
+  if (serviceId === null) {
+    throw new Error(
+      'Contexte sans service : cet appel appartient à un écran de service',
+    )
+  }
   return `${apiUrl}/e/${establishmentId}/s/${serviceId}`
 }
 

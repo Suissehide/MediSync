@@ -64,16 +64,23 @@ function AddMemberForm({ trigger }: AddMemberFormProps) {
       if (!context) {
         return
       }
+      const { serviceId } = context
+      // Sur un écran d'administration sans service (aucun `serviceId` dans le
+      // contexte), un rôle de service ne peut pas être assigné : on l'ignore
+      // silencieusement plutôt que d'envoyer une affectation invalide.
+      if (value.serviceRole !== NO_SERVICE_ROLE && !serviceId) {
+        return
+      }
       addMember.mutate({
         email: value.email,
         role: value.role as EstablishmentRole,
         soignantId: value.soignantId || null,
         services:
-          value.serviceRole === NO_SERVICE_ROLE
+          value.serviceRole === NO_SERVICE_ROLE || !serviceId
             ? []
             : [
                 {
-                  serviceId: context.serviceId,
+                  serviceId,
                   role: value.serviceRole as ServiceRole,
                 },
               ],

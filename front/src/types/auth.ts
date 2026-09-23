@@ -16,13 +16,14 @@ export type User = {
   }[]
 }
 
-// Contexte établissement/service courant, dérivé de l'arbre des
-// appartenances de l'utilisateur. Voir `deriveContext` dans le store.
+// Contexte établissement/service courant, lu dans l'URL par le layout
+// correspondant. `serviceId` et `serviceRole` sont nuls sur les écrans
+// d'administration d'établissement, qui vivent sous une URL sans service.
 export type TenantContext = {
   establishmentId: string
-  serviceId: string
+  serviceId: string | null
   establishmentRole: EstablishmentRole
-  serviceRole: ServiceRole
+  serviceRole: ServiceRole | null
   soignantId: string | null
 }
 
