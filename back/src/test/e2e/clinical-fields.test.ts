@@ -5,6 +5,7 @@ import {
   createService,
   createUser,
   signIn,
+  tenantUrl,
 } from './setup/fixtures'
 
 type Cookies = { access_token: string }
@@ -19,18 +20,23 @@ describe('filtrage des champs cliniques selon clinical:read / clinical:write', (
   let patientId: string
   let appointmentId: string
   let appointmentPatientId: string
+  // Une connexion par role, partagee par tous les tests de ce fichier :
+  // `POST /auth/sign-in` est limite a 10/minute, et ce fichier a largement
+  // plus de neuf tests qui s'authentifient.
+  let secretariatCookies: Cookies
+  let intervenantCookies: Cookies
 
   const get = (cookies: Cookies, url: string) =>
     testApp.app.inject({
       method: 'GET',
-      url: `/e/${establishmentId}/s/${serviceId}${url}`,
+      url: tenantUrl(establishmentId, serviceId, url),
       cookies,
     })
 
   const patch = (cookies: Cookies, url: string, payload: unknown) =>
     testApp.app.inject({
       method: 'PATCH',
-      url: `/e/${establishmentId}/s/${serviceId}${url}`,
+      url: tenantUrl(establishmentId, serviceId, url),
       cookies,
       payload: payload as never,
     })
@@ -38,7 +44,7 @@ describe('filtrage des champs cliniques selon clinical:read / clinical:write', (
   const post = (cookies: Cookies, url: string, payload: unknown) =>
     testApp.app.inject({
       method: 'POST',
-      url: `/e/${establishmentId}/s/${serviceId}${url}`,
+      url: tenantUrl(establishmentId, serviceId, url),
       cookies,
       payload: payload as never,
     })
@@ -123,6 +129,8 @@ describe('filtrage des champs cliniques selon clinical:read / clinical:write', (
     appointmentPatientId = appointmentPatient.id
 
     testApp = await buildTestApp()
+    secretariatCookies = await signIn(testApp.app, 'secretariat@b.fr')
+    intervenantCookies = await signIn(testApp.app, 'intervenant@b.fr')
   })
 
   afterAll(async () => {
@@ -131,7 +139,7 @@ describe('filtrage des champs cliniques selon clinical:read / clinical:write', (
   })
 
   it('les retire pour un secretariat, sur la fiche, la liste et le creneau', async () => {
-    const cookies = await signIn(testApp.app, 'secretariat@b.fr')
+    const cookies = secretariatCookies
 
     const one = (await get(cookies, `/patient/${patientId}`)).json()
     expect(one).toMatchObject({
@@ -160,7 +168,7 @@ describe('filtrage des champs cliniques selon clinical:read / clinical:write', (
   })
 
   it('les conserve pour un intervenant, qui a clinical:read', async () => {
-    const cookies = await signIn(testApp.app, 'intervenant@b.fr')
+    const cookies = intervenantCookies
 
     const one = (await get(cookies, `/patient/${patientId}`)).json()
     expect(one).toMatchObject({
@@ -175,14 +183,8 @@ describe('filtrage des champs cliniques selon clinical:read / clinical:write', (
   })
 
   it('retire les colonnes cliniques de l export Excel pour un secretariat', async () => {
-    const withoutClinical = await get(
-      await signIn(testApp.app, 'secretariat@b.fr'),
-      '/patient/export',
-    )
-    const withClinical = await get(
-      await signIn(testApp.app, 'intervenant@b.fr'),
-      '/patient/export',
-    )
+    const withoutClinical = await get(secretariatCookies, '/patient/export')
+    const withClinical = await get(intervenantCookies, '/patient/export')
 
     expect(withoutClinical.statusCode).toBe(200)
     expect(withClinical.statusCode).toBe(200)
@@ -200,7 +202,7 @@ describe('filtrage des champs cliniques selon clinical:read / clinical:write', (
   // Pendant du filtrage de sortie : un role qui ne peut pas lire le contenu
   // clinique ne doit pas pouvoir l'ecraser a l'aveugle.
   it('ignore les champs cliniques envoyes par un secretariat, sans les vider', async () => {
-    const cookies = await signIn(testApp.app, 'secretariat@b.fr')
+    const cookies = secretariatCookies
 
     const res = await patch(cookies, `/patient/${patientId}`, {
       firstName: 'Jeanne',
@@ -221,7 +223,7 @@ describe('filtrage des champs cliniques selon clinical:read / clinical:write', (
   })
 
   it('applique les champs cliniques envoyes par un intervenant, qui a clinical:write', async () => {
-    const cookies = await signIn(testApp.app, 'intervenant@b.fr')
+    const cookies = intervenantCookies
 
     const res = await patch(cookies, `/patient/${patientId}`, {
       notes: 'NOTE-MODIFIEE',
@@ -241,7 +243,7 @@ describe('filtrage des champs cliniques selon clinical:read / clinical:write', (
   // `appointment:write` (que le secretariat detient) ne doit pas suffire a
   // ecrire ce champ clinique-la non plus.
   it('ignore la transmission envoyee par un secretariat sur un rendez-vous existant', async () => {
-    const cookies = await signIn(testApp.app, 'secretariat@b.fr')
+    const cookies = secretariatCookies
 
     const res = await patch(cookies, `/appointment/${appointmentId}`, {
       appointmentPatients: [
@@ -263,7 +265,7 @@ describe('filtrage des champs cliniques selon clinical:read / clinical:write', (
   })
 
   it('applique la transmission envoyee par un intervenant, qui a clinical:write', async () => {
-    const cookies = await signIn(testApp.app, 'intervenant@b.fr')
+    const cookies = intervenantCookies
 
     const res = await patch(cookies, `/appointment/${appointmentId}`, {
       appointmentPatients: [
@@ -293,7 +295,7 @@ describe('filtrage des champs cliniques selon clinical:read / clinical:write', (
   // Second chemin peu exerce : la creation, pas seulement la modification,
   // d'un patient par un role sans `clinical:write`.
   it('cree un patient sans les champs cliniques envoyes par un secretariat', async () => {
-    const cookies = await signIn(testApp.app, 'secretariat@b.fr')
+    const cookies = secretariatCookies
 
     const res = await post(cookies, '/patient', {
       firstName: 'Nouveau',
@@ -308,5 +310,10 @@ describe('filtrage des champs cliniques selon clinical:read / clinical:write', (
     })
     expect(created.firstName).toBe('Nouveau')
     expect(created.notes).toBeNull()
+
+    // Nettoyage : le premier test de ce fichier affirme `toHaveLength(1)` sur
+    // la liste des patients. Sans ce nettoyage, l'ordre d'exécution des tests
+    // deviendrait significatif alors que rien ne le signale.
+    await testDb.patient.delete({ where: { id: created.id } })
   })
 })

@@ -29,27 +29,55 @@ const FAKE_ID = 'clzzzzzzzzzzzzzzzzzzzzzzz'
 // `pdf:export` et `members:read` sont absentes : la matrice les déclare mais
 // aucune route ne les consomme aujourd'hui (voir le rapport de tâche) — il
 // n'existe donc rien à sonder pour elles.
+//
+// `heldStatus` : quatre permissions (`planning:read`, `referentials:read`,
+// `patient:read`, `todo:own`) figurent dans `READ_ALL` et sont donc détenues
+// par les quatre rôles — la branche « détenue » de la boucle ci-dessous s'y
+// exécute toujours, jamais la branche « refusée ». Un simple `not.toBe(403)`
+// y passerait sur un 200, un 404, un 500 ou une route mal orthographiée :
+// rien n'y serait falsifiable. Pour ces quatre-là, on affirme donc le code
+// exact (200, une simple liste). Les autres probes n'ont pas ce défaut :
+// au moins un rôle les refuse, ce qui exerce déjà la branche 403 pour de
+// vrai ; leur branche « détenue » reste `not.toBe(403)` faute d'un code
+// unique fiable (l'identifiant factice produit 201, 400 ou 404 selon la
+// route et le domaine).
 const probes: {
   permission: ServicePermission
   method: 'GET' | 'POST' | 'DELETE'
   path: string
   payload?: unknown
+  heldStatus?: number
 }[] = [
-  { permission: 'planning:read', method: 'GET', path: '/slot' },
+  {
+    permission: 'planning:read',
+    method: 'GET',
+    path: '/slot',
+    heldStatus: 200,
+  },
   {
     permission: 'planning:write',
     method: 'POST',
     path: '/forbidden-week',
     payload: { date: '2026-01-05' },
   },
-  { permission: 'referentials:read', method: 'GET', path: '/thematic' },
+  {
+    permission: 'referentials:read',
+    method: 'GET',
+    path: '/thematic',
+    heldStatus: 200,
+  },
   {
     permission: 'referentials:write',
     method: 'POST',
     path: '/thematic',
     payload: { name: 'X', soignantIDs: [] },
   },
-  { permission: 'patient:read', method: 'GET', path: '/patient' },
+  {
+    permission: 'patient:read',
+    method: 'GET',
+    path: '/patient',
+    heldStatus: 200,
+  },
   {
     permission: 'patient:write',
     method: 'POST',
@@ -77,7 +105,7 @@ const probes: {
     method: 'DELETE',
     path: `/patient/${FAKE_ID}/enrollment-issue/${FAKE_ID}`,
   },
-  { permission: 'todo:own', method: 'GET', path: '/todo' },
+  { permission: 'todo:own', method: 'GET', path: '/todo', heldStatus: 200 },
 ]
 
 const roles: ServiceRole[] = [
@@ -124,7 +152,7 @@ describe('permissions par role de service', () => {
     // change, l'attente suit automatiquement.
     it.each(probes)(
       '$permission -> 403 ssi non detenu',
-      async ({ permission, method, path, payload }) => {
+      async ({ permission, method, path, payload, heldStatus }) => {
         const cookies = cookiesByRole.get(role)
         if (!cookies) {
           throw new Error(`no cookies for role ${role}`)
@@ -136,7 +164,11 @@ describe('permissions par role de service', () => {
           payload: payload as never,
         })
         if (SERVICE_PERMISSIONS[role].includes(permission)) {
-          expect(res.statusCode).not.toBe(403)
+          if (heldStatus !== undefined) {
+            expect(res.statusCode).toBe(heldStatus)
+          } else {
+            expect(res.statusCode).not.toBe(403)
+          }
         } else {
           expect(res.statusCode).toBe(403)
         }
