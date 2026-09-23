@@ -1,12 +1,16 @@
-import { createFileRoute, useRouter } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
+
+import { defaultTenantContext } from '@/utils/tenant-context.ts'
 
 export const Route = createFileRoute('/_authenticated/')({
-  component: Index,
+  beforeLoad: ({ context }) => {
+    const tenant = defaultTenantContext(context.authState.user)
+    if (!tenant || tenant.serviceId === null) {
+      throw redirect({ to: '/pending' })
+    }
+    throw redirect({
+      to: '/e/$establishmentId/s/$serviceId/dashboard',
+      params: { establishmentId: tenant.establishmentId, serviceId: tenant.serviceId },
+    })
+  },
 })
-
-function Index() {
-  const router = useRouter()
-  router.navigate({ to: '/dashboard' })
-
-  return <></>
-}

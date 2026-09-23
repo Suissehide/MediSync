@@ -11,21 +11,21 @@ import dayjs, { type Dayjs } from 'dayjs'
 import { CalendarDays, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react'
 
-import AddPatientForm from '../../components/custom/popup/addPatientForm.tsx'
-import AddPatientToSlotForm from '../../components/custom/popup/addPatientToSlotForm.tsx'
-import DashboardLayout from '../../components/dashboard.layout.tsx'
-import { HeaderTable } from '../../components/table/headerTable.tsx'
-import type { CustomMeta } from '../../components/table/reactTable.tsx'
-import { Button } from '../../components/ui/button.tsx'
+import AddPatientForm from '@/components/custom/popup/addPatientForm.tsx'
+import AddPatientToSlotForm from '@/components/custom/popup/addPatientToSlotForm.tsx'
+import DashboardLayout from '@/components/dashboard.layout.tsx'
+import { HeaderTable } from '@/components/table/headerTable.tsx'
+import type { CustomMeta } from '@/components/table/reactTable.tsx'
+import { Button } from '@/components/ui/button.tsx'
 import {
   PopoverContent,
   PopoverRoot,
   PopoverTrigger,
-} from '../../components/ui/popover.tsx'
-import { hexToRGBA } from '../../libs/color.ts'
-import { usePathwayTrackingQuery } from '../../queries/usePathway.ts'
+} from '@/components/ui/popover.tsx'
+import { hexToRGBA } from '@/libs/color.ts'
+import { usePathwayTrackingQuery } from '@/queries/usePathway.ts'
 
-export const Route = createFileRoute('/_authenticated/suivi')({
+export const Route = createFileRoute('/_authenticated/e/$establishmentId/s/$serviceId/suivi')({
   component: SuiviPage,
 })
 
@@ -63,6 +63,7 @@ function getCommonPinningStyles(
 
 function SuiviPage() {
   const navigate = useNavigate()
+  const { establishmentId, serviceId } = Route.useParams()
   const [date, setDate] = useState<Dayjs>(dayjs.utc())
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -307,7 +308,17 @@ function SuiviPage() {
                       <tr
                         key={row.id}
                         className="border-b border-border hover:bg-primary/5 transition-colors cursor-pointer"
-                        onClick={() => row.original.patientId && void navigate({ to: '/patient/$patientID', params: { patientID: row.original.patientId } })}
+                        onClick={() =>
+                          row.original.patientId &&
+                          void navigate({
+                            to: '/e/$establishmentId/s/$serviceId/patient/$patientID',
+                            params: {
+                              establishmentId,
+                              serviceId,
+                              patientID: row.original.patientId,
+                            },
+                          })
+                        }
                       >
                         {row.getVisibleCells().map((cell) => {
                           const isPinned = cell.column.getIsPinned()

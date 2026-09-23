@@ -2,25 +2,26 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { ArrowLeft, Download, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
-import { PatientApi } from '../../../api/patient.api.ts'
-import { getPatientColumns } from '../../../columns/patient.column.tsx'
-import AddPatientForm from '../../../components/custom/popup/addPatientForm.tsx'
-import AddPatientToSlotForm from '../../../components/custom/popup/addPatientToSlotForm.tsx'
-import DashboardLayout from '../../../components/dashboard.layout.tsx'
-import ReactTable from '../../../components/table/reactTable.tsx'
-import { Button } from '../../../components/ui/button.tsx'
-import DropdownFilter from '../../../components/ui/dropdownFilter.tsx'
-import { Input } from '../../../components/ui/input.tsx'
-import { usePathwayTemplateQueries } from '../../../queries/usePathwayTemplate.ts'
-import { usePatientWithTagsQuery } from '../../../queries/usePatient.tsx'
-import type { PatientWithTags } from '../../../types/patient.ts'
+import { PatientApi } from '@/api/patient.api.ts'
+import { getPatientColumns } from '@/columns/patient.column.tsx'
+import AddPatientForm from '@/components/custom/popup/addPatientForm.tsx'
+import AddPatientToSlotForm from '@/components/custom/popup/addPatientToSlotForm.tsx'
+import DashboardLayout from '@/components/dashboard.layout.tsx'
+import ReactTable from '@/components/table/reactTable.tsx'
+import { Button } from '@/components/ui/button.tsx'
+import DropdownFilter from '@/components/ui/dropdownFilter.tsx'
+import { Input } from '@/components/ui/input.tsx'
+import { usePathwayTemplateQueries } from '@/queries/usePathwayTemplate.ts'
+import { usePatientWithTagsQuery } from '@/queries/usePatient.tsx'
+import type { PatientWithTags } from '@/types/patient.ts'
 
-export const Route = createFileRoute('/_authenticated/patient/')({
+export const Route = createFileRoute('/_authenticated/e/$establishmentId/s/$serviceId/patient/')({
   component: PatientList,
 })
 
 function PatientList() {
   const navigate = useNavigate()
+  const { establishmentId, serviceId } = Route.useParams()
   const { patients, isPending } = usePatientWithTagsQuery()
   const { pathwayTemplates } = usePathwayTemplateQueries()
   const [searchTerm, setSearchTerm] = useState('')
@@ -28,7 +29,10 @@ function PatientList() {
   const [isExporting, setIsExporting] = useState(false)
 
   const handleRedirectPatient = async (patientID: string) => {
-    await navigate({ to: '/patient/$patientID', params: { patientID } })
+    await navigate({
+      to: '/e/$establishmentId/s/$serviceId/patient/$patientID',
+      params: { establishmentId, serviceId, patientID },
+    })
   }
 
   const columns = getPatientColumns({ onView: handleRedirectPatient, pathwayTemplates: pathwayTemplates ?? [] })
@@ -104,7 +108,12 @@ function PatientList() {
           <Button
             variant="outline"
             size="icon"
-            onClick={() => navigate({ to: '/dashboard' })}
+            onClick={() =>
+              navigate({
+                to: '/e/$establishmentId/s/$serviceId/dashboard',
+                params: { establishmentId, serviceId },
+              })
+            }
           >
             <ArrowLeft className="w-4 h-4" />
           </Button>

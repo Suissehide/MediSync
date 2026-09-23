@@ -2,30 +2,30 @@ import { createFileRoute, useNavigate, useParams } from '@tanstack/react-router'
 import { ArrowLeft, FileDown, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
-import EditPatient from '../../../components/custom/Patient/edit/edit.patient.tsx'
-import ProgrammePDFModal from '../../../components/custom/Patient/pdf/programme-pdf-modal.tsx'
-import DiagnosticPatient from '../../../components/custom/Patient/view/diagnostic.patient.tsx'
-import OverviewPatient from '../../../components/custom/Patient/view/overview.patient.tsx'
-import PlanningPatient from '../../../components/custom/Patient/view/planning.patient.tsx'
-import AddPatientForm from '../../../components/custom/popup/addPatientForm.tsx'
-import { AddPatientToPathwayForm } from '../../../components/custom/popup/addPatientToPathwayForm.tsx'
-import { ConfirmDeleteForm } from '../../../components/custom/popup/confirmDeleteForm.tsx'
-import DashboardLayout from '../../../components/dashboard.layout.tsx'
-import { Button } from '../../../components/ui/button.tsx'
+import EditPatient from '@/components/custom/Patient/edit/edit.patient.tsx'
+import ProgrammePDFModal from '@/components/custom/Patient/pdf/programme-pdf-modal.tsx'
+import DiagnosticPatient from '@/components/custom/Patient/view/diagnostic.patient.tsx'
+import OverviewPatient from '@/components/custom/Patient/view/overview.patient.tsx'
+import PlanningPatient from '@/components/custom/Patient/view/planning.patient.tsx'
+import AddPatientForm from '@/components/custom/popup/addPatientForm.tsx'
+import { AddPatientToPathwayForm } from '@/components/custom/popup/addPatientToPathwayForm.tsx'
+import { ConfirmDeleteForm } from '@/components/custom/popup/confirmDeleteForm.tsx'
+import DashboardLayout from '@/components/dashboard.layout.tsx'
+import { Button } from '@/components/ui/button.tsx'
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from '../../../components/ui/tabs.tsx'
-import { useCan } from '../../../hooks/useCan.ts'
+} from '@/components/ui/tabs.tsx'
+import { useCan } from '@/hooks/useCan.ts'
 import {
   usePatientByIDQuery,
   usePatientMutations,
-} from '../../../queries/usePatient.tsx'
-import { useDiagnosticStore } from '../../../store/useDiagnosticStore.ts'
+} from '@/queries/usePatient.tsx'
+import { useDiagnosticStore } from '@/store/useDiagnosticStore.ts'
 
-export const Route = createFileRoute('/_authenticated/patient/$patientID')({
+export const Route = createFileRoute('/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID')({
   component: PatientDetails,
 })
 
@@ -43,8 +43,8 @@ function PatientDetails() {
   const { selectedId: diagnosticSelectedId, setSelectedId } =
     useDiagnosticStore()
 
-  const { patientID } = useParams({
-    from: '/_authenticated/patient/$patientID',
+  const { establishmentId, serviceId, patientID } = useParams({
+    from: '/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID',
   })
   const { patient, isError, isFetched } = usePatientByIDQuery(patientID)
 
@@ -61,7 +61,10 @@ function PatientDetails() {
   }, [setSelectedId])
 
   if (isFetched && (isError || !patient)) {
-    void navigate({ to: '/patient' })
+    void navigate({
+      to: '/e/$establishmentId/s/$serviceId/patient',
+      params: { establishmentId, serviceId },
+    })
     return null
   }
 
@@ -76,7 +79,12 @@ function PatientDetails() {
             <Button
               variant="outline"
               size="icon"
-              onClick={() => navigate({ to: '/patient' })}
+              onClick={() =>
+                navigate({
+                  to: '/e/$establishmentId/s/$serviceId/patient',
+                  params: { establishmentId, serviceId },
+                })
+              }
             >
               <ArrowLeft className="w-4 h-4" />
             </Button>
@@ -153,7 +161,10 @@ function PatientDetails() {
           deletePatient(patient.id, {
             onOptimisticDelete: () => {
               setShowDelete(false)
-              void navigate({ to: '/patient' })
+              void navigate({
+                to: '/e/$establishmentId/s/$serviceId/patient',
+                params: { establishmentId, serviceId },
+              })
             },
           })
         }}

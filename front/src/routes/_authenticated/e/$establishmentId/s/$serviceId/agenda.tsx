@@ -4,30 +4,30 @@ import dayjs, { type Dayjs } from 'dayjs'
 import { CalendarDays } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
-import { getDayAppointmentColumns } from '../../columns/dayAppointment.column.tsx'
-import AddPatientForm from '../../components/custom/popup/addPatientForm.tsx'
-import AddPatientToAppointmentForm from '../../components/custom/popup/addPatientToAppointmentForm.tsx'
-import AddPatientToSlotForm from '../../components/custom/popup/addPatientToSlotForm.tsx'
-import { ConfirmDeleteForm } from '../../components/custom/popup/confirmDeleteForm.tsx'
-import AppointmentSheet from '../../components/custom/sheet/appointmentSheet.tsx'
-import WeekDayStrip from '../../components/custom/weekDayStrip.tsx'
-import DashboardLayout from '../../components/dashboard.layout.tsx'
-import ReactTable from '../../components/table/reactTable.tsx'
-import { Button } from '../../components/ui/button.tsx'
+import { getDayAppointmentColumns } from '@/columns/dayAppointment.column.tsx'
+import AddPatientForm from '@/components/custom/popup/addPatientForm.tsx'
+import AddPatientToAppointmentForm from '@/components/custom/popup/addPatientToAppointmentForm.tsx'
+import AddPatientToSlotForm from '@/components/custom/popup/addPatientToSlotForm.tsx'
+import { ConfirmDeleteForm } from '@/components/custom/popup/confirmDeleteForm.tsx'
+import AppointmentSheet from '@/components/custom/sheet/appointmentSheet.tsx'
+import WeekDayStrip from '@/components/custom/weekDayStrip.tsx'
+import DashboardLayout from '@/components/dashboard.layout.tsx'
+import ReactTable from '@/components/table/reactTable.tsx'
+import { Button } from '@/components/ui/button.tsx'
 import {
   PopoverContent,
   PopoverRoot,
   PopoverTrigger,
-} from '../../components/ui/popover.tsx'
+} from '@/components/ui/popover.tsx'
 import {
   buildDayAppointmentRows,
   type DayAppointmentRow,
-} from '../../libs/utils.ts'
-import { useAppointmentMutations } from '../../queries/useAppointment.ts'
-import { useSlotsInRangeQuery } from '../../queries/useSlot.ts'
-import { useSoignantStore } from '../../store/useSoignantStore.ts'
+} from '@/libs/utils.ts'
+import { useAppointmentMutations } from '@/queries/useAppointment.ts'
+import { useSlotsInRangeQuery } from '@/queries/useSlot.ts'
+import { useSoignantStore } from '@/store/useSoignantStore.ts'
 
-export const Route = createFileRoute('/_authenticated/agenda')({
+export const Route = createFileRoute('/_authenticated/e/$establishmentId/s/$serviceId/agenda')({
   component: Agenda,
 })
 

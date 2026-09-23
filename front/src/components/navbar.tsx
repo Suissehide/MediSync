@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 
 import { useCan } from '../hooks/useCan.ts'
+import { useAuthStore } from '../store/useAuthStore.ts'
 import TodoSheet from './custom/todo/todoSheet.tsx'
 import { Button } from './ui/button.tsx'
 import {
@@ -136,6 +137,13 @@ function Navbar({ toggleSidebar }: NavbarProps) {
     canReadActivityLog
   const matchRoute = useMatchRoute()
   const isActive = (to: string) => !!matchRoute({ to, fuzzy: false })
+  // Les onglets Dashboard/Agenda/Patients/Suivi vivent sous
+  // /e/:establishmentId/s/:serviceId depuis l'etape 2 (tache 6) : le
+  // contexte vient du store, pose par le layout de service avant que ces
+  // ecrans ne puissent se rendre. Sans contexte de service (ecrans
+  // d'administration atteints par un role sans affectation de service), les
+  // onglets n'ont pas de destination valable et sont masques.
+  const context = useAuthStore((state) => state.context)
 
   return (
     <div className="fixed top-0 left-0 right-0 z-50 px-4 h-16 flex justify-between items-center bg-foreground text-text border-b border-border-sidebar">
@@ -154,47 +162,65 @@ function Navbar({ toggleSidebar }: NavbarProps) {
           </Button>
         </div>
 
-        <div className="flex gap-4">
-          <Link
-            to="/dashboard"
-            className={`relative cursor-pointer transition-colors duration-300
+        {context?.serviceId && (
+          <div className="flex gap-4">
+            <Link
+              to="/e/$establishmentId/s/$serviceId/dashboard"
+              params={{
+                establishmentId: context.establishmentId,
+                serviceId: context.serviceId,
+              }}
+              className={`relative cursor-pointer transition-colors duration-300
                after:content-[''] after:absolute after:left-0 after:top-full after:w-full after:h-[3px] after:bg-primary after:scale-x-0 after:origin-right after:transition-transform after:duration-300
                hover:after:scale-x-100 hover:after:origin-left
-               ${isActive('/dashboard') ? 'text-text after:scale-x-100' : 'text-text-light'}`}
-          >
-            Dashboard
-          </Link>
+               ${isActive('/e/$establishmentId/s/$serviceId/dashboard') ? 'text-text after:scale-x-100' : 'text-text-light'}`}
+            >
+              Dashboard
+            </Link>
 
-          <Link
-            to="/agenda"
-            className={`relative cursor-pointer transition-colors duration-300
+            <Link
+              to="/e/$establishmentId/s/$serviceId/agenda"
+              params={{
+                establishmentId: context.establishmentId,
+                serviceId: context.serviceId,
+              }}
+              className={`relative cursor-pointer transition-colors duration-300
                after:content-[''] after:absolute after:left-0 after:top-full after:w-full after:h-[3px] after:bg-primary after:scale-x-0 after:origin-right after:transition-transform after:duration-300
                hover:after:scale-x-100 hover:after:origin-left
-               ${isActive('/agenda') ? 'text-text after:scale-x-100' : 'text-text-light'}`}
-          >
-            Agenda
-          </Link>
+               ${isActive('/e/$establishmentId/s/$serviceId/agenda') ? 'text-text after:scale-x-100' : 'text-text-light'}`}
+            >
+              Agenda
+            </Link>
 
-          <Link
-            to="/patient"
-            className={`relative cursor-pointer transition-colors duration-300
+            <Link
+              to="/e/$establishmentId/s/$serviceId/patient"
+              params={{
+                establishmentId: context.establishmentId,
+                serviceId: context.serviceId,
+              }}
+              className={`relative cursor-pointer transition-colors duration-300
                after:content-[''] after:absolute after:left-0 after:top-full after:w-full after:h-[3px] after:bg-primary after:scale-x-0 after:origin-right after:transition-transform after:duration-300
                hover:after:scale-x-100 hover:after:origin-left
-               ${isActive('/patient') ? 'text-text after:scale-x-100' : 'text-text-light'}`}
-          >
-            Patients
-          </Link>
+               ${isActive('/e/$establishmentId/s/$serviceId/patient') ? 'text-text after:scale-x-100' : 'text-text-light'}`}
+            >
+              Patients
+            </Link>
 
-          <Link
-            to="/suivi"
-            className={`relative cursor-pointer transition-colors duration-300
+            <Link
+              to="/e/$establishmentId/s/$serviceId/suivi"
+              params={{
+                establishmentId: context.establishmentId,
+                serviceId: context.serviceId,
+              }}
+              className={`relative cursor-pointer transition-colors duration-300
                after:content-[''] after:absolute after:left-0 after:top-full after:w-full after:h-[3px] after:bg-primary after:scale-x-0 after:origin-right after:transition-transform after:duration-300
                hover:after:scale-x-100 hover:after:origin-left
-               ${isActive('/suivi') ? 'text-text after:scale-x-100' : 'text-text-light'}`}
-          >
-            Suivi
-          </Link>
-        </div>
+               ${isActive('/e/$establishmentId/s/$serviceId/suivi') ? 'text-text after:scale-x-100' : 'text-text-light'}`}
+            >
+              Suivi
+            </Link>
+          </div>
+        )}
       </div>
       <div className="flex gap-8 pl-4 border-l border-border-sidebar">
         <div className="flex items-center gap-2">

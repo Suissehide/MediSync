@@ -65,7 +65,10 @@ function UserSettings() {
           <Button
             variant="outline"
             size="icon"
-            onClick={() => navigate({ to: '/dashboard' })}
+            // `/dashboard` a demenage sous /e/:establishmentId/s/:serviceId
+            // (etape 2, tache 6) ; cet ecran n'a pas ces parametres dans son
+            // URL. `/` redirige vers le tableau de bord du contexte courant.
+            onClick={() => navigate({ to: '/' })}
           >
             <ArrowLeft className="w-4 h-4" />
           </Button>

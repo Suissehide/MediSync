@@ -15,6 +15,7 @@ export interface AuthStoreActions {
   update: (user: User) => void
   authenticate: (user: User | undefined) => void
   logout: () => void
+  setContext: (context: TenantContext) => void
 }
 
 // Délègue à `defaultTenantContext` (front/src/utils/tenant-context.ts), le
@@ -51,6 +52,12 @@ export const useAuthStore = create<AuthStoreState & AuthStoreActions>()(
 
           logout: () => {
             set({ isAuthenticated: false, user: null, context: null })
+          },
+
+          // Pose le contexte lu dans l'URL. Ecrit sans condition : le layout
+          // l'a deja valide contre les appartenances.
+          setContext: (context: TenantContext) => {
+            set({ context })
           },
         }),
         {
