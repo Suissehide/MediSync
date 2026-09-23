@@ -21,6 +21,21 @@ const servicesOf = (establishment: User['establishments'][number]) =>
 const establishmentOf = (user: User | null, establishmentId?: string) =>
   !establishmentId ? undefined : establishmentsOf(user).find((e) => e.id === establishmentId)
 
+// Un couple accessible : un service de l'arbre des appartenances, avec son
+// établissement. Dérivation commune au sélecteur de service (`TenantSelector`)
+// et à la page de choix (`/choose-context`) — les mêmes gardes que le reste
+// de ce module (`establishmentsOf`/`servicesOf`) la protègent contre un
+// `user` de forme inattendue.
+export type AccessibleCouple = {
+  establishment: User['establishments'][number]
+  service: User['establishments'][number]['services'][number]
+}
+
+export const accessibleCouples = (user: User | null): AccessibleCouple[] =>
+  establishmentsOf(user).flatMap((establishment) =>
+    servicesOf(establishment).map((service) => ({ establishment, service })),
+  )
+
 // Un couple de l'URL n'est accepté que s'il figure dans les appartenances.
 // Le back refuserait de toute façon par un 404 ; refuser ici évite d'envoyer
 // la requête et permet de rediriger vers le choix de contexte.

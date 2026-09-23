@@ -13,6 +13,7 @@ import {
 
 import { useCan } from '../hooks/useCan.ts'
 import { useAuthStore } from '../store/useAuthStore.ts'
+import { TenantSelector } from './custom/tenantSelector.tsx'
 import TodoSheet from './custom/todo/todoSheet.tsx'
 import { Button } from './ui/button.tsx'
 import {
@@ -33,7 +34,12 @@ interface NavbarProps {
 // détenir l'une sans l'autre.
 interface SettingsMenuProps {
   establishmentId: string
-  serviceId: string
+  // Nul sur un écran d'administration sans service (administrateur sans
+  // affectation, voir `admin.tsx`) : les cinq écrans qui vivent sous
+  // /e/:establishmentId/s/:serviceId n'ont alors pas de destination valable
+  // et restent masqués. Seul Membres, sous /e/:establishmentId/admin/members
+  // (layout d'établissement, tâche 8), reste accessible dans ce cas.
+  serviceId: string | null
   canPlanning: boolean
   canManageSoignants: boolean
   canManageReferentials: boolean
@@ -57,8 +63,10 @@ const SettingsMenu = ({
   // /e/:establishmentId/s/:serviceId : la navigation prend les mêmes
   // paramètres que les onglets Dashboard/Agenda/Patients/Suivi. Membres vit
   // sous /e/:establishmentId/admin/members (layout d'établissement, tâche 8),
-  // sans paramètre de service.
-  const params = { establishmentId, serviceId }
+  // sans paramètre de service. `serviceParams` reste nul sans service en
+  // contexte ; chaque entrée qui en a besoin se garde donc par lui, pas
+  // seulement par sa permission.
+  const serviceParams = serviceId === null ? null : { establishmentId, serviceId }
 
   return (
     <PopoverRoot>
@@ -68,65 +76,65 @@ const SettingsMenu = ({
         </Button>
       </PopoverTrigger>
       <PopoverContent sideOffset={2} align="end">
-        {canPlanning && (
+        {serviceParams && canPlanning && (
           <PopoverMenuItem
             icon={<CalendarDays className="w-4 h-4" />}
             onClick={() =>
               router.navigate({
                 to: '/e/$establishmentId/s/$serviceId/planning',
-                params,
+                params: serviceParams,
               })
             }
           >
             Planning
           </PopoverMenuItem>
         )}
-        {canManageSoignants && (
+        {serviceParams && canManageSoignants && (
           <PopoverMenuItem
             icon={<Users className="w-4 h-4" />}
             onClick={() =>
               router.navigate({
                 to: '/e/$establishmentId/s/$serviceId/soignant',
-                params,
+                params: serviceParams,
               })
             }
           >
             Soignants
           </PopoverMenuItem>
         )}
-        {canManageReferentials && (
+        {serviceParams && canManageReferentials && (
           <PopoverMenuItem
             icon={<Tag className="w-4 h-4" />}
             onClick={() =>
               router.navigate({
                 to: '/e/$establishmentId/s/$serviceId/thematic',
-                params,
+                params: serviceParams,
               })
             }
           >
             Thématiques
           </PopoverMenuItem>
         )}
-        {canManageLocations && (
+        {serviceParams && canManageLocations && (
           <PopoverMenuItem
             icon={<DoorOpen className="w-4 h-4" />}
             onClick={() =>
               router.navigate({
                 to: '/e/$establishmentId/s/$serviceId/location',
-                params,
+                params: serviceParams,
               })
             }
           >
             Salles
           </PopoverMenuItem>
         )}
-        {canManageReferentials && (
+        {serviceParams && canManageReferentials && (
           <PopoverMenuItem
             icon={<BriefcaseMedical className="w-4 h-4" />}
             onClick={() =>
               router.navigate({
                 to: '/e/$establishmentId/s/$serviceId/diagnostic-template',
-                params,
+                params: serviceParams,
               })
             }
           >
@@ -146,13 +154,13 @@ const SettingsMenu = ({
             Membres
           </PopoverMenuItem>
         )}
-        {canReadActivityLog && (
+        {serviceParams && canReadActivityLog && (
           <PopoverMenuItem
             icon={<Activity className="w-4 h-4" />}
             onClick={() =>
               router.navigate({
                 to: '/e/$establishmentId/s/$serviceId/activity-log',
-                params,
+                params: serviceParams,
               })
             }
           >
@@ -203,6 +211,7 @@ function Navbar({ toggleSidebar }: NavbarProps) {
           >
             <PanelLeft className="w-5 h-5" />
           </Button>
+          <TenantSelector />
         </div>
 
         {context?.serviceId && (
@@ -267,7 +276,7 @@ function Navbar({ toggleSidebar }: NavbarProps) {
       </div>
       <div className="flex gap-8 pl-4 border-l border-border-sidebar">
         <div className="flex items-center gap-2">
-          {hasSettingsAccess && context?.establishmentId && context.serviceId && (
+          {hasSettingsAccess && context?.establishmentId && (
             <SettingsMenu
               establishmentId={context.establishmentId}
               serviceId={context.serviceId}

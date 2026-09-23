@@ -17,6 +17,7 @@ import { Route as AuthIndexImport } from './routes/auth/index'
 import { Route as AuthenticatedIndexImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedSuiviImport } from './routes/_authenticated/suivi'
 import { Route as AuthenticatedDashboardImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedChooseContextImport } from './routes/_authenticated/choose-context'
 import { Route as AuthenticatedAgendaImport } from './routes/_authenticated/agenda'
 import { Route as AuthenticatedPatientIndexImport } from './routes/_authenticated/patient/index'
 import { Route as AuthenticatedUserSettingsImport } from './routes/_authenticated/user/settings'
@@ -81,6 +82,14 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+
+const AuthenticatedChooseContextRoute = AuthenticatedChooseContextImport.update(
+  {
+    id: '/choose-context',
+    path: '/choose-context',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any,
+)
 
 const AuthenticatedAgendaRoute = AuthenticatedAgendaImport.update({
   id: '/agenda',
@@ -292,6 +301,13 @@ declare module '@tanstack/react-router' {
       path: '/agenda'
       fullPath: '/agenda'
       preLoaderRoute: typeof AuthenticatedAgendaImport
+      parentRoute: typeof AuthenticatedImport
+    }
+    '/_authenticated/choose-context': {
+      id: '/_authenticated/choose-context'
+      path: '/choose-context'
+      fullPath: '/choose-context'
+      preLoaderRoute: typeof AuthenticatedChooseContextImport
       parentRoute: typeof AuthenticatedImport
     }
     '/_authenticated/dashboard': {
@@ -589,6 +605,7 @@ const AuthenticatedEEstablishmentIdSServiceIdRouteWithChildren =
 
 interface AuthenticatedRouteChildren {
   AuthenticatedAgendaRoute: typeof AuthenticatedAgendaRoute
+  AuthenticatedChooseContextRoute: typeof AuthenticatedChooseContextRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedSuiviRoute: typeof AuthenticatedSuiviRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
@@ -608,6 +625,7 @@ interface AuthenticatedRouteChildren {
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAgendaRoute: AuthenticatedAgendaRoute,
+  AuthenticatedChooseContextRoute: AuthenticatedChooseContextRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedSuiviRoute: AuthenticatedSuiviRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
@@ -636,6 +654,7 @@ export interface FileRoutesByFullPath {
   '': typeof AuthenticatedRouteWithChildren
   '/pending': typeof PendingRoute
   '/agenda': typeof AuthenticatedAgendaRoute
+  '/choose-context': typeof AuthenticatedChooseContextRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/suivi': typeof AuthenticatedSuiviRoute
   '/': typeof AuthenticatedIndexRoute
@@ -670,6 +689,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/pending': typeof PendingRoute
   '/agenda': typeof AuthenticatedAgendaRoute
+  '/choose-context': typeof AuthenticatedChooseContextRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/suivi': typeof AuthenticatedSuiviRoute
   '/': typeof AuthenticatedIndexRoute
@@ -705,6 +725,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/pending': typeof PendingRoute
   '/_authenticated/agenda': typeof AuthenticatedAgendaRoute
+  '/_authenticated/choose-context': typeof AuthenticatedChooseContextRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/suivi': typeof AuthenticatedSuiviRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
@@ -743,6 +764,7 @@ export interface FileRouteTypes {
     | ''
     | '/pending'
     | '/agenda'
+    | '/choose-context'
     | '/dashboard'
     | '/suivi'
     | '/'
@@ -776,6 +798,7 @@ export interface FileRouteTypes {
   to:
     | '/pending'
     | '/agenda'
+    | '/choose-context'
     | '/dashboard'
     | '/suivi'
     | '/'
@@ -809,6 +832,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/pending'
     | '/_authenticated/agenda'
+    | '/_authenticated/choose-context'
     | '/_authenticated/dashboard'
     | '/_authenticated/suivi'
     | '/_authenticated/'
@@ -873,6 +897,7 @@ export const routeTree = rootRoute
       "filePath": "_authenticated.tsx",
       "children": [
         "/_authenticated/agenda",
+        "/_authenticated/choose-context",
         "/_authenticated/dashboard",
         "/_authenticated/suivi",
         "/_authenticated/",
@@ -895,6 +920,10 @@ export const routeTree = rootRoute
     },
     "/_authenticated/agenda": {
       "filePath": "_authenticated/agenda.tsx",
+      "parent": "/_authenticated"
+    },
+    "/_authenticated/choose-context": {
+      "filePath": "_authenticated/choose-context.tsx",
       "parent": "/_authenticated"
     },
     "/_authenticated/dashboard": {

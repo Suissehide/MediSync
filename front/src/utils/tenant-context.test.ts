@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import type { User } from '@/types/auth.ts'
 import {
+  accessibleCouples,
   defaultTenantContext,
   rememberContext,
   resolveEstablishmentContext,
@@ -128,5 +129,22 @@ describe('defaultTenantContext', () => {
   it('rend null pour un utilisateur sans appartenance', () => {
     expect(defaultTenantContext({ ...user, establishments: [] })).toBeNull()
     expect(defaultTenantContext(null)).toBeNull()
+  })
+})
+
+describe('accessibleCouples', () => {
+  it('aplatit tous les couples etablissement/service, dans l ordre de l arbre', () => {
+    expect(accessibleCouples(user).map((c) => `${c.establishment.id}/${c.service.id}`)).toEqual([
+      'e1/s1',
+      'e1/s2',
+      'e2/s3',
+    ])
+  })
+
+  // Meme garde que le reste du module : un `user` nul ou un etablissement
+  // sans service ne doit jamais faire lever `.flatMap`/`.map`.
+  it('rend un tableau vide sans utilisateur ou sans service', () => {
+    expect(accessibleCouples(null)).toEqual([])
+    expect(accessibleCouples({ ...user, establishments: [] })).toEqual([])
   })
 })
