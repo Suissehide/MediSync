@@ -1,6 +1,7 @@
 export const AUTH = {
   LOGIN: 'login',
   LOGOUT: 'logout',
+  ME: 'getMe',
 }
 
 export const TODO = {
