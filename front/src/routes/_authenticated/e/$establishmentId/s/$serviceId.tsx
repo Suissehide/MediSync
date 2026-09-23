@@ -9,13 +9,10 @@ export const Route = createFileRoute('/_authenticated/e/$establishmentId/s/$serv
   beforeLoad: ({ context, params, preload }) => {
     const tenant = resolveTenantContext(context.authState.user, params)
     if (!tenant) {
-      // `/choose-context` n'existe pas encore : c'est la tache 12 qui la
-      // cree. `href` (chaine libre, non verifiee contre l'arbre de routes)
-      // reference la route en avance sans affirmer un typage faux, contrairement
-      // a un `to` force par assertion : si la tache 12 nomme la route
-      // autrement, ceci reste un simple lien casse a corriger, pas un trou
-      // de type qui masquerait le probleme.
-      throw redirect({ href: '/choose-context' })
+      // `/choose-context` existe depuis la tache 12 (selecteur et page de
+      // choix) : `to` verifie desormais la destination contre l'arbre de
+      // routes genere, plutot que de s'en remettre a une chaine libre.
+      throw redirect({ to: '/choose-context' })
     }
     // Le routeur precharge a l'intention (`defaultPreload: 'intent'` dans
     // main.tsx) : survoler un lien execute deja `beforeLoad`, avant toute

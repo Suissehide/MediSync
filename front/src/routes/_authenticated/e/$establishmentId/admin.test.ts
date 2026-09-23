@@ -72,7 +72,7 @@ describe('beforeLoad du layout d etablissement', () => {
     // `resolveEstablishmentContext` exige le role ADMIN ; un simple membre
     // est redirige avant que le contexte ne soit jamais pose.
     expect(() => runBeforeLoad(member, false)).toThrow(
-      expect.objectContaining({ isRedirect: true, href: '/choose-context' }),
+      expect.objectContaining({ isRedirect: true, to: '/choose-context' }),
     )
     expect(useAuthStore.getState().context).toBeNull()
   })
