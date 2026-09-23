@@ -62,8 +62,11 @@ describe('changement de contexte', () => {
   it('annule les requetes en vol avant de vider', async () => {
     const queryClient = new QueryClient()
     const order: string[] = []
-    vi.spyOn(queryClient, 'cancelQueries').mockImplementation(async () => {
+    vi.spyOn(queryClient, 'cancelQueries').mockImplementation(() => {
       order.push('cancel')
+      // Rendre la promesse sans `async` : `resetOnTenantChange` l'attend, et
+      // biome refuse une fonction `async` sans `await`.
+      return Promise.resolve()
     })
     vi.spyOn(queryClient, 'clear').mockImplementation(() => {
       order.push('clear')
