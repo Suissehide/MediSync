@@ -103,3 +103,45 @@ Documents liés :
 - **R80** — Réserve 2 tranchée par la re-revue : le retrait de `pathwayID` à l'exécution est une défense en profondeur, pas un masque — le typage bloque en premier (il faudrait un `as never` délibéré pour l'atteindre), la voie légitime ne traverse pas ce code, et il transforme un effet de bord du schéma Zod en garantie. Décision : conservé.
 - **R81** — Résidu hors périmètre relevé par la re-revue : `update` ne porte pas d'`assertNotSelf` sur le rôle, un administrateur qui n'est pas le dernier peut encore se rétrograder en MEMBER et perdre `members:manage`. Décision : versé à l'étape 2, comme le contexte d'établissement sans service dont il partage la cause. Coût si faux : un administrateur se rétrograde par erreur et un collègue le rétablit — pas de perte de données, pas de fuite.
 - **R82** — Le registre des décisions vit dans un espace de travail git-ignoré que la fin de chantier supprime. Décision : verser les 82 décisions dans `docs/multi-tenant/decisions-etape-1.md`, versionné. Coût si faux : un document de plus à maintenir ; mais pour une application de santé, la trace du raisonnement de sécurité vaut plus que la concision du dépôt.
+
+## Après la fusion : ce que la vérification manuelle a trouvé
+
+Trois défauts ont été découverts en exécutant l'application et la procédure,
+après que dix-neuf revues de tâche, une revue finale de branche et une
+re-revue ciblée les aient tous manqués. Ils partagent une cause : **une
+hypothèse tenue pour vraie par un type ou par une convention, que rien
+n'exécutait vraiment.**
+
+- **R83** — L'utilisateur est conservé par le navigateur et sa forme a changé.
+  Rien ne le rafraîchit au chargement, et la dérivation du contexte s'exécute
+  dans les gardes du routeur, avant tout rendu. Toute personne déjà connectée
+  voyait `user.establishments is not iterable` à la place de l'application,
+  sans même pouvoir atteindre la page de connexion. Cela aurait touché
+  l'intégralité des comptes au déploiement. Décision : versionner le store et
+  purger un état hérité, plus un garde défensif dans la dérivation. Coût si
+  faux : une déconnexion de trop, immédiate à rattraper puisque le cookie de
+  session reste valide.
+- **R84** — Sur un identifiant de tenant étranger, le statut était bien 404 et
+  aucune donnée ne fuyait, mais le corps portait une erreur interne
+  (`Cannot destructure property 'serviceRole'…`), rendue à qui sonde des
+  identifiants au hasard. Cause : `request.tenant` était déclaré **non
+  optionnel** alors qu'il n'existe qu'après résolution, et les hooks suivants
+  s'exécutent aussi sur la charge d'une réponse d'erreur. Le type mentait, donc
+  les déstructurations paraissaient sûres au compilateur comme aux relectures.
+  Décision : rendre le type honnête — ce qui a immédiatement révélé un
+  quatrième usage non gardé dans l'export Excel — et faire échouer fermé les
+  trois hooks. Les tests d'isolation n'assertaient que le statut, jamais le
+  corps ; un cas le fait désormais.
+- **R85** — La garde de démarrage sur les permissions ne voyait que les routes
+  posées sous les deux plugins de tenant. Une route de forme multi-tenant
+  enregistrée ailleurs démarrait sans bruit, hors résolution, hors permission
+  et hors filtrage clinique. Décision : une seconde garde à la racine, qui juge
+  sur la forme de l'URL. Vérifiée en posant réellement une telle route : le
+  démarrage échoue désormais, là où il réussissait.
+
+**Ce qu'il faut en retenir pour les étapes suivantes.** Les revues lisent le
+code tel qu'il se présente, et un type qui ment les désarme toutes en même
+temps. Deux réflexes en découlent : déclarer optionnel ce qui l'est
+réellement, puis laisser le compilateur énumérer les usages ; et asserter le
+**corps** des réponses d'erreur, pas seulement leur statut, sur les chemins de
+refus.
