@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { devtools, persist, subscribeWithSelector } from 'zustand/middleware'
 
 import type { TenantContext, User } from '../types/auth.ts'
+import { defaultTenantContext } from '../utils/tenant-context.ts'
 
 export interface AuthStoreState {
   isAuthenticated: boolean
@@ -16,33 +17,15 @@ export interface AuthStoreActions {
   logout: () => void
 }
 
-// Étape 1 : un seul contexte par session, le premier couple établissement/service
-// trouvé. L'étape 2 apporte le sélecteur et la mémorisation du dernier contexte.
-//
-// Appelée depuis les `beforeLoad` du routeur, donc avant tout rendu : elle doit
-// tolérer un `user` de forme inattendue plutôt que de lever. Un utilisateur
-// venant d'une version antérieure porte un `user` sans `establishments` dans
-// son stockage local ; `migrate` ci-dessous le purge, mais ce garde reste la
-// deuxième barrière — une exception ici remplace toute l'application par un
-// écran d'erreur, sans même laisser atteindre la page de connexion.
-export const deriveContext = (user: User | null): TenantContext | null => {
-  if (!user || !Array.isArray(user.establishments)) {
-    return null
-  }
-  for (const est of user.establishments) {
-    const service = est.services[0]
-    if (service) {
-      return {
-        establishmentId: est.id,
-        serviceId: service.id,
-        establishmentRole: est.role,
-        serviceRole: service.role,
-        soignantId: est.soignantId,
-      }
-    }
-  }
-  return null
-}
+// Délègue à `defaultTenantContext` (front/src/utils/tenant-context.ts), le
+// module pur écrit pour l'étape 2 : même résolution du premier couple
+// établissement/service, même repli sur le dernier contexte visité, même
+// garde contre un `user` de forme inattendue (état persisté d'une version
+// antérieure, stockage corrompu). Deux implémentations du même calcul
+// avaient déjà divergé sur cette garde ; `deriveContext` ne reste ici que
+// parce que ses appelants ne sont pas encore réécrits — sa suppression est
+// portée par les tâches qui les remplacent.
+export const deriveContext = (user: User | null): TenantContext | null => defaultTenantContext(user)
 
 export const useAuthStore = create<AuthStoreState & AuthStoreActions>()(
   subscribeWithSelector(

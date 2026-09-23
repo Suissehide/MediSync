@@ -6,10 +6,20 @@ export const LAST_CONTEXT_KEY = (userId: string) => `medisync/last-context/${use
 
 type Params = { establishmentId?: string; serviceId?: string }
 
+// Ce module est appelé depuis les gardes de route, donc avant tout rendu :
+// un `user` de forme inattendue (état persisté d'une version antérieure,
+// stockage corrompu) ne doit jamais faire lever `.find`/`.for…of` sur un
+// champ absent ou non-tableau. Une exception ici remplace toute l'application
+// par un écran d'erreur — c'est exactement ce qui s'est produit il y a
+// quelques heures sur ce dépôt (même garde dans useAuthStore.deriveContext).
+const establishmentsOf = (user: User | null): User['establishments'] =>
+  user && Array.isArray(user.establishments) ? user.establishments : []
+
+const servicesOf = (establishment: User['establishments'][number]) =>
+  Array.isArray(establishment.services) ? establishment.services : []
+
 const establishmentOf = (user: User | null, establishmentId?: string) =>
-  !user || !establishmentId
-    ? undefined
-    : user.establishments.find((e) => e.id === establishmentId)
+  !establishmentId ? undefined : establishmentsOf(user).find((e) => e.id === establishmentId)
 
 // Un couple de l'URL n'est accepté que s'il figure dans les appartenances.
 // Le back refuserait de toute façon par un 404 ; refuser ici évite d'envoyer
@@ -19,7 +29,7 @@ export const resolveTenantContext = (user: User | null, params: Params): TenantC
   if (!establishment || !params.serviceId) {
     return null
   }
-  const service = establishment.services.find((s) => s.id === params.serviceId)
+  const service = servicesOf(establishment).find((s) => s.id === params.serviceId)
   if (!service) {
     return null
   }
@@ -98,8 +108,8 @@ export const defaultTenantContext = (user: User | null): TenantContext | null =>
       return remembered
     }
   }
-  for (const establishment of user.establishments) {
-    const service = establishment.services[0]
+  for (const establishment of establishmentsOf(user)) {
+    const service = servicesOf(establishment)[0]
     if (service) {
       return resolveTenantContext(user, { establishmentId: establishment.id, serviceId: service.id })
     }

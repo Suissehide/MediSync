@@ -83,6 +83,18 @@ describe('defaultTenantContext', () => {
     expect(defaultTenantContext(user)?.serviceId).toBe('s1')
   })
 
+  // Les gardes des taches suivantes lisent les roles pour decider des
+  // permissions : un objet partiel (sans role) passerait a tort.
+  it('rend l objet complet, roles compris, pour le premier couple', () => {
+    expect(defaultTenantContext(user)).toEqual({
+      establishmentId: 'e1',
+      serviceId: 's1',
+      establishmentRole: 'ADMIN',
+      serviceRole: 'COORDINATEUR',
+      soignantId: 'so1',
+    })
+  })
+
   it('reprend le dernier couple visite', () => {
     rememberContext('u1', resolveTenantContext(user, { establishmentId: 'e2', serviceId: 's3' })!)
     expect(defaultTenantContext(user)).toMatchObject({ establishmentId: 'e2', serviceId: 's3' })
@@ -100,6 +112,17 @@ describe('defaultTenantContext', () => {
   it('ne lit pas le dernier couple d un autre utilisateur', () => {
     localStorage.setItem('medisync/last-context/autre', JSON.stringify({ establishmentId: 'e2', serviceId: 's3' }))
     expect(defaultTenantContext(user)?.serviceId).toBe('s1')
+  })
+
+  // Verrouille la cle elle-meme, pas seulement l'ignorance d'une cle deja
+  // ecrite a la main : avec une cle globale (sans identifiant), memoriser le
+  // contexte du second utilisateur ecraserait celui du premier.
+  it('isole le dernier contexte de deux utilisateurs sur le meme poste', () => {
+    const other: User = { ...user, id: 'u2' }
+    rememberContext('u1', resolveTenantContext(user, { establishmentId: 'e1', serviceId: 's2' })!)
+    rememberContext('u2', resolveTenantContext(other, { establishmentId: 'e2', serviceId: 's3' })!)
+    expect(defaultTenantContext(user)?.serviceId).toBe('s2')
+    expect(defaultTenantContext(other)?.serviceId).toBe('s3')
   })
 
   it('rend null pour un utilisateur sans appartenance', () => {
