@@ -6,6 +6,7 @@ import { Button } from '../components/ui/button.tsx'
 import { APPOINTMENT, PATHWAY, PATIENT, SLOT } from '../constants/process.constant.ts'
 import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
+import { currentTenantKey } from '../hooks/useTenantSwitch.ts'
 import { useToast } from '../hooks/useToast.ts'
 import type {
   CreatePatientParams,
@@ -200,8 +201,25 @@ export const usePatientMutations = () => {
 
       let cancelled = false
 
+      // Le couple etablissement/service au moment ou la suppression est
+      // programmee. Cinq secondes plus tard, l'URL sera calculee a l'appel :
+      // si le contexte a change entre-temps, la requete partirait vers le
+      // NOUVEAU service. Elle y echouerait sur un 404 neutre, puis la branche
+      // d'erreur restaurerait dans le cache les patients de l'ancien service.
+      // Au-dela de cette fuite, emettre une suppression vers le mauvais
+      // service est une faute en soi : elle echoue en silence et l'utilisateur
+      // croit avoir supprime.
+      const scheduledTenant = currentTenantKey()
+
       const timeoutId = setTimeout(async () => {
         if (cancelled) {
+          return
+        }
+        if (currentTenantKey() !== scheduledTenant) {
+          // On renonce : ni appel, ni ecriture de cache. Le patient n'est pas
+          // supprime, et la prochaine lecture de l'ancien service le remontre.
+          restoreQueryDefaults()
+          setIsDeletePending(false)
           return
         }
         try {
