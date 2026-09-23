@@ -7,10 +7,15 @@ import ReactDOM from 'react-dom/client'
 
 import { registerStaleTenantHandler } from './api/fetchWithAuth.ts'
 import RootLayout from './components/root.layout.tsx'
-import { createTenantQueryClient, useTenantQueryClient } from './hooks/useTenantSwitch.ts'
+import {
+  createTenantQueryClient,
+  useTenantQueryClient,
+} from './hooks/useTenantSwitch.ts'
 import { meQueryOptions } from './queries/useMe.ts'
 import { routeTree } from './routeTree.gen.ts'
 import { useAuthStore } from './store/useAuthStore.ts'
+import type { User } from './types/auth.ts'
+import { isTenantRouteStale } from './utils/tenant-context.ts'
 import 'dayjs/locale/fr'
 import { GlobalStyles, StyledEngineProvider } from '@mui/material'
 import { LocalizationProvider } from '@mui/x-date-pickers'
@@ -52,12 +57,24 @@ declare module '@tanstack/react-router' {
   }
 }
 
-// Un 404 de tenant perime (cf. fetchWithAuth.ts) recharge l'arbre des
-// appartenances puis renvoie au choix de contexte. Enregistre ici, et non
-// dans fetchWithAuth.ts, pour que ce dernier ne depende ni du routeur ni du
-// client de requetes.
+// Un 404 de route de tenant PEUT signifier que l'arbre des appartenances est
+// perime — affectation retiree pendant la session — mais peut tout aussi
+// bien etre une simple ressource absente du service courant, couple encore
+// valide : le back rend ce 404 deliberement neutre (pour ne rien reveler a
+// qui sonde des identifiants au hasard), donc rien dans la reponse ne permet
+// de trancher. On tranche ici, cote front : on recharge l'arbre des
+// appartenances, puis on reverifie contre lui le couple VISE PAR L'URL EN
+// ECHEC — jamais le contexte courant du store, qui a pu changer entre
+// l'emission de la requete et la resolution du 404. `isTenantRouteStale`
+// porte cette verification en reutilisant resolveTenantContext /
+// resolveEstablishmentContext, les memes fonctions que les gardes de route.
+// On ne navigue que si le couple a bien disparu : un 404 legitime ne
+// provoque donc rien.
 //
-// `router.options.context.queryClient`, jamais une variable capturee au
+// Enregistre ici, et non dans fetchWithAuth.ts, pour que ce dernier ne
+// depende ni du routeur ni du client de requetes.
+//
+// `router.options.context?.queryClient`, jamais une variable capturee au
 // chargement du module : un client neuf est construit a chaque changement
 // de contexte (tache 10), et `AppRoutes` ne le pose sur
 // `router.options.context` qu'au rendu suivant (meme mecanisme que
@@ -65,9 +82,30 @@ declare module '@tanstack/react-router' {
 // moment ou le rappel se declenche, plutot qu'une reference figee a l'appel
 // de `registerStaleTenantHandler`, garantit de toujours viser le cache en
 // usage — jamais un cache devenu inerte apres un changement de contexte.
-registerStaleTenantHandler(() => {
-  void router.options.context?.queryClient.invalidateQueries(meQueryOptions)
-  void router.navigate({ to: '/choose-context' })
+registerStaleTenantHandler(async (pathname) => {
+  const queryClient = router.options.context?.queryClient
+  if (!queryClient) {
+    return
+  }
+
+  let user: User
+  try {
+    // `staleTime: 0` force un aller-retour reseau : `invalidateQueries` ne
+    // rend pas la donnee fraiche en valeur de retour pour une requete sans
+    // observateur actif, et relire le cache a la main (`getQueryData`) est
+    // interdit hors des deux emplacements nommes dans
+    // `useTenantSwitch.ts`/`useSlot.ts` (`lecture-directe-du-cache.test.ts`).
+    user = await queryClient.fetchQuery({ ...meQueryOptions, staleTime: 0 })
+  } catch {
+    // Session expiree ou back injoignable : sans arbre frais, on ne peut pas
+    // confirmer que le couple vise a disparu. On ne navigue pas sur un
+    // simple doute — `fetchWithAuth` a deja son propre traitement du 401.
+    return
+  }
+
+  if (isTenantRouteStale(user, pathname)) {
+    void router.navigate({ to: '/choose-context' })
+  }
 })
 
 const rootElement = document.getElementById('root')

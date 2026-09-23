@@ -76,6 +76,48 @@ export const resolveEstablishmentContext = (
   }
 }
 
+// Reconnait la forme d'une route de tenant — celles que batissent
+// `tenantApiUrl` (`/e/:establishmentId/s/:serviceId/...`) et
+// `establishmentApiUrl` (`/e/:establishmentId/admin/...`) — pour en extraire
+// le couple ou l'etablissement vise. `null` si le chemin ne correspond a
+// aucune des deux formes ; ne devrait pas arriver depuis `fetchWithAuth`, qui
+// filtre deja sur `/e/`, mais autant rester total plutot que de lever.
+const tenantRouteParams = (pathname: string): Params | null => {
+  const withService = /^\/e\/([^/]+)\/s\/([^/]+)(?:\/|$)/.exec(pathname)
+  if (withService) {
+    return { establishmentId: withService[1], serviceId: withService[2] }
+  }
+  const withoutService = /^\/e\/([^/]+)\/admin(?:\/|$)/.exec(pathname)
+  if (withoutService) {
+    return { establishmentId: withoutService[1] }
+  }
+  return null
+}
+
+// Un 404 sur une route de tenant a deux causes indiscernables cote back (le
+// 404 est deliberement neutre, pour ne rien reveler a qui sonde des
+// identifiants au hasard) : une ressource absente du service courant (couple
+// toujours valide), ou un arbre des appartenances perime (affectation
+// retiree pendant la session). On les distingue cote front, en reverifiant
+// le couple/etablissement VISE PAR L'URL EN ECHEC (jamais le contexte
+// courant du store, qui a pu changer entre l'emission de la requete et la
+// resolution du 404) contre l'arbre FRAICHEMENT RECHARGE. S'il y figure
+// encore, le 404 etait legitime. S'il en a disparu, l'arbre etait perime.
+//
+// Reutilise resolveTenantContext/resolveEstablishmentContext — les memes
+// fonctions que les gardes de route — plutot que de definir une seconde
+// notion de « couple valide » qui pourrait diverger de la premiere.
+export const isTenantRouteStale = (user: User | null, pathname: string): boolean => {
+  const params = tenantRouteParams(pathname)
+  if (!params) {
+    return false
+  }
+  if (params.serviceId) {
+    return resolveTenantContext(user, params) === null
+  }
+  return resolveEstablishmentContext(user, params) === null
+}
+
 const readLastContext = (userId: string): Params | null => {
   try {
     const raw = localStorage.getItem(LAST_CONTEXT_KEY(userId))

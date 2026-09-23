@@ -4,6 +4,7 @@ import type { User } from '@/types/auth.ts'
 import {
   accessibleCouples,
   defaultTenantContext,
+  isTenantRouteStale,
   rememberContext,
   resolveEstablishmentContext,
   resolveTenantContext,
@@ -129,6 +130,46 @@ describe('defaultTenantContext', () => {
   it('rend null pour un utilisateur sans appartenance', () => {
     expect(defaultTenantContext({ ...user, establishments: [] })).toBeNull()
     expect(defaultTenantContext(null)).toBeNull()
+  })
+})
+
+// `isTenantRouteStale` tranche entre les deux causes d'un 404 de route de
+// tenant, indiscernables cote back (tache 13, tour de correction 1) : une
+// ressource absente du service courant (couple toujours dans l'arbre — 404
+// legitime, aucune navigation) et un arbre des appartenances perime
+// (couple disparu — direction confirmee du choix de contexte).
+describe('isTenantRouteStale', () => {
+  it('rend faux pour une ressource absente : le couple de service vise reste dans l arbre', () => {
+    expect(isTenantRouteStale(user, '/e/e1/s/s1/patient/introuvable')).toBe(false)
+  })
+
+  it('rend vrai quand le service vise a disparu de l etablissement', () => {
+    expect(isTenantRouteStale(user, '/e/e1/s/s9/patient/px')).toBe(true)
+  })
+
+  it('rend vrai quand l etablissement vise a disparu', () => {
+    expect(isTenantRouteStale(user, '/e/e9/s/s1/patient/px')).toBe(true)
+  })
+
+  it('rend faux pour une route d administration d etablissement : l etablissement vise reste administre', () => {
+    expect(isTenantRouteStale(user, '/e/e1/admin/soignant')).toBe(false)
+  })
+
+  // e2 : role MEMBER, pas ADMIN — l'ecran d'administration ne lui appartient
+  // plus (ou jamais), meme si l'etablissement figure toujours dans l'arbre.
+  it('rend vrai pour une route d administration sur un etablissement dont le role admin a disparu', () => {
+    expect(isTenantRouteStale(user, '/e/e2/admin/soignant')).toBe(true)
+  })
+
+  it('rend vrai sans utilisateur : aucun couple ne peut plus se resoudre', () => {
+    expect(isTenantRouteStale(null, '/e/e1/s/s1/patient/px')).toBe(true)
+  })
+
+  // Chemin qui ne correspond a aucune des deux formes de route de tenant :
+  // ne devrait pas arriver depuis `fetchWithAuth`, qui filtre deja sur
+  // `/e/`, mais la fonction reste totale plutot que de lever ou de deviner.
+  it('rend faux pour un chemin qui ne designe pas une route de tenant reconnue', () => {
+    expect(isTenantRouteStale(user, '/me')).toBe(false)
   })
 })
 
