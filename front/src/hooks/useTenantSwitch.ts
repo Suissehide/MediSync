@@ -44,18 +44,36 @@ export const currentTenantKey = (): string => tenantKey(useAuthStore.getState().
 // Photo d'un ou plusieurs emplacements du cache, prise AVEC le couple du
 // moment. Une mutation optimiste photographie l'etat avant de le modifier,
 // puis le restaure si l'appel echoue.
+//
+// La donnee photographiee n'est pas un champ de cet objet : elle reste
+// enfermee dans la fermeture, et `reposer` porte la garde de couple. Ni la
+// reposer a la main, ni fabriquer une photo au couple menti ne sont donc
+// possibles a partir de ce type — la garde ne s'oublie pas en recopiant le
+// motif d'a cote.
 export type TenantSnapshot = {
-  tenant: string
-  entries: { key: QueryKey; data: unknown }[]
+  readonly reposer: (client: QueryClient) => void
 }
 
 export const snapshotForTenant = (
   client: QueryClient,
   ...keys: QueryKey[]
-): TenantSnapshot => ({
-  tenant: currentTenantKey(),
-  entries: keys.map((key) => ({ key, data: client.getQueryData(key) })),
-})
+): TenantSnapshot => {
+  const tenant = currentTenantKey()
+  // Seule lecture directe du cache autorisee dans le front avec celle de
+  // `useSlot.ts` (cf. `src/test/lecture-directe-du-cache.test.ts`).
+  const entries = keys.map((key) => ({ key, data: client.getQueryData(key) }))
+
+  return {
+    reposer: (target: QueryClient) => {
+      if (tenant !== currentTenantKey()) {
+        return
+      }
+      for (const { key, data } of entries) {
+        target.setQueryData(key, data)
+      }
+    },
+  }
+}
 
 // LE point d'application unique des restaurations. Il renonce si le couple a
 // change depuis la prise de la photo.
@@ -72,19 +90,19 @@ export const snapshotForTenant = (
 // reapparait n'est pas une ligne mais la liste entiere du service precedent,
 // sous une cle que le nouveau service lit.
 //
-// Passer par cette fonction plutot que par une condition recopiee a chaque
-// point : une `TenantSnapshot` ne se restaure pas autrement, donc un point
-// de restauration ne peut pas oublier la garde sans cesser de compiler.
+// Ce qui tient cette garantie, exactement : le type ci-dessus ferme les
+// contournements par la photo (la donnee est hors d'atteinte, le couple n'est
+// pas falsifiable), et `src/test/lecture-directe-du-cache.test.ts` ferme le
+// contournement qui reste — prendre sa propre photo par `getQueryData` puis
+// la reposer sans passer par ici. Ce n'est donc PAS le compilateur qui
+// l'empeche partout : c'est une regle de depot, et la voila nommee. Une
+// affirmation fausse sur un mecanisme de surete vaut moins que pas
+// d'affirmation du tout.
 export const restoreForTenant = (
   client: QueryClient,
   snapshot: TenantSnapshot | undefined,
 ): void => {
-  if (!snapshot || snapshot.tenant !== currentTenantKey()) {
-    return
-  }
-  for (const { key, data } of snapshot.entries) {
-    client.setQueryData(key, data)
-  }
+  snapshot?.reposer(client)
 }
 
 // Les cinq stores qui tiennent en memoire vive de la donnee du service : deux
