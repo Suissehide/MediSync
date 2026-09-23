@@ -68,7 +68,7 @@ function MemberSettings() {
   const columns = useMemo(
     () =>
       getMemberColumns({
-        serviceId: context?.serviceId ?? '',
+        serviceId: context?.serviceId ?? null,
         soignants: soignants ?? [],
         onToggleActive: handleToggleActive,
         onRemove: setRemoveTarget,

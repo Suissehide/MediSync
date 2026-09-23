@@ -25,8 +25,10 @@ import {
 interface EditMemberFormProps {
   member: Member
   // Service du contexte courant : cette étape ne règle que le rôle du
-  // membre dans cet unique service (multi-service : étape 2).
-  serviceId: string
+  // membre dans cet unique service (multi-service : étape 2). Nul sur un
+  // écran d'administration sans service : la commande de rôle de service
+  // se désactive alors, aucune affectation n'est envoyée.
+  serviceId: string | null
 }
 
 const NO_SERVICE_ROLE = 'NONE'
@@ -52,8 +54,10 @@ function EditMemberForm({ member, serviceId }: EditMemberFormProps) {
 
   const currentServiceRole = useMemo(
     () =>
-      member.serviceMemberships.find((m) => m.serviceId === serviceId)?.role ??
-      NO_SERVICE_ROLE,
+      serviceId === null
+        ? NO_SERVICE_ROLE
+        : member.serviceMemberships.find((m) => m.serviceId === serviceId)
+            ?.role ?? NO_SERVICE_ROLE,
     [member, serviceId],
   )
 
@@ -71,8 +75,12 @@ function EditMemberForm({ member, serviceId }: EditMemberFormProps) {
       const otherServiceMemberships = member.serviceMemberships.filter(
         (m) => m.serviceId !== serviceId,
       )
+      // Sans service dans le contexte, aucune affectation ne peut être
+      // envoyée : la commande de rôle de service est désactivée dans le
+      // formulaire, mais on refuse aussi ici plutôt que de se fier
+      // uniquement à l'UI.
       const services =
-        value.serviceRole === NO_SERVICE_ROLE
+        serviceId === null || value.serviceRole === NO_SERVICE_ROLE
           ? otherServiceMemberships
           : [
               ...otherServiceMemberships,
@@ -151,6 +159,10 @@ function EditMemberForm({ member, serviceId }: EditMemberFormProps) {
                   label="Rôle dans le service courant"
                   options={SERVICE_ROLE_OPTIONS}
                   clearable={false}
+                  // Pas de service dans le contexte (écran d'administration
+                  // d'établissement) : aucun rôle de service ne peut être
+                  // assigné depuis cet écran.
+                  disabled={serviceId === null}
                 />
               )}
             </form.AppField>
