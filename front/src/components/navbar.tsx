@@ -55,8 +55,9 @@ const SettingsMenu = ({
   const router = useRouter()
   // Les six écrans de réglages de service vivent désormais sous
   // /e/:establishmentId/s/:serviceId : la navigation prend les mêmes
-  // paramètres que les onglets Dashboard/Agenda/Patients/Suivi. Membres
-  // (`/settings/user`) reste hors de ce périmètre, sa route n'a pas bougé.
+  // paramètres que les onglets Dashboard/Agenda/Patients/Suivi. Membres vit
+  // sous /e/:establishmentId/admin/members (layout d'établissement, tâche 8),
+  // sans paramètre de service.
   const params = { establishmentId, serviceId }
 
   return (
@@ -135,7 +136,12 @@ const SettingsMenu = ({
         {canManageMembers && (
           <PopoverMenuItem
             icon={<UserCog className="w-4 h-4" />}
-            onClick={() => router.navigate({ to: '/settings/user' })}
+            onClick={() =>
+              router.navigate({
+                to: '/e/$establishmentId/admin/members',
+                params: { establishmentId },
+              })
+            }
           >
             Membres
           </PopoverMenuItem>
