@@ -50,7 +50,12 @@ sauvegarde fraîche, l'étape 6 ne pourrait restaurer qu'un état plus ancien.
 > **Le `localhost:5432` codé en dur dans tous les blocs de cette section est une valeur par
 > défaut, pas la vôtre.** Vérifier le port Postgres réel dans `deploy/.env` (`POSTGRES_PORT`) et
 > le substituer dans **chaque** commande ci-dessous, y compris si l'on n'exécute que le deuxième
-> ou le troisième bloc. Un port erroné vise une autre base, ou échoue silencieusement.
+> ou le troisième bloc.
+>
+> Ce n'est pas une précaution théorique : sur la machine de développement, MediSync écoute sur
+> **5433**, et un conteneur Postgres d'un tout autre projet occupe 5432. Une commande recopiée
+> telle quelle s'y connecte sans erreur visible et opère sur la mauvaise base. Vérifier avec
+> `docker ps --format '{{.Names}}\t{{.Ports}}' | grep postgres` avant de commencer.
 
 Restaurer le dump le plus récent dans une base **jetable**, distincte de la base de développement
 locale (`DB_NAME` cible une autre base que celle par défaut, pour ne rien détruire de son propre
@@ -91,13 +96,28 @@ d'erreur et le comprendre avant de retenter : la même migration est déjà pass
 données réelles, un échec ici signale donc un écart entre cette copie-ci et celle de la répétition,
 pas un défaut de la migration. Ne pas rejouer la commande en boucle.
 
-Jouer le fichier d'invariants « après » et comparer à la main, ligne à ligne (mêmes libellés que le
-fichier « avant »), les comptes de lignes par table qu'il donne en seconde moitié de sortie :
+Jouer le fichier d'invariants « après », puis comparer les comptes de lignes par table qu'il donne
+en seconde moitié de sortie à ceux du fichier « avant » :
 
 ```shell
 docker exec -i medisync-postgres psql -U postgres -d medisync_deploy_check \
   < back/prisma/checks/multi-tenant-socle.sql
 ```
+
+> **Comparer les valeurs, pas les lignes.** `psql` aligne la colonne des libellés sur le libellé le
+> plus long de *son* résultat, et les deux fichiers n'ont pas le même : un `diff` brut des deux
+> sorties signale alors les dix-huit lignes comme différentes alors que chaque valeur est
+> identique. Sous tension, cela se lit comme une perte de données et déclenche un retour arrière
+> inutile. Enregistrer chaque sortie dans un fichier (`… > avant.txt`, `… > apres.txt`) et les
+> comparer en normalisant l'espacement :
+>
+> ```shell
+> norm() { grep -E '^ (Lignes|Appartenances|Coordinateurs|Liens)' "$1" \
+>   | sed 's/|/ /' \
+>   | awk '{v=$NF; $NF=""; gsub(/[[:space:]]+$/,"",$0); gsub(/[[:space:]]+/," ",$0); print $0" = "v}' \
+>   | sort; }
+> diff <(norm avant.txt) <(norm apres.txt) && echo "aucun ecart"
+> ```
 
 **Attendu** : toutes les lignes « sans établissement »/« sans service » valent **0** ; le nombre
 d'établissements et de services vaut **1** chacun ; les comptes d'appartenances et de
