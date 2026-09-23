@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { devtools, persist, subscribeWithSelector } from 'zustand/middleware'
 
 import type { TenantContext, User } from '../types/auth.ts'
-import { defaultTenantContext } from '../utils/tenant-context.ts'
+import { defaultTenantContext, forgetContext } from '../utils/tenant-context.ts'
 
 export interface AuthStoreState {
   isAuthenticated: boolean
@@ -32,18 +32,27 @@ export const useAuthStore = create<AuthStoreState & AuthStoreActions>()(
   subscribeWithSelector(
     devtools(
       persist(
-        (set) => ({
+        (set, get) => ({
           isAuthenticated: false,
           isInitialLoading: false,
           user: null,
           context: null,
 
+          // Ne touche plus a `context` : `deriveContext(user)` ici tournait
+          // a chaque navigation (appele depuis la garde de `_authenticated`),
+          // donc sur tout ecran hors service `context` valait le dernier
+          // couple visite — pas seulement un flag de permission, mais le
+          // tenant que lisent les fabriques d'URL a l'appel, pour les
+          // lectures comme pour les ecritures. Le contexte appartient desormais
+          // aux layouts de route (`setContext`), et a eux seuls.
           update: (user: User | undefined) => {
             if (user) {
-              set({ user, context: deriveContext(user) })
+              set({ user })
             }
           },
 
+          // A la connexion, aucune URL ne porte encore de contexte : c'est
+          // le seul moment ou le deriver ici reste legitime.
           authenticate: (user: User | undefined) => {
             if (user) {
               set({ isAuthenticated: true, user, context: deriveContext(user) })
@@ -51,6 +60,12 @@ export const useAuthStore = create<AuthStoreState & AuthStoreActions>()(
           },
 
           logout: () => {
+            // Purge le dernier couple memorise : sans ca, il survit a la
+            // deconnexion et ressert au prochain compte sur ce poste.
+            const userId = get().user?.id
+            if (userId) {
+              forgetContext(userId)
+            }
             set({ isAuthenticated: false, user: null, context: null })
           },
 
