@@ -38,6 +38,11 @@ sauvegarde fraîche, l'étape 6 ne pourrait restaurer qu'un état plus ancien.
 
 ## 2. Répétition sur une copie locale
 
+> **Le `localhost:5432` codé en dur dans tous les blocs de cette section est une valeur par
+> défaut, pas la vôtre.** Vérifier le port Postgres réel dans `deploy/.env` (`POSTGRES_PORT`) et
+> le substituer dans **chaque** commande ci-dessous, y compris si l'on n'exécute que le deuxième
+> ou le troisième bloc. Un port erroné vise une autre base, ou échoue silencieusement.
+
 Restaurer le dump le plus récent dans une base **jetable**, distincte de la base de développement
 locale (`DB_NAME` cible une autre base que celle par défaut, pour ne rien détruire de son propre
 environnement de travail) :
@@ -63,7 +68,7 @@ docker exec -i medisync-postgres psql -U postgres -d medisync_deploy_check \
 Noter ces quatre résultats (nombre de comptes par ancien rôle, nombre de liens soignant/créneau,
 nombre de liens soignant/thématique, et la sortie du fichier « avant », qui compte les lignes de 17
 tables). Appliquer ensuite la migration sur cette copie (`DATABASE_URL` surchargé pour cette seule
-commande — vérifier le port Postgres réel dans `deploy/.env`, `5432` par défaut) :
+commande, port réel — voir la mise en garde en tête de section) :
 
 ```shell
 cd back
@@ -112,6 +117,19 @@ docker exec medisync-postgres psql -U postgres -c "DROP DATABASE medisync_deploy
 ```
 
 ## 3. Déployer l'image
+
+**Avant toute chose, arrêter l'ancien conteneur applicatif** (depuis Dokploy, arrêter le service
+back), ou à défaut interdire les écritures sur la base. La migration pose des contraintes
+`NOT NULL` sur des tables que l'ancien conteneur, encore vivant pendant le déploiement, peut
+continuer d'écrire sans renseigner les nouvelles colonnes : une ligne insérée entre le
+remplissage et la pose des contraintes ferait échouer la migration, ou passerait au travers.
+C'est une fenêtre de maintenance : l'application est indisponible entre cet arrêt et la fin de
+l'étape 4.
+
+**Attendu** : le service back n'a plus de conteneur en cours d'exécution, et l'application
+répond en erreur depuis un navigateur. Si l'ancien conteneur ne s'arrête pas, **ne pas déployer**
+— une migration lancée en concurrence d'écritures n'est pas rattrapable autrement que par
+l'étape 6.
 
 La migration s'applique automatiquement au démarrage du conteneur de production
 (`npm run start:migrate:production` → `prisma migrate deploy` puis lancement du serveur). Déployer

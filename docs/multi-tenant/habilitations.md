@@ -89,9 +89,12 @@ Règles associées :
 - La mise à jour d'un patient dans un créneau (`AppointmentPatient`) sépare
   les champs de présence (`appointment:write`) des transmissions
   (`clinical:write`).
-- Toute lecture d'une fiche patient, d'un diagnostic éducatif ou tout export
-  PDF écrit une ligne dans le journal des accès (`PatientAccessLog`) avec
-  l'utilisateur, l'établissement, le service et le patient.
+- **À venir (étape 4)** : toute lecture d'une fiche patient, d'un diagnostic
+  éducatif et tout export PDF écriront une ligne dans le journal des accès
+  (`PatientAccessLog`) avec l'utilisateur, l'établissement, le service et le
+  patient. Ce modèle n'existe pas encore : à ce jour, **aucune traçabilité
+  des lectures n'est en place**. Seules les écritures sont journalisées, dans
+  le journal d'activité (voir la puce ci-dessous sur la gestion des membres).
 - Un compte se désactive (`User.deactivatedAt`), il ne se supprime pas, pour
   conserver l'imputabilité des actions passées dans les journaux.
 - `User.deactivatedAt` porte sur l'**identité globale**, partagée entre tous
