@@ -103,11 +103,34 @@ class MembershipDomain implements MembershipDomainInterface {
     }
   }
 
+  private isSelf(membership: MembershipRowDomain): boolean {
+    return membership.userId === this.currentUserId()
+  }
+
   // Un administrateur ne peut ni se retirer ni se désactiver lui-même.
   private assertNotSelf(membership: MembershipRowDomain): void {
-    if (membership.userId === this.currentUserId()) {
+    if (this.isSelf(membership)) {
       throw Boom.conflict('Cannot apply this action to your own account')
     }
+  }
+
+  // Un administrateur qui vide sa propre liste de services perd tout contexte
+  // de service, donc l'accès à tous les écrans — y compris l'écran Membres,
+  // le seul qui lui permettrait de se réaffecter. S'il est le dernier
+  // administrateur, la sortie passe par du SQL en production. Il peut
+  // toujours vider la liste d'un tiers, et modifier la sienne tant qu'il
+  // garde au moins un service. Le correctif de fond (un contexte
+  // d'établissement sans service) relève de l'étape 2.
+  private assertKeepsOwnService(
+    membership: MembershipRowDomain,
+    services: ServiceAssignment[] | undefined,
+  ): void {
+    if (services === undefined || services.length > 0 || !this.isSelf(membership)) {
+      return
+    }
+    throw Boom.conflict(
+      'Vous ne pouvez pas retirer tous vos propres services : vous perdriez l\'accès à tous les écrans, y compris celui des membres qui permettrait de vous réaffecter',
+    )
   }
 
   // `User.deactivatedAt` porte sur l'identité globale, partagée par tous les
@@ -150,6 +173,7 @@ class MembershipDomain implements MembershipDomainInterface {
     if (params.role === 'MEMBER') {
       await this.assertNotLastAdmin(membership)
     }
+    this.assertKeepsOwnService(membership, params.services)
     await this.assertReferences(params.soignantId, params.services)
     const updated = await this.membershipRepository.update(id, params)
     this.emit('member.updated', id)

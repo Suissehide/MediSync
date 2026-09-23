@@ -111,6 +111,8 @@ const LAST_ADMIN = 'Cannot remove the last administrator'
 const SELF = 'Cannot apply this action to your own account'
 const MULTI_ESTABLISHMENT =
   'This account belongs to several establishments; its activation cannot be changed from here'
+const SELF_WITHOUT_SERVICE =
+  'Vous ne pouvez pas retirer tous vos propres services : vous perdriez l\'accès à tous les écrans, y compris celui des membres qui permettrait de vous réaffecter'
 
 const rejectsWith = (
   promise: Promise<unknown>,
@@ -304,6 +306,39 @@ describe('MembershipDomain', () => {
       MULTI_ESTABLISHMENT,
     )
     expect(calls).toEqual([])
+  })
+
+  // Sans cette regle, un administrateur pouvait se retirer tous ses services
+  // et perdre l'acces a tous les ecrans, y compris l'ecran Membres qui lui
+  // permettrait de se reaffecter : s'il etait le dernier administrateur, la
+  // sortie passait par du SQL en production.
+  it('refuse a l utilisateur courant de vider sa propre liste de services', async () => {
+    const { domain, ctx, calls } = build([row({})], 2)
+    await rejectsWith(
+      asAdmin(ctx, () => domain.update('em1', { services: [] })),
+      409,
+      SELF_WITHOUT_SERVICE,
+    )
+    expect(calls).toEqual([])
+  })
+
+  it('laisse vider la liste de services d un tiers', async () => {
+    const { domain, ctx, calls } = build(
+      [row({}), row({ id: 'em2', userId: 'u2', user: user({ id: 'u2' }) })],
+      2,
+    )
+    await asAdmin(ctx, () => domain.update('em2', { services: [] }))
+    expect(calls).toEqual(['update'])
+  })
+
+  it('laisse l utilisateur courant modifier sa propre appartenance en gardant un service', async () => {
+    const { domain, ctx, calls } = build([row({})], 2)
+    await asAdmin(ctx, () =>
+      domain.update('em1', { services: [{ serviceId: 's1', role: 'LECTURE' }] }),
+    )
+    // Une mise a jour qui ne touche pas du tout aux services reste permise.
+    await asAdmin(ctx, () => domain.update('em1', { soignantId: 'so1' }))
+    expect(calls).toEqual(['update', 'update'])
   })
 
   it('journalise la reactivation', async () => {
