@@ -56,6 +56,17 @@ const NESTED_RELATIONS: Record<string, Record<string, string>> = {
 // c'est la seule façon de garantir que les enfants renvoyés appartiennent à un seul tenant.
 const GLOBAL_TENANT_RELATIONS: Record<string, readonly string[]> = {
   User: ['soignant', 'establishmentMemberships'],
+  // `Establishment` n'est ni dans SERVICE_MODELS ni dans ESTABLISHMENT_MODELS :
+  // c'est un modèle global, et toutes ses relations mènent à des données de
+  // tenant. Noms repris un par un du modèle `Establishment` de
+  // prisma/schema.prisma : toute relation ajoutée là-bas doit l'être ici.
+  Establishment: [
+    'services',
+    'memberships',
+    'patients',
+    'soignants',
+    'locations',
+  ],
 }
 const UNIQUE_READ_OPERATIONS = new Set(['findUnique', 'findUniqueOrThrow'])
 

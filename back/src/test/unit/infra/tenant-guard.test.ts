@@ -25,6 +25,37 @@ describe('assertTenantScope', () => {
     ).not.toThrow()
   })
 
+  // `Establishment` est lui aussi un modele global (ni SERVICE_MODELS ni
+  // ESTABLISHMENT_MODELS) et TOUTES ses relations menent a des donnees de
+  // tenant : sans entree dans GLOBAL_TENANT_RELATIONS, un
+  // `establishment.findMany({ include: { patients: true } })` traversait le
+  // garde-fou sans controle.
+  it('refuse un include de relation de tenant sur Establishment hors findUnique(OrThrow)', () => {
+    for (const relation of ['services', 'memberships', 'patients', 'soignants', 'locations']) {
+      expect(() =>
+        assertTenantScope(
+          { model: 'Establishment', operation: 'findMany', args: { include: { [relation]: true } } },
+          store,
+        ),
+      ).toThrow(TenantScopeMissingError)
+    }
+    expect(() =>
+      assertTenantScope(
+        { model: 'Establishment', operation: 'findFirst', args: { select: { patients: true } } },
+        store,
+      ),
+    ).toThrow(TenantScopeMissingError)
+    expect(() =>
+      assertTenantScope(
+        { model: 'Establishment', operation: 'findUnique', args: { where: { id: 'e1' }, include: { patients: true } } },
+        store,
+      ),
+    ).not.toThrow()
+    expect(() =>
+      assertTenantScope({ model: 'Establishment', operation: 'findMany', args: {} }, store),
+    ).not.toThrow()
+  })
+
   it('exige serviceId en lecture sur un modele de service', () => {
     expect(() =>
       assertTenantScope({ model: 'Slot', operation: 'findMany', args: { where: {} } }, store),
