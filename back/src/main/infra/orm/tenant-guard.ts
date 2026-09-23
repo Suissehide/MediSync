@@ -185,6 +185,10 @@ const assertRowScope = (model: string, operation: string, row: Dict, store: Tena
 const isNestedWrite = (value: unknown): value is Dict =>
   isDict(value) && WRITE_VERBS.some((verb) => verb in value)
 
+// Prisma accepte partout la valeur seule ou un tableau de valeurs.
+const asEntries = (value: unknown): unknown[] =>
+  Array.isArray(value) ? value : [value]
+
 // `connect` / `set` : chaque entrée doit porter, directement ou via une clé composite, la
 // colonne de tenant de la famille de l'enfant — sinon on pourrait rattacher à la ligne courante
 // un enregistrement d'un autre tenant qui existe déjà.
@@ -195,8 +199,7 @@ const assertConnectEntries = (
   field: string,
   store: TenantStore,
 ): void => {
-  const entries = Array.isArray(value) ? value : [value]
-  for (const entry of entries) {
+  for (const entry of asEntries(value)) {
     assertWhereLike(model, operation, entry, field, store)
   }
 }
@@ -210,8 +213,7 @@ const assertConnectOrCreate = (
   field: string,
   store: TenantStore,
 ): void => {
-  const entries = Array.isArray(value) ? value : [value]
-  for (const entry of entries) {
+  for (const entry of asEntries(value)) {
     if (!isDict(entry)) {
       continue
     }
@@ -219,6 +221,42 @@ const assertConnectOrCreate = (
       assertData(model, `${operation}.create`, entry.create, store)
     }
     assertWhereLike(model, `${operation}.where`, entry.where, field, store)
+  }
+}
+
+// Un `upsert` imbriqué crée ou met à jour un enfant : sa branche `create` est vérifiée comme
+// un create (colonnes de tenant exigées, récursif), sa branche `update` comme une charge de
+// mise à jour. La valeur peut être un objet ou un tableau.
+const assertNestedUpsert = (
+  childModel: string,
+  operation: string,
+  value: unknown,
+  store: TenantStore,
+): void => {
+  for (const entry of asEntries(value)) {
+    if (!isDict(entry)) {
+      continue
+    }
+    if ('create' in entry) {
+      assertData(childModel, `${operation}.create`, entry.create, store)
+    }
+    assertUpdatePayload(childModel, `${operation}.update`, entry.update, store)
+  }
+}
+
+// Un `update` / `updateMany` imbriqué ne choisit pas librement sa ligne (la relation s'en
+// charge), mais rien n'empêcherait son `data` de déplacer l'enfant vers un autre tenant, ni d'y
+// imbriquer une écriture non vérifiée. Prisma accepte la forme `{ where, data }` comme la forme
+// courte où l'entrée EST le `data`.
+const assertNestedUpdate = (
+  childModel: string,
+  operation: string,
+  value: unknown,
+  store: TenantStore,
+): void => {
+  for (const entry of asEntries(value)) {
+    const data = isDict(entry) && 'data' in entry ? entry.data : entry
+    assertUpdatePayload(childModel, operation, data, store)
   }
 }
 
@@ -240,10 +278,25 @@ const assertNestedWrite = (childModel: string, operation: string, value: Dict, s
   if ('set' in value) {
     assertConnectEntries(childModel, `${operation}.set`, value.set, field, store)
   }
-  // update / updateMany / upsert / delete / deleteMany / disconnect imbriqués : aucun contrôle
-  // supplémentaire ici. Prisma ne peut les résoudre que parmi les enfants déjà rattachés à la
-  // ligne parente (par la relation, pas par un identifiant libre), et le `where` de cette ligne
-  // parente est déjà vérifié ailleurs — ces enfants sont donc déjà dans le bon tenant.
+  // `upsert` imbriqué : `'create' in value` ci-dessus capte le verbe `create`, pas
+  // `upsert.create` — sa branche de création doit donc être vérifiée à part.
+  if ('upsert' in value) {
+    assertNestedUpsert(childModel, `${operation}.upsert`, value.upsert, store)
+  }
+  // `update` / `updateMany` imbriqués : la relation garantit QUELLE ligne est touchée, pas ce
+  // qu'on y écrit.
+  if ('update' in value) {
+    assertNestedUpdate(childModel, `${operation}.update`, value.update, store)
+  }
+  if ('updateMany' in value) {
+    assertNestedUpdate(childModel, `${operation}.updateMany`, value.updateMany, store)
+  }
+  // delete / deleteMany / disconnect imbriqués : aucun contrôle supplémentaire. Ils n'écrivent
+  // aucune colonne, et Prisma ne peut les résoudre que parmi les enfants déjà rattachés à la
+  // ligne parente (par la relation, pas par un identifiant libre), dont le `where` est déjà
+  // vérifié ailleurs — ces enfants sont donc déjà dans le bon tenant. Le même raisonnement vaut
+  // pour le CHOIX de la ligne d'un update/upsert imbriqué ; c'est sa CHARGE écrite, vérifiée
+  // ci-dessus, qui ne l'était pas.
 }
 
 // Toute écriture imbriquée doit porter sur une relation déclarée dans NESTED_RELATIONS : une
@@ -311,6 +364,17 @@ const assertNestedRelationsInUpdate = (model: string, operation: string, data: u
   }
 }
 
+// Charge d'une mise à jour, au premier niveau comme imbriquée : ses colonnes de tenant ne
+// doivent pas déplacer la ligne, et ses relations imbriquées suivent les mêmes règles que sous
+// un create. Déclarée après `assertNestedWrite`, qui l'appelle : les deux sont mutuellement
+// récursives (assertNestedWrite → assertUpdatePayload → assertNestedRelations →
+// assertNestedWrite), comme `assertData` l'est déjà. La récursion n'a lieu qu'à l'appel, jamais
+// à l'initialisation du module.
+function assertUpdatePayload(model: string, operation: string, data: unknown, store: TenantStore): void {
+  assertNoTenantMove(model, operation, data, store)
+  assertNestedRelationsInUpdate(model, operation, data, store)
+}
+
 // Vérifie qu'une opération Prisma porte le filtre de tenant attendu.
 // Pure : testable sans client Prisma.
 export const assertTenantScope = (
@@ -340,8 +404,7 @@ export const assertTenantScope = (
   if (isRead) {
     assertWhere(model, operation, args, field, store)
     if (UPDATE_OPERATIONS.has(operation)) {
-      assertNoTenantMove(model, operation, args.data, store)
-      assertNestedRelationsInUpdate(model, operation, args.data, store)
+      assertUpdatePayload(model, operation, args.data, store)
     }
   }
   if (isWrite) {
@@ -349,8 +412,7 @@ export const assertTenantScope = (
     assertData(model, operation, data, store)
   }
   if (operation === 'upsert') {
-    assertNoTenantMove(model, `${operation}.update`, args.update, store)
-    assertNestedRelationsInUpdate(model, `${operation}.update`, args.update, store)
+    assertUpdatePayload(model, `${operation}.update`, args.update, store)
   }
 }
 

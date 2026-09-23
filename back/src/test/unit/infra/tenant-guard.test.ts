@@ -278,6 +278,156 @@ describe('assertTenantScope', () => {
     ).not.toThrow()
   })
 
+  // Correction 6 : les deux trous symetriques des ecritures imbriquees.
+  // Le CHOIX de la ligne touchee par un update/upsert imbrique est garanti par
+  // la relation ; ce qui s'y ECRIT ne l'etait pas.
+  describe('charge des ecritures imbriquees update / upsert', () => {
+    const base = { startDate: new Date(), serviceId: 's1', establishmentId: 'e1' }
+    const create = (data: object) =>
+      assertTenantScope({ model: 'Appointment', operation: 'create', args: { data } }, store)
+
+    it('refuse la branche create d un upsert imbrique sans colonnes de tenant', () => {
+      expect(() =>
+        create({
+          ...base,
+          appointmentPatients: {
+            upsert: {
+              where: { id_serviceId: { id: 'ap1', serviceId: 's1' } },
+              create: { patientId: 'p' },
+              update: {},
+            },
+          },
+        }),
+      ).toThrow(TenantScopeMissingError)
+    })
+
+    it('refuse la branche create d un upsert imbrique vers un autre tenant, en tableau', () => {
+      expect(() =>
+        create({
+          ...base,
+          appointmentPatients: {
+            upsert: [
+              {
+                where: { id_serviceId: { id: 'ap1', serviceId: 's1' } },
+                create: { patientId: 'p', serviceId: 's1', establishmentId: 'e1' },
+                update: {},
+              },
+              {
+                where: { id_serviceId: { id: 'ap2', serviceId: 's1' } },
+                create: { patientId: 'p2', serviceId: 'autre', establishmentId: 'e1' },
+                update: {},
+              },
+            ],
+          },
+        }),
+      ).toThrow(TenantScopeMissingError)
+    })
+
+    it('refuse la branche update d un upsert imbrique qui deplace l enfant', () => {
+      expect(() =>
+        create({
+          ...base,
+          appointmentPatients: {
+            upsert: {
+              where: { id_serviceId: { id: 'ap1', serviceId: 's1' } },
+              create: { patientId: 'p', serviceId: 's1', establishmentId: 'e1' },
+              update: { serviceId: 'autre' },
+            },
+          },
+        }),
+      ).toThrow(TenantScopeMissingError)
+    })
+
+    it('accepte un upsert imbrique legitime', () => {
+      expect(() =>
+        create({
+          ...base,
+          appointmentPatients: {
+            upsert: {
+              where: { id_serviceId: { id: 'ap1', serviceId: 's1' } },
+              create: { patientId: 'p', serviceId: 's1', establishmentId: 'e1' },
+              update: { transmissionNotes: 'x' },
+            },
+          },
+        }),
+      ).not.toThrow()
+    })
+
+    it('refuse un update imbrique dont le data porte un serviceId etranger', () => {
+      expect(() =>
+        create({
+          ...base,
+          appointmentPatients: {
+            update: { where: { id: 'ap1' }, data: { serviceId: 'autre' } },
+          },
+        }),
+      ).toThrow(TenantScopeMissingError)
+    })
+
+    it('refuse un update imbrique sous sa forme courte, ou l entree EST le data', () => {
+      expect(() =>
+        create({
+          ...base,
+          appointmentPatients: { update: { establishmentId: 'autre' } },
+        }),
+      ).toThrow(TenantScopeMissingError)
+    })
+
+    it('refuse un updateMany imbrique dont le data deplace l enfant', () => {
+      expect(() =>
+        create({
+          ...base,
+          appointmentPatients: {
+            updateMany: [{ where: { patientId: 'p' }, data: { serviceId: 'autre' } }],
+          },
+        }),
+      ).toThrow(TenantScopeMissingError)
+    })
+
+    it('descend dans les relations imbriquees d un update imbrique', () => {
+      // Slot > appointments (update) > appointmentPatients (create) : la
+      // recursion doit atteindre la creation la plus profonde.
+      const deep = (patient: object) => ({
+        ...base,
+        appointments: {
+          update: {
+            where: { id_serviceId: { id: 'a1', serviceId: 's1' } },
+            data: { appointmentPatients: { create: [patient] } },
+          },
+        },
+      })
+      expect(() =>
+        assertTenantScope(
+          { model: 'Slot', operation: 'create', args: { data: deep({ patientId: 'p' }) } },
+          store,
+        ),
+      ).toThrow(TenantScopeMissingError)
+      expect(() =>
+        assertTenantScope(
+          {
+            model: 'Slot',
+            operation: 'create',
+            args: {
+              data: deep({ patientId: 'p', serviceId: 's1', establishmentId: 'e1' }),
+            },
+          },
+          store,
+        ),
+      ).not.toThrow()
+    })
+
+    it('accepte un update imbrique legitime', () => {
+      expect(() =>
+        create({
+          ...base,
+          appointmentPatients: {
+            update: { where: { id: 'ap1' }, data: { transmissionNotes: 'x' } },
+          },
+        }),
+      ).not.toThrow()
+    })
+  })
+
   // Correction 3 : include/select sur une relation de tenant depuis un modele global.
   it('refuse un include de relation de tenant hors findUnique(OrThrow)', () => {
     expect(() =>
