@@ -10,6 +10,7 @@ import { StrictMode } from 'react'
 import ReactDOM from 'react-dom/client'
 
 import RootLayout from './components/root.layout.tsx'
+import { useTenantSwitch } from './hooks/useTenantSwitch.ts'
 import { routeTree } from './routeTree.gen.ts'
 import { useAuthStore } from './store/useAuthStore.ts'
 import 'dayjs/locale/fr'
@@ -80,6 +81,10 @@ if (rootElement && !rootElement.innerHTML) {
 }
 
 function AppRoutes() {
+  // Monte le crochet une seule fois, sous `QueryClientProvider` : il observe
+  // le contexte pose par les layouts de route et vide tout ce qui appartenait
+  // au service precedent.
+  useTenantSwitch()
   const user = useAuthStore((state) => state.user)
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const isInitialLoading = useAuthStore((state) => state.isInitialLoading)

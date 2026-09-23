@@ -12,14 +12,19 @@ interface PathwayTemplateEditActions {
   setStartDate: (date: string) => void
   setPathwayTemplate: (template: PathwayTemplate, startDate: string) => void
   clearPathwayTemplate: () => void
+  reset: () => void
+}
+
+const initialState: PathwayTemplateEditState = {
+  editMode: false,
+  startDate: '',
+  currentPathwayTemplate: null,
 }
 
 export const usePathwayTemplateEditStore = create<
   PathwayTemplateEditState & PathwayTemplateEditActions
 >((set) => ({
-  editMode: false,
-  startDate: '',
-  currentPathwayTemplate: null,
+  ...initialState,
 
   setEditMode: (mode) => set({ editMode: mode }),
   setStartDate: (date) => set({ startDate: date }),
@@ -29,10 +34,8 @@ export const usePathwayTemplateEditStore = create<
       editMode: true,
       startDate,
     }),
-  clearPathwayTemplate: () =>
-    set({
-      currentPathwayTemplate: null,
-      editMode: false,
-      startDate: '',
-    }),
+  clearPathwayTemplate: () => set(initialState),
+  // Appelee au changement de contexte : une edition en cours ne veut rien
+  // dire dans un autre service.
+  reset: () => set(initialState),
 }))
