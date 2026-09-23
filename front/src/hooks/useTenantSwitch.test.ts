@@ -10,6 +10,7 @@ import type { Todo } from '@/types/todo.ts'
 
 import {
   createTenantQueryClient,
+  rehydratePersistedStores,
   resetOnTenantChange,
   restoreForTenant,
   snapshotForTenant,
@@ -17,9 +18,11 @@ import {
   useTenantQueryClient,
 } from '@/hooks/useTenantSwitch.ts'
 import { useAuthStore } from '@/store/useAuthStore.ts'
+import { useDashboardFilterStore } from '@/store/useDashboardFilterStore.ts'
 import { useDiagnosticStore } from '@/store/useDiagnosticStore.ts'
 import { useDiagnosticTemplateStore } from '@/store/useDiagnosticTemplateStore.ts'
 import { usePathwayTemplateEditStore } from '@/store/usePathwayTemplateEditStore.ts'
+import { usePlanningStore } from '@/store/usePlanningStore.ts'
 import { useSoignantStore } from '@/store/useSoignantStore.ts'
 import { useTodoStore } from '@/store/useTodoStore.ts'
 
@@ -101,7 +104,12 @@ describe('changement de contexte', () => {
     expect(usePathwayTemplateEditStore.getState().editMode).toBe(false)
     expect(usePathwayTemplateEditStore.getState().startDate).toBe('')
     expect(useSoignantStore.getState().soignants).toEqual([])
-    expect(useSoignantStore.getState().selectedSoignantIDs).toEqual([])
+    // `selectedSoignantIDs` n'est PAS un de ces cinq : il est persiste, donc
+    // indexe par service (`scoped-storage.ts`), jamais reinitialise — le
+    // reinitialiser en plus de l'indexer serait contradictoire. Ici, le
+    // contexte ne change pas (`beforeEach` le laisse a `null`) : la
+    // rehydratation relit le meme tiroir et retrouve la meme selection.
+    expect(useSoignantStore.getState().selectedSoignantIDs).toEqual(['so1'])
     expect(useTodoStore.getState().todos).toEqual([])
   })
 
@@ -243,5 +251,86 @@ describe('useTenantQueryClient', () => {
 
     expect(afterSwitch).not.toBe(initial)
     expect(result.current).toBe(afterSwitch)
+  })
+})
+
+// A la difference des cinq stores non persistes, ceux-ci ne sont jamais
+// reinitialises par `resetOnTenantChange` : ils changent de tiroir avec le
+// service (`scoped-storage.ts`) et sont rehydrates depuis ce nouveau tiroir.
+describe('stores persistes rehydrates au changement de service', () => {
+  beforeEach(() => {
+    useAuthStore.setState({ context: null })
+  })
+
+  // Preuve a deux volets, dans le meme test : sans l'appel a
+  // `rehydratePersistedStores` dans `resetOnTenantChange`, `selectedSoignantIDs`
+  // resterait a `['so1']` (valeur du service A encore en memoire vive) apres
+  // le passage au service B — et meme avec l'appel, sans le repli explicite
+  // du `merge` de `useSoignantStore.ts`, la fusion par defaut de zustand
+  // garderait cette meme valeur au lieu de repartir du tiroir (encore vide)
+  // du service B.
+  it('ne laisse rien du service precedent dans un service jamais visite, avant toute attente', () => {
+    const queryClient = new QueryClient()
+    // Comme dans « reinitialise les stores avant toute attente » : une
+    // annulation qui ne se resout jamais pendant le test isole ce qui
+    // precede l'attente de ce qui la suit.
+    vi.spyOn(queryClient, 'cancelQueries').mockImplementation(() => new Promise(() => undefined))
+
+    useAuthStore.setState({ context: serviceA })
+    useSoignantStore.setState({ selectedSoignantIDs: ['so1'] })
+    // Contexte change SANS passer par `resetOnTenantChange` : rien ne
+    // rehydrate tout seul, la valeur du service A reste en memoire vive.
+    useAuthStore.setState({ context: serviceB })
+    expect(useSoignantStore.getState().selectedSoignantIDs).toEqual(['so1'])
+
+    void resetOnTenantChange(queryClient)
+
+    expect(useSoignantStore.getState().selectedSoignantIDs).toEqual([])
+  })
+
+  // Le pendant positif du test precedent : revenir dans un service deja
+  // visite retrouve sa selection, ce que la reinitialisation seule ne
+  // pourrait pas offrir.
+  it('retrouve la selection d un service deja visite en y revenant', () => {
+    useAuthStore.setState({ context: serviceA })
+    useSoignantStore.setState({ selectedSoignantIDs: ['so1'] })
+
+    useAuthStore.setState({ context: serviceB })
+    rehydratePersistedStores()
+    expect(useSoignantStore.getState().selectedSoignantIDs).toEqual([])
+
+    useAuthStore.setState({ context: serviceA })
+    rehydratePersistedStores()
+
+    expect(useSoignantStore.getState().selectedSoignantIDs).toEqual(['so1'])
+  })
+
+  // Meme garantie pour les trois autres stores indexes : chacun ecrit sous
+  // son propre tiroir de service et ne laisse rien filtrer d un service a
+  // l autre dans celui qui n a jamais ete visite.
+  it('isole les quatre stores persistes entre deux services jamais visites l un par l autre', () => {
+    useAuthStore.setState({ context: serviceA })
+    useDashboardFilterStore.setState({
+      mode: 'pathway',
+      selectedPathwayTemplateIDs: ['pt1'],
+    })
+    useTodoStore.getState().markTodosAsSeen()
+    useTodoStore.setState({ todos: [tacheDuServiceA] })
+    useTodoStore.getState().markTodosAsSeen()
+    usePlanningStore.getState().setPlanningDates({
+      currentDate: '2026-01-01',
+      viewStart: '2026-01-01',
+      viewEnd: '2026-01-07',
+    })
+
+    useAuthStore.setState({ context: serviceB })
+    rehydratePersistedStores()
+
+    expect(useDashboardFilterStore.getState().mode).toBe('soignant')
+    expect(useDashboardFilterStore.getState().selectedPathwayTemplateIDs).toEqual([])
+    expect(useTodoStore.getState().seenTodoIds).toEqual(new Set())
+    expect(usePlanningStore.getState().currentDate).toBe('')
+    expect(usePlanningStore.getState().viewStart).toBe('')
+    expect(usePlanningStore.getState().viewEnd).toBe('')
   })
 })

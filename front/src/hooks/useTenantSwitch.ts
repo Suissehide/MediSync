@@ -5,9 +5,11 @@ import { useEffect, useState } from 'react'
 import type { TenantContext } from '@/types/auth.ts'
 
 import { useAuthStore } from '@/store/useAuthStore.ts'
+import { useDashboardFilterStore } from '@/store/useDashboardFilterStore.ts'
 import { useDiagnosticStore } from '@/store/useDiagnosticStore.ts'
 import { useDiagnosticTemplateStore } from '@/store/useDiagnosticTemplateStore.ts'
 import { usePathwayTemplateEditStore } from '@/store/usePathwayTemplateEditStore.ts'
+import { usePlanningStore } from '@/store/usePlanningStore.ts'
 import { useSoignantStore } from '@/store/useSoignantStore.ts'
 import { useTodoStore } from '@/store/useTodoStore.ts'
 
@@ -120,16 +122,47 @@ export const resetTenantStores = (): void => {
   useTodoStore.getState().reset()
 }
 
+// Les quatre stores persistes indexes par service (`scoped-storage.ts`) :
+// leur tiroir change de nom avec le contexte, mais `zustand/persist` ne relit
+// le disque qu'au chargement du module. Sans cet appel explicite, un store
+// continuerait d'ecrire dans le nouveau tiroir tout en gardant en memoire les
+// valeurs de l'ancien.
+//
+// Appelee au meme moment synchrone que `resetTenantStores`, pour la meme
+// raison : un miroir ou un filtre remis a jour apres une frontiere
+// asynchrone peut arriver apres la reponse du nouveau service et l'effacer a
+// l'ecran.
+export const rehydratePersistedStores = (): void => {
+  useSoignantStore.persist.rehydrate()
+  useDashboardFilterStore.persist.rehydrate()
+  useTodoStore.persist.rehydrate()
+  usePlanningStore.persist.rehydrate()
+}
+
 // Appelee sur l'ancien client, une fois qu'il a ete remplace. Le vidage seul
 // ne suffisait pas — quatre chemins d'ecriture differee le contournaient —
 // mais il reste utile : il garantit que plus rien de l'ancien service n'est
 // lisible, y compris par un observateur qui serait reste abonne a ce client.
 export const resetOnTenantChange = async (previousClient: QueryClient): Promise<void> => {
-  // Les stores AVANT toute attente, de facon synchrone. Les miroirs sont
-  // realimentes par un effet des que la requete du nouveau service revient :
-  // remis a zero apres une frontiere asynchrone, un miroir fraichement rempli
-  // serait vide, et l'effet ne se rejouerait pas (la donnee de requete n'a pas
-  // change) — l'utilisateur resterait devant une liste vide.
+  // La rehydratation AVANT la reinitialisation, et les deux avant toute
+  // attente, de facon synchrone.
+  //
+  // L'ordre n'est pas arbitraire. `useSoignantStore` et `useTodoStore` sont a
+  // la fois reinitialises (leur miroir) et persistes (une autre part de leur
+  // etat) : leur `reset()` passe par le `set` enveloppe par `persist`, qui
+  // persiste l'INTEGRALITE de l'etat courant apres chaque ecriture — y
+  // compris la part persistee, inchangee par `reset()`. Reinitialiser
+  // d'abord ecrirait donc, sous la cle du NOUVEAU service, la valeur encore
+  // en memoire vive de l'ANCIEN — exactement la fuite que l'indexation existe
+  // pour ecarter. Rehydrater d'abord met cette valeur a jour AVANT cette
+  // ecriture, qui persiste alors un etat deja correct.
+  rehydratePersistedStores()
+
+  // Les miroirs sont realimentes par un effet des que la requete du nouveau
+  // service revient : remis a zero apres une frontiere asynchrone, un miroir
+  // fraichement rempli serait vide, et l'effet ne se rejouerait pas (la
+  // donnee de requete n'a pas change) — l'utilisateur resterait devant une
+  // liste vide.
   resetTenantStores()
 
   // L'annulation precede le vidage : sans elle, une reponse en vol

@@ -3,6 +3,8 @@ import { persist } from 'zustand/middleware'
 
 import type { Soignant } from '../types/soignant.ts'
 
+import { scopedStorage } from './scoped-storage.ts'
+
 interface SoignantState {
   soignants: Soignant[]
   selectedSoignantIDs: string[]
@@ -22,6 +24,14 @@ interface SoignantActions {
 }
 
 type PersistedSoignantState = Pick<SoignantState, 'selectedSoignantIDs'>
+
+// Narrowing sans assertion de type : `in` sur un `unknown` deja ramene a
+// `object` restreint l'acces a la propriete testee (TS 4.9+).
+const estEtatSoignantPersiste = (valeur: unknown): valeur is PersistedSoignantState =>
+  typeof valeur === 'object' &&
+  valeur !== null &&
+  'selectedSoignantIDs' in valeur &&
+  Array.isArray(valeur.selectedSoignantIDs)
 
 export const useSoignantStore = create<SoignantState & SoignantActions>()(
   persist(
@@ -57,15 +67,30 @@ export const useSoignantStore = create<SoignantState & SoignantActions>()(
 
       // Appelee au changement de contexte. `soignants` est un miroir en
       // memoire de la donnee du service, affiche par plusieurs ecrans et
-      // exclu du `partialize` : rien d'autre ne le remet a zero. La selection
-      // designe des soignants de l'ancien service, elle ne veut rien dire
-      // dans le nouveau.
-      reset: () => set({ soignants: [], selectedSoignantIDs: [] }),
+      // exclu du `partialize` : rien d'autre ne le remet a zero.
+      //
+      // `selectedSoignantIDs` n'est plus touche ici : il est indexe par
+      // service (persist/storage plus bas) et rehydrate au changement de
+      // contexte (`useTenantSwitch.ts`). Le reinitialiser ici en plus serait
+      // redondant avec l'indexation, qui suffit deja a ecarter la selection
+      // d'un autre service.
+      reset: () => set({ soignants: [] }),
     }),
     {
       name: 'soignant-store',
+      storage: scopedStorage('soignant-store'),
       partialize: (state): PersistedSoignantState => ({
         selectedSoignantIDs: state.selectedSoignantIDs,
+      }),
+      // Le tiroir neuf d'un service jamais visite ne contient rien : sans ce
+      // repli explicite, la fusion par defaut de zustand garderait la
+      // selection encore en memoire vive du service precedent au lieu de
+      // repartir vide.
+      merge: (persisted, current) => ({
+        ...current,
+        selectedSoignantIDs: estEtatSoignantPersiste(persisted)
+          ? persisted.selectedSoignantIDs
+          : [],
       }),
     },
   ),
