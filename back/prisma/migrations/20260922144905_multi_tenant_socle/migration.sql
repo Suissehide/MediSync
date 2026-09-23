@@ -175,10 +175,16 @@ DECLARE
   svc_id TEXT;
 BEGIN
   -- Garde de neutralité : ne rien faire si aucune des tables ci-dessous n'a de ligne.
-  -- Cette liste doit porter EXACTEMENT les mêmes tables, dans le même ordre, que les
+  -- Cette liste porte EXACTEMENT les mêmes tables, dans le même ordre, que les
   -- ALTER COLUMN ... SET NOT NULL du temps 3 ci-dessous (ActivityLog exclue : ses
-  -- colonnes de tenant restent nullables, elle n'a donc besoin d'aucune garde ici).
-  -- Toute table ajoutée à l'une des deux listes doit être ajoutée à l'autre.
+  -- colonnes de tenant restent nullables, elle n'a donc besoin d'aucune garde ici),
+  -- PLUS "User". Toute table ajoutée à l'une des deux listes doit être ajoutée à
+  -- l'autre ; "User" est la seule entrée qui n'a pas de contrepartie NOT NULL.
+  -- Elle est indispensable : une base ne contenant que des comptes — un
+  -- environnement fraîchement installé où des utilisateurs ont été créés avant
+  -- toute donnée métier — serait sinon traitée comme vide, aucun établissement ni
+  -- service ne serait créé, et ces comptes se retrouveraient sans appartenance,
+  -- donc sans accès.
   IF NOT EXISTS (SELECT 1 FROM "Appointment")
      AND NOT EXISTS (SELECT 1 FROM "AppointmentPatient")
      AND NOT EXISTS (SELECT 1 FROM "DiagnosticEducatif")
@@ -195,7 +201,8 @@ BEGIN
      AND NOT EXISTS (SELECT 1 FROM "SlotTemplate")
      AND NOT EXISTS (SELECT 1 FROM "Soignant")
      AND NOT EXISTS (SELECT 1 FROM "Thematic")
-     AND NOT EXISTS (SELECT 1 FROM "Todo") THEN
+     AND NOT EXISTS (SELECT 1 FROM "Todo")
+     AND NOT EXISTS (SELECT 1 FROM "User") THEN
     RETURN;
   END IF;
 
