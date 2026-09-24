@@ -3,6 +3,7 @@ import { join } from 'node:path'
 
 import {
   ESTABLISHMENT_MODELS,
+  GLOBAL_TENANT_RELATIONS,
   SERVICE_MODELS,
   TENANT_CHILD_RELATIONS,
 } from '../../../main/infra/orm/tenant-guard'
@@ -69,6 +70,9 @@ describe('TENANT_CHILD_RELATIONS reflete prisma/schema.prisma', () => {
     for (const model of [...SERVICE_MODELS, ...ESTABLISHMENT_MODELS]) {
       expect(modelNames).toContain(model)
     }
+    for (const model of Object.keys(GLOBAL_TENANT_RELATIONS)) {
+      expect(modelNames).toContain(model)
+    }
     // Une relation connue, pour prouver que relationsOf lit autre chose que du vide.
     expect(relationsOf(models.get('Patient') ?? '')).toMatchObject({
       enrollmentIssues: 'EnrollmentIssue',
@@ -101,5 +105,39 @@ describe('TENANT_CHILD_RELATIONS reflete prisma/schema.prisma', () => {
       }
     }
     expect(missing).toEqual([])
+  })
+})
+
+// Le pendant de tout ce qui precede, pour la seconde table ecrite a la main : celle des relations
+// d'un modele GLOBAL qui exposent de la donnee de tenant.
+//
+// Elle porte la meme obligation d'exhaustivite, et pour une raison plus pressante encore :
+// `assertGlobalInclude` echoue OUVERT. Une relation absente de la table n'est pas vue, donc
+// l'include passe sans controle — la ou `assertChildInclude` refuse ce qu'il ne connait pas.
+// Avant ce test, la table avait deja derive : elle declarait un `User.soignant` disparu du schema
+// depuis l'etape 1, ou le lien vers `Soignant` est passe a `EstablishmentMembership`.
+describe('GLOBAL_TENANT_RELATIONS reflete prisma/schema.prisma', () => {
+  const globalModels = Object.keys(GLOBAL_TENANT_RELATIONS)
+
+  it('ne declare que des modeles reellement globaux', () => {
+    // Si un modele de cette table entrait un jour dans SERVICE_MODELS ou ESTABLISHMENT_MODELS,
+    // `familyOf` cesserait de le router vers `assertGlobalInclude` et la table deviendrait muette
+    // sans que rien ne le signale.
+    expect(globalModels.length).toBeGreaterThan(0)
+    for (const model of globalModels) {
+      expect(SERVICE_MODELS).not.toContain(model)
+      expect(ESTABLISHMENT_MODELS).not.toContain(model)
+    }
+  })
+
+  // Dans les deux sens, comme pour TENANT_CHILD_RELATIONS : une relation du schema absente de la
+  // table est un trou (l'include passerait sans controle) ; une entree de la table absente du
+  // schema est une declaration morte, qui ne protege rien et ne se voit pas a l'usage.
+  it.each(globalModels)('reflete exactement les relations de %s', (model) => {
+    const body = models.get(model)
+    expect(body).toBeDefined()
+    expect([...(GLOBAL_TENANT_RELATIONS[model] ?? [])].sort()).toEqual(
+      Object.keys(relationsOf(body ?? '')).sort(),
+    )
   })
 })

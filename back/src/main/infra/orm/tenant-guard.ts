@@ -54,12 +54,20 @@ const NESTED_RELATIONS: Record<string, Record<string, string>> = {
 // Relations d'un modèle global qui exposent des données de tenant. Un include/select dessus ne
 // peut être laissé passer que sur une opération ciblant une seule ligne (findUnique(OrThrow)) :
 // c'est la seule façon de garantir que les enfants renvoyés appartiennent à un seul tenant.
-const GLOBAL_TENANT_RELATIONS: Record<string, readonly string[]> = {
-  User: ['soignant', 'establishmentMemberships'],
-  // `Establishment` n'est ni dans SERVICE_MODELS ni dans ESTABLISHMENT_MODELS :
-  // c'est un modèle global, et toutes ses relations mènent à des données de
-  // tenant. Noms repris un par un du modèle `Establishment` de
-  // prisma/schema.prisma : toute relation ajoutée là-bas doit l'être ici.
+//
+// Ce contrôle ÉCHOUE OUVERT : une relation absente de cette table n'est simplement pas vue, donc
+// l'include passe sans contrôle. La table porte donc la même obligation d'exhaustivité que
+// TENANT_CHILD_RELATIONS plus bas, et elle est tenue de la même façon — exportée pour
+// `tenant-guard-schema.test.ts`, qui relit prisma/schema.prisma et exige l'égalité stricte, dans
+// les deux sens, pour chacun des modèles globaux déclarés ici. Une relation ajoutée, renommée ou
+// supprimée là-bas fait échouer la porte tant qu'elle n'est pas reportée ici. (Avant ce test, la
+// table avait déjà dérivé : elle désignait un `User.soignant` disparu depuis l'étape 1, où le lien
+// vers `Soignant` est passé à `EstablishmentMembership`.)
+//
+// `User` et `Establishment` ne sont ni dans SERVICE_MODELS ni dans ESTABLISHMENT_MODELS : ce sont
+// des modèles globaux, et toutes leurs relations mènent à des données de tenant.
+export const GLOBAL_TENANT_RELATIONS: Record<string, readonly string[]> = {
+  User: ['establishmentMemberships'],
   Establishment: [
     'services',
     'memberships',

@@ -429,16 +429,29 @@ describe('assertTenantScope', () => {
   })
 
   // Correction 3 : include/select sur une relation de tenant depuis un modele global.
+  // La relation citee ici est `establishmentMemberships`, la seule que `model User` declare
+  // reellement. L'exemple portait auparavant sur un `User.soignant` disparu du schema depuis
+  // l'etape 1 : le test passait donc sur une relation inexistante, et n'aurait rien vu si la
+  // vraie relation avait quitte GLOBAL_TENANT_RELATIONS. C'est desormais
+  // `tenant-guard-schema.test.ts` qui tient la table contre le schema, dans les deux sens.
   it('refuse un include de relation de tenant hors findUnique(OrThrow)', () => {
     expect(() =>
       assertTenantScope(
-        { model: 'User', operation: 'findMany', args: { include: { soignant: true } } },
+        {
+          model: 'User',
+          operation: 'findMany',
+          args: { include: { establishmentMemberships: true } },
+        },
         store,
       ),
     ).toThrow(TenantScopeMissingError)
     expect(() =>
       assertTenantScope(
-        { model: 'User', operation: 'findUniqueOrThrow', args: { include: { soignant: true } } },
+        {
+          model: 'User',
+          operation: 'findUniqueOrThrow',
+          args: { include: { establishmentMemberships: true } },
+        },
         store,
       ),
     ).not.toThrow()
