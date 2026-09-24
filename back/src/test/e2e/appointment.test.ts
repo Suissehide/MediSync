@@ -107,7 +107,9 @@ describe('rendez-vous avec un patient', () => {
       where: { appointmentId: body.id },
     })
     expect(appointmentPatients).toHaveLength(1)
-    expect(appointmentPatients[0].patientId).toBe(patientId)
+    // Non-null : la longueur vient d'etre affirmee ci-dessus (`noUncheckedIndexedAccess`, pas de
+    // doute d'execution).
+    expect(appointmentPatients[0]!.patientId).toBe(patientId)
 
     await testDb.patient.delete({ where: { id: patientId } })
   })
@@ -173,9 +175,11 @@ describe('rendez-vous avec un patient', () => {
     // rattache au bon creneau et au bon patient.
     expect(result.failedEnrollments).toHaveLength(0)
     expect(result.enrollments).toHaveLength(1)
-    expect(result.enrollments[0].appointments).toHaveLength(1)
-    expect(result.enrollments[0].appointments[0].success).toBe(true)
-    expect(result.enrollments[0].appointments[0].error).toBeUndefined()
+    // Non-null : les deux longueurs viennent d'etre affirmees ci-dessus
+    // (`noUncheckedIndexedAccess`, pas de doute d'execution).
+    expect(result.enrollments[0]!.appointments).toHaveLength(1)
+    expect(result.enrollments[0]!.appointments[0]!.success).toBe(true)
+    expect(result.enrollments[0]!.appointments[0]!.error).toBeUndefined()
 
     const appointment = await testDb.appointment.findFirst({
       where: { slotID: slot.id },
@@ -186,7 +190,9 @@ describe('rendez-vous avec un patient', () => {
       where: { appointmentId: appointment?.id },
     })
     expect(appointmentPatients).toHaveLength(1)
-    expect(appointmentPatients[0].patientId).toBe(patientId)
+    // Non-null : la longueur vient d'etre affirmee ci-dessus (`noUncheckedIndexedAccess`, pas de
+    // doute d'execution).
+    expect(appointmentPatients[0]!.patientId).toBe(patientId)
 
     await testDb.patient.delete({ where: { id: patientId } })
   })
