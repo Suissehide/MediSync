@@ -166,6 +166,24 @@ export const PATIENTS_CARDIOLOGIE = [
       notes: 'Patiente très motivée',
     },
   },
+  {
+    firstName: 'François',
+    lastName: 'Thomas',
+    gender: 'male',
+    birthDate: new Date('1978-02-14'),
+    phone1: '0623698745',
+    email: 'francois.thomas@example.com',
+    distance: '30 km',
+    educationLevel: 'Bac+5',
+    occupation: 'Avocat',
+    currentActivity: 'En activité',
+    clinicalFile: {
+      medicalDiagnosis: 'HTA résistante',
+      orientation: 'Cardiologue',
+      programType: 'ETP HTA',
+      goal: 'Contrôle tensionnel optimal',
+    },
+  },
 ]
 
 // Service Pneumologie : jeu de patients volontairement distinct — aucun nom
@@ -260,6 +278,24 @@ export const PATIENTS_PNEUMOLOGIE = [
       orientation: 'Pneumologue',
       programType: 'ETP Mucoviscidose',
       notes: 'Suivi conjoint avec le CRCM',
+    },
+  },
+  {
+    firstName: 'Karim',
+    lastName: 'Haddad',
+    gender: 'male',
+    birthDate: new Date('1953-08-30'),
+    phone1: '0666778899',
+    email: 'karim.haddad@example.com',
+    distance: '28 km',
+    educationLevel: 'BEP',
+    occupation: 'Retraité',
+    currentActivity: 'Retraite',
+    clinicalFile: {
+      medicalDiagnosis: 'Insuffisance respiratoire chronique',
+      orientation: 'Hospitalisation',
+      programType: 'Réadaptation respiratoire',
+      goal: 'Réduire les hospitalisations',
     },
   },
 ]

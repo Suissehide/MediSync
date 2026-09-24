@@ -150,16 +150,63 @@ const applyTargetMigration = (client: Client): Promise<void> => applySqlFile(cli
 // avant toute ecriture — la meme observation serait faite avec la garde en derniere ligne,
 // parce que `client.query(sql)` en protocole simple enveloppe tout le fichier dans une
 // transaction implicite, qui annule aussi bien une ecriture faite AVANT un echec tardif.
-// La preuve qui manquait est structurelle, pas comportementale : que le premier mot-cle non
-// commente du fichier soit bien `DO` (le bloc de la garde), avant `CREATE TABLE` ou toute
-// autre instruction. Postgres execute un fichier multi-instructions dans l'ordre du texte :
-// une garde positionnellement premiere s'execute donc bien avant tout le reste, y compris
-// avant que la moindre instruction suivante n'ait la moindre chance de s'executer — que la
-// transaction implicite existe ou non. Trois lignes, comme le relecteur l'avait chiffre.
-const firstNonCommentKeyword = (sql: string): string => {
-  const withoutLineComments = sql.replace(/--.*$/gm, '')
-  const firstToken = withoutLineComments.trim().match(/^\S+/)?.[0] ?? ''
-  return firstToken.toUpperCase()
+// La preuve qui manquait est structurelle, pas comportementale.
+//
+// I1 de la re-revue : une premiere version de cette preuve structurelle affirmait seulement
+// que "le premier jeton non commente du fichier est DO" — vrai, mais plus etroit que ce que
+// le commentaire du test en concluait ("la garde est la toute premiere instruction"). Un
+// second bloc DO ECRIVANT, insere avant la garde, satisfait aussi "le premier jeton est DO" :
+// cette assertion restait verte alors qu'une ecriture s'executait avant la garde. La propriete
+// qu'on veut vraiment est plus large et plus directe : qu'AUCUNE instruction capable
+// d'ecrire — CREATE, ALTER, DROP, INSERT, UPDATE, DELETE, TRUNCATE, GRANT, REVOKE, MERGE,
+// quel que soit le bloc qui la contient, y compris a l'interieur d'un autre DO — ne
+// s'execute avant la garde. Postgres execute un fichier multi-instructions dans l'ordre du
+// texte : il suffit donc de comparer deux POSITIONS dans le texte (apres avoir retire les
+// deux formes de commentaires SQL, `--` et `/* */`, pour qu'un mot-cle a l'interieur d'un
+// commentaire ne soit pas compte comme une instruction reelle) : celle ou commence le VRAI
+// bloc de garde, et celle du premier mot-cle d'ecriture du fichier entier.
+
+const stripSqlComments = (sql: string): string => sql.replace(/\/\*[\s\S]*?\*\//g, '').replace(/--.*$/gm, '')
+
+const WRITE_KEYWORD = /\b(CREATE|ALTER|DROP|INSERT|UPDATE|DELETE|TRUNCATE|GRANT|REVOKE|MERGE)\b/gi
+
+// Identifie le VRAI bloc de garde par une chaine qui lui est propre ("trop_de_services", une
+// variable declaree uniquement dans son DECLARE), pas par "le premier DO trouve" — c'est
+// precisement cette confusion qui laissait passer un second bloc DO invente. Renvoie la
+// position du "DO $$" qui ouvre ce bloc.
+const guardBlockStart = (strippedSql: string): number => {
+  const markerIndex = strippedSql.indexOf('trop_de_services')
+  if (markerIndex === -1) {
+    throw new Error(
+      'Garde introuvable : "trop_de_services" absent du fichier de migration une fois les ' +
+        'commentaires retires — la garde a peut-etre ete renommee, reecrite ou supprimee.',
+    )
+  }
+  const openings = [...strippedSql.matchAll(/\bDO\b\s*\$\$/gi)].filter(
+    (m) => m.index !== undefined && m.index <= markerIndex,
+  )
+  const opening = openings.at(-1)
+  if (!opening || opening.index === undefined) {
+    throw new Error('Garde introuvable : aucun bloc "DO $$" ne precede "trop_de_services".')
+  }
+  return opening.index
+}
+
+// Position du premier mot-cle d'ecriture du fichier ENTIER (pas seulement hors du bloc de
+// garde : la garde elle-meme n'en contient aucun, SELECT/RAISE EXCEPTION mis a part, donc ne
+// pas l'exclure ne change rien au cas sain et attrape en plus une ecriture qui se cacherait
+// dans un bloc invente avant elle).
+const firstWriteKeywordIndex = (strippedSql: string): number => {
+  WRITE_KEYWORD.lastIndex = 0
+  const match = WRITE_KEYWORD.exec(strippedSql)
+  return match ? match.index : Number.POSITIVE_INFINITY
+}
+
+// Assertion unique, reutilisee par les deux scenarios de refus ci-dessous : la garde
+// s'execute avant toute ecriture, ou qu'elle se trouve dans le fichier.
+const assertGuardPrecedesEveryWrite = (): void => {
+  const stripped = stripSqlComments(readFileSync(TARGET_MIGRATION_SQL, 'utf8'))
+  expect(guardBlockStart(stripped)).toBeLessThan(firstWriteKeywordIndex(stripped))
 }
 
 const buildTemplateDatabase = async (conn: PgConn, maint: Client): Promise<void> => {
@@ -521,10 +568,10 @@ describe('migration patient_service_file — base jetable, jamais medisync ni me
         await expect(applyTargetMigration(client)).rejects.toThrow(/plusieurs services/)
 
         // Preuve structurelle, pas seulement comportementale (voir le commentaire de
-        // `firstNonCommentKeyword`) : la garde est bien la toute premiere instruction du
-        // fichier sur disque, avant meme `CREATE TABLE`. C'est ce qui garantit qu'elle
+        // `assertGuardPrecedesEveryWrite`) : aucune instruction capable d'ecrire, ou qu'elle
+        // se trouve dans le fichier, ne precede la garde. C'est ce qui garantit qu'elle
         // s'execute avant toute ecriture, independamment de la transaction implicite.
-        expect(firstNonCommentKeyword(readFileSync(TARGET_MIGRATION_SQL, 'utf8'))).toBe('DO')
+        assertGuardPrecedesEveryWrite()
 
         // Rien touche : ni la table du sous-dossier, ni la moindre colonne de Patient. Cette
         // absence d'ecriture est de toute facon acquise par la transaction implicite du
@@ -570,10 +617,10 @@ describe('migration patient_service_file — base jetable, jamais medisync ni me
 
         await expect(applyTargetMigration(client)).rejects.toThrow(/aucun service/)
 
-        // Meme preuve structurelle que dans le scenario "plusieurs services" ci-dessus : la
-        // garde est la toute premiere instruction du fichier, ce n'est pas la transaction
-        // implicite qui fait a elle seule la demonstration.
-        expect(firstNonCommentKeyword(readFileSync(TARGET_MIGRATION_SQL, 'utf8'))).toBe('DO')
+        // Meme preuve structurelle que dans le scenario "plusieurs services" ci-dessus : aucune
+        // ecriture ne precede la garde, ce n'est pas la transaction implicite qui fait a elle
+        // seule la demonstration.
+        assertGuardPrecedesEveryWrite()
 
         const table = await client.query<{ reg: string | null }>(
           `SELECT to_regclass('"PatientServiceFile"') AS reg`,

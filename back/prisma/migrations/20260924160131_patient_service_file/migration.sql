@@ -19,6 +19,14 @@ BEGIN
   -- Spec §4.1 : le message doit nommer les etablissements fautifs ET leurs services, pas
   -- seulement leur nombre — un operateur doit pouvoir agir sur ce seul message, sans requete
   -- supplementaire pour savoir quels services repartir.
+  --
+  -- Decision assumee, pas un oubli : ce compte porte sur TOUS les services, desactives
+  -- compris (aucun filtre sur "deactivatedAt" ici, contrairement a l'application — voir
+  -- me-mapper.ts). Un service desactive peut porter de l'historique de patients ; choisir a
+  -- la place de l'exploitant lequel des deux services doit le recevoir est exactement ce que
+  -- cette garde existe pour empecher. Le message ci-dessous le dit, pour qu'un exploitant qui
+  -- reconnait un service dont plus personne ne se sert ne prenne pas ce refus pour une
+  -- fausse alerte.
   SELECT string_agg(x.etab || ' (' || x.services || ')', ', ')
   INTO trop_de_services
   FROM (
@@ -33,7 +41,10 @@ BEGIN
   IF trop_de_services IS NOT NULL THEN
     RAISE EXCEPTION 'Migration refusee : ces etablissements ont des patients et plusieurs services (%). '
       'Les colonnes de parcours d''un patient sont uniques et ne peuvent pas etre reparties '
-      'automatiquement entre plusieurs sous-dossiers. Une procedure guidee est necessaire.', trop_de_services;
+      'automatiquement entre plusieurs sous-dossiers. Une procedure guidee est necessaire. '
+      'Ce compte inclut les services desactives : un service desactive peut porter de l''historique '
+      'd''un patient, et cette garde refuse de choisir a votre place lequel des services listes '
+      'doit le recevoir.', trop_de_services;
   END IF;
 
   SELECT string_agg(e.name, ', ')
