@@ -143,9 +143,15 @@ describe('withoutClinicalFields', () => {
       transmissionNotes: ['AppointmentPatient'],
     }
     for (const field of CLINICAL_FIELDS) {
+      const expected = expectedModels[field]
+      // Absence traitee explicitement (pas d'assertion de non-nullite) : un champ ajoute a
+      // CLINICAL_FIELDS sans entree correspondante ici doit le dire, pas comparer a `undefined`.
+      if (!expected) {
+        throw new Error(`Aucun modele attendu declare pour le champ clinique "${field}"`)
+      }
       expect({ field, models: modelsDeclaring(field) }).toEqual({
         field,
-        models: [...expectedModels[field]].sort(),
+        models: [...expected].sort(),
       })
     }
   })
