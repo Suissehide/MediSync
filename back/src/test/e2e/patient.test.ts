@@ -1,3 +1,6 @@
+// Regle de robustesse de ce filet, pour toute tache qui le touchera plus
+// tard : on peut changer comment le test atteint la donnee, jamais ce qu'il
+// affirme.
 import { buildTestApp, type TestApp } from './setup/app'
 import { testDb, truncateAll } from './setup/db'
 import {
@@ -81,64 +84,143 @@ describe('routes du patient', () => {
     await testDb.$disconnect()
   })
 
-  it('cree un patient, renseigne les seize colonnes de parcours et de contenu clinique une par une, et les relit a l identique', async () => {
-    const created = await post('/patient', {
-      firstName: 'Jean',
-      lastName: 'Dupont',
+  it('cree deux patients, renseigne les seize colonnes de chacun avec des valeurs distinctes une par une, et verifie qu aucun des deux ne recupere une colonne de l autre', async () => {
+    // Deux patients, jamais un seul : un filet a un seul patient ne peut pas
+    // detecter un decalage entre patients (une migration qui mesattribuerait
+    // les sous-dossiers par jointure positionnelle plutot que par
+    // identifiant de patient le laisserait vert). Chaque valeur ci-dessous
+    // porte le nom de son patient, pour que le diff d'un echec dise lui-meme
+    // qui a recu la valeur de qui.
+    const pierreCreated = await post('/patient', {
+      firstName: 'Pierre',
+      lastName: 'Durand',
     })
-    expect(created.statusCode).toBe(201)
-    const patientId = created.json().id as string
+    expect(pierreCreated.statusCode).toBe(201)
+    const pierreId = pierreCreated.json().id as string
 
-    const updateRes = await patch(`/patient/${patientId}`, {
-      medicalDiagnosis: 'Diabete de type 2',
+    const catherineCreated = await post('/patient', {
+      firstName: 'Catherine',
+      lastName: 'Leroy',
+    })
+    expect(catherineCreated.statusCode).toBe(201)
+    const catherineId = catherineCreated.json().id as string
+
+    const pierreValues = {
+      medicalDiagnosis: 'Pierre - Diabete de type 2',
       entryDate: '2026-03-01T00:00:00.000Z',
-      careMode: 'Ambulatoire',
-      orientation: 'Medecin traitant',
-      etpDecision: 'oui',
-      programType: 'ETP diabete',
-      nonInclusionDetails: 'Aucun motif de non-inclusion',
-      customContentDetails: 'Contenu personnalise du parcours',
-      goal: "Ameliorer l'equilibre alimentaire",
+      careMode: 'Pierre - Ambulatoire',
+      orientation: 'Pierre - Medecin traitant',
+      etpDecision: 'Pierre - oui',
+      programType: 'Pierre - ETP diabete',
+      nonInclusionDetails: 'Pierre - Aucun motif de non-inclusion',
+      customContentDetails: 'Pierre - Contenu personnalise du parcours',
+      goal: "Pierre - Ameliorer l'equilibre alimentaire",
       exitDate: '2026-06-01T00:00:00.000Z',
-      stopReason: 'Programme termine normalement',
-      etpFinalOutcome: 'Objectifs atteints',
-      referringCaregiver: 'Dr Martin',
-      followUpToDo: 'Controle a 3 mois',
-      notes: 'NOTE-PATIENT',
-      details: 'DETAIL-PATIENT',
-    })
-    expect(updateRes.statusCode).toBe(200)
+      stopReason: 'Pierre - Programme termine normalement',
+      etpFinalOutcome: 'Pierre - Objectifs atteints',
+      referringCaregiver: 'Pierre - Dr Martin',
+      followUpToDo: 'Pierre - Controle a 3 mois',
+      notes: 'Pierre - NOTE-PATIENT',
+      details: 'Pierre - DETAIL-PATIENT',
+    }
 
-    const fetched = (await get(`/patient/${patientId}`)).json()
+    const catherineValues = {
+      medicalDiagnosis: 'Catherine - Hypertension arterielle',
+      entryDate: '2026-04-10T00:00:00.000Z',
+      careMode: 'Catherine - Hospitalisation de jour',
+      orientation: 'Catherine - Cardiologue',
+      etpDecision: 'Catherine - non',
+      programType: 'Catherine - ETP cardio',
+      nonInclusionDetails: 'Catherine - Grossesse en cours',
+      customContentDetails: 'Catherine - Contenu adapte au parcours cardio',
+      goal: 'Catherine - Stabiliser la tension arterielle',
+      exitDate: '2026-09-15T00:00:00.000Z',
+      stopReason: 'Catherine - Deces',
+      etpFinalOutcome: 'Catherine - Objectifs partiellement atteints',
+      referringCaregiver: 'Catherine - Dr Bernard',
+      followUpToDo: 'Catherine - Bilan sanguin de controle',
+      notes: 'Catherine - NOTE-PATIENT',
+      details: 'Catherine - DETAIL-PATIENT',
+    }
 
-    // Les seize noms sont ecrits ici un par un : c'est le compte etabli
-    // contre back/prisma/schema.prisma, et c'est precisement la liste que
-    // l'etape 3 va deplacer hors de la table Patient.
-    expect(fetched.medicalDiagnosis).toBe('Diabete de type 2')
-    expect(new Date(fetched.entryDate).toISOString()).toBe(
-      '2026-03-01T00:00:00.000Z',
+    const pierreUpdateRes = await patch(`/patient/${pierreId}`, pierreValues)
+    expect(pierreUpdateRes.statusCode).toBe(200)
+
+    const catherineUpdateRes = await patch(
+      `/patient/${catherineId}`,
+      catherineValues,
     )
-    expect(fetched.careMode).toBe('Ambulatoire')
-    expect(fetched.orientation).toBe('Medecin traitant')
-    expect(fetched.etpDecision).toBe('oui')
-    expect(fetched.programType).toBe('ETP diabete')
-    expect(fetched.nonInclusionDetails).toBe('Aucun motif de non-inclusion')
-    expect(fetched.customContentDetails).toBe(
-      'Contenu personnalise du parcours',
+    expect(catherineUpdateRes.statusCode).toBe(200)
+
+    const pierreFetched = (await get(`/patient/${pierreId}`)).json()
+    const catherineFetched = (await get(`/patient/${catherineId}`)).json()
+
+    // Les seize noms sont ecrits ici un par un, pour chaque patient : c'est
+    // le compte etabli contre back/prisma/schema.prisma, et c'est
+    // precisement la liste que l'etape 3 va deplacer hors de la table
+    // Patient. Chaque valeur attendue porte le nom du patient auquel elle
+    // appartient : un echec dit donc lui-meme qui a recu la valeur de qui.
+    expect(pierreFetched.medicalDiagnosis).toBe(pierreValues.medicalDiagnosis)
+    expect(new Date(pierreFetched.entryDate).toISOString()).toBe(
+      pierreValues.entryDate,
     )
-    expect(fetched.goal).toBe("Ameliorer l'equilibre alimentaire")
-    expect(new Date(fetched.exitDate).toISOString()).toBe(
-      '2026-06-01T00:00:00.000Z',
+    expect(pierreFetched.careMode).toBe(pierreValues.careMode)
+    expect(pierreFetched.orientation).toBe(pierreValues.orientation)
+    expect(pierreFetched.etpDecision).toBe(pierreValues.etpDecision)
+    expect(pierreFetched.programType).toBe(pierreValues.programType)
+    expect(pierreFetched.nonInclusionDetails).toBe(
+      pierreValues.nonInclusionDetails,
     )
-    expect(fetched.stopReason).toBe('Programme termine normalement')
-    expect(fetched.etpFinalOutcome).toBe('Objectifs atteints')
-    expect(fetched.referringCaregiver).toBe('Dr Martin')
-    expect(fetched.followUpToDo).toBe('Controle a 3 mois')
-    expect(fetched.notes).toBe('NOTE-PATIENT')
-    expect(fetched.details).toBe('DETAIL-PATIENT')
+    expect(pierreFetched.customContentDetails).toBe(
+      pierreValues.customContentDetails,
+    )
+    expect(pierreFetched.goal).toBe(pierreValues.goal)
+    expect(new Date(pierreFetched.exitDate).toISOString()).toBe(
+      pierreValues.exitDate,
+    )
+    expect(pierreFetched.stopReason).toBe(pierreValues.stopReason)
+    expect(pierreFetched.etpFinalOutcome).toBe(pierreValues.etpFinalOutcome)
+    expect(pierreFetched.referringCaregiver).toBe(
+      pierreValues.referringCaregiver,
+    )
+    expect(pierreFetched.followUpToDo).toBe(pierreValues.followUpToDo)
+    expect(pierreFetched.notes).toBe(pierreValues.notes)
+    expect(pierreFetched.details).toBe(pierreValues.details)
+
+    expect(catherineFetched.medicalDiagnosis).toBe(
+      catherineValues.medicalDiagnosis,
+    )
+    expect(new Date(catherineFetched.entryDate).toISOString()).toBe(
+      catherineValues.entryDate,
+    )
+    expect(catherineFetched.careMode).toBe(catherineValues.careMode)
+    expect(catherineFetched.orientation).toBe(catherineValues.orientation)
+    expect(catherineFetched.etpDecision).toBe(catherineValues.etpDecision)
+    expect(catherineFetched.programType).toBe(catherineValues.programType)
+    expect(catherineFetched.nonInclusionDetails).toBe(
+      catherineValues.nonInclusionDetails,
+    )
+    expect(catherineFetched.customContentDetails).toBe(
+      catherineValues.customContentDetails,
+    )
+    expect(catherineFetched.goal).toBe(catherineValues.goal)
+    expect(new Date(catherineFetched.exitDate).toISOString()).toBe(
+      catherineValues.exitDate,
+    )
+    expect(catherineFetched.stopReason).toBe(catherineValues.stopReason)
+    expect(catherineFetched.etpFinalOutcome).toBe(
+      catherineValues.etpFinalOutcome,
+    )
+    expect(catherineFetched.referringCaregiver).toBe(
+      catherineValues.referringCaregiver,
+    )
+    expect(catherineFetched.followUpToDo).toBe(catherineValues.followUpToDo)
+    expect(catherineFetched.notes).toBe(catherineValues.notes)
+    expect(catherineFetched.details).toBe(catherineValues.details)
 
     // Nettoyage : ne pas influencer le test de liste suivant.
-    await testDb.patient.delete({ where: { id: patientId } })
+    await testDb.patient.delete({ where: { id: pierreId } })
+    await testDb.patient.delete({ where: { id: catherineId } })
   })
 
   it('la liste des patients contient le patient cree', async () => {
