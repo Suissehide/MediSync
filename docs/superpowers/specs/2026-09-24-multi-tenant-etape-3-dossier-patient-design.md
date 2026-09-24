@@ -11,7 +11,7 @@ Aujourd'hui, un patient est une ligne unique au niveau de l'établissement, qui 
 identité et tout son parcours de soin. Deux services du même établissement qui suivent la même
 personne écrivent donc dans la même ligne, et voient le travail l'un de l'autre.
 
-Cette étape sépare les deux. L'identité reste à l'établissement. Dix-sept colonnes — le parcours,
+Cette étape sépare les deux. L'identité reste à l'établissement. Seize colonnes — le parcours,
 le diagnostic médical, les notes, le bilan de sortie — partent dans un **sous-dossier par
 service**, invisible des autres services.
 
@@ -44,7 +44,7 @@ ni aucune date. La section 5.3 dit comment l'obtenir sans ouvrir davantage.
 
 ### 2.2 Le secrétariat voit le sous-dossier comme il voit le patient aujourd'hui
 
-La règle existante est reportée telle quelle : trois champs masqués sur dix-sept — les notes, le
+La règle existante est reportée telle quelle : trois champs masqués sur seize — les notes, le
 détail et le diagnostic médical. Le reste du sous-dossier, jugé administratif, reste visible.
 Aucune permission nouvelle, aucune modification de la matrice.
 
@@ -63,7 +63,7 @@ le second un risque de double saisie.
 ### 3.1 La nouvelle table
 
 `PatientServiceFile` : `id`, `patientId`, `serviceId`, `establishmentId`, `createdAt`, puis les
-dix-sept colonnes déplacées.
+seize colonnes déplacées.
 
 - `medicalDiagnosis`, `entryDate`, `careMode`, `orientation`, `etpDecision`, `programType`,
   `nonInclusionDetails`, `customContentDetails`, `goal`
@@ -105,7 +105,7 @@ joués avant et après.
 ### 4.1 Quel sous-dossier reçoit les données
 
 Un patient peut aujourd'hui être actif dans plusieurs services, par ses rendez-vous, ses
-diagnostics ou ses problèmes d'inscription. Ses dix-sept colonnes, elles, sont uniques. Il faut
+diagnostics ou ses problèmes d'inscription. Ses seize colonnes, elles, sont uniques. Il faut
 donc décider où elles vont.
 
 **La migration exige qu'au moment où elle s'exécute, chaque établissement n'ait qu'un seul
@@ -121,10 +121,10 @@ procédure guidée à écrire le jour où le cas se présentera.
 
 1. **Ajouter** la table `PatientServiceFile`, vide, avec ses contraintes.
 2. **Remplir** : un sous-dossier par patient, dans l'unique service de son établissement, avec la
-   valeur de ses dix-sept colonnes. Puis rattacher les diagnostics et les problèmes d'inscription
+   valeur de ses seize colonnes. Puis rattacher les diagnostics et les problèmes d'inscription
    à ce sous-dossier.
 3. **Contraindre et nettoyer** : poser les clés étrangères des enfants, puis supprimer les
-   dix-sept colonnes de `Patient`.
+   seize colonnes de `Patient`.
 
 ### 4.3 Ce que les invariants doivent prouver
 
@@ -135,7 +135,7 @@ comptage de lignes resterait vert sur une migration qui aurait recopié des colo
 Les invariants doivent donc porter sur les **valeurs** :
 
 - autant de sous-dossiers que de patients ;
-- pour chacune des dix-sept colonnes, le nombre de valeurs non nulles avant et après est
+- pour chacune des seize colonnes, le nombre de valeurs non nulles avant et après est
   identique ;
 - une somme de contrôle sur le contenu textuel de chaque colonne, identique avant et après —
   c'est le seul contrôle qui attrape une recopie décalée d'une ligne, qu'un comptage laisserait
@@ -165,7 +165,7 @@ ceux du patient.
 
 Le sous-dossier est **créé automatiquement** à la première écriture, et à l'inscription d'un
 patient dans un parcours du service. Le relevé a montré qu'aucun chemin de création de patient ne
-renseigne les dix-sept colonnes : elles sont toujours remplies après coup. La création automatique
+renseigne les seize colonnes : elles sont toujours remplies après coup. La création automatique
 est donc sans effet de bord.
 
 ### 5.2 Le filtrage clinique
@@ -205,7 +205,7 @@ la bonne : la limite a été documentée pour être levée ici.
 ## 6. Front
 
 - **Fiche patient en deux blocs**, nommés : l'identité partagée entre les services, et le dossier
-  de ce service. Le second porte les dix-sept champs, répartis dans les onglets existants.
+  de ce service. Le second porte les seize champs, répartis dans les onglets existants.
 - **Le signal de suivi ailleurs** apparaît dans le bloc d'identité, sous une forme sobre, et dit
   ce qu'il dit : cette personne est suivie dans un autre service, sans plus.
 - **Liste par service** : les patients ayant un sous-dossier dans le service courant.
@@ -216,13 +216,13 @@ la bonne : la limite a été documentée pour être levée ici.
 ## 7. Tests
 
 **Le relevé a mis au jour un fait qui commande cette section : il n'existe aujourd'hui aucun test
-end-to-end sur les routes du patient, et aucun test ne nomme une seule des dix-sept colonnes hors
+end-to-end sur les routes du patient, et aucun test ne nomme une seule des seize colonnes hors
 du filtrage clinique.** La migration la plus risquée du chantier partirait donc sans filet.
 
 L'étape ajoute, **avant** d'écrire la migration :
 
 - des tests end-to-end sur la lecture, l'écriture et la suppression d'un patient, portant
-  explicitement les dix-sept colonnes ;
+  explicitement les seize colonnes ;
 - un test de cloisonnement : deux services, un même patient, chacun ne voit que son sous-dossier ;
 - un test du signal de suivi ailleurs, dans les deux sens ;
 - un test prouvant que le filtrage clinique couvre le sous-dossier ;
@@ -231,6 +231,6 @@ L'étape ajoute, **avant** d'écrire la migration :
 ## 8. Critère de sortie
 
 Un même patient a un sous-dossier dans deux services, chacun n'y voit que le sien, et chacun sait
-qu'il existe un suivi ailleurs sans pouvoir dire lequel. Les valeurs des dix-sept colonnes sont
+qu'il existe un suivi ailleurs sans pouvoir dire lequel. Les valeurs des seize colonnes sont
 identiques avant et après migration, somme de contrôle à l'appui. Un compte secrétariat voit le
 sous-dossier moins ses trois champs cliniques.
