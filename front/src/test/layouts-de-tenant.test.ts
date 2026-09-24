@@ -45,8 +45,16 @@ const estUnCommentaire = (ligne: string) => ligne.startsWith('//') || ligne.star
 // l'ouverture des options, et l'ancre laisserait alors passer un layout
 // pourtant conforme — puis accuserait a tort le fichier d'oubli.
 const DECLARE_REMOUNT_DEPS = /remountDeps\s*:/
-// `setContext(` appele sur le store, quelle que soit la facon de l'atteindre.
-const POSE_LE_CONTEXTE = /\.setContext\s*\(/
+// L'APPEL a `setContext`, quelle que soit la facon dont il a ete atteint. Une
+// frontiere de mot, et surtout pas le point : `const { setContext } =
+// useAuthStore.getState()` puis `setContext(tenant)` pose bel et bien le
+// contexte, et un motif exigeant `.setContext(` laissait ce fichier-la passer
+// au vert sans dependance de remontage — precisement le trou que ce test
+// existe pour fermer. La frontiere de mot ne peut pas confondre avec un
+// `resetContext`/`unsetContext` (pas de frontiere entre deux caracteres de
+// mot), et ne produit aucun faux positif sur le depot : les deux seules
+// occurrences hors commentaire sont les deux layouts.
+const POSE_LE_CONTEXTE = /\bsetContext\s*\(/
 
 // Vitest s'execute depuis `front/`, et l'environnement jsdom ne donne pas
 // d'`import.meta.url` de schema `file:`.
