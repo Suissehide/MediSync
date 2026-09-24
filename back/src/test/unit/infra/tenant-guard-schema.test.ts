@@ -108,14 +108,21 @@ describe('TENANT_CHILD_RELATIONS reflete prisma/schema.prisma', () => {
   })
 })
 
-// Le pendant de tout ce qui precede, pour la seconde table ecrite a la main : celle des relations
-// d'un modele GLOBAL qui exposent de la donnee de tenant.
-//
-// Elle porte la meme obligation d'exhaustivite, et pour une raison plus pressante encore :
-// `assertGlobalInclude` echoue OUVERT. Une relation absente de la table n'est pas vue, donc
-// l'include passe sans controle — la ou `assertChildInclude` refuse ce qu'il ne connait pas.
-// Avant ce test, la table avait deja derive : elle declarait un `User.soignant` disparu du schema
+// La seconde table ecrite a la main : celle des relations d'un modele GLOBAL qui exposent de la
+// donnee de tenant. Le besoin est plus pressant que pour TENANT_CHILD_RELATIONS, parce que
+// `assertGlobalInclude` echoue OUVERT — une relation absente de la table n'est pas vue, donc
+// l'include passe sans controle, la ou `assertChildInclude` refuse ce qu'il ne connait pas. Avant
+// ce test, la table avait deja derive : elle declarait un `User.soignant` disparu du schema
 // depuis l'etape 1, ou le lien vers `Soignant` est passe a `EstablishmentMembership`.
+//
+// MAIS L'OBLIGATION N'EST PAS LA MEME, et ce paragraphe a longtemps affirme le contraire.
+// TENANT_CHILD_RELATIONS est une liste blanche qui EXIGE : ce qui n'y figure pas est refuse, donc
+// y declarer une relation la rend simplement lisible et l'exhaustivite ne coute rien.
+// GLOBAL_TENANT_RELATIONS fait l'inverse : y declarer une relation la RESTREINT, puisque
+// `assertGlobalInclude` refuse alors tout include dessus hors findUnique(OrThrow). Exiger ici
+// l'egalite avec toutes les relations du modele reviendrait donc a exiger qu'on restreigne un
+// futur `User.notificationPreferences` sans aucun rapport avec le cloisonnement. L'exigence est
+// resserree en consequence, et dite en trois proprietes ci-dessous.
 describe('GLOBAL_TENANT_RELATIONS reflete prisma/schema.prisma', () => {
   const globalModels = Object.keys(GLOBAL_TENANT_RELATIONS)
 
@@ -130,18 +137,11 @@ describe('GLOBAL_TENANT_RELATIONS reflete prisma/schema.prisma', () => {
     }
   })
 
-  // L'exigence porte sur ce que le garde-fou doit vraiment couvrir, et pas plus. Elle a d'abord
-  // ete ecrite comme une egalite avec TOUTES les relations du modele, ce qui est juste pour
-  // `Establishment` — dont chaque relation mene a du tenant — mais trop large pour `User` :
-  // ajouter au schema un `User.notificationPreferences`, sans aucun rapport avec le tenant,
-  // aurait fait echouer cette porte jusqu'a ce qu'on le declare ici. Or declarer une relation
-  // dans cette table n'est pas neutre : `assertGlobalInclude` REFUSE alors tout include dessus
-  // hors findUnique(OrThrow). L'egalite stricte poussait donc a restreindre une relation qui
-  // n'avait pas a l'etre, ou a se battre avec le test.
-  //
-  // Ce que la table doit reellement garantir, c'est qu'aucune relation MENANT A DU TENANT
-  // n'echappe au controle — c'est la seule propriete que `assertGlobalInclude` exploite, et la
-  // seule qui compte puisqu'il echoue OUVERT. Les deux sens sont donc verifies separement.
+  // Premiere et deuxieme proprietes (voir l'en-tete du bloc pour le pourquoi du resserrement) :
+  // ce que la table doit garantir est qu'aucune relation MENANT A DU TENANT n'echappe au
+  // controle — la seule propriete que `assertGlobalInclude` exploite, et la seule qui compte
+  // puisqu'il echoue OUVERT. Les deux sens sont enonces separement pour que l'echec nomme le
+  // defaut plutot que de dire « deux objets different ».
   const MODELES_DE_TENANT = new Set([...SERVICE_MODELS, ...ESTABLISHMENT_MODELS])
 
   it.each(globalModels)('declare toutes les relations de %s qui menent a du tenant', (model) => {
