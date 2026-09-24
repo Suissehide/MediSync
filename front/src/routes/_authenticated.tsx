@@ -35,10 +35,14 @@ export const Route = createFileRoute('/_authenticated')({
     }
   },
   // INVARIANT MULTI-TENANT : ce composant survit au changement
-  // d'etablissement/service. Il ne doit jamais interroger l'API — un
-  // observateur cree ici garderait l'ancien client de requetes (React Query
-  // fige le client a la creation de l'observateur) et afficherait la donnee
-  // d'un autre service. Le `beforeLoad` ci-dessus, lui, passe par
-  // `context.queryClient`, tenu a jour par `AppRoutes` : il est sur.
+  // d'etablissement/service — les layouts qui, eux, sont demontes sont
+  // `e/$establishmentId/s/$serviceId` et `e/$establishmentId/admin`, et
+  // seulement parce qu'ils declarent `remountDeps: ({ params }) => params`.
+  // Celui-ci n'en declare aucune, et ne doit donc jamais interroger une API
+  // de tenant : un observateur cree ici garderait l'ancien client de
+  // requetes (React Query lie l'observateur au client a la construction et
+  // ne le relie jamais) et afficherait la donnee d'un autre service. Le
+  // `beforeLoad` ci-dessus, lui, passe par `context.queryClient`, tenu a
+  // jour par `AppRoutes`, et sans observateur : il est sur.
   component: () => <Outlet />,
 })

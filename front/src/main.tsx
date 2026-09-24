@@ -41,6 +41,29 @@ dayjs.locale('fr')
 // par `useTenantQueryClient`, un par couple etablissement/service.
 const initialQueryClient = createTenantQueryClient()
 
+// INVARIANT MULTI-TENANT — les deux moities du mecanisme, ecrites ici parce
+// que c'est le fichier ou l'on vient quand on touche au routeur ou au client
+// de requetes.
+//
+// 1. UN CLIENT NEUF PAR COUPLE etablissement/service (`useTenantQueryClient`,
+//    plus bas dans `App`) : le cache du service precedent devient
+//    inatteignable plutot que simplement perime.
+// 2. LE DEMONTAGE DES ECRANS a chaque changement de couple, porte par le
+//    `remountDeps: ({ params }) => params` des deux layouts de tenant
+//    (`e/$establishmentId/s/$serviceId.tsx`, `e/$establishmentId/admin.tsx`).
+//
+// Aucune des deux ne suffit seule. React Query lie l'observateur au client A
+// LA CONSTRUCTION et ne le relie jamais : sans demontage, un ecran garde
+// l'observateur de l'ancien client et continue d'afficher le service
+// precedent sous l'URL du nouveau. Et comme les cles de requete ne portent
+// deliberement pas le tenant (D2), rien d'autre ne forcerait un
+// rechargement : il n'existe aucun filet sous ces deux lignes.
+//
+// Si l'on ajoutait un jour `defaultRemountDeps` ici, ce serait en
+// REMPLACEMENT des deux `remountDeps` locaux, jamais en doublon silencieux —
+// et en acceptant qu'il remonte aussi sur `$patientID`. En l'etat, ce
+// `createRouter` ne declare volontairement aucune dependance de remontage
+// globale.
 const router = createRouter({
   routeTree,
   context: {

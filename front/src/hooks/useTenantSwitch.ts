@@ -199,6 +199,18 @@ type CurrentClient = {
 // URL d'API sont calculees a l'appel depuis le contexte courant, donc un seul
 // rendu des enfants avec le nouveau contexte et l'ancien client suffirait a
 // ranger la reponse du nouveau service dans le cache de l'ancien.
+//
+// CE HOOK NE FAIT QUE LA MOITIE DU TRAVAIL, et ne peut pas faire l'autre.
+// Construire un client neuf ne REBRANCHE personne : React Query lie
+// l'observateur au client a la construction et ne le relie jamais. Un ecran
+// qui n'est pas DEMONTE garde donc l'observateur de l'ancien client et
+// continue d'afficher le service precedent — sans meme emettre de requete,
+// puisque les cles ne portent pas le tenant (D2). Le demontage est porte
+// ailleurs, par le `remountDeps: ({ params }) => params` des deux layouts de
+// tenant (`routes/_authenticated/e/$establishmentId/s/$serviceId.tsx` et
+// `.../admin.tsx`). Les deux moities sont tenues ensemble par
+// `routes/_authenticated/e/$establishmentId/remontage.test.tsx` ; les tests
+// de ce fichier-ci ne verifient que les pieces.
 export const useTenantQueryClient = (initialClient: QueryClient): QueryClient => {
   const context = useAuthStore((state) => state.context)
   const key = tenantKey(context)

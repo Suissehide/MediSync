@@ -27,5 +27,11 @@ export const Route = createFileRoute('/_authenticated/e/$establishmentId/admin')
     }
     useAuthStore.getState().setContext(tenant)
   },
+  // Meme raison qu'en `s/$serviceId.tsx`, et meme necessite : sans cette
+  // dependance de remontage, passer d'un etablissement administre a un autre
+  // re-rendrait l'ecran sans le demonter, donc sans reabonner ses
+  // observateurs React Query au client neuf. Voir le commentaire detaille
+  // la-bas et `remontage.test.tsx`, qui verrouille les deux layouts.
+  remountDeps: ({ params }) => params,
   component: () => <Outlet />,
 })

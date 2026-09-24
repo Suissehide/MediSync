@@ -33,5 +33,23 @@ export const Route = createFileRoute('/_authenticated/e/$establishmentId/s/$serv
       rememberContext(context.authState.user.id, tenant)
     }
   },
+  // LA SECONDE MOITIE DU MECANISME DE CLOISONNEMENT. Sans cette ligne, aller
+  // de `/e/E/s/A/dashboard` a `/e/E/s/B/dashboard` ne demonte RIEN : le
+  // routeur ne rend son composant avec une cle React que si une dependance
+  // de remontage en produit une (`Match.js` : `remountDeps ??
+  // defaultRemountDeps`, puis `JSON.stringify`), sinon React voit le meme
+  // type de composant au meme emplacement et RE-REND au lieu de remonter.
+  // Or React Query lie l'observateur au client A LA CONSTRUCTION et ne le
+  // relie jamais (`useBaseQuery.js` : `useState(() => new Observer(client,
+  // …))`) : sans demontage, aucun `useQuery` ne se reabonne au client neuf
+  // construit par `useTenantQueryClient`. L'ecran continuerait d'afficher le
+  // cache du service precedent sous l'URL du nouveau, indefiniment et sans
+  // meme emettre de requete — et comme les cles de requete ne portent pas le
+  // tenant (D2), rien d'autre ne forcerait un rechargement.
+  //
+  // Posee ici plutot qu'en `defaultRemountDeps` global : elle se lit a cote
+  // du `beforeLoad` qu'elle complete, et n'impose pas un remontage sur
+  // `$patientID`. Verrouillee par `../remontage.test.tsx`.
+  remountDeps: ({ params }) => params,
   component: () => <Outlet />,
 })
