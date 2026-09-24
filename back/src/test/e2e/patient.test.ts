@@ -271,6 +271,28 @@ describe('routes du patient', () => {
     await testDb.patient.delete({ where: { id: patientId } })
   })
 
+  it('refuse en 400 un des seize champs de service glisse dans patientData, sur POST /patient/enroll', async () => {
+    // Meme defaut qu'au-dessus, sur la route voisine : `patientData` de
+    // `enrollPatientInPathwaysSchema` n'etait pas strict, donc un des seize
+    // champs y survivait a Zod puis se faisait jeter en silence, sans
+    // jamais atteindre le sous-dossier que la route cree pourtant
+    // (task-5-re-review.md, point 2).
+    const enrolledWithClinical = await post('/patient/enroll', {
+      patientData: {
+        firstName: 'Refuse',
+        lastName: 'Enroll',
+        notes: 'PERDU-VIA-ENROLL',
+      },
+      startDate: '2026-01-01T00:00:00.000Z',
+      pathways: [{ tag: 'pathway-inexistant', timeOfDay: 'ALL_DAY' }],
+    })
+    expect(enrolledWithClinical.statusCode).toBe(400)
+
+    expect(
+      await testDb.patient.findFirst({ where: { lastName: 'Enroll' } }),
+    ).toBeNull()
+  })
+
   it('la liste des patients contient le patient cree', async () => {
     const created = await post('/patient', {
       firstName: 'Alice',

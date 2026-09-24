@@ -95,7 +95,10 @@ export const pathwayEnrollmentSchema = z.object({
 })
 
 export const enrollPatientInPathwaysSchema = z.object({
-  patientData: patientSchema,
+  // `.strict()` : meme raison que sur createPatientSchema/updatePatientByIdSchema ci-dessus —
+  // sans elle, un des seize champs de service envoye ici serait retire en silence par Zod, et
+  // l'appelant croirait l'avoir enregistre (task-5-re-review.md, point 2).
+  patientData: patientSchema.strict(),
   startDate: z.coerce.date(),
   pathways: z.array(pathwayEnrollmentSchema).min(1),
 })
