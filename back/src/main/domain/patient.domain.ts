@@ -26,6 +26,7 @@ import type {
   PatientWithTagsDomain,
   RemoveFromPathwayResult,
 } from '../types/domain/patient.domain.interface'
+import type { PatientServiceFileDomainInterface } from '../types/domain/patientServiceFile.domain.interface'
 import type { AppointmentRepositoryInterface } from '../types/infra/orm/repositories/appointment.repository.interface'
 import type {
   PathwayRepositoryInterface,
@@ -102,6 +103,7 @@ class PatientDomain implements PatientDomainInterface {
   private readonly appointmentRepository: AppointmentRepositoryInterface
   private readonly enrollmentIssueRepository: EnrollmentIssueRepositoryInterface
   private readonly thematicRepository: ThematicRepositoryInterface
+  private readonly patientServiceFileDomain: PatientServiceFileDomainInterface
   private readonly tenantContext: TenantContextInterface
   private readonly appEventBus: AppEventBus
 
@@ -112,6 +114,7 @@ class PatientDomain implements PatientDomainInterface {
     appointmentRepository,
     enrollmentIssueRepository,
     thematicRepository,
+    patientServiceFileDomain,
     tenantContext,
     appEventBus,
     logger,
@@ -122,6 +125,7 @@ class PatientDomain implements PatientDomainInterface {
     this.appointmentRepository = appointmentRepository
     this.enrollmentIssueRepository = enrollmentIssueRepository
     this.thematicRepository = thematicRepository
+    this.patientServiceFileDomain = patientServiceFileDomain
     this.tenantContext = tenantContext
     this.appEventBus = appEventBus
     this.logger = logger
@@ -427,6 +431,13 @@ class PatientDomain implements PatientDomainInterface {
     startDate: Date,
     userID: string,
   ): Promise<EnrollmentResult> {
+    // Point de passage unique de l'inscription en parcours (enrollPatientInPathways et
+    // enrollExistingPatientInPathways y mènent toutes deux) : c'est donc ici, et nulle part
+    // ailleurs, que la spec (§5.1) exige la création du sous-dossier de service, avant toute
+    // écriture d'un `EnrollmentIssue` plus bas — sans quoi sa clé étrangère (patientId,
+    // serviceId) → PatientServiceFile serait violée dès qu'une inscription échoue.
+    await this.patientServiceFileDomain.ensureExists(patient.id)
+
     const enrollments: EnrollmentResult['enrollments'] = []
     const failedEnrollments: EnrollmentResult['failedEnrollments'] = []
     let currentPatient = patient

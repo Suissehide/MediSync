@@ -24,6 +24,7 @@ const buildDomain = (known: { templates: string[] }) => {
           ? Promise.resolve({ id })
           : notFound('DiagnosticEducatifTemplate'),
     },
+    patientServiceFileDomain: { ensureExists: () => Promise.resolve() },
     appEventBus: { emit: () => undefined },
   } as unknown as IocContainer
   return { domain: new DiagnosticEducatifDomain(container), created, updated }

@@ -5,6 +5,7 @@ import type {
   DiagnosticEducatifEntity,
   DiagnosticEducatifUpdateEntity,
 } from '../types/domain/diagnosticEducatif.domain.interface'
+import type { PatientServiceFileDomainInterface } from '../types/domain/patientServiceFile.domain.interface'
 import type { DiagnosticEducatifRepositoryInterface } from '../types/infra/orm/repositories/diagnosticEducatif.repository.interface'
 import type { DiagnosticEducatifTemplateRepositoryInterface } from '../types/infra/orm/repositories/diagnosticEducatifTemplate.repository.interface'
 import type { AppEventBus } from '../utils/app-event-bus'
@@ -12,15 +13,18 @@ import type { AppEventBus } from '../utils/app-event-bus'
 class DiagnosticEducatifDomain implements DiagnosticEducatifDomainInterface {
   private readonly diagnosticEducatifRepository: DiagnosticEducatifRepositoryInterface
   private readonly diagnosticEducatifTemplateRepository: DiagnosticEducatifTemplateRepositoryInterface
+  private readonly patientServiceFileDomain: PatientServiceFileDomainInterface
   private readonly appEventBus: AppEventBus
 
   constructor({
     diagnosticEducatifRepository,
     diagnosticEducatifTemplateRepository,
+    patientServiceFileDomain,
     appEventBus,
   }: IocContainer) {
     this.diagnosticEducatifRepository = diagnosticEducatifRepository
     this.diagnosticEducatifTemplateRepository = diagnosticEducatifTemplateRepository
+    this.patientServiceFileDomain = patientServiceFileDomain
     this.appEventBus = appEventBus
   }
 
@@ -39,6 +43,10 @@ class DiagnosticEducatifDomain implements DiagnosticEducatifDomainInterface {
     if (params.templateId) {
       await this.diagnosticEducatifTemplateRepository.findByID(params.templateId)
     }
+    // Le diagnostic pose une clé étrangère (patientId, serviceId) → PatientServiceFile (spec
+    // §5.1) : garantir que le sous-dossier existe avant l'écriture, comme pour l'inscription en
+    // parcours (voir PatientDomain.processEnrollments).
+    await this.patientServiceFileDomain.ensureExists(params.patientId)
     const diag = await this.diagnosticEducatifRepository.create(params)
     this.appEventBus.emit('diagnostic.created', { userID, diagnosticId: diag.id })
     return diag

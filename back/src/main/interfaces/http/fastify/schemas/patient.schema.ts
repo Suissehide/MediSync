@@ -54,13 +54,19 @@ export const getPatientByIdParamsSchema = z.object({
   patientID: z.cuid(),
 })
 
-export const createPatientSchema = z.object(patientEntity).omit({})
+// `.strict()` : les seize colonnes de parcours/clinique ont quitté ce schéma pour
+// patientServiceFile.schema.ts (étape 3 du multi-tenant), mais Zod, sans `.strict()`, retire
+// silencieusement les clés inconnues d'un corps de requête au lieu de les rejeter — un appelant
+// qui envoie encore l'un des seize champs ici (le front actuel le fait, tâches 10/11) perdrait
+// sa saisie sans aucune erreur. `.strict()` transforme cette perte silencieuse en 400 explicite,
+// le temps que les appelants soient corrigés.
+export const createPatientSchema = z.object(patientEntity).strict()
 
 export const deletePatientByIdParamsSchema = getPatientByIdParamsSchema
 
 export const updatePatientByIdSchema = {
   params: getPatientByIdParamsSchema,
-  body: patientSchema.partial(),
+  body: patientSchema.partial().strict(),
 }
 
 

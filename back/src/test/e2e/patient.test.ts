@@ -51,14 +51,6 @@ describe('routes du patient', () => {
       payload: payload as never,
     })
 
-  const put = (url: string, payload: unknown) =>
-    testApp.app.inject({
-      method: 'PUT',
-      url: tenantUrl(establishmentId, serviceId, url),
-      cookies: coordinateurCookies,
-      payload: payload as never,
-    })
-
   const del = (url: string) =>
     testApp.app.inject({
       method: 'DELETE',
@@ -158,16 +150,18 @@ describe('routes du patient', () => {
     // Les seize colonnes vivent desormais sur le sous-dossier de service du
     // patient (etape 3 du multi-tenant), plus sur le patient lui-meme : elles
     // s'ecrivent et se relisent donc sous /patient/:id/service-file plutot
-    // que sous /patient/:id. C'est le seul changement autorise sur ce filet
-    // (voir l'en-tete du fichier) : les seize valeurs, une fois ecrites, et
-    // les 32 assertions qui les relisent plus bas restent identiques.
-    const pierreUpdateRes = await put(
+    // que sous /patient/:id, en PATCH (une charge partielle y fait une mise
+    // a jour partielle, pas un remplacement — voir la route). C'est le seul
+    // changement autorise sur ce filet (voir l'en-tete du fichier) : les
+    // seize valeurs, une fois ecrites, et les 32 assertions qui les relisent
+    // plus bas restent identiques.
+    const pierreUpdateRes = await patch(
       `/patient/${pierreId}/service-file`,
       pierreValues,
     )
     expect(pierreUpdateRes.statusCode).toBe(200)
 
-    const catherineUpdateRes = await put(
+    const catherineUpdateRes = await patch(
       `/patient/${catherineId}/service-file`,
       catherineValues,
     )
@@ -246,6 +240,37 @@ describe('routes du patient', () => {
     await testDb.patient.delete({ where: { id: catherineId } })
   })
 
+  it('refuse en 400 un corps qui porte un des seize champs de service, sur POST et PATCH /patient', async () => {
+    // Les seize champs ont quitte patient.schema.ts pour
+    // patientServiceFile.schema.ts (etape 3) ; sans `.strict()`, Zod les
+    // retirerait en silence d'un corps de requete au lieu de les rejeter,
+    // et l'appelant croirait avoir enregistre une saisie clinique qui n'a
+    // jamais ete ecrite nulle part (task-5-review.md, I2). Le front actuel
+    // envoie encore ces champs a chaque enregistrement : ce 400 est le
+    // signal voulu pendant la fenetre qui nous separe des taches 10/11.
+    const createdWithClinical = await post('/patient', {
+      firstName: 'Refuse',
+      lastName: 'Creation',
+      notes: 'PERDU-A-LA-CREATION',
+    })
+    expect(createdWithClinical.statusCode).toBe(400)
+
+    const created = await post('/patient', {
+      firstName: 'Refuse',
+      lastName: 'Maj',
+    })
+    expect(created.statusCode).toBe(201)
+    const patientId = created.json().id as string
+
+    const updatedWithClinical = await patch(`/patient/${patientId}`, {
+      firstName: 'Refuse',
+      stopReason: 'PERDU-A-LA-MAJ',
+    })
+    expect(updatedWithClinical.statusCode).toBe(400)
+
+    await testDb.patient.delete({ where: { id: patientId } })
+  })
+
   it('la liste des patients contient le patient cree', async () => {
     const created = await post('/patient', {
       firstName: 'Alice',
@@ -260,7 +285,7 @@ describe('routes du patient', () => {
     await testDb.patient.delete({ where: { id: patientId } })
   })
 
-  it('la suppression retire le patient, ses diagnostics et ses problemes d inscription', async () => {
+  it('la suppression retire le patient, son sous-dossier, ses diagnostics et ses problemes d inscription', async () => {
     const created = await post('/patient', {
       firstName: 'Paul',
       lastName: 'Durand',
@@ -268,37 +293,32 @@ describe('routes du patient', () => {
     expect(created.statusCode).toBe(201)
     const patientId = created.json().id as string
 
-    // Le diagnostic et le probleme d'inscription pointent desormais vers le
+    // Le diagnostic et le probleme d'inscription pointent vers le
     // sous-dossier de service du patient, pas directement vers le patient
     // (etape 3 du multi-tenant, clef etrangere posee par la migration
-    // 20260924160131) : il faut donc qu'il existe avant de les creer, ce
-    // qu'aucun chemin de creation de patient ne fait (voir
-    // task-4-retombees.md). Le creer ici n'affaiblit aucune assertion : la
-    // suppression du patient est cense entrainer celle de son sous-dossier
-    // en cascade, exactement comme pour le diagnostic et le probleme
-    // d'inscription verifies plus bas.
-    await testDb.patientServiceFile.create({
-      data: { establishmentId, serviceId, patientId },
+    // 20260924160131), et ce sous-dossier n'existe pas encore pour un
+    // patient tout neuf. C'est desormais le chemin applicatif lui-meme qui
+    // le cree — a la creation d'un diagnostic et a l'inscription en parcours
+    // (voir PatientServiceFileDomain.ensureExists, appele depuis
+    // DiagnosticEducatifDomain.create et PatientDomain.processEnrollments)
+    // — donc ce test passe par les deux routes reelles plutot que par un
+    // `testDb.patientServiceFile.create` qui fabriquerait un etat que la
+    // production ne sait pas produire : ce contournement a ete la bonne
+    // alerte au mauvais endroit (voir task-5-review.md, C1).
+    const diagnosticRes = await post(`/patient/${patientId}/diagnostic`, {
+      title: 'Diagnostic de test',
     })
+    expect(diagnosticRes.statusCode).toBe(201)
+    const diagnosticId = diagnosticRes.json().id as string
 
-    const diagnostic = await testDb.diagnosticEducatif.create({
-      data: {
-        establishmentId,
-        serviceId,
-        patientId,
-        activeFields: [],
-      },
+    const enrollRes = await post(`/patient/${patientId}/enroll`, {
+      patientID: patientId,
+      startDate: '2026-01-01T00:00:00.000Z',
+      pathways: [{ tag: 'pathway-inexistant', timeOfDay: 'ALL_DAY' }],
     })
-
-    const enrollmentIssue = await testDb.enrollmentIssue.create({
-      data: {
-        establishmentId,
-        serviceId,
-        patientId,
-        pathwayTemplateID: 'pathway-inexistant',
-        reason: 'Aucun creneau disponible',
-        startDate: new Date('2026-01-01T00:00:00Z'),
-      },
+    expect(enrollRes.statusCode).toBe(200)
+    const enrollmentIssue = await testDb.enrollmentIssue.findFirstOrThrow({
+      where: { patientId },
     })
 
     const res = await del(`/patient/${patientId}`)
@@ -308,8 +328,13 @@ describe('routes du patient', () => {
       await testDb.patient.findUnique({ where: { id: patientId } }),
     ).toBeNull()
     expect(
+      await testDb.patientServiceFile.findUnique({
+        where: { patientId_serviceId: { patientId, serviceId } },
+      }),
+    ).toBeNull()
+    expect(
       await testDb.diagnosticEducatif.findUnique({
-        where: { id: diagnostic.id },
+        where: { id: diagnosticId },
       }),
     ).toBeNull()
     expect(
@@ -317,6 +342,50 @@ describe('routes du patient', () => {
         where: { id: enrollmentIssue.id },
       }),
     ).toBeNull()
+  })
+
+  it('l ecriture du sous-dossier journalise une entree patient.updated, comme le faisait PATCH /patient', async () => {
+    const created = await post('/patient', {
+      firstName: 'Jean',
+      lastName: 'Journal',
+    })
+    expect(created.statusCode).toBe(201)
+    const patientId = created.json().id as string
+
+    // Avant l'ecriture du sous-dossier : aucune entree pour ce patient.
+    expect(
+      await testDb.activityLog.count({
+        where: { entityID: patientId, action: 'patient.updated' },
+      }),
+    ).toBe(0)
+
+    const res = await patch(`/patient/${patientId}/service-file`, {
+      medicalDiagnosis: 'DIAG-JOURNAL',
+      notes: 'NOTES-JOURNAL',
+      stopReason: 'MOTIF-JOURNAL',
+    })
+    expect(res.statusCode).toBe(200)
+
+    // L'ecriture clinique doit laisser une trace, exactement comme le
+    // faisait PATCH /patient/:id avant que ces colonnes ne demenagent
+    // (voir task-5-review.md, C2) : sans cet evenement, le journal ne bouge
+    // jamais et l'assertion ci-dessous resterait a 0 meme apres l'attente.
+    // L'attente courte tient compte de la forme suivie (AppEventBus.emit
+    // n'est pas attendu par le domaine, comme pour PATCH /patient/:id) :
+    // ActivityLogSubscriber ecrit en arriere-plan, apres que la reponse
+    // HTTP soit deja partie.
+    let count = 0
+    for (let attempt = 0; attempt < 20 && count < 1; attempt++) {
+      count = await testDb.activityLog.count({
+        where: { entityID: patientId, action: 'patient.updated' },
+      })
+      if (count < 1) {
+        await new Promise((resolve) => setTimeout(resolve, 25))
+      }
+    }
+    expect(count).toBe(1)
+
+    await testDb.patient.delete({ where: { id: patientId } })
   })
 
   it("l'export Excel repond 200 avec un corps non vide", async () => {

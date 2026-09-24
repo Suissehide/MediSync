@@ -365,7 +365,7 @@ describe('isolation par tenant', () => {
       expect(readFromA.statusCode).toBe(404)
 
       const writeFromA = await t.app.inject({
-        method: 'PUT',
+        method: 'PATCH',
         url: tenantUrl(est.id, serviceA.id, path),
         cookies: cookiesA,
         payload: { notes: 'ECRASE-DEPUIS-A' },

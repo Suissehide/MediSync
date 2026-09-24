@@ -11,5 +11,11 @@ export interface PatientServiceFileDomainInterface {
   upsert: (
     patientId: string,
     params: PatientServiceFileUpsertEntityDomain,
+    userID: string,
   ) => Promise<PatientServiceFileEntityDomain>
+  // Garantit que le sous-dossier existe, sans le modifier s'il existe deja. A appeler par tout
+  // chemin qui cree un enfant de service rattache a un patient (EnrollmentIssue,
+  // DiagnosticEducatif, …) avant l'ecriture de cet enfant — spec §5.1, "a l'inscription d'un
+  // patient dans un parcours du service".
+  ensureExists: (patientId: string) => Promise<void>
 }

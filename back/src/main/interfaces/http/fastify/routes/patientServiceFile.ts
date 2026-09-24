@@ -40,9 +40,19 @@ const patientServiceFileRouter: FastifyPluginAsync = (fastify) => {
     },
   )
 
-  // Ecriture : cree le sous-dossier a la premiere ecriture, le met a jour
-  // ensuite (upsert). Seul point de creation, voir le repository.
-  fastify.put<{ Params: PatientServiceFileParams; Body: UpsertPatientServiceFileBody }>(
+  // Ecriture : cree le sous-dossier a la premiere ecriture, le met a jour ensuite (upsert) ;
+  // voir aussi ensureExists (patientServiceFile.domain.ts) pour l'autre point de creation, a
+  // l'inscription dans un parcours.
+  //
+  // PATCH, pas PUT : les seize champs sont facultatifs et `update: params` (repository) laisse
+  // Prisma ignorer les cles absentes — une charge partielle fait une mise a jour partielle, ce
+  // que PUT ne promet pas. Un vrai PUT serait de plus dangereux ici : `stripClinicalInput`
+  // retire notes/details/medicalDiagnosis du corps d'un secretariat pour laisser ces colonnes
+  // inchangees (voir utils/clinical-fields.ts) ; en semantique de remplacement, une cle
+  // absente vaudrait "mets a null", et le secretariat effacerait donc ces trois champs a chaque
+  // enregistrement — exactement la perte que ce crochet existe pour empecher. Aucun appelant du
+  // depot ne compte sur un remplacement complet.
+  fastify.patch<{ Params: PatientServiceFileParams; Body: UpsertPatientServiceFileBody }>(
     '/',
     {
       schema: {
@@ -56,7 +66,7 @@ const patientServiceFileRouter: FastifyPluginAsync = (fastify) => {
     },
     (request) => {
       const { patientID } = request.params
-      return patientServiceFileDomain.upsert(patientID, request.body)
+      return patientServiceFileDomain.upsert(patientID, request.body, request.user.userID)
     },
   )
 

@@ -20,4 +20,7 @@ export interface PatientServiceFileRepositoryInterface {
     patientId: string,
     params: PatientServiceFileUpsertEntityRepo,
   ) => Promise<PatientServiceFileEntityRepo>
+  // Cree le sous-dossier s'il n'existe pas encore, sans toucher a ses colonnes s'il existe deja.
+  // Voir PatientServiceFileDomain.ensureExists pour qui l'appelle et pourquoi.
+  ensureExists: (patientId: string) => Promise<void>
 }

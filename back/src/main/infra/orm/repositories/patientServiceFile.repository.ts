@@ -29,9 +29,9 @@ class PatientServiceFileRepository implements PatientServiceFileRepositoryInterf
     })
   }
 
-  // Seul endroit qui cree un sous-dossier : aucun chemin de creation de patient ne renseigne
-  // ces colonnes, elles sont toujours ecrites apres coup (voir task-4-retombees.md, section 3).
-  // Un upsert suffit donc, sans creation dediee a l'inscription dans un parcours.
+  // Cree le sous-dossier a la premiere ecriture, le met a jour ensuite (upsert) — voir
+  // patientServiceFile.ts pour la route qui l'appelle. Ce n'est plus le seul point de creation :
+  // voir ensureExists ci-dessous pour l'autre (spec §5.1, seconde moitie).
   async upsert(
     patientId: string,
     params: PatientServiceFileUpsertEntityRepo,
@@ -41,6 +41,26 @@ class PatientServiceFileRepository implements PatientServiceFileRepositoryInterf
         where: { patientId_serviceId: { patientId, serviceId: this.scope.serviceId } },
         create: { ...params, patientId, ...this.scope },
         update: params,
+      })
+    } catch (err) {
+      throw this.errorHandler.boomErrorFromPrismaError({
+        entityName: 'PatientServiceFile',
+        error: err,
+      })
+    }
+  }
+
+  // Deuxieme point de creation exige par la spec (§5.1) : a l'inscription d'un patient dans un
+  // parcours du service, en plus de la premiere ecriture couverte par upsert ci-dessus. Un
+  // update vide laisse les colonnes deja renseignees intactes ; il ne fait rien d'autre que
+  // garantir que la ligne existe, pour que les enfants de service (EnrollmentIssue,
+  // DiagnosticEducatif) puissent poser leur cle etrangere (patientId, serviceId).
+  async ensureExists(patientId: string): Promise<void> {
+    try {
+      await this.prisma.patientServiceFile.upsert({
+        where: { patientId_serviceId: { patientId, serviceId: this.scope.serviceId } },
+        create: { patientId, ...this.scope },
+        update: {},
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
