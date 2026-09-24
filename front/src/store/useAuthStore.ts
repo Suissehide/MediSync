@@ -60,8 +60,12 @@ export const useAuthStore = create<AuthStoreState & AuthStoreActions>()(
           },
 
           logout: () => {
-            // Purge le dernier couple memorise : sans ca, il survit a la
-            // deconnexion et ressert au prochain compte sur ce poste.
+            // Purge le dernier couple memorise pour CET utilisateur. La cle
+            // est deja cloisonnee par id (LAST_CONTEXT_KEY) : rien ne fuit
+            // vers un autre compte sans cette ligne. Son seul effet reel est
+            // que la meme personne reperd son dernier service visite a
+            // chaque deconnexion, au lieu de le retrouver a la reconnexion
+            // (voir docs/multi-tenant/decisions-etape-2.md).
             const userId = get().user?.id
             if (userId) {
               forgetContext(userId)
