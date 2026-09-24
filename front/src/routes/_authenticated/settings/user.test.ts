@@ -21,6 +21,21 @@ const user: User = {
   ],
 }
 
+// L'ancien favori de l'ecran Membres est d'abord celui d'un administrateur —
+// et un administrateur peut n'avoir aucune affectation de service. Son acces
+// existe pourtant, sous une URL sans service : c'est le cas que `index.tsx`
+// couvrait deja et que celui-ci ne couvrait pas.
+const adminSansService: User = {
+  id: 'u3',
+  email: 'admin@b.fr',
+  firstName: null,
+  lastName: null,
+  isSuperAdmin: false,
+  establishments: [
+    { id: 'e1', name: 'CHU', role: 'ADMIN', soignantId: null, services: [] },
+  ],
+}
+
 const userSansContexte: User = {
   id: 'u2',
   email: 'b@b.fr',
@@ -52,7 +67,21 @@ describe('beforeLoad de l ancienne URL /settings/user', () => {
     )
   })
 
-  it('redirige vers /pending sans contexte', () => {
+  // Sans ce repli, cet administrateur atterrissait sur l'ecran d'attente,
+  // qui n'a aucun lien sortant hormis la deconnexion : l'impasse que la tache
+  // 15 avait fermee sur `index.tsx` restait ouverte par ce favori-ci.
+  it('envoie un administrateur sans affectation de service vers son administration', () => {
+    expect(() => runBeforeLoad(adminSansService)).toThrow(
+      expect.objectContaining({
+        isRedirect: true,
+        to: '/e/$establishmentId/admin/members',
+        params: { establishmentId: 'e1' },
+        search: true,
+      }),
+    )
+  })
+
+  it('redirige vers /pending sans aucun acces, ni service ni administration', () => {
     expect(() => runBeforeLoad(userSansContexte)).toThrow(
       expect.objectContaining({ isRedirect: true, to: '/pending' }),
     )
