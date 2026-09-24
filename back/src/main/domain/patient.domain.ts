@@ -33,7 +33,10 @@ import type {
 } from '../types/infra/orm/repositories/pathway.repository.interface'
 import type { PathwayTemplateRepositoryInterface } from '../types/infra/orm/repositories/pathwayTemplate.repository.interface'
 import type { EnrollmentIssueRepositoryInterface } from '../types/infra/orm/repositories/enrollmentIssue.repository.interface'
-import type { PatientRepositoryInterface } from '../types/infra/orm/repositories/patient.repository.interface'
+import type {
+  PatientForExportEntityRepo,
+  PatientRepositoryInterface,
+} from '../types/infra/orm/repositories/patient.repository.interface'
 import type { SlotWithTemplateAndAppointmentsRepo } from '../types/infra/orm/repositories/slot.repository.interface'
 import type { ThematicRepositoryInterface } from '../types/infra/orm/repositories/thematic.repository.interface'
 import type { Logger } from '../types/utils/logger'
@@ -44,6 +47,52 @@ import { hasPermission } from '../utils/permissions'
 const orEmpty = (value: string | null | undefined): string => value ?? ''
 const formatDate = (value: Date | string | null | undefined): string =>
   value ? dayjs(value).format('DD/MM/YYYY') : ''
+
+// Une seule source de verite pour l'export Excel : en-tete, largeur de colonne et valeur lue
+// vivent ensemble, dans cet ordre. `ws['!cols']` etait auparavant un tableau positionnel
+// commente a la main, en regard de l'ordre des cles d'un objet construit juste au-dessus — rien
+// (ni tsc, ni un schema Zod) ne les reliait, et un decalage entre les deux ne produisait aucune
+// erreur, seulement des largeurs de colonnes fausses a l'ouverture du fichier. Les cles de
+// `careMode`, `orientation`, `entryDate`, `exitDate`, `stopReason` et `medicalDiagnosis` vivent
+// desormais sur le sous-dossier de service (`p.serviceFile`), plus sur `Patient` (etape 3 du
+// multi-tenant) — `null` quand le patient n'a pas encore de sous-dossier dans le service courant.
+type ExportColumn = {
+  header: string
+  width: number
+  value: (p: PatientForExportEntityRepo) => string
+  // Colonnes cliniques : presentes seulement pour qui a `clinical:read`.
+  clinical?: boolean
+}
+
+const EXPORT_COLUMNS: ExportColumn[] = [
+  { header: 'Prénom', width: 16, value: (p) => orEmpty(p.firstName) },
+  { header: 'Nom', width: 16, value: (p) => orEmpty(p.lastName) },
+  { header: 'Genre', width: 10, value: (p) => orEmpty(p.gender) },
+  { header: 'Date de naissance', width: 18, value: (p) => formatDate(p.birthDate) },
+  { header: 'Téléphone', width: 16, value: (p) => orEmpty(p.phone1) },
+  { header: 'Téléphone 2', width: 16, value: (p) => orEmpty(p.phone2) },
+  { header: 'Email', width: 28, value: (p) => orEmpty(p.email) },
+  { header: "Date d'entrée", width: 14, value: (p) => formatDate(p.serviceFile?.entryDate) },
+  { header: 'Date de sortie', width: 14, value: (p) => formatDate(p.serviceFile?.exitDate) },
+  { header: 'Parcours', width: 30, value: (p) => p.pathwayTemplateTags.join(', ') },
+  {
+    header: 'Mode de prise en charge',
+    width: 24,
+    value: (p) => orEmpty(p.serviceFile?.careMode),
+  },
+  { header: 'Orientation', width: 18, value: (p) => orEmpty(p.serviceFile?.orientation) },
+  { header: 'Profession', width: 20, value: (p) => orEmpty(p.occupation) },
+  { header: "Niveau d'étude", width: 18, value: (p) => orEmpty(p.educationLevel) },
+  { header: 'Distance', width: 14, value: (p) => orEmpty(p.distance) },
+  { header: 'Motif de sortie', width: 22, value: (p) => orEmpty(p.serviceFile?.stopReason) },
+  {
+    header: 'Diagnostic médical',
+    width: 28,
+    value: (p) => orEmpty(p.serviceFile?.medicalDiagnosis),
+    clinical: true,
+  },
+  { header: 'Notes', width: 40, value: (p) => orEmpty(p.serviceFile?.notes), clinical: true },
+]
 
 class PatientDomain implements PatientDomainInterface {
   private readonly logger: Logger
@@ -95,56 +144,14 @@ class PatientDomain implements PatientDomainInterface {
     { includeClinicalFields }: PatientExportOptions,
   ): Promise<Buffer> {
     const patients = await this.patientRepository.findForExport(filters)
+    const columns = EXPORT_COLUMNS.filter((c) => includeClinicalFields || !c.clinical)
 
-    const rows = patients.map((p) => ({
-      Prénom: orEmpty(p.firstName),
-      Nom: orEmpty(p.lastName),
-      Genre: orEmpty(p.gender),
-      'Date de naissance': formatDate(p.birthDate),
-      Téléphone: orEmpty(p.phone1),
-      'Téléphone 2': orEmpty(p.phone2),
-      Email: orEmpty(p.email),
-      "Date d'entrée": formatDate(p.entryDate),
-      'Date de sortie': formatDate(p.exitDate),
-      Parcours: p.pathwayTemplateTags.join(', '),
-      'Mode de prise en charge': orEmpty(p.careMode),
-      Orientation: orEmpty(p.orientation),
-      Profession: orEmpty(p.occupation),
-      "Niveau d'étude": orEmpty(p.educationLevel),
-      Distance: orEmpty(p.distance),
-      'Motif de sortie': orEmpty(p.stopReason),
-      // Colonnes cliniques : présentes seulement pour qui a `clinical:read`.
-      ...(includeClinicalFields
-        ? {
-            'Diagnostic médical': orEmpty(p.medicalDiagnosis),
-            Notes: orEmpty(p.notes),
-          }
-        : {}),
-    }))
+    const rows = patients.map((p) =>
+      Object.fromEntries(columns.map((c) => [c.header, c.value(p)])),
+    )
 
     const ws = XLSX.utils.json_to_sheet(rows)
-
-    ws['!cols'] = [
-      { wch: 16 }, // Prénom
-      { wch: 16 }, // Nom
-      { wch: 10 }, // Genre
-      { wch: 18 }, // Date de naissance
-      { wch: 16 }, // Téléphone
-      { wch: 16 }, // Téléphone 2
-      { wch: 28 }, // Email
-      { wch: 14 }, // Date d'entrée
-      { wch: 14 }, // Date de sortie
-      { wch: 30 }, // Parcours
-      { wch: 24 }, // Mode de prise en charge
-      { wch: 18 }, // Orientation
-      { wch: 20 }, // Profession
-      { wch: 18 }, // Niveau d'étude
-      { wch: 14 }, // Distance
-      { wch: 22 }, // Motif de sortie
-      ...(includeClinicalFields
-        ? [{ wch: 28 }, { wch: 40 }] // Diagnostic médical, Notes
-        : []),
-    ]
+    ws['!cols'] = columns.map((c) => ({ wch: c.width }))
 
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Patients')

@@ -109,13 +109,13 @@ describe('withoutClinicalFields', () => {
   // nomme les modeles porteurs attendus et les compare exactement a ceux du
   // schema, par le meme decoupage en blocs `model X { … }` que
   // `tenant-guard-schema.test.ts`. `notes`, `details` et `medicalDiagnosis`
-  // sont portes par `Patient` et par son sous-dossier de service
-  // `PatientServiceFile` (etape 3 du multi-tenant, tant que la donnee n'a
-  // pas ete migree) ; `transmissionNotes` uniquement par `AppointmentPatient`.
-  // Si l'un de ces noms apparaissait sur un modele non prevu ici, ce test
-  // tombe et nomme le modele en trop plutot qu'un simple ecart de compte, et
-  // impose de repasser a un filtrage par forme si ce modele n'est pas
-  // clinique.
+  // sont portes uniquement par le sous-dossier de service
+  // `PatientServiceFile` (etape 3 du multi-tenant a deplace et retire ces
+  // colonnes de `Patient`, qui ne les porte plus) ; `transmissionNotes`
+  // uniquement par `AppointmentPatient`. Si l'un de ces noms apparaissait sur
+  // un modele non prevu ici, ce test tombe et nomme le modele en trop plutot
+  // qu'un simple ecart de compte, et impose de repasser a un filtrage par
+  // forme si ce modele n'est pas clinique.
   it('chaque champ clinique n existe que sur les modeles attendus', () => {
     const schema = readFileSync(
       join(__dirname, '../../../../prisma/schema.prisma'),
@@ -137,9 +137,9 @@ describe('withoutClinicalFields', () => {
     }
 
     const expectedModels: Record<string, string[]> = {
-      notes: ['Patient', 'PatientServiceFile'],
-      details: ['Patient', 'PatientServiceFile'],
-      medicalDiagnosis: ['Patient', 'PatientServiceFile'],
+      notes: ['PatientServiceFile'],
+      details: ['PatientServiceFile'],
+      medicalDiagnosis: ['PatientServiceFile'],
       transmissionNotes: ['AppointmentPatient'],
     }
     for (const field of CLINICAL_FIELDS) {

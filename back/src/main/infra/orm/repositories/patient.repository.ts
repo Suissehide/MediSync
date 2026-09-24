@@ -4,6 +4,7 @@ import type {
   PatientCreateEntityRepo,
   PatientEntityRepo,
   PatientExportFilters,
+  PatientForExportEntityRepo,
   PatientPathwayEntityRepo,
   PatientRepositoryInterface,
   PatientUpdateEntityRepo,
@@ -89,7 +90,7 @@ class PatientRepository implements PatientRepositoryInterface {
     }))
   }
 
-  async findForExport(filters: PatientExportFilters): Promise<PatientWithTagsEntityRepo[]> {
+  async findForExport(filters: PatientExportFilters): Promise<PatientForExportEntityRepo[]> {
     const { search, pathwayTemplateTags } = filters
 
     const patients = await this.prisma.patient.findMany({
@@ -140,13 +141,18 @@ class PatientRepository implements PatientRepositoryInterface {
           },
         },
         enrollmentIssues: { where: { serviceId: this.scope.serviceId } },
+        // Sous-dossier du service courant : le parcours et le contenu clinique de l'export
+        // (etape 3 du multi-tenant) y vivent desormais, plus sur Patient. Filtre de service
+        // explicite requis par le garde-fou d'ORM (relation vers un modele de service).
+        serviceFiles: { where: { serviceId: this.scope.serviceId } },
       },
       orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
     })
 
-    return patients.map(({ appointmentPatients, ...patient }) => ({
+    return patients.map(({ appointmentPatients, serviceFiles, ...patient }) => ({
       ...patient,
       pathwayTemplateTags: distinctMainTags(appointmentPatients),
+      serviceFile: serviceFiles[0] ?? null,
     }))
   }
 

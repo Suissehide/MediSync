@@ -325,6 +325,67 @@ describe('isolation par tenant', () => {
         })
       },
     )
+
+    // Sous-dossier patient (etape 3 du multi-tenant). Cas dedie, hors de la
+    // table `cases` ci-dessus : son ecriture est un PUT (upsert), hors du
+    // type `IsolationCase`, limite a GET/DELETE. Une lecture depuis A doit
+    // rendre 404 comme les autres cas ; une ECRITURE depuis A ne doit ni
+    // lire ni modifier le sous-dossier de B — meme quand cette ecriture
+    // reussit, parce qu'un upsert cree alors le sous-dossier PROPRE de A
+    // (vide, conforme a la conception 2.1 : un second service part d'un
+    // sous-dossier vierge), jamais celui de B. Le controle qui compte est
+    // donc la relecture du sous-dossier de B apres coup : ses valeurs ne
+    // doivent pas avoir bouge.
+    it('un sous-dossier patient cree dans un service n est ni lisible ni modifiable depuis l autre', async () => {
+      const { est, serviceA, serviceB, cookiesA, cookiesB } = scenario
+      const patient = await testDb.patient.create({
+        data: {
+          firstName: 'Dossier',
+          lastName: 'Service',
+          createDate: new Date(),
+          establishmentId: est.id,
+        },
+      })
+      await testDb.patientServiceFile.create({
+        data: {
+          patientId: patient.id,
+          serviceId: serviceB.id,
+          establishmentId: est.id,
+          notes: 'SECRET-SERVICE-B',
+        },
+      })
+
+      const path = `/patient/${patient.id}/service-file`
+
+      const readFromA = await t.app.inject({
+        method: 'GET',
+        url: tenantUrl(est.id, serviceA.id, path),
+        cookies: cookiesA,
+      })
+      expect(readFromA.statusCode).toBe(404)
+
+      const writeFromA = await t.app.inject({
+        method: 'PUT',
+        url: tenantUrl(est.id, serviceA.id, path),
+        cookies: cookiesA,
+        payload: { notes: 'ECRASE-DEPUIS-A' },
+      })
+      expect(writeFromA.statusCode).toBe(200)
+      // La ligne creee par A porte son propre id : elle n'a ni lu ni reutilise
+      // celle de B.
+      const bServiceFile = await testDb.patientServiceFile.findUniqueOrThrow({
+        where: { patientId_serviceId: { patientId: patient.id, serviceId: serviceB.id } },
+      })
+      expect(writeFromA.json().id).not.toBe(bServiceFile.id)
+
+      const readFromB = await t.app.inject({
+        method: 'GET',
+        url: tenantUrl(est.id, serviceB.id, path),
+        cookies: cookiesB,
+      })
+      expect(readFromB.statusCode).toBe(200)
+      expect(readFromB.json().notes).toBe('SECRET-SERVICE-B')
+    })
   })
 
   // Le patient est un modèle d'établissement (pas de service) : le cas

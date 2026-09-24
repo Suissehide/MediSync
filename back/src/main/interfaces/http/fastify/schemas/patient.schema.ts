@@ -17,29 +17,10 @@ const patientEntity = {
   occupation: z.string().optional().nullable(), // Profession
   currentActivity: z.string().optional().nullable(), // Activité actuelle
 
-  // Referrals & Context
-  referringCaregiver: z.string().optional().nullable(), // Soignant référent
-  followUpToDo: z.string().optional().nullable(), // Suivi à régulariser
-
-  // Notes
-  notes: z.string().optional().nullable(),
-  details: z.string().optional().nullable(),
-
-  // Inclusion Data
-  medicalDiagnosis: z.string().optional().nullable(),
-  entryDate: z.coerce.date().optional().nullable(),
-  careMode: z.string().optional().nullable(), // Mode de prise en charge
-  orientation: z.string().optional().nullable(),
-  etpDecision: z.string().optional().nullable(), // ETP décision
-  programType: z.string().optional().nullable(),
-  nonInclusionDetails: z.string().optional().nullable(),
-  customContentDetails: z.string().optional().nullable(),
-  goal: z.string().optional().nullable(),
-
-  // Exit Data
-  exitDate: z.coerce.date().optional().nullable(),
-  stopReason: z.string().optional().nullable(), // Motif d’arrêt de programme
-  etpFinalOutcome: z.string().optional().nullable(), // Point final parcours ETP
+  // Le parcours, le diagnostic medical et les notes ont demenage vers le
+  // sous-dossier de service (etape 3 du multi-tenant) : voir
+  // patientServiceFile.schema.ts, seul endroit du back ou ces seize champs
+  // sont encore enumeres a la main.
 }
 
 export const patientSchema = z.object({

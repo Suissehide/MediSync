@@ -13,11 +13,15 @@ import {
 
 type Cookies = { access_token: string }
 
-// Filet avant l'etape 3 : elle va sortir seize colonnes de parcours et de
-// contenu clinique de la table Patient vers un sous-dossier par service.
-// Aucun test end-to-end ne couvrait encore les routes du patient. Ces tests
-// sont ecrits sur le code actuel et doivent rester verts apres la migration,
-// au prix d'un seul changement : le chemin ou ces colonnes se lisent.
+// Filet avant l'etape 3 : elle a sorti seize colonnes de parcours et de
+// contenu clinique de la table Patient vers un sous-dossier par service, et
+// les a retirees de l'objet de validation du patient (patient.schema.ts) —
+// Zod retire silencieusement les cles inconnues d'un corps de requete, donc
+// l'ECRITURE de ces colonnes a change de route autant que leur LECTURE :
+// toutes deux passent desormais par /patient/:id/service-file plutot que par
+// /patient/:id. Ce que ce test affirme reste identique : les memes seize
+// valeurs, ecrites puis relues, comparees une par une, pour chacun des deux
+// patients.
 describe('routes du patient', () => {
   let testApp: TestApp
   let establishmentId: string
@@ -42,6 +46,14 @@ describe('routes du patient', () => {
   const patch = (url: string, payload: unknown) =>
     testApp.app.inject({
       method: 'PATCH',
+      url: tenantUrl(establishmentId, serviceId, url),
+      cookies: coordinateurCookies,
+      payload: payload as never,
+    })
+
+  const put = (url: string, payload: unknown) =>
+    testApp.app.inject({
+      method: 'PUT',
       url: tenantUrl(establishmentId, serviceId, url),
       cookies: coordinateurCookies,
       payload: payload as never,
@@ -143,17 +155,28 @@ describe('routes du patient', () => {
       details: 'Catherine - DETAIL-PATIENT',
     }
 
-    const pierreUpdateRes = await patch(`/patient/${pierreId}`, pierreValues)
+    // Les seize colonnes vivent desormais sur le sous-dossier de service du
+    // patient (etape 3 du multi-tenant), plus sur le patient lui-meme : elles
+    // s'ecrivent et se relisent donc sous /patient/:id/service-file plutot
+    // que sous /patient/:id. C'est le seul changement autorise sur ce filet
+    // (voir l'en-tete du fichier) : les seize valeurs, une fois ecrites, et
+    // les 32 assertions qui les relisent plus bas restent identiques.
+    const pierreUpdateRes = await put(
+      `/patient/${pierreId}/service-file`,
+      pierreValues,
+    )
     expect(pierreUpdateRes.statusCode).toBe(200)
 
-    const catherineUpdateRes = await patch(
-      `/patient/${catherineId}`,
+    const catherineUpdateRes = await put(
+      `/patient/${catherineId}/service-file`,
       catherineValues,
     )
     expect(catherineUpdateRes.statusCode).toBe(200)
 
-    const pierreFetched = (await get(`/patient/${pierreId}`)).json()
-    const catherineFetched = (await get(`/patient/${catherineId}`)).json()
+    const pierreFetched = (await get(`/patient/${pierreId}/service-file`)).json()
+    const catherineFetched = (
+      await get(`/patient/${catherineId}/service-file`)
+    ).json()
 
     // Les seize noms sont ecrits ici un par un, pour chaque patient : c'est
     // le compte etabli contre back/prisma/schema.prisma, et c'est
@@ -244,6 +267,19 @@ describe('routes du patient', () => {
     })
     expect(created.statusCode).toBe(201)
     const patientId = created.json().id as string
+
+    // Le diagnostic et le probleme d'inscription pointent desormais vers le
+    // sous-dossier de service du patient, pas directement vers le patient
+    // (etape 3 du multi-tenant, clef etrangere posee par la migration
+    // 20260924160131) : il faut donc qu'il existe avant de les creer, ce
+    // qu'aucun chemin de creation de patient ne fait (voir
+    // task-4-retombees.md). Le creer ici n'affaiblit aucune assertion : la
+    // suppression du patient est cense entrainer celle de son sous-dossier
+    // en cascade, exactement comme pour le diagnostic et le probleme
+    // d'inscription verifies plus bas.
+    await testDb.patientServiceFile.create({
+      data: { establishmentId, serviceId, patientId },
+    })
 
     const diagnostic = await testDb.diagnosticEducatif.create({
       data: {

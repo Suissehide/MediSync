@@ -4,11 +4,18 @@ import type {
 } from '../../../../../generated/client'
 import type { PatientWithAppointmentsDomain } from '../../../domain/patient.domain.interface'
 import type { EnrollmentIssueEntityRepo } from './enrollmentIssue.repository.interface'
+import type { PatientServiceFileEntityRepo } from './patientServiceFile.repository.interface'
 
 export type PatientEntityRepo = Patient
 export type PatientWithTagsEntityRepo = Patient & {
   pathwayTemplateTags: string[]
   enrollmentIssues: EnrollmentIssueEntityRepo[]
+}
+// Utilise par l'export Excel : le parcours et le contenu clinique vivent desormais sur le
+// sous-dossier de service (etape 3 du multi-tenant), `null` quand le patient n'en a pas encore
+// dans le service courant.
+export type PatientForExportEntityRepo = PatientWithTagsEntityRepo & {
+  serviceFile: PatientServiceFileEntityRepo | null
 }
 // Le repository pose establishmentId lui-même : l'appelant ne le fournit pas.
 export type PatientCreateEntityRepo = Omit<Prisma.PatientUncheckedCreateInput, 'establishmentId'>
@@ -32,7 +39,7 @@ export type PatientPathwayEntityRepo = {
 export interface PatientRepositoryInterface {
   findAll: () => Promise<PatientEntityRepo[]>
   findAllWithTags: () => Promise<PatientWithTagsEntityRepo[]>
-  findForExport: (filters: PatientExportFilters) => Promise<PatientWithTagsEntityRepo[]>
+  findForExport: (filters: PatientExportFilters) => Promise<PatientForExportEntityRepo[]>
   findByID: (id: string) => Promise<PatientWithAppointmentsDomain>
   create: (
     patientCreateParams: PatientCreateEntityRepo,
