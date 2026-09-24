@@ -23,6 +23,7 @@ export const SERVICE_MODELS: readonly string[] = [
   'Todo',
   'SlotTemplateSoignant',
   'SoignantThematic',
+  'PatientServiceFile',
 ]
 
 // Modèles rattachés à un établissement : portent establishmentId.
@@ -48,7 +49,11 @@ const NESTED_RELATIONS: Record<string, Record<string, string>> = {
   Thematic: { soignantLinks: 'SoignantThematic' },
   Soignant: { slotTemplateLinks: 'SlotTemplateSoignant', thematicLinks: 'SoignantThematic' },
   EstablishmentMembership: { serviceMemberships: 'ServiceMembership' },
-  Patient: { appointmentPatients: 'AppointmentPatient', diagnostics: 'DiagnosticEducatif' },
+  Patient: {
+    appointmentPatients: 'AppointmentPatient',
+    diagnostics: 'DiagnosticEducatif',
+    serviceFiles: 'PatientServiceFile',
+  },
 }
 
 // Relations d'un modèle global qui exposent des données de tenant. Un include/select dessus ne
@@ -104,6 +109,7 @@ export const TENANT_CHILD_RELATIONS: Record<string, Record<string, string>> = {
     diagnostics: 'DiagnosticEducatif',
     enrollmentIssues: 'EnrollmentIssue',
     pathwayPriorities: 'PatientPathwayPriority',
+    serviceFiles: 'PatientServiceFile',
   },
   Soignant: {
     establishment: 'Establishment',
@@ -119,6 +125,7 @@ export const TENANT_CHILD_RELATIONS: Record<string, Record<string, string>> = {
   Service: {
     establishment: 'Establishment',
     memberships: 'ServiceMembership',
+    patientServiceFiles: 'PatientServiceFile',
   },
   EstablishmentMembership: {
     user: 'User',

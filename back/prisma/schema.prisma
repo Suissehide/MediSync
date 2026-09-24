@@ -56,8 +56,9 @@ model Service {
   createdAt       DateTime  @default(now())
   deactivatedAt   DateTime?
 
-  establishment Establishment       @relation(fields: [establishmentId], references: [id])
-  memberships   ServiceMembership[]
+  establishment       Establishment         @relation(fields: [establishmentId], references: [id])
+  memberships         ServiceMembership[]
+  patientServiceFiles PatientServiceFile[]
 
   @@unique([establishmentId, name])
   @@unique([id, establishmentId])
@@ -391,9 +392,52 @@ model Patient {
   diagnostics         DiagnosticEducatif[]
   enrollmentIssues    EnrollmentIssue[]
   pathwayPriorities   PatientPathwayPriority[]
+  serviceFiles        PatientServiceFile[]
 
   @@unique([id, establishmentId])
   @@index([establishmentId])
+}
+
+// Sous-dossier d'un patient dans un service. L'identite reste sur `Patient`,
+// au niveau de l'etablissement ; tout ce qui releve du parcours de soin vit
+// ici, invisible des autres services.
+model PatientServiceFile {
+  id              String @id @default(cuid())
+  patientId       String
+  serviceId       String
+  establishmentId String
+
+  referringCaregiver String?
+  followUpToDo       String?
+  notes              String?
+  details            String?
+
+  medicalDiagnosis     String?
+  entryDate            DateTime? @db.Date
+  careMode             String?
+  orientation          String?
+  etpDecision          String?
+  programType          String?
+  nonInclusionDetails  String?
+  customContentDetails String?
+  goal                 String?
+
+  exitDate        DateTime? @db.Date
+  stopReason      String?
+  etpFinalOutcome String?
+
+  createdAt DateTime @default(now())
+
+  patient Patient @relation(fields: [patientId, establishmentId], references: [id, establishmentId], onDelete: Cascade)
+  service Service @relation(fields: [serviceId, establishmentId], references: [id, establishmentId])
+
+  diagnostics      DiagnosticEducatif[]
+  enrollmentIssues EnrollmentIssue[]
+
+  @@unique([patientId, serviceId])
+  @@unique([id, serviceId])
+  @@index([serviceId])
+  @@index([patientId])
 }
 
 model EnrollmentIssue {
@@ -408,6 +452,9 @@ model EnrollmentIssue {
   createdAt         DateTime @default(now())
 
   patient Patient @relation(fields: [patientId, establishmentId], references: [id, establishmentId], onDelete: Cascade)
+  // Relation dérivée de patientId + serviceId, déjà portées par ce modèle : aucune colonne
+  // supplémentaire, elle relie simplement la ligne à son sous-dossier de service.
+  patientServiceFile PatientServiceFile? @relation(fields: [patientId, serviceId], references: [patientId, serviceId])
 
   @@unique([id, serviceId])
   @@index([patientId])
@@ -543,6 +590,9 @@ model DiagnosticEducatif {
   patient  Patient                     @relation(fields: [patientId, establishmentId], references: [id, establishmentId], onDelete: Cascade)
   // Référence simple (templateId nullable) : cohérence vérifiée par le domaine.
   template DiagnosticEducatifTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  // Relation dérivée de patientId + serviceId, déjà portées par ce modèle : aucune colonne
+  // supplémentaire, elle relie simplement la ligne à son sous-dossier de service.
+  patientServiceFile PatientServiceFile? @relation(fields: [patientId, serviceId], references: [patientId, serviceId])
 
   @@unique([id, serviceId])
   @@index([patientId])

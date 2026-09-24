@@ -101,19 +101,32 @@ describe('withoutClinicalFields', () => {
     expect(filtered).toMatchObject({ count: 3, flag: false })
   })
 
-  // Le filtrage se fait par nom de cle : il n'est sur que tant que chacun de
-  // ces noms ne designe qu'un seul champ dans tout le schema. Si un modele
-  // venait a reutiliser l'un d'eux, ce test tombe et impose de repasser a un
+  // Le filtrage se fait par nom de cle : il n'est sur que tant que chaque nom
+  // ne designe, dans tout le schema, que des champs effectivement cliniques.
+  // `notes`, `details` et `medicalDiagnosis` en portent deux depuis l'etape 3
+  // du multi-tenant (`Patient` et son sous-dossier de service
+  // `PatientServiceFile`, tant que la donnee n'a pas ete migree) ;
+  // `transmissionNotes` n'en porte qu'un (`AppointmentPatient`). Si un de ces
+  // noms apparaissait ailleurs, ce test tombe et impose de repasser a un
   // filtrage par forme.
-  it('chaque nom de champ clinique n existe qu une fois dans le schema Prisma', () => {
+  it('chaque nom de champ clinique n existe que sur les modeles attendus', () => {
     const schema = readFileSync(
       join(__dirname, '../../../../prisma/schema.prisma'),
       'utf8',
     )
+    const expectedCounts: Record<string, number> = {
+      notes: 2,
+      details: 2,
+      medicalDiagnosis: 2,
+      transmissionNotes: 1,
+    }
     for (const field of CLINICAL_FIELDS) {
       const declarations =
         schema.match(new RegExp(`^\\s+${field}\\s`, 'gm')) ?? []
-      expect({ field, count: declarations.length }).toEqual({ field, count: 1 })
+      expect({ field, count: declarations.length }).toEqual({
+        field,
+        count: expectedCounts[field],
+      })
     }
   })
 })
