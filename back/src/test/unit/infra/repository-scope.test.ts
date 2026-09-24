@@ -895,20 +895,30 @@ describe('scoping appointment', () => {
       await repo.addPatientToAppointment({ appointmentID: 'a1', patientID: 'p2' } as never)
       await repo.deleteOrphanedByIds(['a1'])
     })
+    // `create` n'ecrit plus `appointmentPatients` en creation imbriquee : `serviceId` fait
+    // partie de la cle etrangere composite de la relation `appointment`
+    // ([appointmentId, serviceId]), donc Prisma le refuse dans cette forme
+    // ("Unknown argument `serviceId`") — voir le commentaire de
+    // `AppointmentRepository.create` (task-5-re-review.md, point 3). Le rendez-vous et ses
+    // participants sont donc deux ecritures de premier niveau, dans la transaction.
     expect(calls[0]).toMatchObject({
       model: 'appointment', op: 'create',
-      args: {
-        data: {
-          serviceId: 's1', establishmentId: 'e1', slotID: 'sl',
-          appointmentPatients: { create: [{ patientId: 'p1', serviceId: 's1', establishmentId: 'e1' }] },
-        },
-      },
+      args: { data: { serviceId: 's1', establishmentId: 'e1', slotID: 'sl' } },
     })
+    expect(calls[0]?.args.data).not.toHaveProperty('appointmentPatients')
     expect(calls[1]).toMatchObject({
+      model: 'appointmentPatient', op: 'createMany',
+      args: { data: [{ appointmentId: 'x', patientId: 'p1', serviceId: 's1', establishmentId: 'e1' }] },
+    })
+    expect(calls[2]).toMatchObject({
+      model: 'appointment', op: 'findUniqueOrThrow',
+      args: { where: { id_serviceId: { id: 'x', serviceId: 's1' } } },
+    })
+    expect(calls[3]).toMatchObject({
       model: 'appointmentPatient', op: 'create',
       args: { data: { appointmentId: 'a1', patientId: 'p2', serviceId: 's1', establishmentId: 'e1' } },
     })
-    expect(calls[2]).toMatchObject({
+    expect(calls[4]).toMatchObject({
       model: 'appointment', op: 'deleteMany',
       args: { where: { id: { in: ['a1'] }, serviceId: 's1', appointmentPatients: { none: {} } } },
     })

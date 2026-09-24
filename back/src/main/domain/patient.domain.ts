@@ -727,7 +727,15 @@ class PatientDomain implements PatientDomainInterface {
         if (firstAppointmentOnly && slotAppointments.some((a) => a.success)) {
           return enrollmentAppointments
         }
-      } catch {
+      } catch (error) {
+        // Catch muet corrige : c'est lui qui a laisse vivre trois jours, sans aucune trace,
+        // le defaut de composite key de AppointmentRepository.create (task-5-re-review.md,
+        // point 3) — une erreur de programmation rendue au patient comme un probleme de
+        // disponibilite de creneau. Meme forme que le catch de enrollPatientInPathways
+        // ci-dessus : this.logger.error avec le message de l'erreur.
+        this.logger.error(
+          `Erreur lors de l'inscription au créneau du ${slot.startDate}: ${error instanceof Error ? error.message : String(error)}`,
+        )
         enrollmentAppointments.push({
           success: false,
           error: `Erreur lors de l'inscription au créneau du ${slot.startDate}`,

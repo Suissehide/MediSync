@@ -14,8 +14,10 @@ export type AppointmentWithPatientsRepo = AppointmentEntityRepo & {
 }
 // Le repository pose serviceId/establishmentId (tenant) lui-même :
 // l'appelant ne les fournit pas. `appointmentPatients` (la relation brute
-// Prisma) est omise au profit du seul `patientIDs` ci-dessous, converti en
-// écriture imbriquée par le repository.
+// Prisma) est omise au profit du seul `patientIDs` ci-dessous, que le
+// repository transforme en lignes AppointmentPatient (par une création de
+// premier niveau, pas une écriture imbriquée — voir le commentaire de
+// `AppointmentRepository.create`).
 export type AppointmentCreateEntityRepo = Omit<
   Prisma.AppointmentUncheckedCreateInput,
   'establishmentId' | 'serviceId' | 'appointmentPatients'

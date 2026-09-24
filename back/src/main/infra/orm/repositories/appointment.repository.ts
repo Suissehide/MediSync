@@ -96,20 +96,42 @@ class AppointmentRepository implements AppointmentRepositoryInterface {
   ): Promise<AppointmentEntityRepo> {
     try {
       const { patientIDs, transmissionNotes, ...rest } = appointmentCreateParams
+      const { serviceId } = this.scope
 
-      return await this.prisma.appointment.create({
-        data: {
-          ...rest,
-          ...this.scope,
-          appointmentPatients: {
-            create: (patientIDs ?? []).map((patientId) => ({
+      // Pas de creation imbriquee ici (`appointment.create({ data: { appointmentPatients:
+      // { create: [...] } } })`) : `serviceId` fait partie de la cle etrangere composite de la
+      // relation `appointment` ([appointmentId, serviceId]), donc Prisma le deduit de la ligne
+      // Appointment en cours de creation et REFUSE qu'on le passe dans la creation imbriquee
+      // ("Unknown argument `serviceId`"). Et l'omettre ne suffit pas non plus : le garde-fou de
+      // tenant (tenant-guard.ts, assertRowScope) exige `serviceId` explicitement sur toute
+      // ligne AppointmentPatient ecrite, imbriquee ou non — l'omettre y declenche
+      // `TenantScopeMissingError`. Les deux contraintes ne peuvent pas etre satisfaites en meme
+      // temps sur UNE creation imbriquee. On cree donc l'Appointment seul, puis chaque
+      // AppointmentPatient par une creation de premier niveau (meme forme que
+      // `addPatientToAppointment` et la branche `create` de l'`upsert` de `update()`
+      // ci-dessous, qui passent deja `...this.scope` en entier), dans une transaction pour
+      // rester atomique. Defaut preexistant, etape 1/2 du multi-tenant (commit `dacff75`,
+      // task-5-re-review.md, point 3).
+      return await this.prisma.$transaction(async (tx) => {
+        const appointment = await tx.appointment.create({
+          data: { ...rest, ...this.scope },
+        })
+
+        if (patientIDs && patientIDs.length > 0) {
+          await tx.appointmentPatient.createMany({
+            data: patientIDs.map((patientId) => ({
+              appointmentId: appointment.id,
               patientId,
               ...this.scope,
               transmissionNotes: transmissionNotes ?? undefined,
             })),
-          },
-        },
-        include: appointmentInclude,
+          })
+        }
+
+        return tx.appointment.findUniqueOrThrow({
+          where: { id_serviceId: { id: appointment.id, serviceId } },
+          include: appointmentInclude,
+        })
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
