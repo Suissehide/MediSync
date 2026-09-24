@@ -20,6 +20,26 @@ function calculateOffsetDays(weekCalendar: number, dayOfWeek: number): number {
   return weekCalendar * 7 + dayOfWeek
 }
 
+// Découpe "HH:MM" en heure/minute numériques. Échoue bruyamment plutôt que de
+// laisser passer une donnée de peuplement incohérente : un horaire mal formé
+// donnerait sinon un créneau à une heure fausse (ou, sous
+// `noUncheckedIndexedAccess`, une valeur possiblement absente passée à
+// `setUTCHours`).
+function parseTime(time: string): { hour: number; minute: number } {
+  const [hourPart, minutePart, ...rest] = time.split(':')
+  if (hourPart === undefined || minutePart === undefined || rest.length > 0) {
+    throw new Error(`Horaire de seed invalide "${time}" — format attendu "HH:MM".`)
+  }
+  const hour = Number(hourPart)
+  const minute = Number(minutePart)
+  if (Number.isNaN(hour) || Number.isNaN(minute)) {
+    throw new Error(
+      `Horaire de seed invalide "${time}" — heure ou minute non numérique.`,
+    )
+  }
+  return { hour, minute }
+}
+
 export default async function seedPathwayTemplates(
   prisma: PrismaClient,
   soignants: Soignant[],
@@ -99,9 +119,15 @@ function createSlotTemplate(
 ) {
   const soignantIndex = SOIGNANT_MAP[data.soignant] ?? 0
   const soignant = soignants[soignantIndex]
+  if (!soignant) {
+    throw new Error(
+      `Aucun soignant à l'index ${soignantIndex} (clé "${data.soignant}" de SOIGNANT_MAP) — ` +
+        `${soignants.length} soignant(s) seedé(s). Vérifier SOIGNANT_MAP et la liste des soignants.`,
+    )
+  }
 
-  const [startHour, startMinute] = data.startTime.split(':').map(Number)
-  const [endHour, endMinute] = data.endTime.split(':').map(Number)
+  const { hour: startHour, minute: startMinute } = parseTime(data.startTime)
+  const { hour: endHour, minute: endMinute } = parseTime(data.endTime)
 
   const startTime = new Date('1970-01-01T00:00:00Z')
   startTime.setUTCHours(startHour, startMinute, 0, 0)
