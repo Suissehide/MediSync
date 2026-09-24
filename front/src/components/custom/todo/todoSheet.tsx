@@ -74,7 +74,15 @@ export default function TodoSheet() {
 
   return (
     <Sheet open={isParentOpen} onOpenChange={handleParentChange}>
-      <SheetTrigger variant="none" size="icon" className="relative">
+      {/* Bouton sans texte : sans nom accessible, il n'est designable ni par
+      un lecteur d'ecran ni par un test. Meme motif que le selecteur de
+      service (`aria-label="Changer de service"`). */}
+      <SheetTrigger
+        variant="none"
+        size="icon"
+        className="relative"
+        aria-label="Liste des tâches"
+      >
         <BellIcon className="text-text w-5 h-5" />
         {hasNewTodos ? (
           <span className="absolute flex justify-center items-center -top-0 -right-0 h-4 w-4 rounded-full bg-transparent after:absolute after:bg-destructive after:h-2 after:w-2 after:rounded-full" />

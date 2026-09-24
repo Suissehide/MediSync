@@ -191,6 +191,23 @@ function Navbar({ toggleSidebar }: NavbarProps) {
     canReadActivityLog
   const matchRoute = useMatchRoute()
   const isActive = (to: string) => !!matchRoute({ to, fuzzy: false })
+  // INVARIANT MULTI-TENANT — cette condition porte sur la ROUTE, jamais sur
+  // le store. Cette barre est rendue par `DashboardLayout`, donc aussi par
+  // `/user/settings`, qui vit HORS des deux layouts de tenant : le contexte
+  // du store y porte encore le dernier service visite, et s'y fier ferait
+  // apparaitre le panneau des taches sur un ecran qu'aucun changement de
+  // contexte ne demonte (seuls `e/$establishmentId/s/$serviceId` et
+  // `e/$establishmentId/admin` declarent `remountDeps`). L'observateur de
+  // `useTodoQueries` resterait alors lie a l'ANCIEN client de requetes —
+  // React Query lie l'observateur au client a la construction et ne le relie
+  // jamais — et afficherait les taches d'un autre service. `fuzzy: true`
+  // parce que le layout est toujours atteint par l'un de ses enfants
+  // (dashboard, agenda, patient…), jamais par son propre chemin.
+  // Verrouille par `navbar.test.tsx`.
+  const sousLayoutDeService = !!matchRoute({
+    to: '/e/$establishmentId/s/$serviceId',
+    fuzzy: true,
+  })
   // Les onglets Dashboard/Agenda/Patients/Suivi vivent sous
   // /e/:establishmentId/s/:serviceId depuis l'etape 2 (tache 6) : le
   // contexte vient du store, pose par le layout de service avant que ces
@@ -292,14 +309,15 @@ function Navbar({ toggleSidebar }: NavbarProps) {
             />
           )}
           {/* Les todos sont un objet de service (`todo:own` est une
-          permission de service, pas d'etablissement) : sans service en
-          contexte (ecrans d'administration atteints par un role sans
-          affectation, voir `admin.tsx`), `useTodoQueries` appellerait
-          `tenantApiUrl`, qui leve volontairement — meme defaut que celui
-          corrige sur la liste des soignants (tache 8, tour de correction
-          1), ici referme en masquant le widget plutot qu'en lui trouvant un
-          equivalent d'etablissement qui n'existe pas. */}
-          {context?.serviceId && <TodoSheet />}
+          permission de service, pas d'etablissement) : hors du layout de
+          service, `useTodoQueries` appellerait `tenantApiUrl`, qui leve
+          volontairement — meme defaut que celui corrige sur la liste des
+          soignants (tache 8, tour de correction 1), ici referme en masquant
+          le widget plutot qu'en lui trouvant un equivalent d'etablissement
+          qui n'existe pas. La condition est celle de la ROUTE et non celle du
+          store : voir le commentaire de `sousLayoutDeService` ci-dessus, qui
+          dit pourquoi les deux ne coincident pas. */}
+          {sousLayoutDeService && <TodoSheet />}
         </div>
       </div>
     </div>
