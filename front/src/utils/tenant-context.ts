@@ -152,6 +152,19 @@ export const forgetContext = (userId: string): void => {
   }
 }
 
+// Établissements où l'utilisateur est administrateur — validés via
+// `resolveEstablishmentContext` (même vérification de rôle, jamais
+// redupliquée ici) plutôt qu'un filtre direct sur `establishment.role`.
+// Utile à l'index (destination de repli) et à `/choose-context` (liste
+// complète) pour qui n'a aucun couple établissement/service accessible :
+// depuis les tâches 8 et 12, l'administration d'établissement reste un
+// accès réel, à distinguer de l'absence totale d'accès qui seule mérite
+// l'écran d'attente.
+export const administeredEstablishments = (user: User | null): User['establishments'] =>
+  establishmentsOf(user).filter(
+    (establishment) => resolveEstablishmentContext(user, { establishmentId: establishment.id }) !== null,
+  )
+
 // Dans l'ordre : le dernier visité s'il est toujours valide, sinon le premier
 // couple de l'arbre, sinon rien — et la personne tombe sur /pending.
 export const defaultTenantContext = (user: User | null): TenantContext | null => {

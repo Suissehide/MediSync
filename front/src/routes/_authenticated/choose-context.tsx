@@ -2,13 +2,19 @@ import { createFileRoute, redirect, useRouter } from '@tanstack/react-router'
 import { Building2 } from 'lucide-react'
 
 import { useAuthStore } from '@/store/useAuthStore.ts'
-import { accessibleCouples, type AccessibleCouple } from '@/utils/tenant-context.ts'
+import {
+  accessibleCouples,
+  administeredEstablishments,
+  type AccessibleCouple,
+} from '@/utils/tenant-context.ts'
 
 export const Route = createFileRoute('/_authenticated/choose-context')({
-  // Sans aucun couple accessible, cette page n'a rien a proposer : direction
-  // /pending, l'ecran d'attente d'approbation ou d'affectation.
+  // Sans aucun couple ni aucune administration accessible, cette page n'a
+  // rien a proposer : direction /pending, l'ecran d'attente d'approbation ou
+  // d'affectation.
   beforeLoad: ({ context }) => {
-    if (accessibleCouples(context.authState.user).length === 0) {
+    const { user } = context.authState
+    if (accessibleCouples(user).length === 0 && administeredEstablishments(user).length === 0) {
       throw redirect({ to: '/pending' })
     }
   },
@@ -36,15 +42,18 @@ function ChooseContext() {
   const router = useRouter()
   const user = useAuthStore((state) => state.user)
   const groups = groupByEstablishment(accessibleCouples(user))
+  // Etablissements administres : un chemin distinct des couples ci-dessus,
+  // sans quoi un administrateur sans aucune affectation de service n'aurait
+  // rien a choisir sur cette page malgre un acces reel (voir admin.tsx).
+  const administered = administeredEstablishments(user)
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-background p-6">
       <div className="w-full max-w-xl flex flex-col gap-6">
         <div>
-          <h1 className="text-2xl font-bold text-text-dark">Choisir un service</h1>
+          <h1 className="text-2xl font-bold text-text-dark">Choisir un accès</h1>
           <p className="text-text-light">
-            Votre compte est rattaché à plusieurs services : choisissez celui que vous voulez
-            ouvrir.
+            Votre compte a plusieurs accès possibles : choisissez celui que vous voulez ouvrir.
           </p>
         </div>
 
@@ -79,6 +88,32 @@ function ChooseContext() {
             </div>
           </div>
         ))}
+
+        {administered.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <h2 className="text-sm font-semibold text-text-light uppercase tracking-wide">
+              Administration
+            </h2>
+            <div className="flex flex-col gap-2">
+              {administered.map((establishment) => (
+                <button
+                  key={establishment.id}
+                  type="button"
+                  className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 text-left text-text-dark transition-colors hover:bg-primary/10"
+                  onClick={() =>
+                    router.navigate({
+                      to: '/e/$establishmentId/admin/members',
+                      params: { establishmentId: establishment.id },
+                    })
+                  }
+                >
+                  <Building2 className="w-4 h-4 shrink-0 opacity-70" />
+                  <span>{establishment.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

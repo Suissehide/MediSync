@@ -120,8 +120,8 @@ class MembershipDomain implements MembershipDomainInterface {
     }
   }
 
-  // Un administrateur qui se retrograde perd `members:manage`, donc le droit
-  // de se retablir : seul un collegue pourrait le faire. Retrograder
+  // Un compte ne reduit jamais seul ses propres droits, c'est un collegue qui
+  // le fait — par symetrie avec `assertNotSelf` ci-dessus. Retrograder
   // quelqu'un d'autre reste permis.
   private assertNotSelfDemotion(
     membership: MembershipRowDomain,

@@ -234,8 +234,8 @@ describe('MembershipDomain', () => {
     expect(calls).toEqual([])
   })
 
-  // Sans ce garde, un administrateur se retrograde en MEMBER, perd
-  // members:manage, et ne peut plus se retablir lui-meme.
+  // Un compte ne reduit jamais seul ses propres droits, c'est un collegue qui
+  // le fait — par symetrie avec la regle du soi-meme sur remove/setDeactivated.
   it('refuse a l utilisateur courant de se retrograder en MEMBER', async () => {
     const { domain, ctx, calls } = build(
       [row({}), row({ id: 'em2', userId: 'u2', user: user({ id: 'u2' }) })],

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import type { User } from '@/types/auth.ts'
 import {
   accessibleCouples,
+  administeredEstablishments,
   defaultTenantContext,
   isTenantRouteStale,
   rememberContext,
@@ -187,5 +188,26 @@ describe('accessibleCouples', () => {
   it('rend un tableau vide sans utilisateur ou sans service', () => {
     expect(accessibleCouples(null)).toEqual([])
     expect(accessibleCouples({ ...user, establishments: [] })).toEqual([])
+  })
+})
+
+describe('administeredEstablishments', () => {
+  it('ne retient que les etablissements ou le role est ADMIN', () => {
+    expect(administeredEstablishments(user).map((e) => e.id)).toEqual(['e1'])
+  })
+
+  // Le cas vise par la correction : un administrateur qui n a plus aucune
+  // affectation de service reste administrateur de son etablissement.
+  it('retient un etablissement administre meme sans aucun service', () => {
+    const adminSansService: User = {
+      ...user,
+      establishments: [{ ...user.establishments[0], services: [] }],
+    }
+    expect(administeredEstablishments(adminSansService).map((e) => e.id)).toEqual(['e1'])
+  })
+
+  it('rend un tableau vide sans utilisateur ou sans etablissement administre', () => {
+    expect(administeredEstablishments(null)).toEqual([])
+    expect(administeredEstablishments({ ...user, establishments: [user.establishments[1]] })).toEqual([])
   })
 })
