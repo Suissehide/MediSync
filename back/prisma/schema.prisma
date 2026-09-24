@@ -361,30 +361,6 @@ model Patient {
   occupation      String? // Profession
   currentActivity String? // Activité actuelle
 
-  // Referrals & Context
-  referringCaregiver String? // Soignant référent
-  followUpToDo       String? // Suivi à régulariser
-
-  // Notes
-  notes   String?
-  details String?
-
-  // Inclusion Data
-  medicalDiagnosis     String?
-  entryDate            DateTime? @db.Date
-  careMode             String? // Mode de prise en charge
-  orientation          String?
-  etpDecision          String? // ETP décision
-  programType          String?
-  nonInclusionDetails  String?
-  customContentDetails String?
-  goal                 String?
-
-  // Exit Data
-  exitDate        DateTime? @db.Date
-  stopReason      String? // Motif d’arrêt de programme
-  etpFinalOutcome String? // Point final parcours ETP
-
   createDate DateTime
 
   establishment       Establishment            @relation(fields: [establishmentId], references: [id])
