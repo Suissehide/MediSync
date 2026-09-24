@@ -1,4 +1,5 @@
-export const PATIENTS = [
+// Service Cardiologie : jeu de patients historique du seed, inchangé.
+export const PATIENTS_CARDIOLOGIE = [
   {
     firstName: 'Claire',
     lastName: 'Martin',
@@ -159,3 +160,109 @@ export const PATIENTS = [
     goal: 'Contrôle tensionnel optimal',
   },
 ]
+
+// Service Pneumologie : jeu de patients volontairement distinct — aucun nom
+// en commun avec PATIENTS_CARDIOLOGIE — pour qu'une fuite entre services se
+// voie au premier coup d'œil plutôt que de se confondre avec les bonnes
+// données.
+export const PATIENTS_PNEUMOLOGIE = [
+  {
+    firstName: 'Nadia',
+    lastName: 'Belkacem',
+    gender: 'female',
+    birthDate: new Date('1965-06-02'),
+    phone1: '0611223344',
+    email: 'nadia.belkacem@example.com',
+    medicalDiagnosis: 'BPCO stade 2',
+    distance: '9 km',
+    educationLevel: 'Bac+2',
+    occupation: 'Comptable',
+    currentActivity: 'En activité',
+    orientation: 'Pneumologue',
+    programType: 'ETP BPCO',
+  },
+  {
+    firstName: 'Thierry',
+    lastName: 'Lemoine',
+    gender: 'male',
+    birthDate: new Date('1971-09-19'),
+    phone1: '0622334455',
+    email: 'thierry.lemoine@example.com',
+    medicalDiagnosis: 'Asthme sévère',
+    distance: '14 km',
+    educationLevel: 'CAP',
+    occupation: 'Chauffeur routier',
+    currentActivity: 'En activité',
+    orientation: 'Médecin traitant',
+    programType: 'ETP Asthme',
+    notes: 'Crises fréquentes en période hivernale',
+  },
+  {
+    firstName: 'Aïcha',
+    lastName: 'Diallo',
+    gender: 'female',
+    birthDate: new Date('1958-12-11'),
+    phone1: '0633445566',
+    phone2: '0155667788',
+    email: 'aicha.diallo@example.com',
+    medicalDiagnosis: 'Fibrose pulmonaire idiopathique',
+    distance: '22 km',
+    educationLevel: 'Bac',
+    occupation: 'Retraitée',
+    currentActivity: 'Retraite',
+    orientation: 'Pneumologue',
+    programType: 'Réadaptation respiratoire',
+    goal: 'Préserver l’autonomie respiratoire',
+  },
+  {
+    firstName: 'Vincent',
+    lastName: 'Rousseau',
+    gender: 'male',
+    birthDate: new Date('1980-03-27'),
+    phone1: '0644556677',
+    email: 'vincent.rousseau@example.com',
+    medicalDiagnosis: 'Syndrome d’apnées du sommeil',
+    distance: '6 km',
+    educationLevel: 'Bac+5',
+    occupation: 'Architecte',
+    currentActivity: 'En activité',
+    orientation: 'Médecin traitant',
+    programType: 'ETP SAOS',
+  },
+  {
+    firstName: 'Émilie',
+    lastName: 'Vasseur',
+    gender: 'female',
+    birthDate: new Date('1990-01-05'),
+    phone1: '0655667788',
+    email: 'emilie.vasseur@example.com',
+    medicalDiagnosis: 'Mucoviscidose',
+    distance: '17 km',
+    educationLevel: 'Bac+3',
+    occupation: 'Graphiste',
+    currentActivity: 'En activité',
+    orientation: 'Pneumologue',
+    programType: 'ETP Mucoviscidose',
+    notes: 'Suivi conjoint avec le CRCM',
+  },
+  {
+    firstName: 'Karim',
+    lastName: 'Haddad',
+    gender: 'male',
+    birthDate: new Date('1953-08-30'),
+    phone1: '0666778899',
+    email: 'karim.haddad@example.com',
+    medicalDiagnosis: 'Insuffisance respiratoire chronique',
+    distance: '28 km',
+    educationLevel: 'BEP',
+    occupation: 'Retraité',
+    currentActivity: 'Retraite',
+    orientation: 'Hospitalisation',
+    programType: 'Réadaptation respiratoire',
+    goal: 'Réduire les hospitalisations',
+  },
+]
+
+export type PatientData =
+  | (typeof PATIENTS_CARDIOLOGIE)[number]
+  | (typeof PATIENTS_PNEUMOLOGIE)[number]

@@ -28,8 +28,15 @@ export default async function seedPathwayTemplates(
   tenant: SeedTenant,
 ) {
   console.log('→ Deleting old pathway templates...')
-  await prisma.slotTemplate.deleteMany({ where: { templateID: { not: null } } })
-  await prisma.pathwayTemplate.deleteMany()
+  // Filtré par service : avec deux services désormais peuplés dans la même
+  // base, un deleteMany() sans condition effacerait, au second appel, les
+  // gabarits que le premier appel vient de créer pour l'autre service.
+  await prisma.slotTemplate.deleteMany({
+    where: { templateID: { not: null }, serviceId: tenant.serviceId },
+  })
+  await prisma.pathwayTemplate.deleteMany({
+    where: { serviceId: tenant.serviceId },
+  })
 
   console.log('→ Seeding pathway templates...')
 
