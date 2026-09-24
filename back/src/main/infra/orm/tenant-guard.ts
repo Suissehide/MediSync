@@ -39,8 +39,14 @@ export const ESTABLISHMENT_MODELS: readonly string[] = [
 
 // Relations dont les écritures imbriquées sont vérifiées (parent → champ → enfant). C'est une
 // liste blanche qui EXIGE : toute écriture imbriquée sur une relation absente d'ici est refusée
-// (voir assertNestedRelations), plutôt que laissée sans contrôle.
-const NESTED_RELATIONS: Record<string, Record<string, string>> = {
+// (voir assertNestedRelations), plutôt que laissée sans contrôle. Contrairement à
+// TENANT_CHILD_RELATIONS, elle n'a pas à être exhaustive : elle ne recense que les relations pour
+// lesquelles une écriture imbriquée existe réellement dans le code, ajoutées au fil de l'eau. Une
+// relation absente d'ici n'ouvre donc rien — le verbe imbriqué est refusé tant qu'elle n'y est
+// pas — d'où l'absence de test « toute relation du schéma doit y figurer » côté
+// tenant-guard-schema.test.ts. Ce test y vérifie seulement l'autre sens : aucune entrée ne doit
+// désigner une relation qui n'existe plus (ou plus sous ce nom) dans le schéma.
+export const NESTED_RELATIONS: Record<string, Record<string, string>> = {
   Appointment: { appointmentPatients: 'AppointmentPatient' },
   Slot: { appointments: 'Appointment' },
   Pathway: { slots: 'Slot' },

@@ -15,7 +15,8 @@
 // nom de clé reste correct. `transmissionNotes` n'existe qu'une fois, sur
 // `AppointmentPatient`. Si l'un de ces noms venait à apparaître sur un
 // modèle qui n'a rien de clinique, il faudrait repasser à un filtrage par
-// forme — un test le rappelle, en comptant les occurrences attendues.
+// forme — un test le rappelle, en nommant les modèles porteurs attendus
+// plutôt qu'en comptant les occurrences.
 export const CLINICAL_FIELDS: readonly string[] = [
   'notes',
   'details',

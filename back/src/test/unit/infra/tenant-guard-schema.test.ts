@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import {
   ESTABLISHMENT_MODELS,
   GLOBAL_TENANT_RELATIONS,
+  NESTED_RELATIONS,
   SERVICE_MODELS,
   TENANT_CHILD_RELATIONS,
 } from '../../../main/infra/orm/tenant-guard'
@@ -61,6 +62,65 @@ const relationsOf = (body: string): Record<string, string> => {
   }
   return relations
 }
+
+// Une colonne scalaire requise (non nullable) de ce nom, au premier niveau du bloc. `String?`
+// (ex. `ActivityLog.serviceId`) ne compte pas : une colonne optionnelle documente un rattachement
+// possible, pas une obligation de filtrage — voir modelsRequiringServiceScope ci-dessous.
+const hasRequiredColumn = (body: string, column: string): boolean =>
+  new RegExp(`^\\s*${column}\\s+String(?!\\?)\\b`, 'm').test(body)
+
+// Modeles qui portent serviceId ET establishmentId en colonnes requises : ce sont exactement les
+// deux colonnes qui decident, dans tenant-guard.ts, de la famille « service » (voir familyOf).
+// Absent des deux listes (SERVICE_MODELS et ESTABLISHMENT_MODELS), un tel modele tombe dans la
+// famille « global », qui ne verifie plus AUCUN filtre de tenant sur AUCUNE operation — c'est le
+// mode de defaillance le plus grave que ce fichier puisse laisser passer, et le seul qu'aucun
+// autre test du depot n'attrape : la suite unitaire reste verte meme si un modele de service est
+// retire de SERVICE_MODELS, tant que rien n'appelle le garde-fou en conditions reelles.
+const modelsRequiringServiceScope = (): string[] =>
+  [...models.entries()]
+    .filter(([, body]) => hasRequiredColumn(body, 'serviceId') && hasRequiredColumn(body, 'establishmentId'))
+    .map(([name]) => name)
+
+// Exception documentee, pas un oubli : ServiceMembership porte serviceId et establishmentId en
+// colonnes requises mais reste classe « etablissement » (ESTABLISHMENT_MODELS). Il n'est jamais
+// lu par son propre serviceId : la seule relation qui y mene part de EstablishmentMembership, par
+// establishmentMembershipId (colonne sans rapport avec le tenant), et le filtre de service y est
+// pose a la main sur l'include (`membership.repository.ts`, commentaire « meme famille ») plutot
+// que par assertWhere. Deplacer ServiceMembership vers SERVICE_MODELS changerait donc son
+// filtrage a l'execution pour un modele que cette tache ne touche pas ; ce test se contente de
+// nommer l'exception plutot que de la laisser faire echouer une regle par ailleurs correcte.
+const HORS_SERVICE_MODELS: readonly string[] = ['ServiceMembership']
+
+describe('SERVICE_MODELS reflete prisma/schema.prisma', () => {
+  // Le trou qui a motive ce bloc : un modele qui porte serviceId et establishmentId requis mais
+  // n'est dans aucune des deux listes tombe en famille « global », qui laisse tout passer.
+  it('contient tout modele qui porte serviceId et establishmentId en colonnes requises', () => {
+    const manquants = modelsRequiringServiceScope().filter(
+      (model) => !SERVICE_MODELS.includes(model) && !HORS_SERVICE_MODELS.includes(model),
+    )
+    expect(manquants).toEqual([])
+  })
+
+  // L'autre sens : une entree qui ne correspond a aucun modele portant les deux colonnes
+  // requises — modele disparu, renomme, ou dont une des deux colonnes est devenue optionnelle —
+  // est une declaration morte.
+  it('ne declare aucune entree qui ne porte pas les deux colonnes requises', () => {
+    const required = modelsRequiringServiceScope()
+    const mortes = SERVICE_MODELS.filter((model) => !required.includes(model))
+    expect(mortes).toEqual([])
+  })
+
+  // Garde-fou de l'exception elle-meme : si ServiceMembership cessait un jour de porter les deux
+  // colonnes requises, ou entrait dans SERVICE_MODELS, la ligne ci-dessus n'aurait plus de raison
+  // d'exister et ce test le dit plutot que de laisser une exception mensongere.
+  it('ne garde HORS_SERVICE_MODELS que pour un modele qui en aurait sinon besoin', () => {
+    const required = modelsRequiringServiceScope()
+    for (const model of HORS_SERVICE_MODELS) {
+      expect(SERVICE_MODELS).not.toContain(model)
+      expect(required).toContain(model)
+    }
+  })
+})
 
 describe('TENANT_CHILD_RELATIONS reflete prisma/schema.prisma', () => {
   it('lit bien le schema', () => {
@@ -198,5 +258,28 @@ describe('GLOBAL_TENANT_RELATIONS reflete prisma/schema.prisma', () => {
         .map(([field, target]) => `${model}.${field} -> ${target}`),
     )
     expect(nonClassees.filter((relation) => !SANS_DONNEE_DE_TENANT.includes(relation))).toEqual([])
+  })
+})
+
+// La troisieme table ecrite a la main, NESTED_RELATIONS : une liste blanche pour les ecritures
+// imbriquees (parent -> champ -> enfant). A la difference de TENANT_CHILD_RELATIONS, elle n'a
+// pas a etre exhaustive — voir son commentaire dans tenant-guard.ts — puisqu'un champ absent y
+// est deja refuse a l'execution (fail closed) plutot que laisse sans controle. Ce test ne verifie
+// donc qu'un seul sens : une entree qui ne correspond plus a une relation du schema (modele
+// renomme, champ renomme, relation supprimee) est une declaration morte, qui ne protege plus
+// rien et ne se voit pas a l'usage — le meme risque que celui deja tenu pour les deux tables
+// ci-dessus.
+describe('NESTED_RELATIONS reflete prisma/schema.prisma', () => {
+  it('ne declare aucune relation morte', () => {
+    const mortes: string[] = []
+    for (const [model, relations] of Object.entries(NESTED_RELATIONS)) {
+      const actual = relationsOf(models.get(model) ?? '')
+      for (const [field, target] of Object.entries(relations)) {
+        if (actual[field] !== target) {
+          mortes.push(`${model}.${field} -> ${target}`)
+        }
+      }
+    }
+    expect(mortes).toEqual([])
   })
 })

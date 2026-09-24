@@ -453,8 +453,10 @@ model EnrollmentIssue {
 
   patient Patient @relation(fields: [patientId, establishmentId], references: [id, establishmentId], onDelete: Cascade)
   // Relation dérivée de patientId + serviceId, déjà portées par ce modèle : aucune colonne
-  // supplémentaire, elle relie simplement la ligne à son sous-dossier de service.
-  patientServiceFile PatientServiceFile? @relation(fields: [patientId, serviceId], references: [patientId, serviceId])
+  // supplémentaire, elle relie simplement la ligne à son sous-dossier de service. En cascade
+  // comme la relation `patient` ci-dessus : la tâche 6 la remplacera par une relation
+  // `serviceFile` qui porte la même sémantique de suppression.
+  patientServiceFile PatientServiceFile? @relation(fields: [patientId, serviceId], references: [patientId, serviceId], onDelete: Cascade)
 
   @@unique([id, serviceId])
   @@index([patientId])
@@ -591,8 +593,10 @@ model DiagnosticEducatif {
   // Référence simple (templateId nullable) : cohérence vérifiée par le domaine.
   template DiagnosticEducatifTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
   // Relation dérivée de patientId + serviceId, déjà portées par ce modèle : aucune colonne
-  // supplémentaire, elle relie simplement la ligne à son sous-dossier de service.
-  patientServiceFile PatientServiceFile? @relation(fields: [patientId, serviceId], references: [patientId, serviceId])
+  // supplémentaire, elle relie simplement la ligne à son sous-dossier de service. En cascade
+  // comme la relation `patient` ci-dessus : la tâche 6 la remplacera par une relation
+  // `serviceFile` qui porte la même sémantique de suppression.
+  patientServiceFile PatientServiceFile? @relation(fields: [patientId, serviceId], references: [patientId, serviceId], onDelete: Cascade)
 
   @@unique([id, serviceId])
   @@index([patientId])

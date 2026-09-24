@@ -103,29 +103,49 @@ describe('withoutClinicalFields', () => {
 
   // Le filtrage se fait par nom de cle : il n'est sur que tant que chaque nom
   // ne designe, dans tout le schema, que des champs effectivement cliniques.
-  // `notes`, `details` et `medicalDiagnosis` en portent deux depuis l'etape 3
-  // du multi-tenant (`Patient` et son sous-dossier de service
-  // `PatientServiceFile`, tant que la donnee n'a pas ete migree) ;
-  // `transmissionNotes` n'en porte qu'un (`AppointmentPatient`). Si un de ces
-  // noms apparaissait ailleurs, ce test tombe et impose de repasser a un
-  // filtrage par forme.
-  it('chaque nom de champ clinique n existe que sur les modeles attendus', () => {
+  // Plutot que de compter les occurrences (un nombre qui grimperait aussi
+  // bien pour un homonyme non clinique que pour une extension legitime, et
+  // qu'il suffirait de changer pour faire taire un vrai probleme), ce test
+  // nomme les modeles porteurs attendus et les compare exactement a ceux du
+  // schema, par le meme decoupage en blocs `model X { … }` que
+  // `tenant-guard-schema.test.ts`. `notes`, `details` et `medicalDiagnosis`
+  // sont portes par `Patient` et par son sous-dossier de service
+  // `PatientServiceFile` (etape 3 du multi-tenant, tant que la donnee n'a
+  // pas ete migree) ; `transmissionNotes` uniquement par `AppointmentPatient`.
+  // Si l'un de ces noms apparaissait sur un modele non prevu ici, ce test
+  // tombe et nomme le modele en trop plutot qu'un simple ecart de compte, et
+  // impose de repasser a un filtrage par forme si ce modele n'est pas
+  // clinique.
+  it('chaque champ clinique n existe que sur les modeles attendus', () => {
     const schema = readFileSync(
       join(__dirname, '../../../../prisma/schema.prisma'),
       'utf8',
     )
-    const expectedCounts: Record<string, number> = {
-      notes: 2,
-      details: 2,
-      medicalDiagnosis: 2,
-      transmissionNotes: 1,
+    const withoutComments = schema.replace(/\/\/.*$/gm, '')
+
+    // Blocs `model X { … }` : meme technique que tenant-guard-schema.test.ts, le schema
+    // n'imbrique aucune accolade dans un bloc de modele.
+    const modelsDeclaring = (field: string): string[] => {
+      const declaring: string[] = []
+      for (const match of withoutComments.matchAll(/model\s+(\w+)\s*\{([^}]*)\}/g)) {
+        const [, name, body] = match
+        if (name && body !== undefined && new RegExp(`^\\s*${field}\\s`, 'm').test(body)) {
+          declaring.push(name)
+        }
+      }
+      return declaring.sort()
+    }
+
+    const expectedModels: Record<string, string[]> = {
+      notes: ['Patient', 'PatientServiceFile'],
+      details: ['Patient', 'PatientServiceFile'],
+      medicalDiagnosis: ['Patient', 'PatientServiceFile'],
+      transmissionNotes: ['AppointmentPatient'],
     }
     for (const field of CLINICAL_FIELDS) {
-      const declarations =
-        schema.match(new RegExp(`^\\s+${field}\\s`, 'gm')) ?? []
-      expect({ field, count: declarations.length }).toEqual({
+      expect({ field, models: modelsDeclaring(field) }).toEqual({
         field,
-        count: expectedCounts[field],
+        models: [...expectedModels[field]].sort(),
       })
     }
   })

@@ -44,7 +44,7 @@ ALTER TABLE "PatientServiceFile" ADD CONSTRAINT "PatientServiceFile_patientId_es
 ALTER TABLE "PatientServiceFile" ADD CONSTRAINT "PatientServiceFile_serviceId_establishmentId_fkey" FOREIGN KEY ("serviceId", "establishmentId") REFERENCES "Service"("id", "establishmentId") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "EnrollmentIssue" ADD CONSTRAINT "EnrollmentIssue_patientId_serviceId_fkey" FOREIGN KEY ("patientId", "serviceId") REFERENCES "PatientServiceFile"("patientId", "serviceId") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "EnrollmentIssue" ADD CONSTRAINT "EnrollmentIssue_patientId_serviceId_fkey" FOREIGN KEY ("patientId", "serviceId") REFERENCES "PatientServiceFile"("patientId", "serviceId") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "DiagnosticEducatif" ADD CONSTRAINT "DiagnosticEducatif_patientId_serviceId_fkey" FOREIGN KEY ("patientId", "serviceId") REFERENCES "PatientServiceFile"("patientId", "serviceId") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "DiagnosticEducatif" ADD CONSTRAINT "DiagnosticEducatif_patientId_serviceId_fkey" FOREIGN KEY ("patientId", "serviceId") REFERENCES "PatientServiceFile"("patientId", "serviceId") ON DELETE CASCADE ON UPDATE CASCADE;
