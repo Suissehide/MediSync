@@ -190,4 +190,60 @@ describe('rendez-vous avec un patient', () => {
 
     await testDb.patient.delete({ where: { id: patientId } })
   })
+
+  // task-5-re-review-2.md, I1 : `AppointmentRepository.create` cree l'Appointment PUIS ses
+  // AppointmentPatient par des creations de premier niveau distinctes (voir le commentaire de
+  // la methode), enveloppees dans un `$transaction` pour rester atomiques. Retirer entierement
+  // ce `$transaction` laisse passer les quatre portes (build, lint, unitaires, e2e existant) —
+  // le faux client de `repository-scope.test.ts` implemente `$transaction(fn)` par `fn(prisma)`,
+  // donc il ne peut structurellement pas distinguer les deux. Seul un vrai Postgres le peut :
+  // sans transaction, la premiere ecriture (l'Appointment) survit a l'echec de la seconde (le
+  // patient n'existe pas) et reste orpheline sur le creneau, l'occupant sans aucun participant.
+  it("reste atomique : un participant introuvable ne laisse aucun rendez-vous orphelin sur le creneau", async () => {
+    const slotTemplate = await testDb.slotTemplate.create({
+      data: {
+        startTime: new Date('2026-04-03T09:00:00Z'),
+        endTime: new Date('2026-04-03T10:00:00Z'),
+        offsetDays: 0,
+        isIndividual: true,
+        color: '#fff',
+        serviceId,
+        establishmentId,
+      },
+    })
+    const slot = await testDb.slot.create({
+      data: {
+        startDate: new Date('2026-04-03T09:00:00Z'),
+        endDate: new Date('2026-04-03T10:00:00Z'),
+        serviceId,
+        establishmentId,
+        slotTemplateID: slotTemplate.id,
+      },
+    })
+
+    // Un identifiant de la bonne forme (cuid, valide par le schema Zod) mais introuvable en
+    // base : on cree un patient puis on le supprime, pour obtenir la meme situation que
+    // `PROBE A3-fk` de la revue precedente, sans dependre du format interne d'un cuid.
+    const ghostPatient = await testDb.patient.create({
+      data: {
+        firstName: 'Fantome',
+        lastName: 'Absent',
+        establishmentId,
+        createDate: new Date('2026-04-03T00:00:00Z'),
+      },
+    })
+    await testDb.patient.delete({ where: { id: ghostPatient.id } })
+
+    const appointmentRes = await post('/appointment', {
+      startDate: '2026-04-03T09:00:00.000Z',
+      endDate: '2026-04-03T09:30:00.000Z',
+      slotID: slot.id,
+      patientIDs: [ghostPatient.id],
+    })
+
+    expect(appointmentRes.statusCode).toBe(409)
+
+    const orphans = await testDb.appointment.findMany({ where: { slotID: slot.id } })
+    expect(orphans).toHaveLength(0)
+  })
 })
