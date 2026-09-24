@@ -443,7 +443,11 @@ docker exec -i medisync-postgres psql -U postgres -d medisync_etape3_check < bac
 Compare les deux sorties **en normalisant l'espacement**, `psql` alignant la colonne des libellés sur le libellé le plus long de son propre résultat :
 
 ```bash
-norm() { grep -E '^ (Patients|Presence|Empreinte|Etablissements|Services)' "$1" \
+# Le motif distingue les mesures comparables des invariants de structure : sans le
+# `|` exige apres les trois premiers libelles, « Patients sans sous-dossier » serait
+# capte par « Patients » et produirait un faux ecart sur une migration PARFAITE —
+# c'est-a-dire un retour arriere inutile, sous tension.
+norm() { grep -E '^ (Patients|Etablissements|Services) +\||^ (Presence|Empreinte) ' "$1" \
   | sed 's/|/ /' | awk '{v=$NF; $NF=""; gsub(/[[:space:]]+$/,"",$0); gsub(/[[:space:]]+/," ",$0); print $0" = "v}' | sort; }
 diff <(norm /tmp/avant.txt) <(norm /tmp/apres.txt) && echo "aucun ecart"
 ```
