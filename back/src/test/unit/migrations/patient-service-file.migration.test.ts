@@ -3,6 +3,7 @@ import { join } from 'node:path'
 
 import { config as loadDotenv } from 'dotenv'
 import { Client } from 'pg'
+import { z } from 'zod/v4'
 
 // Ce test joue la VRAIE migration `patient_service_file` — le fichier sur disque, pas une
 // copie — sur une base Postgres jetable, créée et détruite pour l'occasion. Il ne touche
@@ -40,7 +41,15 @@ const SCENARIOS = {
   ok: `${PREFIX}_ok`,
   deuxServices: `${PREFIX}_deux_services`,
   zeroService: `${PREFIX}_zero_service`,
+  volume: `${PREFIX}_volume`,
 } as const
+
+// Le validateur REEL du depot (pas une reimplementation) : `patient.schema.ts` et ses
+// voisins (`enrollmentIssue.schema.ts`, `diagnosticEducatif.schema.ts`, `pathway.schema.ts`,
+// `todo.schema.ts`...) valident tous les identifiants de reponse avec `z.cuid()`. C'est
+// exactement cette fonction que ce test appelle sur les identifiants que la migration
+// produit vraiment — pas une hypothese sur leur forme.
+const PATIENT_SERVICE_FILE_ID_SCHEMA = z.cuid()
 
 type PgConn = { host: string; port: number; user: string; password: string }
 
@@ -136,6 +145,22 @@ const applySqlFile = async (client: Client, path: string): Promise<void> => {
 // Lit et joue le VRAI fichier de la migration cible, a chaque appel : si son contenu change,
 // ce test change de comportement avec lui, il ne peut pas rester vert sur un fichier perime.
 const applyTargetMigration = (client: Client): Promise<void> => applySqlFile(client, TARGET_MIGRATION_SQL)
+
+// I5 de la revue : "rien n'a ete touche" ne prouve PAS a lui seul que la garde s'execute
+// avant toute ecriture — la meme observation serait faite avec la garde en derniere ligne,
+// parce que `client.query(sql)` en protocole simple enveloppe tout le fichier dans une
+// transaction implicite, qui annule aussi bien une ecriture faite AVANT un echec tardif.
+// La preuve qui manquait est structurelle, pas comportementale : que le premier mot-cle non
+// commente du fichier soit bien `DO` (le bloc de la garde), avant `CREATE TABLE` ou toute
+// autre instruction. Postgres execute un fichier multi-instructions dans l'ordre du texte :
+// une garde positionnellement premiere s'execute donc bien avant tout le reste, y compris
+// avant que la moindre instruction suivante n'ait la moindre chance de s'executer — que la
+// transaction implicite existe ou non. Trois lignes, comme le relecteur l'avait chiffre.
+const firstNonCommentKeyword = (sql: string): string => {
+  const withoutLineComments = sql.replace(/--.*$/gm, '')
+  const firstToken = withoutLineComments.trim().match(/^\S+/)?.[0] ?? ''
+  return firstToken.toUpperCase()
+}
 
 const buildTemplateDatabase = async (conn: PgConn, maint: Client): Promise<void> => {
   await dropDatabaseIfExists(maint, TEMPLATE_DB)
@@ -349,6 +374,7 @@ describe('migration patient_service_file — base jetable, jamais medisync ni me
     await dropDatabaseIfExists(maint, SCENARIOS.ok)
     await dropDatabaseIfExists(maint, SCENARIOS.deuxServices)
     await dropDatabaseIfExists(maint, SCENARIOS.zeroService)
+    await dropDatabaseIfExists(maint, SCENARIOS.volume)
     await dropDatabaseIfExists(maint, TEMPLATE_DB)
     await maint.end()
   })
@@ -411,6 +437,64 @@ describe('migration patient_service_file — base jetable, jamais medisync ni me
         for (const row of dates.rows) {
           expect({ id: row.id, same: row.same }).toEqual({ id: row.id, same: true })
         }
+
+        // I3 de la revue : la migration fabriquait `gen_random_uuid()::text`, une forme que
+        // le validateur reel du depot rejette (`schema.prisma` declare `@default(cuid())`,
+        // les schemas Zod valident en `z.cuid()`). On ne raisonne pas sur la forme : on
+        // appelle le VRAI validateur sur les identifiants que la migration vient vraiment de
+        // produire.
+        const ids = await client.query<{ id: string }>(
+          'SELECT id FROM "PatientServiceFile" ORDER BY id',
+        )
+        expect(ids.rows).toHaveLength(2)
+        for (const row of ids.rows) {
+          expect({ id: row.id, accepted: PATIENT_SERVICE_FILE_ID_SCHEMA.safeParse(row.id).success }).toEqual(
+            { id: row.id, accepted: true },
+          )
+        }
+
+        // Preuve que le validateur discrimine reellement, et n'accepterait pas n'importe
+        // quoi : un UUID (l'ancienne forme produite par `gen_random_uuid()::text`, tirets
+        // compris) doit etre refuse par ce meme `z.cuid()`.
+        expect(
+          PATIENT_SERVICE_FILE_ID_SCHEMA.safeParse('642bde7f-31e8-4b61-be19-4a5660fc84e3').success,
+        ).toBe(false)
+      })
+    },
+  )
+
+  it(
+    'les identifiants que la migration fabrique restent uniques sur un volume realiste de patients',
+    async () => {
+      const ESTAB_VOL = 'estab-vol-1'
+      const SVC_VOL = 'svc-vol-1'
+      const VOLUME = 5000
+
+      await withScenarioDatabase(conn, maint, SCENARIOS.volume, async (client) => {
+        await insertEstablishment(client, ESTAB_VOL, 'Etablissement Volume')
+        await insertService(client, SVC_VOL, ESTAB_VOL, 'Service Unique')
+        // generate_series plutot que VOLUME appels JS : un aller-retour reseau par patient
+        // rendrait ce test lent pour rien, la question posee porte sur la base, pas sur le
+        // client.
+        await client.query(
+          `INSERT INTO "Patient" (id, "establishmentId", "firstName", "lastName", "createDate")
+           SELECT 'patient-vol-' || gs, $1, 'Prenom' || gs, 'Nom' || gs, now()
+           FROM generate_series(1, $2) AS gs`,
+          [ESTAB_VOL, VOLUME],
+        )
+
+        await applyTargetMigration(client)
+
+        const rows = await client.query<{ id: string }>('SELECT id FROM "PatientServiceFile"')
+        expect(rows.rows).toHaveLength(VOLUME)
+
+        // Unicite : autant d'identifiants distincts que de lignes.
+        const distinctIds = new Set(rows.rows.map((r) => r.id))
+        expect(distinctIds.size).toBe(VOLUME)
+
+        // Et chacun, pas seulement un echantillon, accepte par le VRAI validateur du depot.
+        const rejected = rows.rows.filter((r) => !PATIENT_SERVICE_FILE_ID_SCHEMA.safeParse(r.id).success)
+        expect(rejected).toEqual([])
       })
     },
   )
@@ -436,9 +520,17 @@ describe('migration patient_service_file — base jetable, jamais medisync ni me
 
         await expect(applyTargetMigration(client)).rejects.toThrow(/plusieurs services/)
 
-        // Rien touche : ni la table du sous-dossier, ni la moindre colonne de Patient. La
-        // garde est la toute premiere instruction du fichier, avant meme la creation de la
-        // table — si elle leve, il n'existe litteralement rien avant elle a defaire.
+        // Preuve structurelle, pas seulement comportementale (voir le commentaire de
+        // `firstNonCommentKeyword`) : la garde est bien la toute premiere instruction du
+        // fichier sur disque, avant meme `CREATE TABLE`. C'est ce qui garantit qu'elle
+        // s'execute avant toute ecriture, independamment de la transaction implicite.
+        expect(firstNonCommentKeyword(readFileSync(TARGET_MIGRATION_SQL, 'utf8'))).toBe('DO')
+
+        // Rien touche : ni la table du sous-dossier, ni la moindre colonne de Patient. Cette
+        // absence d'ecriture est de toute facon acquise par la transaction implicite du
+        // protocole simple (voir plus haut) — c'est l'assertion ci-dessus, sur la position
+        // du texte, qui etablit que c'est bien la garde, et non un echec plus loin dans le
+        // fichier, qui a provoque le refus sans qu'aucune ecriture n'ait meme ete tentee.
         const table = await client.query<{ reg: string | null }>(
           `SELECT to_regclass('"PatientServiceFile"') AS reg`,
         )
@@ -477,6 +569,11 @@ describe('migration patient_service_file — base jetable, jamais medisync ni me
         await insertPatient(client, ESTAB, patient)
 
         await expect(applyTargetMigration(client)).rejects.toThrow(/aucun service/)
+
+        // Meme preuve structurelle que dans le scenario "plusieurs services" ci-dessus : la
+        // garde est la toute premiere instruction du fichier, ce n'est pas la transaction
+        // implicite qui fait a elle seule la demonstration.
+        expect(firstNonCommentKeyword(readFileSync(TARGET_MIGRATION_SQL, 'utf8'))).toBe('DO')
 
         const table = await client.query<{ reg: string | null }>(
           `SELECT to_regclass('"PatientServiceFile"') AS reg`,

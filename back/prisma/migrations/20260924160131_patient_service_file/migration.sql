@@ -16,16 +16,19 @@ DO $$
 DECLARE trop_de_services text;
 DECLARE aucun_service text;
 BEGIN
-  SELECT string_agg(e.name || ' (' || x.c || ' services)', ', ')
+  -- Spec §4.1 : le message doit nommer les etablissements fautifs ET leurs services, pas
+  -- seulement leur nombre — un operateur doit pouvoir agir sur ce seul message, sans requete
+  -- supplementaire pour savoir quels services repartir.
+  SELECT string_agg(x.etab || ' (' || x.services || ')', ', ')
   INTO trop_de_services
   FROM (
-    SELECT s."establishmentId", count(DISTINCT s.id) AS c
+    SELECT e.id, e.name AS etab, string_agg(s.name, ', ' ORDER BY s.name) AS services
     FROM "Service" s
+    JOIN "Establishment" e ON e.id = s."establishmentId"
     WHERE EXISTS (SELECT 1 FROM "Patient" p WHERE p."establishmentId" = s."establishmentId")
-    GROUP BY 1
+    GROUP BY e.id, e.name
     HAVING count(DISTINCT s.id) > 1
-  ) x
-  JOIN "Establishment" e ON e.id = x."establishmentId";
+  ) x;
 
   IF trop_de_services IS NOT NULL THEN
     RAISE EXCEPTION 'Migration refusee : ces etablissements ont des patients et plusieurs services (%). '
@@ -96,6 +99,14 @@ ALTER TABLE "PatientServiceFile" ADD CONSTRAINT "PatientServiceFile_serviceId_es
 -- continuation de cet enregistrement, pas un enregistrement neuf. Le dater d'aujourd'hui
 -- inscrirait en base un petit mensonge sur des donnees de parcours parfois saisies des annees
 -- plus tot, irreversible une fois les colonnes source supprimees plus bas.
+--
+-- L'identifiant doit avoir la forme que l'application accepte : `schema.prisma` declare
+-- `id String @id @default(cuid())` et les schemas Zod du depot valident les identifiants de
+-- reponse avec `z.cuid()` (regex `^[cC][^\s-]{8,}$`). Un UUID (avec ses tirets) echoue a ce
+-- test. `'c' || replace(gen_random_uuid()::text, '-', '')` prefixe la lettre 'c' attendue et
+-- retire les tirets qui le feraient rejeter, tout en gardant l'aleatoire de gen_random_uuid()
+-- pour l'unicite — ce n'est pas un vrai cuid (l'algorithme n'est pas reimplemente en SQL),
+-- seulement une valeur de la forme que le validateur du depot accepte.
 INSERT INTO "PatientServiceFile" (
   id, "patientId", "serviceId", "establishmentId",
   "referringCaregiver", "followUpToDo", notes, details,
@@ -104,7 +115,7 @@ INSERT INTO "PatientServiceFile" (
   "exitDate", "stopReason", "etpFinalOutcome", "createdAt"
 )
 SELECT
-  gen_random_uuid()::text, p.id, s.id, p."establishmentId",
+  'c' || replace(gen_random_uuid()::text, '-', ''), p.id, s.id, p."establishmentId",
   p."referringCaregiver", p."followUpToDo", p.notes, p.details,
   p."medicalDiagnosis", p."entryDate", p."careMode", p.orientation, p."etpDecision",
   p."programType", p."nonInclusionDetails", p."customContentDetails", p.goal,
