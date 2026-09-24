@@ -1,22 +1,29 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
 
-import { getThematicColumns } from '../../../../columns/thematic.column.tsx'
-import AddThematicForm from '../../../../components/custom/popup/addThematicForm.tsx'
-import { ConfirmDeleteForm } from '../../../../components/custom/popup/confirmDeleteForm.tsx'
-import DashboardLayout from '../../../../components/dashboard.layout.tsx'
-import ReactTable from '../../../../components/table/reactTable.tsx'
-import { useCan } from '../../../../hooks/useCan.ts'
-import { useSoignantQueries } from '../../../../queries/useSoignant.ts'
+import { getThematicColumns } from '@/columns/thematic.column.tsx'
+import AddThematicForm from '@/components/custom/popup/addThematicForm.tsx'
+import { ConfirmDeleteForm } from '@/components/custom/popup/confirmDeleteForm.tsx'
+import DashboardLayout from '@/components/dashboard.layout.tsx'
+import ReactTable from '@/components/table/reactTable.tsx'
+import { can, useCan } from '@/hooks/useCan.ts'
+import { useSoignantQueries } from '@/queries/useSoignant.ts'
 import {
   useThematicMutations,
   useThematicQueries,
-} from '../../../../queries/useThematic.ts'
-import type { Thematic } from '../../../../types/thematic.ts'
+} from '@/queries/useThematic.ts'
+import type { Thematic } from '@/types/thematic.ts'
+import { resolveTenantContext } from '@/utils/tenant-context.ts'
 
 export const Route = createFileRoute(
-  '/_authenticated/_admin/settings/thematic',
+  '/_authenticated/e/$establishmentId/s/$serviceId/_settings/thematic',
 )({
+  beforeLoad: ({ context, params }) => {
+    const tenant = resolveTenantContext(context.authState.user, params)
+    if (!can(tenant, 'referentials:write')) {
+      throw redirect({ to: '/e/$establishmentId/s/$serviceId/dashboard', params })
+    }
+  },
   component: ThematicSettings,
 })
 

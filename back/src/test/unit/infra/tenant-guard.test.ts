@@ -429,16 +429,29 @@ describe('assertTenantScope', () => {
   })
 
   // Correction 3 : include/select sur une relation de tenant depuis un modele global.
+  // La relation citee ici est `establishmentMemberships`, la seule que `model User` declare
+  // reellement. L'exemple portait auparavant sur un `User.soignant` disparu du schema depuis
+  // l'etape 1 : le test passait donc sur une relation inexistante, et n'aurait rien vu si la
+  // vraie relation avait quitte GLOBAL_TENANT_RELATIONS. C'est desormais
+  // `tenant-guard-schema.test.ts` qui tient la table contre le schema, dans les deux sens.
   it('refuse un include de relation de tenant hors findUnique(OrThrow)', () => {
     expect(() =>
       assertTenantScope(
-        { model: 'User', operation: 'findMany', args: { include: { soignant: true } } },
+        {
+          model: 'User',
+          operation: 'findMany',
+          args: { include: { establishmentMemberships: true } },
+        },
         store,
       ),
     ).toThrow(TenantScopeMissingError)
     expect(() =>
       assertTenantScope(
-        { model: 'User', operation: 'findUniqueOrThrow', args: { include: { soignant: true } } },
+        {
+          model: 'User',
+          operation: 'findUniqueOrThrow',
+          args: { include: { establishmentMemberships: true } },
+        },
         store,
       ),
     ).not.toThrow()
@@ -641,5 +654,212 @@ describe('assertTenantScope', () => {
         store,
       ),
     ).not.toThrow()
+  })
+
+  // Correction 7 : include/select depuis un modele d'etablissement vers un modele de service.
+  // Noms de relations repris de prisma/schema.prisma (modeles Patient, Soignant,
+  // EstablishmentMembership).
+  describe('inclusions depuis un modele d etablissement', () => {
+    // Fuite reelle trouvee a l'etape 1 : un patient (etablissement) incluant
+    // ses problemes d'inscription (service) remontait ceux de tous les services.
+    it('refuse une inclusion vers un modele de service sans filtre', () => {
+      expect(() =>
+        assertTenantScope(
+          {
+            model: 'Patient',
+            operation: 'findMany',
+            args: { where: { establishmentId: 'e1' }, include: { enrollmentIssues: true } },
+          },
+          store,
+        ),
+      ).toThrow(/enrollmentIssues/)
+    })
+
+    it('accepte la meme inclusion filtree sur le service courant', () => {
+      expect(() =>
+        assertTenantScope(
+          {
+            model: 'Patient',
+            operation: 'findMany',
+            args: {
+              where: { establishmentId: 'e1' },
+              include: { enrollmentIssues: { where: { serviceId: 's1' } } },
+            },
+          },
+          store,
+        ),
+      ).not.toThrow()
+    })
+
+    it('refuse une inclusion filtree sur un autre service', () => {
+      expect(() =>
+        assertTenantScope(
+          {
+            model: 'Patient',
+            operation: 'findMany',
+            args: {
+              where: { establishmentId: 'e1' },
+              include: { enrollmentIssues: { where: { serviceId: 'autre' } } },
+            },
+          },
+          store,
+        ),
+      ).toThrow(TenantScopeMissingError)
+    })
+
+    it('laisse passer une inclusion vers un modele du meme niveau', () => {
+      expect(() =>
+        assertTenantScope(
+          {
+            model: 'Patient',
+            operation: 'findMany',
+            args: { where: { establishmentId: 'e1' }, include: { establishment: true } },
+          },
+          store,
+        ),
+      ).not.toThrow()
+    })
+
+    it('refuse une relation non declaree plutot que de la laisser sans controle', () => {
+      expect(() =>
+        assertTenantScope(
+          {
+            model: 'Patient',
+            operation: 'findMany',
+            args: { where: { establishmentId: 'e1' }, include: { relationFuture: true } },
+          },
+          store,
+        ),
+      ).toThrow(/TENANT_CHILD_RELATIONS/)
+    })
+
+    it('controle aussi le select, et ignore une relation ecartee par false', () => {
+      expect(() =>
+        assertTenantScope(
+          {
+            model: 'Soignant',
+            operation: 'findMany',
+            args: { where: { establishmentId: 'e1' }, select: { id: true, todos: true } },
+          },
+          store,
+        ),
+      ).toThrow(/todos/)
+      expect(() =>
+        assertTenantScope(
+          {
+            model: 'Soignant',
+            operation: 'findMany',
+            args: {
+              where: { establishmentId: 'e1' },
+              select: { id: true, todos: { where: { serviceId: 's1' } } },
+            },
+          },
+          store,
+        ),
+      ).not.toThrow()
+      expect(() =>
+        assertTenantScope(
+          {
+            model: 'Soignant',
+            operation: 'findMany',
+            args: { where: { establishmentId: 'e1' }, include: { todos: false } },
+          },
+          store,
+        ),
+      ).not.toThrow()
+    })
+
+    // Inclusion conditionnelle : la branche negative laisse la valeur indefinie, ce que Prisma
+    // traite exactement comme une cle non ecrite. Aucune ligne n'est ramenee, il n'y a donc rien
+    // a filtrer — refuser ici refuserait du code legitime.
+    it('laisse passer une relation laissee indefinie par une inclusion conditionnelle', () => {
+      const withIssues = (demande: boolean) =>
+        assertTenantScope(
+          {
+            model: 'Patient',
+            operation: 'findMany',
+            args: {
+              where: { establishmentId: 'e1' },
+              include: { enrollmentIssues: demande ? { where: { serviceId: 's1' } } : undefined },
+            },
+          },
+          store,
+        )
+      expect(() => withIssues(false)).not.toThrow()
+      expect(() => withIssues(true)).not.toThrow()
+      // Meme idiome sous un contexte sans service : la branche negative reste legitime.
+      expect(() =>
+        assertTenantScope(
+          {
+            model: 'Patient',
+            operation: 'findMany',
+            args: { where: { establishmentId: 'e1' }, include: { enrollmentIssues: undefined } },
+          },
+          adminStore,
+        ),
+      ).not.toThrow()
+    })
+
+    // Sous le prefixe d'administration d'etablissement, il n'existe aucun service courant :
+    // rien ne peut filtrer l'inclusion, elle est donc refusee.
+    it('refuse une inclusion de service depuis un contexte sans service', () => {
+      expect(() =>
+        assertTenantScope(
+          {
+            model: 'Patient',
+            operation: 'findMany',
+            args: {
+              where: { establishmentId: 'e1' },
+              include: { enrollmentIssues: { where: { serviceId: 's1' } } },
+            },
+          },
+          adminStore,
+        ),
+      ).toThrow(TenantScopeMissingError)
+    })
+
+    it('vaut aussi pour une ecriture qui renvoie des relations incluses', () => {
+      expect(() =>
+        assertTenantScope(
+          {
+            model: 'Patient',
+            operation: 'create',
+            args: {
+              data: { firstName: 'A', establishmentId: 'e1' },
+              include: { diagnostics: true },
+            },
+          },
+          store,
+        ),
+      ).toThrow(/diagnostics/)
+    })
+
+    // Lectures reelles qui doivent continuer a passer : la liste des membres (relations de la
+    // meme famille ou globales) et la route de lecture des soignants du routeur
+    // d'administration d'etablissement (aucune inclusion).
+    it('laisse passer les lectures d administration d etablissement existantes', () => {
+      expect(() =>
+        assertTenantScope(
+          {
+            model: 'EstablishmentMembership',
+            operation: 'findMany',
+            args: {
+              where: { establishmentId: 'e1' },
+              include: {
+                user: { select: { id: true, email: true } },
+                serviceMemberships: { where: { establishmentId: 'e1' }, select: { serviceId: true, role: true } },
+              },
+            },
+          },
+          adminStore,
+        ),
+      ).not.toThrow()
+      expect(() =>
+        assertTenantScope(
+          { model: 'Soignant', operation: 'findMany', args: { where: { establishmentId: 'e1' } } },
+          adminStore,
+        ),
+      ).not.toThrow()
+    })
   })
 })

@@ -25,6 +25,25 @@ export const SoignantApi = {
     return response.json()
   },
 
+  // Même liste, mais par le préfixe d'établissement : à utiliser depuis un
+  // écran sans service en contexte (`tenantApiUrl` y lève), comme l'écran
+  // des membres. Le back renvoie le même ensemble dans les deux cas (le
+  // repository filtre par établissement, jamais par service), seule la
+  // permission exigée diffère (`soignants:manage`, pas `referentials:read`).
+  getAllForEstablishment: async (): Promise<Soignant[]> => {
+    const response = await fetchWithAuth(`${establishmentApiUrl()}/soignant`, {
+      method: 'GET',
+    })
+    if (!response.ok) {
+      handleHttpError(
+        response,
+        {},
+        'Impossible de récupérer la liste des soignants',
+      )
+    }
+    return response.json()
+  },
+
   create: async (
     createSoignantParams: CreateSoignantParams,
   ): Promise<Soignant> => {

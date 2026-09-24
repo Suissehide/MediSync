@@ -84,9 +84,13 @@ Key cross-cutting concerns:
 - **Tenant guard (`infra/orm/tenant-guard.ts`)**: a Prisma extension that throws `TenantScopeMissingError` when a
   query on a service model lacks `serviceId` (or `establishmentId` for establishment models) in `where`/`data`.
   Model families are listed there (`SERVICE_MODELS`, `ESTABLISHMENT_MODELS`). It **fails closed**: an operation it
-  doesn't recognize, or a nested write on a relation absent from `NESTED_RELATIONS`, is refused rather than let
-  through unchecked — the error message names the entry to add. Add every new tenant model to the right list, and
-  every new nested write to `NESTED_RELATIONS`.
+  doesn't recognize, a nested write on a relation absent from `NESTED_RELATIONS`, or an `include` from an
+  establishment model on a relation absent from `TENANT_CHILD_RELATIONS`, is refused rather than let through
+  unchecked — the error message names the entry to add. Add every new tenant model to the right list, every new
+  nested write to `NESTED_RELATIONS`, and every relation of an establishment model to `TENANT_CHILD_RELATIONS`
+  (relation names come from `prisma/schema.prisma`). A relation of that table whose target is a service model
+  requires its own `where: { serviceId }` on the include/select: reading from an establishment row otherwise
+  returns the children of *every* service.
 - **Clinical field filtering (`utils/clinical-fields.ts`, wired into `tenant.plugin.ts`)**: `notes`, `details`,
   `medicalDiagnosis` (patient) and `transmissionNotes` (patient enrolled in an appointment) are **not** filtered in
   response schemas. Two Fastify hooks strip them, in both directions: `stripClinicalFields` (`preSerialization`,
@@ -130,7 +134,9 @@ Key cross-cutting concerns:
 6. Register the new router in `interfaces/http/fastify/routes/index.ts`.
 7. Add the model to `SERVICE_MODELS` or `ESTABLISHMENT_MODELS` in `infra/orm/tenant-guard.ts` (and to
    `NESTED_RELATIONS` if another model writes it through a nested relation) — without this the guard rejects every
-   query on it.
+   query on it. An establishment model also gets an entry in `TENANT_CHILD_RELATIONS` listing *all* its relations,
+   and any establishment model gaining a relation towards it must have that relation added there too — an
+   undeclared `include` is refused.
 8. Add a case to `src/test/e2e/isolation.test.ts` proving a caller from one tenant can't reach another tenant's
    rows through the new entity (directly, and through any parent that embeds it).
 

@@ -9,7 +9,7 @@ import {
 import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { toSelectOptions } from '../../../libs/utils.ts'
 import { useMemberMutations } from '../../../queries/useMembers.ts'
-import { useSoignantQueries } from '../../../queries/useSoignant.ts'
+import { useEstablishmentSoignantsQuery } from '../../../queries/useSoignant.ts'
 import { useAuthStore } from '../../../store/useAuthStore.ts'
 import type { EstablishmentRole, ServiceRole } from '../../../types/auth.ts'
 import { Button } from '../../ui/button.tsx'
@@ -28,9 +28,10 @@ interface AddMemberFormProps {
 }
 
 // Aucune affectation de service n'est un choix à part entière (le membre
-// peut être rattaché à l'établissement sans rôle dans le service courant) :
-// on lui donne une valeur explicite plutôt que de s'appuyer sur une case
-// vide, que le composant `Select` ne sait pas représenter comme option.
+// peut être rattaché à l'établissement sans rôle dans aucun service) : on
+// lui donne une valeur explicite plutôt que de s'appuyer sur une case vide,
+// que le composant `Select` ne sait pas représenter comme option.
+const NO_SERVICE = 'NONE'
 const NO_SERVICE_ROLE = 'NONE'
 
 const ESTABLISHMENT_ROLE_OPTIONS = toSelectOptions(ESTABLISHMENT_ROLE_LABEL)
@@ -42,7 +43,11 @@ const SERVICE_ROLE_OPTIONS = [
 function AddMemberForm({ trigger }: AddMemberFormProps) {
   const [open, setOpen] = useState(false)
   const { addMember } = useMemberMutations()
-  const { soignants } = useSoignantQueries()
+  // Prefixe d'etablissement : ce formulaire s'ouvre sur un ecran sans
+  // service en contexte (voir `admin/members.tsx`), ou `useSoignantQueries`
+  // (prefixe de service) leverait.
+  const { soignants } = useEstablishmentSoignantsQuery()
+  const user = useAuthStore((state) => state.user)
   const context = useAuthStore((state) => state.context)
 
   const soignantOptions = useMemo(
@@ -53,30 +58,56 @@ function AddMemberForm({ trigger }: AddMemberFormProps) {
     [soignants],
   )
 
+  // Cet écran vit sous le layout d'établissement : le contexte n'y porte
+  // plus de service « courant ». Les services proposés sont donc lus dans
+  // l'arbre des appartenances (`user.establishments`), pour l'établissement
+  // du contexte.
+  const establishmentServices = useMemo(() => {
+    const establishment = user?.establishments.find(
+      (e) => e.id === context?.establishmentId,
+    )
+    return establishment?.services ?? []
+  }, [user, context?.establishmentId])
+
+  const serviceOptions = useMemo(
+    () => [
+      { value: NO_SERVICE, label: 'Aucun' },
+      ...[...establishmentServices]
+        .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+        .map((s) => ({ value: s.id, label: s.name })),
+    ],
+    [establishmentServices],
+  )
+
   const form = useAppForm({
     defaultValues: {
       email: '',
       role: 'MEMBER',
       soignantId: '',
+      serviceId: NO_SERVICE,
       serviceRole: NO_SERVICE_ROLE,
     },
     onSubmit: ({ value }) => {
       if (!context) {
         return
       }
+      // Une affectation de service n'est envoyée que si un service a
+      // effectivement été choisi ; sans service choisi, le rôle est ignoré
+      // (le champ est de toute façon désactivé dans ce cas, voir plus bas).
+      const services =
+        value.serviceId === NO_SERVICE || value.serviceRole === NO_SERVICE_ROLE
+          ? []
+          : [
+              {
+                serviceId: value.serviceId,
+                role: value.serviceRole as ServiceRole,
+              },
+            ]
       addMember.mutate({
         email: value.email,
         role: value.role as EstablishmentRole,
         soignantId: value.soignantId || null,
-        services:
-          value.serviceRole === NO_SERVICE_ROLE
-            ? []
-            : [
-                {
-                  serviceId: context.serviceId,
-                  role: value.serviceRole as ServiceRole,
-                },
-              ],
+        services,
       })
       setOpen(false)
     },
@@ -156,15 +187,32 @@ function AddMemberForm({ trigger }: AddMemberFormProps) {
               )}
             </form.AppField>
 
-            <form.AppField name="serviceRole">
+            <form.AppField name="serviceId">
               {(field) => (
                 <field.Select
-                  label="Rôle dans le service courant"
-                  options={SERVICE_ROLE_OPTIONS}
+                  label="Service"
+                  options={serviceOptions}
                   clearable={false}
                 />
               )}
             </form.AppField>
+
+            {/* Reactif au service choisi ci-dessus (champ frère) : sans
+            service choisi, aucun rôle de service ne peut être assigné. */}
+            <form.Subscribe selector={(state) => state.values.serviceId}>
+              {(serviceId) => (
+                <form.AppField name="serviceRole">
+                  {(field) => (
+                    <field.Select
+                      label="Rôle dans le service"
+                      options={SERVICE_ROLE_OPTIONS}
+                      clearable={false}
+                      disabled={serviceId === NO_SERVICE}
+                    />
+                  )}
+                </form.AppField>
+              )}
+            </form.Subscribe>
           </form>
         </PopupBody>
 

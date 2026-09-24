@@ -111,7 +111,7 @@ const LAST_ADMIN = 'Cannot remove the last administrator'
 const SELF = 'Cannot apply this action to your own account'
 const MULTI_ESTABLISHMENT =
   'This account belongs to several establishments; its activation cannot be changed from here'
-const SELF_WITHOUT_SERVICE = 'Cannot remove all of your own services'
+const SELF_DEMOTION = 'Cannot remove your own administrator role'
 
 const rejectsWith = (
   promise: Promise<unknown>,
@@ -234,14 +234,27 @@ describe('MembershipDomain', () => {
     expect(calls).toEqual([])
   })
 
-  // Contrepartie de la regle precedente : se retirer son propre role reste
-  // permis tant que l'etablissement garde un administrateur actif.
-  it('autorise l auto-retrogradation quand un autre administrateur subsiste', async () => {
+  // Un compte ne reduit jamais seul ses propres droits, c'est un collegue qui
+  // le fait — par symetrie avec la regle du soi-meme sur remove/setDeactivated.
+  it('refuse a l utilisateur courant de se retrograder en MEMBER', async () => {
     const { domain, ctx, calls } = build(
       [row({}), row({ id: 'em2', userId: 'u2', user: user({ id: 'u2' }) })],
       2,
     )
-    await asAdmin(ctx, () => domain.update('em1', { role: 'MEMBER' }))
+    await rejectsWith(
+      asAdmin(ctx, () => domain.update('em1', { role: 'MEMBER' })),
+      409,
+      SELF_DEMOTION,
+    )
+    expect(calls).toEqual([])
+  })
+
+  it('laisse retrograder un autre administrateur quand il en reste un', async () => {
+    const { domain, ctx, calls } = build(
+      [row({}), row({ id: 'em2', userId: 'u2', user: user({ id: 'u2' }) })],
+      2,
+    )
+    await asAdmin(ctx, () => domain.update('em2', { role: 'MEMBER' }))
     expect(calls).toEqual(['update'])
   })
 
@@ -307,31 +320,16 @@ describe('MembershipDomain', () => {
     expect(calls).toEqual([])
   })
 
-  // Sans cette regle, un administrateur pouvait se retirer tous ses services
-  // et perdre l'acces a tous les ecrans, y compris l'ecran Membres qui lui
-  // permettrait de se reaffecter : s'il etait le dernier administrateur, la
-  // sortie passait par du SQL en production.
-  it('refuse a l utilisateur courant de vider sa propre liste de services', async () => {
+  // Le garde de l'etape 1 n'existait que parce qu'un administrateur sans
+  // service se retrouvait sans aucun ecran accessible. Les taches 8 et 12
+  // lui donnent l'administration d'etablissement sous une URL sans service :
+  // vider sa propre liste de services est donc redevenu une operation comme
+  // une autre.
+  it('autorise l utilisateur courant a vider sa propre liste de services', async () => {
     const { domain, ctx, calls } = build(
       [row({ serviceMemberships: [{ serviceId: 's1', role: 'INTERVENANT' }] })],
       2,
     )
-    await rejectsWith(
-      asAdmin(ctx, () => domain.update('em1', { services: [] })),
-      409,
-      SELF_WITHOUT_SERVICE,
-    )
-    expect(calls).toEqual([])
-  })
-
-  // La regle porte sur le RETRAIT, pas sur l'etat vide. Un administrateur
-  // sans aucun service est une configuration que le formulaire d'ajout permet
-  // de creer, et le formulaire d'edition renvoie `services: []` a chaque
-  // enregistrement : sans cette distinction, un tel compte ne pourrait plus
-  // modifier sa propre ligne du tout, avec un message decrivant une action
-  // qu'il n'a pas demandee.
-  it('laisse l utilisateur courant enregistrer sa propre ligne quand il n avait deja aucun service', async () => {
-    const { domain, ctx, calls } = build([row({ serviceMemberships: [] })], 2)
     await asAdmin(ctx, () => domain.update('em1', { services: [] }))
     expect(calls).toEqual(['update'])
   })

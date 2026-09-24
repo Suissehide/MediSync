@@ -3,6 +3,7 @@ import { Plus } from 'lucide-react'
 import { useState } from 'react'
 
 import type { DayAppointmentRow } from '../../../libs/utils.ts'
+import { useAuthStore } from '../../../store/useAuthStore.ts'
 import { Button } from '../../ui/button.tsx'
 import { CHIP_CLASS, MAX_VISIBLE_CHIPS } from './chip.ts'
 
@@ -20,6 +21,10 @@ type PatientCellProps = {
 
 export default function PatientCell({ row, onAddPatient }: PatientCellProps) {
   const [expanded, setExpanded] = useState(false)
+  // La fiche patient vit sous /e/:establishmentId/s/:serviceId depuis
+  // l'etape 2 (tache 6) : le contexte vient du store, pose par le layout de
+  // service avant que cet ecran (agenda) ne puisse se rendre.
+  const context = useAuthStore((state) => state.context)
 
   const { patients, isIndividual } = row
 
@@ -64,17 +69,31 @@ export default function PatientCell({ row, onAddPatient }: PatientCellProps) {
             : 'flex items-center gap-1 overflow-hidden'
         }
       >
-        {visible.map((appointmentPatient) => (
-          <Link
-            key={appointmentPatient.patient.id}
-            to="/patient/$patientID"
-            params={{ patientID: appointmentPatient.patient.id }}
-            className={`${CHIP_CLASS} hover:bg-primary/20`}
-          >
-            {appointmentPatient.patient.firstName}{' '}
-            {appointmentPatient.patient.lastName}
-          </Link>
-        ))}
+        {visible.map((appointmentPatient) =>
+          context?.serviceId ? (
+            <Link
+              key={appointmentPatient.patient.id}
+              to="/e/$establishmentId/s/$serviceId/patient/$patientID"
+              params={{
+                establishmentId: context.establishmentId,
+                serviceId: context.serviceId,
+                patientID: appointmentPatient.patient.id,
+              }}
+              className={`${CHIP_CLASS} hover:bg-primary/20`}
+            >
+              {appointmentPatient.patient.firstName}{' '}
+              {appointmentPatient.patient.lastName}
+            </Link>
+          ) : (
+            <span
+              key={appointmentPatient.patient.id}
+              className={CHIP_CLASS}
+            >
+              {appointmentPatient.patient.firstName}{' '}
+              {appointmentPatient.patient.lastName}
+            </span>
+          ),
+        )}
 
         {hidden > 0 && (
           <button

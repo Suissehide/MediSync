@@ -8,6 +8,10 @@ import {
 import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
 import { useToast } from '../hooks/useToast.ts'
+import {
+  restoreForTenant,
+  snapshotForTenant,
+} from '../hooks/useTenantSwitch.ts'
 import type {
   CreateSlotTemplateParams,
   SlotTemplate,
@@ -80,7 +84,7 @@ export const useSlotTemplateMutations = () => {
     onMutate: async (newSlotTemplate: CreateSlotTemplateParams) => {
       await queryClient.cancelQueries({ queryKey: [SLOT_TEMPLATE.GET_ALL] })
 
-      const previousSlotTemplates = queryClient.getQueryData([
+      const previousSlotTemplates = snapshotForTenant(queryClient, [
         SLOT_TEMPLATE.GET_ALL,
       ])
       queryClient.setQueryData(
@@ -100,10 +104,7 @@ export const useSlotTemplateMutations = () => {
       })
     },
     onError: (error, __, context) => {
-      queryClient.setQueryData(
-        [SLOT_TEMPLATE.GET_ALL],
-        context?.previousSlotTemplates,
-      )
+      restoreForTenant(queryClient, context?.previousSlotTemplates)
 
       toast({
         title: 'Erreur lors de la création du template de créneau',
@@ -125,7 +126,7 @@ export const useSlotTemplateMutations = () => {
     onMutate: async (slotTemplateID) => {
       await queryClient.cancelQueries({ queryKey: [SLOT_TEMPLATE.GET_ALL] })
 
-      const previousSlotTemplates = queryClient.getQueryData([
+      const previousSlotTemplates = snapshotForTenant(queryClient, [
         SLOT_TEMPLATE.GET_ALL,
       ])
       queryClient.setQueryData(
@@ -145,10 +146,7 @@ export const useSlotTemplateMutations = () => {
       })
     },
     onError: (error, __, context) => {
-      queryClient.setQueryData(
-        [SLOT_TEMPLATE.GET_ALL],
-        context?.previousSlotTemplates,
-      )
+      restoreForTenant(queryClient, context?.previousSlotTemplates)
 
       toast({
         title: 'Erreur lors de la suppression du template de créneau',
@@ -170,7 +168,7 @@ export const useSlotTemplateMutations = () => {
     onMutate: async (updatedSlotTemplate: UpdateSlotTemplateParams) => {
       await queryClient.cancelQueries({ queryKey: [SLOT_TEMPLATE.GET_ALL] })
 
-      const previousSlotTemplates = queryClient.getQueryData([
+      const previousSlotTemplates = snapshotForTenant(queryClient, [
         SLOT_TEMPLATE.GET_ALL,
       ])
       queryClient.setQueryData(
@@ -192,10 +190,7 @@ export const useSlotTemplateMutations = () => {
       })
     },
     onError: (error, __, context) => {
-      queryClient.setQueryData(
-        [SLOT_TEMPLATE.GET_ALL],
-        context?.previousSlotTemplates,
-      )
+      restoreForTenant(queryClient, context?.previousSlotTemplates)
 
       toast({
         title: 'Erreur lors de la mise à jour du template de créneau',

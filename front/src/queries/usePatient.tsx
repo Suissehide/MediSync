@@ -6,6 +6,11 @@ import { Button } from '../components/ui/button.tsx'
 import { APPOINTMENT, PATHWAY, PATIENT, SLOT } from '../constants/process.constant.ts'
 import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
+import {
+  currentTenantKey,
+  restoreForTenant,
+  snapshotForTenant,
+} from '../hooks/useTenantSwitch.ts'
 import { useToast } from '../hooks/useToast.ts'
 import type {
   CreatePatientParams,
@@ -116,7 +121,7 @@ export const usePatientMutations = () => {
     onMutate: async (newPatient: CreatePatientParams) => {
       await queryClient.cancelQueries({ queryKey: [PATIENT.GET_ALL] })
 
-      const previousPatients = queryClient.getQueryData([PATIENT.GET_ALL])
+      const previousPatients = snapshotForTenant(queryClient, [PATIENT.GET_ALL])
       queryClient.setQueryData([PATIENT.GET_ALL], (oldPatients: Patient[]) => [
         ...(oldPatients || []),
         newPatient,
@@ -131,7 +136,7 @@ export const usePatientMutations = () => {
       })
     },
     onError: (error, __, context) => {
-      queryClient.setQueryData([PATIENT.GET_ALL], context?.previousPatients)
+      restoreForTenant(queryClient, context?.previousPatients)
 
       toast({
         title: 'Erreur lors de la création du patient',
@@ -154,13 +159,11 @@ export const usePatientMutations = () => {
       setIsDeletePending(true)
 
       // Snapshot the cache so we can restore on undo or on API error
-      const previousPatients = queryClient.getQueryData<Patient[]>([
+      const previousPatients = snapshotForTenant(queryClient, [
         PATIENT.GET_ALL,
       ])
-      const previousPatientsWithTags = queryClient.getQueryData<
-        PatientWithTags[]
-      >([PATIENT.GET_ALL_WITH_TAGS])
-      const previousPatient = queryClient.getQueryData([
+      const previousPatientsWithTags = snapshotForTenant(queryClient, [PATIENT.GET_ALL_WITH_TAGS])
+      const previousPatient = snapshotForTenant(queryClient, [
         PATIENT.GET_BY_ID,
         patientID,
       ])
@@ -200,8 +203,25 @@ export const usePatientMutations = () => {
 
       let cancelled = false
 
+      // Le couple etablissement/service au moment ou la suppression est
+      // programmee. Cinq secondes plus tard, l'URL sera calculee a l'appel :
+      // si le contexte a change entre-temps, la requete partirait vers le
+      // NOUVEAU service. Elle y echouerait sur un 404 neutre, puis la branche
+      // d'erreur restaurerait dans le cache les patients de l'ancien service.
+      // Au-dela de cette fuite, emettre une suppression vers le mauvais
+      // service est une faute en soi : elle echoue en silence et l'utilisateur
+      // croit avoir supprime.
+      const scheduledTenant = currentTenantKey()
+
       const timeoutId = setTimeout(async () => {
         if (cancelled) {
+          return
+        }
+        if (currentTenantKey() !== scheduledTenant) {
+          // On renonce : ni appel, ni ecriture de cache. Le patient n'est pas
+          // supprime, et la prochaine lecture de l'ancien service le remontre.
+          restoreQueryDefaults()
+          setIsDeletePending(false)
           return
         }
         try {
@@ -214,15 +234,9 @@ export const usePatientMutations = () => {
           ])
         } catch (error) {
           // Restore on API failure
-          queryClient.setQueryData([PATIENT.GET_ALL], previousPatients)
-          queryClient.setQueryData(
-            [PATIENT.GET_ALL_WITH_TAGS],
-            previousPatientsWithTags,
-          )
-          queryClient.setQueryData(
-            [PATIENT.GET_BY_ID, patientID],
-            previousPatient,
-          )
+          restoreForTenant(queryClient, previousPatients)
+          restoreForTenant(queryClient, previousPatientsWithTags)
+          restoreForTenant(queryClient, previousPatient)
           toast({
             title: 'Erreur lors de la suppression du patient',
             message: error instanceof Error ? error.message : undefined,
@@ -247,18 +261,9 @@ export const usePatientMutations = () => {
               cancelled = true
               clearTimeout(timeoutId)
               // Restore caches
-              queryClient.setQueryData(
-                [PATIENT.GET_ALL],
-                previousPatients,
-              )
-              queryClient.setQueryData(
-                [PATIENT.GET_ALL_WITH_TAGS],
-                previousPatientsWithTags,
-              )
-              queryClient.setQueryData(
-                [PATIENT.GET_BY_ID, patientID],
-                previousPatient,
-              )
+              restoreForTenant(queryClient, previousPatients)
+              restoreForTenant(queryClient, previousPatientsWithTags)
+              restoreForTenant(queryClient, previousPatient)
               restoreQueryDefaults()
               setIsDeletePending(false)
               dismiss()
@@ -281,7 +286,7 @@ export const usePatientMutations = () => {
     mutationFn: PatientApi.update,
     onMutate: async (updatedPatient: UpdatePatientParams) => {
       await queryClient.cancelQueries({ queryKey: [PATIENT.GET_ALL] })
-      const previousPatients = queryClient.getQueryData([PATIENT.GET_ALL])
+      const previousPatients = snapshotForTenant(queryClient, [PATIENT.GET_ALL])
       queryClient.setQueryData([PATIENT.GET_ALL], (oldPatients: Patient[]) =>
         oldPatients?.map((patient: Patient) =>
           patient.id === updatedPatient.id ? updatedPatient : patient,
@@ -289,7 +294,7 @@ export const usePatientMutations = () => {
       )
 
       await queryClient.cancelQueries({ queryKey: [PATIENT.GET_BY_ID] })
-      const previousPatient = queryClient.getQueryData([
+      const previousPatient = snapshotForTenant(queryClient, [
         PATIENT.GET_BY_ID,
         updatedPatient.id,
       ])
@@ -307,8 +312,8 @@ export const usePatientMutations = () => {
       })
     },
     onError: (error, __, context) => {
-      queryClient.setQueryData([PATIENT.GET_ALL], context?.previousPatients)
-      queryClient.setQueryData([PATIENT.GET_BY_ID], context?.previousPatient)
+      restoreForTenant(queryClient, context?.previousPatients)
+      restoreForTenant(queryClient, context?.previousPatient)
 
       toast({
         title: 'Erreur lors de la mise à jour du patient',
@@ -473,7 +478,7 @@ export const usePatientMutations = () => {
         queryKey: [PATIENT.GET_PATHWAYS, patientID],
       })
 
-      const previousPathways = queryClient.getQueryData<PatientPathway[]>([
+      const previousPathways = snapshotForTenant(queryClient, [
         PATIENT.GET_PATHWAYS,
         patientID,
       ])
@@ -501,12 +506,7 @@ export const usePatientMutations = () => {
       return { previousPathways, patientID }
     },
     onError: (_, __, context) => {
-      if (context?.previousPathways) {
-        queryClient.setQueryData(
-          [PATIENT.GET_PATHWAYS, context.patientID],
-          context.previousPathways,
-        )
-      }
+      restoreForTenant(queryClient, context?.previousPathways)
       toast({
         title: 'Erreur lors de la réorganisation des parcours',
         severity: TOAST_SEVERITY.ERROR,

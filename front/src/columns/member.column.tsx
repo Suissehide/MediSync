@@ -35,8 +35,9 @@ const RoleBadge = ({
 type MemberColumnOptions = {
   // Le service du contexte courant : cette étape ne montre (et ne modifie)
   // que le rôle du membre dans cet unique service, pas dans les autres
-  // auxquels il pourrait être affecté (multi-service : étape 2).
-  serviceId: string
+  // auxquels il pourrait être affecté (multi-service : étape 2). Nul sur un
+  // écran d'administration sans service.
+  serviceId: string | null
   soignants: Soignant[]
   onToggleActive: (member: Member) => void
   onRemove: (member: Member) => void
@@ -81,9 +82,14 @@ export const getMemberColumns = ({
     id: 'serviceRole',
     header: 'Rôle service',
     cell: ({ row }) => {
-      const assignment = row.original.serviceMemberships.find(
-        (membership) => membership.serviceId === serviceId,
-      )
+      // Sur un écran d'administration sans service, `serviceId` est nul :
+      // aucune affectation ne peut correspondre, on ne cherche même pas.
+      const assignment =
+        serviceId === null
+          ? undefined
+          : row.original.serviceMemberships.find(
+              (membership) => membership.serviceId === serviceId,
+            )
       if (!assignment) {
         return <span className="text-text-light">—</span>
       }

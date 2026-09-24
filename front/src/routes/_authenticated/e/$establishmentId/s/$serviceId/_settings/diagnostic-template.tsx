@@ -1,23 +1,32 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 import { LayoutTemplate } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
-import DashboardLayout from '../../../../components/dashboard.layout.tsx'
-import { Input } from '../../../../components/ui/input.tsx'
-import { Label } from '../../../../components/ui/label.tsx'
-import { Switch } from '../../../../components/ui/switch.tsx'
-import { DIAGNOSTIC_SECTIONS } from '../../../../constants/diagnosticEducatif.constant.ts'
-import { useCan } from '../../../../hooks/useCan.ts'
+import DashboardLayout from '@/components/dashboard.layout.tsx'
+import { Input } from '@/components/ui/input.tsx'
+import { Label } from '@/components/ui/label.tsx'
+import { Switch } from '@/components/ui/switch.tsx'
+import { DIAGNOSTIC_SECTIONS } from '@/constants/diagnosticEducatif.constant.ts'
+import { can, useCan } from '@/hooks/useCan.ts'
 import {
   useDiagnosticTemplateMutations,
   useDiagnosticTemplatesQuery,
-} from '../../../../queries/useDiagnosticEducatif.ts'
-import { useDiagnosticTemplateStore } from '../../../../store/useDiagnosticTemplateStore.ts'
-import type { DiagnosticEducatifTemplate } from '../../../../types/diagnosticEducatif.ts'
+} from '@/queries/useDiagnosticEducatif.ts'
+import { useDiagnosticTemplateStore } from '@/store/useDiagnosticTemplateStore.ts'
+import type { DiagnosticEducatifTemplate } from '@/types/diagnosticEducatif.ts'
+import { resolveTenantContext } from '@/utils/tenant-context.ts'
 
 export const Route = createFileRoute(
-  '/_authenticated/_admin/settings/diagnostic-template',
-)({ component: DiagnosticTemplateSettings })
+  '/_authenticated/e/$establishmentId/s/$serviceId/_settings/diagnostic-template',
+)({
+  beforeLoad: ({ context, params }) => {
+    const tenant = resolveTenantContext(context.authState.user, params)
+    if (!can(tenant, 'referentials:write')) {
+      throw redirect({ to: '/e/$establishmentId/s/$serviceId/dashboard', params })
+    }
+  },
+  component: DiagnosticTemplateSettings,
+})
 
 function DiagnosticTemplateSettings() {
   // Le menu ne montre cet écran qu'aux détenteurs de `referentials:write`,

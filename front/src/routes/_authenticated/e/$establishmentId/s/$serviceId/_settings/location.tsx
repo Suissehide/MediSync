@@ -1,21 +1,28 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
 
-import { getLocationColumns } from '../../../../columns/location.column.tsx'
-import AddLocationForm from '../../../../components/custom/popup/addLocationForm.tsx'
-import { ConfirmDeleteForm } from '../../../../components/custom/popup/confirmDeleteForm.tsx'
-import DashboardLayout from '../../../../components/dashboard.layout.tsx'
-import ReactTable from '../../../../components/table/reactTable.tsx'
-import { useCan } from '../../../../hooks/useCan.ts'
+import { getLocationColumns } from '@/columns/location.column.tsx'
+import AddLocationForm from '@/components/custom/popup/addLocationForm.tsx'
+import { ConfirmDeleteForm } from '@/components/custom/popup/confirmDeleteForm.tsx'
+import DashboardLayout from '@/components/dashboard.layout.tsx'
+import ReactTable from '@/components/table/reactTable.tsx'
+import { can, useCan } from '@/hooks/useCan.ts'
 import {
   useLocationMutations,
   useLocationQueries,
-} from '../../../../queries/useLocation.ts'
-import type { Location } from '../../../../types/location.ts'
+} from '@/queries/useLocation.ts'
+import type { Location } from '@/types/location.ts'
+import { resolveTenantContext } from '@/utils/tenant-context.ts'
 
 export const Route = createFileRoute(
-  '/_authenticated/_admin/settings/location',
+  '/_authenticated/e/$establishmentId/s/$serviceId/_settings/location',
 )({
+  beforeLoad: ({ context, params }) => {
+    const tenant = resolveTenantContext(context.authState.user, params)
+    if (!can(tenant, 'locations:manage')) {
+      throw redirect({ to: '/e/$establishmentId/s/$serviceId/dashboard', params })
+    }
+  },
   component: LocationSettings,
 })
 

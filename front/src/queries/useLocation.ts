@@ -5,6 +5,10 @@ import { LOCATION } from '../constants/process.constant.ts'
 import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
 import { useToast } from '../hooks/useToast.ts'
+import {
+  restoreForTenant,
+  snapshotForTenant,
+} from '../hooks/useTenantSwitch.ts'
 import type {
   CreateLocationParams,
   Location,
@@ -46,7 +50,7 @@ export const useLocationMutations = () => {
     onMutate: async (newLocation: CreateLocationParams) => {
       await queryClient.cancelQueries({ queryKey: [LOCATION.GET_ALL] })
 
-      const previousLocations = queryClient.getQueryData([LOCATION.GET_ALL])
+      const previousLocations = snapshotForTenant(queryClient, [LOCATION.GET_ALL])
       queryClient.setQueryData(
         [LOCATION.GET_ALL],
         (oldLocations: Location[]) => [
@@ -64,7 +68,7 @@ export const useLocationMutations = () => {
       })
     },
     onError: (error, __, context) => {
-      queryClient.setQueryData([LOCATION.GET_ALL], context?.previousLocations)
+      restoreForTenant(queryClient, context?.previousLocations)
 
       toast({
         title: 'Erreur lors de la création de la salle',
@@ -83,7 +87,7 @@ export const useLocationMutations = () => {
     onMutate: async (locationID) => {
       await queryClient.cancelQueries({ queryKey: [LOCATION.GET_ALL] })
 
-      const previousLocations = queryClient.getQueryData([LOCATION.GET_ALL])
+      const previousLocations = snapshotForTenant(queryClient, [LOCATION.GET_ALL])
       queryClient.setQueryData([LOCATION.GET_ALL], (oldLocations: Location[]) =>
         oldLocations?.filter(
           (location: Location) => location.id !== locationID,
@@ -99,7 +103,7 @@ export const useLocationMutations = () => {
       })
     },
     onError: (error, __, context) => {
-      queryClient.setQueryData([LOCATION.GET_ALL], context?.previousLocations)
+      restoreForTenant(queryClient, context?.previousLocations)
 
       toast({
         title: 'Erreur lors de la suppression de la salle',
@@ -118,7 +122,7 @@ export const useLocationMutations = () => {
     onMutate: async (updatedLocation: UpdateLocationParams) => {
       await queryClient.cancelQueries({ queryKey: [LOCATION.GET_ALL] })
 
-      const previousLocations = queryClient.getQueryData([LOCATION.GET_ALL])
+      const previousLocations = snapshotForTenant(queryClient, [LOCATION.GET_ALL])
       queryClient.setQueryData([LOCATION.GET_ALL], (oldLocations: Location[]) =>
         oldLocations?.map((location: Location) =>
           location.id === updatedLocation.id
@@ -136,7 +140,7 @@ export const useLocationMutations = () => {
       })
     },
     onError: (error, __, context) => {
-      queryClient.setQueryData([LOCATION.GET_ALL], context?.previousLocations)
+      restoreForTenant(queryClient, context?.previousLocations)
 
       toast({
         title: 'Erreur lors de la mise à jour de la salle',

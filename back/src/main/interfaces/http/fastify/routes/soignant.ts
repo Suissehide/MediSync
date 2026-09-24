@@ -67,6 +67,30 @@ const soignantReadRouter: FastifyPluginAsync = (fastify) => {
 const soignantAdminRouter: FastifyPluginAsync = (fastify) => {
   const { soignantDomain, logger } = fastify.iocContainer
 
+  // Get all. Aucune permission de lecture des soignants n'existe au niveau
+  // établissement (voir docs/multi-tenant/habilitations.md) : on garde donc
+  // `soignants:manage`, comme les trois routes voisines de ce routeur — un
+  // administrateur qui gère les soignants peut aussi en lister la liste.
+  // Même `soignantDomain.findAll()` que la route de lecture montée sous le
+  // préfixe de service (`soignantReadRouter` ci-dessus) : le repository
+  // filtre déjà par établissement, jamais par service (voir
+  // `SoignantRepository.findAll`), les deux routes renvoient donc le même
+  // ensemble — seuls le préfixe d'URL et la permission exigée diffèrent.
+  fastify.get(
+    '/',
+    {
+      schema: {
+        response: {
+          200: soignantsResponseSchema,
+        },
+      },
+      config: { permission: 'soignants:manage' },
+    },
+    () => {
+      return soignantDomain.findAll()
+    },
+  )
+
   // Create
   fastify.post<{ Body: CreateSoignantBody }>(
     '/',

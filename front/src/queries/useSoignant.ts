@@ -6,6 +6,10 @@ import { SOIGNANT } from '../constants/process.constant.ts'
 import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
 import { useToast } from '../hooks/useToast.ts'
+import {
+  restoreForTenant,
+  snapshotForTenant,
+} from '../hooks/useTenantSwitch.ts'
 import { useSoignantStore } from '../store/useSoignantStore.ts'
 import type {
   CreateSoignantParams,
@@ -47,6 +51,33 @@ export const useSoignantQueries = () => {
   return { soignants, isPending, error }
 }
 
+// Même donnée que `useSoignantQueries`, mais lue par le préfixe
+// d'établissement : à utiliser depuis un écran sans service en contexte
+// (l'écran des membres, `admin/members.tsx`, et les formulaires qu'il
+// ouvre), où `useSoignantQueries` échouerait (`tenantApiUrl` lève sans
+// service). N'écrit pas dans `useSoignantStore` : ce store sert les filtres
+// des écrans de service, hors du périmètre de cet écran d'administration.
+export const useEstablishmentSoignantsQuery = () => {
+  const {
+    data: soignants,
+    isPending,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: [SOIGNANT.GET_ALL_ESTABLISHMENT],
+    queryFn: SoignantApi.getAllForEstablishment,
+    retry: 0,
+  })
+
+  useDataFetching({
+    isPending,
+    isError,
+    error,
+  })
+
+  return { soignants, isPending, error }
+}
+
 // * MUTATIONS
 
 export const useSoignantMutations = () => {
@@ -59,7 +90,7 @@ export const useSoignantMutations = () => {
     onMutate: async (newSoignant: CreateSoignantParams) => {
       await queryClient.cancelQueries({ queryKey: [SOIGNANT.GET_ALL] })
 
-      const previousSoignants = queryClient.getQueryData([SOIGNANT.GET_ALL])
+      const previousSoignants = snapshotForTenant(queryClient, [SOIGNANT.GET_ALL])
       queryClient.setQueryData(
         [SOIGNANT.GET_ALL],
         (oldSoignants: Soignant[]) => [...(oldSoignants || []), newSoignant],
@@ -74,7 +105,7 @@ export const useSoignantMutations = () => {
       })
     },
     onError: (error, __, context) => {
-      queryClient.setQueryData([SOIGNANT.GET_ALL], context?.previousSoignants)
+      restoreForTenant(queryClient, context?.previousSoignants)
 
       toast({
         title: 'Erreur lors de la création du soignant',
@@ -93,7 +124,7 @@ export const useSoignantMutations = () => {
     onMutate: async (soignantID) => {
       await queryClient.cancelQueries({ queryKey: [SOIGNANT.GET_ALL] })
 
-      const previousSoignants = queryClient.getQueryData([SOIGNANT.GET_ALL])
+      const previousSoignants = snapshotForTenant(queryClient, [SOIGNANT.GET_ALL])
       queryClient.setQueryData([SOIGNANT.GET_ALL], (oldSoignants: Soignant[]) =>
         oldSoignants?.filter(
           (soignant: Soignant) => soignant.id !== soignantID,
@@ -109,7 +140,7 @@ export const useSoignantMutations = () => {
       })
     },
     onError: (error, __, context) => {
-      queryClient.setQueryData([SOIGNANT.GET_ALL], context?.previousSoignants)
+      restoreForTenant(queryClient, context?.previousSoignants)
 
       toast({
         title: 'Erreur lors de la suppression du soignant',
@@ -128,7 +159,7 @@ export const useSoignantMutations = () => {
     onMutate: async (updatedSoignant: UpdateSoignantParams) => {
       await queryClient.cancelQueries({ queryKey: [SOIGNANT.GET_ALL] })
 
-      const previousSoignants = queryClient.getQueryData([SOIGNANT.GET_ALL])
+      const previousSoignants = snapshotForTenant(queryClient, [SOIGNANT.GET_ALL])
       queryClient.setQueryData([SOIGNANT.GET_ALL], (oldSoignants: Soignant[]) =>
         oldSoignants?.map((soignant: Soignant) =>
           soignant.id === updatedSoignant.id ? updatedSoignant : soignant,
@@ -144,7 +175,7 @@ export const useSoignantMutations = () => {
       })
     },
     onError: (error, __, context) => {
-      queryClient.setQueryData([SOIGNANT.GET_ALL], context?.previousSoignants)
+      restoreForTenant(queryClient, context?.previousSoignants)
 
       toast({
         title: 'Erreur lors de la mise à jour du soignant',

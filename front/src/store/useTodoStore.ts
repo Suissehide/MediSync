@@ -3,6 +3,8 @@ import { devtools, persist } from 'zustand/middleware'
 
 import type { Todo } from '../types/todo.ts'
 
+import { scopedStorage } from './scoped-storage.ts'
+
 interface TodoState {
   todos: Todo[]
   seenTodoIds: Set<string>
@@ -12,6 +14,7 @@ interface TodoActions {
   addTodo: (todo: Todo) => void
   setTodos: (todos: Todo[]) => void
   markTodosAsSeen: () => void
+  reset: () => void
 }
 
 export const useTodoStore = create<TodoState & TodoActions>()(
@@ -39,6 +42,21 @@ export const useTodoStore = create<TodoState & TodoActions>()(
             'addTodo',
           ),
 
+        // Appelee au changement de contexte. `todos` est un miroir en memoire
+        // des taches du service, affiche par plusieurs ecrans et exclu du
+        // `partialize` : rien d'autre ne le remet a zero. `seenTodoIds` reste
+        // en place — ce sont des identifiants opaques, jamais affiches, et
+        // ils sont persistes pour ne pas re-signaler comme nouvelles des
+        // taches deja vues.
+        reset: () =>
+          set(
+            () => ({
+              todos: [],
+            }),
+            false,
+            'reset',
+          ),
+
         markTodosAsSeen: () =>
           set(
             (state) => ({
@@ -50,6 +68,7 @@ export const useTodoStore = create<TodoState & TodoActions>()(
       }),
       {
         name: 'todo-storage',
+        storage: scopedStorage('todo-storage'),
         partialize: (state) => ({ seenTodoIds: Array.from(state.seenTodoIds) }),
         merge: (persisted, current) => ({
           ...current,

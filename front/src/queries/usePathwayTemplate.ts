@@ -5,6 +5,10 @@ import { PATHWAY_TEMPLATE } from '../constants/process.constant.ts'
 import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
 import { useToast } from '../hooks/useToast.ts'
+import {
+  restoreForTenant,
+  snapshotForTenant,
+} from '../hooks/useTenantSwitch.ts'
 import type {
   CreatePathwayTemplateParams,
   PathwayTemplate,
@@ -77,7 +81,7 @@ export const usePathwayTemplateMutations = () => {
     onMutate: async (newPathwayTemplate: CreatePathwayTemplateParams) => {
       await queryClient.cancelQueries({ queryKey: [PATHWAY_TEMPLATE.GET_ALL] })
 
-      const previousPathwayTemplates = queryClient.getQueryData([
+      const previousPathwayTemplates = snapshotForTenant(queryClient, [
         PATHWAY_TEMPLATE.GET_ALL,
       ])
       queryClient.setQueryData(
@@ -97,10 +101,7 @@ export const usePathwayTemplateMutations = () => {
       })
     },
     onError: (error, __, context) => {
-      queryClient.setQueryData(
-        [PATHWAY_TEMPLATE.GET_ALL],
-        context?.previousPathwayTemplates,
-      )
+      restoreForTenant(queryClient, context?.previousPathwayTemplates)
 
       toast({
         title: 'Erreur lors de la création du template de parcours',
@@ -121,7 +122,7 @@ export const usePathwayTemplateMutations = () => {
     onMutate: async (pathwayTemplateID) => {
       await queryClient.cancelQueries({ queryKey: [PATHWAY_TEMPLATE.GET_ALL] })
 
-      const previousPathwayTemplates = queryClient.getQueryData([
+      const previousPathwayTemplates = snapshotForTenant(queryClient, [
         PATHWAY_TEMPLATE.GET_ALL,
       ])
       queryClient.setQueryData(
@@ -142,10 +143,7 @@ export const usePathwayTemplateMutations = () => {
       })
     },
     onError: (error, __, context) => {
-      queryClient.setQueryData(
-        [PATHWAY_TEMPLATE.GET_ALL],
-        context?.previousPathwayTemplates,
-      )
+      restoreForTenant(queryClient, context?.previousPathwayTemplates)
 
       toast({
         title: 'Erreur lors de la supression du template de parcours',
@@ -165,7 +163,7 @@ export const usePathwayTemplateMutations = () => {
     mutationFn: PathwayTemplateApi.update,
     onMutate: async (updatedPathwayTemplate: UpdatePathwayTemplateParams) => {
       await queryClient.cancelQueries({ queryKey: [PATHWAY_TEMPLATE.GET_ALL] })
-      const previousPathwayTemplates = queryClient.getQueryData([
+      const previousPathwayTemplates = snapshotForTenant(queryClient, [
         PATHWAY_TEMPLATE.GET_ALL,
       ])
       queryClient.setQueryData(
@@ -187,10 +185,7 @@ export const usePathwayTemplateMutations = () => {
       })
     },
     onError: (error, __, context) => {
-      queryClient.setQueryData(
-        [PATHWAY_TEMPLATE.GET_ALL],
-        context?.previousPathwayTemplates,
-      )
+      restoreForTenant(queryClient, context?.previousPathwayTemplates)
 
       toast({
         title: 'Erreur lors de la mise à jour du template de parcours',
@@ -211,7 +206,7 @@ export const usePathwayTemplateMutations = () => {
     onMutate: async (orderedIds: string[]) => {
       await queryClient.cancelQueries({ queryKey: [PATHWAY_TEMPLATE.GET_ALL] })
 
-      const previousPathwayTemplates = queryClient.getQueryData([
+      const previousPathwayTemplates = snapshotForTenant(queryClient, [
         PATHWAY_TEMPLATE.GET_ALL,
       ])
       queryClient.setQueryData(
@@ -233,10 +228,7 @@ export const usePathwayTemplateMutations = () => {
       return { previousPathwayTemplates }
     },
     onError: (_, __, context) => {
-      queryClient.setQueryData(
-        [PATHWAY_TEMPLATE.GET_ALL],
-        context?.previousPathwayTemplates,
-      )
+      restoreForTenant(queryClient, context?.previousPathwayTemplates)
 
       toast({
         title: 'Erreur lors de la réorganisation des parcours',

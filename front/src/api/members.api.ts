@@ -32,10 +32,17 @@ const CONFLICT_MESSAGES: Record<string, { title: string; message: string }> = {
     message:
       'Vous ne pouvez pas retirer ni désactiver votre propre compte depuis cet écran. Demandez à un autre administrateur de le faire.',
   },
-  'Cannot remove all of your own services': {
-    title: 'Retrait de vos propres services',
+  // Le motif affiché ici doit rester celui du back (`assertNotSelfDemotion`
+  // dans `membership.domain.ts`) : la symétrie avec l'interdiction de se
+  // retirer ou se désactiver soi-même — un compte ne réduit jamais seul ses
+  // propres droits, c'est un collègue qui le fait. Surtout pas « vous
+  // perdriez le droit de vous le rendre » : ce motif-là est faux, le garde
+  // du dernier administrateur assurant qu'il reste toujours quelqu'un pour
+  // réparer.
+  'Cannot remove your own administrator role': {
+    title: 'Retrait de votre propre rôle',
     message:
-      "Vous ne pouvez pas retirer tous vos propres services : vous perdriez l'accès à tous les écrans, y compris celui des membres qui vous permettrait de vous réaffecter. Demandez à un autre administrateur de le faire.",
+      "Vous ne pouvez pas retirer votre propre rôle d'administrateur : ce retrait est réservé à un autre administrateur, comme le retrait ou la désactivation de votre propre compte. Demandez à un collègue administrateur de le faire.",
   },
   'This account belongs to several establishments; its activation cannot be changed from here':
     {

@@ -32,6 +32,8 @@ export const LOCATION_ALIAS: Record<string, string> = {
 }
 
 export function resolveLocationName(raw?: string | null): string | null {
-  if (!raw) return null
+  if (!raw) {
+    return null
+  }
   return LOCATION_ALIAS[raw] ?? raw
 }
