@@ -7,32 +7,45 @@ import { administeredEstablishments, defaultTenantContext } from '@/utils/tenant
 // que les onze autres redirections (`redirectToDefaultService`).
 export const Route = createFileRoute('/_authenticated/settings/user')({
   beforeLoad: ({ context }) => {
-    const tenant = defaultTenantContext(context.authState.user)
-    if (!tenant) {
-      // Meme repli que `index.tsx` : `defaultTenantContext` ne rend qu'un
-      // couple AVEC service, donc un administrateur sans affectation de
-      // service n'en obtient aucun — et c'est justement lui qui a le plus de
-      // chances d'avoir garde ce favori, puisque `/settings/user` etait
-      // l'ecran Membres avant l'etape 2. Sans ce repli il atterrissait sur
-      // l'ecran d'attente, qui n'a aucun lien sortant hormis la
-      // deconnexion : l'impasse que la tache 15 venait de fermer ailleurs.
-      // Son acces existe pourtant bel et bien, sous une URL sans service.
-      const [administered] = administeredEstablishments(context.authState.user)
-      if (administered) {
-        throw redirect({
-          to: '/e/$establishmentId/admin/members',
-          params: { establishmentId: administered.id },
-          search: true,
-        })
-      }
-      throw redirect({ to: '/pending' })
+    const user = context.authState.user
+    // L'ecran des membres est un ecran d'ADMINISTRATION D'ETABLISSEMENT : sa
+    // destination se resout donc sur les etablissements ADMINISTRES, et sur
+    // eux seuls. Consulter d'abord `defaultTenantContext`, qui rend n'importe
+    // quel couple accessible — administre ou non —, envoyait un compte membre
+    // d'un etablissement et administrateur d'un AUTRE vers l'administration
+    // du premier : le layout la refusait faute du role ADMIN, et la personne
+    // rebondissait vers le choix de contexte alors que son acces existait,
+    // ailleurs.
+    const administres = administeredEstablishments(user)
+    // Parmi les etablissements administres, celui du dernier couple visite
+    // s'il en fait partie : sans cela, un administrateur de plusieurs
+    // etablissements serait toujours ramene au premier de son arbre, quel que
+    // soit celui qu'il venait de quitter. `defaultTenantContext` n'est plus
+    // qu'un critere de PREFERENCE, jamais la source de la destination.
+    const dernierCouple = defaultTenantContext(user)
+    const cible =
+      administres.find(
+        (etablissement) => etablissement.id === dernierCouple?.establishmentId,
+      ) ?? administres[0]
+    if (cible) {
+      throw redirect({
+        to: '/e/$establishmentId/admin/members',
+        params: { establishmentId: cible.id },
+        // Meme regle que `redirectToDefaultService` : conserver les
+        // parametres de recherche entrants.
+        search: true,
+      })
     }
-    throw redirect({
-      to: '/e/$establishmentId/admin/members',
-      params: { establishmentId: tenant.establishmentId },
-      // Meme regle que `redirectToDefaultService` : conserver les
-      // parametres de recherche entrants.
-      search: true,
-    })
+    // Aucun etablissement administre : l'ecran des membres n'existe pour ce
+    // compte nulle part, et viser une URL d'administration au hasard ne
+    // ferait que provoquer le rebond qu'on vient de fermer. On l'envoie donc
+    // directement la ou le layout d'administration l'aurait envoye, un saut
+    // plus tot — un ecran reel, avec des liens sortants.
+    if (dernierCouple) {
+      throw redirect({ to: '/choose-context' })
+    }
+    // Ni service ni administration : la seule absence totale d'acces. Meme
+    // repli que `index.tsx`.
+    throw redirect({ to: '/pending' })
   },
 })
