@@ -116,7 +116,13 @@ reprise telle quelle :
    Pneumologie). Revenir sur Cardiologie : les soignants cochés précédemment
    doivent être **retrouvés tels quels**. Ce point vérifie l'indexation par
    service des stores persistés (`scoped-storage.ts`), pas une donnée du
-   seed.
+   seed. **Il ne vérifie que ces quatre stores-là, et c'est toute sa
+   portée** : d'autres réglages persistés vivent hors de `scoped-storage.ts`,
+   sous des clés globales — les filtres et la visibilité des colonnes des
+   tableaux (`filters/<id>`, `column-visibility/<id>`) et la journée
+   sélectionnée de l'agenda. Ceux-là traversent bel et bien un changement de
+   service : report assumé, voir D11. Ne pas lire ce point comme « aucun
+   réglage persisté ne subsiste ».
 5. **Anciennes URL.** Avec un compte connecté, naviguer directement vers
    `/agenda?date=2026-01-01` (ou toute autre ancienne URL top-niveau du menu
    — `/settings/planning`, `/settings/soignant`, etc., avec un paramètre de
