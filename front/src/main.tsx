@@ -64,6 +64,18 @@ const initialQueryClient = createTenantQueryClient()
 // et en acceptant qu'il remonte aussi sur `$patientID`. En l'etat, ce
 // `createRouter` ne declare volontairement aucune dependance de remontage
 // globale.
+//
+// CONDITION QUI ROUVRE LE CAS, ecrite ici parce que c'est ici qu'on viendrait
+// l'enfreindre : cette absence est ce qui rend vraie une phrase de
+// `front/CLAUDE.md` (§ « Also implicit »), selon laquelle aucune dependance de
+// remontage ne s'applique aux ecrans vivant hors des deux layouts de tenant
+// (`/user/settings`) — et c'est cette phrase qui justifie d'y interdire tout
+// observateur de tenant, panneau des taches de la barre de navigation compris.
+// Poser `defaultRemountDeps` ici la rend fausse, et RIEN NE LE SIGNALE : la
+// suite du front a ete relancee entiere avec ce reglage pose, elle reste
+// verte, et `src/test/layouts-de-tenant.test.ts` ne lit que les fichiers de
+// `src/routes`, donc jamais celui-ci. Qui ajoute ce reglage corrige la phrase
+// du guide dans le meme changement.
 const router = createRouter({
   routeTree,
   context: {

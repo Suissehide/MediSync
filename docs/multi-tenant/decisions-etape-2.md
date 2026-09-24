@@ -106,6 +106,11 @@ Cinq résidus ont été parqués à la revue finale, tous documentaires ou d'une
 dizaine de lignes. Le premier est le plus important, et il doit être traité
 avant d'ajouter quoi que ce soit à la barre de navigation.
 
+> **Les cinq ont été traités depuis**, sur la branche `worktree-residus-etape-2`
+> et avant tout autre travail d'étape 3. La liste ci-dessous est conservée
+> telle qu'elle a été écrite — c'est l'état des lieux qui a motivé le
+> chantier ; ce qui a été décidé pour chacun est consigné juste après.
+
 1. **L'invariant des écrans survivants est faux.** Le guide du front et deux
    commentaires affirment que tout écran lisant une API de service vit sous le
    layout de service ou celui d'administration. C'est inexact : le panneau des
@@ -126,6 +131,50 @@ avant d'ajouter quoi que ce soit à la barre de navigation.
 5. Le test de conformité au schéma exige l'égalité avec toutes les relations
    du modèle, ce qui est juste pour l'établissement et trop large pour
    l'utilisateur. Il échoue fermé, ce n'est donc pas un trou.
+
+### Comment les cinq ont été refermés
+
+- **1 — l'invariant.** Rendu vrai plutôt qu'affaibli : la condition d'affichage
+  du panneau des tâches porte désormais sur la **route** (`useMatchRoute` sur
+  `/e/$establishmentId/s/$serviceId`, en correspondance floue) et non sur le
+  contexte du store. Les quatre affirmations ont été confrontées au code une à
+  une et réécrites : elles disent maintenant « tout ce qui lit une API de
+  tenant » et non « tout écran », nomment la barre de navigation comme le seul
+  composant hors de l'arbre des écrans, et distinguent l'interdiction de
+  l'**observateur** de celle de la requête — `_authenticated.tsx` appelle bien
+  `ensureQueryData`, ce que la formulation précédente du guide interdisait à la
+  lettre. Verrouillé dans les deux sens par `components/navbar.test.tsx`.
+  Coût si faux : un widget ajouté à la barre rouvrirait la fuite ; c'est
+  précisément ce que le test refuse maintenant.
+- **2 — le troisième layout.** `src/test/layouts-de-tenant.test.ts`, de la forme
+  de `lecture-directe-du-cache.test.ts` : l'ensemble des fichiers de route
+  appelant `setContext(` doit être exactement celui déclarant `remountDeps`.
+  Aucune liste à tenir, les deux ensembles se dérivent du code. Le contrôle de
+  santé n'exige que la présence des deux layouts connus, jamais qu'il n'y en
+  ait que deux : un troisième layout conforme passe sans qu'on touche au test.
+  Coût si faux : un fichier qui mentionne `remountDeps` hors commentaire sans
+  le déclarer ferait un faux positif, réparable en une ligne.
+- **3 — la racine.** `__root.tsx` et non `_authenticated.tsx`. Le paragraphe a
+  été réécrit pour viser **tout ce qui vit au-dessus des deux layouts** —
+  `__root.tsx`, `_authenticated.tsx`, `components/root.layout.tsx`, la barre de
+  navigation — et non un fichier.
+- **4 — le rebond.** `settings/user.tsx` résout d'abord les établissements
+  **administrés**, `defaultTenantContext` n'étant plus qu'un critère de
+  préférence entre eux. Sans administration nulle part, la redirection va
+  directement au choix de contexte, c'est-à-dire là où le layout
+  d'administration aurait renvoyé, un saut plus tôt. Trois cas de test ajoutés.
+- **5 — le test de conformité.** Resserré plutôt que documenté tel quel.
+  L'égalité stricte avec toutes les relations du modèle n'était pas seulement
+  une friction : déclarer une relation dans `GLOBAL_TENANT_RELATIONS` la
+  **restreint** (plus d'`include` hors `findUnique`), donc un futur
+  `User.notificationPreferences` aurait dû être restreint pour faire passer la
+  porte. L'exigence porte maintenant sur ce que le garde-fou exploite — toute
+  relation menant à un modèle de tenant est déclarée, aucune entrée n'est
+  morte — et la friction restante est nommée dans le test : la liste, vide à ce
+  jour, des relations d'un modèle global qui ne mènent pas à du tenant, qu'on
+  complète d'une ligne plutôt qu'en restreignant une lecture légitime. Le
+  commentaire de `tenant-guard.ts` qui promettait « l'égalité stricte » a été
+  corrigé avec.
 
 Y ont aussi été reportés, par décision explicite : les filtres et la visibilité
 des colonnes des tableaux, persistés sous des clés globales sur sept écrans,

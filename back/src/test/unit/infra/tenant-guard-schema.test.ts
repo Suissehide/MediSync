@@ -108,14 +108,21 @@ describe('TENANT_CHILD_RELATIONS reflete prisma/schema.prisma', () => {
   })
 })
 
-// Le pendant de tout ce qui precede, pour la seconde table ecrite a la main : celle des relations
-// d'un modele GLOBAL qui exposent de la donnee de tenant.
-//
-// Elle porte la meme obligation d'exhaustivite, et pour une raison plus pressante encore :
-// `assertGlobalInclude` echoue OUVERT. Une relation absente de la table n'est pas vue, donc
-// l'include passe sans controle — la ou `assertChildInclude` refuse ce qu'il ne connait pas.
-// Avant ce test, la table avait deja derive : elle declarait un `User.soignant` disparu du schema
+// La seconde table ecrite a la main : celle des relations d'un modele GLOBAL qui exposent de la
+// donnee de tenant. Le besoin est plus pressant que pour TENANT_CHILD_RELATIONS, parce que
+// `assertGlobalInclude` echoue OUVERT — une relation absente de la table n'est pas vue, donc
+// l'include passe sans controle, la ou `assertChildInclude` refuse ce qu'il ne connait pas. Avant
+// ce test, la table avait deja derive : elle declarait un `User.soignant` disparu du schema
 // depuis l'etape 1, ou le lien vers `Soignant` est passe a `EstablishmentMembership`.
+//
+// MAIS L'OBLIGATION N'EST PAS LA MEME, et ce paragraphe a longtemps affirme le contraire.
+// TENANT_CHILD_RELATIONS est une liste blanche qui EXIGE : ce qui n'y figure pas est refuse, donc
+// y declarer une relation la rend simplement lisible et l'exhaustivite ne coute rien.
+// GLOBAL_TENANT_RELATIONS fait l'inverse : y declarer une relation la RESTREINT, puisque
+// `assertGlobalInclude` refuse alors tout include dessus hors findUnique(OrThrow). Exiger ici
+// l'egalite avec toutes les relations du modele reviendrait donc a exiger qu'on restreigne un
+// futur `User.notificationPreferences` sans aucun rapport avec le cloisonnement. L'exigence est
+// resserree en consequence, et dite en trois proprietes ci-dessous.
 describe('GLOBAL_TENANT_RELATIONS reflete prisma/schema.prisma', () => {
   const globalModels = Object.keys(GLOBAL_TENANT_RELATIONS)
 
@@ -130,14 +137,66 @@ describe('GLOBAL_TENANT_RELATIONS reflete prisma/schema.prisma', () => {
     }
   })
 
-  // Dans les deux sens, comme pour TENANT_CHILD_RELATIONS : une relation du schema absente de la
-  // table est un trou (l'include passerait sans controle) ; une entree de la table absente du
-  // schema est une declaration morte, qui ne protege rien et ne se voit pas a l'usage.
-  it.each(globalModels)('reflete exactement les relations de %s', (model) => {
+  // Premiere et deuxieme proprietes (voir l'en-tete du bloc pour le pourquoi du resserrement) :
+  // ce que la table doit garantir est qu'aucune relation MENANT A DU TENANT n'echappe au
+  // controle — la seule propriete que `assertGlobalInclude` exploite, et la seule qui compte
+  // puisqu'il echoue OUVERT. Les deux sens sont enonces separement pour que l'echec nomme le
+  // defaut plutot que de dire « deux objets different ».
+  const MODELES_DE_TENANT = new Set([...SERVICE_MODELS, ...ESTABLISHMENT_MODELS])
+
+  it.each(globalModels)('declare toutes les relations de %s qui menent a du tenant', (model) => {
     const body = models.get(model)
     expect(body).toBeDefined()
-    expect([...(GLOBAL_TENANT_RELATIONS[model] ?? [])].sort()).toEqual(
-      Object.keys(relationsOf(body ?? '')).sort(),
+    const declarees = [...(GLOBAL_TENANT_RELATIONS[model] ?? [])]
+
+    // Le trou : une relation vers un modele de tenant absente de la table n'est pas vue, donc
+    // l'include passe sans controle et ramene la donnee de TOUS les tenants.
+    const manquantes = Object.entries(relationsOf(body ?? ''))
+      .filter(([field, target]) => MODELES_DE_TENANT.has(target) && !declarees.includes(field))
+      .map(([field, target]) => `${model}.${field} -> ${target}`)
+    expect(manquantes).toEqual([])
+  })
+
+  it.each(globalModels)('ne declare aucune relation morte sur %s', (model) => {
+    const body = models.get(model)
+    expect(body).toBeDefined()
+    const relations = relationsOf(body ?? '')
+
+    // L'autre sens, inchange : une entree de la table absente du schema ne protege rien et ne se
+    // voit pas a l'usage. C'est exactement la derive qui avait eu lieu (`User.soignant`).
+    const mortes = [...(GLOBAL_TENANT_RELATIONS[model] ?? [])].filter(
+      (field) => relations[field] === undefined,
     )
+    expect(mortes).toEqual([])
+  })
+
+  // LA FRICTION QUI RESTE, NOMMEE PLUTOT QUE SUPPRIMEE. Les deux tests ci-dessus laissent
+  // passer, en silence, une relation d'un modele global qui ne pointe vers AUCUN modele de
+  // tenant. C'est exactement ce qu'on voulait pour `User.notificationPreferences` — mais « ne
+  // pointe vers aucun modele de tenant » est une conclusion qu'aucune regle syntaxique ne peut
+  // tirer seule : une relation vers un modele global (ou vers un modele qui n'est dans aucune
+  // des trois listes) peut tres bien redescendre vers du tenant au niveau suivant, et
+  // `assertGlobalInclude` ne regarde que le premier niveau — la descente dans les inclusions
+  // imbriquees est reportee a l'etape 3 par decision explicite (voir
+  // `docs/multi-tenant/decisions-etape-2.md`).
+  //
+  // Ce test tient donc la liste, vide a ce jour, des relations de modeles globaux qui ne menent
+  // pas a du tenant. Une relation ajoutee la-bas le fait echouer, et la reparation est d'ecrire
+  // ici le nom de la relation et POURQUOI elle n'expose pas de donnee de tenant — pas de la
+  // declarer dans GLOBAL_TENANT_RELATIONS, ce qui interdirait un include parfaitement legitime.
+  // C'est la friction, et elle est a sa place : le cout est une ligne a ecrire, le benefice est
+  // qu'aucune relation d'un modele global n'entre au schema sans que quelqu'un ait tranche.
+  const SANS_DONNEE_DE_TENANT: readonly string[] = []
+
+  it('n a aucune relation de modele global non classee', () => {
+    const nonClassees = globalModels.flatMap((model) =>
+      Object.entries(relationsOf(models.get(model) ?? ''))
+        .filter(([field, target]) => {
+          const declaree = [...(GLOBAL_TENANT_RELATIONS[model] ?? [])].includes(field)
+          return !declaree && !MODELES_DE_TENANT.has(target)
+        })
+        .map(([field, target]) => `${model}.${field} -> ${target}`),
+    )
+    expect(nonClassees.filter((relation) => !SANS_DONNEE_DE_TENANT.includes(relation))).toEqual([])
   })
 })

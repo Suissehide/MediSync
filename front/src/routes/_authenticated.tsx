@@ -43,6 +43,16 @@ export const Route = createFileRoute('/_authenticated')({
   // requetes (React Query lie l'observateur au client a la construction et
   // ne le relie jamais) et afficherait la donnee d'un autre service. Le
   // `beforeLoad` ci-dessus, lui, passe par `context.queryClient`, tenu a
-  // jour par `AppRoutes`, et sans observateur : il est sur.
+  // jour par `AppRoutes`, et sans observateur : il est sur. C'est bien
+  // l'OBSERVATEUR qui est interdit ici, pas la requete — `ensureQueryData`
+  // sur le client courant n'abonne rien et ne survit a rien.
+  //
+  // La meme interdiction vaut pour tout ce qui vit au-dessus des deux
+  // layouts de tenant : `__root.tsx`, `components/root.layout.tsx`, et la
+  // barre de navigation, rendue par `dashboard.layout.tsx` donc aussi par
+  // `/user/settings`. Son panneau des taches, seul widget de la barre qui
+  // lise une API de service, se garde par une correspondance de route dans
+  // `navbar.tsx` — jamais par le contexte du store, qui porte encore le
+  // dernier service visite sur ces ecrans-la.
   component: () => <Outlet />,
 })

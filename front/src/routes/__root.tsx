@@ -67,12 +67,22 @@ function RootErrorComponent({ error }: ErrorComponentProps) {
 // garde l'observateur qu'il avait, donc l'ANCIEN client de requetes (React
 // Query lie l'observateur au client a la construction et ne le relie jamais)
 // : il continuerait d'afficher, ou de recharger, la donnee d'un autre
-// service. Les ecrans qui lisent une API de tenant vivent sous `$serviceId`
-// / `admin` ; ces deux layouts sont demontes au changement PARCE QU'ILS
-// DECLARENT `remountDeps: ({ params }) => params`, et pour aucune autre
-// raison — sans cette ligne le routeur re-rend au lieu de remonter, et
-// l'invariant ci-dessus ne tiendrait plus nulle part. Verrouille par
-// `_authenticated/e/$establishmentId/remontage.test.tsx`.
+// service. Tout ce qui lit une API de tenant n'est monte que sous
+// `$serviceId` / `admin` ; ces deux layouts sont demontes au changement
+// PARCE QU'ILS DECLARENT `remountDeps: ({ params }) => params`, et pour
+// aucune autre raison — sans cette ligne le routeur re-rend au lieu de
+// remonter, et l'invariant ci-dessus ne tiendrait plus nulle part.
+//
+// « Tout ce qui » et non « tout ecran qui » : un composant echappe a l'arbre
+// des ecrans, la barre de navigation, rendue par `DashboardLayout` donc
+// aussi par `/user/settings`, qui vit hors des deux layouts. Son panneau des
+// taches lit une API de service ; il se garde par une CORRESPONDANCE DE
+// ROUTE (`useMatchRoute`, dans `navbar.tsx`) et non par le contexte du
+// store, lequel porte encore le dernier service visite sur ces ecrans-la. Y
+// ajouter un widget qui lit une API de tenant exige la meme garde.
+//
+// Verrouille par `_authenticated/e/$establishmentId/remontage.test.tsx` et
+// `components/navbar.test.tsx`.
 function Root() {
   return (
     <>

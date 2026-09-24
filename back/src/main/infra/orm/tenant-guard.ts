@@ -56,16 +56,21 @@ const NESTED_RELATIONS: Record<string, Record<string, string>> = {
 // c'est la seule façon de garantir que les enfants renvoyés appartiennent à un seul tenant.
 //
 // Ce contrôle ÉCHOUE OUVERT : une relation absente de cette table n'est simplement pas vue, donc
-// l'include passe sans contrôle. La table porte donc la même obligation d'exhaustivité que
-// TENANT_CHILD_RELATIONS plus bas, et elle est tenue de la même façon — exportée pour
-// `tenant-guard-schema.test.ts`, qui relit prisma/schema.prisma et exige l'égalité stricte, dans
-// les deux sens, pour chacun des modèles globaux déclarés ici. Une relation ajoutée, renommée ou
-// supprimée là-bas fait échouer la porte tant qu'elle n'est pas reportée ici. (Avant ce test, la
-// table avait déjà dérivé : elle désignait un `User.soignant` disparu depuis l'étape 1, où le lien
-// vers `Soignant` est passé à `EstablishmentMembership`.)
+// l'include passe sans contrôle. La table porte donc une obligation d'exhaustivité, tenue par
+// `tenant-guard-schema.test.ts`, qui relit prisma/schema.prisma — mais une obligation plus
+// étroite que celle de TENANT_CHILD_RELATIONS plus bas, et il faut lire la différence : toute
+// relation d'un modèle global MENANT A UN MODELE DE TENANT doit figurer ici, et toute entrée
+// d'ici doit exister au schéma. Ce qui n'est PAS exigé, c'est de déclarer les relations qui ne
+// mènent pas à du tenant : déclarer une relation ici la RESTREINT (plus d'include hors
+// findUnique), et une exigence d'égalité stricte forcerait à restreindre, par exemple, un futur
+// `User.notificationPreferences` sans aucun rapport avec le cloisonnement. Le test tient à la
+// place la liste — vide à ce jour — de ces relations-là, pour qu'aucune n'entre au schéma sans
+// qu'on ait tranché. (Avant ce test, la table avait déjà dérivé : elle désignait un
+// `User.soignant` disparu depuis l'étape 1, où le lien vers `Soignant` est passé à
+// `EstablishmentMembership`.)
 //
 // `User` et `Establishment` ne sont ni dans SERVICE_MODELS ni dans ESTABLISHMENT_MODELS : ce sont
-// des modèles globaux, et toutes leurs relations mènent à des données de tenant.
+// des modèles globaux, et toutes leurs relations mènent aujourd'hui à des données de tenant.
 export const GLOBAL_TENANT_RELATIONS: Record<string, readonly string[]> = {
   User: ['establishmentMemberships'],
   Establishment: [
