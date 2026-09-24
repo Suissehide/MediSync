@@ -17,5 +17,8 @@ export default async function seedTenant(prisma: PrismaClient) {
   const serviceB = await prisma.service.create({
     data: { establishmentId: establishment.id, name: 'Pneumologie' },
   })
-  return { establishment, services: [serviceA, serviceB] }
+  // Champs nommés plutôt qu'un tableau : avec `noUncheckedIndexedAccess`,
+  // déstructurer `services[0]`/`services[1]` les typerait `Service | undefined`
+  // alors que les deux existent toujours ici.
+  return { establishment, serviceA, serviceB }
 }

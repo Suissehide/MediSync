@@ -78,8 +78,7 @@ async function seedService(
 async function main() {
   console.log('🌱 Starting database seeding...')
 
-  const { establishment, services } = await seedTenant(prisma)
-  const [serviceA, serviceB] = services
+  const { establishment, serviceA, serviceB } = await seedTenant(prisma)
 
   // Soignants et locaux sont des ressources d'établissement (pas de
   // service) : le personnel et les salles sont partagés entre les deux

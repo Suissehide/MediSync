@@ -10,6 +10,7 @@
     "build": "wireit",
     "build:app": "wireit",
     "build:check-typedefs": "wireit",
+    "build:check-typedefs:prisma": "wireit",
     "build:transpile": "wireit",
     "clean": "wireit",
     "clean:npm": "wireit",
@@ -79,6 +80,7 @@
     "build:app": {
       "dependencies": [
         "build:check-typedefs",
+        "build:check-typedefs:prisma",
         "build:transpile"
       ]
     },
@@ -88,6 +90,18 @@
         "tsconfig.json",
         "src/tsconfig.json",
         "src/**/*.ts"
+      ],
+      "dependencies": [
+        "prisma:generate"
+      ],
+      "output": []
+    },
+    "build:check-typedefs:prisma": {
+      "command": "tsc --noemit --preserveWatchOutput -p prisma/tsconfig.json",
+      "files": [
+        "tsconfig.json",
+        "prisma/tsconfig.json",
+        "prisma/**/*.ts"
       ],
       "dependencies": [
         "prisma:generate"
@@ -257,13 +271,14 @@
       "output": []
     },
     "lint": {
-      "command": "biome lint src/main",
+      "command": "biome lint src/main prisma",
       "files": [
         "biome.json",
         "tsconfig.json",
         "src/tsconfig.json",
         "src/tsconfig.json",
-        "src/main/**"
+        "src/main/**",
+        "prisma/**/*.ts"
       ],
       "output": []
     },
