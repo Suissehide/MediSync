@@ -19,7 +19,7 @@ const servicesOf = (establishment: User['establishments'][number]) =>
   Array.isArray(establishment.services) ? establishment.services : []
 
 const establishmentOf = (user: User | null, establishmentId?: string) =>
-  !establishmentId ? undefined : establishmentsOf(user).find((e) => e.id === establishmentId)
+  establishmentId ? establishmentsOf(user).find((e) => e.id === establishmentId) : undefined
 
 // Un couple accessible : un service de l'arbre des appartenances, avec son
 // établissement. Dérivation commune au sélecteur de service (`TenantSelector`)
