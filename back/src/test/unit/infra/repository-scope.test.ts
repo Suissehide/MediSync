@@ -8,6 +8,7 @@ import { MembershipRepository } from '../../../main/infra/orm/repositories/membe
 import { PathwayRepository } from '../../../main/infra/orm/repositories/pathway.repository'
 import { PathwayTemplateRepository } from '../../../main/infra/orm/repositories/pathwayTemplate.repository'
 import { PatientRepository } from '../../../main/infra/orm/repositories/patient.repository'
+import { PatientServiceFileRepository } from '../../../main/infra/orm/repositories/patientServiceFile.repository'
 import { PlanningCycleRepository } from '../../../main/infra/orm/repositories/planningCycle.repository'
 import { SlotRepository } from '../../../main/infra/orm/repositories/slot.repository'
 import { SlotTemplateRepository } from '../../../main/infra/orm/repositories/slotTemplate.repository'
@@ -18,6 +19,7 @@ import { assertTenantScope } from '../../../main/infra/orm/tenant-guard'
 import type { IocContainer } from '../../../main/types/application/ioc'
 import type { Tenant } from '../../../main/types/utils/tenant-context'
 import { TenantContext } from '../../../main/utils/tenant-context'
+import { TenantScopeMissingError } from '../../../main/utils/tenant-errors'
 
 type Call = { model: string; op: string; args: Record<string, unknown> }
 
@@ -1026,5 +1028,74 @@ describe('scoping appointment', () => {
       model: 'appointment', op: 'findUniqueOrThrow',
       args: { where: { id_serviceId: { id: 'a1', serviceId: 's1' } } },
     })
+  })
+})
+
+// Etape 3 du multi-tenant, tache 7 : `estSuiviAilleurs` est LA SEULE lecture de tout le back qui
+// traverse volontairement la frontiere entre services (design §5.3). Ce bloc en verifie le
+// mecanisme, pas seulement le resultat : la forme exacte de la requete (ses deux bornes, memes
+// sous `runAsSystem`), et — a la place ou l'aurait laissee un simple test de retour — la preuve
+// que cette forme precise serait refusee par le garde-fou d'ORM sans le mode encadre. Voir aussi
+// back/src/test/unit/infra/runAsSystem-unicite.test.ts (unicite de l'exception dans les sources)
+// et back/src/test/e2e/dossier-service.test.ts (comportement de bout en bout, cloisonnement).
+describe('PatientServiceFileRepository.estSuiviAilleurs', () => {
+  it('interroge sous runAsSystem, avec l etablissement courant et un service different du courant', async () => {
+    const { prisma, calls } = buildFakePrisma({ 'patientServiceFile.findFirst': { id: 'sf-autre' } })
+    const ctx = new TenantContext()
+    const spy = jest.spyOn(ctx, 'runAsSystem')
+    const repo = new PatientServiceFileRepository(buildContainer(prisma, ctx))
+
+    const resultat = await ctx.run(tenant, () => repo.estSuiviAilleurs('p1'))
+
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(calls).toHaveLength(1)
+    expect(calls[0]).toMatchObject({
+      model: 'patientServiceFile', op: 'findFirst',
+      args: {
+        where: { patientId: 'p1', establishmentId: 'e1', serviceId: { not: 's1' } },
+        select: { id: true },
+      },
+    })
+    // Rien d'autre qu'un booleen ne sort de la fonction : la ligne trouvee
+    // (`{ id: 'sf-autre' }`) n'est jamais retournee telle quelle.
+    expect(resultat).toBe(true)
+  })
+
+  it('rend vrai quand un autre sous-dossier existe, faux sinon', async () => {
+    const ctx = new TenantContext()
+
+    const { prisma: prismaAvecAutre } = buildFakePrisma({ 'patientServiceFile.findFirst': { id: 'sf-autre' } })
+    const repoAvecAutre = new PatientServiceFileRepository(buildContainer(prismaAvecAutre, ctx))
+    await expect(ctx.run(tenant, () => repoAvecAutre.estSuiviAilleurs('p1'))).resolves.toBe(true)
+
+    const { prisma: prismaSansAutre } = buildFakePrisma({ 'patientServiceFile.findFirst': null })
+    const repoSansAutre = new PatientServiceFileRepository(buildContainer(prismaSansAutre, ctx))
+    await expect(ctx.run(tenant, () => repoSansAutre.estSuiviAilleurs('p1'))).resolves.toBe(false)
+  })
+
+  // Le mecanisme, isole : la forme EXACTE de requete que la fonction construit
+  // (patientId + establissement courant + serviceId EXCLU du courant) est celle qu'un
+  // `runAsSystem` retire de la portee du garde-fou. Sans lui (store `kind: 'tenant'`), le
+  // garde-fou refuse — c'est ce refus qui rend `runAsSystem` necessaire, pas une preference de
+  // style. Avec lui (store `kind: 'system'`), il laisse passer : c'est exactement ce que fait
+  // tenant-guard.ts (`if (store.kind === 'system') { return }`, voir infra/orm/tenant-guard.ts).
+  it('la forme de requete qu elle construit est refusee par le garde-fou hors du mode encadre, et permise dedans', () => {
+    const args = {
+      where: { patientId: 'p1', establishmentId: 'e1', serviceId: { not: 's1' } },
+      select: { id: true },
+    }
+    expect(() =>
+      assertTenantScope(
+        { model: 'PatientServiceFile', operation: 'findFirst', args },
+        { kind: 'tenant', tenant },
+      ),
+    ).toThrow(TenantScopeMissingError)
+
+    expect(() =>
+      assertTenantScope(
+        { model: 'PatientServiceFile', operation: 'findFirst', args },
+        { kind: 'system' },
+      ),
+    ).not.toThrow()
   })
 })

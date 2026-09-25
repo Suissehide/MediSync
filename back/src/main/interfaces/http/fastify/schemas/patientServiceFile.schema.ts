@@ -36,6 +36,13 @@ export const patientServiceFileResponseSchema = z.object({
   establishmentId: z.string(),
   createdAt: z.coerce.date(),
   ...patientServiceFileEntity,
+  // Signal de suivi ailleurs (spec §5.3, tache 7) : vrai si ce patient a un sous-dossier dans un
+  // autre service du meme etablissement. Calcule, jamais stocke — absent de
+  // `patientServiceFileEntity` (partagee avec le corps d'ecriture) pour qu'aucune ecriture ne
+  // puisse le poser. Champ administratif, pas clinique : ni `stripClinicalFields` ni
+  // `stripClinicalInput` (utils/clinical-fields.ts) ne le nomment, il est donc visible du
+  // secretariat comme les autres champs administratifs du sous-dossier.
+  followedElsewhere: z.boolean(),
 })
 
 export const patientServiceFileParamsSchema = z.object({

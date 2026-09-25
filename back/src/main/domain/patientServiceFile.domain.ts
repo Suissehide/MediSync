@@ -38,6 +38,12 @@ class PatientServiceFileDomain implements PatientServiceFileDomainInterface {
   ensureExists(patientId: string): Promise<void> {
     return this.patientServiceFileRepository.ensureExists(patientId)
   }
+
+  // Passe-plat vers l'exception unique du depot (spec §5.3) : voir
+  // PatientServiceFileRepository.estSuiviAilleurs pour ce qu'elle fait et comment.
+  estSuiviAilleurs(patientId: string): Promise<boolean> {
+    return this.patientServiceFileRepository.estSuiviAilleurs(patientId)
+  }
 }
 
 export { PatientServiceFileDomain }
