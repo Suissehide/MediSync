@@ -7,10 +7,14 @@ import {
   PROGRAM_TYPE_OPTIONS,
 } from '../../../../constants/patient.constant.ts'
 import { withForm } from '../../../../hooks/formConfig.tsx'
-import { patientFormOpts } from './form.patient.ts'
+import { patientServiceFileFormOpts } from './form.patient.ts'
 
+// Tous ces champs vivent sur le sous-dossier de service (`types/patientServiceFile.ts`, étape 3
+// du multi-tenant) : leur découpage ne change pas, seul le formulaire auquel ils sont liés
+// change (`patientServiceFileFormOpts` au lieu de `patientFormOpts`). `edit.patient.tsx` ne
+// monte ce composant qu'une fois la lecture du sous-dossier résolue (`serviceFileReady`).
 export const PathwayInclusionFields = withForm({
-  ...patientFormOpts,
+  ...patientServiceFileFormOpts,
   render: ({ form }) => {
     return (
       <div className="h-fit flex-1 flex flex-col gap-2">
