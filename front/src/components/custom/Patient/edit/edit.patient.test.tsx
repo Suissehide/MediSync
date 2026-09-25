@@ -101,7 +101,8 @@ describe('EditPatient — une lecture du sous-dossier en échec (refus d’accè
 
     // Le refus d'accès (403) doit remonter comme une vraie erreur affichée — pas comme une
     // absence de sous-dossier (ce dernier cas, la 404, est verrouillé côté hook par
-    // `usePatientServiceFile.test.tsx`).
+    // `usePatientServiceFile.test.tsx`, et désormais aussi à ce niveau, voir plus bas « le
+    // sous-dossier est absent (404) », m6).
     await waitFor(() => expect(useToastStore.getState().toasts.length).toBeGreaterThan(0))
 
     // Bloc « dossier de ce service » (details.patient.tsx) : absent.
@@ -155,6 +156,35 @@ describe('EditPatient — une lecture du sous-dossier en échec (refus d’accè
     // La lecture du sous-dossier a bien été tentée (GET, en échec par le 403 configuré
     // ci-dessus) : c'est le PATCH qui ne doit jamais partir.
     expect(patchCalls.some(([url]) => url.toString().includes('/service-file'))).toBe(false)
+  })
+})
+
+// Correctif tour 2 (task-11-review.md, m6) — ce chemin (la 404 normale, spec §2.1/§5.1) ne
+// pouvait pas s'écrire au niveau du composant avant que `.env.test` fixe
+// `VITE_API_BASE_URL` : `fetchWithAuth` fait `new URL(response.url)` sur toute réponse 404
+// (`api/fetchWithAuth.ts:89-90`), et sans base d'URL définie, `tenantApiUrl()` produit une URL
+// relative que `new URL()` ne sait pas parser sans base — la 404 normale levait alors une
+// `TypeError`, remontait comme une vraie erreur, et démontait les blocs du sous-dossier :
+// exactement l'état que ce test verrouille comme n'ARRIVANT PAS.
+describe('EditPatient — le sous-dossier est absent (404), un état normal', () => {
+  it("n'affiche aucune erreur et garde les champs du sous-dossier affichés, vides, éditables", async () => {
+    const fetchMock = buildFetchMock([
+      {
+        match: (url, method) => url.includes('/service-file') && method === 'GET',
+        respond: () => ({ ok: false, status: 404, json: async () => ({}) }),
+      },
+    ])
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderEditPatient()
+
+    const notes = await screen.findByLabelText('Notes')
+    expect(notes).toHaveValue('')
+    expect(screen.getByLabelText('Soignant référent')).toBeInTheDocument()
+
+    // Contrairement au 403 (refus, une vraie erreur) : aucun toast d'erreur pour une absence
+    // normale.
+    expect(useToastStore.getState().toasts).toHaveLength(0)
   })
 })
 
@@ -533,6 +563,56 @@ describe('EditPatient — un champ touché puis remis à sa valeur d’origine',
   })
 })
 
+// Correctif tour 2 (task-11-review.md, m3) — même garde que côté sous-dossier
+// (`changedFields.length === 0 → return`, plus haut), appliquée au formulaire du patient : sans
+// elle, cliquer « Sauvegarder » sans avoir touché un seul champ du patient PATCHait quand même
+// l'objet complet (la photographie lue, réécrite telle quelle — une perte de mise à jour
+// possible si quelqu'un d'autre l'a modifié entre-temps) et affichait « Patient modifié avec
+// succès » alors que rien n'avait changé.
+describe('EditPatient — rien à écrire côté patient (m3)', () => {
+  it('ne PATCH pas le patient et ne montre pas son toast de succès', async () => {
+    const patientBodies: Record<string, unknown>[] = []
+    const fetchMock = buildFetchMock([
+      {
+        match: (url, method) => url.includes('/service-file') && method === 'GET',
+        respond: () => ({ ok: true, status: 200, json: async () => serviceFileFixture }),
+      },
+      {
+        match: (url, method) => url.includes('/service-file') && method === 'PATCH',
+        respond: () => ({ ok: true, status: 200, json: async () => serviceFileFixture }),
+      },
+      {
+        match: (url, method) => /\/patient\/p1$/.test(url) && method === 'PATCH',
+        respond: (_url, init) => {
+          patientBodies.push(JSON.parse((init?.body as string) ?? '{}'))
+          return { ok: true, status: 200, json: async () => patientFixture }
+        },
+      },
+    ])
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderEditPatient()
+
+    // Un champ du sous-dossier est modifié, aucun champ du patient ne l'est : seule l'écriture
+    // du sous-dossier doit partir.
+    const notes = await screen.findByLabelText('Notes')
+    await userEvent.clear(notes)
+    await userEvent.type(notes, 'note modifiée')
+
+    await userEvent.click(await screen.findByRole('button', { name: /Sauvegarder/i }))
+
+    await waitFor(() =>
+      expect(
+        useToastStore.getState().toasts.some((t) => typeof t.title === 'string' && t.title.includes('Dossier de service modifié')),
+      ).toBe(true),
+    )
+    expect(patientBodies).toHaveLength(0)
+    expect(
+      useToastStore.getState().toasts.some((t) => typeof t.title === 'string' && t.title.includes('Patient modifié')),
+    ).toBe(false)
+  })
+})
+
 describe('EditPatient — rien à écrire côté sous-dossier', () => {
   it('ne PATCH pas le sous-dossier et ne montre pas son toast de succès', async () => {
     const bodies: Record<string, unknown>[] = []
@@ -653,5 +733,44 @@ describe('EditPatient — la portée est nommée sur les trois onglets qui en ma
     expect(
       screen.getByText(/Sortie et bilan — dossier de ce service, non visible/),
     ).toBeInTheDocument()
+  })
+})
+
+// Correctif tour 2 (task-11-review.md, m2) — l'ancien écran enveloppait tout dans un seul
+// `<form onSubmit>` ; le remplacer par un `<Button type="button">` hors de tout formulaire avait
+// fait disparaître l'enregistrement par la touche Entrée, une régression réelle sur un écran de
+// saisie utilisé toute la journée. Le remède est un seul `<form>` natif pour tout l'écran (pas
+// un par bloc, qui referait le défaut des deux formulaires indépendants), dont le bouton
+// « Sauvegarder » est `type="submit"`.
+describe('EditPatient — la touche Entrée enregistre (m2)', () => {
+  it('déclenche le même enregistrement que le bouton « Sauvegarder »', async () => {
+    // Un champ à une ligne (`field.Input`, pas `field.TextArea` comme « Notes » — une zone de
+    // texte multi-lignes ne doit surtout pas se mettre à enregistrer sur Entrée, ce serait
+    // empêcher tout retour à la ligne). « Prénom » (`IdentityFields`, onglet par défaut) est un
+    // `Input` natif, le cas où Entrée soumet nativement un `<form>`.
+    const patientBodies: Record<string, unknown>[] = []
+    const fetchMock = buildFetchMock([
+      {
+        match: (url, method) => url.includes('/service-file') && method === 'GET',
+        respond: () => ({ ok: false, status: 404, json: async () => ({}) }),
+      },
+      {
+        match: (url, method) => /\/patient\/p1$/.test(url) && method === 'PATCH',
+        respond: (_url, init) => {
+          patientBodies.push(JSON.parse((init?.body as string) ?? '{}'))
+          return { ok: true, status: 200, json: async () => ({ ...patientFixture, firstName: 'Jeanne' }) }
+        },
+      },
+    ])
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderEditPatient()
+
+    const firstName = await screen.findByLabelText('Prénom')
+    await userEvent.clear(firstName)
+    await userEvent.type(firstName, 'Jeanne{Enter}')
+
+    await waitFor(() => expect(patientBodies).toHaveLength(1))
+    expect(patientBodies[0]).toMatchObject({ firstName: 'Jeanne' })
   })
 })
