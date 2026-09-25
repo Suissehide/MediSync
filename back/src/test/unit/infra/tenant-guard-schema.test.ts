@@ -330,4 +330,27 @@ describe('SUPERADMIN_OPERATIONS reflete le schema', () => {
       expect([...SERVICE_MODELS, ...ESTABLISHMENT_MODELS]).toContain(modele)
     }
   })
+
+  // TOUR DE CORRECTION 1 (tache 1) — Important de la revue : les deux tests ci-dessus ne tiennent
+  // que la CONFORMITE au schema (modeles existants, modeles de tenant), jamais le CONTENU. Ils
+  // restaient verts si la revue ajoutait `Soignant: ['findMany', 'deleteMany', 'updateMany']` —
+  // Soignant est un modele de tenant qui existe au schema, donc les deux tests structurels
+  // n'avaient rien a y redire, alors que la liste est la frontiere entre le super-admin et les
+  // donnees de sante : c'est son CONTENU exact, pas seulement sa forme, qui doit etre tenu. Ce
+  // test epingle donc la valeur entiere, cle par cle et operation par operation : tout ajout,
+  // retrait ou changement — un modele de plus, une operation de plus sur un modele deja present,
+  // meme un simple reordonnancement des cles — le fait rougir, forcant une revue deliberee au
+  // lieu d'un silence. Le format est volontairement plat (`toEqual` sur l'objet entier) plutot
+  // qu'une assertion par cle : un diff Jest sur l'objet entier montre immediatement CE QUI a
+  // change, ce qu'une boucle avec `expect(...).toContain(...)` ne peut pas montrer aussi
+  // clairement.
+  it('est exactement la liste attendue — tout changement de contenu doit etre delibere', () => {
+    expect(SUPERADMIN_OPERATIONS).toEqual({
+      Service: ['count', 'findMany'],
+      EstablishmentMembership: ['count', 'findMany', 'create'],
+      ServiceMembership: ['count', 'findMany'],
+      Patient: ['count'],
+      ActivityLog: ['findMany', 'count'],
+    })
+  })
 })

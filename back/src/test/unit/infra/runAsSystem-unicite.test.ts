@@ -1,6 +1,8 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
 
+import ts from 'typescript'
+
 // `runAsSystem` (utils/tenant-context.ts) retire l'exigence du garde-fou d'ORM plutot que de la
 // deplacer : sous ce mode, une requete peut lire N'IMPORTE QUEL etablissement et service, le
 // garde-fou ne verifiant plus rien (voir infra/orm/tenant-guard.ts, `assertTenantScope`,
@@ -13,6 +15,10 @@ import { join, relative, sep } from 'node:path'
 //   2. Le signal de suivi ailleurs (`infra/orm/repositories/patientServiceFile.repository.ts`,
 //      `estSuiviAilleurs`, design §5.3) : LA SEULE lecture de tout le chantier qui traverse
 //      volontairement la frontiere entre services, pour rendre un booleen et rien d'autre.
+//
+// `runAsSuperAdmin` (meme fichier, tache 1 / etape 4a) y ajoute un troisieme mode, qui ne retire
+// rien mais substitue au filtre de tenant une liste declaree et exhaustive de couples (modele,
+// operation) — SUPERADMIN_OPERATIONS, infra/orm/tenant-guard.ts.
 //
 // Une exception a une regle de cloisonnement ne vaut que si elle reste la seule — spec §5.3 :
 // "cela se verifie par un test, pas par une relecture." Ce test relit les sources plutot que de
@@ -30,14 +36,9 @@ import { join, relative, sep } from 'node:path'
 //
 //   A. tout ce qui REFERENCE la methode `runAsSystem` (au-dela du seul appel direct — voir
 //      APPEL_RUN_AS_SYSTEM ci-dessous) ;
-//   B. tout ce qui CONSTRUIT la valeur `{ kind: 'system' }` elle-meme, quel que soit le nom de
-//      la methode qui l'enveloppe — c'est CA, et non le nom `runAsSystem`, qui fait effectivement
-//      entrer le contexte en mode systeme aux yeux du garde-fou (tenant-guard.ts:567).
-//
-// Le second volet est celui qui tient la propriete que la spec demande : meme si quelqu'un
-// renomme, enveloppe ou indirecte `runAsSystem` sous un nom que le volet A ne reconnaitrait pas,
-// il ne peut pas fabriquer le mode systeme sans ecrire cette construction — et elle est comptee
-// ici, une fois, au seul endroit legitime.
+//   B. tout ce qui INVOQUE la capacite d'entrer en mode non-tenant (system OU superadmin) —
+//      REECRIT au tour de correction 1 de la tache 1, voir le commentaire d'appelsDeuxArguments
+//      plus bas pour le pourquoi.
 //
 // Volet A : reference a `runAsSystem`, sous forme d'ACCES A LA PROPRIETE plutot que du seul
 // appel `.runAsSystem(`. `\b` (limite de mot) ferme la forme sur `.bind` (V2) et sur l'espace
@@ -46,22 +47,6 @@ import { join, relative, sep } from 'node:path'
 // avant le nom) et l'entree d'interface (`runAsSystem<T>(fn...): Promise<T>` dans
 // types/utils/tenant-context.ts, meme raison).
 const APPEL_RUN_AS_SYSTEM = /\.runAsSystem\b/
-
-// Volet B : construction de la valeur `{ kind: 'system' }` (avec ou sans espaces, guillemets
-// simples ou doubles) — PAS sa lecture (`store.kind === 'system'`, dans tenant-guard.ts, ne
-// matche pas : il n'y a pas de `:` entre `kind` et `'system'`). C'est la forme que prend, dans le
-// code source, l'entree en mode systeme quel que soit le nom de la methode qui l'appelle.
-const CONSTRUCTION_MODE_SYSTEME = /\{\s*kind\s*:\s*['"]system['"]\s*\}/
-
-// Meme volet B, pour le troisieme contexte du garde-fou (tache 1, etape 4a) : la construction de
-// la valeur `{ kind: 'superadmin' }`. `runAsSuperAdmin` (utils/tenant-context.ts) l'introduit sur
-// le meme modele que `runAsSystem` — sauf que ce mode-la ne retire rien : il substitue au filtre
-// de tenant une liste declaree et exhaustive de couples (modele, operation) permis
-// (SUPERADMIN_OPERATIONS, tenant-guard.ts). Une deuxieme construction de cette valeur, ailleurs
-// que par `runAsSuperAdmin`, contournerait cette liste exactement comme une deuxieme construction
-// de `{ kind: 'system' }` contournerait le filtre de tenant — d'ou la meme garde, sur la meme
-// forme.
-const CONSTRUCTION_MODE_SUPERADMIN = /\{\s*kind\s*:\s*['"]superadmin['"]\s*\}/
 
 // Les deux seuls emplois legitimes du back de production, pour le volet A. Chaque entree porte
 // un nombre D'APPELS, pas un nombre de fichiers : un second appel ajoute dans un fichier deja
@@ -79,18 +64,10 @@ const AUTORISES = [
   },
 ]
 
-// Seul fichier ou le volet B a le droit de trouver une construction : celui qui DEFINIT
-// `runAsSystem` et qui est donc, par construction, le seul endroit legitime d'ou peut naitre la
-// valeur `{ kind: 'system' }`.
+// Seul fichier ou le volet B a le droit de trouver un appel : celui qui DEFINIT `runAsSystem` et
+// `runAsSuperAdmin`, et qui est donc, par construction, le seul endroit legitime d'ou peut naitre
+// un mode non-tenant.
 const SEUL_CONSTRUCTEUR_LEGITIME = 'utils/tenant-context.ts'
-
-// `types/utils/tenant-context.ts` declare le TYPE `TenantStore = { kind: 'tenant'; ... } | {
-// kind: 'system' }` : la meme sous-chaine y apparait textuellement, mais a titre de membre
-// d'union TypeScript, jamais construite comme valeur executee. Un fichier de declaration de type
-// pur ne peut, par construction, faire entrer aucun contexte en mode systeme — il est donc exclu
-// du volet B plutot que de tenter de distinguer par regex un litteral de type d'un litteral de
-// valeur (les deux s'ecrivent `{ kind: 'system' }`).
-const FICHIER_DECLARATION_TYPE = 'types/utils/tenant-context.ts'
 
 // Jest tourne via @swc/jest en module CommonJS (jest.config.ts) : __dirname est disponible.
 const RACINE = join(__dirname, '../../../main')
@@ -114,6 +91,77 @@ const lignesCorrespondantes = (racine: string, motif: RegExp) =>
       .split('\n')
       .map((ligne, index) => ({ fichier: relatif, ligne: index + 1, texte: ligne.trim() }))
       .filter((emplacement) => motif.test(emplacement.texte))
+  })
+
+// TOUR DE CORRECTION 1 (tache 1) — Critique 2 de la revue : l'ancien volet B cherchait la VALEUR
+// `{ kind: 'system' }` / `{ kind: 'superadmin' }` comme une chaine de caracteres, ligne par
+// ligne. Sur sept sabotages soumis a l'epreuve, cinq passaient a travers : gabarit
+// (`` `system` `` plutot que `'system'`), litteral etale sur plusieurs lignes, virgule finale
+// avant l'accolade, etalement (`{ ...marqueurExistant }`) et constante intermediaire construite
+// hors du litteral inline. Les trois premiers ne sont que des artefacts du DECOUPAGE PAR LIGNE
+// (une regex qui ne regarde qu'une ligne a la fois ne peut pas voir un litteral qui en occupe
+// trois, ni tolerer une virgule ou un guillemet different) ; les deux derniers sont plus profonds
+// : ils deguisent la VALEUR sans jamais re-ecrire `{ kind: 'system' }` nulle part ailleurs que
+// dans le fichier legitime — aucun scan de texte, aussi soigneusement ecrit soit-il, ne peut
+// distinguer un `{ ...x }` legitime d'un `{ ...x }` qui propage la capacite ailleurs.
+//
+// Ce que ces cinq sabotages ont EN COMMUN, et qui ne change JAMAIS quelle que soit la facon dont
+// la valeur est ecrite : aucun n'a d'effet sans un appel a DEUX arguments a une methode nommee
+// `run` (la signature de `AsyncLocalStorage#run(store, callback)`). C'est ce geste — pas la
+// forme du premier argument — qui fait que `tenantContext.peek()` lira ensuite `{ kind: 'system'
+// }` ou `{ kind: 'superadmin' }` pendant toute la portee du rappel. Le volet B surveille donc
+// desormais CE geste : tout appel a deux arguments a une methode `.run(` (ou `['run'](`, meme
+// forme via un acces par crochet a nom litteral — la revue avait cite l'etalement comme un
+// contournement, et un acces dynamique par crochet en est un cousin direct), analyse comme du
+// CODE (l'AST TypeScript, via le compilateur deja present dans ce depot pour `tsc`) plutot que
+// comme du texte ligne par ligne. Analyser l'AST ferme au passage le multi-ligne et la virgule
+// finale (des artefacts du decoupage par ligne, pas des idiomes distincts) ; ne plus regarder la
+// VALEUR du premier argument ferme l'etalement et la constante intermediaire, puisque ni l'un ni
+// l'autre ne change la FORME de l'appel lui-meme.
+//
+// CE QUE CE VOLET NE COUVRE TOUJOURS PAS, dit honnetement plutot que par une expression qui
+// ferait semblant de le couvrir : un appel invoque par
+// une forme qui n'est ni `.run(` ni `['run'](` avec un nom litteral — `.call`/`.apply`/
+// `Reflect.apply`, une cle de crochet CALCULEE (`storage[unNomVariable](...)`), ou tout autre
+// detour qui ne prononce jamais litteralement le nom `run` a l'endroit de l'appel. Fermer ce
+// reste exigerait soit une analyse de flux de donnees complete (savoir que `unNomVariable` vaut
+// `'run'` a l'execution), soit une instrumentation a l'execution (intercepter reellement
+// `AsyncLocalStorage.prototype.run`) plutot qu'une lecture statique des sources — un chantier a
+// part, hors de ce qu'un test de conformite des sources peut honnetement garantir. C'est aussi,
+// plus fondamentalement, une limite du langage plutot que de ce test : le champ `storage` de
+// `TenantContext` est marque `private`, mais `private` en TypeScript s'efface entierement a la
+// compilation — a l'execution, n'importe quel code qui detient une reference vers l'instance
+// injectee de `tenantContext` (et elle est injectee presque partout via le conteneur Awilix) peut
+// lire `(tenantContext as any).storage` et l'invoquer directement, sans qu'aucune analyse de
+// SOURCE ne puisse s'y opposer — une vraie frontiere exigerait une encapsulation qui survit a
+// l'execution (`#champPrive` ou `WeakMap`), pas seulement au typage.
+const appelsDeuxArguments = (racine: string): { fichier: string; ligne: number }[] =>
+  fichiersDeProduction(racine).flatMap((chemin) => {
+    const relatif = relative(racine, chemin).split(sep).join('/')
+    const texte = readFileSync(chemin, 'utf8')
+    const source = ts.createSourceFile(chemin, texte, ts.ScriptTarget.Latest, true)
+    const trouvailles: { fichier: string; ligne: number }[] = []
+
+    const nommeRun = (expression: ts.Expression): boolean => {
+      if (ts.isPropertyAccessExpression(expression)) {
+        return expression.name.text === 'run'
+      }
+      if (ts.isElementAccessExpression(expression)) {
+        const cle = expression.argumentExpression
+        return ts.isStringLiteralLike(cle) && cle.text === 'run'
+      }
+      return false
+    }
+
+    const visiter = (noeud: ts.Node): void => {
+      if (ts.isCallExpression(noeud) && nommeRun(noeud.expression) && noeud.arguments.length === 2) {
+        const { line } = source.getLineAndCharacterOfPosition(noeud.getStart(source))
+        trouvailles.push({ fichier: relatif, ligne: line + 1 })
+      }
+      ts.forEachChild(noeud, visiter)
+    }
+    visiter(source)
+    return trouvailles
   })
 
 describe('unicite de l exception runAsSystem au cloisonnement multi-tenant', () => {
@@ -141,49 +189,33 @@ describe('unicite de l exception runAsSystem au cloisonnement multi-tenant', () 
     }
   })
 
-  it('ne construit la valeur { kind: "system" } qu au seul endroit legitime (volet B : la capacite, pas le nom)', () => {
-    const constructions = lignesCorrespondantes(RACINE, CONSTRUCTION_MODE_SYSTEME).filter(
-      (emplacement) => emplacement.fichier !== FICHIER_DECLARATION_TYPE,
-    )
+  it('n invoque la capacite d entrer en mode non-tenant qu au seul endroit legitime (volet B, reecrit : la capacite, pas la forme de la valeur)', () => {
+    const appels = appelsDeuxArguments(RACINE)
 
-    // Une seule construction dans tout src/main (hors declaration de type), et elle doit vivre
-    // dans le fichier qui possede `runAsSystem`. Une deuxieme construction — meme enveloppee sous
-    // un autre nom de methode, meme ajoutee dans ce meme fichier a cote de `runAsSystem` — pousse
-    // ce compte a deux et fait rougir cette assertion, quel que soit le nom choisi pour
-    // l'atteindre : c'est la propriete que le volet A, qui ne lit qu'un nom, ne peut pas garder
-    // seul (constat C1 de la revue de cette tache).
-    expect(constructions).toHaveLength(1)
-    expect(constructions[0]?.fichier).toBe(SEUL_CONSTRUCTEUR_LEGITIME)
-  })
-
-  // Meme volet B, pour le troisieme contexte (tache 1, etape 4a) : `runAsSuperAdmin` doit rester
-  // le seul endroit qui construit `{ kind: 'superadmin' }`, pour la meme raison que ci-dessus —
-  // c'est cette construction, et non le nom de la methode qui l'enveloppe, qui fait entrer le
-  // garde-fou dans ce mode.
-  it('ne construit la valeur { kind: "superadmin" } qu au seul endroit legitime (volet B : la capacite, pas le nom)', () => {
-    const constructions = lignesCorrespondantes(RACINE, CONSTRUCTION_MODE_SUPERADMIN).filter(
-      (emplacement) => emplacement.fichier !== FICHIER_DECLARATION_TYPE,
-    )
-
-    // Meme lecture que pour le mode systeme : une seule construction dans tout src/main (hors
-    // declaration de type), et elle doit vivre dans le fichier qui possede `runAsSuperAdmin`. Une
-    // deuxieme construction — meme enveloppee sous un autre nom de methode — pousse ce compte a
-    // deux et fait rougir cette assertion.
-    expect(constructions).toHaveLength(1)
-    expect(constructions[0]?.fichier).toBe(SEUL_CONSTRUCTEUR_LEGITIME)
+    // Trois appels legitimes dans tout src/main, tous dans utils/tenant-context.ts : `run` pour
+    // `enter`/`run` (tenant), pour `runAsSystem`, et pour `runAsSuperAdmin`. Un quatrieme appel
+    // — ou un appel deplace hors de ce fichier — pousse ce compte au-dela de 3 et fait rougir
+    // cette assertion, quelle que soit la facon dont son premier argument est ecrit (litteral,
+    // gabarit, multi-ligne, virgule finale, etalement, constante importee : aucun ne change la
+    // forme de CET appel, voir le commentaire d'appelsDeuxArguments ci-dessus).
+    expect(appels).toHaveLength(3)
+    for (const appel of appels) {
+      expect(appel.fichier).toBe(SEUL_CONSTRUCTEUR_LEGITIME)
+    }
   })
 })
 
 // Ce que ces deux volets NE couvrent PAS, dit honnetement plutot que par une expression qui
-// ferait semblant de le couvrir (revue tache 7, tour 1) : un appel a `runAsSystem` depuis
-// `back/src/test` (par exemple un test qui invoquerait `tenantContext.runAsSystem(...)` pour
-// fabriquer un contexte systeme de toutes pieces). `RACINE` ne lit que `src/main` — le code de
-// production livre — jamais `src/test`. Ce n'est pas un oubli : les tests unitaires legitimes de
-// ce depot construisent deja `{ kind: 'system' }` directement (repository-scope.test.ts,
-// tenant-context.test.ts, tenant-guard.test.ts) et appellent `runAsSystem` pour eprouver le
-// garde-fou lui-meme, si bien qu'etendre ce scan a `src/test` exigerait une liste d'autorisation
-// separee pour les tests — un chantier a part, hors du remede demande ici, et qui recoupe la
-// meme limite deja actee pour la porte de typage (`npm run build` ne type pas `src/test` non
-// plus : voir tache 7, revue, mineur m4). Un `runAsSystem` ou un `{ kind: 'system' }` ecrit dans un
-// fichier de test n'active d'ailleurs rien en production : il ne peut agir que sur l'execution de
-// ce test-la.
+// ferait semblant de le couvrir (revue tache 7, tour 1 ; complete au tour de correction 1 de la
+// tache 1 — voir le commentaire d'appelsDeuxArguments pour le detail du second volet) : un appel
+// a `runAsSystem`/`runAsSuperAdmin`, ou une invocation directe de `.run(`, depuis
+// `back/src/test` (par exemple un test qui fabriquerait un contexte systeme ou superadmin de
+// toutes pieces). `RACINE` ne lit que `src/main` — le code de production livre — jamais
+// `src/test`. Ce n'est pas un oubli : les tests unitaires legitimes de ce depot construisent deja
+// `{ kind: 'system' }` et `{ kind: 'superadmin' }` directement (repository-scope.test.ts,
+// tenant-context.test.ts, tenant-guard.test.ts) pour eprouver le garde-fou lui-meme, si bien
+// qu'etendre ce scan a `src/test` exigerait une liste d'autorisation separee pour les tests — un
+// chantier a part, hors du remede demande ici, et qui recoupe la meme limite deja actee pour la
+// porte de typage (`npm run build` ne type pas `src/test` non plus : voir tache 7, revue, mineur
+// m4). Un `runAsSystem`, un `runAsSuperAdmin` ou un appel `.run(` ecrit dans un fichier de test
+// n'active d'ailleurs rien en production : il ne peut agir que sur l'execution de ce test-la.

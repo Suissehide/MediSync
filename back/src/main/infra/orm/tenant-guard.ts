@@ -544,6 +544,39 @@ const assertData = (model: string, operation: string, data: unknown, store: Tena
   }
 }
 
+// TOUR DE CORRECTION 1 (tâche 1) — contrepartie, côté écriture, de assertTenantReadScope plus
+// bas : `assertRowScope`, appelé par `assertData` ci-dessus, compare la ligne à UN tenant
+// ambiant (`store.tenant`) — le superadmin n'en a aucun par construction, et sa seule écriture
+// déclarée à ce jour (EstablishmentMembership.create, tâche 6) doit justement pouvoir porter
+// N'IMPORTE QUEL établissement. `assertData` reste donc réservé, TEL QUEL, au contexte tenant et
+// aux appels IMBRIQUÉS (voir plus bas) ; cette fonction couvre l'appel de tête sous superadmin —
+// mêmes lignes, même récursion (`assertNestedRelations`), MOINS `assertRowScope`. C'est cette
+// récursion qui referme le trou que la revue a trouvé : dès qu'une écriture imbriquée touche un
+// modèle de tenant (`assertNestedWrite`, plus haut), elle retombe sur un nouvel appel à
+// `assertData` — celui-là inchangé, donc avec sa propre vérification de `assertRowScope` — qui
+// refuse alors (store toujours superadmin, jamais tenant) toute écriture imbriquée vers un
+// tenant. Seule la ligne de TÊTE, celle que SUPERADMIN_OPERATIONS a explicitement autorisée,
+// échappe à ce contrôle — pas ses enfants.
+const assertSuperAdminWriteRow = (model: string, operation: string, data: unknown, store: TenantStore): void => {
+  const rows = Array.isArray(data) ? data : [data]
+  for (const row of rows) {
+    if (!isDict(row)) {
+      throw new TenantScopeMissingError(model, operation, 'data')
+    }
+    assertNestedRelations(model, operation, row, store)
+  }
+}
+
+// Choisit, pour l'appel de tête (pas les imbriqués, qui repassent toujours par assertData plus
+// haut), le contrôle complet (tenant) ou la variante sans assertRowScope (superadmin).
+const assertWriteData = (model: string, operation: string, data: unknown, store: TenantStore): void => {
+  if (store.kind === 'tenant') {
+    assertData(model, operation, data, store)
+    return
+  }
+  assertSuperAdminWriteRow(model, operation, data, store)
+}
+
 // Entrées effectivement demandées par un include/select. `false` écarte explicitement la
 // relation ; `undefined` la laisse absente — c'est l'idiome d'une inclusion conditionnelle
 // (`{ enrollmentIssues: withIssues ? { where } : undefined }`), que Prisma traite exactement
@@ -747,34 +780,54 @@ const assertGlobalScope = (model: string, operation: string, args: Dict, store: 
   }
 }
 
-// Les deux contextes qui court-circuitent toute la suite de assertTenantScope, avant la logique
-// tenant : `system` retire l'exigence de filtre pour toute opération (deux emplois en
-// production, voir runAsSystem-unicite.test.ts) ; `superadmin` la remplace par une liste
-// déclarée et exhaustive de couples (modèle, opération) permis, SUPERADMIN_OPERATIONS. Un seul
-// point d'entrée pour les deux plutôt que deux `if` distincts dans assertTenantScope — extrait
-// pour sa complexité cognitive (`noExcessiveCognitiveComplexity`), comme assertGlobalScope
-// l'est déjà, juste au-dessus, pour la même raison.
-// Le type de `store` ci-dessous garde un seul champ `kind` porteur d'une union des deux noms de
-// contexte, plutôt que deux membres d'union séparés (un objet par contexte) : la seconde forme
-// écrirait textuellement, côte à côte, les deux littéraux que runAsSystem-unicite.test.ts (volet
-// B) surveille comme des CONSTRUCTIONS de valeur — ce test ne distingue pas un littéral de type
-// d'un littéral de valeur, et n'exclut à ce titre que types/utils/tenant-context.ts, pas ce
-// fichier-ci.
-const isNonTenantStore = (
-  store: TenantStore,
-): store is Extract<TenantStore, { kind: 'system' | 'superadmin' }> =>
-  store.kind === 'system' || store.kind === 'superadmin'
+// Porte de permission du contexte superadmin : le couple (modèle, opération) doit figurer dans
+// SUPERADMIN_OPERATIONS, exhaustive par construction (tout couple absent est refusé).
+//
+// TOUR DE CORRECTION 1 (tâche 1) — Critique 1 de la revue : cette porte ne fait PLUS sortir de
+// assertTenantScope. La première version faisait `return` juste après elle, ce qui sautait toute
+// la descente structurelle prouvée à l'étape 3 (assertNestedInclude, assertData →
+// assertNestedRelations) : un `Service.findMany` déclaré, complété d'un `include` imbriqué
+// jusqu'à `Patient` via `patientServiceFiles`, passait — l'accès aux colonnes cliniques que la
+// liste déclarée est censée exclure. Cette porte se contente donc maintenant de vérifier la
+// permission puis de laisser l'exécution retomber dans le même corps que le contexte tenant, plus
+// bas dans cette fonction — « la machinerie existe déjà et rend le bon verdict, il manquait
+// l'appel ». Les seuls endroits qui divergent encore du contexte tenant sont gardés par
+// `store.kind === 'tenant'`, à l'endroit précis où ils comparent une valeur à UN tenant ambiant
+// que le superadmin n'a pas (voir le commentaire de assertData ci-dessus pour l'écriture, et
+// la garde équivalente sur la lecture ci-dessous) — la descente structurelle, elle, s'applique
+// aux deux contextes sans distinction.
+const assertSuperAdminOperationDeclared = (model: string, operation: string): void => {
+  const permises = SUPERADMIN_OPERATIONS[model]
+  if (!permises?.includes(operation)) {
+    throw new TenantScopeMissingError(model, operation, 'superadmin')
+  }
+}
 
-const assertNonTenantStore = (
-  store: Extract<TenantStore, { kind: 'system' | 'superadmin' }>,
+// `assertWhere` compare le `where` à UN tenant ambiant : sans objet sous superadmin (même raison
+// que assertData, plus haut), donc réservé au contexte tenant plutôt que refusé partout — ce qui
+// aurait rendu la liste déclarée inutilisable en lecture, contrairement aux exemples du brief
+// (`Service.count`/`Patient.count` avec un `where` explicite, mais libre). Extraite avec sa garde
+// pour la complexité cognitive de assertTenantScope, comme les fonctions voisines.
+const assertTenantReadScope = (
   model: string,
   operation: string,
+  args: Dict,
+  field: string,
+  store: TenantStore,
 ): void => {
-  if (store.kind === 'superadmin') {
-    const permises = SUPERADMIN_OPERATIONS[model]
-    if (!permises?.includes(operation)) {
-      throw new TenantScopeMissingError(model, operation, 'superadmin')
-    }
+  if (store.kind !== 'tenant') {
+    return
+  }
+  assertWhere(model, operation, args, field, store)
+  if (UPDATE_OPERATIONS.has(operation)) {
+    assertUpdatePayload(model, operation, args.data, store)
+  }
+}
+
+// Même garde que ci-dessus, pour la branche `update` d'un upsert.
+const assertTenantUpsertPayload = (model: string, operation: string, args: Dict, store: TenantStore): void => {
+  if (store.kind === 'tenant') {
+    assertUpdatePayload(model, `${operation}.update`, args.update, store)
   }
 }
 
@@ -793,9 +846,11 @@ export const assertTenantScope = (
   if (!store) {
     throw new TenantScopeMissingError(model, operation, 'context')
   }
-  if (isNonTenantStore(store)) {
-    assertNonTenantStore(store, model, operation)
+  if (store.kind === 'system') {
     return
+  }
+  if (store.kind === 'superadmin') {
+    assertSuperAdminOperationDeclared(model, operation)
   }
   const isRead = READ_OPERATIONS.has(operation)
   const isWrite = WRITE_OPERATIONS.has(operation)
@@ -804,28 +859,28 @@ export const assertTenantScope = (
   if (!isRead && !isWrite) {
     throw new TenantScopeMissingError(model, operation, 'operation')
   }
-  // Vaut pour les lectures comme pour les écritures : un `create ... include` renvoie les mêmes
-  // données qu'un `findMany ... include`, et expose donc la même chose. Appelé pour une racine
-  // de service ou d'établissement (pas seulement d'établissement, depuis la tâche 9) : la
-  // transition établissement → service que cette fonction referme peut se trouver n'importe où
-  // dans l'arbre d'inclusion, y compris sous une racine de service qui n'atteint un modèle
-  // d'établissement qu'en profondeur (voir assertNestedInclude).
+  // Vaut pour les lectures comme pour les écritures, et pour tenant comme pour superadmin : un
+  // `create ... include` renvoie les mêmes données qu'un `findMany ... include`, et expose donc
+  // la même chose. Appelé pour une racine de service ou d'établissement (pas seulement
+  // d'établissement, depuis la tâche 9) : la transition établissement → service que cette
+  // fonction referme peut se trouver n'importe où dans l'arbre d'inclusion, y compris sous une
+  // racine de service qui n'atteint un modèle d'établissement qu'en profondeur (voir
+  // assertNestedInclude). Sous superadmin, cette transition est TOUJOURS refusée
+  // (assertServiceRelationFilter n'a de valeur à comparer que pour un store `tenant` — voir son
+  // commentaire), ce qui est le comportement voulu : le superadmin n'a pas de service courant.
   if (family === 'establishment' || family === 'service') {
     assertNestedInclude(model, operation, args, store)
   }
   const field = family === 'service' ? 'serviceId' : 'establishmentId'
   if (isRead) {
-    assertWhere(model, operation, args, field, store)
-    if (UPDATE_OPERATIONS.has(operation)) {
-      assertUpdatePayload(model, operation, args.data, store)
-    }
+    assertTenantReadScope(model, operation, args, field, store)
   }
   if (isWrite) {
     const data = operation === 'upsert' ? args.create : args.data
-    assertData(model, operation, data, store)
+    assertWriteData(model, operation, data, store)
   }
   if (operation === 'upsert') {
-    assertUpdatePayload(model, `${operation}.update`, args.update, store)
+    assertTenantUpsertPayload(model, operation, args, store)
   }
 }
 

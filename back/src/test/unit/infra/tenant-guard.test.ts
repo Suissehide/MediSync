@@ -1389,6 +1389,93 @@ describe('contexte superadmin', () => {
       ),
     ).not.toThrow()
   })
+
+  // TOUR DE CORRECTION 1 (tache 1) — Critique 1 de la revue : la premiere version de la branche
+  // superadmin faisait `return` juste apres la porte de permission, sautant toute la descente
+  // structurelle (assertNestedInclude, assertData -> assertNestedRelations) prouvee a l'etape 3.
+  // Les trois cas ci-dessous sont ceux nommes par la revue ; chacun doit rester refuse APRES le
+  // correctif (assertSuperAdminOperationDeclared ne fait plus sortir la fonction), et le dernier
+  // test du bloc verifie l'autre sens : une operation declaree SANS inclusion imbriquee doit
+  // continuer a passer, sans quoi le correctif aurait ferme la liste en la rendant inutilisable.
+  describe('la descente structurelle reste active sous superadmin (revue, tour 1)', () => {
+    it('refuse Service.findMany decore d une inclusion qui descend jusqu a Patient', () => {
+      // Service (etablissement) -> patientServiceFiles (service) -> patient (etablissement),
+      // diagnostics et enrollmentIssues (donnees cliniques). La transition etablissement ->
+      // service, au premier saut, doit deja refuser : le superadmin n'a pas de service courant
+      // par lequel filtrer (assertServiceRelationFilter).
+      expect(() =>
+        assertTenantScope(
+          {
+            model: 'Service',
+            operation: 'findMany',
+            args: {
+              include: {
+                patientServiceFiles: {
+                  include: { patient: true, diagnostics: true, enrollmentIssues: true },
+                },
+              },
+            },
+          },
+          store,
+        ),
+      ).toThrow(TenantScopeMissingError)
+    })
+
+    it('refuse EstablishmentMembership.create avec une ecriture imbriquee vers un autre modele de tenant', () => {
+      // La ligne de tete (userId/establishmentId/role) est declaree et doit rester libre — c'est
+      // le create nu, teste plus bas, qui le prouve. Ce qui doit etre refuse ici est la relation
+      // imbriquee serviceMemberships (declaree dans NESTED_RELATIONS), qui retombe sur un nouvel
+      // appel a assertData — donc a assertRowScope, qui compare a un tenant ambiant que le
+      // superadmin n'a pas.
+      expect(() =>
+        assertTenantScope(
+          {
+            model: 'EstablishmentMembership',
+            operation: 'create',
+            args: {
+              data: {
+                userId: 'u1',
+                establishmentId: 'e1',
+                role: 'MEMBER',
+                serviceMemberships: {
+                  create: [{ serviceId: 's1', establishmentId: 'e1', role: 'INTERVENANT' }],
+                },
+              },
+            },
+          },
+          store,
+        ),
+      ).toThrow(TenantScopeMissingError)
+    })
+
+    it('refuse _count sous select, comme pour le contexte tenant', () => {
+      expect(() =>
+        assertTenantScope(
+          { model: 'Service', operation: 'findMany', args: { select: { _count: true } } },
+          store,
+        ),
+      ).toThrow(TenantScopeMissingError)
+    })
+
+    it('laisse toujours passer une operation declaree sans inclusion imbriquee', () => {
+      // L'autre sens, explicitement demande par la revue : le correctif ne doit pas fermer la
+      // liste au point de la rendre inutilisable. Une lecture nue et une ecriture plate (sans
+      // relation imbriquee) doivent rester vertes.
+      expect(() =>
+        assertTenantScope({ model: 'Service', operation: 'findMany', args: {} }, store),
+      ).not.toThrow()
+      expect(() =>
+        assertTenantScope(
+          {
+            model: 'EstablishmentMembership',
+            operation: 'create',
+            args: { data: { userId: 'u1', establishmentId: 'e1', role: 'MEMBER' } },
+          },
+          store,
+        ),
+      ).not.toThrow()
+    })
+  })
 })
 
 // Preuve de monotonie (tache 1, step 7) : le resserrement de l'etape 3 n'avait perdu aucun refus
