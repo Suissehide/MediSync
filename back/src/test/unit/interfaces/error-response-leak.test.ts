@@ -5,7 +5,6 @@ import { Prisma } from '../../../generated/client'
 import { buildErrorHandler } from '../../../main/interfaces/http/fastify/errors/error.handler'
 import { boomErrorNormalizer } from '../../../main/interfaces/http/fastify/errors/normalizers/boom.error.normalizer'
 import { fastifyErrorNormalizer } from '../../../main/interfaces/http/fastify/errors/normalizers/fastify.error.normalizer'
-import { prismaErrorNormalizer } from '../../../main/interfaces/http/fastify/errors/normalizers/prisma.error.normalizer'
 
 // Reproduit task-5-re-review-3.md C1 : les 29 methodes de depot sans `catch` (dont tout le depot
 // `activityLog`) laissent une erreur Prisma brute tomber directement dans ce gestionnaire —
@@ -27,16 +26,17 @@ const buildUnexpectedPrismaError = () =>
   )
 
 // Un harnais minimal du meme contrat que `FastifyInstance`/`FastifyRequest`/`FastifyReply`, pour
-// executer `buildErrorHandler` sans monter de vrai serveur Fastify. Seuls `log.debug`/`log.error`
-// (les deux appels faits par le gestionnaire), `request.accepts()` et `reply.status()`/`type()`
-// sont exerces.
+// executer `buildErrorHandler` sans monter de vrai serveur Fastify. `log.debug`/`log.error` (les
+// deux niveaux utilises par le gestionnaire), `request.accepts()` et `reply.status()`/`type()`
+// sont exerces. Le canal `debug` est capture au meme titre que `error` (task-5-re-review-3.md, m3
+// puis tour 5) : `LOG_LEVEL=DEBUG` est le reglage qu'on active precisement pour enqueter sur un
+// incident, donc exactement le moment ou ce canal est lu.
 const buildHarness = () => {
   const logsAtErrorLevel: string[] = []
+  const logsAtDebugLevel: string[] = []
   const fastifyLike = {
     log: {
-      // Non exerce par les assertions : le canal `debug` reste un gap connu (m3,
-      // task-5-re-review-3.md), hors des quatre corrections de ce tour.
-      debug: () => undefined,
+      debug: (message: unknown) => logsAtDebugLevel.push(String(message)),
       error: (message: string) => logsAtErrorLevel.push(message),
     },
   }
@@ -56,18 +56,25 @@ const buildHarness = () => {
     url: '/e/est1/s/svc1/patient/pat1/service-file',
     accepts: () => ({ type: () => 'json' }),
   }
-  return { fastifyLike, fakeRequest, fakeReply, statusCodes, logsAtErrorLevel }
+  return {
+    fastifyLike,
+    fakeRequest,
+    fakeReply,
+    statusCodes,
+    logsAtErrorLevel,
+    logsAtDebugLevel,
+  }
 }
 
+// `prismaErrorNormalizer` a ete retire (task-5-re-review-3.md, tour 5, voir
+// fastify-http-server.ts) : c'etait du code mort qui, une fois "corrige", aurait recopie
+// `error.message` pour toute PrismaClientKnownRequestError non attrapee. La chaine reelle ne
+// compte donc plus que ces deux normalizers.
 const runHandler = (
   error: unknown,
   harness: ReturnType<typeof buildHarness>,
 ): { error: string; message: string; statusCode: number } => {
-  const handler = buildErrorHandler(
-    prismaErrorNormalizer,
-    fastifyErrorNormalizer,
-    boomErrorNormalizer,
-  )
+  const handler = buildErrorHandler(fastifyErrorNormalizer, boomErrorNormalizer)
   const body = handler.call(
     harness.fastifyLike as unknown as FastifyInstance,
     error as never,
@@ -78,7 +85,7 @@ const runHandler = (
 }
 
 describe('la chaine de normalizers ne renvoie jamais une valeur soumise pour une erreur inattendue', () => {
-  it('une ecriture clinique en echec sans catch (PrismaClientValidationError brute) ne fuit ni dans le corps ni dans le journal `error`', () => {
+  it('une ecriture clinique en echec sans catch (PrismaClientValidationError brute) ne fuit ni dans le corps, ni dans le journal `error`, ni dans le journal `debug`', () => {
     const harness = buildHarness()
 
     const body = runHandler(buildUnexpectedPrismaError(), harness)
@@ -93,6 +100,11 @@ describe('la chaine de normalizers ne renvoie jamais une valeur soumise pour une
       expect(line).not.toContain(CLINICAL_VALUE)
       expect(line).not.toContain(PATIENT_ID)
     }
+    // Le gestionnaire ne journalise plus rien a `debug` (task-5-re-review-3.md, m3 : l'ancien
+    // `this.log.debug(error)` recopiait l'erreur brute, message et pile compris, et n'etait
+    // eteint qu'a `LOG_LEVEL=INFO` — pas a `DEBUG`, le reglage qu'on active justement pour
+    // enqueter). Le diagnostic de `error` suffit deja ; `debug` n'ajoute plus rien qui puisse fuir.
+    expect(harness.logsAtDebugLevel).toHaveLength(0)
   })
 
   it('le journal `error` garde de quoi enqueter sur une erreur inattendue : classe, route et pile (jamais le message brut)', () => {
@@ -149,5 +161,33 @@ describe('la chaine de normalizers ne renvoie jamais une valeur soumise pour une
 
     const [diagnosticLine] = harness.logsAtErrorLevel
     expect(diagnosticLine).toContain("message=PatientServiceFile: this ID doesn't exist")
+  })
+
+  // task-5-re-review-3.md, I1 : le tour precedent ne testait la chaine qu'avec une
+  // PrismaClientValidationError et une Error nue — jamais une PrismaClientKnownRequestError,
+  // pourtant la seule qui porte `meta` et la seule dont un depot (boomErrorFromPrismaError) tire
+  // des messages 404/409 rendus au client. Ici, la meme erreur atteint le gestionnaire *sans*
+  // etre passee par boomErrorFromPrismaError (exactement le cas d'un depot sans `catch`, C1) :
+  // `meta` peut porter une valeur soumise (constraint, target...) et ne doit jamais atteindre ni
+  // le corps ni le journal.
+  it("une PrismaClientKnownRequestError non attrapee (meta compris) ne fuit ni dans le corps, ni dans le journal, quel que soit le code", () => {
+    const harness = buildHarness()
+    const boomError = new Prisma.PrismaClientKnownRequestError(
+      `Unique constraint failed on the fields: (\`patientId\`,\`notes\`,"${CLINICAL_VALUE}")`,
+      {
+        code: 'P2002',
+        clientVersion: '0.0.0-test',
+        meta: { target: ['patientId', CLINICAL_VALUE], modelName: 'PatientServiceFile' },
+      },
+    )
+
+    const body = runHandler(boomError, harness)
+
+    expect(harness.statusCodes).toEqual([500])
+    expect(body.message).not.toContain(CLINICAL_VALUE)
+    expect(body.error).not.toContain(CLINICAL_VALUE)
+    for (const line of [...harness.logsAtErrorLevel, ...harness.logsAtDebugLevel]) {
+      expect(line).not.toContain(CLINICAL_VALUE)
+    }
   })
 })

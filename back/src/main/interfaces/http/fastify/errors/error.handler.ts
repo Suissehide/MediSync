@@ -84,7 +84,12 @@ const buildErrorHandler = (...errorNormalizers: ErrorNormalizer[]) => {
     request: FastifyRequest,
     reply: FastifyReply,
   ): string | { error: string; message: string; statusCode: number } {
-    this.log.debug(error)
+    // Pas de `this.log.debug(error)` ici : c'etait un second canal d'erreur brute
+    // (task-5-re-review-3.md, m3), recopiant l'objet entier, message et pile compris. Il n'etait
+    // eteint qu'a `LOG_LEVEL=INFO` en production — pas a `DEBUG`, qui est justement le reglage
+    // qu'on active pour enqueter sur un incident, c'est-a-dire le moment ou ce canal est lu. Le
+    // diagnostic ci-dessous (classe, route, pile filtree aux frames) est deja journalise a
+    // `error`, donc visible a `DEBUG` aussi (`error` >= `debug`) : rien n'est perdu.
     this.log.error(
       `Error (#${request.id}) ${routeOf(request)}: ${diagnosticOf(error)}`,
     )
