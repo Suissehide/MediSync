@@ -10,7 +10,8 @@ import {
 } from '../../../main/infra/orm/tenant-guard'
 
 // Le garde-fou controle les include imbriques (a n'importe quelle profondeur, depuis une racine
-// de service ou d'etablissement, tache 9/etape 3) a partir d'une table ecrite a la main,
+// de service, d'etablissement, ou globale depuis le tour de correction 1 sur la tache 9/etape 3)
+// a partir d'une table ecrite a la main,
 // MODEL_RELATIONS, qui couvre desormais TOUS les modeles du schema et pas seulement ceux
 // d'etablissement (l'ancienne TENANT_CHILD_RELATIONS). Sur `include`, une relation absente de la
 // table est refusee, donc un oubli s'y voit. Sur `select`, il ne peut PAS en exiger autant : un
@@ -253,9 +254,12 @@ describe('GLOBAL_TENANT_RELATIONS reflete prisma/schema.prisma', () => {
   // pointe vers aucun modele de tenant » est une conclusion qu'aucune regle syntaxique ne peut
   // tirer seule : une relation vers un modele global (ou vers un modele qui n'est dans aucune
   // des trois listes) peut tres bien redescendre vers du tenant au niveau suivant, et
-  // `assertGlobalInclude` ne regarde que le premier niveau — la descente dans les inclusions
-  // imbriquees est reportee a l'etape 3 par decision explicite (voir
-  // `docs/multi-tenant/decisions-etape-2.md`).
+  // `assertGlobalInclude` ne regarde que le premier niveau. La descente dans les inclusions
+  // imbriquees est desormais couverte ailleurs : `assertNestedInclude`, dans tenant-guard.ts, est
+  // appelee aussi depuis une racine globale (tour de correction 1 sur la relecture de la tache
+  // 9) et attrape toute transition etablissement -> service rencontree en profondeur — mais elle
+  // ne remplace pas cette liste-ci, propre au premier niveau et a la question, differente, de
+  // savoir si une relation de modele global merite d'etre restreinte a findUnique(OrThrow).
   //
   // Ce test tient donc la liste, vide a ce jour, des relations de modeles globaux qui ne menent
   // pas a du tenant. Une relation ajoutee la-bas le fait echouer, et la reparation est d'ecrire

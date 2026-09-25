@@ -117,10 +117,14 @@ export const GLOBAL_TENANT_RELATIONS: Record<string, readonly string[]> = {
 //     à l'exécution (`Prisma.dmmf` absent côté client public — le seul point d'accès qui
 //     existe, `runtimeDataModel` dans `src/generated/internal/class.ts`, est un fichier interne
 //     que Prisma marque lui-même « sous aucun prétexte à importer directement »). Dériver
-//     signifierait donc relire et re-parser `prisma/schema.prisma` à l'exécution, à l'intérieur
-//     de la pièce qui s'exécute sur CHAQUE requête Prisma — un analyseur regex qui n'a jamais
-//     été conçu pour tourner en dehors des tests, dans le composant dont un défaut ouvre
-//     l'accès à des données de santé sans bruit.
+//     signifierait donc relire et re-parser `prisma/schema.prisma` à l'exécution — un analyseur
+//     regex qui n'a jamais été conçu pour tourner en dehors des tests, dans le composant dont un
+//     défaut ouvre l'accès à des données de santé sans bruit. (Ce n'est PAS un argument de
+//     performance : un tel analyseur se construirait une fois, en portée haute, au chargement du
+//     module — mesuré à 0,48 ms pour les 26 modèles du schéma — et `schema.prisma` est de toute
+//     façon livré dans l'image de production, voir `deploy/Dockerfile`. C'est un argument de
+//     surface de risque : mieux vaut ne pas ajouter, dans le composant qui protège les données de
+//     santé, un analyseur que rien n'oblige à écrire.)
 //   - la voie 2 ne supprime de toute façon pas le travail à la main, elle le déplace : ce
 //     qu'il faut alors garder explicite et déclaré, c'est la FAMILLE d'un modèle (service,
 //     établissement, global — SERVICE_MODELS / ESTABLISHMENT_MODELS ci-dessus) puisque c'est
@@ -560,23 +564,6 @@ const assertGlobalInclude = (model: string, operation: string, args: Dict): void
   }
 }
 
-// PÉRIMÈTRE NON COUVERT PAR LA TÂCHE 9, À LIRE AVANT DE L'ÉTENDRE. assertNestedInclude
-// (ci-dessous) n'est appelée que pour une racine de service ou d'établissement — jamais pour une
-// racine globale (`User`, `Establishment`) : voir son appel dans assertTenantScope, conditionné
-// à `family === 'establishment' || family === 'service'`. Une lecture qui part d'un modèle
-// global, franchit ce premier contrôle (findUnique(OrThrow), donc une seule ligne), PUIS
-// descend en profondeur jusqu'à une transition établissement → service — par exemple
-// `user.findUniqueOrThrow({ include: { establishmentMemberships: { include: { soignant: {
-// include: { todos: true } } } } } })` — ne serait donc PAS vue par assertNestedInclude
-// aujourd'hui. Aucune lecture du dépôt n'emprunte ce chemin (vérifié : `user.repository.ts`,
-// seul appelant de `GLOBAL_TENANT_RELATIONS`, s'arrête à `serviceMemberships.service`, qui reste
-// en famille établissement — voir MODEL_RELATIONS). Ce n'est donc pas la limite nommément
-// rouverte par la tâche 9 (qui ne citait que des chaînes parties d'un modèle de service), et
-// l'étendre exigerait d'assouplir le type de assertNestedInclude/assertServiceRelationFilter
-// (`store: TenantStore` devrait devenir `TenantStore | undefined`, un modèle global pouvant être
-// lu hors contexte de tenant) — un changement plus large que celui demandé ici. Signalé plutôt
-// que corrigé, à la manière de l'ancienne limite que cette tâche referme.
-
 // Une relation d'un modèle d'établissement vers un modèle de service doit porter son propre
 // `where` sur le service courant : la ligne parente est filtrée par établissement, rien ne
 // restreint ses enfants au service du tenant. Appelée par assertNestedInclude à CHAQUE
@@ -588,14 +575,16 @@ const assertServiceRelationFilter = (
   operation: string,
   relationField: string,
   value: unknown,
-  store: TenantStore,
+  store: TenantStore | undefined,
 ): void => {
   const detail =
     `include/select '${relationField}' vers un modèle de service sans filtre` +
     ` — ajouter { where: { serviceId } } sur '${relationField}'`
-  // Le tenant courant peut n'avoir aucun service (administration d'établissement) : il n'existe
-  // alors aucun service par lequel filtrer, et l'inclusion est refusée.
-  const expected = store.kind === 'tenant' ? store.tenant.serviceId : null
+  // Le tenant courant peut n'avoir aucun service (administration d'établissement), ou n'exister
+  // pas du tout (descente depuis une racine globale lue sans tenant, ex. la connexion) : dans les
+  // deux cas il n'existe aucun service par lequel filtrer, et l'inclusion est refusée — jamais
+  // laissée passer par défaut faute de store à comparer.
+  const expected = store?.kind === 'tenant' ? store.tenant.serviceId : null
   if (typeof expected !== 'string' || expected.length === 0) {
     throw new TenantScopeMissingError(model, operation, detail)
   }
@@ -604,10 +593,14 @@ const assertServiceRelationFilter = (
   }
 }
 
-// Contrôle les include/select depuis un modèle de service ou d'établissement, RÉCURSIVEMENT.
-// Complément symétrique de assertGlobalInclude (qui ne couvre que les lectures partant d'un
-// modèle global, restreintes à findUnique) : celle-ci couvre les lectures partant d'un modèle de
-// service ou d'établissement, à n'importe quelle profondeur d'inclusion imbriquée.
+// Contrôle les include/select depuis N'IMPORTE QUELLE racine — service, établissement OU globale
+// —, RÉCURSIVEMENT. Pour une racine globale, complète assertGlobalInclude (qui ne garantit que la
+// sûreté au premier niveau, sur une seule ligne) plutôt que de s'y substituer : les deux sont
+// appelées l'une après l'autre par assertTenantScope. `store` y est donc `TenantStore |
+// undefined` : une racine globale peut être lue SANS tenant en contexte (ex. la connexion, avant
+// tenantContext.clear()), et cette descente doit rester utilisable dans ce cas — voir
+// assertServiceRelationFilter, qui refuse plutôt que de laisser passer par défaut quand il n'y a
+// aucun store à comparer à la transition établissement → service.
 //
 // Jusqu'à la tâche 9, ce contrôle n'inspectait que le PREMIER niveau des arguments, et seulement
 // depuis un modèle d'établissement — voir git history pour le commentaire qui documentait cette
@@ -629,9 +622,13 @@ const assertServiceRelationFilter = (
 // fuite fermée au premier niveau à l'étape 2, ici fermée à n'importe quelle profondeur.
 //
 // Échoue FERMÉ à chaque étape, y compris en profondeur : `include` n'accepte que des relations,
-// toute clé doit donc être déclarée dans MODEL_RELATIONS[model] (y compris `_count`, qui compte
-// des enfants sans les filtrer) — une clé absente est refusée, jamais laissée passer en
-// silence, et `model` peut très bien n'avoir AUCUNE relation connue (MODEL_RELATIONS[model]
+// toute clé doit donc être déclarée dans MODEL_RELATIONS[model] — une clé absente est refusée,
+// jamais laissée passer en silence. `_count` (mot réservé Prisma, jamais un nom de relation) en
+// est le cas explicite : refusé sous `include` (clé non déclarée) comme sous `select` (refus
+// dédié — tour de correction 1 sur la relecture de la tâche 9 : `select`, qui mélange colonnes
+// scalaires et relations, ne peut exiger la déclaration de tout le reste, mais `_count` ne
+// collisionne jamais avec un nom de champ ou de relation du schéma). Et `model` peut très bien
+// n'avoir AUCUNE relation connue (MODEL_RELATIONS[model]
 // vaut alors {}, jamais `undefined` : la table est exhaustive sur les 26 modèles du schéma), ce
 // qui refuse alors toute clé sans distinction. Une relation reconnue est en revanche toujours
 // suivie plus loin par récursion, que la transition établissement → service s'y applique ou
@@ -649,7 +646,7 @@ const assertNestedIncludeEntry = (
   operation: string,
   relationField: string,
   value: unknown,
-  store: TenantStore,
+  store: TenantStore | undefined,
 ): void => {
   if (familyOf(model) === 'establishment' && familyOf(childModel) === 'service') {
     assertServiceRelationFilter(model, operation, relationField, value, store)
@@ -659,7 +656,7 @@ const assertNestedIncludeEntry = (
   }
 }
 
-const assertNestedInclude = (model: string, operation: string, args: Dict, store: TenantStore): void => {
+const assertNestedInclude = (model: string, operation: string, args: Dict, store: TenantStore | undefined): void => {
   const relations = MODEL_RELATIONS[model] ?? {}
   // `include` n'accepte que des relations : toute clé doit donc être déclarée. Une clé inconnue
   // est refusée plutôt que laissée sans contrôle — y compris `_count`, qui compte des enfants
@@ -677,8 +674,19 @@ const assertNestedInclude = (model: string, operation: string, args: Dict, store
   }
   // `select` mêle colonnes scalaires et relations, et rien ne permet ici de les distinguer : on
   // n'y exige donc pas la déclaration, seules les relations déclarées y sont vérifiées — mais
-  // celles-ci suivent la même récursion que sous `include`.
+  // celles-ci suivent la même récursion que sous `include`. `_count` est le seul cas qui n'est ni
+  // l'un ni l'autre (mot réservé Prisma, jamais un nom de champ ou de relation de ce schéma) : il
+  // est refusé explicitement, comme il l'est déjà sous `include` (où il tombe simplement dans le
+  // cas « clé non déclarée » ci-dessus) — sinon il compterait les enfants de tous les services
+  // sans jamais être vu, une fuite de cardinalité plutôt que de contenu.
   for (const [relationField, value] of includedRelationEntries(args.select)) {
+    if (relationField === '_count') {
+      throw new TenantScopeMissingError(
+        model,
+        operation,
+        "'_count' compte des enfants sans les filtrer, refusé sous select comme sous include",
+      )
+    }
     const childModel = relations[relationField]
     if (!childModel) {
       continue
@@ -710,6 +718,23 @@ function assertUpdatePayload(model: string, operation: string, data: unknown, st
   assertNestedRelationsInUpdate(model, operation, data, store)
 }
 
+// Vérifie une lecture depuis un modèle global (`User`, `Establishment`) : sûreté au premier
+// niveau (assertGlobalInclude, une seule ligne) PUIS descente récursive (assertNestedInclude),
+// comme pour une racine de service ou d'établissement. Extraite pour la complexité cognitive du
+// linter, qui compte les deux branches de assertTenantScope ensemble sinon — voir
+// assertNestedIncludeEntry, extraite pour la même raison.
+//
+// Une racine globale peut être lue SANS tenant en contexte (ex. la connexion, avant
+// tenantContext.clear()), donc `store` reste `TenantStore | undefined` jusqu'ici — voir
+// assertServiceRelationFilter, qui refuse plutôt que de laisser passer par défaut quand il n'y a
+// aucun store à comparer. Bypassée en mode système comme le reste du garde-fou.
+const assertGlobalScope = (model: string, operation: string, args: Dict, store: TenantStore | undefined): void => {
+  assertGlobalInclude(model, operation, args)
+  if (store?.kind !== 'system') {
+    assertNestedInclude(model, operation, args, store)
+  }
+}
+
 // Vérifie qu'une opération Prisma porte le filtre de tenant attendu.
 // Pure : testable sans client Prisma.
 export const assertTenantScope = (
@@ -719,7 +744,7 @@ export const assertTenantScope = (
   const { model, operation, args } = input
   const family = familyOf(model)
   if (family === 'global') {
-    assertGlobalInclude(model, operation, args)
+    assertGlobalScope(model, operation, args, store)
     return
   }
   if (!store) {

@@ -1165,4 +1165,194 @@ describe('assertTenantScope', () => {
       ).not.toThrow()
     })
   })
+
+  // Tour de correction 1 sur la relecture de la tache 9, important 2 : `_count` sous `select`
+  // echappait au controle la ou il est refuse sous `include` (non declare dans MODEL_RELATIONS,
+  // donc refuse la-bas ; sous `select`, une cle non declaree est ignoree en silence par
+  // construction, puisque `select` mele colonnes scalaires et relations). `_count` n'est ni l'un
+  // ni l'autre : c'est un mot reserve de Prisma. Fuite de cardinalite seule (pas de contenu) :
+  // "ce patient a N dossiers de service" revele qu'il est suivi ailleurs, sans dire ou — demontre
+  // contre une vraie base (task-9-review.md, §Important 2) avec un patient ayant un dossier dans
+  // deux services, ou `_count.serviceFiles` valait 2 pour un tenant scope au seul service A1.
+  describe('_count sous select (tour de correction 1, important 2)', () => {
+    it('refuse _count sous select comme sous include, a la racine', () => {
+      expect(() =>
+        assertTenantScope(
+          {
+            model: 'Patient',
+            operation: 'findMany',
+            args: {
+              where: { establishmentId: 'e1' },
+              select: { lastName: true, _count: { select: { serviceFiles: true } } },
+            },
+          },
+          store,
+        ),
+      ).toThrow(TenantScopeMissingError)
+      expect(() =>
+        assertTenantScope(
+          {
+            model: 'Patient',
+            operation: 'findMany',
+            args: {
+              where: { establishmentId: 'e1' },
+              include: { _count: { select: { serviceFiles: true } } },
+            },
+          },
+          store,
+        ),
+      ).toThrow(TenantScopeMissingError)
+    })
+
+    // La forme raccourcie `_count: true` (compte TOUTES les relations) est au moins aussi
+    // dangereuse que la forme cible, et doit etre refusee de la meme facon.
+    it('refuse _count: true sous select', () => {
+      expect(() =>
+        assertTenantScope(
+          {
+            model: 'Patient',
+            operation: 'findMany',
+            args: { where: { establishmentId: 'e1' }, select: { _count: true } },
+          },
+          store,
+        ),
+      ).toThrow(TenantScopeMissingError)
+    })
+
+    // La recursion etend la portee du probleme a n'importe quelle profondeur : verifie ici sur
+    // la meme chaine imbriquee que la tache 9 (appointment > appointmentPatients > patient).
+    it('refuse _count sous select en profondeur, atteint par la meme chaine imbriquee', () => {
+      expect(() =>
+        assertTenantScope(
+          {
+            model: 'Appointment',
+            operation: 'findMany',
+            args: {
+              where: { serviceId: 's1' },
+              include: {
+                appointmentPatients: {
+                  include: {
+                    patient: {
+                      select: { lastName: true, _count: { select: { serviceFiles: true } } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          store,
+        ),
+      ).toThrow(TenantScopeMissingError)
+    })
+  })
+
+  // Tour de correction 1 sur la relecture de la tache 9 : assertNestedInclude n'etait jamais
+  // appelee pour une racine globale (voir l'ancien commentaire « PERIMETRE NON COUVERT » retire
+  // de tenant-guard.ts). Une lecture qui franchissait assertGlobalInclude (une seule ligne, via
+  // findUnique(OrThrow)) pouvait ensuite descendre sans plus aucun filtre jusqu'a une transition
+  // etablissement -> service. Prouve contre une vraie base (task-9-review.md, §A6) : un compte
+  // membre du seul etablissement A lisait medicalDiagnosis et notes d'un patient de
+  // l'etablissement B par cette meme chaine, en partant de User.
+  describe('descente recursive depuis une racine globale (tour de correction 1)', () => {
+    const dangerousChain = {
+      establishmentMemberships: {
+        include: {
+          establishment: {
+            include: { patients: { include: { serviceFiles: true } } },
+          },
+        },
+      },
+    }
+    const filteredChain = {
+      establishmentMemberships: {
+        include: {
+          establishment: {
+            include: {
+              patients: {
+                include: { serviceFiles: { where: { serviceId: 's1' } } },
+              },
+            },
+          },
+        },
+      },
+    }
+
+    it('refuse User > establishmentMemberships > establishment > patients > serviceFiles sans filtre', () => {
+      expect(() =>
+        assertTenantScope(
+          {
+            model: 'User',
+            operation: 'findUniqueOrThrow',
+            args: { where: { id: 'u1' }, include: dangerousChain },
+          },
+          store,
+        ),
+      ).toThrow(TenantScopeMissingError)
+    })
+
+    it('accepte la meme chaine filtree sur le service courant', () => {
+      expect(() =>
+        assertTenantScope(
+          {
+            model: 'User',
+            operation: 'findUniqueOrThrow',
+            args: { where: { id: 'u1' }, include: filteredChain },
+          },
+          store,
+        ),
+      ).not.toThrow()
+    })
+
+    // Le chemin de connexion : verifySessionCookie appelle userDomain.findByID ->
+    // user.findUniqueOrThrow({ include: membershipsInclude }), et tenantContext.clear() tourne
+    // juste avant (routes/index.ts) — donc SANS aucun tenant en contexte. L'inclusion reelle de
+    // user.repository.ts (establishmentMemberships > { establishment, serviceMemberships >
+    // service }) ne franchit jamais etablissement -> service : ServiceMembership et Service sont
+    // tous deux en famille etablissement (voir MODEL_RELATIONS). Elle doit donc rester verte,
+    // avec ou sans tenant — c'est precisement la lecture que la fermeture de la limite risquait
+    // de casser.
+    it('laisse passer le chemin de connexion (include reel de user.repository.ts), sans tenant', () => {
+      const membershipsInclude = {
+        establishmentMemberships: {
+          include: {
+            establishment: true,
+            serviceMemberships: { include: { service: true } },
+          },
+        },
+      }
+      expect(() =>
+        assertTenantScope(
+          {
+            model: 'User',
+            operation: 'findUniqueOrThrow',
+            args: { where: { id: 'u1' }, include: membershipsInclude },
+          },
+          undefined,
+        ),
+      ).not.toThrow()
+      // findByEmail (login) : aucun include du tout.
+      expect(() =>
+        assertTenantScope(
+          { model: 'User', operation: 'findUniqueOrThrow', args: { where: { email: 'a@b.c' } } },
+          undefined,
+        ),
+      ).not.toThrow()
+    })
+
+    // Echec ferme : sans tenant en contexte, une descente qui atteint quand meme une transition
+    // etablissement -> service est refusee, jamais laissee passer par defaut faute de valeur a
+    // comparer.
+    it('refuse la meme transition dangereuse quand la lecture n a aucun tenant en contexte', () => {
+      expect(() =>
+        assertTenantScope(
+          {
+            model: 'User',
+            operation: 'findUniqueOrThrow',
+            args: { where: { id: 'u1' }, include: dangerousChain },
+          },
+          undefined,
+        ),
+      ).toThrow(TenantScopeMissingError)
+    })
+  })
 })
