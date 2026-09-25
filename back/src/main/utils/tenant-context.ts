@@ -67,6 +67,17 @@ class TenantContext implements TenantContextInterface {
   runAsSystem<T>(fn: () => Promise<T>): Promise<T> {
     return this.storage.run({ kind: 'system' }, fn)
   }
+
+  // Troisieme contexte du garde-fou (tache 1, etape 4a) : substitue au filtre de tenant une
+  // liste declaree et exhaustive de couples (modele, operation) permis — voir
+  // SUPERADMIN_OPERATIONS, infra/orm/tenant-guard.ts. Piege deja rencontre a l'etape 3, valable
+  // ici a l'identique : une requete Prisma est paresseuse. `runAsSuperAdmin(() =>
+  // prisma.x.count(...))` renvoie la promesse SANS l'attendre, l'execution part alors hors de la
+  // portee du contexte, et l'extension lit le tenant ambiant. Toujours `await` A L'INTERIEUR du
+  // rappel.
+  runAsSuperAdmin<T>(fn: () => Promise<T>): Promise<T> {
+    return this.storage.run({ kind: 'superadmin' }, fn)
+  }
 }
 
 export { TenantContext }

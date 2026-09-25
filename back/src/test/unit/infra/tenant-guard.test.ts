@@ -1356,3 +1356,182 @@ describe('assertTenantScope', () => {
     })
   })
 })
+
+describe('contexte superadmin', () => {
+  const store = { kind: 'superadmin' } as const
+
+  it('autorise une operation declaree', () => {
+    expect(() =>
+      assertTenantScope(
+        { model: 'Service', operation: 'count', args: { where: { establishmentId: 'e1' } } },
+        store,
+      ),
+    ).not.toThrow()
+  })
+
+  it('refuse une operation non declaree sur le meme modele', () => {
+    expect(() =>
+      assertTenantScope({ model: 'Service', operation: 'deleteMany', args: {} }, store),
+    ).toThrow(TenantScopeMissingError)
+  })
+
+  it('refuse un modele absent de la liste, meme en lecture', () => {
+    expect(() =>
+      assertTenantScope({ model: 'Patient', operation: 'findMany', args: {} }, store),
+    ).toThrow(TenantScopeMissingError)
+  })
+
+  it('autorise le comptage des patients, qui est declare', () => {
+    expect(() =>
+      assertTenantScope(
+        { model: 'Patient', operation: 'count', args: { where: { establishmentId: 'e1' } } },
+        store,
+      ),
+    ).not.toThrow()
+  })
+})
+
+// Preuve de monotonie (tache 1, step 7) : le resserrement de l'etape 3 n'avait perdu aucun refus
+// (6 649 chemins enumeres, comparaison des deux versions du garde-fou — voir
+// docs/multi-tenant/decisions-etape-3.md). Le troisieme contexte doit tenir la meme propriete
+// pour les deux contextes preexistants.
+//
+// Choix retenu ici entre les deux options du brief : OPTION A (rejouer un echantillon avant et
+// apres le changement), pas l'option B (importer les deux versions du fichier cote a cote).
+// Raison : le diff de cette tache sur assertTenantScope ajoute une nouvelle table
+// (SUPERADMIN_OPERATIONS) et deux fonctions, et remplace UNE seule ligne preexistante —
+// `if (store.kind === 'system') { return }` devient `if (isNonTenantStore(store)) {
+// assertNonTenantStore(store, model, operation); return }` (extraction exigee par le linter,
+// complexite cognitive de assertTenantScope sinon au-dessus du seuil). Ce remplacement est
+// verifie sans changement de comportement pour store.kind === 'system' : `assertNonTenantStore`
+// ne fait rien pour ce cas (seule sa branche `superadmin` a un corps), donc la ligne se comporte
+// exactement comme avant — un retour immediat, sans effet — pour tout appel qui l'atteignait deja.
+// Aucune autre ligne du chemin tenant (family etablissement/service, plus bas dans la fonction)
+// n'est touchee. Importer une seconde copie complete de tenant-guard.ts (plus de 800 lignes, cinq
+// tables ecrites a la main) comme fixture figee aurait ajoute, dans le fichier dont un defaut
+// ouvre l'acces a des donnees de sante sans bruit, une duplication permanente que rien n'oblige a
+// garder synchronisee — le risque que ce meme fichier documente deja pour un autre arbitrage (voir
+// le commentaire de MODEL_RELATIONS). Prouver une fois, a l'ecriture, suffit pour un changement
+// aussi etroit.
+//
+// Cette preuve a ete faite empiriquement, pas seulement argumentee : la version de
+// tenant-guard.ts telle qu'elle existait juste avant cette tache (commit e06d057) a ete remise en
+// place temporairement (copie de cote puis restauree, jamais de `git stash`) et ce meme bloc de
+// cas a ete rejoue contre elle — memes verdicts. Voir le rapport de tache pour la trace de cette
+// epreuve ; elle n'est pas gardee ici en permanence, pour la raison ci-dessus.
+describe('monotonie : le contexte superadmin ne change aucun verdict pour tenant et system', () => {
+  const casTenantEtSysteme: Array<{
+    nom: string
+    store: TenantStore | undefined
+    model: string
+    operation: string
+    args: Record<string, unknown>
+    attendu: 'passe' | 'refuse'
+  }> = [
+    {
+      nom: 'tenant, modele de service, lecture avec serviceId',
+      store,
+      model: 'Slot',
+      operation: 'findMany',
+      args: { where: { serviceId: 's1' } },
+      attendu: 'passe',
+    },
+    {
+      nom: 'tenant, modele de service, lecture sans serviceId',
+      store,
+      model: 'Slot',
+      operation: 'findMany',
+      args: { where: {} },
+      attendu: 'refuse',
+    },
+    {
+      nom: 'tenant, modele d etablissement, lecture avec establishmentId',
+      store,
+      model: 'Patient',
+      operation: 'findMany',
+      args: { where: { establishmentId: 'e1' } },
+      attendu: 'passe',
+    },
+    {
+      nom: 'tenant, modele d etablissement, lecture sans establishmentId',
+      store,
+      model: 'Patient',
+      operation: 'findMany',
+      args: { where: {} },
+      attendu: 'refuse',
+    },
+    {
+      nom: 'tenant, modele global, sans filtre',
+      store,
+      model: 'User',
+      operation: 'findMany',
+      args: {},
+      attendu: 'passe',
+    },
+    {
+      nom: 'tenant, include de relation de tenant sur Establishment hors findUnique',
+      store,
+      model: 'Establishment',
+      operation: 'findMany',
+      args: { include: { patients: true } },
+      attendu: 'refuse',
+    },
+    {
+      nom: 'tenant, meme include mais sous findUnique(id) — une seule ligne',
+      store,
+      model: 'Establishment',
+      operation: 'findUnique',
+      args: { where: { id: 'e1' }, include: { patients: true } },
+      attendu: 'passe',
+    },
+    {
+      nom: 'tenant, service sous un tenant sans service (adminStore)',
+      store: adminStore,
+      model: 'Slot',
+      operation: 'findMany',
+      args: { where: { serviceId: 's1' } },
+      attendu: 'refuse',
+    },
+    {
+      nom: 'system, ecriture large sans filtre',
+      store: { kind: 'system' },
+      model: 'ActivityLog',
+      operation: 'deleteMany',
+      args: { where: {} },
+      attendu: 'passe',
+    },
+    {
+      nom: 'system, modele de service sans filtre',
+      store: { kind: 'system' },
+      model: 'Slot',
+      operation: 'findMany',
+      args: { where: {} },
+      attendu: 'passe',
+    },
+    {
+      nom: 'sans contexte, modele global, lecture unique',
+      store: undefined,
+      model: 'User',
+      operation: 'findUnique',
+      args: { where: { id: 'u' } },
+      attendu: 'passe',
+    },
+    {
+      nom: 'sans contexte, modele de service',
+      store: undefined,
+      model: 'Slot',
+      operation: 'findMany',
+      args: { where: { serviceId: 's1' } },
+      attendu: 'refuse',
+    },
+  ]
+
+  it.each(casTenantEtSysteme)('$nom', ({ store: storeDuCas, model, operation, args, attendu }) => {
+    const appel = () => assertTenantScope({ model, operation, args }, storeDuCas)
+    if (attendu === 'passe') {
+      expect(appel).not.toThrow()
+    } else {
+      expect(appel).toThrow(TenantScopeMissingError)
+    }
+  })
+})

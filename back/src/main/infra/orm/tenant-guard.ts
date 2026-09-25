@@ -37,6 +37,18 @@ export const ESTABLISHMENT_MODELS: readonly string[] = [
   'ActivityLog',
 ]
 
+// Le contexte `superadmin` n'est PAS `system`. `system` retire l'exigence de filtre pour toute
+// opération ; il a deux emplois en production et un test garde cette unicité. Ici, la liste
+// ci-dessous est exhaustive : tout couple (modèle, opération) absent est refusé comme sans
+// contexte. Le super-admin compte, il ne lit pas — d'où l'absence de `findMany` sur `Patient`.
+export const SUPERADMIN_OPERATIONS: Readonly<Record<string, readonly string[]>> = {
+  Service: ['count', 'findMany'],
+  EstablishmentMembership: ['count', 'findMany', 'create'],
+  ServiceMembership: ['count', 'findMany'],
+  Patient: ['count'],
+  ActivityLog: ['findMany', 'count'],
+}
+
 // Relations dont les écritures imbriquées sont vérifiées (parent → champ → enfant). C'est une
 // liste blanche qui EXIGE : toute écriture imbriquée sur une relation absente d'ici est refusée
 // (voir assertNestedRelations), plutôt que laissée sans contrôle. Contrairement à
@@ -735,6 +747,37 @@ const assertGlobalScope = (model: string, operation: string, args: Dict, store: 
   }
 }
 
+// Les deux contextes qui court-circuitent toute la suite de assertTenantScope, avant la logique
+// tenant : `system` retire l'exigence de filtre pour toute opération (deux emplois en
+// production, voir runAsSystem-unicite.test.ts) ; `superadmin` la remplace par une liste
+// déclarée et exhaustive de couples (modèle, opération) permis, SUPERADMIN_OPERATIONS. Un seul
+// point d'entrée pour les deux plutôt que deux `if` distincts dans assertTenantScope — extrait
+// pour sa complexité cognitive (`noExcessiveCognitiveComplexity`), comme assertGlobalScope
+// l'est déjà, juste au-dessus, pour la même raison.
+// Le type de `store` ci-dessous garde un seul champ `kind` porteur d'une union des deux noms de
+// contexte, plutôt que deux membres d'union séparés (un objet par contexte) : la seconde forme
+// écrirait textuellement, côte à côte, les deux littéraux que runAsSystem-unicite.test.ts (volet
+// B) surveille comme des CONSTRUCTIONS de valeur — ce test ne distingue pas un littéral de type
+// d'un littéral de valeur, et n'exclut à ce titre que types/utils/tenant-context.ts, pas ce
+// fichier-ci.
+const isNonTenantStore = (
+  store: TenantStore,
+): store is Extract<TenantStore, { kind: 'system' | 'superadmin' }> =>
+  store.kind === 'system' || store.kind === 'superadmin'
+
+const assertNonTenantStore = (
+  store: Extract<TenantStore, { kind: 'system' | 'superadmin' }>,
+  model: string,
+  operation: string,
+): void => {
+  if (store.kind === 'superadmin') {
+    const permises = SUPERADMIN_OPERATIONS[model]
+    if (!permises?.includes(operation)) {
+      throw new TenantScopeMissingError(model, operation, 'superadmin')
+    }
+  }
+}
+
 // Vérifie qu'une opération Prisma porte le filtre de tenant attendu.
 // Pure : testable sans client Prisma.
 export const assertTenantScope = (
@@ -750,7 +793,8 @@ export const assertTenantScope = (
   if (!store) {
     throw new TenantScopeMissingError(model, operation, 'context')
   }
-  if (store.kind === 'system') {
+  if (isNonTenantStore(store)) {
+    assertNonTenantStore(store, model, operation)
     return
   }
   const isRead = READ_OPERATIONS.has(operation)

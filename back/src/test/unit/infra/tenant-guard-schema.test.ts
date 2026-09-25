@@ -7,6 +7,7 @@ import {
   MODEL_RELATIONS,
   NESTED_RELATIONS,
   SERVICE_MODELS,
+  SUPERADMIN_OPERATIONS,
 } from '../../../main/infra/orm/tenant-guard'
 
 // Le garde-fou controle les include imbriques (a n'importe quelle profondeur, depuis une racine
@@ -302,5 +303,31 @@ describe('NESTED_RELATIONS reflete prisma/schema.prisma', () => {
       }
     }
     expect(mortes).toEqual([])
+  })
+})
+
+// La quatrieme table ecrite a la main, SUPERADMIN_OPERATIONS (tache 1, etape 4a) : la liste
+// declaree des couples (modele, operation) permis sous le contexte superadmin (voir son
+// commentaire dans tenant-guard.ts). Deux proprietes, dans les deux sens ou l'une des deux
+// directions n'a pas de sens :
+//   - chaque modele qu'elle nomme doit exister au schema (sinon la cle est une declaration
+//     morte, qui ne protege ni n'autorise plus rien) ;
+//   - chaque modele qu'elle nomme doit etre un modele de TENANT (service ou etablissement).
+//     C'est la direction la plus utile : elle rougit le jour ou quelqu'un y ajoute un modele
+//     GLOBAL, signe qu'il n'a pas compris que les globaux passent deja sans exception
+//     (assertGlobalScope) et qu'il elargit la liste pour rien.
+describe('SUPERADMIN_OPERATIONS reflete le schema', () => {
+  const modeles = modelNames
+
+  it('ne declare que des modeles qui existent', () => {
+    for (const modele of Object.keys(SUPERADMIN_OPERATIONS)) {
+      expect(modeles).toContain(modele)
+    }
+  })
+
+  it('ne declare que des modeles de tenant — un modele global n a pas besoin d y figurer', () => {
+    for (const modele of Object.keys(SUPERADMIN_OPERATIONS)) {
+      expect([...SERVICE_MODELS, ...ESTABLISHMENT_MODELS]).toContain(modele)
+    }
   })
 })

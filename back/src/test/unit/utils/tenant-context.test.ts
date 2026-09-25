@@ -48,6 +48,21 @@ describe('TenantContext', () => {
     expect(ctx.peek()).toBeUndefined()
   })
 
+  // Meme forme que runAsSystem ci-dessus, pour le troisieme contexte (tache 1, etape 4a). Le
+  // `await Promise.resolve()` a l'interieur du rappel n'est pas cosmetique : une requete Prisma
+  // est paresseuse, et `runAsSuperAdmin(() => prisma.x.count(...))` renverrait la promesse SANS
+  // l'attendre si le rappel n'attendait rien lui-meme — l'execution partirait alors hors de la
+  // portee du contexte (voir le commentaire de runAsSuperAdmin, utils/tenant-context.ts).
+  it('runAsSuperAdmin pose le marqueur superadmin', async () => {
+    const ctx = new TenantContext()
+    await ctx.runAsSuperAdmin(async () => {
+      await Promise.resolve()
+      expect(ctx.peek()).toEqual({ kind: 'superadmin' })
+      expect(() => ctx.current()).toThrow(TenantContextMissingError)
+    })
+    expect(ctx.peek()).toBeUndefined()
+  })
+
   // `enter` utilise `enterWith`, qui teinte le contexte asynchrone jusqu'a
   // la fin de la chaine sans refermer sa portee : sans `clear`, une requete
   // suivante sur le meme worker heriterait du tenant de la precedente.

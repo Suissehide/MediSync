@@ -53,6 +53,16 @@ const APPEL_RUN_AS_SYSTEM = /\.runAsSystem\b/
 // code source, l'entree en mode systeme quel que soit le nom de la methode qui l'appelle.
 const CONSTRUCTION_MODE_SYSTEME = /\{\s*kind\s*:\s*['"]system['"]\s*\}/
 
+// Meme volet B, pour le troisieme contexte du garde-fou (tache 1, etape 4a) : la construction de
+// la valeur `{ kind: 'superadmin' }`. `runAsSuperAdmin` (utils/tenant-context.ts) l'introduit sur
+// le meme modele que `runAsSystem` — sauf que ce mode-la ne retire rien : il substitue au filtre
+// de tenant une liste declaree et exhaustive de couples (modele, operation) permis
+// (SUPERADMIN_OPERATIONS, tenant-guard.ts). Une deuxieme construction de cette valeur, ailleurs
+// que par `runAsSuperAdmin`, contournerait cette liste exactement comme une deuxieme construction
+// de `{ kind: 'system' }` contournerait le filtre de tenant — d'ou la meme garde, sur la meme
+// forme.
+const CONSTRUCTION_MODE_SUPERADMIN = /\{\s*kind\s*:\s*['"]superadmin['"]\s*\}/
+
 // Les deux seuls emplois legitimes du back de production, pour le volet A. Chaque entree porte
 // un nombre D'APPELS, pas un nombre de fichiers : un second appel ajoute dans un fichier deja
 // permis doit etre discute, pas herite silencieusement.
@@ -142,6 +152,23 @@ describe('unicite de l exception runAsSystem au cloisonnement multi-tenant', () 
     // ce compte a deux et fait rougir cette assertion, quel que soit le nom choisi pour
     // l'atteindre : c'est la propriete que le volet A, qui ne lit qu'un nom, ne peut pas garder
     // seul (constat C1 de la revue de cette tache).
+    expect(constructions).toHaveLength(1)
+    expect(constructions[0]?.fichier).toBe(SEUL_CONSTRUCTEUR_LEGITIME)
+  })
+
+  // Meme volet B, pour le troisieme contexte (tache 1, etape 4a) : `runAsSuperAdmin` doit rester
+  // le seul endroit qui construit `{ kind: 'superadmin' }`, pour la meme raison que ci-dessus —
+  // c'est cette construction, et non le nom de la methode qui l'enveloppe, qui fait entrer le
+  // garde-fou dans ce mode.
+  it('ne construit la valeur { kind: "superadmin" } qu au seul endroit legitime (volet B : la capacite, pas le nom)', () => {
+    const constructions = lignesCorrespondantes(RACINE, CONSTRUCTION_MODE_SUPERADMIN).filter(
+      (emplacement) => emplacement.fichier !== FICHIER_DECLARATION_TYPE,
+    )
+
+    // Meme lecture que pour le mode systeme : une seule construction dans tout src/main (hors
+    // declaration de type), et elle doit vivre dans le fichier qui possede `runAsSuperAdmin`. Une
+    // deuxieme construction — meme enveloppee sous un autre nom de methode — pousse ce compte a
+    // deux et fait rougir cette assertion.
     expect(constructions).toHaveLength(1)
     expect(constructions[0]?.fichier).toBe(SEUL_CONSTRUCTEUR_LEGITIME)
   })
