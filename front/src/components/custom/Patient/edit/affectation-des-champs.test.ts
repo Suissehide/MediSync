@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-// Correctif tour 1 (task-11-review.md, I4/S5) — le sabotage que la revue a rejoué sans qu'aucun
+// Correctif tour 1 (tâche 11, revue, Important I4/S5) — le sabotage que la revue a rejoué sans qu'aucun
 // test ne bouge : déplacer « Profession » (`occupation`, un champ de `Patient`) du bloc
 // « Identité partagée » (`identite.patient.tsx`) vers le bloc « Dossier de ce service »
 // (`details.patient.tsx`). C'est exactement le défaut que la tâche 11 existe pour empêcher —

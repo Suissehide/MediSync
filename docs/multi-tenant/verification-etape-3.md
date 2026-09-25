@@ -79,25 +79,39 @@ complémentaires et doivent, à terme, être exécutées toutes les deux.
    & Contexte ». Observer deux blocs distincts : « Identité partagée entre
    les services de l'établissement » (distance, niveau d'études,
    profession…) et, séparé par un intitulé propre, « Dossier de ce
-   service — non visible des autres services » (soignant référent, notes…).
-   Aller sur l'onglet « Parcours & Inclusion » : le champ « Diagnostic
-   médical » affiche « Diabète de type 2 ». Ce champ et ceux du bloc
-   « dossier de ce service » sont ceux qui n'existent que pour Cardiologie —
-   c'est ce que le point suivant vérifie par la négative.
+   service — non visible des autres services » (soignant référent, suivi à
+   régulariser, notes, détails — les quatre champs de ce bloc ; **vides**
+   pour Claire Martin dans le seed, ce qui est normal : son `clinicalFile` ne
+   porte que `medicalDiagnosis`, `orientation`, `programType`). Aller sur
+   l'onglet « Parcours & Inclusion » : le champ « Diagnostic médical »
+   affiche « Diabète de type 2 ». Ce champ est celui qui n'existe que pour
+   Cardiologie — c'est ce que le point suivant vérifie par la négative
+   (sur un patient qui, lui, porte aussi une valeur dans le bloc « Dossier
+   de ce service »).
 
 3. **Le secrétariat voit le sous-dossier moins trois champs cliniques.**
-   Se déconnecter, se reconnecter avec `secretariat.cardiologie@cepta.fr`,
-   ouvrir la même fiche (Claire Martin). Observer : le champ « Diagnostic
-   médical » (onglet « Parcours & Inclusion ») est **vide**, alors qu'il
-   affichait « Diabète de type 2 » au point précédent pour un compte à accès
-   clinique — de même pour les champs « Notes » et « Détails » de l'onglet
-   « Profil & Contexte ». Les treize autres champs du dossier de service
-   (soignant référent, date d'entrée, mode de prise en charge…) restent
-   affichés normalement. Ce comportement n'est pas nouveau (il existait déjà
-   sur le patient avant cette étape) : ce point vérifie qu'il s'applique
-   bien au sous-dossier maintenant qu'il porte ces trois champs, sans
-   modification de code au-delà de ce que l'étape devait vérifier (spec
-   §5.2).
+   Toujours avec `admin@qwetle.fr` (accès clinique complet), ouvrir la fiche
+   de **Pierre Bernard** (Cardiologie) : onglet « Parcours & Inclusion », le
+   champ « Diagnostic médical » affiche « Post-infarctus du myocarde » ;
+   onglet « Profil & Contexte », bloc « Dossier de ce service », le champ
+   « Notes » affiche « Suivi rapproché nécessaire ». Se déconnecter, se
+   reconnecter avec `secretariat.cardiologie@cepta.fr`, rouvrir la même
+   fiche (Pierre Bernard). Observer : le champ « Diagnostic médical » est
+   **vide**, et le champ « Notes » est **vide** — alors qu'ils portaient
+   tous deux une valeur au paragraphe précédent pour un compte à accès
+   clinique. Les treize autres champs du dossier de service (soignant
+   référent, date d'entrée, mode de prise en charge…) restent affichés
+   normalement. **Le champ « Détails » n'est pas démontrable ici** : aucun
+   des seize patients du seed (`back/prisma/seed/data/patient.ts`) ne porte
+   de valeur pour ce champ, donc il reste vide pour tout compte — y compris
+   un compte à accès clinique complet — et son vide ne prouve rien pour le
+   secrétariat spécifiquement. Il est masqué par le même mécanisme que
+   « Notes » et « Diagnostic médical » (`back/src/main/utils/clinical-fields.ts`,
+   `CLINICAL_FIELDS`), non démontré à l'écran faute de donnée de seed. Ce
+   comportement n'est pas nouveau (il existait déjà sur le patient avant
+   cette étape) : ce point vérifie qu'il s'applique bien au sous-dossier
+   maintenant qu'il porte ces trois champs, sans modification de code
+   au-delà de ce que l'étape devait vérifier (spec §5.2).
 
 4. **Un sous-dossier d'un service reste inatteignable depuis l'autre.**
    Toujours avec `admin@qwetle.fr` (qui a accès aux deux services), noter
@@ -112,7 +126,17 @@ complémentaires et doivent, à terme, être exécutées toutes les deux.
    n'affichent **aucune** des valeurs vues au point 2 : ni « Diabète de type
    2 », ni aucun autre champ du dossier de Cardiologie. Le dossier de
    service apparaît vide (aucun sous-dossier de Pneumologie n'existe encore
-   pour Claire), pas rempli avec les données de l'autre service.
+   pour Claire), pas rempli avec les données de l'autre service. **Et le
+   bloc identité n'affiche aucune mention « Suivi existant dans un autre
+   service de l'établissement. »** — alors même que Claire Martin *est*
+   suivie ailleurs (en Cardiologie). C'est la vérification de la décision D3
+   de `decisions-etape-3.md` (la correction la plus importante de l'étape
+   sur ce point) : le signal de suivi ailleurs ne doit apparaître **que** si
+   le service courant possède déjà lui-même un sous-dossier pour ce patient
+   — ici Pneumologie n'en a aucun, donc le signal doit rester absent, même
+   si un autre service en a un. Si cette mention apparaissait ici, ce serait
+   une régression de D3 : chercher ou ouvrir un patient depuis un service
+   qui ne le suit pas révélerait qu'il est suivi ailleurs.
 
 5. **Rechercher une identité existante ne révèle que l'identité.** Toujours
    avec `admin@qwetle.fr`, sur Cardiologie, ouvrir « Ajouter un patient »,

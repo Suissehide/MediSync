@@ -62,7 +62,8 @@ export const patientsResponseSchema = z.array(patientResponseSchema)
 // il faudra soit l'y calculer explicitement (avec son cout assume), soit le derouler autrement
 // (jointure unique plutot qu'un appel par ligne).
 //
-// `.optional()` (revue tache 13, tour 1, point 1 — C1 de task-13-review.md) : le champ n'est
+// `.optional()` (revue tache 13, tour 1, point 1 — Critique C1 ; voir D3,
+// `docs/multi-tenant/decisions-etape-3.md`) : le champ n'est
 // present QUE si le service courant a deja son propre sous-dossier pour ce patient. La spec §6
 // est explicite — « trouver quelqu'un ne revele que son identite, jamais son suivi » — et la
 // tache 13 a arme un chemin qui obtient un `id` par la recherche (ouverte a `patient:read`, donc
@@ -109,7 +110,7 @@ export const patientIdentityMatchSchema = z.object({
   birthDate: z.coerce.date().nullable(),
 })
 
-// `results` + `hasMore` (revue tache 13, tour 1, point 4 — I4 de task-13-review.md) : la
+// `results` + `hasMore` (revue tache 13, tour 1, point 4 — Important I4) : la
 // recherche s'arrete a vingt lignes (voir le `take` du depot), et le SEUL but declare de cette
 // route est d'eviter les doublons — un utilisateur qui ne voit pas l'identite qu'il cherche
 // conclut a tort qu'elle n'existe pas et en cree une seconde. `hasMore` dit seulement qu'il y a

@@ -157,6 +157,6 @@ describe('unicite de l exception runAsSystem au cloisonnement multi-tenant', () 
 // garde-fou lui-meme, si bien qu'etendre ce scan a `src/test` exigerait une liste d'autorisation
 // separee pour les tests — un chantier a part, hors du remede demande ici, et qui recoupe la
 // meme limite deja actee pour la porte de typage (`npm run build` ne type pas `src/test` non
-// plus : voir m4, task-7-review.md). Un `runAsSystem` ou un `{ kind: 'system' }` ecrit dans un
+// plus : voir tache 7, revue, mineur m4). Un `runAsSystem` ou un `{ kind: 'system' }` ecrit dans un
 // fichier de test n'active d'ailleurs rien en production : il ne peut agir que sur l'execution de
 // ce test-la.

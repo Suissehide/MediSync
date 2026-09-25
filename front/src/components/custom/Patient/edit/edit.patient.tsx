@@ -77,7 +77,7 @@ export default function EditPatient({ patient }: PatientParam) {
   // back pour treize d'entre eux — voir `form.patient.ts` pour le patron à ne pas reproduire.
   const serviceFileReady = !isServiceFilePending && !isServiceFileError
 
-  // Correctif tour 1 (task-11-review.md, C1/C2) — pourquoi une référence figée plutôt que
+  // Correctif tour 1 (tâche 11, revue, Critiques C1/C2) — pourquoi une référence figée plutôt que
   // `serviceFile` lu en direct :
   // `FormApi.update()` (appelé à chaque rendu par `useForm`) recopie `options.defaultValues`
   // *sans condition*, mais ne touche `state.values` que si le formulaire n'a encore jamais été
@@ -121,7 +121,7 @@ export default function EditPatient({ patient }: PatientParam) {
         return
       }
 
-      // Correctif tour 2 (task-11-review.md, m3) — exactement la même garde que côté
+      // Correctif tour 2 (tâche 11, revue, mineur m3) — exactement la même garde que côté
       // sous-dossier (`serviceFileForm.onSubmit`, plus bas) : sans elle, ce formulaire
       // s'enregistrait à chaque clic sur « Sauvegarder », même quand aucun de ses champs n'avait
       // été touché — un toast « Patient modifié avec succès » qui ment, et une écriture qui
@@ -205,7 +205,7 @@ export default function EditPatient({ patient }: PatientParam) {
   // tout a été enregistré. `serviceFileForm.handleSubmit()` n'est jamais appelé si la lecture du
   // sous-dossier n'a pas abouti.
   //
-  // Correctif tour 2 (task-11-review.md, m5) — les deux `await` ci-dessous ne mettent PAS les
+  // Correctif tour 2 (tâche 11, revue, mineur m5) — les deux `await` ci-dessous ne mettent PAS les
   // deux soumissions en séquence : `handleSubmit` tel qu'exposé par `useForm`
   // (`@tanstack/react-form/dist/esm/useForm.js`) appelle `formApi._handleSubmit(...)` sans en
   // renvoyer la promesse, donc il rend `undefined` et l'`await` ne porte sur rien. Les deux
@@ -222,7 +222,7 @@ export default function EditPatient({ patient }: PatientParam) {
     }
   }
 
-  // Correctif tour 2 (task-11-review.md, m2) — la touche Entrée doit de nouveau enregistrer,
+  // Correctif tour 2 (tâche 11, revue, mineur m2) — la touche Entrée doit de nouveau enregistrer,
   // comme sur l'ancien écran à un seul `<form>`. Le remède n'est PAS de rendre chacun des deux
   // formulaires TanStack Form indépendant (un `<form>` par bloc) : deux `<form>` imbriqués ou
   // côte à côte referaient le défaut que ce correctif doit éviter — l'Entrée dans un champ ne

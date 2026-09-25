@@ -583,7 +583,7 @@ describe('scoping des repositories de diagnostic', () => {
   // d'echec d'inscription, rattaches au sous-dossier de service). Jusqu'ici seul
   // DiagnosticEducatifRepository avait un bloc ici : sur cinq sabotages du filtre de service
   // pratiques en revue, les deux qui touchaient EnrollmentIssueRepository (findByPatientID et
-  // delete) ne faisaient rougir aucun test — voir task-6-review.md, C1. Ce bloc couvre ses trois
+  // delete) ne faisaient rougir aucun test — voir tache 6, revue, Critique C1. Ce bloc couvre ses trois
   // methodes, calque sur celui de DiagnosticEducatifRepository ci-dessus.
   it('EnrollmentIssueRepository filtre, cree et supprime avec les cles de tenant', async () => {
     const { prisma, calls } = buildFakePrisma()

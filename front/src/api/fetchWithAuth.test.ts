@@ -83,7 +83,7 @@ describe('fetchWithAuth — 404 de route de tenant', () => {
   // Le sous-dossier de service d'un patient rend un 404 tant qu'aucune ecriture ne l'a encore
   // cree pour ce patient dans ce service (delibere cote back) — c'est l'etat NORMAL et
   // majoritaire juste apres une migration, pas un signal d'arbre perime. Ce 404-la ne doit rien
-  // declencher (task-10-review.md, I4).
+  // declencher (tâche 10, revue, Important I4).
   it('ne declenche rien pour un 404 sur le sous-dossier de service d un patient', async () => {
     vi.stubGlobal(
       'fetch',

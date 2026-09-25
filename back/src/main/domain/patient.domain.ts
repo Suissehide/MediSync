@@ -190,8 +190,8 @@ class PatientDomain implements PatientDomainInterface {
   }
 
   // Le signal de suivi ailleurs (spec §5.3/§6, tache 7 tour 1, I1) est porte ici, pas sur le
-  // sous-dossier de service. `followedElsewhere` (revue tache 13, tour 1, point 1 — C1 de
-  // task-13-review.md) n'est calcule, et present dans la reponse, QUE si le service courant a
+  // sous-dossier de service. `followedElsewhere` (revue tache 13, tour 1, point 1 — Critique C1 ;
+  // voir D3, `docs/multi-tenant/decisions-etape-3.md`) n'est calcule, et present dans la reponse, QUE si le service courant a
   // deja son propre sous-dossier pour ce patient : depuis la tache 12, tout patient cree ou
   // rattache dans un service y possede un sous-dossier (`ensureExists`), donc cette condition
   // recouvre exactement « ce patient est chez moi ». Le signal existe pour avertir un service

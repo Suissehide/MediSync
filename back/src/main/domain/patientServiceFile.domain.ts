@@ -55,8 +55,8 @@ class PatientServiceFileDomain implements PatientServiceFileDomainInterface {
   // d'homonymes (deux identites proches, la date de naissance souvent absente) cree un
   // sous-dossier vide qu'aucune route ne permet de retirer, et allume `estSuiviAilleurs` pour
   // tous les autres services de l'etablissement sans retour possible. Meme cout que celui deja
-  // assume pour la creation directe d'un patient dans le mauvais service (voir le ruling de la
-  // tache 12, `progress.md`), repris ici sur un geste plus facile a declencher par erreur : ne
+  // assume pour la creation directe d'un patient dans le mauvais service (voir D6,
+  // `docs/multi-tenant/decisions-etape-3.md`), repris ici sur un geste plus facile a declencher par erreur : ne
   // pas rattacher ne perd rien, l'alternative n'est donc pas plus mauvaise. Ne pas ajouter de
   // route de retrait sans re-evaluer cette section et `dossier-service.test.ts`.
   async attachToCurrentService(

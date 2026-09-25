@@ -68,6 +68,44 @@ le multi-tenant est fusionnée entre-temps : `SELECT count(*) FROM
 l'étape 1 seule, 54 = les deux déjà appliquées. Préférer la requête par nom
 ci-dessus, qui reste juste même si ce compte a bougé.
 
+### Contrôle supplémentaire, en lecture seule : la précondition de la garde de la migration
+
+**Uniquement si le résultat ci-dessus est 1 ligne (`multi_tenant_socle` seul)**
+— c'est-à-dire si `Establishment`/`Service` existent déjà en production. La
+migration de cette étape (§4.2 de la spécification, voir `decisions-etape-3.md`,
+D4) refuse de s'exécuter si un établissement ayant au moins un patient possède
+plusieurs services, ou aucun. Ce contrôle, en lecture seule, dit **avant**
+d'entrer en fenêtre de maintenance si ce refus se produira, plutôt que de le
+découvrir après avoir arrêté le conteneur applicatif :
+
+```sql
+-- lit seulement, ne modifie rien
+SELECT e.id AS etablissement, e.name,
+       count(DISTINCT s.id) FILTER (WHERE s.id IS NOT NULL) AS nb_services
+FROM "Establishment" e
+JOIN "Patient" p ON p."establishmentId" = e.id
+LEFT JOIN "Service" s ON s."establishmentId" = e.id
+GROUP BY e.id, e.name
+HAVING count(DISTINCT s.id) FILTER (WHERE s.id IS NOT NULL) <> 1;
+```
+
+**Attendu : 0 ligne.** Une ligne renvoyée nomme un établissement où la
+migration refusera (le nombre de services montré, `0` ou `2` et plus, dit
+lequel des deux refus de D4 s'appliquerait) : régler la situation (créer ou
+désactiver un service, selon le cas) avant de continuer, plutôt que d'entrer
+en fenêtre de maintenance pour se retrouver bloqué (voir §2 et §4 plus bas
+pour ce que ce blocage coûte si on le découvre après coup).
+
+**Scénario B (0 ligne au contrôle précédent) : ce contrôle ne s'applique pas
+encore**, et ce n'est pas un oubli — `Establishment`/`Service` n'existent pas
+avant que `multi_tenant_socle` ne les crée, et cette même migration crée
+exactement un établissement et un service pour toutes les données
+existantes : la garde de `patient_service_file` ne peut donc pas refuser dans
+ce scénario précis, par construction. Le premier déploiement qui pourra
+violer cette précondition est un déploiement **ultérieur** à celui-ci (une
+fois l'étape 4 du chantier multi-tenant en place, qui permettra de créer un
+second service).
+
 ## 1. Sauvegarde manuelle
 
 Depuis l'interface Dokploy : télécharger le dernier `pg_dump` du service
@@ -103,17 +141,50 @@ DB_NAME=medisync_deploy_check deploy/scripts/restore-db-dump.sh <dump-le-plus-re
 
 ### Relever les invariants « avant », avant toute migration
 
-Les deux fichiers « avant » se jouent avant toute migration, quel que soit le
-scénario établi à l'étape 0 — les colonnes qu'ils mesurent ne sont touchées
-ni par l'une ni par l'autre migration tant qu'elle n'a pas été appliquée :
+**Scénario A (une ligne à l'étape 0, `multi_tenant_socle` déjà reçue) :**
+`dossier-patient-avant.sql` se joue avant toute migration, sans autre
+précaution — les colonnes qu'il mesure ne sont touchées que par la migration
+de cette étape, pas encore appliquée à ce stade :
 
 ```shell
 docker exec -i medisync-postgres psql -U postgres -d medisync_deploy_check \
   < back/prisma/checks/dossier-patient-avant.sql > dossier-avant.txt
 ```
 
-**Scénario B uniquement** (ni l'étape 1 ni l'étape 3 en production, établi à
-l'étape 0) — jouer en plus l'« avant » de l'étape 1 :
+**Scénario B (0 ligne à l'étape 0) : ne PAS jouer `dossier-patient-avant.sql`
+tel quel.** Il interroge `"Establishment"` et `"Service"`, deux tables que
+**seule la migration `multi_tenant_socle` crée** — en scénario B elles
+n'existent pas encore. `psql` échoue alors avec
+`ERROR: relation "Establishment" does not exist`, écrit sur **stderr** ; la
+redirection `> dossier-avant.txt` de la commande ci-dessus produit dans ce cas
+un fichier de **0 octet**, sans autre signal à l'écran que cette ligne
+d'erreur qui défile. Si on ne le remarque pas et qu'on poursuit, la
+comparaison normalisée plus bas annoncera **35 écarts sur 35** — la perte
+apparente de toutes les colonnes cliniques de tous les patients — sur une
+migration par ailleurs parfaite. `prisma migrate deploy` n'offre aucun point
+d'arrêt entre les deux migrations pour prendre la mesure « avant » une fois
+`Establishment`/`Service` créées mais avant que `patient_service_file` n'ait
+tourné : il les applique toutes les deux d'un coup.
+
+**La mesure qui remplace `dossier-patient-avant.sql` en scénario B** : les
+mêmes lignes « Patients », « Presence <colonne> » et « Empreinte <colonne> »
+(33 des 35 lignes comparées plus bas), obtenues en retirant du fichier, à
+l'exécution, les deux lignes qui interrogent `Establishment`/`Service` — sans
+modifier le fichier lui-même :
+
+```shell
+grep -v -e "'Etablissements'" -e "'Services'" back/prisma/checks/dossier-patient-avant.sql \
+  | docker exec -i medisync-postgres psql -U postgres -d medisync_deploy_check > dossier-avant.txt
+```
+
+**Ce qu'il faut observer** : un fichier `dossier-avant.txt` non vide, avec les
+33 lignes `Patients`/`Presence …`/`Empreinte …` remplies de valeurs réelles
+(pas d'erreur `relation … does not exist`). Si le fichier est vide ou contient
+une erreur, ne pas continuer : reprendre cette étape, vérifier qu'on a bien
+suivi la branche scénario B et pas la commande du scénario A par erreur.
+
+**Scénario B uniquement, dans les deux cas** — jouer en plus l'« avant » de
+l'étape 1 :
 
 ```shell
 docker exec -i medisync-postgres psql -U postgres -d medisync_deploy_check \
@@ -126,19 +197,48 @@ docker exec -i medisync-postgres psql -U postgres -d medisync_deploy_check \
 cd back
 DATABASE_URL="postgres://postgres:postgres@localhost:5432/medisync_deploy_check?schema=public" \
   npm run prisma:migrate:deploy
+cd ..
 ```
 
+**Ne pas oublier le `cd ..` ci-dessus** : les blocs qui suivent (invariants
+« après », comparaison, suppression de la copie) utilisent tous des chemins
+relatifs à la racine du dépôt (`back/prisma/checks/…`) — rester dans `back/`
+les ferait échouer (fichier introuvable) ou comparer deux fichiers écrits
+dans des répertoires différents.
+
 **Attendu** : `All migrations have been successfully applied.` Chaque
-migration s'exécute dans sa propre transaction : un échec ne laisse pas la
-base à moitié migrée. La migration de cette étape (§4.2 de la spécification)
-refuse en outre explicitement de s'exécuter, **avant toute écriture**, si un
-établissement ayant des patients possède plusieurs services actifs ou
-désactivés, ou n'en possède aucun (voir `decisions-etape-3.md`, D4) — le
-message nomme les établissements et services fautifs. Si elle échoue, lire le
-message et le comprendre avant de retenter : la même migration est déjà
-passée sur une copie des données réelles pendant le développement, un échec
-ici signale un écart entre cette copie-ci et celle-là, pas un défaut de la
-migration elle-même. Ne pas rejouer la commande en boucle.
+migration s'exécute dans sa propre transaction : un échec ne laisse pas les
+**données** à moitié migrées. La migration de cette étape (§4.2 de la
+spécification) refuse en outre explicitement de s'exécuter, **avant toute
+écriture**, si un établissement ayant des patients possède plusieurs services
+actifs ou désactivés, ou n'en possède aucun (voir `decisions-etape-3.md`,
+D4 ; le contrôle de §0 ci-dessus est fait pour éviter d'en arriver là) — le
+message nomme les établissements et services fautifs.
+
+> **Un échec laisse en revanche le journal des migrations bloqué, et
+> retenter ne suffit pas.** Prisma inscrit la migration en échec dans
+> `_prisma_migrations` ; toute tentative suivante — y compris
+> `prisma migrate deploy` rejoué en boucle, et le `start:migrate:production`
+> que le conteneur de production rejoue à **chaque redémarrage**
+> (`back/deploy/Dockerfile`) — échoue ensuite avec `P3009` **sans rien
+> appliquer**, même si la cause du premier échec a été corrigée entre-temps.
+> **Ne pas rejouer la commande en boucle** : lire le message d'erreur et le
+> comprendre d'abord (la même migration est déjà passée sur une copie des
+> données réelles pendant le développement, un échec ici signale un écart
+> entre cette copie-ci et celle-là, pas un défaut de la migration
+> elle-même), corriger la cause, **puis débloquer explicitement le
+> journal** avant de rejouer :
+>
+> ```shell
+> cd back
+> npx prisma migrate resolve --rolled-back 20260924160131_patient_service_file
+> npm run prisma:migrate:deploy
+> cd ..
+> ```
+>
+> Sans cette commande, corriger la cause ne suffit pas : la migration reste
+> marquée en échec et **aucun déploiement suivant ne pourra plus s'appliquer**,
+> pas seulement celui-ci.
 
 ### Relever les invariants « après », et comparer
 
@@ -186,6 +286,22 @@ docker exec -i medisync-postgres psql -U postgres -d medisync_deploy_check \
 `Services`, 16 `Presence <colonne>`, 16 `Empreinte <colonne>`)** : `diff`
 silencieux, `aucun ecart sur les 35 lignes communes`. **Le moindre écart
 signale une perte ou un décalage de données** : ne pas continuer.
+
+**Scénario B : deux lignes de plus dans le `diff`, et c'est attendu, pas un
+écart.** `dossier-avant.txt` a été construit sans `Etablissements`/`Services`
+(voir plus haut) : le `diff` affiche donc, en plus des 33 lignes communes,
+```
+> Etablissements = 1
+> Services = 1
+```
+(éprouvé : sur une base jetable construite au niveau pré-étape-1 avec dix
+patients réels, seules ces deux lignes apparaissent, précédées de `>` — le
+signe d'une ligne présente uniquement dans l'« après » — et aucune des 33
+autres lignes ne diverge). Ces deux lignes n'existent pas encore côté
+« avant » par construction, exactement comme les six lignes structurelles
+ci-dessous : ce n'est un problème que si une **troisième** ligne apparaît, ou
+si l'une des 33 lignes communes diffère. **En scénario B, l'attendu est donc :
+diff ne montre que ces deux lignes `>`, rien d'autre.**
 
 Vérifier en plus, dans `dossier-apres.txt` seul (ces lignes n'existent pas
 dans le fichier « avant », c'est attendu) :
@@ -250,13 +366,30 @@ d'habitude depuis Dokploy.
 
 **Attendu** : dans les logs du conteneur, `All migrations have been
 successfully applied.` suivi de `Server is ready`. Si le conteneur redémarre
-en boucle ou que les logs montrent une erreur de migration, **ne pas tenter
-de réparer en production** : chaque migration s'exécute dans sa propre
-transaction (aucune n'a rien pu appliquer à moitié) — passer directement à
-l'étape 7. **Il n'existe pas de correctif de code qui rattrape une migration
-de cette étape ratée** : les seize colonnes source auront déjà disparu de
-`Patient`, et le seul chemin de retour est la restauration de la sauvegarde
-de l'étape 1.
+en boucle ou que les logs montrent une erreur de migration, distinguer deux
+cas avant d'agir — **le conteneur va continuer de rejouer `prisma migrate
+deploy` à chaque redémarrage, et ne réussira ni l'un ni l'autre tant que le
+bon geste n'a pas été fait :**
+
+- **Le message nomme des établissements et des services (le refus de la
+  garde D4, `decisions-etape-3.md`)** : aucune donnée n'a été touchée (la
+  garde refuse avant la moindre écriture), mais le journal des migrations
+  reste bloqué (`P3009` à chaque tentative suivante) tant qu'il n'est pas
+  débloqué explicitement — voir §2 ci-dessus pour la commande
+  (`npx prisma migrate resolve --rolled-back 20260924160131_patient_service_file`),
+  à exécuter depuis là où l'on peut atteindre la base de production, après
+  avoir corrigé la précondition (le contrôle de §0 est fait pour l'éviter,
+  mais une donnée a pu changer entre §0 et ce déploiement). Redéployer
+  ensuite : pas besoin de restaurer une sauvegarde pour un refus qui n'a
+  touché aucune donnée.
+- **Toute autre erreur** : **ne pas tenter de réparer en production**. Chaque
+  migration s'exécute dans sa propre transaction — un échec ne laisse pas les
+  **données** à moitié migrées, mais laisse le **journal** des migrations
+  bloqué exactement comme ci-dessus, et cette fois la cause n'est pas connue
+  avec la même certitude. Passer directement à l'étape 7. **Il n'existe pas
+  de correctif de code qui rattrape une migration de cette étape ratée** :
+  les seize colonnes source auront déjà disparu de `Patient`, et le seul
+  chemin de retour est la restauration de la sauvegarde de l'étape 1.
 
 ## 5. Vérifier en production
 
@@ -346,18 +479,64 @@ sauvegarde de l'étape 1 **sur la base de production** :
 deploy/scripts/restore-db-dump.sh <sauvegarde-de-l-etape-1.sql.gz>
 ```
 
+> **`deploy/scripts/restore-db-dump.sh` restaure toujours la base du
+> conteneur `medisync-postgres` joignable depuis l'endroit où on l'exécute :
+> l'exécuter là où tourne la production, pas depuis un poste local qui ne
+> verrait que sa propre base.** Le script a pour valeurs par défaut le
+> conteneur **local** (`CONTAINER=medisync-postgres`) et la base de
+> développement **locale** (`DB_NAME=medisync`), et refuse explicitement de
+> parler à un démon Docker distant (voir `deploy/scripts/restore-db-dump.sh`,
+> section « Garde-fou : cible locale uniquement ») — il ne peut donc pas se
+> tromper de cible en restaurant sur un serveur distant par erreur, mais rien
+> n'empêche de le lancer, sans le vouloir, **depuis un poste de développement**
+> plutôt que depuis l'endroit où tourne la production : dans ce cas il
+> détruit et remplace la base de développement locale (`medisync`), et **ne
+> touche pas la production**, sans qu'aucun message ne le distingue d'une
+> vraie restauration réussie. Au moment le plus tendu de la procédure, c'est
+> le pire moment pour découvrir qu'on a détruit la mauvaise base et laissé la
+> production dans l'état qui a déclenché ce retour arrière.
+
 **Attendu** : l'application redémarre sur le schéma et les données d'avant la
-migration. Vérifier que la dernière migration appliquée n'est pas
-`20260924160131_patient_service_file` (ni, en scénario B, `20260922144905_multi_tenant_socle`
-si le retour arrière doit remonter avant l'étape 1 elle-même) :
+migration. La vérifier **positivement**, pas par l'absence d'un nom dans une
+liste — `npx prisma migrate status` liste les migrations **non** appliquées,
+pas celles qui le sont : sur une restauration **ratée** (la migration est
+encore en place), il répond `Database schema is up to date!`, un message qui
+se lit comme un succès alors que c'en est l'inverse. Utiliser à la place la
+requête par nom de §0 (en lecture seule, elle dit vrai dans les deux sens) ou,
+plus directement, ce contrôle qui constate lui-même l'état du schéma :
 
 ```shell
-cd back && DATABASE_URL="<url de la base restaurée>" npx prisma migrate status
+docker exec -i medisync-postgres psql -U postgres -d <nom-de-la-base-restauree> -c "
+    SELECT
+      (SELECT count(*) FROM information_schema.columns
+         WHERE table_schema='public' AND table_name='Patient'
+           AND column_name IN ('medicalDiagnosis','entryDate','careMode','orientation',
+                                'etpDecision','programType','nonInclusionDetails',
+                                'customContentDetails','goal','exitDate','stopReason',
+                                'etpFinalOutcome','referringCaregiver','followUpToDo',
+                                'notes','details')) AS colonnes_patient_seize,
+      to_regclass('public.\"PatientServiceFile\"') AS table_sous_dossier;"
 ```
 
-Si l'une des deux figure encore, la restauration n'a pas eu l'effet attendu
-(mauvais fichier, ou la commande a visé la mauvaise base) : recommencer la
-restauration avant de rouvrir l'accès aux utilisateurs.
+(`<nom-de-la-base-restauree>` : `medisync` en production, le nom passé à
+`DB_NAME` sur une copie locale). **Attendu, retour
+arrière réussi** : `colonnes_patient_seize` = **16** et `table_sous_dossier`
+**vide** (aucune table). **Si le retour arrière a échoué** (migration encore
+appliquée) : `colonnes_patient_seize` = **0** et `table_sous_dossier` =
+`PatientServiceFile` — l'échec se voit directement dans les deux colonnes,
+sans avoir à interpréter un message d'apparence rassurante. Éprouvé dans les
+deux sens sur des bases jetables : `medisync` elle-même (jamais migrée par
+cette étape) rend `16` / vide ; une base où la migration est restée appliquée
+rend `0` / `PatientServiceFile`.
+
+En scénario B, si le retour arrière doit remonter avant l'étape 1 elle-même,
+vérifier en plus que `to_regclass('public."Establishment"')` est vide (aucune
+des tables de l'étape 1 ne doit rester).
+
+Si l'un des deux contrôles ne donne pas le résultat attendu, la restauration
+n'a pas eu l'effet voulu (mauvais fichier, ou la commande a visé la mauvaise
+base — voir l'avertissement ci-dessus) : recommencer la restauration avant de
+rouvrir l'accès aux utilisateurs.
 
 ---
 

@@ -83,7 +83,7 @@ describe('PatientServiceFileApi', () => {
   // pas un champ du sous-dossier), ni un objet reconstruit à partir d'une lecture filtrée. Le
   // corps porte ici PLUSIEURS champs fournis : un seul n'aurait pas pu distinguer « n'envoie
   // que ce qu'on lui donne » de « n'envoie que le premier champ du corps » — un trou réel,
-  // laissé vert par le seul champ envoyé jusqu'ici (task-10-review.md, m3, sabotage B).
+  // laissé vert par le seul champ envoyé jusqu'ici (tâche 10, revue, mineur m3, sabotage B).
   it('update n envoie que les champs fournis dans le corps, jamais patientID', async () => {
     const fetchMock = vi.fn().mockResolvedValue(okResponse(serviceFile))
     vi.stubGlobal('fetch', fetchMock)

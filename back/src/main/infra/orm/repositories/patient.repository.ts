@@ -190,8 +190,8 @@ class PatientRepository implements PatientRepositoryInterface {
         // un `select` explicite obligerait a enumerer chaque colonne du sous-dossier ici, une
         // liste qui se desynchroniserait silencieusement de `prisma/schema.prisma` a la
         // prochaine colonne ajoutee. `enrollmentIssues` est donc retire explicitement plus bas,
-        // apres la requete, plutot que par la forme de la requete elle-meme (I2, task-6-review.md
-        // : `serviceFile` ne doit porter aucune cle que `PatientServiceFileEntityRepo` ne
+        // apres la requete, plutot que par la forme de la requete elle-meme (tache 6, revue,
+        // Important I2 : `serviceFile` ne doit porter aucune cle que `PatientServiceFileEntityRepo` ne
         // declare pas).
         serviceFiles: {
           where: { serviceId: this.scope.serviceId },

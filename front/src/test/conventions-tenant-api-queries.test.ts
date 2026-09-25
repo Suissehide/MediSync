@@ -16,7 +16,7 @@ import { describe, expect, it } from 'vitest'
 // `src/test/layouts-de-tenant.test.ts` ne lit que `src/routes` : il ne voit ni `src/api` ni
 // `src/queries`. `src/test/lecture-directe-du-cache.test.ts` balaie bien tout `src`, mais son
 // sujet est la restauration de photographie (`getQueryData`/`getQueriesData`), pas ces deux
-// conventions-ci — verifie par task-10-review.md, I3 : les deux sabotages ci-dessous le
+// conventions-ci — verifie tache 10, revue, Important I3 : les deux sabotages ci-dessous le
 // laissent vert.
 //
 // D'ou cette regle, de la meme forme que les deux tests cites (traversee de fichiers, motif de

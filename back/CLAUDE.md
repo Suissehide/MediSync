@@ -31,7 +31,7 @@ NPM scripts are orchestrated by [wireit](https://github.com/google/wireit) (see 
   that check. Three real occurrences were found this way during étape 3 (the worst left the demo seed silently
   broken for a full correction round, with `tsc` reporting zero errors on it throughout).
 - `npm run lint` — Biome on `src/main` (`npm run lint:ci` for CI).
-- `npm test` / `npm run test:unit` / `npm run test:e2e` — Jest via `src/test/jest.config.ts` (note: a `src/test/` directory is not currently checked in; the scripts assume it exists when tests are added).
+- `npm test` / `npm run test:unit` / `npm run test:e2e` — Jest via `src/test/jest.config.ts` (`src/test/` is checked into git like any other source directory; see `runAsSystem-unicite.test.ts` cited below for one example path).
 - Run a single test: `npx jest -c src/test/jest.config.ts -t "<name regex>"` or `npx jest <path/to/file.test.ts>`.
 - `npm run cover` / `cover:unit` / `cover:e2e` — same as test variants with coverage.
 - `npm run validate` — `deps:check` + `build` + `lint` + `cover` (used by CI).

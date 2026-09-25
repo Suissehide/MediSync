@@ -1172,7 +1172,7 @@ describe('assertTenantScope', () => {
   // construction, puisque `select` mele colonnes scalaires et relations). `_count` n'est ni l'un
   // ni l'autre : c'est un mot reserve de Prisma. Fuite de cardinalite seule (pas de contenu) :
   // "ce patient a N dossiers de service" revele qu'il est suivi ailleurs, sans dire ou — demontre
-  // contre une vraie base (task-9-review.md, §Important 2) avec un patient ayant un dossier dans
+  // contre une vraie base (tache 9, revue, Important 2) avec un patient ayant un dossier dans
   // deux services, ou `_count.serviceFiles` valait 2 pour un tenant scope au seul service A1.
   describe('_count sous select (tour de correction 1, important 2)', () => {
     it('refuse _count sous select comme sous include, a la racine', () => {
@@ -1250,7 +1250,7 @@ describe('assertTenantScope', () => {
   // appelee pour une racine globale (voir l'ancien commentaire « PERIMETRE NON COUVERT » retire
   // de tenant-guard.ts). Une lecture qui franchissait assertGlobalInclude (une seule ligne, via
   // findUnique(OrThrow)) pouvait ensuite descendre sans plus aucun filtre jusqu'a une transition
-  // etablissement -> service. Prouve contre une vraie base (task-9-review.md, §A6) : un compte
+  // etablissement -> service. Prouve contre une vraie base (tache 9, revue, point A6) : un compte
   // membre du seul etablissement A lisait medicalDiagnosis et notes d'un patient de
   // l'etablissement B par cette meme chaine, en partant de User.
   describe('descente recursive depuis une racine globale (tour de correction 1)', () => {

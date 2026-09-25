@@ -392,7 +392,7 @@ describe('isolation par tenant', () => {
     // leurs routes sont imbriquees sous /patient/:patientId/…, un second identifiant que le type
     // `IsolationCase` (un seul `path(id)`) ne porte pas. `back/CLAUDE.md` (etape 8, "Adding a new
     // entity") exige un cas par entite de service ; aucun n'existait pour ces deux-la avant ce
-    // tour de correction (task-6-review.md, C1).
+    // tour de correction (tache 6, revue, Critique C1).
     it('un probleme d inscription cree dans un service n est ni lisible ni supprimable depuis l autre', async () => {
       const { est, serviceA, serviceB, cookiesA, cookiesB } = scenario
       const patient = await testDb.patient.create({

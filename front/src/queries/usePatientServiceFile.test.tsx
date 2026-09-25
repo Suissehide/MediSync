@@ -135,7 +135,7 @@ describe('usePatientServiceFileQuery — le sous-dossier peut ne pas exister', (
 
 // Sans appelant aujourd'hui (la fiche patient en deux blocs, qui déclenchera cette mutation,
 // est la tâche 11) : les six tests ajoutés à la tâche 10 ne touchaient que le module d'API et
-// la requête de lecture, jamais ce hook (task-10-review.md, m3 — sabotage G, « suppression pure
+// la requête de lecture, jamais ce hook (tâche 10, revue, mineur m3 — sabotage G, « suppression pure
 // et simple du hook de mutation, que rien ne remarque »). Ces deux tests l'exercent directement
 // — un test qui ne rougit pas quand on supprime ce qu'il teste ne teste rien.
 describe('usePatientServiceFileMutations', () => {

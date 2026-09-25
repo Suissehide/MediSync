@@ -68,7 +68,7 @@ export const patientServiceFileFormOpts = formOptions({
   },
 })
 
-// Correctif tour 1 (task-11-review.md, C1/C2/I1) — les deux fonctions qui suivent construisent
+// Correctif tour 1 (tâche 11, revue, Critiques C1/C2, Important I1) — les deux fonctions qui suivent construisent
 // les défauts d'un formulaire à partir d'une lecture serveur : le premier montage ET la
 // resynchronisation après un enregistrement réussi (`edit.patient.tsx`) passent par elles, pour
 // ne jamais faire dériver `defaultValues` de deux façons différentes. Une seule règle des deux

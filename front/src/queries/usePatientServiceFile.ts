@@ -69,7 +69,7 @@ export const usePatientServiceFileMutations = () => {
         PATIENT_SERVICE_FILE.GET_BY_PATIENT,
         updated.patientID,
       ])
-      // Correctif tour 2 (task-11-review.md, m4) — `updated` porte `patientID` (le paramètre de
+      // Correctif tour 2 (tâche 11, revue, mineur m4) — `updated` porte `patientID` (le paramètre de
       // mutation, qui désigne le patient) en plus des champs du sous-dossier ; l'entité en cache
       // porte, elle, `patientId` (minuscule). Sans cette exclusion, `{...old, ...updated}`
       // injectait une clé `patientID` étrangère dans l'objet `PatientServiceFile` optimiste —

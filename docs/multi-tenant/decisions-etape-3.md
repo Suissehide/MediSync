@@ -29,7 +29,7 @@ Documents liés :
 
 Trois choix de conception n'appartiennent pas à l'exécutant du chantier — ils
 ont été tranchés avec Léo avant que la première tâche ne commence
-(`progress.md`, « Ruling préalable 1 »). Coût s'ils sont faux : ce sont ses
+(« Ruling préalable 1 »). Coût s'ils sont faux : ce sont ses
 choix, pas ceux de l'exécution.
 
 - Un second service qui prend en charge un patient déjà suivi ailleurs part
@@ -73,7 +73,7 @@ alors qu'elle le devrait.
 
 ## D2 — Le sous-dossier vide avec signal de suivi ailleurs est une fuite d'information délibérée et bornée
 
-**Motif** (`progress.md`, « Ruling préalable 2 »). Le fait qu'une personne
+**Motif** (« Ruling préalable 2 », tâche 2). Le fait qu'une personne
 soit suivie dans un autre service est, au sens large, une donnée de santé. La
 spécification (§2.1, §5.3) l'exige néanmoins : sans lui, un soignant croirait
 découvrir un dossier neuf plutôt que de savoir qu'un collègue le suit déjà.
@@ -87,17 +87,25 @@ devenir la règle — c'est le motif même du ruling. Concrètement, la fonction
 qui calcule le signal (`estSuiviAilleurs`, `patientServiceFile.repository.ts`)
 est la **seule** lecture de tout le dépôt qui traverse volontairement la
 frontière de service, elle s'exécute dans le mode encadré du garde-fou d'ORM
-(`runAsSystem`) réservé aux traitements hors requête — **jamais en
-assouplissant le garde-fou lui-même** — et ne ramène qu'une colonne. Vérifié
-au journal Postgres par la revue de la tâche 7 : la requête inter-service ne
-ramène jamais une ligne de sous-dossier, à comparer aux vingt et une colonnes
-que ramène la lecture du sous-dossier propre au service. Même une erreur
-provoquée délibérément sur cette requête ne fait fuiter ni son contenu ni sa
-ligne : 500 générique, journal réduit à la classe et à la pile.
+(`runAsSystem`) réservé aux traitements hors requête — et ne ramène qu'une
+colonne. **Le mode `runAsSystem` retire l'exigence du garde-fou, il ne la
+déplace pas** (voir le commentaire en capitales à
+`patientServiceFile.repository.ts:131-138`) : sous ce mode, le garde-fou
+n'exige plus aucun filtre de service ni d'établissement, et la requête
+pourrait donc lire tous les établissements si on la laissait faire. La sûreté
+vient **entièrement** des deux bornes que la requête porte à la main
+(`establishmentId`, `serviceId: { not }`), capturées avant d'entrer dans le
+mode — sans modifier le garde-fou lui-même, qui reste inchangé pour tout le
+reste du dépôt. Vérifié au journal Postgres par la revue de la tâche 7 : la
+requête inter-service ne ramène jamais une ligne de sous-dossier, à comparer
+aux vingt et une colonnes que ramène la lecture du sous-dossier propre au
+service. Même une erreur provoquée délibérément sur cette requête ne fait
+fuiter ni son contenu ni sa ligne : 500 générique, journal réduit à la classe
+et à la pile.
 
 ## D3 — Le signal n'est rendu que si le service courant possède déjà un sous-dossier pour ce patient
 
-**Motif** (`progress.md`, tâche 13, Critique + Ruling). C'est la correction la
+**Motif** (tâche 13, Critique + Ruling). C'est la correction la
 plus importante de l'étape sur ce point précis, trouvée par la rencontre de
 deux tâches par ailleurs justes isolément. La recherche d'identité (tâche 13)
 tient sa promesse à la lettre : elle ne rend que quatre champs d'identité,
@@ -127,7 +135,7 @@ qu'aucun commentaire ne documentait avant cette étape.
 
 ## D4 — Le refus de migrer un établissement à plusieurs services, et celui qui n'en a aucun
 
-**Motif** (`progress.md`, « Ruling préalable 3 », spec §4.1). Un patient peut
+**Motif** (« Ruling préalable 3 », spec §4.1). Un patient peut
 être actif dans plusieurs services (rendez-vous, diagnostics, inscriptions) ;
 ses seize colonnes, elles, sont uniques. Répartir au jugé entre deux services
 produirait une perte silencieuse de notes cliniques — le pire résultat
@@ -159,7 +167,7 @@ moyen d'en créer un second depuis l'interface.
 
 ## D5 — Les invariants portent une empreinte par colonne, pas un comptage de lignes
 
-**Motif** (`progress.md`, « Ruling préalable 4 », spec §4.3). À l'étape 1, les
+**Motif** (« Ruling préalable 4 », spec §4.3). À l'étape 1, les
 lignes se déplaçaient d'une table à l'autre : un comptage de lignes avant et
 après suffisait à démontrer qu'aucune n'avait disparu. Ici, **les lignes
 restent, seules les valeurs changent de table** : un comptage resterait vert
@@ -207,7 +215,7 @@ vue.
 
 ## D6 — La création d'un patient crée son sous-dossier, et le coût est assumé
 
-**Motif** (`progress.md`, tâche 12). La spécification (§5.1) dit que le
+**Motif** (tâche 12). La spécification (§5.1) dit que le
 sous-dossier est créé « à la première écriture, et à l'inscription d'un
 patient dans un parcours du service ». Le relevé de la tâche 5 a montré que
 ces deux chemins ne couvrent pas la création directe d'un patient (« Créer
@@ -256,6 +264,71 @@ autorisée du test.
 **Coût si faux.** Une exception à une règle de cloisonnement qui se laisse
 contourner par un simple renommage ou une méthode jumelle n'est plus une
 exception : c'est un trou dans le garde-fou qui porte le nom d'une garantie.
+
+## D8 — L'écriture du sous-dossier est en `PATCH`, jamais en `PUT`, et un vrai `PUT` serait dangereux ici
+
+**Motif** (tâche 5, deux Rulings). Les seize champs du sous-dossier sont tous
+facultatifs dans le corps de la requête, et le dépôt (`update: params`) laisse
+Prisma ignorer toute clé absente : une charge partielle produit une mise à
+jour partielle — ce qu'un `PUT` ne promet pas, et ce que `PATCH` promet par
+convention. Route concernée :
+`fastify.patch<...>('/', …)` dans `back/src/main/interfaces/http/fastify/routes/patientServiceFile.ts`.
+
+**Ce qu'un vrai `PUT` casserait.** `stripClinicalInput` retire
+`notes`/`details`/`medicalDiagnosis` du corps d'un compte secrétariat pour
+laisser ces trois colonnes inchangées (`back/src/main/utils/clinical-fields.ts`).
+En sémantique de remplacement complet, une clé absente du corps vaudrait
+« remets cette colonne à `null` » : le secrétariat effacerait donc ces trois
+champs cliniques à **chaque** enregistrement — exactement la perte que ce
+crochet existe pour empêcher. Aucun appelant du dépôt ne compte par ailleurs
+sur un remplacement complet ; rien ne dépend de la sémantique `PUT` ici.
+
+**Coût si faux.** Une route à qui l'on donnerait la sémantique de remplacement
+d'un `PUT` effacerait silencieusement des données cliniques à chaque
+enregistrement fait par un rôle qui n'a pas le droit de les voir — pas une
+régression visible tout de suite, mais une perte de données réelle sur une
+application qui manipule de vraies données de santé.
+
+## D9 — La route du sous-dossier est exemptée du rappel de tenant périmé, coût assumé
+
+**Motif** (tâche 10, « Ruling à conscience »). Le sous-dossier de service d'un
+patient rend un `404` tant qu'aucune écriture ne l'a encore créé pour ce
+patient dans ce service — c'est délibéré côté back, et c'est l'état
+**majoritaire** juste après une migration, avant qu'aucun patient n'ait de
+sous-dossier dans un second service (voir `front/src/api/fetchWithAuth.ts`,
+`CHEMINS_404_NORMAUX`). Sans cette exemption de chemin, chaque ouverture d'une
+fiche patient sans sous-dossier paierait un aller-retour `/me` complet en
+tâche de fond, pour un `404` qui ne dit rien de la fraîcheur du couple
+établissement/service.
+
+**Coût assumé.** Sur cette route précise, un tenant réellement périmé (une
+affectation retirée pendant la session) **ne sera plus détecté** par le
+rappel — l'exemption est de chemin, pas de contrat back, donc le 404
+lui-même reste inchangé, seul le déclenchement du rappel front est court-
+circuité ici. Le rappel continue de se déclencher normalement sur toute autre
+route de tenant. Décision prise en connaissance de cause : l'alternative (un
+aller-retour `/me` à chaque fiche patient sans sous-dossier, sur l'état
+majoritaire attendu juste après cette étape) coûtait plus cher que le risque
+résiduel.
+
+## D10 — Le front n'envoie que les champs réellement modifiés, jamais le formulaire entier
+
+**Motif** (tâche 10/11). `edit.patient.tsx` n'envoie, dans le corps du
+`PATCH`, que les champs effectivement touchés depuis la dernière lecture ou
+le dernier enregistrement réussi (une photographie figée des valeurs par
+défaut, pas le `isDirty` de TanStack Form, qui reste vrai indéfiniment après
+toute modification même si la valeur est ensuite rétablie) — jamais le
+formulaire entier. Treize des seize colonnes du sous-dossier ne sont
+protégées par aucune liste d'autorisation côté back : une lecture périmée ou
+partielle suivie d'un enregistrement naïf du formulaire complet effacerait
+silencieusement de vraies données cliniques ou de parcours, pour n'importe
+quel rôle. Documenté côté front dans `front/CLAUDE.md`, section « Patient
+sub-record (étape 3) ».
+
+**Coût si faux.** Démontré par le sabotage n°3 de la tâche 11 : envoyer même
+un seul champ non modifié suffit, sur une lecture périmée, à écraser une
+valeur posée entre-temps par un autre onglet ou un autre compte — treize
+colonnes réelles exposées, sans qu'aucune erreur ne le signale à l'écran.
 
 ---
 
@@ -368,7 +441,7 @@ un correctif de sept lignes, portes vertes, chemin de connexion intact
 (`assertServiceRelationFilter` traite désormais l'absence de tenant comme
 l'absence de service et refuse, au lieu de laisser passer par défaut). « Une
 fuite de données de santé entre établissements, démontrée et corrigeable en
-sept lignes, ne se documente pas » (`progress.md`, tâche 9).
+sept lignes, ne se documente pas » (tâche 9).
 
 ---
 

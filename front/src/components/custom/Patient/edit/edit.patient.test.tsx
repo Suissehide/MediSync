@@ -159,7 +159,7 @@ describe('EditPatient — une lecture du sous-dossier en échec (refus d’accè
   })
 })
 
-// Correctif tour 2 (task-11-review.md, m6) — ce chemin (la 404 normale, spec §2.1/§5.1) ne
+// Correctif tour 2 (tâche 11, revue, mineur m6) — ce chemin (la 404 normale, spec §2.1/§5.1) ne
 // pouvait pas s'écrire au niveau du composant avant que `.env.test` fixe
 // `VITE_API_BASE_URL` : `fetchWithAuth` fait `new URL(response.url)` sur toute réponse 404
 // (`api/fetchWithAuth.ts:89-90`), et sans base d'URL définie, `tenantApiUrl()` produit une URL
@@ -327,7 +327,7 @@ describe('EditPatient — deux écritures indépendantes, la vérité si l’une
   })
 })
 
-// Correctif tour 1 (task-11-review.md, C1/C2/I1/I4) — la propriété que ces tests tiennent :
+// Correctif tour 1 (tâche 11, revue, Critiques C1/C2, Importants I1/I4) — la propriété que ces tests tiennent :
 // « le corps envoyé ne contient jamais un champ que l'utilisateur n'a pas touché », à travers
 // plusieurs enregistrements, plusieurs relectures, un champ modifié puis rétabli. `FormApi.update`
 // (`@tanstack/form-core`) recopie `options.defaultValues` à chaque relecture, mais ne rafraîchit
@@ -563,7 +563,7 @@ describe('EditPatient — un champ touché puis remis à sa valeur d’origine',
   })
 })
 
-// Correctif tour 2 (task-11-review.md, m3) — même garde que côté sous-dossier
+// Correctif tour 2 (tâche 11, revue, mineur m3) — même garde que côté sous-dossier
 // (`changedFields.length === 0 → return`, plus haut), appliquée au formulaire du patient : sans
 // elle, cliquer « Sauvegarder » sans avoir touché un seul champ du patient PATCHait quand même
 // l'objet complet (la photographie lue, réécrite telle quelle — une perte de mise à jour
@@ -689,7 +689,7 @@ describe('EditPatient — la barre « Modifications non sauvegardées » (I1)', 
   })
 })
 
-// Décision 2.3 de la spec, correctif I2 (task-11-review.md) : chaque écran qui affiche des champs
+// Décision 2.3 de la spec, correctif I2 (tâche 11, revue) : chaque écran qui affiche des champs
 // de `Patient` ou de `PatientServiceFile` doit dire à quelle portée ils appartiennent — pas
 // seulement l'onglet « Profil & Contexte ».
 describe('EditPatient — la portée est nommée sur les trois onglets qui en manquaient (I2)', () => {
@@ -736,7 +736,7 @@ describe('EditPatient — la portée est nommée sur les trois onglets qui en ma
   })
 })
 
-// Correctif tour 2 (task-11-review.md, m2) — l'ancien écran enveloppait tout dans un seul
+// Correctif tour 2 (tâche 11, revue, mineur m2) — l'ancien écran enveloppait tout dans un seul
 // `<form onSubmit>` ; le remplacer par un `<Button type="button">` hors de tout formulaire avait
 // fait disparaître l'enregistrement par la touche Entrée, une régression réelle sur un écran de
 // saisie utilisé toute la journée. Le remède est un seul `<form>` natif pour tout l'écran (pas

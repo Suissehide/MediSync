@@ -245,7 +245,7 @@ describe('routes du patient', () => {
     // patientServiceFile.schema.ts (etape 3) ; sans `.strict()`, Zod les
     // retirerait en silence d'un corps de requete au lieu de les rejeter,
     // et l'appelant croirait avoir enregistre une saisie clinique qui n'a
-    // jamais ete ecrite nulle part (task-5-review.md, I2). Le front actuel
+    // jamais ete ecrite nulle part (tache 5, revue, Important I2). Le front actuel
     // envoie encore ces champs a chaque enregistrement : ce 400 est le
     // signal voulu pendant la fenetre qui nous separe des taches 10/11.
     const createdWithClinical = await post('/patient', {
@@ -326,7 +326,7 @@ describe('routes du patient', () => {
     // — donc ce test passe par les deux routes reelles plutot que par un
     // `testDb.patientServiceFile.create` qui fabriquerait un etat que la
     // production ne sait pas produire : ce contournement a ete la bonne
-    // alerte au mauvais endroit (voir task-5-review.md, C1).
+    // alerte au mauvais endroit (voir tache 5, revue, Critique C1).
     const diagnosticRes = await post(`/patient/${patientId}/diagnostic`, {
       title: 'Diagnostic de test',
     })
@@ -390,7 +390,7 @@ describe('routes du patient', () => {
 
     // L'ecriture clinique doit laisser une trace, exactement comme le
     // faisait PATCH /patient/:id avant que ces colonnes ne demenagent
-    // (voir task-5-review.md, C2) : sans cet evenement, le journal ne bouge
+    // (voir tache 5, revue, Critique C2) : sans cet evenement, le journal ne bouge
     // jamais et l'assertion ci-dessous resterait a 0 meme apres l'attente.
     // L'attente courte tient compte de la forme suivie (AppEventBus.emit
     // n'est pas attendu par le domaine, comme pour PATCH /patient/:id) :

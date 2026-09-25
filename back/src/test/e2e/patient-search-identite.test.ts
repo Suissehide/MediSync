@@ -344,7 +344,7 @@ describe('recherche d identite existante avant creation de patient (tache 13)', 
     },
   )
 
-  // Revue tache 13, tour de correction 1, point 2 (I1 de task-13-review.md) : `%` et `_` sont
+  // Revue tache 13, tour de correction 1, point 2 (Important I1) : `%` et `_` sont
   // des jokers du motif `LIKE`/`ILIKE` sous-jacent a `contains`. Sans echappement, une recherche
   // par `%` seul contourne la garde du `.refine` ("au moins un prenom ou un nom") et rend tout
   // l'etablissement ; `_` fait de meme en matchant n'importe quel caractere unique. Ce test
@@ -408,7 +408,7 @@ describe('recherche d identite existante avant creation de patient (tache 13)', 
     },
   )
 
-  // Revue tache 13, tour de correction 1, point 4 (I4 de task-13-review.md) : la recherche
+  // Revue tache 13, tour de correction 1, point 4 (Important I4) : la recherche
   // s'arrete a vingt resultats sans le dire, sur la fonction dont le seul but est d'eviter les
   // doublons. `hasMore` doit dire qu'il y en a davantage — jamais combien.
   it(
@@ -437,7 +437,7 @@ describe('recherche d identite existante avant creation de patient (tache 13)', 
     },
   )
 
-  // Revue tache 13, tour de correction 1, point 3 (I3 de task-13-review.md) : le rattachement
+  // Revue tache 13, tour de correction 1, point 3 (Important I3) : le rattachement
   // doit etre idempotent de bout en bout. Six appels HTTP reels en PARALLELE (pas en sequence,
   // qui ne reproduit jamais la course) sur le meme patient depuis le meme service : une seule
   // ligne en base, et AUCUNE reponse en erreur — le cas "deja suivi ici" est un resultat normal,
