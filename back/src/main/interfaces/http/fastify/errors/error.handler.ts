@@ -11,6 +11,7 @@ import type {
   ErrorNormalizer,
   ErrorResponse,
 } from '../../../../types/interfaces/http/fastify/errors'
+import { pathWithoutQuery } from '../../../../utils/url-helper'
 import {
   defaultErrorResponse,
   errorNormalizer,
@@ -71,12 +72,10 @@ const diagnosticOf = (error: unknown): string => {
   return parts.join(' | ')
 }
 
-const routeOf = (request: FastifyRequest): string => {
-  // Chemin seul, sans chaine de requete : voir fastify-http-server.ts pour la meme regle sur le
-  // journal des requetes (task-5-re-review-3.md, I3).
-  const [path] = request.url.split('?')
-  return `${request.method} ${path}`
-}
+// Chemin seul, sans chaine de requete : meme regle que le journal des requetes dans
+// fastify-http-server.ts (task-5-re-review-3.md, I3) — les deux partagent `pathWithoutQuery`.
+const routeOf = (request: FastifyRequest): string =>
+  `${request.method} ${pathWithoutQuery(request.url)}`
 
 const buildErrorHandler = (...errorNormalizers: ErrorNormalizer[]) => {
   return function (

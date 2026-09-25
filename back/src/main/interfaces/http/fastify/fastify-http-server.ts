@@ -7,7 +7,7 @@ import type {
 import Fastify from 'fastify'
 import type { IocContainer } from '../../../types/application/ioc'
 import type { HttpServer } from '../../../types/interfaces/http/server'
-import { toLocalhostIfLinux } from '../../../utils/url-helper'
+import { pathWithoutQuery, toLocalhostIfLinux } from '../../../utils/url-helper'
 import { buildErrorHandler } from './errors/error.handler'
 import { boomErrorNormalizer } from './errors/normalizers/boom.error.normalizer'
 import { fastifyErrorNormalizer } from './errors/normalizers/fastify.error.normalizer'
@@ -76,7 +76,7 @@ class FastifyHttpServer implements HttpServer {
     )
     fastify.addHook('onRequest', (request) => {
       log.debug(
-        `Incoming request (#${request.id}): ${request.method} ${request.url}`,
+        `Incoming request (#${request.id}): ${request.method} ${pathWithoutQuery(request.url)}`,
       )
       return Promise.resolve()
     })
@@ -84,7 +84,7 @@ class FastifyHttpServer implements HttpServer {
       const { elapsedTime } = reply
       const time = Math.round(elapsedTime)
       log.info(
-        `Request completed (#${request.id}): ${request.method} ${request.url} [HTTP ${reply.statusCode}] (${time}ms)`,
+        `Request completed (#${request.id}): ${request.method} ${pathWithoutQuery(request.url)} [HTTP ${reply.statusCode}] (${time}ms)`,
       )
       return Promise.resolve()
     })
