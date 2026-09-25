@@ -1,3 +1,4 @@
+import Boom from '@hapi/boom'
 import dayjs from 'dayjs'
 import * as XLSX from 'xlsx'
 
@@ -48,6 +49,33 @@ import { hasPermission } from '../utils/permissions'
 const orEmpty = (value: string | null | undefined): string => value ?? ''
 const formatDate = (value: Date | string | null | undefined): string =>
   value ? dayjs(value).format('DD/MM/YYYY') : ''
+
+// Les deux boucles d'inscription (processEnrollments, enrollInSlot) attrapent toute erreur
+// levee par un depot pour la transformer en echec partiel plutot qu'en 500 : la reponse
+// (`failedEnrollments[].reason`, affichee a l'ecran par front/src/queries/usePatient.tsx) et le
+// journal en portent le message. Un Boom est sans risque : son message est toujours ecrit par
+// notre propre code (`boomErrorFromPrismaError`, ou un `Boom.xxx(...)` explicite d'un domaine).
+// Mais 17 depots sur 19 ont des methodes sans `catch` (task-5-re-review-3.md, C1) : si l'une
+// d'elles est appelee ici et jette une erreur brute (Prisma ou autre), ce n'est plus un Boom, et
+// son message peut porter integralement les arguments de l'appel qui a echoue. On ne fait donc
+// jamais confiance a `error.message` en dehors d'un Boom : seule sa classe, qui ne peut porter
+// aucune valeur soumise, va au journal, et la reponse ne recoit qu'un texte generique.
+const describeEnrollmentFailure = (
+  context: string,
+  error: unknown,
+): { reason: string; logLine: string } => {
+  if (Boom.isBoom(error)) {
+    return {
+      reason: error.message,
+      logLine: `Erreur lors de l'inscription ${context}: ${error.message}`,
+    }
+  }
+  const errorClass = error instanceof Error ? error.constructor.name : typeof error
+  return {
+    reason: `Erreur inattendue lors de l'inscription ${context}`,
+    logLine: `Erreur inattendue lors de l'inscription ${context} [${errorClass}]`,
+  }
+}
 
 // Une seule source de verite pour l'export Excel : en-tete, largeur de colonne et valeur lue
 // vivent ensemble, dans cet ordre. `ws['!cols']` etait auparavant un tableau positionnel
@@ -459,17 +487,16 @@ class PatientDomain implements PatientDomainInterface {
           failedEnrollments.push(outcome.failure)
         }
       } catch (error) {
-        this.logger.error(
-          `Erreur lors de l'inscription au parcours avec tag "${enrollment.tag}": ${error instanceof Error ? error.message : String(error)}`,
+        const { reason, logLine } = describeEnrollmentFailure(
+          `au parcours avec tag "${enrollment.tag}"`,
+          error,
         )
+        this.logger.error(logLine)
         failedEnrollments.push({
           slotTemplate: {
             id: enrollment.tag,
           },
-          reason:
-            error instanceof Error
-              ? error.message
-              : "Erreur inconnue lors de l'inscription",
+          reason,
         })
       }
     }
@@ -732,13 +759,16 @@ class PatientDomain implements PatientDomainInterface {
         // le defaut de composite key de AppointmentRepository.create (task-5-re-review.md,
         // point 3) — une erreur de programmation rendue au patient comme un probleme de
         // disponibilite de creneau. Meme forme que le catch de enrollPatientInPathways
-        // ci-dessus : this.logger.error avec le message de l'erreur.
-        this.logger.error(
-          `Erreur lors de l'inscription au créneau du ${slot.startDate}: ${error instanceof Error ? error.message : String(error)}`,
+        // ci-dessus : describeEnrollmentFailure, jamais le message brut d'une erreur qui
+        // n'est pas un Boom (task-5-re-review-3.md, tour 5).
+        const { reason, logLine } = describeEnrollmentFailure(
+          `au créneau du ${slot.startDate}`,
+          error,
         )
+        this.logger.error(logLine)
         enrollmentAppointments.push({
           success: false,
-          error: `Erreur lors de l'inscription au créneau du ${slot.startDate}`,
+          error: reason,
         })
       }
     }

@@ -475,3 +475,43 @@ describe('PatientDomain – report du motif dans une transmission clinique', () 
     ).toBeUndefined()
   })
 })
+
+// task-5-re-review-3.md (re-revue du tour 5) : le catch de processEnrollments/enrollInSlot
+// (ci-dessous, patient.domain.ts) traite tout `error instanceof Error` de la meme facon,
+// Boom ou non. C'est sans risque pour un Boom (son message est toujours ecrit par notre
+// propre code — boomErrorFromPrismaError ou un `Boom.xxx(...)` explicite). Mais 17 depots sur
+// 19 ont des methodes sans `catch` (task-5-re-review-3.md, C1) : si l'une d'elles jette une
+// erreur brute au lieu d'un Boom, ce catch en recopierait aujourd'hui le message tel quel dans
+// la reponse HTTP (`failedEnrollments[].reason`, affiche a l'ecran par
+// front/src/queries/usePatient.tsx) ET dans le journal applicatif. Reproduit ici sans toucher
+// a Prisma : `pathwayTemplateRepository.findAll` (methode reellement sans `catch`, voir
+// pathwayTemplate.repository.ts) rejette avec une `Error` nue portant un marqueur.
+describe('PatientDomain – une erreur inattendue (non-Boom) pendant l\'inscription ne fuit pas', () => {
+  const RAW_ERROR_MARKER = 'MOTIF-CLINIQUE-CONFIDENTIEL-INATTENDU'
+
+  it('ne renvoie jamais le message brut d une erreur qui n est pas un Boom, ni au client ni au journal', async () => {
+    const { domain, container } = buildDomain()
+    container.pathwayTemplateRepository.findAll = jest.fn(async () => {
+      throw new Error(RAW_ERROR_MARKER)
+    })
+
+    const result = await domain.enrollPatientInPathways(
+      {
+        patientData: { firstName: 'Ada', lastName: 'Lovelace' } as never,
+        startDate: monday(0),
+        pathways: [{ tag: 'GROUPE', timeOfDay: 'ALL_DAY', duration: 30 }],
+      },
+      'user-1',
+    )
+
+    expect(result.failedEnrollments).toHaveLength(1)
+    expect(result.failedEnrollments[0]?.reason).not.toContain(RAW_ERROR_MARKER)
+
+    const loggedMessages = container.logger.error.mock.calls.map(
+      (call) => call[0] as string,
+    )
+    for (const message of loggedMessages) {
+      expect(message).not.toContain(RAW_ERROR_MARKER)
+    }
+  })
+})
