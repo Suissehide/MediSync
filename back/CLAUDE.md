@@ -21,7 +21,15 @@ NPM scripts are orchestrated by [wireit](https://github.com/google/wireit) (see 
 
 - `npm run dev` — start with watch (`@swc-node/register`, no transpile step).
 - `npm run start:development` / `npm run start:production` — `npm start` picks one via `per-env` from `NODE_ENV`.
-- `npm run build` — `prisma generate` → `tsc --noemit` typecheck → SWC transpile `src` → `lib`.
+- `npm run build` — `prisma generate` → `tsc --noemit` typecheck → SWC transpile `src` → `lib`. **The typecheck is
+  scoped to `src/main/tsconfig.json` (plus `prisma/tsconfig.json`) — it does not check `src/test`.** A deliberate
+  type error in a test file leaves this gate green (confirmed twice, by mistake, during the étape 3 multi-tenant
+  work). Tests are transpiled by SWC without type checking, so this has no runtime effect, but a report that claims
+  "no type errors" without saying "in src/main" is claiming more than this gate proves. A closely related and
+  narrower gap: TypeScript does **not** flag excess properties on an object built by spreading (`{ ...p }`) and then
+  assigned to a variable before being passed to Prisma or Zod — only a literal passed directly as an argument gets
+  that check. Three real occurrences were found this way during étape 3 (the worst left the demo seed silently
+  broken for a full correction round, with `tsc` reporting zero errors on it throughout).
 - `npm run lint` — Biome on `src/main` (`npm run lint:ci` for CI).
 - `npm test` / `npm run test:unit` / `npm run test:e2e` — Jest via `src/test/jest.config.ts` (note: a `src/test/` directory is not currently checked in; the scripts assume it exists when tests are added).
 - Run a single test: `npx jest -c src/test/jest.config.ts -t "<name regex>"` or `npx jest <path/to/file.test.ts>`.
@@ -93,13 +101,47 @@ Key cross-cutting concerns:
   service model requires its own `where: { serviceId }` on the include/select: reading from an establishment row otherwise
   returns the children of *every* service.
 - **Clinical field filtering (`utils/clinical-fields.ts`, wired into `tenant.plugin.ts`)**: `notes`, `details`,
-  `medicalDiagnosis` (patient) and `transmissionNotes` (patient enrolled in an appointment) are **not** filtered in
-  response schemas. Two Fastify hooks strip them, in both directions: `stripClinicalFields` (`preSerialization`,
-  gated on `clinical:read`, recurses into nested payloads) and `stripClinicalInput` (`preValidation`, gated on
+  `medicalDiagnosis` (now on `PatientServiceFile`, the per-service sub-record — see below, moved off `Patient` in
+  étape 3) and `transmissionNotes` (patient enrolled in an appointment) are **not** filtered in response schemas.
+  Two Fastify hooks strip them, in both directions: `stripClinicalFields` (`preSerialization`, gated on
+  `clinical:read`, recurses into nested payloads) and `stripClinicalInput` (`preValidation`, gated on
   `clinical:write`, strips the same keys from request bodies — a stripped key leaves the DB column unchanged, it
   doesn't blank it). Both are attached to the route plugins, not to individual routes, so a new route is covered
   by default; don't reintroduce clinical fields in a route-local schema tweak, they'd bypass nothing but the hooks
-  still run on the handler's return value.
+  still run on the handler's return value. The sub-record's routes (`interfaces/http/fastify/routes/patientServiceFile.ts`)
+  needed no change to be covered — this was verified by a test rather than assumed, per the multi-tenant étape 3 spec §5.2.
+- **The patient sub-record (`PatientServiceFile`) is a service model; the sixteen clinical/pathway columns are no
+  longer on `Patient`.** `Patient` now carries only identity and contact info (`firstName`, `lastName`, `birthDate`,
+  `phone1`/`phone2`, `email`) plus socio-demographic context — fields that don't change from one service to
+  another — and stays establishment-scoped (`ESTABLISHMENT_MODELS`); `GET /patient` (`findAll`) therefore still
+  returns full patient rows with no service filter, a known gap, not something this note fixes. The sixteen columns
+  that do vary by service (care pathway, medical diagnosis, notes, discharge summary…) live on
+  `PatientServiceFile`, one row per `(patientId, serviceId)`, a **service model** like any other (`SERVICE_MODELS`,
+  cascade-deleted from `Patient`). `DiagnosticEducatif` and `EnrollmentIssue` point at the sub-record via
+  `(patientId, serviceId)` rather than at `Patient` directly. The sub-record is created lazily — on first write to
+  it (`upsert`) or through `PatientServiceFileDomain.ensureExists`, called from every domain path that attaches a
+  patient to a service (pathway enrollment, `DiagnosticEducatif` creation, direct patient creation via
+  `PatientDomain.create`) — and **no route deletes one**; only deleting the patient (cascade) does. An empty
+  sub-record created by mistake is therefore permanent, and will make the "followed elsewhere" signal (below) true
+  for every other service that actually follows that patient.
+- **The one deliberate cross-service read, and the test that keeps it the only one.** A patient in one service is
+  sometimes already followed in another; the front needs to know that (a plain boolean, nothing else) without
+  seeing anything about it. `PatientServiceFileRepository.estSuiviAilleurs` (in
+  `infra/orm/repositories/patientServiceFile.repository.ts`) is the **only** place in the repo that reads another
+  service's sub-records — it runs under `tenantContext.runAsSystem()` (the same escape hatch used by the
+  activity-log purge job, and nowhere else in `src/main`) and returns a single boolean, never an id, a service
+  name, a count, a date or any column content. `back/src/test/unit/infra/runAsSystem-unicite.test.ts` is what keeps
+  this exception singular: it doesn't just grep for the method name, it re-derives the "system mode" capability
+  (constructing the system-scoped store some other way — e.g. a hypothetical `TenantContext.runAsSystem.bind(...)`
+  or a sibling method — defeats the guard exactly like calling `runAsSystem` directly would). Adding a second
+  `runAsSystem` call to `src/main` without adding it to that test's allow-list is a guard violation, not a passing
+  test. Known gap: the allow-list only covers `src/main` — several legitimate `src/test` callers construct the same
+  "system" store to exercise the tenant guard itself, so that directory isn't covered (same class of gap as the
+  typecheck one above). Because `GET /patient/:id` carries `followedElsewhere`, and the identity-search route
+  (used before creating a patient, to avoid duplicates) returns bare identifiers, the signal is only computed and
+  returned **when the current service already has a sub-record for that patient** — otherwise finding someone by
+  name would itself leak "followed elsewhere" to a service that has never actually seen them. See
+  `docs/multi-tenant/decisions-etape-3.md` (D3) for the incident this closes.
 - **Permissions**: routes under `/e/:establishmentId/s/:serviceId` and `/e/:establishmentId/admin` MUST declare
   `config: { permission }` (matrix in `utils/permissions.ts`, mirrored in `front/src/utils/permissions.ts`; a unit
   test checks both copies are identical). Server startup fails otherwise. Two `onRoute` fail-safes enforce this:
@@ -156,5 +198,9 @@ A husky `pre-commit` hook runs `npm test`.
 
 ## Testing & API exploration
 
-- HTTP requests for manual exploration live in `bruno/` (open with the Bruno API client).
+- HTTP requests for manual exploration live in `bruno/` (open with the Bruno API client). **The whole collection's
+  `BASE_URL` environment variable has no tenant prefix** (`{{BASE_URL}}/patient/...` instead of
+  `{{BASE_URL}}/e/:establishmentId/s/:serviceId/patient/...`), so every request under a tenant-scoped router 404s
+  as-is — confirmed on all seven Patient requests. Pre-existing, not specific to the patient collection; fix the
+  environment variable rather than individual requests if this gets addressed.
 - The CI test environment uses `deploy/.env.test`; the `*:ci` wireit targets bring up a separate test DB via that env file before running tests.

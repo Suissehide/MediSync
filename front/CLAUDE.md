@@ -100,6 +100,38 @@ Some Zustand stores use `zustand/middleware`'s `persist` with a storage backend 
 
 `utils/permissions.ts` is a byte-for-byte duplicate of `back/src/main/utils/permissions.ts`; a back-side unit test asserts the two files are textually identical. Don't refactor one without the other. `useCan` (wherever it's consumed) reads the matrix against the current role(s) in context — it is unchanged by the tenant-context work in this step; a route not under `e/$establishmentId/s/$serviceId` or `e/$establishmentId/admin` isn't allowed to declare a permission-gated screen at all (enforced server-side at boot, see `back/CLAUDE.md`).
 
+## Patient sub-record (étape 3)
+
+`Patient` (identity, contact, socio-demographic context — shared across every service of the establishment) and
+`PatientServiceFile` (the sixteen care-pathway/clinical columns, one row per `(patientId, serviceId)`) are two
+separate reads/writes on the front, mirroring the back split (`back/CLAUDE.md`). `components/custom/Patient/edit/`
+renders them as two visibly separate, explicitly labelled blocks in the same screen — never merge them into one
+form or one payload; `identite.patient.tsx` (shared identity) and `details.patient.tsx`/`pathway-inclusion.patient.tsx`
+(this service's sub-record) each bind to their own form (`form.patient.ts`: `patientFormOpts` vs
+`patientServiceFileFormOpts`). The sub-record is read lazily by its own request and the screen doesn't mount its
+fields until that read resolves (`serviceFileReady` in `edit.patient.tsx`). The save only sends the fields actually
+touched since the last successful read/save (a frozen snapshot of defaults, not TanStack Form's `isDirty`, which
+stays true indefinitely after any edit even if the value is reverted) — never the whole form: thirteen of the
+sixteen sub-record columns aren't protected by any back-side allow-list, so a stale or partial read followed by a
+naive full-form save would silently blank real clinical/pathway data for any role. Don't "simplify" this back to
+submitting the whole form.
+
+`followedElsewhere` (a boolean, nothing else — no service name, count or date) is a property of the *person*, not
+of the sub-record: it lives in the identity block (`identite.patient.tsx`), sourced from the same `GET /patient/:id`
+call that fills the rest of the screen, no extra request. It renders on exactly `true`; both `false` and `undefined`
+render nothing, deliberately indistinguishable — the back only computes and returns it when the current service
+already has a sub-record for this patient (see `back/CLAUDE.md`), so an `undefined` here is the ordinary case for a
+patient this service hasn't taken in yet, not a loading state to fill in later.
+
+The "add patient" popup (`components/custom/popup/addPatientForm.tsx`) searches existing establishment identities
+before creating a new one (`Rechercher un patient existant`) — results show only name and birth date, never
+anything about where else a match is followed. Choosing a match (`attachExistingPatient`) creates an **empty**
+sub-record in the current service and never touches the shared identity; picking the wrong homonym is
+**irreversible from the UI** — no screen removes a sub-record once created (see `back/CLAUDE.md`). "Créer sans
+parcours" also creates a sub-record immediately (`PatientDomain.create` → `ensureExists` on the back), so a
+directly-created patient shows up in this service's list right away instead of vanishing from every list until a
+pathway or diagnostic is added.
+
 ## Testing
 
 Vitest + Testing Library, `jsdom` environment. `src/test/setup.ts` reassigns `globalThis.localStorage`/`sessionStorage` to jsdom's real implementations — this works around Node's own global Web Storage (active by default since Node 25) shadowing jsdom's; don't "simplify" this by reading `window.localStorage` instead, `window === globalThis` in this test environment so it's the same shadowed property.
