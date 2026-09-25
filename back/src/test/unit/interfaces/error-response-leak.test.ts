@@ -51,6 +51,9 @@ const buildHarness = () => {
     },
   }
   const fakeRequest = {
+    id: 'req-test-1',
+    method: 'PATCH',
+    url: '/e/est1/s/svc1/patient/pat1/service-file',
     accepts: () => ({ type: () => 'json' }),
   }
   return { fastifyLike, fakeRequest, fakeReply, statusCodes, logsAtErrorLevel }
@@ -85,11 +88,27 @@ describe('la chaine de normalizers ne renvoie jamais une valeur soumise pour une
     expect(body.message).not.toContain(PATIENT_ID)
     expect(body.error).not.toContain(CLINICAL_VALUE)
 
-    expect(harness.logsAtErrorLevel).toHaveLength(1)
+    expect(harness.logsAtErrorLevel).toHaveLength(2)
     for (const line of harness.logsAtErrorLevel) {
       expect(line).not.toContain(CLINICAL_VALUE)
       expect(line).not.toContain(PATIENT_ID)
     }
+  })
+
+  it('le journal `error` garde de quoi enqueter sur une erreur inattendue : classe, route et pile (jamais le message brut)', () => {
+    const harness = buildHarness()
+
+    runHandler(buildUnexpectedPrismaError(), harness)
+
+    const [diagnosticLine] = harness.logsAtErrorLevel
+    expect(diagnosticLine).toContain('class=PrismaClientValidationError')
+    expect(diagnosticLine).toContain('PATCH /e/est1/s/svc1/patient/pat1/service-file')
+    expect(diagnosticLine).toContain('req-test-1')
+    // La pile est presente (des lignes de frame), mais jamais le message brut de l'erreur : ce
+    // message multi-lignes recopie integralement le `data` de l'invocation Prisma qui a echoue
+    // (voir buildUnexpectedPrismaError ci-dessus).
+    expect(diagnosticLine).toMatch(/at .+\(.+:\d+:\d+\)/)
+    expect(diagnosticLine).not.toContain('message=')
   })
 
   it('un 409 delibere (contrainte metier) rend exactement le message dont le front dependent par egalite de chaine', () => {
@@ -120,5 +139,15 @@ describe('la chaine de normalizers ne renvoie jamais une valeur soumise pour une
       message: "Appointment: this ID doesn't exist",
       statusCode: 404,
     })
+  })
+
+  it('le journal `error` d un Boom porte son message : il est toujours ecrit par notre propre code, jamais recopie d une erreur brute', () => {
+    const harness = buildHarness()
+    const boomError = notFound('PatientServiceFile: this ID doesn\'t exist')
+
+    runHandler(boomError, harness)
+
+    const [diagnosticLine] = harness.logsAtErrorLevel
+    expect(diagnosticLine).toContain("message=PatientServiceFile: this ID doesn't exist")
   })
 })
