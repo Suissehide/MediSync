@@ -623,6 +623,18 @@ establishmentMembership.findMany({ where: { establishmentId: 'e1' },
 1 964 chaînes sur 8 680 franchissent un global, dont 112 par l'arête `User → EstablishmentMembership`.
 Condition d'exploitation : qu'un compte soit membre des deux établissements.
 
+**Et le pont est ouvert en écriture, pas seulement en lecture** — établi par la re-revue du tour 4
+de la tâche 1, verdict identique à `a13046b` :
+
+```ts
+establishment.create({ data: { name: 'X', patients: { create: { … } } } })
+```
+
+Sous un contexte de tenant ordinaire, cela **écrit un patient dans un autre établissement**. La
+frontière serait donc fermée en lecture et ouverte en écriture, ce qui est le pire des deux états :
+on croirait le cloisonnement acquis. Le côté `data` est donc dans le périmètre de cette tâche au
+même titre que le côté `include`, et le step 3 porte sur les deux.
+
 **Pourquoi il a échappé à tout :** la protection du chemin ordinaire repose sur le `where` de la
 racine, qui épingle l'établissement. Les relations **vers** un modèle global sont toutes à-un, donc
 inoffensives. Mais une relation **depuis** un global peut être à-plusieurs et traverser les
@@ -635,7 +647,7 @@ ne l'emprunte aujourd'hui. Il n'avait aucun effet tant qu'il n'existait qu'un se
 
 - [ ] **Step 1** : reproduire le défaut par un test, sous contexte de tenant, et le montrer **rouge**.
 - [ ] **Step 2** : porter la cardinalité dans `MODEL_RELATIONS`, tenue par le test de conformité au schéma dans les deux directions — une relation qui change de cardinalité dans le schéma doit faire rougir.
-- [ ] **Step 3** : refuser la descente **depuis** un modèle global par une relation à-plusieurs, sous contexte de tenant comme sous super-admin.
+- [ ] **Step 3** : refuser le franchissement **depuis** un modèle global par une relation à-plusieurs, sous contexte de tenant comme sous super-admin, **en lecture (`include`/`select`) comme en écriture (`data`)**.
 - [ ] **Step 4** : la question symétrique, qui prime. Ce resserrement va faire tomber des lectures existantes : **corriger l'appel, jamais le garde-fou**. Énumérer ce qui tombe, et traiter chacune. Si le garde-fou paraît refuser à tort, **s'arrêter et le décrire**.
 - [ ] **Step 5** : la monotonie, mesurée comme aux quatre tours de la tâche 1 : zéro refus perdu sur le chemin de tenant, et dire combien de cas ont été comparés.
 - [ ] **Step 6** : commit.
