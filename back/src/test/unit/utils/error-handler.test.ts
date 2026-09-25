@@ -153,3 +153,68 @@ describe('ErrorHandler.boomErrorFromPrismaError', () => {
     }
   })
 })
+
+// task-5-re-review-4.md, I4 : le commit d2ca64f a change le message 404 de repli d'un caractere
+// pres (retrait du prefixe d'entite en double) en declarant qu'« aucun message client ne change
+// en pratique » — c'etait faux pour cette branche, et rien ne l'a signale. Ces trois messages
+// sont delibveres (ecrits a la main dans `boomErrorFromPrismaError`, jamais deduits d'une entree)
+// et rendus tels quels au client : on les fige au caractere pres pour qu'un changement futur soit
+// un choix explicite (voir ce test rougir), jamais un accident qui passe inapercu.
+describe('ErrorHandler.boomErrorFromPrismaError – messages delibveres, figes au caractere pres (task-5-re-review-4.md, I4)', () => {
+  it('P2025 (repli) rend "<Entite> with this ID doesn\'t exist"', () => {
+    const { logger } = buildFakeLogger()
+    const errorHandler = new ErrorHandler({ logger } as IocContainer)
+
+    const boomError = errorHandler.boomErrorFromPrismaError({
+      entityName: 'Patient',
+      error: buildPrismaKnownRequestError('P2025', {}),
+    })
+
+    expect(boomError.output.statusCode).toBe(404)
+    expect(boomError.message).toBe("Patient with this ID doesn't exist")
+  })
+
+  it('P2003 rend "<Entite> cannot be deleted because it has related records (<parent ou unknown relation>)"', () => {
+    const { logger } = buildFakeLogger()
+    const errorHandler = new ErrorHandler({ logger } as IocContainer)
+
+    const boomError = errorHandler.boomErrorFromPrismaError({
+      entityName: 'PatientServiceFile',
+      error: buildPrismaKnownRequestError('P2003', {}),
+    })
+
+    expect(boomError.output.statusCode).toBe(409)
+    expect(boomError.message).toBe(
+      'PatientServiceFile cannot be deleted because it has related records (unknown relation)',
+    )
+  })
+
+  it('P2003 avec un parent connu nomme ce parent plutot que "unknown relation"', () => {
+    const { logger } = buildFakeLogger()
+    const errorHandler = new ErrorHandler({ logger } as IocContainer)
+
+    const boomError = errorHandler.boomErrorFromPrismaError({
+      entityName: 'Slot',
+      parentEntityName: 'Pathway',
+      error: buildPrismaKnownRequestError('P2003', {}),
+    })
+
+    expect(boomError.output.statusCode).toBe(409)
+    expect(boomError.message).toBe(
+      'Slot cannot be deleted because it has related records (Pathway)',
+    )
+  })
+
+  it('P2002 rend "<Entite> already exists (unknown field)"', () => {
+    const { logger } = buildFakeLogger()
+    const errorHandler = new ErrorHandler({ logger } as IocContainer)
+
+    const boomError = errorHandler.boomErrorFromPrismaError({
+      entityName: 'PatientServiceFile',
+      error: buildPrismaKnownRequestError('P2002', {}),
+    })
+
+    expect(boomError.output.statusCode).toBe(409)
+    expect(boomError.message).toBe('PatientServiceFile already exists (unknown field)')
+  })
+})
