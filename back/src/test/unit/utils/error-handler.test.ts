@@ -157,10 +157,10 @@ describe('ErrorHandler.boomErrorFromPrismaError', () => {
 // task-5-re-review-4.md, I4 : le commit d2ca64f a change le message 404 de repli d'un caractere
 // pres (retrait du prefixe d'entite en double) en declarant qu'« aucun message client ne change
 // en pratique » — c'etait faux pour cette branche, et rien ne l'a signale. Ces trois messages
-// sont delibveres (ecrits a la main dans `boomErrorFromPrismaError`, jamais deduits d'une entree)
+// sont deliberes (ecrits a la main dans `boomErrorFromPrismaError`, jamais deduits d'une entree)
 // et rendus tels quels au client : on les fige au caractere pres pour qu'un changement futur soit
 // un choix explicite (voir ce test rougir), jamais un accident qui passe inapercu.
-describe('ErrorHandler.boomErrorFromPrismaError – messages delibveres, figes au caractere pres (task-5-re-review-4.md, I4)', () => {
+describe('ErrorHandler.boomErrorFromPrismaError – messages deliberes, figes au caractere pres (task-5-re-review-4.md, I4)', () => {
   it('P2025 (repli) rend "<Entite> with this ID doesn\'t exist"', () => {
     const { logger } = buildFakeLogger()
     const errorHandler = new ErrorHandler({ logger } as IocContainer)
