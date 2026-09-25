@@ -31,7 +31,15 @@ export type Patient = {
   followedElsewhere?: boolean
 }
 
-export type PatientWithTags = Patient & { pathwayTemplateTags: string[] }
+export type PatientWithTags = Patient & {
+  pathwayTemplateTags: string[]
+  // Date d'entrée dans le service courant : vit sur `PatientServiceFile`
+  // (`types/patientServiceFile.ts`), mais `GET /patient/with-tags` joint déjà le sous-dossier
+  // filtré sur le service courant et l'aplatit sur la ligne (back, `patient.repository.ts`
+  // #findAllWithTags — tâche 12 du plan, pas la 11). N'existe donc que sur cette liste, pas sur
+  // `Patient` en général (création/édition, qui passent par `PatientServiceFileApi`).
+  entryDate?: string
+}
 
 export type EnrollmentIssue = {
   id: string

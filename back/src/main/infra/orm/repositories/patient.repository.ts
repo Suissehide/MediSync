@@ -80,12 +80,13 @@ class PatientRepository implements PatientRepositoryInterface {
             },
           },
         },
-        // Les problemes d'inscription vivent desormais sur le sous-dossier de service (etape 3
-        // du multi-tenant) : la lecture passe par lui, puis s'aplatit pour garder la meme forme
-        // qu'avant sur le patient (au plus un sous-dossier par service, donc pas de doublon).
+        // Les problemes d'inscription et la date d'entree vivent desormais sur le sous-dossier
+        // de service (etape 3 du multi-tenant) : la lecture passe par lui, puis s'aplatit pour
+        // garder la meme forme qu'avant sur le patient (au plus un sous-dossier par service,
+        // donc pas de doublon).
         serviceFiles: {
           where: { serviceId: this.scope.serviceId },
-          select: { enrollmentIssues: true },
+          select: { enrollmentIssues: true, entryDate: true },
         },
       },
     })
@@ -94,6 +95,7 @@ class PatientRepository implements PatientRepositoryInterface {
       ...patient,
       pathwayTemplateTags: distinctMainTags(appointmentPatients),
       enrollmentIssues: serviceFiles.flatMap((f) => f.enrollmentIssues),
+      entryDate: serviceFiles[0]?.entryDate ?? null,
     }))
   }
 

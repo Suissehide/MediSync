@@ -1,4 +1,5 @@
 import { createColumnHelper } from '@tanstack/react-table'
+import dayjs from 'dayjs'
 import { AlertTriangle, Eye } from 'lucide-react'
 
 import { Button } from '../components/ui/button.tsx'
@@ -51,13 +52,18 @@ export const getPatientColumns = ({
     columnHelper.accessor('lastName', {
       header: 'Nom',
     }),
-    // La colonne "Date d'entrée" a été retirée ici (étape 3 du multi-tenant) : `entryDate` a
-    // quitté `Patient`/`PatientWithTags` pour le sous-dossier de service (`PatientServiceFile`,
-    // `types/patientServiceFile.ts`), un par couple patient/service. Cette liste rend des
-    // patients toutes appartenances confondues (`GET /patient/with-tags`), sans sous-dossier de
-    // service embarqué : la donnée n'existe simplement plus à cet endroit pour la reconstituer
-    // sans redessiner l'écran (une ligne par service, un chargement par ligne, ...) — hors du
-    // périmètre de cette tâche (typage et accès aux données), propriétaire tâche 11.
+    // `entryDate` a quitté `Patient` pour le sous-dossier de service (`PatientServiceFile`,
+    // `types/patientServiceFile.ts`, étape 3 du multi-tenant), mais `GET /patient/with-tags`
+    // joint déjà ce sous-dossier filtré sur le service courant et l'aplatit sur la ligne (back,
+    // tâche 12 du plan) : la colonne se lit donc sur `PatientWithTags.entryDate`, comme avant.
+    columnHelper.accessor(
+      (row) =>
+        row.entryDate ? dayjs.utc(row.entryDate).format('DD/MM/YYYY') : '',
+      {
+        id: 'entryDate',
+        header: "Date d'entrée",
+      },
+    ),
     columnHelper.accessor('pathwayTemplateTags', {
       id: 'pathwayTemplateTags',
       header: 'Parcours',

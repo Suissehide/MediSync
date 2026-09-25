@@ -10,6 +10,14 @@ export type PatientEntityRepo = Patient
 export type PatientWithTagsEntityRepo = Patient & {
   pathwayTemplateTags: string[]
   enrollmentIssues: EnrollmentIssueEntityRepo[]
+  // Date d'entree dans le service courant : vit sur PatientServiceFile, mais
+  // `findAllWithTags` joint deja le sous-dossier filtre sur le service (comme pour
+  // `enrollmentIssues` ci-dessus) et l'aplatit ici plutot que d'exposer le sous-dossier entier
+  // (tache 12 du plan, Step 2 — pas la tache 11, qui ne touche pas au back ni a cette liste).
+  // Optionnelle : seule `findAllWithTags` la pose. `findForExport`, qui expose le sous-dossier
+  // complet sous `serviceFile` (voir `PatientForExportEntityRepo` plus bas), lit
+  // `serviceFile.entryDate` et ne duplique pas la valeur ici.
+  entryDate?: Date | null
 }
 // Utilise par l'export Excel : le parcours et le contenu clinique vivent desormais sur le
 // sous-dossier de service (etape 3 du multi-tenant), `null` quand le patient n'en a pas encore
