@@ -12,7 +12,12 @@ type Cookies = { access_token: string }
 
 // Le document d'habilitations reserve le contenu clinique a `clinical:read` :
 // ni le secretariat ni la lecture seule ne doivent le voir, y compris quand
-// le patient est embarque par une autre reponse.
+// le patient est embarque par une autre reponse, ou quand ce contenu vit sur
+// le sous-dossier de service plutot que sur le patient lui-meme (etape 3 du
+// multi-tenant : notes/details/medicalDiagnosis ont demenage vers
+// `PatientServiceFile` ; etpDecision/goal/programType/stopReason avec eux,
+// mais restent des donnees administratives visibles de tous — voir
+// utils/clinical-fields.ts).
 describe('filtrage des champs cliniques selon clinical:read / clinical:write', () => {
   let testApp: TestApp
   let establishmentId: string
@@ -49,8 +54,10 @@ describe('filtrage des champs cliniques selon clinical:read / clinical:write', (
       payload: payload as never,
     })
 
-  const storedPatient = () =>
-    testDb.patient.findUniqueOrThrow({ where: { id: patientId } })
+  const storedServiceFile = () =>
+    testDb.patientServiceFile.findUniqueOrThrow({
+      where: { patientId_serviceId: { patientId, serviceId } },
+    })
 
   beforeAll(async () => {
     await truncateAll()
@@ -78,17 +85,27 @@ describe('filtrage des champs cliniques selon clinical:read / clinical:write', (
         firstName: 'Jean',
         lastName: 'Patient',
         createDate: new Date('2026-01-01T00:00:00Z'),
+      },
+    })
+    patientId = patient.id
+
+    // Sous-dossier de service (etape 3 du multi-tenant) : les seize colonnes
+    // de parcours et de contenu clinique vivent ici, plus sur Patient.
+    // notes/details/medicalDiagnosis sont cliniques ; etpDecision/goal/
+    // programType/stopReason sont administratifs, visibles de tous.
+    await testDb.patientServiceFile.create({
+      data: {
+        ...tenant,
+        patientId,
         notes: 'NOTE-SECRETE',
         details: 'DETAIL-SECRET',
         medicalDiagnosis: 'DIAGNOSTIC-SECRET',
-        // Donnees administratives du programme : visibles de tous.
         etpDecision: 'oui',
         goal: 'objectif',
         programType: 'standard',
         stopReason: 'aucun',
       },
     })
-    patientId = patient.id
 
     const slotTemplate = await testDb.slotTemplate.create({
       data: {
@@ -138,18 +155,26 @@ describe('filtrage des champs cliniques selon clinical:read / clinical:write', (
     await testDb.$disconnect()
   })
 
-  it('les retire pour un secretariat, sur la fiche, la liste et le creneau', async () => {
+  it('les retire pour un secretariat, sur la fiche, le sous-dossier, la liste et le creneau', async () => {
     const cookies = secretariatCookies
 
     const one = (await get(cookies, `/patient/${patientId}`)).json()
-    expect(one).toMatchObject({
-      firstName: 'Jean',
+    expect(one).toMatchObject({ firstName: 'Jean' })
+
+    // Sous-dossier : meme route, memes permissions que le patient
+    // (patient:read) — le filtrage doit s'y appliquer sans modification
+    // (spec §5.2). "Comme aujourd'hui" : trois champs cliniques masques sur
+    // seize, les donnees administratives du parcours restent visibles.
+    const file = (await get(cookies, `/patient/${patientId}/service-file`)).json()
+    expect(file).toMatchObject({
       etpDecision: 'oui',
       goal: 'objectif',
+      programType: 'standard',
+      stopReason: 'aucun',
     })
-    expect(one).not.toHaveProperty('notes')
-    expect(one).not.toHaveProperty('details')
-    expect(one).not.toHaveProperty('medicalDiagnosis')
+    expect(file).not.toHaveProperty('notes')
+    expect(file).not.toHaveProperty('details')
+    expect(file).not.toHaveProperty('medicalDiagnosis')
 
     const list = (await get(cookies, '/patient')).json()
     expect(list).toHaveLength(1)
@@ -167,11 +192,18 @@ describe('filtrage des champs cliniques selon clinical:read / clinical:write', (
     expect(serialized).toContain('Conjoint')
   })
 
-  it('les conserve pour un intervenant, qui a clinical:read', async () => {
+  it('les conserve pour un intervenant, qui a clinical:read, sur la fiche comme sur le sous-dossier', async () => {
     const cookies = intervenantCookies
 
     const one = (await get(cookies, `/patient/${patientId}`)).json()
-    expect(one).toMatchObject({
+    expect(one).toMatchObject({ firstName: 'Jean' })
+
+    // Sens inverse du test precedent : un role qui a le droit clinique voit
+    // bien les trois champs sur le sous-dossier (pas seulement leur absence
+    // ne suffit pas a prouver le filtrage : il faut aussi prouver qu'ils
+    // sont bien rendus a qui y a droit).
+    const file = (await get(cookies, `/patient/${patientId}/service-file`)).json()
+    expect(file).toMatchObject({
       notes: 'NOTE-SECRETE',
       details: 'DETAIL-SECRET',
       medicalDiagnosis: 'DIAGNOSTIC-SECRET',
@@ -200,21 +232,23 @@ describe('filtrage des champs cliniques selon clinical:read / clinical:write', (
   })
 
   // Pendant du filtrage de sortie : un role qui ne peut pas lire le contenu
-  // clinique ne doit pas pouvoir l'ecraser a l'aveugle.
-  it('ignore les champs cliniques envoyes par un secretariat, sans les vider', async () => {
+  // clinique ne doit pas pouvoir l'ecraser a l'aveugle. C'est le point qui
+  // compte le plus : un secretariat qui enregistre le sous-dossier ne doit
+  // ni l'ecraser ni le vider.
+  it('ignore les champs cliniques envoyes par un secretariat sur le sous-dossier, sans les vider', async () => {
     const cookies = secretariatCookies
 
-    const res = await patch(cookies, `/patient/${patientId}`, {
-      firstName: 'Jeanne',
+    const res = await patch(cookies, `/patient/${patientId}/service-file`, {
+      goal: 'objectif modifie',
       notes: 'ECRASE',
       details: 'ECRASE',
       medicalDiagnosis: 'ECRASE',
     })
     expect(res.statusCode).toBe(200)
 
-    const stored = await storedPatient()
+    const stored = await storedServiceFile()
     // Le champ non clinique est bien modifie : la requete n'a pas ete rejetee.
-    expect(stored.firstName).toBe('Jeanne')
+    expect(stored.goal).toBe('objectif modifie')
     // Les champs cliniques sont INCHANGES — ni ecrases par la valeur envoyee,
     // ni vides par le retrait de la cle.
     expect(stored.notes).toBe('NOTE-SECRETE')
@@ -225,13 +259,13 @@ describe('filtrage des champs cliniques selon clinical:read / clinical:write', (
   it('applique les champs cliniques envoyes par un intervenant, qui a clinical:write', async () => {
     const cookies = intervenantCookies
 
-    const res = await patch(cookies, `/patient/${patientId}`, {
+    const res = await patch(cookies, `/patient/${patientId}/service-file`, {
       notes: 'NOTE-MODIFIEE',
       medicalDiagnosis: 'DIAGNOSTIC-MODIFIE',
     })
     expect(res.statusCode).toBe(200)
 
-    const stored = await storedPatient()
+    const stored = await storedServiceFile()
     expect(stored.notes).toBe('NOTE-MODIFIEE')
     expect(stored.medicalDiagnosis).toBe('DIAGNOSTIC-MODIFIE')
     // Non envoye : inchange.
@@ -293,27 +327,43 @@ describe('filtrage des champs cliniques selon clinical:read / clinical:write', (
   })
 
   // Second chemin peu exerce : la creation, pas seulement la modification,
-  // d'un patient par un role sans `clinical:write`.
-  it('cree un patient sans les champs cliniques envoyes par un secretariat', async () => {
+  // du sous-dossier par un role sans `clinical:write`. Avant l'etape 3, ce
+  // test creait un patient directement avec `notes` dans le corps de
+  // `POST /patient` : la colonne a quitte `Patient` pour
+  // `PatientServiceFile`, qui n'est jamais cree par `POST /patient` (spec
+  // §5.1) mais seulement a sa premiere ecriture — donc ici, par le premier
+  // `PATCH /patient/:id/service-file` du patient nouvellement cree.
+  it('cree le sous-dossier a sa premiere ecriture sans les champs cliniques envoyes par un secretariat', async () => {
     const cookies = secretariatCookies
 
-    const res = await post(cookies, '/patient', {
+    const createdPatient = await post(cookies, '/patient', {
       firstName: 'Nouveau',
       lastName: 'Patient',
+    })
+    expect(createdPatient.statusCode).toBe(201)
+    const nouveauPatientId = createdPatient.json().id as string
+
+    const storedPatient = await testDb.patient.findUniqueOrThrow({
+      where: { id: nouveauPatientId },
+    })
+    expect(storedPatient.firstName).toBe('Nouveau')
+
+    const res = await patch(cookies, `/patient/${nouveauPatientId}/service-file`, {
+      goal: 'objectif initial',
       notes: 'NE-DOIT-PAS-ETRE-STOCKE',
     })
-    expect(res.statusCode).toBe(201)
+    expect(res.statusCode).toBe(200)
     expect(res.json()).not.toHaveProperty('notes')
 
-    const created = await testDb.patient.findUniqueOrThrow({
-      where: { id: res.json().id },
+    const createdFile = await testDb.patientServiceFile.findUniqueOrThrow({
+      where: { patientId_serviceId: { patientId: nouveauPatientId, serviceId } },
     })
-    expect(created.firstName).toBe('Nouveau')
-    expect(created.notes).toBeNull()
+    expect(createdFile.goal).toBe('objectif initial')
+    expect(createdFile.notes).toBeNull()
 
     // Nettoyage : le premier test de ce fichier affirme `toHaveLength(1)` sur
-    // la liste des patients. Sans ce nettoyage, l'ordre d'exécution des tests
+    // la liste des patients. Sans ce nettoyage, l'ordre d'execution des tests
     // deviendrait significatif alors que rien ne le signale.
-    await testDb.patient.delete({ where: { id: created.id } })
+    await testDb.patient.delete({ where: { id: nouveauPatientId } })
   })
 })
