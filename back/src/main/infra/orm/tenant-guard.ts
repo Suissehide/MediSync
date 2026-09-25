@@ -50,15 +50,25 @@ export const ESTABLISHMENT_MODELS: readonly string[] = [
 //   - `EstablishmentMembership.create` ou `.findMany` avec `include: { user: true }` ;
 //   - `User.findMany` avec `include: { establishmentMemberships: true }` ;
 //   - `Service.findMany` avec `include: { establishment: true }`.
-// Ce n'est PAS un oubli à réparer en ajoutant `User`/`Establishment` ici : `User` et
-// `Establishment` sont des modèles globaux, sans colonne de tenant, donc AUCUNE déclaration n'est
-// nécessaire pour les lire (voir SUPERADMIN_SAFE_GLOBAL_OPERATIONS, plus haut — une lecture qui ne
-// mute rien y est permise sans figurer dans cette liste). Le contournement sûr est donc de NE PAS
-// utiliser `include` : faire deux requêtes séparées — l'une sur le modèle de tenant (déjà
-// déclaré ici), l'autre sur `User`/`Establishment` par ses identifiants (`where: { id: { in:
-// [...] } }`) — puis joindre en mémoire, côté application. Deux lectures et une jointure en JS
-// coûtent plus cher qu'un `include`, mais restent sûres : chaque requête reste dans son propre
-// modèle, sans jamais traverser le pont qu'un `include` imbriqué ouvrirait.
+// Ce n'est PAS un oubli à réparer en ajoutant `User`/`Establishment` ici : cette liste-ci ne
+// concerne QUE les modèles de tenant, et un modèle global ne l'atteint jamais (voir
+// assertTenantScope : `family === 'global'` sort par assertGlobalScope avant la porte de
+// permission). Les modèles globaux ont leur propre table, SUPERADMIN_GLOBAL_OPERATIONS, plus bas.
+// Le contournement sûr est donc de NE PAS utiliser `include` : faire deux requêtes séparées —
+// l'une sur le modèle de tenant (déjà déclaré ici), l'autre sur `User`/`Establishment` par ses
+// identifiants (`where: { id: { in: [...] } }`, une lecture déclarée dans l'autre table) — puis
+// joindre en mémoire, côté application. Deux lectures et une jointure en JS coûtent plus cher
+// qu'un `include`, mais restent sûres : chaque requête reste dans son propre modèle, sans jamais
+// traverser le pont qu'un `include` imbriqué ouvrirait.
+//
+// CÔTÉ ÉCRITURE (tour de correction 4, ce que le paragraphe ci-dessus ne disait pas) : une
+// écriture sur un modèle GLOBAL sous superadmin — créer un établissement, un compte, un lien
+// d'accès, un octroi — ne se déclare pas ici non plus, mais dans SUPERADMIN_GLOBAL_OPERATIONS.
+// Elle n'ouvre que sa propre ligne : toute écriture IMBRIQUÉE sous son `data` (un
+// `patients: { create: … }` accroché à un `Establishment.create`) reste refusée, comme l'est
+// l'`include` équivalent. Pour rattacher une ligne de tenant à la ligne globale qu'on vient de
+// créer, il faut donc une seconde écriture, déclarée dans CETTE liste-ci
+// (`EstablishmentMembership.create`), et non une écriture imbriquée.
 export const SUPERADMIN_OPERATIONS: Readonly<Record<string, readonly string[]>> = {
   Service: ['count', 'findMany'],
   EstablishmentMembership: ['count', 'findMany', 'create'],
@@ -320,20 +330,70 @@ const UPDATE_OPERATIONS = new Set(['update', 'updateMany', 'updateManyAndReturn'
 // jamais cette porte. Démontré : `Establishment.deleteMany({})` (aucune colonne de tenant à
 // vérifier sur un modèle global, donc rien ne s'y opposait) purgeait la table entière.
 //
-// Remède retenu : sous superadmin, une racine globale reste lisible SANS déclaration explicite
-// dans SUPERADMIN_OPERATIONS pour les lectures qui ne mutent rien — c'est délibéré, pas un oubli,
-// et documenté au-dessus de SUPERADMIN_OPERATIONS : `User`/`Establishment` sont les seuls modèles
-// qui n'ont besoin d'AUCUNE déclaration pour être comptés ou listés sans filtre (ils ne portent
-// aucune colonne de tenant), et une tâche à venir (6/7/9) doit pouvoir lire `User` pour joindre en
-// mémoire ce qu'un `include` ne peut plus traverser (voir assertNoGlobalBridgeUnderSuperAdmin).
-// Mais toute opération qui MUTE une table globale — create, delete(Many), update(Many), upsert —
-// reste refusée : rien dans les tâches déclarées n'en a besoin, et purger `Establishment` ou
-// `User` en bloc n'a pas sa place derrière un contexte qui ne devrait jamais écrire hors de la
-// seule création déclarée (EstablishmentMembership.create).
-const SUPERADMIN_SAFE_GLOBAL_OPERATIONS = new Set([
+// Remède retenu au tour 3 : les lectures qui ne mutent rien restaient permises, toute mutation
+// d'une table globale était refusée.
+//
+// TOUR DE CORRECTION 4 (tâche 1) — Critique de la re-revue : ce remède fermait TROP, et sans
+// laisser de porte. `SUPERADMIN_SAFE_GLOBAL_OPERATIONS` était un ensemble d'OPÉRATIONS sans
+// distinction de modèle : dix-huit couples (modèle, opération) sont passés de permis à refusés
+// d'un seul geste, dont les écritures dont quatre tâches du plan dépendent. Aucune ne pouvait être
+// rouverte : un modèle global n'atteint JAMAIS `assertSuperAdminOperationDeclared` (le retour par
+// `assertGlobalScope` a lieu avant), donc l'ajouter à SUPERADMIN_OPERATIONS n'aurait rien changé ;
+// et ajouter `create` à l'ancien ensemble aurait rouvert `Establishment.create` pour n'importe
+// quoi, `deleteMany` aurait rouvert `Establishment.deleteMany({})` — le trou que le tour 3 venait
+// de fermer. Le reste du fichier a partout ailleurs la granularité PAR MODÈLE ; il ne l'avait pas
+// ici.
+//
+// Cette table est donc, pour les modèles globaux, la symétrique exacte de SUPERADMIN_OPERATIONS :
+// sous superadmin, un couple (modèle, opération) absent est refusé comme sans contexte, et un
+// modèle global absent de la table l'est en entier, LECTURE COMPRISE. Elle vaut pour le seul
+// contexte superadmin : sans contexte, sous tenant ou sous système, un modèle global reste traité
+// comme avant (voir assertGlobalScope). Ce qu'elle ne remplace pas : un `include`/`select` qui
+// franchit la frontière global/tenant reste refusé sous superadmin quoi qu'elle déclare
+// (assertNoGlobalBridgeUnderSuperAdmin), et les écritures IMBRIQUÉES sous un `data` déclaré ici
+// repassent par assertNestedRelations, qui les refuse toutes faute d'entrée dans NESTED_RELATIONS.
+//
+// POURQUOI CHAQUE ÉCRITURE Y FIGURE, une par une — et pourquoi les voisines n'y sont pas :
+//   - `User.create` : tâches 6 (premier administrateur) et 10 (compte de membre). PAS `upsert` :
+//     la tâche 6 step 2 exige qu'une adresse déjà connue ne soit NI écrasée ni distinguable dans
+//     la réponse, donc une lecture suivie d'une création, jamais un upsert qui écraserait le nom
+//     ou le mot de passe. PAS `update` : `lastLoginAt` (tâche 7 step 4) est posé sur le chemin de
+//     connexion, qui n'a aucun contexte, et la désactivation d'un membre (tâche 10 step 2) se fait
+//     sous contexte tenant, où un modèle global n'est pas soumis à cette table.
+//   - `Establishment.create` : tâche 6. PAS `update`/`delete(Many)` : aucune route de ce plan ne
+//     modifie ni ne supprime un établissement sous ce contexte.
+//   - `AccessLink.create` + `updateMany` : tâches 4, 6 et 10 — émettre un lien, et invalider les
+//     liens précédents du même compte à la réémission (`updateMany` conditionné sur
+//     `usedAt: null`, tâche 4 steps 1 et 3).
+//   - `SuperAdminAccessGrant.create` + `update` : tâche 8. PAS `delete` (que la revue attendait
+//     ici) : le modèle porte `revokedAt DateTime?` (spécification §5) et la tâche 8 step 4 exige
+//     que `GET /e/:establishmentId/grants` rende les octrois « en cours ET PASSÉS, avec leur motif
+//     et leur auteur ». Supprimer la ligne détruirait précisément la trace comptable qui justifie
+//     le mécanisme : révoquer est un `update` qui pose `revokedAt`, pas un `delete`. PAS
+//     `deleteMany` non plus, pour la même raison.
+//
+// `AccessLink` et `SuperAdminAccessGrant` n'existent pas encore au schéma (tâche 2) : ils sont
+// déclarés ici d'avance parce que la tâche 2 les veut GLOBAUX à dessein (« Ne les ajoute ni à
+// SERVICE_MODELS ni à ESTABLISHMENT_MODELS ») et que `familyOf` rend « global » par défaut pour
+// tout modèle qu'il ne connaît pas — sans cette déclaration, les tâches 4, 6, 8 et 10 se
+// heurteraient au refus au milieu d'une tâche de fonctionnalité. `tenant-guard-schema.test.ts`
+// tient cette avance : il exige que tout modèle déclaré ici existe au schéma OU figure dans sa
+// courte liste d'attente, et que chaque modèle de cette liste n'existe PAS encore — la tâche 2 le
+// fera donc rougir, ce qui force à relire les opérations déclarées le jour où les tables arrivent.
+//
+// AJOUTER UN MODÈLE GLOBAL AU SCHÉMA SANS ENTRÉE ICI ne l'ouvre pas : il est refusé en entier sous
+// superadmin (échec FERMÉ), et le refus dit quel couple manque.
+const LECTURES_GLOBALES_SANS_MUTATION: readonly string[] = [
   'findMany', 'findFirst', 'findFirstOrThrow', 'findUnique', 'findUniqueOrThrow',
   'count', 'aggregate', 'groupBy',
-])
+]
+
+export const SUPERADMIN_GLOBAL_OPERATIONS: Readonly<Record<string, readonly string[]>> = {
+  User: [...LECTURES_GLOBALES_SANS_MUTATION, 'create'],
+  Establishment: [...LECTURES_GLOBALES_SANS_MUTATION, 'create'],
+  AccessLink: [...LECTURES_GLOBALES_SANS_MUTATION, 'create', 'updateMany'],
+  SuperAdminAccessGrant: [...LECTURES_GLOBALES_SANS_MUTATION, 'create', 'update'],
+}
 
 // Verbes Prisma d'écriture imbriquée : la présence de l'un d'eux dans la valeur d'un champ
 // signale une relation à vérifier plutôt qu'une simple colonne scalaire.
@@ -885,13 +945,46 @@ function assertUpdatePayload(model: string, operation: string, data: unknown, st
 // assertServiceRelationFilter, qui refuse plutôt que de laisser passer par défaut quand il n'y a
 // aucun store à comparer. Bypassée en mode système comme le reste du garde-fou.
 //
-// TOUR DE CORRECTION 3 (tâche 1) — sous superadmin, une opération qui MUTE une table globale
-// (voir SUPERADMIN_SAFE_GLOBAL_OPERATIONS, plus haut, pour le détail) est refusée ici, avant même
-// assertGlobalInclude : rien dans ce fichier ne borne une écriture sur un modèle global (pas de
-// colonne de tenant à comparer), donc rien ne s'opposait à `Establishment.deleteMany({})`.
-const assertGlobalScope = (model: string, operation: string, args: Dict, store: TenantStore | undefined): void => {
-  if (store?.kind === 'superadmin' && !SUPERADMIN_SAFE_GLOBAL_OPERATIONS.has(operation)) {
+// TOUR DE CORRECTION 3 (tâche 1) — sous superadmin, une opération sur une table globale doit être
+// déclarée pour passer, et elle l'est ici, avant même assertGlobalInclude : rien dans ce fichier
+// ne borne une écriture sur un modèle global (pas de colonne de tenant à comparer), donc rien ne
+// s'opposait à `Establishment.deleteMany({})`.
+//
+// TOUR DE CORRECTION 4 — la déclaration est devenue une table PAR MODÈLE
+// (SUPERADMIN_GLOBAL_OPERATIONS, plus haut, où chaque entrée est justifiée une par une) plutôt
+// qu'un ensemble d'opérations valable pour tous les modèles globaux à la fois.
+const assertSuperAdminGlobalOperationDeclared = (model: string, operation: string): void => {
+  const permises = SUPERADMIN_GLOBAL_OPERATIONS[model]
+  if (!permises?.includes(operation)) {
     throw new TenantScopeMissingError(model, operation, 'superadmin')
+  }
+}
+
+// Une écriture déclarée sur un modèle global n'ouvre QUE sa propre ligne. Son `data` peut porter
+// une écriture imbriquée (`Establishment.create({ data: { patients: { create: … } } })`), et
+// `assertGlobalScope` n'inspectait jusqu'ici que `include`/`select`, jamais `data` — il n'en avait
+// pas besoin tant que toute écriture globale était refusée. Maintenant qu'elles peuvent être
+// déclarées, la même récursion que pour une racine de tenant s'applique : `assertSuperAdminWriteRow`
+// (donc `assertNestedRelations`) refuse toute relation absente de NESTED_RELATIONS — et aucun
+// modèle global n'y a d'entrée, donc toute écriture imbriquée depuis une racine globale est
+// refusée. Sans cet appel, déclarer `Establishment.create` rouvrirait, par son `data`, le pont vers
+// les modèles de tenant que assertNoGlobalBridgeUnderSuperAdmin ferme du côté `include`.
+const assertSuperAdminGlobalWrite = (model: string, operation: string, args: Dict, store: TenantStore): void => {
+  if (WRITE_OPERATIONS.has(operation)) {
+    assertSuperAdminWriteRow(model, operation, operation === 'upsert' ? args.create : args.data, store)
+  }
+  if (UPDATE_OPERATIONS.has(operation)) {
+    assertSuperAdminWriteRow(model, operation, args.data, store)
+  }
+  if (operation === 'upsert') {
+    assertSuperAdminWriteRow(model, `${operation}.update`, args.update, store)
+  }
+}
+
+const assertGlobalScope = (model: string, operation: string, args: Dict, store: TenantStore | undefined): void => {
+  if (store?.kind === 'superadmin') {
+    assertSuperAdminGlobalOperationDeclared(model, operation)
+    assertSuperAdminGlobalWrite(model, operation, args, store)
   }
   assertGlobalInclude(model, operation, args)
   if (store?.kind !== 'system') {

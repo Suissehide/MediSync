@@ -82,6 +82,21 @@ const SEUL_CONSTRUCTEUR_LEGITIME = 'utils/tenant-context.ts'
 // les memes qu'au tour de correction 1, et c'est PRECISEMENT pour ca que ce volet ne remplace pas
 // le volet B — il le complete, sur les formes que le volet B ne voit pas (`.call`, `.apply`,
 // `Reflect.apply`, cle de crochet calculee, tant que la VALEUR reste ecrite en clair).
+//
+// SES FAUX POSITIFS, declares plutot que decouverts en CI (tour de correction 4, mineur de la
+// re-revue, les deux prouves par execution) : ce volet lit du TEXTE, pas du code, donc il ne
+// distingue pas un litteral executable d'une simple mention. Un COMMENTAIRE qui cite l'idiome
+// (`// … storage.run({ kind: 'system' }, fn)`) et une CHAINE DE CARACTERES qui le contient
+// (`const DOC = "… { kind: 'superadmin' } …"`) le font rougir tous les deux, alors qu'aucun des
+// deux n'active quoi que ce soit. Le mode d'echec est visible (la CI rougit, le message donne le
+// fichier et la ligne) mais il oriente mal : devant un test rouge sur un commentaire, le premier
+// reflexe est d'assouplir la regex — c'est le contraire qu'il faut faire. Le remede est de
+// REECRIRE la mention (parler de l'idiome sans l'ecrire en clair : « la valeur de mode systeme »,
+// ou couper le litteral), jamais d'elargir ce volet. Le reste de l'echelle est plus sur : les
+// tests de ce depot construisent librement ces valeurs et ne rougissent pas, `RACINE` ne lisant
+// que `src/main` (voir la note de fin de fichier). Et le cas voisin qui ne rougit PAS, verifie
+// lui aussi : une LECTURE (`store.kind === 'system'`, dans tenant-guard.ts) n'a pas de `:` entre
+// `kind` et la valeur, donc elle n'est pas captee.
 const CONSTRUCTION_MODE_SYSTEME = /\{\s*kind\s*:\s*['"]system['"]\s*\}/
 const CONSTRUCTION_MODE_SUPERADMIN = /\{\s*kind\s*:\s*['"]superadmin['"]\s*\}/
 
@@ -201,6 +216,15 @@ const lignesCorrespondantes = (racine: string, motif: RegExp) =>
 //      C'est un remede a l'execution, pas une declaration : « si peek() peut rendre une copie
 //      figee sans casser d'appelant, c'est mieux qu'une declaration » — verifie, ca ne casse
 //      aucun appelant connu (les deux emplois de `peek()` hors de ce fichier ne font que LIRE).
+//      TOUR DE CORRECTION 4 : au tour 3, cette declaration promettait plus que le code ne tenait.
+//      Le gel etait SUPERFICIEL — il protegeait `kind`, pas `store.tenant`, et la re-revue a
+//      prouve par execution que `peek().tenant.establishmentId = 'e9'` reussissait, survivait a un
+//      tick, et repointait tout le contexte sur un autre etablissement (une porte PLUS large que
+//      celle qui etait fermee : tous les modeles d'un autre etablissement, pas seulement les cinq
+//      de la liste declaree), la meme reference etant en outre distribuee aux handlers par
+//      `request.tenant`. Le tenant imbrique est desormais gele lui aussi ; `Tenant` ne portant que
+//      des scalaires, ce gel est total, et un test de `tenant-context.test.ts` rougit si une
+//      colonne imbriquee y apparaissait un jour.
 //   2. REJOUER UN INSTANTANE D'`AsyncLocalStorage` CAPTURE DANS UNE PORTEE LEGITIME — Node expose
 //      `AsyncLocalStorage.snapshot()` (statique) et `asyncLocalStorage.bind(fn)` (instance), qui
 //      capturent le contexte COURANT dans une fonction ordinaire, rejouable n'importe ou, y

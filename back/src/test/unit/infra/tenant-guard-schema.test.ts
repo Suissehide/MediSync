@@ -7,6 +7,7 @@ import {
   MODEL_RELATIONS,
   NESTED_RELATIONS,
   SERVICE_MODELS,
+  SUPERADMIN_GLOBAL_OPERATIONS,
   SUPERADMIN_OPERATIONS,
 } from '../../../main/infra/orm/tenant-guard'
 
@@ -361,6 +362,88 @@ describe('SUPERADMIN_OPERATIONS reflete le schema', () => {
       ServiceMembership: ['count', 'findMany'],
       Patient: ['count'],
       ActivityLog: ['findMany', 'count'],
+    })
+  })
+})
+
+// TOUR DE CORRECTION 4 (tache 1) — Critique de la re-revue : le resserrement du tour 3 refusait
+// TOUTE mutation d'un modele global sous superadmin, par un ensemble d'OPERATIONS sans
+// granularite par modele, et sans aucune porte pour en rouvrir une seule. SUPERADMIN_GLOBAL_
+// OPERATIONS lui substitue une table PAR MODELE, symetrique de SUPERADMIN_OPERATIONS ci-dessus.
+// Elle est la frontiere entre le super-admin et les tables globales exactement comme l'autre l'est
+// pour les tables de tenant : elle est donc tenue ici dans les MEMES trois directions — modeles
+// qui existent, modeles de la bonne famille, et contenu exact epingle.
+//
+// Les deux modeles que la tache 2 doit creer (`AccessLink`, `SuperAdminAccessGrant`) sont declares
+// AVANT d'exister au schema, a dessein : la tache 2 les veut globaux, `familyOf` rend « global »
+// par defaut, et sans declaration prealable les taches 4, 6, 8 et 10 se heurteraient au refus au
+// milieu d'une tache de fonctionnalite. Cette avance est bornee par une liste d'attente explicite
+// que le troisieme test ci-dessous fait POURRIR BRUYAMMENT le jour ou les tables arrivent, plutot
+// que de la laisser vivre indefiniment.
+const MODELES_GLOBAUX_A_VENIR: readonly string[] = ['AccessLink', 'SuperAdminAccessGrant']
+
+describe('SUPERADMIN_GLOBAL_OPERATIONS reflete le schema', () => {
+  it('ne declare que des modeles GLOBAUX — un modele de tenant releve de SUPERADMIN_OPERATIONS', () => {
+    const modelesDeTenant = [...SERVICE_MODELS, ...ESTABLISHMENT_MODELS]
+    for (const modele of Object.keys(SUPERADMIN_GLOBAL_OPERATIONS)) {
+      expect(modelesDeTenant).not.toContain(modele)
+    }
+  })
+
+  // Un meme modele dans les deux tables serait une ambiguite silencieuse : c'est `familyOf` qui
+  // decide laquelle des deux portes il franchit, jamais l'auteur de la declaration, et l'entree
+  // inutile ferait croire a une permission qui n'est jamais lue.
+  it('ne partage aucun modele avec SUPERADMIN_OPERATIONS', () => {
+    const communs = Object.keys(SUPERADMIN_GLOBAL_OPERATIONS).filter(
+      (modele) => modele in SUPERADMIN_OPERATIONS,
+    )
+    expect(communs).toEqual([])
+  })
+
+  it('ne declare que des modeles qui existent, ou nommement en attente de la tache 2', () => {
+    const inconnus = Object.keys(SUPERADMIN_GLOBAL_OPERATIONS).filter(
+      (modele) => !modelNames.has(modele) && !MODELES_GLOBAUX_A_VENIR.includes(modele),
+    )
+    expect(inconnus).toEqual([])
+
+    // L'autre sens, celui qui fait pourrir la liste d'attente : des que la tache 2 ajoute une de
+    // ces tables au schema, ce test rougit. Le remede attendu est de RETIRER le modele de
+    // MODELES_GLOBAUX_A_VENIR (le premier sens ci-dessus le couvrira alors par le schema), et, en
+    // le faisant, de relire les operations declarees pour lui dans SUPERADMIN_GLOBAL_OPERATIONS
+    // maintenant que ses colonnes existent vraiment.
+    const dejaArrives = MODELES_GLOBAUX_A_VENIR.filter((modele) => modelNames.has(modele))
+    expect(dejaArrives).toEqual([])
+
+    // Et une entree d'attente qui ne correspond a aucune declaration est une ligne morte.
+    const inutiles = MODELES_GLOBAUX_A_VENIR.filter(
+      (modele) => !(modele in SUPERADMIN_GLOBAL_OPERATIONS),
+    )
+    expect(inutiles).toEqual([])
+  })
+
+  // Meme role, mot pour mot, que l'epingle de SUPERADMIN_OPERATIONS ci-dessus, et memes limites
+  // (l'ordre des CLES d'un objet n'est pas observable par `toEqual` ; l'ordre des elements d'un
+  // tableau l'est) : ce sont les OPERATIONS declarees, pas seulement la forme de la table, qui
+  // decident de ce qu'un super-admin peut ecrire sur une table globale. La liste des lectures est
+  // ecrite ici en clair plutot que reconstruite depuis la constante du garde-fou : une epingle qui
+  // reutiliserait la meme source que le code ne tiendrait rien (elle suivrait toute modification
+  // au lieu de la signaler).
+  it('est exactement la liste attendue — tout changement de contenu doit etre delibere', () => {
+    const lectures = [
+      'findMany',
+      'findFirst',
+      'findFirstOrThrow',
+      'findUnique',
+      'findUniqueOrThrow',
+      'count',
+      'aggregate',
+      'groupBy',
+    ]
+    expect(SUPERADMIN_GLOBAL_OPERATIONS).toEqual({
+      User: [...lectures, 'create'],
+      Establishment: [...lectures, 'create'],
+      AccessLink: [...lectures, 'create', 'updateMany'],
+      SuperAdminAccessGrant: [...lectures, 'create', 'update'],
     })
   })
 })

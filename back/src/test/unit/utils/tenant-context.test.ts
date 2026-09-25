@@ -89,6 +89,62 @@ describe('TenantContext', () => {
     })
   })
 
+  // TOUR DE CORRECTION 4 (tache 1) — la re-revue a montre par execution que le gel du tour 3 etait
+  // SUPERFICIEL : `Object.freeze` ne gele que l'enveloppe, donc `peek().tenant.establishmentId =
+  // 'e9'` reussissait, survivait a une frontiere asynchrone, et repointait tout le contexte sur un
+  // autre etablissement — alors que ce fichier et `runAsSystem-unicite.test.ts` declaraient la
+  // porte « fermee ». Ces trois tests tiennent la fermeture complete : le tenant imbrique est gele
+  // lui aussi, l'objet que le plugin pose sur `request.tenant` est le MEME (donc gele par la meme
+  // occasion), et `Tenant` reste plat — sans quoi un gel a deux niveaux ne suffirait plus.
+  it('gele aussi le tenant imbrique : repointer l etablissement echoue, avant comme apres un tick', async () => {
+    const ctx = new TenantContext()
+    await ctx.run({ ...tenant }, async () => {
+      await Promise.resolve()
+      const store = ctx.peek()
+      expect(store?.kind).toBe('tenant')
+      const tenantDuStore = store?.kind === 'tenant' ? store.tenant : undefined
+      expect(Object.isFrozen(tenantDuStore)).toBe(true)
+      expect(() => {
+        // biome-ignore lint/suspicious/noExplicitAny: sabotage delibere pour l'epreuve
+        ;(tenantDuStore as any).establishmentId = 'e9'
+      }).toThrow(TypeError)
+      expect(ctx.current().establishmentId).toBe('e1')
+      // La porte exacte que la revue a exploitee : la mutation survivait a un tick asynchrone et
+      // valait pour tout le reste de la portee.
+      await Promise.resolve()
+      expect(ctx.peek()).toEqual({ kind: 'tenant', tenant })
+    })
+  })
+
+  it('gele l objet passe a enter — celui-la meme que le plugin pose sur request.tenant', () => {
+    const ctx = new TenantContext()
+    // `tenant.plugin.ts` fait `request.tenant = tenant` PUIS `tenantContext.enter(tenant)` : c'est
+    // un seul objet, distribue a tous les handlers par `requireTenant`. Le muter par cette
+    // reference repointait le contexte sans jamais appeler `peek()`.
+    const tenantDeLaRequete = { ...tenant }
+    ctx.enter(tenantDeLaRequete)
+    expect(Object.isFrozen(tenantDeLaRequete)).toBe(true)
+    expect(() => {
+      // biome-ignore lint/suspicious/noExplicitAny: sabotage delibere pour l'epreuve
+      ;(tenantDeLaRequete as any).establishmentId = 'e9'
+    }).toThrow(TypeError)
+    expect(ctx.current().establishmentId).toBe('e1')
+    ctx.clear()
+  })
+
+  it('n a aucune colonne imbriquee : le gel a deux niveaux est donc total, et le restera ou rougira', () => {
+    const ctx = new TenantContext()
+    ctx.enter({ ...tenant })
+    const valeurs = Object.values(ctx.current())
+    // Une colonne de `Tenant` qui deviendrait un objet (ou un tableau) rendrait le gel de nouveau
+    // superficiel sans que rien ne le signale : ce test est ce qui le signale.
+    for (const valeur of valeurs) {
+      expect(typeof valeur === 'object' && valeur !== null).toBe(false)
+    }
+    expect(valeurs).toHaveLength(6)
+    ctx.clear()
+  })
+
   it('runAsSuperAdmin et runAsSystem restent utilisables normalement malgre le gel (aucun appelant legitime ne mute le store)', async () => {
     const ctx = new TenantContext()
     // Les deux emplois legitimes de production lisent seulement le store (activityLog.repository.ts,
