@@ -135,7 +135,7 @@ describe('TENANT_CHILD_RELATIONS reflete prisma/schema.prisma', () => {
     }
     // Une relation connue, pour prouver que relationsOf lit autre chose que du vide.
     expect(relationsOf(models.get('Patient') ?? '')).toMatchObject({
-      enrollmentIssues: 'EnrollmentIssue',
+      serviceFiles: 'PatientServiceFile',
     })
   })
 

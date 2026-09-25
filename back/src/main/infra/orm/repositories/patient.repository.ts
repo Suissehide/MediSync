@@ -80,13 +80,20 @@ class PatientRepository implements PatientRepositoryInterface {
             },
           },
         },
-        enrollmentIssues: { where: { serviceId: this.scope.serviceId } },
+        // Les problemes d'inscription vivent desormais sur le sous-dossier de service (etape 3
+        // du multi-tenant) : la lecture passe par lui, puis s'aplatit pour garder la meme forme
+        // qu'avant sur le patient (au plus un sous-dossier par service, donc pas de doublon).
+        serviceFiles: {
+          where: { serviceId: this.scope.serviceId },
+          select: { enrollmentIssues: true },
+        },
       },
     })
 
-    return patients.map(({ appointmentPatients, ...patient }) => ({
+    return patients.map(({ appointmentPatients, serviceFiles, ...patient }) => ({
       ...patient,
       pathwayTemplateTags: distinctMainTags(appointmentPatients),
+      enrollmentIssues: serviceFiles.flatMap((f) => f.enrollmentIssues),
     }))
   }
 
@@ -140,11 +147,15 @@ class PatientRepository implements PatientRepositoryInterface {
             },
           },
         },
-        enrollmentIssues: { where: { serviceId: this.scope.serviceId } },
         // Sous-dossier du service courant : le parcours et le contenu clinique de l'export
         // (etape 3 du multi-tenant) y vivent desormais, plus sur Patient. Filtre de service
-        // explicite requis par le garde-fou d'ORM (relation vers un modele de service).
-        serviceFiles: { where: { serviceId: this.scope.serviceId } },
+        // explicite requis par le garde-fou d'ORM (relation vers un modele de service). Les
+        // problemes d'inscription, eux aussi rattaches au sous-dossier depuis la tache 6, sont
+        // inclus ici pour la meme raison qu'avant : garder la forme `PatientWithTagsEntityRepo`.
+        serviceFiles: {
+          where: { serviceId: this.scope.serviceId },
+          include: { enrollmentIssues: true },
+        },
       },
       orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
     })
@@ -153,12 +164,16 @@ class PatientRepository implements PatientRepositoryInterface {
       ...patient,
       pathwayTemplateTags: distinctMainTags(appointmentPatients),
       serviceFile: serviceFiles[0] ?? null,
+      enrollmentIssues: serviceFiles.flatMap((f) => f.enrollmentIssues),
     }))
   }
 
   async findByID(patientID: string): Promise<PatientWithAppointmentsDomain> {
     try {
-      return await this.prisma.patient.findUniqueOrThrow({
+      // Les problemes d'inscription vivent desormais sur le sous-dossier de service (etape 3 du
+      // multi-tenant) : la lecture passe par lui, puis s'aplatit pour garder la meme forme
+      // qu'avant sur le patient (au plus un sous-dossier par service, donc pas de doublon).
+      const { serviceFiles, ...patient } = await this.prisma.patient.findUniqueOrThrow({
         where: { id_establishmentId: { id: patientID, ...this.establishmentScope } },
         include: {
           appointmentPatients: {
@@ -167,9 +182,13 @@ class PatientRepository implements PatientRepositoryInterface {
               appointment: true,
             },
           },
-          enrollmentIssues: { where: { serviceId: this.scope.serviceId } },
+          serviceFiles: {
+            where: { serviceId: this.scope.serviceId },
+            select: { enrollmentIssues: true },
+          },
         },
       })
+      return { ...patient, enrollmentIssues: serviceFiles.flatMap((f) => f.enrollmentIssues) }
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
         entityName: 'Patient',

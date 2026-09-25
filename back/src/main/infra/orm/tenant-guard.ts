@@ -57,7 +57,6 @@ export const NESTED_RELATIONS: Record<string, Record<string, string>> = {
   EstablishmentMembership: { serviceMemberships: 'ServiceMembership' },
   Patient: {
     appointmentPatients: 'AppointmentPatient',
-    diagnostics: 'DiagnosticEducatif',
     serviceFiles: 'PatientServiceFile',
   },
 }
@@ -112,8 +111,6 @@ export const TENANT_CHILD_RELATIONS: Record<string, Record<string, string>> = {
   Patient: {
     establishment: 'Establishment',
     appointmentPatients: 'AppointmentPatient',
-    diagnostics: 'DiagnosticEducatif',
-    enrollmentIssues: 'EnrollmentIssue',
     pathwayPriorities: 'PatientPathwayPriority',
     serviceFiles: 'PatientServiceFile',
   },
@@ -485,11 +482,13 @@ const assertServiceRelationFilter = (
 // thematic|slotTemplate|pathwayTemplate > soignantLinks > soignant et slotTemplate > location
 // (slot-template.include). Aucune ne redescend aujourd'hui : toutes s'arrêtent sur le patient, le
 // soignant ou le lieu, qui n'embarquent rien de plus. Le jour où l'une d'elles s'écrira
-// `patient: { include: { enrollmentIssues: … } }` (ou `diagnostics`, `pathwayPriorities`,
-// `appointmentPatients`), `soignant: { include: { todos: … } }` (ou `thematicLinks`,
-// `slotTemplateLinks`) ou `location: { include: { slotTemplates: … } }`, l'inclusion de service
-// ne sera PAS vue ici et devra porter son `where: { serviceId }` à la main — exactement la
-// situation d'avant cette fonction.
+// `patient: { include: { pathwayPriorities: … } }` (ou `appointmentPatients`, `serviceFiles` —
+// depuis la tâche 6, `diagnostics` et `enrollmentIssues` ne sont plus des relations de `Patient`,
+// mais de `PatientServiceFile`, atteignables via `serviceFiles: { include: { diagnostics: … } }`),
+// `soignant: { include: { todos: … } }` (ou `thematicLinks`, `slotTemplateLinks`) ou
+// `location: { include: { slotTemplates: … } }`, l'inclusion de service ne sera PAS vue ici et
+// devra porter son `where: { serviceId }` à la main — exactement la situation d'avant cette
+// fonction.
 //
 // Fermer ce cas suppose de suivre la famille du modèle courant le long de la descente, donc une
 // table parent → relation → cible pour TOUS les modèles et non pour les seuls modèles

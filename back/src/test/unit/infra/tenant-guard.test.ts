@@ -660,19 +660,22 @@ describe('assertTenantScope', () => {
   // Noms de relations repris de prisma/schema.prisma (modeles Patient, Soignant,
   // EstablishmentMembership).
   describe('inclusions depuis un modele d etablissement', () => {
-    // Fuite reelle trouvee a l'etape 1 : un patient (etablissement) incluant
-    // ses problemes d'inscription (service) remontait ceux de tous les services.
+    // Fuite reelle trouvee a l'etape 1 : un patient (etablissement) incluant un modele de
+    // service remontait celui de tous les services. Depuis la tache 6, ce n'est plus
+    // `enrollmentIssues` qui l'illustre (retire de Patient : les problemes d'inscription
+    // dependent desormais du sous-dossier de service, pas du patient) mais `serviceFiles`,
+    // la relation de Patient vers PatientServiceFile qui porte la meme exigence de filtre.
     it('refuse une inclusion vers un modele de service sans filtre', () => {
       expect(() =>
         assertTenantScope(
           {
             model: 'Patient',
             operation: 'findMany',
-            args: { where: { establishmentId: 'e1' }, include: { enrollmentIssues: true } },
+            args: { where: { establishmentId: 'e1' }, include: { serviceFiles: true } },
           },
           store,
         ),
-      ).toThrow(/enrollmentIssues/)
+      ).toThrow(/serviceFiles/)
     })
 
     it('accepte la meme inclusion filtree sur le service courant', () => {
@@ -683,7 +686,7 @@ describe('assertTenantScope', () => {
             operation: 'findMany',
             args: {
               where: { establishmentId: 'e1' },
-              include: { enrollmentIssues: { where: { serviceId: 's1' } } },
+              include: { serviceFiles: { where: { serviceId: 's1' } } },
             },
           },
           store,
@@ -699,7 +702,7 @@ describe('assertTenantScope', () => {
             operation: 'findMany',
             args: {
               where: { establishmentId: 'e1' },
-              include: { enrollmentIssues: { where: { serviceId: 'autre' } } },
+              include: { serviceFiles: { where: { serviceId: 'autre' } } },
             },
           },
           store,
@@ -780,7 +783,7 @@ describe('assertTenantScope', () => {
             operation: 'findMany',
             args: {
               where: { establishmentId: 'e1' },
-              include: { enrollmentIssues: demande ? { where: { serviceId: 's1' } } : undefined },
+              include: { serviceFiles: demande ? { where: { serviceId: 's1' } } : undefined },
             },
           },
           store,
@@ -793,7 +796,7 @@ describe('assertTenantScope', () => {
           {
             model: 'Patient',
             operation: 'findMany',
-            args: { where: { establishmentId: 'e1' }, include: { enrollmentIssues: undefined } },
+            args: { where: { establishmentId: 'e1' }, include: { serviceFiles: undefined } },
           },
           adminStore,
         ),
@@ -810,7 +813,7 @@ describe('assertTenantScope', () => {
             operation: 'findMany',
             args: {
               where: { establishmentId: 'e1' },
-              include: { enrollmentIssues: { where: { serviceId: 's1' } } },
+              include: { serviceFiles: { where: { serviceId: 's1' } } },
             },
           },
           adminStore,
@@ -826,12 +829,12 @@ describe('assertTenantScope', () => {
             operation: 'create',
             args: {
               data: { firstName: 'A', establishmentId: 'e1' },
-              include: { diagnostics: true },
+              include: { serviceFiles: true },
             },
           },
           store,
         ),
-      ).toThrow(/diagnostics/)
+      ).toThrow(/serviceFiles/)
     })
 
     // Lectures reelles qui doivent continuer a passer : la liste des membres (relations de la

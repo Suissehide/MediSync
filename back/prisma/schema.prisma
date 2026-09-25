@@ -365,8 +365,6 @@ model Patient {
 
   establishment       Establishment            @relation(fields: [establishmentId], references: [id])
   appointmentPatients AppointmentPatient[]
-  diagnostics         DiagnosticEducatif[]
-  enrollmentIssues    EnrollmentIssue[]
   pathwayPriorities   PatientPathwayPriority[]
   serviceFiles        PatientServiceFile[]
 
@@ -427,12 +425,12 @@ model EnrollmentIssue {
   startDate         DateTime
   createdAt         DateTime @default(now())
 
-  patient Patient @relation(fields: [patientId, establishmentId], references: [id, establishmentId], onDelete: Cascade)
   // Relation dérivée de patientId + serviceId, déjà portées par ce modèle : aucune colonne
-  // supplémentaire, elle relie simplement la ligne à son sous-dossier de service. En cascade
-  // comme la relation `patient` ci-dessus : la tâche 6 la remplacera par une relation
-  // `serviceFile` qui porte la même sémantique de suppression.
-  patientServiceFile PatientServiceFile? @relation(fields: [patientId, serviceId], references: [patientId, serviceId], onDelete: Cascade)
+  // supplémentaire, elle relie simplement la ligne à son sous-dossier de service. Seul parent
+  // désormais (la tâche 6 a retiré la relation `patient` vers Patient(id, establishmentId) qui
+  // coexistait ici) : ce modèle est un modèle de service, il dépend d'un sous-dossier de
+  // service, pas d'un parent d'établissement.
+  serviceFile PatientServiceFile @relation(fields: [patientId, serviceId], references: [patientId, serviceId], onDelete: Cascade)
 
   @@unique([id, serviceId])
   @@index([patientId])
@@ -565,14 +563,14 @@ model DiagnosticEducatif {
   suiviEducatifNegocie    String?
   rapatrier               String?
 
-  patient  Patient                     @relation(fields: [patientId, establishmentId], references: [id, establishmentId], onDelete: Cascade)
   // Référence simple (templateId nullable) : cohérence vérifiée par le domaine.
   template DiagnosticEducatifTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
   // Relation dérivée de patientId + serviceId, déjà portées par ce modèle : aucune colonne
-  // supplémentaire, elle relie simplement la ligne à son sous-dossier de service. En cascade
-  // comme la relation `patient` ci-dessus : la tâche 6 la remplacera par une relation
-  // `serviceFile` qui porte la même sémantique de suppression.
-  patientServiceFile PatientServiceFile? @relation(fields: [patientId, serviceId], references: [patientId, serviceId], onDelete: Cascade)
+  // supplémentaire, elle relie simplement la ligne à son sous-dossier de service. Seul parent
+  // désormais (la tâche 6 a retiré la relation `patient` vers Patient(id, establishmentId) qui
+  // coexistait ici) : ce modèle est un modèle de service, il dépend d'un sous-dossier de
+  // service, pas d'un parent d'établissement.
+  serviceFile PatientServiceFile @relation(fields: [patientId, serviceId], references: [patientId, serviceId], onDelete: Cascade)
 
   @@unique([id, serviceId])
   @@index([patientId])
