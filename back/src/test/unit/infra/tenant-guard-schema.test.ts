@@ -4,17 +4,19 @@ import { join } from 'node:path'
 import {
   ESTABLISHMENT_MODELS,
   GLOBAL_TENANT_RELATIONS,
+  MODEL_RELATIONS,
   NESTED_RELATIONS,
   SERVICE_MODELS,
-  TENANT_CHILD_RELATIONS,
 } from '../../../main/infra/orm/tenant-guard'
 
-// Le garde-fou controle les include d'un modele d'etablissement a partir d'une table ecrite a la
-// main, TENANT_CHILD_RELATIONS. Sur `include`, une relation absente de la table est refusee, donc
-// un oubli s'y voit. Sur `select`, il ne peut PAS en exiger autant : un select mele colonnes
-// scalaires et relations, et ce generateur Prisma n'expose aucune metadonnee a l'execution qui
-// permettrait de les distinguer. Une relation ajoutee au schema sans etre reportee dans la table
-// passerait donc silencieusement par select.
+// Le garde-fou controle les include imbriques (a n'importe quelle profondeur, depuis une racine
+// de service ou d'etablissement, tache 9/etape 3) a partir d'une table ecrite a la main,
+// MODEL_RELATIONS, qui couvre desormais TOUS les modeles du schema et pas seulement ceux
+// d'etablissement (l'ancienne TENANT_CHILD_RELATIONS). Sur `include`, une relation absente de la
+// table est refusee, donc un oubli s'y voit. Sur `select`, il ne peut PAS en exiger autant : un
+// select mele colonnes scalaires et relations, et ce generateur Prisma n'expose aucune metadonnee
+// a l'execution qui permettrait de les distinguer. Une relation ajoutee au schema sans etre
+// reportee dans la table passerait donc silencieusement par select.
 //
 // Ce fichier ferme ce cas a la construction plutot qu'a l'execution, ce qui est plus fort : il
 // relit prisma/schema.prisma et exige que la table en soit le reflet exact. Une relation ajoutee,
@@ -122,7 +124,15 @@ describe('SERVICE_MODELS reflete prisma/schema.prisma', () => {
   })
 })
 
-describe('TENANT_CHILD_RELATIONS reflete prisma/schema.prisma', () => {
+// MODEL_RELATIONS (tache 9/etape 3) couvre TOUS les modeles du schema, pas seulement ceux
+// d'etablissement : c'est ce qui permet au garde-fou de suivre la famille du modele courant a
+// n'importe quelle profondeur d'inclusion imbriquee, et de reconnaitre une transition
+// etablissement -> service la ou qu'elle se trouve dans l'arbre, pas seulement au premier
+// niveau depuis la racine de la requete. Avant cette tache, cette table s'appelait
+// TENANT_CHILD_RELATIONS et ne couvrait que ESTABLISHMENT_MODELS ; les tests ci-dessous
+// portaient alors sur `[...ESTABLISHMENT_MODELS]`, ils portent maintenant sur `[...modelNames]`
+// (tous les modeles reellement declares au schema, la meme source que relationsOf).
+describe('MODEL_RELATIONS reflete prisma/schema.prisma', () => {
   it('lit bien le schema', () => {
     // Garde-fou du garde-fou : si le fichier bouge ou si l'analyse ci-dessus cesse de
     // reconnaitre les blocs, les tests suivants deviendraient vrais sur un schema vide.
@@ -139,25 +149,32 @@ describe('TENANT_CHILD_RELATIONS reflete prisma/schema.prisma', () => {
     })
   })
 
-  it('declare chaque modele d etablissement', () => {
-    expect(Object.keys(TENANT_CHILD_RELATIONS).sort()).toEqual([...ESTABLISHMENT_MODELS].sort())
+  it('declare chaque modele du schema', () => {
+    expect(Object.keys(MODEL_RELATIONS).sort()).toEqual([...modelNames].sort())
   })
 
-  // Le coeur : relation par relation, dans les deux sens. Une relation du schema absente de la
-  // table est un trou (elle passerait par select sans controle) ; une entree de la table absente
-  // du schema est une declaration morte, qui ne protege rien et ne se voit pas a l'usage.
-  it.each([...ESTABLISHMENT_MODELS])('reflete exactement les relations de %s', (model) => {
+  // Le coeur : relation par relation, dans les deux sens, pour CHAQUE modele du schema — pas
+  // seulement ceux d'etablissement. Une relation du schema absente de la table est un trou (elle
+  // traverserait un include imbrique sans etre reconnue, donc refusee a tort, ou pire laisserait
+  // une transition etablissement -> service non filtree si l'oubli portait sur elle) ; une
+  // entree de la table absente du schema est une declaration morte, qui ne protege rien et ne se
+  // voit pas a l'usage.
+  it.each([...modelNames])('reflete exactement les relations de %s', (model) => {
     const body = models.get(model)
     expect(body).toBeDefined()
-    expect(TENANT_CHILD_RELATIONS[model]).toEqual(relationsOf(body ?? ''))
+    expect(MODEL_RELATIONS[model]).toEqual(relationsOf(body ?? ''))
   })
 
-  // Enonce separement la propriete que le garde-fou exploite reellement, pour qu'un echec dise
-  // « telle relation vers un modele de service manque » plutot que « deux objets different ».
+  // Enonce separement la propriete de cloisonnement que le garde-fou exploite reellement, pour
+  // qu'un echec dise « telle relation vers un modele de service manque » plutot que « deux
+  // objets different ». Cette propriete precise ne concerne que les modeles d'etablissement
+  // (c'est la ou nait la transition dangereuse), mais elle est desormais deja couverte, pour
+  // TOUS les modeles, par l'egalite exacte ci-dessus : ce test reste pour la lisibilite du
+  // message d'echec sur le cas qui compte pour le cloisonnement.
   it('ne laisse aucune relation vers un modele de service hors de la table', () => {
     const missing: string[] = []
     for (const model of ESTABLISHMENT_MODELS) {
-      const declared = TENANT_CHILD_RELATIONS[model] ?? {}
+      const declared = MODEL_RELATIONS[model] ?? {}
       for (const [field, target] of Object.entries(relationsOf(models.get(model) ?? ''))) {
         if (SERVICE_MODELS.includes(target) && declared[field] !== target) {
           missing.push(`${model}.${field} -> ${target}`)
@@ -169,14 +186,14 @@ describe('TENANT_CHILD_RELATIONS reflete prisma/schema.prisma', () => {
 })
 
 // La seconde table ecrite a la main : celle des relations d'un modele GLOBAL qui exposent de la
-// donnee de tenant. Le besoin est plus pressant que pour TENANT_CHILD_RELATIONS, parce que
+// donnee de tenant. Le besoin est plus pressant que pour MODEL_RELATIONS, parce que
 // `assertGlobalInclude` echoue OUVERT — une relation absente de la table n'est pas vue, donc
-// l'include passe sans controle, la ou `assertChildInclude` refuse ce qu'il ne connait pas. Avant
+// l'include passe sans controle, la ou `assertNestedInclude` refuse ce qu'il ne connait pas. Avant
 // ce test, la table avait deja derive : elle declarait un `User.soignant` disparu du schema
 // depuis l'etape 1, ou le lien vers `Soignant` est passe a `EstablishmentMembership`.
 //
 // MAIS L'OBLIGATION N'EST PAS LA MEME, et ce paragraphe a longtemps affirme le contraire.
-// TENANT_CHILD_RELATIONS est une liste blanche qui EXIGE : ce qui n'y figure pas est refuse, donc
+// MODEL_RELATIONS est une liste blanche qui EXIGE : ce qui n'y figure pas est refuse, donc
 // y declarer une relation la rend simplement lisible et l'exhaustivite ne coute rien.
 // GLOBAL_TENANT_RELATIONS fait l'inverse : y declarer une relation la RESTREINT, puisque
 // `assertGlobalInclude` refuse alors tout include dessus hors findUnique(OrThrow). Exiger ici
@@ -262,7 +279,7 @@ describe('GLOBAL_TENANT_RELATIONS reflete prisma/schema.prisma', () => {
 })
 
 // La troisieme table ecrite a la main, NESTED_RELATIONS : une liste blanche pour les ecritures
-// imbriquees (parent -> champ -> enfant). A la difference de TENANT_CHILD_RELATIONS, elle n'a
+// imbriquees (parent -> champ -> enfant). A la difference de MODEL_RELATIONS, elle n'a
 // pas a etre exhaustive — voir son commentaire dans tenant-guard.ts — puisqu'un champ absent y
 // est deja refuse a l'execution (fail closed) plutot que laisse sans controle. Ce test ne verifie
 // donc qu'un seul sens : une entree qui ne correspond plus a une relation du schema (modele
