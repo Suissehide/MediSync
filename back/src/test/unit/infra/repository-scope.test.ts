@@ -2,6 +2,7 @@ import { ActivityLogRepository } from '../../../main/infra/orm/repositories/acti
 import { AppointmentRepository } from '../../../main/infra/orm/repositories/appointment.repository'
 import { DiagnosticEducatifRepository } from '../../../main/infra/orm/repositories/diagnosticEducatif.repository'
 import { DiagnosticEducatifTemplateRepository } from '../../../main/infra/orm/repositories/diagnosticEducatifTemplate.repository'
+import { EnrollmentIssueRepository } from '../../../main/infra/orm/repositories/enrollmentIssue.repository'
 import { LocationRepository } from '../../../main/infra/orm/repositories/location.repository'
 import { MembershipRepository } from '../../../main/infra/orm/repositories/membership.repository'
 import { PathwayRepository } from '../../../main/infra/orm/repositories/pathway.repository'
@@ -573,6 +574,39 @@ describe('scoping des repositories de diagnostic', () => {
     expect(calls[4]).toMatchObject({
       model: 'diagnosticEducatif', op: 'delete',
       args: { where: { id_serviceId: { id: 'd1', serviceId: 's1' } } },
+    })
+  })
+
+  // EnrollmentIssueRepository est l'autre modele de service deplace par la tache 6 (motifs
+  // d'echec d'inscription, rattaches au sous-dossier de service). Jusqu'ici seul
+  // DiagnosticEducatifRepository avait un bloc ici : sur cinq sabotages du filtre de service
+  // pratiques en revue, les deux qui touchaient EnrollmentIssueRepository (findByPatientID et
+  // delete) ne faisaient rougir aucun test — voir task-6-review.md, C1. Ce bloc couvre ses trois
+  // methodes, calque sur celui de DiagnosticEducatifRepository ci-dessus.
+  it('EnrollmentIssueRepository filtre, cree et supprime avec les cles de tenant', async () => {
+    const { prisma, calls } = buildFakePrisma()
+    const ctx = new TenantContext()
+    const repo = new EnrollmentIssueRepository(buildContainer(prisma, ctx))
+    await ctx.run(tenant, async () => {
+      await repo.findByPatientID('p1')
+      await repo.create('p1', [{ pathwayTemplateID: 'pt1', reason: 'R', startDate: new Date() }])
+      await repo.delete('ei1')
+    })
+    expect(calls[0]).toMatchObject({
+      model: 'enrollmentIssue', op: 'findMany',
+      args: { where: { patientId: 'p1', serviceId: 's1', establishmentId: 'e1' } },
+    })
+    expect(calls[1]).toMatchObject({
+      model: 'enrollmentIssue', op: 'createMany',
+      args: {
+        data: [
+          { patientId: 'p1', pathwayTemplateID: 'pt1', reason: 'R', serviceId: 's1', establishmentId: 'e1' },
+        ],
+      },
+    })
+    expect(calls[2]).toMatchObject({
+      model: 'enrollmentIssue', op: 'delete',
+      args: { where: { id_serviceId: { id: 'ei1', serviceId: 's1' } } },
     })
   })
 

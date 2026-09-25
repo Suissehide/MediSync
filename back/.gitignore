@@ -8,7 +8,7 @@
 **/.envrc
 
 tsconfig.tsbuildinfo
-.tmp_*
+.tmp-*
 /prisma/dev.db
 
 # Logs

@@ -152,6 +152,19 @@ class PatientRepository implements PatientRepositoryInterface {
         // explicite requis par le garde-fou d'ORM (relation vers un modele de service). Les
         // problemes d'inscription, eux aussi rattaches au sous-dossier depuis la tache 6, sont
         // inclus ici pour la meme raison qu'avant : garder la forme `PatientWithTagsEntityRepo`.
+        //
+        // `include` (pas `select`) est necessaire ici, a la difference de `findAllWithTags` et
+        // `findByID` : ceux-ci ne gardent que `enrollmentIssues` et jettent le reste du
+        // sous-dossier, `select: { enrollmentIssues: true }` leur suffit donc. Cette methode-ci
+        // expose au contraire le sous-dossier complet sous `serviceFile` (dix-neuf colonnes,
+        // lues par EXPORT_COLUMNS dans patient.domain.ts) : il lui faut les scalaires ET la
+        // relation. Prisma n'a pas de forme "tous les scalaires + une relation" hors `include` —
+        // un `select` explicite obligerait a enumerer chaque colonne du sous-dossier ici, une
+        // liste qui se desynchroniserait silencieusement de `prisma/schema.prisma` a la
+        // prochaine colonne ajoutee. `enrollmentIssues` est donc retire explicitement plus bas,
+        // apres la requete, plutot que par la forme de la requete elle-meme (I2, task-6-review.md
+        // : `serviceFile` ne doit porter aucune cle que `PatientServiceFileEntityRepo` ne
+        // declare pas).
         serviceFiles: {
           where: { serviceId: this.scope.serviceId },
           include: { enrollmentIssues: true },
@@ -160,12 +173,18 @@ class PatientRepository implements PatientRepositoryInterface {
       orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
     })
 
-    return patients.map(({ appointmentPatients, serviceFiles, ...patient }) => ({
-      ...patient,
-      pathwayTemplateTags: distinctMainTags(appointmentPatients),
-      serviceFile: serviceFiles[0] ?? null,
-      enrollmentIssues: serviceFiles.flatMap((f) => f.enrollmentIssues),
-    }))
+    return patients.map(({ appointmentPatients, serviceFiles, ...patient }) => {
+      const [primaryServiceFile] = serviceFiles
+      const serviceFile = primaryServiceFile
+        ? ((({ enrollmentIssues: _enrollmentIssuesOnServiceFile, ...rest }) => rest)(primaryServiceFile))
+        : null
+      return {
+        ...patient,
+        pathwayTemplateTags: distinctMainTags(appointmentPatients),
+        serviceFile,
+        enrollmentIssues: serviceFiles.flatMap((f) => f.enrollmentIssues),
+      }
+    })
   }
 
   async findByID(patientID: string): Promise<PatientWithAppointmentsDomain> {
