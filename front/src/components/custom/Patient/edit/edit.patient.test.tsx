@@ -774,3 +774,84 @@ describe('EditPatient — la touche Entrée enregistre (m2)', () => {
     expect(patientBodies[0]).toMatchObject({ firstName: 'Jeanne' })
   })
 })
+
+// Tâche 14 (spec §5.3/§6) — le signal de suivi ailleurs. Trois états, pas deux (revue tâche 13,
+// tour 1, point 1) : `followedElsewhere` vrai affiche la mention, faux et absent n'affichent
+// RIEN — ni l'un ni l'autre ne doit se distinguer à l'écran d'une absence de question posée. Le
+// booléen vient de `patient` (déjà lu par `GET /patient/:id`, la même requête qui a rempli tout
+// le reste de l'écran) : aucun de ces trois cas ne doit faire varier le nombre d'appels réseau.
+const MENTION_TEXT = "Suivi existant dans un autre service de l'établissement."
+
+describe('EditPatient — le signal de suivi ailleurs (IdentiteFields, tâche 14)', () => {
+  it('affiche la mention, mot pour mot, quand followedElsewhere est vrai', async () => {
+    const fetchMock = buildFetchMock([
+      {
+        match: (url, method) => url.includes('/service-file') && method === 'GET',
+        respond: () => ({ ok: false, status: 404, json: async () => ({}) }),
+      },
+    ])
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderEditPatient({ ...patientFixture, followedElsewhere: true })
+
+    expect(await screen.findByText(MENTION_TEXT)).toBeInTheDocument()
+
+    // Aucun appel supplémentaire déclenché par l'affichage de la mention : le seul appel réseau
+    // de cet écran reste la lecture du sous-dossier, déjà nécessaire sans le signal.
+    expect(fetchMock.mock.calls).toHaveLength(1)
+    expect(fetchMock.mock.calls[0][0].toString()).toContain('/service-file')
+  })
+
+  it('n’affiche rien quand followedElsewhere est présent et faux (« ce service est le seul »)', async () => {
+    const fetchMock = buildFetchMock([
+      {
+        match: (url, method) => url.includes('/service-file') && method === 'GET',
+        respond: () => ({ ok: false, status: 404, json: async () => ({}) }),
+      },
+    ])
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderEditPatient({ ...patientFixture, followedElsewhere: false })
+
+    // Attend que l'écran ait fini de se stabiliser (mêmes conditions que le cas vrai) avant de
+    // constater une absence, pour ne pas confondre « pas encore rendu » et « rendu, absent ».
+    expect(await screen.findByLabelText("Distance d'habitation")).toBeInTheDocument()
+    expect(screen.queryByText(MENTION_TEXT)).not.toBeInTheDocument()
+    expect(fetchMock.mock.calls).toHaveLength(1)
+  })
+
+  it('n’affiche rien quand followedElsewhere est absent (le service courant n’a pas encore de sous-dossier)', async () => {
+    const fetchMock = buildFetchMock([
+      {
+        match: (url, method) => url.includes('/service-file') && method === 'GET',
+        respond: () => ({ ok: false, status: 404, json: async () => ({}) }),
+      },
+    ])
+    vi.stubGlobal('fetch', fetchMock)
+
+    // `patientFixture` ne porte pas `followedElsewhere` — l'absence normale documentée par
+    // `types/patient.ts` (un `undefined` qui n'est pas un `false` déguisé).
+    renderEditPatient(patientFixture)
+
+    expect(await screen.findByLabelText("Distance d'habitation")).toBeInTheDocument()
+    expect(screen.queryByText(MENTION_TEXT)).not.toBeInTheDocument()
+    expect(fetchMock.mock.calls).toHaveLength(1)
+  })
+
+  it('reste sobre : ni nom de service, ni nombre, ni date dans la mention', async () => {
+    const fetchMock = buildFetchMock([
+      {
+        match: (url, method) => url.includes('/service-file') && method === 'GET',
+        respond: () => ({ ok: false, status: 404, json: async () => ({}) }),
+      },
+    ])
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderEditPatient({ ...patientFixture, followedElsewhere: true })
+
+    const mention = await screen.findByText(MENTION_TEXT)
+    // Le texte exact ci-dessus est déjà la preuve la plus forte ; cette assertion protège contre
+    // un enrichissement futur du même nœud (ex. un nom de service ajouté après coup).
+    expect(mention.textContent).toBe(MENTION_TEXT)
+  })
+})

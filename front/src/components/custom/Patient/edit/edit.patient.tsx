@@ -259,7 +259,14 @@ export default function EditPatient({ patient }: PatientParam) {
         <IdentityFields form={patientForm} />
       </Section>
       <Section show={selected === 'profile'}>
-        <IdentiteFields form={patientForm} />
+        {/* Tâche 14 : `patient` (pas `patientSnapshot`, qui ne sert qu'à figer les défauts du
+            formulaire) porte `followedElsewhere` — champ non éditable, jamais dans
+            `patientFormOpts`. Aucun appel réseau supplémentaire : c'est la même lecture qui a
+            déjà rempli cet écran. */}
+        <IdentiteFields
+          form={patientForm}
+          followedElsewhere={patient?.followedElsewhere}
+        />
         {serviceFileReady && <DetailsFields form={serviceFileForm} />}
       </Section>
       <Section show={selected === 'pathway'}>
