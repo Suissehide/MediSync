@@ -527,3 +527,23 @@ describe('PatientDomain – une erreur inattendue (non-Boom) pendant l\'inscript
     }
   })
 })
+
+// Tache 12, tour de correction 1 : `PatientDomain.create` appelle desormais `ensureExists`,
+// comme `processEnrollments` et `DiagnosticEducatifDomain.create` (voir le commentaire dans
+// patient.domain.ts). Garde-fou unitaire, rapide, en plus de la preuve e2e
+// (patient.test.ts, describe "cloisonnement de la liste des patients par service") qui montre
+// la consequence bout en bout sur la liste par service.
+describe('PatientDomain – création du sous-dossier de service a la creation du patient', () => {
+  it('appelle ensureExists avec l id du patient nouvellement cree', async () => {
+    const { domain, container } = buildDomain()
+
+    const created = await domain.create(
+      { firstName: 'Ada', lastName: 'Lovelace' } as never,
+      'user-1',
+    )
+
+    expect(container.patientServiceFileDomain.ensureExists).toHaveBeenCalledWith(
+      created.id,
+    )
+  })
+})

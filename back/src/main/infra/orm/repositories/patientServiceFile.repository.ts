@@ -56,12 +56,19 @@ class PatientServiceFileRepository implements PatientServiceFileRepositoryInterf
   // garantir que la ligne existe, pour que les enfants de service (EnrollmentIssue,
   // DiagnosticEducatif) puissent poser leur cle etrangere (patientId, serviceId).
   //
-  // CE QUE CET APPEL COUVRE REELLEMENT, ET CE QU'IL NE COUVRE PAS (task-5-re-review.md, point 1) :
-  // seuls deux chemins appellent `ensureExists` aujourd'hui — `processEnrollments`
-  // (patient.domain.ts, point de passage unique de `enrollPatientInPathways` ET
-  // `enrollExistingPatientInPathways`) et `DiagnosticEducatifDomain.create`. Ce sont exactement
-  // les deux seuls modeles qui portent une cle etrangere composite (patientId, serviceId) vers
-  // `PatientServiceFile` : `EnrollmentIssue` et `DiagnosticEducatif`.
+  // CE QUE CET APPEL COUVRE REELLEMENT, ET CE QU'IL NE COUVRE PAS (task-5-re-review.md, point 1 ;
+  // mis a jour tache 12, tour de correction 1) : trois chemins appellent `ensureExists`
+  // aujourd'hui. Deux le font parce qu'un enfant de service pose sa cle etrangere composite
+  // (patientId, serviceId) vers `PatientServiceFile` et en a besoin pour ecrire sans violer
+  // cette contrainte — `processEnrollments` (patient.domain.ts, point de passage unique de
+  // `enrollPatientInPathways` ET `enrollExistingPatientInPathways`, pour `EnrollmentIssue`) et
+  // `DiagnosticEducatifDomain.create` (pour `DiagnosticEducatif`) ; ce sont les deux seuls
+  // modeles qui portent cette cle etrangere. Le troisieme, `PatientDomain.create`, n'a aucune
+  // telle contrainte a satisfaire : il appelle `ensureExists` par decision de metier (creer un
+  // patient depuis un service, c'est le suivre dans ce service), pour qu'un patient cree sans
+  // inscription ni diagnostic (bouton « Creer sans parcours ») ait quand meme un sous-dossier
+  // dans le service ou il vient d'etre cree — sans quoi la liste, filtree par sous-dossier, ne
+  // le montrerait plus jamais nulle part (voir le commentaire dans PatientDomain.create).
   //
   // Deux AUTRES modeles portent, eux aussi, un `serviceId` lie au patient et n'appellent PAS
   // `ensureExists` : `AppointmentPatient` (cree par `appointment.repository.ts` — `create`,

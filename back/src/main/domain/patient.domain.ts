@@ -208,6 +208,31 @@ class PatientDomain implements PatientDomainInterface {
       createDate: new Date().toISOString(),
     }
     const patient = await this.patientRepository.create(patientInputParams)
+    // Cree le sous-dossier de service des la creation du patient — troisieme appel a
+    // `ensureExists`, meme forme que les deux autres (processEnrollments plus bas, et
+    // DiagnosticEducatifDomain.create) : ni transaction, ni try/catch, une erreur remonte telle
+    // quelle (Boom via errorHandler.boomErrorFromPrismaError). Avant ce correctif, seuls
+    // processEnrollments et DiagnosticEducatifDomain.create appelaient `ensureExists` : un
+    // patient cree par le bouton « Creer sans parcours » du formulaire d'ajout (POST /patient
+    // seul, aucune inscription, aucun diagnostic) ne recevait donc aucun sous-dossier. Depuis
+    // que la liste de patients filtre sur le sous-dossier du service courant (voir
+    // PatientRepository.findAllWithTags), ce patient disparaissait de la liste de TOUT
+    // service — y compris celui ou il vient d'etre cree : il restait en base et dans l'export,
+    // mais plus aucune route normale ne permettait de le rouvrir. Une perte d'acces a un dossier
+    // de sante, sur un chemin de creation qui existe dans l'interface.
+    //
+    // Decision (tache 12, tour de correction 1) : creer un patient depuis un service, c'est le
+    // suivre dans ce service. Le cout est connu et assume : un patient cree par erreur dans le
+    // mauvais service y laissera un sous-dossier vide IRREVERSIBLE (aucune route ne supprime un
+    // sous-dossier, voir le commentaire au-dessus de `ensureExists` dans
+    // patientServiceFile.repository.ts), qui allumera le signal « suivi ailleurs »
+    // (`estSuiviAilleurs`) pour les autres services de l'etablissement. C'est exactement la
+    // meme consequence, deja acceptee et documentee, qu'un diagnostic cree dans le mauvais
+    // service (voir le test correspondant dans dossier-service.test.ts). Entre une trace de
+    // trop — qui se voit, par le signal — et un dossier introuvable, la trace de trop est le
+    // moindre mal : le signal ne revele jamais qu'un booleen (spec §5.3), quand l'absence de
+    // sous-dossier privait le soignant de tout acces normal au dossier.
+    await this.patientServiceFileDomain.ensureExists(patient.id)
     this.appEventBus.emit('patient.created', { userID, patientId: patient.id })
     return patient
   }

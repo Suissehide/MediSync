@@ -134,6 +134,37 @@ describe('signal de suivi ailleurs (lecture du patient)', () => {
     expect(res.json().followedElsewhere).toBe(false)
   })
 
+  // Tache 12, tour de correction 1, point 3 : `PatientDomain.create` appelle desormais
+  // `ensureExists` (voir le commentaire au-dessus de l'appel, dans patient.domain.ts), pour
+  // qu'un patient cree sans parcours ait un sous-dossier dans le service qui vient de le creer.
+  // Consequence a etablir par un test et non a supposer : un patient cree dans le service A
+  // (POST /patient seul, aucune inscription) fait-il passer le signal a vrai pour le service B ?
+  // Reponse : oui — et c'est la meme consequence, deja acceptee, qu'un diagnostic cree dans le
+  // mauvais service (voir le test plus bas, "un diagnostic cree puis supprime..."). C'est
+  // conforme a la definition du signal telle que la spec §5.3 la pose ("ce patient a-t-il AU
+  // MOINS un sous-dossier dans un autre service") : le signal ne distingue pas un sous-dossier
+  // ouvert par une creation directe d'un sous-dossier ouvert par une inscription ou un
+  // diagnostic — il n'y a qu'une seule notion de sous-dossier, et la spec ne prevoit aucune
+  // exception pour celui laisse par une creation seule.
+  it('un patient cree sans parcours dans le service A fait passer le signal a vrai pour le service B', async () => {
+    const created = await t.app.inject({
+      method: 'POST',
+      url: tenantUrl(est.id, serviceA.id, '/patient'),
+      cookies: cookiesA,
+      payload: { firstName: 'CreeSeul', lastName: 'ServiceA' },
+    })
+    expect(created.statusCode).toBe(201)
+    const patientId = created.json().id as string
+
+    const fromB = await t.app.inject({
+      method: 'GET', url: tenantUrl(est.id, serviceB.id, identityPath(patientId)), cookies: cookiesB,
+    })
+    expect(fromB.statusCode).toBe(200)
+    expect(fromB.json().followedElsewhere).toBe(true)
+
+    await testDb.patient.delete({ where: { id: patientId } })
+  })
+
   // Instruction 1 (dispatch tache 7) : un patient HOMONYME dans un AUTRE etablissement ne doit
   // jamais faire passer le signal a vrai.
   //

@@ -562,4 +562,31 @@ describe('cloisonnement de la liste des patients par service (tache 12)', () => 
 
     await testDb.patient.delete({ where: { id: patientId } })
   })
+
+  // Tache 12, tour de correction 1 : le tour precedent a etabli, preuve a l'appui (voir le
+  // commit qui a introduit ce fichier), qu'un patient cree par le bouton « Creer sans parcours »
+  // du formulaire d'ajout (POST /patient seul, sans inscription ni diagnostic ni ecriture du
+  // sous-dossier — exactement ce que fait `createPatientInService` ci-dessus) ne recevait AUCUN
+  // sous-dossier : plus aucun chemin de creation ne rendait `ensureExists`, et le filtre de liste
+  // introduit par ce commit le faisait donc disparaitre de la liste de TOUT service, y compris
+  // celui ou il vient d'etre cree. Il restait en base et dans l'export (aucune route ne le
+  // supprime), mais sans porte d'entree normale pour le rouvrir — une perte d'acces a un dossier
+  // de sante. Rouge avant le correctif de `PatientDomain.create` (voir le commentaire au-dessus
+  // de l'appel a `ensureExists`), vert apres.
+  it('un patient cree sans parcours apparait dans la liste du service ou il a ete cree, et pas dans celle de l autre', async () => {
+    const patientId = await createPatientInService(serviceAId, {
+      firstName: 'SansParcours',
+      lastName: 'CreationDirecte',
+    })
+
+    const listA = await listWithTags(serviceAId)
+    expect(listA.map((p) => p.id)).toContain(patientId)
+
+    // Le cloisonnement doit tenir : reparer la visibilite dans le service de creation ne doit
+    // pas faire apparaitre le patient dans un service qui ne le suit pas.
+    const listB = await listWithTags(serviceBId)
+    expect(listB.map((p) => p.id)).not.toContain(patientId)
+
+    await testDb.patient.delete({ where: { id: patientId } })
+  })
 })
