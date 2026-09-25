@@ -17,20 +17,35 @@ const servicePath = (patientId: string) => `/patient/${patientId}/service-file`
 // sous-dossier de service — voir l'en-tete plus bas (revue tache 7, tour 1, I1).
 const identityPath = (patientId: string) => `/patient/${patientId}`
 
-// Le signal de suivi ailleurs (design §5.3/§6, tache 7) : LA SEULE lecture de tout le back qui
-// traverse volontairement la frontiere entre services. Ce fichier prouve, par requete HTTP
-// reelle et non par relecture du code, que :
-//   1. le booleen se comporte correctement (vrai / faux / faux a travers un etablissement) ;
+// Le signal de suivi ailleurs (design §5.3/§6, tache 7 ; condition d'apparition corrigee a la
+// tache 13, tour de correction 1, point 1 — C1 de task-13-review.md) : LA SEULE lecture de tout
+// le back qui traverse volontairement la frontiere entre services. Ce fichier prouve, par
+// requete HTTP reelle et non par relecture du code, que :
+//   1. le champ se comporte correctement dans les TROIS cas : suivi ici ET ailleurs (present,
+//      vrai) ; suivi ici seulement (present, faux) ; PAS suivi ici (absent de la reponse, quel
+//      que soit le suivi ailleurs) ;
 //   2. il ne fuit jamais rien d'autre, dans la reponse comme aux yeux du filtrage clinique ;
 //   3. le cloisonnement existant (un service ne lit jamais le sous-dossier d'un autre : 404,
 //      jamais un objet vide) tient toujours une fois le signal branche sur la route.
 //
-// Tour de correction 1 (revue de la tache 7, constat I1) : le signal vivait a l'origine sur
-// `GET .../service-file`, donc indisponible tant que le service courant n'a pas encore de
-// sous-dossier local — exactement le moment ou la decision 2.1 le rend le plus utile (un second
-// service qui accueille un patient deja suivi ailleurs part d'un sous-dossier vide). Il vit
-// desormais sur `GET /patient/:id` (le bloc d'identite, spec §6), disponible avant qu'aucun
-// sous-dossier de service n'existe. `servicePath` (le sous-dossier) reste utilise ici pour les
+// Tour de correction 1 de la tache 7 (constat I1) avait deplace le signal de
+// `GET .../service-file` vers `GET /patient/:id`, en le rendant disponible AVANT qu'aucun
+// sous-dossier local n'existe — precisement ce que la decision 2.1 demandait pour un second
+// service qui ACCUEILLE un patient deja suivi ailleurs.
+//
+// La tache 13 a ensuite arme un chemin qui rend cette disponibilite inconditionnelle
+// dangereuse : `GET /patient/search` (ouverte a `patient:read`, donc a LECTURE) rend un `id`
+// pour un patient que le demandeur ne suit pas du tout, et cet `id` suffisait a lire le signal
+// en une seconde requete, sans aucune ecriture — exactement ce que la spec §6 interdit
+// ("trouver quelqu'un ne revele que son identite, jamais son suivi"). Tour de correction 1 de la
+// tache 13 (C1) : le signal est desormais ABSENT de la reponse tant que le service courant n'a
+// pas SON PROPRE sous-dossier pour ce patient — jamais `false` dans ce cas, un `false` dirait
+// "je sais, et c'est non". Depuis la tache 12, tout patient cree ou rattache dans un service y
+// possede un sous-dossier (`ensureExists`), donc cette condition recouvre exactement "ce patient
+// est chez moi" : la decision 2.1 reste servie normalement des qu'un service ACCUEILLE
+// reellement un patient (il pose alors son propre sous-dossier vide au meme moment — voir
+// `attachToCurrentService`/`PatientDomain.create`) ; seule la lecture PURE (chercher, sans
+// accueillir) ne voit plus rien. `servicePath` (le sous-dossier) reste utilise ici pour les
 // tests qui portent sur le CLOISONNEMENT du sous-dossier lui-meme (le 404, la trace vide laissee
 // par `ensureExists`), independants du signal.
 //
@@ -96,73 +111,105 @@ describe('signal de suivi ailleurs (lecture du patient)', () => {
     await testDb.$disconnect()
   })
 
-  it('rend vrai quand un sous-dossier existe dans un autre service du meme etablissement — et c est reciproque', async () => {
-    const patient = await testDb.patient.create({
-      data: { firstName: 'Deux', lastName: 'Services', createDate: new Date(), establishmentId: est.id },
-    })
-    await testDb.patientServiceFile.create({
-      data: { patientId: patient.id, serviceId: serviceA.id, establishmentId: est.id },
-    })
-    await testDb.patientServiceFile.create({
-      data: { patientId: patient.id, serviceId: serviceB.id, establishmentId: est.id },
-    })
+  // Les trois cas exiges par la revue (tache 13, tour de correction 1, point 1) : suivi ici ET
+  // ailleurs (present, vrai) ; suivi ici SEULEMENT (present, faux) ; PAS suivi ici (absent),
+  // regroupes dans un seul test pour partager le meme patient et la meme lecture croisee.
+  it(
+    'les trois cas du signal : present et vrai (suivi ici et ailleurs), present et faux (suivi ' +
+      'ici seulement), absent (pas suivi ici, quel que soit le suivi ailleurs)',
+    async () => {
+      const patient = await testDb.patient.create({
+        data: { firstName: 'Deux', lastName: 'Services', createDate: new Date(), establishmentId: est.id },
+      })
+      await testDb.patientServiceFile.create({
+        data: { patientId: patient.id, serviceId: serviceA.id, establishmentId: est.id },
+      })
+      await testDb.patientServiceFile.create({
+        data: { patientId: patient.id, serviceId: serviceB.id, establishmentId: est.id },
+      })
 
-    const fromA = await t.app.inject({
-      method: 'GET', url: tenantUrl(est.id, serviceA.id, identityPath(patient.id)), cookies: cookiesA,
-    })
-    const fromB = await t.app.inject({
-      method: 'GET', url: tenantUrl(est.id, serviceB.id, identityPath(patient.id)), cookies: cookiesB,
-    })
-    expect(fromA.statusCode).toBe(200)
-    expect(fromB.statusCode).toBe(200)
-    expect(fromA.json().followedElsewhere).toBe(true)
-    expect(fromB.json().followedElsewhere).toBe(true)
-  })
+      // Cas 1 : sous-dossier ICI (A) et ailleurs (B) -> present, vrai. Reciproque : vu de B
+      // aussi (B a son propre sous-dossier, et voit celui de A comme "ailleurs").
+      const fromA = await t.app.inject({
+        method: 'GET', url: tenantUrl(est.id, serviceA.id, identityPath(patient.id)), cookies: cookiesA,
+      })
+      const fromB = await t.app.inject({
+        method: 'GET', url: tenantUrl(est.id, serviceB.id, identityPath(patient.id)), cookies: cookiesB,
+      })
+      expect(fromA.statusCode).toBe(200)
+      expect(fromB.statusCode).toBe(200)
+      expect(fromA.json()).toHaveProperty('followedElsewhere', true)
+      expect(fromB.json()).toHaveProperty('followedElsewhere', true)
 
-  it('rend faux quand aucun autre sous-dossier n existe', async () => {
-    const patient = await testDb.patient.create({
-      data: { firstName: 'Seul', lastName: 'Service', createDate: new Date(), establishmentId: est.id },
-    })
-    await testDb.patientServiceFile.create({
-      data: { patientId: patient.id, serviceId: serviceA.id, establishmentId: est.id },
-    })
+      // Cas 2 : sous-dossier ICI seulement (patient suivi uniquement en A) -> present, faux.
+      const patientSeul = await testDb.patient.create({
+        data: { firstName: 'Seul', lastName: 'Service', createDate: new Date(), establishmentId: est.id },
+      })
+      await testDb.patientServiceFile.create({
+        data: { patientId: patientSeul.id, serviceId: serviceA.id, establishmentId: est.id },
+      })
+      const resSeul = await t.app.inject({
+        method: 'GET', url: tenantUrl(est.id, serviceA.id, identityPath(patientSeul.id)), cookies: cookiesA,
+      })
+      expect(resSeul.statusCode).toBe(200)
+      expect(resSeul.json()).toHaveProperty('followedElsewhere', false)
 
-    const res = await t.app.inject({
-      method: 'GET', url: tenantUrl(est.id, serviceA.id, identityPath(patient.id)), cookies: cookiesA,
-    })
-    expect(res.statusCode).toBe(200)
-    expect(res.json().followedElsewhere).toBe(false)
-  })
+      // Cas 3 : PAS de sous-dossier ICI (B ne suit pas ce patient), alors qu'il en existe un
+      // ailleurs (A) — c'est exactement le cas d'une simple recherche (GET /patient/search rend
+      // un `id`, puis GET /patient/:id) : le champ doit etre ABSENT, jamais `false`.
+      const resPasIci = await t.app.inject({
+        method: 'GET', url: tenantUrl(est.id, serviceB.id, identityPath(patientSeul.id)), cookies: cookiesB,
+      })
+      expect(resPasIci.statusCode).toBe(200)
+      expect(resPasIci.json()).not.toHaveProperty('followedElsewhere')
+
+      await testDb.patient.delete({ where: { id: patientSeul.id } })
+    },
+  )
 
   // Tache 12, tour de correction 1, point 3 : `PatientDomain.create` appelle desormais
   // `ensureExists` (voir le commentaire au-dessus de l'appel, dans patient.domain.ts), pour
   // qu'un patient cree sans parcours ait un sous-dossier dans le service qui vient de le creer.
-  // Consequence a etablir par un test et non a supposer : un patient cree dans le service A
-  // (POST /patient seul, aucune inscription) fait-il passer le signal a vrai pour le service B ?
-  // Reponse : oui — et c'est la meme consequence, deja acceptee, qu'un diagnostic cree dans le
-  // mauvais service (voir le test plus bas, "un diagnostic cree puis supprime..."). C'est
-  // conforme a la definition du signal telle que la spec §5.3 la pose ("ce patient a-t-il AU
-  // MOINS un sous-dossier dans un autre service") : le signal ne distingue pas un sous-dossier
-  // ouvert par une creation directe d'un sous-dossier ouvert par une inscription ou un
-  // diagnostic — il n'y a qu'une seule notion de sous-dossier, et la spec ne prevoit aucune
-  // exception pour celui laisse par une creation seule.
-  it('un patient cree sans parcours dans le service A fait passer le signal a vrai pour le service B', async () => {
-    const created = await t.app.inject({
-      method: 'POST',
-      url: tenantUrl(est.id, serviceA.id, '/patient'),
-      cookies: cookiesA,
-      payload: { firstName: 'CreeSeul', lastName: 'ServiceA' },
-    })
-    expect(created.statusCode).toBe(201)
-    const patientId = created.json().id as string
+  //
+  // Consequence, mise a jour au tour de correction 1 de la tache 13 (C1) : un patient cree dans
+  // le service A (POST /patient seul, aucune inscription) fait-il passer le signal a vrai pour
+  // le service B ? PLUS AUTOMATIQUEMENT — B doit d'abord accueillir (rattacher) ce patient pour
+  // que le signal lui apparaisse ; une simple lecture depuis B, sans sous-dossier local, ne le
+  // voit plus (cas 3 ci-dessus). Ce test montre les deux temps : absent avant que B n'accueille
+  // le patient, present et vrai des qu'il le fait.
+  it(
+    'un patient cree sans parcours dans le service A : absent pour B tant qu il ne l accueille ' +
+      'pas, present et vrai des qu il le rattache',
+    async () => {
+      const created = await t.app.inject({
+        method: 'POST',
+        url: tenantUrl(est.id, serviceA.id, '/patient'),
+        cookies: cookiesA,
+        payload: { firstName: 'CreeSeul', lastName: 'ServiceA' },
+      })
+      expect(created.statusCode).toBe(201)
+      const patientId = created.json().id as string
 
-    const fromB = await t.app.inject({
-      method: 'GET', url: tenantUrl(est.id, serviceB.id, identityPath(patientId)), cookies: cookiesB,
-    })
-    expect(fromB.statusCode).toBe(200)
-    expect(fromB.json().followedElsewhere).toBe(true)
+      const fromBAvant = await t.app.inject({
+        method: 'GET', url: tenantUrl(est.id, serviceB.id, identityPath(patientId)), cookies: cookiesB,
+      })
+      expect(fromBAvant.statusCode).toBe(200)
+      expect(fromBAvant.json()).not.toHaveProperty('followedElsewhere')
 
-    await testDb.patient.delete({ where: { id: patientId } })
+      const attach = await t.app.inject({
+        method: 'POST',
+        url: tenantUrl(est.id, serviceB.id, servicePath(patientId)),
+        cookies: cookiesB,
+      })
+      expect(attach.statusCode).toBe(200)
+
+      const fromBApres = await t.app.inject({
+        method: 'GET', url: tenantUrl(est.id, serviceB.id, identityPath(patientId)), cookies: cookiesB,
+      })
+      expect(fromBApres.statusCode).toBe(200)
+      expect(fromBApres.json()).toHaveProperty('followedElsewhere', true)
+
+      await testDb.patient.delete({ where: { id: patientId } })
   })
 
   // Instruction 1 (dispatch tache 7) : un patient HOMONYME dans un AUTRE etablissement ne doit
@@ -207,7 +254,9 @@ describe('signal de suivi ailleurs (lecture du patient)', () => {
       method: 'GET', url: tenantUrl(est1.id, serviceA1.id, identityPath(patient1.id)), cookies: cookies1,
     })
     expect(res.statusCode).toBe(200)
-    expect(res.json().followedElsewhere).toBe(false)
+    // patient1 a son propre sous-dossier ici (serviceA1) : le champ est present (le service
+    // demandeur suit ce patient), et vaut faux (l'homonyme ne compte pas).
+    expect(res.json()).toHaveProperty('followedElsewhere', false)
   })
 
   // Instruction 3 : la reponse ne rend qu un booleen de plus, rien d'autre du sous-dossier d un
@@ -296,46 +345,62 @@ describe('signal de suivi ailleurs (lecture du patient)', () => {
   // une absence ne se distinguent pas cote appelant). Deja couvert par une entree dediee de
   // back/src/test/e2e/isolation.test.ts (tache 6) ; repris ici au plus pres du signal.
   //
-  // Tour 1 (I1) : le signal, lui, ne depend plus de l existence d un sous-dossier local — c est
-  // precisement le defaut que ce tour corrige. Ce test le montre desormais dans les DEUX sens :
-  // le 404 du sous-dossier ne porte toujours rien (inchangé), et la lecture du PATIENT, elle,
-  // rend le signal vrai malgre l absence de sous-dossier local — le cas que la decision 2.1
-  // decrit (un second service qui accueille un patient deja suivi ailleurs, avant d avoir ecrit
-  // quoi que ce soit).
-  it('un service sans sous-dossier local recoit 404 sur le sous-dossier, mais voit deja le signal sur la fiche patient', async () => {
-    const patient = await testDb.patient.create({
-      data: { firstName: 'Cloisonne', lastName: 'Ment', createDate: new Date(), establishmentId: est.id },
-    })
-    // Sous-dossier seulement dans B : A n en a aucun.
-    await testDb.patientServiceFile.create({
-      data: { patientId: patient.id, serviceId: serviceB.id, establishmentId: est.id, notes: 'SECRET-B-CLOISON' },
-    })
+  // Tour 1 de la tache 7 (I1) avait rendu le signal disponible sans sous-dossier local. Tour 1
+  // de la tache 13 (C1) referme ce cas precis : un service SANS sous-dossier local, qui n a rien
+  // accueilli, ne voit PLUS le signal (absent, pas faux) — voir l en-tete de ce fichier. Ce test
+  // le montre desormais dans les DEUX sens : le 404 du sous-dossier ne porte toujours rien
+  // (inchange), et la lecture du PATIENT, elle, n a plus le champ tant que A n a pas accueilli le
+  // patient ; des qu il le fait (rattachement), le champ apparait et vaut vrai.
+  it(
+    'un service sans sous-dossier local recoit 404 sur le sous-dossier ET aucun signal sur la ' +
+      'fiche patient — jusqu a ce qu il accueille le patient',
+    async () => {
+      const patient = await testDb.patient.create({
+        data: { firstName: 'Cloisonne', lastName: 'Ment', createDate: new Date(), establishmentId: est.id },
+      })
+      // Sous-dossier seulement dans B : A n en a aucun.
+      await testDb.patientServiceFile.create({
+        data: { patientId: patient.id, serviceId: serviceB.id, establishmentId: est.id, notes: 'SECRET-B-CLOISON' },
+      })
 
-    const sousDossierDepuisA = await t.app.inject({
-      method: 'GET', url: tenantUrl(est.id, serviceA.id, servicePath(patient.id)), cookies: cookiesA,
-    })
-    expect(sousDossierDepuisA.statusCode).toBe(404)
-    // Jamais un objet partiel : le corps du 404 est celui, neutre, declare par la route
-    // (`{ message }`), rien qui ressemble a un sous-dossier.
-    expect(sousDossierDepuisA.json()).not.toHaveProperty('id')
-    expect(sousDossierDepuisA.json()).not.toHaveProperty('notes')
+      const sousDossierDepuisA = await t.app.inject({
+        method: 'GET', url: tenantUrl(est.id, serviceA.id, servicePath(patient.id)), cookies: cookiesA,
+      })
+      expect(sousDossierDepuisA.statusCode).toBe(404)
+      // Jamais un objet partiel : le corps du 404 est celui, neutre, declare par la route
+      // (`{ message }`), rien qui ressemble a un sous-dossier.
+      expect(sousDossierDepuisA.json()).not.toHaveProperty('id')
+      expect(sousDossierDepuisA.json()).not.toHaveProperty('notes')
 
-    // Le second service PREND EN CHARGE ce patient sans avoir encore rien ecrit : c est
-    // exactement le moment ou la decision 2.1 dit que l ecran doit deja indiquer un suivi
-    // ailleurs, pour que le soignant se rapproche d un collegue plutot que de croire decouvrir un
-    // dossier neuf.
-    const identiteDepuisA = await t.app.inject({
-      method: 'GET', url: tenantUrl(est.id, serviceA.id, identityPath(patient.id)), cookies: cookiesA,
-    })
-    expect(identiteDepuisA.statusCode).toBe(200)
-    expect(identiteDepuisA.json().followedElsewhere).toBe(true)
+      // A n a RIEN ecrit pour ce patient (ni cree, ni rattache) : c est exactement le cas d une
+      // simple recherche qui aurait trouve son `id` — le signal doit rester absent.
+      const identiteDepuisA = await t.app.inject({
+        method: 'GET', url: tenantUrl(est.id, serviceA.id, identityPath(patient.id)), cookies: cookiesA,
+      })
+      expect(identiteDepuisA.statusCode).toBe(200)
+      expect(identiteDepuisA.json()).not.toHaveProperty('followedElsewhere')
 
-    const sousDossierDepuisB = await t.app.inject({
-      method: 'GET', url: tenantUrl(est.id, serviceB.id, servicePath(patient.id)), cookies: cookiesB,
-    })
-    expect(sousDossierDepuisB.statusCode).toBe(200)
-    expect(sousDossierDepuisB.json().notes).toBe('SECRET-B-CLOISON')
-  })
+      // Le second service ACCUEILLE maintenant ce patient (rattachement) : c est exactement le
+      // moment ou la decision 2.1 dit que l ecran doit indiquer un suivi ailleurs, pour que le
+      // soignant se rapproche d un collegue plutot que de croire decouvrir un dossier neuf.
+      const attach = await t.app.inject({
+        method: 'POST', url: tenantUrl(est.id, serviceA.id, servicePath(patient.id)), cookies: cookiesA,
+      })
+      expect(attach.statusCode).toBe(200)
+
+      const identiteApresAccueil = await t.app.inject({
+        method: 'GET', url: tenantUrl(est.id, serviceA.id, identityPath(patient.id)), cookies: cookiesA,
+      })
+      expect(identiteApresAccueil.statusCode).toBe(200)
+      expect(identiteApresAccueil.json()).toHaveProperty('followedElsewhere', true)
+
+      const sousDossierDepuisB = await t.app.inject({
+        method: 'GET', url: tenantUrl(est.id, serviceB.id, servicePath(patient.id)), cookies: cookiesB,
+      })
+      expect(sousDossierDepuisB.statusCode).toBe(200)
+      expect(sousDossierDepuisB.json().notes).toBe('SECRET-B-CLOISON')
+    },
+  )
 
   // Instruction 6 (dispatch tache 7) : la revue de la tache 5 a etabli qu un diagnostic cree
   // dans le mauvais service laisse une trace permanente — `ensureExists` pose un sous-dossier
@@ -385,10 +450,9 @@ describe('signal de suivi ailleurs (lecture du patient)', () => {
     expect(traceDansB).not.toBeNull()
     expect(traceDansB?.notes).toBeNull()
 
-    // Le service A cree ENSUITE, correctement, son propre sous-dossier (necessaire pour lire le
-    // sien : depuis le tour 1 (I1), le signal ne l exige plus pour APPARAITRE sur la fiche
-    // patient, mais ce test verifie ici l ecriture normale du sous-dossier, pas seulement le
-    // signal).
+    // Le service A cree ENSUITE, correctement, son propre sous-dossier — necessaire depuis le
+    // tour 1 de la tache 13 (C1) pour que le signal lui apparaisse du tout (voir l en-tete de ce
+    // fichier) : sans cette ligne, la lecture ci-dessous n aurait plus le champ.
     await testDb.patientServiceFile.create({
       data: { patientId: patient.id, serviceId: serviceA.id, establishmentId: est.id },
     })
@@ -399,6 +463,6 @@ describe('signal de suivi ailleurs (lecture du patient)', () => {
     expect(fromA.statusCode).toBe(200)
     // Comportement actuel, constate et non corrige par cette tache : la trace vide suffit a
     // faire croire a A qu il existe un vrai suivi ailleurs, et rien dans l API ne peut l eteindre.
-    expect(fromA.json().followedElsewhere).toBe(true)
+    expect(fromA.json()).toHaveProperty('followedElsewhere', true)
   })
 })

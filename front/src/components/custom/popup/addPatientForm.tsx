@@ -8,7 +8,7 @@ import { GENDER_OPTIONS } from '../../../constants/patient.constant.ts'
 import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { usePatientIdentitySearch, usePatientMutations } from '../../../queries/usePatient.tsx'
 import { usePatientServiceFileMutations } from '../../../queries/usePatientServiceFile.ts'
-import type { CreatePatientParams, PatientIdentityMatch, TimeOfDay } from '../../../types/patient.ts'
+import type { CreatePatientParams, PatientIdentityMatch, PatientIdentitySearchResult, TimeOfDay } from '../../../types/patient.ts'
 import { Button } from '../../ui/button.tsx'
 import {
   Popup,
@@ -38,6 +38,10 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
   // `null` : aucune recherche encore lancée. `[]` : recherche faite, aucune identité trouvée —
   // les deux sont affichés différemment (tâche 13, spec §6).
   const [identityMatches, setIdentityMatches] = useState<PatientIdentityMatch[] | null>(null)
+  // `hasMore` (tâche 13, tour de correction 1, point 4) : vingt résultats affichés au plus, sans
+  // dire le total — voir `PatientIdentitySearchResult`. Affiché seulement quand une recherche a
+  // été faite, comme `identityMatches`.
+  const [identityMatchesHasMore, setIdentityMatchesHasMore] = useState(false)
   const pathwayState = usePathwaySelector()
   const { reset: resetPathways } = pathwayState
 
@@ -84,6 +88,7 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
     setStep(1)
     resetPathways()
     setIdentityMatches(null)
+    setIdentityMatchesHasMore(false)
   }, [resetPathways])
 
   useEffect(() => {
@@ -122,12 +127,13 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
 
   const searchIdentity = async () => {
     const { firstName, lastName, birthDate } = form.state.values
-    const matches = await identitySearch.mutateAsync({
+    const { results, hasMore }: PatientIdentitySearchResult = await identitySearch.mutateAsync({
       firstName: firstName.trim() || undefined,
       lastName: lastName.trim() || undefined,
       birthDate: birthDate || undefined,
     })
-    setIdentityMatches(matches)
+    setIdentityMatches(results)
+    setIdentityMatchesHasMore(hasMore)
   }
 
   // Choisir une identité existante crée le sous-dossier dans le service courant, sans jamais
@@ -135,6 +141,13 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
   // `PATCH /patient/:id`. Le cas « déjà suivi ici » (consigne 4) est dit par le toast de
   // `attachExistingPatient` (voir usePatientServiceFile.ts) ; la popup se ferme dans les deux
   // cas, comme pour la création.
+  //
+  // IRREVERSIBLE (revue tache 13, tour de correction 1 ; connu depuis la tache 7) : choisir la
+  // mauvaise ligne d'une liste d'homonymes cree un sous-dossier vide dans ce service qu'aucun
+  // ecran, aucune route, ne permet de retirer ensuite — voir le commentaire de
+  // `PatientServiceFileDomain.attachToCurrentService` (back). Rien ici ne le confirme avant
+  // d'agir : garder ce risque present a l'esprit avant d'ajouter, un jour, une confirmation ou un
+  // "annuler".
   const chooseExistingIdentity = async (match: PatientIdentityMatch) => {
     await attachExistingPatient.mutateAsync(match.id)
     setOpen(false)
@@ -240,6 +253,17 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
                         </li>
                       ))}
                     </ul>
+                  )}
+
+                  {/* Troncature (tâche 13, tour de correction 1, point 4) : la recherche existe
+                      pour éviter les doublons — ne pas dire qu'il y a plus de résultats ferait
+                      croire à tort qu'une identité n'existe pas. Jamais un total exact, voir
+                      `PatientIdentitySearchResult`. */}
+                  {identityMatches !== null && identityMatchesHasMore && (
+                    <em className="text-sm text-neutral-400">
+                      Plus de {identityMatches.length} résultats : affinez la recherche (prénom,
+                      nom, date de naissance) pour voir les autres identités.
+                    </em>
                   )}
                 </div>
               </>

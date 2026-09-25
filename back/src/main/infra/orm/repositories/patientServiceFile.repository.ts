@@ -1,3 +1,4 @@
+import { Prisma } from '../../../../generated/client'
 import type { IocContainer } from '../../../types/application/ioc'
 import type {
   PatientServiceFileEntityRepo,
@@ -6,6 +7,7 @@ import type {
 } from '../../../types/infra/orm/repositories/patientServiceFile.repository.interface'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { TenantContextInterface } from '../../../types/utils/tenant-context'
+import PrismaErrorCodes from '../error-codes-prisma'
 import type { PostgresPrismaClient } from '../postgres-client'
 
 class PatientServiceFileRepository implements PatientServiceFileRepositoryInterface {
@@ -97,6 +99,23 @@ class PatientServiceFileRepository implements PatientServiceFileRepositoryInterf
         update: {},
       })
     } catch (err) {
+      // Idempotence de bout en bout (revue tache 13, tour 1, point 3) : sous concurrence (deux
+      // rattachements simultanes sur le meme patient, via `PatientServiceFileDomain.
+      // attachToCurrentService`), l'upsert lui-meme peut heurter la contrainte d'unicite
+      // `(patientId, serviceId)` — verifie par execution, six appels HTTP en parallele, dans
+      // patient-search-identite.test.ts. Ce n'est jamais un vrai conflit : le nom de la methode
+      // le dit, `ensureExists` ne promet que "le sous-dossier existe", et un P2002 ici veut dire
+      // exactement ca — deja cree par un appel concurrent. Le remonter en 409 ferait echouer a
+      // l'ecran une operation qui a reussi (le sous-dossier existe bel et bien), pour un cas que
+      // `if (existing)` en amont (attachToCurrentService) ne peut pas toujours intercepter :
+      // deux appels peuvent tous les deux lire "n'existe pas encore" avant que l'un des deux
+      // n'ecrive.
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === PrismaErrorCodes.OPERATION_FAILED_ON_UNIQUE_CONSTRAINT
+      ) {
+        return
+      }
       throw this.errorHandler.boomErrorFromPrismaError({
         entityName: 'PatientServiceFile',
         error: err,

@@ -96,9 +96,12 @@ describe('AddPatientForm — recherche d’identité existante (tâche 13)', () 
         respond: () => ({
           ok: true,
           status: 200,
-          json: async () => [
-            { id: 'existing-1', firstName: 'Isabelle', lastName: 'Fontaine', birthDate: '1980-05-12T00:00:00.000Z' },
-          ],
+          json: async () => ({
+            results: [
+              { id: 'existing-1', firstName: 'Isabelle', lastName: 'Fontaine', birthDate: '1980-05-12T00:00:00.000Z' },
+            ],
+            hasMore: false,
+          }),
         }),
       },
     ])
@@ -123,7 +126,7 @@ describe('AddPatientForm — recherche d’identité existante (tâche 13)', () 
     const fetchMock = buildFetchMock([
       {
         match: (url, method) => url.includes('/patient/search') && method === 'GET',
-        respond: () => ({ ok: true, status: 200, json: async () => [] }),
+        respond: () => ({ ok: true, status: 200, json: async () => ({ results: [], hasMore: false }) }),
       },
     ])
     vi.stubGlobal('fetch', fetchMock)
@@ -145,7 +148,10 @@ describe('AddPatientForm — recherche d’identité existante (tâche 13)', () 
           respond: () => ({
             ok: true,
             status: 200,
-            json: async () => [{ id: 'existing-1', firstName: 'Robert', lastName: 'Girard', birthDate: null }],
+            json: async () => ({
+              results: [{ id: 'existing-1', firstName: 'Robert', lastName: 'Girard', birthDate: null }],
+              hasMore: false,
+            }),
           }),
         },
         {
@@ -199,7 +205,10 @@ describe('AddPatientForm — recherche d’identité existante (tâche 13)', () 
         respond: () => ({
           ok: true,
           status: 200,
-          json: async () => [{ id: 'existing-2', firstName: 'Nadia', lastName: 'Roche', birthDate: null }],
+          json: async () => ({
+            results: [{ id: 'existing-2', firstName: 'Nadia', lastName: 'Roche', birthDate: null }],
+            hasMore: false,
+          }),
         }),
       },
       {
@@ -224,5 +233,56 @@ describe('AddPatientForm — recherche d’identité existante (tâche 13)', () 
     const toast = useToastStore.getState().toasts[0]
     expect(toast.title).toMatch(/déjà suivi/i)
     expect(toast.message).toMatch(/n'a pas été modifié|n a pas ete modifie/i)
+  })
+
+  // Tâche 13, tour de correction 1, point 4 : la troncature à vingt résultats ne doit pas être
+  // muette — sinon un utilisateur qui ne voit pas l'identité qu'il cherche croit à tort qu'elle
+  // n'existe pas et crée un doublon.
+  it('affiche un message quand la recherche indique qu il y a plus de résultats (`hasMore`)', async () => {
+    const fetchMock = buildFetchMock([
+      {
+        match: (url, method) => url.includes('/patient/search') && method === 'GET',
+        respond: () => ({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            results: [{ id: 'existing-3', firstName: 'Martin', lastName: 'Un', birthDate: null }],
+            hasMore: true,
+          }),
+        }),
+      },
+    ])
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderForm()
+    await openPopupAndFillIdentity('Martin', 'X')
+    await userEvent.click(screen.getByRole('button', { name: /Rechercher un patient existant/i }))
+
+    expect(await screen.findByText(/Martin Un/)).toBeInTheDocument()
+    expect(screen.getByText(/plus de.*résultats/i)).toBeInTheDocument()
+  })
+
+  it('n affiche pas le message de troncature quand `hasMore` est faux', async () => {
+    const fetchMock = buildFetchMock([
+      {
+        match: (url, method) => url.includes('/patient/search') && method === 'GET',
+        respond: () => ({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            results: [{ id: 'existing-4', firstName: 'Martin', lastName: 'Deux', birthDate: null }],
+            hasMore: false,
+          }),
+        }),
+      },
+    ])
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderForm()
+    await openPopupAndFillIdentity('Martin', 'Y')
+    await userEvent.click(screen.getByRole('button', { name: /Rechercher un patient existant/i }))
+
+    expect(await screen.findByText(/Martin Deux/)).toBeInTheDocument()
+    expect(screen.queryByText(/plus de.*résultats/i)).not.toBeInTheDocument()
   })
 })

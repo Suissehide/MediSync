@@ -23,11 +23,17 @@ export type Patient = {
 
   // Suivi ailleurs : ce patient a-t-il au moins un sous-dossier dans un autre service du même
   // établissement (étape 3 du multi-tenant). Vit sur le patient, pas sur `PatientServiceFile`
-  // (`types/patientServiceFile.ts`) : délibéré côté back, pour rester disponible avant même
-  // qu'un sous-dossier de service existe pour ce patient — voir `patient.domain.ts#findByID`
-  // (back) et la spec §5.3/§6. N'apparaît que sur la lecture détaillée d'un patient
-  // (`patientDetailResponseSchema`), pas sur les listes ni sur create/update, d'où l'optionnel.
-  // Son affichage est la tâche 14.
+  // (`types/patientServiceFile.ts`) — voir `patient.domain.ts#findByID` (back) et la spec
+  // §5.3/§6. N'apparaît que sur la lecture détaillée d'un patient (`patientDetailResponseSchema`),
+  // pas sur les listes ni sur create/update.
+  //
+  // `?` ici est un VRAI optionnel, pas seulement "absent des listes" (revu à la tâche 13, tour de
+  // correction 1, point 1) : même sur la lecture détaillée, le champ est absent tant que le
+  // service courant n'a pas lui-même un sous-dossier pour ce patient — jamais `false` dans ce
+  // cas, un `false` dirait « je sais, et c'est non ». Sans cette garde, un `id` obtenu par la
+  // recherche (`PatientIdentityMatch`, qui elle ne porte jamais ce champ) suffisait, avec
+  // `GET /patient/:id`, à apprendre qu'un patient est suivi ailleurs sans jamais le suivre
+  // soi-même — exactement ce que la spec §6 interdit. Son affichage est la tâche 14.
   followedElsewhere?: boolean
 }
 
@@ -59,6 +65,15 @@ export type PatientIdentityMatch = {
   firstName: string
   lastName: string
   birthDate?: string | null
+}
+
+// `hasMore` (étape 3 du multi-tenant, tâche 13, tour de correction 1, point 4) : la recherche
+// s'arrête à vingt résultats (back, `IDENTITY_SEARCH_LIMIT`) — sur une fonction dont le seul but
+// est d'éviter les doublons, ne pas le dire ferait croire à tort qu'une identité n'existe pas.
+// `hasMore` dit seulement qu'il y en a PLUS de vingt, jamais combien exactement.
+export type PatientIdentitySearchResult = {
+  results: PatientIdentityMatch[]
+  hasMore: boolean
 }
 
 export type SearchPatientIdentityParams = {

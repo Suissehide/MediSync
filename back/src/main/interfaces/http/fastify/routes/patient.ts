@@ -111,10 +111,23 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
   // /:patientID). Meme permission que la lecture du patient (`patient:read`) : aucune permission
   // nouvelle — un secretariat obtient exactement la meme reponse qu'un coordinateur, la
   // recherche ne portant aucun champ clinique (consigne 5 du brief, verifie par
-  // patient-search-identite.test.ts). `patientIdentitySearchResponseSchema` est la seconde
-  // ligne de defense (la premiere est le `select` du depot) : meme si un jour quelqu'un
-  // elargissait la requete, la serialisation Zod/fast-json-stringify ne laisserait passer que
-  // ces quatre cles.
+  // patient-search-identite.test.ts).
+  //
+  // Ce qui tient reellement la forme de la reponse (revue tache 13, tour 1, point 5) : le corps
+  // HTTP effectivement rendu, verifie par `patient-search-identite.test.ts`
+  // (`expect(Object.keys(match).sort()).toEqual([...])` sur la reponse reelle, pas sur un type).
+  // Le `select` du depot (`PatientRepository.searchByIdentity`) et
+  // `patientIdentitySearchResponseSchema` ci-dessous y contribuent tous les deux, mais ni l'un
+  // ni l'autre ne tient seul, a l'epreuve : un `select` elargi d'une colonne passe le
+  // compilateur (Prisma retourne un objet plus riche que le type declare, et l'assignation n'est
+  // pas un litteral frais — TypeScript ne verifie pas les proprietes en trop dans ce cas), et
+  // Zod/fast-json-stringify le rattrapent silencieusement en serialisation ; a l'inverse, retirer
+  // le schema de reponse ne fuit rien tant que le `select` reste etroit. Seul le retrait des DEUX
+  // a la fois fait rougir un test. Ce n'est pas une faiblesse a corriger en testant chaque couche
+  // isolement : une defense en profondeur qu'on eprouve couche par couche ne prouve que sa
+  // propre redondance, pas la propriete qui compte — celle-ci est eprouvee au niveau ou elle
+  // s'observe, le corps de la reponse HTTP.
+  //
   fastify.get<{ Querystring: SearchPatientIdentityQuery }>(
     '/search',
     {

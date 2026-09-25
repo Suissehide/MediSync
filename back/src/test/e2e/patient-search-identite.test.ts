@@ -5,6 +5,12 @@
 // dans un AUTRE service. Ce fichier prouve cette propriete par execution, champ par champ, avant
 // de prouver le reste du flux (cloisonnement d'etablissement, parite secretariat, et le
 // rattachement d'une identite existante au service courant).
+//
+// Tour de correction 1 (revue de la tache 13) ajoute trois choses, en execution reelle : la
+// reponse est desormais `{ results, hasMore }` (point 4, la troncature a vingt n'est plus
+// muette) ; `%`/`_` dans un nom cherche sont traites comme du texte, pas des jokers LIKE (point
+// 2) ; et le rattachement en PARALLELE (pas seulement en sequence) est idempotent — aucune
+// reponse 409 pour une operation qui reussit (point 3).
 import { buildTestApp, type TestApp } from './setup/app'
 import { testDb, truncateAll } from './setup/db'
 import { createEstablishment, createService, createUser, signIn, tenantUrl } from './setup/fixtures'
@@ -160,9 +166,11 @@ describe('recherche d identite existante avant creation de patient (tache 13)', 
       const res = await searchFrom(serviceBId, coordoCookies, '?firstName=Isabelle&lastName=Fontaine')
       expect(res.statusCode).toBe(200)
 
-      const body = res.json() as unknown[]
-      expect(body).toHaveLength(1)
-      const match = body[0] as Record<string, unknown>
+      // `{ results, hasMore }` (revue tache 13, tour 1, point 4) : pas un tableau nu.
+      const body = res.json() as { results: unknown[]; hasMore: boolean }
+      expect(body.results).toHaveLength(1)
+      expect(body.hasMore).toBe(false)
+      const match = body.results[0] as Record<string, unknown>
 
       // L'assertion la plus importante de ce fichier : EXACTEMENT ces quatre cles, ni plus ni
       // moins. Une seule cle de trop (gender, phone1, followedElsewhere, un nom de service...)
@@ -222,7 +230,7 @@ describe('recherche d identite existante avant creation de patient (tache 13)', 
       cookies: autreEtablissementCookies,
     })
     expect(res.statusCode).toBe(200)
-    expect(res.json()).toEqual([])
+    expect(res.json()).toEqual({ results: [], hasMore: false })
 
     await testDb.patient.delete({ where: { id: patientId } })
   })
@@ -331,6 +339,132 @@ describe('recherche d identite existante avant creation de patient (tache 13)', 
 
       const after = await get(serviceAId, coordoCookies, `/patient/${patientId}/service-file`)
       expect(after.json()).toEqual(before)
+
+      await testDb.patient.delete({ where: { id: patientId } })
+    },
+  )
+
+  // Revue tache 13, tour de correction 1, point 2 (I1 de task-13-review.md) : `%` et `_` sont
+  // des jokers du motif `LIKE`/`ILIKE` sous-jacent a `contains`. Sans echappement, une recherche
+  // par `%` seul contourne la garde du `.refine` ("au moins un prenom ou un nom") et rend tout
+  // l'etablissement ; `_` fait de meme en matchant n'importe quel caractere unique. Ce test
+  // prouve les deux sens : le caractere est traite comme du texte (pas de fuite), ET une
+  // recherche legitime portant ce caractere dans un vrai nom fonctionne toujours.
+  it(
+    "un '%' ou un '_' dans le nom cherche est traite comme du texte, jamais comme un joker " +
+      'LIKE — et une identite qui porte reellement ce caractere reste trouvable',
+    async () => {
+      const wildPercent = await post(serviceAId, coordoCookies, '/patient', {
+        firstName: '100%Sur',
+        lastName: 'Pourcent',
+      })
+      const wildUnderscore = await post(serviceAId, coordoCookies, '/patient', {
+        firstName: 'Sous_Score',
+        lastName: 'Underscore',
+      })
+      const normalOne = await post(serviceAId, coordoCookies, '/patient', {
+        firstName: 'Alice', lastName: 'Normale',
+      })
+      const normalTwo = await post(serviceAId, coordoCookies, '/patient', {
+        firstName: 'Bruno', lastName: 'Ordinaire',
+      })
+      expect(wildPercent.statusCode).toBe(201)
+      expect(wildUnderscore.statusCode).toBe(201)
+      expect(normalOne.statusCode).toBe(201)
+      expect(normalTwo.statusCode).toBe(201)
+      const ids = [wildPercent, wildUnderscore, normalOne, normalTwo].map((r) => r.json().id as string)
+
+      // `%` seul (encode `%25`) : si c'etait un joker, matcherait TOUS les prenoms de
+      // l'etablissement. Echappe, il ne matche que le prenom qui porte litteralement un `%`.
+      const resPercent = await searchFrom(serviceAId, coordoCookies, '?firstName=%25')
+      expect(resPercent.statusCode).toBe(200)
+      const bodyPercent = resPercent.json() as { results: { id: string }[]; hasMore: boolean }
+      expect(bodyPercent.results.map((r) => r.id)).toEqual([wildPercent.json().id])
+
+      // `_` seul : si c'etait un joker, matcherait tout prenom d'au moins un caractere (donc
+      // tous). Echappe, il ne matche que le prenom qui porte litteralement un `_`.
+      const resUnderscore = await searchFrom(serviceAId, coordoCookies, '?firstName=_')
+      expect(resUnderscore.statusCode).toBe(200)
+      const bodyUnderscore = resUnderscore.json() as { results: { id: string }[]; hasMore: boolean }
+      expect(bodyUnderscore.results.map((r) => r.id)).toEqual([wildUnderscore.json().id])
+
+      // Contre-epreuve : une recherche normale ne matche jamais les identites "%"/"_" ci-dessus.
+      const resNormal = await searchFrom(serviceAId, coordoCookies, '?firstName=Alice')
+      const bodyNormal = resNormal.json() as { results: { id: string }[]; hasMore: boolean }
+      expect(bodyNormal.results.map((r) => r.id)).toEqual([normalOne.json().id])
+
+      // Recherche legitime portant le caractere dans un nom REEL : toujours trouvable (la garde
+      // ne doit pas empecher un vrai "%" ou "_" saisi tel quel de matcher son propre patient).
+      const resFullPercent = await searchFrom(serviceAId, coordoCookies, '?firstName=100%25Sur')
+      expect((resFullPercent.json() as { results: { id: string }[] }).results.map((r) => r.id)).toEqual([
+        wildPercent.json().id,
+      ])
+      const resFullUnderscore = await searchFrom(serviceAId, coordoCookies, '?firstName=Sous_Score')
+      expect((resFullUnderscore.json() as { results: { id: string }[] }).results.map((r) => r.id)).toEqual([
+        wildUnderscore.json().id,
+      ])
+
+      await testDb.patient.deleteMany({ where: { id: { in: ids } } })
+    },
+  )
+
+  // Revue tache 13, tour de correction 1, point 4 (I4 de task-13-review.md) : la recherche
+  // s'arrete a vingt resultats sans le dire, sur la fonction dont le seul but est d'eviter les
+  // doublons. `hasMore` doit dire qu'il y en a davantage — jamais combien.
+  it(
+    'la recherche coupe a vingt resultats et le dit via `hasMore`, sans rendre le total exact',
+    async () => {
+      const homonymes = await Promise.all(
+        Array.from({ length: 25 }, (_, i) =>
+          post(serviceAId, coordoCookies, '/patient', {
+            firstName: `H${String(i).padStart(2, '0')}`,
+            lastName: 'Vingtcinq',
+          }),
+        ),
+      )
+      for (const r of homonymes) {
+        expect(r.statusCode).toBe(201)
+      }
+      const ids = homonymes.map((r) => r.json().id as string)
+
+      const res = await searchFrom(serviceAId, coordoCookies, '?lastName=Vingtcinq')
+      expect(res.statusCode).toBe(200)
+      const body = res.json() as { results: unknown[]; hasMore: boolean }
+      expect(body.results).toHaveLength(20)
+      expect(body.hasMore).toBe(true)
+
+      await testDb.patient.deleteMany({ where: { id: { in: ids } } })
+    },
+  )
+
+  // Revue tache 13, tour de correction 1, point 3 (I3 de task-13-review.md) : le rattachement
+  // doit etre idempotent de bout en bout. Six appels HTTP reels en PARALLELE (pas en sequence,
+  // qui ne reproduit jamais la course) sur le meme patient depuis le meme service : une seule
+  // ligne en base, et AUCUNE reponse en erreur — le cas "deja suivi ici" est un resultat normal,
+  // pas un conflit.
+  it(
+    'le rattachement en parallele (six appels simultanes) est idempotent : une seule ligne en ' +
+      'base, aucune reponse 409',
+    async () => {
+      const created = await post(serviceAId, coordoCookies, '/patient', {
+        firstName: 'Course', lastName: 'Parallele',
+      })
+      expect(created.statusCode).toBe(201)
+      const patientId = created.json().id as string
+
+      const responses = await Promise.all(
+        Array.from({ length: 6 }, () => post(serviceBId, coordoCookies, `/patient/${patientId}/service-file`, {})),
+      )
+
+      for (const res of responses) {
+        expect(res.statusCode).toBe(200)
+        expect(res.json()).toHaveProperty('patientId', patientId)
+      }
+
+      const rows = await testDb.patientServiceFile.findMany({
+        where: { patientId, serviceId: serviceBId },
+      })
+      expect(rows).toHaveLength(1)
 
       await testDb.patient.delete({ where: { id: patientId } })
     },

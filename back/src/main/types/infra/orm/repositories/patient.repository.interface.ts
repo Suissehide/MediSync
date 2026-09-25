@@ -63,13 +63,21 @@ export type PatientIdentitySearchResultRepo = {
   birthDate: Date | null
 }
 
+// `hasMore` (revue tache 13, tour 1, point 4) : vrai s'il existe plus de
+// `IDENTITY_SEARCH_LIMIT` correspondances — jamais le nombre exact, voir le commentaire de
+// `PatientRepository.searchByIdentity`.
+export type PatientIdentitySearchRepoResult = {
+  results: PatientIdentitySearchResultRepo[]
+  hasMore: boolean
+}
+
 export interface PatientRepositoryInterface {
   findAll: () => Promise<PatientEntityRepo[]>
   findAllWithTags: () => Promise<PatientWithTagsEntityRepo[]>
   findForExport: (filters: PatientExportFilters) => Promise<PatientForExportEntityRepo[]>
   searchByIdentity: (
     filters: PatientIdentitySearchFilters,
-  ) => Promise<PatientIdentitySearchResultRepo[]>
+  ) => Promise<PatientIdentitySearchRepoResult>
   findByID: (id: string) => Promise<PatientWithAppointmentsDomain>
   create: (
     patientCreateParams: PatientCreateEntityRepo,

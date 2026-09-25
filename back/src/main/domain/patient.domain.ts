@@ -22,7 +22,7 @@ import type {
   PatientEntityDomain,
   PatientExportFilters,
   PatientExportOptions,
-  PatientIdentityMatchDomain,
+  PatientIdentitySearchResultDomain,
   PatientPathwayDomain,
   PatientUpdateEntityDomain,
   PatientWithAppointmentsDomain,
@@ -179,18 +179,37 @@ class PatientDomain implements PatientDomainInterface {
   // garde-fou d'ORM normal suffit — nul besoin d'assouplir quoi que ce soit. Ne pas y ajouter
   // `runAsSystem` : l'exception unique de l'etape reste `estSuiviAilleurs`, et
   // `runAsSystem-unicite.test.ts` le verifie par lecture de source, pas par relecture humaine.
-  searchByIdentity(filters: PatientIdentitySearchFilters): Promise<PatientIdentityMatchDomain[]> {
+  //
+  // `hasMore` (revue tache 13, tour 1, point 4) fait partie de la reponse depuis le depot
+  // lui-meme : c'est lui qui possede le `take` et la limite, voir
+  // `PatientRepository.searchByIdentity`. Passe-plat pur, comme avant.
+  searchByIdentity(
+    filters: PatientIdentitySearchFilters,
+  ): Promise<PatientIdentitySearchResultDomain> {
     return this.patientRepository.searchByIdentity(filters)
   }
 
   // Le signal de suivi ailleurs (spec §5.3/§6, tache 7 tour 1, I1) est porte ici, pas sur le
-  // sous-dossier de service : il vaut avant qu'aucun sous-dossier local n'existe encore — c'est
-  // exactement le moment ou la decision 2.1 le rend utile (un second service qui accueille un
-  // patient deja suivi ailleurs part d'un sous-dossier vide, donc d'un 404 sur la route du
-  // sous-dossier). `estSuiviAilleurs` reste l'unique lecture qui traverse la frontiere entre
-  // services (spec §5.3) : seul l'endroit qui la consomme a change.
+  // sous-dossier de service. `followedElsewhere` (revue tache 13, tour 1, point 1 — C1 de
+  // task-13-review.md) n'est calcule, et present dans la reponse, QUE si le service courant a
+  // deja son propre sous-dossier pour ce patient : depuis la tache 12, tout patient cree ou
+  // rattache dans un service y possede un sous-dossier (`ensureExists`), donc cette condition
+  // recouvre exactement « ce patient est chez moi ». Le signal existe pour avertir un service
+  // qui suit DEJA un patient qu'il est suivi ailleurs (decision 2.1) — pas pour renseigner
+  // quelqu'un qui se contente de le chercher : la recherche (`searchByIdentity` ci-dessus) rend
+  // un `id` accessible a `patient:read`, donc a LECTURE, et cet `id` mene ici. Sans cette garde,
+  // deux requetes HTTP sans aucune ecriture suffisaient a apprendre qu'un patient est suivi dans
+  // un autre service — exactement ce que la spec §6 interdit ("trouver quelqu'un ne revele que
+  // son identite, jamais son suivi"). Voir `dossier-service.test.ts` pour les trois cas.
+  //
+  // `estSuiviAilleurs` reste l'unique lecture qui traverse la frontiere entre services (spec
+  // §5.3) : seule la condition qui decide de l'appeler a change.
   async findByID(patientID: string): Promise<PatientDetailDomain> {
     const patient = await this.patientRepository.findByID(patientID)
+    const hasFileHere = await this.patientServiceFileDomain.findByPatient(patientID)
+    if (!hasFileHere) {
+      return patient
+    }
     const followedElsewhere = await this.patientServiceFileDomain.estSuiviAilleurs(patientID)
     return { ...patient, followedElsewhere }
   }

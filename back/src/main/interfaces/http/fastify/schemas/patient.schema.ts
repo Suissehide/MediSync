@@ -61,8 +61,17 @@ export const patientsResponseSchema = z.array(patientResponseSchema)
 // liste. Ce choix n'est pas cense etre definitif : s'il s'avere qu'une liste a besoin du signal,
 // il faudra soit l'y calculer explicitement (avec son cout assume), soit le derouler autrement
 // (jointure unique plutot qu'un appel par ligne).
+//
+// `.optional()` (revue tache 13, tour 1, point 1 — C1 de task-13-review.md) : le champ n'est
+// present QUE si le service courant a deja son propre sous-dossier pour ce patient. La spec §6
+// est explicite — « trouver quelqu'un ne revele que son identite, jamais son suivi » — et la
+// tache 13 a arme un chemin qui obtient un `id` par la recherche (ouverte a `patient:read`, donc
+// a LECTURE) puis lit ce signal en une seconde requete, pour un patient que le service demandeur
+// ne suit meme pas. `false` dirait « je sais, et c'est non » — une information tout autant
+// interdite par la spec qu'un `true` non sollicite ; seule l'absence de la cle ne dit rien.
+// Voir `PatientDomain.findByID` pour le calcul, et `dossier-service.test.ts` pour les trois cas.
 export const patientDetailResponseSchema = patientResponseSchema.extend({
-  followedElsewhere: z.boolean(),
+  followedElsewhere: z.boolean().optional(),
 })
 
 export const patientWithTagsResponseSchema = patientResponseSchema.extend({
@@ -100,7 +109,17 @@ export const patientIdentityMatchSchema = z.object({
   birthDate: z.coerce.date().nullable(),
 })
 
-export const patientIdentitySearchResponseSchema = z.array(patientIdentityMatchSchema)
+// `results` + `hasMore` (revue tache 13, tour 1, point 4 — I4 de task-13-review.md) : la
+// recherche s'arrete a vingt lignes (voir le `take` du depot), et le SEUL but declare de cette
+// route est d'eviter les doublons — un utilisateur qui ne voit pas l'identite qu'il cherche
+// conclut a tort qu'elle n'existe pas et en cree une seconde. `hasMore` dit seulement qu'il y a
+// PLUS de vingt resultats, jamais combien : un compte exact couterait un `count()` sur toute la
+// table a chaque recherche, pour une information que l'ecran n'a pas besoin de connaitre au
+// chiffre pres — "affinez votre recherche" reste vrai que le total soit 21 ou 400.
+export const patientIdentitySearchResponseSchema = z.object({
+  results: z.array(patientIdentityMatchSchema),
+  hasMore: z.boolean(),
+})
 
 export type SearchPatientIdentityQuery = z.infer<typeof searchPatientIdentityQuerySchema>
 

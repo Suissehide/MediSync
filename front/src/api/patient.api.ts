@@ -10,7 +10,7 @@ import type {
   EnrollmentResult,
   EnrollPatientParams,
   Patient,
-  PatientIdentityMatch,
+  PatientIdentitySearchResult,
   PatientPathway,
   PatientWithTags,
   SearchPatientIdentityParams,
@@ -79,7 +79,7 @@ export const PatientApi = {
   // n'envoyer que les paramètres effectivement renseignés.
   searchIdentity: async (
     params: SearchPatientIdentityParams,
-  ): Promise<PatientIdentityMatch[]> => {
+  ): Promise<PatientIdentitySearchResult> => {
     const query = new URLSearchParams()
     if (params.firstName) {
       query.set('firstName', params.firstName)

@@ -6,7 +6,7 @@ import type {
   PatientExportFilters,
   PatientForExportEntityRepo,
   PatientIdentitySearchFilters,
-  PatientIdentitySearchResultRepo,
+  PatientIdentitySearchRepoResult,
   PatientPathwayEntityRepo,
   PatientRepositoryInterface,
   PatientUpdateEntityRepo,
@@ -21,6 +21,21 @@ type AppointmentPatientWithMainTag = {
     slot: { pathway: { template: { mainTag: string } | null } | null } | null
   } | null
 }
+
+// Nombre maximum de resultats affiches par une recherche d'identite (design §6, tache 13) —
+// voir `PatientRepository.searchByIdentity` pour la garde anti-doublon (`hasMore`) qui en
+// depend. Exporte pour que la source de verite reste unique (pas un `20` duplique ailleurs).
+export const IDENTITY_SEARCH_LIMIT = 20
+
+// Echappe les caracteres speciaux du motif `LIKE`/`ILIKE` (`%`, `_`) dans une valeur destinee a
+// `contains` (revue tache 13, tour 1, point 2) : sans cela, un nom cherche contenant l'un de ces
+// deux caracteres — ou meme la seule valeur `%` — est traite comme un joker par Postgres,
+// contournant la garde du `.refine` de `searchPatientIdentityQuerySchema` ("au moins un prenom
+// ou un nom"). L'antislash est echappe en premier : c'est le caractere d'echappement par defaut
+// de LIKE/ILIKE sur Postgres, donc un antislash saisi par l'utilisateur doit lui-meme devenir
+// litteral avant que `%`/`_` ne soient prefixes du meme caractere.
+const escapeLikePattern = (value: string): string =>
+  value.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_')
 
 // Tags principaux distincts des parcours auxquels un patient est inscrit.
 const distinctMainTags = (
@@ -207,7 +222,10 @@ class PatientRepository implements PatientRepositoryInterface {
   // elle-meme qui ne fait jamais entrer les autres colonnes en memoire, pas une projection
   // appliquee apres coup (une premiere version naive, qui renvoyait l'entite entiere, a ete
   // prouvee rouge contre le test de confidentialite avant ce correctif — voir
-  // patient-search-identite.test.ts, "la recherche ne rend que l'identite").
+  // patient-search-identite.test.ts, "la recherche ne rend que l'identite"). Ce `select` est un
+  // renfort, pas la garantie qui compte : voir `patientIdentitySearchResponseSchema`
+  // (patient.schema.ts) pour ce qui tient reellement la forme de la reponse HTTP (revue tache
+  // 13, tour 1, point 5).
   //
   // Establishment-scope, PAS `runAsSystem` : Patient est un modele d'etablissement (comme
   // `establishmentScope` ci-dessus le sert deja a `findByID`/`findAll`/`create`), donc le
@@ -215,21 +233,41 @@ class PatientRepository implements PatientRepositoryInterface {
   // l'etablissement courant sans avoir a l'assouplir. Voir le commentaire de
   // `PatientDomain.searchByIdentity` pour pourquoi ce choix n'etend pas l'exception de
   // `estSuiviAilleurs`.
-  searchByIdentity(
+  //
+  // `escapeLikePattern` (revue tache 13, tour 1, point 2) : `contains`/`mode: insensitive` se
+  // traduit en `ILIKE` sur Postgres, et `%`/`_` y sont des jokers — un nom cherche contenant l'un
+  // des deux (ou meme un simple `%`, sans nom) faisait sinon remonter tout l'etablissement,
+  // exactement ce que le `.refine` du schema de requete (searchPatientIdentityQuerySchema) est
+  // cense empecher. Prisma ne les echappe pas lui-meme : la valeur saisie est inseree telle
+  // quelle dans le motif `%valeur%` envoye a Postgres. Ce n'est pas une injection SQL — Prisma
+  // parametre deja la requete — seul le MOTIF `LIKE` est affecte.
+  //
+  // `take: IDENTITY_SEARCH_LIMIT + 1` (revue tache 13, tour 1, point 4) : une ligne de plus que
+  // ce qu'on affiche jamais, uniquement pour savoir s'il y en a davantage — `hasMore` le dit,
+  // sans jamais compter combien exactement (un `count()` sur toute la table couterait une
+  // seconde requete a chaque recherche, pour un ecran qui n'a besoin que de savoir qu'il faut
+  // affiner).
+  async searchByIdentity(
     filters: PatientIdentitySearchFilters,
-  ): Promise<PatientIdentitySearchResultRepo[]> {
+  ): Promise<PatientIdentitySearchRepoResult> {
     const { firstName, lastName, birthDate } = filters
-    return this.prisma.patient.findMany({
+    const matches = await this.prisma.patient.findMany({
       where: {
         ...this.establishmentScope,
-        ...(firstName ? { firstName: { contains: firstName, mode: 'insensitive' } } : {}),
-        ...(lastName ? { lastName: { contains: lastName, mode: 'insensitive' } } : {}),
+        ...(firstName
+          ? { firstName: { contains: escapeLikePattern(firstName), mode: 'insensitive' } }
+          : {}),
+        ...(lastName
+          ? { lastName: { contains: escapeLikePattern(lastName), mode: 'insensitive' } }
+          : {}),
         ...(birthDate ? { birthDate } : {}),
       },
       select: { id: true, firstName: true, lastName: true, birthDate: true },
       orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
-      take: 20,
+      take: IDENTITY_SEARCH_LIMIT + 1,
     })
+    const hasMore = matches.length > IDENTITY_SEARCH_LIMIT
+    return { results: hasMore ? matches.slice(0, IDENTITY_SEARCH_LIMIT) : matches, hasMore }
   }
 
   async findByID(patientID: string): Promise<PatientWithAppointmentsDomain> {
