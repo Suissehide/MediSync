@@ -22,6 +22,22 @@ export const isKey = <T extends object>(o: T, k: PropertyKey): k is keyof T => {
   return k in o
 }
 
+// N'importe quelle cle dont le nom contient "secret" (JWT, cookie, ou un futur secret de
+// config) : jamais sa valeur en clair dans un journal, quel que soit le niveau
+// (task-5-re-review-3.md, tour 5 — `jwtSecret`/`jwtRefreshSecret`/`cookieSecret` partaient en
+// clair dans `awilix-ioc-container.ts` a `debug`, des le demarrage). Filtre sur le NOM de la cle,
+// pas sur une liste figee, pour couvrir un secret de config ajoute plus tard sans y repenser.
+const SECRET_KEY_PATTERN = /secret/i
+
+export const redactSecrets = (
+  record: Record<string, unknown>,
+): Record<string, unknown> =>
+  Object.fromEntries(
+    Object.entries(record).map(([key, value]) =>
+      SECRET_KEY_PATTERN.test(key) ? [key, '<redacted>'] : [key, value],
+    ),
+  )
+
 export const recordToString = (record: Record<string, unknown>): string =>
   Object.keys(record)
     .sort((key1, key2) => key1.localeCompare(key2))
