@@ -680,11 +680,65 @@ const assertServiceRelationFilter = (
 // non : ne descendre que sous condition serait le point exact où un modèle ou une relation non
 // reconnus pourraient être traités comme sûrs par défaut — la limite que cette fonction referme.
 
+// TOUR DE CORRECTION 2 (tâche 1) — Critique 1 de la revue : un modèle GLOBAL sert de pont. La
+// transition établissement → service, vérifiée juste en dessous, ne dit rien d'une relation vers
+// un modèle GLOBAL (`Service.establishment`, `EstablishmentMembership.user`…) ni d'une relation
+// REPARTANT d'un modèle global vers un modèle de tenant (`Establishment.patients`…) : ni l'une ni
+// l'autre n'est une transition établissement → service, donc ni l'une ni l'autre n'était vérifiée.
+//
+// Sous un contexte TENANT, cela ne fuit pas — mais pas grâce à un contrôle explicite ici : le
+// `where` de la racine épingle déjà UN établissement, et toute relation vers un modèle global
+// part d'une ligne déjà bornée à cet établissement (une clé étrangère à-un, jamais à-plusieurs —
+// vérifié : dans MODEL_RELATIONS, aucune relation d'un modèle de tenant vers `User` ou
+// `Establishment` n'est autre chose qu'un champ singulier). Le modèle global atteint est donc
+// TOUJOURS la même ligne unique, quel que soit le nombre de lignes racines, et ses propres
+// relations ne peuvent redescendre que vers CETTE établissement-là — aucune fuite inter-
+// établissements n'est géométriquement possible. C'est exactement le raisonnement qui justifie
+// GLOBAL_TENANT_RELATIONS et sa restriction à `findUnique(OrThrow)` pour une racine globale :
+// la même propriété (une seule ligne globale atteinte), garantie autrement à mi-descente.
+//
+// Sous SUPERADMIN, cette garantie n'existe pas : `assertTenantReadScope` ne pose aucun `where`
+// de racine (voir son commentaire, plus haut — le super-admin n'a pas de tenant ambiant par
+// lequel borner). `Service.findMany({})` peut donc rendre des lignes de TOUS les établissements ;
+// chacune atteint SA PROPRE ligne globale via `establishment`, et cette ligne globale expose à
+// son tour SES propres patients/soignants/lieux/comptes — la liste nominative de tous les
+// établissements, en clair : « le super-admin compte, il ne lit pas » (SUPERADMIN_OPERATIONS)
+// perd son sens si une inclusion imbriquée peut quand même faire lire.
+//
+// Remède retenu, LOCAL au contexte superadmin plutôt qu'une refonte de la descente pour tous les
+// contextes : sous superadmin, franchir un modèle GLOBAL, à N'IMPORTE QUELLE profondeur, est
+// refusé purement et simplement — pas seulement pour l'établissement → service, comme le fait
+// assertServiceRelationFilter pour tenant. Aucune valeur ne pourrait de toute façon border cette
+// traversée (il n'existe pas de « bon » établissement à comparer, comme il n'en existe pas pour
+// assertWhere). Choisi plutôt qu'étendre la vérification aux autres contextes parce que la
+// garantie qui protège tenant et l'absence de tenant (root pinning + relation à-un) n'a pas
+// besoin d'aide ici — l'étendre demanderait de suivre la CARDINALITÉ de chaque relation
+// (à-un/à-plusieurs) à travers tout le graphe, une information que MODEL_RELATIONS ne porte pas
+// aujourd'hui, pour fermer un cas qui n'est OUVERT que sous superadmin. Un futur usage d'un
+// modèle global sous superadmin (déclaration future dans SUPERADMIN_OPERATIONS) devra être
+// pensé en connaissance de cette limite, pas la contourner par un ajout à ce fichier.
+const assertNoGlobalBridgeUnderSuperAdmin = (
+  model: string,
+  childModel: string,
+  operation: string,
+  relationField: string,
+  store: TenantStore | undefined,
+): void => {
+  if (store?.kind === 'superadmin' && familyOf(childModel) === 'global') {
+    throw new TenantScopeMissingError(
+      model,
+      operation,
+      `relation '${relationField}' mène au modèle global '${childModel}' — refusée sous superadmin, qui n'a pas de tenant ambiant pour borner ce que ce pont exposerait`,
+    )
+  }
+}
+
 // Traite une relation d'include/select une fois son modèle cible résolu, commun à `include` et
 // `select` : sépare ce cas partagé du reste pour garder assertNestedInclude lisible (extrait
 // aussi pour la complexité cognitive du linter, qui compte les deux boucles ensemble sinon).
-// Vérifie la transition établissement → service si elle s'applique ICI, puis redescend
-// récursivement — quelle que soit cette famille, jamais seulement si elle correspond.
+// Vérifie la transition établissement → service si elle s'applique ICI, refuse le pont vers un
+// modèle global sous superadmin (voir assertNoGlobalBridgeUnderSuperAdmin ci-dessus), puis
+// redescend récursivement — quelle que soit cette famille, jamais seulement si elle correspond.
 const assertNestedIncludeEntry = (
   model: string,
   childModel: string,
@@ -696,6 +750,7 @@ const assertNestedIncludeEntry = (
   if (familyOf(model) === 'establishment' && familyOf(childModel) === 'service') {
     assertServiceRelationFilter(model, operation, relationField, value, store)
   }
+  assertNoGlobalBridgeUnderSuperAdmin(model, childModel, operation, relationField, store)
   if (isDict(value)) {
     assertNestedInclude(childModel, `${operation}>${relationField}`, value, store)
   }

@@ -36,9 +36,10 @@ import ts from 'typescript'
 //
 //   A. tout ce qui REFERENCE la methode `runAsSystem` (au-dela du seul appel direct — voir
 //      APPEL_RUN_AS_SYSTEM ci-dessous) ;
-//   B. tout ce qui INVOQUE la capacite d'entrer en mode non-tenant (system OU superadmin) —
-//      REECRIT au tour de correction 1 de la tache 1, voir le commentaire d'appelsDeuxArguments
-//      plus bas pour le pourquoi.
+//   B. tout ce qui INVOQUE la capacite d'entrer dans un mode non-tenant (system OU superadmin),
+//      par QUELQUE PORTE que ce soit de `AsyncLocalStorage` — REECRIT au tour de correction 1 de
+//      la tache 1, puis a nouveau resserre au tour de correction 2 (voir le commentaire
+//      d'appelsCapaciteDeStore plus bas pour le detail des deux tours).
 //
 // Volet A : reference a `runAsSystem`, sous forme d'ACCES A LA PROPRIETE plutot que du seul
 // appel `.runAsSystem(`. `\b` (limite de mot) ferme la forme sur `.bind` (V2) et sur l'espace
@@ -64,9 +65,9 @@ const AUTORISES = [
   },
 ]
 
-// Seul fichier ou le volet B a le droit de trouver un appel : celui qui DEFINIT `runAsSystem` et
-// `runAsSuperAdmin`, et qui est donc, par construction, le seul endroit legitime d'ou peut naitre
-// un mode non-tenant.
+// Seul fichier ou le volet B a le droit de trouver un appel : celui qui DEFINIT `enter`, `clear`,
+// `run`, `runAsSystem` et `runAsSuperAdmin`, et qui est donc, par construction, le seul endroit
+// legitime d'ou peut naitre un changement de store — tenant, non-tenant, ou son effacement.
 const SEUL_CONSTRUCTEUR_LEGITIME = 'utils/tenant-context.ts'
 
 // Jest tourne via @swc/jest en module CommonJS (jest.config.ts) : __dirname est disponible.
@@ -106,55 +107,74 @@ const lignesCorrespondantes = (racine: string, motif: RegExp) =>
 // distinguer un `{ ...x }` legitime d'un `{ ...x }` qui propage la capacite ailleurs.
 //
 // Ce que ces cinq sabotages ont EN COMMUN, et qui ne change JAMAIS quelle que soit la facon dont
-// la valeur est ecrite : aucun n'a d'effet sans un appel a DEUX arguments a une methode nommee
-// `run` (la signature de `AsyncLocalStorage#run(store, callback)`). C'est ce geste — pas la
-// forme du premier argument — qui fait que `tenantContext.peek()` lira ensuite `{ kind: 'system'
-// }` ou `{ kind: 'superadmin' }` pendant toute la portee du rappel. Le volet B surveille donc
-// desormais CE geste : tout appel a deux arguments a une methode `.run(` (ou `['run'](`, meme
-// forme via un acces par crochet a nom litteral — la revue avait cite l'etalement comme un
-// contournement, et un acces dynamique par crochet en est un cousin direct), analyse comme du
-// CODE (l'AST TypeScript, via le compilateur deja present dans ce depot pour `tsc`) plutot que
-// comme du texte ligne par ligne. Analyser l'AST ferme au passage le multi-ligne et la virgule
+// la valeur est ecrite : aucun n'a d'effet sans un appel a une METHODE DE `AsyncLocalStorage` qui
+// pose un nouveau store. C'est ce geste — pas la forme du premier argument — qui fait que
+// `tenantContext.peek()` lira ensuite `{ kind: 'system' }` ou `{ kind: 'superadmin' }` pendant
+// toute la portee ou elle s'applique. Le volet B surveille donc desormais CE geste, analyse comme
+// du CODE (l'AST TypeScript, via le compilateur deja present dans ce depot pour `tsc`) plutot que
+// comme du texte ligne par ligne : analyser l'AST ferme au passage le multi-ligne et la virgule
 // finale (des artefacts du decoupage par ligne, pas des idiomes distincts) ; ne plus regarder la
 // VALEUR du premier argument ferme l'etalement et la constante intermediaire, puisque ni l'un ni
 // l'autre ne change la FORME de l'appel lui-meme.
 //
+// TOUR DE CORRECTION 2 (tache 1) — deux angles morts trouves dans CETTE reecriture, l'un par la
+// re-revue (Critique 2), l'autre nomme par elle sans etre encore ferme (Important) :
+//
+//   - Critique 2 : la version precedente ne cherchait qu'un appel a la methode `run` — or
+//     `AsyncLocalStorage` pose aussi un store avec `enterWith(store)`, une porte DIFFERENTE, tout
+//     aussi capable d'entrer dans un mode non-tenant (prouve par execution par la revue :
+//     `peek()` rend bien `{ kind: 'superadmin' }` apres un `storage.enterWith({ kind:
+//     'superadmin' })`, et une operation sans filtre passe ensuite), et qui figure DEJA
+//     legitimement trois lignes plus haut dans ce meme fichier (`enter`, `clear`). Une regle qui
+//     ne visait qu'un nom de methode (`run`) a donc reproduit exactement le defaut que la
+//     reecriture visait a corriger — un nom, pas une capacite. Volet B surveille maintenant les
+//     DEUX portes : `run` et `enterWith`.
+//   - Important : la condition `arguments.length === 2` sur `run` etait trop etroite — la
+//     signature reelle est variadique (`run(store, callback, ...args)`), donc
+//     `storage.run(store, fn, undefined)` ou un appel par etalement (`storage.run(...args)`, ou
+//     `argsArray.length` different de 2 au runtime) y echappaient. Aucune des deux methodes
+//     surveillees n'impose plus de condition sur le nombre d'arguments : le NOM de la methode
+//     visee (par acces direct ou par crochet a cle litterale) est desormais la seule condition,
+//     ce qui couvre aussi bien `run(store, fn)` que `run(store, fn, undefined)` ou un appel
+//     etale.
+//
 // CE QUE CE VOLET NE COUVRE TOUJOURS PAS, dit honnetement plutot que par une expression qui
-// ferait semblant de le couvrir : un appel invoque par
-// une forme qui n'est ni `.run(` ni `['run'](` avec un nom litteral — `.call`/`.apply`/
-// `Reflect.apply`, une cle de crochet CALCULEE (`storage[unNomVariable](...)`), ou tout autre
-// detour qui ne prononce jamais litteralement le nom `run` a l'endroit de l'appel. Fermer ce
-// reste exigerait soit une analyse de flux de donnees complete (savoir que `unNomVariable` vaut
-// `'run'` a l'execution), soit une instrumentation a l'execution (intercepter reellement
-// `AsyncLocalStorage.prototype.run`) plutot qu'une lecture statique des sources — un chantier a
-// part, hors de ce qu'un test de conformite des sources peut honnetement garantir. C'est aussi,
-// plus fondamentalement, une limite du langage plutot que de ce test : le champ `storage` de
-// `TenantContext` est marque `private`, mais `private` en TypeScript s'efface entierement a la
-// compilation — a l'execution, n'importe quel code qui detient une reference vers l'instance
-// injectee de `tenantContext` (et elle est injectee presque partout via le conteneur Awilix) peut
-// lire `(tenantContext as any).storage` et l'invoquer directement, sans qu'aucune analyse de
-// SOURCE ne puisse s'y opposer — une vraie frontiere exigerait une encapsulation qui survit a
-// l'execution (`#champPrive` ou `WeakMap`), pas seulement au typage.
-const appelsDeuxArguments = (racine: string): { fichier: string; ligne: number }[] =>
+// ferait semblant de le couvrir : un appel invoque par une forme qui ne prononce jamais
+// litteralement `run` ou `enterWith` a l'endroit de l'appel — `.call`/`.apply`/`Reflect.apply`,
+// ou une cle de crochet CALCULEE (`storage[unNomVariable](...)`). Fermer ce reste exigerait soit
+// une analyse de flux de donnees complete (savoir que `unNomVariable` vaut `'run'` a
+// l'execution), soit une instrumentation a l'execution (intercepter reellement
+// `AsyncLocalStorage.prototype.run`/`.enterWith`) plutot qu'une lecture statique des sources — un
+// chantier a part, hors de ce qu'un test de conformite des sources peut honnetement garantir.
+// C'est aussi, plus fondamentalement, une limite du langage plutot que de ce test : le champ
+// `storage` de `TenantContext` est marque `private`, mais `private` en TypeScript s'efface
+// entierement a la compilation — a l'execution, n'importe quel code qui detient une reference
+// vers l'instance injectee de `tenantContext` (et elle est injectee presque partout via le
+// conteneur Awilix) peut lire `(tenantContext as any).storage` et l'invoquer directement, sans
+// qu'aucune analyse de SOURCE ne puisse s'y opposer — une vraie frontiere exigerait une
+// encapsulation qui survit a l'execution (`#champPrive` ou `WeakMap`), pas seulement au typage.
+const METHODES_QUI_POSENT_UN_STORE = new Set(['run', 'enterWith'])
+
+const appelsCapaciteDeStore = (racine: string): { fichier: string; ligne: number }[] =>
   fichiersDeProduction(racine).flatMap((chemin) => {
     const relatif = relative(racine, chemin).split(sep).join('/')
     const texte = readFileSync(chemin, 'utf8')
     const source = ts.createSourceFile(chemin, texte, ts.ScriptTarget.Latest, true)
     const trouvailles: { fichier: string; ligne: number }[] = []
 
-    const nommeRun = (expression: ts.Expression): boolean => {
+    const nommeCapaciteDeStore = (expression: ts.Expression): boolean => {
       if (ts.isPropertyAccessExpression(expression)) {
-        return expression.name.text === 'run'
+        return METHODES_QUI_POSENT_UN_STORE.has(expression.name.text)
       }
       if (ts.isElementAccessExpression(expression)) {
         const cle = expression.argumentExpression
-        return ts.isStringLiteralLike(cle) && cle.text === 'run'
+        return ts.isStringLiteralLike(cle) && METHODES_QUI_POSENT_UN_STORE.has(cle.text)
       }
       return false
     }
 
     const visiter = (noeud: ts.Node): void => {
-      if (ts.isCallExpression(noeud) && nommeRun(noeud.expression) && noeud.arguments.length === 2) {
+      if (ts.isCallExpression(noeud) && nommeCapaciteDeStore(noeud.expression)) {
         const { line } = source.getLineAndCharacterOfPosition(noeud.getStart(source))
         trouvailles.push({ fichier: relatif, ligne: line + 1 })
       }
@@ -189,16 +209,18 @@ describe('unicite de l exception runAsSystem au cloisonnement multi-tenant', () 
     }
   })
 
-  it('n invoque la capacite d entrer en mode non-tenant qu au seul endroit legitime (volet B, reecrit : la capacite, pas la forme de la valeur)', () => {
-    const appels = appelsDeuxArguments(RACINE)
+  it('n invoque la capacite de poser un store (run OU enterWith) qu au seul endroit legitime (volet B, reecrit : la capacite, pas un nom de methode)', () => {
+    const appels = appelsCapaciteDeStore(RACINE)
 
-    // Trois appels legitimes dans tout src/main, tous dans utils/tenant-context.ts : `run` pour
-    // `enter`/`run` (tenant), pour `runAsSystem`, et pour `runAsSuperAdmin`. Un quatrieme appel
-    // — ou un appel deplace hors de ce fichier — pousse ce compte au-dela de 3 et fait rougir
-    // cette assertion, quelle que soit la facon dont son premier argument est ecrit (litteral,
-    // gabarit, multi-ligne, virgule finale, etalement, constante importee : aucun ne change la
-    // forme de CET appel, voir le commentaire d'appelsDeuxArguments ci-dessus).
-    expect(appels).toHaveLength(3)
+    // Cinq appels legitimes dans tout src/main, tous dans utils/tenant-context.ts : deux
+    // `enterWith` (`enter` pose le tenant, `clear` efface la portee) et trois `run` (`run` pour
+    // le tenant, `runAsSystem`, `runAsSuperAdmin`). Un sixieme appel — a l'une ou l'autre methode
+    // — ou un appel deplace hors de ce fichier, pousse ce compte au-dela de 5 et fait rougir
+    // cette assertion, quelle que soit la facon dont l'argument de store est ecrit (litteral,
+    // gabarit, multi-ligne, virgule finale, etalement, constante importee, argument
+    // supplementaire : aucun ne change le NOM de la methode appelee, voir le commentaire
+    // d'appelsCapaciteDeStore ci-dessus).
+    expect(appels).toHaveLength(5)
     for (const appel of appels) {
       expect(appel.fichier).toBe(SEUL_CONSTRUCTEUR_LEGITIME)
     }
@@ -206,16 +228,17 @@ describe('unicite de l exception runAsSystem au cloisonnement multi-tenant', () 
 })
 
 // Ce que ces deux volets NE couvrent PAS, dit honnetement plutot que par une expression qui
-// ferait semblant de le couvrir (revue tache 7, tour 1 ; complete au tour de correction 1 de la
-// tache 1 — voir le commentaire d'appelsDeuxArguments pour le detail du second volet) : un appel
-// a `runAsSystem`/`runAsSuperAdmin`, ou une invocation directe de `.run(`, depuis
-// `back/src/test` (par exemple un test qui fabriquerait un contexte systeme ou superadmin de
-// toutes pieces). `RACINE` ne lit que `src/main` — le code de production livre — jamais
+// ferait semblant de le couvrir (revue tache 7, tour 1 ; complete aux tours de correction 1 et 2
+// de la tache 1 — voir le commentaire d'appelsCapaciteDeStore pour le detail du second volet) :
+// un appel a `runAsSystem`/`runAsSuperAdmin`, ou une invocation directe de `.run(`/`.enterWith(`,
+// depuis `back/src/test` (par exemple un test qui fabriquerait un contexte systeme ou superadmin
+// de toutes pieces). `RACINE` ne lit que `src/main` — le code de production livre — jamais
 // `src/test`. Ce n'est pas un oubli : les tests unitaires legitimes de ce depot construisent deja
 // `{ kind: 'system' }` et `{ kind: 'superadmin' }` directement (repository-scope.test.ts,
 // tenant-context.test.ts, tenant-guard.test.ts) pour eprouver le garde-fou lui-meme, si bien
 // qu'etendre ce scan a `src/test` exigerait une liste d'autorisation separee pour les tests — un
 // chantier a part, hors du remede demande ici, et qui recoupe la meme limite deja actee pour la
 // porte de typage (`npm run build` ne type pas `src/test` non plus : voir tache 7, revue, mineur
-// m4). Un `runAsSystem`, un `runAsSuperAdmin` ou un appel `.run(` ecrit dans un fichier de test
-// n'active d'ailleurs rien en production : il ne peut agir que sur l'execution de ce test-la.
+// m4). Un `runAsSystem`, un `runAsSuperAdmin` ou un appel `.run(`/`.enterWith(` ecrit dans un
+// fichier de test n'active d'ailleurs rien en production : il ne peut agir que sur l'execution de
+// ce test-la.

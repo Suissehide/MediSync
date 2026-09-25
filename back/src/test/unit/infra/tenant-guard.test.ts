@@ -1,4 +1,10 @@
-import { assertTenantScope } from '../../../main/infra/orm/tenant-guard'
+import {
+  assertTenantScope,
+  ESTABLISHMENT_MODELS,
+  MODEL_RELATIONS,
+  SERVICE_MODELS,
+  SUPERADMIN_OPERATIONS,
+} from '../../../main/infra/orm/tenant-guard'
 import type { TenantStore } from '../../../main/types/utils/tenant-context'
 import { TenantScopeMissingError } from '../../../main/utils/tenant-errors'
 
@@ -1619,6 +1625,147 @@ describe('monotonie : le contexte superadmin ne change aucun verdict pour tenant
       expect(appel).not.toThrow()
     } else {
       expect(appel).toThrow(TenantScopeMissingError)
+    }
+  })
+})
+
+// TOUR DE CORRECTION 2 (tache 1) — Critique 1 de la revue : un modele GLOBAL sert de pont.
+// `Service.findMany({ include: { establishment: { include: { patients: true } } } })` passait :
+// la transition etablissement -> service (assertServiceRelationFilter) ne dit rien d'une
+// relation vers un modele global, ni d'une relation qui en repart. Voir le commentaire de
+// assertNoGlobalBridgeUnderSuperAdmin (tenant-guard.ts) pour le detail du remede et pourquoi il
+// reste local au contexte superadmin (le contexte tenant est protege par le `where` de sa
+// racine, jamais pose sous superadmin).
+describe('aucun pont par un modele global sous superadmin (revue, tour 2)', () => {
+  const store = { kind: 'superadmin' } as const
+
+  type Famille = 'service' | 'etablissement' | 'global'
+  const familleDe = (modele: string): Famille => {
+    if (SERVICE_MODELS.includes(modele)) {
+      return 'service'
+    }
+    if (ESTABLISHMENT_MODELS.includes(modele)) {
+      return 'etablissement'
+    }
+    return 'global'
+  }
+
+  // Construit l'objet `include` imbrique qui suit exactement `chemin` (une liste de noms de
+  // champ de relation), jusqu'a une valeur terminale `true`.
+  const includeDuChemin = (chemin: readonly string[]): Record<string, unknown> => {
+    const [tete, ...reste] = chemin
+    if (tete === undefined) {
+      return {}
+    }
+    return reste.length === 0 ? { [tete]: true } : { [tete]: { include: includeDuChemin(reste) } }
+  }
+
+  // Parcours en largeur de MODEL_RELATIONS depuis `racine`, jusqu'a une profondeur bornee — ce
+  // graphe porte des cycles (Slot <-> Appointment, Pathway <-> Slot...), la profondeur est donc
+  // la seule garde necessaire, pas un ensemble de visites. Chaque chemin retenu s'arrete des
+  // qu'il atteint pour la PREMIERE fois un modele global : c'est le point exact ou
+  // assertNoGlobalBridgeUnderSuperAdmin doit refuser, et un chemin plus long derriere lui ne
+  // serait de toute facon jamais atteint — la recursion de assertNestedInclude s'arrete au
+  // premier throw, donc le premier pont trouve est la seule chose qu'une descente reelle peut
+  // jamais essayer de franchir.
+  const cheminsVersUnModeleGlobal = (racine: string, profondeurMax: number): string[][] => {
+    const resultats: string[][] = []
+    const file: Array<{ modele: string; chemin: string[] }> = [{ modele: racine, chemin: [] }]
+    while (file.length > 0) {
+      const courant = file.shift()
+      if (!courant || courant.chemin.length >= profondeurMax) {
+        continue
+      }
+      for (const [relationField, cible] of Object.entries(MODEL_RELATIONS[courant.modele] ?? {})) {
+        const nouveauChemin = [...courant.chemin, relationField]
+        if (familleDe(cible) === 'global') {
+          resultats.push(nouveauChemin)
+          continue
+        }
+        file.push({ modele: cible, chemin: nouveauChemin })
+      }
+    }
+    return resultats
+  }
+
+  // Les seuls modeles declares avec `findMany` (count ne prend pas d'`include` en Prisma, donc
+  // Patient — qui n'a que `count` — ne peut pas servir de racine a une chaine d'inclusion).
+  const racinesAvecInclude = Object.entries(SUPERADMIN_OPERATIONS)
+    .filter(([, operations]) => operations.includes('findMany'))
+    .map(([modele]) => modele)
+
+  it('part bien de plus d un modele (sinon le test suivant ne cherche presque rien)', () => {
+    expect(racinesAvecInclude.length).toBeGreaterThanOrEqual(3)
+  })
+
+  // Le coeur de l'epreuve demandee par la revue : chercher la chaine qui passe encore, pas
+  // seulement verifier que l'exemple cite echoue. Chaque chaine qui touche un modele global,
+  // depuis chacune des racines declarees avec `findMany`, doit etre refusee — le tableau des
+  // violations (vide si tout est refuse) s'affiche dans le diff Jest en cas d'echec, avec la
+  // racine et le chemin exact qui aurait fui.
+  it('refuse toute chaine qui atteint un modele global, depuis chaque racine declaree, a toute profondeur', () => {
+    // Verifie exhaustivement (85 chemins distincts sur la version actuelle du schema, comptes le
+    // jour de ce correctif) plutot que sur l'echantillon d'un exemple : chaque chemin depuis
+    // chacune des racines declarees avec `findMany`, jusqu'a profondeur 5, qui atteint pour la
+    // premiere fois un modele global.
+    const violations: { racine: string; chemin: string[] }[] = []
+    for (const racine of racinesAvecInclude) {
+      for (const chemin of cheminsVersUnModeleGlobal(racine, 5)) {
+        const include = includeDuChemin(chemin)
+        try {
+          assertTenantScope({ model: racine, operation: 'findMany', args: { include } }, store)
+          violations.push({ racine, chemin })
+        } catch (erreur) {
+          if (!(erreur instanceof TenantScopeMissingError)) {
+            throw erreur
+          }
+        }
+      }
+    }
+    expect(violations).toEqual([])
+  })
+
+  // L'exemple nomme par la revue, garde tel quel en plus de la recherche ci-dessus : un echec de
+  // lecture isole sur ce cas precis doit rester lisible sans avoir a interpreter un tableau de
+  // violations.
+  it('refuse Service.findMany -> establishment -> patients, l exemple cite par la revue', () => {
+    expect(() =>
+      assertTenantScope(
+        {
+          model: 'Service',
+          operation: 'findMany',
+          args: { include: { establishment: { include: { patients: true } } } },
+        },
+        store,
+      ),
+    ).toThrow(TenantScopeMissingError)
+  })
+
+  // L'autre sens, explicitement demande par la revue : le correctif ne doit pas avoir referme
+  // plus que necessaire. Les dix couples declares (SUPERADMIN_OPERATIONS), nus et avec un
+  // `where` libre, doivent tous continuer a passer.
+  it('laisse passer les dix couples declares, nus et avec un where libre', () => {
+    const casDeclares: Array<{ model: string; operation: string; args: Record<string, unknown> }> = [
+      { model: 'Service', operation: 'count', args: {} },
+      { model: 'Service', operation: 'count', args: { where: { establishmentId: 'e1' } } },
+      { model: 'Service', operation: 'findMany', args: {} },
+      { model: 'Service', operation: 'findMany', args: { where: { establishmentId: 'e1' } } },
+      { model: 'EstablishmentMembership', operation: 'count', args: {} },
+      { model: 'EstablishmentMembership', operation: 'findMany', args: {} },
+      {
+        model: 'EstablishmentMembership',
+        operation: 'create',
+        args: { data: { userId: 'u1', establishmentId: 'e1', role: 'MEMBER' } },
+      },
+      { model: 'ServiceMembership', operation: 'count', args: {} },
+      { model: 'ServiceMembership', operation: 'findMany', args: {} },
+      { model: 'Patient', operation: 'count', args: {} },
+      { model: 'Patient', operation: 'count', args: { where: { establishmentId: 'e1' } } },
+      { model: 'ActivityLog', operation: 'findMany', args: {} },
+      { model: 'ActivityLog', operation: 'count', args: {} },
+    ]
+    for (const cas of casDeclares) {
+      expect(() => assertTenantScope(cas, store)).not.toThrow()
     }
   })
 })

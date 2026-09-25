@@ -338,12 +338,22 @@ describe('SUPERADMIN_OPERATIONS reflete le schema', () => {
   // n'avaient rien a y redire, alors que la liste est la frontiere entre le super-admin et les
   // donnees de sante : c'est son CONTENU exact, pas seulement sa forme, qui doit etre tenu. Ce
   // test epingle donc la valeur entiere, cle par cle et operation par operation : tout ajout,
-  // retrait ou changement — un modele de plus, une operation de plus sur un modele deja present,
-  // meme un simple reordonnancement des cles — le fait rougir, forcant une revue deliberee au
-  // lieu d'un silence. Le format est volontairement plat (`toEqual` sur l'objet entier) plutot
-  // qu'une assertion par cle : un diff Jest sur l'objet entier montre immediatement CE QUI a
-  // change, ce qu'une boucle avec `expect(...).toContain(...)` ne peut pas montrer aussi
-  // clairement.
+  // tout retrait, et tout changement d'une des OPERATIONS d'un modele deja present — y compris
+  // leur ORDRE au sein d'un meme modele (`toEqual` compare les tableaux element par element) —
+  // fait rougir ce test, forcant une revue deliberee au lieu d'un silence.
+  //
+  // CE QUE CE TEST NE TIENT PAS, dit platement plutot qu'affirme a tort (tour de correction 2 —
+  // verifie par execution : `require('util').isDeepStrictEqual({a:1,b:2}, {b:2,a:1})` vaut
+  // `true`, la meme semantique que `toEqual` sur un objet) : l'ORDRE DES CLES de
+  // SUPERADMIN_OPERATIONS lui-meme (`Service` avant ou apres `Patient`, par exemple) n'est pas
+  // observable par une egalite structurelle sur un objet JavaScript, et ce reordonnancement-la ne
+  // fait donc PAS rougir ce test — sans consequence de toute facon, l'ordre des cles d'un objet
+  // n'affecte jamais son comportement ici (SUPERADMIN_OPERATIONS[model] est un acces par cle, pas
+  // par position).
+  //
+  // Le format est volontairement plat (`toEqual` sur l'objet entier) plutot qu'une assertion par
+  // cle : un diff Jest sur l'objet entier montre immediatement CE QUI a change, ce qu'une boucle
+  // avec `expect(...).toContain(...)` ne peut pas montrer aussi clairement.
   it('est exactement la liste attendue — tout changement de contenu doit etre delibere', () => {
     expect(SUPERADMIN_OPERATIONS).toEqual({
       Service: ['count', 'findMany'],
