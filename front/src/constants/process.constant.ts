@@ -45,6 +45,14 @@ export const PATIENT = {
   REORDER_PATHWAYS: 'reorder_patient_pathways',
 }
 
+// Sous-dossier de service du patient (étape 3 du multi-tenant) : clé volontairement sans le
+// tenant (établissement/service), comme le reste des clés de ce fichier — voir `front/CLAUDE.md`
+// § « Query keys deliberately do not carry the tenant ».
+export const PATIENT_SERVICE_FILE = {
+  GET_BY_PATIENT: 'get_patient_service_file',
+  UPDATE: 'update_patient_service_file',
+}
+
 export const SLOT = {
   GET_ALL: 'get_all_slots',
   GET_BY_ID: 'get_by_id_slot',

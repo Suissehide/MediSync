@@ -18,32 +18,17 @@ export type Patient = {
   occupation?: string // Profession
   currentActivity?: string // Activité actuelle
 
-  // Referrals & Context
-  referringCaregiver?: string // Soignant référent
-  followUpToDo?: string // Suivi à régulariser
-
-  // Notes
-  notes?: string
-  details?: string
-
-  // Inclusion Data
-  medicalDiagnosis?: string
-  entryDate?: string
-  careMode?: string // Mode de prise en charge
-  orientation?: string
-  etpDecision?: string // ETP décision
-  programType?: string
-  nonInclusionDetails?: string
-  customContentDetails?: string
-  goal?: string
-
-  // Exit Data
-  exitDate?: string
-  stopReason?: string // Motif d'arrêt de programme
-  etpFinalOutcome?: string // Point final parcours ETP
-
   // Enrollment
   enrollmentIssues?: EnrollmentIssue[]
+
+  // Suivi ailleurs : ce patient a-t-il au moins un sous-dossier dans un autre service du même
+  // établissement (étape 3 du multi-tenant). Vit sur le patient, pas sur `PatientServiceFile`
+  // (`types/patientServiceFile.ts`) : délibéré côté back, pour rester disponible avant même
+  // qu'un sous-dossier de service existe pour ce patient — voir `patient.domain.ts#findByID`
+  // (back) et la spec §5.3/§6. N'apparaît que sur la lecture détaillée d'un patient
+  // (`patientDetailResponseSchema`), pas sur les listes ni sur create/update, d'où l'optionnel.
+  // Son affichage est la tâche 14.
+  followedElsewhere?: boolean
 }
 
 export type PatientWithTags = Patient & { pathwayTemplateTags: string[] }
