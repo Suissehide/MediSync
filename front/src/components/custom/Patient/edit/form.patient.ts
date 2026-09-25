@@ -1,5 +1,8 @@
 import { formOptions } from '@tanstack/react-form'
 
+import type { Patient } from '../../../../types/patient.ts'
+import type { PatientServiceFile } from '../../../../types/patientServiceFile.ts'
+
 // Les seize champs de parcours, d'inclusion et de contenu clinique qui vivaient ici ont
 // déménagé vers `patientServiceFileFormOpts`, plus bas dans ce fichier : ils appartiennent au
 // sous-dossier de service (`types/patientServiceFile.ts`), pas au patient (étape 3 du
@@ -64,3 +67,29 @@ export const patientServiceFileFormOpts = formOptions({
     etpFinalOutcome: '',
   },
 })
+
+// Correctif tour 1 (task-11-review.md, C1/C2/I1) — les deux fonctions qui suivent construisent
+// les défauts d'un formulaire à partir d'une lecture serveur : le premier montage ET la
+// resynchronisation après un enregistrement réussi (`edit.patient.tsx`) passent par elles, pour
+// ne jamais faire dériver `defaultValues` de deux façons différentes. Une seule règle des deux
+// côtés : `null`/l'absence de colonne valent chaîne vide, jamais autre chose — c'est cette
+// équivalence qui rend un champ non touché indétectable comme « changé » quand le serveur
+// renvoie `null` là où le formulaire tenait `''`.
+type PatientFormValues = typeof patientFormOpts.defaultValues
+type PatientServiceFileFormValues = typeof patientServiceFileFormOpts.defaultValues
+
+export const buildPatientDefaults = (data?: Partial<Patient> | null): PatientFormValues => {
+  const source = (data ?? {}) as Record<string, unknown>
+  return Object.fromEntries(
+    Object.keys(patientFormOpts.defaultValues).map((key) => [key, source[key] ?? '']),
+  ) as PatientFormValues
+}
+
+export const buildServiceFileDefaults = (
+  data?: Partial<PatientServiceFile> | null,
+): PatientServiceFileFormValues => {
+  const source = (data ?? {}) as Record<string, unknown>
+  return Object.fromEntries(
+    Object.keys(patientServiceFileFormOpts.defaultValues).map((key) => [key, source[key] ?? '']),
+  ) as PatientServiceFileFormValues
+}

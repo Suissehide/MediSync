@@ -13,6 +13,9 @@ import { patientServiceFileFormOpts } from './form.patient.ts'
 // du multi-tenant) : leur découpage ne change pas, seul le formulaire auquel ils sont liés
 // change (`patientServiceFileFormOpts` au lieu de `patientFormOpts`). `edit.patient.tsx` ne
 // monte ce composant qu'une fois la lecture du sous-dossier résolue (`serviceFileReady`).
+// Décision 2.3 de la spec, correctif I2 (task-11-review.md) : avant ce correctif, cet onglet
+// portait `medicalDiagnosis` — l'un des trois champs cliniques — sans dire qu'il appartient au
+// service courant, pas au patient partagé.
 export const PathwayInclusionFields = withForm({
   ...patientServiceFileFormOpts,
   render: ({ form }) => {
@@ -20,7 +23,7 @@ export const PathwayInclusionFields = withForm({
       <div className="h-fit flex-1 flex flex-col gap-2">
         <div className="flex items-center gap-2 mt-2">
           <h4 className="relative text-sm font-semibold">
-            Parcours et inclusion
+            Parcours et inclusion — dossier de ce service, non visible des autres services
           </h4>
           <div className="mt-1 ml-1 flex-1 border-t border-border" />
         </div>

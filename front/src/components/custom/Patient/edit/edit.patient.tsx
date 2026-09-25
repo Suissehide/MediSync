@@ -6,7 +6,7 @@ import {
   Save,
   User,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import type { MenuItem } from '../../../../constants/ui.constant.ts'
 import { useAppForm } from '../../../../hooks/formConfig.tsx'
@@ -16,12 +16,20 @@ import {
   usePatientServiceFileQuery,
 } from '../../../../queries/usePatientServiceFile.ts'
 import type { Patient, UpdatePatientParams } from '../../../../types/patient.ts'
-import type { UpdatePatientServiceFileFields } from '../../../../types/patientServiceFile.ts'
+import type {
+  PatientServiceFile,
+  UpdatePatientServiceFileFields,
+} from '../../../../types/patientServiceFile.ts'
 import { Button } from '../../../ui/button.tsx'
 import { FixedBar } from '../../../ui/fixedbar.tsx'
 import { ToggleGroup, ToggleGroupItem } from '../../../ui/toggle-group.tsx'
 import { DetailsFields } from './details.patient.tsx'
-import { patientFormOpts, patientServiceFileFormOpts } from './form.patient.ts'
+import {
+  buildPatientDefaults,
+  buildServiceFileDefaults,
+  patientFormOpts,
+  patientServiceFileFormOpts,
+} from './form.patient.ts'
 import { IdentiteFields } from './identite.patient.tsx'
 import { IdentityFields } from './identity.patient.tsx'
 import { OutcomeReviewFields } from './outcome-review.patient.tsx'
@@ -69,20 +77,46 @@ export default function EditPatient({ patient }: PatientParam) {
   // back pour treize d'entre eux — voir `form.patient.ts` pour le patron à ne pas reproduire.
   const serviceFileReady = !isServiceFilePending && !isServiceFileError
 
-  const {
-    enrollmentIssues: _,
-    id: __,
-    followedElsewhere: ___,
-    ...patientFormValues
-  } = patient ?? {}
+  // Correctif tour 1 (task-11-review.md, C1/C2) — pourquoi une référence figée plutôt que
+  // `serviceFile` lu en direct :
+  // `FormApi.update()` (appelé à chaque rendu par `useForm`) recopie `options.defaultValues`
+  // *sans condition*, mais ne touche `state.values` que si le formulaire n'a encore jamais été
+  // touché. Passer `serviceFile` (qui change à chaque relecture — y compris celle que déclenche
+  // notre propre `onSettled`) directement en `defaultValues` fait donc diverger, dès le premier
+  // champ touché, ce que `isDefaultValue` croit être la valeur de référence de ce que l'écran
+  // affiche réellement : le filtre de `changedFields` plus bas se met à comparer la saisie à une
+  // cible qui a bougé sous ses pieds, et se met à désigner comme « changés » des champs que
+  // personne n'a touchés.
+  //
+  // `serviceFileSnapshot` casse cette dérive : il ne bouge que deux fois — une fois quand la
+  // lecture initiale aboutit (`hasHydratedServiceFile`, ci-dessous), une fois après un
+  // enregistrement réussi (`onSuccess` du formulaire, plus bas), toujours à partir de ce que le
+  // serveur a effectivement renvoyé. Une relecture en arrière-plan qui n'est pas la nôtre — y
+  // compris celle déclenchée par notre propre `onSettled` — ne le touche jamais : c'est
+  // précisément ce qui empêche une valeur périmée d'écraser une valeur posée ailleurs (C2).
+  const [serviceFileSnapshot, setServiceFileSnapshot] = useState<PatientServiceFile | null>(null)
+  const hasHydratedServiceFile = useRef(false)
+
+  useEffect(() => {
+    if (hasHydratedServiceFile.current || isServiceFilePending) {
+      return
+    }
+    hasHydratedServiceFile.current = true
+    setServiceFileSnapshot(serviceFile ?? null)
+  }, [isServiceFilePending, serviceFile])
+
+  // Même figeage côté patient, pour la même raison : `patient` est lui aussi une valeur de
+  // requête vivante (`usePatientByIDQuery`, invalidée par notre propre `onSettled`), qui ne
+  // doit pas faire bouger la référence pendant que le formulaire est touché. Le formulaire
+  // patient renvoie toujours l'objet complet (jamais de filtre `isDefaultValue` sur ce corps,
+  // voir `m3` de la revue) : figer ce côté sert `reset()`/I1, pas une propriété de charge
+  // partielle.
+  const [patientSnapshot] = useState<Patient | undefined>(patient)
 
   const patientForm = useAppForm({
     ...patientFormOpts,
-    defaultValues: {
-      ...patientFormOpts.defaultValues,
-      ...patientFormValues,
-    },
-    onSubmit: ({ value }) => {
+    defaultValues: buildPatientDefaults(patientSnapshot),
+    onSubmit: ({ value, formApi }) => {
       if (!patient?.id) {
         return
       }
@@ -92,25 +126,19 @@ export default function EditPatient({ patient }: PatientParam) {
         ...value,
       } satisfies UpdatePatientParams
 
-      updatePatient.mutate(updatePatientData)
+      updatePatient.mutate(updatePatientData, {
+        onSuccess: (response) => {
+          // Referme la barre (I1) et resynchronise valeurs et défauts, pour que le prochain
+          // enregistrement compare à nouveau à ce que le serveur vient de confirmer.
+          formApi.reset(buildPatientDefaults(response))
+        },
+      })
     },
   })
 
-  const {
-    id: _sfId,
-    patientId: _sfPatientId,
-    serviceId: _sfServiceId,
-    establishmentId: _sfEstablishmentId,
-    createdAt: _sfCreatedAt,
-    ...serviceFileFormValues
-  } = serviceFile ?? {}
-
   const serviceFileForm = useAppForm({
     ...patientServiceFileFormOpts,
-    defaultValues: {
-      ...patientServiceFileFormOpts.defaultValues,
-      ...serviceFileFormValues,
-    },
+    defaultValues: buildServiceFileDefaults(serviceFileSnapshot),
     onSubmit: ({ value, formApi }) => {
       if (!patient?.id || !serviceFileReady) {
         return
@@ -119,7 +147,10 @@ export default function EditPatient({ patient }: PatientParam) {
       // Seuls les champs réellement modifiés depuis la lecture partent dans le corps du PATCH —
       // jamais un objet reconstruit à partir des défauts de `patientServiceFileFormOpts`.
       // `isDefaultValue` (pas `isDirty`, qui ne redevient jamais faux une fois un champ touché,
-      // même reporté à sa valeur d'origine) reflète l'écart réel avec ce qui a été lu.
+      // même reporté à sa valeur d'origine) reflète l'écart réel avec ce qui a été lu — et reste
+      // vrai d'un enregistrement à l'autre parce que `defaultValues` vient désormais de
+      // `serviceFileSnapshot`, une référence que rien ne bouge sans notre accord (voir plus
+      // haut).
       const changedFields = (
         Object.keys(value) as (keyof typeof value)[]
       ).filter((field) => formApi.getFieldMeta(field)?.isDefaultValue === false)
@@ -132,10 +163,21 @@ export default function EditPatient({ patient }: PatientParam) {
         changedFields.map((field) => [field, value[field]]),
       ) as UpdatePatientServiceFileFields
 
-      updatePatientServiceFile.mutate({
-        patientID: patient.id,
-        ...changedBody,
-      })
+      updatePatientServiceFile.mutate(
+        {
+          patientID: patient.id,
+          ...changedBody,
+        },
+        {
+          onSuccess: (response) => {
+            // Même correctif que côté patient : referme la barre (I1), et surtout avance
+            // `serviceFileSnapshot` à ce que le serveur vient de confirmer — jamais à ce
+            // qu'une relecture en arrière-plan pourrait rapporter entre-temps.
+            setServiceFileSnapshot(response)
+            formApi.reset(buildServiceFileDefaults(response))
+          },
+        },
+      )
     },
   })
 
