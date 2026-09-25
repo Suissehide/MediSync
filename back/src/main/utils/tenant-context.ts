@@ -23,8 +23,20 @@ import { TenantContextMissingError } from './tenant-errors'
 class TenantContext implements TenantContextInterface {
   private readonly storage = new AsyncLocalStorage<TenantStore | undefined>()
 
+  // TOUR DE CORRECTION 3 (tâche 1) — la revue a trouvé, par exécution, une porte que ni le nom
+  // d'une méthode ni la forme d'un appel ne peuvent surveiller : muter en place l'objet que
+  // `peek()`/`getStore()` renvoie (`const s = tenantContext.peek(); (s as any).kind =
+  // 'superadmin'`) change le store que TOUT code lira ensuite dans la même portée asynchrone —
+  // sans jamais appeler `run` ni `enterWith`. `Object.freeze` sur le store CONSTRUIT ICI, avant
+  // qu'il n'entre dans le stockage, ferme cette porte à l'exécution plutôt que de se contenter de
+  // la nommer comme irréductible : une mutation ultérieure échoue silencieusement en mode non
+  // strict, ou lève un `TypeError` en mode strict (les modules ES le sont — voir
+  // `tenant-context.test.ts` pour la preuve par exécution). Gel superficiel seulement (`kind`,
+  // et `tenant` comme référence) : aucun appelant connu ne mute un store après construction (les
+  // deux emplois de `peek()` hors de ce fichier ne font que LIRE ses colonnes, voir
+  // `activityLog.repository.ts`), donc rien ne casse.
   enter(tenant: Tenant): void {
-    this.storage.enterWith({ kind: 'tenant', tenant })
+    this.storage.enterWith(Object.freeze({ kind: 'tenant', tenant }))
   }
 
   clear(): void {
@@ -32,7 +44,7 @@ class TenantContext implements TenantContextInterface {
   }
 
   run<T>(tenant: Tenant, fn: () => Promise<T>): Promise<T> {
-    return this.storage.run({ kind: 'tenant', tenant }, fn)
+    return this.storage.run(Object.freeze({ kind: 'tenant', tenant }), fn)
   }
 
   peek(): TenantStore | undefined {
@@ -65,7 +77,7 @@ class TenantContext implements TenantContextInterface {
   }
 
   runAsSystem<T>(fn: () => Promise<T>): Promise<T> {
-    return this.storage.run({ kind: 'system' }, fn)
+    return this.storage.run(Object.freeze({ kind: 'system' }), fn)
   }
 
   // Troisieme contexte du garde-fou (tache 1, etape 4a) : substitue au filtre de tenant une
@@ -76,7 +88,7 @@ class TenantContext implements TenantContextInterface {
   // portee du contexte, et l'extension lit le tenant ambiant. Toujours `await` A L'INTERIEUR du
   // rappel.
   runAsSuperAdmin<T>(fn: () => Promise<T>): Promise<T> {
-    return this.storage.run({ kind: 'superadmin' }, fn)
+    return this.storage.run(Object.freeze({ kind: 'superadmin' }), fn)
   }
 }
 

@@ -1635,8 +1635,16 @@ describe('monotonie : le contexte superadmin ne change aucun verdict pour tenant
 // relation vers un modele global, ni d'une relation qui en repart. Voir le commentaire de
 // assertNoGlobalBridgeUnderSuperAdmin (tenant-guard.ts) pour le detail du remede et pourquoi il
 // reste local au contexte superadmin (le contexte tenant est protege par le `where` de sa
-// racine, jamais pose sous superadmin).
-describe('aucun pont par un modele global sous superadmin (revue, tour 2)', () => {
+// racine, jamais pose sous superadmin — sauf par une relation A-PLUSIEURS d'un modele global,
+// qui reste un trou preexistant non traite ici, voir le meme commentaire, tour 3).
+//
+// TOUR DE CORRECTION 3 — Critique : une racine GLOBALE contournait ENTIEREMENT la liste, puisque
+// `assertTenantScope` retourne via `assertGlobalScope` avant meme d'atteindre la porte de
+// permission. `Establishment.findUnique({ include: { patients: true } })` et
+// `Establishment.deleteMany({})` passaient tous deux. La recherche ci-dessous porte donc
+// maintenant aussi sur les racines globales (`User`, `Establishment`), pas seulement sur les
+// racines declarees dans SUPERADMIN_OPERATIONS.
+describe('aucun pont par un modele global sous superadmin (revue, tours 2 et 3)', () => {
   const store = { kind: 'superadmin' } as const
 
   type Famille = 'service' | 'etablissement' | 'global'
@@ -1662,13 +1670,14 @@ describe('aucun pont par un modele global sous superadmin (revue, tour 2)', () =
 
   // Parcours en largeur de MODEL_RELATIONS depuis `racine`, jusqu'a une profondeur bornee — ce
   // graphe porte des cycles (Slot <-> Appointment, Pathway <-> Slot...), la profondeur est donc
-  // la seule garde necessaire, pas un ensemble de visites. Chaque chemin retenu s'arrete des
-  // qu'il atteint pour la PREMIERE fois un modele global : c'est le point exact ou
-  // assertNoGlobalBridgeUnderSuperAdmin doit refuser, et un chemin plus long derriere lui ne
-  // serait de toute facon jamais atteint — la recursion de assertNestedInclude s'arrete au
-  // premier throw, donc le premier pont trouve est la seule chose qu'une descente reelle peut
-  // jamais essayer de franchir.
-  const cheminsVersUnModeleGlobal = (racine: string, profondeurMax: number): string[][] => {
+  // la seule garde necessaire, pas un ensemble de visites. Chaque chemin retenu s'arrete au
+  // PREMIER saut qui franchit la frontiere global/tenant (dans un sens comme dans l'autre — voir
+  // TOUR 3 ci-dessus : une racine globale franchit la frontiere des le premier saut, pas apres
+  // avoir atteint un modele global en profondeur, puisqu'elle EST deja ce modele) : c'est le
+  // point exact ou assertNoGlobalBridgeUnderSuperAdmin doit refuser, et un chemin plus long
+  // derriere lui ne serait de toute facon jamais atteint — la recursion de assertNestedInclude
+  // s'arrete au premier throw.
+  const cheminsQuiFranchissentLaFrontiereGlobale = (racine: string, profondeurMax: number): string[][] => {
     const resultats: string[][] = []
     const file: Array<{ modele: string; chemin: string[] }> = [{ modele: racine, chemin: [] }]
     while (file.length > 0) {
@@ -1678,7 +1687,8 @@ describe('aucun pont par un modele global sous superadmin (revue, tour 2)', () =
       }
       for (const [relationField, cible] of Object.entries(MODEL_RELATIONS[courant.modele] ?? {})) {
         const nouveauChemin = [...courant.chemin, relationField]
-        if (familleDe(cible) === 'global') {
+        const franchit = (familleDe(courant.modele) === 'global') !== (familleDe(cible) === 'global')
+        if (franchit) {
           resultats.push(nouveauChemin)
           continue
         }
@@ -1694,26 +1704,36 @@ describe('aucun pont par un modele global sous superadmin (revue, tour 2)', () =
     .filter(([, operations]) => operations.includes('findMany'))
     .map(([modele]) => modele)
 
+  // Les deux racines globales (tour 3) : lisibles sans declaration (SUPERADMIN_SAFE_GLOBAL_
+  // OPERATIONS, tenant-guard.ts), donc des racines tout aussi legitimes qu'un modele declare.
+  // `findUnique` plutot que `findMany` : assertGlobalInclude bloque deja `findMany` + un include
+  // vers une relation de GLOBAL_TENANT_RELATIONS, independamment de cette recherche — c'est
+  // precisement le cas (`findUnique`, autorise par assertGlobalInclude) que la revue a cite, et
+  // c'est lui qui isole vraiment ce que assertNoGlobalBridgeUnderSuperAdmin doit refuser seul.
+  const racinesGlobales = ['User', 'Establishment']
+
   it('part bien de plus d un modele (sinon le test suivant ne cherche presque rien)', () => {
     expect(racinesAvecInclude.length).toBeGreaterThanOrEqual(3)
+    expect(racinesGlobales).toEqual(['User', 'Establishment'])
   })
 
   // Le coeur de l'epreuve demandee par la revue : chercher la chaine qui passe encore, pas
-  // seulement verifier que l'exemple cite echoue. Chaque chaine qui touche un modele global,
-  // depuis chacune des racines declarees avec `findMany`, doit etre refusee — le tableau des
-  // violations (vide si tout est refuse) s'affiche dans le diff Jest en cas d'echec, avec la
-  // racine et le chemin exact qui aurait fui.
-  it('refuse toute chaine qui atteint un modele global, depuis chaque racine declaree, a toute profondeur', () => {
-    // Verifie exhaustivement (85 chemins distincts sur la version actuelle du schema, comptes le
-    // jour de ce correctif) plutot que sur l'echantillon d'un exemple : chaque chemin depuis
-    // chacune des racines declarees avec `findMany`, jusqu'a profondeur 5, qui atteint pour la
-    // premiere fois un modele global.
+  // seulement verifier que l'exemple cite echoue — et, au tour 3, depuis une racine globale
+  // comme depuis les autres. Le tableau des violations (vide si tout est refuse) s'affiche dans
+  // le diff Jest en cas d'echec, avec la racine et le chemin exact qui aurait fui.
+  it('refuse toute chaine qui franchit la frontiere globale/tenant, depuis chaque racine — declaree ou globale —, a toute profondeur', () => {
     const violations: { racine: string; chemin: string[] }[] = []
-    for (const racine of racinesAvecInclude) {
-      for (const chemin of cheminsVersUnModeleGlobal(racine, 5)) {
+    const racinesEtOperations: Array<{ racine: string; operation: string }> = [
+      ...racinesAvecInclude.map((racine) => ({ racine, operation: 'findMany' })),
+      ...racinesGlobales.map((racine) => ({ racine, operation: 'findUnique' })),
+    ]
+    for (const { racine, operation } of racinesEtOperations) {
+      for (const chemin of cheminsQuiFranchissentLaFrontiereGlobale(racine, 5)) {
         const include = includeDuChemin(chemin)
+        const args: Record<string, unknown> =
+          operation === 'findUnique' ? { where: { id: 'x1' }, include } : { include }
         try {
-          assertTenantScope({ model: racine, operation: 'findMany', args: { include } }, store)
+          assertTenantScope({ model: racine, operation, args }, store)
           violations.push({ racine, chemin })
         } catch (erreur) {
           if (!(erreur instanceof TenantScopeMissingError)) {
@@ -1725,10 +1745,10 @@ describe('aucun pont par un modele global sous superadmin (revue, tour 2)', () =
     expect(violations).toEqual([])
   })
 
-  // L'exemple nomme par la revue, garde tel quel en plus de la recherche ci-dessus : un echec de
-  // lecture isole sur ce cas precis doit rester lisible sans avoir a interpreter un tableau de
-  // violations.
-  it('refuse Service.findMany -> establishment -> patients, l exemple cite par la revue', () => {
+  // Les deux exemples nommes par la revue, gardes tels quels en plus de la recherche ci-dessus :
+  // un echec de lecture isole sur ces cas precis doit rester lisible sans avoir a interpreter un
+  // tableau de violations.
+  it('refuse Service.findMany -> establishment -> patients, l exemple cite au tour 2', () => {
     expect(() =>
       assertTenantScope(
         {
@@ -1741,10 +1761,32 @@ describe('aucun pont par un modele global sous superadmin (revue, tour 2)', () =
     ).toThrow(TenantScopeMissingError)
   })
 
+  it('refuse Establishment.findUnique -> patients, l exemple cite au tour 3', () => {
+    expect(() =>
+      assertTenantScope(
+        {
+          model: 'Establishment',
+          operation: 'findUnique',
+          args: { where: { id: 'e1' }, include: { patients: true } },
+        },
+        store,
+      ),
+    ).toThrow(TenantScopeMissingError)
+  })
+
+  it('refuse Establishment.deleteMany, l autre exemple cite au tour 3', () => {
+    expect(() => assertTenantScope({ model: 'Establishment', operation: 'deleteMany', args: {} }, store)).toThrow(
+      TenantScopeMissingError,
+    )
+  })
+
   // L'autre sens, explicitement demande par la revue : le correctif ne doit pas avoir referme
   // plus que necessaire. Les dix couples declares (SUPERADMIN_OPERATIONS), nus et avec un
-  // `where` libre, doivent tous continuer a passer.
-  it('laisse passer les dix couples declares, nus et avec un where libre', () => {
+  // `where` libre, doivent tous continuer a passer — et, depuis le tour 3, une lecture NUE (sans
+  // include) d'une racine globale doit rester possible : c'est le contournement documente
+  // au-dessus de SUPERADMIN_OPERATIONS (deux lectures separees, jointure en memoire) pour les
+  // taches 6, 7 et 9.
+  it('laisse passer les dix couples declares, nus et avec un where libre, et les lectures nues de User/Establishment', () => {
     const casDeclares: Array<{ model: string; operation: string; args: Record<string, unknown> }> = [
       { model: 'Service', operation: 'count', args: {} },
       { model: 'Service', operation: 'count', args: { where: { establishmentId: 'e1' } } },
@@ -1763,6 +1805,12 @@ describe('aucun pont par un modele global sous superadmin (revue, tour 2)', () =
       { model: 'Patient', operation: 'count', args: { where: { establishmentId: 'e1' } } },
       { model: 'ActivityLog', operation: 'findMany', args: {} },
       { model: 'ActivityLog', operation: 'count', args: {} },
+      // Le contournement sûr documenté au-dessus de SUPERADMIN_OPERATIONS : lectures nues,
+      // aucun `include` vers l'autre côté du pont.
+      { model: 'User', operation: 'findMany', args: {} },
+      { model: 'User', operation: 'findMany', args: { where: { id: { in: ['u1', 'u2'] } } } },
+      { model: 'Establishment', operation: 'findMany', args: {} },
+      { model: 'Establishment', operation: 'findUnique', args: { where: { id: 'e1' } } },
     ]
     for (const cas of casDeclares) {
       expect(() => assertTenantScope(cas, store)).not.toThrow()

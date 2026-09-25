@@ -63,6 +63,48 @@ describe('TenantContext', () => {
     expect(ctx.peek()).toBeUndefined()
   })
 
+  // TOUR DE CORRECTION 3 (tache 1) — Important de la revue : muter en place l'objet rendu par
+  // `peek()` est une porte d'entree dans un mode non-tenant qu'aucune analyse de source ne peut
+  // surveiller (voir runAsSystem-unicite.test.ts). Le remede choisi n'est pas une declaration de
+  // cette limite, mais une fermeture a l'execution : le store est gele (`Object.freeze`) avant
+  // d'entrer dans le stockage. Preuve par execution, dans les DEUX sens demandes par la revue —
+  // que ca casse un appelant legitime (non : la lecture continue de fonctionner), et que ca ferme
+  // reellement la porte (oui : la mutation leve, elle ne reussit jamais silencieusement).
+  it('gele le store : une mutation en place echoue plutot que de faire glisser le contexte', async () => {
+    const ctx = new TenantContext()
+    await ctx.runAsSuperAdmin(async () => {
+      await Promise.resolve()
+      const store = ctx.peek()
+      expect(store).toBeDefined()
+      expect(Object.isFrozen(store)).toBe(true)
+      // Les modules ES (donc ce fichier compile) tournent en mode strict : une affectation sur
+      // une propriete en lecture seule y leve un TypeError plutot que d'echouer en silence — la
+      // encore verifie par execution, pas suppose.
+      expect(() => {
+        // biome-ignore lint/suspicious/noExplicitAny: sabotage delibere pour l'epreuve
+        ;(store as any).kind = 'tenant'
+      }).toThrow(TypeError)
+      // La mutation a echoue : le store lu juste apres reste superadmin, pas tenant.
+      expect(ctx.peek()).toEqual({ kind: 'superadmin' })
+    })
+  })
+
+  it('runAsSuperAdmin et runAsSystem restent utilisables normalement malgre le gel (aucun appelant legitime ne mute le store)', async () => {
+    const ctx = new TenantContext()
+    // Les deux emplois legitimes de production lisent seulement le store (activityLog.repository.ts,
+    // tenant-guard.ts) — reproduit ici par une lecture ordinaire, qui doit continuer a fonctionner
+    // sans exception ni contournement.
+    await ctx.runAsSystem(async () => {
+      await Promise.resolve()
+      expect(ctx.peek()).toEqual({ kind: 'system' })
+    })
+    await ctx.run(tenant, async () => {
+      await Promise.resolve()
+      expect(ctx.current().establishmentId).toBe('e1')
+      expect(ctx.scope()).toEqual({ serviceId: 's1', establishmentId: 'e1' })
+    })
+  })
+
   // `enter` utilise `enterWith`, qui teinte le contexte asynchrone jusqu'a
   // la fin de la chaine sans refermer sa portee : sans `clear`, une requete
   // suivante sur le meme worker heriterait du tenant de la precedente.

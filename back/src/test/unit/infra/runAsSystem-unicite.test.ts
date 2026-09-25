@@ -39,7 +39,11 @@ import ts from 'typescript'
 //   B. tout ce qui INVOQUE la capacite d'entrer dans un mode non-tenant (system OU superadmin),
 //      par QUELQUE PORTE que ce soit de `AsyncLocalStorage` — REECRIT au tour de correction 1 de
 //      la tache 1, puis a nouveau resserre au tour de correction 2 (voir le commentaire
-//      d'appelsCapaciteDeStore plus bas pour le detail des deux tours).
+//      d'appelsCapaciteDeStore plus bas pour le detail des deux tours) ;
+//   C. tout ce qui ECRIT LITTERALEMENT la valeur `{ kind: 'system' }` / `{ kind: 'superadmin' }`
+//      — l'ANCIEN volet B, retabli au tour de correction 3 a cote du nouveau plutot qu'a sa
+//      place : les deux se completent, aucun des deux seul ne suffit (voir le commentaire juste
+//      avant METHODES_QUI_POSENT_UN_STORE pour le detail).
 //
 // Volet A : reference a `runAsSystem`, sous forme d'ACCES A LA PROPRIETE plutot que du seul
 // appel `.runAsSystem(`. `\b` (limite de mot) ferme la forme sur `.bind` (V2) et sur l'espace
@@ -69,6 +73,25 @@ const AUTORISES = [
 // `run`, `runAsSystem` et `runAsSuperAdmin`, et qui est donc, par construction, le seul endroit
 // legitime d'ou peut naitre un changement de store — tenant, non-tenant, ou son effacement.
 const SEUL_CONSTRUCTEUR_LEGITIME = 'utils/tenant-context.ts'
+
+// Volet C (retabli au tour de correction 3) : construction TEXTUELLE de la valeur
+// `{ kind: 'system' }` / `{ kind: 'superadmin' }` (avec ou sans espaces, guillemets simples ou
+// doubles) — PAS sa lecture (`store.kind === 'system'`, dans tenant-guard.ts, ne matche pas : il
+// n'y a pas de `:` entre `kind` et `'system'`). Ligne par ligne, comme l'ancien volet B : les
+// limites connues (multi-ligne, virgule finale, gabarit, etalement, constante intermediaire) sont
+// les memes qu'au tour de correction 1, et c'est PRECISEMENT pour ca que ce volet ne remplace pas
+// le volet B — il le complete, sur les formes que le volet B ne voit pas (`.call`, `.apply`,
+// `Reflect.apply`, cle de crochet calculee, tant que la VALEUR reste ecrite en clair).
+const CONSTRUCTION_MODE_SYSTEME = /\{\s*kind\s*:\s*['"]system['"]\s*\}/
+const CONSTRUCTION_MODE_SUPERADMIN = /\{\s*kind\s*:\s*['"]superadmin['"]\s*\}/
+
+// `types/utils/tenant-context.ts` declare le TYPE `TenantStore = { kind: 'tenant'; ... } | {
+// kind: 'system' } | { kind: 'superadmin' }` : la meme sous-chaine y apparait textuellement, mais
+// a titre de membre d'union TypeScript, jamais construite comme valeur executee. Un fichier de
+// declaration de type pur ne peut, par construction, faire entrer aucun contexte en mode
+// non-tenant — il est donc exclu du volet C plutot que de tenter de distinguer par regex un
+// litteral de type d'un litteral de valeur (les deux s'ecrivent `{ kind: 'system' }`).
+const FICHIER_DECLARATION_TYPE = 'types/utils/tenant-context.ts'
 
 // Jest tourne via @swc/jest en module CommonJS (jest.config.ts) : __dirname est disponible.
 const RACINE = join(__dirname, '../../../main')
@@ -138,12 +161,23 @@ const lignesCorrespondantes = (racine: string, motif: RegExp) =>
 //     ce qui couvre aussi bien `run(store, fn)` que `run(store, fn, undefined)` ou un appel
 //     etale.
 //
-// CE QUE CE VOLET NE COUVRE TOUJOURS PAS, dit honnetement plutot que par une expression qui
-// ferait semblant de le couvrir : un appel invoque par une forme qui ne prononce jamais
-// litteralement `run` ou `enterWith` a l'endroit de l'appel — `.call`/`.apply`/`Reflect.apply`,
-// ou une cle de crochet CALCULEE (`storage[unNomVariable](...)`). Fermer ce reste exigerait soit
-// une analyse de flux de donnees complete (savoir que `unNomVariable` vaut `'run'` a
-// l'execution), soit une instrumentation a l'execution (intercepter reellement
+// TOUR DE CORRECTION 3 (tache 1) — Important de la re-revue : le volet B (nom de methode) perd
+// quatre couvertures que l'ANCIEN volet, purement textuel, tenait sans meme les viser
+// deliberement — `.call`, `.apply`, `Reflect.apply` et une cle de crochet CALCULEE partagent un
+// point commun que le volet B, fonde sur le nom de la methode APPELEE, ne peut pas voir : aucun
+// n'ecrit litteralement `run(` ou `enterWith(` a l'endroit de l'appel — mais TOUS, dans leur
+// forme la plus simple, continuent d'ecrire la VALEUR `{ kind: 'system' }` ou
+// `{ kind: 'superadmin' }` en clair, quelque part sur la meme ligne. C'est exactement ce que
+// l'ancien volet textuel (Critique 2, tour 1) surveillait, et qu'aucun volet n'a plus surveille
+// depuis qu'il a ete remplace plutot que complete. Remede retenu ici, estime a dix lignes par la
+// revue : GARDER l'ancien volet textuel comme TROISIEME volet, a cote du volet B plutot qu'a sa
+// place — les deux se completent, aucun des deux ne remplace l'autre (voir Volet C plus bas).
+//
+// CE QUE CES TROIS VOLETS NE COUVRENT TOUJOURS PAS, dit honnetement plutot que par une expression
+// qui ferait semblant de le couvrir : une valeur CONSTRUITE PROGRESSIVEMENT SANS jamais ecrire le
+// litteral complet nulle part (`const s = {}; s.kind = 'sys' + 'tem'`, ou une cle de crochet dont
+// la valeur ET le nom sont tous deux indirects). Fermer ce reste exigerait une analyse de flux de
+// donnees complete, ou une instrumentation a l'execution (intercepter reellement
 // `AsyncLocalStorage.prototype.run`/`.enterWith`) plutot qu'une lecture statique des sources — un
 // chantier a part, hors de ce qu'un test de conformite des sources peut honnetement garantir.
 // C'est aussi, plus fondamentalement, une limite du langage plutot que de ce test : le champ
@@ -153,6 +187,32 @@ const lignesCorrespondantes = (racine: string, motif: RegExp) =>
 // conteneur Awilix) peut lire `(tenantContext as any).storage` et l'invoquer directement, sans
 // qu'aucune analyse de SOURCE ne puisse s'y opposer — une vraie frontiere exigerait une
 // encapsulation qui survit a l'execution (`#champPrive` ou `WeakMap`), pas seulement au typage.
+//
+// DEUX PORTES SUPPLEMENTAIRES, TROUVEES PAR EXECUTION AU TOUR 3, DECLAREES ICI FAUTE DE POUVOIR
+// LES FERMER PAR UNE LECTURE STATIQUE DES SOURCES :
+//
+//   1. MUTER EN PLACE l'objet que `peek()`/`getStore()` renvoie (`const s = tenantContext.peek();
+//      (s as any).kind = 'superadmin'`) — aucun appel a `run`/`enterWith`, aucun litteral
+//      `{ kind: ... }` nulle part : rien qu'un des trois volets ci-dessous puisse voir. FERMEE,
+//      elle, mais PAS par un volet de ce fichier : le store est desormais gele
+//      (`Object.freeze`) a sa construction dans `utils/tenant-context.ts`, donc une mutation de
+//      ce genre echoue a l'execution (`TypeError` en mode strict — voir
+//      `tenant-context.test.ts`, qui le prouve par execution) plutot que de reussir en silence.
+//      C'est un remede a l'execution, pas une declaration : « si peek() peut rendre une copie
+//      figee sans casser d'appelant, c'est mieux qu'une declaration » — verifie, ca ne casse
+//      aucun appelant connu (les deux emplois de `peek()` hors de ce fichier ne font que LIRE).
+//   2. REJOUER UN INSTANTANE D'`AsyncLocalStorage` CAPTURE DANS UNE PORTEE LEGITIME — Node expose
+//      `AsyncLocalStorage.snapshot()` (statique) et `asyncLocalStorage.bind(fn)` (instance), qui
+//      capturent le contexte COURANT dans une fonction ordinaire, rejouable n'importe ou, y
+//      compris hors de la portee ou elle a ete capturee. Une capture faite legitimement
+//      A L'INTERIEUR d'un `runAsSuperAdmin` produit une fonction qui, invoquee PLUS TARD depuis
+//      N'IMPORTE QUEL fichier, y fait retomber `peek()` sur le contexte superadmin — sans jamais
+//      ecrire `run(`, `enterWith(`, ni aucun litteral `{ kind: ... }` au point d'appel : le site
+//      d'invocation est un appel de fonction ORDINAIRE, syntaxiquement indiscernable de n'importe
+//      quel autre. NI le volet B (nom de methode) NI le volet C (litteral de valeur) ne peuvent
+//      la voir, et elle n'est PAS fermee : `AsyncLocalStorage.snapshot`/`.bind` ne sont utilises
+//      nulle part dans ce depot a ce jour (verifie), donc rien ne l'exploite aujourd'hui — mais
+//      rien dans ce fichier ne le garantirait si quelqu'un commencait a les utiliser.
 const METHODES_QUI_POSENT_UN_STORE = new Set(['run', 'enterWith'])
 
 const appelsCapaciteDeStore = (racine: string): { fichier: string; ligne: number }[] =>
@@ -225,20 +285,41 @@ describe('unicite de l exception runAsSystem au cloisonnement multi-tenant', () 
       expect(appel.fichier).toBe(SEUL_CONSTRUCTEUR_LEGITIME)
     }
   })
+
+  it('n ecrit litteralement la valeur { kind: "system" } / { kind: "superadmin" } qu au seul endroit legitime (volet C : le texte, en complement du volet B)', () => {
+    const constructionsSysteme = lignesCorrespondantes(RACINE, CONSTRUCTION_MODE_SYSTEME).filter(
+      (emplacement) => emplacement.fichier !== FICHIER_DECLARATION_TYPE,
+    )
+    const constructionsSuperadmin = lignesCorrespondantes(RACINE, CONSTRUCTION_MODE_SUPERADMIN).filter(
+      (emplacement) => emplacement.fichier !== FICHIER_DECLARATION_TYPE,
+    )
+
+    // Une seule construction textuelle de chaque valeur dans tout src/main (hors declaration de
+    // type), et elle doit vivre dans le fichier qui possede `runAsSystem`/`runAsSuperAdmin`. Ce
+    // volet attrape ce que le volet B (nom de methode) ne peut pas voir : `.call`, `.apply`,
+    // `Reflect.apply`, une cle de crochet calculee — tant que la valeur elle-meme reste ecrite en
+    // clair, peu importe la forme de l'appel qui la consomme.
+    expect(constructionsSysteme).toHaveLength(1)
+    expect(constructionsSysteme[0]?.fichier).toBe(SEUL_CONSTRUCTEUR_LEGITIME)
+    expect(constructionsSuperadmin).toHaveLength(1)
+    expect(constructionsSuperadmin[0]?.fichier).toBe(SEUL_CONSTRUCTEUR_LEGITIME)
+  })
 })
 
-// Ce que ces deux volets NE couvrent PAS, dit honnetement plutot que par une expression qui
-// ferait semblant de le couvrir (revue tache 7, tour 1 ; complete aux tours de correction 1 et 2
-// de la tache 1 — voir le commentaire d'appelsCapaciteDeStore pour le detail du second volet) :
-// un appel a `runAsSystem`/`runAsSuperAdmin`, ou une invocation directe de `.run(`/`.enterWith(`,
-// depuis `back/src/test` (par exemple un test qui fabriquerait un contexte systeme ou superadmin
-// de toutes pieces). `RACINE` ne lit que `src/main` — le code de production livre — jamais
-// `src/test`. Ce n'est pas un oubli : les tests unitaires legitimes de ce depot construisent deja
-// `{ kind: 'system' }` et `{ kind: 'superadmin' }` directement (repository-scope.test.ts,
-// tenant-context.test.ts, tenant-guard.test.ts) pour eprouver le garde-fou lui-meme, si bien
-// qu'etendre ce scan a `src/test` exigerait une liste d'autorisation separee pour les tests — un
-// chantier a part, hors du remede demande ici, et qui recoupe la meme limite deja actee pour la
-// porte de typage (`npm run build` ne type pas `src/test` non plus : voir tache 7, revue, mineur
-// m4). Un `runAsSystem`, un `runAsSuperAdmin` ou un appel `.run(`/`.enterWith(` ecrit dans un
-// fichier de test n'active d'ailleurs rien en production : il ne peut agir que sur l'execution de
-// ce test-la.
+// Ce que ces trois volets NE couvrent PAS, dit honnetement plutot que par une expression qui
+// ferait semblant de le couvrir (revue tache 7, tour 1 ; complete aux tours de correction 1, 2 et
+// 3 de la tache 1 — voir le commentaire d'appelsCapaciteDeStore pour le detail des trois volets,
+// et les deux portes declarees juste apres lui) : un appel a `runAsSystem`/`runAsSuperAdmin`, une
+// invocation directe de `.run(`/`.enterWith(`, ou une construction litterale de
+// `{ kind: 'system' }`/`{ kind: 'superadmin' }`, depuis `back/src/test` (par exemple un test qui
+// fabriquerait un contexte systeme ou superadmin de toutes pieces). `RACINE` ne lit que
+// `src/main` — le code de production livre — jamais `src/test`. Ce n'est pas un oubli : les
+// tests unitaires legitimes de ce depot construisent deja `{ kind: 'system' }` et
+// `{ kind: 'superadmin' }` directement (repository-scope.test.ts, tenant-context.test.ts,
+// tenant-guard.test.ts) pour eprouver le garde-fou lui-meme, si bien qu'etendre ce scan a
+// `src/test` exigerait une liste d'autorisation separee pour les tests — un chantier a part, hors
+// du remede demande ici, et qui recoupe la meme limite deja actee pour la porte de typage
+// (`npm run build` ne type pas `src/test` non plus : voir tache 7, revue, mineur m4). Un
+// `runAsSystem`, un `runAsSuperAdmin`, un appel `.run(`/`.enterWith(` ou une construction
+// litterale ecrits dans un fichier de test n'activent d'ailleurs rien en production : ils ne
+// peuvent agir que sur l'execution de ce test-la.
