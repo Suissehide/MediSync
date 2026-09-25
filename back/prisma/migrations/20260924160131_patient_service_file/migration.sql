@@ -144,6 +144,22 @@ ALTER TABLE "EnrollmentIssue" ADD CONSTRAINT "EnrollmentIssue_patientId_serviceI
 -- AddForeignKey
 ALTER TABLE "DiagnosticEducatif" ADD CONSTRAINT "DiagnosticEducatif_patientId_serviceId_fkey" FOREIGN KEY ("patientId", "serviceId") REFERENCES "PatientServiceFile"("patientId", "serviceId") ON DELETE CASCADE ON UPDATE CASCADE;
 
+-- Retirer les deux anciennes contraintes vers "Patient" (posees dans la migration
+-- 20260922144905_multi_tenant_socle) : "DiagnosticEducatif" et "EnrollmentIssue" sont des
+-- modeles de service, ils ne dependent plus que du sous-dossier de service depuis les deux
+-- AddForeignKey ci-dessus. Les laisser en place ferait coexister deux parents pour la meme
+-- ligne — une derive que `prisma migrate diff` contre le schema (qui ne declare plus que la
+-- relation `serviceFile`) proposerait un jour de corriger, a un moment qu'on n'aura pas choisi.
+-- Posees ici, apres les deux contraintes precedentes et non avant : l'ordre a l'interieur du
+-- temps 3 n'a pas d'effet sur la validite du retrait (retirer une contrainte ne valide rien),
+-- mais il suit la meme logique de lecture que le reste du fichier — poser le nouveau avant de
+-- retirer l'ancien.
+-- DropForeignKey
+ALTER TABLE "EnrollmentIssue" DROP CONSTRAINT "EnrollmentIssue_patientId_establishmentId_fkey";
+
+-- DropForeignKey
+ALTER TABLE "DiagnosticEducatif" DROP CONSTRAINT "DiagnosticEducatif_patientId_establishmentId_fkey";
+
 -- Nettoyer : les seize colonnes ont ete recopiees plus haut, elles quittent "Patient".
 -- AlterTable
 ALTER TABLE "Patient"
