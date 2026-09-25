@@ -1,3 +1,5 @@
+import * as XLSX from 'xlsx'
+
 import { buildTestApp, type TestApp } from './setup/app'
 import { testDb, truncateAll } from './setup/db'
 import {
@@ -155,7 +157,7 @@ describe('filtrage des champs cliniques selon clinical:read / clinical:write', (
     await testDb.$disconnect()
   })
 
-  it('les retire pour un secretariat, sur la fiche, le sous-dossier, la liste et le creneau', async () => {
+  it('les retire pour un secretariat, sur le sous-dossier et sur la transmission embarquee par un creneau', async () => {
     const cookies = secretariatCookies
 
     const one = (await get(cookies, `/patient/${patientId}`)).json()
@@ -165,7 +167,9 @@ describe('filtrage des champs cliniques selon clinical:read / clinical:write', (
     // (patient:read) — le filtrage doit s'y appliquer sans modification
     // (spec §5.2). "Comme aujourd'hui" : trois champs cliniques masques sur
     // seize, les donnees administratives du parcours restent visibles.
-    const file = (await get(cookies, `/patient/${patientId}/service-file`)).json()
+    const file = (
+      await get(cookies, `/patient/${patientId}/service-file`)
+    ).json()
     expect(file).toMatchObject({
       etpDecision: 'oui',
       goal: 'objectif',
@@ -178,14 +182,27 @@ describe('filtrage des champs cliniques selon clinical:read / clinical:write', (
 
     const list = (await get(cookies, '/patient')).json()
     expect(list).toHaveLength(1)
+    // `notes` n'est plus une colonne de `Patient` depuis l'etape 3 : cette
+    // assertion passe deja quand le crochet de sortie est entierement
+    // neutralise (verifie a la relecture de la tache 8), elle ne prouve donc
+    // rien aujourd'hui. Gardee volontairement comme filet d'avance pour les
+    // taches 6/7/12/13, qui vont imbriquer le sous-dossier dans la liste.
     expect(list[0]).not.toHaveProperty('notes')
 
     // Patient embarque par un creneau : rendez-vous -> participant -> patient.
     const slots = await get(cookies, '/slot')
     const serialized = slots.body
     expect(slots.statusCode).toBe(200)
+    // notes/medicalDiagnosis ne sont plus des colonnes de `Patient` non plus :
+    // memes raisons que ci-dessus, ces deux-la ne prouvent rien aujourd'hui.
+    // Filets d'avance pour les memes taches, qui vont imbriquer le
+    // sous-dossier sous un creneau.
     expect(serialized).not.toContain('NOTE-SECRETE')
     expect(serialized).not.toContain('DIAGNOSTIC-SECRET')
+    // Celle-ci, en revanche, prouve quelque chose des aujourd'hui :
+    // `transmissionNotes` vit sur `AppointmentPatient`, un modele que le
+    // creneau embarque reellement (rendez-vous -> participant) ; sa presence
+    // ici montrerait que le crochet de sortie ne recurse pas.
     expect(serialized).not.toContain('TRANSMISSION-SECRETE')
     // Le reste de la reponse est bien la : le filtre retire des champs, pas
     // la charge utile.
@@ -202,7 +219,9 @@ describe('filtrage des champs cliniques selon clinical:read / clinical:write', (
     // bien les trois champs sur le sous-dossier (pas seulement leur absence
     // ne suffit pas a prouver le filtrage : il faut aussi prouver qu'ils
     // sont bien rendus a qui y a droit).
-    const file = (await get(cookies, `/patient/${patientId}/service-file`)).json()
+    const file = (
+      await get(cookies, `/patient/${patientId}/service-file`)
+    ).json()
     expect(file).toMatchObject({
       notes: 'NOTE-SECRETE',
       details: 'DETAIL-SECRET',
@@ -220,15 +239,44 @@ describe('filtrage des champs cliniques selon clinical:read / clinical:write', (
 
     expect(withoutClinical.statusCode).toBe(200)
     expect(withClinical.statusCode).toBe(200)
-    // Le classeur est un ZIP : les libelles de colonnes et les valeurs y sont
-    // compresses. On compare donc la seule chose observable sans dependance
-    // supplementaire — la taille — apres avoir verifie que le contenu differe.
-    expect(withoutClinical.rawPayload.equals(withClinical.rawPayload)).toBe(
-      false,
-    )
-    expect(withoutClinical.rawPayload.length).toBeLessThan(
-      withClinical.rawPayload.length,
-    )
+
+    // Une taille differente ne dit pas QUELLES colonnes ont disparu : une
+    // taille egale, ou differente pour une autre raison que le filtrage,
+    // passerait ici au vert. On lit donc les deux classeurs et on nomme les
+    // en-tetes, colonne par colonne (`xlsx` est deja une dependance du code
+    // de production qui les genere).
+    const headersOf = (rawPayload: Buffer): string[] => {
+      const workbook = XLSX.read(rawPayload, { type: 'buffer' })
+      const sheetName = workbook.SheetNames[0]
+      if (!sheetName) {
+        throw new Error('classeur exporte sans feuille')
+      }
+      const sheet = workbook.Sheets[sheetName]
+      if (!sheet) {
+        throw new Error('classeur exporte sans feuille nommee')
+      }
+      const rows = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1 })
+      const headerRow = rows[0]
+      if (!headerRow) {
+        throw new Error('classeur exporte sans ligne d en-tete')
+      }
+      return headerRow
+    }
+
+    const secretariatHeaders = headersOf(withoutClinical.rawPayload)
+    const clinicalHeaders = headersOf(withClinical.rawPayload)
+
+    // `details` (le troisieme champ clinique) n'est pas une colonne de
+    // l'export du tout, pour aucun role : seuls deux des trois champs
+    // cliniques y sont exposes. La liste attendue le dit nommement, plutot
+    // que de deduire "moins trois colonnes" d'une difference de taille.
+    expect(clinicalHeaders).toEqual([
+      ...secretariatHeaders,
+      'Diagnostic médical',
+      'Notes',
+    ])
+    expect(secretariatHeaders).not.toContain('Diagnostic médical')
+    expect(secretariatHeaders).not.toContain('Notes')
   })
 
   // Pendant du filtrage de sortie : un role qui ne peut pas lire le contenu
@@ -270,6 +318,56 @@ describe('filtrage des champs cliniques selon clinical:read / clinical:write', (
     expect(stored.medicalDiagnosis).toBe('DIAGNOSTIC-MODIFIE')
     // Non envoye : inchange.
     expect(stored.details).toBe('DETAIL-SECRET')
+  })
+
+  // Cas qui aurait pu etre Critique (releve a la relecture de la tache 8) :
+  // le schema `upsertPatientServiceFileBodySchema` declare les trois champs
+  // `.optional().nullable()`, donc `null` est syntaxiquement recevable par
+  // Zod. Un secretariat pourrait donc croire qu'envoyer `null` explicitement
+  // — par exemple en vidant un champ de formulaire — efface la colonne, la ou
+  // omettre la cle la laisse inchangee. Ce n'est pas le cas : `stripClinicalInput`
+  // s'execute en `preValidation`, avant que Zod ne voie le corps, et retire la
+  // cle `null` comme n'importe quelle autre.
+  it('ignore un `notes`/`details`/`medicalDiagnosis` envoye a `null` explicitement par un secretariat, sans vider les colonnes', async () => {
+    const cookies = secretariatCookies
+    const before = await storedServiceFile()
+
+    const res = await patch(cookies, `/patient/${patientId}/service-file`, {
+      goal: 'objectif avec null explicite',
+      notes: null,
+      details: null,
+      medicalDiagnosis: null,
+    })
+    expect(res.statusCode).toBe(200)
+
+    const stored = await storedServiceFile()
+    // Le champ non clinique est bien modifie : la requete n'a pas ete rejetee.
+    expect(stored.goal).toBe('objectif avec null explicite')
+    // Les champs cliniques restent a leur valeur precedente : `null` explicite
+    // ne les vide pas, exactement comme l'omission de la cle.
+    expect(stored.notes).toBe(before.notes)
+    expect(stored.details).toBe(before.details)
+    expect(stored.medicalDiagnosis).toBe(before.medicalDiagnosis)
+  })
+
+  // Contre-epreuve indispensable : sans elle, le test precedent pourrait
+  // passer au vert parce que l'ecriture de `null` ne marche plus du tout
+  // (par exemple si Prisma ignorait silencieusement toute valeur `null`),
+  // et non parce que le crochet de secretariat protege specifiquement.
+  it('vide bien notes/details/medicalDiagnosis a `null` quand un intervenant l envoie explicitement (contre-epreuve)', async () => {
+    const cookies = intervenantCookies
+
+    const res = await patch(cookies, `/patient/${patientId}/service-file`, {
+      notes: null,
+      details: null,
+      medicalDiagnosis: null,
+    })
+    expect(res.statusCode).toBe(200)
+
+    const stored = await storedServiceFile()
+    expect(stored.notes).toBeNull()
+    expect(stored.details).toBeNull()
+    expect(stored.medicalDiagnosis).toBeNull()
   })
 
   // Chemin peu exerce jusqu'ici : la transmission d'un patient deja inscrit a
@@ -348,15 +446,21 @@ describe('filtrage des champs cliniques selon clinical:read / clinical:write', (
     })
     expect(storedPatient.firstName).toBe('Nouveau')
 
-    const res = await patch(cookies, `/patient/${nouveauPatientId}/service-file`, {
-      goal: 'objectif initial',
-      notes: 'NE-DOIT-PAS-ETRE-STOCKE',
-    })
+    const res = await patch(
+      cookies,
+      `/patient/${nouveauPatientId}/service-file`,
+      {
+        goal: 'objectif initial',
+        notes: 'NE-DOIT-PAS-ETRE-STOCKE',
+      },
+    )
     expect(res.statusCode).toBe(200)
     expect(res.json()).not.toHaveProperty('notes')
 
     const createdFile = await testDb.patientServiceFile.findUniqueOrThrow({
-      where: { patientId_serviceId: { patientId: nouveauPatientId, serviceId } },
+      where: {
+        patientId_serviceId: { patientId: nouveauPatientId, serviceId },
+      },
     })
     expect(createdFile.goal).toBe('objectif initial')
     expect(createdFile.notes).toBeNull()
