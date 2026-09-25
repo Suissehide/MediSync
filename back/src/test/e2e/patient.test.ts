@@ -425,3 +425,141 @@ describe('routes du patient', () => {
     await testDb.patient.delete({ where: { id: patientId } })
   })
 })
+
+// Tache 12 (etape 3 du multi-tenant) : jusqu'ici, `GET /patient/with-tags` rendait tous les
+// patients de l'etablissement, quel que soit le service consulte — les deux services montraient
+// donc la meme liste, ce qui rendait toute demonstration de cloisonnement non concluante (voir
+// task-12-brief.md). La liste doit desormais ne rendre que les patients ayant un sous-dossier
+// (`PatientServiceFile`) dans le service courant. Ce bloc utilise deux services du meme
+// etablissement et un seul compte, membre coordinateur des deux, pour comparer directement ce
+// que chaque service voit.
+describe('cloisonnement de la liste des patients par service (tache 12)', () => {
+  let testApp: TestApp
+  let establishmentId: string
+  let serviceAId: string
+  let serviceBId: string
+  let cookies: Cookies
+
+  beforeAll(async () => {
+    await truncateAll()
+    const establishment = await createEstablishment('E-cloisonnement')
+    establishmentId = establishment.id
+    const serviceA = await createService(establishmentId, 'Service A')
+    const serviceB = await createService(establishmentId, 'Service B')
+    serviceAId = serviceA.id
+    serviceBId = serviceB.id
+
+    // Un seul compte, coordinateur des deux services : le point de comparaison est le meme
+    // utilisateur qui change de service, pas deux utilisateurs differents.
+    await createUser({
+      email: 'coordo-deux-services@patient.fr',
+      memberships: [
+        {
+          establishmentId,
+          role: 'MEMBER',
+          services: [
+            { serviceId: serviceAId, role: 'COORDINATEUR' },
+            { serviceId: serviceBId, role: 'COORDINATEUR' },
+          ],
+        },
+      ],
+    })
+
+    testApp = await buildTestApp()
+    cookies = await signIn(testApp.app, 'coordo-deux-services@patient.fr')
+  })
+
+  afterAll(async () => {
+    await testApp.close()
+    await testDb.$disconnect()
+  })
+
+  const listWithTags = (serviceId: string) =>
+    testApp.app
+      .inject({
+        method: 'GET',
+        url: tenantUrl(establishmentId, serviceId, '/patient/with-tags'),
+        cookies,
+      })
+      .then((res) => res.json() as { id: string; entryDate: string | null }[])
+
+  const createPatientInService = (serviceId: string, payload: unknown) =>
+    testApp.app
+      .inject({
+        method: 'POST',
+        url: tenantUrl(establishmentId, serviceId, '/patient'),
+        cookies,
+        payload: payload as never,
+      })
+      .then((res) => {
+        expect(res.statusCode).toBe(201)
+        return res.json().id as string
+      })
+
+  const writeServiceFile = (
+    serviceId: string,
+    patientId: string,
+    payload: unknown,
+  ) =>
+    testApp.app
+      .inject({
+        method: 'PATCH',
+        url: tenantUrl(
+          establishmentId,
+          serviceId,
+          `/patient/${patientId}/service-file`,
+        ),
+        cookies,
+        payload: payload as never,
+      })
+      .then((res) => {
+        expect(res.statusCode).toBe(200)
+      })
+
+  it('un patient suivi uniquement dans le service A n apparait pas dans la liste du service B', async () => {
+    const patientId = await createPatientInService(serviceAId, {
+      firstName: 'Solo',
+      lastName: 'ServiceA',
+    })
+    await writeServiceFile(serviceAId, patientId, {
+      entryDate: '2026-01-15T00:00:00.000Z',
+    })
+
+    const listA = await listWithTags(serviceAId)
+    expect(listA.map((p) => p.id)).toContain(patientId)
+
+    const listB = await listWithTags(serviceBId)
+    expect(listB.map((p) => p.id)).not.toContain(patientId)
+
+    await testDb.patient.delete({ where: { id: patientId } })
+  })
+
+  it('un patient suivi dans les deux services apparait dans les deux listes, avec les donnees de chaque service et non celles de l autre', async () => {
+    const patientId = await createPatientInService(serviceAId, {
+      firstName: 'Double',
+      lastName: 'Service',
+    })
+    await writeServiceFile(serviceAId, patientId, {
+      entryDate: '2026-02-01T00:00:00.000Z',
+    })
+    await writeServiceFile(serviceBId, patientId, {
+      entryDate: '2026-03-01T00:00:00.000Z',
+    })
+
+    const listA = await listWithTags(serviceAId)
+    const listB = await listWithTags(serviceBId)
+
+    const patientInA = listA.find((p) => p.id === patientId)
+    const patientInB = listB.find((p) => p.id === patientId)
+    expect(patientInA).toBeDefined()
+    expect(patientInB).toBeDefined()
+    expect(new Date(patientInA?.entryDate as string).toISOString()).toBe(
+      '2026-02-01T00:00:00.000Z',
+    )
+    expect(new Date(patientInB?.entryDate as string).toISOString()).toBe(
+      '2026-03-01T00:00:00.000Z',
+    )
+
+    await testDb.patient.delete({ where: { id: patientId } })
+  })
+})

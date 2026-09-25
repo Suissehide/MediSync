@@ -60,7 +60,16 @@ class PatientRepository implements PatientRepositoryInterface {
 
   async findAllWithTags(): Promise<PatientWithTagsEntityRepo[]> {
     const patients = await this.prisma.patient.findMany({
-      where: this.establishmentScope,
+      // La liste rend les patients ayant un sous-dossier dans le SERVICE courant, pas tous ceux
+      // de l'etablissement (tache 12, etape 3 du multi-tenant) : avant ce filtre, les deux
+      // services montraient la meme liste — voir task-12-brief.md, et le test de cloisonnement
+      // dans patient.test.ts. `some` ne filtre que les LIGNES rendues, `include.serviceFiles`
+      // ci-dessous continue de porter son propre `where` pour ne recuperer, pour ce patient, que
+      // le sous-dossier du service courant (jamais celui d'un autre service).
+      where: {
+        ...this.establishmentScope,
+        serviceFiles: { some: { serviceId: this.scope.serviceId } },
+      },
       include: {
         appointmentPatients: {
           where: { serviceId: this.scope.serviceId },
