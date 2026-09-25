@@ -6,6 +6,7 @@ import { AuthDomain } from '../../../domain/auth.domain'
 import { PathwayDomain } from '../../../domain/pathway.domain'
 import { PathwayTemplateDomain } from '../../../domain/pathwayTemplate.domain'
 import { PatientDomain } from '../../../domain/patient.domain'
+import { PatientServiceFileDomain } from '../../../domain/patientServiceFile.domain'
 import { SlotDomain } from '../../../domain/slot.domain'
 import { SoignantDomain } from '../../../domain/soignant.domain'
 import { ThematicDomain } from '../../../domain/thematic.domain'
@@ -18,6 +19,7 @@ import { AppointmentRepository } from '../../../infra/orm/repositories/appointme
 import { PathwayRepository } from '../../../infra/orm/repositories/pathway.repository'
 import { PathwayTemplateRepository } from '../../../infra/orm/repositories/pathwayTemplate.repository'
 import { PatientRepository } from '../../../infra/orm/repositories/patient.repository'
+import { PatientServiceFileRepository } from '../../../infra/orm/repositories/patientServiceFile.repository'
 import { SlotRepository } from '../../../infra/orm/repositories/slot.repository'
 import { SoignantRepository } from '../../../infra/orm/repositories/soignant.repository'
 import { ThematicRepository } from '../../../infra/orm/repositories/thematic.repository'
@@ -27,7 +29,7 @@ import { FastifyHttpServer } from '../../../interfaces/http/fastify/fastify-http
 import type { Config } from '../../../types/application/config'
 import type { IocContainer } from '../../../types/application/ioc'
 import { ErrorHandler } from '../../../utils/error-handler'
-import { recordToString } from '../../../utils/helper'
+import { recordToString, redactSecrets } from '../../../utils/helper'
 import { TenantContext } from '../../../utils/tenant-context'
 import { SlotTemplateDomain } from '../../../domain/slotTemplate.domain'
 import { SlotTemplateRepository } from '../../../infra/orm/repositories/slotTemplate.repository'
@@ -66,7 +68,7 @@ class AwilixIocContainer {
     const container = this.#registerLogger()
     const logger = container.resolve('logger')
     logger.debug('Initializing IoC container…')
-    logger.debug(`Loaded config:\n\t${recordToString(config)}`)
+    logger.debug(`Loaded config:\n\t${recordToString(redactSecrets(config))}`)
     // Tenant context (avant l'ORM : le garde-fou Prisma en dépend)
     this.#registerTenantContext()
     // DB
@@ -99,6 +101,9 @@ class AwilixIocContainer {
     // Patient
     this.#registerPatientDomain()
     this.#registerPatientRepository()
+    // PatientServiceFile
+    this.#registerPatientServiceFileDomain()
+    this.#registerPatientServiceFileRepository()
     // Soignant
     this.#registerSoignantDomain()
     this.#registerSoignantRepository()
@@ -260,6 +265,17 @@ class AwilixIocContainer {
   }
   #registerPatientRepository(): void {
     this.register('patientRepository', asClass(PatientRepository).singleton())
+  }
+
+  // PatientServiceFile
+  #registerPatientServiceFileDomain(): void {
+    this.register('patientServiceFileDomain', asClass(PatientServiceFileDomain).singleton())
+  }
+  #registerPatientServiceFileRepository(): void {
+    this.register(
+      'patientServiceFileRepository',
+      asClass(PatientServiceFileRepository).singleton(),
+    )
   }
 
   // Soignant

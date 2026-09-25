@@ -325,6 +325,193 @@ describe('isolation par tenant', () => {
         })
       },
     )
+
+    // Sous-dossier patient (etape 3 du multi-tenant). Cas dedie, hors de la
+    // table `cases` ci-dessus : son ecriture est un PUT (upsert), hors du
+    // type `IsolationCase`, limite a GET/DELETE. Une lecture depuis A doit
+    // rendre 404 comme les autres cas ; une ECRITURE depuis A ne doit ni
+    // lire ni modifier le sous-dossier de B — meme quand cette ecriture
+    // reussit, parce qu'un upsert cree alors le sous-dossier PROPRE de A
+    // (vide, conforme a la conception 2.1 : un second service part d'un
+    // sous-dossier vierge), jamais celui de B. Le controle qui compte est
+    // donc la relecture du sous-dossier de B apres coup : ses valeurs ne
+    // doivent pas avoir bouge.
+    it('un sous-dossier patient cree dans un service n est ni lisible ni modifiable depuis l autre', async () => {
+      const { est, serviceA, serviceB, cookiesA, cookiesB } = scenario
+      const patient = await testDb.patient.create({
+        data: {
+          firstName: 'Dossier',
+          lastName: 'Service',
+          createDate: new Date(),
+          establishmentId: est.id,
+        },
+      })
+      await testDb.patientServiceFile.create({
+        data: {
+          patientId: patient.id,
+          serviceId: serviceB.id,
+          establishmentId: est.id,
+          notes: 'SECRET-SERVICE-B',
+        },
+      })
+
+      const path = `/patient/${patient.id}/service-file`
+
+      const readFromA = await t.app.inject({
+        method: 'GET',
+        url: tenantUrl(est.id, serviceA.id, path),
+        cookies: cookiesA,
+      })
+      expect(readFromA.statusCode).toBe(404)
+
+      const writeFromA = await t.app.inject({
+        method: 'PATCH',
+        url: tenantUrl(est.id, serviceA.id, path),
+        cookies: cookiesA,
+        payload: { notes: 'ECRASE-DEPUIS-A' },
+      })
+      expect(writeFromA.statusCode).toBe(200)
+      // La ligne creee par A porte son propre id : elle n'a ni lu ni reutilise
+      // celle de B.
+      const bServiceFile = await testDb.patientServiceFile.findUniqueOrThrow({
+        where: { patientId_serviceId: { patientId: patient.id, serviceId: serviceB.id } },
+      })
+      expect(writeFromA.json().id).not.toBe(bServiceFile.id)
+
+      const readFromB = await t.app.inject({
+        method: 'GET',
+        url: tenantUrl(est.id, serviceB.id, path),
+        cookies: cookiesB,
+      })
+      expect(readFromB.statusCode).toBe(200)
+      expect(readFromB.json().notes).toBe('SECRET-SERVICE-B')
+    })
+
+    // Enfants du sous-dossier de service (tache 6 : diagnostics et problemes d'inscription
+    // rattaches a PatientServiceFile plutot qu'a Patient). Cas dedies, hors de la table `cases` :
+    // leurs routes sont imbriquees sous /patient/:patientId/…, un second identifiant que le type
+    // `IsolationCase` (un seul `path(id)`) ne porte pas. `back/CLAUDE.md` (etape 8, "Adding a new
+    // entity") exige un cas par entite de service ; aucun n'existait pour ces deux-la avant ce
+    // tour de correction (tache 6, revue, Critique C1).
+    it('un probleme d inscription cree dans un service n est ni lisible ni supprimable depuis l autre', async () => {
+      const { est, serviceA, serviceB, cookiesA, cookiesB } = scenario
+      const patient = await testDb.patient.create({
+        data: {
+          firstName: 'Inscription',
+          lastName: 'Service',
+          createDate: new Date(),
+          establishmentId: est.id,
+        },
+      })
+      await testDb.patientServiceFile.create({
+        data: { patientId: patient.id, serviceId: serviceB.id, establishmentId: est.id },
+      })
+      const issue = await testDb.enrollmentIssue.create({
+        data: {
+          patientId: patient.id,
+          serviceId: serviceB.id,
+          establishmentId: est.id,
+          pathwayTemplateID: 'pt-secret',
+          reason: 'RAISON-SECRETE-B',
+          startDate: new Date('2026-01-05'),
+        },
+      })
+
+      const listPath = `/patient/${patient.id}/enrollment-issue`
+
+      // La liste elle-meme reussit (le patient appartient a l'etablissement, pas au service),
+      // mais ne doit rendre aucune ligne du service etranger : c'est la forme de fuite la plus
+      // courante, un findMany sans clause de service.
+      const listFromA = await t.app.inject({
+        method: 'GET',
+        url: tenantUrl(est.id, serviceA.id, listPath),
+        cookies: cookiesA,
+      })
+      expect(listFromA.statusCode).toBe(200)
+      expect(listFromA.json()).toEqual([])
+
+      const deleteFromA = await t.app.inject({
+        method: 'DELETE',
+        url: tenantUrl(est.id, serviceA.id, `${listPath}/${issue.id}`),
+        cookies: cookiesA,
+      })
+      expect(deleteFromA.statusCode).toBe(404)
+
+      // Contrepoint : la ligne n'a pas bouge, son proprietaire la voit toujours.
+      const listFromB = await t.app.inject({
+        method: 'GET',
+        url: tenantUrl(est.id, serviceB.id, listPath),
+        cookies: cookiesB,
+      })
+      expect(listFromB.statusCode).toBe(200)
+      expect(listFromB.json()).toMatchObject([{ id: issue.id, reason: 'RAISON-SECRETE-B' }])
+    })
+
+    it('un diagnostic educatif cree dans un service n est ni lisible, ni modifiable, ni supprimable depuis l autre', async () => {
+      const { est, serviceA, serviceB, cookiesA, cookiesB } = scenario
+      const patient = await testDb.patient.create({
+        data: {
+          firstName: 'Diagnostic',
+          lastName: 'Service',
+          createDate: new Date(),
+          establishmentId: est.id,
+        },
+      })
+      await testDb.patientServiceFile.create({
+        data: { patientId: patient.id, serviceId: serviceB.id, establishmentId: est.id },
+      })
+      const diagnostic = await testDb.diagnosticEducatif.create({
+        data: {
+          patientId: patient.id,
+          serviceId: serviceB.id,
+          establishmentId: est.id,
+          activeFields: [],
+          title: 'TITRE-SECRET-B',
+        },
+      })
+
+      const basePath = `/patient/${patient.id}/diagnostic`
+      const itemPath = `${basePath}/${diagnostic.id}`
+
+      const listFromA = await t.app.inject({
+        method: 'GET',
+        url: tenantUrl(est.id, serviceA.id, basePath),
+        cookies: cookiesA,
+      })
+      expect(listFromA.statusCode).toBe(200)
+      expect(listFromA.json()).toEqual([])
+
+      const readFromA = await t.app.inject({
+        method: 'GET',
+        url: tenantUrl(est.id, serviceA.id, itemPath),
+        cookies: cookiesA,
+      })
+      expect(readFromA.statusCode).toBe(404)
+
+      const patchFromA = await t.app.inject({
+        method: 'PATCH',
+        url: tenantUrl(est.id, serviceA.id, itemPath),
+        cookies: cookiesA,
+        payload: { title: 'ECRASE-DEPUIS-A' },
+      })
+      expect(patchFromA.statusCode).toBe(404)
+
+      const deleteFromA = await t.app.inject({
+        method: 'DELETE',
+        url: tenantUrl(est.id, serviceA.id, itemPath),
+        cookies: cookiesA,
+      })
+      expect(deleteFromA.statusCode).toBe(404)
+
+      // Contrepoint : la ligne n'a ni bouge ni disparu, son proprietaire la lit toujours.
+      const readFromB = await t.app.inject({
+        method: 'GET',
+        url: tenantUrl(est.id, serviceB.id, itemPath),
+        cookies: cookiesB,
+      })
+      expect(readFromB.statusCode).toBe(200)
+      expect(readFromB.json().title).toBe('TITRE-SECRET-B')
+    })
   })
 
   // Le patient est un modèle d'établissement (pas de service) : le cas

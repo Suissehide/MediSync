@@ -2,8 +2,9 @@
 
 Procédure à exécuter à la main contre le serveur de développement (port
 4270), après avoir démarré l'application normalement et peuplé la base par le
-seed à deux services décrit dans
-`.superpowers/sdd/2026-09-23-multi-tenant-etape-2-contexte-front/task-16-report.md`.
+seed à deux services (`back/prisma/seed.ts`, `back/prisma/seed/data/patient.ts` ;
+voir `verification-etape-3.md`, section « Un avertissement qui s'inverse par
+rapport à l'étape 2 », pour son détail vérifié).
 Ce document ne remplace pas les portes automatisées (`back`: build, lint,
 tests unitaires, tests e2e ; `front`: build, tests) — il vérifie ce qu'elles
 ne peuvent pas vérifier : ce qu'un compte voit réellement à l'écran.

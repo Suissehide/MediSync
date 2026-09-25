@@ -1,0 +1,15 @@
+meta {
+  name: Get Patient Service File
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{BASE_URL}}/patient/:patientID/service-file
+  body: none
+  auth: none
+}
+
+params:path {
+  patientID: cmc12qrpp0001l54eu8psht60
+}

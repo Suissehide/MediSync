@@ -2,6 +2,10 @@ import { GENDER_OPTIONS } from '../../../../constants/patient.constant.ts'
 import { withForm } from '../../../../hooks/formConfig.tsx'
 import { patientFormOpts } from './form.patient.ts'
 
+// Champs de `Patient` (décision 2.3 de la spec) : partagés entre les services de
+// l'établissement, comme le bloc « Identité partagée » de `identite.patient.tsx` — d'où la même
+// mention dans les deux titres ci-dessous. Avant ce correctif (tâche 11, revue, Important I2), cet
+// onglet était l'un des trois à afficher ces champs sans dire à qui ils appartiennent.
 export const IdentityFields = withForm({
   ...patientFormOpts,
   render: ({ form }) => {
@@ -10,7 +14,7 @@ export const IdentityFields = withForm({
         <div className="h-fit flex-1 flex flex-col gap-2">
           <div className="flex items-center gap-2 mt-2">
             <h4 className="relative text-sm font-semibold">
-              Informations générales
+              Informations générales — partagées entre les services de l'établissement
             </h4>
             <div className="mt-1 ml-1 flex-1 border-t border-border" />
           </div>
@@ -39,7 +43,9 @@ export const IdentityFields = withForm({
 
         <div className="h-fit flex-1 flex flex-col gap-2">
           <div className="flex items-center gap-2 mt-2">
-            <h4 className="relative text-sm font-semibold">Contact</h4>
+            <h4 className="relative text-sm font-semibold">
+              Contact — partagé entre les services de l'établissement
+            </h4>
             <div className="mt-1 ml-1 flex-1 border-t border-border" />
           </div>
 

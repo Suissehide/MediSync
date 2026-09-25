@@ -7,11 +7,10 @@ import type {
 import Fastify from 'fastify'
 import type { IocContainer } from '../../../types/application/ioc'
 import type { HttpServer } from '../../../types/interfaces/http/server'
-import { toLocalhostIfLinux } from '../../../utils/url-helper'
+import { pathWithoutQuery, toLocalhostIfLinux } from '../../../utils/url-helper'
 import { buildErrorHandler } from './errors/error.handler'
 import { boomErrorNormalizer } from './errors/normalizers/boom.error.normalizer'
 import { fastifyErrorNormalizer } from './errors/normalizers/fastify.error.normalizer'
-import { prismaErrorNormalizer } from './errors/normalizers/prisma.error.normalizer'
 import { plugins } from './plugins'
 import { routes } from './routes'
 import { notFoundHandler } from './util/not-found.handler'
@@ -67,16 +66,21 @@ class FastifyHttpServer implements HttpServer {
       )
     })
     fastify.setNotFoundHandler(notFoundHandler)
+    // `prismaErrorNormalizer` a ete retire (task-5-re-review-3.md, tour 5) : sa detection
+    // (`error.type === 'PrismaClientKnownRequestError'`) ne correspond a aucun champ reel d'une
+    // PrismaClientKnownRequestError (verifie contre une vraie instance : `.type` vaut toujours
+    // `undefined`), donc il ne s'executait jamais. Une PrismaClientKnownRequestError qui atteint
+    // ce point (parce qu'un depot l'a laissee s'echapper sans `catch`) tombe desormais sur le
+    // dernier normalizer de la chaine (`errorNormalizer`, error.normalizer.ts), qui la traite deja
+    // sans jamais recopier son message. Le remettre en etat de fonctionner aurait fait renvoyer
+    // `error.message` — qui, pour une erreur Prisma non attrapee, peut porter integralement les
+    // valeurs de l'ecriture qui a echoue.
     fastify.setErrorHandler(
-      buildErrorHandler(
-        prismaErrorNormalizer,
-        fastifyErrorNormalizer,
-        boomErrorNormalizer,
-      ),
+      buildErrorHandler(fastifyErrorNormalizer, boomErrorNormalizer),
     )
     fastify.addHook('onRequest', (request) => {
       log.debug(
-        `Incoming request (#${request.id}): ${request.method} ${request.url}`,
+        `Incoming request (#${request.id}): ${request.method} ${pathWithoutQuery(request.url)}`,
       )
       return Promise.resolve()
     })
@@ -84,7 +88,7 @@ class FastifyHttpServer implements HttpServer {
       const { elapsedTime } = reply
       const time = Math.round(elapsedTime)
       log.info(
-        `Request completed (#${request.id}): ${request.method} ${request.url} [HTTP ${reply.statusCode}] (${time}ms)`,
+        `Request completed (#${request.id}): ${request.method} ${pathWithoutQuery(request.url)} [HTTP ${reply.statusCode}] (${time}ms)`,
       )
       return Promise.resolve()
     })

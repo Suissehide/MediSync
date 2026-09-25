@@ -7,11 +7,14 @@
 // pas partie : ce sont des données administratives du programme, qu'un
 // secrétariat a de bonnes raisons de voir.
 //
-// Chacun de ces quatre noms n'existe qu'une fois dans `prisma/schema.prisma`
-// (Patient pour les trois premiers, AppointmentPatient pour le quatrième) :
-// un retrait par nom de clé ne peut donc pas emporter un champ homonyme d'un
-// autre modèle. Si le schéma venait à réutiliser un de ces noms ailleurs, il
-// faudrait repasser à un filtrage par forme — un test le rappelle.
+// `notes`, `details` et `medicalDiagnosis` n'existent plus que sur
+// `PatientServiceFile`, le sous-dossier de service d'un patient (étape 3 du
+// multi-tenant a déplacé et retiré ces colonnes de `Patient`, qui ne les
+// porte plus). `transmissionNotes` n'existe qu'une fois, sur
+// `AppointmentPatient`. Si l'un de ces noms venait à apparaître sur un
+// modèle qui n'a rien de clinique, il faudrait repasser à un filtrage par
+// forme — un test le rappelle, en nommant les modèles porteurs attendus
+// plutôt qu'en comptant les occurrences.
 export const CLINICAL_FIELDS: readonly string[] = [
   'notes',
   'details',

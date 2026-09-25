@@ -1,3 +1,4 @@
+import Boom from '@hapi/boom'
 import dayjs from 'dayjs'
 import * as XLSX from 'xlsx'
 
@@ -16,16 +17,20 @@ import type {
   EnrollPatientInPathwaysInput,
   PathwayEnrollmentInput,
   PatientCreateEntityDomain,
+  PatientDetailDomain,
   PatientDomainInterface,
   PatientEntityDomain,
   PatientExportFilters,
   PatientExportOptions,
+  PatientIdentitySearchResultDomain,
   PatientPathwayDomain,
   PatientUpdateEntityDomain,
   PatientWithAppointmentsDomain,
   PatientWithTagsDomain,
   RemoveFromPathwayResult,
 } from '../types/domain/patient.domain.interface'
+import type { PatientIdentitySearchFilters } from '../types/infra/orm/repositories/patient.repository.interface'
+import type { PatientServiceFileDomainInterface } from '../types/domain/patientServiceFile.domain.interface'
 import type { AppointmentRepositoryInterface } from '../types/infra/orm/repositories/appointment.repository.interface'
 import type {
   PathwayRepositoryInterface,
@@ -33,7 +38,10 @@ import type {
 } from '../types/infra/orm/repositories/pathway.repository.interface'
 import type { PathwayTemplateRepositoryInterface } from '../types/infra/orm/repositories/pathwayTemplate.repository.interface'
 import type { EnrollmentIssueRepositoryInterface } from '../types/infra/orm/repositories/enrollmentIssue.repository.interface'
-import type { PatientRepositoryInterface } from '../types/infra/orm/repositories/patient.repository.interface'
+import type {
+  PatientForExportEntityRepo,
+  PatientRepositoryInterface,
+} from '../types/infra/orm/repositories/patient.repository.interface'
 import type { SlotWithTemplateAndAppointmentsRepo } from '../types/infra/orm/repositories/slot.repository.interface'
 import type { ThematicRepositoryInterface } from '../types/infra/orm/repositories/thematic.repository.interface'
 import type { Logger } from '../types/utils/logger'
@@ -45,6 +53,79 @@ const orEmpty = (value: string | null | undefined): string => value ?? ''
 const formatDate = (value: Date | string | null | undefined): string =>
   value ? dayjs(value).format('DD/MM/YYYY') : ''
 
+// Les deux boucles d'inscription (processEnrollments, enrollInSlot) attrapent toute erreur
+// levee par un depot pour la transformer en echec partiel plutot qu'en 500 : la reponse
+// (`failedEnrollments[].reason`, affichee a l'ecran par front/src/queries/usePatient.tsx) et le
+// journal en portent le message. Un Boom est sans risque : son message est toujours ecrit par
+// notre propre code (`boomErrorFromPrismaError`, ou un `Boom.xxx(...)` explicite d'un domaine).
+// Mais 17 depots sur 19 ont des methodes sans `catch` (task-5-re-review-3.md, C1) : si l'une
+// d'elles est appelee ici et jette une erreur brute (Prisma ou autre), ce n'est plus un Boom, et
+// son message peut porter integralement les arguments de l'appel qui a echoue. On ne fait donc
+// jamais confiance a `error.message` en dehors d'un Boom : seule sa classe, qui ne peut porter
+// aucune valeur soumise, va au journal, et la reponse ne recoit qu'un texte generique.
+const describeEnrollmentFailure = (
+  context: string,
+  error: unknown,
+): { reason: string; logLine: string } => {
+  if (Boom.isBoom(error)) {
+    return {
+      reason: error.message,
+      logLine: `Erreur lors de l'inscription ${context}: ${error.message}`,
+    }
+  }
+  const errorClass = error instanceof Error ? error.constructor.name : typeof error
+  return {
+    reason: `Erreur inattendue lors de l'inscription ${context}`,
+    logLine: `Erreur inattendue lors de l'inscription ${context} [${errorClass}]`,
+  }
+}
+
+// Une seule source de verite pour l'export Excel : en-tete, largeur de colonne et valeur lue
+// vivent ensemble, dans cet ordre. `ws['!cols']` etait auparavant un tableau positionnel
+// commente a la main, en regard de l'ordre des cles d'un objet construit juste au-dessus — rien
+// (ni tsc, ni un schema Zod) ne les reliait, et un decalage entre les deux ne produisait aucune
+// erreur, seulement des largeurs de colonnes fausses a l'ouverture du fichier. Les cles de
+// `careMode`, `orientation`, `entryDate`, `exitDate`, `stopReason` et `medicalDiagnosis` vivent
+// desormais sur le sous-dossier de service (`p.serviceFile`), plus sur `Patient` (etape 3 du
+// multi-tenant) — `null` quand le patient n'a pas encore de sous-dossier dans le service courant.
+type ExportColumn = {
+  header: string
+  width: number
+  value: (p: PatientForExportEntityRepo) => string
+  // Colonnes cliniques : presentes seulement pour qui a `clinical:read`.
+  clinical?: boolean
+}
+
+const EXPORT_COLUMNS: ExportColumn[] = [
+  { header: 'Prénom', width: 16, value: (p) => orEmpty(p.firstName) },
+  { header: 'Nom', width: 16, value: (p) => orEmpty(p.lastName) },
+  { header: 'Genre', width: 10, value: (p) => orEmpty(p.gender) },
+  { header: 'Date de naissance', width: 18, value: (p) => formatDate(p.birthDate) },
+  { header: 'Téléphone', width: 16, value: (p) => orEmpty(p.phone1) },
+  { header: 'Téléphone 2', width: 16, value: (p) => orEmpty(p.phone2) },
+  { header: 'Email', width: 28, value: (p) => orEmpty(p.email) },
+  { header: "Date d'entrée", width: 14, value: (p) => formatDate(p.serviceFile?.entryDate) },
+  { header: 'Date de sortie', width: 14, value: (p) => formatDate(p.serviceFile?.exitDate) },
+  { header: 'Parcours', width: 30, value: (p) => p.pathwayTemplateTags.join(', ') },
+  {
+    header: 'Mode de prise en charge',
+    width: 24,
+    value: (p) => orEmpty(p.serviceFile?.careMode),
+  },
+  { header: 'Orientation', width: 18, value: (p) => orEmpty(p.serviceFile?.orientation) },
+  { header: 'Profession', width: 20, value: (p) => orEmpty(p.occupation) },
+  { header: "Niveau d'étude", width: 18, value: (p) => orEmpty(p.educationLevel) },
+  { header: 'Distance', width: 14, value: (p) => orEmpty(p.distance) },
+  { header: 'Motif de sortie', width: 22, value: (p) => orEmpty(p.serviceFile?.stopReason) },
+  {
+    header: 'Diagnostic médical',
+    width: 28,
+    value: (p) => orEmpty(p.serviceFile?.medicalDiagnosis),
+    clinical: true,
+  },
+  { header: 'Notes', width: 40, value: (p) => orEmpty(p.serviceFile?.notes), clinical: true },
+]
+
 class PatientDomain implements PatientDomainInterface {
   private readonly logger: Logger
   private readonly patientRepository: PatientRepositoryInterface
@@ -53,6 +134,7 @@ class PatientDomain implements PatientDomainInterface {
   private readonly appointmentRepository: AppointmentRepositoryInterface
   private readonly enrollmentIssueRepository: EnrollmentIssueRepositoryInterface
   private readonly thematicRepository: ThematicRepositoryInterface
+  private readonly patientServiceFileDomain: PatientServiceFileDomainInterface
   private readonly tenantContext: TenantContextInterface
   private readonly appEventBus: AppEventBus
 
@@ -63,6 +145,7 @@ class PatientDomain implements PatientDomainInterface {
     appointmentRepository,
     enrollmentIssueRepository,
     thematicRepository,
+    patientServiceFileDomain,
     tenantContext,
     appEventBus,
     logger,
@@ -73,6 +156,7 @@ class PatientDomain implements PatientDomainInterface {
     this.appointmentRepository = appointmentRepository
     this.enrollmentIssueRepository = enrollmentIssueRepository
     this.thematicRepository = thematicRepository
+    this.patientServiceFileDomain = patientServiceFileDomain
     this.tenantContext = tenantContext
     this.appEventBus = appEventBus
     this.logger = logger
@@ -86,8 +170,48 @@ class PatientDomain implements PatientDomainInterface {
     return this.patientRepository.findAllWithTags()
   }
 
-  findByID(patientID: string): Promise<PatientEntityDomain> {
-    return this.patientRepository.findByID(patientID)
+  // Recherche d'identite existante avant creation (design §6, tache 13) : passe-plat vers le
+  // depot, SANS `runAsSystem`. Contrairement a `estSuiviAilleurs` (patientServiceFile.repository
+  // .ts), qui doit traverser la frontiere entre SERVICES, cette recherche ne traverse qu'une
+  // frontiere de SERVICE a l'interieur du MEME etablissement : Patient est un modele
+  // d'etablissement (voir `establishmentScope` dans patient.repository.ts, deja utilise par
+  // `findByID`/`findAll`/`create`), donc une lecture filtree sur l'etablissement courant du
+  // garde-fou d'ORM normal suffit — nul besoin d'assouplir quoi que ce soit. Ne pas y ajouter
+  // `runAsSystem` : l'exception unique de l'etape reste `estSuiviAilleurs`, et
+  // `runAsSystem-unicite.test.ts` le verifie par lecture de source, pas par relecture humaine.
+  //
+  // `hasMore` (revue tache 13, tour 1, point 4) fait partie de la reponse depuis le depot
+  // lui-meme : c'est lui qui possede le `take` et la limite, voir
+  // `PatientRepository.searchByIdentity`. Passe-plat pur, comme avant.
+  searchByIdentity(
+    filters: PatientIdentitySearchFilters,
+  ): Promise<PatientIdentitySearchResultDomain> {
+    return this.patientRepository.searchByIdentity(filters)
+  }
+
+  // Le signal de suivi ailleurs (spec §5.3/§6, tache 7 tour 1, I1) est porte ici, pas sur le
+  // sous-dossier de service. `followedElsewhere` (revue tache 13, tour 1, point 1 — Critique C1 ;
+  // voir D3, `docs/multi-tenant/decisions-etape-3.md`) n'est calcule, et present dans la reponse, QUE si le service courant a
+  // deja son propre sous-dossier pour ce patient : depuis la tache 12, tout patient cree ou
+  // rattache dans un service y possede un sous-dossier (`ensureExists`), donc cette condition
+  // recouvre exactement « ce patient est chez moi ». Le signal existe pour avertir un service
+  // qui suit DEJA un patient qu'il est suivi ailleurs (decision 2.1) — pas pour renseigner
+  // quelqu'un qui se contente de le chercher : la recherche (`searchByIdentity` ci-dessus) rend
+  // un `id` accessible a `patient:read`, donc a LECTURE, et cet `id` mene ici. Sans cette garde,
+  // deux requetes HTTP sans aucune ecriture suffisaient a apprendre qu'un patient est suivi dans
+  // un autre service — exactement ce que la spec §6 interdit ("trouver quelqu'un ne revele que
+  // son identite, jamais son suivi"). Voir `dossier-service.test.ts` pour les trois cas.
+  //
+  // `estSuiviAilleurs` reste l'unique lecture qui traverse la frontiere entre services (spec
+  // §5.3) : seule la condition qui decide de l'appeler a change.
+  async findByID(patientID: string): Promise<PatientDetailDomain> {
+    const patient = await this.patientRepository.findByID(patientID)
+    const hasFileHere = await this.patientServiceFileDomain.findByPatient(patientID)
+    if (!hasFileHere) {
+      return patient
+    }
+    const followedElsewhere = await this.patientServiceFileDomain.estSuiviAilleurs(patientID)
+    return { ...patient, followedElsewhere }
   }
 
   async exportExcel(
@@ -95,56 +219,14 @@ class PatientDomain implements PatientDomainInterface {
     { includeClinicalFields }: PatientExportOptions,
   ): Promise<Buffer> {
     const patients = await this.patientRepository.findForExport(filters)
+    const columns = EXPORT_COLUMNS.filter((c) => includeClinicalFields || !c.clinical)
 
-    const rows = patients.map((p) => ({
-      Prénom: orEmpty(p.firstName),
-      Nom: orEmpty(p.lastName),
-      Genre: orEmpty(p.gender),
-      'Date de naissance': formatDate(p.birthDate),
-      Téléphone: orEmpty(p.phone1),
-      'Téléphone 2': orEmpty(p.phone2),
-      Email: orEmpty(p.email),
-      "Date d'entrée": formatDate(p.entryDate),
-      'Date de sortie': formatDate(p.exitDate),
-      Parcours: p.pathwayTemplateTags.join(', '),
-      'Mode de prise en charge': orEmpty(p.careMode),
-      Orientation: orEmpty(p.orientation),
-      Profession: orEmpty(p.occupation),
-      "Niveau d'étude": orEmpty(p.educationLevel),
-      Distance: orEmpty(p.distance),
-      'Motif de sortie': orEmpty(p.stopReason),
-      // Colonnes cliniques : présentes seulement pour qui a `clinical:read`.
-      ...(includeClinicalFields
-        ? {
-            'Diagnostic médical': orEmpty(p.medicalDiagnosis),
-            Notes: orEmpty(p.notes),
-          }
-        : {}),
-    }))
+    const rows = patients.map((p) =>
+      Object.fromEntries(columns.map((c) => [c.header, c.value(p)])),
+    )
 
     const ws = XLSX.utils.json_to_sheet(rows)
-
-    ws['!cols'] = [
-      { wch: 16 }, // Prénom
-      { wch: 16 }, // Nom
-      { wch: 10 }, // Genre
-      { wch: 18 }, // Date de naissance
-      { wch: 16 }, // Téléphone
-      { wch: 16 }, // Téléphone 2
-      { wch: 28 }, // Email
-      { wch: 14 }, // Date d'entrée
-      { wch: 14 }, // Date de sortie
-      { wch: 30 }, // Parcours
-      { wch: 24 }, // Mode de prise en charge
-      { wch: 18 }, // Orientation
-      { wch: 20 }, // Profession
-      { wch: 18 }, // Niveau d'étude
-      { wch: 14 }, // Distance
-      { wch: 22 }, // Motif de sortie
-      ...(includeClinicalFields
-        ? [{ wch: 28 }, { wch: 40 }] // Diagnostic médical, Notes
-        : []),
-    ]
+    ws['!cols'] = columns.map((c) => ({ wch: c.width }))
 
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Patients')
@@ -160,6 +242,31 @@ class PatientDomain implements PatientDomainInterface {
       createDate: new Date().toISOString(),
     }
     const patient = await this.patientRepository.create(patientInputParams)
+    // Cree le sous-dossier de service des la creation du patient — troisieme appel a
+    // `ensureExists`, meme forme que les deux autres (processEnrollments plus bas, et
+    // DiagnosticEducatifDomain.create) : ni transaction, ni try/catch, une erreur remonte telle
+    // quelle (Boom via errorHandler.boomErrorFromPrismaError). Avant ce correctif, seuls
+    // processEnrollments et DiagnosticEducatifDomain.create appelaient `ensureExists` : un
+    // patient cree par le bouton « Creer sans parcours » du formulaire d'ajout (POST /patient
+    // seul, aucune inscription, aucun diagnostic) ne recevait donc aucun sous-dossier. Depuis
+    // que la liste de patients filtre sur le sous-dossier du service courant (voir
+    // PatientRepository.findAllWithTags), ce patient disparaissait de la liste de TOUT
+    // service — y compris celui ou il vient d'etre cree : il restait en base et dans l'export,
+    // mais plus aucune route normale ne permettait de le rouvrir. Une perte d'acces a un dossier
+    // de sante, sur un chemin de creation qui existe dans l'interface.
+    //
+    // Decision (tache 12, tour de correction 1) : creer un patient depuis un service, c'est le
+    // suivre dans ce service. Le cout est connu et assume : un patient cree par erreur dans le
+    // mauvais service y laissera un sous-dossier vide IRREVERSIBLE (aucune route ne supprime un
+    // sous-dossier, voir le commentaire au-dessus de `ensureExists` dans
+    // patientServiceFile.repository.ts), qui allumera le signal « suivi ailleurs »
+    // (`estSuiviAilleurs`) pour les autres services de l'etablissement. C'est exactement la
+    // meme consequence, deja acceptee et documentee, qu'un diagnostic cree dans le mauvais
+    // service (voir le test correspondant dans dossier-service.test.ts). Entre une trace de
+    // trop — qui se voit, par le signal — et un dossier introuvable, la trace de trop est le
+    // moindre mal : le signal ne revele jamais qu'un booleen (spec §5.3), quand l'absence de
+    // sous-dossier privait le soignant de tout acces normal au dossier.
+    await this.patientServiceFileDomain.ensureExists(patient.id)
     this.appEventBus.emit('patient.created', { userID, patientId: patient.id })
     return patient
   }
@@ -420,6 +527,13 @@ class PatientDomain implements PatientDomainInterface {
     startDate: Date,
     userID: string,
   ): Promise<EnrollmentResult> {
+    // Point de passage unique de l'inscription en parcours (enrollPatientInPathways et
+    // enrollExistingPatientInPathways y mènent toutes deux) : c'est donc ici, et nulle part
+    // ailleurs, que la spec (§5.1) exige la création du sous-dossier de service, avant toute
+    // écriture d'un `EnrollmentIssue` plus bas — sans quoi sa clé étrangère (patientId,
+    // serviceId) → PatientServiceFile serait violée dès qu'une inscription échoue.
+    await this.patientServiceFileDomain.ensureExists(patient.id)
+
     const enrollments: EnrollmentResult['enrollments'] = []
     const failedEnrollments: EnrollmentResult['failedEnrollments'] = []
     let currentPatient = patient
@@ -441,17 +555,16 @@ class PatientDomain implements PatientDomainInterface {
           failedEnrollments.push(outcome.failure)
         }
       } catch (error) {
-        this.logger.error(
-          `Erreur lors de l'inscription au parcours avec tag "${enrollment.tag}": ${error instanceof Error ? error.message : String(error)}`,
+        const { reason, logLine } = describeEnrollmentFailure(
+          `au parcours avec tag "${enrollment.tag}"`,
+          error,
         )
+        this.logger.error(logLine)
         failedEnrollments.push({
           slotTemplate: {
             id: enrollment.tag,
           },
-          reason:
-            error instanceof Error
-              ? error.message
-              : "Erreur inconnue lors de l'inscription",
+          reason,
         })
       }
     }
@@ -709,10 +822,21 @@ class PatientDomain implements PatientDomainInterface {
         if (firstAppointmentOnly && slotAppointments.some((a) => a.success)) {
           return enrollmentAppointments
         }
-      } catch {
+      } catch (error) {
+        // Catch muet corrige : c'est lui qui a laisse vivre trois jours, sans aucune trace,
+        // le defaut de composite key de AppointmentRepository.create (task-5-re-review.md,
+        // point 3) — une erreur de programmation rendue au patient comme un probleme de
+        // disponibilite de creneau. Meme forme que le catch de enrollPatientInPathways
+        // ci-dessus : describeEnrollmentFailure, jamais le message brut d'une erreur qui
+        // n'est pas un Boom (task-5-re-review-3.md, tour 5).
+        const { reason, logLine } = describeEnrollmentFailure(
+          `au créneau du ${slot.startDate}`,
+          error,
+        )
+        this.logger.error(logLine)
         enrollmentAppointments.push({
           success: false,
-          error: `Erreur lors de l'inscription au créneau du ${slot.startDate}`,
+          error: reason,
         })
       }
     }

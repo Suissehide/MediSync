@@ -75,7 +75,13 @@ class ActivityLogSubscriber {
         entityID,
       })
     } catch (err) {
-      this.logger.error(`ActivityLog: failed to log ${action}: ${err}`)
+      // Jamais `${err}` : ce depot (`activityLog.repository.ts`) n'a lui-meme aucun `catch`, donc
+      // une erreur Prisma brute peut remonter ici telle quelle, et son message recopie
+      // integralement le `data` de l'ecriture qui a echoue — userFirstName/userLastName compris
+      // (task-5-re-review-3.md, tour 5). Seule la classe de l'erreur, qui ne peut jamais porter
+      // une valeur soumise, va au journal.
+      const errorClass = err instanceof Error ? err.constructor.name : typeof err
+      this.logger.error(`ActivityLog: failed to log ${action} [${errorClass}]`)
     }
   }
 }

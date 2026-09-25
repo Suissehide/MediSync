@@ -1,0 +1,43 @@
+meta {
+  name: Update Patient Service File
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{BASE_URL}}/patient/:patientID/service-file
+  body: json
+  auth: none
+}
+
+params:path {
+  patientID: cmc12qrpp0001l54eu8psht60
+}
+
+body:json {
+  {
+    // Referrals & Context
+    "referringCaregiver": "referringCaregiver", // Soignant référent
+    "followUpToDo": "followUpToDo", // Suivi à régulariser
+
+    // Notes
+    "notes": "notes",
+    "details": "details",
+
+    // Inclusion Data
+    "medicalDiagnosis": "medicalDiagnosis",
+    "entryDate": "2025-06-10T14:00:00.000Z",
+    "careMode": "careMode", // Mode de prise en charge
+    "orientation": "orientation",
+    "etpDecision": "etpDecision",
+    "programType": "programType",
+    "nonInclusionDetails": "nonInclusionDetails",
+    "customContentDetails": "customContentDetails",
+    "goal": "goal",
+
+    // Exit Data
+    "exitDate": null,
+    "stopReason": "stopReason",
+    "etpFinalOutcome": "etpFinalOutcome"
+  }
+}

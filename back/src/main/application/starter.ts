@@ -22,7 +22,14 @@ const scheduleActivityLogCleanup = (instances: IocContainer): void => {
       .then(({ deleted }) =>
         logger.info(`ActivityLog cleanup: ${deleted} entrées supprimées`),
       )
-      .catch((err) => logger.error(`ActivityLog cleanup failed: ${err}`))
+      .catch((err) => {
+        // Jamais `${err}` : `activityLogRepository.deleteOlderThan` n'a aucun `catch`
+        // (task-5-re-review-3.md, tour 5), donc une erreur Prisma brute peut arriver ici
+        // telle quelle. Seule sa classe, qui ne peut jamais porter une valeur soumise, va
+        // au journal.
+        const errorClass = err instanceof Error ? err.constructor.name : typeof err
+        logger.error(`ActivityLog cleanup failed [${errorClass}]`)
+      })
   }
   const timer = setInterval(run, ONE_DAY_MS)
   timer.unref?.()
@@ -42,4 +49,4 @@ const startApp = async (): Promise<IocContainer> => {
   return iocContainer.instances
 }
 
-export { startApp, startIocContainer }
+export { startApp, startIocContainer, scheduleActivityLogCleanup }

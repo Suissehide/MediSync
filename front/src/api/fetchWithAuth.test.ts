@@ -80,6 +80,46 @@ describe('fetchWithAuth — 404 de route de tenant', () => {
     expect(onStaleTenant).not.toHaveBeenCalled()
   })
 
+  // Le sous-dossier de service d'un patient rend un 404 tant qu'aucune ecriture ne l'a encore
+  // cree pour ce patient dans ce service (delibere cote back) — c'est l'etat NORMAL et
+  // majoritaire juste apres une migration, pas un signal d'arbre perime. Ce 404-la ne doit rien
+  // declencher (tâche 10, revue, Important I4).
+  it('ne declenche rien pour un 404 sur le sous-dossier de service d un patient', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        status: 404,
+        url: 'http://localhost:3000/e/e1/s/s1/patient/px/service-file',
+      }),
+    )
+    const onStaleTenant = vi.fn().mockResolvedValue(undefined)
+    registerStaleTenantHandler(onStaleTenant)
+
+    await fetchWithAuth('http://localhost:3000/e/e1/s/s1/patient/px/service-file')
+
+    expect(onStaleTenant).not.toHaveBeenCalled()
+  })
+
+  // L'exemption porte sur le CHEMIN du sous-dossier de service, pas sur toute route de tenant :
+  // un vrai tenant perime (patient absent ailleurs qu'au sous-dossier) doit continuer de
+  // declencher le rappel.
+  it('declenche toujours le rappel pour un 404 sur une autre route de tenant du meme patient', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        status: 404,
+        url: 'http://localhost:3000/e/e1/s/s1/patient/px',
+      }),
+    )
+    const onStaleTenant = vi.fn().mockResolvedValue(undefined)
+    registerStaleTenantHandler(onStaleTenant)
+
+    await fetchWithAuth('http://localhost:3000/e/e1/s/s1/patient/px')
+
+    expect(onStaleTenant).toHaveBeenCalledTimes(1)
+    expect(onStaleTenant).toHaveBeenCalledWith('/e/e1/s/s1/patient/px')
+  })
+
   // Un ecran qui charge plusieurs ressources d'un coup peut voir plusieurs
   // requetes echouer par 404 en meme temps, toutes pour le meme couple retire
   // : sans garde-fou, chacune relancerait son propre rechargement de `/me`.

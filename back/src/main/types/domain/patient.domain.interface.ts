@@ -3,6 +3,8 @@ import type { TimeOfDay } from '../../interfaces/http/fastify/schemas/patient.sc
 import type {
   PatientCreateEntityRepo,
   PatientEntityRepo,
+  PatientIdentitySearchFilters,
+  PatientIdentitySearchResultRepo,
   PatientUpdateEntityRepo,
   PatientWithTagsEntityRepo,
 } from '../infra/orm/repositories/patient.repository.interface'
@@ -12,12 +14,26 @@ import type { EnrollmentIssueEntityDomain } from './enrollmentIssue.domain.inter
 
 export type PatientEntityDomain = PatientEntityRepo
 export type PatientWithTagsDomain = PatientWithTagsEntityRepo
+export type PatientIdentityMatchDomain = PatientIdentitySearchResultRepo
+// Recherche d'identite : `hasMore` dit qu'il y a plus de vingt resultats, jamais combien (revue
+// tache 13, tour 1, point 4) — voir le commentaire de `patientIdentitySearchResponseSchema`.
+export type PatientIdentitySearchResultDomain = {
+  results: PatientIdentityMatchDomain[]
+  hasMore: boolean
+}
 export type PatientWithAppointmentsDomain = PatientEntityDomain & {
   appointmentPatients: (AppointmentPatientEntityDomain & {
     appointment: AppointmentEntityDomain
   })[]
   enrollmentIssues: EnrollmentIssueEntityDomain[]
 }
+// Signal de suivi ailleurs (spec §5.3/§6, tache 7 tour 1, I1) porte par la lecture du patient,
+// pas par celle du sous-dossier : voir PatientDomain.findByID.
+//
+// `followedElsewhere?` (revue tache 13, tour 1, point 1) : absent quand le service courant n'a
+// pas encore de sous-dossier pour ce patient — jamais `false` dans ce cas, un `false` dirait
+// « je sais, et c'est non ». Voir le commentaire de `patientDetailResponseSchema`.
+export type PatientDetailDomain = PatientWithAppointmentsDomain & { followedElsewhere?: boolean }
 export type PatientCreateEntityDomain = Omit<
   PatientCreateEntityRepo,
   'createDate'
@@ -99,7 +115,10 @@ export type PatientPathwayDomain = {
 export interface PatientDomainInterface {
   findAll: () => Promise<PatientEntityDomain[]>
   findAllWithTags: () => Promise<PatientWithTagsDomain[]>
-  findByID: (patientID: string) => Promise<PatientEntityDomain>
+  searchByIdentity: (
+    filters: PatientIdentitySearchFilters,
+  ) => Promise<PatientIdentitySearchResultDomain>
+  findByID: (patientID: string) => Promise<PatientDetailDomain>
   exportExcel: (
     filters: PatientExportFilters,
     options: PatientExportOptions,

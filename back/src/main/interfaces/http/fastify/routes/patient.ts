@@ -17,6 +17,8 @@ import {
   enrollPatientInPathwaysSchema,
   type GetPatientByIdParams,
   getPatientByIdParamsSchema,
+  patientDetailResponseSchema,
+  patientIdentitySearchResponseSchema,
   type PatientPathwayParams,
   patientPathwayParamsSchema,
   patientPathwaysResponseSchema,
@@ -26,6 +28,8 @@ import {
   type ReorderPatientPathwaysBody,
   removeFromPathwayResponseSchema,
   reorderPatientPathwaysBodySchema,
+  type SearchPatientIdentityQuery,
+  searchPatientIdentityQuerySchema,
   type UpdatePatientBody,
   type UpdatePatientParams,
   updatePatientByIdSchema,
@@ -103,6 +107,44 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
     },
   )
 
+  // Recherche d'identite existante avant creation (design §6, tache 13, must be before
+  // /:patientID). Meme permission que la lecture du patient (`patient:read`) : aucune permission
+  // nouvelle — un secretariat obtient exactement la meme reponse qu'un coordinateur, la
+  // recherche ne portant aucun champ clinique (consigne 5 du brief, verifie par
+  // patient-search-identite.test.ts).
+  //
+  // Ce qui tient reellement la forme de la reponse (revue tache 13, tour 1, point 5) : le corps
+  // HTTP effectivement rendu, verifie par `patient-search-identite.test.ts`
+  // (`expect(Object.keys(match).sort()).toEqual([...])` sur la reponse reelle, pas sur un type).
+  // Le `select` du depot (`PatientRepository.searchByIdentity`) et
+  // `patientIdentitySearchResponseSchema` ci-dessous y contribuent tous les deux, mais ni l'un
+  // ni l'autre ne tient seul, a l'epreuve : un `select` elargi d'une colonne passe le
+  // compilateur (Prisma retourne un objet plus riche que le type declare, et l'assignation n'est
+  // pas un litteral frais — TypeScript ne verifie pas les proprietes en trop dans ce cas), et
+  // Zod/fast-json-stringify le rattrapent silencieusement en serialisation ; a l'inverse, retirer
+  // le schema de reponse ne fuit rien tant que le `select` reste etroit. Seul le retrait des DEUX
+  // a la fois fait rougir un test. Ce n'est pas une faiblesse a corriger en testant chaque couche
+  // isolement : une defense en profondeur qu'on eprouve couche par couche ne prouve que sa
+  // propre redondance, pas la propriete qui compte — celle-ci est eprouvee au niveau ou elle
+  // s'observe, le corps de la reponse HTTP.
+  //
+  fastify.get<{ Querystring: SearchPatientIdentityQuery }>(
+    '/search',
+    {
+      schema: {
+        querystring: searchPatientIdentityQuerySchema,
+        response: {
+          200: patientIdentitySearchResponseSchema,
+        },
+      },
+      config: { permission: 'patient:read' },
+    },
+    (request) => {
+      const { firstName, lastName, birthDate } = request.query
+      return patientDomain.searchByIdentity({ firstName, lastName, birthDate })
+    },
+  )
+
   // Get all with pathway template tags (must be before /:patientID)
   fastify.get(
     '/with-tags',
@@ -122,7 +164,7 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
       schema: {
         params: getPatientByIdParamsSchema,
         response: {
-          200: patientResponseSchema,
+          200: patientDetailResponseSchema,
           404: z.object({ message: z.string() }),
         },
       },

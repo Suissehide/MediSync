@@ -4,6 +4,9 @@ import type {
   PatientCreateEntityRepo,
   PatientEntityRepo,
   PatientExportFilters,
+  PatientForExportEntityRepo,
+  PatientIdentitySearchFilters,
+  PatientIdentitySearchRepoResult,
   PatientPathwayEntityRepo,
   PatientRepositoryInterface,
   PatientUpdateEntityRepo,
@@ -18,6 +21,21 @@ type AppointmentPatientWithMainTag = {
     slot: { pathway: { template: { mainTag: string } | null } | null } | null
   } | null
 }
+
+// Nombre maximum de resultats affiches par une recherche d'identite (design §6, tache 13) —
+// voir `PatientRepository.searchByIdentity` pour la garde anti-doublon (`hasMore`) qui en
+// depend. Exporte pour que la source de verite reste unique (pas un `20` duplique ailleurs).
+export const IDENTITY_SEARCH_LIMIT = 20
+
+// Echappe les caracteres speciaux du motif `LIKE`/`ILIKE` (`%`, `_`) dans une valeur destinee a
+// `contains` (revue tache 13, tour 1, point 2) : sans cela, un nom cherche contenant l'un de ces
+// deux caracteres — ou meme la seule valeur `%` — est traite comme un joker par Postgres,
+// contournant la garde du `.refine` de `searchPatientIdentityQuerySchema` ("au moins un prenom
+// ou un nom"). L'antislash est echappe en premier : c'est le caractere d'echappement par defaut
+// de LIKE/ILIKE sur Postgres, donc un antislash saisi par l'utilisateur doit lui-meme devenir
+// litteral avant que `%`/`_` ne soient prefixes du meme caractere.
+const escapeLikePattern = (value: string): string =>
+  value.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_')
 
 // Tags principaux distincts des parcours auxquels un patient est inscrit.
 const distinctMainTags = (
@@ -59,7 +77,16 @@ class PatientRepository implements PatientRepositoryInterface {
 
   async findAllWithTags(): Promise<PatientWithTagsEntityRepo[]> {
     const patients = await this.prisma.patient.findMany({
-      where: this.establishmentScope,
+      // La liste rend les patients ayant un sous-dossier dans le SERVICE courant, pas tous ceux
+      // de l'etablissement (tache 12, etape 3 du multi-tenant) : avant ce filtre, les deux
+      // services montraient la meme liste — voir task-12-brief.md, et le test de cloisonnement
+      // dans patient.test.ts. `some` ne filtre que les LIGNES rendues, `include.serviceFiles`
+      // ci-dessous continue de porter son propre `where` pour ne recuperer, pour ce patient, que
+      // le sous-dossier du service courant (jamais celui d'un autre service).
+      where: {
+        ...this.establishmentScope,
+        serviceFiles: { some: { serviceId: this.scope.serviceId } },
+      },
       include: {
         appointmentPatients: {
           where: { serviceId: this.scope.serviceId },
@@ -79,17 +106,26 @@ class PatientRepository implements PatientRepositoryInterface {
             },
           },
         },
-        enrollmentIssues: { where: { serviceId: this.scope.serviceId } },
+        // Les problemes d'inscription et la date d'entree vivent desormais sur le sous-dossier
+        // de service (etape 3 du multi-tenant) : la lecture passe par lui, puis s'aplatit pour
+        // garder la meme forme qu'avant sur le patient (au plus un sous-dossier par service,
+        // donc pas de doublon).
+        serviceFiles: {
+          where: { serviceId: this.scope.serviceId },
+          select: { enrollmentIssues: true, entryDate: true },
+        },
       },
     })
 
-    return patients.map(({ appointmentPatients, ...patient }) => ({
+    return patients.map(({ appointmentPatients, serviceFiles, ...patient }) => ({
       ...patient,
       pathwayTemplateTags: distinctMainTags(appointmentPatients),
+      enrollmentIssues: serviceFiles.flatMap((f) => f.enrollmentIssues),
+      entryDate: serviceFiles[0]?.entryDate ?? null,
     }))
   }
 
-  async findForExport(filters: PatientExportFilters): Promise<PatientWithTagsEntityRepo[]> {
+  async findForExport(filters: PatientExportFilters): Promise<PatientForExportEntityRepo[]> {
     const { search, pathwayTemplateTags } = filters
 
     const patients = await this.prisma.patient.findMany({
@@ -139,20 +175,107 @@ class PatientRepository implements PatientRepositoryInterface {
             },
           },
         },
-        enrollmentIssues: { where: { serviceId: this.scope.serviceId } },
+        // Sous-dossier du service courant : le parcours et le contenu clinique de l'export
+        // (etape 3 du multi-tenant) y vivent desormais, plus sur Patient. Filtre de service
+        // explicite requis par le garde-fou d'ORM (relation vers un modele de service). Les
+        // problemes d'inscription, eux aussi rattaches au sous-dossier depuis la tache 6, sont
+        // inclus ici pour la meme raison qu'avant : garder la forme `PatientWithTagsEntityRepo`.
+        //
+        // `include` (pas `select`) est necessaire ici, a la difference de `findAllWithTags` et
+        // `findByID` : ceux-ci ne gardent que `enrollmentIssues` et jettent le reste du
+        // sous-dossier, `select: { enrollmentIssues: true }` leur suffit donc. Cette methode-ci
+        // expose au contraire le sous-dossier complet sous `serviceFile` (dix-neuf colonnes,
+        // lues par EXPORT_COLUMNS dans patient.domain.ts) : il lui faut les scalaires ET la
+        // relation. Prisma n'a pas de forme "tous les scalaires + une relation" hors `include` —
+        // un `select` explicite obligerait a enumerer chaque colonne du sous-dossier ici, une
+        // liste qui se desynchroniserait silencieusement de `prisma/schema.prisma` a la
+        // prochaine colonne ajoutee. `enrollmentIssues` est donc retire explicitement plus bas,
+        // apres la requete, plutot que par la forme de la requete elle-meme (tache 6, revue,
+        // Important I2 : `serviceFile` ne doit porter aucune cle que `PatientServiceFileEntityRepo` ne
+        // declare pas).
+        serviceFiles: {
+          where: { serviceId: this.scope.serviceId },
+          include: { enrollmentIssues: true },
+        },
       },
       orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
     })
 
-    return patients.map(({ appointmentPatients, ...patient }) => ({
-      ...patient,
-      pathwayTemplateTags: distinctMainTags(appointmentPatients),
-    }))
+    return patients.map(({ appointmentPatients, serviceFiles, ...patient }) => {
+      const [primaryServiceFile] = serviceFiles
+      const serviceFile = primaryServiceFile
+        ? ((({ enrollmentIssues: _enrollmentIssuesOnServiceFile, ...rest }) => rest)(primaryServiceFile))
+        : null
+      return {
+        ...patient,
+        pathwayTemplateTags: distinctMainTags(appointmentPatients),
+        serviceFile,
+        enrollmentIssues: serviceFiles.flatMap((f) => f.enrollmentIssues),
+      }
+    })
+  }
+
+  // Recherche d'identite existante avant creation (design §6, tache 13) : rend UNIQUEMENT
+  // l'identite — id (necessaire pour choisir un resultat), prenom, nom, date de naissance —
+  // jamais le contact (genre, telephones, email...), jamais le suivi, jamais un contenu de
+  // service. `select` explicite, pas `include` ni l'entite complete : c'est la requete
+  // elle-meme qui ne fait jamais entrer les autres colonnes en memoire, pas une projection
+  // appliquee apres coup (une premiere version naive, qui renvoyait l'entite entiere, a ete
+  // prouvee rouge contre le test de confidentialite avant ce correctif — voir
+  // patient-search-identite.test.ts, "la recherche ne rend que l'identite"). Ce `select` est un
+  // renfort, pas la garantie qui compte : voir `patientIdentitySearchResponseSchema`
+  // (patient.schema.ts) pour ce qui tient reellement la forme de la reponse HTTP (revue tache
+  // 13, tour 1, point 5).
+  //
+  // Establishment-scope, PAS `runAsSystem` : Patient est un modele d'etablissement (comme
+  // `establishmentScope` ci-dessus le sert deja a `findByID`/`findAll`/`create`), donc le
+  // garde-fou d'ORM normal — un `where` qui porte `establishmentId` — suffit a filtrer TOUT
+  // l'etablissement courant sans avoir a l'assouplir. Voir le commentaire de
+  // `PatientDomain.searchByIdentity` pour pourquoi ce choix n'etend pas l'exception de
+  // `estSuiviAilleurs`.
+  //
+  // `escapeLikePattern` (revue tache 13, tour 1, point 2) : `contains`/`mode: insensitive` se
+  // traduit en `ILIKE` sur Postgres, et `%`/`_` y sont des jokers — un nom cherche contenant l'un
+  // des deux (ou meme un simple `%`, sans nom) faisait sinon remonter tout l'etablissement,
+  // exactement ce que le `.refine` du schema de requete (searchPatientIdentityQuerySchema) est
+  // cense empecher. Prisma ne les echappe pas lui-meme : la valeur saisie est inseree telle
+  // quelle dans le motif `%valeur%` envoye a Postgres. Ce n'est pas une injection SQL — Prisma
+  // parametre deja la requete — seul le MOTIF `LIKE` est affecte.
+  //
+  // `take: IDENTITY_SEARCH_LIMIT + 1` (revue tache 13, tour 1, point 4) : une ligne de plus que
+  // ce qu'on affiche jamais, uniquement pour savoir s'il y en a davantage — `hasMore` le dit,
+  // sans jamais compter combien exactement (un `count()` sur toute la table couterait une
+  // seconde requete a chaque recherche, pour un ecran qui n'a besoin que de savoir qu'il faut
+  // affiner).
+  async searchByIdentity(
+    filters: PatientIdentitySearchFilters,
+  ): Promise<PatientIdentitySearchRepoResult> {
+    const { firstName, lastName, birthDate } = filters
+    const matches = await this.prisma.patient.findMany({
+      where: {
+        ...this.establishmentScope,
+        ...(firstName
+          ? { firstName: { contains: escapeLikePattern(firstName), mode: 'insensitive' } }
+          : {}),
+        ...(lastName
+          ? { lastName: { contains: escapeLikePattern(lastName), mode: 'insensitive' } }
+          : {}),
+        ...(birthDate ? { birthDate } : {}),
+      },
+      select: { id: true, firstName: true, lastName: true, birthDate: true },
+      orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
+      take: IDENTITY_SEARCH_LIMIT + 1,
+    })
+    const hasMore = matches.length > IDENTITY_SEARCH_LIMIT
+    return { results: hasMore ? matches.slice(0, IDENTITY_SEARCH_LIMIT) : matches, hasMore }
   }
 
   async findByID(patientID: string): Promise<PatientWithAppointmentsDomain> {
     try {
-      return await this.prisma.patient.findUniqueOrThrow({
+      // Les problemes d'inscription vivent desormais sur le sous-dossier de service (etape 3 du
+      // multi-tenant) : la lecture passe par lui, puis s'aplatit pour garder la meme forme
+      // qu'avant sur le patient (au plus un sous-dossier par service, donc pas de doublon).
+      const { serviceFiles, ...patient } = await this.prisma.patient.findUniqueOrThrow({
         where: { id_establishmentId: { id: patientID, ...this.establishmentScope } },
         include: {
           appointmentPatients: {
@@ -161,9 +284,13 @@ class PatientRepository implements PatientRepositoryInterface {
               appointment: true,
             },
           },
-          enrollmentIssues: { where: { serviceId: this.scope.serviceId } },
+          serviceFiles: {
+            where: { serviceId: this.scope.serviceId },
+            select: { enrollmentIssues: true },
+          },
         },
       })
+      return { ...patient, enrollmentIssues: serviceFiles.flatMap((f) => f.enrollmentIssues) }
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
         entityName: 'Patient',

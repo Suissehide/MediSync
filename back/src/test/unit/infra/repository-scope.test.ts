@@ -2,11 +2,13 @@ import { ActivityLogRepository } from '../../../main/infra/orm/repositories/acti
 import { AppointmentRepository } from '../../../main/infra/orm/repositories/appointment.repository'
 import { DiagnosticEducatifRepository } from '../../../main/infra/orm/repositories/diagnosticEducatif.repository'
 import { DiagnosticEducatifTemplateRepository } from '../../../main/infra/orm/repositories/diagnosticEducatifTemplate.repository'
+import { EnrollmentIssueRepository } from '../../../main/infra/orm/repositories/enrollmentIssue.repository'
 import { LocationRepository } from '../../../main/infra/orm/repositories/location.repository'
 import { MembershipRepository } from '../../../main/infra/orm/repositories/membership.repository'
 import { PathwayRepository } from '../../../main/infra/orm/repositories/pathway.repository'
 import { PathwayTemplateRepository } from '../../../main/infra/orm/repositories/pathwayTemplate.repository'
 import { PatientRepository } from '../../../main/infra/orm/repositories/patient.repository'
+import { PatientServiceFileRepository } from '../../../main/infra/orm/repositories/patientServiceFile.repository'
 import { PlanningCycleRepository } from '../../../main/infra/orm/repositories/planningCycle.repository'
 import { SlotRepository } from '../../../main/infra/orm/repositories/slot.repository'
 import { SlotTemplateRepository } from '../../../main/infra/orm/repositories/slotTemplate.repository'
@@ -17,6 +19,7 @@ import { assertTenantScope } from '../../../main/infra/orm/tenant-guard'
 import type { IocContainer } from '../../../main/types/application/ioc'
 import type { Tenant } from '../../../main/types/utils/tenant-context'
 import { TenantContext } from '../../../main/utils/tenant-context'
+import { TenantScopeMissingError } from '../../../main/utils/tenant-errors'
 
 type Call = { model: string; op: string; args: Record<string, unknown> }
 
@@ -576,6 +579,39 @@ describe('scoping des repositories de diagnostic', () => {
     })
   })
 
+  // EnrollmentIssueRepository est l'autre modele de service deplace par la tache 6 (motifs
+  // d'echec d'inscription, rattaches au sous-dossier de service). Jusqu'ici seul
+  // DiagnosticEducatifRepository avait un bloc ici : sur cinq sabotages du filtre de service
+  // pratiques en revue, les deux qui touchaient EnrollmentIssueRepository (findByPatientID et
+  // delete) ne faisaient rougir aucun test — voir tache 6, revue, Critique C1. Ce bloc couvre ses trois
+  // methodes, calque sur celui de DiagnosticEducatifRepository ci-dessus.
+  it('EnrollmentIssueRepository filtre, cree et supprime avec les cles de tenant', async () => {
+    const { prisma, calls } = buildFakePrisma()
+    const ctx = new TenantContext()
+    const repo = new EnrollmentIssueRepository(buildContainer(prisma, ctx))
+    await ctx.run(tenant, async () => {
+      await repo.findByPatientID('p1')
+      await repo.create('p1', [{ pathwayTemplateID: 'pt1', reason: 'R', startDate: new Date() }])
+      await repo.delete('ei1')
+    })
+    expect(calls[0]).toMatchObject({
+      model: 'enrollmentIssue', op: 'findMany',
+      args: { where: { patientId: 'p1', serviceId: 's1', establishmentId: 'e1' } },
+    })
+    expect(calls[1]).toMatchObject({
+      model: 'enrollmentIssue', op: 'createMany',
+      args: {
+        data: [
+          { patientId: 'p1', pathwayTemplateID: 'pt1', reason: 'R', serviceId: 's1', establishmentId: 'e1' },
+        ],
+      },
+    })
+    expect(calls[2]).toMatchObject({
+      model: 'enrollmentIssue', op: 'delete',
+      args: { where: { id_serviceId: { id: 'ei1', serviceId: 's1' } } },
+    })
+  })
+
   it('DiagnosticEducatifTemplateRepository filtre, cree et met a jour avec les cles de tenant', async () => {
     const { prisma, calls } = buildFakePrisma()
     const ctx = new TenantContext()
@@ -895,20 +931,30 @@ describe('scoping appointment', () => {
       await repo.addPatientToAppointment({ appointmentID: 'a1', patientID: 'p2' } as never)
       await repo.deleteOrphanedByIds(['a1'])
     })
+    // `create` n'ecrit plus `appointmentPatients` en creation imbriquee : `serviceId` fait
+    // partie de la cle etrangere composite de la relation `appointment`
+    // ([appointmentId, serviceId]), donc Prisma le refuse dans cette forme
+    // ("Unknown argument `serviceId`") — voir le commentaire de
+    // `AppointmentRepository.create` (task-5-re-review.md, point 3). Le rendez-vous et ses
+    // participants sont donc deux ecritures de premier niveau, dans la transaction.
     expect(calls[0]).toMatchObject({
       model: 'appointment', op: 'create',
-      args: {
-        data: {
-          serviceId: 's1', establishmentId: 'e1', slotID: 'sl',
-          appointmentPatients: { create: [{ patientId: 'p1', serviceId: 's1', establishmentId: 'e1' }] },
-        },
-      },
+      args: { data: { serviceId: 's1', establishmentId: 'e1', slotID: 'sl' } },
     })
+    expect(calls[0]?.args.data).not.toHaveProperty('appointmentPatients')
     expect(calls[1]).toMatchObject({
+      model: 'appointmentPatient', op: 'createMany',
+      args: { data: [{ appointmentId: 'x', patientId: 'p1', serviceId: 's1', establishmentId: 'e1' }] },
+    })
+    expect(calls[2]).toMatchObject({
+      model: 'appointment', op: 'findUniqueOrThrow',
+      args: { where: { id_serviceId: { id: 'x', serviceId: 's1' } } },
+    })
+    expect(calls[3]).toMatchObject({
       model: 'appointmentPatient', op: 'create',
       args: { data: { appointmentId: 'a1', patientId: 'p2', serviceId: 's1', establishmentId: 'e1' } },
     })
-    expect(calls[2]).toMatchObject({
+    expect(calls[4]).toMatchObject({
       model: 'appointment', op: 'deleteMany',
       args: { where: { id: { in: ['a1'] }, serviceId: 's1', appointmentPatients: { none: {} } } },
     })
@@ -982,5 +1028,74 @@ describe('scoping appointment', () => {
       model: 'appointment', op: 'findUniqueOrThrow',
       args: { where: { id_serviceId: { id: 'a1', serviceId: 's1' } } },
     })
+  })
+})
+
+// Etape 3 du multi-tenant, tache 7 : `estSuiviAilleurs` est LA SEULE lecture de tout le back qui
+// traverse volontairement la frontiere entre services (design §5.3). Ce bloc en verifie le
+// mecanisme, pas seulement le resultat : la forme exacte de la requete (ses deux bornes, memes
+// sous `runAsSystem`), et — a la place ou l'aurait laissee un simple test de retour — la preuve
+// que cette forme precise serait refusee par le garde-fou d'ORM sans le mode encadre. Voir aussi
+// back/src/test/unit/infra/runAsSystem-unicite.test.ts (unicite de l'exception dans les sources)
+// et back/src/test/e2e/dossier-service.test.ts (comportement de bout en bout, cloisonnement).
+describe('PatientServiceFileRepository.estSuiviAilleurs', () => {
+  it('interroge sous runAsSystem, avec l etablissement courant et un service different du courant', async () => {
+    const { prisma, calls } = buildFakePrisma({ 'patientServiceFile.findFirst': { patientId: 'p1' } })
+    const ctx = new TenantContext()
+    const spy = jest.spyOn(ctx, 'runAsSystem')
+    const repo = new PatientServiceFileRepository(buildContainer(prisma, ctx))
+
+    const resultat = await ctx.run(tenant, () => repo.estSuiviAilleurs('p1'))
+
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(calls).toHaveLength(1)
+    expect(calls[0]).toMatchObject({
+      model: 'patientServiceFile', op: 'findFirst',
+      args: {
+        where: { patientId: 'p1', establishmentId: 'e1', serviceId: { not: 's1' } },
+        select: { patientId: true },
+      },
+    })
+    // Rien d'autre qu'un booleen ne sort de la fonction : la ligne trouvee
+    // (`{ patientId: 'p1' }`) n'est jamais retournee telle quelle.
+    expect(resultat).toBe(true)
+  })
+
+  it('rend vrai quand un autre sous-dossier existe, faux sinon', async () => {
+    const ctx = new TenantContext()
+
+    const { prisma: prismaAvecAutre } = buildFakePrisma({ 'patientServiceFile.findFirst': { patientId: 'p1' } })
+    const repoAvecAutre = new PatientServiceFileRepository(buildContainer(prismaAvecAutre, ctx))
+    await expect(ctx.run(tenant, () => repoAvecAutre.estSuiviAilleurs('p1'))).resolves.toBe(true)
+
+    const { prisma: prismaSansAutre } = buildFakePrisma({ 'patientServiceFile.findFirst': null })
+    const repoSansAutre = new PatientServiceFileRepository(buildContainer(prismaSansAutre, ctx))
+    await expect(ctx.run(tenant, () => repoSansAutre.estSuiviAilleurs('p1'))).resolves.toBe(false)
+  })
+
+  // Le mecanisme, isole : la forme EXACTE de requete que la fonction construit
+  // (patientId + establissement courant + serviceId EXCLU du courant) est celle qu'un
+  // `runAsSystem` retire de la portee du garde-fou. Sans lui (store `kind: 'tenant'`), le
+  // garde-fou refuse — c'est ce refus qui rend `runAsSystem` necessaire, pas une preference de
+  // style. Avec lui (store `kind: 'system'`), il laisse passer : c'est exactement ce que fait
+  // tenant-guard.ts (`if (store.kind === 'system') { return }`, voir infra/orm/tenant-guard.ts).
+  it('la forme de requete qu elle construit est refusee par le garde-fou hors du mode encadre, et permise dedans', () => {
+    const args = {
+      where: { patientId: 'p1', establishmentId: 'e1', serviceId: { not: 's1' } },
+      select: { patientId: true },
+    }
+    expect(() =>
+      assertTenantScope(
+        { model: 'PatientServiceFile', operation: 'findFirst', args },
+        { kind: 'tenant', tenant },
+      ),
+    ).toThrow(TenantScopeMissingError)
+
+    expect(() =>
+      assertTenantScope(
+        { model: 'PatientServiceFile', operation: 'findFirst', args },
+        { kind: 'system' },
+      ),
+    ).not.toThrow()
   })
 })

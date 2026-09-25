@@ -100,6 +100,12 @@ const buildDomain = (
       })),
   })
 
+  // Un seul mock de logger PARTAGE (modele `buildFakeLogger` de `error-handler.test.ts`) : toutes
+  // les methodes poussent dans la meme liste `loggerCalls`, pas seulement `error`
+  // (task-5-re-review-4.md, I1) — sans ca, une fuite par un canal voisin (`warn`, ici) passe au
+  // vert.
+  const loggerCalls: string[] = []
+  const recordLog = (message: string) => loggerCalls.push(message)
   const container = {
     // Contexte de tenant minimal : seuls les roles sont lus par le domaine
     // (report du motif dans une transmission clinique).
@@ -107,10 +113,10 @@ const buildDomain = (
       current: () => ({ serviceRole, establishmentRole: 'MEMBER' }),
     },
     logger: {
-      error: jest.fn(),
-      info: jest.fn(),
-      warn: jest.fn(),
-      debug: jest.fn(),
+      error: jest.fn(recordLog),
+      info: jest.fn(recordLog),
+      warn: jest.fn(recordLog),
+      debug: jest.fn(recordLog),
     },
     appEventBus: { emit: jest.fn() },
     patientRepository: {
@@ -174,6 +180,7 @@ const buildDomain = (
       ),
     },
     enrollmentIssueRepository: { create: jest.fn(async () => undefined) },
+    patientServiceFileDomain: { ensureExists: jest.fn(async () => undefined) },
     thematicRepository: {
       findByID: jest.fn((id: string) =>
         knownThematicIDs.includes(id)
@@ -184,7 +191,7 @@ const buildDomain = (
   }
 
   const domain = new PatientDomain(container as unknown as IocContainer)
-  return { domain, created, container }
+  return { domain, created, container, loggerCalls }
 }
 
 describe('PatientDomain – résolution du parcours par tag principal', () => {
@@ -472,5 +479,71 @@ describe('PatientDomain – report du motif dans une transmission clinique', () 
     expect(
       transmissionNotesOfCreate(container as never),
     ).toBeUndefined()
+  })
+})
+
+// task-5-re-review-3.md (re-revue du tour 5) : le catch de processEnrollments/enrollInSlot
+// (ci-dessous, patient.domain.ts) traite tout `error instanceof Error` de la meme facon,
+// Boom ou non. C'est sans risque pour un Boom (son message est toujours ecrit par notre
+// propre code — boomErrorFromPrismaError ou un `Boom.xxx(...)` explicite). Mais 17 depots sur
+// 19 ont des methodes sans `catch` (task-5-re-review-3.md, C1) : si l'une d'elles jette une
+// erreur brute au lieu d'un Boom, ce catch en recopierait aujourd'hui le message tel quel dans
+// la reponse HTTP (`failedEnrollments[].reason`, affiche a l'ecran par
+// front/src/queries/usePatient.tsx) ET dans le journal applicatif. Reproduit ici sans toucher
+// a Prisma : `pathwayTemplateRepository.findAll` (methode reellement sans `catch`, voir
+// pathwayTemplate.repository.ts) rejette avec une `Error` nue portant un marqueur.
+describe('PatientDomain – une erreur inattendue (non-Boom) pendant l\'inscription ne fuit pas', () => {
+  const RAW_ERROR_MARKER = 'MOTIF-CLINIQUE-CONFIDENTIEL-INATTENDU'
+
+  it('ne renvoie jamais le message brut d une erreur qui n est pas un Boom, ni au client ni au journal', async () => {
+    const { domain, container, loggerCalls } = buildDomain()
+    container.pathwayTemplateRepository.findAll = jest.fn(async () => {
+      throw new Error(RAW_ERROR_MARKER)
+    })
+
+    const result = await domain.enrollPatientInPathways(
+      {
+        patientData: { firstName: 'Ada', lastName: 'Lovelace' } as never,
+        startDate: monday(0),
+        pathways: [{ tag: 'GROUPE', timeOfDay: 'ALL_DAY', duration: 30 }],
+      },
+      'user-1',
+    )
+
+    expect(result.failedEnrollments).toHaveLength(1)
+    expect(result.failedEnrollments[0]?.reason).not.toContain(RAW_ERROR_MARKER)
+
+    const loggedMessages = container.logger.error.mock.calls.map(
+      (call) => call[0] as string,
+    )
+    for (const message of loggedMessages) {
+      expect(message).not.toContain(RAW_ERROR_MARKER)
+    }
+
+    // Tous les canaux, pas seulement `error` (task-5-re-review-4.md, I1) : un `logger.warn`
+    // ajoute dans le `catch` d'inscription, avant la ligne corrigee, doit faire rougir ce test.
+    for (const line of loggerCalls) {
+      expect(line).not.toContain(RAW_ERROR_MARKER)
+    }
+  })
+})
+
+// Tache 12, tour de correction 1 : `PatientDomain.create` appelle desormais `ensureExists`,
+// comme `processEnrollments` et `DiagnosticEducatifDomain.create` (voir le commentaire dans
+// patient.domain.ts). Garde-fou unitaire, rapide, en plus de la preuve e2e
+// (patient.test.ts, describe "cloisonnement de la liste des patients par service") qui montre
+// la consequence bout en bout sur la liste par service.
+describe('PatientDomain – création du sous-dossier de service a la creation du patient', () => {
+  it('appelle ensureExists avec l id du patient nouvellement cree', async () => {
+    const { domain, container } = buildDomain()
+
+    const created = await domain.create(
+      { firstName: 'Ada', lastName: 'Lovelace' } as never,
+      'user-1',
+    )
+
+    expect(container.patientServiceFileDomain.ensureExists).toHaveBeenCalledWith(
+      created.id,
+    )
   })
 })

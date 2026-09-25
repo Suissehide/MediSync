@@ -27,6 +27,17 @@ export const registerStaleTenantHandler = (
 // tache de fond, jamais attendue avant de renvoyer la reponse.
 let isCheckingStaleTenant = false
 
+// Chemins dont le 404 est un etat NORMAL, pas un signal d'arbre perime : le sous-dossier de
+// service d'un patient rend un 404 tant qu'aucune ecriture ne l'a encore cree pour ce patient
+// dans ce service (delibere cote back, voir `patientServiceFile.ts`) — et c'est le cas
+// MAJORITAIRE juste apres une migration, avant qu'aucun patient n'ait de sous-dossier rempli
+// dans un second service. Sans cette exemption, chaque ouverture de fiche patient sans
+// sous-dossier paierait un aller-retour `/me` complet en tache de fond, pour un 404 qui ne dit
+// rien de la fraicheur du couple etablissement/service. Exemption de CHEMIN plutot que de
+// changer le contrat back (deliberement neutre, voir plus bas) : un vrai tenant perime continue
+// de declencher le rappel sur toute autre route.
+const CHEMINS_404_NORMAUX = [/^\/e\/[^/]+\/s\/[^/]+\/patient\/[^/]+\/service-file$/]
+
 export const fetchWithAuth = async (
   input: RequestInfo,
   init?: RequestInit,
@@ -75,16 +86,19 @@ export const fetchWithAuth = async (
   // Restreint aux routes commencant par `/e/` (`tenantApiUrl` et
   // `establishmentApiUrl`) : un 404 sur `/me` ou sur une ressource hors
   // tenant ne doit rien declencher.
-  if (
-    response.status === 404 &&
-    new URL(response.url).pathname.startsWith('/e/') &&
-    onStaleTenant &&
-    !isCheckingStaleTenant
-  ) {
-    isCheckingStaleTenant = true
-    void onStaleTenant(new URL(response.url).pathname).finally(() => {
-      isCheckingStaleTenant = false
-    })
+  if (response.status === 404) {
+    const pathname = new URL(response.url).pathname
+    if (
+      pathname.startsWith('/e/') &&
+      !CHEMINS_404_NORMAUX.some((motif) => motif.test(pathname)) &&
+      onStaleTenant &&
+      !isCheckingStaleTenant
+    ) {
+      isCheckingStaleTenant = true
+      void onStaleTenant(pathname).finally(() => {
+        isCheckingStaleTenant = false
+      })
+    }
   }
 
   return response

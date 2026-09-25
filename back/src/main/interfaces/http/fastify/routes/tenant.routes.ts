@@ -11,6 +11,7 @@ import { locationReadRouter } from './location'
 import { pathwayRouter } from './pathway'
 import { pathwayTemplateRouter } from './pathwayTemplate'
 import { patientRouter } from './patient'
+import { patientServiceFileRouter } from './patientServiceFile'
 import { planningCycleRouter } from './planningCycle'
 import { slotRouter } from './slot'
 import { slotTemplateRouter } from './slotTemplate'
@@ -43,6 +44,7 @@ const tenantRoutes: FastifyPluginAsyncZod = async (fastify) => {
   await fastify.register(thematicRouter, { prefix: '/thematic' })
   await fastify.register(locationReadRouter, { prefix: '/location' })
   await fastify.register(patientRouter, { prefix: '/patient' })
+  await fastify.register(patientServiceFileRouter, { prefix: '/patient/:patientID/service-file' })
   await fastify.register(diagnosticEducatifTemplateRouter, { prefix: '/diagnostic-template' })
   await fastify.register(diagnosticEducatifRouter, { prefix: '/patient/:patientId/diagnostic' })
   await fastify.register(enrollmentIssueRouter, { prefix: '/patient/:patientID/enrollment-issue' })
