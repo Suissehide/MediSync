@@ -13,6 +13,10 @@ import type {
 } from '../../../../types/interfaces/http/fastify/errors'
 import { pathWithoutQuery } from '../../../../utils/url-helper'
 import {
+  TenantContextMissingError,
+  TenantScopeMissingError,
+} from '../../../../utils/tenant-errors'
+import {
   defaultErrorResponse,
   errorNormalizer,
 } from './normalizers/error.normalizer'
@@ -52,17 +56,29 @@ const isBoomLike = (error: unknown): boolean =>
   error !== null &&
   (error as { isBoom?: boolean }).isBoom === true
 
+// Erreurs maison dont le message est un texte que NOUS avons ecrit, jamais recopie d'une entree
+// soumise — au meme titre qu'un Boom (task-5-re-review-4.md, I3). `TenantScopeMissingError` et
+// `TenantContextMissingError` (`utils/tenant-errors.ts`) portent, dans leur message, le nom du
+// modele/de l'operation/du champ manquant que `back/CLAUDE.md` promet de journaliser ("the error
+// message names the entry to add") : sans cette ligne, le garde-fou de tenant refuse une requete
+// sans jamais dire pourquoi, a aucun niveau de journal.
+const isOwnErrorMessage = (error: unknown): boolean =>
+  isBoomLike(error) ||
+  error instanceof TenantScopeMissingError ||
+  error instanceof TenantContextMissingError
+
 // Ce qu'un journal d'erreur peut porter sans jamais reproduire une valeur soumise :
 // - la classe de l'erreur : jamais une valeur soumise.
-// - son message, UNIQUEMENT si c'est un Boom : un Boom n'est jamais construit qu'a la main dans
-//   notre propre code (`boomErrorFromPrismaError`, ou un `Boom.xxx(...)` explicite dans un
-//   domaine) — son message est donc toujours un texte que l'on a ecrit, jamais recopie d'une
-//   erreur brute. C'est la meme distinction que celle d'`error.normalizer.ts` cote reponse HTTP.
+// - son message, UNIQUEMENT si c'est un Boom ou une des erreurs maison ci-dessus : ni l'un ni
+//   l'autre n'est jamais construit qu'a la main dans notre propre code (`boomErrorFromPrismaError`,
+//   un `Boom.xxx(...)` explicite dans un domaine, ou le garde-fou de tenant) — son message est
+//   donc toujours un texte que l'on a ecrit, jamais recopie d'une erreur brute. C'est la meme
+//   distinction que celle d'`error.normalizer.ts` cote reponse HTTP.
 // - la pile, filtree aux seules lignes de frame (voir `stackFramesOnly` ci-dessus).
 const diagnosticOf = (error: unknown): string => {
   const errorClass = error instanceof Error ? error.constructor.name : typeof error
   const parts = [`class=${errorClass}`]
-  if (isBoomLike(error) && error instanceof Error) {
+  if (isOwnErrorMessage(error) && error instanceof Error) {
     parts.push(`message=${error.message}`)
   }
   const frames = stackFramesOnly(error)

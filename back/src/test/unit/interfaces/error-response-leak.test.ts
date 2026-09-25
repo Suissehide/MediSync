@@ -5,6 +5,10 @@ import { Prisma } from '../../../generated/client'
 import { buildErrorHandler } from '../../../main/interfaces/http/fastify/errors/error.handler'
 import { boomErrorNormalizer } from '../../../main/interfaces/http/fastify/errors/normalizers/boom.error.normalizer'
 import { fastifyErrorNormalizer } from '../../../main/interfaces/http/fastify/errors/normalizers/fastify.error.normalizer'
+import {
+  TenantContextMissingError,
+  TenantScopeMissingError,
+} from '../../../main/utils/tenant-errors'
 
 // Reproduit task-5-re-review-3.md C1 : les 29 methodes de depot sans `catch` (dont tout le depot
 // `activityLog`) laissent une erreur Prisma brute tomber directement dans ce gestionnaire —
@@ -199,6 +203,33 @@ describe('la chaine de normalizers ne renvoie jamais une valeur soumise pour une
 
     const [diagnosticLine] = harness.callsByLevel.error
     expect(diagnosticLine).toContain("message=PatientServiceFile: this ID doesn't exist")
+  })
+
+  // task-5-re-review-4.md, I3 : le message d'une TenantScopeMissingError/TenantContextMissingError
+  // (`utils/tenant-errors.ts`) est, au meme titre que celui d'un Boom, un texte que notre propre
+  // code a ecrit — jamais recopie d'une entree soumise. `back/CLAUDE.md` promet que ce message
+  // "names the entry to add" : sans lui au journal, le garde-fou de tenant refuse une requete
+  // sans jamais dire quelle entree ajouter a `SERVICE_MODELS`/`NESTED_RELATIONS`.
+  it('le journal `error` garde le message d une TenantScopeMissingError : c est notre propre code qui l a ecrit', () => {
+    const harness = buildHarness()
+    const tenantError = new TenantScopeMissingError('Pathway', 'findAll', 'serviceId')
+
+    runHandler(tenantError, harness)
+
+    const [diagnosticLine] = harness.callsByLevel.error
+    expect(diagnosticLine).toContain(
+      'message=Tenant scope missing: Pathway.findAll without serviceId',
+    )
+  })
+
+  it('le journal `error` garde aussi le message d une TenantContextMissingError', () => {
+    const harness = buildHarness()
+    const tenantError = new TenantContextMissingError('aucun tenant pose')
+
+    runHandler(tenantError, harness)
+
+    const [diagnosticLine] = harness.callsByLevel.error
+    expect(diagnosticLine).toContain('message=Tenant context missing: aucun tenant pose')
   })
 
   // task-5-re-review-3.md, I1 : le tour precedent ne testait la chaine qu'avec une
