@@ -100,6 +100,12 @@ const buildDomain = (
       })),
   })
 
+  // Un seul mock de logger PARTAGE (modele `buildFakeLogger` de `error-handler.test.ts`) : toutes
+  // les methodes poussent dans la meme liste `loggerCalls`, pas seulement `error`
+  // (task-5-re-review-4.md, I1) — sans ca, une fuite par un canal voisin (`warn`, ici) passe au
+  // vert.
+  const loggerCalls: string[] = []
+  const recordLog = (message: string) => loggerCalls.push(message)
   const container = {
     // Contexte de tenant minimal : seuls les roles sont lus par le domaine
     // (report du motif dans une transmission clinique).
@@ -107,10 +113,10 @@ const buildDomain = (
       current: () => ({ serviceRole, establishmentRole: 'MEMBER' }),
     },
     logger: {
-      error: jest.fn(),
-      info: jest.fn(),
-      warn: jest.fn(),
-      debug: jest.fn(),
+      error: jest.fn(recordLog),
+      info: jest.fn(recordLog),
+      warn: jest.fn(recordLog),
+      debug: jest.fn(recordLog),
     },
     appEventBus: { emit: jest.fn() },
     patientRepository: {
@@ -185,7 +191,7 @@ const buildDomain = (
   }
 
   const domain = new PatientDomain(container as unknown as IocContainer)
-  return { domain, created, container }
+  return { domain, created, container, loggerCalls }
 }
 
 describe('PatientDomain – résolution du parcours par tag principal', () => {
@@ -490,7 +496,7 @@ describe('PatientDomain – une erreur inattendue (non-Boom) pendant l\'inscript
   const RAW_ERROR_MARKER = 'MOTIF-CLINIQUE-CONFIDENTIEL-INATTENDU'
 
   it('ne renvoie jamais le message brut d une erreur qui n est pas un Boom, ni au client ni au journal', async () => {
-    const { domain, container } = buildDomain()
+    const { domain, container, loggerCalls } = buildDomain()
     container.pathwayTemplateRepository.findAll = jest.fn(async () => {
       throw new Error(RAW_ERROR_MARKER)
     })
@@ -512,6 +518,12 @@ describe('PatientDomain – une erreur inattendue (non-Boom) pendant l\'inscript
     )
     for (const message of loggedMessages) {
       expect(message).not.toContain(RAW_ERROR_MARKER)
+    }
+
+    // Tous les canaux, pas seulement `error` (task-5-re-review-4.md, I1) : un `logger.warn`
+    // ajoute dans le `catch` d'inscription, avant la ligne corrigee, doit faire rougir ce test.
+    for (const line of loggerCalls) {
+      expect(line).not.toContain(RAW_ERROR_MARKER)
     }
   })
 })

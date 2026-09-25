@@ -22,7 +22,18 @@ describe("scheduleActivityLogCleanup – un echec de nettoyage ne journalise pas
 
   it('ne journalise que la classe de l erreur, jamais son message brut', async () => {
     jest.useFakeTimers()
-    const logger = { error: jest.fn(), info: jest.fn(), warn: jest.fn(), debug: jest.fn() }
+    // Un seul mock de logger PARTAGE (modele `buildFakeLogger` de `error-handler.test.ts`) :
+    // toutes les methodes poussent dans la meme liste `calls`, pas seulement `error`
+    // (task-5-re-review-4.md, I1) — sans ca, une fuite par un canal voisin (`info`, ici) passe
+    // au vert.
+    const calls: string[] = []
+    const record = (message: string) => calls.push(message)
+    const logger = {
+      error: jest.fn(record),
+      info: jest.fn(record),
+      warn: jest.fn(record),
+      debug: jest.fn(record),
+    }
     let rejectCleanup: (err: unknown) => void = () => undefined
     const activityLogDomain = {
       cleanup: jest.fn(
@@ -49,6 +60,13 @@ describe("scheduleActivityLogCleanup – un echec de nettoyage ne journalise pas
     expect(message).not.toContain('SABOTAGE_COLONNE_INCONNUE')
     expect(message).not.toContain('deleteMany')
     expect(message).toContain('PrismaClientValidationError')
+
+    // Tous les canaux, pas seulement `error` (task-5-re-review-4.md, I1) : un `logger.info`
+    // ajoute dans le `.catch()`, avant la ligne corrigee, doit faire rougir ce test.
+    for (const line of calls) {
+      expect(line).not.toContain('SABOTAGE_COLONNE_INCONNUE')
+      expect(line).not.toContain('deleteMany')
+    }
 
     jest.useRealTimers()
   })

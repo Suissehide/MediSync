@@ -28,23 +28,36 @@ const buildConfig = (): Config => ({
 })
 
 describe('AwilixIocContainer – la config journalisee au demarrage ne porte aucun secret', () => {
-  it('ne journalise jamais jwtSecret / jwtRefreshSecret / cookieSecret en clair', () => {
-    const debugCalls: string[] = []
-    const spy = jest
-      .spyOn(PinoLogger.prototype, 'debug')
-      .mockImplementation((message: string) => {
-        debugCalls.push(message)
-      })
+  it('ne journalise jamais jwtSecret / jwtRefreshSecret / cookieSecret en clair, sur aucun canal', () => {
+    // Tous les canaux de PinoLogger, pas seulement `debug` (task-5-re-review-4.md, I1) : un
+    // `logger.info(...)` ajoute apres la ligne masquee, portant les trois secrets en clair,
+    // passait au vert tant que seul `debug` etait espionne — l'assertion ne regardait que la
+    // ligne qui commence par "Loaded config:", jamais les autres canaux.
+    const LOG_LEVELS = ['trace', 'debug', 'info', 'warn', 'error'] as const
+    const calls: string[] = []
+    const record = (message: string) => calls.push(message)
+    const spies = LOG_LEVELS.map((level) =>
+      jest.spyOn(PinoLogger.prototype, level).mockImplementation(record),
+    )
 
     // eslint-disable-next-line no-new
     new AwilixIocContainer(buildConfig())
 
-    const configLine = debugCalls.find((line) => line.startsWith('Loaded config:'))
+    const configLine = calls.find((line) => line.startsWith('Loaded config:'))
     expect(configLine).toBeDefined()
     expect(configLine).not.toContain('SECRET-JWT-MARKER')
     expect(configLine).not.toContain('SECRET-REFRESH-MARKER')
     expect(configLine).not.toContain('SECRET-COOKIE-MARKER')
 
-    spy.mockRestore()
+    // Et sur AUCUNE ligne, tous canaux confondus.
+    for (const line of calls) {
+      expect(line).not.toContain('SECRET-JWT-MARKER')
+      expect(line).not.toContain('SECRET-REFRESH-MARKER')
+      expect(line).not.toContain('SECRET-COOKIE-MARKER')
+    }
+
+    for (const spy of spies) {
+      spy.mockRestore()
+    }
   })
 })

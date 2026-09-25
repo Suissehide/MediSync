@@ -25,20 +25,36 @@ const buildUnexpectedPrismaError = () =>
     { clientVersion: '0.0.0-test' },
   )
 
+type LogLevel = 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal'
+const LOG_LEVELS: LogLevel[] = ['trace', 'debug', 'info', 'warn', 'error', 'fatal']
+
 // Un harnais minimal du meme contrat que `FastifyInstance`/`FastifyRequest`/`FastifyReply`, pour
-// executer `buildErrorHandler` sans monter de vrai serveur Fastify. `log.debug`/`log.error` (les
-// deux niveaux utilises par le gestionnaire), `request.accepts()` et `reply.status()`/`type()`
-// sont exerces. Le canal `debug` est capture au meme titre que `error` (task-5-re-review-3.md, m3
-// puis tour 5) : `LOG_LEVEL=DEBUG` est le reglage qu'on active precisement pour enqueter sur un
-// incident, donc exactement le moment ou ce canal est lu.
-const buildHarness = () => {
-  const logsAtErrorLevel: string[] = []
-  const logsAtDebugLevel: string[] = []
+// executer `buildErrorHandler` sans monter de vrai serveur Fastify. Les SIX niveaux de log
+// possibles sont cables, pas seulement `debug`/`error` (task-5-re-review-4.md, I1) : les tests
+// precedents ne gardaient que le canal auquel leur auteur pensait, si bien qu'une fuite ecrite
+// par un canal voisin (`warn`, `info`, ...) passait au vert. `callsByLevel` garde le detail par
+// niveau pour les assertions structurelles (« exactement 2 lignes `error`, 0 `debug` ») ;
+// `allCalls` est la liste fusionnee de tous les niveaux, celle qu'une assertion anti-fuite doit
+// boucler dessus pour garder une PROPRIETE plutot qu'un CAS. `accept` choisit la branche du
+// gestionnaire exercee (JSON par defaut, HTML sur demande — la branche HTML n'etait exercee par
+// aucun test avant ce tour).
+const buildHarness = (accept: 'json' | 'html' = 'json') => {
+  const callsByLevel: Record<LogLevel, string[]> = {
+    trace: [],
+    debug: [],
+    info: [],
+    warn: [],
+    error: [],
+    fatal: [],
+  }
+  const allCalls: string[] = []
+  const record = (level: LogLevel) => (message: unknown) => {
+    const text = String(message)
+    callsByLevel[level].push(text)
+    allCalls.push(text)
+  }
   const fastifyLike = {
-    log: {
-      debug: (message: unknown) => logsAtDebugLevel.push(String(message)),
-      error: (message: string) => logsAtErrorLevel.push(message),
-    },
+    log: Object.fromEntries(LOG_LEVELS.map((level) => [level, record(level)])),
   }
   const statusCodes: number[] = []
   const fakeReply = {
@@ -54,15 +70,15 @@ const buildHarness = () => {
     id: 'req-test-1',
     method: 'PATCH',
     url: '/e/est1/s/svc1/patient/pat1/service-file',
-    accepts: () => ({ type: () => 'json' }),
+    accepts: () => ({ type: () => accept }),
   }
   return {
     fastifyLike,
     fakeRequest,
     fakeReply,
     statusCodes,
-    logsAtErrorLevel,
-    logsAtDebugLevel,
+    callsByLevel,
+    allCalls,
   }
 }
 
@@ -73,38 +89,60 @@ const buildHarness = () => {
 const runHandler = (
   error: unknown,
   harness: ReturnType<typeof buildHarness>,
-): { error: string; message: string; statusCode: number } => {
+): string | { error: string; message: string; statusCode: number } => {
   const handler = buildErrorHandler(fastifyErrorNormalizer, boomErrorNormalizer)
-  const body = handler.call(
+  return handler.call(
     harness.fastifyLike as unknown as FastifyInstance,
     error as never,
     harness.fakeRequest as unknown as FastifyRequest,
     harness.fakeReply as unknown as FastifyReply,
   )
-  return body as { error: string; message: string; statusCode: number }
 }
 
+const asJsonBody = (
+  body: ReturnType<typeof runHandler>,
+): { error: string; message: string; statusCode: number } =>
+  body as { error: string; message: string; statusCode: number }
+
 describe('la chaine de normalizers ne renvoie jamais une valeur soumise pour une erreur inattendue', () => {
-  it('une ecriture clinique en echec sans catch (PrismaClientValidationError brute) ne fuit ni dans le corps, ni dans le journal `error`, ni dans le journal `debug`', () => {
+  it('une ecriture clinique en echec sans catch (PrismaClientValidationError brute) ne fuit ni dans le corps, ni dans aucun canal du journal', () => {
     const harness = buildHarness()
 
-    const body = runHandler(buildUnexpectedPrismaError(), harness)
+    const body = asJsonBody(runHandler(buildUnexpectedPrismaError(), harness))
 
     expect(harness.statusCodes).toEqual([500])
     expect(body.message).not.toContain(CLINICAL_VALUE)
     expect(body.message).not.toContain(PATIENT_ID)
     expect(body.error).not.toContain(CLINICAL_VALUE)
 
-    expect(harness.logsAtErrorLevel).toHaveLength(2)
-    for (const line of harness.logsAtErrorLevel) {
-      expect(line).not.toContain(CLINICAL_VALUE)
-      expect(line).not.toContain(PATIENT_ID)
-    }
+    expect(harness.callsByLevel.error).toHaveLength(2)
     // Le gestionnaire ne journalise plus rien a `debug` (task-5-re-review-3.md, m3 : l'ancien
     // `this.log.debug(error)` recopiait l'erreur brute, message et pile compris, et n'etait
     // eteint qu'a `LOG_LEVEL=INFO` — pas a `DEBUG`, le reglage qu'on active justement pour
     // enqueter). Le diagnostic de `error` suffit deja ; `debug` n'ajoute plus rien qui puisse fuir.
-    expect(harness.logsAtDebugLevel).toHaveLength(0)
+    expect(harness.callsByLevel.debug).toHaveLength(0)
+    // Et rien sur AUCUN canal (task-5-re-review-4.md, I1) : une ligne ajoutee demain sur `warn`
+    // ou `info` doit faire rougir ce test, pas seulement une ligne ajoutee sur `error`.
+    for (const line of harness.allCalls) {
+      expect(line).not.toContain(CLINICAL_VALUE)
+      expect(line).not.toContain(PATIENT_ID)
+    }
+  })
+
+  it('meme requete, demandee en HTML : le corps rendu (branche HTML du gestionnaire) ne fuit pas non plus (task-5-re-review-4.md, I1)', () => {
+    const harness = buildHarness('html')
+
+    const body = runHandler(buildUnexpectedPrismaError(), harness)
+
+    expect(harness.statusCodes).toEqual([500])
+    expect(typeof body).toBe('string')
+    const html = body as string
+    expect(html).not.toContain(CLINICAL_VALUE)
+    expect(html).not.toContain(PATIENT_ID)
+    for (const line of harness.allCalls) {
+      expect(line).not.toContain(CLINICAL_VALUE)
+      expect(line).not.toContain(PATIENT_ID)
+    }
   })
 
   it('le journal `error` garde de quoi enqueter sur une erreur inattendue : classe, route et pile (jamais le message brut)', () => {
@@ -112,7 +150,7 @@ describe('la chaine de normalizers ne renvoie jamais une valeur soumise pour une
 
     runHandler(buildUnexpectedPrismaError(), harness)
 
-    const [diagnosticLine] = harness.logsAtErrorLevel
+    const [diagnosticLine] = harness.callsByLevel.error
     expect(diagnosticLine).toContain('class=PrismaClientValidationError')
     expect(diagnosticLine).toContain('PATCH /e/est1/s/svc1/patient/pat1/service-file')
     expect(diagnosticLine).toContain('req-test-1')
@@ -129,7 +167,7 @@ describe('la chaine de normalizers ne renvoie jamais une valeur soumise pour une
     // changement ici casserait silencieusement l'affichage cote front.
     const boomError = conflict('Cannot remove the last administrator')
 
-    const body = runHandler(boomError, harness)
+    const body = asJsonBody(runHandler(boomError, harness))
 
     expect(harness.statusCodes).toEqual([409])
     expect(body).toEqual({
@@ -143,7 +181,7 @@ describe('la chaine de normalizers ne renvoie jamais une valeur soumise pour une
     const harness = buildHarness()
     const boomError = notFound("Appointment: this ID doesn't exist")
 
-    const body = runHandler(boomError, harness)
+    const body = asJsonBody(runHandler(boomError, harness))
 
     expect(harness.statusCodes).toEqual([404])
     expect(body).toEqual({
@@ -159,7 +197,7 @@ describe('la chaine de normalizers ne renvoie jamais une valeur soumise pour une
 
     runHandler(boomError, harness)
 
-    const [diagnosticLine] = harness.logsAtErrorLevel
+    const [diagnosticLine] = harness.callsByLevel.error
     expect(diagnosticLine).toContain("message=PatientServiceFile: this ID doesn't exist")
   })
 
@@ -181,12 +219,12 @@ describe('la chaine de normalizers ne renvoie jamais une valeur soumise pour une
       },
     )
 
-    const body = runHandler(boomError, harness)
+    const body = asJsonBody(runHandler(boomError, harness))
 
     expect(harness.statusCodes).toEqual([500])
     expect(body.message).not.toContain(CLINICAL_VALUE)
     expect(body.error).not.toContain(CLINICAL_VALUE)
-    for (const line of [...harness.logsAtErrorLevel, ...harness.logsAtDebugLevel]) {
+    for (const line of harness.allCalls) {
       expect(line).not.toContain(CLINICAL_VALUE)
     }
   })
