@@ -37,25 +37,29 @@ class ErrorHandler implements ErrorHandlerInterface {
     if (error instanceof Boom) {
       boomError = error
     } else if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      const { code, meta } = error
+      const { code } = error
       // Meme exigence pour un code Prisma reconnu : on journalise le code et l'entite, jamais
-      // `error.message` ni `meta` en clair (un futur code/version pourrait y faire porter une
-      // valeur). Les fragments de `meta` utilises dans les messages ci-dessous (constraint,
-      // target) sont des NOMS de colonne/contrainte du schema, jamais une valeur soumise.
+      // `error.message`. `meta` n'est plus lu du tout ici : verifie contre un vrai Postgres
+      // (task-5-re-review-3.md, m1 puis re-verifie au tour 4), aucun des trois champs qu'on
+      // lisait jusqu'ici (`meta.cause`, `meta.constraint`, `meta.target`) n'existe plus au premier
+      // niveau de `meta` sous Prisma 7.8 — quand l'equivalent existe, c'est desormais imbrique
+      // sous `meta.driverAdapterError.cause.constraint`. Les trois lectures etaient donc du code
+      // mort : le `??` prenait toujours la branche de repli, jamais celle qui aurait pu un jour
+      // porter une valeur soumise. On simplifie en ne lisant plus `meta` du tout, plutot que de
+      // laisser vivre une lecture qu'un futur changement pourrait faire porter une valeur sans que
+      // rien ici ne le remarque.
       this.logger.debug(`Prisma error [${code}] on ${entityName}`)
       if (code === PrismaErrorCodes.OPERATION_DEPENDS_ON_MISSING_RECORD) {
-        const cause = meta?.cause ?? `${entityName} with this ID doesn't exist`
-        boomError = notFound(`${entityName}: ${cause}`)
+        boomError = notFound(`${entityName} with this ID doesn't exist`)
       }
       if (code === PrismaErrorCodes.FOREIGN_KEY_CONSTRAINT_FAILED) {
-        const field = parentEntityName ?? meta?.constraint ?? 'unknown relation'
+        const field = parentEntityName ?? 'unknown relation'
         boomError = conflict(
           `${entityName} cannot be deleted because it has related records (${field})`,
         )
       }
       if (code === PrismaErrorCodes.OPERATION_FAILED_ON_UNIQUE_CONSTRAINT) {
-        const target = meta?.target ?? 'unknown field'
-        boomError = conflict(`${entityName} already exists (${target})`)
+        boomError = conflict(`${entityName} already exists (unknown field)`)
       }
     }
     return boomError

@@ -27,6 +27,20 @@ const buildPrismaValidationError = () =>
     { clientVersion: '0.0.0-test' },
   )
 
+// Meme exigence, pour la branche `PrismaClientKnownRequestError` (task-5-re-review-3.md, I1) :
+// aucun des trois tests ci-dessus n'en instancie une seule, alors que c'est la seule branche qui
+// lit `meta`. On construit ici un `meta` qui porte la valeur clinique la ou le code la lisait
+// avant simplification (`cause`, `target`) : si une lecture de `meta` etait reintroduite, ces deux
+// tests rougiraient.
+const buildPrismaKnownRequestError = (
+  code: string,
+  meta: Record<string, unknown>,
+) =>
+  new Prisma.PrismaClientKnownRequestError(
+    `Prisma error ${code}: ${CLINICAL_VALUE} / ${PATIENT_ID}`,
+    { code, clientVersion: '0.0.0-test', meta },
+  )
+
 const buildFakeLogger = () => {
   const calls: string[] = []
   const record = (message: string) => calls.push(message)
@@ -84,6 +98,53 @@ describe('ErrorHandler.boomErrorFromPrismaError', () => {
       error: new Error(`echec sur ${CLINICAL_VALUE} / ${PATIENT_ID}`),
     })
 
+    expect(boomError.message).not.toContain(CLINICAL_VALUE)
+    expect(boomError.message).not.toContain(PATIENT_ID)
+    for (const message of calls) {
+      expect(message).not.toContain(CLINICAL_VALUE)
+      expect(message).not.toContain(PATIENT_ID)
+    }
+  })
+
+  it('ne recopie ni la valeur clinique ni l identifiant patient dans le message Boom rendu au client, sur une PrismaClientKnownRequestError P2025 dont le meta.cause porte la valeur', () => {
+    const { logger, calls } = buildFakeLogger()
+    const errorHandler = new ErrorHandler({ logger } as IocContainer)
+
+    const boomError = errorHandler.boomErrorFromPrismaError({
+      entityName: 'Patient',
+      error: buildPrismaKnownRequestError('P2025', {
+        modelName: 'Patient',
+        operation: 'a delete',
+        cause: `${CLINICAL_VALUE} / ${PATIENT_ID}`,
+      }),
+    })
+
+    expect(boomError).toBeInstanceOf(Boom)
+    expect(boomError.output.statusCode).toBe(404)
+    // C'est le message du Boom, donc celui rendu au client (voir boom.error.normalizer.ts), pas
+    // seulement celui d'un 500 : cette branche ne passe jamais par `internal()`.
+    expect(boomError.message).not.toContain(CLINICAL_VALUE)
+    expect(boomError.message).not.toContain(PATIENT_ID)
+    for (const message of calls) {
+      expect(message).not.toContain(CLINICAL_VALUE)
+      expect(message).not.toContain(PATIENT_ID)
+    }
+  })
+
+  it('ne recopie ni la valeur clinique ni l identifiant patient dans le message Boom rendu au client, sur une PrismaClientKnownRequestError P2002 dont le meta.target porte la valeur', () => {
+    const { logger, calls } = buildFakeLogger()
+    const errorHandler = new ErrorHandler({ logger } as IocContainer)
+
+    const boomError = errorHandler.boomErrorFromPrismaError({
+      entityName: 'PatientServiceFile',
+      error: buildPrismaKnownRequestError('P2002', {
+        modelName: 'PatientServiceFile',
+        target: [`${CLINICAL_VALUE} / ${PATIENT_ID}`],
+      }),
+    })
+
+    expect(boomError).toBeInstanceOf(Boom)
+    expect(boomError.output.statusCode).toBe(409)
     expect(boomError.message).not.toContain(CLINICAL_VALUE)
     expect(boomError.message).not.toContain(PATIENT_ID)
     for (const message of calls) {
