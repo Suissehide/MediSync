@@ -63,16 +63,28 @@ describe('PatientServiceFileApi', () => {
   })
 
   // Une charge partielle doit rester partielle : ni `patientID` (c'est un paramètre de route,
-  // pas un champ du sous-dossier), ni un objet reconstruit à partir d'une lecture filtrée.
+  // pas un champ du sous-dossier), ni un objet reconstruit à partir d'une lecture filtrée. Le
+  // corps porte ici PLUSIEURS champs fournis : un seul n'aurait pas pu distinguer « n'envoie
+  // que ce qu'on lui donne » de « n'envoie que le premier champ du corps » — un trou réel,
+  // laissé vert par le seul champ envoyé jusqu'ici (task-10-review.md, m3, sabotage B).
   it('update n envoie que les champs fournis dans le corps, jamais patientID', async () => {
     const fetchMock = vi.fn().mockResolvedValue(okResponse(serviceFile))
     vi.stubGlobal('fetch', fetchMock)
 
-    await PatientServiceFileApi.update({ patientID: 'p1', notes: 'nouvelle note' })
+    await PatientServiceFileApi.update({
+      patientID: 'p1',
+      notes: 'nouvelle note',
+      goal: 'objectif',
+      careMode: 'ambulatoire',
+    })
 
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit]
     const body = JSON.parse(init.body as string)
-    expect(body).toEqual({ notes: 'nouvelle note' })
+    expect(body).toEqual({
+      notes: 'nouvelle note',
+      goal: 'objectif',
+      careMode: 'ambulatoire',
+    })
     expect(body).not.toHaveProperty('patientID')
   })
 })
