@@ -112,16 +112,27 @@ class PatientServiceFileRepository implements PatientServiceFileRepositoryInterf
   // elle-meme : meme etablissement (`establishmentId`), service different du courant
   // (`serviceId: { not }`). Le garde-fou ne les impose plus ici ; rien ne rattrape un oubli.
   //
-  // Le patient et son etablissement sont en realite lies par construction (la cle etrangere
-  // composite `PatientServiceFile.patient` reference `Patient(id, establishmentId)` — un
-  // `patientId` donne ne peut donc jamais porter qu'un seul `establishmentId`), si bien que le
-  // filtre `establishmentId` ci-dessous ne changerait rien au resultat pour un `patientId` reel
-  // aujourd'hui. Il reste ecrit explicitement plutot que de s'appuyer sur cette contrainte de
-  // schema : c'est la consigne (la requete porte SES bornes), et une garantie en dur qui ne
-  // depend pas d'une contrainte de base de donnees ailleurs dans le schema.
+  // Le filtre `establishmentId` ci-dessous n'est PAS une ligne morte, verifie par execution
+  // (revue tache 7, tour 1, I3) : aujourd'hui, la cle etrangere composite
+  // `PatientServiceFile.patient` (-> `Patient(id, establishmentId)`) empeche bien qu'un
+  // `patientId` porte deux `establishmentId` differents, donc ce filtre ne change rien au
+  // resultat pour une ligne que le chemin normal peut produire. Mais en retirant les deux cles
+  // etrangeres composites de `PatientServiceFile` sur une base de test et en inserant la ligne
+  // qu'elles interdisent (un `patientId` de l'etablissement E1 associe a un
+  // `establishmentId` = E2), le signal mesure reste FAUX avec ce filtre en place, et devient VRAI
+  // des qu'on le retire. C'est donc la SEULE piece qui tienne la borne d'etablissement des que la
+  // contrainte de cle etrangere cede — et l'etape 4 de ce chantier (creation de services depuis
+  // l'interface) est exactement le terrain ou ce genre de cle composite est amene a bouger. Il
+  // reste ecrit explicitement plutot que de s'appuyer sur la contrainte de schema : c'est la
+  // consigne (la requete porte SES bornes), et une garantie en dur qui ne depend pas d'une
+  // contrainte de base de donnees ailleurs dans le schema.
   //
   // Ne renvoie jamais qu'un booleen : seule la presence ou l'absence d'une ligne sort d'ici,
-  // jamais son identifiant, le nom du service, un compte, une date ou un contenu.
+  // jamais son identifiant, le nom du service, un compte, une date ou un contenu. `select:
+  // { patientId: true }` (et non `{ id: true }`, revue tache 7 tour 1, m1) : `patientId` est une
+  // valeur que l'appelant connait deja (c'est son parametre d'entree), donc la selectionner ne
+  // fait entrer AUCUNE information nouvelle en memoire sur le sous-dossier de l'autre service —
+  // contrairement a `id`, qui aurait fait transiter le cuid du sous-dossier d'un autre service.
   //
   // Le callback DOIT faire son `await` a l'INTERIEUR de lui-meme (et non se contenter de
   // renvoyer la promesse Prisma sans l'attendre). `PrismaClient` execute paresseusement : appeler
@@ -144,7 +155,7 @@ class PatientServiceFileRepository implements PatientServiceFileRepositoryInterf
           establishmentId,
           serviceId: { not: serviceId },
         },
-        select: { id: true },
+        select: { patientId: true },
       })
     })
     return autreSousDossier !== null

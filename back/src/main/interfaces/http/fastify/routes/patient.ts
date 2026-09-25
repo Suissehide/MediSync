@@ -17,6 +17,7 @@ import {
   enrollPatientInPathwaysSchema,
   type GetPatientByIdParams,
   getPatientByIdParamsSchema,
+  patientDetailResponseSchema,
   type PatientPathwayParams,
   patientPathwayParamsSchema,
   patientPathwaysResponseSchema,
@@ -122,7 +123,7 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
       schema: {
         params: getPatientByIdParamsSchema,
         response: {
-          200: patientResponseSchema,
+          200: patientDetailResponseSchema,
           404: z.object({ message: z.string() }),
         },
       },

@@ -36,11 +36,7 @@ const patientServiceFileRouter: FastifyPluginAsync = (fastify) => {
       if (!serviceFile) {
         throw Boom.notFound('Patient service file not found')
       }
-      // Signal de suivi ailleurs (spec §5.3, tache 7) : ajoute au sous-dossier du service
-      // courant, jamais a la place d'un sous-dossier absent — un patient sans sous-dossier ICI
-      // continue de rendre 404 ci-dessus, jamais un objet partiel portant seulement ce booleen.
-      const followedElsewhere = await patientServiceFileDomain.estSuiviAilleurs(patientID)
-      return { ...serviceFile, followedElsewhere }
+      return serviceFile
     },
   )
 
@@ -68,13 +64,9 @@ const patientServiceFileRouter: FastifyPluginAsync = (fastify) => {
       },
       config: { permission: 'patient:write' },
     },
-    async (request) => {
+    (request) => {
       const { patientID } = request.params
-      const serviceFile = await patientServiceFileDomain.upsert(patientID, request.body, request.user.userID)
-      // Meme champ calcule qu'en lecture (spec §5.3, tache 7), et pour la meme raison : les deux
-      // routes partagent `patientServiceFileResponseSchema`, qui l'exige desormais.
-      const followedElsewhere = await patientServiceFileDomain.estSuiviAilleurs(patientID)
-      return { ...serviceFile, followedElsewhere }
+      return patientServiceFileDomain.upsert(patientID, request.body, request.user.userID)
     },
   )
 

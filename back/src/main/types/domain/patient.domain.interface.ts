@@ -18,6 +18,9 @@ export type PatientWithAppointmentsDomain = PatientEntityDomain & {
   })[]
   enrollmentIssues: EnrollmentIssueEntityDomain[]
 }
+// Signal de suivi ailleurs (spec §5.3/§6, tache 7 tour 1, I1) porte par la lecture du patient,
+// pas par celle du sous-dossier : voir PatientDomain.findByID.
+export type PatientDetailDomain = PatientWithAppointmentsDomain & { followedElsewhere: boolean }
 export type PatientCreateEntityDomain = Omit<
   PatientCreateEntityRepo,
   'createDate'
@@ -99,7 +102,7 @@ export type PatientPathwayDomain = {
 export interface PatientDomainInterface {
   findAll: () => Promise<PatientEntityDomain[]>
   findAllWithTags: () => Promise<PatientWithTagsDomain[]>
-  findByID: (patientID: string) => Promise<PatientEntityDomain>
+  findByID: (patientID: string) => Promise<PatientDetailDomain>
   exportExcel: (
     filters: PatientExportFilters,
     options: PatientExportOptions,

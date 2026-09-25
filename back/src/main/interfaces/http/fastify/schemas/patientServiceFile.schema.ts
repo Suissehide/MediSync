@@ -29,6 +29,13 @@ const patientServiceFileEntity = {
   etpFinalOutcome: z.string().optional().nullable(), // Point final parcours ETP
 }
 
+// Le signal de suivi ailleurs (spec §5.3/§6, tache 7) vivait ici jusqu'au tour de correction 1 de
+// la revue de cette tache (I1) : indisponible tant qu'aucun sous-dossier local n'existe encore,
+// c'est-a-dire exactement au moment ou la decision 2.1 le rend le plus utile (un second service
+// qui accueille un patient deja suivi ailleurs part d'un sous-dossier vide, donc d'un 404). Il
+// vit desormais sur la lecture du patient (`patient.schema.ts`, `patientDetailResponseSchema`),
+// disponible avant qu'aucun sous-dossier de service n'existe — voir domain/patient.domain.ts,
+// `findByID`.
 export const patientServiceFileResponseSchema = z.object({
   id: z.cuid(),
   patientId: z.string(),
@@ -36,13 +43,6 @@ export const patientServiceFileResponseSchema = z.object({
   establishmentId: z.string(),
   createdAt: z.coerce.date(),
   ...patientServiceFileEntity,
-  // Signal de suivi ailleurs (spec §5.3, tache 7) : vrai si ce patient a un sous-dossier dans un
-  // autre service du meme etablissement. Calcule, jamais stocke — absent de
-  // `patientServiceFileEntity` (partagee avec le corps d'ecriture) pour qu'aucune ecriture ne
-  // puisse le poser. Champ administratif, pas clinique : ni `stripClinicalFields` ni
-  // `stripClinicalInput` (utils/clinical-fields.ts) ne le nomment, il est donc visible du
-  // secretariat comme les autres champs administratifs du sous-dossier.
-  followedElsewhere: z.boolean(),
 })
 
 export const patientServiceFileParamsSchema = z.object({

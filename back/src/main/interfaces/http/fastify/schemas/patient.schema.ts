@@ -44,6 +44,27 @@ export const patientResponseSchema = z.object({
 
 export const patientsResponseSchema = z.array(patientResponseSchema)
 
+// Signal de suivi ailleurs (spec §5.3/§6, tache 7 — deplace ici au tour de correction 1 de la
+// revue, I1) : vrai si ce patient a au moins un sous-dossier dans un AUTRE service du meme
+// etablissement. Calcule, jamais stocke ; absent de `patientEntity` (partagee avec les corps
+// d'ecriture) pour qu'aucune ecriture ne puisse le poser. Champ administratif, pas clinique : ni
+// `stripClinicalFields` ni `stripClinicalInput` (utils/clinical-fields.ts) ne le nomment, il est
+// donc visible du secretariat comme les autres champs administratifs du patient — decision 2.2.
+//
+// Pose UNIQUEMENT sur `GET /patient/:patientID` (le detail d'un patient, "le bloc d'identite"
+// de la spec §6), pas sur `patientResponseSchema` en general : celui-ci est aussi le squelette
+// de `patientsResponseSchema` (liste) et de `patientWithTagsResponseSchema` (liste avec tags).
+// Le calculer pour CHAQUE ligne d'une liste couterait une requete `runAsSystem` supplementaire
+// par patient affiche (le meme cout que m3 de la revue de la tache 7 relevait deja sur le PATCH
+// du sous-dossier, mais multiplie par la taille de la liste au lieu d'une seule fois) — pour un
+// signal que la spec §6 place dans le bloc d'identite d'un patient OUVERT, jamais dans une
+// liste. Ce choix n'est pas cense etre definitif : s'il s'avere qu'une liste a besoin du signal,
+// il faudra soit l'y calculer explicitement (avec son cout assume), soit le derouler autrement
+// (jointure unique plutot qu'un appel par ligne).
+export const patientDetailResponseSchema = patientResponseSchema.extend({
+  followedElsewhere: z.boolean(),
+})
+
 export const patientWithTagsResponseSchema = patientResponseSchema.extend({
   pathwayTemplateTags: z.array(z.string()),
 })
@@ -79,6 +100,7 @@ export type DeletePatientByIdParams = z.infer<
   typeof deletePatientByIdParamsSchema
 >
 export type PatientResponse = z.infer<typeof patientResponseSchema>
+export type PatientDetailResponse = z.infer<typeof patientDetailResponseSchema>
 
 export const timeOfDaySchema = z.enum(['ALL_DAY', 'MORNING', 'AFTERNOON'])
 

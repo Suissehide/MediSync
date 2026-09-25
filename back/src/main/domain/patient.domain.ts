@@ -17,6 +17,7 @@ import type {
   EnrollPatientInPathwaysInput,
   PathwayEnrollmentInput,
   PatientCreateEntityDomain,
+  PatientDetailDomain,
   PatientDomainInterface,
   PatientEntityDomain,
   PatientExportFilters,
@@ -167,8 +168,16 @@ class PatientDomain implements PatientDomainInterface {
     return this.patientRepository.findAllWithTags()
   }
 
-  findByID(patientID: string): Promise<PatientEntityDomain> {
-    return this.patientRepository.findByID(patientID)
+  // Le signal de suivi ailleurs (spec §5.3/§6, tache 7 tour 1, I1) est porte ici, pas sur le
+  // sous-dossier de service : il vaut avant qu'aucun sous-dossier local n'existe encore — c'est
+  // exactement le moment ou la decision 2.1 le rend utile (un second service qui accueille un
+  // patient deja suivi ailleurs part d'un sous-dossier vide, donc d'un 404 sur la route du
+  // sous-dossier). `estSuiviAilleurs` reste l'unique lecture qui traverse la frontiere entre
+  // services (spec §5.3) : seul l'endroit qui la consomme a change.
+  async findByID(patientID: string): Promise<PatientDetailDomain> {
+    const patient = await this.patientRepository.findByID(patientID)
+    const followedElsewhere = await this.patientServiceFileDomain.estSuiviAilleurs(patientID)
+    return { ...patient, followedElsewhere }
   }
 
   async exportExcel(

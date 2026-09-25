@@ -1040,7 +1040,7 @@ describe('scoping appointment', () => {
 // et back/src/test/e2e/dossier-service.test.ts (comportement de bout en bout, cloisonnement).
 describe('PatientServiceFileRepository.estSuiviAilleurs', () => {
   it('interroge sous runAsSystem, avec l etablissement courant et un service different du courant', async () => {
-    const { prisma, calls } = buildFakePrisma({ 'patientServiceFile.findFirst': { id: 'sf-autre' } })
+    const { prisma, calls } = buildFakePrisma({ 'patientServiceFile.findFirst': { patientId: 'p1' } })
     const ctx = new TenantContext()
     const spy = jest.spyOn(ctx, 'runAsSystem')
     const repo = new PatientServiceFileRepository(buildContainer(prisma, ctx))
@@ -1053,18 +1053,18 @@ describe('PatientServiceFileRepository.estSuiviAilleurs', () => {
       model: 'patientServiceFile', op: 'findFirst',
       args: {
         where: { patientId: 'p1', establishmentId: 'e1', serviceId: { not: 's1' } },
-        select: { id: true },
+        select: { patientId: true },
       },
     })
     // Rien d'autre qu'un booleen ne sort de la fonction : la ligne trouvee
-    // (`{ id: 'sf-autre' }`) n'est jamais retournee telle quelle.
+    // (`{ patientId: 'p1' }`) n'est jamais retournee telle quelle.
     expect(resultat).toBe(true)
   })
 
   it('rend vrai quand un autre sous-dossier existe, faux sinon', async () => {
     const ctx = new TenantContext()
 
-    const { prisma: prismaAvecAutre } = buildFakePrisma({ 'patientServiceFile.findFirst': { id: 'sf-autre' } })
+    const { prisma: prismaAvecAutre } = buildFakePrisma({ 'patientServiceFile.findFirst': { patientId: 'p1' } })
     const repoAvecAutre = new PatientServiceFileRepository(buildContainer(prismaAvecAutre, ctx))
     await expect(ctx.run(tenant, () => repoAvecAutre.estSuiviAilleurs('p1'))).resolves.toBe(true)
 
@@ -1082,7 +1082,7 @@ describe('PatientServiceFileRepository.estSuiviAilleurs', () => {
   it('la forme de requete qu elle construit est refusee par le garde-fou hors du mode encadre, et permise dedans', () => {
     const args = {
       where: { patientId: 'p1', establishmentId: 'e1', serviceId: { not: 's1' } },
-      select: { id: true },
+      select: { patientId: true },
     }
     expect(() =>
       assertTenantScope(
