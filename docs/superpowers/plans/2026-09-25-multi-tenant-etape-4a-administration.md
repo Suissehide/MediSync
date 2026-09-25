@@ -598,6 +598,50 @@ Le test le prouve : après réactivation, les dossiers et les membres sont de re
 
 ---
 
+## Task 15 : le pont par un modèle global, sur le chemin ordinaire
+
+**Ajoutée en cours d'exécution.** La revue de la tâche 1 a établi, par balayage, que le garde-fou
+laisse passer une chaîne qui franchit un modèle global et redescend vers un **autre établissement
+que celui du contexte** — sous un contexte de **tenant ordinaire**, pas seulement sous super-admin.
+
+**Files:**
+- Modify: `back/src/main/infra/orm/tenant-guard.ts` (`MODEL_RELATIONS` gagne la cardinalité)
+- Modify: `back/src/test/unit/infra/tenant-guard.test.ts`, `tenant-guard-schema.test.ts`
+
+**Interfaces:**
+- Produces: `MODEL_RELATIONS` porte, pour chaque relation, si elle mène à **un** enregistrement ou
+  à **plusieurs** ; le test de conformité au schéma la tient dans les deux directions.
+
+Le défaut, prouvé sous contexte de tenant :
+
+```ts
+establishmentMembership.findMany({ where: { establishmentId: 'e1' },
+  include: { user: { include: { establishmentMemberships: {
+    include: { establishment: { include: { patients: true } } } } } } } })
+```
+
+1 964 chaînes sur 8 680 franchissent un global, dont 112 par l'arête `User → EstablishmentMembership`.
+Condition d'exploitation : qu'un compte soit membre des deux établissements.
+
+**Pourquoi il a échappé à tout :** la protection du chemin ordinaire repose sur le `where` de la
+racine, qui épingle l'établissement. Les relations **vers** un modèle global sont toutes à-un, donc
+inoffensives. Mais une relation **depuis** un global peut être à-plusieurs et traverser les
+établissements — et c'est cette asymétrie que ni la descente de l'étape 3 ni la liste de la tâche 1
+ne voyaient.
+
+**Ce défaut préexiste au chantier** : le verdict est identique à `a13046b`. Aucune lecture du dépôt
+ne l'emprunte aujourd'hui. Il n'avait aucun effet tant qu'il n'existait qu'un seul établissement ;
+**c'est l'étape 4a qui le rend atteignable**, en permettant d'en créer un second.
+
+- [ ] **Step 1** : reproduire le défaut par un test, sous contexte de tenant, et le montrer **rouge**.
+- [ ] **Step 2** : porter la cardinalité dans `MODEL_RELATIONS`, tenue par le test de conformité au schéma dans les deux directions — une relation qui change de cardinalité dans le schéma doit faire rougir.
+- [ ] **Step 3** : refuser la descente **depuis** un modèle global par une relation à-plusieurs, sous contexte de tenant comme sous super-admin.
+- [ ] **Step 4** : la question symétrique, qui prime. Ce resserrement va faire tomber des lectures existantes : **corriger l'appel, jamais le garde-fou**. Énumérer ce qui tombe, et traiter chacune. Si le garde-fou paraît refuser à tort, **s'arrêter et le décrire**.
+- [ ] **Step 5** : la monotonie, mesurée comme aux quatre tours de la tâche 1 : zéro refus perdu sur le chemin de tenant, et dire combien de cas ont été comparés.
+- [ ] **Step 6** : commit.
+
+---
+
 ## Auto-relecture du plan
 
 **Couverture de la spécification.** §3.1 → tâches 4, 6, 10. §3.2 → tâche 9. §3.3 → tâche 7. §3.4 → tâches 1, 7. §3.5 → tâches 3, 8. §3.6 → tâche 9. §4.1 → tâche 6. §4.2 → tâche 1. §4.3 → tâche 3. §5 → tâche 2. §6.1 → tâche 4. §6.2 → tâches 5 à 10. §6.3 → tâche 11. §7 → tâches 12, 13. §8 → réparti, chaque tâche portant ses gardes. §9 → tâche 14.
