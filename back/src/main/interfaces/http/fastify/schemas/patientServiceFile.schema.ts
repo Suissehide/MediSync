@@ -51,6 +51,21 @@ export const patientServiceFileParamsSchema = z.object({
 
 export const upsertPatientServiceFileBodySchema = z.object(patientServiceFileEntity)
 
+// Rattachement d'une identite existante au service courant (design §6, tache 13) : cree le
+// sous-dossier s'il n'existe pas encore, sans toucher a une seule de ses colonnes s'il existe
+// deja — `alreadyFollowedHere` le dit explicitement, pour que l'ecran distingue les deux cas
+// (consigne 4 du brief) sans avoir a comparer un etat avant/apres lui-meme. Volontairement
+// minimal : ni le contenu du sous-dossier (cree vide, ou deja existant et donc potentiellement
+// clinique) ni l'identite du patient n'ont a transiter dans cette reponse pour que l'ecran sache
+// quoi faire.
+export const attachPatientToCurrentServiceResponseSchema = z.object({
+  patientId: z.cuid(),
+  alreadyFollowedHere: z.boolean(),
+})
+
 export type PatientServiceFileResponse = z.infer<typeof patientServiceFileResponseSchema>
 export type PatientServiceFileParams = z.infer<typeof patientServiceFileParamsSchema>
 export type UpsertPatientServiceFileBody = z.infer<typeof upsertPatientServiceFileBodySchema>
+export type AttachPatientToCurrentServiceResponse = z.infer<
+  typeof attachPatientToCurrentServiceResponseSchema
+>

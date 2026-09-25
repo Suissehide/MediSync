@@ -3,6 +3,7 @@ import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod/v4'
 
 import {
+  attachPatientToCurrentServiceResponseSchema,
   type PatientServiceFileParams,
   patientServiceFileParamsSchema,
   patientServiceFileResponseSchema,
@@ -37,6 +38,28 @@ const patientServiceFileRouter: FastifyPluginAsync = (fastify) => {
         throw Boom.notFound('Patient service file not found')
       }
       return serviceFile
+    },
+  )
+
+  // Rattachement d'une identite existante au service courant (design §6, tache 13) : choisir un
+  // resultat de la recherche d'identite (GET /patient/search) mene ici, pas vers POST /patient —
+  // aucune ecriture sur l'identite partagee (Patient), seulement la creation du sous-dossier
+  // dans ce service s'il n'existe pas deja. Meme permission que l'ecriture du sous-dossier
+  // (`patient:write`) : ce n'est jamais qu'une facon de l'amorcer.
+  fastify.post<{ Params: PatientServiceFileParams }>(
+    '/',
+    {
+      schema: {
+        params: patientServiceFileParamsSchema,
+        response: {
+          200: attachPatientToCurrentServiceResponseSchema,
+        },
+      },
+      config: { permission: 'patient:write' },
+    },
+    (request) => {
+      const { patientID } = request.params
+      return patientServiceFileDomain.attachToCurrentService(patientID, request.user.userID)
     },
   )
 

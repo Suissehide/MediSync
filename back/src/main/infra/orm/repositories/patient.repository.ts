@@ -5,6 +5,8 @@ import type {
   PatientEntityRepo,
   PatientExportFilters,
   PatientForExportEntityRepo,
+  PatientIdentitySearchFilters,
+  PatientIdentitySearchResultRepo,
   PatientPathwayEntityRepo,
   PatientRepositoryInterface,
   PatientUpdateEntityRepo,
@@ -195,6 +197,38 @@ class PatientRepository implements PatientRepositoryInterface {
         serviceFile,
         enrollmentIssues: serviceFiles.flatMap((f) => f.enrollmentIssues),
       }
+    })
+  }
+
+  // Recherche d'identite existante avant creation (design §6, tache 13) : rend UNIQUEMENT
+  // l'identite — id (necessaire pour choisir un resultat), prenom, nom, date de naissance —
+  // jamais le contact (genre, telephones, email...), jamais le suivi, jamais un contenu de
+  // service. `select` explicite, pas `include` ni l'entite complete : c'est la requete
+  // elle-meme qui ne fait jamais entrer les autres colonnes en memoire, pas une projection
+  // appliquee apres coup (une premiere version naive, qui renvoyait l'entite entiere, a ete
+  // prouvee rouge contre le test de confidentialite avant ce correctif — voir
+  // patient-search-identite.test.ts, "la recherche ne rend que l'identite").
+  //
+  // Establishment-scope, PAS `runAsSystem` : Patient est un modele d'etablissement (comme
+  // `establishmentScope` ci-dessus le sert deja a `findByID`/`findAll`/`create`), donc le
+  // garde-fou d'ORM normal — un `where` qui porte `establishmentId` — suffit a filtrer TOUT
+  // l'etablissement courant sans avoir a l'assouplir. Voir le commentaire de
+  // `PatientDomain.searchByIdentity` pour pourquoi ce choix n'etend pas l'exception de
+  // `estSuiviAilleurs`.
+  searchByIdentity(
+    filters: PatientIdentitySearchFilters,
+  ): Promise<PatientIdentitySearchResultRepo[]> {
+    const { firstName, lastName, birthDate } = filters
+    return this.prisma.patient.findMany({
+      where: {
+        ...this.establishmentScope,
+        ...(firstName ? { firstName: { contains: firstName, mode: 'insensitive' } } : {}),
+        ...(lastName ? { lastName: { contains: lastName, mode: 'insensitive' } } : {}),
+        ...(birthDate ? { birthDate } : {}),
+      },
+      select: { id: true, firstName: true, lastName: true, birthDate: true },
+      orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
+      take: 20,
     })
   }
 

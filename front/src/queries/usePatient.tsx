@@ -19,6 +19,7 @@ import type {
   Patient,
   PatientPathway,
   PatientWithTags,
+  SearchPatientIdentityParams,
   UpdatePatientParams,
 } from '../types/patient.ts'
 
@@ -107,6 +108,27 @@ export const usePatientWithTagsQuery = () => {
   useDataFetching({ isPending, isError, error })
 
   return { patients, isPending }
+}
+
+// Recherche d'identite existante avant creation (etape 3 du multi-tenant, tache 13) : une
+// `useMutation`, pas une `useQuery` — la recherche est declenchee a la demande (un clic, une
+// saisie validee), jamais automatiquement au montage ni tenue a jour en arriere-plan comme le
+// reste des donnees de ce fichier. Rien a invalider en retour : le resultat ne modifie aucun
+// cache existant, il ne fait que proposer des identites a choisir.
+export const usePatientIdentitySearch = () => {
+  const { toast } = useToast()
+
+  return useMutation({
+    mutationKey: [PATIENT.SEARCH_IDENTITY],
+    mutationFn: (params: SearchPatientIdentityParams) => PatientApi.searchIdentity(params),
+    onError: (error) => {
+      toast({
+        title: "Erreur lors de la recherche d'une identité existante",
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
+    },
+  })
 }
 
 // * MUTATIONS

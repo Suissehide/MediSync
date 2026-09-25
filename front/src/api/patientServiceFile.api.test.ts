@@ -62,6 +62,23 @@ describe('PatientServiceFileApi', () => {
     expect(init.method).toBe('PATCH')
   })
 
+  // Rattachement d'une identité existante (tâche 13) : POST sans corps sur la même route que
+  // GET/PATCH — la route se distingue par la méthode, jamais par un chemin différent.
+  it('attachExisting envoie un POST sur la même route, sans corps', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(okResponse({ patientId: 'p1', alreadyFollowedHere: false }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await PatientServiceFileApi.attachExisting('p1')
+
+    expect(result).toEqual({ patientId: 'p1', alreadyFollowedHere: false })
+    const [requestedUrl, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(requestedUrl).toMatch(/\/e\/e1\/s\/s1\/patient\/p1\/service-file$/)
+    expect(init.method).toBe('POST')
+    expect(init.body).toBeUndefined()
+  })
+
   // Une charge partielle doit rester partielle : ni `patientID` (c'est un paramètre de route,
   // pas un champ du sous-dossier), ni un objet reconstruit à partir d'une lecture filtrée. Le
   // corps porte ici PLUSIEURS champs fournis : un seul n'aurait pas pu distinguer « n'envoie

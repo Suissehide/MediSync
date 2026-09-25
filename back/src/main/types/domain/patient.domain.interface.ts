@@ -3,6 +3,8 @@ import type { TimeOfDay } from '../../interfaces/http/fastify/schemas/patient.sc
 import type {
   PatientCreateEntityRepo,
   PatientEntityRepo,
+  PatientIdentitySearchFilters,
+  PatientIdentitySearchResultRepo,
   PatientUpdateEntityRepo,
   PatientWithTagsEntityRepo,
 } from '../infra/orm/repositories/patient.repository.interface'
@@ -12,6 +14,7 @@ import type { EnrollmentIssueEntityDomain } from './enrollmentIssue.domain.inter
 
 export type PatientEntityDomain = PatientEntityRepo
 export type PatientWithTagsDomain = PatientWithTagsEntityRepo
+export type PatientIdentityMatchDomain = PatientIdentitySearchResultRepo
 export type PatientWithAppointmentsDomain = PatientEntityDomain & {
   appointmentPatients: (AppointmentPatientEntityDomain & {
     appointment: AppointmentEntityDomain
@@ -102,6 +105,9 @@ export type PatientPathwayDomain = {
 export interface PatientDomainInterface {
   findAll: () => Promise<PatientEntityDomain[]>
   findAllWithTags: () => Promise<PatientWithTagsDomain[]>
+  searchByIdentity: (
+    filters: PatientIdentitySearchFilters,
+  ) => Promise<PatientIdentityMatchDomain[]>
   findByID: (patientID: string) => Promise<PatientDetailDomain>
   exportExcel: (
     filters: PatientExportFilters,

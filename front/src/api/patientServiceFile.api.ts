@@ -1,5 +1,6 @@
 import { tenantApiUrl } from '../constants/config.constant.ts'
 import { handleHttpError } from '../libs/httpErrorHandler.ts'
+import type { AttachExistingPatientResult } from '../types/patient.ts'
 import type {
   PatientServiceFile,
   UpdatePatientServiceFileParams,
@@ -26,6 +27,27 @@ export const PatientServiceFileApi = {
         response,
         {},
         'Impossible de récupérer le dossier du patient pour ce service',
+      )
+    }
+    return response.json()
+  },
+
+  // Rattache une identité existante (trouvée par `PatientApi.searchIdentity`) au service
+  // courant : crée le sous-dossier s'il n'existe pas déjà, sans jamais toucher à l'identité
+  // partagée ni au sous-dossier d'un autre service (tâche 13, spec §6). Aucun corps : cette
+  // route ne fait que dire "ce patient est désormais suivi ici", jamais écrire un contenu.
+  // `alreadyFollowedHere` distingue les deux cas pour que l'écran le dise clairement, sans
+  // écraser un sous-dossier déjà présent (consigne 4 du brief).
+  attachExisting: async (patientID: string): Promise<AttachExistingPatientResult> => {
+    const response = await fetchWithAuth(
+      `${tenantApiUrl()}/patient/${patientID}/service-file`,
+      { method: 'POST' },
+    )
+    if (!response.ok) {
+      handleHttpError(
+        response,
+        {},
+        'Impossible de rattacher ce patient au service courant',
       )
     }
     return response.json()

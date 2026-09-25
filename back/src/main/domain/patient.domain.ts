@@ -22,12 +22,14 @@ import type {
   PatientEntityDomain,
   PatientExportFilters,
   PatientExportOptions,
+  PatientIdentityMatchDomain,
   PatientPathwayDomain,
   PatientUpdateEntityDomain,
   PatientWithAppointmentsDomain,
   PatientWithTagsDomain,
   RemoveFromPathwayResult,
 } from '../types/domain/patient.domain.interface'
+import type { PatientIdentitySearchFilters } from '../types/infra/orm/repositories/patient.repository.interface'
 import type { PatientServiceFileDomainInterface } from '../types/domain/patientServiceFile.domain.interface'
 import type { AppointmentRepositoryInterface } from '../types/infra/orm/repositories/appointment.repository.interface'
 import type {
@@ -166,6 +168,19 @@ class PatientDomain implements PatientDomainInterface {
 
   findAllWithTags(): Promise<PatientWithTagsDomain[]> {
     return this.patientRepository.findAllWithTags()
+  }
+
+  // Recherche d'identite existante avant creation (design §6, tache 13) : passe-plat vers le
+  // depot, SANS `runAsSystem`. Contrairement a `estSuiviAilleurs` (patientServiceFile.repository
+  // .ts), qui doit traverser la frontiere entre SERVICES, cette recherche ne traverse qu'une
+  // frontiere de SERVICE a l'interieur du MEME etablissement : Patient est un modele
+  // d'etablissement (voir `establishmentScope` dans patient.repository.ts, deja utilise par
+  // `findByID`/`findAll`/`create`), donc une lecture filtree sur l'etablissement courant du
+  // garde-fou d'ORM normal suffit — nul besoin d'assouplir quoi que ce soit. Ne pas y ajouter
+  // `runAsSystem` : l'exception unique de l'etape reste `estSuiviAilleurs`, et
+  // `runAsSystem-unicite.test.ts` le verifie par lecture de source, pas par relecture humaine.
+  searchByIdentity(filters: PatientIdentitySearchFilters): Promise<PatientIdentityMatchDomain[]> {
+    return this.patientRepository.searchByIdentity(filters)
   }
 
   // Le signal de suivi ailleurs (spec §5.3/§6, tache 7 tour 1, I1) est porte ici, pas sur le

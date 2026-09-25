@@ -10,8 +10,10 @@ import type {
   EnrollmentResult,
   EnrollPatientParams,
   Patient,
+  PatientIdentityMatch,
   PatientPathway,
   PatientWithTags,
+  SearchPatientIdentityParams,
   UpdatePatientParams,
 } from '../types/patient.ts'
 import { fetchWithAuth } from './fetchWithAuth.ts'
@@ -65,6 +67,38 @@ export const PatientApi = {
         response,
         {},
         `Impossible de récupérer le patient avec l'id : ${patientID}`,
+      )
+    }
+    return response.json()
+  },
+
+  // Recherche d'identite existante avant creation (étape 3 du multi-tenant, tâche 13, spec
+  // §6) : cherche dans TOUT l'établissement, pas seulement le service courant (le patient est un
+  // modèle d'établissement) — mais la réponse ne porte jamais que l'identité, voir
+  // `PatientIdentityMatch`. Contrat back : `GET /patient/search` exige un prénom ou un nom ;
+  // n'envoyer que les paramètres effectivement renseignés.
+  searchIdentity: async (
+    params: SearchPatientIdentityParams,
+  ): Promise<PatientIdentityMatch[]> => {
+    const query = new URLSearchParams()
+    if (params.firstName) {
+      query.set('firstName', params.firstName)
+    }
+    if (params.lastName) {
+      query.set('lastName', params.lastName)
+    }
+    if (params.birthDate) {
+      query.set('birthDate', params.birthDate)
+    }
+    const response = await fetchWithAuth(
+      `${tenantApiUrl()}/patient/search?${query.toString()}`,
+      { method: 'GET' },
+    )
+    if (!response.ok) {
+      handleHttpError(
+        response,
+        {},
+        'Impossible de rechercher une identité existante',
       )
     }
     return response.json()

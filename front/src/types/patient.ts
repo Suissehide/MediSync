@@ -50,6 +50,30 @@ export type EnrollmentIssue = {
   createdAt: string
 }
 
+// Resultat d'une recherche d'identite existante avant creation (etape 3 du multi-tenant, tache
+// 13) : UNIQUEMENT l'identite (id, prenom, nom, date de naissance) — jamais le suivi, jamais un
+// service, jamais un contenu de dossier. Volontairement un type distinct de `Patient`, qui porte
+// bien plus de champs : rien n'encourage ici a en lire un que la reponse back ne rend pas.
+export type PatientIdentityMatch = {
+  id: string
+  firstName: string
+  lastName: string
+  birthDate?: string | null
+}
+
+export type SearchPatientIdentityParams = {
+  firstName?: string
+  lastName?: string
+  birthDate?: string
+}
+
+// Reponse du rattachement d'une identite existante au service courant (POST .../service-file) :
+// voir `PatientServiceFileApi.attachExisting`.
+export type AttachExistingPatientResult = {
+  patientId: string
+  alreadyFollowedHere: boolean
+}
+
 export type CreatePatientParams = Omit<Patient, 'id'>
 export type UpdatePatientParams = Patient
 

@@ -39,6 +39,31 @@ class PatientServiceFileDomain implements PatientServiceFileDomainInterface {
     return this.patientServiceFileRepository.ensureExists(patientId)
   }
 
+  // Rattache une identite existante au service courant (design §6, tache 13 — le pendant de
+  // "Creer sans parcours" pour un patient qu'on vient de trouver par la recherche d'identite,
+  // plutot que de creer). Lit d'abord (findByPatient, deja filtre sur le service courant par
+  // `this.scope` dans le depot) pour savoir s'il existe deja un sous-dossier ICI : si oui, ne
+  // rien faire d'autre que le dire (consigne 4 du brief — "le cas deja suivi ici" ne doit rien
+  // ecraser) ; si non, `ensureExists` le cree vide, jamais en copiant le contenu d'un autre
+  // service. `ensureExists` etant lui-meme idempotent (upsert avec `update: {}`), l'appeler dans
+  // les deux cas serait inoffensif — mais le lire d'abord permet de savoir QUOI rendre a l'ecran
+  // (`alreadyFollowedHere`) et de n'emettre l'evenement d'activite que pour une creation reelle.
+  async attachToCurrentService(
+    patientId: string,
+    userID: string,
+  ): Promise<{ patientId: string; alreadyFollowedHere: boolean }> {
+    const existing = await this.patientServiceFileRepository.findByPatient(patientId)
+    if (existing) {
+      return { patientId, alreadyFollowedHere: true }
+    }
+    await this.patientServiceFileRepository.ensureExists(patientId)
+    // Meme evenement que `upsert` ci-dessus ('patient.updated' -> ActivityLogSubscriber) : ce
+    // rattachement est une ecriture sur le dossier de ce patient (la creation de son
+    // sous-dossier dans ce service), au meme titre imputable qu'une modification de contenu.
+    this.appEventBus.emit('patient.updated', { userID, patientId })
+    return { patientId, alreadyFollowedHere: false }
+  }
+
   // Passe-plat vers l'exception unique du depot (spec §5.3) : voir
   // PatientServiceFileRepository.estSuiviAilleurs pour ce qu'elle fait et comment.
   estSuiviAilleurs(patientId: string): Promise<boolean> {

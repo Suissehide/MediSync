@@ -34,6 +34,7 @@ export const PATIENT = {
   GET_ALL_WITH_TAGS: 'get_all_patients_with_tags',
   GET_BY_ID: 'get_by_id_patient',
   GET: 'get_patient',
+  SEARCH_IDENTITY: 'search_patient_identity',
   CREATE: 'create_patient',
   ENROLL: 'enroll_patient',
   ENROLL_EXISTING: 'enroll_existing_patient',
@@ -51,6 +52,9 @@ export const PATIENT = {
 export const PATIENT_SERVICE_FILE = {
   GET_BY_PATIENT: 'get_patient_service_file',
   UPDATE: 'update_patient_service_file',
+  // Rattachement d'une identité existante (trouvée par PATIENT.SEARCH_IDENTITY) au service
+  // courant — tâche 13 du plan.
+  ATTACH_EXISTING: 'attach_existing_patient_service_file',
 }
 
 export const SLOT = {

@@ -1,12 +1,14 @@
+import { useStore } from '@tanstack/react-form'
 import dayjs from 'dayjs'
-import { ArrowLeft, ArrowRight, Check, Save, X } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, Save, Search, UserCheck, X } from 'lucide-react'
 import type React from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { GENDER_OPTIONS } from '../../../constants/patient.constant.ts'
 import { useAppForm } from '../../../hooks/formConfig.tsx'
-import { usePatientMutations } from '../../../queries/usePatient.tsx'
-import type { CreatePatientParams, TimeOfDay } from '../../../types/patient.ts'
+import { usePatientIdentitySearch, usePatientMutations } from '../../../queries/usePatient.tsx'
+import { usePatientServiceFileMutations } from '../../../queries/usePatientServiceFile.ts'
+import type { CreatePatientParams, PatientIdentityMatch, TimeOfDay } from '../../../types/patient.ts'
 import { Button } from '../../ui/button.tsx'
 import {
   Popup,
@@ -31,6 +33,11 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
   const [open, setOpen] = useState(false)
   const [step, setStep] = useState(1)
   const { enrollPatient, createPatient } = usePatientMutations()
+  const identitySearch = usePatientIdentitySearch()
+  const { attachExistingPatient } = usePatientServiceFileMutations()
+  // `null` : aucune recherche encore lancée. `[]` : recherche faite, aucune identité trouvée —
+  // les deux sont affichés différemment (tâche 13, spec §6).
+  const [identityMatches, setIdentityMatches] = useState<PatientIdentityMatch[] | null>(null)
   const pathwayState = usePathwaySelector()
   const { reset: resetPathways } = pathwayState
 
@@ -76,6 +83,7 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
     formResetRef.current()
     setStep(1)
     resetPathways()
+    setIdentityMatches(null)
   }, [resetPathways])
 
   useEffect(() => {
@@ -97,6 +105,38 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
       birthDate,
     } satisfies CreatePatientParams)
 
+    setOpen(false)
+  }
+
+  // Recherche d'identité existante avant création (tâche 13, spec §6) : cherche dans tout
+  // l'établissement, sur le prénom/nom déjà saisis dans le formulaire — jamais automatique, un
+  // clic explicite. Le résultat ne porte jamais que l'identité (id, prénom, nom, date de
+  // naissance) : rien de plus à afficher, rien de plus à masquer.
+  // `useStore`, pas une lecture directe de `form.state.values` : TanStack Form ne rend ce
+  // composant reactif a un champ que via `useStore`/`form.Subscribe` (voir addSlotForm.tsx) —
+  // une lecture directe ici resterait figee sur les valeurs du premier rendu, laissant le
+  // bouton "desactive" alors que les champs ont ete remplis.
+  const firstNameValue = useStore(form.store, (state) => state.values.firstName)
+  const lastNameValue = useStore(form.store, (state) => state.values.lastName)
+  const canSearchIdentity = firstNameValue.trim().length > 0 || lastNameValue.trim().length > 0
+
+  const searchIdentity = async () => {
+    const { firstName, lastName, birthDate } = form.state.values
+    const matches = await identitySearch.mutateAsync({
+      firstName: firstName.trim() || undefined,
+      lastName: lastName.trim() || undefined,
+      birthDate: birthDate || undefined,
+    })
+    setIdentityMatches(matches)
+  }
+
+  // Choisir une identité existante crée le sous-dossier dans le service courant, sans jamais
+  // toucher à l'identité (consigne 3 du brief) : ce chemin n'appelle jamais `createPatient` ni
+  // `PATCH /patient/:id`. Le cas « déjà suivi ici » (consigne 4) est dit par le toast de
+  // `attachExistingPatient` (voir usePatientServiceFile.ts) ; la popup se ferme dans les deux
+  // cas, comme pour la création.
+  const chooseExistingIdentity = async (match: PatientIdentityMatch) => {
+    await attachExistingPatient.mutateAsync(match.id)
     setOpen(false)
   }
 
@@ -150,6 +190,58 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
                     <field.Select options={GENDER_OPTIONS} label="Genre" />
                   )}
                 </form.AppField>
+
+                <div className="flex flex-col gap-2 mt-2 border-t border-border pt-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="self-start"
+                    disabled={!canSearchIdentity}
+                    isLoading={identitySearch.isPending}
+                    onClick={searchIdentity}
+                  >
+                    <Search className="w-4 h-4" /> Rechercher un patient existant
+                  </Button>
+
+                  {identityMatches !== null && identityMatches.length === 0 && (
+                    <em className="text-sm text-neutral-400">
+                      Aucune identité existante trouvée dans l'établissement.
+                    </em>
+                  )}
+
+                  {identityMatches !== null && identityMatches.length > 0 && (
+                    <ul className="flex flex-col gap-1">
+                      {identityMatches.map((match) => (
+                        <li
+                          key={match.id}
+                          className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2 text-sm"
+                        >
+                          <span>
+                            {match.firstName} {match.lastName}
+                            {match.birthDate && (
+                              <span className="text-neutral-400">
+                                {' '}
+                                — né(e) le {dayjs(match.birthDate).format('DD/MM/YYYY')}
+                              </span>
+                            )}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            isLoading={
+                              attachExistingPatient.isPending &&
+                              attachExistingPatient.variables === match.id
+                            }
+                            onClick={() => chooseExistingIdentity(match)}
+                          >
+                            <UserCheck className="w-4 h-4" /> Choisir
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               </>
             )}
 

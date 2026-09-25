@@ -18,6 +18,7 @@ import {
   type GetPatientByIdParams,
   getPatientByIdParamsSchema,
   patientDetailResponseSchema,
+  patientIdentitySearchResponseSchema,
   type PatientPathwayParams,
   patientPathwayParamsSchema,
   patientPathwaysResponseSchema,
@@ -27,6 +28,8 @@ import {
   type ReorderPatientPathwaysBody,
   removeFromPathwayResponseSchema,
   reorderPatientPathwaysBodySchema,
+  type SearchPatientIdentityQuery,
+  searchPatientIdentityQuerySchema,
   type UpdatePatientBody,
   type UpdatePatientParams,
   updatePatientByIdSchema,
@@ -101,6 +104,31 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
         )
         .header('Content-Disposition', `attachment; filename="${filename}"`)
         .send(buffer)
+    },
+  )
+
+  // Recherche d'identite existante avant creation (design §6, tache 13, must be before
+  // /:patientID). Meme permission que la lecture du patient (`patient:read`) : aucune permission
+  // nouvelle — un secretariat obtient exactement la meme reponse qu'un coordinateur, la
+  // recherche ne portant aucun champ clinique (consigne 5 du brief, verifie par
+  // patient-search-identite.test.ts). `patientIdentitySearchResponseSchema` est la seconde
+  // ligne de defense (la premiere est le `select` du depot) : meme si un jour quelqu'un
+  // elargissait la requete, la serialisation Zod/fast-json-stringify ne laisserait passer que
+  // ces quatre cles.
+  fastify.get<{ Querystring: SearchPatientIdentityQuery }>(
+    '/search',
+    {
+      schema: {
+        querystring: searchPatientIdentityQuerySchema,
+        response: {
+          200: patientIdentitySearchResponseSchema,
+        },
+      },
+      config: { permission: 'patient:read' },
+    },
+    (request) => {
+      const { firstName, lastName, birthDate } = request.query
+      return patientDomain.searchByIdentity({ firstName, lastName, birthDate })
     },
   )
 

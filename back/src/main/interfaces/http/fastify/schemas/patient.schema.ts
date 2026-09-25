@@ -75,6 +75,35 @@ export const patientWithTagsResponseSchema = patientResponseSchema.extend({
 
 export const patientsWithTagsResponseSchema = z.array(patientWithTagsResponseSchema)
 
+// Recherche d'identite existante avant creation (design §6, tache 13) : au moins un prenom ou un
+// nom est exige, pour eviter qu'un appel sans filtre ne rende tout l'etablissement — la date de
+// naissance seule ne suffit pas non plus a la declencher. `.refine` plutot que deux champs
+// obligatoires : chacun des trois filtres reste facultatif pris seul.
+export const searchPatientIdentityQuerySchema = z
+  .object({
+    firstName: z.string().trim().min(1).optional(),
+    lastName: z.string().trim().min(1).optional(),
+    birthDate: z.coerce.date().optional(),
+  })
+  .refine((query) => !!query.firstName || !!query.lastName, {
+    message: 'Un prénom ou un nom est requis pour rechercher une identité existante',
+  })
+
+// Ce que la recherche a le droit de rendre, et rien d'autre (design §5.3/§6) : jamais le suivi,
+// jamais un service, jamais un contenu de dossier, jamais un compte. `id` est necessaire pour
+// choisir l'identite (rattachement au service courant), il n'ajoute aucune information nouvelle
+// puisque l'appelant le reçoit pour un patient qu'il vient de trouver par son nom.
+export const patientIdentityMatchSchema = z.object({
+  id: z.cuid(),
+  firstName: z.string(),
+  lastName: z.string(),
+  birthDate: z.coerce.date().nullable(),
+})
+
+export const patientIdentitySearchResponseSchema = z.array(patientIdentityMatchSchema)
+
+export type SearchPatientIdentityQuery = z.infer<typeof searchPatientIdentityQuerySchema>
+
 export const getPatientByIdParamsSchema = z.object({
   patientID: z.cuid(),
 })
