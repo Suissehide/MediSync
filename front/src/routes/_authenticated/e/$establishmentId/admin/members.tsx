@@ -1,9 +1,11 @@
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute, redirect, useParams } from '@tanstack/react-router'
 import { useCallback, useMemo, useState } from 'react'
 
 import { getMemberColumns } from '@/columns/member.column.tsx'
 import AddMemberForm from '@/components/custom/popup/addMemberForm.tsx'
 import { ConfirmDeleteForm } from '@/components/custom/popup/confirmDeleteForm.tsx'
+import CreateMemberAccountForm from '@/components/custom/popup/createMemberAccountForm.tsx'
+import { EstablishmentAdminNav } from '@/components/custom/establishmentAdmin/establishmentAdminNav.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
 import ReactTable from '@/components/table/reactTable.tsx'
 import { can } from '@/hooks/useCan.ts'
@@ -35,6 +37,9 @@ export const Route = createFileRoute(
 })
 
 function MemberSettings() {
+  const { establishmentId } = useParams({
+    from: '/_authenticated/e/$establishmentId/admin/members',
+  })
   const context = useAuthStore((state) => state.context)
 
   const { members, isPending } = useMembersQuery()
@@ -94,11 +99,16 @@ function MemberSettings() {
   return (
     <DashboardLayout>
       <div className="flex-1 bg-background p-6 rounded-lg flex flex-col w-full gap-4">
+        <EstablishmentAdminNav establishmentId={establishmentId} />
+
         <div className="flex justify-between items-center gap-3">
           <h1 className="h-9 flex items-center text-text-dark text-xl font-semibold">
             Membres de l'établissement
           </h1>
-          <AddMemberForm />
+          <div className="flex gap-2">
+            <CreateMemberAccountForm />
+            <AddMemberForm />
+          </div>
         </div>
 
         <ReactTable<Member>

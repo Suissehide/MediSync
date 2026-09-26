@@ -52,3 +52,13 @@ export type LoginInput = {
   email: string
   password: string
 }
+
+// `POST /auth/access-link/consume` (tâche 13, page publique) : le jeton est
+// un mot de passe à usage unique. Il arrive dans l'URL du navigateur, mais
+// ce type ne doit JAMAIS être sérialisé dans une URL d'appel — il part dans
+// le corps de la requête (voir `AuthApi.consumeAccessLink`,
+// `access-link.tsx`).
+export type ConsumeAccessLinkInput = {
+  token: string
+  password: string
+}

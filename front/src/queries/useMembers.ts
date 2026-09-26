@@ -5,7 +5,11 @@ import { MEMBER } from '../constants/process.constant.ts'
 import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
 import { useToast } from '../hooks/useToast.ts'
-import type { AddMemberInput, UpdateMemberInput } from '../types/member.ts'
+import type {
+  AddMemberInput,
+  CreateMemberAccountInput,
+  UpdateMemberInput,
+} from '../types/member.ts'
 
 // * QUERIES
 
@@ -82,6 +86,31 @@ export const useMemberMutations = () => {
     onSettled: () => invalidate(),
   })
 
+  // LE JETON RENDU EST UN MOT DE PASSE À USAGE UNIQUE (tâche 13, step 3,
+  // même exigence que `useSuperAdminReissueAccessLink`) : cette mutation ne
+  // l'écrit dans AUCUNE clé de requête, AUCUN cache — son seul effet
+  // observable pour l'appelant est `createMemberAccount.data`, tenu par
+  // React Query dans le cache des MUTATIONS (jamais atteignable par
+  // `getQueryData`/`getQueriesData`). `invalidate()` ne rafraîchit que la
+  // LISTE des membres (`MEMBER.GET_ALL`), qui ne porte jamais le jeton en
+  // clair (voir `memberResponseSchema`, back : pas de champ `accessLink`).
+  const createMemberAccount = useMutation({
+    mutationKey: [MEMBER.CREATE_ACCOUNT],
+    mutationFn: (input: CreateMemberAccountInput) =>
+      MembersApi.createAccount(input),
+    onSuccess: () => {
+      toast({ title: 'Compte créé', severity: TOAST_SEVERITY.SUCCESS })
+    },
+    onError: (error) => {
+      toast({
+        title: 'Erreur lors de la création du compte',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
+    },
+    onSettled: () => invalidate(),
+  })
+
   const removeMember = useMutation({
     mutationKey: [MEMBER.REMOVE],
     mutationFn: (id: string) => MembersApi.remove(id),
@@ -134,6 +163,7 @@ export const useMemberMutations = () => {
 
   return {
     addMember,
+    createMemberAccount,
     updateMember,
     removeMember,
     deactivateMember,

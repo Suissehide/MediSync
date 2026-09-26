@@ -126,6 +126,26 @@ export const MEMBER = {
   UPDATE: 'update_member',
   REMOVE: 'remove_member',
   DEACTIVATE: 'deactivate_member',
+  // Tâche 13, step 3 : création de compte, distincte de `ADD` (rattachement
+  // d'un compte existant).
+  CREATE_ACCOUNT: 'create_member_account',
+}
+
+// Onglet des services de l'administration d'établissement (tâche 13, step
+// 1). `DEACTIVATION_IMPACT` n'est JAMAIS appelée pour toute la liste
+// (arbitrage transmis par Léo, task-13-brief.md) : seulement à la demande,
+// au moment de désactiver un service précis.
+export const SERVICE_ADMIN = {
+  GET_ALL: 'get_all_services_admin',
+  CREATE: 'create_service_admin',
+  UPDATE: 'update_service_admin',
+  DEACTIVATION_IMPACT: 'service_admin_deactivation_impact',
+}
+
+// Onglet des accès temporaires de l'administration d'établissement (tâche
+// 13, step 2) : `GET /e/:establishmentId/admin/grants`, en cours ET passés.
+export const GRANT_ESTABLISHMENT = {
+  GET_ALL: 'get_all_establishment_grants',
 }
 
 export const LOCATION = {

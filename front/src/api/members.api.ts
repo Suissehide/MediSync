@@ -2,6 +2,8 @@ import { establishmentApiUrl } from '../constants/config.constant.ts'
 import { handleHttpError } from '../libs/httpErrorHandler.ts'
 import type {
   AddMemberInput,
+  CreateMemberAccountInput,
+  CreateMemberAccountResult,
   Member,
   UpdateMemberInput,
 } from '../types/member.ts'
@@ -112,6 +114,34 @@ export const MembersApi = {
           },
         },
         "Impossible d'ajouter le membre",
+      )
+    }
+    return response.json()
+  },
+
+  // `POST /e/:establishmentId/admin/members/account` (tâche 13, step 3) :
+  // le chemin réel est SANS `/admin` dans le brief mais ce routeur est monté
+  // sous ce préfixe (voir le commentaire du back, `members.ts`) —
+  // `MEMBERS_URL()` le porte déjà.
+  createAccount: async (
+    input: CreateMemberAccountInput,
+  ): Promise<CreateMemberAccountResult> => {
+    const response = await fetchWithAuth(`${MEMBERS_URL()}/account`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    })
+    if (!response.ok) {
+      handleHttpError(
+        response,
+        {
+          400: {
+            title: 'Création impossible',
+            message:
+              'Cette adresse a déjà un compte : utilisez plutôt "Ajouter un membre" pour la rattacher.',
+          },
+        },
+        'Impossible de créer le compte',
       )
     }
     return response.json()
