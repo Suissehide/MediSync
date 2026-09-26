@@ -96,12 +96,21 @@ describe('acces au prefixe /super-admin', () => {
   // Ce test est rouge sans son mécanisme : commenter l'un ou l'autre `addHook` dans
   // super-admin.routes.ts le fait échouer immédiatement (vérifié par exécution avant de compter
   // ce test — voir le rapport de tâche).
+  //
+  // `register` a été ajouté au double du vrai `fastify` (tâche 6) : le plugin enregistre
+  // désormais `establishmentsRouter` en plus des deux crochets, exactement ce que le commentaire
+  // de `superAdminRoutes` (super-admin.routes.ts) annonçait depuis la tâche 5 — « les tâches 6, 7
+  // et 8 enregistrent ici leurs routeurs ». Un double sans cette méthode ferait rejeter la
+  // promesse ci-dessous (`fastify.register is not a function`) sans jamais atteindre l'assertion
+  // sur les crochets ; ce n'est pas ce que ce test veut éprouver, d'où le stub minimal plutôt
+  // qu'une réécriture de son assertion.
   it('pose le garde-fou de permission puis requireSuperAdmin, dans cet ordre', async () => {
     const hooks: { event: string; handler: unknown }[] = []
     const fastify = {
       addHook: (event: string, handler: unknown) => {
         hooks.push({ event, handler })
       },
+      register: () => Promise.resolve(),
     }
     await (
       superAdminRoutes as unknown as (

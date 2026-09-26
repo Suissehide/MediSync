@@ -13,6 +13,7 @@ import { ThematicDomain } from '../../../domain/thematic.domain'
 import { TodoDomain } from '../../../domain/todo.domain'
 import { UserDomain } from '../../../domain/user.domain'
 import { AccessLinkDomain } from '../../../domain/accessLink.domain'
+import { EstablishmentDomain } from '../../../domain/establishment.domain'
 import { HttpClient } from '../../../infra/http/http-client'
 import { PinoLogger } from '../../../infra/logger/pino/pino-logger'
 import { PostgresOrm } from '../../../infra/orm/postgres-client'
@@ -52,6 +53,7 @@ import { LocationDomain } from '../../../domain/location.domain'
 import { MembershipDomain } from '../../../domain/membership.domain'
 import { AccessGrantRepository } from '../../../infra/orm/repositories/accessGrant.repository'
 import { AccessLinkRepository } from '../../../infra/orm/repositories/accessLink.repository'
+import { EstablishmentRepository } from '../../../infra/orm/repositories/establishment.repository'
 import { LocationRepository } from '../../../infra/orm/repositories/location.repository'
 import { MembershipRepository } from '../../../infra/orm/repositories/membership.repository'
 
@@ -147,6 +149,9 @@ class AwilixIocContainer {
     // AccessLink
     this.#registerAccessLinkDomain()
     this.#registerAccessLinkRepository()
+    // Establishment
+    this.#registerEstablishmentDomain()
+    this.#registerEstablishmentRepository()
 
     // Server
     this.#registerHttpServer()
@@ -386,6 +391,14 @@ class AwilixIocContainer {
   }
   #registerAccessLinkRepository(): void {
     this.register('accessLinkRepository', asClass(AccessLinkRepository).singleton())
+  }
+
+  // Establishment
+  #registerEstablishmentDomain(): void {
+    this.register('establishmentDomain', asClass(EstablishmentDomain).singleton())
+  }
+  #registerEstablishmentRepository(): void {
+    this.register('establishmentRepository', asClass(EstablishmentRepository).singleton())
   }
 }
 

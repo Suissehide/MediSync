@@ -8,6 +8,7 @@ import type { AuthDomainInterface } from '../domain/auth.domain.interface'
 import type { DiagnosticEducatifDomainInterface } from '../domain/diagnosticEducatif.domain.interface'
 import type { DiagnosticEducatifTemplateDomainInterface } from '../domain/diagnosticEducatifTemplate.domain.interface'
 import type { EnrollmentIssueDomainInterface } from '../domain/enrollmentIssue.domain.interface'
+import type { EstablishmentDomainInterface } from '../domain/establishment.domain.interface'
 import type { ForbiddenWeekDomainInterface } from '../domain/forbiddenWeek.domain.interface'
 import type { PlanningCycleDomainInterface } from '../domain/planningCycle.domain.interface'
 import type { LocationDomainInterface } from '../domain/location.domain.interface'
@@ -30,6 +31,7 @@ import type { AppointmentRepositoryInterface } from '../infra/orm/repositories/a
 import type { DiagnosticEducatifRepositoryInterface } from '../infra/orm/repositories/diagnosticEducatif.repository.interface'
 import type { DiagnosticEducatifTemplateRepositoryInterface } from '../infra/orm/repositories/diagnosticEducatifTemplate.repository.interface'
 import type { EnrollmentIssueRepositoryInterface } from '../infra/orm/repositories/enrollmentIssue.repository.interface'
+import type { EstablishmentRepositoryInterface } from '../infra/orm/repositories/establishment.repository.interface'
 import type { ForbiddenWeekRepositoryInterface } from '../infra/orm/repositories/forbiddenWeek.repository.interface'
 import type { PlanningCycleRepositoryInterface } from '../infra/orm/repositories/planningCycle.repository.interface'
 import type { LocationRepositoryInterface } from '../infra/orm/repositories/location.repository.interface'
@@ -126,4 +128,7 @@ export interface IocContainer {
   // AccessLink (lien d'acces, etape 4a tache 4)
   readonly accessLinkDomain: AccessLinkDomainInterface
   readonly accessLinkRepository: AccessLinkRepositoryInterface
+  // Establishment (creation d'un etablissement et de son premier administrateur, etape 4a tache 6)
+  readonly establishmentDomain: EstablishmentDomainInterface
+  readonly establishmentRepository: EstablishmentRepositoryInterface
 }

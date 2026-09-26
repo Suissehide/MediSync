@@ -3,6 +3,7 @@ import type { onRequestAsyncHookHandler } from 'fastify'
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 
 import { assertRoutePermission } from '../plugins/tenant.plugin'
+import { establishmentsRouter } from './super-admin/establishments'
 
 // Partagée avec le garde-fou racine ci-dessous et l'enregistrement du plugin (routes/index.ts),
 // pour qu'un futur renommage du préfixe ne puisse pas faire diverger les deux en silence.
@@ -54,10 +55,10 @@ export const requireSuperAdmin: onRequestAsyncHookHandler = (request) => {
 // enregistrent ici leurs routeurs (établissements, comptes, octrois) ; chacun hérite des deux
 // crochets sans avoir à y penser, exactement comme `membersRouter`/`soignantAdminRouter`/
 // `locationAdminRouter` héritent de ceux d'establishment-admin.routes.ts.
-const superAdminRoutes: FastifyPluginAsyncZod = (fastify) => {
+const superAdminRoutes: FastifyPluginAsyncZod = async (fastify) => {
   fastify.addHook('onRoute', assertRoutePermission)
   fastify.addHook('onRequest', requireSuperAdmin)
-  return Promise.resolve()
+  await fastify.register(establishmentsRouter, { prefix: '/establishments' })
 }
 
 export { superAdminRoutes }
