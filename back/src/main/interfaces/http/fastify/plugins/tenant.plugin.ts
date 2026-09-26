@@ -194,7 +194,7 @@ const tenantPlugin: FastifyPluginAsync = fastifyPlugin(
         _reply: FastifyReply,
         done: HookHandlerDoneFunction,
       ) {
-        liveGrantsForUser(request.currentUser, accessGrantRepository)
+        liveGrantsForUser(request.currentUser.id, accessGrantRepository)
           .then((grants) => {
             // Horloge prise ICI, à l'instant de la résolution — jamais mise en cache d'une
             // requête à l'autre : c'est ce qui fait qu'un octroi qui vient d'expirer est refusé

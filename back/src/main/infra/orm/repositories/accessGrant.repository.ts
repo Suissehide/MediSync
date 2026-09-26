@@ -1,3 +1,5 @@
+import Boom from '@hapi/boom'
+
 import type { IocContainer } from '../../../types/application/ioc'
 import type { LiveGrant } from '../../../types/domain/accessGrant.domain.interface'
 import type {
@@ -21,6 +23,21 @@ class AccessGrantRepository implements AccessGrantRepositoryInterface {
     this.errorHandler = errorHandler
   }
 
+  // TOUR DE CORRECTION 1 (tâche 8, étape 4a) — voir CONTRAT 2 sur l'interface
+  // (`AccessGrantRepositoryInterface.findForUser`) : la relecture a démontré par exécution
+  // qu'élargir le type de l'ancien appelant (`liveGrantsForUser`, deux champs puis neuf) ne
+  // fermait rien — un littéral fabriqué prétendant `isSuperAdmin: true` pour l'id d'un compte
+  // RÉELLEMENT démis de ce drapeau, mais encore titulaire d'un octroi non révoqué, faisait
+  // ressortir cet octroi RÉEL. `liveGrantsForUser` ne porte donc plus ce champ du tout : la
+  // vérité est rechargée ICI, fraîche, à CHAQUE appel — jamais acceptée d'un appelant. Lecture
+  // PLATE, volontairement HORS de `runAsSuperAdmin` : `User` est un modèle global, il se lit
+  // sans restriction supplémentaire quel que soit le contexte ambiant (spec §4.1) — entrer le
+  // contexte superadmin seulement APRÈS cette vérification garde la même réduction de surface
+  // que l'ancienne version (qui évitait d'y entrer pour un compte non super-admin), à la
+  // différence que la décision n'est plus une PRÉTENTION mais un FAIT relu à l'instant. Coût
+  // assumé : un aller-retour Postgres de plus, sur clé primaire, pour tout compte — le prix de
+  // ne plus faire confiance à l'appelant sur ce point précis.
+  //
   // `SuperAdminAccessGrant`, `Establishment` et `Service` sont trois modèles distincts
   // (le premier et le deuxième globaux, le troisième d'établissement) : un `include` imbriqué
   // depuis `SuperAdminAccessGrant` vers `establishment` ou vers les services de celui-ci
@@ -30,7 +47,14 @@ class AccessGrantRepository implements AccessGrantRepositoryInterface {
   // (l'octroi lui-même, l'établissement, ses services), toutes déclarées pour le contexte
   // superadmin (`SUPERADMIN_GLOBAL_OPERATIONS.SuperAdminAccessGrant`/`.Establishment`,
   // `SUPERADMIN_OPERATIONS.Service`).
-  findForUser(userId: string): Promise<LiveGrant[]> {
+  async findForUser(userId: string): Promise<LiveGrant[]> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { isSuperAdmin: true },
+    })
+    if (user?.isSuperAdmin !== true) {
+      return []
+    }
     return this.tenantContext.runAsSuperAdmin(async () => {
       const grants = await this.prisma.superAdminAccessGrant.findMany({
         where: { userId, revokedAt: null },
@@ -88,11 +112,33 @@ class AccessGrantRepository implements AccessGrantRepositoryInterface {
     })
   }
 
+  // Tour de correction 1 (tâche 8) : appelée par `SuperAdminGrantDomain.grant` avant d'écrire —
+  // voir le commentaire sur l'interface pour la définition exacte de « vivant » ici (plus étroit
+  // que `revokedAt: null` seul). `count` est déclarée pour `SuperAdminAccessGrant` sous le
+  // contexte superadmin (`LECTURES_GLOBALES_SANS_MUTATION`, tenant-guard.ts).
+  hasLiveGrant(userId: string, establishmentId: string, now: Date): Promise<boolean> {
+    return this.tenantContext.runAsSuperAdmin(async () => {
+      const count = await this.prisma.superAdminAccessGrant.count({
+        where: { userId, establishmentId, revokedAt: null, expiresAt: { gt: now } },
+      })
+      return count > 0
+    })
+  }
+
   // `DELETE /super-admin/grants/:id` : `.update` (pas `.delete`, jamais déclarée — voir le
   // commentaire au-dessus de `SUPERADMIN_GLOBAL_OPERATIONS`) pose `revokedAt`, la ligne survit.
-  // Lève 404 (P2025, via `errorHandler`) si l'id est inconnu.
-  async revoke(id: string, at: Date): Promise<void> {
+  // Voir le commentaire sur l'interface pour les deux points corrigés en tour de correction 1 :
+  // restriction au titulaire, et préservation de la PREMIÈRE date de révocation.
+  async revoke(id: string, callerId: string, at: Date): Promise<void> {
     await this.tenantContext.runAsSuperAdmin(async () => {
+      const grant = await this.prisma.superAdminAccessGrant.findUnique({ where: { id } })
+      if (!grant || grant.userId !== callerId) {
+        throw Boom.notFound()
+      }
+      if (grant.revokedAt !== null) {
+        // Déjà révoqué : no-op, la PREMIÈRE date reste — voir le commentaire sur l'interface.
+        return
+      }
       try {
         await this.prisma.superAdminAccessGrant.update({
           where: { id },

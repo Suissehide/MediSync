@@ -192,6 +192,46 @@ describe('resolution du tenant', () => {
     expect(apres.statusCode).toBe(404)
   })
 
+  // TOUR DE CORRECTION 1 (tâche 8, étape 4a) — reconstruit EXACTEMENT le scénario que la
+  // relecture a démontré par exécution : un compte réellement démis du drapeau super-admin,
+  // dont l'octroi (non révoqué, non expiré) reste en base, appelé DIRECTEMENT au niveau du
+  // dépôt — le point d'entrée le plus bas, celui qu'un appelant fabriqué atteindrait, sans
+  // passer par `/me` ni par une session HTTP. Avant ce tour, `liveGrantsForUser` acceptait un
+  // `User` complet et faisait confiance à SON champ `isSuperAdmin` : un appel direct au dépôt
+  // avec l'id de ce compte démis, depuis n'importe quel code de `src/main`, aurait tout de même
+  // fait ressortir l'octroi RÉEL (établissement, services) si l'appelant avait — à tort —
+  // prétendu `isSuperAdmin: true`. Depuis ce tour, `AccessGrantRepository.findForUser` ne prend
+  // plus qu'un `userId` et relit LUI-MÊME `User.isSuperAdmin`, frais, à chaque appel : aucune
+  // prétention d'aucune sorte ne peut plus rien changer au résultat. Ce test rougit si cette
+  // relecture fraîche disparaît (par exemple si `findForUser` redevenait un simple filtre sur
+  // `revokedAt`, sans revérifier le drapeau).
+  it('la lecture directe du depot ne fait plus confiance a une pretention isSuperAdmin', async () => {
+    const est = await createEstablishment('Octroi')
+    const ancienSuperAdmin = await createUser({
+      email: 'demis@test.fr',
+      isSuperAdmin: true,
+    })
+
+    await grantAccess({
+      userId: ancienSuperAdmin.id,
+      establishmentId: est.id,
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+
+    // Démis APRÈS l'octroi : la ligne `SuperAdminAccessGrant` reste non révoquée, non expirée.
+    await testDb.user.update({
+      where: { id: ancienSuperAdmin.id },
+      data: { isSuperAdmin: false },
+    })
+
+    // Appel DIRECT du dépôt, avec le seul `userId` — c'est tout ce que la nouvelle signature
+    // accepte : il n'existe plus de champ `isSuperAdmin` où écrire une prétention.
+    const grants = await t.instances.accessGrantRepository.findForUser(
+      ancienSuperAdmin.id,
+    )
+    expect(grants).toEqual([])
+  })
+
   // Fermeture (tâche 8, étape 4a — voir le contrat écrit sur
   // `AccessGrantRepositoryInterface.findForUser`) : un octroi RÉEL, non révoqué, non expiré, sur
   // un établissement qui devient désactivé APRÈS coup, ne doit plus rien conférer — ni la lecture

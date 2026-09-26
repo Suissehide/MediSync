@@ -3,10 +3,7 @@ import type {
   LiveGrant,
 } from '../types/domain/accessGrant.domain.interface'
 import type { AccessGrantRepositoryInterface } from '../types/infra/orm/repositories/accessGrant.repository.interface'
-import type {
-  UserEntityRepo,
-  UserWithMemberships,
-} from '../types/infra/orm/repositories/user.repository.interface'
+import type { UserWithMemberships } from '../types/infra/orm/repositories/user.repository.interface'
 
 // Un octroi est vivant s'il n'a été ni révoqué ni atteint son terme, jugé contre l'horloge
 // REÇUE (jamais lue ici) : c'est ce qui rend l'expiration éprouvable sans attendre, à l'unité
@@ -35,6 +32,31 @@ const commeOctroi = (grant: LiveGrant): EffectiveMembership => ({
   })),
   origine: 'octroi',
 })
+
+// TOUR DE CORRECTION 1 (tâche 8, étape 4a) — Important n°2 de la relecture : rien n'empêchait
+// deux octrois VIVANTS sur le MÊME établissement (un premier pas encore expiré, un second
+// s'accordé par-dessus) de produire ici DEUX `EffectiveMembership` identiques par
+// `establishmentId` — `/me` listait alors deux fois le même établissement. La résolution de
+// tenant s'en sortait (elle prend le premier match, `Array.find`), mais le sélecteur du front
+// aurait affiché une ligne en double. Choix retenu (voir `SuperAdminGrantDomain.grant`,
+// domain/superAdminGrant.domain.ts, pour l'AUTRE moitié du remède) : EMPÊCHER la création d'un
+// second octroi vivant sur un établissement qui en a déjà un, ET dédoublonner ici quand même, en
+// défense — un octroi créé avant ce garde, ou par toute autre voie future, ne redonnerait pas de
+// doublon pour autant. Sans perte d'information : `AccessGrantRepositoryInterface.findForUser`
+// dérive `services`/`establishmentName` de l'ÉTABLISSEMENT, jamais de la ligne d'octroi
+// elle-même (voir son implémentation) — deux octrois vivants sur le même établissement portent
+// donc rigoureusement le même contenu utile, seul `expiresAt`/`revokedAt` diffère, et ni l'un ni
+// l'autre ne survit dans `EffectiveMembership`. Garder le premier rencontré est donc sans perte.
+const dedoublonneParEtablissement = (grants: LiveGrant[]): LiveGrant[] => {
+  const vus = new Set<string>()
+  return grants.filter((grant) => {
+    if (vus.has(grant.establishmentId)) {
+      return false
+    }
+    vus.add(grant.establishmentId)
+    return true
+  })
+}
 
 // Arbre des appartenances RÉELLES, actives seulement (un établissement ou un service désactivé
 // disparaît) — reprend ici la filtration jusqu'ici dupliquée entre `me-mapper.ts` et
@@ -87,6 +109,9 @@ const appartenancesReelles = (
 //     là où aucune voie ne doit passer. `etablissementsAvecAppartenance` est donc construit sur
 //     la liste BRUTE des appartenances, pas sur `reelles` (déjà filtrée).
 //
+//   - Deux octrois vivants sur le MÊME établissement ne produisent jamais deux entrées (tour de
+//     correction 1, tâche 8) : voir `dedoublonneParEtablissement` ci-dessous.
+//
 // Ce qu'elle ne garantit PAS, et qui reste à la charge de l'appelant : qu'un octroi visant un
 // établissement désactivé — sans qu'aucune appartenance réelle, active ou non, ne l'atteste —
 // n'arrive jamais jusqu'ici. `LiveGrant` (types/domain/accessGrant.domain.interface.ts) ne porte
@@ -104,52 +129,50 @@ export const effectiveMemberships = (
     ),
   )
   const octrois = user.isSuperAdmin
-    ? grants
-        .filter(
+    ? dedoublonneParEtablissement(
+        grants.filter(
           (grant) =>
             estVivant(grant, now) &&
             !etablissementsAvecAppartenance.has(grant.establishmentId),
-        )
-        .map(commeOctroi)
+        ),
+      ).map(commeOctroi)
     : []
   return [...reelles, ...octrois]
 }
 
-// N'entre JAMAIS le contexte superadmin (tenantContext.runAsSuperAdmin, dans
-// `AccessGrantRepository.findForUser`) pour un compte qui n'est pas — ou plus — super-admin : un
-// octroi ne lui confère de toute façon rien (voir `effectiveMemberships` ci-dessus), donc la
-// lecture n'a structurellement rien à trouver. La tâche 1 a mis quatre tours de correction à
-// réduire la surface où ce contexte est actif ; l'élargir à CHAQUE requête de CHAQUE
-// utilisateur — superadmin ou non — l'aurait rouverte. Seul appelant légitime de
-// `AccessGrantRepositoryInterface.findForUser` : voir
+// Seul appelant légitime de `AccessGrantRepositoryInterface.findForUser` : voir
 // src/test/unit/domain/effectiveMemberships-seul-appelant.test.ts.
 //
-// FERMETURE (tâche 8, étape 4a) — le paramètre était `Pick<UserWithMemberships, 'id' |
-// 'isSuperAdmin'>` : DEUX champs scalaires, triviaux à fabriquer à la main
-// (`{ id: unIdQuelconque, isSuperAdmin: true }`) n'importe où dans `src/main`, sans jamais passer
-// par un dépôt. Le test qui surveille l'appelant nommé de `findForUser`
-// (`effectiveMemberships-seul-appelant.test.ts`) ne l'aurait pas vu : il grep un nom de fonction
-// (`findForUser(`), pas la provenance de l'argument qu'un appel LÉGITIME à `liveGrantsForUser`
-// lui passerait. Un tel littéral, une fois passé ici, entre le contexte superadmin
-// (`accessGrantRepository.findForUser`) pour N'IMPORTE QUEL id fabriqué, et en ressort les
-// octrois RÉELS de ce compte s'il en a — une fuite de lecture, silencieuse, que rien ne
-// signalerait tant que la fonction reste appelée par son nom.
+// TOUR DE CORRECTION 1 (tâche 8, étape 4a) — CE QUE LE TOUR PRÉCÉDENT N'A PAS FERMÉ. Cette
+// fonction prenait un `UserEntityRepo` (= `User` complet) et faisait confiance à SON CHAMP
+// `isSuperAdmin` pour décider de lire. La relecture a reconstruit le littéral complet — neuf
+// champs scalaires, mot de passe et sel VIDES — pour un compte réellement titulaire d'un octroi
+// mais RETIRÉ du drapeau super-admin depuis (exactement le scénario de « l octroi ne confere
+// plus rien des que son titulaire n est plus super-admin », tenant-resolution.test.ts) : en
+// prétendant `isSuperAdmin: true` dans le littéral, l'appel faisait ressortir l'octroi RÉEL de ce
+// compte — établissement, services — alors que la vérité actuelle en base est `false`. Élargir le
+// type de deux à neuf champs n'avait rien fermé : AUCUN type ne peut empêcher qui que ce soit de
+// fabriquer un objet conforme, `src/main` étant vérifié par `tsc` mais pas exécuté sous un
+// vérificateur à l'exécution — la fonction devait cesser de faire confiance à CE QU'ON LUI DONNE
+// SUR CE POINT.
 //
-// `UserEntityRepo` (= `User`, le modèle Prisma complet : email, mot de passe haché, sel,
-// horodatages…) ferme cette porte SANS RIEN CASSER : `UserWithMemberships` l'étend, donc les
-// trois appelants existants (tenant.plugin.ts et me.ts avec un `UserWithMemberships` complet,
-// auth.domain.ts avec le `User` nu que rend `findByEmail`, avant que les rattachements ne soient
-// chargés) restent tous valides sans changement. Ce qui cesse de l'être : un littéral à deux
-// champs — `tsc` (build, scope `src/main`, voir CLAUDE.md) le refuse désormais pour des champs
-// manquants, qu'il soit passé en littéral direct ou via une variable typée plus étroitement,
-// aucune des deux formes n'échappant à une vérification d'affectation complète (à la différence
-// du contrôle des propriétés EXCÉDENTAIRES, qui lui ne vaut que pour un littéral direct — voir
-// CLAUDE.md). Fabriquer un compte crédible resterait possible en théorie, mais plus par accident,
-// et plus sans que la revue voie un mot de passe et un sel inventés au milieu du code.
+// REMÈDE : plus aucun champ `isSuperAdmin` en entrée — seulement un `userId`. Il n'y a donc plus
+// rien à mentir : la vérité est rechargée ELLE-MÊME, fraîche, par
+// `AccessGrantRepository.findForUser` (une lecture triviale de `User.isSuperAdmin`, avant toute
+// autre chose — voir son commentaire), jamais mise en cache ni acceptée d'un appelant. Un id
+// fabriqué (ou correct) ne change rien : c'est la valeur ACTUELLE en base qui tranche, à CHAQUE
+// appel. Reconstruire le littéral du relecteur n'a donc plus de sens — il n'existe plus de champ
+// où écrire le mensonge — et rejouer exactement son scénario (compte démis, octroi non révoqué
+// encore en base) rend désormais `[]` : voir tenant-resolution.test.ts, « la lecture directe du
+// depot ne fait plus confiance a une pretention isSuperAdmin ».
+//
+// Coût assumé : un aller-retour Postgres de plus par requête (une lecture d'une seule colonne,
+// sur clé primaire) pour TOUT compte, super-admin ou non — là où l'ancienne version l'évitait
+// pour un compte déjà chargé. C'est le prix exact de ne plus faire confiance à l'appelant ; la
+// surface d'entrée dans `runAsSuperAdmin` elle-même reste aussi réduite qu'avant (la lecture
+// fraîche est HORS de ce contexte, voir `AccessGrantRepository.findForUser` — seul un compte dont
+// la vérité ACTUELLE est `isSuperAdmin: true` fait franchir la porte).
 export const liveGrantsForUser = (
-  user: UserEntityRepo,
+  userId: string,
   accessGrantRepository: AccessGrantRepositoryInterface,
-): Promise<LiveGrant[]> =>
-  user.isSuperAdmin
-    ? accessGrantRepository.findForUser(user.id)
-    : Promise.resolve([])
+): Promise<LiveGrant[]> => accessGrantRepository.findForUser(userId)

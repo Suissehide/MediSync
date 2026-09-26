@@ -21,13 +21,13 @@ export interface SuperAdminGrantDomainInterface {
   // Lève `Boom.notFound` si `establishmentId` ne désigne aucun établissement (`Establishment`
   // est global, cette route n'a aucun tenant ambiant pour le garantir autrement).
   grant: (input: GrantInput) => Promise<SuperAdminGrantEntityRepo>
-  // Révoque avant terme (spec §6.2). Lève `Boom.notFound` si l'id est inconnu. Idempotent EN
-  // PRATIQUE mais pas en PRÉCISION : révoquer un octroi déjà révoqué réécrit `revokedAt` avec
-  // l'horodatage COURANT plutôt que de garder le premier — `SuperAdminAccessGrant.update` est la
-  // seule opération déclarée pour ce modèle sous contexte superadmin (PAS `updateMany`), donc pas
-  // de lecture conditionnelle bon marché possible dans la même écriture ; aucune route de ce plan
-  // ne dépend de la date EXACTE d'une double révocation.
-  revoke: (id: string) => Promise<void>
+  // Révoque avant terme (spec §6.2). Lève `Boom.notFound` si l'id est inconnu, OU si
+  // `callerId` n'est pas le titulaire de cet octroi (tour de correction 1, tâche 8 — mineur
+  // signalé en relecture : seul celui qui s'est accordé l'octroi peut le révoquer, jamais un
+  // autre super-admin) — même 404, pour ne pas distinguer les deux cas. Idempotent, PRÉCISION
+  // comprise : révoquer un octroi déjà révoqué est un no-op qui garde la PREMIÈRE date (voir
+  // `AccessGrantRepository.revoke`, qui lit la ligne avant d'écrire).
+  revoke: (id: string, callerId: string) => Promise<void>
   // `GET /e/:establishmentId/admin/grants` : en cours ET passés (spec §3.5, §6.2), motif et
   // auteur inclus. Aucun `establishmentId` en paramètre, à dessein (même parti pris que
   // `MembershipRepository`, qui lit `tenantContext.establishmentScope()` en interne plutôt que de

@@ -175,6 +175,42 @@ describe('effectiveMemberships', () => {
     ).toEqual([])
   })
 
+  // Tour de correction 1 (tâche 8) — Important n°2 de la relecture : deux octrois VIVANTS sur le
+  // MÊME établissement (ex. un second s'accordé avant le terme du premier) ne doivent produire
+  // qu'UNE SEULE entrée — sans quoi `/me` liste deux fois le même établissement, même
+  // identifiant. Le contenu (services) est identique quelle que soit la ligne d'octroi qui le
+  // porte (`AccessGrantRepository.findForUser` le dérive de l'établissement, jamais de l'octroi
+  // lui-même) : rien ne se perd à n'en garder qu'un.
+  it('dedoublonne deux octrois vivants sur le meme etablissement', () => {
+    const premier: LiveGrant = {
+      establishmentId: 'e1',
+      establishmentName: 'E1',
+      expiresAt: new Date('2026-09-25T13:00:00Z'),
+      revokedAt: null,
+      services: [{ id: 's1', name: 'S1' }],
+    }
+    const second: LiveGrant = {
+      establishmentId: 'e1',
+      establishmentName: 'E1',
+      expiresAt: new Date('2026-09-25T15:00:00Z'),
+      revokedAt: null,
+      services: [{ id: 's1', name: 'S1' }],
+    }
+    const effectives = effectiveMemberships(
+      utilisateurSansRattachement,
+      [premier, second],
+      maintenant,
+    )
+    expect(effectives).toEqual([
+      {
+        establishmentId: 'e1',
+        role: 'ADMIN',
+        services: [{ id: 's1', role: 'COORDINATEUR' }],
+        origine: 'octroi',
+      },
+    ])
+  })
+
   // Tour de correction 1 (tâche 3) — Important n°4 de la revue : un membre réel d'un
   // établissement DÉSACTIVÉ (donc invisible, comme partout ailleurs) ne doit pas voir cette
   // absence comblée par un octroi visant le même établissement — ce que ferait une primauté

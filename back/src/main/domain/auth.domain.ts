@@ -106,7 +106,7 @@ class AuthDomain implements AuthDomainInterface {
     await this.userRepository.recordLogin(user.id, new Date())
 
     const full = await this.userRepository.findByID(user.id)
-    const grants = await liveGrantsForUser(user, this.accessGrantRepository)
+    const grants = await liveGrantsForUser(user.id, this.accessGrantRepository)
     const { accessToken, refreshToken } = this.generateTokens(user.id)
 
     return {
@@ -146,7 +146,7 @@ class AuthDomain implements AuthDomainInterface {
       throw Boom.unauthorized('Account deactivated')
     }
 
-    const grants = await liveGrantsForUser(user, this.accessGrantRepository)
+    const grants = await liveGrantsForUser(user.id, this.accessGrantRepository)
     const { accessToken, refreshToken } = this.generateTokens(user.id)
 
     return {

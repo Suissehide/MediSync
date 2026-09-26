@@ -16,7 +16,7 @@ const meRouter: FastifyPluginAsync = (fastify) => {
     { schema: { response: { 200: meResponseSchema } } },
     async (request) => {
       const grants = await liveGrantsForUser(
-        request.currentUser,
+        request.currentUser.id,
         accessGrantRepository,
       )
       return toMeResponse(request.currentUser, grants, new Date())
@@ -38,11 +38,12 @@ const meRouter: FastifyPluginAsync = (fastify) => {
           newPassword,
         })
       }
-      // Séquentiel, pas `Promise.all` : `liveGrantsForUser` a besoin du `isSuperAdmin` à jour de
-      // `updated` (un profil peut changer entre deux requêtes) pour décider s'il vaut la peine de
-      // lire les octrois — voir accessGrant.domain.ts.
+      // `liveGrantsForUser` ne lit plus `isSuperAdmin` sur `updated` (tour de correction 1,
+      // tâche 8) : `AccessGrantRepository.findForUser` relit ce drapeau lui-même, frais, à
+      // l'instant de l'appel — la fraîcheur ne dépend donc plus de l'ordre entre les deux
+      // lectures. `updated` reste nécessaire pour `toMeResponse` (l'arbre des appartenances).
       const updated = await userDomain.findByID(userID)
-      const grants = await liveGrantsForUser(updated, accessGrantRepository)
+      const grants = await liveGrantsForUser(updated.id, accessGrantRepository)
       return toMeResponse(updated, grants, new Date())
     },
   )

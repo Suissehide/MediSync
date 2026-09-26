@@ -34,6 +34,7 @@ describe('octrois temporaires (tache 8)', () => {
   let t: TestApp
   let superAdminId: string
   let superAdminCookies: { access_token: string }
+  let autreSuperAdminCookies: { access_token: string }
   let adminCibleCookies: { access_token: string }
   let adminAutreCookies: { access_token: string }
   let cible: { id: string }
@@ -49,6 +50,12 @@ describe('octrois temporaires (tache 8)', () => {
     })
     superAdminId = superAdmin.id
     superAdminCookies = await signIn(t.app, 'super@test.fr')
+
+    // Un SECOND super-admin, distinct du premier — sert uniquement à prouver qu'il ne peut pas
+    // révoquer les octrois du premier (tour de correction 1, tâche 8, mineur signalé en
+    // relecture).
+    await createUser({ email: 'autre-super@test.fr', isSuperAdmin: true })
+    autreSuperAdminCookies = await signIn(t.app, 'autre-super@test.fr')
 
     cible = await createEstablishment('Cible')
     autre = await createEstablishment('Autre')
@@ -170,6 +177,49 @@ describe('octrois temporaires (tache 8)', () => {
       expect(await testDb.superAdminAccessGrant.count()).toBe(avant)
     })
 
+    // Mineur signalé en relecture (tâche 8, tour de correction 1) : sans ce garde, la route
+    // rendait 201 sur un établissement désactivé, sans jamais rien accorder derrière — un octroi
+    // sur un établissement désactivé n'apparaît jamais dans une lecture (CONTRAT 1,
+    // `accessGrant.repository.interface.ts`). Refusé désormais à l'écriture, pour ne pas laisser
+    // l'appelant croire qu'il a obtenu un accès.
+    it('refuse un octroi sur un etablissement desactive, sans rien ecrire', async () => {
+      const est = await createEstablishment('Desactive')
+      await testDb.establishment.update({
+        where: { id: est.id },
+        data: { deactivatedAt: new Date() },
+      })
+
+      const res = await postGrant({
+        establishmentId: est.id,
+        reason: 'diagnostic',
+      })
+
+      expect(res.statusCode).toBe(409)
+      expect(await countGrantsFor(est.id)).toBe(0)
+    })
+
+    // Tour de correction 1 (tâche 8) — Important n°2 de la relecture : sans ce garde, un second
+    // octroi vivant sur le même établissement était accepté (201), et `/me` aurait listé
+    // l'établissement deux fois (voir `accessGrant.domain.test.ts`, « dedoublonne deux octrois
+    // vivants... », pour la moitié « lecture » du remède ; ce test couvre la moitié « écriture »,
+    // qui l'empêche à la source).
+    it('refuse un second octroi vivant sur un etablissement qui en a deja un', async () => {
+      const est = await createEstablishment('DejaOctroye')
+
+      const premier = await postGrant({
+        establishmentId: est.id,
+        reason: 'premiere intervention',
+      })
+      expect(premier.statusCode).toBe(201)
+
+      const second = await postGrant({
+        establishmentId: est.id,
+        reason: 'seconde intervention',
+      })
+      expect(second.statusCode).toBe(409)
+      expect(await countGrantsFor(est.id)).toBe(1)
+    })
+
     it("l'octroi cree confere reellement l'acces, visible depuis /me", async () => {
       const est = await createEstablishment('AccesReel')
 
@@ -247,14 +297,76 @@ describe('octrois temporaires (tache 8)', () => {
       })
       expect(res.statusCode).toBe(404)
     })
+
+    // Mineur signalé en relecture (tâche 8, tour de correction 1) : la révocation n'était
+    // restreinte à personne — n'importe quel super-admin pouvait clore l'octroi d'un autre.
+    // Restreint désormais au titulaire (spec §3.5, « s'accorder l'accès ») : 404, jamais 403,
+    // pour ne pas distinguer « n'existe pas » de « n'est pas à vous ».
+    it("un autre super-admin ne peut pas revoquer l'octroi d'un tiers", async () => {
+      const est = await createEstablishment('OctroiDautrui')
+      const created = await postGrant({
+        establishmentId: est.id,
+        reason: 'intervention',
+      })
+      const grantId = created.json().id
+
+      const del = await t.app.inject({
+        method: 'DELETE',
+        url: `/super-admin/grants/${grantId}`,
+        cookies: autreSuperAdminCookies,
+      })
+      expect(del.statusCode).toBe(404)
+
+      const row = await testDb.superAdminAccessGrant.findUniqueOrThrow({
+        where: { id: grantId },
+      })
+      expect(row.revokedAt).toBeNull()
+    })
+
+    // Mineur signalé en relecture : une double révocation réécrivait `revokedAt` avec
+    // l'horodatage courant. Idempotent désormais, PRÉCISION comprise : la PREMIÈRE date reste.
+    it('revoquer un octroi deja revoque garde la premiere date', async () => {
+      const est = await createEstablishment('DoubleRevocation')
+      const created = await postGrant({
+        establishmentId: est.id,
+        reason: 'intervention',
+      })
+      const grantId = created.json().id
+
+      const premiere = await t.app.inject({
+        method: 'DELETE',
+        url: `/super-admin/grants/${grantId}`,
+        cookies: superAdminCookies,
+      })
+      expect(premiere.statusCode).toBe(204)
+      const apresPremiere = await testDb.superAdminAccessGrant.findUniqueOrThrow(
+        { where: { id: grantId } },
+      )
+      const premiereDate = apresPremiere.revokedAt
+      expect(premiereDate).not.toBeNull()
+
+      // Écart réel, mesurable : sans lui, une réécriture bornée à la même milliseconde que la
+      // première passerait ce test par accident, sans jamais avoir prouvé l'idempotence.
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      const seconde = await t.app.inject({
+        method: 'DELETE',
+        url: `/super-admin/grants/${grantId}`,
+        cookies: superAdminCookies,
+      })
+      expect(seconde.statusCode).toBe(204)
+      const apresSeconde = await testDb.superAdminAccessGrant.findUniqueOrThrow(
+        { where: { id: grantId } },
+      )
+      expect(apresSeconde.revokedAt?.getTime()).toBe(premiereDate?.getTime())
+    })
   })
 
   describe('GET /e/:establishmentId/admin/grants', () => {
     it("l'administrateur de l'etablissement voit les octrois en cours et passes, avec motif et auteur", async () => {
-      const enCours = await postGrant({
-        establishmentId: cible.id,
-        reason: 'diagnostic en cours',
-      })
+      // `passe` DOIT être créé et révoqué AVANT `enCours` : depuis le tour de correction 1
+      // (tâche 8), un second octroi vivant sur un établissement qui en a déjà un est refusé
+      // (409) — les deux ne peuvent donc jamais coexister VIVANTS, seulement l'un après l'autre.
       const passe = await postGrant({
         establishmentId: cible.id,
         reason: 'diagnostic clos',
@@ -263,6 +375,10 @@ describe('octrois temporaires (tache 8)', () => {
         method: 'DELETE',
         url: `/super-admin/grants/${passe.json().id}`,
         cookies: superAdminCookies,
+      })
+      const enCours = await postGrant({
+        establishmentId: cible.id,
+        reason: 'diagnostic en cours',
       })
 
       const res = await t.app.inject({

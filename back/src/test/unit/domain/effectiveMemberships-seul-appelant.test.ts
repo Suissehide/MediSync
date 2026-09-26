@@ -16,9 +16,11 @@ import { join, relative, sep } from 'node:path'
 //      rougir si l'un des deux appelants autorises perd son appel (ou en gagne un second en
 //      silence) ;
 //   B. tout appel a `.findForUser(` (la lecture du repository) — attrape un appelant qui
-//      court-circuiterait `liveGrantsForUser` (accessGrant.domain.ts) et donc son garde
-//      superadmin (voir ce fichier : un octroi ne confere rien a qui n'est plus super-admin, et
-//      la lecture elle-meme ne doit s'executer que pour ce cas).
+//      court-circuiterait `liveGrantsForUser` (accessGrant.domain.ts). Le garde superadmin
+//      lui-meme vit desormais DANS `AccessGrantRepository.findForUser` (tour de correction 1,
+//      tache 8) : `liveGrantsForUser` n'est plus qu'un relais vers un `userId`, precisement pour
+//      qu'aucun appelant ne puisse plus PRETENDRE un `isSuperAdmin` — la verite est relue fraiche
+//      a chaque appel, jamais acceptee d'un argument.
 //
 // CE QU'IL NE GARANTIT PAS : une REIMPLEMENTATION locale qui recalculerait le meme arbre
 // d'appartenances (ou relirait le repository via un detour — alias, `.bind`, cle de crochet
@@ -58,11 +60,12 @@ const AUTORISES_FIND_FOR_USER = [
 ]
 
 // Fichiers qui DEFINISSENT les fonctions surveillees : `export const effectiveMemberships = (...)`
-// et `export const liveGrantsForUser = (...) => user.isSuperAdmin ? accessGrantRepository.findForUser(...)`.
-// Une DEFINITION n'est pas un APPEL (`effectiveMemberships =` porte un `=` que la regex d'appel
-// ne matche jamais), mais la ligne `accessGrantRepository.findForUser(user.id)` a l'INTERIEUR de
-// `liveGrantsForUser` EST un appel — c'est l'appel legitime, deja compte dans
-// `AUTORISES_FIND_FOR_USER` ci-dessus. Rien a exclure ici pour ce volet, donc.
+// et `export const liveGrantsForUser = (userId, accessGrantRepository) =>
+// accessGrantRepository.findForUser(userId)`. Une DEFINITION n'est pas un APPEL
+// (`effectiveMemberships =` porte un `=` que la regex d'appel ne matche jamais), mais la ligne
+// `accessGrantRepository.findForUser(userId)` a l'INTERIEUR de `liveGrantsForUser` EST un appel —
+// c'est l'appel legitime, deja compte dans `AUTORISES_FIND_FOR_USER` ci-dessus. Rien a exclure
+// ici pour ce volet, donc.
 const FICHIER_DEFINITION = 'domain/accessGrant.domain.ts'
 
 const RACINE = join(__dirname, '../../../main')
