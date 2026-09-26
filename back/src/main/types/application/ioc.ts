@@ -1,6 +1,7 @@
 import type { PostgresOrm } from '../../infra/orm/postgres-client'
 import type { ActivityLogSubscriber } from '../../services/activity-log.subscriber'
 import type { AppEventBus } from '../../utils/app-event-bus'
+import type { AccessLinkDomainInterface } from '../domain/accessLink.domain.interface'
 import type { ActivityLogDomainInterface } from '../domain/activityLog.domain.interface'
 import type { AppointmentDomainInterface } from '../domain/appointment.domain.interface'
 import type { AuthDomainInterface } from '../domain/auth.domain.interface'
@@ -23,6 +24,7 @@ import type { TodoDomainInterface } from '../domain/todo.domain.interface'
 import type { UserDomainInterface } from '../domain/user.domain.interface'
 import type { HttpClientInterface } from '../infra/http/http-client'
 import type { AccessGrantRepositoryInterface } from '../infra/orm/repositories/accessGrant.repository.interface'
+import type { AccessLinkRepositoryInterface } from '../infra/orm/repositories/accessLink.repository.interface'
 import type { ActivityLogRepositoryInterface } from '../infra/orm/repositories/activityLog.repository.interface'
 import type { AppointmentRepositoryInterface } from '../infra/orm/repositories/appointment.repository.interface'
 import type { DiagnosticEducatifRepositoryInterface } from '../infra/orm/repositories/diagnosticEducatif.repository.interface'
@@ -121,4 +123,7 @@ export interface IocContainer {
   // AccessGrant (octroi temporaire d'acces, etape 4a) — pas de domaine : `effectiveMemberships`
   // (domain/accessGrant.domain.ts) est une fonction pure, sans dependance a injecter.
   readonly accessGrantRepository: AccessGrantRepositoryInterface
+  // AccessLink (lien d'acces, etape 4a tache 4)
+  readonly accessLinkDomain: AccessLinkDomainInterface
+  readonly accessLinkRepository: AccessLinkRepositoryInterface
 }

@@ -12,6 +12,7 @@ import { SoignantDomain } from '../../../domain/soignant.domain'
 import { ThematicDomain } from '../../../domain/thematic.domain'
 import { TodoDomain } from '../../../domain/todo.domain'
 import { UserDomain } from '../../../domain/user.domain'
+import { AccessLinkDomain } from '../../../domain/accessLink.domain'
 import { HttpClient } from '../../../infra/http/http-client'
 import { PinoLogger } from '../../../infra/logger/pino/pino-logger'
 import { PostgresOrm } from '../../../infra/orm/postgres-client'
@@ -50,6 +51,7 @@ import { PlanningCycleRepository } from '../../../infra/orm/repositories/plannin
 import { LocationDomain } from '../../../domain/location.domain'
 import { MembershipDomain } from '../../../domain/membership.domain'
 import { AccessGrantRepository } from '../../../infra/orm/repositories/accessGrant.repository'
+import { AccessLinkRepository } from '../../../infra/orm/repositories/accessLink.repository'
 import { LocationRepository } from '../../../infra/orm/repositories/location.repository'
 import { MembershipRepository } from '../../../infra/orm/repositories/membership.repository'
 
@@ -142,6 +144,9 @@ class AwilixIocContainer {
     this.#registerPlanningCycleRepository()
     // AccessGrant
     this.#registerAccessGrantRepository()
+    // AccessLink
+    this.#registerAccessLinkDomain()
+    this.#registerAccessLinkRepository()
 
     // Server
     this.#registerHttpServer()
@@ -373,6 +378,14 @@ class AwilixIocContainer {
   // AccessGrant
   #registerAccessGrantRepository(): void {
     this.register('accessGrantRepository', asClass(AccessGrantRepository).singleton())
+  }
+
+  // AccessLink
+  #registerAccessLinkDomain(): void {
+    this.register('accessLinkDomain', asClass(AccessLinkDomain).singleton())
+  }
+  #registerAccessLinkRepository(): void {
+    this.register('accessLinkRepository', asClass(AccessLinkRepository).singleton())
   }
 }
 
