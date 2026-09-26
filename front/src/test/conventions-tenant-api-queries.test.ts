@@ -38,12 +38,37 @@ import { describe, expect, it } from 'vitest'
 const IDENTIFIANTS_DE_TENANT = /\b(establishmentId|serviceId|tenant)\b/i
 const CLE_AVEC_FABRIQUE_URL = /\b(queryKey|mutationKey)\s*:.*\b(tenantApiUrl|establishmentApiUrl)\s*\(/
 
-// Aucune exception aujourd'hui : ni `src/api` ni `src/queries` n'a besoin de nommer le tenant
-// pour respecter les deux conventions (verifie par lecture complete des deux dossiers). Si un
-// module legitime en a un jour besoin, il doit etre ajoute ici, avec sa raison et le nombre
-// exact d'occurrences attendues — jamais en silence : voir la boucle plus bas, qui echoue si le
-// compte declare ne correspond pas au compte reel, dans les deux sens.
-const EXCEPTIONS: { fichier: string; raison: string; occurrences: number }[] = []
+// Tache 12 (etape 4a) : le super-admin est HORS DE TOUT TENANT (front/CLAUDE.md, § « Le contexte
+// est implicite ») — `GET /super-admin/establishments/:id` prend un identifiant d'etablissement
+// comme une DONNEE de son chemin, exactement comme une route prendrait un `patientID`, jamais
+// comme un tenant implicite lu dans le store. Les deux fichiers ci-dessous nomment donc
+// `establishmentId` en toutes lettres plutot que de chercher un nom qui echappe au motif (ce
+// serait faire passer le test sans honorer la convention). Chaque compte a ete verifie par
+// lecture ligne a ligne (voir aussi la commande qui les recompte, citee dans task-12-report.md) :
+//   - `api/superAdmin.api.ts` : 2 occurrences, dans `getEstablishment` (le parametre de fonction
+//     et l'interpolation dans l'URL) — la seule methode du module qui vise UN etablissement
+//     precis plutot que la collection ou une action independante de tout etablissement.
+//   - `queries/useSuperAdmin.ts` : 3 occurrences, dans `useSuperAdminEstablishmentQuery` (le
+//     parametre du hook, la cle de requete et l'appel a `getEstablishment`) — la cle de requete
+//     porte l'identifiant pour la MEME raison qu'une fiche patient porte `patientID` dans la
+//     sienne (identite de la ressource demandee), pas pour cloisonner un cache par tenant : ces
+//     ecrans vivent tous sous un seul et meme `QueryClient`, jamais sous un layout de tenant.
+const EXCEPTIONS: { fichier: string; raison: string; occurrences: number }[] = [
+  {
+    fichier: 'api/superAdmin.api.ts',
+    raison:
+      "le super-admin designe un etablissement comme une DONNEE de GET /super-admin/establishments/:id, " +
+      "pas comme un tenant implicite (task-12-brief.md)",
+    occurrences: 2,
+  },
+  {
+    fichier: 'queries/useSuperAdmin.ts',
+    raison:
+      "meme donnee que ci-dessus, plus la cle de requete qui identifie la ressource demandee " +
+      "(comme PATIENT.GET_BY_ID le fait de patientID), sans lien avec le cloisonnement par tenant",
+    occurrences: 3,
+  },
+]
 
 // Vitest s'execute depuis `front/`, et l'environnement jsdom ne donne pas d'`import.meta.url` de
 // schema `file:`.

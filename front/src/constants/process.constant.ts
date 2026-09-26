@@ -4,6 +4,23 @@ export const AUTH = {
   ME: 'getMe',
 }
 
+// Écrans du super-admin (étape 4a, tâche 12) : hors de tout tenant, donc
+// aucune clé ici n'a besoin — ni ne doit — porter un établissement ou un
+// service (front/CLAUDE.md, § « Query keys deliberately do not carry the
+// tenant »). `GET_ESTABLISHMENT` prend malgré tout l'identifiant en clé
+// (voir `useSuperAdminEstablishmentQuery`) : ce n'est pas un tenant mais la
+// DONNÉE demandée, exactement comme `PATIENT.GET_BY_ID` la prend pour un
+// patient.
+export const SUPER_ADMIN = {
+  GET_ALL_ESTABLISHMENTS: 'get_all_super_admin_establishments',
+  GET_ESTABLISHMENT: 'get_super_admin_establishment',
+  CREATE_ESTABLISHMENT: 'create_super_admin_establishment',
+  SEARCH_ACCOUNT: 'search_super_admin_account',
+  REISSUE_ACCESS_LINK: 'reissue_super_admin_access_link',
+  CREATE_GRANT: 'create_super_admin_grant',
+  REVOKE_GRANT: 'revoke_super_admin_grant',
+}
+
 export const TODO = {
   GET_ALL: 'get_all_todos',
   GET: 'get_todo',
