@@ -61,7 +61,11 @@ const membersRouter: FastifyPluginAsync = (fastify) => {
   // `createMemberAccountResponseSchema`. Le schéma Zod l'élaguerait déjà à la sérialisation ;
   // la projection le dit à la lecture du code plutôt que de s'en remettre à cet effet de bord,
   // et `projectCreatedMember` est éprouvée à part (tour de correction 2, mineur n°3 : tant
-  // qu'elle vivait en ligne ici, aucun test ne pouvait la tenir).
+  // qu'elle vivait en ligne ici, aucun test ne pouvait la tenir). ATTENTION, la limite est
+  // mesurée, pas supposée : c'est le CONTENU de la projection qui est éprouvé, jamais SON
+  // APPEL DEPUIS CETTE LIGNE — retirer `projectCreatedMember(...)` ci-dessous ne fait rougir
+  // aucune des quatre portes, parce que Zod rend alors exactement la même réponse. Le
+  // raisonnement complet est sur `projectCreatedMember` (`schemas/members.schema.ts`).
   fastify.post<{ Body: CreateMemberAccountBody }>(
     '/account',
     {

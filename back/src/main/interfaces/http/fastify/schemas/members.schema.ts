@@ -118,6 +118,25 @@ export const memberAccessLinkResponseSchema = z.object({
 // pouvait la tenir — la remplacer par `return { member, accessLink }` laissait les 26 tests
 // membres verts, puisque Zod élaguait déjà. Extraite ici pour être éprouvée directement
 // (`member-account-projection.test.ts`) : le rapport disait « éprouvé », il ne l'était pas.
+//
+// CE QUI EST GARDÉ, ET CE QUI NE L'EST PAS (précisé après la re-revue du tour 2, qui a mesuré
+// la limite au lieu de la déduire). Gardé : le CONTENU de cette fonction — la saboter en son
+// sein (`({ ...member })`) fait rougir `member-account-projection.test.ts`, dont le `Received`
+// porte alors `createdAt`, `establishmentId`, `user` et `userId` en trop. PAS gardé : son
+// BRANCHEMENT depuis la route. Remplacer `projectCreatedMember(member)` par `member` dans
+// `routes/members.ts` traverse encore les 424 tests unitaires, les 203 e2e et `npm run build`
+// sans un seul rouge — et `npm run lint` aussi, dès lors qu'on nettoie l'import devenu mort,
+// ce que ferait n'importe quel remaniement ordinaire. Seul l'import oublié rougirait, et c'est
+// de l'hygiène, pas une garde de comportement.
+//
+// La raison est structurelle et vaut d'être sue avant d'essayer de la fermer : à ce niveau,
+// c'est Zod qui élague, donc la sortie observable est IDENTIQUE avec ou sans l'appel. Aucun
+// test passant par HTTP ne peut donc distinguer les deux — il faudrait appeler le handler hors
+// de Fastify, c'est-à-dire tester le branchement plutôt que le comportement. Ce n'est pas un
+// oubli : cette fonction est une SECONDE serrure sur une porte que Zod ferme déjà, et une
+// seconde serrure est par construction invisible tant que la première tient. Elle ne sert que
+// le jour où `createMemberAccountResponseSchema` serait élargi — et ce jour-là, c'est
+// `member-account-projection.test.ts` qui dira si elle vaut encore quelque chose.
 export const projectCreatedMember = (member: {
   id: string
   role: 'ADMIN' | 'MEMBER'
