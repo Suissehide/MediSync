@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, relative, resolve } from 'node:path'
 
 import { assertTenantScope, MODEL_RELATIONS } from '../../../main/infra/orm/tenant-guard'
 import type { TenantStore } from '../../../main/types/utils/tenant-context'
@@ -65,16 +65,39 @@ const PROFONDEUR = Number(process.env.PROFONDEUR ?? '4')
 const REF = process.env.MONOTONIE_REF ?? 'HEAD'
 
 const CHEMIN_DANS_LE_DEPOT = 'back/src/main/infra/orm/tenant-guard.ts'
-// Ecrit A COTE du garde-fou, pas dans un dossier temporaire : le fichier tire de git porte des
-// imports RELATIFS (`../../../generated/client`, `../../utils/tenant-errors`), qui ne resolvent
-// qu'a cet endroit. Supprime en fin de fichier, et ignore par git (voir .gitignore).
-const CHEMIN_BASELINE = join(__dirname, '../../../main/infra/orm/tenant-guard.baseline-monotonie.ts')
+// Revue finale de l'étape 4a, mineur : ce fichier matérialisait sa copie EN PLUS, à côté du
+// garde-fou, DANS `src/main` — pendant toute la durée du test, `npm run lint` la lint, `npm run
+// build` l'émet (elle vit sous `src/main/tsconfig.json`), et les énumérations de ce dossier la
+// balaient. Supprimée en `afterAll`, mais un jest interrompu (crash, kill -9, CI coupée) la
+// laisse derrière — un `build` lancé juste après la ramasserait. Écrite maintenant dans CE
+// dossier (`src/test`, jamais couvert par `lint` ni par le typecheck de `build`), avec ses
+// imports RELATIFS réécrits pour continuer à résoudre : la version tirée de git porte des
+// chemins relatifs à SON emplacement d'origine (`../../../generated/client`, etc.), qui ne
+// pointeraient plus juste une fois copiés ici tels quels.
+const CHEMIN_BASELINE = join(__dirname, 'tenant-guard.baseline-monotonie.ts')
+// Répertoire d'origine du garde-fou dans le dépôt (jamais lu sur le disque : sert uniquement de
+// base de résolution pour les imports relatifs de la source tirée de git).
+const REPERTOIRE_DORIGINE = join(__dirname, '../../../main/infra/orm')
 
 type Assert = typeof assertTenantScope
 
 // Vrai quand la reference et l'arbre de travail portent le MEME garde-fou : la comparaison ne
 // compare alors rien, et il faut le dire.
 let sourcesIdentiques = false
+
+// Réécrit chaque import relatif (`from '../../foo'`) pour qu'il continue de résoudre depuis LA
+// NOUVELLE localisation du fichier (`__dirname`, dans `src/test`) plutôt que depuis son
+// emplacement d'origine (`REPERTOIRE_DORIGINE`, dans `src/main`) — générique, donc valable même
+// si `tenant-guard.ts` gagne ou perd un import plus tard.
+const reecrireLesImportsRelatifs = (source: string): string =>
+  source.replace(/from '(\.\.[^']*)'/g, (_match, specificateur: string) => {
+    const cible = resolve(REPERTOIRE_DORIGINE, specificateur)
+    let reecrit = relative(__dirname, cible).replace(/\\/g, '/')
+    if (!reecrit.startsWith('.')) {
+      reecrit = `./${reecrit}`
+    }
+    return `from '${reecrit}'`
+  })
 
 const materialiserLaVersionDeReference = (): Assert => {
   const racineDuDepot = execFileSync('git', ['rev-parse', '--show-toplevel'], {
@@ -88,7 +111,7 @@ const materialiserLaVersionDeReference = (): Assert => {
   })
   const actuel = readFileSync(join(racineDuDepot, CHEMIN_DANS_LE_DEPOT), 'utf8')
   sourcesIdentiques = actuel === source
-  writeFileSync(CHEMIN_BASELINE, source, 'utf8')
+  writeFileSync(CHEMIN_BASELINE, reecrireLesImportsRelatifs(source), 'utf8')
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   return (require(CHEMIN_BASELINE) as { assertTenantScope: Assert }).assertTenantScope
 }

@@ -8,6 +8,10 @@
 **/.envrc
 
 tsconfig.tsbuildinfo
+# Copie de reference du garde-fou, materialisee puis supprimee par
+# tenant-guard-monotonie.test.ts (afterAll) — filet si un jest interrompu la
+# laisse derriere.
+**/tenant-guard.baseline-monotonie.ts
 .tmp-*
 /prisma/dev.db
 
