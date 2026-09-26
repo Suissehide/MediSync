@@ -4,6 +4,7 @@ import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 
 import { assertRoutePermission } from '../plugins/tenant.plugin'
 import { establishmentsRouter } from './super-admin/establishments'
+import { grantsRouter } from './super-admin/grants'
 import { usersRouter } from './super-admin/users'
 
 // Partagée avec le garde-fou racine ci-dessous et l'enregistrement du plugin (routes/index.ts),
@@ -61,6 +62,7 @@ const superAdminRoutes: FastifyPluginAsyncZod = async (fastify) => {
   fastify.addHook('onRequest', requireSuperAdmin)
   await fastify.register(establishmentsRouter, { prefix: '/establishments' })
   await fastify.register(usersRouter, { prefix: '/users' })
+  await fastify.register(grantsRouter, { prefix: '/grants' })
 }
 
 export { superAdminRoutes }

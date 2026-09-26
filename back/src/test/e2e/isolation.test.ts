@@ -3,7 +3,9 @@ import { testDb, truncateAll } from './setup/db'
 import {
   adminUrl,
   createEstablishment,
+  createService,
   createUser,
+  grantAccess,
   signIn,
   tenantUrl,
   twoServicesScenario,
@@ -642,6 +644,60 @@ describe('isolation par tenant', () => {
       const ids = (own.json() as { id: string }[]).map((s) => s.id)
       expect(ids).toContain(ownSoignant.id)
       expect(ids).not.toContain(foreignSoignant.id)
+    })
+  })
+
+  // Tache 8 (etape 4a) : l'octroi temporaire de super-admin (spec §3.5, §4.3). C'est CE fichier
+  // qu'un relecteur consulte pour l'isolation — un cas ailleurs (par exemple dans
+  // `super-admin-grants.test.ts` ou `tenant-resolution.test.ts`) ne le remplace pas. Un octroi
+  // sur l'etablissement A ne doit rien laisser passer sur B, alors meme que le titulaire de
+  // l'octroi devient membre ordinaire (role ADMIN, spec §4.3) de A : le contrepoint (A repond
+  // 200) prouve que l'octroi fonctionne reellement, pour que le 404 sur B prouve une isolation et
+  // non un octroi qui n'aurait jamais rien accorde.
+  describe('isolation entre etablissements : octroi temporaire de super-admin', () => {
+    beforeEach(truncateAll)
+
+    it('un octroi sur l etablissement A ne donne rien sur l etablissement B', async () => {
+      const A = await createEstablishment('A')
+      const B = await createEstablishment('B')
+      const serviceA = await createService(A.id, 'Service A')
+      const serviceB = await createService(B.id, 'Service B')
+      const superAdmin = await createUser({
+        email: 'super@test.fr',
+        isSuperAdmin: true,
+      })
+      const cookies = await signIn(t.app, 'super@test.fr')
+
+      await grantAccess({
+        userId: superAdmin.id,
+        establishmentId: A.id,
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      })
+
+      // B : aucun octroi ne le concerne — 404, comme pour tout tenant etranger.
+      const surB = await t.app.inject({
+        method: 'GET',
+        url: tenantUrl(B.id, serviceB.id, '/thematic'),
+        cookies,
+      })
+      expect(surB.statusCode).toBe(404)
+
+      // Contrepoint sur B, cote administration (aucun service en jeu) : meme refus.
+      const surBAdmin = await t.app.inject({
+        method: 'GET',
+        url: adminUrl(B.id, '/members'),
+        cookies,
+      })
+      expect(surBAdmin.statusCode).toBe(404)
+
+      // Contrepoint sur A, ou l'octroi porte reellement : 200, preuve que l'octroi
+      // fonctionne — sans quoi le refus sur B ne prouverait rien.
+      const surA = await t.app.inject({
+        method: 'GET',
+        url: tenantUrl(A.id, serviceA.id, '/thematic'),
+        cookies,
+      })
+      expect(surA.statusCode).toBe(200)
     })
   })
 

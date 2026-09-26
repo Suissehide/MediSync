@@ -1,16 +1,24 @@
 import type { IocContainer } from '../../../types/application/ioc'
 import type { LiveGrant } from '../../../types/domain/accessGrant.domain.interface'
-import type { AccessGrantRepositoryInterface } from '../../../types/infra/orm/repositories/accessGrant.repository.interface'
+import type {
+  AccessGrantRepositoryInterface,
+  CreateGrantRepo,
+  EstablishmentGrantRow,
+  SuperAdminGrantEntityRepo,
+} from '../../../types/infra/orm/repositories/accessGrant.repository.interface'
+import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { TenantContextInterface } from '../../../types/utils/tenant-context'
 import type { PostgresPrismaClient } from '../postgres-client'
 
 class AccessGrantRepository implements AccessGrantRepositoryInterface {
   private readonly prisma: PostgresPrismaClient
   private readonly tenantContext: TenantContextInterface
+  private readonly errorHandler: ErrorHandlerInterface
 
-  constructor({ postgresOrm, tenantContext }: IocContainer) {
+  constructor({ postgresOrm, tenantContext, errorHandler }: IocContainer) {
     this.prisma = postgresOrm.prisma
     this.tenantContext = tenantContext
+    this.errorHandler = errorHandler
   }
 
   // `SuperAdminAccessGrant`, `Establishment` et `Service` sont trois modèles distincts
@@ -62,6 +70,73 @@ class AccessGrantRepository implements AccessGrantRepositoryInterface {
         ]
       })
     })
+  }
+
+  // `POST /super-admin/grants` : `SuperAdminAccessGrant.create` n'est déclarée que sous le
+  // contexte superadmin (SUPERADMIN_GLOBAL_OPERATIONS, tenant-guard.ts) — cette route n'a de
+  // toute façon aucun tenant ambiant (préfixe `/super-admin`, aucun `:establishmentId` d'URL).
+  create(params: CreateGrantRepo): Promise<SuperAdminGrantEntityRepo> {
+    return this.tenantContext.runAsSuperAdmin(async () => {
+      try {
+        return await this.prisma.superAdminAccessGrant.create({ data: params })
+      } catch (err) {
+        throw this.errorHandler.boomErrorFromPrismaError({
+          entityName: 'SuperAdminAccessGrant',
+          error: err,
+        })
+      }
+    })
+  }
+
+  // `DELETE /super-admin/grants/:id` : `.update` (pas `.delete`, jamais déclarée — voir le
+  // commentaire au-dessus de `SUPERADMIN_GLOBAL_OPERATIONS`) pose `revokedAt`, la ligne survit.
+  // Lève 404 (P2025, via `errorHandler`) si l'id est inconnu.
+  async revoke(id: string, at: Date): Promise<void> {
+    await this.tenantContext.runAsSuperAdmin(async () => {
+      try {
+        await this.prisma.superAdminAccessGrant.update({
+          where: { id },
+          data: { revokedAt: at },
+        })
+      } catch (err) {
+        throw this.errorHandler.boomErrorFromPrismaError({
+          entityName: 'SuperAdminAccessGrant',
+          error: err,
+        })
+      }
+    })
+  }
+
+  // `GET /e/:establishmentId/admin/grants` : appelée depuis une route déjà sous contexte tenant
+  // RÉEL (`resolveEstablishmentAdmin`) — pas de `runAsSuperAdmin` ici, voir le commentaire sur
+  // `findForEstablishment` (types/infra/orm/repositories/accessGrant.repository.interface.ts).
+  // `include: { user }` est sûr : `SuperAdminAccessGrant.user -> User` est déclarée dans
+  // MODEL_RELATIONS (global -> global), et la restriction qui refuserait de franchir ce pont
+  // (`assertNoGlobalBridgeUnderSuperAdmin`) ne s'applique qu'au contexte superadmin — jamais au
+  // contexte tenant ordinaire d'où cette lecture part. `establishmentId` vient de
+  // `tenantContext.establishmentScope()`, jamais d'un argument que l'appelant pourrait fournir.
+  findForEstablishment(): Promise<EstablishmentGrantRow[]> {
+    const { establishmentId } = this.tenantContext.establishmentScope()
+    return this.prisma.superAdminAccessGrant
+      .findMany({
+        where: { establishmentId },
+        orderBy: { grantedAt: 'desc' },
+        include: {
+          user: {
+            select: { id: true, email: true, firstName: true, lastName: true },
+          },
+        },
+      })
+      .then((rows) =>
+        rows.map((row) => ({
+          id: row.id,
+          reason: row.reason,
+          grantedAt: row.grantedAt,
+          expiresAt: row.expiresAt,
+          revokedAt: row.revokedAt,
+          grantedBy: row.user,
+        })),
+      )
   }
 }
 

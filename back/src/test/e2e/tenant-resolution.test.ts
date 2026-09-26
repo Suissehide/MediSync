@@ -192,6 +192,51 @@ describe('resolution du tenant', () => {
     expect(apres.statusCode).toBe(404)
   })
 
+  // Fermeture (tâche 8, étape 4a — voir le contrat écrit sur
+  // `AccessGrantRepositoryInterface.findForUser`) : un octroi RÉEL, non révoqué, non expiré, sur
+  // un établissement qui devient désactivé APRÈS coup, ne doit plus rien conférer — ni la lecture
+  // (`/me` ne le liste plus), ni l'entrée en tenant (404, comme pour un membre réel, voir « un
+  // etablissement desactive est egalement invisible a un membre » ci-dessus). Ce test rougit si
+  // le filtre `deactivatedAt: null` disparaît de la lecture d'`Establishment` dans
+  // `AccessGrantRepository.findForUser` (infra/orm/repositories/accessGrant.repository.ts) :
+  // sans lui, l'octroi resterait vivant et rendrait un rôle ADMIN sur un établissement désactivé
+  // — build, lint, unitaires et e2e restaient tous verts sans ce cas avant cette tâche.
+  it('un octroi sur un etablissement desactive ne redonne rien', async () => {
+    const est = await createEstablishment('Octroi desactive')
+    const service = await createService(est.id, 'Service')
+    const superAdmin = await createUser({
+      email: 'super@test.fr',
+      isSuperAdmin: true,
+    })
+    const cookies = await signIn(t.app, 'super@test.fr')
+
+    await grantAccess({
+      userId: superAdmin.id,
+      establishmentId: est.id,
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+
+    await testDb.establishment.update({
+      where: { id: est.id },
+      data: { deactivatedAt: new Date() },
+    })
+
+    const me = await t.app.inject({ method: 'GET', url: '/me', cookies })
+    expect(me.statusCode).toBe(200)
+    expect(
+      (me.json().establishments as { id: string }[]).some(
+        (e) => e.id === est.id,
+      ),
+    ).toBe(false)
+
+    const tenant = await t.app.inject({
+      method: 'GET',
+      url: tenantUrl(est.id, service.id, '/patient'),
+      cookies,
+    })
+    expect(tenant.statusCode).toBe(404)
+  })
+
   it('/me renvoie l arbre des appartenances', async () => {
     const { est, serviceA, cookiesA } = await twoServicesScenario(t.app)
     const res = await t.app.inject({

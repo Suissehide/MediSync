@@ -3,7 +3,10 @@ import type {
   LiveGrant,
 } from '../types/domain/accessGrant.domain.interface'
 import type { AccessGrantRepositoryInterface } from '../types/infra/orm/repositories/accessGrant.repository.interface'
-import type { UserWithMemberships } from '../types/infra/orm/repositories/user.repository.interface'
+import type {
+  UserEntityRepo,
+  UserWithMemberships,
+} from '../types/infra/orm/repositories/user.repository.interface'
 
 // Un octroi est vivant s'il n'a été ni révoqué ni atteint son terme, jugé contre l'horloge
 // REÇUE (jamais lue ici) : c'est ce qui rend l'expiration éprouvable sans attendre, à l'unité
@@ -120,8 +123,31 @@ export const effectiveMemberships = (
 // utilisateur — superadmin ou non — l'aurait rouverte. Seul appelant légitime de
 // `AccessGrantRepositoryInterface.findForUser` : voir
 // src/test/unit/domain/effectiveMemberships-seul-appelant.test.ts.
+//
+// FERMETURE (tâche 8, étape 4a) — le paramètre était `Pick<UserWithMemberships, 'id' |
+// 'isSuperAdmin'>` : DEUX champs scalaires, triviaux à fabriquer à la main
+// (`{ id: unIdQuelconque, isSuperAdmin: true }`) n'importe où dans `src/main`, sans jamais passer
+// par un dépôt. Le test qui surveille l'appelant nommé de `findForUser`
+// (`effectiveMemberships-seul-appelant.test.ts`) ne l'aurait pas vu : il grep un nom de fonction
+// (`findForUser(`), pas la provenance de l'argument qu'un appel LÉGITIME à `liveGrantsForUser`
+// lui passerait. Un tel littéral, une fois passé ici, entre le contexte superadmin
+// (`accessGrantRepository.findForUser`) pour N'IMPORTE QUEL id fabriqué, et en ressort les
+// octrois RÉELS de ce compte s'il en a — une fuite de lecture, silencieuse, que rien ne
+// signalerait tant que la fonction reste appelée par son nom.
+//
+// `UserEntityRepo` (= `User`, le modèle Prisma complet : email, mot de passe haché, sel,
+// horodatages…) ferme cette porte SANS RIEN CASSER : `UserWithMemberships` l'étend, donc les
+// trois appelants existants (tenant.plugin.ts et me.ts avec un `UserWithMemberships` complet,
+// auth.domain.ts avec le `User` nu que rend `findByEmail`, avant que les rattachements ne soient
+// chargés) restent tous valides sans changement. Ce qui cesse de l'être : un littéral à deux
+// champs — `tsc` (build, scope `src/main`, voir CLAUDE.md) le refuse désormais pour des champs
+// manquants, qu'il soit passé en littéral direct ou via une variable typée plus étroitement,
+// aucune des deux formes n'échappant à une vérification d'affectation complète (à la différence
+// du contrôle des propriétés EXCÉDENTAIRES, qui lui ne vaut que pour un littéral direct — voir
+// CLAUDE.md). Fabriquer un compte crédible resterait possible en théorie, mais plus par accident,
+// et plus sans que la revue voie un mot de passe et un sel inventés au milieu du code.
 export const liveGrantsForUser = (
-  user: Pick<UserWithMemberships, 'id' | 'isSuperAdmin'>,
+  user: UserEntityRepo,
   accessGrantRepository: AccessGrantRepositoryInterface,
 ): Promise<LiveGrant[]> =>
   user.isSuperAdmin

@@ -51,6 +51,7 @@ import { PlanningCycleDomain } from '../../../domain/planningCycle.domain'
 import { PlanningCycleRepository } from '../../../infra/orm/repositories/planningCycle.repository'
 import { LocationDomain } from '../../../domain/location.domain'
 import { MembershipDomain } from '../../../domain/membership.domain'
+import { SuperAdminGrantDomain } from '../../../domain/superAdminGrant.domain'
 import { AccessGrantRepository } from '../../../infra/orm/repositories/accessGrant.repository'
 import { AccessLinkRepository } from '../../../infra/orm/repositories/accessLink.repository'
 import { EstablishmentRepository } from '../../../infra/orm/repositories/establishment.repository'
@@ -146,6 +147,7 @@ class AwilixIocContainer {
     this.#registerPlanningCycleRepository()
     // AccessGrant
     this.#registerAccessGrantRepository()
+    this.#registerSuperAdminGrantDomain()
     // AccessLink
     this.#registerAccessLinkDomain()
     this.#registerAccessLinkRepository()
@@ -383,6 +385,9 @@ class AwilixIocContainer {
   // AccessGrant
   #registerAccessGrantRepository(): void {
     this.register('accessGrantRepository', asClass(AccessGrantRepository).singleton())
+  }
+  #registerSuperAdminGrantDomain(): void {
+    this.register('superAdminGrantDomain', asClass(SuperAdminGrantDomain).singleton())
   }
 
   // AccessLink

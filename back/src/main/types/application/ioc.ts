@@ -20,6 +20,7 @@ import type { PatientServiceFileDomainInterface } from '../domain/patientService
 import type { SlotDomainInterface } from '../domain/slot.domain.interface'
 import type { SlotTemplateDomainInterface } from '../domain/slotTemplate.domain.interface'
 import type { SoignantDomainInterface } from '../domain/soignant.domain.interface'
+import type { SuperAdminGrantDomainInterface } from '../domain/superAdminGrant.domain.interface'
 import type { ThematicDomainInterface } from '../domain/thematic.domain.interface'
 import type { TodoDomainInterface } from '../domain/todo.domain.interface'
 import type { UserDomainInterface } from '../domain/user.domain.interface'
@@ -122,9 +123,12 @@ export interface IocContainer {
   // PlanningCycle
   readonly planningCycleDomain: PlanningCycleDomainInterface
   readonly planningCycleRepository: PlanningCycleRepositoryInterface
-  // AccessGrant (octroi temporaire d'acces, etape 4a) — pas de domaine : `effectiveMemberships`
-  // (domain/accessGrant.domain.ts) est une fonction pure, sans dependance a injecter.
+  // AccessGrant (octroi temporaire d'acces, etape 4a) — la lecture (`effectiveMemberships`,
+  // domain/accessGrant.domain.ts) reste une fonction pure, sans dependance a injecter ;
+  // l'ecriture (s'accorder un octroi, le revoquer, tache 8) est `superAdminGrantDomain`
+  // ci-dessous, seul appelant des methodes d'ecriture du meme depot.
   readonly accessGrantRepository: AccessGrantRepositoryInterface
+  readonly superAdminGrantDomain: SuperAdminGrantDomainInterface
   // AccessLink (lien d'acces, etape 4a tache 4)
   readonly accessLinkDomain: AccessLinkDomainInterface
   readonly accessLinkRepository: AccessLinkRepositoryInterface
