@@ -5,6 +5,7 @@ import { authRouter } from './auth'
 import { establishmentAdminRoutes } from './establishment-admin.routes'
 import { healthcheckRouter } from './healthcheck'
 import { meRouter } from './me'
+import { superAdminRoutes } from './super-admin.routes'
 import { tenantRoutes } from './tenant.routes'
 
 // Routes publiques (sans session) : racine, healthcheck et authentification.
@@ -48,6 +49,7 @@ const routes: FastifyPluginAsyncZod = async (fastify) => {
   await fastify.register(establishmentAdminRoutes, {
     prefix: '/e/:establishmentId/admin',
   })
+  await fastify.register(superAdminRoutes, { prefix: '/super-admin' })
 }
 
 export { routes }
