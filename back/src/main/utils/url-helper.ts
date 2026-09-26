@@ -20,9 +20,49 @@ export const toLocalhostIfLinux = (address: string): string =>
 // journal, ni un en-tete de reponse).
 const NO_SUFFIX_PATH_PREFIXES: readonly string[] = ['/auth/access-link/consume']
 
+// Tour de correction 2 (mineur) : la comparaison ne reconnaissait le prefixe qu'a l'octet pres —
+// dix variantes de la MEME route sabotee y echappaient : casse differente, un octet du chemin
+// encode en pourcent (`%63onsume` = « consume » avec le premier `c` encode), le separateur `/`
+// lui-meme encode (`consume%2F...`), un slash double, un parametre matriciel HTTP (`;cle=val`)
+// insere sur un segment. Chacune atteint le MEME `notFoundHandler` que la forme nue, avec un
+// `request.url` differemment ecrit — la troncature doit donc comparer une forme NORMALISEE, pas
+// la chaine brute.
+//
+// Ordre delibere : decoder (au besoin plusieurs fois, un double encodage — `%2563` — ne se revele
+// qu'a la deuxieme passe) AVANT de retirer les doublons de `/` (un `%2F` decode en `/` peut lui
+// meme creer un doublon) AVANT de retirer un parametre matriciel AVANT de comparer sans tenir
+// compte de la casse. Echec sur un decodage impossible (`%` mal forme) : on garde la chaine telle
+// quelle plutot que de lever — une comparaison ratee est sans consequence, une exception ne
+// devrait jamais venir d'une fonction de journalisation.
+const MAX_DECODE_PASSES = 5
+
+const decodeRepeatedly = (value: string): string => {
+  let current = value
+  for (let pass = 0; pass < MAX_DECODE_PASSES; pass += 1) {
+    let decoded: string
+    try {
+      decoded = decodeURIComponent(current)
+    } catch {
+      return current
+    }
+    if (decoded === current) {
+      return current
+    }
+    current = decoded
+  }
+  return current
+}
+
+const normalizeForSensitivePrefixMatch = (path: string): string =>
+  decodeRepeatedly(path)
+    .replace(/\/{2,}/g, '/')
+    .replace(/;[^/]*/g, '')
+    .toLowerCase()
+
 const truncateAtSensitivePrefix = (path: string): string => {
+  const normalized = normalizeForSensitivePrefixMatch(path)
   const prefix = NO_SUFFIX_PATH_PREFIXES.find(
-    (candidate) => path === candidate || path.startsWith(`${candidate}/`),
+    (candidate) => normalized === candidate || normalized.startsWith(`${candidate}/`),
   )
   return prefix ?? path
 }

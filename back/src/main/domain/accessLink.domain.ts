@@ -35,15 +35,17 @@ class AccessLinkDomain implements AccessLinkDomainInterface {
     // administrateur, un clic, puis un autre plus tard) invalide bien la précédente ; éprouvé en
     // e2e (« reemettre un lien invalide le precedent »).
     //
-    // CE QUE CECI NE FERME PAS (étape 4a, tâche 4, tour de correction 1, Important n°3, constaté
-    // par exécution : six émissions simultanées pour le même compte laissent PLUSIEURS liens
-    // utilisables — de 4 à 6 selon l'exécution, jamais 1 seul, jamais fermé par construction) :
+    // CE QUE CECI NE FERME PAS (étape 4a, tâche 4, tour de correction 1, Important n°3, PRÉCISÉ
+    // au tour de correction 2 : « de 4 à 6, non déterministe » restait une imprécision) :
     // `invalidateActiveForUser` et `create` ne sont pas une seule opération atomique, et rien
-    // n'empêche N appels de ce domaine de s'exécuter en parallèle sur le même `userId` — chacun
-    // invalide ce qui existait AVANT que les autres n'aient écrit leur propre ligne, puis crée la
-    // sienne. Le nombre exact de survivants dépend de l'entrelacement réel des appels (non
-    // déterministe, contrairement à `consumeIfActive` ci-dessous) ; ce qui est constant, c'est
-    // qu'il en reste PLUS D'UN — la course n'est pas fermée. Contrairement à `consumeIfActive`
+    // n'empêche N appels de ce domaine de s'exécuter en parallèle sur le même `userId`. Mesuré
+    // précisément (30 exécutions, 6 émissions simultanées chacune, voir « emissions simultanees »
+    // dans access-link.test.ts) : 29 fois sur 30, les SIX survivent (chaque invalidation part
+    // avant qu'aucune création voisine n'ait atteint la base) ; une fois sur 30, un seul a été
+    // invalidé — plausible sous contention du pool de connexions. PAS DÉTERMINISTE PAR
+    // CONSTRUCTION, donc, même si le cas courant (tous survivent) domine largement. Ce qui reste
+    // vrai dans TOUS les cas mesurés : il en reste PLUS D'UN — la course n'est pas fermée.
+    // Contrairement à `consumeIfActive`
     // (Review Focus n°1), qui protège une PROPRIÉTÉ que le brief nomme explicitement (un jeton ne
     // se consomme qu'une fois, y compris sous course), le brief ne demande nulle part qu'ÉMETTRE
     // soit mutuellement exclusif — seulement que RÉÉMETTRE invalide ce qui précède, ce qui reste

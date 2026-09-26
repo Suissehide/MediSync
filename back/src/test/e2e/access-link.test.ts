@@ -154,17 +154,22 @@ describe('POST /auth/access-link/consume', () => {
     })
   })
 
-  // Tour de correction 1, Important n°3 : contrairement à la réémission SÉQUENTIELLE ci-dessus
-  // (qui invalide bien le lien précédent), l'ÉMISSION n'a pas de course fermée — voir le
-  // commentaire détaillé sur `AccessLinkDomain.issue`. Ce test CONSTATE le comportement réel
-  // (plusieurs émissions simultanées pour le même compte laissent PLUSIEURS liens utilisables)
-  // plutôt que d'affirmer une garantie que le code ne tient pas — et sans prétendre que le
-  // nombre exact est déterministe : `invalidateActiveForUser` et `create` ne formant pas une
-  // seule opération atomique, le nombre de survivants dépend de l'entrelacement réel des six
-  // appels (observé : de 4 à 6 selon l'exécution). La seule affirmation qui tient dans tous les
-  // cas, et qui est celle qui compte, est qu'il en reste PLUS QU'UN — si la course était fermée
-  // (un seul lien vivant par compte, quoi qu'il arrive), ce nombre serait toujours 1. Vérifié
-  // directement contre la base (`usedAt: null` = utilisable), sans passer par la route de
+  // Tour de correction 1, Important n°3, PRÉCISÉ au tour de correction 2 (mineur : mon
+  // « de 4 à 6, non déterministe » restait une imprécision) : contrairement à la réémission
+  // SÉQUENTIELLE ci-dessus (qui invalide bien le lien précédent), l'ÉMISSION n'a pas de course
+  // fermée — voir le commentaire détaillé sur `AccessLinkDomain.issue`. Mesuré précisément (30
+  // exécutions de ce test, en local, chacune avec 6 émissions simultanées) : **29 fois sur 30**,
+  // les SIX liens survivent (chaque appel envoie sa lecture d'invalidation avant qu'aucun des
+  // cinq autres n'ait eu le temps d'écrire sa propre ligne — la forme normale de la course, celle
+  // que la relecture externe a mesurée comme déterministe) ; **une fois sur 30**, un seul des six
+  // a été invalidé (5 survivants) — plausible sous contention du pool de connexions Prisma, une
+  // des six invalidations ayant pu s'exécuter après qu'une création voisine ait déjà atteint la
+  // base. Le nombre exact n'est donc PAS garanti par construction (`invalidateActiveForUser` et
+  // `create` ne formant pas une seule opération atomique — voir ce commentaire), même s'il est
+  // dans les faits presque toujours N pour N. La seule affirmation que ce test vérifie, et qui
+  // est vraie dans TOUS les cas observés, est qu'il en reste PLUS QU'UN : si la course était
+  // fermée (un seul lien vivant par compte, quoi qu'il arrive), ce nombre serait toujours 1.
+  // Vérifié directement contre la base (`usedAt: null` = utilisable), sans passer par la route de
   // consommation : ce n'est pas ce qui est éprouvé ici.
   it('emissions simultanees pour le meme compte : plus d un lien reste utilisable (course NON fermee, assume)', async () => {
     const user = await createUser({ email: 'six-emissions@etab.fr' })

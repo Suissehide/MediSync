@@ -50,4 +50,49 @@ describe('pathWithoutQuery', () => {
       '/patient/export/UN-IDENTIFIANT',
     )
   })
+
+  // Tour de correction 2, mineur : la comparaison ne reconnaissait le prefixe qu'a l'octet pres —
+  // dix variantes de la MEME route sabotee y echappaient (relecture externe). Chacune des cinq
+  // formes ci-dessous doit tronquer IDENTIQUEMENT a la forme nue.
+  it('tronque quelle que soit la casse du chemin', () => {
+    expect(
+      pathWithoutQuery('/AUTH/Access-Link/CONSUME/UN-JETON'),
+    ).toBe('/auth/access-link/consume')
+  })
+
+  it("tronque un segment encode en pourcent (%63 = 'c')", () => {
+    expect(
+      pathWithoutQuery('/auth/access-link/%63onsume/UN-JETON'),
+    ).toBe('/auth/access-link/consume')
+  })
+
+  it('tronque quand le separateur `/` lui-meme est encode (%2F)', () => {
+    expect(
+      pathWithoutQuery('/auth/access-link/consume%2FUN-JETON'),
+    ).toBe('/auth/access-link/consume')
+  })
+
+  it('tronque malgre un double encodage (une seule passe ne suffirait pas)', () => {
+    // %2563 decode une premiere fois en %63, puis une seconde fois en 'c'.
+    expect(
+      pathWithoutQuery('/auth/access-link/%2563onsume/UN-JETON'),
+    ).toBe('/auth/access-link/consume')
+  })
+
+  it('tronque malgre un slash double dans le chemin', () => {
+    expect(
+      pathWithoutQuery('/auth//access-link/consume/UN-JETON'),
+    ).toBe('/auth/access-link/consume')
+  })
+
+  it("tronque malgre un parametre matriciel HTTP (`;cle=valeur`) insere sur un segment", () => {
+    expect(
+      pathWithoutQuery('/auth/access-link/consume;jsessionid=x/UN-JETON'),
+    ).toBe('/auth/access-link/consume')
+  })
+
+  it('ne leve pas sur un `%` mal forme dans le chemin : garde la chaine telle quelle plutot que planter', () => {
+    expect(() => pathWithoutQuery('/patient/export%')).not.toThrow()
+    expect(pathWithoutQuery('/patient/export%')).toBe('/patient/export%')
+  })
 })

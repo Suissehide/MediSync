@@ -49,31 +49,48 @@ class FastifyHttpServer implements HttpServer {
       exposeHeadRoutes: false,
       forceCloseConnections: 'idle',
       requestTimeout: 3000,
-      // Etape 4a, tache 4, tour de correction 1, Important n°2 : sans ceci, `request.ip` (donc
-      // la cle par defaut de `@fastify/rate-limit`, `defaultKeyGenerator = (req) => req.ip`,
-      // voir node_modules/@fastify/rate-limit/index.js) vaut l'adresse du DERNIER sauteur TCP —
-      // le reverse proxy lui-meme derriere Traefik (`deploy/compose.yaml` : le service `back`
-      // n'a qu'un hop devant lui, sur le reseau `proxy` partage). Sans confiance explicite,
-      // TOUTES les requetes de TOUS les utilisateurs partagent donc la MEME adresse cote
-      // Fastify, et la limite de 10/minute sur `/auth/sign-in` et `/auth/access-link/consume`
-      // est PARTAGEE par tout le monde plutot qu'appliquee par client.
+      // Etape 4a, tache 4, tour de correction 1, Important n°2, PUIS tour de correction 2,
+      // Critique (la valeur du tour 1 etait une regression) : sans confiance explicite dans le
+      // proxy, `request.ip` (donc la cle par defaut de `@fastify/rate-limit`,
+      // `defaultKeyGenerator = (req) => req.ip`, node_modules/@fastify/rate-limit/index.js) vaut
+      // l'adresse du DERNIER sauteur TCP. TOUTES les requetes de TOUS les utilisateurs
+      // partageraient donc la meme adresse cote Fastify, et la limite de 10/minute sur
+      // `/auth/sign-in`/`/auth/access-link/consume` serait partagee par tout le monde plutot
+      // qu'appliquee par client.
       //
-      // `1` (pas `true`) : fait confiance a EXACTEMENT un sauteur — celui immediatement devant le
-      // process Node, donc Traefik — et lit `request.ip` comme la derniere adresse NON approuvee
-      // de `X-Forwarded-For` en repartant de la droite. Un client qui pretend etre derriere trois
-      // proxys en ajoutant de fausses entrees en tete de `X-Forwarded-For` ne deplace donc rien :
-      // seule l'entree juste avant Traefik compte. `true` (faire confiance a la chaine entiere)
-      // aurait laisse n'importe quel appelant forger sa propre adresse en la placant lui-meme en
-      // tete de l'en-tete — exactement le contournement que ce reglage doit fermer.
+      // CE QUE LE TOUR 1 AVAIT FAIT DE FAUX — `trustProxy: 1` — mesure par exécution contre de
+      // VRAIES connexions TCP (voir back/src/test/unit/interfaces/trust-proxy.test.ts) :
+      // `getTrustProxyFn` (node_modules/fastify/lib/request.js) traduit un NOMBRE en
+      // `(adresse, i) => i < n` — une confiance PUREMENT POSITIONNELLE, qui ne regarde JAMAIS qui
+      // est réellement le pair TCP direct. N'importe quel appelant qui se connecte EN DIRECT
+      // (sans passer par Traefik) est alors traité comme « le premier sauteur », et son propre
+      // `X-Forwarded-For` — qu'il écrit lui-même — est honoré tel quel : la limite de débit
+      // devenait contournable à volonté (25 requetes avec une adresse differente a chaque fois,
+      // mesurees : zero refus, la de la limite mordait quinze fois des que ce reglage etait
+      // retire).
       //
-      // Reserve non levee par le code : `deploy/compose.yaml` publie AUSSI le port du conteneur
-      // `back` directement sur l'hote (`ports: - '${PORT}:${PORT}'`), a cote du reseau `proxy`
-      // interne a Traefik. Si ce port est joignable depuis l'exterieur sans passer par Traefik,
-      // l'hypothese « un seul sauteur, toujours Traefik » ne tient plus, et `trustProxy: 1` fait
-      // alors confiance a une adresse qu'un appelant direct peut forger. Je ne peux pas etablir
-      // depuis ce depot si ce port est effectivement pare-feuille au deploiement — a verifier par
-      // qui opere l'infrastructure plutot qu'a deviner ici.
-      trustProxy: 1,
+      // LE REMEDE, qui NE renvoie PAS la question a l'infrastructure (tour 2 : « le code peut se
+      // proteger seul ») : une confiance PAR ADRESSE/PLAGE plutot que par POSITION —
+      // `@fastify/proxy-addr` (dont Fastify se sert pour toute valeur non numerique) ne lit alors
+      // `X-Forwarded-For` QUE si le pair TCP DIRECT appartient lui-meme a une des plages
+      // ci-dessous ; sinon `request.ip` reste l'adresse reelle du socket, sans jamais consulter
+      // l'en-tete. `uniquelocal` couvre les plages privees RFC1918
+      // (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16 — celle ou Docker place les reseaux definis
+      // par l'utilisateur, dont `proxy`/`deploy/compose.yaml`, sans jamais en fixer l'adresse
+      // exacte) ; `loopback`/`linklocal` couvrent les deux autres formes usuelles d'un saut de
+      // confiance local. AUCUNE des trois ne depend de savoir si le port du conteneur `back` est,
+      // par ailleurs, publie sur l'hote : un appelant qui se connecte directement depuis une
+      // adresse PUBLIQUE (le seul cas ou une exposition directe du port changerait quelque
+      // chose) n'appartient a aucune de ces plages, donc son en-tete est ignore quoi qu'il
+      // arrive — la garantie ne repose plus sur une hypothese de topologie reseau.
+      //
+      // Ce que ceci ne couvre pas, et qui reste un vrai residu (pas une hypothese a verifier
+      // ailleurs, mais une limite du modele de confiance « par plage ») : un autre conteneur
+      // deja present sur le MEME reseau Docker `proxy` a, lui aussi, une adresse privee, donc
+      // logee dans les memes plages — un tel appelant serait indistinguable de Traefik par ce
+      // seul critere. Ce residu suppose une infrastructure deja compromise (un conteneur non
+      // legitime admis sur le reseau `proxy`), pas un appelant public ordinaire.
+      trustProxy: 'loopback,linklocal,uniquelocal',
     }
 
     this.fastify = Fastify(fastifyOptions)
