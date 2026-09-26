@@ -2,9 +2,25 @@ import { buildTestApp, type TestApp } from './setup/app'
 import { testDb, truncateAll } from './setup/db'
 import {
   createEstablishment,
+  createService,
+  createUser,
+  grantAccess,
+  signIn,
   tenantUrl,
   twoServicesScenario,
 } from './setup/fixtures'
+
+// Ne fige QUE `Date` : les vrais minuteurs (setTimeout, l'E/S de la vraie base de test) restent
+// réels, seule l'horloge que lit `resolveTenant` (interfaces/http/fastify/plugins/tenant.plugin.ts,
+// `new Date()`) est sous contrôle — ce qui rend l'expiration d'un octroi éprouvable sans attendre.
+const TIMERS_REELS = [
+  'nextTick', 'hrtime', 'performance', 'queueMicrotask',
+  'requestAnimationFrame', 'cancelAnimationFrame', 'requestIdleCallback', 'cancelIdleCallback',
+  'setImmediate', 'clearImmediate', 'setInterval', 'clearInterval', 'setTimeout', 'clearTimeout',
+] as const
+const avancerHorloge = (ms: number): void => {
+  jest.setSystemTime(new Date(Date.now() + ms))
+}
 
 // Bout en bout, cette fois : la résolution du tenant est déjà testée
 // unitairement (`src/test/unit/interfaces/tenant-resolution.test.ts`) contre
@@ -87,6 +103,54 @@ describe('resolution du tenant', () => {
       cookies: cookiesA,
     })
     expect(res.statusCode).toBe(404)
+  })
+
+  // Review Focus n°2 (tâche 3, étape 4a) : un octroi qui expire pendant une session déjà
+  // ouverte doit être refusé dès la requête SUIVANTE, sans attendre une reconnexion — c'est la
+  // raison d'être de l'évaluation à la lecture (`effectiveMemberships` appelée à chaque
+  // résolution de tenant, jamais mise en cache). 404, pas 403 : la forme que
+  // `resolveTenantFromUser` emploie déjà pour un tenant inconnu, pour ne pas révéler
+  // l'existence d'un établissement auquel on n'a plus accès.
+  it('refuse des que l octroi expire, sans attendre une reconnexion', async () => {
+    const est = await createEstablishment('Octroi')
+    const service = await createService(est.id, 'Service')
+    const superAdmin = await createUser({
+      email: 'super@test.fr',
+      isSuperAdmin: true,
+    })
+    const cookies = await signIn(t.app, 'super@test.fr')
+
+    jest.useFakeTimers({ doNotFake: [...TIMERS_REELS] })
+    try {
+      const maintenant = new Date()
+      jest.setSystemTime(maintenant)
+
+      // Octroi d'une seconde, posé avant la première requête.
+      await grantAccess({
+        userId: superAdmin.id,
+        establishmentId: est.id,
+        expiresAt: new Date(maintenant.getTime() + 1000),
+      })
+
+      const avant = await t.app.inject({
+        method: 'GET',
+        url: tenantUrl(est.id, service.id, '/patient'),
+        cookies,
+      })
+      expect(avant.statusCode).toBe(200)
+
+      // L'octroi est expiré depuis une seconde, sur le MÊME cookie de session.
+      avancerHorloge(2000)
+
+      const apres = await t.app.inject({
+        method: 'GET',
+        url: tenantUrl(est.id, service.id, '/patient'),
+        cookies,
+      })
+      expect(apres.statusCode).toBe(404)
+    } finally {
+      jest.useRealTimers()
+    }
   })
 
   it('/me renvoie l arbre des appartenances', async () => {

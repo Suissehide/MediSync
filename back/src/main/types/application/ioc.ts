@@ -22,6 +22,7 @@ import type { ThematicDomainInterface } from '../domain/thematic.domain.interfac
 import type { TodoDomainInterface } from '../domain/todo.domain.interface'
 import type { UserDomainInterface } from '../domain/user.domain.interface'
 import type { HttpClientInterface } from '../infra/http/http-client'
+import type { AccessGrantRepositoryInterface } from '../infra/orm/repositories/accessGrant.repository.interface'
 import type { ActivityLogRepositoryInterface } from '../infra/orm/repositories/activityLog.repository.interface'
 import type { AppointmentRepositoryInterface } from '../infra/orm/repositories/appointment.repository.interface'
 import type { DiagnosticEducatifRepositoryInterface } from '../infra/orm/repositories/diagnosticEducatif.repository.interface'
@@ -117,4 +118,7 @@ export interface IocContainer {
   // PlanningCycle
   readonly planningCycleDomain: PlanningCycleDomainInterface
   readonly planningCycleRepository: PlanningCycleRepositoryInterface
+  // AccessGrant (octroi temporaire d'acces, etape 4a) — pas de domaine : `effectiveMemberships`
+  // (domain/accessGrant.domain.ts) est une fonction pure, sans dependance a injecter.
+  readonly accessGrantRepository: AccessGrantRepositoryInterface
 }

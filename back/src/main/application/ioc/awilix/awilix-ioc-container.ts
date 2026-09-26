@@ -49,6 +49,7 @@ import { PlanningCycleDomain } from '../../../domain/planningCycle.domain'
 import { PlanningCycleRepository } from '../../../infra/orm/repositories/planningCycle.repository'
 import { LocationDomain } from '../../../domain/location.domain'
 import { MembershipDomain } from '../../../domain/membership.domain'
+import { AccessGrantRepository } from '../../../infra/orm/repositories/accessGrant.repository'
 import { LocationRepository } from '../../../infra/orm/repositories/location.repository'
 import { MembershipRepository } from '../../../infra/orm/repositories/membership.repository'
 
@@ -139,6 +140,8 @@ class AwilixIocContainer {
     // PlanningCycle
     this.#registerPlanningCycleDomain()
     this.#registerPlanningCycleRepository()
+    // AccessGrant
+    this.#registerAccessGrantRepository()
 
     // Server
     this.#registerHttpServer()
@@ -365,6 +368,11 @@ class AwilixIocContainer {
       'planningCycleRepository',
       asClass(PlanningCycleRepository).singleton(),
     )
+  }
+
+  // AccessGrant
+  #registerAccessGrantRepository(): void {
+    this.register('accessGrantRepository', asClass(AccessGrantRepository).singleton())
   }
 }
 

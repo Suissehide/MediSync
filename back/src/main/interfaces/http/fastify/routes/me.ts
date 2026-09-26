@@ -8,12 +8,15 @@ import {
 } from '../schemas/me.schema'
 
 const meRouter: FastifyPluginAsync = (fastify) => {
-  const { userDomain } = fastify.iocContainer
+  const { userDomain, accessGrantRepository } = fastify.iocContainer
 
   fastify.get(
     '/',
     { schema: { response: { 200: meResponseSchema } } },
-    (request) => toMeResponse(request.currentUser),
+    async (request) => {
+      const grants = await accessGrantRepository.findForUser(request.currentUser.id)
+      return toMeResponse(request.currentUser, grants, new Date())
+    },
   )
 
   fastify.patch<{ Body: UpdateMeBody }>(
@@ -31,7 +34,11 @@ const meRouter: FastifyPluginAsync = (fastify) => {
           newPassword,
         })
       }
-      return toMeResponse(await userDomain.findByID(userID))
+      const [updated, grants] = await Promise.all([
+        userDomain.findByID(userID),
+        accessGrantRepository.findForUser(userID),
+      ])
+      return toMeResponse(updated, grants, new Date())
     },
   )
   return Promise.resolve()
