@@ -165,7 +165,8 @@ expire tout seul, sans rien à exécuter.
 
 ## 5. Modèle de données
 
-Deux tables neuves, deux colonnes.
+Deux tables neuves, une colonne — et les relations inverses que Prisma exige pour valider le
+schéma, qui ne portent aucune donnée de tenant.
 
 ```prisma
 model AccessLink {
