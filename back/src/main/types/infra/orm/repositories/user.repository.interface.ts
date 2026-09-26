@@ -24,6 +24,11 @@ export type UserProfileUpdateRepo = { firstName?: string; lastName?: string }
 
 export interface UserRepositoryInterface {
   findByID: (userId: string) => Promise<UserWithMemberships>
+  // Tache 15 (etape 4a) : la ligne `User` SEULE, sans l'arbre des appartenances — voir le
+  // commentaire sur l'implementation. `findByID` reste pour le chemin de CONNEXION, qui a besoin
+  // de cet arbre et n'a aucun contexte de tenant ; sous un contexte de tenant, c'est celle-ci
+  // qu'il faut, l'autre franchissant un pont que le garde-fou refuse desormais.
+  findIdentity: (userID: string) => Promise<UserEntityRepo>
   findByEmail: (email: string) => Promise<UserEntityRepo>
   // `client` optionnel (étape 4a, tâche 6, tour de correction 1) : voir le commentaire équivalent
   // sur `AccessLinkRepositoryInterface`.

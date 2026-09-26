@@ -28,9 +28,9 @@ import ts from 'typescript'
 // anterieure de ce commentaire disait « deux fois seulement » avant que la tache 9 n'ajoute un
 // troisieme emploi legitime dans le meme fichier que le second — la prose mentait alors que les
 // assertions, elles, restaient justes ; corrige une premiere fois en pretendant a tort que la
-// CAPACITE et les BORNES etaient toutes deux couvertes ici, corrige a nouveau ci-dessus. Quatre
+// CAPACITE et les BORNES etaient toutes deux couvertes ici, corrige a nouveau ci-dessus. Cinq
 // emplois declares a ce jour, tous dans le back de production (un quatrieme ajoute a la tache 11,
-// etape 4a) :
+// etape 4a, un cinquieme a la tache 15) :
 //
 //   1. La purge planifiee du journal d'activite (`application/starter.ts`,
 //      `scheduleActivityLogCleanup`) : hors de toute requete HTTP, il n'existe alors aucun
@@ -55,6 +55,17 @@ import ts from 'typescript'
 //      mais aussi `ActivityLog` (modele d'ETABLISSEMENT) pour sa ligne de journal — cette
 //      deuxieme ecriture est la raison structurelle de l'encadrement : un modele global n'exige
 //      pas `runAsSystem` pour lui-meme, `ActivityLog` si.
+//   5. « Ce compte est-il rattache ailleurs ? » (`infra/orm/repositories/membership.repository.ts`,
+//      `estRattacheAilleurs`, tache 15, etape 4a) : meme forme que 2 et 3 — une traversee
+//      volontaire de frontiere qui ne rend qu'un BOOLEEN, jamais un identifiant ni un nom
+//      d'etablissement. Elle REMPLACE une lecture strictement plus large : `MembershipDomain`
+//      chargeait l'arbre COMPLET des appartenances du compte (`UserRepository.findByID`, un
+//      `include` qui repart du modele GLOBAL `User` par une relation a-plusieurs) pour n'en
+//      garder qu'un `length` — un pont que le garde-fou refuse desormais sous contexte de tenant
+//      (`assertNoGlobalToManyBridge`, tenant-guard.ts). Ce cinquieme emploi RESSERRE donc ce qui
+//      traverse, il ne l'elargit pas. Ses bornes (compte vise, etablissement courant EXCLU,
+//      capture AVANT d'entrer dans le mode encadre) sont verifiees par `repository-scope.test.ts`,
+//      pas par ce fichier-ci.
 //
 // `runAsSuperAdmin` (meme fichier, tache 1 / etape 4a) y ajoute un troisieme mode, qui ne retire
 // rien mais substitue au filtre de tenant une liste declaree et exhaustive de couples (modele,
@@ -114,6 +125,21 @@ const AUTORISES = [
     raison:
       'bootstrapSuperAdmin (tache 11, etape 4a) — seul point qui pose User.isSuperAdmin, ' +
       'appele par scripts/bootstrap-super-admin.ts, hors de toute requete HTTP',
+    appels: 1,
+  },
+  {
+    fichier: 'infra/orm/repositories/membership.repository.ts',
+    raison:
+      'estRattacheAilleurs (tache 15, etape 4a) — « ce compte est-il rattache a un AUTRE ' +
+      'etablissement que le courant ? », un BOOLEEN et rien d autre. La question porte par ' +
+      'nature sur les autres etablissements (User.deactivatedAt et un lien d acces sont ' +
+      'GLOBAUX : agir dessus depuis un etablissement toucherait les autres, ce que les gardes ' +
+      'appelantes refusent), donc aucune requete bornee au tenant courant ne peut y repondre. ' +
+      'REMPLACE une lecture PLUS LARGE : MembershipDomain lisait l arbre COMPLET des ' +
+      'appartenances via UserRepository.findByID pour n en garder qu un length — un include qui ' +
+      'repart du modele GLOBAL User par une relation a-plusieurs, que le garde-fou refuse ' +
+      'desormais sous contexte de tenant (assertNoGlobalToManyBridge). Ce qui traverse la ' +
+      'frontiere passe de l arbre entier a un bit. Bornes verifiees par repository-scope.test.ts',
     appels: 1,
   },
 ]

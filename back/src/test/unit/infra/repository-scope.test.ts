@@ -296,6 +296,79 @@ describe('MembershipRepository (gestion des membres)', () => {
     ).resolves.toBeUndefined()
   })
 
+  // TACHE 15 (etape 4a) — `estRattacheAilleurs` est le CINQUIEME emploi declare du mode systeme
+  // (`runAsSystem-unicite.test.ts`, qui garde la CAPACITE). C'est ICI que sont gardees ses
+  // BORNES, comme pour `estSuiviAilleurs` et `impactDesactivation` plus bas : la forme exacte de
+  // la requete, et la preuve que cette forme serait refusee par le garde-fou hors du mode
+  // encadre — sans quoi le mode encadre serait une preference de style plutot qu'une necessite.
+  describe('MembershipRepository.estRattacheAilleurs', () => {
+    it('compte sous runAsSystem, sur le compte vise, en EXCLUANT l etablissement courant', async () => {
+      const { prisma, calls } = buildFakePrisma({ 'establishmentMembership.count': 2 })
+      const ctx = new TenantContext()
+      const spy = jest.spyOn(ctx, 'runAsSystem')
+      const repo = new MembershipRepository(buildContainer(prisma, ctx))
+
+      const resultat = await ctx.run(tenant, () => repo.estRattacheAilleurs('u9'))
+
+      expect(spy).toHaveBeenCalledTimes(1)
+      expect(calls).toHaveLength(1)
+      expect(calls[0]).toMatchObject({
+        model: 'establishmentMembership',
+        op: 'count',
+        args: { where: { userId: 'u9', establishmentId: { not: 'e1' } } },
+      })
+      // UN BOOLEEN sort de la fonction, jamais le compte ni un identifiant d'etablissement.
+      expect(resultat).toBe(true)
+    })
+
+    it('rend faux quand le compte n est rattache qu ici', async () => {
+      const { prisma } = buildFakePrisma({ 'establishmentMembership.count': 0 })
+      const ctx = new TenantContext()
+      const repo = new MembershipRepository(buildContainer(prisma, ctx))
+
+      await expect(ctx.run(tenant, () => repo.estRattacheAilleurs('u9'))).resolves.toBe(false)
+    })
+
+    // Le mecanisme, isole. Ce que le mode encadre rend possible, et que rien d'autre ne pourrait :
+    // `establishmentId: { not: … }` est exactement ce que `assertWhere` refuse sous un contexte de
+    // tenant (la valeur lue n'est pas l'etablissement courant, c'est un objet de filtre). Le refus
+    // est donc REEL, pas theorique — et c'est lui qui justifie l'encadrement.
+    it('la forme de requete qu elle construit est refusee hors du mode encadre, et permise dedans', () => {
+      const args = { where: { userId: 'u9', establishmentId: { not: 'e1' } } }
+      expect(() =>
+        assertTenantScope(
+          { model: 'EstablishmentMembership', operation: 'count', args },
+          { kind: 'tenant', tenant },
+        ),
+      ).toThrow(TenantScopeMissingError)
+
+      expect(() =>
+        assertTenantScope(
+          { model: 'EstablishmentMembership', operation: 'count', args },
+          { kind: 'system' },
+        ),
+      ).not.toThrow()
+    })
+
+    // Le piege du depot, tenu par un test plutot que par un commentaire : l'etablissement courant
+    // doit etre lu AVANT d'entrer dans le mode systeme. Lu a l'interieur, `current()` leverait
+    // (le store n'y est plus de type tenant) — et une implementation qui « reparerait » cela en
+    // laissant tomber la borne compterait les rattachements de TOUS les etablissements, courant
+    // compris, rendant vrai pour un compte rattache ici seulement. Le test ci-dessus l'attrape
+    // par la valeur exacte du `not`.
+    it('ne leve pas et garde sa borne meme si le contexte systeme est deja ouvert autour', async () => {
+      const { prisma, calls } = buildFakePrisma({ 'establishmentMembership.count': 0 })
+      const ctx = new TenantContext()
+      const repo = new MembershipRepository(buildContainer(prisma, ctx))
+
+      await ctx.run(tenant, () => repo.estRattacheAilleurs('u9'))
+
+      expect(calls[0]?.args).toMatchObject({
+        where: { establishmentId: { not: 'e1' } },
+      })
+    })
+  })
+
   it('update verifie l appartenance dans le tenant avant de rebattre les affectations', async () => {
     const { prisma, calls } = buildFakePrisma()
     const ctx = new TenantContext()

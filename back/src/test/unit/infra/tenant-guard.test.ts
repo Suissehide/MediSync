@@ -52,12 +52,23 @@ describe('assertTenantScope', () => {
         store,
       ),
     ).toThrow(TenantScopeMissingError)
+    // TACHE 15 — CETTE ATTENTE A CHANGE DE SENS, et le changement EST le correctif. Elle disait
+    // `not.toThrow()` : `assertGlobalInclude` laissait passer un include de relation de tenant
+    // des lors que l'operation ne visait qu'UNE ligne, au motif — ecrit tel quel au-dessus de
+    // GLOBAL_TENANT_RELATIONS — que ce serait « la seule facon de garantir que les enfants
+    // renvoyes appartiennent a un seul tenant ». Ce motif est FAUX pour une relation
+    // A-PLUSIEURS : une seule ligne d'`Establishment` porte tous SES patients, et rien n'oblige
+    // cette ligne a etre celle du tenant courant — le `where` d'un modele global n'est compare a
+    // aucun tenant (il n'y a pas de colonne a comparer). `findUnique({ where: { id: 'e2' } })`
+    // sous le tenant de e1 rendait donc les patients de e2. Ce n'est pas une attente qu'on
+    // assouplit pour faire passer un test : c'est un appel qu'aucun repository du depot ne fait,
+    // dont la forme etait a tort declaree sure.
     expect(() =>
       assertTenantScope(
         { model: 'Establishment', operation: 'findUnique', args: { where: { id: 'e1' }, include: { patients: true } } },
         store,
       ),
-    ).not.toThrow()
+    ).toThrow(TenantScopeMissingError)
     expect(() =>
       assertTenantScope({ model: 'Establishment', operation: 'findMany', args: {} }, store),
     ).not.toThrow()
@@ -452,6 +463,10 @@ describe('assertTenantScope', () => {
         store,
       ),
     ).toThrow(TenantScopeMissingError)
+    // TACHE 15 — meme retournement que sur `Establishment` plus haut, meme raison : UNE ligne de
+    // `User` porte les appartenances de TOUS ses etablissements. « Une seule ligne » ne garantit
+    // « un seul tenant » que pour une relation a-UN ; `establishmentMemberships` est
+    // a-PLUSIEURS. Voir le bloc « tache 15 » en fin de fichier.
     expect(() =>
       assertTenantScope(
         {
@@ -461,7 +476,7 @@ describe('assertTenantScope', () => {
         },
         store,
       ),
-    ).not.toThrow()
+    ).toThrow(TenantScopeMissingError)
     expect(() =>
       assertTenantScope({ model: 'User', operation: 'findMany', args: {} }, store),
     ).not.toThrow()
@@ -1297,7 +1312,15 @@ describe('assertTenantScope', () => {
       ).toThrow(TenantScopeMissingError)
     })
 
-    it('accepte la meme chaine filtree sur le service courant', () => {
+    // TACHE 15 — CETTE ATTENTE A CHANGE DE SENS. Filtrer la transition etablissement -> service
+    // (`serviceFiles: { where: { serviceId } }`) fermait le SEUL defaut que l'etape 3 connaissait
+    // sur cette chaine ; il en restait un autre, deux sauts plus haut et invisible d'ici : le
+    // premier saut, `User -> establishmentMemberships`, repart d'un modele GLOBAL par une
+    // relation A-PLUSIEURS, et ramene les appartenances de tous les etablissements du compte.
+    // Aucun filtre pose plus BAS dans la chaine ne peut rattraper cela — la chaine est deja
+    // sortie de l'etablissement du contexte au premier saut. Le refus tombe donc maintenant au
+    // premier saut, avec ou sans filtre en dessous.
+    it('refuse la meme chaine meme filtree sur le service courant : le defaut est au premier saut', () => {
       expect(() =>
         assertTenantScope(
           {
@@ -1307,7 +1330,22 @@ describe('assertTenantScope', () => {
           },
           store,
         ),
-      ).not.toThrow()
+      ).toThrow(/relation 'establishmentMemberships'/)
+      // AUCUN REFUS DEPLACE : sans contexte, ou la regle de la tache 15 ne s'applique pas
+      // (voir assertNoGlobalToManyBridge), cette meme chaine reste refusee pour la raison
+      // d'AVANT — la transition etablissement -> service, qu'aucun `serviceId` ne peut satisfaire
+      // faute de tenant a comparer. Les deux refus coexistent, chacun nomme par son message ;
+      // la tache 15 en ajoute un, elle n'en remplace aucun.
+      expect(() =>
+        assertTenantScope(
+          {
+            model: 'User',
+            operation: 'findUniqueOrThrow',
+            args: { where: { id: 'u1' }, include: filteredChain },
+          },
+          undefined,
+        ),
+      ).toThrow(/'serviceFiles' vers un modèle de service sans filtre/)
     })
 
     // Le chemin de connexion : verifySessionCookie appelle userDomain.findByID ->
@@ -1571,12 +1609,15 @@ describe('monotonie : le contexte superadmin ne change aucun verdict pour tenant
       attendu: 'refuse',
     },
     {
+      // TACHE 15 : `passe` jusqu'ici, `refuse` desormais. « Une seule ligne » ne borne rien quand
+      // la relation est a-plusieurs ET que la ligne est globale (voir le bloc « tache 15 »). Un
+      // refus GAGNE, jamais un refus perdu : la monotonie porte sur les refus qui disparaissent.
       nom: 'tenant, meme include mais sous findUnique(id) — une seule ligne',
       store,
       model: 'Establishment',
       operation: 'findUnique',
       args: { where: { id: 'e1' }, include: { patients: true } },
-      attendu: 'passe',
+      attendu: 'refuse',
     },
     {
       nom: 'tenant, service sous un tenant sans service (adminStore)',
@@ -1686,7 +1727,8 @@ describe('aucun pont par un modele global sous superadmin (revue, tours 2 et 3)'
       if (!courant || courant.chemin.length >= profondeurMax) {
         continue
       }
-      for (const [relationField, cible] of Object.entries(MODEL_RELATIONS[courant.modele] ?? {})) {
+      for (const [relationField, relation] of Object.entries(MODEL_RELATIONS[courant.modele] ?? {})) {
+        const cible = relation.model
         const nouveauChemin = [...courant.chemin, relationField]
         const franchit = (familleDe(courant.modele) === 'global') !== (familleDe(cible) === 'global')
         if (franchit) {
@@ -2082,5 +2124,189 @@ describe('ecritures declarees sur un modele global sous superadmin (revue, tour 
       expect(() => assertTenantScope(cas, undefined)).not.toThrow()
       expect(() => assertTenantScope(cas, { kind: 'system' })).not.toThrow()
     }
+  })
+})
+
+// TACHE 15 (etape 4a) — LE PONT PAR UN MODELE GLOBAL, SUR LE CHEMIN ORDINAIRE.
+//
+// Ce que les tours 2 et 3 de la tache 1 avaient nomme sans le fermer (voir le commentaire de
+// `assertNoGlobalBridgeUnderSuperAdmin`, tenant-guard.ts) : la protection du chemin de tenant
+// repose sur le `where` de la RACINE, qui epingle l'etablissement. Les relations qui MENENT a un
+// modele global sont toutes a-un (verifie : `EstablishmentMembership.user`, `Patient.establishment`,
+// `AccessLink.user`… — voir MODEL_RELATIONS, ou elles portent toutes `one`), donc inoffensives :
+// une ligne deja epinglee ne mene qu'a UNE ligne globale. Mais une relation qui REPART d'un
+// modele global peut etre a-PLUSIEURS, et celle-la traverse les etablissements — c'est
+// l'asymetrie que ni la descente recursive de l'etape 3 ni la liste declaree de la tache 1 ne
+// voyaient.
+//
+// MESURE, PAS IMPRESSION (step 1, avant correctif, sur la vraie base — voir
+// `tenant-guard-pont-global.test.ts` pour la version permanente) : deux etablissements peuples
+// (A : patient « Alice DE-A », B : patient « Bruno DE-B ») et UN compte membre des deux. Sous le
+// contexte de tenant de A, la chaine ci-dessous rendait
+// `[{etab:"Etab A",patient:"Alice DE-A"},{etab:"Etab B",patient:"Bruno DE-B"}]` — le patient de B
+// a traverse, sans aucun refus. Cote ecriture, `Establishment.update({where:{id:B}, data:{
+// patients:{create:{…Dora}}}})` sous ce meme contexte a ECRIT « Dora DE-D » dans l'etablissement
+// B, qui contenait ensuite « Bruno DE-B » et « Dora DE-D ».
+describe('tache 15 : franchir un modele global par une relation a-plusieurs', () => {
+  const patient = { firstName: 'X', lastName: 'Y', createDate: new Date('2024-01-01') }
+
+  describe('lecture', () => {
+    it('refuse la chaine exacte du brief, sous un contexte de tenant ordinaire', () => {
+      expect(() =>
+        assertTenantScope(
+          {
+            model: 'EstablishmentMembership',
+            operation: 'findMany',
+            args: {
+              where: { establishmentId: 'e1' },
+              include: {
+                user: {
+                  include: {
+                    establishmentMemberships: {
+                      include: { establishment: { include: { patients: true } } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          store,
+        ),
+      ).toThrow(TenantScopeMissingError)
+    })
+
+    // Le meme pont, pris a sa racine : `User.findUnique` est la forme que `assertGlobalInclude`
+    // laissait passer AU MOTIF qu'une seule ligne garantirait un seul tenant. Ce motif est faux
+    // des que la relation est a-plusieurs : UNE ligne de `User` porte les appartenances de TOUS
+    // ses etablissements.
+    it('refuse une relation a-plusieurs depuis une racine globale, meme en findUnique', () => {
+      expect(() =>
+        assertTenantScope(
+          {
+            model: 'User',
+            operation: 'findUniqueOrThrow',
+            args: { where: { id: 'u1' }, include: { establishmentMemberships: true } },
+          },
+          store,
+        ),
+      ).toThrow(TenantScopeMissingError)
+      expect(() =>
+        assertTenantScope(
+          {
+            model: 'Establishment',
+            operation: 'findUnique',
+            args: { where: { id: 'e1' }, include: { patients: true } },
+          },
+          store,
+        ),
+      ).toThrow(TenantScopeMissingError)
+    })
+
+    it('refuse aussi sous select, ou la declaration ne peut pas etre exigee', () => {
+      expect(() =>
+        assertTenantScope(
+          {
+            model: 'EstablishmentMembership',
+            operation: 'findMany',
+            args: {
+              where: { establishmentId: 'e1' },
+              select: { user: { select: { establishmentMemberships: true } } },
+            },
+          },
+          store,
+        ),
+      ).toThrow(TenantScopeMissingError)
+    })
+
+    // L'autre sens, celui qui dit que le resserrement ne ferme pas plus que le defaut : une
+    // relation A-UN vers un modele global reste permise, c'est la lecture reelle de
+    // `membership.repository.ts` (les membres d'un etablissement, avec leur compte).
+    it('laisse passer une relation a-un vers un modele global, la lecture reelle du depot', () => {
+      expect(() =>
+        assertTenantScope(
+          {
+            model: 'EstablishmentMembership',
+            operation: 'findMany',
+            args: {
+              where: { establishmentId: 'e1' },
+              include: {
+                user: { select: { id: true, email: true, deactivatedAt: true } },
+                serviceMemberships: true,
+              },
+            },
+          },
+          store,
+        ),
+      ).not.toThrow()
+      // `AccessLink.findUnique -> user` : global vers global, a-un (accessLink.repository.ts).
+      expect(() =>
+        assertTenantScope(
+          {
+            model: 'AccessLink',
+            operation: 'findUnique',
+            args: { where: { tokenHash: 'h' }, include: { user: { select: { id: true } } } },
+          },
+          store,
+        ),
+      ).not.toThrow()
+    })
+  })
+
+  describe('ecriture', () => {
+    it("refuse l'exemple du brief : Establishment.create avec un patient imbrique", () => {
+      expect(() =>
+        assertTenantScope(
+          {
+            model: 'Establishment',
+            operation: 'create',
+            args: { data: { name: 'X', patients: { create: patient } } },
+          },
+          store,
+        ),
+      ).toThrow(TenantScopeMissingError)
+    })
+
+    it("refuse d'ecrire dans l'etablissement d'a cote par un update de sa ligne globale", () => {
+      expect(() =>
+        assertTenantScope(
+          {
+            model: 'Establishment',
+            operation: 'update',
+            args: { where: { id: 'e2' }, data: { patients: { create: patient } } },
+          },
+          store,
+        ),
+      ).toThrow(TenantScopeMissingError)
+    })
+
+    it('refuse une appartenance imbriquee sous la creation d un compte', () => {
+      expect(() =>
+        assertTenantScope(
+          {
+            model: 'User',
+            operation: 'create',
+            args: {
+              data: { email: 'a@b.c', establishmentMemberships: { create: { establishmentId: 'e2' } } },
+            },
+          },
+          store,
+        ),
+      ).toThrow(TenantScopeMissingError)
+    })
+
+    it('laisse passer une ecriture globale qui n ouvre que sa propre ligne', () => {
+      expect(() =>
+        assertTenantScope(
+          { model: 'Establishment', operation: 'create', args: { data: { name: 'X' } } },
+          store,
+        ),
+      ).not.toThrow()
+      expect(() =>
+        assertTenantScope(
+          { model: 'User', operation: 'update', args: { where: { id: 'u1' }, data: { lastName: 'Z' } } },
+          store,
+        ),
+      ).not.toThrow()
+    })
   })
 })

@@ -136,6 +136,30 @@ Key cross-cutting concerns:
   open it — the refusal names the missing pair. Four correction rounds went into this; the last
   independent sweep was 48 roots × 8 shapes, 157 095 648 cases at depth 11, zero leak, with
   monotonicity (no previously-refused case becomes allowed) measured on 7 031 232 cases.
+- **A relation that REPARTS from a global model towards MANY rows is refused — under an ordinary
+  tenant context too, in reads and in writes (étape 4a, task 15).** The ordinary path's safety
+  comes from the ROOT's `where`, which pins the establishment. Relations *towards* a global model
+  are all to-one (`EstablishmentMembership.user`, `Patient.establishment`, `AccessLink.user`) and
+  stay allowed — one pinned row leads to one global row. A relation *from* a global model can be
+  to-many, and that one is bounded by nothing: `User.establishmentMemberships` returns the
+  account's memberships in **every** establishment, `Establishment.patients` the patients of
+  whichever establishment the (uncomparable) global `where` picked. Measured before the fix, on
+  the real database: under establishment A's tenant, the chain
+  `establishmentMembership.findMany({ where: { establishmentId: A }, include: { user: { include:
+  { establishmentMemberships: { include: { establishment: { include: { patients: true } } } } } } } })`
+  returned **B's patient**, and `establishment.update({ where: { id: B }, data: { patients:
+  { create } } })` **wrote** a patient into B. `MODEL_RELATIONS` therefore carries the
+  CARDINALITY (`one('X')` / `many('X')`), held against `prisma/schema.prisma` in both directions
+  by `tenant-guard-schema.test.ts` — a relation that becomes `Type[]` and stays declared `one`
+  reopens the bridge silently, so that test names cardinality on its own. Two consequences when
+  adding a model: declare each relation with its cardinality, and expect the guard to refuse a
+  nested write from a global root outright (no global model has a `NESTED_RELATIONS` entry —
+  use the scalar FK, `userId: u`, not `user: { connect: { id: u } }`). **Named limit, not a
+  proven safety:** the rule does not apply when there is NO context, because that is the login
+  path — `UserRepository.findByID` must read the account's whole membership tree to establish
+  which establishments it belongs to, and there is no ambient establishment to protect. What
+  holds it is `tenantContext.clear()` at the head of every request plus the fact that no tenant
+  route reaches a repository before `enter()`.
 - **A temporary grant does NOT bypass the guard — it confers memberships.** A super-admin holding
   a live `SuperAdminAccessGrant` does not enter the `superadmin` context to reach an
   establishment's screens: he goes down the **ordinary tenant path**, with the memberships the
@@ -223,10 +247,18 @@ Key cross-cutting concerns:
       system-scoped store some other way — e.g. a hypothetical `TenantContext.runAsSystem.bind(...)` or a sibling
       method — defeats the guard exactly like calling `runAsSystem` directly would). It never looks at what a
       query's `where` contains.
-    - `back/src/test/unit/infra/repository-scope.test.ts` (the `PatientServiceFileRepository.estSuiviAilleurs` and
-      `.impactDesactivation` describes) keeps the BOUNDS: it captures the actual arguments each method sends to
+    - `back/src/test/unit/infra/repository-scope.test.ts` (the `PatientServiceFileRepository.estSuiviAilleurs`,
+      `.impactDesactivation` and `MembershipRepository.estRattacheAilleurs` describes) keeps the BOUNDS: it captures the actual arguments each method sends to
       Prisma and asserts they carry explicit, self-contained filters, then separately proves that exact shape would
       be refused by the guard outside the framed mode.
+  A fifth declared site joined them at étape 4a task 15: `MembershipRepository.estRattacheAilleurs`, which
+  answers "is this account attached to an establishment other than the current one?" with a **boolean and nothing
+  else**. It exists because that question is, by nature, about the other establishments (`User.deactivatedAt` and
+  an access link are GLOBAL, so acting on them from one establishment would reach the others — which is exactly
+  what the calling guards refuse), so no tenant-bounded query can answer it. It **replaces a strictly wider read**:
+  `MembershipDomain` used to load the account's entire membership tree through `UserRepository.findByID` just to
+  take a `length` — an `include` leaving the global `User` by a to-many relation, now refused under a tenant
+  context. What crosses the boundary went from the whole tree to one bit.
   Adding an undeclared `runAsSystem` call to `src/main` is a guard violation, not a passing test. Known gap: the
   allow-list only covers `src/main` — several legitimate `src/test` callers construct the same
   "system" store to exercise the tenant guard itself, so that directory isn't covered (same class of gap as the
@@ -279,9 +311,13 @@ Key cross-cutting concerns:
 6. Register the new router in `interfaces/http/fastify/routes/index.ts`.
 7. Add the model to `SERVICE_MODELS` or `ESTABLISHMENT_MODELS` in `infra/orm/tenant-guard.ts` (and to
    `NESTED_RELATIONS` if another model writes it through a nested relation) — without this the guard rejects every
-   query on it. Every model — not just establishment ones, all 26 of them — also gets an entry in
-   `MODEL_RELATIONS` listing *all* its relations, and any model gaining a relation towards it must have that
-   relation added there too — an undeclared `include`/`select` is refused.
+   query on it. Every model — not just establishment ones, all 28 of them — also gets an entry in
+   `MODEL_RELATIONS` listing *all* its relations **with their cardinality** (`one('X')` / `many('X')`, copied from
+   `prisma/schema.prisma`: `X[]` is `many`, `X` and `X?` are `one`), and any model gaining a relation towards it
+   must have that relation added there too — an undeclared `include`/`select` is refused, and a wrong cardinality
+   on a relation leaving a GLOBAL model reopens the cross-establishment bridge (see the task-15 bullet above).
+   `tenant-guard-schema.test.ts` holds both the targets and the cardinalities against the schema, in both
+   directions.
 8. Add a case to `src/test/e2e/isolation.test.ts` proving a caller from one tenant can't reach another tenant's
    rows through the new entity (directly, and through any parent that embeds it).
 

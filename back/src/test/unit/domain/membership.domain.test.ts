@@ -30,16 +30,18 @@ const row = (over: Partial<MembershipRow>): MembershipRow => ({
 
 // `admins` est le nombre d'administrateurs **actifs** (ce que compte le
 // repository) ; `establishments` le nombre d'etablissements de l'identite
-// visee, que le domaine lit via userRepository.findByID.
+// visee (tache 15 : lu via membershipRepository.estRattacheAilleurs, plus via un include).
 // Marqueur du client transactionnel : les trois ecritures de `createAccount` (le compte, le
 // rattachement, le lien) doivent TOUTES le recevoir, sans quoi elles ne partagent pas un sort.
 const TX = Symbol('transaction')
 
-// L'identite GLOBALE telle que `userRepository.findByID` la rend : le drapeau super-admin et
-// la liste des etablissements auxquels le compte est rattache. La garde du jeton
-// (`assertIssuableToken`) lit les DEUX — un stub qui rendrait `[{}, {}]` sans identifiant
-// d'etablissement, comme le faisait la version precedente de ce fichier, ne peut rien prouver
-// d'un predicat qui compare des identifiants.
+// Le decor d'un compte GLOBAL : le drapeau super-admin et la liste des etablissements auxquels
+// il est rattache. La garde du jeton (`assertIssuableToken`) lit les DEUX — un stub qui rendrait
+// `[{}, {}]` sans identifiant d'etablissement, comme le faisait une version precedente de ce
+// fichier, ne peut rien prouver d'un predicat qui compare des identifiants. Depuis la tache 15
+// (etape 4a) ces deux faits sortent de DEUX lectures distinctes du domaine
+// (`userRepository.findIdentity` et `membershipRepository.estRattacheAilleurs`), et non plus
+// d'un seul arbre : les deux stubs ci-dessous lisent donc la meme description.
 type CompteGlobal = { isSuperAdmin?: boolean; establishmentIds?: string[] }
 
 const build = (
@@ -51,6 +53,16 @@ const build = (
   const ctx = new TenantContext()
   const calls: string[] = []
   const events: string[] = []
+  // Par defaut : `establishments` rattachements dont le PREMIER est l'etablissement courant
+  // (`e1`) et les suivants sont etrangers — ce qui preserve le comportement des tests anterieurs
+  // (la garde comptait `length > 1` sur l'arbre entier) tout en donnant a la garde du jeton des
+  // identifiants reels a comparer. `comptesGlobaux` permet a un test de decrire un compte
+  // precis : super-admin, ou rattache AILLEURS seulement.
+  const rattachementsDe = (userId: string): string[] =>
+    comptesGlobaux[userId]?.establishmentIds ??
+    Array.from({ length: establishments }, (_, index) =>
+      index === 0 ? 'e1' : `e-ailleurs-${index}`,
+    )
   const container = {
     tenantContext: ctx,
     appEventBus: {
@@ -67,6 +79,14 @@ const build = (
       findByUserID: (userId: string) =>
         Promise.resolve(rows.find((r) => r.userId === userId) ?? null),
       countAdmins: () => Promise.resolve(admins),
+      // TACHE 15 : le booleen qui a remplace la lecture de l'arbre complet des appartenances.
+      // Derive de la MEME description de decor que `findIdentity` plus bas.
+      estRattacheAilleurs: (userId: string) =>
+        Promise.resolve(
+          rattachementsDe(userId).some(
+            (establishmentId) => establishmentId !== 'e1',
+          ),
+        ),
       create: (p: unknown, client?: unknown) => {
         calls.push(client === TX ? 'create(tx)' : 'create')
         return Promise.resolve(row({ id: 'new', ...(p as object) }))
@@ -125,25 +145,17 @@ const build = (
         )
         return Promise.resolve({ id: 'u-neuf', deactivatedAt: null })
       },
-      // Par defaut : `establishments` rattachements dont le PREMIER est l'etablissement
-      // courant (`e1`) et les suivants sont etrangers — ce qui preserve le comportement des
-      // tests anterieurs (`setDeactivated` compte `length > 1`) tout en donnant a la garde du
-      // jeton des identifiants reels a comparer. `comptesGlobaux` permet a un test de decrire
-      // un compte precis : super-admin, ou rattache AILLEURS seulement.
-      findByID: (userId: string) => {
-        const surMesure = comptesGlobaux[userId]
-        const establishmentIds =
-          surMesure?.establishmentIds ??
-          Array.from({ length: establishments }, (_, index) =>
-            index === 0 ? 'e1' : `e-ailleurs-${index}`,
-          )
-        return Promise.resolve({
-          isSuperAdmin: surMesure?.isSuperAdmin ?? false,
-          establishmentMemberships: establishmentIds.map((establishmentId) => ({
-            establishmentId,
-          })),
-        })
-      },
+      // TACHE 15 (etape 4a) : `findIdentity` — la LIGNE `User` seule — remplace `findByID` pour
+      // les deux gardes du domaine. L'arbre des appartenances n'en sort plus : la question
+      // « rattache ailleurs ? » est posee separement a
+      // `membershipRepository.estRattacheAilleurs`, plus haut, qui lit la MEME description de
+      // decor (`rattachementsDe`) pour que les deux stubs ne puissent pas diverger.
+      findIdentity: (userId: string) =>
+        Promise.resolve({
+          id: userId,
+          isSuperAdmin: comptesGlobaux[userId]?.isSuperAdmin ?? false,
+          deactivatedAt: null,
+        }),
       setDeactivated: () => {
         calls.push('deactivate')
         return Promise.resolve({})

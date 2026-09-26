@@ -5,6 +5,7 @@ import {
   ESTABLISHMENT_MODELS,
   GLOBAL_TENANT_RELATIONS,
   MODEL_RELATIONS,
+  type ModelRelation,
   NESTED_RELATIONS,
   SERVICE_MODELS,
   SUPERADMIN_GLOBAL_OPERATIONS,
@@ -53,20 +54,35 @@ const modelNames = new Set(models.keys())
 // (String, DateTime, Int…) et les enums (EstablishmentRole, AppointmentType…) sont ecartes par
 // construction, puisqu'ils ne sont pas declares par un bloc `model`. Les attributs de bloc
 // (`@@unique`, `@@index`, `@@id`) sont ignores : ils commencent par `@@`, jamais par un nom.
-const relationsOf = (body: string): Record<string, string> => {
-  const relations: Record<string, string> = {}
+//
+// TACHE 15 (etape 4a) — la CARDINALITE est desormais lue elle aussi, depuis le `[]` du type
+// (`EstablishmentMembership[]` -> a-plusieurs, `User` ou `User?` -> a-un). C'est le seul endroit
+// du depot qui la connaisse de source sure ; MODEL_RELATIONS la recopie a la main et les tests
+// ci-dessous tiennent les deux sens, donc une relation qui passe de `Type` a `Type[]` — ou
+// l'inverse — dans le schema fait rougir tant qu'elle n'est pas repercutee dans la table. Sans
+// cela, `assertNoGlobalToManyBridge` (tenant-guard.ts) deciderait sur une cardinalite perimee :
+// une relation devenue a-plusieurs et restee declaree `one` rouvrirait le pont en silence.
+const relationsOf = (body: string): Record<string, ModelRelation> => {
+  const relations: Record<string, ModelRelation> = {}
   for (const line of body.split('\n')) {
     const match = /^\s*(\w+)\s+(\w+)(\[\])?\??/.exec(line)
     if (!match) {
       continue
     }
-    const [, field, type] = match
+    const [, field, type, liste] = match
     if (field && type && modelNames.has(type)) {
-      relations[field] = type
+      relations[field] = { model: type, list: liste !== undefined }
     }
   }
   return relations
 }
+
+// Les cibles seules, pour les proprietes qui ne parlent que de la cible (GLOBAL_TENANT_RELATIONS,
+// NESTED_RELATIONS : ni l'une ni l'autre ne porte de cardinalite).
+const targetsOf = (body: string): Record<string, string> =>
+  Object.fromEntries(
+    Object.entries(relationsOf(body)).map(([field, relation]) => [field, relation.model]),
+  )
 
 // Une colonne scalaire requise (non nullable) de ce nom, au premier niveau du bloc. `String?`
 // (ex. `ActivityLog.serviceId`) ne compte pas : une colonne optionnelle documente un rattachement
@@ -148,7 +164,8 @@ describe('MODEL_RELATIONS reflete prisma/schema.prisma', () => {
     }
     // Une relation connue, pour prouver que relationsOf lit autre chose que du vide.
     expect(relationsOf(models.get('Patient') ?? '')).toMatchObject({
-      serviceFiles: 'PatientServiceFile',
+      serviceFiles: { model: 'PatientServiceFile', list: true },
+      establishment: { model: 'Establishment', list: false },
     })
   })
 
@@ -168,6 +185,47 @@ describe('MODEL_RELATIONS reflete prisma/schema.prisma', () => {
     expect(MODEL_RELATIONS[model]).toEqual(relationsOf(body ?? ''))
   })
 
+  // TACHE 15 — la CARDINALITE, enoncee separement de l'egalite exacte ci-dessus pour que l'echec
+  // dise « telle relation a change de cardinalite » plutot que « deux objets different ». C'est
+  // la seule information de cette table dont `assertNoGlobalToManyBridge` se sert pour decider,
+  // et une cardinalite perimee ne se voit pas a l'usage : une relation devenue a-plusieurs et
+  // restee declaree `one` rouvrirait le pont en silence, sans qu'aucune requete du depot ne
+  // change de forme. Les deux sens sont tenus en une fois (l'ecart est symetrique).
+  it('porte la cardinalite exacte de chaque relation du schema', () => {
+    const ecarts: string[] = []
+    for (const model of modelNames) {
+      const declarees = MODEL_RELATIONS[model] ?? {}
+      for (const [field, relation] of Object.entries(relationsOf(models.get(model) ?? ''))) {
+        const declaree = declarees[field]
+        if (declaree && declaree.list !== relation.list) {
+          ecarts.push(
+            `${model}.${field} : schema=${relation.list ? 'many' : 'one'}, table=${declaree.list ? 'many' : 'one'}`,
+          )
+        }
+      }
+    }
+    expect(ecarts).toEqual([])
+  })
+
+  // Et la propriete que la tache 15 exploite vraiment, dite en clair plutot que laissee a deduire
+  // de la table : AUCUNE relation qui MENE a un modele global n'est a-plusieurs. C'est elle qui
+  // rend sur le chemin de tenant la descente vers un global inoffensive, et donc le refus
+  // limitable au sens inverse (voir assertNoGlobalToManyBridge). Le jour ou le schema en
+  // introduirait une, ce test rougit et la question doit etre retranchee — pas la ligne effacee.
+  it('n a aucune relation A-PLUSIEURS qui mene a un modele global', () => {
+    const modelesDeTenant = new Set([...SERVICE_MODELS, ...ESTABLISHMENT_MODELS])
+    const estGlobal = (model: string): boolean => !modelesDeTenant.has(model)
+    const aPlusieursVersGlobal: string[] = []
+    for (const [model, relations] of Object.entries(MODEL_RELATIONS)) {
+      for (const [field, relation] of Object.entries(relations)) {
+        if (!estGlobal(model) && estGlobal(relation.model) && relation.list) {
+          aPlusieursVersGlobal.push(`${model}.${field} -> ${relation.model}`)
+        }
+      }
+    }
+    expect(aPlusieursVersGlobal).toEqual([])
+  })
+
   // Enonce separement la propriete de cloisonnement que le garde-fou exploite reellement, pour
   // qu'un echec dise « telle relation vers un modele de service manque » plutot que « deux
   // objets different ». Cette propriete precise ne concerne que les modeles d'etablissement
@@ -178,8 +236,8 @@ describe('MODEL_RELATIONS reflete prisma/schema.prisma', () => {
     const missing: string[] = []
     for (const model of ESTABLISHMENT_MODELS) {
       const declared = MODEL_RELATIONS[model] ?? {}
-      for (const [field, target] of Object.entries(relationsOf(models.get(model) ?? ''))) {
-        if (SERVICE_MODELS.includes(target) && declared[field] !== target) {
+      for (const [field, target] of Object.entries(targetsOf(models.get(model) ?? ''))) {
+        if (SERVICE_MODELS.includes(target) && declared[field]?.model !== target) {
           missing.push(`${model}.${field} -> ${target}`)
         }
       }
@@ -231,7 +289,7 @@ describe('GLOBAL_TENANT_RELATIONS reflete prisma/schema.prisma', () => {
 
     // Le trou : une relation vers un modele de tenant absente de la table n'est pas vue, donc
     // l'include passe sans controle et ramene la donnee de TOUS les tenants.
-    const manquantes = Object.entries(relationsOf(body ?? ''))
+    const manquantes = Object.entries(targetsOf(body ?? ''))
       .filter(([field, target]) => MODELES_DE_TENANT.has(target) && !declarees.includes(field))
       .map(([field, target]) => `${model}.${field} -> ${target}`)
     expect(manquantes).toEqual([])
@@ -240,7 +298,7 @@ describe('GLOBAL_TENANT_RELATIONS reflete prisma/schema.prisma', () => {
   it.each(globalModels)('ne declare aucune relation morte sur %s', (model) => {
     const body = models.get(model)
     expect(body).toBeDefined()
-    const relations = relationsOf(body ?? '')
+    const relations = targetsOf(body ?? '')
 
     // L'autre sens, inchange : une entree de la table absente du schema ne protege rien et ne se
     // voit pas a l'usage. C'est exactement la derive qui avait eu lieu (`User.soignant`).
@@ -283,7 +341,7 @@ describe('GLOBAL_TENANT_RELATIONS reflete prisma/schema.prisma', () => {
 
   it('n a aucune relation de modele global non classee', () => {
     const nonClassees = globalModels.flatMap((model) =>
-      Object.entries(relationsOf(models.get(model) ?? ''))
+      Object.entries(targetsOf(models.get(model) ?? ''))
         .filter(([field, target]) => {
           const declaree = [...(GLOBAL_TENANT_RELATIONS[model] ?? [])].includes(field)
           return !declaree && !MODELES_DE_TENANT.has(target)
@@ -306,7 +364,7 @@ describe('NESTED_RELATIONS reflete prisma/schema.prisma', () => {
   it('ne declare aucune relation morte', () => {
     const mortes: string[] = []
     for (const [model, relations] of Object.entries(NESTED_RELATIONS)) {
-      const actual = relationsOf(models.get(model) ?? '')
+      const actual = targetsOf(models.get(model) ?? '')
       for (const [field, target] of Object.entries(relations)) {
         if (actual[field] !== target) {
           mortes.push(`${model}.${field} -> ${target}`)

@@ -198,11 +198,25 @@ class MembershipDomain implements MembershipDomainInterface {
   // aussi l'accès aux autres, où l'administrateur n'a aucun droit. Tant que
   // la désactivation n'est pas portée par l'appartenance, on refuse les deux
   // sens (couper comme rétablir) sur un compte multi-établissement.
-  private assertSingleEstablishment(
-    user: { establishmentMemberships: unknown[] },
+  //
+  // TÂCHE 15 (étape 4a) — CE QUI A CHANGÉ, ET CE QUI NE CHANGE PAS. Le prédicat était
+  // `user.establishmentMemberships.length > 1`, lu sur l'arbre COMPLET des appartenances que
+  // `UserRepository.findByID` embarquait. Cette lecture-là repart du modèle global `User` par une
+  // relation à-plusieurs : le garde-fou la refuse désormais sous un contexte de tenant (voir
+  // `assertNoGlobalToManyBridge`, infra/orm/tenant-guard.ts), et c'est l'APPEL qui est corrigé,
+  // pas le garde-fou. La question est posée directement — « rattaché ailleurs ? » — à
+  // `MembershipRepository.estRattacheAilleurs`, qui rend un booléen et rien d'autre.
+  //
+  // Le verdict est le MÊME, et plus fidèle à l'intention écrite ci-dessus : l'appartenance visée
+  // est celle de l'établissement courant, donc `length > 1` voulait déjà dire « il y en a une
+  // ailleurs » (`@@unique([userId, establishmentId])` interdit deux appartenances au même
+  // établissement, donc les deux prédicats coïncident exactement). Ce qui traverse la frontière
+  // passe, lui, de l'arbre entier — noms des autres établissements, leurs services — à un bit.
+  private async assertRattachementUnique(
+    userId: string,
     message: string,
-  ): void {
-    if (user.establishmentMemberships.length > 1) {
+  ): Promise<void> {
+    if (await this.membershipRepository.estRattacheAilleurs(userId)) {
       throw Boom.conflict(message)
     }
   }
@@ -212,7 +226,7 @@ class MembershipDomain implements MembershipDomainInterface {
   // d'être fermé (`members.test.ts`, « ne desactive pas le compte global d un super-admin »).
   // Ce n'est pas une prise de contrôle mais un DÉNI DE SERVICE : `deactivatedAt` vit sur le
   // `User`, global, et un simple ADMIN d'établissement coupait l'accès du super-admin à TOUTE
-  // la plateforme. Ni `assertSingleEstablishment` (une seule appartenance suffit à la
+  // la plateforme. Ni `assertRattachementUnique` (aucun rattachement ailleurs suffit à la
   // satisfaire) ni `assertNotLastAdmin` (muette dès qu'un second administrateur existe) ne s'y
   // opposaient.
   //
@@ -262,15 +276,15 @@ class MembershipDomain implements MembershipDomainInterface {
     userId: string,
     refusRattachementAilleurs: () => Error,
   ): Promise<void> {
-    const user = await this.userRepository.findByID(userId)
+    // TÂCHE 15 : `findIdentity` (la ligne `User` seule) et non `findByID` (qui embarque l'arbre
+    // des appartenances de TOUS les établissements). Les deux faits dont cette garde a besoin
+    // sont désormais lus séparément : `isSuperAdmin` est une colonne du compte, et « rattaché
+    // ailleurs » un booléen — voir `assertRattachementUnique` plus haut pour le détail.
+    const user = await this.userRepository.findIdentity(userId)
     if (user.isSuperAdmin) {
       throw Boom.badRequest(UNADDABLE_EMAIL)
     }
-    const { establishmentId } = this.tenantContext.establishmentScope()
-    const ailleurs = user.establishmentMemberships.filter(
-      (membership) => membership.establishmentId !== establishmentId,
-    )
-    if (ailleurs.length > 0) {
+    if (await this.membershipRepository.estRattacheAilleurs(userId)) {
       throw refusRattachementAilleurs()
     }
   }
@@ -449,7 +463,7 @@ class MembershipDomain implements MembershipDomainInterface {
   // réinitialise le mot de passe du `User`, qui est GLOBAL — pas celui de l'appartenance. Un
   // administrateur de l'établissement A qui réémet un lien pour un compte membre AUSSI de B
   // prendrait, par ce lien, le contrôle de son accès à B, où il n'a aucun droit.
-  // `assertSingleEstablishment` — la garde que `setDeactivated` porte déjà, pour le motif
+  // `assertRattachementUnique` — la garde que `setDeactivated` porte déjà, pour le motif
   // JUMEAU (`User.deactivatedAt` est global de la même façon) — refuse donc ici aussi, en 409.
   //
   // L'identité visée n'est JAMAIS un `userId` reçu du client : c'est `membership.userId`, lu
@@ -483,11 +497,14 @@ class MembershipDomain implements MembershipDomainInterface {
     deactivated: boolean,
   ): Promise<MembershipRowDomain> {
     const membership = await this.membershipRepository.findByID(id)
-    // UNE seule lecture de l'identité globale pour les deux gardes ci-dessous, qui portent
-    // toutes deux sur des colonnes du `User` plutôt que de l'appartenance.
-    const user = await this.userRepository.findByID(membership.userId)
+    // La ligne `User` seule pour la garde super-admin, qui porte sur une colonne du compte ; le
+    // rattachement ailleurs se demande à part, en un booléen (tâche 15).
+    const user = await this.userRepository.findIdentity(membership.userId)
     this.assertNotSuperAdmin(user)
-    this.assertSingleEstablishment(user, MULTI_ESTABLISHMENT_ACTIVATION)
+    await this.assertRattachementUnique(
+      membership.userId,
+      MULTI_ESTABLISHMENT_ACTIVATION,
+    )
     if (deactivated) {
       this.assertNotSelf(membership)
       await this.assertNotLastAdmin(membership)

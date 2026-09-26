@@ -96,6 +96,43 @@ class MembershipRepository implements MembershipRepositoryInterface {
     })
   }
 
+  // TACHE 15 (etape 4a) — « CE COMPTE EST-IL RATTACHE AILLEURS ? », UN BOOLEEN ET RIEN D'AUTRE.
+  //
+  // CE QU'ELLE REMPLACE. `MembershipDomain` lisait `UserRepository.findByID`, qui embarque
+  // l'arbre COMPLET des appartenances du compte — tous etablissements confondus, avec leur nom et
+  // leurs services — pour n'en garder qu'un `length` ou un `filter(...).length > 0`. Cette
+  // lecture-la repart du modele GLOBAL `User` par une relation A-PLUSIEURS, et c'est le pont que
+  // la tache 15 ferme sur le chemin de tenant (`assertNoGlobalToManyBridge`, tenant-guard.ts).
+  // La question elle-meme reste legitime — `User.deactivatedAt` et un lien d'acces sont GLOBAUX,
+  // donc agir dessus depuis un etablissement toucherait les autres, et c'est precisement ce que
+  // les gardes appelantes refusent. Mais elle se pose en rendant UN BOOLEEN, jamais un
+  // identifiant, un nom d'etablissement ni une date : ce qui traverse la frontiere passe de
+  // l'arbre entier a un bit.
+  //
+  // POURQUOI `runAsSystem`, et pourquoi ce n'est pas un contournement du resserrement. La
+  // question porte, par nature, sur les etablissements AUTRES que le courant : aucune requete
+  // bornee au tenant courant ne peut y repondre, et le garde-fou refuse a juste titre un
+  // `establishmentId: { not: … }` sous un contexte de tenant (prouve dans
+  // `repository-scope.test.ts`, qui verifie aussi les BORNES de cette requete — ce fichier-la, pas
+  // `runAsSystem-unicite.test.ts`, qui ne garde que la CAPACITE). C'est exactement la forme de
+  // `PatientServiceFileRepository.estSuiviAilleurs` : une traversee declaree, nommee, bornee, qui
+  // ne rend qu'un agregat. Cinquieme emploi declare du mode systeme ; voir
+  // `runAsSystem-unicite.test.ts` pour l'enumeration.
+  //
+  // PIEGE DU DEPOT : Prisma est paresseux. L'etablissement courant est lu AVANT d'entrer dans le
+  // mode encadre (`current()` y leverait, le store n'y etant plus de type tenant), et la requete
+  // est `await`ee A L'INTERIEUR du rappel — sans quoi elle partirait hors de la portee du
+  // contexte et le garde-fou lirait le tenant ambiant.
+  async estRattacheAilleurs(userId: string): Promise<boolean> {
+    const { establishmentId } = this.establishmentScope
+    return await this.tenantContext.runAsSystem(async () => {
+      const count = await this.prisma.establishmentMembership.count({
+        where: { userId, establishmentId: { not: establishmentId } },
+      })
+      return count > 0
+    })
+  }
+
   async serviceExists(serviceId: string): Promise<boolean> {
     const count = await this.prisma.service.count({
       where: { id: serviceId, ...this.establishmentScope, deactivatedAt: null },

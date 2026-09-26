@@ -46,6 +46,35 @@ class UserRepository implements UserRepositoryInterface {
     }
   }
 
+  // TACHE 15 (etape 4a) — L'IDENTITE GLOBALE SEULE, SANS SON ARBRE D'APPARTENANCES.
+  //
+  // `findByID` ci-dessus embarque `membershipsInclude`, qui repart du modele GLOBAL `User` par la
+  // relation A-PLUSIEURS `establishmentMemberships` : il ramene donc les appartenances de TOUS
+  // les etablissements du compte, avec le nom de chacun et la liste de ses services. Sur le
+  // chemin de connexion (aucun contexte) c'est exactement ce qu'il faut — c'est la lecture qui
+  // ETABLIT a quels etablissements le compte appartient. Sous un contexte de TENANT, c'est le
+  // pont que la tache 15 ferme (`assertNoGlobalToManyBridge`, tenant-guard.ts) : un
+  // administrateur de l'etablissement A n'a pas a faire charger l'arbre de B pour une adresse
+  // qu'il choisit lui-meme.
+  //
+  // Cette methode-ci est ce qu'il reste quand on retire l'include : la LIGNE `User`, rien de plus
+  // — de quoi lire `isSuperAdmin` et `deactivatedAt`, qui sont des colonnes du compte et ne
+  // disent rien d'un autre etablissement. La question « ce compte est-il rattache ailleurs ? »,
+  // elle, ne se lit plus ici du tout : elle est posee a `MembershipRepository.
+  // estRattacheAilleurs`, qui rend UN BOOLEEN et rien d'autre. Deux lectures separees a la place
+  // d'un include — le contournement documente au-dessus de `SUPERADMIN_OPERATIONS`
+  // (tenant-guard.ts), applique ici au contexte tenant.
+  async findIdentity(userID: string): Promise<UserEntityRepo> {
+    try {
+      return await this.prisma.user.findUniqueOrThrow({ where: { id: userID } })
+    } catch (err) {
+      throw this.errorHandler.boomErrorFromPrismaError({
+        entityName: 'User',
+        error: err,
+      })
+    }
+  }
+
   async findByEmail(email: string): Promise<UserEntityRepo> {
     try {
       return await this.prisma.user.findUniqueOrThrow({
