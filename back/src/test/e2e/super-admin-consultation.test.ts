@@ -4,18 +4,88 @@
 // patients ».
 //
 // Property centrale (task-7-brief.md, Steps 1 et 3) : ces réponses ne portent JAMAIS de donnée
-// de patient, même sous forme d'identité. Prouvé DEUX fois, comme à l'étape 3 : les clés EXACTES
-// (`Object.keys(...).sort()`), puis une recherche de sous-chaîne sur le corps BRUT ENTIER — pas
-// seulement sur une ligne. Tour de correction 1 : la revue a montré qu'une ligne fantôme, nommée
-// du patient, ajoutée AILLEURS dans un tableau, laisse toutes les assertions de clés/valeurs
-// vertes tant que la sous-chaîne n'est vérifiée que sur la ligne examinée — d'où les vérifications
-// ci-dessous sur le corps entier, avec des établissements qui ONT des patients, des services et
-// des lignes de journal (jamais à vide, sans quoi la garde serait vraie par vacuité).
+// de patient — ni son IDENTITÉ, ni le CONTENU de son dossier (diagnostic, notes, détails). Prouvé
+// DEUX fois, comme à l'étape 3 : les clés EXACTES (`Object.keys(...).sort()`), puis une recherche
+// de sous-chaîne sur le corps BRUT ENTIER — pas seulement sur une ligne.
+//
+// LEÇON DE CE FICHIER, ÉCRITE ICI PARCE QUE C'EST LA TROISIÈME FOIS QU'ELLE COÛTE UN TOUR (tour
+// de correction 2) : le filet a manqué trois fois, JAMAIS par erreur de raisonnement — par
+// PAUVRETÉ DU JEU D'ESSAI.
+//   1. Une ligne fantôme nommée du patient, ajoutée AILLEURS dans un tableau, laissait toutes
+//      les assertions de clés/valeurs vertes tant que la sous-chaîne n'était vérifiée que sur la
+//      ligne examinée. → vérifier le corps ENTIER, jamais une ligne isolée.
+//   2. Retirer le filtre d'établissement sur `patientCount` restait invisible tant que le jeu
+//      d'essai ne créait de patients QUE dans l'établissement testé : le total global et le
+//      total local coïncidaient alors par construction. → un établissement de contrôle,
+//      créé une fois pour tout le fichier, avec des patients qu'AUCUN test ne doit jamais voir
+//      compter ailleurs que chez lui.
+//   3. Les marqueurs de sous-chaîne ne couvraient que des NOMS : un diagnostic médical glissé
+//      dans un champ du journal aurait traversé tout. → un dossier clinique rempli
+//      (`PatientServiceFile`), et des marqueurs qui couvrent aussi le CONTENU.
+// Ne pas répéter cette leçon : tout nouvel établissement de test qui manipule un patient doit
+// avoir au moins un dossier clinique rempli, et toute vérification de sous-chaîne doit courir
+// sur le corps ENTIER de la réponse, jamais sur une valeur ou une ligne isolée.
 import { buildTestApp, type TestApp } from './setup/app'
 import { testDb, truncateAll } from './setup/db'
 import { createEstablishment, createService, createUser, signIn } from './setup/fixtures'
 
 type ListRow = { id: string; [key: string]: unknown }
+
+const createPatient = (establishmentId: string, firstName: string, lastName: string) =>
+  testDb.patient.create({
+    data: { establishmentId, firstName, lastName, createDate: new Date() },
+  })
+
+// Un dossier clinique rempli (spec §5, `PatientServiceFile`) — le CONTENU dont la fuite ne se
+// verrait que par sous-chaîne sur le corps entier, jamais par une clé (aucune route de ce
+// fichier n'a de raison de déclarer un champ clinique, donc rien ne l'affirmerait par sa forme).
+const createClinicalRecord = (params: {
+  establishmentId: string
+  serviceId: string
+  patientId: string
+  medicalDiagnosis: string
+  notes: string
+  details: string
+}) =>
+  testDb.patientServiceFile.create({
+    data: {
+      establishmentId: params.establishmentId,
+      serviceId: params.serviceId,
+      patientId: params.patientId,
+      medicalDiagnosis: params.medicalDiagnosis,
+      notes: params.notes,
+      details: params.details,
+    },
+  })
+
+const deactivateService = (id: string) =>
+  testDb.service.update({ where: { id }, data: { deactivatedAt: new Date() } })
+
+const deactivateUser = (id: string) =>
+  testDb.user.update({ where: { id }, data: { deactivatedAt: new Date() } })
+
+const setName = (id: string, firstName: string, lastName: string) =>
+  testDb.user.update({ where: { id }, data: { firstName, lastName } })
+
+const createActivityLogEntry = (
+  establishmentId: string,
+  params: { action: string; entityID: string; userID?: string; createdAt?: Date },
+) =>
+  testDb.activityLog.create({
+    data: {
+      establishmentId,
+      serviceId: null,
+      userID: params.userID ?? 'staff-fixture-id',
+      userFirstName: 'Prenom',
+      userLastName: 'ActeurJournal',
+      action: params.action,
+      entityType: 'Patient',
+      entityID: params.entityID,
+      ...(params.createdAt ? { createdAt: params.createdAt } : {}),
+    },
+  })
+
+const findRow = (body: ListRow[], id: string) => body.find((row) => row.id === id)
 
 describe('consultation super-admin : liste des etablissements et recherche d un compte', () => {
   let testApp: TestApp
@@ -26,6 +96,15 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
     testApp = await buildTestApp()
     await createUser({ email: 'super-consultation@medisync.fr', isSuperAdmin: true })
     superAdminCookies = await signIn(testApp.app, 'super-consultation@medisync.fr')
+
+    // Établissement de CONTRÔLE (leçon n°2 ci-dessus) : ses patients ne doivent JAMAIS apparaître
+    // dans le compteur d'un autre établissement. Sa seule raison d'être est de garantir que le
+    // total GLOBAL de patients diffère TOUJOURS du total LOCAL d'un établissement sous test — une
+    // fixture où les deux coïncident ne prouve aucun filtre.
+    const controlEstablishment = await createEstablishment('Etablissement Controle Comptage')
+    for (let i = 0; i < 5; i += 1) {
+      await createPatient(controlEstablishment.id, `PrenomControleGlobal${i}`, `NomControleGlobal${i}`)
+    }
   })
 
   afterAll(async () => {
@@ -54,43 +133,12 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
       cookies: superAdminCookies,
     })
 
-  const createPatient = (establishmentId: string, firstName: string, lastName: string) =>
-    testDb.patient.create({
-      data: { establishmentId, firstName, lastName, createDate: new Date() },
-    })
-
-  const deactivateService = (id: string) =>
-    testDb.service.update({ where: { id }, data: { deactivatedAt: new Date() } })
-
-  const deactivateUser = (id: string) =>
-    testDb.user.update({ where: { id }, data: { deactivatedAt: new Date() } })
-
-  const createActivityLogEntry = (
-    establishmentId: string,
-    params: { action: string; entityID: string; userID?: string; createdAt?: Date },
-  ) =>
-    testDb.activityLog.create({
-      data: {
-        establishmentId,
-        serviceId: null,
-        userID: params.userID ?? 'staff-fixture-id',
-        userFirstName: 'Prenom',
-        userLastName: 'ActeurJournal',
-        action: params.action,
-        entityType: 'Patient',
-        entityID: params.entityID,
-        ...(params.createdAt ? { createdAt: params.createdAt } : {}),
-      },
-    })
-
-  const findRow = (body: ListRow[], id: string) => body.find((row) => row.id === id)
-
   // Step 1 (task-7-brief.md) : le contenu exact de la liste, et ses compteurs.
   describe('GET /super-admin/establishments', () => {
     it(
       "affiche les cles EXACTES et les bons compteurs — serviceCount/accountCount ne comptent " +
-        "QUE l'utilisable (tour de correction 1), firstAdmin est le premier ENCORE actif, et " +
-        "aucune identite de patient dans le corps brut",
+        "QUE l'utilisable (tour de correction 1), firstAdmin est le premier ENCORE actif avec " +
+        "son nom (tour de correction 2), et aucune identite de patient dans le corps brut",
       async () => {
         const est = await createEstablishment('Etablissement Alpha Liste')
         await createService(est.id, 'Service Alpha 1')
@@ -105,11 +153,12 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
         })
         await deactivateUser(admin1.id)
 
-        // Second administrateur — celui que la liste doit montrer.
+        // Second administrateur — celui que la liste doit montrer, avec son nom.
         const admin2 = await createUser({
           email: 'admin2-liste@alpha.fr',
           memberships: [{ establishmentId: est.id, role: 'ADMIN' }],
         })
+        await setName(admin2.id, 'Jeanne', 'Dupont')
 
         // Un compte simple, actif : compte dans `accountCount`, jamais dans `firstAdmin`.
         await createUser({
@@ -119,6 +168,12 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
 
         await createPatient(est.id, 'PrenomSecretPatientAlphaUn', 'NomSecretPatientAlphaUn')
         await createPatient(est.id, 'PrenomSecretPatientAlphaDeux', 'NomSecretPatientAlphaDeux')
+
+        // Leçon n°2 : le total global (établissement de contrôle + ceux des tests précédents +
+        // les 2 d'ici) est TOUJOURS strictement supérieur au total local (2) — un `patientCount`
+        // sans filtre serait donc visible ici.
+        const globalPatientCount = await testDb.patient.count()
+        expect(globalPatientCount).toBeGreaterThan(2)
 
         const res = await listEstablishments()
         expect(res.statusCode).toBe(200)
@@ -138,6 +193,12 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
           'patientCount',
           'serviceCount',
         ])
+        expect(Object.keys(row.firstAdmin as object).sort()).toEqual([
+          'email',
+          'firstName',
+          'id',
+          'lastName',
+        ])
 
         expect(row.name).toBe('Etablissement Alpha Liste')
         expect(row.deactivatedAt).toBeNull()
@@ -145,8 +206,14 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
         expect(row.serviceCount).toBe(2)
         // 3 comptes rattaches (admin1, admin2, membre), 1 desactive (admin1) : 2 utilisables.
         expect(row.accountCount).toBe(2)
+        // Filtre par etablissement (leçon n°2) : 2, jamais le total global.
         expect(row.patientCount).toBe(2)
-        expect(row.firstAdmin).toEqual({ id: admin2.id, email: 'admin2-liste@alpha.fr' })
+        expect(row.firstAdmin).toEqual({
+          id: admin2.id,
+          email: 'admin2-liste@alpha.fr',
+          firstName: 'Jeanne',
+          lastName: 'Dupont',
+        })
         // Aucune ligne de journal pour cet etablissement : « jamais » se voit par `null`.
         expect(row.lastActivityAt).toBeNull()
 
@@ -171,13 +238,44 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
       expect(row?.firstAdmin).toBeNull()
     })
 
-    // Mineur (tour de correction 1) : le départage à créneau égal (`orderBy: [{ createdAt:
-    // 'asc' }, { userId: 'asc' }]`, establishment.repository.ts) est documenté et laissé en
-    // place, mais SANS test e2e dédié — une tentative de le montrer rouge sans son mécanisme
-    // (deux rattachements au même instant, `orderBy` réduit au seul `createdAt`) est restée
-    // VERTE : Postgres a rendu le même ordre entre deux requêtes consécutives dans ce process de
-    // test, sans qu'aucun ORDER BY explicite ne le garantisse. Un test qui ne peut pas être
-    // montré rouge ne prouve rien — retiré plutôt que compté à tort ; voir le rapport de tâche.
+    // Mineur (tour de correction 1), refait au tour 2 : le relecteur a montré que ma première
+    // tentative échouait parce que l'ordre PHYSIQUE des lignes coïncidait avec l'ordre par
+    // identifiant — Postgres, sans ORDER BY explicite sur `userId`, rend un scan dans l'ordre
+    // d'insertion pour une table fraîchement écrite. En insérant D'ABORD la ligne du plus GRAND
+    // identifiant, l'ordre physique et l'ordre voulu (userId croissant) DIVERGENT : le test
+    // devient sensible au départage.
+    it('firstAdmin est deterministe quand deux administrateurs partagent le meme instant de rattachement', async () => {
+      const est = await createEstablishment('Etablissement Egalite Admin')
+      const adminX = await createUser({ email: 'admin-egalite-x@egalite.fr' })
+      const adminY = await createUser({ email: 'admin-egalite-y@egalite.fr' })
+      const [smallerAdmin, largerAdmin] =
+        adminX.id < adminY.id ? [adminX, adminY] : [adminY, adminX]
+      const sameInstant = new Date()
+
+      // Insere D'ABORD la ligne du plus grand identifiant.
+      await testDb.establishmentMembership.create({
+        data: {
+          userId: largerAdmin.id,
+          establishmentId: est.id,
+          role: 'ADMIN',
+          createdAt: sameInstant,
+        },
+      })
+      await testDb.establishmentMembership.create({
+        data: {
+          userId: smallerAdmin.id,
+          establishmentId: est.id,
+          role: 'ADMIN',
+          createdAt: sameInstant,
+        },
+      })
+
+      const res = await listEstablishments()
+      const row = findRow(res.json(), est.id)
+      // Avec le departage (userId croissant), c'est le plus PETIT identifiant qui gagne — jamais
+      // celui insere en premier.
+      expect((row?.firstAdmin as { id: string } | null)?.id).toBe(smallerAdmin.id)
+    })
 
     // Tour de correction 1, Important n°3 : la regression precise que la revue a demontree —
     // une connexion, meme PARTAGEE entre deux etablissements, ne doit plus faire bouger AUCUN
@@ -228,8 +326,9 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
   describe('GET /super-admin/establishments/:id', () => {
     it(
       "rend les cles EXACTES du detail entier — etablissement, services, membres, journal — " +
-        "avec un etablissement qui A des patients, des services (actifs et desactives) et des " +
-        "lignes de journal, et aucune identite de patient nulle part dans le corps brut",
+        "avec un etablissement qui A des patients (dont un dossier CLINIQUE rempli), des " +
+        "services (actifs et desactives) et des lignes de journal, et ni identite ni contenu " +
+        "de patient nulle part dans le corps brut",
       async () => {
         const est = await createEstablishment('Etablissement Detail Complet')
         const serviceActif = await createService(est.id, 'Service Detail Actif')
@@ -240,14 +339,31 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
           email: 'admin-detail@detail.fr',
           memberships: [{ establishmentId: est.id, role: 'ADMIN' }],
         })
+        await setName(admin.id, 'Alice', 'Admin')
         const membre = await createUser({
           email: 'membre-detail@detail.fr',
           memberships: [{ establishmentId: est.id, role: 'MEMBER' }],
         })
+        await setName(membre.id, 'Bob', 'Membre')
         await deactivateUser(membre.id)
 
-        await createPatient(est.id, 'PrenomSecretDetailUn', 'NomSecretDetailUn')
+        const patient1 = await createPatient(
+          est.id,
+          'PrenomSecretDetailUn',
+          'NomSecretDetailUn',
+        )
         await createPatient(est.id, 'PrenomSecretDetailDeux', 'NomSecretDetailDeux')
+
+        // Leçon n°3 : un dossier clinique REMPLI, dont le contenu (pas seulement l'identité du
+        // patient) doit être couvert par la vérification de sous-chaîne ci-dessous.
+        await createClinicalRecord({
+          establishmentId: est.id,
+          serviceId: serviceActif.id,
+          patientId: patient1.id,
+          medicalDiagnosis: 'DiagnosticConfidentielDetailXYZ',
+          notes: 'NotesConfidentiellesDetailXYZ',
+          details: 'DetailsConfidentielsDetailXYZ',
+        })
 
         await createActivityLogEntry(est.id, {
           action: 'patient.updated',
@@ -309,7 +425,9 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
             'createdAt',
             'deactivatedAt',
             'email',
+            'firstName',
             'id',
+            'lastName',
             'role',
           ])
         }
@@ -318,12 +436,16 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
             expect.objectContaining({
               id: admin.id,
               email: 'admin-detail@detail.fr',
+              firstName: 'Alice',
+              lastName: 'Admin',
               role: 'ADMIN',
               deactivatedAt: null,
             }),
             expect.objectContaining({
               id: membre.id,
               email: 'membre-detail@detail.fr',
+              firstName: 'Bob',
+              lastName: 'Membre',
               role: 'MEMBER',
             }),
           ]),
@@ -335,6 +457,11 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
         // serviceCount/accountCount ne comptent que l'utilisable — meme regle que la liste.
         expect(body.serviceCount).toBe(1)
         expect(body.accountCount).toBe(1)
+        // patientCount filtre par etablissement (leçon n°2) : 2, jamais le total global (qui
+        // inclut l'etablissement de controle et tous les patients des autres tests).
+        const globalPatientCount = await testDb.patient.count()
+        expect(globalPatientCount).toBeGreaterThan(2)
+        expect(body.patientCount).toBe(2)
 
         expect(body.activityLog).toHaveLength(2)
         for (const entry of body.activityLog) {
@@ -362,10 +489,15 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
         // Double vérification sur le corps ENTIER (toutes les lignes, pas seulement la
         // première) — précisément ce que la revue a montré absent : une ligne fantôme nommée du
         // patient, ailleurs dans un tableau, échappait à toute assertion de clé/valeur ci-dessus.
+        // IDENTITÉ :
         expect(res.payload).not.toContain('PrenomSecretDetailUn')
         expect(res.payload).not.toContain('NomSecretDetailUn')
         expect(res.payload).not.toContain('PrenomSecretDetailDeux')
         expect(res.payload).not.toContain('NomSecretDetailDeux')
+        // CONTENU du dossier (leçon n°3) — diagnostic, notes, détails :
+        expect(res.payload).not.toContain('DiagnosticConfidentielDetailXYZ')
+        expect(res.payload).not.toContain('NotesConfidentiellesDetailXYZ')
+        expect(res.payload).not.toContain('DetailsConfidentielsDetailXYZ')
       },
     )
 
@@ -379,8 +511,9 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
   // et dernier accès. Aucune donnée de patient.
   describe('GET /super-admin/users?email=', () => {
     it(
-      "rend les cles EXACTES du compte et de chaque rattachement, avec le role et le nom de " +
-        "l'etablissement, et aucune identite de patient dans le corps brut",
+      "rend les cles EXACTES du compte (avec son nom, tour de correction 2) et de chaque " +
+        "rattachement, avec le role et le nom de l'etablissement, et aucune identite de " +
+        "patient dans le corps brut",
       async () => {
         const estGamma = await createEstablishment('Etablissement Gamma Recherche')
         const estDelta = await createEstablishment('Etablissement Delta Recherche')
@@ -389,6 +522,7 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
           email: 'compte-cherche@recherche.fr',
           memberships: [{ establishmentId: estGamma.id, role: 'ADMIN' }],
         })
+        await setName(account.id, 'Claire', 'Cherche')
         // Second rattachement, ajouté après coup — un compte peut appartenir à plusieurs
         // établissements.
         await testDb.establishmentMembership.create({
@@ -404,12 +538,16 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
         expect(Object.keys(body).sort()).toEqual([
           'deactivatedAt',
           'email',
+          'firstName',
           'id',
           'lastLoginAt',
+          'lastName',
           'memberships',
         ])
         expect(body.id).toBe(account.id)
         expect(body.email).toBe('compte-cherche@recherche.fr')
+        expect(body.firstName).toBe('Claire')
+        expect(body.lastName).toBe('Cherche')
         expect(body.deactivatedAt).toBeNull()
         expect(body.lastLoginAt).toBeNull()
         expect(body.memberships).toHaveLength(2)

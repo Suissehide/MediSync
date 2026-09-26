@@ -12,9 +12,10 @@ export type PasswordChangeDomain = {
 }
 
 // Recherche d'un compte (spec §3.4, tâche 7) : « untel ne voit plus ses patients » se diagnostique
-// avec des rattachements et des dates, jamais un contenu de dossier. Volontairement réduit à
-// l'e-mail (pas de nom, même principe que `FirstAdmin` — voir establishment.repository.
-// interface.ts) et aux colonnes qui répondent à cette question précise.
+// avec des rattachements et des dates, jamais un contenu de dossier. Le nom est visible (tour de
+// correction 2, arbitrage de Léo — voir le commentaire sur `FirstAdmin`, establishment.
+// repository.interface.ts) : un nom de collègue n'est pas une donnée de santé, et le diagnostic
+// de support en a besoin.
 export type AccountMembership = {
   establishmentId: string
   establishmentName: string
@@ -24,6 +25,8 @@ export type AccountMembership = {
 export type AccountSearchResult = {
   id: string
   email: string
+  firstName: string | null
+  lastName: string | null
   deactivatedAt: Date | null
   lastLoginAt: Date | null
   memberships: AccountMembership[]

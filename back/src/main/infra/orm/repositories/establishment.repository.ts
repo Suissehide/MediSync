@@ -163,7 +163,7 @@ class EstablishmentRepository implements EstablishmentRepositoryInterface {
         const users = userIds.length
           ? await this.prisma.user.findMany({
               where: { id: { in: userIds } },
-              select: { id: true, email: true, deactivatedAt: true },
+              select: { id: true, email: true, firstName: true, lastName: true, deactivatedAt: true },
             })
           : []
         const userById = new Map(users.map((u) => [u.id, u]))
@@ -179,7 +179,12 @@ class EstablishmentRepository implements EstablishmentRepositoryInterface {
           }
           const user = userById.get(membership.userId)
           if (user && user.deactivatedAt === null) {
-            firstAdmin = { id: user.id, email: user.email }
+            firstAdmin = {
+              id: user.id,
+              email: user.email,
+              firstName: user.firstName,
+              lastName: user.lastName,
+            }
             break
           }
         }
@@ -191,6 +196,25 @@ class EstablishmentRepository implements EstablishmentRepositoryInterface {
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
         entityName: 'Establishment',
+        error: err,
+      })
+    }
+  }
+
+  // `Patient.count` pour `EstablishmentDomain.getById` (tour de correction 2, mineur) : la
+  // seule lecture du détail qui ne peut pas être dérivée d'un tableau déjà chargé
+  // (`Patient.findMany` n'est pas déclaré, spec §3.3) — une petite duplication du `count` inline
+  // de `countersFor` ci-dessus, préférée à un partage qui aurait fait sortir l'appel Prisma de
+  // son `runAsSuperAdmin` synchrone (même piège que partout ailleurs : `await` À L'INTÉRIEUR du
+  // rappel).
+  async patientCountFor(establishmentId: string): Promise<number> {
+    try {
+      return await this.tenantContext.runAsSuperAdmin(async () => {
+        return await this.prisma.patient.count({ where: { establishmentId } })
+      })
+    } catch (err) {
+      throw this.errorHandler.boomErrorFromPrismaError({
+        entityName: 'Patient',
         error: err,
       })
     }
@@ -253,7 +277,13 @@ class EstablishmentRepository implements EstablishmentRepositoryInterface {
         const users = userIds.length
           ? await this.prisma.user.findMany({
               where: { id: { in: userIds } },
-              select: { id: true, email: true, deactivatedAt: true },
+              select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                deactivatedAt: true,
+              },
             })
           : []
         const userById = new Map(users.map((u) => [u.id, u]))
@@ -265,6 +295,8 @@ class EstablishmentRepository implements EstablishmentRepositoryInterface {
             // Ne devrait jamais manquer (la ligne `EstablishmentMembership` vient d'être lue) —
             // nommé plutôt que silencieux, voir le même choix sur `UserDomain.searchByEmail`.
             email: user?.email ?? UNRESOLVED_ACCOUNT_EMAIL,
+            firstName: user?.firstName ?? null,
+            lastName: user?.lastName ?? null,
             role: membership.role,
             createdAt: membership.createdAt,
             deactivatedAt: user?.deactivatedAt ?? null,

@@ -9,6 +9,7 @@ import type {
 import type {
   EstablishmentDetail,
   EstablishmentListRow,
+  FirstAdmin,
 } from '../types/infra/orm/repositories/establishment.repository.interface'
 import type { IocContainer } from '../types/application/ioc'
 import type { PostgresOrm } from '../infra/orm/postgres-client'
@@ -158,15 +159,57 @@ class EstablishmentDomain implements EstablishmentDomainInterface {
   // comprend par des rattachements, pas par un compteur seul). `findByIdOrThrow` lève
   // `Boom.notFound` (via `errorHandler.boomErrorFromPrismaError`) si l'id est inconnu — avant
   // toute autre lecture, pour ne pas construire un détail sur un établissement qui n'existe pas.
+  //
+  // Tour de correction 2 (mineur) : n'appelle PLUS `countersFor`, qui relirait une seconde fois
+  // `Service`, `EstablishmentMembership` et `ActivityLog` — les mêmes tables que `servicesFor`,
+  // `membersFor` et `activityLogFor` viennent de lire pour construire les trois tableaux
+  // ci-dessous. `serviceCount`/`accountCount`/`firstAdmin`/`lastActivityAt` sont donc dérivés de
+  // CES tableaux, déjà chargés ; `patientCount` reste une lecture à part
+  // (`patientCountFor`) — c'est la seule que rien d'autre ici ne charge (`Patient.findMany`
+  // n'est pas déclaré, spec §3.3). Les deux listes utilisées ici (`services`/`members`) portent
+  // TOUJOURS les désactivés (arbitrage de Léo, tour de correction 2 — voir le commentaire sur
+  // `EstablishmentServiceRow`) ; seuls les compteurs filtrent, en re-dérivant depuis ces mêmes
+  // tableaux plutôt qu'en refaisant la requête.
   async getById(id: string): Promise<EstablishmentDetail> {
     const establishment = await this.establishmentRepository.findByIdOrThrow(id)
-    const [counters, services, members, activityLog] = await Promise.all([
-      this.establishmentRepository.countersFor(establishment.id),
+    const [services, members, activityLog, patientCount] = await Promise.all([
       this.establishmentRepository.servicesFor(establishment.id),
       this.establishmentRepository.membersFor(establishment.id),
       this.establishmentRepository.activityLogFor(establishment.id),
+      this.establishmentRepository.patientCountFor(establishment.id),
     ])
-    return { ...establishment, ...counters, services, members, activityLog }
+
+    const serviceCount = services.filter((service) => service.deactivatedAt === null).length
+    const accountCount = members.filter((member) => member.deactivatedAt === null).length
+    // `members` est déjà trié par [createdAt asc, userId asc] (membersFor) — même départage,
+    // même ordre, que `countersFor` appliquait pour `firstAdmin`.
+    const firstAdminMember = members.find(
+      (member) => member.role === 'ADMIN' && member.deactivatedAt === null,
+    )
+    const firstAdmin: FirstAdmin = firstAdminMember
+      ? {
+          id: firstAdminMember.id,
+          email: firstAdminMember.email,
+          firstName: firstAdminMember.firstName,
+          lastName: firstAdminMember.lastName,
+        }
+      : null
+    // `activityLog` est trié par `createdAt` décroissant (activityLogFor) : son premier élément
+    // EST la dernière activité, quelle que soit la borne de page appliquée à la liste — la borne
+    // ne coupe que la QUEUE d'une liste déjà triée, jamais la tête.
+    const lastActivityAt = activityLog[0]?.createdAt ?? null
+
+    return {
+      ...establishment,
+      serviceCount,
+      accountCount,
+      patientCount,
+      firstAdmin,
+      lastActivityAt,
+      services,
+      members,
+      activityLog,
+    }
   }
 }
 

@@ -14,11 +14,15 @@ export const accountMembershipSchema = z.object({
   createdAt: z.coerce.date(),
 })
 
-// Volontairement sans prénom/nom : l'adresse suffit à identifier le compte cherché, même
-// principe de divulgation bornée que `firstAdmin` (establishment.schema.ts).
+// Nom visible (tour de correction 2, arbitrage de Léo qui revient sur le tour précédent) : le
+// journal d'activité rend déjà les noms de l'auteur, les cacher ici serait un théâtre — un nom de
+// collègue n'est pas une donnée de santé, et le diagnostic de support en a besoin. Voir le
+// commentaire sur `FirstAdmin` (establishment.repository.interface.ts).
 export const accountSearchResponseSchema = z.object({
   id: z.string(),
   email: z.string(),
+  firstName: z.string().nullable(),
+  lastName: z.string().nullable(),
   deactivatedAt: z.coerce.date().nullable(),
   lastLoginAt: z.coerce.date().nullable(),
   memberships: z.array(accountMembershipSchema),

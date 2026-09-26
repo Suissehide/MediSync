@@ -86,6 +86,11 @@ class UserDomain implements UserDomainInterface {
     return {
       id: user.id,
       email: user.email,
+      // Tour de correction 2 (arbitrage de Léo) : le nom est visible, comme partout où le
+      // super-admin regarde — voir le commentaire sur `FirstAdmin`
+      // (establishment.repository.interface.ts).
+      firstName: user.firstName,
+      lastName: user.lastName,
       deactivatedAt: user.deactivatedAt,
       lastLoginAt: user.lastLoginAt,
       memberships: memberships.map((m) => ({

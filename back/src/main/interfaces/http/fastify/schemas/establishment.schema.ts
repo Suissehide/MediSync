@@ -50,7 +50,9 @@ export type CreateEstablishmentBody = z.infer<typeof createEstablishmentSchema>
 // `lastActivityAt`, PAS `lastAccessAt` (tour de correction 1, Important n°3) : voir le
 // commentaire détaillé sur `EstablishmentCounters`
 // (types/infra/orm/repositories/establishment.repository.interface.ts) — la dernière ligne de
-// journal DE CET établissement, jamais une connexion à un autre.
+// journal DE CET établissement, jamais une connexion à un autre. Sous-déclare l'activité réelle
+// (le journal ne porte que des écritures) et régresse à `null` après la purge à douze mois — voir
+// le même commentaire.
 //
 // `serviceCount`/`accountCount` ne comptent QUE l'utilisable (tour de correction 1, Important
 // n°2, même commentaire) — désactivés exclus, comme `firstAdmin`.
@@ -63,8 +65,17 @@ export const establishmentListItemSchema = z.object({
   accountCount: z.number(),
   patientCount: z.number(),
   // Nul quand l'établissement n'a aucun administrateur ENCORE actif (le premier a pu être
-  // désactivé) — pas de nom, l'adresse suffit à joindre.
-  firstAdmin: z.object({ id: z.string(), email: z.string() }).nullable(),
+  // désactivé). Nom visible (tour de correction 2, arbitrage de Léo) : un nom de collègue n'est
+  // pas une donnée de santé, à la différence d'un nom de patient — voir le commentaire sur
+  // `FirstAdmin` (establishment.repository.interface.ts).
+  firstAdmin: z
+    .object({
+      id: z.string(),
+      email: z.string(),
+      firstName: z.string().nullable(),
+      lastName: z.string().nullable(),
+    })
+    .nullable(),
   lastActivityAt: z.coerce.date().nullable(),
 })
 export const establishmentListResponseSchema = z.array(establishmentListItemSchema)
@@ -73,9 +84,12 @@ export const establishmentIdParamsSchema = z.object({ id: z.string() })
 export type EstablishmentIdParams = z.infer<typeof establishmentIdParamsSchema>
 
 // Le détail d'un établissement (spec §6.2, tour de correction 1) : la ligne ci-dessus, augmentée
-// des services, des membres et du journal d'activité — désactivés compris pour ces trois
-// listes (à la différence des compteurs ci-dessus, qui eux ne comptent que l'utilisable) : un
-// écran de diagnostic doit montrer ce qui est éteint, pas seulement ce qui tourne.
+// des services, des membres et du journal d'activité. Tour de correction 2, arbitrage de Léo :
+// désactivés TOUJOURS compris dans ces deux listes (à la différence des compteurs ci-dessus, qui
+// eux ne comptent que l'utilisable) — un établissement affichant « 1 service » au-dessus d'une
+// liste de deux n'est pas une incohérence, c'est voulu : on voit qu'un service désactivé existe
+// encore, ne serait-ce que pour le réactiver, et le compteur reste lisible dès que la liste le
+// montre à côté.
 const establishmentDetailServiceSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -83,11 +97,13 @@ const establishmentDetailServiceSchema = z.object({
   deactivatedAt: z.coerce.date().nullable(),
 })
 
-// Pas de nom — même principe que `firstAdmin` : l'adresse suffit à identifier un membre, et
-// c'est déjà une donnée personnelle.
+// Nom visible (tour de correction 2, arbitrage de Léo) — même principe que `firstAdmin`
+// ci-dessus.
 const establishmentDetailMemberSchema = z.object({
   id: z.string(),
   email: z.string(),
+  firstName: z.string().nullable(),
+  lastName: z.string().nullable(),
   role: establishmentRoleSchema,
   createdAt: z.coerce.date(),
   deactivatedAt: z.coerce.date().nullable(),
