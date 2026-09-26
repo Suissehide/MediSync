@@ -1,5 +1,7 @@
 import { z } from 'zod/v4'
 
+type ServiceRole = 'COORDINATEUR' | 'INTERVENANT' | 'SECRETARIAT' | 'LECTURE'
+
 const serviceRoleSchema = z.enum([
   'COORDINATEUR',
   'INTERVENANT',
@@ -106,6 +108,26 @@ export const createMemberAccountResponseSchema = z.object({
 // réémettre un lien pour un membre existant — la réinitialisation d'un accès oublié.
 export const memberAccessLinkResponseSchema = z.object({
   accessLink: accessLinkSchema,
+})
+
+// La projection que la route applique AVANT le schéma — défense en profondeur : si
+// `createMemberAccountResponseSchema` était un jour élargi (ou remplacé par un schéma plus
+// permissif), c'est elle qui empêcherait encore le bloc `user` d'atteindre l'appelant.
+//
+// TOUR DE CORRECTION 2, mineur n°3 : elle vivait en ligne dans le handler, où AUCUN test ne
+// pouvait la tenir — la remplacer par `return { member, accessLink }` laissait les 26 tests
+// membres verts, puisque Zod élaguait déjà. Extraite ici pour être éprouvée directement
+// (`member-account-projection.test.ts`) : le rapport disait « éprouvé », il ne l'était pas.
+export const projectCreatedMember = (member: {
+  id: string
+  role: 'ADMIN' | 'MEMBER'
+  soignantId: string | null
+  serviceMemberships: { serviceId: string; role: ServiceRole }[]
+}) => ({
+  id: member.id,
+  role: member.role,
+  soignantId: member.soignantId,
+  serviceMemberships: member.serviceMemberships,
 })
 
 export type MemberResponse = z.infer<typeof memberResponseSchema>

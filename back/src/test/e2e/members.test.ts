@@ -796,22 +796,43 @@ describe('routes membres', () => {
   // CRITIQUE n°2, second maillon : un super-admin DEJA membre de cet etablissement — ce que
   // `EstablishmentDomain.createWithFirstAdmin` peut produire legitimement. L'ancienne garde
   // (`assertSingleEstablishment`) le laissait passer, puisqu'il n'a qu'une appartenance.
-  it('ne reemet aucun lien pour un membre qui est super-admin', async () => {
+  // LA CHAINE EN TROIS APPELS, D'UN SEUL TENANT (tour de correction 2, point n°5). Le tour
+  // precedent eprouvait chaque maillon separement : la JONCTION n'etait tenue par rien.
+  it('la chaine en trois appels meurt au premier maillon, et le second refuserait aussi', async () => {
     const sa = await createUser({
-      email: 'sa-membre@b.fr',
+      email: 'sa-chaine@plateforme.fr',
       isSuperAdmin: true,
-      memberships: [{ establishmentId, role: 'MEMBER' }],
     })
-    const { membershipId } = await membershipDe('sa-membre@b.fr')
-    // La fixture est bien celle qui contournait l'ancienne garde : UNE seule appartenance.
+
+    // MAILLON 1, PAR LA ROUTE : rattacher le super-admin a cet etablissement.
+    const rattachement = await call('POST', '/', {
+      email: 'sa-chaine@plateforme.fr',
+      role: 'MEMBER',
+    })
+    expect(rattachement.statusCode).toBe(400)
+    expect(
+      await testDb.establishmentMembership.count({ where: { userId: sa.id } }),
+    ).toBe(0)
+
+    // LA CHAINE S'ARRETE ICI : sans appartenance, le maillon 2 n'a rien a viser. Le second
+    // maillon est donc eprouve sur le seul etat qui puisse ENCORE le produire —
+    // `EstablishmentDomain.createWithFirstAdmin`, qui rattache legitimement un super-admin
+    // quand il est le premier administrateur d'un etablissement qu'il vient de creer. Cet etat
+    // est reproduit en base parce qu'AUCUNE route de ce niveau ne peut plus le fabriquer.
+    await testDb.establishmentMembership.create({
+      data: { userId: sa.id, establishmentId, role: 'MEMBER' },
+    })
+    const { membershipId } = await membershipDe('sa-chaine@plateforme.fr')
+    // UNE seule appartenance : l'etat exact qui contournait l'ancienne garde.
     expect(
       await testDb.establishmentMembership.count({ where: { userId: sa.id } }),
     ).toBe(1)
 
+    // MAILLONS 2 ET 3 : reemettre, puis jouer le jeton jusqu'a la session et au prefixe vise.
     const res = await reissue(membershipId)
     const priseDeControle = await chaineComplete(
       res,
-      'sa-membre@b.fr',
+      'sa-chaine@plateforme.fr',
       '/super-admin/establishments',
     )
 
@@ -890,6 +911,124 @@ describe('routes membres', () => {
     expect(
       (await testDb.user.findUniqueOrThrow({ where: { id: sa.id } })).deactivatedAt,
     ).toBeNull()
+  })
+
+  // LE SENS INVERSE (tour de correction 2, point n°4) : il n'etait assure que par la POSITION
+  // du code, aucun test ne le tenait, alors que le rapport annoncait « les deux sens ». Un
+  // super-admin desactive l'a ete deliberement, au niveau de la plateforme ; un administrateur
+  // d'etablissement n'a pas a defaire cette decision.
+  it('ne reactive pas non plus le compte global d un super-admin depuis un etablissement', async () => {
+    const sa = await createUser({
+      email: 'sa-dormant@plateforme.fr',
+      isSuperAdmin: true,
+      memberships: [{ establishmentId, role: 'MEMBER' }],
+    })
+    // Desactive en base : l'etat que seule la plateforme peut produire aujourd'hui, et que
+    // cette route ne doit pas defaire.
+    await testDb.user.update({
+      where: { id: sa.id },
+      data: { deactivatedAt: new Date() },
+    })
+    const { membershipId } = await membershipDe('sa-dormant@plateforme.fr')
+
+    const res = await call('POST', `/${membershipId}/reactivate`)
+
+    expect(res.statusCode).toBe(409)
+    expect(
+      (await testDb.user.findUniqueOrThrow({ where: { id: sa.id } })).deactivatedAt,
+    ).not.toBeNull()
+  })
+
+
+  // TEST DE CONSTAT (tour de correction 2, Important) — il n'affirme pas une propriete
+  // souhaitable, il MESURE une divulgation qui reste ouverte, a la maniere de
+  // « emissions simultanees » (access-link.test.ts, tache 4).
+  //
+  // CE QU'IL CONSTATE : les deux routes d'ajout du niveau administrateur, prises ENSEMBLE,
+  // rendent un couple de statuts DIFFERENT pour chacune des trois natures d'adresse — et le
+  // couple (400, 400), celui du super-admin, s'obtient SANS LA MOINDRE ECRITURE. Un
+  // administrateur d'etablissement peut donc, sur n'importe quelle adresse et sans laisser de
+  // trace, apprendre : « inconnue », « a un compte ordinaire rattache ailleurs », ou « est un
+  // super-admin ».
+  //
+  // POURQUOI ON NE LE FERME PAS (arbitrage de Leo, tour 2) : toute reponse honnete a
+  // l'appelant legitime divulgue ce fait, et le seul moyen de le fermer serait de MENTIR a
+  // l'administrateur sur le sort de sa demande — lui rendre 201 sans rien creer le laisserait
+  // attendre un acces qui n'arrivera jamais. Ce n'est plus une prise de controle : les trois
+  // verbes (rattacher, creer, reemettre) sont refuses ; il ne reste que du renseignement.
+  //
+  // CE TEST A ETE ECRIT D'ABORD TEL QUE LE COMMENTAIRE D'`UNADDABLE_EMAIL` DECRIVAIT LE
+  // SYSTEME — trois couples identiques (400, 400) et zero ecriture partout. Il est tombe rouge
+  // en imprimant la realite ci-dessous : c'est cette execution, pas une relecture, qui a
+  // etabli que deux phrases du code etaient fausses.
+  it('constat : le couple de refus des deux routes d ajout identifie la nature du compte', async () => {
+    await peuplerAutreEtablissement()
+    await createUser({
+      email: 'sonde-ailleurs@autre.fr',
+      memberships: [{ establishmentId: autreEtablissementId, role: 'MEMBER' }],
+    })
+    await createUser({ email: 'sonde-sa@plateforme.fr', isSuperAdmin: true })
+    // Un compte qui existe, ordinaire, rattache NULLE PART : la quatrieme nature d'adresse.
+    await createUser({ email: 'sonde-libre@autre.fr' })
+
+    // Toute ecriture que les deux appels pourraient produire : un compte, un rattachement,
+    // un lien. Le journal d'activite n'est pas compte ici — il est ecrit de facon asynchrone
+    // par le souscripteur, et seulement A LA SUITE d'une de ces trois ecritures (`emit` n'est
+    // appele qu'apres succes) : zero ligne ecrite implique zero ligne journalisee.
+    const totaux = async () => {
+      const [comptes, appartenances, liens] = await Promise.all([
+        testDb.user.count(),
+        testDb.establishmentMembership.count(),
+        testDb.accessLink.count(),
+      ])
+      return comptes + appartenances + liens
+    }
+
+    // Les DEUX routes d'ajout du meme routeur, avec la meme permission, sur la meme adresse.
+    const sonder = async (email: string) => {
+      const avant = await totaux()
+      const parCreation = await call('POST', '/account', { email, role: 'MEMBER' })
+      const parRattachement = await call('POST', '/', { email, role: 'MEMBER' })
+      return {
+        couple: [parCreation.statusCode, parRattachement.statusCode],
+        lignesEcrites: (await totaux()) - avant,
+      }
+    }
+
+    const inconnue = await sonder('sonde-inconnue@b.fr')
+    const ailleurs = await sonder('sonde-ailleurs@autre.fr')
+    const superAdmin = await sonder('sonde-sa@plateforme.fr')
+    const libre = await sonder('sonde-libre@autre.fr')
+
+    // Mesure, pas souhait. Les trois couples sont DISTINCTS deux a deux — c'est la
+    // divulgation elle-meme ; et seule la troisieme sonde est GRATUITE (aucune ecriture),
+    // donc repetable a volonte sans laisser de trace.
+    expect({ inconnue, ailleurs, superAdmin, libre }).toEqual({
+      // `/account` cree le compte : la sonde reussit, et ecrit trois lignes (compte,
+      // rattachement, lien). `POST /members` rend ensuite 400, l'adresse etant desormais
+      // membre d'ici.
+      inconnue: { couple: [201, 400], lignesEcrites: 3 },
+      // Refusee a la creation (elle aurait remis un jeton), rattachee sans jeton : une ligne.
+      ailleurs: { couple: [400, 201], lignesEcrites: 1 },
+      // LE CAS QUI COMPTE : refusee des deux cotes, et RIEN d'ecrit. Le journal d'activite ne
+      // bouge donc pas non plus.
+      superAdmin: { couple: [400, 400], lignesEcrites: 0 },
+      // Compte existant, rattache nulle part : MEME couple que l'adresse inconnue — seul le
+      // nombre de lignes ecrites differe (deux, pas trois : le compte existait deja), et
+      // l'appelant ne voit pas ce nombre.
+      libre: { couple: [201, 400], lignesEcrites: 2 },
+    })
+
+    // TROIS natures distinguables sur QUATRE : « inconnue » et « compte libre » rendent le
+    // MEME couple, et la reponse de `/account` ne porte, dans les deux cas, que des valeurs
+    // soumises par l'appelant. C'est ce qui rend la fermeture du canal temporel NON REDONDANTE
+    // avec la divulgation constatee ici : sur ces deux natures-la, le temps de reponse etait
+    // le SEUL discriminant qui restait (voir « ne dit pas, par son temps de reponse ... »).
+    const couples = [inconnue, ailleurs, superAdmin, libre].map((sonde) =>
+      sonde.couple.join('/'),
+    )
+    expect(new Set(couples).size).toBe(3)
+    expect(libre.couple).toEqual(inconnue.couple)
   })
 
 })

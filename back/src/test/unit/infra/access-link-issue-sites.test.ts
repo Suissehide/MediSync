@@ -13,7 +13,16 @@ import ts from 'typescript'
 // C'est exactement par la que le tour precedent a echoue : la garde avait ete posee sur la seule
 // REEMISSION, et `POST /account` — la route d'a cote, dans le meme fichier — la contournait
 // entierement. Une garde par route se reoublie a la route suivante ; ce fichier rend l'oubli
-// visible en CI plutot qu'en revue.
+// visible a l'execution plutot qu'en revue.
+//
+// TOUR DE CORRECTION 2 — CETTE PHRASE DISAIT « VISIBLE EN CI », ET ELLE ETAIT FAUSSE LA OU
+// L'OUBLI SE PRODUIT. `test:unit` (wireit, package.json) ne declarait pas `src/main/**` dans ses
+// `files` : apres l'ajout d'un cinquieme site d'emission dans `src/main`, `npm run test:unit`
+// repondait « Ran 0 scripts and skipped 2 » — vert, en reutilisant son cache — alors que ce
+// fichier etait bel et bien rouge sous Jest direct. Un garde-fou qui ne rougit que si on pense a
+// contourner le cache ne garde rien dans la boucle locale. `files` declare desormais
+// `src/main/**` (verifie : le meme sabotage rend « Tests: 1 failed, 421 passed » par la commande
+// npm). `test:e2e` et `cover:unit` ne souffraient pas du defaut, ils le declaraient deja.
 //
 // Il garde DEUX proprietes distinctes, et il faut dire laquelle fait quoi (lecon de
 // `runAsSystem-unicite.test.ts`, qui a coute deux tours a ce depot pour avoir confondu les

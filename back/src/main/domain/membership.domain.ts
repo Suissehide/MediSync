@@ -22,11 +22,22 @@ import type { TenantContextInterface } from '../types/utils/tenant-context'
 import type { AppEventBus } from '../utils/app-event-bus'
 import { hashPassword, randomToken } from '../utils/hash'
 
-// QUATRE refus, un seul message (tour de correction 1) : adresse inconnue, adresse déjà
-// membre d'ici, compte super-admin, compte rattaché à un AUTRE établissement. Sinon un
-// administrateur pourrait énumérer les adresses qui ont un compte sur la plateforme — et,
-// depuis ce tour, repérer lesquelles sont des comptes super-admin. Même parti pris que la
-// connexion, qui ne distingue pas non plus l'adresse inconnue du mot de passe erroné.
+// QUATRE refus, un seul message : adresse inconnue, adresse déjà membre d'ici, compte
+// super-admin, compte rattaché à un AUTRE établissement.
+//
+// TOUR DE CORRECTION 2 — CE QUE CE MESSAGE ACHÈTE, ET CE QU'IL N'ACHÈTE PAS. La version
+// précédente de ce commentaire disait « sinon un administrateur pourrait énumérer les adresses
+// qui ont un compte » : vrai pour `addByEmail` (une adresse inconnue y reçoit le MÊME 400, donc
+// les quatre refus y sont réellement indiscernables), FAUX pour `createAccount`, où une adresse
+// inconnue reçoit 201 — le seul fait d'y être refusé annonce donc « cette adresse a un compte ».
+// Mesuré, pas relu : voir « constat : le couple de refus des deux routes d ajout identifie la
+// nature du compte » (members.test.ts), écrit d'abord tel que CETTE phrase décrivait le système,
+// et tombé rouge en imprimant le contraire.
+//
+// Ce que le message partagé achète réellement : le MOTIF du refus reste caché. Un 400 sur
+// `createAccount` ne dit pas « super-admin » plutôt que « rattaché ailleurs » — il faut croiser
+// avec `POST /members` pour les séparer. Ce que l'appelant apprend de toute façon, et qu'on
+// n'essaie plus de nier ici : qu'il y a un compte.
 const UNADDABLE_EMAIL = 'This e-mail address cannot be added as a member'
 
 // Message lu tel quel par `front/src/api/members.api.ts`, qui le fait
@@ -314,17 +325,25 @@ class MembershipDomain implements MembershipDomainInterface {
   // l'appelant est un administrateur d'établissement, qui n'a pas la recherche de comptes du
   // super-admin (`GET /super-admin/users?email=`).
   //
-  // TOUR DE CORRECTION 1, Important n°1 — CE COMMENTAIRE AFFIRMAIT PLUS QUE LE CODE NE TIENT.
-  // Il disait « aucune route ne lui offre de recherche de comptes » : c'est FAUX. `POST
-  // /e/:establishmentId/admin/members` (`addByEmail`, même routeur, même permission) est un
-  // oracle décisif en UN appel — 201 si l'adresse a un compte libre et ordinaire, 400 sinon.
-  // Ce n'est donc pas l'absence d'oracle qui justifie de fermer ce canal-ci, c'est sa NATURE :
-  // le temps de réponse est gratuit, muet et RÉPÉTABLE À VOLONTÉ — il n'écrit rien, ne laisse
-  // aucune trace, et personne ne peut constater après coup qu'une énumération a eu lieu. Le
-  // sondage par `POST /members`, lui, coûte une écriture : un rattachement réel, visible dans
-  // `GET /members`, et une ligne de journal (`member.added`) nominative que le super-admin
-  // relit. Fermer le canal gratuit laisse donc debout un oracle CHER et COMPTABLE, ce qui est
-  // exactement la propriété qu'on veut — pas l'absence d'oracle.
+  // DEUX JUSTIFICATIONS SUCCESSIVES, TOUTES DEUX FAUSSES, ET CE QUI LES REMPLACE.
+  //
+  // Tour 1 disait « aucune route ne lui offre de recherche de comptes » : faux, `POST
+  // /e/:establishmentId/admin/members` en est une. Tour 2 l'a remplacée par « ce qui reste coûte
+  // une écriture journalisée » : faux aussi, et mesuré — le couple (400, 400) rendu par les deux
+  // routes d'ajout identifie EXACTEMENT un super-admin, en deux appels, sans écrire une seule
+  // ligne (« constat : le couple de refus … », members.test.ts). Il existe donc bel et bien un
+  // oracle gratuit et sans trace, que ce hachage ne ferme pas.
+  //
+  // CE QUE CE HACHAGE FERME, LUI, ET QUE RIEN D'AUTRE NE FERME. Deux natures d'adresse rendent
+  // le MÊME couple `201 / 400` : une adresse inconnue, et un compte qui existe déjà mais n'est
+  // rattaché nulle part. Sur ces deux-là, le statut est identique, la réponse ne porte que des
+  // valeurs soumises par l'appelant (voir `createMemberAccountResponseSchema`), et le TEMPS DE
+  // RÉPONSE était le dernier discriminant — 49 ms contre 11 ms, sans recouvrement. C'est ce
+  // couple-là, et lui seul, que l'égalisation rend indistinguable ; le test de constat le
+  // vérifie explicitement (`expect(libre.couple).toEqual(inconnue.couple)`).
+  //
+  // Autrement dit : la fermeture n'est pas redondante avec la divulgation constatée, elle porte
+  // sur une distinction que la divulgation constatée ne permet PAS de faire.
   //
   // Le canal est donc fermé plutôt que documenté : la branche « compte réutilisé » paie
   // EXACTEMENT le même PBKDF2, sur un mot de passe jeté qui n'est écrit nulle part.

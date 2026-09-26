@@ -10,6 +10,7 @@ import {
   type MemberParams,
   memberAccessLinkResponseSchema,
   memberParamsSchema,
+  projectCreatedMember,
   memberResponseSchema,
   membersResponseSchema,
   type UpdateMemberBody,
@@ -58,7 +59,9 @@ const membersRouter: FastifyPluginAsync = (fastify) => {
   // d'écrire : `member.user` (nom stocké, identifiant du compte) resterait sinon un oracle
   // d'existence de comptes sur une adresse déjà connue — voir
   // `createMemberAccountResponseSchema`. Le schéma Zod l'élaguerait déjà à la sérialisation ;
-  // la projection le dit à la lecture du code plutôt que de s'en remettre à cet effet de bord.
+  // la projection le dit à la lecture du code plutôt que de s'en remettre à cet effet de bord,
+  // et `projectCreatedMember` est éprouvée à part (tour de correction 2, mineur n°3 : tant
+  // qu'elle vivait en ligne ici, aucun test ne pouvait la tenir).
   fastify.post<{ Body: CreateMemberAccountBody }>(
     '/account',
     {
@@ -73,15 +76,7 @@ const membersRouter: FastifyPluginAsync = (fastify) => {
         request.body,
       )
       reply.code(201)
-      return {
-        member: {
-          id: member.id,
-          role: member.role,
-          soignantId: member.soignantId,
-          serviceMemberships: member.serviceMemberships,
-        },
-        accessLink,
-      }
+      return { member: projectCreatedMember(member), accessLink }
     },
   )
 

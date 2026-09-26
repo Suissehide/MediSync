@@ -406,6 +406,7 @@
     "test:unit": {
       "command": "jest --runInBand -c src/test/jest.config.ts --selectProjects unit",
       "files": [
+        "src/main/**",
         "src/test/unit/**",
         "src/test/*"
       ],
