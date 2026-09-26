@@ -60,10 +60,29 @@ export type EstablishmentDetail = EstablishmentListItem & {
 }
 
 // `CreateEstablishmentInput`/`CreateEstablishmentResult` (POST
-// /super-admin/establishments) ont été retirés ici (tour de correction 1,
-// Important n°5) : aucun écran, aucune requête, aucun test ne les
-// consommait — code mort qui portait de surcroît un second jeton en clair
-// sans garde. Voir `api/superAdmin.api.ts`.
+// /super-admin/establishments, `createEstablishmentSchema`/
+// `createEstablishmentResponseSchema` côté back) avaient été retirés ici
+// (tour de correction 1, Important n°5) faute d'écran, de requête ou de
+// test — réintroduits à la tâche 14b (hors plan, étape 4a), avec les trois
+// à la fois : voir `createEstablishmentForm.tsx` et son test, qui gardent
+// le jeton (`accessLink.token`) sur les mêmes cinq canaux qu'à la tâche 13
+// (`createMemberAccountForm.tsx`).
+export type CreateEstablishmentInput = {
+  name: string
+  email: string
+  firstName?: string
+  lastName?: string
+}
+
+export type CreateEstablishmentResult = {
+  establishment: {
+    id: string
+    name: string
+    createdAt: string
+    deactivatedAt: string | null
+  }
+  accessLink: { token: string }
+}
 
 export type AccountMembership = {
   establishmentId: string

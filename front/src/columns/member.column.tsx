@@ -136,7 +136,7 @@ export const getMemberColumns = ({
       const deactivated = member.user.deactivatedAt !== null
       return (
         <div className="flex justify-end gap-2">
-          <EditMemberForm member={member} serviceId={serviceId} />
+          <EditMemberForm member={member} />
           <Button
             variant="outline"
             size="icon"

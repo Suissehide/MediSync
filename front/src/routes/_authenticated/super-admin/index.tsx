@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 
 import { superAdminEstablishmentColumns } from '@/columns/superAdminEstablishment.column.tsx'
+import CreateEstablishmentForm from '@/components/custom/popup/createEstablishmentForm.tsx'
 import { SuperAdminNav } from '@/components/custom/superAdmin/superAdminNav.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
 import ReactTable from '@/components/table/reactTable.tsx'
@@ -22,9 +23,12 @@ function SuperAdminEstablishmentsList() {
   return (
     <DashboardLayout>
       <div className="flex-1 bg-background p-6 rounded-lg flex flex-col w-full gap-4">
-        <h1 className="h-9 flex items-center text-text-dark text-xl font-semibold">
-          Établissements
-        </h1>
+        <div className="flex justify-between items-center gap-3">
+          <h1 className="h-9 flex items-center text-text-dark text-xl font-semibold">
+            Établissements
+          </h1>
+          <CreateEstablishmentForm />
+        </div>
         <SuperAdminNav />
 
         {/* Tour de correction 1, Important n°4 : une erreur de chargement

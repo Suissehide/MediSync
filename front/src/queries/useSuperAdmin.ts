@@ -1,11 +1,11 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { SuperAdminApi } from '../api/superAdmin.api.ts'
 import { SUPER_ADMIN } from '../constants/process.constant.ts'
 import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
 import { useToast } from '../hooks/useToast.ts'
-import type { CreateGrantInput } from '../types/superAdmin.ts'
+import type { CreateEstablishmentInput, CreateGrantInput } from '../types/superAdmin.ts'
 
 // Écrans du super-admin (tâche 12) : hors de tout tenant. Aucune clé de
 // requête ici ne porte d'établissement ou de service au sens de
@@ -69,8 +69,40 @@ export const useSuperAdminEstablishmentQuery = (establishmentId: string) => {
 
 // * MUTATIONS
 
-// `useSuperAdminCreateEstablishment` a été retiré ici (tour de correction 1,
-// Important n°5) : code mort, aucun appelant, voir `api/superAdmin.api.ts`.
+// Réintroduit à la tâche 14b (hors plan, étape 4a) — voir
+// `api/superAdmin.api.ts`. LE JETON RENDU EST UN MOT DE PASSE À USAGE
+// UNIQUE (même exigence que `useMemberMutations().createMemberAccount`,
+// tâche 13) : cette mutation ne l'écrit dans AUCUNE clé de requête, AUCUN
+// cache — son seul effet observable pour l'appelant est
+// `createEstablishment.data`, tenu par React Query dans le cache des
+// MUTATIONS (jamais atteignable par `getQueryData`/`getQueriesData`).
+// `invalidate()` ne rafraîchit que la LISTE des établissements
+// (`GET_ALL_ESTABLISHMENTS`), qui ne porte jamais le jeton en clair (voir
+// `establishmentListItemSchema`, back : pas de champ `accessLink`).
+export const useSuperAdminCreateEstablishment = () => {
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+
+  return useMutation({
+    mutationKey: [SUPER_ADMIN.CREATE_ESTABLISHMENT],
+    mutationFn: (input: CreateEstablishmentInput) =>
+      SuperAdminApi.createEstablishment(input),
+    onSuccess: () => {
+      toast({ title: 'Établissement créé', severity: TOAST_SEVERITY.SUCCESS })
+    },
+    onError: (error) => {
+      toast({
+        title: "Erreur lors de la création de l'établissement",
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
+    },
+    onSettled: () =>
+      queryClient.invalidateQueries({
+        queryKey: [SUPER_ADMIN.GET_ALL_ESTABLISHMENTS],
+      }),
+  })
+}
 
 // Recherche déclenchée par un envoi de formulaire, pas par un montage
 // d'écran : une mutation plutôt qu'une requête, comme le reste des actions

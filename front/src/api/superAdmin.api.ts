@@ -2,6 +2,8 @@ import { apiUrl } from '../constants/config.constant.ts'
 import { handleHttpError } from '../libs/httpErrorHandler.ts'
 import type {
   AccountSearchResult,
+  CreateEstablishmentInput,
+  CreateEstablishmentResult,
   CreateGrantInput,
   EstablishmentDetail,
   EstablishmentListItem,
@@ -53,14 +55,23 @@ export const SuperAdminApi = {
     return response.json()
   },
 
-  // `createEstablishment` (POST /super-admin/establishments) a été retiré
-  // ici (tour de correction 1, Important n°5) : aucun écran ne l'appelait,
-  // aucun test ne le couvrait, et sa réponse portait un second jeton en
-  // clair (`accessLink.token`) qu'aucune garde ne surveillait — un type qui
-  // promettait « jamais journalisé, jamais mis en cache » sans qu'aucun code
-  // ne tienne cette promesse. Les steps du brief (liste, détail, recherche
-  // de compte) ne demandent pas d'écran de création ; à réintroduire avec
-  // son écran ET sa garde le jour où l'un et l'autre sont commandés.
+  // Réintroduit à la tâche 14b (hors plan, étape 4a) : « aucun écran ne
+  // l'appelait » n'est plus vrai, voir `createEstablishmentForm.tsx`, qui
+  // porte la garde manquante (le jeton `accessLink.token` ne quitte jamais
+  // l'écran — cinq canaux, comme `createMemberAccount`).
+  createEstablishment: async (
+    input: CreateEstablishmentInput,
+  ): Promise<CreateEstablishmentResult> => {
+    const response = await fetchWithAuth(`${SUPER_ADMIN_URL()}/establishments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    })
+    if (!response.ok) {
+      handleHttpError(response, {}, "Impossible de créer l'établissement")
+    }
+    return response.json()
+  },
 
   searchAccount: async (email: string): Promise<AccountSearchResult> => {
     const response = await fetchWithAuth(
