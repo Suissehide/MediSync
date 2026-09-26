@@ -7,20 +7,29 @@ import ts from 'typescript'
 // deplacer : sous ce mode, une requete peut lire N'IMPORTE QUEL etablissement et service, le
 // garde-fou ne verifiant plus rien (voir infra/orm/tenant-guard.ts, `assertTenantScope`,
 // `if (store.kind === 'system') { return }`). C'est une exception assumee au cloisonnement
-// multi-tenant, deux fois seulement dans tout le back de production :
+// multi-tenant — TOUR DE CORRECTION 1 (relecture, tache 9) : L'INVARIANT N'EST PAS UN NOMBRE
+// D'APPELS. Une version precedente de ce commentaire disait « deux fois seulement » avant que la
+// tache 9 n'ajoute un troisieme emploi legitime dans le meme fichier que le second — la prose
+// mentait alors que les assertions, elles, restaient justes. Il n'y a pas de plafond a priori :
+// ce que ce fichier garde, c'est que chaque emploi soit DECLARE (enumere ci-dessous, avec sa
+// raison) et que sa requete porte SES PROPRES BORNES explicites (jamais empruntees a un contexte
+// ambiant qui n'existe pas a l'endroit ou elle s'execute). Trois emplois declares a ce jour, tous
+// dans le back de production :
 //
 //   1. La purge planifiee du journal d'activite (`application/starter.ts`,
 //      `scheduleActivityLogCleanup`) : hors de toute requete HTTP, il n'existe alors aucun
 //      tenant a poser, et la purge doit toucher TOUTE la table, pas un seul etablissement.
 //   2. Le signal de suivi ailleurs (`infra/orm/repositories/patientServiceFile.repository.ts`,
 //      `estSuiviAilleurs`, design §5.3) : une lecture qui traverse volontairement la frontiere
-//      entre services, pour rendre un booleen et rien d'autre.
+//      entre services, pour rendre un booleen et rien d'autre. Ses bornes : etablissement et
+//      service courants, captures AVANT d'entrer dans le mode encadre.
 //   3. L'impact d'une desactivation de service (meme fichier, `impactDesactivation`, design
 //      §3.6, tache 9) : appelee depuis l'administration d'etablissement (aucun service courant
 //      a ce niveau), elle traverse la meme frontiere pour rendre DEUX NOMBRES agreges — jamais
-//      un identifiant, un nom ou un contenu. Le second et dernier emploi de cette exception,
-//      toujours dans le meme fichier que le premier : le nombre de FICHIERS reste a deux
-//      (`AUTORISES` ci-dessous), mais le compte d'APPELS dans celui-ci passe de un a deux.
+//      un identifiant, un nom ou un contenu. Ses bornes : etablissement ET service dont on
+//      evalue la desactivation, recus EXPLICITEMENT de l'appelant (`ServiceDomain.
+//      impactDesactivation`), puisqu'aucun contexte de service courant n'existe a cet endroit
+//      pour les fournir autrement.
 //
 // `runAsSuperAdmin` (meme fichier, tache 1 / etape 4a) y ajoute un troisieme mode, qui ne retire
 // rien mais substitue au filtre de tenant une liste declaree et exhaustive de couples (modele,

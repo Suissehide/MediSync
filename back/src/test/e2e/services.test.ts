@@ -5,6 +5,7 @@ import {
   createEstablishment,
   createService,
   createUser,
+  grantAccess,
   signIn,
   tenantUrl,
 } from './setup/fixtures'
@@ -87,6 +88,45 @@ describe('routes services', () => {
     })
   })
 
+  // Tour de correction 1 (relecture) — Important n°2 : sous un octroi temporaire (spec §4.3),
+  // l'acteur est un membre ordinaire au sens des permissions, mais AUCUNE appartenance réelle
+  // n'est jamais matérialisée. Créer un service ne doit donc PAS échouer faute d'appartenance à
+  // rattacher, et ne doit PAS non plus en créer une — l'octroi donne déjà accès à tous les
+  // services actifs de l'établissement, un rattachement réel survivrait à son expiration.
+  it('un super-admin sous octroi cree un service SANS rattachement reel, et y accede quand meme', async () => {
+    const superAdmin = await createUser({
+      email: 'super-services@test.fr',
+      isSuperAdmin: true,
+    })
+    await grantAccess({
+      userId: superAdmin.id,
+      establishmentId,
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+    const superCookies = await signIn(testApp.app, 'super-services@test.fr')
+
+    const created = await call('POST', '/', { name: 'Octroi' }, superCookies)
+    expect(created.statusCode).toBe(201)
+    const service = created.json()
+
+    // Aucune EstablishmentMembership réelle n'a été créée pour cet acteur.
+    const membership = await testDb.establishmentMembership.findFirst({
+      where: { userId: superAdmin.id, establishmentId },
+    })
+    expect(membership).toBeNull()
+
+    // Et pourtant l'accès fonctionne : l'octroi confère COORDINATEUR sur chaque service actif
+    // de l'établissement (spec §3.5), y compris celui qui vient d'être créé — les services sont
+    // relus frais à chaque requête (`AccessGrantRepository.findForUser`), jamais figés au moment
+    // de l'octroi.
+    const acces = await testApp.app.inject({
+      method: 'GET',
+      url: tenantUrl(establishmentId, service.id, '/location'),
+      cookies: superCookies,
+    })
+    expect(acces.statusCode).toBe(200)
+  })
+
   it('refuse deux services de meme nom dans le meme etablissement', async () => {
     await call('POST', '/', { name: 'Doublon' })
     const second = await call('POST', '/', { name: 'Doublon' })
@@ -137,6 +177,41 @@ describe('routes services', () => {
     // (qui serait identique des deux côtés) mais bien propre à CHAQUE service.
     const resB = await call('GET', `/${serviceB.id}/impact-desactivation`)
     expect(resB.json()).toEqual({ suivisIci: 2, suivisNullePartAilleurs: 0 })
+  })
+
+  // Tour de correction 1 (relecture) — Important n°1 : un patient dont le SEUL autre
+  // sous-dossier vit dans un service DÉJÀ désactivé deviendra tout aussi invisible qu'un
+  // patient qui n'a aucun autre sous-dossier — l'équivalence promise par la spec §3.6 (« suivi
+  // nulle part ailleurs = deviendra invisible ») exige donc de ne compter comme « ailleurs » que
+  // les services encore ACTIFS.
+  it('compte comme invisible un patient dont le seul autre suivi vit dans un service deja desactive', async () => {
+    const serviceC = (await call('POST', '/', { name: 'C-impact' })).json()
+    const serviceD = (await call('POST', '/', { name: 'D-impact-desactive' })).json()
+
+    const patient = await testDb.patient.create({
+      data: {
+        firstName: 'Patient',
+        lastName: `Impact-desactive-${Math.random()}`,
+        createDate: new Date(),
+        establishmentId,
+      },
+    })
+    await testDb.patientServiceFile.create({
+      data: { patientId: patient.id, serviceId: serviceC.id, establishmentId },
+    })
+    // Le seul « ailleurs » de ce patient est le service D — désactivé AVANT même de mesurer
+    // l'impact de C : D ne protège donc plus personne de l'invisibilité.
+    await testDb.patientServiceFile.create({
+      data: { patientId: patient.id, serviceId: serviceD.id, establishmentId },
+    })
+    const offD = await call('PATCH', `/${serviceD.id}`, { deactivated: true })
+    expect(offD.statusCode).toBe(200)
+
+    const res = await call('GET', `/${serviceC.id}/impact-desactivation`)
+    expect(res.statusCode).toBe(200)
+    // Sans le correctif : { suivisIci: 1, suivisNullePartAilleurs: 0 } — le patient compterait
+    // à tort comme protégé par un service qui ne le montre déjà plus à personne.
+    expect(res.json()).toEqual({ suivisIci: 1, suivisNullePartAilleurs: 1 })
   })
 
   it('rend deux zeros pour un service sans aucun patient', async () => {

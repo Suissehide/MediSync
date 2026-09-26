@@ -1149,10 +1149,13 @@ describe('PatientServiceFileRepository.impactDesactivation', () => {
         select: { patientId: true },
       },
     })
-    // Seconde requete : parmi CES MEMES patients, ceux suivis dans un AUTRE service du MEME
-    // etablissement — jamais un autre etablissement (impossible de toute facon par la cle
+    // Seconde requete : parmi CES MEMES patients, ceux suivis dans un AUTRE service ACTIF du
+    // MEME etablissement — jamais un autre etablissement (impossible de toute facon par la cle
     // etrangere composite, mais la requete porte quand meme sa propre borne, comme
-    // `estSuiviAilleurs`).
+    // `estSuiviAilleurs`). `service: { deactivatedAt: null }` (tour de correction 1, relecture,
+    // Important n°1) : un service DEJA desactive ne protege plus personne de l'invisibilite,
+    // donc il ne doit pas compter comme un « ailleurs » qui sauve le patient du compte qui
+    // importe.
     expect(calls[1]).toMatchObject({
       model: 'patientServiceFile', op: 'findMany',
       args: {
@@ -1160,6 +1163,7 @@ describe('PatientServiceFileRepository.impactDesactivation', () => {
           establishmentId: 'e1',
           patientId: { in: ['p1', 'p2', 'p3'] },
           serviceId: { not: 'sB' },
+          service: { deactivatedAt: null },
         },
         select: { patientId: true },
       },
@@ -1193,7 +1197,12 @@ describe('PatientServiceFileRepository.impactDesactivation', () => {
   // traverse la frontiere entre services) est refusee par le garde-fou hors du mode encadre.
   it('la forme de la requete qui traverse la frontiere est refusee hors du mode encadre, et permise dedans', () => {
     const args = {
-      where: { establishmentId: 'e1', patientId: { in: ['p1'] }, serviceId: { not: 'sB' } },
+      where: {
+        establishmentId: 'e1',
+        patientId: { in: ['p1'] },
+        serviceId: { not: 'sB' },
+        service: { deactivatedAt: null },
+      },
       select: { patientId: true },
     }
     expect(() =>

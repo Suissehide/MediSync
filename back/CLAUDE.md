@@ -124,20 +124,23 @@ Key cross-cutting concerns:
   `PatientDomain.create`) — and **no route deletes one**; only deleting the patient (cascade) does. An empty
   sub-record created by mistake is therefore permanent, and will make the "followed elsewhere" signal (below) true
   for every other service that actually follows that patient.
-- **The two deliberate cross-service reads, and the test that keeps them exactly two.** A patient in one service is
+- **The deliberate cross-service reads, and the test that keeps the invariant honest.** A patient in one service is
   sometimes already followed in another; the front needs to know that (a plain boolean, nothing else) without
   seeing anything about it. `PatientServiceFileRepository.estSuiviAilleurs` (in
   `infra/orm/repositories/patientServiceFile.repository.ts`) reads another service's sub-records for that purpose,
-  under `tenantContext.runAsSystem()` (the same escape hatch used by the activity-log purge job). The second read,
+  under `tenantContext.runAsSystem()` (the same escape hatch used by the activity-log purge job). A second read,
   added at étape 4a task 9, is `PatientServiceFileRepository.impactDesactivation` — called from establishment
   administration (`GET /e/:establishmentId/admin/services/:id/impact-desactivation`, no service in scope at that
   level) to warn how many patients a service's deactivation would make invisible everywhere. Both live in the same
   file, both return only aggregates or booleans, never an id, a service name, a date or any column content, and
-  nothing else in `src/main` does this. `back/src/test/unit/infra/runAsSystem-unicite.test.ts` is what keeps this
-  exception to exactly these two calls: it doesn't just grep for the method name, it re-derives the "system mode"
-  capability (constructing the system-scoped store some other way — e.g. a hypothetical
-  `TenantContext.runAsSystem.bind(...)` or a sibling method — defeats the guard exactly like calling `runAsSystem`
-  directly would). Adding a third `runAsSystem` call to `src/main` without adding it to that test's allow-list is a
+  nothing else in `src/main` does this. **The invariant `back/src/test/unit/infra/runAsSystem-unicite.test.ts`
+  keeps is not a call count** (task 9's review found the test's own prose still claiming "two, only two" right
+  above a list that had grown to three — the assertions were still correct, the prose had just gone stale): what
+  it enforces is that every employment is declared by name with its reason, and that each one's query carries its
+  own explicit bounds rather than borrowing an ambient tenant that doesn't exist at that call site. It doesn't just
+  grep for the method name, it re-derives the "system mode" capability (constructing the system-scoped store some
+  other way — e.g. a hypothetical `TenantContext.runAsSystem.bind(...)` or a sibling method — defeats the guard
+  exactly like calling `runAsSystem` directly would). Adding an undeclared `runAsSystem` call to `src/main` is a
   guard violation, not a passing test. Known gap: the allow-list only covers `src/main` — several legitimate
   `src/test` callers construct the same
   "system" store to exercise the tenant guard itself, so that directory isn't covered (same class of gap as the

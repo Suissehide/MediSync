@@ -124,14 +124,15 @@ class PatientServiceFileRepository implements PatientServiceFileRepositoryInterf
     }
   }
 
-  // EXCEPTION ASSUMEE au cloisonnement inter-service (design §5.3) : la PREMIERE des deux
-  // lectures de tout le back qui traversent volontairement la frontiere entre services — la
-  // seconde est `impactDesactivation`, plus bas dans ce meme fichier (design §3.6, tache 9),
-  // qui rend un compte plutot qu'un booleen mais ne franchit jamais la frontiere autrement.
-  // Leur unicite (au nombre de deux, toutes deux dans ce fichier) est verifiee par
-  // back/src/test/unit/infra/runAsSystem-unicite.test.ts, qui relit les sources et echoue si un
-  // troisieme appel a `runAsSystem` apparait ailleurs — ou si l'un des deux disparait sans que
-  // la liste autorisee n'en soit avertie.
+  // EXCEPTION ASSUMEE au cloisonnement inter-service (design §5.3) : la PREMIERE des lectures de
+  // tout le back qui traversent volontairement la frontiere entre services — une seconde est
+  // `impactDesactivation`, plus bas dans ce meme fichier (design §3.6, tache 9), qui rend un
+  // compte plutot qu'un booleen mais ne franchit jamais la frontiere autrement. L'invariant que
+  // verifie back/src/test/unit/infra/runAsSystem-unicite.test.ts n'est PAS un nombre d'appels :
+  // c'est que chaque emploi soit DECLARE (nomme, avec sa raison) et que sa requete porte SES
+  // PROPRES BORNES explicites — ce test relit les sources et echoue si un appel a `runAsSystem`
+  // apparait sans etre declare, ou si l'un des emplois declares disparait sans que la liste
+  // autorisee n'en soit avertie.
   //
   // `runAsSystem` (tenant-context.ts) RETIRE l'exigence du garde-fou d'ORM, il ne la deplace
   // pas : sous ce mode, le garde-fou n'exige plus AUCUN filtre de service ni d'etablissement, et
@@ -205,12 +206,22 @@ class PatientServiceFileRepository implements PatientServiceFileRepositoryInterf
   // contenu — la meme discipline de divulgation qu'`estSuiviAilleurs` (`select: { patientId:
   // true }`, jamais `id`), pretee ici a un compte plutot qu'a un booleen. `suivisIci` est le
   // nombre de sous-dossiers de ce service ; `suivisNullePartAilleurs` est le sous-ensemble de
-  // leurs patients qui n'ont AUCUN autre sous-dossier dans le meme etablissement — calcule en
-  // deux lectures plutot qu'une jointure, pour rester lisible : la premiere ramene les
-  // identifiants de patients suivis ICI, la seconde ceux qui le sont AILLEURS PARMI EUX (meme
-  // etablissement, service different), et la difference des deux ensembles donne le compte qui
-  // importe. Meme piege que ci-dessus : les DEUX `await` sont a l'INTERIEUR du seul rappel
-  // `runAsSystem`, jamais une promesse rendue sans etre attendue.
+  // leurs patients qui n'ont AUCUN autre sous-dossier dans un AUTRE SERVICE ACTIF du meme
+  // etablissement — calcule en deux lectures plutot qu'une jointure, pour rester lisible : la
+  // premiere ramene les identifiants de patients suivis ICI, la seconde ceux qui le sont
+  // AILLEURS PARMI EUX (meme etablissement, service different ET ACTIF), et la difference des
+  // deux ensembles donne le compte qui importe. Meme piege que ci-dessus : les DEUX `await` sont
+  // a l'INTERIEUR du seul rappel `runAsSystem`, jamais une promesse rendue sans etre attendue.
+  //
+  // TOUR DE CORRECTION 1 (relecture) — Important n°1 : un patient dont le SEUL autre
+  // sous-dossier vit dans un service DEJA DESACTIVE n'a, en pratique, deja plus aucun autre
+  // service qui le montre — il deviendrait donc tout aussi invisible que celui qui n'a
+  // litteralement aucun autre sous-dossier. La spec §3.6 promet l'equivalence « suivi nulle
+  // part ailleurs = deviendra invisible » ; compter ce patient comme « suivi ailleurs » la
+  // rendait fausse, et dans le sens qui rassure a tort (l'ecran annoncait 1 la ou la realite
+  // etait 2). `service: { deactivatedAt: null }` sur la seconde lecture ferme ce trou : seul un
+  // autre service ENCORE ACTIF compte comme un « ailleurs » qui protege reellement le patient de
+  // l'invisibilite.
   async impactDesactivation(
     serviceId: string,
     establishmentId: string,
@@ -229,6 +240,7 @@ class PatientServiceFileRepository implements PatientServiceFileRepositoryInterf
           establishmentId,
           patientId: { in: patientIds },
           serviceId: { not: serviceId },
+          service: { deactivatedAt: null },
         },
         select: { patientId: true },
       })

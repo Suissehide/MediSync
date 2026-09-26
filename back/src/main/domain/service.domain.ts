@@ -35,7 +35,9 @@ class ServiceDomain implements ServiceDomainInterface {
   // pouvait de toute façon s'y affecter en un clic — le rattachement ne lui accorde rien
   // qu'elle ne pouvait s'accorder, il lui épargne un détour et évite qu'un établissement neuf
   // commence par un cul-de-sac (aucun service, donc aucun écran de service accessible à
-  // personne). `creatorUserId` vient du tenant courant, jamais du corps de la requête.
+  // personne). `creatorUserId` vient du tenant courant, jamais du corps de la requête. Sous un
+  // octroi temporaire (spec §4.3), ce rattachement n'a pas lieu — voir `ServiceRepository.create`
+  // pour pourquoi, et pour ce qui distingue les deux cas.
   create(
     serviceCreateParams: ServiceCreateEntityDomain,
   ): Promise<ServiceEntityDomain> {

@@ -38,7 +38,10 @@ export const ESTABLISHMENT_MODELS: readonly string[] = [
 ]
 
 // Le contexte `superadmin` n'est PAS `system`. `system` retire l'exigence de filtre pour toute
-// opération ; il a deux emplois en production et un test garde cette unicité. Ici, la liste
+// opération ; l'invariant n'est PAS un nombre d'appels (qui grossit au fil des tâches légitimes)
+// mais le fait que chaque emploi soit DÉCLARÉ (énuméré, avec sa raison) et que sa requête porte
+// SES PROPRES BORNES explicites — un test garde cette propriété (runAsSystem-unicite.test.ts).
+// Ici, la liste
 // ci-dessous est exhaustive : tout couple (modèle, opération) absent est refusé comme sans
 // contexte. Le super-admin compte, il ne lit pas — d'où l'absence de `findMany` sur `Patient`.
 //
