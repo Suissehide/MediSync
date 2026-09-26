@@ -51,14 +51,20 @@ function GrantsAdmin() {
 
   const etat = queryState({ isPending, error, hasData: grants !== undefined })
 
+  // Mineur (tour de correction 1, tâche 13) : UNE seule valeur de temps
+  // pour tout le rendu — `new Date()` appelé une seconde fois plus bas (au
+  // moment d'étiqueter un accès passé) pouvait, à la seconde de bascule,
+  // classer un octroi comme « passé » ici puis l'étiqueter « En cours »
+  // là-bas, pour le même octroi dans le même rendu.
+  const maintenant = useMemo(() => new Date(), [])
+
   const { enCours, passes } = useMemo(() => {
-    const maintenant = new Date()
     const tous = grants ?? []
     return {
       enCours: tous.filter((g) => estEnCours(g, maintenant)),
       passes: tous.filter((g) => !estEnCours(g, maintenant)),
     }
-  }, [grants])
+  }, [grants, maintenant])
 
   return (
     <DashboardLayout>
@@ -133,7 +139,7 @@ function GrantsAdmin() {
                         </div>
                       </div>
                       <div className="text-text-light whitespace-nowrap">
-                        {statutPasse(grant, new Date())}
+                        {statutPasse(grant, maintenant)}
                       </div>
                     </li>
                   ))}

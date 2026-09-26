@@ -14,11 +14,16 @@ type AccessLinkSearch = { token: string }
 // part dans le CORPS de `POST /auth/access-link/consume`
 // (`AuthApi.consumeAccessLink`), jamais dans une clé de cache de requête,
 // jamais dans un journal de console. Voir `access-link.test.tsx`, qui
-// reprend les quatre canaux de `accountSearchPanel.test.tsx`.
+// reprend les quatre canaux de `accountSearchPanel.test.tsx` — PLUS un
+// cinquième, nommé par la revue du tour de correction 1 : le jeton ne doit
+// pas non plus rester dans la barre d'adresse après une consommation
+// réussie (voir `consumedSuccessfully`/`replace: true` plus bas).
 //
 // Cette page vit sous `routes/auth/`, donc HORS de `_authenticated` :
-// atteignable sans session (voir `access-link.test.tsx`, qui le vérifie
-// plutôt que de le supposer).
+// atteignable sans session — vérifié sur le VRAI `routeTree.gen.ts` dans
+// `access-link.test.tsx` (describe « atteignabilite sans session, sur le
+// VRAI arbre de routes »), pas seulement sur un arbre de test synthétique
+// qui ne pourrait rien prouver sur ce point précis.
 export const Route = createFileRoute('/auth/access-link')({
   validateSearch: (search: Record<string, unknown>): AccessLinkSearch => ({
     token: typeof search.token === 'string' ? search.token : '',
@@ -39,6 +44,13 @@ function AccessLinkPage() {
   const consume = useConsumeAccessLink()
   const { loginMutation, isPending: isLoginPending } = useLogin()
   const [loginFailed, setLoginFailed] = useState(false)
+  // Cinquième canal, nommé par la revue (le brief et mon propre commentaire
+  // n'en comptaient que quatre) : entre la consommation réussie et la
+  // connexion, `token` est purgé de la recherche d'URL (voir plus bas) — le
+  // composant se re-rend alors avec `token === ''`, ce qui retomberait sur
+  // la branche « lien invalide » sans ce drapeau, pile pendant la fenêtre où
+  // la connexion est en cours.
+  const [consumedSuccessfully, setConsumedSuccessfully] = useState(false)
 
   const form = useAppForm({
     defaultValues: { email: '', password: '', confirmPassword: '' },
@@ -60,12 +72,28 @@ function AccessLinkPage() {
       consume.consumeMutation(
         { token, password: value.password },
         {
-          onSuccess: () => {
+          onSuccess: async () => {
+            setConsumedSuccessfully(true)
+            // CINQUIÈME CANAL (Important n°1 de la revue) : sans ceci, le
+            // jeton reste dans la barre d'adresse après une consommation
+            // réussie — un retour arrière re-affiche le formulaire avec le
+            // jeton encore visible dans l'URL, et une re-soumission
+            // recevrait 410 (« demandez-en un autre ») alors que la
+            // personne vient pourtant de réussir. `replace: true` change
+            // l'entrée d'historique COURANTE au lieu d'en empiler une
+            // nouvelle : un retour arrière ne peut plus jamais retomber sur
+            // l'URL porteuse du jeton, elle n'existe plus dans l'historique.
+            // Fait AVANT d'appeler la connexion, comme demandé.
+            await navigate({
+              to: '/auth/access-link',
+              search: { token: '' },
+              replace: true,
+            })
             loginMutation(
               { email: value.email, password: value.password },
               {
                 onSuccess: async () => {
-                  await navigate({ to: '/' })
+                  await navigate({ to: '/', replace: true })
                 },
                 onError: () => setLoginFailed(true),
               },
@@ -77,8 +105,10 @@ function AccessLinkPage() {
   })
 
   // Aucun jeton dans l'URL : ne tente même pas d'appel — rien à consommer,
-  // rien qui puisse fuir.
-  if (!token) {
+  // rien qui puisse fuir. Sauf si la consommation vient JUSTEMENT de
+  // réussir (voir `consumedSuccessfully` ci-dessus) : la purge de l'URL
+  // fait retomber `token` à la chaîne vide, ce n'est pas un lien invalide.
+  if (!token && !consumedSuccessfully) {
     return (
       <Shell>
         <Message text="Ce lien est invalide. Demandez-en un autre à votre établissement." />
@@ -146,8 +176,9 @@ function AccessLinkPage() {
 
           {consume.isError && (
             <p className="w-full text-sm text-destructive mb-2">
-              Une erreur est survenue. Vérifiez les informations saisies et
-              réessayez.
+              {consume.error instanceof Error
+                ? consume.error.message
+                : 'Une erreur est survenue. Réessayez.'}
             </p>
           )}
 
@@ -171,8 +202,22 @@ function AccessLinkPage() {
             <form.AppField
               name="password"
               validators={{
-                onSubmit: ({ value }) =>
-                  value ? undefined : 'Le mot de passe est nécessaire',
+                // Même message que `user/settings.tsx` (précédent existant,
+                // non suivi au premier tour — Important n°2 de la revue) :
+                // le back exige 12 caractères (`accessLinkConsumeSchema`),
+                // et sans ce contrôle côté client, l'écran par lequel une
+                // personne ENTRE dans l'application se contentait d'un
+                // « une erreur est survenue » qui ne dit jamais quoi
+                // corriger.
+                onChange: ({ value }) => {
+                  if (!value) {
+                    return 'Le mot de passe est nécessaire'
+                  }
+                  if (value.length < 12) {
+                    return 'Le mot de passe doit contenir au moins 12 caractères'
+                  }
+                  return undefined
+                },
               }}
             >
               {(field) => <field.Password label="Nouveau mot de passe" />}

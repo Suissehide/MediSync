@@ -12,6 +12,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { routeTree as vraiRouteTree } from '@/routeTree.gen.ts'
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { AuthState } from '@/types/auth.ts'
 
@@ -92,8 +93,11 @@ const monter = (path: string, fetchMock: ReturnType<typeof buildFetchMock>) => {
   const router = createRouter({
     routeTree,
     history: createMemoryHistory({ initialEntries: [path] }),
-    // JAMAIS `isAuthenticated: true` : cette page doit être atteignable
-    // sans session.
+    // JAMAIS `isAuthenticated: true` sur CET arbre synthetique : voir plus
+    // bas, describe dedie, pour la preuve d'atteignabilite sans session sur
+    // le VRAI arbre de routes (mineur, tour de correction 1 — cet arbre-ci
+    // ne peut rien prouver sur ce point, il ne declare meme pas de route
+    // `_authenticated`).
     context: { authState: { isAuthenticated: false, user: null } },
   })
   render(
@@ -101,7 +105,7 @@ const monter = (path: string, fetchMock: ReturnType<typeof buildFetchMock>) => {
       <RouterProvider router={router} />
     </QueryClientProvider>,
   )
-  return queryClient
+  return { queryClient, router }
 }
 
 const routeConsume = (
@@ -229,6 +233,79 @@ describe('page publique de consommation d un lien d acces', () => {
     expect(consumeCalls).toHaveLength(1)
   })
 
+  // Important n°1 (tour de correction 1) : cinquieme canal nomme par la
+  // revue. Login volontairement en echec (401, deterministe) pour observer
+  // l'etat du routeur JUSTE apres la purge, sans dependre de l'issue de la
+  // connexion qui suit.
+  it("purge le jeton de l'URL et REMPLACE l'entree d'historique des la consommation reussie, avant meme la connexion", async () => {
+    const fetchMock = buildFetchMock([
+      routeConsume(() => ({ ok: true, status: 200, json: async () => ({ success: true }) })),
+      routeSignIn(() => ({ ok: false, status: 401, json: async () => ({}) })),
+    ])
+    const { router } = monter(`/auth/access-link?token=${JETON}`, fetchMock)
+    const longueurHistoriqueAvant = router.history.length
+
+    await remplirEtValider('quelqu.un@chu.fr', 'un-mot-de-passe-suffisant')
+
+    await screen.findByText(/la connexion automatique a échoué/i)
+
+    // Le jeton n'est plus dans la recherche d'URL courante...
+    expect(router.state.location.search).toEqual({ token: '' })
+    expect(String(router.state.location.href)).not.toContain(JETON)
+    // ...et aucune NOUVELLE entree d'historique n'a ete empilee : c'est un
+    // REMPLACEMENT (`replace: true`), pas une navigation ordinaire — un
+    // retour arriere ne peut donc plus jamais retomber sur l'URL porteuse
+    // du jeton, qui n'existe plus dans l'historique.
+    expect(router.history.length).toBe(longueurHistoriqueAvant)
+  })
+
+  // Important n°2 (tour de correction 1) : le back exige 12 caracteres
+  // (`accessLinkConsumeSchema`) ; sans ce controle cote client, huit
+  // caracteres partaient en requete, revenaient 400, et l'ecran affichait
+  // une phrase qui ne parlait jamais de longueur — sur l'ecran par lequel
+  // une personne ENTRE dans l'application. Precedent existant et pas suivi
+  // au premier tour : `user/settings.tsx` (« Le mot de passe doit contenir
+  // au moins 12 caracteres »).
+  it('un mot de passe trop court est refuse cote client, avec le message exact, avant tout appel reseau', async () => {
+    const fetchMock = buildFetchMock([])
+    monter(`/auth/access-link?token=${JETON}`, fetchMock)
+
+    await userEvent.type(screen.getByLabelText(/adresse e-mail/i), 'quelqu.un@chu.fr')
+    await userEvent.type(screen.getByLabelText(/^nouveau mot de passe/i), 'trop-court')
+    // Blur explicite (clic sur le champ suivant) : declenche la validation.
+    await userEvent.click(screen.getByLabelText(/confirmer le mot de passe/i))
+
+    expect(
+      await screen.findByText(/doit contenir au moins 12 caractères/i),
+    ).toBeInTheDocument()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  // Important n°2, seconde moitie : la banniere d'erreur affichait UNE
+  // PHRASE FIGEE quel que soit le statut (« Une erreur est survenue.
+  // Verifiez... »), qui ne reflete jamais le VRAI message d'erreur. Ici, un
+  // 500 (ni 410 ni 401) doit afficher le message reel de l'API, et laisser
+  // le formulaire utilisable — rien ne prouve que le jeton a ete consomme
+  // par une simple panne serveur.
+  it("une erreur qui n'est ni 410 ni 401 affiche le vrai message d'API, pas une phrase figee, et laisse le formulaire pour reessayer", async () => {
+    monter(
+      `/auth/access-link?token=${JETON}`,
+      buildFetchMock([
+        routeConsume(() => ({ ok: false, status: 500, json: async () => ({}) })),
+      ]),
+    )
+
+    await remplirEtValider('quelqu.un@chu.fr', 'un-mot-de-passe-suffisant')
+
+    expect(
+      await screen.findByText(/une erreur interne est survenue/i),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText(/vérifiez les informations saisies et réessayez/i),
+    ).not.toBeInTheDocument()
+    expect(screen.getByLabelText(/adresse e-mail/i)).toBeInTheDocument()
+  })
+
   it("le jeton n'atterrit jamais ailleurs qu'a l'ecran (quatre canaux)", async () => {
     const consoleSpies = (
       ['log', 'warn', 'error', 'info', 'debug'] as const
@@ -238,7 +315,7 @@ describe('page publique de consommation d un lien d acces', () => {
       routeConsume(() => ({ ok: true, status: 200, json: async () => ({ success: true }) })),
       routeSignIn(() => ({ ok: true, status: 201, json: async () => utilisateurConnecte })),
     ])
-    const queryClient = monter(`/auth/access-link?token=${JETON}`, fetchMock)
+    const { queryClient } = monter(`/auth/access-link?token=${JETON}`, fetchMock)
 
     await remplirEtValider('quelqu.un@chu.fr', 'un-mot-de-passe-suffisant')
 
@@ -272,5 +349,48 @@ describe('page publique de consommation d un lien d acces', () => {
         expect(JSON.stringify(call)).not.toContain(JETON)
       }
     }
+  })
+})
+
+// Mineur (tour de correction 1) : « ton harnais ne prouve pas
+// l'atteignabilite sans session — il construit son propre arbre, ou aucun
+// `_authenticated` ne figure ; rien n'aurait donc pu rediriger, quelle que
+// soit la place reelle du fichier ». Vrai. Ce describe utilise le VRAI
+// `routeTree.gen.ts` — celui que `main.tsx` monte reellement — pour
+// verifier la SEULE chose que l'arbre synthetique ci-dessus ne peut pas
+// prouver : que `/auth/access-link` est bien enregistree HORS DE
+// `_authenticated` dans l'arbre reel, donc jamais redirigee vers `/auth`
+// meme sans session.
+describe('atteignabilite sans session, sur le VRAI arbre de routes', () => {
+  it("le vrai routeTree.gen.ts place access-link hors de _authenticated : aucune redirection vers /auth sans session", async () => {
+    const fetchMock = buildFetchMock([])
+    vi.stubGlobal('fetch', fetchMock)
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+    const router = createRouter({
+      routeTree: vraiRouteTree,
+      history: createMemoryHistory({
+        initialEntries: [`/auth/access-link?token=${JETON}`],
+      }),
+      // JAMAIS authentifie : c'est exactement le cas que cette page doit
+      // servir. Si `access-link.tsx` etait (par erreur) enregistre sous
+      // `_authenticated`, son `beforeLoad` redirigerait ici vers `/auth`.
+      context: { queryClient, authState: { isAuthenticated: false, user: null } },
+    })
+    render(
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    )
+
+    expect(
+      await screen.findByText(/choisissez votre mot de passe/i),
+    ).toBeInTheDocument()
+    // La page de connexion (`routes/auth/index.tsx`) porte ce titre : son
+    // absence prouve qu'aucune redirection vers `/auth` n'a eu lieu.
+    expect(screen.queryByText(/^s'identifier$/i)).not.toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/auth/access-link')
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 })

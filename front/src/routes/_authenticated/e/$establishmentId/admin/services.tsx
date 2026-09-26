@@ -27,8 +27,15 @@ import type { Service } from '@/types/service.ts'
 import { resolveEstablishmentContext } from '@/utils/tenant-context.ts'
 
 // Même garde que `admin/members.tsx` : le layout `admin` (voir `admin.tsx`)
-// n'exige que le rôle ADMIN ; cet écran se garde en plus explicitement par
-// `services:manage`.
+// exige DÉJÀ le rôle ADMIN — via `resolveEstablishmentContext`
+// (`utils/tenant-context.ts`), qui renvoie `null` si `establishment.role !==
+// 'ADMIN'` et fait alors rediriger vers `/choose-context` AVANT que cette
+// feuille ne soit atteinte (un MEMBER n'y arrive jamais, voir `admin.test.ts`,
+// « refuse un membre sans role ADMIN sur cet etablissement »). Cet écran se
+// garde donc EN PLUS, explicitement, par `services:manage` : redondant avec
+// le rôle aujourd'hui (tout ADMIN a cette permission, voir
+// `ESTABLISHMENT_PERMISSIONS`), mais qui reste correct si la matrice des
+// habilitations change un jour et dissocie les deux.
 export const Route = createFileRoute(
   '/_authenticated/e/$establishmentId/admin/services',
 )({

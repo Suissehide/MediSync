@@ -120,10 +120,22 @@ describe('CreateMemberAccountForm', () => {
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /copier l'identifiant/i })).toBeInTheDocument()
 
-    // Fermer la popup ne doit rien laisser reapparaitre : le formulaire de
-    // creation reprend sa place, plus jamais le jeton.
+    // Fermer la popup : Radix demonte simplement le CONTENU au ferme, donc
+    // `queryByText(JETON)` serait deja absent ici meme SANS aucune remise a
+    // zero de la mutation - cette seule assertion ne prouve rien (Critique
+    // n°2, tour de correction 1 : le relecteur a retire `reset()` et les
+    // deux tests d'origine restaient verts).
     await userEvent.click(screen.getByRole('button', { name: /fermer/i }))
     expect(screen.queryByText(JETON)).not.toBeInTheDocument()
+
+    // LA PREUVE QUI COMPTE : rouvrir. Le composant reste MONTE d'un bout a
+    // l'autre (seul le contenu de la popup Radix se demonte/remonte), donc
+    // la donnee de la mutation (`createMemberAccount.data`) survit tant que
+    // rien ne l'a explicitement remise a zero. Sans `reset()`, le jeton
+    // reapparaitrait ici.
+    await userEvent.click(screen.getByRole('button', { name: /créer un compte/i }))
+    expect(screen.queryByText(JETON)).not.toBeInTheDocument()
+    expect(screen.getByLabelText(/e-mail/i)).toBeInTheDocument()
   })
 
   it("le jeton n'atterrit jamais ailleurs qu'à l'écran (quatre canaux)", async () => {

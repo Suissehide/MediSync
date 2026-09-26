@@ -216,6 +216,37 @@ describe('etats de l ecran des services', () => {
     expect(screen.queryByText(/chargement/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/impossible de charger/i)).not.toBeInTheDocument()
   })
+
+  // Mineur (tour de correction 1, tâche 13) : cette propriété n'avait pas
+  // de nom propre - elle vivait implicitement sous un test qui parle de
+  // REACTIVATION (« reactiver ne calcule aucun impact »), qui ne couvre pas
+  // le simple RENDU de la liste. `buildFetchMock` leve deja sur un appel
+  // non attendu, mais aucune assertion ne le nommait : un `useEffect` qui
+  // appellerait l'impact pour chaque service au montage laisserait passer
+  // ce test-la aussi si personne ne cherche precisement cette propriete.
+  it("n'appelle jamais la route d'impact au simple rendu de la liste, avant toute interaction", async () => {
+    const fetchMock = buildFetchMock([routeGetServices([serviceActif, serviceDesactive])])
+    vi.stubGlobal('fetch', fetchMock)
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const router = createRouter({
+      routeTree,
+      history: createMemoryHistory({ initialEntries: ['/e/e1/admin/services'] }),
+      context: { authState: { isAuthenticated: true, user: admin } },
+    })
+    render(
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    )
+
+    await screen.findByText('Cardio')
+    await screen.findByText('Neuro')
+
+    expect(
+      fetchMock.mock.calls.some(([url]) => String(url).includes('impact-desactivation')),
+    ).toBe(false)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
 })
 
 describe('desactivation d un service : les deux compteurs', () => {
@@ -238,12 +269,35 @@ describe('desactivation d un service : les deux compteurs', () => {
     await screen.findByText('Cardio')
     await userEvent.click(screen.getByRole('button', { name: /désactiver le service/i }))
 
-    await screen.findByText('5')
-    expect(screen.getByText('2')).toBeInTheDocument()
-    // Les deux nombres ne disent pas la meme chose : verifie qu ils
-    // n'apparaissent pas comme deux facons de dire la meme chose - `5` et
-    // `2` doivent tous deux etre presents et distincts l'un de l'autre.
-    expect(screen.getByText('5')).not.toBe(screen.getByText('2'))
+    // Tour de correction 1, Critique n°1 : `getByText('5')` /
+    // `getByText('2')` existent et sont forcement des noeuds distincts
+    // (deux requetes de texte exact ne peuvent jamais rendre le meme
+    // noeud) - ca ne prouve RIEN sur QUEL nombre porte QUEL libelle. Le
+    // relecteur a echange les deux libelles dans `services.tsx` (le nombre
+    // sous « suivis ici » devient celui qui compte, et inversement) et les
+    // neuf tests precedents restaient verts. On attache donc chaque
+    // assertion au CONTENEUR du libelle, pas au noeud de texte nu.
+    await screen.findByText(/suivis dans ce service/i)
+    const suivisIciParagraphe = screen
+      .getByText(/suivis dans ce service/i)
+      .closest('p')
+    const suivisAilleursParagraphe = screen
+      .getByText(/deviendront invisibles partout/i)
+      .closest('p')
+    expect(suivisIciParagraphe).not.toBeNull()
+    expect(suivisAilleursParagraphe).not.toBeNull()
+
+    // Le nombre qui compte pour DECIDER (`suivisNullePartAilleurs`, ceux
+    // qui deviendront invisibles PARTOUT) doit porter la valeur 2, jamais 5
+    // - et reciproquement pour `suivisIci`. Chaque assertion NEGATIVE est
+    // ce qui fait rougir un echange de libelles : une assertion purement
+    // positive («5 est present quelque part») resterait verte meme
+    // echangee.
+    expect(suivisIciParagraphe).toHaveTextContent('5')
+    expect(suivisIciParagraphe).not.toHaveTextContent('2')
+    expect(suivisAilleursParagraphe).toHaveTextContent('2')
+    expect(suivisAilleursParagraphe).not.toHaveTextContent('5')
+
     expect(
       screen.getByText(/resteront en base mais ne seront plus accessibles/i),
     ).toBeInTheDocument()
