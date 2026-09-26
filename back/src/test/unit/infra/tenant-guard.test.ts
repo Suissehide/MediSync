@@ -74,6 +74,44 @@ describe('assertTenantScope', () => {
     ).not.toThrow()
   })
 
+  // Revue finale de l'etape 4a, Important n°1 : `assertGlobalInclude` (la garde ci-dessus) est
+  // la SEULE des deux barrieres a s'appliquer SANS contexte — `assertNoGlobalToManyBridge`
+  // (tache 15) se limite explicitement a `store?.kind === 'tenant' || store?.kind ===
+  // 'superadmin'` et rend la main sans rien verifier des que `store` est `undefined`. Or
+  // `undefined` est exactement le contexte de TOUTE route hors tenant : `/auth`, `/me` et tout
+  // `/super-admin` (back/CLAUDE.md, "il ne s'applique pas sans contexte"). Le test ci-dessus
+  // passe sous `store` (kind 'tenant') : le meme verdict y est DEJA rendu, redondamment, par
+  // `assertNoGlobalToManyBridge` — desactiver `assertGlobalInclude` ne le fait donc pas rougir.
+  // Celui-ci reproduit les memes appels sans aucun contexte, ce qui isole la seule garde qui
+  // les tient reellement a cet endroit. Preuve par sabotage (methode systematic-debugging) :
+  // commenter l'appel a `assertGlobalInclude` dans `assertGlobalScope` fait rougir ce test seul
+  // (avec le test de monotonie, dont la reference par defaut est `HEAD`) sur les 658 du back.
+  it('sans aucun contexte, refuse un include de relation de tenant sur un modele global (derniere barriere hors tenant)', () => {
+    expect(() =>
+      assertTenantScope(
+        { model: 'Establishment', operation: 'findMany', args: { include: { patients: true } } },
+        undefined,
+      ),
+    ).toThrow(TenantScopeMissingError)
+    expect(() =>
+      assertTenantScope(
+        { model: 'Establishment', operation: 'findFirst', args: { include: { patients: true } } },
+        undefined,
+      ),
+    ).toThrow(TenantScopeMissingError)
+    expect(() =>
+      assertTenantScope(
+        { model: 'User', operation: 'findMany', args: { include: { establishmentMemberships: true } } },
+        undefined,
+      ),
+    ).toThrow(TenantScopeMissingError)
+    // Contrepartie : sans relation de tenant incluse, la meme lecture sans contexte reste
+    // permise (c'est le cas nominal de `/me`, `/auth/*`).
+    expect(() =>
+      assertTenantScope({ model: 'Establishment', operation: 'findMany', args: {} }, undefined),
+    ).not.toThrow()
+  })
+
   it('exige serviceId en lecture sur un modele de service', () => {
     expect(() =>
       assertTenantScope({ model: 'Slot', operation: 'findMany', args: { where: {} } }, store),
