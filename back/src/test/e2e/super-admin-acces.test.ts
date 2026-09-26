@@ -159,16 +159,33 @@ describe('acces au prefixe /super-admin', () => {
 
   // La propriété visée par la tâche : balayée par `fastify.printRoutes()`, pas sur un
   // échantillon choisi à la main — c'est ce qui la garde juste sans y penser quand les tâches 6,
-  // 7 et 8 enregistreront leurs routeurs sous ce préfixe (aujourd'hui, aucune : la boucle
-  // ci-dessous ne trouve donc rien à parcourir, et c'est l'état attendu tant que ces tâches ne
-  // sont pas faites).
+  // 7 et 8 enregistreront leurs routeurs sous ce préfixe (aujourd'hui, aucune : le filtre sur
+  // `/super-admin` ne trouve donc rien à parcourir, et c'est l'état attendu tant que ces tâches
+  // ne sont pas faites).
+  //
+  // Tour de correction 1 (relecture externe) : rien, sans la ligne qui suit, ne distinguait
+  // « zéro route parce qu'il n'y en a légitimement aucune sous /super-admin » de « zéro route
+  // parce que l'énumération elle-même est cassée » — ce dernier cas laissait ce test vert sans
+  // avoir rien examiné. On n'asserte PAS que le sous-ensemble /super-admin est non vide (ce
+  // serait faux aujourd'hui, et rouge pour rien). On asserte que `parsePrintedRoutes` rend
+  // quelque chose sur l'application ENTIÈRE avant tout filtre : elle porte plusieurs dizaines de
+  // routes déjà (146 à l'écriture de ce test, HEAD exclu), donc un total qui s'effondre trahit
+  // une énumération cassée, y compris quand /super-admin ne contient encore rien. Montré rouge
+  // par exécution en corrompant volontairement `parsePrintedRoutes` (retour `[]`
+  // inconditionnel) avant de compter ce test — voir le rapport de tâche.
   it('chaque route enregistree sous /super-admin rend 404 a un compte sans le drapeau', async () => {
     await createUser({ email: 'membre-ordinaire@test.fr', isSuperAdmin: false })
     const cookies = await signIn(testApp.app, 'membre-ordinaire@test.fr')
 
-    const routes = parsePrintedRoutes(
+    const allRoutes = parsePrintedRoutes(
       testApp.app.printRoutes({ commonPrefix: false }),
-    ).filter((route) => route.url.startsWith('/super-admin'))
+    )
+    // Garde de l'énumération elle-même, avant tout filtre — voir le commentaire ci-dessus.
+    expect(allRoutes.length).toBeGreaterThan(50)
+
+    const routes = allRoutes.filter((route) =>
+      route.url.startsWith('/super-admin'),
+    )
 
     for (const route of routes) {
       const res = await testApp.app.inject({
