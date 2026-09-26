@@ -178,29 +178,35 @@ les comptes actuels du seed** (tous ont au moins un service) » : un administrat
 `/choose-context`, pas sur l'écran d'attente. C'est le scénario exact corrigé à l'étape 2 (D15).
 
 **Ce n'est plus un compte à fabriquer à la main : c'est désormais l'état NORMAL d'un premier
-administrateur.** Le chemin, de bout en bout :
+administrateur.** Le chemin, de bout en bout — **corrigé à la revue finale** : la version
+précédente de ce document (`bd7fde9`) envoyait encore l'opérateur faire un appel HTTP à la main
+pour créer l'établissement, et n'exerçait nulle part le bouton d'affectation à un second service.
+Les deux existent depuis la tâche 14b (`db07109`, `f022ef9`) ; ce chemin les fait passer par
+l'écran, pas à côté :
 
 1. obtenir un super-admin (préalable de la partie 1) ;
-2. créer un établissement et son premier administrateur — **par un appel HTTP, il n'y a pas
-   d'écran** (voir la réserve ci-dessous) ;
-3. ouvrir le lien rendu par cet appel, poser un mot de passe, être connecté ;
+2. **depuis l'écran**, onglet « Établissements », bouton « Créer un établissement »
+   (`createEstablishmentForm.tsx`, monté sur la liste) : saisir le nom de l'établissement et
+   l'adresse de son premier administrateur. **Attendu** : une fenêtre « Établissement créé »
+   affiche le lien de première connexion **une seule fois**, avec un bouton de copie — jamais un
+   jeton nu (voir le mineur ci-dessous sur ce point précis) ;
+3. ouvrir le lien rendu par cet écran, poser un mot de passe, être connecté ;
 4. **observer** : ce compte a `ADMIN` sur un établissement et **aucun service**. L'index doit le
    rediriger vers `/e/:establishmentId/admin/members`. S'il atterrit sur `/pending`, c'est la
-   régression que le point 7 existe pour attraper.
+   régression que le point 7 existe pour attraper ;
+5. **créer un second service** (onglet « Services », bouton « Créer un service ») puis, **depuis
+   l'écran Membres**, ouvrir « Modifier le membre » sur le premier administrateur et lui donner un
+   rôle sur ce second service — le menu doit proposer **tous** les services de l'établissement, y
+   compris ceux dont l'administrateur connecté n'est pas lui-même membre (revue finale, Important
+   n°2 : `createMemberAccountForm.tsx` et `addMemberForm.tsx` proposaient jusque-là les services
+   **de l'administrateur connecté**, pas ceux de l'établissement — corrigé, avec un établissement
+   à deux services et un administrateur membre d'un seul comme cas de test, sans quoi le défaut
+   reste invisible). **Attendu** : l'affectation apparaît dans la colonne « Rôle service » de la
+   liste des membres, à côté de celle déjà posée à la création.
 
-**⚠ La réserve de l'étape 2 : créer un établissement n'a pas d'écran.** La route existe, le front
-non (le code correspondant a été retiré comme code mort, non testé, et parce que son type portait
-un second jeton en clair qu'aucune garde ne surveillait). Il faut donc, connecté en super-admin,
-un appel authentifié :
-
-```
-POST /super-admin/establishments
-{ "name": "<nom>", "email": "<adresse du premier administrateur>",
-  "firstName": "<optionnel>", "lastName": "<optionnel>" }
-```
-
-La réponse porte l'établissement créé et `accessLink.token` — **le jeton en clair, rendu une seule
-fois**. Ne le recopier nulle part : il ouvre `/auth/access-link?token=…`.
+Il ne reste, hors interface, que le script d'amorçage du premier super-admin (étape 1
+ci-dessus) — un choix assumé (`decisions-etape-4a.md`, D16), pas un manque : voir le tableau
+plus bas, qui referme le critère de sortie de la cible sur ce seul point.
 
 ## `verification-etape-3.md` — huit points
 
@@ -235,20 +241,27 @@ l'interface, sans accès à la base** ». Voici ce qui est vrai, marche par marc
 | Marche | Depuis l'interface ? |
 |---|---|
 | Poser le drapeau `isSuperAdmin` | **Non** — script en ligne de commande, délibérément (`decisions-etape-4a.md`, D16). |
-| Créer l'établissement et son premier administrateur | **Non** — la route existe, l'écran n'existe pas. |
+| Créer l'établissement et son premier administrateur | **Oui** — `createEstablishmentForm.tsx`, monté sur la liste des établissements (tâche 14b). |
 | Poser le mot de passe du premier administrateur | **Oui** — `/auth/access-link?token=…`. |
 | Créer les services | **Oui**, et le créateur en devient coordinateur. |
 | Créer les comptes de membres et leurs liens | **Oui**, une affectation de service à la création. |
-| Affecter un membre à un **second** service | **Non** — l'écran Membres vit sans service en contexte, sa commande de rôle de service y est désactivée. La route l'accepte pourtant. |
+| Affecter un membre à un **second** service | **Oui** — `EditMemberForm` (tâche 14b) lit la liste complète des services de l'établissement et poste un tableau d'affectations, une par service. |
 | Créer les soignants, lieux, thématiques, gabarits de parcours | **Oui** — écrans antérieurs. |
 | Créer les patients et leurs dossiers | **Oui** — écrans antérieurs, sous le service. |
 | Désactiver un service, un compte | **Oui**, avec l'avertissement chiffré. |
 
-**Le critère de sortie n'est donc pas atteint au pied de la lettre : il reste deux appels hors
-interface (le script d'amorçage, l'appel de création d'établissement) et une affectation
-impossible à l'écran.** Le premier est un choix assumé et défendable ; les deux autres sont des
-manques. Le deuxième est un travail de front d'une taille modeste (la route, ses types et son
-schéma existent) ; le troisième est décrit dans `decisions-etape-4a.md`, « Ce qui reste ouvert ».
+**Le critère de sortie est donc atteint, à une marche assumée près : il ne reste qu'un seul appel
+hors interface — le script d'amorçage du premier super-admin.** C'est un choix assumé et
+défendable (`decisions-etape-4a.md`, D16) : un compte de ce pouvoir ne doit pas être à un clic.
+**Correction par rapport à la version de ce document écrite avant la tâche 14b** (`bd7fde9`) :
+elle déclarait encore ouvertes la création d'établissement et l'affectation à un second service,
+et comptait deux appels hors interface plutôt qu'un — les deux manques qu'`db07109`/`f022ef9`
+existent pour combler, vérifiés ci-dessus dans le code avant de réécrire cette table (voir aussi
+`decisions-etape-4a.md`, annexe, #17 et #19). L'un des deux formulaires de création de membre
+proposait par ailleurs encore, après la tâche 14b, les services **de l'administrateur connecté**
+plutôt que ceux de l'établissement (revue finale, Important n°2) — sans conséquence sur cette
+table (l'affectation à un second service marche, par le bon écran), mais à connaître si l'on
+rejoue ce chemin avec un administrateur qui n'est pas lui-même membre de tous les services.
 
 ## Ce qu'aucune de ces procédures ne couvre, et qu'il ne faut pas croire couvert
 

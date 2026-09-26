@@ -257,20 +257,20 @@ seize colonnes de parcours auront été recopiées **puis supprimées**.
 
 À dire pour qu'on ne le découvre pas à l'usage :
 
-- **Il n'y a aucun écran de création d'établissement.** La route existe
-  (`POST /super-admin/establishments`, corps : nom de l'établissement, adresse du premier
-  administrateur) et rend le lien de première connexion de cet administrateur ; le code front
-  correspondant a été retiré comme code mort, non testé, et parce que son type portait un second
-  jeton en clair qu'aucune garde ne surveillait. La zone super-admin n'a que deux onglets,
-  Établissements (liste et détail) et Comptes. **Créer un second établissement se fait donc par un
-  appel HTTP authentifié**, pas depuis l'interface. Voir `verification-etape-4a.md`, qui en tire
-  les conséquences sur le critère de sortie de la cible.
 - **Aucune traçabilité à l'échelle de la plateforme.** La réémission d'un lien par le super-admin
   n'émet aucun événement et n'apparaît dans aucun journal ; les lignes de journal du script
   d'amorçage existent en base mais aucune route ne les lit. C'est le sujet de l'étape 4b
   (`decisions-etape-4a.md`, « Ce qui reste ouvert »).
-- **Depuis l'écran Membres, on ne peut affecter personne à un service** : une affectation ne se
-  pose qu'à la création du compte, et une seule. Le manque est à l'écran, pas à l'API.
+- **Il ne reste qu'un seul appel hors interface : le script d'amorçage du premier super-admin**
+  (`npm run bootstrap:super-admin`). C'est un choix assumé, pas un manque (`decisions-etape-4a.md`,
+  D16). **Correction par rapport à la version de ce document écrite avant la tâche 14b**
+  (`db07109`, `f022ef9`, commit de rédaction initiale `bd7fde9`) : elle décrivait encore ici
+  l'absence d'écran de création d'établissement et l'impossibilité d'affecter un membre à un
+  second service depuis l'écran Membres. Les deux existent désormais —
+  `createEstablishmentForm.tsx` (monté sur la liste des établissements) et `EditMemberForm`
+  (liste complète des services de l'établissement, un rôle par service) — vérifiés dans le code
+  avant de réécrire ce paragraphe. Voir `verification-etape-4a.md`, qui en tire les conséquences
+  sur le critère de sortie de la cible, et `decisions-etape-4a.md`, annexe, #17 et #19.
 
 ## À ne jamais faire, sur cette base ou sur `medisync`
 

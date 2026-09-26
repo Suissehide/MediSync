@@ -10,10 +10,12 @@ sur les habilitations et l'imputabilité).
 
 Statut : socle implémenté (établissement → services → modèles de parcours), **plus le rôle
 super-admin, l'accès d'intervention temporaire et le lien de première connexion, implémentés à
-l'étape 4a** (voir `decisions-etape-4a.md`). Deux réserves, à ne pas lire comme des détails :
-**il n'existe pas d'écran de création d'établissement** (la route existe, pas l'interface), et
+l'étape 4a** (voir `decisions-etape-4a.md`). Une réserve, à ne pas lire comme un détail :
 **il n'existe aucune traçabilité des actions du super-admin à l'échelle de la plateforme** —
-c'est le sujet de l'étape 4b. Voir la spec d'architecture dans `docs/superpowers/specs/`.
+c'est le sujet de l'étape 4b. (La réserve précédemment notée ici sur l'écran de création
+d'établissement était vraie avant la tâche 14b, qui l'a comblée — corrigé à la revue finale de
+l'étape 4a, sur vérification de l'écran dans le code : `createEstablishmentForm.tsx`.)
+Voir la spec d'architecture dans `docs/superpowers/specs/`.
 
 ## Niveaux de rattachement
 
