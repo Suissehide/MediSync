@@ -1,10 +1,12 @@
 import type { IocContainer } from '../../../types/application/ioc'
+import type { PrimaTransactionClient } from '../../../types/infra/orm/client'
 import type {
   ActivityLogCreateEntityRepo,
   ActivityLogFindManyParams,
   ActivityLogFindManyResult,
   ActivityLogRepositoryInterface,
 } from '../../../types/infra/orm/repositories/activityLog.repository.interface'
+import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { TenantContextInterface } from '../../../types/utils/tenant-context'
 import type { PostgresPrismaClient } from '../postgres-client'
 
@@ -13,10 +15,12 @@ const PAGE_SIZE = 50
 class ActivityLogRepository implements ActivityLogRepositoryInterface {
   private readonly prisma: PostgresPrismaClient
   private readonly tenantContext: TenantContextInterface
+  private readonly errorHandler: ErrorHandlerInterface
 
-  constructor({ postgresOrm, tenantContext }: IocContainer) {
+  constructor({ postgresOrm, tenantContext, errorHandler }: IocContainer) {
     this.prisma = postgresOrm.prisma
     this.tenantContext = tenantContext
+    this.errorHandler = errorHandler
   }
 
   // Contexte lu au moment de l'écriture : null hors requête (runAsSystem).
@@ -34,10 +38,28 @@ class ActivityLogRepository implements ActivityLogRepositoryInterface {
     }
   }
 
-  async create(params: ActivityLogCreateEntityRepo): Promise<void> {
-    await this.prisma.activityLog.create({
-      data: { ...params, ...this.contextColumns },
-    })
+  // `client` optionnel (tour de correction 1, tâche 11) : `UserDomain.bootstrapSuperAdmin`
+  // l'appelle sous transaction, avec les écritures de `User` qu'elle journalise — pour qu'une
+  // écriture ne puisse jamais survivre seule à l'échec de l'autre. Try/catch ajouté au même
+  // tour : cette méthode était la seule du dépôt à écrire sans passer par
+  // `errorHandler.boomErrorFromPrismaError`, contrairement à toutes ses voisines
+  // (`user.repository.ts` notamment) — une erreur Prisma brute, dont le message recopie
+  // intégralement le `data` de l'écriture ratée (userID, action, entityID…), pouvait donc
+  // atteindre un appelant sans être absorbée.
+  async create(
+    params: ActivityLogCreateEntityRepo,
+    client: PrimaTransactionClient = this.prisma,
+  ): Promise<void> {
+    try {
+      await client.activityLog.create({
+        data: { ...params, ...this.contextColumns },
+      })
+    } catch (err) {
+      throw this.errorHandler.boomErrorFromPrismaError({
+        entityName: 'ActivityLog',
+        error: err,
+      })
+    }
   }
 
   // Le service courant, plus les entrees ecrites hors service. Les operations

@@ -1,4 +1,5 @@
 import type { IocContainer } from '../../../types/application/ioc'
+import type { PrimaTransactionClient } from '../../../types/infra/orm/client'
 import type {
   UserCreateEntityRepo,
   UserEntityRepo,
@@ -6,7 +7,6 @@ import type {
   UserRepositoryInterface,
   UserWithMemberships,
 } from '../../../types/infra/orm/repositories/user.repository.interface'
-import type { PrimaTransactionClient } from '../../../types/infra/orm/client'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import { hashPassword } from '../../../utils/hash'
 import type { PostgresPrismaClient } from '../postgres-client'
@@ -113,12 +113,17 @@ class UserRepository implements UserRepositoryInterface {
     }
   }
 
+  // `client` optionnel (tâche 11, étape 4a) : `UserDomain.bootstrapSuperAdmin` l'appelle sous
+  // transaction, avec `grantSuperAdmin` et l'écriture d'`ActivityLog` — voir le commentaire sur
+  // cette méthode. Les appelants existants (membership.domain.ts) ne le fournissent pas et
+  // retombent sur `this.prisma`, sans changement de comportement.
   async setDeactivated(
     userID: string,
     at: Date | null,
+    client: PrimaTransactionClient = this.prisma,
   ): Promise<UserEntityRepo> {
     try {
-      return await this.prisma.user.update({
+      return await client.user.update({
         where: { id: userID },
         data: { deactivatedAt: at },
       })
@@ -150,10 +155,17 @@ class UserRepository implements UserRepositoryInterface {
 
   // Tâche 11 (étape 4a) : appelée uniquement par `UserDomain.bootstrapSuperAdmin`, elle-même
   // encadrée en mode système (`tenantContext`, voir ce fichier) — seul appelant, hors de toute
-  // requête HTTP.
-  async grantSuperAdmin(userID: string): Promise<UserEntityRepo> {
+  // requête HTTP. `client` optionnel, même motif que `setDeactivated` ci-dessus : les deux, plus
+  // l'écriture d'`ActivityLog`, partagent une seule transaction (tour de correction 1, Important
+  // n°1 — sans elle, une promotion pouvait rester acquise en base alors que sa ligne de journal
+  // échouait, perdue sans recours puisque l'idempotence de `bootstrapSuperAdmin` empêche ensuite
+  // tout second appel de rejouer cette branche).
+  async grantSuperAdmin(
+    userID: string,
+    client: PrimaTransactionClient = this.prisma,
+  ): Promise<UserEntityRepo> {
     try {
-      return await this.prisma.user.update({
+      return await client.user.update({
         where: { id: userID },
         data: { isSuperAdmin: true },
       })

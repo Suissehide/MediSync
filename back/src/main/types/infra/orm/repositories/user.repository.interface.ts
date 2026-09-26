@@ -36,7 +36,14 @@ export interface UserRepositoryInterface {
     params: UserProfileUpdateRepo,
   ) => Promise<UserEntityRepo>
   updatePassword: (userID: string, password: string) => Promise<void>
-  setDeactivated: (userID: string, at: Date | null) => Promise<UserEntityRepo>
+  // `client` optionnel (tâche 11, étape 4a, tour de correction 1) : voir le commentaire sur
+  // `grantSuperAdmin` ci-dessous — les deux partagent une transaction depuis
+  // `UserDomain.bootstrapSuperAdmin`.
+  setDeactivated: (
+    userID: string,
+    at: Date | null,
+    client?: PrimaTransactionClient,
+  ) => Promise<UserEntityRepo>
   // Tâche 7 (étape 4a) : posée à la connexion réussie (`AuthDomain.signIn`) — sans elle, la
   // liste du super-admin affiche « jamais » pour tout le monde (spec §3.3, colonne « dernier
   // accès »). `User` est global : aucun contexte de tenant à fournir, comme les méthodes
@@ -44,6 +51,12 @@ export interface UserRepositoryInterface {
   recordLogin: (userID: string, at: Date) => Promise<void>
   // Tâche 11 (étape 4a) : SEUL point d'écriture de `User.isSuperAdmin` — aucune route n'en a un
   // (délibéré). N'existe qu'en sens « pose », jamais « retire » : voir `UserDomain.
-  // bootstrapSuperAdmin`, seul appelant, invoqué par `scripts/bootstrap-super-admin.ts`.
-  grantSuperAdmin: (userID: string) => Promise<UserEntityRepo>
+  // bootstrapSuperAdmin`, seul appelant, invoqué par `scripts/bootstrap-super-admin.ts`. `client`
+  // optionnel (tour de correction 1, Important n°1) : `bootstrapSuperAdmin` l'appelle sous
+  // transaction avec `setDeactivated` et l'écriture d'`ActivityLog`, pour qu'une promotion ne
+  // puisse jamais survivre seule à l'échec de sa ligne de journal.
+  grantSuperAdmin: (
+    userID: string,
+    client?: PrimaTransactionClient,
+  ) => Promise<UserEntityRepo>
 }

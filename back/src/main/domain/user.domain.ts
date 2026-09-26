@@ -1,9 +1,11 @@
 import Boom from '@hapi/boom'
 
+import type { PostgresOrm } from '../infra/orm/postgres-client'
 import type { IocContainer } from '../types/application/ioc'
 import type { AccessLinkDomainInterface } from '../types/domain/accessLink.domain.interface'
 import type {
   AccountSearchResult,
+  BootstrapSuperAdminResult,
   PasswordChangeDomain,
   UserDomainInterface,
   UserEntityDomain,
@@ -56,6 +58,7 @@ class UserDomain implements UserDomainInterface {
   private readonly accessLinkDomain: AccessLinkDomainInterface
   private readonly activityLogRepository: ActivityLogRepositoryInterface
   private readonly tenantContext: TenantContextInterface
+  private readonly postgresOrm: PostgresOrm
 
   constructor({
     userRepository,
@@ -63,12 +66,14 @@ class UserDomain implements UserDomainInterface {
     accessLinkDomain,
     activityLogRepository,
     tenantContext,
+    postgresOrm,
   }: IocContainer) {
     this.userRepository = userRepository
     this.establishmentRepository = establishmentRepository
     this.accessLinkDomain = accessLinkDomain
     this.activityLogRepository = activityLogRepository
     this.tenantContext = tenantContext
+    this.postgresOrm = postgresOrm
   }
 
   findByID(userID: string): Promise<UserEntityDomain> {
@@ -111,15 +116,22 @@ class UserDomain implements UserDomainInterface {
   // (`membershipsForUser`, `findManyByIds`) jointes ici EN MÉMOIRE — jamais un `include`, voir le
   // commentaire au-dessus de `SUPERADMIN_OPERATIONS` (tenant-guard.ts).
   async searchByEmail(email: string): Promise<AccountSearchResult> {
-    const user = await this.userRepository.findByEmail(email).catch((err: unknown) => {
-      if (Boom.isBoom(err) && err.output.statusCode === 404) {
-        throw Boom.notFound('No account with this email')
-      }
-      throw err
-    })
-    const memberships = await this.establishmentRepository.membershipsForUser(user.id)
-    const establishmentIds = [...new Set(memberships.map((m) => m.establishmentId))]
-    const establishments = await this.establishmentRepository.findManyByIds(establishmentIds)
+    const user = await this.userRepository
+      .findByEmail(email)
+      .catch((err: unknown) => {
+        if (Boom.isBoom(err) && err.output.statusCode === 404) {
+          throw Boom.notFound('No account with this email')
+        }
+        throw err
+      })
+    const memberships = await this.establishmentRepository.membershipsForUser(
+      user.id,
+    )
+    const establishmentIds = [
+      ...new Set(memberships.map((m) => m.establishmentId)),
+    ]
+    const establishments =
+      await this.establishmentRepository.findManyByIds(establishmentIds)
     const nameById = new Map(establishments.map((e) => [e.id, e.name]))
 
     return {
@@ -134,7 +146,8 @@ class UserDomain implements UserDomainInterface {
       lastLoginAt: user.lastLoginAt,
       memberships: memberships.map((m) => ({
         establishmentId: m.establishmentId,
-        establishmentName: nameById.get(m.establishmentId) ?? UNRESOLVED_ESTABLISHMENT_NAME,
+        establishmentName:
+          nameById.get(m.establishmentId) ?? UNRESOLVED_ESTABLISHMENT_NAME,
         role: m.role,
         createdAt: m.createdAt,
       })),
@@ -181,46 +194,85 @@ class UserDomain implements UserDomainInterface {
   // (`process.exit`, ou simplement la fin de `main()`) avant qu'une écriture non attendue n'ait
   // eu le temps d'aboutir, perdant la ligne de journal en silence. `activityLogRepository.create`
   // est donc appelé ICI directement, `await`É, plutôt que par l'intermédiaire du bus d'événements.
-  async bootstrapSuperAdmin(email: string): Promise<UserEntityRepo> {
+  //
+  // TOUR DE CORRECTION 1, Important n°1 (revue) : les écritures sur `User` et sur `ActivityLog`
+  // partageaient deux appels distincts, sans transaction — si la ligne de journal échouait APRÈS
+  // que le drapeau ait été posé, l'appelant recevait un rejet (le compte SEMBLE ne pas avoir été
+  // promu), alors que la promotion avait réellement eu lieu ; et l'idempotence (délibérée,
+  // ci-dessus) empêchait ensuite tout second appel de rejouer cette branche, pour rejournaliser
+  // ou simplement constater l'écart. La trace de « qui a créé ce super-admin, et quand » était
+  // alors perdue pour toujours. Toutes les écritures d'un même appel partagent donc désormais UNE
+  // seule transaction (précédent : `EstablishmentDomain.createWithFirstAdmin`,
+  // `postgresOrm.executeWithTransactionClient`, ouverte ICI aussi depuis l'intérieur d'un mode
+  // non-tenant — `runAsSystem` plutôt que `runAsSuperAdmin` — le garde-fou ne distinguant pas une
+  // opération transactionnelle d'une opération isolée, seul le contexte ambiant compte). Piège
+  // Prisma paresseux, toujours le même : chaque étape est `await`ée À L'INTÉRIEUR du rappel
+  // transactionnel.
+  async bootstrapSuperAdmin(email: string): Promise<BootstrapSuperAdminResult> {
     return await this.tenantContext.runAsSystem(async () => {
-      const user = await this.userRepository.findByEmail(email).catch((err: unknown) => {
-        if (Boom.isBoom(err) && err.output.statusCode === 404) {
-          throw Boom.notFound(UNKNOWN_EMAIL)
-        }
-        throw err
-      })
+      const user = await this.userRepository
+        .findByEmail(email)
+        .catch((err: unknown) => {
+          if (Boom.isBoom(err) && err.output.statusCode === 404) {
+            throw Boom.notFound(UNKNOWN_EMAIL)
+          }
+          throw err
+        })
 
       const wasSuperAdmin = user.isSuperAdmin
       const wasDeactivated = user.deactivatedAt !== null
-      // Reporte l'état le plus à jour connu, sans troisième lecture : chaque écriture rend
-      // déjà l'entité mise à jour, il suffit d'accumuler la dernière plutôt que de relire.
-      let current = user
 
-      if (!wasSuperAdmin) {
-        current = await this.userRepository.grantSuperAdmin(user.id)
-        await this.activityLogRepository.create({
-          userID: CLI_ACTOR,
-          userFirstName: null,
-          userLastName: null,
-          action: 'superAdmin.granted',
-          entityType: 'user',
-          entityID: user.id,
-        })
+      if (wasSuperAdmin && !wasDeactivated) {
+        // Idempotence choisie (voir l'interface) : déjà super-admin ET déjà actif, rien à
+        // changer — donc aucune transaction à ouvrir, ni écriture, ni ligne de journal.
+        return { user, granted: false, reactivated: false }
       }
 
-      if (wasDeactivated) {
-        current = await this.userRepository.setDeactivated(user.id, null)
-        await this.activityLogRepository.create({
-          userID: CLI_ACTOR,
-          userFirstName: null,
-          userLastName: null,
-          action: 'superAdmin.reactivated',
-          entityType: 'user',
-          entityID: user.id,
-        })
-      }
+      const current = await this.postgresOrm.executeWithTransactionClient(
+        async (tx) => {
+          // Reporte l'état le plus à jour connu, sans lecture supplémentaire : chaque écriture
+          // rend déjà l'entité mise à jour, il suffit d'accumuler la dernière plutôt que de relire.
+          let latest = user
 
-      return current
+          if (!wasSuperAdmin) {
+            latest = await this.userRepository.grantSuperAdmin(user.id, tx)
+            await this.activityLogRepository.create(
+              {
+                userID: CLI_ACTOR,
+                userFirstName: null,
+                userLastName: null,
+                action: 'superAdmin.granted',
+                entityType: 'user',
+                entityID: user.id,
+              },
+              tx,
+            )
+          }
+
+          if (wasDeactivated) {
+            latest = await this.userRepository.setDeactivated(user.id, null, tx)
+            await this.activityLogRepository.create(
+              {
+                userID: CLI_ACTOR,
+                userFirstName: null,
+                userLastName: null,
+                action: 'superAdmin.reactivated',
+                entityType: 'user',
+                entityID: user.id,
+              },
+              tx,
+            )
+          }
+
+          return latest
+        },
+      )
+
+      return {
+        user: current,
+        granted: !wasSuperAdmin,
+        reactivated: wasDeactivated,
+      }
     })
   }
 }

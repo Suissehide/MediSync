@@ -32,6 +32,16 @@ export type AccountSearchResult = {
   memberships: AccountMembership[]
 }
 
+// Tâche 11 (étape 4a), tour de correction 1 : `granted`/`reactivated` disent ce qui a été
+// EFFECTIVEMENT changé par CET appel (pas l'état final, que `user` porte déjà) — l'opérateur du
+// script doit savoir qu'il vient de réactiver un compte, pas seulement de le promouvoir. Les
+// deux sont `false` sur un second appel idempotent (rien n'a changé).
+export type BootstrapSuperAdminResult = {
+  user: UserEntityRepo
+  granted: boolean
+  reactivated: boolean
+}
+
 export interface UserDomainInterface {
   findByID: (userID: string) => Promise<UserEntityDomain>
   updateProfile: (
@@ -67,6 +77,10 @@ export interface UserDomainInterface {
   // dès que `isSuperAdmin` est vrai (assertNotSuperAdmin, membership.domain.ts), et aucune route
   // de `/super-admin` n'écrit `deactivatedAt` — un super-admin désactivé n'a donc aucun autre
   // chemin de retour. Idempotent : un second appel sur un compte déjà super-admin et déjà actif
-  // n'écrit rien, ni sur `User` ni dans le journal d'activité.
-  bootstrapSuperAdmin: (email: string) => Promise<UserEntityRepo>
+  // n'écrit rien, ni sur `User` ni dans le journal d'activité. Tour de correction 1, Important
+  // n°1 : les écritures (`User` ET `ActivityLog`) partagent une seule transaction Postgres —
+  // sans elle, une promotion pouvait rester acquise en base alors que sa ligne de journal
+  // échouait, perdue sans recours puisque l'idempotence empêche ensuite tout second appel de
+  // rejouer cette branche.
+  bootstrapSuperAdmin: (email: string) => Promise<BootstrapSuperAdminResult>
 }

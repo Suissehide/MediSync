@@ -1,3 +1,5 @@
+import type { PrimaTransactionClient } from '../client'
+
 export type ActivityLogEntityRepo = {
   id: string
   establishmentId: string | null
@@ -30,7 +32,14 @@ export type ActivityLogFindManyResult = {
 }
 
 export interface ActivityLogRepositoryInterface {
-  create: (params: ActivityLogCreateEntityRepo) => Promise<void>
-  findMany: (params: ActivityLogFindManyParams) => Promise<ActivityLogFindManyResult>
+  // `client` optionnel (tâche 11, étape 4a, tour de correction 1) : voir le commentaire sur
+  // l'implémentation.
+  create: (
+    params: ActivityLogCreateEntityRepo,
+    client?: PrimaTransactionClient,
+  ) => Promise<void>
+  findMany: (
+    params: ActivityLogFindManyParams,
+  ) => Promise<ActivityLogFindManyResult>
   deleteOlderThan: (date: Date) => Promise<number>
 }

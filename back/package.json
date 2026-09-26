@@ -7,11 +7,12 @@
   "author": "",
   "license": "ISC",
   "scripts": {
-    "bootstrap:super-admin": "npm run with:tsx -- ./scripts/bootstrap-super-admin.ts",
+    "bootstrap:super-admin": "tsx ./scripts/bootstrap-super-admin.ts",
     "build": "wireit",
     "build:app": "wireit",
     "build:check-typedefs": "wireit",
     "build:check-typedefs:prisma": "wireit",
+    "build:check-typedefs:scripts": "wireit",
     "build:transpile": "wireit",
     "clean": "wireit",
     "clean:npm": "wireit",
@@ -82,6 +83,7 @@
       "dependencies": [
         "build:check-typedefs",
         "build:check-typedefs:prisma",
+        "build:check-typedefs:scripts",
         "build:transpile"
       ]
     },
@@ -103,6 +105,18 @@
         "tsconfig.json",
         "prisma/tsconfig.json",
         "prisma/**/*.ts"
+      ],
+      "dependencies": [
+        "prisma:generate"
+      ],
+      "output": []
+    },
+    "build:check-typedefs:scripts": {
+      "command": "tsc --noemit --preserveWatchOutput -p scripts/tsconfig.json",
+      "files": [
+        "tsconfig.json",
+        "scripts/tsconfig.json",
+        "scripts/**/*.ts"
       ],
       "dependencies": [
         "prisma:generate"
@@ -272,14 +286,15 @@
       "output": []
     },
     "lint": {
-      "command": "biome lint src/main prisma",
+      "command": "biome lint src/main prisma scripts",
       "files": [
         "biome.json",
         "tsconfig.json",
         "src/tsconfig.json",
         "src/tsconfig.json",
         "src/main/**",
-        "prisma/**/*.ts"
+        "prisma/**/*.ts",
+        "scripts/**/*.ts"
       ],
       "output": []
     },
