@@ -4,14 +4,16 @@ import type { UserRepositoryInterface } from '../types/infra/orm/repositories/us
 import type { AppEventBus } from '../utils/app-event-bus'
 import type { Logger } from '../types/utils/logger'
 
-// Les cinq operations de gestion des membres partagent la meme forme de
-// charge utile : une seule boucle suffit a les journaliser toutes.
+// Les operations de gestion des membres partagent la meme forme de charge
+// utile : une seule boucle suffit a les journaliser toutes.
 const MEMBER_ACTIONS = [
   'member.added',
   'member.updated',
   'member.removed',
   'member.deactivated',
   'member.reactivated',
+  'member.accountCreated',
+  'member.accessLinkReissued',
 ] as const
 
 class ActivityLogSubscriber {
@@ -65,7 +67,32 @@ class ActivityLogSubscriber {
     entityID: string,
   ): Promise<void> {
     try {
-      const user = await this.userRepository.findByID(userID).catch(() => null)
+      // TACHE 15 (etape 4a, tour de correction 1) — `findIdentity`, PAS `findByID`.
+      //
+      // Ce souscripteur n'a besoin que de `firstName`/`lastName`, deux colonnes de la ligne
+      // `User`. `findByID` y ajoutait l'arbre COMPLET des appartenances (`membershipsInclude`),
+      // c'est-a-dire une relation A-PLUSIEURS repartant d'un modele GLOBAL — le pont que la
+      // tache 15 ferme sous contexte de tenant (`assertNoGlobalToManyBridge`,
+      // infra/orm/tenant-guard.ts).
+      //
+      // ET CE SOUSCRIPTEUR S'EXECUTE BIEN SOUS CONTEXTE DE TENANT : `appEventBus.emit` est
+      // SYNCHRONE, donc ce rappel demarre dans la portee `AsyncLocalStorage` de la requete. La
+      // preuve est deux lignes plus bas — `activityLogRepository.create` remplit
+      // `establishmentId`/`serviceId` depuis `tenantContext.peek()`, et ces colonnes sont
+      // renseignees.
+      //
+      // POURQUOI CE `.catch(() => null)` REND LA CHOSE GRAVE, et pourquoi il reste : il existe
+      // pour qu'une ligne de journal soit ecrite meme si le nom de l'auteur ne peut pas etre
+      // resolu — mieux vaut une trace amputee que pas de trace. Mais il AVALE aussi un refus du
+      // garde-fou : avec `findByID`, TOUTES les actions journalisees depuis une route de tenant
+      // (patients, diagnostics, rendez-vous, membres) se sont mises a s'ecrire avec
+      // `userFirstName: null, userLastName: null`, sans le moindre signal. Dans une application
+      // de sante, c'est la tracabilite de QUI A FAIT QUOI qui se degrade en silence.
+      //
+      // Ce qui empeche le retour du defaut : `src/test/e2e/activity-log-auteur.test.ts`, qui
+      // affirme LE NOM DE L'AUTEUR dans la ligne ecrite — pas le nombre de lignes, ni son
+      // existence : la ligne existait deja, c'est son auteur qui manquait.
+      const user = await this.userRepository.findIdentity(userID).catch(() => null)
       await this.activityLogRepository.create({
         userID,
         userFirstName: user?.firstName ?? null,

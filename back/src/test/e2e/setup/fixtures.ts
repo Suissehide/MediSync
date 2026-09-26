@@ -28,11 +28,17 @@ type MembershipFixture = {
 export const createUser = async (params: {
   email: string
   password?: string
+  isSuperAdmin?: boolean
   memberships?: MembershipFixture[]
 }) => {
   const { hash, salt } = hashPassword(params.password ?? DEFAULT_PASSWORD)
   const user = await testDb.user.create({
-    data: { email: params.email, password: hash, salt },
+    data: {
+      email: params.email,
+      password: hash,
+      salt,
+      isSuperAdmin: params.isSuperAdmin ?? false,
+    },
   })
   for (const m of params.memberships ?? []) {
     await testDb.establishmentMembership.create({
@@ -75,6 +81,25 @@ export const signIn = async (
   }
   return { access_token: token }
 }
+
+// Un octroi temporaire, tel que le posera plus tard la route d'émission (tâche 8) — ici créé
+// directement en base, ce test n'exerçant que la lecture (résolution de tenant / `/me`).
+export const grantAccess = (params: {
+  userId: string
+  establishmentId: string
+  expiresAt: Date
+  reason?: string
+  revokedAt?: Date | null
+}) =>
+  testDb.superAdminAccessGrant.create({
+    data: {
+      userId: params.userId,
+      establishmentId: params.establishmentId,
+      expiresAt: params.expiresAt,
+      reason: params.reason ?? 'diagnostic',
+      revokedAt: params.revokedAt ?? null,
+    },
+  })
 
 export const tenantUrl = (
   establishmentId: string,

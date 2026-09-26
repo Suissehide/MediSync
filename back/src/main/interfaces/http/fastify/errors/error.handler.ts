@@ -11,11 +11,11 @@ import type {
   ErrorNormalizer,
   ErrorResponse,
 } from '../../../../types/interfaces/http/fastify/errors'
-import { pathWithoutQuery } from '../../../../utils/url-helper'
 import {
   TenantContextMissingError,
   TenantScopeMissingError,
 } from '../../../../utils/tenant-errors'
+import { pathWithoutQuery } from '../../../../utils/url-helper'
 import {
   defaultErrorResponse,
   errorNormalizer,
@@ -76,7 +76,8 @@ const isOwnErrorMessage = (error: unknown): boolean =>
 //   distinction que celle d'`error.normalizer.ts` cote reponse HTTP.
 // - la pile, filtree aux seules lignes de frame (voir `stackFramesOnly` ci-dessus).
 const diagnosticOf = (error: unknown): string => {
-  const errorClass = error instanceof Error ? error.constructor.name : typeof error
+  const errorClass =
+    error instanceof Error ? error.constructor.name : typeof error
   const parts = [`class=${errorClass}`]
   if (isOwnErrorMessage(error) && error instanceof Error) {
     parts.push(`message=${error.message}`)
@@ -132,4 +133,8 @@ const buildErrorHandler = (...errorNormalizers: ErrorNormalizer[]) => {
   }
 }
 
-export { buildErrorHandler, normalizeResponse }
+// Exportée (tâche 11, étape 4a, tour de correction 1) : `scripts/bootstrap-super-admin.ts` la
+// réutilise pour la même raison qu'ici — un message d'erreur n'est sûr à afficher que si NOUS
+// l'avons écrit (Boom ou une des erreurs maison ci-dessus), jamais s'il vient de recopier une
+// erreur brute (Prisma, entre autres) qui peut porter une valeur soumise.
+export { buildErrorHandler, normalizeResponse, isOwnErrorMessage }

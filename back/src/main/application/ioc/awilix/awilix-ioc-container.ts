@@ -12,6 +12,8 @@ import { SoignantDomain } from '../../../domain/soignant.domain'
 import { ThematicDomain } from '../../../domain/thematic.domain'
 import { TodoDomain } from '../../../domain/todo.domain'
 import { UserDomain } from '../../../domain/user.domain'
+import { AccessLinkDomain } from '../../../domain/accessLink.domain'
+import { EstablishmentDomain } from '../../../domain/establishment.domain'
 import { HttpClient } from '../../../infra/http/http-client'
 import { PinoLogger } from '../../../infra/logger/pino/pino-logger'
 import { PostgresOrm } from '../../../infra/orm/postgres-client'
@@ -49,8 +51,14 @@ import { PlanningCycleDomain } from '../../../domain/planningCycle.domain'
 import { PlanningCycleRepository } from '../../../infra/orm/repositories/planningCycle.repository'
 import { LocationDomain } from '../../../domain/location.domain'
 import { MembershipDomain } from '../../../domain/membership.domain'
+import { ServiceDomain } from '../../../domain/service.domain'
+import { SuperAdminGrantDomain } from '../../../domain/superAdminGrant.domain'
+import { AccessGrantRepository } from '../../../infra/orm/repositories/accessGrant.repository'
+import { AccessLinkRepository } from '../../../infra/orm/repositories/accessLink.repository'
+import { EstablishmentRepository } from '../../../infra/orm/repositories/establishment.repository'
 import { LocationRepository } from '../../../infra/orm/repositories/location.repository'
 import { MembershipRepository } from '../../../infra/orm/repositories/membership.repository'
+import { ServiceRepository } from '../../../infra/orm/repositories/service.repository'
 
 declare module '@fastify/awilix' {
   interface Cradle extends IocContainer {}
@@ -139,6 +147,18 @@ class AwilixIocContainer {
     // PlanningCycle
     this.#registerPlanningCycleDomain()
     this.#registerPlanningCycleRepository()
+    // AccessGrant
+    this.#registerAccessGrantRepository()
+    this.#registerSuperAdminGrantDomain()
+    // AccessLink
+    this.#registerAccessLinkDomain()
+    this.#registerAccessLinkRepository()
+    // Establishment
+    this.#registerEstablishmentDomain()
+    this.#registerEstablishmentRepository()
+    // Service
+    this.#registerServiceDomain()
+    this.#registerServiceRepository()
 
     // Server
     this.#registerHttpServer()
@@ -302,6 +322,14 @@ class AwilixIocContainer {
     this.register('locationRepository', asClass(LocationRepository).singleton())
   }
 
+  // Service
+  #registerServiceDomain(): void {
+    this.register('serviceDomain', asClass(ServiceDomain).singleton())
+  }
+  #registerServiceRepository(): void {
+    this.register('serviceRepository', asClass(ServiceRepository).singleton())
+  }
+
   // Todo
   #registerTodoDomain(): void {
     this.register('todoDomain', asClass(TodoDomain).singleton())
@@ -365,6 +393,30 @@ class AwilixIocContainer {
       'planningCycleRepository',
       asClass(PlanningCycleRepository).singleton(),
     )
+  }
+
+  // AccessGrant
+  #registerAccessGrantRepository(): void {
+    this.register('accessGrantRepository', asClass(AccessGrantRepository).singleton())
+  }
+  #registerSuperAdminGrantDomain(): void {
+    this.register('superAdminGrantDomain', asClass(SuperAdminGrantDomain).singleton())
+  }
+
+  // AccessLink
+  #registerAccessLinkDomain(): void {
+    this.register('accessLinkDomain', asClass(AccessLinkDomain).singleton())
+  }
+  #registerAccessLinkRepository(): void {
+    this.register('accessLinkRepository', asClass(AccessLinkRepository).singleton())
+  }
+
+  // Establishment
+  #registerEstablishmentDomain(): void {
+    this.register('establishmentDomain', asClass(EstablishmentDomain).singleton())
+  }
+  #registerEstablishmentRepository(): void {
+    this.register('establishmentRepository', asClass(EstablishmentRepository).singleton())
   }
 }
 

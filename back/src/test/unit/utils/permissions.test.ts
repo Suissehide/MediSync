@@ -53,6 +53,15 @@ describe('permissions', () => {
     expect(hasPermission({ serviceRole: 'COORDINATEUR', establishmentRole: 'MEMBER' }, 'activity-log:read')).toBe(false)
   })
 
+  // `establishments:manage` (etape 4a, tache 6) n'est accordee par AUCUN role d'etablissement ni
+  // de service (habilitations.md : seule la colonne Super-admin est cochee) : c'est
+  // `requireSuperAdmin` (drapeau `isSuperAdmin`), pas cette matrice, qui protege
+  // `POST /super-admin/establishments`. Verifie meme avec le role le plus permissif (ADMIN).
+  it('n accorde jamais establishments:manage par un role d etablissement ou de service', () => {
+    expect(hasPermission({ serviceRole: null, establishmentRole: 'ADMIN' }, 'establishments:manage')).toBe(false)
+    expect(hasPermission({ serviceRole: 'COORDINATEUR', establishmentRole: 'ADMIN' }, 'establishments:manage')).toBe(false)
+  })
+
   // Les roles sont declares a trois endroits : les enums Prisma, cette
   // matrice, et le schema HTTP des membres. Ce test empeche la matrice de
   // diverger du schema en silence — un role ajoute cote Prisma et oublie ici

@@ -75,7 +75,9 @@ describe('toMeResponse', () => {
         },
       ],
     }
-    expect(toMeResponse(user)).toEqual({
+    // `[]` explicite : `grants` n'a plus de valeur par défaut (tour de correction 1, tâche 3),
+    // précisément pour qu'un appel qui l'omettrait ne compile plus silencieusement.
+    expect(toMeResponse(user, [])).toEqual({
       id: 'u1',
       email: 'a@b.fr',
       firstName: 'A',
@@ -88,6 +90,7 @@ describe('toMeResponse', () => {
           role: 'ADMIN',
           soignantId: 'so1',
           services: [{ id: 's1', name: 'Svc s1', role: 'COORDINATEUR' }],
+          origine: 'reelle',
         },
       ],
     })

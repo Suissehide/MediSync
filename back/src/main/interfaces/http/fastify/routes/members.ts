@@ -4,8 +4,13 @@ import { z } from 'zod/v4'
 import {
   type AddMemberBody,
   addMemberSchema,
+  type CreateMemberAccountBody,
+  createMemberAccountResponseSchema,
+  createMemberAccountSchema,
   type MemberParams,
+  memberAccessLinkResponseSchema,
   memberParamsSchema,
+  projectCreatedMember,
   memberResponseSchema,
   membersResponseSchema,
   type UpdateMemberBody,
@@ -44,6 +49,41 @@ const membersRouter: FastifyPluginAsync = (fastify) => {
     },
   )
 
+
+  // Tâche 10, step 1. Chemin réel : `POST /e/:establishmentId/admin/members/account` — le brief
+  // l'écrit sans `/admin`, mais ce routeur est monté sous ce préfixe (establishment-admin.
+  // routes.ts) et une route portant `:establishmentId` enregistrée hors de ces greffons fait
+  // échouer le démarrage (`assertTenantShapedRoute`).
+  //
+  // La réponse est PROJETÉE ici, explicitement, sur les seules colonnes que l'appelant vient
+  // d'écrire : `member.user` (nom stocké, identifiant du compte) resterait sinon un oracle
+  // d'existence de comptes sur une adresse déjà connue — voir
+  // `createMemberAccountResponseSchema`. Le schéma Zod l'élaguerait déjà à la sérialisation ;
+  // la projection le dit à la lecture du code plutôt que de s'en remettre à cet effet de bord,
+  // et `projectCreatedMember` est éprouvée à part (tour de correction 2, mineur n°3 : tant
+  // qu'elle vivait en ligne ici, aucun test ne pouvait la tenir). ATTENTION, la limite est
+  // mesurée, pas supposée : c'est le CONTENU de la projection qui est éprouvé, jamais SON
+  // APPEL DEPUIS CETTE LIGNE — retirer `projectCreatedMember(...)` ci-dessous ne fait rougir
+  // aucune des quatre portes, parce que Zod rend alors exactement la même réponse. Le
+  // raisonnement complet est sur `projectCreatedMember` (`schemas/members.schema.ts`).
+  fastify.post<{ Body: CreateMemberAccountBody }>(
+    '/account',
+    {
+      schema: {
+        body: createMemberAccountSchema,
+        response: { 201: createMemberAccountResponseSchema },
+      },
+      config: { permission: 'members:manage' },
+    },
+    async (request, reply) => {
+      const { member, accessLink } = await membershipDomain.createAccount(
+        request.body,
+      )
+      reply.code(201)
+      return { member: projectCreatedMember(member), accessLink }
+    },
+  )
+
   fastify.patch<{ Params: MemberParams; Body: UpdateMemberBody }>(
     '/:membershipId',
     {
@@ -70,6 +110,28 @@ const membersRouter: FastifyPluginAsync = (fastify) => {
     async (request, reply) => {
       await membershipDomain.remove(request.params.membershipId)
       reply.code(204).send()
+    },
+  )
+
+
+  // Tâche 10, step 3 : réémettre un lien — la réinitialisation d'un accès oublié, qui
+  // n'existait par aucun moyen. Le client désigne une APPARTENANCE, jamais un compte : voir
+  // `MembershipDomain.reissueAccessLink` pour ce que cette distinction protège.
+  fastify.post<{ Params: MemberParams }>(
+    '/:membershipId/access-link',
+    {
+      schema: {
+        params: memberParamsSchema,
+        response: { 201: memberAccessLinkResponseSchema },
+      },
+      config: { permission: 'members:manage' },
+    },
+    async (request, reply) => {
+      const accessLink = await membershipDomain.reissueAccessLink(
+        request.params.membershipId,
+      )
+      reply.code(201)
+      return { accessLink }
     },
   )
 

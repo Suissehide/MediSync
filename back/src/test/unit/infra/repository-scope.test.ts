@@ -296,6 +296,79 @@ describe('MembershipRepository (gestion des membres)', () => {
     ).resolves.toBeUndefined()
   })
 
+  // TACHE 15 (etape 4a) — `estRattacheAilleurs` est le CINQUIEME emploi declare du mode systeme
+  // (`runAsSystem-unicite.test.ts`, qui garde la CAPACITE). C'est ICI que sont gardees ses
+  // BORNES, comme pour `estSuiviAilleurs` et `impactDesactivation` plus bas : la forme exacte de
+  // la requete, et la preuve que cette forme serait refusee par le garde-fou hors du mode
+  // encadre — sans quoi le mode encadre serait une preference de style plutot qu'une necessite.
+  describe('MembershipRepository.estRattacheAilleurs', () => {
+    it('compte sous runAsSystem, sur le compte vise, en EXCLUANT l etablissement courant', async () => {
+      const { prisma, calls } = buildFakePrisma({ 'establishmentMembership.count': 2 })
+      const ctx = new TenantContext()
+      const spy = jest.spyOn(ctx, 'runAsSystem')
+      const repo = new MembershipRepository(buildContainer(prisma, ctx))
+
+      const resultat = await ctx.run(tenant, () => repo.estRattacheAilleurs('u9'))
+
+      expect(spy).toHaveBeenCalledTimes(1)
+      expect(calls).toHaveLength(1)
+      expect(calls[0]).toMatchObject({
+        model: 'establishmentMembership',
+        op: 'count',
+        args: { where: { userId: 'u9', establishmentId: { not: 'e1' } } },
+      })
+      // UN BOOLEEN sort de la fonction, jamais le compte ni un identifiant d'etablissement.
+      expect(resultat).toBe(true)
+    })
+
+    it('rend faux quand le compte n est rattache qu ici', async () => {
+      const { prisma } = buildFakePrisma({ 'establishmentMembership.count': 0 })
+      const ctx = new TenantContext()
+      const repo = new MembershipRepository(buildContainer(prisma, ctx))
+
+      await expect(ctx.run(tenant, () => repo.estRattacheAilleurs('u9'))).resolves.toBe(false)
+    })
+
+    // Le mecanisme, isole. Ce que le mode encadre rend possible, et que rien d'autre ne pourrait :
+    // `establishmentId: { not: … }` est exactement ce que `assertWhere` refuse sous un contexte de
+    // tenant (la valeur lue n'est pas l'etablissement courant, c'est un objet de filtre). Le refus
+    // est donc REEL, pas theorique — et c'est lui qui justifie l'encadrement.
+    it('la forme de requete qu elle construit est refusee hors du mode encadre, et permise dedans', () => {
+      const args = { where: { userId: 'u9', establishmentId: { not: 'e1' } } }
+      expect(() =>
+        assertTenantScope(
+          { model: 'EstablishmentMembership', operation: 'count', args },
+          { kind: 'tenant', tenant },
+        ),
+      ).toThrow(TenantScopeMissingError)
+
+      expect(() =>
+        assertTenantScope(
+          { model: 'EstablishmentMembership', operation: 'count', args },
+          { kind: 'system' },
+        ),
+      ).not.toThrow()
+    })
+
+    // Le piege du depot, tenu par un test plutot que par un commentaire : l'etablissement courant
+    // doit etre lu AVANT d'entrer dans le mode systeme. Lu a l'interieur, `current()` leverait
+    // (le store n'y est plus de type tenant) — et une implementation qui « reparerait » cela en
+    // laissant tomber la borne compterait les rattachements de TOUS les etablissements, courant
+    // compris, rendant vrai pour un compte rattache ici seulement. Le test ci-dessus l'attrape
+    // par la valeur exacte du `not`.
+    it('ne leve pas et garde sa borne meme si le contexte systeme est deja ouvert autour', async () => {
+      const { prisma, calls } = buildFakePrisma({ 'establishmentMembership.count': 0 })
+      const ctx = new TenantContext()
+      const repo = new MembershipRepository(buildContainer(prisma, ctx))
+
+      await ctx.run(tenant, () => repo.estRattacheAilleurs('u9'))
+
+      expect(calls[0]?.args).toMatchObject({
+        where: { establishmentId: { not: 'e1' } },
+      })
+    })
+  })
+
   it('update verifie l appartenance dans le tenant avant de rebattre les affectations', async () => {
     const { prisma, calls } = buildFakePrisma()
     const ctx = new TenantContext()
@@ -1031,13 +1104,17 @@ describe('scoping appointment', () => {
   })
 })
 
-// Etape 3 du multi-tenant, tache 7 : `estSuiviAilleurs` est LA SEULE lecture de tout le back qui
-// traverse volontairement la frontiere entre services (design §5.3). Ce bloc en verifie le
-// mecanisme, pas seulement le resultat : la forme exacte de la requete (ses deux bornes, memes
-// sous `runAsSystem`), et — a la place ou l'aurait laissee un simple test de retour — la preuve
-// que cette forme precise serait refusee par le garde-fou d'ORM sans le mode encadre. Voir aussi
-// back/src/test/unit/infra/runAsSystem-unicite.test.ts (unicite de l'exception dans les sources)
-// et back/src/test/e2e/dossier-service.test.ts (comportement de bout en bout, cloisonnement).
+// Etape 3 du multi-tenant, tache 7 : `estSuiviAilleurs` traverse volontairement la frontiere
+// entre services (design §5.3) — `impactDesactivation`, plus bas dans ce fichier (tache 9), en
+// est une autre. Ce bloc verifie le mecanisme, pas seulement le resultat : la forme exacte de la
+// requete (ses deux bornes, memes sous `runAsSystem`), et — a la place ou l'aurait laissee un
+// simple test de retour — la preuve que cette forme precise serait refusee par le garde-fou
+// d'ORM sans le mode encadre. C'EST CE BLOC-CI (et son equivalent pour `impactDesactivation`) qui
+// garde les BORNES des requetes — PAS back/src/test/unit/infra/runAsSystem-unicite.test.ts, qui
+// garde une propriete DIFFERENTE (la CAPACITE : que le mode ne s'active qu'aux emplacements
+// declares) et ne regarde jamais le contenu d'une requete — voir le commentaire au-dessus
+// d'`estSuiviAilleurs` dans patientServiceFile.repository.ts pour le detail des deux tests. Voir
+// aussi back/src/test/e2e/dossier-service.test.ts (comportement de bout en bout, cloisonnement).
 describe('PatientServiceFileRepository.estSuiviAilleurs', () => {
   it('interroge sous runAsSystem, avec l etablissement courant et un service different du courant', async () => {
     const { prisma, calls } = buildFakePrisma({ 'patientServiceFile.findFirst': { patientId: 'p1' } })
@@ -1094,6 +1171,131 @@ describe('PatientServiceFileRepository.estSuiviAilleurs', () => {
     expect(() =>
       assertTenantScope(
         { model: 'PatientServiceFile', operation: 'findFirst', args },
+        { kind: 'system' },
+      ),
+    ).not.toThrow()
+  })
+})
+
+// Design §3.6, tache 9 : un autre emploi declare de l'exception (voir runAsSystem-unicite.
+// test.ts pour la CAPACITE ; ce bloc-ci pour les BORNES — deux tests, deux proprietes, voir le
+// commentaire au-dessus d'`estSuiviAilleurs` dans patientServiceFile.repository.ts). Appele
+// depuis l'administration d'etablissement — AUCUN service dans le tenant courant
+// (`serviceId: null`) — ce bloc verifie que la methode fonctionne quand meme (elle ne lit jamais
+// `this.scope`, qui exigerait un service), la forme exacte des DEUX requetes qu'elle construit
+// (dont le filtre sur les services ACTIFS de la seconde), et le compte qui importe : les
+// patients suivis ICI mais NULLE PART AILLEURS ACTIVEMENT dans le meme etablissement — PAS le
+// meme calcul que le signal de suivi ailleurs (`estSuiviAilleurs`), qui repond a une question
+// differente et ne filtre pas les services desactives : voir le commentaire cite ci-dessus.
+describe('PatientServiceFileRepository.impactDesactivation', () => {
+  const tenantAdminEtablissement: Tenant = {
+    userId: 'u1', establishmentId: 'e1', establishmentRole: 'ADMIN',
+    serviceId: null, serviceRole: null, soignantId: null,
+  }
+
+  it('interroge sous runAsSystem, sans service courant, et rend les patients suivis ici mais nulle part ailleurs', async () => {
+    const calls: { model: string; op: string; args: Record<string, unknown> }[] = []
+    // Deux patients (p1, p2) suivis ici (serviceId 'sB') ET ailleurs dans l'etablissement ; un
+    // troisieme (p3) suivi ici SEULEMENT — c'est lui, et lui seul, qui doit compter dans
+    // `suivisNullePartAilleurs`. Un jeu ou les deux comptes coincideraient (tous suivis
+    // ailleurs, ou aucun) ne prouverait rien : celui-ci les distingue.
+    const reponses = [
+      [{ patientId: 'p1' }, { patientId: 'p2' }, { patientId: 'p3' }],
+      [{ patientId: 'p1' }, { patientId: 'p2' }],
+    ]
+    let appel = 0
+    const prisma = {
+      patientServiceFile: {
+        findMany: (args: Record<string, unknown>) => {
+          calls.push({ model: 'patientServiceFile', op: 'findMany', args })
+          return Promise.resolve(reponses[appel++])
+        },
+      },
+    }
+    const ctx = new TenantContext()
+    const spy = jest.spyOn(ctx, 'runAsSystem')
+    const repo = new PatientServiceFileRepository(buildContainer(prisma, ctx))
+
+    const resultat = await ctx.run(tenantAdminEtablissement, () =>
+      repo.impactDesactivation('sB', 'e1'),
+    )
+
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(calls).toHaveLength(2)
+    // Premiere requete : les sous-dossiers du service dont on evalue la desactivation.
+    expect(calls[0]).toMatchObject({
+      model: 'patientServiceFile', op: 'findMany',
+      args: {
+        where: { serviceId: 'sB', establishmentId: 'e1' },
+        select: { patientId: true },
+      },
+    })
+    // Seconde requete : parmi CES MEMES patients, ceux suivis dans un AUTRE service ACTIF du
+    // MEME etablissement — jamais un autre etablissement (impossible de toute facon par la cle
+    // etrangere composite, mais la requete porte quand meme sa propre borne, comme
+    // `estSuiviAilleurs`). `service: { deactivatedAt: null }` (tour de correction 1, relecture,
+    // Important n°1) : un service DEJA desactive ne protege plus personne de l'invisibilite,
+    // donc il ne doit pas compter comme un « ailleurs » qui sauve le patient du compte qui
+    // importe.
+    expect(calls[1]).toMatchObject({
+      model: 'patientServiceFile', op: 'findMany',
+      args: {
+        where: {
+          establishmentId: 'e1',
+          patientId: { in: ['p1', 'p2', 'p3'] },
+          serviceId: { not: 'sB' },
+          service: { deactivatedAt: null },
+        },
+        select: { patientId: true },
+      },
+    })
+    // Rien d'autre que deux nombres ne sort de la fonction.
+    expect(resultat).toEqual({ suivisIci: 3, suivisNullePartAilleurs: 1 })
+  })
+
+  it('ne fait pas la seconde requete quand personne n est suivi ici : { 0, 0 } directement', async () => {
+    const calls: unknown[] = []
+    const prisma = {
+      patientServiceFile: {
+        findMany: (args: unknown) => {
+          calls.push(args)
+          return Promise.resolve([])
+        },
+      },
+    }
+    const ctx = new TenantContext()
+    const repo = new PatientServiceFileRepository(buildContainer(prisma, ctx))
+
+    const resultat = await ctx.run(tenantAdminEtablissement, () =>
+      repo.impactDesactivation('sVide', 'e1'),
+    )
+
+    expect(calls).toHaveLength(1)
+    expect(resultat).toEqual({ suivisIci: 0, suivisNullePartAilleurs: 0 })
+  })
+
+  // Meme demonstration que pour estSuiviAilleurs : la forme de la SECONDE requete (celle qui
+  // traverse la frontiere entre services) est refusee par le garde-fou hors du mode encadre.
+  it('la forme de la requete qui traverse la frontiere est refusee hors du mode encadre, et permise dedans', () => {
+    const args = {
+      where: {
+        establishmentId: 'e1',
+        patientId: { in: ['p1'] },
+        serviceId: { not: 'sB' },
+        service: { deactivatedAt: null },
+      },
+      select: { patientId: true },
+    }
+    expect(() =>
+      assertTenantScope(
+        { model: 'PatientServiceFile', operation: 'findMany', args },
+        { kind: 'tenant', tenant: tenantAdminEtablissement },
+      ),
+    ).toThrow(TenantScopeMissingError)
+
+    expect(() =>
+      assertTenantScope(
+        { model: 'PatientServiceFile', operation: 'findMany', args },
         { kind: 'system' },
       ),
     ).not.toThrow()

@@ -69,6 +69,7 @@ const buildDomain = (knownUser: UserEntityRepo = buildKnownUser()) => {
     updateProfile: () => Promise.resolve(knownUser),
     updatePassword: () => Promise.resolve(),
     setDeactivated: () => Promise.resolve(knownUser),
+    recordLogin: () => Promise.resolve(),
   }
 
   const config = {
@@ -86,8 +87,14 @@ const buildDomain = (knownUser: UserEntityRepo = buildKnownUser()) => {
     warn: () => {},
   }
 
+  // Depuis la tâche 3 (étape 4a) : `AuthDomain` consulte les octrois vivants de l'utilisateur à
+  // chaque connexion/rafraîchissement (`toMeResponse` en a besoin pour l'arbre effectif). Aucun
+  // octroi ici, sans rapport avec ce que ce fichier éprouve (la non-énumération des comptes).
+  const accessGrantRepository = { findForUser: () => Promise.resolve([]) }
+
   const domain = new AuthDomain({
     userRepository,
+    accessGrantRepository,
     config,
     logger,
   } as unknown as IocContainer)

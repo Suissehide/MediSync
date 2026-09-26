@@ -9,8 +9,8 @@ import {
 import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { toSelectOptions } from '../../../libs/utils.ts'
 import { useMemberMutations } from '../../../queries/useMembers.ts'
+import { useServicesQuery } from '../../../queries/useServices.ts'
 import { useEstablishmentSoignantsQuery } from '../../../queries/useSoignant.ts'
-import { useAuthStore } from '../../../store/useAuthStore.ts'
 import type { EstablishmentRole, ServiceRole } from '../../../types/auth.ts'
 import { Button } from '../../ui/button.tsx'
 import {
@@ -47,8 +47,19 @@ function AddMemberForm({ trigger }: AddMemberFormProps) {
   // service en contexte (voir `admin/members.tsx`), ou `useSoignantQueries`
   // (prefixe de service) leverait.
   const { soignants } = useEstablishmentSoignantsQuery()
-  const user = useAuthStore((state) => state.user)
-  const context = useAuthStore((state) => state.context)
+  // Revue finale de l'étape 4a, Important n°2 : les services PROPOSÉS sont
+  // la liste COMPLÈTE de l'établissement courant
+  // (`GET /e/:establishmentId/admin/services`, déjà listée par l'onglet des
+  // services), jamais celle de l'administrateur connecté
+  // (`user.establishments[].services`, données de `/me`) — sans quoi un
+  // administrateur membre d'un seul service de l'établissement ne peut
+  // rattacher personne à l'autre. Même source qu'`EditMemberForm` et
+  // `CreateMemberAccountForm` (`useServicesQuery`).
+  const {
+    services,
+    isPending: servicesPending,
+    error: servicesError,
+  } = useServicesQuery()
 
   const soignantOptions = useMemo(
     () =>
@@ -58,25 +69,17 @@ function AddMemberForm({ trigger }: AddMemberFormProps) {
     [soignants],
   )
 
-  // Cet écran vit sous le layout d'établissement : le contexte n'y porte
-  // plus de service « courant ». Les services proposés sont donc lus dans
-  // l'arbre des appartenances (`user.establishments`), pour l'établissement
-  // du contexte.
-  const establishmentServices = useMemo(() => {
-    const establishment = user?.establishments.find(
-      (e) => e.id === context?.establishmentId,
-    )
-    return establishment?.services ?? []
-  }, [user, context?.establishmentId])
-
   const serviceOptions = useMemo(
     () => [
       { value: NO_SERVICE, label: 'Aucun' },
-      ...[...establishmentServices]
+      ...[...(services ?? [])]
         .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
-        .map((s) => ({ value: s.id, label: s.name })),
+        .map((s) => ({
+          value: s.id,
+          label: s.deactivatedAt !== null ? `${s.name} (désactivé)` : s.name,
+        })),
     ],
-    [establishmentServices],
+    [services],
   )
 
   const form = useAppForm({
@@ -88,9 +91,6 @@ function AddMemberForm({ trigger }: AddMemberFormProps) {
       serviceRole: NO_SERVICE_ROLE,
     },
     onSubmit: ({ value }) => {
-      if (!context) {
-        return
-      }
       // Une affectation de service n'est envoyée que si un service a
       // effectivement été choisi ; sans service choisi, le rôle est ignoré
       // (le champ est de toute façon désactivé dans ce cas, voir plus bas).
@@ -196,6 +196,16 @@ function AddMemberForm({ trigger }: AddMemberFormProps) {
                 />
               )}
             </form.AppField>
+            {servicesPending && (
+              <p className="text-xs text-text-light">
+                Chargement des services...
+              </p>
+            )}
+            {!servicesPending && servicesError && (
+              <p className="text-xs text-destructive">
+                Impossible de charger les services.
+              </p>
+            )}
 
             {/* Reactif au service choisi ci-dessus (champ frère) : sans
             service choisi, aucun rôle de service ne peut être assigné. */}

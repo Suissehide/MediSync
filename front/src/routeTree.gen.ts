@@ -15,12 +15,17 @@ import { Route as PendingImport } from './routes/pending'
 import { Route as AuthenticatedImport } from './routes/_authenticated'
 import { Route as AuthIndexImport } from './routes/auth/index'
 import { Route as AuthenticatedIndexImport } from './routes/_authenticated/index'
+import { Route as AuthAccessLinkImport } from './routes/auth/access-link'
+import { Route as AuthenticatedSuperAdminImport } from './routes/_authenticated/super-admin'
 import { Route as AuthenticatedSuiviImport } from './routes/_authenticated/suivi'
 import { Route as AuthenticatedDashboardImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedChooseContextImport } from './routes/_authenticated/choose-context'
 import { Route as AuthenticatedAgendaImport } from './routes/_authenticated/agenda'
+import { Route as AuthenticatedSuperAdminIndexImport } from './routes/_authenticated/super-admin/index'
 import { Route as AuthenticatedPatientIndexImport } from './routes/_authenticated/patient/index'
 import { Route as AuthenticatedUserSettingsImport } from './routes/_authenticated/user/settings'
+import { Route as AuthenticatedSuperAdminUsersImport } from './routes/_authenticated/super-admin/users'
+import { Route as AuthenticatedSuperAdminEstablishmentIdImport } from './routes/_authenticated/super-admin/$establishmentId'
 import { Route as AuthenticatedSettingsUserImport } from './routes/_authenticated/settings/user'
 import { Route as AuthenticatedSettingsThematicImport } from './routes/_authenticated/settings/thematic'
 import { Route as AuthenticatedSettingsSoignantImport } from './routes/_authenticated/settings/soignant'
@@ -31,7 +36,9 @@ import { Route as AuthenticatedSettingsActivityLogImport } from './routes/_authe
 import { Route as AuthenticatedPatientPatientIDImport } from './routes/_authenticated/patient/$patientID'
 import { Route as AuthenticatedEEstablishmentIdAdminImport } from './routes/_authenticated/e/$establishmentId/admin'
 import { Route as AuthenticatedEEstablishmentIdSServiceIdImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId'
+import { Route as AuthenticatedEEstablishmentIdAdminServicesImport } from './routes/_authenticated/e/$establishmentId/admin/services'
 import { Route as AuthenticatedEEstablishmentIdAdminMembersImport } from './routes/_authenticated/e/$establishmentId/admin/members'
+import { Route as AuthenticatedEEstablishmentIdAdminGrantsImport } from './routes/_authenticated/e/$establishmentId/admin/grants'
 import { Route as AuthenticatedEEstablishmentIdSServiceIdIndexImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/index'
 import { Route as AuthenticatedEEstablishmentIdSServiceIdSuiviImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/suivi'
 import { Route as AuthenticatedEEstablishmentIdSServiceIdDashboardImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/dashboard'
@@ -71,6 +78,18 @@ const AuthenticatedIndexRoute = AuthenticatedIndexImport.update({
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 
+const AuthAccessLinkRoute = AuthAccessLinkImport.update({
+  id: '/auth/access-link',
+  path: '/auth/access-link',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const AuthenticatedSuperAdminRoute = AuthenticatedSuperAdminImport.update({
+  id: '/super-admin',
+  path: '/super-admin',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+
 const AuthenticatedSuiviRoute = AuthenticatedSuiviImport.update({
   id: '/suivi',
   path: '/suivi',
@@ -97,6 +116,13 @@ const AuthenticatedAgendaRoute = AuthenticatedAgendaImport.update({
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 
+const AuthenticatedSuperAdminIndexRoute =
+  AuthenticatedSuperAdminIndexImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedSuperAdminRoute,
+  } as any)
+
 const AuthenticatedPatientIndexRoute = AuthenticatedPatientIndexImport.update({
   id: '/patient/',
   path: '/patient/',
@@ -108,6 +134,20 @@ const AuthenticatedUserSettingsRoute = AuthenticatedUserSettingsImport.update({
   path: '/user/settings',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+
+const AuthenticatedSuperAdminUsersRoute =
+  AuthenticatedSuperAdminUsersImport.update({
+    id: '/users',
+    path: '/users',
+    getParentRoute: () => AuthenticatedSuperAdminRoute,
+  } as any)
+
+const AuthenticatedSuperAdminEstablishmentIdRoute =
+  AuthenticatedSuperAdminEstablishmentIdImport.update({
+    id: '/$establishmentId',
+    path: '/$establishmentId',
+    getParentRoute: () => AuthenticatedSuperAdminRoute,
+  } as any)
 
 const AuthenticatedSettingsUserRoute = AuthenticatedSettingsUserImport.update({
   id: '/settings/user',
@@ -178,10 +218,24 @@ const AuthenticatedEEstablishmentIdSServiceIdRoute =
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 
+const AuthenticatedEEstablishmentIdAdminServicesRoute =
+  AuthenticatedEEstablishmentIdAdminServicesImport.update({
+    id: '/services',
+    path: '/services',
+    getParentRoute: () => AuthenticatedEEstablishmentIdAdminRoute,
+  } as any)
+
 const AuthenticatedEEstablishmentIdAdminMembersRoute =
   AuthenticatedEEstablishmentIdAdminMembersImport.update({
     id: '/members',
     path: '/members',
+    getParentRoute: () => AuthenticatedEEstablishmentIdAdminRoute,
+  } as any)
+
+const AuthenticatedEEstablishmentIdAdminGrantsRoute =
+  AuthenticatedEEstablishmentIdAdminGrantsImport.update({
+    id: '/grants',
+    path: '/grants',
     getParentRoute: () => AuthenticatedEEstablishmentIdAdminRoute,
   } as any)
 
@@ -324,6 +378,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSuiviImport
       parentRoute: typeof AuthenticatedImport
     }
+    '/_authenticated/super-admin': {
+      id: '/_authenticated/super-admin'
+      path: '/super-admin'
+      fullPath: '/super-admin'
+      preLoaderRoute: typeof AuthenticatedSuperAdminImport
+      parentRoute: typeof AuthenticatedImport
+    }
+    '/auth/access-link': {
+      id: '/auth/access-link'
+      path: '/auth/access-link'
+      fullPath: '/auth/access-link'
+      preLoaderRoute: typeof AuthAccessLinkImport
+      parentRoute: typeof rootRoute
+    }
     '/_authenticated/': {
       id: '/_authenticated/'
       path: '/'
@@ -394,6 +462,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsUserImport
       parentRoute: typeof AuthenticatedImport
     }
+    '/_authenticated/super-admin/$establishmentId': {
+      id: '/_authenticated/super-admin/$establishmentId'
+      path: '/$establishmentId'
+      fullPath: '/super-admin/$establishmentId'
+      preLoaderRoute: typeof AuthenticatedSuperAdminEstablishmentIdImport
+      parentRoute: typeof AuthenticatedSuperAdminImport
+    }
+    '/_authenticated/super-admin/users': {
+      id: '/_authenticated/super-admin/users'
+      path: '/users'
+      fullPath: '/super-admin/users'
+      preLoaderRoute: typeof AuthenticatedSuperAdminUsersImport
+      parentRoute: typeof AuthenticatedSuperAdminImport
+    }
     '/_authenticated/user/settings': {
       id: '/_authenticated/user/settings'
       path: '/user/settings'
@@ -408,6 +490,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPatientIndexImport
       parentRoute: typeof AuthenticatedImport
     }
+    '/_authenticated/super-admin/': {
+      id: '/_authenticated/super-admin/'
+      path: '/'
+      fullPath: '/super-admin/'
+      preLoaderRoute: typeof AuthenticatedSuperAdminIndexImport
+      parentRoute: typeof AuthenticatedSuperAdminImport
+    }
     '/_authenticated/e/$establishmentId/admin': {
       id: '/_authenticated/e/$establishmentId/admin'
       path: '/e/$establishmentId/admin'
@@ -415,11 +504,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEEstablishmentIdAdminImport
       parentRoute: typeof AuthenticatedImport
     }
+    '/_authenticated/e/$establishmentId/admin/grants': {
+      id: '/_authenticated/e/$establishmentId/admin/grants'
+      path: '/grants'
+      fullPath: '/e/$establishmentId/admin/grants'
+      preLoaderRoute: typeof AuthenticatedEEstablishmentIdAdminGrantsImport
+      parentRoute: typeof AuthenticatedEEstablishmentIdAdminImport
+    }
     '/_authenticated/e/$establishmentId/admin/members': {
       id: '/_authenticated/e/$establishmentId/admin/members'
       path: '/members'
       fullPath: '/e/$establishmentId/admin/members'
       preLoaderRoute: typeof AuthenticatedEEstablishmentIdAdminMembersImport
+      parentRoute: typeof AuthenticatedEEstablishmentIdAdminImport
+    }
+    '/_authenticated/e/$establishmentId/admin/services': {
+      id: '/_authenticated/e/$establishmentId/admin/services'
+      path: '/services'
+      fullPath: '/e/$establishmentId/admin/services'
+      preLoaderRoute: typeof AuthenticatedEEstablishmentIdAdminServicesImport
       parentRoute: typeof AuthenticatedEEstablishmentIdAdminImport
     }
     '/_authenticated/e/$establishmentId/s/$serviceId': {
@@ -525,14 +628,39 @@ declare module '@tanstack/react-router' {
 
 // Create and export the route tree
 
+interface AuthenticatedSuperAdminRouteChildren {
+  AuthenticatedSuperAdminEstablishmentIdRoute: typeof AuthenticatedSuperAdminEstablishmentIdRoute
+  AuthenticatedSuperAdminUsersRoute: typeof AuthenticatedSuperAdminUsersRoute
+  AuthenticatedSuperAdminIndexRoute: typeof AuthenticatedSuperAdminIndexRoute
+}
+
+const AuthenticatedSuperAdminRouteChildren: AuthenticatedSuperAdminRouteChildren =
+  {
+    AuthenticatedSuperAdminEstablishmentIdRoute:
+      AuthenticatedSuperAdminEstablishmentIdRoute,
+    AuthenticatedSuperAdminUsersRoute: AuthenticatedSuperAdminUsersRoute,
+    AuthenticatedSuperAdminIndexRoute: AuthenticatedSuperAdminIndexRoute,
+  }
+
+const AuthenticatedSuperAdminRouteWithChildren =
+  AuthenticatedSuperAdminRoute._addFileChildren(
+    AuthenticatedSuperAdminRouteChildren,
+  )
+
 interface AuthenticatedEEstablishmentIdAdminRouteChildren {
+  AuthenticatedEEstablishmentIdAdminGrantsRoute: typeof AuthenticatedEEstablishmentIdAdminGrantsRoute
   AuthenticatedEEstablishmentIdAdminMembersRoute: typeof AuthenticatedEEstablishmentIdAdminMembersRoute
+  AuthenticatedEEstablishmentIdAdminServicesRoute: typeof AuthenticatedEEstablishmentIdAdminServicesRoute
 }
 
 const AuthenticatedEEstablishmentIdAdminRouteChildren: AuthenticatedEEstablishmentIdAdminRouteChildren =
   {
+    AuthenticatedEEstablishmentIdAdminGrantsRoute:
+      AuthenticatedEEstablishmentIdAdminGrantsRoute,
     AuthenticatedEEstablishmentIdAdminMembersRoute:
       AuthenticatedEEstablishmentIdAdminMembersRoute,
+    AuthenticatedEEstablishmentIdAdminServicesRoute:
+      AuthenticatedEEstablishmentIdAdminServicesRoute,
   }
 
 const AuthenticatedEEstablishmentIdAdminRouteWithChildren =
@@ -608,6 +736,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedChooseContextRoute: typeof AuthenticatedChooseContextRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedSuiviRoute: typeof AuthenticatedSuiviRoute
+  AuthenticatedSuperAdminRoute: typeof AuthenticatedSuperAdminRouteWithChildren
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedPatientPatientIDRoute: typeof AuthenticatedPatientPatientIDRoute
   AuthenticatedSettingsActivityLogRoute: typeof AuthenticatedSettingsActivityLogRoute
@@ -628,6 +757,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedChooseContextRoute: AuthenticatedChooseContextRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedSuiviRoute: AuthenticatedSuiviRoute,
+  AuthenticatedSuperAdminRoute: AuthenticatedSuperAdminRouteWithChildren,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedPatientPatientIDRoute: AuthenticatedPatientPatientIDRoute,
   AuthenticatedSettingsActivityLogRoute: AuthenticatedSettingsActivityLogRoute,
@@ -657,6 +787,8 @@ export interface FileRoutesByFullPath {
   '/choose-context': typeof AuthenticatedChooseContextRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/suivi': typeof AuthenticatedSuiviRoute
+  '/super-admin': typeof AuthenticatedSuperAdminRouteWithChildren
+  '/auth/access-link': typeof AuthAccessLinkRoute
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthIndexRoute
   '/patient/$patientID': typeof AuthenticatedPatientPatientIDRoute
@@ -667,10 +799,15 @@ export interface FileRoutesByFullPath {
   '/settings/soignant': typeof AuthenticatedSettingsSoignantRoute
   '/settings/thematic': typeof AuthenticatedSettingsThematicRoute
   '/settings/user': typeof AuthenticatedSettingsUserRoute
+  '/super-admin/$establishmentId': typeof AuthenticatedSuperAdminEstablishmentIdRoute
+  '/super-admin/users': typeof AuthenticatedSuperAdminUsersRoute
   '/user/settings': typeof AuthenticatedUserSettingsRoute
   '/patient': typeof AuthenticatedPatientIndexRoute
+  '/super-admin/': typeof AuthenticatedSuperAdminIndexRoute
   '/e/$establishmentId/admin': typeof AuthenticatedEEstablishmentIdAdminRouteWithChildren
+  '/e/$establishmentId/admin/grants': typeof AuthenticatedEEstablishmentIdAdminGrantsRoute
   '/e/$establishmentId/admin/members': typeof AuthenticatedEEstablishmentIdAdminMembersRoute
+  '/e/$establishmentId/admin/services': typeof AuthenticatedEEstablishmentIdAdminServicesRoute
   '/e/$establishmentId/s/$serviceId': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsRouteWithChildren
   '/e/$establishmentId/s/$serviceId/agenda': typeof AuthenticatedEEstablishmentIdSServiceIdAgendaRoute
   '/e/$establishmentId/s/$serviceId/dashboard': typeof AuthenticatedEEstablishmentIdSServiceIdDashboardRoute
@@ -692,6 +829,7 @@ export interface FileRoutesByTo {
   '/choose-context': typeof AuthenticatedChooseContextRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/suivi': typeof AuthenticatedSuiviRoute
+  '/auth/access-link': typeof AuthAccessLinkRoute
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthIndexRoute
   '/patient/$patientID': typeof AuthenticatedPatientPatientIDRoute
@@ -702,10 +840,15 @@ export interface FileRoutesByTo {
   '/settings/soignant': typeof AuthenticatedSettingsSoignantRoute
   '/settings/thematic': typeof AuthenticatedSettingsThematicRoute
   '/settings/user': typeof AuthenticatedSettingsUserRoute
+  '/super-admin/$establishmentId': typeof AuthenticatedSuperAdminEstablishmentIdRoute
+  '/super-admin/users': typeof AuthenticatedSuperAdminUsersRoute
   '/user/settings': typeof AuthenticatedUserSettingsRoute
   '/patient': typeof AuthenticatedPatientIndexRoute
+  '/super-admin': typeof AuthenticatedSuperAdminIndexRoute
   '/e/$establishmentId/admin': typeof AuthenticatedEEstablishmentIdAdminRouteWithChildren
+  '/e/$establishmentId/admin/grants': typeof AuthenticatedEEstablishmentIdAdminGrantsRoute
   '/e/$establishmentId/admin/members': typeof AuthenticatedEEstablishmentIdAdminMembersRoute
+  '/e/$establishmentId/admin/services': typeof AuthenticatedEEstablishmentIdAdminServicesRoute
   '/e/$establishmentId/s/$serviceId': typeof AuthenticatedEEstablishmentIdSServiceIdIndexRoute
   '/e/$establishmentId/s/$serviceId/agenda': typeof AuthenticatedEEstablishmentIdSServiceIdAgendaRoute
   '/e/$establishmentId/s/$serviceId/dashboard': typeof AuthenticatedEEstablishmentIdSServiceIdDashboardRoute
@@ -728,6 +871,8 @@ export interface FileRoutesById {
   '/_authenticated/choose-context': typeof AuthenticatedChooseContextRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/suivi': typeof AuthenticatedSuiviRoute
+  '/_authenticated/super-admin': typeof AuthenticatedSuperAdminRouteWithChildren
+  '/auth/access-link': typeof AuthAccessLinkRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/auth/': typeof AuthIndexRoute
   '/_authenticated/patient/$patientID': typeof AuthenticatedPatientPatientIDRoute
@@ -738,10 +883,15 @@ export interface FileRoutesById {
   '/_authenticated/settings/soignant': typeof AuthenticatedSettingsSoignantRoute
   '/_authenticated/settings/thematic': typeof AuthenticatedSettingsThematicRoute
   '/_authenticated/settings/user': typeof AuthenticatedSettingsUserRoute
+  '/_authenticated/super-admin/$establishmentId': typeof AuthenticatedSuperAdminEstablishmentIdRoute
+  '/_authenticated/super-admin/users': typeof AuthenticatedSuperAdminUsersRoute
   '/_authenticated/user/settings': typeof AuthenticatedUserSettingsRoute
   '/_authenticated/patient/': typeof AuthenticatedPatientIndexRoute
+  '/_authenticated/super-admin/': typeof AuthenticatedSuperAdminIndexRoute
   '/_authenticated/e/$establishmentId/admin': typeof AuthenticatedEEstablishmentIdAdminRouteWithChildren
+  '/_authenticated/e/$establishmentId/admin/grants': typeof AuthenticatedEEstablishmentIdAdminGrantsRoute
   '/_authenticated/e/$establishmentId/admin/members': typeof AuthenticatedEEstablishmentIdAdminMembersRoute
+  '/_authenticated/e/$establishmentId/admin/services': typeof AuthenticatedEEstablishmentIdAdminServicesRoute
   '/_authenticated/e/$establishmentId/s/$serviceId': typeof AuthenticatedEEstablishmentIdSServiceIdRouteWithChildren
   '/_authenticated/e/$establishmentId/s/$serviceId/_settings': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsRouteWithChildren
   '/_authenticated/e/$establishmentId/s/$serviceId/agenda': typeof AuthenticatedEEstablishmentIdSServiceIdAgendaRoute
@@ -767,6 +917,8 @@ export interface FileRouteTypes {
     | '/choose-context'
     | '/dashboard'
     | '/suivi'
+    | '/super-admin'
+    | '/auth/access-link'
     | '/'
     | '/auth'
     | '/patient/$patientID'
@@ -777,10 +929,15 @@ export interface FileRouteTypes {
     | '/settings/soignant'
     | '/settings/thematic'
     | '/settings/user'
+    | '/super-admin/$establishmentId'
+    | '/super-admin/users'
     | '/user/settings'
     | '/patient'
+    | '/super-admin/'
     | '/e/$establishmentId/admin'
+    | '/e/$establishmentId/admin/grants'
     | '/e/$establishmentId/admin/members'
+    | '/e/$establishmentId/admin/services'
     | '/e/$establishmentId/s/$serviceId'
     | '/e/$establishmentId/s/$serviceId/agenda'
     | '/e/$establishmentId/s/$serviceId/dashboard'
@@ -801,6 +958,7 @@ export interface FileRouteTypes {
     | '/choose-context'
     | '/dashboard'
     | '/suivi'
+    | '/auth/access-link'
     | '/'
     | '/auth'
     | '/patient/$patientID'
@@ -811,10 +969,15 @@ export interface FileRouteTypes {
     | '/settings/soignant'
     | '/settings/thematic'
     | '/settings/user'
+    | '/super-admin/$establishmentId'
+    | '/super-admin/users'
     | '/user/settings'
     | '/patient'
+    | '/super-admin'
     | '/e/$establishmentId/admin'
+    | '/e/$establishmentId/admin/grants'
     | '/e/$establishmentId/admin/members'
+    | '/e/$establishmentId/admin/services'
     | '/e/$establishmentId/s/$serviceId'
     | '/e/$establishmentId/s/$serviceId/agenda'
     | '/e/$establishmentId/s/$serviceId/dashboard'
@@ -835,6 +998,8 @@ export interface FileRouteTypes {
     | '/_authenticated/choose-context'
     | '/_authenticated/dashboard'
     | '/_authenticated/suivi'
+    | '/_authenticated/super-admin'
+    | '/auth/access-link'
     | '/_authenticated/'
     | '/auth/'
     | '/_authenticated/patient/$patientID'
@@ -845,10 +1010,15 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/soignant'
     | '/_authenticated/settings/thematic'
     | '/_authenticated/settings/user'
+    | '/_authenticated/super-admin/$establishmentId'
+    | '/_authenticated/super-admin/users'
     | '/_authenticated/user/settings'
     | '/_authenticated/patient/'
+    | '/_authenticated/super-admin/'
     | '/_authenticated/e/$establishmentId/admin'
+    | '/_authenticated/e/$establishmentId/admin/grants'
     | '/_authenticated/e/$establishmentId/admin/members'
+    | '/_authenticated/e/$establishmentId/admin/services'
     | '/_authenticated/e/$establishmentId/s/$serviceId'
     | '/_authenticated/e/$establishmentId/s/$serviceId/_settings'
     | '/_authenticated/e/$establishmentId/s/$serviceId/agenda'
@@ -869,12 +1039,14 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   PendingRoute: typeof PendingRoute
+  AuthAccessLinkRoute: typeof AuthAccessLinkRoute
   AuthIndexRoute: typeof AuthIndexRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   PendingRoute: PendingRoute,
+  AuthAccessLinkRoute: AuthAccessLinkRoute,
   AuthIndexRoute: AuthIndexRoute,
 }
 
@@ -890,6 +1062,7 @@ export const routeTree = rootRoute
       "children": [
         "/_authenticated",
         "/pending",
+        "/auth/access-link",
         "/auth/"
       ]
     },
@@ -900,6 +1073,7 @@ export const routeTree = rootRoute
         "/_authenticated/choose-context",
         "/_authenticated/dashboard",
         "/_authenticated/suivi",
+        "/_authenticated/super-admin",
         "/_authenticated/",
         "/_authenticated/patient/$patientID",
         "/_authenticated/settings/activity-log",
@@ -933,6 +1107,18 @@ export const routeTree = rootRoute
     "/_authenticated/suivi": {
       "filePath": "_authenticated/suivi.tsx",
       "parent": "/_authenticated"
+    },
+    "/_authenticated/super-admin": {
+      "filePath": "_authenticated/super-admin.tsx",
+      "parent": "/_authenticated",
+      "children": [
+        "/_authenticated/super-admin/$establishmentId",
+        "/_authenticated/super-admin/users",
+        "/_authenticated/super-admin/"
+      ]
+    },
+    "/auth/access-link": {
+      "filePath": "auth/access-link.tsx"
     },
     "/_authenticated/": {
       "filePath": "_authenticated/index.tsx",
@@ -973,6 +1159,14 @@ export const routeTree = rootRoute
       "filePath": "_authenticated/settings/user.tsx",
       "parent": "/_authenticated"
     },
+    "/_authenticated/super-admin/$establishmentId": {
+      "filePath": "_authenticated/super-admin/$establishmentId.tsx",
+      "parent": "/_authenticated/super-admin"
+    },
+    "/_authenticated/super-admin/users": {
+      "filePath": "_authenticated/super-admin/users.tsx",
+      "parent": "/_authenticated/super-admin"
+    },
     "/_authenticated/user/settings": {
       "filePath": "_authenticated/user/settings.tsx",
       "parent": "/_authenticated"
@@ -981,15 +1175,29 @@ export const routeTree = rootRoute
       "filePath": "_authenticated/patient/index.tsx",
       "parent": "/_authenticated"
     },
+    "/_authenticated/super-admin/": {
+      "filePath": "_authenticated/super-admin/index.tsx",
+      "parent": "/_authenticated/super-admin"
+    },
     "/_authenticated/e/$establishmentId/admin": {
       "filePath": "_authenticated/e/$establishmentId/admin.tsx",
       "parent": "/_authenticated",
       "children": [
-        "/_authenticated/e/$establishmentId/admin/members"
+        "/_authenticated/e/$establishmentId/admin/grants",
+        "/_authenticated/e/$establishmentId/admin/members",
+        "/_authenticated/e/$establishmentId/admin/services"
       ]
+    },
+    "/_authenticated/e/$establishmentId/admin/grants": {
+      "filePath": "_authenticated/e/$establishmentId/admin/grants.tsx",
+      "parent": "/_authenticated/e/$establishmentId/admin"
     },
     "/_authenticated/e/$establishmentId/admin/members": {
       "filePath": "_authenticated/e/$establishmentId/admin/members.tsx",
+      "parent": "/_authenticated/e/$establishmentId/admin"
+    },
+    "/_authenticated/e/$establishmentId/admin/services": {
+      "filePath": "_authenticated/e/$establishmentId/admin/services.tsx",
       "parent": "/_authenticated/e/$establishmentId/admin"
     },
     "/_authenticated/e/$establishmentId/s/$serviceId": {

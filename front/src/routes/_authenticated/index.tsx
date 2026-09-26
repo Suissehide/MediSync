@@ -22,6 +22,26 @@ export const Route = createFileRoute('/_authenticated/')({
         params: { establishmentId: administered.id },
       })
     }
+    // Tour de correction 1, Critique n°1 : l'etat que laisse le script
+    // d'amorcage de la tache 11 (isSuperAdmin posE, AUCUN rattachement — ce
+    // script ne cree jamais d'appartenance d'etablissement) n'a ni couple
+    // service/etablissement ni etablissement administre : sans ce cas, il
+    // tombait sur /pending, qui monte un ecran sans DashboardLayout (donc
+    // sans barre laterale, donc sans l'entree « Super-administration ») et
+    // qui lui ment (« en attente d'approbation », faux pour ce compte). Doit
+    // rester APRES les deux verifications ci-dessus : un super-admin qui a
+    // par ailleurs un acces a un etablissement atterrit d'abord sur celui-ci,
+    // comme n'importe quel autre compte — «un acces», pas necessairement
+    // «une vraie appartenance» : `administeredEstablishments` (et
+    // `defaultTenantContext` plus haut) lisent `user.establishments`, qui
+    // porte aussi bien un rattachement reel qu'un etablissement atteint par
+    // un octroi temporaire VIVANT (`origine: 'octroi'`, voir
+    // `decisions-etape-4a.md`, D5) — les deux declenchent la meme
+    // redirection ici (revue finale, mineur : la phrase precedente
+    // promettait «vraie» a tort).
+    if (context.authState.user?.isSuperAdmin === true) {
+      throw redirect({ to: '/super-admin' })
+    }
     throw redirect({ to: '/pending' })
   },
 })

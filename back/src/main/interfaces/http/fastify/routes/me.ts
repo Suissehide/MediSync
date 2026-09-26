@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify'
 
+import { liveGrantsForUser } from '../../../../domain/accessGrant.domain'
 import { toMeResponse } from '../../../../utils/me-mapper'
 import {
   meResponseSchema,
@@ -8,12 +9,18 @@ import {
 } from '../schemas/me.schema'
 
 const meRouter: FastifyPluginAsync = (fastify) => {
-  const { userDomain } = fastify.iocContainer
+  const { userDomain, accessGrantRepository } = fastify.iocContainer
 
   fastify.get(
     '/',
     { schema: { response: { 200: meResponseSchema } } },
-    (request) => toMeResponse(request.currentUser),
+    async (request) => {
+      const grants = await liveGrantsForUser(
+        request.currentUser.id,
+        accessGrantRepository,
+      )
+      return toMeResponse(request.currentUser, grants, new Date())
+    },
   )
 
   fastify.patch<{ Body: UpdateMeBody }>(
@@ -31,7 +38,13 @@ const meRouter: FastifyPluginAsync = (fastify) => {
           newPassword,
         })
       }
-      return toMeResponse(await userDomain.findByID(userID))
+      // `liveGrantsForUser` ne lit plus `isSuperAdmin` sur `updated` (tour de correction 1,
+      // tâche 8) : `AccessGrantRepository.findForUser` relit ce drapeau lui-même, frais, à
+      // l'instant de l'appel — la fraîcheur ne dépend donc plus de l'ordre entre les deux
+      // lectures. `updated` reste nécessaire pour `toMeResponse` (l'arbre des appartenances).
+      const updated = await userDomain.findByID(userID)
+      const grants = await liveGrantsForUser(updated.id, accessGrantRepository)
+      return toMeResponse(updated, grants, new Date())
     },
   )
   return Promise.resolve()

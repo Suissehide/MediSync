@@ -7,13 +7,14 @@ import type {
 import Fastify from 'fastify'
 import type { IocContainer } from '../../../types/application/ioc'
 import type { HttpServer } from '../../../types/interfaces/http/server'
-import { pathWithoutQuery, toLocalhostIfLinux } from '../../../utils/url-helper'
+import { toLocalhostIfLinux } from '../../../utils/url-helper'
 import { buildErrorHandler } from './errors/error.handler'
 import { boomErrorNormalizer } from './errors/normalizers/boom.error.normalizer'
 import { fastifyErrorNormalizer } from './errors/normalizers/fastify.error.normalizer'
 import { plugins } from './plugins'
 import { routes } from './routes'
 import { notFoundHandler } from './util/not-found.handler'
+import { incomingRequestLog, requestCompletedLog } from './util/request-log'
 import {
   type ZodTypeProvider,
   serializerCompiler,
@@ -48,6 +49,57 @@ class FastifyHttpServer implements HttpServer {
       exposeHeadRoutes: false,
       forceCloseConnections: 'idle',
       requestTimeout: 3000,
+      // Etape 4a, tache 4, tour de correction 1, Important n°2, PUIS tour de correction 2,
+      // Critique (la valeur du tour 1 etait une regression) : sans confiance explicite dans le
+      // proxy, `request.ip` (donc la cle par defaut de `@fastify/rate-limit`,
+      // `defaultKeyGenerator = (req) => req.ip`, node_modules/@fastify/rate-limit/index.js) vaut
+      // l'adresse du DERNIER sauteur TCP. TOUTES les requetes de TOUS les utilisateurs
+      // partageraient donc la meme adresse cote Fastify, et la limite de 10/minute sur
+      // `/auth/sign-in`/`/auth/access-link/consume` serait partagee par tout le monde plutot
+      // qu'appliquee par client.
+      //
+      // CE QUE LE TOUR 1 AVAIT FAIT DE FAUX — `trustProxy: 1` — mesure par exécution contre de
+      // VRAIES connexions TCP (voir back/src/test/unit/interfaces/trust-proxy.test.ts) :
+      // `getTrustProxyFn` (node_modules/fastify/lib/request.js) traduit un NOMBRE en
+      // `(adresse, i) => i < n` — une confiance PUREMENT POSITIONNELLE, qui ne regarde JAMAIS qui
+      // est réellement le pair TCP direct. N'importe quel appelant qui se connecte EN DIRECT
+      // (sans passer par Traefik) est alors traité comme « le premier sauteur », et son propre
+      // `X-Forwarded-For` — qu'il écrit lui-même — est honoré tel quel : la limite de débit
+      // devenait contournable à volonté (25 requetes avec une adresse differente a chaque fois,
+      // mesurees : zero refus, la de la limite mordait quinze fois des que ce reglage etait
+      // retire).
+      //
+      // LE REMEDE, qui NE renvoie PAS la question a l'infrastructure (tour 2 : « le code peut se
+      // proteger seul ») : une confiance PAR ADRESSE/PLAGE plutot que par POSITION —
+      // `@fastify/proxy-addr` (dont Fastify se sert pour toute valeur non numerique) ne lit alors
+      // `X-Forwarded-For` QUE si le pair TCP DIRECT appartient lui-meme a une des plages
+      // ci-dessous ; sinon `request.ip` reste l'adresse reelle du socket, sans jamais consulter
+      // l'en-tete. `uniquelocal` couvre les plages privees RFC1918
+      // (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16 — celle ou Docker place les reseaux definis
+      // par l'utilisateur, dont `proxy`/`deploy/compose.yaml`, sans jamais en fixer l'adresse
+      // exacte) ; `loopback`/`linklocal` couvrent les deux autres formes usuelles d'un saut de
+      // confiance local.
+      //
+      // RESERVE (tour de correction 3 -- la version precedente etait trop rassurante, plus etroite
+      // que la vraie breche mesuree). MESURE par execution : un appelant qui atteint le port
+      // PUBLIE du conteneur `back` -- que ce soit un appel LOCAL (meme machine) ou un appel via
+      // l'adresse RESEAU DE L'HOTE lui-meme (le port publie ecoute sur toutes les interfaces,
+      // `ports: - '${PORT}:${PORT}'` dans `deploy/compose.yaml`, jamais modifie ici -- question de
+      // deploiement, pas de code) -- voit son adresse traduite par Docker et ARRIVE au conteneur
+      // comme une adresse PRIVEE, donc DANS la plage de confiance ci-dessus. Le residu n'est donc
+      // pas limite a « un autre conteneur deja present sur le reseau Docker `proxy` » : il couvre
+      // tout appelant qui atteint l'HOTE lui-meme, conteneur ou non.
+      //
+      // CE QUI RESTE NON VERIFIE, et qu'il ne faut pas non plus affirmer dans l'autre sens : pour
+      // un appelant reellement EXTERNE (depuis l'internet public, atteignant l'adresse publique de
+      // l'hote), la traduction d'adresse standard sur Docker/Linux (DNAT sans SNAT/hairpin)
+      // PRESERVE l'adresse source d'origine -- le conteneur verrait alors une adresse PUBLIQUE,
+      // hors de toute plage de confiance, et son en-tete resterait ignore. Rien dans ce depot ne
+      // permet donc d'affirmer que la production, telle que reellement deployee (au-dela de ce que
+      // `deploy/compose.yaml` decrit), est vulnerable par ce vecteur precis pour un appelant public
+      // ordinaire -- ni de l'exclure pour de bon : les deux moities de cette reserve se lisent
+      // ensemble, l'une n'efface pas l'autre.
+      trustProxy: 'loopback,linklocal,uniquelocal',
     }
 
     this.fastify = Fastify(fastifyOptions)
@@ -79,16 +131,20 @@ class FastifyHttpServer implements HttpServer {
       buildErrorHandler(fastifyErrorNormalizer, boomErrorNormalizer),
     )
     fastify.addHook('onRequest', (request) => {
-      log.debug(
-        `Incoming request (#${request.id}): ${request.method} ${pathWithoutQuery(request.url)}`,
-      )
+      log.debug(incomingRequestLog(request.id, request.method, request.url))
       return Promise.resolve()
     })
     fastify.addHook('onResponse', (request, reply) => {
       const { elapsedTime } = reply
       const time = Math.round(elapsedTime)
       log.info(
-        `Request completed (#${request.id}): ${request.method} ${pathWithoutQuery(request.url)} [HTTP ${reply.statusCode}] (${time}ms)`,
+        requestCompletedLog(
+          request.id,
+          request.method,
+          request.url,
+          reply.statusCode,
+          time,
+        ),
       )
       return Promise.resolve()
     })

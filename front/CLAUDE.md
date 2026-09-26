@@ -132,9 +132,78 @@ parcours" also creates a sub-record immediately (`PatientDomain.create` → `ens
 directly-created patient shows up in this service's list right away instead of vanishing from every list until a
 pathway or diagnostic is added.
 
+## Administration and super-admin (étape 4a)
+
+**The role guard of the establishment-administration screens lives in the CONTEXT RESOLUTION, not
+in the layout file.** `routes/_authenticated/e/$establishmentId/admin.tsx` contains no visible
+role check, and a review once concluded from that silence that a `MEMBER` walked through it.
+That was wrong: `resolveEstablishmentContext` (`utils/tenant-context.ts`) returns `null` as soon
+as `establishment.role !== 'ADMIN'`, and the `beforeLoad` then redirects to `/choose-context`. A
+pre-existing test keeps it. **A guard absent from a file is not an absent guard** — read the
+resolver before concluding.
+
+**"No membership at all" is the NORMAL state of a freshly bootstrapped super-admin, not a pending
+account.** The flag is set by a CLI script that never creates a membership (`back/CLAUDE.md`).
+Any code treating "no membership" as "awaiting approval" is wrong about him — the front used to
+send him to `/pending`, a screen with no sidebar and no way out, with a false message, so the one
+screen this whole step exists to serve was reachable only by typing the URL. `_authenticated/
+index.tsx` therefore checks, in this order: a service pair, then an administered establishment,
+then the `isSuperAdmin` flag (→ `/super-admin`), then `/pending`. Keep that order: a super-admin
+who also has a real membership must land on it first, like anybody else.
+
+**`/super-admin` throws `notFound()` for an account without the flag — it must not redirect.** The
+back answers 404 (never 403) under that prefix so the zone's existence isn't revealed; a silent
+redirect on the front made it deducible in two tries. Note the wider gap this doesn't fix: there
+is **no `notFoundComponent` anywhere in the front**, so an unknown URL renders TanStack Router's
+default "Not Found".
+
+**The access-link token is a one-time password. It arrives in the browser URL — that is how it is
+handed to the person — and must never leave in one.** It goes in the **body** of
+`POST /auth/access-link/consume` (`AuthApi.consumeAccessLink`), never in a query key, never in a
+console line, and after a successful consumption it is stripped from the URL with
+`replace: true` — the fifth channel, found in review: without `replace`, going Back re-displayed
+the token in the address bar and re-armed the form. `routes/auth/access-link.test.tsx` covers the
+five channels. The page lives under `routes/auth/`, outside `_authenticated`, and that
+reachability is asserted against the **real** `routeTree.gen.ts`, not a synthetic test tree.
+It is also the **page** that logs in after consuming, never the consume route: that route returns
+`{ success }` and no session, so there is exactly one place in the app that establishes sessions.
+
+**A grant confers memberships, it bypasses nothing.** `/me` exposes
+`origine: 'reelle' | 'octroi'` per establishment (optional on the type: a missing value fails on
+the safe side — no badge rather than a false one). It does **not** expose the grant row's id, so
+the front can only revoke the grant it created **in the current session**. `ActiveGrantNotice`
+therefore shows a persistent "accès actif" banner plus "révocation indisponible depuis cette
+session" instead of a button that vanishes — **the absence of the button must never read as
+"no active grant"**. Keep that invariant if you touch this component.
+
+`conventions-tenant-api-queries.test.ts` forbids naming `establishmentId` in `src/api` and
+`src/queries`; the super-admin legitimately needs it (there an establishment is **data**, not an
+implicit context). The way through is the test's **exception list** — reason plus exact
+occurrence count, checked in both directions — **never** renaming to slip under the pattern.
+
 ## Testing
 
-Vitest + Testing Library, `jsdom` environment. `src/test/setup.ts` reassigns `globalThis.localStorage`/`sessionStorage` to jsdom's real implementations — this works around Node's own global Web Storage (active by default since Node 25) shadowing jsdom's; don't "simplify" this by reading `window.localStorage` instead, `window === globalThis` in this test environment so it's the same shadowed property.
+Vitest + Testing Library, `jsdom` environment.
+
+**Blind spot, confirmed in both directions — a virtualised table renders ZERO rows under jsdom.**
+`components/table/reactTable.tsx` virtualises its rows through `@tanstack/react-virtual`, whose
+container measures zero height in jsdom. **Any test asserting the contents of such a table is
+therefore true by vacuity** and proves nothing. Measured: removing the mock from
+`routes/_authenticated/e/$establishmentId/admin/services.test.tsx` makes 4 of its 9 tests fail.
+Two files mock the virtualiser today (`admin/services.test.tsx` and
+`admin/members.render.test.tsx`); no other front test asserts the contents of a virtualised
+table, which was verified rather than assumed. **Any new test of a table's contents must mock
+`@tanstack/react-virtual`** — copy the mock from either file — otherwise it proves nothing while
+looking green.
+
+Two more failure modes found in review on this step, both "true by construction", worth knowing
+because they look like real tests:
+
+- asserting that something **disappears** when Radix unmounts the whole content on close — the
+  assertion passes whether or not the code resets state. Assert on **reopening** instead.
+- asserting two numbers without binding each to its label — swapping the two labels left nine
+  tests green while the screen announced the wrong figure next to the wrong sentence. One
+  assertion was even tautological (`getByText('5') !== getByText('2')`). `src/test/setup.ts` reassigns `globalThis.localStorage`/`sessionStorage` to jsdom's real implementations — this works around Node's own global Web Storage (active by default since Node 25) shadowing jsdom's; don't "simplify" this by reading `window.localStorage` instead, `window === globalThis` in this test environment so it's the same shadowed property.
 
 Route-level `beforeLoad` logic (context resolution, redirects, the preload guard) is tested with disposable minimal routers rather than the full app tree — see the `.test.ts` files colocated with `e/$establishmentId/s/$serviceId.tsx`, `e/$establishmentId/admin.tsx`, `choose-context.tsx`.
 

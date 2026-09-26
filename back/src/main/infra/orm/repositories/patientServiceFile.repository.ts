@@ -1,6 +1,7 @@
 import { Prisma } from '../../../../generated/client'
 import type { IocContainer } from '../../../types/application/ioc'
 import type {
+  PatientServiceFileDeactivationImpactRepo,
   PatientServiceFileEntityRepo,
   PatientServiceFileRepositoryInterface,
   PatientServiceFileUpsertEntityRepo,
@@ -123,11 +124,25 @@ class PatientServiceFileRepository implements PatientServiceFileRepositoryInterf
     }
   }
 
-  // EXCEPTION ASSUMEE au cloisonnement inter-service (design §5.3) : LA SEULE lecture de tout le
-  // back qui traverse volontairement la frontiere entre services. Son unicite est verifiee par
-  // back/src/test/unit/infra/runAsSystem-unicite.test.ts, qui relit les sources et echoue si un
-  // second appel a `runAsSystem` apparait ailleurs — ou si celui-ci disparait sans que la liste
-  // autorisee n'en soit averti.
+  // EXCEPTION ASSUMEE au cloisonnement inter-service (design §5.3) : une lecture qui traverse
+  // volontairement la frontiere entre services — `impactDesactivation`, plus bas dans ce meme
+  // fichier (design §3.6, tache 9), en est une autre, qui rend un compte plutot qu'un booleen
+  // mais ne franchit jamais la frontiere autrement.
+  //
+  // DEUX TESTS DIFFERENTS GARDENT DEUX PROPRIETES DIFFERENTES DE CETTE EXCEPTION (tour de
+  // correction 2, tache 9 — une version precedente de ce commentaire pretendait qu'un SEUL test
+  // garantissait les deux, ce qui etait faux) :
+  //   - `back/src/test/unit/infra/runAsSystem-unicite.test.ts` garde la CAPACITE : que le seul
+  //     moyen d'entrer dans un mode non-tenant (system ou superadmin), dans tout `src/main`, se
+  //     trouve aux emplacements DECLARES (nommes, avec leur raison) — il ne regarde JAMAIS le
+  //     contenu d'une requete ni ses filtres ; poser un `where: {}` vide sur les deux lectures de
+  //     ce fichier le laisse 3 sur 3 vert, precisement parce que ce n'est pas ce qu'il verifie.
+  //   - `back/src/test/unit/infra/repository-scope.test.ts` (describes `PatientServiceFileRepository.
+  //     estSuiviAilleurs` et `.impactDesactivation`) garde les BORNES : il capture les arguments
+  //     REELS envoyes a Prisma par ce code et verifie qu'ils portent leurs propres filtres
+  //     explicites, PUIS que cette forme precise serait refusee par le garde-fou hors du mode
+  //     encadre (`assertTenantScope` appele directement avec `store.kind: 'tenant'`). C'est LUI
+  //     qui rougirait sur un `where` vide.
   //
   // `runAsSystem` (tenant-context.ts) RETIRE l'exigence du garde-fou d'ORM, il ne la deplace
   // pas : sous ce mode, le garde-fou n'exige plus AUCUN filtre de service ni d'etablissement, et
@@ -185,6 +200,78 @@ class PatientServiceFileRepository implements PatientServiceFileRepositoryInterf
       })
     })
     return autreSousDossier !== null
+  }
+
+  // Une autre lecture qui traverse volontairement la frontiere entre services (design §3.6,
+  // tache 9) — voir le commentaire au-dessus d'`estSuiviAilleurs` pour la CAPACITE (deux tests
+  // differents, deux proprietes differentes). Appelee depuis le contexte d'ADMINISTRATION
+  // D'ETABLISSEMENT (`/e/:establishmentId/admin/services/:id/impact-desactivation`), pas depuis
+  // un service : `this.scope` (qui exige un service courant) n'y est donc pas disponible, et
+  // `serviceId`/`establishmentId` sont recus explicitement de l'appelant
+  // (`ServiceDomain.impactDesactivation`), qui les tient de l'admin resolu et d'un service deja
+  // verifie appartenir a cet etablissement (`ServiceRepository.findByID`, qui leve 404 sinon). La
+  // requete porte donc SES bornes, comme `estSuiviAilleurs` — meme principe, deux parametres
+  // explicites plutot qu'un contexte de service qui n'existe pas ici.
+  //
+  // Ne rend que DEUX NOMBRES, jamais un identifiant de patient, un nom de service ou un
+  // contenu — la meme discipline de divulgation qu'`estSuiviAilleurs` (`select: { patientId:
+  // true }`, jamais `id`), pretee ici a un compte plutot qu'a un booleen. `suivisIci` est le
+  // nombre de sous-dossiers de ce service ; `suivisNullePartAilleurs` est le sous-ensemble de
+  // leurs patients qui n'ont AUCUN autre sous-dossier dans un AUTRE SERVICE ACTIF du meme
+  // etablissement — calcule en deux lectures plutot qu'une jointure, pour rester lisible : la
+  // premiere ramene les identifiants de patients suivis ICI, la seconde ceux qui le sont
+  // AILLEURS PARMI EUX (meme etablissement, service different ET ACTIF), et la difference des
+  // deux ensembles donne le compte qui importe. Meme piege que ci-dessus : les DEUX `await` sont
+  // a l'INTERIEUR du seul rappel `runAsSystem`, jamais une promesse rendue sans etre attendue.
+  //
+  // TOUR DE CORRECTION 1 (relecture) — Important n°1 : un patient dont le SEUL autre
+  // sous-dossier vit dans un service DEJA DESACTIVE deviendrait tout aussi invisible que celui
+  // qui n'a litteralement aucun autre sous-dossier. La spec §3.6 promet l'equivalence « suivi
+  // nulle part ailleurs = deviendra invisible » ; compter ce patient comme « suivi ailleurs » la
+  // rendait fausse, et dans le sens qui rassure a tort (l'ecran annoncait 1 la ou la realite
+  // etait 2). `service: { deactivatedAt: null }` sur la seconde lecture ferme ce trou : seul un
+  // autre service ENCORE ACTIF compte comme un « ailleurs » qui protege reellement le patient de
+  // l'invisibilite.
+  //
+  // TOUR DE CORRECTION 2 (relecture) — CE N'EST PAS LE MEME CALCUL QU'`estSuiviAilleurs`, ET CE
+  // N'EN DEVRAIT PAS ETRE UN (le brief de cette tache parlait d'un « miroir » ; c'etait le
+  // mauvais mot, tranche par le coordinateur). Cette methode-ci repond « ce patient va-t-il
+  // devenir invisible partout » — un ailleurs deja desactive ne protege de rien, d'ou le filtre
+  // sur les services actifs. `estSuiviAilleurs` repond une question DIFFERENTE, « un
+  // sous-dossier existe-t-il ailleurs », et reste VRAIE meme si cet ailleurs est desactive : le
+  // sous-dossier existe toujours, ce service PEUT etre reactive (decision 3.6), et le signal ne
+  // doit pas mentir en disant « non » a un dossier qui existe reellement. Aligner les deux
+  // calculs casserait l'un des deux ; ils restent volontairement distincts.
+  async impactDesactivation(
+    serviceId: string,
+    establishmentId: string,
+  ): Promise<PatientServiceFileDeactivationImpactRepo> {
+    return await this.tenantContext.runAsSystem(async () => {
+      const suivisIci = await this.prisma.patientServiceFile.findMany({
+        where: { serviceId, establishmentId },
+        select: { patientId: true },
+      })
+      if (suivisIci.length === 0) {
+        return { suivisIci: 0, suivisNullePartAilleurs: 0 }
+      }
+      const patientIds = suivisIci.map((row) => row.patientId)
+      const suivisAilleursParmiEux = await this.prisma.patientServiceFile.findMany({
+        where: {
+          establishmentId,
+          patientId: { in: patientIds },
+          serviceId: { not: serviceId },
+          service: { deactivatedAt: null },
+        },
+        select: { patientId: true },
+      })
+      const suiviAilleursIds = new Set(
+        suivisAilleursParmiEux.map((row) => row.patientId),
+      )
+      const suivisNullePartAilleurs = patientIds.filter(
+        (patientId) => !suiviAilleursIds.has(patientId),
+      ).length
+      return { suivisIci: patientIds.length, suivisNullePartAilleurs }
+    })
   }
 }
 

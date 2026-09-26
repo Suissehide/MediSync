@@ -43,3 +43,17 @@ export function verifyPassword({
   // Repli pour les hash historiques (coût 1000). À terme, ré-hacher au login.
   return safeEqualHex(derive(password, salt, LEGACY_ITERATIONS), hash)
 }
+
+// Jeton aléatoire encodé en base64url (URL-safe, sans padding) : sert de jeton d'accès (lien de
+// première connexion / réinitialisation, étape 4a, tâche 4). Le jeton lui-même n'est JAMAIS
+// stocké ; seule son empreinte (`sha256Hex`, ci-dessous) rejoint la base.
+export function randomToken(byteLength: number): string {
+  return crypto.randomBytes(byteLength).toString('base64url')
+}
+
+// Empreinte d'un jeton d'accès : irréversible, c'est elle que la table `AccessLink` stocke — la
+// table ne doit jamais suffire à fabriquer un accès (voir prisma/schema.prisma, modèle
+// `AccessLink`).
+export function sha256Hex(value: string): string {
+  return crypto.createHash('sha256').update(value).digest('hex')
+}

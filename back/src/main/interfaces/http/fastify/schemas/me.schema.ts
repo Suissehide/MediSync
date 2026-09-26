@@ -24,6 +24,9 @@ export const meResponseSchema = z.object({
           ]),
         }),
       ),
+      // Dit à l'écran d'où vient cet accès (voir utils/me-mapper.ts) : sans elle dans ce schéma
+      // de réponse, Zod l'aurait silencieusement retirée de la charge envoyée au front.
+      origine: z.enum(['reelle', 'octroi']),
     }),
   ),
 })

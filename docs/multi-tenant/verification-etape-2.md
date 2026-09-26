@@ -9,6 +9,19 @@ Ce document ne remplace pas les portes automatisées (`back`: build, lint,
 tests unitaires, tests e2e ; `front`: build, tests) — il vérifie ce qu'elles
 ne peuvent pas vérifier : ce qu'un compte voit réellement à l'écran.
 
+> **État au 2026-09-26 : cette procédure n'a jamais été exécutée.**
+> `docs/multi-tenant/verification-etape-4a.md` la reprend **point par point** et
+> dit lesquels sont jouables et par quel chemin. Verdict résumé : les huit
+> points le sont ; **sept l'étaient déjà entièrement avant l'étape 4a** — le
+> seed fournit les comptes et les deux services dont ils ont besoin — et le
+> huitième ne l'était qu'à moitié. Ce qui les a bloqués, c'est que personne ne
+> les a lancés, pas un manque d'outillage.
+> **Le point 7 est l'exception** : sa seconde moitié — un administrateur
+> d'établissement **sans aucune** affectation de service, que ce document
+> déclarait « non couvrable avec les comptes actuels du seed » — est désormais
+> l'état normal d'un premier administrateur créé par le super-admin. Le chemin
+> exact est décrit dans `verification-etape-4a.md`, partie 2.
+
 ## Comptes du seed
 
 | Compte | Mot de passe | Services | Ce qu'il permet de vérifier |

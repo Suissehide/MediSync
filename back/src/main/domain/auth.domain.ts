@@ -9,12 +9,14 @@ import type {
   SignInResponse,
   SignOutResponse,
 } from '../types/domain/auth.domain.interface'
+import type { AccessGrantRepositoryInterface } from '../types/infra/orm/repositories/accessGrant.repository.interface'
 import type { UserRepositoryInterface } from '../types/infra/orm/repositories/user.repository.interface'
 import type { JwtPayload } from '../types/interfaces/http/fastify/plugins/jwt.plugin'
 import type { Logger } from '../types/utils/logger'
 import { generateJwt, verifyJwt } from '../utils/auth-helper'
 import { verifyPassword } from '../utils/hash'
 import { toMeResponse } from '../utils/me-mapper'
+import { liveGrantsForUser } from './accessGrant.domain'
 
 const isNotFound = (error: unknown): boolean =>
   Boom.isBoom(error) && error.output.statusCode === 404
@@ -22,6 +24,7 @@ const isNotFound = (error: unknown): boolean =>
 class AuthDomain implements AuthDomainInterface {
   private readonly logger: Logger
   private readonly userRepository: UserRepositoryInterface
+  private readonly accessGrantRepository: AccessGrantRepositoryInterface
   private readonly config: Config
 
   // Constantes pour éviter les timing attacks
@@ -29,8 +32,14 @@ class AuthDomain implements AuthDomainInterface {
   private readonly DUMMY_HASH =
     '$2b$10$dummysaltfordummyhash.dummyhashdummyhashdummyhash'
 
-  constructor({ userRepository, config, logger }: IocContainer) {
+  constructor({
+    userRepository,
+    accessGrantRepository,
+    config,
+    logger,
+  }: IocContainer) {
     this.userRepository = userRepository
+    this.accessGrantRepository = accessGrantRepository
     this.config = config
     this.logger = logger
   }
@@ -90,10 +99,21 @@ class AuthDomain implements AuthDomainInterface {
       throw Boom.unauthorized('Account deactivated')
     }
 
+    // Tâche 7 (étape 4a) : posée ICI, une fois le mot de passe vérifié et le compte confirmé
+    // actif — jamais sur `refresh`, qui ne redémontre aucun secret. Sans cette écriture,
+    // `User.lastLoginAt` reste vide pour tout le monde et la liste du super-admin affiche
+    // « jamais » à chaque établissement, quelle que soit son activité réelle (spec §3.3).
+    await this.userRepository.recordLogin(user.id, new Date())
+
     const full = await this.userRepository.findByID(user.id)
+    const grants = await liveGrantsForUser(user.id, this.accessGrantRepository)
     const { accessToken, refreshToken } = this.generateTokens(user.id)
 
-    return { accessToken, refreshToken, me: toMeResponse(full) }
+    return {
+      accessToken,
+      refreshToken,
+      me: toMeResponse(full, grants, new Date()),
+    }
   }
 
   async refresh(currentRefreshToken: string): Promise<SignInResponse> {
@@ -126,9 +146,14 @@ class AuthDomain implements AuthDomainInterface {
       throw Boom.unauthorized('Account deactivated')
     }
 
+    const grants = await liveGrantsForUser(user.id, this.accessGrantRepository)
     const { accessToken, refreshToken } = this.generateTokens(user.id)
 
-    return { accessToken, refreshToken, me: toMeResponse(user) }
+    return {
+      accessToken,
+      refreshToken,
+      me: toMeResponse(user, grants, new Date()),
+    }
   }
 
   async register(createUserInput: CreateUserInput): Promise<RegisterResponse> {

@@ -1,10 +1,14 @@
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from '@tanstack/react-router'
 
 import { AuthApi } from '../api/auth.api.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
 import { useAuthStore } from '../store/useAuthStore.ts'
-import type { LoginInput, RegisterInput } from '../types/auth.ts'
+import type {
+  ConsumeAccessLinkInput,
+  LoginInput,
+  RegisterInput,
+} from '../types/auth.ts'
 
 // * QUERIES
 
@@ -43,6 +47,7 @@ export const useLogin = () => {
 
 export const useLogout = () => {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const logout = useAuthStore((state) => state.logout)
 
   const {
@@ -55,6 +60,17 @@ export const useLogout = () => {
       return await AuthApi.logout()
     },
     onSuccess: () => {
+      // Tour de correction 1, Important n°3 : `hooks/useTenantSwitch.ts` ne
+      // construit un `QueryClient` neuf que si `tenantKey(context)` change,
+      // et ce couple vaut la chaîne vide pour TOUT compte qui n'a jamais
+      // posé de contexte de tenant (super-admin sans établissement, par
+      // exemple) — deux comptes de ce type qui se succèdent partageraient
+      // donc le même client, et le cache du premier resterait lisible par
+      // le second. Vider le cache ACTIF (celui que fournit
+      // `QueryClientProvider` à l'instant de cet appel) ferme ce trou sans
+      // dépendre de la clé de tenant : sûr même quand un client neuf allait
+      // de toute façon être construit juste après.
+      queryClient.clear()
       logout()
       const redirect = new URLSearchParams(window.location.search).get(
         'redirect',
@@ -98,6 +114,29 @@ export const useUpdateMe = () => {
   })
 
   return mutation
+}
+
+// `POST /auth/access-link/consume` (tâche 13, page publique) : pose le
+// nouveau mot de passe. Volontairement SANS `useDataFetching` : cette
+// mutation ne toaste rien elle-même — `routes/auth/access-link.tsx` lit
+// `isError`/`error` pour distinguer à l'écran un 410 (lien invalide ou
+// expiré) d'un 401 (compte désactivé), deux messages différents qu'un
+// toast générique effacerait l'un dans l'autre.
+export const useConsumeAccessLink = () => {
+  const {
+    mutate: consumeMutation,
+    isPending,
+    isError,
+    error,
+    data,
+    reset,
+  } = useMutation({
+    mutationFn: (input: ConsumeAccessLinkInput) =>
+      AuthApi.consumeAccessLink(input),
+    retry: 0,
+  })
+
+  return { consumeMutation, isPending, isError, error, data, reset }
 }
 
 export const useRegister = () => {

@@ -1,16 +1,19 @@
 import type { PostgresOrm } from '../../infra/orm/postgres-client'
 import type { ActivityLogSubscriber } from '../../services/activity-log.subscriber'
 import type { AppEventBus } from '../../utils/app-event-bus'
+import type { AccessLinkDomainInterface } from '../domain/accessLink.domain.interface'
 import type { ActivityLogDomainInterface } from '../domain/activityLog.domain.interface'
 import type { AppointmentDomainInterface } from '../domain/appointment.domain.interface'
 import type { AuthDomainInterface } from '../domain/auth.domain.interface'
 import type { DiagnosticEducatifDomainInterface } from '../domain/diagnosticEducatif.domain.interface'
 import type { DiagnosticEducatifTemplateDomainInterface } from '../domain/diagnosticEducatifTemplate.domain.interface'
 import type { EnrollmentIssueDomainInterface } from '../domain/enrollmentIssue.domain.interface'
+import type { EstablishmentDomainInterface } from '../domain/establishment.domain.interface'
 import type { ForbiddenWeekDomainInterface } from '../domain/forbiddenWeek.domain.interface'
 import type { PlanningCycleDomainInterface } from '../domain/planningCycle.domain.interface'
 import type { LocationDomainInterface } from '../domain/location.domain.interface'
 import type { MembershipDomainInterface } from '../domain/membership.domain.interface'
+import type { ServiceDomainInterface } from '../domain/service.domain.interface'
 import type { PathwayDomainInterface } from '../domain/pathway.domain.interface'
 import type { PathwayTemplateDomainInterface } from '../domain/pathwayTemplate.domain.interface'
 import type { PatientDomainInterface } from '../domain/patient.domain.interface'
@@ -18,19 +21,24 @@ import type { PatientServiceFileDomainInterface } from '../domain/patientService
 import type { SlotDomainInterface } from '../domain/slot.domain.interface'
 import type { SlotTemplateDomainInterface } from '../domain/slotTemplate.domain.interface'
 import type { SoignantDomainInterface } from '../domain/soignant.domain.interface'
+import type { SuperAdminGrantDomainInterface } from '../domain/superAdminGrant.domain.interface'
 import type { ThematicDomainInterface } from '../domain/thematic.domain.interface'
 import type { TodoDomainInterface } from '../domain/todo.domain.interface'
 import type { UserDomainInterface } from '../domain/user.domain.interface'
 import type { HttpClientInterface } from '../infra/http/http-client'
+import type { AccessGrantRepositoryInterface } from '../infra/orm/repositories/accessGrant.repository.interface'
+import type { AccessLinkRepositoryInterface } from '../infra/orm/repositories/accessLink.repository.interface'
 import type { ActivityLogRepositoryInterface } from '../infra/orm/repositories/activityLog.repository.interface'
 import type { AppointmentRepositoryInterface } from '../infra/orm/repositories/appointment.repository.interface'
 import type { DiagnosticEducatifRepositoryInterface } from '../infra/orm/repositories/diagnosticEducatif.repository.interface'
 import type { DiagnosticEducatifTemplateRepositoryInterface } from '../infra/orm/repositories/diagnosticEducatifTemplate.repository.interface'
 import type { EnrollmentIssueRepositoryInterface } from '../infra/orm/repositories/enrollmentIssue.repository.interface'
+import type { EstablishmentRepositoryInterface } from '../infra/orm/repositories/establishment.repository.interface'
 import type { ForbiddenWeekRepositoryInterface } from '../infra/orm/repositories/forbiddenWeek.repository.interface'
 import type { PlanningCycleRepositoryInterface } from '../infra/orm/repositories/planningCycle.repository.interface'
 import type { LocationRepositoryInterface } from '../infra/orm/repositories/location.repository.interface'
 import type { MembershipRepositoryInterface } from '../infra/orm/repositories/membership.repository.interface'
+import type { ServiceRepositoryInterface } from '../infra/orm/repositories/service.repository.interface'
 import type { PathwayRepositoryInterface } from '../infra/orm/repositories/pathway.repository.interface'
 import type { PathwayTemplateRepositoryInterface } from '../infra/orm/repositories/pathwayTemplate.repository.interface'
 import type { PatientRepositoryInterface } from '../infra/orm/repositories/patient.repository.interface'
@@ -117,4 +125,19 @@ export interface IocContainer {
   // PlanningCycle
   readonly planningCycleDomain: PlanningCycleDomainInterface
   readonly planningCycleRepository: PlanningCycleRepositoryInterface
+  // AccessGrant (octroi temporaire d'acces, etape 4a) — la lecture (`effectiveMemberships`,
+  // domain/accessGrant.domain.ts) reste une fonction pure, sans dependance a injecter ;
+  // l'ecriture (s'accorder un octroi, le revoquer, tache 8) est `superAdminGrantDomain`
+  // ci-dessous, seul appelant des methodes d'ecriture du meme depot.
+  readonly accessGrantRepository: AccessGrantRepositoryInterface
+  readonly superAdminGrantDomain: SuperAdminGrantDomainInterface
+  // AccessLink (lien d'acces, etape 4a tache 4)
+  readonly accessLinkDomain: AccessLinkDomainInterface
+  readonly accessLinkRepository: AccessLinkRepositoryInterface
+  // Establishment (creation d'un etablissement et de son premier administrateur, etape 4a tache 6)
+  readonly establishmentDomain: EstablishmentDomainInterface
+  readonly establishmentRepository: EstablishmentRepositoryInterface
+  // Service (creation, renommage, (des)activation d'un service, etape 4a tache 9)
+  readonly serviceDomain: ServiceDomainInterface
+  readonly serviceRepository: ServiceRepositoryInterface
 }

@@ -41,6 +41,17 @@ celle de l'étape 2 devait explicitement éviter.
 
 ## Un rappel qui doit être dit sans détour
 
+**Cette procédure-ci n'a jamais été exécutée non plus** (état au 2026-09-26,
+fin de l'étape 4a). `docs/multi-tenant/verification-etape-4a.md` la reprend
+**point par point** : les huit points sont jouables, et **les huit l'étaient
+déjà avant l'étape 4a** — ils reposent tous sur des comptes et des données que
+le seed fournit. Aucun n'était bloqué par l'absence d'administration, et il
+faut le dire plutôt que de prêter à l'étape 4a un mérite qu'elle n'a pas.
+Deux nuances y sont écrites : le **point 6 est irréversible** (aucun écran ne
+retire le sous-dossier créé — le rejouer exige de re-seeder), et l'étape 4a
+permet désormais de **rejouer les huit sur un second établissement construit
+depuis l'interface**, ce qui change la portée du point 4 en particulier.
+
 **La vérification manuelle de l'étape 2 (`verification-etape-2.md`, huit
 points) n'a jamais été exécutée.** Elle reste valide et à faire — rien dans
 cette étape ne l'a rendue obsolète, à l'exception du point 3 (« la liste des

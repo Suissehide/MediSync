@@ -18,6 +18,13 @@ type AppEvents = {
   'member.removed':     { userID: string; membershipId: string }
   'member.deactivated': { userID: string; membershipId: string }
   'member.reactivated': { userID: string; membershipId: string }
+  // Tache 10 : creer un compte de membre est la plus forte de ces operations — elle fabrique
+  // une identite ET lui remet un acces. Un evenement A PART plutot que `member.added`, pour
+  // que le journal distingue « rattache une identite existante » de « a cree ce compte ».
+  'member.accountCreated': { userID: string; membershipId: string }
+  // Reemettre un lien, c'est remettre a quelqu'un le pouvoir de reinitialiser le mot de
+  // passe d'un compte : la trace importe autant que pour un changement de role.
+  'member.accessLinkReissued': { userID: string; membershipId: string }
 }
 
 class AppEventBus {

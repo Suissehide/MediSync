@@ -11,7 +11,10 @@ export type Tenant = {
 
 export type ServiceTenant = Tenant & { serviceId: string; serviceRole: ServiceRole }
 
-export type TenantStore = { kind: 'tenant'; tenant: Tenant } | { kind: 'system' }
+export type TenantStore =
+  | { kind: 'tenant'; tenant: Tenant }
+  | { kind: 'system' }
+  | { kind: 'superadmin' }
 
 export interface TenantContextInterface {
   enter(tenant: Tenant): void
@@ -25,4 +28,5 @@ export interface TenantContextInterface {
   scope(): { serviceId: string; establishmentId: string }
   establishmentScope(): { establishmentId: string }
   runAsSystem<T>(fn: () => Promise<T>): Promise<T>
+  runAsSuperAdmin<T>(fn: () => Promise<T>): Promise<T>
 }

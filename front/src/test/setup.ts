@@ -30,6 +30,29 @@ beforeEach(() => {
   sessionStorage.clear()
 })
 
+// jsdom n'implemente ni l'API de capture de pointeur (`Element.prototype.
+// hasPointerCapture`/`setPointerCapture`/`releasePointerCapture`) ni
+// `scrollIntoView` — Radix UI (dont `RadixSelect`, utilise par
+// `components/ui/select.tsx`) les appelle a l'ouverture d'un menu deroulant,
+// ce qui levait `TypeError: target.hasPointerCapture is not a function` et
+// empechait TOUT test d'interagir avec un `<Select>` non-recherchable
+// (verifie par execution, tache 14b, tour de correction 1 : aucun test du
+// depot n'ouvrait un tel menu avant ce polyfill). Poser des no-ops suffit :
+// aucun test n'a besoin du VRAI comportement de capture de pointeur, juste
+// que Radix ne leve pas en l'appelant.
+if (!Element.prototype.hasPointerCapture) {
+  Element.prototype.hasPointerCapture = () => false
+}
+if (!Element.prototype.setPointerCapture) {
+  Element.prototype.setPointerCapture = () => undefined
+}
+if (!Element.prototype.releasePointerCapture) {
+  Element.prototype.releasePointerCapture = () => undefined
+}
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = () => undefined
+}
+
 afterEach(() => {
   cleanup()
 })

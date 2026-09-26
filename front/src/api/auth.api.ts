@@ -1,6 +1,10 @@
 import { apiUrl } from '../constants/config.constant.ts'
 import { handleHttpError } from '../libs/httpErrorHandler.ts'
-import type { RegisterInput, User } from '../types/auth.ts'
+import type {
+  ConsumeAccessLinkInput,
+  RegisterInput,
+  User,
+} from '../types/auth.ts'
 import { fetchWithAuth } from './fetchWithAuth.ts'
 
 export const AuthApi = {
@@ -84,6 +88,43 @@ export const AuthApi = {
       )
     }
     return response
+  },
+
+  // `POST /auth/access-link/consume` (tâche 13, page publique) : le jeton
+  // est un mot de passe à usage unique, transmis dans l'URL du navigateur
+  // mais qui part ICI dans le CORPS de la requête — jamais dans l'URL de
+  // cet appel (voir `back/.../auth/access-link.router.ts`, même exigence
+  // que côté back). `fetch` brut, PAS `fetchWithAuth` : il n'existe aucune
+  // session à ce stade, et un 401 ici signifie « compte désactivé », pas
+  // « session expirée » — `fetchWithAuth` traiterait ce 401 comme une
+  // session à rafraîchir et redirigerait vers `/auth`, un contresens total
+  // sur cette route.
+  consumeAccessLink: async ({
+    token,
+    password,
+  }: ConsumeAccessLinkInput): Promise<{ success: boolean }> => {
+    const response = await fetch(`${apiUrl}/auth/access-link/consume`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, password }),
+    })
+    if (!response.ok) {
+      handleHttpError(
+        response,
+        {
+          410: {
+            title: 'Lien invalide',
+            message: "Ce lien n'est plus valable.",
+          },
+          401: {
+            title: 'Compte désactivé',
+            message: 'Ce compte est désactivé.',
+          },
+        },
+        'Impossible de définir le mot de passe',
+      )
+    }
+    return response.json()
   },
 
   me: async (): Promise<User> => {

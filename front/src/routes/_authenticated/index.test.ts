@@ -44,6 +44,42 @@ const sansAcces: User = {
   establishments: [],
 }
 
+// Tour de correction 1, Critique n°1 : l'etat exact qu'un compte laisse par
+// le script d'amorcage de la tache 11 porte reellement — le drapeau posE,
+// aucun rattachement (le script ne cree jamais d'appartenance). Avant ce
+// correctif, ce compte tombait sur /pending, qui lui ment (il n'attend rien).
+const superAdminSansEtablissement: User = {
+  id: 'sa1',
+  email: 'super@medisync.fr',
+  firstName: null,
+  lastName: null,
+  isSuperAdmin: true,
+  establishments: [],
+}
+
+// Tour de correction 2 (revue) : un compte peut porter isSuperAdmin ET
+// exercer réellement quelque part (le drapeau n'exclut rien côté back — un
+// même compte peut être praticien dans un établissement). La garde
+// isSuperAdmin est placée APRÈS les deux vérifications de tenant dans
+// index.tsx ; rien ne garantit que cet ordre survive à une réécriture
+// future sans ce test.
+const superAdminAvecService: User = {
+  id: 'sa2',
+  email: 'super-praticien@medisync.fr',
+  firstName: null,
+  lastName: null,
+  isSuperAdmin: true,
+  establishments: [
+    {
+      id: 'e1',
+      name: 'CHU',
+      role: 'MEMBER',
+      soignantId: 'so1',
+      services: [{ id: 's1', name: 'Cardio', role: 'INTERVENANT' }],
+    },
+  ],
+}
+
 const runBeforeLoad = (user: User) => {
   const beforeLoad = Route.options.beforeLoad
   if (!beforeLoad) {
@@ -81,6 +117,31 @@ describe('beforeLoad de l index authentifie', () => {
   it('envoie qui n a reellement aucun acces vers l ecran d attente', () => {
     expect(() => runBeforeLoad(sansAcces)).toThrow(
       expect.objectContaining({ isRedirect: true, to: '/pending' }),
+    )
+  })
+
+  // Critique n°1 (tour de correction 1) : sans ce cas, un super-admin fraichement
+  // amorce (isSuperAdmin: true, aucun etablissement) retombait sur /pending —
+  // un ecran qui lui annonce a tort etre en attente d'approbation, et qui ne
+  // monte pas DashboardLayout, donc aucune barre laterale, donc aucun moyen
+  // d'atteindre /super-admin autrement qu'en tapant l'URL a la main.
+  it('envoie un super-admin sans aucun etablissement vers /super-admin, jamais vers /pending', () => {
+    expect(() => runBeforeLoad(superAdminSansEtablissement)).toThrow(
+      expect.objectContaining({ isRedirect: true, to: '/super-admin' }),
+    )
+  })
+
+  // Tour de correction 2 : un super-admin qui exerce aussi comme praticien
+  // retrouve son tableau de bord de service, jamais /super-admin — la garde
+  // du drapeau ne doit s'appliquer qu'en dernier recours, après le couple
+  // service/établissement et l'établissement administré.
+  it('envoie un super-admin qui a par ailleurs un couple etablissement/service vers son tableau de bord, jamais vers /super-admin', () => {
+    expect(() => runBeforeLoad(superAdminAvecService)).toThrow(
+      expect.objectContaining({
+        isRedirect: true,
+        to: '/e/$establishmentId/s/$serviceId/dashboard',
+        params: { establishmentId: 'e1', serviceId: 's1' },
+      }),
     )
   })
 })

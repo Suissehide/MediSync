@@ -80,9 +80,16 @@ describe('tenantPlugin — isolation entre requetes concurrentes', () => {
   it('ne laisse pas le tenant d une requete fuiter vers une autre en vol', async () => {
     const tenantContext = new TenantContext()
     const fastify = Fastify()
-    // Seul `tenantContext` est lu par le plugin à l'enregistrement : pas
-    // besoin du reste du conteneur pour ce test.
-    fastify.decorate('iocContainer', { tenantContext } as unknown as IocContainer)
+    // `tenantContext` et `accessGrantRepository` sont les deux seuls lus par le plugin à
+    // l'enregistrement (depuis la tâche 3, étape 4a : `resolveTenant`/`resolveEstablishmentAdmin`
+    // consultent les octrois vivants de l'utilisateur) — pas besoin du reste du conteneur pour ce
+    // test. Aucun octroi ici : le tableau vide suffit à isoler ce que ce test observe
+    // (l'étanchéité du tenant entre deux requêtes concurrentes), sans rapport avec les octrois.
+    const accessGrantRepository = { findForUser: () => Promise.resolve([]) }
+    fastify.decorate(
+      'iocContainer',
+      { tenantContext, accessGrantRepository } as unknown as IocContainer,
+    )
     await fastify.register(tenantPlugin)
 
     fastify.addHook('onRequest', (request) => {

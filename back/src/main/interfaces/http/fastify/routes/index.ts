@@ -5,6 +5,11 @@ import { authRouter } from './auth'
 import { establishmentAdminRoutes } from './establishment-admin.routes'
 import { healthcheckRouter } from './healthcheck'
 import { meRouter } from './me'
+import {
+  assertSuperAdminShapedRoute,
+  SUPER_ADMIN_PREFIX,
+  superAdminRoutes,
+} from './super-admin.routes'
 import { tenantRoutes } from './tenant.routes'
 
 // Routes publiques (sans session) : racine, healthcheck et authentification.
@@ -14,6 +19,8 @@ const routes: FastifyPluginAsyncZod = async (fastify) => {
   // Toute route de forme multi-tenant doit déclarer sa permission, où qu'elle
   // soit enregistrée — voir assertTenantShapedRoute.
   fastify.addHook('onRoute', assertTenantShapedRoute)
+  // Même garde, pour le même défaut, côté préfixe super-admin — voir assertSuperAdminShapedRoute.
+  fastify.addHook('onRoute', assertSuperAdminShapedRoute)
 
   const { tenantContext } = fastify.iocContainer
 
@@ -48,6 +55,7 @@ const routes: FastifyPluginAsyncZod = async (fastify) => {
   await fastify.register(establishmentAdminRoutes, {
     prefix: '/e/:establishmentId/admin',
   })
+  await fastify.register(superAdminRoutes, { prefix: SUPER_ADMIN_PREFIX })
 }
 
 export { routes }

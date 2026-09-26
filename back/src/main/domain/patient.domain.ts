@@ -202,8 +202,18 @@ class PatientDomain implements PatientDomainInterface {
   // un autre service — exactement ce que la spec §6 interdit ("trouver quelqu'un ne revele que
   // son identite, jamais son suivi"). Voir `dossier-service.test.ts` pour les trois cas.
   //
-  // `estSuiviAilleurs` reste l'unique lecture qui traverse la frontiere entre services (spec
-  // §5.3) : seule la condition qui decide de l'appeler a change.
+  // `estSuiviAilleurs` traverse la frontiere entre services (spec §5.3) : seule la condition qui
+  // decide de l'appeler a change ici.
+  //
+  // CE QU'IL REPOND, ET POURQUOI CE N'EST PAS LE MEME CALCUL QUE L'IMPACT D'UNE DESACTIVATION
+  // (tour de correction 2, tache 9 — la spec §3.6 a d'abord parle d'un « miroir », a tort) :
+  // `estSuiviAilleurs` repond « un sous-dossier existe-t-il ailleurs », vrai MEME si cet ailleurs
+  // est un service aujourd'hui desactive — le sous-dossier existe toujours, et ce service peut
+  // etre reactive (decision 3.6 : reactiver rend tout). `ServiceDomain.impactDesactivation`
+  // (via `PatientServiceFileRepository.impactDesactivation`) repond une question DIFFERENTE : «
+  // ce patient va-t-il devenir invisible partout », et un ailleurs deja desactive ne protege de
+  // rien — il compte donc les services ACTIFS seulement. Deux questions, deux reponses justes,
+  // volontairement PAS alignees : les aligner casserait l'une des deux.
   async findByID(patientID: string): Promise<PatientDetailDomain> {
     const patient = await this.patientRepository.findByID(patientID)
     const hasFileHere = await this.patientServiceFileDomain.findByPatient(patientID)

@@ -29,7 +29,13 @@ export type EstablishmentPermission =
   | 'activity-log:write'
   | 'access-log:read'
 
-export type Permission = ServicePermission | EstablishmentPermission
+// Portée par le drapeau `User.isSuperAdmin`, jamais par un rôle d'établissement ou de service
+// (habilitations.md, table « Permissions d'établissement et de plateforme » — colonne
+// Super-admin, seule cochée pour `establishments:manage`). Aucune route ne la vérifie par
+// `hasPermission` : `requireSuperAdmin` (super-admin.routes.ts) tranche seul, sur le drapeau.
+export type SuperAdminPermission = 'establishments:manage'
+
+export type Permission = ServicePermission | EstablishmentPermission | SuperAdminPermission
 
 const READ_ALL: readonly ServicePermission[] = [
   'planning:read',
@@ -83,6 +89,14 @@ const SERVICE_PERMISSION_SET: ReadonlySet<string> = new Set(
 export const isServicePermission = (permission: Permission): permission is ServicePermission =>
   SERVICE_PERMISSION_SET.has(permission)
 
+const ESTABLISHMENT_PERMISSION_SET: ReadonlySet<string> = new Set(
+  Object.values(ESTABLISHMENT_PERMISSIONS).flat(),
+)
+
+export const isEstablishmentPermission = (
+  permission: Permission,
+): permission is EstablishmentPermission => ESTABLISHMENT_PERMISSION_SET.has(permission)
+
 export type RoleSet = {
   serviceRole: ServiceRole | null
   establishmentRole: EstablishmentRole | null
@@ -92,8 +106,13 @@ export const hasPermission = (roles: RoleSet, permission: Permission): boolean =
   if (isServicePermission(permission)) {
     return roles.serviceRole !== null && SERVICE_PERMISSIONS[roles.serviceRole].includes(permission)
   }
-  return (
-    roles.establishmentRole !== null &&
-    ESTABLISHMENT_PERMISSIONS[roles.establishmentRole].includes(permission)
-  )
+  if (isEstablishmentPermission(permission)) {
+    return (
+      roles.establishmentRole !== null &&
+      ESTABLISHMENT_PERMISSIONS[roles.establishmentRole].includes(permission)
+    )
+  }
+  // Une SuperAdminPermission (`establishments:manage`) : aucun rôle d'établissement ou de
+  // service ne l'accorde jamais — voir le commentaire au-dessus de son type.
+  return false
 }
