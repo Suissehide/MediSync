@@ -5,6 +5,7 @@ import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { buildAccessLinkUrl } from '@/libs/accessLink.ts'
 import { useToastStore } from '@/store/useToastStore.ts'
 
 import { AccountSearchPanel } from './accountSearchPanel.tsx'
@@ -22,6 +23,9 @@ dayjs.extend(utc)
 // URL, ni dans un journal de console, ni dans le cache d'une requête ».
 
 const JETON_UNIQUE = 'jeton-de-test-ne-jamais-fuiter'
+// Revue finale de l'étape 4a, mineur : l'écran affichait le jeton NU alors
+// qu'il annonce un « lien à usage unique » — voir `buildAccessLinkUrl`.
+const LIEN_ATTENDU = buildAccessLinkUrl(JETON_UNIQUE)
 
 type Route = {
   match: (url: string, method: string) => boolean
@@ -189,8 +193,9 @@ describe('AccountSearchPanel', () => {
       screen.getByRole('button', { name: /confirmer la réémission/i }),
     )
 
-    // Affiché à l'écran : c'est le seul endroit où il doit apparaître.
-    expect(await screen.findByText(JETON_UNIQUE)).toBeInTheDocument()
+    // Affiché à l'écran : c'est le seul endroit où il doit apparaître —
+    // sous forme de LIEN complet, pas de jeton nu (revue finale, mineur).
+    expect(await screen.findByText(LIEN_ATTENDU)).toBeInTheDocument()
 
     // Canal 1/4 — jamais dans la VALEUR d'une entrée du cache des requêtes
     // (la réémission est une mutation ; `getQueryData`/`getQueriesData`, ce

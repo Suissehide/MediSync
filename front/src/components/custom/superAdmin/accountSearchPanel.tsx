@@ -3,6 +3,7 @@ import { Check, KeyRound, Search, X } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 
 import { CopyableId } from '../../../components/custom/copyableId.tsx'
+import { buildAccessLinkUrl } from '../../../libs/accessLink.ts'
 import {
   useSuperAdminAccountSearch,
   useSuperAdminReissueAccessLink,
@@ -172,7 +173,7 @@ export const AccountSearchPanel = () => {
                 Lien à usage unique — transmettez-le en main propre, il ne
                 sera plus jamais affiché.
               </p>
-              <CopyableId value={reissue.data.accessLink.token} />
+              <CopyableId value={buildAccessLinkUrl(reissue.data.accessLink.token)} />
             </div>
           )}
         </Card>

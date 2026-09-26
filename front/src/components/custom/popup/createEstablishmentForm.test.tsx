@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { buildAccessLinkUrl } from '@/libs/accessLink.ts'
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import { useToastStore } from '@/store/useToastStore.ts'
 import type { User } from '@/types/auth.ts'
@@ -28,6 +29,11 @@ const superAdmin: User = {
 }
 
 const JETON = 'jeton-de-test-etablissement-neuf-ne-jamais-fuiter'
+// Revue finale de l'étape 4a, mineur : l'écran affichait le jeton NU alors
+// qu'il annonce un « lien à usage unique » — le destinataire recevait
+// quelque chose qui n'est pas un lien. `LIEN_ATTENDU` est ce qui doit
+// apparaître désormais à l'écran, pas `JETON` seul (voir `buildAccessLinkUrl`).
+const LIEN_ATTENDU = buildAccessLinkUrl(JETON)
 
 type Route = {
   match: (url: string, method: string) => boolean
@@ -110,22 +116,22 @@ describe('CreateEstablishmentForm', () => {
 
     await remplirEtCreer()
 
-    expect(await screen.findByText(JETON)).toBeInTheDocument()
+    expect(await screen.findByText(LIEN_ATTENDU)).toBeInTheDocument()
     expect(
       screen.getByText(/il ne sera plus jamais affiché/i),
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /copier l'identifiant/i })).toBeInTheDocument()
 
     // Fermer ne prouve rien (Radix démonte le CONTENU au ferme, donc
-    // `queryByText(JETON)` serait déjà absent même sans remise à zéro).
+    // `queryByText(LIEN_ATTENDU)` serait déjà absent même sans remise à zéro).
     await userEvent.click(screen.getByRole('button', { name: /fermer/i }))
-    expect(screen.queryByText(JETON)).not.toBeInTheDocument()
+    expect(screen.queryByText(LIEN_ATTENDU)).not.toBeInTheDocument()
 
     // LA PREUVE QUI COMPTE : rouvrir.
     await userEvent.click(
       screen.getByRole('button', { name: /créer un établissement/i }),
     )
-    expect(screen.queryByText(JETON)).not.toBeInTheDocument()
+    expect(screen.queryByText(LIEN_ATTENDU)).not.toBeInTheDocument()
     expect(screen.getByLabelText(/nom de l'établissement/i)).toBeInTheDocument()
   })
 
@@ -140,7 +146,7 @@ describe('CreateEstablishmentForm', () => {
 
     await remplirEtCreer()
 
-    expect(await screen.findByText(JETON)).toBeInTheDocument()
+    expect(await screen.findByText(LIEN_ATTENDU)).toBeInTheDocument()
 
     // Canal 1 — jamais dans la VALEUR d'une entrée du cache des requêtes.
     const cachesAvecLeJetonEnValeur = queryClient

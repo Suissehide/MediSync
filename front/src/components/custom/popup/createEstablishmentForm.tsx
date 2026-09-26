@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 
 import { CopyableId } from '@/components/custom/copyableId.tsx'
 import { useAppForm } from '@/hooks/formConfig.tsx'
+import { buildAccessLinkUrl } from '@/libs/accessLink.ts'
 import { useSuperAdminCreateEstablishment } from '@/queries/useSuperAdmin.ts'
 
 import { Button } from '../../ui/button.tsx'
@@ -89,7 +90,7 @@ function CreateEstablishmentForm() {
                   Lien à usage unique — transmettez-le en main propre, il ne
                   sera plus jamais affiché.
                 </p>
-                <CopyableId value={created.accessLink.token} />
+                <CopyableId value={buildAccessLinkUrl(created.accessLink.token)} />
               </div>
             </PopupBody>
             <PopupFooter>
