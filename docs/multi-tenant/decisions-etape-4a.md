@@ -648,15 +648,67 @@ plateforme.** C'est le périmètre naturel de l'étape 4b.
    `findAllWithTags` filtre bien par sous-dossier du service courant. Manque connu depuis
    l'étape 3, pas fermé par l'étape 4a.
 
-9. **Le pont par modèle global sous contexte de TENANT ordinaire** — `User.
-   establishmentMemberships` est une relation à-plusieurs qui traverse les établissements — reste
-   ouvert. Il **préexiste** à ce chantier (verdict identique à `e06d057`), en lecture **et en
-   écriture** (`Establishment.create` avec une création imbriquée écrit un patient dans un autre
-   établissement). Ce que l'étape 4a a fait : retirer les trente lignes de commentaire qui le
-   **déclaraient impossible** — une fausse assurance écrite dans le garde-fou est pire que le
-   trou, parce qu'elle dissuade de chercher — et ajouter une **tâche 15** au plan pour le traiter.
-   Une frontière fermée en lecture et ouverte en écriture est le pire des deux états, parce qu'on
-   la croit acquise.
+9. **Le pont par modèle global sous contexte de TENANT ordinaire — FERMÉ par la tâche 15, et il
+   n'était pas théorique.** Une relation partant d'un modèle global peut être à-plusieurs et
+   traverser les établissements (`User.establishmentMemberships`) ; une chaîne d'inclusions
+   franchissait donc la frontière, **en lecture et en écriture**. L'asymétrie explique qu'il ait
+   échappé à tout : les relations *vers* un global sont toutes à-un, donc inoffensives ; ni la
+   descente récursive de l'étape 3 ni la liste déclarée de la tâche 1 ne regardaient dans l'autre
+   sens. Le défaut **préexiste** au chantier (verdict identique à `a13046b`) et n'avait aucun
+   effet tant qu'il n'existait qu'un seul établissement : **c'est l'étape 4a qui l'a rendu
+   atteignable**, en permettant d'en créer un second — et c'est pour cela qu'elle le referme.
+
+   **Ce que nous croyions à tort, et qui doit être lu par quiconque reprend ce garde-fou** : le
+   plan affirmait qu'« aucune lecture du dépôt n'emprunte ce pont aujourd'hui ». **C'était faux.**
+   `UserRepository.findByID`, qui lit l'arbre complet des appartenances, était appelé **sous
+   contexte de tenant** par le domaine des appartenances, et l'un de ces appels prend en entrée
+   **une adresse choisie par l'administrateur**. Le pont était donc emprunté par un chemin de
+   production réel, à entrée contrôlée par l'appelant. Deux fausses assurances successives ont
+   protégé ce trou : d'abord trente lignes de commentaire qui le déclaraient impossible (retirées
+   en cours de chantier), puis un commentaire du garde-fou qui affirmait une sûreté inexacte — et
+   **c'est lui qui avait fait écrire quatre tests à l'envers**, sur la prémisse fausse qu'« une
+   seule ligne implique un seul tenant ».
+
+   *La correction* : la cardinalité est portée par `MODEL_RELATIONS` et tenue par le test de
+   conformité au schéma **dans les trois sens** ; le franchissement depuis un global par une
+   relation à-plusieurs est refusé sous tenant comme sous super-admin, en `include`/`select`
+   comme en `data`. **L'appel a été corrigé, jamais le garde-fou** : le souscripteur et le domaine
+   passent à `findIdentity` (la ligne `User` seule) plus un booléen borné (`estRattacheAilleurs`,
+   cinquième emploi déclaré du mode système). Ce qui traverse la frontière passe de l'arbre entier
+   à un bit. Monotonie mesurée et **rejouable** (`MONOTONIE_REF=<ref> PROFONDEUR=9`) : 61 923 360
+   cas, zéro refus perdu, tous les changements de verdict sur le chemin de tenant.
+
+   *Ce que le resserrement a cassé, et qu'aucune porte ne voyait* : le souscripteur du journal
+   d'activité appelait lui aussi `findByID`, sous contexte de tenant — `appEventBus.emit` est
+   synchrone, donc le rappel s'exécute dans la portée de la requête — et un `.catch(() => null)`
+   transformait le refus en « auteur inconnu ». Mesuré sur la base : `"userFirstName":"Prenom"`
+   devenait `null`, pour **toutes** les actions journalisées depuis une route de tenant, colonne
+   que le front affiche. Le test unitaire bouchonnait le dépôt et le seul e2e **comptait des
+   lignes** : la ligne existait toujours, amputée. Fermé, avec un test qui affirme désormais le
+   **nom de l'auteur**. *Leçon de classe, pas d'incident* : **tout `.catch` qui avale une erreur
+   est un endroit où un resserrement du garde-fou se convertit en dégradation silencieuse.** Les
+   trois autres de `src/main` ont été relus (ils enveloppent `findByEmail`, une lecture nue,
+   insensible) ; aucune porte ne surveille cette classe.
+
+   *Deux limites délibérément laissées ouvertes*, nommées ici pour qu'on ne les redécouvre pas :
+   la règle ne s'applique à **aucune route non tenant** — `routes/index.ts` appelle
+   `tenantContext.clear()` à chaque requête et seul `tenant.plugin.ts` entre dans un contexte,
+   donc `/me`, `/auth` et **tout le préfixe `/super-admin`** s'exécutent sans store ; et sous
+   tenant, l'écriture **plate** sur une racine globale d'à côté reste ouverte (seules les
+   écritures imbriquées sont vérifiées). Ni l'une ni l'autre n'est une régression — zéro
+   changement de verdict hors chemin de tenant — mais la première a une conséquence concrète :
+   une lecture future dans `/super-admin` pourrait atteindre des patients par
+   `Establishment.findUnique + include`, **en contournant `SUPERADMIN_OPERATIONS`**, dont
+   l'absence de `Patient.findMany` est pourtant motivée. *Coût si faux* : les fermer en fin de
+   chantier aurait fait tomber des lectures légitimes sans le budget de relecture nécessaire ;
+   elles ouvrent l'étape 4b.
+
+   *Et une phrase à ne pas laisser croire* : **l'étape 4a n'est pas monotone vis-à-vis de
+   `main`.** Le harnais versé, lancé contre `main`, rapporte 1 800 verdicts assouplis. Ils sont
+   tous expliqués — 1 594 ont pour racine ou pour étape `AccessLink` ou `SuperAdminAccessGrant`,
+   **les deux tables nées à la tâche 2**, qu'un garde-fou antérieur refusait faute de les
+   connaître ; les 206 autres sont la réouverture délibérée de `SUPERADMIN_GLOBAL_OPERATIONS`.
+   Rien d'inexpliqué, mais mieux vaut le lire ici que le découvrir en 4b.
 
 10. **`Object.freeze` sur le store de contexte a d'abord été superficiel**, et le fichier déclarait
     la porte « FERMÉE » alors que muter `peek().tenant.establishmentId` réussissait et repointait
