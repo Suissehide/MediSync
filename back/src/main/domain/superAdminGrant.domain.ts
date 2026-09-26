@@ -69,13 +69,20 @@ class SuperAdminGrantDomain implements SuperAdminGrantDomainInterface {
     }
     const now = new Date()
     // Tour de correction 1 : refuse AVANT d'écrire — voir le commentaire au-dessus de
-    // `ACTIVE_GRANT_EXISTS`. Course possible, assumée : deux requêtes concurrentes pourraient
-    // toutes deux passer ce contrôle avant que l'une n'écrive — un risque de très faible portée
-    // pour un geste humain, volontaire, rarement répété à la seconde près, et qu'une contrainte
-    // Postgres ne peut pas fermer proprement ici (une expiration COURANTE, `expiresAt > now()`,
-    // n'est pas un prédicat d'index partiel valide : elle varie dans le temps, contrairement à
-    // `revokedAt IS NULL`, qui bloquerait à tort un octroi FUTUR après la simple expiration
-    // naturelle d'un précédent jamais révoqué).
+    // `ACTIVE_GRANT_EXISTS`. COURSE SYSTÉMATIQUE, PAS HYPOTHÉTIQUE (tour de correction 2 — la
+    // relecture a mesuré, et je l'ai reproduit par exécution : trois essais, trois fois deux
+    // octrois vivants créés) : deux requêtes concurrentes qui visent le MÊME établissement
+    // passent TOUJOURS ce contrôle toutes les deux avant que l'une n'écrive — la fenêtre s'ouvre
+    // à chaque fois, elle ne se referme jamais d'elle-même. Sans conséquence de sûreté : le
+    // dédoublonnage (`effectiveMemberships`, `dedoublonneParEtablissement`) absorbe le cas et
+    // `/me` ne montre qu'une ligne. Conséquence réelle, assumée : la liste de l'administrateur
+    // d'établissement (`GET /e/:establishmentId/admin/grants`) montre alors DEUX lignes vivantes,
+    // simultanément — elle ne dédoublonne pas, spec §3.5 exige « en cours ET passés », donc
+    // chaque ligne réelle. Pas de contrainte Postgres qui ferme proprement cette fenêtre-là ici
+    // (une expiration COURANTE, `expiresAt > now()`, n'est pas un prédicat d'index partiel
+    // valide : elle varie dans le temps, contrairement à `revokedAt IS NULL`, qui bloquerait à
+    // tort un octroi FUTUR après la simple expiration naturelle d'un précédent jamais révoqué).
+    // Porté au journal de décisions de l'étape (tâche 14) plutôt que fermé ici.
     const dejaVivant = await this.accessGrantRepository.hasLiveGrant(
       userId,
       establishmentId,

@@ -97,9 +97,13 @@ const appartenancesReelles = (
 //   - Un octroi ne confère RIEN si son titulaire n'est plus super-admin, jugé ICI, à la lecture,
 //     contre le MÊME `user` que celui dont dépendent les appartenances réelles — jamais mis en
 //     cache, exactement comme l'expiration. Retirer le drapeau ne retire donc jamais l'accès que
-//     tardivement : la requête suivante le referme, sans reconnexion. `liveGrantsForUser`
-//     ci-dessous fait aussi l'économie de la lecture pour un compte qui n'a structurellement
-//     jamais rien à y trouver — une seconde barrière, pas un substitut à celle-ci.
+//     tardivement : la requête suivante le referme, sans reconnexion, et le remet tout aussi vite
+//     si le drapeau revient (200 → 404 → 200, éprouvé par exécution). Seconde barrière,
+//     redondante et pas un substitut à celle-ci : `AccessGrantRepository.findForUser` (PAS
+//     `liveGrantsForUser`, qui n'est plus qu'un relais depuis le tour de correction 1, tâche 8 —
+//     voir son commentaire) relit elle-même `User.isSuperAdmin`, fraîche, avant d'entrer le
+//     contexte superadmin ; un compte qui n'a structurellement rien à y trouver n'y entre donc
+//     jamais.
 //
 //   - Une appartenance réelle prime TOUJOURS sur un octroi au même établissement — même
 //     désactivée. Se limiter aux appartenances actives pour cette primauté rouvrirait
@@ -156,15 +160,24 @@ export const effectiveMemberships = (
 // vérificateur à l'exécution — la fonction devait cesser de faire confiance à CE QU'ON LUI DONNE
 // SUR CE POINT.
 //
-// REMÈDE : plus aucun champ `isSuperAdmin` en entrée — seulement un `userId`. Il n'y a donc plus
-// rien à mentir : la vérité est rechargée ELLE-MÊME, fraîche, par
-// `AccessGrantRepository.findForUser` (une lecture triviale de `User.isSuperAdmin`, avant toute
-// autre chose — voir son commentaire), jamais mise en cache ni acceptée d'un appelant. Un id
-// fabriqué (ou correct) ne change rien : c'est la valeur ACTUELLE en base qui tranche, à CHAQUE
-// appel. Reconstruire le littéral du relecteur n'a donc plus de sens — il n'existe plus de champ
-// où écrire le mensonge — et rejouer exactement son scénario (compte démis, octroi non révoqué
-// encore en base) rend désormais `[]` : voir tenant-resolution.test.ts, « la lecture directe du
-// depot ne fait plus confiance a une pretention isSuperAdmin ».
+// REMÈDE : plus aucun champ `isSuperAdmin` en entrée — seulement un `userId`. CE N'EST PAS « plus
+// rien à mentir » (tour de correction 2 — la relecture a montré que cette phrase promettait un
+// cran de trop) : l'identifiant LUI-MÊME reste une valeur qu'un appelant pourrait substituer — un
+// id de tiers obtiendrait les octrois de ce tiers, et rien ici ne le distingue d'un appel
+// légitime, ni le compilateur, ni le lint, ni le garde-fou statique. Ce qui est vrai : la
+// confiance ne porte plus sur NEUF champs (dont un booléen qu'il suffisait d'affirmer) mais sur
+// UN SEUL — et c'est ce seul-là que surveille désormais
+// `effectiveMemberships-seul-appelant.test.ts` (tour de correction 2 : il relit désormais aussi
+// les appels à CETTE fonction, comme il le faisait déjà pour `effectiveMemberships`) : un appel
+// non nommé dans sa liste fait rougir le test, que son argument soit fabriqué ou légitime. La
+// vérité du DRAPEAU, elle, est rechargée ELLE-MÊME, fraîche, par
+// `AccessGrantRepository.findForUser` (une lecture triviale de
+// `User.isSuperAdmin`, avant toute autre chose — voir son commentaire), jamais mise en cache ni
+// acceptée d'un appelant : rejouer exactement le scénario du relecteur (compte démis, octroi non
+// révoqué encore en base) rend désormais `[]`, voir tenant-resolution.test.ts, « la lecture
+// directe du depot ne fait plus confiance a une pretention isSuperAdmin ». Ce que cela NE ferme
+// PAS — porté au journal de décisions de l'étape (tâche 14) plutôt que traité ici : que
+// `userId` provienne bien, à chaque appel, d'une session authentifiée plutôt que d'un id soumis.
 //
 // Coût assumé : un aller-retour Postgres de plus par requête (une lecture d'une seule colonne,
 // sur clé primaire) pour TOUT compte, super-admin ou non — là où l'ancienne version l'évitait

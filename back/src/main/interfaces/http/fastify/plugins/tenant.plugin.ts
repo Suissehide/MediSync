@@ -164,7 +164,9 @@ const tenantPlugin: FastifyPluginAsync = fastifyPlugin(
     const { tenantContext, accessGrantRepository } = fastify.iocContainer
 
     // Depuis la tâche 3 (étape 4a), résoudre le tenant lit aussi les octrois vivants de
-    // l'utilisateur (`liveGrantsForUser`, un aller-retour DB conditionnel — voir
+    // l'utilisateur (`liveGrantsForUser` — depuis le tour de correction 1 de la tâche 8, un
+    // relais qui appelle TOUJOURS `AccessGrantRepository.findForUser` ; c'est cette dernière qui
+    // décide, en interne, si la lecture va plus loin qu'une seule colonne — voir
     // accessGrant.domain.ts) AVANT d'appeler `tenantContext.enter` — alors qu'avant, `enter` était
     // le tout premier geste, synchrone, du hook. Ce délai réel change la forme qu'exige
     // `tenantContext.enter` (qui repose sur `AsyncLocalStorage.enterWith`).
