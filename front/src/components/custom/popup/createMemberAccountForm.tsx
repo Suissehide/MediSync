@@ -7,10 +7,11 @@ import {
   SERVICE_ROLE_LABEL,
 } from '@/constants/member.constant.ts'
 import { useAppForm } from '@/hooks/formConfig.tsx'
+import { buildAccessLinkUrl } from '@/libs/accessLink.ts'
 import { toSelectOptions } from '@/libs/utils.ts'
 import { useMemberMutations } from '@/queries/useMembers.ts'
+import { useServicesQuery } from '@/queries/useServices.ts'
 import { useEstablishmentSoignantsQuery } from '@/queries/useSoignant.ts'
-import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { EstablishmentRole, ServiceRole } from '@/types/auth.ts'
 
 import { Button } from '../../ui/button.tsx'
@@ -43,8 +44,18 @@ function CreateMemberAccountForm() {
   const [open, setOpen] = useState(false)
   const { createMemberAccount } = useMemberMutations()
   const { soignants } = useEstablishmentSoignantsQuery()
-  const user = useAuthStore((state) => state.user)
-  const context = useAuthStore((state) => state.context)
+  // Revue finale de l'étape 4a, Important n°2 : les services PROPOSÉS sont
+  // la liste COMPLÈTE de l'établissement courant
+  // (`GET /e/:establishmentId/admin/services`), jamais celle de
+  // l'administrateur connecté (`user.establishments[].services`, données de
+  // `/me`) — sans quoi un administrateur membre d'un seul service de
+  // l'établissement ne peut affecter personne à l'autre. Même source
+  // qu'`EditMemberForm` (`useServicesQuery`).
+  const {
+    services,
+    isPending: servicesPending,
+    error: servicesError,
+  } = useServicesQuery()
 
   const soignantOptions = useMemo(
     () =>
@@ -54,21 +65,17 @@ function CreateMemberAccountForm() {
     [soignants],
   )
 
-  const establishmentServices = useMemo(() => {
-    const establishment = user?.establishments.find(
-      (e) => e.id === context?.establishmentId,
-    )
-    return establishment?.services ?? []
-  }, [user, context?.establishmentId])
-
   const serviceOptions = useMemo(
     () => [
       { value: NO_SERVICE, label: 'Aucun' },
-      ...[...establishmentServices]
+      ...[...(services ?? [])]
         .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
-        .map((s) => ({ value: s.id, label: s.name })),
+        .map((s) => ({
+          value: s.id,
+          label: s.deactivatedAt !== null ? `${s.name} (désactivé)` : s.name,
+        })),
     ],
-    [establishmentServices],
+    [services],
   )
 
   const form = useAppForm({
@@ -139,7 +146,7 @@ function CreateMemberAccountForm() {
                   Lien à usage unique — transmettez-le en main propre, il ne
                   sera plus jamais affiché.
                 </p>
-                <CopyableId value={created.accessLink.token} />
+                <CopyableId value={buildAccessLinkUrl(created.accessLink.token)} />
               </div>
             </PopupBody>
             <PopupFooter>
@@ -219,6 +226,16 @@ function CreateMemberAccountForm() {
                     />
                   )}
                 </form.AppField>
+                {servicesPending && (
+                  <p className="text-xs text-text-light">
+                    Chargement des services...
+                  </p>
+                )}
+                {!servicesPending && servicesError && (
+                  <p className="text-xs text-destructive">
+                    Impossible de charger les services.
+                  </p>
+                )}
 
                 <form.Subscribe selector={(state) => state.values.serviceId}>
                   {(serviceId) => (
