@@ -18,8 +18,11 @@ export type AccessLinkCreateEntityRepo = {
 export interface AccessLinkRepositoryInterface {
   // Invalide (marque consommés) tous les liens NON consommés de ce compte. Appelé avant de créer
   // le nouveau lien à l'émission : une réémission invalide les liens précédents du même compte
-  // (spec §6.1). Un `updateMany` sans condition de course à protéger ici — contrairement à
-  // `consumeIfActive`, qui, lui, doit résister à deux appels simultanés.
+  // (spec §6.1), pour un appelant SÉQUENTIEL (l'usage attendu). Ceci NE ferme PAS la course entre
+  // deux appels concurrents à `AccessLinkDomain.issue` pour le même compte — voir le commentaire
+  // détaillé sur `issue`, `domain/accessLink.domain.ts` (étape 4a, tâche 4, tour de correction 1,
+  // Important n°3) — contrairement à `consumeIfActive`, ci-dessous, qui, lui, doit résister à
+  // deux appels simultanés (Review Focus n°1, exigé par le brief).
   invalidateActiveForUser: (userId: string, now: Date) => Promise<void>
   create: (params: AccessLinkCreateEntityRepo) => Promise<void>
   // Lecture SEULE, jamais de mutation : sert à distinguer un jeton inconnu (retourne `null`) d'un

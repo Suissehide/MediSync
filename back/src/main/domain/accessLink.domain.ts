@@ -31,7 +31,31 @@ class AccessLinkDomain implements AccessLinkDomainInterface {
     const now = new Date()
     const token = randomToken(TOKEN_BYTES)
     // Réémettre invalide tout lien encore utilisable du même compte (spec §6.1), AVANT de créer
-    // le nouveau : un compte n'a donc jamais plus d'un lien utilisable à la fois.
+    // le nouveau : une réémission qui suit une réémission précédente (l'usage attendu — un seul
+    // administrateur, un clic, puis un autre plus tard) invalide bien la précédente ; éprouvé en
+    // e2e (« reemettre un lien invalide le precedent »).
+    //
+    // CE QUE CECI NE FERME PAS (étape 4a, tâche 4, tour de correction 1, Important n°3, constaté
+    // par exécution : six émissions simultanées pour le même compte laissent PLUSIEURS liens
+    // utilisables — de 4 à 6 selon l'exécution, jamais 1 seul, jamais fermé par construction) :
+    // `invalidateActiveForUser` et `create` ne sont pas une seule opération atomique, et rien
+    // n'empêche N appels de ce domaine de s'exécuter en parallèle sur le même `userId` — chacun
+    // invalide ce qui existait AVANT que les autres n'aient écrit leur propre ligne, puis crée la
+    // sienne. Le nombre exact de survivants dépend de l'entrelacement réel des appels (non
+    // déterministe, contrairement à `consumeIfActive` ci-dessous) ; ce qui est constant, c'est
+    // qu'il en reste PLUS D'UN — la course n'est pas fermée. Contrairement à `consumeIfActive`
+    // (Review Focus n°1), qui protège une PROPRIÉTÉ que le brief nomme explicitement (un jeton ne
+    // se consomme qu'une fois, y compris sous course), le brief ne demande nulle part qu'ÉMETTRE
+    // soit mutuellement exclusif — seulement que RÉÉMETTRE invalide ce qui précède, ce qui reste
+    // vrai en séquence. Fermer aussi le cas concurrent demanderait une contrainte portée par la
+    // base (ex. un index unique partiel sur `(userId) WHERE usedAt IS NULL`) ou un verrou
+    // consultatif par compte — une migration de schéma ou un mécanisme de verrouillage qu'aucune
+    // tâche de ce plan ne réclame, pour un scénario rare (le MÊME compte administrateur émettant
+    // pour le MÊME utilisateur au même instant) et auto-limité par l'expiration à sept jours de
+    // tout lien qui en résulterait. Choix assumé : documenter la limite plutôt que la fermer sans
+    // qu'elle soit demandée — voir « emissions simultanees » dans access-link.test.ts, qui
+    // constate ce comportement (plus d'un lien utilisable) plutôt que
+    // d'affirmer le contraire.
     await this.accessLinkRepository.invalidateActiveForUser(userId, now)
     await this.accessLinkRepository.create({
       userId,

@@ -1,4 +1,3 @@
-import Boom from '@hapi/boom'
 import type { FastifyPluginAsync } from 'fastify'
 
 import {
@@ -13,7 +12,7 @@ import {
 // cette forme).
 const accessLinkRouter: FastifyPluginAsync = (fastify) => {
   const { iocContainer } = fastify
-  const { accessLinkDomain, logger } = iocContainer
+  const { accessLinkDomain } = iocContainer
 
   fastify.post<{ Body: AccessLinkConsumeInput }>(
     '/consume',
@@ -29,16 +28,21 @@ const accessLinkRouter: FastifyPluginAsync = (fastify) => {
         rateLimit: { max: 10, timeWindow: '1 minute' },
       },
     },
+    // Pas de nouvelle validation manuelle ici (étape 4a, tâche 4, tour de correction 1, Important
+    // n°5 — CODE MORT, retiré) : le `schema.body` ci-dessus est déjà appliqué par Fastify — via
+    // le `validatorCompiler` de `fastify-type-provider-zod`, enregistré globalement
+    // (`fastify-http-server.ts`) — AVANT que ce gestionnaire ne s'exécute. Un corps qui ne
+    // correspond pas à `accessLinkConsumeSchema` ne l'atteint donc jamais ; `request.body` est ici
+    // TOUJOURS déjà `AccessLinkConsumeInput`. Une version antérieure de ce fichier reprenait, du
+    // même endroit dans `register.router.ts`/`sign-in.router.ts` (qui portent la même
+    // redondance), un second `accessLinkConsumeSchema.safeParse(request.body)` suivi d'un `throw
+    // Boom.badRequest(...)` en cas d'échec — jamais atteignable. Prouvé par exécution : remplacer
+    // temporairement cette branche par un `throw new Error('SONDE...')` et rejouer le test « une
+    // charge invalide (jeton manquant) » (`access-link-token-leak.test.ts`) continuait de rendre
+    // 400 sans jamais lever cette erreur — la preuve que la branche manuelle n'était jamais
+    // exécutée, Fastify ayant déjà tranché avant elle.
     async (request) => {
-      const { success, data, error } = accessLinkConsumeSchema.safeParse(
-        request.body,
-      )
-      if (!success) {
-        // Ne jamais logger le corps de requête (contient le jeton et le mot de passe).
-        logger.debug(`Invalid access-link consume payload: ${error.message}`)
-        throw Boom.badRequest(error)
-      }
-      const { token, password } = data
+      const { token, password } = request.body
       await accessLinkDomain.consume(token, password)
       return { success: true }
     },
