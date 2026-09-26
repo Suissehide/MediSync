@@ -4,14 +4,16 @@ import type { UserRepositoryInterface } from '../types/infra/orm/repositories/us
 import type { AppEventBus } from '../utils/app-event-bus'
 import type { Logger } from '../types/utils/logger'
 
-// Les cinq operations de gestion des membres partagent la meme forme de
-// charge utile : une seule boucle suffit a les journaliser toutes.
+// Les operations de gestion des membres partagent la meme forme de charge
+// utile : une seule boucle suffit a les journaliser toutes.
 const MEMBER_ACTIONS = [
   'member.added',
   'member.updated',
   'member.removed',
   'member.deactivated',
   'member.reactivated',
+  'member.accountCreated',
+  'member.accessLinkReissued',
 ] as const
 
 class ActivityLogSubscriber {

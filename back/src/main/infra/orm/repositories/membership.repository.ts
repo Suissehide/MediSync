@@ -5,6 +5,7 @@ import type {
   MembershipRow,
   MembershipUpdateRepo,
 } from '../../../types/infra/orm/repositories/membership.repository.interface'
+import type { PrimaTransactionClient } from '../../../types/infra/orm/client'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { TenantContextInterface } from '../../../types/utils/tenant-context'
 import type { PostgresPrismaClient } from '../postgres-client'
@@ -102,13 +103,16 @@ class MembershipRepository implements MembershipRepositoryInterface {
     return count > 0
   }
 
-  async create({
-    services,
-    ...params
-  }: MembershipCreateRepo): Promise<MembershipRow> {
+  // `client` optionnel (tâche 10, step 1) : voir le commentaire équivalent sur
+  // `UserRepositoryInterface.create`. Sert à inscrire le rattachement dans la MÊME
+  // transaction que la création du compte et l'émission du lien.
+  async create(
+    { services, ...params }: MembershipCreateRepo,
+    client: PrimaTransactionClient = this.prisma,
+  ): Promise<MembershipRow> {
     const { establishmentId } = this.establishmentScope
     try {
-      return await this.prisma.establishmentMembership.create({
+      return await client.establishmentMembership.create({
         data: {
           ...params,
           establishmentId,

@@ -7,6 +7,7 @@ import type {
   EstablishmentRole,
   ServiceRole,
 } from '../../../../../generated/enums'
+import type { PrimaTransactionClient } from '../client'
 
 // Une appartenance telle que la manipule la gestion des membres : la ligne
 // EstablishmentMembership, l'identité qu'elle rattache (jamais le mot de
@@ -38,7 +39,12 @@ export interface MembershipRepositoryInterface {
   findByID: (id: string) => Promise<MembershipRow>
   findByUserID: (userId: string) => Promise<MembershipRow | null>
   countAdmins: () => Promise<number>
-  create: (params: MembershipCreateRepo) => Promise<MembershipRow>
+  // `client` optionnel (tâche 10, step 1) : le rattachement d'un compte fraîchement créé doit
+  // partager le sort de la création du compte et de l'émission de son lien.
+  create: (
+    params: MembershipCreateRepo,
+    client?: PrimaTransactionClient,
+  ) => Promise<MembershipRow>
   update: (id: string, params: MembershipUpdateRepo) => Promise<MembershipRow>
   delete: (id: string) => Promise<void>
   serviceExists: (serviceId: string) => Promise<boolean>
