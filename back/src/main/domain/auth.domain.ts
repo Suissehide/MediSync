@@ -99,6 +99,12 @@ class AuthDomain implements AuthDomainInterface {
       throw Boom.unauthorized('Account deactivated')
     }
 
+    // Tâche 7 (étape 4a) : posée ICI, une fois le mot de passe vérifié et le compte confirmé
+    // actif — jamais sur `refresh`, qui ne redémontre aucun secret. Sans cette écriture,
+    // `User.lastLoginAt` reste vide pour tout le monde et la liste du super-admin affiche
+    // « jamais » à chaque établissement, quelle que soit son activité réelle (spec §3.3).
+    await this.userRepository.recordLogin(user.id, new Date())
+
     const full = await this.userRepository.findByID(user.id)
     const grants = await liveGrantsForUser(user, this.accessGrantRepository)
     const { accessToken, refreshToken } = this.generateTokens(user.id)

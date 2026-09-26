@@ -69,6 +69,7 @@ const buildDomain = (knownUser: UserEntityRepo = buildKnownUser()) => {
     updateProfile: () => Promise.resolve(knownUser),
     updatePassword: () => Promise.resolve(),
     setDeactivated: () => Promise.resolve(knownUser),
+    recordLogin: () => Promise.resolve(),
   }
 
   const config = {

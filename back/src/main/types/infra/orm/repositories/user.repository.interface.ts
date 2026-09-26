@@ -37,4 +37,9 @@ export interface UserRepositoryInterface {
   ) => Promise<UserEntityRepo>
   updatePassword: (userID: string, password: string) => Promise<void>
   setDeactivated: (userID: string, at: Date | null) => Promise<UserEntityRepo>
+  // Tâche 7 (étape 4a) : posée à la connexion réussie (`AuthDomain.signIn`) — sans elle, la
+  // liste du super-admin affiche « jamais » pour tout le monde (spec §3.3, colonne « dernier
+  // accès »). `User` est global : aucun contexte de tenant à fournir, comme les méthodes
+  // voisines ci-dessus.
+  recordLogin: (userID: string, at: Date) => Promise<void>
 }

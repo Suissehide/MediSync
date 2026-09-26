@@ -1,4 +1,5 @@
 import type { Establishment } from '../../../generated/client'
+import type { EstablishmentListRow } from '../infra/orm/repositories/establishment.repository.interface'
 
 // Le premier administrateur d'un établissement neuf (spec §3.1, §4.1, §6.2, tâche 6). Une seule
 // route l'appelle aujourd'hui : `POST /super-admin/establishments`.
@@ -40,4 +41,10 @@ export interface EstablishmentDomainInterface {
     input: CreateEstablishmentInput,
     issuedBy: string,
   ) => Promise<CreateEstablishmentResult>
+  // Tâche 7 : la liste du super-admin et ses compteurs (spec §3.3). Une donnée de santé
+  // agrégée, assumée et bornée — voir le commentaire sur `EstablishmentCounters`.
+  list: () => Promise<EstablishmentListRow[]>
+  // Le détail d'UN établissement : la même ligne que dans la liste. `Boom.notFound` si l'id est
+  // inconnu (`findByIdOrThrow`).
+  getById: (id: string) => Promise<EstablishmentListRow>
 }

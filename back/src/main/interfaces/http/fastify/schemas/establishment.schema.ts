@@ -37,3 +37,25 @@ export const createEstablishmentResponseSchema = z.object({
 })
 
 export type CreateEstablishmentBody = z.infer<typeof createEstablishmentSchema>
+
+// `GET /super-admin/establishments` et `GET /super-admin/establishments/:id` (spec §3.3, §6.2,
+// tâche 7). Clés EXACTES — un test les affirme triées, pas seulement l'absence de quelques
+// champs (task-7-brief.md, Step 1). `patientCount` est une donnée de santé agrégée, assumée et
+// bornée : un nombre, jamais une identité ni un contenu (spec §3.3).
+export const establishmentListItemSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  createdAt: z.coerce.date(),
+  deactivatedAt: z.coerce.date().nullable(),
+  serviceCount: z.number(),
+  accountCount: z.number(),
+  patientCount: z.number(),
+  // Nul quand l'établissement n'a aucun administrateur ENCORE actif (le premier a pu être
+  // désactivé) — pas de nom, l'adresse suffit à joindre.
+  firstAdmin: z.object({ id: z.string(), email: z.string() }).nullable(),
+  lastAccessAt: z.coerce.date().nullable(),
+})
+export const establishmentListResponseSchema = z.array(establishmentListItemSchema)
+
+export const establishmentIdParamsSchema = z.object({ id: z.string() })
+export type EstablishmentIdParams = z.infer<typeof establishmentIdParamsSchema>

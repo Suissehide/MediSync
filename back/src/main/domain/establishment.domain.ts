@@ -6,6 +6,7 @@ import type {
   CreateEstablishmentResult,
   EstablishmentDomainInterface,
 } from '../types/domain/establishment.domain.interface'
+import type { EstablishmentListRow } from '../types/infra/orm/repositories/establishment.repository.interface'
 import type { IocContainer } from '../types/application/ioc'
 import type { PostgresOrm } from '../infra/orm/postgres-client'
 import type { EstablishmentRepositoryInterface } from '../types/infra/orm/repositories/establishment.repository.interface'
@@ -133,6 +134,27 @@ class EstablishmentDomain implements EstablishmentDomainInterface {
     // Tour de correction 1, Important n°1 : ne rend plus rien sur le compte au-delà de ce qui
     // est nécessaire — voir le commentaire sur `CreateEstablishmentResult`.
     return { establishment, accessLink }
+  }
+
+  // Tâche 7 : la liste du super-admin (spec §3.3). Une lecture nue (`findAll`, modèle global)
+  // puis, PAR établissement, ses compteurs (`countersFor`, sous contexte superadmin) — voir le
+  // commentaire de `EstablishmentCounters` pour ce que chaque compteur expose et pourquoi.
+  async list(): Promise<EstablishmentListRow[]> {
+    const establishments = await this.establishmentRepository.findAll()
+    return Promise.all(
+      establishments.map(async (establishment) => {
+        const counters = await this.establishmentRepository.countersFor(establishment.id)
+        return { ...establishment, ...counters }
+      }),
+    )
+  }
+
+  // Le détail d'UN établissement : la même ligne que dans la liste (spec §3.3). `findByIdOrThrow`
+  // lève `Boom.notFound` (via `errorHandler.boomErrorFromPrismaError`) si l'id est inconnu.
+  async getById(id: string): Promise<EstablishmentListRow> {
+    const establishment = await this.establishmentRepository.findByIdOrThrow(id)
+    const counters = await this.establishmentRepository.countersFor(establishment.id)
+    return { ...establishment, ...counters }
   }
 }
 

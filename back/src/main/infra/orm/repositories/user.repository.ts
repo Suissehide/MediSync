@@ -129,6 +129,24 @@ class UserRepository implements UserRepositoryInterface {
       })
     }
   }
+
+  // Tâche 7 : posée sur le chemin de connexion (`AuthDomain.signIn`), qui n'a aucun contexte de
+  // tenant ni de superadmin — `User` est global, cette écriture n'a donc rien à encadrer (voir
+  // le commentaire au-dessus de `SUPERADMIN_GLOBAL_OPERATIONS`, tenant-guard.ts : PAS `update`
+  // pour cette raison précise).
+  async recordLogin(userID: string, at: Date): Promise<void> {
+    try {
+      await this.prisma.user.update({
+        where: { id: userID },
+        data: { lastLoginAt: at },
+      })
+    } catch (err) {
+      throw this.errorHandler.boomErrorFromPrismaError({
+        entityName: 'User',
+        error: err,
+      })
+    }
+  }
 }
 
 export { UserRepository }
