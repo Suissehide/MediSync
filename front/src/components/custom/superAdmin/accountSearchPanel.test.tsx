@@ -117,9 +117,42 @@ describe('AccountSearchPanel', () => {
     expect(screen.getByText('CHU')).toBeInTheDocument()
   })
 
+  // Tour de correction 1, Mineur : « la réémission part sur un simple clic,
+  // sans confirmation ». C'est un mot de passe à usage unique sur le
+  // compte d'AUTRUI — le clic seul ne doit rien envoyer.
+  it('demande une confirmation avant de reemettre le lien : le premier clic seul n envoie aucune requete', async () => {
+    const fetchMock = buildFetchMock([
+      {
+        match: (url, method) => url.includes('/super-admin/users?email=') && method === 'GET',
+        respond: () => ({ ok: true, status: 200, json: async () => compteRecherche }),
+      },
+    ])
+    vi.stubGlobal('fetch', fetchMock)
+    renderPanel()
+
+    await rechercher('untel@chu.fr')
+    await screen.findByText('untel@chu.fr')
+
+    await userEvent.click(
+      screen.getByRole('button', { name: /réémettre un lien d'accès/i }),
+    )
+
+    expect(
+      screen.getByText(/confirmez-vous|voulez-vous vraiment|sur de vouloir/i),
+    ).toBeInTheDocument()
+    expect(fetchMock).toHaveBeenCalledTimes(1) // la recherche seule, pas la reemission
+  })
+
   it("le jeton reemis n'atterrit jamais ailleurs qu'a l'ecran", async () => {
-    const consoleLog = vi.spyOn(console, 'log').mockImplementation(() => undefined)
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    // Tour de correction 1, Critique n°2 : les QUATRE canaux que le
+    // commentaire ci-dessus énumère, chacun avec sa propre garde — le
+    // relecteur a démontré qu'une garde qui n'en couvre que deux (le cache
+    // via `state.data` seul, `console.log`/`console.error` seuls) reste
+    // verte devant une fuite écrite dans une CLÉ de cache et journalisée
+    // par `console.warn`.
+    const consoleSpies = (
+      ['log', 'warn', 'error', 'info', 'debug'] as const
+    ).map((methode) => vi.spyOn(console, methode).mockImplementation(() => undefined))
     const urlAvant = window.location.href
 
     vi.stubGlobal(
@@ -152,28 +185,45 @@ describe('AccountSearchPanel', () => {
     await userEvent.click(
       screen.getByRole('button', { name: /réémettre un lien d'accès/i }),
     )
+    await userEvent.click(
+      screen.getByRole('button', { name: /confirmer la réémission/i }),
+    )
 
     // Affiché à l'écran : c'est le seul endroit où il doit apparaître.
     expect(await screen.findByText(JETON_UNIQUE)).toBeInTheDocument()
 
-    // Jamais dans le cache des REQUÊTES (la réémission est une mutation ;
-    // `getQueryData`/`getQueriesData`, ce que ce test imite ici en
-    // parcourant `getQueryCache`, ne doivent jamais pouvoir le lire).
-    const cachesAvecLeJeton = queryClient
+    // Canal 1/4 — jamais dans la VALEUR d'une entrée du cache des requêtes
+    // (la réémission est une mutation ; `getQueryData`/`getQueriesData`, ce
+    // que ce test imite ici en parcourant `getQueryCache`, ne doivent
+    // jamais pouvoir le lire).
+    const cachesAvecLeJetonEnValeur = queryClient
       .getQueryCache()
       .getAll()
       .filter((query) => JSON.stringify(query.state.data ?? '').includes(JETON_UNIQUE))
-    expect(cachesAvecLeJeton).toEqual([])
+    expect(cachesAvecLeJetonEnValeur).toEqual([])
 
-    // Jamais dans une URL.
+    // Canal 2/4 — jamais dans la CLÉ d'une entrée du cache non plus : une
+    // fuite peut se nicher dans la clé elle-même (`['lien-emis', jeton]`)
+    // sans jamais apparaître dans `state.data`, et le canal 1 seul ne la
+    // verrait pas.
+    const cachesAvecLeJetonEnCle = queryClient
+      .getQueryCache()
+      .getAll()
+      .filter((query) => JSON.stringify(query.queryKey).includes(JETON_UNIQUE))
+    expect(cachesAvecLeJetonEnCle).toEqual([])
+
+    // Canal 3/4 — jamais dans une URL (navigateur ou requête réseau).
     expect(window.location.href).toBe(urlAvant)
     for (const call of (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls) {
       expect(String(call[0])).not.toContain(JETON_UNIQUE)
     }
 
-    // Jamais dans un journal de console.
-    for (const call of [...consoleLog.mock.calls, ...consoleError.mock.calls]) {
-      expect(JSON.stringify(call)).not.toContain(JETON_UNIQUE)
+    // Canal 4/4 — jamais dans un journal de console, quelle que soit la
+    // méthode utilisée (`console.warn` inclus, pas seulement `log`/`error`).
+    for (const spy of consoleSpies) {
+      for (const call of spy.mock.calls) {
+        expect(JSON.stringify(call)).not.toContain(JETON_UNIQUE)
+      }
     }
   })
 })

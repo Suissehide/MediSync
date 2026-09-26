@@ -13,6 +13,15 @@ export type User = {
     role: EstablishmentRole
     soignantId: string | null
     services: { id: string; name: string; role: ServiceRole }[]
+    // `GET /me` (back/src/main/utils/me-mapper.ts) rend TOUJOURS ce champ —
+    // une appartenance réelle ou un accès ouvert par un octroi temporaire
+    // (spec §3.5). Optionnel ici plutôt que requis (tour de correction 1,
+    // Important n°2) pour ne pas devoir retoucher la douzaine de fixtures
+    // de test qui construisent un `User` sans lui : une entrée sans
+    // `origine` se traite exactement comme 'reelle' par tout code qui ne
+    // teste que `=== 'octroi'`, ce qui est la seule lecture qu'en fait
+    // aujourd'hui `$establishmentId.tsx` (voir `activeGrantNotice.tsx`).
+    origine?: 'reelle' | 'octroi'
   }[]
 }
 

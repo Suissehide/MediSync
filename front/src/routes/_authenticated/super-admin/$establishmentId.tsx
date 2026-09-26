@@ -8,9 +8,11 @@ import { ArrowLeft } from 'lucide-react'
 import { activityLogColumns } from '@/columns/activityLog.column.tsx'
 import { CopyableId } from '@/components/custom/copyableId.tsx'
 import CreateGrantForm from '@/components/custom/popup/createGrantForm.tsx'
+import { ActiveGrantNotice } from '@/components/custom/superAdmin/activeGrantNotice.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
 import ReactTable from '@/components/table/reactTable.tsx'
 import { Button } from '@/components/ui/button.tsx'
+import { queryState } from '@/libs/queryState.ts'
 import { useSuperAdminEstablishmentQuery } from '@/queries/useSuperAdmin.ts'
 import type { ActivityLog } from '@/types/activityLog.ts'
 
@@ -37,14 +39,43 @@ function SuperAdminEstablishmentDetail() {
   const { establishmentId } = useParams({
     from: '/_authenticated/super-admin/$establishmentId',
   })
-  const { establishment, isPending } =
+  const { establishment, isPending, error } =
     useSuperAdminEstablishmentQuery(establishmentId)
 
-  if (isPending || !establishment) {
+  // Tour de correction 1, Important n°4 : avec `retry: 0`, une requête en
+  // échec repasse `isPending` à `false` sans jamais poser `establishment` —
+  // une garde `isPending || !establishment` restait donc vraie pour
+  // toujours devant une vraie erreur (identifiant supprimé ou mal
+  // recopié, back injoignable), affichant un « Chargement... » perpétuel
+  // qui ne dit rien à l'appelant. `queryState` distingue les trois cas.
+  const etat = queryState({
+    isPending,
+    error,
+    hasData: establishment !== undefined,
+  })
+
+  if (etat === 'pending') {
     return (
       <DashboardLayout>
         <div className="flex-1 flex items-center justify-center text-text-light">
           Chargement...
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  if (etat === 'error' || etat === 'empty' || !establishment) {
+    return (
+      <DashboardLayout>
+        <div className="flex-1 flex flex-col items-center justify-center gap-3 text-text-light">
+          <p>
+            Impossible de charger cet établissement. Vérifiez l'identifiant ou
+            réessayez.
+          </p>
+          <Button variant="outline" onClick={() => navigate({ to: '/super-admin' })}>
+            <ArrowLeft className="w-4 h-4" />
+            Retour à la liste
+          </Button>
         </div>
       </DashboardLayout>
     )
@@ -71,6 +102,8 @@ function SuperAdminEstablishmentDetail() {
           </div>
           <CreateGrantForm establishmentId={establishment.id} />
         </div>
+
+        <ActiveGrantNotice establishmentId={establishment.id} />
 
         <section>
           <h2 className="text-sm font-semibold text-text-light uppercase mb-2">

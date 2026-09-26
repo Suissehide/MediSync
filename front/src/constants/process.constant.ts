@@ -14,7 +14,6 @@ export const AUTH = {
 export const SUPER_ADMIN = {
   GET_ALL_ESTABLISHMENTS: 'get_all_super_admin_establishments',
   GET_ESTABLISHMENT: 'get_super_admin_establishment',
-  CREATE_ESTABLISHMENT: 'create_super_admin_establishment',
   SEARCH_ACCOUNT: 'search_super_admin_account',
   REISSUE_ACCESS_LINK: 'reissue_super_admin_access_link',
   CREATE_GRANT: 'create_super_admin_grant',

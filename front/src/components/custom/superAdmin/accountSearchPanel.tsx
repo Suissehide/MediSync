@@ -1,5 +1,5 @@
 import dayjs from 'dayjs'
-import { KeyRound, Search } from 'lucide-react'
+import { Check, KeyRound, Search, X } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 
 import { CopyableId } from '../../../components/custom/copyableId.tsx'
@@ -11,6 +11,14 @@ import { Button } from '../../ui/button.tsx'
 import { Card } from '../../ui/card.tsx'
 import { Input } from '../../ui/input.tsx'
 import { Label } from '../../ui/label.tsx'
+import {
+  Popup,
+  PopupBody,
+  PopupContent,
+  PopupFooter,
+  PopupHeader,
+  PopupTitle,
+} from '../../ui/popup.tsx'
 
 const ESTABLISHMENT_ROLE_LABEL: Record<string, string> = {
   ADMIN: 'Administrateur',
@@ -29,6 +37,7 @@ const ESTABLISHMENT_ROLE_LABEL: Record<string, string> = {
 // l'affiche — verrouillé par `accountSearchPanel.test.tsx`.
 export const AccountSearchPanel = () => {
   const [email, setEmail] = useState('')
+  const [confirmingReissue, setConfirmingReissue] = useState(false)
   const search = useSuperAdminAccountSearch()
   const reissue = useSuperAdminReissueAccessLink()
 
@@ -41,6 +50,7 @@ export const AccountSearchPanel = () => {
       return
     }
     reissue.reset()
+    setConfirmingReissue(false)
     search.mutate(trimmed)
   }
 
@@ -103,6 +113,8 @@ export const AccountSearchPanel = () => {
                     <span>{membership.establishmentName}</span>
                     <span className="text-text-light">
                       {ESTABLISHMENT_ROLE_LABEL[membership.role] ?? membership.role}
+                      {' · depuis le '}
+                      {dayjs.utc(membership.createdAt).format('DD/MM/YYYY')}
                     </span>
                   </li>
                 ))}
@@ -112,12 +124,47 @@ export const AccountSearchPanel = () => {
 
           <Button
             variant="outline"
-            onClick={() => reissue.mutate(account.id)}
+            onClick={() => setConfirmingReissue(true)}
             isLoading={reissue.isPending}
           >
             <KeyRound className="w-4 h-4" />
             Réémettre un lien d'accès
           </Button>
+
+          {/* Tour de correction 1, Mineur : un mot de passe à usage unique
+          sur le compte D'AUTRUI ne part jamais sur un simple clic. */}
+          <Popup modal open={confirmingReissue} onOpenChange={setConfirmingReissue}>
+            <PopupContent>
+              <PopupHeader>
+                <PopupTitle className="font-bold text-xl">
+                  Réémettre le lien d'accès ?
+                </PopupTitle>
+              </PopupHeader>
+              <PopupBody>
+                <p className="text-sm text-text-light">
+                  Un nouveau lien à usage unique sera généré pour{' '}
+                  <strong>{account.email}</strong>. Confirmez-vous ?
+                </p>
+              </PopupBody>
+              <PopupFooter>
+                <Button variant="outline" onClick={() => setConfirmingReissue(false)}>
+                  <X className="w-4 h-4" />
+                  Annuler
+                </Button>
+                <Button
+                  variant="default"
+                  onClick={() => {
+                    setConfirmingReissue(false)
+                    reissue.mutate(account.id)
+                  }}
+                  isLoading={reissue.isPending}
+                >
+                  <Check className="w-4 h-4" />
+                  Confirmer la réémission
+                </Button>
+              </PopupFooter>
+            </PopupContent>
+          </Popup>
 
           {reissue.data && (
             <div className="bg-input p-3 rounded-lg flex flex-col gap-1">

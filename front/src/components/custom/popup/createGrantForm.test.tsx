@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { useLastGrantStore } from '@/store/useLastGrantStore.ts'
 import { useToastStore } from '@/store/useToastStore.ts'
 
 import CreateGrantForm from './createGrantForm.tsx'
@@ -52,6 +53,7 @@ const ouvrir = async () => {
 
 beforeEach(() => {
   useToastStore.setState({ toasts: [] })
+  useLastGrantStore.setState({ grantIdByEstablishment: {} })
 })
 
 afterEach(() => {
@@ -122,5 +124,14 @@ describe('CreateGrantForm — motif obligatoire et durée bornée', () => {
       reason: 'Compte bloqué, dépannage',
       durationHours: 4,
     })
+
+    // Tour de correction 1, Important n°2 : `GET /me` ne rend jamais
+    // l'identifiant d'un octroi, seulement son `origine` — le SEUL moment
+    // où le front voit cet identifiant est cette réponse de création. Sans
+    // le mémoriser ici, `ActiveGrantNotice` ne peut jamais proposer de
+    // révoquer l'octroi qu'on vient soi-même de créer.
+    await waitFor(() =>
+      expect(useLastGrantStore.getState().grantIdByEstablishment.e1).toBe('g1'),
+    )
   })
 })

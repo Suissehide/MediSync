@@ -59,25 +59,11 @@ export type EstablishmentDetail = EstablishmentListItem & {
   activityLog: ActivityLog[]
 }
 
-export type CreateEstablishmentInput = {
-  name: string
-  email: string
-  firstName?: string
-  lastName?: string
-}
-
-export type CreateEstablishmentResult = {
-  establishment: {
-    id: string
-    name: string
-    createdAt: string
-    deactivatedAt: string | null
-  }
-  // Le jeton en clair, rendu une seule fois (voir `back/CLAUDE.md`,
-  // `accessLink.domain.ts#issue`) : jamais journalisé, jamais mis en cache,
-  // jamais recopié dans une URL — affiché à l'écran et rien de plus.
-  accessLink: { token: string }
-}
+// `CreateEstablishmentInput`/`CreateEstablishmentResult` (POST
+// /super-admin/establishments) ont été retirés ici (tour de correction 1,
+// Important n°5) : aucun écran, aucune requête, aucun test ne les
+// consommait — code mort qui portait de surcroît un second jeton en clair
+// sans garde. Voir `api/superAdmin.api.ts`.
 
 export type AccountMembership = {
   establishmentId: string

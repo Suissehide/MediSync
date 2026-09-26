@@ -105,6 +105,7 @@ function Sidebar({ isVisible, components, quickActions }: SidebarProps) {
                   variant="none"
                   size="icon"
                   className="text-text-sidebar group"
+                  aria-label="Menu du compte"
                 >
                   <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
                 </Button>

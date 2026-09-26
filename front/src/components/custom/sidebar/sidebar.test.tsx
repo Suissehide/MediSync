@@ -58,10 +58,14 @@ const monterSidebar = (user: User) => {
 }
 
 describe('entree de navigation Super-administration', () => {
+  // Tour de correction 1, Mineur : le bouton porte desormais un
+  // `aria-label` explicite (`sidebar.tsx`) — cibler par nom accessible vide
+  // cassait pour une raison sans rapport des qu'un second bouton sans nom
+  // apparaissait ailleurs dans l'arbre.
   it("n'apparait pas dans le menu du compte pour un compte sans le drapeau isSuperAdmin", async () => {
     monterSidebar(compteOrdinaire)
 
-    await userEvent.click(screen.getByRole('button', { name: '' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Menu du compte' }))
 
     expect(screen.getByText('Réglages')).toBeInTheDocument()
     expect(screen.queryByText('Super-administration')).not.toBeInTheDocument()
@@ -70,7 +74,7 @@ describe('entree de navigation Super-administration', () => {
   it('apparait dans le menu du compte pour un compte avec le drapeau isSuperAdmin', async () => {
     monterSidebar(superAdmin)
 
-    await userEvent.click(screen.getByRole('button', { name: '' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Menu du compte' }))
 
     expect(await screen.findByText('Super-administration')).toBeInTheDocument()
   })

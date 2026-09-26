@@ -1,21 +1,28 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 
 import { SuperAdminApi } from '../api/superAdmin.api.ts'
 import { SUPER_ADMIN } from '../constants/process.constant.ts'
 import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
 import { useToast } from '../hooks/useToast.ts'
-import type {
-  CreateEstablishmentInput,
-  CreateGrantInput,
-} from '../types/superAdmin.ts'
+import type { CreateGrantInput } from '../types/superAdmin.ts'
 
 // Écrans du super-admin (tâche 12) : hors de tout tenant. Aucune clé de
 // requête ici ne porte d'établissement ou de service au sens de
-// front/CLAUDE.md (§ « Query keys deliberately do not carry the tenant ») —
-// l'isolation par `QueryClient` neuf que ce mécanisme protège n'a pas
-// d'objet ici, ces écrans vivant sous un seul et même client, jamais sous
-// un layout de tenant.
+// front/CLAUDE.md (§ « Query keys deliberately do not carry the tenant »),
+// et pour cause : ces écrans ne vivent sous AUCUN des deux layouts de
+// tenant, donc `hooks/useTenantSwitch.ts` ne les distingue jamais les uns
+// des autres — `tenantKey(null)` vaut la chaîne vide pour tout compte qui
+// n'a jamais posé de contexte, quel que soit ce compte. Ce n'est PAS « un
+// seul et même `QueryClient` » pour toujours (erreur corrigée ici, tour de
+// correction 1, Important n°3) : ils vivent sous LE CLIENT DU COUPLE
+// COURANT, qui peut très bien être celui d'un compte précédent si personne
+// n'a changé de couple entre deux — par exemple deux super-admins qui se
+// succèdent sans qu'aucun des deux ne visite jamais un écran de tenant.
+// C'est pour cette raison précise que `useLogout` (`queries/useAuth.ts`)
+// vide le cache actif à la déconnexion : la garantie ne vient pas d'un
+// client dédié à cette zone, qui n'existe pas, mais d'un cache remis à zéro
+// à chaque changement de compte.
 
 // * QUERIES
 
@@ -62,29 +69,8 @@ export const useSuperAdminEstablishmentQuery = (establishmentId: string) => {
 
 // * MUTATIONS
 
-export const useSuperAdminCreateEstablishment = () => {
-  const queryClient = useQueryClient()
-  const { toast } = useToast()
-
-  return useMutation({
-    mutationKey: [SUPER_ADMIN.CREATE_ESTABLISHMENT],
-    mutationFn: (input: CreateEstablishmentInput) =>
-      SuperAdminApi.createEstablishment(input),
-    onSuccess: () => {
-      toast({ title: 'Établissement créé', severity: TOAST_SEVERITY.SUCCESS })
-      queryClient.invalidateQueries({
-        queryKey: [SUPER_ADMIN.GET_ALL_ESTABLISHMENTS],
-      })
-    },
-    onError: (error) => {
-      toast({
-        title: "Erreur lors de la création de l'établissement",
-        message: error.message,
-        severity: TOAST_SEVERITY.ERROR,
-      })
-    },
-  })
-}
+// `useSuperAdminCreateEstablishment` a été retiré ici (tour de correction 1,
+// Important n°5) : code mort, aucun appelant, voir `api/superAdmin.api.ts`.
 
 // Recherche déclenchée par un envoi de formulaire, pas par un montage
 // d'écran : une mutation plutôt qu'une requête, comme le reste des actions

@@ -17,7 +17,7 @@ export const Route = createFileRoute('/_authenticated/super-admin/')({
 
 function SuperAdminEstablishmentsList() {
   const navigate = useNavigate()
-  const { establishments, isPending } = useSuperAdminEstablishmentsQuery()
+  const { establishments, isPending, error } = useSuperAdminEstablishmentsQuery()
 
   return (
     <DashboardLayout>
@@ -27,18 +27,30 @@ function SuperAdminEstablishmentsList() {
         </h1>
         <SuperAdminNav />
 
-        <ReactTable<EstablishmentListItem>
-          data={establishments ?? []}
-          columns={superAdminEstablishmentColumns}
-          filterId="super-admin-establishments"
-          isLoading={isPending}
-          onRowClick={(row) =>
-            navigate({
-              to: '/super-admin/$establishmentId',
-              params: { establishmentId: row.id },
-            })
-          }
-        />
+        {/* Tour de correction 1, Important n°4 : une erreur de chargement
+        rendait un tableau vide, indiscernable d'un « aucun établissement »
+        réel (`establishments ?? []` retombe sur le même tableau vide dans
+        les deux cas). L'erreur est désormais affichée à part, avant même
+        d'atteindre `ReactTable` — qui garde la distinction chargement/vide
+        qu'il tenait déjà correctement pour ces deux-là. */}
+        {error ? (
+          <p className="text-sm text-destructive">
+            Impossible de charger les établissements. Réessayez plus tard.
+          </p>
+        ) : (
+          <ReactTable<EstablishmentListItem>
+            data={establishments ?? []}
+            columns={superAdminEstablishmentColumns}
+            filterId="super-admin-establishments"
+            isLoading={isPending}
+            onRowClick={(row) =>
+              navigate({
+                to: '/super-admin/$establishmentId',
+                params: { establishmentId: row.id },
+              })
+            }
+          />
+        )}
       </div>
     </DashboardLayout>
   )

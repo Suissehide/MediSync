@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 
 import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { useSuperAdminCreateGrant } from '../../../queries/useSuperAdmin.ts'
+import { useLastGrantStore } from '../../../store/useLastGrantStore.ts'
 import { Button } from '../../ui/button.tsx'
 import {
   Popup,
@@ -36,6 +37,7 @@ const MAX_DURATION_HOURS = 24
 function CreateGrantForm({ establishmentId, trigger }: CreateGrantFormProps) {
   const [open, setOpen] = useState(false)
   const createGrant = useSuperAdminCreateGrant()
+  const recordGrant = useLastGrantStore((state) => state.recordGrant)
 
   const form = useAppForm({
     defaultValues: {
@@ -59,7 +61,16 @@ function CreateGrantForm({ establishmentId, trigger }: CreateGrantFormProps) {
           reason: value.reason.trim(),
           durationHours: value.durationHours,
         },
-        { onSuccess: () => setOpen(false) },
+        {
+          onSuccess: (grant) => {
+            // Le seul moment où le front voit l'identifiant de cet octroi
+            // (voir `useLastGrantStore.ts`) : sans ce rappel,
+            // `ActiveGrantNotice` ne pourrait jamais proposer de le
+            // révoquer.
+            recordGrant(establishmentId, grant.id)
+            setOpen(false)
+          },
+        },
       )
     },
   })

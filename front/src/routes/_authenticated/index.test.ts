@@ -44,6 +44,19 @@ const sansAcces: User = {
   establishments: [],
 }
 
+// Tour de correction 1, Critique n°1 : l'etat exact qu'un compte laisse par
+// le script d'amorcage de la tache 11 porte reellement — le drapeau posE,
+// aucun rattachement (le script ne cree jamais d'appartenance). Avant ce
+// correctif, ce compte tombait sur /pending, qui lui ment (il n'attend rien).
+const superAdminSansEtablissement: User = {
+  id: 'sa1',
+  email: 'super@medisync.fr',
+  firstName: null,
+  lastName: null,
+  isSuperAdmin: true,
+  establishments: [],
+}
+
 const runBeforeLoad = (user: User) => {
   const beforeLoad = Route.options.beforeLoad
   if (!beforeLoad) {
@@ -81,6 +94,17 @@ describe('beforeLoad de l index authentifie', () => {
   it('envoie qui n a reellement aucun acces vers l ecran d attente', () => {
     expect(() => runBeforeLoad(sansAcces)).toThrow(
       expect.objectContaining({ isRedirect: true, to: '/pending' }),
+    )
+  })
+
+  // Critique n°1 (tour de correction 1) : sans ce cas, un super-admin fraichement
+  // amorce (isSuperAdmin: true, aucun etablissement) retombait sur /pending —
+  // un ecran qui lui annonce a tort etre en attente d'approbation, et qui ne
+  // monte pas DashboardLayout, donc aucune barre laterale, donc aucun moyen
+  // d'atteindre /super-admin autrement qu'en tapant l'URL a la main.
+  it('envoie un super-admin sans aucun etablissement vers /super-admin, jamais vers /pending', () => {
+    expect(() => runBeforeLoad(superAdminSansEtablissement)).toThrow(
+      expect.objectContaining({ isRedirect: true, to: '/super-admin' }),
     )
   })
 })
