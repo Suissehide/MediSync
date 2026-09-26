@@ -9,11 +9,13 @@ import type {
   UserEntityDomain,
   UserProfileUpdateDomain,
 } from '../types/domain/user.domain.interface'
+import type { ActivityLogRepositoryInterface } from '../types/infra/orm/repositories/activityLog.repository.interface'
 import type { EstablishmentRepositoryInterface } from '../types/infra/orm/repositories/establishment.repository.interface'
 import type {
   UserEntityRepo,
   UserRepositoryInterface,
 } from '../types/infra/orm/repositories/user.repository.interface'
+import type { TenantContextInterface } from '../types/utils/tenant-context'
 import { verifyPassword } from '../utils/hash'
 
 // Repli défensif, nommé plutôt que laissé en `?? ''` silencieux (tour de correction 1, mineur) :
@@ -30,19 +32,43 @@ const UNRESOLVED_ESTABLISHMENT_NAME = ''
 const DEACTIVATED_ACCOUNT =
   'This account is deactivated; its access link cannot be reissued'
 
+// Tâche 11 (étape 4a) : adresse inconnue — même refus qu'à la recherche de compte
+// (`searchByEmail`), mais depuis un script en ligne de commande plutôt qu'une route HTTP.
+const UNKNOWN_EMAIL = 'No account with this email'
+
+// Acteur du journal d'activité pour une écriture faite HORS de toute requête, par un script en
+// ligne de commande plutôt qu'une personne connectée (tâche 11, arbitrage de rapport — absent du
+// brief, qui ne dit rien de cette ligne). Deux refus délibérés :
+//   - PAS d'acteur inventé (un `'system'` ou un `'cli'` qui ne renverrait sur rien) : la relecture
+//     du souscripteur (`activity-log.subscriber.ts` — ici contournée, voir plus bas) chercherait
+//     un compte, ne le trouverait jamais, et laisserait les deux noms à `null`, ce qui est
+//     PRÉCISÉMENT le comportement voulu, pas un accident.
+//   - SURTOUT PAS l'identifiant du compte promu : la ligne dirait alors qu'il s'est promu
+//     lui-même, ce qui est faux et invérifiable des années plus tard.
+// Le marqueur doit être structurellement incapable d'être un identifiant de compte : les cuids
+// générés par `@default(cuid())` (schema.prisma) sont entièrement en minuscules alphanumériques,
+// jamais de `:`. Un grep futur sur cette valeur retrouve directement ce commentaire.
+const CLI_ACTOR = 'cli:bootstrap-super-admin'
+
 class UserDomain implements UserDomainInterface {
   private readonly userRepository: UserRepositoryInterface
   private readonly establishmentRepository: EstablishmentRepositoryInterface
   private readonly accessLinkDomain: AccessLinkDomainInterface
+  private readonly activityLogRepository: ActivityLogRepositoryInterface
+  private readonly tenantContext: TenantContextInterface
 
   constructor({
     userRepository,
     establishmentRepository,
     accessLinkDomain,
+    activityLogRepository,
+    tenantContext,
   }: IocContainer) {
     this.userRepository = userRepository
     this.establishmentRepository = establishmentRepository
     this.accessLinkDomain = accessLinkDomain
+    this.activityLogRepository = activityLogRepository
+    this.tenantContext = tenantContext
   }
 
   findByID(userID: string): Promise<UserEntityDomain> {
@@ -136,6 +162,66 @@ class UserDomain implements UserDomainInterface {
       throw Boom.conflict(DEACTIVATED_ACCOUNT)
     }
     return await this.accessLinkDomain.issue(user.id, issuedBy)
+  }
+
+  // Tâche 11 (étape 4a) : voir le commentaire sur `UserDomainInterface.bootstrapSuperAdmin` pour
+  // le pourquoi (adresse inconnue refusée, réactivation, idempotence). Encadrée en mode système
+  // (`runAsSystem`, ci-dessous) : hors de toute requête, il n'existe aucun tenant à poser, et
+  // l'écriture dans `ActivityLog` (modèle d'établissement, pas global) l'exige — même motif que
+  // `scheduleActivityLogCleanup` (application/starter.ts), déclarée à côté dans
+  // `runAsSystem-unicite.test.ts`. PIÈGE DÉJÀ DOCUMENTÉ SUR `runAsSuperAdmin` (tenant-context.ts),
+  // valable à l'identique ici : Prisma est paresseux, chaque appel ci-dessous est donc `await`É
+  // À L'INTÉRIEUR du rappel plutôt que rendu tel quel, faute de quoi l'exécution partirait hors
+  // de la portée du contexte système.
+  //
+  // ARCHITECTURE, ÉCART DÉLIBÉRÉ : partout ailleurs (membership.domain.ts), une écriture du
+  // journal passe par `appEventBus.emit` puis `ActivityLogSubscriber`, en mode « tire et
+  // oublie » (jamais attendu par l'appelant) — tenable dans un serveur HTTP qui reste vivant le
+  // temps que la file de microtâches se vide. Un SCRIPT ne l'est pas : il peut se terminer
+  // (`process.exit`, ou simplement la fin de `main()`) avant qu'une écriture non attendue n'ait
+  // eu le temps d'aboutir, perdant la ligne de journal en silence. `activityLogRepository.create`
+  // est donc appelé ICI directement, `await`É, plutôt que par l'intermédiaire du bus d'événements.
+  async bootstrapSuperAdmin(email: string): Promise<UserEntityRepo> {
+    return await this.tenantContext.runAsSystem(async () => {
+      const user = await this.userRepository.findByEmail(email).catch((err: unknown) => {
+        if (Boom.isBoom(err) && err.output.statusCode === 404) {
+          throw Boom.notFound(UNKNOWN_EMAIL)
+        }
+        throw err
+      })
+
+      const wasSuperAdmin = user.isSuperAdmin
+      const wasDeactivated = user.deactivatedAt !== null
+      // Reporte l'état le plus à jour connu, sans troisième lecture : chaque écriture rend
+      // déjà l'entité mise à jour, il suffit d'accumuler la dernière plutôt que de relire.
+      let current = user
+
+      if (!wasSuperAdmin) {
+        current = await this.userRepository.grantSuperAdmin(user.id)
+        await this.activityLogRepository.create({
+          userID: CLI_ACTOR,
+          userFirstName: null,
+          userLastName: null,
+          action: 'superAdmin.granted',
+          entityType: 'user',
+          entityID: user.id,
+        })
+      }
+
+      if (wasDeactivated) {
+        current = await this.userRepository.setDeactivated(user.id, null)
+        await this.activityLogRepository.create({
+          userID: CLI_ACTOR,
+          userFirstName: null,
+          userLastName: null,
+          action: 'superAdmin.reactivated',
+          entityType: 'user',
+          entityID: user.id,
+        })
+      }
+
+      return current
+    })
   }
 }
 

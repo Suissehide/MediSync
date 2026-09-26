@@ -42,4 +42,8 @@ export interface UserRepositoryInterface {
   // accès »). `User` est global : aucun contexte de tenant à fournir, comme les méthodes
   // voisines ci-dessus.
   recordLogin: (userID: string, at: Date) => Promise<void>
+  // Tâche 11 (étape 4a) : SEUL point d'écriture de `User.isSuperAdmin` — aucune route n'en a un
+  // (délibéré). N'existe qu'en sens « pose », jamais « retire » : voir `UserDomain.
+  // bootstrapSuperAdmin`, seul appelant, invoqué par `scripts/bootstrap-super-admin.ts`.
+  grantSuperAdmin: (userID: string) => Promise<UserEntityRepo>
 }

@@ -7,6 +7,7 @@
   "author": "",
   "license": "ISC",
   "scripts": {
+    "bootstrap:super-admin": "npm run with:tsx -- ./scripts/bootstrap-super-admin.ts",
     "build": "wireit",
     "build:app": "wireit",
     "build:check-typedefs": "wireit",

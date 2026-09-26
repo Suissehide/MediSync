@@ -147,6 +147,23 @@ class UserRepository implements UserRepositoryInterface {
       })
     }
   }
+
+  // Tâche 11 (étape 4a) : appelée uniquement par `UserDomain.bootstrapSuperAdmin`, elle-même
+  // encadrée en mode système (`tenantContext`, voir ce fichier) — seul appelant, hors de toute
+  // requête HTTP.
+  async grantSuperAdmin(userID: string): Promise<UserEntityRepo> {
+    try {
+      return await this.prisma.user.update({
+        where: { id: userID },
+        data: { isSuperAdmin: true },
+      })
+    } catch (err) {
+      throw this.errorHandler.boomErrorFromPrismaError({
+        entityName: 'User',
+        error: err,
+      })
+    }
+  }
 }
 
 export { UserRepository }

@@ -56,4 +56,17 @@ export interface UserDomainInterface {
     userID: string,
     issuedBy: string,
   ) => Promise<{ token: string }>
+  // Tâche 11 (étape 4a) : SEULE fonction qui pose `User.isSuperAdmin` — aucune route ne l'écrit,
+  // délibérément. Appelée uniquement par `scripts/bootstrap-super-admin.ts`, hors de toute
+  // requête : elle s'encadre elle-même en mode système (voir `TenantContext`, utils/
+  // tenant-context.ts), le script n'ayant lui-même aucun tenant à poser. Lève `Boom.notFound`
+  // si l'adresse est inconnue — un super-admin sans mot de passe choisi serait un compte
+  // privilégié dormant, il n'y a donc
+  // jamais de création implicite. Réactive au passage un compte désactivé (`deactivatedAt`
+  // remis à `null`) : `MembershipDomain.setDeactivated` refuse ce changement dans les deux sens
+  // dès que `isSuperAdmin` est vrai (assertNotSuperAdmin, membership.domain.ts), et aucune route
+  // de `/super-admin` n'écrit `deactivatedAt` — un super-admin désactivé n'a donc aucun autre
+  // chemin de retour. Idempotent : un second appel sur un compte déjà super-admin et déjà actif
+  // n'écrit rien, ni sur `User` ni dans le journal d'activité.
+  bootstrapSuperAdmin: (email: string) => Promise<UserEntityRepo>
 }

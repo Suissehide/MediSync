@@ -28,8 +28,9 @@ import ts from 'typescript'
 // anterieure de ce commentaire disait « deux fois seulement » avant que la tache 9 n'ajoute un
 // troisieme emploi legitime dans le meme fichier que le second — la prose mentait alors que les
 // assertions, elles, restaient justes ; corrige une premiere fois en pretendant a tort que la
-// CAPACITE et les BORNES etaient toutes deux couvertes ici, corrige a nouveau ci-dessus. Trois
-// emplois declares a ce jour, tous dans le back de production :
+// CAPACITE et les BORNES etaient toutes deux couvertes ici, corrige a nouveau ci-dessus. Quatre
+// emplois declares a ce jour, tous dans le back de production (un quatrieme ajoute a la tache 11,
+// etape 4a) :
 //
 //   1. La purge planifiee du journal d'activite (`application/starter.ts`,
 //      `scheduleActivityLogCleanup`) : hors de toute requete HTTP, il n'existe alors aucun
@@ -47,6 +48,13 @@ import ts from 'typescript'
 //      `repository-scope.test.ts`. CE N'EST PAS LE MEME CALCUL que le signal de suivi ailleurs
 //      (question differente : « ce patient va-t-il devenir invisible » contre « un sous-dossier
 //      existe-t-il ailleurs ») — voir le commentaire sur `impactDesactivation` pour le detail.
+//   4. Le script d'amorcage du super-admin (`domain/user.domain.ts`, `bootstrapSuperAdmin`,
+//      tache 11, etape 4a) : seul appelant `scripts/bootstrap-super-admin.ts`, hors de toute
+//      requete HTTP — meme motif que 1. L'ecriture qu'elle encadre n'est pas la meme table
+//      (`User`, un modele GLOBAL, pour poser `isSuperAdmin` et, si besoin, reactiver le compte)
+//      mais aussi `ActivityLog` (modele d'ETABLISSEMENT) pour sa ligne de journal — cette
+//      deuxieme ecriture est la raison structurelle de l'encadrement : un modele global n'exige
+//      pas `runAsSystem` pour lui-meme, `ActivityLog` si.
 //
 // `runAsSuperAdmin` (meme fichier, tache 1 / etape 4a) y ajoute un troisieme mode, qui ne retire
 // rien mais substitue au filtre de tenant une liste declaree et exhaustive de couples (modele,
@@ -85,7 +93,7 @@ import ts from 'typescript'
 // types/utils/tenant-context.ts, meme raison).
 const APPEL_RUN_AS_SYSTEM = /\.runAsSystem\b/
 
-// Les deux seuls emplois legitimes du back de production, pour le volet A. Chaque entree porte
+// Les seuls emplois legitimes du back de production, pour le volet A. Chaque entree porte
 // un nombre D'APPELS, pas un nombre de fichiers : un second appel ajoute dans un fichier deja
 // permis doit etre discute, pas herite silencieusement.
 const AUTORISES = [
@@ -100,6 +108,13 @@ const AUTORISES = [
       'estSuiviAilleurs — le signal de suivi ailleurs — ET impactDesactivation — les ' +
       'compteurs de l ecran de desactivation d un service (design §3.6, tache 9)',
     appels: 2,
+  },
+  {
+    fichier: 'domain/user.domain.ts',
+    raison:
+      'bootstrapSuperAdmin (tache 11, etape 4a) — seul point qui pose User.isSuperAdmin, ' +
+      'appele par scripts/bootstrap-super-admin.ts, hors de toute requete HTTP',
+    appels: 1,
   },
 ]
 
@@ -303,7 +318,7 @@ const appelsCapaciteDeStore = (racine: string): { fichier: string; ligne: number
   })
 
 describe('unicite de l exception runAsSystem au cloisonnement multi-tenant', () => {
-  it('n apparait, dans back/src/main, qu aux deux emplacements autorises (volet A : le nom, et ses detours)', () => {
+  it('n apparait, dans back/src/main, qu aux emplacements autorises (volet A : le nom, et ses detours)', () => {
     const trouvees = lignesCorrespondantes(RACINE, APPEL_RUN_AS_SYSTEM)
 
     const interdits = trouvees.filter(
