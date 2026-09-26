@@ -263,13 +263,23 @@ describe('GLOBAL_TENANT_RELATIONS reflete prisma/schema.prisma', () => {
   // ne remplace pas cette liste-ci, propre au premier niveau et a la question, differente, de
   // savoir si une relation de modele global merite d'etre restreinte a findUnique(OrThrow).
   //
-  // Ce test tient donc la liste, vide a ce jour, des relations de modeles globaux qui ne menent
-  // pas a du tenant. Une relation ajoutee la-bas le fait echouer, et la reparation est d'ecrire
-  // ici le nom de la relation et POURQUOI elle n'expose pas de donnee de tenant — pas de la
-  // declarer dans GLOBAL_TENANT_RELATIONS, ce qui interdirait un include parfaitement legitime.
+  // Ce test tient donc la liste des relations de modeles globaux qui ne menent pas a du tenant.
+  // Une relation ajoutee la-bas le fait echouer, et la reparation est d'ecrire ici le nom de la
+  // relation et POURQUOI elle n'expose pas de donnee de tenant — pas de la declarer dans
+  // GLOBAL_TENANT_RELATIONS, ce qui interdirait un include parfaitement legitime.
   // C'est la friction, et elle est a sa place : le cout est une ligne a ecrire, le benefice est
   // qu'aucune relation d'un modele global n'entre au schema sans que quelqu'un ait tranche.
-  const SANS_DONNEE_DE_TENANT: readonly string[] = []
+  //
+  // Tache 2 (etape 4a) : `User.accessLinks` et `User.superAdminAccessGrants` /
+  // `Establishment.superAdminAccessGrants` sont les relations inverses, exigees par Prisma,
+  // vers `AccessLink` et `SuperAdminAccessGrant` — deux modeles GLOBAUX eux-memes (declares ni
+  // dans SERVICE_MODELS ni dans ESTABLISHMENT_MODELS). Une relation entre deux modeles globaux
+  // ne mene pas a du tenant : rien a restreindre ici.
+  const SANS_DONNEE_DE_TENANT: readonly string[] = [
+    'User.accessLinks -> AccessLink',
+    'User.superAdminAccessGrants -> SuperAdminAccessGrant',
+    'Establishment.superAdminAccessGrants -> SuperAdminAccessGrant',
+  ]
 
   it('n a aucune relation de modele global non classee', () => {
     const nonClassees = globalModels.flatMap((model) =>
@@ -374,13 +384,13 @@ describe('SUPERADMIN_OPERATIONS reflete le schema', () => {
 // pour les tables de tenant : elle est donc tenue ici dans les MEMES trois directions — modeles
 // qui existent, modeles de la bonne famille, et contenu exact epingle.
 //
-// Les deux modeles que la tache 2 doit creer (`AccessLink`, `SuperAdminAccessGrant`) sont declares
-// AVANT d'exister au schema, a dessein : la tache 2 les veut globaux, `familyOf` rend « global »
-// par defaut, et sans declaration prealable les taches 4, 6, 8 et 10 se heurteraient au refus au
-// milieu d'une tache de fonctionnalite. Cette avance est bornee par une liste d'attente explicite
-// que le troisieme test ci-dessous fait POURRIR BRUYAMMENT le jour ou les tables arrivent, plutot
-// que de la laisser vivre indefiniment.
-const MODELES_GLOBAUX_A_VENIR: readonly string[] = ['AccessLink', 'SuperAdminAccessGrant']
+// Les deux modeles que la tache 1 avait declares par avance (`AccessLink`, `SuperAdminAccessGrant`)
+// existent desormais au schema (tache 2) : la liste d'attente qui bornait cette avance est donc
+// retiree ci-dessous — le troisieme test faisait volontairement POURRIR ce fichier des que les
+// tables arriveraient, plutot que de laisser vivre l'attente indefiniment. Voir tenant-guard.ts
+// pour la relecture des operations declarees maintenant que les colonnes existent vraiment
+// (`usedAt`, `revokedAt` confirmes conformes a la specification).
+const MODELES_GLOBAUX_A_VENIR: readonly string[] = []
 
 describe('SUPERADMIN_GLOBAL_OPERATIONS reflete le schema', () => {
   it('ne declare que des modeles GLOBAUX — un modele de tenant releve de SUPERADMIN_OPERATIONS', () => {

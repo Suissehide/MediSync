@@ -120,7 +120,11 @@ export const NESTED_RELATIONS: Record<string, Record<string, string>> = {
 // `EstablishmentMembership`.)
 //
 // `User` et `Establishment` ne sont ni dans SERVICE_MODELS ni dans ESTABLISHMENT_MODELS : ce sont
-// des modèles globaux, et toutes leurs relations mènent aujourd'hui à des données de tenant.
+// des modèles globaux. Toutes leurs relations vers un modèle de TENANT sont listées ci-dessous ;
+// depuis la tâche 2 (étape 4a), ils portent aussi chacun une relation vers un autre modèle
+// global (`User.accessLinks` -> `AccessLink`, `User.superAdminAccessGrants` et
+// `Establishment.superAdminAccessGrants` -> `SuperAdminAccessGrant`) qui n'a donc pas sa place
+// ici : voir `tenant-guard-schema.test.ts` (SANS_DONNEE_DE_TENANT) pour l'énoncé de ce choix.
 export const GLOBAL_TENANT_RELATIONS: Record<string, readonly string[]> = {
   User: ['establishmentMemberships'],
   Establishment: [
@@ -195,6 +199,8 @@ export const MODEL_RELATIONS: Record<string, Record<string, string>> = {
   // Modèles globaux.
   User: {
     establishmentMemberships: 'EstablishmentMembership',
+    accessLinks: 'AccessLink',
+    superAdminAccessGrants: 'SuperAdminAccessGrant',
   },
   Establishment: {
     services: 'Service',
@@ -202,6 +208,17 @@ export const MODEL_RELATIONS: Record<string, Record<string, string>> = {
     patients: 'Patient',
     soignants: 'Soignant',
     locations: 'Location',
+    superAdminAccessGrants: 'SuperAdminAccessGrant',
+  },
+  // Tâche 2, étape 4a : `AccessLink` et `SuperAdminAccessGrant` sont globaux eux aussi (voir
+  // SUPERADMIN_GLOBAL_OPERATIONS plus bas) — leurs relations pointent vers d'autres modèles
+  // globaux (`User`, `Establishment`), jamais vers du tenant.
+  AccessLink: {
+    user: 'User',
+  },
+  SuperAdminAccessGrant: {
+    user: 'User',
+    establishment: 'Establishment',
   },
   // Modèles d'établissement.
   Patient: {
@@ -372,14 +389,13 @@ const UPDATE_OPERATIONS = new Set(['update', 'updateMany', 'updateManyAndReturn'
 //     le mécanisme : révoquer est un `update` qui pose `revokedAt`, pas un `delete`. PAS
 //     `deleteMany` non plus, pour la même raison.
 //
-// `AccessLink` et `SuperAdminAccessGrant` n'existent pas encore au schéma (tâche 2) : ils sont
-// déclarés ici d'avance parce que la tâche 2 les veut GLOBAUX à dessein (« Ne les ajoute ni à
+// `AccessLink` et `SuperAdminAccessGrant` ont été déclarés ici d'avance, avant d'exister au
+// schéma (tâche 1), parce que la tâche 2 les veut GLOBAUX à dessein (« Ne les ajoute ni à
 // SERVICE_MODELS ni à ESTABLISHMENT_MODELS ») et que `familyOf` rend « global » par défaut pour
 // tout modèle qu'il ne connaît pas — sans cette déclaration, les tâches 4, 6, 8 et 10 se
-// heurteraient au refus au milieu d'une tâche de fonctionnalité. `tenant-guard-schema.test.ts`
-// tient cette avance : il exige que tout modèle déclaré ici existe au schéma OU figure dans sa
-// courte liste d'attente, et que chaque modèle de cette liste n'existe PAS encore — la tâche 2 le
-// fera donc rougir, ce qui force à relire les opérations déclarées le jour où les tables arrivent.
+// seraient heurtées au refus au milieu d'une tâche de fonctionnalité. Les deux tables existent
+// désormais au schéma (tâche 2) ; les opérations ci-dessous ont été relues contre les modèles
+// réels (`usedAt`/`revokedAt` confirmés) et n'ont pas changé.
 //
 // AJOUTER UN MODÈLE GLOBAL AU SCHÉMA SANS ENTRÉE ICI ne l'ouvre pas : il est refusé en entier sous
 // superadmin (échec FERMÉ), et le refus dit quel couple manque.

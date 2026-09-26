@@ -42,11 +42,12 @@ model Establishment {
   createdAt     DateTime  @default(now())
   deactivatedAt DateTime?
 
-  services    Service[]
-  memberships EstablishmentMembership[]
-  patients    Patient[]
-  soignants   Soignant[]
-  locations   Location[]
+  services               Service[]
+  memberships            EstablishmentMembership[]
+  patients               Patient[]
+  soignants              Soignant[]
+  locations              Location[]
+  superAdminAccessGrants SuperAdminAccessGrant[]
 }
 
 model Service {
@@ -137,8 +138,11 @@ model User {
   lastName      String?
   isSuperAdmin  Boolean   @default(false)
   deactivatedAt DateTime?
+  lastLoginAt   DateTime?
 
   establishmentMemberships EstablishmentMembership[]
+  accessLinks              AccessLink[]
+  superAdminAccessGrants   SuperAdminAccessGrant[]
 }
 
 model PathwayTemplate {
@@ -634,4 +638,34 @@ model PlanningCycle {
   startOfWeek     DateTime @db.Date
   weekCount       Int
   updatedAt       DateTime @updatedAt
+}
+
+model AccessLink {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  createdBy String
+  createdAt DateTime  @default(now())
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model SuperAdminAccessGrant {
+  id              String    @id @default(cuid())
+  userId          String
+  establishmentId String
+  reason          String
+  grantedAt       DateTime  @default(now())
+  expiresAt       DateTime
+  revokedAt       DateTime?
+
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  establishment Establishment @relation(fields: [establishmentId], references: [id])
+
+  @@index([establishmentId, expiresAt])
+  @@index([userId])
 }
