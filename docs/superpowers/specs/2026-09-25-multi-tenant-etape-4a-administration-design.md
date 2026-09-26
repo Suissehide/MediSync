@@ -146,9 +146,12 @@ comme aujourd'hui. La liste est tenue par un test de conformité au schéma, dan
 directions, comme les quatre tables existantes du garde-fou.
 
 **Ce type n'est pas `runAsSystem`.** Le mode encadré retire l'exigence de filtre pour *toute*
-opération ; il a exactement **deux** emplois en production, et un test surveille cette unicité en
-en gardant la capacité et non le nom (`runAsSystem-unicite.test.ts`). Lui donner dix nouveaux
-points d'appel tuerait cette propriété. Le type `superadmin` est au contraire une liste courte et
+opération ; ses emplois en production sont **énumérés et tenus par un test** qui surveille en
+gardant la capacité et non le nom (`runAsSystem-unicite.test.ts`). L'invariant n'est pas un
+**nombre** d'appels — il en comptait deux à l'écriture de cette spécification, trois après la
+tâche 9 — mais le fait que **chacun soit déclaré**, et que la requête qu'il encadre porte
+elle-même ses bornes : sous ce mode, le garde-fou ne vérifie plus rien. Lui donner dix points
+d'appel non déclarés tuerait la propriété ; en déclarer un de plus, motivé, ne la touche pas. Le type `superadmin` est au contraire une liste courte et
 énumérable.
 
 **Ce n'est pas non plus un second client Prisma sans garde-fou**, que la cible prescrivait (§6 de
