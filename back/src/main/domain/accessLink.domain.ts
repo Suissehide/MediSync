@@ -2,6 +2,7 @@ import Boom from '@hapi/boom'
 
 import type { IocContainer } from '../types/application/ioc'
 import type { AccessLinkDomainInterface } from '../types/domain/accessLink.domain.interface'
+import type { PrimaTransactionClient } from '../types/infra/orm/client'
 import type { AccessLinkRepositoryInterface } from '../types/infra/orm/repositories/accessLink.repository.interface'
 import type { UserRepositoryInterface } from '../types/infra/orm/repositories/user.repository.interface'
 import { randomToken, sha256Hex } from '../utils/hash'
@@ -27,7 +28,11 @@ class AccessLinkDomain implements AccessLinkDomainInterface {
     this.userRepository = userRepository
   }
 
-  async issue(userId: string, issuedBy: string): Promise<{ token: string }> {
+  async issue(
+    userId: string,
+    issuedBy: string,
+    client?: PrimaTransactionClient,
+  ): Promise<{ token: string }> {
     const now = new Date()
     const token = randomToken(TOKEN_BYTES)
     // Réémettre invalide tout lien encore utilisable du même compte (spec §6.1), AVANT de créer
@@ -58,13 +63,16 @@ class AccessLinkDomain implements AccessLinkDomainInterface {
     // qu'elle soit demandée — voir « emissions simultanees » dans access-link.test.ts, qui
     // constate ce comportement (plus d'un lien utilisable) plutôt que
     // d'affirmer le contraire.
-    await this.accessLinkRepository.invalidateActiveForUser(userId, now)
-    await this.accessLinkRepository.create({
-      userId,
-      tokenHash: sha256Hex(token),
-      createdBy: issuedBy,
-      expiresAt: addDays(now, VALIDITY_DAYS),
-    })
+    await this.accessLinkRepository.invalidateActiveForUser(userId, now, client)
+    await this.accessLinkRepository.create(
+      {
+        userId,
+        tokenHash: sha256Hex(token),
+        createdBy: issuedBy,
+        expiresAt: addDays(now, VALIDITY_DAYS),
+      },
+      client,
+    )
     // Le jeton en clair n'est rendu QU'ICI : la base ne voit jamais que son empreinte
     // (`AccessLink.tokenHash`), jamais le jeton — voir prisma/schema.prisma.
     return { token }

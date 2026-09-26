@@ -6,6 +6,7 @@ import type {
   UserRepositoryInterface,
   UserWithMemberships,
 } from '../../../types/infra/orm/repositories/user.repository.interface'
+import type { PrimaTransactionClient } from '../../../types/infra/orm/client'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import { hashPassword } from '../../../utils/hash'
 import type { PostgresPrismaClient } from '../postgres-client'
@@ -58,11 +59,14 @@ class UserRepository implements UserRepositoryInterface {
     }
   }
 
-  async create(input: UserCreateEntityRepo): Promise<UserEntityRepo> {
+  async create(
+    input: UserCreateEntityRepo,
+    client: PrimaTransactionClient = this.prisma,
+  ): Promise<UserEntityRepo> {
     const { password, ...user } = input
     const { hash, salt } = hashPassword(password)
     try {
-      return await this.prisma.user.create({
+      return await client.user.create({
         data: {
           ...user,
           salt,

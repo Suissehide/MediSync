@@ -5,6 +5,7 @@ import type {
   ServiceMembership,
   User,
 } from '../../../../../generated/client'
+import type { PrimaTransactionClient } from '../client'
 
 export type UserEntityRepo = User
 export type UserWithMemberships = User & {
@@ -24,7 +25,12 @@ export type UserProfileUpdateRepo = { firstName?: string; lastName?: string }
 export interface UserRepositoryInterface {
   findByID: (userId: string) => Promise<UserWithMemberships>
   findByEmail: (email: string) => Promise<UserEntityRepo>
-  create: (user: UserCreateEntityRepo) => Promise<UserEntityRepo>
+  // `client` optionnel (étape 4a, tâche 6, tour de correction 1) : voir le commentaire équivalent
+  // sur `AccessLinkRepositoryInterface`.
+  create: (
+    user: UserCreateEntityRepo,
+    client?: PrimaTransactionClient,
+  ) => Promise<UserEntityRepo>
   updateProfile: (
     userID: string,
     params: UserProfileUpdateRepo,

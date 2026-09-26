@@ -4,6 +4,7 @@ import type {
   AccessLinkRepositoryInterface,
   AccessLinkWithUser,
 } from '../../../types/infra/orm/repositories/accessLink.repository.interface'
+import type { PrimaTransactionClient } from '../../../types/infra/orm/client'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { PostgresPrismaClient } from '../postgres-client'
 
@@ -16,16 +17,23 @@ class AccessLinkRepository implements AccessLinkRepositoryInterface {
     this.errorHandler = errorHandler
   }
 
-  async invalidateActiveForUser(userId: string, now: Date): Promise<void> {
-    await this.prisma.accessLink.updateMany({
+  async invalidateActiveForUser(
+    userId: string,
+    now: Date,
+    client: PrimaTransactionClient = this.prisma,
+  ): Promise<void> {
+    await client.accessLink.updateMany({
       where: { userId, usedAt: null },
       data: { usedAt: now },
     })
   }
 
-  async create(params: AccessLinkCreateEntityRepo): Promise<void> {
+  async create(
+    params: AccessLinkCreateEntityRepo,
+    client: PrimaTransactionClient = this.prisma,
+  ): Promise<void> {
     try {
-      await this.prisma.accessLink.create({ data: params })
+      await client.accessLink.create({ data: params })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
         entityName: 'AccessLink',

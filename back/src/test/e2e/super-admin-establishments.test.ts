@@ -49,18 +49,24 @@ describe('POST /super-admin/establishments', () => {
     const body = res.json()
     expect(body.establishment).toMatchObject({ name: 'Clinique du Parc' })
     expect(body.establishment.id).toEqual(expect.any(String))
-    expect(body.firstAdmin).toMatchObject({
-      email: 'premiere-admin@clinique.fr',
-      firstName: 'Jeanne',
-      lastName: 'Dupont',
-    })
     expect(typeof body.accessLink.token).toBe('string')
     expect(body.accessLink.token.length).toBeGreaterThan(0)
+    // Tour de correction 1, Important n°1 : la reponse ne porte plus AUCUNE information sur le
+    // compte — seulement l'etablissement et le lien.
+    expect(Object.keys(body).sort()).toEqual(['accessLink', 'establishment'])
+
+    // Le compte a bien ete cree avec les prenom/nom SOUMIS (verifie en base, plus dans la
+    // reponse depuis le tour de correction 1).
+    const createdAdmin = await testDb.user.findUniqueOrThrow({
+      where: { email: 'premiere-admin@clinique.fr' },
+    })
+    expect(createdAdmin.firstName).toBe('Jeanne')
+    expect(createdAdmin.lastName).toBe('Dupont')
 
     // Le rattachement en ADMIN existe bien en base, sur le nouvel établissement.
     const membership = await testDb.establishmentMembership.findFirst({
       where: {
-        userId: body.firstAdmin.id,
+        userId: createdAdmin.id,
         establishmentId: body.establishment.id,
       },
     })
@@ -176,14 +182,128 @@ describe('POST /super-admin/establishments', () => {
       // rougir CE test meme s'il portait la MEME cle des deux cotes avec des valeurs
       // differentes — ce qu'une simple comparaison nouveau/reutilise ne peut pas voir, puisque
       // le NOM de la cle serait identique dans les deux reponses (montre par sabotage : voir
-      // task-6-report.md).
-      const expectedTopLevelKeys = ['accessLink', 'establishment', 'firstAdmin'].sort()
-      const expectedAdminKeys = ['email', 'firstName', 'id', 'lastName'].sort()
+      // task-6-report.md). Depuis le tour de correction 1, la reponse ne porte plus AUCUNE
+      // information sur le compte : la liste attendue est reduite d'autant.
+      const expectedTopLevelKeys = ['accessLink', 'establishment'].sort()
       for (const res of [nouveau, reutilise]) {
-        const body = res.json()
-        expect(Object.keys(body).sort()).toEqual(expectedTopLevelKeys)
-        expect(Object.keys(body.firstAdmin).sort()).toEqual(expectedAdminKeys)
+        expect(Object.keys(res.json()).sort()).toEqual(expectedTopLevelKeys)
       }
+    })
+
+    // Tour de correction 1 (relecture externe), Important n°1 : la regression precise que le
+    // relecteur a demontree — un appel avec un nom different sur une adresse DEJA connue
+    // rendait l'ANCIEN nom stocke, jamais celui soumis, ce qu'une comparaison par NOM de cle ne
+    // pouvait pas voir. Prouve ici en envoyant des noms differents et en verifiant qu'AUCUN des
+    // deux (ni le stocke, ni le soumis) n'apparait nulle part dans le corps de la reponse — la
+    // reponse ne doit rien dire sur le compte, dans un sens comme dans l'autre.
+    it("ne revele jamais le prenom/nom — ni celui stocke, ni celui soumis — meme quand ils different", async () => {
+      const existing = await createUser({ email: 'nom-stocke@ailleurs.fr' })
+      await testDb.user.update({
+        where: { id: existing.id },
+        data: { firstName: 'Zorro', lastName: 'Stocke' },
+      })
+
+      const res = await create({
+        name: 'Etablissement Oracle De Nom',
+        email: 'nom-stocke@ailleurs.fr',
+        firstName: 'Autre',
+        lastName: 'Personne',
+      })
+
+      expect(res.statusCode).toBe(201)
+      const raw = res.payload
+      expect(raw).not.toContain('Zorro')
+      expect(raw).not.toContain('Stocke')
+      expect(raw).not.toContain('Autre')
+      expect(raw).not.toContain('Personne')
+      expect(Object.keys(res.json()).sort()).toEqual(['accessLink', 'establishment'])
+
+      // Et le compte existant garde bien SON nom d'origine — pas celui soumis.
+      const after = await testDb.user.findUniqueOrThrow({ where: { id: existing.id } })
+      expect(after.firstName).toBe('Zorro')
+      expect(after.lastName).toBe('Stocke')
+    })
+  })
+
+  // Step 3, tour de correction 1, Important n°4 : un compte desactive ne peut ni se connecter
+  // ni consommer un lien (AccessLinkDomain.consume). Le refus doit avoir lieu EN AMONT de toute
+  // ecriture : aucun etablissement orphelin, inutilisable, cree en silence.
+  it('refuse en amont un compte desactive : aucun etablissement ni rattachement n est cree', async () => {
+    const deactivated = await createUser({ email: 'desactive@ailleurs.fr' })
+    await testDb.user.update({
+      where: { id: deactivated.id },
+      data: { deactivatedAt: new Date() },
+    })
+
+    const res = await create({
+      name: 'Etablissement Jamais Cree',
+      email: 'desactive@ailleurs.fr',
+    })
+
+    expect(res.statusCode).toBe(409)
+    const establishment = await testDb.establishment.findFirst({
+      where: { name: 'Etablissement Jamais Cree' },
+    })
+    expect(establishment).toBeNull()
+    const membership = await testDb.establishmentMembership.findFirst({
+      where: { userId: deactivated.id },
+    })
+    expect(membership).toBeNull()
+  })
+
+  // Step 3 (tour de correction 1, Importants n°2 et n°3) : les trois ecritures (etablissement,
+  // compte, rattachement) PLUS l'emission du lien sont une seule transaction. Prouve en faisant
+  // echouer, tour a tour, la DEUXIEME ecriture (le rattachement) puis la TROISIEME etape
+  // (l'emission du lien) — sur les VRAIS singletons de l'IoC (pas une reimplementation), pour
+  // que l'echec traverse la VRAIE transaction plutot qu'une simulee.
+  describe('annulation transactionnelle : un echec en cours de route n annule PAS que sa propre ecriture', () => {
+    it("l'echec du rattachement (2e ecriture) annule tout, y compris le compte fraichement cree", async () => {
+      const spy = jest
+        .spyOn(testApp.instances.establishmentRepository, 'attachAdmin')
+        .mockRejectedValueOnce(new Error('SABOTAGE: rattachement en echec'))
+
+      const res = await create({
+        name: 'Etablissement Annule Rattachement',
+        email: 'jamais-vu-annule-rattachement@ailleurs.fr',
+      })
+      spy.mockRestore()
+
+      expect(res.statusCode).toBe(500)
+      const establishment = await testDb.establishment.findFirst({
+        where: { name: 'Etablissement Annule Rattachement' },
+      })
+      expect(establishment).toBeNull()
+      const user = await testDb.user.findUnique({
+        where: { email: 'jamais-vu-annule-rattachement@ailleurs.fr' },
+      })
+      expect(user).toBeNull()
+    })
+
+    it("l'echec de l'emission du lien (apres les deux premieres ecritures) annule tout, y compris le rattachement", async () => {
+      const spy = jest
+        .spyOn(testApp.instances.accessLinkDomain, 'issue')
+        .mockRejectedValueOnce(new Error('SABOTAGE: emission en echec'))
+
+      const res = await create({
+        name: 'Etablissement Annule Lien',
+        email: 'jamais-vu-annule-lien@ailleurs.fr',
+      })
+      spy.mockRestore()
+
+      expect(res.statusCode).toBe(500)
+      const establishment = await testDb.establishment.findFirst({
+        where: { name: 'Etablissement Annule Lien' },
+      })
+      expect(establishment).toBeNull()
+      const user = await testDb.user.findUnique({
+        where: { email: 'jamais-vu-annule-lien@ailleurs.fr' },
+      })
+      expect(user).toBeNull()
+      // Aucun rattachement ne peut donc survivre non plus, faute d'etablissement ou de compte.
+      const membership = await testDb.establishmentMembership.findFirst({
+        where: { user: { email: 'jamais-vu-annule-lien@ailleurs.fr' } },
+      })
+      expect(membership).toBeNull()
     })
   })
 })

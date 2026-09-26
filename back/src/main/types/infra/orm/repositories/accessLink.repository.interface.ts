@@ -1,4 +1,5 @@
 import type { AccessLink, User } from '../../../../../generated/client'
+import type { PrimaTransactionClient } from '../client'
 
 export type AccessLinkEntityRepo = AccessLink
 
@@ -23,8 +24,20 @@ export interface AccessLinkRepositoryInterface {
   // détaillé sur `issue`, `domain/accessLink.domain.ts` (étape 4a, tâche 4, tour de correction 1,
   // Important n°3) — contrairement à `consumeIfActive`, ci-dessous, qui, lui, doit résister à
   // deux appels simultanés (Review Focus n°1, exigé par le brief).
-  invalidateActiveForUser: (userId: string, now: Date) => Promise<void>
-  create: (params: AccessLinkCreateEntityRepo) => Promise<void>
+  // `client` optionnel (étape 4a, tâche 6, tour de correction 1, Important n°2) : le client de
+  // transaction (`PrimaTransactionClient`) quand cet appel doit faire partie d'une transaction
+  // ouverte par l'appelant — `EstablishmentDomain.createWithFirstAdmin`, aujourd'hui, est seul à
+  // le fournir. Omis, retombe sur `this.prisma` (comportement inchangé pour tout appelant
+  // existant, `AccessLinkDomain.issue` en tête).
+  invalidateActiveForUser: (
+    userId: string,
+    now: Date,
+    client?: PrimaTransactionClient,
+  ) => Promise<void>
+  create: (
+    params: AccessLinkCreateEntityRepo,
+    client?: PrimaTransactionClient,
+  ) => Promise<void>
   // Lecture SEULE, jamais de mutation : sert à distinguer un jeton inconnu (retourne `null`) d'un
   // jeton connu, pour lire le compte cible AVANT de décider de consommer (Review Focus n°5).
   findByTokenHashWithUser: (tokenHash: string) => Promise<AccessLinkWithUser | null>
