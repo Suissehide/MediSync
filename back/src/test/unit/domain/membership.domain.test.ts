@@ -35,7 +35,19 @@ const row = (over: Partial<MembershipRow>): MembershipRow => ({
 // rattachement, le lien) doivent TOUTES le recevoir, sans quoi elles ne partagent pas un sort.
 const TX = Symbol('transaction')
 
-const build = (rows: MembershipRow[], admins = 1, establishments = 1) => {
+// L'identite GLOBALE telle que `userRepository.findByID` la rend : le drapeau super-admin et
+// la liste des etablissements auxquels le compte est rattache. La garde du jeton
+// (`assertIssuableToken`) lit les DEUX — un stub qui rendrait `[{}, {}]` sans identifiant
+// d'etablissement, comme le faisait la version precedente de ce fichier, ne peut rien prouver
+// d'un predicat qui compare des identifiants.
+type CompteGlobal = { isSuperAdmin?: boolean; establishmentIds?: string[] }
+
+const build = (
+  rows: MembershipRow[],
+  admins = 1,
+  establishments = 1,
+  comptesGlobaux: Record<string, CompteGlobal> = {},
+) => {
   const ctx = new TenantContext()
   const calls: string[] = []
   const events: string[] = []
@@ -91,9 +103,21 @@ const build = (rows: MembershipRow[], admins = 1, establishments = 1) => {
           'new@b.fr': { id: 'u2', deactivatedAt: null },
           'deja@b.fr': { id: 'u1', deactivatedAt: null },
           'dormant@b.fr': { id: 'u3', deactivatedAt: new Date() },
+          // Les deux comptes que la garde du jeton doit refuser (tour de correction 1).
+          'superadmin@b.fr': { id: 'u8', deactivatedAt: null },
+          'ailleurs@b.fr': { id: 'u9', deactivatedAt: null },
         }
         const compte = comptes[email]
-        return compte ? Promise.resolve(compte) : Promise.reject(Boom.notFound())
+        if (!compte) {
+          return Promise.reject(Boom.notFound())
+        }
+        // `UserEntityRepo` EST la ligne `User` complete (findUniqueOrThrow sans `select`) :
+        // elle porte donc `isSuperAdmin`, que `addByEmail` lit ici plutot que de refaire une
+        // lecture. Le stub doit le rendre, sinon il ne peut pas prouver ce refus.
+        return Promise.resolve({
+          ...compte,
+          isSuperAdmin: comptesGlobaux[compte.id]?.isSuperAdmin ?? false,
+        })
       },
       create: (params: { email: string }, client?: unknown) => {
         calls.push(
@@ -101,13 +125,25 @@ const build = (rows: MembershipRow[], admins = 1, establishments = 1) => {
         )
         return Promise.resolve({ id: 'u-neuf', deactivatedAt: null })
       },
-      findByID: () =>
-        Promise.resolve({
-          establishmentMemberships: Array.from(
-            { length: establishments },
-            () => ({}),
-          ),
-        }),
+      // Par defaut : `establishments` rattachements dont le PREMIER est l'etablissement
+      // courant (`e1`) et les suivants sont etrangers — ce qui preserve le comportement des
+      // tests anterieurs (`setDeactivated` compte `length > 1`) tout en donnant a la garde du
+      // jeton des identifiants reels a comparer. `comptesGlobaux` permet a un test de decrire
+      // un compte precis : super-admin, ou rattache AILLEURS seulement.
+      findByID: (userId: string) => {
+        const surMesure = comptesGlobaux[userId]
+        const establishmentIds =
+          surMesure?.establishmentIds ??
+          Array.from({ length: establishments }, (_, index) =>
+            index === 0 ? 'e1' : `e-ailleurs-${index}`,
+          )
+        return Promise.resolve({
+          isSuperAdmin: surMesure?.isSuperAdmin ?? false,
+          establishmentMemberships: establishmentIds.map((establishmentId) => ({
+            establishmentId,
+          })),
+        })
+      },
       setDeactivated: () => {
         calls.push('deactivate')
         return Promise.resolve({})
@@ -123,7 +159,10 @@ const build = (rows: MembershipRow[], admins = 1, establishments = 1) => {
   return { domain: new MembershipDomain(container), ctx, calls, events }
 }
 
-const asAdmin = (ctx: TenantContext, fn: () => Promise<unknown>) =>
+// Generique (tour de correction 1, Important n°3) : rendait `Promise<unknown>`, si bien que
+// `(await asAdmin(...)).accessLink` etait une erreur TS18046 — invisible en test (swc ne type
+// pas) mais reelle, et la seule erreur de type NEUVE du commit precedent.
+const asAdmin = <T>(ctx: TenantContext, fn: () => Promise<T>) =>
   ctx.run(
     {
       userId: 'u1',
@@ -150,6 +189,7 @@ const DEACTIVATED_ACCOUNT =
   'This account is deactivated and cannot be added as a member'
 const DEACTIVATED_LINK =
   'This account is deactivated; its access link cannot be reissued'
+const UNADDABLE_EMAIL = 'This e-mail address cannot be added as a member'
 
 const rejectsWith = (
   promise: Promise<unknown>,
@@ -537,6 +577,105 @@ describe('MembershipDomain', () => {
     const { domain, ctx, events } = build([row({})])
     await asAdmin(ctx, () => domain.reissueAccessLink('em1'))
     expect(events).toEqual(['member.accessLinkReissued'])
+  })
+
+
+  // --- Tour de correction 1 : LA GARDE DU JETON, partagee par les deux emissions ---
+
+  const SUPER_ADMIN = { u8: { isSuperAdmin: true } }
+  const RATTACHE_AILLEURS = { u9: { establishmentIds: ['e-autre'] } }
+
+  const creerCompte = (
+    domain: { createAccount: (p: never) => Promise<unknown> },
+    ctx: TenantContext,
+    email: string,
+  ) =>
+    asAdmin(ctx, () =>
+      domain.createAccount({
+        email,
+        role: 'MEMBER',
+        soignantId: null,
+        services: [],
+      } as never),
+    )
+
+  it('ne cree aucun compte pour une adresse super-admin, du refus opaque partage', async () => {
+    const { domain, ctx, calls } = build([row({})], 1, 1, SUPER_ADMIN)
+    await rejectsWith(
+      creerCompte(domain, ctx, 'superadmin@b.fr'),
+      400,
+      UNADDABLE_EMAIL,
+    )
+    expect(calls).toEqual([])
+  })
+
+  it('ne cree aucun compte pour une adresse rattachee a un autre etablissement', async () => {
+    const { domain, ctx, calls } = build([row({})], 1, 1, RATTACHE_AILLEURS)
+    // MEME refus, mot pour mot, que pour un super-admin ci-dessus et qu'une adresse inconnue :
+    // les distinguer ferait de la route un detecteur de comptes.
+    await rejectsWith(
+      creerCompte(domain, ctx, 'ailleurs@b.fr'),
+      400,
+      UNADDABLE_EMAIL,
+    )
+    expect(calls).toEqual([])
+  })
+
+  it('rattache sans jeton une adresse deja en poste ailleurs, mais refuse un super-admin', async () => {
+    // La question symetrique : `addByEmail` n'emet AUCUN jeton, donc le rattachement d'une
+    // personne qui exerce dans deux structures reste permis. Seul le super-admin y est refuse
+    // (premier maillon de la chaine de la Critique n°2).
+    const permis = build([row({})], 1, 1, RATTACHE_AILLEURS)
+    await asAdmin(permis.ctx, () =>
+      permis.domain.addByEmail({
+        email: 'ailleurs@b.fr',
+        role: 'MEMBER',
+        soignantId: null,
+        services: [],
+      }),
+    )
+    expect(permis.calls).toEqual(['create'])
+
+    const refuse = build([row({})], 1, 1, SUPER_ADMIN)
+    await rejectsWith(
+      asAdmin(refuse.ctx, () =>
+        refuse.domain.addByEmail({
+          email: 'superadmin@b.fr',
+          role: 'MEMBER',
+          soignantId: null,
+          services: [],
+        }),
+      ),
+      400,
+      UNADDABLE_EMAIL,
+    )
+    expect(refuse.calls).toEqual([])
+  })
+
+  it('ne reemet aucun lien pour un membre super-admin, meme avec une seule appartenance', async () => {
+    // Le cas EXACT que l'ancienne garde laissait passer : une seule appartenance, donc
+    // `assertSingleEstablishment` etait satisfaite — et le compte portait le drapeau.
+    const { domain, ctx, calls } = build(
+      [row({ id: 'em3', userId: 'u8', user: user({ id: 'u8' }) })],
+      1,
+      1,
+      SUPER_ADMIN,
+    )
+    await rejectsWith(
+      asAdmin(ctx, () => domain.reissueAccessLink('em3')),
+      400,
+      UNADDABLE_EMAIL,
+    )
+    expect(calls).toEqual([])
+  })
+
+  it('emet bien quand le compte n est rattache qu a l etablissement courant', async () => {
+    // La garde ne doit pas fermer le cas ordinaire : un membre d ici, et d ici seulement.
+    const { domain, ctx, calls } = build([row({})], 1, 1, {
+      u1: { establishmentIds: ['e1'] },
+    })
+    await asAdmin(ctx, () => domain.reissueAccessLink('em1'))
+    expect(calls).toEqual(['issue(u1,u1,hors-tx)'])
   })
 
 })

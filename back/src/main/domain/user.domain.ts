@@ -1,6 +1,7 @@
 import Boom from '@hapi/boom'
 
 import type { IocContainer } from '../types/application/ioc'
+import type { AccessLinkDomainInterface } from '../types/domain/accessLink.domain.interface'
 import type {
   AccountSearchResult,
   PasswordChangeDomain,
@@ -23,13 +24,25 @@ import { verifyPassword } from '../utils/hash'
 // rester utilisable face à une incohérence, pas s'arrêter dessus.
 const UNRESOLVED_ESTABLISHMENT_NAME = ''
 
+// Même refus, même motif qu'au niveau établissement : `AccessLinkDomain.consume` refuse un compte
+// désactivé, donc la route rendrait 201 sur un accès qui ne pourra jamais être consommé — et
+// l'émission aurait au passage invalidé les liens encore actifs du compte.
+const DEACTIVATED_ACCOUNT =
+  'This account is deactivated; its access link cannot be reissued'
+
 class UserDomain implements UserDomainInterface {
   private readonly userRepository: UserRepositoryInterface
   private readonly establishmentRepository: EstablishmentRepositoryInterface
+  private readonly accessLinkDomain: AccessLinkDomainInterface
 
-  constructor({ userRepository, establishmentRepository }: IocContainer) {
+  constructor({
+    userRepository,
+    establishmentRepository,
+    accessLinkDomain,
+  }: IocContainer) {
     this.userRepository = userRepository
     this.establishmentRepository = establishmentRepository
+    this.accessLinkDomain = accessLinkDomain
   }
 
   findByID(userID: string): Promise<UserEntityDomain> {
@@ -100,6 +113,29 @@ class UserDomain implements UserDomainInterface {
         createdAt: m.createdAt,
       })),
     }
+  }
+
+  // LA SOUPAPE de la garde du jeton (tâche 10, tour de correction 1, arbitrage n°3) — voir le
+  // commentaire sur `UserDomainInterface.reissueAccessLink`, et celui d'
+  // `assertIssuableToken` (membership.domain.ts) pour ce qu'elle rend tenable.
+  //
+  // AUCUNE garde de comptage d'établissements ici, et c'est le but : le super-admin est
+  // l'autorité qui traverse légitimement les établissements. Ce qui la borne, ce n'est pas un
+  // compteur mais le préfixe `/super-admin` — `requireSuperAdmin` (404 à qui n'a pas le drapeau)
+  // et la permission `establishments:manage`.
+  //
+  // `findByID` lève `Boom.notFound` sur un identifiant inconnu (findUniqueOrThrow via
+  // `errorHandler.boomErrorFromPrismaError`) : le compte est donc lu AVANT toute écriture, ce
+  // qui vaut aussi pour le refus ci-dessous.
+  async reissueAccessLink(
+    userID: string,
+    issuedBy: string,
+  ): Promise<{ token: string }> {
+    const user = await this.userRepository.findByID(userID)
+    if (user.deactivatedAt !== null) {
+      throw Boom.conflict(DEACTIVATED_ACCOUNT)
+    }
+    return await this.accessLinkDomain.issue(user.id, issuedBy)
   }
 }
 

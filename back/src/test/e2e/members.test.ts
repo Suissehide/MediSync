@@ -14,6 +14,13 @@ import {
 const LAST_ADMIN = 'Cannot remove the last administrator'
 const SELF = 'Cannot apply this action to your own account'
 const ALREADY_MEMBER = 'This account is already a member of this establishment'
+// Le refus opaque partage par `addByEmail` et `createAccount` : adresse inconnue, deja membre,
+// super-admin, ou deja rattachee ailleurs — un seul et meme message, pour qu'un administrateur
+// ne puisse pas enumerer les comptes de la plateforme.
+const UNADDABLE_EMAIL = 'This e-mail address cannot be added as a member'
+const DEACTIVATED_LINK =
+  'This account is deactivated; its access link cannot be reissued'
+const MDP_ATTAQUANT = 'MotDePasseDeLAttaquant123!!'
 
 describe('routes membres', () => {
   let testApp: TestApp
@@ -370,25 +377,26 @@ describe('routes membres', () => {
     ).resolves.toEqual(expect.objectContaining({ access_token: expect.any(String) }))
   })
 
+  // TOUR DE CORRECTION 1 : ce test attachait auparavant un compte membre d'un AUTRE
+  // etablissement, et attendait 201. Sa fixture ETAIT l'escalade de la Critique n°1 — c'est
+  // desormais un 400 opaque (voir « ne remet aucun jeton pour une adresse rattachee a un AUTRE
+  // etablissement »). Le cas legitime que ce test doit garder est celui d'un compte qui existe
+  // deja mais n'est rattache NULLE PART : une personne dont le compte a ete cree puis
+  // l'appartenance retiree, ou qui n'a jamais ete rattachee.
   it('rend la meme forme pour une adresse deja pourvue d un compte, sans ecraser son identite', async () => {
-    await peuplerAutreEtablissement()
-    const deja = await createUser({
-      email: 'partage@autre.fr',
-      memberships: [
-        {
-          establishmentId: autreEtablissementId,
-          role: 'MEMBER',
-          services: [{ serviceId: autreServiceId, role: 'LECTURE' }],
-        },
-      ],
-    })
+    const deja = await createUser({ email: 'compte-libre@autre.fr' })
     await testDb.user.update({
       where: { id: deja.id },
       data: { firstName: 'Ancien', lastName: 'Nom' },
     })
+    // La fixture est bien un compte SANS aucun rattachement : sinon la garde du jeton la
+    // refuserait, et ce test ne dirait rien de la branche « compte reutilise ».
+    expect(
+      await testDb.establishmentMembership.count({ where: { userId: deja.id } }),
+    ).toBe(0)
 
     const res = await createAccount({
-      email: 'partage@autre.fr',
+      email: 'compte-libre@autre.fr',
       firstName: 'Soumis',
       lastName: 'Different',
       role: 'MEMBER',
@@ -404,14 +412,14 @@ describe('routes membres', () => {
     expect(corps).not.toContain('Soumis')
     expect(corps).not.toContain(deja.id)
 
-    // Le compte n'est ni duplique, ni ecrase, et son appartenance a B est intacte.
-    expect(await testDb.user.count({ where: { email: 'partage@autre.fr' } })).toBe(1)
+    // Le compte n'est ni duplique, ni ecrase, et il est desormais rattache — une seule fois.
+    expect(await testDb.user.count({ where: { email: 'compte-libre@autre.fr' } })).toBe(1)
     const relu = await testDb.user.findUniqueOrThrow({ where: { id: deja.id } })
     expect(relu.firstName).toBe('Ancien')
     expect(relu.password).toBe(deja.password)
     expect(
       await testDb.establishmentMembership.count({ where: { userId: deja.id } }),
-    ).toBe(2)
+    ).toBe(1)
   })
 
   // Le raisonnement de la tache 6 (« divulgation assumee : le super-admin dispose de toute
@@ -524,6 +532,16 @@ describe('routes membres', () => {
   const reissue = (membershipId: string) =>
     call('POST', `/${membershipId}/access-link`)
 
+  // Fabrique un membre de CET etablissement, avec son compte et son lien, sans dependre
+  // d'aucun autre test (mineur n°3 du tour de correction 1 : les dependances d'ordre entre
+  // tests e2e).
+  const nouveauMembre = async (email: string) => {
+    const res = await createAccount({ email, role: 'MEMBER' })
+    expect(res.statusCode).toBe(201)
+    const { compte, membershipId } = await membershipDe(email)
+    return { compte, membershipId, token: res.json().accessLink.token as string }
+  }
+
   const membershipDe = async (email: string, dansEtablissement = establishmentId) => {
     const compte = await testDb.user.findUniqueOrThrow({ where: { email } })
     const appartenance = await testDb.establishmentMembership.findFirstOrThrow({
@@ -533,15 +551,9 @@ describe('routes membres', () => {
   }
 
   it('reemet un lien : le precedent devient inutilisable, le nouveau ouvre une session', async () => {
-    // `compte-neuf@b.fr` n'appartient qu'a cet etablissement : la garde
-    // multi-etablissement ne peut donc pas se declencher ici, seule la reemission est
-    // eprouvee.
-    const { membershipId } = await membershipDe('compte-neuf@b.fr')
-    // Le lien remis a la creation du compte a deja ete consomme plus haut : on en reemet
-    // un premier, qui sert de « precedent » a invalider.
-    const precedent = await reissue(membershipId)
-    expect(precedent.statusCode).toBe(201)
-    const premier = precedent.json().accessLink.token as string
+    // Fabrique son propre membre, n'appartenant qu'a cet etablissement : aucune dependance
+    // d'ordre avec un autre test, et la garde multi-etablissement ne peut pas se declencher.
+    const { membershipId, token: premier } = await nouveauMembre('reemission@b.fr')
 
     const res = await reissue(membershipId)
 
@@ -552,15 +564,35 @@ describe('routes membres', () => {
     const AUTRE_MDP = 'EncoreUnAutreMotDePasse123!!'
     expect((await consume(res.json().accessLink.token, AUTRE_MDP)).statusCode).toBe(200)
     await expect(
-      signIn(testApp.app, 'compte-neuf@b.fr', AUTRE_MDP),
+      signIn(testApp.app, 'reemission@b.fr', AUTRE_MDP),
     ).resolves.toEqual(expect.objectContaining({ access_token: expect.any(String) }))
   })
 
   it('refuse de reemettre un lien pour un compte membre de plusieurs etablissements', async () => {
     await peuplerAutreEtablissement()
-    const { compte, membershipId } = await membershipDe('partage@autre.fr')
-    // La fixture est reellement double : sans ces deux appartenances, le test serait vrai
-    // par vacuite.
+    // La fixture est construite par le CHEMIN LEGITIME : un compte deja en poste dans B, que
+    // `POST /members` (sans jeton) rattache aussi a A — le cas ordinaire d'un soignant qui
+    // exerce dans deux structures. C'est exactement lui que la reemission doit refuser.
+    const compte = await createUser({
+      email: 'deux-etablissements@autre.fr',
+      memberships: [
+        {
+          establishmentId: autreEtablissementId,
+          role: 'MEMBER',
+          services: [{ serviceId: autreServiceId, role: 'LECTURE' }],
+        },
+      ],
+    })
+    expect(
+      (
+        await call('POST', '/', {
+          email: 'deux-etablissements@autre.fr',
+          role: 'MEMBER',
+        })
+      ).statusCode,
+    ).toBe(201)
+    const { membershipId } = await membershipDe('deux-etablissements@autre.fr')
+    // Sans ces deux appartenances reelles, le test serait vrai par vacuite.
     expect(
       await testDb.establishmentMembership.count({ where: { userId: compte.id } }),
     ).toBe(2)
@@ -574,13 +606,17 @@ describe('routes membres', () => {
   })
 
   it('refuse de reemettre un lien pour un compte desactive', async () => {
-    const { compte, membershipId } = await membershipDe('chrono-neuf-0@b.fr')
+    const { compte, membershipId } = await nouveauMembre('dormant-reemission@b.fr')
     expect((await call('POST', `/${membershipId}/deactivate`)).statusCode).toBe(200)
     const avant = await testDb.accessLink.count({ where: { userId: compte.id } })
 
     const res = await reissue(membershipId)
 
     expect(res.statusCode).toBe(409)
+    // Le MESSAGE, pas seulement le statut : trois refus de cette route rendent 409, et le
+    // rapport justifie leurs messages distincts par « pour qu'un test sache lequel s'est
+    // declenche ». Sans cette ligne, cette justification etait creuse.
+    expect(res.json().message).toBe(DEACTIVATED_LINK)
     expect(await testDb.accessLink.count({ where: { userId: compte.id } })).toBe(avant)
   })
 
@@ -602,7 +638,25 @@ describe('routes membres', () => {
   // ecran : l'une fabrique une identite, l'autre remet le pouvoir de reinitialiser un mot de
   // passe. Elles doivent etre imputables au meme titre qu'un changement de role — un
   // commentaire qui l'affirme ne suffit pas.
-  it('journalise la creation de compte et la reemission de lien', async () => {
+  // IMPUTABLE, pas seulement journalise (tour de correction 1, mineur n°2) : la version
+  // precedente de ce test n'affirmait ni l'ACTEUR ni l'appartenance VISEE, alors que le
+  // souscripteur ecrit les deux — le nom du test promettait plus que ses assertions.
+  it('journalise la creation de compte et la reemission de lien, avec leur auteur et leur cible', async () => {
+    const { compte, membershipId } = await nouveauMembre('journal@b.fr')
+    expect((await reissue(membershipId)).statusCode).toBe(201)
+    const auteur = await testDb.user.findUniqueOrThrow({
+      where: { email: 'admin@b.fr' },
+    })
+    // L'auteur n'est pas la cible : sans cette difference, une confusion entre les deux
+    // passerait inapercue.
+    expect(auteur.id).not.toBe(compte.id)
+
+    type Entree = {
+      action: string
+      entityType: string
+      entityID: string
+      userID: string
+    }
     const attendues = ['member.accountCreated', 'member.accessLinkReissued']
     for (let essai = 0; essai < 40; essai += 1) {
       const res = await testApp.app.inject({
@@ -611,17 +665,231 @@ describe('routes membres', () => {
         cookies,
       })
       expect(res.statusCode).toBe(200)
-      const actions = new Set(
-        (res.json().data as { action: string; entityType: string }[])
-          .filter((entree) => entree.entityType === 'member')
-          .map((entree) => entree.action),
+      const lesNotres = (res.json().data as Entree[]).filter(
+        (entree) =>
+          entree.entityType === 'member' && entree.entityID === membershipId,
       )
-      if (attendues.every((action) => actions.has(action))) {
+      if (attendues.every((action) => lesNotres.some((e) => e.action === action))) {
+        // Chaque ligne porte l'administrateur qui a agi — jamais le compte vise.
+        expect(lesNotres.map((e) => e.userID)).toEqual(lesNotres.map(() => auteur.id))
         return
       }
       await new Promise((resolve) => setTimeout(resolve, 50))
     }
     throw new Error(`journal incomplet : ${attendues.join(', ')} attendues`)
+  })
+
+
+  // ------------------------------------------------------------------
+  // Tour de correction 1 — les deux escalades de privilege.
+  //
+  // La garde porte sur LE JETON, pas sur la route : toute route de ce niveau qui rend un
+  // jeton la porte, parce qu'un jeton d'acces reinitialise le mot de passe du `User`, qui
+  // est GLOBAL. Les tests ci-dessous jouent la CHAINE COMPLETE (jeton -> consume ->
+  // session -> acces a l'etablissement vise), parce que c'est l'acces obtenu qui est le
+  // defaut, pas le statut du premier appel.
+  // ------------------------------------------------------------------
+
+  // Joue l'attaque jusqu'au bout et rend ce qu'elle a REELLEMENT obtenu : un jeton
+  // consomme, une session ouverte, un statut sur la ressource convoitee. Rend 0 quand
+  // aucun jeton n'a ete remis — c'est le resultat attendu une fois la garde en place.
+  const chaineComplete = async (
+    reponse: { json: () => unknown },
+    email: string,
+    urlConvoitee: string,
+  ): Promise<number> => {
+    const jeton = (reponse.json() as { accessLink?: { token: string } }).accessLink?.token
+    if (jeton === undefined) {
+      return 0
+    }
+    expect((await consume(jeton, MDP_ATTAQUANT)).statusCode).toBe(200)
+    const session = await signIn(testApp.app, email, MDP_ATTAQUANT)
+    const atteinte = await testApp.app.inject({
+      method: 'GET',
+      url: urlConvoitee,
+      cookies: session,
+    })
+    return atteinte.statusCode
+  }
+
+  // CRITIQUE n°1. L'administrateur de A soumet l'adresse d'une personne administratrice de
+  // B seulement. Sans garde : 201 + jeton, `consume` pose le mot de passe, et
+  // `GET /e/B/admin/members` rend 200 — l'administrateur de A administre B.
+  it('ne remet aucun jeton pour une adresse rattachee a un AUTRE etablissement', async () => {
+    await peuplerAutreEtablissement()
+    const victime = await createUser({
+      email: 'victime-b@autre.fr',
+      memberships: [
+        {
+          establishmentId: autreEtablissementId,
+          role: 'ADMIN',
+          services: [{ serviceId: autreServiceId, role: 'COORDINATEUR' }],
+        },
+      ],
+    })
+
+    const res = await createAccount({ email: 'victime-b@autre.fr', role: 'MEMBER' })
+    const priseDeControle = await chaineComplete(
+      res,
+      'victime-b@autre.fr',
+      adminUrl(autreEtablissementId, '/members'),
+    )
+
+    // Un seul `expect` pour les deux faits : le diff montre d'un coup le statut ET l'acces
+    // reellement obtenu sur B, plutot que de s'arreter au premier.
+    expect({ statut: res.statusCode, adminDeB: priseDeControle }).toEqual({
+      statut: 400,
+      adminDeB: 0,
+    })
+    expect(res.json().message).toBe(UNADDABLE_EMAIL)
+    // Rien ecrit : ni rattachement a A, ni lien.
+    expect(
+      await testDb.establishmentMembership.count({ where: { userId: victime.id } }),
+    ).toBe(1)
+    expect(await testDb.accessLink.count({ where: { userId: victime.id } })).toBe(0)
+  })
+
+  // CRITIQUE n°2, chemin court : le super-admin n'est membre de rien, un seul appel suffit.
+  it('ne remet aucun jeton pour un compte super-admin', async () => {
+    const sa = await createUser({ email: 'sa-libre@plateforme.fr', isSuperAdmin: true })
+    // La fixture porte REELLEMENT le drapeau : sans cela le test ne prouverait rien.
+    expect(
+      (await testDb.user.findUniqueOrThrow({ where: { id: sa.id } })).isSuperAdmin,
+    ).toBe(true)
+
+    const res = await createAccount({ email: 'sa-libre@plateforme.fr', role: 'MEMBER' })
+    const priseDeControle = await chaineComplete(
+      res,
+      'sa-libre@plateforme.fr',
+      '/super-admin/establishments',
+    )
+
+    expect({ statut: res.statusCode, superAdmin: priseDeControle }).toEqual({
+      statut: 400,
+      superAdmin: 0,
+    })
+    expect(res.json().message).toBe(UNADDABLE_EMAIL)
+    expect(await testDb.accessLink.count({ where: { userId: sa.id } })).toBe(0)
+  })
+
+  // CRITIQUE n°2, premier maillon : `addByEmail` rattachait un super-admin sans rien dire.
+  // Le refus doit etre INDISCERNABLE de celui d'une adresse inconnue — sinon la route
+  // devient un detecteur de super-admins, utilisable sur n'importe quelle adresse.
+  it('refuse de rattacher un super-admin, du meme refus exactement qu une adresse inconnue', async () => {
+    await createUser({ email: 'sa-rattachement@plateforme.fr', isSuperAdmin: true })
+
+    const superAdmin = await call('POST', '/', {
+      email: 'sa-rattachement@plateforme.fr',
+      role: 'MEMBER',
+    })
+    const inconnue = await call('POST', '/', {
+      email: 'personne-du-tout@b.fr',
+      role: 'MEMBER',
+    })
+
+    expect(superAdmin.statusCode).toBe(inconnue.statusCode)
+    expect(superAdmin.json()).toEqual(inconnue.json())
+    expect(superAdmin.statusCode).toBe(400)
+    expect(superAdmin.json().message).toBe(UNADDABLE_EMAIL)
+  })
+
+  // CRITIQUE n°2, second maillon : un super-admin DEJA membre de cet etablissement — ce que
+  // `EstablishmentDomain.createWithFirstAdmin` peut produire legitimement. L'ancienne garde
+  // (`assertSingleEstablishment`) le laissait passer, puisqu'il n'a qu'une appartenance.
+  it('ne reemet aucun lien pour un membre qui est super-admin', async () => {
+    const sa = await createUser({
+      email: 'sa-membre@b.fr',
+      isSuperAdmin: true,
+      memberships: [{ establishmentId, role: 'MEMBER' }],
+    })
+    const { membershipId } = await membershipDe('sa-membre@b.fr')
+    // La fixture est bien celle qui contournait l'ancienne garde : UNE seule appartenance.
+    expect(
+      await testDb.establishmentMembership.count({ where: { userId: sa.id } }),
+    ).toBe(1)
+
+    const res = await reissue(membershipId)
+    const priseDeControle = await chaineComplete(
+      res,
+      'sa-membre@b.fr',
+      '/super-admin/establishments',
+    )
+
+    expect({ statut: res.statusCode, superAdmin: priseDeControle }).toEqual({
+      statut: 400,
+      superAdmin: 0,
+    })
+    expect(await testDb.accessLink.count({ where: { userId: sa.id } })).toBe(0)
+  })
+
+  // LA QUESTION SYMETRIQUE : la garde ne doit pas fermer ce qui doit rester ouvert.
+  // Rattacher (SANS jeton) une personne qui exerce deja dans un autre etablissement reste
+  // permis — c'est le cas ordinaire d'un soignant qui travaille dans deux structures.
+  it('laisse rattacher, sans jeton, une personne qui exerce deja dans un autre etablissement', async () => {
+    await peuplerAutreEtablissement()
+    const bilocal = await createUser({
+      email: 'deux-postes@autre.fr',
+      memberships: [
+        {
+          establishmentId: autreEtablissementId,
+          role: 'MEMBER',
+          services: [{ serviceId: autreServiceId, role: 'INTERVENANT' }],
+        },
+      ],
+    })
+
+    const res = await call('POST', '/', {
+      email: 'deux-postes@autre.fr',
+      role: 'MEMBER',
+    })
+
+    expect(res.statusCode).toBe(201)
+    expect(
+      await testDb.establishmentMembership.count({ where: { userId: bilocal.id } }),
+    ).toBe(2)
+    // Aucun jeton : `addByEmail` n'en a jamais emis, et ce n'est pas ce tour qui le change.
+    expect(await testDb.accessLink.count({ where: { userId: bilocal.id } })).toBe(0)
+  })
+
+
+  // TROUVE EN TRAITANT LA CRITIQUE n°2, HORS DES TROIS VERBES DEMANDES — meme classe, autre
+  // consequence : ce n'est pas une prise de controle mais un DENI DE SERVICE. `deactivatedAt`
+  // vit sur le `User`, global : un simple ADMIN d'etablissement coupait l'acces du super-admin
+  // A TOUTE LA PLATEFORME. L'ancienne garde ne s'y opposait pas (une seule appartenance), et la
+  // regle du dernier administrateur non plus des qu'un second administrateur existe.
+  it('ne desactive pas le compte global d un super-admin depuis un etablissement', async () => {
+    const sa = await createUser({
+      email: 'sa-desactivable@b.fr',
+      isSuperAdmin: true,
+      // MEMBER, et non ADMIN : sinon c'est la regle du dernier administrateur qui refuserait,
+      // et le test serait vrai pour une autre raison que celle qu'il garde.
+      memberships: [{ establishmentId, role: 'MEMBER' }],
+    })
+    const { membershipId } = await membershipDe('sa-desactivable@b.fr')
+
+    const res = await call('POST', `/${membershipId}/deactivate`)
+
+    // La chaine complete : le super-admin doit toujours pouvoir se connecter ET atteindre son
+    // prefixe. Un 409 seul ne dirait pas que son acces est intact.
+    const session = await signIn(testApp.app, 'sa-desactivable@b.fr').catch(() => null)
+    const acces =
+      session === null
+        ? 0
+        : (
+            await testApp.app.inject({
+              method: 'GET',
+              url: '/super-admin/establishments',
+              cookies: session,
+            })
+          ).statusCode
+
+    expect({ statut: res.statusCode, superAdminIntact: acces }).toEqual({
+      statut: 409,
+      superAdminIntact: 200,
+    })
+    expect(
+      (await testDb.user.findUniqueOrThrow({ where: { id: sa.id } })).deactivatedAt,
+    ).toBeNull()
   })
 
 })

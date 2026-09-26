@@ -22,11 +22,11 @@ import type { TenantContextInterface } from '../types/utils/tenant-context'
 import type { AppEventBus } from '../utils/app-event-bus'
 import { hashPassword, randomToken } from '../utils/hash'
 
-// Une adresse inconnue et une adresse déjà membre échouent de la même façon,
-// avec le même code et le même message : sinon un administrateur pourrait
-// énumérer les adresses qui ont un compte sur la plateforme. Même parti pris
-// que la connexion, qui ne distingue pas non plus l'adresse inconnue du mot
-// de passe erroné.
+// QUATRE refus, un seul message (tour de correction 1) : adresse inconnue, adresse déjà
+// membre d'ici, compte super-admin, compte rattaché à un AUTRE établissement. Sinon un
+// administrateur pourrait énumérer les adresses qui ont un compte sur la plateforme — et,
+// depuis ce tour, repérer lesquelles sont des comptes super-admin. Même parti pris que la
+// connexion, qui ne distingue pas non plus l'adresse inconnue du mot de passe erroné.
 const UNADDABLE_EMAIL = 'This e-mail address cannot be added as a member'
 
 // Message lu tel quel par `front/src/api/members.api.ts`, qui le fait
@@ -57,7 +57,11 @@ const MULTI_ESTABLISHMENT_LINK =
   'This account belongs to several establishments; its access link cannot be reissued from here'
 
 const DEACTIVATED_LINK =
-  'This account is deactivated; its access link cannot be reissued' 
+  'This account is deactivated; its access link cannot be reissued'
+
+// Tour de correction 1, trouvé en traitant la Critique n°2, hors des trois verbes demandés.
+const SUPER_ADMIN_ACTIVATION =
+  'This account cannot be activated or deactivated from an establishment' 
 
 class MembershipDomain implements MembershipDomainInterface {
   private readonly membershipRepository: MembershipRepositoryInterface
@@ -119,6 +123,16 @@ class MembershipDomain implements MembershipDomainInterface {
     if (await this.membershipRepository.findByUserID(user.id)) {
       throw Boom.badRequest(UNADDABLE_EMAIL)
     }
+    // Tour de correction 1, Critique n°2, PREMIER MAILLON de la chaîne : rattacher un
+    // super-admin à son établissement lui donnait ensuite une appartenance UNIQUE, donc une
+    // réémission que l'ancienne garde laissait passer. Cette méthode n'émet aucun jeton — elle
+    // n'appelle donc pas `assertIssuableToken` —, mais elle prépare le terrain de celle qui en
+    // émet. Même message que les deux refus ci-dessus : indiscernable, un test l'exige.
+    // Le rattachement d'une personne qui exerce DÉJÀ ailleurs reste permis, lui : sans jeton,
+    // il ne déplace aucun pouvoir (elle garde son propre mot de passe).
+    if (user.isSuperAdmin) {
+      throw Boom.badRequest(UNADDABLE_EMAIL)
+    }
     await this.assertReferences(soignantId, services)
     const membership = await this.membershipRepository.create({
       userId: user.id,
@@ -173,13 +187,80 @@ class MembershipDomain implements MembershipDomainInterface {
   // aussi l'accès aux autres, où l'administrateur n'a aucun droit. Tant que
   // la désactivation n'est pas portée par l'appartenance, on refuse les deux
   // sens (couper comme rétablir) sur un compte multi-établissement.
-  private async assertSingleEstablishment(
-    membership: MembershipRowDomain,
+  private assertSingleEstablishment(
+    user: { establishmentMemberships: unknown[] },
     message: string,
-  ): Promise<void> {
-    const user = await this.userRepository.findByID(membership.userId)
+  ): void {
     if (user.establishmentMemberships.length > 1) {
       throw Boom.conflict(message)
+    }
+  }
+
+  // MÊME CLASSE QUE LA CRITIQUE n°2, AUTRE CONSÉQUENCE — trouvé en la traitant, hors des trois
+  // verbes du tour (rattachement, création, réémission), et reproduit de bout en bout avant
+  // d'être fermé (`members.test.ts`, « ne desactive pas le compte global d un super-admin »).
+  // Ce n'est pas une prise de contrôle mais un DÉNI DE SERVICE : `deactivatedAt` vit sur le
+  // `User`, global, et un simple ADMIN d'établissement coupait l'accès du super-admin à TOUTE
+  // la plateforme. Ni `assertSingleEstablishment` (une seule appartenance suffit à la
+  // satisfaire) ni `assertNotLastAdmin` (muette dès qu'un second administrateur existe) ne s'y
+  // opposaient.
+  //
+  // Les DEUX sens sont refusés, comme pour le compte multi-établissement juste au-dessus et
+  // pour la même raison : ce qui se décide au niveau de la plateforme ne se défait pas depuis
+  // un établissement. Message propre plutôt qu'opaque : la cible est un membre déjà visible
+  // dans `GET /members`, il n'y a rien à cacher sur son existence — et l'administrateur a
+  // besoin de comprendre pourquoi le bouton ne marche pas.
+  private assertNotSuperAdmin(user: { isSuperAdmin: boolean }): void {
+    if (user.isSuperAdmin) {
+      throw Boom.conflict(SUPER_ADMIN_ACTIVATION)
+    }
+  }
+
+  // LA GARDE DU JETON (tour de correction 1, Critiques n°1 et n°2). Appelée avant CHAQUE
+  // `issue()` de ce niveau — une seule méthode, pas une copie par route : c'est
+  // `access-link-issue-sites.test.ts` qui exige que chaque site d'émission de `src/main` soit
+  // déclaré, et que ce fichier en appelle autant que d'émissions.
+  //
+  // POURQUOI ELLE PORTE SUR LE JETON ET NON SUR LA ROUTE. Un lien d'accès réinitialise le mot
+  // de passe du `User`, qui est GLOBAL : il ne donne pas accès « à cet établissement », il donne
+  // accès AU COMPTE, donc à tout ce que ce compte atteint. Le tour précédent avait posé cette
+  // garde sur la seule réémission ; `POST /account` la contournait entièrement (Critique n°1) —
+  // l'administrateur de A soumettait l'adresse d'une personne administratrice de B, recevait un
+  // jeton, et administrait B. Deux refus :
+  //
+  //   1. UN COMPTE SUPER-ADMIN NE SE DÉPANNE JAMAIS DEPUIS UN ÉTABLISSEMENT (Critique n°2).
+  //      Rien, ailleurs, ne lisait `isSuperAdmin` : un simple ADMIN prenait le compte
+  //      super-admin en un appel, ou en trois via `addByEmail` puis la réémission. Message
+  //      OPAQUE (`UNADDABLE_EMAIL`) plutôt qu'un motif propre : un refus qui dirait « cette
+  //      adresse est un super-admin » ferait de la route un détecteur de super-admins,
+  //      utilisable sur n'importe quelle adresse. CONSÉQUENCE ASSUMÉE : un super-admin qui
+  //      exerce aussi en service devra avoir un second compte, ordinaire.
+  //   2. AUCUN RATTACHEMENT AILLEURS. Compté par rapport à l'établissement COURANT, pas par un
+  //      `length > 1` : à la création, le compte n'est pas encore membre d'ici (zéro ou N
+  //      rattachements étrangers) ; à la réémission, il l'est déjà (un rattachement d'ici, plus
+  //      les étrangers). Le même prédicat couvre les deux, là où `length > 1` n'aurait été juste
+  //      que pour la seconde.
+  //
+  // LA SOUPAPE, sans laquelle cette garde serait une impasse : une personne réellement en poste
+  // dans deux établissements qui perd son mot de passe n'a aucun recours ici (il n'existe ni
+  // route de mot de passe oublié, ni changement de mot de passe sans l'ancien). Elle passe par
+  // `UserDomain.reissueAccessLink`, sous le préfixe super-admin — l'autorité qui traverse
+  // légitimement les établissements. C'est elle qui rend ce refus tenable ; ne pas la retirer
+  // sans rouvrir la question.
+  private async assertIssuableToken(
+    userId: string,
+    refusRattachementAilleurs: () => Error,
+  ): Promise<void> {
+    const user = await this.userRepository.findByID(userId)
+    if (user.isSuperAdmin) {
+      throw Boom.badRequest(UNADDABLE_EMAIL)
+    }
+    const { establishmentId } = this.tenantContext.establishmentScope()
+    const ailleurs = user.establishmentMemberships.filter(
+      (membership) => membership.establishmentId !== establishmentId,
+    )
+    if (ailleurs.length > 0) {
+      throw refusRattachementAilleurs()
     }
   }
 
@@ -230,9 +311,23 @@ class MembershipDomain implements MembershipDomainInterface {
   // dit donc, à lui seul, si l'adresse a déjà un compte. Cette fuite y a été ASSUMÉE au motif que
   // l'appelant est un super-admin, qui dispose de toute façon d'une recherche de comptes par
   // adresse (`GET /super-admin/users?email=`, tâche 7). CETTE PRÉMISSE EST FAUSSE ICI :
-  // l'appelant est un administrateur d'établissement, et aucune route ne lui offre de recherche
-  // de comptes. Le canal est donc fermé plutôt que documenté : la branche « compte réutilisé »
-  // paie EXACTEMENT le même PBKDF2, sur un mot de passe jeté qui n'est écrit nulle part.
+  // l'appelant est un administrateur d'établissement, qui n'a pas la recherche de comptes du
+  // super-admin (`GET /super-admin/users?email=`).
+  //
+  // TOUR DE CORRECTION 1, Important n°1 — CE COMMENTAIRE AFFIRMAIT PLUS QUE LE CODE NE TIENT.
+  // Il disait « aucune route ne lui offre de recherche de comptes » : c'est FAUX. `POST
+  // /e/:establishmentId/admin/members` (`addByEmail`, même routeur, même permission) est un
+  // oracle décisif en UN appel — 201 si l'adresse a un compte libre et ordinaire, 400 sinon.
+  // Ce n'est donc pas l'absence d'oracle qui justifie de fermer ce canal-ci, c'est sa NATURE :
+  // le temps de réponse est gratuit, muet et RÉPÉTABLE À VOLONTÉ — il n'écrit rien, ne laisse
+  // aucune trace, et personne ne peut constater après coup qu'une énumération a eu lieu. Le
+  // sondage par `POST /members`, lui, coûte une écriture : un rattachement réel, visible dans
+  // `GET /members`, et une ligne de journal (`member.added`) nominative que le super-admin
+  // relit. Fermer le canal gratuit laisse donc debout un oracle CHER et COMPTABLE, ce qui est
+  // exactement la propriété qu'on veut — pas l'absence d'oracle.
+  //
+  // Le canal est donc fermé plutôt que documenté : la branche « compte réutilisé » paie
+  // EXACTEMENT le même PBKDF2, sur un mot de passe jeté qui n'est écrit nulle part.
   //
   // Ce que ce calcul ferme, et ce qu'il ne ferme pas (mesuré, pas supposé — voir
   // « ne dit pas, par son temps de reponse… », members.test.ts) : il supprime l'écart dominant,
@@ -266,6 +361,12 @@ class MembershipDomain implements MembershipDomainInterface {
       if (await this.membershipRepository.findByUserID(existing.id)) {
         throw Boom.conflict(ALREADY_MEMBER)
       }
+      // Tour de correction 1, Critique n°1 : AVANT le refus « désactivé » ci-dessous, à dessein.
+      // Un compte désactivé rattaché à un AUTRE établissement reçoit ainsi le refus opaque,
+      // jamais le 409 qui dirait son état — le fait le plus sensible l'emporte.
+      await this.assertIssuableToken(existing.id, () =>
+        Boom.badRequest(UNADDABLE_EMAIL),
+      )
       // Refusé EN AMONT, avant la moindre écriture : `AccessLinkDomain.consume` refuse un compte
       // désactivé, donc la route rendrait 201 sur un accès qui ne pourra jamais être consommé.
       //
@@ -337,7 +438,13 @@ class MembershipDomain implements MembershipDomainInterface {
   // un `membershipId` d'un autre établissement rend 404, jamais un lien.
   async reissueAccessLink(id: string): Promise<{ token: string }> {
     const membership = await this.membershipRepository.findByID(id)
-    await this.assertSingleEstablishment(membership, MULTI_ESTABLISHMENT_LINK)
+    // La MÊME garde que `createAccount`, pas une copie : voir `assertIssuableToken`. Le refus
+    // « rattaché ailleurs » garde ici son message propre (409) plutôt que le message opaque :
+    // le compte est DÉJÀ membre d'ici, donc visible dans `GET /members` — il n'y a rien à
+    // cacher sur son existence, et l'administrateur a besoin de savoir quoi faire.
+    await this.assertIssuableToken(membership.userId, () =>
+      Boom.conflict(MULTI_ESTABLISHMENT_LINK),
+    )
     // Un lien émis pour un compte désactivé ne pourrait jamais être consommé
     // (`AccessLinkDomain.consume` le refuse) : la route rendrait 201 sur un accès inutilisable.
     // Refusé avant l'émission, qui invaliderait au passage les liens encore actifs du compte.
@@ -357,10 +464,11 @@ class MembershipDomain implements MembershipDomainInterface {
     deactivated: boolean,
   ): Promise<MembershipRowDomain> {
     const membership = await this.membershipRepository.findByID(id)
-    await this.assertSingleEstablishment(
-      membership,
-      MULTI_ESTABLISHMENT_ACTIVATION,
-    )
+    // UNE seule lecture de l'identité globale pour les deux gardes ci-dessous, qui portent
+    // toutes deux sur des colonnes du `User` plutôt que de l'appartenance.
+    const user = await this.userRepository.findByID(membership.userId)
+    this.assertNotSuperAdmin(user)
+    this.assertSingleEstablishment(user, MULTI_ESTABLISHMENT_ACTIVATION)
     if (deactivated) {
       this.assertNotSelf(membership)
       await this.assertNotLastAdmin(membership)

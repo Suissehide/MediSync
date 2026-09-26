@@ -46,4 +46,14 @@ export interface UserDomainInterface {
   // donnée de patient (spec §3.4). `Boom.notFound` (via `UserRepository.findByEmail`) si
   // l'adresse est inconnue.
   searchByEmail: (email: string) => Promise<AccountSearchResult>
+  // LA SOUPAPE (tâche 10, tour de correction 1, arbitrage n°3). Réémet le lien d'accès d'un
+  // compte quel que soit le nombre d'établissements auxquels il appartient : c'est précisément
+  // ce que la garde du jeton interdit au niveau établissement
+  // (`MembershipDomain.assertIssuableToken`), et que seul le super-admin peut faire. Lève
+  // `Boom.notFound` si le compte est inconnu, `Boom.conflict` s'il est désactivé (un lien émis
+  // pour un compte désactivé ne pourrait jamais être consommé).
+  reissueAccessLink: (
+    userID: string,
+    issuedBy: string,
+  ) => Promise<{ token: string }>
 }

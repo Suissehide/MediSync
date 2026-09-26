@@ -35,4 +35,23 @@ export const searchAccountQuerySchema = z.object({
   }),
 })
 
+// `POST /super-admin/users/:userId/access-link` (tâche 10, tour de correction 1, arbitrage n°3) :
+// LA SOUPAPE. La garde du jeton refuse à un administrateur d'établissement de réémettre un lien
+// pour un compte rattaché ailleurs ou pour un super-admin ; sans ce recours, une personne en
+// poste dans deux établissements qui perd son mot de passe n'en aurait aucun (il n'existe ni
+// route de mot de passe oublié, ni changement sans l'ancien). Le super-admin est l'autorité qui
+// traverse légitimement les établissements : cette route ne porte donc PAS la garde de comptage.
+//
+// `userId` est reçu du client — c'est licite ICI et nulle part ailleurs : cet appelant dispose
+// déjà de `GET /super-admin/users?email=` pour trouver le compte, et son périmètre est la
+// plateforme entière. Au niveau établissement, au contraire, l'identité visée est toujours
+// déduite d'une appartenance chargée par un repository filtré.
+export const superAdminUserParamsSchema = z.object({ userId: z.cuid() })
+
+export const reissueAccessLinkResponseSchema = z.object({
+  // Le jeton en clair, rendu une seule fois — voir `accessLink.domain.ts#issue`.
+  accessLink: z.object({ token: z.string() }),
+})
+
 export type SearchAccountQuery = z.infer<typeof searchAccountQuerySchema>
+export type SuperAdminUserParams = z.infer<typeof superAdminUserParamsSchema>
