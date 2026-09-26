@@ -13,8 +13,14 @@ import ts from 'typescript'
 //      `scheduleActivityLogCleanup`) : hors de toute requete HTTP, il n'existe alors aucun
 //      tenant a poser, et la purge doit toucher TOUTE la table, pas un seul etablissement.
 //   2. Le signal de suivi ailleurs (`infra/orm/repositories/patientServiceFile.repository.ts`,
-//      `estSuiviAilleurs`, design §5.3) : LA SEULE lecture de tout le chantier qui traverse
-//      volontairement la frontiere entre services, pour rendre un booleen et rien d'autre.
+//      `estSuiviAilleurs`, design §5.3) : une lecture qui traverse volontairement la frontiere
+//      entre services, pour rendre un booleen et rien d'autre.
+//   3. L'impact d'une desactivation de service (meme fichier, `impactDesactivation`, design
+//      §3.6, tache 9) : appelee depuis l'administration d'etablissement (aucun service courant
+//      a ce niveau), elle traverse la meme frontiere pour rendre DEUX NOMBRES agreges — jamais
+//      un identifiant, un nom ou un contenu. Le second et dernier emploi de cette exception,
+//      toujours dans le meme fichier que le premier : le nombre de FICHIERS reste a deux
+//      (`AUTORISES` ci-dessous), mais le compte d'APPELS dans celui-ci passe de un a deux.
 //
 // `runAsSuperAdmin` (meme fichier, tache 1 / etape 4a) y ajoute un troisieme mode, qui ne retire
 // rien mais substitue au filtre de tenant une liste declaree et exhaustive de couples (modele,
@@ -64,8 +70,10 @@ const AUTORISES = [
   },
   {
     fichier: 'infra/orm/repositories/patientServiceFile.repository.ts',
-    raison: 'estSuiviAilleurs — le signal de suivi ailleurs',
-    appels: 1,
+    raison:
+      'estSuiviAilleurs — le signal de suivi ailleurs — ET impactDesactivation — les ' +
+      'compteurs de l ecran de desactivation d un service (design §3.6, tache 9)',
+    appels: 2,
   },
 ]
 

@@ -51,12 +51,14 @@ import { PlanningCycleDomain } from '../../../domain/planningCycle.domain'
 import { PlanningCycleRepository } from '../../../infra/orm/repositories/planningCycle.repository'
 import { LocationDomain } from '../../../domain/location.domain'
 import { MembershipDomain } from '../../../domain/membership.domain'
+import { ServiceDomain } from '../../../domain/service.domain'
 import { SuperAdminGrantDomain } from '../../../domain/superAdminGrant.domain'
 import { AccessGrantRepository } from '../../../infra/orm/repositories/accessGrant.repository'
 import { AccessLinkRepository } from '../../../infra/orm/repositories/accessLink.repository'
 import { EstablishmentRepository } from '../../../infra/orm/repositories/establishment.repository'
 import { LocationRepository } from '../../../infra/orm/repositories/location.repository'
 import { MembershipRepository } from '../../../infra/orm/repositories/membership.repository'
+import { ServiceRepository } from '../../../infra/orm/repositories/service.repository'
 
 declare module '@fastify/awilix' {
   interface Cradle extends IocContainer {}
@@ -154,6 +156,9 @@ class AwilixIocContainer {
     // Establishment
     this.#registerEstablishmentDomain()
     this.#registerEstablishmentRepository()
+    // Service
+    this.#registerServiceDomain()
+    this.#registerServiceRepository()
 
     // Server
     this.#registerHttpServer()
@@ -315,6 +320,14 @@ class AwilixIocContainer {
   }
   #registerLocationRepository(): void {
     this.register('locationRepository', asClass(LocationRepository).singleton())
+  }
+
+  // Service
+  #registerServiceDomain(): void {
+    this.register('serviceDomain', asClass(ServiceDomain).singleton())
+  }
+  #registerServiceRepository(): void {
+    this.register('serviceRepository', asClass(ServiceRepository).singleton())
   }
 
   // Todo

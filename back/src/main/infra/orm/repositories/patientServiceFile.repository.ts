@@ -1,6 +1,7 @@
 import { Prisma } from '../../../../generated/client'
 import type { IocContainer } from '../../../types/application/ioc'
 import type {
+  PatientServiceFileDeactivationImpactRepo,
   PatientServiceFileEntityRepo,
   PatientServiceFileRepositoryInterface,
   PatientServiceFileUpsertEntityRepo,
@@ -123,11 +124,14 @@ class PatientServiceFileRepository implements PatientServiceFileRepositoryInterf
     }
   }
 
-  // EXCEPTION ASSUMEE au cloisonnement inter-service (design §5.3) : LA SEULE lecture de tout le
-  // back qui traverse volontairement la frontiere entre services. Son unicite est verifiee par
+  // EXCEPTION ASSUMEE au cloisonnement inter-service (design §5.3) : la PREMIERE des deux
+  // lectures de tout le back qui traversent volontairement la frontiere entre services — la
+  // seconde est `impactDesactivation`, plus bas dans ce meme fichier (design §3.6, tache 9),
+  // qui rend un compte plutot qu'un booleen mais ne franchit jamais la frontiere autrement.
+  // Leur unicite (au nombre de deux, toutes deux dans ce fichier) est verifiee par
   // back/src/test/unit/infra/runAsSystem-unicite.test.ts, qui relit les sources et echoue si un
-  // second appel a `runAsSystem` apparait ailleurs — ou si celui-ci disparait sans que la liste
-  // autorisee n'en soit averti.
+  // troisieme appel a `runAsSystem` apparait ailleurs — ou si l'un des deux disparait sans que
+  // la liste autorisee n'en soit avertie.
   //
   // `runAsSystem` (tenant-context.ts) RETIRE l'exigence du garde-fou d'ORM, il ne la deplace
   // pas : sous ce mode, le garde-fou n'exige plus AUCUN filtre de service ni d'etablissement, et
@@ -185,6 +189,57 @@ class PatientServiceFileRepository implements PatientServiceFileRepositoryInterf
       })
     })
     return autreSousDossier !== null
+  }
+
+  // Seconde et derniere lecture qui traverse volontairement la frontiere entre services (design
+  // §3.6, tache 9) — voir le commentaire au-dessus d'`estSuiviAilleurs`. Appelee depuis le
+  // contexte d'ADMINISTRATION D'ETABLISSEMENT (`/e/:establishmentId/admin/services/:id/impact-
+  // desactivation`), pas depuis un service : `this.scope` (qui exige un service courant) n'y est
+  // donc pas disponible, et `serviceId`/`establishmentId` sont recus explicitement de
+  // l'appelant (`ServiceDomain.impactDesactivation`), qui les tient de l'admin resolu et d'un
+  // service deja verifie appartenir a cet etablissement (`ServiceRepository.findByID`, qui leve
+  // 404 sinon). La requete porte donc SES bornes, comme `estSuiviAilleurs` — meme principe,
+  // deux parametres explicites plutot qu'un contexte de service qui n'existe pas ici.
+  //
+  // Ne rend que DEUX NOMBRES, jamais un identifiant de patient, un nom de service ou un
+  // contenu — la meme discipline de divulgation qu'`estSuiviAilleurs` (`select: { patientId:
+  // true }`, jamais `id`), pretee ici a un compte plutot qu'a un booleen. `suivisIci` est le
+  // nombre de sous-dossiers de ce service ; `suivisNullePartAilleurs` est le sous-ensemble de
+  // leurs patients qui n'ont AUCUN autre sous-dossier dans le meme etablissement — calcule en
+  // deux lectures plutot qu'une jointure, pour rester lisible : la premiere ramene les
+  // identifiants de patients suivis ICI, la seconde ceux qui le sont AILLEURS PARMI EUX (meme
+  // etablissement, service different), et la difference des deux ensembles donne le compte qui
+  // importe. Meme piege que ci-dessus : les DEUX `await` sont a l'INTERIEUR du seul rappel
+  // `runAsSystem`, jamais une promesse rendue sans etre attendue.
+  async impactDesactivation(
+    serviceId: string,
+    establishmentId: string,
+  ): Promise<PatientServiceFileDeactivationImpactRepo> {
+    return await this.tenantContext.runAsSystem(async () => {
+      const suivisIci = await this.prisma.patientServiceFile.findMany({
+        where: { serviceId, establishmentId },
+        select: { patientId: true },
+      })
+      if (suivisIci.length === 0) {
+        return { suivisIci: 0, suivisNullePartAilleurs: 0 }
+      }
+      const patientIds = suivisIci.map((row) => row.patientId)
+      const suivisAilleursParmiEux = await this.prisma.patientServiceFile.findMany({
+        where: {
+          establishmentId,
+          patientId: { in: patientIds },
+          serviceId: { not: serviceId },
+        },
+        select: { patientId: true },
+      })
+      const suiviAilleursIds = new Set(
+        suivisAilleursParmiEux.map((row) => row.patientId),
+      )
+      const suivisNullePartAilleurs = patientIds.filter(
+        (patientId) => !suiviAilleursIds.has(patientId),
+      ).length
+      return { suivisIci: patientIds.length, suivisNullePartAilleurs }
+    })
   }
 }
 

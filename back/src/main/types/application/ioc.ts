@@ -13,6 +13,7 @@ import type { ForbiddenWeekDomainInterface } from '../domain/forbiddenWeek.domai
 import type { PlanningCycleDomainInterface } from '../domain/planningCycle.domain.interface'
 import type { LocationDomainInterface } from '../domain/location.domain.interface'
 import type { MembershipDomainInterface } from '../domain/membership.domain.interface'
+import type { ServiceDomainInterface } from '../domain/service.domain.interface'
 import type { PathwayDomainInterface } from '../domain/pathway.domain.interface'
 import type { PathwayTemplateDomainInterface } from '../domain/pathwayTemplate.domain.interface'
 import type { PatientDomainInterface } from '../domain/patient.domain.interface'
@@ -37,6 +38,7 @@ import type { ForbiddenWeekRepositoryInterface } from '../infra/orm/repositories
 import type { PlanningCycleRepositoryInterface } from '../infra/orm/repositories/planningCycle.repository.interface'
 import type { LocationRepositoryInterface } from '../infra/orm/repositories/location.repository.interface'
 import type { MembershipRepositoryInterface } from '../infra/orm/repositories/membership.repository.interface'
+import type { ServiceRepositoryInterface } from '../infra/orm/repositories/service.repository.interface'
 import type { PathwayRepositoryInterface } from '../infra/orm/repositories/pathway.repository.interface'
 import type { PathwayTemplateRepositoryInterface } from '../infra/orm/repositories/pathwayTemplate.repository.interface'
 import type { PatientRepositoryInterface } from '../infra/orm/repositories/patient.repository.interface'
@@ -135,4 +137,7 @@ export interface IocContainer {
   // Establishment (creation d'un etablissement et de son premier administrateur, etape 4a tache 6)
   readonly establishmentDomain: EstablishmentDomainInterface
   readonly establishmentRepository: EstablishmentRepositoryInterface
+  // Service (creation, renommage, (des)activation d'un service, etape 4a tache 9)
+  readonly serviceDomain: ServiceDomainInterface
+  readonly serviceRepository: ServiceRepositoryInterface
 }
