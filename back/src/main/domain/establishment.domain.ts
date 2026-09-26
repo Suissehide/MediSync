@@ -77,6 +77,15 @@ class EstablishmentDomain implements EstablishmentDomainInterface {
     // émettre (AccessLinkDomain.consume refuse un compte désactivé). Sans ce refus, la route
     // rendait 201 et créait un établissement dont l'unique administrateur ne pouvait jamais y
     // entrer, sans qu'aucun signal ne le dise.
+    //
+    // SECONDE DIVULGATION ASSUMÉE ET BORNÉE (tour de correction 2, mineur signalé par le
+    // coordinateur) : ce 409 dit « cette adresse a déjà un compte, et il est désactivé » — un
+    // oracle plus commode que le canal temporel ci-dessus (aucun coût de calcul, un statut HTTP
+    // sans ambiguïté à énumérer). Laissé ouvert pour le même motif que le canal temporel : cette
+    // route est déjà réservée à des super-admins authentifiés, qui disposeront d'une recherche
+    // de comptes par adresse (tâche 7) — cacher ce refus (un 201 qui ne créerait rien, par
+    // exemple) coûterait plus cher en confusion opérationnelle qu'il ne fermerait de surface
+    // réellement nouvelle.
     if (existing && existing.deactivatedAt !== null) {
       throw Boom.conflict(DEACTIVATED_ACCOUNT)
     }

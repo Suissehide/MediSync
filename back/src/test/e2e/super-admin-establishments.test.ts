@@ -256,11 +256,31 @@ describe('POST /super-admin/establishments', () => {
   // echouer, tour a tour, la DEUXIEME ecriture (le rattachement) puis la TROISIEME etape
   // (l'emission du lien) — sur les VRAIS singletons de l'IoC (pas une reimplementation), pour
   // que l'echec traverse la VRAIE transaction plutot qu'une simulee.
+  //
+  // Tour de correction 2 (relecture externe), l'Important : `mockRejectedValueOnce` remplace
+  // la methode entiere — elle ne s'execute donc JAMAIS, et le sabotage ne peut rien ecrire avant
+  // de rejeter. Un test construit ainsi est aveugle a la regression precise qu'il existe pour
+  // empecher (omettre le client de transaction sur UN SEUL appel) : rien n'est ecrit hors
+  // transaction de toute facon, puisque rien n'est ecrit du tout. Demontre par le relecteur :
+  // en retirant `tx` du seul appel a `accessLinkDomain.issue`, `npm run build` reste vert et ces
+  // deux tests aussi, alors que deux ecritures sortent silencieusement de la transaction sur la
+  // branche du compte preexistant. Remplace par un PASSE-PLAT : appeler la VRAIE implementation
+  // (capturee avant l'espionnage, donc jamais elle-meme espionnee), la laisser ECRIRE POUR DE
+  // VRAI dans la transaction en cours, PUIS jeter — pour que ce soit l'ANNULATION, et non
+  // l'absence d'ecriture, qui soit mise a l'epreuve.
   describe('annulation transactionnelle : un echec en cours de route n annule PAS que sa propre ecriture', () => {
-    it("l'echec du rattachement (2e ecriture) annule tout, y compris le compte fraichement cree", async () => {
+    it("l'echec du rattachement (2e ecriture, APRES qu'elle ait reellement ecrit) annule tout, y compris le compte fraichement cree", async () => {
+      const repo = testApp.instances.establishmentRepository
+      const original = repo.attachAdmin.bind(repo)
       const spy = jest
-        .spyOn(testApp.instances.establishmentRepository, 'attachAdmin')
-        .mockRejectedValueOnce(new Error('SABOTAGE: rattachement en echec'))
+        .spyOn(repo, 'attachAdmin')
+        .mockImplementationOnce(async (establishmentId, userId, client) => {
+          // Passe-plat : la VRAIE ecriture a bien lieu, dans la transaction en cours...
+          await original(establishmentId, userId, client)
+          // ...et C'EST SEULEMENT APRES qu'on simule l'echec, pour eprouver l'annulation d'une
+          // ecriture reelle plutot que l'absence d'ecriture.
+          throw new Error('SABOTAGE: rattachement en echec, apres ecriture reelle')
+        })
 
       const res = await create({
         name: 'Etablissement Annule Rattachement',
@@ -277,12 +297,26 @@ describe('POST /super-admin/establishments', () => {
         where: { email: 'jamais-vu-annule-rattachement@ailleurs.fr' },
       })
       expect(user).toBeNull()
+      // Le rattachement lui-meme, ecrit reellement par le passe-plat avant l'echec, ne survit
+      // pas non plus.
+      const membership = await testDb.establishmentMembership.findFirst({
+        where: { establishment: { name: 'Etablissement Annule Rattachement' } },
+      })
+      expect(membership).toBeNull()
     })
 
-    it("l'echec de l'emission du lien (apres les deux premieres ecritures) annule tout, y compris le rattachement", async () => {
+    it("l'echec de l'emission du lien (APRES qu'elle ait reellement ecrit) annule tout, y compris le rattachement", async () => {
+      const domain = testApp.instances.accessLinkDomain
+      const original = domain.issue.bind(domain)
       const spy = jest
-        .spyOn(testApp.instances.accessLinkDomain, 'issue')
-        .mockRejectedValueOnce(new Error('SABOTAGE: emission en echec'))
+        .spyOn(domain, 'issue')
+        .mockImplementationOnce(async (userId, issuedBy, client) => {
+          // Passe-plat : les VRAIES ecritures (invalidation + creation du lien) ont bien lieu,
+          // dans la transaction en cours...
+          await original(userId, issuedBy, client)
+          // ...et C'EST SEULEMENT APRES qu'on simule l'echec.
+          throw new Error('SABOTAGE: emission en echec, apres ecriture reelle')
+        })
 
       const res = await create({
         name: 'Etablissement Annule Lien',
@@ -304,6 +338,11 @@ describe('POST /super-admin/establishments', () => {
         where: { user: { email: 'jamais-vu-annule-lien@ailleurs.fr' } },
       })
       expect(membership).toBeNull()
+      // Et le lien lui-meme, ecrit reellement par le passe-plat avant l'echec, ne survit pas.
+      const accessLink = await testDb.accessLink.findFirst({
+        where: { user: { email: 'jamais-vu-annule-lien@ailleurs.fr' } },
+      })
+      expect(accessLink).toBeNull()
     })
   })
 })

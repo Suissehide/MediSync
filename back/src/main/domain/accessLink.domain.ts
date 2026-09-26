@@ -35,6 +35,11 @@ class AccessLinkDomain implements AccessLinkDomainInterface {
   ): Promise<{ token: string }> {
     const now = new Date()
     const token = randomToken(TOKEN_BYTES)
+    // `client` (tâche 6, tour de correction 1) : voir le commentaire détaillé sur
+    // `AccessLinkDomainInterface.issue`. Change seulement le SORT de CET appel (rattaché à une
+    // transaction plus large s'il en fournit une) — n'a aucun effet sur la course décrite
+    // ci-dessous, qui porte sur DEUX APPELS DISTINCTS à `issue`, chacun avec son propre `client`
+    // (ou aucun), jamais sur les deux écritures d'un même appel entre elles.
     // Réémettre invalide tout lien encore utilisable du même compte (spec §6.1), AVANT de créer
     // le nouveau : une réémission qui suit une réémission précédente (l'usage attendu — un seul
     // administrateur, un clic, puis un autre plus tard) invalide bien la précédente ; éprouvé en
