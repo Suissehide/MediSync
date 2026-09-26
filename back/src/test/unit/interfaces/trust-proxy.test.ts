@@ -18,6 +18,18 @@ import http from 'node:http'
 // a un nombre (`trustProxy: 1`), qui ne regarde jamais qui est le pair, seulement sa POSITION.
 const TRUSTED_RANGES = 'loopback,linklocal,uniquelocal'
 
+// Tour de correction 3, mineur : le test « en direct » utilisait `trustProxy: false` (confiance
+// TOTALEMENT desactivee) plutot que la valeur de production — la branche qui compte (« avec la
+// configuration reelle active, un pair HORS des plages configurees n'est pas honore ») n'etait
+// donc pas couverte par ce test-la. Ce fichier ne peut pas reproduire LITTERALEMENT la valeur de
+// production ici : toute connexion de test passe par `127.0.0.1` (loopback), qui fait justement
+// PARTIE de cette valeur — la rejouer telle quelle rendrait `loopback` toujours « dans la plage »,
+// donc jamais le cas « hors plage ». Cette constante retire seulement le preset `loopback` de la
+// valeur de production, pour que le pair de test (`127.0.0.1`) devienne reellement HORS de la
+// plage configuree, tout en passant par le MEME mecanisme reel (`@fastify/proxy-addr`, pas une
+// reimplementation) qu'avec la valeur de production.
+const PRODUCTION_RANGES_WITHOUT_LOOPBACK = 'linklocal,uniquelocal'
+
 const requestOnce = (
   port: number,
   forwardedFor?: string,
@@ -166,8 +178,8 @@ describe('confiance dans le proxy (request.ip), dont depend la clef de la limite
   // tour 1 : avec `trustProxy: 1`, ces quatre requetes passaient TOUTES (l'en-tete etait honore,
   // donc chacune avait sa propre clef) — montré rouge par exécution, puis rétabli (voir
   // task-4-report.md).
-  it("en direct (hors plage de confiance), un en-tete fabrique DIFFERENT a chaque requete ne deplace rien : la limite mord comme si l'appelant n'avait jamais change d'adresse", async () => {
-    const { app, port } = await buildRealServer(false)
+  it("en direct (hors plage de confiance -- avec la CONFIGURATION active, pas la confiance desactivee), un en-tete fabrique DIFFERENT a chaque requete ne deplace rien : la limite mord comme si l'appelant n'avait jamais change d'adresse", async () => {
+    const { app, port } = await buildRealServer(PRODUCTION_RANGES_WITHOUT_LOOPBACK)
     try {
       const statuses: number[] = []
       for (let i = 0; i < 4; i += 1) {
@@ -182,13 +194,19 @@ describe('confiance dans le proxy (request.ip), dont depend la clef de la limite
   })
 
   // Ce que la confiance PAR PLAGE ne protege pas — nomme dans un commentaire plutot que dans un
-  // test qui ne pourrait rien affirmer de plus qu'une tautologie (deux réseaux Docker distincts
-  // ne se simulent pas dans ce fichier) : elle suppose que tout pair TCP appartenant a une plage
-  // privee EST le proxy legitime. Un autre conteneur deja present sur le MEME reseau Docker
-  // `proxy` (`deploy/compose.yaml`) aurait, lui aussi, une adresse privee — indistinguable de
-  // Traefik par ce seul critere. Ce residu suppose une infrastructure deja compromise (un
-  // conteneur non legitime admis sur le reseau `proxy`), pas un appelant public ordinaire — c'est
-  // pourquoi le remede retenu (la plage, pas une adresse exacte non plus fixee par Docker) reste
-  // le bon compromis SANS toucher `deploy/compose.yaml` (question d'infrastructure, pas de code —
-  // voir task-4-report.md).
+  // test qui ne pourrait rien affirmer de plus qu'une tautologie (une vraie topologie Docker a
+  // deux niveaux ne se simule pas dans ce fichier) : elle suppose que tout pair TCP appartenant a
+  // une plage privee EST le proxy legitime. Tour de correction 3 : ce residu est PLUS LARGE que
+  // « un autre conteneur deja present sur le reseau Docker `proxy` » — mesure par execution
+  // (voir `fastify-http-server.ts`) : un appelant qui atteint le port PUBLIE du conteneur `back`,
+  // que ce soit LOCALEMENT ou via l'adresse RESEAU DE L'HOTE lui-meme, voit son adresse traduite
+  // par Docker et arrive comme une adresse PRIVEE, donc dans la plage de confiance — le residu
+  // couvre donc tout appelant qui atteint l'HOTE lui-meme, conteneur ou non, pas seulement un
+  // conteneur intrus. Ce qui reste NON VERIFIE dans l'autre sens : pour un appelant reellement
+  // EXTERNE (internet public), la traduction d'adresse standard Docker/Linux (DNAT sans
+  // SNAT/hairpin) preserve l'adresse source d'origine — rien ici ne permet d'affirmer que la
+  // production est vulnerable par ce vecteur pour un appelant public ordinaire, ni de l'exclure.
+  // C'est pourquoi le remede retenu (la plage, pas une adresse exacte non plus fixee par Docker)
+  // reste le bon compromis SANS toucher `deploy/compose.yaml` (question d'infrastructure, pas de
+  // code — voir task-4-report.md).
 })

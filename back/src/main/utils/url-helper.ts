@@ -1,3 +1,5 @@
+import { posix } from 'node:path'
+
 export const toLocalhostIfLinux = (address: string): string =>
   process.platform === 'linux'
     ? address.replace('127.0.0.1', 'localhost').replace('0.0.0.0', 'localhost')
@@ -20,21 +22,39 @@ export const toLocalhostIfLinux = (address: string): string =>
 // journal, ni un en-tete de reponse).
 const NO_SUFFIX_PATH_PREFIXES: readonly string[] = ['/auth/access-link/consume']
 
-// Tour de correction 2 (mineur) : la comparaison ne reconnaissait le prefixe qu'a l'octet pres —
-// dix variantes de la MEME route sabotee y echappaient : casse differente, un octet du chemin
-// encode en pourcent (`%63onsume` = « consume » avec le premier `c` encode), le separateur `/`
-// lui-meme encode (`consume%2F...`), un slash double, un parametre matriciel HTTP (`;cle=val`)
-// insere sur un segment. Chacune atteint le MEME `notFoundHandler` que la forme nue, avec un
-// `request.url` differemment ecrit — la troncature doit donc comparer une forme NORMALISEE, pas
-// la chaine brute.
+// Tour de correction 2 (mineur), puis tour de correction 3 (mineur, six formes voisines
+// ajoutees) : la comparaison ne reconnaissait le prefixe qu'a l'octet pres — seize variantes de
+// la MEME route sabotee y echappaient au total : casse differente, un octet du chemin encode en
+// pourcent (`%63onsume` = « consume » avec le premier `c` encode), le separateur `/` lui-meme
+// encode (`consume%2F...`), un double encodage, un slash double, un parametre matriciel HTTP
+// (`;cle=val`) insere sur un segment, un segment `.`/`..` (traversee de chemin), et une poignee
+// de caracteres invisibles ou blancs glisses au milieu d'un segment (espace, tabulation, octet
+// nul, espace de largeur nulle U+200B). Chacune atteint le MEME `notFoundHandler` que la forme
+// nue, avec un `request.url` differemment ecrit — la troncature doit donc comparer une forme
+// NORMALISEE, pas la chaine brute.
 //
 // Ordre delibere : decoder (au besoin plusieurs fois, un double encodage — `%2563` — ne se revele
-// qu'a la deuxieme passe) AVANT de retirer les doublons de `/` (un `%2F` decode en `/` peut lui
-// meme creer un doublon) AVANT de retirer un parametre matriciel AVANT de comparer sans tenir
-// compte de la casse. Echec sur un decodage impossible (`%` mal forme) : on garde la chaine telle
-// quelle plutot que de lever — une comparaison ratee est sans consequence, une exception ne
-// devrait jamais venir d'une fonction de journalisation.
+// qu'a la deuxieme passe) ; puis retirer les caracteres blancs/invisibles nommes ci-dessus (un
+// caractere glisse au milieu de « consume » le rendrait meconnaissable sans ce retrait) ; puis
+// normaliser les segments `.`/`..` et les doublons de `/` via `node:path` (`posix.normalize`,
+// jamais reimplemente ici) — cette etape ne fait jamais sortir la comparaison de la racine `/`,
+// donc `..` ne peut jamais faire matcher un chemin qui ne descend pas reellement sous le prefixe
+// sensible ; puis retirer un parametre matriciel ; puis comparer sans tenir compte de la casse.
+// Echec sur un decodage impossible (`%` mal forme) : on garde la chaine telle quelle plutot que
+// de lever — une comparaison ratee est sans consequence, une exception ne devrait jamais venir
+// d'une fonction de journalisation.
 const MAX_DECODE_PASSES = 5
+
+// Espace, tabulation, octet nul, espace de largeur nulle (U+200B) : glisses au milieu d'un
+// segment (`cons` + U+200B + `ume`, `cons%00ume`...), ils le rendent meconnaissable a une
+// comparaison litterale sans en changer le sens pour un humain ou pour la plupart des couches
+// HTTP en amont. Construit via `new RegExp` a partir d'une chaine d'echappements (`\\u0000`,
+// `\\u200b`) plutot qu'un littéral `/…/` : ecrire l'octet nul ou l'espace de largeur nulle en
+// clair dans ce fichier source, meme via un echappement dans un littéral de regex, y laisse soit
+// un caractere de controle invisible reel, soit declenche le lint (« control character in a
+// regular expression ») -- l'un et l'autre pires qu'une construction dynamique explicite ici.
+const INVISIBLE_OR_BLANK_CHARS_PATTERN = ' |\\t|\\u0000|\\u200b'
+const INVISIBLE_OR_BLANK_CHARS_REGEX = new RegExp(INVISIBLE_OR_BLANK_CHARS_PATTERN, 'g')
 
 const decodeRepeatedly = (value: string): string => {
   let current = value
@@ -53,11 +73,12 @@ const decodeRepeatedly = (value: string): string => {
   return current
 }
 
-const normalizeForSensitivePrefixMatch = (path: string): string =>
-  decodeRepeatedly(path)
-    .replace(/\/{2,}/g, '/')
-    .replace(/;[^/]*/g, '')
-    .toLowerCase()
+const normalizeForSensitivePrefixMatch = (path: string): string => {
+  const decoded = decodeRepeatedly(path)
+  const withoutInvisibleChars = decoded.replace(INVISIBLE_OR_BLANK_CHARS_REGEX, '')
+  const withoutDotSegments = posix.normalize(withoutInvisibleChars)
+  return withoutDotSegments.replace(/;[^/]*/g, '').toLowerCase()
+}
 
 const truncateAtSensitivePrefix = (path: string): string => {
   const normalized = normalizeForSensitivePrefixMatch(path)

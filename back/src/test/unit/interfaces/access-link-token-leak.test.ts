@@ -40,6 +40,27 @@ import { sha256Hex } from '../../../main/utils/hash'
 // principaux ci-dessous exercent maintenant le VRAI `AccessLinkDomain` et le VRAI
 // `AccessLinkRepository` — un faux Prisma en mémoire remplace la base, mais aucune des deux
 // classes n'est réimplémentée ni bouchonnée.
+//
+// Tour de correction 3 — CE QUE CE GARDE-FOU NE TIENT PAS, dit précisément plutôt que résumé en
+// « tout est surveillé » (la relecture externe a montré, par sabotage, que cette phrase promettait
+// plus que le mécanisme ne tient) : trois formes que le VRAI pino imprime sans lever échappent
+// encore à `serializeLogArg` (plus bas) —
+//   1. `log.error(err)`, un objet `Error` passé tel quel : `JSON.stringify(err)` rend `"{}"`
+//      (les propriétés `message`/`stack` d'une `Error` ne sont pas énumérables), donc son
+//      contenu — y compris un jeton qu'il porterait — disparaît silencieusement plutôt que de
+//      faire échouer la capture ;
+//   2. `log.error({ err }, 'message')`, la même `Error` nichée sous une clé : même cause, même
+//      disparition silencieuse ;
+//   3. les LIAISONS d'un logger enfant (`logger.child({ token })`, qui réapparaissent sur
+//      CHAQUE ligne suivante émise par cet enfant chez le vrai pino) : le faux `child()`
+//      ci-dessous ignore l'argument qu'on lui passe et ne le reporte jamais dans les lignes
+//      capturées.
+// Aucune fuite réelle aujourd'hui : le seul appelant de ce chemin (`error.handler.ts`,
+// `diagnosticOf`/`routeOf`) ne journalise que des CHAÎNES qu'il construit lui-même, jamais une
+// `Error` brute ni des liaisons de logger enfant — voir ces deux fonctions, qui n'appellent
+// jamais `log.child(...)` et ne passent jamais un objet `Error` en premier argument. Mais ce
+// garde-fou-ci ne le PROUVE pas pour un futur appelant qui le ferait ; il ne couvre que les
+// formes qu'il capture réellement (chaîne, objet simple JSON-sérialisable).
 type LogLevel = 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal'
 
 // Distinctif : ne peut apparaître par hasard dans un nom de méthode, de route ou un message
@@ -395,15 +416,26 @@ describe("le lien d'acces (POST /auth/access-link/consume) ne fait jamais fuir l
     await app.close()
   })
 
-  // Tour de correction 2, mineur : la troncature ne reconnaissait le préfixe qu'à l'octet près.
-  // Variantes de la MÊME route sabotée (casse, encodage pourcent, double encodage du séparateur,
-  // double slash, paramètre matriciel `;...`) — toutes doivent tronquer identiquement.
+  // Tour de correction 2, mineur, puis tour de correction 3 (six formes voisines de plus) : la
+  // troncature ne reconnaissait le préfixe qu'à l'octet près. Variantes de la MÊME route sabotée
+  // (casse, encodage pourcent, double encodage, séparateur encodé, double slash, paramètre
+  // matriciel `;...`, caractères blancs/invisibles glissés dans un segment, traversée de chemin
+  // `.`/`..`) — toutes doivent tronquer identiquement.
   it.each<string>([
     `/AUTH/Access-Link/CONSUME/${TOKEN}`,
     `/auth/access-link/%63onsume/${TOKEN}`,
     `/auth/access-link/consume%2F${TOKEN}`,
+    `/auth/access-link/%2563onsume/${TOKEN}`,
     `/auth//access-link/consume/${TOKEN}`,
     `/auth/access-link/consume;jsessionid=x/${TOKEN}`,
+    // Tour de correction 3, mineur : six formes voisines fuyaient encore — caracteres blancs ou
+    // invisibles glisses au milieu du segment, et traversee de chemin (`.`/`..`).
+    `/auth/access-link/con%20sume/${TOKEN}`,
+    `/auth/access-link/con%09sume/${TOKEN}`,
+    `/auth/access-link/cons%00ume/${TOKEN}`,
+    `/auth/access-link/cons%E2%80%8Bume/${TOKEN}`,
+    `/auth/./access-link/consume/${TOKEN}`,
+    `/auth/access-link/autre-route/../consume/${TOKEN}`,
   ])(
     'variante encodee/normalisee de la meme route sabotee (%s) ne fuit pas non plus',
     async (urlWithToken) => {

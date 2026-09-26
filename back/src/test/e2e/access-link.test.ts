@@ -154,21 +154,17 @@ describe('POST /auth/access-link/consume', () => {
     })
   })
 
-  // Tour de correction 1, Important n°3, PRÉCISÉ au tour de correction 2 (mineur : mon
-  // « de 4 à 6, non déterministe » restait une imprécision) : contrairement à la réémission
-  // SÉQUENTIELLE ci-dessus (qui invalide bien le lien précédent), l'ÉMISSION n'a pas de course
-  // fermée — voir le commentaire détaillé sur `AccessLinkDomain.issue`. Mesuré précisément (30
-  // exécutions de ce test, en local, chacune avec 6 émissions simultanées) : **29 fois sur 30**,
-  // les SIX liens survivent (chaque appel envoie sa lecture d'invalidation avant qu'aucun des
-  // cinq autres n'ait eu le temps d'écrire sa propre ligne — la forme normale de la course, celle
-  // que la relecture externe a mesurée comme déterministe) ; **une fois sur 30**, un seul des six
-  // a été invalidé (5 survivants) — plausible sous contention du pool de connexions Prisma, une
-  // des six invalidations ayant pu s'exécuter après qu'une création voisine ait déjà atteint la
-  // base. Le nombre exact n'est donc PAS garanti par construction (`invalidateActiveForUser` et
-  // `create` ne formant pas une seule opération atomique — voir ce commentaire), même s'il est
-  // dans les faits presque toujours N pour N. La seule affirmation que ce test vérifie, et qui
-  // est vraie dans TOUS les cas observés, est qu'il en reste PLUS QU'UN : si la course était
-  // fermée (un seul lien vivant par compte, quoi qu'il arrive), ce nombre serait toujours 1.
+  // Tour de correction 1, Important n°3, PRÉCISÉ au tour 2 (mon « de 4 à 6, non déterministe »
+  // restait imprécis) PUIS AU TOUR 3 : mon chiffre « 29 fois sur 30 » ne s'est pas reproduit à la
+  // relecture (neuf exécutions sur neuf y ont donné quatre ou cinq survivants). Je n'affirme donc
+  // plus AUCUNE fréquence précise — le nombre de survivants est VARIABLE, sans ratio stable
+  // observé d'une machine ou d'un tour à l'autre. Contrairement à la réémission SÉQUENTIELLE
+  // ci-dessus (qui invalide bien le lien précédent), l'ÉMISSION n'a pas de course fermée — voir
+  // le commentaire détaillé sur `AccessLinkDomain.issue`. Le nombre exact n'est PAS garanti par
+  // construction (`invalidateActiveForUser` et `create` ne formant pas une seule opération
+  // atomique). La seule affirmation que ce test vérifie, et qui est vraie dans TOUS les cas
+  // observés jusqu'ici, quelle que soit la machine, est qu'il en reste PLUS QU'UN : si la course
+  // était fermée (un seul lien vivant par compte, quoi qu'il arrive), ce nombre serait toujours 1.
   // Vérifié directement contre la base (`usedAt: null` = utilisable), sans passer par la route de
   // consommation : ce n'est pas ce qui est éprouvé ici.
   it('emissions simultanees pour le meme compte : plus d un lien reste utilisable (course NON fermee, assume)', async () => {

@@ -78,18 +78,27 @@ class FastifyHttpServer implements HttpServer {
       // (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16 — celle ou Docker place les reseaux definis
       // par l'utilisateur, dont `proxy`/`deploy/compose.yaml`, sans jamais en fixer l'adresse
       // exacte) ; `loopback`/`linklocal` couvrent les deux autres formes usuelles d'un saut de
-      // confiance local. AUCUNE des trois ne depend de savoir si le port du conteneur `back` est,
-      // par ailleurs, publie sur l'hote : un appelant qui se connecte directement depuis une
-      // adresse PUBLIQUE (le seul cas ou une exposition directe du port changerait quelque
-      // chose) n'appartient a aucune de ces plages, donc son en-tete est ignore quoi qu'il
-      // arrive — la garantie ne repose plus sur une hypothese de topologie reseau.
+      // confiance local.
       //
-      // Ce que ceci ne couvre pas, et qui reste un vrai residu (pas une hypothese a verifier
-      // ailleurs, mais une limite du modele de confiance « par plage ») : un autre conteneur
-      // deja present sur le MEME reseau Docker `proxy` a, lui aussi, une adresse privee, donc
-      // logee dans les memes plages — un tel appelant serait indistinguable de Traefik par ce
-      // seul critere. Ce residu suppose une infrastructure deja compromise (un conteneur non
-      // legitime admis sur le reseau `proxy`), pas un appelant public ordinaire.
+      // RESERVE (tour de correction 3 -- la version precedente etait trop rassurante, plus etroite
+      // que la vraie breche mesuree). MESURE par execution : un appelant qui atteint le port
+      // PUBLIE du conteneur `back` -- que ce soit un appel LOCAL (meme machine) ou un appel via
+      // l'adresse RESEAU DE L'HOTE lui-meme (le port publie ecoute sur toutes les interfaces,
+      // `ports: - '${PORT}:${PORT}'` dans `deploy/compose.yaml`, jamais modifie ici -- question de
+      // deploiement, pas de code) -- voit son adresse traduite par Docker et ARRIVE au conteneur
+      // comme une adresse PRIVEE, donc DANS la plage de confiance ci-dessus. Le residu n'est donc
+      // pas limite a « un autre conteneur deja present sur le reseau Docker `proxy` » : il couvre
+      // tout appelant qui atteint l'HOTE lui-meme, conteneur ou non.
+      //
+      // CE QUI RESTE NON VERIFIE, et qu'il ne faut pas non plus affirmer dans l'autre sens : pour
+      // un appelant reellement EXTERNE (depuis l'internet public, atteignant l'adresse publique de
+      // l'hote), la traduction d'adresse standard sur Docker/Linux (DNAT sans SNAT/hairpin)
+      // PRESERVE l'adresse source d'origine -- le conteneur verrait alors une adresse PUBLIQUE,
+      // hors de toute plage de confiance, et son en-tete resterait ignore. Rien dans ce depot ne
+      // permet donc d'affirmer que la production, telle que reellement deployee (au-dela de ce que
+      // `deploy/compose.yaml` decrit), est vulnerable par ce vecteur precis pour un appelant public
+      // ordinaire -- ni de l'exclure pour de bon : les deux moities de cette reserve se lisent
+      // ensemble, l'une n'efface pas l'autre.
       trustProxy: 'loopback,linklocal,uniquelocal',
     }
 

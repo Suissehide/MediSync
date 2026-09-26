@@ -95,4 +95,49 @@ describe('pathWithoutQuery', () => {
     expect(() => pathWithoutQuery('/patient/export%')).not.toThrow()
     expect(pathWithoutQuery('/patient/export%')).toBe('/patient/export%')
   })
+
+  // Tour de correction 3, mineur : six formes voisines fuyaient encore — un caractere blanc ou
+  // invisible glisse au milieu d'un segment, ou une traversee de chemin (`.`/`..`) qui casse la
+  // continuite litterale du prefixe. Chacune doit tronquer IDENTIQUEMENT a la forme nue.
+  it('tronque malgre un espace glisse au milieu du segment (encode en %20)', () => {
+    expect(
+      pathWithoutQuery('/auth/access-link/con%20sume/UN-JETON'),
+    ).toBe('/auth/access-link/consume')
+  })
+
+  it('tronque malgre une tabulation glissee au milieu du segment (encodee en %09)', () => {
+    expect(
+      pathWithoutQuery('/auth/access-link/con%09sume/UN-JETON'),
+    ).toBe('/auth/access-link/consume')
+  })
+
+  it("tronque malgre un octet nul glisse au milieu du segment (encode en %00)", () => {
+    expect(
+      pathWithoutQuery('/auth/access-link/cons%00ume/UN-JETON'),
+    ).toBe('/auth/access-link/consume')
+  })
+
+  it('tronque malgre un espace de largeur nulle (U+200B, encode en %E2%80%8B) glisse au milieu du segment', () => {
+    expect(
+      pathWithoutQuery('/auth/access-link/cons%E2%80%8Bume/UN-JETON'),
+    ).toBe('/auth/access-link/consume')
+  })
+
+  it("tronque malgre un segment `.` insere avant le prefixe sensible", () => {
+    expect(
+      pathWithoutQuery('/auth/./access-link/consume/UN-JETON'),
+    ).toBe('/auth/access-link/consume')
+  })
+
+  it("tronque malgre une traversee de chemin (`..`) qui redescend sous le meme prefixe", () => {
+    expect(
+      pathWithoutQuery('/auth/access-link/autre-route/../consume/UN-JETON'),
+    ).toBe('/auth/access-link/consume')
+  })
+
+  it("ne fait PAS matcher une traversee de chemin qui ne redescend jamais sous le prefixe sensible", () => {
+    expect(
+      pathWithoutQuery('/auth/access-link/consume/../../etc/UN-IDENTIFIANT'),
+    ).toBe('/auth/access-link/consume/../../etc/UN-IDENTIFIANT')
+  })
 })

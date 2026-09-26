@@ -36,16 +36,16 @@ class AccessLinkDomain implements AccessLinkDomainInterface {
     // e2e (« reemettre un lien invalide le precedent »).
     //
     // CE QUE CECI NE FERME PAS (étape 4a, tâche 4, tour de correction 1, Important n°3, PRÉCISÉ
-    // au tour de correction 2 : « de 4 à 6, non déterministe » restait une imprécision) :
+    // au tour 2 — « de 4 à 6, non déterministe » restait imprécis — PUIS AU TOUR 3 : mon chiffre
+    // « 29 fois sur 30 » ne s'est pas reproduit à la relecture (neuf exécutions sur neuf y ont
+    // donné quatre ou cinq survivants). Je n'affirme donc plus de fréquence : le nombre de
+    // survivants est VARIABLE, sans chiffre stable observé d'une machine ou d'un tour à l'autre —
     // `invalidateActiveForUser` et `create` ne sont pas une seule opération atomique, et rien
-    // n'empêche N appels de ce domaine de s'exécuter en parallèle sur le même `userId`. Mesuré
-    // précisément (30 exécutions, 6 émissions simultanées chacune, voir « emissions simultanees »
-    // dans access-link.test.ts) : 29 fois sur 30, les SIX survivent (chaque invalidation part
-    // avant qu'aucune création voisine n'ait atteint la base) ; une fois sur 30, un seul a été
-    // invalidé — plausible sous contention du pool de connexions. PAS DÉTERMINISTE PAR
-    // CONSTRUCTION, donc, même si le cas courant (tous survivent) domine largement. Ce qui reste
-    // vrai dans TOUS les cas mesurés : il en reste PLUS D'UN — la course n'est pas fermée.
-    // Contrairement à `consumeIfActive`
+    // n'empêche N appels de ce domaine de s'exécuter en parallèle sur le même `userId`, chacun
+    // invalidant ce qui existait AVANT que les autres n'aient écrit leur propre ligne. Ce qui
+    // reste vrai dans TOUS les cas mesurés, à ce jour, quelle que soit la machine : il en reste
+    // PLUS D'UN — jamais réduit à 1 seul — la course n'est pas fermée. Contrairement à
+    // `consumeIfActive`
     // (Review Focus n°1), qui protège une PROPRIÉTÉ que le brief nomme explicitement (un jeton ne
     // se consomme qu'une fois, y compris sous course), le brief ne demande nulle part qu'ÉMETTRE
     // soit mutuellement exclusif — seulement que RÉÉMETTRE invalide ce qui précède, ce qui reste
