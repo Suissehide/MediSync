@@ -136,6 +136,15 @@ Key cross-cutting concerns:
   open it — the refusal names the missing pair. Four correction rounds went into this; the last
   independent sweep was 48 roots × 8 shapes, 157 095 648 cases at depth 11, zero leak, with
   monotonicity (no previously-refused case becomes allowed) measured on 7 031 232 cases.
+  **That monotonicity sweep is now a versioned, re-runnable test** rather than a number in a
+  report: `src/test/unit/infra/tenant-guard-monotonie.test.ts` pulls the comparison version out
+  of git (`MONOTONIE_REF`, default `HEAD` — so it answers "does what I am writing lose a
+  refusal?" while you edit) and carries no second copy of the guard. Depth 4 by default (~1 s,
+  runs in the unit suite); `MONOTONIE_REF=f022ef9 PROFONDEUR=9 …` reproduces task 15's 61 923 360
+  cases. Against `main` it reports ~1 800 "lost refusals" for the whole of étape 4a, all
+  explained: the `AccessLink`/`SuperAdminAccessGrant` tables that task 2 created (undeclared
+  relations used to be refused outright) plus task 1's deliberate `SUPERADMIN_GLOBAL_OPERATIONS`
+  reopening.
 - **A relation that REPARTS from a global model towards MANY rows is refused — under an ordinary
   tenant context too, in reads and in writes (étape 4a, task 15).** The ordinary path's safety
   comes from the ROOT's `where`, which pins the establishment. Relations *towards* a global model
@@ -154,12 +163,32 @@ Key cross-cutting concerns:
   reopens the bridge silently, so that test names cardinality on its own. Two consequences when
   adding a model: declare each relation with its cardinality, and expect the guard to refuse a
   nested write from a global root outright (no global model has a `NESTED_RELATIONS` entry —
-  use the scalar FK, `userId: u`, not `user: { connect: { id: u } }`). **Named limit, not a
-  proven safety:** the rule does not apply when there is NO context, because that is the login
-  path — `UserRepository.findByID` must read the account's whole membership tree to establish
-  which establishments it belongs to, and there is no ambient establishment to protect. What
-  holds it is `tenantContext.clear()` at the head of every request plus the fact that no tenant
-  route reaches a repository before `enter()`.
+  use the scalar FK, `userId: u`, not `user: { connect: { id: u } }`).
+  **What this rule does NOT cover — read this before assuming the boundary is closed.**
+    - **It does not apply without a context, and "without a context" means every non-tenant
+      route, not just login.** `routes/index.ts` calls `tenantContext.clear()` on every request
+      and `tenant.plugin.ts` is the only caller of `enter()`, so **no route outside
+      `/e/:establishmentId/...` ever enters a context**: `/auth`, `/me` and the whole
+      `/super-admin` prefix run with no store, their repositories entering `runAsSuperAdmin`
+      only case by case. Concrete consequence: a future read added under `/super-admin` and left
+      outside a `runAsSuperAdmin` could reach patients through
+      `Establishment.findUnique({ include: { patients: true } })`, **bypassing
+      `SUPERADMIN_OPERATIONS` entirely** — whose lack of `Patient.findMany` is precisely
+      motivated by "the super-admin counts, he does not read". Pre-existing, not a regression
+      (measured), deliberately left open at task 15 and carried to the head of étape 4b.
+    - **On the write side it closes the nested `data` only.** A FLAT write on the global row
+      itself is still wide open under a tenant context — `Establishment.update({ where: { id:
+      someOther }, data: { name } })`, `Establishment.deleteMany({})`,
+      `User.updateMany({ data: { isSuperAdmin: true } })` — because a global model has no tenant
+      column to compare. Pre-existing and out of task 15's scope (whose defect was relation
+      crossing). The super-admin context has a counterpart for this
+      (`SUPERADMIN_GLOBAL_OPERATIONS`); the tenant context has none.
+    - **A read that only needs a few columns of `User` must use `findIdentity`, never
+      `findByID`.** `findByID` carries the whole membership tree, so it is now refused under a
+      tenant context — and `ActivityLogSubscriber` swallowed that refusal behind a
+      `.catch(() => null)`, silently writing every activity-log row of every tenant route with a
+      null author. `src/test/e2e/activity-log-auteur.test.ts` asserts the author's **name**;
+      asserting that the row exists proves nothing, because it always did.
 - **A temporary grant does NOT bypass the guard — it confers memberships.** A super-admin holding
   a live `SuperAdminAccessGrant` does not enter the `superadmin` context to reach an
   establishment's screens: he goes down the **ordinary tenant path**, with the memberships the

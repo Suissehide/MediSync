@@ -10,3 +10,7 @@
 # Sauvegardes de base : contiennent des donnees patients, jamais versionnees
 *.dump
 *.sql.gz
+
+# Version de reference materialisee a la volee par tenant-guard-monotonie.test.ts (tiree de git,
+# supprimee en fin de test) — ne doit jamais etre versionnee.
+back/src/main/infra/orm/tenant-guard.baseline-monotonie.ts

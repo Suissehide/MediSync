@@ -28,8 +28,15 @@ const buildSubscriber = () => {
     findMany: jest.fn(),
     deleteOlderThan: jest.fn(),
   }
+  // TACHE 15 (etape 4a, tour de correction 1) : `findIdentity`, pas `findByID` — le souscripteur
+  // n'a jamais eu besoin que de deux colonnes de la ligne `User`, et `findByID` y ajoutait
+  // l'arbre des appartenances, refuse sous contexte de tenant depuis le resserrement du
+  // garde-fou. CE BOUCHON EST PRECISEMENT CE QUI A AVEUGLE CE FICHIER : il rend ce qu'on lui
+  // demande de rendre, donc il ne pouvait pas voir la vraie lecture tomber. La propriete « le
+  // nom de l'auteur est bien inscrit » est tenue ailleurs, sur la vraie base :
+  // `src/test/e2e/activity-log-auteur.test.ts`.
   const userRepository = {
-    findByID: jest.fn(async () => ({
+    findIdentity: jest.fn(async () => ({
       id: 'user-1',
       firstName: 'Ada',
       lastName: 'Lovelace',
@@ -77,7 +84,7 @@ describe("ActivityLogSubscriber – un echec d'ecriture ne fuit pas le nom de l'
   it('ne journalise jamais le prenom/nom de l utilisateur quand le depot echoue', async () => {
     const { appEventBus, activityLogRepository, userRepository, logger, calls } =
       buildSubscriber()
-    userRepository.findByID.mockResolvedValue({
+    userRepository.findIdentity.mockResolvedValue({
       id: 'user-1',
       firstName: USER_FIRST_NAME,
       lastName: USER_LAST_NAME,

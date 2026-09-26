@@ -129,10 +129,13 @@ export const NESTED_RELATIONS: Record<string, Record<string, string>> = {
 // CE QUI RESTE À CETTE TABLE malgré ce démenti, et pourquoi elle n'est pas supprimée : sous
 // `tenant` et sous `superadmin`, `assertNoGlobalToManyBridge` (plus bas) refuse désormais ces
 // relations quelle que soit l'opération, findUnique compris — cette table-ci n'y ajoute plus
-// rien. Elle reste seule en charge du cas SANS CONTEXTE (le chemin de connexion), où la règle de
-// cardinalité ne s'applique pas : elle y interdit encore un `findMany` qui ramènerait ces enfants
-// pour plusieurs comptes ou plusieurs établissements à la fois. C'est une borne plus faible, et
-// elle est maintenant nommée comme telle plutôt que présentée comme une garantie.
+// rien. Elle reste SEULE EN CHARGE du cas sans contexte, c'est-à-dire de TOUTE route non tenant
+// (`/auth`, `/me`, tout `/super-admin` — voir assertNoGlobalToManyBridge pour pourquoi la liste
+// est aussi large), où la règle de cardinalité ne s'applique pas : elle y interdit encore un
+// `findMany` qui ramènerait ces enfants pour plusieurs comptes ou plusieurs établissements à la
+// fois, mais elle laisse passer le `findUnique` — dont ce commentaire vient d'établir qu'il ne
+// garantit rien. C'est une borne FAIBLE, et elle est maintenant nommée comme telle plutôt que
+// présentée comme une garantie.
 //
 // Ce contrôle ÉCHOUE OUVERT : une relation absente de cette table n'est simplement pas vue, donc
 // l'include passe sans contrôle. La table porte donc une obligation d'exhaustivité, tenue par
@@ -958,17 +961,33 @@ const assertNoGlobalBridgeUnderSuperAdmin = (
 // (membership.repository.ts, accessLink.repository.ts) et qui ne peut rien traverser — une ligne
 // ne mène qu'à une ligne. Fermer celle-là aussi serait fermer plus que le défaut.
 //
-// SOUS QUELS CONTEXTES. `tenant` et `superadmin`. Pas `system` (assertNestedInclude n'y est pas
-// appelée du tout, voir assertGlobalScope/assertTenantScope). Et pas SANS CONTEXTE : là, il
-// n'existe aucun établissement ambiant à protéger, et c'est le chemin de la CONNEXION —
+// SOUS QUELS CONTEXTES — ET LA PORTÉE EXACTE DE CE QUI RESTE OUVERT, qui est BIEN PLUS LARGE
+// que « le chemin de la connexion » (tour de correction 1 : une version précédente de ce
+// paragraphe écrivait cela, et c'était faux).
+//
+// La règle s'applique sous `tenant` et sous `superadmin`. Pas sous `system`
+// (assertNestedInclude n'y est pas appelée du tout). Et pas SANS CONTEXTE — or « sans contexte »
+// ne veut pas dire « la connexion » : `routes/index.ts` appelle `tenantContext.clear()` en tête
+// de CHAQUE requête, et `tenant.plugin.ts` est le SEUL à appeler `enter()`. Donc **aucune route
+// hors `/e/:establishmentId/...` n'entre jamais dans un contexte** : `/auth`, `/me` et TOUT le
+// préfixe `/super-admin` s'exécutent sans store, leurs dépôts n'entrant dans `runAsSuperAdmin`
+// qu'au coup par coup, requête par requête. Cette règle-ci ne les couvre donc pas.
+//
+// CE QUE CELA LAISSE OUVERT, écrit en clair plutôt que découvert plus tard : une lecture future
+// ajoutée sous `/super-admin` et laissée hors d'un `runAsSuperAdmin` pourrait atteindre des
+// patients par `Establishment.findUnique({ include: { patients: true } })` — en CONTOURNANT
+// entièrement `SUPERADMIN_OPERATIONS`, dont l'absence de `Patient.findMany` est justement motivée
+// par « le super-admin compte, il ne lit pas ». Ce n'est pas une régression (mesuré : le verdict
+// est identique avant et après cette tâche), c'est un trou PRÉEXISTANT, laissé ouvert à dessein
+// ici — le fermer est un travail distinct, avec un vrai risque de casse sur la connexion et sur
+// `/me`. Porté en tête de l'étape 4b.
+//
+// Pourquoi la connexion est quand même la raison de ne pas le fermer à la légère :
 // `UserRepository.findByID` lit `user.findUniqueOrThrow({ include: { establishmentMemberships:
 // { include: { establishment, serviceMemberships: { include: { service } } } } } })` juste après
-// `tenantContext.clear()` (routes/index.ts), précisément pour savoir à quels établissements le
-// compte appartient. Cette lecture-là est la source de l'autorité, pas une traversée de
-// frontière ; l'y refuser casserait la connexion sans rien protéger. C'est une LIMITE, pas une
-// sûreté démontrée, et elle est nommée ici plutôt que tue : ce qui la tient est que le contexte
-// est reposé à zéro en tête de CHAQUE requête et qu'aucune route de tenant n'atteint un
-// repository avant `enter()`.
+// `clear()`, précisément pour ÉTABLIR à quels établissements le compte appartient. Cette
+// lecture-là est la source de l'autorité, pas une traversée de frontière. Mais c'est un exemple,
+// pas la borne : la borne est « toute route non tenant ».
 //
 // Sous superadmin, la règle plus large du tour 3 (assertNoGlobalBridgeUnderSuperAdmin, appelée
 // juste avant) refuse déjà ces cas-là et les autres ; celle-ci ne l'exclut pas pour autant —
@@ -1124,13 +1143,27 @@ const assertSuperAdminGlobalOperationDeclared = (model: string, operation: strin
 // les modèles de tenant que assertNoGlobalBridgeUnderSuperAdmin ferme du côté `include`.
 //
 // TÂCHE 15 (étape 4a) — CE CONTRÔLE VAUT AUSSI SOUS UN CONTEXTE DE TENANT, et ne le faisait pas.
-// Le pont était donc fermé en lecture (par le `where` de la racine, tant que la descente restait
-// dans du tenant) et OUVERT EN ÉCRITURE : sous un contexte de tenant ordinaire,
+// Sous un contexte de tenant ordinaire,
 // `Establishment.create({ data: { name, patients: { create: … } } })` écrivait un patient dans un
 // autre établissement, et `Establishment.update({ where: { id: autre }, data: { patients:
 // { create: … } } })` l'écrivait dans un établissement EXISTANT d'à côté (mesuré, voir
-// `src/test/e2e/tenant-guard-pont-global.test.ts`). C'est le pire des deux états : on croirait le
-// cloisonnement acquis. D'où l'appel ci-dessous pour `tenant` comme pour `superadmin`.
+// `src/test/e2e/tenant-guard-pont-global.test.ts`). D'où l'appel ci-dessous pour `tenant` comme
+// pour `superadmin`.
+//
+// CE QUE CET APPEL NE FERME PAS, ET IL FAUT LE LIRE AVANT DE CROIRE L'ÉCRITURE VERROUILLÉE
+// (tour de correction 1 : une version précédente de ce paragraphe parlait d'un côté écriture
+// « refermé », ce qui promettait plus que ce code ne tient — exactement le genre de phrase que ce
+// fichier existe pour empêcher). Ce qui est fermé, c'est le `data` IMBRIQUÉ : une écriture qui
+// atteint une AUTRE table à travers une relation. L'écriture PLATE sur la ligne globale
+// elle-même reste, sous contexte de tenant, entièrement ouverte — un modèle global n'a aucune
+// colonne de tenant à comparer, donc rien ici ne s'y oppose :
+//     Establishment.update({ where: { id: unAutre }, data: { name: '…' } })
+//     Establishment.deleteMany({})
+//     User.updateMany({ data: { isSuperAdmin: true } })
+// C'est PRÉEXISTANT, hors du périmètre de la tâche 15 (dont le défaut était le franchissement de
+// relation), et non traité ici plutôt que traité à moitié. Le pendant existe déjà pour le
+// superadmin — SUPERADMIN_GLOBAL_OPERATIONS, plus haut, qui n'autorise que des couples nommés ;
+// il n'a pas d'équivalent pour le contexte tenant.
 //
 // POURQUOI LA LISTE BLANCHE ICI, ET LA CARDINALITÉ EN LECTURE — l'asymétrie est délibérée, pas un
 // oubli. Côté écriture, le mécanisme de déclaration existe déjà (NESTED_RELATIONS) et aucun
@@ -1158,8 +1191,9 @@ const assertGlobalScope = (model: string, operation: string, args: Dict, store: 
     assertSuperAdminGlobalOperationDeclared(model, operation)
   }
   // Tâche 15 : `tenant` en plus de `superadmin`. Ni `system` (qui contourne tout le garde-fou par
-  // construction) ni l'absence de contexte (le chemin de connexion : aucun établissement ambiant
-  // à protéger — même limite, nommée, que pour la lecture, voir assertNoGlobalToManyBridge).
+  // construction) ni l'absence de contexte — laquelle couvre TOUTE route non tenant (`/auth`,
+  // `/me`, tout `/super-admin`), pas seulement la connexion : même limite, et même portée, que
+  // pour la lecture (voir assertNoGlobalToManyBridge, qui la détaille).
   if (store?.kind === 'superadmin' || store?.kind === 'tenant') {
     assertGlobalNestedWrite(model, operation, args, store)
   }

@@ -191,20 +191,52 @@ describe('MODEL_RELATIONS reflete prisma/schema.prisma', () => {
   // et une cardinalite perimee ne se voit pas a l'usage : une relation devenue a-plusieurs et
   // restee declaree `one` rouvrirait le pont en silence, sans qu'aucune requete du depot ne
   // change de forme. Les deux sens sont tenus en une fois (l'ecart est symetrique).
-  it('porte la cardinalite exacte de chaque relation du schema', () => {
+  //
+  // TROIS SENS, PAS DEUX (tour de correction 1 de la tache 15 — la version precedente n'en
+  // tenait que deux, et la revue l'a montre par execution : en SUPPRIMANT une relation du schema
+  // tout en gardant son entree dans la table, trois tests rougissaient mais PAS celui-ci, qui
+  // est justement le seul a dire QUELLE relation a bouge). Les trois ecarts possibles entre la
+  // table et le schema sont donc nommes ici, chacun avec son mot :
+  //   - `cardinalite` : la relation existe des deux cotes, mais `one`/`many` ne correspond pas ;
+  //   - `absente de la table` : le schema la declare, la table l'ignore ;
+  //   - `absente du schema` : la table la declare, le schema ne l'a plus (entree morte).
+  it('porte la cardinalite exacte de chaque relation du schema, dans les trois sens', () => {
     const ecarts: string[] = []
     for (const model of modelNames) {
       const declarees = MODEL_RELATIONS[model] ?? {}
-      for (const [field, relation] of Object.entries(relationsOf(models.get(model) ?? ''))) {
+      const auSchema = relationsOf(models.get(model) ?? '')
+      for (const [field, relation] of Object.entries(auSchema)) {
         const declaree = declarees[field]
-        if (declaree && declaree.list !== relation.list) {
+        if (!declaree) {
+          ecarts.push(`${model}.${field} -> ${relation.model} : absente de la table`)
+          continue
+        }
+        if (declaree.list !== relation.list) {
           ecarts.push(
-            `${model}.${field} : schema=${relation.list ? 'many' : 'one'}, table=${declaree.list ? 'many' : 'one'}`,
+            `${model}.${field} : cardinalite schema=${relation.list ? 'many' : 'one'}, table=${declaree.list ? 'many' : 'one'}`,
           )
+        }
+        if (declaree.model !== relation.model) {
+          ecarts.push(
+            `${model}.${field} : cible schema=${relation.model}, table=${declaree.model}`,
+          )
+        }
+      }
+      for (const [field, declaree] of Object.entries(declarees)) {
+        if (!auSchema[field]) {
+          ecarts.push(`${model}.${field} -> ${declaree.model} : absente du schema (entree morte)`)
         }
       }
     }
     expect(ecarts).toEqual([])
+  })
+
+  // Le meme troisieme sens au niveau du MODELE, pas seulement de la relation : une table qui
+  // declare un modele disparu du schema (ou l'inverse) est deja tenue par « declare chaque
+  // modele du schema » plus haut, dont l'egalite de cles couvre les deux sens.
+  it('ne declare aucun modele absent du schema', () => {
+    const inconnus = Object.keys(MODEL_RELATIONS).filter((model) => !modelNames.has(model))
+    expect(inconnus).toEqual([])
   })
 
   // Et la propriete que la tache 15 exploite vraiment, dite en clair plutot que laissee a deduire
