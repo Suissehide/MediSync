@@ -35,7 +35,21 @@ NPM scripts are orchestrated by [wireit](https://github.com/google/wireit) (see 
 - Run a single test: `npx jest -c src/test/jest.config.ts -t "<name regex>"` or `npx jest <path/to/file.test.ts>`.
 - `npm run cover` / `cover:unit` / `cover:e2e` — same as test variants with coverage.
 - `npm run validate` — `deps:check` + `build` + `lint` + `cover` (used by CI).
-- `npm run check:unused-methods` — custom static analysis (`scripts/detect-unused-methods.ts`).
+- `npm run check:unused-methods` — **declared but not runnable**: `scripts/detect-unused-methods.ts`
+  does not exist (`scripts/` holds only `bootstrap-super-admin.ts` and its `tsconfig.json`).
+  Pre-existing; left as-is rather than silently removed.
+- `npm run bootstrap:super-admin -- <email>` — **the only way to set `User.isSuperAdmin`.** No
+  route writes that flag and the seed creates no super-admin, deliberately: an account of that
+  power should not be one click away. It **promotes an existing account** (unknown address is
+  refused), is idempotent, and also **reactivates** a deactivated identity it promotes — saying so
+  in its output, because promoting a deactivated account would otherwise create a dormant
+  privileged account. It is also the **only** way back for a deactivated super-admin:
+  `assertNotSuperAdmin` refuses (de)activation from establishment administration in both
+  directions, on purpose. It calls the locally installed `tsx` rather than `with:tsx`, which fails
+  under Node 26 (`Cannot find module './plugins'`) — that breakage is **still open for
+  `npm run seed`**, which shares `with:tsx`.
+- Neither `lint` nor `build:check-typedefs` covers `back/scripts/`; that directory has its own
+  `tsconfig.json`, added with the bootstrap script.
 
 Prisma:
 
@@ -100,6 +114,66 @@ Key cross-cutting concerns:
   `prisma/schema.prisma`). A relation whose carrying model is of family establishment and whose target is a
   service model requires its own `where: { serviceId }` on the include/select: reading from an establishment row otherwise
   returns the children of *every* service.
+- **The `superadmin` context is a THIRD kind of context, with a declared capability list, and it
+  fails closed (étape 4a).** The super-admin has no tenant, so `tenantContext.runAsSuperAdmin()`
+  gives him a context of his own — not a bypass. What he may do is enumerated pair by pair in
+  **two** tables in `tenant-guard.ts`, and an absent pair is refused exactly like a missing
+  context:
+    - `SUPERADMIN_OPERATIONS` — tenant models. Today: `Service` (`count`, `findMany`),
+      `EstablishmentMembership` (`count`, `findMany`, `create`), `ServiceMembership` (`count`,
+      `findMany`), `Patient` (**`count` only** — never a row), `ActivityLog` (`findMany`, `count`).
+    - `SUPERADMIN_GLOBAL_OPERATIONS` — global models, its exact mirror. A global model **absent
+      from this table is refused in full under `superadmin`, reads included**. Writes are named
+      one by one: `User.create` (not `upsert`, which would overwrite an existing account),
+      `Establishment.create`, `AccessLink.create`/`updateMany`,
+      `SuperAdminAccessGrant.create`/`update` (**not `delete`** — revoking sets `revokedAt`; the
+      row is the accounting trail the whole grant mechanism rests on, and the HTTP `DELETE` verb
+      is not a row deletion).
+  Two further checks apply under this context and are not replaced by either table: an
+  `include`/`select` crossing the global↔tenant boundary is refused
+  (`assertNoGlobalBridgeUnderSuperAdmin`), and nested writes under a declared `data` still go
+  through `assertNestedRelations`. Adding a global model to the schema without an entry does not
+  open it — the refusal names the missing pair. Four correction rounds went into this; the last
+  independent sweep was 48 roots × 8 shapes, 157 095 648 cases at depth 11, zero leak, with
+  monotonicity (no previously-refused case becomes allowed) measured on 7 031 232 cases.
+- **A temporary grant does NOT bypass the guard — it confers memberships.** A super-admin holding
+  a live `SuperAdminAccessGrant` does not enter the `superadmin` context to reach an
+  establishment's screens: he goes down the **ordinary tenant path**, with the memberships the
+  grant yields (`domain/accessGrant.domain.ts`, `effectiveMemberships`) — establishment `ADMIN`
+  plus `COORDINATEUR` on each **active** service. Proven by comparing 26 routes between a real
+  member and a granted super-admin, status and body byte for byte, no divergence either way
+  (`src/test/e2e/super-admin-acces.test.ts`); without a grant, 404 everywhere. Three things follow
+  and are easy to get wrong: the grant is re-evaluated **at read time** against the
+  `isSuperAdmin` flag (dropping the flag drops the access immediately, no re-login), the
+  repository **re-reads the flag itself** from a bare id (no caller-supplied user object — a
+  forged literal used to reopen it), and a grant **never materialises a real membership**, so no
+  code may assume "the creator is a member of this establishment" (that assumption was true when
+  written and false two tasks later; it produced a misleading 404 on service creation).
+  `src/test/unit/domain/effectiveMemberships-seul-appelant.test.ts` keeps `effectiveMemberships`
+  the single caller — but it does NOT catch a local re-implementation, and it says so.
+- **An access link resets the password of the `User`, which is GLOBAL — this is the invariant that
+  governs every route returning a token.** A link does not grant access "to this establishment",
+  it grants access **to the account**, hence to everything that account reaches. Three privilege
+  escalations came out of ignoring it (an establishment admin taking over an account of another
+  establishment, taking over the super-admin account, and — through the twin global column
+  `User.deactivatedAt` — deactivating the super-admin platform-wide). They are closed by **one
+  shared guard**, `MembershipDomain.assertIssuableToken`, called before every establishment-level
+  `issue()` — not a copy per route. What keeps it honest:
+  `src/test/unit/infra/access-link-issue-sites.test.ts`, which enumerates the `.issue(` call sites
+  in `src/main` and requires the domain to call the guard at least as often as it issues. **Put
+  the guard on the token, never on the route**: the previous round put it on reissue only, and
+  `POST /account` walked straight past it. The escape hatch that makes the refusal tenable is
+  `UserDomain.reissueAccessLink`, under `/super-admin` — do not remove it without reopening the
+  question (there is no forgotten-password route and `PATCH /me` does not change a password).
+- **Never log an access-link token, and never put one in a URL.** The token travels only in the
+  **body** of `POST /auth/access-link/consume`; the DB holds only its SHA-256
+  (`AccessLink.tokenHash`), never the token. `pathWithoutQuery` (`utils/url-helper.ts`) strips
+  only the query string, so a token in a *path segment* would survive into the request log intact
+  — which is exactly how the leak reopened at étape 4a, through the **404 path** of a route that
+  did not exist. `src/test/unit/interfaces/access-link-token-leak.test.ts` watches the log
+  channels and was proven by sabotage to exercise the real domain and repository. **Known gaps in
+  that net, do not read it as universal**: a response *header* carrying the token passes, and a
+  direct write to stdout passes. Both verified on the wire.
 - **Clinical field filtering (`utils/clinical-fields.ts`, wired into `tenant.plugin.ts`)**: `notes`, `details`,
   `medicalDiagnosis` (now on `PatientServiceFile`, the per-service sub-record — see below, moved off `Patient` in
   étape 3) and `transmissionNotes` (patient enrolled in an appointment) are **not** filtered in response schemas.
@@ -167,6 +241,15 @@ Key cross-cutting concerns:
   `assertRoutePermission` on each of the two route plugins, and `assertTenantShapedRoute` at the root of
   `routes/index.ts`, which judges on the URL shape — so a route carrying `:establishmentId` registered *outside*
   those plugins, and therefore outside the resolution, permission and clinical-filtering hooks, also fails the boot.
+  **Routes under `/super-admin` have the same pair** (étape 4a): `superAdminRoutes` adds
+  `assertRoutePermission` plus an `onRequest` `requireSuperAdmin` that answers **404, never 403**,
+  to an account without the flag — same stance as tenant resolution, don't reveal a zone you may
+  not see. And `assertSuperAdminShapedRoute`, posted at the root, fails the boot for any route
+  whose URL starts with that prefix but was registered elsewhere. **Known limit, same as its
+  tenant sibling**: Fastify exposes no way, inside `onRoute`, to inspect the hook chain a route
+  will actually inherit, so this guard forces a permission to be *declared* — it does **not**
+  prove `requireSuperAdmin` was wired onto that route. The declared capability lists of the
+  tenant guard are the last net there.
 - **`request.tenant` is optional on purpose.** It only exists once `resolveTenant` has run. On the failure path it is
   never set, and later hooks still execute on the error payload — the three tenant hooks therefore check it and fail
   closed (clinical filters strip, permission returns the same 404 as resolution). In a handler, use `requireTenant`
