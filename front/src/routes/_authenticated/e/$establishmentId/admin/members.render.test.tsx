@@ -123,6 +123,11 @@ const routeSoignants: Route = {
   respond: () => ({ ok: true, status: 200, json: async () => [] }),
 }
 
+const routeServices = (services: unknown[] = []): Route => ({
+  match: (url, method) => url.endsWith('/admin/services') && method === 'GET',
+  respond: () => ({ ok: true, status: 200, json: async () => services }),
+})
+
 const membreActif = {
   id: 'm1',
   role: 'MEMBER' as const,
@@ -217,6 +222,7 @@ describe('etats de l ecran des membres', () => {
   it('affiche le contenu une fois la reponse arrivee', async () => {
     monter([
       routeSoignants,
+      routeServices(),
       {
         match: (url, method) => url.endsWith('/admin/members') && method === 'GET',
         respond: () => ({ ok: true, status: 200, json: async () => [membreActif] }),
@@ -227,5 +233,65 @@ describe('etats de l ecran des membres', () => {
       expect(screen.getByText('membre@chu.fr')).toBeInTheDocument()
     })
     expect(screen.queryByText(/impossible de charger les membres/i)).not.toBeInTheDocument()
+  })
+
+  // Tour de correction 1 (Important n°2) : avant cette tache, la colonne
+  // « Role service » ne montrait QUE le role dans un contexte de service qui
+  // n'existe jamais sur cet ecran — toujours « — », meme pour un membre
+  // reellement affecte. Verrouille le VRAI rendu (virtualiseur simule, sinon
+  // vrai par vacuite — voir front/CLAUDE.md, § Testing) : le nom du service
+  // ET son role, pour CHAQUE affectation, plus la degradation propre quand
+  // le service n'est pas (encore) dans la liste chargee.
+  it('affiche le nom du service ET le role pour chaque affectation reelle (multi-service)', async () => {
+    const membreAffecte = {
+      id: 'm2',
+      role: 'MEMBER' as const,
+      soignantId: null,
+      user: {
+        id: 'u3',
+        email: 'affecte@chu.fr',
+        firstName: null,
+        lastName: null,
+        deactivatedAt: null,
+      },
+      serviceMemberships: [
+        { serviceId: 'svcA', role: 'COORDINATEUR' as const },
+        // Service absent de la liste chargee (course, ou tout autre ecart) :
+        // le role reste visible, sans nom de service devant.
+        { serviceId: 'svc-disparu', role: 'LECTURE' as const },
+      ],
+    }
+    monter([
+      routeSoignants,
+      routeServices([
+        {
+          id: 'svcA',
+          name: 'Cardiologie',
+          createdAt: '2026-01-01T00:00:00.000Z',
+          deactivatedAt: null,
+        },
+      ]),
+      {
+        match: (url, method) => url.endsWith('/admin/members') && method === 'GET',
+        respond: () => ({
+          ok: true,
+          status: 200,
+          json: async () => [membreActif, membreAffecte],
+        }),
+      },
+    ])
+
+    await waitFor(() => {
+      expect(screen.getByText('affecte@chu.fr')).toBeInTheDocument()
+    })
+
+    expect(screen.getByText('Cardiologie : Coordinateur')).toBeInTheDocument()
+    expect(screen.getByText('Lecture')).toBeInTheDocument()
+
+    // Le membre sans aucune affectation garde son tiret, sur SA propre
+    // ligne — jamais confondu avec celles de l'autre membre.
+    const ligneMembreActif = screen.getByText('membre@chu.fr').closest('tr')
+    expect(ligneMembreActif).not.toBeNull()
+    expect(ligneMembreActif?.textContent).toContain('—')
   })
 })

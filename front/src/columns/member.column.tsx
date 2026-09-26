@@ -9,6 +9,7 @@ import {
 } from '../constants/member.constant.ts'
 import type { EstablishmentRole } from '../types/auth.ts'
 import type { Member } from '../types/member.ts'
+import type { Service } from '../types/service.ts'
 import type { Soignant } from '../types/soignant.ts'
 
 const columnHelper = createColumnHelper<Member>()
@@ -33,11 +34,16 @@ const RoleBadge = ({
 )
 
 type MemberColumnOptions = {
-  // Le service du contexte courant : cette étape ne montre (et ne modifie)
-  // que le rôle du membre dans cet unique service, pas dans les autres
-  // auxquels il pourrait être affecté (multi-service : étape 2). Nul sur un
-  // écran d'administration sans service.
-  serviceId: string | null
+  // Tâche 14b (tour de correction 1, Important n°2) : la liste COMPLÈTE des
+  // services de l'établissement courant (`GET /e/:establishmentId/admin/
+  // services`, même requête qu'`EditMemberForm`) — sert à résoudre le NOM
+  // d'un service à partir de `serviceMemberships[].serviceId`. Avant cette
+  // tâche, la colonne « Rôle service » ne montrait que le rôle dans le
+  // service d'un CONTEXTE qui n'existe jamais sur cet écran (toujours
+  // `null`) : elle affichait donc systématiquement « — », y compris pour un
+  // membre réellement affecté — un geste comblé mais invisible ailleurs que
+  // dans la popup d'édition.
+  services: Service[]
   soignants: Soignant[]
   onToggleActive: (member: Member) => void
   onRemove: (member: Member) => void
@@ -47,7 +53,7 @@ type MemberColumnOptions = {
 }
 
 export const getMemberColumns = ({
-  serviceId,
+  services,
   soignants,
   onToggleActive,
   onRemove,
@@ -82,22 +88,33 @@ export const getMemberColumns = ({
     id: 'serviceRole',
     header: 'Rôle service',
     cell: ({ row }) => {
-      // Sur un écran d'administration sans service, `serviceId` est nul :
-      // aucune affectation ne peut correspondre, on ne cherche même pas.
-      const assignment =
-        serviceId === null
-          ? undefined
-          : row.original.serviceMemberships.find(
-              (membership) => membership.serviceId === serviceId,
-            )
-      if (!assignment) {
+      const assignments = row.original.serviceMemberships
+      if (assignments.length === 0) {
         return <span className="text-text-light">—</span>
       }
+      // Une affectation par service (multi-service, un rôle par service —
+      // `ServiceMembership`, back/prisma/schema.prisma) : toutes montrées,
+      // jamais une seule au hasard. Le nom du service est résolu par
+      // `services` (liste complète de l'établissement) ; un service absent
+      // de cette liste (chargement en cours, ou tout autre écart, voir
+      // `editMemberForm.tsx#buildServiceAssignments`) affiche quand même le
+      // rôle, sans faire disparaître l'affectation.
       return (
-        <RoleBadge
-          label={SERVICE_ROLE_LABEL[assignment.role]}
-          className="bg-primary/10 text-primary border border-primary/20"
-        />
+        <div className="flex flex-wrap gap-1">
+          {assignments.map((assignment) => {
+            const service = services.find((s) => s.id === assignment.serviceId)
+            const label = service
+              ? `${service.name} : ${SERVICE_ROLE_LABEL[assignment.role]}`
+              : SERVICE_ROLE_LABEL[assignment.role]
+            return (
+              <RoleBadge
+                key={assignment.serviceId}
+                label={label}
+                className="bg-primary/10 text-primary border border-primary/20"
+              />
+            )
+          })}
+        </div>
       )
     },
   }),

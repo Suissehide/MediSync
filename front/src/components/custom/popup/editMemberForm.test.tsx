@@ -53,6 +53,16 @@ const servicesFixture = [
   { id: 'svcA', name: 'Cardiologie', createdAt: '2026-01-01T00:00:00.000Z', deactivatedAt: null },
   { id: 'svcB', name: 'Neurologie', createdAt: '2026-01-01T00:00:00.000Z', deactivatedAt: null },
   { id: 'svcC', name: 'Pédiatrie', createdAt: '2026-01-01T00:00:00.000Z', deactivatedAt: null },
+  // Minutieusement absent des fixtures avant le tour de correction 1 : rien
+  // n'éprouvait alors le suffixe « (désactivé) » de la liste — un service
+  // désactivé, sans affectation, reste proposé (l'établissement peut le
+  // réactiver, voir `admin/services.tsx`).
+  {
+    id: 'svcD',
+    name: 'Urgences',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    deactivatedAt: '2026-02-01T00:00:00.000Z',
+  },
 ]
 
 type Route = {
@@ -119,20 +129,95 @@ afterEach(() => {
 })
 
 describe('EditMemberForm — affecter un membre a un service', () => {
-  it("propose TOUS les services de l'etablissement, chacun editable (plus de commande figee sur un contexte inexistant)", async () => {
+  // Tour de correction 1 : la version precedente de ce test ne verifiait
+  // que la presence des libelles et `toBeEnabled()` — devenu vrai par
+  // vacuite depuis que la desactivation conditionnelle a disparu du
+  // composant (il n'y a plus DE commande a desactiver). Verifie desormais
+  // des valeurs par defaut PRECISES, une par service, chacune liee a son
+  // propre libelle plutot qu'affirmee en vrac.
+  it("propose TOUS les services de l'etablissement, chacun pre-rempli avec le role reellement affecte (ou Aucun), y compris un service desactive", async () => {
     renderForm(buildFetchMock([routeSoignants, routeServices()]))
     await ouvrir()
 
     await waitFor(() => {
       expect(screen.getByLabelText('Cardiologie')).toBeInTheDocument()
     })
-    expect(screen.getByLabelText('Neurologie')).toBeInTheDocument()
-    expect(screen.getByLabelText('Pédiatrie')).toBeInTheDocument()
+
+    // Deux services deja affectes : chacun montre SON role, pas un autre.
+    expect(screen.getByLabelText('Cardiologie')).toHaveTextContent('Coordinateur')
+    expect(screen.getByLabelText('Neurologie')).toHaveTextContent('Intervenant')
+    // Aucune affectation : « Aucun », jamais un role herite d'un autre service.
+    expect(screen.getByLabelText('Pédiatrie')).toHaveTextContent('Aucun')
+
+    // Service desactive, sans affectation : propose quand meme (avec son
+    // suffixe), a « Aucun » comme les autres services non affectes.
+    const libelleUrgences = screen.getByLabelText(/Urgences \(désactivé\)/i)
+    expect(libelleUrgences).toBeInTheDocument()
+    expect(screen.getByLabelText(/Urgences \(désactivé\)/i)).toHaveTextContent('Aucun')
 
     // Plus jamais desactivee : l'ancienne commande unique se desactivait
     // systematiquement (`serviceId === null`, toujours vrai sur cet ecran).
     expect(screen.getByLabelText('Cardiologie')).toBeEnabled()
     expect(screen.getByLabelText('Pédiatrie')).toBeEnabled()
+  })
+
+  // LE GESTE REEL DE L'UTILISATEUR (tour de correction 1, Important n°1) :
+  // la fonction pure `buildServiceAssignments` etait eprouvee, mais rien ne
+  // couvrait le CABLAGE React qui alimente `serviceRoles` a chaque clic — le
+  // relecteur a remplace la fusion (`setServiceRoles((prev) => ({ ...prev,
+  // [id]: value }))`) par un ecrasement (`setServiceRoles({ [id]: value })`)
+  // sans faire rougir aucun des neuf tests precedents. Necessite le
+  // polyfill de `hasPointerCapture`/`scrollIntoView` (`src/test/setup.ts`) :
+  // sans lui, RadixSelect leve a l'ouverture sous jsdom.
+  it("changer le role d'un service via le VRAI composant ne touche pas le role deja choisi d'un autre service", async () => {
+    const fetchMock = buildFetchMock([
+      routeSoignants,
+      routeServices(),
+      {
+        match: (url, method) => url.endsWith('/admin/members/m1') && method === 'PATCH',
+        respond: () => ({ ok: true, status: 200, json: async () => ({ ...memberFixture }) }),
+      },
+    ])
+    renderForm(fetchMock)
+    await ouvrir()
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Cardiologie')).toHaveTextContent('Coordinateur')
+    })
+    expect(screen.getByLabelText('Neurologie')).toHaveTextContent('Intervenant')
+
+    // Change UNIQUEMENT le role de Neurologie (svcB), par un vrai clic dans
+    // le VRAI menu deroulant.
+    await userEvent.click(screen.getByLabelText('Neurologie'))
+    await userEvent.click(await screen.findByText('Secrétariat'))
+
+    // Immediatement apres le clic, AVANT toute soumission : Cardiologie
+    // (svcA), jamais touchee, doit toujours afficher SON role d'origine.
+    expect(screen.getByLabelText('Cardiologie')).toHaveTextContent('Coordinateur')
+    expect(screen.getByLabelText('Neurologie')).toHaveTextContent('Secrétariat')
+
+    await userEvent.click(screen.getByRole('button', { name: /^enregistrer$/i }))
+
+    await waitFor(() => {
+      const patchCall = fetchMock.mock.calls.find(
+        ([url, init]) =>
+          String(url).endsWith('/admin/members/m1') && init?.method === 'PATCH',
+      )
+      expect(patchCall).toBeDefined()
+    })
+
+    const patchCall = fetchMock.mock.calls.find(
+      ([url, init]) =>
+        String(url).endsWith('/admin/members/m1') && init?.method === 'PATCH',
+    )
+    const body = JSON.parse(String(patchCall?.[1]?.body))
+    expect(body.services).toEqual(
+      expect.arrayContaining([
+        { serviceId: 'svcA', role: 'COORDINATEUR' },
+        { serviceId: 'svcB', role: 'SECRETARIAT' },
+      ]),
+    )
+    expect(body.services).toHaveLength(2)
   })
 
   it("soumettre sans rien changer renvoie EXACTEMENT les affectations existantes (aucune n'est effacee)", async () => {

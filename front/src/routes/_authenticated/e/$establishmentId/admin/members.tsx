@@ -14,8 +14,8 @@ import {
   useMemberMutations,
   useMembersQuery,
 } from '@/queries/useMembers.ts'
+import { useServicesQuery } from '@/queries/useServices.ts'
 import { useEstablishmentSoignantsQuery } from '@/queries/useSoignant.ts'
-import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { Member } from '@/types/member.ts'
 import { resolveEstablishmentContext } from '@/utils/tenant-context.ts'
 
@@ -45,13 +45,19 @@ function MemberSettings() {
   const { establishmentId } = useParams({
     from: '/_authenticated/e/$establishmentId/admin/members',
   })
-  const context = useAuthStore((state) => state.context)
 
   const { members, isPending, error } = useMembersQuery()
   // Prefixe d'etablissement, pas de service : ce layout n'en porte aucun
   // (voir `admin.tsx`), et `useSoignantQueries` (prefixe de service) leverait
   // ici. Voir le commentaire de `useEstablishmentSoignantsQuery`.
   const { soignants } = useEstablishmentSoignantsQuery()
+  // Même requête que l'onglet des services (`admin/services.tsx`) : sert à
+  // résoudre le NOM d'un service pour la colonne « Rôle service »
+  // (`member.column.tsx`, tour de correction 1, Important n°2) — sans
+  // état de chargement/erreur dédié ici, même précédent que `soignants`
+  // ci-dessus (une liste absente ou pas encore chargée retombe sur `[]`,
+  // et la colonne affiche alors le rôle sans le nom plutôt que rien).
+  const { services } = useServicesQuery()
   const { removeMember, deactivateMember, reactivateMember } =
     useMemberMutations()
 
@@ -99,15 +105,13 @@ function MemberSettings() {
   const columns = useMemo(
     () =>
       getMemberColumns({
-        // Ecran sous le layout d'établissement (`admin.tsx`) : le contexte
-        // n'y porte jamais de service, `serviceId` vaut toujours `null`.
-        serviceId: context?.serviceId ?? null,
+        services: services ?? [],
         soignants: soignants ?? [],
         onToggleActive: handleToggleActive,
         onRemove: setRemoveTarget,
         isToggling,
       }),
-    [context?.serviceId, soignants, handleToggleActive, isToggling],
+    [services, soignants, handleToggleActive, isToggling],
   )
 
   return (
