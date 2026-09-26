@@ -167,7 +167,11 @@ describe('unicite des appelants nommes d effectiveMemberships et de findForUser'
 
   // Tour de correction 2 (tache 8) : voir le commentaire en tete de fichier, point C., pour ce
   // que ce test ferme et ce qu'il ne ferme pas.
-  it('liveGrantsForUser n est appelee, dans back/src/main, qu aux cinq emplacements autorises', () => {
+  // Revue finale de l'etape 4a, mineur : ce titre disait « cinq emplacements » — or
+  // `AUTORISES_LIVE_GRANTS_FOR_USER` (ci-dessus) nomme TROIS fichiers, pour CINQ appels au total
+  // (2 + 2 + 1). « Emplacement » se lisait comme un fichier ; c'est le nombre d'appels qu'il
+  // fallait dire.
+  it('liveGrantsForUser n est appelee, dans back/src/main, qu aux trois fichiers autorises (cinq appels au total)', () => {
     verifieUnicite(
       appelsTrouves(APPEL_LIVE_GRANTS_FOR_USER, false),
       AUTORISES_LIVE_GRANTS_FOR_USER,

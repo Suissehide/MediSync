@@ -291,7 +291,16 @@ Key cross-cutting concerns:
   Adding an undeclared `runAsSystem` call to `src/main` is a guard violation, not a passing test. Known gap: the
   allow-list only covers `src/main` — several legitimate `src/test` callers construct the same
   "system" store to exercise the tenant guard itself, so that directory isn't covered (same class of gap as the
-  typecheck one above). Because `GET /patient/:id` carries `followedElsewhere`, and the identity-search route
+  typecheck one above). **A narrower, separate gap, worth stating rather than assuming away** (found at the étape
+  4a final review): the named allow-list above (`AUTORISES` in `runAsSystem-unicite.test.ts`) exists only for
+  `runAsSystem`. `runAsSuperAdmin`'s own call sites (twelve in `src/main` today) are not enumerated by name
+  anywhere — a thirteenth call added anywhere in `src/main` leaves every check in that file green. Only its
+  *construction* is unique (one `run` call, one literal `{ kind: "superadmin" }`, both confined to
+  `tenant-context.ts`), which closes a second way *in* but not "who may invoke it once inside". This is defensible
+  as-is: once inside the mode, every operation still passes through the declared, exhaustive
+  `SUPERADMIN_OPERATIONS`/`SUPERADMIN_GLOBAL_OPERATIONS` tables, so a thirteenth call site cannot by itself widen
+  what it's allowed to do — but that is a different guarantee from "every site is named and justified", and the
+  surrounding vocabulary should not be read as promising the latter. Because `GET /patient/:id` carries `followedElsewhere`, and the identity-search route
   (used before creating a patient, to avoid duplicates) returns bare identifiers, the signal is only computed and
   returned **when the current service already has a sub-record for that patient** — otherwise finding someone by
   name would itself leak "followed elsewhere" to a service that has never actually seen them. See

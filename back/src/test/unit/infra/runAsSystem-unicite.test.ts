@@ -71,6 +71,20 @@ import ts from 'typescript'
 // rien mais substitue au filtre de tenant une liste declaree et exhaustive de couples (modele,
 // operation) — SUPERADMIN_OPERATIONS, infra/orm/tenant-guard.ts.
 //
+// CE QUE CE FICHIER NE FAIT PAS, A DIRE PLUTOT QUE LAISSER SUPPOSER (revue finale, mineur) : le
+// volet A ci-dessus (AUTORISES, un tableau nomme fichier par fichier) N'EXISTE QUE POUR
+// `runAsSystem`. Les APPELS a `.runAsSuperAdmin(` (douze dans src/main, aujourd'hui) ne sont
+// enumeres nulle part ici — un treizieme site, ajoute n'importe ou dans src/main, laisserait les
+// trois volets de ce fichier entierement verts. Seule sa CONSTRUCTION reste unique (volets B et
+// C : un seul appel a `run` pour ce mode, une seule ecriture litterale de `{ kind: "superadmin" }`,
+// tous deux dans `tenant-context.ts`) — ce qui ferme « une seconde facon d'ENTRER dans ce mode »,
+// pas « qui a le droit de l'INVOQUER une fois entre ». C'est defendable tel quel : une fois dans
+// ce mode, chaque operation reste bornee par la liste declaree et exhaustive de
+// `SUPERADMIN_OPERATIONS`/`SUPERADMIN_GLOBAL_OPERATIONS` (tenant-guard.ts), qui refuse tout
+// couple absent — un treizieme APPEL a `runAsSuperAdmin` ne peut donc pas, a lui seul, elargir ce
+// qu'il est possible d'y faire. Mais ce n'est pas la meme garantie que « chaque site est nomme et
+// justifie », et rien ne doit laisser croire le contraire.
+//
 // Une exception a une regle de cloisonnement ne vaut que si chaque emploi reste declare et
 // borne — spec §5.3 : "cela se verifie par un test, pas par une relecture." Ce test relit les
 // sources plutot que de faire confiance a la memoire, a la maniere de
