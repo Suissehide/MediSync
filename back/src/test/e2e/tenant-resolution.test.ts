@@ -153,6 +153,45 @@ describe('resolution du tenant', () => {
     }
   })
 
+  // Tour de correction 1 (tâche 3) — Important n°1 de la revue : retirer le drapeau super-admin
+  // ne retirait pas l'accès. Jugé à la lecture, comme l'expiration : la requête suivante, sur le
+  // MÊME cookie, referme l'accès sans reconnexion.
+  it('l octroi ne confere plus rien des que son titulaire n est plus super-admin', async () => {
+    const est = await createEstablishment('Octroi')
+    const service = await createService(est.id, 'Service')
+    const superAdmin = await createUser({
+      email: 'super@test.fr',
+      isSuperAdmin: true,
+    })
+    const cookies = await signIn(t.app, 'super@test.fr')
+
+    await grantAccess({
+      userId: superAdmin.id,
+      establishmentId: est.id,
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+
+    const avant = await t.app.inject({
+      method: 'GET',
+      url: tenantUrl(est.id, service.id, '/patient'),
+      cookies,
+    })
+    expect(avant.statusCode).toBe(200)
+
+    // Le drapeau est retiré, l'octroi lui-même reste en base, non expiré, non révoqué.
+    await testDb.user.update({
+      where: { id: superAdmin.id },
+      data: { isSuperAdmin: false },
+    })
+
+    const apres = await t.app.inject({
+      method: 'GET',
+      url: tenantUrl(est.id, service.id, '/patient'),
+      cookies,
+    })
+    expect(apres.statusCode).toBe(404)
+  })
+
   it('/me renvoie l arbre des appartenances', async () => {
     const { est, serviceA, cookiesA } = await twoServicesScenario(t.app)
     const res = await t.app.inject({
@@ -163,7 +202,45 @@ describe('resolution du tenant', () => {
     expect(res.statusCode).toBe(200)
     expect(res.json()).toMatchObject({
       establishments: [
-        { id: est.id, services: [{ id: serviceA.id, role: 'COORDINATEUR' }] },
+        {
+          id: est.id,
+          services: [{ id: serviceA.id, role: 'COORDINATEUR' }],
+          origine: 'reelle',
+        },
+      ],
+    })
+  })
+
+  // Tour de correction 1 (tâche 3) — Important n°2 de la revue : aucun test n'affirmait que
+  // `/me` liste bien un établissement octroyé, alors que c'est le second des deux seuls
+  // appelants de `effectiveMemberships` — la moitié de la garantie de cette tâche n'était donc
+  // vérifiée par rien.
+  it('/me liste un etablissement octroye, avec son origine', async () => {
+    const est = await createEstablishment('Octroi')
+    const service = await createService(est.id, 'Service')
+    const superAdmin = await createUser({
+      email: 'super@test.fr',
+      isSuperAdmin: true,
+    })
+    const cookies = await signIn(t.app, 'super@test.fr')
+
+    await grantAccess({
+      userId: superAdmin.id,
+      establishmentId: est.id,
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+
+    const res = await t.app.inject({ method: 'GET', url: '/me', cookies })
+    expect(res.statusCode).toBe(200)
+    expect(res.json()).toMatchObject({
+      establishments: [
+        {
+          id: est.id,
+          name: est.name,
+          role: 'ADMIN',
+          origine: 'octroi',
+          services: [{ id: service.id, role: 'COORDINATEUR' }],
+        },
       ],
     })
   })

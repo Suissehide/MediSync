@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify'
 
+import { liveGrantsForUser } from '../../../../domain/accessGrant.domain'
 import { toMeResponse } from '../../../../utils/me-mapper'
 import {
   meResponseSchema,
@@ -14,7 +15,10 @@ const meRouter: FastifyPluginAsync = (fastify) => {
     '/',
     { schema: { response: { 200: meResponseSchema } } },
     async (request) => {
-      const grants = await accessGrantRepository.findForUser(request.currentUser.id)
+      const grants = await liveGrantsForUser(
+        request.currentUser,
+        accessGrantRepository,
+      )
       return toMeResponse(request.currentUser, grants, new Date())
     },
   )
@@ -34,10 +38,11 @@ const meRouter: FastifyPluginAsync = (fastify) => {
           newPassword,
         })
       }
-      const [updated, grants] = await Promise.all([
-        userDomain.findByID(userID),
-        accessGrantRepository.findForUser(userID),
-      ])
+      // Séquentiel, pas `Promise.all` : `liveGrantsForUser` a besoin du `isSuperAdmin` à jour de
+      // `updated` (un profil peut changer entre deux requêtes) pour décider s'il vaut la peine de
+      // lire les octrois — voir accessGrant.domain.ts.
+      const updated = await userDomain.findByID(userID)
+      const grants = await liveGrantsForUser(updated, accessGrantRepository)
       return toMeResponse(updated, grants, new Date())
     },
   )

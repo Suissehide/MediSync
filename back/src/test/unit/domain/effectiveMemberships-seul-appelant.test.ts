@@ -7,21 +7,33 @@ import { join, relative, sep } from 'node:path'
 // cheveu, il existera un acces que l'un accorde et que l'autre refuse — ou l'inverse, ce qui est
 // pire.
 //
-// Ce test relit les sources plutot que de faire confiance a la memoire, a la maniere de
-// `front/src/test/lecture-directe-du-cache.test.ts` : il compte les APPELS a
-// `effectiveMemberships(` dans `back/src/main` et exige qu'ils ne vivent qu'aux deux
-// emplacements autorises, un chacun. Un troisieme appel — ou une reimplementation locale qui
-// recalculerait le meme arbre sans jamais nommer la fonction — doit faire rougir ce test.
-// La definition elle-meme (`export const effectiveMemberships = (...) => {`) ne matche jamais
-// cette regex : un `=` s'intercale toujours entre le nom et la parenthese d'appel — verifie en
-// plus par `FICHIER_DEFINITION` plus bas, exclu explicitement plutot que de compter sur cette
-// seule propriete de la regex.
+// CE QUE CE FICHIER GARANTIT, DIT SANS EXAGERER (tour de correction 1, tache 3 — la revue a
+// montre qu'une version precedente de ce commentaire pretendait plus) : il relit les sources,
+// a la maniere de `front/src/test/lecture-directe-du-cache.test.ts`, et surveille deux choses,
+// chacune par un NOM :
+//
+//   A. tout appel a `effectiveMemberships(` — attrape un TROISIEME appelant NOMME, et fait
+//      rougir si l'un des deux appelants autorises perd son appel (ou en gagne un second en
+//      silence) ;
+//   B. tout appel a `.findForUser(` (la lecture du repository) — attrape un appelant qui
+//      court-circuiterait `liveGrantsForUser` (accessGrant.domain.ts) et donc son garde
+//      superadmin (voir ce fichier : un octroi ne confere rien a qui n'est plus super-admin, et
+//      la lecture elle-meme ne doit s'executer que pour ce cas).
+//
+// CE QU'IL NE GARANTIT PAS : une REIMPLEMENTATION locale qui recalculerait le meme arbre
+// d'appartenances (ou relirait le repository via un detour — alias, `.bind`, cle de crochet
+// calculee) SANS JAMAIS PRONONCER CES DEUX NOMS echapperait entierement a ce test. Fermer ce
+// reste exigerait soit une analyse de flux de donnees complete, soit une instrumentation a
+// l'execution (intercepter reellement les fonctions exportees) — un chantier a part, hors de ce
+// qu'une lecture statique des sources peut honnetement garantir (meme limite, deja actee, que
+// `runAsSystem-unicite.test.ts`, fin de fichier).
 const APPEL_EFFECTIVE_MEMBERSHIPS = /effectiveMemberships\(/
+const APPEL_FIND_FOR_USER = /\.findForUser\(/
 
-// Les deux seuls appelants legitimes. Chaque entree porte un nombre D'APPELS, pas un nombre de
-// fichiers : un second appel ajoute dans un fichier deja permis doit etre discute, pas herite
-// silencieusement.
-const AUTORISES = [
+// Les deux seuls appelants legitimes d'`effectiveMemberships`. Chaque entree porte un nombre
+// D'APPELS, pas un nombre de fichiers : un second appel ajoute dans un fichier deja permis doit
+// etre discute, pas herite silencieusement.
+const AUTORISES_EFFECTIVE_MEMBERSHIPS = [
   {
     fichier: 'utils/me-mapper.ts',
     raison: 'toMeResponse — alimente le selecteur d etablissement/service du front',
@@ -34,9 +46,23 @@ const AUTORISES = [
   },
 ]
 
-// Fichier qui DEFINIT la fonction : `export const effectiveMemberships = (...) => {`. Ce n'est
-// pas un appel (pas de parenthese immediatement apres le nom, un `=` s'intercale), mais il est
-// exclu explicitement plutot que de compter sur la seule forme de la regex pour le distinguer.
+// Seul appelant legitime de `AccessGrantRepositoryInterface.findForUser` : `liveGrantsForUser`,
+// qui n'invoque la lecture que pour un compte encore super-admin (voir accessGrant.domain.ts).
+// Tout autre appel contournerait ce garde.
+const AUTORISES_FIND_FOR_USER = [
+  {
+    fichier: 'domain/accessGrant.domain.ts',
+    raison: 'liveGrantsForUser — seul point qui decide QUAND lire, et donc quand entrer le contexte superadmin',
+    appels: 1,
+  },
+]
+
+// Fichiers qui DEFINISSENT les fonctions surveillees : `export const effectiveMemberships = (...)`
+// et `export const liveGrantsForUser = (...) => user.isSuperAdmin ? accessGrantRepository.findForUser(...)`.
+// Une DEFINITION n'est pas un APPEL (`effectiveMemberships =` porte un `=` que la regex d'appel
+// ne matche jamais), mais la ligne `accessGrantRepository.findForUser(user.id)` a l'INTERIEUR de
+// `liveGrantsForUser` EST un appel — c'est l'appel legitime, deja compte dans
+// `AUTORISES_FIND_FOR_USER` ci-dessus. Rien a exclure ici pour ce volet, donc.
 const FICHIER_DEFINITION = 'domain/accessGrant.domain.ts'
 
 const RACINE = join(__dirname, '../../../main')
@@ -53,36 +79,49 @@ const fichiersDeProduction = (dossier: string): string[] =>
     return [chemin]
   })
 
-const appelsTrouves = (): { fichier: string; ligne: number }[] =>
+const appelsTrouves = (
+  motif: RegExp,
+  exclureDefinition: boolean,
+): { fichier: string; ligne: number }[] =>
   fichiersDeProduction(RACINE).flatMap((chemin) => {
     const relatif = relative(RACINE, chemin).split(sep).join('/')
-    if (relatif === FICHIER_DEFINITION) {
+    if (exclureDefinition && relatif === FICHIER_DEFINITION) {
       return []
     }
     return readFileSync(chemin, 'utf8')
       .split('\n')
       .map((ligne, index) => ({ fichier: relatif, ligne: index + 1, texte: ligne }))
-      .filter((emplacement) => APPEL_EFFECTIVE_MEMBERSHIPS.test(emplacement.texte))
+      .filter((emplacement) => motif.test(emplacement.texte))
       .map(({ fichier, ligne }) => ({ fichier, ligne }))
   })
 
-describe('unicite de l appelant d effectiveMemberships', () => {
-  it('n est appelee, dans back/src/main, qu aux deux emplacements autorises', () => {
-    const trouvees = appelsTrouves()
+const verifieUnicite = (
+  trouvees: { fichier: string; ligne: number }[],
+  autorises: { fichier: string; appels: number }[],
+): void => {
+  const interdits = trouvees.filter(
+    (emplacement) => !autorises.some((permis) => permis.fichier === emplacement.fichier),
+  )
+  // Sens 1 : un appelant supplementaire, non nomme dans la liste, doit faire rougir ce test.
+  expect(interdits).toEqual([])
+  // Sens 2 : un emplacement autorise qui perdrait son appel (ou en gagnerait un second en
+  // silence) doit rougir aussi, sans quoi la liste pourrit au premier refactor.
+  for (const permis of autorises) {
+    expect(
+      trouvees.filter((emplacement) => emplacement.fichier === permis.fichier).length,
+    ).toBe(permis.appels)
+  }
+}
 
-    const interdits = trouvees.filter(
-      (emplacement) => !AUTORISES.some((permis) => permis.fichier === emplacement.fichier),
+describe('unicite des appelants nommes d effectiveMemberships et de findForUser', () => {
+  it('effectiveMemberships n est appelee, dans back/src/main, qu aux deux emplacements autorises', () => {
+    verifieUnicite(
+      appelsTrouves(APPEL_EFFECTIVE_MEMBERSHIPS, true),
+      AUTORISES_EFFECTIVE_MEMBERSHIPS,
     )
+  })
 
-    // Sens 1 : un troisieme appelant doit faire rougir ce test.
-    expect(interdits).toEqual([])
-
-    // Sens 2 : un emplacement autorise qui perdrait son appel (ou en gagnerait un second en
-    // silence) doit rougir aussi, sans quoi la liste pourrit au premier refactor.
-    for (const permis of AUTORISES) {
-      expect(
-        trouvees.filter((emplacement) => emplacement.fichier === permis.fichier).length,
-      ).toBe(permis.appels)
-    }
+  it('findForUser n est appelee, dans back/src/main, que par liveGrantsForUser', () => {
+    verifieUnicite(appelsTrouves(APPEL_FIND_FOR_USER, false), AUTORISES_FIND_FOR_USER)
   })
 })

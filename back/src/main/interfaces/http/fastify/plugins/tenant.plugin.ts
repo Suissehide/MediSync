@@ -12,7 +12,10 @@ import type {
 import type { FastifyPluginAsync } from 'fastify/types/plugin'
 import fastifyPlugin from 'fastify-plugin'
 
-import { effectiveMemberships } from '../../../../domain/accessGrant.domain'
+import {
+  effectiveMemberships,
+  liveGrantsForUser,
+} from '../../../../domain/accessGrant.domain'
 import type { LiveGrant } from '../../../../types/domain/accessGrant.domain.interface'
 import type { UserWithMemberships } from '../../../../types/infra/orm/repositories/user.repository.interface'
 import type { Tenant } from '../../../../types/utils/tenant-context'
@@ -52,14 +55,18 @@ type TenantParams = { establishmentId: string; serviceId?: string }
 // le tenant. 404 dans tous les cas d'échec, y compris un octroi qui vient d'expirer, pour ne pas
 // révéler l'existence d'un établissement ou d'un service auquel on n'a plus accès.
 //
-// `grants`/`now` par défaut (`[]` / `new Date()`) : sans octroi, le résultat est exactement celui
-// d'avant l'étape 4a (seules les appartenances réelles comptent) — un appelant qui ne les fournit
-// pas (voir src/test/unit/interfaces/tenant-resolution.test.ts) n'a donc rien à changer.
+// `grants` N'A PAS de valeur par défaut, à dessein (tour de correction 1, tâche 3) : un défaut
+// à `[]` compilerait sans broncher pour un appelant qui aurait oublié de lire les octrois — la
+// divergence exacte que cette tâche existe pour empêcher, silencieuse puisque ce fichier est
+// typé et vérifié par `tsc` (voir back/CLAUDE.md). Chaque appelant, y compris un test, doit donc
+// dire explicitement « aucun octroi » (`[]`) plutôt que de le recevoir par omission. `now` garde
+// un défaut (`new Date()`) : aucun appelant ne peut se tromper en omettant l'heure réelle, ce
+// n'est pas la même classe de risque.
 export const resolveTenantFromUser = (
   user: UserWithMemberships,
   params: TenantParams,
   options: { requireEstablishmentAdmin: boolean },
-  grants: LiveGrant[] = [],
+  grants: LiveGrant[],
   now: Date = new Date(),
 ): Tenant => {
   const effectives = effectiveMemberships(user, grants, now)
@@ -157,31 +164,37 @@ const tenantPlugin: FastifyPluginAsync = fastifyPlugin(
     const { tenantContext, accessGrantRepository } = fastify.iocContainer
 
     // Depuis la tâche 3 (étape 4a), résoudre le tenant lit aussi les octrois vivants de
-    // l'utilisateur (`accessGrantRepository.findForUser`, un aller-retour DB) AVANT d'appeler
-    // `tenantContext.enter` — alors qu'avant, `enter` était le tout premier geste, synchrone, du
-    // hook. Ce délai réel change la forme qu'exige `tenantContext.enter` (qui repose sur
-    // `AsyncLocalStorage.enterWith`) : posé en mode PROMESSE (fonction `async` à un seul
-    // argument, comme le reste de ce fichier), démontré par exécution
-    // (`tenant-plugin-concurrency.test.ts` rougissait, message « Tenant context missing », sur
-    // les DEUX requêtes) que le contexte posé par `enterWith` ne survit plus jusqu'au handler dès
-    // que deux requêtes concurrentes traversent chacune un `await` réel avant lui — Fastify
-    // avance alors vers la phase suivante par un chemin qui ne descend plus de la continuation où
-    // `enterWith` a été appelé. Remède, vérifié par le même test : repasser en mode CALLBACK
-    // (troisième paramètre `done`, type `onRequestHookHandler` plutôt
-    // qu'`onRequestAsyncHookHandler`) et n'appeler `done()` qu'APRÈS `enter()`, à l'intérieur du
-    // `.then()` de la promesse asynchrone — Fastify enchaîne alors la phase suivante à même cette
-    // continuation, et le contexte survit, y compris sous deux requêtes concurrentes.
-    const resolve = (
-      options: { requireEstablishmentAdmin: boolean },
-    ): onRequestHookHandler =>
+    // l'utilisateur (`liveGrantsForUser`, un aller-retour DB conditionnel — voir
+    // accessGrant.domain.ts) AVANT d'appeler `tenantContext.enter` — alors qu'avant, `enter` était
+    // le tout premier geste, synchrone, du hook. Ce délai réel change la forme qu'exige
+    // `tenantContext.enter` (qui repose sur `AsyncLocalStorage.enterWith`).
+    //
+    // CE N'EST PAS UN DÉFAUT DE CONCURRENCE — corrigé dans la description après une revue qui l'a
+    // démontré par exécution (tour de correction 1, tâche 3) : posé en mode PROMESSE (fonction
+    // `async` à un seul argument, comme le reste de ce fichier), le contexte posé par
+    // `enterWith` ne survivait pas jusqu'au handler pour une requête SEULE et SÉQUENTIELLE — pas
+    // seulement sous deux requêtes concurrentes. La suite e2e entière le démontrait (79 des 113
+    // tests rougissaient, un échec déterministe, pas une course rare frôlée de peu). Sa seule
+    // bonne nouvelle : c'était une perte TOTALE du contexte pour la requête qui le posait, jamais
+    // une contamination croisée vers une autre — huit tenants résolus ensemble donnaient huit
+    // résultats corrects une fois le remède posé, et les deux façons naïves d'écrire encore le
+    // crochet échouaient elles aussi fermé (404/500), jamais en silence.
+    //
+    // Remède, vérifié par exécution (`tenant-plugin-concurrency.test.ts` et par la suite e2e
+    // entière) : repasser en mode CALLBACK (troisième paramètre `done`, type
+    // `onRequestHookHandler` plutôt qu'`onRequestAsyncHookHandler`) et n'appeler `done()`
+    // qu'APRÈS `enter()`, à l'intérieur du `.then()` de la promesse asynchrone — Fastify enchaîne
+    // alors la phase suivante à même cette continuation, et le contexte survit.
+    const resolve = (options: {
+      requireEstablishmentAdmin: boolean
+    }): onRequestHookHandler =>
       function (
         this: FastifyInstance,
         request: FastifyRequest,
         _reply: FastifyReply,
         done: HookHandlerDoneFunction,
       ) {
-        accessGrantRepository
-          .findForUser(request.currentUser.id)
+        liveGrantsForUser(request.currentUser, accessGrantRepository)
           .then((grants) => {
             // Horloge prise ICI, à l'instant de la résolution — jamais mise en cache d'une
             // requête à l'autre : c'est ce qui fait qu'un octroi qui vient d'expirer est refusé
@@ -200,8 +213,14 @@ const tenantPlugin: FastifyPluginAsync = fastifyPlugin(
           .catch(done)
       }
 
-    fastify.decorate('resolveTenant', resolve({ requireEstablishmentAdmin: false }))
-    fastify.decorate('resolveEstablishmentAdmin', resolve({ requireEstablishmentAdmin: true }))
+    fastify.decorate(
+      'resolveTenant',
+      resolve({ requireEstablishmentAdmin: false }),
+    )
+    fastify.decorate(
+      'resolveEstablishmentAdmin',
+      resolve({ requireEstablishmentAdmin: true }),
+    )
 
     // Lit la permission déclarée dans `config` de la route ; le fail-safe
     // onRoute des plugins de routes garantit qu'elle existe.

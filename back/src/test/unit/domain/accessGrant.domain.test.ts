@@ -4,6 +4,12 @@ import type { UserWithMemberships } from '../../../main/types/infra/orm/reposito
 
 const maintenant = new Date('2026-09-25T12:00:00Z')
 
+// `isSuperAdmin: true` par défaut : un octroi (`SuperAdminAccessGrant`) n'existe dans ce dépôt
+// que pour un compte qui l'est — voir la tâche 8, qui émet ces lignes. Les fixtures qui
+// N'exercent aucun octroi (ex. `retire les etablissements et services desactives...`) restent
+// valides quelle que soit cette valeur, puisqu'elles ne passent jamais de `grants`. Les tests qui
+// veulent spécifiquement le cas « plus super-admin » (tour de correction 1) le disent en toutes
+// lettres, en écrasant ce champ.
 const baseUser = {
   id: 'u1',
   email: 'a@b.fr',
@@ -11,7 +17,7 @@ const baseUser = {
   salt: '',
   firstName: null,
   lastName: null,
-  isSuperAdmin: false,
+  isSuperAdmin: true,
   deactivatedAt: null,
 }
 
@@ -151,5 +157,54 @@ describe('effectiveMemberships', () => {
         origine: 'reelle',
       },
     ])
+  })
+
+  // Tour de correction 1 (tâche 3) — Important n°1 de la revue : retirer le drapeau super-admin
+  // ne retirait pas l'accès. Jugé ICI, contre le MÊME `user` que les appartenances réelles —
+  // jamais mis en cache — donc éprouvable sans reconnexion, exactement comme l'expiration.
+  it('un octroi ne confere rien si son titulaire n est plus super-admin', () => {
+    const compteOrdinaire: UserWithMemberships = {
+      ...baseUser,
+      isSuperAdmin: false,
+      establishmentMemberships: [],
+    }
+    expect(
+      effectiveMemberships(compteOrdinaire, [
+        { establishmentId: 'e1', expiresAt: new Date('2026-09-25T13:00:00Z'), revokedAt: null } as LiveGrant,
+      ], maintenant),
+    ).toEqual([])
+  })
+
+  // Tour de correction 1 (tâche 3) — Important n°4 de la revue : un membre réel d'un
+  // établissement DÉSACTIVÉ (donc invisible, comme partout ailleurs) ne doit pas voir cette
+  // absence comblée par un octroi visant le même établissement — ce que ferait une primauté
+  // « réelle sur octroi » calculée seulement sur les appartenances déjà filtrées actives.
+  it('un octroi ne ressuscite pas une appartenance reelle a un etablissement desactive', () => {
+    const membreDunEtablissementDesactive: UserWithMemberships = {
+      ...baseUser,
+      establishmentMemberships: [
+        {
+          id: 'em1',
+          userId: 'u1',
+          establishmentId: 'e1',
+          role: 'MEMBER',
+          soignantId: null,
+          createdAt: maintenant,
+          establishment: { id: 'e1', name: 'E1', createdAt: maintenant, deactivatedAt: maintenant },
+          serviceMemberships: [],
+        },
+      ],
+    }
+    expect(
+      effectiveMemberships(membreDunEtablissementDesactive, [
+        {
+          establishmentId: 'e1',
+          establishmentName: 'E1',
+          expiresAt: new Date('2026-09-25T13:00:00Z'),
+          revokedAt: null,
+          services: [{ id: 's1', name: 'S1' }],
+        },
+      ], maintenant),
+    ).toEqual([])
   })
 })

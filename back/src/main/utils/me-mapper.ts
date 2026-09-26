@@ -1,5 +1,5 @@
-import { effectiveMemberships } from '../domain/accessGrant.domain'
 import type { EstablishmentRole, ServiceRole } from '../../generated/enums'
+import { effectiveMemberships } from '../domain/accessGrant.domain'
 import type { LiveGrant } from '../types/domain/accessGrant.domain.interface'
 import type { UserWithMemberships } from '../types/infra/orm/repositories/user.repository.interface'
 
@@ -15,6 +15,11 @@ export type MeResponse = {
     role: EstablishmentRole
     soignantId: string | null
     services: { id: string; name: string; role: ServiceRole }[]
+    // Dit à l'écran d'où vient cet accès — voir R2 (décisions étape 4a) et
+    // `EffectiveMembership.origine` (types/domain/accessGrant.domain.interface.ts). Sans ce
+    // champ, `/me` ne pourrait jamais distinguer un établissement où l'utilisateur est
+    // réellement membre d'un établissement qu'un octroi temporaire lui ouvre.
+    origine: 'reelle' | 'octroi'
   }[]
 }
 
@@ -25,19 +30,26 @@ export type MeResponse = {
 // jamais diverger de ce que `/me` affiche — voir
 // src/test/unit/domain/effectiveMemberships-seul-appelant.test.ts.
 //
-// `grants`/`now` par défaut (`[]` / `new Date()`) : aucun octroi n'existait avant l'étape 4a, et
-// un appelant qui ne les fournit pas retrouve exactement le comportement d'avant (seulement les
-// appartenances réelles) plutôt que d'échouer.
+// `grants` N'A PAS de valeur par défaut, à dessein (tour de correction 1, tâche 3) : un défaut à
+// `[]` compilait sans broncher pour un appelant qui aurait oublié de lire les octrois —
+// exactement la divergence que cette tâche existe pour empêcher (démontré par la revue :
+// `routes/me.ts` omettant les octrois passait toute la suite existante, sans qu'aucun test ne
+// s'en aperçoive). `tsc` (voir back/CLAUDE.md) force donc chaque appelant de `src/main`, y
+// compris un futur, à dire explicitement « aucun octroi » (`[]`). `now` garde un défaut
+// (`new Date()`) : aucun appelant ne peut se tromper en omettant l'heure réelle, ce n'est pas la
+// même classe de risque.
 export const toMeResponse = (
   user: UserWithMemberships,
-  grants: LiveGrant[] = [],
+  grants: LiveGrant[],
   now: Date = new Date(),
 ): MeResponse => {
   const effectives = effectiveMemberships(user, grants, now)
   const membershipByEstablishment = new Map(
     user.establishmentMemberships.map((m) => [m.establishmentId, m]),
   )
-  const grantByEstablishment = new Map(grants.map((g) => [g.establishmentId, g]))
+  const grantByEstablishment = new Map(
+    grants.map((g) => [g.establishmentId, g]),
+  )
 
   return {
     id: user.id,
@@ -49,9 +61,14 @@ export const toMeResponse = (
       if (effective.origine === 'reelle') {
         // Garanti présent : `effectiveMemberships` ne construit une entrée 'reelle' qu'à partir
         // de `user.establishmentMemberships`, jamais d'ailleurs.
-        const membership = membershipByEstablishment.get(effective.establishmentId)
+        const membership = membershipByEstablishment.get(
+          effective.establishmentId,
+        )
         const serviceById = new Map(
-          (membership?.serviceMemberships ?? []).map((sm) => [sm.serviceId, sm.service.name]),
+          (membership?.serviceMemberships ?? []).map((sm) => [
+            sm.serviceId,
+            sm.service.name,
+          ]),
         )
         return {
           id: effective.establishmentId,
@@ -63,12 +80,15 @@ export const toMeResponse = (
             name: serviceById.get(service.id) ?? '',
             role: service.role,
           })),
+          origine: effective.origine,
         }
       }
       // origine === 'octroi' : les noms viennent du grant correspondant, jamais de
       // `user.establishmentMemberships` (l'utilisateur n'y appartient pas réellement).
       const grant = grantByEstablishment.get(effective.establishmentId)
-      const serviceNameById = new Map((grant?.services ?? []).map((s) => [s.id, s.name]))
+      const serviceNameById = new Map(
+        (grant?.services ?? []).map((s) => [s.id, s.name]),
+      )
       return {
         id: effective.establishmentId,
         name: grant?.establishmentName ?? '',
@@ -79,6 +99,7 @@ export const toMeResponse = (
           name: serviceNameById.get(service.id) ?? '',
           role: service.role,
         })),
+        origine: effective.origine,
       }
     }),
   }

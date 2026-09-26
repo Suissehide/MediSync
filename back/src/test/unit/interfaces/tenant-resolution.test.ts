@@ -22,9 +22,13 @@ const user: UserWithMemberships = {
   establishmentMemberships: [membership],
 }
 
+// `[]` explicite à chaque appel de `resolveTenantFromUser` ci-dessous : `grants` n'a plus de
+// valeur par défaut (tour de correction 1, tâche 3) — précisément pour qu'un appel qui l'omet ne
+// compile plus silencieusement dans `src/main`. Ce fichier n'est pas vérifié par `tsc` (voir
+// back/CLAUDE.md), mais le dit explicitement plutôt que de s'appuyer sur l'ancien défaut.
 describe('resolveTenantFromUser', () => {
   it('resout un couple etablissement/service dont l utilisateur est membre', () => {
-    expect(resolveTenantFromUser(user, { establishmentId: 'e1', serviceId: 's1' }, { requireEstablishmentAdmin: false }))
+    expect(resolveTenantFromUser(user, { establishmentId: 'e1', serviceId: 's1' }, { requireEstablishmentAdmin: false }, []))
       .toEqual({ userId: 'u1', establishmentId: 'e1', establishmentRole: 'MEMBER', serviceId: 's1', serviceRole: 'INTERVENANT', soignantId: 'so1' })
   })
 
@@ -34,7 +38,7 @@ describe('resolveTenantFromUser', () => {
       { establishmentId: 'e1', serviceId: 's2' },
       { establishmentId: 'e9', serviceId: 's1' },
     ]) {
-      expect(() => resolveTenantFromUser(user, params, { requireEstablishmentAdmin: false }))
+      expect(() => resolveTenantFromUser(user, params, { requireEstablishmentAdmin: false }, []))
         .toThrow(expect.objectContaining({ output: expect.objectContaining({ statusCode: 404 }) }))
     }
   })
@@ -66,10 +70,10 @@ describe('resolveTenantFromUser', () => {
   })
 
   it('exige le role ADMIN pour le contexte d administration', () => {
-    expect(() => resolveTenantFromUser(user, { establishmentId: 'e1' }, { requireEstablishmentAdmin: true }))
+    expect(() => resolveTenantFromUser(user, { establishmentId: 'e1' }, { requireEstablishmentAdmin: true }, []))
       .toThrow(Boom.Boom)
     const admin = { ...user, establishmentMemberships: [{ ...membership, role: 'ADMIN' as const }] }
-    expect(resolveTenantFromUser(admin, { establishmentId: 'e1' }, { requireEstablishmentAdmin: true }))
+    expect(resolveTenantFromUser(admin, { establishmentId: 'e1' }, { requireEstablishmentAdmin: true }, []))
       .toEqual({ userId: 'u1', establishmentId: 'e1', establishmentRole: 'ADMIN', serviceId: null, serviceRole: null, soignantId: 'so1' })
   })
 })

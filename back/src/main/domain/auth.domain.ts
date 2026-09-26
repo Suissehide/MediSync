@@ -16,6 +16,7 @@ import type { Logger } from '../types/utils/logger'
 import { generateJwt, verifyJwt } from '../utils/auth-helper'
 import { verifyPassword } from '../utils/hash'
 import { toMeResponse } from '../utils/me-mapper'
+import { liveGrantsForUser } from './accessGrant.domain'
 
 const isNotFound = (error: unknown): boolean =>
   Boom.isBoom(error) && error.output.statusCode === 404
@@ -31,7 +32,12 @@ class AuthDomain implements AuthDomainInterface {
   private readonly DUMMY_HASH =
     '$2b$10$dummysaltfordummyhash.dummyhashdummyhashdummyhash'
 
-  constructor({ userRepository, accessGrantRepository, config, logger }: IocContainer) {
+  constructor({
+    userRepository,
+    accessGrantRepository,
+    config,
+    logger,
+  }: IocContainer) {
     this.userRepository = userRepository
     this.accessGrantRepository = accessGrantRepository
     this.config = config
@@ -94,10 +100,14 @@ class AuthDomain implements AuthDomainInterface {
     }
 
     const full = await this.userRepository.findByID(user.id)
-    const grants = await this.accessGrantRepository.findForUser(user.id)
+    const grants = await liveGrantsForUser(user, this.accessGrantRepository)
     const { accessToken, refreshToken } = this.generateTokens(user.id)
 
-    return { accessToken, refreshToken, me: toMeResponse(full, grants, new Date()) }
+    return {
+      accessToken,
+      refreshToken,
+      me: toMeResponse(full, grants, new Date()),
+    }
   }
 
   async refresh(currentRefreshToken: string): Promise<SignInResponse> {
@@ -130,10 +140,14 @@ class AuthDomain implements AuthDomainInterface {
       throw Boom.unauthorized('Account deactivated')
     }
 
-    const grants = await this.accessGrantRepository.findForUser(user.id)
+    const grants = await liveGrantsForUser(user, this.accessGrantRepository)
     const { accessToken, refreshToken } = this.generateTokens(user.id)
 
-    return { accessToken, refreshToken, me: toMeResponse(user, grants, new Date()) }
+    return {
+      accessToken,
+      refreshToken,
+      me: toMeResponse(user, grants, new Date()),
+    }
   }
 
   async register(createUserInput: CreateUserInput): Promise<RegisterResponse> {
