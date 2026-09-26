@@ -57,6 +57,29 @@ const superAdminSansEtablissement: User = {
   establishments: [],
 }
 
+// Tour de correction 2 (revue) : un compte peut porter isSuperAdmin ET
+// exercer réellement quelque part (le drapeau n'exclut rien côté back — un
+// même compte peut être praticien dans un établissement). La garde
+// isSuperAdmin est placée APRÈS les deux vérifications de tenant dans
+// index.tsx ; rien ne garantit que cet ordre survive à une réécriture
+// future sans ce test.
+const superAdminAvecService: User = {
+  id: 'sa2',
+  email: 'super-praticien@medisync.fr',
+  firstName: null,
+  lastName: null,
+  isSuperAdmin: true,
+  establishments: [
+    {
+      id: 'e1',
+      name: 'CHU',
+      role: 'MEMBER',
+      soignantId: 'so1',
+      services: [{ id: 's1', name: 'Cardio', role: 'INTERVENANT' }],
+    },
+  ],
+}
+
 const runBeforeLoad = (user: User) => {
   const beforeLoad = Route.options.beforeLoad
   if (!beforeLoad) {
@@ -105,6 +128,20 @@ describe('beforeLoad de l index authentifie', () => {
   it('envoie un super-admin sans aucun etablissement vers /super-admin, jamais vers /pending', () => {
     expect(() => runBeforeLoad(superAdminSansEtablissement)).toThrow(
       expect.objectContaining({ isRedirect: true, to: '/super-admin' }),
+    )
+  })
+
+  // Tour de correction 2 : un super-admin qui exerce aussi comme praticien
+  // retrouve son tableau de bord de service, jamais /super-admin — la garde
+  // du drapeau ne doit s'appliquer qu'en dernier recours, après le couple
+  // service/établissement et l'établissement administré.
+  it('envoie un super-admin qui a par ailleurs un couple etablissement/service vers son tableau de bord, jamais vers /super-admin', () => {
+    expect(() => runBeforeLoad(superAdminAvecService)).toThrow(
+      expect.objectContaining({
+        isRedirect: true,
+        to: '/e/$establishmentId/s/$serviceId/dashboard',
+        params: { establishmentId: 'e1', serviceId: 's1' },
+      }),
     )
   })
 })
