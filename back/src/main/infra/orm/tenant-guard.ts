@@ -39,11 +39,19 @@ export const ESTABLISHMENT_MODELS: readonly string[] = [
 
 // Le contexte `superadmin` n'est PAS `system`. `system` retire l'exigence de filtre pour toute
 // opération ; l'invariant n'est PAS un nombre d'appels (qui grossit au fil des tâches légitimes)
-// mais le fait que chaque emploi soit DÉCLARÉ (énuméré, avec sa raison) et que sa requête porte
-// SES PROPRES BORNES explicites — un test garde cette propriété (runAsSystem-unicite.test.ts).
-// Ici, la liste
-// ci-dessous est exhaustive : tout couple (modèle, opération) absent est refusé comme sans
-// contexte. Le super-admin compte, il ne lit pas — d'où l'absence de `findMany` sur `Patient`.
+// mais DEUX propriétés distinctes, gardées par DEUX tests distincts (tour de correction 2, tâche
+// 9 — une version précédente de ce commentaire les confondait en une seule affirmation, fausse
+// pour les deux : un `where` vide sur les deux emplois déclarés de `patientServiceFile.
+// repository.ts` laisse le premier test 3 sur 3 vert) :
+//   - que chaque emploi soit DÉCLARÉ, nommé, avec sa raison — `runAsSystem-unicite.test.ts`, qui
+//     ne regarde jamais le contenu d'une requête, seulement OÙ (quel fichier) la capacité est
+//     invoquée ;
+//   - que la requête que chaque emploi encadre porte SES PROPRES BORNES explicites — vérifié au
+//     cas par cas, par emploi, dans `repository-scope.test.ts` (capture des arguments réels
+//     envoyés à Prisma, puis preuve que cette forme serait refusée hors du mode encadré).
+// Ici, la liste ci-dessous est exhaustive : tout couple (modèle, opération) absent est refusé
+// comme sans contexte. Le super-admin compte, il ne lit pas — d'où l'absence de `findMany` sur
+// `Patient`.
 //
 // CE QUE CETTE LISTE REFUSE, ET LE CONTOURNEMENT SÛR (tour de correction 3, Important de la
 // revue) — lisez ceci AVANT d'ajouter une entrée ici pour contourner un refus des tâches 6, 7 ou

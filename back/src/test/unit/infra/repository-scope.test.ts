@@ -1031,13 +1031,17 @@ describe('scoping appointment', () => {
   })
 })
 
-// Etape 3 du multi-tenant, tache 7 : `estSuiviAilleurs` est LA SEULE lecture de tout le back qui
-// traverse volontairement la frontiere entre services (design §5.3). Ce bloc en verifie le
-// mecanisme, pas seulement le resultat : la forme exacte de la requete (ses deux bornes, memes
-// sous `runAsSystem`), et — a la place ou l'aurait laissee un simple test de retour — la preuve
-// que cette forme precise serait refusee par le garde-fou d'ORM sans le mode encadre. Voir aussi
-// back/src/test/unit/infra/runAsSystem-unicite.test.ts (unicite de l'exception dans les sources)
-// et back/src/test/e2e/dossier-service.test.ts (comportement de bout en bout, cloisonnement).
+// Etape 3 du multi-tenant, tache 7 : `estSuiviAilleurs` traverse volontairement la frontiere
+// entre services (design §5.3) — `impactDesactivation`, plus bas dans ce fichier (tache 9), en
+// est une autre. Ce bloc verifie le mecanisme, pas seulement le resultat : la forme exacte de la
+// requete (ses deux bornes, memes sous `runAsSystem`), et — a la place ou l'aurait laissee un
+// simple test de retour — la preuve que cette forme precise serait refusee par le garde-fou
+// d'ORM sans le mode encadre. C'EST CE BLOC-CI (et son equivalent pour `impactDesactivation`) qui
+// garde les BORNES des requetes — PAS back/src/test/unit/infra/runAsSystem-unicite.test.ts, qui
+// garde une propriete DIFFERENTE (la CAPACITE : que le mode ne s'active qu'aux emplacements
+// declares) et ne regarde jamais le contenu d'une requete — voir le commentaire au-dessus
+// d'`estSuiviAilleurs` dans patientServiceFile.repository.ts pour le detail des deux tests. Voir
+// aussi back/src/test/e2e/dossier-service.test.ts (comportement de bout en bout, cloisonnement).
 describe('PatientServiceFileRepository.estSuiviAilleurs', () => {
   it('interroge sous runAsSystem, avec l etablissement courant et un service different du courant', async () => {
     const { prisma, calls } = buildFakePrisma({ 'patientServiceFile.findFirst': { patientId: 'p1' } })
@@ -1100,12 +1104,16 @@ describe('PatientServiceFileRepository.estSuiviAilleurs', () => {
   })
 })
 
-// Design §3.6, tache 9 : le second et dernier appel de l'exception (voir runAsSystem-unicite.
-// test.ts). Appele depuis l'administration d'etablissement — AUCUN service dans le tenant
-// courant (`serviceId: null`) — ce bloc verifie que la methode fonctionne quand meme (elle ne
-// lit jamais `this.scope`, qui exigerait un service), la forme exacte des DEUX requetes qu'elle
-// construit, et le compte qui importe : les patients suivis ICI mais NULLE PART AILLEURS dans le
-// meme etablissement.
+// Design §3.6, tache 9 : un autre emploi declare de l'exception (voir runAsSystem-unicite.
+// test.ts pour la CAPACITE ; ce bloc-ci pour les BORNES — deux tests, deux proprietes, voir le
+// commentaire au-dessus d'`estSuiviAilleurs` dans patientServiceFile.repository.ts). Appele
+// depuis l'administration d'etablissement — AUCUN service dans le tenant courant
+// (`serviceId: null`) — ce bloc verifie que la methode fonctionne quand meme (elle ne lit jamais
+// `this.scope`, qui exigerait un service), la forme exacte des DEUX requetes qu'elle construit
+// (dont le filtre sur les services ACTIFS de la seconde), et le compte qui importe : les
+// patients suivis ICI mais NULLE PART AILLEURS ACTIVEMENT dans le meme etablissement — PAS le
+// meme calcul que le signal de suivi ailleurs (`estSuiviAilleurs`), qui repond a une question
+// differente et ne filtre pas les services desactives : voir le commentaire cite ci-dessus.
 describe('PatientServiceFileRepository.impactDesactivation', () => {
   const tenantAdminEtablissement: Tenant = {
     userId: 'u1', establishmentId: 'e1', establishmentRole: 'ADMIN',

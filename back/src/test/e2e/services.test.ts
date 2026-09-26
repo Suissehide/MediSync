@@ -16,6 +16,15 @@ type MeEstablishment = {
   services: { id: string; name: string; role: string }[]
 }
 
+// Ne fige QUE `Date` : les vrais minuteurs (setTimeout, l'E/S de la vraie base de test) restent
+// réels, seule l'horloge que lit `resolveTenant` est sous contrôle — ce qui rend l'expiration
+// d'un octroi éprouvable sans attendre (même convention que tenant-resolution.test.ts).
+const TIMERS_REELS = [
+  'nextTick', 'hrtime', 'performance', 'queueMicrotask',
+  'requestAnimationFrame', 'cancelAnimationFrame', 'requestIdleCallback', 'cancelIdleCallback',
+  'setImmediate', 'clearImmediate', 'setInterval', 'clearInterval', 'setTimeout', 'clearTimeout',
+] as const
+
 // Tâche 9 (étape 4a) : le second service — ce qui rend enfin démontrable, à l'écran, le
 // cloisonnement par service que trois étapes précédentes ont préparé sans pouvoir le vérifier
 // (design §1). Trois décisions y sont éprouvées : créer un service y rattache son créateur,
@@ -125,6 +134,109 @@ describe('routes services', () => {
       cookies: superCookies,
     })
     expect(acces.statusCode).toBe(200)
+  })
+
+  // Mineur (tour de correction 2) : le cœur de l'argument « pas de rattachement réel » est
+  // l'expiration — sans elle, rien ne distingue ce choix d'un rattachement classique qui
+  // survivrait de toute façon. Non gardé par un test au tour précédent ; ajouté ici. L'horloge
+  // est avancée plutôt qu'attendue (même convention que tenant-resolution.test.ts).
+  it('apres expiration de l octroi, le service reste actif et visible de l etablissement, mais son createur recoit 404 partout', async () => {
+    const superAdmin = await createUser({
+      email: 'super-expire@test.fr',
+      isSuperAdmin: true,
+    })
+    const superCookies = await signIn(testApp.app, 'super-expire@test.fr')
+    const debut = new Date()
+    await grantAccess({
+      userId: superAdmin.id,
+      establishmentId,
+      expiresAt: new Date(debut.getTime() + 1000),
+    })
+
+    jest.useFakeTimers({ doNotFake: [...TIMERS_REELS] })
+    try {
+      jest.setSystemTime(debut)
+
+      const created = await call('POST', '/', { name: 'Expire' }, superCookies)
+      expect(created.statusCode).toBe(201)
+      const service = created.json()
+
+      // L'octroi est expire depuis une seconde, sur le MEME cookie de session.
+      jest.setSystemTime(new Date(debut.getTime() + 2000))
+
+      // Le createur perd l'acces PARTOUT : le service qu'il vient de creer (plus aucun octroi
+      // pour l'atteindre), et /me ne liste plus l'etablissement pour lui.
+      const apresService = await testApp.app.inject({
+        method: 'GET',
+        url: tenantUrl(establishmentId, service.id, '/location'),
+        cookies: superCookies,
+      })
+      expect(apresService.statusCode).toBe(404)
+      const meApres = await testApp.app.inject({
+        method: 'GET',
+        url: '/me',
+        cookies: superCookies,
+      })
+      expect(
+        (meApres.json().establishments as MeEstablishment[]).find(
+          (e) => e.id === establishmentId,
+        ),
+      ).toBeUndefined()
+
+      // Le service, lui, N'A PAS DISPARU : il reste actif, et visible de l'etablissement — par
+      // un administrateur REEL, dont l'acces ne depend d'aucun octroi. C'est bien ce que visait
+      // la decision « pas de rattachement reel » : rien ne devait survivre a l'octroi, sauf le
+      // service lui-meme, qui n'est pas un rattachement.
+      const liste = await call('GET', '/')
+      expect(liste.statusCode).toBe(200)
+      expect(liste.json()).toContainEqual(
+        expect.objectContaining({ id: service.id, name: 'Expire', deactivatedAt: null }),
+      )
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  // Mineur (tour de correction 2) — nomme un cas que la relecture a trouve sans que je l'aie
+  // nomme : un super-admin qui est REELLEMENT membre (non-administrateur) d'un AUTRE
+  // etablissement, et cree un service sous octroi ICI. Sans le filtre `establishmentId` dans
+  // `ServiceRepository.create` (`findFirst({ where: { userId, establishmentId } })`), une
+  // recherche par le seul `userId` aurait pu rattacher le service neuf a l'appartenance de
+  // l'AUTRE etablissement — un rattachement PERMANENT et FAUX (mauvais etablissement), qui
+  // aurait en outre survecu a l'expiration de l'octroi. La borne d'etablissement ferme ce cas.
+  it('un super-admin membre non-administrateur d un AUTRE etablissement, sous octroi ici, ne pollue ni son appartenance reelle ni celle-ci', async () => {
+    const ailleurs = await createEstablishment('Ailleurs (services)')
+    const superAdmin = await createUser({
+      email: 'super-ailleurs@test.fr',
+      isSuperAdmin: true,
+      memberships: [{ establishmentId: ailleurs.id, role: 'MEMBER' }],
+    })
+    const membershipAilleursAvant = await testDb.establishmentMembership.findFirstOrThrow({
+      where: { userId: superAdmin.id, establishmentId: ailleurs.id },
+    })
+    await grantAccess({
+      userId: superAdmin.id,
+      establishmentId,
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+    const superCookies = await signIn(testApp.app, 'super-ailleurs@test.fr')
+
+    const created = await call('POST', '/', { name: 'Ailleurs-octroi' }, superCookies)
+    expect(created.statusCode).toBe(201)
+
+    // Aucune appartenance reelle creee sur l'etablissement CIBLE.
+    expect(
+      await testDb.establishmentMembership.findFirst({
+        where: { userId: superAdmin.id, establishmentId },
+      }),
+    ).toBeNull()
+    // Et l'appartenance REELLE, sur l'AUTRE etablissement, n'a recu aucun rattachement de
+    // service parasite.
+    expect(
+      await testDb.serviceMembership.findMany({
+        where: { establishmentMembershipId: membershipAilleursAvant.id },
+      }),
+    ).toEqual([])
   })
 
   it('refuse deux services de meme nom dans le meme etablissement', async () => {

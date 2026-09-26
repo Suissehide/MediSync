@@ -7,37 +7,54 @@ import ts from 'typescript'
 // deplacer : sous ce mode, une requete peut lire N'IMPORTE QUEL etablissement et service, le
 // garde-fou ne verifiant plus rien (voir infra/orm/tenant-guard.ts, `assertTenantScope`,
 // `if (store.kind === 'system') { return }`). C'est une exception assumee au cloisonnement
-// multi-tenant — TOUR DE CORRECTION 1 (relecture, tache 9) : L'INVARIANT N'EST PAS UN NOMBRE
-// D'APPELS. Une version precedente de ce commentaire disait « deux fois seulement » avant que la
-// tache 9 n'ajoute un troisieme emploi legitime dans le meme fichier que le second — la prose
-// mentait alors que les assertions, elles, restaient justes. Il n'y a pas de plafond a priori :
-// ce que ce fichier garde, c'est que chaque emploi soit DECLARE (enumere ci-dessous, avec sa
-// raison) et que sa requete porte SES PROPRES BORNES explicites (jamais empruntees a un contexte
-// ambiant qui n'existe pas a l'endroit ou elle s'execute). Trois emplois declares a ce jour, tous
-// dans le back de production :
+// multi-tenant.
+//
+// TOUR DE CORRECTION 2 (relecture, tache 9) — CE FICHIER-CI NE GARDE QU'UNE SEULE DES DEUX
+// PROPRIETES QUI RENDENT L'EXCEPTION SURE, ET IL FAUT LE DIRE PRECISEMENT : le tour precedent
+// affirmait que « chaque emploi soit declare » ET que « sa requete porte ses propres bornes »
+// etaient TOUS DEUX garantis ICI — FAUX, demontre par execution : poser un `where: {}` vide sur
+// LES DEUX lectures de `patientServiceFile.repository.ts` (estSuiviAilleurs ET
+// impactDesactivation) laisse CE FICHIER 3 tests sur 3 VERTS, puisqu'il ne lit jamais le contenu
+// d'une requete — seulement OU (quel fichier, quelle methode nommee) la CAPACITE d'entrer dans
+// un mode non-tenant est invoquee. Ce qui rougirait sur un `where` vide, c'est un AUTRE fichier :
+// `back/src/test/unit/infra/repository-scope.test.ts` (describes `PatientServiceFileRepository.
+// estSuiviAilleurs` et `.impactDesactivation`), qui capture les arguments REELS envoyes a Prisma
+// et prouve, pour CHAQUE emploi, que sa forme precise serait refusee par le garde-fou hors du
+// mode encadre. Les DEUX proprietes restent necessaires, aucune des deux ne remplace l'autre —
+// mais DEUX tests distincts les gardent, pas un seul.
+//
+// Il n'y a pas de plafond a priori sur le NOMBRE d'emplois : ce que CE fichier garde, c'est que
+// chacun soit DECLARE (enumere ci-dessous, avec sa raison, dans un fichier PRECIS). Une version
+// anterieure de ce commentaire disait « deux fois seulement » avant que la tache 9 n'ajoute un
+// troisieme emploi legitime dans le meme fichier que le second — la prose mentait alors que les
+// assertions, elles, restaient justes ; corrige une premiere fois en pretendant a tort que la
+// CAPACITE et les BORNES etaient toutes deux couvertes ici, corrige a nouveau ci-dessus. Trois
+// emplois declares a ce jour, tous dans le back de production :
 //
 //   1. La purge planifiee du journal d'activite (`application/starter.ts`,
 //      `scheduleActivityLogCleanup`) : hors de toute requete HTTP, il n'existe alors aucun
 //      tenant a poser, et la purge doit toucher TOUTE la table, pas un seul etablissement.
 //   2. Le signal de suivi ailleurs (`infra/orm/repositories/patientServiceFile.repository.ts`,
 //      `estSuiviAilleurs`, design §5.3) : une lecture qui traverse volontairement la frontiere
-//      entre services, pour rendre un booleen et rien d'autre. Ses bornes : etablissement et
-//      service courants, captures AVANT d'entrer dans le mode encadre.
+//      entre services, pour rendre un booleen et rien d'autre. Ses bornes (etablissement et
+//      service courants, captures AVANT d'entrer dans le mode encadre) sont verifiees par
+//      `repository-scope.test.ts`, pas par ce fichier-ci.
 //   3. L'impact d'une desactivation de service (meme fichier, `impactDesactivation`, design
 //      §3.6, tache 9) : appelee depuis l'administration d'etablissement (aucun service courant
 //      a ce niveau), elle traverse la meme frontiere pour rendre DEUX NOMBRES agreges — jamais
-//      un identifiant, un nom ou un contenu. Ses bornes : etablissement ET service dont on
-//      evalue la desactivation, recus EXPLICITEMENT de l'appelant (`ServiceDomain.
-//      impactDesactivation`), puisqu'aucun contexte de service courant n'existe a cet endroit
-//      pour les fournir autrement.
+//      un identifiant, un nom ou un contenu. Ses bornes (etablissement ET service dont on evalue
+//      la desactivation, recus EXPLICITEMENT de l'appelant) sont, de meme, verifiees par
+//      `repository-scope.test.ts`. CE N'EST PAS LE MEME CALCUL que le signal de suivi ailleurs
+//      (question differente : « ce patient va-t-il devenir invisible » contre « un sous-dossier
+//      existe-t-il ailleurs ») — voir le commentaire sur `impactDesactivation` pour le detail.
 //
 // `runAsSuperAdmin` (meme fichier, tache 1 / etape 4a) y ajoute un troisieme mode, qui ne retire
 // rien mais substitue au filtre de tenant une liste declaree et exhaustive de couples (modele,
 // operation) — SUPERADMIN_OPERATIONS, infra/orm/tenant-guard.ts.
 //
-// Une exception a une regle de cloisonnement ne vaut que si elle reste la seule — spec §5.3 :
-// "cela se verifie par un test, pas par une relecture." Ce test relit les sources plutot que de
-// faire confiance a la memoire, a la maniere de
+// Une exception a une regle de cloisonnement ne vaut que si chaque emploi reste declare et
+// borne — spec §5.3 : "cela se verifie par un test, pas par une relecture." Ce test relit les
+// sources plutot que de faire confiance a la memoire, a la maniere de
 // `front/src/test/lecture-directe-du-cache.test.ts`.
 //
 // REVUE tache 7, tour 1, constat Critique C1 : une garde qui ne surveille que le NOM

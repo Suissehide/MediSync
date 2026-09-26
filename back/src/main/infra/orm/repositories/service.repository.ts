@@ -67,6 +67,26 @@ class ServiceRepository implements ServiceRepositoryInterface {
   // rien — il a déjà accès à tous les services actifs de l'établissement par son octroi, et un
   // rattachement réel survivrait précisément à ce que l'octroi doit borner dans le temps ; le
   // service se crée quand même, sans coordinateur ajouté.
+  //
+  // CONSEQUENCE A CONNAITRE (mineur, tour de correction 2) : un service créé sous octroi naît
+  // donc SANS AUCUN MEMBRE, et le reste DÉFINITIVEMENT — passée l'expiration de l'octroi qui l'a
+  // créé, plus personne ne le rejoint automatiquement (voir le test e2e d'expiration,
+  // `services.test.ts` : le service persiste, actif, mais inatteignable par son créateur). Ce
+  // n'est pas un défaut à corriger ici : un administrateur RÉEL de l'établissement le voit dans
+  // la liste (`findAll`) et peut y ajouter un membre par les routes existantes
+  // (`/e/:establishmentId/admin/members`) — mais rien ne le fait pour lui. `findFirst({
+  // establishmentId, ... })` (et non un simple `{ userId }`) est aussi ce qui empêche un
+  // super-admin réellement membre non-administrateur d'un AUTRE établissement, agissant ici sous
+  // octroi, de voir la recherche matcher SON appartenance là-bas et y rattacher — à tort — un
+  // `ServiceMembership` du service qu'il vient de créer ICI : un rattachement permanent et faux,
+  // qui aurait survécu à l'expiration de l'octroi. Éprouvé par exécution (`services.test.ts`) :
+  // sans le filtre d'établissement, le garde-fou d'ORM refuse même la lecture (500, modèle
+  // d'établissement lu sans sa borne) plutôt que de laisser filer un mauvais rattachement en
+  // silence — mais une création de service ne doit dépendre, pour réussir, d'aucune appartenance
+  // sur un AUTRE établissement, encore moins échouer à cause d'elle. La borne explicite est donc
+  // ce qui rend la requête correcte dans les DEUX régimes : avec le garde-fou (qui la rendrait de
+  // toute façon obligatoire) et sans lui (où elle resterait la seule chose à empêcher le
+  // mauvais rattachement).
   async create(
     { name }: ServiceCreateEntityRepo,
     creatorUserId: string,

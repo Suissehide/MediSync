@@ -18,8 +18,11 @@ const servicePath = (patientId: string) => `/patient/${patientId}/service-file`
 const identityPath = (patientId: string) => `/patient/${patientId}`
 
 // Le signal de suivi ailleurs (design §5.3/§6, tache 7 ; condition d'apparition corrigee a la
-// tache 13, tour de correction 1, point 1 — Critique C1 ; voir D3, decisions-etape-3.md) : LA SEULE lecture de tout
-// le back qui traverse volontairement la frontiere entre services. Ce fichier prouve, par
+// tache 13, tour de correction 1, point 1 — Critique C1 ; voir D3, decisions-etape-3.md) :
+// une lecture qui traverse volontairement la frontiere entre services (`impactDesactivation`,
+// tache 9, en est une autre — voir patientServiceFile.repository.ts pour pourquoi ce n'est PAS
+// le meme calcul : le signal ci-dessous reste vrai meme si l'ailleurs est un service desactive,
+// puisque le sous-dossier existe et que ce service peut etre reactive). Ce fichier prouve, par
 // requete HTTP reelle et non par relecture du code, que :
 //   1. le champ se comporte correctement dans les TROIS cas : suivi ici ET ailleurs (present,
 //      vrai) ; suivi ici seulement (present, faux) ; PAS suivi ici (absent de la reponse, quel

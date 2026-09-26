@@ -124,25 +124,37 @@ Key cross-cutting concerns:
   `PatientDomain.create`) — and **no route deletes one**; only deleting the patient (cascade) does. An empty
   sub-record created by mistake is therefore permanent, and will make the "followed elsewhere" signal (below) true
   for every other service that actually follows that patient.
-- **The deliberate cross-service reads, and the test that keeps the invariant honest.** A patient in one service is
-  sometimes already followed in another; the front needs to know that (a plain boolean, nothing else) without
-  seeing anything about it. `PatientServiceFileRepository.estSuiviAilleurs` (in
-  `infra/orm/repositories/patientServiceFile.repository.ts`) reads another service's sub-records for that purpose,
-  under `tenantContext.runAsSystem()` (the same escape hatch used by the activity-log purge job). A second read,
-  added at étape 4a task 9, is `PatientServiceFileRepository.impactDesactivation` — called from establishment
-  administration (`GET /e/:establishmentId/admin/services/:id/impact-desactivation`, no service in scope at that
-  level) to warn how many patients a service's deactivation would make invisible everywhere. Both live in the same
-  file, both return only aggregates or booleans, never an id, a service name, a date or any column content, and
-  nothing else in `src/main` does this. **The invariant `back/src/test/unit/infra/runAsSystem-unicite.test.ts`
-  keeps is not a call count** (task 9's review found the test's own prose still claiming "two, only two" right
-  above a list that had grown to three — the assertions were still correct, the prose had just gone stale): what
-  it enforces is that every employment is declared by name with its reason, and that each one's query carries its
-  own explicit bounds rather than borrowing an ambient tenant that doesn't exist at that call site. It doesn't just
-  grep for the method name, it re-derives the "system mode" capability (constructing the system-scoped store some
-  other way — e.g. a hypothetical `TenantContext.runAsSystem.bind(...)` or a sibling method — defeats the guard
-  exactly like calling `runAsSystem` directly would). Adding an undeclared `runAsSystem` call to `src/main` is a
-  guard violation, not a passing test. Known gap: the allow-list only covers `src/main` — several legitimate
-  `src/test` callers construct the same
+- **The deliberate cross-service reads, and the two different tests that keep them honest — not one test, not a
+  call count.** A patient in one service is sometimes already followed in another; the front needs to know that (a
+  plain boolean, nothing else) without seeing anything about it. `PatientServiceFileRepository.estSuiviAilleurs`
+  (in `infra/orm/repositories/patientServiceFile.repository.ts`) reads another service's sub-records for that
+  purpose, under `tenantContext.runAsSystem()` (the same escape hatch used by the activity-log purge job). A
+  second read, added at étape 4a task 9, is `PatientServiceFileRepository.impactDesactivation` — called from
+  establishment administration (`GET /e/:establishmentId/admin/services/:id/impact-desactivation`, no service in
+  scope at that level) to warn how many patients a service's deactivation would make invisible everywhere. **This
+  is not the same computation as `estSuiviAilleurs`, on purpose**: `estSuiviAilleurs` answers "does a sub-record
+  exist elsewhere", true even if that other service is deactivated today (the sub-record still exists, and that
+  service can be reactivated); `impactDesactivation` answers "will this patient become invisible everywhere", and
+  an elsewhere that's already deactivated protects no one — so it counts active elsewhere-services only. Aligning
+  the two would break one of them; see the comment on `impactDesactivation` for the detail. Both return only
+  aggregates or booleans, never an id, a service name, a date or any column content, and nothing else in
+  `src/main` does this.
+  **Two different tests keep two different properties here (task 9's second review round found a prior version of
+  this very paragraph collapsing both into one false claim: it said the bounds-checking lived in
+  `runAsSystem-unicite.test.ts`, and proved that false by putting an empty `where` on both queries above — that
+  test stayed 3-for-3 green, because it never reads a query's contents):**
+    - `back/src/test/unit/infra/runAsSystem-unicite.test.ts` keeps the CAPACITY: that every place in `src/main`
+      able to enter a non-tenant mode is a declared, named call site with a reason — it does this by grepping for
+      the method name, and separately re-deriving the "system mode" capability itself (constructing the
+      system-scoped store some other way — e.g. a hypothetical `TenantContext.runAsSystem.bind(...)` or a sibling
+      method — defeats the guard exactly like calling `runAsSystem` directly would). It never looks at what a
+      query's `where` contains.
+    - `back/src/test/unit/infra/repository-scope.test.ts` (the `PatientServiceFileRepository.estSuiviAilleurs` and
+      `.impactDesactivation` describes) keeps the BOUNDS: it captures the actual arguments each method sends to
+      Prisma and asserts they carry explicit, self-contained filters, then separately proves that exact shape would
+      be refused by the guard outside the framed mode.
+  Adding an undeclared `runAsSystem` call to `src/main` is a guard violation, not a passing test. Known gap: the
+  allow-list only covers `src/main` — several legitimate `src/test` callers construct the same
   "system" store to exercise the tenant guard itself, so that directory isn't covered (same class of gap as the
   typecheck one above). Because `GET /patient/:id` carries `followedElsewhere`, and the identity-search route
   (used before creating a patient, to avoid duplicates) returns bare identifiers, the signal is only computed and
