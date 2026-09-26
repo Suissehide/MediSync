@@ -4,9 +4,9 @@ import {
   type CreateEstablishmentBody,
   createEstablishmentResponseSchema,
   createEstablishmentSchema,
+  establishmentDetailResponseSchema,
   type EstablishmentIdParams,
   establishmentIdParamsSchema,
-  establishmentListItemSchema,
   establishmentListResponseSchema,
 } from '../../schemas/establishment.schema'
 
@@ -28,13 +28,14 @@ const establishmentsRouter: FastifyPluginAsync = (fastify) => {
     () => establishmentDomain.list(),
   )
 
-  // Le détail d'UN établissement : la même ligne que dans la liste. 404 si l'id est inconnu.
+  // Le détail d'UN établissement (spec §6.2, tour de correction 1) : la ligne de la liste,
+  // augmentée des services, des membres et du journal d'activité. 404 si l'id est inconnu.
   fastify.get<{ Params: EstablishmentIdParams }>(
     '/:id',
     {
       schema: {
         params: establishmentIdParamsSchema,
-        response: { 200: establishmentListItemSchema },
+        response: { 200: establishmentDetailResponseSchema },
       },
       config: { permission: 'establishments:manage' },
     },

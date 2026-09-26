@@ -1,13 +1,21 @@
-// Tâche 7 (étape 4a) : la liste des établissements et ses compteurs (spec §3.3), et la
-// recherche d'un compte (spec §3.4) — l'écran qui répond à « untel ne voit plus ses patients ».
+// Tâche 7 (étape 4a) : la liste des établissements et ses compteurs (spec §3.3), le détail d'un
+// établissement — services, membres, journal d'activité (spec §6.2, tour de correction 1) — et
+// la recherche d'un compte (spec §3.4) — l'écran qui répond à « untel ne voit plus ses
+// patients ».
 //
-// Property centrale (task-7-brief.md, Steps 1 et 3) : ces deux réponses ne portent JAMAIS de
-// donnée de patient, même sous forme d'identité. Prouvé DEUX fois, comme à l'étape 3 : les clés
-// EXACTES de la réponse (`Object.keys(...).sort()`), puis une recherche de sous-chaîne sur le
-// corps BRUT — la clé seule laisserait passer un champ imbriqué qui porterait la valeur.
+// Property centrale (task-7-brief.md, Steps 1 et 3) : ces réponses ne portent JAMAIS de donnée
+// de patient, même sous forme d'identité. Prouvé DEUX fois, comme à l'étape 3 : les clés EXACTES
+// (`Object.keys(...).sort()`), puis une recherche de sous-chaîne sur le corps BRUT ENTIER — pas
+// seulement sur une ligne. Tour de correction 1 : la revue a montré qu'une ligne fantôme, nommée
+// du patient, ajoutée AILLEURS dans un tableau, laisse toutes les assertions de clés/valeurs
+// vertes tant que la sous-chaîne n'est vérifiée que sur la ligne examinée — d'où les vérifications
+// ci-dessous sur le corps entier, avec des établissements qui ONT des patients, des services et
+// des lignes de journal (jamais à vide, sans quoi la garde serait vraie par vacuité).
 import { buildTestApp, type TestApp } from './setup/app'
 import { testDb, truncateAll } from './setup/db'
 import { createEstablishment, createService, createUser, signIn } from './setup/fixtures'
+
+type ListRow = { id: string; [key: string]: unknown }
 
 describe('consultation super-admin : liste des etablissements et recherche d un compte', () => {
   let testApp: TestApp
@@ -51,25 +59,51 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
       data: { establishmentId, firstName, lastName, createDate: new Date() },
     })
 
+  const deactivateService = (id: string) =>
+    testDb.service.update({ where: { id }, data: { deactivatedAt: new Date() } })
+
+  const deactivateUser = (id: string) =>
+    testDb.user.update({ where: { id }, data: { deactivatedAt: new Date() } })
+
+  const createActivityLogEntry = (
+    establishmentId: string,
+    params: { action: string; entityID: string; userID?: string; createdAt?: Date },
+  ) =>
+    testDb.activityLog.create({
+      data: {
+        establishmentId,
+        serviceId: null,
+        userID: params.userID ?? 'staff-fixture-id',
+        userFirstName: 'Prenom',
+        userLastName: 'ActeurJournal',
+        action: params.action,
+        entityType: 'Patient',
+        entityID: params.entityID,
+        ...(params.createdAt ? { createdAt: params.createdAt } : {}),
+      },
+    })
+
+  const findRow = (body: ListRow[], id: string) => body.find((row) => row.id === id)
+
   // Step 1 (task-7-brief.md) : le contenu exact de la liste, et ses compteurs.
   describe('GET /super-admin/establishments', () => {
     it(
-      "affiche les cles EXACTES et les bons compteurs — le premier administrateur ENCORE " +
-        "actif (le tout premier a ete desactive), et aucune identite de patient dans le corps brut",
+      "affiche les cles EXACTES et les bons compteurs — serviceCount/accountCount ne comptent " +
+        "QUE l'utilisable (tour de correction 1), firstAdmin est le premier ENCORE actif, et " +
+        "aucune identite de patient dans le corps brut",
       async () => {
         const est = await createEstablishment('Etablissement Alpha Liste')
         await createService(est.id, 'Service Alpha 1')
         await createService(est.id, 'Service Alpha 2')
+        const serviceDesactive = await createService(est.id, 'Service Alpha Desactive')
+        await deactivateService(serviceDesactive.id)
 
         // Premier administrateur, chronologiquement — mais desactive depuis.
         const admin1 = await createUser({
           email: 'admin1-liste@alpha.fr',
           memberships: [{ establishmentId: est.id, role: 'ADMIN' }],
         })
-        await testDb.user.update({
-          where: { id: admin1.id },
-          data: { deactivatedAt: new Date() },
-        })
+        await deactivateUser(admin1.id)
 
         // Second administrateur — celui que la liste doit montrer.
         const admin2 = await createUser({
@@ -77,7 +111,7 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
           memberships: [{ establishmentId: est.id, role: 'ADMIN' }],
         })
 
-        // Un compte simple : compte dans `accountCount`, jamais dans `firstAdmin`.
+        // Un compte simple, actif : compte dans `accountCount`, jamais dans `firstAdmin`.
         await createUser({
           email: 'membre-liste@alpha.fr',
           memberships: [{ establishmentId: est.id, role: 'MEMBER' }],
@@ -89,7 +123,7 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
         const res = await listEstablishments()
         expect(res.statusCode).toBe(200)
         const body = res.json()
-        const row = body.find((e: { id: string }) => e.id === est.id)
+        const row = findRow(body, est.id)
         expect(row).toBeDefined()
 
         // Clés EXACTES — pas seulement l'absence de quelques champs (Step 1).
@@ -99,7 +133,7 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
           'deactivatedAt',
           'firstAdmin',
           'id',
-          'lastAccessAt',
+          'lastActivityAt',
           'name',
           'patientCount',
           'serviceCount',
@@ -107,12 +141,14 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
 
         expect(row.name).toBe('Etablissement Alpha Liste')
         expect(row.deactivatedAt).toBeNull()
+        // 3 services crees, 1 desactive : seuls les 2 utilisables comptent.
         expect(row.serviceCount).toBe(2)
-        expect(row.accountCount).toBe(3)
+        // 3 comptes rattaches (admin1, admin2, membre), 1 desactive (admin1) : 2 utilisables.
+        expect(row.accountCount).toBe(2)
         expect(row.patientCount).toBe(2)
         expect(row.firstAdmin).toEqual({ id: admin2.id, email: 'admin2-liste@alpha.fr' })
-        // Personne ne s'est encore connecté : « jamais ».
-        expect(row.lastAccessAt).toBeNull()
+        // Aucune ligne de journal pour cet etablissement : « jamais » se voit par `null`.
+        expect(row.lastActivityAt).toBeNull()
 
         // Double vérification (Step 1) : aucune identité de patient dans le corps BRUT.
         expect(res.payload).not.toContain('PrenomSecretPatientAlphaUn')
@@ -128,58 +164,210 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
         email: 'seul-admin-beta@beta.fr',
         memberships: [{ establishmentId: est.id, role: 'ADMIN' }],
       })
-      await testDb.user.update({
-        where: { id: seulAdmin.id },
-        data: { deactivatedAt: new Date() },
-      })
+      await deactivateUser(seulAdmin.id)
 
       const res = await listEstablishments()
-      const row = res.json().find((e: { id: string }) => e.id === est.id)
-      expect(row.firstAdmin).toBeNull()
+      const row = findRow(res.json(), est.id)
+      expect(row?.firstAdmin).toBeNull()
     })
 
-    it("lastAccessAt reflete une connexion reelle, posee par le chemin de connexion (step 4)", async () => {
-      const est = await createEstablishment('Etablissement Alpha Connexion')
-      await createUser({
-        email: 'admin-connexion@alpha-connexion.fr',
-        memberships: [{ establishmentId: est.id, role: 'ADMIN' }],
-      })
+    // Mineur (tour de correction 1) : le départage à créneau égal (`orderBy: [{ createdAt:
+    // 'asc' }, { userId: 'asc' }]`, establishment.repository.ts) est documenté et laissé en
+    // place, mais SANS test e2e dédié — une tentative de le montrer rouge sans son mécanisme
+    // (deux rattachements au même instant, `orderBy` réduit au seul `createdAt`) est restée
+    // VERTE : Postgres a rendu le même ordre entre deux requêtes consécutives dans ce process de
+    // test, sans qu'aucun ORDER BY explicite ne le garantisse. Un test qui ne peut pas être
+    // montré rouge ne prouve rien — retiré plutôt que compté à tort ; voir le rapport de tâche.
 
-      const before = await listEstablishments()
-      const rowBefore = before.json().find((e: { id: string }) => e.id === est.id)
-      expect(rowBefore.lastAccessAt).toBeNull()
+    // Tour de correction 1, Important n°3 : la regression precise que la revue a demontree —
+    // une connexion, meme PARTAGEE entre deux etablissements, ne doit plus faire bouger AUCUN
+    // des deux. Seule une vraie ligne de journal, DANS un etablissement, fait bouger CELUI-LA.
+    it(
+      "lastActivityAt vient du journal d'activite de CET etablissement — une connexion, meme " +
+        "partagee entre deux etablissements, ne le fait bouger dans AUCUN des deux",
+      async () => {
+        const estE = await createEstablishment('Etablissement Epsilon Activite')
+        const estF = await createEstablishment('Etablissement Zeta Activite')
 
-      await signIn(testApp.app, 'admin-connexion@alpha-connexion.fr')
+        await createUser({
+          email: 'membre-partage-activite@epsilon-zeta.fr',
+          memberships: [
+            { establishmentId: estE.id, role: 'MEMBER' },
+            { establishmentId: estF.id, role: 'MEMBER' },
+          ],
+        })
 
-      const after = await listEstablishments()
-      const rowAfter = after.json().find((e: { id: string }) => e.id === est.id)
-      expect(rowAfter.lastAccessAt).not.toBeNull()
-      expect(new Date(rowAfter.lastAccessAt).getTime()).toBeGreaterThan(Date.now() - 5000)
-    })
+        const before = await listEstablishments()
+        expect(findRow(before.json(), estE.id)?.lastActivityAt).toBeNull()
+        expect(findRow(before.json(), estF.id)?.lastActivityAt).toBeNull()
+
+        await signIn(testApp.app, 'membre-partage-activite@epsilon-zeta.fr')
+
+        const afterSignIn = await listEstablishments()
+        expect(findRow(afterSignIn.json(), estE.id)?.lastActivityAt).toBeNull()
+        expect(findRow(afterSignIn.json(), estF.id)?.lastActivityAt).toBeNull()
+
+        const activityDate = new Date()
+        await createActivityLogEntry(estE.id, {
+          action: 'patient.updated',
+          entityID: 'patient-fixture-epsilon',
+          createdAt: activityDate,
+        })
+
+        const afterActivity = await listEstablishments()
+        const rowE = findRow(afterActivity.json(), estE.id)
+        const rowF = findRow(afterActivity.json(), estF.id)
+        expect(rowE?.lastActivityAt).not.toBeNull()
+        expect(new Date(rowE?.lastActivityAt as string).getTime()).toBe(activityDate.getTime())
+        // L'autre etablissement, jamais touche par l'activite, reste `null`.
+        expect(rowF?.lastActivityAt).toBeNull()
+      },
+    )
   })
 
   describe('GET /super-admin/establishments/:id', () => {
-    it("rend le detail d'un etablissement, meme forme que la liste", async () => {
-      const est = await createEstablishment('Etablissement Detail')
-      await createService(est.id, 'Service Detail 1')
+    it(
+      "rend les cles EXACTES du detail entier — etablissement, services, membres, journal — " +
+        "avec un etablissement qui A des patients, des services (actifs et desactives) et des " +
+        "lignes de journal, et aucune identite de patient nulle part dans le corps brut",
+      async () => {
+        const est = await createEstablishment('Etablissement Detail Complet')
+        const serviceActif = await createService(est.id, 'Service Detail Actif')
+        const serviceInactif = await createService(est.id, 'Service Detail Inactif')
+        await deactivateService(serviceInactif.id)
 
-      const res = await getEstablishment(est.id)
-      expect(res.statusCode).toBe(200)
-      const body = res.json()
-      expect(Object.keys(body).sort()).toEqual([
-        'accountCount',
-        'createdAt',
-        'deactivatedAt',
-        'firstAdmin',
-        'id',
-        'lastAccessAt',
-        'name',
-        'patientCount',
-        'serviceCount',
-      ])
-      expect(body.id).toBe(est.id)
-      expect(body.serviceCount).toBe(1)
-    })
+        const admin = await createUser({
+          email: 'admin-detail@detail.fr',
+          memberships: [{ establishmentId: est.id, role: 'ADMIN' }],
+        })
+        const membre = await createUser({
+          email: 'membre-detail@detail.fr',
+          memberships: [{ establishmentId: est.id, role: 'MEMBER' }],
+        })
+        await deactivateUser(membre.id)
+
+        await createPatient(est.id, 'PrenomSecretDetailUn', 'NomSecretDetailUn')
+        await createPatient(est.id, 'PrenomSecretDetailDeux', 'NomSecretDetailDeux')
+
+        await createActivityLogEntry(est.id, {
+          action: 'patient.updated',
+          entityID: 'entite-journal-un',
+          userID: admin.id,
+        })
+        await createActivityLogEntry(est.id, {
+          action: 'patient.created',
+          entityID: 'entite-journal-deux',
+          userID: admin.id,
+        })
+
+        const res = await getEstablishment(est.id)
+        expect(res.statusCode).toBe(200)
+        const body = res.json()
+
+        // Clés EXACTES du corps ENTIER — pas seulement de la ligne (tour de correction 1).
+        expect(Object.keys(body).sort()).toEqual([
+          'accountCount',
+          'activityLog',
+          'createdAt',
+          'deactivatedAt',
+          'firstAdmin',
+          'id',
+          'lastActivityAt',
+          'members',
+          'name',
+          'patientCount',
+          'serviceCount',
+          'services',
+        ])
+
+        expect(body.services).toHaveLength(2)
+        for (const service of body.services) {
+          expect(Object.keys(service).sort()).toEqual([
+            'createdAt',
+            'deactivatedAt',
+            'id',
+            'name',
+          ])
+        }
+        expect(body.services).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              id: serviceActif.id,
+              name: 'Service Detail Actif',
+              deactivatedAt: null,
+            }),
+            expect.objectContaining({ id: serviceInactif.id, name: 'Service Detail Inactif' }),
+          ]),
+        )
+        expect(
+          body.services.find((s: { id: string }) => s.id === serviceInactif.id).deactivatedAt,
+        ).not.toBeNull()
+
+        expect(body.members).toHaveLength(2)
+        for (const member of body.members) {
+          expect(Object.keys(member).sort()).toEqual([
+            'createdAt',
+            'deactivatedAt',
+            'email',
+            'id',
+            'role',
+          ])
+        }
+        expect(body.members).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              id: admin.id,
+              email: 'admin-detail@detail.fr',
+              role: 'ADMIN',
+              deactivatedAt: null,
+            }),
+            expect.objectContaining({
+              id: membre.id,
+              email: 'membre-detail@detail.fr',
+              role: 'MEMBER',
+            }),
+          ]),
+        )
+        expect(
+          body.members.find((m: { id: string }) => m.id === membre.id).deactivatedAt,
+        ).not.toBeNull()
+
+        // serviceCount/accountCount ne comptent que l'utilisable — meme regle que la liste.
+        expect(body.serviceCount).toBe(1)
+        expect(body.accountCount).toBe(1)
+
+        expect(body.activityLog).toHaveLength(2)
+        for (const entry of body.activityLog) {
+          expect(Object.keys(entry).sort()).toEqual([
+            'action',
+            'createdAt',
+            'entityID',
+            'entityType',
+            'id',
+            'userFirstName',
+            'userID',
+            'userLastName',
+          ])
+        }
+        expect(body.activityLog).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ action: 'patient.updated', entityID: 'entite-journal-un' }),
+            expect.objectContaining({
+              action: 'patient.created',
+              entityID: 'entite-journal-deux',
+            }),
+          ]),
+        )
+
+        // Double vérification sur le corps ENTIER (toutes les lignes, pas seulement la
+        // première) — précisément ce que la revue a montré absent : une ligne fantôme nommée du
+        // patient, ailleurs dans un tableau, échappait à toute assertion de clé/valeur ci-dessus.
+        expect(res.payload).not.toContain('PrenomSecretDetailUn')
+        expect(res.payload).not.toContain('NomSecretDetailUn')
+        expect(res.payload).not.toContain('PrenomSecretDetailDeux')
+        expect(res.payload).not.toContain('NomSecretDetailDeux')
+      },
+    )
 
     it('rend 404 pour un identifiant inconnu', async () => {
       const res = await getEstablishment('clzzzzzzzzzzzzzzzzzzzzzzz')
@@ -258,10 +446,7 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
     it('montre la desactivation et le dernier acces du compte cherche', async () => {
       const account = await createUser({ email: 'compte-desactive-recherche@recherche.fr' })
       await signIn(testApp.app, 'compte-desactive-recherche@recherche.fr')
-      await testDb.user.update({
-        where: { id: account.id },
-        data: { deactivatedAt: new Date() },
-      })
+      await deactivateUser(account.id)
 
       const res = await searchAccount('compte-desactive-recherche@recherche.fr')
       const body = res.json()
@@ -269,9 +454,13 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
       expect(body.lastLoginAt).not.toBeNull()
     })
 
-    it('rend 404 pour une adresse inconnue', async () => {
+    // Mineur (tour de correction 1) : le message ne doit pas parler d'« ID » pour une recherche
+    // par ADRESSE — le message générique de l'error handler ('User with this ID doesn't exist')
+    // est trompeur ici, seul endroit du fichier où il pouvait atteindre un appelant HTTP.
+    it("rend 404 pour une adresse inconnue, avec un message qui parle d'adresse, pas d'ID", async () => {
       const res = await searchAccount('jamais-vu-recherche@nulle-part.fr')
       expect(res.statusCode).toBe(404)
+      expect(res.json().message).not.toMatch(/\bID\b/)
     })
 
     it('rend 400 quand la query email est absente', async () => {
