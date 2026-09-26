@@ -127,8 +127,9 @@ d'énumération, pas la prose, qui empêche la prochaine route d'émettre sans p
 
 - **D4 — Le super-admin voit tout sauf le contenu des dossiers, et les noms du personnel sont
   visibles partout où il regarde.** Comptes, rattachements, rôles, établissements, services,
-  désactivations, journal d'activité, derniers accès, identifiants copiables — y compris ceux des
-  patients. Aucune identité de patient, aucun contenu de dossier.
+  désactivations, journal d'activité, derniers accès, identifiants copiables — établissements,
+  comptes et services. Aucune identité de patient, aucun contenu de dossier, **et aucun
+  identifiant de patient non plus** (voir plus bas, ce n'est pas un manque).
   *Motif* : les ennuis réels de production sont des problèmes de contexte et d'habilitation, pas
   de contenu. « Je ne vois plus mes patients » se diagnostique avec des rattachements et des
   dates. Pour le reste, l'exploitant dispose de `psql`, qui est l'outil juste : il ne passe pas
@@ -140,6 +141,27 @@ d'énumération, pas la prose, qui empêche la prochaine route d'émettre sans p
   en a besoin. **Noms visibles partout où le super-admin regarde.**
   *Coût si faux* : une session de super-admin volée vaudrait la lecture de tous les dossiers de
   tous les établissements, derrière un simple cookie et sans second facteur.
+  **Correction à la revue finale, sur « identifiants copiables partout » : cette phrase promettait
+  plus que le code ne tenait, à l'envers du défaut habituel de ce chantier.** Elle disait « y
+  compris ceux des patients » alors que, avant cette revue, `CopyableId` n'était posé qu'à deux
+  endroits : l'établissement, dans la zone SUPER-ADMIN elle-même
+  (`superAdminEstablishment.column.tsx`, `super-admin/$establishmentId.tsx`) et le COMPTE, mais
+  seulement dans la recherche de comptes du super-admin, elle aussi hors établissement
+  (`accountSearchPanel.tsx`, `account.id`). **Dans l'administration d'un établissement elle-même**
+  (les onglets Membres et Services que tout administrateur d'établissement — pas seulement le
+  super-admin — utilise au quotidien), aucun identifiant n'était copiable. Arbitrage tranché en
+  deux moitiés à cette même revue : `CopyableId` a été posé sur la liste des membres
+  (`member.column.tsx`, l'identifiant du COMPTE — le même que celui qu'`accountSearchPanel.tsx`
+  utilise déjà pour recouper, côté super-admin) et sur la liste des services
+  (`service.column.tsx`) — c'est le geste de dépannage réel, « donne-moi l'identifiant de ce
+  compte ». **Pour les patients, c'est la promesse qu'il fallait
+  corriger, pas le code : aucun écran super-admin n'expose d'identité de patient, et c'est le
+  comportement VOULU.** Un identifiant de patient copiable depuis une zone qui ne montre par
+  ailleurs ni nom ni date de naissance n'aiderait aucun diagnostic de support (D4 le dit déjà :
+  « je ne vois plus mes patients » se diagnostique par les rattachements, pas par le dossier) et
+  ouvrirait un moyen de recouper un dossier depuis une zone hors du contexte clinique. Aucun écran
+  n'en a besoin aujourd'hui ; si un tel besoin apparaît, il se traite comme une décision à part,
+  pas en élargissant D4 en silence.
 
 - **D5 — L'accès d'intervention est temporaire, motivé et visible ; il confère administrateur
   d'établissement et coordinateur sur chaque service actif.** Quatre heures par défaut,
@@ -763,6 +785,12 @@ plateforme.** C'est le périmètre naturel de l'étape 4b.
     surveillait. La zone super-admin n'a que deux onglets : Établissements (liste et détail) et
     Comptes. Créer un établissement se fait donc par un appel HTTP. Voir
     `verification-etape-4a.md`, qui en tire les conséquences sur le critère de sortie de la cible.
+    **Résolu à la tâche 14b** (`db07109`, `f022ef9`) : l'écran existe désormais
+    (`front/src/components/custom/popup/createEstablishmentForm.tsx`), monté sur la liste des
+    établissements. Ce point était encore décrit ci-dessus comme ouvert dans la version de ce
+    document écrite avant cette tâche (`bd7fde9`) — corrigé à la revue finale, qui a vérifié
+    l'écran dans le code avant de réécrire l'affirmation (voir aussi `verification-etape-4a.md` et
+    `deploiement-etape-4a.md`, corrigés au même moment).
 
 18. **`/e/:establishmentId/admin` n'a pas de route index** : y arriver directement rend un
     `<Outlet/>` vide. Antérieur, sans conséquence aujourd'hui (aucun lien n'y mène, tous pointent
@@ -776,6 +804,19 @@ plateforme.** C'est le périmètre naturel de l'étape 4b.
     (`user.establishments[].services`), pas celle de l'établissement. La route
     `PATCH /e/:id/admin/members/:id` accepte pourtant un tableau d'affectations : le manque est à
     l'écran, pas à l'API.
+    **Résolu à la tâche 14b** (`db07109`, `f022ef9`) pour la partie « affecter un membre à un
+    second service depuis l'écran Membres » : `EditMemberForm` (`editMemberForm.tsx:104-116`) lit
+    désormais la liste COMPLÈTE des services de l'établissement
+    (`GET /e/:establishmentId/admin/services`) et poste un tableau `services[]`, un rôle par
+    service. **La seconde moitié de ce point — « la liste des services proposés est celle de
+    l'administrateur connecté, pas celle de l'établissement » — restait vraie pour LES DEUX AUTRES
+    formulaires** (`CreateMemberAccountForm`, `AddMemberForm`) après la tâche 14b : corrigé à la
+    revue finale (Important n°2), qui les a alignés sur la même source
+    qu'`EditMemberForm`. Preuve par un établissement à deux services et un administrateur membre
+    d'un seul (`createMemberAccountForm.test.tsx`, `addMemberForm.test.tsx`) — la fixture d'origine
+    de `createMemberAccountForm.test.tsx` portait `services: []`, ce qui rendait le défaut invisible.
+    Ce point était encore décrit ci-dessus comme entièrement ouvert (« le manque est à l'écran, pas
+    à l'API ») dans la version de ce document écrite avant la tâche 14b (`bd7fde9`).
 
 ---
 

@@ -217,6 +217,21 @@ describe('etats de l ecran des services', () => {
     expect(screen.queryByText(/impossible de charger/i)).not.toBeInTheDocument()
   })
 
+  // Revue finale de l'étape 4a, Important n°3 : « identifiants copiables »
+  // (decisions-etape-4a.md, D3/D4) n'etait tenu que pour l'etablissement —
+  // le geste de depannage reel n'avait nulle part ou se poser sur cet
+  // ecran non plus.
+  it("affiche l'identifiant du service, copiable", async () => {
+    monter([routeGetServices([serviceActif])])
+
+    await waitFor(() => {
+      expect(screen.getByText('Cardio')).toBeInTheDocument()
+    })
+
+    expect(screen.getByText(serviceActif.id)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /copier l'identifiant/i })).toBeInTheDocument()
+  })
+
   // Mineur (tour de correction 1, tâche 13) : cette propriété n'avait pas
   // de nom propre - elle vivait implicitement sous un test qui parle de
   // REACTIVATION (« reactiver ne calcule aucun impact »), qui ne couvre pas

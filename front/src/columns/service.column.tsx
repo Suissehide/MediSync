@@ -2,6 +2,7 @@ import { createColumnHelper } from '@tanstack/react-table'
 import dayjs from 'dayjs'
 import { Ban, Pencil, RotateCcw } from 'lucide-react'
 
+import { CopyableId } from '@/components/custom/copyableId.tsx'
 import { Button } from '@/components/ui/button.tsx'
 import type { Service } from '@/types/service.ts'
 
@@ -26,6 +27,13 @@ export const getServiceColumns = ({
     id: 'name',
     header: 'Nom',
     cell: ({ row }) => row.original.name,
+  }),
+  // Revue finale de l'étape 4a, Important n°3 : « identifiants copiables »
+  // (decisions-etape-4a.md, D3/D4) — le geste de dépannage réel.
+  columnHelper.display({
+    id: 'serviceId',
+    header: 'Identifiant',
+    cell: ({ row }) => <CopyableId value={row.original.id} />,
   }),
   columnHelper.display({
     id: 'createdAt',

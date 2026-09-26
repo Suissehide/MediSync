@@ -287,6 +287,30 @@ describe('etats de l ecran des membres', () => {
 
     expect(screen.getByText('Cardiologie : Coordinateur')).toBeInTheDocument()
     expect(screen.getByText('Lecture')).toBeInTheDocument()
+  })
+
+  // Revue finale de l'etape 4a, Important n°3 : « identifiants copiables »
+  // (decisions-etape-4a.md, D3/D4) n'etait tenu que pour l'etablissement —
+  // le geste de depannage reel (« donne-moi l'identifiant de ce compte »)
+  // n'avait nulle part ou se poser sur cet ecran. L'identifiant montre est
+  // celui du COMPTE (`member.user.id`), le meme que celui affiche par la
+  // recherche de comptes du super-admin (`accountSearchPanel.tsx`).
+  it("affiche l'identifiant du compte, copiable", async () => {
+    monter([
+      routeSoignants,
+      routeServices(),
+      {
+        match: (url, method) => url.endsWith('/admin/members') && method === 'GET',
+        respond: () => ({ ok: true, status: 200, json: async () => [membreActif] }),
+      },
+    ])
+
+    await waitFor(() => {
+      expect(screen.getByText('membre@chu.fr')).toBeInTheDocument()
+    })
+
+    expect(screen.getByText(membreActif.user.id)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /copier l'identifiant/i })).toBeInTheDocument()
 
     // Le membre sans aucune affectation garde son tiret, sur SA propre
     // ligne — jamais confondu avec celles de l'autre membre.

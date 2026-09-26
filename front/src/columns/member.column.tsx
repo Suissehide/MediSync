@@ -1,6 +1,7 @@
 import { createColumnHelper } from '@tanstack/react-table'
 import { Ban, RotateCcw, Trash } from 'lucide-react'
 
+import { CopyableId } from '../components/custom/copyableId.tsx'
 import EditMemberForm from '../components/custom/popup/editMemberForm.tsx'
 import { Button } from '../components/ui/button.tsx'
 import {
@@ -73,6 +74,17 @@ export const getMemberColumns = ({
     id: 'email',
     header: 'Email',
     cell: ({ row }) => row.original.user.email,
+  }),
+  // Revue finale de l'étape 4a, Important n°3 : « identifiants copiables »
+  // (decisions-etape-4a.md, D3/D4) — le geste de dépannage réel, « donne-moi
+  // l'identifiant de ce compte ». L'identifiant du COMPTE (`user.id`), pas
+  // celui du rattachement (`Member.id`) : c'est le même que celui affiché
+  // par la recherche de comptes du super-admin (`accountSearchPanel.tsx`),
+  // qui recoupe par la même donnée.
+  columnHelper.display({
+    id: 'accountId',
+    header: 'Identifiant',
+    cell: ({ row }) => <CopyableId value={row.original.user.id} />,
   }),
   columnHelper.display({
     id: 'establishmentRole',
