@@ -94,8 +94,14 @@ les établissements, derrière un simple cookie et sans second facteur.
 ### 3.5 L'accès d'intervention est temporaire, motivé et visible
 
 Le super-admin peut s'accorder l'accès à un établissement pour une durée courte, en le justifiant.
-Pendant cette durée il est **un membre ordinaire** de cet établissement, avec le rôle de
-coordinateur. **Quatre heures par défaut, vingt-quatre au maximum** : assez pour comprendre un
+Pendant cette durée il est **un membre ordinaire** de cet établissement : rôle **administrateur**
+d'établissement, et **coordinateur** sur chacun de ses services actifs.
+
+*Pourquoi administrateur et non simple membre* — tranché à la tâche 3 : le but de l'octroi est le
+diagnostic, et le cas de support le plus fréquent est un problème de rattachement. Un accès qui ne
+voit pas la liste des membres ne diagnostique rien. L'écart avec un coordinateur réel est réel et
+assumé : l'octroi ouvre les écrans d'administration de l'établissement, qu'un coordinateur ne voit
+pas. **Quatre heures par défaut, vingt-quatre au maximum** : assez pour comprendre un
 ennui et agir, trop peu pour qu'un octroi oublié devienne un accès permanent.
 
 L'administrateur de l'établissement **voit ces octrois**, en cours et passés, avec leur motif.
@@ -242,11 +248,11 @@ aucun moyen. Compté dans 4a, sans rien construire de plus.
 | `POST /super-admin/users/:id/access-link` | `establishments:manage` | Réémet un lien |
 | `POST /super-admin/grants` | `establishments:manage` | S'accorde un accès temporaire, motif obligatoire |
 | `DELETE /super-admin/grants/:id` | `establishments:manage` | Révoque avant terme |
-| `GET /e/:establishmentId/services` | `services:manage` | Liste, avec les compteurs de désactivation |
-| `POST /e/:establishmentId/services` | `services:manage` | Crée, et rattache son créateur comme coordinateur |
-| `PATCH /e/:establishmentId/services/:id` | `services:manage` | Renomme, désactive, réactive |
-| `GET /e/:establishmentId/grants` | `members:manage` | Les octrois dont l'établissement a fait l'objet |
-| `POST /e/:establishmentId/members/account` | `members:manage` | Crée un compte et son lien |
+| `GET /e/:establishmentId/admin/services` | `services:manage` | Liste, avec les compteurs de désactivation |
+| `POST /e/:establishmentId/admin/services` | `services:manage` | Crée, et rattache son créateur comme coordinateur |
+| `PATCH /e/:establishmentId/admin/services/:id` | `services:manage` | Renomme, désactive, réactive |
+| `GET /e/:establishmentId/admin/grants` | `members:manage` | Les octrois dont l'établissement a fait l'objet |
+| `POST /e/:establishmentId/admin/members/account` | `members:manage` | Crée un compte et son lien |
 | `POST /auth/access-link/consume` | publique | Consomme un lien et pose le mot de passe |
 
 Tout ce qui est sous `/super-admin` rend **404** à un compte sans le drapeau, jamais 403 : ne pas
