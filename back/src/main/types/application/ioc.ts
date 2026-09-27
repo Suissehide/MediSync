@@ -17,6 +17,7 @@ import type { ServiceDomainInterface } from '../domain/service.domain.interface'
 import type { PathwayDomainInterface } from '../domain/pathway.domain.interface'
 import type { PathwayTemplateDomainInterface } from '../domain/pathwayTemplate.domain.interface'
 import type { PatientDomainInterface } from '../domain/patient.domain.interface'
+import type { PatientAccessLogDomainInterface } from '../domain/patientAccessLog.domain.interface'
 import type { PatientServiceFileDomainInterface } from '../domain/patientServiceFile.domain.interface'
 import type { SlotDomainInterface } from '../domain/slot.domain.interface'
 import type { SlotTemplateDomainInterface } from '../domain/slotTemplate.domain.interface'
@@ -42,6 +43,7 @@ import type { ServiceRepositoryInterface } from '../infra/orm/repositories/servi
 import type { PathwayRepositoryInterface } from '../infra/orm/repositories/pathway.repository.interface'
 import type { PathwayTemplateRepositoryInterface } from '../infra/orm/repositories/pathwayTemplate.repository.interface'
 import type { PatientRepositoryInterface } from '../infra/orm/repositories/patient.repository.interface'
+import type { PatientAccessLogRepositoryInterface } from '../infra/orm/repositories/patientAccessLog.repository.interface'
 import type { PatientServiceFileRepositoryInterface } from '../infra/orm/repositories/patientServiceFile.repository.interface'
 import type { SlotRepositoryInterface } from '../infra/orm/repositories/slot.repository.interface'
 import type { SlotTemplateRepositoryInterface } from '../infra/orm/repositories/slotTemplate.repository.interface'
@@ -140,4 +142,8 @@ export interface IocContainer {
   // Service (creation, renommage, (des)activation d'un service, etape 4a tache 9)
   readonly serviceDomain: ServiceDomainInterface
   readonly serviceRepository: ServiceRepositoryInterface
+  // PatientAccessLog (journal des consultations, etape 4b tache 2) — le crochet qui appelle
+  // `record` vient de la tache 3 ; cette tache pose seulement le chemin d'ecriture.
+  readonly patientAccessLogDomain: PatientAccessLogDomainInterface
+  readonly patientAccessLogRepository: PatientAccessLogRepositoryInterface
 }

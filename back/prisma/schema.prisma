@@ -458,6 +458,15 @@ model PatientAccessLog {
   exportCount   Int?
   exportFilters String?
 
+  // Decision du 2026-09-27 (etape 4b, tache 2) : un acces obtenu par octroi temporaire
+  // (superadmin muni d'un SuperAdminAccessGrant vivant, domain/accessGrant.domain.ts) emprunte
+  // le chemin de tenant ordinaire -- memes appartenances effectives qu'un membre reel -- et
+  // serait donc journalise de facon indiscernable d'un acces de soin sans cette colonne. Defaut
+  // `false` : une ligne ecrite par un chemin qui ne pose pas encore cette information (aucun
+  // aujourd'hui, dans src/main) reste un acces reel plutot que de fausser silencieusement le
+  // signe oppose.
+  accesParOctroi Boolean @default(false)
+
   createdAt DateTime @default(now())
 
   patient Patient @relation(fields: [patientId, establishmentId], references: [id, establishmentId], onDelete: Cascade)

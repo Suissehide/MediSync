@@ -29,7 +29,7 @@ const user: UserWithMemberships = {
 describe('resolveTenantFromUser', () => {
   it('resout un couple etablissement/service dont l utilisateur est membre', () => {
     expect(resolveTenantFromUser(user, { establishmentId: 'e1', serviceId: 's1' }, { requireEstablishmentAdmin: false }, []))
-      .toEqual({ userId: 'u1', establishmentId: 'e1', establishmentRole: 'MEMBER', serviceId: 's1', serviceRole: 'INTERVENANT', soignantId: 'so1' })
+      .toEqual({ userId: 'u1', establishmentId: 'e1', establishmentRole: 'MEMBER', serviceId: 's1', serviceRole: 'INTERVENANT', soignantId: 'so1', origine: 'reelle' })
   })
 
   it('renvoie 404 pour un service inconnu, desactive, ou un etablissement etranger', () => {
@@ -74,6 +74,33 @@ describe('resolveTenantFromUser', () => {
       .toThrow(Boom.Boom)
     const admin = { ...user, establishmentMemberships: [{ ...membership, role: 'ADMIN' as const }] }
     expect(resolveTenantFromUser(admin, { establishmentId: 'e1' }, { requireEstablishmentAdmin: true }, []))
-      .toEqual({ userId: 'u1', establishmentId: 'e1', establishmentRole: 'ADMIN', serviceId: null, serviceRole: null, soignantId: 'so1' })
+      .toEqual({ userId: 'u1', establishmentId: 'e1', establishmentRole: 'ADMIN', serviceId: null, serviceRole: null, soignantId: 'so1', origine: 'reelle' })
+  })
+
+  // Etape 4b, tache 2 : `origine` doit distinguer un octroi temporaire d'une appartenance
+  // reelle jusque dans le `Tenant` resolu — pas seulement dans `EffectiveMembership`
+  // (accessGrant.domain.ts), qui l'a toujours porte. Sans ce test, un retrait silencieux de
+  // `origine: membership.origine` dans `resolveTenantFromUser` (les deux `return`) laisserait
+  // le test precedent au vert (il ne couvre qu'une appartenance reelle) alors que le journal des
+  // consultations (`PatientAccessLogDomain.record`) ne verrait plus jamais d'octroi.
+  it('porte origine: octroi pour un super-admin qui n a aucune appartenance reelle a cet etablissement', () => {
+    const superAdmin: UserWithMemberships = {
+      ...user,
+      isSuperAdmin: true,
+      establishmentMemberships: [],
+    }
+    const grant = {
+      establishmentId: 'e9',
+      establishmentName: 'Etablissement sous octroi',
+      expiresAt: new Date(now.getTime() + 60_000),
+      revokedAt: null,
+      services: [{ id: 's9', name: 'S9' }],
+    }
+    expect(
+      resolveTenantFromUser(superAdmin, { establishmentId: 'e9', serviceId: 's9' }, { requireEstablishmentAdmin: false }, [grant], now),
+    ).toEqual({
+      userId: 'u1', establishmentId: 'e9', establishmentRole: 'ADMIN',
+      serviceId: 's9', serviceRole: 'COORDINATEUR', soignantId: null, origine: 'octroi',
+    })
   })
 })

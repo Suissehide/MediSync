@@ -97,6 +97,13 @@ export const resolveTenantFromUser = (
       serviceId: null,
       serviceRole: null,
       soignantId,
+      // Etape 4b, tache 2 : le journal des consultations (`PatientAccessLogDomain.record`) doit
+      // pouvoir distinguer un acces obtenu par octroi temporaire d'un acces reel — sans quoi les
+      // deux seraient indiscernables l'un de l'autre dans le journal, precisement ce qu'un
+      // journal d'audit existe pour empecher. `membership.origine` le sait deja
+      // (`effectiveMemberships` ci-dessus) ; il ne restait qu'a le transmettre plutot que de le
+      // laisser disparaitre a la sortie de cette fonction.
+      origine: membership.origine,
     }
   }
   const service = membership.services.find((s) => s.id === params.serviceId)
@@ -110,6 +117,7 @@ export const resolveTenantFromUser = (
     serviceId: service.id,
     serviceRole: service.role,
     soignantId,
+    origine: membership.origine,
   }
 }
 
