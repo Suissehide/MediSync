@@ -14,9 +14,12 @@ import type { IocContainer } from '../../../main/types/application/ioc'
 import type { RecordAccessInput } from '../../../main/types/domain/patientAccessLog.domain.interface'
 import type { Tenant } from '../../../main/types/utils/tenant-context'
 import {
+  buildPatientExportFilters,
   EXEMPTED_PATIENT_ROUTES,
   LOGGED_PATIENT_ROUTES,
+  PATIENT_EXPORT_ROUTE_URL,
   patientIdParamOf,
+  plannedPatientExportAccess,
 } from '../../../main/utils/access-log-routes'
 import { TenantContext } from '../../../main/utils/tenant-context'
 
@@ -166,6 +169,53 @@ describe('assertNoDeadPatientAccessEntry', () => {
     expect(() => assertNoDeadPatientAccessEntry(enEcriture)).toThrow(
       /Entrees mortes/,
     )
+  })
+})
+
+// ---------------------------------------------------------------------------
+// L'export (tache 4) : structurellement hors du filet ci-dessus, cote fonctions pures.
+// ---------------------------------------------------------------------------
+
+describe('plannedPatientExportAccess', () => {
+  it("n est jamais exigee par assertPatientReadLogged : c'est une route de collection", () => {
+    // Meme URL que celle que patientRouter enregistre reellement (routes/patient.ts) — une
+    // divergence entre les deux ferait passer ce dispositif a cote de la vraie route.
+    expect(PATIENT_EXPORT_ROUTE_URL).toBe(`${PREFIX}/patient/export`)
+    expect(patientIdParamOf(PATIENT_EXPORT_ROUTE_URL)).toBeNull()
+  })
+
+  it('rend null pour une autre route, meme avec un compte connu', () => {
+    expect(plannedPatientExportAccess(DOSSIER, { search: 'dup' }, 2)).toBeNull()
+  })
+
+  // Le compte ne peut venir que du handler (`routes/patient.ts`) : absent, ce dispositif ne
+  // peut pas construire de ligne. `recordPatientAccess` distingue ce cas (bug d'assemblage) du
+  // simple "cette route n'est pas journalisee" — voir le test du crochet plus bas.
+  it('rend null sur la route d export elle-meme quand le compte est inconnu', () => {
+    expect(
+      plannedPatientExportAccess(PATIENT_EXPORT_ROUTE_URL, { search: 'dup' }, undefined),
+    ).toBeNull()
+  })
+
+  it('construit une ligne avec le compte et les criteres, filtre absent omis', () => {
+    expect(plannedPatientExportAccess(PATIENT_EXPORT_ROUTE_URL, { search: 'dup' }, 2)).toEqual({
+      action: 'export',
+      exportCount: 2,
+      exportFilters: JSON.stringify({ search: 'dup' }),
+    })
+  })
+
+  it('porte pathwayTemplateTags quand il est fourni, et les deux ensemble', () => {
+    expect(buildPatientExportFilters({ pathwayTemplateTags: ['asthme'] })).toBe(
+      JSON.stringify({ pathwayTemplateTags: ['asthme'] }),
+    )
+    expect(
+      buildPatientExportFilters({ search: 'dup', pathwayTemplateTags: ['asthme', 'diabete'] }),
+    ).toBe(JSON.stringify({ search: 'dup', pathwayTemplateTags: ['asthme', 'diabete'] }))
+  })
+
+  it('ne porte ni search ni pathwayTemplateTags quand aucun des deux n est fourni', () => {
+    expect(buildPatientExportFilters({})).toBe('{}')
   })
 })
 
@@ -529,6 +579,66 @@ describe('recordPatientAccess', () => {
     expect(erreursRequete[0]).toContain('PrismaClientKnownRequestError')
     expect(erreursRequete[0]).not.toContain(secret)
     expect(surInstance).not.toHaveBeenCalled()
+    await app.close()
+  })
+
+  // ---------------------------------------------------------------------
+  // L'export (tache 4) : meme crochet, dispositif dedie (voir access-log-routes.ts).
+  // ---------------------------------------------------------------------
+
+  it("ecrit une ligne pour l export, sans identifiant de patient, avec le compte et les criteres", async () => {
+    const vues: RecordAccessInput[] = []
+    const { app, call } = await buildHookHarness((input) => {
+      vues.push(input)
+      return Promise.resolve()
+    })
+    await call({
+      request: {
+        tenant: tenantOf(),
+        routeOptions: { url: PATIENT_EXPORT_ROUTE_URL },
+        params: {},
+        query: { search: 'dup' },
+        patientExportCount: 2,
+        currentUser: { firstName: 'Ada', lastName: 'Lovelace' },
+      },
+      reply: { statusCode: 200 },
+    })
+    expect(vues).toEqual([
+      {
+        patientId: undefined,
+        userID: 'u1',
+        userFirstName: 'Ada',
+        userLastName: 'Lovelace',
+        action: 'export',
+        exportCount: 2,
+        exportFilters: JSON.stringify({ search: 'dup' }),
+      },
+    ])
+    await app.close()
+  })
+
+  // Bug d'assemblage plutot que cas normal (voir le commentaire de `recordPatientAccess`) : le
+  // handler n'a pas pose `patientExportCount` avant de repondre. Rien n'est ecrit, mais rien
+  // n'est tu non plus — meme parti pris que le contexte de tenant absent ou etranger.
+  it("n ecrit rien, et le signale, quand l export n a pas de compte connu", async () => {
+    const vues: RecordAccessInput[] = []
+    const { app, call, erreursRequete } = await buildHookHarness((input) => {
+      vues.push(input)
+      return Promise.resolve()
+    })
+    await call({
+      request: {
+        tenant: tenantOf(),
+        routeOptions: { url: PATIENT_EXPORT_ROUTE_URL },
+        params: {},
+        query: { search: 'dup' },
+        currentUser: { firstName: null, lastName: null },
+      },
+      reply: { statusCode: 200 },
+    })
+    expect(vues).toEqual([])
+    expect(erreursRequete).toHaveLength(1)
+    expect(erreursRequete[0]).toContain('export')
     await app.close()
   })
 })

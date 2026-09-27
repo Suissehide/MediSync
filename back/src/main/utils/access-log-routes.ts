@@ -131,3 +131,71 @@ export const plannedPatientAccess = (
   }
   return { action, patientId }
 }
+
+// ---------------------------------------------------------------------------
+// L'export (tache 4, etape 4b) : structurellement hors du filet ci-dessus.
+// ---------------------------------------------------------------------------
+//
+// `GET /patient/export` n'a AUCUN parametre dans son URL : `patientIdParamOf` y rend `null`,
+// donc `assertPatientReadLogged` ne l'exige dans aucune des deux listes ci-dessus, et
+// `plannedPatientAccess` n'a rien a y lire. C'est voulu, pas un trou -- c'est exactement la
+// raison d'etre de cette tache. Un dispositif dedie, symetrique de celui-ci mais construit
+// depuis la chaine de requete plutot que depuis un parametre de route, journalise cette route
+// EN UNE SEULE LIGNE (le nombre de dossiers rendus, pas un par dossier -- une ligne par
+// patient reproduirait exactement le defaut qui a fait exclure « toute lecture identifiante »
+// du perimetre de ce journal : un journal volumineux ou l'essentiel se noie).
+//
+// URL DECLAREE de la route, telle que Fastify l'enregistre (`patientRouter`, prefixe
+// `/patient` sous `tenantRoutes`) -- exactement la forme que lit `request.routeOptions.url`,
+// comme pour `LOGGED_PATIENT_ROUTES` ci-dessus.
+export const PATIENT_EXPORT_ROUTE_URL = '/e/:establishmentId/s/:serviceId/patient/export'
+
+export type PatientExportQuery = {
+  search?: string
+  pathwayTemplateTags?: string | string[]
+}
+
+// Les CRITERES de l'export, tels que journalises -- jamais son resultat, jamais la chaine de
+// requete brute. `search` est un texte libre (potentiellement un nom de patient, voir
+// `utils/url-helper.ts`) ; c'est precisement pour cela que `PatientAccessLogDomain.record`
+// (domain/patientAccessLog.domain.ts) refuse toute cle clinique dans `exportFilters` -- la
+// seule barriere qui protege ce journal de contenu clinique, deja ecrite a la tache 2, et
+// deliberement pas reecrite ici.
+//
+// `JSON.stringify` omet de lui-meme une propriete dont la valeur est `undefined` : un critere
+// absent de la requete n'apparait donc jamais dans le JSON produit, sans condition explicite.
+export const buildPatientExportFilters = (query: PatientExportQuery): string =>
+  JSON.stringify({
+    search: query.search,
+    pathwayTemplateTags: query.pathwayTemplateTags,
+  })
+
+export type PlannedPatientExportAccess = {
+  action: 'export'
+  exportCount: number
+  exportFilters: string
+}
+
+// Ce qu'il y a a journaliser pour l'export, ou `null` si cette route n'est pas celle-ci, ou si
+// le nombre de dossiers rendus n'est pas encore connu. `exportCount` vient du handler
+// (`routes/patient.ts`) via `request.patientExportCount` : seul le handler sait combien de
+// dossiers l'export a effectivement rendus -- le recalculer ici rejouerait la meme requete en
+// base une seconde fois, avec un risque de divergence si un patient a ete cree ou supprime
+// entre les deux lectures. Sur le chemin de succes (la seule qui atteint ce point, voir la
+// garde de statut du crochet), le handler l'a TOUJOURS pose avant de repondre : `undefined` ici
+// signale un bug d'assemblage, pas un cas normal, et le crochet appelant le journalise en
+// consequence plutot que d'ecrire une ligne au compte inconnu.
+export const plannedPatientExportAccess = (
+  url: string | undefined,
+  query: PatientExportQuery | undefined,
+  exportCount: number | undefined,
+): PlannedPatientExportAccess | null => {
+  if (url !== PATIENT_EXPORT_ROUTE_URL || exportCount === undefined) {
+    return null
+  }
+  return {
+    action: 'export',
+    exportCount,
+    exportFilters: buildPatientExportFilters(query ?? {}),
+  }
+}

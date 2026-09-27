@@ -18,13 +18,17 @@ import {
   liveGrantsForUser,
 } from '../../../../domain/accessGrant.domain'
 import type { LiveGrant } from '../../../../types/domain/accessGrant.domain.interface'
+import type { AccessAction } from '../../../../types/domain/patientAccessLog.domain.interface'
 import type { UserWithMemberships } from '../../../../types/infra/orm/repositories/user.repository.interface'
 import type { Tenant } from '../../../../types/utils/tenant-context'
 import {
   EXEMPTED_PATIENT_ROUTES,
   LOGGED_PATIENT_ROUTES,
+  PATIENT_EXPORT_ROUTE_URL,
+  type PatientExportQuery,
   patientIdParamOf,
   plannedPatientAccess,
+  plannedPatientExportAccess,
 } from '../../../../utils/access-log-routes'
 import { withoutClinicalFields } from '../../../../utils/clinical-fields'
 import { hasPermission, type Permission } from '../../../../utils/permissions'
@@ -37,6 +41,13 @@ declare module 'fastify' {
     // hooks suivants s'exécutent quand même sur la réponse d'erreur. Le
     // déclarer non optionnel faisait passer les déstructurations pour sûres.
     tenant?: Tenant
+    // Journal des consultations, export (etape 4b, tache 4). `GET /patient/export` n'a aucun
+    // parametre de route ou lire un identifiant de patient : `recordPatientAccess` (plus bas)
+    // n'a donc pas d'autre moyen de savoir combien de dossiers l'export a rendus que de le lire
+    // ici -- seul le handler (`routes/patient.ts`) le sait, et il le pose juste avant de
+    // repondre. `undefined` sur toute autre route, et sur celle-ci si le handler ne l'a jamais
+    // pose (voir le commentaire de `recordPatientAccess`).
+    patientExportCount?: number
   }
   export interface FastifyContextConfig {
     permission?: Permission
@@ -264,6 +275,35 @@ export const requireTenant = (request: FastifyRequest): Tenant => {
   return request.tenant
 }
 
+// Ce qu'il y a a journaliser pour CETTE requete -- un dossier (les quatre routes de
+// `LOGGED_PATIENT_ROUTES`) ou l'export (tache 4, dispositif dedie) -- ou `null`. Petite fonction
+// a part, pour que `recordPatientAccess` (plus bas) reste lisible d'un trait : le lint l'impose
+// (`noExcessiveCognitiveComplexity`). La connaissance de CE qu'il faut journaliser reste
+// entierement dans `utils/access-log-routes.ts` ; ce crochet ne fait qu'assembler les deux
+// resolveurs qu'il expose, jamais une troisieme regle a lui.
+const resolvePlannedAccess = (
+  request: FastifyRequest,
+): {
+  action: AccessAction
+  patientId?: string
+  exportCount?: number
+  exportFilters?: string
+} | null => {
+  const url = request.routeOptions.url
+  const dossier = plannedPatientAccess(
+    url,
+    request.params as Record<string, string | undefined>,
+  )
+  if (dossier !== null) {
+    return dossier
+  }
+  return plannedPatientExportAccess(
+    url,
+    request.query as PatientExportQuery | undefined,
+    request.patientExportCount,
+  )
+}
+
 const tenantPlugin: FastifyPluginAsync = fastifyPlugin(
   (fastify: FastifyInstance) => {
     const { tenantContext, accessGrantRepository, patientAccessLogDomain } =
@@ -448,17 +488,29 @@ const tenantPlugin: FastifyPluginAsync = fastifyPlugin(
         if (request.method !== 'GET') {
           return Promise.resolve()
         }
-        // 2. Seules les routes declarees journalisees le sont. `routeOptions.url` est l'URL
-        //    DECLAREE (avec ses `:parametres`), la meme chaine exactement que celle que
-        //    `assertPatientReadLogged` a vue au demarrage — les deux ne peuvent pas diverger.
-        const prevu = plannedPatientAccess(
-          request.routeOptions.url,
-          request.params as Record<string, string | undefined>,
-        )
+        // 1 ter. L'export (tache 4) est le SEUL cas ou ce crochet peut savoir qu'une ligne est
+        //    due sans pouvoir la construire : `request.patientExportCount` vient du handler
+        //    (`routes/patient.ts`), pose juste avant de repondre. Absent ici, sur CETTE route,
+        //    c'est un bug d'assemblage -- un export sans aucun resultat pose `0`, jamais rien --
+        //    et il se signale, plutot que d'ecrire une ligne au compte inconnu ou de se taire.
+        if (
+          request.routeOptions.url === PATIENT_EXPORT_ROUTE_URL &&
+          request.patientExportCount === undefined
+        ) {
+          request.log.error(
+            'PatientAccessLog: export sans nombre de dossiers connu, action non journalisee',
+          )
+          return Promise.resolve()
+        }
+        // 2. Seules les routes declarees journalisees le sont, ou l'export (dispositif dedie,
+        //    voir `resolvePlannedAccess` ci-dessus). `routeOptions.url` est l'URL DECLAREE (avec
+        //    ses `:parametres`), la meme chaine exactement que celle que `assertPatientReadLogged`
+        //    a vue au demarrage pour un dossier — les deux ne peuvent pas diverger.
+        const prevu = resolvePlannedAccess(request)
         if (prevu === null) {
           return Promise.resolve()
         }
-        const { action, patientId } = prevu
+        const { action, patientId, exportCount, exportFilters } = prevu
         // 3. UNE SEULE comparaison, qui couvre DEUX choses — et c'est voulu, plutot qu'une garde
         //    `if (!request.tenant)` en plus, qu'aucun test n'aurait pu faire rougir seule
         //    (mesure : celle-ci la subsume entierement). Elle refuse a la fois le tenant absent
@@ -484,6 +536,8 @@ const tenantPlugin: FastifyPluginAsync = fastifyPlugin(
             userFirstName: request.currentUser?.firstName ?? null,
             userLastName: request.currentUser?.lastName ?? null,
             action,
+            exportCount,
+            exportFilters,
           })
           .catch((err: unknown) => {
             // UNE ECRITURE DE JOURNAL QUI ECHOUE NE DOIT PAS EMPECHER DE SOIGNER : la reponse est

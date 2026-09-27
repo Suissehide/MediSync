@@ -97,6 +97,14 @@ export type PatientExportFilters = {
 // dire explicitement s'il a `clinical:read`.
 export type PatientExportOptions = { includeClinicalFields: boolean }
 
+// `count` (etape 4b, tache 4) : le nombre de dossiers effectivement rendus par l'export,
+// necessaire au handler (`routes/patient.ts`) pour poser `request.patientExportCount` avant de
+// repondre -- le journal des consultations (`recordPatientAccess`, plugins/tenant.plugin.ts) en
+// a besoin et ne peut pas le recalculer lui-meme sans rejouer integralement la meme requete.
+// `patients.length` est deja calcule ici pour construire les lignes du classeur ; l'exposer
+// coute une propriete, pas une seconde requete.
+export type PatientExportResult = { buffer: Buffer; count: number }
+
 export type RemoveFromPathwayResult = {
   deletedAppointments: number
   removedFromGroup: number
@@ -122,7 +130,7 @@ export interface PatientDomainInterface {
   exportExcel: (
     filters: PatientExportFilters,
     options: PatientExportOptions,
-  ) => Promise<Buffer>
+  ) => Promise<PatientExportResult>
   create: (
     patientCreateParams: PatientCreateEntityDomain,
     userID: string,

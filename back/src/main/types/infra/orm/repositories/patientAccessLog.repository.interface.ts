@@ -11,7 +11,9 @@ export type PatientAccessLogEntityRepo = PatientAccessLog
 // qui la calcule depuis `tenantContext.current().origine` et la fournit ici, exactement comme
 // `ServiceRepository.create` recoit `creatorUserId` du domaine plutot que de l'appelant HTTP.
 export type PatientAccessLogCreateEntityRepo = {
-  patientId: string
+  // Optionnel depuis la tache 4 (etape 4b) : une ligne d'export n'a pas d'identifiant de patient
+  // (voir le commentaire de `RecordAccessInput`, types/domain/patientAccessLog.domain.interface.ts).
+  patientId?: string
   userID: string
   userFirstName: string | null
   userLastName: string | null

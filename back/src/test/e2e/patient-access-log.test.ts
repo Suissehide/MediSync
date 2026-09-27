@@ -329,6 +329,122 @@ describe('journal des consultations : le crochet sur le chemin reel', () => {
 })
 
 // ---------------------------------------------------------------------------
+// L'export (tache 4) : structurellement hors du filet ci-dessus -- `GET /patient/export` n'a
+// aucun identifiant de patient dans son URL. Dispositif dedie (voir
+// utils/access-log-routes.ts) : une seule ligne par export, avec le nombre de dossiers rendus
+// et les criteres de la requete, jamais un identifiant de patient (`patientId` est desormais
+// nullable en base -- voir la migration `make_patient_access_log_patient_id_nullable`).
+// ---------------------------------------------------------------------------
+
+describe("journal des consultations : l export, en une ligne (tache 4)", () => {
+  let testApp: TestApp
+  let etab: { id: string }
+  let service: { id: string }
+  let cookies: { access_token: string }
+
+  beforeAll(async () => {
+    await truncateAll()
+    testApp = await buildTestApp()
+
+    etab = await createEstablishment('Export')
+    service = await createService(etab.id, 'Service export')
+
+    await createUser({
+      email: 'export@test.fr',
+      memberships: [
+        {
+          establishmentId: etab.id,
+          services: [{ serviceId: service.id, role: 'COORDINATEUR' }],
+        },
+      ],
+    })
+
+    // DEUX patients qui correspondent au filtre "dup" (Dupont, Dupuis), et un TROISIEME qui n y
+    // correspond pas (Martin). Sans ce troisieme, un export qui ignorerait le filtre (renverrait
+    // TOUJOURS tous les patients de l etablissement) donnerait le meme compte que celui-ci --
+    // le test ne prouverait alors rien du filtrage, seulement que l export compte quelque chose.
+    await testDb.patient.createMany({
+      data: [
+        {
+          firstName: 'Marie',
+          lastName: 'Dupont',
+          createDate: new Date(),
+          establishmentId: etab.id,
+        },
+        {
+          firstName: 'Paul',
+          lastName: 'Dupuis',
+          createDate: new Date(),
+          establishmentId: etab.id,
+        },
+        {
+          firstName: 'Alice',
+          lastName: 'Martin',
+          createDate: new Date(),
+          establishmentId: etab.id,
+        },
+      ],
+    })
+
+    cookies = await signIn(testApp.app, 'export@test.fr')
+  })
+
+  afterAll(async () => {
+    await testApp.close()
+    await testDb.$disconnect()
+  })
+
+  beforeEach(async () => {
+    await testDb.patientAccessLog.deleteMany()
+  })
+
+  const exporter = (query: string) =>
+    testApp.app.inject({
+      method: 'GET',
+      url: `${tenantUrl(etab.id, service.id, '/patient/export')}?${query}`,
+      cookies,
+    })
+
+  it('trace un export en UNE ligne, avec le nombre de dossiers et les criteres', async () => {
+    const res = await exporter('search=dup')
+    expect(res.statusCode).toBe(200)
+    await attendre(
+      async () => (await testDb.patientAccessLog.count()) === 1,
+      "la ligne de l export est ecrite",
+    )
+    const lignes = await testDb.patientAccessLog.findMany({
+      where: { action: 'export' },
+    })
+    expect(lignes).toHaveLength(1)
+    expect({
+      patientId: lignes[0]?.patientId,
+      count: lignes[0]?.exportCount,
+      filtres: lignes[0]?.exportFilters,
+    }).toEqual({
+      patientId: null,
+      count: 2,
+      filtres: JSON.stringify({ search: 'dup' }),
+    })
+  })
+
+  // Review Focus n°2 (cahier des charges) : un export dont le filtre ne rend aucun dossier est
+  // journalise quand meme, avec `exportCount: 0` -- jamais confondu avec « rien a journaliser ».
+  it("trace un export qui ne rend aucun dossier", async () => {
+    const res = await exporter('search=personne-de-ce-nom')
+    expect(res.statusCode).toBe(200)
+    await attendre(
+      async () => (await testDb.patientAccessLog.count()) === 1,
+      "la ligne de l export vide est ecrite",
+    )
+    const lignes = await testDb.patientAccessLog.findMany({
+      where: { action: 'export' },
+    })
+    expect(lignes).toHaveLength(1)
+    expect(lignes[0]?.exportCount).toBe(0)
+  })
+})
+
+// ---------------------------------------------------------------------------
 // La propriete centrale, sur le chemin reel : une route neuve non declaree
 // empeche l application de devenir prete.
 // ---------------------------------------------------------------------------

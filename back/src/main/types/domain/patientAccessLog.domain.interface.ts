@@ -15,8 +15,17 @@ export type AccessAction =
   | 'echecsInscription.consultes'
   | 'export'
 
+// `patientId` est optionnel depuis la tache 4 (etape 4b) : `GET /patient/export` n'a aucun
+// identifiant de patient dans son URL, structurellement -- voir `utils/access-log-routes.ts`
+// (`PATIENT_EXPORT_ROUTE_URL`, `plannedPatientExportAccess`) pour le mecanisme dedie qui la
+// journalise quand meme, en une seule ligne. ARBITRAGE DE LEO (2026-09-27) : plutot que de
+// deplacer l'export dans `ActivityLog`, la colonne `PatientAccessLog.patientId` (prisma/
+// schema.prisma) devient nullable -- verifie avant d'ecrire que la cle etrangere composite
+// (patientId, establishmentId) le tolere : Postgres, par defaut, en `MATCH SIMPLE`, n'exige la
+// correspondance que lorsque AUCUNE colonne referente n'est nulle. Une ligne d'export
+// (patientId `NULL`, establishmentId renseigne) ne declenche donc jamais la contrainte.
 export type RecordAccessInput = {
-  patientId: string
+  patientId?: string
   userID: string
   userFirstName: string | null
   userLastName: string | null

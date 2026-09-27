@@ -448,7 +448,7 @@ model PatientAccessLog {
   id              String @id @default(cuid())
   establishmentId String
   serviceId       String
-  patientId       String
+  patientId       String?
 
   userID        String
   userFirstName String?
@@ -469,7 +469,7 @@ model PatientAccessLog {
 
   createdAt DateTime @default(now())
 
-  patient Patient @relation(fields: [patientId, establishmentId], references: [id, establishmentId], onDelete: Cascade)
+  patient Patient? @relation(fields: [patientId, establishmentId], references: [id, establishmentId], onDelete: Cascade)
   service Service @relation(fields: [serviceId, establishmentId], references: [id, establishmentId])
 
   @@unique([id, serviceId])

@@ -2,6 +2,8 @@ import { PatientAccessLogDomain } from '../../../main/domain/patientAccessLog.do
 import { PatientAccessLogRepository } from '../../../main/infra/orm/repositories/patientAccessLog.repository'
 import type { IocContainer } from '../../../main/types/application/ioc'
 import type { Tenant } from '../../../main/types/utils/tenant-context'
+import { buildPatientExportFilters } from '../../../main/utils/access-log-routes'
+import { CLINICAL_FIELDS } from '../../../main/utils/clinical-fields'
 import { TenantContext } from '../../../main/utils/tenant-context'
 import { TenantContextMissingError } from '../../../main/utils/tenant-errors'
 
@@ -226,6 +228,71 @@ describe('PatientAccessLogDomain.record', () => {
     const { domain, calls } = setup()
 
     await expect(domain.record(validInput)).rejects.toThrow(TenantContextMissingError)
+    expect(calls).toHaveLength(0)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// L'export (tache 4) : les criteres journalises viennent de `buildPatientExportFilters`
+// (utils/access-log-routes.ts), jamais recopies ici -- composition avec la garde clinique
+// ci-dessus (tache 2), sur le chemin reel, plutot qu'une seconde garde a cote.
+// ---------------------------------------------------------------------------
+
+describe("PatientAccessLogDomain.record, les criteres de l export (tache 4)", () => {
+  it('ecrit la ligne, sans identifiant de patient, quand les criteres construits depuis la requete (search, pathwayTemplateTags) sont legitimes', async () => {
+    const { ctx, domain, calls } = setup()
+
+    await ctx.run(tenantReel, () =>
+      domain.record({
+        userID: 'u1',
+        userFirstName: null,
+        userLastName: null,
+        action: 'export',
+        exportCount: 2,
+        exportFilters: buildPatientExportFilters({
+          search: 'dup',
+          pathwayTemplateTags: ['asthme'],
+        }),
+      }),
+    )
+
+    expect(calls).toHaveLength(1)
+    expect(calls[0]).not.toHaveProperty('patientId')
+    expect(calls[0]).toMatchObject({
+      action: 'export',
+      exportCount: 2,
+      exportFilters: JSON.stringify({ search: 'dup', pathwayTemplateTags: ['asthme'] }),
+    })
+  })
+
+  // Aucune des deux clefs que `buildPatientExportFilters` connait (`search`,
+  // `pathwayTemplateTags`) n'est clinique : la chaine de requete reelle de `/patient/export` ne
+  // peut donc pas y glisser une cle interdite aujourd'hui. Cette garde reste la SEULE barriere
+  // si une future route d'export venait a accepter un critere en texte libre nomme d'apres une
+  // colonne clinique -- eprouvee ici avec une cle IMPORTEE (`CLINICAL_FIELDS`,
+  // utils/clinical-fields.ts), jamais recopiee, pour ne jamais diverger de la liste que la
+  // garde consulte reellement.
+  it('refuse meme un export dont les criteres porteraient une cle clinique importee', async () => {
+    const { ctx, domain, calls } = setup()
+    const [cleClinique] = CLINICAL_FIELDS
+    expect(cleClinique).toBeDefined()
+
+    await expect(
+      ctx.run(tenantReel, () =>
+        domain.record({
+          userID: 'u1',
+          userFirstName: null,
+          userLastName: null,
+          action: 'export',
+          exportCount: 2,
+          exportFilters: JSON.stringify({
+            search: 'dup',
+            [cleClinique as string]: 'texte clinique',
+          }),
+        }),
+      ),
+    ).rejects.toThrow(/clinique/i)
+
     expect(calls).toHaveLength(0)
   })
 })
