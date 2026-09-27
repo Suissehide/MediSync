@@ -103,4 +103,33 @@ describe('resolveTenantFromUser', () => {
       serviceId: 's9', serviceRole: 'COORDINATEUR', soignantId: null, origine: 'octroi',
     })
   })
+
+  // TOUR DE CORRECTION 1 (revue) — le test precedent ne croise l'octroi qu'avec la branche
+  // SERVICE (`requireEstablishmentAdmin: false`) de `resolveTenantFromUser`. Celle-ci a une
+  // seconde branche, l'administration d'etablissement (`requireEstablishmentAdmin: true`), avec
+  // son propre `return` litteral qui pose aussi `origine: membership.origine` — jamais exercee
+  // avec un octroi jusqu'ici. Un defaut propre a CETTE branche (par exemple un `return` qui
+  // aurait oublie `origine`, ou l'aurait figee a `'reelle'`) ne serait vu par aucun des tests
+  // existants : celui d'administration ci-dessus ne porte que sur une appartenance reelle, et
+  // celui d'octroi ci-dessus ne passe que par la branche service.
+  it('porte aussi origine: octroi dans le contexte d administration d etablissement', () => {
+    const superAdmin: UserWithMemberships = {
+      ...user,
+      isSuperAdmin: true,
+      establishmentMemberships: [],
+    }
+    const grant = {
+      establishmentId: 'e9',
+      establishmentName: 'Etablissement sous octroi',
+      expiresAt: new Date(now.getTime() + 60_000),
+      revokedAt: null,
+      services: [{ id: 's9', name: 'S9' }],
+    }
+    expect(
+      resolveTenantFromUser(superAdmin, { establishmentId: 'e9' }, { requireEstablishmentAdmin: true }, [grant], now),
+    ).toEqual({
+      userId: 'u1', establishmentId: 'e9', establishmentRole: 'ADMIN',
+      serviceId: null, serviceRole: null, soignantId: null, origine: 'octroi',
+    })
+  })
 })

@@ -8,6 +8,7 @@ import { MembershipRepository } from '../../../main/infra/orm/repositories/membe
 import { PathwayRepository } from '../../../main/infra/orm/repositories/pathway.repository'
 import { PathwayTemplateRepository } from '../../../main/infra/orm/repositories/pathwayTemplate.repository'
 import { PatientRepository } from '../../../main/infra/orm/repositories/patient.repository'
+import { PatientAccessLogRepository } from '../../../main/infra/orm/repositories/patientAccessLog.repository'
 import { PatientServiceFileRepository } from '../../../main/infra/orm/repositories/patientServiceFile.repository'
 import { PlanningCycleRepository } from '../../../main/infra/orm/repositories/planningCycle.repository'
 import { SlotRepository } from '../../../main/infra/orm/repositories/slot.repository'
@@ -19,7 +20,7 @@ import { assertTenantScope } from '../../../main/infra/orm/tenant-guard'
 import type { IocContainer } from '../../../main/types/application/ioc'
 import type { Tenant } from '../../../main/types/utils/tenant-context'
 import { TenantContext } from '../../../main/utils/tenant-context'
-import { TenantScopeMissingError } from '../../../main/utils/tenant-errors'
+import { TenantContextMissingError, TenantScopeMissingError } from '../../../main/utils/tenant-errors'
 
 type Call = { model: string; op: string; args: Record<string, unknown> }
 
@@ -1299,5 +1300,80 @@ describe('PatientServiceFileRepository.impactDesactivation', () => {
         { kind: 'system' },
       ),
     ).not.toThrow()
+  })
+})
+
+// TOUR DE CORRECTION 1 (revue, tache 2 etape 4b) — DUPLIQUE (ne deplace pas) les deux memes
+// bornes que `patientAccessLog.domain.test.ts` prouve deja depuis le domaine : ce fichier tient
+// la liste des depots dont le scoping est couvert, et `PatientAccessLogRepository` n'y figurait
+// pas. Sans cette entree, un futur resserrement du garde-fou qui casserait ce depot ne serait vu
+// que si quelqu'un pense a aller regarder le fichier du domaine — rien ici ne l'y forcerait.
+describe('PatientAccessLogRepository', () => {
+  it('pose establishmentId/serviceId depuis le scope, jamais depuis l appelant', async () => {
+    const { prisma, calls } = buildFakePrisma()
+    const ctx = new TenantContext()
+    const repo = new PatientAccessLogRepository(buildContainer(prisma, ctx))
+
+    await ctx.run(tenant, () =>
+      repo.create({
+        patientId: 'p1',
+        userID: 'u1',
+        userFirstName: 'A',
+        userLastName: 'B',
+        action: 'dossier.ouvert',
+        accesParOctroi: false,
+      }),
+    )
+
+    expect(calls[0]).toMatchObject({
+      model: 'patientAccessLog',
+      op: 'create',
+      args: {
+        data: {
+          establishmentId: 'e1',
+          serviceId: 's1',
+          patientId: 'p1',
+          userID: 'u1',
+          action: 'dossier.ouvert',
+          accesParOctroi: false,
+        },
+      },
+    })
+  })
+
+  // Meme demonstration que pour les autres depots plus haut : la forme exacte qu'envoie `create`
+  // passe le garde-fou reel (`assertTenantScope`) sous un contexte de tenant, et — puisque
+  // `create` lit `tenantContext.scope()` avant meme d'atteindre Prisma — est refusee hors de
+  // tout contexte, sans que le garde-fou ait meme besoin d'intervenir.
+  it('create passe le garde-fou de tenant, et est refuse hors de tout contexte', async () => {
+    const ctx = new TenantContext()
+    const guarded = new Proxy(
+      {},
+      {
+        get:
+          (_t, op: string) =>
+          (args: Record<string, unknown>) => {
+            assertTenantScope(
+              { model: 'PatientAccessLog', operation: op, args: args ?? {} },
+              ctx.peek(),
+            )
+            return Promise.resolve({ id: 'x', ...(args.data as object) })
+          },
+      },
+    )
+    const prisma = { patientAccessLog: guarded } as unknown
+    const repo = new PatientAccessLogRepository(buildContainer(prisma, ctx))
+    const params = {
+      patientId: 'p1',
+      userID: 'u1',
+      userFirstName: null,
+      userLastName: null,
+      action: 'dossier.ouvert',
+      accesParOctroi: false,
+    }
+
+    await expect(ctx.run(tenant, () => repo.create(params))).resolves.toBeDefined()
+
+    await expect(repo.create(params)).rejects.toThrow(TenantContextMissingError)
   })
 })

@@ -25,10 +25,17 @@ class PatientAccessLogDomain implements PatientAccessLogDomainInterface {
   // avant tout appel au depot : une ligne dont les filtres portent une des quatre cles reservees
   // a `clinical:read` (`utils/clinical-fields.ts`) n'est jamais ecrite, meme partiellement.
   //
-  // Verifie AVANT de lire le tenant courant, a dessein : le test qui prouve ce refus
-  // (patientAccessLog.domain.test.ts) construit le domaine sans tenantContext du tout — inverser
-  // l'ordre ferait echouer ce test pour une autre raison que celle qu'il pretend eprouver (un
-  // `TenantContextMissingError` au lieu du refus clinique attendu).
+  // TOUR DE CORRECTION 1 (revue) — cette garde est verifiee sur le CHEMIN REEL
+  // (patientAccessLog.domain.test.ts monte desormais un `tenantContext` reel, entre par
+  // `ctx.run`, avant d'appeler `record`), pas seulement avec un domaine construit sans
+  // tenantContext. La revue a demontre par execution que l'ancienne version du test (domaine
+  // sans tenantContext) rougissait bien sous un sabotage etroit (retirer `notes` de la liste
+  // verifiee) — mais pour la MAUVAISE raison : un `TypeError` sur `this.tenantContext.current()`
+  // undefined, pas le rejet clinique que l'assertion `/clinique/i` pretendait eprouver. Rejoue
+  // avec un tenantContext reel, le meme sabotage laissait la ligne s'ecrire, `exportFilters`
+  // clinique intact, dans l'appel Prisma capture — la garde ne protegeait donc RIEN sur le
+  // chemin de production. Verifier avant ou apres la lecture du tenant ne change plus rien au
+  // resultat de ce test desormais.
   async record(input: RecordAccessInput): Promise<void> {
     this.assertNoClinicalContent(input.exportFilters)
     // Decision du 2026-09-27 (etape 4b) : un acces obtenu par octroi temporaire (superadmin muni
@@ -46,6 +53,15 @@ class PatientAccessLogDomain implements PatientAccessLogDomainInterface {
     })
   }
 
+  // TOUR DE CORRECTION 1 (revue) — deux trous elargis a dessein, sur la SEULE barriere qui
+  // protege ce journal de contenu clinique :
+  //   - la verification etait limitee au premier niveau des cles ; un filtre exotique portant
+  //     la cle clinique sous un objet ou un tableau imbrique (`{ criteres: [{ notes: '...' }] }`)
+  //     passait sans etre vu. `findClinicalKey` descend desormais recursivement dans les objets
+  //     ET les tableaux.
+  //   - une chaine non analysable comme JSON etait silencieusement ACCEPTEE (`return` dans le
+  //     `catch`) — la seule barriere du journal laissait alors passer tout ce qu'elle ne savait
+  //     pas lire. Elle REFUSE desormais, au lieu d'accepter par defaut.
   private assertNoClinicalContent(exportFilters: string | undefined): void {
     if (exportFilters === undefined) {
       return
@@ -54,21 +70,54 @@ class PatientAccessLogDomain implements PatientAccessLogDomainInterface {
     try {
       parsed = JSON.parse(exportFilters)
     } catch {
-      // Non exploitable comme JSON : rien de plus a verifier ici. La validation de forme
-      // d'`exportFilters` est hors de la portee de cette tache (voir le brief : le depot et le
-      // domaine d'ECRITURE, pas la validation d'entree HTTP).
-      return
+      throw Boom.badRequest(
+        "Le journal des consultations refuse un exportFilters non analysable (JSON invalide) : impossible de garantir l'absence de contenu clinique",
+      )
     }
-    if (typeof parsed !== 'object' || parsed === null) {
-      return
+    const key = this.findClinicalKey(parsed)
+    if (key !== null) {
+      throw Boom.badRequest(
+        `Le journal des consultations ne peut jamais porter de contenu clinique (cle "${key}")`,
+      )
     }
-    for (const key of Object.keys(parsed as Record<string, unknown>)) {
-      if (CLINICAL_FIELD_SET.has(key)) {
-        throw Boom.badRequest(
-          `Le journal des consultations ne peut jamais porter de contenu clinique (cle "${key}")`,
-        )
+  }
+
+  // Cherche une cle clinique (`utils/clinical-fields.ts`) a n'importe quelle profondeur, dans un
+  // objet comme dans un tableau — la forme exacte de `exportFilters` n'est pas figee, et un
+  // filtre exotique ne doit pas pouvoir se nicher hors de portee de cette recherche. Scindee en
+  // trois petites methodes (plutot qu'une seule recursive) pour rester sous le seuil de
+  // complexite cognitive du lint.
+  private findClinicalKey(value: unknown): string | null {
+    if (Array.isArray(value)) {
+      return this.findClinicalKeyInList(value)
+    }
+    if (typeof value === 'object' && value !== null) {
+      return this.findClinicalKeyInObject(value as Record<string, unknown>)
+    }
+    return null
+  }
+
+  private findClinicalKeyInList(items: unknown[]): string | null {
+    for (const item of items) {
+      const found = this.findClinicalKey(item)
+      if (found !== null) {
+        return found
       }
     }
+    return null
+  }
+
+  private findClinicalKeyInObject(obj: Record<string, unknown>): string | null {
+    for (const [key, nested] of Object.entries(obj)) {
+      if (CLINICAL_FIELD_SET.has(key)) {
+        return key
+      }
+      const found = this.findClinicalKey(nested)
+      if (found !== null) {
+        return found
+      }
+    }
+    return null
   }
 }
 
