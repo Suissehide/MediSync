@@ -169,9 +169,13 @@ export const assertTenantShapedRoute = (route: {
 
 // `route.method` vaut une chaine pour `fastify.get(...)` et un tableau pour un
 // `fastify.route({ method: ['GET', 'POST'] })`. Les deux formes existent dans Fastify ; ne
-// traiter que la premiere aurait laissé un trou silencieux.
-const methodsOf = (method: unknown): string[] =>
-  Array.isArray(method) ? method.map(String) : [String(method)]
+// traiter que la premiere aurait laissé un trou silencieux. Exporte : le garde-fou racine
+// (`assertPatientRouteUnderTenant`, routes/tenant.routes.ts) doit poser exactement la meme
+// question que celui du greffon, sans en recopier la reponse.
+export const isReadRoute = (method: unknown): boolean =>
+  (Array.isArray(method) ? method.map(String) : [String(method)]).includes(
+    'GET',
+  )
 
 // Troisieme fail-safe de demarrage, frere des deux ci-dessus, et LA propriete centrale de
 // l'etape 4b : une route de lecture qui designe un dossier patient est journalisee par defaut,
@@ -185,16 +189,22 @@ const methodsOf = (method: unknown): string[] =>
 // `patientIdParamOf` (utils/access-log-routes.ts) qui le reconnait, pas une comparaison
 // litterale, sans quoi les trois routes de diagnostic seraient passees au travers.
 //
-// Meme limite, assumee, que `assertTenantShapedRoute` ci-dessus : ce crochet est pose par
-// `tenantRoutes` (routes/tenant.routes.ts), au meme endroit que le crochet d'ecriture
-// `recordPatientAccess` — donc tout ce qu'il examine est aussi ce que le crochet couvre, et
-// inversement. Une route de forme « patient » enregistree HORS de `tenantRoutes` echapperait aux
-// deux, et rien ici ne la rattraperait.
+// PORTEE, corrigee au tour de correction 1 : ce crochet est pose par `tenantRoutes`
+// (routes/tenant.routes.ts), au meme endroit que le crochet d'ecriture `recordPatientAccess` —
+// donc tout ce qu'il examine est aussi ce que le crochet couvre, et inversement, ce qui est
+// exactement la propriete voulue (une entree de `LOGGED_PATIENT_ROUTES` est toujours REELLEMENT
+// journalisee). Le premier jet ajoutait ici « meme limite, assumee, qu'`assertTenantShapedRoute` »
+// pour le hors-greffon : c'etait FAUX, et dans le sens qui arrange — ce dernier est pose A LA
+// RACINE precisement pour NE PAS avoir cette limite (« la forme de l'URL suffit a exiger la
+// declaration, ou que la route soit posee », son commentaire trente lignes plus haut), et
+// `assertSuperAdminShapedRoute` de meme. Le hors-greffon est donc couvert ici aussi, par un frere
+// racine ecrit pour ca : `assertPatientRouteUnderTenant` (routes/tenant.routes.ts), qui refuse
+// sechement plutot que d'afficher une couverture qu'il ne pourrait pas tenir.
 export const assertPatientReadLogged = (route: {
   method: unknown
   url: string
 }): void => {
-  if (!methodsOf(route.method).includes('GET')) {
+  if (!isReadRoute(route.method)) {
     return
   }
   if (patientIdParamOf(route.url) === null) {
@@ -221,9 +231,7 @@ export const assertNoDeadPatientAccessEntry = (
   seenRoutes: readonly { method: unknown; url: string }[],
 ): void => {
   const readable = new Set(
-    seenRoutes
-      .filter((route) => methodsOf(route.method).includes('GET'))
-      .map((route) => route.url),
+    seenRoutes.filter((route) => isReadRoute(route.method)).map((r) => r.url),
   )
   const dead = [
     ...Object.keys(LOGGED_PATIENT_ROUTES).map((url) => ({
@@ -429,6 +437,17 @@ const tenantPlugin: FastifyPluginAsync = fastifyPlugin(
         if (reply.statusCode >= 400) {
           return Promise.resolve()
         }
+        // 1 bis. Une requete HEAD ne rend AUCUN corps : personne n'a rien lu. Le jumeau qu'en
+        //    cree `exposeHeadRoutes` porte pourtant la MEME `routeOptions.url` que la route GET,
+        //    donc rien d'autre ici ne l'en distinguerait. MESURE au tour de correction 1 :
+        //    aujourd'hui l'application n'expose aucune route HEAD (`exposeHeadRoutes: false`,
+        //    fastify-http-server.ts) et un HEAD recoit 404 — ce filtre ne change donc rien
+        //    AUJOURD'HUI, il rend la propriete independante d'un reglage qui tient en un mot
+        //    ailleurs. Un journal qui enregistre des lectures qui n'ont pas eu lieu induit en
+        //    erreur autant qu'un journal qui en manque.
+        if (request.method !== 'GET') {
+          return Promise.resolve()
+        }
         // 2. Seules les routes declarees journalisees le sont. `routeOptions.url` est l'URL
         //    DECLAREE (avec ses `:parametres`), la meme chaine exactement que celle que
         //    `assertPatientReadLogged` a vue au demarrage — les deux ne peuvent pas diverger.
@@ -449,7 +468,9 @@ const tenantPlugin: FastifyPluginAsync = fastifyPlugin(
         //    lever, comme les deux filtres cliniques, mais PAS en silence.
         const store = tenantContext.peek()
         if (store?.kind !== 'tenant' || store.tenant !== request.tenant) {
-          fastify.log.error(
+          // `request.log` et non `fastify.log` : une perte de ligne d'audit doit porter le
+          // `reqId`, sans quoi elle est irrattachable a la requete qui aurait du laisser la trace.
+          request.log.error(
             `PatientAccessLog: contexte de tenant absent ou etranger a la requete, ${action} non journalise`,
           )
           return Promise.resolve()
@@ -478,7 +499,9 @@ const tenantPlugin: FastifyPluginAsync = fastifyPlugin(
             // soumise, va au journal technique.
             const errorClass =
               err instanceof Error ? err.constructor.name : typeof err
-            fastify.log.error(
+            // `request.log`, pour la meme raison que ci-dessus : cette ligne doit pouvoir etre
+            // rattachee a la requete dont la trace manque.
+            request.log.error(
               `PatientAccessLog: echec de journalisation de ${action} [${errorClass}]`,
             )
           })

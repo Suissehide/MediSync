@@ -5,7 +5,11 @@ import {
   assertPatientReadLogged,
   tenantPlugin,
 } from '../../../main/interfaces/http/fastify/plugins/tenant.plugin'
-import { tenantRoutes } from '../../../main/interfaces/http/fastify/routes/tenant.routes'
+import {
+  assertPatientRouteUnderTenant,
+  TENANT_PREFIX,
+  tenantRoutes,
+} from '../../../main/interfaces/http/fastify/routes/tenant.routes'
 import type { IocContainer } from '../../../main/types/application/ioc'
 import type { RecordAccessInput } from '../../../main/types/domain/patientAccessLog.domain.interface'
 import type { Tenant } from '../../../main/types/utils/tenant-context'
@@ -16,7 +20,7 @@ import {
 } from '../../../main/utils/access-log-routes'
 import { TenantContext } from '../../../main/utils/tenant-context'
 
-const PREFIX = '/e/:establishmentId/s/:serviceId'
+const PREFIX = TENANT_PREFIX
 const DOSSIER = `${PREFIX}/patient/:patientID`
 
 // ---------------------------------------------------------------------------
@@ -54,11 +58,44 @@ describe('assertPatientReadLogged', () => {
     ).toThrow(/inedite/)
   })
 
-  it('ne confond pas un parametre qui commence pareil avec un identifiant de patient', () => {
-    expect(patientIdParamOf(`${PREFIX}/patient/:patientIDs`)).toBeNull()
-    expect(() =>
-      assertPatientReadLogged({ method: 'GET', url: `${PREFIX}/x/:patientIDs` }),
-    ).not.toThrow()
+  // LA REGLE QUI PORTE LA PROMESSE EST STRUCTURELLE : un segment `/patient/` suivi d'un
+  // parametre, quel qu'en soit le nom. C'est la sonde du relecteur (tour de correction 1) :
+  // `:patient_id`, `:id`, `:pid` demarraient sans broncher et n'ecrivaient rien.
+  it('reconnait un dossier a la STRUCTURE de l URL, quel que soit le nom du parametre', () => {
+    for (const nom of ['patient_id', 'id', 'pid', 'x']) {
+      expect(patientIdParamOf(`${PREFIX}/patient/:${nom}/sonde`)).toBe(nom)
+      expect(() =>
+        assertPatientReadLogged({
+          method: 'GET',
+          url: `${PREFIX}/patient/:${nom}/sonde`,
+        }),
+      ).toThrow(/sonde/)
+    }
+  })
+
+  // Et sans faux positif : les routes de collection n'ont pas de parametre en position suivante.
+  it('ne prend pas une route de collection pour un dossier identifie', () => {
+    for (const url of [
+      `${PREFIX}/patient`,
+      `${PREFIX}/patient/export`,
+      `${PREFIX}/patient/search`,
+      `${PREFIX}/patient/with-tags`,
+      `${PREFIX}/todo/:todoID`,
+    ]) {
+      expect(patientIdParamOf(url)).toBeNull()
+      expect(() =>
+        assertPatientReadLogged({ method: 'GET', url }),
+      ).not.toThrow()
+    }
+  })
+
+  it('garde le filet par nom pour un dossier hors d un segment /patient/', () => {
+    // Filet secondaire : il attrape `:patientID` la ou la structure ne dit rien...
+    expect(patientIdParamOf(`${PREFIX}/dossier/:patientID`)).toBe('patientID')
+    // ...et il s'arrete a la frontiere du nom, sans confondre un parametre qui commence pareil.
+    expect(patientIdParamOf(`${PREFIX}/dossier/:patientIDs`)).toBeNull()
+    // Mais sous un segment `/patient/`, c'est la structure qui tranche, nom ou pas.
+    expect(patientIdParamOf(`${PREFIX}/patient/:patientIDs`)).toBe('patientIDs')
   })
 
   it('laisse passer une route sans identifiant de patient, et une ecriture', () => {
@@ -133,6 +170,51 @@ describe('assertNoDeadPatientAccessEntry', () => {
 })
 
 // ---------------------------------------------------------------------------
+// Le frere RACINE du garde-fou : le hors-greffon.
+// ---------------------------------------------------------------------------
+
+describe('assertPatientRouteUnderTenant', () => {
+  it('refuse une route de lecture designant un dossier posee hors du prefixe de tenant', () => {
+    for (const url of [
+      '/e/:establishmentId/admin/patient/:patient_id',
+      '/super-admin/patient/:id',
+      '/dossier/:patientID',
+    ]) {
+      expect(() =>
+        assertPatientRouteUnderTenant({ method: 'GET', url }),
+      ).toThrow(/hors du greffon de tenant/)
+      // Le message doit dire OU la remettre, pas seulement qu'elle est refusee.
+      expect(() =>
+        assertPatientRouteUnderTenant({ method: 'GET', url }),
+      ).toThrow(new RegExp(TENANT_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+    }
+  })
+
+  it('laisse passer ce qui vit sous le prefixe de tenant, et ce qui ne designe aucun dossier', () => {
+    for (const url of [
+      ...Object.keys(LOGGED_PATIENT_ROUTES),
+      ...Object.keys(EXEMPTED_PATIENT_ROUTES),
+      '/e/:establishmentId/admin/members/:membershipId',
+      '/super-admin/users',
+      '/health',
+    ]) {
+      expect(() =>
+        assertPatientRouteUnderTenant({ method: 'GET', url }),
+      ).not.toThrow()
+    }
+  })
+
+  it('ne regarde que les lectures', () => {
+    expect(() =>
+      assertPatientRouteUnderTenant({
+        method: 'POST',
+        url: '/e/:establishmentId/admin/patient/:patient_id',
+      }),
+    ).not.toThrow()
+  })
+})
+
+// ---------------------------------------------------------------------------
 // L attache : le crochet est bien pose par tenantRoutes, pas seulement ecrit.
 // ---------------------------------------------------------------------------
 
@@ -185,7 +267,7 @@ const tenantOf = (): Tenant => ({
 })
 
 type HookCall = {
-  request: Record<string, unknown>
+  request: Record<string, unknown> & { method?: string; log?: unknown }
   reply: { statusCode: number }
   // Le tenant reellement pose dans le contexte asynchrone pendant l'appel. `undefined` simule
   // une portee perdue. Par defaut, celui que porte `request.tenant` — le cas nominal, ou
@@ -205,12 +287,21 @@ const buildHookHarness = async (
   } as unknown as IocContainer)
   await app.register(tenantPlugin)
   await app.ready()
+  // Erreurs vues par `request.log` (voir `call` plus bas).
+  const erreursRequete: string[] = []
   const hook = (
     app as FastifyInstance & {
       recordPatientAccess: (request: unknown, reply: unknown) => Promise<void>
     }
   ).recordPatientAccess
   const call = ({ request, reply, contexte }: HookCall) => {
+    // Une vraie `FastifyRequest` porte toujours `method` et `log` ; le crochet lit les deux
+    // (filtre HEAD, et journalisation rattachee au `reqId`). Le `log` pose ici est
+    // DELIBEREMENT distinct de `app.log` : c'est ce qui permet d'affirmer que le crochet
+    // journalise sur le logger DE LA REQUETE — celui qui porte le `reqId` — et non sur celui de
+    // l'instance, ou la perte d'une ligne d'audit serait irrattachable a la requete.
+    request.method = request.method ?? 'GET'
+    request.log = request.log ?? { error: (m: unknown) => erreursRequete.push(String(m)) }
     const pose =
       contexte === undefined ? (request.tenant as Tenant | undefined) : contexte
     if (pose === undefined || pose === 'aucun') {
@@ -218,7 +309,7 @@ const buildHookHarness = async (
     }
     return tenantContext.run(pose, () => hook.call(app, request, reply))
   }
-  return { app, call, tenantContext }
+  return { app, call, tenantContext, erreursRequete }
 }
 
 describe('recordPatientAccess', () => {
@@ -249,6 +340,31 @@ describe('recordPatientAccess', () => {
     await app.close()
   })
 
+  // Une requete HEAD ne rend aucun corps : personne n'a rien lu. Son jumeau porte la MEME
+  // `routeOptions.url` que la route GET, donc rien d'autre que la methode ne l'en distingue.
+  // L'application n'expose aujourd'hui aucune route HEAD (`exposeHeadRoutes: false`), ce filtre
+  // rend donc la propriete independante de ce reglage plutot que tributaire de lui — et c'est
+  // pour cela qu'il s'eprouve ici, au crochet, et pas par une requete HTTP qui recevrait un 404.
+  it('n ecrit rien pour une requete qui ne rend aucun corps (HEAD)', async () => {
+    const vues: RecordAccessInput[] = []
+    const { app, call } = await buildHookHarness((input) => {
+      vues.push(input)
+      return Promise.resolve()
+    })
+    await call({
+      request: {
+        method: 'HEAD',
+        tenant: tenantOf(),
+        routeOptions: { url: DOSSIER },
+        params: { patientID: 'p1' },
+        currentUser: { firstName: null, lastName: null },
+      },
+      reply: { statusCode: 200 },
+    })
+    expect(vues).toEqual([])
+    await app.close()
+  })
+
   // Le pire cas possible pour un journal d'audit n'est pas l'absence de ligne, c'est une ligne
   // attribuee au mauvais etablissement. Le crochet exige donc que le contexte asynchrone porte
   // LE MEME OBJET que `request.tenant` — `resolveTenant` pose les deux a partir d'une seule
@@ -256,14 +372,13 @@ describe('recordPatientAccess', () => {
   // requete) ne passe pas.
   it("n ecrit rien quand le contexte ambiant n est pas celui de cette requete", async () => {
     const vues: RecordAccessInput[] = []
-    const { app, call } = await buildHookHarness((input) => {
+    const { app, call, erreursRequete } = await buildHookHarness((input) => {
       vues.push(input)
       return Promise.resolve()
     })
-    const errors: string[] = []
-    jest.spyOn(app.log, 'error').mockImplementation(((message: unknown) => {
-      errors.push(String(message))
-    }) as never)
+    const surInstance = jest
+      .spyOn(app.log, 'error')
+      .mockImplementation((() => undefined) as never)
 
     const requete = {
       tenant: tenantOf(),
@@ -281,8 +396,11 @@ describe('recordPatientAccess', () => {
     })
 
     expect(vues).toEqual([])
-    expect(errors).toHaveLength(2)
-    expect(errors[0]).toContain('contexte de tenant')
+    expect(erreursRequete).toHaveLength(2)
+    expect(erreursRequete[0]).toContain('contexte de tenant')
+    // Sur le logger DE LA REQUETE, jamais sur celui de l'instance : sans `reqId`, une perte de
+    // ligne d'audit n'est rattachable a rien.
+    expect(surInstance).not.toHaveBeenCalled()
     await app.close()
   })
 
@@ -336,14 +454,10 @@ describe('recordPatientAccess', () => {
   // le chemin HTTP reel, pour cette raison exacte).
   it("n ecrit rien, et ne leve pas, quand le tenant n est pas resolu", async () => {
     const vues: RecordAccessInput[] = []
-    const { app, call } = await buildHookHarness((input) => {
+    const { app, call, erreursRequete } = await buildHookHarness((input) => {
       vues.push(input)
       return Promise.resolve()
     })
-    const errors: string[] = []
-    jest.spyOn(app.log, 'error').mockImplementation(((message: unknown) => {
-      errors.push(String(message))
-    }) as never)
     await expect(
       call({
         request: {
@@ -357,7 +471,7 @@ describe('recordPatientAccess', () => {
     ).resolves.toBeUndefined()
     expect(vues).toEqual([])
     // Rien n'est ecrit, mais rien n'est tu non plus.
-    expect(errors).toHaveLength(1)
+    expect(erreursRequete).toHaveLength(1)
     await app.close()
   })
 
@@ -392,13 +506,12 @@ describe('recordPatientAccess', () => {
   it("n avale pas l echec en silence, et ne recopie jamais le message de l erreur", async () => {
     class PrismaClientKnownRequestError extends Error {}
     const secret = 'patientId: ckpatient0000000000000000'
-    const { app, call } = await buildHookHarness(() =>
+    const { app, call, erreursRequete } = await buildHookHarness(() =>
       Promise.reject(new PrismaClientKnownRequestError(secret)),
     )
-    const errors: string[] = []
-    jest.spyOn(app.log, 'error').mockImplementation(((message: unknown) => {
-      errors.push(String(message))
-    }) as never)
+    const surInstance = jest
+      .spyOn(app.log, 'error')
+      .mockImplementation((() => undefined) as never)
 
     await expect(
       call({
@@ -412,9 +525,10 @@ describe('recordPatientAccess', () => {
       }),
     ).resolves.toBeUndefined()
 
-    expect(errors).toHaveLength(1)
-    expect(errors[0]).toContain('PrismaClientKnownRequestError')
-    expect(errors[0]).not.toContain(secret)
+    expect(erreursRequete).toHaveLength(1)
+    expect(erreursRequete[0]).toContain('PrismaClientKnownRequestError')
+    expect(erreursRequete[0]).not.toContain(secret)
+    expect(surInstance).not.toHaveBeenCalled()
     await app.close()
   })
 })

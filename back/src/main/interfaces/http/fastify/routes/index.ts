@@ -10,7 +10,11 @@ import {
   SUPER_ADMIN_PREFIX,
   superAdminRoutes,
 } from './super-admin.routes'
-import { tenantRoutes } from './tenant.routes'
+import {
+  assertPatientRouteUnderTenant,
+  TENANT_PREFIX,
+  tenantRoutes,
+} from './tenant.routes'
 
 // Routes publiques (sans session) : racine, healthcheck et authentification.
 const PUBLIC_ROUTES = new Set(['/', '/health'])
@@ -21,6 +25,11 @@ const routes: FastifyPluginAsyncZod = async (fastify) => {
   fastify.addHook('onRoute', assertTenantShapedRoute)
   // Même garde, pour le même défaut, côté préfixe super-admin — voir assertSuperAdminShapedRoute.
   fastify.addHook('onRoute', assertSuperAdminShapedRoute)
+  // Troisième de la famille (étape 4b) : une route de LECTURE qui désigne un dossier patient et
+  // qui serait enregistrée hors du greffon de tenant échapperait au journal des consultations,
+  // sans que rien ne le signale. Elle est refusée au démarrage — voir
+  // assertPatientRouteUnderTenant.
+  fastify.addHook('onRoute', assertPatientRouteUnderTenant)
 
   const { tenantContext } = fastify.iocContainer
 
@@ -49,9 +58,7 @@ const routes: FastifyPluginAsyncZod = async (fastify) => {
   await fastify.register(healthcheckRouter)
   await fastify.register(authRouter, { prefix: '/auth' })
   await fastify.register(meRouter, { prefix: '/me' })
-  await fastify.register(tenantRoutes, {
-    prefix: '/e/:establishmentId/s/:serviceId',
-  })
+  await fastify.register(tenantRoutes, { prefix: TENANT_PREFIX })
   await fastify.register(establishmentAdminRoutes, {
     prefix: '/e/:establishmentId/admin',
   })

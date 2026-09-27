@@ -45,9 +45,11 @@ class TenantContext implements TenantContextInterface {
   // Tenant n'est un objet »), pour que l'ajout d'une colonne imbriquée fasse rougir plutôt que de
   // rouvrir la porte en silence.
   //
-  // Vérifié dans l'autre sens, celui qui casse : aucun appelant ne mute un tenant. Les deux
+  // Vérifié dans l'autre sens, celui qui casse : aucun appelant ne mute un tenant. Les
   // emplois de `peek()` hors de ce fichier ne font que LIRE ses colonnes
-  // (`activityLog.repository.ts`), `resolveTenantFromUser` (`tenant.plugin.ts`) construit un objet
+  // (`activityLog.repository.ts`, `tenant-guard.ts`, `tenant.plugin.ts` — le compte figurait ici
+  // en toutes lettres et dérivait en silence à chaque nouvel emploi, il a donc été retiré),
+  // `resolveTenantFromUser` (`tenant.plugin.ts`) construit un objet
   // NEUF à chaque requête, et `currentService()` plus bas en rend une copie étalée plutôt que de
   // l'amender. Le gel se propage volontairement à `request.tenant`, qui est le MÊME objet que
   // celui posé ici (`tenant.plugin.ts` : `request.tenant = tenant` puis `tenantContext.enter(tenant)`)

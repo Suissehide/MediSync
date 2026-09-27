@@ -7,7 +7,11 @@ import {
 import { loadConfig } from '../../main/application/config'
 import { startIocContainer } from '../../main/application/starter'
 import { plugins } from '../../main/interfaces/http/fastify/plugins'
-import { tenantRoutes } from '../../main/interfaces/http/fastify/routes/tenant.routes'
+import { routes } from '../../main/interfaces/http/fastify/routes'
+import {
+  TENANT_PREFIX,
+  tenantRoutes,
+} from '../../main/interfaces/http/fastify/routes/tenant.routes'
 import {
   EXEMPTED_PATIENT_ROUTES,
   LOGGED_PATIENT_ROUTES,
@@ -23,8 +27,6 @@ import {
   signIn,
   tenantUrl,
 } from './setup/fixtures'
-
-const TENANT_PREFIX = '/e/:establishmentId/s/:serviceId'
 
 // Un identifiant syntaxiquement valide (cuid) qui n'existe dans aucune table : la route de
 // lecture du dossier repond alors 404, en passant par le handler — exactement le chemin
@@ -232,6 +234,32 @@ describe('journal des consultations : le crochet sur le chemin reel', () => {
     })
   })
 
+  // ARBITRAGE DE LEO (tour de correction 1) : les echecs d'inscription sont JOURNALISES, avec
+  // une quatrieme action a eux. Le verifier sur le chemin reel, et pas seulement dans la liste —
+  // c'est aussi ce qui prouve que la quatrieme valeur traverse le domaine et arrive en base,
+  // dont la colonne `action` est une chaine libre.
+  it("journalise la consultation des echecs d inscription, sous sa propre action", async () => {
+    const res = await testApp.app.inject({
+      method: 'GET',
+      url: tenantUrl(
+        etab.id,
+        service.id,
+        `/patient/${patient.id}/enrollment-issue`,
+      ),
+      cookies,
+    })
+    expect(res.statusCode).toBe(200)
+    await attendre(
+      async () => (await testDb.patientAccessLog.count()) === 1,
+      'la ligne des echecs d inscription est ecrite',
+    )
+    const [ligne] = await testDb.patientAccessLog.findMany()
+    expect({ action: ligne?.action, patientId: ligne?.patientId }).toEqual({
+      action: 'echecsInscription.consultes',
+      patientId: patient.id,
+    })
+  })
+
   // LE POINT DE LA REVIEW FOCUS n°1. Non vide par construction : la comparaison porte sur un
   // dossier qui EXISTE et un qui n'existe pas, sur la MEME route et avec les MEMES droits. Sans
   // la premiere moitie, « zero ligne » ne distinguerait pas « le crochet a refuse l'erreur » de
@@ -352,7 +380,7 @@ const monterAvecRouteEnPlus = (
 const fermer = (app: FastifyInstance) => app.close().catch(() => undefined)
 
 describe('journal des consultations : le garde-fou de demarrage', () => {
-  // Temoin negatif, sans lequel le test suivant ne prouverait rien : le harnais lui-meme
+  // Temoin negatif, sans lequel les tests suivants ne prouveraient rien : le harnais lui-meme
   // demarre. Sans cette ligne, un `rejects.toThrow` pourrait etre satisfait par n'importe quelle
   // erreur de montage.
   it('demarre normalement quand toutes les routes sont declarees', async () => {
@@ -365,7 +393,7 @@ describe('journal des consultations : le garde-fou de demarrage', () => {
   // un echantillon recopie. Le garde-fou `onRoute` tient deja le sens « une route reelle absente
   // des listes » ; ce test le redit en une seule assertion lisible et ajoute l'autre sens, celui
   // que `onReady` tient au demarrage. Portee exacte : les routes de `tenantRoutes`, c'est-a-dire
-  // exactement celles que le crochet d'ecriture couvre — pas l'application entiere.
+  // exactement celles que le crochet d'ecriture couvre.
   it('couvre exactement les routes GET reelles qui designent un dossier patient', async () => {
     const { app, routesLues } = monterAvecRouteEnPlus()
     await app.ready()
@@ -381,29 +409,97 @@ describe('journal des consultations : le garde-fou de demarrage', () => {
     await fermer(app)
   }, 30000)
 
-  it("refuse de demarrer si une route de service portant :patientID n est ni journalisee ni exemptee", async () => {
+  // LA SONDE DU RELECTEUR (tour de correction 1). Ces quatre routes sont posees EXACTEMENT comme
+  // celles du vrai routeur patient — chemin relatif sous le prefixe du greffon, `config.
+  // permission` declaree — et portent un nom de parametre auquel personne n'avait pense. Avant
+  // la detection structurelle, `GET /patient/:patient_id/sonde-revue` demarrait sans broncher,
+  // servait un dossier identifie et n'ecrivait aucune ligne.
+  //
+  // `rejects.toThrow(/sonde-revue-<nom>/)` et pas seulement `/sonde/` : le message doit nommer LA
+  // route refusee, faute de quoi ce test serait satisfait par le refus d'une autre.
+  it.each(['patient_id', 'id', 'pid', 'patientId'])(
+    'refuse de demarrer sur une route de dossier dont le parametre s appelle :%s',
+    async (nom) => {
+      const { app } = monterAvecRouteEnPlus((child) => {
+        child.get(
+          `/patient/:${nom}/sonde-revue-${nom}`,
+          { config: { permission: 'patient:read' } },
+          () => ({}),
+        )
+      })
+      await expect(app.ready()).rejects.toThrow(
+        new RegExp(`hors du journal des consultations.*sonde-revue-${nom}`),
+      )
+      await fermer(app)
+    },
+    30000,
+  )
+
+  // Le pendant, sans lequel le precedent ne dirait pas grand-chose : une route de COLLECTION
+  // sous `/patient/` (comme `/patient/export`, `/patient/search`, `/patient/with-tags`, qui
+  // existent reellement) n'est pas un dossier identifie et ne doit rien exiger.
+  it('laisse demarrer une route de collection sous /patient/, sans parametre', async () => {
     const { app } = monterAvecRouteEnPlus((child) => {
       child.get(
-        `${TENANT_PREFIX}/patient/:patientID/inedite`,
+        '/patient/sonde-collection',
         { config: { permission: 'patient:read' } },
         () => ({}),
       )
     })
-    await expect(app.ready()).rejects.toThrow(/inedite/)
+    await expect(app.ready()).resolves.toBeDefined()
+    await fermer(app)
+  }, 30000)
+})
+
+// ---------------------------------------------------------------------------
+// Le frere RACINE : une route de dossier posee HORS du greffon de tenant.
+// ---------------------------------------------------------------------------
+
+// Meme principe que le harnais ci-dessus, mais sur `routes` (l'application ENTIERE, donc les
+// crochets `onRoute` de racine) plutot que sur le seul greffon de tenant.
+const monterApplicationAvecRouteEnPlus = (
+  enPlus?: (fastify: FastifyInstance) => void,
+): FastifyInstance => {
+  const container = startIocContainer(loadConfig())
+  const app = Fastify()
+  app.setValidatorCompiler(validatorCompiler)
+  app.setSerializerCompiler(serializerCompiler)
+  app.iocContainer = container.instances
+  void app.register(plugins)
+  void app.register(async (child) => {
+    await (
+      routes as unknown as (
+        fastify: FastifyInstance,
+        options: unknown,
+      ) => Promise<void>
+    )(child, {})
+    enPlus?.(child)
+  })
+  return app
+}
+
+describe('journal des consultations : le refus racine du hors-greffon', () => {
+  it("demarre normalement quand aucune route de dossier ne vit hors du greffon", async () => {
+    const app = monterApplicationAvecRouteEnPlus()
+    await expect(app.ready()).resolves.toBeDefined()
     await fermer(app)
   }, 30000)
 
-  // Meme propriete, avec l'autre orthographe du parametre : c'est celle des routes de
-  // diagnostic, et une detection litterale sur `:patientID` l'aurait laissee passer.
-  it('refuse aussi de demarrer sur l orthographe :patientId', async () => {
-    const { app } = monterAvecRouteEnPlus((child) => {
-      child.get(
-        `${TENANT_PREFIX}/patient/:patientId/inedite-minuscule`,
-        { config: { permission: 'patient:read' } },
-        () => ({}),
-      )
-    })
-    await expect(app.ready()).rejects.toThrow(/inedite-minuscule/)
-    await fermer(app)
-  }, 30000)
+  // Le trou que le premier jet laissait ouvert en se reclamant, a tort, de « la meme limite
+  // qu'assertTenantShapedRoute » : ces deux routes designent un dossier, vivent hors du greffon,
+  // n'auraient jamais laisse de trace, et rien ne l'aurait dit.
+  it.each([
+    ['administration d etablissement', '/e/:establishmentId/admin/patient/:patient_id'],
+    ['racine', '/dossier-hors-greffon/:patientID'],
+  ])(
+    'refuse de demarrer sur une route de dossier posee a la %s',
+    async (_ou, url) => {
+      const app = monterApplicationAvecRouteEnPlus((child) => {
+        child.get(url, { config: { permission: 'patient:read' } }, () => ({}))
+      })
+      await expect(app.ready()).rejects.toThrow(/hors du greffon de tenant/)
+      await fermer(app)
+    },
+    30000,
+  )
 })
