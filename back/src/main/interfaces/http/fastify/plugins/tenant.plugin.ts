@@ -5,6 +5,7 @@ import type {
   FastifyRequest,
   HookHandlerDoneFunction,
   onRequestHookHandler,
+  onResponseAsyncHookHandler,
   preHandlerAsyncHookHandler,
   preSerializationAsyncHookHandler,
   preValidationAsyncHookHandler,
@@ -19,6 +20,12 @@ import {
 import type { LiveGrant } from '../../../../types/domain/accessGrant.domain.interface'
 import type { UserWithMemberships } from '../../../../types/infra/orm/repositories/user.repository.interface'
 import type { Tenant } from '../../../../types/utils/tenant-context'
+import {
+  EXEMPTED_PATIENT_ROUTES,
+  LOGGED_PATIENT_ROUTES,
+  patientIdParamOf,
+  plannedPatientAccess,
+} from '../../../../utils/access-log-routes'
 import { withoutClinicalFields } from '../../../../utils/clinical-fields'
 import { hasPermission, type Permission } from '../../../../utils/permissions'
 
@@ -43,6 +50,10 @@ declare module 'fastify' {
     enforcePermission: preHandlerAsyncHookHandler
     stripClinicalFields: preSerializationAsyncHookHandler
     stripClinicalInput: preValidationAsyncHookHandler
+    // Journal des consultations (etape 4b, tache 3). Pose en `onResponse`, donc APRES que la
+    // reponse soit partie : le code de statut est connu (on ne journalise pas un echec), et une
+    // ecriture lente n'allonge jamais la lecture du dossier.
+    recordPatientAccess: onResponseAsyncHookHandler
   }
 }
 
@@ -156,6 +167,84 @@ export const assertTenantShapedRoute = (route: {
   }
 }
 
+// `route.method` vaut une chaine pour `fastify.get(...)` et un tableau pour un
+// `fastify.route({ method: ['GET', 'POST'] })`. Les deux formes existent dans Fastify ; ne
+// traiter que la premiere aurait laissé un trou silencieux.
+const methodsOf = (method: unknown): string[] =>
+  Array.isArray(method) ? method.map(String) : [String(method)]
+
+// Troisieme fail-safe de demarrage, frere des deux ci-dessus, et LA propriete centrale de
+// l'etape 4b : une route de lecture qui designe un dossier patient est journalisee par defaut,
+// ou le serveur refuse de demarrer. Sans lui, la couverture du journal serait une liste tenue a
+// la main, qui se desynchronise au premier routeur ajoute — en silence, et dans le sens qui
+// perd des traces.
+//
+// Portee, dite exactement : seules les lectures (GET) sont concernees — les ecritures sont deja
+// tracees par `ActivityLog`. Le nom du parametre de patient n'est pas uniforme dans ce depot
+// (`:patientID` chez les uns, `:patientId` chez `diagnosticEducatifRouter`) : c'est
+// `patientIdParamOf` (utils/access-log-routes.ts) qui le reconnait, pas une comparaison
+// litterale, sans quoi les trois routes de diagnostic seraient passees au travers.
+//
+// Meme limite, assumee, que `assertTenantShapedRoute` ci-dessus : ce crochet est pose par
+// `tenantRoutes` (routes/tenant.routes.ts), au meme endroit que le crochet d'ecriture
+// `recordPatientAccess` — donc tout ce qu'il examine est aussi ce que le crochet couvre, et
+// inversement. Une route de forme « patient » enregistree HORS de `tenantRoutes` echapperait aux
+// deux, et rien ici ne la rattraperait.
+export const assertPatientReadLogged = (route: {
+  method: unknown
+  url: string
+}): void => {
+  if (!methodsOf(route.method).includes('GET')) {
+    return
+  }
+  if (patientIdParamOf(route.url) === null) {
+    return
+  }
+  if (
+    route.url in LOGGED_PATIENT_ROUTES ||
+    route.url in EXEMPTED_PATIENT_ROUTES
+  ) {
+    return
+  }
+  throw new Error(
+    `Route de lecture patient hors du journal des consultations : GET ${route.url}. ` +
+      'Inscrire cette route dans LOGGED_PATIENT_ROUTES (avec son action) ou dans ' +
+      'EXEMPTED_PATIENT_ROUTES (avec sa raison), src/main/utils/access-log-routes.ts.',
+  )
+}
+
+// L'autre sens de la meme comparaison, et il compte autant : une entree qui ne correspond plus a
+// aucune route reelle (route renommee, routeur retire) laisserait croire a une couverture qui
+// n'existe plus. Posee en `onReady` par `tenantRoutes`, une fois toutes les routes enregistrees,
+// avec les routes REELLEMENT vues par son crochet `onRoute` — jamais une liste recopiee.
+export const assertNoDeadPatientAccessEntry = (
+  seenRoutes: readonly { method: unknown; url: string }[],
+): void => {
+  const readable = new Set(
+    seenRoutes
+      .filter((route) => methodsOf(route.method).includes('GET'))
+      .map((route) => route.url),
+  )
+  const dead = [
+    ...Object.keys(LOGGED_PATIENT_ROUTES).map((url) => ({
+      url,
+      list: 'LOGGED_PATIENT_ROUTES',
+    })),
+    ...Object.keys(EXEMPTED_PATIENT_ROUTES).map((url) => ({
+      url,
+      list: 'EXEMPTED_PATIENT_ROUTES',
+    })),
+  ].filter((entry) => !readable.has(entry.url))
+  if (dead.length > 0) {
+    throw new Error(
+      `Entrees mortes dans le journal des consultations : ${dead
+        .map((entry) => `${entry.list} -> GET ${entry.url}`)
+        .join(', ')}. Aucune route GET reelle ne porte cette URL ; retirer l'entree ou corriger ` +
+        "l'URL dans src/main/utils/access-log-routes.ts.",
+    )
+  }
+}
+
 // À utiliser dans un handler qui a besoin du tenant. `enforcePermission` l'a
 // déjà exigé en `preHandler`, donc il est présent — mais le type ne le sait
 // pas, et le faire croire par une assertion rendrait muette la prochaine route
@@ -169,7 +258,8 @@ export const requireTenant = (request: FastifyRequest): Tenant => {
 
 const tenantPlugin: FastifyPluginAsync = fastifyPlugin(
   (fastify: FastifyInstance) => {
-    const { tenantContext, accessGrantRepository } = fastify.iocContainer
+    const { tenantContext, accessGrantRepository, patientAccessLogDomain } =
+      fastify.iocContainer
 
     // Depuis la tâche 3 (étape 4a), résoudre le tenant lit aussi les octrois vivants de
     // l'utilisateur (`liveGrantsForUser` — depuis le tour de correction 1 de la tâche 8, un
@@ -305,6 +395,94 @@ const tenantPlugin: FastifyPluginAsync = fastifyPlugin(
           request.body = withoutClinicalFields(request.body)
         }
         return Promise.resolve()
+      },
+    )
+    // Journal des consultations (etape 4b, tache 3). Pose en crochet plutot que recopie dans
+    // chaque handler, pour la meme raison que les deux filtres cliniques ci-dessus : une route de
+    // lecture nouvelle est couverte sans que son auteur ait a y penser — et, ici, le garde-fou de
+    // demarrage `assertPatientReadLogged` le lui rappelle de toute facon.
+    //
+    // LE CONTEXTE DE TENANT, QUI EST TOUTE LA DIFFICULTE DE CE CROCHET. `record`
+    // (domain/patientAccessLog.domain.ts) lit `tenantContext.current().origine`, et le depot y
+    // lit `scope()` : sans contexte, aucune ligne ne s'ecrit ; avec le MAUVAIS contexte, une
+    // ligne FAUSSE s'ecrirait, attribuee au mauvais etablissement — de loin le pire des deux.
+    //
+    // Un crochet `onResponse` s'execute apres la fin de la reponse, donc rien ne garantit a
+    // priori qu'il herite encore de la portee `AsyncLocalStorage` teintee par `resolveTenant`.
+    // MESURE plutot que supposee (sonde jetable, voir le rapport de tache) : le contexte survit,
+    // par `app.inject` COMME par une vraie connexion TCP. Mais une mesure n'est pas une
+    // garantie, et ce crochet ne peut pas non plus reposer le store lui-meme : poser un store
+    // hors de `utils/tenant-context.ts` est precisement ce que le volet B de
+    // `runAsSystem-unicite.test.ts` interdit, a dessein.
+    //
+    // D'ou la VERIFICATION, qui ne coute rien et ne suppose rien : `peek()` doit rendre LE MEME
+    // OBJET que `request.tenant` — pas un tenant qui lui ressemble, le meme, par identite.
+    // `resolveTenant` (plus haut) pose les deux a partir d'une seule valeur gelee, donc cette
+    // egalite ne peut etre vraie que pour la portee de CETTE requete. Si elle est fausse, rien
+    // n'est ecrit et l'incident est journalise : perdre une ligne se voit, une ligne attribuee
+    // au mauvais etablissement ne se voit pas.
+    fastify.decorate(
+      'recordPatientAccess',
+      (request: FastifyRequest, reply: FastifyReply) => {
+        // 1. Une reponse en erreur n'est pas une consultation : un 404 sur un identifiant
+        //    inconnu, un 403, un 500 ne doivent laisser aucune ligne.
+        if (reply.statusCode >= 400) {
+          return Promise.resolve()
+        }
+        // 2. Sans tenant, on n'ecrit pas — et surtout on ne leve pas. `request.tenant` est
+        //    optionnel par construction (voir la declaration en tete de ce fichier) : sur le
+        //    chemin d'echec de `resolveTenant` il n'est jamais pose, et les crochets suivants
+        //    s'executent quand meme. Meme parti pris que les deux filtres cliniques.
+        const tenant = request.tenant
+        if (!tenant) {
+          return Promise.resolve()
+        }
+        // 3. Seules les routes declarees journalisees le sont. `routeOptions.url` est l'URL
+        //    DECLAREE (avec ses `:parametres`), la meme chaine exactement que celle que
+        //    `assertPatientReadLogged` a vue au demarrage — les deux ne peuvent pas diverger.
+        const prevu = plannedPatientAccess(
+          request.routeOptions.url,
+          request.params as Record<string, string | undefined>,
+        )
+        if (prevu === null) {
+          return Promise.resolve()
+        }
+        const { action, patientId } = prevu
+        const store = tenantContext.peek()
+        if (store?.kind !== 'tenant' || store.tenant !== tenant) {
+          fastify.log.error(
+            `PatientAccessLog: contexte de tenant absent ou etranger a la requete, ${action} non journalise`,
+          )
+          return Promise.resolve()
+        }
+        return patientAccessLogDomain
+          .record({
+            patientId,
+            // `tenant.userId` plutot que `request.user.userID` : c'est la meme valeur, mais
+            // celle-ci vient d'un objet dont la presence vient d'etre verifiee juste au-dessus.
+            userID: tenant.userId,
+            userFirstName: request.currentUser?.firstName ?? null,
+            userLastName: request.currentUser?.lastName ?? null,
+            action,
+          })
+          .catch((err: unknown) => {
+            // UNE ECRITURE DE JOURNAL QUI ECHOUE NE DOIT PAS EMPECHER DE SOIGNER : la reponse est
+            // deja partie, et refuser l'acces a un dossier parce que le journal est indisponible
+            // transformerait un incident de base de donnees en impossibilite de soin. Mais elle
+            // ne doit pas non plus disparaitre en silence — c'est la lecon de l'etape precedente,
+            // ou un `.catch` a vide la colonne « auteur » de toutes les lignes neuves sans que
+            // rien ne le signale (voir services/activity-log.subscriber.ts).
+            //
+            // Jamais `${err}` ni `err.message` : une erreur Prisma non attrapee recopie
+            // integralement le `data` de l'ecriture ratee — donc l'identifiant du patient et le
+            // nom de l'agent. Seule la CLASSE de l'erreur, qui ne peut porter aucune valeur
+            // soumise, va au journal technique.
+            const errorClass =
+              err instanceof Error ? err.constructor.name : typeof err
+            fastify.log.error(
+              `PatientAccessLog: echec de journalisation de ${action} [${errorClass}]`,
+            )
+          })
       },
     )
     return Promise.resolve()

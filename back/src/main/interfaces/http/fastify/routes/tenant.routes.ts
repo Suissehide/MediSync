@@ -1,6 +1,10 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 
-import { assertRoutePermission } from '../plugins/tenant.plugin'
+import {
+  assertNoDeadPatientAccessEntry,
+  assertPatientReadLogged,
+  assertRoutePermission,
+} from '../plugins/tenant.plugin'
 import { activityLogRouter } from './activityLog'
 import { appointmentRouter } from './appointment'
 import { diagnosticEducatifRouter } from './diagnosticEducatif'
@@ -24,6 +28,24 @@ import { todoRouter } from './todo'
 // démarrage sinon (fail-safe).
 const tenantRoutes: FastifyPluginAsyncZod = async (fastify) => {
   fastify.addHook('onRoute', assertRoutePermission)
+  // Journal des consultations (etape 4b, tache 3) — LA propriete centrale du chantier : toute
+  // route GET posee ici dont l'URL designe un dossier patient est journalisee ou explicitement
+  // exemptee, sinon le demarrage echoue. Voir assertPatientReadLogged (tenant.plugin.ts) et les
+  // deux listes (utils/access-log-routes.ts).
+  fastify.addHook('onRoute', assertPatientReadLogged)
+  // L'autre sens de la comparaison. Les routes sont collectees TELLES QUE FASTIFY LES ENREGISTRE
+  // — pas recopiees — puis confrontees aux deux listes une fois toutes posees, d'ou le `onReady`
+  // (un `onRoute` ne peut pas savoir qu'il a vu la derniere route). Le tableau est cree ICI, a
+  // chaque enregistrement du greffon, donc une seconde application dans le meme processus
+  // (les tests en montent plusieurs) repart d'une collecte vierge.
+  const seenTenantRoutes: { method: unknown; url: string }[] = []
+  fastify.addHook('onRoute', (route) => {
+    seenTenantRoutes.push({ method: route.method, url: route.url })
+  })
+  fastify.addHook('onReady', () => {
+    assertNoDeadPatientAccessEntry(seenTenantRoutes)
+    return Promise.resolve()
+  })
   fastify.addHook('onRequest', fastify.resolveTenant)
   fastify.addHook('preHandler', fastify.enforcePermission)
   // Retire les champs cliniques du corps de la requête quand l'appelant n'a
@@ -33,6 +55,10 @@ const tenantRoutes: FastifyPluginAsyncZod = async (fastify) => {
   // Retire les champs cliniques des réponses quand l'appelant n'a pas
   // `clinical:read` (secrétariat, lecture seule). Voir tenant.plugin.ts.
   fastify.addHook('preSerialization', fastify.stripClinicalFields)
+  // Ecrit la ligne du journal des consultations, apres que la reponse soit partie. Pose ici, a
+  // cote des deux crochets cliniques, et jamais sur les routes individuelles : voir
+  // tenant.plugin.ts.
+  fastify.addHook('onResponse', fastify.recordPatientAccess)
 
   await fastify.register(todoRouter, { prefix: '/todo' })
   await fastify.register(appointmentRouter, { prefix: '/appointment' })
