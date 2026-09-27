@@ -101,8 +101,51 @@ export const EXEMPTED_PATIENT_ROUTES: Record<string, string> = {
   // uniquement l'auteur, l'action, la date et le service), seulement la liste de qui a ouvert
   // quoi et quand. La journaliser ferait de plus grossir le journal a chaque fois qu'on le
   // consulte, jusqu'a noyer les acces de soin sous les acces d'audit.
+  // Tour de correction 1 (revue) : le premier jet disait « aucune identite », un absolu faux —
+  // la reponse porte le nom de l'AGENT (auteur de l'acces), une identite reelle. Ce qu'elle ne
+  // porte jamais, c'est l'identite ou le contenu clinique DU PATIENT (voir
+  // `patientAccessLogsResponseSchema` : `userFirstName`/`userLastName` y sont l'auteur, jamais
+  // le patient, qui n'apparait que par l'URL deja connue de l'appelant).
   '/e/:establishmentId/s/:serviceId/patient/:patientID/acces':
-    "lit le journal des consultations d'un dossier, n'en constitue pas une : aucune identite ni contenu clinique rendus, et la journaliser ferait grossir le journal a chaque consultation de lui-meme",
+    "lit le journal des consultations d'un dossier, n'en constitue pas une : aucune identite DE PATIENT ni contenu clinique rendus (l'auteur de l'acces, oui) — et la journaliser ferait grossir le journal a chaque consultation de lui-meme",
+}
+
+// Deuxieme liste d'exemption, pour le SECOND garde-fou racine (`assertPatientRouteUnderTenant`,
+// routes/tenant.routes.ts), pas pour `assertPatientReadLogged` ni pour la liste ci-dessus.
+//
+// PORTEE, ET DIFFERENCE AVEC `EXEMPTED_PATIENT_ROUTES` : une entree ci-dessus exempte une route
+// de la JOURNALISATION — elle promet implicitement qu'une couverture PAR LE CROCHET D'ECRITURE
+// existe (la route vit sous `tenantRoutes`, donc herite de `recordPatientAccess`), et choisit
+// simplement de ne pas s'en servir. Une entree ICI exempte une route de l'OBLIGATION DE VIVRE
+// SOUS LE PREFIXE DE TENANT — elle ne promet AUCUNE couverture par ce crochet (absent hors de
+// `tenantRoutes`), elle declare qu'il n'en faut aucune, parce que la route ne lit jamais le
+// dossier lui-meme : elle FILTRE une table d'audit par un identifiant de patient, sans jamais
+// rendre son contenu.
+//
+// TOUR DE CORRECTION 1 (revue, tache 5) — CE QUE CETTE LISTE REMPLACE, ET POURQUOI CE N'ETAIT
+// PAS UN DETAIL. Le premier jet renommait le parametre de la route d'administration
+// (`:patientID` -> `:patientRef`) pour sortir des deux filets de `patientIdParamOf` et
+// echapper ainsi a `assertPatientRouteUnderTenant`. Demontre FAUX par la revue, avec une sonde
+// reelle : `GET /e/:establishmentId/admin/patients/:patientRef/sonde`, servie par un vrai
+// `findUniqueOrThrow` sur `Patient`, rendait un dossier COMPLET (200), sans ecrire aucune ligne
+// de journal, et rien — ni le demarrage, ni les 21 suites e2e — ne le signalait. Le
+// contrefactuel etait sans appel : meme code, seul le nom du parametre change, et le serveur
+// refuse de demarrer en nommant la route. Un renommage n'est donc pas une exemption : il ne
+// declare rien, il rend le filet aveugle pour TOUTE future route qui choisirait ce nom, pas
+// seulement celle-ci. Cette liste-ci, elle, ne desarme rien : `patientIdParamOf` continue de
+// reconnaitre `:patientID` normalement, et seule l'URL EXACTE declaree ci-dessous echappe au
+// refus — une route non declaree de la meme forme (`/admin/patients/:xxx/...`) reste refusee
+// (voir le test `refuse toujours une route non declaree de la meme forme`,
+// access-log-hook.test.ts).
+//
+// GARDE DE L'EXEMPTION ELLE-MEME, SYMETRIQUE DE `assertNoDeadPatientAccessEntry` : une entree
+// qui ne correspond plus a aucune route GET reelle fait echouer le demarrage —
+// `assertNoDeadAdminPatientExemption` (routes/tenant.routes.ts), posee en `onReady` a la racine
+// (routes/index.ts), avec les routes REELLEMENT vues par son crochet `onRoute`, jamais une liste
+// recopiee.
+export const EXEMPTED_ADMIN_PATIENT_ROUTES: Record<string, string> = {
+  '/e/:establishmentId/admin/patients/:patientID/acces':
+    "filtre le journal des consultations par l'identifiant de patient de l'URL, ne lit jamais le dossier lui-meme : aucune identite DE PATIENT ni contenu clinique rendus (voir patientAccessLogsResponseSchema)",
 }
 
 // Ce qu'il y a a journaliser pour une route donnee, ou `null` s'il n'y a rien. Ecrit ici plutot

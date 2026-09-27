@@ -1,6 +1,9 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 
-import { patientIdParamOf } from '../../../../utils/access-log-routes'
+import {
+  EXEMPTED_ADMIN_PATIENT_ROUTES,
+  patientIdParamOf,
+} from '../../../../utils/access-log-routes'
 import {
   assertNoDeadPatientAccessEntry,
   assertPatientReadLogged,
@@ -42,9 +45,33 @@ export const TENANT_PREFIX = '/e/:establishmentId/s/:serviceId'
 // depuis la racine ne serait ni journalisee ni signalee — le journal aurait un trou, et rien ne le
 // dirait.
 //
-// Il refuse SECHEMENT, sans consulter aucune liste — et c'est le point : l'inscrire dans
-// `LOGGED_PATIENT_ROUTES` afficherait une couverture que le crochet d'ecriture, absent de la, ne
-// tiendrait pas. La seule reponse juste est « remets cette route sous le prefixe de tenant ».
+// Il refuse SECHEMENT, sans consulter aucune liste JOURNALISEE — et c'est le point : l'inscrire
+// dans `LOGGED_PATIENT_ROUTES` afficherait une couverture que le crochet d'ecriture, absent de
+// la, ne tiendrait pas. La seule reponse juste POUR UNE ROUTE QUI LIT UN DOSSIER est « remets
+// cette route sous le prefixe de tenant ».
+//
+// TOUR DE CORRECTION 1 (revue, tache 5) — CE QUE LE PREMIER JET CROYAIT A TORT, ET LA TROISIEME
+// VOIE QUE LA REVUE A PROTOTYPEE. Le premier jet en deduisait que l'absolu valait aussi pour une
+// route qui ne lit JAMAIS le dossier — une lecture du JOURNAL des consultations, qui filtre une
+// table d'audit par un identifiant de patient sans jamais rendre le dossier — et la faisait
+// echapper au filet en renommant son parametre (`:patientID` -> un nom que `patientIdParamOf`
+// ne reconnait pas). DEMONTRE FAUX PAR EXECUTION : une sonde reelle enregistree sous ce nom
+// renomme (`GET /e/:establishmentId/admin/patients/:patientRef/sonde`, servie par un vrai
+// `findUniqueOrThrow` sur `Patient`) rendait un dossier COMPLET, sans ecrire aucune ligne de
+// journal, et rien ne le signalait — le meme code, le meme fichier, seul le nom du parametre
+// change separe un dossier complet rendu du refus de demarrage. Un renommage n'est pas une
+// exemption : il ne declare rien, et desarme le filet pour TOUTE route future qui choisirait ce
+// nom, pas seulement celle qui l'a fait en premier.
+//
+// La reponse retenue est `EXEMPTED_ADMIN_PATIENT_ROUTES` (utils/access-log-routes.ts) :
+// consultee ICI, juste apres le test du prefixe, pour les seules routes de lecture qui NE LISENT
+// JAMAIS le dossier — une exemption ne promet aucune couverture par le crochet d'ecriture (elle
+// n'en a pas besoin, contrairement a une entree de `EXEMPTED_PATIENT_ROUTES`), elle declare
+// qu'aucune n'est due. `patientIdParamOf` continue de reconnaitre CE nom de parametre
+// normalement (rien n'est desarme) : seule l'URL EXACTE declaree echappe au refus, une route non
+// declaree de la meme forme reste refusee (`assertNoDeadAdminPatientExemption`, plus bas, en garde
+// la contrepartie : une entree qui ne correspond plus a aucune route reelle fait echouer le
+// demarrage, exactement comme `assertNoDeadPatientAccessEntry` pour l'autre liste).
 //
 // MEME LIMITE, elle, que ses deux freres, et leurs commentaires la disent deja : Fastify n'offre,
 // au moment ou `onRoute` s'execute, aucun moyen public de savoir quelle chaine de crochets une
@@ -60,13 +87,43 @@ export const assertPatientRouteUnderTenant = (route: {
   if (route.url.startsWith(`${TENANT_PREFIX}/`)) {
     return
   }
+  if (route.url in EXEMPTED_ADMIN_PATIENT_ROUTES) {
+    return
+  }
   throw new Error(
     `Route de lecture designant un dossier patient hors du greffon de tenant : GET ${route.url}. ` +
       `Le journal des consultations n'est pose que sous ${TENANT_PREFIX} : enregistrer cette ` +
-      'route sous ce prefixe, ou elle ne laissera aucune trace (voir ' +
-      'src/main/utils/access-log-routes.ts).',
+      'route sous ce prefixe, ou la declarer dans EXEMPTED_ADMIN_PATIENT_ROUTES si elle ne lit ' +
+      "jamais le dossier lui-meme (voir src/main/utils/access-log-routes.ts), sans quoi elle ne " +
+      'laissera aucune trace.',
   )
 }
+
+// L'autre sens de la meme comparaison, symetrique d'`assertNoDeadPatientAccessEntry`
+// (tenant.plugin.ts) mais pour `EXEMPTED_ADMIN_PATIENT_ROUTES` : une entree qui ne correspond
+// plus a aucune route GET reelle laisserait croire a une exemption qui ne protege plus rien —
+// la route aurait disparu ou change d'URL, et l'entree resterait, muette. Posee en `onReady`
+// A LA RACINE (routes/index.ts), avec les routes REELLEMENT vues par son propre crochet
+// `onRoute` — jamais une liste recopiee — puisque c'est la, et non sous `tenantRoutes`, que vit
+// `assertPatientRouteUnderTenant` lui-meme, et que les routes d'administration sont enregistrees
+// ailleurs que sous `tenantRoutes`.
+export const assertNoDeadAdminPatientExemption = (
+  seenRoutes: readonly { method: unknown; url: string }[],
+): void => {
+  const readable = new Set(
+    seenRoutes.filter((route) => isReadRoute(route.method)).map((r) => r.url),
+  )
+  const dead = Object.keys(EXEMPTED_ADMIN_PATIENT_ROUTES).filter((url) => !readable.has(url))
+  if (dead.length > 0) {
+    throw new Error(
+      `Entrees mortes dans EXEMPTED_ADMIN_PATIENT_ROUTES : ${dead
+        .map((url) => `GET ${url}`)
+        .join(', ')}. Aucune route GET reelle ne porte cette URL ; retirer l'entree ou corriger ` +
+        "l'URL dans src/main/utils/access-log-routes.ts.",
+    )
+  }
+}
+
 
 // Toute route enregistrée ici vit sous /e/:establishmentId/s/:serviceId et
 // doit déclarer `config.permission`. Le hook onRoute fait échouer le

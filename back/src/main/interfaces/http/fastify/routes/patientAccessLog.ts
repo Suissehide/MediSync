@@ -30,7 +30,7 @@ const patientAccessLogRouter: FastifyPluginAsync = (fastify) => {
         params: patientAccessLogServiceParamsSchema,
         response: { 200: patientAccessLogsResponseSchema },
       },
-      config: { permission: 'accessLog:read' },
+      config: { permission: 'consultations:read' },
     },
     (request) => patientAccessLogDomain.findByPatientInService(request.params.patientID),
   )
@@ -39,37 +39,32 @@ const patientAccessLogRouter: FastifyPluginAsync = (fastify) => {
 }
 
 // Route d'administration d'etablissement : `GET
-// /e/:establishmentId/admin/patients/:patientRef/acces`, montee par `establishmentAdminRoutes`
-// (routes/establishment-admin.routes.ts) au prefixe `/patients/:patientRef/acces`. Meme journal,
+// /e/:establishmentId/admin/patients/:patientID/acces`, montee par `establishmentAdminRoutes`
+// (routes/establishment-admin.routes.ts) au prefixe `/patients/:patientID/acces`. Meme journal,
 // a l'echelle de TOUS les services de l'etablissement (`PatientAccessLogRepository.
-// findByPatientInEstablishment`, filtre par `establishmentScope()`).
+// findByPatientInEstablishment`, filtre par `establishmentScope()` sous `runAsSystem()`).
 //
-// PARAMETRE NOMME `:patientRef`, PAS `:patientID` (le nom qu'emploie encore le cahier des charges
-// de la tache) — DECISION DELIBEREE, PAS UNE COQUILLE, PRISE CONTRE LE CAHIER DES CHARGES APRES
-// VERIFICATION PAR EXECUTION. Le garde-fou racine `assertPatientRouteUnderTenant`
-// (routes/tenant.routes.ts, pose en hook `onRoute` sur TOUTE l'application, pas seulement sous
-// `tenantRoutes`) refuse SECHEMENT, au demarrage, toute route GET dont l'URL designe un dossier
-// patient — au sens de `patientIdParamOf`, utils/access-log-routes.ts — sans vivre sous le
-// prefixe de tenant de service, SANS CONSULTER AUCUNE LISTE D'EXEMPTION : c'est volontaire (son
-// propre commentaire : « la seule reponse juste est de remettre cette route sous le prefixe de
-// tenant »), parce qu'une route hors de ce prefixe n'herite jamais du crochet d'ecriture — une
-// exemption y mentirait sur une couverture qui n'existe pas.
+// PARAMETRE `:patientID`, PAS RENOMME — TOUR DE CORRECTION 1 (revue). Le premier jet renommait
+// ce parametre (`:patientRef`) pour sortir des deux filets de `patientIdParamOf`
+// (utils/access-log-routes.ts) et echapper ainsi au garde-fou racine
+// `assertPatientRouteUnderTenant` (routes/tenant.routes.ts), qui refuse SECHEMENT, au demarrage,
+// toute route GET dont l'URL designe un dossier patient sans vivre sous le prefixe de tenant de
+// service. DEMONTRE FAUX PAR LA REVUE, avec une sonde reelle
+// (`GET /e/:establishmentId/admin/patients/:patientRef/sonde`, servie par un vrai
+// `findUniqueOrThrow` sur `Patient`) : le meme renommage rendait un dossier COMPLET (200), sans
+// ecrire aucune ligne de journal, et rien — ni le demarrage, ni les 21 suites e2e — ne le
+// signalait. Un renommage n'est pas une exemption : il desarme le filet pour TOUTE route future
+// qui choisirait ce nom, pas seulement celle-ci.
 //
-// Le filet SECONDAIRE de `patientIdParamOf` reconnait un parametre nomme `patientId`/`patientID`
-// (la casse indifferente) QUEL QUE SOIT LE NOM DU SEGMENT qui le porte, justement pour attraper
-// une route comme celle-ci, posee sous `patients/` (pluriel) et non `patient/` (singulier) — le
-// filet PRIMAIRE, structurel, ne la voit pas, mais le secondaire si. Enregistrer cette route
-// avec `:patientID` (essaye en premier, pour suivre le cahier des charges a la lettre) fait donc
-// echouer `app.ready()` avec « hors du greffon de tenant » : une route d'administration
-// d'etablissement ne vit, par definition, jamais sous `/e/:establishmentId/s/:serviceId`.
-//
-// Cette route n'est pourtant pas une lecture de dossier au sens que ce garde-fou protege : elle
-// ne rend aucune identite ni contenu clinique (voir `patientAccessLogsResponseSchema`), et son
-// parametre ne fait que FILTRER une table d'audit par la colonne `patientId` du journal —
-// exactement comme `PatientExportQuery.search` (utils/access-log-routes.ts) filtre l'export sans
-// jamais designer un dossier par un identifiant de route. Renommer le parametre en `:patientRef`
-// sort la route des DEUX filets (le segment est deja hors du premier ; `patientRef` ne matche pas
-// la regex du second) sans rien changer a ce que la route fait ou renvoie.
+// La route reprend donc `:patientID`, et sa dispense de vivre sous le prefixe de tenant est
+// DECLAREE, dans `EXEMPTED_ADMIN_PATIENT_ROUTES` (utils/access-log-routes.ts) — consultee par
+// `assertPatientRouteUnderTenant` juste apres son test de prefixe. Une entree la ne promet
+// aucune couverture par le crochet d'ecriture (absent hors de `tenantRoutes`) : elle declare
+// qu'aucune n'est due, parce que cette route ne lit jamais le dossier lui-meme — elle FILTRE une
+// table d'audit par la colonne `patientId` du journal, exactement comme `PatientExportQuery.
+// search` filtre l'export sans jamais designer un dossier par un identifiant de route. Elle ne
+// rend d'ailleurs aucune identite DE PATIENT ni contenu clinique (voir
+// `patientAccessLogsResponseSchema`).
 const patientAccessLogAdminRouter: FastifyPluginAsync = (fastify) => {
   const { patientAccessLogDomain } = fastify.iocContainer
 
@@ -82,7 +77,7 @@ const patientAccessLogAdminRouter: FastifyPluginAsync = (fastify) => {
       },
       config: { permission: 'access-log:read' },
     },
-    (request) => patientAccessLogDomain.findByPatientInEstablishment(request.params.patientRef),
+    (request) => patientAccessLogDomain.findByPatientInEstablishment(request.params.patientID),
   )
 
   return Promise.resolve()

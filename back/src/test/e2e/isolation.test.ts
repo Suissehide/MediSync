@@ -647,6 +647,105 @@ describe('isolation par tenant', () => {
     })
   })
 
+  // Tache 5 (etape 4b) : le journal des consultations, cote administration d'etablissement
+  // (`findByPatientInEstablishment`). CE CAS-CI EST DIFFERENT des deux precedents (membres,
+  // soignants) : ceux-la prouvent que l'IDENTIFIANT D'ETABLISSEMENT DE L'URL est cloisonne —
+  // deja garanti par `resolveEstablishmentAdmin`, commun a toutes les routes d'administration.
+  // Le risque propre a CETTE route est ailleurs : `findByPatientInEstablishment` lit sous
+  // `runAsSystem()` (voir infra/orm/repositories/patientAccessLog.repository.ts), qui RETIRE
+  // l'exigence du garde-fou de tenant plutot que de la deplacer — la seule chose qui protege
+  // encore un etablissement de l'autre est le filtre `establishmentId` ecrit a la main dans la
+  // requete Prisma elle-meme. Ce test vise donc un administrateur de A, dans SON PROPRE
+  // etablissement (URL valide, pas de 404 de resolution), mais avec l'IDENTIFIANT DE PATIENT
+  // D'UN AUTRE ETABLISSEMENT (B) — le seul chemin qui exercerait reellement ce filtre s'il
+  // disparaissait un jour.
+  describe('isolation entre etablissements : journal des consultations (tache 5)', () => {
+    beforeEach(truncateAll)
+
+    it("un administrateur de A ne voit pas la ligne de B, meme en visant son propre etablissement avec l identifiant du patient de B", async () => {
+      const A = await createEstablishment('A')
+      const B = await createEstablishment('B')
+      const serviceA = await createService(A.id, 'Service A')
+      const serviceB = await createService(B.id, 'Service B')
+      await createUser({
+        email: 'admin-a@test.fr',
+        memberships: [{ establishmentId: A.id, role: 'ADMIN' }],
+      })
+      await createUser({
+        email: 'admin-b@test.fr',
+        memberships: [{ establishmentId: B.id, role: 'ADMIN' }],
+      })
+      const cookiesA = await signIn(t.app, 'admin-a@test.fr')
+      const cookiesB = await signIn(t.app, 'admin-b@test.fr')
+
+      // Un patient HOMONYME dans chaque etablissement (meme nom, meme prenom) : un test qui
+      // distinguerait les deux par leur nom plutot que par leur identifiant ne prouverait rien
+      // sur le cloisonnement lui-meme.
+      const patientA = await testDb.patient.create({
+        data: { firstName: 'Jean', lastName: 'Homonyme', createDate: new Date(), establishmentId: A.id },
+      })
+      const patientB = await testDb.patient.create({
+        data: { firstName: 'Jean', lastName: 'Homonyme', createDate: new Date(), establishmentId: B.id },
+      })
+      await testDb.patientAccessLog.create({
+        data: {
+          establishmentId: B.id,
+          serviceId: serviceB.id,
+          patientId: patientB.id,
+          userID: 'u-b',
+          userFirstName: 'Coordinateur',
+          userLastName: 'DeB',
+          action: 'dossier.ouvert',
+          accesParOctroi: false,
+        },
+      })
+      // Une ligne pour A aussi, pour le contrepoint : sans elle, un 200-tableau-vide sur A
+      // prouverait juste que la route repond, jamais qu'elle sait rendre une vraie ligne.
+      await testDb.patientAccessLog.create({
+        data: {
+          establishmentId: A.id,
+          serviceId: serviceA.id,
+          patientId: patientA.id,
+          userID: 'u-a',
+          userFirstName: 'Coordinateur',
+          userLastName: 'DeA',
+          action: 'dossier.ouvert',
+          accesParOctroi: false,
+        },
+      })
+
+      // Admin de A, URL de A (valide), mais IDENTIFIANT DE PATIENT DE B : aucune ligne de B ne
+      // doit filtrer par ce chemin, meme si establishmentId disparaissait un jour du where.
+      const croise = await t.app.inject({
+        method: 'GET',
+        url: adminUrl(A.id, `/patients/${patientB.id}/acces`),
+        cookies: cookiesA,
+      })
+      expect(croise.statusCode).toBe(200)
+      expect(croise.json()).toEqual([])
+
+      // Contrepoint 1 : admin de A voit bien SA PROPRE ligne, sur son propre patient — la route
+      // fonctionne reellement, le tableau vide ci-dessus n'est pas un defaut de la route.
+      const propre = await t.app.inject({
+        method: 'GET',
+        url: adminUrl(A.id, `/patients/${patientA.id}/acces`),
+        cookies: cookiesA,
+      })
+      expect(propre.statusCode).toBe(200)
+      expect(propre.json()).toHaveLength(1)
+
+      // Contrepoint 2 : admin de B, sur SON PROPRE patient homonyme, voit bien sa ligne — la
+      // fixture est reelle, ce n'est pas B qui est vide par erreur de preparation.
+      const chezB = await t.app.inject({
+        method: 'GET',
+        url: adminUrl(B.id, `/patients/${patientB.id}/acces`),
+        cookies: cookiesB,
+      })
+      expect(chezB.statusCode).toBe(200)
+      expect(chezB.json()).toHaveLength(1)
+    })
+  })
+
   // Tache 8 (etape 4a) : l'octroi temporaire de super-admin (spec §3.5, §4.3). C'est CE fichier
   // qu'un relecteur consulte pour l'isolation — un cas ailleurs (par exemple dans
   // `super-admin-grants.test.ts` ou `tenant-resolution.test.ts`) ne le remplace pas. Un octroi

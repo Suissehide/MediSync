@@ -31,14 +31,14 @@ export const patientAccessLogServiceParamsSchema = z.object({
 
 export type PatientAccessLogServiceParams = z.infer<typeof patientAccessLogServiceParamsSchema>
 
-// Route d'administration d'etablissement : `GET /e/:establishmentId/admin/patients/:patientRef/acces`.
-// Parametre nomme `:patientRef`, PAS `:patientID` NI `:patientId` — decision deliberee, voir le
-// commentaire dans interfaces/http/fastify/routes/patientAccessLog.ts (le garde-fou racine
-// `assertPatientRouteUnderTenant` refuse au demarrage toute route dont l'URL porte un parametre
-// nomme ainsi, quel que soit le nom de son segment, si elle ne vit pas sous le prefixe de tenant
-// de service — verifie par execution).
+// Route d'administration d'etablissement : `GET /e/:establishmentId/admin/patients/:patientID/acces`.
+// Meme nom de parametre que la route de service (`:patientID`) — un renommage avait ete essaye
+// pour echapper au garde-fou racine `assertPatientRouteUnderTenant`, demontre faux par la revue
+// (tour de correction 1) et abandonne : la route est desormais declaree, avec sa raison, dans
+// `EXEMPTED_ADMIN_PATIENT_ROUTES` (utils/access-log-routes.ts) — voir le commentaire dans
+// interfaces/http/fastify/routes/patientAccessLog.ts pour le detail.
 export const patientAccessLogAdminParamsSchema = z.object({
-  patientRef: z.cuid(),
+  patientID: z.cuid(),
 })
 
 export type PatientAccessLogAdminParams = z.infer<typeof patientAccessLogAdminParamsSchema>

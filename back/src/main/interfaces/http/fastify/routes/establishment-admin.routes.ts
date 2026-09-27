@@ -25,7 +25,7 @@ const establishmentAdminRoutes: FastifyPluginAsyncZod = async (fastify) => {
   await fastify.register(locationAdminRouter, { prefix: '/location' })
   await fastify.register(grantsRouter, { prefix: '/grants' })
   await fastify.register(servicesRouter, { prefix: '/services' })
-  await fastify.register(patientAccessLogAdminRouter, { prefix: '/patients/:patientRef/acces' })
+  await fastify.register(patientAccessLogAdminRouter, { prefix: '/patients/:patientID/acces' })
 }
 
 export { establishmentAdminRoutes }

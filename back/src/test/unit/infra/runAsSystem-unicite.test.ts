@@ -75,8 +75,10 @@ import ts from 'typescript'
 //      encadre) est verifiee par `repository-scope.test.ts`. `PatientAccessLog` reste dans
 //      `SERVICE_MODELS` (tenant-guard.ts) : le reclasser en `ESTABLISHMENT_MODELS` pour eviter
 //      ce sixieme emploi a ete essaye et rejete par la preuve de monotonie
-//      (`tenant-guard-monotonie.test.ts`), qui a montre une vingtaine de chemins d'inclusion
-//      imbriquee rouverts ailleurs par ce reclassement.
+//      (`tenant-guard-monotonie.test.ts`, profondeur 4), qui a montre **855 refus perdus** (110
+//      chemins d'inclusion imbriquee distincts), repartis sur QUATRE contextes — 111 sans
+//      contexte, 119 sous superadmin, mais surtout 325 sous tenant ORDINAIRE et 300 sous
+//      administration d'etablissement, la majorite du total.
 //
 // `runAsSuperAdmin` (meme fichier, tache 1 / etape 4a) y ajoute un troisieme mode, qui ne retire
 // rien mais substitue au filtre de tenant une liste declaree et exhaustive de couples (modele,
@@ -175,9 +177,10 @@ const AUTORISES = [
       'reste dans SERVICE_MODELS (tenant-guard.ts), dont le garde-fou exige serviceId pour ' +
       'toute operation ; reclasser le modele en ESTABLISHMENT_MODELS pour eviter runAsSystem a ' +
       'ete essaye et rejete par la preuve de monotonie (tenant-guard-monotonie.test.ts), qui a ' +
-      'montre une vingtaine de ponts d inclusion imbriquee rouverts ailleurs. Rend les acces de ' +
-      'TOUS les services de l etablissement, jamais de contenu clinique. Bornes verifiees par ' +
-      'repository-scope.test.ts',
+      'montre 855 refus perdus (110 chemins distincts), sur quatre contextes dont le tenant ' +
+      'ORDINAIRE (325) et l administration d etablissement (300), pas seulement superadmin (119) ' +
+      'et l absence de contexte (111). Rend les acces de TOUS les services de l etablissement, ' +
+      'jamais de contenu clinique. Bornes verifiees par repository-scope.test.ts',
     appels: 1,
   },
 ]

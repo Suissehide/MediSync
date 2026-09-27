@@ -457,7 +457,7 @@ describe('journal des consultations : le lire, par service et par etablissement 
   let serviceB: { id: string }
   let patient: { id: string }
   let cookiesCoordinateurA: { access_token: string }
-  // Un compte du MEME service que A, sans `accessLog:read` (LECTURE ne l a pas) : eprouve la
+  // Un compte du MEME service que A, sans `consultations:read` (LECTURE ne l a pas) : eprouve la
   // permission de service toute seule, pour un patient et une route qui existent tous les deux.
   let cookiesLectureA: { access_token: string }
   let cookiesAdmin: { access_token: string }
@@ -556,16 +556,26 @@ describe('journal des consultations : le lire, par service et par etablissement 
     await testDb.$disconnect()
   })
 
-  // SABORDAGE ETROIT, EPROUVE (retire avant ce commit) : remplacer `...this.scope` par
-  // `...this.establishmentScope` dans `PatientAccessLogRepository.findByPatientInService`
-  // rougit CE test — mais pas de la facon qu'on imaginerait d'abord (un 200 qui montrerait les
-  // deux services). `PatientAccessLog` reste dans `SERVICE_MODELS` (tenant-guard.ts), dont le
-  // garde-fou exige `serviceId` dans le `where` pour TOUTE operation ; un `where` sans cette cle
-  // (ce que rend `establishmentScope()` seul) echoue donc AVANT MEME D'ATTEINDRE LA BASE, avec
-  // `TenantScopeMissingError` (500) — et le second test (« ne rend ni identite… ») rougit en
-  // meme temps, par ricochet, puisqu'il tape la meme route. C'est une preuve PLUS FORTE que
-  // celle attendue : `scope()` n'est pas seulement ce qui rend la REPONSE correcte, c'est ce qui
-  // rend la requete possible du tout.
+  // DEUX SABORDAGES ETROITS, EPROUVES (retires avant ce commit), qui prouvent chacun une chose
+  // DIFFERENTE — l'un ne remplace pas l'autre :
+  //
+  // 1. Remplacer `...this.scope` par `...this.establishmentScope` (sans toucher au canal Prisma)
+  //    rougit CE test — mais pas de la facon qu'on imaginerait d'abord (un 200 qui montrerait les
+  //    deux services). `PatientAccessLog` reste dans `SERVICE_MODELS` (tenant-guard.ts), dont le
+  //    garde-fou exige `serviceId` dans le `where` pour TOUTE operation ; un `where` sans cette
+  //    cle (ce que rend `establishmentScope()` seul) echoue donc AVANT MEME D'ATTEINDRE LA BASE,
+  //    avec `TenantScopeMissingError` (500) — et le second test (« ne rend ni identite… »)
+  //    rougit en meme temps, par ricochet, puisqu'il tape la meme route.
+  // 2. Remplacer le CORPS ENTIER de la methode par le meme canal que `findByPatientInEstablishment`
+  //    (`runAsSystem()`, filtre sur `establishmentId` SEUL, capture avant d'entrer dans le mode
+  //    encadre) produit la fuite REELLE que le premier sabordage n'a pas montree : 200, avec les
+  //    lignes des DEUX services (`serviceA.id` ET `serviceB.id`) — puisque `runAsSystem` retire
+  //    l'exigence du garde-fou, qui ne peut donc plus rattraper l'absence de `serviceId`. CE
+  //    TEST ROUGIT ALORS SEUL (le suivant, qui verifie la FORME de la reponse, reste vert : la
+  //    forme des deux lignes rendues est toujours correcte, seul leur NOMBRE et leur
+  //    PROVENANCE sont faux) — c'est la propriete que le premier sabordage prouvait seulement
+  //    par ricochet, celle-ci la prouve directement : `scope()` est ce qui rend la reponse
+  //    CORRECTE, `establishmentScope()`+`runAsSystem()` la rendrait seulement POSSIBLE, a tort.
   it('un coordinateur ne voit que les acces de SON service', async () => {
     const res = await testApp.app.inject({
       method: 'GET',
@@ -604,7 +614,26 @@ describe('journal des consultations : le lire, par service et par etablissement 
     )
   })
 
-  it('refuse la lecture de service a qui n a pas accessLog:read (LECTURE)', async () => {
+  // Meme forme, cote administration — pas un doublon : c'est CETTE route qui lit le perimetre le
+  // plus large (tous les services de l'etablissement), donc celle ou une fuite de contenu
+  // clinique ou d'identite de patient serait la plus large aussi. Le test de service ci-dessus
+  // ne la couvre pas : deux routes, deux schemas de reponse distincts (voir
+  // patientAccessLog.schema.ts), donc deux preuves distinctes.
+  it('ne rend ni identite de patient ni contenu clinique cote administration non plus', async () => {
+    const res = await testApp.app.inject({
+      method: 'GET',
+      url: adminUrl(etab.id, `/patients/${patient.id}/acces`),
+      cookies: cookiesAdmin,
+    })
+    expect(res.statusCode).toBe(200)
+    for (const ligne of res.json()) {
+      expect(Object.keys(ligne).sort()).toEqual(
+        ['action', 'createdAt', 'id', 'serviceId', 'userFirstName', 'userLastName'].sort(),
+      )
+    }
+  })
+
+  it('refuse la lecture de service a qui n a pas consultations:read (LECTURE)', async () => {
     const res = await testApp.app.inject({
       method: 'GET',
       url: tenantUrl(etab.id, serviceA.id, `/patient/${patient.id}/acces`),
@@ -804,4 +833,24 @@ describe('journal des consultations : le refus racine du hors-greffon', () => {
     },
     30000,
   )
+
+  // TOUR DE CORRECTION 1 (revue, tache 5) — LA SONDE DU RELECTEUR, REJOUEE SUR L APPLICATION
+  // REELLE. La revue a demontre que renommer un parametre de route (`:patientID` -> `:patientRef`)
+  // pour sortir des filets de `patientIdParamOf` etait un contournement, pas une exemption : une
+  // route posee sous ce nom rendait un dossier complet, sans ecrire de ligne, et rien ne le
+  // signalait. `EXEMPTED_ADMIN_PATIENT_ROUTES` a remplace le renommage — mais l'exemption ne
+  // doit jouer que pour l'URL EXACTE declaree, jamais par ressemblance de forme. Cette sonde,
+  // posee sous LA MEME FORME que la vraie route d'administration (`/patients/:patientID/...`,
+  // hors du prefixe de tenant) mais avec une URL DIFFERENTE, doit rester refusee.
+  it("refuse une sonde d administration de meme forme que la route exemptee, mais d URL differente", async () => {
+    const app = monterApplicationAvecRouteEnPlus((child) => {
+      child.get(
+        '/e/:establishmentId/admin/patients/:patientID/sonde',
+        { config: { permission: 'patient:read' } },
+        () => ({}),
+      )
+    })
+    await expect(app.ready()).rejects.toThrow(/hors du greffon de tenant/)
+    await fermer(app)
+  }, 30000)
 })

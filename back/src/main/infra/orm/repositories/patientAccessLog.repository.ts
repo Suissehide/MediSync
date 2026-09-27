@@ -29,14 +29,18 @@ import type { PostgresPrismaClient } from '../postgres-client'
 // `establishmentId` — un `establishmentScope()` nu y echoue donc avec `TenantScopeMissingError`,
 // depuis le contexte d'administration d'etablissement (`serviceId: null`). Reclasser
 // `PatientAccessLog` en `ESTABLISHMENT_MODELS` POUR CONTOURNER CE POINT A ETE ESSAYE, ET REJETE
-// PAR LA PREUVE DE MONOTONIE (`tenant-guard-monotonie.test.ts`, MONOTONIE_REF=HEAD) : le
-// reclassement rouvrait, sous superadmin comme sans aucun contexte, une vingtaine de chemins
-// d'inclusion imbriquee jusqu'ici refuses (`User.establishmentMemberships>establishment>
-// services>accessLogs` et apparentes) — parce que la transition etablissement -> service que
+// PAR LA PREUVE DE MONOTONIE (`tenant-guard-monotonie.test.ts`, MONOTONIE_REF=HEAD, profondeur
+// 4 par defaut) : le reclassement perdait **855 refus** (110 chemins d'inclusion imbriquee
+// distincts, dont `User.establishmentMemberships>establishment>services>accessLogs` et
+// apparentes), repartis sur QUATRE contextes, PAS SEULEMENT `superadmin` et l'absence de
+// contexte comme une premiere lecture trop rapide de ce chiffre l'avait laisse croire : 111
+// sans contexte, 119 sous superadmin, mais aussi **325 sous le contexte de TENANT ORDINAIRE et
+// 300 sous administration d'etablissement** — la majorite de la perte, pas la portion la plus
+// petite. La cause reste la meme partout : la transition etablissement -> service que
 // `assertServiceRelationFilter` protege ailleurs dans l'arbre cesse de s'appliquer des que la
-// CIBLE n'est plus de famille service. Un gain local (cette lecture) n'a pas a payer un cout
-// global (des ponts rouverts ailleurs) quand un dispositif deja eprouve — `runAsSystem` — couvre
-// exactement ce cas sans y toucher.
+// CIBLE n'est plus de famille service, quel que soit le contexte qui descend l'arbre. Un gain
+// local (cette lecture) n'a pas a payer un cout global de cette ampleur quand un dispositif deja
+// eprouve — `runAsSystem` — couvre exactement ce cas sans y toucher.
 //
 // Meme discipline que `estSuiviAilleurs`/`impactDesactivation` (patientServiceFile.repository.ts) :
 // la borne (`establishmentId`, lue via `this.establishmentScope`) est capturee AVANT d'entrer

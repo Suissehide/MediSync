@@ -66,6 +66,7 @@ associe les permissions aux rôles. C'est cette matrice qui fait foi.
 | `pdf:export` | Export PDF du programme remis au patient | ✔ | ✔ | ✔ | |
 | `todo:own` | Ses propres tâches | ✔ | ✔ | ✔ | ✔ |
 | `members:read` | Voir les membres du service et leur rôle | ✔ | ✔ | ✔ | ✔ |
+| `consultations:read` | Lire le journal des consultations (`PatientAccessLog`) du service courant : qui a ouvert quel dossier, quand — jamais un contenu clinique | ✔ | | | |
 
 Règles associées :
 

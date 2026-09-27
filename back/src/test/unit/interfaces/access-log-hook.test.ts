@@ -6,6 +6,7 @@ import {
   tenantPlugin,
 } from '../../../main/interfaces/http/fastify/plugins/tenant.plugin'
 import {
+  assertNoDeadAdminPatientExemption,
   assertPatientRouteUnderTenant,
   TENANT_PREFIX,
   tenantRoutes,
@@ -15,6 +16,7 @@ import type { RecordAccessInput } from '../../../main/types/domain/patientAccess
 import type { Tenant } from '../../../main/types/utils/tenant-context'
 import {
   buildPatientExportFilters,
+  EXEMPTED_ADMIN_PATIENT_ROUTES,
   EXEMPTED_PATIENT_ROUTES,
   LOGGED_PATIENT_ROUTES,
   PATIENT_EXPORT_ROUTE_URL,
@@ -274,6 +276,68 @@ describe('assertPatientRouteUnderTenant', () => {
         url: '/e/:establishmentId/admin/patient/:patient_id',
       }),
     ).not.toThrow()
+  })
+
+  // TOUR DE CORRECTION 1 (tache 5) — LA TROISIEME VOIE. Le relecteur a demontre, par une sonde
+  // reelle (`GET /e/:establishmentId/admin/patients/:patientRef/sonde`, servie par un vrai
+  // `findUniqueOrThrow` sur `Patient`), que renommer le parametre pour sortir des deux filets de
+  // `patientIdParamOf` etait un contournement : le meme code, le meme fichier, seul le nom du
+  // parametre change, separe un dossier complet rendu sans aucune ligne de journal d'un refus de
+  // demarrage. `EXEMPTED_ADMIN_PATIENT_ROUTES` est la reponse retenue : une route qui vit
+  // deliberement hors du prefixe de tenant peut y etre declaree, avec sa raison, plutot que de
+  // changer de nom pour echapper au filet. Elle ne promet PAS une couverture par le crochet
+  // d'ecriture (absent hors de `tenantRoutes`) — elle declare qu'aucune couverture n'est due,
+  // parce que la route ne lit jamais le dossier lui-meme.
+  it('laisse passer une route d administration explicitement exemptee, avec :patientID', () => {
+    for (const url of Object.keys(EXEMPTED_ADMIN_PATIENT_ROUTES)) {
+      expect(patientIdParamOf(url)).not.toBeNull()
+      expect(() =>
+        assertPatientRouteUnderTenant({ method: 'GET', url }),
+      ).not.toThrow()
+    }
+  })
+
+  // La sonde du relecteur elle-meme, REDEVENUE REFUSEE : meme forme exacte
+  // (`/admin/patients/:xxx/...`, hors du prefixe de tenant), mais UNE route non declaree.
+  // L'exemption ne s'accorde jamais par ressemblance de forme, seulement par URL exacte.
+  it("refuse toujours une route non declaree de la meme forme (patients/:xxx, plurielle)", () => {
+    // Une seule URL a de quoi surprendre : `:patientID` matche le filet secondaire de
+    // `patientIdParamOf` (nom reconnu, quel que soit le segment) — c'est CETTE forme que la
+    // sonde du relecteur employait, et qu'une exemption non exacte aurait laissee passer par
+    // ressemblance. `:patientRef` ne matche NI le filet primaire (segment `patients/`, pluriel)
+    // NI le secondaire (nom non reconnu) : `patientIdParamOf` y rend `null` par construction,
+    // donc `assertPatientRouteUnderTenant` ne la voit meme pas comme designant un dossier — ce
+    // n'est pas ce que ce test-ci eprouve (voir le residu documente dans
+    // `patientIdParamOf`, utils/access-log-routes.ts).
+    const url = '/e/:establishmentId/admin/patients/:patientID/sonde'
+    expect(patientIdParamOf(url)).not.toBeNull()
+    expect(() =>
+      assertPatientRouteUnderTenant({ method: 'GET', url }),
+    ).toThrow(/hors du greffon de tenant/)
+  })
+})
+
+describe('assertNoDeadAdminPatientExemption', () => {
+  const declarees = Object.keys(EXEMPTED_ADMIN_PATIENT_ROUTES).map((url) => ({
+    method: 'GET',
+    url,
+  }))
+
+  it('ne dit rien quand chaque entree correspond a une route GET reelle', () => {
+    expect(() => assertNoDeadAdminPatientExemption(declarees)).not.toThrow()
+  })
+
+  it('refuse de demarrer quand une entree ne correspond plus a aucune route', () => {
+    expect(() => assertNoDeadAdminPatientExemption([])).toThrow(
+      /EXEMPTED_ADMIN_PATIENT_ROUTES/,
+    )
+  })
+
+  it('ne compte pas une route homonyme d une autre methode comme vivante', () => {
+    const enEcriture = declarees.map(({ url }) => ({ method: 'POST', url }))
+    expect(() => assertNoDeadAdminPatientExemption(enEcriture)).toThrow(
+      /EXEMPTED_ADMIN_PATIENT_ROUTES/,
+    )
   })
 })
 
