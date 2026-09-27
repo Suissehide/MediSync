@@ -429,15 +429,7 @@ const tenantPlugin: FastifyPluginAsync = fastifyPlugin(
         if (reply.statusCode >= 400) {
           return Promise.resolve()
         }
-        // 2. Sans tenant, on n'ecrit pas — et surtout on ne leve pas. `request.tenant` est
-        //    optionnel par construction (voir la declaration en tete de ce fichier) : sur le
-        //    chemin d'echec de `resolveTenant` il n'est jamais pose, et les crochets suivants
-        //    s'executent quand meme. Meme parti pris que les deux filtres cliniques.
-        const tenant = request.tenant
-        if (!tenant) {
-          return Promise.resolve()
-        }
-        // 3. Seules les routes declarees journalisees le sont. `routeOptions.url` est l'URL
+        // 2. Seules les routes declarees journalisees le sont. `routeOptions.url` est l'URL
         //    DECLAREE (avec ses `:parametres`), la meme chaine exactement que celle que
         //    `assertPatientReadLogged` a vue au demarrage — les deux ne peuvent pas diverger.
         const prevu = plannedPatientAccess(
@@ -448,8 +440,15 @@ const tenantPlugin: FastifyPluginAsync = fastifyPlugin(
           return Promise.resolve()
         }
         const { action, patientId } = prevu
+        // 3. UNE SEULE comparaison, qui couvre DEUX choses — et c'est voulu, plutot qu'une garde
+        //    `if (!request.tenant)` en plus, qu'aucun test n'aurait pu faire rougir seule
+        //    (mesure : celle-ci la subsume entierement). Elle refuse a la fois le tenant absent
+        //    — `request.tenant` est optionnel par construction, voir la declaration en tete de
+        //    ce fichier, et `store.tenant` n'est jamais `undefined` — et le contexte d'une AUTRE
+        //    portee, qui ferait ecrire une ligne au nom du mauvais etablissement. On sort sans
+        //    lever, comme les deux filtres cliniques, mais PAS en silence.
         const store = tenantContext.peek()
-        if (store?.kind !== 'tenant' || store.tenant !== tenant) {
+        if (store?.kind !== 'tenant' || store.tenant !== request.tenant) {
           fastify.log.error(
             `PatientAccessLog: contexte de tenant absent ou etranger a la requete, ${action} non journalise`,
           )
@@ -458,9 +457,9 @@ const tenantPlugin: FastifyPluginAsync = fastifyPlugin(
         return patientAccessLogDomain
           .record({
             patientId,
-            // `tenant.userId` plutot que `request.user.userID` : c'est la meme valeur, mais
-            // celle-ci vient d'un objet dont la presence vient d'etre verifiee juste au-dessus.
-            userID: tenant.userId,
+            // `store.tenant.userId` plutot que `request.user.userID` : c'est la meme valeur,
+            // mais celle-ci vient du contexte dont l'identite vient d'etre verifiee.
+            userID: store.tenant.userId,
             userFirstName: request.currentUser?.firstName ?? null,
             userLastName: request.currentUser?.lastName ?? null,
             action,

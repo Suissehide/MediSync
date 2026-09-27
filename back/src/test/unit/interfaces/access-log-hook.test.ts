@@ -330,16 +330,20 @@ describe('recordPatientAccess', () => {
 
   // `request.tenant` est optionnel par construction : sur le chemin d'echec de `resolveTenant`
   // il n'est jamais pose, et les crochets suivants s'executent quand meme. Le crochet doit
-  // sortir SANS ECRIRE et SANS LEVER. Eprouve ici avec un code de succes, faute de quoi la garde
-  // de statut ci-dessus suffirait a rendre ce test vert et il ne mesurerait rien de la garde du
-  // tenant (voir le rapport de tache : le sabotage prevu par le cahier des charges ne pouvait
-  // pas rougir sur le chemin HTTP reel, pour cette raison exacte).
+  // sortir SANS ECRIRE et SANS LEVER. Eprouve ici avec un code de SUCCES, faute de quoi la garde
+  // de statut ci-dessus suffirait a rendre ce test vert et il ne mesurerait rien du tenant (voir
+  // le rapport de tache : le sabotage prevu par le cahier des charges ne pouvait pas rougir sur
+  // le chemin HTTP reel, pour cette raison exacte).
   it("n ecrit rien, et ne leve pas, quand le tenant n est pas resolu", async () => {
     const vues: RecordAccessInput[] = []
     const { app, call } = await buildHookHarness((input) => {
       vues.push(input)
       return Promise.resolve()
     })
+    const errors: string[] = []
+    jest.spyOn(app.log, 'error').mockImplementation(((message: unknown) => {
+      errors.push(String(message))
+    }) as never)
     await expect(
       call({
         request: {
@@ -352,6 +356,8 @@ describe('recordPatientAccess', () => {
       }),
     ).resolves.toBeUndefined()
     expect(vues).toEqual([])
+    // Rien n'est ecrit, mais rien n'est tu non plus.
+    expect(errors).toHaveLength(1)
     await app.close()
   })
 

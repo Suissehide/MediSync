@@ -54,7 +54,17 @@ describe('journal des consultations : le crochet sur le chemin reel', () => {
   let autreEtab: { id: string }
   let autreService: { id: string }
   let patient: { id: string }
+  // Un SECOND patient, reserve a la requete-barriere. C'est ce qui rend les tests « aucune
+  // ligne » non ambigus : la ligne attendue porte un patientId distinct, donc attendre son
+  // arrivee ne peut pas etre satisfait par la ligne qu'un crochet sabote aurait ecrite pour le
+  // premier patient (mesure par sabotage : avec un seul patient, la course rendait le test vert
+  // a tort).
+  let patientBarriere: { id: string }
   let cookies: { access_token: string }
+  // Un compte du meme service, sans `clinical:read` : il recoit 403 sur une route JOURNALISEE,
+  // pour un patient qui EXISTE. C'est le seul moyen d'eprouver la garde de statut toute seule —
+  // voir le commentaire du test concerne.
+  let cookiesLecture: { access_token: string }
 
   beforeAll(async () => {
     await truncateAll()
@@ -94,8 +104,34 @@ describe('journal des consultations : le crochet sur le chemin reel', () => {
         establishmentId: etab.id,
       },
     })
+    patientBarriere = await testDb.patient.create({
+      data: {
+        firstName: 'Barriere',
+        lastName: 'Temoin',
+        createDate: new Date(),
+        establishmentId: etab.id,
+      },
+    })
+    await testDb.patientServiceFile.create({
+      data: {
+        patientId: patientBarriere.id,
+        serviceId: service.id,
+        establishmentId: etab.id,
+      },
+    })
+
+    await createUser({
+      email: 'lecture@test.fr',
+      memberships: [
+        {
+          establishmentId: etab.id,
+          services: [{ serviceId: service.id, role: 'LECTURE' }],
+        },
+      ],
+    })
 
     cookies = await signIn(testApp.app, 'journal@test.fr')
+    cookiesLecture = await signIn(testApp.app, 'lecture@test.fr')
   })
 
   afterAll(async () => {
@@ -113,6 +149,22 @@ describe('journal des consultations : le crochet sur le chemin reel', () => {
       url: tenantUrl(etab.id, service.id, `/patient/${patientId}`),
       cookies,
     })
+
+  // Requete-barriere : elle emprunte exactement le meme chemin que la requete eprouvee, sur un
+  // AUTRE patient, donc sa ligne ne peut arriver qu'APRES celle qu'aurait ecrite la requete
+  // eprouvee. Quand elle est la, le compte est definitif — c'est ce qui evite de conclure
+  // « aucune ligne » d'une course gagnee de justesse.
+  const barriere = async () => {
+    const res = await ouvrirDossier(patientBarriere.id)
+    expect(res.statusCode).toBe(200)
+    await attendre(
+      async () =>
+        (await testDb.patientAccessLog.count({
+          where: { patientId: patientBarriere.id },
+        })) === 1,
+      'la ligne de la requete-barriere est ecrite',
+    )
+  }
 
   it("ecrit une ligne complete a l ouverture d un dossier, sans jamais de contenu clinique", async () => {
     const res = await ouvrirDossier(patient.id)
@@ -184,23 +236,30 @@ describe('journal des consultations : le crochet sur le chemin reel', () => {
   // dossier qui EXISTE et un qui n'existe pas, sur la MEME route et avec les MEMES droits. Sans
   // la premiere moitie, « zero ligne » ne distinguerait pas « le crochet a refuse l'erreur » de
   // « le crochet n'ecrit jamais rien ».
+  //
+  // ET IL FAUT LES DEUX ERREURS, pas seulement le 404 — mesure par sabotage, pas supposee. Avec
+  // le seul 404 sur un identifiant INCONNU, retirer la garde `reply.statusCode >= 400` du
+  // crochet laissait ce test VERT : la ligne partait bien a l'ecriture, mais la cle etrangere
+  // `PatientAccessLog.patient` (prisma/schema.prisma) la refusait, le `catch` l'absorbait, et
+  // « zero ligne » etait vrai POUR UNE AUTRE RAISON que celle que le nom de ce test annonce.
+  // Le 403 ci-dessous ferme ce trou : le patient EXISTE, la route est JOURNALISEE, seule la
+  // permission manque — rien d'autre que la garde de statut n'empeche alors l'ecriture.
   it("n ecrit aucune ligne quand la reponse est une erreur, alors qu elle en ecrit une quand elle ne l est pas", async () => {
+    const sansPermission = await testApp.app.inject({
+      method: 'GET',
+      url: tenantUrl(etab.id, service.id, `/patient/${patient.id}/diagnostic`),
+      cookies: cookiesLecture,
+    })
+    expect(sansPermission.statusCode).toBe(403)
+
     const enErreur = await ouvrirDossier(PATIENT_INCONNU)
     expect(enErreur.statusCode).toBe(404)
 
-    // Requete-barriere : elle emprunte exactement le meme chemin, et sa ligne ne peut arriver
-    // qu'APRES celle qu'aurait ecrite la requete en erreur. Quand elle est la, le compte est
-    // definitif — c'est ce qui evite de conclure « aucune ligne » d'une simple course gagnee.
-    const enSucces = await ouvrirDossier(patient.id)
-    expect(enSucces.statusCode).toBe(200)
-    await attendre(
-      async () => (await testDb.patientAccessLog.count()) >= 1,
-      'la ligne de la requete-barriere est ecrite',
-    )
+    await barriere()
 
     const lignes = await testDb.patientAccessLog.findMany()
     expect(lignes).toHaveLength(1)
-    expect(lignes[0]?.patientId).toBe(patient.id)
+    expect(lignes[0]?.patientId).toBe(patientBarriere.id)
   })
 
   // LE POINT DE LA REVIEW FOCUS n°2. `request.tenant` est optionnel par construction : la
@@ -220,15 +279,10 @@ describe('journal des consultations : le crochet sur le chemin reel', () => {
     expect(res.statusCode).toBe(404)
     expect(res.json()).not.toHaveProperty('stack')
 
-    const barriere = await ouvrirDossier(patient.id)
-    expect(barriere.statusCode).toBe(200)
-    await attendre(
-      async () => (await testDb.patientAccessLog.count()) >= 1,
-      'la ligne de la requete-barriere est ecrite',
-    )
+    await barriere()
     const lignes = await testDb.patientAccessLog.findMany()
     expect(lignes).toHaveLength(1)
-    expect(lignes[0]?.establishmentId).toBe(etab.id)
+    expect(lignes[0]?.patientId).toBe(patientBarriere.id)
   })
 
   it("n ecrit aucune ligne pour une route exemptee", async () => {
@@ -239,15 +293,10 @@ describe('journal des consultations : le crochet sur le chemin reel', () => {
     })
     expect(res.statusCode).toBe(200)
 
-    const barriere = await ouvrirDossier(patient.id)
-    expect(barriere.statusCode).toBe(200)
-    await attendre(
-      async () => (await testDb.patientAccessLog.count()) >= 1,
-      'la ligne de la requete-barriere est ecrite',
-    )
+    await barriere()
     const lignes = await testDb.patientAccessLog.findMany()
     expect(lignes).toHaveLength(1)
-    expect(lignes[0]?.action).toBe('dossier.ouvert')
+    expect(lignes[0]?.patientId).toBe(patientBarriere.id)
   })
 })
 
