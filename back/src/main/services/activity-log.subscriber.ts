@@ -97,6 +97,19 @@ class ActivityLogSubscriber {
     // synchrone nu (tenant-context.ts#runAsSuperAdmin, tour de correction 1, tache 6 : mesure sur
     // un appelant reel, un rappel synchrone nu perd la portee — 5 tests sur 244 tombent en 500).
     // Site declare dans `runAsSystem-unicite.test.ts` (AUTORISES).
+    //
+    // TOUR DE CORRECTION 1 (revue) — POURQUOI `#log` UTILISE `findIdentity` ICI N'EST *PAS* LE
+    // MOTIF ECRIT PLUS BAS SUR `#log` (le pont a-plusieurs refuse par le garde-fou), et le dire
+    // aurait laisse une regression invisible. Ce site tourne sous `runAsSystem`, or le refus du
+    // pont (`assertNoGlobalToManyBridge`, tenant-guard.ts) NE S'APPLIQUE NI au mode systeme NI a
+    // l'absence de store — seuls `tenant` et `superadmin` sont couverts. `findByID` n'y serait
+    // donc PAS refuse : mesure par sabotage reel (remplacer `findIdentity` par `findByID` ici),
+    // le test e2e de la tache 7 (`super-admin-access-link.test.ts`) restait VERT, parce que le
+    // super-admin n'a par nature aucune appartenance a charger — les deux methodes y rendent
+    // EXACTEMENT le meme resultat. La bonne raison, propre a CE site, est donc plus modeste :
+    // NE CHARGER QUE CE DONT `#log` A BESOIN (deux colonnes), jamais un refus du garde-fou. La
+    // regression est tenue par une preuve DIRECTE — quelle methode est appelee, pas quel contenu
+    // en revient — dans `src/test/unit/services/activity-log.subscriber.test.ts`.
     this.appEventBus.on('user.accessLinkReissued', (p) =>
       this.tenantContext.runAsSystem(async () => {
         await this.#log('user.accessLinkReissued', 'user', p.userID, p.targetUserId)
