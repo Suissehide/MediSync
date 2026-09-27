@@ -214,6 +214,19 @@ describe('plannedPatientExportAccess', () => {
     ).toBe(JSON.stringify({ search: 'dup', pathwayTemplateTags: ['asthme', 'diabete'] }))
   })
 
+  // Revue de la tache 4, mineur n°2 : une etiquette unique arrive en CHAINE dans la chaine de
+  // requete, alors que le gestionnaire (`routes/patient.ts`) la normalise en tableau avant de
+  // filtrer. Sans normalisation ici, le journal dirait `"asthme"` la ou le filtre applique etait
+  // `["asthme"]` — une forme de critere qui n'a jamais ete celle du filtrage reel.
+  it('normalise une etiquette unique en tableau, comme le fait le filtrage reel', () => {
+    expect(buildPatientExportFilters({ pathwayTemplateTags: 'asthme' })).toBe(
+      JSON.stringify({ pathwayTemplateTags: ['asthme'] }),
+    )
+    expect(
+      buildPatientExportFilters({ search: 'dup', pathwayTemplateTags: 'asthme' }),
+    ).toBe(JSON.stringify({ search: 'dup', pathwayTemplateTags: ['asthme'] }))
+  })
+
   it('ne porte ni search ni pathwayTemplateTags quand aucun des deux n est fourni', () => {
     expect(buildPatientExportFilters({})).toBe('{}')
   })

@@ -164,11 +164,19 @@ export type PatientExportQuery = {
 //
 // `JSON.stringify` omet de lui-meme une propriete dont la valeur est `undefined` : un critere
 // absent de la requete n'apparait donc jamais dans le JSON produit, sans condition explicite.
-export const buildPatientExportFilters = (query: PatientExportQuery): string =>
-  JSON.stringify({
+// Les etiquettes sont NORMALISEES EN TABLEAU, exactement comme le fait le gestionnaire de la
+// route (`routes/patient.ts`) avant de filtrer. Sans cela, un export sur une seule etiquette
+// serait filtre sur `["asthme"]` mais journalise comme `"asthme"` : qui relirait le journal
+// lirait une forme de critere qui n'est pas celle qui a reellement ete appliquee. Le journal
+// doit dire ce qui s'est passe, pas ce que la chaine de requete avait l'air de demander.
+export const buildPatientExportFilters = (query: PatientExportQuery): string => {
+  const tags = query.pathwayTemplateTags
+  return JSON.stringify({
     search: query.search,
-    pathwayTemplateTags: query.pathwayTemplateTags,
+    pathwayTemplateTags:
+      tags === undefined ? undefined : Array.isArray(tags) ? tags : [tags],
   })
+}
 
 export type PlannedPatientExportAccess = {
   action: 'export'

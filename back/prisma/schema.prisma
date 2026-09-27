@@ -76,8 +76,16 @@ model EstablishmentMembership {
 
   user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   establishment      Establishment       @relation(fields: [establishmentId], references: [id])
-  // Référence simple (composite impossible : soignantId nullable, establishmentId requis).
-  // La cohérence d'établissement est vérifiée par MembershipDomain.
+  // Référence simple, et non composite. ATTENTION : la raison écrite ici jusqu'à l'étape 4b
+  // était FAUSSE — elle disait « composite impossible : soignantId nullable, establishmentId
+  // requis ». Mesuré à la tâche 4 de l'étape 4b, par édition temporaire du schéma puis
+  // `prisma validate` et `prisma generate` : Prisma 7.8 accepte une relation composite dont un
+  // seul des deux champs référents est nullable (seul un avertissement bénin sur
+  // `onDelete: SetNull` apparaît). Le composite est donc POSSIBLE ici ; il n'est simplement pas
+  // posé, et la cohérence d'établissement est vérifiée par MembershipDomain.
+  // Ce qu'il en coûte de le laisser simple : rien ne garantit au niveau de la base qu'un
+  // soignant rattaché ici appartienne au même établissement que l'appartenance — seule cette
+  // vérification applicative le tient.
   soignant           Soignant?           @relation(fields: [soignantId], references: [id], onDelete: SetNull)
   serviceMemberships ServiceMembership[]
 
