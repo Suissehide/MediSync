@@ -140,11 +140,32 @@ Key cross-cutting concerns:
   report: `src/test/unit/infra/tenant-guard-monotonie.test.ts` pulls the comparison version out
   of git (`MONOTONIE_REF`, default `HEAD` — so it answers "does what I am writing lose a
   refusal?" while you edit) and carries no second copy of the guard. Depth 4 by default (~1 s,
-  runs in the unit suite); `MONOTONIE_REF=f022ef9 PROFONDEUR=9 …` reproduces task 15's 61 923 360
-  cases. Against `main` it reports ~1 800 "lost refusals" for the whole of étape 4a, all
+  runs in the unit suite); `PROFONDEUR=9 …` is the deep sweep, run by hand. **Its case count is
+  not a constant** — it is derived from `MODEL_RELATIONS`, so it grows whenever the schema gains
+  a relation: 61 923 360 when task 15 measured it against `f022ef9`, **80 198 400 at étape 4b
+  task 9** (2 004 960 chains, ~40 min). Quote the count your own run printed, not this one.
+  Against `main` it reports ~1 800 "lost refusals" for the whole of étape 4a, all
   explained: the `AccessLink`/`SuperAdminAccessGrant` tables that task 2 created (undeclared
   relations used to be refused outright) plus task 1's deliberate `SUPERADMIN_GLOBAL_OPERATIONS`
   reopening.
+- **"No context" is a FOURTH declared context, not a free pass (étape 4b, task 9).** Tenant
+  models were already refused without a store (`assertTenantScope` throws on `!store` before
+  anything else); **global models were not** — they leave through `assertGlobalScope` and used
+  to meet no permission gate at all, so `Establishment.deleteMany({})` and
+  `User.updateMany({ data: { isSuperAdmin: true } })` passed on `/auth`, `/me` and the whole
+  `/super-admin` prefix. `NO_CONTEXT_GLOBAL_OPERATIONS` is the exact mirror of
+  `SUPERADMIN_GLOBAL_OPERATIONS` for that case: `User` (`findUnique`, `findUniqueOrThrow`,
+  `update`, `create`), `Establishment` (`findMany`, `findUniqueOrThrow`), `AccessLink`
+  (`findUnique`, `create`, `updateMany`); `SuperAdminAccessGrant` is **absent on purpose** (all
+  of its uses are framed by `runAsSuperAdmin`) and therefore refused in full. **The list was
+  measured, not guessed**: the guard was instrumented to journal every (model, operation) seen
+  with `peek() === undefined` and the whole e2e suite run — 1 243 calls, 8 distinct pairs, zero
+  of them on a tenant model. The ninth entry, `User.create`, was **missing from that
+  measurement** because no e2e test exercised `POST /auth/register`; `src/test/e2e/auth-register.test.ts`
+  now covers it, so re-running the instrumentation would see it. **Two named limits**: a
+  declared single-row read may still `include` a tenant relation (that is `UserRepository.findByID`,
+  the authority read on every authenticated request), and a nested `data` under one of the four
+  declared writes is not checked without a context.
 - **A relation that REPARTS from a global model towards MANY rows is refused — under an ordinary
   tenant context too, in reads and in writes (étape 4a, task 15).** The ordinary path's safety
   comes from the ROOT's `where`, which pins the establishment. Relations *towards* a global model
@@ -165,24 +186,26 @@ Key cross-cutting concerns:
   nested write from a global root outright (no global model has a `NESTED_RELATIONS` entry —
   use the scalar FK, `userId: u`, not `user: { connect: { id: u } }`).
   **What this rule does NOT cover — read this before assuming the boundary is closed.**
-    - **It does not apply without a context, and "without a context" means every non-tenant
-      route, not just login.** `routes/index.ts` calls `tenantContext.clear()` on every request
-      and `tenant.plugin.ts` is the only caller of `enter()`, so **no route outside
-      `/e/:establishmentId/...` ever enters a context**: `/auth`, `/me` and the whole
-      `/super-admin` prefix run with no store, their repositories entering `runAsSuperAdmin`
-      only case by case. Concrete consequence: a future read added under `/super-admin` and left
-      outside a `runAsSuperAdmin` could reach patients through
-      `Establishment.findUnique({ include: { patients: true } })`, **bypassing
-      `SUPERADMIN_OPERATIONS` entirely** — whose lack of `Patient.findMany` is precisely
-      motivated by "the super-admin counts, he does not read". Pre-existing, not a regression
-      (measured), deliberately left open at task 15 and carried to the head of étape 4b.
+    - **This rule (cardinality) still does not apply without a context, and "without a context"
+      means every non-tenant route, not just login.** `routes/index.ts` calls
+      `tenantContext.clear()` on every request and `tenant.plugin.ts` is the only caller of
+      `enter()`, so **no route outside `/e/:establishmentId/...` ever enters a context**:
+      `/auth`, `/me` and the whole `/super-admin` prefix run with no store, their repositories
+      entering `runAsSuperAdmin` only case by case. It cannot be extended there: `cookie.plugin`
+      reads `UserRepository.findByID` — `user.findUniqueOrThrow` with
+      `include: { establishmentMemberships: … }`, a to-many relation leaving a global model — on
+      **every authenticated request**, to establish which establishments the account belongs to.
+      Refusing that would refuse every request. **What WAS closed instead, at étape 4b task 9, is
+      the permission gate** — see the "FOURTH declared context" bullet above.
     - **On the write side it closes the nested `data` only.** A FLAT write on the global row
       itself is still wide open under a tenant context — `Establishment.update({ where: { id:
       someOther }, data: { name } })`, `Establishment.deleteMany({})`,
       `User.updateMany({ data: { isSuperAdmin: true } })` — because a global model has no tenant
       column to compare. Pre-existing and out of task 15's scope (whose defect was relation
       crossing). The super-admin context has a counterpart for this
-      (`SUPERADMIN_GLOBAL_OPERATIONS`); the tenant context has none.
+      (`SUPERADMIN_GLOBAL_OPERATIONS`), and **since étape 4b task 9 so does "no context"
+      (`NO_CONTEXT_GLOBAL_OPERATIONS`)**; the tenant context still has none — under a tenant
+      context those three flat writes remain permitted.
     - **A read that only needs a few columns of `User` must use `findIdentity`, never
       `findByID`.** `findByID` carries the whole membership tree, so it is now refused under a
       tenant context — and `ActivityLogSubscriber` swallowed that refusal behind a

@@ -136,13 +136,19 @@ export const NESTED_RELATIONS: Record<string, Record<string, string>> = {
 // CE QUI RESTE À CETTE TABLE malgré ce démenti, et pourquoi elle n'est pas supprimée : sous
 // `tenant` et sous `superadmin`, `assertNoGlobalToManyBridge` (plus bas) refuse désormais ces
 // relations quelle que soit l'opération, findUnique compris — cette table-ci n'y ajoute plus
-// rien. Elle reste SEULE EN CHARGE du cas sans contexte, c'est-à-dire de TOUTE route non tenant
-// (`/auth`, `/me`, tout `/super-admin` — voir assertNoGlobalToManyBridge pour pourquoi la liste
-// est aussi large), où la règle de cardinalité ne s'applique pas : elle y interdit encore un
-// `findMany` qui ramènerait ces enfants pour plusieurs comptes ou plusieurs établissements à la
-// fois, mais elle laisse passer le `findUnique` — dont ce commentaire vient d'établir qu'il ne
-// garantit rien. C'est une borne FAIBLE, et elle est maintenant nommée comme telle plutôt que
-// présentée comme une garantie.
+// rien. Elle reste la seule règle de DESCENTE en charge du cas sans contexte, c'est-à-dire de
+// TOUTE route non tenant (`/auth`, `/me`, tout `/super-admin` — voir assertNoGlobalToManyBridge
+// pour pourquoi la liste est aussi large), où la règle de cardinalité ne s'applique pas : elle y
+// interdit encore un `findMany` qui ramènerait ces enfants pour plusieurs comptes ou plusieurs
+// établissements à la fois, mais elle laisse passer le `findUnique` — dont ce commentaire vient
+// d'établir qu'il ne garantit rien. C'est une borne FAIBLE, et elle est nommée comme telle
+// plutôt que présentée comme une garantie.
+//
+// TÂCHE 9 (étape 4b) : elle n'est plus SEULE sur ce cas, mais ce qui s'ajoute est d'une autre
+// nature. NO_CONTEXT_GLOBAL_OPERATIONS (plus bas) décide désormais QUELLES opérations peuvent
+// s'exécuter sans contexte sur un modèle global ; cette table-ci décide de ce qu'une opération
+// admise peut INCLURE. Les deux se composent, aucune ne remplace l'autre : `Establishment.
+// findMany` est déclaré, et c'est bien cette table-ci qui l'empêche d'y accrocher `patients`.
 //
 // Ce contrôle ÉCHOUE OUVERT : une relation absente de cette table n'est simplement pas vue, donc
 // l'include passe sans contrôle. La table porte donc une obligation d'exhaustivité, tenue par
@@ -477,6 +483,102 @@ export const SUPERADMIN_GLOBAL_OPERATIONS: Readonly<Record<string, readonly stri
   Establishment: [...LECTURES_GLOBALES_SANS_MUTATION, 'create'],
   AccessLink: [...LECTURES_GLOBALES_SANS_MUTATION, 'create', 'updateMany'],
   SuperAdminAccessGrant: [...LECTURES_GLOBALES_SANS_MUTATION, 'create', 'update'],
+}
+
+// TÂCHE 9 (étape 4b) — L'ABSENCE DE CONTEXTE EST UN QUATRIÈME CONTEXTE DÉCLARÉ, plus un
+// laissez-passer. Symétrique exacte de SUPERADMIN_GLOBAL_OPERATIONS ci-dessus, pour le cas
+// `store === undefined` : un couple (modèle, opération) absent est refusé, et un modèle global
+// absent de la table l'est en entier, lecture comprise.
+//
+// LE DÉFAUT QUE CETTE TABLE FERME, ET SA PORTÉE EXACTE. `routes/index.ts` appelle
+// `tenantContext.clear()` en tête de CHAQUE requête et `tenant.plugin.ts` est le SEUL à appeler
+// `enter()` : `/auth`, `/me` et TOUT le préfixe `/super-admin` s'exécutent donc sans store,
+// leurs dépôts n'entrant dans `runAsSuperAdmin` qu'au coup par coup. Pour un modèle de TENANT ce
+// cas était DÉJÀ refusé (`assertTenantScope` lève dès que `!store`, avant toute autre
+// vérification) ; le trou ne concernait que les modèles GLOBAUX, qui sortent par
+// `assertGlobalScope` sans jamais rencontrer de porte de permission. Mesuré à l'étape
+// précédente, et cité tel quel par le brief : `Establishment.findUnique({ include: { patients:
+// true } })`, `Establishment.deleteMany({})` et `User.updateMany({ data: { isSuperAdmin: true }
+// } )` passaient. Ce n'était pas une régression (zéro changement de verdict sous « aucun
+// contexte » sur les 61 923 360 cas de la tâche 15), c'était le trou le plus large qui restait.
+//
+// COMMENT CETTE LISTE A ÉTÉ ÉTABLIE — pas en lisant le code, en MESURANT. Le garde-fou a été
+// instrumenté (journalisation de chaque couple (modèle, opération) vu avec `peek() ===
+// undefined`, dans `buildTenantGuardExtension`, donc sur les seuls appels Prisma RÉELS) puis la
+// suite e2e complète a été lancée : 1 243 appels, 8 couples distincts, tous sur un modèle global
+// (aucun modèle de tenant n'apparaît — confirmation par la mesure que ce cas-là était bien déjà
+// fermé). La suite unitaire, relancée de même, n'en produit aucun : elle appelle
+// `assertTenantScope` directement, sans client Prisma.
+//
+// LA MESURE A MANQUÉ UNE ENTRÉE, ET C'EST DIT ICI PLUTÔT QU'ENTERRÉ : `User.create` n'a été vu
+// par AUCUN des 1 243 appels, parce qu'aucun test e2e n'exerçait `POST /auth/register` — la
+// seule route non tenant qui crée un compte hors `runAsSuperAdmin`. Une liste purement
+// journalisée aurait donc fermé cette route en production sans qu'un seul test rougisse. Le
+// couple est déclaré ci-dessous, ET la route est désormais couverte par
+// `src/test/e2e/auth-register.test.ts`, pour que la méthode de découverte redevienne complète :
+// une prochaine relance de l'instrumentation le verrait.
+//
+// CE QUE CETTE TABLE NE FERME PAS — à lire avant de croire le cas « sans contexte » verrouillé :
+//   1. Une opération DÉCLARÉE ici peut encore porter un `include` vers un modèle de tenant si
+//      c'est une lecture à une seule ligne : `assertGlobalInclude` ne refuse que les lectures
+//      à-plusieurs (findMany/findFirst) et `assertNoGlobalToManyBridge` ne s'applique pas sans
+//      contexte. Ce n'est PAS un oubli : `UserRepository.findByID` fait exactement cela
+//      (`user.findUniqueOrThrow` avec `include: { establishmentMemberships: … }`) sur le chemin
+//      de la connexion et sur CHAQUE requête authentifiée (cookie.plugin.ts), pour ÉTABLIR à
+//      quels établissements le compte appartient. Fermer ce cas fermerait la connexion. Ce qui
+//      change avec cette table, c'est que la liste des opérations capables d'en arriver là est
+//      maintenant close et nommée, au lieu d'être « toutes ».
+//   2. Une écriture DÉCLARÉE ici n'est pas soumise à `assertGlobalNestedWrite` : un `data`
+//      imbriqué sous `User.create` ou `AccessLink.create` reste non vérifié sans contexte, alors
+//      qu'il l'est sous `tenant` et sous `superadmin`. C'est le pendant, côté écriture, du point
+//      1, et il est hors du périmètre de cette tâche (dont le défaut était l'absence de porte de
+//      permission, pas la descente) — nommé ici plutôt que découvert plus tard. Les quatre
+//      écritures déclarées ci-dessous n'écrivent aujourd'hui que des colonnes scalaires.
+//
+// CHAQUE ENTRÉE PORTE LA ROUTE QUI LA JUSTIFIE. Une entrée sans route est une entrée à
+// supprimer.
+export const NO_CONTEXT_GLOBAL_OPERATIONS: Readonly<Record<string, readonly string[]>> = {
+  User: [
+    // `AccessGrantRepository.findForUser` relit le drapeau `isSuperAdmin` HORS de
+    // `runAsSuperAdmin`, à dessein (voir son commentaire) : `POST /auth/sign-in`, `GET /me`,
+    // `PATCH /me`, `POST /auth/refresh`.
+    'findUnique',
+    // `UserRepository.findByID` / `.findIdentity` / `.findByEmail` : le crochet `onRequest` de
+    // `routes/index.ts` (via `cookie.plugin.ts`, donc TOUTE requête authentifiée),
+    // `POST /auth/sign-in`, `POST /auth/refresh`, `GET`/`PATCH /me`, `GET /super-admin/users`,
+    // `POST /super-admin/establishments`, `POST /super-admin/users/:id/access-link`.
+    'findUniqueOrThrow',
+    // `UserRepository.recordLogin` (`POST /auth/sign-in`, pose `lastLoginAt`),
+    // `.updatePassword` (`POST /auth/access-link/consume`), `.updateProfile` (`PATCH /me`).
+    'update',
+    // `UserRepository.create` depuis `AuthDomain.register` : `POST /auth/register`. Le seul
+    // couple qu'aucun test e2e n'exerçait — voir le paragraphe ci-dessus.
+    'create',
+  ],
+  Establishment: [
+    // `EstablishmentRepository.findAll` (`GET /super-admin/establishments`) et `.findManyByIds`
+    // (`GET /super-admin/users`, qui joint les noms d'établissement EN MÉMOIRE plutôt que par un
+    // `include`).
+    'findMany',
+    // `EstablishmentRepository.findByIdOrThrow` : `GET /super-admin/establishments/:id` et
+    // `POST /super-admin/grants` (vérification de l'établissement visé avant d'écrire l'octroi).
+    'findUniqueOrThrow',
+  ],
+  AccessLink: [
+    // `AccessLinkRepository.findByTokenHashWithUser` : `POST /auth/access-link/consume`.
+    'findUnique',
+    // `AccessLinkRepository.create` depuis `AccessLinkDomain.issue` :
+    // `POST /super-admin/users/:id/access-link`. (Le même `issue` sous
+    // `POST /super-admin/establishments` passe, lui, par `runAsSuperAdmin`.)
+    'create',
+    // `AccessLinkRepository.invalidateActiveForUser` (réémission, même route que `create`) et
+    // `.consumeIfActive` (`POST /auth/access-link/consume`, marque `usedAt` sous condition).
+    'updateMany',
+  ],
+  // `SuperAdminAccessGrant` n'y figure PAS, et ce n'est pas un oubli : ses quatre emplois
+  // (`findMany`, `create`, `count`, `findUnique`, `update` — accessGrant.repository.ts) sont
+  // TOUS encadrés par `runAsSuperAdmin`, donc déclarés dans SUPERADMIN_GLOBAL_OPERATIONS. Aucun
+  // n'apparaît dans la mesure sans contexte. Le modèle est donc refusé en entier ici.
 }
 
 // Verbes Prisma d'écriture imbriquée : la présence de l'un d'eux dans la valeur d'un champ
@@ -986,21 +1088,33 @@ const assertNoGlobalBridgeUnderSuperAdmin = (
 // préfixe `/super-admin` s'exécutent sans store, leurs dépôts n'entrant dans `runAsSuperAdmin`
 // qu'au coup par coup, requête par requête. Cette règle-ci ne les couvre donc pas.
 //
-// CE QUE CELA LAISSE OUVERT, écrit en clair plutôt que découvert plus tard : une lecture future
-// ajoutée sous `/super-admin` et laissée hors d'un `runAsSuperAdmin` pourrait atteindre des
+// CE QUE CELA LAISSAIT OUVERT, écrit en clair plutôt que découvert plus tard : une lecture
+// future ajoutée sous `/super-admin` et laissée hors d'un `runAsSuperAdmin` pouvait atteindre des
 // patients par `Establishment.findUnique({ include: { patients: true } })` — en CONTOURNANT
 // entièrement `SUPERADMIN_OPERATIONS`, dont l'absence de `Patient.findMany` est justement motivée
-// par « le super-admin compte, il ne lit pas ». Ce n'est pas une régression (mesuré : le verdict
-// est identique avant et après cette tâche), c'est un trou PRÉEXISTANT, laissé ouvert à dessein
-// ici — le fermer est un travail distinct, avec un vrai risque de casse sur la connexion et sur
-// `/me`. Porté en tête de l'étape 4b.
+// par « le super-admin compte, il ne lit pas ». Ce n'était pas une régression (mesuré : le
+// verdict était identique avant et après la tâche 15), c'était un trou PRÉEXISTANT, laissé
+// ouvert à dessein ici et porté en tête de l'étape 4b.
 //
-// Pourquoi la connexion est quand même la raison de ne pas le fermer à la légère :
+// REPRIS PAR LA TÂCHE 9 (étape 4b), MAIS PAR UNE AUTRE VOIE — et il faut lire laquelle, parce
+// qu'elle ne ferme pas la même chose. L'absence de contexte est devenue un QUATRIÈME contexte
+// DÉCLARÉ (NO_CONTEXT_GLOBAL_OPERATIONS, plus haut) : sans store, un modèle global ne franchit
+// plus que les couples (modèle, opération) nommés, chacun avec sa route. `Establishment.
+// findUnique` n'en fait pas partie, donc l'exemple ci-dessus est aujourd'hui refusé — mais par la
+// PORTE DE PERMISSION, pas par la règle de cardinalité, qui reste inapplicable sans contexte
+// (voir juste en dessous). Autrement dit : la liste des opérations capables d'arriver jusqu'ici
+// est close et nommée, la descente qui suivrait l'une d'elles ne l'est toujours pas.
+//
+// Pourquoi la connexion est la raison pour laquelle cette règle-ci, la cardinalité, ne s'étend
+// TOUJOURS PAS au cas sans contexte — et pourquoi ce n'est pas un oubli de la tâche 9 :
 // `UserRepository.findByID` lit `user.findUniqueOrThrow({ include: { establishmentMemberships:
 // { include: { establishment, serviceMemberships: { include: { service } } } } } })` juste après
-// `clear()`, précisément pour ÉTABLIR à quels établissements le compte appartient. Cette
-// lecture-là est la source de l'autorité, pas une traversée de frontière. Mais c'est un exemple,
-// pas la borne : la borne est « toute route non tenant ».
+// `clear()`, précisément pour ÉTABLIR à quels établissements le compte appartient — et pas
+// seulement à la connexion : `cookie.plugin.ts` le fait sur CHAQUE requête authentifiée.
+// `User.establishmentMemberships` est une relation à-plusieurs depuis un modèle global : étendre
+// cette règle à `store === undefined` refuserait cette lecture, donc toute requête
+// authentifiée. Cette lecture-là est la source de l'autorité, pas une traversée de frontière.
+// Mais c'est un exemple, pas la borne : la borne est « toute route non tenant ».
 //
 // Sous superadmin, la règle plus large du tour 3 (assertNoGlobalBridgeUnderSuperAdmin, appelée
 // juste avant) refuse déjà ces cas-là et les autres ; celle-ci ne l'exclut pas pour autant —
@@ -1199,7 +1313,26 @@ const assertGlobalNestedWrite = (model: string, operation: string, args: Dict, s
   }
 }
 
+// Porte de permission du QUATRIÈME contexte, celui de l'absence de contexte (tâche 9, étape
+// 4b) : jumelle de `assertSuperAdminGlobalOperationDeclared` ci-dessus, sur
+// NO_CONTEXT_GLOBAL_OPERATIONS. Le détail de l'erreur dit `sans-contexte` plutôt que
+// `superadmin`, pour que le refus nomme la table à laquelle ajouter le couple — les deux tables
+// ne se recouvrent pas.
+const assertNoContextGlobalOperationDeclared = (model: string, operation: string): void => {
+  const permises = NO_CONTEXT_GLOBAL_OPERATIONS[model]
+  if (!permises?.includes(operation)) {
+    throw new TenantScopeMissingError(model, operation, 'sans-contexte')
+  }
+}
+
 const assertGlobalScope = (model: string, operation: string, args: Dict, store: TenantStore | undefined): void => {
+  // Tâche 9 (étape 4b) : en PREMIER, avant toute autre vérification, exactement comme la porte
+  // superadmin juste en dessous. Sans store, un modèle global ne rencontrait aucune porte de
+  // permission — voir NO_CONTEXT_GLOBAL_OPERATIONS pour le défaut fermé ici et pour ce qu'il
+  // reste ouvert derrière cette porte.
+  if (!store) {
+    assertNoContextGlobalOperationDeclared(model, operation)
+  }
   if (store?.kind === 'superadmin') {
     assertSuperAdminGlobalOperationDeclared(model, operation)
   }
@@ -1207,6 +1340,12 @@ const assertGlobalScope = (model: string, operation: string, args: Dict, store: 
   // construction) ni l'absence de contexte — laquelle couvre TOUTE route non tenant (`/auth`,
   // `/me`, tout `/super-admin`), pas seulement la connexion : même limite, et même portée, que
   // pour la lecture (voir assertNoGlobalToManyBridge, qui la détaille).
+  //
+  // TÂCHE 9 (étape 4b) : la porte ci-dessus a réduit la liste des écritures qui peuvent arriver
+  // jusqu'ici sans contexte à quatre couples nommés (`User.create`, `User.update`,
+  // `AccessLink.create`, `AccessLink.updateMany`) ; elle n'a PAS étendu cette descente-ci à ce
+  // cas. Une écriture imbriquée sous l'un de ces quatre `data` reste donc non vérifiée sans
+  // contexte — limite nommée, point 2 du commentaire de NO_CONTEXT_GLOBAL_OPERATIONS.
   if (store?.kind === 'superadmin' || store?.kind === 'tenant') {
     assertGlobalNestedWrite(model, operation, args, store)
   }

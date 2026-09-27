@@ -2,6 +2,7 @@ import {
   assertTenantScope,
   ESTABLISHMENT_MODELS,
   MODEL_RELATIONS,
+  NO_CONTEXT_GLOBAL_OPERATIONS,
   SERVICE_MODELS,
   SUPERADMIN_GLOBAL_OPERATIONS,
   SUPERADMIN_OPERATIONS,
@@ -2148,9 +2149,18 @@ describe('ecritures declarees sur un modele global sous superadmin (revue, tour 
   })
 
   // Et la contrepartie de monotonie, a l'echelle de ce bloc : ce tour n'a rien change hors du
-  // contexte superadmin. Les memes couples, sous tenant et sans contexte, rendent le meme verdict
+  // contexte superadmin. Les memes couples, sous tenant et sous systeme, rendent le meme verdict
   // qu'avant — un modele global n'y est soumis a aucune des deux tables.
-  it('ne change aucun verdict hors du contexte superadmin', () => {
+  //
+  // TACHE 9 (etape 4b) — « SANS CONTEXTE » A ETE RETIRE DE CETTE LISTE, A DESSEIN. Ce test
+  // affirmait aussi `assertTenantScope(cas, undefined)` sans refus, pour les quatre couples
+  // ci-dessous. C'etait vrai, et c'etait precisement le trou : hors tenant, un modele global ne
+  // rencontrait AUCUNE porte de permission. La tache 9 en fait un quatrieme contexte declare
+  // (NO_CONTEXT_GLOBAL_OPERATIONS), donc ces quatre couples y sont maintenant refuses — c'est
+  // l'objet meme de cette tache, pas un assouplissement subi. La propriete que ce test gardait
+  // reste tenue pour les deux contextes ou elle a encore un sens ; le cas sans contexte est
+  // repris, en refus, par le bloc « tache 9 » en fin de fichier.
+  it('ne change aucun verdict sous tenant ni sous systeme', () => {
     const casHorsSuperadmin: Array<{ model: string; operation: string; args: Record<string, unknown> }> = [
       { model: 'Establishment', operation: 'create', args: { data: { name: 'x' } } },
       { model: 'Establishment', operation: 'deleteMany', args: {} },
@@ -2159,8 +2169,9 @@ describe('ecritures declarees sur un modele global sous superadmin (revue, tour 
     ]
     for (const cas of casHorsSuperadmin) {
       expect(() => assertTenantScope(cas, storeTenant)).not.toThrow()
-      expect(() => assertTenantScope(cas, undefined)).not.toThrow()
       expect(() => assertTenantScope(cas, { kind: 'system' })).not.toThrow()
+      // Et, depuis la tache 9, refuses sans contexte — jamais laisses passer.
+      expect(() => assertTenantScope(cas, undefined)).toThrow(TenantScopeMissingError)
     }
   })
 })
@@ -2346,5 +2357,207 @@ describe('tache 15 : franchir un modele global par une relation a-plusieurs', ()
         ),
       ).not.toThrow()
     })
+  })
+})
+
+// TACHE 9 (etape 4b) — L'ABSENCE DE CONTEXTE EST UN QUATRIEME CONTEXTE DECLARE.
+//
+// Le defaut ferme ici : `routes/index.ts` appelle `tenantContext.clear()` en tete de CHAQUE
+// requete et `tenant.plugin.ts` est le seul a appeler `enter()`, donc `/auth`, `/me` et TOUT le
+// prefixe `/super-admin` s'executent SANS store. Pour un modele de TENANT, ce cas etait deja
+// refuse (`assertTenantScope` leve des que `!store`) ; pour un modele GLOBAL, il ne l'etait pas
+// du tout : la porte de permission etait franchie avant meme d'exister. Ces trois appels, cites
+// tels quels par le brief de la tache 9, passaient jusqu'ici.
+describe('tache 9 : sans aucun contexte, un modele global suit une liste declaree', () => {
+  // Les trois appels cites par le brief, mesures passants a l'etape precedente.
+  it.each([
+    ['Establishment', 'findUnique', { where: { id: 'e2' }, include: { patients: true } }],
+    ['Establishment', 'deleteMany', { where: {} }],
+    ['User', 'updateMany', { where: {}, data: { isSuperAdmin: true } }],
+  ])('sans aucun contexte, refuse %s.%s', (model, operation, args) => {
+    expect(() =>
+      assertTenantScope({ model, operation, args } as Parameters<typeof assertTenantScope>[0], undefined),
+    ).toThrow(TenantScopeMissingError)
+  })
+
+  // Ce dont les ROUTES ont besoin, nomme une par une plutot que par un balayage — meme parti
+  // pris que `besoinsDesTaches` plus haut : un echec ici doit dire QUELLE route se retrouve
+  // fermee. Les arguments reproduisent la forme reelle envoyee par le depot.
+  const besoinsDesRoutes: Array<{ route: string; model: string; operation: string; args: Record<string, unknown> }> = [
+    {
+      route: 'onRequest de routes/index.ts (cookie.plugin) — UserRepository.findByID',
+      model: 'User',
+      operation: 'findUniqueOrThrow',
+      args: {
+        where: { id: 'u1' },
+        include: { establishmentMemberships: { include: { establishment: true } } },
+      },
+    },
+    {
+      route: 'POST /auth/sign-in — UserRepository.findByEmail',
+      model: 'User',
+      operation: 'findUniqueOrThrow',
+      args: { where: { email: 'a@b.c' } },
+    },
+    {
+      route: 'POST /auth/sign-in — UserRepository.recordLogin (lastLoginAt)',
+      model: 'User',
+      operation: 'update',
+      args: { where: { id: 'u1' }, data: { lastLoginAt: new Date() } },
+    },
+    {
+      route: 'GET /me, POST /auth/refresh — AccessGrantRepository.findForUser (relit isSuperAdmin)',
+      model: 'User',
+      operation: 'findUnique',
+      args: { where: { id: 'u1' }, select: { isSuperAdmin: true } },
+    },
+    {
+      route: 'POST /auth/register — UserRepository.create',
+      model: 'User',
+      operation: 'create',
+      args: { data: { email: 'a@b.c', password: 'h', salt: 's' } },
+    },
+    {
+      route: 'GET /super-admin/establishments — EstablishmentRepository.findAll',
+      model: 'Establishment',
+      operation: 'findMany',
+      args: { orderBy: { createdAt: 'asc' } },
+    },
+    {
+      route: 'GET /super-admin/establishments/:id, POST /super-admin/grants — findByIdOrThrow',
+      model: 'Establishment',
+      operation: 'findUniqueOrThrow',
+      args: { where: { id: 'e1' } },
+    },
+    {
+      route: 'POST /auth/access-link/consume — AccessLinkRepository.findByTokenHashWithUser',
+      model: 'AccessLink',
+      operation: 'findUnique',
+      args: { where: { tokenHash: 'h' }, include: { user: true } },
+    },
+    {
+      route: 'POST /super-admin/users/:id/access-link — AccessLinkRepository.create',
+      model: 'AccessLink',
+      operation: 'create',
+      args: { data: { userId: 'u1', tokenHash: 'h', createdBy: 'u0', expiresAt: new Date() } },
+    },
+    {
+      route: 'POST /auth/access-link/consume — AccessLinkRepository.consumeIfActive',
+      model: 'AccessLink',
+      operation: 'updateMany',
+      args: { where: { tokenHash: 'h', usedAt: null }, data: { usedAt: new Date() } },
+    },
+  ]
+
+  it.each(besoinsDesRoutes)('laisse passer $route', ({ model, operation, args }) => {
+    expect(() => assertTenantScope({ model, operation, args }, undefined)).not.toThrow()
+  })
+
+  // L'autre sens, celui qui compte autant. `SuperAdminAccessGrant` y figure a dessein : tous ses
+  // emplois sont encadres par `runAsSuperAdmin`, donc il est refuse EN ENTIER sans contexte,
+  // lecture comprise — comme l'est un modele global que personne n'a declare.
+  const nonDeclares: Array<{ model: string; operation: string; args: Record<string, unknown> }> = [
+    { model: 'Establishment', operation: 'delete', args: { where: { id: 'e1' } } },
+    { model: 'Establishment', operation: 'update', args: { where: { id: 'e1' }, data: { name: 'x' } } },
+    { model: 'Establishment', operation: 'create', args: { data: { name: 'x' } } },
+    { model: 'Establishment', operation: 'count', args: {} },
+    { model: 'User', operation: 'delete', args: { where: { id: 'u1' } } },
+    { model: 'User', operation: 'deleteMany', args: {} },
+    { model: 'User', operation: 'upsert', args: { where: { id: 'u1' }, create: {}, update: {} } },
+    { model: 'User', operation: 'findMany', args: {} },
+    { model: 'AccessLink', operation: 'deleteMany', args: {} },
+    { model: 'AccessLink', operation: 'update', args: { where: { id: 'l1' }, data: {} } },
+    { model: 'SuperAdminAccessGrant', operation: 'findMany', args: { where: { userId: 'u1' } } },
+    { model: 'SuperAdminAccessGrant', operation: 'count', args: {} },
+    { model: 'SuperAdminAccessGrant', operation: 'create', args: { data: {} } },
+    { model: 'SuperAdminAccessGrant', operation: 'update', args: { where: { id: 'g1' }, data: {} } },
+    { model: 'UnModeleGlobalDeDemain', operation: 'findMany', args: {} },
+    { model: 'UnModeleGlobalDeDemain', operation: 'count', args: {} },
+    { model: 'UnModeleGlobalDeDemain', operation: 'create', args: { data: {} } },
+  ]
+
+  it.each(nonDeclares)('refuse $model / $operation, non declare sans contexte', ({ model, operation, args }) => {
+    expect(() => assertTenantScope({ model, operation, args }, undefined)).toThrow(TenantScopeMissingError)
+  })
+
+  // Toute la table, sans exception ecrite a la main, dans les deux sens — meme forme que pour
+  // SUPERADMIN_GLOBAL_OPERATIONS : ce que la declaration promet, le garde-fou doit le tenir
+  // couple par couple, et rien de plus.
+  it('laisse passer chaque couple declare de NO_CONTEXT_GLOBAL_OPERATIONS, et rien d autre sur ces modeles', () => {
+    const argsMinimaux = (operation: string): Record<string, unknown> => {
+      if (operation === 'create') {
+        return { data: {} }
+      }
+      if (operation === 'update' || operation === 'updateMany') {
+        return { where: { id: 'x1' }, data: {} }
+      }
+      if (operation === 'findUnique' || operation === 'findUniqueOrThrow') {
+        return { where: { id: 'x1' } }
+      }
+      return {}
+    }
+    const refusesATort: string[] = []
+    for (const [model, operations] of Object.entries(NO_CONTEXT_GLOBAL_OPERATIONS)) {
+      for (const operation of operations) {
+        try {
+          assertTenantScope({ model, operation, args: argsMinimaux(operation) }, undefined)
+        } catch {
+          refusesATort.push(`${model}.${operation}`)
+        }
+      }
+    }
+    expect(refusesATort).toEqual([])
+
+    const toutesLesOperations = [
+      'findMany', 'findFirst', 'findFirstOrThrow', 'findUnique', 'findUniqueOrThrow',
+      'count', 'aggregate', 'groupBy',
+      'create', 'createMany', 'createManyAndReturn',
+      'update', 'updateMany', 'updateManyAndReturn', 'upsert', 'delete', 'deleteMany',
+    ]
+    const passesATort: string[] = []
+    for (const [model, operations] of Object.entries(NO_CONTEXT_GLOBAL_OPERATIONS)) {
+      for (const operation of toutesLesOperations) {
+        if (operations.includes(operation)) {
+          continue
+        }
+        try {
+          assertTenantScope({ model, operation, args: argsMinimaux(operation) }, undefined)
+          passesATort.push(`${model}.${operation}`)
+        } catch {
+          // refuse, c'est l'attendu
+        }
+      }
+    }
+    expect(passesATort).toEqual([])
+  })
+
+  // MONOTONIE LOCALE : ce resserrement ne touche QUE le cas sans contexte. Les memes couples
+  // gardent leur verdict d'avant sous tenant, sous superadmin et sous systeme — la mesure large
+  // est dans `tenant-guard-monotonie.test.ts`, celle-ci dit la propriete en clair, a cote du
+  // changement.
+  it('ne change aucun verdict sous tenant, superadmin ou systeme', () => {
+    const cas: Array<{ model: string; operation: string; args: Record<string, unknown> }> = [
+      { model: 'Establishment', operation: 'deleteMany', args: {} },
+      { model: 'User', operation: 'updateMany', args: { data: { isSuperAdmin: true } } },
+      { model: 'SuperAdminAccessGrant', operation: 'findMany', args: { where: { userId: 'u1' } } },
+    ]
+    for (const c of cas) {
+      // Sous tenant : une ecriture plate sur un modele global reste permise (limite nommee,
+      // CLAUDE.md) ; la lecture d'octroi aussi.
+      expect(() => assertTenantScope(c, store)).not.toThrow()
+      // Sous systeme : le garde-fou est contourne par construction.
+      expect(() => assertTenantScope(c, { kind: 'system' })).not.toThrow()
+    }
+    // Sous superadmin : refuses avant comme apres, par SUPERADMIN_GLOBAL_OPERATIONS pour les
+    // deux premiers, permis pour le troisieme — inchange par cette tache.
+    expect(() =>
+      assertTenantScope({ model: 'Establishment', operation: 'deleteMany', args: {} }, { kind: 'superadmin' }),
+    ).toThrow(TenantScopeMissingError)
+    expect(() =>
+      assertTenantScope(
+        { model: 'SuperAdminAccessGrant', operation: 'findMany', args: { where: { userId: 'u1' } } },
+        { kind: 'superadmin' },
+      ),
+    ).not.toThrow()
   })
 })
