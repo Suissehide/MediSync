@@ -86,7 +86,7 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
       // champs cliniques des réponses JSON ne s'y applique pas, il faut donc
       // décider ici de la présence des colonnes cliniques.
       const { serviceRole, establishmentRole } = requireTenant(request)
-      const buffer = await patientDomain.exportExcel(
+      const { buffer, count } = await patientDomain.exportExcel(
         { search, pathwayTemplateTags: tags },
         {
           includeClinicalFields: hasPermission(
@@ -95,6 +95,12 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
           ),
         },
       )
+      // Journal des consultations (etape 4b, tache 4) : cette route n'a aucun identifiant de
+      // patient dans son URL, donc `recordPatientAccess` (onResponse, plugins/tenant.plugin.ts)
+      // ne peut pas savoir combien de dossiers l'export a rendus sans le lire ici -- c'est le
+      // SEUL endroit qui le sait. Pose AVANT de repondre : le crochet `onResponse` s'execute
+      // apres l'envoi de la reponse, donc apres ce point de toute facon.
+      request.patientExportCount = count
 
       const filename = `patients_${new Date().toISOString().slice(0, 10)}.xlsx`
       await reply

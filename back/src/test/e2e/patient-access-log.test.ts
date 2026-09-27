@@ -1,0 +1,891 @@
+import Fastify, { type FastifyInstance } from 'fastify'
+import {
+  serializerCompiler,
+  validatorCompiler,
+} from 'fastify-type-provider-zod'
+
+import { loadConfig } from '../../main/application/config'
+import { startIocContainer } from '../../main/application/starter'
+import { plugins } from '../../main/interfaces/http/fastify/plugins'
+import { routes } from '../../main/interfaces/http/fastify/routes'
+import {
+  TENANT_PREFIX,
+  tenantRoutes,
+} from '../../main/interfaces/http/fastify/routes/tenant.routes'
+import {
+  EXEMPTED_PATIENT_ROUTES,
+  LOGGED_PATIENT_ROUTES,
+  patientIdParamOf,
+} from '../../main/utils/access-log-routes'
+import '../../main/utils/date'
+import { buildTestApp, type TestApp } from './setup/app'
+import { testDb, truncateAll } from './setup/db'
+import {
+  adminUrl,
+  createEstablishment,
+  createService,
+  createUser,
+  signIn,
+  tenantUrl,
+} from './setup/fixtures'
+
+// Un identifiant syntaxiquement valide (cuid) qui n'existe dans aucune table : la route de
+// lecture du dossier repond alors 404, en passant par le handler — exactement le chemin
+// d'erreur que le crochet doit ignorer. Meme convention que permissions.test.ts.
+const PATIENT_INCONNU = 'clzzzzzzzzzzzzzzzzzzzzzzz'
+
+// `app.inject` rend la main quand la reponse est terminee ; le crochet `onResponse` qui ecrit la
+// ligne, lui, est asynchrone et n'est pas forcement acheve a cet instant. Attendre une condition
+// plutot que dormir un temps fixe.
+const attendre = async (
+  condition: () => Promise<boolean>,
+  quoi: string,
+): Promise<void> => {
+  for (let essai = 0; essai < 100; essai += 1) {
+    if (await condition()) {
+      return
+    }
+    await new Promise((resolve) => setTimeout(resolve, 20))
+  }
+  throw new Error(`Condition jamais atteinte : ${quoi}`)
+}
+
+describe('journal des consultations : le crochet sur le chemin reel', () => {
+  let testApp: TestApp
+  let etab: { id: string }
+  let service: { id: string }
+  let autreEtab: { id: string }
+  let autreService: { id: string }
+  let patient: { id: string }
+  // Un SECOND patient, reserve a la requete-barriere. C'est ce qui rend les tests « aucune
+  // ligne » non ambigus : la ligne attendue porte un patientId distinct, donc attendre son
+  // arrivee ne peut pas etre satisfait par la ligne qu'un crochet sabote aurait ecrite pour le
+  // premier patient (mesure par sabotage : avec un seul patient, la course rendait le test vert
+  // a tort).
+  let patientBarriere: { id: string }
+  let cookies: { access_token: string }
+  // Un compte du meme service, sans `clinical:read` : il recoit 403 sur une route JOURNALISEE,
+  // pour un patient qui EXISTE. C'est le seul moyen d'eprouver la garde de statut toute seule —
+  // voir le commentaire du test concerne.
+  let cookiesLecture: { access_token: string }
+
+  beforeAll(async () => {
+    await truncateAll()
+    testApp = await buildTestApp()
+
+    etab = await createEstablishment('Journal')
+    service = await createService(etab.id, 'Service journal')
+    autreEtab = await createEstablishment('Ailleurs')
+    autreService = await createService(autreEtab.id, 'Service ailleurs')
+
+    const user = await createUser({
+      email: 'journal@test.fr',
+      memberships: [
+        {
+          establishmentId: etab.id,
+          services: [{ serviceId: service.id, role: 'COORDINATEUR' }],
+        },
+      ],
+    })
+    await testDb.user.update({
+      where: { id: user.id },
+      data: { firstName: 'Ada', lastName: 'Lovelace' },
+    })
+
+    patient = await testDb.patient.create({
+      data: {
+        firstName: 'Jean',
+        lastName: 'Patient',
+        createDate: new Date(),
+        establishmentId: etab.id,
+      },
+    })
+    await testDb.patientServiceFile.create({
+      data: {
+        patientId: patient.id,
+        serviceId: service.id,
+        establishmentId: etab.id,
+      },
+    })
+    patientBarriere = await testDb.patient.create({
+      data: {
+        firstName: 'Barriere',
+        lastName: 'Temoin',
+        createDate: new Date(),
+        establishmentId: etab.id,
+      },
+    })
+    await testDb.patientServiceFile.create({
+      data: {
+        patientId: patientBarriere.id,
+        serviceId: service.id,
+        establishmentId: etab.id,
+      },
+    })
+
+    await createUser({
+      email: 'lecture@test.fr',
+      memberships: [
+        {
+          establishmentId: etab.id,
+          services: [{ serviceId: service.id, role: 'LECTURE' }],
+        },
+      ],
+    })
+
+    cookies = await signIn(testApp.app, 'journal@test.fr')
+    cookiesLecture = await signIn(testApp.app, 'lecture@test.fr')
+  })
+
+  afterAll(async () => {
+    await testApp.close()
+    await testDb.$disconnect()
+  })
+
+  beforeEach(async () => {
+    await testDb.patientAccessLog.deleteMany()
+  })
+
+  const ouvrirDossier = (patientId: string) =>
+    testApp.app.inject({
+      method: 'GET',
+      url: tenantUrl(etab.id, service.id, `/patient/${patientId}`),
+      cookies,
+    })
+
+  // Requete-barriere : elle emprunte exactement le meme chemin que la requete eprouvee, sur un
+  // AUTRE patient, donc sa ligne ne peut arriver qu'APRES celle qu'aurait ecrite la requete
+  // eprouvee. Quand elle est la, le compte est definitif — c'est ce qui evite de conclure
+  // « aucune ligne » d'une course gagnee de justesse.
+  const barriere = async () => {
+    const res = await ouvrirDossier(patientBarriere.id)
+    expect(res.statusCode).toBe(200)
+    await attendre(
+      async () =>
+        (await testDb.patientAccessLog.count({
+          where: { patientId: patientBarriere.id },
+        })) === 1,
+      'la ligne de la requete-barriere est ecrite',
+    )
+  }
+
+  it("ecrit une ligne complete a l ouverture d un dossier, sans jamais de contenu clinique", async () => {
+    const res = await ouvrirDossier(patient.id)
+    expect(res.statusCode).toBe(200)
+    await attendre(
+      async () => (await testDb.patientAccessLog.count()) === 1,
+      'la ligne du journal est ecrite',
+    )
+    const lignes = await testDb.patientAccessLog.findMany()
+    expect(lignes).toHaveLength(1)
+    expect(lignes[0]).toEqual(
+      expect.objectContaining({
+        establishmentId: etab.id,
+        serviceId: service.id,
+        patientId: patient.id,
+        userFirstName: 'Ada',
+        userLastName: 'Lovelace',
+        action: 'dossier.ouvert',
+        accesParOctroi: false,
+        exportCount: null,
+        exportFilters: null,
+      }),
+    )
+  })
+
+  it("distingue le sous-dossier de service de l ouverture du dossier", async () => {
+    const res = await testApp.app.inject({
+      method: 'GET',
+      url: tenantUrl(
+        etab.id,
+        service.id,
+        `/patient/${patient.id}/service-file`,
+      ),
+      cookies,
+    })
+    expect(res.statusCode).toBe(200)
+    await attendre(
+      async () => (await testDb.patientAccessLog.count()) === 1,
+      'la ligne du sous-dossier est ecrite',
+    )
+    const [ligne] = await testDb.patientAccessLog.findMany()
+    expect(ligne?.action).toBe('sousDossier.ouvert')
+  })
+
+  // Les deux routes de diagnostic sont un ECART assume par rapport aux listes du cahier des
+  // charges (voir le rapport). Les inscrire ne suffit pas : ce test verifie qu'une ligne est
+  // REELLEMENT ecrite pour elles — c'est aussi la preuve que la detection du parametre
+  // fonctionne sur l'orthographe `:patientId`, dont le crochet a besoin pour lire
+  // `request.params`.
+  it("journalise la lecture du diagnostic educatif, malgre l autre orthographe du parametre", async () => {
+    const res = await testApp.app.inject({
+      method: 'GET',
+      url: tenantUrl(etab.id, service.id, `/patient/${patient.id}/diagnostic`),
+      cookies,
+    })
+    expect(res.statusCode).toBe(200)
+    await attendre(
+      async () => (await testDb.patientAccessLog.count()) === 1,
+      'la ligne du diagnostic est ecrite',
+    )
+    const [ligne] = await testDb.patientAccessLog.findMany()
+    expect({ action: ligne?.action, patientId: ligne?.patientId }).toEqual({
+      action: 'sousDossier.ouvert',
+      patientId: patient.id,
+    })
+  })
+
+  // ARBITRAGE DE LEO (tour de correction 1) : les echecs d'inscription sont JOURNALISES, avec
+  // une quatrieme action a eux. Le verifier sur le chemin reel, et pas seulement dans la liste —
+  // c'est aussi ce qui prouve que la quatrieme valeur traverse le domaine et arrive en base,
+  // dont la colonne `action` est une chaine libre.
+  it("journalise la consultation des echecs d inscription, sous sa propre action", async () => {
+    const res = await testApp.app.inject({
+      method: 'GET',
+      url: tenantUrl(
+        etab.id,
+        service.id,
+        `/patient/${patient.id}/enrollment-issue`,
+      ),
+      cookies,
+    })
+    expect(res.statusCode).toBe(200)
+    await attendre(
+      async () => (await testDb.patientAccessLog.count()) === 1,
+      'la ligne des echecs d inscription est ecrite',
+    )
+    const [ligne] = await testDb.patientAccessLog.findMany()
+    expect({ action: ligne?.action, patientId: ligne?.patientId }).toEqual({
+      action: 'echecsInscription.consultes',
+      patientId: patient.id,
+    })
+  })
+
+  // LE POINT DE LA REVIEW FOCUS n°1. Non vide par construction : la comparaison porte sur un
+  // dossier qui EXISTE et un qui n'existe pas, sur la MEME route et avec les MEMES droits. Sans
+  // la premiere moitie, « zero ligne » ne distinguerait pas « le crochet a refuse l'erreur » de
+  // « le crochet n'ecrit jamais rien ».
+  //
+  // ET IL FAUT LES DEUX ERREURS, pas seulement le 404 — mesure par sabotage, pas supposee. Avec
+  // le seul 404 sur un identifiant INCONNU, retirer la garde `reply.statusCode >= 400` du
+  // crochet laissait ce test VERT : la ligne partait bien a l'ecriture, mais la cle etrangere
+  // `PatientAccessLog.patient` (prisma/schema.prisma) la refusait, le `catch` l'absorbait, et
+  // « zero ligne » etait vrai POUR UNE AUTRE RAISON que celle que le nom de ce test annonce.
+  // Le 403 ci-dessous ferme ce trou : le patient EXISTE, la route est JOURNALISEE, seule la
+  // permission manque — rien d'autre que la garde de statut n'empeche alors l'ecriture.
+  it("n ecrit aucune ligne quand la reponse est une erreur, alors qu elle en ecrit une quand elle ne l est pas", async () => {
+    const sansPermission = await testApp.app.inject({
+      method: 'GET',
+      url: tenantUrl(etab.id, service.id, `/patient/${patient.id}/diagnostic`),
+      cookies: cookiesLecture,
+    })
+    expect(sansPermission.statusCode).toBe(403)
+
+    const enErreur = await ouvrirDossier(PATIENT_INCONNU)
+    expect(enErreur.statusCode).toBe(404)
+
+    await barriere()
+
+    const lignes = await testDb.patientAccessLog.findMany()
+    expect(lignes).toHaveLength(1)
+    expect(lignes[0]?.patientId).toBe(patientBarriere.id)
+  })
+
+  // LE POINT DE LA REVIEW FOCUS n°2. `request.tenant` est optionnel par construction : la
+  // resolution repond 404 AVANT le handler, donc il vaut `undefined` quand le crochet s'execute.
+  //
+  // RESERVE, dite plutot que tue (voir le rapport) : sur CE chemin, la garde de statut suffit
+  // deja a sortir, donc ce test n'isole PAS la garde `request.tenant` — aucune requete HTTP ne
+  // peut produire « succes ET tenant absent » sous `tenantRoutes`. C'est le test unitaire
+  // (access-log-hook.test.ts, « n ecrit rien, et ne leve pas, quand le tenant n est pas
+  // resolu ») qui l'eprouve seule, avec un code de succes.
+  it("n ecrit aucune ligne, et ne casse pas la reponse, quand le tenant n a pas ete resolu", async () => {
+    const res = await testApp.app.inject({
+      method: 'GET',
+      url: tenantUrl(autreEtab.id, autreService.id, `/patient/${patient.id}`),
+      cookies,
+    })
+    expect(res.statusCode).toBe(404)
+    expect(res.json()).not.toHaveProperty('stack')
+
+    await barriere()
+    const lignes = await testDb.patientAccessLog.findMany()
+    expect(lignes).toHaveLength(1)
+    expect(lignes[0]?.patientId).toBe(patientBarriere.id)
+  })
+
+  it("n ecrit aucune ligne pour une route exemptee", async () => {
+    const res = await testApp.app.inject({
+      method: 'GET',
+      url: tenantUrl(etab.id, service.id, `/patient/${patient.id}/pathways`),
+      cookies,
+    })
+    expect(res.statusCode).toBe(200)
+
+    await barriere()
+    const lignes = await testDb.patientAccessLog.findMany()
+    expect(lignes).toHaveLength(1)
+    expect(lignes[0]?.patientId).toBe(patientBarriere.id)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// L'export (tache 4) : structurellement hors du filet ci-dessus -- `GET /patient/export` n'a
+// aucun identifiant de patient dans son URL. Dispositif dedie (voir
+// utils/access-log-routes.ts) : une seule ligne par export, avec le nombre de dossiers rendus
+// et les criteres de la requete, jamais un identifiant de patient (`patientId` est desormais
+// nullable en base -- voir la migration `make_patient_access_log_patient_id_nullable`).
+// ---------------------------------------------------------------------------
+
+describe("journal des consultations : l export, en une ligne (tache 4)", () => {
+  let testApp: TestApp
+  let etab: { id: string }
+  let service: { id: string }
+  let cookies: { access_token: string }
+
+  beforeAll(async () => {
+    await truncateAll()
+    testApp = await buildTestApp()
+
+    etab = await createEstablishment('Export')
+    service = await createService(etab.id, 'Service export')
+
+    await createUser({
+      email: 'export@test.fr',
+      memberships: [
+        {
+          establishmentId: etab.id,
+          services: [{ serviceId: service.id, role: 'COORDINATEUR' }],
+        },
+      ],
+    })
+
+    // DEUX patients qui correspondent au filtre "dup" (Dupont, Dupuis), et un TROISIEME qui n y
+    // correspond pas (Martin). Sans ce troisieme, un export qui ignorerait le filtre (renverrait
+    // TOUJOURS tous les patients de l etablissement) donnerait le meme compte que celui-ci --
+    // le test ne prouverait alors rien du filtrage, seulement que l export compte quelque chose.
+    await testDb.patient.createMany({
+      data: [
+        {
+          firstName: 'Marie',
+          lastName: 'Dupont',
+          createDate: new Date(),
+          establishmentId: etab.id,
+        },
+        {
+          firstName: 'Paul',
+          lastName: 'Dupuis',
+          createDate: new Date(),
+          establishmentId: etab.id,
+        },
+        {
+          firstName: 'Alice',
+          lastName: 'Martin',
+          createDate: new Date(),
+          establishmentId: etab.id,
+        },
+      ],
+    })
+
+    cookies = await signIn(testApp.app, 'export@test.fr')
+  })
+
+  afterAll(async () => {
+    await testApp.close()
+    await testDb.$disconnect()
+  })
+
+  beforeEach(async () => {
+    await testDb.patientAccessLog.deleteMany()
+  })
+
+  const exporter = (query: string) =>
+    testApp.app.inject({
+      method: 'GET',
+      url: `${tenantUrl(etab.id, service.id, '/patient/export')}?${query}`,
+      cookies,
+    })
+
+  it('trace un export en UNE ligne, avec le nombre de dossiers et les criteres', async () => {
+    const res = await exporter('search=dup')
+    expect(res.statusCode).toBe(200)
+    await attendre(
+      async () => (await testDb.patientAccessLog.count()) === 1,
+      "la ligne de l export est ecrite",
+    )
+    const lignes = await testDb.patientAccessLog.findMany({
+      where: { action: 'export' },
+    })
+    expect(lignes).toHaveLength(1)
+    expect({
+      patientId: lignes[0]?.patientId,
+      count: lignes[0]?.exportCount,
+      filtres: lignes[0]?.exportFilters,
+    }).toEqual({
+      patientId: null,
+      count: 2,
+      filtres: JSON.stringify({ search: 'dup' }),
+    })
+  })
+
+  // Review Focus n°2 (cahier des charges) : un export dont le filtre ne rend aucun dossier est
+  // journalise quand meme, avec `exportCount: 0` -- jamais confondu avec « rien a journaliser ».
+  it("trace un export qui ne rend aucun dossier", async () => {
+    const res = await exporter('search=personne-de-ce-nom')
+    expect(res.statusCode).toBe(200)
+    await attendre(
+      async () => (await testDb.patientAccessLog.count()) === 1,
+      "la ligne de l export vide est ecrite",
+    )
+    const lignes = await testDb.patientAccessLog.findMany({
+      where: { action: 'export' },
+    })
+    expect(lignes).toHaveLength(1)
+    expect(lignes[0]?.exportCount).toBe(0)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Tache 5 (etape 4b) : les deux premieres LECTURES du journal — celle du coordinateur de
+// service (scope()) et celle de l administrateur d etablissement (establishmentScope()).
+// ---------------------------------------------------------------------------
+
+describe('journal des consultations : le lire, par service et par etablissement (tache 5)', () => {
+  let testApp: TestApp
+  let etab: { id: string }
+  let serviceA: { id: string }
+  let serviceB: { id: string }
+  let patient: { id: string }
+  let cookiesCoordinateurA: { access_token: string }
+  // Un compte du MEME service que A, sans `consultations:read` (LECTURE ne l a pas) : eprouve la
+  // permission de service toute seule, pour un patient et une route qui existent tous les deux.
+  let cookiesLectureA: { access_token: string }
+  let cookiesAdmin: { access_token: string }
+  // Simple MEMBRE d etablissement (pas ADMIN) : eprouve la permission d etablissement toute
+  // seule, symetrique de `cookiesLectureA` cote service.
+  let cookiesMembre: { access_token: string }
+
+  beforeAll(async () => {
+    await truncateAll()
+    testApp = await buildTestApp()
+
+    etab = await createEstablishment('Lecture du journal')
+    // DEUX services REELLEMENT peuples, chacun avec au moins un acces au meme patient — sans
+    // quoi « l administrateur voit tous les services » serait vrai par vacuite (voir le cahier
+    // des charges de la tache).
+    serviceA = await createService(etab.id, 'Service A')
+    serviceB = await createService(etab.id, 'Service B')
+
+    await createUser({
+      email: 'coordinateur-a-journal@test.fr',
+      memberships: [
+        {
+          establishmentId: etab.id,
+          services: [{ serviceId: serviceA.id, role: 'COORDINATEUR' }],
+        },
+      ],
+    })
+    await createUser({
+      email: 'lecture-a-journal@test.fr',
+      memberships: [
+        {
+          establishmentId: etab.id,
+          services: [{ serviceId: serviceA.id, role: 'LECTURE' }],
+        },
+      ],
+    })
+    await createUser({
+      email: 'admin-journal@test.fr',
+      memberships: [{ establishmentId: etab.id, role: 'ADMIN' }],
+    })
+    await createUser({
+      email: 'membre-journal@test.fr',
+      memberships: [{ establishmentId: etab.id, role: 'MEMBER' }],
+    })
+
+    patient = await testDb.patient.create({
+      data: {
+        firstName: 'Jean',
+        lastName: 'Patient',
+        createDate: new Date(),
+        establishmentId: etab.id,
+      },
+    })
+    await testDb.patientServiceFile.createMany({
+      data: [
+        { patientId: patient.id, serviceId: serviceA.id, establishmentId: etab.id },
+        { patientId: patient.id, serviceId: serviceB.id, establishmentId: etab.id },
+      ],
+    })
+
+    // Les lignes du journal elles-memes : ecrites directement en base plutot que rejouees via
+    // le crochet (deja eprouve par les blocs precedents) — une par service, sur le MEME patient.
+    // `accesParOctroi` DIFFERE entre les deux lignes (tour de correction 1, tache 10) : une
+    // fixture ou les deux lignes portent la meme valeur ne prouverait rien sur le fait que la
+    // route rend bien LA VALEUR DE CHAQUE LIGNE, plutot qu'une constante.
+    await testDb.patientAccessLog.createMany({
+      data: [
+        {
+          establishmentId: etab.id,
+          serviceId: serviceA.id,
+          patientId: patient.id,
+          userID: 'u-coordinateur-a',
+          userFirstName: 'Ada',
+          userLastName: 'DuServiceA',
+          action: 'dossier.ouvert',
+          accesParOctroi: true,
+        },
+        {
+          establishmentId: etab.id,
+          serviceId: serviceB.id,
+          patientId: patient.id,
+          userID: 'u-coordinateur-b',
+          userFirstName: 'Belle',
+          userLastName: 'DuServiceB',
+          action: 'dossier.ouvert',
+          accesParOctroi: false,
+        },
+      ],
+    })
+
+    cookiesCoordinateurA = await signIn(testApp.app, 'coordinateur-a-journal@test.fr')
+    cookiesLectureA = await signIn(testApp.app, 'lecture-a-journal@test.fr')
+    cookiesAdmin = await signIn(testApp.app, 'admin-journal@test.fr')
+    cookiesMembre = await signIn(testApp.app, 'membre-journal@test.fr')
+  })
+
+  afterAll(async () => {
+    await testApp.close()
+    await testDb.$disconnect()
+  })
+
+  // DEUX SABORDAGES ETROITS, EPROUVES (retires avant ce commit), qui prouvent chacun une chose
+  // DIFFERENTE — l'un ne remplace pas l'autre :
+  //
+  // 1. Remplacer `...this.scope` par `...this.establishmentScope` (sans toucher au canal Prisma)
+  //    rougit CE test — mais pas de la facon qu'on imaginerait d'abord (un 200 qui montrerait les
+  //    deux services). `PatientAccessLog` reste dans `SERVICE_MODELS` (tenant-guard.ts), dont le
+  //    garde-fou exige `serviceId` dans le `where` pour TOUTE operation ; un `where` sans cette
+  //    cle (ce que rend `establishmentScope()` seul) echoue donc AVANT MEME D'ATTEINDRE LA BASE,
+  //    avec `TenantScopeMissingError` (500) — et le second test (« ne rend ni identite… »)
+  //    rougit en meme temps, par ricochet, puisqu'il tape la meme route.
+  // 2. Remplacer le CORPS ENTIER de la methode par le meme canal que `findByPatientInEstablishment`
+  //    (`runAsSystem()`, filtre sur `establishmentId` SEUL, capture avant d'entrer dans le mode
+  //    encadre) produit la fuite REELLE que le premier sabordage n'a pas montree : 200, avec les
+  //    lignes des DEUX services (`serviceA.id` ET `serviceB.id`) — puisque `runAsSystem` retire
+  //    l'exigence du garde-fou, qui ne peut donc plus rattraper l'absence de `serviceId`. CE
+  //    TEST ROUGIT ALORS SEUL (le suivant, qui verifie la FORME de la reponse, reste vert : la
+  //    forme des deux lignes rendues est toujours correcte, seul leur NOMBRE et leur
+  //    PROVENANCE sont faux) — c'est la propriete que le premier sabordage prouvait seulement
+  //    par ricochet, celle-ci la prouve directement : `scope()` est ce qui rend la reponse
+  //    CORRECTE, `establishmentScope()`+`runAsSystem()` la rendrait seulement POSSIBLE, a tort.
+  it('un coordinateur ne voit que les acces de SON service', async () => {
+    const res = await testApp.app.inject({
+      method: 'GET',
+      url: tenantUrl(etab.id, serviceA.id, `/patient/${patient.id}/acces`),
+      cookies: cookiesCoordinateurA,
+    })
+    expect(res.statusCode).toBe(200)
+    expect(res.json().map((l: { serviceId: string }) => l.serviceId)).toEqual([serviceA.id])
+  })
+
+  it('un admin d etablissement voit les acces de TOUS les services de son etablissement', async () => {
+    const res = await testApp.app.inject({
+      method: 'GET',
+      url: adminUrl(etab.id, `/patients/${patient.id}/acces`),
+      cookies: cookiesAdmin,
+    })
+    expect(res.statusCode).toBe(200)
+    expect(new Set(res.json().map((l: { serviceId: string }) => l.serviceId))).toEqual(
+      new Set([serviceA.id, serviceB.id]),
+    )
+  })
+
+  // Le schema de reponse ne porte que l auteur, l action, la date, le service et
+  // `accesParOctroi` (tour de correction 1, tache 10 -- ce dernier champ etait exclu a tort,
+  // voir le commentaire de `patientAccessLogEntryResponseSchema`) : jamais `patientId`,
+  // `exportCount`, `exportFilters` ni les identifiants de tenant, meme si le depot les rend
+  // tous.
+  it('ne rend ni identite de patient ni contenu clinique, seulement qui a consulte quoi et quand', async () => {
+    const res = await testApp.app.inject({
+      method: 'GET',
+      url: tenantUrl(etab.id, serviceA.id, `/patient/${patient.id}/acces`),
+      cookies: cookiesCoordinateurA,
+    })
+    expect(res.statusCode).toBe(200)
+    const [ligne] = res.json()
+    expect(Object.keys(ligne).sort()).toEqual(
+      ['accesParOctroi', 'action', 'createdAt', 'id', 'serviceId', 'userFirstName', 'userLastName'].sort(),
+    )
+  })
+
+  // Meme forme, cote administration — pas un doublon : c'est CETTE route qui lit le perimetre le
+  // plus large (tous les services de l'etablissement), donc celle ou une fuite de contenu
+  // clinique ou d'identite de patient serait la plus large aussi. Le test de service ci-dessus
+  // ne la couvre pas : deux routes, deux schemas de reponse distincts (voir
+  // patientAccessLog.schema.ts), donc deux preuves distinctes.
+  it('ne rend ni identite de patient ni contenu clinique cote administration non plus', async () => {
+    const res = await testApp.app.inject({
+      method: 'GET',
+      url: adminUrl(etab.id, `/patients/${patient.id}/acces`),
+      cookies: cookiesAdmin,
+    })
+    expect(res.statusCode).toBe(200)
+    for (const ligne of res.json()) {
+      expect(Object.keys(ligne).sort()).toEqual(
+        ['accesParOctroi', 'action', 'createdAt', 'id', 'serviceId', 'userFirstName', 'userLastName'].sort(),
+      )
+    }
+  })
+
+  // Tour de correction 1 (tache 10) : `accesParOctroi` distingue un acces de depannage (octroi
+  // temporaire de super-admin) d'un acces de soin ordinaire — l'interet meme d'un journal
+  // d'audit. La fixture de ce bloc porte deux valeurs DIFFERENTES (service A: true, service B:
+  // false) precisement pour que ce test ne soit pas vrai par vacuite : une reponse qui rendrait
+  // `false` partout, ou `true` partout, le ferait rougir.
+  it('expose accesParOctroi, avec sa vraie valeur par ligne (jamais une constante)', async () => {
+    const resAdmin = await testApp.app.inject({
+      method: 'GET',
+      url: adminUrl(etab.id, `/patients/${patient.id}/acces`),
+      cookies: cookiesAdmin,
+    })
+    expect(resAdmin.statusCode).toBe(200)
+    const lignes = resAdmin.json() as { serviceId: string; accesParOctroi: boolean }[]
+    const ligneA = lignes.find((l) => l.serviceId === serviceA.id)
+    const ligneB = lignes.find((l) => l.serviceId === serviceB.id)
+    expect(ligneA?.accesParOctroi).toBe(true)
+    expect(ligneB?.accesParOctroi).toBe(false)
+
+    // Cote service (coordinateur A) : seule la ligne de SON service est visible, et elle porte
+    // bien `true`.
+    const resService = await testApp.app.inject({
+      method: 'GET',
+      url: tenantUrl(etab.id, serviceA.id, `/patient/${patient.id}/acces`),
+      cookies: cookiesCoordinateurA,
+    })
+    expect(resService.statusCode).toBe(200)
+    const [ligneService] = resService.json() as { accesParOctroi: boolean }[]
+    expect(ligneService?.accesParOctroi).toBe(true)
+  })
+
+  it('refuse la lecture de service a qui n a pas consultations:read (LECTURE)', async () => {
+    const res = await testApp.app.inject({
+      method: 'GET',
+      url: tenantUrl(etab.id, serviceA.id, `/patient/${patient.id}/acces`),
+      cookies: cookiesLectureA,
+    })
+    expect(res.statusCode).toBe(403)
+  })
+
+  // 404, pas 403 : convention deja etablie par toutes les routes d'administration
+  // d'etablissement (voir services.test.ts, members.test.ts) — `resolveEstablishmentAdmin`
+  // (tenant.plugin.ts) refuse `requireEstablishmentAdmin` par 404 pour tout membre qui n'est pas
+  // `ADMIN`, avant meme d'atteindre la verification de permission (meme refus de principe que
+  // pour un service ou un etablissement inconnu : ne pas distinguer les deux cas). ADMIN porte
+  // TOUJOURS `access-log:read` (aucun role d'etablissement partiel n'existe entre ADMIN et
+  // MEMBER) : ce test eprouve donc la resolution d'administration, pas la permission elle-meme.
+  it('refuse la lecture d etablissement a un simple MEMBRE (404, pas 403)', async () => {
+    const res = await testApp.app.inject({
+      method: 'GET',
+      url: adminUrl(etab.id, `/patients/${patient.id}/acces`),
+      cookies: cookiesMembre,
+    })
+    expect(res.statusCode).toBe(404)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// La propriete centrale, sur le chemin reel : une route neuve non declaree
+// empeche l application de devenir prete.
+// ---------------------------------------------------------------------------
+
+// Monte le VRAI greffon `tenantRoutes` (donc ses vrais crochets `onRoute`/`onReady`) sur une
+// instance Fastify neuve, et laisse l'appelant y poser une route de plus. Les `register` ne sont
+// volontairement pas attendus : c'est `ready()` qui doit trancher, et c'est ce qu'on mesure.
+const monterAvecRouteEnPlus = (
+  enPlus?: (fastify: FastifyInstance) => void,
+): { app: FastifyInstance; routesLues: string[] } => {
+  const container = startIocContainer(loadConfig())
+  const app = Fastify()
+  app.setValidatorCompiler(validatorCompiler)
+  app.setSerializerCompiler(serializerCompiler)
+  app.iocContainer = container.instances
+  // Collecte les URL DECLAREES telles que Fastify les enregistre, pour la comparaison des deux
+  // listes aux routes reelles plus bas — `printRoutes` ne conviendrait pas : il rend l'arbre du
+  // routeur, ou deux routes qui partagent une position mais pas le nom du parametre fusionnent
+  // en `:patientID|:patientId`.
+  const routesLues: string[] = []
+  app.addHook('onRoute', (route) => {
+    const methodes = Array.isArray(route.method)
+      ? route.method.map(String)
+      : [String(route.method)]
+    if (methodes.includes('GET') && patientIdParamOf(route.url) !== null) {
+      routesLues.push(route.url)
+    }
+  })
+  void app.register(plugins)
+  // Le prefixe vient de routes/index.ts dans l'application reelle ; sans lui, les URL declarees
+  // ne seraient pas celles que portent les deux listes, et ce harnais mesurerait autre chose.
+  void app.register(
+    async (child) => {
+      await (
+        tenantRoutes as unknown as (
+          fastify: FastifyInstance,
+          options: unknown,
+        ) => Promise<void>
+      )(child, {})
+      enPlus?.(child)
+    },
+    { prefix: TENANT_PREFIX },
+  )
+  return { app, routesLues }
+}
+
+// Un `close` sur une application dont le demarrage a echoue n'a rien a fermer proprement : ne
+// pas laisser son echec masquer celui que le test vient de mesurer.
+const fermer = (app: FastifyInstance) => app.close().catch(() => undefined)
+
+describe('journal des consultations : le garde-fou de demarrage', () => {
+  // Temoin negatif, sans lequel les tests suivants ne prouveraient rien : le harnais lui-meme
+  // demarre. Sans cette ligne, un `rejects.toThrow` pourrait etre satisfait par n'importe quelle
+  // erreur de montage.
+  it('demarre normalement quand toutes les routes sont declarees', async () => {
+    const { app } = monterAvecRouteEnPlus()
+    await expect(app.ready()).resolves.toBeDefined()
+    await fermer(app)
+  }, 30000)
+
+  // Les deux listes confrontees aux routes REELLES du greffon, dans les deux sens, plutot qu'a
+  // un echantillon recopie. Le garde-fou `onRoute` tient deja le sens « une route reelle absente
+  // des listes » ; ce test le redit en une seule assertion lisible et ajoute l'autre sens, celui
+  // que `onReady` tient au demarrage. Portee exacte : les routes de `tenantRoutes`, c'est-a-dire
+  // exactement celles que le crochet d'ecriture couvre.
+  it('couvre exactement les routes GET reelles qui designent un dossier patient', async () => {
+    const { app, routesLues } = monterAvecRouteEnPlus()
+    await app.ready()
+    // Garde de l'enumeration elle-meme : un collecteur casse rendrait `[]`, et la comparaison
+    // ci-dessous serait vraie par vacuite des que les deux listes seraient vides elles aussi.
+    expect(routesLues.length).toBeGreaterThan(0)
+    expect([...routesLues].sort()).toEqual(
+      [
+        ...Object.keys(LOGGED_PATIENT_ROUTES),
+        ...Object.keys(EXEMPTED_PATIENT_ROUTES),
+      ].sort(),
+    )
+    await fermer(app)
+  }, 30000)
+
+  // LA SONDE DU RELECTEUR (tour de correction 1). Ces quatre routes sont posees EXACTEMENT comme
+  // celles du vrai routeur patient — chemin relatif sous le prefixe du greffon, `config.
+  // permission` declaree — et portent un nom de parametre auquel personne n'avait pense. Avant
+  // la detection structurelle, `GET /patient/:patient_id/sonde-revue` demarrait sans broncher,
+  // servait un dossier identifie et n'ecrivait aucune ligne.
+  //
+  // `rejects.toThrow(/sonde-revue-<nom>/)` et pas seulement `/sonde/` : le message doit nommer LA
+  // route refusee, faute de quoi ce test serait satisfait par le refus d'une autre.
+  it.each(['patient_id', 'id', 'pid', 'patientId'])(
+    'refuse de demarrer sur une route de dossier dont le parametre s appelle :%s',
+    async (nom) => {
+      const { app } = monterAvecRouteEnPlus((child) => {
+        child.get(
+          `/patient/:${nom}/sonde-revue-${nom}`,
+          { config: { permission: 'patient:read' } },
+          () => ({}),
+        )
+      })
+      await expect(app.ready()).rejects.toThrow(
+        new RegExp(`hors du journal des consultations.*sonde-revue-${nom}`),
+      )
+      await fermer(app)
+    },
+    30000,
+  )
+
+  // Le pendant, sans lequel le precedent ne dirait pas grand-chose : une route de COLLECTION
+  // sous `/patient/` (comme `/patient/export`, `/patient/search`, `/patient/with-tags`, qui
+  // existent reellement) n'est pas un dossier identifie et ne doit rien exiger.
+  it('laisse demarrer une route de collection sous /patient/, sans parametre', async () => {
+    const { app } = monterAvecRouteEnPlus((child) => {
+      child.get(
+        '/patient/sonde-collection',
+        { config: { permission: 'patient:read' } },
+        () => ({}),
+      )
+    })
+    await expect(app.ready()).resolves.toBeDefined()
+    await fermer(app)
+  }, 30000)
+})
+
+// ---------------------------------------------------------------------------
+// Le frere RACINE : une route de dossier posee HORS du greffon de tenant.
+// ---------------------------------------------------------------------------
+
+// Meme principe que le harnais ci-dessus, mais sur `routes` (l'application ENTIERE, donc les
+// crochets `onRoute` de racine) plutot que sur le seul greffon de tenant.
+const monterApplicationAvecRouteEnPlus = (
+  enPlus?: (fastify: FastifyInstance) => void,
+): FastifyInstance => {
+  const container = startIocContainer(loadConfig())
+  const app = Fastify()
+  app.setValidatorCompiler(validatorCompiler)
+  app.setSerializerCompiler(serializerCompiler)
+  app.iocContainer = container.instances
+  void app.register(plugins)
+  void app.register(async (child) => {
+    await (
+      routes as unknown as (
+        fastify: FastifyInstance,
+        options: unknown,
+      ) => Promise<void>
+    )(child, {})
+    enPlus?.(child)
+  })
+  return app
+}
+
+describe('journal des consultations : le refus racine du hors-greffon', () => {
+  it("demarre normalement quand aucune route de dossier ne vit hors du greffon", async () => {
+    const app = monterApplicationAvecRouteEnPlus()
+    await expect(app.ready()).resolves.toBeDefined()
+    await fermer(app)
+  }, 30000)
+
+  // Le trou que le premier jet laissait ouvert en se reclamant, a tort, de « la meme limite
+  // qu'assertTenantShapedRoute » : ces deux routes designent un dossier, vivent hors du greffon,
+  // n'auraient jamais laisse de trace, et rien ne l'aurait dit.
+  it.each([
+    ['administration d etablissement', '/e/:establishmentId/admin/patient/:patient_id'],
+    ['racine', '/dossier-hors-greffon/:patientID'],
+  ])(
+    'refuse de demarrer sur une route de dossier posee a la %s',
+    async (_ou, url) => {
+      const app = monterApplicationAvecRouteEnPlus((child) => {
+        child.get(url, { config: { permission: 'patient:read' } }, () => ({}))
+      })
+      await expect(app.ready()).rejects.toThrow(/hors du greffon de tenant/)
+      await fermer(app)
+    },
+    30000,
+  )
+
+  // TOUR DE CORRECTION 1 (revue, tache 5) — LA SONDE DU RELECTEUR, REJOUEE SUR L APPLICATION
+  // REELLE. La revue a demontre que renommer un parametre de route (`:patientID` -> `:patientRef`)
+  // pour sortir des filets de `patientIdParamOf` etait un contournement, pas une exemption : une
+  // route posee sous ce nom rendait un dossier complet, sans ecrire de ligne, et rien ne le
+  // signalait. `EXEMPTED_ADMIN_PATIENT_ROUTES` a remplace le renommage — mais l'exemption ne
+  // doit jouer que pour l'URL EXACTE declaree, jamais par ressemblance de forme. Cette sonde,
+  // posee sous LA MEME FORME que la vraie route d'administration (`/patients/:patientID/...`,
+  // hors du prefixe de tenant) mais avec une URL DIFFERENTE, doit rester refusee.
+  it("refuse une sonde d administration de meme forme que la route exemptee, mais d URL differente", async () => {
+    const app = monterApplicationAvecRouteEnPlus((child) => {
+      child.get(
+        '/e/:establishmentId/admin/patients/:patientID/sonde',
+        { config: { permission: 'patient:read' } },
+        () => ({}),
+      )
+    })
+    await expect(app.ready()).rejects.toThrow(/hors du greffon de tenant/)
+    await fermer(app)
+  }, 30000)
+})

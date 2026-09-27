@@ -2,15 +2,31 @@ import type { IocContainer } from '../../../types/application/ioc'
 import type { PrimaTransactionClient } from '../../../types/infra/orm/client'
 import type {
   ActivityLogCreateEntityRepo,
+  ActivityLogEntityRepo,
   ActivityLogFindManyParams,
   ActivityLogFindManyResult,
   ActivityLogRepositoryInterface,
+  PlatformAccessLogFilters,
 } from '../../../types/infra/orm/repositories/activityLog.repository.interface'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { TenantContextInterface } from '../../../types/utils/tenant-context'
+import { platformCompteFilter } from '../../../utils/platform-access-log-filters'
 import type { PostgresPrismaClient } from '../postgres-client'
 
 const PAGE_SIZE = 50
+
+// Écran de diagnostic plateforme (tâche 6, étape 4b), pas un export complet — même esprit que
+// `ACTIVITY_LOG_DETAIL_LIMIT` (establishment.repository.ts), qui borne le journal d'UN
+// établissement pour la même raison.
+//
+// CE QUE CETTE BORNE REND INATTEIGNABLE, dit ici plutôt que découvert (revue finale de branche,
+// Important n°1) : le tri est `createdAt desc`, donc au-delà de 200 lignes dans le périmètre
+// demandé, les PLUS ANCIENNES sortent de la réponse — et aucune pagination ne permet d'y
+// revenir. Ce sont précisément les lignes du script d'amorçage (`establishmentId: null`), dont
+// la documentation présentait la lisibilité comme acquise. D'où le filtre `sansEtablissement`
+// ci-dessous : il resserre le périmètre à ces lignes-là, qui tiennent alors très largement sous
+// la borne. Voir « Ce qui reste ouvert » (§8), docs/multi-tenant/decisions-etape-4b.md.
+const PLATFORM_ACCESS_LOG_LIMIT = 200
 
 class ActivityLogRepository implements ActivityLogRepositoryInterface {
   private readonly prisma: PostgresPrismaClient
@@ -99,6 +115,59 @@ class ActivityLogRepository implements ActivityLogRepositoryInterface {
       this.prisma.activityLog.count({ where }),
     ])
     return { data, total, page }
+  }
+
+  // Tâche 6, étape 4b : `GET /super-admin/access-log` (source=activite) — SANS borne de tenant,
+  // à l'échelle de la plateforme entière. `ActivityLog.findMany` est déjà déclaré dans
+  // `SUPERADMIN_OPERATIONS` (tâche 1) : encadré par `runAsSuperAdmin`. C'est cette lecture, sans
+  // aucun `establishmentId` dans le `where`, qui rend enfin lisibles les lignes du script
+  // d'amorçage (`UserDomain.bootstrapSuperAdmin`, écrites sous `runAsSystem`,
+  // `establishmentId: null`) : aucune autre route ne les filtrait jusqu'ici, ni la lecture
+  // d'établissement (`establishment.repository.ts#activityLogFor`, qui exige un
+  // `establishmentId` précis), ni le tenant ordinaire (`findMany` ci-dessus, qui n'existe que
+  // sous un tenant).
+  //
+  // `await` À L'INTÉRIEUR du rappel — mais lisez `utils/tenant-context.ts#runAsSuperAdmin` avant
+  // de recopier cette forme ailleurs. ÉNONCÉ EXACT (revue finale de branche, Important n°5 — ce
+  // commentaire portait encore l'énoncé intermédiaire, « ce qui tient la portée est l'enrobage
+  // `async` », que `back/CLAUDE.md` et l'annexe des décisions nomment désormais comme un
+  // SYMPTÔME) : **ce qui compte, c'est que la lecture du contexte survienne AVANT le premier
+  // point de suspension**. Un rappel SYNCHRONE NU perd le contexte ICI (mesuré, tour de
+  // correction 1 de la tâche 6 : 5 tests rougissent en 500) parce que la requête Prisma est
+  // PARESSEUSE — rien n'est lu avant que `run` n'ait rendu la main. Le même rappel synchrone nu
+  // convient parfaitement ailleurs s'il lit tout de suite : `deleteOlderThan`, quarante lignes
+  // plus bas, appelle `tenantContext.peek()` synchroniquement en tête de son corps, et la
+  // propriété tient. L'`await` ci-dessous reste écrit pour le lint (`suspicious/useAwait`) et la
+  // lisibilité.
+  async findAllPlatformWide(filters: PlatformAccessLogFilters): Promise<ActivityLogEntityRepo[]> {
+    try {
+      return await this.tenantContext.runAsSuperAdmin(async () => {
+        return await this.prisma.activityLog.findMany({
+          where: {
+            // Trois états, jamais deux à la fois — la valeur réservée `SANS_ETABLISSEMENT` du
+            // schéma HTTP arrive ici sous la forme du booléen, pas d'un identifiant, et elle
+            // l'emporte si jamais les deux venaient à coexister (voir le commentaire de
+            // `PlatformAccessLogFilters`). C'est la SEULE façon d'atteindre les lignes du script
+            // d'amorçage une fois le journal au-delà de 200 entrées : elles n'ont pas
+            // d'établissement, et ce sont les plus anciennes de la table.
+            ...(filters.sansEtablissement
+              ? { establishmentId: null }
+              : filters.establishmentId
+                ? { establishmentId: filters.establishmentId }
+                : {}),
+            ...platformCompteFilter(filters.compte),
+            ...(filters.action ? { action: filters.action } : {}),
+          },
+          orderBy: { createdAt: 'desc' },
+          take: PLATFORM_ACCESS_LOG_LIMIT,
+        })
+      })
+    } catch (err) {
+      throw this.errorHandler.boomErrorFromPrismaError({
+        entityName: 'ActivityLog',
+        error: err,
+      })
+    }
   }
 
   // Sous runAsSystem (purge planifiee) : toute la table. Sous un tenant : le

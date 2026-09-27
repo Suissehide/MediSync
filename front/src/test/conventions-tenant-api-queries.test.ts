@@ -68,6 +68,14 @@ const EXCEPTIONS: { fichier: string; raison: string; occurrences: number }[] = [
       "(comme PATIENT.GET_BY_ID le fait de patientID), sans lien avec le cloisonnement par tenant",
     occurrences: 3,
   },
+  {
+    fichier: 'api/superAdminAccessLog.api.ts',
+    raison:
+      "meme raisonnement que superAdmin.api.ts#getEstablishment : `establishmentId` est un FILTRE " +
+      "optionnel de GET /super-admin/access-log, une DONNEE de la requete (etablissement/compte/action, " +
+      "task-11-brief.md), jamais un tenant implicite -- ces ecrans vivent hors de tout layout de tenant",
+    occurrences: 2,
+  },
 ]
 
 // Vitest s'execute depuis `front/`, et l'environnement jsdom ne donne pas d'`import.meta.url` de

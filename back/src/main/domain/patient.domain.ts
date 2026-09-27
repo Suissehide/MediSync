@@ -22,6 +22,7 @@ import type {
   PatientEntityDomain,
   PatientExportFilters,
   PatientExportOptions,
+  PatientExportResult,
   PatientIdentitySearchResultDomain,
   PatientPathwayDomain,
   PatientUpdateEntityDomain,
@@ -227,7 +228,7 @@ class PatientDomain implements PatientDomainInterface {
   async exportExcel(
     filters: PatientExportFilters,
     { includeClinicalFields }: PatientExportOptions,
-  ): Promise<Buffer> {
+  ): Promise<PatientExportResult> {
     const patients = await this.patientRepository.findForExport(filters)
     const columns = EXPORT_COLUMNS.filter((c) => includeClinicalFields || !c.clinical)
 
@@ -240,7 +241,10 @@ class PatientDomain implements PatientDomainInterface {
 
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Patients')
-    return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer
+    // `count` (etape 4b, tache 4) : le nombre de dossiers REELLEMENT rendus, pour le journal des
+    // consultations -- voir `PatientExportResult` (types/domain/patient.domain.interface.ts).
+    return { buffer, count: patients.length }
   }
 
   async create(

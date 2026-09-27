@@ -3,6 +3,7 @@ import type { onRequestAsyncHookHandler } from 'fastify'
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 
 import { assertRoutePermission } from '../plugins/tenant.plugin'
+import { accessLogRouter } from './super-admin/access-log'
 import { establishmentsRouter } from './super-admin/establishments'
 import { grantsRouter } from './super-admin/grants'
 import { usersRouter } from './super-admin/users'
@@ -63,6 +64,7 @@ const superAdminRoutes: FastifyPluginAsyncZod = async (fastify) => {
   await fastify.register(establishmentsRouter, { prefix: '/establishments' })
   await fastify.register(usersRouter, { prefix: '/users' })
   await fastify.register(grantsRouter, { prefix: '/grants' })
+  await fastify.register(accessLogRouter, { prefix: '/access-log' })
 }
 
 export { superAdminRoutes }

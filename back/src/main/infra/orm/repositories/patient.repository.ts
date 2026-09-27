@@ -14,6 +14,9 @@ import type {
 } from '../../../types/infra/orm/repositories/patient.repository.interface'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { TenantContextInterface } from '../../../types/utils/tenant-context'
+// `escapeLikePattern` vivait en tete de ce fichier ; extrait a la revue finale de branche
+// (etape 4b) pour servir aussi le filtre « compte » de la lecture plateforme des deux journaux.
+import { escapeLikePattern } from '../../../utils/like-pattern'
 import type { PostgresPrismaClient } from '../postgres-client'
 
 type AppointmentPatientWithMainTag = {
@@ -26,16 +29,6 @@ type AppointmentPatientWithMainTag = {
 // voir `PatientRepository.searchByIdentity` pour la garde anti-doublon (`hasMore`) qui en
 // depend. Exporte pour que la source de verite reste unique (pas un `20` duplique ailleurs).
 export const IDENTITY_SEARCH_LIMIT = 20
-
-// Echappe les caracteres speciaux du motif `LIKE`/`ILIKE` (`%`, `_`) dans une valeur destinee a
-// `contains` (revue tache 13, tour 1, point 2) : sans cela, un nom cherche contenant l'un de ces
-// deux caracteres — ou meme la seule valeur `%` — est traite comme un joker par Postgres,
-// contournant la garde du `.refine` de `searchPatientIdentityQuerySchema` ("au moins un prenom
-// ou un nom"). L'antislash est echappe en premier : c'est le caractere d'echappement par defaut
-// de LIKE/ILIKE sur Postgres, donc un antislash saisi par l'utilisateur doit lui-meme devenir
-// litteral avant que `%`/`_` ne soient prefixes du meme caractere.
-const escapeLikePattern = (value: string): string =>
-  value.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_')
 
 // Tags principaux distincts des parcours auxquels un patient est inscrit.
 const distinctMainTags = (

@@ -19,6 +19,11 @@ export const SUPER_ADMIN = {
   REISSUE_ACCESS_LINK: 'reissue_super_admin_access_link',
   CREATE_GRANT: 'create_super_admin_grant',
   REVOKE_GRANT: 'revoke_super_admin_grant',
+  // Étape 4b, tâche 11 : les deux journaux à l'échelle de la plateforme (`GET
+  // /super-admin/access-log`) — une seule clé, la requête entière (filtres compris) figurant en
+  // second élément du tableau `queryKey` (voir `useSuperAdminAccessLogQuery`), comme
+  // `PATIENT_ACCESS_LOG.GET_BY_PATIENT` le fait déjà de `patientID`.
+  GET_ACCESS_LOG: 'get_super_admin_access_log',
 }
 
 export const TODO = {
@@ -183,6 +188,14 @@ export const DIAGNOSTIC_EDUCATIF_TEMPLATE = {
 export const ACTIVITY_LOG = {
   GET_ALL: 'get_all_activity_logs',
   CLEANUP: 'cleanup_activity_logs',
+}
+
+// Journal des consultations d'un dossier patient (étape 4b, tâche 10). Clé sans le tenant, comme
+// le reste de ce fichier (`front/CLAUDE.md` § « Query keys deliberately do not carry the
+// tenant ») ; elle porte `patientID`, exactement comme `PATIENT_SERVICE_FILE.GET_BY_PATIENT` porte
+// l'identifiant de la ressource demandée, pas celui d'un tenant.
+export const PATIENT_ACCESS_LOG = {
+  GET_BY_PATIENT: 'get_patient_access_log',
 }
 
 export const FORBIDDEN_WEEK = {

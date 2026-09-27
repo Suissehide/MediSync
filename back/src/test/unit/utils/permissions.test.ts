@@ -53,6 +53,32 @@ describe('permissions', () => {
     expect(hasPermission({ serviceRole: 'COORDINATEUR', establishmentRole: 'MEMBER' }, 'activity-log:read')).toBe(false)
   })
 
+  // Etape 4b, tache 5 : deux permissions distinctes portent le journal des consultations,
+  // `consultations:read` (service, COORDINATEUR) et `access-log:read` (etablissement, ADMIN) —
+  // noms volontairement NON HOMOGRAPHES (tour de correction 1 : le premier jet, `accessLog:read`,
+  // ne se distinguait de `access-log:read` que par la casse et un trait d'union — un piege de
+  // lecture permanent dans une matrice dupliquee entre deux depots), voir le commentaire
+  // au-dessus de `consultations:read` (utils/permissions.ts). Ce test tient la propriete qui
+  // justifie la distinction ELLE-MEME (independamment du nom choisi) : un administrateur
+  // d'etablissement sans service courant (le cas reel de la route d'administration,
+  // `serviceId: null`) doit obtenir `access-log:read`, jamais `consultations:read` — et
+  // reciproquement, un coordinateur de service ne doit jamais obtenir `access-log:read` par sa
+  // seule appartenance de service.
+  it('distingue consultations:read (service) de access-log:read (etablissement)', () => {
+    expect(
+      hasPermission({ serviceRole: null, establishmentRole: 'ADMIN' }, 'access-log:read'),
+    ).toBe(true)
+    expect(
+      hasPermission({ serviceRole: null, establishmentRole: 'ADMIN' }, 'consultations:read'),
+    ).toBe(false)
+    expect(
+      hasPermission({ serviceRole: 'COORDINATEUR', establishmentRole: 'MEMBER' }, 'consultations:read'),
+    ).toBe(true)
+    expect(
+      hasPermission({ serviceRole: 'COORDINATEUR', establishmentRole: 'MEMBER' }, 'access-log:read'),
+    ).toBe(false)
+  })
+
   // `establishments:manage` (etape 4a, tache 6) n'est accordee par AUCUN role d'etablissement ni
   // de service (habilitations.md : seule la colonne Super-admin est cochee) : c'est
   // `requireSuperAdmin` (drapeau `isSuperAdmin`), pas cette matrice, qui protege

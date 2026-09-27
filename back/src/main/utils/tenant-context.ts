@@ -45,9 +45,11 @@ class TenantContext implements TenantContextInterface {
   // Tenant n'est un objet »), pour que l'ajout d'une colonne imbriquée fasse rougir plutôt que de
   // rouvrir la porte en silence.
   //
-  // Vérifié dans l'autre sens, celui qui casse : aucun appelant ne mute un tenant. Les deux
+  // Vérifié dans l'autre sens, celui qui casse : aucun appelant ne mute un tenant. Les
   // emplois de `peek()` hors de ce fichier ne font que LIRE ses colonnes
-  // (`activityLog.repository.ts`), `resolveTenantFromUser` (`tenant.plugin.ts`) construit un objet
+  // (`activityLog.repository.ts`, `tenant-guard.ts`, `tenant.plugin.ts` — le compte figurait ici
+  // en toutes lettres et dérivait en silence à chaque nouvel emploi, il a donc été retiré),
+  // `resolveTenantFromUser` (`tenant.plugin.ts`) construit un objet
   // NEUF à chaque requête, et `currentService()` plus bas en rend une copie étalée plutôt que de
   // l'amender. Le gel se propage volontairement à `request.tenant`, qui est le MÊME objet que
   // celui posé ici (`tenant.plugin.ts` : `request.tenant = tenant` puis `tenantContext.enter(tenant)`)
@@ -101,11 +103,47 @@ class TenantContext implements TenantContextInterface {
 
   // Troisieme contexte du garde-fou (tache 1, etape 4a) : substitue au filtre de tenant une
   // liste declaree et exhaustive de couples (modele, operation) permis — voir
-  // SUPERADMIN_OPERATIONS, infra/orm/tenant-guard.ts. Piege deja rencontre a l'etape 3, valable
-  // ici a l'identique : une requete Prisma est paresseuse. `runAsSuperAdmin(() =>
-  // prisma.x.count(...))` renvoie la promesse SANS l'attendre, l'execution part alors hors de la
-  // portee du contexte, et l'extension lit le tenant ambiant. Toujours `await` A L'INTERIEUR du
-  // rappel.
+  // SUPERADMIN_OPERATIONS, infra/orm/tenant-guard.ts.
+  //
+  // LE PIEGE REEL, MESURE (etape 4b, tache 6 ; enonce corrige une TROISIEME et derniere fois a
+  // la revue finale de branche — ce fichier fait autorite, et il portait encore l'avant-dernier
+  // enonce, que `back/CLAUDE.md` et l'annexe des decisions nomment desormais comme un SYMPTOME).
+  //
+  // L'ENONCE EXACT, ET C'EST LE SEUL A RECOPIER AILLEURS :
+  //
+  //     LA LECTURE DU CONTEXTE DOIT SURVENIR AVANT LE PREMIER POINT DE SUSPENSION.
+  //
+  // `this.storage.run` ci-dessous ne tient la portee que jusqu'a ce que le rappel rende la main.
+  // Une requete Prisma est PARESSEUSE : `prisma.x.findMany(...)` ne lit rien au moment ou on
+  // l'ecrit, la lecture du contexte par le garde-fou survient quand la promesse est reellement
+  // executee. Un rappel SYNCHRONE NU qui se contente de RENDRE cette promesse —
+  // `runAsSuperAdmin(() => prisma.x.findMany(...))` — a donc deja quitte la portee quand la
+  // lecture arrive : le garde-fou lit le contexte ambiant. Mesure par sabotage e2e sur un
+  // appelant reel (`PatientAccessLogRepository.findAllPlatformWide`, task-6-report.md) : 5 tests
+  // sur 244 echouent, tous en `TenantScopeMissingError` (500).
+  //
+  // POURQUOI CE N'EST PAS « L'ENROBAGE `async` QUI TIENT LA PROPRIETE » — l'enonce precedent,
+  // plus juste que le premier (« toujours `await` a l'interieur ») mais toujours faux, et faux
+  // DANS LE SENS QUI FAIT MAL. Il decrivait le symptome : une fonction `async` qui rend une
+  // valeur "thenable" la fait passer par une resolution de promesse que Node rattache a la
+  // portee active, ce qui revient a ne pas suspendre avant d'avoir lu. Mais generalise, il
+  // trompe deux fois :
+  //   - il declare DEFECTUEUX un appelant de production qui va tres bien. `deleteOlderThan`
+  //     (activityLog.repository.ts ET patientAccessLog.repository.ts) est appele par un rappel
+  //     SYNCHRONE NU (`runAsSystem(() => activityLogDomain.cleanup())`, application/starter.ts),
+  //     et la propriete tient — parce que ce chemin lit `tenantContext.peek()` SYNCHRONIQUEMENT
+  //     en tete de son corps, avant tout `await` ;
+  //   - surtout, il rassure a tort : un rappel `async` ne protege de RIEN s'il lit le contexte
+  //     APRES une attente. Qui croit l'enrobage suffisant placera la lecture apres un `await`,
+  //     et perdra le contexte avec un rappel de la forme officiellement « correcte ».
+  //
+  // CE QUI RESTE VRAI, ET POURQUOI ECRIRE `await` A L'INTERIEUR DEMEURE LA CONVENTION DE CE
+  // DEPOT — mais pour une raison DIFFERENTE de celle qu'on croyait : la regle Biome
+  // `suspicious/useAwait` (voir CLAUDE.md, section Code style) REFUSE un rappel `async` sans
+  // aucun `await` — verifie, `npm run lint` echoue exactement sur cette forme — et un rappel qui
+  // ne suspend jamais se lit mal a cote de ses voisins qui, eux, suspendent reellement. La
+  // pratique etait bonne, le motif etait faux. Vaut a l'identique pour `run`/`runAsSystem`
+  // ci-dessus : meme primitive (`this.storage.run`), meme mecanisme.
   runAsSuperAdmin<T>(fn: () => Promise<T>): Promise<T> {
     return this.storage.run(Object.freeze({ kind: 'superadmin' }), fn)
   }

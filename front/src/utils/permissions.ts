@@ -19,6 +19,33 @@ export type ServicePermission =
   | 'pdf:export'
   | 'todo:own'
   | 'members:read'
+  // Etape 4b, tache 5 : lire le journal des consultations (`PatientAccessLog`), a l'echelle du
+  // SEUL service courant. `access-log:read` (EstablishmentPermission ci-dessous, deja present
+  // pour ADMIN depuis la toute premiere version de ce fichier, bd26a72) ne convient pas pour
+  // cette route DE SERVICE : `hasPermission` (plus bas) choisit sa branche — service ou
+  // etablissement — sur la seule APPARTENANCE de la chaine a l'un des deux ensembles, avant
+  // meme de regarder les roles de l'appelant. Une chaine presente dans les DEUX ensembles
+  // prendrait toujours la branche service, y compris pour un appelant d'administration
+  // d'etablissement dont `serviceRole` est `null` — la route d'administration echouerait donc
+  // TOUJOURS, quel que soit son `establishmentRole`. Verifie par execution en ecrivant d'abord
+  // ce test faux.
+  //
+  // TOUR DE CORRECTION 1 (revue) — `accessLog:read` (premier jet) etait un homographe presque
+  // parfait d'`access-log:read`, dans une matrice DUPLIQUEE entre deux depots (back et front) :
+  // un piege de lecture permanent, pas seulement pour cette tache. Le court-circuit ci-dessus
+  // explique pourquoi deux permissions DISTINCTES sont necessaires ; il n'explique pas pourquoi
+  // choisir un nom qui ne se distingue de l'autre que par la casse et un trait d'union. Renomme
+  // en `consultations:read` : aucune parente visuelle avec `access-log:read`, et un mot qui n'est
+  // pas deja pris par une autre permission de ce fichier.
+  //
+  // CE QUE CE COMMENTAIRE NE DIT PAS ET NE DOIT PAS DIRE : que deux permissions seraient
+  // « impossibles » a unifier. Une semantique « ou » (accordee des que l'UNE des deux branches
+  // accorde) aurait rendu une seule permission viable en huit lignes — essaye et REJETE, parce
+  // qu'elle brouillerait alors deux echelles d'habilitation distinctes : un ADMIN d'etablissement
+  // membre d'un service en LECTURE obtiendrait `consultations:read` sur la route DE SERVICE par
+  // sa seule appartenance de service, une confusion durable que cette tache ne doit pas
+  // introduire dans une fonction dont depend chaque route du depot.
+  | 'consultations:read'
 
 export type EstablishmentPermission =
   | 'services:manage'
@@ -56,6 +83,7 @@ export const SERVICE_PERMISSIONS: Record<ServiceRole, readonly ServicePermission
     'clinical:write',
     'appointment:write',
     'pdf:export',
+    'consultations:read',
   ],
   INTERVENANT: [
     ...READ_ALL,

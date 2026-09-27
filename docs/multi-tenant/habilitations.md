@@ -66,6 +66,7 @@ associe les permissions aux rôles. C'est cette matrice qui fait foi.
 | `pdf:export` | Export PDF du programme remis au patient | ✔ | ✔ | ✔ | |
 | `todo:own` | Ses propres tâches | ✔ | ✔ | ✔ | ✔ |
 | `members:read` | Voir les membres du service et leur rôle | ✔ | ✔ | ✔ | ✔ |
+| `consultations:read` | Lire le journal des consultations (`PatientAccessLog`) du service courant : qui a ouvert quel dossier, quand — jamais un contenu clinique | ✔ | | | |
 
 Règles associées :
 
@@ -88,18 +89,46 @@ Règles associées :
 - La suppression d'un dossier patient (`patient:delete`) est réservée au
   coordinateur : ni le secrétariat ni l'intervenant ne peuvent supprimer un
   dossier, même s'ils peuvent le modifier.
+- **`consultations:read` et `access-log:read` sont deux permissions distinctes,
+  et ce n'est pas un doublon.** La première ouvre la lecture du journal des
+  consultations **du service courant** (coordinateur) ; la seconde, celle de
+  **tous les services de l'établissement** (administrateur d'établissement).
+  Les unifier est impossible en l'état : `hasPermission` choisit sa branche —
+  service ou établissement — sur la seule appartenance de la chaîne à l'un des
+  deux ensembles, **avant** de regarder les rôles, donc une chaîne présente dans
+  les deux prendrait toujours la branche service et la route d'administration
+  échouerait toujours. Une sémantique « ou » les unifierait, mais accorderait la
+  permission de **service** à un administrateur membre d'un service en simple
+  lecture : écarté. La permission de service s'est d'abord appelée
+  `accessLog:read` et a été **renommée** — deux noms à un trait d'union et une
+  casse près, dans une matrice dupliquée entre deux dépôts, est un piège de
+  lecture permanent.
 - La purge du journal d'activité relève d'un droit d'écriture
   (`activity-log:write`) distinct de sa lecture : supprimer des entrées
   d'audit ne peut pas passer pour une consultation.
 - La mise à jour d'un patient dans un créneau (`AppointmentPatient`) sépare
   les champs de présence (`appointment:write`) des transmissions
   (`clinical:write`).
-- **À venir (étape 4b)** : toute lecture d'une fiche patient, d'un diagnostic
-  éducatif et tout export PDF écriront une ligne dans le journal des accès
-  (`PatientAccessLog`) avec l'utilisateur, l'établissement, le service et le
-  patient. Ce modèle n'existe pas encore : à ce jour, **aucune traçabilité
-  des lectures n'est en place**. Seules les écritures sont journalisées, dans
-  le journal d'activité (voir la puce ci-dessous sur la gestion des membres).
+- **La traçabilité des lectures existe depuis l'étape 4b** (cette puce annonçait
+  auparavant un modèle « qui n'existe pas encore » ; elle est réécrite ici, et
+  **son périmètre annoncé était inexact**). Écrivent une ligne dans
+  `PatientAccessLog`, avec l'utilisateur, l'établissement, le service, le
+  patient et l'origine de l'accès : l'ouverture d'une fiche patient
+  (`dossier.ouvert`), l'ouverture du sous-dossier de service et d'un diagnostic
+  éducatif (`sousDossier.ouvert`), la consultation des problèmes d'inscription
+  (`echecsInscription.consultes`), et **l'export Excel de la liste des
+  patients**, tracé en **une seule ligne** avec son nombre de dossiers et ses
+  critères (`export`). L'export **PDF** du programme (`pdf:export`) n'est **pas**
+  tracé : la puce d'origine l'annonçait, ce n'est pas ce qui a été construit — et
+  il ne pouvait pas l'être par ce mécanisme, `pdf:export` ne gardant **aucune
+  route du back** (le document est fabriqué dans le navigateur). Ce qui est
+  tracé, c'est la lecture du dossier qui l'alimente.
+  Ne sont pas tracées non plus, délibérément, la liste des patients et la
+  recherche — une ligne par affichage d'écran noierait les ouvertures de
+  dossier. Une route GET dont l'URL désigne un dossier est journalisée **par
+  défaut** : sinon elle doit être déclarée exemptée avec sa raison, ou le
+  serveur refuse de démarrer. Détail, limites et coûts :
+  `docs/multi-tenant/decisions-etape-4b.md`.
 - Un compte se désactive (`User.deactivatedAt`), il ne se supprime pas, pour
   conserver l'imputabilité des actions passées dans les journaux.
 - `User.deactivatedAt` porte sur l'**identité globale**, partagée entre tous
@@ -130,7 +159,7 @@ Règles associées :
 | `members:manage` (rattacher un compte, affecter aux services, changer les rôles, désactiver) | ✔ | |
 | `activity-log:read` (journal d'activité de l'établissement) | ✔ | |
 | `activity-log:write` (purge des entrées du journal d'activité) | ✔ | |
-| `access-log:read` (journal des accès aux dossiers patients) | ✔ | |
+| `access-log:read` (journal des accès aux dossiers patients, **tous services** de l'établissement — depuis l'étape 4b ; **aucun écran ne l'appelle encore**, voir `deploiement-etape-4b.md` §10) | ✔ | |
 | `establishments:manage` (créer un établissement, nommer son premier administrateur, rechercher un compte, réémettre un lien, s'accorder un octroi) | | ✔ |
 
 Le super-admin n'a, **en propre**, aucune permission de service ni

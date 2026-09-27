@@ -6,10 +6,12 @@ import {
 } from 'fastify-type-provider-zod'
 
 import { AccessLinkDomain } from '../../../main/domain/accessLink.domain'
+import { UserDomain } from '../../../main/domain/user.domain'
 import { buildErrorHandler } from '../../../main/interfaces/http/fastify/errors/error.handler'
 import { boomErrorNormalizer } from '../../../main/interfaces/http/fastify/errors/normalizers/boom.error.normalizer'
 import { fastifyErrorNormalizer } from '../../../main/interfaces/http/fastify/errors/normalizers/fastify.error.normalizer'
 import { accessLinkRouter } from '../../../main/interfaces/http/fastify/routes/auth/access-link.router'
+import { usersRouter } from '../../../main/interfaces/http/fastify/routes/super-admin/users'
 import { notFoundHandler } from '../../../main/interfaces/http/fastify/util/not-found.handler'
 import {
   incomingRequestLog,
@@ -17,6 +19,7 @@ import {
 } from '../../../main/interfaces/http/fastify/util/request-log'
 import { AccessLinkRepository } from '../../../main/infra/orm/repositories/accessLink.repository'
 import type { IocContainer } from '../../../main/types/application/ioc'
+import { AppEventBus } from '../../../main/utils/app-event-bus'
 import { ErrorHandler } from '../../../main/utils/error-handler'
 import { sha256Hex } from '../../../main/utils/hash'
 
@@ -467,5 +470,145 @@ describe("le lien d'acces (POST /auth/access-link/consume) ne fait jamais fuir l
     const urlWithToken = `/une/route/qui/n/existe/pas/${TOKEN}`
     expect(incomingRequestLog(1, 'POST', urlWithToken)).toContain(TOKEN)
     expect(requestCompletedLog(1, 'POST', urlWithToken, 200, 3)).toContain(TOKEN)
+  })
+})
+
+// Tour de correction 1 (revue, tâche 7, étape 4b) : le filet ci-dessus n'exerçait QUE la
+// CONSOMMATION d'un lien (`POST /auth/access-link/consume`). La route qui ÉMET un jeton —
+// `UserDomain.reissueAccessLink`, sous `/super-admin` — n'était couverte par AUCUN test de ce
+// type ; seule une assertion ad hoc sur la ligne en base (`super-admin-access-link.test.ts`,
+// tâche 7) en disait quelque chose, et elle ne dit rien du journal applicatif, des en-têtes de
+// réponse, ni de la sortie standard — exactement ce que ce fichier surveille pour la route
+// jumelle. Même harnais (VRAI `AccessLinkDomain`, VRAI `AccessLinkRepository`, faux Prisma en
+// mémoire, VRAI `UserDomain`, VRAIS formateurs de journal, mêmes six niveaux de journal
+// capturés), appliqué à cette route-ci.
+//
+// DIFFÉRENCE DÉLIBÉRÉE avec `expectNoLeak` ci-dessus : cette route REND le jeton dans le CORPS de
+// la réponse, par construction — c'est le seul canal légitime (`accessLink.domain.ts#issue`,
+// « le jeton en clair n'est rendu QU'ICI »). L'assertion porte donc sur les TROIS AUTRES canaux
+// (journal, en-têtes, sortie standard), jamais sur le corps : un `expectNoLeak` inchangé
+// rougirait ici sur le comportement voulu, pas sur une fuite.
+//
+// CE QUE CE HARNAIS NE COUVRE PAS : l'AUTORISATION de la route (`requireSuperAdmin`,
+// `assertRoutePermission`) — ni `verifySessionCookie` ni `requireSuperAdmin` ne sont montés ici,
+// `request.currentUser` est posé directement par un crochet local. Ce n'est pas un oubli : ce
+// fichier n'a jamais exercé l'authentification d'aucune route (voir `buildApp` ci-dessus pour la
+// consommation, elle aussi non authentifiée par nature) — il surveille ce qu'une route laisse
+// fuiter UNE FOIS ATTEINTE, pas qui peut l'atteindre (couvert ailleurs :
+// `src/test/e2e/super-admin-access-link.test.ts`, `global-auth-hook.test.ts`).
+describe("le lien d'acces (POST /super-admin/users/:userId/access-link) ne fait fuir le jeton nulle part hors du corps", () => {
+  const SUPER_ADMIN_ID = 'ckabcdefghij1234567890123'
+  const TARGET_USER_ID = 'ckzyxwvutsrq9876543210987'
+
+  // Assez large pour que le VRAI `AccessLinkRepository` fonctionne contre lui (même esprit que
+  // `buildFakePrisma` ci-dessus) : `invalidateActiveForUser` (aucun lien actif à invalider ici)
+  // puis `create`, les deux seuls appels de `AccessLinkDomain.issue`.
+  const buildFakeAccessLinkPrisma = () => ({
+    accessLink: {
+      updateMany: () => Promise.resolve({ count: 0 }),
+      create: () => Promise.resolve(),
+    },
+  })
+
+  const buildReissueApp = (): {
+    app: FastifyInstance
+    allCalls: string[]
+  } => {
+    const { loggerInstance, allCalls } = buildCapturingLogger()
+
+    const errorHandler = new ErrorHandler({
+      logger: loggerInstance,
+    } as unknown as IocContainer)
+    const accessLinkRepository = new AccessLinkRepository({
+      postgresOrm: { prisma: buildFakeAccessLinkPrisma() },
+      errorHandler,
+    } as unknown as IocContainer)
+    // Compte cible : jamais désactivé, c'est tout ce que `reissueAccessLink` lui demande.
+    const userRepository = {
+      findByID: (userID: string) => Promise.resolve({ id: userID, deactivatedAt: null }),
+    }
+    const accessLinkDomain = new AccessLinkDomain({
+      accessLinkRepository,
+      userRepository,
+    } as unknown as IocContainer)
+    // Le bus RÉEL, sans souscripteur enregistré : `emit` reste un appel réel (pas un bouchon
+    // muet), mais n'a ici aucun effet observable — la ligne de journal elle-même est déjà
+    // éprouvée SANS jeton par `super-admin-access-link.test.ts` (assertion directe sur la ligne
+    // en base), ce test-ci porte sur les canaux que celui-là ne regarde pas.
+    const appEventBus = new AppEventBus()
+    const userDomain = new UserDomain({
+      userRepository,
+      establishmentRepository: {},
+      accessLinkDomain,
+      activityLogRepository: {},
+      tenantContext: {},
+      postgresOrm: {},
+      appEventBus,
+    } as unknown as IocContainer)
+
+    const app = Fastify({ loggerInstance, disableRequestLogging: true })
+    app.setValidatorCompiler(validatorCompiler)
+    app.setSerializerCompiler(serializerCompiler)
+    app.withTypeProvider<ZodTypeProvider>()
+    app.iocContainer = { userDomain } as unknown as IocContainer
+    app.setNotFoundHandler(notFoundHandler)
+    app.setErrorHandler(
+      buildErrorHandler(fastifyErrorNormalizer, boomErrorNormalizer),
+    )
+
+    app.addHook('onRequest', (request) => {
+      app.log.debug(incomingRequestLog(request.id, request.method, request.url))
+      return Promise.resolve()
+    })
+    app.addHook('onResponse', (request, reply) => {
+      app.log.info(
+        requestCompletedLog(request.id, request.method, request.url, reply.statusCode, 0),
+      )
+      return Promise.resolve()
+    })
+    // Remplace `verifySessionCookie` + `requireSuperAdmin`, absents de ce harnais (voir le
+    // commentaire de tête) : pose directement l'acteur que la route lit.
+    app.addHook('onRequest', (request) => {
+      request.currentUser = { id: SUPER_ADMIN_ID, isSuperAdmin: true } as never
+      return Promise.resolve()
+    })
+
+    return { app, allCalls }
+  }
+
+  it('le jeton apparait dans le corps de la reponse (attendu), jamais dans un journal, un en-tete ou la sortie standard', async () => {
+    const { app, allCalls } = buildReissueApp()
+    await app.register(usersRouter, { prefix: '/users' })
+    await app.ready()
+
+    let res: Awaited<ReturnType<typeof app.inject>> | undefined
+    const stdWrites = await withCapturedStdWrites(async () => {
+      res = await app.inject({
+        method: 'POST',
+        url: `/users/${TARGET_USER_ID}/access-link`,
+      })
+    })
+    if (!res) {
+      throw new Error('no response captured')
+    }
+
+    expect(res.statusCode).toBe(201)
+    const { token } = res.json().accessLink as { token: string }
+    expect(token.length).toBeGreaterThan(0)
+
+    // LA différence avec `expectNoLeak` : le corps CONTIENT légitimement le jeton — c'est le
+    // seul canal par lequel cette route peut le remettre à l'appelant.
+    expect(res.payload).toContain(token)
+
+    // Les trois AUTRES canaux ne doivent, eux, jamais le porter.
+    for (const line of allCalls) {
+      expect(line).not.toContain(token)
+    }
+    expect(JSON.stringify(res.headers)).not.toContain(token)
+    for (const chunk of stdWrites) {
+      expect(chunk).not.toContain(token)
+    }
+
+    await app.close()
   })
 })

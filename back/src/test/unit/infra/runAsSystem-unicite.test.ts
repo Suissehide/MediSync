@@ -28,13 +28,31 @@ import ts from 'typescript'
 // anterieure de ce commentaire disait « deux fois seulement » avant que la tache 9 n'ajoute un
 // troisieme emploi legitime dans le meme fichier que le second — la prose mentait alors que les
 // assertions, elles, restaient justes ; corrige une premiere fois en pretendant a tort que la
-// CAPACITE et les BORNES etaient toutes deux couvertes ici, corrige a nouveau ci-dessus. Cinq
-// emplois declares a ce jour, tous dans le back de production (un quatrieme ajoute a la tache 11,
-// etape 4a, un cinquieme a la tache 15) :
+// CAPACITE et les BORNES etaient toutes deux couvertes ici, corrige a nouveau ci-dessus.
 //
-//   1. La purge planifiee du journal d'activite (`application/starter.ts`,
-//      `scheduleActivityLogCleanup`) : hors de toute requete HTTP, il n'existe alors aucun
-//      tenant a poser, et la purge doit toucher TOUTE la table, pas un seul etablissement.
+// LE COMPTE, DIT UNE SEULE FOIS ET DANS UNE SEULE UNITE (revue finale de branche : la prose
+// melait deux unites, « emplois declares » et « appels », et la liste numerotee ci-dessous ne
+// correspondait NI a l'une NI a l'autre — elle enumerait SEPT sites en six numeros, en scindant
+// `patientServiceFile.repository.ts` en deux entrees et en omettant purement et simplement le
+// site de la tache 7) :
+//   - SIX emplois DECLARES, c'est-a-dire six entrees d'`AUTORISES` ci-dessous, une par FICHIER,
+//     chacune avec sa raison ;
+//   - HUIT APPELS au total, `application/starter.ts` et `patientServiceFile.repository.ts` en
+//     portant deux chacun.
+//
+// La liste ci-dessous enumere les SITES D'APPEL, groupes par question posee — c'est l'unite qui
+// se relit, pas celle qui se compte. Elle en porte SEPT, parce que les deux appels de
+// `application/starter.ts` repondent a la meme question (purger un journal) alors que les deux
+// de `patientServiceFile.repository.ts` en posent deux distinctes. Le SEPTIEME, ajoute a la
+// revue finale de branche, est le site de la tache 7 (etape 4b) : il etait declare dans
+// `AUTORISES` depuis son commit, mais n'avait jamais rejoint cette liste-ci.
+//
+//   1. La purge planifiee des DEUX journaux (`application/starter.ts`,
+//      `scheduleActivityLogCleanup` ET, depuis la tache 8, `schedulePatientAccessLogCleanup`) :
+//      hors de toute requete HTTP, il n'existe alors aucun tenant a poser, et chaque purge doit
+//      toucher TOUTE sa table, pas un seul etablissement. Retention parametrable
+//      (`config.logRetentionMonths`) pour les deux, calculee independamment dans chaque domaine
+//      (`ActivityLogDomain.cleanup`, `PatientAccessLogDomain.cleanup`) plutot que factorisee.
 //   2. Le signal de suivi ailleurs (`infra/orm/repositories/patientServiceFile.repository.ts`,
 //      `estSuiviAilleurs`, design §5.3) : une lecture qui traverse volontairement la frontiere
 //      entre services, pour rendre un booleen et rien d'autre. Ses bornes (etablissement et
@@ -66,6 +84,32 @@ import ts from 'typescript'
 //      traverse, il ne l'elargit pas. Ses bornes (compte vise, etablissement courant EXCLU,
 //      capture AVANT d'entrer dans le mode encadre) sont verifiees par `repository-scope.test.ts`,
 //      pas par ce fichier-ci.
+//   6. La lecture du journal des consultations, a l'echelle de l'etablissement
+//      (`infra/orm/repositories/patientAccessLog.repository.ts`, `findByPatientInEstablishment`,
+//      tache 5, etape 4b) : appelee depuis l'administration d'etablissement (aucun service
+//      courant a ce niveau), pour rendre TOUTES les lignes du journal d'un patient, tous
+//      services confondus — jamais de contenu clinique (voir le schema de reponse HTTP). Meme
+//      forme que 2 et 3 : la borne (`establishmentId`, capturee AVANT d'entrer dans le mode
+//      encadre) est verifiee par `repository-scope.test.ts`. `PatientAccessLog` reste dans
+//      `SERVICE_MODELS` (tenant-guard.ts) : le reclasser en `ESTABLISHMENT_MODELS` pour eviter
+//      ce sixieme emploi a ete essaye et rejete par la preuve de monotonie
+//      (`tenant-guard-monotonie.test.ts`, profondeur 4), qui a montre **855 refus perdus** (110
+//      chemins d'inclusion imbriquee distincts), repartis sur QUATRE contextes — 111 sans
+//      contexte, 119 sous superadmin, mais surtout 325 sous tenant ORDINAIRE et 300 sous
+//      administration d'etablissement, la majorite du total.
+//   7. La ligne de journal de la reemission de lien par le super-admin
+//      (`services/activity-log.subscriber.ts`, souscription a `user.accessLinkReissued`, tache 7,
+//      etape 4b — SITE AJOUTE A CETTE LISTE A LA REVUE FINALE DE BRANCHE : il etait declare dans
+//      `AUTORISES` des son commit, mais la prose ci-dessus ne l'avait jamais integre).
+//      `/super-admin` s'execute sans AUCUN contexte (pas seulement sans tenant) et `ActivityLog`
+//      est un modele d'ETABLISSEMENT : le garde-fou refusait categoriquement l'ecriture, et le
+//      `catch` de `#log` avalait le refus — rien n'echouait, rien ne manquait visiblement, seule
+//      la trace disparaissait. Meme motif que 1 et 4 : hors de toute requete de tenant, il n'y a
+//      pas d'etablissement a poser, seulement `establishmentId: null`. N'encadre QUE cette
+//      souscription, jamais les onze autres actions du fichier — les elargir toutes masquerait
+//      une VRAIE perte de contexte sur une route de tenant. Ce que ce fichier-ci garde est la
+//      DECLARATION du site ; que la ligne soit reellement ecrite est prouve par execution
+//      ailleurs (`src/test/e2e/activity-log-emissions-declarees.test.ts`).
 //
 // `runAsSuperAdmin` (meme fichier, tache 1 / etape 4a) y ajoute un troisieme mode, qui ne retire
 // rien mais substitue au filtre de tenant une liste declaree et exhaustive de couples (modele,
@@ -124,8 +168,12 @@ const APPEL_RUN_AS_SYSTEM = /\.runAsSystem\b/
 const AUTORISES = [
   {
     fichier: 'application/starter.ts',
-    raison: 'purge planifiee du journal d activite, hors de toute requete',
-    appels: 1,
+    raison:
+      'purge planifiee des DEUX journaux, hors de toute requete : le journal d activite ' +
+      '(scheduleActivityLogCleanup) et, depuis la tache 8 (etape 4b), le journal des ' +
+      'consultations (schedulePatientAccessLogCleanup) — retention parametrable ' +
+      '(config.logRetentionMonths) pour les deux',
+    appels: 2,
   },
   {
     fichier: 'infra/orm/repositories/patientServiceFile.repository.ts',
@@ -154,6 +202,36 @@ const AUTORISES = [
       'repart du modele GLOBAL User par une relation a-plusieurs, que le garde-fou refuse ' +
       'desormais sous contexte de tenant (assertNoGlobalToManyBridge). Ce qui traverse la ' +
       'frontiere passe de l arbre entier a un bit. Bornes verifiees par repository-scope.test.ts',
+    appels: 1,
+  },
+  {
+    fichier: 'infra/orm/repositories/patientAccessLog.repository.ts',
+    raison:
+      'findByPatientInEstablishment (tache 5, etape 4b) — la route d administration ' +
+      'd etablissement du journal des consultations, sans service courant. PatientAccessLog ' +
+      'reste dans SERVICE_MODELS (tenant-guard.ts), dont le garde-fou exige serviceId pour ' +
+      'toute operation ; reclasser le modele en ESTABLISHMENT_MODELS pour eviter runAsSystem a ' +
+      'ete essaye et rejete par la preuve de monotonie (tenant-guard-monotonie.test.ts), qui a ' +
+      'montre 855 refus perdus (110 chemins distincts), sur quatre contextes dont le tenant ' +
+      'ORDINAIRE (325) et l administration d etablissement (300), pas seulement superadmin (119) ' +
+      'et l absence de contexte (111). Rend les acces de TOUS les services de l etablissement, ' +
+      'jamais de contenu clinique. Bornes verifiees par repository-scope.test.ts',
+    appels: 1,
+  },
+  {
+    fichier: 'services/activity-log.subscriber.ts',
+    raison:
+      'la reemission de lien par le super-admin (tache 7, etape 4b, evenement ' +
+      '`user.accessLinkReissued`) : `/super-admin` s execute sans AUCUN contexte (pas seulement ' +
+      'sans tenant), et `ActivityLog` est un modele d ETABLISSEMENT (tenant-guard.ts, ' +
+      'ESTABLISHMENT_MODELS) — le garde-fou refuse categoriquement une ecriture dessus en ' +
+      'l absence de store, avant meme de regarder son contenu (mesure par execution : sans ce ' +
+      'contournement, la ligne de journal n est jamais posee, l ecriture refusee etant avalee ' +
+      'par le `catch` de `#log`). Meme motif que `bootstrapSuperAdmin` (domain/user.domain.ts, ' +
+      'ci-dessus) et la purge planifiee (application/starter.ts) : hors de toute requete de ' +
+      'tenant, il n y a pas d etablissement a poser, seulement `establishmentId: null`. N encadre ' +
+      'QUE cette souscription, pas les onze autres actions de ce fichier : les elargir toutes ' +
+      'masquerait silencieusement une VRAIE perte de contexte sur une route de tenant.',
     appels: 1,
   },
 ]

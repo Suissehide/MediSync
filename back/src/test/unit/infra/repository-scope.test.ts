@@ -8,6 +8,7 @@ import { MembershipRepository } from '../../../main/infra/orm/repositories/membe
 import { PathwayRepository } from '../../../main/infra/orm/repositories/pathway.repository'
 import { PathwayTemplateRepository } from '../../../main/infra/orm/repositories/pathwayTemplate.repository'
 import { PatientRepository } from '../../../main/infra/orm/repositories/patient.repository'
+import { PatientAccessLogRepository } from '../../../main/infra/orm/repositories/patientAccessLog.repository'
 import { PatientServiceFileRepository } from '../../../main/infra/orm/repositories/patientServiceFile.repository'
 import { PlanningCycleRepository } from '../../../main/infra/orm/repositories/planningCycle.repository'
 import { SlotRepository } from '../../../main/infra/orm/repositories/slot.repository'
@@ -19,7 +20,7 @@ import { assertTenantScope } from '../../../main/infra/orm/tenant-guard'
 import type { IocContainer } from '../../../main/types/application/ioc'
 import type { Tenant } from '../../../main/types/utils/tenant-context'
 import { TenantContext } from '../../../main/utils/tenant-context'
-import { TenantScopeMissingError } from '../../../main/utils/tenant-errors'
+import { TenantContextMissingError, TenantScopeMissingError } from '../../../main/utils/tenant-errors'
 
 type Call = { model: string; op: string; args: Record<string, unknown> }
 
@@ -71,6 +72,34 @@ export const buildFakePrisma = (responses: Partial<Record<string, unknown>> = {}
     },
   })
   return { prisma, calls }
+}
+
+// Mimique la paresse REELLE de Prisma (deja documentee partout dans ce depot, et desormais dans
+// le commentaire de `runAsSuperAdmin`, utils/tenant-context.ts) : `buildFakePrisma` ci-dessus
+// resout IMMEDIATEMENT (`Promise.resolve`), ce qui masque exactement la question posee par le
+// tour de correction 1 de la tache 6 -- ce faux depot-ci rend la reponse a « quel store
+// `tenantContext.peek()` un abonnement `.then()` REEL verrait-il », pas « quel store un simple
+// appel synchrone verrait-il » (les deux coincident pour `Promise.resolve`, ils divergent pour
+// une requete paresseuse). Necessaire pour eprouver `findAllPlatformWide`
+// (`ActivityLogRepository`, `PatientAccessLogRepository`) : voir leurs tests dans ce fichier, et
+// `tenant-context.test.ts` pour la preuve generale, independante de tout depot.
+const buildLazyFakePrisma = (tenantContext: TenantContext) => {
+  const calls: Call[] = []
+  const storesAuDispatch: unknown[] = []
+  const handler = (model: string) =>
+    new Proxy({}, {
+      get: (_t, op: string) => (args: Record<string, unknown>) => {
+        calls.push({ model, op, args })
+        return {
+          then: (resolve: (valeur: unknown) => void) => {
+            storesAuDispatch.push(tenantContext.peek())
+            resolve(op === 'findMany' ? [] : 0)
+          },
+        }
+      },
+    })
+  const prisma = new Proxy({}, { get: (_t, model: string) => handler(model) })
+  return { prisma, calls, storesAuDispatch }
 }
 
 export const tenant: Tenant = {
@@ -183,6 +212,103 @@ describe('scoping des repositories d etablissement', () => {
       args: { where: { createdAt: { lt: date } } },
     })
     expect(calls[1]?.args.where).not.toHaveProperty('establishmentId')
+  })
+
+  // Etape 4b, tache 6 (tour de correction 1) : entree manquante pour `findAllPlatformWide`,
+  // signalee par la revue. `ActivityLog.findMany` est deja declare dans `SUPERADMIN_OPERATIONS`
+  // (tache 1) ; cette methode-ci l'exerce SANS aucune borne de tenant dans le `where` — a la
+  // difference de `findMany` plus haut (tenant ordinaire, `establishmentId` + service obligatoires).
+  it('ActivityLogRepository.findAllPlatformWide envoie les filtres recus, aucun de force, sous runAsSuperAdmin', async () => {
+    const { prisma, calls } = buildFakePrisma()
+    const ctx = new TenantContext()
+    const repo = new ActivityLogRepository(buildContainer(prisma, ctx))
+
+    await repo.findAllPlatformWide({ establishmentId: 'e9', compte: 'u9', action: 'a9' })
+    expect(calls[0]).toMatchObject({
+      model: 'activityLog', op: 'findMany',
+      args: { where: { establishmentId: 'e9', action: 'a9' } },
+    })
+    // Le filtre « compte » est un `OR` : identifiant EXACT ou fragment de prenom/nom, insensible
+    // a la casse (revue finale de branche, Important n°1 — voir `utils/platform-access-log-
+    // filters.ts`). La forme exacte est verifiee ici, pas seulement sa presence : un `contains`
+    // qui perdrait `mode: 'insensitive'` rendrait la recherche par nom inutilisable en pratique,
+    // et un `userID: { contains }` a la place de l'egalite elargirait silencieusement ce que
+    // l'ancien filtre exact promettait.
+    expect(calls[0]?.args.where).toMatchObject({
+      OR: [
+        { userID: 'u9' },
+        { userFirstName: { contains: 'u9', mode: 'insensitive' } },
+        { userLastName: { contains: 'u9', mode: 'insensitive' } },
+      ],
+    })
+
+    // « Sans etablissement » : la seule facon d'atteindre les lignes du script d'amorcage une
+    // fois le journal au-dela de 200 entrees. Un booleen ici, jamais la valeur reservee du
+    // schema HTTP — la route la traduit une fois, avant d'appeler ce depot.
+    calls.length = 0
+    await repo.findAllPlatformWide({ sansEtablissement: true })
+    expect(calls[0]).toMatchObject({
+      model: 'activityLog', op: 'findMany', args: { where: { establishmentId: null } },
+    })
+
+    // Et si les deux arrivaient quand meme ensemble (le schema HTTP le rend impossible), c'est
+    // « sans etablissement » qui l'emporte — jamais les deux, jamais un silence.
+    calls.length = 0
+    await repo.findAllPlatformWide({ sansEtablissement: true, establishmentId: 'e9' })
+    expect(calls[0]?.args.where).toMatchObject({ establishmentId: null })
+
+    calls.length = 0
+
+    await repo.findAllPlatformWide({})
+    // Sans filtre, AUCUNE cle forcee dans le `where` — c'est precisement ce qui rend lisibles
+    // les lignes du script d'amorcage (`establishmentId: null`) : un `establishmentId` impose,
+    // meme `null`, les exclurait d'un `where: { establishmentId: null }` qui ne matcherait que
+    // les lignes EXPLICITEMENT nulles, pas « n'importe laquelle ».
+    expect(calls[0]).toMatchObject({ model: 'activityLog', op: 'findMany', args: { where: {} } })
+  })
+
+  // Meme demonstration que pour PatientAccessLogRepository plus bas : la forme exacte envoyee
+  // (aucune borne) est refusee par le garde-fou reel hors du contexte superadmin — y compris
+  // sous un tenant ordinaire, ou `ActivityLog` (ESTABLISHMENT_MODELS) exige `establishmentId` — et
+  // permise dedans, parce que `ActivityLog` y est declare (tache 1), pas parce que le garde-fou
+  // aurait ete contourne.
+  it('la forme sans borne de findAllPlatformWide est refusee hors du contexte superadmin, et permise dedans', () => {
+    const args = { where: {} }
+
+    expect(() =>
+      assertTenantScope({ model: 'ActivityLog', operation: 'findMany', args }, undefined),
+    ).toThrow(TenantScopeMissingError)
+
+    expect(() =>
+      assertTenantScope(
+        { model: 'ActivityLog', operation: 'findMany', args },
+        { kind: 'tenant', tenant },
+      ),
+    ).toThrow(TenantScopeMissingError)
+
+    expect(() =>
+      assertTenantScope(
+        { model: 'ActivityLog', operation: 'findMany', args },
+        { kind: 'superadmin' },
+      ),
+    ).not.toThrow()
+  })
+
+  // LA PROPRIETE QUI A COUTE UN TOUR DE CORRECTION (tache 6) : ce que `Promise.resolve()`
+  // (buildFakePrisma) ne peut pas montrer, parce qu'il resout deja au moment de l'appel.
+  // `buildLazyFakePrisma` differe la lecture du store jusqu'au `.then()` REEL, exactement comme
+  // le fait Prisma — et prouve que le rappel de `findAllPlatformWide`, tel qu'ecrit en
+  // production (un `async` SANS mutation du mecanisme), conserve bien `superadmin` jusque-la.
+  // Voir `tenant-context.test.ts` (« c est l enrobage async... ») pour la preuve generale,
+  // independante de tout depot : un rappel SYNCHRONE NU, lui, perdrait ce contexte ici.
+  it('findAllPlatformWide conserve le contexte superadmin jusqu au dispatch reel de Prisma (requete paresseuse)', async () => {
+    const ctx = new TenantContext()
+    const { prisma, storesAuDispatch } = buildLazyFakePrisma(ctx)
+    const repo = new ActivityLogRepository(buildContainer(prisma, ctx))
+
+    await repo.findAllPlatformWide({})
+
+    expect(storesAuDispatch).toEqual([{ kind: 'superadmin' }])
   })
 })
 
@@ -1299,5 +1425,228 @@ describe('PatientServiceFileRepository.impactDesactivation', () => {
         { kind: 'system' },
       ),
     ).not.toThrow()
+  })
+})
+
+// TOUR DE CORRECTION 1 (revue, tache 2 etape 4b) — DUPLIQUE (ne deplace pas) les deux memes
+// bornes que `patientAccessLog.domain.test.ts` prouve deja depuis le domaine : ce fichier tient
+// la liste des depots dont le scoping est couvert, et `PatientAccessLogRepository` n'y figurait
+// pas. Sans cette entree, un futur resserrement du garde-fou qui casserait ce depot ne serait vu
+// que si quelqu'un pense a aller regarder le fichier du domaine — rien ici ne l'y forcerait.
+describe('PatientAccessLogRepository', () => {
+  it('pose establishmentId/serviceId depuis le scope, jamais depuis l appelant', async () => {
+    const { prisma, calls } = buildFakePrisma()
+    const ctx = new TenantContext()
+    const repo = new PatientAccessLogRepository(buildContainer(prisma, ctx))
+
+    await ctx.run(tenant, () =>
+      repo.create({
+        patientId: 'p1',
+        userID: 'u1',
+        userFirstName: 'A',
+        userLastName: 'B',
+        action: 'dossier.ouvert',
+        accesParOctroi: false,
+      }),
+    )
+
+    expect(calls[0]).toMatchObject({
+      model: 'patientAccessLog',
+      op: 'create',
+      args: {
+        data: {
+          establishmentId: 'e1',
+          serviceId: 's1',
+          patientId: 'p1',
+          userID: 'u1',
+          action: 'dossier.ouvert',
+          accesParOctroi: false,
+        },
+      },
+    })
+  })
+
+  // Meme demonstration que pour les autres depots plus haut : la forme exacte qu'envoie `create`
+  // passe le garde-fou reel (`assertTenantScope`) sous un contexte de tenant, et — puisque
+  // `create` lit `tenantContext.scope()` avant meme d'atteindre Prisma — est refusee hors de
+  // tout contexte, sans que le garde-fou ait meme besoin d'intervenir.
+  it('create passe le garde-fou de tenant, et est refuse hors de tout contexte', async () => {
+    const ctx = new TenantContext()
+    const guarded = new Proxy(
+      {},
+      {
+        get:
+          (_t, op: string) =>
+          (args: Record<string, unknown>) => {
+            assertTenantScope(
+              { model: 'PatientAccessLog', operation: op, args: args ?? {} },
+              ctx.peek(),
+            )
+            return Promise.resolve({ id: 'x', ...(args.data as object) })
+          },
+      },
+    )
+    const prisma = { patientAccessLog: guarded } as unknown
+    const repo = new PatientAccessLogRepository(buildContainer(prisma, ctx))
+    const params = {
+      patientId: 'p1',
+      userID: 'u1',
+      userFirstName: null,
+      userLastName: null,
+      action: 'dossier.ouvert',
+      accesParOctroi: false,
+    }
+
+    await expect(ctx.run(tenant, () => repo.create(params))).resolves.toBeDefined()
+
+    await expect(repo.create(params)).rejects.toThrow(TenantContextMissingError)
+  })
+
+  // Tache 5 (etape 4b) : les deux premieres LECTURES. `findByPatientInService` reprend le meme
+  // `scope()` que `create` — le sabotage etroit (remplacer `scope()` par `establishmentScope()`
+  // dans ce depot) est prouve cote e2e (patient-access-log.test.ts, deux services reellement
+  // peuples) ; ce test-ci tient la forme EXACTE envoyee a Prisma, comme pour `create` plus haut.
+  it('findByPatientInService filtre par patientId ET par le scope de service, jamais autrement', async () => {
+    const { prisma, calls } = buildFakePrisma()
+    const ctx = new TenantContext()
+    const repo = new PatientAccessLogRepository(buildContainer(prisma, ctx))
+
+    await ctx.run(tenant, () => repo.findByPatientInService('p1'))
+
+    expect(calls[0]).toMatchObject({
+      model: 'patientAccessLog',
+      op: 'findMany',
+      args: {
+        where: { patientId: 'p1', establishmentId: 'e1', serviceId: 's1' },
+      },
+    })
+  })
+
+  // Un tenant d'administration d'etablissement (`serviceId: null`, comme le rend
+  // `resolveEstablishmentAdmin`, tenant.plugin.ts) : `findByPatientInEstablishment` doit
+  // fonctionner QUAND MEME (elle ne lit jamais `this.scope`, qui exigerait un service), et le
+  // `where` qu'elle envoie ne porte que `establishmentId` — jamais `serviceId`, puisque son
+  // point est justement de voir TOUS les services.
+  const tenantAdminEtablissement: Tenant = {
+    userId: 'u1', establishmentId: 'e1', establishmentRole: 'ADMIN',
+    serviceId: null, serviceRole: null, soignantId: null,
+  }
+
+  it('findByPatientInEstablishment interroge sous runAsSystem, sans service courant, filtre par establishmentId seul', async () => {
+    const { prisma, calls } = buildFakePrisma()
+    const ctx = new TenantContext()
+    const spy = jest.spyOn(ctx, 'runAsSystem')
+    const repo = new PatientAccessLogRepository(buildContainer(prisma, ctx))
+
+    await ctx.run(tenantAdminEtablissement, () => repo.findByPatientInEstablishment('p1'))
+
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(calls[0]).toMatchObject({
+      model: 'patientAccessLog',
+      op: 'findMany',
+      args: {
+        where: { patientId: 'p1', establishmentId: 'e1' },
+      },
+    })
+    expect((calls[0]?.args.where as Record<string, unknown>).serviceId).toBeUndefined()
+  })
+
+  // Meme demonstration que pour `PatientServiceFileRepository` plus haut : la forme exacte de la
+  // requete de `findByPatientInEstablishment` est refusee par le garde-fou reel hors du mode
+  // encadre — y compris depuis l'administration d'etablissement, ou `serviceId` vaut `null` et
+  // fait donc echouer `assertTenantScope` sur ce champ, meme avec `establishmentId` correct — et
+  // permise dedans.
+  it('la forme de la requete d administration est refusee hors du mode encadre, et permise dedans', () => {
+    const args = { where: { patientId: 'p1', establishmentId: 'e1' } }
+
+    expect(() =>
+      assertTenantScope(
+        { model: 'PatientAccessLog', operation: 'findMany', args },
+        { kind: 'tenant', tenant: tenantAdminEtablissement },
+      ),
+    ).toThrow(TenantScopeMissingError)
+
+    expect(() =>
+      assertTenantScope(
+        { model: 'PatientAccessLog', operation: 'findMany', args },
+        { kind: 'system' },
+      ),
+    ).not.toThrow()
+  })
+
+  // Etape 4b, tache 6 (tour de correction 1) : entree manquante pour `findAllPlatformWide`,
+  // signalee par la revue — comme pour `ActivityLogRepository` plus haut. `PatientAccessLog`
+  // reste dans `SERVICE_MODELS` : cette methode-ci est la SEULE lecture du depot qui ne porte ni
+  // `establishmentId` ni `serviceId` dans son `where`, rendue possible par la declaration de
+  // `PatientAccessLog` dans `SUPERADMIN_OPERATIONS` (tache 6), jamais par un contournement du
+  // garde-fou.
+  it('findAllPlatformWide envoie les filtres recus, aucun de force, sous runAsSuperAdmin', async () => {
+    const { prisma, calls } = buildFakePrisma()
+    const ctx = new TenantContext()
+    const repo = new PatientAccessLogRepository(buildContainer(prisma, ctx))
+
+    await repo.findAllPlatformWide({ establishmentId: 'e9', compte: 'u9', action: 'a9' })
+    expect(calls[0]).toMatchObject({
+      model: 'patientAccessLog', op: 'findMany',
+      args: { where: { establishmentId: 'e9', action: 'a9' } },
+    })
+    expect(calls[0]?.args.where).toMatchObject({
+      OR: [
+        { userID: 'u9' },
+        { userFirstName: { contains: 'u9', mode: 'insensitive' } },
+        { userLastName: { contains: 'u9', mode: 'insensitive' } },
+      ],
+    })
+
+    // `sansEtablissement` N'A PAS DE SENS SUR CE MODELE (`establishmentId` non nullable) : le
+    // schema HTTP refuse la combinaison par un 400, et ce depot ne lit JAMAIS ce champ. Ce cas
+    // le tient : s'il venait a le lire, le `where` porterait `establishmentId: null` et cette
+    // assertion rougirait.
+    calls.length = 0
+    await repo.findAllPlatformWide({ sansEtablissement: true })
+    expect(calls[0]).toMatchObject({
+      model: 'patientAccessLog', op: 'findMany', args: { where: {} },
+    })
+    expect(calls[0]?.args.where).not.toHaveProperty('establishmentId')
+
+    calls.length = 0
+    await repo.findAllPlatformWide({})
+    expect(calls[0]).toMatchObject({
+      model: 'patientAccessLog', op: 'findMany', args: { where: {} },
+    })
+  })
+
+  it('la forme sans borne de findAllPlatformWide est refusee hors du contexte superadmin, et permise dedans', () => {
+    const args = { where: {} }
+
+    expect(() =>
+      assertTenantScope({ model: 'PatientAccessLog', operation: 'findMany', args }, undefined),
+    ).toThrow(TenantScopeMissingError)
+
+    expect(() =>
+      assertTenantScope(
+        { model: 'PatientAccessLog', operation: 'findMany', args },
+        { kind: 'tenant', tenant },
+      ),
+    ).toThrow(TenantScopeMissingError)
+
+    expect(() =>
+      assertTenantScope(
+        { model: 'PatientAccessLog', operation: 'findMany', args },
+        { kind: 'superadmin' },
+      ),
+    ).not.toThrow()
+  })
+
+  // Meme propriete, meme technique que pour `ActivityLogRepository.findAllPlatformWide` plus
+  // haut — voir son commentaire, et `tenant-context.test.ts` pour la preuve generale.
+  it('findAllPlatformWide conserve le contexte superadmin jusqu au dispatch reel de Prisma (requete paresseuse)', async () => {
+    const ctx = new TenantContext()
+    const { prisma, storesAuDispatch } = buildLazyFakePrisma(ctx)
+    const repo = new PatientAccessLogRepository(buildContainer(prisma, ctx))
+
+    await repo.findAllPlatformWide({})
+
+    expect(storesAuDispatch).toEqual([{ kind: 'superadmin' }])
   })
 })

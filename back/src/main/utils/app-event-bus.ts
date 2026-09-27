@@ -25,6 +25,14 @@ type AppEvents = {
   // Reemettre un lien, c'est remettre a quelqu'un le pouvoir de reinitialiser le mot de
   // passe d'un compte : la trace importe autant que pour un changement de role.
   'member.accessLinkReissued': { userID: string; membershipId: string }
+  // Tache 7 (etape 4b) : `UserDomain.reissueAccessLink`, sous le prefixe super-admin — la route
+  // la plus puissante du systeme (elle reemet un lien d'acces pour N'IMPORTE QUEL compte, hors
+  // de la garde de jeton qui borne `member.accessLinkReissued` a un seul etablissement). Un
+  // evenement A PART plutot qu'une reutilisation de `member.accessLinkReissued` : cette route
+  // n'a pas d'appartenance (`membershipId`) a rapporter, seulement le compte cible
+  // (`targetUserId`), et la confondre avec la variante d'etablissement effacerait precisement la
+  // distinction que le journal doit porter. `userID` est le super-admin qui agit.
+  'user.accessLinkReissued': { userID: string; targetUserId: string }
 }
 
 class AppEventBus {
