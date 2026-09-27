@@ -484,4 +484,73 @@ describe('routes services', () => {
       expect(res.statusCode).toBe(404)
     })
   })
+  // ---------------------------------------------------------------------
+  // Les identifiants que la MIGRATION du socle fabrique elle-meme.
+  // ---------------------------------------------------------------------
+  //
+  // `20260922144905_multi_tenant_socle` cree l'etablissement et le service
+  // d'origine avec des identifiants de la forme `est_<20 hex>` / `svc_<20 hex>`
+  // (lignes 209-213 de sa migration), pour reprendre les donnees d'avant le
+  // multi-tenant. Ce ne sont PAS des cuid. Toute reponse qui valide ces
+  // identifiants avec `z.cuid()` echoue donc a la serialisation et rend 500 —
+  // sur l'etablissement d'origine, c'est-a-dire en production.
+  //
+  // Constate en vrai sur la base de developpement : `GET /admin/services`
+  // rendait 500 en boucle, et le front relancait la requete sans fin jusqu'a
+  // « Maximum update depth exceeded ».
+  describe('identifiants fabriques par la migration du socle', () => {
+    it('rend 200 sur un service dont l identifiant vient de la migration, pas un cuid', async () => {
+      const etab = await testDb.establishment.create({
+        data: { id: `est_${'a1b2c3d4e5f6a7b8c9d0'}`, name: 'Etablissement' },
+      })
+      const svc = await testDb.service.create({
+        data: { id: `svc_${'0d9c8b7a6f5e4d3c2b1a'}`, establishmentId: etab.id, name: 'Service' },
+      })
+      const admin = await createUser({
+        email: 'admin-migration-lecture@b.fr',
+        memberships: [{ establishmentId: etab.id, role: 'ADMIN' }],
+      })
+      const cookies = await signIn(testApp.app, admin.email)
+
+      const res = await testApp.app.inject({
+        method: 'GET',
+        url: adminUrl(etab.id, '/services'),
+        cookies,
+      })
+
+      expect(res.statusCode).toBe(200)
+      expect(res.json().map((s: { id: string }) => s.id)).toContain(svc.id)
+    })
+
+    it('accepte d affecter un membre a un service dont l identifiant vient de la migration', async () => {
+      const etab = await testDb.establishment.create({
+        data: { id: `est_${'b1c2d3e4f5a6b7c8d9e0'}`, name: 'Etablissement' },
+      })
+      const svc = await testDb.service.create({
+        data: { id: `svc_${'1e0d9c8b7a6f5e4d3c2b'}`, establishmentId: etab.id, name: 'Service' },
+      })
+      const admin = await createUser({
+        email: 'admin-migration-affectation@b.fr',
+        memberships: [{ establishmentId: etab.id, role: 'ADMIN' }],
+      })
+      const cible = await createUser({ email: 'cible-migration@b.fr' })
+      const cookies = await signIn(testApp.app, admin.email)
+
+      const res = await testApp.app.inject({
+        method: 'POST',
+        url: adminUrl(etab.id, '/members'),
+        cookies,
+        payload: {
+          email: cible.email,
+          role: 'MEMBER',
+          services: [{ serviceId: svc.id, role: 'INTERVENANT' }],
+        },
+      })
+
+      expect(res.statusCode).toBe(201)
+      expect(res.json().serviceMemberships).toEqual([
+        { serviceId: svc.id, role: 'INTERVENANT' },
+      ])
+    })
+  })
 })

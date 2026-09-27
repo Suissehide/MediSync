@@ -9,8 +9,10 @@ const serviceRoleSchema = z.enum([
   'LECTURE',
 ])
 const establishmentRoleSchema = z.enum(['ADMIN', 'MEMBER'])
+// Voir `service.schema.ts` : le service d'origine porte un identifiant `svc_...` fabrique par
+// la migration du socle, jamais un cuid.
 const assignmentSchema = z.object({
-  serviceId: z.cuid(),
+  serviceId: z.string().min(1),
   role: serviceRoleSchema,
 })
 
@@ -54,7 +56,9 @@ export const updateMemberSchema = z.object({
   soignantId: z.cuid().nullable().optional(),
   services: assignmentsSchema.optional(),
 })
-export const memberParamsSchema = z.object({ membershipId: z.cuid() })
+// Meme raison : les appartenances des comptes preexistants portent `em_...`, fabrique par la
+// migration du socle. Les valider en cuid rendait 400 sur TOUT membre d'avant le multi-tenant.
+export const memberParamsSchema = z.object({ membershipId: z.string().min(1) })
 
 // `POST /e/:establishmentId/admin/members/account` (tâche 10, step 1) : créer un compte de
 // membre, et rendre son lien de première connexion. Le brief écrit ce chemin sans `/admin` ;
