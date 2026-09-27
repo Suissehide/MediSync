@@ -181,6 +181,61 @@ session" instead of a button that vanishes — **the absence of the button must 
 implicit context). The way through is the test's **exception list** — reason plus exact
 occurrence count, checked in both directions — **never** renaming to slip under the pattern.
 
+## Access logs (étape 4b)
+
+**Two screens, not three — and the missing one is a real gap, not an oversight to be papered
+over.** The back exposes three reads of `PatientAccessLog`; the front implements two.
+
+- **Service scale** — `routes/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/acces.tsx`,
+  reached by the **"Journal des accès" button on the patient file**. The button is its own
+  component (`components/custom/Patient/patientAccessLogButton.tsx`) rather than inline markup,
+  so it can be tested on its own: mounting the whole patient screen would drag in `OverviewPatient`,
+  `AddPatientForm` and their queries, none of which bear on what the button must guarantee — its
+  conditional visibility and its link parameters.
+- **Platform scale** — `routes/_authenticated/super-admin/access-log.tsx`, reached from
+  `SuperAdminNav`. It declares no guard of its own: the parent layout's `beforeLoad` throws
+  `notFound()` for an account without the flag, exactly like `index.tsx` and `users.tsx`.
+- **Establishment scale — NO SCREEN EXISTS.** `GET /e/:establishmentId/admin/patients/:patientID/acces`
+  is implemented, permission-gated (`access-log:read`) and covered by e2e and isolation tests on
+  the back, and **nothing in `src/api` or `src/routes/.../admin/` calls it**. An establishment
+  administrator has no way to see the consolidated, all-services view from the app. If you add that
+  screen, it goes under `e/$establishmentId/admin/`, and its API module needs an exception entry in
+  `conventions-tenant-api-queries.test.ts` if it names `establishmentId`.
+
+**`consultations:read` and `access-log:read` are two different permissions, and the naming is
+deliberate.** The service screen needs `consultations:read` (**COORDINATEUR only**); the
+establishment route needs `access-log:read` (**ADMIN** of the establishment). They cannot be
+merged: `hasPermission` picks its branch — service or establishment — from which *set* the string
+belongs to, **before** looking at the caller's roles, so a string present in both would always take
+the service branch and the administration route would always fail. The service one was first called
+`accessLog:read` and **renamed** — two names differing by a hyphen and a capital, in a matrix
+duplicated byte-for-byte across two repos, is a permanent reading trap. Don't reintroduce a
+near-homograph.
+
+**The screens never merge the two journals.** The platform screen sends a mandatory `source`
+(`acces` | `activite`) and shows one at a time; switching it also switches the **action labels**
+(`constants/superAdminAccessLog.constant.ts` picks between the two existing dictionaries, it defines
+none of its own). The two journals' columns only partly overlap, and a silent merge would hide more
+than it shows on a diagnostic screen. Default source is `acces`, because that is where the
+**"Origine"** column flags what a super-admin looks for first.
+
+**"Origine" (`accesParOctroi`) is not decoration.** It distinguishes a temporary-grant
+(troubleshooting) access from a care access — a super-admin under a grant travels the ordinary
+tenant path and would otherwise be indistinguishable from a member. The column was created on the
+back and then **invisible for five tasks** because a brief listed the response fields without it.
+On the platform screen it is `null` (not `false`) for `activite` rows: `false` would assert a real
+access where no grant is even conceivable.
+
+**Neither screen ever shows patient identity or clinical content**, by construction of the back's
+Zod response schemas (strip mode), and the platform screen's "Dossier (id)" column carries an
+**identifier, never a name**. Keep it that way if you add columns.
+
+**One pre-existing bug this step fixed, worth knowing about**: `Button` with `asChild` wrapped its
+children in a `Fragment` even when not loading, so Radix's `Slot` cloned `className`/`ref` onto the
+Fragment rather than the real element (React: "Invalid prop `className` supplied to
+`React.Fragment`"). It had no other caller before this step, hence the invisibility. Fixed at the source in
+`components/ui/button.tsx` — the Fragment now exists only in the two-children (loading) branch.
+
 ## Testing
 
 Vitest + Testing Library, `jsdom` environment.

@@ -103,6 +103,38 @@ Key cross-cutting concerns:
   `:establishmentId`/`:serviceId` from the URL, checks the user's memberships and stores the tenant in an
   `AsyncLocalStorage`. Repositories read it per call (`tenantContext.scope()` → `{ serviceId, establishmentId }`,
   `establishmentScope()`), never in constructors. Background jobs run under `tenantContext.runAsSystem()`.
+- **The Prisma laziness trap, stated CORRECTLY — it took three rewrites to get here, so read this
+  one and not the older phrasings.** A Prisma query is lazy: `runAsSuperAdmin(() => prisma.x.count(…))`
+  returns the promise without awaiting it, the real work then starts outside the `AsyncLocalStorage`
+  scope, and the guard reads the ambient tenant instead. The old adage — *"always `await` INSIDE the
+  callback"* — was imprecise, and so was its first correction (*"what holds the property is the
+  `async` wrapper"*), which described a symptom. The exact rule:
+  > **What matters is that the context is READ BEFORE THE FIRST SUSPENSION POINT.**
+
+  A plain **synchronous** callback is fine if it reads straight away: `deleteOlderThan` (both journal
+  repositories) calls `tenantContext.peek()` **synchronously at the top of its body**, before any
+  `await`, and the property holds. An `async` callback protects nothing if it reads *after* a wait.
+  The `async` wrapper works because the value it returns goes through a promise resolution Node ties
+  to the scope active at call time — which amounts to not suspending before reading. **The repo's
+  convention remains an `async` callback with an inner `await`, but for a different reason than the
+  one long written here**: Biome's `suspicious/useAwait` rejects an `async` callback with no `await`
+  (verified: `npm run lint` fails on exactly that shape), and a callback that never suspends reads
+  badly next to neighbours that do. Measured at étape 4b task 6 on a real caller
+  (`PatientAccessLogRepository.findAllPlatformWide`): a bare synchronous callback reddens
+  `repository-scope.test.ts` → "findAllPlatformWide conserve le contexte superadmin jusqu au dispatch
+  reel de Prisma", **alone**. Before that task, the property was held only by accident — no assertion
+  aimed at it.
+- **An event that is declared must ACTUALLY write a line, and that is proved by execution (étape 4b,
+  task 7).** A *static* guard ("does every `AppEvents` entry have a subscription?") would not have
+  caught the real defect: `user.accessLinkReissued` **was** subscribed — the line died, swallowed by
+  `#log`'s `catch` after the tenant guard refused it (`/super-admin` runs with no store at all, and
+  `ActivityLog` is an establishment model). Nothing failed, nothing was visibly missing; only the
+  trace vanished. `src/test/e2e/activity-log-emissions-declarees.test.ts` now emits **every declared
+  event under the context its real call site uses** (read from the *source* of `AppEvents`, never
+  copied by hand) and requires a line to appear, with a **named** exemption list (empty today). It
+  lives in e2e, never unit: a stubbed repository cannot reproduce the real Prisma refusal, so a unit
+  test would catch a caricature of the defect. **The trap stays armed for what is not yet written**:
+  any future event emitted from a non-tenant route will be refused and swallowed the same way.
 - **Tenant guard (`infra/orm/tenant-guard.ts`)**: a Prisma extension that throws `TenantScopeMissingError` when a
   query on a service model lacks `serviceId` (or `establishmentId` for establishment models) in `where`/`data`.
   Model families are listed there (`SERVICE_MODELS`, `ESTABLISHMENT_MODELS`). It **fails closed**: an operation it
@@ -141,13 +173,24 @@ Key cross-cutting concerns:
   of git (`MONOTONIE_REF`, default `HEAD` — so it answers "does what I am writing lose a
   refusal?" while you edit) and carries no second copy of the guard. Depth 4 by default (~1 s,
   runs in the unit suite); `PROFONDEUR=9 …` is the deep sweep, run by hand. **Its case count is
-  not a constant** — it is derived from `MODEL_RELATIONS`, so it grows whenever the schema gains
-  a relation: 61 923 360 when task 15 measured it against `f022ef9`, **80 198 400 at étape 4b
-  task 9** (2 004 960 chains, ~40 min). Quote the count your own run printed, not this one.
-  Against `main` it reports ~1 800 "lost refusals" for the whole of étape 4a, all
-  explained: the `AccessLink`/`SuperAdminAccessGrant` tables that task 2 created (undeclared
-  relations used to be refused outright) plus task 1's deliberate `SUPERADMIN_GLOBAL_OPERATIONS`
-  reopening.
+  not a constant** — it is derived from `MODEL_RELATIONS` *and* from the shapes the file itself
+  enumerates, so it grows whenever the schema gains a relation **and whenever the sweep is
+  widened**: 61 923 360 when task 15 measured it against `f022ef9`, 80 198 400 at the start of
+  étape 4b task 9, **100 249 450 after that task widened it** — depth 0 (bare shapes, no
+  `include`) and four verbs (`delete`, `deleteMany`, `updateMany`, `upsert`) were missing
+  entirely, so **the instrument was seeing a fifth less than its own header claimed**, an
+  under-coverage of twenty million cases. Zero lost refusals before and after. Quote the count
+  your own run printed, not this one.
+  **Against `main` it reports 349 lost refusals, not the ~1 800 this file used to say** — that
+  figure was inherited from étape 4a and was wrong on three counts at once. Re-measured at étape
+  4b task 9 and again when writing `docs/multi-tenant/decisions-etape-4b.md` (`MONOTONIE_REF=main`,
+  depth 4, 4 016 chains, 202 250 cases): **349**, split `{tenant: 315, superadmin: 34}`, **zero
+  under "no context"** (task 9 closed that whole family), and **349 out of 349** caused by
+  `PatientAccessLog` — a model of étape **4b**, not by the two tables of étape 4a. Verified by
+  filtering the full list, not a sample. Adding a model necessarily relaxes verdicts; the only
+  question worth asking is *which ones*. Note that `MONOTONIE_REF=main` therefore **fails** by
+  design — it is an on-demand comparison, not part of the default suite, which compares against
+  `HEAD`.
 - **"No context" is a FOURTH declared context, not a free pass (étape 4b, task 9).** Tenant
   models were already refused without a store (`assertTenantScope` throws on `!store` before
   anything else); **global models were not** — they leave through `assertGlobalScope` and used
@@ -354,6 +397,61 @@ Key cross-cutting concerns:
   will actually inherit, so this guard forces a permission to be *declared* — it does **not**
   prove `requireSuperAdmin` was wired onto that route. The declared capability lists of the
   tenant guard are the last net there.
+- **Patient access log — a GET route that names a patient is journalled BY DEFAULT, or the boot
+  fails (étape 4b).** Writes have been traced since étape 2 (`ActivityLog`); *reads* left no trace
+  at all, and in a care application it is the read that looks exactly like its own abuse. The
+  model is `PatientAccessLog` (a **service** model, same pattern as `PatientServiceFile`), and the
+  single source of truth for what is journalled is `utils/access-log-routes.ts`. Four moving parts,
+  don't wire a fifth:
+    - **`patientIdParamOf` — detection is STRUCTURAL, never by parameter name.** A `/patient/`
+      segment followed by a parameter, *whatever it is called*, plus a secondary net for a
+      `patientId`/`patientID` parameter outside such a segment. The first version matched the
+      *name*, and a real route `GET /patient/:patient_id/sonde-revue` added to the real router
+      **booted fine, served an identified record, wrote nothing, and nothing anywhere said so**.
+      This repo has already proved the spelling drifts (`:patientID` vs `:patientId` on the
+      diagnostic routes). **Residue, stated rather than hidden**: a record under *both* an unheard-of
+      segment and an unheard-of parameter name (`/dossier/:id`) escapes both nets. No syntactic rule
+      can guess that a new segment means "patient".
+    - **Two declared lists**, both compared against the REAL routes, in both directions.
+      `LOGGED_PATIENT_ROUTES` (URL → action) and `EXEMPTED_PATIENT_ROUTES` (URL → reason in plain
+      words — an exemption is justified *positively*, the default is to journal).
+      `assertPatientReadLogged` (`onRoute`) fails the boot on an undeclared route;
+      `assertNoDeadPatientAccessEntry` (`onReady`, with the routes actually seen) fails it on an
+      entry that no longer matches anything. Only GETs: writes are already in `ActivityLog`.
+    - **A root sibling, like the other two guards.** `assertPatientRouteUnderTenant`
+      (`routes/tenant.routes.ts`, posted at the root by `routes/index.ts`) refuses **flatly** any
+      patient-shaped GET registered outside the tenant prefix — it consults no journalling list,
+      because outside `tenantRoutes` the write hook does not exist and an entry there would promise
+      a coverage nothing could keep. A route that legitimately needs to live outside goes in
+      `EXEMPTED_ADMIN_PATIENT_ROUTES`, **with its reason**, guarded in turn by
+      `assertNoDeadAdminPatientExemption`. **Never rename a parameter to slip under the net** — it
+      was tried (`:patientID` → `:patientRef`) and a probe then served a full record, 200, no log
+      line, all 21 e2e suites green. A rename declares nothing; it blinds the net for every future
+      route that picks that name.
+    - **`recordPatientAccess` — an `onResponse` hook**, so the response has already left: a 4xx/5xx
+      leaves no line, a slow write never slows a record read. It refuses `HEAD` (no body was sent,
+      nobody read anything), and it checks `tenantContext.peek()` returns **the very same object**
+      as `request.tenant`, by identity — losing a line is visible, a line attributed to the wrong
+      establishment is not. **A failed write never blocks the read** (refusing care because the log
+      is down is the wrong trade) **but is never silent either**: `request.log.error` with the
+      `reqId` and **only the error's CLASS** — an uncaught Prisma error copies the whole failed
+      `data`, i.e. the patient id and the agent's name.
+  Four actions today (`dossier.ouvert`, `sousDossier.ouvert`, `echecsInscription.consultes`,
+  `export`); `action` is a text column, so a fifth costs no migration. **The export is a dedicated
+  device**: `GET /patient/export` has no route parameter, so it is journalled in **one line** with
+  its record count and criteria (`plannedPatientExportAccess`), the count coming from the handler
+  via `request.patientExportCount` — never recomputed, which would replay the query and could
+  diverge. `patientId` is nullable **for that reason alone**. `exportFilters` is the only free-text
+  column of the table and `PatientAccessLogDomain.record` refuses any clinical key in it,
+  recursively, refusing rather than accepting anything it cannot parse.
+  **Retention is configurable**: `LOG_RETENTION_MONTHS`, twelve months by default, applied to
+  **both** journals by two separate scheduled purges in `application/starter.ts` (the month
+  arithmetic is **duplicated** between the two domains on purpose — a sabotage that hardcodes twelve
+  in one must only redden that one's test). An absurd value (`0`, `-3`, `douze`) **fails the boot**,
+  not the purge: measured on the test database, a retention of zero wipes both journals on the first
+  pass, including a line one minute old. The value twelve is **provisional and awaiting advice**; see
+  `docs/multi-tenant/deploiement-etape-4b.md` §5, which also records that the variable is **not yet
+  passed to the container** by either compose file.
 - **`request.tenant` is optional on purpose.** It only exists once `resolveTenant` has run. On the failure path it is
   never set, and later hooks still execute on the error payload — the three tenant hooks therefore check it and fail
   closed (clinical filters strip, permission returns the same 404 as resolution). In a handler, use `requireTenant`
