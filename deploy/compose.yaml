@@ -50,6 +50,7 @@ services:
       - JWT_REFRESH_EXPIRES_IN
       - COOKIE_SECRET
       - LOG_LEVEL
+      - LOG_RETENTION_MONTHS
       - NODE_CLUSTER
       - NODE_ENV=production
       - NODE_TLS_REJECT_UNAUTHORIZED

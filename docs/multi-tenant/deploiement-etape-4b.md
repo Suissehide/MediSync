@@ -181,17 +181,17 @@ coupure vaut l'instant présent et **toutes les lignes disparaissent au premier 
 une ligne vieille d'une minute**. Un démarrage qui échoue se voit ; deux journaux vidés la nuit,
 non.
 
-### ⚠ La variable n'arrive pas au conteneur en l'état
+### La variable est transmise au conteneur — corrigé après la fusion de 4b
 
-**Vérifié dans le dépôt en écrivant ce document** : `LOG_RETENTION_MONTHS` **n'apparaît dans aucune
-section `environment:`** de `deploy/compose.yaml` ni de
-`deploy/dokploy/docker-compose.dokploy.yml`. La poser dans le fichier `.env` de déploiement **ne la
-fera donc pas parvenir à l'application** — celle-ci lira son défaut de douze mois quoi qu'il arrive,
-sans le moindre signal.
+**Historique, parce qu'il vaut d'être connu.** Quand ce document a été écrit, `LOG_RETENTION_MONTHS`
+n'apparaissait dans **aucune** section `environment:` — ni de `deploy/compose.yaml`, ni de
+`deploy/dokploy/docker-compose.dokploy.yml` — alors que cinq variables voisines y étaient. La poser
+dans le `.env` de déploiement **n'aurait donc rien changé** : l'application aurait lu son défaut de
+douze mois quoi qu'il arrive, **sans le moindre signal**. Une variable de configuration qui ne
+configure rien et ne le dit pas est exactement le genre de piège que l'étape 4b existe pour fermer.
 
-Ce n'est pas bloquant aujourd'hui (le défaut *est* la valeur voulue), et c'est pour cela que rien
-n'a été modifié ici. **Mais le jour où la valeur est tranchée, il faudra d'abord ajouter la ligne**,
-dans les **deux** fichiers, à côté de `LOG_LEVEL` :
+**C'est corrigé.** Léo a autorisé la modification des fichiers de composition, et la variable est
+désormais déclarée aux trois endroits :
 
 ```yaml
 # deploy/compose.yaml, service back, section environment:
@@ -201,8 +201,15 @@ dans les **deux** fichiers, à côté de `LOG_LEVEL` :
       - LOG_RETENTION_MONTHS=${LOG_RETENTION_MONTHS}
 ```
 
-…et la déclarer dans `deploy/.env.example` avec son commentaire. **Vérifier ensuite que la valeur est
-bien celle attendue**, pas celle de l'exemple :
+…plus `deploy/.env.example`, où elle porte sa valeur par défaut **et** l'avertissement sur son
+caractère provisoire. Les deux fichiers ont été relus comme YAML après modification : quatre
+services chacun, structure inchangée.
+
+**Ce que cela ne garantit pas, et qu'il faut vérifier au déploiement.** Une variable déclarée dans
+`compose.yaml` sous la forme courte (`- LOG_RETENTION_MONTHS`, sans valeur) n'est transmise que si
+elle existe dans l'environnement du `docker compose`. Si le `.env` du déploiement ne la porte pas,
+elle n'arrive pas — et l'application reprend son défaut, toujours sans signal. **La déclaration
+rend la transmission possible, elle ne la rend pas certaine** :
 
 ```shell
 docker exec <conteneur-back> printenv LOG_RETENTION_MONTHS
@@ -368,7 +375,10 @@ colonnes de parcours auront été recopiées **puis supprimées**.
   les transmissions des patients inscrits. Ce n'est pas un défaut d'implémentation, c'est le périmètre
   choisi — mais la phrase « toute lecture de données de patient laisse une trace » serait fausse.
 - **La purge n'a ni verrou entre instances, ni signal si elle échoue en boucle** (§8).
-- **`LOG_RETENTION_MONTHS` n'arrive pas au conteneur** en l'état (§5).
+- **`LOG_RETENTION_MONTHS` est desormais declaree dans les deux fichiers de composition** (§5) —
+  elle ne l'etait dans aucun quand ce document a ete ecrit. La declaration rend la transmission
+  possible, **elle ne la rend pas certaine** : sous la forme courte, la variable doit exister dans
+  l'environnement du `docker compose`, sinon l'application reprend son defaut sans signal.
 - **`runAsSuperAdmin` n'est énuméré par rien.** Quatorze sites d'appel dans `src/main` (douze avant
   cette étape ; les deux ajoutés sont les lectures plateforme des deux journaux), aucune liste nommée
   nulle part. Défendable — les tables déclarées bornent ce qu'on peut y faire — mais différent de
