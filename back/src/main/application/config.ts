@@ -49,6 +49,20 @@ const configSchema = z.object({
     .default('4000')
     .transform((val) => Number.parseInt(val, 10)),
   isTestRunning: z.boolean().default(false),
+
+  // Retention des deux journaux de tracabilite (ActivityLog, PatientAccessLog — tache 8, etape
+  // 4b) : entier strictement positif, defaut douze mois. Une purge planifiee tourne seule, sans
+  // personne pour regarder son resultat (application/starter.ts) ; une valeur absurde (zero,
+  // negative, non numerique) doit donc faire echouer le DEMARRAGE plutot que de laisser la purge
+  // interpreter zero mois litteralement au premier passage planifie (ce qui viderait les deux
+  // journaux). `.pipe` verifie APRES le parsing : `Number.parseInt('douze', 10)` rend `NaN`, que
+  // `z.number()` refuse deja nommement (jamais un entier valide) ; `0`/`-3` echouent sur
+  // `.positive()`.
+  logRetentionMonths: z
+    .string()
+    .default('12')
+    .transform((val) => Number.parseInt(val, 10))
+    .pipe(z.number().int().positive()),
 })
 const envVarNames = [
   'CORS_ORIGIN',
@@ -62,11 +76,16 @@ const envVarNames = [
   'LOG_LEVEL',
   'PORT',
   'MOCK_SERVER_PORT',
+  'LOG_RETENTION_MONTHS',
 ]
 
-const loadConfig = () => {
+// `env` optionnel (tache 8, etape 4b) : `process.env` par defaut, pour que tout appelant de
+// production (starter.ts, e2e/setup/app.ts) continue de fonctionner sans argument. Injectable
+// pour eprouver une retention absurde sans jamais toucher au `process.env` reel du process de
+// test (config.test.ts).
+const loadConfig = (env: NodeJS.Dict<string> = process.env) => {
   const envConfig = pickFromDict<ConfigEnvVars>(
-    process.env,
+    env,
     envVarNames,
     toCamelCase,
   )

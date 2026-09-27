@@ -233,6 +233,33 @@ describe('PatientAccessLogDomain.record', () => {
 })
 
 // ---------------------------------------------------------------------------
+// Tache 8, etape 4b : la retention (config.logRetentionMonths) doit gouverner la purge de ce
+// second journal aussi, CALCULEE INDEPENDAMMENT de celle d'ActivityLogDomain (voir le commentaire
+// de PatientAccessLogDomain.cleanup) — sabotage etroit eprouve par execution : remettre `12` en
+// dur ICI SEUL fait rougir ce test-ci, jamais activityLog.domain.test.ts.
+// ---------------------------------------------------------------------------
+
+describe('PatientAccessLogDomain.cleanup', () => {
+  afterEach(() => {
+    jest.useRealTimers()
+  })
+
+  it('purge a la duree configuree, pas a douze mois en dur', async () => {
+    jest.useFakeTimers()
+    const repository = { deleteOlderThan: jest.fn().mockResolvedValue(0) }
+    const domain = new PatientAccessLogDomain({
+      patientAccessLogRepository: repository,
+      config: { logRetentionMonths: 3 },
+    } as never)
+    jest.setSystemTime(new Date('2026-09-27T00:00:00Z'))
+
+    await domain.cleanup()
+
+    expect(repository.deleteOlderThan).toHaveBeenCalledWith(new Date('2026-06-27T00:00:00Z'))
+  })
+})
+
+// ---------------------------------------------------------------------------
 // L'export (tache 4) : les criteres journalises viennent de `buildPatientExportFilters`
 // (utils/access-log-routes.ts), jamais recopies ici -- composition avec la garde clinique
 // ci-dessus (tache 2), sur le chemin reel, plutot qu'une seconde garde a cote.

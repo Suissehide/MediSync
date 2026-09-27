@@ -30,11 +30,18 @@ import ts from 'typescript'
 // assertions, elles, restaient justes ; corrige une premiere fois en pretendant a tort que la
 // CAPACITE et les BORNES etaient toutes deux couvertes ici, corrige a nouveau ci-dessus. Six
 // emplois declares a ce jour, tous dans le back de production (un quatrieme ajoute a la tache 11,
-// etape 4a, un cinquieme a la tache 15, un sixieme a la tache 5 de l'etape 4b) :
+// etape 4a, un cinquieme a la tache 15, un sixieme a la tache 5 de l'etape 4b) — un SEPTIEME
+// APPEL rejoint desormais le premier emploi ci-dessous (meme fichier, tache 8, etape 4b : la
+// purge planifiee du journal des consultations, a cote de celle du journal d'activite) : le
+// compte d'emplois DECLARES (des fichiers/raisons distincts) reste a six, mais le nombre
+// D'APPELS total passe de sept a huit, `application/starter.ts` en portant desormais deux :
 //
-//   1. La purge planifiee du journal d'activite (`application/starter.ts`,
-//      `scheduleActivityLogCleanup`) : hors de toute requete HTTP, il n'existe alors aucun
-//      tenant a poser, et la purge doit toucher TOUTE la table, pas un seul etablissement.
+//   1. La purge planifiee des DEUX journaux (`application/starter.ts`,
+//      `scheduleActivityLogCleanup` ET, depuis la tache 8, `schedulePatientAccessLogCleanup`) :
+//      hors de toute requete HTTP, il n'existe alors aucun tenant a poser, et chaque purge doit
+//      toucher TOUTE sa table, pas un seul etablissement. Retention parametrable
+//      (`config.logRetentionMonths`) pour les deux, calculee independamment dans chaque domaine
+//      (`ActivityLogDomain.cleanup`, `PatientAccessLogDomain.cleanup`) plutot que factorisee.
 //   2. Le signal de suivi ailleurs (`infra/orm/repositories/patientServiceFile.repository.ts`,
 //      `estSuiviAilleurs`, design §5.3) : une lecture qui traverse volontairement la frontiere
 //      entre services, pour rendre un booleen et rien d'autre. Ses bornes (etablissement et
@@ -137,8 +144,12 @@ const APPEL_RUN_AS_SYSTEM = /\.runAsSystem\b/
 const AUTORISES = [
   {
     fichier: 'application/starter.ts',
-    raison: 'purge planifiee du journal d activite, hors de toute requete',
-    appels: 1,
+    raison:
+      'purge planifiee des DEUX journaux, hors de toute requete : le journal d activite ' +
+      '(scheduleActivityLogCleanup) et, depuis la tache 8 (etape 4b), le journal des ' +
+      'consultations (schedulePatientAccessLogCleanup) — retention parametrable ' +
+      '(config.logRetentionMonths) pour les deux',
+    appels: 2,
   },
   {
     fichier: 'infra/orm/repositories/patientServiceFile.repository.ts',

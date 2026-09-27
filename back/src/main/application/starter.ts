@@ -10,7 +10,8 @@ const startIocContainer = (config: Config): AwilixIocContainer => {
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000
 
-// Purge périodique du journal d'activité (rétention 12 mois côté domaine),
+// Purge périodique du journal d'activité (rétention paramétrable côté domaine,
+// `config.logRetentionMonths` — tâche 8, étape 4b, douze mois par défaut),
 // pour éviter une croissance non bornée de la table. Hors de toute requête :
 // encadrée par runAsSystem pour que le repository purge toute la table plutôt
 // qu'un tenant particulier.
@@ -36,6 +37,39 @@ const scheduleActivityLogCleanup = (instances: IocContainer): void => {
   run()
 }
 
+// Purge périodique du journal des consultations (tâche 8, étape 4b) : même
+// mécanisme, même rétention paramétrable (indépendante, voir le commentaire de
+// `PatientAccessLogDomain.cleanup`), à côté de la purge existante ci-dessus —
+// septième emploi déclaré de `runAsSystem` (`runAsSystem-unicite.test.ts`,
+// entrée `application/starter.ts`, désormais deux appels). Rappel `async` avec
+// un `await` interne (et non le rappel synchrone nu de la purge ci-dessus) :
+// convention établie ailleurs sur ce chantier pour ce mécanisme (voir
+// `utils/tenant-context.ts#runAsSuperAdmin`) — ce qui tient réellement la
+// portée du contexte est l'enrobage `async`, l'`await` reste écrit pour le
+// lint (`suspicious/useAwait`) et la lisibilité.
+const schedulePatientAccessLogCleanup = (instances: IocContainer): void => {
+  const { patientAccessLogDomain, logger, tenantContext } = instances
+  const run = (): void => {
+    tenantContext
+      .runAsSystem(async () => {
+        return await patientAccessLogDomain.cleanup()
+      })
+      .then(({ deleted }) =>
+        logger.info(`PatientAccessLog cleanup: ${deleted} entrées supprimées`),
+      )
+      .catch((err) => {
+        // Même raison que le `catch` de `scheduleActivityLogCleanup` ci-dessus :
+        // `patientAccessLogRepository.deleteOlderThan` n'a lui non plus aucun `catch`
+        // propre. Seule la classe de l'erreur va au journal.
+        const errorClass = err instanceof Error ? err.constructor.name : typeof err
+        logger.error(`PatientAccessLog cleanup failed [${errorClass}]`)
+      })
+  }
+  const timer = setInterval(run, ONE_DAY_MS)
+  timer.unref?.()
+  run()
+}
+
 const startApp = async (): Promise<IocContainer> => {
   const config = loadConfig()
   const iocContainer = startIocContainer(config)
@@ -45,8 +79,14 @@ const startApp = async (): Promise<IocContainer> => {
   await httpServer.start()
 
   scheduleActivityLogCleanup(iocContainer.instances)
+  schedulePatientAccessLogCleanup(iocContainer.instances)
 
   return iocContainer.instances
 }
 
-export { startApp, startIocContainer, scheduleActivityLogCleanup }
+export {
+  startApp,
+  startIocContainer,
+  scheduleActivityLogCleanup,
+  schedulePatientAccessLogCleanup,
+}

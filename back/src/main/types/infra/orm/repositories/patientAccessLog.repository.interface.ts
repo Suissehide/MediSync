@@ -46,4 +46,7 @@ export interface PatientAccessLogRepositoryInterface {
   // Etape 4b, tache 6 : la TROISIEME lecture, a l'echelle de la PLATEFORME entiere -- sous
   // `runAsSuperAdmin`, jamais sous un tenant. Voir le commentaire sur l'implementation.
   findAllPlatformWide: (filters: PlatformAccessLogFilters) => Promise<PatientAccessLogEntityRepo[]>
+  // Tache 8, etape 4b : purge planifiee (retention parametrable, voir PatientAccessLogDomain.
+  // cleanup). Voir le commentaire de l'implementation pour le mecanisme de bornage.
+  deleteOlderThan: (date: Date) => Promise<number>
 }

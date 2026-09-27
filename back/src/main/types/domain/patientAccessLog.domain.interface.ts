@@ -55,4 +55,7 @@ export interface PatientAccessLogDomainInterface {
   findAllPlatformWide: (
     filters: PlatformAccessLogFilters,
   ) => Promise<PatientAccessLogEntityDomain[]>
+  // Tache 8, etape 4b : purge planifiee, retention parametrable (`config.logRetentionMonths`),
+  // meme forme qu'`ActivityLogDomainInterface.cleanup`.
+  cleanup: () => Promise<{ deleted: number }>
 }

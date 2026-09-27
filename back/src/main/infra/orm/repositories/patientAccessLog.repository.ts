@@ -174,6 +174,26 @@ class PatientAccessLogRepository implements PatientAccessLogRepositoryInterface 
       })
     }
   }
+
+  // Purge planifiee (tache 8, etape 4b) : meme mecanisme qu'`ActivityLogRepository.
+  // deleteOlderThan`. Sous `runAsSystem` (kind 'system'), `tenantContext.peek()` ne rend jamais
+  // 'tenant' : la purge touche alors TOUTE la table, sans poser `serviceId` -- a la difference
+  // d'`ActivityLog`, `PatientAccessLog` n'a pas de ligne "hors service" (`create` pose toujours
+  // `this.scope`), donc pas de filtre equivalent au `serviceFilter` de l'autre depot a reprendre
+  // ici. AUCUN try/catch ici, a dessein : `application/starter.ts` (le seul appelant, via
+  // `PatientAccessLogDomain.cleanup`) ne journalise que la CLASSE de l'erreur dans son `catch`,
+  // jamais son message brut -- une erreur Prisma non absorbee ici y recopierait sinon le `data`
+  // de l'ecriture ratee (meme raison que `deleteOlderThan` d'`ActivityLogRepository`, qui n'a pas
+  // non plus de `catch` propre).
+  async deleteOlderThan(date: Date): Promise<number> {
+    const store = this.tenantContext.peek()
+    const where =
+      store?.kind === 'tenant'
+        ? { ...this.scope, createdAt: { lt: date } }
+        : { createdAt: { lt: date } }
+    const result = await this.prisma.patientAccessLog.deleteMany({ where })
+    return result.count
+  }
 }
 
 export { PatientAccessLogRepository }

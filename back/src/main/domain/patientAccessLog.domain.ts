@@ -1,5 +1,6 @@
 import Boom from '@hapi/boom'
 
+import type { Config } from '../types/application/config'
 import type { IocContainer } from '../types/application/ioc'
 import type {
   PatientAccessLogDomainInterface,
@@ -18,10 +19,12 @@ const CLINICAL_FIELD_SET: ReadonlySet<string> = new Set(CLINICAL_FIELDS)
 class PatientAccessLogDomain implements PatientAccessLogDomainInterface {
   private readonly patientAccessLogRepository: PatientAccessLogRepositoryInterface
   private readonly tenantContext: TenantContextInterface
+  private readonly config: Config
 
-  constructor({ patientAccessLogRepository, tenantContext }: IocContainer) {
+  constructor({ patientAccessLogRepository, tenantContext, config }: IocContainer) {
     this.patientAccessLogRepository = patientAccessLogRepository
     this.tenantContext = tenantContext
+    this.config = config
   }
 
   // `exportFilters` est le seul champ libre de la table (voir le commentaire du modele,
@@ -74,6 +77,17 @@ class PatientAccessLogDomain implements PatientAccessLogDomainInterface {
     filters: PlatformAccessLogFilters,
   ): Promise<PatientAccessLogEntityDomain[]> {
     return this.patientAccessLogRepository.findAllPlatformWide(filters)
+  }
+
+  // Retention parametrable (tache 8, etape 4b) : `config.logRetentionMonths`, jamais douze en
+  // dur -- meme calcul qu'`ActivityLogDomain.cleanup`, DUPLIQUE plutot que factorise a dessein
+  // (voir son commentaire) : un sabotage qui remet douze en dur ici seul ne doit faire rougir que
+  // le test de CE domaine.
+  async cleanup(): Promise<{ deleted: number }> {
+    const cutoff = new Date()
+    cutoff.setMonth(cutoff.getMonth() - this.config.logRetentionMonths)
+    const deleted = await this.patientAccessLogRepository.deleteOlderThan(cutoff)
+    return { deleted }
   }
 
   // TOUR DE CORRECTION 1 (revue) — deux trous elargis a dessein, sur la SEULE barriere qui
