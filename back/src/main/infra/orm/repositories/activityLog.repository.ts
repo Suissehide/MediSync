@@ -110,15 +110,22 @@ class ActivityLogRepository implements ActivityLogRepositoryInterface {
 
   // Tâche 6, étape 4b : `GET /super-admin/access-log` (source=activite) — SANS borne de tenant,
   // à l'échelle de la plateforme entière. `ActivityLog.findMany` est déjà déclaré dans
-  // `SUPERADMIN_OPERATIONS` (tâche 1) : encadré par `runAsSuperAdmin`, `await` À L'INTÉRIEUR du
-  // rappel — piège Prisma paresseux déjà rencontré partout ailleurs sur ce chantier (sans ce
-  // `await` interne, la requête part hors de la portée du contexte, et le garde-fou lit le
-  // tenant ambiant plutôt que `superadmin`). C'est cette lecture, sans aucun `establishmentId`
-  // dans le `where`, qui rend enfin lisibles les lignes du script d'amorçage
-  // (`UserDomain.bootstrapSuperAdmin`, écrites sous `runAsSystem`, `establishmentId: null`) :
-  // aucune autre route ne les filtrait jusqu'ici, ni la lecture d'établissement
-  // (`establishment.repository.ts#activityLogFor`, qui exige un `establishmentId` précis), ni le
-  // tenant ordinaire (`findMany` ci-dessus, qui n'existe que sous un tenant).
+  // `SUPERADMIN_OPERATIONS` (tâche 1) : encadré par `runAsSuperAdmin`. C'est cette lecture, sans
+  // aucun `establishmentId` dans le `where`, qui rend enfin lisibles les lignes du script
+  // d'amorçage (`UserDomain.bootstrapSuperAdmin`, écrites sous `runAsSystem`,
+  // `establishmentId: null`) : aucune autre route ne les filtrait jusqu'ici, ni la lecture
+  // d'établissement (`establishment.repository.ts#activityLogFor`, qui exige un
+  // `establishmentId` précis), ni le tenant ordinaire (`findMany` ci-dessus, qui n'existe que
+  // sous un tenant).
+  //
+  // `await` À L'INTÉRIEUR du rappel — mais lisez `utils/tenant-context.ts#runAsSuperAdmin` avant
+  // de recopier cette forme ailleurs : la mesure (tour de correction 1, tâche 6) montre que ce
+  // qui tient réellement la portée du contexte est l'ENROBAGE `async` du rappel, pas le mot-clé
+  // `await` lui-même (un rappel `async` SANS `await` interne reste correct, mesuré sur les 244
+  // e2e) — un rappel SYNCHRONE NU, en revanche, perd le contexte (mesuré : 5 tests rougissent en
+  // 500). L'`await` ci-dessous reste écrit : `suspicious/useAwait` (Biome, CLAUDE.md) refuse un
+  // rappel `async` sans aucun `await`, et un rappel qui ne suspend jamais se lit mal à côté de
+  // ses voisins — deux raisons de lisibilité/lint, plus la raison de contexte qu'on croyait.
   async findAllPlatformWide(filters: PlatformAccessLogFilters): Promise<ActivityLogEntityRepo[]> {
     try {
       return await this.tenantContext.runAsSuperAdmin(async () => {

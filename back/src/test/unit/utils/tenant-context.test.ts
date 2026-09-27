@@ -13,6 +13,19 @@ const tenant: Tenant = {
   soignantId: null,
 }
 
+// Mimique une requete Prisma reelle : rien ne se passe a la CONSTRUCTION de l'objet rendu par
+// `client.modele.operation(args)`, seul un `.then()` ulterieur (ce que `await` fait) declenche le
+// travail — ici, lire le store ALS ambiant au moment ou ce travail a lieu reellement. C'est cette
+// paresse, pas `Promise.resolve()` (deja regle des la construction), qui reproduit fidelement le
+// mecanisme mesure sur le vrai depot (etape 4b, tache 6, tour de correction 1) sans toucher a une
+// vraie base.
+class RequetePrismaFictive {
+  constructor(private readonly lireStore: () => unknown) {}
+  then(resolve: (valeur: unknown) => void): void {
+    resolve(this.lireStore())
+  }
+}
+
 describe('TenantContext', () => {
   it('leve sans contexte', () => {
     const ctx = new TenantContext()
@@ -48,11 +61,7 @@ describe('TenantContext', () => {
     expect(ctx.peek()).toBeUndefined()
   })
 
-  // Meme forme que runAsSystem ci-dessus, pour le troisieme contexte (tache 1, etape 4a). Le
-  // `await Promise.resolve()` a l'interieur du rappel n'est pas cosmetique : une requete Prisma
-  // est paresseuse, et `runAsSuperAdmin(() => prisma.x.count(...))` renverrait la promesse SANS
-  // l'attendre si le rappel n'attendait rien lui-meme — l'execution partirait alors hors de la
-  // portee du contexte (voir le commentaire de runAsSuperAdmin, utils/tenant-context.ts).
+  // Meme forme que runAsSystem ci-dessus, pour le troisieme contexte (tache 1, etape 4a).
   it('runAsSuperAdmin pose le marqueur superadmin', async () => {
     const ctx = new TenantContext()
     await ctx.runAsSuperAdmin(async () => {
@@ -61,6 +70,42 @@ describe('TenantContext', () => {
       expect(() => ctx.current()).toThrow(TenantContextMissingError)
     })
     expect(ctx.peek()).toBeUndefined()
+  })
+
+  // CE QUE CE TEST CORRIGE (etape 4b, tache 6, tour de correction 1) : l'ancien commentaire ici
+  // affirmait que le `await` A L'INTERIEUR du rappel etait ce qui tenait la portee du contexte.
+  // Mesure par execution (sabotage sur un appelant reel, `PatientAccessLogRepository.
+  // findAllPlatformWide`, task-6-report.md) : FAUX. Les trois cas suivants, avec la MEME
+  // requete paresseuse (`RequetePrismaFictive`, qui ne lit le store qu'a l'instant ou `.then()`
+  // est reellement invoque — exactement le "Prisma est paresseux" repete partout ailleurs dans
+  // ce depot) :
+  //   - rappel `async` SANS aucun `await` interne -> contexte CORRECT ;
+  //   - rappel `async` AVEC un `await` interne (la convention ecrite partout) -> contexte CORRECT ;
+  //   - rappel SYNCHRONE NU (pas de `async` du tout) -> contexte PERDU.
+  // Ce qui tient la propriete est donc l'ENROBAGE `async` du rappel, pas le mot-cle `await`
+  // lui-meme : une fonction `async` qui REND une valeur "thenable" la fait passer par une
+  // resolution de promesse que Node associe a la portee `AsyncLocalStorage` active au moment de
+  // l'appel — exactement comme le ferait un `await` explicite. Voir le commentaire corrige de
+  // `runAsSuperAdmin` (utils/tenant-context.ts) pour la regle complete, y compris pourquoi
+  // l'`await` interne reste neanmoins la convention du depot (Biome `suspicious/useAwait`,
+  // lisibilite) — jamais parce qu'il tiendrait a lui seul cette propriete-ci.
+  it('runAsSuperAdmin : c est l enrobage async du rappel qui tient le contexte face a une requete paresseuse, jamais le mot-cle await', async () => {
+    const ctx = new TenantContext()
+
+    const sansAwaitInterne = await ctx.runAsSuperAdmin(async () => {
+      return new RequetePrismaFictive(() => ctx.peek())
+    })
+    expect(sansAwaitInterne).toEqual({ kind: 'superadmin' })
+
+    const avecAwaitInterne = await ctx.runAsSuperAdmin(async () => {
+      return await new RequetePrismaFictive(() => ctx.peek())
+    })
+    expect(avecAwaitInterne).toEqual({ kind: 'superadmin' })
+
+    // Rappel volontairement SANS `async` : le point de ce cas est precisement son absence.
+    const rappelSynchroneNu = () => new RequetePrismaFictive(() => ctx.peek())
+    const contexteAppelSynchrone = await ctx.runAsSuperAdmin(rappelSynchroneNu)
+    expect(contexteAppelSynchrone).toBeUndefined()
   })
 
   // TOUR DE CORRECTION 3 (tache 1) — Important de la revue : muter en place l'objet rendu par

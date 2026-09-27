@@ -74,6 +74,34 @@ export const buildFakePrisma = (responses: Partial<Record<string, unknown>> = {}
   return { prisma, calls }
 }
 
+// Mimique la paresse REELLE de Prisma (deja documentee partout dans ce depot, et desormais dans
+// le commentaire de `runAsSuperAdmin`, utils/tenant-context.ts) : `buildFakePrisma` ci-dessus
+// resout IMMEDIATEMENT (`Promise.resolve`), ce qui masque exactement la question posee par le
+// tour de correction 1 de la tache 6 -- ce faux depot-ci rend la reponse a « quel store
+// `tenantContext.peek()` un abonnement `.then()` REEL verrait-il », pas « quel store un simple
+// appel synchrone verrait-il » (les deux coincident pour `Promise.resolve`, ils divergent pour
+// une requete paresseuse). Necessaire pour eprouver `findAllPlatformWide`
+// (`ActivityLogRepository`, `PatientAccessLogRepository`) : voir leurs tests dans ce fichier, et
+// `tenant-context.test.ts` pour la preuve generale, independante de tout depot.
+const buildLazyFakePrisma = (tenantContext: TenantContext) => {
+  const calls: Call[] = []
+  const storesAuDispatch: unknown[] = []
+  const handler = (model: string) =>
+    new Proxy({}, {
+      get: (_t, op: string) => (args: Record<string, unknown>) => {
+        calls.push({ model, op, args })
+        return {
+          then: (resolve: (valeur: unknown) => void) => {
+            storesAuDispatch.push(tenantContext.peek())
+            resolve(op === 'findMany' ? [] : 0)
+          },
+        }
+      },
+    })
+  const prisma = new Proxy({}, { get: (_t, model: string) => handler(model) })
+  return { prisma, calls, storesAuDispatch }
+}
+
 export const tenant: Tenant = {
   userId: 'u1', establishmentId: 'e1', establishmentRole: 'MEMBER',
   serviceId: 's1', serviceRole: 'INTERVENANT', soignantId: 'so1',
@@ -184,6 +212,73 @@ describe('scoping des repositories d etablissement', () => {
       args: { where: { createdAt: { lt: date } } },
     })
     expect(calls[1]?.args.where).not.toHaveProperty('establishmentId')
+  })
+
+  // Etape 4b, tache 6 (tour de correction 1) : entree manquante pour `findAllPlatformWide`,
+  // signalee par la revue. `ActivityLog.findMany` est deja declare dans `SUPERADMIN_OPERATIONS`
+  // (tache 1) ; cette methode-ci l'exerce SANS aucune borne de tenant dans le `where` — a la
+  // difference de `findMany` plus haut (tenant ordinaire, `establishmentId` + service obligatoires).
+  it('ActivityLogRepository.findAllPlatformWide envoie les filtres recus, aucun de force, sous runAsSuperAdmin', async () => {
+    const { prisma, calls } = buildFakePrisma()
+    const ctx = new TenantContext()
+    const repo = new ActivityLogRepository(buildContainer(prisma, ctx))
+
+    await repo.findAllPlatformWide({ establishmentId: 'e9', userID: 'u9', action: 'a9' })
+    expect(calls[0]).toMatchObject({
+      model: 'activityLog', op: 'findMany',
+      args: { where: { establishmentId: 'e9', userID: 'u9', action: 'a9' } },
+    })
+
+    await repo.findAllPlatformWide({})
+    // Sans filtre, AUCUNE cle forcee dans le `where` — c'est precisement ce qui rend lisibles
+    // les lignes du script d'amorcage (`establishmentId: null`) : un `establishmentId` impose,
+    // meme `null`, les exclurait d'un `where: { establishmentId: null }` qui ne matcherait que
+    // les lignes EXPLICITEMENT nulles, pas « n'importe laquelle ».
+    expect(calls[1]).toMatchObject({ model: 'activityLog', op: 'findMany', args: { where: {} } })
+  })
+
+  // Meme demonstration que pour PatientAccessLogRepository plus bas : la forme exacte envoyee
+  // (aucune borne) est refusee par le garde-fou reel hors du contexte superadmin — y compris
+  // sous un tenant ordinaire, ou `ActivityLog` (ESTABLISHMENT_MODELS) exige `establishmentId` — et
+  // permise dedans, parce que `ActivityLog` y est declare (tache 1), pas parce que le garde-fou
+  // aurait ete contourne.
+  it('la forme sans borne de findAllPlatformWide est refusee hors du contexte superadmin, et permise dedans', () => {
+    const args = { where: {} }
+
+    expect(() =>
+      assertTenantScope({ model: 'ActivityLog', operation: 'findMany', args }, undefined),
+    ).toThrow(TenantScopeMissingError)
+
+    expect(() =>
+      assertTenantScope(
+        { model: 'ActivityLog', operation: 'findMany', args },
+        { kind: 'tenant', tenant },
+      ),
+    ).toThrow(TenantScopeMissingError)
+
+    expect(() =>
+      assertTenantScope(
+        { model: 'ActivityLog', operation: 'findMany', args },
+        { kind: 'superadmin' },
+      ),
+    ).not.toThrow()
+  })
+
+  // LA PROPRIETE QUI A COUTE UN TOUR DE CORRECTION (tache 6) : ce que `Promise.resolve()`
+  // (buildFakePrisma) ne peut pas montrer, parce qu'il resout deja au moment de l'appel.
+  // `buildLazyFakePrisma` differe la lecture du store jusqu'au `.then()` REEL, exactement comme
+  // le fait Prisma — et prouve que le rappel de `findAllPlatformWide`, tel qu'ecrit en
+  // production (un `async` SANS mutation du mecanisme), conserve bien `superadmin` jusque-la.
+  // Voir `tenant-context.test.ts` (« c est l enrobage async... ») pour la preuve generale,
+  // independante de tout depot : un rappel SYNCHRONE NU, lui, perdrait ce contexte ici.
+  it('findAllPlatformWide conserve le contexte superadmin jusqu au dispatch reel de Prisma (requete paresseuse)', async () => {
+    const ctx = new TenantContext()
+    const { prisma, storesAuDispatch } = buildLazyFakePrisma(ctx)
+    const repo = new ActivityLogRepository(buildContainer(prisma, ctx))
+
+    await repo.findAllPlatformWide({})
+
+    expect(storesAuDispatch).toEqual([{ kind: 'superadmin' }])
   })
 })
 
@@ -1447,5 +1542,62 @@ describe('PatientAccessLogRepository', () => {
         { kind: 'system' },
       ),
     ).not.toThrow()
+  })
+
+  // Etape 4b, tache 6 (tour de correction 1) : entree manquante pour `findAllPlatformWide`,
+  // signalee par la revue — comme pour `ActivityLogRepository` plus haut. `PatientAccessLog`
+  // reste dans `SERVICE_MODELS` : cette methode-ci est la SEULE lecture du depot qui ne porte ni
+  // `establishmentId` ni `serviceId` dans son `where`, rendue possible par la declaration de
+  // `PatientAccessLog` dans `SUPERADMIN_OPERATIONS` (tache 6), jamais par un contournement du
+  // garde-fou.
+  it('findAllPlatformWide envoie les filtres recus, aucun de force, sous runAsSuperAdmin', async () => {
+    const { prisma, calls } = buildFakePrisma()
+    const ctx = new TenantContext()
+    const repo = new PatientAccessLogRepository(buildContainer(prisma, ctx))
+
+    await repo.findAllPlatformWide({ establishmentId: 'e9', userID: 'u9', action: 'a9' })
+    expect(calls[0]).toMatchObject({
+      model: 'patientAccessLog', op: 'findMany',
+      args: { where: { establishmentId: 'e9', userID: 'u9', action: 'a9' } },
+    })
+
+    await repo.findAllPlatformWide({})
+    expect(calls[1]).toMatchObject({
+      model: 'patientAccessLog', op: 'findMany', args: { where: {} },
+    })
+  })
+
+  it('la forme sans borne de findAllPlatformWide est refusee hors du contexte superadmin, et permise dedans', () => {
+    const args = { where: {} }
+
+    expect(() =>
+      assertTenantScope({ model: 'PatientAccessLog', operation: 'findMany', args }, undefined),
+    ).toThrow(TenantScopeMissingError)
+
+    expect(() =>
+      assertTenantScope(
+        { model: 'PatientAccessLog', operation: 'findMany', args },
+        { kind: 'tenant', tenant },
+      ),
+    ).toThrow(TenantScopeMissingError)
+
+    expect(() =>
+      assertTenantScope(
+        { model: 'PatientAccessLog', operation: 'findMany', args },
+        { kind: 'superadmin' },
+      ),
+    ).not.toThrow()
+  })
+
+  // Meme propriete, meme technique que pour `ActivityLogRepository.findAllPlatformWide` plus
+  // haut — voir son commentaire, et `tenant-context.test.ts` pour la preuve generale.
+  it('findAllPlatformWide conserve le contexte superadmin jusqu au dispatch reel de Prisma (requete paresseuse)', async () => {
+    const ctx = new TenantContext()
+    const { prisma, storesAuDispatch } = buildLazyFakePrisma(ctx)
+    const repo = new PatientAccessLogRepository(buildContainer(prisma, ctx))
+
+    await repo.findAllPlatformWide({})
+
+    expect(storesAuDispatch).toEqual([{ kind: 'superadmin' }])
   })
 })

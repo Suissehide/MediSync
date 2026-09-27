@@ -135,10 +135,17 @@ class PatientAccessLogRepository implements PatientAccessLogRepositoryInterface 
   // declare dans `SUPERADMIN_OPERATIONS` (tenant-guard.ts) : sous `runAsSuperAdmin`,
   // `assertTenantReadScope` ne s'applique qu'au contexte `tenant` (jamais `superadmin`), donc
   // aucun `where` n'est exige ici — memes termes que `Service.count`/`Patient.count` (commentaire
-  // au-dessus de `SUPERADMIN_OPERATIONS`). `await` A L'INTERIEUR du rappel, meme piege que
-  // partout ailleurs sur ce chantier (Prisma est paresseux : un simple retour de promesse
-  // laisserait la requete partir hors de la portee du contexte, et le garde-fou lirait alors le
-  // mauvais store).
+  // au-dessus de `SUPERADMIN_OPERATIONS`).
+  //
+  // `await` A L'INTERIEUR du rappel — mais lisez `utils/tenant-context.ts#runAsSuperAdmin` avant
+  // de recopier cette forme ailleurs : la mesure (tour de correction 1, tache 6) montre que ce
+  // qui tient reellement la portee du contexte est l'ENROBAGE `async` du rappel, pas le mot-cle
+  // `await` lui-meme (un rappel `async` SANS `await` interne reste correct, mesure sur les 244
+  // e2e) — un rappel SYNCHRONE NU, en revanche, perd le contexte (mesure : 5 tests rougissent en
+  // 500, exactement les cinq tests `source=acces`). L'`await` ci-dessous reste ecrit :
+  // `suspicious/useAwait` (Biome, CLAUDE.md) refuse un rappel `async` sans aucun `await`, et un
+  // rappel qui ne suspend jamais se lit mal a cote de ses voisins — deux raisons de
+  // lisibilite/lint, plus la raison de contexte qu'on croyait.
   //
   // A LA DIFFERENCE DE `findByPatientInEstablishment` CI-DESSUS, ce n'est PAS une traversee de
   // frontiere non declaree sous `runAsSystem` : c'est la capacite superadmin, exhaustive par

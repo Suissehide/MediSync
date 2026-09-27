@@ -293,8 +293,11 @@ Key cross-cutting concerns:
   "system" store to exercise the tenant guard itself, so that directory isn't covered (same class of gap as the
   typecheck one above). **A narrower, separate gap, worth stating rather than assuming away** (found at the étape
   4a final review): the named allow-list above (`AUTORISES` in `runAsSystem-unicite.test.ts`) exists only for
-  `runAsSystem`. `runAsSuperAdmin`'s own call sites (twelve in `src/main` today) are not enumerated by name
-  anywhere — a thirteenth call added anywhere in `src/main` leaves every check in that file green. Only its
+  `runAsSystem`. `runAsSuperAdmin`'s own call sites (twelve before étape 4b task 6, **fourteen today** — that
+  task added two, in `activityLog.repository.ts` and `patientAccessLog.repository.ts`, both for
+  `findAllPlatformWide`, the read behind `GET /super-admin/access-log` — and said so rather than letting the
+  count drift silently) are not enumerated by name anywhere — a fifteenth call added anywhere in `src/main`
+  leaves every check in that file green. Only its
   *construction* is unique (one `run` call, one literal `{ kind: "superadmin" }`, both confined to
   `tenant-context.ts`), which closes a second way *in* but not "who may invoke it once inside". This is defensible
   as-is: once inside the mode, every operation still passes through the declared, exhaustive
