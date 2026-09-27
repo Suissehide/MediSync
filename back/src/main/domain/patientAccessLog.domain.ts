@@ -3,6 +3,7 @@ import Boom from '@hapi/boom'
 import type { IocContainer } from '../types/application/ioc'
 import type {
   PatientAccessLogDomainInterface,
+  PatientAccessLogEntityDomain,
   RecordAccessInput,
 } from '../types/domain/patientAccessLog.domain.interface'
 import type { PatientAccessLogRepositoryInterface } from '../types/infra/orm/repositories/patientAccessLog.repository.interface'
@@ -51,6 +52,19 @@ class PatientAccessLogDomain implements PatientAccessLogDomainInterface {
       ...input,
       accesParOctroi: origine === 'octroi',
     })
+  }
+
+  // Etape 4b, tache 5 : simples relais vers le depot — aucune logique metier ici, le
+  // cloisonnement se joue entierement dans `PatientAccessLogRepository` (`scope()` vs
+  // `establishmentScope()`, voir son commentaire). Le filtrage du contenu clinique (aucun ici,
+  // par construction du schema Zod de reponse) n'a pas besoin d'etre reecrit : ce que ces deux
+  // methodes rendent n'est jamais un dossier patient, seulement des lignes du journal d'audit.
+  findByPatientInService(patientId: string): Promise<PatientAccessLogEntityDomain[]> {
+    return this.patientAccessLogRepository.findByPatientInService(patientId)
+  }
+
+  findByPatientInEstablishment(patientId: string): Promise<PatientAccessLogEntityDomain[]> {
+    return this.patientAccessLogRepository.findByPatientInEstablishment(patientId)
   }
 
   // TOUR DE CORRECTION 1 (revue) — deux trous elargis a dessein, sur la SEULE barriere qui

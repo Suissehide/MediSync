@@ -19,6 +19,18 @@ export type ServicePermission =
   | 'pdf:export'
   | 'todo:own'
   | 'members:read'
+  // Etape 4b, tache 5 : lire le journal des consultations (`PatientAccessLog`), a l'echelle du
+  // SEUL service courant. Nom distinct de `access-log:read` (EstablishmentPermission ci-dessous,
+  // deja present pour ADMIN depuis la toute premiere version de ce fichier, bd26a72) a dessein :
+  // les deux designations partagent le meme mot dans le cahier des charges de la tache, mais
+  // `hasPermission` (plus bas) choisit sa branche — service ou etablissement — sur la seule
+  // APPARTENANCE de la chaine a l'un des deux ensembles, avant meme de regarder les roles de
+  // l'appelant. Une chaine presente dans les DEUX ensembles prendrait toujours la branche
+  // service, y compris pour un appelant d'administration d'etablissement dont `serviceRole` est
+  // `null` — la route d'administration echouerait donc TOUJOURS, quel que soit son
+  // `establishmentRole`. Verifie par execution en ecrivant d'abord ce test faux avant de choisir
+  // ce nom.
+  | 'accessLog:read'
 
 export type EstablishmentPermission =
   | 'services:manage'
@@ -56,6 +68,7 @@ export const SERVICE_PERMISSIONS: Record<ServiceRole, readonly ServicePermission
     'clinical:write',
     'appointment:write',
     'pdf:export',
+    'accessLog:read',
   ],
   INTERVENANT: [
     ...READ_ALL,

@@ -9,13 +9,43 @@ import type { TenantContextInterface } from '../../../types/utils/tenant-context
 import type { PostgresPrismaClient } from '../postgres-client'
 
 // Modele : service.repository.ts (cahier des charges de la tache). Le constructeur ne lit
-// jamais le scope — seule `create` le fait, via `this.scope`, au moment de l'ecriture. Un acces
-// se journalise toujours a l'interieur d'un service (le journal existe pour la consultation d'un
-// dossier patient, qui n'a lieu que sous `/e/:establishmentId/s/:serviceId/...`) : `scope()`
-// (et non `establishmentScope()`) est donc la bonne methode, et son echec — hors de tout
-// contexte de tenant, ou dans le contexte d'administration d'etablissement, sans service — est
-// le comportement voulu (voir patientAccessLog.domain.test.ts, qui le montre par execution
-// plutot que de le contourner).
+// jamais le scope — chaque methode le fait a son propre appel, via `this.scope` ou
+// `this.establishmentScope`. Un acces se journalise toujours a l'interieur d'un service (le
+// journal existe pour la consultation d'un dossier patient, qui n'a lieu que sous
+// `/e/:establishmentId/s/:serviceId/...`) : `scope()` (et non `establishmentScope()`) est donc la
+// bonne methode pour `create`, et son echec — hors de tout contexte de tenant, ou dans le
+// contexte d'administration d'etablissement, sans service — est le comportement voulu (voir
+// patientAccessLog.domain.test.ts, qui le montre par execution plutot que de le contourner).
+//
+// Etape 4b, tache 5 (les deux premieres LECTURES) : `findByPatientInService` reprend le meme
+// `scope()` que `create` — le cloisonnement par service vient de la, jamais d'un `where` recopie
+// a la main.
+//
+// `findByPatientInEstablishment` EST UNE TRAVERSEE DE FRONTIERE ASSUMEE, DU MEME GENRE QUE
+// `PatientServiceFileRepository.impactDesactivation`, PAS UN SIMPLE `establishmentScope()` NU —
+// essaye en premier, et ecarte par PREUVE, pas par gout. `PatientAccessLog` reste dans
+// `SERVICE_MODELS` (infra/orm/tenant-guard.ts) : le garde-fou de tenant exige `serviceId` pour
+// TOUTE operation sur un modele de cette famille, meme une lecture dont le `where` ne porte que
+// `establishmentId` — un `establishmentScope()` nu y echoue donc avec `TenantScopeMissingError`,
+// depuis le contexte d'administration d'etablissement (`serviceId: null`). Reclasser
+// `PatientAccessLog` en `ESTABLISHMENT_MODELS` POUR CONTOURNER CE POINT A ETE ESSAYE, ET REJETE
+// PAR LA PREUVE DE MONOTONIE (`tenant-guard-monotonie.test.ts`, MONOTONIE_REF=HEAD) : le
+// reclassement rouvrait, sous superadmin comme sans aucun contexte, une vingtaine de chemins
+// d'inclusion imbriquee jusqu'ici refuses (`User.establishmentMemberships>establishment>
+// services>accessLogs` et apparentes) — parce que la transition etablissement -> service que
+// `assertServiceRelationFilter` protege ailleurs dans l'arbre cesse de s'appliquer des que la
+// CIBLE n'est plus de famille service. Un gain local (cette lecture) n'a pas a payer un cout
+// global (des ponts rouverts ailleurs) quand un dispositif deja eprouve — `runAsSystem` — couvre
+// exactement ce cas sans y toucher.
+//
+// Meme discipline que `estSuiviAilleurs`/`impactDesactivation` (patientServiceFile.repository.ts) :
+// la borne (`establishmentId`, lue via `this.establishmentScope`) est capturee AVANT d'entrer
+// dans le mode encadre — `this.establishmentScope` lit le contexte de tenant ORDINAIRE, plus
+// disponible une fois `runAsSystem` entame — et portee EXPLICITEMENT par la requete elle-meme,
+// puisque le garde-fou n'exige plus rien sous ce mode. Declaree dans
+// `runAsSystem-unicite.test.ts` (CAPACITE) ; ses bornes exactes sont verifiees par
+// `repository-scope.test.ts` (le `where` reel envoye a Prisma, puis la preuve que cette forme
+// serait refusee hors du mode encadre).
 class PatientAccessLogRepository implements PatientAccessLogRepositoryInterface {
   private readonly prisma: PostgresPrismaClient
   private readonly errorHandler: ErrorHandlerInterface
@@ -31,6 +61,10 @@ class PatientAccessLogRepository implements PatientAccessLogRepositoryInterface 
     return this.tenantContext.scope()
   }
 
+  private get establishmentScope() {
+    return this.tenantContext.establishmentScope()
+  }
+
   // `await` a l'interieur de cette methode, jamais un simple retour de promesse non attendue :
   // c'est ce qui garde la lecture de `this.scope` — donc du contexte `AsyncLocalStorage` —
   // synchrone et anterieure a l'appel Prisma, plutot que de laisser l'ecriture partir hors de la
@@ -39,6 +73,43 @@ class PatientAccessLogRepository implements PatientAccessLogRepositoryInterface 
     try {
       return await this.prisma.patientAccessLog.create({
         data: { ...params, ...this.scope },
+      })
+    } catch (err) {
+      throw this.errorHandler.boomErrorFromPrismaError({
+        entityName: 'PatientAccessLog',
+        error: err,
+      })
+    }
+  }
+
+  // Meme piege que `create`, meme remede : `await` a l'interieur, pour lire `this.scope` avant
+  // de quitter la portee synchrone du contexte de tenant.
+  async findByPatientInService(patientId: string): Promise<PatientAccessLogEntityRepo[]> {
+    try {
+      return await this.prisma.patientAccessLog.findMany({
+        where: { patientId, ...this.scope },
+        orderBy: { createdAt: 'desc' },
+      })
+    } catch (err) {
+      throw this.errorHandler.boomErrorFromPrismaError({
+        entityName: 'PatientAccessLog',
+        error: err,
+      })
+    }
+  }
+
+  // `establishmentId` lu ICI, hors du rappel `runAsSystem` : voir le commentaire de classe.
+  // `await` a l'INTERIEUR du rappel (meme piege que partout ailleurs sur ce chantier) : un
+  // simple retour de promesse laisserait `runAsSystem` restaurer le contexte ordinaire avant que
+  // Prisma n'execute reellement la requete, et le garde-fou verrait alors le mauvais store.
+  async findByPatientInEstablishment(patientId: string): Promise<PatientAccessLogEntityRepo[]> {
+    const { establishmentId } = this.establishmentScope
+    try {
+      return await this.tenantContext.runAsSystem(async () => {
+        return await this.prisma.patientAccessLog.findMany({
+          where: { patientId, establishmentId },
+          orderBy: { createdAt: 'desc' },
+        })
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({

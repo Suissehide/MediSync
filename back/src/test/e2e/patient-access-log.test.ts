@@ -21,6 +21,7 @@ import '../../main/utils/date'
 import { buildTestApp, type TestApp } from './setup/app'
 import { testDb, truncateAll } from './setup/db'
 import {
+  adminUrl,
   createEstablishment,
   createService,
   createUser,
@@ -441,6 +442,191 @@ describe("journal des consultations : l export, en une ligne (tache 4)", () => {
     })
     expect(lignes).toHaveLength(1)
     expect(lignes[0]?.exportCount).toBe(0)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Tache 5 (etape 4b) : les deux premieres LECTURES du journal — celle du coordinateur de
+// service (scope()) et celle de l administrateur d etablissement (establishmentScope()).
+// ---------------------------------------------------------------------------
+
+describe('journal des consultations : le lire, par service et par etablissement (tache 5)', () => {
+  let testApp: TestApp
+  let etab: { id: string }
+  let serviceA: { id: string }
+  let serviceB: { id: string }
+  let patient: { id: string }
+  let cookiesCoordinateurA: { access_token: string }
+  // Un compte du MEME service que A, sans `accessLog:read` (LECTURE ne l a pas) : eprouve la
+  // permission de service toute seule, pour un patient et une route qui existent tous les deux.
+  let cookiesLectureA: { access_token: string }
+  let cookiesAdmin: { access_token: string }
+  // Simple MEMBRE d etablissement (pas ADMIN) : eprouve la permission d etablissement toute
+  // seule, symetrique de `cookiesLectureA` cote service.
+  let cookiesMembre: { access_token: string }
+
+  beforeAll(async () => {
+    await truncateAll()
+    testApp = await buildTestApp()
+
+    etab = await createEstablishment('Lecture du journal')
+    // DEUX services REELLEMENT peuples, chacun avec au moins un acces au meme patient — sans
+    // quoi « l administrateur voit tous les services » serait vrai par vacuite (voir le cahier
+    // des charges de la tache).
+    serviceA = await createService(etab.id, 'Service A')
+    serviceB = await createService(etab.id, 'Service B')
+
+    await createUser({
+      email: 'coordinateur-a-journal@test.fr',
+      memberships: [
+        {
+          establishmentId: etab.id,
+          services: [{ serviceId: serviceA.id, role: 'COORDINATEUR' }],
+        },
+      ],
+    })
+    await createUser({
+      email: 'lecture-a-journal@test.fr',
+      memberships: [
+        {
+          establishmentId: etab.id,
+          services: [{ serviceId: serviceA.id, role: 'LECTURE' }],
+        },
+      ],
+    })
+    await createUser({
+      email: 'admin-journal@test.fr',
+      memberships: [{ establishmentId: etab.id, role: 'ADMIN' }],
+    })
+    await createUser({
+      email: 'membre-journal@test.fr',
+      memberships: [{ establishmentId: etab.id, role: 'MEMBER' }],
+    })
+
+    patient = await testDb.patient.create({
+      data: {
+        firstName: 'Jean',
+        lastName: 'Patient',
+        createDate: new Date(),
+        establishmentId: etab.id,
+      },
+    })
+    await testDb.patientServiceFile.createMany({
+      data: [
+        { patientId: patient.id, serviceId: serviceA.id, establishmentId: etab.id },
+        { patientId: patient.id, serviceId: serviceB.id, establishmentId: etab.id },
+      ],
+    })
+
+    // Les lignes du journal elles-memes : ecrites directement en base plutot que rejouees via
+    // le crochet (deja eprouve par les blocs precedents) — une par service, sur le MEME patient.
+    await testDb.patientAccessLog.createMany({
+      data: [
+        {
+          establishmentId: etab.id,
+          serviceId: serviceA.id,
+          patientId: patient.id,
+          userID: 'u-coordinateur-a',
+          userFirstName: 'Ada',
+          userLastName: 'DuServiceA',
+          action: 'dossier.ouvert',
+          accesParOctroi: false,
+        },
+        {
+          establishmentId: etab.id,
+          serviceId: serviceB.id,
+          patientId: patient.id,
+          userID: 'u-coordinateur-b',
+          userFirstName: 'Belle',
+          userLastName: 'DuServiceB',
+          action: 'dossier.ouvert',
+          accesParOctroi: false,
+        },
+      ],
+    })
+
+    cookiesCoordinateurA = await signIn(testApp.app, 'coordinateur-a-journal@test.fr')
+    cookiesLectureA = await signIn(testApp.app, 'lecture-a-journal@test.fr')
+    cookiesAdmin = await signIn(testApp.app, 'admin-journal@test.fr')
+    cookiesMembre = await signIn(testApp.app, 'membre-journal@test.fr')
+  })
+
+  afterAll(async () => {
+    await testApp.close()
+    await testDb.$disconnect()
+  })
+
+  // SABORDAGE ETROIT, EPROUVE (retire avant ce commit) : remplacer `...this.scope` par
+  // `...this.establishmentScope` dans `PatientAccessLogRepository.findByPatientInService`
+  // rougit CE test — mais pas de la facon qu'on imaginerait d'abord (un 200 qui montrerait les
+  // deux services). `PatientAccessLog` reste dans `SERVICE_MODELS` (tenant-guard.ts), dont le
+  // garde-fou exige `serviceId` dans le `where` pour TOUTE operation ; un `where` sans cette cle
+  // (ce que rend `establishmentScope()` seul) echoue donc AVANT MEME D'ATTEINDRE LA BASE, avec
+  // `TenantScopeMissingError` (500) — et le second test (« ne rend ni identite… ») rougit en
+  // meme temps, par ricochet, puisqu'il tape la meme route. C'est une preuve PLUS FORTE que
+  // celle attendue : `scope()` n'est pas seulement ce qui rend la REPONSE correcte, c'est ce qui
+  // rend la requete possible du tout.
+  it('un coordinateur ne voit que les acces de SON service', async () => {
+    const res = await testApp.app.inject({
+      method: 'GET',
+      url: tenantUrl(etab.id, serviceA.id, `/patient/${patient.id}/acces`),
+      cookies: cookiesCoordinateurA,
+    })
+    expect(res.statusCode).toBe(200)
+    expect(res.json().map((l: { serviceId: string }) => l.serviceId)).toEqual([serviceA.id])
+  })
+
+  it('un admin d etablissement voit les acces de TOUS les services de son etablissement', async () => {
+    const res = await testApp.app.inject({
+      method: 'GET',
+      url: adminUrl(etab.id, `/patients/${patient.id}/acces`),
+      cookies: cookiesAdmin,
+    })
+    expect(res.statusCode).toBe(200)
+    expect(new Set(res.json().map((l: { serviceId: string }) => l.serviceId))).toEqual(
+      new Set([serviceA.id, serviceB.id]),
+    )
+  })
+
+  // Le schema de reponse ne porte que l auteur, l action, la date et le service (cahier des
+  // charges) : jamais `patientId`, `exportCount`, `exportFilters`, `accesParOctroi` ni les
+  // identifiants de tenant, meme si le depot les rend tous.
+  it('ne rend ni identite de patient ni contenu clinique, seulement qui a consulte quoi et quand', async () => {
+    const res = await testApp.app.inject({
+      method: 'GET',
+      url: tenantUrl(etab.id, serviceA.id, `/patient/${patient.id}/acces`),
+      cookies: cookiesCoordinateurA,
+    })
+    expect(res.statusCode).toBe(200)
+    const [ligne] = res.json()
+    expect(Object.keys(ligne).sort()).toEqual(
+      ['action', 'createdAt', 'id', 'serviceId', 'userFirstName', 'userLastName'].sort(),
+    )
+  })
+
+  it('refuse la lecture de service a qui n a pas accessLog:read (LECTURE)', async () => {
+    const res = await testApp.app.inject({
+      method: 'GET',
+      url: tenantUrl(etab.id, serviceA.id, `/patient/${patient.id}/acces`),
+      cookies: cookiesLectureA,
+    })
+    expect(res.statusCode).toBe(403)
+  })
+
+  // 404, pas 403 : convention deja etablie par toutes les routes d'administration
+  // d'etablissement (voir services.test.ts, members.test.ts) — `resolveEstablishmentAdmin`
+  // (tenant.plugin.ts) refuse `requireEstablishmentAdmin` par 404 pour tout membre qui n'est pas
+  // `ADMIN`, avant meme d'atteindre la verification de permission (meme refus de principe que
+  // pour un service ou un etablissement inconnu : ne pas distinguer les deux cas). ADMIN porte
+  // TOUJOURS `access-log:read` (aucun role d'etablissement partiel n'existe entre ADMIN et
+  // MEMBER) : ce test eprouve donc la resolution d'administration, pas la permission elle-meme.
+  it('refuse la lecture d etablissement a un simple MEMBRE (404, pas 403)', async () => {
+    const res = await testApp.app.inject({
+      method: 'GET',
+      url: adminUrl(etab.id, `/patients/${patient.id}/acces`),
+      cookies: cookiesMembre,
+    })
+    expect(res.statusCode).toBe(404)
   })
 })
 

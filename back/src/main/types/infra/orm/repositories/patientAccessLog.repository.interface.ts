@@ -25,4 +25,11 @@ export type PatientAccessLogCreateEntityRepo = {
 
 export interface PatientAccessLogRepositoryInterface {
   create: (params: PatientAccessLogCreateEntityRepo) => Promise<PatientAccessLogEntityRepo>
+  // Etape 4b, tache 5 : les deux premieres LECTURES du journal. `findByPatientInService` filtre
+  // par `tenantContext.scope()` (establishmentId + serviceId du tenant courant) : c'est ce filtre
+  // qui isole les acces d'un service de ceux d'un autre, jamais un `where` recopie a la main.
+  // `findByPatientInEstablishment` filtre par `tenantContext.establishmentScope()` (establishmentId
+  // seul) : elle rend les acces de TOUS les services de l'etablissement, pour l'administrateur.
+  findByPatientInService: (patientId: string) => Promise<PatientAccessLogEntityRepo[]>
+  findByPatientInEstablishment: (patientId: string) => Promise<PatientAccessLogEntityRepo[]>
 }

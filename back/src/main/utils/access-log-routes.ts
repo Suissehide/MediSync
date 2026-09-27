@@ -89,19 +89,20 @@ export const LOGGED_PATIENT_ROUTES: Record<string, AccessAction> = {
 
 // Chaque exemption porte sa raison en clair. Une exemption se justifie POSITIVEMENT : le defaut
 // est de journaliser.
-//
-// La tache 5 ajoutera `/e/:establishmentId/s/:serviceId/patient/:patientID/acces` — la route qui
-// LIT le journal. Elle designera elle-meme un dossier et devra donc venir ici, avec pour raison
-// que lire le journal des consultations d'un dossier n'est pas consulter ce dossier : elle ne rend
-// aucune identite ni aucun contenu clinique, seulement la liste de qui a ouvert quoi et quand. La
-// journaliser ferait de plus grossir le journal a chaque fois qu'on le consulte, jusqu'a noyer les
-// acces de soin sous les acces d'audit. Elle n'est PAS inscrite ici aujourd'hui : une entree morte
-// fait echouer le demarrage (voir plus haut), donc elle s'ajoutera avec la route, pas avant.
 export const EXEMPTED_PATIENT_ROUTES: Record<string, string> = {
   '/e/:establishmentId/s/:serviceId/patient/:patientID/pathways':
     "appelee par l'ecran du dossier en meme temps que l'ouverture : la journaliser doublerait chaque ligne sans rien apprendre",
   '/e/:establishmentId/s/:serviceId/patient/:patientID/pathway/:pathwayID/appointments-count':
     'rend un nombre, aucune identite, aucun contenu',
+  // Tache 5 (etape 4b) : la route qui LIT le journal, cote service
+  // (interfaces/http/fastify/routes/patientAccessLog.ts). Lire le journal des consultations
+  // d'un dossier n'est pas consulter ce dossier : elle ne rend aucune identite ni aucun contenu
+  // clinique (voir `patientAccessLogsResponseSchema`, schemas/patientAccessLog.schema.ts —
+  // uniquement l'auteur, l'action, la date et le service), seulement la liste de qui a ouvert
+  // quoi et quand. La journaliser ferait de plus grossir le journal a chaque fois qu'on le
+  // consulte, jusqu'a noyer les acces de soin sous les acces d'audit.
+  '/e/:establishmentId/s/:serviceId/patient/:patientID/acces':
+    "lit le journal des consultations d'un dossier, n'en constitue pas une : aucune identite ni contenu clinique rendus, et la journaliser ferait grossir le journal a chaque consultation de lui-meme",
 }
 
 // Ce qu'il y a a journaliser pour une route donnee, ou `null` s'il n'y a rien. Ecrit ici plutot

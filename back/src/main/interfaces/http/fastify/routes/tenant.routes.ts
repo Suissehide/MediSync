@@ -16,6 +16,7 @@ import { forbiddenWeekRouter } from './forbiddenWeek'
 import { locationReadRouter } from './location'
 import { pathwayRouter } from './pathway'
 import { pathwayTemplateRouter } from './pathwayTemplate'
+import { patientAccessLogRouter } from './patientAccessLog'
 import { patientRouter } from './patient'
 import { patientServiceFileRouter } from './patientServiceFile'
 import { planningCycleRouter } from './planningCycle'
@@ -118,6 +119,7 @@ const tenantRoutes: FastifyPluginAsyncZod = async (fastify) => {
   await fastify.register(diagnosticEducatifTemplateRouter, { prefix: '/diagnostic-template' })
   await fastify.register(diagnosticEducatifRouter, { prefix: '/patient/:patientId/diagnostic' })
   await fastify.register(enrollmentIssueRouter, { prefix: '/patient/:patientID/enrollment-issue' })
+  await fastify.register(patientAccessLogRouter, { prefix: '/patient/:patientID/acces' })
   await fastify.register(activityLogRouter, { prefix: '/activity-log' })
   await fastify.register(forbiddenWeekRouter, { prefix: '/forbidden-week' })
   await fastify.register(planningCycleRouter, { prefix: '/planning-cycle' })

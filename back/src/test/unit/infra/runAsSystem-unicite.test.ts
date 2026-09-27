@@ -28,9 +28,9 @@ import ts from 'typescript'
 // anterieure de ce commentaire disait « deux fois seulement » avant que la tache 9 n'ajoute un
 // troisieme emploi legitime dans le meme fichier que le second — la prose mentait alors que les
 // assertions, elles, restaient justes ; corrige une premiere fois en pretendant a tort que la
-// CAPACITE et les BORNES etaient toutes deux couvertes ici, corrige a nouveau ci-dessus. Cinq
+// CAPACITE et les BORNES etaient toutes deux couvertes ici, corrige a nouveau ci-dessus. Six
 // emplois declares a ce jour, tous dans le back de production (un quatrieme ajoute a la tache 11,
-// etape 4a, un cinquieme a la tache 15) :
+// etape 4a, un cinquieme a la tache 15, un sixieme a la tache 5 de l'etape 4b) :
 //
 //   1. La purge planifiee du journal d'activite (`application/starter.ts`,
 //      `scheduleActivityLogCleanup`) : hors de toute requete HTTP, il n'existe alors aucun
@@ -66,6 +66,17 @@ import ts from 'typescript'
 //      traverse, il ne l'elargit pas. Ses bornes (compte vise, etablissement courant EXCLU,
 //      capture AVANT d'entrer dans le mode encadre) sont verifiees par `repository-scope.test.ts`,
 //      pas par ce fichier-ci.
+//   6. La lecture du journal des consultations, a l'echelle de l'etablissement
+//      (`infra/orm/repositories/patientAccessLog.repository.ts`, `findByPatientInEstablishment`,
+//      tache 5, etape 4b) : appelee depuis l'administration d'etablissement (aucun service
+//      courant a ce niveau), pour rendre TOUTES les lignes du journal d'un patient, tous
+//      services confondus — jamais de contenu clinique (voir le schema de reponse HTTP). Meme
+//      forme que 2 et 3 : la borne (`establishmentId`, capturee AVANT d'entrer dans le mode
+//      encadre) est verifiee par `repository-scope.test.ts`. `PatientAccessLog` reste dans
+//      `SERVICE_MODELS` (tenant-guard.ts) : le reclasser en `ESTABLISHMENT_MODELS` pour eviter
+//      ce sixieme emploi a ete essaye et rejete par la preuve de monotonie
+//      (`tenant-guard-monotonie.test.ts`), qui a montre une vingtaine de chemins d'inclusion
+//      imbriquee rouverts ailleurs par ce reclassement.
 //
 // `runAsSuperAdmin` (meme fichier, tache 1 / etape 4a) y ajoute un troisieme mode, qui ne retire
 // rien mais substitue au filtre de tenant une liste declaree et exhaustive de couples (modele,
@@ -154,6 +165,19 @@ const AUTORISES = [
       'repart du modele GLOBAL User par une relation a-plusieurs, que le garde-fou refuse ' +
       'desormais sous contexte de tenant (assertNoGlobalToManyBridge). Ce qui traverse la ' +
       'frontiere passe de l arbre entier a un bit. Bornes verifiees par repository-scope.test.ts',
+    appels: 1,
+  },
+  {
+    fichier: 'infra/orm/repositories/patientAccessLog.repository.ts',
+    raison:
+      'findByPatientInEstablishment (tache 5, etape 4b) — la route d administration ' +
+      'd etablissement du journal des consultations, sans service courant. PatientAccessLog ' +
+      'reste dans SERVICE_MODELS (tenant-guard.ts), dont le garde-fou exige serviceId pour ' +
+      'toute operation ; reclasser le modele en ESTABLISHMENT_MODELS pour eviter runAsSystem a ' +
+      'ete essaye et rejete par la preuve de monotonie (tenant-guard-monotonie.test.ts), qui a ' +
+      'montre une vingtaine de ponts d inclusion imbriquee rouverts ailleurs. Rend les acces de ' +
+      'TOUS les services de l etablissement, jamais de contenu clinique. Bornes verifiees par ' +
+      'repository-scope.test.ts',
     appels: 1,
   },
 ]

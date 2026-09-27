@@ -1,3 +1,5 @@
+import type { PatientAccessLog } from '../../../generated/client'
+
 // Journal des consultations d'un dossier patient (etape 4b). Quatre evenements distingues, sans
 // que le journal ne porte jamais lui-meme de contenu clinique (voir `record`,
 // domain/patientAccessLog.domain.ts, et `utils/clinical-fields.ts` pour la liste des cles
@@ -34,6 +36,16 @@ export type RecordAccessInput = {
   exportFilters?: string
 }
 
+// Etape 4b, tache 5 : ce que rendent les deux premieres LECTURES du journal. Le type complet
+// (`PatientAccessLog`, importe ci-dessous) porte des colonnes que ni l'une ni l'autre route ne
+// doit rendre (`exportFilters`, `accesParOctroi`…) : c'est le schema Zod de reponse
+// (interfaces/http/fastify/schemas/patientAccessLog.schema.ts), pas ce type, qui borne ce qui
+// sort reellement en HTTP — voir son commentaire pour la liste exacte des quatre champs
+// (auteur, action, date, service).
+export type PatientAccessLogEntityDomain = PatientAccessLog
+
 export interface PatientAccessLogDomainInterface {
   record: (input: RecordAccessInput) => Promise<void>
+  findByPatientInService: (patientId: string) => Promise<PatientAccessLogEntityDomain[]>
+  findByPatientInEstablishment: (patientId: string) => Promise<PatientAccessLogEntityDomain[]>
 }

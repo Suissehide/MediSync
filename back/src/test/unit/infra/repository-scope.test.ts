@@ -1376,4 +1376,76 @@ describe('PatientAccessLogRepository', () => {
 
     await expect(repo.create(params)).rejects.toThrow(TenantContextMissingError)
   })
+
+  // Tache 5 (etape 4b) : les deux premieres LECTURES. `findByPatientInService` reprend le meme
+  // `scope()` que `create` — le sabotage etroit (remplacer `scope()` par `establishmentScope()`
+  // dans ce depot) est prouve cote e2e (patient-access-log.test.ts, deux services reellement
+  // peuples) ; ce test-ci tient la forme EXACTE envoyee a Prisma, comme pour `create` plus haut.
+  it('findByPatientInService filtre par patientId ET par le scope de service, jamais autrement', async () => {
+    const { prisma, calls } = buildFakePrisma()
+    const ctx = new TenantContext()
+    const repo = new PatientAccessLogRepository(buildContainer(prisma, ctx))
+
+    await ctx.run(tenant, () => repo.findByPatientInService('p1'))
+
+    expect(calls[0]).toMatchObject({
+      model: 'patientAccessLog',
+      op: 'findMany',
+      args: {
+        where: { patientId: 'p1', establishmentId: 'e1', serviceId: 's1' },
+      },
+    })
+  })
+
+  // Un tenant d'administration d'etablissement (`serviceId: null`, comme le rend
+  // `resolveEstablishmentAdmin`, tenant.plugin.ts) : `findByPatientInEstablishment` doit
+  // fonctionner QUAND MEME (elle ne lit jamais `this.scope`, qui exigerait un service), et le
+  // `where` qu'elle envoie ne porte que `establishmentId` — jamais `serviceId`, puisque son
+  // point est justement de voir TOUS les services.
+  const tenantAdminEtablissement: Tenant = {
+    userId: 'u1', establishmentId: 'e1', establishmentRole: 'ADMIN',
+    serviceId: null, serviceRole: null, soignantId: null,
+  }
+
+  it('findByPatientInEstablishment interroge sous runAsSystem, sans service courant, filtre par establishmentId seul', async () => {
+    const { prisma, calls } = buildFakePrisma()
+    const ctx = new TenantContext()
+    const spy = jest.spyOn(ctx, 'runAsSystem')
+    const repo = new PatientAccessLogRepository(buildContainer(prisma, ctx))
+
+    await ctx.run(tenantAdminEtablissement, () => repo.findByPatientInEstablishment('p1'))
+
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(calls[0]).toMatchObject({
+      model: 'patientAccessLog',
+      op: 'findMany',
+      args: {
+        where: { patientId: 'p1', establishmentId: 'e1' },
+      },
+    })
+    expect((calls[0]?.args.where as Record<string, unknown>).serviceId).toBeUndefined()
+  })
+
+  // Meme demonstration que pour `PatientServiceFileRepository` plus haut : la forme exacte de la
+  // requete de `findByPatientInEstablishment` est refusee par le garde-fou reel hors du mode
+  // encadre — y compris depuis l'administration d'etablissement, ou `serviceId` vaut `null` et
+  // fait donc echouer `assertTenantScope` sur ce champ, meme avec `establishmentId` correct — et
+  // permise dedans.
+  it('la forme de la requete d administration est refusee hors du mode encadre, et permise dedans', () => {
+    const args = { where: { patientId: 'p1', establishmentId: 'e1' } }
+
+    expect(() =>
+      assertTenantScope(
+        { model: 'PatientAccessLog', operation: 'findMany', args },
+        { kind: 'tenant', tenant: tenantAdminEtablissement },
+      ),
+    ).toThrow(TenantScopeMissingError)
+
+    expect(() =>
+      assertTenantScope(
+        { model: 'PatientAccessLog', operation: 'findMany', args },
+        { kind: 'system' },
+      ),
+    ).not.toThrow()
+  })
 })
