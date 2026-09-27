@@ -6,7 +6,10 @@ import type {
   PatientAccessLogEntityDomain,
   RecordAccessInput,
 } from '../types/domain/patientAccessLog.domain.interface'
-import type { PatientAccessLogRepositoryInterface } from '../types/infra/orm/repositories/patientAccessLog.repository.interface'
+import type {
+  PatientAccessLogRepositoryInterface,
+  PlatformAccessLogFilters,
+} from '../types/infra/orm/repositories/patientAccessLog.repository.interface'
 import type { TenantContextInterface } from '../types/utils/tenant-context'
 import { CLINICAL_FIELDS } from '../utils/clinical-fields'
 
@@ -65,6 +68,12 @@ class PatientAccessLogDomain implements PatientAccessLogDomainInterface {
 
   findByPatientInEstablishment(patientId: string): Promise<PatientAccessLogEntityDomain[]> {
     return this.patientAccessLogRepository.findByPatientInEstablishment(patientId)
+  }
+
+  findAllPlatformWide(
+    filters: PlatformAccessLogFilters,
+  ): Promise<PatientAccessLogEntityDomain[]> {
+    return this.patientAccessLogRepository.findAllPlatformWide(filters)
   }
 
   // TOUR DE CORRECTION 1 (revue) — deux trous elargis a dessein, sur la SEULE barriere qui

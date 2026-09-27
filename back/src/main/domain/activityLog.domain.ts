@@ -1,9 +1,11 @@
 import type { IocContainer } from '../types/application/ioc'
 import type { ActivityLogDomainInterface } from '../types/domain/activityLog.domain.interface'
 import type {
+  ActivityLogEntityRepo,
   ActivityLogFindManyParams,
   ActivityLogFindManyResult,
   ActivityLogRepositoryInterface,
+  PlatformAccessLogFilters,
 } from '../types/infra/orm/repositories/activityLog.repository.interface'
 
 class ActivityLogDomain implements ActivityLogDomainInterface {
@@ -15,6 +17,10 @@ class ActivityLogDomain implements ActivityLogDomainInterface {
 
   findMany(params: ActivityLogFindManyParams): Promise<ActivityLogFindManyResult> {
     return this.activityLogRepository.findMany(params)
+  }
+
+  findAllPlatformWide(filters: PlatformAccessLogFilters): Promise<ActivityLogEntityRepo[]> {
+    return this.activityLogRepository.findAllPlatformWide(filters)
   }
 
   async cleanup(): Promise<{ deleted: number }> {

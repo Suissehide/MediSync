@@ -3,10 +3,17 @@ import type {
   PatientAccessLogCreateEntityRepo,
   PatientAccessLogEntityRepo,
   PatientAccessLogRepositoryInterface,
+  PlatformAccessLogFilters,
 } from '../../../types/infra/orm/repositories/patientAccessLog.repository.interface'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { TenantContextInterface } from '../../../types/utils/tenant-context'
 import type { PostgresPrismaClient } from '../postgres-client'
+
+// Ecran de diagnostic plateforme (tache 6, etape 4b), pas un export complet — meme esprit que
+// `ACTIVITY_LOG_DETAIL_LIMIT` (establishment.repository.ts) et son homologue
+// `PLATFORM_ACCESS_LOG_LIMIT` (activityLog.repository.ts, meme tache, meme valeur — duplique
+// plutot que partage, comme le type `PlatformAccessLogFilters` : voir son commentaire).
+const PLATFORM_ACCESS_LOG_LIMIT = 200
 
 // Modele : service.repository.ts (cahier des charges de la tache). Le constructeur ne lit
 // jamais le scope — chaque methode le fait a son propre appel, via `this.scope` ou
@@ -113,6 +120,44 @@ class PatientAccessLogRepository implements PatientAccessLogRepositoryInterface 
         return await this.prisma.patientAccessLog.findMany({
           where: { patientId, establishmentId },
           orderBy: { createdAt: 'desc' },
+        })
+      })
+    } catch (err) {
+      throw this.errorHandler.boomErrorFromPrismaError({
+        entityName: 'PatientAccessLog',
+        error: err,
+      })
+    }
+  }
+
+  // Etape 4b, tache 6 : `GET /super-admin/access-log` (source=acces) — SANS borne de tenant, a
+  // l'echelle de la PLATEFORME entiere. `PatientAccessLog: ['findMany', 'count']` est desormais
+  // declare dans `SUPERADMIN_OPERATIONS` (tenant-guard.ts) : sous `runAsSuperAdmin`,
+  // `assertTenantReadScope` ne s'applique qu'au contexte `tenant` (jamais `superadmin`), donc
+  // aucun `where` n'est exige ici — memes termes que `Service.count`/`Patient.count` (commentaire
+  // au-dessus de `SUPERADMIN_OPERATIONS`). `await` A L'INTERIEUR du rappel, meme piege que
+  // partout ailleurs sur ce chantier (Prisma est paresseux : un simple retour de promesse
+  // laisserait la requete partir hors de la portee du contexte, et le garde-fou lirait alors le
+  // mauvais store).
+  //
+  // A LA DIFFERENCE DE `findByPatientInEstablishment` CI-DESSUS, ce n'est PAS une traversee de
+  // frontiere non declaree sous `runAsSystem` : c'est la capacite superadmin, exhaustive par
+  // construction, qui autorise explicitement ce couple (modele, operation) — retirer l'entree de
+  // `SUPERADMIN_OPERATIONS` fait refuser cette methode avec `TenantScopeMissingError`, jamais
+  // rendre une liste vide (verifie par sabotage, voir le rapport de tache).
+  async findAllPlatformWide(
+    filters: PlatformAccessLogFilters,
+  ): Promise<PatientAccessLogEntityRepo[]> {
+    try {
+      return await this.tenantContext.runAsSuperAdmin(async () => {
+        return await this.prisma.patientAccessLog.findMany({
+          where: {
+            ...(filters.establishmentId ? { establishmentId: filters.establishmentId } : {}),
+            ...(filters.userID ? { userID: filters.userID } : {}),
+            ...(filters.action ? { action: filters.action } : {}),
+          },
+          orderBy: { createdAt: 'desc' },
+          take: PLATFORM_ACCESS_LOG_LIMIT,
         })
       })
     } catch (err) {

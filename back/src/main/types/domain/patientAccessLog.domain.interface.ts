@@ -1,4 +1,5 @@
 import type { PatientAccessLog } from '../../../generated/client'
+import type { PlatformAccessLogFilters } from '../infra/orm/repositories/patientAccessLog.repository.interface'
 
 // Journal des consultations d'un dossier patient (etape 4b). Quatre evenements distingues, sans
 // que le journal ne porte jamais lui-meme de contenu clinique (voir `record`,
@@ -48,4 +49,10 @@ export interface PatientAccessLogDomainInterface {
   record: (input: RecordAccessInput) => Promise<void>
   findByPatientInService: (patientId: string) => Promise<PatientAccessLogEntityDomain[]>
   findByPatientInEstablishment: (patientId: string) => Promise<PatientAccessLogEntityDomain[]>
+  // Etape 4b, tache 6 : la TROISIEME lecture, a l'echelle de la plateforme (super-admin). Simple
+  // relais vers le depot, comme les deux precedentes — voir `PatientAccessLogRepository.
+  // findAllPlatformWide` pour le cloisonnement (delibere absent : c'est le point de la tache).
+  findAllPlatformWide: (
+    filters: PlatformAccessLogFilters,
+  ) => Promise<PatientAccessLogEntityDomain[]>
 }

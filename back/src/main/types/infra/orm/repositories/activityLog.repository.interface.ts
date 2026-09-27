@@ -31,6 +31,18 @@ export type ActivityLogFindManyResult = {
   page: number
 }
 
+// Tâche 6, étape 4b : `GET /super-admin/access-log` (source=activite). Filtres libres — sous
+// superadmin, `assertTenantReadScope` (tenant-guard.ts) ne s'applique qu'au contexte `tenant`,
+// jamais à `superadmin` : rien n'exige donc un `where` particulier ici, contrairement au
+// `findMany` ci-dessus (tenant ordinaire). Tous optionnels : sans aucun, la lecture rend TOUTE la
+// table — y compris les lignes du script d'amorçage (`establishmentId: null`), qu'aucune autre
+// route ne peut lire (voir le commentaire sur l'implémentation).
+export type PlatformAccessLogFilters = {
+  establishmentId?: string
+  userID?: string
+  action?: string
+}
+
 export interface ActivityLogRepositoryInterface {
   // `client` optionnel (tâche 11, étape 4a, tour de correction 1) : voir le commentaire sur
   // l'implémentation.
@@ -41,5 +53,6 @@ export interface ActivityLogRepositoryInterface {
   findMany: (
     params: ActivityLogFindManyParams,
   ) => Promise<ActivityLogFindManyResult>
+  findAllPlatformWide: (filters: PlatformAccessLogFilters) => Promise<ActivityLogEntityRepo[]>
   deleteOlderThan: (date: Date) => Promise<number>
 }

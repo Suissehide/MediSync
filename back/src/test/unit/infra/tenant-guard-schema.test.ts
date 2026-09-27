@@ -462,6 +462,9 @@ describe('SUPERADMIN_OPERATIONS reflete le schema', () => {
       ServiceMembership: ['count', 'findMany'],
       Patient: ['count'],
       ActivityLog: ['findMany', 'count'],
+      // Tâche 6, étape 4b : `GET /super-admin/access-log` (source=acces) — voir le commentaire
+      // sur cette entrée dans tenant-guard.ts.
+      PatientAccessLog: ['findMany', 'count'],
     })
   })
 })

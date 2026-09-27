@@ -23,6 +23,17 @@ export type PatientAccessLogCreateEntityRepo = {
   accesParOctroi: boolean
 }
 
+// Tache 6, etape 4b : `GET /super-admin/access-log` (source=acces). Memes trois filtres, libres,
+// qu'`activityLog.repository.interface.ts#PlatformAccessLogFilters` — dupliques plutot que
+// partages entre deux depots de modeles distincts, comme `ACTIVITY_LOG_DETAIL_LIMIT`/
+// `UNRESOLVED_ACCOUNT_EMAIL` (establishment.repository.ts) le font deja pour de petites
+// declarations locales de ce genre.
+export type PlatformAccessLogFilters = {
+  establishmentId?: string
+  userID?: string
+  action?: string
+}
+
 export interface PatientAccessLogRepositoryInterface {
   create: (params: PatientAccessLogCreateEntityRepo) => Promise<PatientAccessLogEntityRepo>
   // Etape 4b, tache 5 : les deux premieres LECTURES du journal. `findByPatientInService` filtre
@@ -32,4 +43,7 @@ export interface PatientAccessLogRepositoryInterface {
   // seul) : elle rend les acces de TOUS les services de l'etablissement, pour l'administrateur.
   findByPatientInService: (patientId: string) => Promise<PatientAccessLogEntityRepo[]>
   findByPatientInEstablishment: (patientId: string) => Promise<PatientAccessLogEntityRepo[]>
+  // Etape 4b, tache 6 : la TROISIEME lecture, a l'echelle de la PLATEFORME entiere -- sous
+  // `runAsSuperAdmin`, jamais sous un tenant. Voir le commentaire sur l'implementation.
+  findAllPlatformWide: (filters: PlatformAccessLogFilters) => Promise<PatientAccessLogEntityRepo[]>
 }

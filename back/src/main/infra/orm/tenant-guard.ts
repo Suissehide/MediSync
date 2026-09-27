@@ -87,6 +87,12 @@ export const SUPERADMIN_OPERATIONS: Readonly<Record<string, readonly string[]>> 
   ServiceMembership: ['count', 'findMany'],
   Patient: ['count'],
   ActivityLog: ['findMany', 'count'],
+  // Tâche 6, étape 4b : `GET /super-admin/access-log` (source=acces). Jamais une ligne de
+  // `Patient` — cette entrée ne rouvre pas « le super-admin compte, il ne lit pas » (voir
+  // `Patient` ci-dessus) : `PatientAccessLog` est le journal d'AUDIT, jamais le dossier lui-même,
+  // et sa réponse HTTP ne porte que `patientId` comme IDENTIFIANT (jamais un nom) — voir
+  // `superAdminAccessLog.schema.ts`.
+  PatientAccessLog: ['findMany', 'count'],
 }
 
 // Relations dont les écritures imbriquées sont vérifiées (parent → champ → enfant). C'est une

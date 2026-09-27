@@ -2,15 +2,22 @@ import type { IocContainer } from '../../../types/application/ioc'
 import type { PrimaTransactionClient } from '../../../types/infra/orm/client'
 import type {
   ActivityLogCreateEntityRepo,
+  ActivityLogEntityRepo,
   ActivityLogFindManyParams,
   ActivityLogFindManyResult,
   ActivityLogRepositoryInterface,
+  PlatformAccessLogFilters,
 } from '../../../types/infra/orm/repositories/activityLog.repository.interface'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { TenantContextInterface } from '../../../types/utils/tenant-context'
 import type { PostgresPrismaClient } from '../postgres-client'
 
 const PAGE_SIZE = 50
+
+// Écran de diagnostic plateforme (tâche 6, étape 4b), pas un export complet — même esprit que
+// `ACTIVITY_LOG_DETAIL_LIMIT` (establishment.repository.ts), qui borne le journal d'UN
+// établissement pour la même raison.
+const PLATFORM_ACCESS_LOG_LIMIT = 200
 
 class ActivityLogRepository implements ActivityLogRepositoryInterface {
   private readonly prisma: PostgresPrismaClient
@@ -99,6 +106,38 @@ class ActivityLogRepository implements ActivityLogRepositoryInterface {
       this.prisma.activityLog.count({ where }),
     ])
     return { data, total, page }
+  }
+
+  // Tâche 6, étape 4b : `GET /super-admin/access-log` (source=activite) — SANS borne de tenant,
+  // à l'échelle de la plateforme entière. `ActivityLog.findMany` est déjà déclaré dans
+  // `SUPERADMIN_OPERATIONS` (tâche 1) : encadré par `runAsSuperAdmin`, `await` À L'INTÉRIEUR du
+  // rappel — piège Prisma paresseux déjà rencontré partout ailleurs sur ce chantier (sans ce
+  // `await` interne, la requête part hors de la portée du contexte, et le garde-fou lit le
+  // tenant ambiant plutôt que `superadmin`). C'est cette lecture, sans aucun `establishmentId`
+  // dans le `where`, qui rend enfin lisibles les lignes du script d'amorçage
+  // (`UserDomain.bootstrapSuperAdmin`, écrites sous `runAsSystem`, `establishmentId: null`) :
+  // aucune autre route ne les filtrait jusqu'ici, ni la lecture d'établissement
+  // (`establishment.repository.ts#activityLogFor`, qui exige un `establishmentId` précis), ni le
+  // tenant ordinaire (`findMany` ci-dessus, qui n'existe que sous un tenant).
+  async findAllPlatformWide(filters: PlatformAccessLogFilters): Promise<ActivityLogEntityRepo[]> {
+    try {
+      return await this.tenantContext.runAsSuperAdmin(async () => {
+        return await this.prisma.activityLog.findMany({
+          where: {
+            ...(filters.establishmentId ? { establishmentId: filters.establishmentId } : {}),
+            ...(filters.userID ? { userID: filters.userID } : {}),
+            ...(filters.action ? { action: filters.action } : {}),
+          },
+          orderBy: { createdAt: 'desc' },
+          take: PLATFORM_ACCESS_LOG_LIMIT,
+        })
+      })
+    } catch (err) {
+      throw this.errorHandler.boomErrorFromPrismaError({
+        entityName: 'ActivityLog',
+        error: err,
+      })
+    }
   }
 
   // Sous runAsSystem (purge planifiee) : toute la table. Sous un tenant : le
