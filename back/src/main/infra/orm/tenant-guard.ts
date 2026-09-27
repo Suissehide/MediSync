@@ -24,6 +24,7 @@ export const SERVICE_MODELS: readonly string[] = [
   'SlotTemplateSoignant',
   'SoignantThematic',
   'PatientServiceFile',
+  'PatientAccessLog',
 ]
 
 // Modèles rattachés à un établissement : portent establishmentId.
@@ -281,6 +282,7 @@ export const MODEL_RELATIONS: Record<string, Record<string, ModelRelation>> = {
     appointmentPatients: many('AppointmentPatient'),
     pathwayPriorities: many('PatientPathwayPriority'),
     serviceFiles: many('PatientServiceFile'),
+    accessLogs: many('PatientAccessLog'),
   },
   Soignant: {
     establishment: one('Establishment'),
@@ -297,6 +299,7 @@ export const MODEL_RELATIONS: Record<string, Record<string, ModelRelation>> = {
     establishment: one('Establishment'),
     memberships: many('ServiceMembership'),
     patientServiceFiles: many('PatientServiceFile'),
+    accessLogs: many('PatientAccessLog'),
   },
   EstablishmentMembership: {
     user: one('User'),
@@ -379,6 +382,10 @@ export const MODEL_RELATIONS: Record<string, Record<string, ModelRelation>> = {
     service: one('Service'),
     diagnostics: many('DiagnosticEducatif'),
     enrollmentIssues: many('EnrollmentIssue'),
+  },
+  PatientAccessLog: {
+    patient: one('Patient'),
+    service: one('Service'),
   },
 }
 

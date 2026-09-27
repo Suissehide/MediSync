@@ -60,6 +60,7 @@ model Service {
   establishment       Establishment         @relation(fields: [establishmentId], references: [id])
   memberships         ServiceMembership[]
   patientServiceFiles PatientServiceFile[]
+  accessLogs          PatientAccessLog[]
 
   @@unique([establishmentId, name])
   @@unique([id, establishmentId])
@@ -371,6 +372,7 @@ model Patient {
   appointmentPatients AppointmentPatient[]
   pathwayPriorities   PatientPathwayPriority[]
   serviceFiles        PatientServiceFile[]
+  accessLogs          PatientAccessLog[]
 
   @@unique([id, establishmentId])
   @@index([establishmentId])
@@ -416,6 +418,55 @@ model PatientServiceFile {
   @@unique([id, serviceId])
   @@index([serviceId])
   @@index([patientId])
+}
+
+// Journal des consultations : qui a ouvert le dossier de quel patient, quand, et le detail d'un
+// export eventuel (nombre de lignes, filtres). Modele de service, sur le patron exact de
+// PatientServiceFile (cles composites, @@unique([id, serviceId])).
+//
+// LA CASCADE EST UNE DECISION, PAS UN DEFAUT. `onDelete: Cascade` depuis Patient efface
+// l'historique de consultation au moment meme ou le dossier est supprime -- soit potentiellement
+// au moment precis ou cet historique devient interessant a lire. Motif retenu, et son cout :
+// conserver les lignes apres suppression du patient laisserait un journal qui designe un dossier
+// qui n'existe plus, et `patientId` deviendrait une cle morte ; les effacer perd la trace de qui
+// avait consulte ce dossier avant sa suppression. Deux points verifies dans le code, pas
+// seulement affirmes ici, ont fait pencher vers la cascade : (1) la suppression du patient reste
+// elle-meme journalisee ailleurs, avec son auteur -- `PatientDomain.delete` emet
+// `patient.deleted` (`userID`, `patientId`), capte par `ActivityLogSubscriber`
+// (`services/activity-log.subscriber.ts`), qui ecrit une ligne `ActivityLog` nommant l'auteur ;
+// (2) `PatientServiceFile`, le dossier clinique lui-meme, cascade DEJA depuis `Patient` (meme
+// relation, meme `onDelete`) -- la donnee que ce journal decrirait avoir ete consultee disparait
+// donc de toute facon au meme instant, ce qui affaiblit l'interet de garder ce journal-ci
+// orphelin d'elle. Cout accepte, a nommer plutot qu'a taire : si une consultation abusive precede
+// de peu la suppression du patient (par le meme acteur, ou un complice qui couvre ses traces), le
+// detail fin -- qui, quand, combien de lignes exportees -- est perdu avec elle ; seule la ligne
+// `patient.deleted` demeure, sans le detail des consultations qui l'ont precedee. Si ce risque
+// devait un jour compter plus que la coherence referentielle (par exemple pour une obligation
+// reglementaire de conserver la preuve d'acces meme apres suppression du dossier), la ligne a
+// changer est celle-ci -- pas une lecture silencieuse du gap ailleurs.
+model PatientAccessLog {
+  id              String @id @default(cuid())
+  establishmentId String
+  serviceId       String
+  patientId       String
+
+  userID        String
+  userFirstName String?
+  userLastName  String?
+
+  action        String
+  exportCount   Int?
+  exportFilters String?
+
+  createdAt DateTime @default(now())
+
+  patient Patient @relation(fields: [patientId, establishmentId], references: [id, establishmentId], onDelete: Cascade)
+  service Service @relation(fields: [serviceId, establishmentId], references: [id, establishmentId])
+
+  @@unique([id, serviceId])
+  @@index([patientId])
+  @@index([createdAt])
+  @@index([establishmentId, serviceId])
 }
 
 model EnrollmentIssue {
