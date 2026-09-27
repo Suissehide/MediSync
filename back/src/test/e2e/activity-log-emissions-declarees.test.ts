@@ -1,6 +1,9 @@
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
-
+import {
+  BORNE_BASSE_EVENEMENTS,
+  type EvenementDeclare,
+  evenementsDansSource,
+  evenementsDeclares,
+} from '../shared/app-events-source'
 import { buildTestApp, type TestApp } from './setup/app'
 import { testDb, truncateAll } from './setup/db'
 
@@ -17,9 +20,11 @@ import { testDb, truncateAll } from './setup/db'
 // Ce fichier prouve donc, par EXECUTION, que chaque evenement declare produit reellement une
 // ligne quand il est emis sous le contexte ou il l'est reellement en production — jamais sous un
 // contexte suppose. Trois pieces :
-//   1. Les evenements sont lus depuis la SOURCE de `AppEvents` (regex sur `app-event-bus.ts`),
-//      jamais recopies a la main : un evenement ajoute au type et oublie ici fait echouer ce
-//      fichier plutot que de passer inapercu.
+//   1. Les evenements sont lus depuis la SOURCE de `AppEvents` (`app-event-bus.ts`, lu par
+//      `../shared/app-events-source.ts`), jamais recopies a la main : un evenement ajoute au
+//      type et oublie ici fait echouer ce fichier plutot que de passer inapercu — Y COMPRIS
+//      declare sur plusieurs lignes, ce qui n'a PAS ete vrai jusqu'a la revue finale de branche
+//      (voir le commentaire de ce module, et l'`EXEMPLE_MULTILIGNE` plus bas qui le tient).
 //   2. `CONTEXTES_REELS` : UNE entree par evenement, qui NOMME le contexte sous lequel ce site
 //      d'appel emet reellement (tenant de service, tenant d'administration, ou aucun contexte —
 //      voir le site d'appel cite sur chaque ligne). Jamais un contexte suppose ou choisi pour
@@ -81,36 +86,72 @@ const EXEMPTIONS: Record<string, string> = {}
 
 // Lit les evenements DEPUIS LA SOURCE plutot que de les recopier a la main (meme philosophie que
 // `runAsSystem-unicite.test.ts`, qui grep sa propre source plutot que de maintenir une liste
-// separee qui pourrait deriver). Chaque entree de `AppEvents` est ecrite sur SA PROPRE ligne,
-// entierement — `'nom.evenement': { champ: string; ... }` — donc une regex ligne par ligne
-// suffit, sans avoir a parser TypeScript.
-const CHEMIN_APP_EVENT_BUS = join(__dirname, '../../main/utils/app-event-bus.ts')
-const LIGNE_EVENEMENT = /^\s*'([\w.]+)':\s*\{([^}]*)\}/
-const CHAMP_STRING = /(\w+)\s*:\s*string/g
-
-type EvenementDeclare = { nom: string; champs: string[] }
-
-const evenementsDeclares = (): EvenementDeclare[] => {
-  const source = readFileSync(CHEMIN_APP_EVENT_BUS, 'utf8')
-  const evenements: EvenementDeclare[] = []
-  for (const ligne of source.split('\n')) {
-    const trouve = LIGNE_EVENEMENT.exec(ligne)
-    if (!trouve) {
-      continue
-    }
-    const [, nom, corps] = trouve
-    const champs = [...corps.matchAll(CHAMP_STRING)].map((m) => m[1])
-    evenements.push({ nom, champs })
-  }
-  return evenements
-}
+// separee qui pourrait deriver).
+//
+// LA LECTURE ELLE-MEME VIT DANS `../shared/app-events-source.ts` (revue finale de branche,
+// Important n°4) : elle etait ecrite ici, en une regex LIGNE PAR LIGNE qui exigeait l'accolade
+// fermante sur la meme ligne, et ECHOUAIT DONC OUVERT sur un evenement declare sur plusieurs
+// lignes — voir le commentaire de ce module pour la mesure et le remede. Elle est desormais
+// partagee avec le contrat de vocabulaire (`unit/utils/access-log-vocabulaire.test.ts`), pour
+// que les deux tests posent exactement la meme question a la meme source.
 
 // Charge synthetique minimale : une chaine distincte par champ, derivee de son nom — jamais une
 // valeur qui ressemble a une donnee reelle (aucun email, aucun jeton).
 const chargeSynthetique = (evenement: EvenementDeclare): Record<string, string> =>
   Object.fromEntries(evenement.champs.map((champ) => [champ, `synthetique-${champ}`]))
 
+// LA PREUVE PAR L'EXEMPLE MULTILIGNE (revue finale de branche, Important n°4). Ce `describe` est
+// la contre-epreuve de la lecture elle-meme : il ne regarde pas `app-event-bus.ts`, il donne a
+// `evenementsDansSource` la forme que le motif precedent ne voyait pas, et exige qu'elle la
+// voie. Avec la lecture ligne par ligne d'avant, le second cas ci-dessous rend `[]` pour
+// `facture.emise` et ce fichier rougit — c'est le sens du correctif.
+const EXEMPLE_MULTILIGNE = `
+type AppEvents = {
+  'patient.created':    { userID: string; patientId: string }
+  'facture.emise': {
+    userID: string
+    factureId: string
+    etablissementId: string
+    montantCentimes: number
+  }
+}
+`
+
+describe('la lecture de AppEvents voit un evenement declare sur plusieurs lignes', () => {
+  it('rend les DEUX evenements de l exemple, monoligne et multiligne', () => {
+    expect(evenementsDansSource(EXEMPLE_MULTILIGNE).map((e) => e.nom)).toEqual([
+      'patient.created',
+      'facture.emise',
+    ])
+  })
+
+  it('rend les champs `string` de la charge multiligne, sans le champ numerique', () => {
+    const facture = evenementsDansSource(EXEMPLE_MULTILIGNE).find(
+      (e) => e.nom === 'facture.emise',
+    )
+    expect(facture?.champs).toEqual(['userID', 'factureId', 'etablissementId'])
+  })
+
+  // Un evenement multiligne NON CLASSE doit faire echouer le recouvrement, pas passer inapercu :
+  // c'est la propriete que l'en-tete de ce fichier promet, rejouee ici sur la forme qui la
+  // mettait en defaut. Le sabotage exact prouve avant ce correctif — quatre lignes ajoutees a
+  // `AppEvents`, rien ajoute a `CONTEXTES_REELS` — laissait le fichier 18/18 vert.
+  it('un evenement multiligne absent des deux tables est bien signale comme non classe', () => {
+    const noms = evenementsDansSource(EXEMPLE_MULTILIGNE).map((e) => e.nom)
+    const nonClasses = noms.filter(
+      (nom) => !(nom in CONTEXTES_REELS) && !(nom in EXEMPTIONS),
+    )
+    expect(nonClasses).toEqual(['facture.emise'])
+  })
+})
+
 describe('chaque evenement declare est classe (contexte reel ou exemption nommee)', () => {
+  // La lecture ne doit jamais rendre MOINS que ce qui est connu : une liste vide (fichier
+  // renomme, bloc introuvable) rendrait tout le reste de ce fichier vert en ne testant rien.
+  it('voit au moins autant d evenements qu au jour ou cette borne a ete posee', () => {
+    expect(evenementsDeclares().length).toBeGreaterThanOrEqual(BORNE_BASSE_EVENEMENTS)
+  })
+
   it('AppEvents, CONTEXTES_REELS et EXEMPTIONS se recouvrent exactement', () => {
     const noms = evenementsDeclares().map((e) => e.nom)
     const nonClasses = noms.filter(

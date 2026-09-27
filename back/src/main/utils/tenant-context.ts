@@ -105,32 +105,45 @@ class TenantContext implements TenantContextInterface {
   // liste declaree et exhaustive de couples (modele, operation) permis — voir
   // SUPERADMIN_OPERATIONS, infra/orm/tenant-guard.ts.
   //
-  // LE PIEGE REEL, MESURE (etape 4b, tache 6, tour de correction 1 — l'enonce precedent de ce
-  // commentaire etait imprecis ; corrige ici, a la source qui fait autorite). Un rappel
-  // SYNCHRONE NU — `runAsSuperAdmin(() => prisma.x.count(...))`, sans `async` — perd bien le
-  // contexte : rien ne rattache la continuation reelle de la requete Prisma (paresseuse, comme
-  // partout ailleurs sur ce chantier) a la portee posee par `this.storage.run` ci-dessous, qui
-  // s'acheve des que le rappel revient (synchronement) — le garde-fou lit alors le tenant
-  // ambiant. Mesure par execution, par sabotage e2e sur un appelant reel
-  // (`PatientAccessLogRepository.findAllPlatformWide`, task-6-report.md) : cette forme fait
-  // echouer 5 tests sur 244, tous avec `TenantScopeMissingError` (500).
+  // LE PIEGE REEL, MESURE (etape 4b, tache 6 ; enonce corrige une TROISIEME et derniere fois a
+  // la revue finale de branche — ce fichier fait autorite, et il portait encore l'avant-dernier
+  // enonce, que `back/CLAUDE.md` et l'annexe des decisions nomment desormais comme un SYMPTOME).
   //
-  // CE QUI TIENT LA PROPRIETE N'EST PAS LE MOT-CLE `await`, C'EST L'ENROBAGE `async` DU RAPPEL.
-  // Rejoue sur le meme appelant reel : `runAsSuperAdmin(async () => { return
-  // prisma.x.findMany(...) })` — SANS aucun `await` interne — reste CORRECT (244/244 verts). Une
-  // fonction `async` qui rend une valeur "thenable" la fait passer par une resolution de
-  // promesse que Node associe a la portee `AsyncLocalStorage` active au moment de l'appel,
-  // exactement comme le ferait un `await` explicite ; c'est cette resolution implicite qui
-  // rattache la continuation, pas la presence litterale du mot-cle `await`. Vaut a l'identique
-  // pour `run`/`runAsSystem` ci-dessus : meme primitive (`this.storage.run`), meme mecanisme.
+  // L'ENONCE EXACT, ET C'EST LE SEUL A RECOPIER AILLEURS :
+  //
+  //     LA LECTURE DU CONTEXTE DOIT SURVENIR AVANT LE PREMIER POINT DE SUSPENSION.
+  //
+  // `this.storage.run` ci-dessous ne tient la portee que jusqu'a ce que le rappel rende la main.
+  // Une requete Prisma est PARESSEUSE : `prisma.x.findMany(...)` ne lit rien au moment ou on
+  // l'ecrit, la lecture du contexte par le garde-fou survient quand la promesse est reellement
+  // executee. Un rappel SYNCHRONE NU qui se contente de RENDRE cette promesse —
+  // `runAsSuperAdmin(() => prisma.x.findMany(...))` — a donc deja quitte la portee quand la
+  // lecture arrive : le garde-fou lit le contexte ambiant. Mesure par sabotage e2e sur un
+  // appelant reel (`PatientAccessLogRepository.findAllPlatformWide`, task-6-report.md) : 5 tests
+  // sur 244 echouent, tous en `TenantScopeMissingError` (500).
+  //
+  // POURQUOI CE N'EST PAS « L'ENROBAGE `async` QUI TIENT LA PROPRIETE » — l'enonce precedent,
+  // plus juste que le premier (« toujours `await` a l'interieur ») mais toujours faux, et faux
+  // DANS LE SENS QUI FAIT MAL. Il decrivait le symptome : une fonction `async` qui rend une
+  // valeur "thenable" la fait passer par une resolution de promesse que Node rattache a la
+  // portee active, ce qui revient a ne pas suspendre avant d'avoir lu. Mais generalise, il
+  // trompe deux fois :
+  //   - il declare DEFECTUEUX un appelant de production qui va tres bien. `deleteOlderThan`
+  //     (activityLog.repository.ts ET patientAccessLog.repository.ts) est appele par un rappel
+  //     SYNCHRONE NU (`runAsSystem(() => activityLogDomain.cleanup())`, application/starter.ts),
+  //     et la propriete tient — parce que ce chemin lit `tenantContext.peek()` SYNCHRONIQUEMENT
+  //     en tete de son corps, avant tout `await` ;
+  //   - surtout, il rassure a tort : un rappel `async` ne protege de RIEN s'il lit le contexte
+  //     APRES une attente. Qui croit l'enrobage suffisant placera la lecture apres un `await`,
+  //     et perdra le contexte avec un rappel de la forme officiellement « correcte ».
   //
   // CE QUI RESTE VRAI, ET POURQUOI ECRIRE `await` A L'INTERIEUR DEMEURE LA CONVENTION DE CE
-  // DEPOT : la regle Biome `suspicious/useAwait` (voir CLAUDE.md, section Code style) REFUSE un
-  // rappel `async` sans aucun `await` — verifie, `npm run lint` echoue exactement sur cette
-  // forme — et un rappel qui ne suspend jamais se lit mal a cote de ses voisins qui, eux,
-  // suspendent reellement. Le rappel doit donc etre `async` (necessaire au contexte), l'`await`
-  // interne satisfait le lint et la lisibilite (plus necessaire au contexte lui-meme, contrairement
-  // a ce que l'ancien enonce affirmait).
+  // DEPOT — mais pour une raison DIFFERENTE de celle qu'on croyait : la regle Biome
+  // `suspicious/useAwait` (voir CLAUDE.md, section Code style) REFUSE un rappel `async` sans
+  // aucun `await` — verifie, `npm run lint` echoue exactement sur cette forme — et un rappel qui
+  // ne suspend jamais se lit mal a cote de ses voisins qui, eux, suspendent reellement. La
+  // pratique etait bonne, le motif etait faux. Vaut a l'identique pour `run`/`runAsSystem`
+  // ci-dessus : meme primitive (`this.storage.run`), meme mecanisme.
   runAsSuperAdmin<T>(fn: () => Promise<T>): Promise<T> {
     return this.storage.run(Object.freeze({ kind: 'superadmin' }), fn)
   }

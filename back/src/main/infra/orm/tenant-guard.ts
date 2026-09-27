@@ -92,7 +92,15 @@ export const SUPERADMIN_OPERATIONS: Readonly<Record<string, readonly string[]>> 
   // `Patient` ci-dessus) : `PatientAccessLog` est le journal d'AUDIT, jamais le dossier lui-même,
   // et sa réponse HTTP ne porte que `patientId` comme IDENTIFIANT (jamais un nom) — voir
   // `superAdminAccessLog.schema.ts`.
-  PatientAccessLog: ['findMany', 'count'],
+  //
+  // `count` A ÉTÉ RETIRÉ à la revue finale de branche : il était déclaré « par symétrie » avec
+  // `ActivityLog` juste au-dessus, et AUCUN appel ne l'exerçait — `patientAccessLog.count`
+  // n'existe nulle part dans `src/main`. La discipline posée à la tâche 9, et écrite en toutes
+  // lettres au-dessus de `NO_CONTEXT_GLOBAL_OPERATIONS` (« chaque entrée porte la route qui la
+  // justifie ; une entrée sans route est une entrée à supprimer »), vaut pour cette table-ci
+  // aussi : une capacité déclarée « au cas où » est une capacité que personne ne re-justifiera
+  // le jour où quelqu'un s'en servira.
+  PatientAccessLog: ['findMany'],
 }
 
 // Relations dont les écritures imbriquées sont vérifiées (parent → champ → enfant). C'est une

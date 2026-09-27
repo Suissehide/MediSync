@@ -9,16 +9,65 @@ import { z } from 'zod/v4'
 //   - `acces`    -> `PatientAccessLog`, declare a cette tache (tenant-guard.ts).
 export const superAdminAccessLogSourceSchema = z.enum(['activite', 'acces'])
 
-// Trois filtres, tous optionnels : `establishmentId` (etablissement), `userID` (compte -- meme
-// nom de colonne dans les deux modeles), `action` (chaine libre dans les deux modeles). Sans
-// aucun filtre, la lecture rend TOUTE la table du journal choisi -- y compris les lignes du
-// script d'amorcage (`ActivityLog.establishmentId: null`), qu'aucune autre route ne peut lire.
-export const superAdminAccessLogQuerySchema = z.object({
-  source: superAdminAccessLogSourceSchema,
-  establishmentId: z.string().optional(),
-  userID: z.string().optional(),
-  action: z.string().optional(),
-})
+// Valeur RESERVEE du filtre d'etablissement : « les lignes qui n'ont AUCUN etablissement ».
+//
+// REVUE FINALE DE BRANCHE, Important n°1 — POURQUOI ELLE EXISTE. La lecture plateforme est
+// bornee a `PLATFORM_ACCESS_LOG_LIMIT` lignes (200, `createdAt desc`, les deux depots). Les
+// lignes du script d'amorcage (`UserDomain.bootstrapSuperAdmin`, `establishmentId: null`) sont
+// par construction LES PLUS ANCIENNES de la table : des que le journal d'activite depasse 200
+// entrees, elles tombent hors de la page, et AUCUN filtre ne permettait de les viser -- le
+// filtre d'etablissement ne savait pas demander « sans etablissement », et la liste deroulante
+// du front ne propose que des etablissements REELS. La documentation presentait pourtant cette
+// lisibilite comme ACQUISE (« l'un des deux trous que cet ecran ferme ») : elle ne l'etait que
+// sur un journal jeune.
+//
+// UNE VALEUR RESERVEE PLUTOT QU'UN SECOND CHAMP : un `sansEtablissement` a cote
+// d'`establishmentId` rendrait representable une demande contradictoire (« l'etablissement A, et
+// sans etablissement »), qu'il faudrait ensuite arbitrer quelque part. Un seul champ, trois
+// etats (absent / un identifiant / cette valeur) ne le permet pas. La collision est impossible :
+// les identifiants d'etablissement sont des cuid (`z.cuid()`, schemas/index.ts), jamais ce mot.
+export const SANS_ETABLISSEMENT = 'aucun'
+
+// Trois filtres, tous optionnels : `establishmentId` (etablissement, ou `SANS_ETABLISSEMENT`),
+// `compte`, `action` (chaine libre dans les deux modeles). Sans aucun filtre, la lecture rend
+// les 200 dernieres lignes du journal choisi (voir `PLATFORM_ACCESS_LOG_LIMIT`).
+//
+// `compte` REMPLACE `userID` (revue finale de branche, Important n°1). L'ancien filtre exigeait
+// un identifiant EXACT ; l'ecran, lui, offre une recherche par NOM, qu'il appliquait cote
+// navigateur -- donc sur la page DEJA TRONQUEE a 200 lignes. Chercher un compte rendait « aucune
+// entree » alors que ses lignes existaient, quelques milliers de lignes plus bas. Ce filtre-ci
+// est evalue EN BASE, sur toute la table, et accepte les deux formes que l'ecran peut produire :
+// l'identifiant exact (`userID`, ce que faisait l'ancien filtre -- rien n'est perdu) ou un
+// fragment de prenom/nom, insensible a la casse. Les noms sont les copies DENORMALISEES portees
+// par chaque ligne de journal (`userFirstName`/`userLastName`), jamais une jointure vers `User` :
+// un journal d'audit doit dire qui a agi SOUS LE NOM QU'IL PORTAIT ALORS.
+//
+// CE QU'IL NE FAIT PAS, dit plutot que suppose : il ne rapproche pas prenom ET nom d'une meme
+// saisie (« Ada DuServiceA » ne matche pas, « Ada » et « DuServiceA » matchent). L'ancien filtre
+// navigateur, lui, concatenait les deux. C'est la seule capacite perdue au change, et elle est
+// perdue contre celle de voir les lignes au-dela de la 200e.
+export const superAdminAccessLogQuerySchema = z
+  .object({
+    source: superAdminAccessLogSourceSchema,
+    establishmentId: z.string().optional(),
+    compte: z.string().optional(),
+    action: z.string().optional(),
+  })
+  // `PatientAccessLog.establishmentId` est NON NULLABLE (prisma/schema.prisma) : une ligne de
+  // consultation sans etablissement n'existe pas, et ne peut pas exister. Demander
+  // `source=acces&establishmentId=aucun` n'est donc pas une recherche vide, c'est une question
+  // qui n'a pas de sens -- un 400 le dit, la, ou une liste vide laisserait croire « aucune
+  // aujourd'hui, peut-etre demain ».
+  .refine(
+    (q) => !(q.source === 'acces' && q.establishmentId === SANS_ETABLISSEMENT),
+    {
+      path: ['establishmentId'],
+      message:
+        `establishmentId=${SANS_ETABLISSEMENT} n'a de sens que sur source=activite : ` +
+        'PatientAccessLog.establishmentId est non nullable, aucune ligne de consultation ne ' +
+        'peut etre sans etablissement.',
+    },
+  )
 
 // Forme UNIQUE pour les deux sources (plutot qu'une union discriminee) : les champs propres a
 // une source et absents de l'autre (`entityType`/`entityID` pour `activite`, `patientId` ET

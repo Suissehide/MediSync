@@ -131,10 +131,31 @@ Key cross-cutting concerns:
   `ActivityLog` is an establishment model). Nothing failed, nothing was visibly missing; only the
   trace vanished. `src/test/e2e/activity-log-emissions-declarees.test.ts` now emits **every declared
   event under the context its real call site uses** (read from the *source* of `AppEvents`, never
-  copied by hand) and requires a line to appear, with a **named** exemption list (empty today). It
-  lives in e2e, never unit: a stubbed repository cannot reproduce the real Prisma refusal, so a unit
-  test would catch a caricature of the defect. **The trap stays armed for what is not yet written**:
-  any future event emitted from a non-tenant route will be refused and swallowed the same way.
+  copied by hand) and requires a line to appear, with a **named** exemption list (empty today).
+  **That source reading itself failed open until the final branch review, which is the one way this
+  guard must never fail.** Its pattern was line-based and required the closing brace on the *same
+  line*, so an event declared over four lines — what the formatter produces as soon as the payload
+  exceeds the line width, and one existing event is already 87 characters — was **not seen at all**:
+  neither classified, nor exempted, nor reported. Proved by execution: a three-field event added
+  over four lines left the file **18/18 green**. The reader now **balances braces**, lives in
+  `src/test/shared/app-events-source.ts` (shared with the vocabulary contract below, so both ask the
+  same source the same question), and `EXEMPLE_MULTILIGNE` holds it by a test that **is** the
+  counter-example. A low bound on the number of events read catches the other failure mode (the
+  reader breaking entirely and returning nothing).
+  It lives in e2e, never unit: a stubbed repository cannot reproduce the real Prisma refusal, so a
+  unit test would catch a caricature of the defect. **The trap stays armed for what is not yet
+  written**: any future event emitted from a non-tenant route will be refused and swallowed the
+  same way.
+- **The action vocabulary is a CONTRACT between the two repos, like the permission matrix
+  (étape 4b, final branch review).** `ActivityLog.action` can carry **19** values (the 17 `AppEvents`
+  keys plus `ACTIVITY_LOG_SCRIPT_ACTIONS`, `utils/activity-log-actions.ts` — the two lines the
+  bootstrap script writes outside the bus); `PatientAccessLog.action` carries the four of
+  `AccessAction`. The front's platform screen reused the dictionary written for the *service*
+  activity screen — true of its provenance, false of its coverage — and named only **8** of the 19,
+  missing every `member.*`, both script actions, `patient.removedFromPathway` and
+  `user.accessLinkReissued`, i.e. the very line task 7 exists to create.
+  `src/test/unit/utils/access-log-vocabulaire.test.ts` now binds both dictionaries to their source,
+  **in both directions** — an unnamed action reddens, and so does a label matching nothing.
 - **Tenant guard (`infra/orm/tenant-guard.ts`)**: a Prisma extension that throws `TenantScopeMissingError` when a
   query on a service model lacks `serviceId` (or `establishmentId` for establishment models) in `where`/`data`.
   Model families are listed there (`SERVICE_MODELS`, `ESTABLISHMENT_MODELS`). It **fails closed**: an operation it
@@ -153,7 +174,12 @@ Key cross-cutting concerns:
   context:
     - `SUPERADMIN_OPERATIONS` — tenant models. Today: `Service` (`count`, `findMany`),
       `EstablishmentMembership` (`count`, `findMany`, `create`), `ServiceMembership` (`count`,
-      `findMany`), `Patient` (**`count` only** — never a row), `ActivityLog` (`findMany`, `count`).
+      `findMany`), `Patient` (**`count` only** — never a row), `ActivityLog` (`findMany`, `count`),
+      `PatientAccessLog` (**`findMany` only**, étape 4b — the audit journal behind
+      `GET /super-admin/access-log?source=acces`, never a `Patient` row; `count` was declared "for
+      symmetry" with `ActivityLog` and removed at the final branch review because **no call site
+      exercised it**. The discipline written above `NO_CONTEXT_GLOBAL_OPERATIONS` — "an entry with
+      no route is an entry to delete" — applies to this table too).
     - `SUPERADMIN_GLOBAL_OPERATIONS` — global models, its exact mirror. A global model **absent
       from this table is refused in full under `superadmin`, reads included**. Writes are named
       one by one: `User.create` (not `upsert`, which would overwrite an existing account),
@@ -367,7 +393,12 @@ Key cross-cutting concerns:
   "system" store to exercise the tenant guard itself, so that directory isn't covered (same class of gap as the
   typecheck one above). **A narrower, separate gap, worth stating rather than assuming away** (found at the étape
   4a final review): the named allow-list above (`AUTORISES` in `runAsSystem-unicite.test.ts`) exists only for
-  `runAsSystem`. `runAsSuperAdmin`'s own call sites (twelve before étape 4b task 6, **fourteen today** — that
+  `runAsSystem`. Its own numbered **prose** list of `runAsSystem` sites was wrong until the final
+  branch review, in a way worth knowing because it is the failure mode of every hand-kept list: the
+  assertions were right, the prose had drifted — it mixed two units of count (six declared
+  *entries*, eight *calls*) and had never taken in task 7's site, which `AUTORISES` had carried
+  since its commit.
+  `runAsSuperAdmin`'s own call sites (twelve before étape 4b task 6, **fourteen today** — that
   task added two, in `activityLog.repository.ts` and `patientAccessLog.repository.ts`, both for
   `findAllPlatformWide`, the read behind `GET /super-admin/access-log` — and said so rather than letting the
   count drift silently) are not enumerated by name anywhere — a fifteenth call added anywhere in `src/main`

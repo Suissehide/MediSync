@@ -245,13 +245,33 @@ Puis, point par point :
    les lignes de B disparaissent, celles de A restent. Choisir B : l'inverse.
 3. **Le filtre Action.** Choisir « Export ». **Attendu** : il ne reste que la ligne du point 4.
    Choisir « Dossier ouvert » : il ne reste que les ouvertures de fiche.
+   Puis basculer sur **Journal d'activité** et rouvrir le filtre Action. **Attendu** : la liste
+   propose **dix-neuf** actions, pas huit — en particulier « Lien d'accès réémis (super-admin) »,
+   les sept actions de gestion des membres, et les deux actions de script « Super-admin accordé /
+   réactivé ». C'est le journal d'activité **de la plateforme** : il voit ce que l'écran d'activité
+   d'un service ne voit jamais. (Avant la revue finale de branche, ce filtre réutilisait le
+   dictionnaire de l'écran de service et ne proposait que huit valeurs — dont aucune des onze que
+   cet écran est le seul à pouvoir montrer.)
 4. **Le filtre Compte.** Taper une partie du nom d'un des comptes utilisés. **Attendu** : seules ses
-   lignes restent. (Ce filtre est appliqué côté navigateur, sur le nom **ou** l'identifiant : on ne
-   tape pas un identifiant de mémoire sur un écran de diagnostic.)
+   lignes restent, après un court instant (la saisie est envoyée au serveur avec un léger délai).
+   **Ce filtre est appliqué PAR LE SERVEUR**, sur le nom **ou** l'identifiant exact, sur toute la
+   table — pas dans le navigateur sur les lignes déjà affichées. La distinction est la raison d'être
+   du point 5 bis ci-dessous.
 5. **Les lignes du script d'amorçage.** Sur la source **Journal d'activité**, sans aucun filtre.
    **Attendu** : les lignes posées par `npm run bootstrap:super-admin` sont visibles — elles n'ont
    pas d'établissement, et **aucune autre route de l'application ne peut les lire**. C'est l'un des
    deux trous que cet écran ferme.
+   **Sur une base de démonstration, oui ; sur une base vivante, PAS FORCÉMENT** — et c'est la
+   correction la plus utile de la revue finale de branche : la lecture est bornée à **200 lignes**,
+   triées de la plus récente à la plus ancienne. Les lignes d'amorçage étant par construction les
+   **plus anciennes** de la table, elles sortent de la page dès que le journal d'activité dépasse
+   200 entrées.
+5. bis. **Viser les lignes d'amorçage explicitement.** Toujours sur **Journal d'activité**, ouvrir
+   le filtre **Établissement** : la première option est **« Sans établissement (amorçage) »**.
+   **Attendu** : il ne reste que les lignes sans établissement, y compris sur un journal de
+   plusieurs milliers d'entrées. Vérifier aussi que cette option **n'existe pas** sur le journal des
+   consultations : une ligne de consultation a toujours un établissement, la question n'aurait pas
+   de sens (le serveur y répond 400, l'écran ne propose donc pas de la poser).
 6. **Un compte ordinaire ne sait pas que la zone existe.** Se déconnecter, se reconnecter avec
    `sabrina.bernadet@cepta.fr`, saisir `/super-admin/access-log` dans la barre d'adresse.
    **Attendu** : exactement le même écran « Not Found » qu'une URL inventée (`/nimporte-quoi`) —
@@ -314,7 +334,7 @@ est une décision assumée, développée dans `decisions-etape-4b.md`.
 | 6 | Colonne « Origine » : octroi distinct d'un accès réel | | |
 | 7 | Cloisonnement entre deux établissements | | |
 | 8 | Lecture d'établissement — **aucun écran**, appel direct | | |
-| 9 | Écran plateforme : source, 3 filtres, amorçage, 404 | | |
+| 9 | Écran plateforme : source, 3 filtres (dont Action à 19 valeurs, Compte côté serveur), amorçage **et « Sans établissement »**, 404 | | |
 | 10 | Une consultation en erreur ne laisse rien | | |
 | 11 | Aucune occurrence de `PatientAccessLog:` dans les journaux | | |
 | 12 | Les trois non-couvertures, constatées de visu | | |

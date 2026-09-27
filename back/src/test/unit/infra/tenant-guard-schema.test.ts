@@ -463,8 +463,10 @@ describe('SUPERADMIN_OPERATIONS reflete le schema', () => {
       Patient: ['count'],
       ActivityLog: ['findMany', 'count'],
       // Tâche 6, étape 4b : `GET /super-admin/access-log` (source=acces) — voir le commentaire
-      // sur cette entrée dans tenant-guard.ts.
-      PatientAccessLog: ['findMany', 'count'],
+      // sur cette entrée dans tenant-guard.ts. `count` a été RETIRÉ à la revue finale de
+      // branche : déclaré « par symétrie » avec `ActivityLog` juste au-dessus, il n'était exercé
+      // par aucun appel (`patientAccessLog.count` n'existe nulle part dans `src/main`).
+      PatientAccessLog: ['findMany'],
     })
   })
 })

@@ -213,11 +213,36 @@ duplicated byte-for-byte across two repos, is a permanent reading trap. Don't re
 near-homograph.
 
 **The screens never merge the two journals.** The platform screen sends a mandatory `source`
-(`acces` | `activite`) and shows one at a time; switching it also switches the **action labels**
-(`constants/superAdminAccessLog.constant.ts` picks between the two existing dictionaries, it defines
-none of its own). The two journals' columns only partly overlap, and a silent merge would hide more
-than it shows on a diagnostic screen. Default source is `acces`, because that is where the
-**"Origine"** column flags what a super-admin looks for first.
+(`acces` | `activite`) and shows one at a time; switching it also switches the **action labels**.
+The two journals' columns only partly overlap, and a silent merge would hide more than it shows on a
+diagnostic screen. Default source is `acces`, because that is where the **"Origine"** column flags
+what a super-admin looks for first.
+
+**The platform screen EXTENDS the service dictionary, it does not reuse it — and the reason is a
+real defect, not a preference (final branch review).** `constants/superAdminAccessLog.constant.ts`
+first said it "defines no labels of its own: both dictionaries already exist, each proven by the
+screen that introduced it". True of their provenance, **false of their coverage**: `ACTION_LABELS`
+was written for the *service* activity screen, which never sees actions written outside a service,
+and carried **8** keys where the activity journal can carry **19**. Missing: the seven `member.*`
+(written under the administration context), the two bootstrap-script actions,
+`patient.removedFromPathway` (missing since étape 2, from the service screen too — fixed there), and
+`user.accessLinkReissued`, **the line task 7 exists to create**, on the most powerful route in the
+system. `PLATFORM_ONLY_ACTIVITY_ACTION_LABELS` now carries exactly what is added, and
+`back/src/test/unit/utils/access-log-vocabulaire.test.ts` **binds both dictionaries to the back's
+source** in both directions — the same kind of cross-repo contract the permission matrix already
+had. Do not add a label here without an action behind it, and do not add an action on the back
+without a label here: either way that test reddens.
+
+**Every filter on the platform screen is a SERVER filter, and the account one must stay that way.**
+The read is bounded to **200 rows** (`PLATFORM_ACCESS_LOG_LIMIT`, back, `createdAt desc`) with no
+pagination. A filter applied in the browser can therefore only narrow an already-truncated page:
+the account filter used to be client-side and answered "aucune entrée" for accounts whose rows
+existed a few thousand lines further down. It now sends `compte` (exact id **or** a first/last-name
+fragment, case-insensitive), debounced 300 ms — without the debounce every keystroke would run an
+`ILIKE` across the whole platform. The establishment filter also carries a reserved value,
+`SANS_ETABLISSEMENT` (mirrored byte-for-byte on the back, held by a test), offered **only** on
+`activite`: it is the only way to reach the bootstrap-script rows, which have no establishment and
+are the oldest in the table, once the journal passes 200 entries.
 
 **"Origine" (`accesParOctroi`) is not decoration.** It distinguishes a temporary-grant
 (troubleshooting) access from a care access — a super-admin under a grant travels the ordinary

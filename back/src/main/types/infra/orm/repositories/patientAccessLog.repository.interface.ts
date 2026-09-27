@@ -23,14 +23,26 @@ export type PatientAccessLogCreateEntityRepo = {
   accesParOctroi: boolean
 }
 
-// Tache 6, etape 4b : `GET /super-admin/access-log` (source=acces). Memes trois filtres, libres,
+// Tache 6, etape 4b : `GET /super-admin/access-log` (source=acces). Memes filtres, libres,
 // qu'`activityLog.repository.interface.ts#PlatformAccessLogFilters` — dupliques plutot que
 // partages entre deux depots de modeles distincts, comme `ACTIVITY_LOG_DETAIL_LIMIT`/
 // `UNRESOLVED_ACCOUNT_EMAIL` (establishment.repository.ts) le font deja pour de petites
 // declarations locales de ce genre.
+//
+// `sansEtablissement` FIGURE ICI SANS Y SERVIR, et c'est delibere plutot qu'un oubli : les deux
+// depots partagent une seule forme de filtres parce que la route les traite d'un seul geste
+// (routes/super-admin/access-log.ts), mais `PatientAccessLog.establishmentId` est NON NULLABLE
+// (prisma/schema.prisma) — aucune ligne de consultation ne peut etre sans etablissement. Le
+// schema HTTP refuse donc la combinaison en amont, par un 400 qui le DIT, plutot que de laisser
+// ce depot rendre une liste vide qu'on lirait « aucune aujourd'hui ». L'implementation ci-dessous
+// ne lit jamais ce champ.
+//
+// `compte` remplace `userID` (revue finale de branche, Important n°1) : identifiant exact ou
+// fragment de prenom/nom — voir le commentaire du schema HTTP pour le pourquoi.
 export type PlatformAccessLogFilters = {
   establishmentId?: string
-  userID?: string
+  sansEtablissement?: boolean
+  compte?: string
   action?: string
 }
 

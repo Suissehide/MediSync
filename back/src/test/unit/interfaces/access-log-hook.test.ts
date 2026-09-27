@@ -5,6 +5,7 @@ import {
   assertPatientReadLogged,
   tenantPlugin,
 } from '../../../main/interfaces/http/fastify/plugins/tenant.plugin'
+import { routes } from '../../../main/interfaces/http/fastify/routes/index'
 import {
   assertNoDeadAdminPatientExemption,
   assertPatientRouteUnderTenant,
@@ -376,6 +377,137 @@ describe('attache des crochets du journal dans tenantRoutes', () => {
       hooks.find((h) => h.event === 'onResponse')?.handler,
     ).toBe(recordPatientAccess)
     expect(hooks.some((h) => h.event === 'onReady')).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// LE SENS INVERSE, ATTACHE POUR DE BON (revue finale de branche, Important n°3).
+// ---------------------------------------------------------------------------
+//
+// CE QUI MANQUAIT. Les deux controles d'entree morte — `assertNoDeadPatientAccessEntry` (sous
+// `tenantRoutes`) et `assertNoDeadAdminPatientExemption` (a la racine) — sont eprouves plus haut
+// COMME FONCTIONS, sur des tableaux fabriques. Rien ne verifiait qu'ils soient reellement
+// APPELES au demarrage : la seule assertion de cablage ci-dessus se contente de « un crochet
+// `onReady` existe », jamais de ce qu'il fait. Mesure avant ce correctif : commenter L'UN OU
+// L'AUTRE des deux appels dans son `onReady` laissait **557 unitaires et 268 e2e verts**. Le
+// sens ALLER, lui, rougit bien (`assertPatientReadLogged` fait echouer le demarrage), et la
+// documentation ecrivait pourtant « les entrees mortes des deux listes font echouer le demarrage
+// a leur tour » : vrai dans le code, tenu par rien.
+//
+// COMMENT CES DEUX TESTS S'Y PRENNENT, et pourquoi ils ne peuvent pas etre satisfaits par
+// l'existence d'un crochet. Le greffon est applique sur un faux Fastify qui n'enregistre AUCUNE
+// route reelle (`register` est un bouchon) : la collecte `onRoute` reste donc vide, et le
+// crochet `onReady` — S'IL APPELLE VRAIMENT LE CONTROLE — doit lever en nommant les entrees
+// declarees, qui sont toutes mortes de son point de vue. Puis on rejoue en ayant pousse les
+// memes URL par le crochet `onRoute` reellement pose : le controle doit alors se taire. Retirer
+// l'appel du `onReady` fait rougir le premier cas ; retirer le collecteur `onRoute` fait rougir
+// le second.
+type CrochetPose = { event: string; handler: unknown }
+
+const appliquerGreffon = async (
+  greffon: unknown,
+  fastify: Record<string, unknown>,
+): Promise<void> => {
+  await (greffon as (f: unknown, o: unknown) => Promise<void>)(fastify, {})
+}
+
+// Rejoue le `onReady` du greffon avec les routes GET que l'on veut lui avoir fait voir.
+const declencherOnReady = async (
+  crochets: CrochetPose[],
+  urlsVues: readonly string[],
+): Promise<Error | null> => {
+  for (const url of urlsVues) {
+    for (const crochet of crochets.filter((c) => c.event === 'onRoute')) {
+      // La route est passee a TOUS les crochets `onRoute` poses, pas au seul collecteur : c'est
+      // ce qui garantit qu'on ne teste pas un collecteur que le greffon n'attacherait plus. Elle
+      // porte donc une `permission`, exigee d'une route de forme tenant par
+      // `assertRoutePermission`/`assertTenantShapedRoute` — sans quoi ceux-la leveraient d'abord
+      // et le `onReady` ne serait jamais atteint.
+      ;(
+        crochet.handler as (r: {
+          method: string
+          url: string
+          config: { permission: string }
+        }) => void
+      )({ method: 'GET', url, config: { permission: 'consultations:read' } })
+    }
+  }
+  const onReady = crochets.find((c) => c.event === 'onReady')
+  if (onReady === undefined) {
+    return new Error('aucun crochet onReady pose par ce greffon')
+  }
+  try {
+    await (onReady.handler as () => Promise<void>)()
+    return null
+  } catch (err) {
+    return err as Error
+  }
+}
+
+describe('tenantRoutes appelle reellement assertNoDeadPatientAccessEntry en onReady', () => {
+  const fauxFastify = (crochets: CrochetPose[]): Record<string, unknown> => ({
+    resolveTenant: Symbol('resolveTenant'),
+    enforcePermission: Symbol('enforcePermission'),
+    stripClinicalInput: Symbol('stripClinicalInput'),
+    stripClinicalFields: Symbol('stripClinicalFields'),
+    recordPatientAccess: Symbol('recordPatientAccess'),
+    addHook: (event: string, handler: unknown) => {
+      crochets.push({ event, handler })
+    },
+    register: () => Promise.resolve(),
+  })
+
+  const declarees = [
+    ...Object.keys(LOGGED_PATIENT_ROUTES),
+    ...Object.keys(EXEMPTED_PATIENT_ROUTES),
+  ]
+
+  it('fait echouer le demarrage quand aucune route declaree n existe plus', async () => {
+    const crochets: CrochetPose[] = []
+    await appliquerGreffon(tenantRoutes, fauxFastify(crochets))
+    const erreur = await declencherOnReady(crochets, [])
+    expect(erreur).not.toBeNull()
+    expect(erreur?.message).toMatch(/Entrees mortes dans le journal des consultations/)
+    // Les DEUX listes sont bien confrontees, pas seulement la premiere.
+    expect(erreur?.message).toMatch(/LOGGED_PATIENT_ROUTES/)
+    expect(erreur?.message).toMatch(/EXEMPTED_PATIENT_ROUTES/)
+  })
+
+  it('se tait quand chaque entree correspond a une route GET reellement vue', async () => {
+    const crochets: CrochetPose[] = []
+    await appliquerGreffon(tenantRoutes, fauxFastify(crochets))
+    expect(await declencherOnReady(crochets, declarees)).toBeNull()
+  })
+})
+
+describe('le greffon racine appelle reellement assertNoDeadAdminPatientExemption en onReady', () => {
+  const fauxFastify = (crochets: CrochetPose[]): Record<string, unknown> => ({
+    iocContainer: { tenantContext: new TenantContext() },
+    verifySessionCookie: () => Promise.resolve(),
+    addHook: (event: string, handler: unknown) => {
+      crochets.push({ event, handler })
+    },
+    get: () => undefined,
+    register: () => Promise.resolve(),
+  })
+
+  const declarees = Object.keys(EXEMPTED_ADMIN_PATIENT_ROUTES)
+
+  it('fait echouer le demarrage quand une exemption ne protege plus aucune route', async () => {
+    const crochets: CrochetPose[] = []
+    await appliquerGreffon(routes, fauxFastify(crochets))
+    const erreur = await declencherOnReady(crochets, [])
+    expect(erreur).not.toBeNull()
+    expect(erreur?.message).toMatch(/Entrees mortes dans EXEMPTED_ADMIN_PATIENT_ROUTES/)
+    for (const url of declarees) {
+      expect(erreur?.message).toContain(url)
+    }
+  })
+
+  it('se tait quand chaque exemption correspond a une route GET reellement vue', async () => {
+    const crochets: CrochetPose[] = []
+    await appliquerGreffon(routes, fauxFastify(crochets))
+    expect(await declencherOnReady(crochets, declarees)).toBeNull()
   })
 })
 

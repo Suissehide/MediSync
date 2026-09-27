@@ -18,6 +18,10 @@ import type {
   UserRepositoryInterface,
 } from '../types/infra/orm/repositories/user.repository.interface'
 import type { TenantContextInterface } from '../types/utils/tenant-context'
+import {
+  SUPER_ADMIN_GRANTED,
+  SUPER_ADMIN_REACTIVATED,
+} from '../utils/activity-log-actions'
 import type { AppEventBus } from '../utils/app-event-bus'
 import { verifyPassword } from '../utils/hash'
 
@@ -252,7 +256,7 @@ class UserDomain implements UserDomainInterface {
                 userID: CLI_ACTOR,
                 userFirstName: null,
                 userLastName: null,
-                action: 'superAdmin.granted',
+                action: SUPER_ADMIN_GRANTED,
                 entityType: 'user',
                 entityID: user.id,
               },
@@ -267,7 +271,7 @@ class UserDomain implements UserDomainInterface {
                 userID: CLI_ACTOR,
                 userFirstName: null,
                 userLastName: null,
-                action: 'superAdmin.reactivated',
+                action: SUPER_ADMIN_REACTIVATED,
                 entityType: 'user',
                 entityID: user.id,
               },

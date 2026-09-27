@@ -28,13 +28,24 @@ import ts from 'typescript'
 // anterieure de ce commentaire disait « deux fois seulement » avant que la tache 9 n'ajoute un
 // troisieme emploi legitime dans le meme fichier que le second — la prose mentait alors que les
 // assertions, elles, restaient justes ; corrige une premiere fois en pretendant a tort que la
-// CAPACITE et les BORNES etaient toutes deux couvertes ici, corrige a nouveau ci-dessus. Six
-// emplois declares a ce jour, tous dans le back de production (un quatrieme ajoute a la tache 11,
-// etape 4a, un cinquieme a la tache 15, un sixieme a la tache 5 de l'etape 4b) — un SEPTIEME
-// APPEL rejoint desormais le premier emploi ci-dessous (meme fichier, tache 8, etape 4b : la
-// purge planifiee du journal des consultations, a cote de celle du journal d'activite) : le
-// compte d'emplois DECLARES (des fichiers/raisons distincts) reste a six, mais le nombre
-// D'APPELS total passe de sept a huit, `application/starter.ts` en portant desormais deux :
+// CAPACITE et les BORNES etaient toutes deux couvertes ici, corrige a nouveau ci-dessus.
+//
+// LE COMPTE, DIT UNE SEULE FOIS ET DANS UNE SEULE UNITE (revue finale de branche : la prose
+// melait deux unites, « emplois declares » et « appels », et la liste numerotee ci-dessous ne
+// correspondait NI a l'une NI a l'autre — elle enumerait SEPT sites en six numeros, en scindant
+// `patientServiceFile.repository.ts` en deux entrees et en omettant purement et simplement le
+// site de la tache 7) :
+//   - SIX emplois DECLARES, c'est-a-dire six entrees d'`AUTORISES` ci-dessous, une par FICHIER,
+//     chacune avec sa raison ;
+//   - HUIT APPELS au total, `application/starter.ts` et `patientServiceFile.repository.ts` en
+//     portant deux chacun.
+//
+// La liste ci-dessous enumere les SITES D'APPEL, groupes par question posee — c'est l'unite qui
+// se relit, pas celle qui se compte. Elle en porte SEPT, parce que les deux appels de
+// `application/starter.ts` repondent a la meme question (purger un journal) alors que les deux
+// de `patientServiceFile.repository.ts` en posent deux distinctes. Le SEPTIEME, ajoute a la
+// revue finale de branche, est le site de la tache 7 (etape 4b) : il etait declare dans
+// `AUTORISES` depuis son commit, mais n'avait jamais rejoint cette liste-ci.
 //
 //   1. La purge planifiee des DEUX journaux (`application/starter.ts`,
 //      `scheduleActivityLogCleanup` ET, depuis la tache 8, `schedulePatientAccessLogCleanup`) :
@@ -86,6 +97,19 @@ import ts from 'typescript'
 //      chemins d'inclusion imbriquee distincts), repartis sur QUATRE contextes — 111 sans
 //      contexte, 119 sous superadmin, mais surtout 325 sous tenant ORDINAIRE et 300 sous
 //      administration d'etablissement, la majorite du total.
+//   7. La ligne de journal de la reemission de lien par le super-admin
+//      (`services/activity-log.subscriber.ts`, souscription a `user.accessLinkReissued`, tache 7,
+//      etape 4b — SITE AJOUTE A CETTE LISTE A LA REVUE FINALE DE BRANCHE : il etait declare dans
+//      `AUTORISES` des son commit, mais la prose ci-dessus ne l'avait jamais integre).
+//      `/super-admin` s'execute sans AUCUN contexte (pas seulement sans tenant) et `ActivityLog`
+//      est un modele d'ETABLISSEMENT : le garde-fou refusait categoriquement l'ecriture, et le
+//      `catch` de `#log` avalait le refus — rien n'echouait, rien ne manquait visiblement, seule
+//      la trace disparaissait. Meme motif que 1 et 4 : hors de toute requete de tenant, il n'y a
+//      pas d'etablissement a poser, seulement `establishmentId: null`. N'encadre QUE cette
+//      souscription, jamais les onze autres actions du fichier — les elargir toutes masquerait
+//      une VRAIE perte de contexte sur une route de tenant. Ce que ce fichier-ci garde est la
+//      DECLARATION du site ; que la ligne soit reellement ecrite est prouve par execution
+//      ailleurs (`src/test/e2e/activity-log-emissions-declarees.test.ts`).
 //
 // `runAsSuperAdmin` (meme fichier, tache 1 / etape 4a) y ajoute un troisieme mode, qui ne retire
 // rien mais substitue au filtre de tenant une liste declaree et exhaustive de couples (modele,

@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { RotateCcw, Search } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { getSuperAdminAccessLogColumns } from '@/columns/superAdminAccessLog.column.tsx'
 import { SuperAdminNav } from '@/components/custom/superAdmin/superAdminNav.tsx'
@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input.tsx'
 import { Label } from '@/components/ui/label.tsx'
 import { Select } from '@/components/ui/select.tsx'
 import {
+  SANS_ETABLISSEMENT,
   SUPER_ADMIN_ACCESS_LOG_SOURCE_OPTIONS,
   superAdminAccessLogActionOptions,
 } from '@/constants/superAdminAccessLog.constant.ts'
@@ -35,6 +36,9 @@ type Filtres = {
   compte: string
 }
 
+// Délai avant d'envoyer la saisie du champ « Compte » au serveur — voir son usage plus bas.
+const DELAI_SAISIE_MS = 300
+
 const FILTRES_PAR_DEFAUT: Filtres = {
   // Le journal des CONSULTATIONS par défaut : c'est celui où `accesParOctroi` distingue
   // l'anomalie qu'un super-admin cherche en premier sur cet écran (voir
@@ -48,27 +52,36 @@ const FILTRES_PAR_DEFAUT: Filtres = {
 function SuperAdminAccessLogPage() {
   const [filtres, setFiltres] = useState<Filtres>(FILTRES_PAR_DEFAUT)
 
+  // LE FILTRE « COMPTE » EST DIFFÉRÉ AVANT D'ÊTRE ENVOYÉ. Il est devenu un filtre SERVEUR (voir
+  // juste en dessous) : sans ce délai, chaque frappe déclencherait une lecture de toute la table
+  // du journal, avec un `ILIKE` sur deux colonnes, à l'échelle de la plateforme. Le dépôt n'a pas
+  // de crochet de temporisation ; son précédent pour une recherche texte côté serveur est un
+  // bouton d'envoi explicite (`addPatientForm.tsx`, `usePatientIdentitySearch`). Un bouton pour
+  // un seul champ au milieu d'un bandeau de sélecteurs se lirait mal ici, d'où ce délai — court,
+  // local, et sans dépendance nouvelle.
+  const [compteApplique, setCompteApplique] = useState('')
+  useEffect(() => {
+    const minuteur = setTimeout(() => setCompteApplique(filtres.compte.trim()), DELAI_SAISIE_MS)
+    return () => clearTimeout(minuteur)
+  }, [filtres.compte])
+
   const { establishments } = useSuperAdminEstablishmentsQuery()
+  // LES TROIS FILTRES SONT SERVEUR (revue finale de branche, Important n°1). Le filtre « compte »
+  // était appliqué DANS LE NAVIGATEUR, sur la page déjà tronquée à 200 lignes (`createdAt desc`,
+  // `PLATFORM_ACCESS_LOG_LIMIT`, les deux dépôts) : chercher un compte rendait « aucune entrée »
+  // alors que ses lignes existaient, plus bas dans la table. Un filtre navigateur ne peut, par
+  // construction, que réduire une page déjà tronquée. Le filtre serveur, lui, existait — mais
+  // n'acceptait qu'un `userID` EXACT, que personne ne tape de mémoire, et n'était donc appelé par
+  // personne. Il accepte désormais les deux formes que cette saisie peut produire (identifiant
+  // exact ou fragment de prénom/nom), et c'est LUI qui est branché ici.
   const { entries, isPending, error } = useSuperAdminAccessLogQuery({
     source: filtres.source,
     establishmentId: filtres.establishmentId || undefined,
+    compte: compteApplique || undefined,
     action: filtres.action || undefined,
   })
 
-  // Le filtre « compte » est client, comme celui d'`activity-log.tsx` (recherche sur le nom ou
-  // l'identifiant) : la route back ne connaît qu'un `userID` exact, que personne ne tape de
-  // mémoire sur un écran de diagnostic plateforme.
-  const rows = useMemo(() => {
-    const toutes = entries ?? []
-    if (!filtres.compte) {
-      return toutes
-    }
-    const recherche = filtres.compte.toLowerCase()
-    return toutes.filter((row) => {
-      const nomComplet = `${row.userFirstName ?? ''} ${row.userLastName ?? ''}`.toLowerCase()
-      return nomComplet.includes(recherche) || row.userID.toLowerCase().includes(recherche)
-    })
-  }, [entries, filtres.compte])
+  const rows = entries ?? []
 
   const hasActiveFilters = Boolean(
     filtres.establishmentId || filtres.action || filtres.compte,
@@ -82,13 +95,36 @@ function SuperAdminAccessLogPage() {
     // Changer de journal réinitialise `action` : les deux journaux ne partagent pas le même
     // vocabulaire d'action (voir `constants/superAdminAccessLog.constant.ts`) — garder l'ancienne
     // valeur filtrerait sur une action qui n'existe pas dans l'autre journal.
-    setFiltres((prev) => ({ ...prev, source, action: '' }))
+    //
+    // ET RÉINITIALISE « Sans établissement » (revue finale de branche) : cette valeur n'existe
+    // que sur le journal d'activité, et la garder en basculant sur les consultations enverrait
+    // au back une requête qu'il refuse par un 400 (`PatientAccessLog.establishmentId` est non
+    // nullable — voir le `.refine` du schéma). L'écran ne doit jamais pouvoir formuler cette
+    // demande-là ; un vrai identifiant d'établissement, lui, reste valable sur les deux journaux
+    // et n'est donc pas réinitialisé.
+    setFiltres((prev) => ({
+      ...prev,
+      source,
+      action: '',
+      establishmentId:
+        prev.establishmentId === SANS_ETABLISSEMENT && source !== 'activite'
+          ? ''
+          : prev.establishmentId,
+    }))
   }
 
-  const establishmentOptions = (establishments ?? []).map((e) => ({
-    value: e.id,
-    label: e.name,
-  }))
+  // « Sans établissement » n'est proposée que sur le journal d'activité : c'est le seul des deux
+  // modèles dont `establishmentId` puisse être nul (les lignes du script d'amorçage). Sur les
+  // consultations, l'option n'existe pas plutôt que d'exister et d'échouer.
+  const establishmentOptions = [
+    ...(filtres.source === 'activite'
+      ? [{ value: SANS_ETABLISSEMENT, label: "Sans établissement (amorçage)" }]
+      : []),
+    ...(establishments ?? []).map((e) => ({
+      value: e.id,
+      label: e.name,
+    })),
+  ]
 
   const columns = getSuperAdminAccessLogColumns({
     source: filtres.source,
@@ -140,7 +176,7 @@ function SuperAdminAccessLogPage() {
                   <Label htmlFor="super-admin-access-log-compte">Compte</Label>
                   <Input
                     id="super-admin-access-log-compte"
-                    placeholder="Rechercher un compte..."
+                    placeholder="Nom ou identifiant..."
                     value={filtres.compte}
                     onChange={(e) => set('compte')(e.target.value)}
                     iconLeft={<Search className="h-4 w-4" />}

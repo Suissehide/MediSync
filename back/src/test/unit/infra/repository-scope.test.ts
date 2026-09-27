@@ -223,18 +223,48 @@ describe('scoping des repositories d etablissement', () => {
     const ctx = new TenantContext()
     const repo = new ActivityLogRepository(buildContainer(prisma, ctx))
 
-    await repo.findAllPlatformWide({ establishmentId: 'e9', userID: 'u9', action: 'a9' })
+    await repo.findAllPlatformWide({ establishmentId: 'e9', compte: 'u9', action: 'a9' })
     expect(calls[0]).toMatchObject({
       model: 'activityLog', op: 'findMany',
-      args: { where: { establishmentId: 'e9', userID: 'u9', action: 'a9' } },
+      args: { where: { establishmentId: 'e9', action: 'a9' } },
     })
+    // Le filtre « compte » est un `OR` : identifiant EXACT ou fragment de prenom/nom, insensible
+    // a la casse (revue finale de branche, Important n°1 — voir `utils/platform-access-log-
+    // filters.ts`). La forme exacte est verifiee ici, pas seulement sa presence : un `contains`
+    // qui perdrait `mode: 'insensitive'` rendrait la recherche par nom inutilisable en pratique,
+    // et un `userID: { contains }` a la place de l'egalite elargirait silencieusement ce que
+    // l'ancien filtre exact promettait.
+    expect(calls[0]?.args.where).toMatchObject({
+      OR: [
+        { userID: 'u9' },
+        { userFirstName: { contains: 'u9', mode: 'insensitive' } },
+        { userLastName: { contains: 'u9', mode: 'insensitive' } },
+      ],
+    })
+
+    // « Sans etablissement » : la seule facon d'atteindre les lignes du script d'amorcage une
+    // fois le journal au-dela de 200 entrees. Un booleen ici, jamais la valeur reservee du
+    // schema HTTP — la route la traduit une fois, avant d'appeler ce depot.
+    calls.length = 0
+    await repo.findAllPlatformWide({ sansEtablissement: true })
+    expect(calls[0]).toMatchObject({
+      model: 'activityLog', op: 'findMany', args: { where: { establishmentId: null } },
+    })
+
+    // Et si les deux arrivaient quand meme ensemble (le schema HTTP le rend impossible), c'est
+    // « sans etablissement » qui l'emporte — jamais les deux, jamais un silence.
+    calls.length = 0
+    await repo.findAllPlatformWide({ sansEtablissement: true, establishmentId: 'e9' })
+    expect(calls[0]?.args.where).toMatchObject({ establishmentId: null })
+
+    calls.length = 0
 
     await repo.findAllPlatformWide({})
     // Sans filtre, AUCUNE cle forcee dans le `where` — c'est precisement ce qui rend lisibles
     // les lignes du script d'amorcage (`establishmentId: null`) : un `establishmentId` impose,
     // meme `null`, les exclurait d'un `where: { establishmentId: null }` qui ne matcherait que
     // les lignes EXPLICITEMENT nulles, pas « n'importe laquelle ».
-    expect(calls[1]).toMatchObject({ model: 'activityLog', op: 'findMany', args: { where: {} } })
+    expect(calls[0]).toMatchObject({ model: 'activityLog', op: 'findMany', args: { where: {} } })
   })
 
   // Meme demonstration que pour PatientAccessLogRepository plus bas : la forme exacte envoyee
@@ -1555,14 +1585,33 @@ describe('PatientAccessLogRepository', () => {
     const ctx = new TenantContext()
     const repo = new PatientAccessLogRepository(buildContainer(prisma, ctx))
 
-    await repo.findAllPlatformWide({ establishmentId: 'e9', userID: 'u9', action: 'a9' })
+    await repo.findAllPlatformWide({ establishmentId: 'e9', compte: 'u9', action: 'a9' })
     expect(calls[0]).toMatchObject({
       model: 'patientAccessLog', op: 'findMany',
-      args: { where: { establishmentId: 'e9', userID: 'u9', action: 'a9' } },
+      args: { where: { establishmentId: 'e9', action: 'a9' } },
+    })
+    expect(calls[0]?.args.where).toMatchObject({
+      OR: [
+        { userID: 'u9' },
+        { userFirstName: { contains: 'u9', mode: 'insensitive' } },
+        { userLastName: { contains: 'u9', mode: 'insensitive' } },
+      ],
     })
 
+    // `sansEtablissement` N'A PAS DE SENS SUR CE MODELE (`establishmentId` non nullable) : le
+    // schema HTTP refuse la combinaison par un 400, et ce depot ne lit JAMAIS ce champ. Ce cas
+    // le tient : s'il venait a le lire, le `where` porterait `establishmentId: null` et cette
+    // assertion rougirait.
+    calls.length = 0
+    await repo.findAllPlatformWide({ sansEtablissement: true })
+    expect(calls[0]).toMatchObject({
+      model: 'patientAccessLog', op: 'findMany', args: { where: {} },
+    })
+    expect(calls[0]?.args.where).not.toHaveProperty('establishmentId')
+
+    calls.length = 0
     await repo.findAllPlatformWide({})
-    expect(calls[1]).toMatchObject({
+    expect(calls[0]).toMatchObject({
       model: 'patientAccessLog', op: 'findMany', args: { where: {} },
     })
   })

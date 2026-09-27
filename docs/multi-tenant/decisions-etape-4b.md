@@ -572,10 +572,40 @@ n'éclairerait un écran de diagnostic. Le DTO a une forme **unique** pour les d
 champs propres à l'une valant `null` sur les lignes de l'autre — et il est construit **champ par
 champ** par la route, jamais par un `...row` étalé.
 
-*Ce que le code tient, et par quels tests* : `back/src/test/e2e/super-admin-access-log.test.ts` (neuf
-cas, dont « rend les lignes du script d amorcage, que nulle autre route ne peut lire », les trois
-filtres, et « ne rend jamais d identite de patient — seulement des identifiants ») ;
-`front/src/routes/_authenticated/super-admin/access-log.test.tsx` côté écran.
+*Ce que le code tient, et par quels tests* : `back/src/test/e2e/super-admin-access-log.test.ts`
+(**quinze** cas, dont « rend les lignes du script d amorcage, que nulle autre route ne peut lire »,
+les trois filtres, et « ne rend jamais d identite de patient — seulement des identifiants ») ;
+`front/src/routes/_authenticated/super-admin/access-log.test.tsx` côté écran (**seize** cas).
+
+**Ce que la revue finale de branche a changé sur cet écran, et pourquoi ce n'étaient pas des
+détails.** Trois défauts se tenaient par la main, et aucun n'était visible en regardant une seule
+tâche :
+
+1. **Le filtre « compte » était appliqué dans le navigateur, sur une page bornée à 200 lignes.** Il
+   ne pouvait donc que réduire ce qui était déjà rendu : chercher un compte affichait « aucune
+   entrée » alors que ses lignes existaient, plus bas dans la table. Le filtre **serveur**
+   correspondant existait, était couvert par un test e2e, et **n'était appelé par personne** — il
+   n'acceptait qu'un `userID` **exact**, que personne ne tape de mémoire sur un écran de
+   diagnostic. Il accepte désormais les deux formes que la saisie produit (identifiant exact **ou**
+   fragment de prénom/nom, insensible à la casse, `%`/`_` échappés), et c'est **lui** qui est
+   branché. La saisie est différée de 300 ms avant l'envoi : sans cela, chaque frappe déclencherait
+   un `ILIKE` sur toute la plateforme.
+2. **Les lignes du script d'amorçage redevenaient invisibles** au-delà de 200 entrées — voir
+   « Ce qui reste ouvert », §8. Une valeur réservée du filtre d'établissement
+   (`SANS_ETABLISSEMENT`, miroir vérifié par un test entre les deux dépôts) les vise désormais.
+   Elle n'est proposée que sur `activite` : `PatientAccessLog.establishmentId` est non nullable, et
+   le back répond **400** à la combinaison plutôt qu'une liste vide qui se lirait « aucune
+   aujourd'hui ».
+3. **Le filtre « Action » n'atteignait que 8 des 19 actions réellement écrites.** La tâche 11
+   réutilisait le dictionnaire de l'écran d'activité **de service** — vrai de sa provenance, faux de
+   sa couverture : cet écran-là ne voit jamais les sept `member.*`, les deux actions d'amorçage,
+   `patient.removedFromPathway` (absente depuis l'étape 2, y compris de l'écran de service), ni
+   `user.accessLinkReissued` — **la ligne que la tâche 7 existe pour créer**, sur la route la plus
+   puissante du système. Les dix-neuf sont couvertes, et
+   `back/src/test/unit/utils/access-log-vocabulaire.test.ts` **lie désormais le dictionnaire à la
+   source** (clés de `AppEvents` + `ACTIVITY_LOG_SCRIPT_ACTIONS`, et `AccessAction` pour l'autre
+   journal), dans les deux sens — ce que les matrices de permissions avaient déjà et que le
+   vocabulaire d'actions n'avait pas.
 
 **Le défaut à ne pas répéter, et c'est le quatrième de la liste d'ouverture.** Le rapport de la
 tâche 11 faisait passer le **troisième filtre (action)** pour couvert en substituant « source » (le
@@ -637,8 +667,15 @@ journal qui en manque.
 
 ## Ce qui reste ouvert
 
-Six limites, mesurées et nommées. Aucune n'est un oubli : chacune a été examinée, et la raison de ne
-pas la fermer ici est écrite.
+**Neuf** limites, mesurées et nommées. Aucune n'est un oubli : chacune a été examinée, et la raison
+de ne pas la fermer ici est écrite.
+
+*(La revue finale de branche a relevé deux choses sur cette phrase. D'abord l'arithmétique : elle
+annonçait **six** limites et en listait **sept** — corrigé. Ensuite, et c'est le vrai point, deux
+limites réelles étaient déclarées ailleurs dans le dépôt mais **absentes de ce registre**, qui est
+le document désigné comme faisant foi : la **borne de 200 lignes** de l'écran plateforme, et les
+**deux colonnes de l'export que personne ne rend**. Elles sont les §8 et §9 ci-dessous. Une limite
+écrite dans un commentaire de code mais pas ici est une limite que personne ne relira.)*
 
 ### 1. Le garde-fou couvre les routes qui **nomment** un patient, pas celles qui en **rendent** les données
 
@@ -737,6 +774,68 @@ une garantie différente de « chaque site est nommé et justifié »**, et le v
 pas se lire comme promettant la seconde. Lacune préexistante, **aggravée de deux sites par cette
 étape**, et dite ici plutôt que tue.
 
+### 8. L'écran plateforme ne rend jamais plus de **200 lignes**, et rien ne permet de remonter plus loin
+
+`PLATFORM_ACCESS_LOG_LIMIT` vaut **200** dans les deux dépôts de journaux, le tri est
+`createdAt desc`. Au-delà de 200 lignes dans le périmètre demandé, **les plus anciennes sortent de
+la réponse**, et **aucune pagination ne permet d'y revenir**. La seule façon de les atteindre est de
+**resserrer les filtres** jusqu'à ce que le périmètre tienne sous la borne.
+
+**Ce que cela a réellement cassé, et qui n'avait pas été vu** (revue finale de branche) : les lignes
+du script d'amorçage sont, par construction, **les plus anciennes de la table**. Passé 200 entrées
+dans le journal d'activité, elles tombaient hors de la page — et **aucun filtre ne permettait de les
+viser**, le filtre d'établissement ne sachant pas demander « sans établissement » et la liste
+déroulante ne proposant que des établissements réels. La documentation présentait pourtant cette
+lisibilité comme **acquise** (« l'un des deux trous que cet écran ferme », § 9 du guide de
+vérification) : elle ne l'était que sur un journal jeune.
+
+**Trois choses ont changé, aucune ne supprime la borne** :
+- le filtre **compte** est désormais évalué **en base** et non dans le navigateur (il l'était : il
+  ne pouvait donc que réduire une page déjà tronquée, et rendait « aucune entrée » pour un compte
+  dont les lignes existaient) ;
+- le filtre d'établissement accepte une valeur réservée, **« Sans établissement »**, qui vise
+  exactement les lignes d'amorçage ;
+- la borne est **déclarée** — ici, et dans les deux fichiers qui la portent.
+
+**Pourquoi pas une pagination** : c'est l'arbitrage rendu, et il mérite d'être écrit plutôt que
+supposé. Une pagination sur cette route demanderait un curseur stable (`createdAt` n'est pas unique),
+un total, et une pagination côté écran pour les deux sources — un chantier qui dépasse une passe de
+revue, sur un écran de **diagnostic** dont le besoin réel est « retrouver les lignes de X », auquel
+un filtre serveur répond mieux qu'un défilement de pages. **Si le journal devient un outil
+d'investigation rétrospective plutôt que de diagnostic, c'est cette décision-là qu'il faut rouvrir**,
+pas la valeur 200.
+
+*Coût si c'est faux* : un écran d'audit qui affirme « aucune entrée » là où il devrait dire « pas
+dans les 200 dernières ». La distinction n'est pas affichée aujourd'hui — l'écran ne signale pas
+qu'il a tronqué.
+
+### 9. Deux colonnes de l'export ne sont rendues par **aucune** lecture ni **aucun** écran
+
+`PatientAccessLog.exportCount` (le nombre de dossiers rendus par un export) et
+`exportFilters` (ses critères, en JSON) sont **écrits** à chaque export — c'est tout l'objet de la
+tâche 4 — et **lus par personne** : ni la lecture de service, ni celle d'établissement, ni celle de
+la plateforme ne les portent dans leur schéma de réponse, et aucun écran ne les affiche. Une ligne
+d'export s'affiche donc aujourd'hui comme « Export », sans son ampleur ni son périmètre.
+
+**Les deux ne relèvent pas du même arbitrage, et c'est le point** :
+- **`exportFilters` est exclu pour une raison de fond, qui tient** : c'est le seul champ de texte
+  libre de la table, il peut porter un nom de patient (`search`), et le domaine ne le laisse passer
+  qu'après avoir refusé toute clé clinique. L'exposer demanderait de décider *à qui*, et sous quelle
+  permission. **À garder fermé par défaut.**
+- **`exportCount` est un nombre, et rien d'autre.** L'argument qui a fait exposer `accesParOctroi`
+  au tour de correction 1 de la tâche 10 s'applique **mot pour mot** : « ce n'est ni un contenu
+  clinique, ni une identité », et « une colonne écrite sur chaque ligne mais lue par personne est
+  précisément la classe de défaut que cette étape existe pour fermer ». Savoir qu'un export a rendu
+  **3** dossiers ou **4 000** est exactement ce qu'un auditeur regarde en premier.
+
+**Ce n'est pas corrigé ici**, parce que l'exposer touche trois schémas de réponse, trois écrans et
+leurs tests — et parce que l'écart avec `accesParOctroi` est un **écart d'arbitrage**, pas un défaut
+de code : personne n'a jamais tranché sur ce champ-là. C'est donc posé ici comme **question ouverte
+et nommée** plutôt que décidée en passant. Le registre du « ce qui reste ouvert » est le document
+qui fait foi ; il le disait dans un commentaire de schéma, il le dit maintenant ici.
+
+*Coût si c'est faux* : le journal sait combien de dossiers sont sortis et ne le dit à personne.
+
 ---
 
 ## Annexe — ce qui s'est révélé faux en chemin
@@ -791,6 +890,53 @@ le code a tranché. Elles sont listées parce que la prochaine étape rencontrer
     affiché. Restructuré en `index.tsx`, après lecture de la source du routeur.
 11. **`access-log:read` n'a pas été créée par cette étape** — elle est sur `main` depuis la première
     version de `permissions.ts`. Une recherche `git log -S` avait induit en erreur.
+
+*Et ce que la **revue finale de branche** a trouvé faux à son tour, sur du texte que les tours
+précédents avaient pourtant relu :*
+
+12. **La garde dynamique des événements échouait OUVERT** — c'est-à-dire de la façon exacte contre
+    laquelle elle existe. Son motif de lecture, ligne par ligne, exigeait l'accolade fermante **sur
+    la même ligne** ; un événement déclaré sur quatre lignes — la forme que le formateur produit
+    dès que la charge dépasse la largeur de ligne, et un événement existant fait déjà 87 caractères
+    — n'était **pas vu du tout** : ni classé, ni exempté, ni signalé. Prouvé par exécution : un
+    événement à trois champs ajouté sur quatre lignes laissait le fichier **18/18 vert**, alors que
+    son en-tête promettait le contraire en toutes lettres. La lecture **équilibre** désormais les
+    accolades, et `EXEMPLE_MULTILIGNE` le tient par un test qui **est** le contre-exemple.
+13. **Le sens inverse des deux listes de routes n'était tenu par rien.** Les deux contrôles
+    d'entrée morte étaient éprouvés **comme fonctions**, sur des tableaux fabriqués ; rien ne
+    vérifiait qu'ils soient **appelés** au démarrage. Mesuré : commenter **l'un ou l'autre** des
+    deux appels dans son `onReady` laissait **557 unitaires et 268 e2e verts**. Le sens aller, lui,
+    rougissait bien — et la documentation écrivait « les entrées mortes des deux listes font
+    échouer le démarrage à leur tour » : vrai dans le code, tenu par rien. Quatre cas de câblage le
+    tiennent maintenant, et les deux sabotages rougissent chacun sur son propre test.
+14. **L'énoncé du piège Prisma était périmé là où il faisait autorité.** `utils/tenant-context.ts`
+    se présentait comme « la source corrigée » et portait encore l'énoncé **intermédiaire**
+    (« ce qui tient la propriété, c'est l'enrobage `async` »), que ce document et `back/CLAUDE.md`
+    nomment comme un symptôme depuis la tâche 6. Pire : cette généralisation est **contredite par un
+    appelant de production quarante lignes plus loin** — la purge existante utilise un rappel
+    synchrone nu et fonctionne. Le risque allait dans le mauvais sens : qui croit l'enrobage
+    suffisant placera la lecture **après** une attente. Corrigé aux trois endroits qui le portaient
+    encore (`tenant-context.ts`, et les deux `findAllPlatformWide`), plus le commentaire de la purge
+    neuve qui s'en servait pour justifier de s'écarter de sa voisine.
+15. **Une entrée « au cas où » dans la capacité super-admin.** `PatientAccessLog` était déclaré
+    `['findMany', 'count']` « par symétrie » avec `ActivityLog` ; `count` n'était exercé par **aucun
+    appel** de `src/main`. La discipline posée à la tâche 9 est écrite au-dessus de la table
+    voisine : « une entrée sans route est une entrée à supprimer ». Retiré.
+16. **Une énumération périmée, au même endroit et pour la même raison qu'il y a cinq tâches.** La
+    raison d'exemption de la route de lecture énumérait « uniquement l'auteur, l'action, la date et
+    le service » — la liste du cahier des charges de la tâche 5, périmée depuis que la tâche 10 a
+    exposé `accesParOctroi`. C'est **la phrase même** qui avait rendu ce champ invisible cinq tâches
+    durant, recopiée dans un commentaire et laissée derrière le code qu'elle décrit.
+17. **La liste numérotée des emplois de `runAsSystem` n'avait jamais intégré le site de la tâche
+    7**, et mélangeait deux unités de compte (« emplois déclarés » et « appels »). Le site était
+    pourtant bien déclaré dans `AUTORISES` depuis son commit : c'est la **prose** qui avait dérivé,
+    et un commentaire de `starter.ts` parlait d'un « septième emploi déclaré » qui n'existe pas
+    (six emplois, huit appels).
+18. **L'énumération de l'Important n°2 de la consigne était elle-même incomplète** — voir le
+    rapport de revue : elle listait dix actions manquantes (sept `member.*`, deux d'amorçage,
+    `user.accessLinkReissued`) pour un écart de **onze**. La onzième,
+    `patient.removedFromPathway`, manquait **aussi à l'écran de service**, depuis l'étape 2. Le
+    contrat de vocabulaire l'a trouvée, pas la relecture.
 
 **L'énoncé corrigé du piège Prisma, puisqu'il a fallu trois tours pour l'obtenir.** Une requête Prisma
 est **paresseuse**. Ce qui fait perdre le contexte n'est pas l'absence du mot-clé `await`, et ce n'est

@@ -7,12 +7,22 @@ import type {
 } from '../../../types/infra/orm/repositories/patientAccessLog.repository.interface'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { TenantContextInterface } from '../../../types/utils/tenant-context'
+import { platformCompteFilter } from '../../../utils/platform-access-log-filters'
 import type { PostgresPrismaClient } from '../postgres-client'
 
 // Ecran de diagnostic plateforme (tache 6, etape 4b), pas un export complet — meme esprit que
 // `ACTIVITY_LOG_DETAIL_LIMIT` (establishment.repository.ts) et son homologue
 // `PLATFORM_ACCESS_LOG_LIMIT` (activityLog.repository.ts, meme tache, meme valeur — duplique
 // plutot que partage, comme le type `PlatformAccessLogFilters` : voir son commentaire).
+//
+// CE QUE CETTE BORNE REND INATTEIGNABLE, dit ici plutot que decouvert (revue finale de branche,
+// Important n°1) : le tri est `createdAt desc`, donc au-dela de 200 lignes dans le perimetre
+// demande, les PLUS ANCIENNES sortent de la reponse — et AUCUNE pagination ne permet d'y
+// revenir. La seule facon de les atteindre est de RESSERRER les filtres (etablissement, compte,
+// action) jusqu'a ce que le perimetre demande tienne sous la borne. C'est pour cela que les
+// filtres sont evalues EN BASE et non dans le navigateur : un filtre navigateur ne peut, par
+// construction, que reduire une page deja tronquee. Voir « Ce qui reste ouvert » (§8),
+// docs/multi-tenant/decisions-etape-4b.md.
 const PLATFORM_ACCESS_LOG_LIMIT = 200
 
 // Modele : service.repository.ts (cahier des charges de la tache). Le constructeur ne lit
@@ -131,21 +141,23 @@ class PatientAccessLogRepository implements PatientAccessLogRepositoryInterface 
   }
 
   // Etape 4b, tache 6 : `GET /super-admin/access-log` (source=acces) — SANS borne de tenant, a
-  // l'echelle de la PLATEFORME entiere. `PatientAccessLog: ['findMany', 'count']` est desormais
-  // declare dans `SUPERADMIN_OPERATIONS` (tenant-guard.ts) : sous `runAsSuperAdmin`,
+  // l'echelle de la PLATEFORME entiere. `PatientAccessLog: ['findMany']` est desormais declare
+  // dans `SUPERADMIN_OPERATIONS` (tenant-guard.ts) : sous `runAsSuperAdmin`,
   // `assertTenantReadScope` ne s'applique qu'au contexte `tenant` (jamais `superadmin`), donc
   // aucun `where` n'est exige ici — memes termes que `Service.count`/`Patient.count` (commentaire
   // au-dessus de `SUPERADMIN_OPERATIONS`).
   //
   // `await` A L'INTERIEUR du rappel — mais lisez `utils/tenant-context.ts#runAsSuperAdmin` avant
-  // de recopier cette forme ailleurs : la mesure (tour de correction 1, tache 6) montre que ce
-  // qui tient reellement la portee du contexte est l'ENROBAGE `async` du rappel, pas le mot-cle
-  // `await` lui-meme (un rappel `async` SANS `await` interne reste correct, mesure sur les 244
-  // e2e) — un rappel SYNCHRONE NU, en revanche, perd le contexte (mesure : 5 tests rougissent en
-  // 500, exactement les cinq tests `source=acces`). L'`await` ci-dessous reste ecrit :
-  // `suspicious/useAwait` (Biome, CLAUDE.md) refuse un rappel `async` sans aucun `await`, et un
-  // rappel qui ne suspend jamais se lit mal a cote de ses voisins — deux raisons de
-  // lisibilite/lint, plus la raison de contexte qu'on croyait.
+  // de recopier cette forme ailleurs. ENONCE EXACT (revue finale de branche, Important n°5 — ce
+  // commentaire portait encore l'enonce intermediaire, « ce qui tient la portee est l'enrobage
+  // `async` », que `back/CLAUDE.md` et l'annexe des decisions nomment desormais comme un
+  // SYMPTOME) : **ce qui compte, c'est que la lecture du contexte survienne AVANT le premier
+  // point de suspension**. Un rappel SYNCHRONE NU perd le contexte ICI (mesure, tour de
+  // correction 1 de la tache 6 : 5 tests rougissent en 500, exactement les cinq `source=acces`)
+  // parce que la requete Prisma est PARESSEUSE — rien n'est lu avant que `run` n'ait rendu la
+  // main. Le meme rappel synchrone nu convient parfaitement a `deleteOlderThan`, quarante lignes
+  // plus bas, qui lit `tenantContext.peek()` synchroniquement en tete de son corps. L'`await`
+  // ci-dessous reste ecrit pour le lint (`suspicious/useAwait`) et la lisibilite.
   //
   // A LA DIFFERENCE DE `findByPatientInEstablishment` CI-DESSUS, ce n'est PAS une traversee de
   // frontiere non declaree sous `runAsSystem` : c'est la capacite superadmin, exhaustive par
@@ -159,8 +171,11 @@ class PatientAccessLogRepository implements PatientAccessLogRepositoryInterface 
       return await this.tenantContext.runAsSuperAdmin(async () => {
         return await this.prisma.patientAccessLog.findMany({
           where: {
+            // `filters.sansEtablissement` n'est jamais lu ici : `establishmentId` est NON
+            // NULLABLE sur ce modele, et le schema HTTP refuse la combinaison par un 400 —
+            // voir le commentaire de `PlatformAccessLogFilters` (interface de ce depot).
             ...(filters.establishmentId ? { establishmentId: filters.establishmentId } : {}),
-            ...(filters.userID ? { userID: filters.userID } : {}),
+            ...platformCompteFilter(filters.compte),
             ...(filters.action ? { action: filters.action } : {}),
           },
           orderBy: { createdAt: 'desc' },

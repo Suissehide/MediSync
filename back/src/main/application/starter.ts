@@ -39,14 +39,28 @@ const scheduleActivityLogCleanup = (instances: IocContainer): void => {
 
 // Purge périodique du journal des consultations (tâche 8, étape 4b) : même
 // mécanisme, même rétention paramétrable (indépendante, voir le commentaire de
-// `PatientAccessLogDomain.cleanup`), à côté de la purge existante ci-dessus —
-// septième emploi déclaré de `runAsSystem` (`runAsSystem-unicite.test.ts`,
-// entrée `application/starter.ts`, désormais deux appels). Rappel `async` avec
-// un `await` interne (et non le rappel synchrone nu de la purge ci-dessus) :
-// convention établie ailleurs sur ce chantier pour ce mécanisme (voir
-// `utils/tenant-context.ts#runAsSuperAdmin`) — ce qui tient réellement la
-// portée du contexte est l'enrobage `async`, l'`await` reste écrit pour le
-// lint (`suspicious/useAwait`) et la lisibilité.
+// `PatientAccessLogDomain.cleanup`), à côté de la purge existante ci-dessus.
+//
+// SECOND APPEL du PREMIER emploi déclaré de `runAsSystem` — l'entrée
+// `application/starter.ts` de `runAsSystem-unicite.test.ts` porte désormais
+// `appels: 2`. (Revue finale de branche : ce commentaire disait « septième
+// emploi déclaré », un ordinal qui avait dérivé. La convention du fichier cité
+// compte SIX emplois déclarés — un par fichier, avec sa raison — pour HUIT
+// appels au total ; ce site-ci n'en ouvre aucun septième, il s'ajoute au
+// premier.)
+//
+// RAPPEL `async` AVEC UN `await` INTERNE, et non le rappel synchrone nu de la
+// purge ci-dessus. Le motif écrit ici était périmé : « ce qui tient la portée
+// du contexte est l'enrobage `async` » est l'énoncé que `back/CLAUDE.md`,
+// l'annexe des décisions et `utils/tenant-context.ts#runAsSuperAdmin` nomment
+// désormais comme un SYMPTÔME. L'énoncé exact est : **la lecture du contexte
+// doit survenir avant le premier point de suspension**. Les DEUX formes sont
+// donc correctes ici, et la voisine synchrone nue le prouve — les deux
+// `deleteOlderThan` lisent `tenantContext.peek()` synchroniquement en tête de
+// leur corps. Ce qui reste de l'écart entre les deux purges est purement une
+// affaire de lint et de lisibilité (`suspicious/useAwait` refuse un rappel
+// `async` sans `await`), pas de correction : ne pas lire cet `async` comme la
+// condition qui tient la portée, ni la voisine comme une exception tolérée.
 const schedulePatientAccessLogCleanup = (instances: IocContainer): void => {
   const { patientAccessLogDomain, logger, tenantContext } = instances
   const run = (): void => {

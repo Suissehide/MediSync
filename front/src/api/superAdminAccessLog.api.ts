@@ -19,8 +19,8 @@ const buildQuery = (params: SuperAdminAccessLogQuery): string => {
   if (params.establishmentId) {
     query.set('establishmentId', params.establishmentId)
   }
-  if (params.userID) {
-    query.set('userID', params.userID)
+  if (params.compte) {
+    query.set('compte', params.compte)
   }
   if (params.action) {
     query.set('action', params.action)

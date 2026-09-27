@@ -426,19 +426,32 @@ describe("etats de l'ecran plateforme du journal des acces", () => {
     expect(screen.getByText('Alice Martin')).toBeInTheDocument()
   })
 
-  // Le filtre « compte » (client, cf. le commentaire du fichier de route) doit lui aussi exclure
-  // quelque chose pour prouver quelque chose.
-  it("le filtre compte exclut les lignes des autres comptes", async () => {
-    vi.stubGlobal(
-      'fetch',
-      buildFetchMock([
-        routeEtablissements([chu]),
-        routeAccessLog([
+  // REVUE FINALE DE BRANCHE, Important n°1 — LE FILTRE « COMPTE » EST SERVEUR, ET CES DEUX CAS
+  // NE PEUVENT PAS ETRE SATISFAITS PAR UN FILTRE NAVIGATEUR.
+  //
+  // L'ancien cas donnait au bouchon les MEMES deux lignes quelle que soit la requete, et
+  // verifiait que Bob disparaissait : un filtre navigateur le satisfaisait, et c'est bien ce qui
+  // se passait — sur la page DEJA TRONQUEE a 200 lignes. Les deux cas ci-dessous inversent la
+  // charge de la preuve : le bouchon honore `compte`, donc ne rien envoyer laisse Bob a l'ecran.
+  it("le filtre compte est envoye au SERVEUR (un filtre navigateur ne le satisferait pas)", async () => {
+    const fetchMock = buildFetchMock([
+      routeEtablissements([chu]),
+      routeAccessLog((url) => {
+        const compte = url.searchParams.get('compte')
+        const toutes = [
           ligneAcces({ id: 'log-alice', userFirstName: 'Alice', userLastName: 'Martin' }),
           ligneAcces({ id: 'log-bob', userFirstName: 'Bob', userLastName: 'Durand' }),
-        ]),
-      ]),
-    )
+        ]
+        if (compte === null) {
+          return toutes
+        }
+        const fragment = compte.toLowerCase()
+        return toutes.filter((l) =>
+          `${l.userFirstName} ${l.userLastName}`.toLowerCase().includes(fragment),
+        )
+      }),
+    ])
+    vi.stubGlobal('fetch', fetchMock)
 
     monter(superAdmin)
 
@@ -449,10 +462,163 @@ describe("etats de l'ecran plateforme du journal des acces", () => {
 
     await userEvent.type(screen.getByLabelText('Compte'), 'alice')
 
+    // Les deux assertions dans le MEME `waitFor` : la saisie est differee puis relance la
+    // requete, et pendant ce rechargement `ReactTable` rend des squelettes — aucune des deux
+    // lignes n'est alors a l'ecran, un etat transitoire qu'une assertion isolee sur l'absence de
+    // Bob prendrait pour le resultat.
     await waitFor(() => {
+      expect(screen.getByText('Alice Martin')).toBeInTheDocument()
       expect(screen.queryByText('Bob Durand')).not.toBeInTheDocument()
     })
-    expect(screen.getByText('Alice Martin')).toBeInTheDocument()
+    expect(
+      fetchMock.mock.calls.some(([url]) => String(url).includes('compte=alice')),
+    ).toBe(true)
+  })
+
+  // LE DEFAUT LUI-MEME, REJOUE. La lecture plateforme est bornee a 200 lignes en `createdAt
+  // desc` : les lignes plus anciennes d'un compte n'apparaissent JAMAIS dans la reponse non
+  // filtree. Le bouchon reproduit exactement cela — Zoe n'est rendue QUE lorsque `compte` est
+  // envoye. Un filtre navigateur, qui ne peut que reduire la page recue, rendrait ici « aucune
+  // entree » alors que les lignes existent : c'est le constat de la revue, mot pour mot.
+  it("trouve un compte dont les lignes sont HORS de la page non filtree (ce que le filtre navigateur ne pouvait pas)", async () => {
+    vi.stubGlobal(
+      'fetch',
+      buildFetchMock([
+        routeEtablissements([chu]),
+        routeAccessLog((url) => {
+          const compte = url.searchParams.get('compte')
+          if (compte === null) {
+            // La « page » des 200 dernieres lignes : Zoe n'y est pas, elle est trop ancienne.
+            return [ligneAcces({ id: 'log-alice', userFirstName: 'Alice', userLastName: 'Martin' })]
+          }
+          return compte.toLowerCase() === 'zoe'
+            ? [ligneAcces({ id: 'log-zoe', userFirstName: 'Zoe', userLastName: 'Ancienne' })]
+            : []
+        }),
+      ]),
+    )
+
+    monter(superAdmin)
+
+    await waitFor(() => {
+      expect(screen.getByText('Alice Martin')).toBeInTheDocument()
+    })
+    expect(screen.queryByText('Zoe Ancienne')).not.toBeInTheDocument()
+
+    await userEvent.type(screen.getByLabelText('Compte'), 'zoe')
+
+    await waitFor(() => {
+      expect(screen.getByText('Zoe Ancienne')).toBeInTheDocument()
+    })
+  })
+
+  // REVUE FINALE DE BRANCHE, Important n°1 — VISER LES LIGNES SANS ETABLISSEMENT. Sans cette
+  // option, les lignes du script d'amorcage (les plus ANCIENNES de la table, donc les premieres
+  // a tomber hors de la page de 200) ne sont visables par aucun filtre : la liste deroulante ne
+  // proposait que des etablissements REELS.
+  it("propose « Sans etablissement » sur le journal d'activite, et l'envoie au serveur", async () => {
+    const fetchMock = buildFetchMock([
+      routeEtablissements([chu]),
+      routeAccessLog((url) => {
+        if (url.searchParams.get('source') !== 'activite') {
+          return [ligneAcces()]
+        }
+        const ligneAmorcage = {
+          id: 'log-amorcage',
+          source: 'activite' as const,
+          establishmentId: null,
+          serviceId: null,
+          userID: 'cli:bootstrap-super-admin',
+          userFirstName: null,
+          userLastName: null,
+          action: 'superAdmin.granted',
+          createdAt: '2026-01-15T10:30:00.000Z',
+          entityType: 'user',
+          entityID: 'u9',
+          patientId: null,
+          accesParOctroi: null,
+        }
+        const ligneOrdinaire = {
+          ...ligneAmorcage,
+          id: 'log-ordinaire',
+          establishmentId: 'e1',
+          userID: 'u1',
+          action: 'patient.created',
+        }
+        return url.searchParams.get('establishmentId') === 'aucun'
+          ? [ligneAmorcage]
+          : [ligneAmorcage, ligneOrdinaire]
+      }),
+    ])
+    vi.stubGlobal('fetch', fetchMock)
+
+    monter(superAdmin)
+
+    await userEvent.click(await screen.findByLabelText('Journal'))
+    await userEvent.click(await screen.findByRole('option', { name: "Journal d'activité" }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Patient créé')).toBeInTheDocument()
+    })
+    // Le libellé de l'action d'amorçage existe désormais (Important n°2) : la ligne ne s'affiche
+    // plus sous son nom technique.
+    expect(screen.getByText('Super-admin accordé (script)')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByLabelText('Établissement'))
+    await userEvent.click(await screen.findByRole('option', { name: 'Sans établissement (amorçage)' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Super-admin accordé (script)')).toBeInTheDocument()
+      expect(screen.queryByText('Patient créé')).not.toBeInTheDocument()
+    })
+    expect(
+      fetchMock.mock.calls.some(([url]) => String(url).includes('establishmentId=aucun')),
+    ).toBe(true)
+  })
+
+  // `PatientAccessLog.establishmentId` est NON NULLABLE : la demander « sans etablissement » n'a
+  // pas de sens, et le back repond 400. L'option n'existe donc pas sur ce journal-la, plutot que
+  // d'exister et d'echouer.
+  it("ne propose PAS « Sans etablissement » sur le journal des consultations", async () => {
+    vi.stubGlobal(
+      'fetch',
+      buildFetchMock([routeEtablissements([chu]), routeAccessLog([ligneAcces()])]),
+    )
+
+    monter(superAdmin)
+
+    await userEvent.click(await screen.findByLabelText('Établissement'))
+    expect(await screen.findByRole('option', { name: 'CHU Bordeaux' })).toBeInTheDocument()
+    expect(
+      screen.queryByRole('option', { name: 'Sans établissement (amorçage)' }),
+    ).not.toBeInTheDocument()
+  })
+
+  // Le vocabulaire d'action de l'ecran plateforme couvre les DIX-NEUF valeurs que le journal
+  // d'activite peut porter, pas les huit de l'ecran de service (Important n°2). Le contrat qui
+  // le tient vit cote back (`unit/utils/access-log-vocabulaire.test.ts`, qui lit ce dictionnaire
+  // et `AppEvents`) ; ce cas-ci verifie que l'ecran s'en sert reellement, sur la valeur qui
+  // comptait le plus : la reemission de lien par le super-admin, la route la plus puissante du
+  // systeme, et la ligne que la tache 7 existe pour creer.
+  it("propose user.accessLinkReissued dans le filtre Action du journal d'activite", async () => {
+    vi.stubGlobal(
+      'fetch',
+      buildFetchMock([routeEtablissements([chu]), routeAccessLog([])]),
+    )
+
+    monter(superAdmin)
+
+    await userEvent.click(await screen.findByLabelText('Journal'))
+    await userEvent.click(await screen.findByRole('option', { name: "Journal d'activité" }))
+
+    await userEvent.click(screen.getByLabelText('Action'))
+    expect(
+      await screen.findByRole('option', { name: "Lien d'accès réémis (super-admin)" }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('option', { name: 'Super-admin accordé (script)' }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Membre rattaché' })).toBeInTheDocument()
   })
 
   // Changer de journal réinitialise l'action (les deux ne partagent pas le même vocabulaire) et

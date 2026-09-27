@@ -28,9 +28,19 @@ export type SuperAdminAccessLogEntry = {
 // Miroir de `superAdminAccessLogQuerySchema` (back) : `source` est obligatoire (la route ne lit
 // jamais les deux journaux à la fois), les trois autres sont les filtres optionnels de la spec
 // (établissement, compte, action).
+//
+// REVUE FINALE DE BRANCHE, Important n°1 — deux évolutions, côté back comme ici :
+//   - `establishmentId` accepte la valeur réservée `SANS_ETABLISSEMENT`
+//     (`constants/superAdminAccessLog.constant.ts`), qui vise les lignes SANS établissement —
+//     celles du script d'amorçage, les plus anciennes de la table, donc les premières à tomber
+//     hors de la page de 200 (`PLATFORM_ACCESS_LOG_LIMIT`, back). Uniquement sur `activite` :
+//     `PatientAccessLog.establishmentId` est non nullable, et le back répond 400 autrement.
+//   - `compte` REMPLACE `userID` : identifiant exact **ou** fragment de prénom/nom, évalué EN
+//     BASE. L'écran filtrait le compte dans le navigateur, sur la page déjà tronquée — chercher
+//     un compte rendait « aucune entrée » alors que ses lignes existaient.
 export type SuperAdminAccessLogQuery = {
   source: SuperAdminAccessLogSource
   establishmentId?: string
-  userID?: string
+  compte?: string
   action?: string
 }

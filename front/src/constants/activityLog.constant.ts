@@ -1,10 +1,25 @@
 import { toSelectOptions } from '../libs/utils.ts'
 
+// Les actions que l'écran d'activité DE SERVICE peut rencontrer
+// (`routes/.../s/$serviceId/_settings/activity-log.tsx`) : celles écrites sous un contexte de
+// tenant AVEC un service courant. Les actions de gestion des membres (`member.*`) sont écrites
+// sous le contexte d'ADMINISTRATION, qui n'a pas de service, et n'apparaissent donc jamais ici —
+// c'est l'écran plateforme qui les voit (`constants/superAdminAccessLog.constant.ts`, qui
+// COMPLÈTE ce dictionnaire plutôt que de le réutiliser tel quel).
+//
+// `patient.removedFromPathway` A ÉTÉ AJOUTÉ à la revue finale de branche (étape 4b). Il manquait
+// depuis l'étape 2 : l'événement existe sur `main` depuis l'origine du bus, il est bien écrit
+// sous un contexte de service, et le filtre « Action » de cet écran-ci ne le proposait pas —
+// une ligne réelle s'affichait donc sous son nom technique, et aucune valeur du filtre ne
+// permettait de l'isoler. Trouvé par le contrat de vocabulaire
+// (`back/src/test/unit/utils/access-log-vocabulaire.test.ts`), qui lie désormais ce fichier à
+// `AppEvents`.
 export const ACTION_LABELS: Record<string, string> = {
   'patient.created': 'Patient créé',
   'patient.updated': 'Patient modifié',
   'patient.deleted': 'Patient supprimé',
   'patient.enrolled': 'Patient inscrit à un parcours',
+  'patient.removedFromPathway': "Patient retiré d'un parcours",
   'diagnostic.created': 'Diagnostic créé',
   'diagnostic.updated': 'Diagnostic modifié',
   'appointment.created': 'Rendez-vous créé',

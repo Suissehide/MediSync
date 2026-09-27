@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
 
 import {
+  SANS_ETABLISSEMENT,
   type SuperAdminAccessLogEntry,
   type SuperAdminAccessLogQuery,
   superAdminAccessLogQuerySchema,
@@ -33,8 +34,19 @@ const accessLogRouter: FastifyPluginAsync = (fastify) => {
       config: { permission: 'establishments:manage' },
     },
     async (request): Promise<SuperAdminAccessLogEntry[]> => {
-      const { source, establishmentId, userID, action } = request.query
-      const filters = { establishmentId, userID, action }
+      const { source, establishmentId, compte, action } = request.query
+      // LA VALEUR RESERVEE EST TRADUITE ICI, UNE FOIS, et n'atteint jamais les depots sous sa
+      // forme textuelle (revue finale de branche, Important n°1) : un depot qui comparerait
+      // lui-meme `establishmentId` a la chaine `'aucun'` serait un second endroit ou cette
+      // convention pourrait deriver. En sortie d'ici, « sans etablissement » est un booleen, et
+      // `establishmentId` ne porte plus jamais que de vrais identifiants.
+      const sansEtablissement = establishmentId === SANS_ETABLISSEMENT
+      const filters = {
+        establishmentId: sansEtablissement ? undefined : establishmentId,
+        sansEtablissement,
+        compte,
+        action,
+      }
 
       if (source === 'activite') {
         const rows = await activityLogDomain.findAllPlatformWide(filters)

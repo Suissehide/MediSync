@@ -98,9 +98,16 @@ export const EXEMPTED_PATIENT_ROUTES: Record<string, string> = {
   // (interfaces/http/fastify/routes/patientAccessLog.ts). Lire le journal des consultations
   // d'un dossier n'est pas consulter ce dossier : elle ne rend aucune identite ni aucun contenu
   // clinique (voir `patientAccessLogsResponseSchema`, schemas/patientAccessLog.schema.ts —
-  // uniquement l'auteur, l'action, la date et le service), seulement la liste de qui a ouvert
-  // quoi et quand. La journaliser ferait de plus grossir le journal a chaque fois qu'on le
-  // consulte, jusqu'a noyer les acces de soin sous les acces d'audit.
+  // CINQ champs : l'auteur, l'action, la date, le service et `accesParOctroi`), seulement la
+  // liste de qui a ouvert quoi, quand, et par quelle provenance. La journaliser ferait de plus
+  // grossir le journal a chaque fois qu'on le consulte, jusqu'a noyer les acces de soin sous
+  // les acces d'audit.
+  // REVUE FINALE DE BRANCHE : cette enumeration disait encore « uniquement l'auteur, l'action,
+  // la date et le service », la liste du cahier des charges de la tache 5 — periMEE depuis que
+  // la tache 10 a expose `accesParOctroi`. C'est la MEME phrase, au mot pres, qui avait rendu ce
+  // champ invisible cinq taches durant : une enumeration recopiee d'un brief, laissee derriere
+  // le code qu'elle est censee decrire. Une raison d'exemption qui enumere doit etre relue
+  // chaque fois que le schema cite change, ou ne pas enumerer du tout.
   // Tour de correction 1 (revue) : le premier jet disait « aucune identite », un absolu faux —
   // la reponse porte le nom de l'AGENT (auteur de l'acces), une identite reelle. Ce qu'elle ne
   // porte jamais, c'est l'identite ou le contenu clinique DU PATIENT (voir

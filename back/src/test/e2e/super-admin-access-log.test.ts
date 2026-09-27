@@ -169,16 +169,45 @@ describe('GET /super-admin/access-log', () => {
     expect(body.every((l) => l.establishmentId === etabA.id)).toBe(true)
   })
 
-  it('filtre par compte (userID)', async () => {
+  it('filtre par compte, sur l identifiant exact (ce que faisait l ancien filtre userID)', async () => {
     const res = await testApp.app.inject({
       method: 'GET',
-      url: '/super-admin/access-log?source=acces&userID=u-coordinateur-b',
+      url: '/super-admin/access-log?source=acces&compte=u-coordinateur-b',
       cookies: cookiesSuperAdmin,
     })
     expect(res.statusCode).toBe(200)
     const body = res.json() as { userID: string }[]
     expect(body.length).toBeGreaterThan(0)
     expect(body.every((l) => l.userID === 'u-coordinateur-b')).toBe(true)
+  })
+
+  // REVUE FINALE DE BRANCHE, Important n°1 : le filtre accepte desormais AUSSI un fragment de
+  // prenom/nom, insensible a la casse — la forme que l'ecran produit reellement. C'est ce qui
+  // permet de le brancher au serveur sans perdre la recherche par nom que l'ecran offrait (et
+  // qu'il appliquait, lui, sur la page deja tronquee).
+  it('filtre par compte, sur un fragment de nom, insensible a la casse', async () => {
+    const res = await testApp.app.inject({
+      method: 'GET',
+      url: '/super-admin/access-log?source=acces&compte=DUSERVICEB',
+      cookies: cookiesSuperAdmin,
+    })
+    expect(res.statusCode).toBe(200)
+    const body = res.json() as { userID: string }[]
+    expect(body.length).toBeGreaterThan(0)
+    expect(body.every((l) => l.userID === 'u-coordinateur-b')).toBe(true)
+  })
+
+  // Un fragment qui serait traite comme un JOKER par Postgres ne doit rien rendre de plus
+  // qu'une recherche litterale — meme garde, et meme fonction (`escapeLikePattern`), que la
+  // recherche d'identite de patient. Sans elle, « % » rendrait TOUTE la plateforme.
+  it('ne traite pas le pourcent comme un joker', async () => {
+    const res = await testApp.app.inject({
+      method: 'GET',
+      url: '/super-admin/access-log?source=acces&compte=%25',
+      cookies: cookiesSuperAdmin,
+    })
+    expect(res.statusCode).toBe(200)
+    expect(res.json()).toEqual([])
   })
 
   it('filtre par action', async () => {
@@ -232,6 +261,115 @@ describe('GET /super-admin/access-log', () => {
   // BRUT (meme double verification que superAdminUser.schema.ts, accountSearchResponseSchema),
   // en plus de la cle exacte : un nom de patient qui fuiterait sous une cle imprevue serait
   // invisible a une assertion qui ne regarderait que les cles connues.
+  // ------------------------------------------------------------------------------------
+  // LA BORNE DE 200 LIGNES, ET CE QU'ELLE REND INATTEIGNABLE SANS FILTRE SERVEUR
+  // (revue finale de branche, Important n°1).
+  // ------------------------------------------------------------------------------------
+  //
+  // `PLATFORM_ACCESS_LOG_LIMIT` vaut 200, le tri est `createdAt desc`. Les deux cas ci-dessous
+  // peuplent le journal AU-DELA de cette borne, puis cherchent une ligne qui est, par
+  // construction, hors de la premiere page : un filtre applique dans le navigateur ne pourrait
+  // JAMAIS la trouver, puisqu'il ne voit que les 200 lignes deja rendues. Ce sont donc les deux
+  // cas que l'ecran ne pouvait pas satisfaire avant ce correctif, et que le filtre serveur
+  // satisfait.
+  describe('au-dela de la borne de 200 lignes', () => {
+    const ANCIEN = new Date('2020-01-01T00:00:00.000Z')
+
+    beforeAll(async () => {
+      // 250 lignes RECENTES sur le journal d'activite — la premiere page est pleine, et pleine
+      // de lignes qui ne nous interessent pas.
+      await testDb.activityLog.createMany({
+        data: Array.from({ length: 250 }, (_, i) => ({
+          establishmentId: etabA.id,
+          serviceId: serviceA.id,
+          userID: `u-bruit-${i}`,
+          userFirstName: 'Bruit',
+          userLastName: 'Recent',
+          action: 'patient.created',
+          entityType: 'patient',
+          entityID: `p-bruit-${i}`,
+        })),
+      })
+      // LA ligne cherchee : ancienne, donc hors de la page de 200.
+      await testDb.activityLog.create({
+        data: {
+          establishmentId: etabA.id,
+          serviceId: serviceA.id,
+          userID: 'u-tres-ancien',
+          userFirstName: 'Zoe',
+          userLastName: 'Ancienne',
+          action: 'patient.updated',
+          entityType: 'patient',
+          entityID: 'p-ancien',
+          createdAt: ANCIEN,
+        },
+      })
+    })
+
+    it('la page non filtree ne porte PAS la ligne ancienne — la borne mord reellement', async () => {
+      const res = await testApp.app.inject({
+        method: 'GET',
+        url: '/super-admin/access-log?source=activite',
+        cookies: cookiesSuperAdmin,
+      })
+      expect(res.statusCode).toBe(200)
+      const body = res.json() as { userID: string }[]
+      expect(body.length).toBe(200)
+      expect(body.some((l) => l.userID === 'u-tres-ancien')).toBe(false)
+    })
+
+    it('le filtre compte, lui, la trouve — ce qu un filtre navigateur ne pouvait pas', async () => {
+      const res = await testApp.app.inject({
+        method: 'GET',
+        url: '/super-admin/access-log?source=activite&compte=ancienne',
+        cookies: cookiesSuperAdmin,
+      })
+      expect(res.statusCode).toBe(200)
+      const body = res.json() as { userID: string }[]
+      expect(body.length).toBe(1)
+      expect(body[0]?.userID).toBe('u-tres-ancien')
+    })
+
+    // LE CAS QUI MOTIVE LA VALEUR RESERVEE. La ligne du script d'amorcage est ecrite sans
+    // etablissement et c'est l'une des plus anciennes de la table : passe 200 entrees, elle
+    // sort de la page, et AUCUN filtre ne permettait de la viser — la liste deroulante de
+    // l'ecran ne propose que des etablissements REELS. La documentation presentait pourtant sa
+    // lisibilite comme ACQUISE (« l'un des deux trous que cet ecran ferme »).
+    it('la ligne du script d amorcage sort de la page non filtree, mais reste visable', async () => {
+      const sansFiltre = await testApp.app.inject({
+        method: 'GET',
+        url: '/super-admin/access-log?source=activite',
+        cookies: cookiesSuperAdmin,
+      })
+      expect(
+        sansFiltre.json().some((l: { userID: string }) => l.userID === 'cli:bootstrap-super-admin'),
+      ).toBe(false)
+
+      const cible = await testApp.app.inject({
+        method: 'GET',
+        url: '/super-admin/access-log?source=activite&establishmentId=aucun',
+        cookies: cookiesSuperAdmin,
+      })
+      expect(cible.statusCode).toBe(200)
+      const body = cible.json() as { userID: string; establishmentId: string | null }[]
+      expect(body.length).toBeGreaterThan(0)
+      expect(body.every((l) => l.establishmentId === null)).toBe(true)
+      expect(body.some((l) => l.userID === 'cli:bootstrap-super-admin')).toBe(true)
+    })
+
+    // `PatientAccessLog.establishmentId` est NON NULLABLE : la question n'a pas de sens sur ce
+    // journal-la, et un 400 le DIT — la ou une liste vide laisserait croire « aucune
+    // aujourd'hui, peut-etre demain ».
+    it('refuse la valeur reservee sur le journal des consultations, par un 400', async () => {
+      const res = await testApp.app.inject({
+        method: 'GET',
+        url: '/super-admin/access-log?source=acces&establishmentId=aucun',
+        cookies: cookiesSuperAdmin,
+      })
+      expect(res.statusCode).toBe(400)
+    })
+  })
+
   it('ne rend jamais d identite de patient — seulement des identifiants', async () => {
     const res = await testApp.app.inject({
       method: 'GET',

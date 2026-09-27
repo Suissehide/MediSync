@@ -34,12 +34,23 @@ export type ActivityLogFindManyResult = {
 // Tâche 6, étape 4b : `GET /super-admin/access-log` (source=activite). Filtres libres — sous
 // superadmin, `assertTenantReadScope` (tenant-guard.ts) ne s'applique qu'au contexte `tenant`,
 // jamais à `superadmin` : rien n'exige donc un `where` particulier ici, contrairement au
-// `findMany` ci-dessus (tenant ordinaire). Tous optionnels : sans aucun, la lecture rend TOUTE la
-// table — y compris les lignes du script d'amorçage (`establishmentId: null`), qu'aucune autre
-// route ne peut lire (voir le commentaire sur l'implémentation).
+// `findMany` ci-dessus (tenant ordinaire). Tous optionnels : sans aucun, la lecture rend les 200
+// dernières lignes de la table (`PLATFORM_ACCESS_LOG_LIMIT`, voir l'implémentation).
+//
+// REVUE FINALE DE BRANCHE, Important n°1 — deux champs ont changé, et le mot « libres » ci-dessus
+// ne doit pas laisser croire qu'ils sont interchangeables :
+//   - `sansEtablissement` cible les lignes à `establishmentId: null` — celles du script
+//     d'amorçage, les plus ANCIENNES de la table, donc les premières à tomber hors de la page de
+//     200. Exclusif d'`establishmentId` par construction en amont (une seule valeur de requête,
+//     `SANS_ETABLISSEMENT`, voir le schéma HTTP) ; si les deux arrivaient quand même ici,
+//     l'implémentation tranche en faveur de `sansEtablissement`, jamais silencieusement des deux.
+//   - `compte` remplace `userID` : identifiant EXACT **ou** fragment de prénom/nom, insensible à
+//     la casse. Le filtrage par nom vivait dans le navigateur, sur la page déjà tronquée ; il est
+//     désormais évalué en base, sur toute la table.
 export type PlatformAccessLogFilters = {
   establishmentId?: string
-  userID?: string
+  sansEtablissement?: boolean
+  compte?: string
   action?: string
 }
 
