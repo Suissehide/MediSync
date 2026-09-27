@@ -1,5 +1,5 @@
-import { createFileRoute, useNavigate, useParams } from '@tanstack/react-router'
-import { ArrowLeft, FileDown, Trash2 } from 'lucide-react'
+import { createFileRoute, Link, useNavigate, useParams } from '@tanstack/react-router'
+import { ArrowLeft, FileDown, History, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import EditPatient from '@/components/custom/Patient/edit/edit.patient.tsx'
@@ -25,7 +25,26 @@ import {
 } from '@/queries/usePatient.tsx'
 import { useDiagnosticStore } from '@/store/useDiagnosticStore.ts'
 
-export const Route = createFileRoute('/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID')({
+// Etape 4b, tâche 10 — CE FICHIER A ÉTÉ DÉPLACÉ (`$patientID.tsx` → `$patientID/index.tsx`),
+// PAS SEULEMENT RENOMMÉ, pour une raison qui n'est écrite nulle part dans le brief de cette
+// tâche : `patient/$patientID/acces.tsx` (nouveau, cette tâche) et `$patientID.tsx` (l'ancien
+// fichier) auraient sinon partagé le MÊME segment de route sous TanStack Router — le premier
+// devenant, de fait, le PARENT du second. Or `PatientDetails` ne rend jamais `<Outlet/>` : sans
+// ce déplacement, `/patient/$patientID/acces` aurait matché les deux routes, rendu SEULEMENT
+// `PatientDetails` (rien n'appelle `Outlet` pour afficher l'enfant), et le nouvel écran ne se
+// serait jamais affiché — ni erreur au démarrage, ni test existant pour le signaler. Vérifié en
+// lisant `MatchInner` (node_modules/@tanstack/react-router/dist/esm/Match.js) : un match dont la
+// route déclare un `component` rend CE component, jamais un `<Outlet/>` implicite. La forme
+// retenue reprend celle, déjà éprouvée dans ce même dossier, de `patient/index.tsx` +
+// `patient/$patientID.tsx` : deux fichiers frères, sans fichier de layout intermédiaire — ici un
+// niveau plus bas (`$patientID/index.tsx` + `$patientID/acces.tsx`), pour la même raison. Le
+// chemin public ne change pas (`fullPath` reste `/patient/$patientID`, comme pour
+// `patient/index.tsx` face à `patient/`) ; seul l'identifiant interne de route gagne un `/` final
+// (voir `createFileRoute` et `useParams` ci-dessous), et aucun autre fichier du dépôt ne le
+// référence (vérifié par recherche).
+export const Route = createFileRoute(
+  '/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/',
+)({
   component: PatientDetails,
 })
 
@@ -35,6 +54,11 @@ function PatientDetails() {
   // (export généré dans le navigateur), gardée ici, seul endroit où elle
   // s'utilise.
   const canExportPdf = useCan('pdf:export')
+  // Etape 4b, tâche 10 : la même permission que le garde de
+  // `patient/$patientID/acces.tsx` (`consultations:read`, réservée au rôle
+  // COORDINATEUR) — un lien vers un écran inaccessible serait pire qu'une
+  // absence de lien.
+  const canReadAccessLog = useCan('consultations:read')
   const [selected, setSelected] = useState<string>('overview')
   const [showPDF, setShowPDF] = useState(false)
   const [showDelete, setShowDelete] = useState(false)
@@ -44,7 +68,7 @@ function PatientDetails() {
     useDiagnosticStore()
 
   const { establishmentId, serviceId, patientID } = useParams({
-    from: '/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID',
+    from: '/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/',
   })
   const { patient, isError, isFetched } = usePatientByIDQuery(patientID)
 
@@ -93,6 +117,22 @@ function PatientDetails() {
             </h2>
             <div className="ml-auto flex items-center gap-2">
               {patient && <AddPatientToPathwayForm patient={patient} />}
+              {canReadAccessLog && (
+                <Button
+                  asChild
+                  variant="outline"
+                  size="default"
+                  className="font-normal leading-tight"
+                >
+                  <Link
+                    to="/e/$establishmentId/s/$serviceId/patient/$patientID/acces"
+                    params={{ establishmentId, serviceId, patientID }}
+                  >
+                    <History className="w-4 h-4" />
+                    Journal des accès
+                  </Link>
+                </Button>
+              )}
               {canExportPdf && (
                 <Button
                   variant="outline"

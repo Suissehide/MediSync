@@ -45,13 +45,14 @@ import { Route as AuthenticatedEEstablishmentIdSServiceIdDashboardImport } from 
 import { Route as AuthenticatedEEstablishmentIdSServiceIdAgendaImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/agenda'
 import { Route as AuthenticatedEEstablishmentIdSServiceIdSettingsImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/_settings'
 import { Route as AuthenticatedEEstablishmentIdSServiceIdPatientIndexImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/patient/index'
-import { Route as AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID'
 import { Route as AuthenticatedEEstablishmentIdSServiceIdSettingsThematicImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/_settings/thematic'
 import { Route as AuthenticatedEEstablishmentIdSServiceIdSettingsSoignantImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/_settings/soignant'
 import { Route as AuthenticatedEEstablishmentIdSServiceIdSettingsPlanningImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/_settings/planning'
 import { Route as AuthenticatedEEstablishmentIdSServiceIdSettingsLocationImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/_settings/location'
 import { Route as AuthenticatedEEstablishmentIdSServiceIdSettingsDiagnosticTemplateImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/_settings/diagnostic-template'
 import { Route as AuthenticatedEEstablishmentIdSServiceIdSettingsActivityLogImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/_settings/activity-log'
+import { Route as AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDIndexImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/index'
+import { Route as AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDAccesImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/acces'
 
 // Create/Update Routes
 
@@ -280,13 +281,6 @@ const AuthenticatedEEstablishmentIdSServiceIdPatientIndexRoute =
     getParentRoute: () => AuthenticatedEEstablishmentIdSServiceIdRoute,
   } as any)
 
-const AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDRoute =
-  AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDImport.update({
-    id: '/patient/$patientID',
-    path: '/patient/$patientID',
-    getParentRoute: () => AuthenticatedEEstablishmentIdSServiceIdRoute,
-  } as any)
-
 const AuthenticatedEEstablishmentIdSServiceIdSettingsThematicRoute =
   AuthenticatedEEstablishmentIdSServiceIdSettingsThematicImport.update({
     id: '/thematic',
@@ -330,6 +324,20 @@ const AuthenticatedEEstablishmentIdSServiceIdSettingsActivityLogRoute =
     id: '/activity-log',
     path: '/activity-log',
     getParentRoute: () => AuthenticatedEEstablishmentIdSServiceIdSettingsRoute,
+  } as any)
+
+const AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDIndexRoute =
+  AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDIndexImport.update({
+    id: '/patient/$patientID/',
+    path: '/patient/$patientID/',
+    getParentRoute: () => AuthenticatedEEstablishmentIdSServiceIdRoute,
+  } as any)
+
+const AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDAccesRoute =
+  AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDAccesImport.update({
+    id: '/patient/$patientID/acces',
+    path: '/patient/$patientID/acces',
+    getParentRoute: () => AuthenticatedEEstablishmentIdSServiceIdRoute,
   } as any)
 
 // Populate the FileRoutesByPath interface
@@ -609,18 +617,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsThematicImport
       parentRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsImport
     }
-    '/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID': {
-      id: '/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID'
-      path: '/patient/$patientID'
-      fullPath: '/e/$establishmentId/s/$serviceId/patient/$patientID'
-      preLoaderRoute: typeof AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDImport
-      parentRoute: typeof AuthenticatedEEstablishmentIdSServiceIdImport
-    }
     '/_authenticated/e/$establishmentId/s/$serviceId/patient/': {
       id: '/_authenticated/e/$establishmentId/s/$serviceId/patient/'
       path: '/patient'
       fullPath: '/e/$establishmentId/s/$serviceId/patient'
       preLoaderRoute: typeof AuthenticatedEEstablishmentIdSServiceIdPatientIndexImport
+      parentRoute: typeof AuthenticatedEEstablishmentIdSServiceIdImport
+    }
+    '/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/acces': {
+      id: '/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/acces'
+      path: '/patient/$patientID/acces'
+      fullPath: '/e/$establishmentId/s/$serviceId/patient/$patientID/acces'
+      preLoaderRoute: typeof AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDAccesImport
+      parentRoute: typeof AuthenticatedEEstablishmentIdSServiceIdImport
+    }
+    '/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/': {
+      id: '/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/'
+      path: '/patient/$patientID'
+      fullPath: '/e/$establishmentId/s/$serviceId/patient/$patientID'
+      preLoaderRoute: typeof AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDIndexImport
       parentRoute: typeof AuthenticatedEEstablishmentIdSServiceIdImport
     }
   }
@@ -704,8 +719,9 @@ interface AuthenticatedEEstablishmentIdSServiceIdRouteChildren {
   AuthenticatedEEstablishmentIdSServiceIdDashboardRoute: typeof AuthenticatedEEstablishmentIdSServiceIdDashboardRoute
   AuthenticatedEEstablishmentIdSServiceIdSuiviRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSuiviRoute
   AuthenticatedEEstablishmentIdSServiceIdIndexRoute: typeof AuthenticatedEEstablishmentIdSServiceIdIndexRoute
-  AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDRoute: typeof AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDRoute
   AuthenticatedEEstablishmentIdSServiceIdPatientIndexRoute: typeof AuthenticatedEEstablishmentIdSServiceIdPatientIndexRoute
+  AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDAccesRoute: typeof AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDAccesRoute
+  AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDIndexRoute: typeof AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDIndexRoute
 }
 
 const AuthenticatedEEstablishmentIdSServiceIdRouteChildren: AuthenticatedEEstablishmentIdSServiceIdRouteChildren =
@@ -720,10 +736,12 @@ const AuthenticatedEEstablishmentIdSServiceIdRouteChildren: AuthenticatedEEstabl
       AuthenticatedEEstablishmentIdSServiceIdSuiviRoute,
     AuthenticatedEEstablishmentIdSServiceIdIndexRoute:
       AuthenticatedEEstablishmentIdSServiceIdIndexRoute,
-    AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDRoute:
-      AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDRoute,
     AuthenticatedEEstablishmentIdSServiceIdPatientIndexRoute:
       AuthenticatedEEstablishmentIdSServiceIdPatientIndexRoute,
+    AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDAccesRoute:
+      AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDAccesRoute,
+    AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDIndexRoute:
+      AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDIndexRoute,
   }
 
 const AuthenticatedEEstablishmentIdSServiceIdRouteWithChildren =
@@ -819,8 +837,9 @@ export interface FileRoutesByFullPath {
   '/e/$establishmentId/s/$serviceId/planning': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsPlanningRoute
   '/e/$establishmentId/s/$serviceId/soignant': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsSoignantRoute
   '/e/$establishmentId/s/$serviceId/thematic': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsThematicRoute
-  '/e/$establishmentId/s/$serviceId/patient/$patientID': typeof AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDRoute
   '/e/$establishmentId/s/$serviceId/patient': typeof AuthenticatedEEstablishmentIdSServiceIdPatientIndexRoute
+  '/e/$establishmentId/s/$serviceId/patient/$patientID/acces': typeof AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDAccesRoute
+  '/e/$establishmentId/s/$serviceId/patient/$patientID': typeof AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDIndexRoute
 }
 
 export interface FileRoutesByTo {
@@ -859,8 +878,9 @@ export interface FileRoutesByTo {
   '/e/$establishmentId/s/$serviceId/planning': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsPlanningRoute
   '/e/$establishmentId/s/$serviceId/soignant': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsSoignantRoute
   '/e/$establishmentId/s/$serviceId/thematic': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsThematicRoute
-  '/e/$establishmentId/s/$serviceId/patient/$patientID': typeof AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDRoute
   '/e/$establishmentId/s/$serviceId/patient': typeof AuthenticatedEEstablishmentIdSServiceIdPatientIndexRoute
+  '/e/$establishmentId/s/$serviceId/patient/$patientID/acces': typeof AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDAccesRoute
+  '/e/$establishmentId/s/$serviceId/patient/$patientID': typeof AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDIndexRoute
 }
 
 export interface FileRoutesById {
@@ -904,8 +924,9 @@ export interface FileRoutesById {
   '/_authenticated/e/$establishmentId/s/$serviceId/_settings/planning': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsPlanningRoute
   '/_authenticated/e/$establishmentId/s/$serviceId/_settings/soignant': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsSoignantRoute
   '/_authenticated/e/$establishmentId/s/$serviceId/_settings/thematic': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsThematicRoute
-  '/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID': typeof AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDRoute
   '/_authenticated/e/$establishmentId/s/$serviceId/patient/': typeof AuthenticatedEEstablishmentIdSServiceIdPatientIndexRoute
+  '/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/acces': typeof AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDAccesRoute
+  '/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/': typeof AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDIndexRoute
 }
 
 export interface FileRouteTypes {
@@ -949,8 +970,9 @@ export interface FileRouteTypes {
     | '/e/$establishmentId/s/$serviceId/planning'
     | '/e/$establishmentId/s/$serviceId/soignant'
     | '/e/$establishmentId/s/$serviceId/thematic'
-    | '/e/$establishmentId/s/$serviceId/patient/$patientID'
     | '/e/$establishmentId/s/$serviceId/patient'
+    | '/e/$establishmentId/s/$serviceId/patient/$patientID/acces'
+    | '/e/$establishmentId/s/$serviceId/patient/$patientID'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/pending'
@@ -988,8 +1010,9 @@ export interface FileRouteTypes {
     | '/e/$establishmentId/s/$serviceId/planning'
     | '/e/$establishmentId/s/$serviceId/soignant'
     | '/e/$establishmentId/s/$serviceId/thematic'
-    | '/e/$establishmentId/s/$serviceId/patient/$patientID'
     | '/e/$establishmentId/s/$serviceId/patient'
+    | '/e/$establishmentId/s/$serviceId/patient/$patientID/acces'
+    | '/e/$establishmentId/s/$serviceId/patient/$patientID'
   id:
     | '__root__'
     | '/_authenticated'
@@ -1031,8 +1054,9 @@ export interface FileRouteTypes {
     | '/_authenticated/e/$establishmentId/s/$serviceId/_settings/planning'
     | '/_authenticated/e/$establishmentId/s/$serviceId/_settings/soignant'
     | '/_authenticated/e/$establishmentId/s/$serviceId/_settings/thematic'
-    | '/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID'
     | '/_authenticated/e/$establishmentId/s/$serviceId/patient/'
+    | '/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/acces'
+    | '/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/'
   fileRoutesById: FileRoutesById
 }
 
@@ -1209,8 +1233,9 @@ export const routeTree = rootRoute
         "/_authenticated/e/$establishmentId/s/$serviceId/dashboard",
         "/_authenticated/e/$establishmentId/s/$serviceId/suivi",
         "/_authenticated/e/$establishmentId/s/$serviceId/",
-        "/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID",
-        "/_authenticated/e/$establishmentId/s/$serviceId/patient/"
+        "/_authenticated/e/$establishmentId/s/$serviceId/patient/",
+        "/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/acces",
+        "/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/"
       ]
     },
     "/_authenticated/e/$establishmentId/s/$serviceId/_settings": {
@@ -1265,12 +1290,16 @@ export const routeTree = rootRoute
       "filePath": "_authenticated/e/$establishmentId/s/$serviceId/_settings/thematic.tsx",
       "parent": "/_authenticated/e/$establishmentId/s/$serviceId/_settings"
     },
-    "/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID": {
-      "filePath": "_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID.tsx",
-      "parent": "/_authenticated/e/$establishmentId/s/$serviceId"
-    },
     "/_authenticated/e/$establishmentId/s/$serviceId/patient/": {
       "filePath": "_authenticated/e/$establishmentId/s/$serviceId/patient/index.tsx",
+      "parent": "/_authenticated/e/$establishmentId/s/$serviceId"
+    },
+    "/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/acces": {
+      "filePath": "_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/acces.tsx",
+      "parent": "/_authenticated/e/$establishmentId/s/$serviceId"
+    },
+    "/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/": {
+      "filePath": "_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/index.tsx",
       "parent": "/_authenticated/e/$establishmentId/s/$serviceId"
     }
   }

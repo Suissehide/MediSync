@@ -185,6 +185,14 @@ export const ACTIVITY_LOG = {
   CLEANUP: 'cleanup_activity_logs',
 }
 
+// Journal des consultations d'un dossier patient (étape 4b, tâche 10). Clé sans le tenant, comme
+// le reste de ce fichier (`front/CLAUDE.md` § « Query keys deliberately do not carry the
+// tenant ») ; elle porte `patientID`, exactement comme `PATIENT_SERVICE_FILE.GET_BY_PATIENT` porte
+// l'identifiant de la ressource demandée, pas celui d'un tenant.
+export const PATIENT_ACCESS_LOG = {
+  GET_BY_PATIENT: 'get_patient_access_log',
+}
+
 export const FORBIDDEN_WEEK = {
   GET_ALL: 'get_all_forbidden_weeks',
   CREATE: 'create_forbidden_week',
