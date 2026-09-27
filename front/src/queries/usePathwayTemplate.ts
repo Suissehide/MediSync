@@ -212,7 +212,7 @@ export const usePathwayTemplateMutations = () => {
       queryClient.setQueryData(
         [PATHWAY_TEMPLATE.GET_ALL],
         (oldPathwayTemplates: PathwayTemplate[]) => {
-          if (!oldPathwayTemplates) return oldPathwayTemplates
+          if (!oldPathwayTemplates) { return oldPathwayTemplates }
           const orderMap = new Map(
             orderedIds.map((id, index) => [id, index]),
           )

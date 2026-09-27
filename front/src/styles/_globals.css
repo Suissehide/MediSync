@@ -51,7 +51,13 @@
   --color-destructive-foreground: var(--destructive-foreground);
 }
 
-@theme .dark {
+/* `@theme` ne prend pas de selecteur en Tailwind v4 : la forme `@theme .dark` etait invalide, et
+   elle faisait echouer l'analyse CSS de Biome sur TOUT le fichier (« expected { but found . »,
+   puis « expected } but the file ends ») — ce qui masquait au passage les autres diagnostics.
+   Rendue en selecteur ordinaire, comme le fait deja `_colors.css` pour le reste de la palette
+   sombre. Note : rien n'applique aujourd'hui la classe `dark`, cette palette est donc dormante
+   des deux cotes. */
+.dark {
   --background: #020817;
 }
 

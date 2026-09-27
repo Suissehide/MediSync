@@ -625,7 +625,9 @@ function Planning() {
       setView('calendar')
     }
     handleClearSelection()
-  }, [editMode])
+    // `handleClearSelection` est memoise avec une liste vide : sa reference ne change jamais,
+    // l'ajouter ne fait donc pas re-jouer cet effet.
+  }, [editMode, handleClearSelection])
 
   const pathwayEvents = useMemo<CalendarEvent[]>(() => {
     if (!pathways) {

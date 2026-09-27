@@ -184,7 +184,7 @@ export const PatientApi = {
 
   exportExcel: async (filters?: { search?: string; pathwayTemplateTags?: string[] }): Promise<Blob> => {
     const params = new URLSearchParams()
-    if (filters?.search) params.set('search', filters.search)
+    if (filters?.search) { params.set('search', filters.search) }
     for (const tag of filters?.pathwayTemplateTags ?? []) {
       params.append('pathwayTemplateTags', tag)
     }

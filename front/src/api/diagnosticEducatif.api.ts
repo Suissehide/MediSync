@@ -13,13 +13,13 @@ import { fetchWithAuth } from './fetchWithAuth.ts'
 export const DiagnosticEducatifApi = {
   getByPatient: async (patientId: string): Promise<DiagnosticEducatif[]> => {
     const res = await fetchWithAuth(`${tenantApiUrl()}/patient/${patientId}/diagnostic`, { method: 'GET' })
-    if (!res.ok) handleHttpError(res, {}, 'Impossible de récupérer les diagnostics')
+    if (!res.ok) { handleHttpError(res, {}, 'Impossible de récupérer les diagnostics') }
     return res.json()
   },
 
   getByID: async (patientId: string, diagnosticId: string): Promise<DiagnosticEducatif> => {
     const res = await fetchWithAuth(`${tenantApiUrl()}/patient/${patientId}/diagnostic/${diagnosticId}`, { method: 'GET' })
-    if (!res.ok) handleHttpError(res, {}, 'Impossible de récupérer le diagnostic')
+    if (!res.ok) { handleHttpError(res, {}, 'Impossible de récupérer le diagnostic') }
     return res.json()
   },
 
@@ -30,7 +30,7 @@ export const DiagnosticEducatifApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     })
-    if (!res.ok) handleHttpError(res, {}, 'Impossible de créer le diagnostic')
+    if (!res.ok) { handleHttpError(res, {}, 'Impossible de créer le diagnostic') }
     return res.json()
   },
 
@@ -41,20 +41,20 @@ export const DiagnosticEducatifApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     })
-    if (!res.ok) handleHttpError(res, {}, 'Impossible de mettre à jour le diagnostic')
+    if (!res.ok) { handleHttpError(res, {}, 'Impossible de mettre à jour le diagnostic') }
     return res.json()
   },
 
   delete: async (patientId: string, diagnosticId: string): Promise<void> => {
     const res = await fetchWithAuth(`${tenantApiUrl()}/patient/${patientId}/diagnostic/${diagnosticId}`, { method: 'DELETE' })
-    if (!res.ok) handleHttpError(res, {}, 'Impossible de supprimer le diagnostic')
+    if (!res.ok) { handleHttpError(res, {}, 'Impossible de supprimer le diagnostic') }
   },
 }
 
 export const DiagnosticEducatifTemplateApi = {
   getAll: async (): Promise<DiagnosticEducatifTemplate[]> => {
     const res = await fetchWithAuth(`${tenantApiUrl()}/diagnostic-template`, { method: 'GET' })
-    if (!res.ok) handleHttpError(res, {}, 'Impossible de récupérer les templates')
+    if (!res.ok) { handleHttpError(res, {}, 'Impossible de récupérer les templates') }
     return res.json()
   },
 
@@ -64,7 +64,7 @@ export const DiagnosticEducatifTemplateApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(params),
     })
-    if (!res.ok) handleHttpError(res, {}, 'Impossible de créer le template')
+    if (!res.ok) { handleHttpError(res, {}, 'Impossible de créer le template') }
     return res.json()
   },
 
@@ -75,12 +75,12 @@ export const DiagnosticEducatifTemplateApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     })
-    if (!res.ok) handleHttpError(res, {}, 'Impossible de mettre à jour le template')
+    if (!res.ok) { handleHttpError(res, {}, 'Impossible de mettre à jour le template') }
     return res.json()
   },
 
   delete: async (id: string): Promise<void> => {
     const res = await fetchWithAuth(`${tenantApiUrl()}/diagnostic-template/${id}`, { method: 'DELETE' })
-    if (!res.ok) handleHttpError(res, {}, 'Impossible de supprimer le template')
+    if (!res.ok) { handleHttpError(res, {}, 'Impossible de supprimer le template') }
   },
 }

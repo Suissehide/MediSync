@@ -49,9 +49,9 @@ function SidebarPathway() {
 
   const handleMove = useCallback(
     (index: number, direction: 'up' | 'down') => {
-      if (!pathwayTemplates) return
+      if (!pathwayTemplates) { return }
       const targetIndex = direction === 'up' ? index - 1 : index + 1
-      if (targetIndex < 0 || targetIndex >= pathwayTemplates.length) return
+      if (targetIndex < 0 || targetIndex >= pathwayTemplates.length) { return }
 
       const newOrder = pathwayTemplates.map((t) => t.id)
       const [movedId] = newOrder.splice(index, 1)
@@ -101,8 +101,7 @@ function SidebarPathway() {
                   key={pathwayTemplate.id}
                   data-pathway-id={pathwayTemplate.id}
                   data-pathway-name={pathwayTemplate.name}
-                  onClick={() => handleEditPathwayTemplate(pathwayTemplate)}
-                  className={`group rounded border transition-all cursor-pointer hover:shadow-md ${
+                  className={`group rounded border transition-all hover:shadow-md ${
                     isSelected
                       ? 'border-border-dark shadow-sm'
                       : 'border-border-sidebar bg-sidebar'
@@ -115,7 +114,12 @@ function SidebarPathway() {
                     }),
                   }}
                 >
-                  <div className="relative flex items-center gap-3 px-3 py-2">
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => handleEditPathwayTemplate(pathwayTemplate)}
+                      className="w-full flex items-center gap-3 px-3 py-2 text-left cursor-pointer"
+                    >
                     <div
                       className="flex-shrink-0 w-8 h-8 rounded-md flex items-center justify-center"
                       style={{
@@ -156,7 +160,9 @@ function SidebarPathway() {
                       </div>
                     </div>
 
-                    <div className="absolute right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    </button>
+
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       {index > 0 && (
                         <Button
                           variant="ghost"

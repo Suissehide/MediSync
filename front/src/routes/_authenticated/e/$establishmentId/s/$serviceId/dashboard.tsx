@@ -292,7 +292,7 @@ function Dashboard() {
           <AddAppointmentForm
             open={openCreateAppointmentModal}
             setOpen={(open) => {
-              if (!open) calendarUnselectRef.current?.()
+              if (!open) { calendarUnselectRef.current?.() }
               setOpenCreateAppointmentModal(open)
             }}
             startDate={selectedDate.startStr}

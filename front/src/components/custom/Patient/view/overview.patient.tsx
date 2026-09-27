@@ -256,7 +256,7 @@ export default function OverviewPatient({ patient }: OverviewPatientProps) {
 
   const handleRemoveClick = useCallback(
     async (pathwayID: string) => {
-      if (!patient) return
+      if (!patient) { return }
       const { count } = await PatientApi.getAppointmentsCountInPathway(
         patient.id,
         pathwayID,
@@ -274,7 +274,7 @@ export default function OverviewPatient({ patient }: OverviewPatientProps) {
   )
 
   const handleConfirmRemove = useCallback(() => {
-    if (!patient || !removeTarget) return
+    if (!patient || !removeTarget) { return }
     removeFromPathway.mutate(
       { patientID: patient.id, pathwayID: removeTarget.pathwayID },
       { onSettled: () => setRemoveTarget(null) },
@@ -346,7 +346,7 @@ export default function OverviewPatient({ patient }: OverviewPatientProps) {
         <ConfirmDeleteForm
           open={removeTarget !== null}
           setOpen={(open) => {
-            if (!open) setRemoveTarget(null)
+            if (!open) { setRemoveTarget(null) }
           }}
           onConfirm={handleConfirmRemove}
           loading={removeFromPathway.isPending}

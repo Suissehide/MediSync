@@ -14,13 +14,16 @@ export default function CalendarDatePickerButton({
   setAnchorEl,
   onChange,
 }: Props) {
-  if (!anchorEl) return null
+  if (!anchorEl) { return null }
 
   const rect = anchorEl.getBoundingClientRect()
 
   return createPortal(
     <>
-      <div
+      {/* Voile de fermeture : un vrai bouton, donc atteignable au clavier. */}
+      <button
+        type="button"
+        aria-label="Fermer le selecteur de date"
         className="fixed inset-0 z-[199]"
         onClick={() => setAnchorEl(null)}
       />

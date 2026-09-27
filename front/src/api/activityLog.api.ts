@@ -13,18 +13,18 @@ export type GetActivityLogsParams = {
 export const ActivityLogApi = {
   getAll: async (params: GetActivityLogsParams = {}): Promise<ActivityLogsResponse> => {
     const query = new URLSearchParams()
-    if (params.page) query.set('page', String(params.page))
-    if (params.action) query.set('action', params.action)
-    if (params.userID) query.set('userID', params.userID)
-    if (params.from) query.set('from', params.from)
+    if (params.page) { query.set('page', String(params.page)) }
+    if (params.action) { query.set('action', params.action) }
+    if (params.userID) { query.set('userID', params.userID) }
+    if (params.from) { query.set('from', params.from) }
     const response = await fetchWithAuth(`${tenantApiUrl()}/activity-log?${query}`, { method: 'GET' })
-    if (!response.ok) handleHttpError(response, {}, "Impossible de récupérer les logs d'activité")
+    if (!response.ok) { handleHttpError(response, {}, "Impossible de récupérer les logs d'activité") }
     return response.json()
   },
 
   cleanup: async (): Promise<{ deleted: number }> => {
     const response = await fetchWithAuth(`${tenantApiUrl()}/activity-log/cleanup`, { method: 'POST' })
-    if (!response.ok) handleHttpError(response, {}, 'Impossible de nettoyer les logs')
+    if (!response.ok) { handleHttpError(response, {}, 'Impossible de nettoyer les logs') }
     return response.json()
   },
 }

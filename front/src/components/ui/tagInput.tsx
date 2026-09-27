@@ -81,14 +81,15 @@ export function TagInput({
 
   return (
     <div ref={containerRef} className="relative">
-      <div
+      {/* `label` plutot que `div` : le clic sur la zone met le champ au focus nativement,
+          sans gestionnaire ni piege d'accessibilite. */}
+      <label
         className={cn(
           inputVariants(),
           'h-auto min-h-9 flex flex-wrap gap-1.5 py-1.5 cursor-text',
           'focus-within:ring-1 focus-within:ring-ring',
           className,
         )}
-        onClick={() => inputRef.current?.focus()}
       >
         {value.map((tag) => (
           <span
@@ -121,7 +122,7 @@ export function TagInput({
           placeholder={value.length === 0 ? placeholder : ''}
           className="flex-1 min-w-24 outline-none bg-transparent placeholder:text-muted-foreground text-sm"
         />
-      </div>
+      </label>
 
       {showSuggestions && filteredSuggestions.length > 0 && (
         <div
