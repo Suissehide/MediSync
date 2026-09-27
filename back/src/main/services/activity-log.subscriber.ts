@@ -1,8 +1,9 @@
 import type { IocContainer } from '../types/application/ioc'
 import type { ActivityLogRepositoryInterface } from '../types/infra/orm/repositories/activityLog.repository.interface'
 import type { UserRepositoryInterface } from '../types/infra/orm/repositories/user.repository.interface'
-import type { AppEventBus } from '../utils/app-event-bus'
 import type { Logger } from '../types/utils/logger'
+import type { TenantContextInterface } from '../types/utils/tenant-context'
+import type { AppEventBus } from '../utils/app-event-bus'
 
 // Les operations de gestion des membres partagent la meme forme de charge
 // utile : une seule boucle suffit a les journaliser toutes.
@@ -21,17 +22,20 @@ class ActivityLogSubscriber {
   private readonly activityLogRepository: ActivityLogRepositoryInterface
   private readonly userRepository: UserRepositoryInterface
   private readonly logger: Logger
+  private readonly tenantContext: TenantContextInterface
 
   constructor({
     appEventBus,
     activityLogRepository,
     userRepository,
     logger,
+    tenantContext,
   }: IocContainer) {
     this.appEventBus = appEventBus
     this.activityLogRepository = activityLogRepository
     this.userRepository = userRepository
     this.logger = logger
+    this.tenantContext = tenantContext
     this.#subscribe()
   }
 
@@ -58,6 +62,45 @@ class ActivityLogSubscriber {
       this.appEventBus.on(action, (p) =>
         this.#log(action, 'member', p.userID, p.membershipId))
     }
+    // Tache 7 (etape 4b) : la reemission par le super-admin. `entityType: 'user'`, pas
+    // `'member'` — cette route vise un COMPTE, hors de toute appartenance.
+    //
+    // MESURE, PAS SUPPOSE (une premiere version de ce commentaire affirmait a tort que
+    // `activityLogRepository.create` ecrirait simplement `establishmentId`/`serviceId` a `null`
+    // et s'arretait la — FAUX, demontre par execution : le premier essai a laisse le test rouge
+    // en boucle, `expected [] to have length 1`, meme apres 2 secondes d'attente). La route
+    // `/super-admin` s'execute SANS AUCUN CONTEXTE (back/CLAUDE.md : tout le prefixe tourne sans
+    // store, ses depots n'entrant en `runAsSuperAdmin` qu'au cas par cas) — pas seulement sans
+    // contexte de TENANT.
+    // `ActivityLog` est un modele d'ETABLISSEMENT (tenant-guard.ts, ESTABLISHMENT_MODELS), et le
+    // garde-fou refuse categoriquement toute operation sur un tel modele en l'ABSENCE de store
+    // (`assertTenantScope` : `if (!store) throw new TenantScopeMissingError(...)`) — avant meme
+    // de regarder le contenu de l'ecriture. Une ligne « `establishmentId: null` » n'est donc
+    // PAS ce qui se produirait par defaut : l'ecriture est refusee, l'exception remonte au
+    // `catch` de `#log` plus bas, qui la journalise (au niveau `error`, invisible en test — voir
+    // `LOG_LEVEL=silent`, .env.test) et l'AVALE — la ligne n'est jamais posee.
+    //
+    // Meme motif, meme remede que `UserDomain.bootstrapSuperAdmin` (hors de toute requete HTTP,
+    // via `scripts/bootstrap-super-admin.ts`) et `starter.ts#scheduleActivityLogCleanup` (purge
+    // planifiee) : le mode systeme du contexte de tenant (methode `runAsSystem`, appelee juste
+    // en-dessous), qui retire l'exigence de filtre du garde-fou plutot que de la deplacer
+    // (`if (store.kind === 'system') return`, tenant-guard.ts). La
+    // ligne obtenue porte alors reellement `establishmentId: null, serviceId: null` — c'est ce
+    // qui la rend lisible par `GET /super-admin/access-log`, qui lit `ActivityLog` sans borne
+    // d'etablissement, exactement comme les lignes du script d'amorcage.
+    //
+    // `runAsSystem` n'entoure QUE cette souscription (pas `#log` tout entier, generique aux
+    // douze actions ci-dessus) : les elargir toutes masquerait silencieusement une VRAIE perte de
+    // contexte sur une route de tenant (elle continuerait a s'ecrire avec un etablissement nul
+    // plutot que de faire echouer, puis journaliser, l'ecriture comme aujourd'hui) — un risque
+    // que cette tache n'a pas a rouvrir. Rappel ASYNC AVEC UN `await` INTERNE, jamais un rappel
+    // synchrone nu (tenant-context.ts#runAsSuperAdmin, tour de correction 1, tache 6 : mesure sur
+    // un appelant reel, un rappel synchrone nu perd la portee — 5 tests sur 244 tombent en 500).
+    // Site declare dans `runAsSystem-unicite.test.ts` (AUTORISES).
+    this.appEventBus.on('user.accessLinkReissued', (p) =>
+      this.tenantContext.runAsSystem(async () => {
+        await this.#log('user.accessLinkReissued', 'user', p.userID, p.targetUserId)
+      }))
   }
 
   async #log(

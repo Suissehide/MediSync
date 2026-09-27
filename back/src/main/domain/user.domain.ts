@@ -18,6 +18,7 @@ import type {
   UserRepositoryInterface,
 } from '../types/infra/orm/repositories/user.repository.interface'
 import type { TenantContextInterface } from '../types/utils/tenant-context'
+import type { AppEventBus } from '../utils/app-event-bus'
 import { verifyPassword } from '../utils/hash'
 
 // Repli défensif, nommé plutôt que laissé en `?? ''` silencieux (tour de correction 1, mineur) :
@@ -59,6 +60,7 @@ class UserDomain implements UserDomainInterface {
   private readonly activityLogRepository: ActivityLogRepositoryInterface
   private readonly tenantContext: TenantContextInterface
   private readonly postgresOrm: PostgresOrm
+  private readonly appEventBus: AppEventBus
 
   constructor({
     userRepository,
@@ -67,6 +69,7 @@ class UserDomain implements UserDomainInterface {
     activityLogRepository,
     tenantContext,
     postgresOrm,
+    appEventBus,
   }: IocContainer) {
     this.userRepository = userRepository
     this.establishmentRepository = establishmentRepository
@@ -74,6 +77,7 @@ class UserDomain implements UserDomainInterface {
     this.activityLogRepository = activityLogRepository
     this.tenantContext = tenantContext
     this.postgresOrm = postgresOrm
+    this.appEventBus = appEventBus
   }
 
   findByID(userID: string): Promise<UserEntityDomain> {
@@ -174,7 +178,14 @@ class UserDomain implements UserDomainInterface {
     if (user.deactivatedAt !== null) {
       throw Boom.conflict(DEACTIVATED_ACCOUNT)
     }
-    return await this.accessLinkDomain.issue(user.id, issuedBy)
+    const accessLink = await this.accessLinkDomain.issue(user.id, issuedBy)
+    // Tache 7 (etape 4b) : la route la plus puissante du systeme n'emettait rien — seule la
+    // colonne `AccessLink.createdBy` en gardait trace. `issuedBy` est le super-admin qui agit
+    // (`request.currentUser.id`, superAdminUser.ts) : pas `this.tenantContext.current().userId`
+    // comme dans `MembershipDomain.emit`, cette route n'a AUCUN contexte de tenant a lire
+    // (`/super-admin`, back/CLAUDE.md).
+    this.appEventBus.emit('user.accessLinkReissued', { userID: issuedBy, targetUserId: user.id })
+    return accessLink
   }
 
   // Tâche 11 (étape 4a) : voir le commentaire sur `UserDomainInterface.bootstrapSuperAdmin` pour

@@ -183,6 +183,22 @@ const AUTORISES = [
       'jamais de contenu clinique. Bornes verifiees par repository-scope.test.ts',
     appels: 1,
   },
+  {
+    fichier: 'services/activity-log.subscriber.ts',
+    raison:
+      'la reemission de lien par le super-admin (tache 7, etape 4b, evenement ' +
+      '`user.accessLinkReissued`) : `/super-admin` s execute sans AUCUN contexte (pas seulement ' +
+      'sans tenant), et `ActivityLog` est un modele d ETABLISSEMENT (tenant-guard.ts, ' +
+      'ESTABLISHMENT_MODELS) — le garde-fou refuse categoriquement une ecriture dessus en ' +
+      'l absence de store, avant meme de regarder son contenu (mesure par execution : sans ce ' +
+      'contournement, la ligne de journal n est jamais posee, l ecriture refusee etant avalee ' +
+      'par le `catch` de `#log`). Meme motif que `bootstrapSuperAdmin` (domain/user.domain.ts, ' +
+      'ci-dessus) et la purge planifiee (application/starter.ts) : hors de toute requete de ' +
+      'tenant, il n y a pas d etablissement a poser, seulement `establishmentId: null`. N encadre ' +
+      'QUE cette souscription, pas les onze autres actions de ce fichier : les elargir toutes ' +
+      'masquerait silencieusement une VRAIE perte de contexte sur une route de tenant.',
+    appels: 1,
+  },
 ]
 
 // Seul fichier ou le volet B a le droit de trouver un appel : celui qui DEFINIT `enter`, `clear`,

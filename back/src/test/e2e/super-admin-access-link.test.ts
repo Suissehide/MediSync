@@ -20,10 +20,13 @@ import {
 } from './setup/fixtures'
 
 const NOUVEAU_MDP = 'MotDePasseRetrouve123!!'
+const SUPER_ADMIN_PRENOM = 'Racine'
+const SUPER_ADMIN_NOM = 'Plateforme'
 
 describe('soupape super-admin : reemettre le lien d un compte multi-etablissement', () => {
   let testApp: TestApp
   let superAdminCookies: { access_token: string }
+  let superAdminId: string
   let etablissementA: string
   let etablissementB: string
   let bilocalId: string
@@ -56,7 +59,15 @@ describe('soupape super-admin : reemettre le lien d un compte multi-etablissemen
     })
     bilocalId = bilocal.id
 
-    await createUser({ email: 'root@plateforme.fr', isSuperAdmin: true })
+    const superAdmin = await createUser({ email: 'root@plateforme.fr', isSuperAdmin: true })
+    superAdminId = superAdmin.id
+    // Pose independamment du chemin eprouve : c'est precisement le nom qu'on verifie plus bas
+    // (Tache 7, meme raison que `activity-log-auteur.test.ts` — une ligne qui existe ne prouve
+    // rien, seul le nom prouve que le souscripteur a lu le bon compte).
+    await testDb.user.update({
+      where: { id: superAdmin.id },
+      data: { firstName: SUPER_ADMIN_PRENOM, lastName: SUPER_ADMIN_NOM },
+    })
 
     testApp = await buildTestApp()
     superAdminCookies = await signIn(testApp.app, 'root@plateforme.fr')
@@ -139,5 +150,60 @@ describe('soupape super-admin : reemettre le lien d un compte multi-etablissemen
     // Herite de `requireSuperAdmin` (super-admin.routes.ts) : 404, jamais 403.
     const ordinaire = await signIn(testApp.app, 'deux-postes@soin.fr', NOUVEAU_MDP)
     expect((await reissue(bilocalId, ordinaire)).statusCode).toBe(404)
+  })
+
+  // Tache 7 (etape 4b) : la route la plus puissante du systeme — elle reemet le lien d'acces de
+  // N'IMPORTE QUEL compte — n'apparaissait dans aucun journal ; seule la colonne
+  // `AccessLink.createdBy` en gardait trace. Compte CIBLE DEDIE (jamais `bilocalId`, deja
+  // reemis par un test precedent) et filtre par `entityID` en plus de l'action : ce fichier
+  // n'isole pas la base entre tests, `toHaveLength(1)` ne doit donc rien devoir a l'ordre
+  // d'execution des `it` voisins.
+  it('journalise la reemission de lien par le super-admin, avec son auteur', async () => {
+    const cible = await createUser({ email: 'a-tracer@soin.fr' })
+
+    const res = await reissue(cible.id)
+    expect(res.statusCode).toBe(201)
+
+    // Le journal est ecrit en « tire et oublie » (`appEventBus.emit`, jamais attendu par la
+    // route) : on attend donc son apparition, sans jamais rendre vert un journal vide (meme
+    // convention que `activity-log-auteur.test.ts`).
+    let lignes: Awaited<ReturnType<typeof testDb.activityLog.findMany>> = []
+    for (let essai = 0; essai < 40 && lignes.length === 0; essai += 1) {
+      lignes = await testDb.activityLog.findMany({
+        where: { action: 'user.accessLinkReissued', entityID: cible.id },
+      })
+      if (lignes.length === 0) {
+        await new Promise((resolve) => setTimeout(resolve, 50))
+      }
+    }
+    expect(lignes).toHaveLength(1)
+    expect({ auteur: lignes[0]?.userID, cible: lignes[0]?.entityID }).toEqual({
+      auteur: superAdminId,
+      cible: cible.id,
+    })
+    // LA propriete, pas seulement l existence de la ligne (meme raison que
+    // `activity-log-auteur.test.ts`) : le nom du super-admin qui a agi.
+    expect({
+      userFirstName: lignes[0]?.userFirstName,
+      userLastName: lignes[0]?.userLastName,
+    }).toEqual({ userFirstName: SUPER_ADMIN_PRENOM, userLastName: SUPER_ADMIN_NOM })
+    // Ni le jeton ni son empreinte ne doivent jamais atteindre une ligne de journal
+    // (`access-link-token-leak.test.ts` surveille les autres canaux ; ici, la colonne dediee).
+    expect(JSON.stringify(lignes[0])).not.toContain(res.json().accessLink.token)
+
+    // Une ligne que personne ne peut lire ne sert a rien (tache 7, point 4 du brief) : cette
+    // ligne porte `establishmentId: null` (aucun contexte sous `/super-admin`), donc NI la
+    // lecture de tenant ordinaire (qui n'existe que sous un tenant) NI la lecture
+    // d'etablissement (qui exige un `establishmentId` precis) ne peuvent l'atteindre. Seule
+    // `GET /super-admin/access-log` (tache 6, sans borne d'etablissement) le peut — verifie ici
+    // plutot que suppose.
+    const journalPlateforme = await testApp.app.inject({
+      method: 'GET',
+      url: '/super-admin/access-log?source=activite&action=user.accessLinkReissued',
+      cookies: superAdminCookies,
+    })
+    expect(journalPlateforme.statusCode).toBe(200)
+    const lignesVisibles = journalPlateforme.json() as { entityID: string }[]
+    expect(lignesVisibles.some((l) => l.entityID === cible.id)).toBe(true)
   })
 })
