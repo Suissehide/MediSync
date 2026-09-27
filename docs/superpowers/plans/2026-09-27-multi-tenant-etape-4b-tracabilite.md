@@ -107,7 +107,7 @@ porte le code.
 
 ---
 
-## Tâche 1 : la table et sa déclaration au garde-fou
+## Task 1 : la table et sa déclaration au garde-fou
 
 **Fichiers**
 - Créer : `prisma/migrations/<horodatage>_patient_access_log/migration.sql`
@@ -219,7 +219,7 @@ git commit -m "Ajouter la table du journal des consultations et la declarer au g
 
 ---
 
-## Tâche 2 : le dépôt et le domaine d'écriture
+## Task 2 : le dépôt et le domaine d'écriture
 
 **Fichiers**
 - Créer : `src/main/infra/orm/repositories/patientAccessLog.repository.ts`,
@@ -301,7 +301,7 @@ git commit -m "Ecrire le journal des consultations, sans jamais son contenu clin
 
 ---
 
-## Tâche 3 : le crochet, son attache et le garde-fou de démarrage
+## Task 3 : le crochet, son attache et le garde-fou de démarrage
 
 **C'est la tâche qui porte la propriété centrale du chantier.** Une route neuve est couverte par
 défaut, ou le serveur refuse de démarrer.
@@ -422,7 +422,7 @@ git commit -m "Journaliser l ouverture d un dossier par crochet, et refuser de d
 
 ---
 
-## Tâche 4 : l'export, tracé en une ligne
+## Task 4 : l'export, tracé en une ligne
 
 **Fichiers**
 - Modifier : `src/main/utils/access-log-routes.ts`,
@@ -487,7 +487,7 @@ git commit -m "Tracer l export en une ligne, avec son nombre de dossiers et ses 
 
 ---
 
-## Tâche 5 : les deux routes de lecture du tenant
+## Task 5 : les deux routes de lecture du tenant
 
 **Fichiers**
 - Créer : `src/main/interfaces/http/fastify/routes/patientAccessLog.ts`,
@@ -557,7 +557,7 @@ git commit -m "Lire le journal des acces a un dossier, par service et par etabli
 
 ---
 
-## Tâche 6 : la route plateforme du super-admin
+## Task 6 : la route plateforme du super-admin
 
 **Elle ferme deux trous de l'étape 4a** : les lignes du script d'amorçage
 (`establishmentId: null`) n'étaient lisibles par aucune route, et aucune route ne lisait le
@@ -622,7 +622,7 @@ git commit -m "Lire les deux journaux a l echelle de la plateforme, et rendre li
 
 ---
 
-## Tâche 7 : l'événement manquant sur la réémission par le super-admin
+## Task 7 : l'événement manquant sur la réémission par le super-admin
 
 **Fichiers**
 - Modifier : `src/main/utils/app-event-bus.ts`, `src/main/domain/user.domain.ts`,
@@ -666,7 +666,7 @@ git commit -m "Journaliser la reemission de lien par le super-admin"
 
 ---
 
-## Tâche 8 : la purge paramétrable, pour les deux journaux
+## Task 8 : la purge paramétrable, pour les deux journaux
 
 **Fichiers**
 - Modifier : `src/main/application/config.ts`, `src/main/domain/activityLog.domain.ts`,
@@ -727,7 +727,7 @@ git commit -m "Rendre la retention des deux journaux parametrable, douze mois pa
 
 ---
 
-## Tâche 9 : le quatrième contexte déclaré
+## Task 9 : le quatrième contexte déclaré
 
 **La tâche la plus délicate du plan.** Elle resserre le garde-fou d'ORM, la pièce dont dépend tout
 le cloisonnement.
@@ -792,7 +792,7 @@ git commit -m "Faire du contexte absent un quatrieme contexte declare, plutot qu
 
 ---
 
-## Tâche 10 : les écrans de journal du tenant
+## Task 10 : les écrans de journal du tenant
 
 **Fichiers**
 - Créer : `front/src/api/accessLog.api.ts`, `front/src/queries/useAccessLog.ts`,
@@ -828,7 +828,7 @@ git commit -m "Afficher le journal des acces a un dossier, par service"
 
 ---
 
-## Tâche 11 : l'écran plateforme du super-admin
+## Task 11 : l'écran plateforme du super-admin
 
 **Fichiers**
 - Créer : `front/src/routes/_authenticated/super-admin/access-log.tsx`
@@ -857,7 +857,7 @@ git commit -m "Afficher les deux journaux a l echelle de la plateforme"
 
 ---
 
-## Tâche 12 : documentation, décisions, déploiement, vérification
+## Task 12 : documentation, décisions, déploiement, vérification
 
 **Fichiers**
 - Créer : `docs/multi-tenant/decisions-etape-4b.md`, `deploiement-etape-4b.md`,
