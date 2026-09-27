@@ -301,7 +301,7 @@ Key cross-cutting concerns:
   *construction* is unique (one `run` call, one literal `{ kind: "superadmin" }`, both confined to
   `tenant-context.ts`), which closes a second way *in* but not "who may invoke it once inside". This is defensible
   as-is: once inside the mode, every operation still passes through the declared, exhaustive
-  `SUPERADMIN_OPERATIONS`/`SUPERADMIN_GLOBAL_OPERATIONS` tables, so a thirteenth call site cannot by itself widen
+  `SUPERADMIN_OPERATIONS`/`SUPERADMIN_GLOBAL_OPERATIONS` tables, so a fifteenth call site cannot by itself widen
   what it's allowed to do — but that is a different guarantee from "every site is named and justified", and the
   surrounding vocabulary should not be read as promising the latter. Because `GET /patient/:id` carries `followedElsewhere`, and the identity-search route
   (used before creating a patient, to avoid duplicates) returns bare identifiers, the signal is only computed and
