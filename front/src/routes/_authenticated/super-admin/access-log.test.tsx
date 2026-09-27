@@ -389,6 +389,43 @@ describe("etats de l'ecran plateforme du journal des acces", () => {
     expect(screen.getByText('Alice Martin')).toBeInTheDocument()
   })
 
+  // Tour de correction 1 : ce cas manquait — sans lui, remplacer
+  // `action: filtres.action || undefined` par `action: undefined` (le filtre jamais envoyé au
+  // serveur, quel que soit le choix de l'utilisateur) laissait les onze tests d'alors tout
+  // verts. Même discipline que le filtre établissement : deux lignes dont les actions ne se
+  // recouvrent pas, la sélection de l'une fait disparaître l'autre.
+  it("le filtre action exclut les lignes dont l'action ne correspond pas", async () => {
+    vi.stubGlobal(
+      'fetch',
+      buildFetchMock([
+        routeEtablissements([chu]),
+        routeAccessLog((url) => {
+          const action = url.searchParams.get('action')
+          const toutes = [
+            ligneAcces({ id: 'log-ouvert', action: 'dossier.ouvert', userFirstName: 'Alice', userLastName: 'Martin' }),
+            ligneAcces({ id: 'log-export', action: 'export', userFirstName: 'Bob', userLastName: 'Durand' }),
+          ]
+          return action ? toutes.filter((l) => l.action === action) : toutes
+        }),
+      ]),
+    )
+
+    monter(superAdmin)
+
+    await waitFor(() => {
+      expect(screen.getByText('Alice Martin')).toBeInTheDocument()
+    })
+    expect(screen.getByText('Bob Durand')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByLabelText('Action'))
+    await userEvent.click(await screen.findByRole('option', { name: 'Dossier ouvert' }))
+
+    await waitFor(() => {
+      expect(screen.queryByText('Bob Durand')).not.toBeInTheDocument()
+    })
+    expect(screen.getByText('Alice Martin')).toBeInTheDocument()
+  })
+
   // Le filtre « compte » (client, cf. le commentaire du fichier de route) doit lui aussi exclure
   // quelque chose pour prouver quelque chose.
   it("le filtre compte exclut les lignes des autres comptes", async () => {
