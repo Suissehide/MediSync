@@ -21,13 +21,20 @@ export const superAdminAccessLogQuerySchema = z.object({
 })
 
 // Forme UNIQUE pour les deux sources (plutot qu'une union discriminee) : les champs propres a
-// une source et absents de l'autre (`entityType`/`entityID` pour `activite`, `patientId` pour
-// `acces`) sont simplement `null` quand la ligne vient de l'autre journal. C'est la route qui
-// construit ce DTO champ par champ (jamais un `...row` etale) : AUCUNE colonne de
-// `PatientAccessLog` hors de cette liste ne peut donc fuiter par accident -- en particulier
-// `exportFilters` (texte libre, le seul champ de la table qui pourrait porter du contenu
-// clinique, voir domain/patientAccessLog.domain.ts) et `accesParOctroi` ne sont jamais lus par
-// cette route.
+// une source et absents de l'autre (`entityType`/`entityID` pour `activite`, `patientId` ET
+// `accesParOctroi` pour `acces` -- `ActivityLog` n'a pas cette notion) sont simplement `null`
+// quand la ligne vient de l'autre journal. C'est la route qui construit ce DTO champ par champ
+// (jamais un `...row` etale) : AUCUNE colonne de `PatientAccessLog` hors de cette liste ne peut
+// donc fuiter par accident -- en particulier `exportFilters` (texte libre, le seul champ de la
+// table qui pourrait porter du contenu clinique, voir domain/patientAccessLog.domain.ts) n'est
+// jamais lu par cette route.
+//
+// `accesParOctroi` N'EST PLUS DANS LA LISTE DES CHAMPS EXCLUS (tour de correction 1, tache 10) --
+// voir le commentaire equivalent dans `patientAccessLog.schema.ts` pour la raison complete (un
+// defaut de cahier des charges a la tache 5, pas un choix delibere de securite). Un booleen sur
+// la PROVENANCE de l'acces n'a jamais porte de contenu clinique ni d'identite ; `null` sur les
+// lignes `activite` (le seul cas ou cette notion n'existe pas), jamais `false` -- `false`
+// affirmerait a tort un acces reel la ou aucun octroi n'existe meme conceptuellement.
 //
 // `patientId` est un IDENTIFIANT, jamais un nom : cette route ne rouvre PAS « le super-admin
 // compte les patients, il ne les lit pas » (SUPERADMIN_OPERATIONS, tenant-guard.ts) -- elle ne
@@ -47,6 +54,7 @@ export const superAdminAccessLogEntryResponseSchema = z.object({
   entityType: z.string().nullable(),
   entityID: z.string().nullable(),
   patientId: z.string().nullable(),
+  accesParOctroi: z.boolean().nullable(),
 })
 
 export const superAdminAccessLogsResponseSchema = z.array(superAdminAccessLogEntryResponseSchema)

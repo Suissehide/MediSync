@@ -37,12 +37,14 @@ export type RecordAccessInput = {
   exportFilters?: string
 }
 
-// Etape 4b, tache 5 : ce que rendent les deux premieres LECTURES du journal. Le type complet
-// (`PatientAccessLog`, importe ci-dessous) porte des colonnes que ni l'une ni l'autre route ne
-// doit rendre (`exportFilters`, `accesParOctroi`…) : c'est le schema Zod de reponse
+// Etape 4b, tache 5 (tour de correction 1, tache 10) : ce que rendent les deux premieres
+// LECTURES du journal. Le type complet (`PatientAccessLog`, importe ci-dessous) porte des
+// colonnes que ni l'une ni l'autre route ne doit rendre (`patientId`, `exportCount`,
+// `exportFilters`) : c'est le schema Zod de reponse
 // (interfaces/http/fastify/schemas/patientAccessLog.schema.ts), pas ce type, qui borne ce qui
-// sort reellement en HTTP — voir son commentaire pour la liste exacte des quatre champs
-// (auteur, action, date, service).
+// sort reellement en HTTP — voir son commentaire pour la liste exacte des cinq champs (auteur,
+// action, date, service, `accesParOctroi`). `accesParOctroi` figurait a tort dans la liste
+// exclue ici avant le tour de correction 1 : voir le commentaire du schema pour la raison.
 export type PatientAccessLogEntityDomain = PatientAccessLog
 
 export interface PatientAccessLogDomainInterface {

@@ -1,5 +1,6 @@
 import { createColumnHelper } from '@tanstack/react-table'
 import dayjs from 'dayjs'
+import { ShieldAlert } from 'lucide-react'
 
 import { ACCESS_LOG_ACTION_LABELS } from '../constants/accessLog.constant.ts'
 import type { PatientAccessLogEntry } from '../types/accessLog.ts'
@@ -13,23 +14,29 @@ type AccessLogColumnOptions = {
   services: { id: string; name: string }[]
 }
 
-// Etape 4b, tache 10 : CE QUE CET ECRAN MONTRE, ET CE QU'IL NE MONTRE PAS.
+// Etape 4b, tache 10 (tour de correction 1) : CE QUE CET ECRAN MONTRE.
 //
-// `patientAccessLogEntryResponseSchema` (back) rend exactement quatre champs utiles : l'auteur
-// (`userFirstName`/`userLastName`), l'action, la date (`createdAt`) et le service (`serviceId`) —
-// une seule colonne par champ ci-dessous.
+// `patientAccessLogEntryResponseSchema` (back) rend l'auteur (`userFirstName`/`userLastName`),
+// l'action, la date (`createdAt`), le service (`serviceId`) et `accesParOctroi` — une colonne par
+// champ ci-dessous, plus une pour ce dernier.
 //
-// CE QUI CONTREDIT LE CAHIER DES CHARGES DE CETTE TACHE, ET POURQUOI IL N'Y A PAS DE COLONNE
-// `accesParOctroi` ICI : le brief demande de distinguer un accès obtenu par octroi temporaire de
-// super-admin. Mais AUCUNE des trois lectures du journal (service, établissement, plateforme) ne
-// rend jamais cette colonne — voir le commentaire de `patientAccessLogEntryResponseSchema`
-// (back/.../schemas/patientAccessLog.schema.ts : « jamais patientId, exportCount, exportFilters
-// ni accesParOctroi, meme si le depot les rend ») et celui, identique dans l'esprit, de
-// `superAdminAccessLogEntryResponseSchema`. C'est un choix délibéré et répété du back (tâches 5
-// et 6 de cette étape), pas un oubli : le filtrage vient du mode « strip » par défaut de Zod, pas
-// d'une liste noire écrite à la main. Le front ne peut pas afficher une donnée que la route ne
-// sert jamais — une colonne ici serait soit vide en permanence, soit une invention. Signalé au
-// rapport de tâche plutôt que suivi en silence.
+// HISTORIQUE DE CETTE COLONNE : le premier jet de cette tâche ne l'affichait PAS, parce
+// qu'aucune des trois lectures du journal ne la rendait alors (un défaut du cahier des charges
+// de la tâche 5, pas un choix délibéré — voir le rapport de tâche). Le back l'expose désormais
+// dans ses trois schémas de réponse (`patientAccessLog.schema.ts`,
+// `superAdminAccessLog.schema.ts`) ; ce fichier l'affiche à son tour.
+//
+// LA COLONNE NE SE FOND PAS DANS LE RESTE, À DESSEIN : un accès de dépannage (octroi temporaire
+// de super-admin) est l'ANOMALIE que ce journal existe pour laisser sauter aux yeux — pas une
+// propriété de plus, à égalité visuelle avec la date ou le service. Elle se rend donc en deux
+// temps, jamais comme une colonne booléenne banale (« Oui »/« Non » sur chaque ligne, qui noierait
+// l'anomalie dans le bruit d'un « Non » répété) :
+//   - un accès RÉEL (`accesParOctroi: false`, l'immense majorité des lignes) : rien, la cellule
+//     reste vide, exactement comme `followedElsewhere` (`front/CLAUDE.md`) ne rend rien sur
+//     `false`/`undefined` plutôt que d'afficher une négation partout ;
+//   - un accès PAR OCTROI (`accesParOctroi: true`) : un badge ambré, avec icône, qui NOMME la
+//     provenance (« Accès par octroi ») plutôt que de se contenter d'un point de couleur —
+//     l'anomalie doit se lire, pas seulement se remarquer.
 export const getAccessLogColumns = ({ services }: AccessLogColumnOptions) => [
   columnHelper.accessor('createdAt', {
     header: 'Date',
@@ -65,4 +72,20 @@ export const getAccessLogColumns = ({ services }: AccessLogColumnOptions) => [
       size: 160,
     },
   ),
+  columnHelper.accessor('accesParOctroi', {
+    id: 'accesParOctroi',
+    header: 'Origine',
+    size: 180,
+    cell: (info) => {
+      if (!info.getValue()) {
+        return null
+      }
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold bg-amber-100 text-amber-700 leading-none">
+          <ShieldAlert className="w-3 h-3" />
+          Accès par octroi
+        </span>
+      )
+    },
+  }),
 ]

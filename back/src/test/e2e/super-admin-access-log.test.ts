@@ -51,7 +51,9 @@ describe('GET /super-admin/access-log', () => {
     // Les lignes du journal des CONSULTATIONS, sur les DEUX etablissements -- ecrites
     // directement en base plutot que rejouees via le crochet (deja eprouve par
     // patient-access-log.test.ts), une par etablissement, avec un compte et une action
-    // distincts pour eprouver les trois filtres.
+    // distincts pour eprouver les trois filtres. `accesParOctroi` DIFFERE entre les deux
+    // (tour de correction 1, tache 10) : une fixture a valeur unique ne prouverait pas que la
+    // route rend la vraie valeur de chaque ligne plutot qu'une constante.
     await testDb.patientAccessLog.createMany({
       data: [
         {
@@ -62,7 +64,7 @@ describe('GET /super-admin/access-log', () => {
           userFirstName: 'Ada',
           userLastName: 'DuServiceA',
           action: 'dossier.ouvert',
-          accesParOctroi: false,
+          accesParOctroi: true,
         },
         {
           establishmentId: etabB.id,
@@ -189,6 +191,39 @@ describe('GET /super-admin/access-log', () => {
     const body = res.json() as { action: string }[]
     expect(body.length).toBeGreaterThan(0)
     expect(body.every((l) => l.action === 'export')).toBe(true)
+  })
+
+  // Tour de correction 1 (tache 10) : `accesParOctroi` doit sortir de cette route aussi,
+  // liee a la BONNE etablissement -- pas une constante. La fixture porte true pour A, false
+  // pour B (voir plus haut) : un test qui ne verifierait qu'une des deux valeurs ne
+  // prouverait pas que l'autre est bien rendue.
+  it('expose accesParOctroi sur source=acces, avec sa vraie valeur par etablissement', async () => {
+    const res = await testApp.app.inject({
+      method: 'GET',
+      url: '/super-admin/access-log?source=acces',
+      cookies: cookiesSuperAdmin,
+    })
+    expect(res.statusCode).toBe(200)
+    const body = res.json() as { establishmentId: string; accesParOctroi: boolean }[]
+    const ligneA = body.find((l) => l.establishmentId === etabA.id)
+    const ligneB = body.find((l) => l.establishmentId === etabB.id)
+    expect(ligneA?.accesParOctroi).toBe(true)
+    expect(ligneB?.accesParOctroi).toBe(false)
+  })
+
+  // `ActivityLog` n'a pas cette notion : `null`, jamais `false` -- `false` affirmerait a tort
+  // un acces reel la ou aucun octroi n'existe meme conceptuellement (voir le commentaire du
+  // schema de reponse).
+  it('rend accesParOctroi a null sur source=activite (la notion n existe pas pour ce journal)', async () => {
+    const res = await testApp.app.inject({
+      method: 'GET',
+      url: '/super-admin/access-log?source=activite',
+      cookies: cookiesSuperAdmin,
+    })
+    expect(res.statusCode).toBe(200)
+    const body = res.json() as { accesParOctroi: boolean | null }[]
+    expect(body.length).toBeGreaterThan(0)
+    expect(body.every((l) => l.accesParOctroi === null)).toBe(true)
   })
 
   // Arbitrage de l'etape 4a, non rouvert ici (voir le brief) : le super-admin compte les

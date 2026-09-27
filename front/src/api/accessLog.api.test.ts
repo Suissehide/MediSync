@@ -21,6 +21,7 @@ const entries: PatientAccessLogEntry[] = [
     serviceId: 's1',
     userFirstName: 'Alice',
     userLastName: 'Martin',
+    accesParOctroi: false,
   },
 ]
 

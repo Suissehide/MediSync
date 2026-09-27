@@ -51,12 +51,17 @@ const accessLogRouter: FastifyPluginAsync = (fastify) => {
           entityType: row.entityType,
           entityID: row.entityID,
           patientId: null,
+          // `ActivityLog` n'a pas cette notion : `null`, jamais `false` -- voir le commentaire du
+          // schema de reponse (tour de correction 1, tache 10).
+          accesParOctroi: null,
         }))
       }
 
       // `source === 'acces'` : PatientAccessLog. Construction CHAMP PAR CHAMP (jamais `...row`) --
-      // voir le commentaire du schema de reponse pour pourquoi (`exportFilters`, `accesParOctroi`
-      // ne doivent jamais atteindre ce DTO).
+      // voir le commentaire du schema de reponse pour pourquoi (`exportFilters` ne doit jamais
+      // atteindre ce DTO). `accesParOctroi` EST lue et rendue ici depuis le tour de correction 1
+      // de la tache 10 -- un booleen sur la provenance de l'acces, jamais un contenu clinique ni
+      // une identite (voir le commentaire du schema de reponse pour le raisonnement complet).
       const rows = await patientAccessLogDomain.findAllPlatformWide(filters)
       return rows.map((row) => ({
         id: row.id,
@@ -71,6 +76,7 @@ const accessLogRouter: FastifyPluginAsync = (fastify) => {
         entityType: null,
         entityID: null,
         patientId: row.patientId ?? null,
+        accesParOctroi: row.accesParOctroi,
       }))
     },
   )

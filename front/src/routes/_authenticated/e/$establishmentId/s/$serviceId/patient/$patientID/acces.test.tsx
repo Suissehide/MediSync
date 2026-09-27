@@ -156,6 +156,7 @@ const ligne = {
   serviceId: 's1',
   userFirstName: 'Alice',
   userLastName: 'Martin',
+  accesParOctroi: false,
 }
 
 beforeEach(() => {
@@ -228,6 +229,42 @@ describe('etats de l ecran du journal des acces', () => {
     expect(screen.getByText('Cardio')).toBeInTheDocument()
     expect(screen.queryByText(/chargement/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/impossible de charger/i)).not.toBeInTheDocument()
+    // `accesParOctroi: false` (fixture `ligne`) : aucun badge, jamais un "Non" bruyant sur
+    // chaque ligne normale (voir le commentaire de `columns/accessLog.column.tsx`).
+    expect(screen.queryByText(/accès par octroi/i)).not.toBeInTheDocument()
+  })
+
+  // Tour de correction 1 (tâche 10) : `accesParOctroi` distingue un accès de dépannage (octroi
+  // temporaire de super-admin) d'un accès de soin ordinaire — le point même de ce journal
+  // d'audit. Une fixture où TOUTES les lignes portent la même valeur ne prouverait rien (la
+  // pathologie du test vrai par vacuité, déjà mesurée sept fois sur ce dépôt) : celle-ci mélange
+  // délibérément les deux, et lie chaque assertion à SA ligne — jamais une présence "quelque
+  // part dans le document", le piège qui a déjà laissé passer un échange de libellés ailleurs
+  // sur ce dépôt (`admin/services.test.tsx`, revue de la tâche 13).
+  it("distingue un acces reel d'un acces par octroi, sans jamais les confondre", async () => {
+    monter([
+      routeGetAcces([
+        { ...ligne, id: 'log-reel', userFirstName: 'Alice', userLastName: 'Martin', accesParOctroi: false },
+        { ...ligne, id: 'log-octroi', userFirstName: 'Super', userLastName: 'Admin', accesParOctroi: true },
+      ]),
+    ])
+
+    await waitFor(() => {
+      expect(screen.getByText('Alice Martin')).toBeInTheDocument()
+    })
+    expect(screen.getByText('Super Admin')).toBeInTheDocument()
+
+    const ligneReelle = screen.getByText('Alice Martin').closest('tr')
+    const ligneOctroi = screen.getByText('Super Admin').closest('tr')
+    expect(ligneReelle).not.toBeNull()
+    expect(ligneOctroi).not.toBeNull()
+
+    expect(ligneOctroi).toHaveTextContent(/accès par octroi/i)
+    expect(ligneReelle).not.toHaveTextContent(/accès par octroi/i)
+
+    // Une seule ligne porte le badge — pas une par ligne (ce ne serait plus une anomalie qui
+    // saute aux yeux, mais une colonne banale de plus).
+    expect(screen.getAllByText(/accès par octroi/i)).toHaveLength(1)
   })
 
   it("distingue les quatre actions du journal, jamais confondues entre elles", async () => {

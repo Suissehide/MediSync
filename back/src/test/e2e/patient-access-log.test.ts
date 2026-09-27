@@ -520,6 +520,9 @@ describe('journal des consultations : le lire, par service et par etablissement 
 
     // Les lignes du journal elles-memes : ecrites directement en base plutot que rejouees via
     // le crochet (deja eprouve par les blocs precedents) — une par service, sur le MEME patient.
+    // `accesParOctroi` DIFFERE entre les deux lignes (tour de correction 1, tache 10) : une
+    // fixture ou les deux lignes portent la meme valeur ne prouverait rien sur le fait que la
+    // route rend bien LA VALEUR DE CHAQUE LIGNE, plutot qu'une constante.
     await testDb.patientAccessLog.createMany({
       data: [
         {
@@ -530,7 +533,7 @@ describe('journal des consultations : le lire, par service et par etablissement 
           userFirstName: 'Ada',
           userLastName: 'DuServiceA',
           action: 'dossier.ouvert',
-          accesParOctroi: false,
+          accesParOctroi: true,
         },
         {
           establishmentId: etab.id,
@@ -598,9 +601,11 @@ describe('journal des consultations : le lire, par service et par etablissement 
     )
   })
 
-  // Le schema de reponse ne porte que l auteur, l action, la date et le service (cahier des
-  // charges) : jamais `patientId`, `exportCount`, `exportFilters`, `accesParOctroi` ni les
-  // identifiants de tenant, meme si le depot les rend tous.
+  // Le schema de reponse ne porte que l auteur, l action, la date, le service et
+  // `accesParOctroi` (tour de correction 1, tache 10 -- ce dernier champ etait exclu a tort,
+  // voir le commentaire de `patientAccessLogEntryResponseSchema`) : jamais `patientId`,
+  // `exportCount`, `exportFilters` ni les identifiants de tenant, meme si le depot les rend
+  // tous.
   it('ne rend ni identite de patient ni contenu clinique, seulement qui a consulte quoi et quand', async () => {
     const res = await testApp.app.inject({
       method: 'GET',
@@ -610,7 +615,7 @@ describe('journal des consultations : le lire, par service et par etablissement 
     expect(res.statusCode).toBe(200)
     const [ligne] = res.json()
     expect(Object.keys(ligne).sort()).toEqual(
-      ['action', 'createdAt', 'id', 'serviceId', 'userFirstName', 'userLastName'].sort(),
+      ['accesParOctroi', 'action', 'createdAt', 'id', 'serviceId', 'userFirstName', 'userLastName'].sort(),
     )
   })
 
@@ -628,9 +633,39 @@ describe('journal des consultations : le lire, par service et par etablissement 
     expect(res.statusCode).toBe(200)
     for (const ligne of res.json()) {
       expect(Object.keys(ligne).sort()).toEqual(
-        ['action', 'createdAt', 'id', 'serviceId', 'userFirstName', 'userLastName'].sort(),
+        ['accesParOctroi', 'action', 'createdAt', 'id', 'serviceId', 'userFirstName', 'userLastName'].sort(),
       )
     }
+  })
+
+  // Tour de correction 1 (tache 10) : `accesParOctroi` distingue un acces de depannage (octroi
+  // temporaire de super-admin) d'un acces de soin ordinaire — l'interet meme d'un journal
+  // d'audit. La fixture de ce bloc porte deux valeurs DIFFERENTES (service A: true, service B:
+  // false) precisement pour que ce test ne soit pas vrai par vacuite : une reponse qui rendrait
+  // `false` partout, ou `true` partout, le ferait rougir.
+  it('expose accesParOctroi, avec sa vraie valeur par ligne (jamais une constante)', async () => {
+    const resAdmin = await testApp.app.inject({
+      method: 'GET',
+      url: adminUrl(etab.id, `/patients/${patient.id}/acces`),
+      cookies: cookiesAdmin,
+    })
+    expect(resAdmin.statusCode).toBe(200)
+    const lignes = resAdmin.json() as { serviceId: string; accesParOctroi: boolean }[]
+    const ligneA = lignes.find((l) => l.serviceId === serviceA.id)
+    const ligneB = lignes.find((l) => l.serviceId === serviceB.id)
+    expect(ligneA?.accesParOctroi).toBe(true)
+    expect(ligneB?.accesParOctroi).toBe(false)
+
+    // Cote service (coordinateur A) : seule la ligne de SON service est visible, et elle porte
+    // bien `true`.
+    const resService = await testApp.app.inject({
+      method: 'GET',
+      url: tenantUrl(etab.id, serviceA.id, `/patient/${patient.id}/acces`),
+      cookies: cookiesCoordinateurA,
+    })
+    expect(resService.statusCode).toBe(200)
+    const [ligneService] = resService.json() as { accesParOctroi: boolean }[]
+    expect(ligneService?.accesParOctroi).toBe(true)
   })
 
   it('refuse la lecture de service a qui n a pas consultations:read (LECTURE)', async () => {
