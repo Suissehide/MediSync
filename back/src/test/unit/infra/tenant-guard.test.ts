@@ -84,30 +84,69 @@ describe('assertTenantScope', () => {
   // passe sous `store` (kind 'tenant') : le meme verdict y est DEJA rendu, redondamment, par
   // `assertNoGlobalToManyBridge` — desactiver `assertGlobalInclude` ne le fait donc pas rougir.
   // Celui-ci reproduit les memes appels sans aucun contexte, ce qui isole la seule garde qui
-  // les tient reellement a cet endroit. Preuve par sabotage (methode systematic-debugging) :
-  // commenter l'appel a `assertGlobalInclude` dans `assertGlobalScope` fait rougir ce test seul
-  // (avec le test de monotonie, dont la reference par defaut est `HEAD`) sur les 658 du back.
-  it('sans aucun contexte, refuse un include de relation de tenant sur un modele global (derniere barriere hors tenant)', () => {
-    expect(() =>
-      assertTenantScope(
-        { model: 'Establishment', operation: 'findMany', args: { include: { patients: true } } },
-        undefined,
-      ),
-    ).toThrow(TenantScopeMissingError)
-    expect(() =>
-      assertTenantScope(
-        { model: 'Establishment', operation: 'findFirst', args: { include: { patients: true } } },
-        undefined,
-      ),
-    ).toThrow(TenantScopeMissingError)
-    expect(() =>
-      assertTenantScope(
-        { model: 'User', operation: 'findMany', args: { include: { establishmentMemberships: true } } },
-        undefined,
-      ),
-    ).toThrow(TenantScopeMissingError)
-    // Contrepartie : sans relation de tenant incluse, la meme lecture sans contexte reste
-    // permise (c'est le cas nominal de `/me`, `/auth/*`).
+  // les tient reellement a cet endroit.
+  //
+  // TOUR DE CORRECTION 1 DE LA TACHE 9 (etape 4b) — CE TEST S'ETAIT VIDE EN SILENCE, ET C'EST
+  // EXACTEMENT LA CLASSE DE DEFAUT QUE LA TACHE 9 FERME. La version d'avant portait trois
+  // assertions : `Establishment.findMany`, `Establishment.findFirst`, `User.findMany`. En
+  // faisant de l'absence de contexte un contexte DECLARE (NO_CONTEXT_GLOBAL_OPERATIONS), la
+  // tache 9 a rendu `Establishment.findFirst` et `User.findMany` non declares : ces deux-la sont
+  // desormais refuses par la PORTE DE PERMISSION, en tete de `assertGlobalScope`, et
+  // n'atteignent plus jamais `assertGlobalInclude`. Le test restait VERT en ne couvrant plus
+  // qu'un cas sur trois — une garde dont la couverture s'erode sans que rien ne rougisse.
+  //
+  // DEUX CHANGEMENTS POUR QUE CELA NE PUISSE PAS SE REPRODUIRE :
+  //   - les trois cas sont choisis parmi les couples DECLARES (donc ils franchissent la porte de
+  //     permission et arrivent bien jusqu'a `assertGlobalInclude`), et ils couvrent les deux
+  //     branches de cette garde (`include` et `select`) ;
+  //   - on epingle le MOTIF du refus (`error.field`), pas seulement son type. Un cas qui serait
+  //     un jour refuse plus tot, par une autre regle, ferait rougir ce test au lieu de le vider.
+  //
+  // Preuve par sabotage, refaite apres cette correction (methode systematic-debugging) :
+  // commenter l'appel a `assertGlobalInclude` dans `assertGlobalScope` fait rougir les TROIS
+  // cas ci-dessous (avant la correction : un seul).
+  const MOTIF_GLOBAL_INCLUDE = 'include/select sur une relation de tenant hors findUnique(OrThrow)'
+
+  it.each([
+    {
+      nom: 'Establishment.findMany + include patients',
+      model: 'Establishment',
+      operation: 'findMany',
+      args: { include: { patients: true } },
+    },
+    {
+      nom: 'User.update + include establishmentMemberships',
+      model: 'User',
+      operation: 'update',
+      args: { where: { id: 'u1' }, data: {}, include: { establishmentMemberships: true } },
+    },
+    {
+      nom: 'User.create + select establishmentMemberships (branche select)',
+      model: 'User',
+      operation: 'create',
+      args: { data: { email: 'a@b.c' }, select: { establishmentMemberships: true } },
+    },
+  ])(
+    'sans aucun contexte, une operation DECLAREE ne peut pas inclure une relation de tenant : $nom',
+    ({ model, operation, args }) => {
+      // Garde-fou du test : le couple doit etre declare, sinon il serait refuse par la porte de
+      // permission et ne dirait plus rien de `assertGlobalInclude`.
+      expect(NO_CONTEXT_GLOBAL_OPERATIONS[model]).toContain(operation)
+      let capturee: TenantScopeMissingError | undefined
+      try {
+        assertTenantScope({ model, operation, args }, undefined)
+      } catch (err) {
+        capturee = err as TenantScopeMissingError
+      }
+      expect(capturee).toBeInstanceOf(TenantScopeMissingError)
+      // LE motif : c'est bien `assertGlobalInclude` qui refuse, pas la porte de permission ni
+      // une regle de descente.
+      expect(capturee?.field).toBe(MOTIF_GLOBAL_INCLUDE)
+    },
+  )
+
+  it('sans aucun contexte, la meme lecture sans relation de tenant reste permise', () => {
+    // Contrepartie : c'est le cas nominal de `GET /super-admin/establishments`.
     expect(() =>
       assertTenantScope({ model: 'Establishment', operation: 'findMany', args: {} }, undefined),
     ).not.toThrow()
@@ -2476,8 +2515,19 @@ describe('tache 9 : sans aucun contexte, un modele global suit une liste declare
     { model: 'UnModeleGlobalDeDemain', operation: 'create', args: { data: {} } },
   ]
 
+  // Le MOTIF est epingle, pas seulement le type (tour de correction 1, mineur) : sans cela, un
+  // de ces cas pourrait un jour etre refuse par une AUTRE regle et rester vert en ne disant plus
+  // rien de la porte de permission. C'est precisement ce qui venait d'arriver au test de
+  // `assertGlobalInclude` en tete de ce fichier.
   it.each(nonDeclares)('refuse $model / $operation, non declare sans contexte', ({ model, operation, args }) => {
-    expect(() => assertTenantScope({ model, operation, args }, undefined)).toThrow(TenantScopeMissingError)
+    let capturee: TenantScopeMissingError | undefined
+    try {
+      assertTenantScope({ model, operation, args }, undefined)
+    } catch (err) {
+      capturee = err as TenantScopeMissingError
+    }
+    expect(capturee).toBeInstanceOf(TenantScopeMissingError)
+    expect(capturee?.field).toBe('sans-contexte')
   })
 
   // Toute la table, sans exception ecrite a la main, dans les deux sens — meme forme que pour

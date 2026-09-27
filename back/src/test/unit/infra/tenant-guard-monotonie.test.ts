@@ -26,35 +26,71 @@ import type { TenantStore } from '../../../main/types/utils/tenant-context'
 // que de laisser prendre un vert pour une preuve.
 //
 // Pour comparer a autre chose qu'au dernier commit — une branche entiere, une etape —, on
-// nomme la reference. La mesure de la tache 15 se rejoue ainsi, exactement :
-//     MONOTONIE_REF=f022ef9 PROFONDEUR=9 npx jest -c src/test/jest.config.ts \
+// nomme la reference :
+//     MONOTONIE_REF=<ref> PROFONDEUR=9 npx jest -c src/test/jest.config.ts \
 //       --selectProjects unit --testPathPatterns tenant-guard-monotonie
+// (« se rejoue EXACTEMENT » a ete retire de cette phrase a la tache 9, etape 4b : la commande
+// rejoue bien la COMPARAISON, jamais le CHIFFRE. L'espace balaye depend de MODEL_RELATIONS et
+// des formes definies plus bas, qui ont change deux fois depuis la tache 15 — voir plus bas.)
 //
-// CE QUE `MONOTONIE_REF=main` REND, ET CE QUE CELA VEUT DIRE (mesure a profondeur 4) : 1 800
-// « refus perdus » pour l'etape 4a ENTIERE — et ils sont tous explicables, verifies un par un.
-// 1 552 sans contexte et 42 sous tenant ont pour racine ou pour etape `AccessLink` /
-// `SuperAdminAccessGrant`, deux modeles que la tache 2 a AJOUTES au schema : avant elle, ils
-// n'etaient pas dans MODEL_RELATIONS, donc tout `include` les nommant etait refuse comme « non
-// declare ». Les declarer les rend utilisables — ce n'est pas un refus perdu au sens du
-// cloisonnement, c'est une table qui nait. Les 206 sous superadmin sont la reouverture
-// DELIBEREE du tour de correction 4 de la tache 1 (SUPERADMIN_GLOBAL_OPERATIONS, ou chaque
-// couple est justifie un par un). Rien d'inexplique — mais c'est bien pour pouvoir le VERIFIER
-// que ce harnais est verse au depot plutot que jete.
+// CE QUE `MONOTONIE_REF=main` REND, ET CE QUE CELA VEUT DIRE — mesure REFAITE a la tache 9
+// (etape 4b), parce que ce paragraphe etait perime sur les trois plans a la fois : le nombre,
+// la repartition, et la CAUSE. Il annoncait « 1 800 refus perdus, dont 1 552 sans contexte »,
+// imputes aux tables `AccessLink`/`SuperAdminAccessGrant` nees a la tache 2. Mesure actuelle, a
+// profondeur 4, sur 202 250 cas :
+//     349 refus perdus — {"tenant":315,"superadmin":34}, et ZERO sans contexte.
+// Les deux ecarts ont chacun leur raison, et aucune n'est celle qui etait ecrite ici :
+//   - zero sans contexte, parce que la tache 9 a justement referme cette famille entiere (la
+//     porte de permission NO_CONTEXT_GLOBAL_OPERATIONS) ;
+//   - les 349 restants sont, verifies un par un par filtrage de la liste complete (349 sur 349,
+//     pas un echantillon), tous des cas dont la racine ou une etape est `PatientAccessLog` /
+//     `accessLogs` — un modele ajoute a l'etape 4b, pas a la 4a. Meme MECANISME que
+//     l'explication d'origine, autre modele : avant son entree dans MODEL_RELATIONS, tout
+//     `include` le nommant etait refuse comme « non declare ». Le declarer le rend utilisable ;
+//     ce n'est pas un refus perdu au sens du cloisonnement, c'est une table qui nait.
+// LECON, et c'est la raison d'etre de ce harnais : ce paragraphe est un CHIFFRE DANS UN
+// COMMENTAIRE, exactement ce que ce fichier a ete cree pour remplacer. Il se perime a chaque
+// modele ajoute. Relancez la commande plutot que de le croire.
 //
 // CE QU'IL MESURE. Pour chaque cas, le verdict des deux versions (passe / refuse) :
 //   - REFUS PERDU (refuse avant, passe maintenant) => ECHEC. C'est la propriete.
 //   - refus gagne (passe avant, refuse maintenant) => compte et affiche, jamais un echec : c'est
 //     ce que fait un resserrement.
-// L'espace : toutes les racines du schema x 8 formes d'operation x 5 contextes x toutes les
-// chaines d'inclusion du graphe MODEL_RELATIONS jusqu'a `PROFONDEUR` (parcours en PROFONDEUR —
-// le graphe porte des cycles, la profondeur est la seule garde ; en largeur, un niveau entier
-// tiendrait des millions de tableaux en memoire).
+// L'ESPACE BALAYE, DECRIT EXACTEMENT — et il a ete decrit trop largement jusqu'a la tache 9
+// (etape 4b, tour de correction 1 : la revue a montre que cet en-tete promettait plus que la
+// boucle ne couvrait, dans l'instrument meme auquel tout le monde se fie). Deux familles, et
+// c'est la reunion des deux qui fait l'espace :
+//   1. PROFONDEUR 0 — les formes NUES (`FORMES_NUES` plus bas) : chaque racine x chaque verbe,
+//      SANS aucun `include` ni `select`. Elles manquaient entierement : toutes les formes
+//      etaient decorees d'au moins une relation incluse, si bien qu'un `Establishment.deleteMany
+//      ({})` nu — la forme meme que la tache 9 modifie — n'etait jamais compare.
+//   2. PROFONDEURS 1..PROFONDEUR — les formes DECOREES (`formes()`) : chaque racine x chaque
+//      forme x chaque chaine d'inclusion du graphe MODEL_RELATIONS (parcours en PROFONDEUR — le
+//      graphe porte des cycles, la profondeur est la seule garde ; en largeur, un niveau entier
+//      tiendrait des millions de tableaux en memoire).
+// Le tout x 5 contextes (tenant, tenant-admin, superadmin, system, sans-contexte).
 //
-// PROFONDEUR : 4 par defaut (3 538 chaines, 141 520 cas, ~1 s), pour que la suite unitaire reste
-// rapide. Le balayage profond se lance a la main et c'est lui qui vaut preuve. Mesure de
-// reference de la tache 15, rejouable par la commande ci-dessus : profondeur 9, 1 548 084
-// chaines, 61 923 360 cas compares, ZERO refus perdu, et zero changement de verdict hors du
-// chemin de tenant (~10 min).
+// LES VERBES COUVERTS : les dix qu'un modele peut subir de destructif ou de structurant —
+// findMany, findUnique, findFirst, count, create, update, updateMany, upsert, delete,
+// deleteMany. Les formes nues les portent tous les dix ; les formes decorees en portent huit
+// (ni `updateMany` ni `deleteMany`, qui n'acceptent pas d'`include` chez Prisma — les decorer
+// mesurerait une forme qui ne peut pas exister). Avant la tache 9, les formes decorees n'en
+// couvraient que six et les nues n'existaient pas : `delete`, `deleteMany`, `updateMany` et
+// `upsert` n'etaient balayes nulle part. Ce qui reste hors du balayage, nomme plutot que
+// sous-entendu : `findFirstOrThrow`, `findUniqueOrThrow`, `createMany`, `createManyAndReturn`,
+// `updateManyAndReturn`, `aggregate`, `groupBy` — chacun partage sa logique de verification avec
+// un verbe present ici (voir READ_OPERATIONS / WRITE_OPERATIONS dans le garde-fou), mais
+// « partage sa logique » n'est pas « est mesure », et c'est dit ainsi.
+//
+// PROFONDEUR : 4 par defaut (4 016 chaines, 202 250 cas, ~2 s), pour que la suite unitaire reste
+// rapide. Le balayage profond se lance a la main et c'est lui qui vaut preuve.
+//
+// LE NOMBRE DE CAS N'EST PAS UNE CONSTANTE, ne le recopiez pas d'un rapport : il se derive de
+// MODEL_RELATIONS et grossit a chaque relation ajoutee au schema, et il a change deux fois pour
+// cette seule raison. Profondeur 9 : 61 923 360 cas quand la tache 15 l'a mesure contre
+// `f022ef9` ; 80 198 400 au debut de la tache 9 (etape 4b), le graphe ayant gagne
+// `PatientAccessLog` ; et davantage depuis que cet en-tete elargit l'espace. Citez le chiffre
+// que VOTRE execution a imprime — le `console.log` du second test le donne en entier.
 //
 // LIMITE, NOMMEE : si `git show` ne peut pas produire la version de reference (historique
 // absent, reference inconnue), ce test ECHOUE au lieu de se taire. Un test de monotonie qui se
@@ -157,9 +193,31 @@ const selectDuChemin = (chemin: readonly string[]): Record<string, unknown> => {
   return reste.length === 0 ? { [tete]: true } : { [tete]: { select: selectDuChemin(reste) } }
 }
 
-// Les huit formes : lectures nues, la forme `select`, deux ECRITURES decorees d'un `include`
-// (un `create ... include` rend ce qu'un `findMany ... include` rendrait), et la chaine filtree
-// sur le service courant a chaque saut.
+const LIGNE_DE_TENANT = { establishmentId: 'e1', serviceId: 's1' }
+
+// PROFONDEUR 0 — les formes NUES, sans `include` ni `select` (tache 9, etape 4b, tour de
+// correction 1). Appliquees une fois par racine, en plus des formes decorees ci-dessous. C'est
+// ici, et nulle part ailleurs, que `Establishment.deleteMany({})` — la forme citee par le brief
+// de la tache 9 — entre dans le balayage. Les dix verbes y figurent, y compris les deux
+// (`updateMany`, `deleteMany`) que Prisma n'accepte pas avec un `include`.
+const FORMES_NUES: { operation: string; args: Record<string, unknown> }[] = [
+  { operation: 'findMany', args: {} },
+  { operation: 'findUnique', args: { where: { id: 'x1' } } },
+  { operation: 'findFirst', args: { where: LIGNE_DE_TENANT } },
+  { operation: 'count', args: { where: { establishmentId: 'e1' } } },
+  { operation: 'create', args: { data: LIGNE_DE_TENANT } },
+  { operation: 'update', args: { where: { id: 'x1' }, data: {} } },
+  { operation: 'updateMany', args: { where: {}, data: {} } },
+  { operation: 'upsert', args: { where: { id: 'x1' }, create: LIGNE_DE_TENANT, update: {} } },
+  { operation: 'delete', args: { where: { id: 'x1' } } },
+  { operation: 'deleteMany', args: { where: {} } },
+]
+
+// Les huit formes DECOREES : lectures nues, la forme `select`, des ECRITURES decorees d'un
+// `include` (un `create ... include` rend ce qu'un `findMany ... include` rendrait), et la
+// chaine filtree sur le service courant a chaque saut. `delete` et `upsert` s'y sont ajoutes a
+// la tache 9 (etape 4b) — tous deux acceptent un `include` chez Prisma, et `upsert` porte en
+// plus ses deux branches `create`/`update`, que rien ne decorait jusqu'ici.
 const formes = (chemin: readonly string[]) => {
   const inc = includeDuChemin(chemin, false)
   const incFiltre = includeDuChemin(chemin, true)
@@ -167,12 +225,17 @@ const formes = (chemin: readonly string[]) => {
   return [
     { operation: 'findMany', args: { include: inc } },
     { operation: 'findUnique', args: { where: { id: 'x1' }, include: inc } },
-    { operation: 'findFirst', args: { where: { establishmentId: 'e1', serviceId: 's1' }, include: inc } },
+    { operation: 'findFirst', args: { where: LIGNE_DE_TENANT, include: inc } },
     { operation: 'findMany', args: { select: sel } },
-    { operation: 'create', args: { data: { establishmentId: 'e1', serviceId: 's1' }, include: inc } },
+    { operation: 'create', args: { data: LIGNE_DE_TENANT, include: inc } },
     { operation: 'update', args: { where: { id: 'x1' }, data: {}, include: inc } },
     { operation: 'count', args: { where: { establishmentId: 'e1' }, include: inc } },
-    { operation: 'findMany', args: { where: { establishmentId: 'e1', serviceId: 's1' }, include: incFiltre } },
+    { operation: 'findMany', args: { where: LIGNE_DE_TENANT, include: incFiltre } },
+    { operation: 'delete', args: { where: { id: 'x1' }, include: inc } },
+    {
+      operation: 'upsert',
+      args: { where: { id: 'x1' }, create: LIGNE_DE_TENANT, update: {}, include: inc },
+    },
   ]
 }
 
@@ -240,24 +303,37 @@ describe(`monotonie du garde-fou contre ${REF} (profondeur ${PROFONDEUR})`, () =
     const perdusParContexte = new Map<string, number>()
     const gagnes = new Map<string, number>()
 
+    const comparer = (
+      racine: string,
+      operation: string,
+      args: Record<string, unknown>,
+      chemin: readonly string[],
+    ): void => {
+      for (const { nom, store } of CONTEXTES) {
+        cas += 1
+        const a = passe(avant, racine, operation, args, store)
+        const b = passe(assertTenantScope, racine, operation, args, store)
+        if (a === b) {
+          continue
+        }
+        if (a === false && b === true) {
+          perdus.push(`${nom} | ${racine}.${operation} | ${chemin.join('>') || '(nu)'}`)
+          perdusParContexte.set(nom, (perdusParContexte.get(nom) ?? 0) + 1)
+        } else {
+          gagnes.set(nom, (gagnes.get(nom) ?? 0) + 1)
+        }
+      }
+    }
+
     for (const racine of Object.keys(MODEL_RELATIONS)) {
+      // Profondeur 0 : la racine seule, sans include ni select.
+      for (const { operation, args } of FORMES_NUES) {
+        comparer(racine, operation, args, [])
+      }
       for (const chemin of cheminsDepuis(racine, PROFONDEUR, [])) {
         chaines += 1
         for (const { operation, args } of formes(chemin)) {
-          for (const { nom, store } of CONTEXTES) {
-            cas += 1
-            const a = passe(avant, racine, operation, args, store)
-            const b = passe(assertTenantScope, racine, operation, args, store)
-            if (a === b) {
-              continue
-            }
-            if (a === false && b === true) {
-              perdus.push(`${nom} | ${racine}.${operation} | ${chemin.join('>')}`)
-              perdusParContexte.set(nom, (perdusParContexte.get(nom) ?? 0) + 1)
-            } else {
-              gagnes.set(nom, (gagnes.get(nom) ?? 0) + 1)
-            }
-          }
+          comparer(racine, operation, args, chemin)
         }
       }
     }

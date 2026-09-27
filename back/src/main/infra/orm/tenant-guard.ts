@@ -500,7 +500,13 @@ export const SUPERADMIN_GLOBAL_OPERATIONS: Readonly<Record<string, readonly stri
 // précédente, et cité tel quel par le brief : `Establishment.findUnique({ include: { patients:
 // true } })`, `Establishment.deleteMany({})` et `User.updateMany({ data: { isSuperAdmin: true }
 // } )` passaient. Ce n'était pas une régression (zéro changement de verdict sous « aucun
-// contexte » sur les 61 923 360 cas de la tâche 15), c'était le trou le plus large qui restait.
+// contexte » à la tâche 15), c'était le trou le plus large du cas SANS CONTEXTE.
+// (TOUR DE CORRECTION 1 — cette phrase disait « le trou le plus large qui restait », tout court.
+// C'est faux, et c'est le genre de superlatif que ce fichier existe pour empêcher : le même trou
+// reste OUVERT, et plus large, sous un contexte de TENANT ordinaire — `Establishment.deleteMany
+// ({})` et `User.updateMany({ data: { isSuperAdmin: true } })` y passent toujours, faute de
+// colonne de tenant à comparer sur un modèle global. Le contexte tenant n'a toujours pas de
+// table équivalente ; voir assertGlobalNestedWrite, qui le dit aussi.)
 //
 // COMMENT CETTE LISTE A ÉTÉ ÉTABLIE — pas en lisant le code, en MESURANT. Le garde-fou a été
 // instrumenté (journalisation de chaque couple (modèle, opération) vu avec `peek() ===
@@ -532,8 +538,29 @@ export const SUPERADMIN_GLOBAL_OPERATIONS: Readonly<Record<string, readonly stri
 //      imbriqué sous `User.create` ou `AccessLink.create` reste non vérifié sans contexte, alors
 //      qu'il l'est sous `tenant` et sous `superadmin`. C'est le pendant, côté écriture, du point
 //      1, et il est hors du périmètre de cette tâche (dont le défaut était l'absence de porte de
-//      permission, pas la descente) — nommé ici plutôt que découvert plus tard. Les quatre
-//      écritures déclarées ci-dessous n'écrivent aujourd'hui que des colonnes scalaires.
+//      permission, pas la descente) — nommé ici plutôt que découvert plus tard.
+//   3. UNE ÉCRITURE DÉCLARÉE N'EST BORNÉE NI PAR LA LIGNE NI PAR LA COLONNE (tour de correction
+//      1). Cette table déclare des couples (modèle, opération) ; elle ne dit RIEN de ce que
+//      l'écriture touche. Mesuré, sans contexte :
+//        `User.update({ where: { id }, data: { isSuperAdmin: true } })`      -> PASSE
+//        `User.update({ where: { id }, data: { deactivatedAt: … } })`        -> PASSE
+//        `User.update({ data: { isSuperAdmin: true } })` (sans `where`)      -> PASSE
+//        `AccessLink.updateMany({ where: {}, data: … })` (where vide)        -> PASSE
+//        `User.updateMany({ where: {}, data: { isSuperAdmin: true } })`      -> refusé
+//      Autrement dit : le défaut emblématique du brief est bien fermé EN MASSE, et son jumeau
+//      LIGNE À LIGNE ne l'est pas. Ce n'est pas exploitable aujourd'hui — vérifié route par
+//      route, et c'est une propriété des APPELANTS, pas de cette table : `registerSchema` (Zod)
+//      dépouille les clés inconnues du corps, et `PATCH /me` déstructure explicitement
+//      `firstName`/`lastName` avant d'appeler `updateProfile`. Mais c'est à une ligne d'appel
+//      près, et rien ici ne rattraperait cette ligne.
+//      NE PAS LIRE « n'écrit que des colonnes scalaires » COMME UNE GARANTIE : `isSuperAdmin`
+//      EST une colonne scalaire. Le point 2 parle des écritures IMBRIQUÉES (vers une autre
+//      table) ; celui-ci parle des colonnes de la ligne globale elle-même, et les deux sont
+//      ouverts pour des raisons différentes.
+//      Fermer ce point-ci demanderait une table d'un autre genre — (modèle, opération, colonnes
+//      permises) — que ni `SUPERADMIN_GLOBAL_OPERATIONS` ni celle-ci ne portent, donc un
+//      arbitrage qui dépasse cette tâche. Le même trou existe, plus large, sous contexte tenant
+//      (voir `assertGlobalNestedWrite`).
 //
 // CHAQUE ENTRÉE PORTE LA ROUTE QUI LA JUSTIFIE. Une entrée sans route est une entrée à
 // supprimer.
@@ -575,10 +602,23 @@ export const NO_CONTEXT_GLOBAL_OPERATIONS: Readonly<Record<string, readonly stri
     // `.consumeIfActive` (`POST /auth/access-link/consume`, marque `usedAt` sous condition).
     'updateMany',
   ],
-  // `SuperAdminAccessGrant` n'y figure PAS, et ce n'est pas un oubli : ses quatre emplois
-  // (`findMany`, `create`, `count`, `findUnique`, `update` — accessGrant.repository.ts) sont
-  // TOUS encadrés par `runAsSuperAdmin`, donc déclarés dans SUPERADMIN_GLOBAL_OPERATIONS. Aucun
-  // n'apparaît dans la mesure sans contexte. Le modèle est donc refusé en entier ici.
+  // `SuperAdminAccessGrant` n'y figure PAS, et ce n'est pas un oubli. Il a SIX emplois dans
+  // `src/main`, tous dans `accessGrant.repository.ts`, et aucun ne tourne sans contexte — mais
+  // pas tous pour la même raison, et c'est la distinction qui compte :
+  //   - CINQ sont encadrés par `runAsSuperAdmin` (`findMany` des octrois vivants, `create`,
+  //     `count`, `findUnique`, `update`), donc déclarés dans SUPERADMIN_GLOBAL_OPERATIONS ;
+  //   - le SIXIÈME, `findForEstablishment` (`GET /e/:establishmentId/admin/grants`), tourne sous
+  //     un contexte de TENANT réel — son `establishmentId` vient de
+  //     `tenantContext.establishmentScope()`, qui lève s'il n'y a pas de tenant. Il ne peut donc
+  //     structurellement pas atteindre cette table-ci, sans y être déclaré pour autant.
+  // (TOUR DE CORRECTION 1 — une version précédente de ce commentaire annonçait « quatre emplois »
+  // puis en listait cinq, et ignorait le sixième. Cause exacte, qui vaut d'être connue de qui
+  // relira ce fichier : le motif de recherche utilisé pour l'énumération — `\.superAdminAccessGrant\.findMany`
+  // sur une seule ligne — se brise sur le saut de ligne que le formateur insère entre le modèle
+  // et le verbe. Cette énumération sert de CONTRE-VÉRIFICATION à la mesure par instrumentation ;
+  // un motif qui rate un site rend cette contre-vérification muette. Le motif correct traverse
+  // les lignes : `\.superAdminAccessGrant\s*\n?\s*\.<verbe>`. Refaite ainsi sur les quatre
+  // modèles globaux : 27 sites d'appel, pas 26.)
 }
 
 // Verbes Prisma d'écriture imbriquée : la présence de l'un d'eux dans la valeur d'un champ

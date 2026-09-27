@@ -156,16 +156,24 @@ Key cross-cutting concerns:
   `/super-admin` prefix. `NO_CONTEXT_GLOBAL_OPERATIONS` is the exact mirror of
   `SUPERADMIN_GLOBAL_OPERATIONS` for that case: `User` (`findUnique`, `findUniqueOrThrow`,
   `update`, `create`), `Establishment` (`findMany`, `findUniqueOrThrow`), `AccessLink`
-  (`findUnique`, `create`, `updateMany`); `SuperAdminAccessGrant` is **absent on purpose** (all
-  of its uses are framed by `runAsSuperAdmin`) and therefore refused in full. **The list was
-  measured, not guessed**: the guard was instrumented to journal every (model, operation) seen
-  with `peek() === undefined` and the whole e2e suite run — 1 243 calls, 8 distinct pairs, zero
-  of them on a tenant model. The ninth entry, `User.create`, was **missing from that
-  measurement** because no e2e test exercised `POST /auth/register`; `src/test/e2e/auth-register.test.ts`
-  now covers it, so re-running the instrumentation would see it. **Two named limits**: a
-  declared single-row read may still `include` a tenant relation (that is `UserRepository.findByID`,
-  the authority read on every authenticated request), and a nested `data` under one of the four
-  declared writes is not checked without a context.
+  (`findUnique`, `create`, `updateMany`); `SuperAdminAccessGrant` is **absent on purpose** — its
+  six call sites all have a context, though **not all for the same reason**: five are framed by
+  `runAsSuperAdmin`, and the sixth (`findForEstablishment`, `GET /e/:establishmentId/admin/grants`)
+  runs under a real *tenant* context, its `establishmentId` coming from `establishmentScope()`.
+  It is therefore refused in full without a context. **The list was measured, not guessed**: the
+  guard was instrumented to journal every (model, operation) seen with `peek() === undefined`
+  and the whole e2e suite run — 1 243 calls, 8 distinct pairs, zero of them on a tenant model.
+  The ninth entry, `User.create`, was **missing from that measurement** because no e2e test
+  exercised `POST /auth/register`; `src/test/e2e/auth-register.test.ts` now covers it, and the
+  instrumentation re-run confirms it: **1 244 calls, 9 pairs**. **Three named limits**, all in
+  the table's comment: a declared single-row read may still `include` a tenant relation (that is
+  `UserRepository.findByID`, the authority read on every authenticated request); a nested `data`
+  under a declared write is not checked without a context; and **a declared write is bounded
+  neither by row nor by column** — `User.update({ where: { id }, data: { isSuperAdmin: true } })`
+  passes, while its mass twin `User.updateMany` is refused. That third one is not exploitable
+  today, but only because of the *callers* (Zod strips unknown keys on register, `PATCH /me`
+  destructures two fields) — never read "only scalar columns" as a guarantee, `isSuperAdmin` is
+  a scalar column.
 - **A relation that REPARTS from a global model towards MANY rows is refused — under an ordinary
   tenant context too, in reads and in writes (étape 4a, task 15).** The ordinary path's safety
   comes from the ROOT's `where`, which pins the establishment. Relations *towards* a global model
