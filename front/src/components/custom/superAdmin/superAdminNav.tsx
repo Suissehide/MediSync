@@ -28,6 +28,12 @@ export const SuperAdminNav = () => {
       >
         Comptes
       </Link>
+      <Link
+        to="/super-admin/access-log"
+        className={linkClassName(isActive('/super-admin/access-log'))}
+      >
+        Journal des accès
+      </Link>
     </nav>
   )
 }

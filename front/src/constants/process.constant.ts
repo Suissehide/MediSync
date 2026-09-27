@@ -19,6 +19,11 @@ export const SUPER_ADMIN = {
   REISSUE_ACCESS_LINK: 'reissue_super_admin_access_link',
   CREATE_GRANT: 'create_super_admin_grant',
   REVOKE_GRANT: 'revoke_super_admin_grant',
+  // Étape 4b, tâche 11 : les deux journaux à l'échelle de la plateforme (`GET
+  // /super-admin/access-log`) — une seule clé, la requête entière (filtres compris) figurant en
+  // second élément du tableau `queryKey` (voir `useSuperAdminAccessLogQuery`), comme
+  // `PATIENT_ACCESS_LOG.GET_BY_PATIENT` le fait déjà de `patientID`.
+  GET_ACCESS_LOG: 'get_super_admin_access_log',
 }
 
 export const TODO = {

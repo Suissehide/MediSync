@@ -1,8 +1,9 @@
-import { createFileRoute, Link, useNavigate, useParams } from '@tanstack/react-router'
-import { ArrowLeft, FileDown, History, Trash2 } from 'lucide-react'
+import { createFileRoute, useNavigate, useParams } from '@tanstack/react-router'
+import { ArrowLeft, FileDown, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import EditPatient from '@/components/custom/Patient/edit/edit.patient.tsx'
+import { PatientAccessLogButton } from '@/components/custom/Patient/patientAccessLogButton.tsx'
 import ProgrammePDFModal from '@/components/custom/Patient/pdf/programme-pdf-modal.tsx'
 import DiagnosticPatient from '@/components/custom/Patient/view/diagnostic.patient.tsx'
 import OverviewPatient from '@/components/custom/Patient/view/overview.patient.tsx'
@@ -54,11 +55,6 @@ function PatientDetails() {
   // (export généré dans le navigateur), gardée ici, seul endroit où elle
   // s'utilise.
   const canExportPdf = useCan('pdf:export')
-  // Etape 4b, tâche 10 : la même permission que le garde de
-  // `patient/$patientID/acces.tsx` (`consultations:read`, réservée au rôle
-  // COORDINATEUR) — un lien vers un écran inaccessible serait pire qu'une
-  // absence de lien.
-  const canReadAccessLog = useCan('consultations:read')
   const [selected, setSelected] = useState<string>('overview')
   const [showPDF, setShowPDF] = useState(false)
   const [showDelete, setShowDelete] = useState(false)
@@ -117,22 +113,11 @@ function PatientDetails() {
             </h2>
             <div className="ml-auto flex items-center gap-2">
               {patient && <AddPatientToPathwayForm patient={patient} />}
-              {canReadAccessLog && (
-                <Button
-                  asChild
-                  variant="outline"
-                  size="default"
-                  className="font-normal leading-tight"
-                >
-                  <Link
-                    to="/e/$establishmentId/s/$serviceId/patient/$patientID/acces"
-                    params={{ establishmentId, serviceId, patientID }}
-                  >
-                    <History className="w-4 h-4" />
-                    Journal des accès
-                  </Link>
-                </Button>
-              )}
+              <PatientAccessLogButton
+                establishmentId={establishmentId}
+                serviceId={serviceId}
+                patientID={patientID}
+              />
               {canExportPdf && (
                 <Button
                   variant="outline"

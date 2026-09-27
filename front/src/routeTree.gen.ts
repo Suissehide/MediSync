@@ -25,6 +25,7 @@ import { Route as AuthenticatedSuperAdminIndexImport } from './routes/_authentic
 import { Route as AuthenticatedPatientIndexImport } from './routes/_authenticated/patient/index'
 import { Route as AuthenticatedUserSettingsImport } from './routes/_authenticated/user/settings'
 import { Route as AuthenticatedSuperAdminUsersImport } from './routes/_authenticated/super-admin/users'
+import { Route as AuthenticatedSuperAdminAccessLogImport } from './routes/_authenticated/super-admin/access-log'
 import { Route as AuthenticatedSuperAdminEstablishmentIdImport } from './routes/_authenticated/super-admin/$establishmentId'
 import { Route as AuthenticatedSettingsUserImport } from './routes/_authenticated/settings/user'
 import { Route as AuthenticatedSettingsThematicImport } from './routes/_authenticated/settings/thematic'
@@ -140,6 +141,13 @@ const AuthenticatedSuperAdminUsersRoute =
   AuthenticatedSuperAdminUsersImport.update({
     id: '/users',
     path: '/users',
+    getParentRoute: () => AuthenticatedSuperAdminRoute,
+  } as any)
+
+const AuthenticatedSuperAdminAccessLogRoute =
+  AuthenticatedSuperAdminAccessLogImport.update({
+    id: '/access-log',
+    path: '/access-log',
     getParentRoute: () => AuthenticatedSuperAdminRoute,
   } as any)
 
@@ -477,6 +485,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSuperAdminEstablishmentIdImport
       parentRoute: typeof AuthenticatedSuperAdminImport
     }
+    '/_authenticated/super-admin/access-log': {
+      id: '/_authenticated/super-admin/access-log'
+      path: '/access-log'
+      fullPath: '/super-admin/access-log'
+      preLoaderRoute: typeof AuthenticatedSuperAdminAccessLogImport
+      parentRoute: typeof AuthenticatedSuperAdminImport
+    }
     '/_authenticated/super-admin/users': {
       id: '/_authenticated/super-admin/users'
       path: '/users'
@@ -645,6 +660,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedSuperAdminRouteChildren {
   AuthenticatedSuperAdminEstablishmentIdRoute: typeof AuthenticatedSuperAdminEstablishmentIdRoute
+  AuthenticatedSuperAdminAccessLogRoute: typeof AuthenticatedSuperAdminAccessLogRoute
   AuthenticatedSuperAdminUsersRoute: typeof AuthenticatedSuperAdminUsersRoute
   AuthenticatedSuperAdminIndexRoute: typeof AuthenticatedSuperAdminIndexRoute
 }
@@ -653,6 +669,8 @@ const AuthenticatedSuperAdminRouteChildren: AuthenticatedSuperAdminRouteChildren
   {
     AuthenticatedSuperAdminEstablishmentIdRoute:
       AuthenticatedSuperAdminEstablishmentIdRoute,
+    AuthenticatedSuperAdminAccessLogRoute:
+      AuthenticatedSuperAdminAccessLogRoute,
     AuthenticatedSuperAdminUsersRoute: AuthenticatedSuperAdminUsersRoute,
     AuthenticatedSuperAdminIndexRoute: AuthenticatedSuperAdminIndexRoute,
   }
@@ -818,6 +836,7 @@ export interface FileRoutesByFullPath {
   '/settings/thematic': typeof AuthenticatedSettingsThematicRoute
   '/settings/user': typeof AuthenticatedSettingsUserRoute
   '/super-admin/$establishmentId': typeof AuthenticatedSuperAdminEstablishmentIdRoute
+  '/super-admin/access-log': typeof AuthenticatedSuperAdminAccessLogRoute
   '/super-admin/users': typeof AuthenticatedSuperAdminUsersRoute
   '/user/settings': typeof AuthenticatedUserSettingsRoute
   '/patient': typeof AuthenticatedPatientIndexRoute
@@ -860,6 +879,7 @@ export interface FileRoutesByTo {
   '/settings/thematic': typeof AuthenticatedSettingsThematicRoute
   '/settings/user': typeof AuthenticatedSettingsUserRoute
   '/super-admin/$establishmentId': typeof AuthenticatedSuperAdminEstablishmentIdRoute
+  '/super-admin/access-log': typeof AuthenticatedSuperAdminAccessLogRoute
   '/super-admin/users': typeof AuthenticatedSuperAdminUsersRoute
   '/user/settings': typeof AuthenticatedUserSettingsRoute
   '/patient': typeof AuthenticatedPatientIndexRoute
@@ -904,6 +924,7 @@ export interface FileRoutesById {
   '/_authenticated/settings/thematic': typeof AuthenticatedSettingsThematicRoute
   '/_authenticated/settings/user': typeof AuthenticatedSettingsUserRoute
   '/_authenticated/super-admin/$establishmentId': typeof AuthenticatedSuperAdminEstablishmentIdRoute
+  '/_authenticated/super-admin/access-log': typeof AuthenticatedSuperAdminAccessLogRoute
   '/_authenticated/super-admin/users': typeof AuthenticatedSuperAdminUsersRoute
   '/_authenticated/user/settings': typeof AuthenticatedUserSettingsRoute
   '/_authenticated/patient/': typeof AuthenticatedPatientIndexRoute
@@ -951,6 +972,7 @@ export interface FileRouteTypes {
     | '/settings/thematic'
     | '/settings/user'
     | '/super-admin/$establishmentId'
+    | '/super-admin/access-log'
     | '/super-admin/users'
     | '/user/settings'
     | '/patient'
@@ -992,6 +1014,7 @@ export interface FileRouteTypes {
     | '/settings/thematic'
     | '/settings/user'
     | '/super-admin/$establishmentId'
+    | '/super-admin/access-log'
     | '/super-admin/users'
     | '/user/settings'
     | '/patient'
@@ -1034,6 +1057,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/thematic'
     | '/_authenticated/settings/user'
     | '/_authenticated/super-admin/$establishmentId'
+    | '/_authenticated/super-admin/access-log'
     | '/_authenticated/super-admin/users'
     | '/_authenticated/user/settings'
     | '/_authenticated/patient/'
@@ -1137,6 +1161,7 @@ export const routeTree = rootRoute
       "parent": "/_authenticated",
       "children": [
         "/_authenticated/super-admin/$establishmentId",
+        "/_authenticated/super-admin/access-log",
         "/_authenticated/super-admin/users",
         "/_authenticated/super-admin/"
       ]
@@ -1185,6 +1210,10 @@ export const routeTree = rootRoute
     },
     "/_authenticated/super-admin/$establishmentId": {
       "filePath": "_authenticated/super-admin/$establishmentId.tsx",
+      "parent": "/_authenticated/super-admin"
+    },
+    "/_authenticated/super-admin/access-log": {
+      "filePath": "_authenticated/super-admin/access-log.tsx",
       "parent": "/_authenticated/super-admin"
     },
     "/_authenticated/super-admin/users": {
