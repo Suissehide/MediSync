@@ -63,9 +63,31 @@ const locationReadRouter: FastifyPluginAsync = (fastify) => {
   return Promise.resolve()
 }
 
-// Administration, sous le préfixe d'établissement : /e/:establishmentId/location.
+// Administration, sous le préfixe d'établissement : /e/:establishmentId/admin/location.
 const locationAdminRouter: FastifyPluginAsync = (fastify) => {
   const { locationDomain, logger } = fastify.iocContainer
+
+  // Get all, pour l'ecran Salles de l'administration d'etablissement, qui vit
+  // sans service en contexte. Meme patron que la liste des soignants
+  // (`soignantAdminRouter`) : aucune permission de lecture des lieux n'existe
+  // au niveau etablissement, on garde donc `locations:manage`, comme les
+  // routes d'ecriture voisines. Meme `locationDomain.findAll()` que la
+  // lecture de service : le repository filtre par etablissement, jamais par
+  // service, les deux routes renvoient donc le meme ensemble.
+  fastify.get(
+    '/',
+    {
+      schema: {
+        response: {
+          200: locationsResponseSchema,
+        },
+      },
+      config: { permission: 'locations:manage' },
+    },
+    () => {
+      return locationDomain.findAll()
+    },
+  )
 
   // Create
   fastify.post<{ Body: CreateLocationBody }>(
