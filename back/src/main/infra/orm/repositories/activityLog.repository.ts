@@ -6,6 +6,7 @@ import type {
   ActivityLogFindManyParams,
   ActivityLogFindManyResult,
   ActivityLogRepositoryInterface,
+  ActivityLogScopeFilters,
   PlatformAccessLogFilters,
 } from '../../../types/infra/orm/repositories/activityLog.repository.interface'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
@@ -78,18 +79,25 @@ class ActivityLogRepository implements ActivityLogRepositoryInterface {
     }
   }
 
-  // Le service courant, plus les entrees ecrites hors service. Les operations
-  // de gestion des membres se font dans le contexte d'administration, qui n'a
-  // pas de service : leurs lignes portent `serviceId = null` et seraient
-  // invisibles — et jamais purgees — si le filtre se limitait au service
-  // courant. On ne va pas jusqu'a ouvrir tout l'etablissement : l'activite des
-  // autres services n'a pas a apparaitre dans un ecran monte sous un prefixe
-  // de service.
-  private get serviceFilter() {
+  // Perimetre de lecture et de purge, en plus de `establishmentScope()`.
+  //
+  // Sous le contexte d'ETABLISSEMENT (administration, `serviceId` nul) — le seul ou les routes
+  // du journal sont montees depuis la navigation par echelle (2026-09-28) : tout
+  // l'etablissement, tous services confondus, lignes sans service comprises. C'est le perimetre
+  // que `docs/multi-tenant/habilitations.md` donne a `activity-log:read` (« journal d'activite de
+  // l'etablissement »), prerogative de l'administrateur. `filters.serviceId` le resserre a un
+  // service ; `establishmentScope()` garantit qu'un service d'un autre etablissement ne rend rien.
+  //
+  // Sous un contexte de SERVICE : le service courant plus les lignes sans service, comme
+  // avant le demenagement. Aucune route ne l'emprunte plus ; la branche reste pour que le depot
+  // ne s'ouvre jamais a tout l'etablissement depuis un prefixe de service si une route y
+  // revenait. `filters` y est ignore.
+  private scopeFilter(filters: ActivityLogScopeFilters = {}) {
     const { serviceId } = this.tenantContext.current()
-    return serviceId === null
-      ? { serviceId: null }
-      : { OR: [{ serviceId }, { serviceId: null }] }
+    if (serviceId !== null) {
+      return { OR: [{ serviceId }, { serviceId: null }] }
+    }
+    return filters.serviceId ? { serviceId: filters.serviceId } : {}
   }
 
   async findMany({
@@ -97,10 +105,11 @@ class ActivityLogRepository implements ActivityLogRepositoryInterface {
     action,
     userID,
     from,
+    serviceId,
   }: ActivityLogFindManyParams): Promise<ActivityLogFindManyResult> {
     const where = {
       ...this.tenantContext.establishmentScope(),
-      ...this.serviceFilter,
+      ...this.scopeFilter({ serviceId }),
       ...(action ? { action } : {}),
       ...(userID ? { userID } : {}),
       ...(from ? { createdAt: { gte: from } } : {}),
@@ -173,13 +182,13 @@ class ActivityLogRepository implements ActivityLogRepositoryInterface {
   // Sous runAsSystem (purge planifiee) : toute la table. Sous un tenant : le
   // meme perimetre que la lecture, pour que tout ce qui s'affiche soit
   // purgeable et que rien d'autre ne le soit.
-  async deleteOlderThan(date: Date): Promise<number> {
+  async deleteOlderThan(date: Date, filters: ActivityLogScopeFilters = {}): Promise<number> {
     const store = this.tenantContext.peek()
     const where =
       store?.kind === 'tenant'
         ? {
             establishmentId: store.tenant.establishmentId,
-            ...this.serviceFilter,
+            ...this.scopeFilter(filters),
             createdAt: { lt: date },
           }
         : { createdAt: { lt: date } }

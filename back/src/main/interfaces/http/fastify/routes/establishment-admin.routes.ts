@@ -1,6 +1,7 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 
 import { assertRoutePermission } from '../plugins/tenant.plugin'
+import { activityLogRouter } from './activityLog'
 import { grantsRouter } from './grants'
 import { locationAdminRouter } from './location'
 import { membersRouter } from './members'
@@ -26,6 +27,7 @@ const establishmentAdminRoutes: FastifyPluginAsyncZod = async (fastify) => {
   await fastify.register(grantsRouter, { prefix: '/grants' })
   await fastify.register(servicesRouter, { prefix: '/services' })
   await fastify.register(patientAccessLogAdminRouter, { prefix: '/patients/:patientID/acces' })
+  await fastify.register(activityLogRouter, { prefix: '/activity-log' })
 }
 
 export { establishmentAdminRoutes }

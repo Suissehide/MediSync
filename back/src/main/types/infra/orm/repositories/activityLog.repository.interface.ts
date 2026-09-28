@@ -23,6 +23,13 @@ export type ActivityLogFindManyParams = {
   action?: string
   userID?: string
   from?: Date
+  // Navigation par echelle (2026-09-28) : filtre facultatif sur un service, honore seulement
+  // sous le contexte d'etablissement (voir `ActivityLogRepository.scopeFilter`).
+  serviceId?: string
+}
+
+export type ActivityLogScopeFilters = {
+  serviceId?: string
 }
 
 export type ActivityLogFindManyResult = {
@@ -65,5 +72,5 @@ export interface ActivityLogRepositoryInterface {
     params: ActivityLogFindManyParams,
   ) => Promise<ActivityLogFindManyResult>
   findAllPlatformWide: (filters: PlatformAccessLogFilters) => Promise<ActivityLogEntityRepo[]>
-  deleteOlderThan: (date: Date) => Promise<number>
+  deleteOlderThan: (date: Date, filters?: ActivityLogScopeFilters) => Promise<number>
 }

@@ -2,6 +2,7 @@ import type {
   ActivityLogEntityRepo,
   ActivityLogFindManyParams,
   ActivityLogFindManyResult,
+  ActivityLogScopeFilters,
   PlatformAccessLogFilters,
 } from '../infra/orm/repositories/activityLog.repository.interface'
 
@@ -13,5 +14,5 @@ export interface ActivityLogDomainInterface {
   // findByPatientInEstablishment` — le cloisonnement (ou son absence délibérée, à l'échelle
   // plateforme) se joue entièrement dans `ActivityLogRepository.findAllPlatformWide`.
   findAllPlatformWide: (filters: PlatformAccessLogFilters) => Promise<ActivityLogEntity[]>
-  cleanup: () => Promise<{ deleted: number }>
+  cleanup: (filters?: ActivityLogScopeFilters) => Promise<{ deleted: number }>
 }

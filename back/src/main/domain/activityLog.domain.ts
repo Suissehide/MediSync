@@ -6,6 +6,7 @@ import type {
   ActivityLogFindManyParams,
   ActivityLogFindManyResult,
   ActivityLogRepositoryInterface,
+  ActivityLogScopeFilters,
   PlatformAccessLogFilters,
 } from '../types/infra/orm/repositories/activityLog.repository.interface'
 
@@ -30,10 +31,10 @@ class ActivityLogDomain implements ActivityLogDomainInterface {
   // dur. Calcul duplique a l'identique dans `PatientAccessLogDomain.cleanup` plutot que
   // factorise -- un sabotage qui remet douze en dur dans UN SEUL des deux domaines doit faire
   // rougir le test de CE domaine seul, jamais les deux ensemble.
-  async cleanup(): Promise<{ deleted: number }> {
+  async cleanup(filters: ActivityLogScopeFilters = {}): Promise<{ deleted: number }> {
     const cutoff = new Date()
     cutoff.setMonth(cutoff.getMonth() - this.config.logRetentionMonths)
-    const deleted = await this.activityLogRepository.deleteOlderThan(cutoff)
+    const deleted = await this.activityLogRepository.deleteOlderThan(cutoff, filters)
     return { deleted }
   }
 }

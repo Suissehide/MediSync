@@ -139,7 +139,7 @@ describe('routes membres', () => {
       for (let attempt = 0; attempt < 30; attempt += 1) {
         const res = await testApp.app.inject({
           method: 'GET',
-          url: `/e/${establishmentId}/s/${serviceId}/activity-log`,
+          url: `/e/${establishmentId}/admin/activity-log`,
           cookies,
         })
         expect(res.statusCode).toBe(200)
@@ -661,7 +661,7 @@ describe('routes membres', () => {
     for (let essai = 0; essai < 40; essai += 1) {
       const res = await testApp.app.inject({
         method: 'GET',
-        url: `/e/${establishmentId}/s/${serviceId}/activity-log`,
+        url: `/e/${establishmentId}/admin/activity-log`,
         cookies,
       })
       expect(res.statusCode).toBe(200)
