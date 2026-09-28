@@ -76,6 +76,15 @@ const EXCEPTIONS: { fichier: string; raison: string; occurrences: number }[] = [
       "task-11-brief.md), jamais un tenant implicite -- ces ecrans vivent hors de tout layout de tenant",
     occurrences: 2,
   },
+  {
+    fichier: 'api/activityLog.api.ts',
+    raison:
+      "navigation par echelle (2026-09-28) : `serviceId` est un FILTRE optionnel du journal " +
+      "d'activite de l'administration d'etablissement (lecture et purge), une DONNEE de la requete " +
+      "comme l'`establishmentId` de superAdminAccessLog.api.ts -- le tenant, lui, reste implicite " +
+      "(`establishmentApiUrl()` sans argument)",
+    occurrences: 4,
+  },
 ]
 
 // Vitest s'execute depuis `front/`, et l'environnement jsdom ne donne pas d'`import.meta.url` de

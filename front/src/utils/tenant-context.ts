@@ -22,7 +22,7 @@ const establishmentOf = (user: User | null, establishmentId?: string) =>
   establishmentId ? establishmentsOf(user).find((e) => e.id === establishmentId) : undefined
 
 // Un couple accessible : un service de l'arbre des appartenances, avec son
-// établissement. Dérivation commune au sélecteur de service (`TenantSelector`)
+// établissement. Dérivation commune au sélecteur d'échelle (`ScaleSelector`)
 // et à la page de choix (`/choose-context`) — les mêmes gardes que le reste
 // de ce module (`establishmentsOf`/`servicesOf`) la protègent contre un
 // `user` de forme inattendue.
@@ -185,4 +185,26 @@ export const defaultTenantContext = (user: User | null): TenantContext | null =>
     }
   }
   return null
+}
+
+// Navigation par echelle (2026-09-28) : toutes les destinations d'un compte, dans l'ordre ou le
+// selecteur d'echelle et `/choose-context` les presentent — pour chaque etablissement, ses
+// services puis son administration si le compte l'administre ; la plateforme en dernier, pour
+// un super-admin. Une seule derivation pour les deux ecrans : c'est ce qui les empeche de
+// diverger (le selecteur ne connaissait jusqu'ici que les couples de service).
+export type Destination =
+  | { kind: 'service'; establishment: User['establishments'][number]; service: AccessibleCouple['service'] }
+  | { kind: 'admin'; establishment: User['establishments'][number] }
+  | { kind: 'platform' }
+
+export const accessibleDestinations = (user: User | null): Destination[] => {
+  const administered = new Set(administeredEstablishments(user).map((e) => e.id))
+  const destinations: Destination[] = establishmentsOf(user).flatMap((establishment) => [
+    ...servicesOf(establishment).map((service) => ({ kind: 'service' as const, establishment, service })),
+    ...(administered.has(establishment.id) ? [{ kind: 'admin' as const, establishment }] : []),
+  ])
+  if (user?.isSuperAdmin === true) {
+    destinations.push({ kind: 'platform' })
+  }
+  return destinations
 }

@@ -47,4 +47,8 @@ describe('beforeLoad de la page de choix de contexte', () => {
       expect.objectContaining({ isRedirect: true, to: '/pending' }),
     )
   })
+
+  it('ne redirige pas vers /pending un super-admin sans aucune appartenance', () => {
+    expect(() => runBeforeLoad({ ...sansAcces, isSuperAdmin: true })).not.toThrow()
+  })
 })

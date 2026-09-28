@@ -44,7 +44,7 @@ export const PatientAccessLogButton = ({
         params={{ establishmentId, serviceId, patientID }}
       >
         <History className="w-4 h-4" />
-        Journal des accès
+        Consultations du dossier
       </Link>
     </Button>
   )

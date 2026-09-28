@@ -1,4 +1,5 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createColumnHelper } from '@tanstack/react-table'
 import dayjs from 'dayjs'
 import { RotateCcw, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -15,22 +16,29 @@ import {
 } from '@/constants/activityLog.constant.ts'
 import { can } from '@/hooks/useCan.ts'
 import { useActivityLogsQuery } from '@/queries/useActivityLog.ts'
+import { useServicesQuery } from '@/queries/useServices.ts'
 import type { ActivityLog } from '@/types/activityLog.ts'
-import { resolveTenantContext } from '@/utils/tenant-context.ts'
+import { resolveEstablishmentContext } from '@/utils/tenant-context.ts'
 
-export const Route = createFileRoute(
-  '/_authenticated/e/$establishmentId/s/$serviceId/_settings/activity-log',
-)({
+// Navigation par echelle (2026-09-28) : le journal d'activite est une prerogative de
+// l'administrateur d'etablissement (`activity-log:read`) et couvre tout l'etablissement
+// (`ActivityLogRepository.scopeFilter`, cote back), filtrable par service. Il vivait sous un
+// service, ou il ne montrait que ce service et restait hors d'atteinte d'un administrateur sans
+// affectation de service.
+export const Route = createFileRoute('/_authenticated/e/$establishmentId/admin/activity-log')({
+  // Meme garde explicite que `members.tsx`.
   beforeLoad: ({ context, params }) => {
-    const tenant = resolveTenantContext(context.authState.user, params)
+    const tenant = resolveEstablishmentContext(context.authState.user, params)
     if (!can(tenant, 'activity-log:read')) {
-      throw redirect({ to: '/e/$establishmentId/s/$serviceId/dashboard', params })
+      throw redirect({ to: '/' })
     }
   },
   component: ActivityLogPage,
 })
 
-const DEFAULT_FILTERS = { action: '', periodDays: '', userSearch: '' }
+const DEFAULT_FILTERS = { action: '', periodDays: '', userSearch: '', serviceId: '' }
+
+const columnHelper = createColumnHelper<ActivityLog>()
 
 function ActivityLogPage() {
   const [filters, setFilters] = useState(DEFAULT_FILTERS)
@@ -44,7 +52,29 @@ function ActivityLogPage() {
   const { data, isPending } = useActivityLogsQuery({
     action: filters.action || undefined,
     from,
+    serviceId: filters.serviceId || undefined,
   })
+
+  // Services de l'etablissement, actifs ou non : une ligne ancienne peut venir d'un service
+  // desactive depuis, et doit encore se lire par son nom.
+  const { services } = useServicesQuery()
+  const serviceOptions = useMemo(
+    () =>
+      [...(services ?? [])]
+        .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+        .map((s) => ({ value: s.id, label: s.name })),
+    [services],
+  )
+
+  const columns = useMemo(() => {
+    const nomDuService = new Map((services ?? []).map((s) => [s.id, s.name]))
+    const colonneService = columnHelper.accessor(
+      (row) => (row.serviceId ? (nomDuService.get(row.serviceId) ?? '—') : 'Établissement'),
+      { id: 'service', header: 'Service', size: 160 },
+    )
+    // Apres l'utilisateur : la date, l'heure, l'utilisateur, puis d'ou vient la ligne.
+    return [...activityLogColumns.slice(0, 3), colonneService, ...activityLogColumns.slice(3)]
+  }, [services])
 
   const logs = useMemo(() => {
     const all = data?.data ?? []
@@ -73,7 +103,7 @@ function ActivityLogPage() {
 
         <ReactTable<ActivityLog>
           data={logs}
-          columns={activityLogColumns}
+          columns={columns}
           pagination
           filterId="activity-log"
           isLoading={isPending}
@@ -91,6 +121,15 @@ function ActivityLogPage() {
                 iconLeft={<Search className="h-4 w-4" />}
                 className="w-56"
               />
+              <div className="w-52">
+                <Select
+                  value={filters.serviceId}
+                  onValueChange={(v) => set('serviceId')(v ?? '')}
+                  options={serviceOptions}
+                  placeholder="Tous les services"
+                  clearable
+                />
+              </div>
               <div className="w-60">
                 <Select
                   value={filters.action}

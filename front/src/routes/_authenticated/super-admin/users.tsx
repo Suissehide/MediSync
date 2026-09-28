@@ -1,7 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 
 import { AccountSearchPanel } from '@/components/custom/superAdmin/accountSearchPanel.tsx'
-import { SuperAdminNav } from '@/components/custom/superAdmin/superAdminNav.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
 
 // Task-12-brief.md, step 3 : « la recherche d'un compte, qui répond à
@@ -20,7 +19,6 @@ function SuperAdminUsers() {
         <h1 className="h-9 flex items-center text-text-dark text-xl font-semibold">
           Rechercher un compte
         </h1>
-        <SuperAdminNav />
         <AccountSearchPanel />
       </div>
     </DashboardLayout>

@@ -12,13 +12,13 @@ import type { TenantContext } from '@/types/auth.ts'
 
 import { PatientAccessLogButton } from './patientAccessLogButton.tsx'
 
-// Étape 4b, tâche 11 (brief, « un petit reste de la tâche 10 ») : le bouton « Journal des accès »
+// Étape 4b, tâche 11 (brief, « un petit reste de la tâche 10 ») : le bouton « Consultations du dossier » (anciennement « Journal des accès »)
 // de la fiche patient n'avait AUCUN test — ni sa visibilité conditionnelle (`consultations:read`,
 // réservée au rôle COORDINATEUR — `utils/permissions.ts`), ni les paramètres de son lien. Ce
 // fichier ferme les deux, sur le VRAI composant (`patientAccessLogButton.tsx`, extrait de
 // `patient/$patientID/index.tsx` pour cette raison précise).
 //
-// Routeur minimal, sans arbre de routes réel (même convention que `tenantSelector.test.tsx`) :
+// Routeur minimal, sans arbre de routes réel (même convention que `scaleSelector.test.tsx`) :
 // `Link` interpole son `href` à partir de `to`/`params` (`router.buildLocation`, string
 // resolution), sans exiger que la destination soit un nœud enregistré de CE routeur de test.
 const contextCoordinateur: TenantContext = {
@@ -57,7 +57,7 @@ describe('PatientAccessLogButton', () => {
 
     const { container } = monter()
 
-    expect(screen.queryByRole('link', { name: /journal des accès/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /consultations du dossier/i })).not.toBeInTheDocument()
     expect(container).toBeEmptyDOMElement()
   })
 
@@ -66,7 +66,7 @@ describe('PatientAccessLogButton', () => {
 
     monter()
 
-    const lien = screen.getByRole('link', { name: /journal des accès/i })
+    const lien = screen.getByRole('link', { name: /consultations du dossier/i })
     expect(lien).toHaveAttribute('href', '/e/e1/s/s1/patient/p1/acces')
   })
 
@@ -84,7 +84,7 @@ describe('PatientAccessLogButton', () => {
     })
     render(<RouterProvider router={router} />)
 
-    const lien = screen.getByRole('link', { name: /journal des accès/i })
+    const lien = screen.getByRole('link', { name: /consultations du dossier/i })
     expect(lien).toHaveAttribute('href', '/e/e9/s/s9/patient/p9/acces')
   })
 
@@ -93,6 +93,6 @@ describe('PatientAccessLogButton', () => {
 
     monter()
 
-    expect(screen.queryByRole('link', { name: /journal des accès/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /consultations du dossier/i })).not.toBeInTheDocument()
   })
 })

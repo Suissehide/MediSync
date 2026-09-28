@@ -156,6 +156,7 @@ export const GRANT_ESTABLISHMENT = {
 
 export const LOCATION = {
   GET_ALL: 'get_all_locations',
+  GET_ALL_ESTABLISHMENT: 'get_all_locations_establishment',
   CREATE: 'create_location',
   UPDATE: 'update_location',
   DELETE: 'delete_location',

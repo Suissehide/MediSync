@@ -3,7 +3,6 @@ import { RotateCcw, Search } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { getSuperAdminAccessLogColumns } from '@/columns/superAdminAccessLog.column.tsx'
-import { SuperAdminNav } from '@/components/custom/superAdmin/superAdminNav.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
 import { ReactTable } from '@/components/table/reactTable.tsx'
 import { Button } from '@/components/ui/button.tsx'
@@ -135,9 +134,8 @@ function SuperAdminAccessLogPage() {
     <DashboardLayout>
       <div className="flex-1 bg-background p-6 rounded-lg flex flex-col w-full gap-4">
         <h1 className="h-9 flex items-center text-text-dark text-xl font-semibold">
-          Journal des accès
+          Journaux
         </h1>
-        <SuperAdminNav />
 
         <div className="w-64">
           <Label htmlFor="super-admin-access-log-source">Journal</Label>

@@ -3,6 +3,9 @@ export type ActivityLog = {
   userID: string
   userFirstName: string | null
   userLastName: string | null
+  // Rendu par le journal de l'administration d'établissement seulement (nul pour une opération
+  // sans service) ; absent du détail d'établissement du super-admin.
+  serviceId?: string | null
   action: string
   entityType: string
   entityID: string

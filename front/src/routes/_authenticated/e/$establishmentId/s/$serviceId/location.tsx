@@ -1,90 +1,18 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import { useMemo, useState } from 'react'
 
-import { getLocationColumns } from '@/columns/location.column.tsx'
-import AddLocationForm from '@/components/custom/popup/addLocationForm.tsx'
-import { ConfirmDeleteForm } from '@/components/custom/popup/confirmDeleteForm.tsx'
-import DashboardLayout from '@/components/dashboard.layout.tsx'
-import ReactTable from '@/components/table/reactTable.tsx'
-import { can, useCan } from '@/hooks/useCan.ts'
-import {
-  useLocationMutations,
-  useLocationQueries,
-} from '@/queries/useLocation.ts'
-import type { Location } from '@/types/location.ts'
-import { resolveTenantContext } from '@/utils/tenant-context.ts'
-
+// Ecran demenage a l'echelle de l'etablissement (navigation par echelle, 2026-09-28) : cette
+// adresse, gardee pour les favoris, mene a son equivalent d'administration du MEME
+// etablissement, parametres de recherche compris (TanStack Router ne les reporte pas de
+// lui-meme ; `search: true` les reprend tels quels). Le layout d'administration refusera un
+// compte qui n'administre pas cet etablissement, comme il le fait deja pour Membres.
 export const Route = createFileRoute(
-  '/_authenticated/e/$establishmentId/s/$serviceId/_settings/location',
+  '/_authenticated/e/$establishmentId/s/$serviceId/location',
 )({
-  beforeLoad: ({ context, params }) => {
-    const tenant = resolveTenantContext(context.authState.user, params)
-    if (!can(tenant, 'locations:manage')) {
-      throw redirect({ to: '/e/$establishmentId/s/$serviceId/dashboard', params })
-    }
+  beforeLoad: ({ params }) => {
+    throw redirect({
+      to: '/e/$establishmentId/admin/locations',
+      params: { establishmentId: params.establishmentId },
+      search: true,
+    })
   },
-  component: LocationSettings,
 })
-
-function LocationSettings() {
-  // Le menu ne montre cette page qu'aux détenteurs de `locations:manage`,
-  // mais l'URL se tape à la main : les actions d'écriture se gardent aussi
-  // ici, indépendamment du menu.
-  const canManage = useCan('locations:manage')
-  const { locations, isPending } = useLocationQueries()
-  const { deleteLocation } = useLocationMutations()
-  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
-
-  const sortedLocations = useMemo(
-    () =>
-      [...(locations ?? [])].sort((a, b) => a.name.localeCompare(b.name, 'fr')),
-    [locations],
-  )
-
-  const columns = useMemo(
-    () =>
-      getLocationColumns({
-        onDelete: (id) => setDeleteTargetId(id),
-        canManage,
-      }),
-    [canManage],
-  )
-
-  return (
-    <DashboardLayout>
-      <div className="flex-1 bg-background p-6 rounded-lg flex flex-col w-full gap-4">
-        <div className="flex justify-between items-center gap-3">
-          <h1 className="h-9 flex items-center text-text-dark text-xl font-semibold">
-            Salles
-          </h1>
-          {canManage && <AddLocationForm />}
-        </div>
-
-        <ReactTable<Location>
-          data={sortedLocations}
-          columns={columns}
-          filterId="location"
-          isLoading={isPending}
-        />
-
-        <ConfirmDeleteForm
-          open={!!deleteTargetId}
-          setOpen={(open) => {
-            if (!open) {
-              setDeleteTargetId(null)
-            }
-          }}
-          onConfirm={() => {
-            if (deleteTargetId) {
-              deleteLocation.mutate(deleteTargetId)
-            }
-            setDeleteTargetId(null)
-          }}
-          loading={deleteLocation.isPending}
-          title="Supprimer la salle"
-          description="Voulez-vous vraiment supprimer cette salle ? Cette action est irréversible."
-        />
-      </div>
-    </DashboardLayout>
-  )
-}

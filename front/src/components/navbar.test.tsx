@@ -2,99 +2,28 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { AnyRoute } from '@tanstack/react-router'
 import {
   createMemoryHistory,
-  createRootRoute,
   createRootRouteWithContext,
   createRoute,
   createRouter,
   Outlet,
   RouterProvider,
 } from '@tanstack/react-router'
-import { render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { Route as adminRoute } from '@/routes/_authenticated/e/$establishmentId/admin.tsx'
 import { Route as serviceRoute } from '@/routes/_authenticated/e/$establishmentId/s/$serviceId.tsx'
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { AuthState, TenantContext, User } from '@/types/auth.ts'
 
-import Navbar, { SettingsMenu, type SettingsMenuProps } from './navbar.tsx'
+import Navbar from './navbar.tsx'
 
 // `main.tsx` enregistre ce greffon au demarrage de l'application ; le panneau
 // des taches appelle `dayjs.utc()` des son montage. Le harnais de test ne
 // passe pas par `main.tsx` et doit donc le reproduire.
 dayjs.extend(utc)
-
-// Aucune permission de service accordee par defaut : chaque test ne leve que
-// celles dont il a besoin, pour ne jamais dependre d'un defaut permissif.
-const AUCUNE_PERMISSION: Omit<SettingsMenuProps, 'establishmentId' | 'serviceId'> = {
-  canPlanning: false,
-  canManageSoignants: false,
-  canManageReferentials: false,
-  canManageLocations: false,
-  canManageMembers: false,
-  canReadActivityLog: false,
-}
-
-// Meme harnais minimal que `tenantSelector.test.tsx` : `SettingsMenu` n'a
-// besoin que d'un `useRouter()` fonctionnel (pour `router.navigate` au clic,
-// jamais declenche par ces tests, qui ne verifient que le rendu).
-const renderSettingsMenu = (props: SettingsMenuProps) => {
-  const rootRoute = createRootRoute({ component: () => <SettingsMenu {...props} /> })
-  const router = createRouter({
-    routeTree: rootRoute,
-    history: createMemoryHistory({ initialEntries: ['/'] }),
-  })
-  return render(<RouterProvider router={router} />)
-}
-
-describe('SettingsMenu', () => {
-  // Verrou du constat reporte par la tache 12 : un administrateur sans
-  // affectation de service (contexte `serviceId: null`, voir `admin.tsx`)
-  // garde acces a l'ecran des membres — sa garde de route l'y autorise
-  // explicitement (`members:manage`, permission d'etablissement, pas de
-  // service) — et doit donc voir le lien correspondant dans ce menu.
-  it('affiche le lien Membres pour un administrateur sans service en contexte', async () => {
-    renderSettingsMenu({
-      establishmentId: 'e1',
-      serviceId: null,
-      ...AUCUNE_PERMISSION,
-      canManageMembers: true,
-    })
-
-    await userEvent.click(screen.getByRole('button'))
-
-    expect(await screen.findByText('Membres')).toBeInTheDocument()
-    // Aucun ecran de service n'a de destination valable sans service en
-    // contexte : aucun ne doit apparaitre, meme si sa permission (de niveau
-    // etablissement pour certains d'entre eux) etait accordee.
-    expect(screen.queryByText('Planning')).not.toBeInTheDocument()
-    expect(screen.queryByText('Activité')).not.toBeInTheDocument()
-  })
-
-  // Cas nominal : avec un service en contexte et toutes les permissions
-  // accordees, Membres reste visible aux cotes des ecrans de service — le
-  // verrou ci-dessus ne doit pas masquer Membres quand un service est present.
-  it('affiche Membres aux cotes des ecrans de service quand un service est en contexte', async () => {
-    renderSettingsMenu({
-      establishmentId: 'e1',
-      serviceId: 's1',
-      canPlanning: true,
-      canManageSoignants: true,
-      canManageReferentials: true,
-      canManageLocations: true,
-      canManageMembers: true,
-      canReadActivityLog: true,
-    })
-
-    await userEvent.click(screen.getByRole('button'))
-
-    expect(await screen.findByText('Membres')).toBeInTheDocument()
-    expect(screen.getByText('Planning')).toBeInTheDocument()
-    expect(screen.getByText('Activité')).toBeInTheDocument()
-  })
-})
 
 // ---------------------------------------------------------------------------
 // INVARIANT MULTI-TENANT — ce que ce bloc verrouille.
@@ -182,16 +111,41 @@ const ecranHorsTenant = createRoute({
   component: () => <Navbar toggleSidebar={replierLaBarre} />,
 })
 
+// Le vrai layout d'administration, pour les onglets de l'echelle etablissement.
+const layoutAdmin = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'e/$establishmentId/admin',
+  beforeLoad: optionsDe(adminRoute).beforeLoad,
+  remountDeps: optionsDe(adminRoute).remountDeps,
+  component: () => <Outlet />,
+})
+
+const ecranAdmin = createRoute({
+  getParentRoute: () => layoutAdmin,
+  path: 'members',
+  component: () => <Navbar toggleSidebar={replierLaBarre} />,
+})
+
+// La plateforme : son layout reel exige le drapeau ; seul le chemin compte pour la barre.
+const ecranPlateforme = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'super-admin/users',
+  component: () => <Navbar toggleSidebar={replierLaBarre} />,
+})
+
 const arbre = rootRoute.addChildren([
   layoutDeService.addChildren([ecranDeService]),
+  layoutAdmin.addChildren([ecranAdmin]),
+  ecranPlateforme,
   ecranHorsTenant,
 ])
 
-const monterNavbar = (depart: string) => {
+const monterNavbar = (depart: string, user: User = utilisateur) => {
+  useAuthStore.setState({ user })
   const router = createRouter({
     routeTree: arbre,
     history: createMemoryHistory({ initialEntries: [depart] }),
-    context: { authState: { isAuthenticated: true, user: utilisateur } },
+    context: { authState: { isAuthenticated: true, user } },
   })
   return render(
     <QueryClientProvider client={new QueryClient()}>
@@ -245,5 +199,121 @@ describe('panneau des taches de la barre de navigation', () => {
     await waitFor(() => {
       expect(panneauDesTaches()).toBeInTheDocument()
     })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Navigation par echelle (2026-09-28) : la barre n'affiche que les onglets de l'echelle de la
+// ROUTE, filtres par le role. Ces cas remplacent ceux de l'ancien `SettingsMenu`.
+// ---------------------------------------------------------------------------
+
+const avecRoles = (
+  establishmentRole: 'ADMIN' | 'MEMBER',
+  serviceRole: 'COORDINATEUR' | 'INTERVENANT' | null,
+  isSuperAdmin = false,
+): User => ({
+  ...utilisateur,
+  isSuperAdmin,
+  establishments: [
+    {
+      ...utilisateur.establishments[0],
+      role: establishmentRole,
+      services: serviceRole ? [{ id: 's1', name: 'Cardio', role: serviceRole }] : [],
+    },
+  ],
+})
+
+const onglets = () =>
+  within(screen.getByRole('navigation', { name: 'Navigation' }))
+    .getAllByRole('link')
+    .map((lien) => lien.textContent)
+
+describe('onglets de la barre de navigation', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    useAuthStore.setState({ isAuthenticated: true, context: null })
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('[]', { status: 200 })),
+    )
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    useAuthStore.setState({ isAuthenticated: false, user: null, context: null })
+  })
+
+  // Le defaut n° 3 de l'inventaire, ferme : un administrateur sans aucune affectation de service
+  // atteint enfin Soignants, Salles et le journal.
+  it('montre les six onglets d etablissement a un administrateur sans service, et aucun onglet de service', async () => {
+    monterNavbar('/e/e1/admin/members', avecRoles('ADMIN', null))
+
+    await waitFor(() => {
+      expect(onglets()).toEqual([
+        'Membres',
+        'Services',
+        'Accès temporaires',
+        'Soignants',
+        'Salles',
+        "Journal d'activité",
+      ])
+    })
+    expect(screen.queryByText('Dashboard')).not.toBeInTheDocument()
+  })
+
+  it('montre au coordinateur le quotidien et l organisation, rien de l etablissement', async () => {
+    monterNavbar('/e/e1/s/s1/dashboard', avecRoles('MEMBER', 'COORDINATEUR'))
+
+    await waitFor(() => {
+      expect(onglets()).toEqual([
+        'Dashboard',
+        'Agenda',
+        'Patients',
+        'Suivi',
+        'Planning',
+        'Thématiques',
+        'Diagnostics',
+      ])
+    })
+  })
+
+  it('ne montre a l intervenant que les quatre onglets du quotidien', async () => {
+    monterNavbar('/e/e1/s/s1/dashboard', avecRoles('MEMBER', 'INTERVENANT'))
+
+    await waitFor(() => {
+      expect(onglets()).toEqual(['Dashboard', 'Agenda', 'Patients', 'Suivi'])
+    })
+  })
+
+  // Un administrateur coordinateur, sous son service : les onglets d'etablissement restent dans
+  // l'administration, jamais melanges a ceux du service.
+  it('ne melange jamais deux echelles', async () => {
+    monterNavbar('/e/e1/s/s1/dashboard', avecRoles('ADMIN', 'COORDINATEUR'))
+
+    await waitFor(() => {
+      expect(onglets()).toContain('Planning')
+    })
+    expect(onglets()).not.toContain('Soignants')
+    expect(onglets()).not.toContain('Membres')
+  })
+
+  it('montre les trois onglets de la plateforme a un super-admin', async () => {
+    monterNavbar('/super-admin/users', avecRoles('MEMBER', null, true))
+
+    await waitFor(() => {
+      expect(onglets()).toEqual(['Établissements', 'Comptes', 'Journaux'])
+    })
+  })
+
+  // L'invariant, cote onglets : sur un ecran hors tenant, le store porte encore le dernier
+  // service visite, et la barre ne doit pas s'en servir pour afficher des onglets.
+  it('n affiche aucun onglet hors des trois echelles, meme avec un service dans le store', async () => {
+    useAuthStore.setState({ context: dernierContexteVisite })
+    monterNavbar('/user/settings')
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('MediSync')
+    })
+    expect(screen.queryByRole('navigation', { name: 'Navigation' })).not.toBeInTheDocument()
   })
 })

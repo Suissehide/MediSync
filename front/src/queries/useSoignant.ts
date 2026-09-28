@@ -80,6 +80,17 @@ export const useEstablishmentSoignantsQuery = () => {
 
 // * MUTATIONS
 
+// Les deux listes — celle des ecrans de service et celle de l'administration
+// d'etablissement — decrivent le meme ensemble (le depot filtre par etablissement,
+// jamais par service) : une ecriture les rend perimees toutes les deux. Depuis la
+// navigation par echelle, les ecritures partent de l'ecran d'administration, qui ne lit
+// que la seconde.
+const invalidateSoignantLists = (queryClient: ReturnType<typeof useQueryClient>) =>
+  Promise.all([
+    queryClient.invalidateQueries({ queryKey: [SOIGNANT.GET_ALL] }),
+    queryClient.invalidateQueries({ queryKey: [SOIGNANT.GET_ALL_ESTABLISHMENT] }),
+  ])
+
 export const useSoignantMutations = () => {
   const queryClient = useQueryClient()
   const { toast } = useToast()
@@ -114,7 +125,7 @@ export const useSoignantMutations = () => {
       })
     },
     onSettled: async () => {
-      await queryClient.invalidateQueries({ queryKey: [SOIGNANT.GET_ALL] })
+      await invalidateSoignantLists(queryClient)
     },
   })
 
@@ -149,7 +160,7 @@ export const useSoignantMutations = () => {
       })
     },
     onSettled: async () => {
-      await queryClient.invalidateQueries({ queryKey: [SOIGNANT.GET_ALL] })
+      await invalidateSoignantLists(queryClient)
     },
   })
 
@@ -184,7 +195,7 @@ export const useSoignantMutations = () => {
       })
     },
     onSettled: async () => {
-      await queryClient.invalidateQueries({ queryKey: [SOIGNANT.GET_ALL] })
+      await invalidateSoignantLists(queryClient)
     },
   })
 

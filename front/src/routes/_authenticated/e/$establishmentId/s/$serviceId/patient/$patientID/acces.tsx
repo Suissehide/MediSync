@@ -51,7 +51,7 @@ function PatientAccessLogPage() {
       <div className="flex-1 bg-background p-6 rounded-lg flex flex-col w-full gap-4">
         <div className="flex items-center justify-between">
           <h1 className="h-9 flex items-center text-text-dark text-xl font-semibold">
-            Journal des accès
+            Consultations du dossier
           </h1>
         </div>
 

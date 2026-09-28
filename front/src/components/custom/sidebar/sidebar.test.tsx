@@ -14,15 +14,11 @@ import type { AuthState, User } from '@/types/auth.ts'
 import Sidebar from './sidebar.tsx'
 
 // ---------------------------------------------------------------------------
-// Étape 4a, tâche 12, step 4 : « un compte sans le drapeau ne voit AUCUNE
-// entrée de navigation vers ces écrans ». Le back rend 404 (jamais 403) à qui
-// n'a pas `isSuperAdmin` — un menu grisé ou un message « réservé aux
-// super-administrateurs » défait ce parti pris (task-12-brief.md). Ce bloc
-// verrouille donc les DEUX sens : l'entrée « Super-administration » n'existe
-// tout simplement pas dans le DOM pour un compte ordinaire, et elle est bien
-// présente pour un compte qui porte le drapeau.
+// Navigation par echelle (2026-09-28) : l'entree vers la plateforme a quitte le menu du compte
+// pour le selecteur d'echelle (`scaleSelector.tsx`), ou `scaleSelector.test.tsx` verrouille les
+// deux sens (absente sans le drapeau `isSuperAdmin`, presente avec). Le menu du compte ne porte
+// plus que Reglages et Deconnexion, pour tous les comptes.
 // ---------------------------------------------------------------------------
-
 const compteOrdinaire: User = {
   id: 'u1',
   email: 'a@b.fr',
@@ -57,25 +53,17 @@ const monterSidebar = (user: User) => {
   )
 }
 
-describe('entree de navigation Super-administration', () => {
-  // Tour de correction 1, Mineur : le bouton porte desormais un
-  // `aria-label` explicite (`sidebar.tsx`) — cibler par nom accessible vide
-  // cassait pour une raison sans rapport des qu'un second bouton sans nom
-  // apparaissait ailleurs dans l'arbre.
-  it("n'apparait pas dans le menu du compte pour un compte sans le drapeau isSuperAdmin", async () => {
-    monterSidebar(compteOrdinaire)
+describe('menu du compte', () => {
+  it.each([
+    ['un compte ordinaire', compteOrdinaire],
+    ['un super-admin', superAdmin],
+  ])("ne porte plus d'entree Super-administration pour %s", async (_, user) => {
+    monterSidebar(user)
 
     await userEvent.click(screen.getByRole('button', { name: 'Menu du compte' }))
 
     expect(screen.getByText('Réglages')).toBeInTheDocument()
+    expect(screen.getByText('Déconnecter')).toBeInTheDocument()
     expect(screen.queryByText('Super-administration')).not.toBeInTheDocument()
-  })
-
-  it('apparait dans le menu du compte pour un compte avec le drapeau isSuperAdmin', async () => {
-    monterSidebar(superAdmin)
-
-    await userEvent.click(screen.getByRole('button', { name: 'Menu du compte' }))
-
-    expect(await screen.findByText('Super-administration')).toBeInTheDocument()
   })
 })

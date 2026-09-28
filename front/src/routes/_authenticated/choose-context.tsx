@@ -1,9 +1,10 @@
 import { createFileRoute, redirect, useRouter } from '@tanstack/react-router'
-import { Building2 } from 'lucide-react'
+import { Building2, Globe } from 'lucide-react'
 
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import {
   accessibleCouples,
+  accessibleDestinations,
   administeredEstablishments,
   type AccessibleCouple,
 } from '@/utils/tenant-context.ts'
@@ -14,7 +15,9 @@ export const Route = createFileRoute('/_authenticated/choose-context')({
   // d'affectation.
   beforeLoad: ({ context }) => {
     const { user } = context.authState
-    if (accessibleCouples(user).length === 0 && administeredEstablishments(user).length === 0) {
+    // Meme derivation que le selecteur d'echelle : un super-admin sans aucune appartenance a
+    // encore une destination, la plateforme.
+    if (accessibleDestinations(user).length === 0) {
       throw redirect({ to: '/pending' })
     }
   },
@@ -72,7 +75,7 @@ function ChooseContext() {
                     // Une fiche patient precise n'a pas d'equivalent dans un
                     // autre service tant que l'etape 3 n'a pas cree les
                     // sous-dossiers : on ramene donc toujours a l'index du
-                    // service, comme dans `TenantSelector`. Un bouton, pas un
+                    // service, comme dans le selecteur d'echelle. Un bouton, pas un
                     // `Link` : le survol ne doit pas laisser croire a un
                     // prechargement de destination sur cet ecran de choix.
                     router.navigate({
@@ -112,6 +115,22 @@ function ChooseContext() {
                 </button>
               ))}
             </div>
+          </div>
+        )}
+
+        {user?.isSuperAdmin === true && (
+          <div className="flex flex-col gap-2">
+            <h2 className="text-sm font-semibold text-text-light uppercase tracking-wide">
+              Plateforme
+            </h2>
+            <button
+              type="button"
+              className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 text-left text-text-dark transition-colors hover:bg-primary/10"
+              onClick={() => router.navigate({ to: '/super-admin' })}
+            >
+              <Globe className="w-4 h-4 shrink-0 opacity-70" />
+              <span>Super-administration</span>
+            </button>
           </div>
         )}
       </div>

@@ -2,7 +2,6 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 
 import { superAdminEstablishmentColumns } from '@/columns/superAdminEstablishment.column.tsx'
 import CreateEstablishmentForm from '@/components/custom/popup/createEstablishmentForm.tsx'
-import { SuperAdminNav } from '@/components/custom/superAdmin/superAdminNav.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
 import ReactTable from '@/components/table/reactTable.tsx'
 import { useSuperAdminEstablishmentsQuery } from '@/queries/useSuperAdmin.ts'
@@ -29,7 +28,6 @@ function SuperAdminEstablishmentsList() {
           </h1>
           <CreateEstablishmentForm />
         </div>
-        <SuperAdminNav />
 
         {/* Tour de correction 1, Important n°4 : une erreur de chargement
         rendait un tableau vide, indiscernable d'un « aucun établissement »

@@ -14,6 +14,7 @@ import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { AuthState, User } from '@/types/auth.ts'
 import type { EstablishmentListItem } from '@/types/superAdmin.ts'
 import type { SuperAdminAccessLogEntry } from '@/types/superAdminAccessLog.ts'
@@ -99,6 +100,9 @@ const routeTree = rootRoute.addChildren([
 ])
 
 const monter = (user: User) => {
+  // Navigation par echelle (2026-09-28) : les onglets de la plateforme viennent de la barre du
+  // haut (`navbar.tsx`), qui lit le compte dans le store, et non plus d'un bandeau dans la page.
+  useAuthStore.setState({ user })
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   const router = createRouter({
     routeTree,
@@ -196,8 +200,8 @@ describe("discretion de l'ecran plateforme du journal des acces", () => {
     // "Not Found" par défaut — le même que pour une URL réellement inconnue.
     expect(await screen.findByText('Not Found')).toBeInTheDocument()
 
-    expect(screen.queryByRole('heading', { name: 'Journal des accès' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Journal des accès' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Journaux' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Journaux' })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Comptes' })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Établissements' })).not.toBeInTheDocument()
   })
@@ -211,9 +215,9 @@ describe("discretion de l'ecran plateforme du journal des acces", () => {
     monter(superAdmin)
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Journal des accès' })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Journaux' })).toBeInTheDocument()
     })
-    expect(screen.getByRole('link', { name: 'Journal des accès' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Journaux' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Comptes' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Établissements' })).toBeInTheDocument()
     expect(screen.queryByText('Not Found')).not.toBeInTheDocument()
@@ -243,7 +247,7 @@ describe("etats de l'ecran plateforme du journal des acces", () => {
     monter(superAdmin)
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Journal des accès' })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Journaux' })).toBeInTheDocument()
     })
     // `ReactTable` rend des lignes squelettes (`animate-pulse`) tant que `isLoading` est vrai —
     // jamais l'état d'erreur, jamais l'état vide.

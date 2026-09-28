@@ -1,8 +1,7 @@
-import { createFileRoute, redirect, useParams } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 import dayjs from 'dayjs'
 import { useMemo } from 'react'
 
-import { EstablishmentAdminNav } from '@/components/custom/establishmentAdmin/establishmentAdminNav.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
 import { can } from '@/hooks/useCan.ts'
 import { queryState } from '@/libs/queryState.ts'
@@ -44,9 +43,6 @@ const statutPasse = (grant: EstablishmentGrant, maintenant: Date): string => {
 }
 
 function GrantsAdmin() {
-  const { establishmentId } = useParams({
-    from: '/_authenticated/e/$establishmentId/admin/grants',
-  })
   const { grants, isPending, error } = useEstablishmentGrantsQuery()
 
   const etat = queryState({ isPending, error, hasData: grants !== undefined })
@@ -69,7 +65,6 @@ function GrantsAdmin() {
   return (
     <DashboardLayout>
       <div className="flex-1 bg-background p-6 rounded-lg flex flex-col w-full gap-6 overflow-auto">
-        <EstablishmentAdminNav establishmentId={establishmentId} />
 
         <h1 className="text-xl font-semibold text-text-dark">
           Accès temporaires

@@ -1,5 +1,5 @@
 import { useRouter } from '@tanstack/react-router'
-import { ChevronDown, LogOut, Settings, ShieldCheck, Zap } from 'lucide-react'
+import { ChevronDown, LogOut, Settings, Zap } from 'lucide-react'
 import { Fragment, type JSX } from 'react'
 
 import { useLogout } from '../../../queries/useAuth.ts'
@@ -117,23 +117,6 @@ function Sidebar({ isVisible, components, quickActions }: SidebarProps) {
                 >
                   Réglages
                 </PopoverMenuItem>
-                {/* Seule entrée de navigation vers les écrans du
-                super-admin (étape 4a, tâche 12) : gardée par le drapeau
-                `isSuperAdmin`, jamais par une permission de la matrice
-                établissement/service (celle-ci n'en a pas). Le back rend
-                404 (jamais 403) à qui n'a pas ce drapeau — cette entrée
-                doit donc être ABSENTE, pas grisée ni annoncée par un
-                message « réservé aux super-administrateurs », qui
-                défairait ce parti pris en révélant que la zone existe.
-                Verrouillé par `sidebar.test.tsx`. */}
-                {authState?.user?.isSuperAdmin === true && (
-                  <PopoverMenuItem
-                    icon={<ShieldCheck className="w-4 h-4" />}
-                    onClick={() => router.navigate({ to: '/super-admin' })}
-                  >
-                    Super-administration
-                  </PopoverMenuItem>
-                )}
                 <PopoverSeparator />
                 <PopoverMenuItem
                   icon={<LogOut className="w-4 h-4" />}

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import type { User } from '@/types/auth.ts'
 import {
   accessibleCouples,
+  accessibleDestinations,
   administeredEstablishments,
   defaultTenantContext,
   isTenantRouteStale,
@@ -209,5 +210,46 @@ describe('administeredEstablishments', () => {
   it('rend un tableau vide sans utilisateur ou sans etablissement administre', () => {
     expect(administeredEstablishments(null)).toEqual([])
     expect(administeredEstablishments({ ...user, establishments: [user.establishments[1]] })).toEqual([])
+  })
+})
+
+describe('accessibleDestinations', () => {
+  const cles = (u: User | null) =>
+    accessibleDestinations(u).map((d) =>
+      d.kind === 'service'
+        ? `service:${d.establishment.id}/${d.service.id}`
+        : d.kind === 'admin'
+          ? `admin:${d.establishment.id}`
+          : 'plateforme',
+    )
+
+  it('range les services de chaque etablissement puis son administration, dans l ordre de l arbre', () => {
+    expect(cles(user)).toEqual(['service:e1/s1', 'service:e1/s2', 'admin:e1', 'service:e2/s3'])
+  })
+
+  it('ne propose qu une destination a un administrateur sans service', () => {
+    const adminSansService: User = {
+      ...user,
+      establishments: [{ ...user.establishments[0], services: [] }],
+    }
+    expect(cles(adminSansService)).toEqual(['admin:e1'])
+  })
+
+  it('compte deux destinations pour un administrateur coordinateur d un seul service', () => {
+    const adminUnService: User = {
+      ...user,
+      establishments: [{ ...user.establishments[0], services: [user.establishments[0].services[0]] }],
+    }
+    expect(cles(adminUnService)).toEqual(['service:e1/s1', 'admin:e1'])
+  })
+
+  it('ajoute la plateforme en dernier pour un super-admin, et seulement pour lui', () => {
+    expect(cles({ ...user, isSuperAdmin: true }).at(-1)).toBe('plateforme')
+    expect(cles(user)).not.toContain('plateforme')
+    expect(cles({ ...user, isSuperAdmin: true, establishments: [] })).toEqual(['plateforme'])
+  })
+
+  it('rend un tableau vide sans utilisateur', () => {
+    expect(cles(null)).toEqual([])
   })
 })
