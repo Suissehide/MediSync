@@ -28,17 +28,20 @@ import { accessibleDestinations, type Destination } from '@/utils/tenant-context
 // la reinitialisation des stores sont armes a l'arrivee sur la route (`useTenantSwitch.ts`,
 // layouts de service et d'etablissement).
 
-type Groupe = { titre: string | null; destinations: Destination[] }
+// `id` : l'etablissement (ou `null` pour la plateforme). Deux etablissements peuvent porter le
+// meme nom ; le regroupement et la cle React se font donc sur l'identifiant, jamais sur le titre.
+type Groupe = { id: string | null; titre: string | null; destinations: Destination[] }
 
 const grouper = (destinations: Destination[]): Groupe[] => {
   const groupes: Groupe[] = []
   for (const destination of destinations) {
+    const id = destination.kind === 'platform' ? null : destination.establishment.id
     const titre = destination.kind === 'platform' ? null : destination.establishment.name
     const dernier = groupes.at(-1)
-    if (dernier && dernier.titre === titre) {
+    if (dernier && dernier.id === id) {
       dernier.destinations.push(destination)
     } else {
-      groupes.push({ titre, destinations: [destination] })
+      groupes.push({ id, titre, destinations: [destination] })
     }
   }
   return groupes
@@ -106,7 +109,11 @@ export const ScaleSelector = () => {
   const courant = useCurrentScale()
 
   const destinations = accessibleDestinations(user)
-  if (destinations.length <= 1) {
+  // A partir de deux destinations, il y a un choix. Avec une seule, le selecteur reste utile hors
+  // des trois echelles (`/user/settings`…) : c'est le seul chemin nomme pour revenir, par exemple
+  // pour un super-admin sans aucune appartenance, dont l'entree Plateforme a quitte le menu du
+  // compte.
+  if (destinations.length === 0 || (destinations.length === 1 && courant !== null)) {
     return null
   }
 
@@ -129,7 +136,11 @@ export const ScaleSelector = () => {
   return (
     <PopoverRoot>
       <PopoverTrigger asChild>
-        <Button variant="none" className="gap-2 px-2 max-w-72 truncate" aria-label="Changer d'accès">
+        <Button
+          variant="none"
+          className="gap-2 px-2 max-w-72 truncate"
+          aria-label={`Changer d'accès (actuellement : ${libelle(user, courant)})`}
+        >
           <Building2 className="w-4 h-4 shrink-0" />
           <span className="truncate text-sm">{libelle(user, courant)}</span>
           <ChevronDown className="w-4 h-4 shrink-0" />
@@ -137,7 +148,7 @@ export const ScaleSelector = () => {
       </PopoverTrigger>
       <PopoverContent align="start" sideOffset={2}>
         {grouper(destinations).map((groupe, index) => (
-          <Fragment key={groupe.titre ?? 'plateforme'}>
+          <Fragment key={groupe.id ?? 'plateforme'}>
             {groupe.titre === null ? (
               index > 0 && <PopoverSeparator />
             ) : (

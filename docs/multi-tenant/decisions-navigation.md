@@ -9,7 +9,7 @@
 | | Avant (`main`, eca1ffb) | Après |
 |---|---|---|
 | Back, e2e | 280 | 288 (+ `location-admin`, `activity-log-etablissement`) |
-| Front, vitest | 51 fichiers, 255 tests | 54 fichiers, 286 tests |
+| Front, vitest | 51 fichiers, 255 tests | 54 fichiers, 288 tests |
 | Front, lint | 0 erreur, 34 avertissements | 0 erreur, 34 avertissements |
 | Front, `tsc -b` et `vite build` | verts | verts |
 
@@ -67,6 +67,15 @@ Vingt écrans, rangés par quatre étapes successives sans décision d'ensemble 
   contrat existant de `resolveEstablishmentAdmin`, suivi par les nouveaux tests.
 
 ## Ce qui reste ouvert
+
+- **Le journal d'activité n'affiche que ses 50 lignes les plus récentes** (relecture de branche,
+  point Important). Le front n'envoie jamais `page` ; la pagination et la recherche par
+  utilisateur de l'écran travaillent sur ces 50 lignes. Le défaut existait déjà, mais le journal
+  couvrant désormais tout l'établissement, 50 lignes portent beaucoup moins loin. Correctif :
+  pagination côté serveur (`page`, `total`) et recherche d'utilisateur envoyée au back.
+- Une ancienne adresse de service (`/e/E/s/S/soignant`…) passe d'abord par la garde du layout de
+  service : un administrateur retiré de ce service arrive sur `/choose-context`, pas sur
+  l'administration.
 
 - La largeur de la barre pour un coordinateur (7 onglets, le sélecteur, le panneau des tâches) :
   à vérifier à 1280 px sur un vrai navigateur.

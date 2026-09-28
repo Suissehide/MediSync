@@ -29,6 +29,9 @@ export type NavItem = {
   group: string
   // L'onglet reste actif sur les ecrans d'objet qu'il ouvre (la fiche patient sous Patients).
   matchPrefix?: boolean
+  // Ecrans d'objet ouverts depuis cet onglet quand un prefixe ne convient pas (celui de
+  // `/super-admin` couvrirait aussi Comptes et Journaux).
+  activeAlso?: readonly RoutePath[]
 }
 
 export const SCALE_ROOTS = {
@@ -91,7 +94,12 @@ export const NAVIGATION: Record<Scale, readonly NavItem[]> = {
     },
   ],
   platform: [
-    { label: 'Établissements', to: '/super-admin', group: '' },
+    {
+      label: 'Établissements',
+      to: '/super-admin',
+      group: '',
+      activeAlso: ['/super-admin/$establishmentId'],
+    },
     { label: 'Comptes', to: '/super-admin/users', group: '' },
     { label: 'Journaux', to: '/super-admin/access-log', group: '' },
   ],

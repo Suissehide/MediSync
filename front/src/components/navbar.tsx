@@ -80,11 +80,12 @@ function Navbar({ toggleSidebar }: NavbarProps) {
         {onglets.length > 0 && (
           <nav aria-label="Navigation" className="flex items-center gap-4 pl-2">
             {onglets.map((item, index) => {
-              const actif = !!matchRoute({
-                to: item.to,
-                params: params as never,
-                fuzzy: item.matchPrefix ?? false,
-              })
+              const actif =
+                !!matchRoute({
+                  to: item.to,
+                  params: params as never,
+                  fuzzy: item.matchPrefix ?? false,
+                }) || (item.activeAlso ?? []).some((to) => !!matchRoute({ to, fuzzy: false }))
               const nouveauGroupe = index > 0 && onglets[index - 1].group !== item.group
               return (
                 <Fragment key={item.to}>

@@ -87,21 +87,41 @@ const monter = (depart = '/') => {
   return render(<RouterProvider router={router} />)
 }
 
-const declencheur = () => screen.findByRole('button', { name: "Changer d'accès" })
+const NOM = /^Changer d'accès/
+const declencheur = () => screen.findByRole('button', { name: NOM })
 
 describe('ScaleSelector', () => {
   beforeEach(() => {
     useAuthStore.setState({ context: null })
   })
 
-  it('ne rend rien pour un compte a une seule destination', async () => {
+  it('ne rend rien pour un compte a une seule destination, sur son echelle', async () => {
     useAuthStore.setState({ user: intervenantUnService })
 
-    monter()
+    monter('/e/e1/s/s1/dashboard')
 
     // Laisser le routeur se monter avant de conclure a l'absence.
     await new Promise((r) => setTimeout(r, 0))
-    expect(screen.queryByRole('button', { name: "Changer d'accès" })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: NOM })).not.toBeInTheDocument()
+  })
+
+  // Hors des trois echelles, le selecteur est le seul chemin nomme pour revenir : un super-admin
+  // sans appartenance n'a plus d'entree Plateforme dans le menu du compte.
+  it('reste visible hors des echelles, meme avec une seule destination', async () => {
+    useAuthStore.setState({ user: { ...intervenantUnService, isSuperAdmin: true, establishments: [] } })
+
+    monter('/')
+    await userEvent.click(await declencheur())
+
+    expect(await screen.findByRole('button', { name: 'Plateforme' })).toBeInTheDocument()
+  })
+
+  it('dit ou l on se trouve dans son nom accessible', async () => {
+    useAuthStore.setState({ user: adminCoordinateur })
+
+    monter('/e/e1/s/s1/dashboard')
+
+    expect(await declencheur()).toHaveAccessibleName("Changer d'accès (actuellement : CHU › Cardio)")
   })
 
   it('rend une entree par couple accessible, et le lien vers tous les acces', async () => {
