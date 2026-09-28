@@ -157,8 +157,8 @@ Règles associées :
 | `locations:manage` | ✔ | |
 | `soignants:manage` (profils soignants de l'établissement) | ✔ | |
 | `members:manage` (rattacher un compte, affecter aux services, changer les rôles, désactiver) | ✔ | |
-| `activity-log:read` (journal d'activité de l'établissement) | ✔ | |
-| `activity-log:write` (purge des entrées du journal d'activité) | ✔ | |
+| `activity-log:read` (journal d'activité de l'établissement, **tous services**, filtrable par service — écran « Journal d'activité » de l'administration depuis la navigation par échelle, `decisions-navigation.md`) | ✔ | |
+| `activity-log:write` (purge des entrées du journal d'activité, sur le même périmètre que la lecture) | ✔ | |
 | `access-log:read` (journal des accès aux dossiers patients, **tous services** de l'établissement — depuis l'étape 4b ; **aucun écran ne l'appelle encore**, voir `deploiement-etape-4b.md` §10) | ✔ | |
 | `establishments:manage` (créer un établissement, nommer son premier administrateur, rechercher un compte, réémettre un lien, s'accorder un octroi) | | ✔ |
 

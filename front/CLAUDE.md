@@ -44,17 +44,25 @@ Layout convention: a route segment starting with `_` (`_authenticated.tsx`, `_se
 _authenticated.tsx                          # requires a session; refreshes `authState.user` from /me
 ├── e/$establishmentId/
 │   ├── admin.tsx                           # establishment layout: sets context WITHOUT a service
-│   │   └── admin/members.tsx
+│   │   └── admin/{members,services,grants,soignants,locations,activity-log}.tsx
 │   └── s/$serviceId.tsx                    # service layout: sets context WITH a service
 │       ├── _settings.tsx                   # nested under s/$serviceId, inherits its context
-│       │   └── _settings/{soignant,location,thematic,planning,diagnostic-template,activity-log}.tsx
+│       │   └── _settings/{thematic,planning,diagnostic-template}.tsx
 │       ├── agenda.tsx, dashboard.tsx, index.tsx, suivi.tsx
+│       ├── {soignant,location,activity-log}.tsx   # old addresses: redirect to admin/…, search kept
 │       └── patient/{index,$patientID}.tsx
-├── choose-context.tsx                      # service/establishment picker, no context of its own
+├── choose-context.tsx                      # full-page list of every destination, no context of its own
+├── super-admin.tsx + super-admin/*         # platform scale, `isSuperAdmin` only
 └── (a dozen old top-level paths: /agenda, /settings/*, /patient/*…)  # redirect to the tenant tree, search params preserved
 ```
 
 The old top-level paths (`/agenda`, `/settings/planning`, …) still exist as thin redirect files, for bookmarks and hardcoded links predating multi-tenancy — see `docs/multi-tenant/decisions-etape-2.md` for why they redirect rather than 404, and why they must forward the incoming search string explicitly (TanStack Router does not do it implicitly).
+
+### Navigation is by scale, and described in one table
+
+Every section screen belongs to exactly one **scale** — service (`/e/:e/s/:s/…`), establishment (`/e/:e/admin/…`) or platform (`/super-admin/…`) — and its URL, its guarding permission and its tab agree. `src/navigation/navigation.ts` is the single description: `NAVIGATION` lists each scale's tabs (label, route, permission, group), `HORS_ONGLETS` lists the object screens deliberately reached from elsewhere (patient file, "Consultations du dossier", establishment file) with the reason. The navbar renders only the tabs of the scale of the **current route** (`useCurrentScale`, a route match — never the store, same reason as the task panel below), filtered by the role; a thin separator marks a change of group. `ScaleSelector` (`components/custom/scaleSelector.tsx`) lists every destination of the account — services, establishment administration, platform — from `accessibleDestinations`, the same derivation `/choose-context` uses.
+
+Adding a screen: put its route under the right scale, then add it to `NAVIGATION` (or to `HORS_ONGLETS` with the place it is reached from). `navigation/navigation.test.ts` fails on a section screen that is in neither, and on a tab guarded by a permission of the other scale. Background and the six defects this replaced: `docs/multi-tenant/decisions-navigation.md`.
 
 ### The context is implicit, and it comes from the URL
 
@@ -187,7 +195,7 @@ occurrence count, checked in both directions — **never** renaming to slip unde
 over.** The back exposes three reads of `PatientAccessLog`; the front implements two.
 
 - **Service scale** — `routes/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/acces.tsx`,
-  reached by the **"Journal des accès" button on the patient file**. The button is its own
+  reached by the **"Consultations du dossier" button on the patient file** (labelled "Journal des accès" until the navigation-by-scale change, which gave each journal a distinct name). The button is its own
   component (`components/custom/Patient/patientAccessLogButton.tsx`) rather than inline markup,
   so it can be tested on its own: mounting the whole patient screen would drag in `OverviewPatient`,
   `AddPatientForm` and their queries, none of which bear on what the button must guarantee — its
