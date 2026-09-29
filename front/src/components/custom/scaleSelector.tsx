@@ -1,4 +1,4 @@
-import { Building2, ChevronDown } from 'lucide-react'
+import { Building2, Check, ChevronDown } from 'lucide-react'
 import { Fragment } from 'react'
 
 import {
@@ -6,6 +6,7 @@ import {
   grouperDestinations,
   iconeDestination,
   intituleDestination,
+  LibelleServices,
   TitreEtablissement,
   useOuvrirDestination,
 } from '@/components/custom/destinations.tsx'
@@ -107,7 +108,12 @@ export const ScaleSelector = () => {
           <ChevronDown className="w-4 h-4 shrink-0" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" sideOffset={2}>
+      {/* Meme largeur que le declencheur : le menu se lit comme le deroulant de ce bouton. */}
+      <PopoverContent
+        align="start"
+        sideOffset={4}
+        className="w-(--radix-popover-trigger-width) p-1.5"
+      >
         {grouperDestinations(destinations).map((groupe, index) =>
           groupe.titre === null ? (
             <Fragment key="plateforme">
@@ -126,6 +132,7 @@ export const ScaleSelector = () => {
             // L'etablissement en titre — cliquable vers son administration pour qui l'administre —
             // et ses services DECALES dessous : on lit d'un coup d'oeil qu'ils en relevent.
             <div key={groupe.id} className="flex flex-col">
+              {index > 0 && <PopoverSeparator />}
               <TitreEtablissement
                 titre={groupe.titre}
                 onOuvrir={
@@ -138,22 +145,30 @@ export const ScaleSelector = () => {
                   estCourante(groupe.administration)
                 }
               />
-              <PopoverSubGroup className="mb-1">
-                {groupe.destinations.map((destination) => (
-                  <PopoverMenuItem
-                    key={cleDestination(destination)}
-                    onClick={() => ouvrir(destination)}
-                    className={
-                      estCourante(destination)
-                        ? 'bg-primary/10 font-semibold text-primary'
-                        : undefined
-                    }
-                    ariaCurrent={estCourante(destination)}
-                  >
-                    {intituleDestination(destination)}
-                  </PopoverMenuItem>
-                ))}
-              </PopoverSubGroup>
+              {groupe.destinations.length > 0 && (
+                <PopoverSubGroup className="mb-1">
+                  <LibelleServices />
+                  {groupe.destinations.map((destination) => (
+                    <PopoverMenuItem
+                      key={cleDestination(destination)}
+                      onClick={() => ouvrir(destination)}
+                      className={
+                        estCourante(destination)
+                          ? 'bg-primary/10 font-semibold text-primary'
+                          : undefined
+                      }
+                      ariaCurrent={estCourante(destination)}
+                    >
+                      <span className="truncate">
+                        {intituleDestination(destination)}
+                      </span>
+                      {estCourante(destination) && (
+                        <Check className="ml-auto w-4 h-4 shrink-0" />
+                      )}
+                    </PopoverMenuItem>
+                  ))}
+                </PopoverSubGroup>
+              )}
             </div>
           ),
         )}

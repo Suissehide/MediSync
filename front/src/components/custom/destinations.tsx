@@ -78,8 +78,8 @@ export const intituleDestination = (destination: Destination): string => {
 }
 
 // L'en-tete d'un etablissement, au-dessus de ses services decales. Pour un compte qui
-// l'administre, l'en-tete est lui-meme l'entree de l'administration : un bouton, signale par
-// le bouclier a droite, et mis en avant quand on s'y trouve deja.
+// l'administre, l'en-tete est lui-meme l'entree de l'administration : un bouton (survol comme
+// les autres entrees), mis en avant quand on s'y trouve deja.
 export const TitreEtablissement = ({
   titre,
   onOuvrir,
@@ -114,10 +114,17 @@ export const TitreEtablissement = ({
       }`}
     >
       {contenu}
-      <ShieldCheck className="ml-auto w-4 h-4 shrink-0 opacity-50" />
     </button>
   )
 }
+
+// Petit intitule au-dessus des services decales : dit en toutes lettres que ce sont LES
+// SERVICES de l'etablissement du dessus, ce que le seul decalage laissait deviner.
+export const LibelleServices = () => (
+  <div className="px-2 pt-0.5 pb-0.5 text-[11px] font-medium uppercase tracking-wide text-text-light">
+    Services
+  </div>
+)
 
 // Toujours l'ecran d'entree de l'echelle : une fiche patient precise n'a pas d'equivalent
 // dans un autre service.

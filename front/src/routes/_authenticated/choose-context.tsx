@@ -5,6 +5,7 @@ import {
   grouperDestinations,
   iconeDestination,
   intituleDestination,
+  LibelleServices,
   TitreEtablissement,
   useOuvrirDestination,
 } from '@/components/custom/destinations.tsx'
@@ -93,11 +94,14 @@ function ChooseContext() {
                       : undefined
                   }
                 />
-                <div className="ml-6 mb-1 flex flex-col gap-0.5">
-                  {groupe.destinations.map((destination) =>
-                    entree(destination, false),
-                  )}
-                </div>
+                {groupe.destinations.length > 0 && (
+                  <div className="ml-6 mb-1 flex flex-col gap-0.5">
+                    <LibelleServices />
+                    {groupe.destinations.map((destination) =>
+                      entree(destination, false),
+                    )}
+                  </div>
+                )}
               </div>
             ),
           )}
