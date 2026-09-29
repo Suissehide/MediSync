@@ -1,5 +1,5 @@
 import { Check, UserRound, X } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 
 import { useServiceMemberMutations } from '../../../queries/useServiceMembers.ts'
 import type { ServiceMember } from '../../../types/serviceMember.ts'
@@ -39,12 +39,17 @@ function EditSoignantAccountsForm({ soignant, members }: EditSoignantAccountsFor
     [members, soignant.id],
   )
   const [choisis, setChoisis] = useState<string[]>(actuels)
+  const [enCours, setEnCours] = useState(false)
 
-  useEffect(() => {
-    if (open) {
+  // La selection repart de l'etat enregistre a l'OUVERTURE seulement : un rafraichissement de la
+  // liste des membres pendant que la fenetre est ouverte ne doit pas effacer ce que le
+  // coordinateur est en train de cocher.
+  const changerOuverture = (ouvert: boolean) => {
+    if (ouvert) {
       setChoisis(actuels)
     }
-  }, [open, actuels])
+    setOpen(ouvert)
+  }
 
   const options = useMemo(
     () =>
@@ -54,24 +59,33 @@ function EditSoignantAccountsForm({ soignant, members }: EditSoignantAccountsFor
     [members],
   )
 
-  const enregistrer = () => {
-    for (const affectationId of choisis.filter((id) => !actuels.includes(id))) {
-      setSoignant.mutate({ affectationId, soignantId: soignant.id })
+  // Toutes les ecritures partent ensemble et la fenetre ne se ferme qu'une fois qu'elles ont
+  // abouti ; un echec laisse la fenetre ouverte, avec le message d'erreur de la mutation.
+  const enregistrer = async () => {
+    const ajouts = choisis.filter((id) => !actuels.includes(id))
+    const retraits = actuels.filter((id) => !choisis.includes(id))
+    setEnCours(true)
+    try {
+      await Promise.all([
+        ...ajouts.map((affectationId) => setSoignant.mutateAsync({ affectationId, soignantId: soignant.id })),
+        ...retraits.map((affectationId) => setSoignant.mutateAsync({ affectationId, soignantId: null })),
+      ])
+      setOpen(false)
+    } catch {
+      // Deja signale par le toast d'erreur de `useServiceMemberMutations`.
+    } finally {
+      setEnCours(false)
     }
-    for (const affectationId of actuels.filter((id) => !choisis.includes(id))) {
-      setSoignant.mutate({ affectationId, soignantId: null })
-    }
-    setOpen(false)
   }
 
   return (
-    <Popup modal={true} open={open} onOpenChange={setOpen}>
+    <Popup modal={true} open={open} onOpenChange={changerOuverture}>
       <PopupTrigger asChild>
         <Button
           variant="outline"
           size="icon"
           aria-label={`Comptes rattachés à ${soignant.name}`}
-          onClick={() => setOpen(true)}
+          onClick={() => changerOuverture(true)}
         >
           <UserRound className="w-4 h-4" />
         </Button>
@@ -103,7 +117,7 @@ function EditSoignantAccountsForm({ soignant, members }: EditSoignantAccountsFor
             <X className="w-4 h-4" />
             Annuler
           </Button>
-          <Button variant="default" onClick={enregistrer}>
+          <Button variant="default" onClick={() => void enregistrer()} isLoading={enCours}>
             <Check className="w-4 h-4" />
             Enregistrer
           </Button>

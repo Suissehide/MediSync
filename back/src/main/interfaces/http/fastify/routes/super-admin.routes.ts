@@ -56,8 +56,8 @@ export const requireSuperAdmin: onRequestAsyncHookHandler = (request) => {
 // fait échouer le démarrage si une route posée ici oublie sa permission (`config.permission`),
 // puis `requireSuperAdmin` referme l'accès à qui n'a pas le drapeau. Les tâches 6, 7 et 8
 // enregistrent ici leurs routeurs (établissements, comptes, octrois) ; chacun hérite des deux
-// crochets sans avoir à y penser, exactement comme `membersRouter`/`soignantAdminRouter`/
-// `locationAdminRouter` héritent de ceux d'establishment-admin.routes.ts.
+// crochets sans avoir à y penser, exactement comme `membersRouter` ou `servicesRouter` héritent
+// de ceux d'establishment-admin.routes.ts.
 const superAdminRoutes: FastifyPluginAsyncZod = async (fastify) => {
   fastify.addHook('onRoute', assertRoutePermission)
   fastify.addHook('onRequest', requireSuperAdmin)

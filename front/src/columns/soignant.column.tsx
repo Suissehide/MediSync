@@ -101,7 +101,7 @@ export const getSoignantColumns = ({
             <DeleteSoignantForm
               soignant={soignant}
               trigger={
-                <Button variant="outline" size="icon">
+                <Button variant="outline" size="icon" aria-label={`Supprimer ${soignant.name}`}>
                   <Trash className="w-4 h-4 text-destructive" />
                 </Button>
               }

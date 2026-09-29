@@ -103,7 +103,8 @@ Vingt écrans, rangés par quatre étapes successives sans décision d'ensemble 
 - **Déploiement de la migration `soignants_salles_par_service`** : dans un établissement à
   plusieurs services, chaque coordinateur retrouvera la liste complète des soignants et des salles
   d'avant, à trier. Les comptes gardent leur rattachement dans chacun de leurs services, vers la
-  copie de ce service.
+  copie de ce service. Un compte rattaché à un soignant mais affecté à AUCUN service (un
+  administrateur sans service, typiquement) perd ce rattachement : il n'a nulle part où vivre.
 - L'ancienne adresse de service du journal (`/e/E/s/S/activity-log`) passe d'abord par la garde du
   layout de service : un administrateur retiré de ce service arrive sur `/choose-context`, pas sur
   l'administration.

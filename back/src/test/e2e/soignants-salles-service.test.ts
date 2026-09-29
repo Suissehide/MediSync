@@ -132,7 +132,7 @@ describe('soignants et salles a l echelle du service', () => {
   it('refuse un soignant d un autre service et une affectation d un autre service', async () => {
     const soignantB = await testDb.soignant.create({ data: { name: 'Kine', establishmentId: E, serviceId: B } })
     const membres = (await call(coordA, 'GET', tenantUrl(E, A, '/membres'))).json() as { id: string }[]
-    const affectationA = membres[0].id
+    const affectationA = membres.at(0)?.id ?? ''
     const affectationB = (
       await testDb.serviceMembership.findFirstOrThrow({ where: { serviceId: B } })
     ).id

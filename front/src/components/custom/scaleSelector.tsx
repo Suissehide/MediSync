@@ -183,6 +183,7 @@ export const ScaleSelector = () => {
                     icon={destination.kind === 'admin' ? icone(destination) : undefined}
                     onClick={() => ouvrir(destination)}
                     className={estCourante(destination) ? 'bg-primary/10 font-semibold text-primary' : undefined}
+                    ariaCurrent={estCourante(destination)}
                   >
                     {intitule(destination)}
                   </PopoverMenuItem>

@@ -38,7 +38,6 @@ const user: UserWithMemberships = {
       userId: 'u1',
       establishmentId: 'e1',
       role: 'MEMBER',
-      soignantId: null,
       createdAt: now,
       establishment: { id: 'e1', name: 'E1', createdAt: now, deactivatedAt: null },
       serviceMemberships: [
@@ -48,6 +47,7 @@ const user: UserWithMemberships = {
           serviceId: 's1',
           establishmentId: 'e1',
           role: 'INTERVENANT',
+          soignantId: null,
           createdAt: now,
           service: { id: 's1', establishmentId: 'e1', name: 'S1', createdAt: now, deactivatedAt: null },
         },
@@ -58,7 +58,6 @@ const user: UserWithMemberships = {
       userId: 'u1',
       establishmentId: 'e2',
       role: 'MEMBER',
-      soignantId: null,
       createdAt: now,
       establishment: { id: 'e2', name: 'E2', createdAt: now, deactivatedAt: null },
       serviceMemberships: [
@@ -68,6 +67,7 @@ const user: UserWithMemberships = {
           serviceId: 's2',
           establishmentId: 'e2',
           role: 'COORDINATEUR',
+          soignantId: null,
           createdAt: now,
           service: { id: 's2', establishmentId: 'e2', name: 'S2', createdAt: now, deactivatedAt: null },
         },

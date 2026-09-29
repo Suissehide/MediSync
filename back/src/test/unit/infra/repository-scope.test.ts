@@ -366,7 +366,7 @@ describe('MembershipRepository (gestion des membres)', () => {
 
     await ctx.run(tenant, () =>
       repo.create({
-        userId: 'u9', role: 'MEMBER', soignantId: null,
+        userId: 'u9', role: 'MEMBER',
         services: [{ serviceId: 'sv1', role: 'LECTURE' }],
       }))
 
@@ -416,7 +416,7 @@ describe('MembershipRepository (gestion des membres)', () => {
         await repo.findByUserID('u9')
         await repo.countAdmins()
         await repo.serviceExists('sv1')
-        await repo.create({ userId: 'u9', role: 'MEMBER', soignantId: null, services: [{ serviceId: 'sv1', role: 'LECTURE' }] })
+        await repo.create({ userId: 'u9', role: 'MEMBER', services: [{ serviceId: 'sv1', role: 'LECTURE' }] })
         await repo.update('em1', { role: 'ADMIN', services: [{ serviceId: 'sv1', role: 'LECTURE' }] })
         await repo.delete('em1')
       }),

@@ -105,7 +105,12 @@ function EditSoignantThematicsForm({
     <Popup modal={true} open={open} onOpenChange={setOpen}>
       <PopupTrigger asChild>
         {trigger ?? (
-          <Button variant="outline" size="icon" onClick={() => setOpen(true)}>
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label={`Modifier ${soignant.name} et ses thématiques`}
+            onClick={() => setOpen(true)}
+          >
             <Pencil className="w-4 h-4" />
           </Button>
         )}

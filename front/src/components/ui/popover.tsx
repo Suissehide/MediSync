@@ -47,6 +47,8 @@ type PopoverMenuItemProps = {
   onClick?: () => void
   variant?: 'default' | 'destructive'
   className?: string
+  // Marque l'entree qui designe l'endroit ou l'on se trouve deja (lecteurs d'ecran).
+  ariaCurrent?: boolean
 }
 
 function PopoverMenuItem({
@@ -55,11 +57,13 @@ function PopoverMenuItem({
   onClick,
   variant = 'default',
   className,
+  ariaCurrent,
 }: PopoverMenuItemProps) {
   return (
     <button
       type="button"
       onClick={onClick}
+      aria-current={ariaCurrent ? 'true' : undefined}
       className={cn(
         'flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm outline-none transition-colors',
         variant === 'default' &&
