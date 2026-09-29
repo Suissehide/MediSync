@@ -8,6 +8,7 @@ import ReactTable from '@/components/table/reactTable.tsx'
 import { can } from '@/hooks/useCan.ts'
 import { useServiceMembersQuery } from '@/queries/useServiceMembers.ts'
 import { useSoignantQueries } from '@/queries/useSoignant.ts'
+import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { ServiceMember } from '@/types/serviceMember.ts'
 import { resolveTenantContext } from '@/utils/tenant-context.ts'
 
@@ -32,6 +33,7 @@ export const Route = createFileRoute(
 function ServiceMembers() {
   const { members, isPending } = useServiceMembersQuery()
   const { soignants } = useSoignantQueries()
+  const superAdmin = useAuthStore((state) => state.user?.isSuperAdmin === true)
 
   const sorted = useMemo(
     () =>
@@ -41,8 +43,8 @@ function ServiceMembers() {
     [members],
   )
   const columns = useMemo(
-    () => getServiceMemberColumns(soignants ?? []),
-    [soignants],
+    () => getServiceMemberColumns(soignants ?? [], superAdmin),
+    [soignants, superAdmin],
   )
 
   return (
