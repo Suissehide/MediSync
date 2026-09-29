@@ -1,4 +1,4 @@
-import { establishmentApiUrl, tenantApiUrl } from '../constants/config.constant.ts'
+import { tenantApiUrl } from '../constants/config.constant.ts'
 import { handleHttpError } from '../libs/httpErrorHandler.ts'
 import type {
   CreateSoignantParams,
@@ -25,30 +25,11 @@ export const SoignantApi = {
     return response.json()
   },
 
-  // Même liste, mais par le préfixe d'établissement : à utiliser depuis un
-  // écran sans service en contexte (`tenantApiUrl` y lève), comme l'écran
-  // des membres. Le back renvoie le même ensemble dans les deux cas (le
-  // repository filtre par établissement, jamais par service), seule la
-  // permission exigée diffère (`soignants:manage`, pas `referentials:read`).
-  getAllForEstablishment: async (): Promise<Soignant[]> => {
-    const response = await fetchWithAuth(`${establishmentApiUrl()}/soignant`, {
-      method: 'GET',
-    })
-    if (!response.ok) {
-      handleHttpError(
-        response,
-        {},
-        'Impossible de récupérer la liste des soignants',
-      )
-    }
-    return response.json()
-  },
-
   create: async (
     createSoignantParams: CreateSoignantParams,
   ): Promise<Soignant> => {
     const response = await fetchWithAuth(
-      `${establishmentApiUrl()}/soignant?action=createSoignant`,
+      `${tenantApiUrl()}/soignant?action=createSoignant`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -66,7 +47,7 @@ export const SoignantApi = {
   ): Promise<Soignant> => {
     const { id: soignantID, ...updateSoignantInputs } = updateSoignantParams
     const response = await fetchWithAuth(
-      `${establishmentApiUrl()}/soignant/${soignantID}?action=updateSoignant`,
+      `${tenantApiUrl()}/soignant/${soignantID}?action=updateSoignant`,
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -81,7 +62,7 @@ export const SoignantApi = {
 
   delete: async (soignantID: string): Promise<void> => {
     const response = await fetchWithAuth(
-      `${establishmentApiUrl()}/soignant/${soignantID}?action=deleteSoignant`,
+      `${tenantApiUrl()}/soignant/${soignantID}?action=deleteSoignant`,
       {
         method: 'DELETE',
       },

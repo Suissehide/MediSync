@@ -11,8 +11,11 @@ export type User = {
     id: string
     name: string
     role: EstablishmentRole
-    soignantId: string | null
-    services: { id: string; name: string; role: ServiceRole }[]
+    // Le soignant (métier du service) que le compte incarne DANS CE SERVICE — porté par
+    // l'affectation de service depuis le 2026-09-29, les soignants étant propres à chaque
+    // service. Optionnel, même raison que `origine` ci-dessous : les fixtures qui ne s'en
+    // servent pas n'ont pas à le déclarer, et une absence se lit comme « aucun ».
+    services: { id: string; name: string; role: ServiceRole; soignantId?: string | null }[]
     // `GET /me` (back/src/main/utils/me-mapper.ts) rend TOUJOURS ce champ —
     // une appartenance réelle ou un accès ouvert par un octroi temporaire
     // (spec §3.5). Optionnel ici plutôt que requis (tour de correction 1,

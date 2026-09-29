@@ -11,7 +11,6 @@ import { buildAccessLinkUrl } from '@/libs/accessLink.ts'
 import { toSelectOptions } from '@/libs/utils.ts'
 import { useMemberMutations } from '@/queries/useMembers.ts'
 import { useServicesQuery } from '@/queries/useServices.ts'
-import { useEstablishmentSoignantsQuery } from '@/queries/useSoignant.ts'
 import type { EstablishmentRole, ServiceRole } from '@/types/auth.ts'
 
 import { Button } from '../../ui/button.tsx'
@@ -43,7 +42,6 @@ const SERVICE_ROLE_OPTIONS = [
 function CreateMemberAccountForm() {
   const [open, setOpen] = useState(false)
   const { createMemberAccount } = useMemberMutations()
-  const { soignants } = useEstablishmentSoignantsQuery()
   // Revue finale de l'étape 4a, Important n°2 : les services PROPOSÉS sont
   // la liste COMPLÈTE de l'établissement courant
   // (`GET /e/:establishmentId/admin/services`), jamais celle de
@@ -56,14 +54,6 @@ function CreateMemberAccountForm() {
     isPending: servicesPending,
     error: servicesError,
   } = useServicesQuery()
-
-  const soignantOptions = useMemo(
-    () =>
-      [...(soignants ?? [])]
-        .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
-        .map((s) => ({ value: s.id, label: s.name })),
-    [soignants],
-  )
 
   const serviceOptions = useMemo(
     () => [
@@ -84,7 +74,6 @@ function CreateMemberAccountForm() {
       firstName: '',
       lastName: '',
       role: 'MEMBER',
-      soignantId: '',
       serviceId: NO_SERVICE,
       serviceRole: NO_SERVICE_ROLE,
     },
@@ -103,7 +92,6 @@ function CreateMemberAccountForm() {
         firstName: value.firstName || undefined,
         lastName: value.lastName || undefined,
         role: value.role as EstablishmentRole,
-        soignantId: value.soignantId || null,
         services,
       })
     },
@@ -203,16 +191,6 @@ function CreateMemberAccountForm() {
                       label="Rôle établissement"
                       options={ESTABLISHMENT_ROLE_OPTIONS}
                       clearable={false}
-                    />
-                  )}
-                </form.AppField>
-
-                <form.AppField name="soignantId">
-                  {(field) => (
-                    <field.Select
-                      label="Fonction"
-                      options={soignantOptions}
-                      placeholder="Aucune"
                     />
                   )}
                 </form.AppField>

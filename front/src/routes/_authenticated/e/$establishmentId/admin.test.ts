@@ -17,7 +17,6 @@ const admin: User = {
       id: 'e1',
       name: 'CHU',
       role: 'ADMIN',
-      soignantId: null,
       // Un administrateur sans affectation de service : exactement le cas
       // que ce layout existe pour laisser malgre tout atteindre
       // l'administration.
@@ -37,7 +36,6 @@ const member: User = {
       id: 'e1',
       name: 'CHU',
       role: 'MEMBER',
-      soignantId: 'so1',
       services: [{ id: 's1', name: 'Cardio', role: 'INTERVENANT' }],
     },
   ],

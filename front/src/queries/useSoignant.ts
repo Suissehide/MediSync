@@ -51,45 +51,7 @@ export const useSoignantQueries = () => {
   return { soignants, isPending, error }
 }
 
-// Même donnée que `useSoignantQueries`, mais lue par le préfixe
-// d'établissement : à utiliser depuis un écran sans service en contexte
-// (l'écran des membres, `admin/members.tsx`, et les formulaires qu'il
-// ouvre), où `useSoignantQueries` échouerait (`tenantApiUrl` lève sans
-// service). N'écrit pas dans `useSoignantStore` : ce store sert les filtres
-// des écrans de service, hors du périmètre de cet écran d'administration.
-export const useEstablishmentSoignantsQuery = () => {
-  const {
-    data: soignants,
-    isPending,
-    isError,
-    error,
-  } = useQuery({
-    queryKey: [SOIGNANT.GET_ALL_ESTABLISHMENT],
-    queryFn: SoignantApi.getAllForEstablishment,
-    retry: 0,
-  })
-
-  useDataFetching({
-    isPending,
-    isError,
-    error,
-  })
-
-  return { soignants, isPending, error }
-}
-
 // * MUTATIONS
-
-// Les deux listes — celle des ecrans de service et celle de l'administration
-// d'etablissement — decrivent le meme ensemble (le depot filtre par etablissement,
-// jamais par service) : une ecriture les rend perimees toutes les deux. Depuis la
-// navigation par echelle, les ecritures partent de l'ecran d'administration, qui ne lit
-// que la seconde.
-const invalidateSoignantLists = (queryClient: ReturnType<typeof useQueryClient>) =>
-  Promise.all([
-    queryClient.invalidateQueries({ queryKey: [SOIGNANT.GET_ALL] }),
-    queryClient.invalidateQueries({ queryKey: [SOIGNANT.GET_ALL_ESTABLISHMENT] }),
-  ])
 
 export const useSoignantMutations = () => {
   const queryClient = useQueryClient()
@@ -125,7 +87,7 @@ export const useSoignantMutations = () => {
       })
     },
     onSettled: async () => {
-      await invalidateSoignantLists(queryClient)
+      await queryClient.invalidateQueries({ queryKey: [SOIGNANT.GET_ALL] })
     },
   })
 
@@ -160,7 +122,7 @@ export const useSoignantMutations = () => {
       })
     },
     onSettled: async () => {
-      await invalidateSoignantLists(queryClient)
+      await queryClient.invalidateQueries({ queryKey: [SOIGNANT.GET_ALL] })
     },
   })
 
@@ -195,7 +157,7 @@ export const useSoignantMutations = () => {
       })
     },
     onSettled: async () => {
-      await invalidateSoignantLists(queryClient)
+      await queryClient.invalidateQueries({ queryKey: [SOIGNANT.GET_ALL] })
     },
   })
 

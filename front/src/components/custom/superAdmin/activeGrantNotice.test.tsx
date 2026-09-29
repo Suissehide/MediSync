@@ -24,7 +24,7 @@ const superAdminAvecOctroi: User = {
   firstName: null,
   lastName: null,
   isSuperAdmin: true,
-  establishments: [{ id: 'e1', name: 'CHU', role: 'ADMIN', soignantId: null, services: [], origine: 'octroi' }],
+  establishments: [{ id: 'e1', name: 'CHU', role: 'ADMIN', services: [], origine: 'octroi' }],
 }
 
 const superAdminSansOctroiIci: User = {

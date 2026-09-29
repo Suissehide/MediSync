@@ -1,13 +1,14 @@
 import { Link, useMatchRoute } from '@tanstack/react-router'
-import { PanelLeft } from 'lucide-react'
+import { ChevronDown, PanelLeft } from 'lucide-react'
 import { Fragment } from 'react'
 
 import { can } from '../hooks/useCan.ts'
-import { NAVIGATION, type NavItem, useCurrentScale } from '../navigation/navigation.ts'
+import { MENU_GROUPS, NAVIGATION, type NavItem, useCurrentScale } from '../navigation/navigation.ts'
 import { useAuthStore } from '../store/useAuthStore.ts'
 import { ScaleSelector } from './custom/scaleSelector.tsx'
 import TodoSheet from './custom/todo/todoSheet.tsx'
 import { Button } from './ui/button.tsx'
+import { PopoverClose, PopoverContent, PopoverRoot, PopoverTrigger } from './ui/popover.tsx'
 
 interface NavbarProps {
   toggleSidebar: () => void
@@ -21,6 +22,55 @@ interface NavbarProps {
 const TAB_CLASS = `relative cursor-pointer transition-colors duration-300
   after:content-[''] after:absolute after:left-0 after:top-full after:w-full after:h-[3px] after:bg-primary after:scale-x-0 after:origin-right after:transition-transform after:duration-300
   hover:after:scale-x-100 hover:after:origin-left`
+
+// Un groupe d'ecrans derriere un seul bouton (l'organisation du service) : ses ecrans sont des
+// SOUS-CATEGORIES, decales vers la droite sous le titre du groupe et reunis par un filet, pour
+// qu'on lise d'un coup d'oeil qu'ils relevent de lui.
+function MenuDeGroupe({
+  nom,
+  items,
+  actif,
+  params,
+}: {
+  nom: string
+  items: NavItem[]
+  actif: boolean
+  params: object
+}) {
+  return (
+    <PopoverRoot>
+      <PopoverTrigger asChild>
+        <Button
+          variant="none"
+          className={`h-9 gap-1.5 px-3 rounded-lg border border-solid text-sm ${
+            actif ? 'border-primary text-text' : 'border-transparent text-text-light hover:text-text'
+          } data-[state=open]:border-primary data-[state=open]:bg-white/10 data-[state=open]:text-text`}
+        >
+          {nom}
+          <ChevronDown className="w-4 h-4" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" sideOffset={6} className="w-80 p-2">
+        <p className="px-3 pt-1 pb-2 text-xs font-semibold uppercase tracking-wide text-text-light">{nom}</p>
+        <div className="ml-3 flex flex-col gap-0.5 border-l-2 border-border pl-3">
+          {items.map((item) => (
+            <PopoverClose asChild key={item.to}>
+              <Link
+                to={item.to}
+                params={params as never}
+                className="flex flex-col gap-0.5 rounded-md px-3 py-2 hover:bg-primary/10 focus-visible:bg-primary/10 outline-none"
+                activeProps={{ 'aria-current': 'page', className: 'bg-primary/10' }}
+              >
+                <span className="text-sm font-medium text-text-dark">{item.label}</span>
+                {item.description && <span className="text-xs text-text-light">{item.description}</span>}
+              </Link>
+            </PopoverClose>
+          ))}
+        </div>
+      </PopoverContent>
+    </PopoverRoot>
+  )
+}
 
 function Navbar({ toggleSidebar }: NavbarProps) {
   const matchRoute = useMatchRoute()
@@ -44,6 +94,24 @@ function Navbar({ toggleSidebar }: NavbarProps) {
       : item.permission === undefined || can(context, item.permission)
 
   const onglets = courant ? NAVIGATION[courant.scale].filter(visible) : []
+  // Groupes consecutifs de la table, dans l'ordre : un separateur entre deux groupes, et un menu
+  // deroulant pour un groupe de `MENU_GROUPS`.
+  const groupes: { nom: string; items: NavItem[] }[] = []
+  for (const item of onglets) {
+    const dernier = groupes.at(-1)
+    if (dernier && dernier.nom === item.group) {
+      dernier.items.push(item)
+    } else {
+      groupes.push({ nom: item.group, items: [item] })
+    }
+  }
+
+  const estActif = (item: NavItem) =>
+    !!matchRoute({
+      to: item.to,
+      params: params as never,
+      fuzzy: item.matchPrefix ?? false,
+    }) || (item.activeAlso ?? []).some((to) => !!matchRoute({ to, fuzzy: false }))
 
   // INVARIANT MULTI-TENANT — cette condition porte sur la ROUTE, jamais sur
   // le store. Cette barre est rendue par `DashboardLayout`, donc aussi par
@@ -77,32 +145,28 @@ function Navbar({ toggleSidebar }: NavbarProps) {
           <ScaleSelector />
         </div>
 
-        {onglets.length > 0 && (
+        {groupes.length > 0 && (
           <nav aria-label="Navigation" className="flex items-center gap-4 pl-2">
-            {onglets.map((item, index) => {
-              const actif =
-                !!matchRoute({
-                  to: item.to,
-                  params: params as never,
-                  fuzzy: item.matchPrefix ?? false,
-                }) || (item.activeAlso ?? []).some((to) => !!matchRoute({ to, fuzzy: false }))
-              const nouveauGroupe = index > 0 && onglets[index - 1].group !== item.group
-              return (
-                <Fragment key={item.to}>
-                  {nouveauGroupe && (
-                    <span aria-hidden="true" className="h-5 w-px bg-border-sidebar" />
-                  )}
-                  <Link
-                    to={item.to}
-                    params={params as never}
-                    aria-current={actif ? 'page' : undefined}
-                    className={`${TAB_CLASS} whitespace-nowrap ${actif ? 'text-text after:scale-x-100' : 'text-text-light'}`}
-                  >
-                    {item.label}
-                  </Link>
-                </Fragment>
-              )
-            })}
+            {groupes.map((groupe, index) => (
+              <Fragment key={groupe.nom || `groupe-${index}`}>
+                {index > 0 && <span aria-hidden="true" className="h-5 w-px bg-border-sidebar" />}
+                {MENU_GROUPS.has(groupe.nom) ? (
+                  <MenuDeGroupe nom={groupe.nom} items={groupe.items} actif={groupe.items.some(estActif)} params={params} />
+                ) : (
+                  groupe.items.map((item) => (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      params={params as never}
+                      aria-current={estActif(item) ? 'page' : undefined}
+                      className={`${TAB_CLASS} whitespace-nowrap ${estActif(item) ? 'text-text after:scale-x-100' : 'text-text-light'}`}
+                    >
+                      {item.label}
+                    </Link>
+                  ))
+                )}
+              </Fragment>
+            ))}
           </nav>
         )}
       </div>

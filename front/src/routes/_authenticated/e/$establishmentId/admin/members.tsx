@@ -14,7 +14,6 @@ import {
   useMembersQuery,
 } from '@/queries/useMembers.ts'
 import { useServicesQuery } from '@/queries/useServices.ts'
-import { useEstablishmentSoignantsQuery } from '@/queries/useSoignant.ts'
 import type { Member } from '@/types/member.ts'
 import { resolveEstablishmentContext } from '@/utils/tenant-context.ts'
 
@@ -43,16 +42,12 @@ export const Route = createFileRoute(
 function MemberSettings() {
 
   const { members, isPending, error } = useMembersQuery()
-  // Prefixe d'etablissement, pas de service : ce layout n'en porte aucun
-  // (voir `admin.tsx`), et `useSoignantQueries` (prefixe de service) leverait
-  // ici. Voir le commentaire de `useEstablishmentSoignantsQuery`.
-  const { soignants } = useEstablishmentSoignantsQuery()
   // Même requête que l'onglet des services (`admin/services.tsx`) : sert à
   // résoudre le NOM d'un service pour la colonne « Rôle service »
   // (`member.column.tsx`, tour de correction 1, Important n°2) — sans
-  // état de chargement/erreur dédié ici, même précédent que `soignants`
-  // ci-dessus (une liste absente ou pas encore chargée retombe sur `[]`,
-  // et la colonne affiche alors le rôle sans le nom plutôt que rien).
+  // état de chargement/erreur dédié ici (une liste absente ou pas encore
+  // chargée retombe sur `[]`, et la colonne affiche alors le rôle sans le
+  // nom plutôt que rien).
   const { services } = useServicesQuery()
   const { removeMember, deactivateMember, reactivateMember } =
     useMemberMutations()
@@ -102,12 +97,11 @@ function MemberSettings() {
     () =>
       getMemberColumns({
         services: services ?? [],
-        soignants: soignants ?? [],
         onToggleActive: handleToggleActive,
         onRemove: setRemoveTarget,
         isToggling,
       }),
-    [services, soignants, handleToggleActive, isToggling],
+    [services, handleToggleActive, isToggling],
   )
 
   return (

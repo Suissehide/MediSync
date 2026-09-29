@@ -9,7 +9,7 @@ const columnHelper = createColumnHelper<Location>()
 
 type LocationActions = {
   onDelete: (id: string) => void
-  // L'écran reste consultable par lecture seule ; sans `locations:manage`,
+  // L'écran reste consultable par lecture seule ; sans `referentials:write`,
   // les actions d'écriture ne doivent pas apparaître (le menu n'est pas la
   // seule barrière, une URL se tape à la main).
   canManage: boolean

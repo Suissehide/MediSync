@@ -12,7 +12,6 @@ export type MemberServiceAssignment = {
 export type Member = {
   id: string
   role: EstablishmentRole
-  soignantId: string | null
   user: {
     id: string
     email: string
@@ -26,14 +25,12 @@ export type Member = {
 export type AddMemberInput = {
   email: string
   role: EstablishmentRole
-  soignantId: string | null
   services: MemberServiceAssignment[]
 }
 
 export type UpdateMemberInput = {
   id: string
   role?: EstablishmentRole
-  soignantId?: string | null
   services?: MemberServiceAssignment[]
 }
 
@@ -46,7 +43,6 @@ export type CreateMemberAccountInput = {
   firstName?: string
   lastName?: string
   role: EstablishmentRole
-  soignantId: string | null
   services: MemberServiceAssignment[]
 }
 
@@ -59,7 +55,6 @@ export type CreateMemberAccountResult = {
   member: {
     id: string
     role: EstablishmentRole
-    soignantId: string | null
     serviceMemberships: MemberServiceAssignment[]
   }
   accessLink: { token: string }

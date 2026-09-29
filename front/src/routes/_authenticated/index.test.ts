@@ -15,7 +15,6 @@ const userAvecService: User = {
       id: 'e1',
       name: 'CHU',
       role: 'MEMBER',
-      soignantId: null,
       services: [{ id: 's1', name: 'Cardio', role: 'INTERVENANT' }],
     },
   ],
@@ -31,7 +30,7 @@ const adminSansService: User = {
   lastName: null,
   isSuperAdmin: false,
   establishments: [
-    { id: 'e1', name: 'CHU', role: 'ADMIN', soignantId: null, services: [] },
+    { id: 'e1', name: 'CHU', role: 'ADMIN', services: [] },
   ],
 }
 
@@ -74,7 +73,6 @@ const superAdminAvecService: User = {
       id: 'e1',
       name: 'CHU',
       role: 'MEMBER',
-      soignantId: 'so1',
       services: [{ id: 's1', name: 'Cardio', role: 'INTERVENANT' }],
     },
   ],

@@ -117,6 +117,14 @@ export const ScaleSelector = () => {
     return null
   }
 
+  const estCourante = (destination: Destination) =>
+    (destination.kind === 'service' &&
+      courant?.scale === 'service' &&
+      courant.serviceId === destination.service.id) ||
+    (destination.kind === 'admin' &&
+      courant?.scale === 'establishment' &&
+      courant.establishmentId === destination.establishment.id)
+
   const ouvrir = (destination: Destination) => {
     if (destination.kind === 'service') {
       void router.navigate({
@@ -150,26 +158,39 @@ export const ScaleSelector = () => {
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" sideOffset={2}>
-        {grouper(destinations).map((groupe, index) => (
-          <Fragment key={groupe.id ?? 'plateforme'}>
-            {groupe.titre === null ? (
-              index > 0 && <PopoverSeparator />
-            ) : (
-              <div className="px-2 pt-2 pb-1 text-xs font-semibold uppercase tracking-wide text-text-light">
+        {grouper(destinations).map((groupe, index) =>
+          groupe.titre === null ? (
+            <Fragment key="plateforme">
+              {index > 0 && <PopoverSeparator />}
+              {groupe.destinations.map((destination) => (
+                <PopoverMenuItem key={cle(destination)} icon={icone(destination)} onClick={() => ouvrir(destination)}>
+                  {intitule(destination)}
+                </PopoverMenuItem>
+              ))}
+            </Fragment>
+          ) : (
+            // L'etablissement en titre, ses services et son administration DECALES dessous, reunis
+            // par un filet : on lit d'un coup d'oeil qu'ils en relevent.
+            <div key={groupe.id} className="flex flex-col">
+              <div className="flex items-center gap-2 px-2 pt-2 pb-1 text-sm font-semibold text-text-dark">
+                <Building2 className="w-4 h-4 opacity-70" />
                 {groupe.titre}
               </div>
-            )}
-            {groupe.destinations.map((destination) => (
-              <PopoverMenuItem
-                key={cle(destination)}
-                icon={icone(destination)}
-                onClick={() => ouvrir(destination)}
-              >
-                {intitule(destination)}
-              </PopoverMenuItem>
-            ))}
-          </Fragment>
-        ))}
+              <div className="ml-4 mb-1 flex flex-col border-l-2 border-border pl-2">
+                {groupe.destinations.map((destination) => (
+                  <PopoverMenuItem
+                    key={cle(destination)}
+                    icon={destination.kind === 'admin' ? icone(destination) : undefined}
+                    onClick={() => ouvrir(destination)}
+                    className={estCourante(destination) ? 'bg-primary/10 font-semibold text-primary' : undefined}
+                  >
+                    {intitule(destination)}
+                  </PopoverMenuItem>
+                ))}
+              </div>
+            </div>
+          ),
+        )}
         <PopoverSeparator />
         <PopoverMenuItem onClick={() => void router.navigate({ to: '/choose-context' })}>
           Tous les accès…

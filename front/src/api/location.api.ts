@@ -1,4 +1,4 @@
-import { establishmentApiUrl, tenantApiUrl } from '../constants/config.constant.ts'
+import { tenantApiUrl } from '../constants/config.constant.ts'
 import { handleHttpError } from '../libs/httpErrorHandler.ts'
 import type {
   CreateLocationParams,
@@ -25,29 +25,11 @@ export const LocationApi = {
     return response.json()
   },
 
-  // Même liste, par le préfixe d'administration : l'écran Salles vit à
-  // l'échelle de l'établissement (navigation par échelle, 2026-09-28), sans
-  // service en contexte (`tenantApiUrl` y lève). Le back renvoie le même
-  // ensemble ; seule la permission exigée diffère (`locations:manage`).
-  getAllForEstablishment: async (): Promise<Location[]> => {
-    const response = await fetchWithAuth(`${establishmentApiUrl()}/location`, {
-      method: 'GET',
-    })
-    if (!response.ok) {
-      handleHttpError(
-        response,
-        {},
-        'Impossible de récupérer la liste des salles',
-      )
-    }
-    return response.json()
-  },
-
   create: async (
     createLocationParams: CreateLocationParams,
   ): Promise<Location> => {
     const response = await fetchWithAuth(
-      `${establishmentApiUrl()}/location?action=createLocation`,
+      `${tenantApiUrl()}/location?action=createLocation`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -65,7 +47,7 @@ export const LocationApi = {
   ): Promise<Location> => {
     const { id: locationID, ...updateLocationInputs } = updateLocationParams
     const response = await fetchWithAuth(
-      `${establishmentApiUrl()}/location/${locationID}?action=updateLocation`,
+      `${tenantApiUrl()}/location/${locationID}?action=updateLocation`,
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -80,7 +62,7 @@ export const LocationApi = {
 
   delete: async (locationID: string): Promise<void> => {
     const response = await fetchWithAuth(
-      `${establishmentApiUrl()}/location/${locationID}?action=deleteLocation`,
+      `${tenantApiUrl()}/location/${locationID}?action=deleteLocation`,
       {
         method: 'DELETE',
       },

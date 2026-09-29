@@ -53,7 +53,8 @@ export const resolveTenantContext = (user: User | null, params: Params): TenantC
     serviceId: service.id,
     establishmentRole: establishment.role,
     serviceRole: service.role,
-    soignantId: establishment.soignantId,
+    // Porté par l'affectation de service depuis le 2026-09-29 (soignants propres à chaque service).
+    soignantId: service.soignantId ?? null,
   }
 }
 
@@ -72,7 +73,8 @@ export const resolveEstablishmentContext = (
     serviceId: null,
     establishmentRole: establishment.role,
     serviceRole: null,
-    soignantId: establishment.soignantId,
+    // Aucun service, donc aucun soignant : ils sont propres à chaque service.
+    soignantId: null,
   }
 }
 

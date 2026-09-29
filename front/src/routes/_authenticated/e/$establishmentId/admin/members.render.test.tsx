@@ -55,7 +55,7 @@ const admin: User = {
   lastName: null,
   isSuperAdmin: false,
   establishments: [
-    { id: 'e1', name: 'CHU', role: 'ADMIN', soignantId: null, services: [] },
+    { id: 'e1', name: 'CHU', role: 'ADMIN', services: [] },
   ],
 }
 
@@ -131,7 +131,6 @@ const routeServices = (services: unknown[] = []): Route => ({
 const membreActif = {
   id: 'm1',
   role: 'MEMBER' as const,
-  soignantId: null,
   user: {
     id: 'u2',
     email: 'membre@chu.fr',
@@ -246,7 +245,6 @@ describe('etats de l ecran des membres', () => {
     const membreAffecte = {
       id: 'm2',
       role: 'MEMBER' as const,
-      soignantId: null,
       user: {
         id: 'u3',
         email: 'affecte@chu.fr',

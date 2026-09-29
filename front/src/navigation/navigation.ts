@@ -25,14 +25,21 @@ export type NavItem = {
   // la matrice ne represente.
   permission?: Permission
   // Regroupement par nature du travail : un separateur vertical fin est dessine entre deux
-  // groupes consecutifs.
+  // groupes consecutifs. Un groupe de `MENU_GROUPS` s'affiche en menu deroulant, ses ecrans en
+  // sous-categories decalees.
   group: string
+  // Une ligne sous l'intitule, dans un menu deroulant : a quoi sert l'ecran.
+  description?: string
   // L'onglet reste actif sur les ecrans d'objet qu'il ouvre (la fiche patient sous Patients).
   matchPrefix?: boolean
   // Ecrans d'objet ouverts depuis cet onglet quand un prefixe ne convient pas (celui de
   // `/super-admin` couvrirait aussi Comptes et Journaux).
   activeAlso?: readonly RoutePath[]
 }
+
+// Groupes affiches en menu deroulant plutot qu'en onglets : l'organisation du service tient cinq
+// ecrans, qui en onglets satureraient la barre.
+export const MENU_GROUPS: ReadonlySet<string> = new Set(['Organisation'])
 
 export const SCALE_ROOTS = {
   service: '/e/$establishmentId/s/$serviceId',
@@ -56,18 +63,37 @@ export const NAVIGATION: Record<Scale, readonly NavItem[]> = {
       to: '/e/$establishmentId/s/$serviceId/planning',
       permission: 'planning:write',
       group: 'Organisation',
+      description: 'Semaines types et créneaux des parcours',
     },
     {
       label: 'Thématiques',
       to: '/e/$establishmentId/s/$serviceId/thematic',
       permission: 'referentials:write',
       group: 'Organisation',
+      description: "Ateliers d'éducation et soignants habilités",
     },
     {
-      label: 'Diagnostics',
+      label: 'Diagnostics éducatifs',
       to: '/e/$establishmentId/s/$serviceId/diagnostic-template',
       permission: 'referentials:write',
       group: 'Organisation',
+      description: 'Modèles de bilan du service',
+    },
+    // Propres a chaque service depuis le 2026-09-29 : un soignant est un metier du service, une
+    // salle un lieu du service.
+    {
+      label: 'Soignants',
+      to: '/e/$establishmentId/s/$serviceId/soignant',
+      permission: 'referentials:write',
+      group: 'Organisation',
+      description: 'Métiers qui interviennent dans le service',
+    },
+    {
+      label: 'Salles',
+      to: '/e/$establishmentId/s/$serviceId/location',
+      permission: 'referentials:write',
+      group: 'Organisation',
+      description: 'Lieux où se tiennent les séances',
     },
   ],
   establishment: [
@@ -79,13 +105,6 @@ export const NAVIGATION: Record<Scale, readonly NavItem[]> = {
       permission: 'members:manage',
       group: 'Accès',
     },
-    {
-      label: 'Soignants',
-      to: '/e/$establishmentId/admin/soignants',
-      permission: 'soignants:manage',
-      group: 'Ressources',
-    },
-    { label: 'Salles', to: '/e/$establishmentId/admin/locations', permission: 'locations:manage', group: 'Ressources' },
     {
       label: "Journal d'activité",
       to: '/e/$establishmentId/admin/activity-log',

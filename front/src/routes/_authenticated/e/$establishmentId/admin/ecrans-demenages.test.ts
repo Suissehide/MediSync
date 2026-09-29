@@ -3,13 +3,11 @@ import { describe, expect, it } from 'vitest'
 import type { User } from '@/types/auth.ts'
 
 import { Route as journal } from './activity-log.tsx'
-import { Route as salles } from './locations.tsx'
-import { Route as soignants } from './soignants.tsx'
 
-// Navigation par echelle (2026-09-28) : les trois ecrans rejoints par l'administration
-// d'etablissement se gardent comme Membres (`members.test.ts`) — par leur permission
-// d'etablissement, reservee a l'ADMIN — et s'ouvrent enfin a un administrateur SANS aucune
-// affectation de service, le compte que leur ancien emplacement laissait a la porte.
+// Navigation par echelle (2026-09-28) : le journal d'activite, rejoint par l'administration
+// d'etablissement, se garde comme Membres (`members.test.ts`) — par sa permission
+// d'etablissement, reservee a l'ADMIN — et s'ouvre enfin a un administrateur SANS aucune
+// affectation de service, le compte que son ancien emplacement laissait a la porte.
 
 const adminSansService: User = {
   id: 'u1',
@@ -17,10 +15,10 @@ const adminSansService: User = {
   firstName: null,
   lastName: null,
   isSuperAdmin: false,
-  establishments: [{ id: 'e1', name: 'CHU', role: 'ADMIN', soignantId: null, services: [] }],
+  establishments: [{ id: 'e1', name: 'CHU', role: 'ADMIN', services: [] }],
 }
 
-// Le role metier du service : Soignants et Salles lui restent fermes (decision du 2026-09-28).
+// Le role metier du service : le journal lui reste ferme.
 const coordinateur: User = {
   ...adminSansService,
   id: 'u2',
@@ -29,7 +27,6 @@ const coordinateur: User = {
       id: 'e1',
       name: 'CHU',
       role: 'MEMBER',
-      soignantId: null,
       services: [{ id: 's1', name: 'Cardio', role: 'COORDINATEUR' }],
     },
   ],
@@ -49,8 +46,6 @@ const lancer = (route: AvecBeforeLoad, user: User) => {
 }
 
 describe.each([
-  ['Soignants', soignants],
-  ['Salles', salles],
   ["Journal d'activite", journal],
 ])('garde de l ecran %s', (_, route) => {
   it('laisse passer un administrateur sans aucune affectation de service', () => {

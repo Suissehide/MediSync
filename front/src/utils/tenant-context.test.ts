@@ -23,9 +23,8 @@ const user: User = {
       id: 'e1',
       name: 'CHU',
       role: 'ADMIN',
-      soignantId: 'so1',
       services: [
-        { id: 's1', name: 'Cardio', role: 'COORDINATEUR' },
+        { id: 's1', name: 'Cardio', role: 'COORDINATEUR', soignantId: 'so1' },
         { id: 's2', name: 'Pneumo', role: 'LECTURE' },
       ],
     },
@@ -33,7 +32,6 @@ const user: User = {
       id: 'e2',
       name: 'Clinique',
       role: 'MEMBER',
-      soignantId: null,
       services: [{ id: 's3', name: 'Reeduc', role: 'INTERVENANT' }],
     },
   ],
@@ -46,8 +44,14 @@ describe('resolveTenantContext', () => {
       serviceId: 's2',
       establishmentRole: 'ADMIN',
       serviceRole: 'LECTURE',
-      soignantId: 'so1',
+      soignantId: null,
     })
+  })
+
+  // Le soignant est celui de l'affectation de CE service (2026-09-29), pas un soignant de
+  // l'etablissement : present sur s1, absent sur s2.
+  it('prend le soignant de l affectation du service vise', () => {
+    expect(resolveTenantContext(user, { establishmentId: 'e1', serviceId: 's1' })?.soignantId).toBe('so1')
   })
 
   it('refuse un service qui appartient a un autre etablissement', () => {
@@ -69,7 +73,7 @@ describe('resolveEstablishmentContext', () => {
       serviceId: null,
       establishmentRole: 'ADMIN',
       serviceRole: null,
-      soignantId: 'so1',
+      soignantId: null,
     })
   })
 

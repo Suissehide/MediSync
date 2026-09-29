@@ -36,7 +36,7 @@ const admin: User = {
   lastName: null,
   isSuperAdmin: false,
   establishments: [
-    { id: 'e1', name: 'CHU', role: 'ADMIN', soignantId: null, services: [] },
+    { id: 'e1', name: 'CHU', role: 'ADMIN', services: [] },
   ],
 }
 
@@ -194,7 +194,6 @@ describe('beforeLoad de l ecran des acces temporaires — garde members:manage',
         id: 'e1',
         name: 'CHU',
         role: 'MEMBER',
-        soignantId: 'so1',
         services: [{ id: 's1', name: 'Cardio', role: 'INTERVENANT' }],
       },
     ],

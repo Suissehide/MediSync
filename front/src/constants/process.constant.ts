@@ -26,6 +26,12 @@ export const SUPER_ADMIN = {
   GET_ACCESS_LOG: 'get_super_admin_access_log',
 }
 
+// Membres du service courant et leur rattachement a un soignant (2026-09-29).
+export const SERVICE_MEMBER = {
+  GET_ALL: 'get_all_service_members',
+  SET_SOIGNANT: 'set_service_member_soignant',
+}
+
 export const TODO = {
   GET_ALL: 'get_all_todos',
   GET: 'get_todo',
@@ -36,15 +42,6 @@ export const TODO = {
 
 export const SOIGNANT = {
   GET_ALL: 'get_all_soignants',
-  // Distincte de GET_ALL : celle-ci vise le prefixe d'etablissement
-  // (`establishmentApiUrl`), pas celui de service — necessaire sur les
-  // ecrans sans service en contexte (voir `admin/members.tsx`), qui ne
-  // peuvent pas appeler `tenantApiUrl`. Meme ensemble de soignants cote
-  // back (le repository filtre par etablissement dans les deux cas), mais
-  // une cle de cache distincte pour ne pas confondre les deux permissions
-  // differentes qui les gardent (`referentials:read` contre
-  // `soignants:manage`).
-  GET_ALL_ESTABLISHMENT: 'get_all_soignants_establishment',
   GET: 'get_soignant',
   CREATE: 'create_soignant',
   UPDATE: 'update_soignant',
@@ -156,7 +153,6 @@ export const GRANT_ESTABLISHMENT = {
 
 export const LOCATION = {
   GET_ALL: 'get_all_locations',
-  GET_ALL_ESTABLISHMENT: 'get_all_locations_establishment',
   CREATE: 'create_location',
   UPDATE: 'update_location',
   DELETE: 'delete_location',

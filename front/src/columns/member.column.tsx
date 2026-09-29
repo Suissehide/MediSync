@@ -11,7 +11,6 @@ import {
 import type { EstablishmentRole } from '../types/auth.ts'
 import type { Member } from '../types/member.ts'
 import type { Service } from '../types/service.ts'
-import type { Soignant } from '../types/soignant.ts'
 
 const columnHelper = createColumnHelper<Member>()
 
@@ -45,7 +44,6 @@ type MemberColumnOptions = {
   // membre réellement affecté — un geste comblé mais invisible ailleurs que
   // dans la popup d'édition.
   services: Service[]
-  soignants: Soignant[]
   onToggleActive: (member: Member) => void
   onRemove: (member: Member) => void
   // Un seul jeu de mutations sert toutes les lignes : on ne veut faire
@@ -55,7 +53,6 @@ type MemberColumnOptions = {
 
 export const getMemberColumns = ({
   services,
-  soignants,
   onToggleActive,
   onRemove,
   isToggling,
@@ -128,14 +125,6 @@ export const getMemberColumns = ({
           })}
         </div>
       )
-    },
-  }),
-  columnHelper.display({
-    id: 'soignant',
-    header: 'Fonction',
-    cell: ({ row }) => {
-      const soignant = soignants.find((s) => s.id === row.original.soignantId)
-      return soignant?.name ?? '—'
     },
   }),
   columnHelper.display({

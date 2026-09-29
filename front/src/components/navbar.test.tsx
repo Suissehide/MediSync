@@ -9,6 +9,7 @@ import {
   RouterProvider,
 } from '@tanstack/react-router'
 import { render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -58,7 +59,6 @@ const utilisateur: User = {
       id: 'e1',
       name: 'CHU',
       role: 'ADMIN',
-      soignantId: 'so1',
       services: [{ id: 's1', name: 'Cardio', role: 'COORDINATEUR' }],
     },
   ],
@@ -223,10 +223,15 @@ const avecRoles = (
   ],
 })
 
+// Les onglets directs (liens) et, a part, les menus de groupe (boutons) de la barre.
 const onglets = () =>
   within(screen.getByRole('navigation', { name: 'Navigation' }))
-    .getAllByRole('link')
+    .queryAllByRole('link')
     .map((lien) => lien.textContent)
+const menus = () =>
+  within(screen.getByRole('navigation', { name: 'Navigation' }))
+    .queryAllByRole('button')
+    .map((bouton) => bouton.textContent)
 
 describe('onglets de la barre de navigation', () => {
   beforeEach(() => {
@@ -245,44 +250,44 @@ describe('onglets de la barre de navigation', () => {
 
   // Le defaut n° 3 de l'inventaire, ferme : un administrateur sans aucune affectation de service
   // atteint enfin Soignants, Salles et le journal.
-  it('montre les six onglets d etablissement a un administrateur sans service, et aucun onglet de service', async () => {
+  it('montre les onglets d etablissement a un administrateur sans service, et aucun onglet de service', async () => {
     monterNavbar('/e/e1/admin/members', avecRoles('ADMIN', null))
 
     await waitFor(() => {
-      expect(onglets()).toEqual([
-        'Membres',
-        'Services',
-        'Accès temporaires',
-        'Soignants',
-        'Salles',
-        "Journal d'activité",
-      ])
+      expect(onglets()).toEqual(['Membres', 'Services', 'Accès temporaires', "Journal d'activité"])
     })
+    expect(menus()).toEqual([])
     expect(screen.queryByText('Dashboard')).not.toBeInTheDocument()
   })
 
-  it('montre au coordinateur le quotidien et l organisation, rien de l etablissement', async () => {
+  it('montre au coordinateur le quotidien en onglets et l organisation en menu, rien de l etablissement', async () => {
     monterNavbar('/e/e1/s/s1/dashboard', avecRoles('MEMBER', 'COORDINATEUR'))
 
     await waitFor(() => {
-      expect(onglets()).toEqual([
-        'Dashboard',
-        'Agenda',
-        'Patients',
-        'Suivi',
-        'Planning',
-        'Thématiques',
-        'Diagnostics',
-      ])
+      expect(onglets()).toEqual(['Dashboard', 'Agenda', 'Patients', 'Suivi'])
     })
+    expect(menus()).toEqual(['Organisation'])
+
+    // Le menu ouvert : ses cinq ecrans, en sous-categories, dont Soignants et Salles (propres au
+    // service depuis le 2026-09-29).
+    await userEvent.click(screen.getByRole('button', { name: 'Organisation' }))
+    const sousCategories = await screen.findAllByRole('link', { name: /Planning|Thématiques|Diagnostics|Soignants|Salles/ })
+    expect(sousCategories.map((lien) => lien.querySelector('span')?.textContent)).toEqual([
+      'Planning',
+      'Thématiques',
+      'Diagnostics éducatifs',
+      'Soignants',
+      'Salles',
+    ])
   })
 
-  it('ne montre a l intervenant que les quatre onglets du quotidien', async () => {
+  it('ne montre a l intervenant que les quatre onglets du quotidien, sans menu Organisation', async () => {
     monterNavbar('/e/e1/s/s1/dashboard', avecRoles('MEMBER', 'INTERVENANT'))
 
     await waitFor(() => {
       expect(onglets()).toEqual(['Dashboard', 'Agenda', 'Patients', 'Suivi'])
     })
+    expect(menus()).toEqual([])
   })
 
   // Un administrateur coordinateur, sous son service : les onglets d'etablissement restent dans
@@ -291,10 +296,10 @@ describe('onglets de la barre de navigation', () => {
     monterNavbar('/e/e1/s/s1/dashboard', avecRoles('ADMIN', 'COORDINATEUR'))
 
     await waitFor(() => {
-      expect(onglets()).toContain('Planning')
+      expect(menus()).toEqual(['Organisation'])
     })
-    expect(onglets()).not.toContain('Soignants')
     expect(onglets()).not.toContain('Membres')
+    expect(onglets()).not.toContain("Journal d'activité")
   })
 
   it('montre les trois onglets de la plateforme a un super-admin', async () => {

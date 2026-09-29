@@ -38,38 +38,7 @@ export const useLocationQueries = () => {
   return { locations, isPending, error }
 }
 
-// Même donnée, par le préfixe d'administration : pour l'écran Salles de
-// l'établissement, qui n'a pas de service en contexte.
-export const useEstablishmentLocationsQuery = () => {
-  const {
-    data: locations,
-    isPending,
-    isError,
-    error,
-  } = useQuery({
-    queryKey: [LOCATION.GET_ALL_ESTABLISHMENT],
-    queryFn: LocationApi.getAllForEstablishment,
-    retry: 0,
-  })
-
-  useDataFetching({
-    isPending,
-    isError,
-    error,
-  })
-
-  return { locations, isPending, error }
-}
-
 // * MUTATIONS
-
-// Les deux listes décrivent le même ensemble (le dépôt filtre par
-// établissement) : une écriture les rend périmées toutes les deux.
-const invalidateLocationLists = (queryClient: ReturnType<typeof useQueryClient>) =>
-  Promise.all([
-    queryClient.invalidateQueries({ queryKey: [LOCATION.GET_ALL] }),
-    queryClient.invalidateQueries({ queryKey: [LOCATION.GET_ALL_ESTABLISHMENT] }),
-  ])
 
 export const useLocationMutations = () => {
   const queryClient = useQueryClient()
@@ -108,7 +77,7 @@ export const useLocationMutations = () => {
       })
     },
     onSettled: async () => {
-      await invalidateLocationLists(queryClient)
+      await queryClient.invalidateQueries({ queryKey: [LOCATION.GET_ALL] })
     },
   })
 
@@ -143,7 +112,7 @@ export const useLocationMutations = () => {
       })
     },
     onSettled: async () => {
-      await invalidateLocationLists(queryClient)
+      await queryClient.invalidateQueries({ queryKey: [LOCATION.GET_ALL] })
     },
   })
 
@@ -180,7 +149,7 @@ export const useLocationMutations = () => {
       })
     },
     onSettled: async () => {
-      await invalidateLocationLists(queryClient)
+      await queryClient.invalidateQueries({ queryKey: [LOCATION.GET_ALL] })
     },
   })
 

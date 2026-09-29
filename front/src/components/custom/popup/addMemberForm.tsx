@@ -10,7 +10,6 @@ import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { toSelectOptions } from '../../../libs/utils.ts'
 import { useMemberMutations } from '../../../queries/useMembers.ts'
 import { useServicesQuery } from '../../../queries/useServices.ts'
-import { useEstablishmentSoignantsQuery } from '../../../queries/useSoignant.ts'
 import type { EstablishmentRole, ServiceRole } from '../../../types/auth.ts'
 import { Button } from '../../ui/button.tsx'
 import {
@@ -43,10 +42,8 @@ const SERVICE_ROLE_OPTIONS = [
 function AddMemberForm({ trigger }: AddMemberFormProps) {
   const [open, setOpen] = useState(false)
   const { addMember } = useMemberMutations()
-  // Prefixe d'etablissement : ce formulaire s'ouvre sur un ecran sans
-  // service en contexte (voir `admin/members.tsx`), ou `useSoignantQueries`
-  // (prefixe de service) leverait.
-  const { soignants } = useEstablishmentSoignantsQuery()
+  // Aucun soignant ici : ils sont propres a chaque service depuis le
+  // 2026-09-29, et le coordinateur rattache les membres depuis son service.
   // Revue finale de l'étape 4a, Important n°2 : les services PROPOSÉS sont
   // la liste COMPLÈTE de l'établissement courant
   // (`GET /e/:establishmentId/admin/services`, déjà listée par l'onglet des
@@ -60,14 +57,6 @@ function AddMemberForm({ trigger }: AddMemberFormProps) {
     isPending: servicesPending,
     error: servicesError,
   } = useServicesQuery()
-
-  const soignantOptions = useMemo(
-    () =>
-      [...(soignants ?? [])]
-        .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
-        .map((s) => ({ value: s.id, label: s.name })),
-    [soignants],
-  )
 
   const serviceOptions = useMemo(
     () => [
@@ -86,7 +75,6 @@ function AddMemberForm({ trigger }: AddMemberFormProps) {
     defaultValues: {
       email: '',
       role: 'MEMBER',
-      soignantId: '',
       serviceId: NO_SERVICE,
       serviceRole: NO_SERVICE_ROLE,
     },
@@ -106,7 +94,6 @@ function AddMemberForm({ trigger }: AddMemberFormProps) {
       addMember.mutate({
         email: value.email,
         role: value.role as EstablishmentRole,
-        soignantId: value.soignantId || null,
         services,
       })
       setOpen(false)
@@ -173,16 +160,6 @@ function AddMemberForm({ trigger }: AddMemberFormProps) {
                   label="Rôle établissement"
                   options={ESTABLISHMENT_ROLE_OPTIONS}
                   clearable={false}
-                />
-              )}
-            </form.AppField>
-
-            <form.AppField name="soignantId">
-              {(field) => (
-                <field.Select
-                  label="Fonction"
-                  options={soignantOptions}
-                  placeholder="Aucune"
                 />
               )}
             </form.AppField>

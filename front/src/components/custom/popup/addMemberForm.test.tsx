@@ -29,7 +29,6 @@ const adminMembreDUnSeulService: User = {
       id: 'e1',
       name: 'CHU',
       role: 'ADMIN',
-      soignantId: null,
       services: [{ id: 'svcA', name: 'Cardiologie', role: 'COORDINATEUR' }],
     },
   ],
@@ -123,7 +122,7 @@ describe('AddMemberForm', () => {
         respond: () => ({
           ok: true,
           status: 201,
-          json: async () => ({ id: 'm2', role: 'MEMBER', soignantId: null, serviceMemberships: [] }),
+          json: async () => ({ id: 'm2', role: 'MEMBER', serviceMemberships: [] }),
         }),
       },
     ])

@@ -28,14 +28,13 @@ const admin: User = {
   lastName: null,
   isSuperAdmin: false,
   establishments: [
-    { id: 'e1', name: 'CHU', role: 'ADMIN', soignantId: null, services: [] },
+    { id: 'e1', name: 'CHU', role: 'ADMIN', services: [] },
   ],
 }
 
 const memberFixture: Member = {
   id: 'm1',
   role: 'MEMBER',
-  soignantId: null,
   user: {
     id: 'u2',
     email: 'membre@chu.fr',

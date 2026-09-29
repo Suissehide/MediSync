@@ -29,7 +29,7 @@ const admin: User = {
   lastName: null,
   isSuperAdmin: false,
   establishments: [
-    { id: 'e1', name: 'CHU', role: 'ADMIN', soignantId: null, services: [] },
+    { id: 'e1', name: 'CHU', role: 'ADMIN', services: [] },
   ],
 }
 
@@ -47,7 +47,6 @@ const adminMembreDUnSeulService: User = {
       id: 'e1',
       name: 'CHU',
       role: 'ADMIN',
-      soignantId: null,
       services: [{ id: 'svcA', name: 'Cardiologie', role: 'COORDINATEUR' }],
     },
   ],
@@ -138,7 +137,7 @@ describe('CreateMemberAccountForm', () => {
             ok: true,
             status: 201,
             json: async () => ({
-              member: { id: 'm1', role: 'MEMBER', soignantId: null, serviceMemberships: [] },
+              member: { id: 'm1', role: 'MEMBER', serviceMemberships: [] },
               accessLink: { token: JETON },
             }),
           }),
@@ -187,7 +186,7 @@ describe('CreateMemberAccountForm', () => {
           ok: true,
           status: 201,
           json: async () => ({
-            member: { id: 'm1', role: 'MEMBER', soignantId: null, serviceMemberships: [] },
+            member: { id: 'm1', role: 'MEMBER', serviceMemberships: [] },
             accessLink: { token: JETON },
           }),
         }),

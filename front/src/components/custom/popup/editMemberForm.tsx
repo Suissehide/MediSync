@@ -9,7 +9,6 @@ import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { toSelectOptions } from '../../../libs/utils.ts'
 import { useMemberMutations } from '../../../queries/useMembers.ts'
 import { useServicesQuery } from '../../../queries/useServices.ts'
-import { useEstablishmentSoignantsQuery } from '../../../queries/useSoignant.ts'
 import type { EstablishmentRole, ServiceRole } from '../../../types/auth.ts'
 import type { Member, MemberServiceAssignment } from '../../../types/member.ts'
 import type { Service } from '../../../types/service.ts'
@@ -97,10 +96,8 @@ function buildDefaultServiceRoles(
 function EditMemberForm({ member }: EditMemberFormProps) {
   const [open, setOpen] = useState(false)
   const { updateMember } = useMemberMutations()
-  // Prefixe d'etablissement : ce formulaire s'ouvre sur un ecran sans
-  // service en contexte (voir `admin/members.tsx`), ou `useSoignantQueries`
-  // (prefixe de service) leverait.
-  const { soignants } = useEstablishmentSoignantsQuery()
+  // Aucun soignant ici : ils sont propres a chaque service depuis le
+  // 2026-09-29, et le coordinateur rattache les membres depuis son service.
   // Les services PROPOSÉS sont la liste COMPLÈTE de l'établissement
   // courant (`GET /e/:establishmentId/admin/services`, déjà listée par
   // l'onglet des services, `admin/services.tsx`) — jamais celle d'un
@@ -114,14 +111,6 @@ function EditMemberForm({ member }: EditMemberFormProps) {
     isPending: servicesPending,
     error: servicesError,
   } = useServicesQuery()
-
-  const soignantOptions = useMemo(
-    () =>
-      [...(soignants ?? [])]
-        .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
-        .map((s) => ({ value: s.id, label: s.name })),
-    [soignants],
-  )
 
   const sortedServices = useMemo(
     () =>
@@ -139,7 +128,6 @@ function EditMemberForm({ member }: EditMemberFormProps) {
   const form = useAppForm({
     defaultValues: {
       role: member.role,
-      soignantId: member.soignantId ?? '',
     },
     onSubmit: ({ value }) => {
       const servicesPayload = buildServiceAssignments({
@@ -150,7 +138,6 @@ function EditMemberForm({ member }: EditMemberFormProps) {
       updateMember.mutate({
         id: member.id,
         role: value.role as EstablishmentRole,
-        soignantId: value.soignantId || null,
         services: servicesPayload,
       })
       setOpen(false)
@@ -161,7 +148,6 @@ function EditMemberForm({ member }: EditMemberFormProps) {
     if (open) {
       form.reset({
         role: member.role,
-        soignantId: member.soignantId ?? '',
       })
       setServiceRoles(
         buildDefaultServiceRoles(sortedServices, member.serviceMemberships),
@@ -204,16 +190,6 @@ function EditMemberForm({ member }: EditMemberFormProps) {
                   label="Rôle établissement"
                   options={ESTABLISHMENT_ROLE_OPTIONS}
                   clearable={false}
-                />
-              )}
-            </form.AppField>
-
-            <form.AppField name="soignantId">
-              {(field) => (
-                <field.Select
-                  label="Fonction"
-                  options={soignantOptions}
-                  placeholder="Aucune"
                 />
               )}
             </form.AppField>

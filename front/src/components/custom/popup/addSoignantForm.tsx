@@ -25,33 +25,11 @@ interface AddSoignantFormProps {
   trigger?: React.ReactNode
 }
 
-type Thematiques = {
-  thematics: ReturnType<typeof useThematicQueries>['thematics']
-  updateThematic: ReturnType<typeof useThematicMutations>['updateThematic']
-}
-
-// Sous un service (panneau lateral des ecrans de service) : creation ET rattachement aux
-// thematiques du service courant.
 function AddSoignantForm({ trigger }: AddSoignantFormProps) {
-  const { thematics } = useThematicQueries()
-  const { updateThematic } = useThematicMutations()
-  return <SoignantCreationForm trigger={trigger} thematiques={{ thematics, updateThematic }} />
-}
-
-// A l'echelle de l'etablissement (ecran Soignants de l'administration, navigation par echelle
-// 2026-09-28) : aucun service en contexte, donc aucune thematique a proposer —
-// `useThematicQueries` y leverait (`tenantApiUrl`). Le nom seul.
-export function AddEstablishmentSoignantForm({ trigger }: AddSoignantFormProps) {
-  return <SoignantCreationForm trigger={trigger} thematiques={null} />
-}
-
-function SoignantCreationForm({
-  trigger,
-  thematiques,
-}: AddSoignantFormProps & { thematiques: Thematiques | null }) {
   const [open, setOpen] = useState(false)
   const { createSoignant } = useSoignantMutations()
-  const thematics = thematiques?.thematics
+  const { thematics } = useThematicQueries()
+  const { updateThematic } = useThematicMutations()
 
   const thematicOptions =
     thematics
@@ -71,8 +49,8 @@ function SoignantCreationForm({
           onSuccess: (createdSoignant) => {
             for (const thematicID of value.thematicIDs) {
               const thematic = thematics?.find((t) => t.id === thematicID)
-              if (thematic && thematiques) {
-                thematiques.updateThematic.mutate({
+              if (thematic) {
+                updateThematic.mutate({
                   id: thematicID,
                   soignantIDs: [
                     ...thematic.soignants.map((s) => s.id),
@@ -131,21 +109,19 @@ function SoignantCreationForm({
               {(field) => <field.Input label="Nom" />}
             </form.AppField>
 
-            {thematiques && (
-              <form.Field name="thematicIDs">
-                {(field) => (
-                  <div className="flex flex-col gap-1">
-                    <Label className="text-sm font-medium">Thématiques</Label>
-                    <MultiSelect
-                      options={thematicOptions}
-                      value={field.state.value}
-                      onChange={(val) => field.handleChange(val)}
-                      placeholder="Sélectionner des thématiques"
-                    />
-                  </div>
-                )}
-              </form.Field>
-            )}
+            <form.Field name="thematicIDs">
+              {(field) => (
+                <div className="flex flex-col gap-1">
+                  <Label className="text-sm font-medium">Thématiques</Label>
+                  <MultiSelect
+                    options={thematicOptions}
+                    value={field.state.value}
+                    onChange={(val) => field.handleChange(val)}
+                    placeholder="Sélectionner des thématiques"
+                  />
+                </div>
+              )}
+            </form.Field>
           </form>
         </PopupBody>
 

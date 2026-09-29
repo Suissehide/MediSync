@@ -21,7 +21,7 @@ const modeLabels: Record<DashboardFilterMode, string> = {
 }
 
 function SidebarDashboardFilter() {
-  const isAdmin = useCan('soignants:manage')
+  const isAdmin = useCan('referentials:write')
   const mode = useDashboardFilterStore((state) => state.mode)
   const setMode = useDashboardFilterStore((state) => state.setMode)
   const [isOpen, setIsOpen] = useState(false)

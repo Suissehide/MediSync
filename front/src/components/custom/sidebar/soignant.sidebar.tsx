@@ -6,7 +6,7 @@ import AddSoignantForm from '../popup/addSoignantForm.tsx'
 import SoignantFilterSection from './soignantFilter.section.tsx'
 
 function SidebarSoignant() {
-  const isAdmin = useCan('soignants:manage')
+  const isAdmin = useCan('referentials:write')
 
   return (
     <SoignantFilterSection

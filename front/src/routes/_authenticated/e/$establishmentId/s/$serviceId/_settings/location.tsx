@@ -7,33 +7,37 @@ import { ConfirmDeleteForm } from '@/components/custom/popup/confirmDeleteForm.t
 import DashboardLayout from '@/components/dashboard.layout.tsx'
 import ReactTable from '@/components/table/reactTable.tsx'
 import { can, useCan } from '@/hooks/useCan.ts'
-import { useEstablishmentLocationsQuery, useLocationMutations } from '@/queries/useLocation.ts'
+import {
+  useLocationMutations,
+  useLocationQueries,
+} from '@/queries/useLocation.ts'
 import type { Location } from '@/types/location.ts'
-import { resolveEstablishmentContext } from '@/utils/tenant-context.ts'
+import { resolveTenantContext } from '@/utils/tenant-context.ts'
 
-// Navigation par echelle (2026-09-28) : les salles sont une donnee d'etablissement
-// (`Location.establishmentId`) gardee par `locations:manage` (ADMIN). L'ecran vivait sous un
-// service ; il vit desormais a l'echelle de l'etablissement, joignable sans affectation de
-// service.
-export const Route = createFileRoute('/_authenticated/e/$establishmentId/admin/locations')({
-  // Meme garde explicite que `members.tsx`.
+export const Route = createFileRoute(
+  '/_authenticated/e/$establishmentId/s/$serviceId/_settings/location',
+)({
   beforeLoad: ({ context, params }) => {
-    const tenant = resolveEstablishmentContext(context.authState.user, params)
-    if (!can(tenant, 'locations:manage')) {
-      throw redirect({ to: '/' })
+    const tenant = resolveTenantContext(context.authState.user, params)
+    if (!can(tenant, 'referentials:write')) {
+      throw redirect({ to: '/e/$establishmentId/s/$serviceId/dashboard', params })
     }
   },
-  component: EstablishmentLocations,
+  component: LocationSettings,
 })
 
-function EstablishmentLocations() {
-  const canManage = useCan('locations:manage')
-  const { locations, isPending } = useEstablishmentLocationsQuery()
+function LocationSettings() {
+  // Le menu ne montre cette page qu'aux détenteurs de `referentials:write` (le coordinateur),
+  // mais l'URL se tape à la main : les actions d'écriture se gardent aussi
+  // ici, indépendamment du menu.
+  const canManage = useCan('referentials:write')
+  const { locations, isPending } = useLocationQueries()
   const { deleteLocation } = useLocationMutations()
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
 
   const sortedLocations = useMemo(
-    () => [...(locations ?? [])].sort((a, b) => a.name.localeCompare(b.name, 'fr')),
+    () =>
+      [...(locations ?? [])].sort((a, b) => a.name.localeCompare(b.name, 'fr')),
     [locations],
   )
 
@@ -50,7 +54,9 @@ function EstablishmentLocations() {
     <DashboardLayout>
       <div className="flex-1 bg-background p-6 rounded-lg flex flex-col w-full gap-4">
         <div className="flex justify-between items-center gap-3">
-          <h1 className="h-9 flex items-center text-text-dark text-xl font-semibold">Salles</h1>
+          <h1 className="h-9 flex items-center text-text-dark text-xl font-semibold">
+            Salles
+          </h1>
           {canManage && <AddLocationForm />}
         </div>
 

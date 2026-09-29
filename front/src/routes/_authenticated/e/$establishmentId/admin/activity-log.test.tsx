@@ -34,7 +34,7 @@ const admin: User = {
   firstName: null,
   lastName: null,
   isSuperAdmin: false,
-  establishments: [{ id: 'e1', name: 'CHU', role: 'ADMIN', soignantId: null, services: [] }],
+  establishments: [{ id: 'e1', name: 'CHU', role: 'ADMIN', services: [] }],
 }
 
 const rootRoute = createRootRouteWithContext<{ authState: AuthState }>()({

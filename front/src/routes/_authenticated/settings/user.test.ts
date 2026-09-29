@@ -15,7 +15,6 @@ const user: User = {
       id: 'e1',
       name: 'CHU',
       role: 'ADMIN',
-      soignantId: null,
       services: [{ id: 's1', name: 'Cardio', role: 'COORDINATEUR' }],
     },
   ],
@@ -32,7 +31,7 @@ const adminSansService: User = {
   lastName: null,
   isSuperAdmin: false,
   establishments: [
-    { id: 'e1', name: 'CHU', role: 'ADMIN', soignantId: null, services: [] },
+    { id: 'e1', name: 'CHU', role: 'ADMIN', services: [] },
   ],
 }
 
@@ -52,10 +51,9 @@ const membreIciAdministrateurLaBas: User = {
       id: 'e1',
       name: 'CHU',
       role: 'MEMBER',
-      soignantId: null,
       services: [{ id: 's1', name: 'Cardio', role: 'INTERVENANT' }],
     },
-    { id: 'e2', name: 'Clinique', role: 'ADMIN', soignantId: null, services: [] },
+    { id: 'e2', name: 'Clinique', role: 'ADMIN', services: [] },
   ],
 }
 
@@ -69,12 +67,11 @@ const administrateurDeDeux: User = {
   lastName: null,
   isSuperAdmin: false,
   establishments: [
-    { id: 'e1', name: 'CHU', role: 'ADMIN', soignantId: null, services: [] },
+    { id: 'e1', name: 'CHU', role: 'ADMIN', services: [] },
     {
       id: 'e2',
       name: 'Clinique',
       role: 'ADMIN',
-      soignantId: null,
       services: [{ id: 's2', name: 'Neuro', role: 'COORDINATEUR' }],
     },
   ],
@@ -93,7 +90,6 @@ const membrePartout: User = {
       id: 'e1',
       name: 'CHU',
       role: 'MEMBER',
-      soignantId: null,
       services: [{ id: 's1', name: 'Cardio', role: 'INTERVENANT' }],
     },
   ],
