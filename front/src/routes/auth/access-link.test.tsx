@@ -15,7 +15,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { routeTree as vraiRouteTree } from '@/routeTree.gen.ts'
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { AuthState } from '@/types/auth.ts'
-
 import { Route as accessLinkRoute } from './access-link.tsx'
 
 // La page publique de consommation d'un lien d'accès (tâche 13, step 4) —
@@ -66,7 +65,11 @@ const authRoute = createRoute({
   component: () => <div>Page de connexion</div>,
 })
 
-const routeTree = rootRoute.addChildren([accessLinkTestRoute, indexRoute, authRoute])
+const routeTree = rootRoute.addChildren([
+  accessLinkTestRoute,
+  indexRoute,
+  authRoute,
+])
 
 type Route = {
   match: (url: string, method: string) => boolean
@@ -108,10 +111,9 @@ const monter = (path: string, fetchMock: ReturnType<typeof buildFetchMock>) => {
   return { queryClient, router }
 }
 
-const routeConsume = (
-  respond: Route['respond'],
-): Route => ({
-  match: (url, method) => url.endsWith('/auth/access-link/consume') && method === 'POST',
+const routeConsume = (respond: Route['respond']): Route => ({
+  match: (url, method) =>
+    url.endsWith('/auth/access-link/consume') && method === 'POST',
   respond,
 })
 
@@ -122,10 +124,18 @@ const routeSignIn = (respond: Route['respond']): Route => ({
 
 const remplirEtValider = async (email: string, password: string) => {
   await userEvent.type(screen.getByLabelText(/adresse e-mail/i), email)
-  await userEvent.type(screen.getByLabelText(/^nouveau mot de passe/i), password)
-  await userEvent.type(screen.getByLabelText(/confirmer le mot de passe/i), password)
+  await userEvent.type(
+    screen.getByLabelText(/^nouveau mot de passe/i),
+    password,
+  )
+  await userEvent.type(
+    screen.getByLabelText(/confirmer le mot de passe/i),
+    password,
+  )
   await userEvent.click(
-    screen.getByRole('button', { name: /définir le mot de passe et se connecter/i }),
+    screen.getByRole('button', {
+      name: /définir le mot de passe et se connecter/i,
+    }),
   )
 }
 
@@ -150,13 +160,19 @@ describe('page publique de consommation d un lien d acces', () => {
     monter(
       `/auth/access-link?token=${JETON}`,
       buildFetchMock([
-        routeConsume(() => ({ ok: false, status: 410, json: async () => ({}) })),
+        routeConsume(() => ({
+          ok: false,
+          status: 410,
+          json: async () => ({}),
+        })),
       ]),
     )
 
     await remplirEtValider('quelqu.un@chu.fr', 'un-mot-de-passe-suffisant')
 
-    expect(await screen.findByText(/ce lien n'est plus valable/i)).toBeInTheDocument()
+    expect(
+      await screen.findByText(/ce lien n'est plus valable/i),
+    ).toBeInTheDocument()
     expect(screen.queryByText(/compte est désactivé/i)).not.toBeInTheDocument()
   })
 
@@ -164,19 +180,29 @@ describe('page publique de consommation d un lien d acces', () => {
     monter(
       `/auth/access-link?token=${JETON}`,
       buildFetchMock([
-        routeConsume(() => ({ ok: false, status: 401, json: async () => ({}) })),
+        routeConsume(() => ({
+          ok: false,
+          status: 401,
+          json: async () => ({}),
+        })),
       ]),
     )
 
     await remplirEtValider('quelqu.un@chu.fr', 'un-mot-de-passe-suffisant')
 
     expect(await screen.findByText(/compte est désactivé/i)).toBeInTheDocument()
-    expect(screen.queryByText(/lien n'est plus valable/i)).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(/lien n'est plus valable/i),
+    ).not.toBeInTheDocument()
   })
 
   it('succes : consomme puis appelle la connexion ordinaire avec l adresse et le mot de passe saisis, puis navigue', async () => {
     const fetchMock = buildFetchMock([
-      routeConsume(() => ({ ok: true, status: 200, json: async () => ({ success: true }) })),
+      routeConsume(() => ({
+        ok: true,
+        status: 200,
+        json: async () => ({ success: true }),
+      })),
       routeSignIn(() => ({
         ok: true,
         status: 201,
@@ -210,14 +236,21 @@ describe('page publique de consommation d un lien d acces', () => {
     })
   })
 
-  it("consommation reussie mais connexion echouee : message distinct, le formulaire ne repropose pas de reconsommer le jeton", async () => {
+  it('consommation reussie mais connexion echouee : message distinct, le formulaire ne repropose pas de reconsommer le jeton', async () => {
     const fetchMock = buildFetchMock([
-      routeConsume(() => ({ ok: true, status: 200, json: async () => ({ success: true }) })),
+      routeConsume(() => ({
+        ok: true,
+        status: 200,
+        json: async () => ({ success: true }),
+      })),
       routeSignIn(() => ({ ok: false, status: 401, json: async () => ({}) })),
     ])
     monter(`/auth/access-link?token=${JETON}`, fetchMock)
 
-    await remplirEtValider('adresse-mal-recopiee@chu.fr', 'un-mot-de-passe-suffisant')
+    await remplirEtValider(
+      'adresse-mal-recopiee@chu.fr',
+      'un-mot-de-passe-suffisant',
+    )
 
     expect(
       await screen.findByText(/la connexion automatique a échoué/i),
@@ -239,7 +272,11 @@ describe('page publique de consommation d un lien d acces', () => {
   // connexion qui suit.
   it("purge le jeton de l'URL et REMPLACE l'entree d'historique des la consommation reussie, avant meme la connexion", async () => {
     const fetchMock = buildFetchMock([
-      routeConsume(() => ({ ok: true, status: 200, json: async () => ({ success: true }) })),
+      routeConsume(() => ({
+        ok: true,
+        status: 200,
+        json: async () => ({ success: true }),
+      })),
       routeSignIn(() => ({ ok: false, status: 401, json: async () => ({}) })),
     ])
     const { router } = monter(`/auth/access-link?token=${JETON}`, fetchMock)
@@ -270,8 +307,14 @@ describe('page publique de consommation d un lien d acces', () => {
     const fetchMock = buildFetchMock([])
     monter(`/auth/access-link?token=${JETON}`, fetchMock)
 
-    await userEvent.type(screen.getByLabelText(/adresse e-mail/i), 'quelqu.un@chu.fr')
-    await userEvent.type(screen.getByLabelText(/^nouveau mot de passe/i), 'trop-court')
+    await userEvent.type(
+      screen.getByLabelText(/adresse e-mail/i),
+      'quelqu.un@chu.fr',
+    )
+    await userEvent.type(
+      screen.getByLabelText(/^nouveau mot de passe/i),
+      'trop-court',
+    )
     // Blur explicite (clic sur le champ suivant) : declenche la validation.
     await userEvent.click(screen.getByLabelText(/confirmer le mot de passe/i))
 
@@ -291,7 +334,11 @@ describe('page publique de consommation d un lien d acces', () => {
     monter(
       `/auth/access-link?token=${JETON}`,
       buildFetchMock([
-        routeConsume(() => ({ ok: false, status: 500, json: async () => ({}) })),
+        routeConsume(() => ({
+          ok: false,
+          status: 500,
+          json: async () => ({}),
+        })),
       ]),
     )
 
@@ -309,13 +356,26 @@ describe('page publique de consommation d un lien d acces', () => {
   it("le jeton n'atterrit jamais ailleurs qu'a l'ecran (quatre canaux)", async () => {
     const consoleSpies = (
       ['log', 'warn', 'error', 'info', 'debug'] as const
-    ).map((methode) => vi.spyOn(console, methode).mockImplementation(() => undefined))
+    ).map((methode) =>
+      vi.spyOn(console, methode).mockImplementation(() => undefined),
+    )
 
     const fetchMock = buildFetchMock([
-      routeConsume(() => ({ ok: true, status: 200, json: async () => ({ success: true }) })),
-      routeSignIn(() => ({ ok: true, status: 201, json: async () => utilisateurConnecte })),
+      routeConsume(() => ({
+        ok: true,
+        status: 200,
+        json: async () => ({ success: true }),
+      })),
+      routeSignIn(() => ({
+        ok: true,
+        status: 201,
+        json: async () => utilisateurConnecte,
+      })),
     ])
-    const { queryClient } = monter(`/auth/access-link?token=${JETON}`, fetchMock)
+    const { queryClient } = monter(
+      `/auth/access-link?token=${JETON}`,
+      fetchMock,
+    )
 
     await remplirEtValider('quelqu.un@chu.fr', 'un-mot-de-passe-suffisant')
 
@@ -362,7 +422,7 @@ describe('page publique de consommation d un lien d acces', () => {
 // `_authenticated` dans l'arbre reel, donc jamais redirigee vers `/auth`
 // meme sans session.
 describe('atteignabilite sans session, sur le VRAI arbre de routes', () => {
-  it("le vrai routeTree.gen.ts place access-link hors de _authenticated : aucune redirection vers /auth sans session", async () => {
+  it('le vrai routeTree.gen.ts place access-link hors de _authenticated : aucune redirection vers /auth sans session', async () => {
     const fetchMock = buildFetchMock([])
     vi.stubGlobal('fetch', fetchMock)
     const queryClient = new QueryClient({
@@ -376,7 +436,10 @@ describe('atteignabilite sans session, sur le VRAI arbre de routes', () => {
       // JAMAIS authentifie : c'est exactement le cas que cette page doit
       // servir. Si `access-link.tsx` etait (par erreur) enregistre sous
       // `_authenticated`, son `beforeLoad` redirigerait ici vers `/auth`.
-      context: { queryClient, authState: { isAuthenticated: false, user: null } },
+      context: {
+        queryClient,
+        authState: { isAuthenticated: false, user: null },
+      },
     })
     render(
       <QueryClientProvider client={queryClient}>

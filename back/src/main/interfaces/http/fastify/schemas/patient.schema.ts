@@ -83,7 +83,9 @@ export const patientWithTagsResponseSchema = patientResponseSchema.extend({
   entryDate: z.coerce.date().optional().nullable(),
 })
 
-export const patientsWithTagsResponseSchema = z.array(patientWithTagsResponseSchema)
+export const patientsWithTagsResponseSchema = z.array(
+  patientWithTagsResponseSchema,
+)
 
 // Recherche d'identite existante avant creation (design §6, tache 13) : au moins un prenom ou un
 // nom est exige, pour eviter qu'un appel sans filtre ne rende tout l'etablissement — la date de
@@ -96,7 +98,8 @@ export const searchPatientIdentityQuerySchema = z
     birthDate: z.coerce.date().optional(),
   })
   .refine((query) => !!query.firstName || !!query.lastName, {
-    message: 'Un prénom ou un nom est requis pour rechercher une identité existante',
+    message:
+      'Un prénom ou un nom est requis pour rechercher une identité existante',
   })
 
 // Ce que la recherche a le droit de rendre, et rien d'autre (design §5.3/§6) : jamais le suivi,
@@ -122,7 +125,9 @@ export const patientIdentitySearchResponseSchema = z.object({
   hasMore: z.boolean(),
 })
 
-export type SearchPatientIdentityQuery = z.infer<typeof searchPatientIdentityQuerySchema>
+export type SearchPatientIdentityQuery = z.infer<
+  typeof searchPatientIdentityQuerySchema
+>
 
 export const getPatientByIdParamsSchema = z.object({
   patientID: z.cuid(),
@@ -142,7 +147,6 @@ export const updatePatientByIdSchema = {
   params: getPatientByIdParamsSchema,
   body: patientSchema.partial().strict(),
 }
-
 
 export type PatientInput = z.infer<typeof patientSchema>
 export type GetPatientByIdParams = z.infer<typeof getPatientByIdParamsSchema>

@@ -11,7 +11,9 @@ import type { TenantContextInterface } from '../../../types/utils/tenant-context
 import PrismaErrorCodes from '../error-codes-prisma'
 import type { PostgresPrismaClient } from '../postgres-client'
 
-class PatientServiceFileRepository implements PatientServiceFileRepositoryInterface {
+class PatientServiceFileRepository
+  implements PatientServiceFileRepositoryInterface
+{
   private readonly prisma: PostgresPrismaClient
   private readonly errorHandler: ErrorHandlerInterface
   private readonly tenantContext: TenantContextInterface
@@ -26,7 +28,9 @@ class PatientServiceFileRepository implements PatientServiceFileRepositoryInterf
     return this.tenantContext.scope()
   }
 
-  findByPatient(patientId: string): Promise<PatientServiceFileEntityRepo | null> {
+  findByPatient(
+    patientId: string,
+  ): Promise<PatientServiceFileEntityRepo | null> {
     return this.prisma.patientServiceFile.findFirst({
       where: { patientId, ...this.scope },
     })
@@ -41,7 +45,9 @@ class PatientServiceFileRepository implements PatientServiceFileRepositoryInterf
   ): Promise<PatientServiceFileEntityRepo> {
     try {
       return await this.prisma.patientServiceFile.upsert({
-        where: { patientId_serviceId: { patientId, serviceId: this.scope.serviceId } },
+        where: {
+          patientId_serviceId: { patientId, serviceId: this.scope.serviceId },
+        },
         create: { ...params, patientId, ...this.scope },
         update: params,
       })
@@ -95,7 +101,9 @@ class PatientServiceFileRepository implements PatientServiceFileRepositoryInterf
   async ensureExists(patientId: string): Promise<void> {
     try {
       await this.prisma.patientServiceFile.upsert({
-        where: { patientId_serviceId: { patientId, serviceId: this.scope.serviceId } },
+        where: {
+          patientId_serviceId: { patientId, serviceId: this.scope.serviceId },
+        },
         create: { patientId, ...this.scope },
         update: {},
       })
@@ -255,15 +263,16 @@ class PatientServiceFileRepository implements PatientServiceFileRepositoryInterf
         return { suivisIci: 0, suivisNullePartAilleurs: 0 }
       }
       const patientIds = suivisIci.map((row) => row.patientId)
-      const suivisAilleursParmiEux = await this.prisma.patientServiceFile.findMany({
-        where: {
-          establishmentId,
-          patientId: { in: patientIds },
-          serviceId: { not: serviceId },
-          service: { deactivatedAt: null },
-        },
-        select: { patientId: true },
-      })
+      const suivisAilleursParmiEux =
+        await this.prisma.patientServiceFile.findMany({
+          where: {
+            establishmentId,
+            patientId: { in: patientIds },
+            serviceId: { not: serviceId },
+            service: { deactivatedAt: null },
+          },
+          select: { patientId: true },
+        })
       const suiviAilleursIds = new Set(
         suivisAilleursParmiEux.map((row) => row.patientId),
       )

@@ -14,9 +14,20 @@ import {
 // réels, seule l'horloge que lit `resolveTenant` (interfaces/http/fastify/plugins/tenant.plugin.ts,
 // `new Date()`) est sous contrôle — ce qui rend l'expiration d'un octroi éprouvable sans attendre.
 const TIMERS_REELS = [
-  'nextTick', 'hrtime', 'performance', 'queueMicrotask',
-  'requestAnimationFrame', 'cancelAnimationFrame', 'requestIdleCallback', 'cancelIdleCallback',
-  'setImmediate', 'clearImmediate', 'setInterval', 'clearInterval', 'setTimeout', 'clearTimeout',
+  'nextTick',
+  'hrtime',
+  'performance',
+  'queueMicrotask',
+  'requestAnimationFrame',
+  'cancelAnimationFrame',
+  'requestIdleCallback',
+  'cancelIdleCallback',
+  'setImmediate',
+  'clearImmediate',
+  'setInterval',
+  'clearInterval',
+  'setTimeout',
+  'clearTimeout',
 ] as const
 const avancerHorloge = (ms: number): void => {
   jest.setSystemTime(new Date(Date.now() + ms))

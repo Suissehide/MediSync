@@ -1,6 +1,11 @@
 import { buildTestApp, type TestApp } from './setup/app'
 import { testDb, truncateAll } from './setup/db'
-import { createEstablishment, createService, createUser, signIn } from './setup/fixtures'
+import {
+  createEstablishment,
+  createService,
+  createUser,
+  signIn,
+} from './setup/fixtures'
 
 // Tache 6, etape 4b : `GET /super-admin/access-log`. Ferme deux trous laisses par l'etape
 // precedente (taches 1 a 5) -- voir le commentaire de tete de
@@ -81,7 +86,10 @@ describe('GET /super-admin/access-log', () => {
 
     // Le compte cible du script d'amorcage (`UserDomain.bootstrapSuperAdmin`) : la ligne
     // qu'aucune autre route ne peut lire, celle que cette tache rend enfin lisible.
-    compte = await createUser({ email: 'promu-super-admin@test.fr', isSuperAdmin: true })
+    compte = await createUser({
+      email: 'promu-super-admin@test.fr',
+      isSuperAdmin: true,
+    })
     await testDb.activityLog.create({
       data: {
         userID: 'cli:bootstrap-super-admin',
@@ -119,7 +127,11 @@ describe('GET /super-admin/access-log', () => {
     })
     expect(res.statusCode).toBe(200)
     expect(
-      res.json().some((l: { userID: string }) => l.userID === 'cli:bootstrap-super-admin'),
+      res
+        .json()
+        .some(
+          (l: { userID: string }) => l.userID === 'cli:bootstrap-super-admin',
+        ),
     ).toBe(true)
   })
 
@@ -152,9 +164,11 @@ describe('GET /super-admin/access-log', () => {
       cookies: cookiesSuperAdmin,
     })
     expect(res.statusCode).toBe(200)
-    expect(new Set(res.json().map((l: { establishmentId: string }) => l.establishmentId))).toEqual(
-      new Set([etabA.id, etabB.id]),
-    )
+    expect(
+      new Set(
+        res.json().map((l: { establishmentId: string }) => l.establishmentId),
+      ),
+    ).toEqual(new Set([etabA.id, etabB.id]))
   })
 
   it('filtre par etablissement', async () => {
@@ -233,7 +247,10 @@ describe('GET /super-admin/access-log', () => {
       cookies: cookiesSuperAdmin,
     })
     expect(res.statusCode).toBe(200)
-    const body = res.json() as { establishmentId: string; accesParOctroi: boolean }[]
+    const body = res.json() as {
+      establishmentId: string
+      accesParOctroi: boolean
+    }[]
     const ligneA = body.find((l) => l.establishmentId === etabA.id)
     const ligneB = body.find((l) => l.establishmentId === etabB.id)
     expect(ligneA?.accesParOctroi).toBe(true)
@@ -342,7 +359,11 @@ describe('GET /super-admin/access-log', () => {
         cookies: cookiesSuperAdmin,
       })
       expect(
-        sansFiltre.json().some((l: { userID: string }) => l.userID === 'cli:bootstrap-super-admin'),
+        sansFiltre
+          .json()
+          .some(
+            (l: { userID: string }) => l.userID === 'cli:bootstrap-super-admin',
+          ),
       ).toBe(false)
 
       const cible = await testApp.app.inject({
@@ -351,10 +372,15 @@ describe('GET /super-admin/access-log', () => {
         cookies: cookiesSuperAdmin,
       })
       expect(cible.statusCode).toBe(200)
-      const body = cible.json() as { userID: string; establishmentId: string | null }[]
+      const body = cible.json() as {
+        userID: string
+        establishmentId: string | null
+      }[]
       expect(body.length).toBeGreaterThan(0)
       expect(body.every((l) => l.establishmentId === null)).toBe(true)
-      expect(body.some((l) => l.userID === 'cli:bootstrap-super-admin')).toBe(true)
+      expect(body.some((l) => l.userID === 'cli:bootstrap-super-admin')).toBe(
+        true,
+      )
     })
 
     // `PatientAccessLog.establishmentId` est NON NULLABLE : la question n'a pas de sens sur ce
@@ -382,6 +408,10 @@ describe('GET /super-admin/access-log', () => {
     expect(res.body).not.toContain('Prenom-B-Confidentiel')
     expect(res.body).not.toContain('Nom-B-Confidentiel')
     const body = res.json() as { patientId: string | null }[]
-    expect(body.some((l) => typeof l.patientId === 'string' && l.patientId.length > 0)).toBe(true)
+    expect(
+      body.some(
+        (l) => typeof l.patientId === 'string' && l.patientId.length > 0,
+      ),
+    ).toBe(true)
   })
 })

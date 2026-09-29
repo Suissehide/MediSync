@@ -2,7 +2,6 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
 import type { Soignant } from '../types/soignant.ts'
-
 import { scopedStorage } from './scoped-storage.ts'
 
 interface SoignantState {
@@ -27,7 +26,9 @@ type PersistedSoignantState = Pick<SoignantState, 'selectedSoignantIDs'>
 
 // Narrowing sans assertion de type : `in` sur un `unknown` deja ramene a
 // `object` restreint l'acces a la propriete testee (TS 4.9+).
-const estEtatSoignantPersiste = (valeur: unknown): valeur is PersistedSoignantState =>
+const estEtatSoignantPersiste = (
+  valeur: unknown,
+): valeur is PersistedSoignantState =>
   typeof valeur === 'object' &&
   valeur !== null &&
   'selectedSoignantIDs' in valeur &&
@@ -56,7 +57,9 @@ export const useSoignantStore = create<SoignantState & SoignantActions>()(
       toggleSoignant: (id) =>
         set((state) => ({
           selectedSoignantIDs: state.selectedSoignantIDs.includes(id)
-            ? state.selectedSoignantIDs.filter((selectedID) => selectedID !== id)
+            ? state.selectedSoignantIDs.filter(
+                (selectedID) => selectedID !== id,
+              )
             : [...state.selectedSoignantIDs, id],
         })),
       selectAllSoignants: () =>

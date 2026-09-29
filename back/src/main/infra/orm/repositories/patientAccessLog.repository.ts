@@ -67,7 +67,9 @@ const PLATFORM_ACCESS_LOG_LIMIT = 200
 // `runAsSystem-unicite.test.ts` (CAPACITE) ; ses bornes exactes sont verifiees par
 // `repository-scope.test.ts` (le `where` reel envoye a Prisma, puis la preuve que cette forme
 // serait refusee hors du mode encadre).
-class PatientAccessLogRepository implements PatientAccessLogRepositoryInterface {
+class PatientAccessLogRepository
+  implements PatientAccessLogRepositoryInterface
+{
   private readonly prisma: PostgresPrismaClient
   private readonly errorHandler: ErrorHandlerInterface
   private readonly tenantContext: TenantContextInterface
@@ -90,7 +92,9 @@ class PatientAccessLogRepository implements PatientAccessLogRepositoryInterface 
   // c'est ce qui garde la lecture de `this.scope` — donc du contexte `AsyncLocalStorage` —
   // synchrone et anterieure a l'appel Prisma, plutot que de laisser l'ecriture partir hors de la
   // portee du contexte (piege deja rencontre plusieurs fois sur ce chantier).
-  async create(params: PatientAccessLogCreateEntityRepo): Promise<PatientAccessLogEntityRepo> {
+  async create(
+    params: PatientAccessLogCreateEntityRepo,
+  ): Promise<PatientAccessLogEntityRepo> {
     try {
       return await this.prisma.patientAccessLog.create({
         data: { ...params, ...this.scope },
@@ -105,7 +109,9 @@ class PatientAccessLogRepository implements PatientAccessLogRepositoryInterface 
 
   // Meme piege que `create`, meme remede : `await` a l'interieur, pour lire `this.scope` avant
   // de quitter la portee synchrone du contexte de tenant.
-  async findByPatientInService(patientId: string): Promise<PatientAccessLogEntityRepo[]> {
+  async findByPatientInService(
+    patientId: string,
+  ): Promise<PatientAccessLogEntityRepo[]> {
     try {
       return await this.prisma.patientAccessLog.findMany({
         where: { patientId, ...this.scope },
@@ -123,7 +129,9 @@ class PatientAccessLogRepository implements PatientAccessLogRepositoryInterface 
   // `await` a l'INTERIEUR du rappel (meme piege que partout ailleurs sur ce chantier) : un
   // simple retour de promesse laisserait `runAsSystem` restaurer le contexte ordinaire avant que
   // Prisma n'execute reellement la requete, et le garde-fou verrait alors le mauvais store.
-  async findByPatientInEstablishment(patientId: string): Promise<PatientAccessLogEntityRepo[]> {
+  async findByPatientInEstablishment(
+    patientId: string,
+  ): Promise<PatientAccessLogEntityRepo[]> {
     const { establishmentId } = this.establishmentScope
     try {
       return await this.tenantContext.runAsSystem(async () => {
@@ -174,7 +182,9 @@ class PatientAccessLogRepository implements PatientAccessLogRepositoryInterface 
             // `filters.sansEtablissement` n'est jamais lu ici : `establishmentId` est NON
             // NULLABLE sur ce modele, et le schema HTTP refuse la combinaison par un 400 —
             // voir le commentaire de `PlatformAccessLogFilters` (interface de ce depot).
-            ...(filters.establishmentId ? { establishmentId: filters.establishmentId } : {}),
+            ...(filters.establishmentId
+              ? { establishmentId: filters.establishmentId }
+              : {}),
             ...platformCompteFilter(filters.compte),
             ...(filters.action ? { action: filters.action } : {}),
           },

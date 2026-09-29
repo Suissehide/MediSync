@@ -4,11 +4,11 @@ import { PathwayApi } from '../api/pathway.api.ts'
 import { PATHWAY, SLOT } from '../constants/process.constant.ts'
 import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
-import { useToast } from '../hooks/useToast.ts'
 import {
   restoreForTenant,
   snapshotForTenant,
 } from '../hooks/useTenantSwitch.ts'
+import { useToast } from '../hooks/useToast.ts'
 import type {
   CreatePathwayParams,
   InstantiatePathwayParams,
@@ -108,7 +108,9 @@ export const usePathwayMutations = () => {
     onMutate: async (newPathway: InstantiatePathwayParams) => {
       await queryClient.cancelQueries({ queryKey: [PATHWAY.INSTANTIATE] })
 
-      const previousPathways = snapshotForTenant(queryClient, [PATHWAY.INSTANTIATE])
+      const previousPathways = snapshotForTenant(queryClient, [
+        PATHWAY.INSTANTIATE,
+      ])
       queryClient.setQueryData(
         [PATHWAY.INSTANTIATE],
         (oldPathways: Pathway[]) => [...(oldPathways || []), newPathway],

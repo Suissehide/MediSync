@@ -80,11 +80,11 @@ const buildDomain = (knownUser: UserEntityRepo = buildKnownUser()) => {
   }
 
   const logger = {
-    debug: () => {},
-    error: () => {},
-    info: () => {},
-    trace: () => {},
-    warn: () => {},
+    debug: jest.fn(),
+    error: jest.fn(),
+    info: jest.fn(),
+    trace: jest.fn(),
+    warn: jest.fn(),
   }
 
   // Depuis la tâche 3 (étape 4a) : `AuthDomain` consulte les octrois vivants de l'utilisateur à

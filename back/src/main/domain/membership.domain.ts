@@ -1,8 +1,8 @@
 import Boom from '@hapi/boom'
 
 import type { EstablishmentRole } from '../../generated/enums'
-import type { IocContainer } from '../types/application/ioc'
 import type { PostgresOrm } from '../infra/orm/postgres-client'
+import type { IocContainer } from '../types/application/ioc'
 import type { AccessLinkDomainInterface } from '../types/domain/accessLink.domain.interface'
 import type {
   MembershipAddByEmailDomain,
@@ -10,17 +10,17 @@ import type {
   MembershipCreateAccountResult,
   MembershipDomainInterface,
   MembershipRowDomain,
-  ServiceMemberRowDomain,
   MembershipUpdateDomain,
+  ServiceMemberRowDomain,
 } from '../types/domain/membership.domain.interface'
 import type {
   MembershipRepositoryInterface,
   ServiceAssignment,
 } from '../types/infra/orm/repositories/membership.repository.interface'
+import type { SoignantRepositoryInterface } from '../types/infra/orm/repositories/soignant.repository.interface'
 import type { UserRepositoryInterface } from '../types/infra/orm/repositories/user.repository.interface'
 import type { TenantContextInterface } from '../types/utils/tenant-context'
 import type { AppEventBus } from '../utils/app-event-bus'
-import type { SoignantRepositoryInterface } from '../types/infra/orm/repositories/soignant.repository.interface'
 import { hashPassword, randomToken } from '../utils/hash'
 
 // QUATRE refus, un seul message : adresse inconnue, adresse déjà membre d'ici, compte
@@ -73,7 +73,7 @@ const DEACTIVATED_LINK =
 
 // Tour de correction 1, trouvé en traitant la Critique n°2, hors des trois verbes demandés.
 const SUPER_ADMIN_ACTIVATION =
-  'This account cannot be activated or deactivated from an establishment' 
+  'This account cannot be activated or deactivated from an establishment'
 
 class MembershipDomain implements MembershipDomainInterface {
   private readonly membershipRepository: MembershipRepositoryInterface
@@ -118,7 +118,10 @@ class MembershipDomain implements MembershipDomainInterface {
     if (soignantId) {
       await this.soignantRepository.findByID(soignantId)
     }
-    const updated = await this.membershipRepository.setServiceSoignant(serviceMembershipId, soignantId)
+    const updated = await this.membershipRepository.setServiceSoignant(
+      serviceMembershipId,
+      soignantId,
+    )
     if (!updated) {
       throw Boom.notFound('Service member not found')
     }
@@ -350,7 +353,6 @@ class MembershipDomain implements MembershipDomainInterface {
     this.emit('member.removed', id)
   }
 
-
   // TÂCHE 6, LE RAISONNEMENT QU'ON NE REPREND PAS. Là-bas, créer un compte calcule un PBKDF2 à
   // 210 000 itérations là où réutiliser un compte existant ne le fait pas : le temps de réponse
   // dit donc, à lui seul, si l'adresse a déjà un compte. Cette fuite y a été ASSUMÉE au motif que
@@ -405,7 +407,9 @@ class MembershipDomain implements MembershipDomainInterface {
     // Une LECTURE d'abord, jamais un `upsert` : un compte déjà connu ne doit être écrasé ni
     // dans son nom ni dans son mot de passe (tâche 6, Review Focus n°4). `findByEmail` lève
     // plutôt que de rendre `null` ; absorbé ici comme dans `addByEmail` ci-dessus.
-    const existing = await this.userRepository.findByEmail(email).catch(() => null)
+    const existing = await this.userRepository
+      .findByEmail(email)
+      .catch(() => null)
 
     if (existing) {
       // Dans cet ordre : « déjà membre ici » est le refus que l'administrateur peut lire et
@@ -447,8 +451,8 @@ class MembershipDomain implements MembershipDomainInterface {
     // repartir l'exécution hors de la portée, et le garde-fou lirait le tenant ambiant.
     // (Ici le contexte est posé par `enterWith` pour toute la requête, donc il ne serait pas
     // perdu ; on garde la discipline plutôt que de dépendre de ce détail.)
-    const { membership, accessLink } = await this.postgresOrm.executeWithTransactionClient(
-      async (tx) => {
+    const { membership, accessLink } =
+      await this.postgresOrm.executeWithTransactionClient(async (tx) => {
         const account =
           existing ??
           (await this.userRepository.create(
@@ -470,13 +474,11 @@ class MembershipDomain implements MembershipDomainInterface {
           tx,
         )
         return { membership, accessLink }
-      },
-    )
+      })
 
     this.emit('member.accountCreated', membership.id)
     return { member: membership, accessLink }
   }
-
 
   // ÉTAPE LA PLUS DANGEREUSE DE LA TÂCHE 10, et le brief ne le dit pas : un lien d'accès
   // réinitialise le mot de passe du `User`, qui est GLOBAL — pas celui de l'appartenance. Un

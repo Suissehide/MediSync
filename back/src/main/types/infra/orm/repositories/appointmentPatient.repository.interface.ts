@@ -26,6 +26,7 @@ export type AppointmentPatientUpdateEntityRepo = Pick<
 // `AppointmentUpdateEntityRepo.appointmentPatients` (le rendez-vous y est
 // déjà connu du paramètre `appointmentID` de `update`) : `appointmentID`
 // est donc requis ici, jamais optionnel.
-export type AppointmentPatientAddEntityRepo = AppointmentPatientUpdateEntityRepo & {
-  appointmentID: string
-}
+export type AppointmentPatientAddEntityRepo =
+  AppointmentPatientUpdateEntityRepo & {
+    appointmentID: string
+  }

@@ -140,10 +140,9 @@ function AddSlotForm({
   const thematicOptions = useMemo(() => {
     const set = new Map<string, { value: string; label: string }>()
     for (const soignant of selectedSoignants) {
-      for (const t of
-        thematics?.filter((t) =>
-          t.soignants.some((ss) => ss.id === soignant.id),
-        ) ?? []) {
+      for (const t of thematics?.filter((t) =>
+        t.soignants.some((ss) => ss.id === soignant.id),
+      ) ?? []) {
         set.set(t.id, { value: t.id, label: t.name })
       }
     }
@@ -268,7 +267,9 @@ function AddSlotForm({
             <form.Field name="soignantIDs">
               {(field) => (
                 <FormField>
-                  <div className="text-sm text-text-light font-medium">Soignants</div>
+                  <div className="text-sm text-text-light font-medium">
+                    Soignants
+                  </div>
                   <MultiSelect
                     options={soignantOptions}
                     value={field.state.value}
@@ -286,7 +287,8 @@ function AddSlotForm({
                   options={thematicOptions}
                   label="Thématique"
                   disabled={
-                    selectedSoignants.length === 0 || thematicOptions.length === 0
+                    selectedSoignants.length === 0 ||
+                    thematicOptions.length === 0
                   }
                   placeholder={
                     selectedSoignants.length === 0

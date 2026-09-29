@@ -56,10 +56,9 @@ export const EventFormFields = withForm({
       )
       const map = new Map<string, { value: string; label: string }>()
       for (const soignant of selected) {
-        for (const t of
-          thematics?.filter((t) =>
-            t.soignants.some((ss) => ss.id === soignant.id),
-          ) ?? []) {
+        for (const t of thematics?.filter((t) =>
+          t.soignants.some((ss) => ss.id === soignant.id),
+        ) ?? []) {
           map.set(t.id, { value: t.id, label: t.name })
         }
       }
@@ -82,7 +81,9 @@ export const EventFormFields = withForm({
         <form.Field name="soignantIDs">
           {(field) => (
             <FormField>
-              <div className="text-sm text-text-light font-medium">Soignants</div>
+              <div className="text-sm text-text-light font-medium">
+                Soignants
+              </div>
               <MultiSelect
                 options={soignantOptions}
                 value={field.state.value}
@@ -100,8 +101,7 @@ export const EventFormFields = withForm({
               options={thematicOptions}
               label="Thématique"
               disabled={
-                selectedSoignantIds.length === 0 ||
-                thematicOptions.length === 0
+                selectedSoignantIds.length === 0 || thematicOptions.length === 0
               }
               placeholder={
                 selectedSoignantIds.length === 0

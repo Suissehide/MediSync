@@ -6,10 +6,10 @@ import type {
   SuperAdminGrantDomainInterface,
 } from '../types/domain/superAdminGrant.domain.interface'
 import type {
+  AccessGrantRepositoryInterface,
   EstablishmentGrantRow,
   SuperAdminGrantEntityRepo,
 } from '../types/infra/orm/repositories/accessGrant.repository.interface'
-import type { AccessGrantRepositoryInterface } from '../types/infra/orm/repositories/accessGrant.repository.interface'
 import type { EstablishmentRepositoryInterface } from '../types/infra/orm/repositories/establishment.repository.interface'
 
 // Tour de correction 1 (tâche 8) — Important n°2 de la relecture : deux octrois vivants sur le
@@ -47,7 +47,10 @@ class SuperAdminGrantDomain implements SuperAdminGrantDomainInterface {
   private readonly accessGrantRepository: AccessGrantRepositoryInterface
   private readonly establishmentRepository: EstablishmentRepositoryInterface
 
-  constructor({ accessGrantRepository, establishmentRepository }: IocContainer) {
+  constructor({
+    accessGrantRepository,
+    establishmentRepository,
+  }: IocContainer) {
     this.accessGrantRepository = accessGrantRepository
     this.establishmentRepository = establishmentRepository
   }
@@ -63,7 +66,8 @@ class SuperAdminGrantDomain implements SuperAdminGrantDomainInterface {
     reason,
     durationHours,
   }: GrantInput): Promise<SuperAdminGrantEntityRepo> {
-    const establishment = await this.establishmentRepository.findByIdOrThrow(establishmentId)
+    const establishment =
+      await this.establishmentRepository.findByIdOrThrow(establishmentId)
     if (establishment.deactivatedAt !== null) {
       throw Boom.conflict(ESTABLISHMENT_DEACTIVATED)
     }

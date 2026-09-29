@@ -28,13 +28,17 @@ export function CreateForbiddenWeekForm({
 }: CreateForbiddenWeekFormProps) {
   const weekStart = date ? dayjs.utc(date).isoWeekday(1) : null
   const weekStartLabel = weekStart ? weekStart.format('DD MMMM YYYY') : ''
-  const weekEndLabel = weekStart ? weekStart.add(6, 'day').format('DD MMMM YYYY') : ''
+  const weekEndLabel = weekStart
+    ? weekStart.add(6, 'day').format('DD MMMM YYYY')
+    : ''
 
   return (
     <Popup modal open={open} onOpenChange={setOpen}>
       <PopupContent>
         <PopupHeader>
-          <PopupTitle className="font-bold text-xl">Semaine interdite</PopupTitle>
+          <PopupTitle className="font-bold text-xl">
+            Semaine interdite
+          </PopupTitle>
         </PopupHeader>
 
         <PopupBody>

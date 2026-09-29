@@ -108,7 +108,9 @@ export function WeekPicker({ value, onChange }: WeekPickerProps) {
   // Le mois affiché change de deux façons : par les flèches du calendrier
   // (`onMonthChange`) et par une sélection qui le déborde, y compris via les
   // boutons « Semaine précédente / suivante ». On suit les deux.
-  const [visibleMonth, setVisibleMonth] = useState<Dayjs>(() => value ?? dayjs())
+  const [visibleMonth, setVisibleMonth] = useState<Dayjs>(
+    () => value ?? dayjs(),
+  )
   useEffect(() => {
     if (value) {
       setVisibleMonth(value)

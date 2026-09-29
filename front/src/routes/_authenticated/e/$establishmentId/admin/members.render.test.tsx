@@ -13,7 +13,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { AuthState, User } from '@/types/auth.ts'
-
 import { Route as adminRoute } from '../admin.tsx'
 import { Route as membersRoute } from './members.tsx'
 
@@ -54,9 +53,7 @@ const admin: User = {
   firstName: null,
   lastName: null,
   isSuperAdmin: false,
-  establishments: [
-    { id: 'e1', name: 'CHU', role: 'ADMIN', services: [] },
-  ],
+  establishments: [{ id: 'e1', name: 'CHU', role: 'ADMIN', services: [] }],
 }
 
 const rootRoute = createRootRouteWithContext<{ authState: AuthState }>()({
@@ -81,7 +78,9 @@ const membersScreenRoute = createRoute({
   component: optionsDe(membersRoute).component,
 })
 const routeTree = rootRoute.addChildren([
-  authenticatedRoute.addChildren([adminLayoutRoute.addChildren([membersScreenRoute])]),
+  authenticatedRoute.addChildren([
+    adminLayoutRoute.addChildren([membersScreenRoute]),
+  ]),
 ])
 
 type Route = {
@@ -166,7 +165,9 @@ describe('etats de l ecran des membres', () => {
         })
       }),
     )
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
     const router = createRouter({
       routeTree,
       history: createMemoryHistory({ initialEntries: ['/e/e1/admin/members'] }),
@@ -179,25 +180,32 @@ describe('etats de l ecran des membres', () => {
     )
 
     expect(await screen.findByText(/chargement/i)).toBeInTheDocument()
-    expect(screen.queryByText(/impossible de charger les membres/i)).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(/impossible de charger les membres/i),
+    ).not.toBeInTheDocument()
   })
 
   // Le cas qui compte le plus (meme lecon qu'a la tache 12) : sans le
   // filet, un 500 laisse `members` a `undefined`, le tableau se contente
   // d'un rendu vide et rien ne distingue « panne » d' « aucun membre ».
-  it("affiche une erreur distincte, jamais un tableau vide silencieux, sur une panne", async () => {
+  it('affiche une erreur distincte, jamais un tableau vide silencieux, sur une panne', async () => {
     monter([
       routeSoignants,
       {
-        match: (url, method) => url.endsWith('/admin/members') && method === 'GET',
+        match: (url, method) =>
+          url.endsWith('/admin/members') && method === 'GET',
         respond: () => ({ ok: false, status: 500, json: async () => ({}) }),
       },
     ])
 
     await waitFor(() => {
-      expect(screen.getByText(/impossible de charger les membres/i)).toBeInTheDocument()
+      expect(
+        screen.getByText(/impossible de charger les membres/i),
+      ).toBeInTheDocument()
     })
-    expect(screen.queryByText(/aucun membre pour le moment/i)).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(/aucun membre pour le moment/i),
+    ).not.toBeInTheDocument()
     expect(screen.queryByText(/^chargement/i)).not.toBeInTheDocument()
   })
 
@@ -205,13 +213,16 @@ describe('etats de l ecran des membres', () => {
     monter([
       routeSoignants,
       {
-        match: (url, method) => url.endsWith('/admin/members') && method === 'GET',
+        match: (url, method) =>
+          url.endsWith('/admin/members') && method === 'GET',
         respond: () => ({ ok: true, status: 200, json: async () => [] }),
       },
     ])
 
     await waitFor(() => {
-      expect(screen.getByText(/aucun membre pour le moment/i)).toBeInTheDocument()
+      expect(
+        screen.getByText(/aucun membre pour le moment/i),
+      ).toBeInTheDocument()
     })
     expect(
       screen.queryByText(/impossible de charger les membres/i),
@@ -223,15 +234,22 @@ describe('etats de l ecran des membres', () => {
       routeSoignants,
       routeServices(),
       {
-        match: (url, method) => url.endsWith('/admin/members') && method === 'GET',
-        respond: () => ({ ok: true, status: 200, json: async () => [membreActif] }),
+        match: (url, method) =>
+          url.endsWith('/admin/members') && method === 'GET',
+        respond: () => ({
+          ok: true,
+          status: 200,
+          json: async () => [membreActif],
+        }),
       },
     ])
 
     await waitFor(() => {
       expect(screen.getByText('membre@chu.fr')).toBeInTheDocument()
     })
-    expect(screen.queryByText(/impossible de charger les membres/i)).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(/impossible de charger les membres/i),
+    ).not.toBeInTheDocument()
   })
 
   // Tour de correction 1 (Important n°2) : avant cette tache, la colonne
@@ -270,7 +288,8 @@ describe('etats de l ecran des membres', () => {
         },
       ]),
       {
-        match: (url, method) => url.endsWith('/admin/members') && method === 'GET',
+        match: (url, method) =>
+          url.endsWith('/admin/members') && method === 'GET',
         respond: () => ({
           ok: true,
           status: 200,
@@ -298,8 +317,13 @@ describe('etats de l ecran des membres', () => {
       routeSoignants,
       routeServices(),
       {
-        match: (url, method) => url.endsWith('/admin/members') && method === 'GET',
-        respond: () => ({ ok: true, status: 200, json: async () => [membreActif] }),
+        match: (url, method) =>
+          url.endsWith('/admin/members') && method === 'GET',
+        respond: () => ({
+          ok: true,
+          status: 200,
+          json: async () => [membreActif],
+        }),
       },
     ])
 
@@ -308,7 +332,9 @@ describe('etats de l ecran des membres', () => {
     })
 
     expect(screen.getByText(membreActif.user.id)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /copier l'identifiant/i })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /copier l'identifiant/i }),
+    ).toBeInTheDocument()
 
     // Le membre sans aucune affectation garde son tiret, sur SA propre
     // ligne — jamais confondu avec celles de l'autre membre.

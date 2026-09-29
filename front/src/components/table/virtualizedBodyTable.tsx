@@ -74,7 +74,12 @@ export function VirtualizedBodyTable<TData>({
                   height: rowHeight,
                 }}
               >
-                <div className="h-3.5 rounded bg-muted animate-pulse" style={{ width: `${50 + ((rowIndex * 13 + column.getIndex()) % 40)}%` }} />
+                <div
+                  className="h-3.5 rounded bg-muted animate-pulse"
+                  style={{
+                    width: `${50 + ((rowIndex * 13 + column.getIndex()) % 40)}%`,
+                  }}
+                />
               </td>
             ))}
           </tr>

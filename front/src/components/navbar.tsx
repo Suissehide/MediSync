@@ -3,12 +3,23 @@ import { ChevronDown, PanelLeft } from 'lucide-react'
 import { Fragment } from 'react'
 
 import { can } from '../hooks/useCan.ts'
-import { MENU_GROUPS, NAVIGATION, type NavItem, useCurrentScale } from '../navigation/navigation.ts'
+import {
+  MENU_GROUPS,
+  NAVIGATION,
+  type NavItem,
+  useCurrentScale,
+} from '../navigation/navigation.ts'
 import { useAuthStore } from '../store/useAuthStore.ts'
 import { ScaleSelector } from './custom/scaleSelector.tsx'
 import TodoSheet from './custom/todo/todoSheet.tsx'
 import { Button } from './ui/button.tsx'
-import { PopoverClose, PopoverContent, PopoverRoot, PopoverSubGroup, PopoverTrigger } from './ui/popover.tsx'
+import {
+  PopoverClose,
+  PopoverContent,
+  PopoverRoot,
+  PopoverSubGroup,
+  PopoverTrigger,
+} from './ui/popover.tsx'
 
 interface NavbarProps {
   toggleSidebar: () => void
@@ -43,7 +54,9 @@ function MenuDeGroupe({
         <Button
           variant="none"
           className={`h-9 gap-1.5 px-3 rounded-lg border border-solid text-sm ${
-            actif ? 'border-primary text-text' : 'border-transparent text-text-light hover:text-text'
+            actif
+              ? 'border-primary text-text'
+              : 'border-transparent text-text-light hover:text-text'
           } data-[state=open]:border-primary data-[state=open]:bg-white/10 data-[state=open]:text-text`}
         >
           {nom}
@@ -51,7 +64,9 @@ function MenuDeGroupe({
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" sideOffset={6} className="w-80 p-2">
-        <p className="px-3 pt-1 pb-2 text-xs font-semibold uppercase tracking-wide text-text-light">{nom}</p>
+        <p className="px-3 pt-1 pb-2 text-xs font-semibold uppercase tracking-wide text-text-light">
+          {nom}
+        </p>
         <PopoverSubGroup>
           {items.map((item) => (
             <PopoverClose asChild key={item.to}>
@@ -59,10 +74,19 @@ function MenuDeGroupe({
                 to={item.to}
                 params={params as never}
                 className="flex flex-col gap-0.5 rounded-md px-3 py-2 hover:bg-primary/10 focus-visible:bg-primary/10 outline-none"
-                activeProps={{ 'aria-current': 'page', className: 'bg-primary/10' }}
+                activeProps={{
+                  'aria-current': 'page',
+                  className: 'bg-primary/10',
+                }}
               >
-                <span className="text-sm font-medium text-text-dark">{item.label}</span>
-                {item.description && <span className="text-xs text-text-light">{item.description}</span>}
+                <span className="text-sm font-medium text-text-dark">
+                  {item.label}
+                </span>
+                {item.description && (
+                  <span className="text-xs text-text-light">
+                    {item.description}
+                  </span>
+                )}
               </Link>
             </PopoverClose>
           ))}
@@ -83,7 +107,10 @@ function Navbar({ toggleSidebar }: NavbarProps) {
 
   const params =
     courant?.scale === 'service'
-      ? { establishmentId: courant.establishmentId, serviceId: courant.serviceId }
+      ? {
+          establishmentId: courant.establishmentId,
+          serviceId: courant.serviceId,
+        }
       : courant?.scale === 'establishment'
         ? { establishmentId: courant.establishmentId }
         : {}
@@ -111,7 +138,8 @@ function Navbar({ toggleSidebar }: NavbarProps) {
       to: item.to,
       params: params as never,
       fuzzy: item.matchPrefix ?? false,
-    }) || (item.activeAlso ?? []).some((to) => !!matchRoute({ to, fuzzy: false }))
+    }) ||
+    (item.activeAlso ?? []).some((to) => !!matchRoute({ to, fuzzy: false }))
 
   // INVARIANT MULTI-TENANT — cette condition porte sur la ROUTE, jamais sur
   // le store. Cette barre est rendue par `DashboardLayout`, donc aussi par
@@ -149,9 +177,19 @@ function Navbar({ toggleSidebar }: NavbarProps) {
           <nav aria-label="Navigation" className="flex items-center gap-4 pl-2">
             {groupes.map((groupe, index) => (
               <Fragment key={groupe.nom || `groupe-${index}`}>
-                {index > 0 && <span aria-hidden="true" className="h-5 w-px bg-border-sidebar" />}
+                {index > 0 && (
+                  <span
+                    aria-hidden="true"
+                    className="h-5 w-px bg-border-sidebar"
+                  />
+                )}
                 {MENU_GROUPS.has(groupe.nom) ? (
-                  <MenuDeGroupe nom={groupe.nom} items={groupe.items} actif={groupe.items.some(estActif)} params={params} />
+                  <MenuDeGroupe
+                    nom={groupe.nom}
+                    items={groupe.items}
+                    actif={groupe.items.some(estActif)}
+                    params={params}
+                  />
                 ) : (
                   groupe.items.map((item) => (
                     <Link

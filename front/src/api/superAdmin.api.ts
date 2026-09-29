@@ -40,17 +40,15 @@ export const SuperAdminApi = {
   // /super-admin/establishments/:id`), pas un tenant implicite — voir
   // l'exception déclarée dans conventions-tenant-api-queries.test.ts et le
   // commentaire de tête de ce fichier.
-  getEstablishment: async (establishmentId: string): Promise<EstablishmentDetail> => {
+  getEstablishment: async (
+    establishmentId: string,
+  ): Promise<EstablishmentDetail> => {
     const response = await fetchWithAuth(
       `${SUPER_ADMIN_URL()}/establishments/${establishmentId}`,
       { method: 'GET' },
     )
     if (!response.ok) {
-      handleHttpError(
-        response,
-        {},
-        "Impossible de récupérer l'établissement",
-      )
+      handleHttpError(response, {}, "Impossible de récupérer l'établissement")
     }
     return response.json()
   },
@@ -62,11 +60,14 @@ export const SuperAdminApi = {
   createEstablishment: async (
     input: CreateEstablishmentInput,
   ): Promise<CreateEstablishmentResult> => {
-    const response = await fetchWithAuth(`${SUPER_ADMIN_URL()}/establishments`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(input),
-    })
+    const response = await fetchWithAuth(
+      `${SUPER_ADMIN_URL()}/establishments`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+      },
+    )
     if (!response.ok) {
       handleHttpError(response, {}, "Impossible de créer l'établissement")
     }
@@ -88,7 +89,9 @@ export const SuperAdminApi = {
   // n'importe quel compte de la plateforme. Le jeton rendu ne doit jamais
   // être journalisé ici — cette fonction se contente de le renvoyer à son
   // appelant, qui l'affiche et rien de plus (voir `users.tsx`).
-  reissueAccessLink: async (userId: string): Promise<ReissueAccessLinkResult> => {
+  reissueAccessLink: async (
+    userId: string,
+  ): Promise<ReissueAccessLinkResult> => {
     const response = await fetchWithAuth(
       `${SUPER_ADMIN_URL()}/users/${userId}/access-link`,
       { method: 'POST' },

@@ -84,11 +84,7 @@ const envVarNames = [
 // pour eprouver une retention absurde sans jamais toucher au `process.env` reel du process de
 // test (config.test.ts).
 const loadConfig = (env: NodeJS.Dict<string> = process.env) => {
-  const envConfig = pickFromDict<ConfigEnvVars>(
-    env,
-    envVarNames,
-    toCamelCase,
-  )
+  const envConfig = pickFromDict<ConfigEnvVars>(env, envVarNames, toCamelCase)
   envConfig.logLevel = envConfig.logLevel.toLowerCase()
   const configData = {
     ...envConfig,

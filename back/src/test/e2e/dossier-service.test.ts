@@ -91,7 +91,12 @@ describe('signal de suivi ailleurs (lecture du patient)', () => {
 
     await createUser({
       email: 'secretariat-signal@test.fr',
-      memberships: [{ establishmentId: est.id, services: [{ serviceId: serviceA.id, role: 'SECRETARIAT' }] }],
+      memberships: [
+        {
+          establishmentId: est.id,
+          services: [{ serviceId: serviceA.id, role: 'SECRETARIAT' }],
+        },
+      ],
     })
     secretariatCookies = await signIn(t.app, 'secretariat-signal@test.fr')
 
@@ -100,7 +105,12 @@ describe('signal de suivi ailleurs (lecture du patient)', () => {
     serviceA1 = await createService(est1.id, 'A1')
     await createUser({
       email: 'u1-homonyme@test.fr',
-      memberships: [{ establishmentId: est1.id, services: [{ serviceId: serviceA1.id, role: 'COORDINATEUR' }] }],
+      memberships: [
+        {
+          establishmentId: est1.id,
+          services: [{ serviceId: serviceA1.id, role: 'COORDINATEUR' }],
+        },
+      ],
     })
     cookies1 = await signIn(t.app, 'u1-homonyme@test.fr')
 
@@ -122,22 +132,39 @@ describe('signal de suivi ailleurs (lecture du patient)', () => {
       'ici seulement), absent (pas suivi ici, quel que soit le suivi ailleurs)',
     async () => {
       const patient = await testDb.patient.create({
-        data: { firstName: 'Deux', lastName: 'Services', createDate: new Date(), establishmentId: est.id },
+        data: {
+          firstName: 'Deux',
+          lastName: 'Services',
+          createDate: new Date(),
+          establishmentId: est.id,
+        },
       })
       await testDb.patientServiceFile.create({
-        data: { patientId: patient.id, serviceId: serviceA.id, establishmentId: est.id },
+        data: {
+          patientId: patient.id,
+          serviceId: serviceA.id,
+          establishmentId: est.id,
+        },
       })
       await testDb.patientServiceFile.create({
-        data: { patientId: patient.id, serviceId: serviceB.id, establishmentId: est.id },
+        data: {
+          patientId: patient.id,
+          serviceId: serviceB.id,
+          establishmentId: est.id,
+        },
       })
 
       // Cas 1 : sous-dossier ICI (A) et ailleurs (B) -> present, vrai. Reciproque : vu de B
       // aussi (B a son propre sous-dossier, et voit celui de A comme "ailleurs").
       const fromA = await t.app.inject({
-        method: 'GET', url: tenantUrl(est.id, serviceA.id, identityPath(patient.id)), cookies: cookiesA,
+        method: 'GET',
+        url: tenantUrl(est.id, serviceA.id, identityPath(patient.id)),
+        cookies: cookiesA,
       })
       const fromB = await t.app.inject({
-        method: 'GET', url: tenantUrl(est.id, serviceB.id, identityPath(patient.id)), cookies: cookiesB,
+        method: 'GET',
+        url: tenantUrl(est.id, serviceB.id, identityPath(patient.id)),
+        cookies: cookiesB,
       })
       expect(fromA.statusCode).toBe(200)
       expect(fromB.statusCode).toBe(200)
@@ -146,13 +173,24 @@ describe('signal de suivi ailleurs (lecture du patient)', () => {
 
       // Cas 2 : sous-dossier ICI seulement (patient suivi uniquement en A) -> present, faux.
       const patientSeul = await testDb.patient.create({
-        data: { firstName: 'Seul', lastName: 'Service', createDate: new Date(), establishmentId: est.id },
+        data: {
+          firstName: 'Seul',
+          lastName: 'Service',
+          createDate: new Date(),
+          establishmentId: est.id,
+        },
       })
       await testDb.patientServiceFile.create({
-        data: { patientId: patientSeul.id, serviceId: serviceA.id, establishmentId: est.id },
+        data: {
+          patientId: patientSeul.id,
+          serviceId: serviceA.id,
+          establishmentId: est.id,
+        },
       })
       const resSeul = await t.app.inject({
-        method: 'GET', url: tenantUrl(est.id, serviceA.id, identityPath(patientSeul.id)), cookies: cookiesA,
+        method: 'GET',
+        url: tenantUrl(est.id, serviceA.id, identityPath(patientSeul.id)),
+        cookies: cookiesA,
       })
       expect(resSeul.statusCode).toBe(200)
       expect(resSeul.json()).toHaveProperty('followedElsewhere', false)
@@ -161,7 +199,9 @@ describe('signal de suivi ailleurs (lecture du patient)', () => {
       // ailleurs (A) — c'est exactement le cas d'une simple recherche (GET /patient/search rend
       // un `id`, puis GET /patient/:id) : le champ doit etre ABSENT, jamais `false`.
       const resPasIci = await t.app.inject({
-        method: 'GET', url: tenantUrl(est.id, serviceB.id, identityPath(patientSeul.id)), cookies: cookiesB,
+        method: 'GET',
+        url: tenantUrl(est.id, serviceB.id, identityPath(patientSeul.id)),
+        cookies: cookiesB,
       })
       expect(resPasIci.statusCode).toBe(200)
       expect(resPasIci.json()).not.toHaveProperty('followedElsewhere')
@@ -194,7 +234,9 @@ describe('signal de suivi ailleurs (lecture du patient)', () => {
       const patientId = created.json().id as string
 
       const fromBAvant = await t.app.inject({
-        method: 'GET', url: tenantUrl(est.id, serviceB.id, identityPath(patientId)), cookies: cookiesB,
+        method: 'GET',
+        url: tenantUrl(est.id, serviceB.id, identityPath(patientId)),
+        cookies: cookiesB,
       })
       expect(fromBAvant.statusCode).toBe(200)
       expect(fromBAvant.json()).not.toHaveProperty('followedElsewhere')
@@ -207,13 +249,16 @@ describe('signal de suivi ailleurs (lecture du patient)', () => {
       expect(attach.statusCode).toBe(200)
 
       const fromBApres = await t.app.inject({
-        method: 'GET', url: tenantUrl(est.id, serviceB.id, identityPath(patientId)), cookies: cookiesB,
+        method: 'GET',
+        url: tenantUrl(est.id, serviceB.id, identityPath(patientId)),
+        cookies: cookiesB,
       })
       expect(fromBApres.statusCode).toBe(200)
       expect(fromBApres.json()).toHaveProperty('followedElsewhere', true)
 
       await testDb.patient.delete({ where: { id: patientId } })
-  })
+    },
+  )
 
   // Instruction 1 (dispatch tache 7) : un patient HOMONYME dans un AUTRE etablissement ne doit
   // jamais faire passer le signal a vrai.
@@ -235,26 +280,50 @@ describe('signal de suivi ailleurs (lecture du patient)', () => {
   // si ce cas-ci ne peut pas la faire rougir.
   it('rend faux quand le seul autre sous-dossier appartient a un patient homonyme d un autre etablissement', async () => {
     const patient1 = await testDb.patient.create({
-      data: { firstName: 'Jean', lastName: 'Dupont', createDate: new Date(), establishmentId: est1.id },
+      data: {
+        firstName: 'Jean',
+        lastName: 'Dupont',
+        createDate: new Date(),
+        establishmentId: est1.id,
+      },
     })
     await testDb.patientServiceFile.create({
-      data: { patientId: patient1.id, serviceId: serviceA1.id, establishmentId: est1.id },
+      data: {
+        patientId: patient1.id,
+        serviceId: serviceA1.id,
+        establishmentId: est1.id,
+      },
     })
 
     // L'homonyme : meme prenom, meme nom, mais un identifiant distinct dans un AUTRE
     // etablissement, suivi dans DEUX de ses services (vrai suivi-ailleurs, mais le sien).
     const patientHomonyme = await testDb.patient.create({
-      data: { firstName: 'Jean', lastName: 'Dupont', createDate: new Date(), establishmentId: est2.id },
+      data: {
+        firstName: 'Jean',
+        lastName: 'Dupont',
+        createDate: new Date(),
+        establishmentId: est2.id,
+      },
     })
     await testDb.patientServiceFile.create({
-      data: { patientId: patientHomonyme.id, serviceId: serviceB2.id, establishmentId: est2.id },
+      data: {
+        patientId: patientHomonyme.id,
+        serviceId: serviceB2.id,
+        establishmentId: est2.id,
+      },
     })
     await testDb.patientServiceFile.create({
-      data: { patientId: patientHomonyme.id, serviceId: serviceC2.id, establishmentId: est2.id },
+      data: {
+        patientId: patientHomonyme.id,
+        serviceId: serviceC2.id,
+        establishmentId: est2.id,
+      },
     })
 
     const res = await t.app.inject({
-      method: 'GET', url: tenantUrl(est1.id, serviceA1.id, identityPath(patient1.id)), cookies: cookies1,
+      method: 'GET',
+      url: tenantUrl(est1.id, serviceA1.id, identityPath(patient1.id)),
+      cookies: cookies1,
     })
     expect(res.statusCode).toBe(200)
     // patient1 a son propre sous-dossier ici (serviceA1) : le champ est present (le service
@@ -269,10 +338,19 @@ describe('signal de suivi ailleurs (lecture du patient)', () => {
   // signal a vrai.
   it('ne rend qu un booleen de plus dans la reponse HTTP — aucune cle supplementaire, meme quand le signal est vrai', async () => {
     const patient = await testDb.patient.create({
-      data: { firstName: 'Fuite', lastName: 'Zero', createDate: new Date(), establishmentId: est.id },
+      data: {
+        firstName: 'Fuite',
+        lastName: 'Zero',
+        createDate: new Date(),
+        establishmentId: est.id,
+      },
     })
     await testDb.patientServiceFile.create({
-      data: { patientId: patient.id, serviceId: serviceA.id, establishmentId: est.id },
+      data: {
+        patientId: patient.id,
+        serviceId: serviceA.id,
+        establishmentId: est.id,
+      },
     })
     await testDb.patientServiceFile.create({
       data: {
@@ -285,7 +363,9 @@ describe('signal de suivi ailleurs (lecture du patient)', () => {
     })
 
     const res = await t.app.inject({
-      method: 'GET', url: tenantUrl(est.id, serviceA.id, identityPath(patient.id)), cookies: cookiesA,
+      method: 'GET',
+      url: tenantUrl(est.id, serviceA.id, identityPath(patient.id)),
+      cookies: cookiesA,
     })
     expect(res.statusCode).toBe(200)
     const body = res.json()
@@ -304,20 +384,38 @@ describe('signal de suivi ailleurs (lecture du patient)', () => {
 
   it('le secretariat voit le signal comme les autres roles, alors qu il ne voit pas les trois champs cliniques du sous-dossier', async () => {
     const patient = await testDb.patient.create({
-      data: { firstName: 'Clinique', lastName: 'Test', createDate: new Date(), establishmentId: est.id },
+      data: {
+        firstName: 'Clinique',
+        lastName: 'Test',
+        createDate: new Date(),
+        establishmentId: est.id,
+      },
     })
     await testDb.patientServiceFile.create({
-      data: { patientId: patient.id, serviceId: serviceA.id, establishmentId: est.id, notes: 'SECRET' },
+      data: {
+        patientId: patient.id,
+        serviceId: serviceA.id,
+        establishmentId: est.id,
+        notes: 'SECRET',
+      },
     })
     await testDb.patientServiceFile.create({
-      data: { patientId: patient.id, serviceId: serviceB.id, establishmentId: est.id },
+      data: {
+        patientId: patient.id,
+        serviceId: serviceB.id,
+        establishmentId: est.id,
+      },
     })
 
     const asSecretariat = await t.app.inject({
-      method: 'GET', url: tenantUrl(est.id, serviceA.id, identityPath(patient.id)), cookies: secretariatCookies,
+      method: 'GET',
+      url: tenantUrl(est.id, serviceA.id, identityPath(patient.id)),
+      cookies: secretariatCookies,
     })
     const asCoordinateur = await t.app.inject({
-      method: 'GET', url: tenantUrl(est.id, serviceA.id, identityPath(patient.id)), cookies: cookiesA,
+      method: 'GET',
+      url: tenantUrl(est.id, serviceA.id, identityPath(patient.id)),
+      cookies: cookiesA,
     })
 
     expect(asSecretariat.statusCode).toBe(200)
@@ -325,17 +423,23 @@ describe('signal de suivi ailleurs (lecture du patient)', () => {
     // Le champ n est pas clinique (absent d utils/clinical-fields.ts) : le secretariat le voit,
     // identique au coordinateur.
     expect(asSecretariat.json().followedElsewhere).toBe(true)
-    expect(asSecretariat.json().followedElsewhere).toBe(asCoordinateur.json().followedElsewhere)
+    expect(asSecretariat.json().followedElsewhere).toBe(
+      asCoordinateur.json().followedElsewhere,
+    )
 
     // Contre-epreuve : les trois champs cliniques du SOUS-DOSSIER, eux, restent masques au
     // secretariat — la difference n est donc pas "le secretariat voit tout", mais bien un
     // traitement distinct et correct par champ. Verifie sur la route du sous-dossier, la seule
     // qui les porte desormais (deplacement I1) ; le coordinateur, lui, les lit.
     const sousDossierSecretariat = await t.app.inject({
-      method: 'GET', url: tenantUrl(est.id, serviceA.id, servicePath(patient.id)), cookies: secretariatCookies,
+      method: 'GET',
+      url: tenantUrl(est.id, serviceA.id, servicePath(patient.id)),
+      cookies: secretariatCookies,
     })
     const sousDossierCoordinateur = await t.app.inject({
-      method: 'GET', url: tenantUrl(est.id, serviceA.id, servicePath(patient.id)), cookies: cookiesA,
+      method: 'GET',
+      url: tenantUrl(est.id, serviceA.id, servicePath(patient.id)),
+      cookies: cookiesA,
     })
     expect(sousDossierSecretariat.json()).not.toHaveProperty('notes')
     expect(sousDossierSecretariat.json()).not.toHaveProperty('details')
@@ -359,15 +463,27 @@ describe('signal de suivi ailleurs (lecture du patient)', () => {
       'fiche patient — jusqu a ce qu il accueille le patient',
     async () => {
       const patient = await testDb.patient.create({
-        data: { firstName: 'Cloisonne', lastName: 'Ment', createDate: new Date(), establishmentId: est.id },
+        data: {
+          firstName: 'Cloisonne',
+          lastName: 'Ment',
+          createDate: new Date(),
+          establishmentId: est.id,
+        },
       })
       // Sous-dossier seulement dans B : A n en a aucun.
       await testDb.patientServiceFile.create({
-        data: { patientId: patient.id, serviceId: serviceB.id, establishmentId: est.id, notes: 'SECRET-B-CLOISON' },
+        data: {
+          patientId: patient.id,
+          serviceId: serviceB.id,
+          establishmentId: est.id,
+          notes: 'SECRET-B-CLOISON',
+        },
       })
 
       const sousDossierDepuisA = await t.app.inject({
-        method: 'GET', url: tenantUrl(est.id, serviceA.id, servicePath(patient.id)), cookies: cookiesA,
+        method: 'GET',
+        url: tenantUrl(est.id, serviceA.id, servicePath(patient.id)),
+        cookies: cookiesA,
       })
       expect(sousDossierDepuisA.statusCode).toBe(404)
       // Jamais un objet partiel : le corps du 404 est celui, neutre, declare par la route
@@ -378,7 +494,9 @@ describe('signal de suivi ailleurs (lecture du patient)', () => {
       // A n a RIEN ecrit pour ce patient (ni cree, ni rattache) : c est exactement le cas d une
       // simple recherche qui aurait trouve son `id` — le signal doit rester absent.
       const identiteDepuisA = await t.app.inject({
-        method: 'GET', url: tenantUrl(est.id, serviceA.id, identityPath(patient.id)), cookies: cookiesA,
+        method: 'GET',
+        url: tenantUrl(est.id, serviceA.id, identityPath(patient.id)),
+        cookies: cookiesA,
       })
       expect(identiteDepuisA.statusCode).toBe(200)
       expect(identiteDepuisA.json()).not.toHaveProperty('followedElsewhere')
@@ -387,18 +505,27 @@ describe('signal de suivi ailleurs (lecture du patient)', () => {
       // moment ou la decision 2.1 dit que l ecran doit indiquer un suivi ailleurs, pour que le
       // soignant se rapproche d un collegue plutot que de croire decouvrir un dossier neuf.
       const attach = await t.app.inject({
-        method: 'POST', url: tenantUrl(est.id, serviceA.id, servicePath(patient.id)), cookies: cookiesA,
+        method: 'POST',
+        url: tenantUrl(est.id, serviceA.id, servicePath(patient.id)),
+        cookies: cookiesA,
       })
       expect(attach.statusCode).toBe(200)
 
       const identiteApresAccueil = await t.app.inject({
-        method: 'GET', url: tenantUrl(est.id, serviceA.id, identityPath(patient.id)), cookies: cookiesA,
+        method: 'GET',
+        url: tenantUrl(est.id, serviceA.id, identityPath(patient.id)),
+        cookies: cookiesA,
       })
       expect(identiteApresAccueil.statusCode).toBe(200)
-      expect(identiteApresAccueil.json()).toHaveProperty('followedElsewhere', true)
+      expect(identiteApresAccueil.json()).toHaveProperty(
+        'followedElsewhere',
+        true,
+      )
 
       const sousDossierDepuisB = await t.app.inject({
-        method: 'GET', url: tenantUrl(est.id, serviceB.id, servicePath(patient.id)), cookies: cookiesB,
+        method: 'GET',
+        url: tenantUrl(est.id, serviceB.id, servicePath(patient.id)),
+        cookies: cookiesB,
       })
       expect(sousDossierDepuisB.statusCode).toBe(200)
       expect(sousDossierDepuisB.json().notes).toBe('SECRET-B-CLOISON')
@@ -423,7 +550,12 @@ describe('signal de suivi ailleurs (lecture du patient)', () => {
   // services de l etablissement jusqu a ce que le patient soit supprime.
   it('un diagnostic cree puis supprime dans le mauvais service laisse un sous-dossier vide, dont le signal ne peut plus etre eteint par l API', async () => {
     const patient = await testDb.patient.create({
-      data: { firstName: 'Erreur', lastName: 'DeService', createDate: new Date(), establishmentId: est.id },
+      data: {
+        firstName: 'Erreur',
+        lastName: 'DeService',
+        createDate: new Date(),
+        establishmentId: est.id,
+      },
     })
 
     // La bevue : un diagnostic cree dans B alors qu il aurait du l etre dans A.
@@ -439,7 +571,11 @@ describe('signal de suivi ailleurs (lecture du patient)', () => {
     // Le correctif humain habituel : on supprime le diagnostic errone...
     const deleted = await t.app.inject({
       method: 'DELETE',
-      url: tenantUrl(est.id, serviceB.id, `/patient/${patient.id}/diagnostic/${diagnosticId}`),
+      url: tenantUrl(
+        est.id,
+        serviceB.id,
+        `/patient/${patient.id}/diagnostic/${diagnosticId}`,
+      ),
       cookies: cookiesB,
     })
     expect(deleted.statusCode).toBe(204)
@@ -448,7 +584,9 @@ describe('signal de suivi ailleurs (lecture du patient)', () => {
     // diagnostic, lui, reste — vide, mais present. Aucune route ne peut plus le retirer : voir le
     // commentaire d en-tete de ce test.
     const traceDansB = await testDb.patientServiceFile.findUnique({
-      where: { patientId_serviceId: { patientId: patient.id, serviceId: serviceB.id } },
+      where: {
+        patientId_serviceId: { patientId: patient.id, serviceId: serviceB.id },
+      },
     })
     expect(traceDansB).not.toBeNull()
     expect(traceDansB?.notes).toBeNull()
@@ -457,11 +595,17 @@ describe('signal de suivi ailleurs (lecture du patient)', () => {
     // tour 1 de la tache 13 (C1) pour que le signal lui apparaisse du tout (voir l en-tete de ce
     // fichier) : sans cette ligne, la lecture ci-dessous n aurait plus le champ.
     await testDb.patientServiceFile.create({
-      data: { patientId: patient.id, serviceId: serviceA.id, establishmentId: est.id },
+      data: {
+        patientId: patient.id,
+        serviceId: serviceA.id,
+        establishmentId: est.id,
+      },
     })
 
     const fromA = await t.app.inject({
-      method: 'GET', url: tenantUrl(est.id, serviceA.id, identityPath(patient.id)), cookies: cookiesA,
+      method: 'GET',
+      url: tenantUrl(est.id, serviceA.id, identityPath(patient.id)),
+      cookies: cookiesA,
     })
     expect(fromA.statusCode).toBe(200)
     // Comportement actuel, constate et non corrige par cette tache : la trace vide suffit a

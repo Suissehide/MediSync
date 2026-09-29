@@ -9,7 +9,11 @@ export const ForbiddenWeekApi = {
       method: 'GET',
     })
     if (!response.ok) {
-      handleHttpError(response, {}, 'Impossible de récupérer les semaines interdites')
+      handleHttpError(
+        response,
+        {},
+        'Impossible de récupérer les semaines interdites',
+      )
     }
     return response.json()
   },
@@ -27,11 +31,18 @@ export const ForbiddenWeekApi = {
   },
 
   delete: async (id: string): Promise<void> => {
-    const response = await fetchWithAuth(`${tenantApiUrl()}/forbidden-week/${id}`, {
-      method: 'DELETE',
-    })
+    const response = await fetchWithAuth(
+      `${tenantApiUrl()}/forbidden-week/${id}`,
+      {
+        method: 'DELETE',
+      },
+    )
     if (!response.ok) {
-      handleHttpError(response, {}, 'Impossible de supprimer la semaine interdite')
+      handleHttpError(
+        response,
+        {},
+        'Impossible de supprimer la semaine interdite',
+      )
     }
   },
 }

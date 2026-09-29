@@ -19,11 +19,15 @@ class ActivityLogDomain implements ActivityLogDomainInterface {
     this.config = config
   }
 
-  findMany(params: ActivityLogFindManyParams): Promise<ActivityLogFindManyResult> {
+  findMany(
+    params: ActivityLogFindManyParams,
+  ): Promise<ActivityLogFindManyResult> {
     return this.activityLogRepository.findMany(params)
   }
 
-  findAllPlatformWide(filters: PlatformAccessLogFilters): Promise<ActivityLogEntityRepo[]> {
+  findAllPlatformWide(
+    filters: PlatformAccessLogFilters,
+  ): Promise<ActivityLogEntityRepo[]> {
     return this.activityLogRepository.findAllPlatformWide(filters)
   }
 
@@ -31,10 +35,15 @@ class ActivityLogDomain implements ActivityLogDomainInterface {
   // dur. Calcul duplique a l'identique dans `PatientAccessLogDomain.cleanup` plutot que
   // factorise -- un sabotage qui remet douze en dur dans UN SEUL des deux domaines doit faire
   // rougir le test de CE domaine seul, jamais les deux ensemble.
-  async cleanup(filters: ActivityLogScopeFilters = {}): Promise<{ deleted: number }> {
+  async cleanup(
+    filters: ActivityLogScopeFilters = {},
+  ): Promise<{ deleted: number }> {
     const cutoff = new Date()
     cutoff.setMonth(cutoff.getMonth() - this.config.logRetentionMonths)
-    const deleted = await this.activityLogRepository.deleteOlderThan(cutoff, filters)
+    const deleted = await this.activityLogRepository.deleteOlderThan(
+      cutoff,
+      filters,
+    )
     return { deleted }
   }
 }

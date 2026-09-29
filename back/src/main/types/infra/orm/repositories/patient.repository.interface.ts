@@ -1,7 +1,4 @@
-import type {
-  Patient,
-  Prisma,
-} from '../../../../../generated/client'
+import type { Patient, Prisma } from '../../../../../generated/client'
 import type { PatientWithAppointmentsDomain } from '../../../domain/patient.domain.interface'
 import type { EnrollmentIssueEntityRepo } from './enrollmentIssue.repository.interface'
 import type { PatientServiceFileEntityRepo } from './patientServiceFile.repository.interface'
@@ -26,8 +23,14 @@ export type PatientForExportEntityRepo = PatientWithTagsEntityRepo & {
   serviceFile: PatientServiceFileEntityRepo | null
 }
 // Le repository pose establishmentId lui-même : l'appelant ne le fournit pas.
-export type PatientCreateEntityRepo = Omit<Prisma.PatientUncheckedCreateInput, 'establishmentId'>
-export type PatientUpdateEntityRepo = Omit<Prisma.PatientUncheckedUpdateInput, 'establishmentId'>
+export type PatientCreateEntityRepo = Omit<
+  Prisma.PatientUncheckedCreateInput,
+  'establishmentId'
+>
+export type PatientUpdateEntityRepo = Omit<
+  Prisma.PatientUncheckedUpdateInput,
+  'establishmentId'
+>
 
 export type PatientExportFilters = {
   search?: string
@@ -74,7 +77,9 @@ export type PatientIdentitySearchRepoResult = {
 export interface PatientRepositoryInterface {
   findAll: () => Promise<PatientEntityRepo[]>
   findAllWithTags: () => Promise<PatientWithTagsEntityRepo[]>
-  findForExport: (filters: PatientExportFilters) => Promise<PatientForExportEntityRepo[]>
+  findForExport: (
+    filters: PatientExportFilters,
+  ) => Promise<PatientForExportEntityRepo[]>
   searchByIdentity: (
     filters: PatientIdentitySearchFilters,
   ) => Promise<PatientIdentitySearchRepoResult>
@@ -95,7 +100,9 @@ export interface PatientRepositoryInterface {
     patientID: string,
     pathwayID: string,
   ) => Promise<number>
-  getPathwaysForPatient: (patientID: string) => Promise<PatientPathwayEntityRepo[]>
+  getPathwaysForPatient: (
+    patientID: string,
+  ) => Promise<PatientPathwayEntityRepo[]>
   setPathwayPriorities: (
     patientID: string,
     orderedPathwayIDs: string[],

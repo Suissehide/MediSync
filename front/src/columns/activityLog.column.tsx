@@ -1,7 +1,10 @@
 import { createColumnHelper } from '@tanstack/react-table'
 import dayjs from 'dayjs'
 
-import { ACTION_LABELS, TYPE_LABELS } from '../constants/activityLog.constant.ts'
+import {
+  ACTION_LABELS,
+  TYPE_LABELS,
+} from '../constants/activityLog.constant.ts'
 import type { ActivityLog } from '../types/activityLog.ts'
 
 const columnHelper = createColumnHelper<ActivityLog>()

@@ -1,9 +1,8 @@
-import { createJSONStorage } from 'zustand/middleware'
 import type { PersistStorage } from 'zustand/middleware'
-
-import type { TenantContext } from '@/types/auth.ts'
+import { createJSONStorage } from 'zustand/middleware'
 
 import { useAuthStore } from '@/store/useAuthStore.ts'
+import type { TenantContext } from '@/types/auth.ts'
 
 // Un store persiste qui porte des identifiants de service doit changer de
 // tiroir avec le service, faute de quoi un retour dans un service affiche les
@@ -44,9 +43,12 @@ const activerTiroir = (base: string, context: TenantContext | null): void => {
 // etait rompu — mieux vaut alors retomber sur le contexte courant qu'une cle
 // indefinie.
 const tiroirCourant = (base: string): string =>
-  tiroirsCourants.get(base) ?? scopedStorageName(base, useAuthStore.getState().context)
+  tiroirsCourants.get(base) ??
+  scopedStorageName(base, useAuthStore.getState().context)
 
-export const scopedStorage = <S>(base: string): PersistStorage<S> | undefined => {
+export const scopedStorage = <S>(
+  base: string,
+): PersistStorage<S> | undefined => {
   // Capture explicite, au chargement du module du store, du contexte
   // disponible a cet instant precis. Elle lit le bon tiroir (celui du
   // dernier service visite, pas le tiroir neutre) parce que `useAuthStore`
@@ -61,7 +63,8 @@ export const scopedStorage = <S>(base: string): PersistStorage<S> | undefined =>
 
   return createJSONStorage<S>(() => ({
     getItem: (_key: string) => localStorage.getItem(tiroirCourant(base)),
-    setItem: (_key: string, value: string) => localStorage.setItem(tiroirCourant(base), value),
+    setItem: (_key: string, value: string) =>
+      localStorage.setItem(tiroirCourant(base), value),
     removeItem: (_key: string) => localStorage.removeItem(tiroirCourant(base)),
   }))
 }

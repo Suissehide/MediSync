@@ -18,7 +18,6 @@ import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { AuthState, User } from '@/types/auth.ts'
 import type { EstablishmentListItem } from '@/types/superAdmin.ts'
 import type { SuperAdminAccessLogEntry } from '@/types/superAdminAccessLog.ts'
-
 import { Route as superAdminLayoutRoute } from '../super-admin.tsx'
 import { Route as accessLogRoute } from './access-log.tsx'
 
@@ -64,9 +63,7 @@ const compteOrdinaire: User = {
   firstName: null,
   lastName: null,
   isSuperAdmin: false,
-  establishments: [
-    { id: 'e1', name: 'CHU', role: 'ADMIN', services: [] },
-  ],
+  establishments: [{ id: 'e1', name: 'CHU', role: 'ADMIN', services: [] }],
 }
 
 const rootRoute = createRootRouteWithContext<{ authState: AuthState }>()({
@@ -103,10 +100,14 @@ const monter = (user: User) => {
   // Navigation par echelle (2026-09-28) : les onglets de la plateforme viennent de la barre du
   // haut (`navbar.tsx`), qui lit le compte dans le store, et non plus d'un bandeau dans la page.
   useAuthStore.setState({ user })
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
   const router = createRouter({
     routeTree,
-    history: createMemoryHistory({ initialEntries: ['/super-admin/access-log'] }),
+    history: createMemoryHistory({
+      initialEntries: ['/super-admin/access-log'],
+    }),
     context: { authState: { isAuthenticated: true, user } },
   })
   render(
@@ -140,7 +141,9 @@ const necker: EstablishmentListItem = {
   lastActivityAt: null,
 }
 
-const ligneAcces = (overrides: Partial<SuperAdminAccessLogEntry> = {}): SuperAdminAccessLogEntry => ({
+const ligneAcces = (
+  overrides: Partial<SuperAdminAccessLogEntry> = {},
+): SuperAdminAccessLogEntry => ({
   id: 'log1',
   source: 'acces',
   establishmentId: 'e1',
@@ -168,19 +171,29 @@ const buildFetchMock = (routes: RouteMock[]) =>
     const method = init?.method ?? 'GET'
     const route = routes.find((r) => r.match(url, method))
     if (!route) {
-      throw new Error(`Appel fetch non attendu dans ce test : ${method} ${url.toString()}`)
+      throw new Error(
+        `Appel fetch non attendu dans ce test : ${method} ${url.toString()}`,
+      )
     }
     return Promise.resolve(route.respond(url))
   })
 
 const routeEtablissements = (data: EstablishmentListItem[]): RouteMock => ({
-  match: (url, method) => url.pathname.endsWith('/super-admin/establishments') && method === 'GET',
+  match: (url, method) =>
+    url.pathname.endsWith('/super-admin/establishments') && method === 'GET',
   respond: () => new Response(JSON.stringify(data), { status: 200 }),
 })
 
-const routeAccessLog = (data: SuperAdminAccessLogEntry[] | ((url: URL) => SuperAdminAccessLogEntry[])): RouteMock => ({
-  match: (url, method) => url.pathname.endsWith('/super-admin/access-log') && method === 'GET',
-  respond: (url) => new Response(JSON.stringify(typeof data === 'function' ? data(url) : data), { status: 200 }),
+const routeAccessLog = (
+  data: SuperAdminAccessLogEntry[] | ((url: URL) => SuperAdminAccessLogEntry[]),
+): RouteMock => ({
+  match: (url, method) =>
+    url.pathname.endsWith('/super-admin/access-log') && method === 'GET',
+  respond: (url) =>
+    new Response(
+      JSON.stringify(typeof data === 'function' ? data(url) : data),
+      { status: 200 },
+    ),
 })
 
 afterEach(() => {
@@ -189,9 +202,14 @@ afterEach(() => {
 
 describe("discretion de l'ecran plateforme du journal des acces", () => {
   it("un compte sans le drapeau isSuperAdmin ne voit ni entree de navigation ni le contenu de l'ecran (notFound, indiscernable d'une URL inconnue)", async () => {
-    vi.stubGlobal('fetch', vi.fn(() => {
-      throw new Error('Aucun appel fetch attendu : la garde doit refuser avant tout rendu.')
-    }))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => {
+        throw new Error(
+          'Aucun appel fetch attendu : la garde doit refuser avant tout rendu.',
+        )
+      }),
+    )
 
     monter(compteOrdinaire)
 
@@ -200,10 +218,18 @@ describe("discretion de l'ecran plateforme du journal des acces", () => {
     // "Not Found" par défaut — le même que pour une URL réellement inconnue.
     expect(await screen.findByText('Not Found')).toBeInTheDocument()
 
-    expect(screen.queryByRole('heading', { name: 'Journaux' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Journaux' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Comptes' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Établissements' })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('heading', { name: 'Journaux' }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('link', { name: 'Journaux' }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('link', { name: 'Comptes' }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('link', { name: 'Établissements' }),
+    ).not.toBeInTheDocument()
   })
 
   it("un compte AVEC le drapeau isSuperAdmin atteint reellement l'ecran, avec son entree de navigation", async () => {
@@ -215,18 +241,25 @@ describe("discretion de l'ecran plateforme du journal des acces", () => {
     monter(superAdmin)
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Journaux' })).toBeInTheDocument()
+      expect(
+        screen.getByRole('heading', { name: 'Journaux' }),
+      ).toBeInTheDocument()
     })
     expect(screen.getByRole('link', { name: 'Journaux' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Comptes' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Établissements' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'Établissements' }),
+    ).toBeInTheDocument()
     expect(screen.queryByText('Not Found')).not.toBeInTheDocument()
   })
 })
 
 describe("etats de l'ecran plateforme du journal des acces", () => {
   beforeEach(() => {
-    vi.stubGlobal('fetch', buildFetchMock([routeEtablissements([chu, necker]), routeAccessLog([])]))
+    vi.stubGlobal(
+      'fetch',
+      buildFetchMock([routeEtablissements([chu, necker]), routeAccessLog([])]),
+    )
   })
 
   it("affiche un etat de chargement distinct (ni erreur, ni vide) tant que la reponse n'est pas arrivee", async () => {
@@ -247,24 +280,30 @@ describe("etats de l'ecran plateforme du journal des acces", () => {
     monter(superAdmin)
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Journaux' })).toBeInTheDocument()
+      expect(
+        screen.getByRole('heading', { name: 'Journaux' }),
+      ).toBeInTheDocument()
     })
     // `ReactTable` rend des lignes squelettes (`animate-pulse`) tant que `isLoading` est vrai —
     // jamais l'état d'erreur, jamais l'état vide.
     await waitFor(() => {
-      expect(document.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0)
+      expect(
+        document.querySelectorAll('.animate-pulse').length,
+      ).toBeGreaterThan(0)
     })
     expect(screen.queryByText(/impossible de charger/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/aucune entrée trouvée/i)).not.toBeInTheDocument()
   })
 
-  it("affiche une erreur distincte, jamais un tableau vide, sur une panne", async () => {
+  it('affiche une erreur distincte, jamais un tableau vide, sur une panne', async () => {
     vi.stubGlobal(
       'fetch',
       buildFetchMock([
         routeEtablissements([]),
         {
-          match: (url, method) => url.pathname.endsWith('/super-admin/access-log') && method === 'GET',
+          match: (url, method) =>
+            url.pathname.endsWith('/super-admin/access-log') &&
+            method === 'GET',
           respond: () => new Response(null, { status: 500 }),
         },
       ]),
@@ -273,7 +312,9 @@ describe("etats de l'ecran plateforme du journal des acces", () => {
     monter(superAdmin)
 
     await waitFor(() => {
-      expect(screen.getByText(/impossible de charger le journal de la plateforme/i)).toBeInTheDocument()
+      expect(
+        screen.getByText(/impossible de charger le journal de la plateforme/i),
+      ).toBeInTheDocument()
     })
     expect(screen.queryByText(/aucune entrée trouvée/i)).not.toBeInTheDocument()
   })
@@ -287,7 +328,7 @@ describe("etats de l'ecran plateforme du journal des acces", () => {
     expect(screen.queryByText(/impossible de charger/i)).not.toBeInTheDocument()
   })
 
-  it("affiche le contenu une fois la reponse arrivee : compte, action, etablissement resolu", async () => {
+  it('affiche le contenu une fois la reponse arrivee : compte, action, etablissement resolu', async () => {
     vi.stubGlobal(
       'fetch',
       buildFetchMock([
@@ -315,8 +356,18 @@ describe("etats de l'ecran plateforme du journal des acces", () => {
       buildFetchMock([
         routeEtablissements([chu]),
         routeAccessLog([
-          ligneAcces({ id: 'log-reel', userFirstName: 'Alice', userLastName: 'Martin', accesParOctroi: false }),
-          ligneAcces({ id: 'log-octroi', userFirstName: 'Super', userLastName: 'Admin', accesParOctroi: true }),
+          ligneAcces({
+            id: 'log-reel',
+            userFirstName: 'Alice',
+            userLastName: 'Martin',
+            accesParOctroi: false,
+          }),
+          ligneAcces({
+            id: 'log-octroi',
+            userFirstName: 'Super',
+            userLastName: 'Admin',
+            accesParOctroi: true,
+          }),
         ]),
       ]),
     )
@@ -347,7 +398,13 @@ describe("etats de l'ecran plateforme du journal des acces", () => {
       buildFetchMock([
         routeEtablissements([chu]),
         routeAccessLog([
-          ligneAcces({ id: 'log-amorcage', establishmentId: null, serviceId: null, userFirstName: null, userLastName: null }),
+          ligneAcces({
+            id: 'log-amorcage',
+            establishmentId: null,
+            serviceId: null,
+            userFirstName: null,
+            userLastName: null,
+          }),
         ]),
       ]),
     )
@@ -361,7 +418,7 @@ describe("etats de l'ecran plateforme du journal des acces", () => {
 
   // LE FILTRE NE S'ÉPROUVE QUE S'IL EXCLUT QUELQUE CHOSE (brief) : deux établissements, deux
   // lignes qui ne se recouvrent pas — sans quoi le test ne prouverait rien.
-  it("le filtre etablissement exclut les lignes des autres etablissements", async () => {
+  it('le filtre etablissement exclut les lignes des autres etablissements', async () => {
     vi.stubGlobal(
       'fetch',
       buildFetchMock([
@@ -369,10 +426,22 @@ describe("etats de l'ecran plateforme du journal des acces", () => {
         routeAccessLog((url) => {
           const establishmentId = url.searchParams.get('establishmentId')
           const toutes = [
-            ligneAcces({ id: 'log-chu', establishmentId: 'e1', userFirstName: 'Alice', userLastName: 'Martin' }),
-            ligneAcces({ id: 'log-necker', establishmentId: 'e2', userFirstName: 'Bob', userLastName: 'Durand' }),
+            ligneAcces({
+              id: 'log-chu',
+              establishmentId: 'e1',
+              userFirstName: 'Alice',
+              userLastName: 'Martin',
+            }),
+            ligneAcces({
+              id: 'log-necker',
+              establishmentId: 'e2',
+              userFirstName: 'Bob',
+              userLastName: 'Durand',
+            }),
           ]
-          return establishmentId ? toutes.filter((l) => l.establishmentId === establishmentId) : toutes
+          return establishmentId
+            ? toutes.filter((l) => l.establishmentId === establishmentId)
+            : toutes
         }),
       ]),
     )
@@ -385,7 +454,9 @@ describe("etats de l'ecran plateforme du journal des acces", () => {
     expect(screen.getByText('Bob Durand')).toBeInTheDocument()
 
     await userEvent.click(screen.getByLabelText('Établissement'))
-    await userEvent.click(await screen.findByRole('option', { name: 'CHU Bordeaux' }))
+    await userEvent.click(
+      await screen.findByRole('option', { name: 'CHU Bordeaux' }),
+    )
 
     await waitFor(() => {
       expect(screen.queryByText('Bob Durand')).not.toBeInTheDocument()
@@ -406,8 +477,18 @@ describe("etats de l'ecran plateforme du journal des acces", () => {
         routeAccessLog((url) => {
           const action = url.searchParams.get('action')
           const toutes = [
-            ligneAcces({ id: 'log-ouvert', action: 'dossier.ouvert', userFirstName: 'Alice', userLastName: 'Martin' }),
-            ligneAcces({ id: 'log-export', action: 'export', userFirstName: 'Bob', userLastName: 'Durand' }),
+            ligneAcces({
+              id: 'log-ouvert',
+              action: 'dossier.ouvert',
+              userFirstName: 'Alice',
+              userLastName: 'Martin',
+            }),
+            ligneAcces({
+              id: 'log-export',
+              action: 'export',
+              userFirstName: 'Bob',
+              userLastName: 'Durand',
+            }),
           ]
           return action ? toutes.filter((l) => l.action === action) : toutes
         }),
@@ -422,7 +503,9 @@ describe("etats de l'ecran plateforme du journal des acces", () => {
     expect(screen.getByText('Bob Durand')).toBeInTheDocument()
 
     await userEvent.click(screen.getByLabelText('Action'))
-    await userEvent.click(await screen.findByRole('option', { name: 'Dossier ouvert' }))
+    await userEvent.click(
+      await screen.findByRole('option', { name: 'Dossier ouvert' }),
+    )
 
     await waitFor(() => {
       expect(screen.queryByText('Bob Durand')).not.toBeInTheDocument()
@@ -437,21 +520,31 @@ describe("etats de l'ecran plateforme du journal des acces", () => {
   // verifiait que Bob disparaissait : un filtre navigateur le satisfaisait, et c'est bien ce qui
   // se passait — sur la page DEJA TRONQUEE a 200 lignes. Les deux cas ci-dessous inversent la
   // charge de la preuve : le bouchon honore `compte`, donc ne rien envoyer laisse Bob a l'ecran.
-  it("le filtre compte est envoye au SERVEUR (un filtre navigateur ne le satisferait pas)", async () => {
+  it('le filtre compte est envoye au SERVEUR (un filtre navigateur ne le satisferait pas)', async () => {
     const fetchMock = buildFetchMock([
       routeEtablissements([chu]),
       routeAccessLog((url) => {
         const compte = url.searchParams.get('compte')
         const toutes = [
-          ligneAcces({ id: 'log-alice', userFirstName: 'Alice', userLastName: 'Martin' }),
-          ligneAcces({ id: 'log-bob', userFirstName: 'Bob', userLastName: 'Durand' }),
+          ligneAcces({
+            id: 'log-alice',
+            userFirstName: 'Alice',
+            userLastName: 'Martin',
+          }),
+          ligneAcces({
+            id: 'log-bob',
+            userFirstName: 'Bob',
+            userLastName: 'Durand',
+          }),
         ]
         if (compte === null) {
           return toutes
         }
         const fragment = compte.toLowerCase()
         return toutes.filter((l) =>
-          `${l.userFirstName} ${l.userLastName}`.toLowerCase().includes(fragment),
+          `${l.userFirstName} ${l.userLastName}`
+            .toLowerCase()
+            .includes(fragment),
         )
       }),
     ])
@@ -475,7 +568,9 @@ describe("etats de l'ecran plateforme du journal des acces", () => {
       expect(screen.queryByText('Bob Durand')).not.toBeInTheDocument()
     })
     expect(
-      fetchMock.mock.calls.some(([url]) => String(url).includes('compte=alice')),
+      fetchMock.mock.calls.some(([url]) =>
+        String(url).includes('compte=alice'),
+      ),
     ).toBe(true)
   })
 
@@ -484,7 +579,7 @@ describe("etats de l'ecran plateforme du journal des acces", () => {
   // filtree. Le bouchon reproduit exactement cela — Zoe n'est rendue QUE lorsque `compte` est
   // envoye. Un filtre navigateur, qui ne peut que reduire la page recue, rendrait ici « aucune
   // entree » alors que les lignes existent : c'est le constat de la revue, mot pour mot.
-  it("trouve un compte dont les lignes sont HORS de la page non filtree (ce que le filtre navigateur ne pouvait pas)", async () => {
+  it('trouve un compte dont les lignes sont HORS de la page non filtree (ce que le filtre navigateur ne pouvait pas)', async () => {
     vi.stubGlobal(
       'fetch',
       buildFetchMock([
@@ -493,10 +588,22 @@ describe("etats de l'ecran plateforme du journal des acces", () => {
           const compte = url.searchParams.get('compte')
           if (compte === null) {
             // La « page » des 200 dernieres lignes : Zoe n'y est pas, elle est trop ancienne.
-            return [ligneAcces({ id: 'log-alice', userFirstName: 'Alice', userLastName: 'Martin' })]
+            return [
+              ligneAcces({
+                id: 'log-alice',
+                userFirstName: 'Alice',
+                userLastName: 'Martin',
+              }),
+            ]
           }
           return compte.toLowerCase() === 'zoe'
-            ? [ligneAcces({ id: 'log-zoe', userFirstName: 'Zoe', userLastName: 'Ancienne' })]
+            ? [
+                ligneAcces({
+                  id: 'log-zoe',
+                  userFirstName: 'Zoe',
+                  userLastName: 'Ancienne',
+                }),
+              ]
             : []
         }),
       ]),
@@ -559,7 +666,9 @@ describe("etats de l'ecran plateforme du journal des acces", () => {
     monter(superAdmin)
 
     await userEvent.click(await screen.findByLabelText('Journal'))
-    await userEvent.click(await screen.findByRole('option', { name: "Journal d'activité" }))
+    await userEvent.click(
+      await screen.findByRole('option', { name: "Journal d'activité" }),
+    )
 
     await waitFor(() => {
       expect(screen.getByText('Patient créé')).toBeInTheDocument()
@@ -569,30 +678,43 @@ describe("etats de l'ecran plateforme du journal des acces", () => {
     expect(screen.getByText('Super-admin accordé (script)')).toBeInTheDocument()
 
     await userEvent.click(screen.getByLabelText('Établissement'))
-    await userEvent.click(await screen.findByRole('option', { name: 'Sans établissement (amorçage)' }))
+    await userEvent.click(
+      await screen.findByRole('option', {
+        name: 'Sans établissement (amorçage)',
+      }),
+    )
 
     await waitFor(() => {
-      expect(screen.getByText('Super-admin accordé (script)')).toBeInTheDocument()
+      expect(
+        screen.getByText('Super-admin accordé (script)'),
+      ).toBeInTheDocument()
       expect(screen.queryByText('Patient créé')).not.toBeInTheDocument()
     })
     expect(
-      fetchMock.mock.calls.some(([url]) => String(url).includes('establishmentId=aucun')),
+      fetchMock.mock.calls.some(([url]) =>
+        String(url).includes('establishmentId=aucun'),
+      ),
     ).toBe(true)
   })
 
   // `PatientAccessLog.establishmentId` est NON NULLABLE : la demander « sans etablissement » n'a
   // pas de sens, et le back repond 400. L'option n'existe donc pas sur ce journal-la, plutot que
   // d'exister et d'echouer.
-  it("ne propose PAS « Sans etablissement » sur le journal des consultations", async () => {
+  it('ne propose PAS « Sans etablissement » sur le journal des consultations', async () => {
     vi.stubGlobal(
       'fetch',
-      buildFetchMock([routeEtablissements([chu]), routeAccessLog([ligneAcces()])]),
+      buildFetchMock([
+        routeEtablissements([chu]),
+        routeAccessLog([ligneAcces()]),
+      ]),
     )
 
     monter(superAdmin)
 
     await userEvent.click(await screen.findByLabelText('Établissement'))
-    expect(await screen.findByRole('option', { name: 'CHU Bordeaux' })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('option', { name: 'CHU Bordeaux' }),
+    ).toBeInTheDocument()
     expect(
       screen.queryByRole('option', { name: 'Sans établissement (amorçage)' }),
     ).not.toBeInTheDocument()
@@ -613,16 +735,22 @@ describe("etats de l'ecran plateforme du journal des acces", () => {
     monter(superAdmin)
 
     await userEvent.click(await screen.findByLabelText('Journal'))
-    await userEvent.click(await screen.findByRole('option', { name: "Journal d'activité" }))
+    await userEvent.click(
+      await screen.findByRole('option', { name: "Journal d'activité" }),
+    )
 
     await userEvent.click(screen.getByLabelText('Action'))
     expect(
-      await screen.findByRole('option', { name: "Lien d'accès réémis (super-admin)" }),
+      await screen.findByRole('option', {
+        name: "Lien d'accès réémis (super-admin)",
+      }),
     ).toBeInTheDocument()
     expect(
       screen.getByRole('option', { name: 'Super-admin accordé (script)' }),
     ).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: 'Membre rattaché' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('option', { name: 'Membre rattaché' }),
+    ).toBeInTheDocument()
   })
 
   // Changer de journal réinitialise l'action (les deux ne partagent pas le même vocabulaire) et
@@ -662,7 +790,9 @@ describe("etats de l'ecran plateforme du journal des acces", () => {
     })
 
     await userEvent.click(screen.getByLabelText('Journal'))
-    await userEvent.click(await screen.findByRole('option', { name: "Journal d'activité" }))
+    await userEvent.click(
+      await screen.findByRole('option', { name: "Journal d'activité" }),
+    )
 
     await waitFor(() => {
       expect(screen.getByText('Patient créé')).toBeInTheDocument()

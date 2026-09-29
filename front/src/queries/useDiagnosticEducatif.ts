@@ -1,6 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { DiagnosticEducatifApi, DiagnosticEducatifTemplateApi } from '../api/diagnosticEducatif.api.ts'
-import { DIAGNOSTIC_EDUCATIF, DIAGNOSTIC_EDUCATIF_TEMPLATE } from '../constants/process.constant.ts'
+
+import {
+  DiagnosticEducatifApi,
+  DiagnosticEducatifTemplateApi,
+} from '../api/diagnosticEducatif.api.ts'
+import {
+  DIAGNOSTIC_EDUCATIF,
+  DIAGNOSTIC_EDUCATIF_TEMPLATE,
+} from '../constants/process.constant.ts'
 import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
 import { useToast } from '../hooks/useToast.ts'
@@ -13,7 +20,12 @@ import type {
 } from '../types/diagnosticEducatif.ts'
 
 export const useDiagnosticsByPatientQuery = (patientId: string) => {
-  const { data: diagnostics, isPending, isError, error } = useQuery<DiagnosticEducatif[]>({
+  const {
+    data: diagnostics,
+    isPending,
+    isError,
+    error,
+  } = useQuery<DiagnosticEducatif[]>({
     queryKey: [DIAGNOSTIC_EDUCATIF.GET_BY_PATIENT, patientId],
     queryFn: () => DiagnosticEducatifApi.getByPatient(patientId),
     enabled: !!patientId,
@@ -24,7 +36,12 @@ export const useDiagnosticsByPatientQuery = (patientId: string) => {
 }
 
 export const useDiagnosticTemplatesQuery = () => {
-  const { data: templates, isPending, isError, error } = useQuery({
+  const {
+    data: templates,
+    isPending,
+    isError,
+    error,
+  } = useQuery({
     queryKey: [DIAGNOSTIC_EDUCATIF_TEMPLATE.GET_ALL],
     queryFn: DiagnosticEducatifTemplateApi.getAll,
     retry: 0,
@@ -39,24 +56,37 @@ export const useDiagnosticMutations = (patientId: string) => {
   const queryKey = [DIAGNOSTIC_EDUCATIF.GET_BY_PATIENT, patientId]
 
   const createDiagnostic = useMutation({
-    mutationFn: (params: CreateDiagnosticEducatifParams) => DiagnosticEducatifApi.create(params),
+    mutationFn: (params: CreateDiagnosticEducatifParams) =>
+      DiagnosticEducatifApi.create(params),
     onSuccess: () => {
       toast({ title: 'Diagnostic créé', severity: TOAST_SEVERITY.SUCCESS })
       queryClient.invalidateQueries({ queryKey })
     },
     onError: (error) => {
-      toast({ title: 'Erreur lors de la création', message: error.message, severity: TOAST_SEVERITY.ERROR })
+      toast({
+        title: 'Erreur lors de la création',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
     },
   })
 
   const updateDiagnostic = useMutation({
-    mutationFn: (params: UpdateDiagnosticEducatifParams) => DiagnosticEducatifApi.update(params),
+    mutationFn: (params: UpdateDiagnosticEducatifParams) =>
+      DiagnosticEducatifApi.update(params),
     onSuccess: () => {
-      toast({ title: 'Diagnostic mis à jour', severity: TOAST_SEVERITY.SUCCESS })
+      toast({
+        title: 'Diagnostic mis à jour',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
       queryClient.invalidateQueries({ queryKey })
     },
     onError: (error) => {
-      toast({ title: 'Erreur lors de la mise à jour', message: error.message, severity: TOAST_SEVERITY.ERROR })
+      toast({
+        title: 'Erreur lors de la mise à jour',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
     },
   })
 
@@ -68,7 +98,11 @@ export const useDiagnosticMutations = (patientId: string) => {
       queryClient.invalidateQueries({ queryKey })
     },
     onError: (error) => {
-      toast({ title: 'Erreur lors de la suppression', message: error.message, severity: TOAST_SEVERITY.ERROR })
+      toast({
+        title: 'Erreur lors de la suppression',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
     },
   })
 
@@ -81,21 +115,33 @@ export const useDiagnosticTemplateMutations = () => {
   const queryKey = [DIAGNOSTIC_EDUCATIF_TEMPLATE.GET_ALL]
 
   const createTemplate = useMutation({
-    mutationFn: (params: CreateDiagnosticEducatifTemplateParams) => DiagnosticEducatifTemplateApi.create(params),
+    mutationFn: (params: CreateDiagnosticEducatifTemplateParams) =>
+      DiagnosticEducatifTemplateApi.create(params),
     onSuccess: () => {
       toast({ title: 'Template créé', severity: TOAST_SEVERITY.SUCCESS })
       queryClient.invalidateQueries({ queryKey })
     },
-    onError: (error) => toast({ title: 'Erreur', message: error.message, severity: TOAST_SEVERITY.ERROR }),
+    onError: (error) =>
+      toast({
+        title: 'Erreur',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      }),
   })
 
   const updateTemplate = useMutation({
-    mutationFn: (params: UpdateDiagnosticEducatifTemplateParams) => DiagnosticEducatifTemplateApi.update(params),
+    mutationFn: (params: UpdateDiagnosticEducatifTemplateParams) =>
+      DiagnosticEducatifTemplateApi.update(params),
     onSuccess: () => {
       toast({ title: 'Template mis à jour', severity: TOAST_SEVERITY.SUCCESS })
       queryClient.invalidateQueries({ queryKey })
     },
-    onError: (error) => toast({ title: 'Erreur', message: error.message, severity: TOAST_SEVERITY.ERROR }),
+    onError: (error) =>
+      toast({
+        title: 'Erreur',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      }),
   })
 
   const deleteTemplate = useMutation({
@@ -104,7 +150,12 @@ export const useDiagnosticTemplateMutations = () => {
       toast({ title: 'Template supprimé', severity: TOAST_SEVERITY.SUCCESS })
       queryClient.invalidateQueries({ queryKey })
     },
-    onError: (error) => toast({ title: 'Erreur', message: error.message, severity: TOAST_SEVERITY.ERROR }),
+    onError: (error) =>
+      toast({
+        title: 'Erreur',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      }),
   })
 
   return { createTemplate, updateTemplate, deleteTemplate }

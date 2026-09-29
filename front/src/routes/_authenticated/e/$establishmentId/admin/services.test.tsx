@@ -16,7 +16,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { AuthState, User } from '@/types/auth.ts'
-
 import { Route as adminRoute } from '../admin.tsx'
 import { Route as servicesRoute } from './services.tsx'
 
@@ -62,9 +61,7 @@ const admin: User = {
   firstName: null,
   lastName: null,
   isSuperAdmin: false,
-  establishments: [
-    { id: 'e1', name: 'CHU', role: 'ADMIN', services: [] },
-  ],
+  establishments: [{ id: 'e1', name: 'CHU', role: 'ADMIN', services: [] }],
 }
 
 const rootRoute = createRootRouteWithContext<{ authState: AuthState }>()({
@@ -89,7 +86,9 @@ const servicesScreenRoute = createRoute({
   component: optionsDe(servicesRoute).component,
 })
 const routeTree = rootRoute.addChildren([
-  authenticatedRoute.addChildren([adminLayoutRoute.addChildren([servicesScreenRoute])]),
+  authenticatedRoute.addChildren([
+    adminLayoutRoute.addChildren([servicesScreenRoute]),
+  ]),
 ])
 
 type Route = {
@@ -167,10 +166,14 @@ describe('etats de l ecran des services', () => {
           }),
       ),
     )
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
     const router = createRouter({
       routeTree,
-      history: createMemoryHistory({ initialEntries: ['/e/e1/admin/services'] }),
+      history: createMemoryHistory({
+        initialEntries: ['/e/e1/admin/services'],
+      }),
       context: { authState: { isAuthenticated: true, user: admin } },
     })
     render(
@@ -183,16 +186,19 @@ describe('etats de l ecran des services', () => {
     expect(screen.queryByText(/impossible de charger/i)).not.toBeInTheDocument()
   })
 
-  it("affiche une erreur distincte, jamais un chargement perpetuel, sur une panne", async () => {
+  it('affiche une erreur distincte, jamais un chargement perpetuel, sur une panne', async () => {
     monter([
       {
-        match: (url, method) => url.endsWith('/admin/services') && method === 'GET',
+        match: (url, method) =>
+          url.endsWith('/admin/services') && method === 'GET',
         respond: () => ({ ok: false, status: 500, json: async () => ({}) }),
       },
     ])
 
     await waitFor(() => {
-      expect(screen.getByText(/impossible de charger les services/i)).toBeInTheDocument()
+      expect(
+        screen.getByText(/impossible de charger les services/i),
+      ).toBeInTheDocument()
     })
     expect(screen.queryByText(/^chargement/i)).not.toBeInTheDocument()
   })
@@ -201,7 +207,9 @@ describe('etats de l ecran des services', () => {
     monter([routeGetServices([])])
 
     await waitFor(() => {
-      expect(screen.getByText(/aucun service pour le moment/i)).toBeInTheDocument()
+      expect(
+        screen.getByText(/aucun service pour le moment/i),
+      ).toBeInTheDocument()
     })
     expect(screen.queryByText(/impossible de charger/i)).not.toBeInTheDocument()
   })
@@ -229,7 +237,9 @@ describe('etats de l ecran des services', () => {
     })
 
     expect(screen.getByText(serviceActif.id)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /copier l'identifiant/i })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /copier l'identifiant/i }),
+    ).toBeInTheDocument()
   })
 
   // Mineur (tour de correction 1, tâche 13) : cette propriété n'avait pas
@@ -240,12 +250,18 @@ describe('etats de l ecran des services', () => {
   // appellerait l'impact pour chaque service au montage laisserait passer
   // ce test-la aussi si personne ne cherche precisement cette propriete.
   it("n'appelle jamais la route d'impact au simple rendu de la liste, avant toute interaction", async () => {
-    const fetchMock = buildFetchMock([routeGetServices([serviceActif, serviceDesactive])])
+    const fetchMock = buildFetchMock([
+      routeGetServices([serviceActif, serviceDesactive]),
+    ])
     vi.stubGlobal('fetch', fetchMock)
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
     const router = createRouter({
       routeTree,
-      history: createMemoryHistory({ initialEntries: ['/e/e1/admin/services'] }),
+      history: createMemoryHistory({
+        initialEntries: ['/e/e1/admin/services'],
+      }),
       context: { authState: { isAuthenticated: true, user: admin } },
     })
     render(
@@ -258,19 +274,22 @@ describe('etats de l ecran des services', () => {
     await screen.findByText('Neuro')
 
     expect(
-      fetchMock.mock.calls.some(([url]) => String(url).includes('impact-desactivation')),
+      fetchMock.mock.calls.some(([url]) =>
+        String(url).includes('impact-desactivation'),
+      ),
     ).toBe(false)
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 })
 
 describe('desactivation d un service : les deux compteurs', () => {
-  it("affiche les DEUX compteurs distinctement quand ils different, avant de confirmer", async () => {
+  it('affiche les DEUX compteurs distinctement quand ils different, avant de confirmer', async () => {
     monter([
       routeGetServices([serviceActif]),
       {
         match: (url, method) =>
-          url.endsWith('/admin/services/s1/impact-desactivation') && method === 'GET',
+          url.endsWith('/admin/services/s1/impact-desactivation') &&
+          method === 'GET',
         // Fixture ou les deux nombres DIFFERENT : sinon rien ne prouve
         // qu'on affiche le bon des deux (brief tache 13).
         respond: () => ({
@@ -282,7 +301,9 @@ describe('desactivation d un service : les deux compteurs', () => {
     ])
 
     await screen.findByText('Cardio')
-    await userEvent.click(screen.getByRole('button', { name: /désactiver le service/i }))
+    await userEvent.click(
+      screen.getByRole('button', { name: /désactiver le service/i }),
+    )
 
     // Tour de correction 1, Critique n°1 : `getByText('5')` /
     // `getByText('2')` existent et sont forcement des noeuds distincts
@@ -323,7 +344,8 @@ describe('desactivation d un service : les deux compteurs', () => {
       routeGetServices([serviceActif]),
       {
         match: (url, method) =>
-          url.endsWith('/admin/services/s1/impact-desactivation') && method === 'GET',
+          url.endsWith('/admin/services/s1/impact-desactivation') &&
+          method === 'GET',
         respond: () => ({
           ok: true,
           status: 200,
@@ -331,19 +353,27 @@ describe('desactivation d un service : les deux compteurs', () => {
         }),
       },
       {
-        match: (url, method) => url.endsWith('/admin/services/s1') && method === 'PATCH',
+        match: (url, method) =>
+          url.endsWith('/admin/services/s1') && method === 'PATCH',
         respond: () => ({
           ok: true,
           status: 200,
-          json: async () => ({ ...serviceActif, deactivatedAt: '2026-01-01T00:00:00.000Z' }),
+          json: async () => ({
+            ...serviceActif,
+            deactivatedAt: '2026-01-01T00:00:00.000Z',
+          }),
         }),
       },
     ])
     vi.stubGlobal('fetch', fetchMock)
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
     const router = createRouter({
       routeTree,
-      history: createMemoryHistory({ initialEntries: ['/e/e1/admin/services'] }),
+      history: createMemoryHistory({
+        initialEntries: ['/e/e1/admin/services'],
+      }),
       context: { authState: { isAuthenticated: true, user: admin } },
     })
     render(
@@ -353,10 +383,14 @@ describe('desactivation d un service : les deux compteurs', () => {
     )
 
     await screen.findByText('Cardio')
-    await userEvent.click(screen.getByRole('button', { name: /désactiver le service/i }))
+    await userEvent.click(
+      screen.getByRole('button', { name: /désactiver le service/i }),
+    )
     await screen.findByText('5')
 
-    await userEvent.click(screen.getByRole('button', { name: /confirmer la désactivation/i }))
+    await userEvent.click(
+      screen.getByRole('button', { name: /confirmer la désactivation/i }),
+    )
 
     await waitFor(() => {
       const patchCall = fetchMock.mock.calls.find(
@@ -364,15 +398,18 @@ describe('desactivation d un service : les deux compteurs', () => {
       )
       expect(patchCall).toBeDefined()
       expect(String(patchCall?.[0])).toContain('/admin/services/s1')
-      expect(JSON.parse(String(patchCall?.[1]?.body))).toEqual({ deactivated: true })
+      expect(JSON.parse(String(patchCall?.[1]?.body))).toEqual({
+        deactivated: true,
+      })
     })
   })
 
-  it("reactiver ne calcule aucun impact : la route dediee n est jamais appelee", async () => {
+  it('reactiver ne calcule aucun impact : la route dediee n est jamais appelee', async () => {
     const fetchMock = buildFetchMock([
       routeGetServices([serviceDesactive]),
       {
-        match: (url, method) => url.endsWith('/admin/services/s2') && method === 'PATCH',
+        match: (url, method) =>
+          url.endsWith('/admin/services/s2') && method === 'PATCH',
         respond: () => ({
           ok: true,
           status: 200,
@@ -381,10 +418,14 @@ describe('desactivation d un service : les deux compteurs', () => {
       },
     ])
     vi.stubGlobal('fetch', fetchMock)
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
     const router = createRouter({
       routeTree,
-      history: createMemoryHistory({ initialEntries: ['/e/e1/admin/services'] }),
+      history: createMemoryHistory({
+        initialEntries: ['/e/e1/admin/services'],
+      }),
       context: { authState: { isAuthenticated: true, user: admin } },
     })
     render(
@@ -394,14 +435,20 @@ describe('desactivation d un service : les deux compteurs', () => {
     )
 
     await screen.findByText('Neuro')
-    await userEvent.click(screen.getByRole('button', { name: /réactiver le service/i }))
+    await userEvent.click(
+      screen.getByRole('button', { name: /réactiver le service/i }),
+    )
 
     await waitFor(() => {
-      const patchCall = fetchMock.mock.calls.find(([, init]) => init?.method === 'PATCH')
+      const patchCall = fetchMock.mock.calls.find(
+        ([, init]) => init?.method === 'PATCH',
+      )
       expect(patchCall).toBeDefined()
     })
     expect(
-      fetchMock.mock.calls.some(([url]) => String(url).includes('impact-desactivation')),
+      fetchMock.mock.calls.some(([url]) =>
+        String(url).includes('impact-desactivation'),
+      ),
     ).toBe(false)
   })
 })

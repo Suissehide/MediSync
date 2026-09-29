@@ -2,7 +2,6 @@ import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
 
 import type { Todo } from '../types/todo.ts'
-
 import { scopedStorage } from './scoped-storage.ts'
 
 interface TodoState {
@@ -72,7 +71,9 @@ export const useTodoStore = create<TodoState & TodoActions>()(
         partialize: (state) => ({ seenTodoIds: Array.from(state.seenTodoIds) }),
         merge: (persisted, current) => ({
           ...current,
-          seenTodoIds: new Set((persisted as { seenTodoIds: string[] })?.seenTodoIds ?? []),
+          seenTodoIds: new Set(
+            (persisted as { seenTodoIds: string[] })?.seenTodoIds ?? [],
+          ),
         }),
       },
     ),

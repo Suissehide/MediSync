@@ -18,13 +18,13 @@ import { forbiddenWeekRouter } from './forbiddenWeek'
 import { locationReadRouter, locationWriteRouter } from './location'
 import { pathwayRouter } from './pathway'
 import { pathwayTemplateRouter } from './pathwayTemplate'
-import { patientAccessLogRouter } from './patientAccessLog'
 import { patientRouter } from './patient'
+import { patientAccessLogRouter } from './patientAccessLog'
 import { patientServiceFileRouter } from './patientServiceFile'
 import { planningCycleRouter } from './planningCycle'
+import { serviceMembersRouter } from './serviceMembers'
 import { slotRouter } from './slot'
 import { slotTemplateRouter } from './slotTemplate'
-import { serviceMembersRouter } from './serviceMembers'
 import { soignantReadRouter, soignantWriteRouter } from './soignant'
 import { thematicRouter } from './thematic'
 import { todoRouter } from './todo'
@@ -94,7 +94,7 @@ export const assertPatientRouteUnderTenant = (route: {
     `Route de lecture designant un dossier patient hors du greffon de tenant : GET ${route.url}. ` +
       `Le journal des consultations n'est pose que sous ${TENANT_PREFIX} : enregistrer cette ` +
       'route sous ce prefixe, ou la declarer dans EXEMPTED_ADMIN_PATIENT_ROUTES si elle ne lit ' +
-      "jamais le dossier lui-meme (voir src/main/utils/access-log-routes.ts), sans quoi elle ne " +
+      'jamais le dossier lui-meme (voir src/main/utils/access-log-routes.ts), sans quoi elle ne ' +
       'laissera aucune trace.',
   )
 }
@@ -113,17 +113,20 @@ export const assertNoDeadAdminPatientExemption = (
   const readable = new Set(
     seenRoutes.filter((route) => isReadRoute(route.method)).map((r) => r.url),
   )
-  const dead = Object.keys(EXEMPTED_ADMIN_PATIENT_ROUTES).filter((url) => !readable.has(url))
+  const dead = Object.keys(EXEMPTED_ADMIN_PATIENT_ROUTES).filter(
+    (url) => !readable.has(url),
+  )
   if (dead.length > 0) {
     throw new Error(
       `Entrees mortes dans EXEMPTED_ADMIN_PATIENT_ROUTES : ${dead
         .map((url) => `GET ${url}`)
-        .join(', ')}. Aucune route GET reelle ne porte cette URL ; retirer l'entree ou corriger ` +
+        .join(
+          ', ',
+        )}. Aucune route GET reelle ne porte cette URL ; retirer l'entree ou corriger ` +
         "l'URL dans src/main/utils/access-log-routes.ts.",
     )
   }
 }
-
 
 // Toute route enregistrée ici vit sous /e/:establishmentId/s/:serviceId et
 // doit déclarer `config.permission`. Le hook onRoute fait échouer le
@@ -174,11 +177,21 @@ const tenantRoutes: FastifyPluginAsyncZod = async (fastify) => {
   await fastify.register(locationReadRouter, { prefix: '/location' })
   await fastify.register(locationWriteRouter, { prefix: '/location' })
   await fastify.register(patientRouter, { prefix: '/patient' })
-  await fastify.register(patientServiceFileRouter, { prefix: '/patient/:patientID/service-file' })
-  await fastify.register(diagnosticEducatifTemplateRouter, { prefix: '/diagnostic-template' })
-  await fastify.register(diagnosticEducatifRouter, { prefix: '/patient/:patientId/diagnostic' })
-  await fastify.register(enrollmentIssueRouter, { prefix: '/patient/:patientID/enrollment-issue' })
-  await fastify.register(patientAccessLogRouter, { prefix: '/patient/:patientID/acces' })
+  await fastify.register(patientServiceFileRouter, {
+    prefix: '/patient/:patientID/service-file',
+  })
+  await fastify.register(diagnosticEducatifTemplateRouter, {
+    prefix: '/diagnostic-template',
+  })
+  await fastify.register(diagnosticEducatifRouter, {
+    prefix: '/patient/:patientId/diagnostic',
+  })
+  await fastify.register(enrollmentIssueRouter, {
+    prefix: '/patient/:patientID/enrollment-issue',
+  })
+  await fastify.register(patientAccessLogRouter, {
+    prefix: '/patient/:patientID/acces',
+  })
   await fastify.register(forbiddenWeekRouter, { prefix: '/forbidden-week' })
   await fastify.register(planningCycleRouter, { prefix: '/planning-cycle' })
   await fastify.register(serviceMembersRouter, { prefix: '/membres' })

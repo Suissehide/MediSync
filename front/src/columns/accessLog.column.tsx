@@ -61,11 +61,14 @@ export const getAccessLogColumns = ({ services }: AccessLogColumnOptions) => [
   ),
   columnHelper.accessor('action', {
     header: 'Action',
-    cell: (info) => ACCESS_LOG_ACTION_LABELS[info.getValue()] ?? info.getValue(),
+    cell: (info) =>
+      ACCESS_LOG_ACTION_LABELS[info.getValue()] ?? info.getValue(),
     size: 240,
   }),
   columnHelper.accessor(
-    (row) => services.find((service) => service.id === row.serviceId)?.name ?? row.serviceId,
+    (row) =>
+      services.find((service) => service.id === row.serviceId)?.name ??
+      row.serviceId,
     {
       id: 'service',
       header: 'Service',

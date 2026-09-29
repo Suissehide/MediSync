@@ -76,12 +76,18 @@ export const patientServiceFileFormOpts = formOptions({
 // équivalence qui rend un champ non touché indétectable comme « changé » quand le serveur
 // renvoie `null` là où le formulaire tenait `''`.
 type PatientFormValues = typeof patientFormOpts.defaultValues
-type PatientServiceFileFormValues = typeof patientServiceFileFormOpts.defaultValues
+type PatientServiceFileFormValues =
+  typeof patientServiceFileFormOpts.defaultValues
 
-export const buildPatientDefaults = (data?: Partial<Patient> | null): PatientFormValues => {
+export const buildPatientDefaults = (
+  data?: Partial<Patient> | null,
+): PatientFormValues => {
   const source = (data ?? {}) as Record<string, unknown>
   return Object.fromEntries(
-    Object.keys(patientFormOpts.defaultValues).map((key) => [key, source[key] ?? '']),
+    Object.keys(patientFormOpts.defaultValues).map((key) => [
+      key,
+      source[key] ?? '',
+    ]),
   ) as PatientFormValues
 }
 
@@ -90,6 +96,9 @@ export const buildServiceFileDefaults = (
 ): PatientServiceFileFormValues => {
   const source = (data ?? {}) as Record<string, unknown>
   return Object.fromEntries(
-    Object.keys(patientServiceFileFormOpts.defaultValues).map((key) => [key, source[key] ?? '']),
+    Object.keys(patientServiceFileFormOpts.defaultValues).map((key) => [
+      key,
+      source[key] ?? '',
+    ]),
   ) as PatientServiceFileFormValues
 }

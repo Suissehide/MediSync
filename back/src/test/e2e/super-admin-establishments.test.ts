@@ -142,7 +142,11 @@ describe('POST /super-admin/establishments', () => {
       expect(after.salt).toBe(before.salt)
       // Le mot de passe ORIGINAL fonctionne toujours pour se connecter.
       await expect(
-        signIn(testApp.app, 'deja-connu@ailleurs.fr', 'MotDePasseOriginal123!!'),
+        signIn(
+          testApp.app,
+          'deja-connu@ailleurs.fr',
+          'MotDePasseOriginal123!!',
+        ),
       ).resolves.toBeDefined()
     })
 
@@ -196,7 +200,7 @@ describe('POST /super-admin/establishments', () => {
     // pouvait pas voir. Prouve ici en envoyant des noms differents et en verifiant qu'AUCUN des
     // deux (ni le stocke, ni le soumis) n'apparait nulle part dans le corps de la reponse — la
     // reponse ne doit rien dire sur le compte, dans un sens comme dans l'autre.
-    it("ne revele jamais le prenom/nom — ni celui stocke, ni celui soumis — meme quand ils different", async () => {
+    it('ne revele jamais le prenom/nom — ni celui stocke, ni celui soumis — meme quand ils different', async () => {
       const existing = await createUser({ email: 'nom-stocke@ailleurs.fr' })
       await testDb.user.update({
         where: { id: existing.id },
@@ -216,10 +220,15 @@ describe('POST /super-admin/establishments', () => {
       expect(raw).not.toContain('Stocke')
       expect(raw).not.toContain('Autre')
       expect(raw).not.toContain('Personne')
-      expect(Object.keys(res.json()).sort()).toEqual(['accessLink', 'establishment'])
+      expect(Object.keys(res.json()).sort()).toEqual([
+        'accessLink',
+        'establishment',
+      ])
 
       // Et le compte existant garde bien SON nom d'origine — pas celui soumis.
-      const after = await testDb.user.findUniqueOrThrow({ where: { id: existing.id } })
+      const after = await testDb.user.findUniqueOrThrow({
+        where: { id: existing.id },
+      })
       expect(after.firstName).toBe('Zorro')
       expect(after.lastName).toBe('Stocke')
     })
@@ -279,7 +288,9 @@ describe('POST /super-admin/establishments', () => {
           await original(establishmentId, userId, client)
           // ...et C'EST SEULEMENT APRES qu'on simule l'echec, pour eprouver l'annulation d'une
           // ecriture reelle plutot que l'absence d'ecriture.
-          throw new Error('SABOTAGE: rattachement en echec, apres ecriture reelle')
+          throw new Error(
+            'SABOTAGE: rattachement en echec, apres ecriture reelle',
+          )
         })
 
       const res = await create({

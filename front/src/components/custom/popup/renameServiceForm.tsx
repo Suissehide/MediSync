@@ -4,7 +4,6 @@ import { useEffect } from 'react'
 import { useAppForm } from '@/hooks/formConfig.tsx'
 import { useServiceMutations } from '@/queries/useServices.ts'
 import type { Service } from '@/types/service.ts'
-
 import { Button } from '../../ui/button.tsx'
 import {
   Popup,
@@ -47,7 +46,11 @@ function RenameServiceForm({ service, onClose }: RenameServiceFormProps) {
   }, [service, form])
 
   return (
-    <Popup modal={true} open={service !== null} onOpenChange={(open) => !open && onClose()}>
+    <Popup
+      modal={true}
+      open={service !== null}
+      onOpenChange={(open) => !open && onClose()}
+    >
       <PopupContent>
         <PopupHeader>
           <PopupTitle className="font-bold text-xl">

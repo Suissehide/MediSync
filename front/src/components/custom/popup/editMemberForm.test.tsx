@@ -5,9 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import { useToastStore } from '@/store/useToastStore.ts'
-import type { Member } from '@/types/member.ts'
 import type { User } from '@/types/auth.ts'
-
+import type { Member } from '@/types/member.ts'
 import EditMemberForm, { buildServiceAssignments } from './editMemberForm.tsx'
 
 // Tâche 14b (hors plan, étape 4a) : « affecter un membre à un service » est
@@ -27,9 +26,7 @@ const admin: User = {
   firstName: null,
   lastName: null,
   isSuperAdmin: false,
-  establishments: [
-    { id: 'e1', name: 'CHU', role: 'ADMIN', services: [] },
-  ],
+  establishments: [{ id: 'e1', name: 'CHU', role: 'ADMIN', services: [] }],
 }
 
 const memberFixture: Member = {
@@ -49,9 +46,24 @@ const memberFixture: Member = {
 }
 
 const servicesFixture = [
-  { id: 'svcA', name: 'Cardiologie', createdAt: '2026-01-01T00:00:00.000Z', deactivatedAt: null },
-  { id: 'svcB', name: 'Neurologie', createdAt: '2026-01-01T00:00:00.000Z', deactivatedAt: null },
-  { id: 'svcC', name: 'Pédiatrie', createdAt: '2026-01-01T00:00:00.000Z', deactivatedAt: null },
+  {
+    id: 'svcA',
+    name: 'Cardiologie',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    deactivatedAt: null,
+  },
+  {
+    id: 'svcB',
+    name: 'Neurologie',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    deactivatedAt: null,
+  },
+  {
+    id: 'svcC',
+    name: 'Pédiatrie',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    deactivatedAt: null,
+  },
   // Minutieusement absent des fixtures avant le tour de correction 1 : rien
   // n'éprouvait alors le suffixe « (désactivé) » de la liste — un service
   // désactivé, sans affectation, reste proposé (l'établissement peut le
@@ -91,7 +103,10 @@ const routeServices = (services: unknown[] = servicesFixture): Route => ({
   respond: () => ({ ok: true, status: 200, json: async () => services }),
 })
 
-const renderForm = (fetchMock: ReturnType<typeof buildFetchMock>, member = memberFixture) => {
+const renderForm = (
+  fetchMock: ReturnType<typeof buildFetchMock>,
+  member = memberFixture,
+) => {
   vi.stubGlobal('fetch', fetchMock)
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -105,7 +120,9 @@ const renderForm = (fetchMock: ReturnType<typeof buildFetchMock>, member = membe
 }
 
 const ouvrir = async () => {
-  await userEvent.click(screen.getByRole('button', { name: /modifier le membre/i }))
+  await userEvent.click(
+    screen.getByRole('button', { name: /modifier le membre/i }),
+  )
 }
 
 beforeEach(() => {
@@ -143,7 +160,9 @@ describe('EditMemberForm — affecter un membre a un service', () => {
     })
 
     // Deux services deja affectes : chacun montre SON role, pas un autre.
-    expect(screen.getByLabelText('Cardiologie')).toHaveTextContent('Coordinateur')
+    expect(screen.getByLabelText('Cardiologie')).toHaveTextContent(
+      'Coordinateur',
+    )
     expect(screen.getByLabelText('Neurologie')).toHaveTextContent('Intervenant')
     // Aucune affectation : « Aucun », jamais un role herite d'un autre service.
     expect(screen.getByLabelText('Pédiatrie')).toHaveTextContent('Aucun')
@@ -152,7 +171,9 @@ describe('EditMemberForm — affecter un membre a un service', () => {
     // suffixe), a « Aucun » comme les autres services non affectes.
     const libelleUrgences = screen.getByLabelText(/Urgences \(désactivé\)/i)
     expect(libelleUrgences).toBeInTheDocument()
-    expect(screen.getByLabelText(/Urgences \(désactivé\)/i)).toHaveTextContent('Aucun')
+    expect(screen.getByLabelText(/Urgences \(désactivé\)/i)).toHaveTextContent(
+      'Aucun',
+    )
 
     // Plus jamais desactivee : l'ancienne commande unique se desactivait
     // systematiquement (`serviceId === null`, toujours vrai sur cet ecran).
@@ -173,15 +194,22 @@ describe('EditMemberForm — affecter un membre a un service', () => {
       routeSoignants,
       routeServices(),
       {
-        match: (url, method) => url.endsWith('/admin/members/m1') && method === 'PATCH',
-        respond: () => ({ ok: true, status: 200, json: async () => ({ ...memberFixture }) }),
+        match: (url, method) =>
+          url.endsWith('/admin/members/m1') && method === 'PATCH',
+        respond: () => ({
+          ok: true,
+          status: 200,
+          json: async () => ({ ...memberFixture }),
+        }),
       },
     ])
     renderForm(fetchMock)
     await ouvrir()
 
     await waitFor(() => {
-      expect(screen.getByLabelText('Cardiologie')).toHaveTextContent('Coordinateur')
+      expect(screen.getByLabelText('Cardiologie')).toHaveTextContent(
+        'Coordinateur',
+      )
     })
     expect(screen.getByLabelText('Neurologie')).toHaveTextContent('Intervenant')
 
@@ -192,10 +220,14 @@ describe('EditMemberForm — affecter un membre a un service', () => {
 
     // Immediatement apres le clic, AVANT toute soumission : Cardiologie
     // (svcA), jamais touchee, doit toujours afficher SON role d'origine.
-    expect(screen.getByLabelText('Cardiologie')).toHaveTextContent('Coordinateur')
+    expect(screen.getByLabelText('Cardiologie')).toHaveTextContent(
+      'Coordinateur',
+    )
     expect(screen.getByLabelText('Neurologie')).toHaveTextContent('Secrétariat')
 
-    await userEvent.click(screen.getByRole('button', { name: /^enregistrer$/i }))
+    await userEvent.click(
+      screen.getByRole('button', { name: /^enregistrer$/i }),
+    )
 
     await waitFor(() => {
       const patchCall = fetchMock.mock.calls.find(
@@ -224,7 +256,8 @@ describe('EditMemberForm — affecter un membre a un service', () => {
       routeSoignants,
       routeServices(),
       {
-        match: (url, method) => url.endsWith('/admin/members/m1') && method === 'PATCH',
+        match: (url, method) =>
+          url.endsWith('/admin/members/m1') && method === 'PATCH',
         respond: () => ({
           ok: true,
           status: 200,
@@ -239,7 +272,9 @@ describe('EditMemberForm — affecter un membre a un service', () => {
       expect(screen.getByLabelText('Cardiologie')).toBeInTheDocument()
     })
 
-    await userEvent.click(screen.getByRole('button', { name: /^enregistrer$/i }))
+    await userEvent.click(
+      screen.getByRole('button', { name: /^enregistrer$/i }),
+    )
 
     await waitFor(() => {
       const patchCall = fetchMock.mock.calls.find(
@@ -268,7 +303,7 @@ describe('EditMemberForm — affecter un membre a un service', () => {
   // ecart entre la liste montree et les affectations reelles) ne doit
   // JAMAIS disparaitre au premier enregistrement, meme sans y toucher — la
   // mise a jour remplace l'ensemble des affectations cote back.
-  it("une affectation a un service absent de la liste chargee est preservee telle quelle", async () => {
+  it('une affectation a un service absent de la liste chargee est preservee telle quelle', async () => {
     const memberAvecServiceOrphelin: Member = {
       ...memberFixture,
       serviceMemberships: [
@@ -280,7 +315,8 @@ describe('EditMemberForm — affecter un membre a un service', () => {
       routeSoignants,
       routeServices(), // ne contient PAS 'svc-disparu'
       {
-        match: (url, method) => url.endsWith('/admin/members/m1') && method === 'PATCH',
+        match: (url, method) =>
+          url.endsWith('/admin/members/m1') && method === 'PATCH',
         respond: () => ({
           ok: true,
           status: 200,
@@ -295,7 +331,9 @@ describe('EditMemberForm — affecter un membre a un service', () => {
       expect(screen.getByLabelText('Cardiologie')).toBeInTheDocument()
     })
 
-    await userEvent.click(screen.getByRole('button', { name: /^enregistrer$/i }))
+    await userEvent.click(
+      screen.getByRole('button', { name: /^enregistrer$/i }),
+    )
 
     await waitFor(() => {
       const patchCall = fetchMock.mock.calls.find(
@@ -329,13 +367,19 @@ describe('EditMemberForm — affecter un membre a un service', () => {
       }),
     )
     render(
-      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
         <EditMemberForm member={memberFixture} />
       </QueryClientProvider>,
     )
     await ouvrir()
 
-    expect(await screen.findByText(/chargement des services/i)).toBeInTheDocument()
+    expect(
+      await screen.findByText(/chargement des services/i),
+    ).toBeInTheDocument()
     expect(screen.queryByText(/aucun service/i)).not.toBeInTheDocument()
   })
 
@@ -343,7 +387,9 @@ describe('EditMemberForm — affecter un membre a un service', () => {
     renderForm(buildFetchMock([routeSoignants, routeServices([])]))
     await ouvrir()
 
-    expect(await screen.findByText(/aucun service dans cet établissement/i)).toBeInTheDocument()
+    expect(
+      await screen.findByText(/aucun service dans cet établissement/i),
+    ).toBeInTheDocument()
   })
 
   it("etat d'erreur distinct sur les services : le formulaire reste utilisable pour le role/la fonction", async () => {
@@ -351,14 +397,17 @@ describe('EditMemberForm — affecter un membre a un service', () => {
       buildFetchMock([
         routeSoignants,
         {
-          match: (url, method) => url.endsWith('/admin/services') && method === 'GET',
+          match: (url, method) =>
+            url.endsWith('/admin/services') && method === 'GET',
           respond: () => ({ ok: false, status: 500, json: async () => ({}) }),
         },
       ]),
     )
     await ouvrir()
 
-    expect(await screen.findByText(/impossible de charger les services/i)).toBeInTheDocument()
+    expect(
+      await screen.findByText(/impossible de charger les services/i),
+    ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^enregistrer$/i })).toBeEnabled()
   })
 })

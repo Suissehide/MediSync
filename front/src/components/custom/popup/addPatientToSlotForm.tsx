@@ -398,10 +398,11 @@ function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
   const isJoining = !!joinedAppointment
   const areTimeFieldsDisabled = isJoining || !selected?.isIndividual
 
-  const { freeInterval: individualFreeInterval, minTime, maxTime } = useMemo(
-    () => getFreeIntervalBounds(selected),
-    [selected],
-  )
+  const {
+    freeInterval: individualFreeInterval,
+    minTime,
+    maxTime,
+  } = useMemo(() => getFreeIntervalBounds(selected), [selected])
 
   const durationOptions = useMemo(() => {
     if (!selected) {
@@ -600,7 +601,10 @@ function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
               <span>
                 <span className="text-text-light">Créneau : </span>
                 {formatSlotDate(selected.slot.startDate)}{' '}
-                {formatSlotRange(selected.slot.startDate, selected.slot.endDate)}
+                {formatSlotRange(
+                  selected.slot.startDate,
+                  selected.slot.endDate,
+                )}
               </span>
               <Button
                 type="button"
@@ -618,8 +622,8 @@ function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
 
             {isJoining && (
               <p className="text-sm text-text-light">
-                Ajout à un rendez-vous existant ({selected.bookedCount}
-                /{selected.capacity} patients).
+                Ajout à un rendez-vous existant ({selected.bookedCount}/
+                {selected.capacity} patients).
               </p>
             )}
 

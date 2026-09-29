@@ -33,7 +33,9 @@ export type PatientWithAppointmentsDomain = PatientEntityDomain & {
 // `followedElsewhere?` (revue tache 13, tour 1, point 1) : absent quand le service courant n'a
 // pas encore de sous-dossier pour ce patient — jamais `false` dans ce cas, un `false` dirait
 // « je sais, et c'est non ». Voir le commentaire de `patientDetailResponseSchema`.
-export type PatientDetailDomain = PatientWithAppointmentsDomain & { followedElsewhere?: boolean }
+export type PatientDetailDomain = PatientWithAppointmentsDomain & {
+  followedElsewhere?: boolean
+}
 export type PatientCreateEntityDomain = Omit<
   PatientCreateEntityRepo,
   'createDate'

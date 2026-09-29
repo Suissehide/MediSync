@@ -20,7 +20,10 @@ const buildFastify = () => {
       order.push('verifySessionCookie')
       return Promise.resolve()
     },
-    addHook: (event: string, handler: (...args: unknown[]) => Promise<void>) => {
+    addHook: (
+      event: string,
+      handler: (...args: unknown[]) => Promise<void>,
+    ) => {
       hooks[event] = handler
     },
     get: () => undefined,

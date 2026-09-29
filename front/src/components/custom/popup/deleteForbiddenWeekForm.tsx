@@ -28,7 +28,9 @@ export function DeleteForbiddenWeekForm({
 }: DeleteForbiddenWeekFormProps) {
   const weekStart = startOfWeek ? dayjs.utc(startOfWeek).isoWeekday(1) : null
   const weekStartLabel = weekStart ? weekStart.format('DD MMMM YYYY') : ''
-  const weekEndLabel = weekStart ? weekStart.add(6, 'day').format('DD MMMM YYYY') : ''
+  const weekEndLabel = weekStart
+    ? weekStart.add(6, 'day').format('DD MMMM YYYY')
+    : ''
 
   return (
     <Popup modal open={open} onOpenChange={setOpen}>

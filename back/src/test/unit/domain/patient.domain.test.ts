@@ -357,7 +357,7 @@ describe('PatientDomain – parcours individuel "premier créneau dispo"', () =>
   })
 })
 
-describe('PatientDomain – thematicID d\'une inscription', () => {
+describe("PatientDomain – thematicID d'une inscription", () => {
   it('cree le rendez-vous quand la thematique est connue du tenant', async () => {
     const { domain, created } = buildDomain([], {}, ['them-1'])
 
@@ -366,7 +366,12 @@ describe('PatientDomain – thematicID d\'une inscription', () => {
         patientID: 'patient-1',
         startDate: monday(0),
         pathways: [
-          { tag: 'INDIV', timeOfDay: 'ALL_DAY', duration: 30, thematicID: 'them-1' },
+          {
+            tag: 'INDIV',
+            timeOfDay: 'ALL_DAY',
+            duration: 30,
+            thematicID: 'them-1',
+          },
         ],
       },
       'user-1',
@@ -387,7 +392,12 @@ describe('PatientDomain – thematicID d\'une inscription', () => {
         patientID: 'patient-1',
         startDate: monday(0),
         pathways: [
-          { tag: 'INDIV', timeOfDay: 'ALL_DAY', duration: 30, thematicID: 'them-etranger' },
+          {
+            tag: 'INDIV',
+            timeOfDay: 'ALL_DAY',
+            duration: 30,
+            thematicID: 'them-etranger',
+          },
         ],
       },
       'user-1',
@@ -409,7 +419,12 @@ describe('PatientDomain – thematicID d\'une inscription', () => {
         patientData: { firstName: 'Ada', lastName: 'Lovelace' } as never,
         startDate: monday(0),
         pathways: [
-          { tag: 'INDIV', timeOfDay: 'ALL_DAY', duration: 30, thematicID: 'them-etranger' },
+          {
+            tag: 'INDIV',
+            timeOfDay: 'ALL_DAY',
+            duration: 30,
+            thematicID: 'them-etranger',
+          },
         ],
       },
       'user-1',
@@ -433,7 +448,12 @@ describe('PatientDomain – report du motif dans une transmission clinique', () 
         patientID: 'patient-1',
         startDate: monday(0),
         pathways: [
-          { tag: 'INDIV', timeOfDay: 'ALL_DAY', duration: 30, motif: 'douleur' },
+          {
+            tag: 'INDIV',
+            timeOfDay: 'ALL_DAY',
+            duration: 30,
+            motif: 'douleur',
+          },
         ],
       },
       'user-1',
@@ -442,33 +462,41 @@ describe('PatientDomain – report du motif dans une transmission clinique', () 
   const transmissionNotesOfCreate = (container: {
     appointmentRepository: { create: jest.Mock }
   }) =>
-    (container.appointmentRepository.create.mock.calls[0]?.[0] as {
-      transmissionNotes?: string
-    })?.transmissionNotes
+    (
+      container.appointmentRepository.create.mock.calls[0]?.[0] as {
+        transmissionNotes?: string
+      }
+    )?.transmissionNotes
 
   it('reporte le motif pour un role qui a clinical:write', async () => {
-    const { domain, created, container } = buildDomain([], {}, [], 'INTERVENANT')
+    const { domain, created, container } = buildDomain(
+      [],
+      {},
+      [],
+      'INTERVENANT',
+    )
 
     const result = await enroll(domain)
 
     expect(result.failedEnrollments).toEqual([])
     expect(created).toHaveLength(1)
-    expect(
-      transmissionNotesOfCreate(container as never),
-    ).toBe('douleur')
+    expect(transmissionNotesOfCreate(container as never)).toBe('douleur')
   })
 
   it('inscrit sans ecrire de transmission pour un role sans clinical:write', async () => {
-    const { domain, created, container } = buildDomain([], {}, [], 'SECRETARIAT')
+    const { domain, created, container } = buildDomain(
+      [],
+      {},
+      [],
+      'SECRETARIAT',
+    )
 
     const result = await enroll(domain)
 
     // L'inscription reussit : seule la transmission clinique est refusee.
     expect(result.failedEnrollments).toEqual([])
     expect(created).toHaveLength(1)
-    expect(
-      transmissionNotesOfCreate(container as never),
-    ).toBeUndefined()
+    expect(transmissionNotesOfCreate(container as never)).toBeUndefined()
   })
 
   it('n ecrit pas non plus de transmission en lecture seule', async () => {
@@ -476,9 +504,7 @@ describe('PatientDomain – report du motif dans une transmission clinique', () 
 
     await enroll(domain)
 
-    expect(
-      transmissionNotesOfCreate(container as never),
-    ).toBeUndefined()
+    expect(transmissionNotesOfCreate(container as never)).toBeUndefined()
   })
 })
 
@@ -492,14 +518,14 @@ describe('PatientDomain – report du motif dans une transmission clinique', () 
 // front/src/queries/usePatient.tsx) ET dans le journal applicatif. Reproduit ici sans toucher
 // a Prisma : `pathwayTemplateRepository.findAll` (methode reellement sans `catch`, voir
 // pathwayTemplate.repository.ts) rejette avec une `Error` nue portant un marqueur.
-describe('PatientDomain – une erreur inattendue (non-Boom) pendant l\'inscription ne fuit pas', () => {
+describe("PatientDomain – une erreur inattendue (non-Boom) pendant l'inscription ne fuit pas", () => {
   const RAW_ERROR_MARKER = 'MOTIF-CLINIQUE-CONFIDENTIEL-INATTENDU'
 
   it('ne renvoie jamais le message brut d une erreur qui n est pas un Boom, ni au client ni au journal', async () => {
     const { domain, container, loggerCalls } = buildDomain()
-    container.pathwayTemplateRepository.findAll = jest.fn(async () => {
-      throw new Error(RAW_ERROR_MARKER)
-    })
+    container.pathwayTemplateRepository.findAll = jest.fn(() =>
+      Promise.reject(new Error(RAW_ERROR_MARKER)),
+    )
 
     const result = await domain.enrollPatientInPathways(
       {
@@ -542,8 +568,8 @@ describe('PatientDomain – création du sous-dossier de service a la creation d
       'user-1',
     )
 
-    expect(container.patientServiceFileDomain.ensureExists).toHaveBeenCalledWith(
-      created.id,
-    )
+    expect(
+      container.patientServiceFileDomain.ensureExists,
+    ).toHaveBeenCalledWith(created.id)
   })
 })

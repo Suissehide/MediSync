@@ -4,11 +4,11 @@ import { LocationApi } from '../api/location.api.ts'
 import { LOCATION } from '../constants/process.constant.ts'
 import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
-import { useToast } from '../hooks/useToast.ts'
 import {
   restoreForTenant,
   snapshotForTenant,
 } from '../hooks/useTenantSwitch.ts'
+import { useToast } from '../hooks/useToast.ts'
 import type {
   CreateLocationParams,
   Location,
@@ -50,7 +50,9 @@ export const useLocationMutations = () => {
     onMutate: async (newLocation: CreateLocationParams) => {
       await queryClient.cancelQueries({ queryKey: [LOCATION.GET_ALL] })
 
-      const previousLocations = snapshotForTenant(queryClient, [LOCATION.GET_ALL])
+      const previousLocations = snapshotForTenant(queryClient, [
+        LOCATION.GET_ALL,
+      ])
       queryClient.setQueryData(
         [LOCATION.GET_ALL],
         (oldLocations: Location[]) => [
@@ -87,7 +89,9 @@ export const useLocationMutations = () => {
     onMutate: async (locationID) => {
       await queryClient.cancelQueries({ queryKey: [LOCATION.GET_ALL] })
 
-      const previousLocations = snapshotForTenant(queryClient, [LOCATION.GET_ALL])
+      const previousLocations = snapshotForTenant(queryClient, [
+        LOCATION.GET_ALL,
+      ])
       queryClient.setQueryData([LOCATION.GET_ALL], (oldLocations: Location[]) =>
         oldLocations?.filter(
           (location: Location) => location.id !== locationID,
@@ -122,7 +126,9 @@ export const useLocationMutations = () => {
     onMutate: async (updatedLocation: UpdateLocationParams) => {
       await queryClient.cancelQueries({ queryKey: [LOCATION.GET_ALL] })
 
-      const previousLocations = snapshotForTenant(queryClient, [LOCATION.GET_ALL])
+      const previousLocations = snapshotForTenant(queryClient, [
+        LOCATION.GET_ALL,
+      ])
       queryClient.setQueryData([LOCATION.GET_ALL], (oldLocations: Location[]) =>
         oldLocations?.map((location: Location) =>
           location.id === updatedLocation.id

@@ -1,7 +1,4 @@
-import type {
-  Prisma,
-  Soignant,
-} from '../../../../../generated/client'
+import type { Prisma, Soignant } from '../../../../../generated/client'
 
 export type SoignantEntityRepo = Soignant
 // Le repository pose establishmentId lui-même : l'appelant ne le fournit pas.

@@ -80,7 +80,9 @@ class EstablishmentRepository implements EstablishmentRepositoryInterface {
   // Tâche 7 : lecture nue d'un modèle global, sans contexte — comme `create` ci-dessus.
   async findAll() {
     try {
-      return await this.prisma.establishment.findMany({ orderBy: { createdAt: 'asc' } })
+      return await this.prisma.establishment.findMany({
+        orderBy: { createdAt: 'asc' },
+      })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
         entityName: 'Establishment',
@@ -91,7 +93,9 @@ class EstablishmentRepository implements EstablishmentRepositoryInterface {
 
   async findByIdOrThrow(id: string) {
     try {
-      return await this.prisma.establishment.findUniqueOrThrow({ where: { id } })
+      return await this.prisma.establishment.findUniqueOrThrow({
+        where: { id },
+      })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
         entityName: 'Establishment',
@@ -105,7 +109,9 @@ class EstablishmentRepository implements EstablishmentRepositoryInterface {
       return []
     }
     try {
-      return await this.prisma.establishment.findMany({ where: { id: { in: ids } } })
+      return await this.prisma.establishment.findMany({
+        where: { id: { in: ids } },
+      })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
         entityName: 'Establishment',
@@ -141,29 +147,38 @@ class EstablishmentRepository implements EstablishmentRepositoryInterface {
   async countersFor(establishmentId: string): Promise<EstablishmentCounters> {
     try {
       return await this.tenantContext.runAsSuperAdmin(async () => {
-        const [serviceCount, patientCount, memberships, latestActivity] = await Promise.all([
-          this.prisma.service.count({ where: { establishmentId, deactivatedAt: null } }),
-          this.prisma.patient.count({ where: { establishmentId } }),
-          this.prisma.establishmentMembership.findMany({
-            where: { establishmentId },
-            select: { userId: true, role: true, createdAt: true },
-            // Départage à créneau égal — voir le commentaire sur `FirstAdmin`
-            // (establishment.repository.interface.ts).
-            orderBy: [{ createdAt: 'asc' }, { userId: 'asc' }],
-          }),
-          this.prisma.activityLog.findMany({
-            where: { establishmentId },
-            select: { createdAt: true },
-            orderBy: { createdAt: 'desc' },
-            take: 1,
-          }),
-        ])
+        const [serviceCount, patientCount, memberships, latestActivity] =
+          await Promise.all([
+            this.prisma.service.count({
+              where: { establishmentId, deactivatedAt: null },
+            }),
+            this.prisma.patient.count({ where: { establishmentId } }),
+            this.prisma.establishmentMembership.findMany({
+              where: { establishmentId },
+              select: { userId: true, role: true, createdAt: true },
+              // Départage à créneau égal — voir le commentaire sur `FirstAdmin`
+              // (establishment.repository.interface.ts).
+              orderBy: [{ createdAt: 'asc' }, { userId: 'asc' }],
+            }),
+            this.prisma.activityLog.findMany({
+              where: { establishmentId },
+              select: { createdAt: true },
+              orderBy: { createdAt: 'desc' },
+              take: 1,
+            }),
+          ])
 
         const userIds = [...new Set(memberships.map((m) => m.userId))]
         const users = userIds.length
           ? await this.prisma.user.findMany({
               where: { id: { in: userIds } },
-              select: { id: true, email: true, firstName: true, lastName: true, deactivatedAt: true },
+              select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                deactivatedAt: true,
+              },
             })
           : []
         const userById = new Map(users.map((u) => [u.id, u]))
@@ -191,7 +206,13 @@ class EstablishmentRepository implements EstablishmentRepositoryInterface {
 
         const lastActivityAt = latestActivity[0]?.createdAt ?? null
 
-        return { serviceCount, accountCount, patientCount, firstAdmin, lastActivityAt }
+        return {
+          serviceCount,
+          accountCount,
+          patientCount,
+          firstAdmin,
+          lastActivityAt,
+        }
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
@@ -224,12 +245,20 @@ class EstablishmentRepository implements EstablishmentRepositoryInterface {
   // établissements confondus. `EstablishmentMembership.findMany` est déclaré (tâche 1) ; le nom
   // de chaque établissement est résolu ailleurs (`findManyByIds`, appelé par
   // `UserDomain.searchByEmail`), jamais par un `include` imbriqué.
-  async membershipsForUser(userId: string): Promise<EstablishmentMembershipRow[]> {
+  async membershipsForUser(
+    userId: string,
+  ): Promise<EstablishmentMembershipRow[]> {
     try {
       return await this.tenantContext.runAsSuperAdmin(async () => {
         return await this.prisma.establishmentMembership.findMany({
           where: { userId },
-          select: { id: true, userId: true, establishmentId: true, role: true, createdAt: true },
+          select: {
+            id: true,
+            userId: true,
+            establishmentId: true,
+            role: true,
+            createdAt: true,
+          },
           orderBy: { createdAt: 'asc' },
         })
       })
@@ -244,12 +273,19 @@ class EstablishmentRepository implements EstablishmentRepositoryInterface {
   // Détail d'un établissement (spec §6.2, tour de correction 1) : ses services, quel que soit
   // leur état — désactivé n'est pas supprimé, l'écran de diagnostic doit le montrer, à la
   // différence du compteur `serviceCount` ci-dessus qui, lui, ne compte que l'utilisable.
-  async servicesFor(establishmentId: string): Promise<EstablishmentServiceRow[]> {
+  async servicesFor(
+    establishmentId: string,
+  ): Promise<EstablishmentServiceRow[]> {
     try {
       return await this.tenantContext.runAsSuperAdmin(async () => {
         return await this.prisma.service.findMany({
           where: { establishmentId },
-          select: { id: true, name: true, createdAt: true, deactivatedAt: true },
+          select: {
+            id: true,
+            name: true,
+            createdAt: true,
+            deactivatedAt: true,
+          },
           orderBy: { createdAt: 'asc' },
         })
       })
@@ -316,7 +352,9 @@ class EstablishmentRepository implements EstablishmentRepositoryInterface {
   // `userLastName` du modèle désignent l'AUTEUR de l'action (un membre du personnel), jamais un
   // patient — `entityID` peut être l'identifiant d'un patient, un identifiant copiable comme la
   // spec §3.4 les autorise tous, jamais son nom.
-  async activityLogFor(establishmentId: string): Promise<ActivityLogEntityRepo[]> {
+  async activityLogFor(
+    establishmentId: string,
+  ): Promise<ActivityLogEntityRepo[]> {
     try {
       return await this.tenantContext.runAsSuperAdmin(async () => {
         return await this.prisma.activityLog.findMany({

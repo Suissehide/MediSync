@@ -69,7 +69,8 @@ export const getFreeIntervals = (slot: Slot): FreeInterval[] => {
 /** Nombre total de patients inscrits sur le créneau, tous rendez-vous confondus. */
 export const getBookedPatientCount = (slot: Slot): number =>
   (slot.appointments ?? []).reduce(
-    (total, appointment) => total + (appointment.appointmentPatients?.length ?? 0),
+    (total, appointment) =>
+      total + (appointment.appointmentPatients?.length ?? 0),
     0,
   )
 
@@ -137,7 +138,9 @@ export const getUpcomingSlotSuggestions = (
         isIndividual,
         freeInterval: isIndividual ? getFreeIntervals(slot)[0] : undefined,
         joinableAppointmentID:
-          !isIndividual && existingAppointment ? existingAppointment.id : undefined,
+          !isIndividual && existingAppointment
+            ? existingAppointment.id
+            : undefined,
       }
     })
 }
@@ -154,7 +157,9 @@ export const getSlotDisplayRange = (
 ): { start: string; end: string } => {
   if (slot.slotTemplate?.isIndividual && patientID) {
     const appointment = slot.appointments?.find((appointment) =>
-      appointment.appointmentPatients?.some((ap) => ap.patient.id === patientID),
+      appointment.appointmentPatients?.some(
+        (ap) => ap.patient.id === patientID,
+      ),
     )
     if (appointment) {
       return { start: appointment.startDate, end: appointment.endDate }

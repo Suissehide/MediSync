@@ -1,4 +1,5 @@
 import type { IocContainer } from '../../../types/application/ioc'
+import type { PrimaTransactionClient } from '../../../types/infra/orm/client'
 import type {
   MembershipCreateRepo,
   MembershipRepositoryInterface,
@@ -6,7 +7,6 @@ import type {
   MembershipUpdateRepo,
   ServiceMemberRow,
 } from '../../../types/infra/orm/repositories/membership.repository.interface'
-import type { PrimaTransactionClient } from '../../../types/infra/orm/client'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { TenantContextInterface } from '../../../types/utils/tenant-context'
 import type { PostgresPrismaClient } from '../postgres-client'
@@ -48,7 +48,13 @@ class MembershipRepository implements MembershipRepositoryInterface {
     establishmentMembership: {
       select: {
         user: {
-          select: { id: true, email: true, firstName: true, lastName: true, deactivatedAt: true },
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            deactivatedAt: true,
+          },
         },
       },
     },
@@ -69,11 +75,17 @@ class MembershipRepository implements MembershipRepositoryInterface {
   ): Promise<ServiceMemberRow | null> {
     const { establishmentId, serviceId } = this.tenantContext.scope()
     const where = { id: serviceMembershipId, establishmentId, serviceId }
-    const { count } = await this.prisma.serviceMembership.updateMany({ where, data: { soignantId } })
+    const { count } = await this.prisma.serviceMembership.updateMany({
+      where,
+      data: { soignantId },
+    })
     if (count === 0) {
       return null
     }
-    return this.prisma.serviceMembership.findFirst({ where, select: this.serviceMemberSelect })
+    return this.prisma.serviceMembership.findFirst({
+      where,
+      select: this.serviceMemberSelect,
+    })
   }
 
   private get rowInclude() {
@@ -234,17 +246,27 @@ class MembershipRepository implements MembershipRepositoryInterface {
             select: { serviceId: true },
           })
           const voulues = new Set(services.map((service) => service.serviceId))
-          const retirees = existantes.map((a) => a.serviceId).filter((serviceId) => !voulues.has(serviceId))
+          const retirees = existantes
+            .map((a) => a.serviceId)
+            .filter((serviceId) => !voulues.has(serviceId))
           if (retirees.length > 0) {
             await tx.serviceMembership.deleteMany({
-              where: { establishmentMembershipId: id, establishmentId, serviceId: { in: retirees } },
+              where: {
+                establishmentMembershipId: id,
+                establishmentId,
+                serviceId: { in: retirees },
+              },
             })
           }
           const deja = new Set(existantes.map((a) => a.serviceId))
           for (const service of services) {
             if (deja.has(service.serviceId)) {
               await tx.serviceMembership.updateMany({
-                where: { establishmentMembershipId: id, establishmentId, serviceId: service.serviceId },
+                where: {
+                  establishmentMembershipId: id,
+                  establishmentId,
+                  serviceId: service.serviceId,
+                },
                 data: { role: service.role },
               })
             } else {

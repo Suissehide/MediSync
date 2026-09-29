@@ -1,8 +1,4 @@
-import {
-  createFileRoute,
-  useNavigate,
-  useParams,
-} from '@tanstack/react-router'
+import { createFileRoute, useNavigate, useParams } from '@tanstack/react-router'
 import { ArrowLeft } from 'lucide-react'
 
 import { activityLogColumns } from '@/columns/activityLog.column.tsx'
@@ -72,7 +68,10 @@ function SuperAdminEstablishmentDetail() {
             Impossible de charger cet établissement. Vérifiez l'identifiant ou
             réessayez.
           </p>
-          <Button variant="outline" onClick={() => navigate({ to: '/super-admin' })}>
+          <Button
+            variant="outline"
+            onClick={() => navigate({ to: '/super-admin' })}
+          >
             <ArrowLeft className="w-4 h-4" />
             Retour à la liste
           </Button>

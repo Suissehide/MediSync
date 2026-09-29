@@ -5,7 +5,6 @@ import { CopyableId } from '@/components/custom/copyableId.tsx'
 import { useAppForm } from '@/hooks/formConfig.tsx'
 import { buildAccessLinkUrl } from '@/libs/accessLink.ts'
 import { useSuperAdminCreateEstablishment } from '@/queries/useSuperAdmin.ts'
-
 import { Button } from '../../ui/button.tsx'
 import {
   Popup,
@@ -90,7 +89,9 @@ function CreateEstablishmentForm() {
                   Lien à usage unique — transmettez-le en main propre, il ne
                   sera plus jamais affiché.
                 </p>
-                <CopyableId value={buildAccessLinkUrl(created.accessLink.token)} />
+                <CopyableId
+                  value={buildAccessLinkUrl(created.accessLink.token)}
+                />
               </div>
             </PopupBody>
             <PopupFooter>
@@ -115,7 +116,9 @@ function CreateEstablishmentForm() {
                   name="name"
                   validators={{
                     onSubmit: ({ value }) =>
-                      value ? undefined : "Le nom de l'établissement est nécessaire",
+                      value
+                        ? undefined
+                        : "Le nom de l'établissement est nécessaire",
                   }}
                 >
                   {(field) => (
@@ -127,10 +130,10 @@ function CreateEstablishmentForm() {
                 </form.AppField>
 
                 <p className="text-xs text-text-light">
-                  Identité du premier administrateur de cet établissement.
-                  Une adresse déjà connue de la plateforme garde son propre
-                  compte, sans qu'aucune information dessus ne soit révélée
-                  ici au-delà de ce lien.
+                  Identité du premier administrateur de cet établissement. Une
+                  adresse déjà connue de la plateforme garde son propre compte,
+                  sans qu'aucune information dessus ne soit révélée ici au-delà
+                  de ce lien.
                 </p>
 
                 <form.AppField

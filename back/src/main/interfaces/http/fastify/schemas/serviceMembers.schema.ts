@@ -16,8 +16,12 @@ export const serviceMemberResponseSchema = z.object({
 })
 export const serviceMembersResponseSchema = z.array(serviceMemberResponseSchema)
 
-export const serviceMemberParamsSchema = z.object({ serviceMembershipId: z.string().min(1) })
-export const setServiceSoignantSchema = z.object({ soignantId: z.cuid().nullable() })
+export const serviceMemberParamsSchema = z.object({
+  serviceMembershipId: z.string().min(1),
+})
+export const setServiceSoignantSchema = z.object({
+  soignantId: z.cuid().nullable(),
+})
 
 export type ServiceMemberParams = z.infer<typeof serviceMemberParamsSchema>
 export type SetServiceSoignantBody = z.infer<typeof setServiceSoignantSchema>
@@ -29,7 +33,13 @@ export const projectServiceMember = (row: {
   role: 'COORDINATEUR' | 'INTERVENANT' | 'SECRETARIAT' | 'LECTURE'
   soignantId: string | null
   establishmentMembership: {
-    user: { id: string; email: string; firstName: string | null; lastName: string | null; deactivatedAt: Date | null }
+    user: {
+      id: string
+      email: string
+      firstName: string | null
+      lastName: string | null
+      deactivatedAt: Date | null
+    }
   }
 }) => ({
   id: row.id,

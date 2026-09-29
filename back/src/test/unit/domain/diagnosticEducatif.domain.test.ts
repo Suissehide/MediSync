@@ -6,7 +6,8 @@ import type { IocContainer } from '../../../main/types/application/ioc'
 const buildDomain = (known: { templates: string[] }) => {
   const created: unknown[] = []
   const updated: unknown[] = []
-  const notFound = (name: string) => Promise.reject(Boom.notFound(`${name} not found`))
+  const notFound = (name: string) =>
+    Promise.reject(Boom.notFound(`${name} not found`))
   const container = {
     diagnosticEducatifRepository: {
       create: (params: unknown) => {

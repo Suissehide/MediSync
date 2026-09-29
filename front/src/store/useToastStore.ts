@@ -1,6 +1,6 @@
+import type React from 'react'
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
-import type React from 'react'
 
 import type { ToastActionElement, ToastProps } from '../components/ui/toast.tsx'
 import type { ToastSeverity } from '../constants/ui.constant.ts'

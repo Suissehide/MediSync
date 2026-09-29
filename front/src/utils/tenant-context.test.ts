@@ -39,7 +39,9 @@ const user: User = {
 
 describe('resolveTenantContext', () => {
   it('resout un couple present dans les appartenances', () => {
-    expect(resolveTenantContext(user, { establishmentId: 'e1', serviceId: 's2' })).toEqual({
+    expect(
+      resolveTenantContext(user, { establishmentId: 'e1', serviceId: 's2' }),
+    ).toEqual({
       establishmentId: 'e1',
       serviceId: 's2',
       establishmentRole: 'ADMIN',
@@ -51,24 +53,37 @@ describe('resolveTenantContext', () => {
   // Le soignant est celui de l'affectation de CE service (2026-09-29), pas un soignant de
   // l'etablissement : present sur s1, absent sur s2.
   it('prend le soignant de l affectation du service vise', () => {
-    expect(resolveTenantContext(user, { establishmentId: 'e1', serviceId: 's1' })?.soignantId).toBe('so1')
+    expect(
+      resolveTenantContext(user, { establishmentId: 'e1', serviceId: 's1' })
+        ?.soignantId,
+    ).toBe('so1')
   })
 
   it('refuse un service qui appartient a un autre etablissement', () => {
-    expect(resolveTenantContext(user, { establishmentId: 'e2', serviceId: 's1' })).toBeNull()
+    expect(
+      resolveTenantContext(user, { establishmentId: 'e2', serviceId: 's1' }),
+    ).toBeNull()
   })
 
   it('refuse un etablissement inconnu, un service inconnu, un parametre manquant', () => {
-    expect(resolveTenantContext(user, { establishmentId: 'zz', serviceId: 's1' })).toBeNull()
-    expect(resolveTenantContext(user, { establishmentId: 'e1', serviceId: 'zz' })).toBeNull()
+    expect(
+      resolveTenantContext(user, { establishmentId: 'zz', serviceId: 's1' }),
+    ).toBeNull()
+    expect(
+      resolveTenantContext(user, { establishmentId: 'e1', serviceId: 'zz' }),
+    ).toBeNull()
     expect(resolveTenantContext(user, { establishmentId: 'e1' })).toBeNull()
-    expect(resolveTenantContext(null, { establishmentId: 'e1', serviceId: 's1' })).toBeNull()
+    expect(
+      resolveTenantContext(null, { establishmentId: 'e1', serviceId: 's1' }),
+    ).toBeNull()
   })
 })
 
 describe('resolveEstablishmentContext', () => {
   it('resout un etablissement dont on est administrateur, sans service', () => {
-    expect(resolveEstablishmentContext(user, { establishmentId: 'e1' })).toEqual({
+    expect(
+      resolveEstablishmentContext(user, { establishmentId: 'e1' }),
+    ).toEqual({
       establishmentId: 'e1',
       serviceId: null,
       establishmentRole: 'ADMIN',
@@ -80,7 +95,9 @@ describe('resolveEstablishmentContext', () => {
   // Simple membre : l'ecran d'administration ne doit pas s'ouvrir, meme si
   // le back refuserait de toute facon.
   it('refuse un etablissement dont on n est que membre', () => {
-    expect(resolveEstablishmentContext(user, { establishmentId: 'e2' })).toBeNull()
+    expect(
+      resolveEstablishmentContext(user, { establishmentId: 'e2' }),
+    ).toBeNull()
   })
 })
 
@@ -104,21 +121,33 @@ describe('defaultTenantContext', () => {
   })
 
   it('reprend le dernier couple visite', () => {
-    rememberContext('u1', resolveTenantContext(user, { establishmentId: 'e2', serviceId: 's3' })!)
-    expect(defaultTenantContext(user)).toMatchObject({ establishmentId: 'e2', serviceId: 's3' })
+    rememberContext(
+      'u1',
+      resolveTenantContext(user, { establishmentId: 'e2', serviceId: 's3' })!,
+    )
+    expect(defaultTenantContext(user)).toMatchObject({
+      establishmentId: 'e2',
+      serviceId: 's3',
+    })
   })
 
   // Affectation retiree entre deux sessions : le favori ne doit pas gagner
   // sur les appartenances reelles.
   it('ignore un dernier couple visite devenu invalide', () => {
-    localStorage.setItem('medisync/last-context/u1', JSON.stringify({ establishmentId: 'e9', serviceId: 's9' }))
+    localStorage.setItem(
+      'medisync/last-context/u1',
+      JSON.stringify({ establishmentId: 'e9', serviceId: 's9' }),
+    )
     expect(defaultTenantContext(user)?.serviceId).toBe('s1')
   })
 
   // Poste partage : le favori d'une personne ne doit pas etre propose a une
   // autre, d'ou la cle portant l'identifiant.
   it('ne lit pas le dernier couple d un autre utilisateur', () => {
-    localStorage.setItem('medisync/last-context/autre', JSON.stringify({ establishmentId: 'e2', serviceId: 's3' }))
+    localStorage.setItem(
+      'medisync/last-context/autre',
+      JSON.stringify({ establishmentId: 'e2', serviceId: 's3' }),
+    )
     expect(defaultTenantContext(user)?.serviceId).toBe('s1')
   })
 
@@ -127,8 +156,14 @@ describe('defaultTenantContext', () => {
   // contexte du second utilisateur ecraserait celui du premier.
   it('isole le dernier contexte de deux utilisateurs sur le meme poste', () => {
     const other: User = { ...user, id: 'u2' }
-    rememberContext('u1', resolveTenantContext(user, { establishmentId: 'e1', serviceId: 's2' })!)
-    rememberContext('u2', resolveTenantContext(other, { establishmentId: 'e2', serviceId: 's3' })!)
+    rememberContext(
+      'u1',
+      resolveTenantContext(user, { establishmentId: 'e1', serviceId: 's2' })!,
+    )
+    rememberContext(
+      'u2',
+      resolveTenantContext(other, { establishmentId: 'e2', serviceId: 's3' })!,
+    )
     expect(defaultTenantContext(user)?.serviceId).toBe('s2')
     expect(defaultTenantContext(other)?.serviceId).toBe('s3')
   })
@@ -146,7 +181,9 @@ describe('defaultTenantContext', () => {
 // (couple disparu — direction confirmee du choix de contexte).
 describe('isTenantRouteStale', () => {
   it('rend faux pour une ressource absente : le couple de service vise reste dans l arbre', () => {
-    expect(isTenantRouteStale(user, '/e/e1/s/s1/patient/introuvable')).toBe(false)
+    expect(isTenantRouteStale(user, '/e/e1/s/s1/patient/introuvable')).toBe(
+      false,
+    )
   })
 
   it('rend vrai quand le service vise a disparu de l etablissement', () => {
@@ -181,11 +218,11 @@ describe('isTenantRouteStale', () => {
 
 describe('accessibleCouples', () => {
   it('aplatit tous les couples etablissement/service, dans l ordre de l arbre', () => {
-    expect(accessibleCouples(user).map((c) => `${c.establishment.id}/${c.service.id}`)).toEqual([
-      'e1/s1',
-      'e1/s2',
-      'e2/s3',
-    ])
+    expect(
+      accessibleCouples(user).map(
+        (c) => `${c.establishment.id}/${c.service.id}`,
+      ),
+    ).toEqual(['e1/s1', 'e1/s2', 'e2/s3'])
   })
 
   // Meme garde que le reste du module : un `user` nul ou un etablissement
@@ -208,12 +245,19 @@ describe('administeredEstablishments', () => {
       ...user,
       establishments: [{ ...user.establishments[0], services: [] }],
     }
-    expect(administeredEstablishments(adminSansService).map((e) => e.id)).toEqual(['e1'])
+    expect(
+      administeredEstablishments(adminSansService).map((e) => e.id),
+    ).toEqual(['e1'])
   })
 
   it('rend un tableau vide sans utilisateur ou sans etablissement administre', () => {
     expect(administeredEstablishments(null)).toEqual([])
-    expect(administeredEstablishments({ ...user, establishments: [user.establishments[1]] })).toEqual([])
+    expect(
+      administeredEstablishments({
+        ...user,
+        establishments: [user.establishments[1]],
+      }),
+    ).toEqual([])
   })
 })
 
@@ -228,7 +272,12 @@ describe('accessibleDestinations', () => {
     )
 
   it('range les services de chaque etablissement puis son administration, dans l ordre de l arbre', () => {
-    expect(cles(user)).toEqual(['service:e1/s1', 'service:e1/s2', 'admin:e1', 'service:e2/s3'])
+    expect(cles(user)).toEqual([
+      'service:e1/s1',
+      'service:e1/s2',
+      'admin:e1',
+      'service:e2/s3',
+    ])
   })
 
   it('ne propose qu une destination a un administrateur sans service', () => {
@@ -242,7 +291,12 @@ describe('accessibleDestinations', () => {
   it('compte deux destinations pour un administrateur coordinateur d un seul service', () => {
     const adminUnService: User = {
       ...user,
-      establishments: [{ ...user.establishments[0], services: [user.establishments[0].services[0]] }],
+      establishments: [
+        {
+          ...user.establishments[0],
+          services: [user.establishments[0].services[0]],
+        },
+      ],
     }
     expect(cles(adminUnService)).toEqual(['service:e1/s1', 'admin:e1'])
   })
@@ -250,7 +304,9 @@ describe('accessibleDestinations', () => {
   it('ajoute la plateforme en dernier pour un super-admin, et seulement pour lui', () => {
     expect(cles({ ...user, isSuperAdmin: true }).at(-1)).toBe('plateforme')
     expect(cles(user)).not.toContain('plateforme')
-    expect(cles({ ...user, isSuperAdmin: true, establishments: [] })).toEqual(['plateforme'])
+    expect(cles({ ...user, isSuperAdmin: true, establishments: [] })).toEqual([
+      'plateforme',
+    ])
   })
 
   it('rend un tableau vide sans utilisateur', () => {

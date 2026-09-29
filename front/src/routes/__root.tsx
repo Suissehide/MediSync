@@ -1,15 +1,16 @@
+import type { QueryClient } from '@tanstack/react-query'
 import {
+  createRootRouteWithContext,
   type ErrorComponentProps,
   Outlet,
-  createRootRouteWithContext,
   useRouter,
 } from '@tanstack/react-router'
 import { AlertTriangle } from 'lucide-react'
 import React from 'react'
-import type { AuthState } from '../types/auth.ts'
-import type { QueryClient } from '@tanstack/react-query'
+
 import { Button } from '../components/ui/button.tsx'
 import { environment } from '../constants/config.constant.ts'
+import type { AuthState } from '../types/auth.ts'
 
 const TanStackRouterDevtools =
   environment !== 'development'

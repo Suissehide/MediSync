@@ -9,9 +9,15 @@ import { fetchWithAuth } from './fetchWithAuth.ts'
 // soignants, propres a chaque service, sont lisibles.
 export const ServiceMembersApi = {
   getAll: async (): Promise<ServiceMember[]> => {
-    const response = await fetchWithAuth(`${tenantApiUrl()}/membres`, { method: 'GET' })
+    const response = await fetchWithAuth(`${tenantApiUrl()}/membres`, {
+      method: 'GET',
+    })
     if (!response.ok) {
-      handleHttpError(response, {}, 'Impossible de récupérer les membres du service')
+      handleHttpError(
+        response,
+        {},
+        'Impossible de récupérer les membres du service',
+      )
     }
     return response.json()
   },
@@ -25,13 +31,20 @@ export const ServiceMembersApi = {
     affectationId: string
     soignantId: string | null
   }): Promise<ServiceMember> => {
-    const response = await fetchWithAuth(`${tenantApiUrl()}/membres/${affectationId}/soignant`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ soignantId }),
-    })
+    const response = await fetchWithAuth(
+      `${tenantApiUrl()}/membres/${affectationId}/soignant`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ soignantId }),
+      },
+    )
     if (!response.ok) {
-      handleHttpError(response, {}, 'Impossible de rattacher ce compte au soignant')
+      handleHttpError(
+        response,
+        {},
+        'Impossible de rattacher ce compte au soignant',
+      )
     }
     return response.json()
   },

@@ -21,7 +21,9 @@ import { MultiSelect } from '../../ui/select.tsx'
 // service, et le compte qui l'incarne ici voit ses taches. Un compte n'incarne qu'UN soignant par
 // service : le cocher ici le retire du soignant qu'il incarnait jusque-la.
 export const nomDuCompte = (member: ServiceMember) => {
-  const nom = [member.user.firstName, member.user.lastName].filter(Boolean).join(' ')
+  const nom = [member.user.firstName, member.user.lastName]
+    .filter(Boolean)
+    .join(' ')
   return nom || member.user.email
 }
 
@@ -30,7 +32,10 @@ type EditSoignantAccountsFormProps = {
   members: ServiceMember[]
 }
 
-function EditSoignantAccountsForm({ soignant, members }: EditSoignantAccountsFormProps) {
+function EditSoignantAccountsForm({
+  soignant,
+  members,
+}: EditSoignantAccountsFormProps) {
   const [open, setOpen] = useState(false)
   const { setSoignant } = useServiceMemberMutations()
 
@@ -67,8 +72,12 @@ function EditSoignantAccountsForm({ soignant, members }: EditSoignantAccountsFor
     setEnCours(true)
     try {
       await Promise.all([
-        ...ajouts.map((affectationId) => setSoignant.mutateAsync({ affectationId, soignantId: soignant.id })),
-        ...retraits.map((affectationId) => setSoignant.mutateAsync({ affectationId, soignantId: null })),
+        ...ajouts.map((affectationId) =>
+          setSoignant.mutateAsync({ affectationId, soignantId: soignant.id }),
+        ),
+        ...retraits.map((affectationId) =>
+          setSoignant.mutateAsync({ affectationId, soignantId: null }),
+        ),
       ])
       setOpen(false)
     } catch {
@@ -93,7 +102,9 @@ function EditSoignantAccountsForm({ soignant, members }: EditSoignantAccountsFor
 
       <PopupContent>
         <PopupHeader>
-          <PopupTitle className="font-bold text-xl">Comptes rattachés à {soignant.name}</PopupTitle>
+          <PopupTitle className="font-bold text-xl">
+            Comptes rattachés à {soignant.name}
+          </PopupTitle>
         </PopupHeader>
 
         <PopupBody>
@@ -106,8 +117,8 @@ function EditSoignantAccountsForm({ soignant, members }: EditSoignantAccountsFor
               placeholder="Aucun compte"
             />
             <p className="text-sm text-text-light">
-              Un compte n'incarne qu'un soignant dans ce service : le rattacher ici le retire de son
-              soignant actuel.
+              Un compte n'incarne qu'un soignant dans ce service : le rattacher
+              ici le retire de son soignant actuel.
             </p>
           </div>
         </PopupBody>
@@ -117,7 +128,11 @@ function EditSoignantAccountsForm({ soignant, members }: EditSoignantAccountsFor
             <X className="w-4 h-4" />
             Annuler
           </Button>
-          <Button variant="default" onClick={() => void enregistrer()} isLoading={enCours}>
+          <Button
+            variant="default"
+            onClick={() => void enregistrer()}
+            isLoading={enCours}
+          >
             <Check className="w-4 h-4" />
             Enregistrer
           </Button>

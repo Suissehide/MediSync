@@ -15,7 +15,11 @@ interface QueryStateInput {
 // toujours devant une erreur réelle (identifiant supprimé, back injoignable...).
 // `isPending` est vérifié EN PREMIER : une erreur d'une requête précédente
 // ne doit pas s'afficher pendant qu'une nouvelle tentative est en cours.
-export const queryState = ({ isPending, error, hasData }: QueryStateInput): QueryState => {
+export const queryState = ({
+  isPending,
+  error,
+  hasData,
+}: QueryStateInput): QueryState => {
   if (isPending) {
     return 'pending'
   }

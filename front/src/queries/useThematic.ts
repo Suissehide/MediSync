@@ -4,11 +4,11 @@ import { ThematicApi } from '../api/thematic.api.ts'
 import { THEMATIC } from '../constants/process.constant.ts'
 import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
-import { useToast } from '../hooks/useToast.ts'
 import {
   restoreForTenant,
   snapshotForTenant,
 } from '../hooks/useTenantSwitch.ts'
+import { useToast } from '../hooks/useToast.ts'
 import type {
   CreateThematicParams,
   Thematic,
@@ -50,7 +50,9 @@ export const useThematicMutations = () => {
     onMutate: async (newThematic: CreateThematicParams) => {
       await queryClient.cancelQueries({ queryKey: [THEMATIC.GET_ALL] })
 
-      const previousThematics = snapshotForTenant(queryClient, [THEMATIC.GET_ALL])
+      const previousThematics = snapshotForTenant(queryClient, [
+        THEMATIC.GET_ALL,
+      ])
       queryClient.setQueryData(
         [THEMATIC.GET_ALL],
         (oldThematics: Thematic[]) => [
@@ -87,13 +89,13 @@ export const useThematicMutations = () => {
     onMutate: async (thematicID) => {
       await queryClient.cancelQueries({ queryKey: [THEMATIC.GET_ALL] })
 
-      const previousThematics = snapshotForTenant(queryClient, [THEMATIC.GET_ALL])
-      queryClient.setQueryData(
-        [THEMATIC.GET_ALL],
-        (oldThematics: Thematic[]) =>
-          oldThematics?.filter(
-            (thematic: Thematic) => thematic.id !== thematicID,
-          ),
+      const previousThematics = snapshotForTenant(queryClient, [
+        THEMATIC.GET_ALL,
+      ])
+      queryClient.setQueryData([THEMATIC.GET_ALL], (oldThematics: Thematic[]) =>
+        oldThematics?.filter(
+          (thematic: Thematic) => thematic.id !== thematicID,
+        ),
       )
 
       return { previousThematics }
@@ -124,15 +126,15 @@ export const useThematicMutations = () => {
     onMutate: async (updatedThematic: UpdateThematicParams) => {
       await queryClient.cancelQueries({ queryKey: [THEMATIC.GET_ALL] })
 
-      const previousThematics = snapshotForTenant(queryClient, [THEMATIC.GET_ALL])
-      queryClient.setQueryData(
-        [THEMATIC.GET_ALL],
-        (oldThematics: Thematic[]) =>
-          oldThematics?.map((thematic: Thematic) =>
-            thematic.id === updatedThematic.id
-              ? { ...thematic, ...updatedThematic }
-              : thematic,
-          ),
+      const previousThematics = snapshotForTenant(queryClient, [
+        THEMATIC.GET_ALL,
+      ])
+      queryClient.setQueryData([THEMATIC.GET_ALL], (oldThematics: Thematic[]) =>
+        oldThematics?.map((thematic: Thematic) =>
+          thematic.id === updatedThematic.id
+            ? { ...thematic, ...updatedThematic }
+            : thematic,
+        ),
       )
 
       return { previousThematics }

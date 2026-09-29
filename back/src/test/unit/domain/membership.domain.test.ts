@@ -118,7 +118,10 @@ const build = (
       // Trois adresses : une inconnue (tout le reste), une connue et libre, une connue mais
       // deja membre (`u1`, present dans `rows`), une connue et desactivee.
       findByEmail: (email: string) => {
-        const comptes: Record<string, { id: string; deactivatedAt: Date | null }> = {
+        const comptes: Record<
+          string,
+          { id: string; deactivatedAt: Date | null }
+        > = {
           'new@b.fr': { id: 'u2', deactivatedAt: null },
           'deja@b.fr': { id: 'u1', deactivatedAt: null },
           'dormant@b.fr': { id: 'u3', deactivatedAt: new Date() },
@@ -422,7 +425,9 @@ describe('MembershipDomain', () => {
   it('laisse l utilisateur courant modifier sa propre appartenance en gardant un service', async () => {
     const { domain, ctx, calls } = build([row({})], 2)
     await asAdmin(ctx, () =>
-      domain.update('em1', { services: [{ serviceId: 's1', role: 'LECTURE' }] }),
+      domain.update('em1', {
+        services: [{ serviceId: 's1', role: 'LECTURE' }],
+      }),
     )
     // Une mise a jour qui ne touche pas du tout aux services reste permise.
     await asAdmin(ctx, () => domain.update('em1', { role: 'ADMIN' }))
@@ -572,7 +577,6 @@ describe('MembershipDomain', () => {
     expect(events).toEqual(['member.accessLinkReissued'])
   })
 
-
   // --- Tour de correction 1 : LA GARDE DU JETON, partagee par les deux emissions ---
 
   const SUPER_ADMIN = { u8: { isSuperAdmin: true } }
@@ -667,5 +671,4 @@ describe('MembershipDomain', () => {
     await asAdmin(ctx, () => domain.reissueAccessLink('em1'))
     expect(calls).toEqual(['issue(u1,u1,hors-tx)'])
   })
-
 })

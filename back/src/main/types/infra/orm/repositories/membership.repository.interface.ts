@@ -55,7 +55,10 @@ export interface MembershipRepositoryInterface {
   findServiceMembers: () => Promise<ServiceMemberRow[]>
   // Sous le contexte de SERVICE : pose le soignant d'une affectation du service courant. `null`
   // si l'affectation n'est pas de ce service (le domaine en fait un 404).
-  setServiceSoignant: (serviceMembershipId: string, soignantId: string | null) => Promise<ServiceMemberRow | null>
+  setServiceSoignant: (
+    serviceMembershipId: string,
+    soignantId: string | null,
+  ) => Promise<ServiceMemberRow | null>
   findAll: () => Promise<MembershipRow[]>
   findByID: (id: string) => Promise<MembershipRow>
   findByUserID: (userId: string) => Promise<MembershipRow | null>

@@ -21,7 +21,11 @@ class PatientAccessLogDomain implements PatientAccessLogDomainInterface {
   private readonly tenantContext: TenantContextInterface
   private readonly config: Config
 
-  constructor({ patientAccessLogRepository, tenantContext, config }: IocContainer) {
+  constructor({
+    patientAccessLogRepository,
+    tenantContext,
+    config,
+  }: IocContainer) {
     this.patientAccessLogRepository = patientAccessLogRepository
     this.tenantContext = tenantContext
     this.config = config
@@ -65,12 +69,18 @@ class PatientAccessLogDomain implements PatientAccessLogDomainInterface {
   // `establishmentScope()`, voir son commentaire). Le filtrage du contenu clinique (aucun ici,
   // par construction du schema Zod de reponse) n'a pas besoin d'etre reecrit : ce que ces deux
   // methodes rendent n'est jamais un dossier patient, seulement des lignes du journal d'audit.
-  findByPatientInService(patientId: string): Promise<PatientAccessLogEntityDomain[]> {
+  findByPatientInService(
+    patientId: string,
+  ): Promise<PatientAccessLogEntityDomain[]> {
     return this.patientAccessLogRepository.findByPatientInService(patientId)
   }
 
-  findByPatientInEstablishment(patientId: string): Promise<PatientAccessLogEntityDomain[]> {
-    return this.patientAccessLogRepository.findByPatientInEstablishment(patientId)
+  findByPatientInEstablishment(
+    patientId: string,
+  ): Promise<PatientAccessLogEntityDomain[]> {
+    return this.patientAccessLogRepository.findByPatientInEstablishment(
+      patientId,
+    )
   }
 
   findAllPlatformWide(
@@ -86,7 +96,8 @@ class PatientAccessLogDomain implements PatientAccessLogDomainInterface {
   async cleanup(): Promise<{ deleted: number }> {
     const cutoff = new Date()
     cutoff.setMonth(cutoff.getMonth() - this.config.logRetentionMonths)
-    const deleted = await this.patientAccessLogRepository.deleteOlderThan(cutoff)
+    const deleted =
+      await this.patientAccessLogRepository.deleteOlderThan(cutoff)
     return { deleted }
   }
 

@@ -21,7 +21,10 @@ export type Tenant = {
   origine?: 'reelle' | 'octroi'
 }
 
-export type ServiceTenant = Tenant & { serviceId: string; serviceRole: ServiceRole }
+export type ServiceTenant = Tenant & {
+  serviceId: string
+  serviceRole: ServiceRole
+}
 
 export type TenantStore =
   | { kind: 'tenant'; tenant: Tenant }

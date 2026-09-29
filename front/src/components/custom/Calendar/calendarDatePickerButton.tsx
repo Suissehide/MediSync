@@ -14,7 +14,9 @@ export default function CalendarDatePickerButton({
   setAnchorEl,
   onChange,
 }: Props) {
-  if (!anchorEl) { return null }
+  if (!anchorEl) {
+    return null
+  }
 
   const rect = anchorEl.getBoundingClientRect()
 

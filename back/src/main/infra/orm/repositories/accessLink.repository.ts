@@ -1,10 +1,10 @@
 import type { IocContainer } from '../../../types/application/ioc'
+import type { PrimaTransactionClient } from '../../../types/infra/orm/client'
 import type {
   AccessLinkCreateEntityRepo,
   AccessLinkRepositoryInterface,
   AccessLinkWithUser,
 } from '../../../types/infra/orm/repositories/accessLink.repository.interface'
-import type { PrimaTransactionClient } from '../../../types/infra/orm/client'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { PostgresPrismaClient } from '../postgres-client'
 
@@ -42,7 +42,9 @@ class AccessLinkRepository implements AccessLinkRepositoryInterface {
     }
   }
 
-  findByTokenHashWithUser(tokenHash: string): Promise<AccessLinkWithUser | null> {
+  findByTokenHashWithUser(
+    tokenHash: string,
+  ): Promise<AccessLinkWithUser | null> {
     return this.prisma.accessLink.findUnique({
       where: { tokenHash },
       include: { user: { select: { id: true, deactivatedAt: true } } },

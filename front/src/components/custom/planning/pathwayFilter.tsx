@@ -40,7 +40,9 @@ function PathwayFilter({
       checked: !hiddenIds.has(NO_PATHWAY_KEY),
       color: NO_PATHWAY_COLOR,
     },
-    ...templates.filter((template) => template.firstAppointmentOnly).map(toItem),
+    ...templates
+      .filter((template) => template.firstAppointmentOnly)
+      .map(toItem),
     ...templates
       .filter((template) => !template.firstAppointmentOnly)
       .map(toItem),

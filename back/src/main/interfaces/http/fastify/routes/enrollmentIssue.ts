@@ -13,25 +13,34 @@ const enrollmentIssueRouter: FastifyPluginAsync = (fastify) => {
   const { enrollmentIssueDomain } = fastify.iocContainer
 
   // Get all by patient
-  fastify.get<{ Params: EnrollmentIssuePatientParams }>('/', {
-    schema: {
-      params: enrollmentIssuePatientParamsSchema,
-      response: { 200: enrollmentIssuesResponseSchema },
+  fastify.get<{ Params: EnrollmentIssuePatientParams }>(
+    '/',
+    {
+      schema: {
+        params: enrollmentIssuePatientParamsSchema,
+        response: { 200: enrollmentIssuesResponseSchema },
+      },
+      config: { permission: 'patient:read' },
     },
-    config: { permission: 'patient:read' },
-  }, (request) => enrollmentIssueDomain.findByPatientID(request.params.patientID))
+    (request) =>
+      enrollmentIssueDomain.findByPatientID(request.params.patientID),
+  )
 
   // Delete (dismiss)
-  fastify.delete<{ Params: EnrollmentIssueParams }>('/:issueID', {
-    schema: {
-      params: enrollmentIssueParamsSchema,
-      response: { 204: z.null() },
+  fastify.delete<{ Params: EnrollmentIssueParams }>(
+    '/:issueID',
+    {
+      schema: {
+        params: enrollmentIssueParamsSchema,
+        response: { 204: z.null() },
+      },
+      config: { permission: 'appointment:write' },
     },
-    config: { permission: 'appointment:write' },
-  }, async (request, reply) => {
-    await enrollmentIssueDomain.delete(request.params.issueID)
-    reply.code(204).send()
-  })
+    async (request, reply) => {
+      await enrollmentIssueDomain.delete(request.params.issueID)
+      reply.code(204).send()
+    },
+  )
 
   return Promise.resolve()
 }

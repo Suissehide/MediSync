@@ -15,7 +15,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { AuthState, User } from '@/types/auth.ts'
-
 import { Route as serviceLayoutRoute } from '../../../$serviceId.tsx'
 import { Route as accesRoute } from './acces.tsx'
 
@@ -105,7 +104,9 @@ const accesScreenRoute = createRoute({
   component: optionsDe(accesRoute).component,
 })
 const routeTree = rootRoute.addChildren([
-  authenticatedRoute.addChildren([serviceRoute.addChildren([accesScreenRoute])]),
+  authenticatedRoute.addChildren([
+    serviceRoute.addChildren([accesScreenRoute]),
+  ]),
 ])
 
 type Route = {
@@ -129,7 +130,9 @@ const URL_INITIALE = '/e/e1/s/s1/patient/p1/acces'
 
 const monter = (routes: Route[], user: User = coordinateur) => {
   vi.stubGlobal('fetch', buildFetchMock(routes))
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
   const router = createRouter({
     routeTree,
     history: createMemoryHistory({ initialEntries: [URL_INITIALE] }),
@@ -158,7 +161,11 @@ const ligne = {
 }
 
 beforeEach(() => {
-  useAuthStore.setState({ isAuthenticated: true, user: coordinateur, context: null })
+  useAuthStore.setState({
+    isAuthenticated: true,
+    user: coordinateur,
+    context: null,
+  })
   localStorage.clear()
 })
 
@@ -177,7 +184,9 @@ describe('etats de l ecran du journal des acces', () => {
           }),
       ),
     )
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
     const router = createRouter({
       routeTree,
       history: createMemoryHistory({ initialEntries: [URL_INITIALE] }),
@@ -193,16 +202,19 @@ describe('etats de l ecran du journal des acces', () => {
     expect(screen.queryByText(/impossible de charger/i)).not.toBeInTheDocument()
   })
 
-  it("affiche une erreur distincte, jamais un chargement perpetuel, sur une panne", async () => {
+  it('affiche une erreur distincte, jamais un chargement perpetuel, sur une panne', async () => {
     monter([
       {
-        match: (url, method) => url.endsWith('/patient/p1/acces') && method === 'GET',
+        match: (url, method) =>
+          url.endsWith('/patient/p1/acces') && method === 'GET',
         respond: () => ({ ok: false, status: 500, json: async () => ({}) }),
       },
     ])
 
     await waitFor(() => {
-      expect(screen.getByText(/impossible de charger le journal des accès/i)).toBeInTheDocument()
+      expect(
+        screen.getByText(/impossible de charger le journal des accès/i),
+      ).toBeInTheDocument()
     })
     expect(screen.queryByText(/^chargement/i)).not.toBeInTheDocument()
   })
@@ -211,7 +223,9 @@ describe('etats de l ecran du journal des acces', () => {
     monter([routeGetAcces([])])
 
     await waitFor(() => {
-      expect(screen.getByText(/aucun accès enregistré pour ce dossier/i)).toBeInTheDocument()
+      expect(
+        screen.getByText(/aucun accès enregistré pour ce dossier/i),
+      ).toBeInTheDocument()
     })
     expect(screen.queryByText(/impossible de charger/i)).not.toBeInTheDocument()
   })
@@ -242,8 +256,20 @@ describe('etats de l ecran du journal des acces', () => {
   it("distingue un acces reel d'un acces par octroi, sans jamais les confondre", async () => {
     monter([
       routeGetAcces([
-        { ...ligne, id: 'log-reel', userFirstName: 'Alice', userLastName: 'Martin', accesParOctroi: false },
-        { ...ligne, id: 'log-octroi', userFirstName: 'Super', userLastName: 'Admin', accesParOctroi: true },
+        {
+          ...ligne,
+          id: 'log-reel',
+          userFirstName: 'Alice',
+          userLastName: 'Martin',
+          accesParOctroi: false,
+        },
+        {
+          ...ligne,
+          id: 'log-octroi',
+          userFirstName: 'Super',
+          userLastName: 'Admin',
+          accesParOctroi: true,
+        },
       ]),
     ])
 
@@ -265,7 +291,7 @@ describe('etats de l ecran du journal des acces', () => {
     expect(screen.getAllByText(/accès par octroi/i)).toHaveLength(1)
   })
 
-  it("distingue les quatre actions du journal, jamais confondues entre elles", async () => {
+  it('distingue les quatre actions du journal, jamais confondues entre elles', async () => {
     monter([
       routeGetAcces([
         { ...ligne, id: 'log1', action: 'dossier.ouvert' },
@@ -279,14 +305,16 @@ describe('etats de l ecran du journal des acces', () => {
       expect(screen.getByText('Dossier ouvert')).toBeInTheDocument()
     })
     expect(screen.getByText('Sous-dossier ouvert')).toBeInTheDocument()
-    expect(screen.getByText("Échecs d'inscription consultés")).toBeInTheDocument()
+    expect(
+      screen.getByText("Échecs d'inscription consultés"),
+    ).toBeInTheDocument()
     expect(screen.getByText('Export')).toBeInTheDocument()
   })
 
   // Le schéma de réponse (back, `patientAccessLogEntryResponseSchema`) ne rend jamais
   // `userFirstName`/`userLastName` quand ils sont `null` tous les deux : l'écran ne doit pas
   // planter, ni afficher "null null".
-  it("degrade proprement l auteur quand aucun nom n est connu", async () => {
+  it('degrade proprement l auteur quand aucun nom n est connu', async () => {
     monter([
       routeGetAcces([{ ...ligne, userFirstName: null, userLastName: null }]),
     ])

@@ -48,11 +48,14 @@ export const SlotApi = {
   },
 
   create: async (createSlotParams: CreateSlotParams): Promise<Slot> => {
-    const response = await fetchWithAuth(`${tenantApiUrl()}/slot?action=createSlot`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(createSlotParams),
-    })
+    const response = await fetchWithAuth(
+      `${tenantApiUrl()}/slot?action=createSlot`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(createSlotParams),
+      },
+    )
     if (!response.ok) {
       handleHttpError(response, {}, 'Impossible de créer un créneau')
     }

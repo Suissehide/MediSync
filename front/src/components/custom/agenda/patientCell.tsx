@@ -85,10 +85,7 @@ export default function PatientCell({ row, onAddPatient }: PatientCellProps) {
               {appointmentPatient.patient.lastName}
             </Link>
           ) : (
-            <span
-              key={appointmentPatient.patient.id}
-              className={CHIP_CLASS}
-            >
+            <span key={appointmentPatient.patient.id} className={CHIP_CLASS}>
               {appointmentPatient.patient.firstName}{' '}
               {appointmentPatient.patient.lastName}
             </span>

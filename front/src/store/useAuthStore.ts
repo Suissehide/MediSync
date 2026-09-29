@@ -26,7 +26,8 @@ export interface AuthStoreActions {
 // avaient déjà divergé sur cette garde ; `deriveContext` ne reste ici que
 // parce que ses appelants ne sont pas encore réécrits — sa suppression est
 // portée par les tâches qui les remplacent.
-export const deriveContext = (user: User | null): TenantContext | null => defaultTenantContext(user)
+export const deriveContext = (user: User | null): TenantContext | null =>
+  defaultTenantContext(user)
 
 export const useAuthStore = create<AuthStoreState & AuthStoreActions>()(
   subscribeWithSelector(

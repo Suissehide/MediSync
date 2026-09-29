@@ -18,7 +18,11 @@ export default async function seedLocations(
           },
         },
         update: {},
-        create: { name, establishmentId: tenant.establishmentId, serviceId: tenant.serviceId },
+        create: {
+          name,
+          establishmentId: tenant.establishmentId,
+          serviceId: tenant.serviceId,
+        },
       }),
     ),
   )

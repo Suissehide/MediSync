@@ -11,7 +11,13 @@ export type PatientServiceFileEntityRepo = PatientServiceFile
 // lettres.
 export type PatientServiceFileUpsertEntityRepo = Omit<
   Prisma.PatientServiceFileUncheckedCreateInput,
-  'id' | 'patientId' | 'serviceId' | 'establishmentId' | 'createdAt' | 'diagnostics' | 'enrollmentIssues'
+  | 'id'
+  | 'patientId'
+  | 'serviceId'
+  | 'establishmentId'
+  | 'createdAt'
+  | 'diagnostics'
+  | 'enrollmentIssues'
 >
 
 // Décision 3.6 (spec §3.6, tâche 9) : ce que l'écran affiche avant de désactiver un service.
@@ -33,7 +39,9 @@ export type PatientServiceFileDeactivationImpactRepo = {
 }
 
 export interface PatientServiceFileRepositoryInterface {
-  findByPatient: (patientId: string) => Promise<PatientServiceFileEntityRepo | null>
+  findByPatient: (
+    patientId: string,
+  ) => Promise<PatientServiceFileEntityRepo | null>
   upsert: (
     patientId: string,
     params: PatientServiceFileUpsertEntityRepo,

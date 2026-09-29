@@ -117,7 +117,6 @@ function ServicesAdmin() {
   return (
     <DashboardLayout>
       <div className="flex-1 bg-background p-6 rounded-lg flex flex-col w-full gap-4">
-
         <div className="flex justify-between items-center gap-3">
           <h1 className="h-9 flex items-center text-text-dark text-xl font-semibold">
             Services
@@ -150,7 +149,10 @@ function ServicesAdmin() {
           />
         )}
 
-        <RenameServiceForm service={renameTarget} onClose={() => setRenameTarget(null)} />
+        <RenameServiceForm
+          service={renameTarget}
+          onClose={() => setRenameTarget(null)}
+        />
 
         <Popup
           modal={true}
@@ -175,7 +177,9 @@ function ServicesAdmin() {
               {impact.data && (
                 <div className="flex flex-col gap-2 text-sm">
                   <p>
-                    <span className="text-text-light">Suivis dans ce service : </span>
+                    <span className="text-text-light">
+                      Suivis dans ce service :{' '}
+                    </span>
                     <strong>{impact.data.suivisIci}</strong>
                   </p>
                   <p>

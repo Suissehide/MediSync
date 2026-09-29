@@ -75,7 +75,10 @@ const appointmentRouter: FastifyPluginAsync = (fastify) => {
       config: { permission: 'appointment:write' },
     },
     async (request, reply) => {
-      const appointment = await appointmentDomain.create(request.body, request.user.userID)
+      const appointment = await appointmentDomain.create(
+        request.body,
+        request.user.userID,
+      )
       reply.code(201)
       return appointment
     },

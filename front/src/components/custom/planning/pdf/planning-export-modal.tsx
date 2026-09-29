@@ -113,10 +113,7 @@ export default function PlanningExportModal({
     [selectedSlots, weekStart, weekCount, forbiddenWeekStarts, planningCycle],
   )
 
-  const pdfDocument = useMemo(
-    () => <PlanningWeeksPDF weeks={weeks} />,
-    [weeks],
-  )
+  const pdfDocument = useMemo(() => <PlanningWeeksPDF weeks={weeks} />, [weeks])
 
   const fileName = `planning-${weekStart.format('YYYY-MM-DD')}-${weekCount}-semaines.pdf`
 
@@ -173,9 +170,7 @@ export default function PlanningExportModal({
                 <button
                   type="button"
                   onClick={() =>
-                    setWeekCount((count) =>
-                      Math.max(MIN_WEEK_COUNT, count - 1),
-                    )
+                    setWeekCount((count) => Math.max(MIN_WEEK_COUNT, count - 1))
                   }
                   disabled={weekCount <= MIN_WEEK_COUNT}
                   className="flex items-center justify-center h-9 w-9 rounded-md border border-border bg-background hover:bg-muted transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
@@ -190,9 +185,7 @@ export default function PlanningExportModal({
                 <button
                   type="button"
                   onClick={() =>
-                    setWeekCount((count) =>
-                      Math.min(MAX_WEEK_COUNT, count + 1),
-                    )
+                    setWeekCount((count) => Math.min(MAX_WEEK_COUNT, count + 1))
                   }
                   disabled={weekCount >= MAX_WEEK_COUNT}
                   className="flex items-center justify-center h-9 w-9 rounded-md border border-border bg-background hover:bg-muted transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"

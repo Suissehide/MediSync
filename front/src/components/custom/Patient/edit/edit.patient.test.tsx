@@ -10,7 +10,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import { useToastStore } from '@/store/useToastStore.ts'
 import type { Patient } from '@/types/patient.ts'
-
 import EditPatient from './edit.patient.tsx'
 
 // `main.tsx` enregistre ce greffon au démarrage de l'application ; les champs `DatePicker` du
@@ -50,7 +49,10 @@ const serviceFileFixture = {
 
 type Route = {
   match: (url: string, method: string) => boolean
-  respond: (url: string, init?: RequestInit) => { ok: boolean; status: number; json: () => Promise<unknown> }
+  respond: (
+    url: string,
+    init?: RequestInit,
+  ) => { ok: boolean; status: number; json: () => Promise<unknown> }
 }
 
 const buildFetchMock = (routes: Route[]) =>
@@ -91,7 +93,8 @@ describe('EditPatient — une lecture du sous-dossier en échec (refus d’accè
   it("n'affiche pas les champs du sous-dossier, tout en gardant le bloc d'identité partagée", async () => {
     const fetchMock = buildFetchMock([
       {
-        match: (url, method) => url.includes('/service-file') && method === 'GET',
+        match: (url, method) =>
+          url.includes('/service-file') && method === 'GET',
         respond: () => ({ ok: false, status: 403, json: async () => ({}) }),
       },
     ])
@@ -103,13 +106,17 @@ describe('EditPatient — une lecture du sous-dossier en échec (refus d’accè
     // absence de sous-dossier (ce dernier cas, la 404, est verrouillé côté hook par
     // `usePatientServiceFile.test.tsx`, et désormais aussi à ce niveau, voir plus bas « le
     // sous-dossier est absent (404) », m6).
-    await waitFor(() => expect(useToastStore.getState().toasts.length).toBeGreaterThan(0))
+    await waitFor(() =>
+      expect(useToastStore.getState().toasts.length).toBeGreaterThan(0),
+    )
 
     // Bloc « dossier de ce service » (details.patient.tsx) : absent.
     expect(screen.queryByLabelText('Soignant référent')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Notes')).not.toBeInTheDocument()
     // Bloc « parcours & inclusion » (sous-dossier) : absent.
-    expect(screen.queryByLabelText('Diagnostic médical')).not.toBeInTheDocument()
+    expect(
+      screen.queryByLabelText('Diagnostic médical'),
+    ).not.toBeInTheDocument()
     // Bloc « identité partagée » (identite.patient.tsx, Patient) : toujours présent, sa lecture
     // n'a pas échoué.
     expect(screen.getByLabelText("Distance d'habitation")).toBeInTheDocument()
@@ -118,32 +125,44 @@ describe('EditPatient — une lecture du sous-dossier en échec (refus d’accè
   it('ne soumet rien du côté du sous-dossier quand on enregistre malgré tout', async () => {
     const fetchMock = buildFetchMock([
       {
-        match: (url, method) => url.includes('/service-file') && method === 'GET',
+        match: (url, method) =>
+          url.includes('/service-file') && method === 'GET',
         respond: () => ({ ok: false, status: 403, json: async () => ({}) }),
       },
       {
-        match: (url, method) => /\/patient\/p1$/.test(url) && method === 'PATCH',
-        respond: () => ({ ok: true, status: 200, json: async () => patientFixture }),
+        match: (url, method) =>
+          /\/patient\/p1$/.test(url) && method === 'PATCH',
+        respond: () => ({
+          ok: true,
+          status: 200,
+          json: async () => patientFixture,
+        }),
       },
     ])
     vi.stubGlobal('fetch', fetchMock)
 
     renderEditPatient()
 
-    await waitFor(() => expect(useToastStore.getState().toasts.length).toBeGreaterThan(0))
+    await waitFor(() =>
+      expect(useToastStore.getState().toasts.length).toBeGreaterThan(0),
+    )
 
     // Seul un champ du patient (identité, pas du sous-dossier) est modifié.
     const firstName = await screen.findByLabelText('Prénom')
     await userEvent.clear(firstName)
     await userEvent.type(firstName, 'Jeanne')
 
-    const saveButton = await screen.findByRole('button', { name: /Sauvegarder/i })
+    const saveButton = await screen.findByRole('button', {
+      name: /Sauvegarder/i,
+    })
     await userEvent.click(saveButton)
 
     await waitFor(() =>
-      expect(fetchMock.mock.calls.some(([, init]) => (init as RequestInit | undefined)?.method === 'PATCH')).toBe(
-        true,
-      ),
+      expect(
+        fetchMock.mock.calls.some(
+          ([, init]) => (init as RequestInit | undefined)?.method === 'PATCH',
+        ),
+      ).toBe(true),
     )
 
     // Une tentative d'enregistrement a bien eu lieu (le patient), mais rien n'est parti vers le
@@ -155,7 +174,9 @@ describe('EditPatient — une lecture du sous-dossier en échec (refus d’accè
     expect((patchCalls[0][0] as string).toString()).toMatch(/\/patient\/p1$/)
     // La lecture du sous-dossier a bien été tentée (GET, en échec par le 403 configuré
     // ci-dessus) : c'est le PATCH qui ne doit jamais partir.
-    expect(patchCalls.some(([url]) => url.toString().includes('/service-file'))).toBe(false)
+    expect(
+      patchCalls.some(([url]) => url.toString().includes('/service-file')),
+    ).toBe(false)
   })
 })
 
@@ -170,7 +191,8 @@ describe('EditPatient — le sous-dossier est absent (404), un état normal', ()
   it("n'affiche aucune erreur et garde les champs du sous-dossier affichés, vides, éditables", async () => {
     const fetchMock = buildFetchMock([
       {
-        match: (url, method) => url.includes('/service-file') && method === 'GET',
+        match: (url, method) =>
+          url.includes('/service-file') && method === 'GET',
         respond: () => ({ ok: false, status: 404, json: async () => ({}) }),
       },
     ])
@@ -192,16 +214,31 @@ describe('EditPatient — le sous-dossier envoie une charge partielle', () => {
   it("une modification d'un seul champ n'envoie qu'un champ", async () => {
     const fetchMock = buildFetchMock([
       {
-        match: (url, method) => url.includes('/service-file') && method === 'GET',
-        respond: () => ({ ok: true, status: 200, json: async () => serviceFileFixture }),
+        match: (url, method) =>
+          url.includes('/service-file') && method === 'GET',
+        respond: () => ({
+          ok: true,
+          status: 200,
+          json: async () => serviceFileFixture,
+        }),
       },
       {
-        match: (url, method) => url.includes('/service-file') && method === 'PATCH',
-        respond: () => ({ ok: true, status: 200, json: async () => serviceFileFixture }),
+        match: (url, method) =>
+          url.includes('/service-file') && method === 'PATCH',
+        respond: () => ({
+          ok: true,
+          status: 200,
+          json: async () => serviceFileFixture,
+        }),
       },
       {
-        match: (url, method) => /\/patient\/p1$/.test(url) && method === 'PATCH',
-        respond: () => ({ ok: true, status: 200, json: async () => patientFixture }),
+        match: (url, method) =>
+          /\/patient\/p1$/.test(url) && method === 'PATCH',
+        respond: () => ({
+          ok: true,
+          status: 200,
+          json: async () => patientFixture,
+        }),
       },
     ])
     vi.stubGlobal('fetch', fetchMock)
@@ -214,20 +251,30 @@ describe('EditPatient — le sous-dossier envoie une charge partielle', () => {
     await userEvent.clear(notes)
     await userEvent.type(notes, 'note modifiée')
 
-    const saveButton = await screen.findByRole('button', { name: /Sauvegarder/i })
+    const saveButton = await screen.findByRole('button', {
+      name: /Sauvegarder/i,
+    })
     await userEvent.click(saveButton)
 
     await waitFor(() =>
       expect(
-        fetchMock.mock.calls.some(([url, init]) => url.toString().includes('/service-file') && (init as RequestInit)?.method === 'PATCH'),
+        fetchMock.mock.calls.some(
+          ([url, init]) =>
+            url.toString().includes('/service-file') &&
+            (init as RequestInit)?.method === 'PATCH',
+        ),
       ).toBe(true),
     )
 
     const serviceFilePatch = fetchMock.mock.calls.find(
-      ([url, init]) => url.toString().includes('/service-file') && (init as RequestInit)?.method === 'PATCH',
+      ([url, init]) =>
+        url.toString().includes('/service-file') &&
+        (init as RequestInit)?.method === 'PATCH',
     )
     expect(serviceFilePatch).toBeDefined()
-    const body = JSON.parse((serviceFilePatch?.[1] as RequestInit).body as string)
+    const body = JSON.parse(
+      (serviceFilePatch?.[1] as RequestInit).body as string,
+    )
     expect(body).toEqual({ notes: 'note modifiée' })
   })
 })
@@ -236,15 +283,26 @@ describe('EditPatient — deux écritures indépendantes, la vérité si l’une
   it('dit que le patient a échoué sans laisser croire que le dossier de service a échoué aussi', async () => {
     const fetchMock = buildFetchMock([
       {
-        match: (url, method) => url.includes('/service-file') && method === 'GET',
-        respond: () => ({ ok: true, status: 200, json: async () => serviceFileFixture }),
+        match: (url, method) =>
+          url.includes('/service-file') && method === 'GET',
+        respond: () => ({
+          ok: true,
+          status: 200,
+          json: async () => serviceFileFixture,
+        }),
       },
       {
-        match: (url, method) => url.includes('/service-file') && method === 'PATCH',
-        respond: () => ({ ok: true, status: 200, json: async () => serviceFileFixture }),
+        match: (url, method) =>
+          url.includes('/service-file') && method === 'PATCH',
+        respond: () => ({
+          ok: true,
+          status: 200,
+          json: async () => serviceFileFixture,
+        }),
       },
       {
-        match: (url, method) => /\/patient\/p1$/.test(url) && method === 'PATCH',
+        match: (url, method) =>
+          /\/patient\/p1$/.test(url) && method === 'PATCH',
         respond: () => ({ ok: false, status: 500, json: async () => ({}) }),
       },
     ])
@@ -260,23 +318,41 @@ describe('EditPatient — deux écritures indépendantes, la vérité si l’une
     await userEvent.clear(notes)
     await userEvent.type(notes, 'note modifiée')
 
-    const saveButton = await screen.findByRole('button', { name: /Sauvegarder/i })
+    const saveButton = await screen.findByRole('button', {
+      name: /Sauvegarder/i,
+    })
     await userEvent.click(saveButton)
 
     await waitFor(() =>
       expect(
-        useToastStore.getState().toasts.some((t) => typeof t.title === 'string' && t.title.includes('mise à jour du patient')),
+        useToastStore
+          .getState()
+          .toasts.some(
+            (t) =>
+              typeof t.title === 'string' &&
+              t.title.includes('mise à jour du patient'),
+          ),
       ).toBe(true),
     )
 
     const titles = useToastStore.getState().toasts.map((t) => t.title)
-    expect(titles.some((title) => typeof title === 'string' && title.includes('Erreur lors de la mise à jour du patient'))).toBe(
-      true,
-    )
+    expect(
+      titles.some(
+        (title) =>
+          typeof title === 'string' &&
+          title.includes('Erreur lors de la mise à jour du patient'),
+      ),
+    ).toBe(true)
     // Le dossier de service, lui, a réussi — rien ne doit le faire passer pour un échec global.
     await waitFor(() =>
       expect(
-        useToastStore.getState().toasts.some((t) => typeof t.title === 'string' && t.title.includes('Dossier de service modifié')),
+        useToastStore
+          .getState()
+          .toasts.some(
+            (t) =>
+              typeof t.title === 'string' &&
+              t.title.includes('Dossier de service modifié'),
+          ),
       ).toBe(true),
     )
   })
@@ -284,16 +360,27 @@ describe('EditPatient — deux écritures indépendantes, la vérité si l’une
   it('dit que le dossier de service a échoué sans laisser croire que le patient a échoué aussi', async () => {
     const fetchMock = buildFetchMock([
       {
-        match: (url, method) => url.includes('/service-file') && method === 'GET',
-        respond: () => ({ ok: true, status: 200, json: async () => serviceFileFixture }),
+        match: (url, method) =>
+          url.includes('/service-file') && method === 'GET',
+        respond: () => ({
+          ok: true,
+          status: 200,
+          json: async () => serviceFileFixture,
+        }),
       },
       {
-        match: (url, method) => url.includes('/service-file') && method === 'PATCH',
+        match: (url, method) =>
+          url.includes('/service-file') && method === 'PATCH',
         respond: () => ({ ok: false, status: 500, json: async () => ({}) }),
       },
       {
-        match: (url, method) => /\/patient\/p1$/.test(url) && method === 'PATCH',
-        respond: () => ({ ok: true, status: 200, json: async () => patientFixture }),
+        match: (url, method) =>
+          /\/patient\/p1$/.test(url) && method === 'PATCH',
+        respond: () => ({
+          ok: true,
+          status: 200,
+          json: async () => patientFixture,
+        }),
       },
     ])
     vi.stubGlobal('fetch', fetchMock)
@@ -308,20 +395,34 @@ describe('EditPatient — deux écritures indépendantes, la vérité si l’une
     await userEvent.clear(notes)
     await userEvent.type(notes, 'note modifiée')
 
-    const saveButton = await screen.findByRole('button', { name: /Sauvegarder/i })
+    const saveButton = await screen.findByRole('button', {
+      name: /Sauvegarder/i,
+    })
     await userEvent.click(saveButton)
 
     await waitFor(() =>
       expect(
         useToastStore
           .getState()
-          .toasts.some((t) => typeof t.title === 'string' && t.title.includes('Erreur lors de la mise à jour du dossier de service')),
+          .toasts.some(
+            (t) =>
+              typeof t.title === 'string' &&
+              t.title.includes(
+                'Erreur lors de la mise à jour du dossier de service',
+              ),
+          ),
       ).toBe(true),
     )
 
     await waitFor(() =>
       expect(
-        useToastStore.getState().toasts.some((t) => typeof t.title === 'string' && t.title.includes('Patient modifié')),
+        useToastStore
+          .getState()
+          .toasts.some(
+            (t) =>
+              typeof t.title === 'string' &&
+              t.title.includes('Patient modifié'),
+          ),
       ).toBe(true),
     )
   })
@@ -343,14 +444,16 @@ describe('EditPatient — deux enregistrements successifs, une relecture entre l
 
     const fetchMock = buildFetchMock([
       {
-        match: (url, method) => url.includes('/service-file') && method === 'GET',
+        match: (url, method) =>
+          url.includes('/service-file') && method === 'GET',
         respond: () =>
           created
             ? { ok: true, status: 200, json: async () => created }
             : { ok: false, status: 404, json: async () => ({}) },
       },
       {
-        match: (url, method) => url.includes('/service-file') && method === 'PATCH',
+        match: (url, method) =>
+          url.includes('/service-file') && method === 'PATCH',
         respond: (_url, init) => {
           const body = JSON.parse((init?.body as string) ?? '{}')
           bodies.push(body)
@@ -367,8 +470,13 @@ describe('EditPatient — deux enregistrements successifs, une relecture entre l
         },
       },
       {
-        match: (url, method) => /\/patient\/p1$/.test(url) && method === 'PATCH',
-        respond: () => ({ ok: true, status: 200, json: async () => patientFixture }),
+        match: (url, method) =>
+          /\/patient\/p1$/.test(url) && method === 'PATCH',
+        respond: () => ({
+          ok: true,
+          status: 200,
+          json: async () => patientFixture,
+        }),
       },
     ])
     vi.stubGlobal('fetch', fetchMock)
@@ -378,7 +486,9 @@ describe('EditPatient — deux enregistrements successifs, une relecture entre l
     const notes = await screen.findByLabelText('Notes')
     await userEvent.clear(notes)
     await userEvent.type(notes, 'premiere note')
-    await userEvent.click(await screen.findByRole('button', { name: /Sauvegarder/i }))
+    await userEvent.click(
+      await screen.findByRole('button', { name: /Sauvegarder/i }),
+    )
 
     await waitFor(() => expect(bodies).toHaveLength(1))
     expect(bodies[0]).toEqual({ notes: 'premiere note' })
@@ -388,13 +498,17 @@ describe('EditPatient — deux enregistrements successifs, une relecture entre l
     // bouton précédent est démonté, il en faut un nouveau.
     await waitFor(() => expect(created).not.toBeNull())
     await waitFor(() =>
-      expect(screen.queryByRole('button', { name: /Sauvegarder/i })).not.toBeInTheDocument(),
+      expect(
+        screen.queryByRole('button', { name: /Sauvegarder/i }),
+      ).not.toBeInTheDocument(),
     )
 
     const referringCaregiver = await screen.findByLabelText('Soignant référent')
     await userEvent.clear(referringCaregiver)
     await userEvent.type(referringCaregiver, 'Dr Y')
-    await userEvent.click(await screen.findByRole('button', { name: /Sauvegarder/i }))
+    await userEvent.click(
+      await screen.findByRole('button', { name: /Sauvegarder/i }),
+    )
 
     await waitFor(() => expect(bodies).toHaveLength(2))
     // La propriété : ce corps ne porte que le champ que le soignant vient de saisir — jamais les
@@ -411,18 +525,24 @@ describe('EditPatient — une relecture pose une valeur ailleurs entre deux enre
 
     const fetchMock = buildFetchMock([
       {
-        match: (url, method) => url.includes('/service-file') && method === 'GET',
+        match: (url, method) =>
+          url.includes('/service-file') && method === 'GET',
         respond: () => {
           if (firstSaveDone) {
             // Simule une écriture concurrente : un objectif posé ailleurs, révélé par la
             // relecture que déclenche notre propre `onSettled`.
-            server = { ...server, goal: 'objectif pose ailleurs', referringCaregiver: 'Dr Z' }
+            server = {
+              ...server,
+              goal: 'objectif pose ailleurs',
+              referringCaregiver: 'Dr Z',
+            }
           }
           return { ok: true, status: 200, json: async () => server }
         },
       },
       {
-        match: (url, method) => url.includes('/service-file') && method === 'PATCH',
+        match: (url, method) =>
+          url.includes('/service-file') && method === 'PATCH',
         respond: (_url, init) => {
           const body = JSON.parse((init?.body as string) ?? '{}')
           bodies.push(body)
@@ -432,8 +552,13 @@ describe('EditPatient — une relecture pose une valeur ailleurs entre deux enre
         },
       },
       {
-        match: (url, method) => /\/patient\/p1$/.test(url) && method === 'PATCH',
-        respond: () => ({ ok: true, status: 200, json: async () => patientFixture }),
+        match: (url, method) =>
+          /\/patient\/p1$/.test(url) && method === 'PATCH',
+        respond: () => ({
+          ok: true,
+          status: 200,
+          json: async () => patientFixture,
+        }),
       },
     ])
     vi.stubGlobal('fetch', fetchMock)
@@ -443,20 +568,26 @@ describe('EditPatient — une relecture pose une valeur ailleurs entre deux enre
     const notes = await screen.findByLabelText('Notes')
     await userEvent.clear(notes)
     await userEvent.type(notes, 'note 1')
-    await userEvent.click(await screen.findByRole('button', { name: /Sauvegarder/i }))
+    await userEvent.click(
+      await screen.findByRole('button', { name: /Sauvegarder/i }),
+    )
 
     await waitFor(() => expect(bodies).toHaveLength(1))
     expect(bodies[0]).toEqual({ notes: 'note 1' })
 
     await waitFor(() => expect(server.goal).toBe('objectif pose ailleurs'))
     await waitFor(() =>
-      expect(screen.queryByRole('button', { name: /Sauvegarder/i })).not.toBeInTheDocument(),
+      expect(
+        screen.queryByRole('button', { name: /Sauvegarder/i }),
+      ).not.toBeInTheDocument(),
     )
 
     const notesAgain = await screen.findByLabelText('Notes')
     await userEvent.clear(notesAgain)
     await userEvent.type(notesAgain, 'note 1 bis')
-    await userEvent.click(await screen.findByRole('button', { name: /Sauvegarder/i }))
+    await userEvent.click(
+      await screen.findByRole('button', { name: /Sauvegarder/i }),
+    )
 
     await waitFor(() => expect(bodies).toHaveLength(2))
     // La propriété : le second corps ne porte que `notes`, jamais `goal`/`referringCaregiver` —
@@ -479,11 +610,13 @@ describe('EditPatient — une relecture en arrière-plan, étrangère à notre p
 
     const fetchMock = buildFetchMock([
       {
-        match: (url, method) => url.includes('/service-file') && method === 'GET',
+        match: (url, method) =>
+          url.includes('/service-file') && method === 'GET',
         respond: () => ({ ok: true, status: 200, json: async () => server }),
       },
       {
-        match: (url, method) => url.includes('/service-file') && method === 'PATCH',
+        match: (url, method) =>
+          url.includes('/service-file') && method === 'PATCH',
         respond: (_url, init) => {
           const body = JSON.parse((init?.body as string) ?? '{}')
           bodies.push(body)
@@ -492,8 +625,13 @@ describe('EditPatient — une relecture en arrière-plan, étrangère à notre p
         },
       },
       {
-        match: (url, method) => /\/patient\/p1$/.test(url) && method === 'PATCH',
-        respond: () => ({ ok: true, status: 200, json: async () => patientFixture }),
+        match: (url, method) =>
+          /\/patient\/p1$/.test(url) && method === 'PATCH',
+        respond: () => ({
+          ok: true,
+          status: 200,
+          json: async () => patientFixture,
+        }),
       },
     ])
     vi.stubGlobal('fetch', fetchMock)
@@ -514,9 +652,13 @@ describe('EditPatient — une relecture en arrière-plan, étrangère à notre p
     // — une invalidation quelconque ailleurs dans l'application, un focus de fenêtre...) : entre
     // temps, `goal` a changé côté serveur.
     server = { ...server, goal: 'objectif change ailleurs' }
-    await queryClient.invalidateQueries({ queryKey: ['get_patient_service_file', 'p1'] })
+    await queryClient.invalidateQueries({
+      queryKey: ['get_patient_service_file', 'p1'],
+    })
 
-    await userEvent.click(await screen.findByRole('button', { name: /Sauvegarder/i }))
+    await userEvent.click(
+      await screen.findByRole('button', { name: /Sauvegarder/i }),
+    )
 
     await waitFor(() => expect(bodies).toHaveLength(1))
     expect(bodies[0]).toEqual({ notes: 'note en cours' })
@@ -528,19 +670,30 @@ describe('EditPatient — un champ touché puis remis à sa valeur d’origine',
     const bodies: Record<string, unknown>[] = []
     const fetchMock = buildFetchMock([
       {
-        match: (url, method) => url.includes('/service-file') && method === 'GET',
-        respond: () => ({ ok: true, status: 200, json: async () => serviceFileFixture }),
+        match: (url, method) =>
+          url.includes('/service-file') && method === 'GET',
+        respond: () => ({
+          ok: true,
+          status: 200,
+          json: async () => serviceFileFixture,
+        }),
       },
       {
-        match: (url, method) => url.includes('/service-file') && method === 'PATCH',
+        match: (url, method) =>
+          url.includes('/service-file') && method === 'PATCH',
         respond: (_url, init) => {
           bodies.push(JSON.parse((init?.body as string) ?? '{}'))
           return { ok: true, status: 200, json: async () => serviceFileFixture }
         },
       },
       {
-        match: (url, method) => /\/patient\/p1$/.test(url) && method === 'PATCH',
-        respond: () => ({ ok: true, status: 200, json: async () => patientFixture }),
+        match: (url, method) =>
+          /\/patient\/p1$/.test(url) && method === 'PATCH',
+        respond: () => ({
+          ok: true,
+          status: 200,
+          json: async () => patientFixture,
+        }),
       },
     ])
     vi.stubGlobal('fetch', fetchMock)
@@ -554,7 +707,9 @@ describe('EditPatient — un champ touché puis remis à sa valeur d’origine',
     await userEvent.clear(notes)
     await userEvent.type(notes, 'note existante')
 
-    await userEvent.click(await screen.findByRole('button', { name: /Sauvegarder/i }))
+    await userEvent.click(
+      await screen.findByRole('button', { name: /Sauvegarder/i }),
+    )
 
     // Rien à attendre côté écran (aucun toast, aucun changement visible) : on laisse le temps à
     // un éventuel PATCH indu de partir avant de conclure.
@@ -574,15 +729,26 @@ describe('EditPatient — rien à écrire côté patient (m3)', () => {
     const patientBodies: Record<string, unknown>[] = []
     const fetchMock = buildFetchMock([
       {
-        match: (url, method) => url.includes('/service-file') && method === 'GET',
-        respond: () => ({ ok: true, status: 200, json: async () => serviceFileFixture }),
+        match: (url, method) =>
+          url.includes('/service-file') && method === 'GET',
+        respond: () => ({
+          ok: true,
+          status: 200,
+          json: async () => serviceFileFixture,
+        }),
       },
       {
-        match: (url, method) => url.includes('/service-file') && method === 'PATCH',
-        respond: () => ({ ok: true, status: 200, json: async () => serviceFileFixture }),
+        match: (url, method) =>
+          url.includes('/service-file') && method === 'PATCH',
+        respond: () => ({
+          ok: true,
+          status: 200,
+          json: async () => serviceFileFixture,
+        }),
       },
       {
-        match: (url, method) => /\/patient\/p1$/.test(url) && method === 'PATCH',
+        match: (url, method) =>
+          /\/patient\/p1$/.test(url) && method === 'PATCH',
         respond: (_url, init) => {
           patientBodies.push(JSON.parse((init?.body as string) ?? '{}'))
           return { ok: true, status: 200, json: async () => patientFixture }
@@ -599,16 +765,29 @@ describe('EditPatient — rien à écrire côté patient (m3)', () => {
     await userEvent.clear(notes)
     await userEvent.type(notes, 'note modifiée')
 
-    await userEvent.click(await screen.findByRole('button', { name: /Sauvegarder/i }))
+    await userEvent.click(
+      await screen.findByRole('button', { name: /Sauvegarder/i }),
+    )
 
     await waitFor(() =>
       expect(
-        useToastStore.getState().toasts.some((t) => typeof t.title === 'string' && t.title.includes('Dossier de service modifié')),
+        useToastStore
+          .getState()
+          .toasts.some(
+            (t) =>
+              typeof t.title === 'string' &&
+              t.title.includes('Dossier de service modifié'),
+          ),
       ).toBe(true),
     )
     expect(patientBodies).toHaveLength(0)
     expect(
-      useToastStore.getState().toasts.some((t) => typeof t.title === 'string' && t.title.includes('Patient modifié')),
+      useToastStore
+        .getState()
+        .toasts.some(
+          (t) =>
+            typeof t.title === 'string' && t.title.includes('Patient modifié'),
+        ),
     ).toBe(false)
   })
 })
@@ -618,19 +797,30 @@ describe('EditPatient — rien à écrire côté sous-dossier', () => {
     const bodies: Record<string, unknown>[] = []
     const fetchMock = buildFetchMock([
       {
-        match: (url, method) => url.includes('/service-file') && method === 'GET',
-        respond: () => ({ ok: true, status: 200, json: async () => serviceFileFixture }),
+        match: (url, method) =>
+          url.includes('/service-file') && method === 'GET',
+        respond: () => ({
+          ok: true,
+          status: 200,
+          json: async () => serviceFileFixture,
+        }),
       },
       {
-        match: (url, method) => url.includes('/service-file') && method === 'PATCH',
+        match: (url, method) =>
+          url.includes('/service-file') && method === 'PATCH',
         respond: (_url, init) => {
           bodies.push(JSON.parse((init?.body as string) ?? '{}'))
           return { ok: true, status: 200, json: async () => serviceFileFixture }
         },
       },
       {
-        match: (url, method) => /\/patient\/p1$/.test(url) && method === 'PATCH',
-        respond: () => ({ ok: true, status: 200, json: async () => ({ ...patientFixture, firstName: 'Jeanne' }) }),
+        match: (url, method) =>
+          /\/patient\/p1$/.test(url) && method === 'PATCH',
+        respond: () => ({
+          ok: true,
+          status: 200,
+          json: async () => ({ ...patientFixture, firstName: 'Jeanne' }),
+        }),
       },
     ])
     vi.stubGlobal('fetch', fetchMock)
@@ -641,16 +831,30 @@ describe('EditPatient — rien à écrire côté sous-dossier', () => {
     await userEvent.clear(firstName)
     await userEvent.type(firstName, 'Jeanne')
 
-    await userEvent.click(await screen.findByRole('button', { name: /Sauvegarder/i }))
+    await userEvent.click(
+      await screen.findByRole('button', { name: /Sauvegarder/i }),
+    )
 
     await waitFor(() =>
       expect(
-        useToastStore.getState().toasts.some((t) => typeof t.title === 'string' && t.title.includes('Patient modifié')),
+        useToastStore
+          .getState()
+          .toasts.some(
+            (t) =>
+              typeof t.title === 'string' &&
+              t.title.includes('Patient modifié'),
+          ),
       ).toBe(true),
     )
     expect(bodies).toHaveLength(0)
     expect(
-      useToastStore.getState().toasts.some((t) => typeof t.title === 'string' && t.title.includes('Dossier de service')),
+      useToastStore
+        .getState()
+        .toasts.some(
+          (t) =>
+            typeof t.title === 'string' &&
+            t.title.includes('Dossier de service'),
+        ),
     ).toBe(false)
   })
 })
@@ -659,32 +863,46 @@ describe('EditPatient — la barre « Modifications non sauvegardées » (I1)', 
   it('se referme après un enregistrement réussi', async () => {
     const fetchMock = buildFetchMock([
       {
-        match: (url, method) => url.includes('/service-file') && method === 'GET',
+        match: (url, method) =>
+          url.includes('/service-file') && method === 'GET',
         respond: () => ({ ok: false, status: 404, json: async () => ({}) }),
       },
       {
-        match: (url, method) => /\/patient\/p1$/.test(url) && method === 'PATCH',
-        respond: () => ({ ok: true, status: 200, json: async () => ({ ...patientFixture, firstName: 'Jeanne' }) }),
+        match: (url, method) =>
+          /\/patient\/p1$/.test(url) && method === 'PATCH',
+        respond: () => ({
+          ok: true,
+          status: 200,
+          json: async () => ({ ...patientFixture, firstName: 'Jeanne' }),
+        }),
       },
     ])
     vi.stubGlobal('fetch', fetchMock)
 
     renderEditPatient()
 
-    expect(screen.queryByText('Modifications non sauvegardées')).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('Modifications non sauvegardées'),
+    ).not.toBeInTheDocument()
 
     const firstName = await screen.findByLabelText('Prénom')
     await userEvent.clear(firstName)
     await userEvent.type(firstName, 'Jeanne')
 
     await waitFor(() =>
-      expect(screen.queryByText('Modifications non sauvegardées')).toBeInTheDocument(),
+      expect(
+        screen.queryByText('Modifications non sauvegardées'),
+      ).toBeInTheDocument(),
     )
 
-    await userEvent.click(await screen.findByRole('button', { name: /Sauvegarder/i }))
+    await userEvent.click(
+      await screen.findByRole('button', { name: /Sauvegarder/i }),
+    )
 
     await waitFor(() =>
-      expect(screen.queryByText('Modifications non sauvegardées')).not.toBeInTheDocument(),
+      expect(
+        screen.queryByText('Modifications non sauvegardées'),
+      ).not.toBeInTheDocument(),
     )
   })
 })
@@ -698,7 +916,8 @@ describe('EditPatient — la portée est nommée sur les trois onglets qui en ma
       'fetch',
       buildFetchMock([
         {
-          match: (url, method) => url.includes('/service-file') && method === 'GET',
+          match: (url, method) =>
+            url.includes('/service-file') && method === 'GET',
           respond: () => ({ ok: false, status: 404, json: async () => ({}) }),
         },
       ]),
@@ -707,7 +926,9 @@ describe('EditPatient — la portée est nommée sur les trois onglets qui en ma
     renderEditPatient()
 
     expect(
-      await screen.findByText(/Informations générales — partagées entre les services/),
+      await screen.findByText(
+        /Informations générales — partagées entre les services/,
+      ),
     ).toBeInTheDocument()
     expect(
       screen.getByText(/Contact — partagé entre les services/),
@@ -719,8 +940,13 @@ describe('EditPatient — la portée est nommée sur les trois onglets qui en ma
       'fetch',
       buildFetchMock([
         {
-          match: (url, method) => url.includes('/service-file') && method === 'GET',
-          respond: () => ({ ok: true, status: 200, json: async () => serviceFileFixture }),
+          match: (url, method) =>
+            url.includes('/service-file') && method === 'GET',
+          respond: () => ({
+            ok: true,
+            status: 200,
+            json: async () => serviceFileFixture,
+          }),
         },
       ]),
     )
@@ -728,7 +954,9 @@ describe('EditPatient — la portée est nommée sur les trois onglets qui en ma
     renderEditPatient()
 
     expect(
-      await screen.findByText(/Parcours et inclusion — dossier de ce service, non visible/),
+      await screen.findByText(
+        /Parcours et inclusion — dossier de ce service, non visible/,
+      ),
     ).toBeInTheDocument()
     expect(
       screen.getByText(/Sortie et bilan — dossier de ce service, non visible/),
@@ -751,14 +979,20 @@ describe('EditPatient — la touche Entrée enregistre (m2)', () => {
     const patientBodies: Record<string, unknown>[] = []
     const fetchMock = buildFetchMock([
       {
-        match: (url, method) => url.includes('/service-file') && method === 'GET',
+        match: (url, method) =>
+          url.includes('/service-file') && method === 'GET',
         respond: () => ({ ok: false, status: 404, json: async () => ({}) }),
       },
       {
-        match: (url, method) => /\/patient\/p1$/.test(url) && method === 'PATCH',
+        match: (url, method) =>
+          /\/patient\/p1$/.test(url) && method === 'PATCH',
         respond: (_url, init) => {
           patientBodies.push(JSON.parse((init?.body as string) ?? '{}'))
-          return { ok: true, status: 200, json: async () => ({ ...patientFixture, firstName: 'Jeanne' }) }
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({ ...patientFixture, firstName: 'Jeanne' }),
+          }
         },
       },
     ])
@@ -786,7 +1020,8 @@ describe('EditPatient — le signal de suivi ailleurs (IdentiteFields, tâche 14
   it('affiche la mention, mot pour mot, quand followedElsewhere est vrai', async () => {
     const fetchMock = buildFetchMock([
       {
-        match: (url, method) => url.includes('/service-file') && method === 'GET',
+        match: (url, method) =>
+          url.includes('/service-file') && method === 'GET',
         respond: () => ({ ok: false, status: 404, json: async () => ({}) }),
       },
     ])
@@ -805,7 +1040,8 @@ describe('EditPatient — le signal de suivi ailleurs (IdentiteFields, tâche 14
   it('n’affiche rien quand followedElsewhere est présent et faux (« ce service est le seul »)', async () => {
     const fetchMock = buildFetchMock([
       {
-        match: (url, method) => url.includes('/service-file') && method === 'GET',
+        match: (url, method) =>
+          url.includes('/service-file') && method === 'GET',
         respond: () => ({ ok: false, status: 404, json: async () => ({}) }),
       },
     ])
@@ -815,7 +1051,9 @@ describe('EditPatient — le signal de suivi ailleurs (IdentiteFields, tâche 14
 
     // Attend que l'écran ait fini de se stabiliser (mêmes conditions que le cas vrai) avant de
     // constater une absence, pour ne pas confondre « pas encore rendu » et « rendu, absent ».
-    expect(await screen.findByLabelText("Distance d'habitation")).toBeInTheDocument()
+    expect(
+      await screen.findByLabelText("Distance d'habitation"),
+    ).toBeInTheDocument()
     expect(screen.queryByText(MENTION_TEXT)).not.toBeInTheDocument()
     expect(fetchMock.mock.calls).toHaveLength(1)
   })
@@ -823,7 +1061,8 @@ describe('EditPatient — le signal de suivi ailleurs (IdentiteFields, tâche 14
   it('n’affiche rien quand followedElsewhere est absent (le service courant n’a pas encore de sous-dossier)', async () => {
     const fetchMock = buildFetchMock([
       {
-        match: (url, method) => url.includes('/service-file') && method === 'GET',
+        match: (url, method) =>
+          url.includes('/service-file') && method === 'GET',
         respond: () => ({ ok: false, status: 404, json: async () => ({}) }),
       },
     ])
@@ -833,7 +1072,9 @@ describe('EditPatient — le signal de suivi ailleurs (IdentiteFields, tâche 14
     // `types/patient.ts` (un `undefined` qui n'est pas un `false` déguisé).
     renderEditPatient(patientFixture)
 
-    expect(await screen.findByLabelText("Distance d'habitation")).toBeInTheDocument()
+    expect(
+      await screen.findByLabelText("Distance d'habitation"),
+    ).toBeInTheDocument()
     expect(screen.queryByText(MENTION_TEXT)).not.toBeInTheDocument()
     expect(fetchMock.mock.calls).toHaveLength(1)
   })
@@ -841,7 +1082,8 @@ describe('EditPatient — le signal de suivi ailleurs (IdentiteFields, tâche 14
   it('reste sobre : ni nom de service, ni nombre, ni date dans la mention', async () => {
     const fetchMock = buildFetchMock([
       {
-        match: (url, method) => url.includes('/service-file') && method === 'GET',
+        match: (url, method) =>
+          url.includes('/service-file') && method === 'GET',
         respond: () => ({ ok: false, status: 404, json: async () => ({}) }),
       },
     ])

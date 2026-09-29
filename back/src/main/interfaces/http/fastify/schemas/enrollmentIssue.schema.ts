@@ -10,7 +10,9 @@ export const enrollmentIssueResponseSchema = z.object({
   createdAt: z.coerce.date(),
 })
 
-export const enrollmentIssuesResponseSchema = z.array(enrollmentIssueResponseSchema)
+export const enrollmentIssuesResponseSchema = z.array(
+  enrollmentIssueResponseSchema,
+)
 
 export const enrollmentIssuePatientParamsSchema = z.object({
   patientID: z.cuid(),
@@ -21,6 +23,10 @@ export const enrollmentIssueParamsSchema = z.object({
   issueID: z.cuid(),
 })
 
-export type EnrollmentIssueResponse = z.infer<typeof enrollmentIssueResponseSchema>
-export type EnrollmentIssuePatientParams = z.infer<typeof enrollmentIssuePatientParamsSchema>
+export type EnrollmentIssueResponse = z.infer<
+  typeof enrollmentIssueResponseSchema
+>
+export type EnrollmentIssuePatientParams = z.infer<
+  typeof enrollmentIssuePatientParamsSchema
+>
 export type EnrollmentIssueParams = z.infer<typeof enrollmentIssueParamsSchema>

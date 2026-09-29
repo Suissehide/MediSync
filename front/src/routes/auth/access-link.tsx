@@ -224,9 +224,7 @@ function AccessLinkPage() {
             </form.AppField>
 
             <form.AppField name="confirmPassword">
-              {(field) => (
-                <field.Password label="Confirmer le mot de passe" />
-              )}
+              {(field) => <field.Password label="Confirmer le mot de passe" />}
             </form.AppField>
 
             <Button

@@ -3,12 +3,12 @@ import dayjs, { type Dayjs } from 'dayjs'
 import { twMerge } from 'tailwind-merge'
 
 import type { CalendarEvent } from '../components/custom/Calendar/calendar.tsx'
-import { getContrastTextColor } from './color.ts'
 import type { AppointmentPatient } from '../types/appointmentPatient.ts'
 import type { Pathway } from '../types/pathway.ts'
 import type { Slot } from '../types/slot.ts'
 import type { SlotTemplate } from '../types/slotTemplate.ts'
 import type { Soignant } from '../types/soignant.ts'
+import { getContrastTextColor } from './color.ts'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -24,7 +24,6 @@ export function safeParse<T>(value: string | null, fallback: T): T {
 
 export const containsKeyword = (states: string[], keywords: string[]) =>
   states && keywords.some((keyword) => states.includes(keyword))
-
 
 /**
  * Transforme un objet {clé: label} en [{value, label}]
@@ -190,7 +189,9 @@ export const buildCalendarEventsFromSlotTemplates = (
 export function buildPathwayEvents(pathways: Pathway[]): CalendarEvent[] {
   return pathways.map((pathway) => {
     const endDate = pathway.slots?.reduce((max, slot) => {
-      return dayjs.utc(slot.endDate).isAfter(dayjs.utc(max)) ? slot.endDate : max
+      return dayjs.utc(slot.endDate).isAfter(dayjs.utc(max))
+        ? slot.endDate
+        : max
     }, pathway.startDate)
 
     const weekStart = dayjs.utc(pathway.startDate).isoWeekday(1).startOf('day')

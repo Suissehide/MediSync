@@ -119,7 +119,13 @@ export type EnrollmentResult = {
   patient: Patient
   enrollments: {
     slotTemplate: { id: string; name?: string }
-    appointments: { id?: string; startDate?: string; endDate?: string; success: boolean; error?: string }[]
+    appointments: {
+      id?: string
+      startDate?: string
+      endDate?: string
+      success: boolean
+      error?: string
+    }[]
   }[]
   failedEnrollments: {
     slotTemplate: { id: string; name?: string }

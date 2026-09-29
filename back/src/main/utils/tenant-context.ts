@@ -56,7 +56,9 @@ class TenantContext implements TenantContextInterface {
   // et que `requireTenant` distribue à tous les handlers : c'était l'autre chemin par lequel la
   // re-revue atteignait le store sans jamais appeler `peek()`.
   enter(tenant: Tenant): void {
-    this.storage.enterWith(Object.freeze({ kind: 'tenant', tenant: Object.freeze(tenant) }))
+    this.storage.enterWith(
+      Object.freeze({ kind: 'tenant', tenant: Object.freeze(tenant) }),
+    )
   }
 
   clear(): void {
@@ -65,7 +67,10 @@ class TenantContext implements TenantContextInterface {
 
   // Même gel, et pour la même raison, que `enter` ci-dessus : l'enveloppe ET le tenant.
   run<T>(tenant: Tenant, fn: () => Promise<T>): Promise<T> {
-    return this.storage.run(Object.freeze({ kind: 'tenant', tenant: Object.freeze(tenant) }), fn)
+    return this.storage.run(
+      Object.freeze({ kind: 'tenant', tenant: Object.freeze(tenant) }),
+      fn,
+    )
   }
 
   peek(): TenantStore | undefined {
@@ -85,7 +90,11 @@ class TenantContext implements TenantContextInterface {
     if (tenant.serviceId === null || tenant.serviceRole === null) {
       throw new TenantContextMissingError('no service in the current tenant')
     }
-    return { ...tenant, serviceId: tenant.serviceId, serviceRole: tenant.serviceRole }
+    return {
+      ...tenant,
+      serviceId: tenant.serviceId,
+      serviceRole: tenant.serviceRole,
+    }
   }
 
   scope(): { serviceId: string; establishmentId: string } {

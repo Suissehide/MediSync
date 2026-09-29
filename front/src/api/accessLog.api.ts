@@ -10,11 +10,18 @@ import { fetchWithAuth } from './fetchWithAuth.ts'
 // `PatientServiceFileApi.getByPatient`.
 export const AccessLogApi = {
   getByPatient: async (patientID: string): Promise<PatientAccessLogEntry[]> => {
-    const response = await fetchWithAuth(`${tenantApiUrl()}/patient/${patientID}/acces`, {
-      method: 'GET',
-    })
+    const response = await fetchWithAuth(
+      `${tenantApiUrl()}/patient/${patientID}/acces`,
+      {
+        method: 'GET',
+      },
+    )
     if (!response.ok) {
-      handleHttpError(response, {}, 'Impossible de récupérer le journal des accès à ce dossier')
+      handleHttpError(
+        response,
+        {},
+        'Impossible de récupérer le journal des accès à ce dossier',
+      )
     }
     return response.json()
   },

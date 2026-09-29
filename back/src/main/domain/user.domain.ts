@@ -188,7 +188,10 @@ class UserDomain implements UserDomainInterface {
     // (`request.currentUser.id`, superAdminUser.ts) : pas `this.tenantContext.current().userId`
     // comme dans `MembershipDomain.emit`, cette route n'a AUCUN contexte de tenant a lire
     // (`/super-admin`, back/CLAUDE.md).
-    this.appEventBus.emit('user.accessLinkReissued', { userID: issuedBy, targetUserId: user.id })
+    this.appEventBus.emit('user.accessLinkReissued', {
+      userID: issuedBy,
+      targetUserId: user.id,
+    })
     return accessLink
   }
 

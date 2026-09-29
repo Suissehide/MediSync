@@ -1,9 +1,14 @@
 import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
 
 import { useAuthStore } from '@/store/useAuthStore.ts'
-import { rememberContext, resolveTenantContext } from '@/utils/tenant-context.ts'
+import {
+  rememberContext,
+  resolveTenantContext,
+} from '@/utils/tenant-context.ts'
 
-export const Route = createFileRoute('/_authenticated/e/$establishmentId/s/$serviceId')({
+export const Route = createFileRoute(
+  '/_authenticated/e/$establishmentId/s/$serviceId',
+)({
   // `beforeLoad` et non un effet de rendu : c'est la seule position qui
   // garantisse qu'aucun chargeur enfant ne parte avec le contexte precedent.
   beforeLoad: ({ context, params, preload }) => {

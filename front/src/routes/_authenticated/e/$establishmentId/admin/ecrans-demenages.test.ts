@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
 import type { User } from '@/types/auth.ts'
-
 import { Route as journal } from './activity-log.tsx'
 
 // Navigation par echelle (2026-09-28) : le journal d'activite, rejoint par l'administration
@@ -35,7 +34,9 @@ const coordinateur: User = {
 type AvecBeforeLoad = { options: { beforeLoad?: unknown } }
 
 const lancer = (route: AvecBeforeLoad, user: User) => {
-  const beforeLoad = route.options.beforeLoad as ((a: unknown) => unknown) | undefined
+  const beforeLoad = route.options.beforeLoad as
+    | ((a: unknown) => unknown)
+    | undefined
   if (!beforeLoad) {
     throw new Error('beforeLoad manquant')
   }
@@ -45,14 +46,17 @@ const lancer = (route: AvecBeforeLoad, user: User) => {
   })
 }
 
-describe.each([
-  ["Journal d'activite", journal],
-])('garde de l ecran %s', (_, route) => {
-  it('laisse passer un administrateur sans aucune affectation de service', () => {
-    expect(() => lancer(route, adminSansService)).not.toThrow()
-  })
+describe.each([["Journal d'activite", journal]])(
+  'garde de l ecran %s',
+  (_, route) => {
+    it('laisse passer un administrateur sans aucune affectation de service', () => {
+      expect(() => lancer(route, adminSansService)).not.toThrow()
+    })
 
-  it('refuse un coordinateur, qui n administre pas l etablissement', () => {
-    expect(() => lancer(route, coordinateur)).toThrow(expect.objectContaining({ isRedirect: true, to: '/' }))
-  })
-})
+    it('refuse un coordinateur, qui n administre pas l etablissement', () => {
+      expect(() => lancer(route, coordinateur)).toThrow(
+        expect.objectContaining({ isRedirect: true, to: '/' }),
+      )
+    })
+  },
+)

@@ -21,6 +21,9 @@ describe('ActivityLogDomain.cleanup', () => {
 
     await domain.cleanup()
 
-    expect(repository.deleteOlderThan).toHaveBeenCalledWith(new Date('2026-06-27T00:00:00Z'), {})
+    expect(repository.deleteOlderThan).toHaveBeenCalledWith(
+      new Date('2026-06-27T00:00:00Z'),
+      {},
+    )
   })
 })

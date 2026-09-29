@@ -69,7 +69,9 @@ function SidebarDiagnosticTemplate() {
                         <LayoutTemplate className="w-4 h-4" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-text truncate">{t.name}</div>
+                        <div className="text-sm font-medium text-text truncate">
+                          {t.name}
+                        </div>
                         <div className="text-xs text-text-light">
                           {t.activeFields.length} champ(s) actif(s)
                         </div>

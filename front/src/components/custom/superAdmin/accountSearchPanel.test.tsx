@@ -7,7 +7,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { buildAccessLinkUrl } from '@/libs/accessLink.ts'
 import { useToastStore } from '@/store/useToastStore.ts'
-
 import { AccountSearchPanel } from './accountSearchPanel.tsx'
 
 // `main.tsx` enregistre ce greffon au démarrage ; l'affichage du dernier
@@ -104,7 +103,8 @@ describe('AccountSearchPanel', () => {
       'fetch',
       buildFetchMock([
         {
-          match: (url, method) => url.includes('/super-admin/users?email=') && method === 'GET',
+          match: (url, method) =>
+            url.includes('/super-admin/users?email=') && method === 'GET',
           respond: () => ({
             ok: true,
             status: 200,
@@ -127,8 +127,13 @@ describe('AccountSearchPanel', () => {
   it('demande une confirmation avant de reemettre le lien : le premier clic seul n envoie aucune requete', async () => {
     const fetchMock = buildFetchMock([
       {
-        match: (url, method) => url.includes('/super-admin/users?email=') && method === 'GET',
-        respond: () => ({ ok: true, status: 200, json: async () => compteRecherche }),
+        match: (url, method) =>
+          url.includes('/super-admin/users?email=') && method === 'GET',
+        respond: () => ({
+          ok: true,
+          status: 200,
+          json: async () => compteRecherche,
+        }),
       },
     ])
     vi.stubGlobal('fetch', fetchMock)
@@ -156,14 +161,17 @@ describe('AccountSearchPanel', () => {
     // par `console.warn`.
     const consoleSpies = (
       ['log', 'warn', 'error', 'info', 'debug'] as const
-    ).map((methode) => vi.spyOn(console, methode).mockImplementation(() => undefined))
+    ).map((methode) =>
+      vi.spyOn(console, methode).mockImplementation(() => undefined),
+    )
     const urlAvant = window.location.href
 
     vi.stubGlobal(
       'fetch',
       buildFetchMock([
         {
-          match: (url, method) => url.includes('/super-admin/users?email=') && method === 'GET',
+          match: (url, method) =>
+            url.includes('/super-admin/users?email=') && method === 'GET',
           respond: () => ({
             ok: true,
             status: 200,
@@ -172,7 +180,8 @@ describe('AccountSearchPanel', () => {
         },
         {
           match: (url, method) =>
-            url.endsWith('/super-admin/users/user-cuid-1/access-link') && method === 'POST',
+            url.endsWith('/super-admin/users/user-cuid-1/access-link') &&
+            method === 'POST',
           respond: () => ({
             ok: true,
             status: 201,
@@ -204,7 +213,9 @@ describe('AccountSearchPanel', () => {
     const cachesAvecLeJetonEnValeur = queryClient
       .getQueryCache()
       .getAll()
-      .filter((query) => JSON.stringify(query.state.data ?? '').includes(JETON_UNIQUE))
+      .filter((query) =>
+        JSON.stringify(query.state.data ?? '').includes(JETON_UNIQUE),
+      )
     expect(cachesAvecLeJetonEnValeur).toEqual([])
 
     // Canal 2/4 — jamais dans la CLÉ d'une entrée du cache non plus : une
@@ -219,7 +230,8 @@ describe('AccountSearchPanel', () => {
 
     // Canal 3/4 — jamais dans une URL (navigateur ou requête réseau).
     expect(window.location.href).toBe(urlAvant)
-    for (const call of (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls) {
+    for (const call of (fetch as unknown as ReturnType<typeof vi.fn>).mock
+      .calls) {
       expect(String(call[0])).not.toContain(JETON_UNIQUE)
     }
 

@@ -94,7 +94,8 @@ export default function EditPatient({ patient }: PatientParam) {
   // serveur a effectivement renvoyé. Une relecture en arrière-plan qui n'est pas la nôtre — y
   // compris celle déclenchée par notre propre `onSettled` — ne le touche jamais : c'est
   // précisément ce qui empêche une valeur périmée d'écraser une valeur posée ailleurs (C2).
-  const [serviceFileSnapshot, setServiceFileSnapshot] = useState<PatientServiceFile | null>(null)
+  const [serviceFileSnapshot, setServiceFileSnapshot] =
+    useState<PatientServiceFile | null>(null)
   const hasHydratedServiceFile = useRef(false)
 
   useEffect(() => {

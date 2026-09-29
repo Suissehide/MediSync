@@ -6,7 +6,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import { useToastStore } from '@/store/useToastStore.ts'
 import type { User } from '@/types/auth.ts'
-
 import AddMemberForm from './addMemberForm.tsx'
 
 // Revue finale de l'étape 4a, Important n°2 : ce formulaire (rattacher un
@@ -35,8 +34,18 @@ const adminMembreDUnSeulService: User = {
 }
 
 const servicesFixture = [
-  { id: 'svcA', name: 'Cardiologie', createdAt: '2026-01-01T00:00:00.000Z', deactivatedAt: null },
-  { id: 'svcB', name: 'Pneumologie', createdAt: '2026-01-01T00:00:00.000Z', deactivatedAt: null },
+  {
+    id: 'svcA',
+    name: 'Cardiologie',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    deactivatedAt: null,
+  },
+  {
+    id: 'svcB',
+    name: 'Pneumologie',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    deactivatedAt: null,
+  },
 ]
 
 type Route = {
@@ -99,18 +108,27 @@ afterEach(() => {
 
 describe('AddMemberForm', () => {
   it("propose TOUS les services de l'etablissement, pas seulement ceux de l'administrateur connecte", async () => {
-    vi.stubGlobal('fetch', buildFetchMock([routeSoignants, routeServices(servicesFixture)]))
+    vi.stubGlobal(
+      'fetch',
+      buildFetchMock([routeSoignants, routeServices(servicesFixture)]),
+    )
     renderForm()
 
-    await userEvent.click(screen.getByRole('button', { name: /ajouter un membre/i }))
+    await userEvent.click(
+      screen.getByRole('button', { name: /ajouter un membre/i }),
+    )
     await userEvent.click(screen.getByLabelText('Service'))
 
     // `getByRole('option', …)` plutôt que `getByText` : ce champ vit dans un
     // vrai `<form>`, donc le `Select` (radix-ui) mirroire ses options dans
     // un `<select>` natif caché (`aria-hidden`) en plus du menu ouvert —
     // voir le même commentaire dans `createMemberAccountForm.test.tsx`.
-    expect(await screen.findByRole('option', { name: 'Cardiologie' })).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: 'Pneumologie' })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('option', { name: 'Cardiologie' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('option', { name: 'Pneumologie' }),
+    ).toBeInTheDocument()
   })
 
   it('rattache un compte existant avec le service choisi dans la liste complete', async () => {
@@ -118,33 +136,45 @@ describe('AddMemberForm', () => {
       routeSoignants,
       routeServices(servicesFixture),
       {
-        match: (url, method) => url.endsWith('/admin/members') && method === 'POST',
+        match: (url, method) =>
+          url.endsWith('/admin/members') && method === 'POST',
         respond: () => ({
           ok: true,
           status: 201,
-          json: async () => ({ id: 'm2', role: 'MEMBER', serviceMemberships: [] }),
+          json: async () => ({
+            id: 'm2',
+            role: 'MEMBER',
+            serviceMemberships: [],
+          }),
         }),
       },
     ])
     vi.stubGlobal('fetch', fetchMock)
     renderForm()
 
-    await userEvent.click(screen.getByRole('button', { name: /ajouter un membre/i }))
+    await userEvent.click(
+      screen.getByRole('button', { name: /ajouter un membre/i }),
+    )
     await userEvent.type(screen.getByLabelText(/e-mail/i), 'membre@chu.fr')
 
     // Choisir Pneumologie : le service dont l'administrateur connecté n'est
     // PAS lui-même membre — c'est exactement le cas que le bug fermait.
     await userEvent.click(screen.getByLabelText('Service'))
-    await userEvent.click(await screen.findByRole('option', { name: 'Pneumologie' }))
+    await userEvent.click(
+      await screen.findByRole('option', { name: 'Pneumologie' }),
+    )
 
     await userEvent.click(screen.getByLabelText(/rôle dans le service/i))
-    await userEvent.click(await screen.findByRole('option', { name: 'Intervenant' }))
+    await userEvent.click(
+      await screen.findByRole('option', { name: 'Intervenant' }),
+    )
 
     await userEvent.click(screen.getByRole('button', { name: /^ajouter$/i }))
 
     const postCall = await vi.waitFor(() => {
       const call = fetchMock.mock.calls.find(
-        ([url, init]) => String(url).endsWith('/admin/members') && init?.method === 'POST',
+        ([url, init]) =>
+          String(url).endsWith('/admin/members') && init?.method === 'POST',
       )
       if (!call) {
         throw new Error('pas encore appelé')

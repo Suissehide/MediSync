@@ -11,7 +11,9 @@ import type { SuperAdminAccessLogQuery } from '../types/superAdminAccessLog.ts'
 // (établissement, compte, action) sont des DONNÉES de la requête demandée, jamais un tenant
 // implicite — ces écrans vivent hors de tout layout de tenant, sous le seul `QueryClient` courant
 // (`api/superAdminAccessLog.api.ts`).
-export const useSuperAdminAccessLogQuery = (params: SuperAdminAccessLogQuery) => {
+export const useSuperAdminAccessLogQuery = (
+  params: SuperAdminAccessLogQuery,
+) => {
   const {
     data: entries,
     isPending,

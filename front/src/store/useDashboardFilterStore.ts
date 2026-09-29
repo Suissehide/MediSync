@@ -18,11 +18,16 @@ interface DashboardFilterActions {
   unselectPathwayTemplates: () => void
 }
 
-type PersistedDashboardFilterState = Pick<DashboardFilterState, 'mode' | 'selectedPathwayTemplateIDs'>
+type PersistedDashboardFilterState = Pick<
+  DashboardFilterState,
+  'mode' | 'selectedPathwayTemplateIDs'
+>
 
 // Narrowing sans assertion de type : `in` sur un `unknown` deja ramene a
 // `object` restreint l'acces aux proprietes testees (TS 4.9+).
-const estEtatFiltrePersiste = (valeur: unknown): valeur is PersistedDashboardFilterState =>
+const estEtatFiltrePersiste = (
+  valeur: unknown,
+): valeur is PersistedDashboardFilterState =>
   typeof valeur === 'object' &&
   valeur !== null &&
   'mode' in valeur &&
@@ -42,12 +47,13 @@ export const useDashboardFilterStore = create<
 
       togglePathwayTemplate: (id) =>
         set((state) => ({
-          selectedPathwayTemplateIDs:
-            state.selectedPathwayTemplateIDs.includes(id)
-              ? state.selectedPathwayTemplateIDs.filter(
-                  (selectedID) => selectedID !== id,
-                )
-              : [...state.selectedPathwayTemplateIDs, id],
+          selectedPathwayTemplateIDs: state.selectedPathwayTemplateIDs.includes(
+            id,
+          )
+            ? state.selectedPathwayTemplateIDs.filter(
+                (selectedID) => selectedID !== id,
+              )
+            : [...state.selectedPathwayTemplateIDs, id],
         })),
       selectAllPathwayTemplates: (ids) =>
         set({ selectedPathwayTemplateIDs: ids }),

@@ -102,8 +102,7 @@ export default function AddPatientToAppointmentForm({
 
             {selectedIDs.length === 0 && (
               <p className="text-xs text-destructive">
-                Aucun patient sélectionné : valider supprimera le
-                rendez-vous.
+                Aucun patient sélectionné : valider supprimera le rendez-vous.
               </p>
             )}
 

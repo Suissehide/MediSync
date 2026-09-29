@@ -79,7 +79,8 @@ export function buildPlanningWeeks(
         weekSlots
           .filter(
             (slot) =>
-              timeKeyOf(slot) === timeKey && dayKeyOf(slot.startDate) === dayKey,
+              timeKeyOf(slot) === timeKey &&
+              dayKeyOf(slot.startDate) === dayKey,
           )
           .sort(byThematic),
       ),

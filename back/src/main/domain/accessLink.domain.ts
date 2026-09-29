@@ -85,7 +85,8 @@ class AccessLinkDomain implements AccessLinkDomainInterface {
 
   async consume(token: string, password: string): Promise<void> {
     const tokenHash = sha256Hex(token)
-    const link = await this.accessLinkRepository.findByTokenHashWithUser(tokenHash)
+    const link =
+      await this.accessLinkRepository.findByTokenHashWithUser(tokenHash)
     if (!link) {
       throw Boom.resourceGone(INVALID_OR_EXPIRED)
     }
@@ -99,7 +100,10 @@ class AccessLinkDomain implements AccessLinkDomainInterface {
     // Usage unique tenu PAR LA BASE (Review Focus n°1) : voir le commentaire de
     // `AccessLinkRepositoryInterface.consumeIfActive`. Sous deux consommations simultanées du
     // même jeton, une seule de ces deux invocations reçoit `true`.
-    const consumed = await this.accessLinkRepository.consumeIfActive(tokenHash, now)
+    const consumed = await this.accessLinkRepository.consumeIfActive(
+      tokenHash,
+      now,
+    )
     if (!consumed) {
       throw Boom.resourceGone(INVALID_OR_EXPIRED)
     }

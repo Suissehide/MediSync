@@ -44,7 +44,9 @@ const cases: IsolationCase[] = [
     name: 'soignant',
     create: (s, e) =>
       testDb.soignant
-        .create({ data: { name: 'Dieteticienne', serviceId: s, establishmentId: e } })
+        .create({
+          data: { name: 'Dieteticienne', serviceId: s, establishmentId: e },
+        })
         .then((r) => r.id),
     path: (id) => `/soignant/${id}`,
     ownerStatus: 200,
@@ -395,7 +397,12 @@ describe('isolation par tenant', () => {
       // La ligne creee par A porte son propre id : elle n'a ni lu ni reutilise
       // celle de B.
       const bServiceFile = await testDb.patientServiceFile.findUniqueOrThrow({
-        where: { patientId_serviceId: { patientId: patient.id, serviceId: serviceB.id } },
+        where: {
+          patientId_serviceId: {
+            patientId: patient.id,
+            serviceId: serviceB.id,
+          },
+        },
       })
       expect(writeFromA.json().id).not.toBe(bServiceFile.id)
 
@@ -425,7 +432,11 @@ describe('isolation par tenant', () => {
         },
       })
       await testDb.patientServiceFile.create({
-        data: { patientId: patient.id, serviceId: serviceB.id, establishmentId: est.id },
+        data: {
+          patientId: patient.id,
+          serviceId: serviceB.id,
+          establishmentId: est.id,
+        },
       })
       const issue = await testDb.enrollmentIssue.create({
         data: {
@@ -465,7 +476,9 @@ describe('isolation par tenant', () => {
         cookies: cookiesB,
       })
       expect(listFromB.statusCode).toBe(200)
-      expect(listFromB.json()).toMatchObject([{ id: issue.id, reason: 'RAISON-SECRETE-B' }])
+      expect(listFromB.json()).toMatchObject([
+        { id: issue.id, reason: 'RAISON-SECRETE-B' },
+      ])
     })
 
     it('un diagnostic educatif cree dans un service n est ni lisible, ni modifiable, ni supprimable depuis l autre', async () => {
@@ -479,7 +492,11 @@ describe('isolation par tenant', () => {
         },
       })
       await testDb.patientServiceFile.create({
-        data: { patientId: patient.id, serviceId: serviceB.id, establishmentId: est.id },
+        data: {
+          patientId: patient.id,
+          serviceId: serviceB.id,
+          establishmentId: est.id,
+        },
       })
       const diagnostic = await testDb.diagnosticEducatif.create({
         data: {
@@ -635,7 +652,7 @@ describe('isolation par tenant', () => {
   describe('isolation entre etablissements : journal des consultations (tache 5)', () => {
     beforeEach(truncateAll)
 
-    it("un administrateur de A ne voit pas la ligne de B, meme en visant son propre etablissement avec l identifiant du patient de B", async () => {
+    it('un administrateur de A ne voit pas la ligne de B, meme en visant son propre etablissement avec l identifiant du patient de B', async () => {
       const A = await createEstablishment('A')
       const B = await createEstablishment('B')
       const serviceA = await createService(A.id, 'Service A')
@@ -655,10 +672,20 @@ describe('isolation par tenant', () => {
       // distinguerait les deux par leur nom plutot que par leur identifiant ne prouverait rien
       // sur le cloisonnement lui-meme.
       const patientA = await testDb.patient.create({
-        data: { firstName: 'Jean', lastName: 'Homonyme', createDate: new Date(), establishmentId: A.id },
+        data: {
+          firstName: 'Jean',
+          lastName: 'Homonyme',
+          createDate: new Date(),
+          establishmentId: A.id,
+        },
       })
       const patientB = await testDb.patient.create({
-        data: { firstName: 'Jean', lastName: 'Homonyme', createDate: new Date(), establishmentId: B.id },
+        data: {
+          firstName: 'Jean',
+          lastName: 'Homonyme',
+          createDate: new Date(),
+          establishmentId: B.id,
+        },
       })
       await testDb.patientAccessLog.create({
         data: {

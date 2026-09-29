@@ -42,8 +42,7 @@ export function usePathwaySelector() {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
 
   const allTags = useMemo(
-    () =>
-      [...new Set((pathwayTemplates ?? []).map((t) => t.mainTag))].sort(),
+    () => [...new Set((pathwayTemplates ?? []).map((t) => t.mainTag))].sort(),
     [pathwayTemplates],
   )
 

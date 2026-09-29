@@ -7,6 +7,7 @@ import {
 
 import { AccessLinkDomain } from '../../../main/domain/accessLink.domain'
 import { UserDomain } from '../../../main/domain/user.domain'
+import { AccessLinkRepository } from '../../../main/infra/orm/repositories/accessLink.repository'
 import { buildErrorHandler } from '../../../main/interfaces/http/fastify/errors/error.handler'
 import { boomErrorNormalizer } from '../../../main/interfaces/http/fastify/errors/normalizers/boom.error.normalizer'
 import { fastifyErrorNormalizer } from '../../../main/interfaces/http/fastify/errors/normalizers/fastify.error.normalizer'
@@ -17,7 +18,6 @@ import {
   incomingRequestLog,
   requestCompletedLog,
 } from '../../../main/interfaces/http/fastify/util/request-log'
-import { AccessLinkRepository } from '../../../main/infra/orm/repositories/accessLink.repository'
 import type { IocContainer } from '../../../main/types/application/ioc'
 import { AppEventBus } from '../../../main/utils/app-event-bus'
 import { ErrorHandler } from '../../../main/utils/error-handler'
@@ -107,11 +107,13 @@ const buildCapturingLogger = () => {
     fatal: [],
   }
   const allCalls: string[] = []
-  const record = (level: LogLevel) => (...args: unknown[]) => {
-    const text = args.map(serializeLogArg).join(' ')
-    callsByLevel[level].push(text)
-    allCalls.push(text)
-  }
+  const record =
+    (level: LogLevel) =>
+    (...args: unknown[]) => {
+      const text = args.map(serializeLogArg).join(' ')
+      callsByLevel[level].push(text)
+      allCalls.push(text)
+    }
   const build = (): FakePinoLike => ({
     level: 'trace',
     fatal: record('fatal'),
@@ -177,7 +179,10 @@ const buildFakePrisma = (link: FakeLinkRow, user: FakeUserRow) => ({
     findUnique: ({ where }: { where: { tokenHash: string } }) =>
       Promise.resolve(
         where.tokenHash === link.tokenHash
-          ? { ...link, user: { id: user.id, deactivatedAt: user.deactivatedAt } }
+          ? {
+              ...link,
+              user: { id: user.id, deactivatedAt: user.deactivatedAt },
+            }
           : null,
       ),
     updateMany: ({
@@ -282,7 +287,13 @@ const buildApp = (
   })
   app.addHook('onResponse', (request, reply) => {
     app.log.info(
-      requestCompletedLog(request.id, request.method, request.url, reply.statusCode, 0),
+      requestCompletedLog(
+        request.id,
+        request.method,
+        request.url,
+        reply.statusCode,
+        0,
+      ),
     )
     return Promise.resolve()
   })
@@ -469,7 +480,9 @@ describe("le lien d'acces (POST /auth/access-link/consume) ne fait jamais fuir l
   it('un jeton place sous un prefixe HORS LISTE fuirait toujours (limite assumee de la troncature nommee)', () => {
     const urlWithToken = `/une/route/qui/n/existe/pas/${TOKEN}`
     expect(incomingRequestLog(1, 'POST', urlWithToken)).toContain(TOKEN)
-    expect(requestCompletedLog(1, 'POST', urlWithToken, 200, 3)).toContain(TOKEN)
+    expect(requestCompletedLog(1, 'POST', urlWithToken, 200, 3)).toContain(
+      TOKEN,
+    )
   })
 })
 
@@ -525,7 +538,8 @@ describe("le lien d'acces (POST /super-admin/users/:userId/access-link) ne fait 
     } as unknown as IocContainer)
     // Compte cible : jamais désactivé, c'est tout ce que `reissueAccessLink` lui demande.
     const userRepository = {
-      findByID: (userID: string) => Promise.resolve({ id: userID, deactivatedAt: null }),
+      findByID: (userID: string) =>
+        Promise.resolve({ id: userID, deactivatedAt: null }),
     }
     const accessLinkDomain = new AccessLinkDomain({
       accessLinkRepository,
@@ -562,7 +576,13 @@ describe("le lien d'acces (POST /super-admin/users/:userId/access-link) ne fait 
     })
     app.addHook('onResponse', (request, reply) => {
       app.log.info(
-        requestCompletedLog(request.id, request.method, request.url, reply.statusCode, 0),
+        requestCompletedLog(
+          request.id,
+          request.method,
+          request.url,
+          reply.statusCode,
+          0,
+        ),
       )
       return Promise.resolve()
     })

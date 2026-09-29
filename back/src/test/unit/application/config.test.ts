@@ -27,7 +27,9 @@ describe('loadConfig, LOG_RETENTION_MONTHS', () => {
   it.each([['0'], ['-3'], ['douze']])(
     'refuse de demarrer avec une retention absurde (%s)',
     (valeur) => {
-      expect(() => loadConfig({ ...envValide, LOG_RETENTION_MONTHS: valeur })).toThrow()
+      expect(() =>
+        loadConfig({ ...envValide, LOG_RETENTION_MONTHS: valeur }),
+      ).toThrow()
     },
   )
 

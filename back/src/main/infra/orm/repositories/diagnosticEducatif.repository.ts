@@ -9,7 +9,9 @@ import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { TenantContextInterface } from '../../../types/utils/tenant-context'
 import type { PostgresPrismaClient } from '../postgres-client'
 
-class DiagnosticEducatifRepository implements DiagnosticEducatifRepositoryInterface {
+class DiagnosticEducatifRepository
+  implements DiagnosticEducatifRepositoryInterface
+{
   private readonly prisma: PostgresPrismaClient
   private readonly errorHandler: ErrorHandlerInterface
   private readonly tenantContext: TenantContextInterface
@@ -44,7 +46,9 @@ class DiagnosticEducatifRepository implements DiagnosticEducatifRepositoryInterf
     }
   }
 
-  async create(params: DiagnosticEducatifCreateEntity): Promise<DiagnosticEducatifEntity> {
+  async create(
+    params: DiagnosticEducatifCreateEntity,
+  ): Promise<DiagnosticEducatifEntity> {
     try {
       return await this.prisma.diagnosticEducatif.create({
         data: { ...params, ...this.scope },
@@ -57,7 +61,10 @@ class DiagnosticEducatifRepository implements DiagnosticEducatifRepositoryInterf
     }
   }
 
-  async update(id: string, params: DiagnosticEducatifUpdateEntity): Promise<DiagnosticEducatifEntity> {
+  async update(
+    id: string,
+    params: DiagnosticEducatifUpdateEntity,
+  ): Promise<DiagnosticEducatifEntity> {
     try {
       return await this.prisma.diagnosticEducatif.update({
         where: { id_serviceId: { id, serviceId: this.scope.serviceId } },

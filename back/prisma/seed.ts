@@ -83,8 +83,18 @@ async function main() {
 
   const { establishment, serviceA, serviceB } = await seedTenant(prisma)
 
-  const soignantsA = await seedService(prisma, establishment.id, serviceA, CARDIOLOGIE)
-  const soignantsB = await seedService(prisma, establishment.id, serviceB, PNEUMOLOGIE)
+  const soignantsA = await seedService(
+    prisma,
+    establishment.id,
+    serviceA,
+    CARDIOLOGIE,
+  )
+  const soignantsB = await seedService(
+    prisma,
+    establishment.id,
+    serviceB,
+    PNEUMOLOGIE,
+  )
 
   await seedUsers(
     prisma,

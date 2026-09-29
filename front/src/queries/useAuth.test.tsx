@@ -12,7 +12,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { User } from '@/types/auth.ts'
-
 import { useLogout } from './useAuth.ts'
 
 // ---------------------------------------------------------------------------
@@ -65,7 +64,11 @@ const monter = (queryClient: QueryClient) => {
 }
 
 beforeEach(() => {
-  useAuthStore.setState({ isAuthenticated: true, user: utilisateur, context: null })
+  useAuthStore.setState({
+    isAuthenticated: true,
+    user: utilisateur,
+    context: null,
+  })
   vi.stubGlobal(
     'fetch',
     vi.fn(async () => new Response(null, { status: 200 })),
@@ -78,7 +81,7 @@ afterEach(() => {
 })
 
 describe('useLogout vide le cache de requetes actif', () => {
-  it("efface toute donnee mise en cache par le compte qui se deconnecte", async () => {
+  it('efface toute donnee mise en cache par le compte qui se deconnecte', async () => {
     const queryClient = new QueryClient()
     // Simule ce qu'un compte super-admin sans etablissement (context: null,
     // voir plus haut) aurait laisse dans le cache — la liste des
@@ -90,7 +93,9 @@ describe('useLogout vide le cache de requetes actif', () => {
 
     monter(queryClient)
 
-    await userEvent.click(screen.getByRole('button', { name: /deconnecter|déconnecter/i }))
+    await userEvent.click(
+      screen.getByRole('button', { name: /deconnecter|déconnecter/i }),
+    )
 
     await waitFor(() => {
       expect(queryClient.getQueryCache().getAll()).toEqual([])

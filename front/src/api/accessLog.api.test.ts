@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { PatientAccessLogEntry } from '@/types/accessLog.ts'
-
 import { AccessLogApi } from './accessLog.api.ts'
 
 const context = {
@@ -48,7 +47,10 @@ describe('AccessLogApi', () => {
     const result = await AccessLogApi.getByPatient('p1')
 
     expect(result).toEqual(entries)
-    const [requestedUrl, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    const [requestedUrl, init] = fetchMock.mock.calls[0] as [
+      string,
+      RequestInit,
+    ]
     expect(requestedUrl).toMatch(/\/e\/e1\/s\/s1\/patient\/p1\/acces$/)
     expect(init.method).toBe('GET')
   })

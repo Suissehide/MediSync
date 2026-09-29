@@ -21,7 +21,10 @@ const withSoignants = {
 
 type ThematicRow = Thematic & { soignantLinks: { soignant: Soignant }[] }
 
-const flatten = ({ soignantLinks, ...thematic }: ThematicRow): ThematicWithSoignantsEntityRepo => ({
+const flatten = ({
+  soignantLinks,
+  ...thematic
+}: ThematicRow): ThematicWithSoignantsEntityRepo => ({
   ...thematic,
   soignants: soignantLinks.map((link) => link.soignant),
 })
@@ -42,14 +45,19 @@ class ThematicRepository implements ThematicRepositoryInterface {
   }
 
   async findAll(): Promise<ThematicWithSoignantsEntityRepo[]> {
-    const rows = await this.prisma.thematic.findMany({ where: this.scope, ...withSoignants })
+    const rows = await this.prisma.thematic.findMany({
+      where: this.scope,
+      ...withSoignants,
+    })
     return rows.map(flatten)
   }
 
   async findByID(thematicID: string): Promise<ThematicWithSoignantsEntityRepo> {
     try {
       const row = await this.prisma.thematic.findUniqueOrThrow({
-        where: { id_serviceId: { id: thematicID, serviceId: this.scope.serviceId } },
+        where: {
+          id_serviceId: { id: thematicID, serviceId: this.scope.serviceId },
+        },
         ...withSoignants,
       })
       return flatten(row)
@@ -75,7 +83,9 @@ class ThematicRepository implements ThematicRepositoryInterface {
           duration: thematicCreateParams.duration,
           pdfNotice: thematicCreateParams.pdfNotice,
           ...this.scope,
-          soignantLinks: { create: this.links(thematicCreateParams.soignantIDs) },
+          soignantLinks: {
+            create: this.links(thematicCreateParams.soignantIDs),
+          },
         },
         ...withSoignants,
       })
@@ -94,7 +104,9 @@ class ThematicRepository implements ThematicRepositoryInterface {
   ): Promise<ThematicWithSoignantsEntityRepo> {
     try {
       const row = await this.prisma.thematic.update({
-        where: { id_serviceId: { id: thematicID, serviceId: this.scope.serviceId } },
+        where: {
+          id_serviceId: { id: thematicID, serviceId: this.scope.serviceId },
+        },
         data: {
           name: thematicUpdateParams.name,
           duration: thematicUpdateParams.duration,
@@ -120,7 +132,9 @@ class ThematicRepository implements ThematicRepositoryInterface {
   async delete(thematicID: string): Promise<ThematicEntityRepo> {
     try {
       return await this.prisma.thematic.delete({
-        where: { id_serviceId: { id: thematicID, serviceId: this.scope.serviceId } },
+        where: {
+          id_serviceId: { id: thematicID, serviceId: this.scope.serviceId },
+        },
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({

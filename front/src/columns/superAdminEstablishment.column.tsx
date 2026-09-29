@@ -35,7 +35,9 @@ export const superAdminEstablishmentColumns = [
   columnHelper.display({
     id: 'status',
     header: 'Statut',
-    cell: ({ row }) => <StatutBadge deactivatedAt={row.original.deactivatedAt} />,
+    cell: ({ row }) => (
+      <StatutBadge deactivatedAt={row.original.deactivatedAt} />
+    ),
   }),
   columnHelper.accessor('serviceCount', {
     header: 'Services',

@@ -30,7 +30,14 @@ const buildUnexpectedPrismaError = () =>
   )
 
 type LogLevel = 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal'
-const LOG_LEVELS: LogLevel[] = ['trace', 'debug', 'info', 'warn', 'error', 'fatal']
+const LOG_LEVELS: LogLevel[] = [
+  'trace',
+  'debug',
+  'info',
+  'warn',
+  'error',
+  'fatal',
+]
 
 // Un harnais minimal du meme contrat que `FastifyInstance`/`FastifyRequest`/`FastifyReply`, pour
 // executer `buildErrorHandler` sans monter de vrai serveur Fastify. Les SIX niveaux de log
@@ -156,7 +163,9 @@ describe('la chaine de normalizers ne renvoie jamais une valeur soumise pour une
 
     const [diagnosticLine] = harness.callsByLevel.error
     expect(diagnosticLine).toContain('class=PrismaClientValidationError')
-    expect(diagnosticLine).toContain('PATCH /e/est1/s/svc1/patient/pat1/service-file')
+    expect(diagnosticLine).toContain(
+      'PATCH /e/est1/s/svc1/patient/pat1/service-file',
+    )
     expect(diagnosticLine).toContain('req-test-1')
     // La pile est presente (des lignes de frame), mais jamais le message brut de l'erreur : ce
     // message multi-lignes recopie integralement le `data` de l'invocation Prisma qui a echoue
@@ -197,12 +206,14 @@ describe('la chaine de normalizers ne renvoie jamais une valeur soumise pour une
 
   it('le journal `error` d un Boom porte son message : il est toujours ecrit par notre propre code, jamais recopie d une erreur brute', () => {
     const harness = buildHarness()
-    const boomError = notFound('PatientServiceFile: this ID doesn\'t exist')
+    const boomError = notFound("PatientServiceFile: this ID doesn't exist")
 
     runHandler(boomError, harness)
 
     const [diagnosticLine] = harness.callsByLevel.error
-    expect(diagnosticLine).toContain("message=PatientServiceFile: this ID doesn't exist")
+    expect(diagnosticLine).toContain(
+      "message=PatientServiceFile: this ID doesn't exist",
+    )
   })
 
   // task-5-re-review-4.md, I3 : le message d'une TenantScopeMissingError/TenantContextMissingError
@@ -212,7 +223,11 @@ describe('la chaine de normalizers ne renvoie jamais une valeur soumise pour une
   // sans jamais dire quelle entree ajouter a `SERVICE_MODELS`/`NESTED_RELATIONS`.
   it('le journal `error` garde le message d une TenantScopeMissingError : c est notre propre code qui l a ecrit', () => {
     const harness = buildHarness()
-    const tenantError = new TenantScopeMissingError('Pathway', 'findAll', 'serviceId')
+    const tenantError = new TenantScopeMissingError(
+      'Pathway',
+      'findAll',
+      'serviceId',
+    )
 
     runHandler(tenantError, harness)
 
@@ -229,7 +244,9 @@ describe('la chaine de normalizers ne renvoie jamais une valeur soumise pour une
     runHandler(tenantError, harness)
 
     const [diagnosticLine] = harness.callsByLevel.error
-    expect(diagnosticLine).toContain('message=Tenant context missing: aucun tenant pose')
+    expect(diagnosticLine).toContain(
+      'message=Tenant context missing: aucun tenant pose',
+    )
   })
 
   // task-5-re-review-3.md, I1 : le tour precedent ne testait la chaine qu'avec une
@@ -239,14 +256,17 @@ describe('la chaine de normalizers ne renvoie jamais une valeur soumise pour une
   // etre passee par boomErrorFromPrismaError (exactement le cas d'un depot sans `catch`, C1) :
   // `meta` peut porter une valeur soumise (constraint, target...) et ne doit jamais atteindre ni
   // le corps ni le journal.
-  it("une PrismaClientKnownRequestError non attrapee (meta compris) ne fuit ni dans le corps, ni dans le journal, quel que soit le code", () => {
+  it('une PrismaClientKnownRequestError non attrapee (meta compris) ne fuit ni dans le corps, ni dans le journal, quel que soit le code', () => {
     const harness = buildHarness()
     const boomError = new Prisma.PrismaClientKnownRequestError(
       `Unique constraint failed on the fields: (\`patientId\`,\`notes\`,"${CLINICAL_VALUE}")`,
       {
         code: 'P2002',
         clientVersion: '0.0.0-test',
-        meta: { target: ['patientId', CLINICAL_VALUE], modelName: 'PatientServiceFile' },
+        meta: {
+          target: ['patientId', CLINICAL_VALUE],
+          modelName: 'PatientServiceFile',
+        },
       },
     )
 

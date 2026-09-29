@@ -1,5 +1,4 @@
 import type { PathwayTemplate, Prisma } from '../../../generated/client'
-
 import type { SlotTemplateWithSoignantsDomain } from './slotTemplate.domain.interface'
 
 export type PathwayTemplateEntityDomain = PathwayTemplate

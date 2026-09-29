@@ -5,6 +5,13 @@ import type {
   FastifyServerOptions,
 } from 'fastify'
 import Fastify from 'fastify'
+import {
+  serializerCompiler,
+  validatorCompiler,
+  type ZodTypeProvider,
+} from 'fastify-type-provider-zod'
+
+import type { PinoLogger } from '../../../infra/logger/pino/pino-logger'
 import type { IocContainer } from '../../../types/application/ioc'
 import type { HttpServer } from '../../../types/interfaces/http/server'
 import { toLocalhostIfLinux } from '../../../utils/url-helper'
@@ -15,12 +22,6 @@ import { plugins } from './plugins'
 import { routes } from './routes'
 import { notFoundHandler } from './util/not-found.handler'
 import { incomingRequestLog, requestCompletedLog } from './util/request-log'
-import {
-  type ZodTypeProvider,
-  serializerCompiler,
-  validatorCompiler,
-} from 'fastify-type-provider-zod'
-import type { PinoLogger } from '../../../infra/logger/pino/pino-logger'
 
 declare module 'fastify' {
   export interface FastifyInstance {

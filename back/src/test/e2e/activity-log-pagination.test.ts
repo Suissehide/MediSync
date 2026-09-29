@@ -1,6 +1,12 @@
 import { buildTestApp, type TestApp } from './setup/app'
 import { testDb, truncateAll } from './setup/db'
-import { adminUrl, createEstablishment, createService, createUser, signIn } from './setup/fixtures'
+import {
+  adminUrl,
+  createEstablishment,
+  createService,
+  createUser,
+  signIn,
+} from './setup/fixtures'
 
 // Pagination et recherche cote serveur du journal d'activite de l'administration (2026-09-29).
 // Le journal couvre tout l'etablissement depuis la navigation par echelle : l'ecran ne peut plus
@@ -31,7 +37,10 @@ describe('journal d activite : pagination et recherche', () => {
     })
     const ligne = (
       entityID: string,
-      auteur: { prenom: string; nom: string } = { prenom: 'Alice', nom: 'Martin' },
+      auteur: { prenom: string; nom: string } = {
+        prenom: 'Alice',
+        nom: 'Martin',
+      },
       establishmentId = E.id,
     ) =>
       testDb.activityLog.create({
@@ -51,7 +60,9 @@ describe('journal d activite : pagination et recherche', () => {
   }
 
   const entites = (body: unknown) =>
-    (body as { data: { entityID: string }[] }).data.map((l) => l.entityID).sort()
+    (body as { data: { entityID: string }[] }).data
+      .map((l) => l.entityID)
+      .sort()
 
   it('pagine sur tout le journal et renvoie le total', async () => {
     const { E, cookies, ligne } = await scenario()
@@ -59,20 +70,34 @@ describe('journal d activite : pagination et recherche', () => {
     await ligne('l2')
     await ligne('l3')
 
-    const page1 = await t.app.inject({ method: 'GET', url: adminUrl(E.id, '/activity-log?pageSize=2&page=1'), cookies })
-    const page2 = await t.app.inject({ method: 'GET', url: adminUrl(E.id, '/activity-log?pageSize=2&page=2'), cookies })
+    const page1 = await t.app.inject({
+      method: 'GET',
+      url: adminUrl(E.id, '/activity-log?pageSize=2&page=1'),
+      cookies,
+    })
+    const page2 = await t.app.inject({
+      method: 'GET',
+      url: adminUrl(E.id, '/activity-log?pageSize=2&page=2'),
+      cookies,
+    })
 
     expect(page1.statusCode).toBe(200)
     expect(page1.json()).toMatchObject({ total: 3, page: 1, pageSize: 2 })
     expect(page1.json().data).toHaveLength(2)
     expect(page2.json()).toMatchObject({ total: 3, page: 2, pageSize: 2 })
-    expect([...entites(page1.json()), ...entites(page2.json())].sort()).toEqual(['l1', 'l2', 'l3'])
+    expect([...entites(page1.json()), ...entites(page2.json())].sort()).toEqual(
+      ['l1', 'l2', 'l3'],
+    )
   })
 
   it('refuse une taille de page au-dela de 100', async () => {
     const { E, cookies } = await scenario()
 
-    const res = await t.app.inject({ method: 'GET', url: adminUrl(E.id, '/activity-log?pageSize=500'), cookies })
+    const res = await t.app.inject({
+      method: 'GET',
+      url: adminUrl(E.id, '/activity-log?pageSize=500'),
+      cookies,
+    })
 
     expect(res.statusCode).toBe(400)
   })
@@ -81,11 +106,18 @@ describe('journal d activite : pagination et recherche', () => {
     const { E, F, cookies, ligne } = await scenario()
     await ligne('par-camille-durand', { prenom: 'Camille', nom: 'Durand' })
     await ligne('par-camille-martin', { prenom: 'Camille', nom: 'Martin' })
-    await ligne('par-camille-ailleurs', { prenom: 'Camille', nom: 'Durand' }, F.id)
+    await ligne(
+      'par-camille-ailleurs',
+      { prenom: 'Camille', nom: 'Durand' },
+      F.id,
+    )
 
     const res = await t.app.inject({
       method: 'GET',
-      url: adminUrl(E.id, `/activity-log?user=${encodeURIComponent('camille DUR')}`),
+      url: adminUrl(
+        E.id,
+        `/activity-log?user=${encodeURIComponent('camille DUR')}`,
+      ),
       cookies,
     })
 

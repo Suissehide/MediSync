@@ -20,7 +20,10 @@ import { assertTenantScope } from '../../../main/infra/orm/tenant-guard'
 import type { IocContainer } from '../../../main/types/application/ioc'
 import type { Tenant } from '../../../main/types/utils/tenant-context'
 import { TenantContext } from '../../../main/utils/tenant-context'
-import { TenantContextMissingError, TenantScopeMissingError } from '../../../main/utils/tenant-errors'
+import {
+  TenantContextMissingError,
+  TenantScopeMissingError,
+} from '../../../main/utils/tenant-errors'
 
 type Call = { model: string; op: string; args: Record<string, unknown> }
 
@@ -40,37 +43,49 @@ const includedRelationKeys = (args: Record<string, unknown>): string[] => [
 // `<model>.<op>`, pour les tests qui ont besoin de faire boucler le
 // repository sur un résultat précis). `$transaction(fn)` rappelle fn avec le
 // même faux client.
-export const buildFakePrisma = (responses: Partial<Record<string, unknown>> = {}) => {
+const buildFakePrisma = (responses: Partial<Record<string, unknown>> = {}) => {
   const calls: Call[] = []
   const handler = (model: string) =>
-    new Proxy({}, {
-      get: (_t, op: string) => (args: Record<string, unknown>) => {
-        calls.push({ model, op, args })
-        const key = `${model}.${op}`
-        if (key in responses) {
-          return Promise.resolve(responses[key])
-        }
-        if (op === 'findMany' || op === 'groupBy') {
-          return Promise.resolve([])
-        }
-        if (op === 'count') {
-          return Promise.resolve(0)
-        }
-        const row: Record<string, unknown> = { id: 'x', ...(args.data as object) }
-        for (const relationKey of includedRelationKeys(args)) {
-          row[relationKey] = []
-        }
-        return Promise.resolve(row)
+    new Proxy(
+      {},
+      {
+        get: (_t, op: string) => (args: Record<string, unknown>) => {
+          calls.push({ model, op, args })
+          const key = `${model}.${op}`
+          if (key in responses) {
+            return Promise.resolve(responses[key])
+          }
+          if (op === 'findMany' || op === 'groupBy') {
+            return Promise.resolve([])
+          }
+          if (op === 'count') {
+            return Promise.resolve(0)
+          }
+          const row: Record<string, unknown> = {
+            id: 'x',
+            ...(args.data as object),
+          }
+          for (const relationKey of includedRelationKeys(args)) {
+            row[relationKey] = []
+          }
+          return Promise.resolve(row)
+        },
       },
-    })
-  const prisma: Record<string, unknown> = new Proxy({}, {
-    get: (_t, model: string) => {
-      if (model === '$transaction') {
-        return (arg: unknown) => (typeof arg === 'function' ? arg(prisma) : Promise.all(arg as Promise<unknown>[]))
-      }
-      return handler(model)
+    )
+  const prisma: Record<string, unknown> = new Proxy(
+    {},
+    {
+      get: (_t, model: string) => {
+        if (model === '$transaction') {
+          return (arg: unknown) =>
+            typeof arg === 'function'
+              ? arg(prisma)
+              : Promise.all(arg as Promise<unknown>[])
+        }
+        return handler(model)
+      },
     },
-  })
+  )
   return { prisma, calls }
 }
 
@@ -87,31 +102,41 @@ const buildLazyFakePrisma = (tenantContext: TenantContext) => {
   const calls: Call[] = []
   const storesAuDispatch: unknown[] = []
   const handler = (model: string) =>
-    new Proxy({}, {
-      get: (_t, op: string) => (args: Record<string, unknown>) => {
-        calls.push({ model, op, args })
-        return {
-          then: (resolve: (valeur: unknown) => void) => {
-            storesAuDispatch.push(tenantContext.peek())
-            resolve(op === 'findMany' ? [] : 0)
-          },
-        }
+    new Proxy(
+      {},
+      {
+        get: (_t, op: string) => (args: Record<string, unknown>) => {
+          calls.push({ model, op, args })
+          return {
+            // biome-ignore lint/suspicious/noThenProperty: thenable volontaire, imite la paresse d'une requete Prisma
+            then: (resolve: (valeur: unknown) => void) => {
+              storesAuDispatch.push(tenantContext.peek())
+              resolve(op === 'findMany' ? [] : 0)
+            },
+          }
+        },
       },
-    })
+    )
   const prisma = new Proxy({}, { get: (_t, model: string) => handler(model) })
   return { prisma, calls, storesAuDispatch }
 }
 
-export const tenant: Tenant = {
-  userId: 'u1', establishmentId: 'e1', establishmentRole: 'MEMBER',
-  serviceId: 's1', serviceRole: 'INTERVENANT', soignantId: 'so1',
+const tenant: Tenant = {
+  userId: 'u1',
+  establishmentId: 'e1',
+  establishmentRole: 'MEMBER',
+  serviceId: 's1',
+  serviceRole: 'INTERVENANT',
+  soignantId: 'so1',
 }
 
-export const buildContainer = (prisma: unknown, tenantContext: TenantContext) =>
+const buildContainer = (prisma: unknown, tenantContext: TenantContext) =>
   ({
     postgresOrm: { prisma },
     tenantContext,
-    errorHandler: { boomErrorFromPrismaError: ({ error }: { error: unknown }) => error },
+    errorHandler: {
+      boomErrorFromPrismaError: ({ error }: { error: unknown }) => error,
+    },
   }) as unknown as IocContainer
 
 describe('scoping des repositories d etablissement', () => {
@@ -122,14 +147,29 @@ describe('scoping des repositories d etablissement', () => {
     await ctx.run(tenant, async () => {
       await repo.findAll()
       await repo.findByID('p1')
-      await repo.create({ firstName: 'A', lastName: 'B', createDate: new Date() } as never)
+      await repo.create({
+        firstName: 'A',
+        lastName: 'B',
+        createDate: new Date(),
+      } as never)
     })
-    expect(calls[0]).toMatchObject({ model: 'patient', op: 'findMany', args: { where: { establishmentId: 'e1' } } })
+    expect(calls[0]).toMatchObject({
+      model: 'patient',
+      op: 'findMany',
+      args: { where: { establishmentId: 'e1' } },
+    })
     expect(calls[1]).toMatchObject({
-      model: 'patient', op: 'findUniqueOrThrow',
-      args: { where: { id_establishmentId: { id: 'p1', establishmentId: 'e1' } } },
+      model: 'patient',
+      op: 'findUniqueOrThrow',
+      args: {
+        where: { id_establishmentId: { id: 'p1', establishmentId: 'e1' } },
+      },
     })
-    expect(calls[2]).toMatchObject({ model: 'patient', op: 'create', args: { data: { establishmentId: 'e1' } } })
+    expect(calls[2]).toMatchObject({
+      model: 'patient',
+      op: 'create',
+      args: { data: { establishmentId: 'e1' } },
+    })
   })
 
   // Modeles de service depuis le 2026-09-29 : chaque service tient sa liste.
@@ -143,9 +183,15 @@ describe('scoping des repositories d etablissement', () => {
       await soignants.update('so1', { name: 'N' })
       await locations.delete('l1')
     })
-    expect(calls[0]?.args).toMatchObject({ where: { establishmentId: 'e1', serviceId: 's1' } })
-    expect(calls[1]?.args).toMatchObject({ where: { id_serviceId: { id: 'so1', serviceId: 's1' } } })
-    expect(calls[2]?.args).toMatchObject({ where: { id_serviceId: { id: 'l1', serviceId: 's1' } } })
+    expect(calls[0]?.args).toMatchObject({
+      where: { establishmentId: 'e1', serviceId: 's1' },
+    })
+    expect(calls[1]?.args).toMatchObject({
+      where: { id_serviceId: { id: 'so1', serviceId: 's1' } },
+    })
+    expect(calls[2]?.args).toMatchObject({
+      where: { id_serviceId: { id: 'l1', serviceId: 's1' } },
+    })
   })
 
   it('ActivityLogRepository pose le contexte du tenant a l ecriture, null hors requete', async () => {
@@ -153,19 +199,25 @@ describe('scoping des repositories d etablissement', () => {
     const ctx = new TenantContext()
     const repo = new ActivityLogRepository(buildContainer(prisma, ctx))
     const params = {
-      userID: 'u1', userFirstName: 'A', userLastName: 'B',
-      action: 'create', entityType: 'Patient', entityID: 'p1',
+      userID: 'u1',
+      userFirstName: 'A',
+      userLastName: 'B',
+      action: 'create',
+      entityType: 'Patient',
+      entityID: 'p1',
     }
 
     await ctx.run(tenant, () => repo.create(params))
     await ctx.runAsSystem(() => repo.create(params))
 
     expect(calls[0]).toMatchObject({
-      model: 'activityLog', op: 'create',
+      model: 'activityLog',
+      op: 'create',
       args: { data: { establishmentId: 'e1', serviceId: 's1' } },
     })
     expect(calls[1]).toMatchObject({
-      model: 'activityLog', op: 'create',
+      model: 'activityLog',
+      op: 'create',
       args: { data: { establishmentId: null, serviceId: null } },
     })
   })
@@ -184,11 +236,13 @@ describe('scoping des repositories d etablissement', () => {
     await ctx.run(tenant, () => repo.findMany({ page: 1 }))
 
     expect(calls[0]).toMatchObject({
-      model: 'activityLog', op: 'findMany',
+      model: 'activityLog',
+      op: 'findMany',
       args: { where: { establishmentId: 'e1', ...serviceOrNull } },
     })
     expect(calls[1]).toMatchObject({
-      model: 'activityLog', op: 'count',
+      model: 'activityLog',
+      op: 'count',
       args: { where: { establishmentId: 'e1', ...serviceOrNull } },
     })
   })
@@ -205,11 +259,19 @@ describe('scoping des repositories d etablissement', () => {
     // Meme perimetre que la lecture : tout ce qui s'affiche est purgeable,
     // et rien d'autre ne l'est.
     expect(calls[0]).toMatchObject({
-      model: 'activityLog', op: 'deleteMany',
-      args: { where: { establishmentId: 'e1', ...serviceOrNull, createdAt: { lt: date } } },
+      model: 'activityLog',
+      op: 'deleteMany',
+      args: {
+        where: {
+          establishmentId: 'e1',
+          ...serviceOrNull,
+          createdAt: { lt: date },
+        },
+      },
     })
     expect(calls[1]).toMatchObject({
-      model: 'activityLog', op: 'deleteMany',
+      model: 'activityLog',
+      op: 'deleteMany',
       args: { where: { createdAt: { lt: date } } },
     })
     expect(calls[1]?.args.where).not.toHaveProperty('establishmentId')
@@ -224,9 +286,14 @@ describe('scoping des repositories d etablissement', () => {
     const ctx = new TenantContext()
     const repo = new ActivityLogRepository(buildContainer(prisma, ctx))
 
-    await repo.findAllPlatformWide({ establishmentId: 'e9', compte: 'u9', action: 'a9' })
+    await repo.findAllPlatformWide({
+      establishmentId: 'e9',
+      compte: 'u9',
+      action: 'a9',
+    })
     expect(calls[0]).toMatchObject({
-      model: 'activityLog', op: 'findMany',
+      model: 'activityLog',
+      op: 'findMany',
       args: { where: { establishmentId: 'e9', action: 'a9' } },
     })
     // Le filtre « compte » est un `OR` : identifiant EXACT ou fragment de prenom/nom, insensible
@@ -249,13 +316,18 @@ describe('scoping des repositories d etablissement', () => {
     calls.length = 0
     await repo.findAllPlatformWide({ sansEtablissement: true })
     expect(calls[0]).toMatchObject({
-      model: 'activityLog', op: 'findMany', args: { where: { establishmentId: null } },
+      model: 'activityLog',
+      op: 'findMany',
+      args: { where: { establishmentId: null } },
     })
 
     // Et si les deux arrivaient quand meme ensemble (le schema HTTP le rend impossible), c'est
     // « sans etablissement » qui l'emporte — jamais les deux, jamais un silence.
     calls.length = 0
-    await repo.findAllPlatformWide({ sansEtablissement: true, establishmentId: 'e9' })
+    await repo.findAllPlatformWide({
+      sansEtablissement: true,
+      establishmentId: 'e9',
+    })
     expect(calls[0]?.args.where).toMatchObject({ establishmentId: null })
 
     calls.length = 0
@@ -265,7 +337,11 @@ describe('scoping des repositories d etablissement', () => {
     // les lignes du script d'amorcage (`establishmentId: null`) : un `establishmentId` impose,
     // meme `null`, les exclurait d'un `where: { establishmentId: null }` qui ne matcherait que
     // les lignes EXPLICITEMENT nulles, pas « n'importe laquelle ».
-    expect(calls[0]).toMatchObject({ model: 'activityLog', op: 'findMany', args: { where: {} } })
+    expect(calls[0]).toMatchObject({
+      model: 'activityLog',
+      op: 'findMany',
+      args: { where: {} },
+    })
   })
 
   // Meme demonstration que pour PatientAccessLogRepository plus bas : la forme exacte envoyee
@@ -277,7 +353,10 @@ describe('scoping des repositories d etablissement', () => {
     const args = { where: {} }
 
     expect(() =>
-      assertTenantScope({ model: 'ActivityLog', operation: 'findMany', args }, undefined),
+      assertTenantScope(
+        { model: 'ActivityLog', operation: 'findMany', args },
+        undefined,
+      ),
     ).toThrow(TenantScopeMissingError)
 
     expect(() =>
@@ -329,7 +408,8 @@ describe('MembershipRepository (gestion des membres)', () => {
     })
 
     expect(calls[0]).toMatchObject({
-      model: 'establishmentMembership', op: 'findMany',
+      model: 'establishmentMembership',
+      op: 'findMany',
       args: {
         where: { establishmentId: 'e1' },
         // La relation serviceMemberships porte une cle etrangere simple :
@@ -338,23 +418,38 @@ describe('MembershipRepository (gestion des membres)', () => {
       },
     })
     expect(calls[1]).toMatchObject({
-      model: 'establishmentMembership', op: 'findUniqueOrThrow',
-      args: { where: { id_establishmentId: { id: 'em1', establishmentId: 'e1' } } },
+      model: 'establishmentMembership',
+      op: 'findUniqueOrThrow',
+      args: {
+        where: { id_establishmentId: { id: 'em1', establishmentId: 'e1' } },
+      },
     })
     expect(calls[2]).toMatchObject({
-      model: 'establishmentMembership', op: 'findFirst',
+      model: 'establishmentMembership',
+      op: 'findFirst',
       args: { where: { userId: 'u9', establishmentId: 'e1' } },
     })
     expect(calls[3]).toMatchObject({
-      model: 'establishmentMembership', op: 'count',
-      args: { where: { establishmentId: 'e1', role: 'ADMIN', user: { deactivatedAt: null } } },
+      model: 'establishmentMembership',
+      op: 'count',
+      args: {
+        where: {
+          establishmentId: 'e1',
+          role: 'ADMIN',
+          user: { deactivatedAt: null },
+        },
+      },
     })
     expect(calls[4]).toMatchObject({
-      model: 'service', op: 'count',
-      args: { where: { id: 'sv1', establishmentId: 'e1', deactivatedAt: null } },
+      model: 'service',
+      op: 'count',
+      args: {
+        where: { id: 'sv1', establishmentId: 'e1', deactivatedAt: null },
+      },
     })
     expect(calls[5]).toMatchObject({
-      model: 'establishmentMembership', op: 'deleteMany',
+      model: 'establishmentMembership',
+      op: 'deleteMany',
       args: { where: { id: 'em1', establishmentId: 'e1' } },
     })
   })
@@ -366,17 +461,23 @@ describe('MembershipRepository (gestion des membres)', () => {
 
     await ctx.run(tenant, () =>
       repo.create({
-        userId: 'u9', role: 'MEMBER',
+        userId: 'u9',
+        role: 'MEMBER',
         services: [{ serviceId: 'sv1', role: 'LECTURE' }],
-      }))
+      }),
+    )
 
     expect(calls[0]).toMatchObject({
-      model: 'establishmentMembership', op: 'create',
+      model: 'establishmentMembership',
+      op: 'create',
       args: {
         data: {
-          userId: 'u9', establishmentId: 'e1',
+          userId: 'u9',
+          establishmentId: 'e1',
           serviceMemberships: {
-            create: [{ serviceId: 'sv1', role: 'LECTURE', establishmentId: 'e1' }],
+            create: [
+              { serviceId: 'sv1', role: 'LECTURE', establishmentId: 'e1' },
+            ],
           },
         },
       },
@@ -394,18 +495,33 @@ describe('MembershipRepository (gestion des membres)', () => {
     }
     const ctx = new TenantContext()
     const guarded = (model: string) =>
-      new Proxy({}, {
-        get: (_t, op: string) => (args: Record<string, unknown>) => {
-          assertTenantScope({ model: modelOf[model] ?? model, operation: op, args: args ?? {} }, ctx.peek())
-          return Promise.resolve(op === 'findMany' ? [] : op === 'count' ? 0 : { id: 'x' })
+      new Proxy(
+        {},
+        {
+          get: (_t, op: string) => (args: Record<string, unknown>) => {
+            assertTenantScope(
+              {
+                model: modelOf[model] ?? model,
+                operation: op,
+                args: args ?? {},
+              },
+              ctx.peek(),
+            )
+            return Promise.resolve(
+              op === 'findMany' ? [] : op === 'count' ? 0 : { id: 'x' },
+            )
+          },
         },
-      })
-    const prisma: Record<string, unknown> = new Proxy({}, {
-      get: (_t, model: string) =>
-        model === '$transaction'
-          ? (fn: (client: unknown) => unknown) => fn(prisma)
-          : guarded(model),
-    })
+      )
+    const prisma: Record<string, unknown> = new Proxy(
+      {},
+      {
+        get: (_t, model: string) =>
+          model === '$transaction'
+            ? (fn: (client: unknown) => unknown) => fn(prisma)
+            : guarded(model),
+      },
+    )
     const repo = new MembershipRepository(buildContainer(prisma, ctx))
 
     // Contexte d'administration d'etablissement : pas de service courant.
@@ -416,8 +532,15 @@ describe('MembershipRepository (gestion des membres)', () => {
         await repo.findByUserID('u9')
         await repo.countAdmins()
         await repo.serviceExists('sv1')
-        await repo.create({ userId: 'u9', role: 'MEMBER', services: [{ serviceId: 'sv1', role: 'LECTURE' }] })
-        await repo.update('em1', { role: 'ADMIN', services: [{ serviceId: 'sv1', role: 'LECTURE' }] })
+        await repo.create({
+          userId: 'u9',
+          role: 'MEMBER',
+          services: [{ serviceId: 'sv1', role: 'LECTURE' }],
+        })
+        await repo.update('em1', {
+          role: 'ADMIN',
+          services: [{ serviceId: 'sv1', role: 'LECTURE' }],
+        })
         await repo.delete('em1')
       }),
     ).resolves.toBeUndefined()
@@ -430,12 +553,16 @@ describe('MembershipRepository (gestion des membres)', () => {
   // encadre — sans quoi le mode encadre serait une preference de style plutot qu'une necessite.
   describe('MembershipRepository.estRattacheAilleurs', () => {
     it('compte sous runAsSystem, sur le compte vise, en EXCLUANT l etablissement courant', async () => {
-      const { prisma, calls } = buildFakePrisma({ 'establishmentMembership.count': 2 })
+      const { prisma, calls } = buildFakePrisma({
+        'establishmentMembership.count': 2,
+      })
       const ctx = new TenantContext()
       const spy = jest.spyOn(ctx, 'runAsSystem')
       const repo = new MembershipRepository(buildContainer(prisma, ctx))
 
-      const resultat = await ctx.run(tenant, () => repo.estRattacheAilleurs('u9'))
+      const resultat = await ctx.run(tenant, () =>
+        repo.estRattacheAilleurs('u9'),
+      )
 
       expect(spy).toHaveBeenCalledTimes(1)
       expect(calls).toHaveLength(1)
@@ -453,7 +580,9 @@ describe('MembershipRepository (gestion des membres)', () => {
       const ctx = new TenantContext()
       const repo = new MembershipRepository(buildContainer(prisma, ctx))
 
-      await expect(ctx.run(tenant, () => repo.estRattacheAilleurs('u9'))).resolves.toBe(false)
+      await expect(
+        ctx.run(tenant, () => repo.estRattacheAilleurs('u9')),
+      ).resolves.toBe(false)
     })
 
     // Le mecanisme, isole. Ce que le mode encadre rend possible, et que rien d'autre ne pourrait :
@@ -484,7 +613,9 @@ describe('MembershipRepository (gestion des membres)', () => {
     // compris, rendant vrai pour un compte rattache ici seulement. Le test ci-dessus l'attrape
     // par la valeur exacte du `not`.
     it('ne leve pas et garde sa borne meme si le contexte systeme est deja ouvert autour', async () => {
-      const { prisma, calls } = buildFakePrisma({ 'establishmentMembership.count': 0 })
+      const { prisma, calls } = buildFakePrisma({
+        'establishmentMembership.count': 0,
+      })
       const ctx = new TenantContext()
       const repo = new MembershipRepository(buildContainer(prisma, ctx))
 
@@ -501,7 +632,10 @@ describe('MembershipRepository (gestion des membres)', () => {
     // jour ne doit plus tout effacer puis tout recreer, ce qui perdrait le soignant rattache a
     // une affectation conservee (`ServiceMembership.soignantId`, 2026-09-29).
     const { prisma, calls } = buildFakePrisma({
-      'serviceMembership.findMany': [{ serviceId: 'sv0' }, { serviceId: 'sv2' }],
+      'serviceMembership.findMany': [
+        { serviceId: 'sv0' },
+        { serviceId: 'sv2' },
+      ],
     })
     const ctx = new TenantContext()
     const repo = new MembershipRepository(buildContainer(prisma, ctx))
@@ -513,41 +647,64 @@ describe('MembershipRepository (gestion des membres)', () => {
           { serviceId: 'sv1', role: 'LECTURE' },
           { serviceId: 'sv2', role: 'COORDINATEUR' },
         ],
-      }))
+      }),
+    )
 
     // L'identifiant d'appartenance sert de cle etrangere aux ServiceMembership
     // ecrits ensuite : il est d'abord prouve appartenir a l'etablissement.
     expect(calls[0]).toMatchObject({
-      model: 'establishmentMembership', op: 'findUniqueOrThrow',
-      args: { where: { id_establishmentId: { id: 'em1', establishmentId: 'e1' } } },
+      model: 'establishmentMembership',
+      op: 'findUniqueOrThrow',
+      args: {
+        where: { id_establishmentId: { id: 'em1', establishmentId: 'e1' } },
+      },
     })
     expect(calls[1]).toMatchObject({
-      model: 'serviceMembership', op: 'findMany',
-      args: { where: { establishmentMembershipId: 'em1', establishmentId: 'e1' } },
+      model: 'serviceMembership',
+      op: 'findMany',
+      args: {
+        where: { establishmentMembershipId: 'em1', establishmentId: 'e1' },
+      },
     })
     expect(calls[2]).toMatchObject({
-      model: 'serviceMembership', op: 'deleteMany',
-      args: { where: { establishmentMembershipId: 'em1', establishmentId: 'e1', serviceId: { in: ['sv0'] } } },
+      model: 'serviceMembership',
+      op: 'deleteMany',
+      args: {
+        where: {
+          establishmentMembershipId: 'em1',
+          establishmentId: 'e1',
+          serviceId: { in: ['sv0'] },
+        },
+      },
     })
     expect(calls[3]).toMatchObject({
-      model: 'serviceMembership', op: 'create',
+      model: 'serviceMembership',
+      op: 'create',
       args: {
         data: {
-          establishmentMembershipId: 'em1', serviceId: 'sv1',
-          role: 'LECTURE', establishmentId: 'e1',
+          establishmentMembershipId: 'em1',
+          serviceId: 'sv1',
+          role: 'LECTURE',
+          establishmentId: 'e1',
         },
       },
     })
     // L'affectation conservee est mise a jour sur place : son soignant n'est pas touche.
     expect(calls[4]).toMatchObject({
-      model: 'serviceMembership', op: 'updateMany',
+      model: 'serviceMembership',
+      op: 'updateMany',
       args: {
-        where: { establishmentMembershipId: 'em1', establishmentId: 'e1', serviceId: 'sv2' },
+        where: {
+          establishmentMembershipId: 'em1',
+          establishmentId: 'e1',
+          serviceId: 'sv2',
+        },
         data: { role: 'COORDINATEUR' },
       },
     })
     expect(calls[5]).toMatchObject({
-      model: 'establishmentMembership', op: 'update',
+      model: 'establishmentMembership',
+      op: 'update',
       args: {
         where: { id_establishmentId: { id: 'em1', establishmentId: 'e1' } },
         data: { role: 'ADMIN' },
@@ -565,10 +722,13 @@ describe('PatientRepository couvre les methodes de parcours', () => {
     await ctx.run(tenant, () => repo.getPathwaysForPatient('p1'))
 
     expect(calls[0]).toMatchObject({
-      model: 'pathway', op: 'findMany',
+      model: 'pathway',
+      op: 'findMany',
       args: {
         where: { serviceId: 's1', establishmentId: 'e1' },
-        include: { patientPriorities: { where: { patientID: 'p1', serviceId: 's1' } } },
+        include: {
+          patientPriorities: { where: { patientID: 'p1', serviceId: 's1' } },
+        },
       },
     })
   })
@@ -581,15 +741,31 @@ describe('PatientRepository couvre les methodes de parcours', () => {
     await ctx.run(tenant, () => repo.setPathwayPriorities('p1', ['pw1', 'pw2']))
 
     expect(calls[0]).toMatchObject({
-      model: 'patientPathwayPriority', op: 'deleteMany',
-      args: { where: { patientID: 'p1', serviceId: 's1', establishmentId: 'e1' } },
+      model: 'patientPathwayPriority',
+      op: 'deleteMany',
+      args: {
+        where: { patientID: 'p1', serviceId: 's1', establishmentId: 'e1' },
+      },
     })
     expect(calls[1]).toMatchObject({
-      model: 'patientPathwayPriority', op: 'createMany',
+      model: 'patientPathwayPriority',
+      op: 'createMany',
       args: {
         data: [
-          { patientID: 'p1', pathwayID: 'pw1', priority: 0, serviceId: 's1', establishmentId: 'e1' },
-          { patientID: 'p1', pathwayID: 'pw2', priority: 1, serviceId: 's1', establishmentId: 'e1' },
+          {
+            patientID: 'p1',
+            pathwayID: 'pw1',
+            priority: 0,
+            serviceId: 's1',
+            establishmentId: 'e1',
+          },
+          {
+            patientID: 'p1',
+            pathwayID: 'pw2',
+            priority: 1,
+            serviceId: 's1',
+            establishmentId: 'e1',
+          },
         ],
       },
     })
@@ -603,8 +779,11 @@ describe('PatientRepository couvre les methodes de parcours', () => {
     await ctx.run(tenant, () => repo.countAppointmentsInPathway('p1', 'pw1'))
 
     expect(calls[0]).toMatchObject({
-      model: 'appointmentPatient', op: 'count',
-      args: { where: { serviceId: 's1', establishmentId: 'e1', patientId: 'p1' } },
+      model: 'appointmentPatient',
+      op: 'count',
+      args: {
+        where: { serviceId: 's1', establishmentId: 'e1', patientId: 'p1' },
+      },
     })
   })
 
@@ -613,24 +792,34 @@ describe('PatientRepository couvre les methodes de parcours', () => {
     // branche "dernier patient" doit aussi supprimer le rendez-vous.
     const { prisma, calls } = buildFakePrisma({
       'appointmentPatient.findMany': [
-        { id: 'ap1', appointment: { id: 'appt1', appointmentPatients: [{ id: 'ap1' }] } },
+        {
+          id: 'ap1',
+          appointment: { id: 'appt1', appointmentPatients: [{ id: 'ap1' }] },
+        },
       ],
     })
     const ctx = new TenantContext()
     const repo = new PatientRepository(buildContainer(prisma, ctx))
 
-    const result = await ctx.run(tenant, () => repo.removeFromPathway('p1', 'pw1'))
+    const result = await ctx.run(tenant, () =>
+      repo.removeFromPathway('p1', 'pw1'),
+    )
 
     expect(calls[0]).toMatchObject({
-      model: 'appointmentPatient', op: 'findMany',
-      args: { where: { serviceId: 's1', establishmentId: 'e1', patientId: 'p1' } },
+      model: 'appointmentPatient',
+      op: 'findMany',
+      args: {
+        where: { serviceId: 's1', establishmentId: 'e1', patientId: 'p1' },
+      },
     })
     expect(calls[1]).toMatchObject({
-      model: 'appointmentPatient', op: 'delete',
+      model: 'appointmentPatient',
+      op: 'delete',
       args: { where: { id_serviceId: { id: 'ap1', serviceId: 's1' } } },
     })
     expect(calls[2]).toMatchObject({
-      model: 'appointment', op: 'delete',
+      model: 'appointment',
+      op: 'delete',
       args: { where: { id_serviceId: { id: 'appt1', serviceId: 's1' } } },
     })
     expect(result).toEqual({ deletedAppointments: 1, removedFromGroup: 0 })
@@ -648,26 +837,35 @@ describe('scoping des repositories de service simples', () => {
       await repo.update('t1', { soignantIDs: ['so3'] })
     })
     expect(calls[0]).toMatchObject({
-      model: 'thematic', op: 'findMany',
+      model: 'thematic',
+      op: 'findMany',
       args: { where: { serviceId: 's1' } },
     })
     expect(calls[1]).toMatchObject({
-      model: 'thematic', op: 'create',
+      model: 'thematic',
+      op: 'create',
       args: {
         data: {
-          name: 'T', serviceId: 's1', establishmentId: 'e1',
-          soignantLinks: { create: [
-            { soignantId: 'so1', serviceId: 's1', establishmentId: 'e1' },
-            { soignantId: 'so2', serviceId: 's1', establishmentId: 'e1' },
-          ] },
+          name: 'T',
+          serviceId: 's1',
+          establishmentId: 'e1',
+          soignantLinks: {
+            create: [
+              { soignantId: 'so1', serviceId: 's1', establishmentId: 'e1' },
+              { soignantId: 'so2', serviceId: 's1', establishmentId: 'e1' },
+            ],
+          },
         },
       },
     })
     expect(calls[2]).toMatchObject({
-      model: 'thematic', op: 'update',
+      model: 'thematic',
+      op: 'update',
       args: {
         where: { id_serviceId: { id: 't1', serviceId: 's1' } },
-        data: { soignantLinks: { deleteMany: {}, create: [{ soignantId: 'so3' }] } },
+        data: {
+          soignantLinks: { deleteMany: {}, create: [{ soignantId: 'so3' }] },
+        },
       },
     })
   })
@@ -678,15 +876,23 @@ describe('scoping des repositories de service simples', () => {
     const repo = new TodoRepository(buildContainer(prisma, ctx))
     await ctx.run(tenant, async () => {
       await repo.findAll()
-      await repo.create({ title: 't', createDate: new Date().toISOString(), completed: false } as never)
+      await repo.create({
+        title: 't',
+        createDate: new Date().toISOString(),
+        completed: false,
+      } as never)
     })
     expect(calls[0]).toMatchObject({
-      model: 'todo', op: 'findMany',
+      model: 'todo',
+      op: 'findMany',
       args: { where: { serviceId: 's1', soignantID: 'so1' } },
     })
     expect(calls[1]).toMatchObject({
-      model: 'todo', op: 'create',
-      args: { data: { serviceId: 's1', establishmentId: 'e1', soignantID: 'so1' } },
+      model: 'todo',
+      op: 'create',
+      args: {
+        data: { serviceId: 's1', establishmentId: 'e1', soignantID: 'so1' },
+      },
     })
   })
 
@@ -708,20 +914,28 @@ describe('scoping des repositories de service simples', () => {
     // Lecture unitaire : findFirstOrThrow, le filtre soignantID n'etant pas
     // exprimable dans la cle unique composite id_serviceId.
     expect(calls[0]).toMatchObject({
-      model: 'todo', op: 'findFirstOrThrow',
+      model: 'todo',
+      op: 'findFirstOrThrow',
       args: {
-        where: { id: 'td1', serviceId: 's1', establishmentId: 'e1', soignantID: 'so1' },
+        where: {
+          id: 'td1',
+          serviceId: 's1',
+          establishmentId: 'e1',
+          soignantID: 'so1',
+        },
         include: { soignant: true },
       },
     })
     // Ecritures : lecture de garde scopee sur le soignant AVANT l'ecriture.
     expect(calls[1]).toMatchObject({
-      model: 'todo', op: 'findFirstOrThrow',
+      model: 'todo',
+      op: 'findFirstOrThrow',
       args: { where: { id: 'td1', serviceId: 's1', soignantID: 'so1' } },
     })
     expect(calls[2]).toMatchObject({ model: 'todo', op: 'update' })
     expect(calls[3]).toMatchObject({
-      model: 'todo', op: 'findFirstOrThrow',
+      model: 'todo',
+      op: 'findFirstOrThrow',
       args: { where: { id: 'td1', serviceId: 's1', soignantID: 'so1' } },
     })
     expect(calls[4]).toMatchObject({ model: 'todo', op: 'delete' })
@@ -739,7 +953,9 @@ describe('scoping des repositories de service simples', () => {
       await repo.update('td1', { completed: true } as never)
       await repo.delete('td1')
     })
-    for (const call of calls.filter((c) => c.op !== 'update' && c.op !== 'delete')) {
+    for (const call of calls.filter(
+      (c) => c.op !== 'update' && c.op !== 'delete',
+    )) {
       expect(call.args.where).toMatchObject({ soignantID: null })
     }
   })
@@ -754,15 +970,21 @@ describe('scoping des repositories de service simples', () => {
       await repo.delete()
     })
     expect(calls[0]).toMatchObject({
-      model: 'planningCycle', op: 'findUnique',
+      model: 'planningCycle',
+      op: 'findUnique',
       args: { where: { serviceId: 's1' } },
     })
     expect(calls[1]).toMatchObject({
-      model: 'planningCycle', op: 'upsert',
-      args: { where: { serviceId: 's1' }, create: { serviceId: 's1', establishmentId: 'e1', weekCount: 6 } },
+      model: 'planningCycle',
+      op: 'upsert',
+      args: {
+        where: { serviceId: 's1' },
+        create: { serviceId: 's1', establishmentId: 'e1', weekCount: 6 },
+      },
     })
     expect(calls[2]).toMatchObject({
-      model: 'planningCycle', op: 'deleteMany',
+      model: 'planningCycle',
+      op: 'deleteMany',
       args: { where: { serviceId: 's1' } },
     })
   })
@@ -781,23 +1003,35 @@ describe('scoping des repositories de diagnostic', () => {
       await repo.delete('d1')
     })
     expect(calls[0]).toMatchObject({
-      model: 'diagnosticEducatif', op: 'findMany',
-      args: { where: { patientId: 'p1', serviceId: 's1', establishmentId: 'e1' } },
+      model: 'diagnosticEducatif',
+      op: 'findMany',
+      args: {
+        where: { patientId: 'p1', serviceId: 's1', establishmentId: 'e1' },
+      },
     })
     expect(calls[1]).toMatchObject({
-      model: 'diagnosticEducatif', op: 'findUniqueOrThrow',
+      model: 'diagnosticEducatif',
+      op: 'findUniqueOrThrow',
       args: { where: { id_serviceId: { id: 'd1', serviceId: 's1' } } },
     })
     expect(calls[2]).toMatchObject({
-      model: 'diagnosticEducatif', op: 'create',
-      args: { data: { patientId: 'p1', serviceId: 's1', establishmentId: 'e1' } },
+      model: 'diagnosticEducatif',
+      op: 'create',
+      args: {
+        data: { patientId: 'p1', serviceId: 's1', establishmentId: 'e1' },
+      },
     })
     expect(calls[3]).toMatchObject({
-      model: 'diagnosticEducatif', op: 'update',
-      args: { where: { id_serviceId: { id: 'd1', serviceId: 's1' } }, data: { title: 'T' } },
+      model: 'diagnosticEducatif',
+      op: 'update',
+      args: {
+        where: { id_serviceId: { id: 'd1', serviceId: 's1' } },
+        data: { title: 'T' },
+      },
     })
     expect(calls[4]).toMatchObject({
-      model: 'diagnosticEducatif', op: 'delete',
+      model: 'diagnosticEducatif',
+      op: 'delete',
       args: { where: { id_serviceId: { id: 'd1', serviceId: 's1' } } },
     })
   })
@@ -814,23 +1048,36 @@ describe('scoping des repositories de diagnostic', () => {
     const repo = new EnrollmentIssueRepository(buildContainer(prisma, ctx))
     await ctx.run(tenant, async () => {
       await repo.findByPatientID('p1')
-      await repo.create('p1', [{ pathwayTemplateID: 'pt1', reason: 'R', startDate: new Date() }])
+      await repo.create('p1', [
+        { pathwayTemplateID: 'pt1', reason: 'R', startDate: new Date() },
+      ])
       await repo.delete('ei1')
     })
     expect(calls[0]).toMatchObject({
-      model: 'enrollmentIssue', op: 'findMany',
-      args: { where: { patientId: 'p1', serviceId: 's1', establishmentId: 'e1' } },
+      model: 'enrollmentIssue',
+      op: 'findMany',
+      args: {
+        where: { patientId: 'p1', serviceId: 's1', establishmentId: 'e1' },
+      },
     })
     expect(calls[1]).toMatchObject({
-      model: 'enrollmentIssue', op: 'createMany',
+      model: 'enrollmentIssue',
+      op: 'createMany',
       args: {
         data: [
-          { patientId: 'p1', pathwayTemplateID: 'pt1', reason: 'R', serviceId: 's1', establishmentId: 'e1' },
+          {
+            patientId: 'p1',
+            pathwayTemplateID: 'pt1',
+            reason: 'R',
+            serviceId: 's1',
+            establishmentId: 'e1',
+          },
         ],
       },
     })
     expect(calls[2]).toMatchObject({
-      model: 'enrollmentIssue', op: 'delete',
+      model: 'enrollmentIssue',
+      op: 'delete',
       args: { where: { id_serviceId: { id: 'ei1', serviceId: 's1' } } },
     })
   })
@@ -838,7 +1085,9 @@ describe('scoping des repositories de diagnostic', () => {
   it('DiagnosticEducatifTemplateRepository filtre, cree et met a jour avec les cles de tenant', async () => {
     const { prisma, calls } = buildFakePrisma()
     const ctx = new TenantContext()
-    const repo = new DiagnosticEducatifTemplateRepository(buildContainer(prisma, ctx))
+    const repo = new DiagnosticEducatifTemplateRepository(
+      buildContainer(prisma, ctx),
+    )
     await ctx.run(tenant, async () => {
       await repo.findAll()
       await repo.findByID('dt1')
@@ -847,23 +1096,31 @@ describe('scoping des repositories de diagnostic', () => {
       await repo.delete('dt1')
     })
     expect(calls[0]).toMatchObject({
-      model: 'diagnosticEducatifTemplate', op: 'findMany',
+      model: 'diagnosticEducatifTemplate',
+      op: 'findMany',
       args: { where: { serviceId: 's1', establishmentId: 'e1' } },
     })
     expect(calls[1]).toMatchObject({
-      model: 'diagnosticEducatifTemplate', op: 'findUniqueOrThrow',
+      model: 'diagnosticEducatifTemplate',
+      op: 'findUniqueOrThrow',
       args: { where: { id_serviceId: { id: 'dt1', serviceId: 's1' } } },
     })
     expect(calls[2]).toMatchObject({
-      model: 'diagnosticEducatifTemplate', op: 'create',
+      model: 'diagnosticEducatifTemplate',
+      op: 'create',
       args: { data: { name: 'T', serviceId: 's1', establishmentId: 'e1' } },
     })
     expect(calls[3]).toMatchObject({
-      model: 'diagnosticEducatifTemplate', op: 'update',
-      args: { where: { id_serviceId: { id: 'dt1', serviceId: 's1' } }, data: { name: 'T2' } },
+      model: 'diagnosticEducatifTemplate',
+      op: 'update',
+      args: {
+        where: { id_serviceId: { id: 'dt1', serviceId: 's1' } },
+        data: { name: 'T2' },
+      },
     })
     expect(calls[4]).toMatchObject({
-      model: 'diagnosticEducatifTemplate', op: 'delete',
+      model: 'diagnosticEducatifTemplate',
+      op: 'delete',
       args: { where: { id_serviceId: { id: 'dt1', serviceId: 's1' } } },
     })
   })
@@ -876,22 +1133,33 @@ describe('scoping slotTemplate et slot', () => {
     const repo = new SlotTemplateRepository(buildContainer(prisma, ctx))
     await ctx.run(tenant, async () => {
       await repo.create({
-        startTime: new Date(), endTime: new Date(), offsetDays: 0,
-        isIndividual: true, color: '#fff', soignantIDs: ['so1'],
+        startTime: new Date(),
+        endTime: new Date(),
+        offsetDays: 0,
+        isIndividual: true,
+        color: '#fff',
+        soignantIDs: ['so1'],
       } as never)
       await repo.updateMany(['a', 'b'], { color: '#000' })
     })
     expect(calls[0]).toMatchObject({
-      model: 'slotTemplate', op: 'create',
+      model: 'slotTemplate',
+      op: 'create',
       args: {
         data: {
-          serviceId: 's1', establishmentId: 'e1',
-          soignantLinks: { create: [{ soignantId: 'so1', serviceId: 's1', establishmentId: 'e1' }] },
+          serviceId: 's1',
+          establishmentId: 'e1',
+          soignantLinks: {
+            create: [
+              { soignantId: 'so1', serviceId: 's1', establishmentId: 'e1' },
+            ],
+          },
         },
       },
     })
     expect(calls[1]).toMatchObject({
-      model: 'slotTemplate', op: 'updateMany',
+      model: 'slotTemplate',
+      op: 'updateMany',
       args: { where: { id: { in: ['a', 'b'] }, serviceId: 's1' } },
     })
   })
@@ -901,15 +1169,20 @@ describe('scoping slotTemplate et slot', () => {
     const ctx = new TenantContext()
     const repo = new SlotRepository(buildContainer(prisma, ctx))
     await ctx.run(tenant, async () => {
-      await repo.findAll({ from: new Date('2026-01-01'), to: new Date('2026-02-01') })
+      await repo.findAll({
+        from: new Date('2026-01-01'),
+        to: new Date('2026-02-01'),
+      })
       await repo.delete('sl1')
     })
     expect(calls[0]).toMatchObject({
-      model: 'slot', op: 'findMany',
+      model: 'slot',
+      op: 'findMany',
       args: { where: { serviceId: 's1', endDate: { gt: expect.any(Date) } } },
     })
     expect(calls[1]).toMatchObject({
-      model: 'slot', op: 'delete',
+      model: 'slot',
+      op: 'delete',
       args: { where: { id_serviceId: { id: 'sl1', serviceId: 's1' } } },
     })
   })
@@ -936,10 +1209,16 @@ describe('scoping slotTemplate et slot', () => {
         slotTemplateID: 'st1',
         pathwayID: 'pw-etranger',
       } as never)
-      await repo.update('sl1', { locked: true, pathwayID: 'pw-etranger' } as never)
+      await repo.update('sl1', {
+        locked: true,
+        pathwayID: 'pw-etranger',
+      } as never)
     })
     expect(calls[0]?.args.data).not.toHaveProperty('pathwayID')
-    expect(calls[0]?.args.data).toMatchObject({ serviceId: 's1', establishmentId: 'e1' })
+    expect(calls[0]?.args.data).toMatchObject({
+      serviceId: 's1',
+      establishmentId: 'e1',
+    })
     expect(calls[1]?.args.data).not.toHaveProperty('pathwayID')
     expect(calls[1]?.args.data).toMatchObject({ locked: true })
   })
@@ -960,23 +1239,29 @@ describe('scoping slotTemplate et slot', () => {
       } as never),
     )
     expect(calls[0]).toMatchObject({
-      model: 'slotTemplate', op: 'update',
+      model: 'slotTemplate',
+      op: 'update',
       args: {
         where: { id_serviceId: { id: 'st1', serviceId: 's1' } },
         data: {
           soignantLinks: {
             deleteMany: {},
-            create: [{ soignantId: 'so2', serviceId: 's1', establishmentId: 'e1' }],
+            create: [
+              { soignantId: 'so2', serviceId: 's1', establishmentId: 'e1' },
+            ],
           },
         },
       },
     })
     // La suppression des anciens liens doit precéder la creation des
     // nouveaux dans l'objet d'ecriture imbriquee (ordre des cles).
-    const soignantLinksWrite = (calls[0]?.args.data as { soignantLinks: object }).soignantLinks
+    const soignantLinksWrite = (
+      calls[0]?.args.data as { soignantLinks: object }
+    ).soignantLinks
     expect(Object.keys(soignantLinksWrite)).toEqual(['deleteMany', 'create'])
     expect(calls[1]).toMatchObject({
-      model: 'slot', op: 'update',
+      model: 'slot',
+      op: 'update',
       args: {
         where: { id_serviceId: { id: 'sl1', serviceId: 's1' } },
         data: { locked: true },
@@ -996,15 +1281,21 @@ describe('scoping pathwayTemplate et pathway', () => {
       await repo.create({ name: 'N', color: '#fff', mainTag: 't' } as never)
     })
     expect(calls[0]).toMatchObject({
-      model: 'pathwayTemplate', op: 'findMany',
+      model: 'pathwayTemplate',
+      op: 'findMany',
       args: { where: { serviceId: 's1' }, orderBy: { displayOrder: 'asc' } },
     })
     expect(calls[1]).toMatchObject({
-      model: 'pathwayTemplate', op: 'update',
-      args: { where: { id_serviceId: { id: 'a', serviceId: 's1' } }, data: { displayOrder: 0 } },
+      model: 'pathwayTemplate',
+      op: 'update',
+      args: {
+        where: { id_serviceId: { id: 'a', serviceId: 's1' } },
+        data: { displayOrder: 0 },
+      },
     })
     expect(calls[3]).toMatchObject({
-      model: 'pathwayTemplate', op: 'create',
+      model: 'pathwayTemplate',
+      op: 'create',
       args: { data: { name: 'N', serviceId: 's1', establishmentId: 'e1' } },
     })
   })
@@ -1016,25 +1307,35 @@ describe('scoping pathwayTemplate et pathway', () => {
     await ctx.run(tenant, async () => {
       await repo.findByTemplateTagAndDate('tag', new Date())
       await repo.findTracking(2026, 3)
-      await repo.create({ startDate: '2026-03-02', templateID: 'pt', slotIDs: ['sl'] } as never)
+      await repo.create({
+        startDate: '2026-03-02',
+        templateID: 'pt',
+        slotIDs: ['sl'],
+      } as never)
     })
     expect(calls[0]).toMatchObject({
-      model: 'pathway', op: 'findMany',
+      model: 'pathway',
+      op: 'findMany',
       args: { where: { serviceId: 's1', template: { mainTag: 'tag' } } },
     })
     expect(calls[1]).toMatchObject({
-      model: 'pathway', op: 'findMany',
+      model: 'pathway',
+      op: 'findMany',
       args: { where: { serviceId: 's1' } },
     })
     expect(calls[2]).toMatchObject({
-      model: 'slot', op: 'groupBy',
+      model: 'slot',
+      op: 'groupBy',
       args: { where: { pathwayID: { in: [] }, serviceId: 's1' } },
     })
     expect(calls[3]).toMatchObject({
-      model: 'pathway', op: 'create',
+      model: 'pathway',
+      op: 'create',
       args: {
         data: {
-          serviceId: 's1', establishmentId: 'e1', templateID: 'pt',
+          serviceId: 's1',
+          establishmentId: 'e1',
+          templateID: 'pt',
           slots: { connect: [{ id_serviceId: { id: 'sl', serviceId: 's1' } }] },
         },
       },
@@ -1049,25 +1350,31 @@ describe('scoping pathwayTemplate et pathway', () => {
     const { prisma, calls } = buildFakePrisma({
       'pathwayTemplate.findUnique': {
         id: 'pt1',
-        slotTemplates: [{
-          id: 'stMaster1',
-          startTime: new Date('1970-01-01T09:00:00.000Z'),
-          endTime: new Date('1970-01-01T10:00:00.000Z'),
-          offsetDays: 0,
-          isIndividual: true,
-          capacity: null,
-          thematicId: null,
-          locationID: null,
-          description: null,
-          color: '#fff',
-          soignantLinks: [{ soignantId: 'so1' }],
-        }],
+        slotTemplates: [
+          {
+            id: 'stMaster1',
+            startTime: new Date('1970-01-01T09:00:00.000Z'),
+            endTime: new Date('1970-01-01T10:00:00.000Z'),
+            offsetDays: 0,
+            isIndividual: true,
+            capacity: null,
+            thematicId: null,
+            locationID: null,
+            description: null,
+            color: '#fff',
+            soignantLinks: [{ soignantId: 'so1' }],
+          },
+        ],
       },
-      'pathway.findMany': [{
-        id: 'pw1',
-        startDate: new Date('2026-03-02'),
-        slots: [{ id: 'slot-empty', slotTemplateID: 'st-empty', appointments: [] }],
-      }],
+      'pathway.findMany': [
+        {
+          id: 'pw1',
+          startDate: new Date('2026-03-02'),
+          slots: [
+            { id: 'slot-empty', slotTemplateID: 'st-empty', appointments: [] },
+          ],
+        },
+      ],
     })
     const ctx = new TenantContext()
     const repo = new PathwayRepository(buildContainer(prisma, ctx))
@@ -1075,39 +1382,61 @@ describe('scoping pathwayTemplate et pathway', () => {
     await ctx.run(tenant, () => repo.regenerate('pt1', new Date('2026-03-01')))
 
     expect(calls[0]).toMatchObject({
-      model: 'pathwayTemplate', op: 'findUnique',
+      model: 'pathwayTemplate',
+      op: 'findUnique',
       args: { where: { id_serviceId: { id: 'pt1', serviceId: 's1' } } },
     })
     expect(calls[1]).toMatchObject({
-      model: 'forbiddenWeek', op: 'findMany',
+      model: 'forbiddenWeek',
+      op: 'findMany',
       args: { where: { serviceId: 's1', establishmentId: 'e1' } },
     })
     expect(calls[2]).toMatchObject({
-      model: 'pathway', op: 'findMany',
-      args: { where: { serviceId: 's1', templateID: 'pt1', startDate: { gte: expect.any(Date) } } },
+      model: 'pathway',
+      op: 'findMany',
+      args: {
+        where: {
+          serviceId: 's1',
+          templateID: 'pt1',
+          startDate: { gte: expect.any(Date) },
+        },
+      },
     })
     expect(calls[3]).toMatchObject({
-      model: 'slot', op: 'deleteMany',
+      model: 'slot',
+      op: 'deleteMany',
       args: { where: { id: { in: ['slot-empty'] }, serviceId: 's1' } },
     })
     // Condition de surete : seuls les modeles clones (templateID null) sont
     // supprimes, jamais un modele maitre partage par le PathwayTemplate.
     expect(calls[4]).toMatchObject({
-      model: 'slotTemplate', op: 'deleteMany',
-      args: { where: { id: { in: ['st-empty'] }, templateID: null, serviceId: 's1' } },
+      model: 'slotTemplate',
+      op: 'deleteMany',
+      args: {
+        where: { id: { in: ['st-empty'] }, templateID: null, serviceId: 's1' },
+      },
     })
     expect(calls[5]).toMatchObject({
-      model: 'slotTemplate', op: 'create',
+      model: 'slotTemplate',
+      op: 'create',
       args: {
         data: {
-          serviceId: 's1', establishmentId: 'e1',
-          soignantLinks: { create: [{ soignantId: 'so1', serviceId: 's1', establishmentId: 'e1' }] },
+          serviceId: 's1',
+          establishmentId: 'e1',
+          soignantLinks: {
+            create: [
+              { soignantId: 'so1', serviceId: 's1', establishmentId: 'e1' },
+            ],
+          },
         },
       },
     })
     expect(calls[6]).toMatchObject({
-      model: 'slot', op: 'create',
-      args: { data: { serviceId: 's1', establishmentId: 'e1', pathwayID: 'pw1' } },
+      model: 'slot',
+      op: 'create',
+      args: {
+        data: { serviceId: 's1', establishmentId: 'e1', pathwayID: 'pw1' },
+      },
     })
   })
 
@@ -1124,21 +1453,27 @@ describe('scoping pathwayTemplate et pathway', () => {
     await ctx.run(tenant, () => repo.delete('pw1'))
 
     expect(calls[0]).toMatchObject({
-      model: 'pathway', op: 'findUniqueOrThrow',
+      model: 'pathway',
+      op: 'findUniqueOrThrow',
       args: { where: { id_serviceId: { id: 'pw1', serviceId: 's1' } } },
     })
     expect(calls[1]).toMatchObject({
-      model: 'slot', op: 'deleteMany',
+      model: 'slot',
+      op: 'deleteMany',
       args: { where: { id: { in: ['sl1'] }, serviceId: 's1' } },
     })
     // Meme condition de surete que regenerate() : ne jamais supprimer un
     // modele maitre partage par un PathwayTemplate, seulement un clone.
     expect(calls[2]).toMatchObject({
-      model: 'slotTemplate', op: 'deleteMany',
-      args: { where: { id: { in: ['st1'] }, templateID: null, serviceId: 's1' } },
+      model: 'slotTemplate',
+      op: 'deleteMany',
+      args: {
+        where: { id: { in: ['st1'] }, templateID: null, serviceId: 's1' },
+      },
     })
     expect(calls[3]).toMatchObject({
-      model: 'pathway', op: 'delete',
+      model: 'pathway',
+      op: 'delete',
       args: { where: { id_serviceId: { id: 'pw1', serviceId: 's1' } } },
     })
   })
@@ -1150,8 +1485,16 @@ describe('scoping appointment', () => {
     const ctx = new TenantContext()
     const repo = new AppointmentRepository(buildContainer(prisma, ctx))
     await ctx.run(tenant, async () => {
-      await repo.create({ startDate: new Date(), endDate: new Date(), slotID: 'sl', patientIDs: ['p1'] } as never)
-      await repo.addPatientToAppointment({ appointmentID: 'a1', patientID: 'p2' } as never)
+      await repo.create({
+        startDate: new Date(),
+        endDate: new Date(),
+        slotID: 'sl',
+        patientIDs: ['p1'],
+      } as never)
+      await repo.addPatientToAppointment({
+        appointmentID: 'a1',
+        patientID: 'p2',
+      } as never)
       await repo.deleteOrphanedByIds(['a1'])
     })
     // `create` n'ecrit plus `appointmentPatients` en creation imbriquee : `serviceId` fait
@@ -1161,25 +1504,52 @@ describe('scoping appointment', () => {
     // `AppointmentRepository.create` (task-5-re-review.md, point 3). Le rendez-vous et ses
     // participants sont donc deux ecritures de premier niveau, dans la transaction.
     expect(calls[0]).toMatchObject({
-      model: 'appointment', op: 'create',
+      model: 'appointment',
+      op: 'create',
       args: { data: { serviceId: 's1', establishmentId: 'e1', slotID: 'sl' } },
     })
     expect(calls[0]?.args.data).not.toHaveProperty('appointmentPatients')
     expect(calls[1]).toMatchObject({
-      model: 'appointmentPatient', op: 'createMany',
-      args: { data: [{ appointmentId: 'x', patientId: 'p1', serviceId: 's1', establishmentId: 'e1' }] },
+      model: 'appointmentPatient',
+      op: 'createMany',
+      args: {
+        data: [
+          {
+            appointmentId: 'x',
+            patientId: 'p1',
+            serviceId: 's1',
+            establishmentId: 'e1',
+          },
+        ],
+      },
     })
     expect(calls[2]).toMatchObject({
-      model: 'appointment', op: 'findUniqueOrThrow',
+      model: 'appointment',
+      op: 'findUniqueOrThrow',
       args: { where: { id_serviceId: { id: 'x', serviceId: 's1' } } },
     })
     expect(calls[3]).toMatchObject({
-      model: 'appointmentPatient', op: 'create',
-      args: { data: { appointmentId: 'a1', patientId: 'p2', serviceId: 's1', establishmentId: 'e1' } },
+      model: 'appointmentPatient',
+      op: 'create',
+      args: {
+        data: {
+          appointmentId: 'a1',
+          patientId: 'p2',
+          serviceId: 's1',
+          establishmentId: 'e1',
+        },
+      },
     })
     expect(calls[4]).toMatchObject({
-      model: 'appointment', op: 'deleteMany',
-      args: { where: { id: { in: ['a1'] }, serviceId: 's1', appointmentPatients: { none: {} } } },
+      model: 'appointment',
+      op: 'deleteMany',
+      args: {
+        where: {
+          id: { in: ['a1'] },
+          serviceId: 's1',
+          appointmentPatients: { none: {} },
+        },
+      },
     })
   })
 
@@ -1188,13 +1558,16 @@ describe('scoping appointment', () => {
     const ctx = new TenantContext()
     const repo = new AppointmentRepository(buildContainer(prisma, ctx))
 
-    await ctx.run(tenant, () => repo.update('a1', { motif: 'x', appointmentPatients: [] } as never))
+    await ctx.run(tenant, () =>
+      repo.update('a1', { motif: 'x', appointmentPatients: [] } as never),
+    )
 
     // Une seule operation : la suppression, filtree par la cle composite.
     // Ni mise a jour du rendez-vous ni ecriture sur les participants.
     expect(calls).toHaveLength(1)
     expect(calls[0]).toMatchObject({
-      model: 'appointment', op: 'delete',
+      model: 'appointment',
+      op: 'delete',
       args: { where: { id_serviceId: { id: 'a1', serviceId: 's1' } } },
     })
   })
@@ -1208,11 +1581,16 @@ describe('scoping appointment', () => {
 
     expect(calls).toHaveLength(2)
     expect(calls[0]).toMatchObject({
-      model: 'appointment', op: 'update',
-      args: { where: { id_serviceId: { id: 'a1', serviceId: 's1' } }, data: { motif: 'y' } },
+      model: 'appointment',
+      op: 'update',
+      args: {
+        where: { id_serviceId: { id: 'a1', serviceId: 's1' } },
+        data: { motif: 'y' },
+      },
     })
     expect(calls[1]).toMatchObject({
-      model: 'appointment', op: 'findUniqueOrThrow',
+      model: 'appointment',
+      op: 'findUniqueOrThrow',
       args: { where: { id_serviceId: { id: 'a1', serviceId: 's1' } } },
     })
   })
@@ -1224,31 +1602,48 @@ describe('scoping appointment', () => {
 
     await ctx.run(tenant, () =>
       repo.update('a1', {
-        appointmentPatients: [{ id: 'ap1', patientID: 'p1', accompanying: null, status: null, rejectionReason: null, transmissionNotes: null }],
+        appointmentPatients: [
+          {
+            id: 'ap1',
+            patientID: 'p1',
+            accompanying: null,
+            status: null,
+            rejectionReason: null,
+            transmissionNotes: null,
+          },
+        ],
       } as never),
     )
 
     expect(calls).toHaveLength(4)
     expect(calls[0]).toMatchObject({
-      model: 'appointment', op: 'update',
+      model: 'appointment',
+      op: 'update',
       args: { where: { id_serviceId: { id: 'a1', serviceId: 's1' } } },
     })
     expect(calls[1]).toMatchObject({
-      model: 'appointmentPatient', op: 'deleteMany',
-      args: { where: { appointmentId: 'a1', serviceId: 's1', id: { notIn: ['ap1'] } } },
+      model: 'appointmentPatient',
+      op: 'deleteMany',
+      args: {
+        where: { appointmentId: 'a1', serviceId: 's1', id: { notIn: ['ap1'] } },
+      },
     })
     expect(calls[2]).toMatchObject({
-      model: 'appointmentPatient', op: 'upsert',
+      model: 'appointmentPatient',
+      op: 'upsert',
       args: {
         where: { id_serviceId: { id: 'ap1', serviceId: 's1' } },
         create: {
-          serviceId: 's1', establishmentId: 'e1',
-          appointmentId: 'a1', patientId: 'p1',
+          serviceId: 's1',
+          establishmentId: 'e1',
+          appointmentId: 'a1',
+          patientId: 'p1',
         },
       },
     })
     expect(calls[3]).toMatchObject({
-      model: 'appointment', op: 'findUniqueOrThrow',
+      model: 'appointment',
+      op: 'findUniqueOrThrow',
       args: { where: { id_serviceId: { id: 'a1', serviceId: 's1' } } },
     })
   })
@@ -1267,7 +1662,9 @@ describe('scoping appointment', () => {
 // aussi back/src/test/e2e/dossier-service.test.ts (comportement de bout en bout, cloisonnement).
 describe('PatientServiceFileRepository.estSuiviAilleurs', () => {
   it('interroge sous runAsSystem, avec l etablissement courant et un service different du courant', async () => {
-    const { prisma, calls } = buildFakePrisma({ 'patientServiceFile.findFirst': { patientId: 'p1' } })
+    const { prisma, calls } = buildFakePrisma({
+      'patientServiceFile.findFirst': { patientId: 'p1' },
+    })
     const ctx = new TenantContext()
     const spy = jest.spyOn(ctx, 'runAsSystem')
     const repo = new PatientServiceFileRepository(buildContainer(prisma, ctx))
@@ -1277,9 +1674,14 @@ describe('PatientServiceFileRepository.estSuiviAilleurs', () => {
     expect(spy).toHaveBeenCalledTimes(1)
     expect(calls).toHaveLength(1)
     expect(calls[0]).toMatchObject({
-      model: 'patientServiceFile', op: 'findFirst',
+      model: 'patientServiceFile',
+      op: 'findFirst',
       args: {
-        where: { patientId: 'p1', establishmentId: 'e1', serviceId: { not: 's1' } },
+        where: {
+          patientId: 'p1',
+          establishmentId: 'e1',
+          serviceId: { not: 's1' },
+        },
         select: { patientId: true },
       },
     })
@@ -1291,13 +1693,25 @@ describe('PatientServiceFileRepository.estSuiviAilleurs', () => {
   it('rend vrai quand un autre sous-dossier existe, faux sinon', async () => {
     const ctx = new TenantContext()
 
-    const { prisma: prismaAvecAutre } = buildFakePrisma({ 'patientServiceFile.findFirst': { patientId: 'p1' } })
-    const repoAvecAutre = new PatientServiceFileRepository(buildContainer(prismaAvecAutre, ctx))
-    await expect(ctx.run(tenant, () => repoAvecAutre.estSuiviAilleurs('p1'))).resolves.toBe(true)
+    const { prisma: prismaAvecAutre } = buildFakePrisma({
+      'patientServiceFile.findFirst': { patientId: 'p1' },
+    })
+    const repoAvecAutre = new PatientServiceFileRepository(
+      buildContainer(prismaAvecAutre, ctx),
+    )
+    await expect(
+      ctx.run(tenant, () => repoAvecAutre.estSuiviAilleurs('p1')),
+    ).resolves.toBe(true)
 
-    const { prisma: prismaSansAutre } = buildFakePrisma({ 'patientServiceFile.findFirst': null })
-    const repoSansAutre = new PatientServiceFileRepository(buildContainer(prismaSansAutre, ctx))
-    await expect(ctx.run(tenant, () => repoSansAutre.estSuiviAilleurs('p1'))).resolves.toBe(false)
+    const { prisma: prismaSansAutre } = buildFakePrisma({
+      'patientServiceFile.findFirst': null,
+    })
+    const repoSansAutre = new PatientServiceFileRepository(
+      buildContainer(prismaSansAutre, ctx),
+    )
+    await expect(
+      ctx.run(tenant, () => repoSansAutre.estSuiviAilleurs('p1')),
+    ).resolves.toBe(false)
   })
 
   // Le mecanisme, isole : la forme EXACTE de requete que la fonction construit
@@ -1308,7 +1722,11 @@ describe('PatientServiceFileRepository.estSuiviAilleurs', () => {
   // tenant-guard.ts (`if (store.kind === 'system') { return }`, voir infra/orm/tenant-guard.ts).
   it('la forme de requete qu elle construit est refusee par le garde-fou hors du mode encadre, et permise dedans', () => {
     const args = {
-      where: { patientId: 'p1', establishmentId: 'e1', serviceId: { not: 's1' } },
+      where: {
+        patientId: 'p1',
+        establishmentId: 'e1',
+        serviceId: { not: 's1' },
+      },
       select: { patientId: true },
     }
     expect(() =>
@@ -1339,12 +1757,20 @@ describe('PatientServiceFileRepository.estSuiviAilleurs', () => {
 // differente et ne filtre pas les services desactives : voir le commentaire cite ci-dessus.
 describe('PatientServiceFileRepository.impactDesactivation', () => {
   const tenantAdminEtablissement: Tenant = {
-    userId: 'u1', establishmentId: 'e1', establishmentRole: 'ADMIN',
-    serviceId: null, serviceRole: null, soignantId: null,
+    userId: 'u1',
+    establishmentId: 'e1',
+    establishmentRole: 'ADMIN',
+    serviceId: null,
+    serviceRole: null,
+    soignantId: null,
   }
 
   it('interroge sous runAsSystem, sans service courant, et rend les patients suivis ici mais nulle part ailleurs', async () => {
-    const calls: { model: string; op: string; args: Record<string, unknown> }[] = []
+    const calls: {
+      model: string
+      op: string
+      args: Record<string, unknown>
+    }[] = []
     // Deux patients (p1, p2) suivis ici (serviceId 'sB') ET ailleurs dans l'etablissement ; un
     // troisieme (p3) suivi ici SEULEMENT — c'est lui, et lui seul, qui doit compter dans
     // `suivisNullePartAilleurs`. Un jeu ou les deux comptes coincideraient (tous suivis
@@ -1374,7 +1800,8 @@ describe('PatientServiceFileRepository.impactDesactivation', () => {
     expect(calls).toHaveLength(2)
     // Premiere requete : les sous-dossiers du service dont on evalue la desactivation.
     expect(calls[0]).toMatchObject({
-      model: 'patientServiceFile', op: 'findMany',
+      model: 'patientServiceFile',
+      op: 'findMany',
       args: {
         where: { serviceId: 'sB', establishmentId: 'e1' },
         select: { patientId: true },
@@ -1388,7 +1815,8 @@ describe('PatientServiceFileRepository.impactDesactivation', () => {
     // donc il ne doit pas compter comme un « ailleurs » qui sauve le patient du compte qui
     // importe.
     expect(calls[1]).toMatchObject({
-      model: 'patientServiceFile', op: 'findMany',
+      model: 'patientServiceFile',
+      op: 'findMany',
       args: {
         where: {
           establishmentId: 'e1',
@@ -1499,15 +1927,13 @@ describe('PatientAccessLogRepository', () => {
     const guarded = new Proxy(
       {},
       {
-        get:
-          (_t, op: string) =>
-          (args: Record<string, unknown>) => {
-            assertTenantScope(
-              { model: 'PatientAccessLog', operation: op, args: args ?? {} },
-              ctx.peek(),
-            )
-            return Promise.resolve({ id: 'x', ...(args.data as object) })
-          },
+        get: (_t, op: string) => (args: Record<string, unknown>) => {
+          assertTenantScope(
+            { model: 'PatientAccessLog', operation: op, args: args ?? {} },
+            ctx.peek(),
+          )
+          return Promise.resolve({ id: 'x', ...(args.data as object) })
+        },
       },
     )
     const prisma = { patientAccessLog: guarded } as unknown
@@ -1521,7 +1947,9 @@ describe('PatientAccessLogRepository', () => {
       accesParOctroi: false,
     }
 
-    await expect(ctx.run(tenant, () => repo.create(params))).resolves.toBeDefined()
+    await expect(
+      ctx.run(tenant, () => repo.create(params)),
+    ).resolves.toBeDefined()
 
     await expect(repo.create(params)).rejects.toThrow(TenantContextMissingError)
   })
@@ -1552,8 +1980,12 @@ describe('PatientAccessLogRepository', () => {
   // `where` qu'elle envoie ne porte que `establishmentId` — jamais `serviceId`, puisque son
   // point est justement de voir TOUS les services.
   const tenantAdminEtablissement: Tenant = {
-    userId: 'u1', establishmentId: 'e1', establishmentRole: 'ADMIN',
-    serviceId: null, serviceRole: null, soignantId: null,
+    userId: 'u1',
+    establishmentId: 'e1',
+    establishmentRole: 'ADMIN',
+    serviceId: null,
+    serviceRole: null,
+    soignantId: null,
   }
 
   it('findByPatientInEstablishment interroge sous runAsSystem, sans service courant, filtre par establishmentId seul', async () => {
@@ -1562,7 +1994,9 @@ describe('PatientAccessLogRepository', () => {
     const spy = jest.spyOn(ctx, 'runAsSystem')
     const repo = new PatientAccessLogRepository(buildContainer(prisma, ctx))
 
-    await ctx.run(tenantAdminEtablissement, () => repo.findByPatientInEstablishment('p1'))
+    await ctx.run(tenantAdminEtablissement, () =>
+      repo.findByPatientInEstablishment('p1'),
+    )
 
     expect(spy).toHaveBeenCalledTimes(1)
     expect(calls[0]).toMatchObject({
@@ -1572,7 +2006,9 @@ describe('PatientAccessLogRepository', () => {
         where: { patientId: 'p1', establishmentId: 'e1' },
       },
     })
-    expect((calls[0]?.args.where as Record<string, unknown>).serviceId).toBeUndefined()
+    expect(
+      (calls[0]?.args.where as Record<string, unknown>).serviceId,
+    ).toBeUndefined()
   })
 
   // Meme demonstration que pour `PatientServiceFileRepository` plus haut : la forme exacte de la
@@ -1609,9 +2045,14 @@ describe('PatientAccessLogRepository', () => {
     const ctx = new TenantContext()
     const repo = new PatientAccessLogRepository(buildContainer(prisma, ctx))
 
-    await repo.findAllPlatformWide({ establishmentId: 'e9', compte: 'u9', action: 'a9' })
+    await repo.findAllPlatformWide({
+      establishmentId: 'e9',
+      compte: 'u9',
+      action: 'a9',
+    })
     expect(calls[0]).toMatchObject({
-      model: 'patientAccessLog', op: 'findMany',
+      model: 'patientAccessLog',
+      op: 'findMany',
       args: { where: { establishmentId: 'e9', action: 'a9' } },
     })
     expect(calls[0]?.args.where).toMatchObject({
@@ -1629,14 +2070,18 @@ describe('PatientAccessLogRepository', () => {
     calls.length = 0
     await repo.findAllPlatformWide({ sansEtablissement: true })
     expect(calls[0]).toMatchObject({
-      model: 'patientAccessLog', op: 'findMany', args: { where: {} },
+      model: 'patientAccessLog',
+      op: 'findMany',
+      args: { where: {} },
     })
     expect(calls[0]?.args.where).not.toHaveProperty('establishmentId')
 
     calls.length = 0
     await repo.findAllPlatformWide({})
     expect(calls[0]).toMatchObject({
-      model: 'patientAccessLog', op: 'findMany', args: { where: {} },
+      model: 'patientAccessLog',
+      op: 'findMany',
+      args: { where: {} },
     })
   })
 
@@ -1644,7 +2089,10 @@ describe('PatientAccessLogRepository', () => {
     const args = { where: {} }
 
     expect(() =>
-      assertTenantScope({ model: 'PatientAccessLog', operation: 'findMany', args }, undefined),
+      assertTenantScope(
+        { model: 'PatientAccessLog', operation: 'findMany', args },
+        undefined,
+      ),
     ).toThrow(TenantScopeMissingError)
 
     expect(() =>

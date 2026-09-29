@@ -1,7 +1,6 @@
 import { execFileSync } from 'node:child_process'
 import { existsSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-
 import { config as loadDotenv } from 'dotenv'
 import { Client } from 'pg'
 
@@ -98,7 +97,9 @@ const resolveConnection = (): PgConn => {
   try {
     url = new URL(raw)
   } catch {
-    throw new Error(`Test de derive schema/migrations : DATABASE_URL n'est pas une URL valide ("${raw}").`)
+    throw new Error(
+      `Test de derive schema/migrations : DATABASE_URL n'est pas une URL valide ("${raw}").`,
+    )
   }
   return {
     host: url.hostname,
@@ -117,14 +118,20 @@ const clientFor = (conn: PgConn, database: string): Client =>
     database,
   })
 
-const terminateConnectionsTo = async (maint: Client, name: string): Promise<void> => {
+const terminateConnectionsTo = async (
+  maint: Client,
+  name: string,
+): Promise<void> => {
   await maint.query(
     `SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()`,
     [name],
   )
 }
 
-const dropDatabaseIfExists = async (maint: Client, name: string): Promise<void> => {
+const dropDatabaseIfExists = async (
+  maint: Client,
+  name: string,
+): Promise<void> => {
   await terminateConnectionsTo(maint, name)
   await maint.query(`DROP DATABASE IF EXISTS "${name}"`)
 }
@@ -160,7 +167,11 @@ const runMigrateDiff = (conn: PgConn): DiffResult => {
     )
     return { status: 0, output: stdout }
   } catch (err) {
-    const execErr = err as { status?: number | null; stdout?: string; stderr?: string }
+    const execErr = err as {
+      status?: number | null
+      stdout?: string
+      stderr?: string
+    }
     return {
       status: execErr.status ?? -1,
       output: `${execErr.stdout ?? ''}${execErr.stderr ?? ''}`,
@@ -201,25 +212,22 @@ describe('schema.prisma et les migrations — aucune derive silencieuse', () => 
     await maint.end()
   })
 
-  it(
-    'rejouer toutes les migrations du depot produit exactement l etat que decrit schema.prisma',
-    () => {
-      const result = runMigrateDiff(conn)
+  it('rejouer toutes les migrations du depot produit exactement l etat que decrit schema.prisma', () => {
+    const result = runMigrateDiff(conn)
 
-      if (result.status === 1) {
-        throw new Error(
-          `prisma migrate diff a echoue avant meme de comparer schema et migrations (pas une ` +
-            `derive detectee, une erreur d'execution) : ${result.output}`,
-        )
-      }
+    if (result.status === 1) {
+      throw new Error(
+        `prisma migrate diff a echoue avant meme de comparer schema et migrations (pas une ` +
+          `derive detectee, une erreur d'execution) : ${result.output}`,
+      )
+    }
 
-      // Code 2 = derive : le schema et les migrations rejouees ne decrivent pas le meme etat.
-      // `result.output` porte alors le script SQL qui la corrigerait — visible dans le rapport
-      // Jest si cette assertion echoue, exactement ce qu'un mainteneur doit lire pour agir.
-      expect({ status: result.status, output: result.output }).toEqual({
-        status: 0,
-        output: expect.stringContaining('This is an empty migration.'),
-      })
-    },
-  )
+    // Code 2 = derive : le schema et les migrations rejouees ne decrivent pas le meme etat.
+    // `result.output` porte alors le script SQL qui la corrigerait — visible dans le rapport
+    // Jest si cette assertion echoue, exactement ce qu'un mainteneur doit lire pour agir.
+    expect({ status: result.status, output: result.output }).toEqual({
+      status: 0,
+      output: expect.stringContaining('This is an empty migration.'),
+    })
+  })
 })

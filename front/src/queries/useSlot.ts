@@ -10,11 +10,11 @@ import { SlotApi } from '../api/slot.api.ts'
 import { SLOT } from '../constants/process.constant.ts'
 import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
-import { useToast } from '../hooks/useToast.ts'
 import {
   restoreForTenant,
   snapshotForTenant,
 } from '../hooks/useTenantSwitch.ts'
+import { useToast } from '../hooks/useToast.ts'
 import type {
   CreateSlotParams,
   Slot,

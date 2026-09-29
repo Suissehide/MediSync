@@ -12,7 +12,6 @@ import { toSelectOptions } from '@/libs/utils.ts'
 import { useMemberMutations } from '@/queries/useMembers.ts'
 import { useServicesQuery } from '@/queries/useServices.ts'
 import type { EstablishmentRole, ServiceRole } from '@/types/auth.ts'
-
 import { Button } from '../../ui/button.tsx'
 import {
   Popup,
@@ -111,7 +110,11 @@ function CreateMemberAccountForm() {
   const created = createMemberAccount.data
 
   return (
-    <Popup modal={true} open={open} onOpenChange={(next) => (next ? setOpen(true) : closeAndReset())}>
+    <Popup
+      modal={true}
+      open={open}
+      onOpenChange={(next) => (next ? setOpen(true) : closeAndReset())}
+    >
       <PopupTrigger asChild>
         <Button variant="default" onClick={() => setOpen(true)}>
           <Plus className="w-4 h-4" />
@@ -134,7 +137,9 @@ function CreateMemberAccountForm() {
                   Lien à usage unique — transmettez-le en main propre, il ne
                   sera plus jamais affiché.
                 </p>
-                <CopyableId value={buildAccessLinkUrl(created.accessLink.token)} />
+                <CopyableId
+                  value={buildAccessLinkUrl(created.accessLink.token)}
+                />
               </div>
             </PopupBody>
             <PopupFooter>

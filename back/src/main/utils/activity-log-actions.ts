@@ -23,4 +23,5 @@ export const ACTIVITY_LOG_SCRIPT_ACTIONS = [
   SUPER_ADMIN_REACTIVATED,
 ] as const
 
-export type ActivityLogScriptAction = (typeof ACTIVITY_LOG_SCRIPT_ACTIONS)[number]
+export type ActivityLogScriptAction =
+  (typeof ACTIVITY_LOG_SCRIPT_ACTIONS)[number]

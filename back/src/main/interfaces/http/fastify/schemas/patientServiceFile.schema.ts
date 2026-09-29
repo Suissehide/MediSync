@@ -49,7 +49,9 @@ export const patientServiceFileParamsSchema = z.object({
   patientID: z.cuid(),
 })
 
-export const upsertPatientServiceFileBodySchema = z.object(patientServiceFileEntity)
+export const upsertPatientServiceFileBodySchema = z.object(
+  patientServiceFileEntity,
+)
 
 // Rattachement d'une identite existante au service courant (design §6, tache 13) : cree le
 // sous-dossier s'il n'existe pas encore, sans toucher a une seule de ses colonnes s'il existe
@@ -63,9 +65,15 @@ export const attachPatientToCurrentServiceResponseSchema = z.object({
   alreadyFollowedHere: z.boolean(),
 })
 
-export type PatientServiceFileResponse = z.infer<typeof patientServiceFileResponseSchema>
-export type PatientServiceFileParams = z.infer<typeof patientServiceFileParamsSchema>
-export type UpsertPatientServiceFileBody = z.infer<typeof upsertPatientServiceFileBodySchema>
+export type PatientServiceFileResponse = z.infer<
+  typeof patientServiceFileResponseSchema
+>
+export type PatientServiceFileParams = z.infer<
+  typeof patientServiceFileParamsSchema
+>
+export type UpsertPatientServiceFileBody = z.infer<
+  typeof upsertPatientServiceFileBodySchema
+>
 export type AttachPatientToCurrentServiceResponse = z.infer<
   typeof attachPatientToCurrentServiceResponseSchema
 >

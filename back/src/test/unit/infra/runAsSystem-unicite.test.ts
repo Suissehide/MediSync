@@ -1,6 +1,5 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
-
 import ts from 'typescript'
 
 // `runAsSystem` (utils/tenant-context.ts) retire l'exigence du garde-fou d'ORM plutot que de la
@@ -295,7 +294,11 @@ const lignesCorrespondantes = (racine: string, motif: RegExp) =>
     const relatif = relative(racine, chemin).split(sep).join('/')
     return readFileSync(chemin, 'utf8')
       .split('\n')
-      .map((ligne, index) => ({ fichier: relatif, ligne: index + 1, texte: ligne.trim() }))
+      .map((ligne, index) => ({
+        fichier: relatif,
+        ligne: index + 1,
+        texte: ligne.trim(),
+      }))
       .filter((emplacement) => motif.test(emplacement.texte))
   })
 
@@ -406,11 +409,18 @@ const lignesCorrespondantes = (racine: string, motif: RegExp) =>
 //      rien dans ce fichier ne le garantirait si quelqu'un commencait a les utiliser.
 const METHODES_QUI_POSENT_UN_STORE = new Set(['run', 'enterWith'])
 
-const appelsCapaciteDeStore = (racine: string): { fichier: string; ligne: number }[] =>
+const appelsCapaciteDeStore = (
+  racine: string,
+): { fichier: string; ligne: number }[] =>
   fichiersDeProduction(racine).flatMap((chemin) => {
     const relatif = relative(racine, chemin).split(sep).join('/')
     const texte = readFileSync(chemin, 'utf8')
-    const source = ts.createSourceFile(chemin, texte, ts.ScriptTarget.Latest, true)
+    const source = ts.createSourceFile(
+      chemin,
+      texte,
+      ts.ScriptTarget.Latest,
+      true,
+    )
     const trouvailles: { fichier: string; ligne: number }[] = []
 
     const nommeCapaciteDeStore = (expression: ts.Expression): boolean => {
@@ -419,14 +429,22 @@ const appelsCapaciteDeStore = (racine: string): { fichier: string; ligne: number
       }
       if (ts.isElementAccessExpression(expression)) {
         const cle = expression.argumentExpression
-        return ts.isStringLiteralLike(cle) && METHODES_QUI_POSENT_UN_STORE.has(cle.text)
+        return (
+          ts.isStringLiteralLike(cle) &&
+          METHODES_QUI_POSENT_UN_STORE.has(cle.text)
+        )
       }
       return false
     }
 
     const visiter = (noeud: ts.Node): void => {
-      if (ts.isCallExpression(noeud) && nommeCapaciteDeStore(noeud.expression)) {
-        const { line } = source.getLineAndCharacterOfPosition(noeud.getStart(source))
+      if (
+        ts.isCallExpression(noeud) &&
+        nommeCapaciteDeStore(noeud.expression)
+      ) {
+        const { line } = source.getLineAndCharacterOfPosition(
+          noeud.getStart(source),
+        )
         trouvailles.push({ fichier: relatif, ligne: line + 1 })
       }
       ts.forEachChild(noeud, visiter)
@@ -440,7 +458,8 @@ describe('unicite de l exception runAsSystem au cloisonnement multi-tenant', () 
     const trouvees = lignesCorrespondantes(RACINE, APPEL_RUN_AS_SYSTEM)
 
     const interdits = trouvees.filter(
-      (emplacement) => !AUTORISES.some((permis) => permis.fichier === emplacement.fichier),
+      (emplacement) =>
+        !AUTORISES.some((permis) => permis.fichier === emplacement.fichier),
     )
 
     // Sens 1 : un emploi ajoute ailleurs doit faire rougir ce test. runAsSystem() hors des deux
@@ -455,7 +474,8 @@ describe('unicite de l exception runAsSystem au cloisonnement multi-tenant', () 
     // si ce compte tombe a zero ou change, c'est ce commentaire qu'il faut relire.
     for (const permis of AUTORISES) {
       expect(
-        trouvees.filter((emplacement) => emplacement.fichier === permis.fichier).length,
+        trouvees.filter((emplacement) => emplacement.fichier === permis.fichier)
+          .length,
       ).toBe(permis.appels)
     }
   })
@@ -478,12 +498,14 @@ describe('unicite de l exception runAsSystem au cloisonnement multi-tenant', () 
   })
 
   it('n ecrit litteralement la valeur { kind: "system" } / { kind: "superadmin" } qu au seul endroit legitime (volet C : le texte, en complement du volet B)', () => {
-    const constructionsSysteme = lignesCorrespondantes(RACINE, CONSTRUCTION_MODE_SYSTEME).filter(
-      (emplacement) => emplacement.fichier !== FICHIER_DECLARATION_TYPE,
-    )
-    const constructionsSuperadmin = lignesCorrespondantes(RACINE, CONSTRUCTION_MODE_SUPERADMIN).filter(
-      (emplacement) => emplacement.fichier !== FICHIER_DECLARATION_TYPE,
-    )
+    const constructionsSysteme = lignesCorrespondantes(
+      RACINE,
+      CONSTRUCTION_MODE_SYSTEME,
+    ).filter((emplacement) => emplacement.fichier !== FICHIER_DECLARATION_TYPE)
+    const constructionsSuperadmin = lignesCorrespondantes(
+      RACINE,
+      CONSTRUCTION_MODE_SUPERADMIN,
+    ).filter((emplacement) => emplacement.fichier !== FICHIER_DECLARATION_TYPE)
 
     // Une seule construction textuelle de chaque valeur dans tout src/main (hors declaration de
     // type), et elle doit vivre dans le fichier qui possede `runAsSystem`/`runAsSuperAdmin`. Ce

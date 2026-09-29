@@ -9,7 +9,12 @@ import { useToast } from '../hooks/useToast.ts'
 // Membres du service courant (2026-09-29) — cle sans tenant, comme toutes les autres : le
 // cloisonnement vient du client de requetes neuf par service (voir `useTenantSwitch.ts`).
 export const useServiceMembersQuery = () => {
-  const { data: members, isPending, isError, error } = useQuery({
+  const {
+    data: members,
+    isPending,
+    isError,
+    error,
+  } = useQuery({
     queryKey: [SERVICE_MEMBER.GET_ALL],
     queryFn: ServiceMembersApi.getAll,
     retry: 0,
@@ -35,7 +40,9 @@ export const useServiceMemberMutations = () => {
       })
     },
     onSettled: async () => {
-      await queryClient.invalidateQueries({ queryKey: [SERVICE_MEMBER.GET_ALL] })
+      await queryClient.invalidateQueries({
+        queryKey: [SERVICE_MEMBER.GET_ALL],
+      })
     },
   })
 

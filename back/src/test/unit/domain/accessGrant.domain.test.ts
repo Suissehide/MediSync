@@ -35,7 +35,12 @@ const utilisateurMembreDeE1: UserWithMemberships = {
       establishmentId: 'e1',
       role: 'MEMBER',
       createdAt: maintenant,
-      establishment: { id: 'e1', name: 'E1', createdAt: maintenant, deactivatedAt: null },
+      establishment: {
+        id: 'e1',
+        name: 'E1',
+        createdAt: maintenant,
+        deactivatedAt: null,
+      },
       serviceMemberships: [],
     },
   ],
@@ -43,37 +48,65 @@ const utilisateurMembreDeE1: UserWithMemberships = {
 
 describe('effectiveMemberships', () => {
   it('ajoute une appartenance virtuelle tant que l octroi est vivant', () => {
-    const effectives = effectiveMemberships(utilisateurSansRattachement, [
-      { establishmentId: 'e1', expiresAt: new Date('2026-09-25T13:00:00Z'), revokedAt: null } as LiveGrant,
-    ], maintenant)
+    const effectives = effectiveMemberships(
+      utilisateurSansRattachement,
+      [
+        {
+          establishmentId: 'e1',
+          expiresAt: new Date('2026-09-25T13:00:00Z'),
+          revokedAt: null,
+        } as LiveGrant,
+      ],
+      maintenant,
+    )
     expect(effectives.map((m) => m.establishmentId)).toEqual(['e1'])
     expect(effectives[0]?.origine).toBe('octroi')
   })
 
   it('n ajoute rien quand l octroi est expire', () => {
     expect(
-      effectiveMemberships(utilisateurSansRattachement, [
-        { establishmentId: 'e1', expiresAt: new Date('2026-09-25T11:59:59Z'), revokedAt: null } as LiveGrant,
-      ], maintenant),
+      effectiveMemberships(
+        utilisateurSansRattachement,
+        [
+          {
+            establishmentId: 'e1',
+            expiresAt: new Date('2026-09-25T11:59:59Z'),
+            revokedAt: null,
+          } as LiveGrant,
+        ],
+        maintenant,
+      ),
     ).toEqual([])
   })
 
   it('n ajoute rien quand l octroi est revoque avant son terme', () => {
     expect(
-      effectiveMemberships(utilisateurSansRattachement, [
-        {
-          establishmentId: 'e1',
-          expiresAt: new Date('2026-09-25T13:00:00Z'),
-          revokedAt: new Date('2026-09-25T11:00:00Z'),
-        } as LiveGrant,
-      ], maintenant),
+      effectiveMemberships(
+        utilisateurSansRattachement,
+        [
+          {
+            establishmentId: 'e1',
+            expiresAt: new Date('2026-09-25T13:00:00Z'),
+            revokedAt: new Date('2026-09-25T11:00:00Z'),
+          } as LiveGrant,
+        ],
+        maintenant,
+      ),
     ).toEqual([])
   })
 
   it('ne double pas une appartenance reelle', () => {
-    const effectives = effectiveMemberships(utilisateurMembreDeE1, [
-      { establishmentId: 'e1', expiresAt: new Date('2026-09-25T13:00:00Z'), revokedAt: null } as LiveGrant,
-    ], maintenant)
+    const effectives = effectiveMemberships(
+      utilisateurMembreDeE1,
+      [
+        {
+          establishmentId: 'e1',
+          expiresAt: new Date('2026-09-25T13:00:00Z'),
+          revokedAt: null,
+        } as LiveGrant,
+      ],
+      maintenant,
+    )
     expect(effectives).toHaveLength(1)
     expect(effectives[0]?.origine).toBe('reelle')
   })
@@ -94,7 +127,11 @@ describe('effectiveMemberships', () => {
         { id: 's2', name: 'Service 2' },
       ],
     }
-    const effectives = effectiveMemberships(utilisateurSansRattachement, [grant], maintenant)
+    const effectives = effectiveMemberships(
+      utilisateurSansRattachement,
+      [grant],
+      maintenant,
+    )
     expect(effectives).toEqual([
       {
         establishmentId: 'e9',
@@ -121,17 +158,44 @@ describe('effectiveMemberships', () => {
           establishmentId: 'e1',
           role: 'ADMIN',
           createdAt: maintenant,
-          establishment: { id: 'e1', name: 'E1', createdAt: maintenant, deactivatedAt: null },
+          establishment: {
+            id: 'e1',
+            name: 'E1',
+            createdAt: maintenant,
+            deactivatedAt: null,
+          },
           serviceMemberships: [
             {
-              id: 'sm1', establishmentMembershipId: 'em1', serviceId: 's1', establishmentId: 'e1',
-              role: 'COORDINATEUR', soignantId: null, createdAt: maintenant,
-              service: { id: 's1', establishmentId: 'e1', name: 'S1', createdAt: maintenant, deactivatedAt: null },
+              id: 'sm1',
+              establishmentMembershipId: 'em1',
+              serviceId: 's1',
+              establishmentId: 'e1',
+              role: 'COORDINATEUR',
+              soignantId: null,
+              createdAt: maintenant,
+              service: {
+                id: 's1',
+                establishmentId: 'e1',
+                name: 'S1',
+                createdAt: maintenant,
+                deactivatedAt: null,
+              },
             },
             {
-              id: 'sm2', establishmentMembershipId: 'em1', serviceId: 's2', establishmentId: 'e1',
-              role: 'LECTURE', soignantId: null, createdAt: maintenant,
-              service: { id: 's2', establishmentId: 'e1', name: 'S2', createdAt: maintenant, deactivatedAt: maintenant },
+              id: 'sm2',
+              establishmentMembershipId: 'em1',
+              serviceId: 's2',
+              establishmentId: 'e1',
+              role: 'LECTURE',
+              soignantId: null,
+              createdAt: maintenant,
+              service: {
+                id: 's2',
+                establishmentId: 'e1',
+                name: 'S2',
+                createdAt: maintenant,
+                deactivatedAt: maintenant,
+              },
             },
           ],
         },
@@ -141,7 +205,12 @@ describe('effectiveMemberships', () => {
           establishmentId: 'e2',
           role: 'MEMBER',
           createdAt: maintenant,
-          establishment: { id: 'e2', name: 'E2', createdAt: maintenant, deactivatedAt: maintenant },
+          establishment: {
+            id: 'e2',
+            name: 'E2',
+            createdAt: maintenant,
+            deactivatedAt: maintenant,
+          },
           serviceMemberships: [],
         },
       ],
@@ -166,9 +235,17 @@ describe('effectiveMemberships', () => {
       establishmentMemberships: [],
     }
     expect(
-      effectiveMemberships(compteOrdinaire, [
-        { establishmentId: 'e1', expiresAt: new Date('2026-09-25T13:00:00Z'), revokedAt: null } as LiveGrant,
-      ], maintenant),
+      effectiveMemberships(
+        compteOrdinaire,
+        [
+          {
+            establishmentId: 'e1',
+            expiresAt: new Date('2026-09-25T13:00:00Z'),
+            revokedAt: null,
+          } as LiveGrant,
+        ],
+        maintenant,
+      ),
     ).toEqual([])
   })
 
@@ -222,21 +299,30 @@ describe('effectiveMemberships', () => {
           establishmentId: 'e1',
           role: 'MEMBER',
           createdAt: maintenant,
-          establishment: { id: 'e1', name: 'E1', createdAt: maintenant, deactivatedAt: maintenant },
+          establishment: {
+            id: 'e1',
+            name: 'E1',
+            createdAt: maintenant,
+            deactivatedAt: maintenant,
+          },
           serviceMemberships: [],
         },
       ],
     }
     expect(
-      effectiveMemberships(membreDunEtablissementDesactive, [
-        {
-          establishmentId: 'e1',
-          establishmentName: 'E1',
-          expiresAt: new Date('2026-09-25T13:00:00Z'),
-          revokedAt: null,
-          services: [{ id: 's1', name: 'S1' }],
-        },
-      ], maintenant),
+      effectiveMemberships(
+        membreDunEtablissementDesactive,
+        [
+          {
+            establishmentId: 'e1',
+            establishmentName: 'E1',
+            expiresAt: new Date('2026-09-25T13:00:00Z'),
+            revokedAt: null,
+            services: [{ id: 's1', name: 'S1' }],
+          },
+        ],
+        maintenant,
+      ),
     ).toEqual([])
   })
 })

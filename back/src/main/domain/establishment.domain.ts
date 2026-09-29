@@ -1,5 +1,7 @@
 import Boom from '@hapi/boom'
 
+import type { PostgresOrm } from '../infra/orm/postgres-client'
+import type { IocContainer } from '../types/application/ioc'
 import type { AccessLinkDomainInterface } from '../types/domain/accessLink.domain.interface'
 import type {
   CreateEstablishmentInput,
@@ -9,11 +11,9 @@ import type {
 import type {
   EstablishmentDetail,
   EstablishmentListRow,
+  EstablishmentRepositoryInterface,
   FirstAdmin,
 } from '../types/infra/orm/repositories/establishment.repository.interface'
-import type { IocContainer } from '../types/application/ioc'
-import type { PostgresOrm } from '../infra/orm/postgres-client'
-import type { EstablishmentRepositoryInterface } from '../types/infra/orm/repositories/establishment.repository.interface'
 import type { UserRepositoryInterface } from '../types/infra/orm/repositories/user.repository.interface'
 import type { TenantContextInterface } from '../types/utils/tenant-context'
 import { randomToken } from '../utils/hash'
@@ -75,7 +75,9 @@ class EstablishmentDomain implements EstablishmentDomainInterface {
     // disposeront de toute façon d'une recherche de comptes par adresse (tâche 7) — un calcul
     // factice ajouté ici compliquerait le code pour masquer un secret que l'appelant légitime
     // peut obtenir par un autre moyen, déjà prévu.
-    const existing = await this.userRepository.findByEmail(email).catch(() => null)
+    const existing = await this.userRepository
+      .findByEmail(email)
+      .catch(() => null)
 
     // Tour de correction 1, Important n°4 : refusé EN AMONT, avant la moindre écriture — un
     // compte désactivé ne peut ni se connecter, ni consommer le lien qu'on s'apprêterait à
@@ -108,32 +110,46 @@ class EstablishmentDomain implements EstablishmentDomainInterface {
     // s'y connecter), la même transaction l'annule aussi — les trois écritures ET l'émission
     // partagent donc un seul sort. `await` À L'INTÉRIEUR du rappel transactionnel, à chaque
     // étape : la paresse de Prisma, toujours la même leçon.
-    const { establishment, accessLink } = await this.tenantContext.runAsSuperAdmin(async () => {
-      return await this.postgresOrm.executeWithTransactionClient(async (tx) => {
-        const establishment = await this.establishmentRepository.create(name, tx)
+    const { establishment, accessLink } =
+      await this.tenantContext.runAsSuperAdmin(async () => {
+        return await this.postgresOrm.executeWithTransactionClient(
+          async (tx) => {
+            const establishment = await this.establishmentRepository.create(
+              name,
+              tx,
+            )
 
-        const admin =
-          existing ??
-          (await this.userRepository.create(
-            {
-              email,
-              password: randomToken(PLACEHOLDER_PASSWORD_BYTES),
-              firstName,
-              lastName,
-            },
-            tx,
-          ))
+            const admin =
+              existing ??
+              (await this.userRepository.create(
+                {
+                  email,
+                  password: randomToken(PLACEHOLDER_PASSWORD_BYTES),
+                  firstName,
+                  lastName,
+                },
+                tx,
+              ))
 
-        await this.establishmentRepository.attachAdmin(establishment.id, admin.id, tx)
+            await this.establishmentRepository.attachAdmin(
+              establishment.id,
+              admin.id,
+              tx,
+            )
 
-        // Émis que le compte soit neuf ou réutilisé : dans les deux cas, c'est ainsi que son
-        // titulaire obtient un moyen de se connecter à CE nouvel établissement (spec §6.1 — le
-        // même mécanisme sert la réémission d'un accès oublié).
-        const accessLink = await this.accessLinkDomain.issue(admin.id, issuedBy, tx)
+            // Émis que le compte soit neuf ou réutilisé : dans les deux cas, c'est ainsi que son
+            // titulaire obtient un moyen de se connecter à CE nouvel établissement (spec §6.1 — le
+            // même mécanisme sert la réémission d'un accès oublié).
+            const accessLink = await this.accessLinkDomain.issue(
+              admin.id,
+              issuedBy,
+              tx,
+            )
 
-        return { establishment, accessLink }
+            return { establishment, accessLink }
+          },
+        )
       })
-    })
 
     // Tour de correction 1, Important n°1 : ne rend plus rien sur le compte au-delà de ce qui
     // est nécessaire — voir le commentaire sur `CreateEstablishmentResult`.
@@ -147,7 +163,9 @@ class EstablishmentDomain implements EstablishmentDomainInterface {
     const establishments = await this.establishmentRepository.findAll()
     return Promise.all(
       establishments.map(async (establishment) => {
-        const counters = await this.establishmentRepository.countersFor(establishment.id)
+        const counters = await this.establishmentRepository.countersFor(
+          establishment.id,
+        )
         return { ...establishment, ...counters }
       }),
     )
@@ -179,8 +197,12 @@ class EstablishmentDomain implements EstablishmentDomainInterface {
       this.establishmentRepository.patientCountFor(establishment.id),
     ])
 
-    const serviceCount = services.filter((service) => service.deactivatedAt === null).length
-    const accountCount = members.filter((member) => member.deactivatedAt === null).length
+    const serviceCount = services.filter(
+      (service) => service.deactivatedAt === null,
+    ).length
+    const accountCount = members.filter(
+      (member) => member.deactivatedAt === null,
+    ).length
     // `members` est déjà trié par [createdAt asc, userId asc] (membersFor) — même départage,
     // même ordre, que `countersFor` appliquait pour `firstAdmin`.
     const firstAdminMember = members.find(

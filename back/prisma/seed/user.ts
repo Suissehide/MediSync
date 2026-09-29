@@ -93,7 +93,9 @@ export default async function seedUsers(
       },
     })
     const soignantDans = (serviceId: string) =>
-      u.soignantIndex !== null ? (soignantsParService.get(serviceId)?.[u.soignantIndex]?.id ?? null) : null
+      u.soignantIndex !== null
+        ? (soignantsParService.get(serviceId)?.[u.soignantIndex]?.id ?? null)
+        : null
     await prisma.establishmentMembership.upsert({
       where: {
         userId_establishmentId: { userId: user.id, establishmentId },

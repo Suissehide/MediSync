@@ -1,8 +1,8 @@
 import { X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
-import { inputVariants } from './input.tsx'
 import { cn } from '../../libs/utils.ts'
+import { inputVariants } from './input.tsx'
 
 interface TagInputProps {
   value: string[]
@@ -34,8 +34,7 @@ export function TagInput({
 
   const filteredSuggestions = suggestions.filter(
     (s) =>
-      s.toLowerCase().includes(inputValue.toLowerCase()) &&
-      !value.includes(s),
+      s.toLowerCase().includes(inputValue.toLowerCase()) && !value.includes(s),
   )
 
   const addTag = (tag: string) => {

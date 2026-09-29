@@ -4,10 +4,6 @@ import type { ReactNode } from 'react'
 import { createElement, StrictMode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { TenantContext } from '@/types/auth.ts'
-import type { Soignant } from '@/types/soignant.ts'
-import type { Todo } from '@/types/todo.ts'
-
 import {
   createTenantQueryClient,
   rehydratePersistedStores,
@@ -26,6 +22,9 @@ import { usePathwayTemplateEditStore } from '@/store/usePathwayTemplateEditStore
 import { usePlanningStore } from '@/store/usePlanningStore.ts'
 import { useSoignantStore } from '@/store/useSoignantStore.ts'
 import { useTodoStore } from '@/store/useTodoStore.ts'
+import type { TenantContext } from '@/types/auth.ts'
+import type { Soignant } from '@/types/soignant.ts'
+import type { Todo } from '@/types/todo.ts'
 
 const serviceA: TenantContext = {
   establishmentId: 'e1',
@@ -36,7 +35,11 @@ const serviceA: TenantContext = {
 }
 const serviceB: TenantContext = { ...serviceA, serviceId: 's2' }
 // Ecrans d'administration d'etablissement : aucun service.
-const sansService: TenantContext = { ...serviceA, serviceId: null, serviceRole: null }
+const sansService: TenantContext = {
+  ...serviceA,
+  serviceId: null,
+  serviceRole: null,
+}
 
 const soignantDuServiceA: Soignant = { id: 'so1', name: 'Dupont', active: true }
 const tacheDuServiceA: Todo = {
@@ -91,7 +94,10 @@ describe('changement de contexte', () => {
   it('reinitialise les cinq stores non persistes, miroirs compris', async () => {
     useDiagnosticStore.setState({ selectedId: 'd1' })
     useDiagnosticTemplateStore.setState({ selectedId: 'dt1' })
-    usePathwayTemplateEditStore.setState({ editMode: true, startDate: '2026-01-01' })
+    usePathwayTemplateEditStore.setState({
+      editMode: true,
+      startDate: '2026-01-01',
+    })
     useSoignantStore.setState({
       soignants: [soignantDuServiceA],
       selectedSoignantIDs: ['so1'],
@@ -121,7 +127,9 @@ describe('changement de contexte', () => {
     const queryClient = new QueryClient()
     // Annulation qui ne se resout jamais pendant le test : tout ce qui suit
     // l'attente est hors de portee.
-    vi.spyOn(queryClient, 'cancelQueries').mockImplementation(() => new Promise(() => undefined))
+    vi.spyOn(queryClient, 'cancelQueries').mockImplementation(
+      () => new Promise(() => undefined),
+    )
     useSoignantStore.setState({ soignants: [soignantDuServiceA] })
 
     void resetOnTenantChange(queryClient)
@@ -155,7 +163,9 @@ describe('restauration d une photo de cache', () => {
 
     restoreForTenant(queryClient, photo)
 
-    expect(queryClient.getQueryData(['patients'])).toEqual([{ id: 'p1', nom: 'Service A' }])
+    expect(queryClient.getQueryData(['patients'])).toEqual([
+      { id: 'p1', nom: 'Service A' },
+    ])
   })
 })
 
@@ -167,7 +177,10 @@ describe('cle de contexte', () => {
     expect(tenantKey(null)).toBe('')
     expect(tenantKey(sansService)).toBe('e1/')
     expect(tenantKey(serviceA)).toBe('e1/s1')
-    expect(new Set([tenantKey(null), tenantKey(sansService), tenantKey(serviceA)]).size).toBe(3)
+    expect(
+      new Set([tenantKey(null), tenantKey(sansService), tenantKey(serviceA)])
+        .size,
+    ).toBe(3)
   })
 })
 
@@ -230,7 +243,9 @@ describe('useTenantQueryClient', () => {
 
     expect(result.current).not.toBe(initial)
     expect(result.current.getQueryData(['patients'])).toBeUndefined()
-    await waitFor(() => expect(initial.getQueryData(['patients'])).toBeUndefined())
+    await waitFor(() =>
+      expect(initial.getQueryData(['patients'])).toBeUndefined(),
+    )
     expect(useSoignantStore.getState().soignants).toEqual([])
   })
 
@@ -240,10 +255,12 @@ describe('useTenantQueryClient', () => {
   it('ne construit qu un client par couple en mode strict', () => {
     const initial = createTenantQueryClient()
     useAuthStore.setState({ context: serviceA })
-    const { result, rerender } = renderHook(() => useTenantQueryClient(initial), {
-      wrapper: strictWrapper,
-    })
-
+    const { result, rerender } = renderHook(
+      () => useTenantQueryClient(initial),
+      {
+        wrapper: strictWrapper,
+      },
+    )
 
     act(() => useAuthStore.setState({ context: serviceB }))
     const afterSwitch = result.current
@@ -275,7 +292,9 @@ describe('stores persistes rehydrates au changement de service', () => {
     // Comme dans « reinitialise les stores avant toute attente » : une
     // annulation qui ne se resout jamais pendant le test isole ce qui
     // precede l'attente de ce qui la suit.
-    vi.spyOn(queryClient, 'cancelQueries').mockImplementation(() => new Promise(() => undefined))
+    vi.spyOn(queryClient, 'cancelQueries').mockImplementation(
+      () => new Promise(() => undefined),
+    )
 
     // `rehydratePersistedStores()` active d'abord le tiroir de A (jamais
     // visite avant ce test) avant d'y ecrire une selection : sans cet appel,
@@ -337,7 +356,9 @@ describe('stores persistes rehydrates au changement de service', () => {
     rehydratePersistedStores()
 
     expect(useDashboardFilterStore.getState().mode).toBe('soignant')
-    expect(useDashboardFilterStore.getState().selectedPathwayTemplateIDs).toEqual([])
+    expect(
+      useDashboardFilterStore.getState().selectedPathwayTemplateIDs,
+    ).toEqual([])
     expect(useTodoStore.getState().seenTodoIds).toEqual(new Set())
     expect(usePlanningStore.getState().currentDate).toBe('')
     expect(usePlanningStore.getState().viewStart).toBe('')
@@ -369,12 +390,16 @@ describe('stores persistes rehydrates au changement de service', () => {
     // (exactement ce que fait le calendrier au montage, via `datesSet`).
     useAuthStore.setState({ context: serviceB })
     const { currentDate, viewStart, viewEnd } = usePlanningStore.getState()
-    usePlanningStore.getState().setPlanningDates({ currentDate, viewStart, viewEnd })
+    usePlanningStore
+      .getState()
+      .setPlanningDates({ currentDate, viewStart, viewEnd })
 
     // Rien de cette ecriture ne doit atteindre le tiroir de B : il doit
     // rester intact (jamais visite) jusqu'a ce que la rehydratation
     // l'active explicitement.
-    expect(localStorage.getItem(scopedStorageName('planning-storage', serviceB))).toBeNull()
+    expect(
+      localStorage.getItem(scopedStorageName('planning-storage', serviceB)),
+    ).toBeNull()
 
     rehydratePersistedStores()
     expect(usePlanningStore.getState().currentDate).toBe('')

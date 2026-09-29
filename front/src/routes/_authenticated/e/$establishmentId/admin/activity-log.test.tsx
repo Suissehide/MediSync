@@ -16,7 +16,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { AuthState, User } from '@/types/auth.ts'
-
 import { Route as adminRoute } from '../admin.tsx'
 import { Route as journalRoute } from './activity-log.tsx'
 
@@ -59,7 +58,9 @@ const journalScreenRoute = createRoute({
   component: optionsDe(journalRoute).component,
 })
 const routeTree = rootRoute.addChildren([
-  authenticatedRoute.addChildren([adminLayoutRoute.addChildren([journalScreenRoute])]),
+  authenticatedRoute.addChildren([
+    adminLayoutRoute.addChildren([journalScreenRoute]),
+  ]),
 ])
 
 // Une ligne par page demandee, pour reconnaitre la page affichee ; 120 lignes au total.
@@ -96,11 +97,17 @@ const monter = () => {
   )
   const router = createRouter({
     routeTree,
-    history: createMemoryHistory({ initialEntries: ['/e/e1/admin/activity-log'] }),
+    history: createMemoryHistory({
+      initialEntries: ['/e/e1/admin/activity-log'],
+    }),
     context: { authState: { isAuthenticated: true, user: admin } },
   })
   render(
-    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
       <RouterProvider router={router} />
     </QueryClientProvider>,
   )
@@ -110,7 +117,8 @@ const derniereRequete = () => requetesJournal.at(-1)?.searchParams
 
 // Le corps de la table est virtualise : sans hauteur dans jsdom, aucune ligne n'y est rendue. Ces
 // tests observent donc ce qui compte ici — les requetes envoyees et le pied de pagination.
-const piedCharge = () => screen.findByText('120 résultats', {}, { timeout: 3000 })
+const piedCharge = () =>
+  screen.findByText('120 résultats', {}, { timeout: 3000 })
 
 beforeEach(() => {
   useAuthStore.setState({ isAuthenticated: true, user: admin, context: null })
@@ -152,13 +160,18 @@ describe('journal d activite : pagination et recherche cote serveur', () => {
       expect(derniereRequete()?.get('page')).toBe('3')
     })
 
-    await userEvent.type(screen.getByPlaceholderText('Rechercher un utilisateur...'), 'Durand')
+    await userEvent.type(
+      screen.getByPlaceholderText('Rechercher un utilisateur...'),
+      'Durand',
+    )
 
     await waitFor(() => {
       expect(derniereRequete()?.get('user')).toBe('Durand')
     })
     expect(derniereRequete()?.get('page')).toBe('1')
     // Une requete pour la recherche complete, pas une par frappe.
-    expect(requetesJournal.filter((u) => u.searchParams.has('user'))).toHaveLength(1)
+    expect(
+      requetesJournal.filter((u) => u.searchParams.has('user')),
+    ).toHaveLength(1)
   })
 })

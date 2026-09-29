@@ -20,7 +20,14 @@ export type DiagnosticEducatifUpdateEntity = Partial<
 export interface DiagnosticEducatifDomainInterface {
   findByPatientID: (patientId: string) => Promise<DiagnosticEducatifEntity[]>
   findByID: (id: string) => Promise<DiagnosticEducatifEntity>
-  create: (params: DiagnosticEducatifCreateEntity, userID: string) => Promise<DiagnosticEducatifEntity>
-  update: (id: string, params: DiagnosticEducatifUpdateEntity, userID: string) => Promise<DiagnosticEducatifEntity>
+  create: (
+    params: DiagnosticEducatifCreateEntity,
+    userID: string,
+  ) => Promise<DiagnosticEducatifEntity>
+  update: (
+    id: string,
+    params: DiagnosticEducatifUpdateEntity,
+    userID: string,
+  ) => Promise<DiagnosticEducatifEntity>
   delete: (id: string) => Promise<DiagnosticEducatifEntity>
 }

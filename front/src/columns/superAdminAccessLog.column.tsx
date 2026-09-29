@@ -5,7 +5,10 @@ import { ShieldAlert } from 'lucide-react'
 import { CopyableId } from '../components/custom/copyableId.tsx'
 import { superAdminAccessLogActionLabels } from '../constants/superAdminAccessLog.constant.ts'
 import type { EstablishmentListItem } from '../types/superAdmin.ts'
-import type { SuperAdminAccessLogEntry, SuperAdminAccessLogSource } from '../types/superAdminAccessLog.ts'
+import type {
+  SuperAdminAccessLogEntry,
+  SuperAdminAccessLogSource,
+} from '../types/superAdminAccessLog.ts'
 
 const columnHelper = createColumnHelper<SuperAdminAccessLogEntry>()
 
@@ -31,7 +34,10 @@ type ColumnOptions = {
 // script d'amorçage (`UserDomain.bootstrapSuperAdmin`, sous `runAsSystem`), qu'AUCUNE autre route
 // ne pouvait lire avant cette tâche (voir `routes/super-admin/access-log.ts`, back) — elles se
 // distinguent explicitement plutôt que de laisser une cellule vide ambiguë.
-export const getSuperAdminAccessLogColumns = ({ source, establishments }: ColumnOptions) => {
+export const getSuperAdminAccessLogColumns = ({
+  source,
+  establishments,
+}: ColumnOptions) => {
   const actionLabels = superAdminAccessLogActionLabels(source)
 
   const base = [
@@ -48,7 +54,8 @@ export const getSuperAdminAccessLogColumns = ({ source, establishments }: Column
     columnHelper.accessor(
       (row) =>
         row.establishmentId
-          ? (establishments.find((e) => e.id === row.establishmentId)?.name ?? row.establishmentId)
+          ? (establishments.find((e) => e.id === row.establishmentId)?.name ??
+            row.establishmentId)
           : null,
       {
         id: 'establishment',
@@ -56,7 +63,9 @@ export const getSuperAdminAccessLogColumns = ({ source, establishments }: Column
         size: 170,
         cell: (info) =>
           info.getValue() ?? (
-            <span className="italic text-text-light">Amorçage (aucun établissement)</span>
+            <span className="italic text-text-light">
+              Amorçage (aucun établissement)
+            </span>
           ),
       },
     ),
@@ -111,11 +120,15 @@ export const getSuperAdminAccessLogColumns = ({ source, establishments }: Column
 
   return [
     ...base,
-    columnHelper.accessor((row) => (row.entityType ? `${row.entityType} · ${row.entityID ?? ''}` : null), {
-      id: 'entity',
-      header: 'Entité',
-      size: 220,
-      cell: (info) => info.getValue() ?? '—',
-    }),
+    columnHelper.accessor(
+      (row) =>
+        row.entityType ? `${row.entityType} · ${row.entityID ?? ''}` : null,
+      {
+        id: 'entity',
+        header: 'Entité',
+        size: 220,
+        cell: (info) => info.getValue() ?? '—',
+      },
+    ),
   ]
 }

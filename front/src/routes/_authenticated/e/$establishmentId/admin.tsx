@@ -8,7 +8,9 @@ import { resolveEstablishmentContext } from '@/utils/tenant-context.ts'
 // memoriser ce contexte comme « dernier visite » — il ne designe pas un
 // service et ne peut donc pas servir de destination par defaut (voir
 // `rememberContext`, qui n'est d'ailleurs pas appele ici).
-export const Route = createFileRoute('/_authenticated/e/$establishmentId/admin')({
+export const Route = createFileRoute(
+  '/_authenticated/e/$establishmentId/admin',
+)({
   beforeLoad: ({ context, params, preload }) => {
     const tenant = resolveEstablishmentContext(context.authState.user, params)
     if (!tenant) {

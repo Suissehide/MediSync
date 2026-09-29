@@ -26,8 +26,9 @@ export const Route = createFileRoute(
 })
 
 const grantedByLabel = (grant: EstablishmentGrant) =>
-  [grant.grantedBy.firstName, grant.grantedBy.lastName].filter(Boolean).join(' ') ||
-  grant.grantedBy.email
+  [grant.grantedBy.firstName, grant.grantedBy.lastName]
+    .filter(Boolean)
+    .join(' ') || grant.grantedBy.email
 
 // « En cours » : ni révoqué, ni expiré. Tout le reste est « passé » — un
 // octroi révoqué AVANT son expiration reste distinct d'un octroi simplement
@@ -65,7 +66,6 @@ function GrantsAdmin() {
   return (
     <DashboardLayout>
       <div className="flex-1 bg-background p-6 rounded-lg flex flex-col w-full gap-6 overflow-auto">
-
         <h1 className="text-xl font-semibold text-text-dark">
           Accès temporaires
         </h1>
@@ -101,11 +101,14 @@ function GrantsAdmin() {
                         <div>{grant.reason}</div>
                         <div className="text-text-light">
                           Accordé par {grantedByLabel(grant)} le{' '}
-                          {dayjs.utc(grant.grantedAt).format('DD/MM/YYYY HH:mm')}
+                          {dayjs
+                            .utc(grant.grantedAt)
+                            .format('DD/MM/YYYY HH:mm')}
                         </div>
                       </div>
                       <div className="text-text-light whitespace-nowrap">
-                        Expire le {dayjs.utc(grant.expiresAt).format('DD/MM/YYYY HH:mm')}
+                        Expire le{' '}
+                        {dayjs.utc(grant.expiresAt).format('DD/MM/YYYY HH:mm')}
                       </div>
                     </li>
                   ))}
@@ -130,7 +133,9 @@ function GrantsAdmin() {
                         <div>{grant.reason}</div>
                         <div className="text-text-light">
                           Accordé par {grantedByLabel(grant)} le{' '}
-                          {dayjs.utc(grant.grantedAt).format('DD/MM/YYYY HH:mm')}
+                          {dayjs
+                            .utc(grant.grantedAt)
+                            .format('DD/MM/YYYY HH:mm')}
                         </div>
                       </div>
                       <div className="text-text-light whitespace-nowrap">

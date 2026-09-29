@@ -9,10 +9,7 @@ import DashboardLayout from '@/components/dashboard.layout.tsx'
 import ReactTable from '@/components/table/reactTable.tsx'
 import { can } from '@/hooks/useCan.ts'
 import { queryState } from '@/libs/queryState.ts'
-import {
-  useMemberMutations,
-  useMembersQuery,
-} from '@/queries/useMembers.ts'
+import { useMemberMutations, useMembersQuery } from '@/queries/useMembers.ts'
 import { useServicesQuery } from '@/queries/useServices.ts'
 import type { Member } from '@/types/member.ts'
 import { resolveEstablishmentContext } from '@/utils/tenant-context.ts'
@@ -40,7 +37,6 @@ export const Route = createFileRoute(
 })
 
 function MemberSettings() {
-
   const { members, isPending, error } = useMembersQuery()
   // Même requête que l'onglet des services (`admin/services.tsx`) : sert à
   // résoudre le NOM d'un service pour la colonne « Rôle service »
@@ -107,7 +103,6 @@ function MemberSettings() {
   return (
     <DashboardLayout>
       <div className="flex-1 bg-background p-6 rounded-lg flex flex-col w-full gap-4">
-
         <div className="flex justify-between items-center gap-3">
           <h1 className="h-9 flex items-center text-text-dark text-xl font-semibold">
             Membres de l'établissement

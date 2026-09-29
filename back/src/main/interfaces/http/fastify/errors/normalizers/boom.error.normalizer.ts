@@ -1,9 +1,10 @@
 import type { Boom } from '@hapi/boom'
+import { ZodError } from 'zod/v4'
+
 import type {
   ErrorNormalizer,
   ErrorResponse,
 } from '../../../../../types/interfaces/http/fastify/errors'
-import { ZodError } from 'zod/v4'
 
 const isZodError = (error: unknown): error is ZodError => {
   return error instanceof ZodError

@@ -199,7 +199,8 @@ export const plannedPatientAccess = (
 // URL DECLAREE de la route, telle que Fastify l'enregistre (`patientRouter`, prefixe
 // `/patient` sous `tenantRoutes`) -- exactement la forme que lit `request.routeOptions.url`,
 // comme pour `LOGGED_PATIENT_ROUTES` ci-dessus.
-export const PATIENT_EXPORT_ROUTE_URL = '/e/:establishmentId/s/:serviceId/patient/export'
+export const PATIENT_EXPORT_ROUTE_URL =
+  '/e/:establishmentId/s/:serviceId/patient/export'
 
 export type PatientExportQuery = {
   search?: string
@@ -220,7 +221,9 @@ export type PatientExportQuery = {
 // serait filtre sur `["asthme"]` mais journalise comme `"asthme"` : qui relirait le journal
 // lirait une forme de critere qui n'est pas celle qui a reellement ete appliquee. Le journal
 // doit dire ce qui s'est passe, pas ce que la chaine de requete avait l'air de demander.
-export const buildPatientExportFilters = (query: PatientExportQuery): string => {
+export const buildPatientExportFilters = (
+  query: PatientExportQuery,
+): string => {
   const tags = query.pathwayTemplateTags
   return JSON.stringify({
     search: query.search,

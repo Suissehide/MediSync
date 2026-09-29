@@ -1,92 +1,135 @@
 import Boom from '@hapi/boom'
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod/v4'
+
 import {
   type CreateDiagnosticEducatifBody,
+  createDiagnosticEducatifSchema,
   type DiagnosticParams,
   type DiagnosticPatientParams,
-  type UpdateDiagnosticEducatifBody,
-  type UpdateDiagnosticEducatifParams,
-  createDiagnosticEducatifSchema,
   diagnosticEducatifResponseSchema,
   diagnosticEducatifsResponseSchema,
   diagnosticParamsSchema,
   diagnosticPatientParamsSchema,
+  type UpdateDiagnosticEducatifBody,
+  type UpdateDiagnosticEducatifParams,
   updateDiagnosticEducatifSchema,
 } from '../schemas/diagnosticEducatif.schema'
 
 const diagnosticEducatifRouter: FastifyPluginAsync = (fastify) => {
-  const { diagnosticEducatifDomain, diagnosticEducatifTemplateDomain } = fastify.iocContainer
+  const { diagnosticEducatifDomain, diagnosticEducatifTemplateDomain } =
+    fastify.iocContainer
 
   // Get all by patient
-  fastify.get<{ Params: DiagnosticPatientParams }>('/', {
-    schema: {
-      params: diagnosticPatientParamsSchema,
-      response: { 200: diagnosticEducatifsResponseSchema },
+  fastify.get<{ Params: DiagnosticPatientParams }>(
+    '/',
+    {
+      schema: {
+        params: diagnosticPatientParamsSchema,
+        response: { 200: diagnosticEducatifsResponseSchema },
+      },
+      config: { permission: 'clinical:read' },
     },
-    config: { permission: 'clinical:read' },
-  }, (request) => diagnosticEducatifDomain.findByPatientID(request.params.patientId))
+    (request) =>
+      diagnosticEducatifDomain.findByPatientID(request.params.patientId),
+  )
 
   // Get by ID
-  fastify.get<{ Params: DiagnosticParams }>('/:diagnosticId', {
-    schema: {
-      params: diagnosticParamsSchema,
-      response: { 200: diagnosticEducatifResponseSchema, 404: z.object({ message: z.string() }) },
+  fastify.get<{ Params: DiagnosticParams }>(
+    '/:diagnosticId',
+    {
+      schema: {
+        params: diagnosticParamsSchema,
+        response: {
+          200: diagnosticEducatifResponseSchema,
+          404: z.object({ message: z.string() }),
+        },
+      },
+      config: { permission: 'clinical:read' },
     },
-    config: { permission: 'clinical:read' },
-  }, async (request) => {
-    const diag = await diagnosticEducatifDomain.findByID(request.params.diagnosticId)
-    if (!diag) {
-      throw Boom.notFound('DiagnosticEducatif not found')
-    }
-    return diag
-  })
+    async (request) => {
+      const diag = await diagnosticEducatifDomain.findByID(
+        request.params.diagnosticId,
+      )
+      if (!diag) {
+        throw Boom.notFound('DiagnosticEducatif not found')
+      }
+      return diag
+    },
+  )
 
   // Create
-  fastify.post<{ Params: DiagnosticPatientParams; Body: CreateDiagnosticEducatifBody }>('/', {
-    schema: {
-      params: diagnosticPatientParamsSchema,
-      body: createDiagnosticEducatifSchema,
-      response: { 201: diagnosticEducatifResponseSchema },
+  fastify.post<{
+    Params: DiagnosticPatientParams
+    Body: CreateDiagnosticEducatifBody
+  }>(
+    '/',
+    {
+      schema: {
+        params: diagnosticPatientParamsSchema,
+        body: createDiagnosticEducatifSchema,
+        response: { 201: diagnosticEducatifResponseSchema },
+      },
+      config: { permission: 'clinical:write' },
     },
-    config: { permission: 'clinical:write' },
-  }, async (request, reply) => {
-    const { templateId, ...rest } = request.body
-    let activeFields: string[] = rest.activeFields ?? []
+    async (request, reply) => {
+      const { templateId, ...rest } = request.body
+      let activeFields: string[] = rest.activeFields ?? []
 
-    if (templateId) {
-      const template = await diagnosticEducatifTemplateDomain.findByID(templateId)
-      activeFields = template.activeFields
-    }
+      if (templateId) {
+        const template =
+          await diagnosticEducatifTemplateDomain.findByID(templateId)
+        activeFields = template.activeFields
+      }
 
-    const diag = await diagnosticEducatifDomain.create(
-      { ...rest, patientId: request.params.patientId, templateId: templateId ?? undefined, activeFields },
-      request.user.userID,
-    )
-    reply.code(201)
-    return diag
-  })
+      const diag = await diagnosticEducatifDomain.create(
+        {
+          ...rest,
+          patientId: request.params.patientId,
+          templateId: templateId ?? undefined,
+          activeFields,
+        },
+        request.user.userID,
+      )
+      reply.code(201)
+      return diag
+    },
+  )
 
   // Update
-  fastify.patch<{ Params: UpdateDiagnosticEducatifParams; Body: UpdateDiagnosticEducatifBody }>('/:diagnosticId', {
-    schema: { ...updateDiagnosticEducatifSchema, response: { 200: diagnosticEducatifResponseSchema } },
-    config: { permission: 'clinical:write' },
-  }, (request) => {
-    return diagnosticEducatifDomain.update(
-      request.params.diagnosticId,
-      request.body,
-      request.user.userID,
-    )
-  })
+  fastify.patch<{
+    Params: UpdateDiagnosticEducatifParams
+    Body: UpdateDiagnosticEducatifBody
+  }>(
+    '/:diagnosticId',
+    {
+      schema: {
+        ...updateDiagnosticEducatifSchema,
+        response: { 200: diagnosticEducatifResponseSchema },
+      },
+      config: { permission: 'clinical:write' },
+    },
+    (request) => {
+      return diagnosticEducatifDomain.update(
+        request.params.diagnosticId,
+        request.body,
+        request.user.userID,
+      )
+    },
+  )
 
   // Delete
-  fastify.delete<{ Params: DiagnosticParams }>('/:diagnosticId', {
-    schema: { params: diagnosticParamsSchema, response: { 204: z.null() } },
-    config: { permission: 'clinical:write' },
-  }, async (request, reply) => {
-    await diagnosticEducatifDomain.delete(request.params.diagnosticId)
-    reply.code(204).send()
-  })
+  fastify.delete<{ Params: DiagnosticParams }>(
+    '/:diagnosticId',
+    {
+      schema: { params: diagnosticParamsSchema, response: { 204: z.null() } },
+      config: { permission: 'clinical:write' },
+    },
+    async (request, reply) => {
+      await diagnosticEducatifDomain.delete(request.params.diagnosticId)
+      reply.code(204).send()
+    },
+  )
 
   return Promise.resolve()
 }

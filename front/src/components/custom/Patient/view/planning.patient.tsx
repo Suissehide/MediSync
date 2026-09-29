@@ -39,7 +39,9 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
   const [selectedSlotID, setSelectedSlotID] = useState('')
   const [selectedSlotStart, setSelectedSlotStart] = useState('')
   const [selectedSlotEnd, setSelectedSlotEnd] = useState('')
-  const [selectedSlotSoignants, setSelectedSlotSoignants] = useState<Soignant[]>([])
+  const [selectedSlotSoignants, setSelectedSlotSoignants] = useState<
+    Soignant[]
+  >([])
   const [selectedSlotType, setSelectedSlotType] = useState('')
   const [selectedSlotMaxDate, setSelectedSlotMaxDate] = useState('')
   const calendarUnselectRef = useRef<(() => void) | null>(null)
@@ -92,13 +94,10 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
       .flatMap((s) => s.appointments ?? [])
       .filter(
         (apt) =>
-          apt.appointmentPatients?.some(
-            (ap) => ap.patient.id === patient.id,
-          ) && dayjs.utc(apt.startDate).isAfter(now),
+          apt.appointmentPatients?.some((ap) => ap.patient.id === patient.id) &&
+          dayjs.utc(apt.startDate).isAfter(now),
       )
-      .sort((a, b) =>
-        dayjs.utc(a.startDate).diff(dayjs.utc(b.startDate)),
-      )[0]
+      .sort((a, b) => dayjs.utc(a.startDate).diff(dayjs.utc(b.startDate)))[0]
     return nextApt?.startDate
   }, [slots, patient])
 

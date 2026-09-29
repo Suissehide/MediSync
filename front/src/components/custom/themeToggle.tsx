@@ -1,5 +1,5 @@
+import { Moon, Sun } from 'lucide-react'
 import { useState } from 'react'
-import { Sun, Moon } from 'lucide-react'
 
 const ThemeToggle = () => {
   const [isDay, setIsDay] = useState(true)

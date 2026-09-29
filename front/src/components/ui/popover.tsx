@@ -89,8 +89,18 @@ function PopoverSeparator({ className }: { className?: string }) {
 
 // Sous-categorie d'un menu : seulement DECALEE sous son titre, sans filet. Partagee par le
 // selecteur d'acces et les menus de la barre (Organisation) pour qu'ils se lisent pareil.
-function PopoverSubGroup({ className, children }: { className?: string; children: React.ReactNode }) {
-  return <div className={cn('ml-6 flex flex-col gap-0.5', className)}>{children}</div>
+function PopoverSubGroup({
+  className,
+  children,
+}: {
+  className?: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className={cn('ml-6 flex flex-col gap-0.5', className)}>
+      {children}
+    </div>
+  )
 }
 
 export {

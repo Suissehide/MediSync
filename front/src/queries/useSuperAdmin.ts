@@ -5,7 +5,10 @@ import { SUPER_ADMIN } from '../constants/process.constant.ts'
 import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
 import { useToast } from '../hooks/useToast.ts'
-import type { CreateEstablishmentInput, CreateGrantInput } from '../types/superAdmin.ts'
+import type {
+  CreateEstablishmentInput,
+  CreateGrantInput,
+} from '../types/superAdmin.ts'
 
 // Écrans du super-admin (tâche 12) : hors de tout tenant. Aucune clé de
 // requête ici ne porte d'établissement ou de service au sens de

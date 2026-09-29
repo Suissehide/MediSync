@@ -22,7 +22,10 @@ export const Route = createFileRoute(
   beforeLoad: ({ context, params }) => {
     const tenant = resolveTenantContext(context.authState.user, params)
     if (!can(tenant, 'consultations:read')) {
-      throw redirect({ to: '/e/$establishmentId/s/$serviceId/dashboard', params })
+      throw redirect({
+        to: '/e/$establishmentId/s/$serviceId/dashboard',
+        params,
+      })
     }
   },
   component: PatientAccessLogPage,
@@ -39,8 +42,9 @@ function PatientAccessLogPage() {
   // requête supplémentaire n'est nécessaire pour ce seul affichage.
   const user = useAuthStore((state) => state.user)
   const services =
-    user?.establishments.find((establishment) => establishment.id === establishmentId)
-      ?.services ?? []
+    user?.establishments.find(
+      (establishment) => establishment.id === establishmentId,
+    )?.services ?? []
 
   const etat = queryState({ isPending, error, hasData: entries !== undefined })
 

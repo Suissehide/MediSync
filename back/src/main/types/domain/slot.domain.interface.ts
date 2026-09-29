@@ -1,5 +1,4 @@
 import type { Prisma } from '../../../generated/client'
-
 import type {
   SlotDateRangeRepo,
   SlotEntityRepo,

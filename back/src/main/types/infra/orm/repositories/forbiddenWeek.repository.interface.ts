@@ -10,6 +10,8 @@ export type ForbiddenWeekCreateEntityRepo = Omit<
 
 export interface ForbiddenWeekRepositoryInterface {
   findAll: () => Promise<ForbiddenWeekEntityRepo[]>
-  create: (params: ForbiddenWeekCreateEntityRepo) => Promise<ForbiddenWeekEntityRepo>
+  create: (
+    params: ForbiddenWeekCreateEntityRepo,
+  ) => Promise<ForbiddenWeekEntityRepo>
   delete: (id: string) => Promise<ForbiddenWeekEntityRepo>
 }

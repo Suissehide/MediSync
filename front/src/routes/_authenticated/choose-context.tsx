@@ -3,10 +3,10 @@ import { Building2, Globe } from 'lucide-react'
 
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import {
+  type AccessibleCouple,
   accessibleCouples,
   accessibleDestinations,
   administeredEstablishments,
-  type AccessibleCouple,
 } from '@/utils/tenant-context.ts'
 
 export const Route = createFileRoute('/_authenticated/choose-context')({
@@ -24,14 +24,19 @@ export const Route = createFileRoute('/_authenticated/choose-context')({
   component: ChooseContext,
 })
 
-type Group = { establishment: AccessibleCouple['establishment']; couples: AccessibleCouple[] }
+type Group = {
+  establishment: AccessibleCouple['establishment']
+  couples: AccessibleCouple[]
+}
 
 // Regroupe les couples par etablissement, dans l'ordre ou ils apparaissent
 // dans l'arbre des appartenances.
 const groupByEstablishment = (couples: AccessibleCouple[]): Group[] => {
   const groups: Group[] = []
   for (const couple of couples) {
-    const group = groups.find((g) => g.establishment.id === couple.establishment.id)
+    const group = groups.find(
+      (g) => g.establishment.id === couple.establishment.id,
+    )
     if (group) {
       group.couples.push(couple)
     } else {
@@ -54,9 +59,12 @@ function ChooseContext() {
     <div className="min-h-screen w-full flex items-center justify-center bg-background p-6">
       <div className="w-full max-w-xl flex flex-col gap-6">
         <div>
-          <h1 className="text-2xl font-bold text-text-dark">Choisir un accès</h1>
+          <h1 className="text-2xl font-bold text-text-dark">
+            Choisir un accès
+          </h1>
           <p className="text-text-light">
-            Votre compte a plusieurs accès possibles : choisissez celui que vous voulez ouvrir.
+            Votre compte a plusieurs accès possibles : choisissez celui que vous
+            voulez ouvrir.
           </p>
         </div>
 
@@ -80,7 +88,10 @@ function ChooseContext() {
                     // prechargement de destination sur cet ecran de choix.
                     router.navigate({
                       to: '/e/$establishmentId/s/$serviceId/dashboard',
-                      params: { establishmentId: establishment.id, serviceId: service.id },
+                      params: {
+                        establishmentId: establishment.id,
+                        serviceId: service.id,
+                      },
                     })
                   }
                 >

@@ -17,5 +17,9 @@ export const deleteForbiddenWeekParamsSchema = z.object({
 })
 
 export type ForbiddenWeekResponse = z.infer<typeof forbiddenWeekResponseSchema>
-export type CreateForbiddenWeekBody = z.infer<typeof createForbiddenWeekBodySchema>
-export type DeleteForbiddenWeekParams = z.infer<typeof deleteForbiddenWeekParamsSchema>
+export type CreateForbiddenWeekBody = z.infer<
+  typeof createForbiddenWeekBodySchema
+>
+export type DeleteForbiddenWeekParams = z.infer<
+  typeof deleteForbiddenWeekParamsSchema
+>

@@ -19,9 +19,13 @@ interface ActiveGrantNoticeProps {
 // pour la raison exacte de cette limite : aucune route ne liste les
 // octrois existants, l'identifiant n'est jamais vu ailleurs qu'à la
 // création).
-export const ActiveGrantNotice = ({ establishmentId }: ActiveGrantNoticeProps) => {
+export const ActiveGrantNotice = ({
+  establishmentId,
+}: ActiveGrantNoticeProps) => {
   const user = useAuthStore((state) => state.user)
-  const origine = user?.establishments.find((e) => e.id === establishmentId)?.origine
+  const origine = user?.establishments.find(
+    (e) => e.id === establishmentId,
+  )?.origine
   const grantId = useLastGrantStore(
     (state) => state.grantIdByEstablishment[establishmentId],
   )
@@ -35,7 +39,9 @@ export const ActiveGrantNotice = ({ establishmentId }: ActiveGrantNoticeProps) =
     <div className="flex items-center justify-between gap-3 bg-primary/10 border border-primary/20 rounded-lg px-4 py-2 text-sm">
       <div className="flex items-center gap-2">
         <ShieldAlert className="w-4 h-4 text-primary shrink-0" />
-        <span>Vous disposez déjà d'un accès actif sur cet établissement (octroi).</span>
+        <span>
+          Vous disposez déjà d'un accès actif sur cet établissement (octroi).
+        </span>
       </div>
       {grantId ? (
         <Button

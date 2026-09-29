@@ -30,9 +30,13 @@ class ForbiddenWeekRepository implements ForbiddenWeekRepositoryInterface {
     })
   }
 
-  async create(params: ForbiddenWeekCreateEntityRepo): Promise<ForbiddenWeekEntityRepo> {
+  async create(
+    params: ForbiddenWeekCreateEntityRepo,
+  ): Promise<ForbiddenWeekEntityRepo> {
     try {
-      return await this.prisma.forbiddenWeek.create({ data: { ...params, ...this.scope } })
+      return await this.prisma.forbiddenWeek.create({
+        data: { ...params, ...this.scope },
+      })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
         entityName: 'ForbiddenWeek',

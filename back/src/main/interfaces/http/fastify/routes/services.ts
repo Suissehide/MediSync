@@ -3,8 +3,8 @@ import type { FastifyPluginAsync } from 'fastify'
 import {
   type CreateServiceBody,
   createServiceSchema,
-  serviceDeactivationImpactResponseSchema,
   type ServiceParams,
+  serviceDeactivationImpactResponseSchema,
   serviceParamsSchema,
   serviceResponseSchema,
   servicesResponseSchema,

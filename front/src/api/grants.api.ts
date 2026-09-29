@@ -1,7 +1,6 @@
 import { establishmentApiUrl } from '@/constants/config.constant.ts'
 import { handleHttpError } from '@/libs/httpErrorHandler.ts'
 import type { EstablishmentGrant } from '@/types/grant.ts'
-
 import { fetchWithAuth } from './fetchWithAuth.ts'
 
 // `GET /e/:establishmentId/admin/grants` (back, `grants.ts`) : SEULE
@@ -16,7 +15,11 @@ export const EstablishmentGrantsApi = {
       method: 'GET',
     })
     if (!response.ok) {
-      handleHttpError(response, {}, 'Impossible de récupérer les accès temporaires')
+      handleHttpError(
+        response,
+        {},
+        'Impossible de récupérer les accès temporaires',
+      )
     }
     return response.json()
   },

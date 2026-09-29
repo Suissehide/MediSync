@@ -1,15 +1,16 @@
 import Boom from '@hapi/boom'
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod/v4'
+
 import {
   type CreateDiagnosticEducatifTemplateBody,
-  type DiagnosticTemplateParams,
-  type UpdateDiagnosticEducatifTemplateBody,
-  type UpdateDiagnosticEducatifTemplateParams,
   createDiagnosticEducatifTemplateSchema,
+  type DiagnosticTemplateParams,
   diagnosticEducatifTemplateResponseSchema,
   diagnosticEducatifTemplatesResponseSchema,
   diagnosticTemplateParamsSchema,
+  type UpdateDiagnosticEducatifTemplateBody,
+  type UpdateDiagnosticEducatifTemplateParams,
   updateDiagnosticEducatifTemplateSchema,
 } from '../schemas/diagnosticEducatif.schema'
 
@@ -17,52 +18,94 @@ const diagnosticEducatifTemplateRouter: FastifyPluginAsync = (fastify) => {
   const { diagnosticEducatifTemplateDomain } = fastify.iocContainer
 
   // Get all
-  fastify.get('/', {
-    schema: { response: { 200: diagnosticEducatifTemplatesResponseSchema } },
-    config: { permission: 'referentials:read' },
-  }, () => diagnosticEducatifTemplateDomain.findAll())
+  fastify.get(
+    '/',
+    {
+      schema: { response: { 200: diagnosticEducatifTemplatesResponseSchema } },
+      config: { permission: 'referentials:read' },
+    },
+    () => diagnosticEducatifTemplateDomain.findAll(),
+  )
 
   // Get by ID
-  fastify.get<{ Params: DiagnosticTemplateParams }>('/:templateId', {
-    schema: {
-      params: diagnosticTemplateParamsSchema,
-      response: { 200: diagnosticEducatifTemplateResponseSchema, 404: z.object({ message: z.string() }) },
+  fastify.get<{ Params: DiagnosticTemplateParams }>(
+    '/:templateId',
+    {
+      schema: {
+        params: diagnosticTemplateParamsSchema,
+        response: {
+          200: diagnosticEducatifTemplateResponseSchema,
+          404: z.object({ message: z.string() }),
+        },
+      },
+      config: { permission: 'referentials:read' },
     },
-    config: { permission: 'referentials:read' },
-  }, async (request) => {
-    const template = await diagnosticEducatifTemplateDomain.findByID(request.params.templateId)
-    if (!template) {
-      throw Boom.notFound('Template not found')
-    }
-    return template
-  })
+    async (request) => {
+      const template = await diagnosticEducatifTemplateDomain.findByID(
+        request.params.templateId,
+      )
+      if (!template) {
+        throw Boom.notFound('Template not found')
+      }
+      return template
+    },
+  )
 
   // Create
-  fastify.post<{ Body: CreateDiagnosticEducatifTemplateBody }>('/', {
-    schema: { body: createDiagnosticEducatifTemplateSchema, response: { 201: diagnosticEducatifTemplateResponseSchema } },
-    config: { permission: 'referentials:write' },
-  }, async (request, reply) => {
-    const template = await diagnosticEducatifTemplateDomain.create(request.body)
-    reply.code(201)
-    return template
-  })
+  fastify.post<{ Body: CreateDiagnosticEducatifTemplateBody }>(
+    '/',
+    {
+      schema: {
+        body: createDiagnosticEducatifTemplateSchema,
+        response: { 201: diagnosticEducatifTemplateResponseSchema },
+      },
+      config: { permission: 'referentials:write' },
+    },
+    async (request, reply) => {
+      const template = await diagnosticEducatifTemplateDomain.create(
+        request.body,
+      )
+      reply.code(201)
+      return template
+    },
+  )
 
   // Update
-  fastify.patch<{ Params: UpdateDiagnosticEducatifTemplateParams; Body: UpdateDiagnosticEducatifTemplateBody }>('/:templateId', {
-    schema: { ...updateDiagnosticEducatifTemplateSchema, response: { 200: diagnosticEducatifTemplateResponseSchema } },
-    config: { permission: 'referentials:write' },
-  }, (request) => {
-    return diagnosticEducatifTemplateDomain.update(request.params.templateId, request.body)
-  })
+  fastify.patch<{
+    Params: UpdateDiagnosticEducatifTemplateParams
+    Body: UpdateDiagnosticEducatifTemplateBody
+  }>(
+    '/:templateId',
+    {
+      schema: {
+        ...updateDiagnosticEducatifTemplateSchema,
+        response: { 200: diagnosticEducatifTemplateResponseSchema },
+      },
+      config: { permission: 'referentials:write' },
+    },
+    (request) => {
+      return diagnosticEducatifTemplateDomain.update(
+        request.params.templateId,
+        request.body,
+      )
+    },
+  )
 
   // Delete
-  fastify.delete<{ Params: DiagnosticTemplateParams }>('/:templateId', {
-    schema: { params: diagnosticTemplateParamsSchema, response: { 204: z.null() } },
-    config: { permission: 'referentials:write' },
-  }, async (request, reply) => {
-    await diagnosticEducatifTemplateDomain.delete(request.params.templateId)
-    reply.code(204).send()
-  })
+  fastify.delete<{ Params: DiagnosticTemplateParams }>(
+    '/:templateId',
+    {
+      schema: {
+        params: diagnosticTemplateParamsSchema,
+        response: { 204: z.null() },
+      },
+      config: { permission: 'referentials:write' },
+    },
+    async (request, reply) => {
+      await diagnosticEducatifTemplateDomain.delete(request.params.templateId)
+      reply.code(204).send()
+    },
+  )
 
   return Promise.resolve()
 }

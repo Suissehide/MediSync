@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
 import type { User } from '@/types/auth.ts'
-
 import { Route } from './choose-context.tsx'
 
 const adminSansService: User = {
@@ -10,9 +9,7 @@ const adminSansService: User = {
   firstName: null,
   lastName: null,
   isSuperAdmin: false,
-  establishments: [
-    { id: 'e1', name: 'CHU', role: 'ADMIN', services: [] },
-  ],
+  establishments: [{ id: 'e1', name: 'CHU', role: 'ADMIN', services: [] }],
 }
 
 const sansAcces: User = {
@@ -49,6 +46,8 @@ describe('beforeLoad de la page de choix de contexte', () => {
   })
 
   it('ne redirige pas vers /pending un super-admin sans aucune appartenance', () => {
-    expect(() => runBeforeLoad({ ...sansAcces, isSuperAdmin: true })).not.toThrow()
+    expect(() =>
+      runBeforeLoad({ ...sansAcces, isSuperAdmin: true }),
+    ).not.toThrow()
   })
 })

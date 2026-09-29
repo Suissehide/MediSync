@@ -48,20 +48,20 @@ const clesDeLObjet = (source: string, nom: string): string[] => {
   const propre = sansCommentaires(source)
   const declaration = propre.indexOf(`const ${nom}`)
   if (declaration === -1) {
-    throw new Error(`Objet ${nom} introuvable : le contrat lit un fichier qui a change de forme.`)
+    throw new Error(
+      `Objet ${nom} introuvable : le contrat lit un fichier qui a change de forme.`,
+    )
   }
   const ouvrante = propre.indexOf('{', declaration)
   const bloc = blocEquilibre(propre, ouvrante)
   if (bloc === null) {
     throw new Error(`Objet ${nom} jamais referme.`)
   }
-  return bloc.corps
-    .split('\n')
-    .flatMap((ligne) => {
-      const trouve = CLE.exec(ligne)
-      const cle = trouve?.[1] ?? trouve?.[2] ?? trouve?.[3]
-      return cle === undefined ? [] : [cle]
-    })
+  return bloc.corps.split('\n').flatMap((ligne) => {
+    const trouve = CLE.exec(ligne)
+    const cle = trouve?.[1] ?? trouve?.[2] ?? trouve?.[3]
+    return cle === undefined ? [] : [cle]
+  })
 }
 
 // `AccessAction` (back) : une union de litteraux, une valeur par ligne.
@@ -69,14 +69,19 @@ const VALEUR_UNION = /'([^']+)'/g
 const valeursDeAccessAction = (): string[] => {
   const source = sansCommentaires(
     readFileSync(
-      join(__dirname, '../../../main/types/domain/patientAccessLog.domain.interface.ts'),
+      join(
+        __dirname,
+        '../../../main/types/domain/patientAccessLog.domain.interface.ts',
+      ),
       'utf8',
     ),
   )
   const debut = source.indexOf('export type AccessAction')
   const fin = source.indexOf('\n\n', debut)
   const union = source.slice(debut, fin === -1 ? undefined : fin)
-  return [...union.matchAll(VALEUR_UNION)].flatMap((m) => (m[1] === undefined ? [] : [m[1]]))
+  return [...union.matchAll(VALEUR_UNION)].flatMap((m) =>
+    m[1] === undefined ? [] : [m[1]],
+  )
 }
 
 const trie = (valeurs: readonly string[]): string[] => [...valeurs].sort()
@@ -104,7 +109,9 @@ describe("le vocabulaire du journal d'activite est couvert par le front, exactem
       litFront('constants/superAdminAccessLog.constant.ts'),
       'PLATFORM_ONLY_ACTIVITY_ACTION_LABELS',
     )
-    expect(trie([...service, ...plateformeSeulement])).toEqual(trie(actionsDuBack))
+    expect(trie([...service, ...plateformeSeulement])).toEqual(
+      trie(actionsDuBack),
+    )
   })
 
   // Les deux dictionnaires se COMPLETENT, ils ne se recouvrent pas : une cle presente dans les
@@ -118,7 +125,9 @@ describe("le vocabulaire du journal d'activite est couvert par le front, exactem
       litFront('constants/superAdminAccessLog.constant.ts'),
       'PLATFORM_ONLY_ACTIVITY_ACTION_LABELS',
     )
-    expect(service.filter((cle) => plateformeSeulement.includes(cle))).toEqual([])
+    expect(service.filter((cle) => plateformeSeulement.includes(cle))).toEqual(
+      [],
+    )
   })
 
   // L'ecran DE SERVICE, lui, n'a pas a nommer ce qu'il ne voit jamais — mais tout ce qu'il nomme

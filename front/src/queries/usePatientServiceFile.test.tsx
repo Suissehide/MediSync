@@ -5,7 +5,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import { useToastStore } from '@/store/useToastStore.ts'
-
 import {
   usePatientServiceFileMutations,
   usePatientServiceFileQuery,
@@ -23,7 +22,9 @@ const wrapper = ({ children }: { children: ReactNode }) => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   })
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  return (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  )
 }
 
 // Le sous-dossier peut ne pas exister : le back rend alors une 404, jamais un objet vide
@@ -49,7 +50,9 @@ describe('usePatientServiceFileQuery — le sous-dossier peut ne pas exister', (
       }),
     )
 
-    const { result } = renderHook(() => usePatientServiceFileQuery('p1'), { wrapper })
+    const { result } = renderHook(() => usePatientServiceFileQuery('p1'), {
+      wrapper,
+    })
 
     await waitFor(() => expect(result.current.isPending).toBe(false))
 
@@ -79,7 +82,9 @@ describe('usePatientServiceFileQuery — le sous-dossier peut ne pas exister', (
       }),
     )
 
-    const { result } = renderHook(() => usePatientServiceFileQuery('p1'), { wrapper })
+    const { result } = renderHook(() => usePatientServiceFileQuery('p1'), {
+      wrapper,
+    })
 
     await waitFor(() => expect(result.current.isPending).toBe(false))
 
@@ -102,7 +107,9 @@ describe('usePatientServiceFileQuery — le sous-dossier peut ne pas exister', (
       }),
     )
 
-    const { result } = renderHook(() => usePatientServiceFileQuery('p1'), { wrapper })
+    const { result } = renderHook(() => usePatientServiceFileQuery('p1'), {
+      wrapper,
+    })
 
     await waitFor(() => expect(result.current.isPending).toBe(false))
 
@@ -124,7 +131,9 @@ describe('usePatientServiceFileQuery — le sous-dossier peut ne pas exister', (
       }),
     )
 
-    const { result } = renderHook(() => usePatientServiceFileQuery('p1'), { wrapper })
+    const { result } = renderHook(() => usePatientServiceFileQuery('p1'), {
+      wrapper,
+    })
 
     await waitFor(() => expect(result.current.isPending).toBe(false))
 
@@ -162,7 +171,9 @@ describe('usePatientServiceFileMutations', () => {
     })
     vi.stubGlobal('fetch', fetchMock)
 
-    const { result } = renderHook(() => usePatientServiceFileMutations(), { wrapper })
+    const { result } = renderHook(() => usePatientServiceFileMutations(), {
+      wrapper,
+    })
 
     await act(async () => {
       await result.current.updatePatientServiceFile.mutateAsync({
@@ -173,7 +184,10 @@ describe('usePatientServiceFileMutations', () => {
     })
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
-    const [requestedUrl, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    const [requestedUrl, init] = fetchMock.mock.calls[0] as [
+      string,
+      RequestInit,
+    ]
     expect(requestedUrl).toMatch(/\/e\/e1\/s\/s1\/patient\/p1\/service-file$/)
     expect(init.method).toBe('PATCH')
     expect(JSON.parse(init.body as string)).toEqual({
@@ -183,7 +197,11 @@ describe('usePatientServiceFileMutations', () => {
 
     await waitFor(() =>
       expect(
-        useToastStore.getState().toasts.some((t) => typeof t.title === 'string' && t.title.includes('modifié')),
+        useToastStore
+          .getState()
+          .toasts.some(
+            (t) => typeof t.title === 'string' && t.title.includes('modifié'),
+          ),
       ).toBe(true),
     )
   })
@@ -199,7 +217,9 @@ describe('usePatientServiceFileMutations', () => {
       }),
     )
 
-    const { result } = renderHook(() => usePatientServiceFileMutations(), { wrapper })
+    const { result } = renderHook(() => usePatientServiceFileMutations(), {
+      wrapper,
+    })
 
     await act(async () => {
       await result.current.updatePatientServiceFile
@@ -209,7 +229,11 @@ describe('usePatientServiceFileMutations', () => {
 
     await waitFor(() =>
       expect(
-        useToastStore.getState().toasts.some((t) => typeof t.title === 'string' && t.title.includes('Erreur')),
+        useToastStore
+          .getState()
+          .toasts.some(
+            (t) => typeof t.title === 'string' && t.title.includes('Erreur'),
+          ),
       ).toBe(true),
     )
   })

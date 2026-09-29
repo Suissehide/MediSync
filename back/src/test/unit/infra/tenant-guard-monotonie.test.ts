@@ -2,7 +2,10 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join, relative, resolve } from 'node:path'
 
-import { assertTenantScope, MODEL_RELATIONS } from '../../../main/infra/orm/tenant-guard'
+import {
+  assertTenantScope,
+  MODEL_RELATIONS,
+} from '../../../main/infra/orm/tenant-guard'
 import type { TenantStore } from '../../../main/types/utils/tenant-context'
 
 // LA MESURE DE MONOTONIE, REJOUABLE — pas un chiffre dans un rapport.
@@ -140,16 +143,21 @@ const materialiserLaVersionDeReference = (): Assert => {
     cwd: __dirname,
     encoding: 'utf8',
   }).trim()
-  const source = execFileSync('git', ['show', `${REF}:${CHEMIN_DANS_LE_DEPOT}`], {
-    cwd: racineDuDepot,
-    encoding: 'utf8',
-    maxBuffer: 32 * 1024 * 1024,
-  })
+  const source = execFileSync(
+    'git',
+    ['show', `${REF}:${CHEMIN_DANS_LE_DEPOT}`],
+    {
+      cwd: racineDuDepot,
+      encoding: 'utf8',
+      maxBuffer: 32 * 1024 * 1024,
+    },
+  )
   const actuel = readFileSync(join(racineDuDepot, CHEMIN_DANS_LE_DEPOT), 'utf8')
   sourcesIdentiques = actuel === source
   writeFileSync(CHEMIN_BASELINE, reecrireLesImportsRelatifs(source), 'utf8')
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  return (require(CHEMIN_BASELINE) as { assertTenantScope: Assert }).assertTenantScope
+  return (require(CHEMIN_BASELINE) as { assertTenantScope: Assert })
+    .assertTenantScope
 }
 
 const tenant: TenantStore = {
@@ -165,7 +173,12 @@ const tenant: TenantStore = {
 }
 const tenantAdmin: TenantStore = {
   kind: 'tenant',
-  tenant: { ...tenant.tenant, serviceId: null, serviceRole: null, establishmentRole: 'ADMIN' },
+  tenant: {
+    ...tenant.tenant,
+    serviceId: null,
+    serviceRole: null,
+    establishmentRole: 'ADMIN',
+  },
 }
 const CONTEXTES: { nom: string; store: TenantStore | undefined }[] = [
   { nom: 'tenant', store: tenant },
@@ -175,7 +188,10 @@ const CONTEXTES: { nom: string; store: TenantStore | undefined }[] = [
   { nom: 'sans-contexte', store: undefined },
 ]
 
-const includeDuChemin = (chemin: readonly string[], filtre: boolean): Record<string, unknown> => {
+const includeDuChemin = (
+  chemin: readonly string[],
+  filtre: boolean,
+): Record<string, unknown> => {
   const [tete, ...reste] = chemin
   if (tete === undefined) {
     return {}
@@ -190,7 +206,9 @@ const selectDuChemin = (chemin: readonly string[]): Record<string, unknown> => {
   if (tete === undefined) {
     return {}
   }
-  return reste.length === 0 ? { [tete]: true } : { [tete]: { select: selectDuChemin(reste) } }
+  return reste.length === 0
+    ? { [tete]: true }
+    : { [tete]: { select: selectDuChemin(reste) } }
 }
 
 const LIGNE_DE_TENANT = { establishmentId: 'e1', serviceId: 's1' }
@@ -208,7 +226,10 @@ const FORMES_NUES: { operation: string; args: Record<string, unknown> }[] = [
   { operation: 'create', args: { data: LIGNE_DE_TENANT } },
   { operation: 'update', args: { where: { id: 'x1' }, data: {} } },
   { operation: 'updateMany', args: { where: {}, data: {} } },
-  { operation: 'upsert', args: { where: { id: 'x1' }, create: LIGNE_DE_TENANT, update: {} } },
+  {
+    operation: 'upsert',
+    args: { where: { id: 'x1' }, create: LIGNE_DE_TENANT, update: {} },
+  },
   { operation: 'delete', args: { where: { id: 'x1' } } },
   { operation: 'deleteMany', args: { where: {} } },
 ]
@@ -228,13 +249,27 @@ const formes = (chemin: readonly string[]) => {
     { operation: 'findFirst', args: { where: LIGNE_DE_TENANT, include: inc } },
     { operation: 'findMany', args: { select: sel } },
     { operation: 'create', args: { data: LIGNE_DE_TENANT, include: inc } },
-    { operation: 'update', args: { where: { id: 'x1' }, data: {}, include: inc } },
-    { operation: 'count', args: { where: { establishmentId: 'e1' }, include: inc } },
-    { operation: 'findMany', args: { where: LIGNE_DE_TENANT, include: incFiltre } },
+    {
+      operation: 'update',
+      args: { where: { id: 'x1' }, data: {}, include: inc },
+    },
+    {
+      operation: 'count',
+      args: { where: { establishmentId: 'e1' }, include: inc },
+    },
+    {
+      operation: 'findMany',
+      args: { where: LIGNE_DE_TENANT, include: incFiltre },
+    },
     { operation: 'delete', args: { where: { id: 'x1' }, include: inc } },
     {
       operation: 'upsert',
-      args: { where: { id: 'x1' }, create: LIGNE_DE_TENANT, update: {}, include: inc },
+      args: {
+        where: { id: 'x1' },
+        create: LIGNE_DE_TENANT,
+        update: {},
+        include: inc,
+      },
     },
   ]
 }
@@ -262,7 +297,9 @@ const cheminsDepuis = function* (
   if (restant === 0) {
     return
   }
-  for (const [champ, relation] of Object.entries(MODEL_RELATIONS[modele] ?? {})) {
+  for (const [champ, relation] of Object.entries(
+    MODEL_RELATIONS[modele] ?? {},
+  )) {
     chemin.push(champ)
     yield chemin
     yield* cheminsDepuis(relation.model, restant - 1, chemin)
@@ -317,7 +354,9 @@ describe(`monotonie du garde-fou contre ${REF} (profondeur ${PROFONDEUR})`, () =
           continue
         }
         if (a === false && b === true) {
-          perdus.push(`${nom} | ${racine}.${operation} | ${chemin.join('>') || '(nu)'}`)
+          perdus.push(
+            `${nom} | ${racine}.${operation} | ${chemin.join('>') || '(nu)'}`,
+          )
           perdusParContexte.set(nom, (perdusParContexte.get(nom) ?? 0) + 1)
         } else {
           gagnes.set(nom, (gagnes.get(nom) ?? 0) + 1)
@@ -343,7 +382,7 @@ describe(`monotonie du garde-fou contre ${REF} (profondeur ${PROFONDEUR})`, () =
         ? `monotonie vs ${REF} — SOURCES IDENTIQUES, controle a vide (rien n'est compare : ` +
           'nommer une autre reference avec MONOTONIE_REF pour une vraie mesure). '
         : '') +
-      `monotonie vs ${REF} — profondeur ${PROFONDEUR}, ${chaines} chaines, ${cas} cas compares, ` +
+        `monotonie vs ${REF} — profondeur ${PROFONDEUR}, ${chaines} chaines, ${cas} cas compares, ` +
         `${perdus.length} refus perdus ${JSON.stringify(Object.fromEntries(perdusParContexte))}, ` +
         `refus gagnes : ${JSON.stringify(Object.fromEntries(gagnes))}`,
     )

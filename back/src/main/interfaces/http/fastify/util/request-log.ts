@@ -13,7 +13,8 @@ export const incomingRequestLog = (
   requestId: string | number,
   method: string,
   url: string,
-): string => `Incoming request (#${requestId}): ${method} ${pathWithoutQuery(url)}`
+): string =>
+  `Incoming request (#${requestId}): ${method} ${pathWithoutQuery(url)}`
 
 export const requestCompletedLog = (
   requestId: string | number,

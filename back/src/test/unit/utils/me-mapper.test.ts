@@ -1,5 +1,5 @@
-import { toMeResponse } from '../../../main/utils/me-mapper'
 import type { UserWithMemberships } from '../../../main/types/infra/orm/repositories/user.repository.interface'
+import { toMeResponse } from '../../../main/utils/me-mapper'
 
 const base = {
   id: 'u1',
@@ -88,7 +88,14 @@ describe('toMeResponse', () => {
           id: 'e1',
           name: 'Etab e1',
           role: 'ADMIN',
-          services: [{ id: 's1', name: 'Svc s1', role: 'COORDINATEUR', soignantId: 'so1' }],
+          services: [
+            {
+              id: 's1',
+              name: 'Svc s1',
+              role: 'COORDINATEUR',
+              soignantId: 'so1',
+            },
+          ],
           origine: 'reelle',
         },
       ],

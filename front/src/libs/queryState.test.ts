@@ -10,22 +10,30 @@ import { queryState } from './queryState.ts'
 // qu'aucun appelant ne puisse les confondre par accident.
 describe('queryState', () => {
   it('est "pending" tant que la requete est en cours, meme si une erreur precedente traine', () => {
-    expect(queryState({ isPending: true, error: new Error('ancienne'), hasData: false })).toBe(
-      'pending',
-    )
+    expect(
+      queryState({
+        isPending: true,
+        error: new Error('ancienne'),
+        hasData: false,
+      }),
+    ).toBe('pending')
   })
 
   it('est "error" quand la requete a echoue et ne repart pas — le cas exact du defaut corrige', () => {
-    expect(queryState({ isPending: false, error: new Error('404'), hasData: false })).toBe(
-      'error',
-    )
+    expect(
+      queryState({ isPending: false, error: new Error('404'), hasData: false }),
+    ).toBe('error')
   })
 
   it('est "empty" sur un succes sans aucune donnee', () => {
-    expect(queryState({ isPending: false, error: null, hasData: false })).toBe('empty')
+    expect(queryState({ isPending: false, error: null, hasData: false })).toBe(
+      'empty',
+    )
   })
 
   it('est "ready" sur un succes avec donnee', () => {
-    expect(queryState({ isPending: false, error: null, hasData: true })).toBe('ready')
+    expect(queryState({ isPending: false, error: null, hasData: true })).toBe(
+      'ready',
+    )
   })
 })

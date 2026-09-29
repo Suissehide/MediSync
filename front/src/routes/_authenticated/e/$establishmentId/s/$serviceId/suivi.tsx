@@ -25,7 +25,9 @@ import {
 import { hexToRGBA } from '@/libs/color.ts'
 import { usePathwayTrackingQuery } from '@/queries/usePathway.ts'
 
-export const Route = createFileRoute('/_authenticated/e/$establishmentId/s/$serviceId/suivi')({
+export const Route = createFileRoute(
+  '/_authenticated/e/$establishmentId/s/$serviceId/suivi',
+)({
   component: SuiviPage,
 })
 

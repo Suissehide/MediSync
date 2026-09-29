@@ -1,66 +1,67 @@
 import { type Cradle, diContainer } from '@fastify/awilix'
 import { type AwilixContainer, asClass, asValue } from 'awilix'
 import type { Resolver } from 'awilix/lib/resolvers'
+
+import { AccessLinkDomain } from '../../../domain/accessLink.domain'
+import { ActivityLogDomain } from '../../../domain/activityLog.domain'
 import { AppointmentDomain } from '../../../domain/appointment.domain'
 import { AuthDomain } from '../../../domain/auth.domain'
+import { DiagnosticEducatifDomain } from '../../../domain/diagnosticEducatif.domain'
+import { DiagnosticEducatifTemplateDomain } from '../../../domain/diagnosticEducatifTemplate.domain'
+import { EnrollmentIssueDomain } from '../../../domain/enrollmentIssue.domain'
+import { EstablishmentDomain } from '../../../domain/establishment.domain'
+import { ForbiddenWeekDomain } from '../../../domain/forbiddenWeek.domain'
+import { LocationDomain } from '../../../domain/location.domain'
+import { MembershipDomain } from '../../../domain/membership.domain'
 import { PathwayDomain } from '../../../domain/pathway.domain'
 import { PathwayTemplateDomain } from '../../../domain/pathwayTemplate.domain'
 import { PatientDomain } from '../../../domain/patient.domain'
 import { PatientAccessLogDomain } from '../../../domain/patientAccessLog.domain'
 import { PatientServiceFileDomain } from '../../../domain/patientServiceFile.domain'
+import { PlanningCycleDomain } from '../../../domain/planningCycle.domain'
+import { ServiceDomain } from '../../../domain/service.domain'
 import { SlotDomain } from '../../../domain/slot.domain'
+import { SlotTemplateDomain } from '../../../domain/slotTemplate.domain'
 import { SoignantDomain } from '../../../domain/soignant.domain'
+import { SuperAdminGrantDomain } from '../../../domain/superAdminGrant.domain'
 import { ThematicDomain } from '../../../domain/thematic.domain'
 import { TodoDomain } from '../../../domain/todo.domain'
 import { UserDomain } from '../../../domain/user.domain'
-import { AccessLinkDomain } from '../../../domain/accessLink.domain'
-import { EstablishmentDomain } from '../../../domain/establishment.domain'
 import { HttpClient } from '../../../infra/http/http-client'
 import { PinoLogger } from '../../../infra/logger/pino/pino-logger'
 import { PostgresOrm } from '../../../infra/orm/postgres-client'
+import { AccessGrantRepository } from '../../../infra/orm/repositories/accessGrant.repository'
+import { AccessLinkRepository } from '../../../infra/orm/repositories/accessLink.repository'
+import { ActivityLogRepository } from '../../../infra/orm/repositories/activityLog.repository'
 import { AppointmentRepository } from '../../../infra/orm/repositories/appointment.repository'
+import { DiagnosticEducatifRepository } from '../../../infra/orm/repositories/diagnosticEducatif.repository'
+import { DiagnosticEducatifTemplateRepository } from '../../../infra/orm/repositories/diagnosticEducatifTemplate.repository'
+import { EnrollmentIssueRepository } from '../../../infra/orm/repositories/enrollmentIssue.repository'
+import { EstablishmentRepository } from '../../../infra/orm/repositories/establishment.repository'
+import { ForbiddenWeekRepository } from '../../../infra/orm/repositories/forbiddenWeek.repository'
+import { LocationRepository } from '../../../infra/orm/repositories/location.repository'
+import { MembershipRepository } from '../../../infra/orm/repositories/membership.repository'
 import { PathwayRepository } from '../../../infra/orm/repositories/pathway.repository'
 import { PathwayTemplateRepository } from '../../../infra/orm/repositories/pathwayTemplate.repository'
 import { PatientRepository } from '../../../infra/orm/repositories/patient.repository'
 import { PatientAccessLogRepository } from '../../../infra/orm/repositories/patientAccessLog.repository'
 import { PatientServiceFileRepository } from '../../../infra/orm/repositories/patientServiceFile.repository'
+import { PlanningCycleRepository } from '../../../infra/orm/repositories/planningCycle.repository'
+import { ServiceRepository } from '../../../infra/orm/repositories/service.repository'
 import { SlotRepository } from '../../../infra/orm/repositories/slot.repository'
+import { SlotTemplateRepository } from '../../../infra/orm/repositories/slotTemplate.repository'
 import { SoignantRepository } from '../../../infra/orm/repositories/soignant.repository'
 import { ThematicRepository } from '../../../infra/orm/repositories/thematic.repository'
 import { TodoRepository } from '../../../infra/orm/repositories/todo.repository'
 import { UserRepository } from '../../../infra/orm/repositories/user.repository'
 import { FastifyHttpServer } from '../../../interfaces/http/fastify/fastify-http-server'
+import { ActivityLogSubscriber } from '../../../services/activity-log.subscriber'
 import type { Config } from '../../../types/application/config'
 import type { IocContainer } from '../../../types/application/ioc'
+import { AppEventBus } from '../../../utils/app-event-bus'
 import { ErrorHandler } from '../../../utils/error-handler'
 import { recordToString, redactSecrets } from '../../../utils/helper'
 import { TenantContext } from '../../../utils/tenant-context'
-import { SlotTemplateDomain } from '../../../domain/slotTemplate.domain'
-import { SlotTemplateRepository } from '../../../infra/orm/repositories/slotTemplate.repository'
-import { DiagnosticEducatifDomain } from '../../../domain/diagnosticEducatif.domain'
-import { DiagnosticEducatifTemplateDomain } from '../../../domain/diagnosticEducatifTemplate.domain'
-import { EnrollmentIssueDomain } from '../../../domain/enrollmentIssue.domain'
-import { DiagnosticEducatifRepository } from '../../../infra/orm/repositories/diagnosticEducatif.repository'
-import { DiagnosticEducatifTemplateRepository } from '../../../infra/orm/repositories/diagnosticEducatifTemplate.repository'
-import { EnrollmentIssueRepository } from '../../../infra/orm/repositories/enrollmentIssue.repository'
-import { AppEventBus } from '../../../utils/app-event-bus'
-import { ActivityLogDomain } from '../../../domain/activityLog.domain'
-import { ActivityLogRepository } from '../../../infra/orm/repositories/activityLog.repository'
-import { ActivityLogSubscriber } from '../../../services/activity-log.subscriber'
-import { ForbiddenWeekDomain } from '../../../domain/forbiddenWeek.domain'
-import { ForbiddenWeekRepository } from '../../../infra/orm/repositories/forbiddenWeek.repository'
-import { PlanningCycleDomain } from '../../../domain/planningCycle.domain'
-import { PlanningCycleRepository } from '../../../infra/orm/repositories/planningCycle.repository'
-import { LocationDomain } from '../../../domain/location.domain'
-import { MembershipDomain } from '../../../domain/membership.domain'
-import { ServiceDomain } from '../../../domain/service.domain'
-import { SuperAdminGrantDomain } from '../../../domain/superAdminGrant.domain'
-import { AccessGrantRepository } from '../../../infra/orm/repositories/accessGrant.repository'
-import { AccessLinkRepository } from '../../../infra/orm/repositories/accessLink.repository'
-import { EstablishmentRepository } from '../../../infra/orm/repositories/establishment.repository'
-import { LocationRepository } from '../../../infra/orm/repositories/location.repository'
-import { MembershipRepository } from '../../../infra/orm/repositories/membership.repository'
-import { ServiceRepository } from '../../../infra/orm/repositories/service.repository'
 
 declare module '@fastify/awilix' {
   interface Cradle extends IocContainer {}
@@ -294,7 +295,10 @@ class AwilixIocContainer {
 
   // PatientServiceFile
   #registerPatientServiceFileDomain(): void {
-    this.register('patientServiceFileDomain', asClass(PatientServiceFileDomain).singleton())
+    this.register(
+      'patientServiceFileDomain',
+      asClass(PatientServiceFileDomain).singleton(),
+    )
   }
   #registerPatientServiceFileRepository(): void {
     this.register(
@@ -337,7 +341,10 @@ class AwilixIocContainer {
 
   // PatientAccessLog
   #registerPatientAccessLogDomain(): void {
-    this.register('patientAccessLogDomain', asClass(PatientAccessLogDomain).singleton())
+    this.register(
+      'patientAccessLogDomain',
+      asClass(PatientAccessLogDomain).singleton(),
+    )
   }
   #registerPatientAccessLogRepository(): void {
     this.register(
@@ -356,25 +363,43 @@ class AwilixIocContainer {
 
   // DiagnosticEducatif
   #registerDiagnosticEducatifDomain(): void {
-    this.register('diagnosticEducatifDomain', asClass(DiagnosticEducatifDomain).singleton())
+    this.register(
+      'diagnosticEducatifDomain',
+      asClass(DiagnosticEducatifDomain).singleton(),
+    )
   }
   #registerDiagnosticEducatifRepository(): void {
-    this.register('diagnosticEducatifRepository', asClass(DiagnosticEducatifRepository).singleton())
+    this.register(
+      'diagnosticEducatifRepository',
+      asClass(DiagnosticEducatifRepository).singleton(),
+    )
   }
   // DiagnosticEducatifTemplate
   #registerDiagnosticEducatifTemplateDomain(): void {
-    this.register('diagnosticEducatifTemplateDomain', asClass(DiagnosticEducatifTemplateDomain).singleton())
+    this.register(
+      'diagnosticEducatifTemplateDomain',
+      asClass(DiagnosticEducatifTemplateDomain).singleton(),
+    )
   }
   #registerDiagnosticEducatifTemplateRepository(): void {
-    this.register('diagnosticEducatifTemplateRepository', asClass(DiagnosticEducatifTemplateRepository).singleton())
+    this.register(
+      'diagnosticEducatifTemplateRepository',
+      asClass(DiagnosticEducatifTemplateRepository).singleton(),
+    )
   }
 
   // EnrollmentIssue
   #registerEnrollmentIssueDomain(): void {
-    this.register('enrollmentIssueDomain', asClass(EnrollmentIssueDomain).singleton())
+    this.register(
+      'enrollmentIssueDomain',
+      asClass(EnrollmentIssueDomain).singleton(),
+    )
   }
   #registerEnrollmentIssueRepository(): void {
-    this.register('enrollmentIssueRepository', asClass(EnrollmentIssueRepository).singleton())
+    this.register(
+      'enrollmentIssueRepository',
+      asClass(EnrollmentIssueRepository).singleton(),
+    )
   }
 
   // ActivityLog
@@ -385,23 +410,38 @@ class AwilixIocContainer {
     this.register('activityLogDomain', asClass(ActivityLogDomain).singleton())
   }
   #registerActivityLogRepository(): void {
-    this.register('activityLogRepository', asClass(ActivityLogRepository).singleton())
+    this.register(
+      'activityLogRepository',
+      asClass(ActivityLogRepository).singleton(),
+    )
   }
   #registerActivityLogSubscriber(): void {
-    this.register('activityLogSubscriber', asClass(ActivityLogSubscriber).singleton())
+    this.register(
+      'activityLogSubscriber',
+      asClass(ActivityLogSubscriber).singleton(),
+    )
   }
 
   // ForbiddenWeek
   #registerForbiddenWeekDomain(): void {
-    this.register('forbiddenWeekDomain', asClass(ForbiddenWeekDomain).singleton())
+    this.register(
+      'forbiddenWeekDomain',
+      asClass(ForbiddenWeekDomain).singleton(),
+    )
   }
   #registerForbiddenWeekRepository(): void {
-    this.register('forbiddenWeekRepository', asClass(ForbiddenWeekRepository).singleton())
+    this.register(
+      'forbiddenWeekRepository',
+      asClass(ForbiddenWeekRepository).singleton(),
+    )
   }
 
   // PlanningCycle
   #registerPlanningCycleDomain(): void {
-    this.register('planningCycleDomain', asClass(PlanningCycleDomain).singleton())
+    this.register(
+      'planningCycleDomain',
+      asClass(PlanningCycleDomain).singleton(),
+    )
   }
 
   #registerPlanningCycleRepository(): void {
@@ -413,10 +453,16 @@ class AwilixIocContainer {
 
   // AccessGrant
   #registerAccessGrantRepository(): void {
-    this.register('accessGrantRepository', asClass(AccessGrantRepository).singleton())
+    this.register(
+      'accessGrantRepository',
+      asClass(AccessGrantRepository).singleton(),
+    )
   }
   #registerSuperAdminGrantDomain(): void {
-    this.register('superAdminGrantDomain', asClass(SuperAdminGrantDomain).singleton())
+    this.register(
+      'superAdminGrantDomain',
+      asClass(SuperAdminGrantDomain).singleton(),
+    )
   }
 
   // AccessLink
@@ -424,15 +470,24 @@ class AwilixIocContainer {
     this.register('accessLinkDomain', asClass(AccessLinkDomain).singleton())
   }
   #registerAccessLinkRepository(): void {
-    this.register('accessLinkRepository', asClass(AccessLinkRepository).singleton())
+    this.register(
+      'accessLinkRepository',
+      asClass(AccessLinkRepository).singleton(),
+    )
   }
 
   // Establishment
   #registerEstablishmentDomain(): void {
-    this.register('establishmentDomain', asClass(EstablishmentDomain).singleton())
+    this.register(
+      'establishmentDomain',
+      asClass(EstablishmentDomain).singleton(),
+    )
   }
   #registerEstablishmentRepository(): void {
-    this.register('establishmentRepository', asClass(EstablishmentRepository).singleton())
+    this.register(
+      'establishmentRepository',
+      asClass(EstablishmentRepository).singleton(),
+    )
   }
 }
 

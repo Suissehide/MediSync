@@ -234,7 +234,11 @@ export function ReactTable<TData extends { id: string }>({
       </div>
 
       <div className="relative rounded-lg border border-border-dark">
-        <div className="w-full overflow-auto rounded-lg" style={{ maxHeight }} ref={tableContainerRef}>
+        <div
+          className="w-full overflow-auto rounded-lg"
+          style={{ maxHeight }}
+          ref={tableContainerRef}
+        >
           <table className="table w-max min-w-full border-separate border-spacing-0">
             <HeaderTable
               table={table}

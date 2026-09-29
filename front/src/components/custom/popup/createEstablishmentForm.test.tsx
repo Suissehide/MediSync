@@ -7,7 +7,6 @@ import { buildAccessLinkUrl } from '@/libs/accessLink.ts'
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import { useToastStore } from '@/store/useToastStore.ts'
 import type { User } from '@/types/auth.ts'
-
 import CreateEstablishmentForm from './createEstablishmentForm.tsx'
 
 // Tâche 14b (hors plan, étape 4a) : « créer un établissement » — le back
@@ -67,7 +66,8 @@ const routeCreate = (
     }),
   }),
 ): Route => ({
-  match: (url, method) => url.endsWith('/super-admin/establishments') && method === 'POST',
+  match: (url, method) =>
+    url.endsWith('/super-admin/establishments') && method === 'POST',
   respond,
 })
 
@@ -91,8 +91,14 @@ const remplirEtCreer = async () => {
   await userEvent.click(
     screen.getByRole('button', { name: /créer un établissement/i }),
   )
-  await userEvent.type(screen.getByLabelText(/nom de l'établissement/i), 'Nouvel hôpital')
-  await userEvent.type(screen.getByLabelText(/e-mail/i), 'admin@nouvel-hopital.fr')
+  await userEvent.type(
+    screen.getByLabelText(/nom de l'établissement/i),
+    'Nouvel hôpital',
+  )
+  await userEvent.type(
+    screen.getByLabelText(/e-mail/i),
+    'admin@nouvel-hopital.fr',
+  )
   await userEvent.click(screen.getByRole('button', { name: /^créer$/i }))
 }
 
@@ -120,7 +126,9 @@ describe('CreateEstablishmentForm', () => {
     expect(
       screen.getByText(/il ne sera plus jamais affiché/i),
     ).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /copier l'identifiant/i })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /copier l'identifiant/i }),
+    ).toBeInTheDocument()
 
     // Fermer ne prouve rien (Radix démonte le CONTENU au ferme, donc
     // `queryByText(LIEN_ATTENDU)` serait déjà absent même sans remise à zéro).
@@ -138,7 +146,9 @@ describe('CreateEstablishmentForm', () => {
   it("le jeton n'atterrit jamais ailleurs qu'a l'ecran (cache valeur, cache cle, url reseau, journal de console)", async () => {
     const consoleSpies = (
       ['log', 'warn', 'error', 'info', 'debug'] as const
-    ).map((methode) => vi.spyOn(console, methode).mockImplementation(() => undefined))
+    ).map((methode) =>
+      vi.spyOn(console, methode).mockImplementation(() => undefined),
+    )
 
     const fetchMock = buildFetchMock([routeCreate()])
     vi.stubGlobal('fetch', fetchMock)
@@ -183,7 +193,7 @@ describe('CreateEstablishmentForm', () => {
     expect(window.history.length).toBeGreaterThanOrEqual(1)
   })
 
-  it("email invalide : refuse cote client avant tout appel reseau", async () => {
+  it('email invalide : refuse cote client avant tout appel reseau', async () => {
     const fetchMock = buildFetchMock([routeCreate()])
     vi.stubGlobal('fetch', fetchMock)
     renderForm()
@@ -191,10 +201,15 @@ describe('CreateEstablishmentForm', () => {
     await userEvent.click(
       screen.getByRole('button', { name: /créer un établissement/i }),
     )
-    await userEvent.type(screen.getByLabelText(/nom de l'établissement/i), 'Nouvel hôpital')
+    await userEvent.type(
+      screen.getByLabelText(/nom de l'établissement/i),
+      'Nouvel hôpital',
+    )
     await userEvent.click(screen.getByRole('button', { name: /^créer$/i }))
 
-    expect(await screen.findByText(/l'e-mail est nécessaire/i)).toBeInTheDocument()
+    expect(
+      await screen.findByText(/l'e-mail est nécessaire/i),
+    ).toBeInTheDocument()
     expect(fetchMock).not.toHaveBeenCalled()
   })
 })

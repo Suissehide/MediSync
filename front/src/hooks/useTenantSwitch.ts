@@ -2,8 +2,6 @@ import type { QueryKey } from '@tanstack/react-query'
 import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 
-import type { TenantContext } from '@/types/auth.ts'
-
 import { switchScopedStorageContext } from '@/store/scoped-storage.ts'
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import { useDashboardFilterStore } from '@/store/useDashboardFilterStore.ts'
@@ -13,6 +11,7 @@ import { usePathwayTemplateEditStore } from '@/store/usePathwayTemplateEditStore
 import { usePlanningStore } from '@/store/usePlanningStore.ts'
 import { useSoignantStore } from '@/store/useSoignantStore.ts'
 import { useTodoStore } from '@/store/useTodoStore.ts'
+import type { TenantContext } from '@/types/auth.ts'
 
 // Le client de requetes est construit ici, et non dans `main.tsx`, parce
 // qu'il en faut un NEUF a chaque changement de contexte : les options doivent
@@ -37,12 +36,15 @@ export const createTenantQueryClient = (): QueryClient =>
 // identifiant n'est vide. L'absence complete de contexte (chaine vide) reste
 // distincte des deux.
 export const tenantKey = (context: TenantContext | null): string =>
-  context === null ? '' : `${context.establishmentId}/${context.serviceId ?? ''}`
+  context === null
+    ? ''
+    : `${context.establishmentId}/${context.serviceId ?? ''}`
 
 // Lu a l'appel, jamais capture au chargement du module : sert aux ecritures
 // differees, qui doivent renoncer si le contexte a change depuis qu'elles ont
 // ete programmees.
-export const currentTenantKey = (): string => tenantKey(useAuthStore.getState().context)
+export const currentTenantKey = (): string =>
+  tenantKey(useAuthStore.getState().context)
 
 // Photo d'un ou plusieurs emplacements du cache, prise AVEC le couple du
 // moment. Une mutation optimiste photographie l'etat avant de le modifier,
@@ -152,7 +154,9 @@ export const rehydratePersistedStores = (): void => {
 // ne suffisait pas — quatre chemins d'ecriture differee le contournaient —
 // mais il reste utile : il garantit que plus rien de l'ancien service n'est
 // lisible, y compris par un observateur qui serait reste abonne a ce client.
-export const resetOnTenantChange = async (previousClient: QueryClient): Promise<void> => {
+export const resetOnTenantChange = async (
+  previousClient: QueryClient,
+): Promise<void> => {
   // La rehydratation AVANT la reinitialisation, et les deux avant toute
   // attente, de facon synchrone.
   //
@@ -211,7 +215,9 @@ type CurrentClient = {
 // `.../admin.tsx`). Les deux moities sont tenues ensemble par
 // `routes/_authenticated/e/$establishmentId/remontage.test.tsx` ; les tests
 // de ce fichier-ci ne verifient que les pieces.
-export const useTenantQueryClient = (initialClient: QueryClient): QueryClient => {
+export const useTenantQueryClient = (
+  initialClient: QueryClient,
+): QueryClient => {
   const context = useAuthStore((state) => state.context)
   const key = tenantKey(context)
 
@@ -228,7 +234,11 @@ export const useTenantQueryClient = (initialClient: QueryClient): QueryClient =>
     setCurrent((previousState) =>
       previousState.key === key
         ? previousState
-        : { key, client: createTenantQueryClient(), previous: previousState.client },
+        : {
+            key,
+            client: createTenantQueryClient(),
+            previous: previousState.client,
+          },
     )
   }
 

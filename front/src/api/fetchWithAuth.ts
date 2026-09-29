@@ -36,7 +36,9 @@ let isCheckingStaleTenant = false
 // rien de la fraicheur du couple etablissement/service. Exemption de CHEMIN plutot que de
 // changer le contrat back (deliberement neutre, voir plus bas) : un vrai tenant perime continue
 // de declencher le rappel sur toute autre route.
-const CHEMINS_404_NORMAUX = [/^\/e\/[^/]+\/s\/[^/]+\/patient\/[^/]+\/service-file$/]
+const CHEMINS_404_NORMAUX = [
+  /^\/e\/[^/]+\/s\/[^/]+\/patient\/[^/]+\/service-file$/,
+]
 
 export const fetchWithAuth = async (
   input: RequestInfo,

@@ -15,7 +15,9 @@ const FieldInfo = ({ field, className }: FieldInfoProps) => {
   }
 
   return (
-    <div className={clsx(`text-xs ${showError ? 'font-medium': ''}`, className)}>
+    <div
+      className={clsx(`text-xs ${showError ? 'font-medium' : ''}`, className)}
+    >
       {showError && (
         <em className="text-destructive">
           {field.state.meta.errors.join(', ')}

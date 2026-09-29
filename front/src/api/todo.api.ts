@@ -5,9 +5,12 @@ import { fetchWithAuth } from './fetchWithAuth.ts'
 
 export const TodoApi = {
   getAll: async (): Promise<Todo[]> => {
-    const response = await fetchWithAuth(`${tenantApiUrl()}/todo?action=getAllTodos`, {
-      method: 'GET',
-    })
+    const response = await fetchWithAuth(
+      `${tenantApiUrl()}/todo?action=getAllTodos`,
+      {
+        method: 'GET',
+      },
+    )
     if (!response.ok) {
       handleHttpError(
         response,
@@ -19,11 +22,14 @@ export const TodoApi = {
   },
 
   create: async (createTodoParams: CreateTodoParams): Promise<Todo> => {
-    const response = await fetchWithAuth(`${tenantApiUrl()}/todo?action=createTodo`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(createTodoParams),
-    })
+    const response = await fetchWithAuth(
+      `${tenantApiUrl()}/todo?action=createTodo`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(createTodoParams),
+      },
+    )
     if (!response.ok) {
       handleHttpError(response, {}, 'Impossible de créer une tâche')
     }

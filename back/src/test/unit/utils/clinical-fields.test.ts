@@ -83,7 +83,10 @@ describe('withoutClinicalFields', () => {
   // roles sans acces clinique.
   it('laisse intactes les instances de classe et les valeurs non-objet', () => {
     class Wrapper {
-      constructor(readonly label: string) {}
+      readonly label: string
+      constructor(label: string) {
+        this.label = label
+      }
       toJSON() {
         return { label: this.label }
       }
@@ -127,9 +130,15 @@ describe('withoutClinicalFields', () => {
     // n'imbrique aucune accolade dans un bloc de modele.
     const modelsDeclaring = (field: string): string[] => {
       const declaring: string[] = []
-      for (const match of withoutComments.matchAll(/model\s+(\w+)\s*\{([^}]*)\}/g)) {
+      for (const match of withoutComments.matchAll(
+        /model\s+(\w+)\s*\{([^}]*)\}/g,
+      )) {
         const [, name, body] = match
-        if (name && body !== undefined && new RegExp(`^\\s*${field}\\s`, 'm').test(body)) {
+        if (
+          name &&
+          body !== undefined &&
+          new RegExp(`^\\s*${field}\\s`, 'm').test(body)
+        ) {
           declaring.push(name)
         }
       }
@@ -147,7 +156,9 @@ describe('withoutClinicalFields', () => {
       // Absence traitee explicitement (pas d'assertion de non-nullite) : un champ ajoute a
       // CLINICAL_FIELDS sans entree correspondante ici doit le dire, pas comparer a `undefined`.
       if (!expected) {
-        throw new Error(`Aucun modele attendu declare pour le champ clinique "${field}"`)
+        throw new Error(
+          `Aucun modele attendu declare pour le champ clinique "${field}"`,
+        )
       }
       expect({ field, models: modelsDeclaring(field) }).toEqual({
         field,

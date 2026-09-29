@@ -38,7 +38,8 @@ import { describe, expect, it } from 'vitest'
 // `remountDeps` dans le long commentaire qui le justifie, et il ne doit pas
 // etre compte deux fois ni, surtout, faire passer un fichier pour conforme
 // parce qu'il en PARLE.
-const estUnCommentaire = (ligne: string) => ligne.startsWith('//') || ligne.startsWith('*')
+const estUnCommentaire = (ligne: string) =>
+  ligne.startsWith('//') || ligne.startsWith('*')
 
 // `remountDeps:` en position de propriete d'objet, pas dans une phrase. Pas
 // ancre en debut de ligne : l'option peut etre ecrite sur la meme ligne que
@@ -86,7 +87,9 @@ const lignesUtiles = (chemin: string): string[] =>
 const relatif = (chemin: string) =>
   relative(racineDesRoutes, chemin).split(sep).join('/')
 
-const { posentLeContexte, declarentRemountDeps } = fichiersDeRoute(racineDesRoutes).reduce(
+const { posentLeContexte, declarentRemountDeps } = fichiersDeRoute(
+  racineDesRoutes,
+).reduce(
   (acc, chemin) => {
     const lignes = lignesUtiles(chemin)
     if (lignes.some((ligne) => POSE_LE_CONTEXTE.test(ligne))) {

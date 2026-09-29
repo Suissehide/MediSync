@@ -55,7 +55,10 @@ const fichiersDeProduction = (dossier: string): string[] =>
     }
     // Les tests lisent le cache pour affirmer sur son contenu : c'est leur
     // travail, et ils ne reposent rien dans l'application.
-    if (/\.test\.tsx?$/.test(entree.name) || entree.name === 'routeTree.gen.ts') {
+    if (
+      /\.test\.tsx?$/.test(entree.name) ||
+      entree.name === 'routeTree.gen.ts'
+    ) {
       return []
     }
     return [chemin]
@@ -67,12 +70,17 @@ describe('lecture directe du cache de requetes', () => {
       const relatif = relative(racine, chemin).split(sep).join('/')
       return readFileSync(chemin, 'utf8')
         .split('\n')
-        .map((ligne, index) => ({ fichier: relatif, ligne: index + 1, texte: ligne.trim() }))
+        .map((ligne, index) => ({
+          fichier: relatif,
+          ligne: index + 1,
+          texte: ligne.trim(),
+        }))
         .filter((emplacement) => LECTURES_DIRECTES.test(emplacement.texte))
     })
 
     const interdites = trouvees.filter(
-      (emplacement) => !AUTORISEES.some((permise) => permise.fichier === emplacement.fichier),
+      (emplacement) =>
+        !AUTORISEES.some((permise) => permise.fichier === emplacement.fichier),
     )
 
     // Le message nomme le remede : passer par le mecanisme, pas relire le
@@ -88,7 +96,9 @@ describe('lecture directe du cache de requetes', () => {
     // sans quoi elle rouvre une porte que plus personne ne surveille.
     for (const permise of AUTORISEES) {
       expect(
-        trouvees.filter((emplacement) => emplacement.fichier === permise.fichier).length,
+        trouvees.filter(
+          (emplacement) => emplacement.fichier === permise.fichier,
+        ).length,
         `Nombre d appels attendu dans ${permise.fichier} (${permise.raison}).`,
       ).toBe(permise.appels)
     }

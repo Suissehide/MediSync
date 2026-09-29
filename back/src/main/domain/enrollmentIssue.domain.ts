@@ -1,7 +1,7 @@
 import type { IocContainer } from '../types/application/ioc'
 import type {
-  EnrollmentIssueEntityDomain,
   EnrollmentIssueDomainInterface,
+  EnrollmentIssueEntityDomain,
 } from '../types/domain/enrollmentIssue.domain.interface'
 import type { EnrollmentIssueRepositoryInterface } from '../types/infra/orm/repositories/enrollmentIssue.repository.interface'
 

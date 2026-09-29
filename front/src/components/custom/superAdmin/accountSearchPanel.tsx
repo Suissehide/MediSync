@@ -57,10 +57,7 @@ export const AccountSearchPanel = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      <form
-        onSubmit={handleSearch}
-        className="flex items-end gap-2 max-w-lg"
-      >
+      <form onSubmit={handleSearch} className="flex items-end gap-2 max-w-lg">
         <div className="flex flex-col gap-1 flex-1">
           <Label htmlFor="super-admin-account-search">Adresse e-mail</Label>
           <Input
@@ -81,8 +78,9 @@ export const AccountSearchPanel = () => {
         <Card className="max-w-lg flex flex-col gap-3">
           <div>
             <div className="font-semibold text-text-dark">
-              {[account.firstName, account.lastName].filter(Boolean).join(' ') ||
-                account.email}
+              {[account.firstName, account.lastName]
+                .filter(Boolean)
+                .join(' ') || account.email}
             </div>
             <div className="text-sm text-text-light">{account.email}</div>
             <CopyableId value={account.id} />
@@ -113,7 +111,8 @@ export const AccountSearchPanel = () => {
                   >
                     <span>{membership.establishmentName}</span>
                     <span className="text-text-light">
-                      {ESTABLISHMENT_ROLE_LABEL[membership.role] ?? membership.role}
+                      {ESTABLISHMENT_ROLE_LABEL[membership.role] ??
+                        membership.role}
                       {' · depuis le '}
                       {dayjs.utc(membership.createdAt).format('DD/MM/YYYY')}
                     </span>
@@ -134,7 +133,11 @@ export const AccountSearchPanel = () => {
 
           {/* Tour de correction 1, Mineur : un mot de passe à usage unique
           sur le compte D'AUTRUI ne part jamais sur un simple clic. */}
-          <Popup modal open={confirmingReissue} onOpenChange={setConfirmingReissue}>
+          <Popup
+            modal
+            open={confirmingReissue}
+            onOpenChange={setConfirmingReissue}
+          >
             <PopupContent>
               <PopupHeader>
                 <PopupTitle className="font-bold text-xl">
@@ -148,7 +151,10 @@ export const AccountSearchPanel = () => {
                 </p>
               </PopupBody>
               <PopupFooter>
-                <Button variant="outline" onClick={() => setConfirmingReissue(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setConfirmingReissue(false)}
+                >
                   <X className="w-4 h-4" />
                   Annuler
                 </Button>
@@ -170,10 +176,12 @@ export const AccountSearchPanel = () => {
           {reissue.data && (
             <div className="bg-input p-3 rounded-lg flex flex-col gap-1">
               <p className="text-xs text-text-light">
-                Lien à usage unique — transmettez-le en main propre, il ne
-                sera plus jamais affiché.
+                Lien à usage unique — transmettez-le en main propre, il ne sera
+                plus jamais affiché.
               </p>
-              <CopyableId value={buildAccessLinkUrl(reissue.data.accessLink.token)} />
+              <CopyableId
+                value={buildAccessLinkUrl(reissue.data.accessLink.token)}
+              />
             </div>
           )}
         </Card>

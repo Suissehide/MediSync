@@ -1,6 +1,5 @@
-import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-
 import { config as loadDotenv } from 'dotenv'
 import { Client } from 'pg'
 
@@ -31,7 +30,9 @@ const resolveConnection = (): PgConn => {
   }
   const raw = process.env.DATABASE_URL
   if (!raw) {
-    throw new Error('Test de migration : DATABASE_URL absent une fois back/.env.test(.local) charges.')
+    throw new Error(
+      'Test de migration : DATABASE_URL absent une fois back/.env.test(.local) charges.',
+    )
   }
   const url = new URL(raw)
   return {
@@ -42,7 +43,8 @@ const resolveConnection = (): PgConn => {
   }
 }
 
-const clientFor = (conn: PgConn, database: string) => new Client({ ...conn, database })
+const clientFor = (conn: PgConn, database: string) =>
+  new Client({ ...conn, database })
 
 const migrationDirs = () =>
   readdirSync(MIGRATIONS_DIR, { withFileTypes: true })
@@ -54,13 +56,22 @@ const priorMigrationFiles = (): string[] => {
   const dirs = migrationDirs()
   const index = dirs.indexOf(TARGET_MIGRATION)
   if (index === -1) {
-    throw new Error(`Migration cible "${TARGET_MIGRATION}" introuvable : son nom a change, mettre ce test a jour.`)
+    throw new Error(
+      `Migration cible "${TARGET_MIGRATION}" introuvable : son nom a change, mettre ce test a jour.`,
+    )
   }
-  return dirs.slice(0, index).map((d) => join(MIGRATIONS_DIR, d, 'migration.sql'))
+  return dirs
+    .slice(0, index)
+    .map((d) => join(MIGRATIONS_DIR, d, 'migration.sql'))
 }
 
 const applyTarget = (c: Client) =>
-  c.query(readFileSync(join(MIGRATIONS_DIR, TARGET_MIGRATION, 'migration.sql'), 'utf8'))
+  c.query(
+    readFileSync(
+      join(MIGRATIONS_DIR, TARGET_MIGRATION, 'migration.sql'),
+      'utf8',
+    ),
+  )
 
 describe('migration soignants_salles_par_service', () => {
   const conn = resolveConnection()
@@ -129,7 +140,9 @@ describe('migration soignants_salles_par_service', () => {
       await applyTarget(c)
 
       const soignants = (
-        await c.query(`SELECT id, "serviceId", name FROM "Soignant" WHERE "establishmentId" = 'E' ORDER BY "serviceId"`)
+        await c.query(
+          `SELECT id, "serviceId", name FROM "Soignant" WHERE "establishmentId" = 'E' ORDER BY "serviceId"`,
+        )
       ).rows
       expect(soignants.map((s) => [s.serviceId, s.name])).toEqual([
         ['A', 'Dieteticienne'],
@@ -141,21 +154,67 @@ describe('migration soignants_salles_par_service', () => {
       expect(copieB).not.toBe('S')
       expect(copieB).toMatch(/^c[0-9a-f]{32}$/)
 
-      const salles = (await c.query(`SELECT id, "serviceId" FROM "Location" ORDER BY "serviceId"`)).rows
+      const salles = (
+        await c.query(
+          `SELECT id, "serviceId" FROM "Location" ORDER BY "serviceId"`,
+        )
+      ).rows
       expect(salles.map((l) => l.serviceId)).toEqual(['A', 'B'])
       expect(salles[0].id).toBe('L')
       const salleB = salles[1].id as string
 
       const un = async (sql: string) => (await c.query(sql)).rows[0]
-      expect((await un(`SELECT "soignantId" FROM "SlotTemplateSoignant" WHERE "slotTemplateId" = 'TA'`)).soignantId).toBe('S')
-      expect((await un(`SELECT "soignantId" FROM "SlotTemplateSoignant" WHERE "slotTemplateId" = 'TB'`)).soignantId).toBe(copieB)
-      expect((await un(`SELECT "soignantId" FROM "SoignantThematic" WHERE "thematicId" = 'HB'`)).soignantId).toBe(copieB)
-      expect((await un(`SELECT "soignantID" FROM "Todo" WHERE id = 'TODO_B'`)).soignantID).toBe(copieB)
-      expect((await un(`SELECT "soignantID" FROM "Todo" WHERE id = 'TODO_ETRANGER'`)).soignantID).toBeNull()
-      expect((await un(`SELECT "locationID" FROM "SlotTemplate" WHERE id = 'TA'`)).locationID).toBe('L')
-      expect((await un(`SELECT "locationID" FROM "SlotTemplate" WHERE id = 'TB'`)).locationID).toBe(salleB)
-      expect((await un(`SELECT "soignantId" FROM "ServiceMembership" WHERE id = 'MA'`)).soignantId).toBe('S')
-      expect((await un(`SELECT "soignantId" FROM "ServiceMembership" WHERE id = 'MB'`)).soignantId).toBe(copieB)
+      expect(
+        (
+          await un(
+            `SELECT "soignantId" FROM "SlotTemplateSoignant" WHERE "slotTemplateId" = 'TA'`,
+          )
+        ).soignantId,
+      ).toBe('S')
+      expect(
+        (
+          await un(
+            `SELECT "soignantId" FROM "SlotTemplateSoignant" WHERE "slotTemplateId" = 'TB'`,
+          )
+        ).soignantId,
+      ).toBe(copieB)
+      expect(
+        (
+          await un(
+            `SELECT "soignantId" FROM "SoignantThematic" WHERE "thematicId" = 'HB'`,
+          )
+        ).soignantId,
+      ).toBe(copieB)
+      expect(
+        (await un(`SELECT "soignantID" FROM "Todo" WHERE id = 'TODO_B'`))
+          .soignantID,
+      ).toBe(copieB)
+      expect(
+        (await un(`SELECT "soignantID" FROM "Todo" WHERE id = 'TODO_ETRANGER'`))
+          .soignantID,
+      ).toBeNull()
+      expect(
+        (await un(`SELECT "locationID" FROM "SlotTemplate" WHERE id = 'TA'`))
+          .locationID,
+      ).toBe('L')
+      expect(
+        (await un(`SELECT "locationID" FROM "SlotTemplate" WHERE id = 'TB'`))
+          .locationID,
+      ).toBe(salleB)
+      expect(
+        (
+          await un(
+            `SELECT "soignantId" FROM "ServiceMembership" WHERE id = 'MA'`,
+          )
+        ).soignantId,
+      ).toBe('S')
+      expect(
+        (
+          await un(
+            `SELECT "soignantId" FROM "ServiceMembership" WHERE id = 'MB'`,
+          )
+        ).soignantId,
+      ).toBe(copieB)
 
       const colonne = await c.query(
         `SELECT 1 FROM information_schema.columns WHERE table_name = 'EstablishmentMembership' AND column_name = 'soignantId'`,
@@ -163,9 +222,13 @@ describe('migration soignants_salles_par_service', () => {
       expect(colonne.rowCount).toBe(0)
 
       // L'autre etablissement : son soignant rejoint son unique service, sans copie.
-      expect((await c.query(`SELECT "serviceId" FROM "Soignant" WHERE "establishmentId" = 'F'`)).rows).toEqual([
-        { serviceId: 'X' },
-      ])
+      expect(
+        (
+          await c.query(
+            `SELECT "serviceId" FROM "Soignant" WHERE "establishmentId" = 'F'`,
+          )
+        ).rows,
+      ).toEqual([{ serviceId: 'X' }])
     } finally {
       await c.end()
     }
@@ -185,7 +248,9 @@ describe('migration soignants_salles_par_service', () => {
         `SELECT 1 FROM information_schema.columns WHERE table_name = 'EstablishmentMembership' AND column_name = 'soignantId'`,
       )
       expect(colonne.rowCount).toBe(1)
-      expect((await c.query(`SELECT count(*)::int AS n FROM "Soignant"`)).rows[0].n).toBe(1)
+      expect(
+        (await c.query(`SELECT count(*)::int AS n FROM "Soignant"`)).rows[0].n,
+      ).toBe(1)
     } finally {
       await c.end()
     }

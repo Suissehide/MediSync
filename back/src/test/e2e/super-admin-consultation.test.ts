@@ -27,11 +27,20 @@
 // sur le corps ENTIER de la réponse, jamais sur une valeur ou une ligne isolée.
 import { buildTestApp, type TestApp } from './setup/app'
 import { testDb, truncateAll } from './setup/db'
-import { createEstablishment, createService, createUser, signIn } from './setup/fixtures'
+import {
+  createEstablishment,
+  createService,
+  createUser,
+  signIn,
+} from './setup/fixtures'
 
 type ListRow = { id: string; [key: string]: unknown }
 
-const createPatient = (establishmentId: string, firstName: string, lastName: string) =>
+const createPatient = (
+  establishmentId: string,
+  firstName: string,
+  lastName: string,
+) =>
   testDb.patient.create({
     data: { establishmentId, firstName, lastName, createDate: new Date() },
   })
@@ -69,7 +78,12 @@ const setName = (id: string, firstName: string, lastName: string) =>
 
 const createActivityLogEntry = (
   establishmentId: string,
-  params: { action: string; entityID: string; userID?: string; createdAt?: Date },
+  params: {
+    action: string
+    entityID: string
+    userID?: string
+    createdAt?: Date
+  },
 ) =>
   testDb.activityLog.create({
     data: {
@@ -85,7 +99,8 @@ const createActivityLogEntry = (
     },
   })
 
-const findRow = (body: ListRow[], id: string) => body.find((row) => row.id === id)
+const findRow = (body: ListRow[], id: string) =>
+  body.find((row) => row.id === id)
 
 describe('consultation super-admin : liste des etablissements et recherche d un compte', () => {
   let testApp: TestApp
@@ -94,16 +109,28 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
   beforeAll(async () => {
     await truncateAll()
     testApp = await buildTestApp()
-    await createUser({ email: 'super-consultation@medisync.fr', isSuperAdmin: true })
-    superAdminCookies = await signIn(testApp.app, 'super-consultation@medisync.fr')
+    await createUser({
+      email: 'super-consultation@medisync.fr',
+      isSuperAdmin: true,
+    })
+    superAdminCookies = await signIn(
+      testApp.app,
+      'super-consultation@medisync.fr',
+    )
 
     // Établissement de CONTRÔLE (leçon n°2 ci-dessus) : ses patients ne doivent JAMAIS apparaître
     // dans le compteur d'un autre établissement. Sa seule raison d'être est de garantir que le
     // total GLOBAL de patients diffère TOUJOURS du total LOCAL d'un établissement sous test — une
     // fixture où les deux coïncident ne prouve aucun filtre.
-    const controlEstablishment = await createEstablishment('Etablissement Controle Comptage')
+    const controlEstablishment = await createEstablishment(
+      'Etablissement Controle Comptage',
+    )
     for (let i = 0; i < 5; i += 1) {
-      await createPatient(controlEstablishment.id, `PrenomControleGlobal${i}`, `NomControleGlobal${i}`)
+      await createPatient(
+        controlEstablishment.id,
+        `PrenomControleGlobal${i}`,
+        `NomControleGlobal${i}`,
+      )
     }
   })
 
@@ -136,14 +163,17 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
   // Step 1 (task-7-brief.md) : le contenu exact de la liste, et ses compteurs.
   describe('GET /super-admin/establishments', () => {
     it(
-      "affiche les cles EXACTES et les bons compteurs — serviceCount/accountCount ne comptent " +
+      'affiche les cles EXACTES et les bons compteurs — serviceCount/accountCount ne comptent ' +
         "QUE l'utilisable (tour de correction 1), firstAdmin est le premier ENCORE actif avec " +
-        "son nom (tour de correction 2), et aucune identite de patient dans le corps brut",
+        'son nom (tour de correction 2), et aucune identite de patient dans le corps brut',
       async () => {
         const est = await createEstablishment('Etablissement Alpha Liste')
         await createService(est.id, 'Service Alpha 1')
         await createService(est.id, 'Service Alpha 2')
-        const serviceDesactive = await createService(est.id, 'Service Alpha Desactive')
+        const serviceDesactive = await createService(
+          est.id,
+          'Service Alpha Desactive',
+        )
         await deactivateService(serviceDesactive.id)
 
         // Premier administrateur, chronologiquement — mais desactive depuis.
@@ -166,8 +196,16 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
           memberships: [{ establishmentId: est.id, role: 'MEMBER' }],
         })
 
-        await createPatient(est.id, 'PrenomSecretPatientAlphaUn', 'NomSecretPatientAlphaUn')
-        await createPatient(est.id, 'PrenomSecretPatientAlphaDeux', 'NomSecretPatientAlphaDeux')
+        await createPatient(
+          est.id,
+          'PrenomSecretPatientAlphaUn',
+          'NomSecretPatientAlphaUn',
+        )
+        await createPatient(
+          est.id,
+          'PrenomSecretPatientAlphaDeux',
+          'NomSecretPatientAlphaDeux',
+        )
 
         // Leçon n°2 : le total global (établissement de contrôle + ceux des tests précédents +
         // les 2 d'ici) est TOUJOURS strictement supérieur au total local (2) — un `patientCount`
@@ -274,7 +312,9 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
       const row = findRow(res.json(), est.id)
       // Avec le departage (userId croissant), c'est le plus PETIT identifiant qui gagne — jamais
       // celui insere en premier.
-      expect((row?.firstAdmin as { id: string } | null)?.id).toBe(smallerAdmin.id)
+      expect((row?.firstAdmin as { id: string } | null)?.id).toBe(
+        smallerAdmin.id,
+      )
     })
 
     // Tour de correction 1, Important n°3 : la regression precise que la revue a demontree —
@@ -282,7 +322,7 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
     // des deux. Seule une vraie ligne de journal, DANS un etablissement, fait bouger CELUI-LA.
     it(
       "lastActivityAt vient du journal d'activite de CET etablissement — une connexion, meme " +
-        "partagee entre deux etablissements, ne le fait bouger dans AUCUN des deux",
+        'partagee entre deux etablissements, ne le fait bouger dans AUCUN des deux',
       async () => {
         const estE = await createEstablishment('Etablissement Epsilon Activite')
         const estF = await createEstablishment('Etablissement Zeta Activite')
@@ -316,7 +356,9 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
         const rowE = findRow(afterActivity.json(), estE.id)
         const rowF = findRow(afterActivity.json(), estF.id)
         expect(rowE?.lastActivityAt).not.toBeNull()
-        expect(new Date(rowE?.lastActivityAt as string).getTime()).toBe(activityDate.getTime())
+        expect(new Date(rowE?.lastActivityAt as string).getTime()).toBe(
+          activityDate.getTime(),
+        )
         // L'autre etablissement, jamais touche par l'activite, reste `null`.
         expect(rowF?.lastActivityAt).toBeNull()
       },
@@ -325,14 +367,17 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
 
   describe('GET /super-admin/establishments/:id', () => {
     it(
-      "rend les cles EXACTES du detail entier — etablissement, services, membres, journal — " +
-        "avec un etablissement qui A des patients (dont un dossier CLINIQUE rempli), des " +
-        "services (actifs et desactives) et des lignes de journal, et ni identite ni contenu " +
-        "de patient nulle part dans le corps brut",
+      'rend les cles EXACTES du detail entier — etablissement, services, membres, journal — ' +
+        'avec un etablissement qui A des patients (dont un dossier CLINIQUE rempli), des ' +
+        'services (actifs et desactives) et des lignes de journal, et ni identite ni contenu ' +
+        'de patient nulle part dans le corps brut',
       async () => {
         const est = await createEstablishment('Etablissement Detail Complet')
         const serviceActif = await createService(est.id, 'Service Detail Actif')
-        const serviceInactif = await createService(est.id, 'Service Detail Inactif')
+        const serviceInactif = await createService(
+          est.id,
+          'Service Detail Inactif',
+        )
         await deactivateService(serviceInactif.id)
 
         const admin = await createUser({
@@ -352,7 +397,11 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
           'PrenomSecretDetailUn',
           'NomSecretDetailUn',
         )
-        await createPatient(est.id, 'PrenomSecretDetailDeux', 'NomSecretDetailDeux')
+        await createPatient(
+          est.id,
+          'PrenomSecretDetailDeux',
+          'NomSecretDetailDeux',
+        )
 
         // Leçon n°3 : un dossier clinique REMPLI, dont le contenu (pas seulement l'identité du
         // patient) doit être couvert par la vérification de sous-chaîne ci-dessous.
@@ -412,11 +461,15 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
               name: 'Service Detail Actif',
               deactivatedAt: null,
             }),
-            expect.objectContaining({ id: serviceInactif.id, name: 'Service Detail Inactif' }),
+            expect.objectContaining({
+              id: serviceInactif.id,
+              name: 'Service Detail Inactif',
+            }),
           ]),
         )
         expect(
-          body.services.find((s: { id: string }) => s.id === serviceInactif.id).deactivatedAt,
+          body.services.find((s: { id: string }) => s.id === serviceInactif.id)
+            .deactivatedAt,
         ).not.toBeNull()
 
         expect(body.members).toHaveLength(2)
@@ -451,7 +504,8 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
           ]),
         )
         expect(
-          body.members.find((m: { id: string }) => m.id === membre.id).deactivatedAt,
+          body.members.find((m: { id: string }) => m.id === membre.id)
+            .deactivatedAt,
         ).not.toBeNull()
 
         // serviceCount/accountCount ne comptent que l'utilisable — meme regle que la liste.
@@ -478,7 +532,10 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
         }
         expect(body.activityLog).toEqual(
           expect.arrayContaining([
-            expect.objectContaining({ action: 'patient.updated', entityID: 'entite-journal-un' }),
+            expect.objectContaining({
+              action: 'patient.updated',
+              entityID: 'entite-journal-un',
+            }),
             expect.objectContaining({
               action: 'patient.created',
               entityID: 'entite-journal-deux',
@@ -511,12 +568,16 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
   // et dernier accès. Aucune donnée de patient.
   describe('GET /super-admin/users?email=', () => {
     it(
-      "rend les cles EXACTES du compte (avec son nom, tour de correction 2) et de chaque " +
+      'rend les cles EXACTES du compte (avec son nom, tour de correction 2) et de chaque ' +
         "rattachement, avec le role et le nom de l'etablissement, et aucune identite de " +
-        "patient dans le corps brut",
+        'patient dans le corps brut',
       async () => {
-        const estGamma = await createEstablishment('Etablissement Gamma Recherche')
-        const estDelta = await createEstablishment('Etablissement Delta Recherche')
+        const estGamma = await createEstablishment(
+          'Etablissement Gamma Recherche',
+        )
+        const estDelta = await createEstablishment(
+          'Etablissement Delta Recherche',
+        )
 
         const account = await createUser({
           email: 'compte-cherche@recherche.fr',
@@ -526,10 +587,18 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
         // Second rattachement, ajouté après coup — un compte peut appartenir à plusieurs
         // établissements.
         await testDb.establishmentMembership.create({
-          data: { userId: account.id, establishmentId: estDelta.id, role: 'MEMBER' },
+          data: {
+            userId: account.id,
+            establishmentId: estDelta.id,
+            role: 'MEMBER',
+          },
         })
 
-        await createPatient(estGamma.id, 'PrenomSecretRechercheUn', 'NomSecretRechercheUn')
+        await createPatient(
+          estGamma.id,
+          'PrenomSecretRechercheUn',
+          'NomSecretRechercheUn',
+        )
 
         const res = await searchAccount('compte-cherche@recherche.fr')
         expect(res.statusCode).toBe(200)
@@ -582,7 +651,9 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
     )
 
     it('montre la desactivation et le dernier acces du compte cherche', async () => {
-      const account = await createUser({ email: 'compte-desactive-recherche@recherche.fr' })
+      const account = await createUser({
+        email: 'compte-desactive-recherche@recherche.fr',
+      })
       await signIn(testApp.app, 'compte-desactive-recherche@recherche.fr')
       await deactivateUser(account.id)
 
@@ -616,41 +687,60 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
   describe('User.lastLoginAt est alimente a la connexion (auth.domain.ts#signIn)', () => {
     it('est null avant toute connexion, puis pose apres une connexion reussie', async () => {
       const user = await createUser({ email: 'connexion-lastlogin@test.fr' })
-      const before = await testDb.user.findUniqueOrThrow({ where: { id: user.id } })
+      const before = await testDb.user.findUniqueOrThrow({
+        where: { id: user.id },
+      })
       expect(before.lastLoginAt).toBeNull()
 
       await signIn(testApp.app, 'connexion-lastlogin@test.fr')
 
-      const after = await testDb.user.findUniqueOrThrow({ where: { id: user.id } })
+      const after = await testDb.user.findUniqueOrThrow({
+        where: { id: user.id },
+      })
       expect(after.lastLoginAt).not.toBeNull()
       expect(after.lastLoginAt?.getTime()).toBeGreaterThan(Date.now() - 5000)
     })
 
     it('se met a jour a CHAQUE connexion reussie, pas seulement la premiere', async () => {
-      const user = await createUser({ email: 'connexion-lastlogin-deux@test.fr' })
+      const user = await createUser({
+        email: 'connexion-lastlogin-deux@test.fr',
+      })
       await signIn(testApp.app, 'connexion-lastlogin-deux@test.fr')
-      const first = await testDb.user.findUniqueOrThrow({ where: { id: user.id } })
+      const first = await testDb.user.findUniqueOrThrow({
+        where: { id: user.id },
+      })
 
       await new Promise((resolve) => setTimeout(resolve, 10))
       await signIn(testApp.app, 'connexion-lastlogin-deux@test.fr')
-      const second = await testDb.user.findUniqueOrThrow({ where: { id: user.id } })
+      const second = await testDb.user.findUniqueOrThrow({
+        where: { id: user.id },
+      })
 
       expect(first.lastLoginAt).not.toBeNull()
       expect(second.lastLoginAt).not.toBeNull()
-      expect(second.lastLoginAt?.getTime()).toBeGreaterThan(first.lastLoginAt?.getTime() ?? 0)
+      expect(second.lastLoginAt?.getTime()).toBeGreaterThan(
+        first.lastLoginAt?.getTime() ?? 0,
+      )
     })
 
     it("n'est PAS pose par une tentative de connexion en echec (mot de passe errone)", async () => {
-      const user = await createUser({ email: 'connexion-echec-lastlogin@test.fr' })
+      const user = await createUser({
+        email: 'connexion-echec-lastlogin@test.fr',
+      })
 
       const res = await testApp.app.inject({
         method: 'POST',
         url: '/auth/sign-in',
-        payload: { email: 'connexion-echec-lastlogin@test.fr', password: 'mauvais-mot-de-passe' },
+        payload: {
+          email: 'connexion-echec-lastlogin@test.fr',
+          password: 'mauvais-mot-de-passe',
+        },
       })
       expect(res.statusCode).toBe(401)
 
-      const after = await testDb.user.findUniqueOrThrow({ where: { id: user.id } })
+      const after = await testDb.user.findUniqueOrThrow({
+        where: { id: user.id },
+      })
       expect(after.lastLoginAt).toBeNull()
     })
   })

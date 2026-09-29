@@ -38,7 +38,9 @@ class ServiceRepository implements ServiceRepositoryInterface {
   async findByID(serviceID: string): Promise<ServiceEntityRepo> {
     try {
       return await this.prisma.service.findUniqueOrThrow({
-        where: { id_establishmentId: { id: serviceID, ...this.establishmentScope } },
+        where: {
+          id_establishmentId: { id: serviceID, ...this.establishmentScope },
+        },
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
@@ -126,7 +128,9 @@ class ServiceRepository implements ServiceRepositoryInterface {
   ): Promise<ServiceEntityRepo> {
     try {
       return await this.prisma.service.update({
-        where: { id_establishmentId: { id: serviceID, ...this.establishmentScope } },
+        where: {
+          id_establishmentId: { id: serviceID, ...this.establishmentScope },
+        },
         data: serviceUpdateParams,
       })
     } catch (err) {

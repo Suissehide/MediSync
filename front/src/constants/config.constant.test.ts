@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { establishmentApiUrl, tenantApiUrl } from '@/constants/config.constant.ts'
+import {
+  establishmentApiUrl,
+  tenantApiUrl,
+} from '@/constants/config.constant.ts'
 import { useAuthStore } from '@/store/useAuthStore.ts'
 
 const withService = {

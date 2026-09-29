@@ -16,9 +16,11 @@ export const activityLogResponseSchema = z.object({
 // operation d'administration sans service). Extension locale, et non ajout au schema de base :
 // celui-ci sert aussi le detail d'etablissement du super-admin, dont les cles sont figees par
 // `super-admin-consultation.test.ts`.
-const establishmentActivityLogResponseSchema = activityLogResponseSchema.extend({
-  serviceId: z.string().nullable(),
-})
+const establishmentActivityLogResponseSchema = activityLogResponseSchema.extend(
+  {
+    serviceId: z.string().nullable(),
+  },
+)
 
 export const activityLogsResponseSchema = z.object({
   data: z.array(establishmentActivityLogResponseSchema),
@@ -45,7 +47,9 @@ export const cleanupActivityLogsQuerySchema = z.object({
   serviceId: z.string().optional(),
 })
 
-export type CleanupActivityLogsQuery = z.infer<typeof cleanupActivityLogsQuerySchema>
+export type CleanupActivityLogsQuery = z.infer<
+  typeof cleanupActivityLogsQuerySchema
+>
 
 export const cleanupResponseSchema = z.object({
   deleted: z.number(),

@@ -3,17 +3,17 @@ import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod/v4'
 
 import {
+  type CreateSoignantBody,
   createSoignantSchema,
+  type DeleteSoignantByIdParams,
   deleteSoignantByIdParamsSchema,
+  type GetSoignantByIdParams,
   getSoignantByIdParamsSchema,
   soignantResponseSchema,
   soignantsResponseSchema,
-  updateSoignantByIdSchema,
-  type CreateSoignantBody,
-  type DeleteSoignantByIdParams,
-  type GetSoignantByIdParams,
   type UpdateSoignantBody,
   type UpdateSoignantParams,
+  updateSoignantByIdSchema,
 } from '../schemas/soignant.schema'
 
 // Lecture, sous le préfixe de service : /e/:establishmentId/s/:serviceId/soignant.

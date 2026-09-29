@@ -33,7 +33,8 @@ const patientServiceFileRouter: FastifyPluginAsync = (fastify) => {
     },
     async (request) => {
       const { patientID } = request.params
-      const serviceFile = await patientServiceFileDomain.findByPatient(patientID)
+      const serviceFile =
+        await patientServiceFileDomain.findByPatient(patientID)
       if (!serviceFile) {
         throw Boom.notFound('Patient service file not found')
       }
@@ -59,7 +60,10 @@ const patientServiceFileRouter: FastifyPluginAsync = (fastify) => {
     },
     (request) => {
       const { patientID } = request.params
-      return patientServiceFileDomain.attachToCurrentService(patientID, request.user.userID)
+      return patientServiceFileDomain.attachToCurrentService(
+        patientID,
+        request.user.userID,
+      )
     },
   )
 
@@ -75,7 +79,10 @@ const patientServiceFileRouter: FastifyPluginAsync = (fastify) => {
   // absente vaudrait "mets a null", et le secretariat effacerait donc ces trois champs a chaque
   // enregistrement — exactement la perte que ce crochet existe pour empecher. Aucun appelant du
   // depot ne compte sur un remplacement complet.
-  fastify.patch<{ Params: PatientServiceFileParams; Body: UpsertPatientServiceFileBody }>(
+  fastify.patch<{
+    Params: PatientServiceFileParams
+    Body: UpsertPatientServiceFileBody
+  }>(
     '/',
     {
       schema: {
@@ -89,7 +96,11 @@ const patientServiceFileRouter: FastifyPluginAsync = (fastify) => {
     },
     (request) => {
       const { patientID } = request.params
-      return patientServiceFileDomain.upsert(patientID, request.body, request.user.userID)
+      return patientServiceFileDomain.upsert(
+        patientID,
+        request.body,
+        request.user.userID,
+      )
     },
   )
 

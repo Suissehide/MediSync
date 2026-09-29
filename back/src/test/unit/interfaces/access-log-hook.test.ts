@@ -34,7 +34,7 @@ const DOSSIER = `${PREFIX}/patient/:patientID`
 // ---------------------------------------------------------------------------
 
 describe('assertPatientReadLogged', () => {
-  it("refuse une route de service GET portant :patientID qui n est ni journalisee ni exemptee", () => {
+  it('refuse une route de service GET portant :patientID qui n est ni journalisee ni exemptee', () => {
     expect(() =>
       assertPatientReadLogged({ method: 'GET', url: `${DOSSIER}/inedite` }),
     ).toThrow(/inedite/)
@@ -196,12 +196,22 @@ describe('plannedPatientExportAccess', () => {
   // simple "cette route n'est pas journalisee" — voir le test du crochet plus bas.
   it('rend null sur la route d export elle-meme quand le compte est inconnu', () => {
     expect(
-      plannedPatientExportAccess(PATIENT_EXPORT_ROUTE_URL, { search: 'dup' }, undefined),
+      plannedPatientExportAccess(
+        PATIENT_EXPORT_ROUTE_URL,
+        { search: 'dup' },
+        undefined,
+      ),
     ).toBeNull()
   })
 
   it('construit une ligne avec le compte et les criteres, filtre absent omis', () => {
-    expect(plannedPatientExportAccess(PATIENT_EXPORT_ROUTE_URL, { search: 'dup' }, 2)).toEqual({
+    expect(
+      plannedPatientExportAccess(
+        PATIENT_EXPORT_ROUTE_URL,
+        { search: 'dup' },
+        2,
+      ),
+    ).toEqual({
       action: 'export',
       exportCount: 2,
       exportFilters: JSON.stringify({ search: 'dup' }),
@@ -213,8 +223,16 @@ describe('plannedPatientExportAccess', () => {
       JSON.stringify({ pathwayTemplateTags: ['asthme'] }),
     )
     expect(
-      buildPatientExportFilters({ search: 'dup', pathwayTemplateTags: ['asthme', 'diabete'] }),
-    ).toBe(JSON.stringify({ search: 'dup', pathwayTemplateTags: ['asthme', 'diabete'] }))
+      buildPatientExportFilters({
+        search: 'dup',
+        pathwayTemplateTags: ['asthme', 'diabete'],
+      }),
+    ).toBe(
+      JSON.stringify({
+        search: 'dup',
+        pathwayTemplateTags: ['asthme', 'diabete'],
+      }),
+    )
   })
 
   // Revue de la tache 4, mineur n°2 : une etiquette unique arrive en CHAINE dans la chaine de
@@ -226,7 +244,10 @@ describe('plannedPatientExportAccess', () => {
       JSON.stringify({ pathwayTemplateTags: ['asthme'] }),
     )
     expect(
-      buildPatientExportFilters({ search: 'dup', pathwayTemplateTags: 'asthme' }),
+      buildPatientExportFilters({
+        search: 'dup',
+        pathwayTemplateTags: 'asthme',
+      }),
     ).toBe(JSON.stringify({ search: 'dup', pathwayTemplateTags: ['asthme'] }))
   })
 
@@ -252,7 +273,9 @@ describe('assertPatientRouteUnderTenant', () => {
       // Le message doit dire OU la remettre, pas seulement qu'elle est refusee.
       expect(() =>
         assertPatientRouteUnderTenant({ method: 'GET', url }),
-      ).toThrow(new RegExp(TENANT_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+      ).toThrow(
+        new RegExp(TENANT_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
+      )
     }
   })
 
@@ -301,7 +324,7 @@ describe('assertPatientRouteUnderTenant', () => {
   // La sonde du relecteur elle-meme, REDEVENUE REFUSEE : meme forme exacte
   // (`/admin/patients/:xxx/...`, hors du prefixe de tenant), mais UNE route non declaree.
   // L'exemption ne s'accorde jamais par ressemblance de forme, seulement par URL exacte.
-  it("refuse toujours une route non declaree de la meme forme (patients/:xxx, plurielle)", () => {
+  it('refuse toujours une route non declaree de la meme forme (patients/:xxx, plurielle)', () => {
     // Une seule URL a de quoi surprendre : `:patientID` matche le filet secondaire de
     // `patientIdParamOf` (nom reconnu, quel que soit le segment) — c'est CETTE forme que la
     // sonde du relecteur employait, et qu'une exemption non exacte aurait laissee passer par
@@ -312,9 +335,9 @@ describe('assertPatientRouteUnderTenant', () => {
     // `patientIdParamOf`, utils/access-log-routes.ts).
     const url = '/e/:establishmentId/admin/patients/:patientID/sonde'
     expect(patientIdParamOf(url)).not.toBeNull()
-    expect(() =>
-      assertPatientRouteUnderTenant({ method: 'GET', url }),
-    ).toThrow(/hors du greffon de tenant/)
+    expect(() => assertPatientRouteUnderTenant({ method: 'GET', url })).toThrow(
+      /hors du greffon de tenant/,
+    )
   })
 })
 
@@ -373,9 +396,9 @@ describe('attache des crochets du journal dans tenantRoutes', () => {
         (h) => h.event === 'onRoute' && h.handler === assertPatientReadLogged,
       ),
     ).toBe(true)
-    expect(
-      hooks.find((h) => h.event === 'onResponse')?.handler,
-    ).toBe(recordPatientAccess)
+    expect(hooks.find((h) => h.event === 'onResponse')?.handler).toBe(
+      recordPatientAccess,
+    )
     expect(hooks.some((h) => h.event === 'onReady')).toBe(true)
   })
 })
@@ -467,7 +490,9 @@ describe('tenantRoutes appelle reellement assertNoDeadPatientAccessEntry en onRe
     await appliquerGreffon(tenantRoutes, fauxFastify(crochets))
     const erreur = await declencherOnReady(crochets, [])
     expect(erreur).not.toBeNull()
-    expect(erreur?.message).toMatch(/Entrees mortes dans le journal des consultations/)
+    expect(erreur?.message).toMatch(
+      /Entrees mortes dans le journal des consultations/,
+    )
     // Les DEUX listes sont bien confrontees, pas seulement la premiere.
     expect(erreur?.message).toMatch(/LOGGED_PATIENT_ROUTES/)
     expect(erreur?.message).toMatch(/EXEMPTED_PATIENT_ROUTES/)
@@ -498,7 +523,9 @@ describe('le greffon racine appelle reellement assertNoDeadAdminPatientExemption
     await appliquerGreffon(routes, fauxFastify(crochets))
     const erreur = await declencherOnReady(crochets, [])
     expect(erreur).not.toBeNull()
-    expect(erreur?.message).toMatch(/Entrees mortes dans EXEMPTED_ADMIN_PATIENT_ROUTES/)
+    expect(erreur?.message).toMatch(
+      /Entrees mortes dans EXEMPTED_ADMIN_PATIENT_ROUTES/,
+    )
     for (const url of declarees) {
       expect(erreur?.message).toContain(url)
     }
@@ -560,7 +587,9 @@ const buildHookHarness = async (
     // journalise sur le logger DE LA REQUETE — celui qui porte le `reqId` — et non sur celui de
     // l'instance, ou la perte d'une ligne d'audit serait irrattachable a la requete.
     request.method = request.method ?? 'GET'
-    request.log = request.log ?? { error: (m: unknown) => erreursRequete.push(String(m)) }
+    request.log = request.log ?? {
+      error: (m: unknown) => erreursRequete.push(String(m)),
+    }
     const pose =
       contexte === undefined ? (request.tenant as Tenant | undefined) : contexte
     if (pose === undefined || pose === 'aucun') {
@@ -629,7 +658,7 @@ describe('recordPatientAccess', () => {
   // LE MEME OBJET que `request.tenant` — `resolveTenant` pose les deux a partir d'une seule
   // valeur. Un tenant aux memes colonnes mais construit ailleurs (donc : la portee d'une autre
   // requete) ne passe pas.
-  it("n ecrit rien quand le contexte ambiant n est pas celui de cette requete", async () => {
+  it('n ecrit rien quand le contexte ambiant n est pas celui de cette requete', async () => {
     const vues: RecordAccessInput[] = []
     const { app, call, erreursRequete } = await buildHookHarness((input) => {
       vues.push(input)
@@ -646,7 +675,11 @@ describe('recordPatientAccess', () => {
       currentUser: { firstName: null, lastName: null },
     }
     // Contexte perdu.
-    await call({ request: requete, reply: { statusCode: 200 }, contexte: 'aucun' })
+    await call({
+      request: requete,
+      reply: { statusCode: 200 },
+      contexte: 'aucun',
+    })
     // Contexte present, mais celui d'une AUTRE requete : memes colonnes, autre objet.
     await call({
       request: requete,
@@ -684,7 +717,7 @@ describe('recordPatientAccess', () => {
     await app.close()
   })
 
-  it("n ecrit rien quand la reponse est une erreur", async () => {
+  it('n ecrit rien quand la reponse est une erreur', async () => {
     const vues: RecordAccessInput[] = []
     const { app, call } = await buildHookHarness((input) => {
       vues.push(input)
@@ -711,7 +744,7 @@ describe('recordPatientAccess', () => {
   // de statut ci-dessus suffirait a rendre ce test vert et il ne mesurerait rien du tenant (voir
   // le rapport de tache : le sabotage prevu par le cahier des charges ne pouvait pas rougir sur
   // le chemin HTTP reel, pour cette raison exacte).
-  it("n ecrit rien, et ne leve pas, quand le tenant n est pas resolu", async () => {
+  it('n ecrit rien, et ne leve pas, quand le tenant n est pas resolu', async () => {
     const vues: RecordAccessInput[] = []
     const { app, call, erreursRequete } = await buildHookHarness((input) => {
       vues.push(input)
@@ -762,7 +795,7 @@ describe('recordPatientAccess', () => {
   // La ligne de conduite du chantier : une ecriture de journal qui echoue ne doit pas empecher
   // de soigner, mais elle ne doit pas non plus disparaitre en silence — et le journal technique
   // ne doit jamais recopier le message brut, qui porte le `data` de l'ecriture ratee.
-  it("n avale pas l echec en silence, et ne recopie jamais le message de l erreur", async () => {
+  it('n avale pas l echec en silence, et ne recopie jamais le message de l erreur', async () => {
     class PrismaClientKnownRequestError extends Error {}
     const secret = 'patientId: ckpatient0000000000000000'
     const { app, call, erreursRequete } = await buildHookHarness(() =>
@@ -795,7 +828,7 @@ describe('recordPatientAccess', () => {
   // L'export (tache 4) : meme crochet, dispositif dedie (voir access-log-routes.ts).
   // ---------------------------------------------------------------------
 
-  it("ecrit une ligne pour l export, sans identifiant de patient, avec le compte et les criteres", async () => {
+  it('ecrit une ligne pour l export, sans identifiant de patient, avec le compte et les criteres', async () => {
     const vues: RecordAccessInput[] = []
     const { app, call } = await buildHookHarness((input) => {
       vues.push(input)
@@ -829,7 +862,7 @@ describe('recordPatientAccess', () => {
   // Bug d'assemblage plutot que cas normal (voir le commentaire de `recordPatientAccess`) : le
   // handler n'a pas pose `patientExportCount` avant de repondre. Rien n'est ecrit, mais rien
   // n'est tu non plus — meme parti pris que le contexte de tenant absent ou etranger.
-  it("n ecrit rien, et le signale, quand l export n a pas de compte connu", async () => {
+  it('n ecrit rien, et le signale, quand l export n a pas de compte connu', async () => {
     const vues: RecordAccessInput[] = []
     const { app, call, erreursRequete } = await buildHookHarness((input) => {
       vues.push(input)

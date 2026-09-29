@@ -30,7 +30,8 @@ class ErrorHandler implements ErrorHandlerInterface {
     // client, elle est vers les journaux applicatifs, qu'aucun `redact` ne filtre. On ne
     // construit donc jamais ce message a partir de l'erreur elle-meme : seule sa classe et
     // l'entite concernee, qui ne peuvent porter aucune valeur soumise.
-    const errorClass = error instanceof Error ? error.constructor.name : typeof error
+    const errorClass =
+      error instanceof Error ? error.constructor.name : typeof error
     let boomError: Boom<unknown> = internal(
       `Something went wrong while handling ${entityName} [${errorClass}]`,
     )

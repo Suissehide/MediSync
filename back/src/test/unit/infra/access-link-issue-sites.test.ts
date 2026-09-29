@@ -1,6 +1,5 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
-
 import ts from 'typescript'
 
 // TACHE 10, TOUR DE CORRECTION 1, ARBITRAGE n°1 : la garde porte sur LE JETON, pas sur la route.
@@ -125,7 +124,9 @@ const appelsDeMethode = (
 
     const visiter = (noeud: ts.Node): void => {
       if (ts.isCallExpression(noeud) && nommeLaMethode(noeud.expression)) {
-        const { line } = source.getLineAndCharacterOfPosition(noeud.getStart(source))
+        const { line } = source.getLineAndCharacterOfPosition(
+          noeud.getStart(source),
+        )
         trouvailles.push({ fichier: relatif, ligne: line + 1 })
       }
       ts.forEachChild(noeud, visiter)
@@ -141,7 +142,8 @@ describe('sites d emission d un lien d acces', () => {
     // Sens 1 : une emission ajoutee ailleurs doit faire rougir. Le tableau (vide s il n y a
     // rien d interdit) s affiche dans le diff Jest : chaque entree porte fichier et ligne.
     const interdits = emissions.filter(
-      (site) => !SITES_DECLARES.some((declare) => declare.fichier === site.fichier),
+      (site) =>
+        !SITES_DECLARES.some((declare) => declare.fichier === site.fichier),
     )
     expect(interdits).toEqual([])
 

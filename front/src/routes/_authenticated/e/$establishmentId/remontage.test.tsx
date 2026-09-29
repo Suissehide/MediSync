@@ -12,11 +12,16 @@ import { act, render, screen, waitFor } from '@testing-library/react'
 import { useEffect } from 'react'
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { establishmentApiUrl, tenantApiUrl } from '@/constants/config.constant.ts'
-import { createTenantQueryClient, useTenantQueryClient } from '@/hooks/useTenantSwitch.ts'
+import {
+  establishmentApiUrl,
+  tenantApiUrl,
+} from '@/constants/config.constant.ts'
+import {
+  createTenantQueryClient,
+  useTenantQueryClient,
+} from '@/hooks/useTenantSwitch.ts'
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { AuthState, User } from '@/types/auth.ts'
-
 import { Route as adminRoute } from './admin.tsx'
 import { Route as serviceRoute } from './s/$serviceId.tsx'
 
@@ -190,13 +195,19 @@ const Application = ({
     <QueryClientProvider client={queryClient}>
       <RouterProvider
         router={router}
-        context={{ queryClient, authState: { user: utilisateur, isAuthenticated } }}
+        context={{
+          queryClient,
+          authState: { user: utilisateur, isAuthenticated },
+        }}
       />
     </QueryClientProvider>
   )
 }
 
-const creerRouteur = (depart: string, initialClient: ReturnType<typeof createTenantQueryClient>) =>
+const creerRouteur = (
+  depart: string,
+  initialClient: ReturnType<typeof createTenantQueryClient>,
+) =>
   createRouter({
     routeTree,
     history: createMemoryHistory({ initialEntries: [depart] }),
@@ -250,7 +261,11 @@ describe('changement de service : l ecran est demonte et interroge le nouveau se
     await attendreAffichage('/e/e1/s/s2')
 
     // Demontage PUIS remontage, et non un simple re-rendu.
-    expect(journal).toEqual(['service:montage', 'service:demontage', 'service:montage'])
+    expect(journal).toEqual([
+      'service:montage',
+      'service:demontage',
+      'service:montage',
+    ])
 
     // Et l'ecran a bien interroge le nouveau service, au lieu de se
     // contenter d'un cache.
@@ -283,7 +298,9 @@ describe('changement de service : l ecran est demonte et interroge le nouveau se
       expect.stringContaining('/e/e1/s/s1'),
       expect.stringContaining('/e/e1/s/s2'),
     ])
-    expect(journal.filter((entree) => entree === 'service:demontage')).toHaveLength(3)
+    expect(
+      journal.filter((entree) => entree === 'service:demontage'),
+    ).toHaveLength(3)
   })
 })
 
@@ -303,7 +320,11 @@ describe('changement d etablissement administre : meme exigence sur le layout d 
 
     await attendreAffichage('/e/e2/admin')
 
-    expect(journal).toEqual(['admin:montage', 'admin:demontage', 'admin:montage'])
+    expect(journal).toEqual([
+      'admin:montage',
+      'admin:demontage',
+      'admin:montage',
+    ])
     expect(requetes).toEqual([
       expect.stringContaining('/e/e1/admin'),
       expect.stringContaining('/e/e2/admin'),

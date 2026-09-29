@@ -1,6 +1,7 @@
 import { loadConfig } from './config'
 import { AwilixIocContainer } from './ioc/awilix/awilix-ioc-container'
 import '../utils/date'
+
 import type { Config } from '../types/application/config'
 import type { IocContainer } from '../types/application/ioc'
 
@@ -28,7 +29,8 @@ const scheduleActivityLogCleanup = (instances: IocContainer): void => {
         // (task-5-re-review-3.md, tour 5), donc une erreur Prisma brute peut arriver ici
         // telle quelle. Seule sa classe, qui ne peut jamais porter une valeur soumise, va
         // au journal.
-        const errorClass = err instanceof Error ? err.constructor.name : typeof err
+        const errorClass =
+          err instanceof Error ? err.constructor.name : typeof err
         logger.error(`ActivityLog cleanup failed [${errorClass}]`)
       })
   }
@@ -75,7 +77,8 @@ const schedulePatientAccessLogCleanup = (instances: IocContainer): void => {
         // Même raison que le `catch` de `scheduleActivityLogCleanup` ci-dessus :
         // `patientAccessLogRepository.deleteOlderThan` n'a lui non plus aucun `catch`
         // propre. Seule la classe de l'erreur va au journal.
-        const errorClass = err instanceof Error ? err.constructor.name : typeof err
+        const errorClass =
+          err instanceof Error ? err.constructor.name : typeof err
         logger.error(`PatientAccessLog cleanup failed [${errorClass}]`)
       })
   }

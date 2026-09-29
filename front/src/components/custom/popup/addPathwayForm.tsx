@@ -152,9 +152,7 @@ function AddPathwayForm({ trigger }: AddPathwayFormProps) {
             </div>
 
             <form.AppField name="motifRequired">
-              {(field) => (
-                <field.Checkbox label="Motif obligatoire" />
-              )}
+              {(field) => <field.Checkbox label="Motif obligatoire" />}
             </form.AppField>
 
             <form.AppField name="firstAppointmentOnly">

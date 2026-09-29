@@ -14,10 +14,9 @@ import utc from 'dayjs/plugin/utc'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { AuthState, User } from '@/types/auth.ts'
-
 import { Route as indexRoute } from './index.tsx'
-import { Route as superAdminLayoutRoute } from './super-admin.tsx'
 import { Route as superAdminIndexRoute } from './super-admin/index.tsx'
+import { Route as superAdminLayoutRoute } from './super-admin.tsx'
 
 // ---------------------------------------------------------------------------
 // Tour de correction 1, Critique n°1 : « l'écran que tout le chantier existe
@@ -118,7 +117,9 @@ beforeEach(() => {
     vi.fn((input: RequestInfo | URL) => {
       const url = input.toString()
       if (url.endsWith('/super-admin/establishments')) {
-        return Promise.resolve(new Response(JSON.stringify([]), { status: 200 }))
+        return Promise.resolve(
+          new Response(JSON.stringify([]), { status: 200 }),
+        )
       }
       throw new Error(`Appel fetch non attendu dans ce test : ${url}`)
     }),
@@ -148,7 +149,7 @@ describe('parcours complet : connexion super-admin sans etablissement -> ecran a
   // un tableau vide, indiscernable d'un « aucun établissement » réel. Ce
   // test remplace la réponse 200 vide du `beforeEach` par une 500, et
   // exige le message d'erreur — jamais la table vide par défaut.
-  it("affiche une erreur distincte quand la liste ne peut pas etre chargee", async () => {
+  it('affiche une erreur distincte quand la liste ne peut pas etre chargee', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(() => Promise.resolve(new Response(null, { status: 500 }))),

@@ -7,7 +7,6 @@ import { buildAccessLinkUrl } from '@/libs/accessLink.ts'
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import { useToastStore } from '@/store/useToastStore.ts'
 import type { User } from '@/types/auth.ts'
-
 import CreateMemberAccountForm from './createMemberAccountForm.tsx'
 
 // Onglet des membres (tâche 13, step 3) : « le lien s'affiche UNE SEULE
@@ -28,9 +27,7 @@ const admin: User = {
   firstName: null,
   lastName: null,
   isSuperAdmin: false,
-  establishments: [
-    { id: 'e1', name: 'CHU', role: 'ADMIN', services: [] },
-  ],
+  establishments: [{ id: 'e1', name: 'CHU', role: 'ADMIN', services: [] }],
 }
 
 // Revue finale de l'etape 4a, Important n°2 : l'administrateur connecte
@@ -53,8 +50,18 @@ const adminMembreDUnSeulService: User = {
 }
 
 const servicesFixture = [
-  { id: 'svcA', name: 'Cardiologie', createdAt: '2026-01-01T00:00:00.000Z', deactivatedAt: null },
-  { id: 'svcB', name: 'Pneumologie', createdAt: '2026-01-01T00:00:00.000Z', deactivatedAt: null },
+  {
+    id: 'svcA',
+    name: 'Cardiologie',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    deactivatedAt: null,
+  },
+  {
+    id: 'svcB',
+    name: 'Pneumologie',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    deactivatedAt: null,
+  },
 ]
 
 type Route = {
@@ -100,7 +107,9 @@ const renderForm = () => {
 }
 
 const remplirEtCreer = async () => {
-  await userEvent.click(screen.getByRole('button', { name: /créer un compte/i }))
+  await userEvent.click(
+    screen.getByRole('button', { name: /créer un compte/i }),
+  )
   await userEvent.type(screen.getByLabelText(/e-mail/i), 'nouveau@chu.fr')
   await userEvent.click(screen.getByRole('button', { name: /^créer$/i }))
 }
@@ -132,7 +141,8 @@ describe('CreateMemberAccountForm', () => {
         routeSoignants,
         routeServices(),
         {
-          match: (url, method) => url.endsWith('/admin/members/account') && method === 'POST',
+          match: (url, method) =>
+            url.endsWith('/admin/members/account') && method === 'POST',
           respond: () => ({
             ok: true,
             status: 201,
@@ -152,7 +162,9 @@ describe('CreateMemberAccountForm', () => {
     expect(
       screen.getByText(/il ne sera plus jamais affiché/i),
     ).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /copier l'identifiant/i })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /copier l'identifiant/i }),
+    ).toBeInTheDocument()
 
     // Fermer la popup : Radix demonte simplement le CONTENU au ferme, donc
     // `queryByText(LIEN_ATTENDU)` serait deja absent ici meme SANS aucune
@@ -167,7 +179,9 @@ describe('CreateMemberAccountForm', () => {
     // la donnee de la mutation (`createMemberAccount.data`) survit tant que
     // rien ne l'a explicitement remise a zero. Sans `reset()`, le jeton
     // reapparaitrait ici.
-    await userEvent.click(screen.getByRole('button', { name: /créer un compte/i }))
+    await userEvent.click(
+      screen.getByRole('button', { name: /créer un compte/i }),
+    )
     expect(screen.queryByText(LIEN_ATTENDU)).not.toBeInTheDocument()
     expect(screen.getByLabelText(/e-mail/i)).toBeInTheDocument()
   })
@@ -175,13 +189,16 @@ describe('CreateMemberAccountForm', () => {
   it("le jeton n'atterrit jamais ailleurs qu'à l'écran (quatre canaux)", async () => {
     const consoleSpies = (
       ['log', 'warn', 'error', 'info', 'debug'] as const
-    ).map((methode) => vi.spyOn(console, methode).mockImplementation(() => undefined))
+    ).map((methode) =>
+      vi.spyOn(console, methode).mockImplementation(() => undefined),
+    )
 
     const fetchMock = buildFetchMock([
       routeSoignants,
       routeServices(),
       {
-        match: (url, method) => url.endsWith('/admin/members/account') && method === 'POST',
+        match: (url, method) =>
+          url.endsWith('/admin/members/account') && method === 'POST',
         respond: () => ({
           ok: true,
           status: 201,
@@ -234,10 +251,15 @@ describe('CreateMemberAccountForm', () => {
   // les deux.
   it("propose TOUS les services de l'etablissement, pas seulement ceux de l'administrateur connecte", async () => {
     useAuthStore.setState({ user: adminMembreDUnSeulService })
-    vi.stubGlobal('fetch', buildFetchMock([routeSoignants, routeServices(servicesFixture)]))
+    vi.stubGlobal(
+      'fetch',
+      buildFetchMock([routeSoignants, routeServices(servicesFixture)]),
+    )
     renderForm()
 
-    await userEvent.click(screen.getByRole('button', { name: /créer un compte/i }))
+    await userEvent.click(
+      screen.getByRole('button', { name: /créer un compte/i }),
+    )
     await userEvent.click(screen.getByLabelText('Service'))
 
     // `getByRole('option', …)` plutôt que `getByText` : le composant `Select`
@@ -247,7 +269,11 @@ describe('CreateMemberAccountForm', () => {
     // (c'est le cas ici, à la différence d'`EditMemberForm`) — `getByText`
     // y trouve donc deux éléments pour un même libellé. `getByRole` exclut
     // les éléments `aria-hidden`, donc uniquement l'option du menu ouvert.
-    expect(await screen.findByRole('option', { name: 'Cardiologie' })).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: 'Pneumologie' })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('option', { name: 'Cardiologie' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('option', { name: 'Pneumologie' }),
+    ).toBeInTheDocument()
   })
 })

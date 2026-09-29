@@ -1,6 +1,5 @@
-import type { FastifyPluginAsync } from 'fastify'
-
 import { fastifyAwilixPlugin } from '@fastify/awilix'
+import type { FastifyPluginAsync } from 'fastify'
 
 const awilixPlugin: FastifyPluginAsync = async (fastify) => {
   await fastify.register(fastifyAwilixPlugin, {

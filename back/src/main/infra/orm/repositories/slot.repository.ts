@@ -1,4 +1,3 @@
-import { flattenSlot, slotTemplateInclude } from '../includes/slot-template.include'
 import type { IocContainer } from '../../../types/application/ioc'
 import type {
   SlotCreateEntityRepo,
@@ -10,6 +9,10 @@ import type {
 } from '../../../types/infra/orm/repositories/slot.repository.interface'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { TenantContextInterface } from '../../../types/utils/tenant-context'
+import {
+  flattenSlot,
+  slotTemplateInclude,
+} from '../includes/slot-template.include'
 import type { PostgresPrismaClient } from '../postgres-client'
 
 // Include partagé : un créneau embarque son modèle de créneau (avec ses
@@ -70,7 +73,9 @@ class SlotRepository implements SlotRepositoryInterface {
   async findByID(slotID: string): Promise<SlotDTORepo> {
     try {
       const row = await this.prisma.slot.findUniqueOrThrow({
-        where: { id_serviceId: { id: slotID, serviceId: this.scope.serviceId } },
+        where: {
+          id_serviceId: { id: slotID, serviceId: this.scope.serviceId },
+        },
         include: slotInclude,
       })
       return flattenSlot(row)
@@ -106,24 +111,38 @@ class SlotRepository implements SlotRepositoryInterface {
         const { slotTemplate: slotTemplateData, ...slotData } = slotUpdateParams
 
         if (slotTemplateData?.id) {
-          const { soignantIDs, id: slotTemplateID, ...templateRest } = slotTemplateData
+          const {
+            soignantIDs,
+            id: slotTemplateID,
+            ...templateRest
+          } = slotTemplateData
           const data = {
             ...templateRest,
             ...(soignantIDs !== undefined && {
               soignantLinks: {
                 deleteMany: {},
-                create: soignantIDs.map((soignantId) => ({ soignantId, ...this.scope })),
+                create: soignantIDs.map((soignantId) => ({
+                  soignantId,
+                  ...this.scope,
+                })),
               },
             }),
           }
           await tx.slotTemplate.update({
-            where: { id_serviceId: { id: slotTemplateID, serviceId: this.scope.serviceId } },
+            where: {
+              id_serviceId: {
+                id: slotTemplateID,
+                serviceId: this.scope.serviceId,
+              },
+            },
             data,
           })
         }
 
         const row = await tx.slot.update({
-          where: { id_serviceId: { id: slotID, serviceId: this.scope.serviceId } },
+          where: {
+            id_serviceId: { id: slotID, serviceId: this.scope.serviceId },
+          },
           data: withoutPathwayID(slotData),
           include: slotInclude,
         })
@@ -141,7 +160,9 @@ class SlotRepository implements SlotRepositoryInterface {
   async delete(slotID: string): Promise<SlotEntityRepo> {
     try {
       return await this.prisma.slot.delete({
-        where: { id_serviceId: { id: slotID, serviceId: this.scope.serviceId } },
+        where: {
+          id_serviceId: { id: slotID, serviceId: this.scope.serviceId },
+        },
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({

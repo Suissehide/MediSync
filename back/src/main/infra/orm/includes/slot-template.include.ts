@@ -62,7 +62,10 @@ export const flattenSlotTemplate = <T extends SlotTemplateRow>({
 
 type SlotRow = Slot & { slotTemplate: SlotTemplateRow }
 
-export const flattenSlot = <T extends SlotRow>({ slotTemplate, ...rest }: T) => ({
+export const flattenSlot = <T extends SlotRow>({
+  slotTemplate,
+  ...rest
+}: T) => ({
   ...rest,
   slotTemplate: flattenSlotTemplate(slotTemplate),
 })

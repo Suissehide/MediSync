@@ -29,8 +29,17 @@ const activityLogRouter: FastifyPluginAsync = (fastify) => {
       config: { permission: 'activity-log:read' },
     },
     (request) => {
-      const { page, pageSize, action, userID, user, from, serviceId } = request.query
-      return activityLogDomain.findMany({ page, pageSize, action, userID, user, from, serviceId })
+      const { page, pageSize, action, userID, user, from, serviceId } =
+        request.query
+      return activityLogDomain.findMany({
+        page,
+        pageSize,
+        action,
+        userID,
+        user,
+        from,
+        serviceId,
+      })
     },
   )
 
@@ -44,7 +53,8 @@ const activityLogRouter: FastifyPluginAsync = (fastify) => {
       // Supprimer des entrées d'audit n'est pas une consultation.
       config: { permission: 'activity-log:write' },
     },
-    (request) => activityLogDomain.cleanup({ serviceId: request.query.serviceId }),
+    (request) =>
+      activityLogDomain.cleanup({ serviceId: request.query.serviceId }),
   )
 
   return Promise.resolve()

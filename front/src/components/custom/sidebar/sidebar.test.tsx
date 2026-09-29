@@ -10,7 +10,6 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 
 import type { AuthState, User } from '@/types/auth.ts'
-
 import Sidebar from './sidebar.tsx'
 
 // ---------------------------------------------------------------------------
@@ -37,9 +36,7 @@ const superAdmin: User = {
 
 const monterSidebar = (user: User) => {
   const rootRoute = createRootRouteWithContext<{ authState: AuthState }>()({
-    component: () => (
-      <Sidebar components={[]} isVisible={true} />
-    ),
+    component: () => <Sidebar components={[]} isVisible={true} />,
   })
   const router = createRouter({
     routeTree: rootRoute,
@@ -60,7 +57,9 @@ describe('menu du compte', () => {
   ])("ne porte plus d'entree Super-administration pour %s", async (_, user) => {
     monterSidebar(user)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Menu du compte' }))
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Menu du compte' }),
+    )
 
     expect(screen.getByText('Réglages')).toBeInTheDocument()
     expect(screen.getByText('Déconnecter')).toBeInTheDocument()

@@ -62,17 +62,25 @@ class AccessGrantRepository implements AccessGrantRepositoryInterface {
       if (grants.length === 0) {
         return []
       }
-      const establishmentIds = [...new Set(grants.map((grant) => grant.establishmentId))]
+      const establishmentIds = [
+        ...new Set(grants.map((grant) => grant.establishmentId)),
+      ]
       // Un établissement désactivé n'a plus lieu d'apparaître, octroi ou pas : même parti pris
       // que partout ailleurs dans le dépôt (« désactivé » est invisible).
       const establishments = await this.prisma.establishment.findMany({
         where: { id: { in: establishmentIds }, deactivatedAt: null },
       })
       const services = await this.prisma.service.findMany({
-        where: { establishmentId: { in: establishmentIds }, deactivatedAt: null },
+        where: {
+          establishmentId: { in: establishmentIds },
+          deactivatedAt: null,
+        },
       })
       const establishmentById = new Map(establishments.map((e) => [e.id, e]))
-      const servicesByEstablishment = new Map<string, { id: string; name: string }[]>()
+      const servicesByEstablishment = new Map<
+        string,
+        { id: string; name: string }[]
+      >()
       for (const service of services) {
         const liste = servicesByEstablishment.get(service.establishmentId) ?? []
         liste.push({ id: service.id, name: service.name })
@@ -116,10 +124,19 @@ class AccessGrantRepository implements AccessGrantRepositoryInterface {
   // voir le commentaire sur l'interface pour la définition exacte de « vivant » ici (plus étroit
   // que `revokedAt: null` seul). `count` est déclarée pour `SuperAdminAccessGrant` sous le
   // contexte superadmin (`LECTURES_GLOBALES_SANS_MUTATION`, tenant-guard.ts).
-  hasLiveGrant(userId: string, establishmentId: string, now: Date): Promise<boolean> {
+  hasLiveGrant(
+    userId: string,
+    establishmentId: string,
+    now: Date,
+  ): Promise<boolean> {
     return this.tenantContext.runAsSuperAdmin(async () => {
       const count = await this.prisma.superAdminAccessGrant.count({
-        where: { userId, establishmentId, revokedAt: null, expiresAt: { gt: now } },
+        where: {
+          userId,
+          establishmentId,
+          revokedAt: null,
+          expiresAt: { gt: now },
+        },
       })
       return count > 0
     })
@@ -131,7 +148,9 @@ class AccessGrantRepository implements AccessGrantRepositoryInterface {
   // restriction au titulaire, et préservation de la PREMIÈRE date de révocation.
   async revoke(id: string, callerId: string, at: Date): Promise<void> {
     await this.tenantContext.runAsSuperAdmin(async () => {
-      const grant = await this.prisma.superAdminAccessGrant.findUnique({ where: { id } })
+      const grant = await this.prisma.superAdminAccessGrant.findUnique({
+        where: { id },
+      })
       if (!grant || grant.userId !== callerId) {
         throw Boom.notFound()
       }

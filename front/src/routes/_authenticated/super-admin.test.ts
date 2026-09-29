@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
 import type { User } from '@/types/auth.ts'
-
 import { Route } from './super-admin.tsx'
 
 // Meme style de harnais que `e/$establishmentId/admin.test.ts` : la garde de
@@ -32,9 +31,7 @@ const compteOrdinaire: User = {
   firstName: null,
   lastName: null,
   isSuperAdmin: false,
-  establishments: [
-    { id: 'e1', name: 'CHU', role: 'ADMIN', services: [] },
-  ],
+  establishments: [{ id: 'e1', name: 'CHU', role: 'ADMIN', services: [] }],
 }
 
 describe('beforeLoad du layout /super-admin', () => {

@@ -1,7 +1,4 @@
-import type {
-  Prisma,
-  Soignant,
-} from '../../../generated/client'
+import type { Prisma, Soignant } from '../../../generated/client'
 
 export type SoignantEntityDomain = Soignant
 // Miroir de SoignantCreateEntityRepo/SoignantUpdateEntityRepo : le repository

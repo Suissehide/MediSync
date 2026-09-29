@@ -1,8 +1,8 @@
+import { Prisma } from '../../../generated/client'
 import { ActivityLogSubscriber } from '../../../main/services/activity-log.subscriber'
 import type { IocContainer } from '../../../main/types/application/ioc'
 import { AppEventBus } from '../../../main/utils/app-event-bus'
 import { TenantContext } from '../../../main/utils/tenant-context'
-import { Prisma } from '../../../generated/client'
 
 // task-5-re-review-3.md (re-revue du tour 5), "Ce qu'il reste" : ActivityLogSubscriber
 // journalise `${err}` brut sur un depot (`activityLog.repository.ts`) qui n'a lui-meme aucun
@@ -72,16 +72,18 @@ const buildSubscriber = () => {
     tenantContext,
   }
   // biome-ignore lint/correctness/noUnusedVariables: instancie pour son effet de bord (#subscribe)
-  const subscriber = new ActivityLogSubscriber(container as unknown as IocContainer)
+  const subscriber = new ActivityLogSubscriber(
+    container as unknown as IocContainer,
+  )
   return { appEventBus, activityLogRepository, userRepository, logger, calls }
 }
 
 // Attend que le depot d'activite ait ete appele au moins une fois, sans dependre d'un delai
 // arbitraire (meme motif que `waitForLoggedError` plus bas, applique a `create` plutot qu'a
 // `logger.error`) : `#log` est asynchrone et `emit` ne l'attend pas.
-const waitForActivityLogCreate = (
-  activityLogRepository: { create: jest.Mock },
-): Promise<void> =>
+const waitForActivityLogCreate = (activityLogRepository: {
+  create: jest.Mock
+}): Promise<void> =>
   new Promise((resolve) => {
     if (activityLogRepository.create.mock.calls.length > 0) {
       resolve()
@@ -122,19 +124,25 @@ describe("ActivityLogSubscriber – un echec d'ecriture ne fuit pas le nom de l'
     )
 
   it('ne journalise jamais le prenom/nom de l utilisateur quand le depot echoue', async () => {
-    const { appEventBus, activityLogRepository, userRepository, logger, calls } =
-      buildSubscriber()
+    const {
+      appEventBus,
+      activityLogRepository,
+      userRepository,
+      logger,
+      calls,
+    } = buildSubscriber()
     userRepository.findIdentity.mockResolvedValue({
       id: 'user-1',
       firstName: USER_FIRST_NAME,
       lastName: USER_LAST_NAME,
     })
-    activityLogRepository.create.mockRejectedValue(
-      buildUnexpectedPrismaError(),
-    )
+    activityLogRepository.create.mockRejectedValue(buildUnexpectedPrismaError())
 
     const done = waitForLoggedError(logger)
-    appEventBus.emit('patient.created', { userID: 'user-1', patientId: 'pat-1' })
+    appEventBus.emit('patient.created', {
+      userID: 'user-1',
+      patientId: 'pat-1',
+    })
     await done
 
     expect(logger.error).toHaveBeenCalledTimes(1)
@@ -172,7 +180,8 @@ describe("ActivityLogSubscriber – un echec d'ecriture ne fuit pas le nom de l'
 // forme que la regression ci-dessus ne peut pas traverser sans faire rougir ce test.
 describe('ActivityLogSubscriber – user.accessLinkReissued lit l auteur par findIdentity, jamais findByID', () => {
   it('appelle userRepository.findIdentity avec l auteur, et n appelle jamais findByID', async () => {
-    const { appEventBus, activityLogRepository, userRepository } = buildSubscriber()
+    const { appEventBus, activityLogRepository, userRepository } =
+      buildSubscriber()
 
     const done = waitForActivityLogCreate(activityLogRepository)
     appEventBus.emit('user.accessLinkReissued', {

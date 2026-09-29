@@ -31,7 +31,9 @@ export const patientAccessLogEntryResponseSchema = z.object({
   accesParOctroi: z.boolean(),
 })
 
-export const patientAccessLogsResponseSchema = z.array(patientAccessLogEntryResponseSchema)
+export const patientAccessLogsResponseSchema = z.array(
+  patientAccessLogEntryResponseSchema,
+)
 
 // Route de service : `GET /e/:establishmentId/s/:serviceId/patient/:patientID/acces`. Meme nom
 // de parametre que `enrollmentIssuePatientParamsSchema`/`patientServiceFileRouter` (`:patientID`,
@@ -42,7 +44,9 @@ export const patientAccessLogServiceParamsSchema = z.object({
   patientID: z.cuid(),
 })
 
-export type PatientAccessLogServiceParams = z.infer<typeof patientAccessLogServiceParamsSchema>
+export type PatientAccessLogServiceParams = z.infer<
+  typeof patientAccessLogServiceParamsSchema
+>
 
 // Route d'administration d'etablissement : `GET /e/:establishmentId/admin/patients/:patientID/acces`.
 // Meme nom de parametre que la route de service (`:patientID`) — un renommage avait ete essaye
@@ -54,4 +58,6 @@ export const patientAccessLogAdminParamsSchema = z.object({
   patientID: z.cuid(),
 })
 
-export type PatientAccessLogAdminParams = z.infer<typeof patientAccessLogAdminParamsSchema>
+export type PatientAccessLogAdminParams = z.infer<
+  typeof patientAccessLogAdminParamsSchema
+>

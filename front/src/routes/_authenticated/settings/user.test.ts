@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
 import type { User } from '@/types/auth.ts'
-
 import { Route } from './user.tsx'
 
 const user: User = {
@@ -30,9 +29,7 @@ const adminSansService: User = {
   firstName: null,
   lastName: null,
   isSuperAdmin: false,
-  establishments: [
-    { id: 'e1', name: 'CHU', role: 'ADMIN', services: [] },
-  ],
+  establishments: [{ id: 'e1', name: 'CHU', role: 'ADMIN', services: [] }],
 }
 
 // Le cas du rebond : membre de service d'un etablissement, administrateur

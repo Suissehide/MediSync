@@ -11,7 +11,6 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { User } from '@/types/auth.ts'
-
 import { ScaleSelector } from './scaleSelector.tsx'
 
 const base: Omit<User, 'establishments'> = {
@@ -104,12 +103,16 @@ describe('ScaleSelector', () => {
   // Hors des trois echelles, le selecteur est le seul chemin nomme pour revenir : un super-admin
   // sans appartenance n'a plus d'entree Plateforme dans le menu du compte.
   it('reste visible hors des echelles, meme avec une seule destination', async () => {
-    useAuthStore.setState({ user: { ...intervenantUnService, isSuperAdmin: true, establishments: [] } })
+    useAuthStore.setState({
+      user: { ...intervenantUnService, isSuperAdmin: true, establishments: [] },
+    })
 
     monter('/')
     await userEvent.click(await declencheur())
 
-    expect(await screen.findByRole('button', { name: 'Plateforme' })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('button', { name: 'Plateforme' }),
+    ).toBeInTheDocument()
   })
 
   it('dit ou l on se trouve dans son nom accessible', async () => {
@@ -117,7 +120,9 @@ describe('ScaleSelector', () => {
 
     monter('/e/e1/s/s1/dashboard')
 
-    expect(await declencheur()).toHaveAccessibleName("Changer d'accès (actuellement : CHU › Cardio)")
+    expect(await declencheur()).toHaveAccessibleName(
+      "Changer d'accès (actuellement : CHU › Cardio)",
+    )
   })
 
   it('rend une entree par couple accessible, et le lien vers tous les acces', async () => {
@@ -126,8 +131,12 @@ describe('ScaleSelector', () => {
     monter()
     await userEvent.click(await declencheur())
 
-    expect(await screen.findAllByRole('button', { name: /Cardio|Pneumo/ })).toHaveLength(3)
-    expect(screen.getByRole('button', { name: 'Tous les accès…' })).toBeInTheDocument()
+    expect(
+      await screen.findAllByRole('button', { name: /Cardio|Pneumo/ }),
+    ).toHaveLength(3)
+    expect(
+      screen.getByRole('button', { name: 'Tous les accès…' }),
+    ).toBeInTheDocument()
   })
 
   // Un administrateur coordinateur d'un seul service n'avait pas de selecteur : l'administration
@@ -138,20 +147,28 @@ describe('ScaleSelector', () => {
     monter()
     await userEvent.click(await declencheur())
 
-    expect(await screen.findByRole('button', { name: "Administration de l'établissement" })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('button', {
+        name: "Administration de l'établissement",
+      }),
+    ).toBeInTheDocument()
   })
 
   it('ne propose la plateforme qu a un super-admin', async () => {
     useAuthStore.setState({ user: troisCouples })
     const { unmount } = monter()
     await userEvent.click(await declencheur())
-    expect(screen.queryByRole('button', { name: 'Plateforme' })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Plateforme' }),
+    ).not.toBeInTheDocument()
     unmount()
 
     useAuthStore.setState({ user: { ...troisCouples, isSuperAdmin: true } })
     monter()
     await userEvent.click(await declencheur())
-    expect(await screen.findByRole('button', { name: 'Plateforme' })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('button', { name: 'Plateforme' }),
+    ).toBeInTheDocument()
   })
 
   it('nomme l echelle de la route, pas le dernier contexte du store', async () => {

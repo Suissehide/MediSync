@@ -14,9 +14,12 @@ import {
   SUPER_ADMIN_ACCESS_LOG_SOURCE_OPTIONS,
   superAdminAccessLogActionOptions,
 } from '@/constants/superAdminAccessLog.constant.ts'
-import { useSuperAdminAccessLogQuery } from '@/queries/useSuperAdminAccessLog.ts'
 import { useSuperAdminEstablishmentsQuery } from '@/queries/useSuperAdmin.ts'
-import type { SuperAdminAccessLogEntry, SuperAdminAccessLogSource } from '@/types/superAdminAccessLog.ts'
+import { useSuperAdminAccessLogQuery } from '@/queries/useSuperAdminAccessLog.ts'
+import type {
+  SuperAdminAccessLogEntry,
+  SuperAdminAccessLogSource,
+} from '@/types/superAdminAccessLog.ts'
 
 // Étape 4b, tâche 11 : l'écran plateforme du super-admin, dernier des deux journaux — `GET
 // /super-admin/access-log` (back, tâche 6). Écran hors de tout tenant, comme ses voisins : voir
@@ -60,7 +63,10 @@ function SuperAdminAccessLogPage() {
   // local, et sans dépendance nouvelle.
   const [compteApplique, setCompteApplique] = useState('')
   useEffect(() => {
-    const minuteur = setTimeout(() => setCompteApplique(filtres.compte.trim()), DELAI_SAISIE_MS)
+    const minuteur = setTimeout(
+      () => setCompteApplique(filtres.compte.trim()),
+      DELAI_SAISIE_MS,
+    )
     return () => clearTimeout(minuteur)
   }, [filtres.compte])
 
@@ -86,8 +92,10 @@ function SuperAdminAccessLogPage() {
     filtres.establishmentId || filtres.action || filtres.compte,
   )
 
-  const set = <K extends keyof Filtres>(key: K) => (value: Filtres[K]) =>
-    setFiltres((prev) => ({ ...prev, [key]: value }))
+  const set =
+    <K extends keyof Filtres>(key: K) =>
+    (value: Filtres[K]) =>
+      setFiltres((prev) => ({ ...prev, [key]: value }))
 
   const changerSource = (value: string) => {
     const source = (value || 'acces') as SuperAdminAccessLogSource
@@ -117,7 +125,7 @@ function SuperAdminAccessLogPage() {
   // consultations, l'option n'existe pas plutôt que d'exister et d'échouer.
   const establishmentOptions = [
     ...(filtres.source === 'activite'
-      ? [{ value: SANS_ETABLISSEMENT, label: "Sans établissement (amorçage)" }]
+      ? [{ value: SANS_ETABLISSEMENT, label: 'Sans établissement (amorçage)' }]
       : []),
     ...(establishments ?? []).map((e) => ({
       value: e.id,
@@ -155,7 +163,8 @@ function SuperAdminAccessLogPage() {
         même composition que `super-admin/index.tsx`). */}
         {error ? (
           <p className="text-sm text-destructive">
-            Impossible de charger le journal de la plateforme. Réessayez plus tard.
+            Impossible de charger le journal de la plateforme. Réessayez plus
+            tard.
           </p>
         ) : (
           <ReactTable<SuperAdminAccessLogEntry>
@@ -182,7 +191,9 @@ function SuperAdminAccessLogPage() {
                   />
                 </div>
                 <div className="w-60">
-                  <Label htmlFor="super-admin-access-log-establishment">Établissement</Label>
+                  <Label htmlFor="super-admin-access-log-establishment">
+                    Établissement
+                  </Label>
                   <Select
                     id="super-admin-access-log-establishment"
                     value={filtres.establishmentId}

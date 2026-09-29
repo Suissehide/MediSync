@@ -15,7 +15,9 @@ import { usePathwayTemplateQueries } from '@/queries/usePathwayTemplate.ts'
 import { usePatientWithTagsQuery } from '@/queries/usePatient.tsx'
 import type { PatientWithTags } from '@/types/patient.ts'
 
-export const Route = createFileRoute('/_authenticated/e/$establishmentId/s/$serviceId/patient/')({
+export const Route = createFileRoute(
+  '/_authenticated/e/$establishmentId/s/$serviceId/patient/',
+)({
   component: PatientList,
 })
 
@@ -35,11 +37,13 @@ function PatientList() {
     })
   }
 
-  const columns = getPatientColumns({ onView: handleRedirectPatient, pathwayTemplates: pathwayTemplates ?? [] })
+  const columns = getPatientColumns({
+    onView: handleRedirectPatient,
+    pathwayTemplates: pathwayTemplates ?? [],
+  })
 
   const allTags = useMemo(
-    () =>
-      [...new Set((pathwayTemplates ?? []).map((t) => t.mainTag))].sort(),
+    () => [...new Set((pathwayTemplates ?? []).map((t) => t.mainTag))].sort(),
     [pathwayTemplates],
   )
 

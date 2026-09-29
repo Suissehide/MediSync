@@ -35,14 +35,20 @@ class EnrollmentIssueRepository implements EnrollmentIssueRepositoryInterface {
     issues: EnrollmentIssueCreateEntityRepo[],
   ): Promise<void> {
     await this.prisma.enrollmentIssue.createMany({
-      data: issues.map((issue) => ({ ...issue, patientId: patientID, ...this.scope })),
+      data: issues.map((issue) => ({
+        ...issue,
+        patientId: patientID,
+        ...this.scope,
+      })),
     })
   }
 
   async delete(issueID: string): Promise<void> {
     try {
       await this.prisma.enrollmentIssue.delete({
-        where: { id_serviceId: { id: issueID, serviceId: this.scope.serviceId } },
+        where: {
+          id_serviceId: { id: issueID, serviceId: this.scope.serviceId },
+        },
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({

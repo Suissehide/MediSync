@@ -28,7 +28,9 @@ function calculateOffsetDays(weekCalendar: number, dayOfWeek: number): number {
 function parseTime(time: string): { hour: number; minute: number } {
   const [hourPart, minutePart, ...rest] = time.split(':')
   if (hourPart === undefined || minutePart === undefined || rest.length > 0) {
-    throw new Error(`Horaire de seed invalide "${time}" — format attendu "HH:MM".`)
+    throw new Error(
+      `Horaire de seed invalide "${time}" — format attendu "HH:MM".`,
+    )
   }
   const hour = Number(hourPart)
   const minute = Number(minutePart)

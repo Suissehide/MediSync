@@ -2,7 +2,11 @@
 // Ce fichier est dupliqué à l'identique dans front/src/utils/permissions.ts ;
 // un test unitaire back vérifie l'égalité des deux copies.
 
-export type ServiceRole = 'COORDINATEUR' | 'INTERVENANT' | 'SECRETARIAT' | 'LECTURE'
+export type ServiceRole =
+  | 'COORDINATEUR'
+  | 'INTERVENANT'
+  | 'SECRETARIAT'
+  | 'LECTURE'
 export type EstablishmentRole = 'ADMIN' | 'MEMBER'
 
 export type ServicePermission =
@@ -60,7 +64,10 @@ export type EstablishmentPermission =
 // `hasPermission` : `requireSuperAdmin` (super-admin.routes.ts) tranche seul, sur le drapeau.
 export type SuperAdminPermission = 'establishments:manage'
 
-export type Permission = ServicePermission | EstablishmentPermission | SuperAdminPermission
+export type Permission =
+  | ServicePermission
+  | EstablishmentPermission
+  | SuperAdminPermission
 
 const READ_ALL: readonly ServicePermission[] = [
   'planning:read',
@@ -70,7 +77,10 @@ const READ_ALL: readonly ServicePermission[] = [
   'members:read',
 ]
 
-export const SERVICE_PERMISSIONS: Record<ServiceRole, readonly ServicePermission[]> = {
+export const SERVICE_PERMISSIONS: Record<
+  ServiceRole,
+  readonly ServicePermission[]
+> = {
   COORDINATEUR: [
     ...READ_ALL,
     'planning:write',
@@ -91,11 +101,19 @@ export const SERVICE_PERMISSIONS: Record<ServiceRole, readonly ServicePermission
     'appointment:write',
     'pdf:export',
   ],
-  SECRETARIAT: [...READ_ALL, 'patient:write', 'appointment:write', 'pdf:export'],
+  SECRETARIAT: [
+    ...READ_ALL,
+    'patient:write',
+    'appointment:write',
+    'pdf:export',
+  ],
   LECTURE: [...READ_ALL],
 }
 
-export const ESTABLISHMENT_PERMISSIONS: Record<EstablishmentRole, readonly EstablishmentPermission[]> = {
+export const ESTABLISHMENT_PERMISSIONS: Record<
+  EstablishmentRole,
+  readonly EstablishmentPermission[]
+> = {
   ADMIN: [
     'services:manage',
     'members:manage',
@@ -110,8 +128,9 @@ const SERVICE_PERMISSION_SET: ReadonlySet<string> = new Set(
   Object.values(SERVICE_PERMISSIONS).flat(),
 )
 
-export const isServicePermission = (permission: Permission): permission is ServicePermission =>
-  SERVICE_PERMISSION_SET.has(permission)
+export const isServicePermission = (
+  permission: Permission,
+): permission is ServicePermission => SERVICE_PERMISSION_SET.has(permission)
 
 const ESTABLISHMENT_PERMISSION_SET: ReadonlySet<string> = new Set(
   Object.values(ESTABLISHMENT_PERMISSIONS).flat(),
@@ -119,16 +138,23 @@ const ESTABLISHMENT_PERMISSION_SET: ReadonlySet<string> = new Set(
 
 export const isEstablishmentPermission = (
   permission: Permission,
-): permission is EstablishmentPermission => ESTABLISHMENT_PERMISSION_SET.has(permission)
+): permission is EstablishmentPermission =>
+  ESTABLISHMENT_PERMISSION_SET.has(permission)
 
 export type RoleSet = {
   serviceRole: ServiceRole | null
   establishmentRole: EstablishmentRole | null
 }
 
-export const hasPermission = (roles: RoleSet, permission: Permission): boolean => {
+export const hasPermission = (
+  roles: RoleSet,
+  permission: Permission,
+): boolean => {
   if (isServicePermission(permission)) {
-    return roles.serviceRole !== null && SERVICE_PERMISSIONS[roles.serviceRole].includes(permission)
+    return (
+      roles.serviceRole !== null &&
+      SERVICE_PERMISSIONS[roles.serviceRole].includes(permission)
+    )
   }
   if (isEstablishmentPermission(permission)) {
     return (

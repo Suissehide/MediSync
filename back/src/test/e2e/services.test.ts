@@ -20,9 +20,20 @@ type MeEstablishment = {
 // réels, seule l'horloge que lit `resolveTenant` est sous contrôle — ce qui rend l'expiration
 // d'un octroi éprouvable sans attendre (même convention que tenant-resolution.test.ts).
 const TIMERS_REELS = [
-  'nextTick', 'hrtime', 'performance', 'queueMicrotask',
-  'requestAnimationFrame', 'cancelAnimationFrame', 'requestIdleCallback', 'cancelIdleCallback',
-  'setImmediate', 'clearImmediate', 'setInterval', 'clearInterval', 'setTimeout', 'clearTimeout',
+  'nextTick',
+  'hrtime',
+  'performance',
+  'queueMicrotask',
+  'requestAnimationFrame',
+  'cancelAnimationFrame',
+  'requestIdleCallback',
+  'cancelIdleCallback',
+  'setImmediate',
+  'clearImmediate',
+  'setInterval',
+  'clearInterval',
+  'setTimeout',
+  'clearTimeout',
 ] as const
 
 // Tâche 9 (étape 4a) : le second service — ce qui rend enfin démontrable, à l'écran, le
@@ -73,9 +84,9 @@ describe('routes services', () => {
       cookies,
     })
     expect(res.statusCode).toBe(200)
-    const establishment = (
-      res.json().establishments as MeEstablishment[]
-    ).find((e) => e.id === establishmentId)
+    const establishment = (res.json().establishments as MeEstablishment[]).find(
+      (e) => e.id === establishmentId,
+    )
     return establishment?.services ?? []
   }
 
@@ -191,7 +202,11 @@ describe('routes services', () => {
       const liste = await call('GET', '/')
       expect(liste.statusCode).toBe(200)
       expect(liste.json()).toContainEqual(
-        expect.objectContaining({ id: service.id, name: 'Expire', deactivatedAt: null }),
+        expect.objectContaining({
+          id: service.id,
+          name: 'Expire',
+          deactivatedAt: null,
+        }),
       )
     } finally {
       jest.useRealTimers()
@@ -212,9 +227,10 @@ describe('routes services', () => {
       isSuperAdmin: true,
       memberships: [{ establishmentId: ailleurs.id, role: 'MEMBER' }],
     })
-    const membershipAilleursAvant = await testDb.establishmentMembership.findFirstOrThrow({
-      where: { userId: superAdmin.id, establishmentId: ailleurs.id },
-    })
+    const membershipAilleursAvant =
+      await testDb.establishmentMembership.findFirstOrThrow({
+        where: { userId: superAdmin.id, establishmentId: ailleurs.id },
+      })
     await grantAccess({
       userId: superAdmin.id,
       establishmentId,
@@ -222,7 +238,12 @@ describe('routes services', () => {
     })
     const superCookies = await signIn(testApp.app, 'super-ailleurs@test.fr')
 
-    const created = await call('POST', '/', { name: 'Ailleurs-octroi' }, superCookies)
+    const created = await call(
+      'POST',
+      '/',
+      { name: 'Ailleurs-octroi' },
+      superCookies,
+    )
     expect(created.statusCode).toBe(201)
 
     // Aucune appartenance reelle creee sur l'etablissement CIBLE.
@@ -299,7 +320,9 @@ describe('routes services', () => {
   // les services encore ACTIFS.
   it('compte comme invisible un patient dont le seul autre suivi vit dans un service deja desactive', async () => {
     const serviceC = (await call('POST', '/', { name: 'C-impact' })).json()
-    const serviceD = (await call('POST', '/', { name: 'D-impact-desactive' })).json()
+    const serviceD = (
+      await call('POST', '/', { name: 'D-impact-desactive' })
+    ).json()
 
     const patient = await testDb.patient.create({
       data: {
@@ -507,7 +530,11 @@ describe('routes services', () => {
         data: { id: `est_${'a1b2c3d4e5f6a7b8c9d0'}`, name: 'Etablissement' },
       })
       const svc = await testDb.service.create({
-        data: { id: `svc_${'0d9c8b7a6f5e4d3c2b1a'}`, establishmentId: etab.id, name: 'Service' },
+        data: {
+          id: `svc_${'0d9c8b7a6f5e4d3c2b1a'}`,
+          establishmentId: etab.id,
+          name: 'Service',
+        },
       })
       const admin = await createUser({
         email: 'admin-migration-lecture@b.fr',
@@ -530,7 +557,11 @@ describe('routes services', () => {
         data: { id: `est_${'b1c2d3e4f5a6b7c8d9e0'}`, name: 'Etablissement' },
       })
       const svc = await testDb.service.create({
-        data: { id: `svc_${'1e0d9c8b7a6f5e4d3c2b'}`, establishmentId: etab.id, name: 'Service' },
+        data: {
+          id: `svc_${'1e0d9c8b7a6f5e4d3c2b'}`,
+          establishmentId: etab.id,
+          name: 'Service',
+        },
       })
       const admin = await createUser({
         email: 'admin-migration-affectation@b.fr',

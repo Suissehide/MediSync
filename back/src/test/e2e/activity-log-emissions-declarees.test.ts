@@ -97,8 +97,12 @@ const EXEMPTIONS: Record<string, string> = {}
 
 // Charge synthetique minimale : une chaine distincte par champ, derivee de son nom — jamais une
 // valeur qui ressemble a une donnee reelle (aucun email, aucun jeton).
-const chargeSynthetique = (evenement: EvenementDeclare): Record<string, string> =>
-  Object.fromEntries(evenement.champs.map((champ) => [champ, `synthetique-${champ}`]))
+const chargeSynthetique = (
+  evenement: EvenementDeclare,
+): Record<string, string> =>
+  Object.fromEntries(
+    evenement.champs.map((champ) => [champ, `synthetique-${champ}`]),
+  )
 
 // LA PREUVE PAR L'EXEMPLE MULTILIGNE (revue finale de branche, Important n°4). Ce `describe` est
 // la contre-epreuve de la lecture elle-meme : il ne regarde pas `app-event-bus.ts`, il donne a
@@ -149,7 +153,9 @@ describe('chaque evenement declare est classe (contexte reel ou exemption nommee
   // La lecture ne doit jamais rendre MOINS que ce qui est connu : une liste vide (fichier
   // renomme, bloc introuvable) rendrait tout le reste de ce fichier vert en ne testant rien.
   it('voit au moins autant d evenements qu au jour ou cette borne a ete posee', () => {
-    expect(evenementsDeclares().length).toBeGreaterThanOrEqual(BORNE_BASSE_EVENEMENTS)
+    expect(evenementsDeclares().length).toBeGreaterThanOrEqual(
+      BORNE_BASSE_EVENEMENTS,
+    )
   })
 
   it('AppEvents, CONTEXTES_REELS et EXEMPTIONS se recouvrent exactement', () => {
@@ -161,7 +167,9 @@ describe('chaque evenement declare est classe (contexte reel ou exemption nommee
 
     // Sens inverse : une entree qui ne correspond plus a aucun evenement declare (renomme,
     // retire) doit aussi se voir, plutot que de vieillir en silence.
-    const perimees = Object.keys(CONTEXTES_REELS).filter((nom) => !noms.includes(nom))
+    const perimees = Object.keys(CONTEXTES_REELS).filter(
+      (nom) => !noms.includes(nom),
+    )
     expect(perimees).toEqual([])
   })
 })

@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { PatientIdentitySearchResult } from '@/types/patient.ts'
-
 import { PatientApi } from './patient.api.ts'
 
 const context = {
@@ -30,16 +29,29 @@ describe('PatientApi.searchIdentity', () => {
   // `tenantApiUrl()`, jamais d'un argument establishment/service.
   it('compose l URL par tenantApiUrl(), en GET, avec les seuls paramètres fournis', async () => {
     const searchResult: PatientIdentitySearchResult = {
-      results: [{ id: 'p1', firstName: 'Isabelle', lastName: 'Fontaine', birthDate: '1980-05-12T00:00:00.000Z' }],
+      results: [
+        {
+          id: 'p1',
+          firstName: 'Isabelle',
+          lastName: 'Fontaine',
+          birthDate: '1980-05-12T00:00:00.000Z',
+        },
+      ],
       hasMore: false,
     }
     const fetchMock = vi.fn().mockResolvedValue(okResponse(searchResult))
     vi.stubGlobal('fetch', fetchMock)
 
-    const result = await PatientApi.searchIdentity({ firstName: 'Isabelle', lastName: 'Fontaine' })
+    const result = await PatientApi.searchIdentity({
+      firstName: 'Isabelle',
+      lastName: 'Fontaine',
+    })
 
     expect(result).toEqual(searchResult)
-    const [requestedUrl, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    const [requestedUrl, init] = fetchMock.mock.calls[0] as [
+      string,
+      RequestInit,
+    ]
     expect(requestedUrl).toMatch(/\/e\/e1\/s\/s1\/patient\/search\?/)
     expect(requestedUrl).toContain('firstName=Isabelle')
     expect(requestedUrl).toContain('lastName=Fontaine')
@@ -48,7 +60,9 @@ describe('PatientApi.searchIdentity', () => {
   })
 
   it('n envoie que les champs renseignés (birthDate omis quand absent)', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(okResponse({ results: [], hasMore: false }))
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(okResponse({ results: [], hasMore: false }))
     vi.stubGlobal('fetch', fetchMock)
 
     await PatientApi.searchIdentity({ lastName: 'Roche' })

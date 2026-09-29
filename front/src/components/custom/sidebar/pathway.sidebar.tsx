@@ -49,9 +49,13 @@ function SidebarPathway() {
 
   const handleMove = useCallback(
     (index: number, direction: 'up' | 'down') => {
-      if (!pathwayTemplates) { return }
+      if (!pathwayTemplates) {
+        return
+      }
       const targetIndex = direction === 'up' ? index - 1 : index + 1
-      if (targetIndex < 0 || targetIndex >= pathwayTemplates.length) { return }
+      if (targetIndex < 0 || targetIndex >= pathwayTemplates.length) {
+        return
+      }
 
       const newOrder = pathwayTemplates.map((t) => t.id)
       const [movedId] = newOrder.splice(index, 1)
@@ -120,46 +124,45 @@ function SidebarPathway() {
                       onClick={() => handleEditPathwayTemplate(pathwayTemplate)}
                       className="w-full flex items-center gap-3 px-3 py-2 text-left cursor-pointer"
                     >
-                    <div
-                      className="flex-shrink-0 w-8 h-8 rounded-md flex items-center justify-center"
-                      style={{
-                        backgroundColor: hexToRGBA(
-                          pathwayTemplate.color,
-                          0.15,
-                        ),
-                        color: pathwayTemplate.color,
-                      }}
-                    >
-                      <Route className="w-4 h-4" />
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-text truncate">
-                        {pathwayTemplate.name}
+                      <div
+                        className="flex-shrink-0 w-8 h-8 rounded-md flex items-center justify-center"
+                        style={{
+                          backgroundColor: hexToRGBA(
+                            pathwayTemplate.color,
+                            0.15,
+                          ),
+                          color: pathwayTemplate.color,
+                        }}
+                      >
+                        <Route className="w-4 h-4" />
                       </div>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        <span
-                          className="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold leading-none"
-                          style={{
-                            backgroundColor: hexToRGBA(
-                              pathwayTemplate.color,
-                              0.25,
-                            ),
-                          }}
-                        >
-                          {pathwayTemplate.mainTag}
-                        </span>
-                        {(pathwayTemplate.secondaryTags ?? []).map((tag) => (
+
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-text truncate">
+                          {pathwayTemplate.name}
+                        </div>
+                        <div className="flex flex-wrap gap-1 mt-1">
                           <span
-                            key={tag}
-                            className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium bg-white/10 leading-none"
+                            className="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold leading-none"
+                            style={{
+                              backgroundColor: hexToRGBA(
+                                pathwayTemplate.color,
+                                0.25,
+                              ),
+                            }}
                           >
-                            {tag}
+                            {pathwayTemplate.mainTag}
                           </span>
-                        ))}
+                          {(pathwayTemplate.secondaryTags ?? []).map((tag) => (
+                            <span
+                              key={tag}
+                              className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium bg-white/10 leading-none"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-
                     </button>
 
                     <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

@@ -45,7 +45,7 @@ class AppointmentDomain implements AppointmentDomainInterface {
     const slot = await this.slotDomain.findByID(appointmentCreateParams.slotID)
     if (slot.locked) {
       throw Boom.conflict(
-        'Ce créneau est verrouillé : impossible d\'y ajouter un rendez-vous.',
+        "Ce créneau est verrouillé : impossible d'y ajouter un rendez-vous.",
       )
     }
     // `thematicId` n'a pas de clé composite en base (nullable) : on vérifie
@@ -54,8 +54,13 @@ class AppointmentDomain implements AppointmentDomainInterface {
     if (appointmentCreateParams.thematicId) {
       await this.thematicRepository.findByID(appointmentCreateParams.thematicId)
     }
-    const appointment = await this.appointmentRepository.create(appointmentCreateParams)
-    this.appEventBus.emit('appointment.created', { userID, appointmentId: appointment.id })
+    const appointment = await this.appointmentRepository.create(
+      appointmentCreateParams,
+    )
+    this.appEventBus.emit('appointment.created', {
+      userID,
+      appointmentId: appointment.id,
+    })
     return appointment
   }
 
@@ -65,7 +70,9 @@ class AppointmentDomain implements AppointmentDomainInterface {
     userID: string,
   ): Promise<AppointmentEntityDomain> {
     if (appointmentUpdateParams.slotID) {
-      const slot = await this.slotDomain.findByID(appointmentUpdateParams.slotID)
+      const slot = await this.slotDomain.findByID(
+        appointmentUpdateParams.slotID,
+      )
       if (slot.locked) {
         throw Boom.conflict(
           'Ce créneau est verrouillé : impossible de déplacer un rendez-vous dessus.',
@@ -78,14 +85,16 @@ class AppointmentDomain implements AppointmentDomainInterface {
     }
     // Une liste de patients vide supprime le rendez-vous : dans ce cas on
     // n'émet pas d'événement « updated » sur une entité qui n'existe plus.
-    const wasDeleted =
-      appointmentUpdateParams.appointmentPatients?.length === 0
+    const wasDeleted = appointmentUpdateParams.appointmentPatients?.length === 0
     const appointment = await this.appointmentRepository.update(
       appointmentID,
       appointmentUpdateParams,
     )
     if (!wasDeleted) {
-      this.appEventBus.emit('appointment.updated', { userID, appointmentId: appointment.id })
+      this.appEventBus.emit('appointment.updated', {
+        userID,
+        appointmentId: appointment.id,
+      })
     }
     return appointment
   }

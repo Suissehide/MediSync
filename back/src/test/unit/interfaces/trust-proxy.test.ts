@@ -1,6 +1,9 @@
-import fastifyRateLimit from '@fastify/rate-limit'
-import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify'
 import http from 'node:http'
+import fastifyRateLimit from '@fastify/rate-limit'
+import Fastify, {
+  type FastifyInstance,
+  type FastifyServerOptions,
+} from 'fastify'
 
 // Etape 4a, tache 4, tour de correction 1, Important n°2, PUIS tour de correction 2, CRITIQUE
 // (la valeur retenue au tour 1 — `trustProxy: 1` — etait une REGRESSION, mesuree sur de vraies
@@ -141,7 +144,9 @@ describe('confiance dans le proxy (request.ip), dont depend la clef de la limite
     const { app, port } = await buildRealServer(TRUSTED_RANGES)
     try {
       const results = await Promise.all(
-        ['1.1.1.1', '2.2.2.2', '3.3.3.3', '4.4.4.4'].map((ip) => requestOnce(port, ip)),
+        ['1.1.1.1', '2.2.2.2', '3.3.3.3', '4.4.4.4'].map((ip) =>
+          requestOnce(port, ip),
+        ),
       )
 
       for (const result of results) {
@@ -179,7 +184,9 @@ describe('confiance dans le proxy (request.ip), dont depend la clef de la limite
   // donc chacune avait sa propre clef) — montré rouge par exécution, puis rétabli (voir
   // task-4-report.md).
   it("en direct (hors plage de confiance -- avec la CONFIGURATION active, pas la confiance desactivee), un en-tete fabrique DIFFERENT a chaque requete ne deplace rien : la limite mord comme si l'appelant n'avait jamais change d'adresse", async () => {
-    const { app, port } = await buildRealServer(PRODUCTION_RANGES_WITHOUT_LOOPBACK)
+    const { app, port } = await buildRealServer(
+      PRODUCTION_RANGES_WITHOUT_LOOPBACK,
+    )
     try {
       const statuses: number[] = []
       for (let i = 0; i < 4; i += 1) {

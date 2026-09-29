@@ -1,6 +1,5 @@
-import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-
 import { config as loadDotenv } from 'dotenv'
 import { Client } from 'pg'
 import { z } from 'zod/v4'
@@ -31,7 +30,11 @@ const BACK_ROOT = join(__dirname, '../../../..')
 const MIGRATIONS_DIR = join(BACK_ROOT, 'prisma/migrations')
 const CHECKS_DIR = join(BACK_ROOT, 'prisma/checks')
 const TARGET_MIGRATION = '20260924160131_patient_service_file'
-const TARGET_MIGRATION_SQL = join(MIGRATIONS_DIR, TARGET_MIGRATION, 'migration.sql')
+const TARGET_MIGRATION_SQL = join(
+  MIGRATIONS_DIR,
+  TARGET_MIGRATION,
+  'migration.sql',
+)
 
 // Préfixe distinctif : jamais "medisync" ni "medisync_test", pour qu'un DROP DATABASE de ce
 // fichier ne puisse par construction jamais viser une base qui compte.
@@ -80,7 +83,9 @@ const resolveConnection = (): PgConn => {
   try {
     url = new URL(raw)
   } catch {
-    throw new Error(`Test de migration : DATABASE_URL n'est pas une URL valide ("${raw}").`)
+    throw new Error(
+      `Test de migration : DATABASE_URL n'est pas une URL valide ("${raw}").`,
+    )
   }
   return {
     host: url.hostname,
@@ -102,14 +107,20 @@ const clientFor = (conn: PgConn, database: string): Client =>
 // Termine les connexions residuelles avant un DROP DATABASE : une base issue d'une execution
 // precedente interrompue (crash, Ctrl+C) peut laisser une connexion ouverte qui bloquerait
 // sinon silencieusement le nettoyage.
-const terminateConnectionsTo = async (maint: Client, name: string): Promise<void> => {
+const terminateConnectionsTo = async (
+  maint: Client,
+  name: string,
+): Promise<void> => {
   await maint.query(
     `SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()`,
     [name],
   )
 }
 
-const dropDatabaseIfExists = async (maint: Client, name: string): Promise<void> => {
+const dropDatabaseIfExists = async (
+  maint: Client,
+  name: string,
+): Promise<void> => {
   await terminateConnectionsTo(maint, name)
   await maint.query(`DROP DATABASE IF EXISTS "${name}"`)
 }
@@ -130,7 +141,9 @@ const priorMigrationFiles = (): string[] => {
         `${MIGRATIONS_DIR}. Son nom a probablement change — mettre a jour ce test.`,
     )
   }
-  return dirs.slice(0, targetIndex).map((dir) => join(MIGRATIONS_DIR, dir, 'migration.sql'))
+  return dirs
+    .slice(0, targetIndex)
+    .map((dir) => join(MIGRATIONS_DIR, dir, 'migration.sql'))
 }
 
 // `client.query(text)` avec un seul argument texte (pas de tableau de parametres) emploie le
@@ -144,7 +157,8 @@ const applySqlFile = async (client: Client, path: string): Promise<void> => {
 
 // Lit et joue le VRAI fichier de la migration cible, a chaque appel : si son contenu change,
 // ce test change de comportement avec lui, il ne peut pas rester vert sur un fichier perime.
-const applyTargetMigration = (client: Client): Promise<void> => applySqlFile(client, TARGET_MIGRATION_SQL)
+const applyTargetMigration = (client: Client): Promise<void> =>
+  applySqlFile(client, TARGET_MIGRATION_SQL)
 
 // I5 de la revue : "rien n'a ete touche" ne prouve PAS a lui seul que la garde s'execute
 // avant toute ecriture — la meme observation serait faite avec la garde en derniere ligne,
@@ -166,9 +180,11 @@ const applyTargetMigration = (client: Client): Promise<void> => applySqlFile(cli
 // commentaire ne soit pas compte comme une instruction reelle) : celle ou commence le VRAI
 // bloc de garde, et celle du premier mot-cle d'ecriture du fichier entier.
 
-const stripSqlComments = (sql: string): string => sql.replace(/\/\*[\s\S]*?\*\//g, '').replace(/--.*$/gm, '')
+const stripSqlComments = (sql: string): string =>
+  sql.replace(/\/\*[\s\S]*?\*\//g, '').replace(/--.*$/gm, '')
 
-const WRITE_KEYWORD = /\b(CREATE|ALTER|DROP|INSERT|UPDATE|DELETE|TRUNCATE|GRANT|REVOKE|MERGE)\b/gi
+const WRITE_KEYWORD =
+  /\b(CREATE|ALTER|DROP|INSERT|UPDATE|DELETE|TRUNCATE|GRANT|REVOKE|MERGE)\b/gi
 
 // Identifie le VRAI bloc de garde par une chaine qui lui est propre ("trop_de_services", une
 // variable declaree uniquement dans son DECLARE), pas par "le premier DO trouve" — c'est
@@ -187,7 +203,9 @@ const guardBlockStart = (strippedSql: string): number => {
   )
   const opening = openings.at(-1)
   if (!opening || opening.index === undefined) {
-    throw new Error('Garde introuvable : aucun bloc "DO $$" ne precede "trop_de_services".')
+    throw new Error(
+      'Garde introuvable : aucun bloc "DO $$" ne precede "trop_de_services".',
+    )
   }
   return opening.index
 }
@@ -206,10 +224,15 @@ const firstWriteKeywordIndex = (strippedSql: string): number => {
 // s'execute avant toute ecriture, ou qu'elle se trouve dans le fichier.
 const assertGuardPrecedesEveryWrite = (): void => {
   const stripped = stripSqlComments(readFileSync(TARGET_MIGRATION_SQL, 'utf8'))
-  expect(guardBlockStart(stripped)).toBeLessThan(firstWriteKeywordIndex(stripped))
+  expect(guardBlockStart(stripped)).toBeLessThan(
+    firstWriteKeywordIndex(stripped),
+  )
 }
 
-const buildTemplateDatabase = async (conn: PgConn, maint: Client): Promise<void> => {
+const buildTemplateDatabase = async (
+  conn: PgConn,
+  maint: Client,
+): Promise<void> => {
   await dropDatabaseIfExists(maint, TEMPLATE_DB)
   await maint.query(`CREATE DATABASE "${TEMPLATE_DB}"`)
   const client = clientFor(conn, TEMPLATE_DB)
@@ -225,7 +248,10 @@ const buildTemplateDatabase = async (conn: PgConn, maint: Client): Promise<void>
   }
 }
 
-const cloneFromTemplate = async (maint: Client, name: string): Promise<void> => {
+const cloneFromTemplate = async (
+  maint: Client,
+  name: string,
+): Promise<void> => {
   await dropDatabaseIfExists(maint, name)
   await terminateConnectionsTo(maint, TEMPLATE_DB)
   await maint.query(`CREATE DATABASE "${name}" TEMPLATE "${TEMPLATE_DB}"`)
@@ -251,15 +277,26 @@ const withScenarioDatabase = async <T>(
   }
 }
 
-const insertEstablishment = (client: Client, id: string, name: string): Promise<unknown> =>
-  client.query('INSERT INTO "Establishment" (id, name) VALUES ($1, $2)', [id, name])
-
-const insertService = (client: Client, id: string, establishmentId: string, name: string): Promise<unknown> =>
-  client.query('INSERT INTO "Service" (id, "establishmentId", name) VALUES ($1, $2, $3)', [
+const insertEstablishment = (
+  client: Client,
+  id: string,
+  name: string,
+): Promise<unknown> =>
+  client.query('INSERT INTO "Establishment" (id, name) VALUES ($1, $2)', [
     id,
-    establishmentId,
     name,
   ])
+
+const insertService = (
+  client: Client,
+  id: string,
+  establishmentId: string,
+  name: string,
+): Promise<unknown> =>
+  client.query(
+    'INSERT INTO "Service" (id, "establishmentId", name) VALUES ($1, $2, $3)',
+    [id, establishmentId, name],
+  )
 
 // Les seize colonnes qui demenagent, dans l'ordre du schema d'avant migration.
 const SIXTEEN_FIELDS = [
@@ -291,8 +328,19 @@ type PatientSeed = {
   fields: Record<SixteenField, string | null>
 }
 
-const insertPatient = (client: Client, establishmentId: string, patient: PatientSeed): Promise<unknown> => {
-  const columns = ['id', 'establishmentId', 'firstName', 'lastName', 'createDate', ...SIXTEEN_FIELDS]
+const insertPatient = (
+  client: Client,
+  establishmentId: string,
+  patient: PatientSeed,
+): Promise<unknown> => {
+  const columns = [
+    'id',
+    'establishmentId',
+    'firstName',
+    'lastName',
+    'createDate',
+    ...SIXTEEN_FIELDS,
+  ]
   const values: (string | null)[] = [
     patient.id,
     establishmentId,
@@ -303,7 +351,10 @@ const insertPatient = (client: Client, establishmentId: string, patient: Patient
   ]
   const quotedColumns = columns.map((c) => `"${c}"`).join(', ')
   const placeholders = values.map((_, i) => `$${i + 1}`).join(', ')
-  return client.query(`INSERT INTO "Patient" (${quotedColumns}) VALUES (${placeholders})`, values)
+  return client.query(
+    `INSERT INTO "Patient" (${quotedColumns}) VALUES (${placeholders})`,
+    values,
+  )
 }
 
 type CheckRow = { check: string; value: string }
@@ -311,7 +362,10 @@ type CheckRow = { check: string; value: string }
 // Joue le VRAI fichier de controle (dossier-patient-avant.sql ou dossier-patient.sql) : ce
 // sont eux la mesure qui sera rejouee au deploiement, ce test ne la reimplemente pas. Chaque
 // fichier est une unique requete `SELECT ... UNION ALL ...`, jouee telle quelle.
-const runCheckFile = async (client: Client, filename: string): Promise<Map<string, string>> => {
+const runCheckFile = async (
+  client: Client,
+  filename: string,
+): Promise<Map<string, string>> => {
   const sql = readFileSync(join(CHECKS_DIR, filename), 'utf8')
   const result = await client.query<CheckRow>(sql)
   return new Map(result.rows.map((row) => [row.check, row.value]))
@@ -441,7 +495,11 @@ describe('migration patient_service_file — base jetable, jamais medisync ni me
         // C'est la correction apportee au plan (voir migration.sql) : la garde d'origine
         // aurait bloque ce cas sans raison de securite, en confondant "plusieurs services"
         // avec "plusieurs services ET des patients a repartir".
-        await insertEstablishment(client, ESTAB_2, 'Etablissement Beta Sans Patient')
+        await insertEstablishment(
+          client,
+          ESTAB_2,
+          'Etablissement Beta Sans Patient',
+        )
         await insertService(client, SVC_2A, ESTAB_2, 'Service Beta A')
         await insertService(client, SVC_2B, ESTAB_2, 'Service Beta B')
         await insertPatient(client, ESTAB_1, PATIENT_1)
@@ -461,7 +519,10 @@ describe('migration patient_service_file — base jetable, jamais medisync ni me
         // Envelopper dans { label, value } plutot que comparer les deux Map directement fait
         // nommer par Jest le libelle fautif en cas d'ecart, au lieu d'un diff illisible.
         for (const [label, expected] of avant) {
-          expect({ label, value: apres.get(label) }).toEqual({ label, value: expected })
+          expect({ label, value: apres.get(label) }).toEqual({
+            label,
+            value: expected,
+          })
         }
 
         // Invariants de structure, qui n'ont de sens qu'apres migration : le decompte
@@ -469,7 +530,10 @@ describe('migration patient_service_file — base jetable, jamais medisync ni me
         // mesures d'orphelins, toutes a zero.
         expect(apres.get('Sous-dossiers')).toBe(avant.get('Patients'))
         for (const label of STRUCTURAL_ZERO_LABELS) {
-          expect({ label, value: apres.get(label) }).toEqual({ label, value: '0' })
+          expect({ label, value: apres.get(label) }).toEqual({
+            label,
+            value: '0',
+          })
         }
 
         // La correction du plan sur `createdAt` : le sous-dossier recopie la date de creation
@@ -482,7 +546,10 @@ describe('migration patient_service_file — base jetable, jamais medisync ni me
         `)
         expect(dates.rows).toHaveLength(2)
         for (const row of dates.rows) {
-          expect({ id: row.id, same: row.same }).toEqual({ id: row.id, same: true })
+          expect({ id: row.id, same: row.same }).toEqual({
+            id: row.id,
+            same: true,
+          })
         }
 
         // I3 de la revue : la migration fabriquait `gen_random_uuid()::text`, une forme que
@@ -495,29 +562,34 @@ describe('migration patient_service_file — base jetable, jamais medisync ni me
         )
         expect(ids.rows).toHaveLength(2)
         for (const row of ids.rows) {
-          expect({ id: row.id, accepted: PATIENT_SERVICE_FILE_ID_SCHEMA.safeParse(row.id).success }).toEqual(
-            { id: row.id, accepted: true },
-          )
+          expect({
+            id: row.id,
+            accepted: PATIENT_SERVICE_FILE_ID_SCHEMA.safeParse(row.id).success,
+          }).toEqual({ id: row.id, accepted: true })
         }
 
         // Preuve que le validateur discrimine reellement, et n'accepterait pas n'importe
         // quoi : un UUID (l'ancienne forme produite par `gen_random_uuid()::text`, tirets
         // compris) doit etre refuse par ce meme `z.cuid()`.
         expect(
-          PATIENT_SERVICE_FILE_ID_SCHEMA.safeParse('642bde7f-31e8-4b61-be19-4a5660fc84e3').success,
+          PATIENT_SERVICE_FILE_ID_SCHEMA.safeParse(
+            '642bde7f-31e8-4b61-be19-4a5660fc84e3',
+          ).success,
         ).toBe(false)
       })
     },
   )
 
-  it(
-    'les identifiants que la migration fabrique restent uniques sur un volume realiste de patients',
-    async () => {
-      const ESTAB_VOL = 'estab-vol-1'
-      const SVC_VOL = 'svc-vol-1'
-      const VOLUME = 5000
+  it('les identifiants que la migration fabrique restent uniques sur un volume realiste de patients', async () => {
+    const ESTAB_VOL = 'estab-vol-1'
+    const SVC_VOL = 'svc-vol-1'
+    const VOLUME = 5000
 
-      await withScenarioDatabase(conn, maint, SCENARIOS.volume, async (client) => {
+    await withScenarioDatabase(
+      conn,
+      maint,
+      SCENARIOS.volume,
+      async (client) => {
         await insertEstablishment(client, ESTAB_VOL, 'Etablissement Volume')
         await insertService(client, SVC_VOL, ESTAB_VOL, 'Service Unique')
         // generate_series plutot que VOLUME appels JS : un aller-retour reseau par patient
@@ -532,7 +604,9 @@ describe('migration patient_service_file — base jetable, jamais medisync ni me
 
         await applyTargetMigration(client)
 
-        const rows = await client.query<{ id: string }>('SELECT id FROM "PatientServiceFile"')
+        const rows = await client.query<{ id: string }>(
+          'SELECT id FROM "PatientServiceFile"',
+        )
         expect(rows.rows).toHaveLength(VOLUME)
 
         // Unicite : autant d'identifiants distincts que de lignes.
@@ -540,11 +614,13 @@ describe('migration patient_service_file — base jetable, jamais medisync ni me
         expect(distinctIds.size).toBe(VOLUME)
 
         // Et chacun, pas seulement un echantillon, accepte par le VRAI validateur du depot.
-        const rejected = rows.rows.filter((r) => !PATIENT_SERVICE_FILE_ID_SCHEMA.safeParse(r.id).success)
+        const rejected = rows.rows.filter(
+          (r) => !PATIENT_SERVICE_FILE_ID_SCHEMA.safeParse(r.id).success,
+        )
         expect(rejected).toEqual([])
-      })
-    },
-  )
+      },
+    )
+  })
 
   it(
     'refuse un etablissement a plusieurs services des lors qu il a des patients, sans avoir ' +
@@ -556,42 +632,54 @@ describe('migration patient_service_file — base jetable, jamais medisync ni me
       const patient: PatientSeed = {
         ...PATIENT_1,
         id: 'patient-2svc-1',
-        fields: { ...PATIENT_1.fields, notes: 'Valeur originale a ne jamais perdre (2 services)' },
+        fields: {
+          ...PATIENT_1.fields,
+          notes: 'Valeur originale a ne jamais perdre (2 services)',
+        },
       }
 
-      await withScenarioDatabase(conn, maint, SCENARIOS.deuxServices, async (client) => {
-        await insertEstablishment(client, ESTAB, 'Etablissement CHU Fictif')
-        await insertService(client, SVC_A, ESTAB, 'Service A')
-        await insertService(client, SVC_B, ESTAB, 'Service B')
-        await insertPatient(client, ESTAB, patient)
+      await withScenarioDatabase(
+        conn,
+        maint,
+        SCENARIOS.deuxServices,
+        async (client) => {
+          await insertEstablishment(client, ESTAB, 'Etablissement CHU Fictif')
+          await insertService(client, SVC_A, ESTAB, 'Service A')
+          await insertService(client, SVC_B, ESTAB, 'Service B')
+          await insertPatient(client, ESTAB, patient)
 
-        await expect(applyTargetMigration(client)).rejects.toThrow(/plusieurs services/)
+          await expect(applyTargetMigration(client)).rejects.toThrow(
+            /plusieurs services/,
+          )
 
-        // Preuve structurelle, pas seulement comportementale (voir le commentaire de
-        // `assertGuardPrecedesEveryWrite`) : aucune instruction capable d'ecrire, ou qu'elle
-        // se trouve dans le fichier, ne precede la garde. C'est ce qui garantit qu'elle
-        // s'execute avant toute ecriture, independamment de la transaction implicite.
-        assertGuardPrecedesEveryWrite()
+          // Preuve structurelle, pas seulement comportementale (voir le commentaire de
+          // `assertGuardPrecedesEveryWrite`) : aucune instruction capable d'ecrire, ou qu'elle
+          // se trouve dans le fichier, ne precede la garde. C'est ce qui garantit qu'elle
+          // s'execute avant toute ecriture, independamment de la transaction implicite.
+          assertGuardPrecedesEveryWrite()
 
-        // Rien touche : ni la table du sous-dossier, ni la moindre colonne de Patient. Cette
-        // absence d'ecriture est de toute facon acquise par la transaction implicite du
-        // protocole simple (voir plus haut) — c'est l'assertion ci-dessus, sur la position
-        // du texte, qui etablit que c'est bien la garde, et non un echec plus loin dans le
-        // fichier, qui a provoque le refus sans qu'aucune ecriture n'ait meme ete tentee.
-        const table = await client.query<{ reg: string | null }>(
-          `SELECT to_regclass('"PatientServiceFile"') AS reg`,
-        )
-        expect(table.rows[0]?.reg).toBeNull()
+          // Rien touche : ni la table du sous-dossier, ni la moindre colonne de Patient. Cette
+          // absence d'ecriture est de toute facon acquise par la transaction implicite du
+          // protocole simple (voir plus haut) — c'est l'assertion ci-dessus, sur la position
+          // du texte, qui etablit que c'est bien la garde, et non un echec plus loin dans le
+          // fichier, qui a provoque le refus sans qu'aucune ecriture n'ait meme ete tentee.
+          const table = await client.query<{ reg: string | null }>(
+            `SELECT to_regclass('"PatientServiceFile"') AS reg`,
+          )
+          expect(table.rows[0]?.reg).toBeNull()
 
-        const count = await client.query<{ n: number }>('SELECT count(*)::int AS n FROM "Patient"')
-        expect(count.rows[0]?.n).toBe(1)
+          const count = await client.query<{ n: number }>(
+            'SELECT count(*)::int AS n FROM "Patient"',
+          )
+          expect(count.rows[0]?.n).toBe(1)
 
-        const notes = await client.query<{ notes: string | null }>(
-          'SELECT notes FROM "Patient" WHERE id = $1',
-          [patient.id],
-        )
-        expect(notes.rows[0]?.notes).toBe(patient.fields.notes)
-      })
+          const notes = await client.query<{ notes: string | null }>(
+            'SELECT notes FROM "Patient" WHERE id = $1',
+            [patient.id],
+          )
+          expect(notes.rows[0]?.notes).toBe(patient.fields.notes)
+        },
+      )
     },
   )
 
@@ -603,39 +691,51 @@ describe('migration patient_service_file — base jetable, jamais medisync ni me
       const patient: PatientSeed = {
         ...PATIENT_2,
         id: 'patient-0svc-1',
-        fields: { ...PATIENT_2.fields, notes: 'Valeur originale a ne jamais perdre (0 service)' },
+        fields: {
+          ...PATIENT_2.fields,
+          notes: 'Valeur originale a ne jamais perdre (0 service)',
+        },
       }
 
-      await withScenarioDatabase(conn, maint, SCENARIOS.zeroService, async (client) => {
-        await insertEstablishment(client, ESTAB, 'Etablissement Sans Service')
-        // Aucun service cree pour cet etablissement : c'est exactement le cas que la garde
-        // d'origine du plan laissait passer (elle ne refusait que > 1 service). La jointure
-        // du remplissage n'aurait produit aucune ligne pour ces patients, et le temps 3 aurait
-        // ensuite supprime leurs seize colonnes sans qu'aucun sous-dossier ne les recoive —
-        // une perte silencieuse, exactement ce que la garde existe pour empecher.
-        await insertPatient(client, ESTAB, patient)
+      await withScenarioDatabase(
+        conn,
+        maint,
+        SCENARIOS.zeroService,
+        async (client) => {
+          await insertEstablishment(client, ESTAB, 'Etablissement Sans Service')
+          // Aucun service cree pour cet etablissement : c'est exactement le cas que la garde
+          // d'origine du plan laissait passer (elle ne refusait que > 1 service). La jointure
+          // du remplissage n'aurait produit aucune ligne pour ces patients, et le temps 3 aurait
+          // ensuite supprime leurs seize colonnes sans qu'aucun sous-dossier ne les recoive —
+          // une perte silencieuse, exactement ce que la garde existe pour empecher.
+          await insertPatient(client, ESTAB, patient)
 
-        await expect(applyTargetMigration(client)).rejects.toThrow(/aucun service/)
+          await expect(applyTargetMigration(client)).rejects.toThrow(
+            /aucun service/,
+          )
 
-        // Meme preuve structurelle que dans le scenario "plusieurs services" ci-dessus : aucune
-        // ecriture ne precede la garde, ce n'est pas la transaction implicite qui fait a elle
-        // seule la demonstration.
-        assertGuardPrecedesEveryWrite()
+          // Meme preuve structurelle que dans le scenario "plusieurs services" ci-dessus : aucune
+          // ecriture ne precede la garde, ce n'est pas la transaction implicite qui fait a elle
+          // seule la demonstration.
+          assertGuardPrecedesEveryWrite()
 
-        const table = await client.query<{ reg: string | null }>(
-          `SELECT to_regclass('"PatientServiceFile"') AS reg`,
-        )
-        expect(table.rows[0]?.reg).toBeNull()
+          const table = await client.query<{ reg: string | null }>(
+            `SELECT to_regclass('"PatientServiceFile"') AS reg`,
+          )
+          expect(table.rows[0]?.reg).toBeNull()
 
-        const count = await client.query<{ n: number }>('SELECT count(*)::int AS n FROM "Patient"')
-        expect(count.rows[0]?.n).toBe(1)
+          const count = await client.query<{ n: number }>(
+            'SELECT count(*)::int AS n FROM "Patient"',
+          )
+          expect(count.rows[0]?.n).toBe(1)
 
-        const notes = await client.query<{ notes: string | null }>(
-          'SELECT notes FROM "Patient" WHERE id = $1',
-          [patient.id],
-        )
-        expect(notes.rows[0]?.notes).toBe(patient.fields.notes)
-      })
+          const notes = await client.query<{ notes: string | null }>(
+            'SELECT notes FROM "Patient" WHERE id = $1',
+            [patient.id],
+          )
+          expect(notes.rows[0]?.notes).toBe(patient.fields.notes)
+        },
+      )
     },
   )
 })

@@ -41,26 +41,46 @@ class ActivityLogSubscriber {
 
   #subscribe(): void {
     this.appEventBus.on('patient.created', (p) =>
-      this.#log('patient.created', 'patient', p.userID, p.patientId))
+      this.#log('patient.created', 'patient', p.userID, p.patientId),
+    )
     this.appEventBus.on('patient.updated', (p) =>
-      this.#log('patient.updated', 'patient', p.userID, p.patientId))
+      this.#log('patient.updated', 'patient', p.userID, p.patientId),
+    )
     this.appEventBus.on('patient.deleted', (p) =>
-      this.#log('patient.deleted', 'patient', p.userID, p.patientId))
+      this.#log('patient.deleted', 'patient', p.userID, p.patientId),
+    )
     this.appEventBus.on('patient.enrolled', (p) =>
-      this.#log('patient.enrolled', 'patient', p.userID, p.patientId))
+      this.#log('patient.enrolled', 'patient', p.userID, p.patientId),
+    )
     this.appEventBus.on('patient.removedFromPathway', (p) =>
-      this.#log('patient.removedFromPathway', 'patient', p.userID, p.patientId))
+      this.#log('patient.removedFromPathway', 'patient', p.userID, p.patientId),
+    )
     this.appEventBus.on('diagnostic.created', (p) =>
-      this.#log('diagnostic.created', 'diagnostic', p.userID, p.diagnosticId))
+      this.#log('diagnostic.created', 'diagnostic', p.userID, p.diagnosticId),
+    )
     this.appEventBus.on('diagnostic.updated', (p) =>
-      this.#log('diagnostic.updated', 'diagnostic', p.userID, p.diagnosticId))
+      this.#log('diagnostic.updated', 'diagnostic', p.userID, p.diagnosticId),
+    )
     this.appEventBus.on('appointment.created', (p) =>
-      this.#log('appointment.created', 'appointment', p.userID, p.appointmentId))
+      this.#log(
+        'appointment.created',
+        'appointment',
+        p.userID,
+        p.appointmentId,
+      ),
+    )
     this.appEventBus.on('appointment.updated', (p) =>
-      this.#log('appointment.updated', 'appointment', p.userID, p.appointmentId))
+      this.#log(
+        'appointment.updated',
+        'appointment',
+        p.userID,
+        p.appointmentId,
+      ),
+    )
     for (const action of MEMBER_ACTIONS) {
       this.appEventBus.on(action, (p) =>
-        this.#log(action, 'member', p.userID, p.membershipId))
+        this.#log(action, 'member', p.userID, p.membershipId),
+      )
     }
     // Tache 7 (etape 4b) : la reemission par le super-admin. `entityType: 'user'`, pas
     // `'member'` — cette route vise un COMPTE, hors de toute appartenance.
@@ -112,8 +132,14 @@ class ActivityLogSubscriber {
     // en revient — dans `src/test/unit/services/activity-log.subscriber.test.ts`.
     this.appEventBus.on('user.accessLinkReissued', (p) =>
       this.tenantContext.runAsSystem(async () => {
-        await this.#log('user.accessLinkReissued', 'user', p.userID, p.targetUserId)
-      }))
+        await this.#log(
+          'user.accessLinkReissued',
+          'user',
+          p.userID,
+          p.targetUserId,
+        )
+      }),
+    )
   }
 
   async #log(
@@ -148,7 +174,9 @@ class ActivityLogSubscriber {
       // Ce qui empeche le retour du defaut : `src/test/e2e/activity-log-auteur.test.ts`, qui
       // affirme LE NOM DE L'AUTEUR dans la ligne ecrite — pas le nombre de lignes, ni son
       // existence : la ligne existait deja, c'est son auteur qui manquait.
-      const user = await this.userRepository.findIdentity(userID).catch(() => null)
+      const user = await this.userRepository
+        .findIdentity(userID)
+        .catch(() => null)
       await this.activityLogRepository.create({
         userID,
         userFirstName: user?.firstName ?? null,
@@ -163,7 +191,8 @@ class ActivityLogSubscriber {
       // integralement le `data` de l'ecriture qui a echoue — userFirstName/userLastName compris
       // (task-5-re-review-3.md, tour 5). Seule la classe de l'erreur, qui ne peut jamais porter
       // une valeur soumise, va au journal.
-      const errorClass = err instanceof Error ? err.constructor.name : typeof err
+      const errorClass =
+        err instanceof Error ? err.constructor.name : typeof err
       this.logger.error(`ActivityLog: failed to log ${action} [${errorClass}]`)
     }
   }

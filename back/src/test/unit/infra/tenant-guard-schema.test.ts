@@ -81,7 +81,10 @@ const relationsOf = (body: string): Record<string, ModelRelation> => {
 // NESTED_RELATIONS : ni l'une ni l'autre ne porte de cardinalite).
 const targetsOf = (body: string): Record<string, string> =>
   Object.fromEntries(
-    Object.entries(relationsOf(body)).map(([field, relation]) => [field, relation.model]),
+    Object.entries(relationsOf(body)).map(([field, relation]) => [
+      field,
+      relation.model,
+    ]),
   )
 
 // Une colonne scalaire requise (non nullable) de ce nom, au premier niveau du bloc. `String?`
@@ -99,7 +102,11 @@ const hasRequiredColumn = (body: string, column: string): boolean =>
 // retire de SERVICE_MODELS, tant que rien n'appelle le garde-fou en conditions reelles.
 const modelsRequiringServiceScope = (): string[] =>
   [...models.entries()]
-    .filter(([, body]) => hasRequiredColumn(body, 'serviceId') && hasRequiredColumn(body, 'establishmentId'))
+    .filter(
+      ([, body]) =>
+        hasRequiredColumn(body, 'serviceId') &&
+        hasRequiredColumn(body, 'establishmentId'),
+    )
     .map(([name]) => name)
 
 // Exception documentee, pas un oubli : ServiceMembership porte serviceId et establishmentId en
@@ -117,7 +124,8 @@ describe('SERVICE_MODELS reflete prisma/schema.prisma', () => {
   // n'est dans aucune des deux listes tombe en famille « global », qui laisse tout passer.
   it('contient tout modele qui porte serviceId et establishmentId en colonnes requises', () => {
     const manquants = modelsRequiringServiceScope().filter(
-      (model) => !SERVICE_MODELS.includes(model) && !HORS_SERVICE_MODELS.includes(model),
+      (model) =>
+        !SERVICE_MODELS.includes(model) && !HORS_SERVICE_MODELS.includes(model),
     )
     expect(manquants).toEqual([])
   })
@@ -179,11 +187,14 @@ describe('MODEL_RELATIONS reflete prisma/schema.prisma', () => {
   // une transition etablissement -> service non filtree si l'oubli portait sur elle) ; une
   // entree de la table absente du schema est une declaration morte, qui ne protege rien et ne se
   // voit pas a l'usage.
-  it.each([...modelNames])('reflete exactement les relations de %s', (model) => {
-    const body = models.get(model)
-    expect(body).toBeDefined()
-    expect(MODEL_RELATIONS[model]).toEqual(relationsOf(body ?? ''))
-  })
+  it.each([...modelNames])(
+    'reflete exactement les relations de %s',
+    (model) => {
+      const body = models.get(model)
+      expect(body).toBeDefined()
+      expect(MODEL_RELATIONS[model]).toEqual(relationsOf(body ?? ''))
+    },
+  )
 
   // TACHE 15 — la CARDINALITE, enoncee separement de l'egalite exacte ci-dessus pour que l'echec
   // dise « telle relation a change de cardinalite » plutot que « deux objets different ». C'est
@@ -208,7 +219,9 @@ describe('MODEL_RELATIONS reflete prisma/schema.prisma', () => {
       for (const [field, relation] of Object.entries(auSchema)) {
         const declaree = declarees[field]
         if (!declaree) {
-          ecarts.push(`${model}.${field} -> ${relation.model} : absente de la table`)
+          ecarts.push(
+            `${model}.${field} -> ${relation.model} : absente de la table`,
+          )
           continue
         }
         if (declaree.list !== relation.list) {
@@ -224,7 +237,9 @@ describe('MODEL_RELATIONS reflete prisma/schema.prisma', () => {
       }
       for (const [field, declaree] of Object.entries(declarees)) {
         if (!auSchema[field]) {
-          ecarts.push(`${model}.${field} -> ${declaree.model} : absente du schema (entree morte)`)
+          ecarts.push(
+            `${model}.${field} -> ${declaree.model} : absente du schema (entree morte)`,
+          )
         }
       }
     }
@@ -235,7 +250,9 @@ describe('MODEL_RELATIONS reflete prisma/schema.prisma', () => {
   // declare un modele disparu du schema (ou l'inverse) est deja tenue par « declare chaque
   // modele du schema » plus haut, dont l'egalite de cles couvre les deux sens.
   it('ne declare aucun modele absent du schema', () => {
-    const inconnus = Object.keys(MODEL_RELATIONS).filter((model) => !modelNames.has(model))
+    const inconnus = Object.keys(MODEL_RELATIONS).filter(
+      (model) => !modelNames.has(model),
+    )
     expect(inconnus).toEqual([])
   })
 
@@ -245,7 +262,10 @@ describe('MODEL_RELATIONS reflete prisma/schema.prisma', () => {
   // limitable au sens inverse (voir assertNoGlobalToManyBridge). Le jour ou le schema en
   // introduirait une, ce test rougit et la question doit etre retranchee — pas la ligne effacee.
   it('n a aucune relation A-PLUSIEURS qui mene a un modele global', () => {
-    const modelesDeTenant = new Set([...SERVICE_MODELS, ...ESTABLISHMENT_MODELS])
+    const modelesDeTenant = new Set([
+      ...SERVICE_MODELS,
+      ...ESTABLISHMENT_MODELS,
+    ])
     const estGlobal = (model: string): boolean => !modelesDeTenant.has(model)
     const aPlusieursVersGlobal: string[] = []
     for (const [model, relations] of Object.entries(MODEL_RELATIONS)) {
@@ -268,8 +288,13 @@ describe('MODEL_RELATIONS reflete prisma/schema.prisma', () => {
     const missing: string[] = []
     for (const model of ESTABLISHMENT_MODELS) {
       const declared = MODEL_RELATIONS[model] ?? {}
-      for (const [field, target] of Object.entries(targetsOf(models.get(model) ?? ''))) {
-        if (SERVICE_MODELS.includes(target) && declared[field]?.model !== target) {
+      for (const [field, target] of Object.entries(
+        targetsOf(models.get(model) ?? ''),
+      )) {
+        if (
+          SERVICE_MODELS.includes(target) &&
+          declared[field]?.model !== target
+        ) {
           missing.push(`${model}.${field} -> ${target}`)
         }
       }
@@ -312,20 +337,29 @@ describe('GLOBAL_TENANT_RELATIONS reflete prisma/schema.prisma', () => {
   // controle — la seule propriete que `assertGlobalInclude` exploite, et la seule qui compte
   // puisqu'il echoue OUVERT. Les deux sens sont enonces separement pour que l'echec nomme le
   // defaut plutot que de dire « deux objets different ».
-  const MODELES_DE_TENANT = new Set([...SERVICE_MODELS, ...ESTABLISHMENT_MODELS])
+  const MODELES_DE_TENANT = new Set([
+    ...SERVICE_MODELS,
+    ...ESTABLISHMENT_MODELS,
+  ])
 
-  it.each(globalModels)('declare toutes les relations de %s qui menent a du tenant', (model) => {
-    const body = models.get(model)
-    expect(body).toBeDefined()
-    const declarees = [...(GLOBAL_TENANT_RELATIONS[model] ?? [])]
+  it.each(globalModels)(
+    'declare toutes les relations de %s qui menent a du tenant',
+    (model) => {
+      const body = models.get(model)
+      expect(body).toBeDefined()
+      const declarees = [...(GLOBAL_TENANT_RELATIONS[model] ?? [])]
 
-    // Le trou : une relation vers un modele de tenant absente de la table n'est pas vue, donc
-    // l'include passe sans controle et ramene la donnee de TOUS les tenants.
-    const manquantes = Object.entries(targetsOf(body ?? ''))
-      .filter(([field, target]) => MODELES_DE_TENANT.has(target) && !declarees.includes(field))
-      .map(([field, target]) => `${model}.${field} -> ${target}`)
-    expect(manquantes).toEqual([])
-  })
+      // Le trou : une relation vers un modele de tenant absente de la table n'est pas vue, donc
+      // l'include passe sans controle et ramene la donnee de TOUS les tenants.
+      const manquantes = Object.entries(targetsOf(body ?? ''))
+        .filter(
+          ([field, target]) =>
+            MODELES_DE_TENANT.has(target) && !declarees.includes(field),
+        )
+        .map(([field, target]) => `${model}.${field} -> ${target}`)
+      expect(manquantes).toEqual([])
+    },
+  )
 
   it.each(globalModels)('ne declare aucune relation morte sur %s', (model) => {
     const body = models.get(model)
@@ -375,12 +409,18 @@ describe('GLOBAL_TENANT_RELATIONS reflete prisma/schema.prisma', () => {
     const nonClassees = globalModels.flatMap((model) =>
       Object.entries(targetsOf(models.get(model) ?? ''))
         .filter(([field, target]) => {
-          const declaree = [...(GLOBAL_TENANT_RELATIONS[model] ?? [])].includes(field)
+          const declaree = [...(GLOBAL_TENANT_RELATIONS[model] ?? [])].includes(
+            field,
+          )
           return !declaree && !MODELES_DE_TENANT.has(target)
         })
         .map(([field, target]) => `${model}.${field} -> ${target}`),
     )
-    expect(nonClassees.filter((relation) => !SANS_DONNEE_DE_TENANT.includes(relation))).toEqual([])
+    expect(
+      nonClassees.filter(
+        (relation) => !SANS_DONNEE_DE_TENANT.includes(relation),
+      ),
+    ).toEqual([])
   })
 })
 
@@ -507,7 +547,8 @@ describe('SUPERADMIN_GLOBAL_OPERATIONS reflete le schema', () => {
 
   it('ne declare que des modeles qui existent, ou nommement en attente de la tache 2', () => {
     const inconnus = Object.keys(SUPERADMIN_GLOBAL_OPERATIONS).filter(
-      (modele) => !modelNames.has(modele) && !MODELES_GLOBAUX_A_VENIR.includes(modele),
+      (modele) =>
+        !modelNames.has(modele) && !MODELES_GLOBAUX_A_VENIR.includes(modele),
     )
     expect(inconnus).toEqual([])
 
@@ -516,7 +557,9 @@ describe('SUPERADMIN_GLOBAL_OPERATIONS reflete le schema', () => {
     // MODELES_GLOBAUX_A_VENIR (le premier sens ci-dessus le couvrira alors par le schema), et, en
     // le faisant, de relire les operations declarees pour lui dans SUPERADMIN_GLOBAL_OPERATIONS
     // maintenant que ses colonnes existent vraiment.
-    const dejaArrives = MODELES_GLOBAUX_A_VENIR.filter((modele) => modelNames.has(modele))
+    const dejaArrives = MODELES_GLOBAUX_A_VENIR.filter((modele) =>
+      modelNames.has(modele),
+    )
     expect(dejaArrives).toEqual([])
 
     // Et une entree d'attente qui ne correspond a aucune declaration est une ligne morte.

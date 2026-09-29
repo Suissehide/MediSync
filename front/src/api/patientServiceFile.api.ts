@@ -38,7 +38,9 @@ export const PatientServiceFileApi = {
   // route ne fait que dire "ce patient est désormais suivi ici", jamais écrire un contenu.
   // `alreadyFollowedHere` distingue les deux cas pour que l'écran le dise clairement, sans
   // écraser un sous-dossier déjà présent (consigne 4 du brief).
-  attachExisting: async (patientID: string): Promise<AttachExistingPatientResult> => {
+  attachExisting: async (
+    patientID: string,
+  ): Promise<AttachExistingPatientResult> => {
     const response = await fetchWithAuth(
       `${tenantApiUrl()}/patient/${patientID}/service-file`,
       { method: 'POST' },

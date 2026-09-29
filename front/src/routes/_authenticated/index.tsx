@@ -1,6 +1,9 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 
-import { administeredEstablishments, defaultTenantContext } from '@/utils/tenant-context.ts'
+import {
+  administeredEstablishments,
+  defaultTenantContext,
+} from '@/utils/tenant-context.ts'
 
 export const Route = createFileRoute('/_authenticated/')({
   beforeLoad: ({ context }) => {
@@ -8,7 +11,10 @@ export const Route = createFileRoute('/_authenticated/')({
     if (tenant && tenant.serviceId !== null) {
       throw redirect({
         to: '/e/$establishmentId/s/$serviceId/dashboard',
-        params: { establishmentId: tenant.establishmentId, serviceId: tenant.serviceId },
+        params: {
+          establishmentId: tenant.establishmentId,
+          serviceId: tenant.serviceId,
+        },
       })
     }
     // Aucun couple établissement/service : avant de conclure à une absence

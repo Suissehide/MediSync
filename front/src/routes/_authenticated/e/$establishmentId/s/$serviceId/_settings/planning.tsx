@@ -6,6 +6,7 @@ import interactionPlugin, {
 } from '@fullcalendar/interaction'
 import multiMonthPlugin from '@fullcalendar/multimonth'
 import FullCalendar from '@fullcalendar/react'
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import dayjs from 'dayjs'
 import {
@@ -19,12 +20,15 @@ import {
   Trash2,
   X,
 } from 'lucide-react'
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import Calendar, {
   type CalendarEvent,
 } from '@/components/custom/Calendar/calendar.tsx'
+import PathwayFilter, {
+  NO_PATHWAY_KEY,
+} from '@/components/custom/planning/pathwayFilter.tsx'
+import PlanningExportModal from '@/components/custom/planning/pdf/planning-export-modal.tsx'
 import AddSlotForm from '@/components/custom/popup/addSlotForm.tsx'
 import { BulkDuplicateForm } from '@/components/custom/popup/bulkDuplicateForm.tsx'
 import { BulkMoveForm } from '@/components/custom/popup/bulkMoveForm.tsx'
@@ -36,10 +40,6 @@ import { RegeneratePathwaysForm } from '@/components/custom/popup/regeneratePath
 import EventSheet from '@/components/custom/sheet/eventSheet.tsx'
 import EventTemplateSheet from '@/components/custom/sheet/eventTemplateSheet.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
-import PathwayFilter, {
-  NO_PATHWAY_KEY,
-} from '@/components/custom/planning/pathwayFilter.tsx'
-import PlanningExportModal from '@/components/custom/planning/pdf/planning-export-modal.tsx'
 import { Button } from '@/components/ui/button.tsx'
 import {
   PopoverAnchor,
@@ -49,10 +49,7 @@ import {
   PopoverRoot,
 } from '@/components/ui/popover.tsx'
 import { Select } from '@/components/ui/select.tsx'
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from '@/components/ui/toggle-group.tsx'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group.tsx'
 import { TOAST_SEVERITY } from '@/constants/ui.constant.ts'
 import { can } from '@/hooks/useCan.ts'
 import { useToast } from '@/hooks/useToast.ts'
@@ -65,19 +62,13 @@ import {
   useForbiddenWeekMutations,
   useForbiddenWeekQueries,
 } from '@/queries/useForbiddenWeek.ts'
+import { usePathwayMutations, usePathwayQueries } from '@/queries/usePathway.ts'
+import { usePathwayTemplateQueries } from '@/queries/usePathwayTemplate.ts'
 import {
   usePlanningCycleMutations,
   usePlanningCycleQueries,
 } from '@/queries/usePlanningCycle.ts'
-import {
-  usePathwayMutations,
-  usePathwayQueries,
-} from '@/queries/usePathway.ts'
-import { usePathwayTemplateQueries } from '@/queries/usePathwayTemplate.ts'
-import {
-  useSlotMutations,
-  useSlotsInRangeQuery,
-} from '@/queries/useSlot.ts'
+import { useSlotMutations, useSlotsInRangeQuery } from '@/queries/useSlot.ts'
 import { useSlotTemplateMutations } from '@/queries/useSlotTemplate.ts'
 import { usePathwayTemplateEditStore } from '@/store/usePathwayTemplateEditStore.ts'
 import { usePlanningStore } from '@/store/usePlanningStore.ts'
@@ -98,7 +89,10 @@ export const Route = createFileRoute(
   beforeLoad: ({ context, params }) => {
     const tenant = resolveTenantContext(context.authState.user, params)
     if (!can(tenant, 'planning:write')) {
-      throw redirect({ to: '/e/$establishmentId/s/$serviceId/dashboard', params })
+      throw redirect({
+        to: '/e/$establishmentId/s/$serviceId/dashboard',
+        params,
+      })
     }
   },
   component: Planning,
@@ -640,9 +634,7 @@ function Planning() {
       pathways.filter(
         (pathway) =>
           !hiddenPathwayIds.has(
-            pathway.template?.id ??
-              pathway.pathwayTemplateID ??
-              NO_PATHWAY_KEY,
+            pathway.template?.id ?? pathway.pathwayTemplateID ?? NO_PATHWAY_KEY,
           ),
       ),
     )
@@ -1267,7 +1259,9 @@ function Planning() {
               onSuccess: () => setCycleOpen(false),
             })
           }
-          isPending={savePlanningCycle.isPending || resetPlanningCycle.isPending}
+          isPending={
+            savePlanningCycle.isPending || resetPlanningCycle.isPending
+          }
         />
 
         {exportOpen && (

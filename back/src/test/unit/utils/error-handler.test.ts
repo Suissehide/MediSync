@@ -1,9 +1,9 @@
 import { Boom } from '@hapi/boom'
 
 import { Prisma } from '../../../generated/client'
-import { ErrorHandler } from '../../../main/utils/error-handler'
 import type { IocContainer } from '../../../main/types/application/ioc'
 import type { Logger } from '../../../main/types/utils/logger'
+import { ErrorHandler } from '../../../main/utils/error-handler'
 
 // La valeur soumise dont ce test verifie qu'elle ne reapparait NULLE PART : ni dans le message
 // renvoye par `boomErrorFromPrismaError`, ni dans un des appels au logger. C'est la reproduction
@@ -215,6 +215,8 @@ describe('ErrorHandler.boomErrorFromPrismaError – messages deliberes, figes au
     })
 
     expect(boomError.output.statusCode).toBe(409)
-    expect(boomError.message).toBe('PatientServiceFile already exists (unknown field)')
+    expect(boomError.message).toBe(
+      'PatientServiceFile already exists (unknown field)',
+    )
   })
 })

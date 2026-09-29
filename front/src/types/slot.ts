@@ -33,7 +33,12 @@ export type CreateSlotParamsWithTemplateData = CreateSlotParams & {
 }
 export type UpdateSlotParams = Omit<
   Slot,
-  'startDate' | 'endDate' | 'appointments' | 'pathway' | 'slotTemplate' | 'locked'
+  | 'startDate'
+  | 'endDate'
+  | 'appointments'
+  | 'pathway'
+  | 'slotTemplate'
+  | 'locked'
 > & {
   startDate?: string
   endDate?: string

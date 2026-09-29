@@ -63,7 +63,14 @@ const scalarFieldsOf = (modelName: string): Set<string> => {
 // `form.AppField name="..."` engage le composant qui le déclare : c'est le patron que le
 // développeur du tour précédent aurait dû suivre pour bouger « Profession », et que ce test tient
 // à sa place.
-const editDir = join(process.cwd(), 'src', 'components', 'custom', 'Patient', 'edit')
+const editDir = join(
+  process.cwd(),
+  'src',
+  'components',
+  'custom',
+  'Patient',
+  'edit',
+)
 
 const PATIENT_FILES = ['identity.patient.tsx', 'identite.patient.tsx']
 const SERVICE_FILE_FILES = [
@@ -94,7 +101,10 @@ describe('Affectation des champs Patient / PatientServiceFile — prisma/schema.
   for (const fileName of PATIENT_FILES) {
     it(`${fileName} ne déclare que des champs de Patient`, () => {
       for (const field of fieldsDeclaredIn(fileName)) {
-        expect(patientColumns.has(field), `${field} n'est pas une colonne de Patient`).toBe(true)
+        expect(
+          patientColumns.has(field),
+          `${field} n'est pas une colonne de Patient`,
+        ).toBe(true)
       }
     })
   }
@@ -111,27 +121,45 @@ describe('Affectation des champs Patient / PatientServiceFile — prisma/schema.
   }
 
   it('chaque colonne de Patient est déclarée par exactement un des deux fichiers « Patient »', () => {
-    const declaredByFile = new Map(PATIENT_FILES.map((f) => [f, fieldsDeclaredIn(f)]))
+    const declaredByFile = new Map(
+      PATIENT_FILES.map((f) => [f, fieldsDeclaredIn(f)]),
+    )
     for (const column of patientColumns) {
-      const owners = PATIENT_FILES.filter((f) => declaredByFile.get(f)?.includes(column))
-      expect(owners, `${column} devrait apparaître dans exactement un fichier`).toHaveLength(1)
+      const owners = PATIENT_FILES.filter((f) =>
+        declaredByFile.get(f)?.includes(column),
+      )
+      expect(
+        owners,
+        `${column} devrait apparaître dans exactement un fichier`,
+      ).toHaveLength(1)
     }
   })
 
   it('chaque colonne de PatientServiceFile est déclarée par exactement un des trois fichiers « sous-dossier »', () => {
-    const declaredByFile = new Map(SERVICE_FILE_FILES.map((f) => [f, fieldsDeclaredIn(f)]))
+    const declaredByFile = new Map(
+      SERVICE_FILE_FILES.map((f) => [f, fieldsDeclaredIn(f)]),
+    )
     for (const column of serviceFileColumns) {
-      const owners = SERVICE_FILE_FILES.filter((f) => declaredByFile.get(f)?.includes(column))
-      expect(owners, `${column} devrait apparaître dans exactement un fichier`).toHaveLength(1)
+      const owners = SERVICE_FILE_FILES.filter((f) =>
+        declaredByFile.get(f)?.includes(column),
+      )
+      expect(
+        owners,
+        `${column} devrait apparaître dans exactement un fichier`,
+      ).toHaveLength(1)
     }
   })
 
   it("aucun champ n'a disparu ni n'est apparu : l'union des cinq fichiers vaut exactement Patient ∪ PatientServiceFile", () => {
-    const declared = [...PATIENT_FILES, ...SERVICE_FILE_FILES].flatMap(fieldsDeclaredIn)
+    const declared = [...PATIENT_FILES, ...SERVICE_FILE_FILES].flatMap(
+      fieldsDeclaredIn,
+    )
     const declaredSet = new Set(declared)
     // Pas de doublon toutes sources confondues : un champ compté deux fois masquerait un champ
     // manquant ailleurs dans les vérifications ci-dessus.
     expect(declared).toHaveLength(declaredSet.size)
-    expect(declaredSet).toEqual(new Set([...patientColumns, ...serviceFileColumns]))
+    expect(declaredSet).toEqual(
+      new Set([...patientColumns, ...serviceFileColumns]),
+    )
   })
 })

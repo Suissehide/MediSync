@@ -140,9 +140,7 @@ export function DiagnosticForm({ diagnostic, onSave, onDelete }: Props) {
                             field.type === 'textarea' ? (
                               <TextArea
                                 value={String(f.state.value ?? '')}
-                                onChange={(e) =>
-                                  f.handleChange(e.target.value)
-                                }
+                                onChange={(e) => f.handleChange(e.target.value)}
                                 onBlur={f.handleBlur}
                               />
                             ) : field.type === 'number' ? (
@@ -165,9 +163,7 @@ export function DiagnosticForm({ diagnostic, onSave, onDelete }: Props) {
                             ) : (
                               <Input
                                 value={String(f.state.value ?? '')}
-                                onChange={(e) =>
-                                  f.handleChange(e.target.value)
-                                }
+                                onChange={(e) => f.handleChange(e.target.value)}
                                 onBlur={f.handleBlur}
                               />
                             )

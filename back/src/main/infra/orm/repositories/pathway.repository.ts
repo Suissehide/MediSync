@@ -2,12 +2,8 @@ import Boom from '@hapi/boom'
 import dayjs from 'dayjs'
 
 import type { Slot, SlotTemplate, Soignant } from '../../../../generated/client'
-
-import {
-  flattenSlot,
-  soignantLinksInclude,
-} from '../includes/slot-template.include'
 import type { IocContainer } from '../../../types/application/ioc'
+import type { AppointmentWithPatientsRepo } from '../../../types/infra/orm/repositories/appointment.repository.interface'
 import type {
   PathwayCreateEntityRepo,
   PathwayEntityRepo,
@@ -18,15 +14,18 @@ import type {
   RegeneratePathwaysResultRepo,
   TrackingPathwayRepo,
 } from '../../../types/infra/orm/repositories/pathway.repository.interface'
-import type { AppointmentWithPatientsRepo } from '../../../types/infra/orm/repositories/appointment.repository.interface'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { TenantContextInterface } from '../../../types/utils/tenant-context'
-import type { PostgresPrismaClient } from '../postgres-client'
 import { combineDateAndTime } from '../../../utils/date'
 import {
   buildWeekMapping,
   computeEffectiveOffset,
 } from '../../../utils/pathway-schedule'
+import {
+  flattenSlot,
+  soignantLinksInclude,
+} from '../includes/slot-template.include'
+import type { PostgresPrismaClient } from '../postgres-client'
 
 // Include partagé : un parcours embarque ses créneaux, chacun avec son
 // modèle de créneau (liens soignants aplatis par flattenSlot) et ses

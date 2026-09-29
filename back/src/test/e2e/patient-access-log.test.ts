@@ -18,6 +18,7 @@ import {
   patientIdParamOf,
 } from '../../main/utils/access-log-routes'
 import '../../main/utils/date'
+
 import { buildTestApp, type TestApp } from './setup/app'
 import { testDb, truncateAll } from './setup/db'
 import {
@@ -169,7 +170,7 @@ describe('journal des consultations : le crochet sur le chemin reel', () => {
     )
   }
 
-  it("ecrit une ligne complete a l ouverture d un dossier, sans jamais de contenu clinique", async () => {
+  it('ecrit une ligne complete a l ouverture d un dossier, sans jamais de contenu clinique', async () => {
     const res = await ouvrirDossier(patient.id)
     expect(res.statusCode).toBe(200)
     await attendre(
@@ -193,7 +194,7 @@ describe('journal des consultations : le crochet sur le chemin reel', () => {
     )
   })
 
-  it("distingue le sous-dossier de service de l ouverture du dossier", async () => {
+  it('distingue le sous-dossier de service de l ouverture du dossier', async () => {
     const res = await testApp.app.inject({
       method: 'GET',
       url: tenantUrl(
@@ -217,7 +218,7 @@ describe('journal des consultations : le crochet sur le chemin reel', () => {
   // REELLEMENT ecrite pour elles — c'est aussi la preuve que la detection du parametre
   // fonctionne sur l'orthographe `:patientId`, dont le crochet a besoin pour lire
   // `request.params`.
-  it("journalise la lecture du diagnostic educatif, malgre l autre orthographe du parametre", async () => {
+  it('journalise la lecture du diagnostic educatif, malgre l autre orthographe du parametre', async () => {
     const res = await testApp.app.inject({
       method: 'GET',
       url: tenantUrl(etab.id, service.id, `/patient/${patient.id}/diagnostic`),
@@ -239,7 +240,7 @@ describe('journal des consultations : le crochet sur le chemin reel', () => {
   // une quatrieme action a eux. Le verifier sur le chemin reel, et pas seulement dans la liste —
   // c'est aussi ce qui prouve que la quatrieme valeur traverse le domaine et arrive en base,
   // dont la colonne `action` est une chaine libre.
-  it("journalise la consultation des echecs d inscription, sous sa propre action", async () => {
+  it('journalise la consultation des echecs d inscription, sous sa propre action', async () => {
     const res = await testApp.app.inject({
       method: 'GET',
       url: tenantUrl(
@@ -273,7 +274,7 @@ describe('journal des consultations : le crochet sur le chemin reel', () => {
   // « zero ligne » etait vrai POUR UNE AUTRE RAISON que celle que le nom de ce test annonce.
   // Le 403 ci-dessous ferme ce trou : le patient EXISTE, la route est JOURNALISEE, seule la
   // permission manque — rien d'autre que la garde de statut n'empeche alors l'ecriture.
-  it("n ecrit aucune ligne quand la reponse est une erreur, alors qu elle en ecrit une quand elle ne l est pas", async () => {
+  it('n ecrit aucune ligne quand la reponse est une erreur, alors qu elle en ecrit une quand elle ne l est pas', async () => {
     const sansPermission = await testApp.app.inject({
       method: 'GET',
       url: tenantUrl(etab.id, service.id, `/patient/${patient.id}/diagnostic`),
@@ -299,7 +300,7 @@ describe('journal des consultations : le crochet sur le chemin reel', () => {
   // peut produire « succes ET tenant absent » sous `tenantRoutes`. C'est le test unitaire
   // (access-log-hook.test.ts, « n ecrit rien, et ne leve pas, quand le tenant n est pas
   // resolu ») qui l'eprouve seule, avec un code de succes.
-  it("n ecrit aucune ligne, et ne casse pas la reponse, quand le tenant n a pas ete resolu", async () => {
+  it('n ecrit aucune ligne, et ne casse pas la reponse, quand le tenant n a pas ete resolu', async () => {
     const res = await testApp.app.inject({
       method: 'GET',
       url: tenantUrl(autreEtab.id, autreService.id, `/patient/${patient.id}`),
@@ -314,7 +315,7 @@ describe('journal des consultations : le crochet sur le chemin reel', () => {
     expect(lignes[0]?.patientId).toBe(patientBarriere.id)
   })
 
-  it("n ecrit aucune ligne pour une route exemptee", async () => {
+  it('n ecrit aucune ligne pour une route exemptee', async () => {
     const res = await testApp.app.inject({
       method: 'GET',
       url: tenantUrl(etab.id, service.id, `/patient/${patient.id}/pathways`),
@@ -337,7 +338,7 @@ describe('journal des consultations : le crochet sur le chemin reel', () => {
 // nullable en base -- voir la migration `make_patient_access_log_patient_id_nullable`).
 // ---------------------------------------------------------------------------
 
-describe("journal des consultations : l export, en une ligne (tache 4)", () => {
+describe('journal des consultations : l export, en une ligne (tache 4)', () => {
   let testApp: TestApp
   let etab: { id: string }
   let service: { id: string }
@@ -411,7 +412,7 @@ describe("journal des consultations : l export, en une ligne (tache 4)", () => {
     expect(res.statusCode).toBe(200)
     await attendre(
       async () => (await testDb.patientAccessLog.count()) === 1,
-      "la ligne de l export est ecrite",
+      'la ligne de l export est ecrite',
     )
     const lignes = await testDb.patientAccessLog.findMany({
       where: { action: 'export' },
@@ -430,12 +431,12 @@ describe("journal des consultations : l export, en une ligne (tache 4)", () => {
 
   // Review Focus n°2 (cahier des charges) : un export dont le filtre ne rend aucun dossier est
   // journalise quand meme, avec `exportCount: 0` -- jamais confondu avec « rien a journaliser ».
-  it("trace un export qui ne rend aucun dossier", async () => {
+  it('trace un export qui ne rend aucun dossier', async () => {
     const res = await exporter('search=personne-de-ce-nom')
     expect(res.statusCode).toBe(200)
     await attendre(
       async () => (await testDb.patientAccessLog.count()) === 1,
-      "la ligne de l export vide est ecrite",
+      'la ligne de l export vide est ecrite',
     )
     const lignes = await testDb.patientAccessLog.findMany({
       where: { action: 'export' },
@@ -513,8 +514,16 @@ describe('journal des consultations : le lire, par service et par etablissement 
     })
     await testDb.patientServiceFile.createMany({
       data: [
-        { patientId: patient.id, serviceId: serviceA.id, establishmentId: etab.id },
-        { patientId: patient.id, serviceId: serviceB.id, establishmentId: etab.id },
+        {
+          patientId: patient.id,
+          serviceId: serviceA.id,
+          establishmentId: etab.id,
+        },
+        {
+          patientId: patient.id,
+          serviceId: serviceB.id,
+          establishmentId: etab.id,
+        },
       ],
     })
 
@@ -548,7 +557,10 @@ describe('journal des consultations : le lire, par service et par etablissement 
       ],
     })
 
-    cookiesCoordinateurA = await signIn(testApp.app, 'coordinateur-a-journal@test.fr')
+    cookiesCoordinateurA = await signIn(
+      testApp.app,
+      'coordinateur-a-journal@test.fr',
+    )
     cookiesLectureA = await signIn(testApp.app, 'lecture-a-journal@test.fr')
     cookiesAdmin = await signIn(testApp.app, 'admin-journal@test.fr')
     cookiesMembre = await signIn(testApp.app, 'membre-journal@test.fr')
@@ -586,7 +598,9 @@ describe('journal des consultations : le lire, par service et par etablissement 
       cookies: cookiesCoordinateurA,
     })
     expect(res.statusCode).toBe(200)
-    expect(res.json().map((l: { serviceId: string }) => l.serviceId)).toEqual([serviceA.id])
+    expect(res.json().map((l: { serviceId: string }) => l.serviceId)).toEqual([
+      serviceA.id,
+    ])
   })
 
   it('un admin d etablissement voit les acces de TOUS les services de son etablissement', async () => {
@@ -596,9 +610,9 @@ describe('journal des consultations : le lire, par service et par etablissement 
       cookies: cookiesAdmin,
     })
     expect(res.statusCode).toBe(200)
-    expect(new Set(res.json().map((l: { serviceId: string }) => l.serviceId))).toEqual(
-      new Set([serviceA.id, serviceB.id]),
-    )
+    expect(
+      new Set(res.json().map((l: { serviceId: string }) => l.serviceId)),
+    ).toEqual(new Set([serviceA.id, serviceB.id]))
   })
 
   // Le schema de reponse ne porte que l auteur, l action, la date, le service et
@@ -615,7 +629,15 @@ describe('journal des consultations : le lire, par service et par etablissement 
     expect(res.statusCode).toBe(200)
     const [ligne] = res.json()
     expect(Object.keys(ligne).sort()).toEqual(
-      ['accesParOctroi', 'action', 'createdAt', 'id', 'serviceId', 'userFirstName', 'userLastName'].sort(),
+      [
+        'accesParOctroi',
+        'action',
+        'createdAt',
+        'id',
+        'serviceId',
+        'userFirstName',
+        'userLastName',
+      ].sort(),
     )
   })
 
@@ -633,7 +655,15 @@ describe('journal des consultations : le lire, par service et par etablissement 
     expect(res.statusCode).toBe(200)
     for (const ligne of res.json()) {
       expect(Object.keys(ligne).sort()).toEqual(
-        ['accesParOctroi', 'action', 'createdAt', 'id', 'serviceId', 'userFirstName', 'userLastName'].sort(),
+        [
+          'accesParOctroi',
+          'action',
+          'createdAt',
+          'id',
+          'serviceId',
+          'userFirstName',
+          'userLastName',
+        ].sort(),
       )
     }
   })
@@ -650,7 +680,10 @@ describe('journal des consultations : le lire, par service et par etablissement 
       cookies: cookiesAdmin,
     })
     expect(resAdmin.statusCode).toBe(200)
-    const lignes = resAdmin.json() as { serviceId: string; accesParOctroi: boolean }[]
+    const lignes = resAdmin.json() as {
+      serviceId: string
+      accesParOctroi: boolean
+    }[]
     const ligneA = lignes.find((l) => l.serviceId === serviceA.id)
     const ligneB = lignes.find((l) => l.serviceId === serviceB.id)
     expect(ligneA?.accesParOctroi).toBe(true)
@@ -845,7 +878,7 @@ const monterApplicationAvecRouteEnPlus = (
 }
 
 describe('journal des consultations : le refus racine du hors-greffon', () => {
-  it("demarre normalement quand aucune route de dossier ne vit hors du greffon", async () => {
+  it('demarre normalement quand aucune route de dossier ne vit hors du greffon', async () => {
     const app = monterApplicationAvecRouteEnPlus()
     await expect(app.ready()).resolves.toBeDefined()
     await fermer(app)
@@ -855,7 +888,10 @@ describe('journal des consultations : le refus racine du hors-greffon', () => {
   // qu'assertTenantShapedRoute » : ces deux routes designent un dossier, vivent hors du greffon,
   // n'auraient jamais laisse de trace, et rien ne l'aurait dit.
   it.each([
-    ['administration d etablissement', '/e/:establishmentId/admin/patient/:patient_id'],
+    [
+      'administration d etablissement',
+      '/e/:establishmentId/admin/patient/:patient_id',
+    ],
     ['racine', '/dossier-hors-greffon/:patientID'],
   ])(
     'refuse de demarrer sur une route de dossier posee a la %s',
@@ -877,7 +913,7 @@ describe('journal des consultations : le refus racine du hors-greffon', () => {
   // doit jouer que pour l'URL EXACTE declaree, jamais par ressemblance de forme. Cette sonde,
   // posee sous LA MEME FORME que la vraie route d'administration (`/patients/:patientID/...`,
   // hors du prefixe de tenant) mais avec une URL DIFFERENTE, doit rester refusee.
-  it("refuse une sonde d administration de meme forme que la route exemptee, mais d URL differente", async () => {
+  it('refuse une sonde d administration de meme forme que la route exemptee, mais d URL differente', async () => {
     const app = monterApplicationAvecRouteEnPlus((child) => {
       child.get(
         '/e/:establishmentId/admin/patients/:patientID/sonde',

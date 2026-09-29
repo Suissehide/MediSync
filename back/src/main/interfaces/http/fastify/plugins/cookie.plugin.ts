@@ -1,15 +1,16 @@
-import type { FastifyPluginAsync } from 'fastify/types/plugin'
-import fastifyPlugin from 'fastify-plugin'
+import fastifyCookie, { type FastifyCookieOptions } from '@fastify/cookie'
+import Boom from '@hapi/boom'
 import type {
   FastifyInstance,
   FastifyRequest,
   preHandlerAsyncHookHandler,
 } from 'fastify'
-import { hashSecret, verifyJwt } from '../../../../utils/auth-helper'
-import fastifyCookie, { type FastifyCookieOptions } from '@fastify/cookie'
-import Boom from '@hapi/boom'
+import type { FastifyPluginAsync } from 'fastify/types/plugin'
+import fastifyPlugin from 'fastify-plugin'
+
 import type { UserEntityDomain } from '../../../../types/domain/user.domain.interface'
 import type { JwtPayload } from '../../../../types/interfaces/http/fastify/plugins/jwt.plugin'
+import { hashSecret, verifyJwt } from '../../../../utils/auth-helper'
 
 declare module 'fastify' {
   export interface FastifyRequest {

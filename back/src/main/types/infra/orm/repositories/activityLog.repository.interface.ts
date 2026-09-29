@@ -76,6 +76,11 @@ export interface ActivityLogRepositoryInterface {
   findMany: (
     params: ActivityLogFindManyParams,
   ) => Promise<ActivityLogFindManyResult>
-  findAllPlatformWide: (filters: PlatformAccessLogFilters) => Promise<ActivityLogEntityRepo[]>
-  deleteOlderThan: (date: Date, filters?: ActivityLogScopeFilters) => Promise<number>
+  findAllPlatformWide: (
+    filters: PlatformAccessLogFilters,
+  ) => Promise<ActivityLogEntityRepo[]>
+  deleteOlderThan: (
+    date: Date,
+    filters?: ActivityLogScopeFilters,
+  ) => Promise<number>
 }

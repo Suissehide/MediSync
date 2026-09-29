@@ -7,7 +7,12 @@ import { useDataFetching } from '../hooks/useDataFetching.ts'
 import { useToast } from '../hooks/useToast.ts'
 
 export const useForbiddenWeekQueries = () => {
-  const { data: forbiddenWeeks, isPending, isError, error } = useQuery({
+  const {
+    data: forbiddenWeeks,
+    isPending,
+    isError,
+    error,
+  } = useQuery({
     queryKey: [FORBIDDEN_WEEK.GET_ALL],
     queryFn: ForbiddenWeekApi.getAll,
     retry: 0,
@@ -26,7 +31,10 @@ export const useForbiddenWeekMutations = () => {
     mutationKey: [FORBIDDEN_WEEK.CREATE],
     mutationFn: (date: string) => ForbiddenWeekApi.create(date),
     onSuccess: () => {
-      toast({ title: 'Semaine interdite ajoutée', severity: TOAST_SEVERITY.SUCCESS })
+      toast({
+        title: 'Semaine interdite ajoutée',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
     },
     onError: (error) => {
       toast({
@@ -44,7 +52,10 @@ export const useForbiddenWeekMutations = () => {
     mutationKey: [FORBIDDEN_WEEK.DELETE],
     mutationFn: (id: string) => ForbiddenWeekApi.delete(id),
     onSuccess: () => {
-      toast({ title: 'Semaine interdite supprimée', severity: TOAST_SEVERITY.SUCCESS })
+      toast({
+        title: 'Semaine interdite supprimée',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
     },
     onError: (error) => {
       toast({

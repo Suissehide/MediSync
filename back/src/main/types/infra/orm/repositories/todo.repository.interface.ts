@@ -1,7 +1,4 @@
-import type {
-  Prisma,
-  Todo,
-} from '../../../../../generated/client'
+import type { Prisma, Todo } from '../../../../../generated/client'
 
 export type TodoEntityRepo = Todo
 // Le repository pose serviceId/establishmentId (tenant) et soignantID (profil

@@ -1,14 +1,30 @@
 import { useStore } from '@tanstack/react-form'
 import dayjs from 'dayjs'
-import { ArrowLeft, ArrowRight, Check, Save, Search, UserCheck, X } from 'lucide-react'
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Save,
+  Search,
+  UserCheck,
+  X,
+} from 'lucide-react'
 import type React from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { GENDER_OPTIONS } from '../../../constants/patient.constant.ts'
 import { useAppForm } from '../../../hooks/formConfig.tsx'
-import { usePatientIdentitySearch, usePatientMutations } from '../../../queries/usePatient.tsx'
+import {
+  usePatientIdentitySearch,
+  usePatientMutations,
+} from '../../../queries/usePatient.tsx'
 import { usePatientServiceFileMutations } from '../../../queries/usePatientServiceFile.ts'
-import type { CreatePatientParams, PatientIdentityMatch, PatientIdentitySearchResult, TimeOfDay } from '../../../types/patient.ts'
+import type {
+  CreatePatientParams,
+  PatientIdentityMatch,
+  PatientIdentitySearchResult,
+  TimeOfDay,
+} from '../../../types/patient.ts'
 import { Button } from '../../ui/button.tsx'
 import {
   Popup,
@@ -37,7 +53,9 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
   const { attachExistingPatient } = usePatientServiceFileMutations()
   // `null` : aucune recherche encore lancée. `[]` : recherche faite, aucune identité trouvée —
   // les deux sont affichés différemment (tâche 13, spec §6).
-  const [identityMatches, setIdentityMatches] = useState<PatientIdentityMatch[] | null>(null)
+  const [identityMatches, setIdentityMatches] = useState<
+    PatientIdentityMatch[] | null
+  >(null)
   // `hasMore` (tâche 13, tour de correction 1, point 4) : vingt résultats affichés au plus, sans
   // dire le total — voir `PatientIdentitySearchResult`. Affiché seulement quand une recherche a
   // été faite, comme `identityMatches`.
@@ -123,15 +141,17 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
   // bouton "desactive" alors que les champs ont ete remplis.
   const firstNameValue = useStore(form.store, (state) => state.values.firstName)
   const lastNameValue = useStore(form.store, (state) => state.values.lastName)
-  const canSearchIdentity = firstNameValue.trim().length > 0 || lastNameValue.trim().length > 0
+  const canSearchIdentity =
+    firstNameValue.trim().length > 0 || lastNameValue.trim().length > 0
 
   const searchIdentity = async () => {
     const { firstName, lastName, birthDate } = form.state.values
-    const { results, hasMore }: PatientIdentitySearchResult = await identitySearch.mutateAsync({
-      firstName: firstName.trim() || undefined,
-      lastName: lastName.trim() || undefined,
-      birthDate: birthDate || undefined,
-    })
+    const { results, hasMore }: PatientIdentitySearchResult =
+      await identitySearch.mutateAsync({
+        firstName: firstName.trim() || undefined,
+        lastName: lastName.trim() || undefined,
+        birthDate: birthDate || undefined,
+      })
     setIdentityMatches(results)
     setIdentityMatchesHasMore(hasMore)
   }
@@ -186,7 +206,9 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
               <>
                 <div className="w-full flex gap-4">
                   <form.AppField name="firstName">
-                    {(field) => <field.Input label="Prénom" className="w-full" />}
+                    {(field) => (
+                      <field.Input label="Prénom" className="w-full" />
+                    )}
                   </form.AppField>
 
                   <form.AppField name="lastName">
@@ -213,7 +235,8 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
                     isLoading={identitySearch.isPending}
                     onClick={searchIdentity}
                   >
-                    <Search className="w-4 h-4" /> Rechercher un patient existant
+                    <Search className="w-4 h-4" /> Rechercher un patient
+                    existant
                   </Button>
 
                   {identityMatches !== null && identityMatches.length === 0 && (
@@ -234,7 +257,8 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
                             {match.birthDate && (
                               <span className="text-neutral-400">
                                 {' '}
-                                — né(e) le {dayjs(match.birthDate).format('DD/MM/YYYY')}
+                                — né(e) le{' '}
+                                {dayjs(match.birthDate).format('DD/MM/YYYY')}
                               </span>
                             )}
                           </span>
@@ -261,8 +285,9 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
                       `PatientIdentitySearchResult`. */}
                   {identityMatches !== null && identityMatchesHasMore && (
                     <em className="text-sm text-neutral-400">
-                      Plus de {identityMatches.length} résultats : affinez la recherche (prénom,
-                      nom, date de naissance) pour voir les autres identités.
+                      Plus de {identityMatches.length} résultats : affinez la
+                      recherche (prénom, nom, date de naissance) pour voir les
+                      autres identités.
                     </em>
                   )}
                 </div>
@@ -314,7 +339,11 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
               </Button>
             </>
           ) : (
-            <Button variant="default" onClick={() => form.handleSubmit()} isLoading={enrollPatient.isPending}>
+            <Button
+              variant="default"
+              onClick={() => form.handleSubmit()}
+              isLoading={enrollPatient.isPending}
+            >
               <Check className="w-4 h-4" /> Valider
             </Button>
           )}

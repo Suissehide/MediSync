@@ -21,7 +21,9 @@ type PersistedPlanningState = PlanningState
 
 // Narrowing sans assertion de type : `in` sur un `unknown` deja ramene a
 // `object` restreint l'acces aux proprietes testees (TS 4.9+).
-const estEtatPlanningPersiste = (valeur: unknown): valeur is PersistedPlanningState =>
+const estEtatPlanningPersiste = (
+  valeur: unknown,
+): valeur is PersistedPlanningState =>
   typeof valeur === 'object' &&
   valeur !== null &&
   'currentDate' in valeur &&
@@ -50,8 +52,12 @@ export const usePlanningStore = create<PlanningState & PlanningActions>()(
       // les valeurs par defaut.
       merge: (persisted, current) => ({
         ...current,
-        currentDate: estEtatPlanningPersiste(persisted) ? persisted.currentDate : '',
-        viewStart: estEtatPlanningPersiste(persisted) ? persisted.viewStart : '',
+        currentDate: estEtatPlanningPersiste(persisted)
+          ? persisted.currentDate
+          : '',
+        viewStart: estEtatPlanningPersiste(persisted)
+          ? persisted.viewStart
+          : '',
         viewEnd: estEtatPlanningPersiste(persisted) ? persisted.viewEnd : '',
       }),
     },

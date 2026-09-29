@@ -17,7 +17,8 @@ export const Route = createFileRoute('/_authenticated/super-admin/')({
 
 function SuperAdminEstablishmentsList() {
   const navigate = useNavigate()
-  const { establishments, isPending, error } = useSuperAdminEstablishmentsQuery()
+  const { establishments, isPending, error } =
+    useSuperAdminEstablishmentsQuery()
 
   return (
     <DashboardLayout>

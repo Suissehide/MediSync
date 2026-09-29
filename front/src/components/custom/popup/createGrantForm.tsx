@@ -122,18 +122,16 @@ function CreateGrantForm({ establishmentId, trigger }: CreateGrantFormProps) {
                     : undefined,
               }}
             >
-              {(field) => (
-                <field.TextArea
-                  label="Motif (obligatoire)"
-                />
-              )}
+              {(field) => <field.TextArea label="Motif (obligatoire)" />}
             </form.AppField>
 
             <form.AppField
               name="durationHours"
               validators={{
                 onSubmit: ({ value }) =>
-                  value === undefined || value <= 0 || value > MAX_DURATION_HOURS
+                  value === undefined ||
+                  value <= 0 ||
+                  value > MAX_DURATION_HOURS
                     ? 'La durée doit être comprise entre 1 et 24 heures'
                     : undefined,
               }}

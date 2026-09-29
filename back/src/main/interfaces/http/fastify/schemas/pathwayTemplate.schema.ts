@@ -75,4 +75,3 @@ export type DeletePathwayTemplateByIdParams = z.infer<
 export type PathwayTemplateResponse = z.infer<
   typeof pathwayTemplateResponseSchema
 >
-

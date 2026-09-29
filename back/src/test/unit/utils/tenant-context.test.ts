@@ -1,8 +1,6 @@
-import { TenantContext } from '../../../main/utils/tenant-context'
-import {
-  TenantContextMissingError,
-} from '../../../main/utils/tenant-errors'
 import type { Tenant } from '../../../main/types/utils/tenant-context'
+import { TenantContext } from '../../../main/utils/tenant-context'
+import { TenantContextMissingError } from '../../../main/utils/tenant-errors'
 
 const tenant: Tenant = {
   userId: 'u1',
@@ -20,7 +18,11 @@ const tenant: Tenant = {
 // mecanisme mesure sur le vrai depot (etape 4b, tache 6, tour de correction 1) sans toucher a une
 // vraie base.
 class RequetePrismaFictive {
-  constructor(private readonly lireStore: () => unknown) {}
+  private readonly lireStore: () => unknown
+  constructor(lireStore: () => unknown) {
+    this.lireStore = lireStore
+  }
+  // biome-ignore lint/suspicious/noThenProperty: thenable volontaire, imite la paresse d'une requete Prisma
   then(resolve: (valeur: unknown) => void): void {
     resolve(this.lireStore())
   }
@@ -44,11 +46,14 @@ describe('TenantContext', () => {
 
   it('currentService leve quand le service est nul', async () => {
     const ctx = new TenantContext()
-    await ctx.run({ ...tenant, serviceId: null, serviceRole: null }, async () => {
-      await Promise.resolve()
-      expect(() => ctx.currentService()).toThrow(TenantContextMissingError)
-      expect(ctx.establishmentScope()).toEqual({ establishmentId: 'e1' })
-    })
+    await ctx.run(
+      { ...tenant, serviceId: null, serviceRole: null },
+      async () => {
+        await Promise.resolve()
+        expect(() => ctx.currentService()).toThrow(TenantContextMissingError)
+        expect(ctx.establishmentScope()).toEqual({ establishmentId: 'e1' })
+      },
+    )
   })
 
   it('runAsSystem pose le marqueur systeme', async () => {
@@ -92,6 +97,7 @@ describe('TenantContext', () => {
   it('runAsSuperAdmin : c est l enrobage async du rappel qui tient le contexte face a une requete paresseuse, jamais le mot-cle await', async () => {
     const ctx = new TenantContext()
 
+    // biome-ignore lint/suspicious/useAwait: l'absence d'await interne est precisement ce que ce cas eprouve
     const sansAwaitInterne = await ctx.runAsSuperAdmin(async () => {
       return new RequetePrismaFictive(() => ctx.peek())
     })

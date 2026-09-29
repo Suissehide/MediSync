@@ -1,6 +1,9 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 
-import { administeredEstablishments, defaultTenantContext } from '@/utils/tenant-context.ts'
+import {
+  administeredEstablishments,
+  defaultTenantContext,
+} from '@/utils/tenant-context.ts'
 
 // Cette ancienne URL visait la gestion des membres, qui vit desormais sous
 // l'administration d'etablissement : pas de service, donc un autre modele

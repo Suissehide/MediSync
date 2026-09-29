@@ -32,7 +32,10 @@ import { ACTION_LABELS } from './activityLog.constant.ts'
 // s'afficher ici sous son nom technique — c'est exactement le défaut que la tâche 11 avait
 // reproduit, et la raison pour laquelle le mineur « aucun test de contrat entre les deux dépôts »
 // est traité en même temps que celui-ci.
-export const SUPER_ADMIN_ACCESS_LOG_SOURCE_OPTIONS: { value: SuperAdminAccessLogSource; label: string }[] = [
+export const SUPER_ADMIN_ACCESS_LOG_SOURCE_OPTIONS: {
+  value: SuperAdminAccessLogSource
+  label: string
+}[] = [
   { value: 'acces', label: 'Journal des consultations' },
   { value: 'activite', label: "Journal d'activité" },
 ]
@@ -69,10 +72,13 @@ export const PLATFORM_ACTIVITY_ACTION_LABELS: Record<string, string> = {
 export const superAdminAccessLogActionLabels = (
   source: SuperAdminAccessLogSource,
 ): Record<string, string> =>
-  source === 'activite' ? PLATFORM_ACTIVITY_ACTION_LABELS : ACCESS_LOG_ACTION_LABELS
+  source === 'activite'
+    ? PLATFORM_ACTIVITY_ACTION_LABELS
+    : ACCESS_LOG_ACTION_LABELS
 
-export const superAdminAccessLogActionOptions = (source: SuperAdminAccessLogSource) =>
-  toSelectOptions(superAdminAccessLogActionLabels(source))
+export const superAdminAccessLogActionOptions = (
+  source: SuperAdminAccessLogSource,
+) => toSelectOptions(superAdminAccessLogActionLabels(source))
 
 // Valeur RÉSERVÉE du filtre d'établissement — miroir exact de `SANS_ETABLISSEMENT`
 // (`back/src/main/interfaces/http/fastify/schemas/superAdminAccessLog.schema.ts`). Voir le

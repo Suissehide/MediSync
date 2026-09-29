@@ -47,19 +47,28 @@ const declaresRelationTo = (body: string, targetModel: string): boolean =>
 
 describe('ensureExists ne couvre que EnrollmentIssue et DiagnosticEducatif — a bon droit', () => {
   it('AppointmentPatient ne porte aucune relation vers PatientServiceFile', () => {
-    expect(declaresRelationTo(modelBody('AppointmentPatient'), 'PatientServiceFile')).toBe(false)
+    expect(
+      declaresRelationTo(modelBody('AppointmentPatient'), 'PatientServiceFile'),
+    ).toBe(false)
   })
 
   it('PatientPathwayPriority ne porte aucune relation vers PatientServiceFile', () => {
-    expect(declaresRelationTo(modelBody('PatientPathwayPriority'), 'PatientServiceFile')).toBe(
-      false,
-    )
+    expect(
+      declaresRelationTo(
+        modelBody('PatientPathwayPriority'),
+        'PatientServiceFile',
+      ),
+    ).toBe(false)
   })
 
   // Garde-fou du garde-fou : si `declaresRelationTo` cessait de reconnaitre une vraie relation,
   // les deux tests ci-dessus deviendraient vrais par construction plutot que par preuve.
   it('declaresRelationTo reconnait bien une relation existante vers PatientServiceFile', () => {
-    expect(declaresRelationTo(modelBody('EnrollmentIssue'), 'PatientServiceFile')).toBe(true)
-    expect(declaresRelationTo(modelBody('DiagnosticEducatif'), 'PatientServiceFile')).toBe(true)
+    expect(
+      declaresRelationTo(modelBody('EnrollmentIssue'), 'PatientServiceFile'),
+    ).toBe(true)
+    expect(
+      declaresRelationTo(modelBody('DiagnosticEducatif'), 'PatientServiceFile'),
+    ).toBe(true)
   })
 })

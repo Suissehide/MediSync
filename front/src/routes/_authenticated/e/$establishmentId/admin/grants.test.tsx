@@ -15,7 +15,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { AuthState, User } from '@/types/auth.ts'
-
 import { Route as adminRoute } from '../admin.tsx'
 import { Route as grantsRoute } from './grants.tsx'
 
@@ -35,9 +34,7 @@ const admin: User = {
   firstName: null,
   lastName: null,
   isSuperAdmin: false,
-  establishments: [
-    { id: 'e1', name: 'CHU', role: 'ADMIN', services: [] },
-  ],
+  establishments: [{ id: 'e1', name: 'CHU', role: 'ADMIN', services: [] }],
 }
 
 const rootRoute = createRootRouteWithContext<{ authState: AuthState }>()({
@@ -62,17 +59,23 @@ const grantsScreenRoute = createRoute({
   component: optionsDe(grantsRoute).component,
 })
 const routeTree = rootRoute.addChildren([
-  authenticatedRoute.addChildren([adminLayoutRoute.addChildren([grantsScreenRoute])]),
+  authenticatedRoute.addChildren([
+    adminLayoutRoute.addChildren([grantsScreenRoute]),
+  ]),
 ])
 
-const monter = (fetchImpl: (url: string, method: string) => Promise<Response> | never) => {
+const monter = (
+  fetchImpl: (url: string, method: string) => Promise<Response> | never,
+) => {
   vi.stubGlobal(
     'fetch',
     vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
       fetchImpl(input.toString(), init?.method ?? 'GET'),
     ),
   )
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
   const router = createRouter({
     routeTree,
     history: createMemoryHistory({ initialEntries: ['/e/e1/admin/grants'] }),
@@ -137,13 +140,17 @@ describe('etats de l ecran des acces temporaires', () => {
     monter(() => Promise.resolve(new Response(null, { status: 500 })))
 
     await waitFor(() => {
-      expect(screen.getByText(/impossible de charger les accès temporaires/i)).toBeInTheDocument()
+      expect(
+        screen.getByText(/impossible de charger les accès temporaires/i),
+      ).toBeInTheDocument()
     })
     expect(screen.queryByText(/^chargement/i)).not.toBeInTheDocument()
   })
 
   it('affiche un etat vide distinct sur les deux groupes quand il n y a aucun acces', async () => {
-    monter(() => Promise.resolve(new Response(JSON.stringify([]), { status: 200 })))
+    monter(() =>
+      Promise.resolve(new Response(JSON.stringify([]), { status: 200 })),
+    )
 
     await waitFor(() => {
       expect(screen.getByText(/aucun accès en cours/i)).toBeInTheDocument()
@@ -151,7 +158,7 @@ describe('etats de l ecran des acces temporaires', () => {
     })
   })
 
-  it("separe correctement en cours (ni revoque ni expire) et passes (revoques ou expires), avec motif et auteur", async () => {
+  it('separe correctement en cours (ni revoque ni expire) et passes (revoques ou expires), avec motif et auteur', async () => {
     monter(() =>
       Promise.resolve(
         new Response(
@@ -178,7 +185,9 @@ describe('etats de l ecran des acces temporaires', () => {
     // l'AUTRE section, jamais dans « en cours ».
     expect(passesSection).toHaveTextContent('Astreinte week-end')
     expect(passesSection).toHaveTextContent('Erreur de saisie')
-    expect(passesSection).not.toHaveTextContent('Panne du compte administrateur')
+    expect(passesSection).not.toHaveTextContent(
+      'Panne du compte administrateur',
+    )
   })
 })
 

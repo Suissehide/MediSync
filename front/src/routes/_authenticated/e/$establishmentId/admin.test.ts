@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { User } from '@/types/auth.ts'
 import { LAST_CONTEXT_KEY } from '@/utils/tenant-context.ts'
-
 import { Route } from './admin.tsx'
 
 const admin: User = {

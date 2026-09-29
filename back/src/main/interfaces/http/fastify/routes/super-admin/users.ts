@@ -4,8 +4,8 @@ import {
   accountSearchResponseSchema,
   reissueAccessLinkResponseSchema,
   type SearchAccountQuery,
-  searchAccountQuerySchema,
   type SuperAdminUserParams,
+  searchAccountQuerySchema,
   superAdminUserParamsSchema,
 } from '../../schemas/superAdminUser.schema'
 

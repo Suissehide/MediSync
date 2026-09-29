@@ -1,8 +1,8 @@
-import { clsx } from 'clsx'
 import {
   TimePicker as MuiTimePicker,
   type TimePickerProps as MuiTimePickerProps,
 } from '@mui/x-date-pickers'
+import { clsx } from 'clsx'
 
 interface TimePickerProps extends MuiTimePickerProps {
   className?: string

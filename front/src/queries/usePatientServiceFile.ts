@@ -114,7 +114,8 @@ export const usePatientServiceFileMutations = () => {
   // en retour, pour que le patient y apparaisse.
   const attachExistingPatient = useMutation({
     mutationKey: [PATIENT_SERVICE_FILE.ATTACH_EXISTING],
-    mutationFn: (patientID: string) => PatientServiceFileApi.attachExisting(patientID),
+    mutationFn: (patientID: string) =>
+      PatientServiceFileApi.attachExisting(patientID),
     onError: (error) => {
       toast({
         title: 'Erreur lors du rattachement du patient au service',
@@ -140,7 +141,9 @@ export const usePatientServiceFileMutations = () => {
       )
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: [PATIENT.GET_ALL] }),
-        queryClient.invalidateQueries({ queryKey: [PATIENT.GET_ALL_WITH_TAGS] }),
+        queryClient.invalidateQueries({
+          queryKey: [PATIENT.GET_ALL_WITH_TAGS],
+        }),
         queryClient.invalidateQueries({
           queryKey: [PATIENT_SERVICE_FILE.GET_BY_PATIENT, result.patientId],
         }),

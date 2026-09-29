@@ -205,7 +205,7 @@ describe('rendez-vous avec un patient', () => {
   // donc il ne peut structurellement pas distinguer les deux. Seul un vrai Postgres le peut :
   // sans transaction, la premiere ecriture (l'Appointment) survit a l'echec de la seconde (le
   // patient n'existe pas) et reste orpheline sur le creneau, l'occupant sans aucun participant.
-  it("reste atomique : un participant introuvable ne laisse aucun rendez-vous orphelin sur le creneau", async () => {
+  it('reste atomique : un participant introuvable ne laisse aucun rendez-vous orphelin sur le creneau', async () => {
     const slotTemplate = await testDb.slotTemplate.create({
       data: {
         startTime: new Date('2026-04-03T09:00:00Z'),
@@ -249,7 +249,9 @@ describe('rendez-vous avec un patient', () => {
 
     expect(appointmentRes.statusCode).toBe(409)
 
-    const orphans = await testDb.appointment.findMany({ where: { slotID: slot.id } })
+    const orphans = await testDb.appointment.findMany({
+      where: { slotID: slot.id },
+    })
     expect(orphans).toHaveLength(0)
   })
 })

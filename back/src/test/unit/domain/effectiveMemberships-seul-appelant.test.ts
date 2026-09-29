@@ -50,12 +50,14 @@ const APPEL_LIVE_GRANTS_FOR_USER = /liveGrantsForUser\(/
 const AUTORISES_EFFECTIVE_MEMBERSHIPS = [
   {
     fichier: 'utils/me-mapper.ts',
-    raison: 'toMeResponse — alimente le selecteur d etablissement/service du front',
+    raison:
+      'toMeResponse — alimente le selecteur d etablissement/service du front',
     appels: 1,
   },
   {
     fichier: 'interfaces/http/fastify/plugins/tenant.plugin.ts',
-    raison: 'resolveTenantFromUser — decide ce qu une requete a le droit de lire',
+    raison:
+      'resolveTenantFromUser — decide ce qu une requete a le droit de lire',
     appels: 1,
   },
 ]
@@ -67,7 +69,8 @@ const AUTORISES_EFFECTIVE_MEMBERSHIPS = [
 const AUTORISES_FIND_FOR_USER = [
   {
     fichier: 'domain/accessGrant.domain.ts',
-    raison: 'liveGrantsForUser — seul relais vers AccessGrantRepository.findForUser',
+    raison:
+      'liveGrantsForUser — seul relais vers AccessGrantRepository.findForUser',
     appels: 1,
   },
 ]
@@ -79,7 +82,8 @@ const AUTORISES_FIND_FOR_USER = [
 const AUTORISES_LIVE_GRANTS_FOR_USER = [
   {
     fichier: 'domain/auth.domain.ts',
-    raison: 'signIn et refresh — l id du compte qui vient de prouver son mot de passe ou son jeton',
+    raison:
+      'signIn et refresh — l id du compte qui vient de prouver son mot de passe ou son jeton',
     appels: 2,
   },
   {
@@ -130,7 +134,11 @@ const appelsTrouves = (
     }
     return readFileSync(chemin, 'utf8')
       .split('\n')
-      .map((ligne, index) => ({ fichier: relatif, ligne: index + 1, texte: ligne }))
+      .map((ligne, index) => ({
+        fichier: relatif,
+        ligne: index + 1,
+        texte: ligne,
+      }))
       .filter((emplacement) => motif.test(emplacement.texte))
       .map(({ fichier, ligne }) => ({ fichier, ligne }))
   })
@@ -140,7 +148,8 @@ const verifieUnicite = (
   autorises: { fichier: string; appels: number }[],
 ): void => {
   const interdits = trouvees.filter(
-    (emplacement) => !autorises.some((permis) => permis.fichier === emplacement.fichier),
+    (emplacement) =>
+      !autorises.some((permis) => permis.fichier === emplacement.fichier),
   )
   // Sens 1 : un appelant supplementaire, non nomme dans la liste, doit faire rougir ce test.
   expect(interdits).toEqual([])
@@ -148,7 +157,8 @@ const verifieUnicite = (
   // silence) doit rougir aussi, sans quoi la liste pourrit au premier refactor.
   for (const permis of autorises) {
     expect(
-      trouvees.filter((emplacement) => emplacement.fichier === permis.fichier).length,
+      trouvees.filter((emplacement) => emplacement.fichier === permis.fichier)
+        .length,
     ).toBe(permis.appels)
   }
 }
@@ -162,7 +172,10 @@ describe('unicite des appelants nommes d effectiveMemberships et de findForUser'
   })
 
   it('findForUser n est appelee, dans back/src/main, que par liveGrantsForUser', () => {
-    verifieUnicite(appelsTrouves(APPEL_FIND_FOR_USER, false), AUTORISES_FIND_FOR_USER)
+    verifieUnicite(
+      appelsTrouves(APPEL_FIND_FOR_USER, false),
+      AUTORISES_FIND_FOR_USER,
+    )
   })
 
   // Tour de correction 2 (tache 8) : voir le commentaire en tete de fichier, point C., pour ce

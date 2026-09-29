@@ -27,7 +27,9 @@ import { useAppointmentMutations } from '@/queries/useAppointment.ts'
 import { useSlotsInRangeQuery } from '@/queries/useSlot.ts'
 import { useSoignantStore } from '@/store/useSoignantStore.ts'
 
-export const Route = createFileRoute('/_authenticated/e/$establishmentId/s/$serviceId/agenda')({
+export const Route = createFileRoute(
+  '/_authenticated/e/$establishmentId/s/$serviceId/agenda',
+)({
   component: Agenda,
 })
 
@@ -38,7 +40,9 @@ function Agenda() {
     const stored = localStorage.getItem(SELECTED_DAY_STORAGE_KEY)
     const parsed = stored ? dayjs.utc(stored) : null
 
-    return parsed?.isValid() ? parsed.startOf('day') : dayjs.utc().startOf('day')
+    return parsed?.isValid()
+      ? parsed.startOf('day')
+      : dayjs.utc().startOf('day')
   })
   const [openedRow, setOpenedRow] = useState<DayAppointmentRow | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<DayAppointmentRow | null>(
@@ -81,7 +85,8 @@ function Agenda() {
     )
   }, [slots, selectedDay, selectedSoignantIDs])
 
-  const addPatientTarget = rows.find((row) => row.id === addPatientTargetId) ?? null
+  const addPatientTarget =
+    rows.find((row) => row.id === addPatientTargetId) ?? null
 
   const columns = useMemo(
     () =>

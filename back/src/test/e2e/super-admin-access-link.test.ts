@@ -59,7 +59,10 @@ describe('soupape super-admin : reemettre le lien d un compte multi-etablissemen
     })
     bilocalId = bilocal.id
 
-    const superAdmin = await createUser({ email: 'root@plateforme.fr', isSuperAdmin: true })
+    const superAdmin = await createUser({
+      email: 'root@plateforme.fr',
+      isSuperAdmin: true,
+    })
     superAdminId = superAdmin.id
     // Pose independamment du chemin eprouve : c'est precisement le nom qu'on verifie plus bas
     // (Tache 7, meme raison que `activity-log-auteur.test.ts` — une ligne qui existe ne prouve
@@ -116,16 +119,21 @@ describe('soupape super-admin : reemettre le lien d un compte multi-etablissemen
     })
     expect(consomme.statusCode).toBe(200)
 
-    const session = await signIn(testApp.app, 'deux-postes@soin.fr', NOUVEAU_MDP)
+    const session = await signIn(
+      testApp.app,
+      'deux-postes@soin.fr',
+      NOUVEAU_MDP,
+    )
     const acces = await Promise.all(
-      [etablissementA, etablissementB].map(async (id) =>
-        (
-          await testApp.app.inject({
-            method: 'GET',
-            url: adminUrl(id, '/members'),
-            cookies: session,
-          })
-        ).statusCode,
+      [etablissementA, etablissementB].map(
+        async (id) =>
+          (
+            await testApp.app.inject({
+              method: 'GET',
+              url: adminUrl(id, '/members'),
+              cookies: session,
+            })
+          ).statusCode,
       ),
     )
     expect(acces).toEqual([200, 200])
@@ -141,14 +149,20 @@ describe('soupape super-admin : reemettre le lien d un compte multi-etablissemen
     const res = await reissue(dormant.id)
 
     expect(res.statusCode).toBe(409)
-    expect(await testDb.accessLink.count({ where: { userId: dormant.id } })).toBe(0)
+    expect(
+      await testDb.accessLink.count({ where: { userId: dormant.id } }),
+    ).toBe(0)
   })
 
   it('rend 404 sur un compte inconnu, et a qui n est pas super-admin', async () => {
     expect((await reissue('clzzzzzzzzzzzzzzzzzzzzzzz')).statusCode).toBe(404)
 
     // Herite de `requireSuperAdmin` (super-admin.routes.ts) : 404, jamais 403.
-    const ordinaire = await signIn(testApp.app, 'deux-postes@soin.fr', NOUVEAU_MDP)
+    const ordinaire = await signIn(
+      testApp.app,
+      'deux-postes@soin.fr',
+      NOUVEAU_MDP,
+    )
     expect((await reissue(bilocalId, ordinaire)).statusCode).toBe(404)
   })
 
@@ -186,7 +200,10 @@ describe('soupape super-admin : reemettre le lien d un compte multi-etablissemen
     expect({
       userFirstName: lignes[0]?.userFirstName,
       userLastName: lignes[0]?.userLastName,
-    }).toEqual({ userFirstName: SUPER_ADMIN_PRENOM, userLastName: SUPER_ADMIN_NOM })
+    }).toEqual({
+      userFirstName: SUPER_ADMIN_PRENOM,
+      userLastName: SUPER_ADMIN_NOM,
+    })
     // Ni le jeton ni son empreinte ne doivent jamais atteindre une ligne de journal
     // (`access-link-token-leak.test.ts` surveille les autres canaux ; ici, la colonne dediee).
     expect(JSON.stringify(lignes[0])).not.toContain(res.json().accessLink.token)

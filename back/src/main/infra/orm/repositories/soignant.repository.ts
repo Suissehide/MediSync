@@ -1,8 +1,8 @@
 import type { IocContainer } from '../../../types/application/ioc'
-import type { SoignantRepositoryInterface } from '../../../types/infra/orm/repositories/soignant.repository.interface'
 import type {
   SoignantCreateEntityRepo,
   SoignantEntityRepo,
+  SoignantRepositoryInterface,
   SoignantUpdateEntityRepo,
 } from '../../../types/infra/orm/repositories/soignant.repository.interface'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
@@ -34,7 +34,9 @@ class SoignantRepository implements SoignantRepositoryInterface {
   async findByID(soignantID: string): Promise<SoignantEntityRepo> {
     try {
       return await this.prisma.soignant.findUniqueOrThrow({
-        where: { id_serviceId: { id: soignantID, serviceId: this.scope.serviceId } },
+        where: {
+          id_serviceId: { id: soignantID, serviceId: this.scope.serviceId },
+        },
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
@@ -65,7 +67,9 @@ class SoignantRepository implements SoignantRepositoryInterface {
   ): Promise<SoignantEntityRepo> {
     try {
       return await this.prisma.soignant.update({
-        where: { id_serviceId: { id: soignantID, serviceId: this.scope.serviceId } },
+        where: {
+          id_serviceId: { id: soignantID, serviceId: this.scope.serviceId },
+        },
         data: soignantUpdateParams,
       })
     } catch (err) {
@@ -79,7 +83,9 @@ class SoignantRepository implements SoignantRepositoryInterface {
   async delete(soignantID: string): Promise<SoignantEntityRepo> {
     try {
       return await this.prisma.soignant.delete({
-        where: { id_serviceId: { id: soignantID, serviceId: this.scope.serviceId } },
+        where: {
+          id_serviceId: { id: soignantID, serviceId: this.scope.serviceId },
+        },
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({

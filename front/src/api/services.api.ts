@@ -6,7 +6,6 @@ import type {
   ServiceDeactivationImpact,
   UpdateServiceInput,
 } from '@/types/service.ts'
-
 import { fetchWithAuth } from './fetchWithAuth.ts'
 
 // Sous le préfixe d'établissement (`establishmentApiUrl`), comme

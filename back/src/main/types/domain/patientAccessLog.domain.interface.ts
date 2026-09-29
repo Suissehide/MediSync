@@ -49,8 +49,12 @@ export type PatientAccessLogEntityDomain = PatientAccessLog
 
 export interface PatientAccessLogDomainInterface {
   record: (input: RecordAccessInput) => Promise<void>
-  findByPatientInService: (patientId: string) => Promise<PatientAccessLogEntityDomain[]>
-  findByPatientInEstablishment: (patientId: string) => Promise<PatientAccessLogEntityDomain[]>
+  findByPatientInService: (
+    patientId: string,
+  ) => Promise<PatientAccessLogEntityDomain[]>
+  findByPatientInEstablishment: (
+    patientId: string,
+  ) => Promise<PatientAccessLogEntityDomain[]>
   // Etape 4b, tache 6 : la TROISIEME lecture, a l'echelle de la plateforme (super-admin). Simple
   // relais vers le depot, comme les deux precedentes — voir `PatientAccessLogRepository.
   // findAllPlatformWide` pour le cloisonnement (delibere absent : c'est le point de la tache).

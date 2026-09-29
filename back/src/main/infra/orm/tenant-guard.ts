@@ -83,7 +83,9 @@ export const ESTABLISHMENT_MODELS: readonly string[] = [
 // l'`include` équivalent. Pour rattacher une ligne de tenant à la ligne globale qu'on vient de
 // créer, il faut donc une seconde écriture, déclarée dans CETTE liste-ci
 // (`EstablishmentMembership.create`), et non une écriture imbriquée.
-export const SUPERADMIN_OPERATIONS: Readonly<Record<string, readonly string[]>> = {
+export const SUPERADMIN_OPERATIONS: Readonly<
+  Record<string, readonly string[]>
+> = {
   Service: ['count', 'findMany'],
   EstablishmentMembership: ['count', 'findMany', 'create'],
   ServiceMembership: ['count', 'findMany'],
@@ -121,7 +123,10 @@ export const NESTED_RELATIONS: Record<string, Record<string, string>> = {
   PathwayTemplate: { slotTemplates: 'SlotTemplate' },
   SlotTemplate: { soignantLinks: 'SlotTemplateSoignant', slot: 'Slot' },
   Thematic: { soignantLinks: 'SoignantThematic' },
-  Soignant: { slotTemplateLinks: 'SlotTemplateSoignant', thematicLinks: 'SoignantThematic' },
+  Soignant: {
+    slotTemplateLinks: 'SlotTemplateSoignant',
+    thematicLinks: 'SoignantThematic',
+  },
   EstablishmentMembership: { serviceMemberships: 'ServiceMembership' },
   Patient: {
     appointmentPatients: 'AppointmentPatient',
@@ -182,11 +187,7 @@ export const NESTED_RELATIONS: Record<string, Record<string, string>> = {
 // ici : voir `tenant-guard-schema.test.ts` (SANS_DONNEE_DE_TENANT) pour l'énoncé de ce choix.
 export const GLOBAL_TENANT_RELATIONS: Record<string, readonly string[]> = {
   User: ['establishmentMemberships'],
-  Establishment: [
-    'services',
-    'memberships',
-    'patients',
-  ],
+  Establishment: ['services', 'memberships', 'patients'],
 }
 
 // Une relation de MODEL_RELATIONS : sa cible ET sa CARDINALITÉ (tâche 15, étape 4a).
@@ -408,15 +409,35 @@ export const MODEL_RELATIONS: Record<string, Record<string, ModelRelation>> = {
 const UNIQUE_READ_OPERATIONS = new Set(['findUnique', 'findUniqueOrThrow'])
 
 const READ_OPERATIONS = new Set([
-  'findMany', 'findFirst', 'findFirstOrThrow', 'findUnique', 'findUniqueOrThrow',
-  'update', 'updateMany', 'updateManyAndReturn',
-  'delete', 'deleteMany', 'upsert', 'count', 'aggregate', 'groupBy',
+  'findMany',
+  'findFirst',
+  'findFirstOrThrow',
+  'findUnique',
+  'findUniqueOrThrow',
+  'update',
+  'updateMany',
+  'updateManyAndReturn',
+  'delete',
+  'deleteMany',
+  'upsert',
+  'count',
+  'aggregate',
+  'groupBy',
 ])
-const WRITE_OPERATIONS = new Set(['create', 'createMany', 'createManyAndReturn', 'upsert'])
+const WRITE_OPERATIONS = new Set([
+  'create',
+  'createMany',
+  'createManyAndReturn',
+  'upsert',
+])
 // Sous-ensemble des opérations de lecture dont le `data` peut déplacer une ligne d'un tenant à
 // l'autre (voir assertNoTenantMove). Le `update` d'un upsert est traité séparément : sa clé
 // (args.update) ne coïncide pas avec args.data.
-const UPDATE_OPERATIONS = new Set(['update', 'updateMany', 'updateManyAndReturn'])
+const UPDATE_OPERATIONS = new Set([
+  'update',
+  'updateMany',
+  'updateManyAndReturn',
+])
 
 // TOUR DE CORRECTION 3 (tâche 1) — Critique de la revue : une racine GLOBALE contournait
 // entièrement SUPERADMIN_OPERATIONS. `assertTenantScope` retourne via `assertGlobalScope` dès
@@ -478,15 +499,27 @@ const UPDATE_OPERATIONS = new Set(['update', 'updateMany', 'updateManyAndReturn'
 // AJOUTER UN MODÈLE GLOBAL AU SCHÉMA SANS ENTRÉE ICI ne l'ouvre pas : il est refusé en entier sous
 // superadmin (échec FERMÉ), et le refus dit quel couple manque.
 const LECTURES_GLOBALES_SANS_MUTATION: readonly string[] = [
-  'findMany', 'findFirst', 'findFirstOrThrow', 'findUnique', 'findUniqueOrThrow',
-  'count', 'aggregate', 'groupBy',
+  'findMany',
+  'findFirst',
+  'findFirstOrThrow',
+  'findUnique',
+  'findUniqueOrThrow',
+  'count',
+  'aggregate',
+  'groupBy',
 ]
 
-export const SUPERADMIN_GLOBAL_OPERATIONS: Readonly<Record<string, readonly string[]>> = {
+export const SUPERADMIN_GLOBAL_OPERATIONS: Readonly<
+  Record<string, readonly string[]>
+> = {
   User: [...LECTURES_GLOBALES_SANS_MUTATION, 'create'],
   Establishment: [...LECTURES_GLOBALES_SANS_MUTATION, 'create'],
   AccessLink: [...LECTURES_GLOBALES_SANS_MUTATION, 'create', 'updateMany'],
-  SuperAdminAccessGrant: [...LECTURES_GLOBALES_SANS_MUTATION, 'create', 'update'],
+  SuperAdminAccessGrant: [
+    ...LECTURES_GLOBALES_SANS_MUTATION,
+    'create',
+    'update',
+  ],
 }
 
 // TÂCHE 9 (étape 4b) — L'ABSENCE DE CONTEXTE EST UN QUATRIÈME CONTEXTE DÉCLARÉ, plus un
@@ -568,7 +601,9 @@ export const SUPERADMIN_GLOBAL_OPERATIONS: Readonly<Record<string, readonly stri
 //
 // CHAQUE ENTRÉE PORTE LA ROUTE QUI LA JUSTIFIE. Une entrée sans route est une entrée à
 // supprimer.
-export const NO_CONTEXT_GLOBAL_OPERATIONS: Readonly<Record<string, readonly string[]>> = {
+export const NO_CONTEXT_GLOBAL_OPERATIONS: Readonly<
+  Record<string, readonly string[]>
+> = {
   User: [
     // `AccessGrantRepository.findForUser` relit le drapeau `isSuperAdmin` HORS de
     // `runAsSuperAdmin`, à dessein (voir son commentaire) : `POST /auth/sign-in`, `GET /me`,
@@ -628,8 +663,17 @@ export const NO_CONTEXT_GLOBAL_OPERATIONS: Readonly<Record<string, readonly stri
 // Verbes Prisma d'écriture imbriquée : la présence de l'un d'eux dans la valeur d'un champ
 // signale une relation à vérifier plutôt qu'une simple colonne scalaire.
 const WRITE_VERBS = [
-  'create', 'createMany', 'connectOrCreate', 'connect', 'set',
-  'update', 'updateMany', 'upsert', 'delete', 'deleteMany', 'disconnect',
+  'create',
+  'createMany',
+  'connectOrCreate',
+  'connect',
+  'set',
+  'update',
+  'updateMany',
+  'upsert',
+  'delete',
+  'deleteMany',
+  'disconnect',
 ]
 
 type Family = 'service' | 'establishment' | 'global'
@@ -646,7 +690,10 @@ const familyOf = (model: string): Family => {
 
 type Dict = Record<string, unknown>
 const isDict = (value: unknown): value is Dict =>
-  typeof value === 'object' && value !== null && !Array.isArray(value) && !(value instanceof Date)
+  typeof value === 'object' &&
+  value !== null &&
+  !Array.isArray(value) &&
+  !(value instanceof Date)
 
 // Lit `field` au premier niveau du where, ou dans une clé composite (convention Prisma : les
 // clés uniques composées concatènent leurs champs avec `_`, ex. `id_serviceId`,
@@ -669,11 +716,19 @@ const whereValue = (where: unknown, field: string): unknown => {
   return undefined
 }
 
-const expectedValue = (store: TenantStore, field: string, model: string, operation: string): string => {
+const expectedValue = (
+  store: TenantStore,
+  field: string,
+  model: string,
+  operation: string,
+): string => {
   if (store.kind !== 'tenant') {
     throw new TenantScopeMissingError(model, operation, field)
   }
-  const value = field === 'serviceId' ? store.tenant.serviceId : store.tenant.establishmentId
+  const value =
+    field === 'serviceId'
+      ? store.tenant.serviceId
+      : store.tenant.establishmentId
   // Refuse toute valeur qui n'est pas une chaîne non vide : un champ absent plutôt qu'à `null`
   // ne doit jamais se comparer par accident à un `where` sans filtre (les deux valant
   // `undefined`).
@@ -696,32 +751,63 @@ const assertWhereLike = (
   }
 }
 
-const assertWhere = (model: string, operation: string, args: Dict, field: string, store: TenantStore): void =>
-  assertWhereLike(model, operation, args.where, field, store)
+const assertWhere = (
+  model: string,
+  operation: string,
+  args: Dict,
+  field: string,
+  store: TenantStore,
+): void => assertWhereLike(model, operation, args.where, field, store)
 
 // Empêche un update de déplacer une ligne d'un tenant à l'autre : si serviceId ou
 // establishmentId figure dans les données, sa valeur doit être celle du tenant courant. Absent,
 // c'est le cas normal (l'update ne touche pas à ces colonnes) et on laisse passer.
-const assertNoTenantMove = (model: string, operation: string, data: unknown, store: TenantStore): void => {
+const assertNoTenantMove = (
+  model: string,
+  operation: string,
+  data: unknown,
+  store: TenantStore,
+): void => {
   if (!isDict(data)) {
     return
   }
   const family = familyOf(model)
-  if (family === 'service' && 'serviceId' in data && data.serviceId !== expectedValue(store, 'serviceId', model, operation)) {
+  if (
+    family === 'service' &&
+    'serviceId' in data &&
+    data.serviceId !== expectedValue(store, 'serviceId', model, operation)
+  ) {
     throw new TenantScopeMissingError(model, operation, 'serviceId')
   }
-  if (family !== 'global' && 'establishmentId' in data && data.establishmentId !== expectedValue(store, 'establishmentId', model, operation)) {
+  if (
+    family !== 'global' &&
+    'establishmentId' in data &&
+    data.establishmentId !==
+      expectedValue(store, 'establishmentId', model, operation)
+  ) {
     throw new TenantScopeMissingError(model, operation, 'establishmentId')
   }
 }
 
 // Vérifie que `row` porte les colonnes de tenant attendues pour son modèle.
-const assertRowScope = (model: string, operation: string, row: Dict, store: TenantStore): void => {
+const assertRowScope = (
+  model: string,
+  operation: string,
+  row: Dict,
+  store: TenantStore,
+): void => {
   const family = familyOf(model)
-  if (family === 'service' && row.serviceId !== expectedValue(store, 'serviceId', model, operation)) {
+  if (
+    family === 'service' &&
+    row.serviceId !== expectedValue(store, 'serviceId', model, operation)
+  ) {
     throw new TenantScopeMissingError(model, operation, 'serviceId')
   }
-  if (family !== 'global' && row.establishmentId !== expectedValue(store, 'establishmentId', model, operation)) {
+  if (
+    family !== 'global' &&
+    row.establishmentId !==
+      expectedValue(store, 'establishmentId', model, operation)
+  ) {
     throw new TenantScopeMissingError(model, operation, 'establishmentId')
   }
 }
@@ -805,22 +891,51 @@ const assertNestedUpdate = (
 }
 
 // Vérifie une écriture imbriquée déclarée, verbe par verbe.
-const assertNestedWrite = (childModel: string, operation: string, value: Dict, store: TenantStore): void => {
-  const field = familyOf(childModel) === 'service' ? 'serviceId' : 'establishmentId'
+const assertNestedWrite = (
+  childModel: string,
+  operation: string,
+  value: Dict,
+  store: TenantStore,
+): void => {
+  const field =
+    familyOf(childModel) === 'service' ? 'serviceId' : 'establishmentId'
   if ('create' in value) {
     assertData(childModel, `${operation}.create`, value.create, store)
   }
   if (isDict(value.createMany) && 'data' in value.createMany) {
-    assertData(childModel, `${operation}.createMany`, value.createMany.data, store)
+    assertData(
+      childModel,
+      `${operation}.createMany`,
+      value.createMany.data,
+      store,
+    )
   }
   if ('connectOrCreate' in value) {
-    assertConnectOrCreate(childModel, `${operation}.connectOrCreate`, value.connectOrCreate, field, store)
+    assertConnectOrCreate(
+      childModel,
+      `${operation}.connectOrCreate`,
+      value.connectOrCreate,
+      field,
+      store,
+    )
   }
   if ('connect' in value) {
-    assertConnectEntries(childModel, `${operation}.connect`, value.connect, field, store)
+    assertConnectEntries(
+      childModel,
+      `${operation}.connect`,
+      value.connect,
+      field,
+      store,
+    )
   }
   if ('set' in value) {
-    assertConnectEntries(childModel, `${operation}.set`, value.set, field, store)
+    assertConnectEntries(
+      childModel,
+      `${operation}.set`,
+      value.set,
+      field,
+      store,
+    )
   }
   // `upsert` imbriqué : `'create' in value` ci-dessus capte le verbe `create`, pas
   // `upsert.create` — sa branche de création doit donc être vérifiée à part.
@@ -833,7 +948,12 @@ const assertNestedWrite = (childModel: string, operation: string, value: Dict, s
     assertNestedUpdate(childModel, `${operation}.update`, value.update, store)
   }
   if ('updateMany' in value) {
-    assertNestedUpdate(childModel, `${operation}.updateMany`, value.updateMany, store)
+    assertNestedUpdate(
+      childModel,
+      `${operation}.updateMany`,
+      value.updateMany,
+      store,
+    )
   }
   // delete / deleteMany / disconnect imbriqués : aucun contrôle supplémentaire. Ils n'écrivent
   // aucune colonne, et Prisma ne peut les résoudre que parmi les enfants déjà rattachés à la
@@ -845,7 +965,12 @@ const assertNestedWrite = (childModel: string, operation: string, value: Dict, s
 
 // Toute écriture imbriquée doit porter sur une relation déclarée dans NESTED_RELATIONS : une
 // relation absente de la liste est refusée plutôt que laissée sans contrôle.
-const assertNestedRelations = (model: string, operation: string, row: Dict, store: TenantStore): void => {
+const assertNestedRelations = (
+  model: string,
+  operation: string,
+  row: Dict,
+  store: TenantStore,
+): void => {
   const relations = NESTED_RELATIONS[model] ?? {}
   for (const [relationField, value] of Object.entries(row)) {
     if (!isNestedWrite(value)) {
@@ -863,7 +988,12 @@ const assertNestedRelations = (model: string, operation: string, row: Dict, stor
   }
 }
 
-const assertData = (model: string, operation: string, data: unknown, store: TenantStore): void => {
+const assertData = (
+  model: string,
+  operation: string,
+  data: unknown,
+  store: TenantStore,
+): void => {
   const rows = Array.isArray(data) ? data : [data]
   for (const row of rows) {
     if (!isDict(row)) {
@@ -887,7 +1017,12 @@ const assertData = (model: string, operation: string, data: unknown, store: Tena
 // refuse alors (store toujours superadmin, jamais tenant) toute écriture imbriquée vers un
 // tenant. Seule la ligne de TÊTE, celle que SUPERADMIN_OPERATIONS a explicitement autorisée,
 // échappe à ce contrôle — pas ses enfants.
-const assertSuperAdminWriteRow = (model: string, operation: string, data: unknown, store: TenantStore): void => {
+const assertSuperAdminWriteRow = (
+  model: string,
+  operation: string,
+  data: unknown,
+  store: TenantStore,
+): void => {
   const rows = Array.isArray(data) ? data : [data]
   for (const row of rows) {
     if (!isDict(row)) {
@@ -899,7 +1034,12 @@ const assertSuperAdminWriteRow = (model: string, operation: string, data: unknow
 
 // Choisit, pour l'appel de tête (pas les imbriqués, qui repassent toujours par assertData plus
 // haut), le contrôle complet (tenant) ou la variante sans assertRowScope (superadmin).
-const assertWriteData = (model: string, operation: string, data: unknown, store: TenantStore): void => {
+const assertWriteData = (
+  model: string,
+  operation: string,
+  data: unknown,
+  store: TenantStore,
+): void => {
   if (store.kind === 'tenant') {
     assertData(model, operation, data, store)
     return
@@ -914,7 +1054,9 @@ const assertWriteData = (model: string, operation: string, data: unknown, store:
 // n'a à être filtrée.
 const includedRelationEntries = (value: unknown): [string, unknown][] =>
   isDict(value)
-    ? Object.entries(value).filter(([, included]) => included !== false && included !== undefined)
+    ? Object.entries(value).filter(
+        ([, included]) => included !== false && included !== undefined,
+      )
     : []
 
 const includedRelationKeys = (value: unknown): string[] =>
@@ -923,13 +1065,22 @@ const includedRelationKeys = (value: unknown): string[] =>
 // Un include/select depuis un modèle global qui touche une relation de tenant n'est sûr que sur
 // une opération à une seule ligne (findUnique/findUniqueOrThrow) : c'est la seule garantie que
 // les données incluses appartiennent à un seul tenant.
-const assertGlobalInclude = (model: string, operation: string, args: Dict): void => {
+const assertGlobalInclude = (
+  model: string,
+  operation: string,
+  args: Dict,
+): void => {
   const tenantRelations = GLOBAL_TENANT_RELATIONS[model]
   if (!tenantRelations) {
     return
   }
-  const requested = [...includedRelationKeys(args.include), ...includedRelationKeys(args.select)]
-  const touchesTenantData = requested.some((key) => tenantRelations.includes(key))
+  const requested = [
+    ...includedRelationKeys(args.include),
+    ...includedRelationKeys(args.select),
+  ]
+  const touchesTenantData = requested.some((key) =>
+    tenantRelations.includes(key),
+  )
   if (touchesTenantData && !UNIQUE_READ_OPERATIONS.has(operation)) {
     throw new TenantScopeMissingError(
       model,
@@ -1205,17 +1356,36 @@ const assertNestedIncludeEntry = (
   store: TenantStore | undefined,
 ): void => {
   const childModel = relation.model
-  if (familyOf(model) === 'establishment' && familyOf(childModel) === 'service') {
+  if (
+    familyOf(model) === 'establishment' &&
+    familyOf(childModel) === 'service'
+  ) {
     assertServiceRelationFilter(model, operation, relationField, value, store)
   }
-  assertNoGlobalBridgeUnderSuperAdmin(model, childModel, operation, relationField, store)
+  assertNoGlobalBridgeUnderSuperAdmin(
+    model,
+    childModel,
+    operation,
+    relationField,
+    store,
+  )
   assertNoGlobalToManyBridge(model, relation, operation, relationField, store)
   if (isDict(value)) {
-    assertNestedInclude(childModel, `${operation}>${relationField}`, value, store)
+    assertNestedInclude(
+      childModel,
+      `${operation}>${relationField}`,
+      value,
+      store,
+    )
   }
 }
 
-const assertNestedInclude = (model: string, operation: string, args: Dict, store: TenantStore | undefined): void => {
+const assertNestedInclude = (
+  model: string,
+  operation: string,
+  args: Dict,
+  store: TenantStore | undefined,
+): void => {
   const relations = MODEL_RELATIONS[model] ?? {}
   // `include` n'accepte que des relations : toute clé doit donc être déclarée. Une clé inconnue
   // est refusée plutôt que laissée sans contrôle — y compris `_count`, qui compte des enfants
@@ -1229,7 +1399,14 @@ const assertNestedInclude = (model: string, operation: string, args: Dict, store
         `relation '${relationField}' non déclarée — l'ajouter à MODEL_RELATIONS['${model}']`,
       )
     }
-    assertNestedIncludeEntry(model, relation, operation, relationField, value, store)
+    assertNestedIncludeEntry(
+      model,
+      relation,
+      operation,
+      relationField,
+      value,
+      store,
+    )
   }
   // `select` mêle colonnes scalaires et relations, et rien ne permet ici de les distinguer : on
   // n'y exige donc pas la déclaration, seules les relations déclarées y sont vérifiées — mais
@@ -1250,7 +1427,14 @@ const assertNestedInclude = (model: string, operation: string, args: Dict, store
     if (!relation) {
       continue
     }
-    assertNestedIncludeEntry(model, relation, operation, relationField, value, store)
+    assertNestedIncludeEntry(
+      model,
+      relation,
+      operation,
+      relationField,
+      value,
+      store,
+    )
   }
 }
 
@@ -1260,7 +1444,12 @@ const assertNestedInclude = (model: string, operation: string, args: Dict, store
 // vérifiés. Ne vérifie PAS les colonnes de tenant de `data` lui-même — un `data` de mise à jour
 // n'en porte normalement aucune, et le cas où il en porte une est déjà couvert par
 // assertNoTenantMove.
-const assertNestedRelationsInUpdate = (model: string, operation: string, data: unknown, store: TenantStore): void => {
+const assertNestedRelationsInUpdate = (
+  model: string,
+  operation: string,
+  data: unknown,
+  store: TenantStore,
+): void => {
   if (isDict(data)) {
     assertNestedRelations(model, operation, data, store)
   }
@@ -1272,7 +1461,12 @@ const assertNestedRelationsInUpdate = (model: string, operation: string, data: u
 // récursives (assertNestedWrite → assertUpdatePayload → assertNestedRelations →
 // assertNestedWrite), comme `assertData` l'est déjà. La récursion n'a lieu qu'à l'appel, jamais
 // à l'initialisation du module.
-function assertUpdatePayload(model: string, operation: string, data: unknown, store: TenantStore): void {
+function assertUpdatePayload(
+  model: string,
+  operation: string,
+  data: unknown,
+  store: TenantStore,
+): void {
   assertNoTenantMove(model, operation, data, store)
   assertNestedRelationsInUpdate(model, operation, data, store)
 }
@@ -1296,7 +1490,10 @@ function assertUpdatePayload(model: string, operation: string, data: unknown, st
 // TOUR DE CORRECTION 4 — la déclaration est devenue une table PAR MODÈLE
 // (SUPERADMIN_GLOBAL_OPERATIONS, plus haut, où chaque entrée est justifiée une par une) plutôt
 // qu'un ensemble d'opérations valable pour tous les modèles globaux à la fois.
-const assertSuperAdminGlobalOperationDeclared = (model: string, operation: string): void => {
+const assertSuperAdminGlobalOperationDeclared = (
+  model: string,
+  operation: string,
+): void => {
   const permises = SUPERADMIN_GLOBAL_OPERATIONS[model]
   if (!permises?.includes(operation)) {
     throw new TenantScopeMissingError(model, operation, 'superadmin')
@@ -1345,9 +1542,19 @@ const assertSuperAdminGlobalOperationDeclared = (model: string, operation: strin
 // une lecture réelle et légitime du dépôt (`EstablishmentMembership.findMany` avec
 // `include: { user }`, `AccessLink.findUnique` avec `include: { user }`), que rien ne remplace à
 // coût égal. La cardinalité y sépare exactement ce qui traverse de ce qui ne traverse pas.
-const assertGlobalNestedWrite = (model: string, operation: string, args: Dict, store: TenantStore): void => {
+const assertGlobalNestedWrite = (
+  model: string,
+  operation: string,
+  args: Dict,
+  store: TenantStore,
+): void => {
   if (WRITE_OPERATIONS.has(operation)) {
-    assertSuperAdminWriteRow(model, operation, operation === 'upsert' ? args.create : args.data, store)
+    assertSuperAdminWriteRow(
+      model,
+      operation,
+      operation === 'upsert' ? args.create : args.data,
+      store,
+    )
   }
   if (UPDATE_OPERATIONS.has(operation)) {
     assertSuperAdminWriteRow(model, operation, args.data, store)
@@ -1362,14 +1569,22 @@ const assertGlobalNestedWrite = (model: string, operation: string, args: Dict, s
 // NO_CONTEXT_GLOBAL_OPERATIONS. Le détail de l'erreur dit `sans-contexte` plutôt que
 // `superadmin`, pour que le refus nomme la table à laquelle ajouter le couple — les deux tables
 // ne se recouvrent pas.
-const assertNoContextGlobalOperationDeclared = (model: string, operation: string): void => {
+const assertNoContextGlobalOperationDeclared = (
+  model: string,
+  operation: string,
+): void => {
   const permises = NO_CONTEXT_GLOBAL_OPERATIONS[model]
   if (!permises?.includes(operation)) {
     throw new TenantScopeMissingError(model, operation, 'sans-contexte')
   }
 }
 
-const assertGlobalScope = (model: string, operation: string, args: Dict, store: TenantStore | undefined): void => {
+const assertGlobalScope = (
+  model: string,
+  operation: string,
+  args: Dict,
+  store: TenantStore | undefined,
+): void => {
   // Tâche 9 (étape 4b) : en PREMIER, avant toute autre vérification, exactement comme la porte
   // superadmin juste en dessous. Sans store, un modèle global ne rencontrait aucune porte de
   // permission — voir NO_CONTEXT_GLOBAL_OPERATIONS pour le défaut fermé ici et pour ce qu'il
@@ -1415,7 +1630,10 @@ const assertGlobalScope = (model: string, operation: string, args: Dict, store: 
 // que le superadmin n'a pas (voir le commentaire de assertData ci-dessus pour l'écriture, et
 // la garde équivalente sur la lecture ci-dessous) — la descente structurelle, elle, s'applique
 // aux deux contextes sans distinction.
-const assertSuperAdminOperationDeclared = (model: string, operation: string): void => {
+const assertSuperAdminOperationDeclared = (
+  model: string,
+  operation: string,
+): void => {
   const permises = SUPERADMIN_OPERATIONS[model]
   if (!permises?.includes(operation)) {
     throw new TenantScopeMissingError(model, operation, 'superadmin')
@@ -1444,7 +1662,12 @@ const assertTenantReadScope = (
 }
 
 // Même garde que ci-dessus, pour la branche `update` d'un upsert.
-const assertTenantUpsertPayload = (model: string, operation: string, args: Dict, store: TenantStore): void => {
+const assertTenantUpsertPayload = (
+  model: string,
+  operation: string,
+  args: Dict,
+  store: TenantStore,
+): void => {
   if (store.kind === 'tenant') {
     assertUpdatePayload(model, `${operation}.update`, args.update, store)
   }
@@ -1503,7 +1726,9 @@ export const assertTenantScope = (
   }
 }
 
-export const buildTenantGuardExtension = (tenantContext: TenantContextInterface) =>
+export const buildTenantGuardExtension = (
+  tenantContext: TenantContextInterface,
+) =>
   Prisma.defineExtension({
     name: 'tenantGuard',
     query: {

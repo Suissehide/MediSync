@@ -110,15 +110,19 @@ class PatientRepository implements PatientRepositoryInterface {
       },
     })
 
-    return patients.map(({ appointmentPatients, serviceFiles, ...patient }) => ({
-      ...patient,
-      pathwayTemplateTags: distinctMainTags(appointmentPatients),
-      enrollmentIssues: serviceFiles.flatMap((f) => f.enrollmentIssues),
-      entryDate: serviceFiles[0]?.entryDate ?? null,
-    }))
+    return patients.map(
+      ({ appointmentPatients, serviceFiles, ...patient }) => ({
+        ...patient,
+        pathwayTemplateTags: distinctMainTags(appointmentPatients),
+        enrollmentIssues: serviceFiles.flatMap((f) => f.enrollmentIssues),
+        entryDate: serviceFiles[0]?.entryDate ?? null,
+      }),
+    )
   }
 
-  async findForExport(filters: PatientExportFilters): Promise<PatientForExportEntityRepo[]> {
+  async findForExport(
+    filters: PatientExportFilters,
+  ): Promise<PatientForExportEntityRepo[]> {
     const { search, pathwayTemplateTags } = filters
 
     const patients = await this.prisma.patient.findMany({
@@ -197,7 +201,8 @@ class PatientRepository implements PatientRepositoryInterface {
     return patients.map(({ appointmentPatients, serviceFiles, ...patient }) => {
       const [primaryServiceFile] = serviceFiles
       const serviceFile = primaryServiceFile
-        ? ((({ enrollmentIssues: _enrollmentIssuesOnServiceFile, ...rest }) => rest)(primaryServiceFile))
+        ? (({ enrollmentIssues: _enrollmentIssuesOnServiceFile, ...rest }) =>
+            rest)(primaryServiceFile)
         : null
       return {
         ...patient,
@@ -248,10 +253,20 @@ class PatientRepository implements PatientRepositoryInterface {
       where: {
         ...this.establishmentScope,
         ...(firstName
-          ? { firstName: { contains: escapeLikePattern(firstName), mode: 'insensitive' } }
+          ? {
+              firstName: {
+                contains: escapeLikePattern(firstName),
+                mode: 'insensitive',
+              },
+            }
           : {}),
         ...(lastName
-          ? { lastName: { contains: escapeLikePattern(lastName), mode: 'insensitive' } }
+          ? {
+              lastName: {
+                contains: escapeLikePattern(lastName),
+                mode: 'insensitive',
+              },
+            }
           : {}),
         ...(birthDate ? { birthDate } : {}),
       },
@@ -260,7 +275,10 @@ class PatientRepository implements PatientRepositoryInterface {
       take: IDENTITY_SEARCH_LIMIT + 1,
     })
     const hasMore = matches.length > IDENTITY_SEARCH_LIMIT
-    return { results: hasMore ? matches.slice(0, IDENTITY_SEARCH_LIMIT) : matches, hasMore }
+    return {
+      results: hasMore ? matches.slice(0, IDENTITY_SEARCH_LIMIT) : matches,
+      hasMore,
+    }
   }
 
   async findByID(patientID: string): Promise<PatientWithAppointmentsDomain> {
@@ -268,22 +286,28 @@ class PatientRepository implements PatientRepositoryInterface {
       // Les problemes d'inscription vivent desormais sur le sous-dossier de service (etape 3 du
       // multi-tenant) : la lecture passe par lui, puis s'aplatit pour garder la meme forme
       // qu'avant sur le patient (au plus un sous-dossier par service, donc pas de doublon).
-      const { serviceFiles, ...patient } = await this.prisma.patient.findUniqueOrThrow({
-        where: { id_establishmentId: { id: patientID, ...this.establishmentScope } },
-        include: {
-          appointmentPatients: {
-            where: { serviceId: this.scope.serviceId },
-            include: {
-              appointment: true,
+      const { serviceFiles, ...patient } =
+        await this.prisma.patient.findUniqueOrThrow({
+          where: {
+            id_establishmentId: { id: patientID, ...this.establishmentScope },
+          },
+          include: {
+            appointmentPatients: {
+              where: { serviceId: this.scope.serviceId },
+              include: {
+                appointment: true,
+              },
+            },
+            serviceFiles: {
+              where: { serviceId: this.scope.serviceId },
+              select: { enrollmentIssues: true },
             },
           },
-          serviceFiles: {
-            where: { serviceId: this.scope.serviceId },
-            select: { enrollmentIssues: true },
-          },
-        },
-      })
-      return { ...patient, enrollmentIssues: serviceFiles.flatMap((f) => f.enrollmentIssues) }
+        })
+      return {
+        ...patient,
+        enrollmentIssues: serviceFiles.flatMap((f) => f.enrollmentIssues),
+      }
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
         entityName: 'Patient',
@@ -313,7 +337,9 @@ class PatientRepository implements PatientRepositoryInterface {
   ): Promise<PatientEntityRepo> {
     try {
       return await this.prisma.patient.update({
-        where: { id_establishmentId: { id: patientID, ...this.establishmentScope } },
+        where: {
+          id_establishmentId: { id: patientID, ...this.establishmentScope },
+        },
         data: patientUpdateParams,
       })
     } catch (err) {
@@ -327,7 +353,9 @@ class PatientRepository implements PatientRepositoryInterface {
   async delete(patientID: string): Promise<PatientEntityRepo> {
     try {
       return await this.prisma.patient.delete({
-        where: { id_establishmentId: { id: patientID, ...this.establishmentScope } },
+        where: {
+          id_establishmentId: { id: patientID, ...this.establishmentScope },
+        },
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
@@ -399,7 +427,9 @@ class PatientRepository implements PatientRepositoryInterface {
   ): Promise<void> {
     try {
       await this.prisma.$transaction(async (tx) => {
-        await tx.patientPathwayPriority.deleteMany({ where: { patientID, ...this.scope } })
+        await tx.patientPathwayPriority.deleteMany({
+          where: { patientID, ...this.scope },
+        })
         if (orderedPathwayIDs.length === 0) {
           return
         }
@@ -481,12 +511,19 @@ class PatientRepository implements PatientRepositoryInterface {
           const isOnlyPatient = ap.appointment.appointmentPatients.length <= 1
 
           await tx.appointmentPatient.delete({
-            where: { id_serviceId: { id: ap.id, serviceId: this.scope.serviceId } },
+            where: {
+              id_serviceId: { id: ap.id, serviceId: this.scope.serviceId },
+            },
           })
 
           if (isOnlyPatient) {
             await tx.appointment.delete({
-              where: { id_serviceId: { id: ap.appointment.id, serviceId: this.scope.serviceId } },
+              where: {
+                id_serviceId: {
+                  id: ap.appointment.id,
+                  serviceId: this.scope.serviceId,
+                },
+              },
             })
             deletedAppointments++
           } else {

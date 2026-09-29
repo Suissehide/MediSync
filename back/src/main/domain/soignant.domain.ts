@@ -1,7 +1,7 @@
 import type { IocContainer } from '../types/application/ioc'
-import type { SoignantDomainInterface } from '../types/domain/soignant.domain.interface'
 import type {
   SoignantCreateEntityDomain,
+  SoignantDomainInterface,
   SoignantEntityDomain,
   SoignantUpdateEntityDomain,
 } from '../types/domain/soignant.domain.interface'

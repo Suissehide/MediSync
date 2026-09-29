@@ -22,7 +22,10 @@ export const Route = createFileRoute(
   beforeLoad: ({ context, params }) => {
     const tenant = resolveTenantContext(context.authState.user, params)
     if (!can(tenant, 'referentials:write')) {
-      throw redirect({ to: '/e/$establishmentId/s/$serviceId/dashboard', params })
+      throw redirect({
+        to: '/e/$establishmentId/s/$serviceId/dashboard',
+        params,
+      })
     }
   },
   component: DiagnosticTemplateSettings,

@@ -68,9 +68,7 @@ export function AppointmentTimeFields({
       </FormField>
 
       <FormField className="flex items-center gap-2">
-        <div className="text-sm text-text-light font-medium mb-0">
-          pendant
-        </div>
+        <div className="text-sm text-text-light font-medium mb-0">pendant</div>
         <div>
           <Select
             id={durationFieldId}

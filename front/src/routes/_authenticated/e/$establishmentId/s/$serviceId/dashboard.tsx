@@ -14,10 +14,7 @@ import AddPatientToSlotForm from '@/components/custom/popup/addPatientToSlotForm
 import AppointmentSheet from '@/components/custom/sheet/appointmentSheet.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
 import { SLOT } from '@/constants/process.constant.ts'
-import {
-  buildCalendarEventsFromSlots,
-  containsKeyword,
-} from '@/libs/utils.ts'
+import { buildCalendarEventsFromSlots, containsKeyword } from '@/libs/utils.ts'
 import { useAppointmentMutations } from '@/queries/useAppointment.ts'
 import { usePathwayTemplateQueries } from '@/queries/usePathwayTemplate.ts'
 import { useSlotsInRangeQuery } from '@/queries/useSlot.ts'
@@ -25,10 +22,12 @@ import { useDashboardFilterStore } from '@/store/useDashboardFilterStore.ts'
 import { usePlanningStore } from '@/store/usePlanningStore.ts'
 import { useSoignantStore } from '@/store/useSoignantStore.ts'
 import type { CreateAppointmentParams } from '@/types/appointment.ts'
-import type { Soignant } from '@/types/soignant.ts'
 import type { Slot, SlotDateRange } from '@/types/slot.ts'
+import type { Soignant } from '@/types/soignant.ts'
 
-export const Route = createFileRoute('/_authenticated/e/$establishmentId/s/$serviceId/dashboard')({
+export const Route = createFileRoute(
+  '/_authenticated/e/$establishmentId/s/$serviceId/dashboard',
+)({
   component: Dashboard,
 })
 
@@ -292,7 +291,9 @@ function Dashboard() {
           <AddAppointmentForm
             open={openCreateAppointmentModal}
             setOpen={(open) => {
-              if (!open) { calendarUnselectRef.current?.() }
+              if (!open) {
+                calendarUnselectRef.current?.()
+              }
               setOpenCreateAppointmentModal(open)
             }}
             startDate={selectedDate.startStr}

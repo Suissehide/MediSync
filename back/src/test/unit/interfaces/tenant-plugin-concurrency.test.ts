@@ -39,7 +39,12 @@ const user: UserWithMemberships = {
       establishmentId: 'e1',
       role: 'MEMBER',
       createdAt: now,
-      establishment: { id: 'e1', name: 'E1', createdAt: now, deactivatedAt: null },
+      establishment: {
+        id: 'e1',
+        name: 'E1',
+        createdAt: now,
+        deactivatedAt: null,
+      },
       serviceMemberships: [
         {
           id: 'sm1',
@@ -49,7 +54,13 @@ const user: UserWithMemberships = {
           role: 'INTERVENANT',
           soignantId: null,
           createdAt: now,
-          service: { id: 's1', establishmentId: 'e1', name: 'S1', createdAt: now, deactivatedAt: null },
+          service: {
+            id: 's1',
+            establishmentId: 'e1',
+            name: 'S1',
+            createdAt: now,
+            deactivatedAt: null,
+          },
         },
       ],
     },
@@ -59,7 +70,12 @@ const user: UserWithMemberships = {
       establishmentId: 'e2',
       role: 'MEMBER',
       createdAt: now,
-      establishment: { id: 'e2', name: 'E2', createdAt: now, deactivatedAt: null },
+      establishment: {
+        id: 'e2',
+        name: 'E2',
+        createdAt: now,
+        deactivatedAt: null,
+      },
       serviceMemberships: [
         {
           id: 'sm2',
@@ -69,7 +85,13 @@ const user: UserWithMemberships = {
           role: 'COORDINATEUR',
           soignantId: null,
           createdAt: now,
-          service: { id: 's2', establishmentId: 'e2', name: 'S2', createdAt: now, deactivatedAt: null },
+          service: {
+            id: 's2',
+            establishmentId: 'e2',
+            name: 'S2',
+            createdAt: now,
+            deactivatedAt: null,
+          },
         },
       ],
     },
@@ -86,10 +108,10 @@ describe('tenantPlugin — isolation entre requetes concurrentes', () => {
     // test. Aucun octroi ici : le tableau vide suffit à isoler ce que ce test observe
     // (l'étanchéité du tenant entre deux requêtes concurrentes), sans rapport avec les octrois.
     const accessGrantRepository = { findForUser: () => Promise.resolve([]) }
-    fastify.decorate(
-      'iocContainer',
-      { tenantContext, accessGrantRepository } as unknown as IocContainer,
-    )
+    fastify.decorate('iocContainer', {
+      tenantContext,
+      accessGrantRepository,
+    } as unknown as IocContainer)
     await fastify.register(tenantPlugin)
 
     fastify.addHook('onRequest', (request) => {
@@ -134,10 +156,18 @@ describe('tenantPlugin — isolation entre requetes concurrentes', () => {
     expect(resA.statusCode).toBe(200)
     expect(resB.statusCode).toBe(200)
     expect(resA.json().tenant).toEqual(
-      expect.objectContaining({ establishmentId: 'e1', serviceId: 's1', serviceRole: 'INTERVENANT' }),
+      expect.objectContaining({
+        establishmentId: 'e1',
+        serviceId: 's1',
+        serviceRole: 'INTERVENANT',
+      }),
     )
     expect(resB.json().tenant).toEqual(
-      expect.objectContaining({ establishmentId: 'e2', serviceId: 's2', serviceRole: 'COORDINATEUR' }),
+      expect.objectContaining({
+        establishmentId: 'e2',
+        serviceId: 's2',
+        serviceRole: 'COORDINATEUR',
+      }),
     )
 
     await fastify.close()

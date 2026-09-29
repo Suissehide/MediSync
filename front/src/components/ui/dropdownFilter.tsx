@@ -73,7 +73,8 @@ const DropdownFilter = ({
 
           {filters.map((filter, index) => {
             const startsGroup =
-              Boolean(filter.group) && filter.group !== filters[index - 1]?.group
+              Boolean(filter.group) &&
+              filter.group !== filters[index - 1]?.group
 
             return (
               <Fragment key={filter.id}>
@@ -101,7 +102,11 @@ const DropdownFilter = ({
                 >
                   <div className="w-4 h-4 border border-primary rounded flex items-center justify-center">
                     {filter.checked && (
-                      <Check size={12} strokeWidth={3} className="text-primary" />
+                      <Check
+                        size={12}
+                        strokeWidth={3}
+                        className="text-primary"
+                      />
                     )}
                   </div>
                   {filter.color && (

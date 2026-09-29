@@ -78,7 +78,9 @@ export const establishmentListItemSchema = z.object({
     .nullable(),
   lastActivityAt: z.coerce.date().nullable(),
 })
-export const establishmentListResponseSchema = z.array(establishmentListItemSchema)
+export const establishmentListResponseSchema = z.array(
+  establishmentListItemSchema,
+)
 
 export const establishmentIdParamsSchema = z.object({ id: z.string() })
 export type EstablishmentIdParams = z.infer<typeof establishmentIdParamsSchema>
@@ -109,8 +111,9 @@ const establishmentDetailMemberSchema = z.object({
   deactivatedAt: z.coerce.date().nullable(),
 })
 
-export const establishmentDetailResponseSchema = establishmentListItemSchema.extend({
-  services: z.array(establishmentDetailServiceSchema),
-  members: z.array(establishmentDetailMemberSchema),
-  activityLog: z.array(activityLogResponseSchema),
-})
+export const establishmentDetailResponseSchema =
+  establishmentListItemSchema.extend({
+    services: z.array(establishmentDetailServiceSchema),
+    members: z.array(establishmentDetailMemberSchema),
+    activityLog: z.array(activityLogResponseSchema),
+  })

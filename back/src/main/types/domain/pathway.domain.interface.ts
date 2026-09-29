@@ -1,4 +1,9 @@
-import type { Pathway, PathwayTemplate, Prisma, Slot } from '../../../generated/client'
+import type {
+  Pathway,
+  PathwayTemplate,
+  Prisma,
+  Slot,
+} from '../../../generated/client'
 import type {
   RegeneratePathwaysResultRepo,
   TrackingPathwayRepo,

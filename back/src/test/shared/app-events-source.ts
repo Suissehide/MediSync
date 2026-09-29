@@ -24,7 +24,10 @@ import { join } from 'node:path'
 // Une regex ne peut pas equilibrer des accolades. La lecture ci-dessous les EQUILIBRE : elle
 // isole le bloc `type AppEvents = { ... }`, puis, a l'interieur, chaque entree `'nom': { ... }`
 // par comptage, quelle que soit sa mise en page.
-const CHEMIN_APP_EVENT_BUS = join(__dirname, '../../main/utils/app-event-bus.ts')
+const CHEMIN_APP_EVENT_BUS = join(
+  __dirname,
+  '../../main/utils/app-event-bus.ts',
+)
 const CHAMP_STRING = /(\w+)\s*:\s*string/g
 const DEBUT_ENTREE = /'([\w.]+)'\s*:\s*\{/g
 
@@ -68,7 +71,9 @@ export const blocEquilibre = (
 // Exportee pour etre eprouvee sur un EXEMPLE MULTILIGNE plutot que seulement sur la source
 // reelle, qui pourrait tres bien n'etre que monoligne le jour ou on la lit — c'est exactement ce
 // qui a permis au defaut de vivre.
-export const evenementsDansSource = (sourceBrute: string): EvenementDeclare[] => {
+export const evenementsDansSource = (
+  sourceBrute: string,
+): EvenementDeclare[] => {
   const source = sansCommentaires(sourceBrute)
   const declaration = source.indexOf('type AppEvents')
   if (declaration === -1) {

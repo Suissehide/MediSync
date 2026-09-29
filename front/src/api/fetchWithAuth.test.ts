@@ -95,7 +95,9 @@ describe('fetchWithAuth — 404 de route de tenant', () => {
     const onStaleTenant = vi.fn().mockResolvedValue(undefined)
     registerStaleTenantHandler(onStaleTenant)
 
-    await fetchWithAuth('http://localhost:3000/e/e1/s/s1/patient/px/service-file')
+    await fetchWithAuth(
+      'http://localhost:3000/e/e1/s/s1/patient/px/service-file',
+    )
 
     expect(onStaleTenant).not.toHaveBeenCalled()
   })

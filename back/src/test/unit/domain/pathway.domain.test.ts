@@ -6,7 +6,8 @@ import type { IocContainer } from '../../../main/types/application/ioc'
 const buildDomain = (known: { templates: string[] }) => {
   const created: unknown[] = []
   const updated: unknown[] = []
-  const notFound = (name: string) => Promise.reject(Boom.notFound(`${name} not found`))
+  const notFound = (name: string) =>
+    Promise.reject(Boom.notFound(`${name} not found`))
   const container = {
     pathwayRepository: {
       create: (params: unknown) => {
@@ -20,7 +21,9 @@ const buildDomain = (known: { templates: string[] }) => {
     },
     pathwayTemplateRepository: {
       findByID: (id: string) =>
-        known.templates.includes(id) ? Promise.resolve({ id }) : notFound('PathwayTemplate'),
+        known.templates.includes(id)
+          ? Promise.resolve({ id })
+          : notFound('PathwayTemplate'),
     },
   } as unknown as IocContainer
   return { domain: new PathwayDomain(container), created, updated }

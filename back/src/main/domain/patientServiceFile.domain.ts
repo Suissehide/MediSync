@@ -16,7 +16,9 @@ class PatientServiceFileDomain implements PatientServiceFileDomainInterface {
     this.appEventBus = appEventBus
   }
 
-  findByPatient(patientId: string): Promise<PatientServiceFileEntityDomain | null> {
+  findByPatient(
+    patientId: string,
+  ): Promise<PatientServiceFileEntityDomain | null> {
     return this.patientServiceFileRepository.findByPatient(patientId)
   }
 
@@ -25,13 +27,19 @@ class PatientServiceFileDomain implements PatientServiceFileDomainInterface {
     params: PatientServiceFileUpsertEntityDomain,
     userID: string,
   ): Promise<PatientServiceFileEntityDomain> {
-    const serviceFile = await this.patientServiceFileRepository.upsert(patientId, params)
+    const serviceFile = await this.patientServiceFileRepository.upsert(
+      patientId,
+      params,
+    )
     // Meme evenement que PATCH /patient/:id ('patient.updated' -> ActivityLogSubscriber) : le
     // sous-dossier porte le contenu clinique qui vivait avant sur le patient, et sa modification
     // doit laisser la meme trace dans le journal d'activite (voir back/src/main/services/
     // activity-log.subscriber.ts). Aucun evenement dedie : ce reste une modification du dossier
     // du meme patient, journalisee sous la meme entite.
-    this.appEventBus.emit('patient.updated', { userID, patientId: serviceFile.patientId })
+    this.appEventBus.emit('patient.updated', {
+      userID,
+      patientId: serviceFile.patientId,
+    })
     return serviceFile
   }
 
@@ -63,7 +71,8 @@ class PatientServiceFileDomain implements PatientServiceFileDomainInterface {
     patientId: string,
     userID: string,
   ): Promise<{ patientId: string; alreadyFollowedHere: boolean }> {
-    const existing = await this.patientServiceFileRepository.findByPatient(patientId)
+    const existing =
+      await this.patientServiceFileRepository.findByPatient(patientId)
     if (existing) {
       return { patientId, alreadyFollowedHere: true }
     }

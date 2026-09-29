@@ -40,7 +40,9 @@ export interface AccessLinkRepositoryInterface {
   ) => Promise<void>
   // Lecture SEULE, jamais de mutation : sert à distinguer un jeton inconnu (retourne `null`) d'un
   // jeton connu, pour lire le compte cible AVANT de décider de consommer (Review Focus n°5).
-  findByTokenHashWithUser: (tokenHash: string) => Promise<AccessLinkWithUser | null>
+  findByTokenHashWithUser: (
+    tokenHash: string,
+  ) => Promise<AccessLinkWithUser | null>
   // Usage unique tenu PAR LA BASE (Review Focus n°1) : un `updateMany` conditionné sur
   // `usedAt: null` ET `expiresAt` non dépassé, jamais une lecture suivie d'une écriture — deux
   // appels simultanés sur le même jeton ne peuvent en toucher qu'un. Renvoie `true` si CETTE

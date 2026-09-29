@@ -3,8 +3,8 @@ import type {
   EstablishmentMembership,
 } from '../../../../../generated/client'
 import type { EstablishmentRole } from '../../../../../generated/enums'
-import type { ActivityLogEntityRepo } from './activityLog.repository.interface'
 import type { PrimaTransactionClient } from '../client'
+import type { ActivityLogEntityRepo } from './activityLog.repository.interface'
 
 export type EstablishmentEntityRepo = Establishment
 
@@ -70,7 +70,8 @@ export type EstablishmentCounters = {
   lastActivityAt: Date | null
 }
 
-export type EstablishmentListRow = EstablishmentEntityRepo & EstablishmentCounters
+export type EstablishmentListRow = EstablishmentEntityRepo &
+  EstablishmentCounters
 
 // Tour de correction 1 : le détail d'un établissement (spec §6.2 — « services, membres, journal
 // d'activité ») — la ligne de la liste, augmentée des trois listes qui font de cet écran l'outil

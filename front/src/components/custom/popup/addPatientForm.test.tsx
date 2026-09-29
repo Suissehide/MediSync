@@ -9,7 +9,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import { useToastStore } from '@/store/useToastStore.ts'
-
 import AddPatientForm from './addPatientForm.tsx'
 
 // `main.tsx` enregistre ce greffon au démarrage ; le `DatePicker` de date de naissance en dépend
@@ -32,7 +31,10 @@ const context = {
 
 type Route = {
   match: (url: string, method: string) => boolean
-  respond: (url: string, init?: RequestInit) => { ok: boolean; status: number; json: () => Promise<unknown> }
+  respond: (
+    url: string,
+    init?: RequestInit,
+  ) => { ok: boolean; status: number; json: () => Promise<unknown> }
 }
 
 const buildFetchMock = (routes: Route[]) =>
@@ -60,8 +62,13 @@ const renderForm = () => {
   )
 }
 
-const openPopupAndFillIdentity = async (firstName: string, lastName: string) => {
-  await userEvent.click(screen.getByRole('button', { name: /Ajouter un patient/i }))
+const openPopupAndFillIdentity = async (
+  firstName: string,
+  lastName: string,
+) => {
+  await userEvent.click(
+    screen.getByRole('button', { name: /Ajouter un patient/i }),
+  )
   const firstNameInput = await screen.findByLabelText('Prénom')
   await userEvent.type(firstNameInput, firstName)
   await userEvent.type(screen.getByLabelText('Nom'), lastName)
@@ -81,7 +88,9 @@ describe('AddPatientForm — recherche d’identité existante (tâche 13)', () 
     vi.stubGlobal('fetch', buildFetchMock([]))
     renderForm()
 
-    await userEvent.click(screen.getByRole('button', { name: /Ajouter un patient/i }))
+    await userEvent.click(
+      screen.getByRole('button', { name: /Ajouter un patient/i }),
+    )
 
     const searchButton = await screen.findByRole('button', {
       name: /Rechercher un patient existant/i,
@@ -92,13 +101,19 @@ describe('AddPatientForm — recherche d’identité existante (tâche 13)', () 
   it('cherche par GET /patient/search avec le prénom et le nom saisis, et affiche uniquement l identité rendue', async () => {
     const fetchMock = buildFetchMock([
       {
-        match: (url, method) => url.includes('/patient/search') && method === 'GET',
+        match: (url, method) =>
+          url.includes('/patient/search') && method === 'GET',
         respond: () => ({
           ok: true,
           status: 200,
           json: async () => ({
             results: [
-              { id: 'existing-1', firstName: 'Isabelle', lastName: 'Fontaine', birthDate: '1980-05-12T00:00:00.000Z' },
+              {
+                id: 'existing-1',
+                firstName: 'Isabelle',
+                lastName: 'Fontaine',
+                birthDate: '1980-05-12T00:00:00.000Z',
+              },
             ],
             hasMore: false,
           }),
@@ -110,12 +125,16 @@ describe('AddPatientForm — recherche d’identité existante (tâche 13)', () 
     renderForm()
     await openPopupAndFillIdentity('Isabelle', 'Fontaine')
 
-    await userEvent.click(screen.getByRole('button', { name: /Rechercher un patient existant/i }))
+    await userEvent.click(
+      screen.getByRole('button', { name: /Rechercher un patient existant/i }),
+    )
 
     expect(await screen.findByText(/Isabelle Fontaine/)).toBeInTheDocument()
     expect(screen.getByText(/12\/05\/1980/)).toBeInTheDocument()
 
-    const searchCall = fetchMock.mock.calls.find(([url]) => url.toString().includes('/patient/search'))
+    const searchCall = fetchMock.mock.calls.find(([url]) =>
+      url.toString().includes('/patient/search'),
+    )
     expect(searchCall).toBeDefined()
     const requestedUrl = (searchCall?.[0] as string).toString()
     expect(requestedUrl).toContain('firstName=Isabelle')
@@ -125,17 +144,26 @@ describe('AddPatientForm — recherche d’identité existante (tâche 13)', () 
   it('affiche un message explicite quand la recherche ne trouve aucune identité', async () => {
     const fetchMock = buildFetchMock([
       {
-        match: (url, method) => url.includes('/patient/search') && method === 'GET',
-        respond: () => ({ ok: true, status: 200, json: async () => ({ results: [], hasMore: false }) }),
+        match: (url, method) =>
+          url.includes('/patient/search') && method === 'GET',
+        respond: () => ({
+          ok: true,
+          status: 200,
+          json: async () => ({ results: [], hasMore: false }),
+        }),
       },
     ])
     vi.stubGlobal('fetch', fetchMock)
 
     renderForm()
     await openPopupAndFillIdentity('Inconnu', 'Personne')
-    await userEvent.click(screen.getByRole('button', { name: /Rechercher un patient existant/i }))
+    await userEvent.click(
+      screen.getByRole('button', { name: /Rechercher un patient existant/i }),
+    )
 
-    expect(await screen.findByText(/Aucune identité existante trouvée/i)).toBeInTheDocument()
+    expect(
+      await screen.findByText(/Aucune identité existante trouvée/i),
+    ).toBeInTheDocument()
   })
 
   it(
@@ -144,22 +172,35 @@ describe('AddPatientForm — recherche d’identité existante (tâche 13)', () 
     async () => {
       const fetchMock = buildFetchMock([
         {
-          match: (url, method) => url.includes('/patient/search') && method === 'GET',
+          match: (url, method) =>
+            url.includes('/patient/search') && method === 'GET',
           respond: () => ({
             ok: true,
             status: 200,
             json: async () => ({
-              results: [{ id: 'existing-1', firstName: 'Robert', lastName: 'Girard', birthDate: null }],
+              results: [
+                {
+                  id: 'existing-1',
+                  firstName: 'Robert',
+                  lastName: 'Girard',
+                  birthDate: null,
+                },
+              ],
               hasMore: false,
             }),
           }),
         },
         {
-          match: (url, method) => /\/patient\/existing-1\/service-file$/.test(url) && method === 'POST',
+          match: (url, method) =>
+            /\/patient\/existing-1\/service-file$/.test(url) &&
+            method === 'POST',
           respond: () => ({
             ok: true,
             status: 200,
-            json: async () => ({ patientId: 'existing-1', alreadyFollowedHere: false }),
+            json: async () => ({
+              patientId: 'existing-1',
+              alreadyFollowedHere: false,
+            }),
           }),
         },
       ])
@@ -167,9 +208,13 @@ describe('AddPatientForm — recherche d’identité existante (tâche 13)', () 
 
       renderForm()
       await openPopupAndFillIdentity('Robert', 'Girard')
-      await userEvent.click(screen.getByRole('button', { name: /Rechercher un patient existant/i }))
+      await userEvent.click(
+        screen.getByRole('button', { name: /Rechercher un patient existant/i }),
+      )
 
-      const chooseButton = await screen.findByRole('button', { name: /Choisir/i })
+      const chooseButton = await screen.findByRole('button', {
+        name: /Choisir/i,
+      })
       await userEvent.click(chooseButton)
 
       await waitFor(() =>
@@ -188,12 +233,15 @@ describe('AddPatientForm — recherche d’identité existante (tâche 13)', () 
           const method = (init as RequestInit | undefined)?.method
           return (
             (/\/patient$/.test(url.toString()) && method === 'POST') ||
-            (/\/patient\/existing-1$/.test(url.toString()) && method === 'PATCH')
+            (/\/patient\/existing-1$/.test(url.toString()) &&
+              method === 'PATCH')
           )
         }),
       ).toBe(false)
 
-      await waitFor(() => expect(useToastStore.getState().toasts.length).toBeGreaterThan(0))
+      await waitFor(() =>
+        expect(useToastStore.getState().toasts.length).toBeGreaterThan(0),
+      )
       expect(useToastStore.getState().toasts[0].title).toMatch(/rattaché/i)
     },
   )
@@ -201,22 +249,34 @@ describe('AddPatientForm — recherche d’identité existante (tâche 13)', () 
   it('le cas déjà suivi ici (consigne 4) : le dit clairement, sans laisser croire à une création', async () => {
     const fetchMock = buildFetchMock([
       {
-        match: (url, method) => url.includes('/patient/search') && method === 'GET',
+        match: (url, method) =>
+          url.includes('/patient/search') && method === 'GET',
         respond: () => ({
           ok: true,
           status: 200,
           json: async () => ({
-            results: [{ id: 'existing-2', firstName: 'Nadia', lastName: 'Roche', birthDate: null }],
+            results: [
+              {
+                id: 'existing-2',
+                firstName: 'Nadia',
+                lastName: 'Roche',
+                birthDate: null,
+              },
+            ],
             hasMore: false,
           }),
         }),
       },
       {
-        match: (url, method) => /\/patient\/existing-2\/service-file$/.test(url) && method === 'POST',
+        match: (url, method) =>
+          /\/patient\/existing-2\/service-file$/.test(url) && method === 'POST',
         respond: () => ({
           ok: true,
           status: 200,
-          json: async () => ({ patientId: 'existing-2', alreadyFollowedHere: true }),
+          json: async () => ({
+            patientId: 'existing-2',
+            alreadyFollowedHere: true,
+          }),
         }),
       },
     ])
@@ -224,12 +284,16 @@ describe('AddPatientForm — recherche d’identité existante (tâche 13)', () 
 
     renderForm()
     await openPopupAndFillIdentity('Nadia', 'Roche')
-    await userEvent.click(screen.getByRole('button', { name: /Rechercher un patient existant/i }))
+    await userEvent.click(
+      screen.getByRole('button', { name: /Rechercher un patient existant/i }),
+    )
 
     const chooseButton = await screen.findByRole('button', { name: /Choisir/i })
     await userEvent.click(chooseButton)
 
-    await waitFor(() => expect(useToastStore.getState().toasts.length).toBeGreaterThan(0))
+    await waitFor(() =>
+      expect(useToastStore.getState().toasts.length).toBeGreaterThan(0),
+    )
     const toast = useToastStore.getState().toasts[0]
     expect(toast.title).toMatch(/déjà suivi/i)
     expect(toast.message).toMatch(/n'a pas été modifié|n a pas ete modifie/i)
@@ -241,12 +305,20 @@ describe('AddPatientForm — recherche d’identité existante (tâche 13)', () 
   it('affiche un message quand la recherche indique qu il y a plus de résultats (`hasMore`)', async () => {
     const fetchMock = buildFetchMock([
       {
-        match: (url, method) => url.includes('/patient/search') && method === 'GET',
+        match: (url, method) =>
+          url.includes('/patient/search') && method === 'GET',
         respond: () => ({
           ok: true,
           status: 200,
           json: async () => ({
-            results: [{ id: 'existing-3', firstName: 'Martin', lastName: 'Un', birthDate: null }],
+            results: [
+              {
+                id: 'existing-3',
+                firstName: 'Martin',
+                lastName: 'Un',
+                birthDate: null,
+              },
+            ],
             hasMore: true,
           }),
         }),
@@ -256,7 +328,9 @@ describe('AddPatientForm — recherche d’identité existante (tâche 13)', () 
 
     renderForm()
     await openPopupAndFillIdentity('Martin', 'X')
-    await userEvent.click(screen.getByRole('button', { name: /Rechercher un patient existant/i }))
+    await userEvent.click(
+      screen.getByRole('button', { name: /Rechercher un patient existant/i }),
+    )
 
     expect(await screen.findByText(/Martin Un/)).toBeInTheDocument()
     expect(screen.getByText(/plus de.*résultats/i)).toBeInTheDocument()
@@ -265,12 +339,20 @@ describe('AddPatientForm — recherche d’identité existante (tâche 13)', () 
   it('n affiche pas le message de troncature quand `hasMore` est faux', async () => {
     const fetchMock = buildFetchMock([
       {
-        match: (url, method) => url.includes('/patient/search') && method === 'GET',
+        match: (url, method) =>
+          url.includes('/patient/search') && method === 'GET',
         respond: () => ({
           ok: true,
           status: 200,
           json: async () => ({
-            results: [{ id: 'existing-4', firstName: 'Martin', lastName: 'Deux', birthDate: null }],
+            results: [
+              {
+                id: 'existing-4',
+                firstName: 'Martin',
+                lastName: 'Deux',
+                birthDate: null,
+              },
+            ],
             hasMore: false,
           }),
         }),
@@ -280,7 +362,9 @@ describe('AddPatientForm — recherche d’identité existante (tâche 13)', () 
 
     renderForm()
     await openPopupAndFillIdentity('Martin', 'Y')
-    await userEvent.click(screen.getByRole('button', { name: /Rechercher un patient existant/i }))
+    await userEvent.click(
+      screen.getByRole('button', { name: /Rechercher un patient existant/i }),
+    )
 
     expect(await screen.findByText(/Martin Deux/)).toBeInTheDocument()
     expect(screen.queryByText(/plus de.*résultats/i)).not.toBeInTheDocument()

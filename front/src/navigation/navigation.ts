@@ -49,15 +49,27 @@ export const SCALE_ROOTS = {
 
 export const NAVIGATION: Record<Scale, readonly NavItem[]> = {
   service: [
-    { label: 'Dashboard', to: '/e/$establishmentId/s/$serviceId/dashboard', group: 'Quotidien' },
-    { label: 'Agenda', to: '/e/$establishmentId/s/$serviceId/agenda', group: 'Quotidien' },
+    {
+      label: 'Dashboard',
+      to: '/e/$establishmentId/s/$serviceId/dashboard',
+      group: 'Quotidien',
+    },
+    {
+      label: 'Agenda',
+      to: '/e/$establishmentId/s/$serviceId/agenda',
+      group: 'Quotidien',
+    },
     {
       label: 'Patients',
       to: '/e/$establishmentId/s/$serviceId/patient',
       group: 'Quotidien',
       matchPrefix: true,
     },
-    { label: 'Suivi', to: '/e/$establishmentId/s/$serviceId/suivi', group: 'Quotidien' },
+    {
+      label: 'Suivi',
+      to: '/e/$establishmentId/s/$serviceId/suivi',
+      group: 'Quotidien',
+    },
     {
       label: 'Planning',
       to: '/e/$establishmentId/s/$serviceId/planning',
@@ -97,8 +109,18 @@ export const NAVIGATION: Record<Scale, readonly NavItem[]> = {
     },
   ],
   establishment: [
-    { label: 'Membres', to: '/e/$establishmentId/admin/members', permission: 'members:manage', group: 'Accès' },
-    { label: 'Services', to: '/e/$establishmentId/admin/services', permission: 'services:manage', group: 'Accès' },
+    {
+      label: 'Membres',
+      to: '/e/$establishmentId/admin/members',
+      permission: 'members:manage',
+      group: 'Accès',
+    },
+    {
+      label: 'Services',
+      to: '/e/$establishmentId/admin/services',
+      permission: 'services:manage',
+      group: 'Accès',
+    },
     {
       label: 'Accès temporaires',
       to: '/e/$establishmentId/admin/grants',
@@ -128,10 +150,12 @@ export const NAVIGATION: Record<Scale, readonly NavItem[]> = {
 // entree dit d'ou. Ajouter un ecran de section ici plutot que dans `NAVIGATION` le rendrait
 // introuvable : c'est exactement ce que cette liste doit rester incapable de cacher.
 export const HORS_ONGLETS: Readonly<Partial<Record<RoutePath, string>>> = {
-  '/e/$establishmentId/s/$serviceId/patient/$patientID': 'fiche patient, depuis la liste Patients',
+  '/e/$establishmentId/s/$serviceId/patient/$patientID':
+    'fiche patient, depuis la liste Patients',
   '/e/$establishmentId/s/$serviceId/patient/$patientID/acces':
     'Consultations du dossier, bouton de la fiche patient',
-  '/super-admin/$establishmentId': "fiche d'établissement, depuis la liste Établissements",
+  '/super-admin/$establishmentId':
+    "fiche d'établissement, depuis la liste Établissements",
 }
 
 export type CurrentScale =
@@ -146,11 +170,21 @@ export const useCurrentScale = (): CurrentScale | null => {
   const matchRoute = useMatchRoute()
   const service = matchRoute({ to: SCALE_ROOTS.service, fuzzy: true })
   if (service) {
-    return { scale: 'service', establishmentId: service.establishmentId, serviceId: service.serviceId }
+    return {
+      scale: 'service',
+      establishmentId: service.establishmentId,
+      serviceId: service.serviceId,
+    }
   }
-  const establishment = matchRoute({ to: SCALE_ROOTS.establishment, fuzzy: true })
+  const establishment = matchRoute({
+    to: SCALE_ROOTS.establishment,
+    fuzzy: true,
+  })
   if (establishment) {
-    return { scale: 'establishment', establishmentId: establishment.establishmentId }
+    return {
+      scale: 'establishment',
+      establishmentId: establishment.establishmentId,
+    }
   }
   if (matchRoute({ to: SCALE_ROOTS.platform, fuzzy: true })) {
     return { scale: 'platform' }

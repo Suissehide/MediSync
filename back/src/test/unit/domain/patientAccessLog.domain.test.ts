@@ -29,7 +29,9 @@ const buildContainer = (prisma: unknown, tenantContext: TenantContext) =>
   ({
     postgresOrm: { prisma },
     tenantContext,
-    errorHandler: { boomErrorFromPrismaError: ({ error }: { error: unknown }) => error },
+    errorHandler: {
+      boomErrorFromPrismaError: ({ error }: { error: unknown }) => error,
+    },
   }) as unknown as IocContainer
 
 // TOUR DE CORRECTION 1 (revue) — le VRAI depot, jamais un mock, monte contre un VRAI
@@ -51,8 +53,12 @@ const setup = () => {
 
 // Un membre reel d'un service — le chemin de tenant ordinaire pour un acces de soin.
 const tenantReel: Tenant = {
-  userId: 'u1', establishmentId: 'e1', establishmentRole: 'MEMBER',
-  serviceId: 's1', serviceRole: 'INTERVENANT', soignantId: 'so1',
+  userId: 'u1',
+  establishmentId: 'e1',
+  establishmentRole: 'MEMBER',
+  serviceId: 's1',
+  serviceRole: 'INTERVENANT',
+  soignantId: 'so1',
   origine: 'reelle',
 }
 
@@ -63,7 +69,10 @@ const tenantReel: Tenant = {
 // 2026-09-27 (etape 4b) demande de ne pas laisser indiscernable dans le journal.
 const tenantOctroi: Tenant = {
   ...tenantReel,
-  userId: 'u9', establishmentRole: 'ADMIN', serviceRole: 'COORDINATEUR', soignantId: null,
+  userId: 'u9',
+  establishmentRole: 'ADMIN',
+  serviceRole: 'COORDINATEUR',
+  soignantId: null,
   origine: 'octroi',
 }
 
@@ -74,8 +83,12 @@ const tenantOctroi: Tenant = {
 // verdict sur les deux fixtures ci-dessus (elles portent toutes les deux `origine` explicitement)
 // et rien ne distingue les deux ecritures.
 const tenantSansOrigine: Tenant = {
-  userId: 'u2', establishmentId: 'e1', establishmentRole: 'MEMBER',
-  serviceId: 's1', serviceRole: 'INTERVENANT', soignantId: 'so2',
+  userId: 'u2',
+  establishmentId: 'e1',
+  establishmentRole: 'MEMBER',
+  serviceId: 's1',
+  serviceRole: 'INTERVENANT',
+  soignantId: 'so2',
 }
 
 const validInput = {
@@ -106,7 +119,10 @@ describe('PatientAccessLogDomain.record', () => {
           userFirstName: null,
           userLastName: null,
           action: 'export',
-          exportFilters: JSON.stringify({ search: 'dupont', notes: 'texte clinique' }),
+          exportFilters: JSON.stringify({
+            search: 'dupont',
+            notes: 'texte clinique',
+          }),
         }),
       ),
     ).rejects.toThrow(/clinique/i)
@@ -119,7 +135,7 @@ describe('PatientAccessLogDomain.record', () => {
   // Sabotage etroit : remplacer la recursion de `findClinicalKey` par une simple boucle sur les
   // cles de premier niveau fait rougir CE test precisement (et lui seul parmi les tests
   // "clinique" de ce fichier, puisque les autres portent leur cle clinique au premier niveau).
-  it("refuse une cle clinique nichee sous un objet ou un tableau, pas seulement au premier niveau", async () => {
+  it('refuse une cle clinique nichee sous un objet ou un tableau, pas seulement au premier niveau', async () => {
     const { ctx, domain, calls } = setup()
 
     await expect(
@@ -128,7 +144,10 @@ describe('PatientAccessLogDomain.record', () => {
           ...validInput,
           action: 'export',
           exportFilters: JSON.stringify({
-            criteres: [{ champ: 'age' }, { medicalDiagnosis: 'texte clinique' }],
+            criteres: [
+              { champ: 'age' },
+              { medicalDiagnosis: 'texte clinique' },
+            ],
           }),
         }),
       ),
@@ -157,14 +176,17 @@ describe('PatientAccessLogDomain.record', () => {
     expect(calls).toHaveLength(0)
   })
 
-  it("ecrit la ligne quand exportFilters ne porte aucune cle clinique, a aucune profondeur", async () => {
+  it('ecrit la ligne quand exportFilters ne porte aucune cle clinique, a aucune profondeur', async () => {
     const { ctx, domain, calls } = setup()
 
     await ctx.run(tenantReel, () =>
       domain.record({
         ...validInput,
         action: 'export',
-        exportFilters: JSON.stringify({ search: 'dupont', criteres: [{ champ: 'age' }] }),
+        exportFilters: JSON.stringify({
+          search: 'dupont',
+          criteres: [{ champ: 'age' }],
+        }),
       }),
     )
 
@@ -212,7 +234,7 @@ describe('PatientAccessLogDomain.record', () => {
   // verifie par execution : remplacer `origine === 'octroi'` par `origine !== 'reelle'` dans le
   // domaine fait rougir CE test precisement (`accesParOctroi` deviendrait `true` au lieu de
   // `false`), sans faire rougir aucun des deux tests precedents.
-  it("pose accesParOctroi a faux quand origine est absente du tenant (defaut sur, jamais un octroi affirme a tort)", async () => {
+  it('pose accesParOctroi a faux quand origine est absente du tenant (defaut sur, jamais un octroi affirme a tort)', async () => {
     const { ctx, domain, calls } = setup()
 
     await ctx.run(tenantSansOrigine, () => domain.record(validInput))
@@ -227,7 +249,9 @@ describe('PatientAccessLogDomain.record', () => {
   it("refuse d'ecrire hors de tout contexte de tenant", async () => {
     const { domain, calls } = setup()
 
-    await expect(domain.record(validInput)).rejects.toThrow(TenantContextMissingError)
+    await expect(domain.record(validInput)).rejects.toThrow(
+      TenantContextMissingError,
+    )
     expect(calls).toHaveLength(0)
   })
 })
@@ -255,7 +279,9 @@ describe('PatientAccessLogDomain.cleanup', () => {
 
     await domain.cleanup()
 
-    expect(repository.deleteOlderThan).toHaveBeenCalledWith(new Date('2026-06-27T00:00:00Z'))
+    expect(repository.deleteOlderThan).toHaveBeenCalledWith(
+      new Date('2026-06-27T00:00:00Z'),
+    )
   })
 })
 
@@ -265,7 +291,7 @@ describe('PatientAccessLogDomain.cleanup', () => {
 // ci-dessus (tache 2), sur le chemin reel, plutot qu'une seconde garde a cote.
 // ---------------------------------------------------------------------------
 
-describe("PatientAccessLogDomain.record, les criteres de l export (tache 4)", () => {
+describe('PatientAccessLogDomain.record, les criteres de l export (tache 4)', () => {
   it('ecrit la ligne, sans identifiant de patient, quand les criteres construits depuis la requete (search, pathwayTemplateTags) sont legitimes', async () => {
     const { ctx, domain, calls } = setup()
 
@@ -288,7 +314,10 @@ describe("PatientAccessLogDomain.record, les criteres de l export (tache 4)", ()
     expect(calls[0]).toMatchObject({
       action: 'export',
       exportCount: 2,
-      exportFilters: JSON.stringify({ search: 'dup', pathwayTemplateTags: ['asthme'] }),
+      exportFilters: JSON.stringify({
+        search: 'dup',
+        pathwayTemplateTags: ['asthme'],
+      }),
     })
   })
 

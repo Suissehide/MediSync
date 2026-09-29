@@ -34,7 +34,9 @@ class LocationRepository implements LocationRepositoryInterface {
   async findByID(locationID: string): Promise<LocationEntityRepo> {
     try {
       return await this.prisma.location.findUniqueOrThrow({
-        where: { id_serviceId: { id: locationID, serviceId: this.scope.serviceId } },
+        where: {
+          id_serviceId: { id: locationID, serviceId: this.scope.serviceId },
+        },
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
@@ -65,7 +67,9 @@ class LocationRepository implements LocationRepositoryInterface {
   ): Promise<LocationEntityRepo> {
     try {
       return await this.prisma.location.update({
-        where: { id_serviceId: { id: locationID, serviceId: this.scope.serviceId } },
+        where: {
+          id_serviceId: { id: locationID, serviceId: this.scope.serviceId },
+        },
         data: { name: locationUpdateParams.name },
       })
     } catch (err) {
@@ -79,7 +83,9 @@ class LocationRepository implements LocationRepositoryInterface {
   async delete(locationID: string): Promise<LocationEntityRepo> {
     try {
       return await this.prisma.location.delete({
-        where: { id_serviceId: { id: locationID, serviceId: this.scope.serviceId } },
+        where: {
+          id_serviceId: { id: locationID, serviceId: this.scope.serviceId },
+        },
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({

@@ -43,11 +43,14 @@ export const PathwayApi = {
   instantiate: async (
     instantiatePathwayParams: InstantiatePathwayParams,
   ): Promise<Pathway> => {
-    const response = await fetchWithAuth(`${tenantApiUrl()}/pathway/instantiate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(instantiatePathwayParams),
-    })
+    const response = await fetchWithAuth(
+      `${tenantApiUrl()}/pathway/instantiate`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(instantiatePathwayParams),
+      },
+    )
     if (!response.ok) {
       handleHttpError(response, {}, 'Impossible de créer une tâche')
     }
@@ -57,17 +60,16 @@ export const PathwayApi = {
   regenerate: async (
     params: RegeneratePathwaysParams,
   ): Promise<RegeneratePathwaysResult> => {
-    const response = await fetchWithAuth(`${tenantApiUrl()}/pathway/regenerate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(params),
-    })
+    const response = await fetchWithAuth(
+      `${tenantApiUrl()}/pathway/regenerate`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
+      },
+    )
     if (!response.ok) {
-      handleHttpError(
-        response,
-        {},
-        'Impossible de mettre à jour les parcours',
-      )
+      handleHttpError(response, {}, 'Impossible de mettre à jour les parcours')
     }
     return response.json()
   },
@@ -76,11 +78,14 @@ export const PathwayApi = {
     updatePathwayParams: UpdatePathwayParams,
   ): Promise<Pathway> => {
     const { id: pathwayID, ...updatePathwayInputs } = updatePathwayParams
-    const response = await fetchWithAuth(`${tenantApiUrl()}/pathway/${pathwayID}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updatePathwayInputs),
-    })
+    const response = await fetchWithAuth(
+      `${tenantApiUrl()}/pathway/${pathwayID}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatePathwayInputs),
+      },
+    )
     if (!response.ok) {
       handleHttpError(response, {}, 'Impossible de modifier la tâche')
     }
@@ -88,16 +93,22 @@ export const PathwayApi = {
   },
 
   delete: async (pathwayID: string): Promise<void> => {
-    const response = await fetchWithAuth(`${tenantApiUrl()}/pathway/${pathwayID}`, {
-      method: 'DELETE',
-    })
+    const response = await fetchWithAuth(
+      `${tenantApiUrl()}/pathway/${pathwayID}`,
+      {
+        method: 'DELETE',
+      },
+    )
     if (!response.ok) {
       handleHttpError(response, {}, 'Impossible de supprimer la tâche')
     }
     return
   },
 
-  getTracking: async (year: number, month: number): Promise<TrackingPathway[]> => {
+  getTracking: async (
+    year: number,
+    month: number,
+  ): Promise<TrackingPathway[]> => {
     const response = await fetchWithAuth(
       `${tenantApiUrl()}/pathway/tracking?year=${year}&month=${month}`,
       { method: 'GET' },

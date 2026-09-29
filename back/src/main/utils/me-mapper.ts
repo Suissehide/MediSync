@@ -13,7 +13,12 @@ export type MeResponse = {
     id: string
     name: string
     role: EstablishmentRole
-    services: { id: string; name: string; role: ServiceRole; soignantId: string | null }[]
+    services: {
+      id: string
+      name: string
+      role: ServiceRole
+      soignantId: string | null
+    }[]
     // Dit à l'écran d'où vient cet accès — voir R2 (décisions étape 4a) et
     // `EffectiveMembership.origine` (types/domain/accessGrant.domain.interface.ts). Sans ce
     // champ, `/me` ne pourrait jamais distinguer un établissement où l'utilisateur est

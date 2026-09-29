@@ -6,7 +6,8 @@ import type { IocContainer } from '../../../main/types/application/ioc'
 const buildDomain = (known: { thematics: string[] }) => {
   const created: unknown[] = []
   const updated: unknown[] = []
-  const notFound = (name: string) => Promise.reject(Boom.notFound(`${name} not found`))
+  const notFound = (name: string) =>
+    Promise.reject(Boom.notFound(`${name} not found`))
   const container = {
     appointmentRepository: {
       create: (params: unknown) => {
@@ -23,14 +24,21 @@ const buildDomain = (known: { thematics: string[] }) => {
     },
     thematicRepository: {
       findByID: (id: string) =>
-        known.thematics.includes(id) ? Promise.resolve({ id }) : notFound('Thematic'),
+        known.thematics.includes(id)
+          ? Promise.resolve({ id })
+          : notFound('Thematic'),
     },
     appEventBus: { emit: () => undefined },
   } as unknown as IocContainer
   return { domain: new AppointmentDomain(container), created, updated }
 }
 
-const base = { startDate: new Date(), endDate: new Date(), slotID: 'slot-1', patientIDs: ['p1'] }
+const base = {
+  startDate: new Date(),
+  endDate: new Date(),
+  slotID: 'slot-1',
+  patientIDs: ['p1'],
+}
 
 describe('AppointmentDomain references', () => {
   it('cree quand la thematique est connue du tenant', async () => {

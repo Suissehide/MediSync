@@ -5,11 +5,11 @@ import { TodoApi } from '../api/todo.api.ts'
 import { TODO } from '../constants/process.constant.ts'
 import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
-import { useToast } from '../hooks/useToast.ts'
 import {
   restoreForTenant,
   snapshotForTenant,
 } from '../hooks/useTenantSwitch.ts'
+import { useToast } from '../hooks/useToast.ts'
 import { useTodoStore } from '../store/useTodoStore.ts'
 import type { CreateTodoParams, Todo, UpdateTodoParams } from '../types/todo.ts'
 

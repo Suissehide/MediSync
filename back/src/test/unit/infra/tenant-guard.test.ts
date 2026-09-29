@@ -23,13 +23,21 @@ const store: TenantStore = {
 }
 const adminStore: TenantStore = {
   kind: 'tenant',
-  tenant: { ...store.tenant, serviceId: null, serviceRole: null, establishmentRole: 'ADMIN' },
+  tenant: {
+    ...store.tenant,
+    serviceId: null,
+    serviceRole: null,
+    establishmentRole: 'ADMIN',
+  },
 }
 
 describe('assertTenantScope', () => {
   it('laisse passer un modele global sans filtre', () => {
     expect(() =>
-      assertTenantScope({ model: 'User', operation: 'findMany', args: {} }, store),
+      assertTenantScope(
+        { model: 'User', operation: 'findMany', args: {} },
+        store,
+      ),
     ).not.toThrow()
   })
 
@@ -39,17 +47,31 @@ describe('assertTenantScope', () => {
   // `establishment.findMany({ include: { patients: true } })` traversait le
   // garde-fou sans controle.
   it('refuse un include de relation de tenant sur Establishment hors findUnique(OrThrow)', () => {
-    for (const relation of ['services', 'memberships', 'patients', 'soignants', 'locations']) {
+    for (const relation of [
+      'services',
+      'memberships',
+      'patients',
+      'soignants',
+      'locations',
+    ]) {
       expect(() =>
         assertTenantScope(
-          { model: 'Establishment', operation: 'findMany', args: { include: { [relation]: true } } },
+          {
+            model: 'Establishment',
+            operation: 'findMany',
+            args: { include: { [relation]: true } },
+          },
           store,
         ),
       ).toThrow(TenantScopeMissingError)
     }
     expect(() =>
       assertTenantScope(
-        { model: 'Establishment', operation: 'findFirst', args: { select: { patients: true } } },
+        {
+          model: 'Establishment',
+          operation: 'findFirst',
+          args: { select: { patients: true } },
+        },
         store,
       ),
     ).toThrow(TenantScopeMissingError)
@@ -66,12 +88,19 @@ describe('assertTenantScope', () => {
     // dont la forme etait a tort declaree sure.
     expect(() =>
       assertTenantScope(
-        { model: 'Establishment', operation: 'findUnique', args: { where: { id: 'e1' }, include: { patients: true } } },
+        {
+          model: 'Establishment',
+          operation: 'findUnique',
+          args: { where: { id: 'e1' }, include: { patients: true } },
+        },
         store,
       ),
     ).toThrow(TenantScopeMissingError)
     expect(() =>
-      assertTenantScope({ model: 'Establishment', operation: 'findMany', args: {} }, store),
+      assertTenantScope(
+        { model: 'Establishment', operation: 'findMany', args: {} },
+        store,
+      ),
     ).not.toThrow()
   })
 
@@ -105,7 +134,8 @@ describe('assertTenantScope', () => {
   // Preuve par sabotage, refaite apres cette correction (methode systematic-debugging) :
   // commenter l'appel a `assertGlobalInclude` dans `assertGlobalScope` fait rougir les TROIS
   // cas ci-dessous (avant la correction : un seul).
-  const MOTIF_GLOBAL_INCLUDE = 'include/select sur une relation de tenant hors findUnique(OrThrow)'
+  const MOTIF_GLOBAL_INCLUDE =
+    'include/select sur une relation de tenant hors findUnique(OrThrow)'
 
   it.each([
     {
@@ -118,13 +148,20 @@ describe('assertTenantScope', () => {
       nom: 'User.update + include establishmentMemberships',
       model: 'User',
       operation: 'update',
-      args: { where: { id: 'u1' }, data: {}, include: { establishmentMemberships: true } },
+      args: {
+        where: { id: 'u1' },
+        data: {},
+        include: { establishmentMemberships: true },
+      },
     },
     {
       nom: 'User.create + select establishmentMemberships (branche select)',
       model: 'User',
       operation: 'create',
-      args: { data: { email: 'a@b.c' }, select: { establishmentMemberships: true } },
+      args: {
+        data: { email: 'a@b.c' },
+        select: { establishmentMemberships: true },
+      },
     },
   ])(
     'sans aucun contexte, une operation DECLAREE ne peut pas inclure une relation de tenant : $nom',
@@ -148,17 +185,27 @@ describe('assertTenantScope', () => {
   it('sans aucun contexte, la meme lecture sans relation de tenant reste permise', () => {
     // Contrepartie : c'est le cas nominal de `GET /super-admin/establishments`.
     expect(() =>
-      assertTenantScope({ model: 'Establishment', operation: 'findMany', args: {} }, undefined),
+      assertTenantScope(
+        { model: 'Establishment', operation: 'findMany', args: {} },
+        undefined,
+      ),
     ).not.toThrow()
   })
 
   it('exige serviceId en lecture sur un modele de service', () => {
     expect(() =>
-      assertTenantScope({ model: 'Slot', operation: 'findMany', args: { where: {} } }, store),
+      assertTenantScope(
+        { model: 'Slot', operation: 'findMany', args: { where: {} } },
+        store,
+      ),
     ).toThrow(TenantScopeMissingError)
     expect(() =>
       assertTenantScope(
-        { model: 'Slot', operation: 'findMany', args: { where: { serviceId: 's1' } } },
+        {
+          model: 'Slot',
+          operation: 'findMany',
+          args: { where: { serviceId: 's1' } },
+        },
         store,
       ),
     ).not.toThrow()
@@ -180,7 +227,11 @@ describe('assertTenantScope', () => {
   it('refuse un serviceId different du tenant', () => {
     expect(() =>
       assertTenantScope(
-        { model: 'Slot', operation: 'findMany', args: { where: { serviceId: 'autre' } } },
+        {
+          model: 'Slot',
+          operation: 'findMany',
+          args: { where: { serviceId: 'autre' } },
+        },
         store,
       ),
     ).toThrow(TenantScopeMissingError)
@@ -191,21 +242,37 @@ describe('assertTenantScope', () => {
       startDate: new Date(),
       serviceId: 's1',
       establishmentId: 'e1',
-      appointmentPatients: { create: [{ patientId: 'p', serviceId: 's1', establishmentId: 'e1' }] },
+      appointmentPatients: {
+        create: [{ patientId: 'p', serviceId: 's1', establishmentId: 'e1' }],
+      },
     }
     expect(() =>
-      assertTenantScope({ model: 'Appointment', operation: 'create', args: { data: okData } }, store),
+      assertTenantScope(
+        { model: 'Appointment', operation: 'create', args: { data: okData } },
+        store,
+      ),
     ).not.toThrow()
     const badNested = {
       ...okData,
       appointmentPatients: { create: [{ patientId: 'p' }] },
     }
     expect(() =>
-      assertTenantScope({ model: 'Appointment', operation: 'create', args: { data: badNested } }, store),
+      assertTenantScope(
+        {
+          model: 'Appointment',
+          operation: 'create',
+          args: { data: badNested },
+        },
+        store,
+      ),
     ).toThrow(TenantScopeMissingError)
     expect(() =>
       assertTenantScope(
-        { model: 'Todo', operation: 'createMany', args: { data: [{ title: 't', serviceId: 's1' }] } },
+        {
+          model: 'Todo',
+          operation: 'createMany',
+          args: { data: [{ title: 't', serviceId: 's1' }] },
+        },
         store,
       ),
     ).toThrow(TenantScopeMissingError)
@@ -213,11 +280,18 @@ describe('assertTenantScope', () => {
 
   it('exige establishmentId sur un modele d etablissement', () => {
     expect(() =>
-      assertTenantScope({ model: 'Patient', operation: 'findMany', args: { where: {} } }, store),
+      assertTenantScope(
+        { model: 'Patient', operation: 'findMany', args: { where: {} } },
+        store,
+      ),
     ).toThrow(TenantScopeMissingError)
     expect(() =>
       assertTenantScope(
-        { model: 'Patient', operation: 'findMany', args: { where: { establishmentId: 'e1' } } },
+        {
+          model: 'Patient',
+          operation: 'findMany',
+          args: { where: { establishmentId: 'e1' } },
+        },
         store,
       ),
     ).not.toThrow()
@@ -226,7 +300,11 @@ describe('assertTenantScope', () => {
   it('refuse un modele de service sous un tenant sans service', () => {
     expect(() =>
       assertTenantScope(
-        { model: 'Slot', operation: 'findMany', args: { where: { serviceId: 's1' } } },
+        {
+          model: 'Slot',
+          operation: 'findMany',
+          args: { where: { serviceId: 's1' } },
+        },
         adminStore,
       ),
     ).toThrow(TenantScopeMissingError)
@@ -234,33 +312,65 @@ describe('assertTenantScope', () => {
 
   it('refuse toute operation sans contexte, sauf sur un modele global', () => {
     expect(() =>
-      assertTenantScope({ model: 'Slot', operation: 'findMany', args: { where: { serviceId: 's1' } } }, undefined),
+      assertTenantScope(
+        {
+          model: 'Slot',
+          operation: 'findMany',
+          args: { where: { serviceId: 's1' } },
+        },
+        undefined,
+      ),
     ).toThrow(TenantScopeMissingError)
     expect(() =>
-      assertTenantScope({ model: 'User', operation: 'findUnique', args: { where: { id: 'u' } } }, undefined),
+      assertTenantScope(
+        {
+          model: 'User',
+          operation: 'findUnique',
+          args: { where: { id: 'u' } },
+        },
+        undefined,
+      ),
     ).not.toThrow()
   })
 
   it('laisse tout passer sous le marqueur systeme', () => {
     expect(() =>
-      assertTenantScope({ model: 'ActivityLog', operation: 'deleteMany', args: { where: {} } }, { kind: 'system' }),
+      assertTenantScope(
+        { model: 'ActivityLog', operation: 'deleteMany', args: { where: {} } },
+        { kind: 'system' },
+      ),
     ).not.toThrow()
   })
 
   // Correction 1 : createManyAndReturn / updateManyAndReturn, et refus des operations inconnues.
   it('soumet createManyAndReturn et updateManyAndReturn aux memes exigences que leurs equivalents', () => {
     expect(() =>
-      assertTenantScope({ model: 'Slot', operation: 'updateManyAndReturn', args: { where: {} } }, store),
+      assertTenantScope(
+        {
+          model: 'Slot',
+          operation: 'updateManyAndReturn',
+          args: { where: {} },
+        },
+        store,
+      ),
     ).toThrow(TenantScopeMissingError)
     expect(() =>
       assertTenantScope(
-        { model: 'Slot', operation: 'updateManyAndReturn', args: { where: { serviceId: 's1' } } },
+        {
+          model: 'Slot',
+          operation: 'updateManyAndReturn',
+          args: { where: { serviceId: 's1' } },
+        },
         store,
       ),
     ).not.toThrow()
     expect(() =>
       assertTenantScope(
-        { model: 'Todo', operation: 'createManyAndReturn', args: { data: [{ title: 't' }] } },
+        {
+          model: 'Todo',
+          operation: 'createManyAndReturn',
+          args: { data: [{ title: 't' }] },
+        },
         store,
       ),
     ).toThrow(TenantScopeMissingError)
@@ -269,7 +379,9 @@ describe('assertTenantScope', () => {
         {
           model: 'Todo',
           operation: 'createManyAndReturn',
-          args: { data: [{ title: 't', serviceId: 's1', establishmentId: 'e1' }] },
+          args: {
+            data: [{ title: 't', serviceId: 's1', establishmentId: 'e1' }],
+          },
         },
         store,
       ),
@@ -278,7 +390,10 @@ describe('assertTenantScope', () => {
 
   it('refuse une operation inconnue sur un modele de tenant', () => {
     expect(() =>
-      assertTenantScope({ model: 'Slot', operation: 'inconnue', args: {} }, store),
+      assertTenantScope(
+        { model: 'Slot', operation: 'inconnue', args: {} },
+        store,
+      ),
     ).toThrow(TenantScopeMissingError)
   })
 
@@ -288,36 +403,81 @@ describe('assertTenantScope', () => {
       startDate: new Date(),
       serviceId: 's1',
       establishmentId: 'e1',
-      slot: { create: { startDate: new Date(), serviceId: 's1', establishmentId: 'e1' } },
+      slot: {
+        create: {
+          startDate: new Date(),
+          serviceId: 's1',
+          establishmentId: 'e1',
+        },
+      },
     }
     expect(() =>
-      assertTenantScope({ model: 'Appointment', operation: 'create', args: { data: withUndeclared } }, store),
+      assertTenantScope(
+        {
+          model: 'Appointment',
+          operation: 'create',
+          args: { data: withUndeclared },
+        },
+        store,
+      ),
     ).toThrow(TenantScopeMissingError)
     const withDeclared = {
       startDate: new Date(),
       serviceId: 's1',
       establishmentId: 'e1',
-      appointmentPatients: { create: [{ patientId: 'p', serviceId: 's1', establishmentId: 'e1' }] },
+      appointmentPatients: {
+        create: [{ patientId: 'p', serviceId: 's1', establishmentId: 'e1' }],
+      },
     }
     expect(() =>
-      assertTenantScope({ model: 'Appointment', operation: 'create', args: { data: withDeclared } }, store),
+      assertTenantScope(
+        {
+          model: 'Appointment',
+          operation: 'create',
+          args: { data: withDeclared },
+        },
+        store,
+      ),
     ).not.toThrow()
   })
 
   it('verifie connect et connectOrCreate, laisse passer un update imbrique', () => {
-    const base = { startDate: new Date(), serviceId: 's1', establishmentId: 'e1' }
+    const base = {
+      startDate: new Date(),
+      serviceId: 's1',
+      establishmentId: 'e1',
+    }
 
-    const bareConnect = { ...base, appointmentPatients: { connect: { id: 'ap1' } } }
+    const bareConnect = {
+      ...base,
+      appointmentPatients: { connect: { id: 'ap1' } },
+    }
     expect(() =>
-      assertTenantScope({ model: 'Appointment', operation: 'create', args: { data: bareConnect } }, store),
+      assertTenantScope(
+        {
+          model: 'Appointment',
+          operation: 'create',
+          args: { data: bareConnect },
+        },
+        store,
+      ),
     ).toThrow(TenantScopeMissingError)
 
     const compositeConnect = {
       ...base,
-      appointmentPatients: { connect: { id_serviceId: { id: 'ap1', serviceId: 's1' } } },
+      appointmentPatients: {
+        connect: { id_serviceId: { id: 'ap1', serviceId: 's1' } },
+      },
     }
     expect(() =>
-      assertTenantScope({ model: 'Appointment', operation: 'create', args: { data: compositeConnect } }, store),
+      assertTenantScope(
+        {
+          model: 'Appointment',
+          operation: 'create',
+          args: { data: compositeConnect },
+        },
+        store,
+      ),
     ).not.toThrow()
 
     const connectOrCreateOk = {
@@ -330,7 +490,14 @@ describe('assertTenantScope', () => {
       },
     }
     expect(() =>
-      assertTenantScope({ model: 'Appointment', operation: 'create', args: { data: connectOrCreateOk } }, store),
+      assertTenantScope(
+        {
+          model: 'Appointment',
+          operation: 'create',
+          args: { data: connectOrCreateOk },
+        },
+        store,
+      ),
     ).not.toThrow()
 
     const connectOrCreateBadCreate = {
@@ -344,7 +511,11 @@ describe('assertTenantScope', () => {
     }
     expect(() =>
       assertTenantScope(
-        { model: 'Appointment', operation: 'create', args: { data: connectOrCreateBadCreate } },
+        {
+          model: 'Appointment',
+          operation: 'create',
+          args: { data: connectOrCreateBadCreate },
+        },
         store,
       ),
     ).toThrow(TenantScopeMissingError)
@@ -360,17 +531,30 @@ describe('assertTenantScope', () => {
     }
     expect(() =>
       assertTenantScope(
-        { model: 'Appointment', operation: 'create', args: { data: connectOrCreateBadWhere } },
+        {
+          model: 'Appointment',
+          operation: 'create',
+          args: { data: connectOrCreateBadWhere },
+        },
         store,
       ),
     ).toThrow(TenantScopeMissingError)
 
     const nestedUpdate = {
       ...base,
-      appointmentPatients: { update: { where: { id: 'ap1' }, data: { patientId: 'p2' } } },
+      appointmentPatients: {
+        update: { where: { id: 'ap1' }, data: { patientId: 'p2' } },
+      },
     }
     expect(() =>
-      assertTenantScope({ model: 'Appointment', operation: 'create', args: { data: nestedUpdate } }, store),
+      assertTenantScope(
+        {
+          model: 'Appointment',
+          operation: 'create',
+          args: { data: nestedUpdate },
+        },
+        store,
+      ),
     ).not.toThrow()
   })
 
@@ -378,9 +562,16 @@ describe('assertTenantScope', () => {
   // Le CHOIX de la ligne touchee par un update/upsert imbrique est garanti par
   // la relation ; ce qui s'y ECRIT ne l'etait pas.
   describe('charge des ecritures imbriquees update / upsert', () => {
-    const base = { startDate: new Date(), serviceId: 's1', establishmentId: 'e1' }
+    const base = {
+      startDate: new Date(),
+      serviceId: 's1',
+      establishmentId: 'e1',
+    }
     const create = (data: object) =>
-      assertTenantScope({ model: 'Appointment', operation: 'create', args: { data } }, store)
+      assertTenantScope(
+        { model: 'Appointment', operation: 'create', args: { data } },
+        store,
+      )
 
     it('refuse la branche create d un upsert imbrique sans colonnes de tenant', () => {
       expect(() =>
@@ -405,12 +596,20 @@ describe('assertTenantScope', () => {
             upsert: [
               {
                 where: { id_serviceId: { id: 'ap1', serviceId: 's1' } },
-                create: { patientId: 'p', serviceId: 's1', establishmentId: 'e1' },
+                create: {
+                  patientId: 'p',
+                  serviceId: 's1',
+                  establishmentId: 'e1',
+                },
                 update: {},
               },
               {
                 where: { id_serviceId: { id: 'ap2', serviceId: 's1' } },
-                create: { patientId: 'p2', serviceId: 'autre', establishmentId: 'e1' },
+                create: {
+                  patientId: 'p2',
+                  serviceId: 'autre',
+                  establishmentId: 'e1',
+                },
                 update: {},
               },
             ],
@@ -426,7 +625,11 @@ describe('assertTenantScope', () => {
           appointmentPatients: {
             upsert: {
               where: { id_serviceId: { id: 'ap1', serviceId: 's1' } },
-              create: { patientId: 'p', serviceId: 's1', establishmentId: 'e1' },
+              create: {
+                patientId: 'p',
+                serviceId: 's1',
+                establishmentId: 'e1',
+              },
               update: { serviceId: 'autre' },
             },
           },
@@ -441,7 +644,11 @@ describe('assertTenantScope', () => {
           appointmentPatients: {
             upsert: {
               where: { id_serviceId: { id: 'ap1', serviceId: 's1' } },
-              create: { patientId: 'p', serviceId: 's1', establishmentId: 'e1' },
+              create: {
+                patientId: 'p',
+                serviceId: 's1',
+                establishmentId: 'e1',
+              },
               update: { transmissionNotes: 'x' },
             },
           },
@@ -474,7 +681,9 @@ describe('assertTenantScope', () => {
         create({
           ...base,
           appointmentPatients: {
-            updateMany: [{ where: { patientId: 'p' }, data: { serviceId: 'autre' } }],
+            updateMany: [
+              { where: { patientId: 'p' }, data: { serviceId: 'autre' } },
+            ],
           },
         }),
       ).toThrow(TenantScopeMissingError)
@@ -494,7 +703,11 @@ describe('assertTenantScope', () => {
       })
       expect(() =>
         assertTenantScope(
-          { model: 'Slot', operation: 'create', args: { data: deep({ patientId: 'p' }) } },
+          {
+            model: 'Slot',
+            operation: 'create',
+            args: { data: deep({ patientId: 'p' }) },
+          },
           store,
         ),
       ).toThrow(TenantScopeMissingError)
@@ -504,7 +717,11 @@ describe('assertTenantScope', () => {
             model: 'Slot',
             operation: 'create',
             args: {
-              data: deep({ patientId: 'p', serviceId: 's1', establishmentId: 'e1' }),
+              data: deep({
+                patientId: 'p',
+                serviceId: 's1',
+                establishmentId: 'e1',
+              }),
             },
           },
           store,
@@ -556,7 +773,10 @@ describe('assertTenantScope', () => {
       ),
     ).toThrow(TenantScopeMissingError)
     expect(() =>
-      assertTenantScope({ model: 'User', operation: 'findMany', args: {} }, store),
+      assertTenantScope(
+        { model: 'User', operation: 'findMany', args: {} },
+        store,
+      ),
     ).not.toThrow()
   })
 
@@ -567,7 +787,10 @@ describe('assertTenantScope', () => {
         {
           model: 'Patient',
           operation: 'update',
-          args: { where: { establishmentId: 'e1' }, data: { establishmentId: 'autre' } },
+          args: {
+            where: { establishmentId: 'e1' },
+            data: { establishmentId: 'autre' },
+          },
         },
         store,
       ),
@@ -592,7 +815,11 @@ describe('assertTenantScope', () => {
           operation: 'upsert',
           args: {
             where: { id_serviceId: { id: 'x', serviceId: 's1' } },
-            create: { startDate: new Date(), serviceId: 's1', establishmentId: 'e1' },
+            create: {
+              startDate: new Date(),
+              serviceId: 's1',
+              establishmentId: 'e1',
+            },
             update: { establishmentId: 'e1' },
           },
         },
@@ -620,7 +847,11 @@ describe('assertTenantScope', () => {
           operation: 'upsert',
           args: {
             where: { id_serviceId: { id: 'x', serviceId: 's1' } },
-            create: { startDate: new Date(), serviceId: 's1', establishmentId: 'e1' },
+            create: {
+              startDate: new Date(),
+              serviceId: 's1',
+              establishmentId: 'e1',
+            },
             update: { establishmentId: 'autre' },
           },
         },
@@ -632,17 +863,32 @@ describe('assertTenantScope', () => {
   // Correction 5 : durcissements de whereValue / expectedValue.
   it('refuse un where sans filtre direct : valeur indirecte, operateur logique, cle composite incomplete', () => {
     expect(() =>
-      assertTenantScope({ model: 'Slot', operation: 'findMany', args: { where: { serviceId: undefined } } }, store),
-    ).toThrow(TenantScopeMissingError)
-    expect(() =>
       assertTenantScope(
-        { model: 'Slot', operation: 'findMany', args: { where: { serviceId: { in: ['s1'] } } } },
+        {
+          model: 'Slot',
+          operation: 'findMany',
+          args: { where: { serviceId: undefined } },
+        },
         store,
       ),
     ).toThrow(TenantScopeMissingError)
     expect(() =>
       assertTenantScope(
-        { model: 'Slot', operation: 'findMany', args: { where: { OR: [{ serviceId: 's1' }] } } },
+        {
+          model: 'Slot',
+          operation: 'findMany',
+          args: { where: { serviceId: { in: ['s1'] } } },
+        },
+        store,
+      ),
+    ).toThrow(TenantScopeMissingError)
+    expect(() =>
+      assertTenantScope(
+        {
+          model: 'Slot',
+          operation: 'findMany',
+          args: { where: { OR: [{ serviceId: 's1' }] } },
+        },
         store,
       ),
     ).toThrow(TenantScopeMissingError)
@@ -651,7 +897,11 @@ describe('assertTenantScope', () => {
         {
           model: 'AppointmentPatient',
           operation: 'findMany',
-          args: { where: { appointmentId_patientId: { appointmentId: 'a1', patientId: 'p1' } } },
+          args: {
+            where: {
+              appointmentId_patientId: { appointmentId: 'a1', patientId: 'p1' },
+            },
+          },
         },
         store,
       ),
@@ -661,14 +911,19 @@ describe('assertTenantScope', () => {
   // Correction 2, tour 2 : descente dans les relations imbriquees sous update/updateMany/upsert.
   it('accepte une creation imbriquee sous update avec les bonnes colonnes', () => {
     const okData = {
-      soignantLinks: { create: [{ soignantId: 'so1', serviceId: 's1', establishmentId: 'e1' }] },
+      soignantLinks: {
+        create: [{ soignantId: 'so1', serviceId: 's1', establishmentId: 'e1' }],
+      },
     }
     expect(() =>
       assertTenantScope(
         {
           model: 'Thematic',
           operation: 'update',
-          args: { where: { id_serviceId: { id: 't1', serviceId: 's1' } }, data: okData },
+          args: {
+            where: { id_serviceId: { id: 't1', serviceId: 's1' } },
+            data: okData,
+          },
         },
         store,
       ),
@@ -684,7 +939,10 @@ describe('assertTenantScope', () => {
         {
           model: 'Thematic',
           operation: 'update',
-          args: { where: { id_serviceId: { id: 't1', serviceId: 's1' } }, data: missingColumns },
+          args: {
+            where: { id_serviceId: { id: 't1', serviceId: 's1' } },
+            data: missingColumns,
+          },
         },
         store,
       ),
@@ -693,14 +951,21 @@ describe('assertTenantScope', () => {
 
   it('refuse une creation imbriquee sous update pour un tenant different', () => {
     const wrongTenant = {
-      soignantLinks: { create: [{ soignantId: 'so1', serviceId: 'autre', establishmentId: 'e1' }] },
+      soignantLinks: {
+        create: [
+          { soignantId: 'so1', serviceId: 'autre', establishmentId: 'e1' },
+        ],
+      },
     }
     expect(() =>
       assertTenantScope(
         {
           model: 'Thematic',
           operation: 'update',
-          args: { where: { id_serviceId: { id: 't1', serviceId: 's1' } }, data: wrongTenant },
+          args: {
+            where: { id_serviceId: { id: 't1', serviceId: 's1' } },
+            data: wrongTenant,
+          },
         },
         store,
       ),
@@ -714,7 +979,10 @@ describe('assertTenantScope', () => {
         {
           model: 'Thematic',
           operation: 'update',
-          args: { where: { id_serviceId: { id: 't1', serviceId: 's1' } }, data: undeclared },
+          args: {
+            where: { id_serviceId: { id: 't1', serviceId: 's1' } },
+            data: undeclared,
+          },
         },
         store,
       ),
@@ -749,7 +1017,10 @@ describe('assertTenantScope', () => {
         {
           model: 'Thematic',
           operation: 'update',
-          args: { where: { id_serviceId: { id: 't1', serviceId: 's1' } }, data: replaceLinks },
+          args: {
+            where: { id_serviceId: { id: 't1', serviceId: 's1' } },
+            data: replaceLinks,
+          },
         },
         store,
       ),
@@ -771,7 +1042,10 @@ describe('assertTenantScope', () => {
           {
             model: 'Patient',
             operation: 'findMany',
-            args: { where: { establishmentId: 'e1' }, include: { serviceFiles: true } },
+            args: {
+              where: { establishmentId: 'e1' },
+              include: { serviceFiles: true },
+            },
           },
           store,
         ),
@@ -816,7 +1090,10 @@ describe('assertTenantScope', () => {
           {
             model: 'Patient',
             operation: 'findMany',
-            args: { where: { establishmentId: 'e1' }, include: { establishment: true } },
+            args: {
+              where: { establishmentId: 'e1' },
+              include: { establishment: true },
+            },
           },
           store,
         ),
@@ -829,7 +1106,10 @@ describe('assertTenantScope', () => {
           {
             model: 'Patient',
             operation: 'findMany',
-            args: { where: { establishmentId: 'e1' }, include: { relationFuture: true } },
+            args: {
+              where: { establishmentId: 'e1' },
+              include: { relationFuture: true },
+            },
           },
           store,
         ),
@@ -842,7 +1122,10 @@ describe('assertTenantScope', () => {
           {
             model: 'Patient',
             operation: 'findMany',
-            args: { where: { establishmentId: 'e1' }, select: { id: true, serviceFiles: true } },
+            args: {
+              where: { establishmentId: 'e1' },
+              select: { id: true, serviceFiles: true },
+            },
           },
           store,
         ),
@@ -854,7 +1137,10 @@ describe('assertTenantScope', () => {
             operation: 'findMany',
             args: {
               where: { establishmentId: 'e1' },
-              select: { id: true, serviceFiles: { where: { serviceId: 's1' } } },
+              select: {
+                id: true,
+                serviceFiles: { where: { serviceId: 's1' } },
+              },
             },
           },
           store,
@@ -865,7 +1151,10 @@ describe('assertTenantScope', () => {
           {
             model: 'Patient',
             operation: 'findMany',
-            args: { where: { establishmentId: 'e1' }, include: { serviceFiles: false } },
+            args: {
+              where: { establishmentId: 'e1' },
+              include: { serviceFiles: false },
+            },
           },
           store,
         ),
@@ -883,7 +1172,11 @@ describe('assertTenantScope', () => {
             operation: 'findMany',
             args: {
               where: { establishmentId: 'e1' },
-              include: { serviceFiles: demande ? { where: { serviceId: 's1' } } : undefined },
+              include: {
+                serviceFiles: demande
+                  ? { where: { serviceId: 's1' } }
+                  : undefined,
+              },
             },
           },
           store,
@@ -896,7 +1189,10 @@ describe('assertTenantScope', () => {
           {
             model: 'Patient',
             operation: 'findMany',
-            args: { where: { establishmentId: 'e1' }, include: { serviceFiles: undefined } },
+            args: {
+              where: { establishmentId: 'e1' },
+              include: { serviceFiles: undefined },
+            },
           },
           adminStore,
         ),
@@ -950,7 +1246,10 @@ describe('assertTenantScope', () => {
               where: { establishmentId: 'e1' },
               include: {
                 user: { select: { id: true, email: true } },
-                serviceMemberships: { where: { establishmentId: 'e1' }, select: { serviceId: true, role: true } },
+                serviceMemberships: {
+                  where: { establishmentId: 'e1' },
+                  select: { serviceId: true, role: true },
+                },
               },
             },
           },
@@ -961,7 +1260,11 @@ describe('assertTenantScope', () => {
       // d'etablissement, sans service en contexte, ne peut plus le lire.
       expect(() =>
         assertTenantScope(
-          { model: 'Soignant', operation: 'findMany', args: { where: { establishmentId: 'e1' } } },
+          {
+            model: 'Soignant',
+            operation: 'findMany',
+            args: { where: { establishmentId: 'e1' } },
+          },
           adminStore,
         ),
       ).toThrow(TenantScopeMissingError)
@@ -1011,7 +1314,9 @@ describe('assertTenantScope', () => {
               include: {
                 appointmentPatients: {
                   include: {
-                    patient: { include: { serviceFiles: { where: { serviceId: 's1' } } } },
+                    patient: {
+                      include: { serviceFiles: { where: { serviceId: 's1' } } },
+                    },
                   },
                 },
               },
@@ -1035,7 +1340,9 @@ describe('assertTenantScope', () => {
                   include: {
                     patient: {
                       include: {
-                        pathwayPriorities: filtered ? { where: { serviceId: 's1' } } : true,
+                        pathwayPriorities: filtered
+                          ? { where: { serviceId: 's1' } }
+                          : true,
                       },
                     },
                   },
@@ -1062,7 +1369,9 @@ describe('assertTenantScope', () => {
                   include: {
                     patient: {
                       include: {
-                        appointmentPatients: filtered ? { where: { serviceId: 's1' } } : true,
+                        appointmentPatients: filtered
+                          ? { where: { serviceId: 's1' } }
+                          : true,
                       },
                     },
                   },
@@ -1086,7 +1395,9 @@ describe('assertTenantScope', () => {
               where: { serviceId: 's1' },
               include: {
                 soignant: {
-                  include: { todos: filtered ? { where: { serviceId: 's1' } } : true },
+                  include: {
+                    todos: filtered ? { where: { serviceId: 's1' } } : true,
+                  },
                 },
               },
             },
@@ -1111,7 +1422,9 @@ describe('assertTenantScope', () => {
                 soignantLinks: {
                   include: {
                     soignant: {
-                      include: { todos: filtered ? { where: { serviceId: 's1' } } : true },
+                      include: {
+                        todos: filtered ? { where: { serviceId: 's1' } } : true,
+                      },
                     },
                   },
                 },
@@ -1136,7 +1449,11 @@ describe('assertTenantScope', () => {
               where: { serviceId: 's1' },
               include: {
                 location: {
-                  include: { slotTemplates: filtered ? { where: { serviceId: 's1' } } : true },
+                  include: {
+                    slotTemplates: filtered
+                      ? { where: { serviceId: 's1' } }
+                      : true,
+                  },
                 },
               },
             },
@@ -1259,9 +1576,15 @@ describe('assertTenantScope', () => {
               include: {
                 slots: {
                   include: {
-                    slotTemplate: { include: { soignantLinks: { include: { soignant: true } } } },
+                    slotTemplate: {
+                      include: {
+                        soignantLinks: { include: { soignant: true } },
+                      },
+                    },
                     appointments: {
-                      include: { appointmentPatients: { include: { patient: true } } },
+                      include: {
+                        appointmentPatients: { include: { patient: true } },
+                      },
                     },
                   },
                 },
@@ -1291,7 +1614,10 @@ describe('assertTenantScope', () => {
             operation: 'findMany',
             args: {
               where: { establishmentId: 'e1' },
-              select: { lastName: true, _count: { select: { serviceFiles: true } } },
+              select: {
+                lastName: true,
+                _count: { select: { serviceFiles: true } },
+              },
             },
           },
           store,
@@ -1320,7 +1646,10 @@ describe('assertTenantScope', () => {
           {
             model: 'Patient',
             operation: 'findMany',
-            args: { where: { establishmentId: 'e1' }, select: { _count: true } },
+            args: {
+              where: { establishmentId: 'e1' },
+              select: { _count: true },
+            },
           },
           store,
         ),
@@ -1341,7 +1670,10 @@ describe('assertTenantScope', () => {
                 appointmentPatients: {
                   include: {
                     patient: {
-                      select: { lastName: true, _count: { select: { serviceFiles: true } } },
+                      select: {
+                        lastName: true,
+                        _count: { select: { serviceFiles: true } },
+                      },
                     },
                   },
                 },
@@ -1464,7 +1796,11 @@ describe('assertTenantScope', () => {
       // findByEmail (login) : aucun include du tout.
       expect(() =>
         assertTenantScope(
-          { model: 'User', operation: 'findUniqueOrThrow', args: { where: { email: 'a@b.c' } } },
+          {
+            model: 'User',
+            operation: 'findUniqueOrThrow',
+            args: { where: { email: 'a@b.c' } },
+          },
           undefined,
         ),
       ).not.toThrow()
@@ -1494,7 +1830,11 @@ describe('contexte superadmin', () => {
   it('autorise une operation declaree', () => {
     expect(() =>
       assertTenantScope(
-        { model: 'Service', operation: 'count', args: { where: { establishmentId: 'e1' } } },
+        {
+          model: 'Service',
+          operation: 'count',
+          args: { where: { establishmentId: 'e1' } },
+        },
         store,
       ),
     ).not.toThrow()
@@ -1502,20 +1842,30 @@ describe('contexte superadmin', () => {
 
   it('refuse une operation non declaree sur le meme modele', () => {
     expect(() =>
-      assertTenantScope({ model: 'Service', operation: 'deleteMany', args: {} }, store),
+      assertTenantScope(
+        { model: 'Service', operation: 'deleteMany', args: {} },
+        store,
+      ),
     ).toThrow(TenantScopeMissingError)
   })
 
   it('refuse un modele absent de la liste, meme en lecture', () => {
     expect(() =>
-      assertTenantScope({ model: 'Patient', operation: 'findMany', args: {} }, store),
+      assertTenantScope(
+        { model: 'Patient', operation: 'findMany', args: {} },
+        store,
+      ),
     ).toThrow(TenantScopeMissingError)
   })
 
   it('autorise le comptage des patients, qui est declare', () => {
     expect(() =>
       assertTenantScope(
-        { model: 'Patient', operation: 'count', args: { where: { establishmentId: 'e1' } } },
+        {
+          model: 'Patient',
+          operation: 'count',
+          args: { where: { establishmentId: 'e1' } },
+        },
         store,
       ),
     ).not.toThrow()
@@ -1542,7 +1892,11 @@ describe('contexte superadmin', () => {
             args: {
               include: {
                 patientServiceFiles: {
-                  include: { patient: true, diagnostics: true, enrollmentIssues: true },
+                  include: {
+                    patient: true,
+                    diagnostics: true,
+                    enrollmentIssues: true,
+                  },
                 },
               },
             },
@@ -1569,7 +1923,13 @@ describe('contexte superadmin', () => {
                 establishmentId: 'e1',
                 role: 'MEMBER',
                 serviceMemberships: {
-                  create: [{ serviceId: 's1', establishmentId: 'e1', role: 'INTERVENANT' }],
+                  create: [
+                    {
+                      serviceId: 's1',
+                      establishmentId: 'e1',
+                      role: 'INTERVENANT',
+                    },
+                  ],
                 },
               },
             },
@@ -1582,7 +1942,11 @@ describe('contexte superadmin', () => {
     it('refuse _count sous select, comme pour le contexte tenant', () => {
       expect(() =>
         assertTenantScope(
-          { model: 'Service', operation: 'findMany', args: { select: { _count: true } } },
+          {
+            model: 'Service',
+            operation: 'findMany',
+            args: { select: { _count: true } },
+          },
           store,
         ),
       ).toThrow(TenantScopeMissingError)
@@ -1593,14 +1957,19 @@ describe('contexte superadmin', () => {
       // liste au point de la rendre inutilisable. Une lecture nue et une ecriture plate (sans
       // relation imbriquee) doivent rester vertes.
       expect(() =>
-        assertTenantScope({ model: 'Service', operation: 'findMany', args: {} }, store),
+        assertTenantScope(
+          { model: 'Service', operation: 'findMany', args: {} },
+          store,
+        ),
       ).not.toThrow()
       expect(() =>
         assertTenantScope(
           {
             model: 'EstablishmentMembership',
             operation: 'create',
-            args: { data: { userId: 'u1', establishmentId: 'e1', role: 'MEMBER' } },
+            args: {
+              data: { userId: 'u1', establishmentId: 'e1', role: 'MEMBER' },
+            },
           },
           store,
         ),
@@ -1747,14 +2116,18 @@ describe('monotonie : le contexte superadmin ne change aucun verdict pour tenant
     },
   ]
 
-  it.each(casTenantEtSysteme)('$nom', ({ store: storeDuCas, model, operation, args, attendu }) => {
-    const appel = () => assertTenantScope({ model, operation, args }, storeDuCas)
-    if (attendu === 'passe') {
-      expect(appel).not.toThrow()
-    } else {
-      expect(appel).toThrow(TenantScopeMissingError)
-    }
-  })
+  it.each(casTenantEtSysteme)(
+    '$nom',
+    ({ store: storeDuCas, model, operation, args, attendu }) => {
+      const appel = () =>
+        assertTenantScope({ model, operation, args }, storeDuCas)
+      if (attendu === 'passe') {
+        expect(appel).not.toThrow()
+      } else {
+        expect(appel).toThrow(TenantScopeMissingError)
+      }
+    },
+  )
 })
 
 // TOUR DE CORRECTION 2 (tache 1) — Critique 1 de la revue : un modele GLOBAL sert de pont.
@@ -1788,12 +2161,16 @@ describe('aucun pont par un modele global sous superadmin (revue, tours 2 et 3)'
 
   // Construit l'objet `include` imbrique qui suit exactement `chemin` (une liste de noms de
   // champ de relation), jusqu'a une valeur terminale `true`.
-  const includeDuChemin = (chemin: readonly string[]): Record<string, unknown> => {
+  const includeDuChemin = (
+    chemin: readonly string[],
+  ): Record<string, unknown> => {
     const [tete, ...reste] = chemin
     if (tete === undefined) {
       return {}
     }
-    return reste.length === 0 ? { [tete]: true } : { [tete]: { include: includeDuChemin(reste) } }
+    return reste.length === 0
+      ? { [tete]: true }
+      : { [tete]: { include: includeDuChemin(reste) } }
   }
 
   // Parcours en largeur de MODEL_RELATIONS depuis `racine`, jusqu'a une profondeur bornee — ce
@@ -1805,18 +2182,27 @@ describe('aucun pont par un modele global sous superadmin (revue, tours 2 et 3)'
   // point exact ou assertNoGlobalBridgeUnderSuperAdmin doit refuser, et un chemin plus long
   // derriere lui ne serait de toute facon jamais atteint — la recursion de assertNestedInclude
   // s'arrete au premier throw.
-  const cheminsQuiFranchissentLaFrontiereGlobale = (racine: string, profondeurMax: number): string[][] => {
+  const cheminsQuiFranchissentLaFrontiereGlobale = (
+    racine: string,
+    profondeurMax: number,
+  ): string[][] => {
     const resultats: string[][] = []
-    const file: Array<{ modele: string; chemin: string[] }> = [{ modele: racine, chemin: [] }]
+    const file: Array<{ modele: string; chemin: string[] }> = [
+      { modele: racine, chemin: [] },
+    ]
     while (file.length > 0) {
       const courant = file.shift()
       if (!courant || courant.chemin.length >= profondeurMax) {
         continue
       }
-      for (const [relationField, relation] of Object.entries(MODEL_RELATIONS[courant.modele] ?? {})) {
+      for (const [relationField, relation] of Object.entries(
+        MODEL_RELATIONS[courant.modele] ?? {},
+      )) {
         const cible = relation.model
         const nouveauChemin = [...courant.chemin, relationField]
-        const franchit = (familleDe(courant.modele) === 'global') !== (familleDe(cible) === 'global')
+        const franchit =
+          (familleDe(courant.modele) === 'global') !==
+          (familleDe(cible) === 'global')
         if (franchit) {
           resultats.push(nouveauChemin)
           continue
@@ -1846,9 +2232,17 @@ describe('aucun pont par un modele global sous superadmin (revue, tours 2 et 3)'
   // la frontiere (`create ... include` rend exactement ce qu'un `findMany ... include` rendrait).
   // Le balayage doit donc repartir de la, sans quoi l'elargissement de ce tour rouvrirait
   // precisement ce que le tour 3 a ferme.
-  const racinesGlobales: Array<{ racine: string; operation: string; base: Record<string, unknown> }> = [
+  const racinesGlobales: Array<{
+    racine: string
+    operation: string
+    base: Record<string, unknown>
+  }> = [
     { racine: 'User', operation: 'findUnique', base: { where: { id: 'x1' } } },
-    { racine: 'Establishment', operation: 'findUnique', base: { where: { id: 'x1' } } },
+    {
+      racine: 'Establishment',
+      operation: 'findUnique',
+      base: { where: { id: 'x1' } },
+    },
     { racine: 'User', operation: 'create', base: { data: {} } },
     { racine: 'Establishment', operation: 'create', base: { data: {} } },
   ]
@@ -1868,14 +2262,32 @@ describe('aucun pont par un modele global sous superadmin (revue, tours 2 et 3)'
   // comme depuis les autres. Le tableau des violations (vide si tout est refuse) s'affiche dans
   // le diff Jest en cas d'echec, avec la racine et le chemin exact qui aurait fui.
   it('refuse toute chaine qui franchit la frontiere globale/tenant, depuis chaque racine — declaree ou globale —, a toute profondeur', () => {
-    const violations: { racine: string; operation: string; chemin: string[] }[] = []
-    const racinesEtOperations: Array<{ racine: string; operation: string; base: Record<string, unknown> }> = [
-      ...racinesAvecInclude.map((racine) => ({ racine, operation: 'findMany', base: {} })),
+    const violations: {
+      racine: string
+      operation: string
+      chemin: string[]
+    }[] = []
+    const racinesEtOperations: Array<{
+      racine: string
+      operation: string
+      base: Record<string, unknown>
+    }> = [
+      ...racinesAvecInclude.map((racine) => ({
+        racine,
+        operation: 'findMany',
+        base: {},
+      })),
       ...racinesGlobales,
     ]
     for (const { racine, operation, base } of racinesEtOperations) {
-      for (const chemin of cheminsQuiFranchissentLaFrontiereGlobale(racine, 5)) {
-        const args: Record<string, unknown> = { ...base, include: includeDuChemin(chemin) }
+      for (const chemin of cheminsQuiFranchissentLaFrontiereGlobale(
+        racine,
+        5,
+      )) {
+        const args: Record<string, unknown> = {
+          ...base,
+          include: includeDuChemin(chemin),
+        }
         try {
           assertTenantScope({ model: racine, operation, args }, store)
           violations.push({ racine, operation, chemin })
@@ -1919,9 +2331,12 @@ describe('aucun pont par un modele global sous superadmin (revue, tours 2 et 3)'
   })
 
   it('refuse Establishment.deleteMany, l autre exemple cite au tour 3', () => {
-    expect(() => assertTenantScope({ model: 'Establishment', operation: 'deleteMany', args: {} }, store)).toThrow(
-      TenantScopeMissingError,
-    )
+    expect(() =>
+      assertTenantScope(
+        { model: 'Establishment', operation: 'deleteMany', args: {} },
+        store,
+      ),
+    ).toThrow(TenantScopeMissingError)
   })
 
   // L'autre sens, explicitement demande par la revue : le correctif ne doit pas avoir referme
@@ -1931,11 +2346,23 @@ describe('aucun pont par un modele global sous superadmin (revue, tours 2 et 3)'
   // au-dessus de SUPERADMIN_OPERATIONS (deux lectures separees, jointure en memoire) pour les
   // taches 6, 7 et 9.
   it('laisse passer les dix couples declares, nus et avec un where libre, et les lectures nues de User/Establishment', () => {
-    const casDeclares: Array<{ model: string; operation: string; args: Record<string, unknown> }> = [
+    const casDeclares: Array<{
+      model: string
+      operation: string
+      args: Record<string, unknown>
+    }> = [
       { model: 'Service', operation: 'count', args: {} },
-      { model: 'Service', operation: 'count', args: { where: { establishmentId: 'e1' } } },
+      {
+        model: 'Service',
+        operation: 'count',
+        args: { where: { establishmentId: 'e1' } },
+      },
       { model: 'Service', operation: 'findMany', args: {} },
-      { model: 'Service', operation: 'findMany', args: { where: { establishmentId: 'e1' } } },
+      {
+        model: 'Service',
+        operation: 'findMany',
+        args: { where: { establishmentId: 'e1' } },
+      },
       { model: 'EstablishmentMembership', operation: 'count', args: {} },
       { model: 'EstablishmentMembership', operation: 'findMany', args: {} },
       {
@@ -1946,15 +2373,27 @@ describe('aucun pont par un modele global sous superadmin (revue, tours 2 et 3)'
       { model: 'ServiceMembership', operation: 'count', args: {} },
       { model: 'ServiceMembership', operation: 'findMany', args: {} },
       { model: 'Patient', operation: 'count', args: {} },
-      { model: 'Patient', operation: 'count', args: { where: { establishmentId: 'e1' } } },
+      {
+        model: 'Patient',
+        operation: 'count',
+        args: { where: { establishmentId: 'e1' } },
+      },
       { model: 'ActivityLog', operation: 'findMany', args: {} },
       { model: 'ActivityLog', operation: 'count', args: {} },
       // Le contournement sûr documenté au-dessus de SUPERADMIN_OPERATIONS : lectures nues,
       // aucun `include` vers l'autre côté du pont.
       { model: 'User', operation: 'findMany', args: {} },
-      { model: 'User', operation: 'findMany', args: { where: { id: { in: ['u1', 'u2'] } } } },
+      {
+        model: 'User',
+        operation: 'findMany',
+        args: { where: { id: { in: ['u1', 'u2'] } } },
+      },
       { model: 'Establishment', operation: 'findMany', args: {} },
-      { model: 'Establishment', operation: 'findUnique', args: { where: { id: 'e1' } } },
+      {
+        model: 'Establishment',
+        operation: 'findUnique',
+        args: { where: { id: 'e1' } },
+      },
     ]
     for (const cas of casDeclares) {
       expect(() => assertTenantScope(cas, store)).not.toThrow()
@@ -1988,7 +2427,12 @@ describe('ecritures declarees sur un modele global sous superadmin (revue, tour 
 
   // Ce dont les quatre taches ont besoin, nomme une par une plutot que par un balayage : un echec
   // ici doit dire QUELLE tache se retrouve bloquee.
-  const besoinsDesTaches: Array<{ tache: string; model: string; operation: string; args: Record<string, unknown> }> = [
+  const besoinsDesTaches: Array<{
+    tache: string
+    model: string
+    operation: string
+    args: Record<string, unknown>
+  }> = [
     {
       tache: 'tache 6 — creer un etablissement',
       model: 'Establishment',
@@ -1999,10 +2443,13 @@ describe('ecritures declarees sur un modele global sous superadmin (revue, tour 
       tache: 'taches 6 et 10 — creer un compte',
       model: 'User',
       operation: 'create',
-      args: { data: { email: 'a@b.c', firstName: 'A', lastName: 'B', password: 'x' } },
+      args: {
+        data: { email: 'a@b.c', firstName: 'A', lastName: 'B', password: 'x' },
+      },
     },
     {
-      tache: 'taches 6 et 10 — l adresse deja connue : lire avant de creer, sans ecraser',
+      tache:
+        'taches 6 et 10 — l adresse deja connue : lire avant de creer, sans ecraser',
       model: 'User',
       operation: 'findUnique',
       args: { where: { email: 'a@b.c' } },
@@ -2011,19 +2458,37 @@ describe('ecritures declarees sur un modele global sous superadmin (revue, tour 
       tache: 'taches 4, 6 et 10 — emettre un lien d acces',
       model: 'AccessLink',
       operation: 'create',
-      args: { data: { userId: 'u1', tokenHash: 'h', createdBy: 'u0', expiresAt: new Date() } },
+      args: {
+        data: {
+          userId: 'u1',
+          tokenHash: 'h',
+          createdBy: 'u0',
+          expiresAt: new Date(),
+        },
+      },
     },
     {
-      tache: 'tache 4 — la reemission invalide les liens precedents du meme compte',
+      tache:
+        'tache 4 — la reemission invalide les liens precedents du meme compte',
       model: 'AccessLink',
       operation: 'updateMany',
-      args: { where: { userId: 'u1', usedAt: null }, data: { usedAt: new Date() } },
+      args: {
+        where: { userId: 'u1', usedAt: null },
+        data: { usedAt: new Date() },
+      },
     },
     {
       tache: 'tache 8 — octroyer un acces temporaire',
       model: 'SuperAdminAccessGrant',
       operation: 'create',
-      args: { data: { userId: 'u1', establishmentId: 'e1', reason: 'incident', expiresAt: new Date() } },
+      args: {
+        data: {
+          userId: 'u1',
+          establishmentId: 'e1',
+          reason: 'incident',
+          expiresAt: new Date(),
+        },
+      },
     },
     {
       // La revue attendait ici `.delete`. Le modele porte `revokedAt DateTime?` (specification §5)
@@ -2049,39 +2514,97 @@ describe('ecritures declarees sur un modele global sous superadmin (revue, tour 
     },
   ]
 
-  it.each(besoinsDesTaches)('laisse passer $tache — $model / $operation', ({ model, operation, args }) => {
-    expect(() => assertTenantScope({ model, operation, args }, store)).not.toThrow()
-  })
+  it.each(besoinsDesTaches)(
+    'laisse passer $tache — $model / $operation',
+    ({ model, operation, args }) => {
+      expect(() =>
+        assertTenantScope({ model, operation, args }, store),
+      ).not.toThrow()
+    },
+  )
 
   // L'autre sens, celui qui compte autant : l'elargissement ne doit rien rouvrir d'autre. Chaque
   // couple ci-dessous est une mutation que le tour 3 avait fermee et que ce tour NE rouvre pas.
-  const mutationsNonDeclarees: Array<{ model: string; operation: string; args: Record<string, unknown> }> = [
+  const mutationsNonDeclarees: Array<{
+    model: string
+    operation: string
+    args: Record<string, unknown>
+  }> = [
     { model: 'Establishment', operation: 'deleteMany', args: {} },
-    { model: 'Establishment', operation: 'delete', args: { where: { id: 'e1' } } },
-    { model: 'Establishment', operation: 'update', args: { where: { id: 'e1' }, data: { name: 'x' } } },
-    { model: 'Establishment', operation: 'updateMany', args: { data: { name: 'x' } } },
-    { model: 'Establishment', operation: 'upsert', args: { where: { id: 'e1' }, create: {}, update: {} } },
-    { model: 'Establishment', operation: 'createMany', args: { data: [{ name: 'x' }] } },
-    { model: 'User', operation: 'updateMany', args: { data: { password: 'x' } } },
-    { model: 'User', operation: 'update', args: { where: { id: 'u1' }, data: { password: 'x' } } },
+    {
+      model: 'Establishment',
+      operation: 'delete',
+      args: { where: { id: 'e1' } },
+    },
+    {
+      model: 'Establishment',
+      operation: 'update',
+      args: { where: { id: 'e1' }, data: { name: 'x' } },
+    },
+    {
+      model: 'Establishment',
+      operation: 'updateMany',
+      args: { data: { name: 'x' } },
+    },
+    {
+      model: 'Establishment',
+      operation: 'upsert',
+      args: { where: { id: 'e1' }, create: {}, update: {} },
+    },
+    {
+      model: 'Establishment',
+      operation: 'createMany',
+      args: { data: [{ name: 'x' }] },
+    },
+    {
+      model: 'User',
+      operation: 'updateMany',
+      args: { data: { password: 'x' } },
+    },
+    {
+      model: 'User',
+      operation: 'update',
+      args: { where: { id: 'u1' }, data: { password: 'x' } },
+    },
     { model: 'User', operation: 'delete', args: { where: { id: 'u1' } } },
     { model: 'User', operation: 'deleteMany', args: {} },
-    { model: 'User', operation: 'upsert', args: { where: { id: 'u1' }, create: {}, update: {} } },
-    { model: 'User', operation: 'createMany', args: { data: [{ email: 'a@b.c' }] } },
+    {
+      model: 'User',
+      operation: 'upsert',
+      args: { where: { id: 'u1' }, create: {}, update: {} },
+    },
+    {
+      model: 'User',
+      operation: 'createMany',
+      args: { data: [{ email: 'a@b.c' }] },
+    },
     { model: 'AccessLink', operation: 'delete', args: { where: { id: 'l1' } } },
     { model: 'AccessLink', operation: 'deleteMany', args: {} },
-    { model: 'SuperAdminAccessGrant', operation: 'delete', args: { where: { id: 'g1' } } },
+    {
+      model: 'SuperAdminAccessGrant',
+      operation: 'delete',
+      args: { where: { id: 'g1' } },
+    },
     { model: 'SuperAdminAccessGrant', operation: 'deleteMany', args: {} },
     // Un modele global qu'aucune entree ne declare est refuse EN ENTIER, lecture comprise : c'est
     // la difference avec le tour 3, ou tout modele global etait lisible sans declaration.
     { model: 'UnModeleGlobalDeDemain', operation: 'findMany', args: {} },
     { model: 'UnModeleGlobalDeDemain', operation: 'count', args: {} },
-    { model: 'UnModeleGlobalDeDemain', operation: 'create', args: { data: {} } },
+    {
+      model: 'UnModeleGlobalDeDemain',
+      operation: 'create',
+      args: { data: {} },
+    },
   ]
 
-  it.each(mutationsNonDeclarees)('refuse $model / $operation, non declare', ({ model, operation, args }) => {
-    expect(() => assertTenantScope({ model, operation, args }, store)).toThrow(TenantScopeMissingError)
-  })
+  it.each(mutationsNonDeclarees)(
+    'refuse $model / $operation, non declare',
+    ({ model, operation, args }) => {
+      expect(() =>
+        assertTenantScope({ model, operation, args }, store),
+      ).toThrow(TenantScopeMissingError)
+    },
+  )
 
   // Toute la table, sans exception ecrite a la main : ce que la declaration promet, le garde-fou
   // doit le tenir couple par couple. `count`/`aggregate`/`groupBy` et les ecritures prennent des
@@ -2100,10 +2623,15 @@ describe('ecritures declarees sur un modele global sous superadmin (revue, tour 
       return {}
     }
     const refusesATort: string[] = []
-    for (const [model, operations] of Object.entries(SUPERADMIN_GLOBAL_OPERATIONS)) {
+    for (const [model, operations] of Object.entries(
+      SUPERADMIN_GLOBAL_OPERATIONS,
+    )) {
       for (const operation of operations) {
         try {
-          assertTenantScope({ model, operation, args: argsMinimaux(operation) }, store)
+          assertTenantScope(
+            { model, operation, args: argsMinimaux(operation) },
+            store,
+          )
         } catch {
           refusesATort.push(`${model}.${operation}`)
         }
@@ -2115,16 +2643,36 @@ describe('ecritures declarees sur un modele global sous superadmin (revue, tour 
     // declare reste refusee — c'est ce qui fait de cette table une liste blanche et non une
     // simple documentation.
     const toutesLesOperations = [
-      'findMany', 'findFirst', 'findFirstOrThrow', 'findUnique', 'findUniqueOrThrow',
-      'count', 'aggregate', 'groupBy',
-      'create', 'createMany', 'createManyAndReturn',
-      'update', 'updateMany', 'updateManyAndReturn', 'upsert', 'delete', 'deleteMany',
+      'findMany',
+      'findFirst',
+      'findFirstOrThrow',
+      'findUnique',
+      'findUniqueOrThrow',
+      'count',
+      'aggregate',
+      'groupBy',
+      'create',
+      'createMany',
+      'createManyAndReturn',
+      'update',
+      'updateMany',
+      'updateManyAndReturn',
+      'upsert',
+      'delete',
+      'deleteMany',
     ]
     const passesATort: string[] = []
-    for (const [model, operations] of Object.entries(SUPERADMIN_GLOBAL_OPERATIONS)) {
-      for (const operation of toutesLesOperations.filter((op) => !operations.includes(op))) {
+    for (const [model, operations] of Object.entries(
+      SUPERADMIN_GLOBAL_OPERATIONS,
+    )) {
+      for (const operation of toutesLesOperations.filter(
+        (op) => !operations.includes(op),
+      )) {
         try {
-          assertTenantScope({ model, operation, args: argsMinimaux(operation) }, store)
+          assertTenantScope(
+            { model, operation, args: argsMinimaux(operation) },
+            store,
+          )
           passesATort.push(`${model}.${operation}`)
         } catch (erreur) {
           if (!(erreur instanceof TenantScopeMissingError)) {
@@ -2140,12 +2688,22 @@ describe('ecritures declarees sur un modele global sous superadmin (revue, tour 
   // `Establishment.create` rouvrirait par son `data` le pont vers les modeles de tenant que
   // assertNoGlobalBridgeUnderSuperAdmin ferme du cote `include` — le trou du tour 2, rouvert par
   // l'autre porte.
-  const ecrituresImbriquees: Array<{ nom: string; model: string; operation: string; args: Record<string, unknown> }> = [
+  const ecrituresImbriquees: Array<{
+    nom: string
+    model: string
+    operation: string
+    args: Record<string, unknown>
+  }> = [
     {
       nom: 'Establishment.create + patients.create',
       model: 'Establishment',
       operation: 'create',
-      args: { data: { name: 'x', patients: { create: { firstName: 'A', lastName: 'B' } } } },
+      args: {
+        data: {
+          name: 'x',
+          patients: { create: { firstName: 'A', lastName: 'B' } },
+        },
+      },
     },
     {
       nom: 'Establishment.create + services.connect',
@@ -2157,7 +2715,12 @@ describe('ecritures declarees sur un modele global sous superadmin (revue, tour 
       nom: 'User.create + establishmentMemberships.create',
       model: 'User',
       operation: 'create',
-      args: { data: { email: 'a@b.c', establishmentMemberships: { create: { establishmentId: 'e1' } } } },
+      args: {
+        data: {
+          email: 'a@b.c',
+          establishmentMemberships: { create: { establishmentId: 'e1' } },
+        },
+      },
     },
     {
       nom: 'AccessLink.create + user.connect',
@@ -2169,13 +2732,19 @@ describe('ecritures declarees sur un modele global sous superadmin (revue, tour 
       nom: 'AccessLink.updateMany + user.connect',
       model: 'AccessLink',
       operation: 'updateMany',
-      args: { where: { userId: 'u1' }, data: { user: { connect: { id: 'u2' } } } },
+      args: {
+        where: { userId: 'u1' },
+        data: { user: { connect: { id: 'u2' } } },
+      },
     },
     {
       nom: 'SuperAdminAccessGrant.update + establishment.connect',
       model: 'SuperAdminAccessGrant',
       operation: 'update',
-      args: { where: { id: 'g1' }, data: { establishment: { connect: { id: 'e2' } } } },
+      args: {
+        where: { id: 'g1' },
+        data: { establishment: { connect: { id: 'e2' } } },
+      },
     },
     {
       nom: 'Establishment.create + include patients',
@@ -2187,13 +2756,21 @@ describe('ecritures declarees sur un modele global sous superadmin (revue, tour 
       nom: 'User.create + select establishmentMemberships',
       model: 'User',
       operation: 'create',
-      args: { data: { email: 'a@b.c' }, select: { establishmentMemberships: true } },
+      args: {
+        data: { email: 'a@b.c' },
+        select: { establishmentMemberships: true },
+      },
     },
   ]
 
-  it.each(ecrituresImbriquees)('refuse $nom : une ecriture declaree n ouvre que sa propre ligne', ({ model, operation, args }) => {
-    expect(() => assertTenantScope({ model, operation, args }, store)).toThrow(TenantScopeMissingError)
-  })
+  it.each(ecrituresImbriquees)(
+    'refuse $nom : une ecriture declaree n ouvre que sa propre ligne',
+    ({ model, operation, args }) => {
+      expect(() =>
+        assertTenantScope({ model, operation, args }, store),
+      ).toThrow(TenantScopeMissingError)
+    },
+  )
 
   // Et la contrepartie de monotonie, a l'echelle de ce bloc : ce tour n'a rien change hors du
   // contexte superadmin. Les memes couples, sous tenant et sous systeme, rendent le meme verdict
@@ -2208,17 +2785,31 @@ describe('ecritures declarees sur un modele global sous superadmin (revue, tour 
   // reste tenue pour les deux contextes ou elle a encore un sens ; le cas sans contexte est
   // repris, en refus, par le bloc « tache 9 » en fin de fichier.
   it('ne change aucun verdict sous tenant ni sous systeme', () => {
-    const casHorsSuperadmin: Array<{ model: string; operation: string; args: Record<string, unknown> }> = [
-      { model: 'Establishment', operation: 'create', args: { data: { name: 'x' } } },
+    const casHorsSuperadmin: Array<{
+      model: string
+      operation: string
+      args: Record<string, unknown>
+    }> = [
+      {
+        model: 'Establishment',
+        operation: 'create',
+        args: { data: { name: 'x' } },
+      },
       { model: 'Establishment', operation: 'deleteMany', args: {} },
-      { model: 'User', operation: 'updateMany', args: { data: { password: 'x' } } },
+      {
+        model: 'User',
+        operation: 'updateMany',
+        args: { data: { password: 'x' } },
+      },
       { model: 'UnModeleGlobalDeDemain', operation: 'findMany', args: {} },
     ]
     for (const cas of casHorsSuperadmin) {
       expect(() => assertTenantScope(cas, storeTenant)).not.toThrow()
       expect(() => assertTenantScope(cas, { kind: 'system' })).not.toThrow()
       // Et, depuis la tache 9, refuses sans contexte — jamais laisses passer.
-      expect(() => assertTenantScope(cas, undefined)).toThrow(TenantScopeMissingError)
+      expect(() => assertTenantScope(cas, undefined)).toThrow(
+        TenantScopeMissingError,
+      )
     }
   })
 })
@@ -2244,7 +2835,11 @@ describe('ecritures declarees sur un modele global sous superadmin (revue, tour 
 // patients:{create:{…Dora}}}})` sous ce meme contexte a ECRIT « Dora DE-D » dans l'etablissement
 // B, qui contenait ensuite « Bruno DE-B » et « Dora DE-D ».
 describe('tache 15 : franchir un modele global par une relation a-plusieurs', () => {
-  const patient = { firstName: 'X', lastName: 'Y', createDate: new Date('2024-01-01') }
+  const patient = {
+    firstName: 'X',
+    lastName: 'Y',
+    createDate: new Date('2024-01-01'),
+  }
 
   describe('lecture', () => {
     it('refuse la chaine exacte du brief, sous un contexte de tenant ordinaire', () => {
@@ -2259,7 +2854,9 @@ describe('tache 15 : franchir un modele global par une relation a-plusieurs', ()
                 user: {
                   include: {
                     establishmentMemberships: {
-                      include: { establishment: { include: { patients: true } } },
+                      include: {
+                        establishment: { include: { patients: true } },
+                      },
                     },
                   },
                 },
@@ -2281,7 +2878,10 @@ describe('tache 15 : franchir un modele global par une relation a-plusieurs', ()
           {
             model: 'User',
             operation: 'findUniqueOrThrow',
-            args: { where: { id: 'u1' }, include: { establishmentMemberships: true } },
+            args: {
+              where: { id: 'u1' },
+              include: { establishmentMemberships: true },
+            },
           },
           store,
         ),
@@ -2326,7 +2926,9 @@ describe('tache 15 : franchir un modele global par une relation a-plusieurs', ()
             args: {
               where: { establishmentId: 'e1' },
               include: {
-                user: { select: { id: true, email: true, deactivatedAt: true } },
+                user: {
+                  select: { id: true, email: true, deactivatedAt: true },
+                },
                 serviceMemberships: true,
               },
             },
@@ -2340,7 +2942,10 @@ describe('tache 15 : franchir un modele global par une relation a-plusieurs', ()
           {
             model: 'AccessLink',
             operation: 'findUnique',
-            args: { where: { tokenHash: 'h' }, include: { user: { select: { id: true } } } },
+            args: {
+              where: { tokenHash: 'h' },
+              include: { user: { select: { id: true } } },
+            },
           },
           store,
         ),
@@ -2368,7 +2973,10 @@ describe('tache 15 : franchir un modele global par une relation a-plusieurs', ()
           {
             model: 'Establishment',
             operation: 'update',
-            args: { where: { id: 'e2' }, data: { patients: { create: patient } } },
+            args: {
+              where: { id: 'e2' },
+              data: { patients: { create: patient } },
+            },
           },
           store,
         ),
@@ -2382,7 +2990,10 @@ describe('tache 15 : franchir un modele global par une relation a-plusieurs', ()
             model: 'User',
             operation: 'create',
             args: {
-              data: { email: 'a@b.c', establishmentMemberships: { create: { establishmentId: 'e2' } } },
+              data: {
+                email: 'a@b.c',
+                establishmentMemberships: { create: { establishmentId: 'e2' } },
+              },
             },
           },
           store,
@@ -2393,13 +3004,21 @@ describe('tache 15 : franchir un modele global par une relation a-plusieurs', ()
     it('laisse passer une ecriture globale qui n ouvre que sa propre ligne', () => {
       expect(() =>
         assertTenantScope(
-          { model: 'Establishment', operation: 'create', args: { data: { name: 'X' } } },
+          {
+            model: 'Establishment',
+            operation: 'create',
+            args: { data: { name: 'X' } },
+          },
           store,
         ),
       ).not.toThrow()
       expect(() =>
         assertTenantScope(
-          { model: 'User', operation: 'update', args: { where: { id: 'u1' }, data: { lastName: 'Z' } } },
+          {
+            model: 'User',
+            operation: 'update',
+            args: { where: { id: 'u1' }, data: { lastName: 'Z' } },
+          },
           store,
         ),
       ).not.toThrow()
@@ -2418,26 +3037,41 @@ describe('tache 15 : franchir un modele global par une relation a-plusieurs', ()
 describe('tache 9 : sans aucun contexte, un modele global suit une liste declaree', () => {
   // Les trois appels cites par le brief, mesures passants a l'etape precedente.
   it.each([
-    ['Establishment', 'findUnique', { where: { id: 'e2' }, include: { patients: true } }],
+    [
+      'Establishment',
+      'findUnique',
+      { where: { id: 'e2' }, include: { patients: true } },
+    ],
     ['Establishment', 'deleteMany', { where: {} }],
     ['User', 'updateMany', { where: {}, data: { isSuperAdmin: true } }],
   ])('sans aucun contexte, refuse %s.%s', (model, operation, args) => {
     expect(() =>
-      assertTenantScope({ model, operation, args } as Parameters<typeof assertTenantScope>[0], undefined),
+      assertTenantScope(
+        { model, operation, args } as Parameters<typeof assertTenantScope>[0],
+        undefined,
+      ),
     ).toThrow(TenantScopeMissingError)
   })
 
   // Ce dont les ROUTES ont besoin, nomme une par une plutot que par un balayage — meme parti
   // pris que `besoinsDesTaches` plus haut : un echec ici doit dire QUELLE route se retrouve
   // fermee. Les arguments reproduisent la forme reelle envoyee par le depot.
-  const besoinsDesRoutes: Array<{ route: string; model: string; operation: string; args: Record<string, unknown> }> = [
+  const besoinsDesRoutes: Array<{
+    route: string
+    model: string
+    operation: string
+    args: Record<string, unknown>
+  }> = [
     {
-      route: 'onRequest de routes/index.ts (cookie.plugin) — UserRepository.findByID',
+      route:
+        'onRequest de routes/index.ts (cookie.plugin) — UserRepository.findByID',
       model: 'User',
       operation: 'findUniqueOrThrow',
       args: {
         where: { id: 'u1' },
-        include: { establishmentMemberships: { include: { establishment: true } } },
+        include: {
+          establishmentMemberships: { include: { establishment: true } },
+        },
       },
     },
     {
@@ -2453,7 +3087,8 @@ describe('tache 9 : sans aucun contexte, un modele global suit une liste declare
       args: { where: { id: 'u1' }, data: { lastLoginAt: new Date() } },
     },
     {
-      route: 'GET /me, POST /auth/refresh — AccessGrantRepository.findForUser (relit isSuperAdmin)',
+      route:
+        'GET /me, POST /auth/refresh — AccessGrantRepository.findForUser (relit isSuperAdmin)',
       model: 'User',
       operation: 'findUnique',
       args: { where: { id: 'u1' }, select: { isSuperAdmin: true } },
@@ -2465,78 +3100,137 @@ describe('tache 9 : sans aucun contexte, un modele global suit une liste declare
       args: { data: { email: 'a@b.c', password: 'h', salt: 's' } },
     },
     {
-      route: 'GET /super-admin/establishments — EstablishmentRepository.findAll',
+      route:
+        'GET /super-admin/establishments — EstablishmentRepository.findAll',
       model: 'Establishment',
       operation: 'findMany',
       args: { orderBy: { createdAt: 'asc' } },
     },
     {
-      route: 'GET /super-admin/establishments/:id, POST /super-admin/grants — findByIdOrThrow',
+      route:
+        'GET /super-admin/establishments/:id, POST /super-admin/grants — findByIdOrThrow',
       model: 'Establishment',
       operation: 'findUniqueOrThrow',
       args: { where: { id: 'e1' } },
     },
     {
-      route: 'POST /auth/access-link/consume — AccessLinkRepository.findByTokenHashWithUser',
+      route:
+        'POST /auth/access-link/consume — AccessLinkRepository.findByTokenHashWithUser',
       model: 'AccessLink',
       operation: 'findUnique',
       args: { where: { tokenHash: 'h' }, include: { user: true } },
     },
     {
-      route: 'POST /super-admin/users/:id/access-link — AccessLinkRepository.create',
+      route:
+        'POST /super-admin/users/:id/access-link — AccessLinkRepository.create',
       model: 'AccessLink',
       operation: 'create',
-      args: { data: { userId: 'u1', tokenHash: 'h', createdBy: 'u0', expiresAt: new Date() } },
+      args: {
+        data: {
+          userId: 'u1',
+          tokenHash: 'h',
+          createdBy: 'u0',
+          expiresAt: new Date(),
+        },
+      },
     },
     {
-      route: 'POST /auth/access-link/consume — AccessLinkRepository.consumeIfActive',
+      route:
+        'POST /auth/access-link/consume — AccessLinkRepository.consumeIfActive',
       model: 'AccessLink',
       operation: 'updateMany',
-      args: { where: { tokenHash: 'h', usedAt: null }, data: { usedAt: new Date() } },
+      args: {
+        where: { tokenHash: 'h', usedAt: null },
+        data: { usedAt: new Date() },
+      },
     },
   ]
 
-  it.each(besoinsDesRoutes)('laisse passer $route', ({ model, operation, args }) => {
-    expect(() => assertTenantScope({ model, operation, args }, undefined)).not.toThrow()
-  })
+  it.each(besoinsDesRoutes)(
+    'laisse passer $route',
+    ({ model, operation, args }) => {
+      expect(() =>
+        assertTenantScope({ model, operation, args }, undefined),
+      ).not.toThrow()
+    },
+  )
 
   // L'autre sens, celui qui compte autant. `SuperAdminAccessGrant` y figure a dessein : tous ses
   // emplois sont encadres par `runAsSuperAdmin`, donc il est refuse EN ENTIER sans contexte,
   // lecture comprise — comme l'est un modele global que personne n'a declare.
-  const nonDeclares: Array<{ model: string; operation: string; args: Record<string, unknown> }> = [
-    { model: 'Establishment', operation: 'delete', args: { where: { id: 'e1' } } },
-    { model: 'Establishment', operation: 'update', args: { where: { id: 'e1' }, data: { name: 'x' } } },
-    { model: 'Establishment', operation: 'create', args: { data: { name: 'x' } } },
+  const nonDeclares: Array<{
+    model: string
+    operation: string
+    args: Record<string, unknown>
+  }> = [
+    {
+      model: 'Establishment',
+      operation: 'delete',
+      args: { where: { id: 'e1' } },
+    },
+    {
+      model: 'Establishment',
+      operation: 'update',
+      args: { where: { id: 'e1' }, data: { name: 'x' } },
+    },
+    {
+      model: 'Establishment',
+      operation: 'create',
+      args: { data: { name: 'x' } },
+    },
     { model: 'Establishment', operation: 'count', args: {} },
     { model: 'User', operation: 'delete', args: { where: { id: 'u1' } } },
     { model: 'User', operation: 'deleteMany', args: {} },
-    { model: 'User', operation: 'upsert', args: { where: { id: 'u1' }, create: {}, update: {} } },
+    {
+      model: 'User',
+      operation: 'upsert',
+      args: { where: { id: 'u1' }, create: {}, update: {} },
+    },
     { model: 'User', operation: 'findMany', args: {} },
     { model: 'AccessLink', operation: 'deleteMany', args: {} },
-    { model: 'AccessLink', operation: 'update', args: { where: { id: 'l1' }, data: {} } },
-    { model: 'SuperAdminAccessGrant', operation: 'findMany', args: { where: { userId: 'u1' } } },
+    {
+      model: 'AccessLink',
+      operation: 'update',
+      args: { where: { id: 'l1' }, data: {} },
+    },
+    {
+      model: 'SuperAdminAccessGrant',
+      operation: 'findMany',
+      args: { where: { userId: 'u1' } },
+    },
     { model: 'SuperAdminAccessGrant', operation: 'count', args: {} },
     { model: 'SuperAdminAccessGrant', operation: 'create', args: { data: {} } },
-    { model: 'SuperAdminAccessGrant', operation: 'update', args: { where: { id: 'g1' }, data: {} } },
+    {
+      model: 'SuperAdminAccessGrant',
+      operation: 'update',
+      args: { where: { id: 'g1' }, data: {} },
+    },
     { model: 'UnModeleGlobalDeDemain', operation: 'findMany', args: {} },
     { model: 'UnModeleGlobalDeDemain', operation: 'count', args: {} },
-    { model: 'UnModeleGlobalDeDemain', operation: 'create', args: { data: {} } },
+    {
+      model: 'UnModeleGlobalDeDemain',
+      operation: 'create',
+      args: { data: {} },
+    },
   ]
 
   // Le MOTIF est epingle, pas seulement le type (tour de correction 1, mineur) : sans cela, un
   // de ces cas pourrait un jour etre refuse par une AUTRE regle et rester vert en ne disant plus
   // rien de la porte de permission. C'est precisement ce qui venait d'arriver au test de
   // `assertGlobalInclude` en tete de ce fichier.
-  it.each(nonDeclares)('refuse $model / $operation, non declare sans contexte', ({ model, operation, args }) => {
-    let capturee: TenantScopeMissingError | undefined
-    try {
-      assertTenantScope({ model, operation, args }, undefined)
-    } catch (err) {
-      capturee = err as TenantScopeMissingError
-    }
-    expect(capturee).toBeInstanceOf(TenantScopeMissingError)
-    expect(capturee?.field).toBe('sans-contexte')
-  })
+  it.each(nonDeclares)(
+    'refuse $model / $operation, non declare sans contexte',
+    ({ model, operation, args }) => {
+      let capturee: TenantScopeMissingError | undefined
+      try {
+        assertTenantScope({ model, operation, args }, undefined)
+      } catch (err) {
+        capturee = err as TenantScopeMissingError
+      }
+      expect(capturee).toBeInstanceOf(TenantScopeMissingError)
+      expect(capturee?.field).toBe('sans-contexte')
+    },
+  )
 
   // Toute la table, sans exception ecrite a la main, dans les deux sens — meme forme que pour
   // SUPERADMIN_GLOBAL_OPERATIONS : ce que la declaration promet, le garde-fou doit le tenir
@@ -2555,10 +3249,15 @@ describe('tache 9 : sans aucun contexte, un modele global suit une liste declare
       return {}
     }
     const refusesATort: string[] = []
-    for (const [model, operations] of Object.entries(NO_CONTEXT_GLOBAL_OPERATIONS)) {
+    for (const [model, operations] of Object.entries(
+      NO_CONTEXT_GLOBAL_OPERATIONS,
+    )) {
       for (const operation of operations) {
         try {
-          assertTenantScope({ model, operation, args: argsMinimaux(operation) }, undefined)
+          assertTenantScope(
+            { model, operation, args: argsMinimaux(operation) },
+            undefined,
+          )
         } catch {
           refusesATort.push(`${model}.${operation}`)
         }
@@ -2567,19 +3266,37 @@ describe('tache 9 : sans aucun contexte, un modele global suit une liste declare
     expect(refusesATort).toEqual([])
 
     const toutesLesOperations = [
-      'findMany', 'findFirst', 'findFirstOrThrow', 'findUnique', 'findUniqueOrThrow',
-      'count', 'aggregate', 'groupBy',
-      'create', 'createMany', 'createManyAndReturn',
-      'update', 'updateMany', 'updateManyAndReturn', 'upsert', 'delete', 'deleteMany',
+      'findMany',
+      'findFirst',
+      'findFirstOrThrow',
+      'findUnique',
+      'findUniqueOrThrow',
+      'count',
+      'aggregate',
+      'groupBy',
+      'create',
+      'createMany',
+      'createManyAndReturn',
+      'update',
+      'updateMany',
+      'updateManyAndReturn',
+      'upsert',
+      'delete',
+      'deleteMany',
     ]
     const passesATort: string[] = []
-    for (const [model, operations] of Object.entries(NO_CONTEXT_GLOBAL_OPERATIONS)) {
+    for (const [model, operations] of Object.entries(
+      NO_CONTEXT_GLOBAL_OPERATIONS,
+    )) {
       for (const operation of toutesLesOperations) {
         if (operations.includes(operation)) {
           continue
         }
         try {
-          assertTenantScope({ model, operation, args: argsMinimaux(operation) }, undefined)
+          assertTenantScope(
+            { model, operation, args: argsMinimaux(operation) },
+            undefined,
+          )
           passesATort.push(`${model}.${operation}`)
         } catch {
           // refuse, c'est l'attendu
@@ -2594,10 +3311,22 @@ describe('tache 9 : sans aucun contexte, un modele global suit une liste declare
   // est dans `tenant-guard-monotonie.test.ts`, celle-ci dit la propriete en clair, a cote du
   // changement.
   it('ne change aucun verdict sous tenant, superadmin ou systeme', () => {
-    const cas: Array<{ model: string; operation: string; args: Record<string, unknown> }> = [
+    const cas: Array<{
+      model: string
+      operation: string
+      args: Record<string, unknown>
+    }> = [
       { model: 'Establishment', operation: 'deleteMany', args: {} },
-      { model: 'User', operation: 'updateMany', args: { data: { isSuperAdmin: true } } },
-      { model: 'SuperAdminAccessGrant', operation: 'findMany', args: { where: { userId: 'u1' } } },
+      {
+        model: 'User',
+        operation: 'updateMany',
+        args: { data: { isSuperAdmin: true } },
+      },
+      {
+        model: 'SuperAdminAccessGrant',
+        operation: 'findMany',
+        args: { where: { userId: 'u1' } },
+      },
     ]
     for (const c of cas) {
       // Sous tenant : une ecriture plate sur un modele global reste permise (limite nommee,
@@ -2609,11 +3338,18 @@ describe('tache 9 : sans aucun contexte, un modele global suit une liste declare
     // Sous superadmin : refuses avant comme apres, par SUPERADMIN_GLOBAL_OPERATIONS pour les
     // deux premiers, permis pour le troisieme — inchange par cette tache.
     expect(() =>
-      assertTenantScope({ model: 'Establishment', operation: 'deleteMany', args: {} }, { kind: 'superadmin' }),
+      assertTenantScope(
+        { model: 'Establishment', operation: 'deleteMany', args: {} },
+        { kind: 'superadmin' },
+      ),
     ).toThrow(TenantScopeMissingError)
     expect(() =>
       assertTenantScope(
-        { model: 'SuperAdminAccessGrant', operation: 'findMany', args: { where: { userId: 'u1' } } },
+        {
+          model: 'SuperAdminAccessGrant',
+          operation: 'findMany',
+          args: { where: { userId: 'u1' } },
+        },
         { kind: 'superadmin' },
       ),
     ).not.toThrow()

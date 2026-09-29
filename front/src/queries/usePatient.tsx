@@ -3,7 +3,12 @@ import { useCallback, useState } from 'react'
 
 import { PatientApi } from '../api/patient.api.ts'
 import { Button } from '../components/ui/button.tsx'
-import { APPOINTMENT, PATHWAY, PATIENT, SLOT } from '../constants/process.constant.ts'
+import {
+  APPOINTMENT,
+  PATHWAY,
+  PATIENT,
+  SLOT,
+} from '../constants/process.constant.ts'
 import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
 import {
@@ -120,7 +125,8 @@ export const usePatientIdentitySearch = () => {
 
   return useMutation({
     mutationKey: [PATIENT.SEARCH_IDENTITY],
-    mutationFn: (params: SearchPatientIdentityParams) => PatientApi.searchIdentity(params),
+    mutationFn: (params: SearchPatientIdentityParams) =>
+      PatientApi.searchIdentity(params),
     onError: (error) => {
       toast({
         title: "Erreur lors de la recherche d'une identité existante",
@@ -174,17 +180,14 @@ export const usePatientMutations = () => {
   const [isDeletePending, setIsDeletePending] = useState(false)
 
   const deletePatient = useCallback(
-    (
-      patientID: string,
-      options?: { onOptimisticDelete?: () => void },
-    ) => {
+    (patientID: string, options?: { onOptimisticDelete?: () => void }) => {
       setIsDeletePending(true)
 
       // Snapshot the cache so we can restore on undo or on API error
-      const previousPatients = snapshotForTenant(queryClient, [
-        PATIENT.GET_ALL,
+      const previousPatients = snapshotForTenant(queryClient, [PATIENT.GET_ALL])
+      const previousPatientsWithTags = snapshotForTenant(queryClient, [
+        PATIENT.GET_ALL_WITH_TAGS,
       ])
-      const previousPatientsWithTags = snapshotForTenant(queryClient, [PATIENT.GET_ALL_WITH_TAGS])
       const previousPatient = snapshotForTenant(queryClient, [
         PATIENT.GET_BY_ID,
         patientID,
@@ -438,8 +441,13 @@ export const usePatientMutations = () => {
 
   const dismissEnrollmentIssue = useMutation({
     mutationKey: [PATIENT.DISMISS_ENROLLMENT_ISSUE],
-    mutationFn: ({ patientID, issueID }: { patientID: string; issueID: string }) =>
-      PatientApi.dismissEnrollmentIssue(patientID, issueID),
+    mutationFn: ({
+      patientID,
+      issueID,
+    }: {
+      patientID: string
+      issueID: string
+    }) => PatientApi.dismissEnrollmentIssue(patientID, issueID),
     onError: (error) => {
       toast({
         title: "Erreur lors de la suppression du problème d'inscription",

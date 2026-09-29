@@ -23,4 +23,5 @@ export const tenantApiUrl = () => {
   return `${apiUrl}/e/${establishmentId}/s/${serviceId}`
 }
 
-export const establishmentApiUrl = () => `${apiUrl}/e/${requireContext().establishmentId}/admin`
+export const establishmentApiUrl = () =>
+  `${apiUrl}/e/${requireContext().establishmentId}/admin`

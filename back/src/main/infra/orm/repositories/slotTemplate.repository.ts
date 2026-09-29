@@ -1,4 +1,3 @@
-import { flattenSlotTemplate, slotTemplateInclude } from '../includes/slot-template.include'
 import type { IocContainer } from '../../../types/application/ioc'
 import type {
   SlotTemplateCreateEntityRepo,
@@ -8,6 +7,10 @@ import type {
 } from '../../../types/infra/orm/repositories/slotTemplate.repository.interface'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { TenantContextInterface } from '../../../types/utils/tenant-context'
+import {
+  flattenSlotTemplate,
+  slotTemplateInclude,
+} from '../includes/slot-template.include'
 import type { PostgresPrismaClient } from '../postgres-client'
 
 class SlotTemplateRepository implements SlotTemplateRepositoryInterface {
@@ -34,7 +37,9 @@ class SlotTemplateRepository implements SlotTemplateRepositoryInterface {
     return {
       ...rest,
       ...this.scope,
-      ...(soignantIDs !== undefined && { soignantLinks: { create: this.links(soignantIDs) } }),
+      ...(soignantIDs !== undefined && {
+        soignantLinks: { create: this.links(soignantIDs) },
+      }),
     }
   }
 
@@ -59,7 +64,9 @@ class SlotTemplateRepository implements SlotTemplateRepositoryInterface {
   async findByID(slotTemplateID: string): Promise<SlotTemplateDTORepo> {
     try {
       const row = await this.prisma.slotTemplate.findUniqueOrThrow({
-        where: { id_serviceId: { id: slotTemplateID, serviceId: this.scope.serviceId } },
+        where: {
+          id_serviceId: { id: slotTemplateID, serviceId: this.scope.serviceId },
+        },
         include: slotTemplateInclude,
       })
       return flattenSlotTemplate(row)
@@ -95,7 +102,9 @@ class SlotTemplateRepository implements SlotTemplateRepositoryInterface {
   ): Promise<SlotTemplateDTORepo> {
     try {
       const row = await this.prisma.slotTemplate.update({
-        where: { id_serviceId: { id: slotTemplateID, serviceId: this.scope.serviceId } },
+        where: {
+          id_serviceId: { id: slotTemplateID, serviceId: this.scope.serviceId },
+        },
         data: this.updateData(slotTemplateUpdateParams),
         include: slotTemplateInclude,
       })
@@ -136,7 +145,9 @@ class SlotTemplateRepository implements SlotTemplateRepositoryInterface {
   async delete(slotTemplateID: string): Promise<SlotTemplateDTORepo> {
     try {
       const row = await this.prisma.slotTemplate.delete({
-        where: { id_serviceId: { id: slotTemplateID, serviceId: this.scope.serviceId } },
+        where: {
+          id_serviceId: { id: slotTemplateID, serviceId: this.scope.serviceId },
+        },
         include: slotTemplateInclude,
       })
       return flattenSlotTemplate(row)

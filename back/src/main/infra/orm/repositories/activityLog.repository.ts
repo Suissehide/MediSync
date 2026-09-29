@@ -167,7 +167,9 @@ class ActivityLogRepository implements ActivityLogRepositoryInterface {
   // plus bas, appelle `tenantContext.peek()` synchroniquement en tête de son corps, et la
   // propriété tient. L'`await` ci-dessous reste écrit pour le lint (`suspicious/useAwait`) et la
   // lisibilité.
-  async findAllPlatformWide(filters: PlatformAccessLogFilters): Promise<ActivityLogEntityRepo[]> {
+  async findAllPlatformWide(
+    filters: PlatformAccessLogFilters,
+  ): Promise<ActivityLogEntityRepo[]> {
     try {
       return await this.tenantContext.runAsSuperAdmin(async () => {
         return await this.prisma.activityLog.findMany({
@@ -201,7 +203,10 @@ class ActivityLogRepository implements ActivityLogRepositoryInterface {
   // Sous runAsSystem (purge planifiee) : toute la table. Sous un tenant : le
   // meme perimetre que la lecture, pour que tout ce qui s'affiche soit
   // purgeable et que rien d'autre ne le soit.
-  async deleteOlderThan(date: Date, filters: ActivityLogScopeFilters = {}): Promise<number> {
+  async deleteOlderThan(
+    date: Date,
+    filters: ActivityLogScopeFilters = {},
+  ): Promise<number> {
     const store = this.tenantContext.peek()
     const where =
       store?.kind === 'tenant'

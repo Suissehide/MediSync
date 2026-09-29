@@ -54,7 +54,10 @@ const MAX_DECODE_PASSES = 5
 // un caractere de controle invisible reel, soit declenche le lint (« control character in a
 // regular expression ») -- l'un et l'autre pires qu'une construction dynamique explicite ici.
 const INVISIBLE_OR_BLANK_CHARS_PATTERN = ' |\\t|\\u0000|\\u200b'
-const INVISIBLE_OR_BLANK_CHARS_REGEX = new RegExp(INVISIBLE_OR_BLANK_CHARS_PATTERN, 'g')
+const INVISIBLE_OR_BLANK_CHARS_REGEX = new RegExp(
+  INVISIBLE_OR_BLANK_CHARS_PATTERN,
+  'g',
+)
 
 const decodeRepeatedly = (value: string): string => {
   let current = value
@@ -75,7 +78,10 @@ const decodeRepeatedly = (value: string): string => {
 
 const normalizeForSensitivePrefixMatch = (path: string): string => {
   const decoded = decodeRepeatedly(path)
-  const withoutInvisibleChars = decoded.replace(INVISIBLE_OR_BLANK_CHARS_REGEX, '')
+  const withoutInvisibleChars = decoded.replace(
+    INVISIBLE_OR_BLANK_CHARS_REGEX,
+    '',
+  )
   const withoutDotSegments = posix.normalize(withoutInvisibleChars)
   return withoutDotSegments.replace(/;[^/]*/g, '').toLowerCase()
 }
@@ -83,7 +89,8 @@ const normalizeForSensitivePrefixMatch = (path: string): string => {
 const truncateAtSensitivePrefix = (path: string): string => {
   const normalized = normalizeForSensitivePrefixMatch(path)
   const prefix = NO_SUFFIX_PATH_PREFIXES.find(
-    (candidate) => normalized === candidate || normalized.startsWith(`${candidate}/`),
+    (candidate) =>
+      normalized === candidate || normalized.startsWith(`${candidate}/`),
   )
   return prefix ?? path
 }

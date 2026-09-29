@@ -83,7 +83,10 @@ function buildDefaultServiceRoles(
   existingMemberships: MemberServiceAssignment[],
 ): Record<string, string> {
   const roleByServiceId = new Map(
-    existingMemberships.map((membership) => [membership.serviceId, membership.role]),
+    existingMemberships.map((membership) => [
+      membership.serviceId,
+      membership.role,
+    ]),
   )
   return Object.fromEntries(
     services.map((service) => [
@@ -209,11 +212,13 @@ function EditMemberForm({ member }: EditMemberFormProps) {
                 </p>
               )}
 
-              {!servicesPending && !servicesError && sortedServices.length === 0 && (
-                <p className="text-sm text-text-light">
-                  Aucun service dans cet établissement.
-                </p>
-              )}
+              {!servicesPending &&
+                !servicesError &&
+                sortedServices.length === 0 && (
+                  <p className="text-sm text-text-light">
+                    Aucun service dans cet établissement.
+                  </p>
+                )}
 
               {!servicesPending &&
                 !servicesError &&

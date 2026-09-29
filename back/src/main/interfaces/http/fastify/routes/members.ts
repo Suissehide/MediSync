@@ -10,9 +10,9 @@ import {
   type MemberParams,
   memberAccessLinkResponseSchema,
   memberParamsSchema,
-  projectCreatedMember,
   memberResponseSchema,
   membersResponseSchema,
+  projectCreatedMember,
   type UpdateMemberBody,
   updateMemberSchema,
 } from '../schemas/members.schema'
@@ -48,7 +48,6 @@ const membersRouter: FastifyPluginAsync = (fastify) => {
       return member
     },
   )
-
 
   // Tâche 10, step 1. Chemin réel : `POST /e/:establishmentId/admin/members/account` — le brief
   // l'écrit sans `/admin`, mais ce routeur est monté sous ce préfixe (establishment-admin.
@@ -112,7 +111,6 @@ const membersRouter: FastifyPluginAsync = (fastify) => {
       reply.code(204).send()
     },
   )
-
 
   // Tâche 10, step 3 : réémettre un lien — la réinitialisation d'un accès oublié, qui
   // n'existait par aucun moyen. Le client désigne une APPARTENANCE, jamais un compte : voir

@@ -38,7 +38,10 @@ export type ServiceMemberRowDomain = ServiceMemberRow
 
 export interface MembershipDomainInterface {
   findServiceMembers: () => Promise<ServiceMemberRowDomain[]>
-  setServiceSoignant: (serviceMembershipId: string, soignantId: string | null) => Promise<ServiceMemberRowDomain>
+  setServiceSoignant: (
+    serviceMembershipId: string,
+    soignantId: string | null,
+  ) => Promise<ServiceMemberRowDomain>
   findAll: () => Promise<MembershipRowDomain[]>
   addByEmail: (
     params: MembershipAddByEmailDomain,

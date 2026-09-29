@@ -4,11 +4,11 @@ import { PathwayTemplateApi } from '../api/pathwayTemplate.api.ts'
 import { PATHWAY_TEMPLATE } from '../constants/process.constant.ts'
 import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
-import { useToast } from '../hooks/useToast.ts'
 import {
   restoreForTenant,
   snapshotForTenant,
 } from '../hooks/useTenantSwitch.ts'
+import { useToast } from '../hooks/useToast.ts'
 import type {
   CreatePathwayTemplateParams,
   PathwayTemplate,
@@ -212,10 +212,10 @@ export const usePathwayTemplateMutations = () => {
       queryClient.setQueryData(
         [PATHWAY_TEMPLATE.GET_ALL],
         (oldPathwayTemplates: PathwayTemplate[]) => {
-          if (!oldPathwayTemplates) { return oldPathwayTemplates }
-          const orderMap = new Map(
-            orderedIds.map((id, index) => [id, index]),
-          )
+          if (!oldPathwayTemplates) {
+            return oldPathwayTemplates
+          }
+          const orderMap = new Map(orderedIds.map((id, index) => [id, index]))
           return [...oldPathwayTemplates]
             .map((pt) => ({
               ...pt,

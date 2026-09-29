@@ -5,7 +5,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useLastGrantStore } from '@/store/useLastGrantStore.ts'
 import { useToastStore } from '@/store/useToastStore.ts'
-
 import CreateGrantForm from './createGrantForm.tsx'
 
 // Task-12-brief.md, step 2 : « bouton d'octroi avec motif obligatoire et
@@ -69,7 +68,9 @@ describe('CreateGrantForm — motif obligatoire et durée bornée', () => {
     await ouvrir()
     await userEvent.click(screen.getByRole('button', { name: /^s'accorder/i }))
 
-    expect(await screen.findByText(/motif est obligatoire/i)).toBeInTheDocument()
+    expect(
+      await screen.findByText(/motif est obligatoire/i),
+    ).toBeInTheDocument()
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
@@ -79,7 +80,10 @@ describe('CreateGrantForm — motif obligatoire et durée bornée', () => {
     renderForm()
 
     await ouvrir()
-    await userEvent.type(screen.getByLabelText(/motif/i), 'Compte bloqué, dépannage')
+    await userEvent.type(
+      screen.getByLabelText(/motif/i),
+      'Compte bloqué, dépannage',
+    )
     const dureeInput = screen.getByLabelText(/durée/i)
     await userEvent.clear(dureeInput)
     await userEvent.type(dureeInput, '48')
@@ -94,7 +98,8 @@ describe('CreateGrantForm — motif obligatoire et durée bornée', () => {
   it('envoie establishmentId, reason et durationHours quand la saisie est valide', async () => {
     const fetchMock = buildFetchMock([
       {
-        match: (url, method) => url.endsWith('/super-admin/grants') && method === 'POST',
+        match: (url, method) =>
+          url.endsWith('/super-admin/grants') && method === 'POST',
         respond: (_url, init) => ({
           ok: true,
           status: 201,
@@ -114,7 +119,10 @@ describe('CreateGrantForm — motif obligatoire et durée bornée', () => {
     renderForm()
 
     await ouvrir()
-    await userEvent.type(screen.getByLabelText(/motif/i), 'Compte bloqué, dépannage')
+    await userEvent.type(
+      screen.getByLabelText(/motif/i),
+      'Compte bloqué, dépannage',
+    )
     await userEvent.click(screen.getByRole('button', { name: /^s'accorder/i }))
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))

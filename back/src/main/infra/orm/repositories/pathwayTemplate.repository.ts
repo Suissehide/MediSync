@@ -1,7 +1,4 @@
-import {
-  flattenSlotTemplate,
-  soignantLinksInclude,
-} from '../includes/slot-template.include'
+import type { PathwayTemplate } from '../../../../generated/client'
 import type { IocContainer } from '../../../types/application/ioc'
 import type {
   PathwayTemplateCreateEntityRepo,
@@ -11,7 +8,10 @@ import type {
 } from '../../../types/infra/orm/repositories/pathwayTemplate.repository.interface'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { TenantContextInterface } from '../../../types/utils/tenant-context'
-import type { PathwayTemplate } from '../../../../generated/client'
+import {
+  flattenSlotTemplate,
+  soignantLinksInclude,
+} from '../includes/slot-template.include'
 import type { PostgresPrismaClient } from '../postgres-client'
 
 // `location` et `thematic` sont chacune référencées depuis SlotTemplate par

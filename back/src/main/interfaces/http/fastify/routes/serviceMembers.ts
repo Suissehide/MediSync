@@ -3,10 +3,10 @@ import type { FastifyPluginAsync } from 'fastify'
 import {
   projectServiceMember,
   type ServiceMemberParams,
+  type SetServiceSoignantBody,
   serviceMemberParamsSchema,
   serviceMemberResponseSchema,
   serviceMembersResponseSchema,
-  type SetServiceSoignantBody,
   setServiceSoignantSchema,
 } from '../schemas/serviceMembers.schema'
 
@@ -27,7 +27,8 @@ const serviceMembersRouter: FastifyPluginAsync = (fastify) => {
       schema: { response: { 200: serviceMembersResponseSchema } },
       config: { permission: 'members:read' },
     },
-    async () => (await membershipDomain.findServiceMembers()).map(projectServiceMember),
+    async () =>
+      (await membershipDomain.findServiceMembers()).map(projectServiceMember),
   )
 
   fastify.patch<{ Params: ServiceMemberParams; Body: SetServiceSoignantBody }>(
@@ -42,7 +43,10 @@ const serviceMembersRouter: FastifyPluginAsync = (fastify) => {
     },
     async (request) =>
       projectServiceMember(
-        await membershipDomain.setServiceSoignant(request.params.serviceMembershipId, request.body.soignantId),
+        await membershipDomain.setServiceSoignant(
+          request.params.serviceMembershipId,
+          request.body.soignantId,
+        ),
       ),
   )
 

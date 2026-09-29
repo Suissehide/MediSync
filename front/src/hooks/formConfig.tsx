@@ -151,7 +151,13 @@ function SelectField({
   )
 }
 
-const NumberField = ({ label, className, inputClassName, min, max }: FieldComponentProps & { min?: number; max?: number }) => {
+const NumberField = ({
+  label,
+  className,
+  inputClassName,
+  min,
+  max,
+}: FieldComponentProps & { min?: number; max?: number }) => {
   const field = useFieldContext<number | undefined>()
   const value = field.state.value ?? ''
 
@@ -176,7 +182,11 @@ const NumberField = ({ label, className, inputClassName, min, max }: FieldCompon
   )
 }
 
-function DatePickerField({ label, className, inputClassName }: FieldComponentProps) {
+function DatePickerField({
+  label,
+  className,
+  inputClassName,
+}: FieldComponentProps) {
   const field = useFieldContext<string>()
   const value = useMemo(() => {
     const fieldValue = field.state.value
@@ -194,13 +204,21 @@ function DatePickerField({ label, className, inputClassName }: FieldComponentPro
   return (
     <div className={cn('flex flex-col gap-1', className)}>
       {label && <Label htmlFor={field.name}>{label}</Label>}
-      <DatePicker value={value} onChange={handleChange} className={inputClassName} />
+      <DatePicker
+        value={value}
+        onChange={handleChange}
+        className={inputClassName}
+      />
       <FieldInfo field={field} />
     </div>
   )
 }
 
-function TimePickerField({ label, className, inputClassName }: FieldComponentProps) {
+function TimePickerField({
+  label,
+  className,
+  inputClassName,
+}: FieldComponentProps) {
   const field = useFieldContext<Dayjs | null>()
   const value = field.state.value
 
@@ -246,7 +264,11 @@ function CheckboxField({
   )
 }
 
-function TextAreaField({ label, className, inputClassName }: FieldComponentProps) {
+function TextAreaField({
+  label,
+  className,
+  inputClassName,
+}: FieldComponentProps) {
   const field = useFieldContext<string>()
   const value = field.state.value ?? ''
 
@@ -271,19 +293,72 @@ function TextAreaField({ label, className, inputClassName }: FieldComponentProps
 // de neutres. L'ordre est celui de l'affichage (8 pastilles par ligne).
 const COLOR_PICKER_PALETTE = [
   // Nuances soutenues
-  '#b91c1c', '#c2410c', '#b45309', '#047857', '#0e7490', '#1d4ed8', '#6d28d9', '#be185d',
-  '#dc2626', '#ea580c', '#d97706', '#059669', '#0891b2', '#2563eb', '#7c3aed', '#db2777',
+  '#b91c1c',
+  '#c2410c',
+  '#b45309',
+  '#047857',
+  '#0e7490',
+  '#1d4ed8',
+  '#6d28d9',
+  '#be185d',
+  '#dc2626',
+  '#ea580c',
+  '#d97706',
+  '#059669',
+  '#0891b2',
+  '#2563eb',
+  '#7c3aed',
+  '#db2777',
   // Nuances vives
-  '#ef4444', '#f97316', '#f59e0b', '#10b981', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899',
-  '#f87171', '#fb923c', '#fbbf24', '#34d399', '#22d3ee', '#60a5fa', '#a78bfa', '#f472b6',
+  '#ef4444',
+  '#f97316',
+  '#f59e0b',
+  '#10b981',
+  '#06b6d4',
+  '#3b82f6',
+  '#8b5cf6',
+  '#ec4899',
+  '#f87171',
+  '#fb923c',
+  '#fbbf24',
+  '#34d399',
+  '#22d3ee',
+  '#60a5fa',
+  '#a78bfa',
+  '#f472b6',
   // Nuances claires
-  '#fca5a5', '#fdba74', '#fcd34d', '#6ee7b7', '#67e8f9', '#93c5fd', '#c4b5fd', '#f9a8d4',
-  '#fecaca', '#fed7aa', '#fde68a', '#a7f3d0', '#a5f3fc', '#bfdbfe', '#ddd6fe', '#fbcfe8',
+  '#fca5a5',
+  '#fdba74',
+  '#fcd34d',
+  '#6ee7b7',
+  '#67e8f9',
+  '#93c5fd',
+  '#c4b5fd',
+  '#f9a8d4',
+  '#fecaca',
+  '#fed7aa',
+  '#fde68a',
+  '#a7f3d0',
+  '#a5f3fc',
+  '#bfdbfe',
+  '#ddd6fe',
+  '#fbcfe8',
   // Neutres
-  '#000000', '#374151', '#6b7280', '#9ca3af', '#d1d5db', '#e5e7eb', '#f3f4f6', '#ffffff',
+  '#000000',
+  '#374151',
+  '#6b7280',
+  '#9ca3af',
+  '#d1d5db',
+  '#e5e7eb',
+  '#f3f4f6',
+  '#ffffff',
 ]
 
-function ColorPickerField({ label, className, inputClassName }: FieldComponentProps) {
+function ColorPickerField({
+  label,
+  className,
+  inputClassName,
+}: FieldComponentProps) {
   const [open, setOpen] = useState(false)
   const field = useFieldContext<string>()
   const value = field.state.value ?? '#000000'
@@ -360,7 +435,12 @@ function ColorPickerField({ label, className, inputClassName }: FieldComponentPr
   )
 }
 
-function ToggleField({ label, className, inputClassName, options }: ToggleFieldProps) {
+function ToggleField({
+  label,
+  className,
+  inputClassName,
+  options,
+}: ToggleFieldProps) {
   const field = useFieldContext<boolean>()
   const [option1, option2] = options
 
@@ -372,7 +452,12 @@ function ToggleField({ label, className, inputClassName, options }: ToggleFieldP
     <div className={cn('flex flex-col gap-1', className)}>
       {label && <Label htmlFor={field.name}>{label}</Label>}
 
-      <div className={cn('relative w-fit flex items-center border border-border rounded overflow-hidden', inputClassName)}>
+      <div
+        className={cn(
+          'relative w-fit flex items-center border border-border rounded overflow-hidden',
+          inputClassName,
+        )}
+      >
         <div
           className={`absolute inset-y-0 w-1/2 bg-primary rounded transition-transform duration-200 ease-in-out ${
             field.state.value ? 'translate-x-0' : 'translate-x-full'

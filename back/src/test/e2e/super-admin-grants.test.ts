@@ -339,9 +339,10 @@ describe('octrois temporaires (tache 8)', () => {
         cookies: superAdminCookies,
       })
       expect(premiere.statusCode).toBe(204)
-      const apresPremiere = await testDb.superAdminAccessGrant.findUniqueOrThrow(
-        { where: { id: grantId } },
-      )
+      const apresPremiere =
+        await testDb.superAdminAccessGrant.findUniqueOrThrow({
+          where: { id: grantId },
+        })
       const premiereDate = apresPremiere.revokedAt
       expect(premiereDate).not.toBeNull()
 

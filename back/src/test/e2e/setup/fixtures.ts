@@ -18,7 +18,11 @@ type MembershipFixture = {
   establishmentId: string
   role?: EstablishmentRole
   // Le soignant incarne dans un service se pose sur l'affectation de service (2026-09-29).
-  services?: { serviceId: string; role: ServiceRole; soignantId?: string | null }[]
+  services?: {
+    serviceId: string
+    role: ServiceRole
+    soignantId?: string | null
+  }[]
 }
 
 // Crée un compte et, pour chaque etablissement donné, son appartenance ainsi

@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { PatientServiceFile } from '@/types/patientServiceFile.ts'
-
 import { PatientServiceFileApi } from './patientServiceFile.api.ts'
 
 const context = {
@@ -44,7 +43,10 @@ describe('PatientServiceFileApi', () => {
     const result = await PatientServiceFileApi.getByPatient('p1')
 
     expect(result).toEqual(serviceFile)
-    const [requestedUrl, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    const [requestedUrl, init] = fetchMock.mock.calls[0] as [
+      string,
+      RequestInit,
+    ]
     expect(requestedUrl).toMatch(/\/e\/e1\/s\/s1\/patient\/p1\/service-file$/)
     expect(init.method).toBe('GET')
   })
@@ -55,9 +57,15 @@ describe('PatientServiceFileApi', () => {
     const fetchMock = vi.fn().mockResolvedValue(okResponse(serviceFile))
     vi.stubGlobal('fetch', fetchMock)
 
-    await PatientServiceFileApi.update({ patientID: 'p1', notes: 'nouvelle note' })
+    await PatientServiceFileApi.update({
+      patientID: 'p1',
+      notes: 'nouvelle note',
+    })
 
-    const [requestedUrl, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    const [requestedUrl, init] = fetchMock.mock.calls[0] as [
+      string,
+      RequestInit,
+    ]
     expect(requestedUrl).toMatch(/\/e\/e1\/s\/s1\/patient\/p1\/service-file$/)
     expect(init.method).toBe('PATCH')
   })
@@ -67,13 +75,18 @@ describe('PatientServiceFileApi', () => {
   it('attachExisting envoie un POST sur la même route, sans corps', async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValue(okResponse({ patientId: 'p1', alreadyFollowedHere: false }))
+      .mockResolvedValue(
+        okResponse({ patientId: 'p1', alreadyFollowedHere: false }),
+      )
     vi.stubGlobal('fetch', fetchMock)
 
     const result = await PatientServiceFileApi.attachExisting('p1')
 
     expect(result).toEqual({ patientId: 'p1', alreadyFollowedHere: false })
-    const [requestedUrl, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    const [requestedUrl, init] = fetchMock.mock.calls[0] as [
+      string,
+      RequestInit,
+    ]
     expect(requestedUrl).toMatch(/\/e\/e1\/s\/s1\/patient\/p1\/service-file$/)
     expect(init.method).toBe('POST')
     expect(init.body).toBeUndefined()

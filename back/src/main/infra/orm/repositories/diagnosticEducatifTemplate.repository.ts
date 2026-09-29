@@ -9,7 +9,9 @@ import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { TenantContextInterface } from '../../../types/utils/tenant-context'
 import type { PostgresPrismaClient } from '../postgres-client'
 
-class DiagnosticEducatifTemplateRepository implements DiagnosticEducatifTemplateRepositoryInterface {
+class DiagnosticEducatifTemplateRepository
+  implements DiagnosticEducatifTemplateRepositoryInterface
+{
   private readonly prisma: PostgresPrismaClient
   private readonly errorHandler: ErrorHandlerInterface
   private readonly tenantContext: TenantContextInterface
@@ -37,28 +39,42 @@ class DiagnosticEducatifTemplateRepository implements DiagnosticEducatifTemplate
         where: { id_serviceId: { id, serviceId: this.scope.serviceId } },
       })
     } catch (err) {
-      throw this.errorHandler.boomErrorFromPrismaError({ entityName: 'DiagnosticEducatifTemplate', error: err })
+      throw this.errorHandler.boomErrorFromPrismaError({
+        entityName: 'DiagnosticEducatifTemplate',
+        error: err,
+      })
     }
   }
 
-  async create(params: DiagnosticEducatifTemplateCreateEntity): Promise<DiagnosticEducatifTemplateEntity> {
+  async create(
+    params: DiagnosticEducatifTemplateCreateEntity,
+  ): Promise<DiagnosticEducatifTemplateEntity> {
     try {
       return await this.prisma.diagnosticEducatifTemplate.create({
         data: { ...params, ...this.scope },
       })
     } catch (err) {
-      throw this.errorHandler.boomErrorFromPrismaError({ entityName: 'DiagnosticEducatifTemplate', error: err })
+      throw this.errorHandler.boomErrorFromPrismaError({
+        entityName: 'DiagnosticEducatifTemplate',
+        error: err,
+      })
     }
   }
 
-  async update(id: string, params: DiagnosticEducatifTemplateUpdateEntity): Promise<DiagnosticEducatifTemplateEntity> {
+  async update(
+    id: string,
+    params: DiagnosticEducatifTemplateUpdateEntity,
+  ): Promise<DiagnosticEducatifTemplateEntity> {
     try {
       return await this.prisma.diagnosticEducatifTemplate.update({
         where: { id_serviceId: { id, serviceId: this.scope.serviceId } },
         data: params,
       })
     } catch (err) {
-      throw this.errorHandler.boomErrorFromPrismaError({ entityName: 'DiagnosticEducatifTemplate', error: err })
+      throw this.errorHandler.boomErrorFromPrismaError({
+        entityName: 'DiagnosticEducatifTemplate',
+        error: err,
+      })
     }
   }
 
@@ -68,7 +84,10 @@ class DiagnosticEducatifTemplateRepository implements DiagnosticEducatifTemplate
         where: { id_serviceId: { id, serviceId: this.scope.serviceId } },
       })
     } catch (err) {
-      throw this.errorHandler.boomErrorFromPrismaError({ entityName: 'DiagnosticEducatifTemplate', error: err })
+      throw this.errorHandler.boomErrorFromPrismaError({
+        entityName: 'DiagnosticEducatifTemplate',
+        error: err,
+      })
     }
   }
 }

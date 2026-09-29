@@ -15,7 +15,10 @@ type LocationActions = {
   canManage: boolean
 }
 
-export const getLocationColumns = ({ onDelete, canManage }: LocationActions) => {
+export const getLocationColumns = ({
+  onDelete,
+  canManage,
+}: LocationActions) => {
   const columns = [
     columnHelper.accessor('name', {
       header: 'Nom',

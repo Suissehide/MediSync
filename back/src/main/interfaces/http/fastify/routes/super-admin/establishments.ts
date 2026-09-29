@@ -4,8 +4,8 @@ import {
   type CreateEstablishmentBody,
   createEstablishmentResponseSchema,
   createEstablishmentSchema,
-  establishmentDetailResponseSchema,
   type EstablishmentIdParams,
+  establishmentDetailResponseSchema,
   establishmentIdParamsSchema,
   establishmentListResponseSchema,
 } from '../../schemas/establishment.schema'

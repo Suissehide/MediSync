@@ -1,16 +1,14 @@
 import type { IocContainer } from '../types/application/ioc'
 import type {
+  SlotTemplateCreateEntityDomain,
   SlotTemplateDomainInterface,
   SlotTemplateDTODomain,
+  SlotTemplateUpdateEntityDomain,
 } from '../types/domain/slotTemplate.domain.interface'
 import type { LocationRepositoryInterface } from '../types/infra/orm/repositories/location.repository.interface'
 import type { PathwayTemplateRepositoryInterface } from '../types/infra/orm/repositories/pathwayTemplate.repository.interface'
 import type { SlotTemplateRepositoryInterface } from '../types/infra/orm/repositories/slotTemplate.repository.interface'
 import type { ThematicRepositoryInterface } from '../types/infra/orm/repositories/thematic.repository.interface'
-import type {
-  SlotTemplateCreateEntityDomain,
-  SlotTemplateUpdateEntityDomain,
-} from '../types/domain/slotTemplate.domain.interface'
 
 class SlotTemplateDomain implements SlotTemplateDomainInterface {
   private readonly slotTemplateRepository: SlotTemplateRepositoryInterface
@@ -44,8 +42,14 @@ class SlotTemplateDomain implements SlotTemplateDomainInterface {
   // si elle appartient à un autre service ou établissement.
   private async assertReferences(
     params:
-      | Pick<SlotTemplateCreateEntityDomain, 'locationID' | 'thematicId' | 'templateID'>
-      | Pick<SlotTemplateUpdateEntityDomain, 'locationID' | 'thematicId' | 'templateID'>,
+      | Pick<
+          SlotTemplateCreateEntityDomain,
+          'locationID' | 'thematicId' | 'templateID'
+        >
+      | Pick<
+          SlotTemplateUpdateEntityDomain,
+          'locationID' | 'thematicId' | 'templateID'
+        >,
   ): Promise<void> {
     if (typeof params.locationID === 'string') {
       await this.locationRepository.findByID(params.locationID)

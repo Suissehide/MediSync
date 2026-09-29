@@ -97,7 +97,9 @@ describe('le pont par un modele global, sous un contexte de tenant ordinaire', (
     expect(memberships.map((m) => m.establishmentId).sort()).toEqual(
       [decor.etablissementA, decor.etablissementB].sort(),
     )
-    const patients = await testDb.patient.findMany({ orderBy: { lastName: 'asc' } })
+    const patients = await testDb.patient.findMany({
+      orderBy: { lastName: 'asc' },
+    })
     expect(patients.map((p) => `${p.lastName}@${p.establishmentId}`)).toEqual([
       `DE-A@${decor.etablissementA}`,
       `DE-B@${decor.etablissementB}`,
@@ -139,14 +141,22 @@ describe('le pont par un modele global, sous un contexte de tenant ordinaire', (
           data: {
             name: 'Etab C',
             patients: {
-              create: { firstName: 'Charlie', lastName: 'DE-C', createDate: new Date('2024-01-01') },
+              create: {
+                firstName: 'Charlie',
+                lastName: 'DE-C',
+                createDate: new Date('2024-01-01'),
+              },
             },
           },
         })
       }),
     ).rejects.toThrow(/relation 'patients'/)
-    expect(await testDb.establishment.findFirst({ where: { name: 'Etab C' } })).toBeNull()
-    expect(await testDb.patient.findFirst({ where: { lastName: 'DE-C' } })).toBeNull()
+    expect(
+      await testDb.establishment.findFirst({ where: { name: 'Etab C' } }),
+    ).toBeNull()
+    expect(
+      await testDb.patient.findFirst({ where: { lastName: 'DE-C' } }),
+    ).toBeNull()
   })
 
   // ECRITURE, la forme la plus nette : pas un etablissement neuf, mais CELUI D'A COTE. Avant le
@@ -160,7 +170,11 @@ describe('le pont par un modele global, sous un contexte de tenant ordinaire', (
           where: { id: decor.etablissementB },
           data: {
             patients: {
-              create: { firstName: 'Dora', lastName: 'DE-D', createDate: new Date('2024-01-01') },
+              create: {
+                firstName: 'Dora',
+                lastName: 'DE-D',
+                createDate: new Date('2024-01-01'),
+              },
             },
           },
         })
@@ -178,12 +192,15 @@ describe('le pont par un modele global, sous un contexte de tenant ordinaire', (
   // pas jeter.
   it('laisse passer la lecture reelle des membres, qui ne franchit qu une relation a-un', async () => {
     const { prisma } = t.instances.postgresOrm
-    const membres = await t.instances.tenantContext.run(tenantDe(decor), async () => {
-      return await prisma.establishmentMembership.findMany({
-        where: { establishmentId: decor.etablissementA },
-        include: { user: { select: { id: true, email: true } } },
-      })
-    })
+    const membres = await t.instances.tenantContext.run(
+      tenantDe(decor),
+      async () => {
+        return await prisma.establishmentMembership.findMany({
+          where: { establishmentId: decor.etablissementA },
+          include: { user: { select: { id: true, email: true } } },
+        })
+      },
+    )
     expect(membres).toHaveLength(1)
     expect(membres[0]?.user.id).toBe(decor.compte)
   })

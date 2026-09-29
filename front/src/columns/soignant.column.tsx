@@ -2,7 +2,9 @@ import { createColumnHelper } from '@tanstack/react-table'
 import { Trash } from 'lucide-react'
 
 import DeleteSoignantForm from '../components/custom/popup/deleteSoignantForm.tsx'
-import EditSoignantAccountsForm, { nomDuCompte } from '../components/custom/popup/editSoignantAccountsForm.tsx'
+import EditSoignantAccountsForm, {
+  nomDuCompte,
+} from '../components/custom/popup/editSoignantAccountsForm.tsx'
 import EditSoignantThematicsForm from '../components/custom/popup/editSoignantThematicsForm.tsx'
 import { Button } from '../components/ui/button.tsx'
 import type { ServiceMember } from '../types/serviceMember.ts'
@@ -67,7 +69,9 @@ export const getSoignantColumns = ({
       header: 'Comptes',
       size: 220,
       cell: ({ row }) => {
-        const comptes = members.filter((m) => m.soignantId === row.original.id).map(nomDuCompte)
+        const comptes = members
+          .filter((m) => m.soignantId === row.original.id)
+          .map(nomDuCompte)
         return comptes.length > 0 ? (
           <span className="text-sm text-text-dark">{comptes.join(', ')}</span>
         ) : (
@@ -101,7 +105,11 @@ export const getSoignantColumns = ({
             <DeleteSoignantForm
               soignant={soignant}
               trigger={
-                <Button variant="outline" size="icon" aria-label={`Supprimer ${soignant.name}`}>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label={`Supprimer ${soignant.name}`}
+                >
                   <Trash className="w-4 h-4 text-destructive" />
                 </Button>
               }

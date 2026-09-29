@@ -5,11 +5,11 @@ import { SoignantApi } from '../api/soignant.api.ts'
 import { SOIGNANT } from '../constants/process.constant.ts'
 import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
-import { useToast } from '../hooks/useToast.ts'
 import {
   restoreForTenant,
   snapshotForTenant,
 } from '../hooks/useTenantSwitch.ts'
+import { useToast } from '../hooks/useToast.ts'
 import { useSoignantStore } from '../store/useSoignantStore.ts'
 import type {
   CreateSoignantParams,
@@ -63,7 +63,9 @@ export const useSoignantMutations = () => {
     onMutate: async (newSoignant: CreateSoignantParams) => {
       await queryClient.cancelQueries({ queryKey: [SOIGNANT.GET_ALL] })
 
-      const previousSoignants = snapshotForTenant(queryClient, [SOIGNANT.GET_ALL])
+      const previousSoignants = snapshotForTenant(queryClient, [
+        SOIGNANT.GET_ALL,
+      ])
       queryClient.setQueryData(
         [SOIGNANT.GET_ALL],
         (oldSoignants: Soignant[]) => [...(oldSoignants || []), newSoignant],
@@ -97,7 +99,9 @@ export const useSoignantMutations = () => {
     onMutate: async (soignantID) => {
       await queryClient.cancelQueries({ queryKey: [SOIGNANT.GET_ALL] })
 
-      const previousSoignants = snapshotForTenant(queryClient, [SOIGNANT.GET_ALL])
+      const previousSoignants = snapshotForTenant(queryClient, [
+        SOIGNANT.GET_ALL,
+      ])
       queryClient.setQueryData([SOIGNANT.GET_ALL], (oldSoignants: Soignant[]) =>
         oldSoignants?.filter(
           (soignant: Soignant) => soignant.id !== soignantID,
@@ -132,7 +136,9 @@ export const useSoignantMutations = () => {
     onMutate: async (updatedSoignant: UpdateSoignantParams) => {
       await queryClient.cancelQueries({ queryKey: [SOIGNANT.GET_ALL] })
 
-      const previousSoignants = snapshotForTenant(queryClient, [SOIGNANT.GET_ALL])
+      const previousSoignants = snapshotForTenant(queryClient, [
+        SOIGNANT.GET_ALL,
+      ])
       queryClient.setQueryData([SOIGNANT.GET_ALL], (oldSoignants: Soignant[]) =>
         oldSoignants?.map((soignant: Soignant) =>
           soignant.id === updatedSoignant.id ? updatedSoignant : soignant,

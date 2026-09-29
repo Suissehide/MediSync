@@ -21,7 +21,10 @@ describe('AuthApi.consumeAccessLink', () => {
     })
     vi.stubGlobal('fetch', fetchMock)
 
-    await AuthApi.consumeAccessLink({ token: JETON, password: 'un-mot-de-passe-suffisant' })
+    await AuthApi.consumeAccessLink({
+      token: JETON,
+      password: 'un-mot-de-passe-suffisant',
+    })
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
     const [url, init] = fetchMock.mock.calls[0]
@@ -38,7 +41,10 @@ describe('AuthApi.consumeAccessLink', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     await expect(
-      AuthApi.consumeAccessLink({ token: JETON, password: 'un-mot-de-passe-suffisant' }),
+      AuthApi.consumeAccessLink({
+        token: JETON,
+        password: 'un-mot-de-passe-suffisant',
+      }),
     ).rejects.toMatchObject({ status: 410 })
   })
 })

@@ -18,7 +18,6 @@ import { Route as adminRoute } from '@/routes/_authenticated/e/$establishmentId/
 import { Route as serviceRoute } from '@/routes/_authenticated/e/$establishmentId/s/$serviceId.tsx'
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { AuthState, TenantContext, User } from '@/types/auth.ts'
-
 import Navbar from './navbar.tsx'
 
 // `main.tsx` enregistre ce greffon au demarrage de l'application ; le panneau
@@ -218,7 +217,9 @@ const avecRoles = (
     {
       ...utilisateur.establishments[0],
       role: establishmentRole,
-      services: serviceRole ? [{ id: 's1', name: 'Cardio', role: serviceRole }] : [],
+      services: serviceRole
+        ? [{ id: 's1', name: 'Cardio', role: serviceRole }]
+        : [],
     },
   ],
 })
@@ -254,7 +255,12 @@ describe('onglets de la barre de navigation', () => {
     monterNavbar('/e/e1/admin/members', avecRoles('ADMIN', null))
 
     await waitFor(() => {
-      expect(onglets()).toEqual(['Membres', 'Services', 'Accès temporaires', "Journal d'activité"])
+      expect(onglets()).toEqual([
+        'Membres',
+        'Services',
+        'Accès temporaires',
+        "Journal d'activité",
+      ])
     })
     expect(menus()).toEqual([])
     expect(screen.queryByText('Dashboard')).not.toBeInTheDocument()
@@ -271,8 +277,12 @@ describe('onglets de la barre de navigation', () => {
     // Le menu ouvert : ses cinq ecrans, en sous-categories, dont Soignants et Salles (propres au
     // service depuis le 2026-09-29).
     await userEvent.click(screen.getByRole('button', { name: 'Organisation' }))
-    const sousCategories = await screen.findAllByRole('link', { name: /Planning|Thématiques|Diagnostics|Soignants|Salles/ })
-    expect(sousCategories.map((lien) => lien.querySelector('span')?.textContent)).toEqual([
+    const sousCategories = await screen.findAllByRole('link', {
+      name: /Planning|Thématiques|Diagnostics|Soignants|Salles/,
+    })
+    expect(
+      sousCategories.map((lien) => lien.querySelector('span')?.textContent),
+    ).toEqual([
       'Planning',
       'Thématiques',
       'Diagnostics éducatifs',
@@ -317,8 +327,12 @@ describe('onglets de la barre de navigation', () => {
     monterNavbar('/user/settings')
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('MediSync')
+      expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(
+        'MediSync',
+      )
     })
-    expect(screen.queryByRole('navigation', { name: 'Navigation' })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('navigation', { name: 'Navigation' }),
+    ).not.toBeInTheDocument()
   })
 })

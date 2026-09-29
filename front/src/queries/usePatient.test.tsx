@@ -3,14 +3,12 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { TenantContext } from '@/types/auth.ts'
-import type { CreatePatientParams, Patient } from '@/types/patient.ts'
-
 import { PatientApi } from '@/api/patient.api.ts'
 import { PATIENT } from '@/constants/process.constant.ts'
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import { useToastStore } from '@/store/useToastStore.ts'
-
+import type { TenantContext } from '@/types/auth.ts'
+import type { CreatePatientParams, Patient } from '@/types/patient.ts'
 import { usePatientMutations } from './usePatient.tsx'
 
 const serviceA: TenantContext = {
@@ -22,14 +20,23 @@ const serviceA: TenantContext = {
 }
 const serviceB: TenantContext = { ...serviceA, serviceId: 's2' }
 
-const patientDuServiceA: Patient = { id: 'p1', firstName: 'Anne', lastName: 'Service A' }
-const nouveauPatient: CreatePatientParams = { firstName: 'Nouveau', lastName: 'Patient' }
+const patientDuServiceA: Patient = {
+  id: 'p1',
+  firstName: 'Anne',
+  lastName: 'Service A',
+}
+const nouveauPatient: CreatePatientParams = {
+  firstName: 'Nouveau',
+  lastName: 'Patient',
+}
 
 const wrapper = ({ children }: { children: ReactNode }) => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   })
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  return (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  )
 }
 
 // Une mutation DEJA EN VOL au moment du changement de contexte ne reste pas
@@ -53,7 +60,10 @@ describe('restauration optimiste apres un changement de contexte', () => {
   // la fenetre pendant laquelle le contexte change.
   const monterAvecUneMutationEnVol = () => {
     const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
     })
     const stableWrapper = ({ children }: { children: ReactNode }) => (
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
@@ -68,8 +78,12 @@ describe('restauration optimiste apres un changement de contexte', () => {
         }),
     )
 
-    const { result } = renderHook(() => usePatientMutations(), { wrapper: stableWrapper })
-    const reglee = result.current.createPatient.mutateAsync(nouveauPatient).catch(() => undefined)
+    const { result } = renderHook(() => usePatientMutations(), {
+      wrapper: stableWrapper,
+    })
+    const reglee = result.current.createPatient
+      .mutateAsync(nouveauPatient)
+      .catch(() => undefined)
 
     return { queryClient, reglee, faireEchouer: () => faireEchouer() }
   }
@@ -133,7 +147,9 @@ describe('suppression differee de patient', () => {
   })
 
   it('renonce si le contexte a change au declenchement', async () => {
-    const deleteSpy = vi.spyOn(PatientApi, 'delete').mockResolvedValue(undefined)
+    const deleteSpy = vi
+      .spyOn(PatientApi, 'delete')
+      .mockResolvedValue(undefined)
 
     const { result } = renderHook(() => usePatientMutations(), { wrapper })
 
@@ -152,7 +168,9 @@ describe('suppression differee de patient', () => {
   })
 
   it('emet la suppression si le contexte n a pas change', async () => {
-    const deleteSpy = vi.spyOn(PatientApi, 'delete').mockResolvedValue(undefined)
+    const deleteSpy = vi
+      .spyOn(PatientApi, 'delete')
+      .mockResolvedValue(undefined)
 
     const { result } = renderHook(() => usePatientMutations(), { wrapper })
 

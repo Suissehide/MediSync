@@ -108,7 +108,8 @@ export const resolveTenantFromUser = (
     membership.origine === 'reelle'
       ? (user.establishmentMemberships
           .find((m) => m.establishmentId === params.establishmentId)
-          ?.serviceMemberships.find((sm) => sm.serviceId === serviceId)?.soignantId ?? null)
+          ?.serviceMemberships.find((sm) => sm.serviceId === serviceId)
+          ?.soignantId ?? null)
       : null
   if (options.requireEstablishmentAdmin) {
     if (membership.role !== 'ADMIN') {
@@ -260,7 +261,9 @@ export const assertNoDeadPatientAccessEntry = (
     throw new Error(
       `Entrees mortes dans le journal des consultations : ${dead
         .map((entry) => `${entry.list} -> GET ${entry.url}`)
-        .join(', ')}. Aucune route GET reelle ne porte cette URL ; retirer l'entree ou corriger ` +
+        .join(
+          ', ',
+        )}. Aucune route GET reelle ne porte cette URL ; retirer l'entree ou corriger ` +
         "l'URL dans src/main/utils/access-log-routes.ts.",
     )
   }

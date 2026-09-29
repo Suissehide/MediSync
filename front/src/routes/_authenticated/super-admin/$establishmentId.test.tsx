@@ -14,7 +14,6 @@ import utc from 'dayjs/plugin/utc'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { AuthState, User } from '@/types/auth.ts'
-
 import { Route as detailRoute } from './$establishmentId.tsx'
 
 // ---------------------------------------------------------------------------

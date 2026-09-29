@@ -39,7 +39,9 @@ class PathwayDomain implements PathwayDomainInterface {
     // que le modèle de parcours appartient au tenant en le chargeant par son
     // repository filtré, qui répond 404 si il appartient à un autre service.
     if (pathwayCreateParams.templateID) {
-      await this.pathwayTemplateRepository.findByID(pathwayCreateParams.templateID)
+      await this.pathwayTemplateRepository.findByID(
+        pathwayCreateParams.templateID,
+      )
     }
     const pathwayInputParams = {
       ...pathwayCreateParams,
@@ -53,7 +55,9 @@ class PathwayDomain implements PathwayDomainInterface {
   ): Promise<PathwayEntityDomain> {
     // Voir create() : même vérification d'appartenance au tenant.
     if (pathwayUpdateParams.templateID) {
-      await this.pathwayTemplateRepository.findByID(pathwayUpdateParams.templateID)
+      await this.pathwayTemplateRepository.findByID(
+        pathwayUpdateParams.templateID,
+      )
     }
     return await this.pathwayRepository.update(pathwayID, pathwayUpdateParams)
   }

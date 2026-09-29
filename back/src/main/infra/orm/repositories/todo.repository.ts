@@ -98,7 +98,9 @@ class TodoRepository implements TodoRepositoryInterface {
     try {
       await this.assertOwned(todoID)
       return await this.prisma.todo.update({
-        where: { id_serviceId: { id: todoID, serviceId: this.scope.serviceId } },
+        where: {
+          id_serviceId: { id: todoID, serviceId: this.scope.serviceId },
+        },
         data: todoUpdateParams,
         include: { soignant: true },
       })
@@ -114,7 +116,9 @@ class TodoRepository implements TodoRepositoryInterface {
     try {
       await this.assertOwned(todoID)
       return await this.prisma.todo.delete({
-        where: { id_serviceId: { id: todoID, serviceId: this.scope.serviceId } },
+        where: {
+          id_serviceId: { id: todoID, serviceId: this.scope.serviceId },
+        },
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({

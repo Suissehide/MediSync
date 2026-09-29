@@ -1,6 +1,8 @@
 import type { Dayjs } from 'dayjs'
-import { MoveRight, Minus, Plus, X } from 'lucide-react'
+import { Minus, MoveRight, Plus, X } from 'lucide-react'
 
+import type { PlanningCycle } from '../../../types/planningCycle.ts'
+import { cycleWeekNumber } from '../../../utils/weekCycle.ts'
 import { Button } from '../../ui/button.tsx'
 import { Label } from '../../ui/label.tsx'
 import {
@@ -12,8 +14,6 @@ import {
   PopupTitle,
 } from '../../ui/popup.tsx'
 import { WeekPicker } from '../../ui/weekPicker.tsx'
-import type { PlanningCycle } from '../../../types/planningCycle.ts'
-import { cycleWeekNumber } from '../../../utils/weekCycle.ts'
 
 interface BulkMoveFormBaseProps {
   open: boolean

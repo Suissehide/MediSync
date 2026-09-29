@@ -70,7 +70,10 @@ describe('redirectToDefaultService', () => {
 
   it('redirige vers /pending sans contexte, sans pretendre en conserver la recherche', () => {
     expect(() =>
-      redirectToDefaultService(userSansContexte, '/e/$establishmentId/s/$serviceId/agenda'),
+      redirectToDefaultService(
+        userSansContexte,
+        '/e/$establishmentId/s/$serviceId/agenda',
+      ),
     ).toThrow(expect.objectContaining({ isRedirect: true, to: '/pending' }))
   })
 })

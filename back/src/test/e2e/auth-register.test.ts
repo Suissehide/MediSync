@@ -66,7 +66,10 @@ describe('POST /auth/register', () => {
   })
 
   it('refuse un mot de passe trop court, sans rien ecrire', async () => {
-    const reponse = await register({ email: 'court@test.fr', password: 'court' })
+    const reponse = await register({
+      email: 'court@test.fr',
+      password: 'court',
+    })
 
     expect(reponse.statusCode).toBe(400)
     await expect(

@@ -1,4 +1,3 @@
-import { flattenSlot, soignantLinksInclude } from '../includes/slot-template.include'
 import type { IocContainer } from '../../../types/application/ioc'
 import type {
   AppointmentCreateEntityRepo,
@@ -12,6 +11,10 @@ import type {
 } from '../../../types/infra/orm/repositories/appointmentPatient.repository.interface'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { TenantContextInterface } from '../../../types/utils/tenant-context'
+import {
+  flattenSlot,
+  soignantLinksInclude,
+} from '../includes/slot-template.include'
 import type { PostgresPrismaClient } from '../postgres-client'
 
 // Include partagé : un rendez-vous embarque sa thématique (clé étrangère
@@ -44,7 +47,9 @@ const appointmentWithSlotInclude = {
   ...appointmentInclude,
   slot: {
     include: {
-      slotTemplate: { include: { ...soignantLinksInclude, location: true, thematic: true } },
+      slotTemplate: {
+        include: { ...soignantLinksInclude, location: true, thematic: true },
+      },
     },
   },
 } as const

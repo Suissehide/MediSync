@@ -39,7 +39,12 @@ describe('journal d activite a l echelle de l etablissement', () => {
       email: 'admin@test.fr',
       memberships: [{ establishmentId: E.id, role: 'ADMIN' }],
     })
-    const ligne = (establishmentId: string, serviceId: string | null, entityID: string, createdAt?: Date) =>
+    const ligne = (
+      establishmentId: string,
+      serviceId: string | null,
+      entityID: string,
+      createdAt?: Date,
+    ) =>
       testDb.activityLog.create({
         data: {
           establishmentId,
@@ -60,12 +65,18 @@ describe('journal d activite a l echelle de l etablissement', () => {
   }
 
   const entites = (body: unknown) =>
-    (body as { data: { entityID: string }[] }).data.map((l) => l.entityID).sort()
+    (body as { data: { entityID: string }[] }).data
+      .map((l) => l.entityID)
+      .sort()
 
   it('montre tout l etablissement a un administrateur sans service, jamais un autre etablissement', async () => {
     const { E, cookies } = await scenario()
 
-    const res = await t.app.inject({ method: 'GET', url: adminUrl(E.id, '/activity-log'), cookies })
+    const res = await t.app.inject({
+      method: 'GET',
+      url: adminUrl(E.id, '/activity-log'),
+      cookies,
+    })
 
     expect(res.statusCode).toBe(200)
     expect(entites(res.json())).toEqual(['dans-A', 'dans-B', 'sans-service'])
@@ -102,12 +113,20 @@ describe('journal d activite a l echelle de l etablissement', () => {
     await createUser({
       email: 'admin-coord@test.fr',
       memberships: [
-        { establishmentId: E.id, role: 'ADMIN', services: [{ serviceId: A.id, role: 'COORDINATEUR' }] },
+        {
+          establishmentId: E.id,
+          role: 'ADMIN',
+          services: [{ serviceId: A.id, role: 'COORDINATEUR' }],
+        },
       ],
     })
     const cookies = await signIn(t.app, 'admin-coord@test.fr')
 
-    const res = await t.app.inject({ method: 'GET', url: tenantUrl(E.id, A.id, '/activity-log'), cookies })
+    const res = await t.app.inject({
+      method: 'GET',
+      url: tenantUrl(E.id, A.id, '/activity-log'),
+      cookies,
+    })
 
     expect(res.statusCode).toBe(404)
   })
@@ -116,11 +135,20 @@ describe('journal d activite a l echelle de l etablissement', () => {
     const { E, A } = await scenario()
     await createUser({
       email: 'coord@test.fr',
-      memberships: [{ establishmentId: E.id, services: [{ serviceId: A.id, role: 'COORDINATEUR' }] }],
+      memberships: [
+        {
+          establishmentId: E.id,
+          services: [{ serviceId: A.id, role: 'COORDINATEUR' }],
+        },
+      ],
     })
     const cookies = await signIn(t.app, 'coord@test.fr')
 
-    const res = await t.app.inject({ method: 'GET', url: adminUrl(E.id, '/activity-log'), cookies })
+    const res = await t.app.inject({
+      method: 'GET',
+      url: adminUrl(E.id, '/activity-log'),
+      cookies,
+    })
 
     expect(res.statusCode).toBe(404)
   })
@@ -148,7 +176,9 @@ describe('journal d activite a l echelle de l etablissement', () => {
     expect(toutEtablissement.statusCode).toBe(200)
     expect(toutEtablissement.json()).toEqual({ deleted: 1 })
 
-    const restants = await testDb.activityLog.findMany({ where: { entityID: { startsWith: 'vieux' } } })
+    const restants = await testDb.activityLog.findMany({
+      where: { entityID: { startsWith: 'vieux' } },
+    })
     expect(restants.map((l) => l.entityID)).toEqual(['vieux-F'])
     expect(F.id).not.toBe(E.id)
   })

@@ -1,7 +1,7 @@
 import type { IocContainer } from '../types/application/ioc'
-import type { ThematicDomainInterface } from '../types/domain/thematic.domain.interface'
 import type {
   ThematicCreateEntityDomain,
+  ThematicDomainInterface,
   ThematicEntityDomain,
   ThematicUpdateEntityDomain,
   ThematicWithSoignantsEntityDomain,

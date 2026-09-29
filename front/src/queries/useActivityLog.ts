@@ -1,18 +1,21 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 
-import { ActivityLogApi, type GetActivityLogsParams } from '../api/activityLog.api.ts'
+import {
+  ActivityLogApi,
+  type GetActivityLogsParams,
+} from '../api/activityLog.api.ts'
 import { ACTIVITY_LOG } from '../constants/process.constant.ts'
 import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
 import { useToast } from '../hooks/useToast.ts'
 
 export const useActivityLogsQuery = (params: GetActivityLogsParams = {}) => {
-  const {
-    data,
-    isPending,
-    isError,
-    error,
-  } = useQuery({
+  const { data, isPending, isError, error } = useQuery({
     queryKey: [ACTIVITY_LOG.GET_ALL, params],
     queryFn: () => ActivityLogApi.getAll(params),
     retry: 0,

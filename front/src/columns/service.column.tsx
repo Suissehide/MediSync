@@ -69,7 +69,9 @@ export const getServiceColumns = ({
             size="icon"
             onClick={() => onToggleActive(service)}
             isLoading={isToggling(service)}
-            title={deactivated ? 'Réactiver le service' : 'Désactiver le service'}
+            title={
+              deactivated ? 'Réactiver le service' : 'Désactiver le service'
+            }
           >
             {deactivated ? (
               <RotateCcw className="w-4 h-4" />

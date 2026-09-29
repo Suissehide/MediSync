@@ -6,8 +6,8 @@ import type {
   FastifyRequest,
   preHandlerAsyncHookHandler,
 } from 'fastify'
-import fastifyPlugin from 'fastify-plugin'
 import type { FastifyPluginAsync } from 'fastify/types/plugin'
+import fastifyPlugin from 'fastify-plugin'
 
 import type { JwtPayload } from '../../../../types/interfaces/http/fastify/plugins/jwt.plugin'
 import { hashSecret } from '../../../../utils/auth-helper'

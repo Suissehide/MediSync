@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { User } from '@/types/auth.ts'
 import { LAST_CONTEXT_KEY } from '@/utils/tenant-context.ts'
-
 import { Route } from './$serviceId.tsx'
 
 const user: User = {
@@ -17,7 +16,9 @@ const user: User = {
       id: 'e1',
       name: 'CHU',
       role: 'ADMIN',
-      services: [{ id: 's1', name: 'Cardio', role: 'COORDINATEUR', soignantId: 'so1' }],
+      services: [
+        { id: 's1', name: 'Cardio', role: 'COORDINATEUR', soignantId: 'so1' },
+      ],
     },
   ],
 }

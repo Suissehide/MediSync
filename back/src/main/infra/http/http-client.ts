@@ -1,6 +1,7 @@
 import { TextDecoder } from 'node:util'
 import Boom from '@hapi/boom'
 import { detect } from 'chardet'
+
 import type { IocContainer } from '../../types/application/ioc'
 import type {
   HandleResponseReturn,

@@ -3,7 +3,6 @@ import dayjs from 'dayjs'
 import * as XLSX from 'xlsx'
 
 import type { AppointmentType } from '../../generated/enums'
-
 import {
   type TimeOfDay,
   timeOfDaySchema,
@@ -30,17 +29,17 @@ import type {
   PatientWithTagsDomain,
   RemoveFromPathwayResult,
 } from '../types/domain/patient.domain.interface'
-import type { PatientIdentitySearchFilters } from '../types/infra/orm/repositories/patient.repository.interface'
 import type { PatientServiceFileDomainInterface } from '../types/domain/patientServiceFile.domain.interface'
 import type { AppointmentRepositoryInterface } from '../types/infra/orm/repositories/appointment.repository.interface'
+import type { EnrollmentIssueRepositoryInterface } from '../types/infra/orm/repositories/enrollmentIssue.repository.interface'
 import type {
   PathwayRepositoryInterface,
   PathwayWithSlotsRepo,
 } from '../types/infra/orm/repositories/pathway.repository.interface'
 import type { PathwayTemplateRepositoryInterface } from '../types/infra/orm/repositories/pathwayTemplate.repository.interface'
-import type { EnrollmentIssueRepositoryInterface } from '../types/infra/orm/repositories/enrollmentIssue.repository.interface'
 import type {
   PatientForExportEntityRepo,
+  PatientIdentitySearchFilters,
   PatientRepositoryInterface,
 } from '../types/infra/orm/repositories/patient.repository.interface'
 import type { SlotWithTemplateAndAppointmentsRepo } from '../types/infra/orm/repositories/slot.repository.interface'
@@ -74,7 +73,8 @@ const describeEnrollmentFailure = (
       logLine: `Erreur lors de l'inscription ${context}: ${error.message}`,
     }
   }
-  const errorClass = error instanceof Error ? error.constructor.name : typeof error
+  const errorClass =
+    error instanceof Error ? error.constructor.name : typeof error
   return {
     reason: `Erreur inattendue lors de l'inscription ${context}`,
     logLine: `Erreur inattendue lors de l'inscription ${context} [${errorClass}]`,
@@ -101,30 +101,63 @@ const EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Prénom', width: 16, value: (p) => orEmpty(p.firstName) },
   { header: 'Nom', width: 16, value: (p) => orEmpty(p.lastName) },
   { header: 'Genre', width: 10, value: (p) => orEmpty(p.gender) },
-  { header: 'Date de naissance', width: 18, value: (p) => formatDate(p.birthDate) },
+  {
+    header: 'Date de naissance',
+    width: 18,
+    value: (p) => formatDate(p.birthDate),
+  },
   { header: 'Téléphone', width: 16, value: (p) => orEmpty(p.phone1) },
   { header: 'Téléphone 2', width: 16, value: (p) => orEmpty(p.phone2) },
   { header: 'Email', width: 28, value: (p) => orEmpty(p.email) },
-  { header: "Date d'entrée", width: 14, value: (p) => formatDate(p.serviceFile?.entryDate) },
-  { header: 'Date de sortie', width: 14, value: (p) => formatDate(p.serviceFile?.exitDate) },
-  { header: 'Parcours', width: 30, value: (p) => p.pathwayTemplateTags.join(', ') },
+  {
+    header: "Date d'entrée",
+    width: 14,
+    value: (p) => formatDate(p.serviceFile?.entryDate),
+  },
+  {
+    header: 'Date de sortie',
+    width: 14,
+    value: (p) => formatDate(p.serviceFile?.exitDate),
+  },
+  {
+    header: 'Parcours',
+    width: 30,
+    value: (p) => p.pathwayTemplateTags.join(', '),
+  },
   {
     header: 'Mode de prise en charge',
     width: 24,
     value: (p) => orEmpty(p.serviceFile?.careMode),
   },
-  { header: 'Orientation', width: 18, value: (p) => orEmpty(p.serviceFile?.orientation) },
+  {
+    header: 'Orientation',
+    width: 18,
+    value: (p) => orEmpty(p.serviceFile?.orientation),
+  },
   { header: 'Profession', width: 20, value: (p) => orEmpty(p.occupation) },
-  { header: "Niveau d'étude", width: 18, value: (p) => orEmpty(p.educationLevel) },
+  {
+    header: "Niveau d'étude",
+    width: 18,
+    value: (p) => orEmpty(p.educationLevel),
+  },
   { header: 'Distance', width: 14, value: (p) => orEmpty(p.distance) },
-  { header: 'Motif de sortie', width: 22, value: (p) => orEmpty(p.serviceFile?.stopReason) },
+  {
+    header: 'Motif de sortie',
+    width: 22,
+    value: (p) => orEmpty(p.serviceFile?.stopReason),
+  },
   {
     header: 'Diagnostic médical',
     width: 28,
     value: (p) => orEmpty(p.serviceFile?.medicalDiagnosis),
     clinical: true,
   },
-  { header: 'Notes', width: 40, value: (p) => orEmpty(p.serviceFile?.notes), clinical: true },
+  {
+    header: 'Notes',
+    width: 40,
+    value: (p) => orEmpty(p.serviceFile?.notes),
+    clinical: true,
+  },
 ]
 
 class PatientDomain implements PatientDomainInterface {
@@ -217,11 +250,13 @@ class PatientDomain implements PatientDomainInterface {
   // volontairement PAS alignees : les aligner casserait l'une des deux.
   async findByID(patientID: string): Promise<PatientDetailDomain> {
     const patient = await this.patientRepository.findByID(patientID)
-    const hasFileHere = await this.patientServiceFileDomain.findByPatient(patientID)
+    const hasFileHere =
+      await this.patientServiceFileDomain.findByPatient(patientID)
     if (!hasFileHere) {
       return patient
     }
-    const followedElsewhere = await this.patientServiceFileDomain.estSuiviAilleurs(patientID)
+    const followedElsewhere =
+      await this.patientServiceFileDomain.estSuiviAilleurs(patientID)
     return { ...patient, followedElsewhere }
   }
 
@@ -230,7 +265,9 @@ class PatientDomain implements PatientDomainInterface {
     { includeClinicalFields }: PatientExportOptions,
   ): Promise<PatientExportResult> {
     const patients = await this.patientRepository.findForExport(filters)
-    const columns = EXPORT_COLUMNS.filter((c) => includeClinicalFields || !c.clinical)
+    const columns = EXPORT_COLUMNS.filter(
+      (c) => includeClinicalFields || !c.clinical,
+    )
 
     const rows = patients.map((p) =>
       Object.fromEntries(columns.map((c) => [c.header, c.value(p)])),
@@ -241,7 +278,10 @@ class PatientDomain implements PatientDomainInterface {
 
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Patients')
-    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer
+    const buffer = XLSX.write(wb, {
+      type: 'buffer',
+      bookType: 'xlsx',
+    }) as Buffer
     // `count` (etape 4b, tache 4) : le nombre de dossiers REELLEMENT rendus, pour le journal des
     // consultations -- voir `PatientExportResult` (types/domain/patient.domain.interface.ts).
     return { buffer, count: patients.length }
@@ -290,12 +330,18 @@ class PatientDomain implements PatientDomainInterface {
     patientUpdateParams: PatientUpdateEntityDomain,
     userID: string,
   ): Promise<PatientEntityDomain> {
-    const patient = await this.patientRepository.update(patientID, patientUpdateParams)
+    const patient = await this.patientRepository.update(
+      patientID,
+      patientUpdateParams,
+    )
     this.appEventBus.emit('patient.updated', { userID, patientId: patient.id })
     return patient
   }
 
-  async delete(patientID: string, userID: string): Promise<PatientEntityDomain> {
+  async delete(
+    patientID: string,
+    userID: string,
+  ): Promise<PatientEntityDomain> {
     const patient = await this.patientRepository.findByID(patientID)
     const appointmentIDs = patient.appointmentPatients.map(
       (ap) => ap.appointment.id,
@@ -641,8 +687,7 @@ class PatientDomain implements PatientDomainInterface {
       const appointmentStart = dayjs(appointment.startDate)
       const appointmentEnd = dayjs(appointment.endDate)
       return (
-        slotStart.isBefore(appointmentEnd) &&
-        slotEnd.isAfter(appointmentStart)
+        slotStart.isBefore(appointmentEnd) && slotEnd.isAfter(appointmentStart)
       )
     })
     if (overlapsPatient) {
@@ -671,7 +716,13 @@ class PatientDomain implements PatientDomainInterface {
     appointmentDuration = 30,
   ): boolean {
     return slots.every((slot) =>
-      this.isSlotAvailable(slot, timeOfDay, patientAppointments, maxCapacity, appointmentDuration),
+      this.isSlotAvailable(
+        slot,
+        timeOfDay,
+        patientAppointments,
+        maxCapacity,
+        appointmentDuration,
+      ),
     )
   }
 
@@ -689,8 +740,13 @@ class PatientDomain implements PatientDomainInterface {
       firstAppointmentOnly: boolean
     },
   ): Promise<EnrollmentAppointment[]> {
-    const { type, motif, thematicId, appointmentDuration, firstAppointmentOnly } =
-      options
+    const {
+      type,
+      motif,
+      thematicId,
+      appointmentDuration,
+      firstAppointmentOnly,
+    } = options
     // `motif` vient du corps de la requête d'inscription : c'est du texte
     // libre saisi par l'utilisateur. `transmissionNotes` est une colonne
     // clinique, que le hook `stripClinicalInput` refuse en entrée à qui n'a
@@ -704,7 +760,9 @@ class PatientDomain implements PatientDomainInterface {
       { serviceRole, establishmentRole },
       'clinical:write',
     )
-    const transmissionNotes = canWriteClinical ? (motif ?? undefined) : undefined
+    const transmissionNotes = canWriteClinical
+      ? (motif ?? undefined)
+      : undefined
 
     if (slot.slotTemplate.isIndividual) {
       const nextSlot = this.getNextAvailableAppointment(
@@ -796,7 +854,8 @@ class PatientDomain implements PatientDomainInterface {
   ): Promise<EnrollmentAppointment[]> {
     const { type, motif, timeOfDay } = pathwayTemplate
     let slots = [...pathway.slots].sort(
-      (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
+      (a, b) =>
+        new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
     )
 
     // En mode firstAppointmentOnly, ne considérer que les slots futurs qui
@@ -909,7 +968,9 @@ class PatientDomain implements PatientDomainInterface {
       }
 
       // Sortie si la fenêtre ne tient plus dans le créneau.
-      if (nextAvailableStart.add(durationMinutes, 'minute').isAfter(slotEndDayjs)) {
+      if (
+        nextAvailableStart.add(durationMinutes, 'minute').isAfter(slotEndDayjs)
+      ) {
         return null
       }
     }

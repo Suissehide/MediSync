@@ -1,9 +1,9 @@
+import { Prisma } from '../../../generated/client'
 import {
   scheduleActivityLogCleanup,
   schedulePatientAccessLogCleanup,
 } from '../../../main/application/starter'
 import type { IocContainer } from '../../../main/types/application/ioc'
-import { Prisma } from '../../../generated/client'
 
 // task-5-re-review-3.md (re-revue du tour 5), "Ce qu'il reste" : `starter.ts` journalise
 // `${err}` brut sur un echec du nettoyage periodique du journal d'activite.
@@ -49,7 +49,11 @@ describe("scheduleActivityLogCleanup – un echec de nettoyage ne journalise pas
     const tenantContext = {
       runAsSystem: jest.fn((fn: () => Promise<unknown>) => fn()),
     }
-    const instances = { activityLogDomain, logger, tenantContext } as unknown as IocContainer
+    const instances = {
+      activityLogDomain,
+      logger,
+      tenantContext,
+    } as unknown as IocContainer
 
     scheduleActivityLogCleanup(instances)
     rejectCleanup(buildUnexpectedPrismaError())
@@ -74,7 +78,6 @@ describe("scheduleActivityLogCleanup – un echec de nettoyage ne journalise pas
     jest.useRealTimers()
   })
 })
-
 
 // REVUE DE LA TACHE 8, Important : la purge NEUVE portait la meme promesse — « meme raison que
 // le catch ci-dessus » — sans aucun test qui rougirait si elle cessait d'etre vraie. Mesure du

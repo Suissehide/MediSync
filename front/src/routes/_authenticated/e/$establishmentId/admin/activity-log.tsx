@@ -25,7 +25,9 @@ import { resolveEstablishmentContext } from '@/utils/tenant-context.ts'
 // (`ActivityLogRepository.scopeFilter`, cote back), filtrable par service. Il vivait sous un
 // service, ou il ne montrait que ce service et restait hors d'atteinte d'un administrateur sans
 // affectation de service.
-export const Route = createFileRoute('/_authenticated/e/$establishmentId/admin/activity-log')({
+export const Route = createFileRoute(
+  '/_authenticated/e/$establishmentId/admin/activity-log',
+)({
   // Meme garde explicite que `members.tsx`.
   beforeLoad: ({ context, params }) => {
     const tenant = resolveEstablishmentContext(context.authState.user, params)
@@ -36,7 +38,12 @@ export const Route = createFileRoute('/_authenticated/e/$establishmentId/admin/a
   component: ActivityLogPage,
 })
 
-const DEFAULT_FILTERS = { action: '', periodDays: '', userSearch: '', serviceId: '' }
+const DEFAULT_FILTERS = {
+  action: '',
+  periodDays: '',
+  userSearch: '',
+  serviceId: '',
+}
 
 // Pagination et recherche cote serveur (2026-09-29) : le journal couvre tout l'etablissement, la
 // premiere page de 50 lignes ne suffisait plus, et chercher un auteur dans la seule page affichee
@@ -58,7 +65,8 @@ function ActivityLogPage() {
   // Tout changement de filtre ramene a la premiere page, DANS la meme mise a jour que le filtre :
   // la page 7 d'une recherche plus etroite n'existe peut-etre pas, et un effet apres coup
   // enverrait d'abord une requete pour cette page-la.
-  const revenirAuDebut = () => setPagination((courant) => ({ ...courant, pageIndex: 0 }))
+  const revenirAuDebut = () =>
+    setPagination((courant) => ({ ...courant, pageIndex: 0 }))
 
   const [userApplique, setUserApplique] = useState('')
   useEffect(() => {
@@ -66,7 +74,9 @@ function ActivityLogPage() {
       // Les deux mises a jour partent ensemble : une seule requete, sur la premiere page. Cet
       // effet ne tourne que si la saisie a change ; au montage, la page est deja la premiere.
       setUserApplique(filters.userSearch.trim())
-      setPagination((courant) => (courant.pageIndex === 0 ? courant : { ...courant, pageIndex: 0 }))
+      setPagination((courant) =>
+        courant.pageIndex === 0 ? courant : { ...courant, pageIndex: 0 },
+      )
     }, DELAI_SAISIE_MS)
     return () => clearTimeout(minuteur)
   }, [filters.userSearch])
@@ -104,11 +114,18 @@ function ActivityLogPage() {
   const columns = useMemo(() => {
     const nomDuService = new Map((services ?? []).map((s) => [s.id, s.name]))
     const colonneService = columnHelper.accessor(
-      (row) => (row.serviceId ? (nomDuService.get(row.serviceId) ?? '—') : 'Établissement'),
+      (row) =>
+        row.serviceId
+          ? (nomDuService.get(row.serviceId) ?? '—')
+          : 'Établissement',
       { id: 'service', header: 'Service', size: 160 },
     )
     // Apres l'utilisateur : la date, l'heure, l'utilisateur, puis d'ou vient la ligne.
-    return [...activityLogColumns.slice(0, 3), colonneService, ...activityLogColumns.slice(3)]
+    return [
+      ...activityLogColumns.slice(0, 3),
+      colonneService,
+      ...activityLogColumns.slice(3),
+    ]
   }, [services])
 
   const logs = data?.data ?? []

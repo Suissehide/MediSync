@@ -167,7 +167,9 @@ describe('routes du patient', () => {
     )
     expect(catherineUpdateRes.statusCode).toBe(200)
 
-    const pierreFetched = (await get(`/patient/${pierreId}/service-file`)).json()
+    const pierreFetched = (
+      await get(`/patient/${pierreId}/service-file`)
+    ).json()
     const catherineFetched = (
       await get(`/patient/${catherineId}/service-file`)
     ).json()

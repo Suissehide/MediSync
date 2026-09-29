@@ -42,9 +42,12 @@ export const PatientApi = {
   },
 
   getAllWithTags: async (): Promise<PatientWithTags[]> => {
-    const response = await fetchWithAuth(`${tenantApiUrl()}/patient/with-tags`, {
-      method: 'GET',
-    })
+    const response = await fetchWithAuth(
+      `${tenantApiUrl()}/patient/with-tags`,
+      {
+        method: 'GET',
+      },
+    )
     if (!response.ok) {
       handleHttpError(
         response,
@@ -122,11 +125,14 @@ export const PatientApi = {
     updatePatientParams: UpdatePatientParams,
   ): Promise<Patient> => {
     const { id: patientID, ...updatePatientInputs } = updatePatientParams
-    const response = await fetchWithAuth(`${tenantApiUrl()}/patient/${patientID}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updatePatientInputs),
-    })
+    const response = await fetchWithAuth(
+      `${tenantApiUrl()}/patient/${patientID}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatePatientInputs),
+      },
+    )
     if (!response.ok) {
       handleHttpError(response, {}, 'Impossible de modifier le patient')
     }
@@ -182,16 +188,24 @@ export const PatientApi = {
     }
   },
 
-  exportExcel: async (filters?: { search?: string; pathwayTemplateTags?: string[] }): Promise<Blob> => {
+  exportExcel: async (filters?: {
+    search?: string
+    pathwayTemplateTags?: string[]
+  }): Promise<Blob> => {
     const params = new URLSearchParams()
-    if (filters?.search) { params.set('search', filters.search) }
+    if (filters?.search) {
+      params.set('search', filters.search)
+    }
     for (const tag of filters?.pathwayTemplateTags ?? []) {
       params.append('pathwayTemplateTags', tag)
     }
     const qs = params.toString()
-    const response = await fetchWithAuth(`${tenantApiUrl()}/patient/export${qs ? `?${qs}` : ''}`, {
-      method: 'GET',
-    })
+    const response = await fetchWithAuth(
+      `${tenantApiUrl()}/patient/export${qs ? `?${qs}` : ''}`,
+      {
+        method: 'GET',
+      },
+    )
     if (!response.ok) {
       handleHttpError(response, {}, "Impossible d'exporter les patients")
     }
@@ -235,9 +249,12 @@ export const PatientApi = {
   },
 
   delete: async (patientID: string): Promise<void> => {
-    const response = await fetchWithAuth(`${tenantApiUrl()}/patient/${patientID}`, {
-      method: 'DELETE',
-    })
+    const response = await fetchWithAuth(
+      `${tenantApiUrl()}/patient/${patientID}`,
+      {
+        method: 'DELETE',
+      },
+    )
     if (!response.ok) {
       handleHttpError(response, {}, 'Impossible de supprimer le patient')
     }

@@ -12,14 +12,14 @@ import type { UpdatePathwayTemplateParams } from '../../../types/pathwayTemplate
 import { Button } from '../../ui/button.tsx'
 import { FieldInfo } from '../../ui/fieldInfo.tsx'
 import { Label } from '../../ui/label.tsx'
-import { TagInput } from '../../ui/tagInput.tsx'
-import { ConfirmDeleteForm } from '../popup/confirmDeleteForm.tsx'
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
 } from '../../ui/sheet.tsx'
+import { TagInput } from '../../ui/tagInput.tsx'
+import { ConfirmDeleteForm } from '../popup/confirmDeleteForm.tsx'
 
 interface PathwayTemplateSheetProps {
   open: boolean
@@ -32,7 +32,8 @@ export default function PathwayTemplateSheet({
   setOpen,
   pathwayTemplateID,
 }: PathwayTemplateSheetProps) {
-  const { pathwayTemplate, isPending } = usePathwayTemplateByIDQuery(pathwayTemplateID)
+  const { pathwayTemplate, isPending } =
+    usePathwayTemplateByIDQuery(pathwayTemplateID)
   const { updatePathwayTemplate, deletePathwayTemplate } =
     usePathwayTemplateMutations()
   const { pathwayTemplates } = usePathwayTemplateQueries()
@@ -206,9 +207,7 @@ export default function PathwayTemplateSheet({
                 </div>
 
                 <form.AppField name="motifRequired">
-                  {(field) => (
-                    <field.Checkbox label="Motif obligatoire" />
-                  )}
+                  {(field) => <field.Checkbox label="Motif obligatoire" />}
                 </form.AppField>
 
                 <form.AppField name="firstAppointmentOnly">
@@ -225,12 +224,19 @@ export default function PathwayTemplateSheet({
 
               <div className="px-4 py-4 flex justify-between gap-4 shrink-0">
                 <div>
-                  <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)}>
+                  <Button
+                    variant="destructive"
+                    onClick={() => setShowDeleteConfirm(true)}
+                  >
                     Supprimer
                   </Button>
                 </div>
                 <div className="flex gap-4">
-                  <Button variant="default" onClick={() => form.handleSubmit()} isLoading={updatePathwayTemplate.isPending}>
+                  <Button
+                    variant="default"
+                    onClick={() => form.handleSubmit()}
+                    isLoading={updatePathwayTemplate.isPending}
+                  >
                     Mettre à jour
                   </Button>
                   <Button variant="outline" onClick={() => setOpen('')}>

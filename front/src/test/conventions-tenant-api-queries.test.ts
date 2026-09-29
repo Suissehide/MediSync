@@ -36,7 +36,8 @@ import { describe, expect, it } from 'vitest'
 // `mutationKey` contre un appel direct a l'une des deux fabriques d'URL — le seul autre vecteur
 // de fuite qu'une lecture de source peut nommer sans deviner l'intention de l'auteur.
 const IDENTIFIANTS_DE_TENANT = /\b(establishmentId|serviceId|tenant)\b/i
-const CLE_AVEC_FABRIQUE_URL = /\b(queryKey|mutationKey)\s*:.*\b(tenantApiUrl|establishmentApiUrl)\s*\(/
+const CLE_AVEC_FABRIQUE_URL =
+  /\b(queryKey|mutationKey)\s*:.*\b(tenantApiUrl|establishmentApiUrl)\s*\(/
 
 // Tache 12 (etape 4a) : le super-admin est HORS DE TOUT TENANT (front/CLAUDE.md, § « Le contexte
 // est implicite ») — `GET /super-admin/establishments/:id` prend un identifiant d'etablissement
@@ -57,41 +58,45 @@ const EXCEPTIONS: { fichier: string; raison: string; occurrences: number }[] = [
   {
     fichier: 'api/superAdmin.api.ts',
     raison:
-      "le super-admin designe un etablissement comme une DONNEE de GET /super-admin/establishments/:id, " +
-      "pas comme un tenant implicite (task-12-brief.md)",
+      'le super-admin designe un etablissement comme une DONNEE de GET /super-admin/establishments/:id, ' +
+      'pas comme un tenant implicite (task-12-brief.md)',
     occurrences: 2,
   },
   {
     fichier: 'queries/useSuperAdmin.ts',
     raison:
-      "meme donnee que ci-dessus, plus la cle de requete qui identifie la ressource demandee " +
-      "(comme PATIENT.GET_BY_ID le fait de patientID), sans lien avec le cloisonnement par tenant",
+      'meme donnee que ci-dessus, plus la cle de requete qui identifie la ressource demandee ' +
+      '(comme PATIENT.GET_BY_ID le fait de patientID), sans lien avec le cloisonnement par tenant',
     occurrences: 3,
   },
   {
     fichier: 'api/superAdminAccessLog.api.ts',
     raison:
-      "meme raisonnement que superAdmin.api.ts#getEstablishment : `establishmentId` est un FILTRE " +
-      "optionnel de GET /super-admin/access-log, une DONNEE de la requete (etablissement/compte/action, " +
-      "task-11-brief.md), jamais un tenant implicite -- ces ecrans vivent hors de tout layout de tenant",
+      'meme raisonnement que superAdmin.api.ts#getEstablishment : `establishmentId` est un FILTRE ' +
+      'optionnel de GET /super-admin/access-log, une DONNEE de la requete (etablissement/compte/action, ' +
+      'task-11-brief.md), jamais un tenant implicite -- ces ecrans vivent hors de tout layout de tenant',
     occurrences: 2,
   },
   {
     fichier: 'api/activityLog.api.ts',
     raison:
-      "navigation par echelle (2026-09-28) : `serviceId` est un FILTRE optionnel du journal " +
+      'navigation par echelle (2026-09-28) : `serviceId` est un FILTRE optionnel du journal ' +
       "d'activite de l'administration d'etablissement (lecture et purge), une DONNEE de la requete " +
       "comme l'`establishmentId` de superAdminAccessLog.api.ts -- le tenant, lui, reste implicite " +
-      "(`establishmentApiUrl()` sans argument)",
-    occurrences: 4,
+      '(`establishmentApiUrl()` sans argument)',
+    occurrences: 6,
   },
 ]
 
 // Vitest s'execute depuis `front/`, et l'environnement jsdom ne donne pas d'`import.meta.url` de
 // schema `file:`.
-const DOSSIERS_CONCERNES = [join(process.cwd(), 'src', 'api'), join(process.cwd(), 'src', 'queries')]
+const DOSSIERS_CONCERNES = [
+  join(process.cwd(), 'src', 'api'),
+  join(process.cwd(), 'src', 'queries'),
+]
 
-const estUnCommentaire = (ligne: string) => ligne.startsWith('//') || ligne.startsWith('*')
+const estUnCommentaire = (ligne: string) =>
+  ligne.startsWith('//') || ligne.startsWith('*')
 
 const fichiersDeProduction = (dossier: string): string[] =>
   readdirSync(dossier, { withFileTypes: true }).flatMap((entree) => {
@@ -106,7 +111,8 @@ const fichiersDeProduction = (dossier: string): string[] =>
   })
 
 const racine = join(process.cwd(), 'src')
-const relatif = (chemin: string) => relative(racine, chemin).split(sep).join('/')
+const relatif = (chemin: string) =>
+  relative(racine, chemin).split(sep).join('/')
 
 const lignesUtiles = (chemin: string) =>
   readFileSync(chemin, 'utf8')
@@ -122,25 +128,34 @@ describe('conventions tenant de src/api et src/queries', () => {
       const relatifDuFichier = relatif(chemin)
       return lignesUtiles(chemin)
         .filter(({ texte }) => IDENTIFIANTS_DE_TENANT.test(texte))
-        .map(({ numero, texte }) => ({ fichier: relatifDuFichier, ligne: numero, texte }))
+        .map(({ numero, texte }) => ({
+          fichier: relatifDuFichier,
+          ligne: numero,
+          texte,
+        }))
     })
 
     const horsExceptions = infractions.filter(
-      (infraction) => !EXCEPTIONS.some((exception) => exception.fichier === infraction.fichier),
+      (infraction) =>
+        !EXCEPTIONS.some(
+          (exception) => exception.fichier === infraction.fichier,
+        ),
     )
 
     expect(
       horsExceptions,
-      "Le tenant (etablissement/service) est implicite dans tout `src/api` et `src/queries` " +
-        "(front/CLAUDE.md, § « Le contexte est implicite » et § « Query keys deliberately do " +
+      'Le tenant (etablissement/service) est implicite dans tout `src/api` et `src/queries` ' +
+        '(front/CLAUDE.md, § « Le contexte est implicite » et § « Query keys deliberately do ' +
         "not carry the tenant ») : ni un module d'API ni un hook de requete ne doit nommer " +
         "`establishmentId`, `serviceId` ou `tenant` — l'URL vient de `tenantApiUrl()`/" +
-        '`establishmentApiUrl()` appelees sans argument, jamais d\'un parametre.',
+        "`establishmentApiUrl()` appelees sans argument, jamais d'un parametre.",
     ).toEqual([])
 
     for (const exception of EXCEPTIONS) {
       expect(
-        infractions.filter((infraction) => infraction.fichier === exception.fichier).length,
+        infractions.filter(
+          (infraction) => infraction.fichier === exception.fichier,
+        ).length,
         `Nombre d'occurrences attendu dans ${exception.fichier} (${exception.raison}).`,
       ).toBe(exception.occurrences)
     }
@@ -151,7 +166,11 @@ describe('conventions tenant de src/api et src/queries', () => {
       const relatifDuFichier = relatif(chemin)
       return lignesUtiles(chemin)
         .filter(({ texte }) => CLE_AVEC_FABRIQUE_URL.test(texte))
-        .map(({ numero, texte }) => ({ fichier: relatifDuFichier, ligne: numero, texte }))
+        .map(({ numero, texte }) => ({
+          fichier: relatifDuFichier,
+          ligne: numero,
+          texte,
+        }))
     })
 
     expect(

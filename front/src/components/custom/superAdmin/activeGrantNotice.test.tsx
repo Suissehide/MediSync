@@ -7,7 +7,6 @@ import { useAuthStore } from '@/store/useAuthStore.ts'
 import { useLastGrantStore } from '@/store/useLastGrantStore.ts'
 import { useToastStore } from '@/store/useToastStore.ts'
 import type { User } from '@/types/auth.ts'
-
 import { ActiveGrantNotice } from './activeGrantNotice.tsx'
 
 // Tour de correction 1, Important n°2 : « `/me` porte déjà la réponse à la
@@ -24,7 +23,9 @@ const superAdminAvecOctroi: User = {
   firstName: null,
   lastName: null,
   isSuperAdmin: true,
-  establishments: [{ id: 'e1', name: 'CHU', role: 'ADMIN', services: [], origine: 'octroi' }],
+  establishments: [
+    { id: 'e1', name: 'CHU', role: 'ADMIN', services: [], origine: 'octroi' },
+  ],
 }
 
 const superAdminSansOctroiIci: User = {
@@ -53,7 +54,9 @@ const buildFetchMock = (routes: Route[]) =>
   })
 
 const renderNotice = (establishmentId = 'e1') => {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
   render(
     <QueryClientProvider client={queryClient}>
       <ActiveGrantNotice establishmentId={establishmentId} />
@@ -73,27 +76,42 @@ afterEach(() => {
 
 describe('ActiveGrantNotice', () => {
   it("ne montre rien quand le compte n'a pas d'octroi sur cet etablissement", () => {
-    useAuthStore.setState({ isAuthenticated: true, user: superAdminSansOctroiIci, context: null })
+    useAuthStore.setState({
+      isAuthenticated: true,
+      user: superAdminSansOctroiIci,
+      context: null,
+    })
     renderNotice()
 
     expect(screen.queryByText(/octroi/i)).not.toBeInTheDocument()
   })
 
   it("signale l'octroi actif mais ne propose pas de le revoquer sans identifiant connu", () => {
-    useAuthStore.setState({ isAuthenticated: true, user: superAdminAvecOctroi, context: null })
+    useAuthStore.setState({
+      isAuthenticated: true,
+      user: superAdminAvecOctroi,
+      context: null,
+    })
     renderNotice()
 
     expect(screen.getByText(/acces actif|accès actif/i)).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /revoquer|révoquer/i })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /revoquer|révoquer/i }),
+    ).not.toBeInTheDocument()
   })
 
   it("propose de revoquer l'octroi cree dans cette session, et appelle DELETE", async () => {
-    useAuthStore.setState({ isAuthenticated: true, user: superAdminAvecOctroi, context: null })
+    useAuthStore.setState({
+      isAuthenticated: true,
+      user: superAdminAvecOctroi,
+      context: null,
+    })
     useLastGrantStore.setState({ grantIdByEstablishment: { e1: 'grant-123' } })
 
     const fetchMock = buildFetchMock([
       {
-        match: (url, method) => url.endsWith('/super-admin/grants/grant-123') && method === 'DELETE',
+        match: (url, method) =>
+          url.endsWith('/super-admin/grants/grant-123') && method === 'DELETE',
         respond: () => ({ ok: true, status: 204, json: async () => null }),
       },
     ])
@@ -101,7 +119,9 @@ describe('ActiveGrantNotice', () => {
 
     renderNotice()
 
-    await userEvent.click(screen.getByRole('button', { name: /revoquer|révoquer/i }))
+    await userEvent.click(
+      screen.getByRole('button', { name: /revoquer|révoquer/i }),
+    )
 
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining('/super-admin/grants/grant-123'),

@@ -9,7 +9,6 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { TenantContext } from '@/types/auth.ts'
-
 import { PatientAccessLogButton } from './patientAccessLogButton.tsx'
 
 // Étape 4b, tâche 11 (brief, « un petit reste de la tâche 10 ») : le bouton « Consultations du dossier » (anciennement « Journal des accès »)
@@ -37,7 +36,11 @@ const contextIntervenant: TenantContext = {
 const monter = () => {
   const rootRoute = createRootRoute({
     component: () => (
-      <PatientAccessLogButton establishmentId="e1" serviceId="s1" patientID="p1" />
+      <PatientAccessLogButton
+        establishmentId="e1"
+        serviceId="s1"
+        patientID="p1"
+      />
     ),
   })
   const router = createRouter({
@@ -52,12 +55,14 @@ beforeEach(() => {
 })
 
 describe('PatientAccessLogButton', () => {
-  it("ne rend rien pour un role sans consultations:read (INTERVENANT) — absent du DOM, pas seulement masque", () => {
+  it('ne rend rien pour un role sans consultations:read (INTERVENANT) — absent du DOM, pas seulement masque', () => {
     useAuthStore.setState({ context: contextIntervenant })
 
     const { container } = monter()
 
-    expect(screen.queryByRole('link', { name: /consultations du dossier/i })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('link', { name: /consultations du dossier/i }),
+    ).not.toBeInTheDocument()
     expect(container).toBeEmptyDOMElement()
   })
 
@@ -75,7 +80,11 @@ describe('PatientAccessLogButton', () => {
 
     const rootRoute = createRootRoute({
       component: () => (
-        <PatientAccessLogButton establishmentId="e9" serviceId="s9" patientID="p9" />
+        <PatientAccessLogButton
+          establishmentId="e9"
+          serviceId="s9"
+          patientID="p9"
+        />
       ),
     })
     const router = createRouter({
@@ -88,11 +97,13 @@ describe('PatientAccessLogButton', () => {
     expect(lien).toHaveAttribute('href', '/e/e9/s/s9/patient/p9/acces')
   })
 
-  it("ne rend rien sans contexte du tout (compte deconnecte du tenant)", () => {
+  it('ne rend rien sans contexte du tout (compte deconnecte du tenant)', () => {
     useAuthStore.setState({ context: null })
 
     monter()
 
-    expect(screen.queryByRole('link', { name: /consultations du dossier/i })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('link', { name: /consultations du dossier/i }),
+    ).not.toBeInTheDocument()
   })
 })

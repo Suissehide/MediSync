@@ -2,8 +2,8 @@ import type { FastifyPluginAsync } from 'fastify'
 
 import {
   type PatientAccessLogAdminParams,
-  patientAccessLogAdminParamsSchema,
   type PatientAccessLogServiceParams,
+  patientAccessLogAdminParamsSchema,
   patientAccessLogServiceParamsSchema,
   patientAccessLogsResponseSchema,
 } from '../schemas/patientAccessLog.schema'
@@ -32,7 +32,8 @@ const patientAccessLogRouter: FastifyPluginAsync = (fastify) => {
       },
       config: { permission: 'consultations:read' },
     },
-    (request) => patientAccessLogDomain.findByPatientInService(request.params.patientID),
+    (request) =>
+      patientAccessLogDomain.findByPatientInService(request.params.patientID),
   )
 
   return Promise.resolve()
@@ -77,7 +78,10 @@ const patientAccessLogAdminRouter: FastifyPluginAsync = (fastify) => {
       },
       config: { permission: 'access-log:read' },
     },
-    (request) => patientAccessLogDomain.findByPatientInEstablishment(request.params.patientID),
+    (request) =>
+      patientAccessLogDomain.findByPatientInEstablishment(
+        request.params.patientID,
+      ),
   )
 
   return Promise.resolve()

@@ -106,7 +106,13 @@ export const superAdminAccessLogEntryResponseSchema = z.object({
   accesParOctroi: z.boolean().nullable(),
 })
 
-export const superAdminAccessLogsResponseSchema = z.array(superAdminAccessLogEntryResponseSchema)
+export const superAdminAccessLogsResponseSchema = z.array(
+  superAdminAccessLogEntryResponseSchema,
+)
 
-export type SuperAdminAccessLogQuery = z.infer<typeof superAdminAccessLogQuerySchema>
-export type SuperAdminAccessLogEntry = z.infer<typeof superAdminAccessLogEntryResponseSchema>
+export type SuperAdminAccessLogQuery = z.infer<
+  typeof superAdminAccessLogQuerySchema
+>
+export type SuperAdminAccessLogEntry = z.infer<
+  typeof superAdminAccessLogEntryResponseSchema
+>

@@ -1,5 +1,6 @@
-import type { PathwayTemplate } from '../types/pathwayTemplate'
 import { create } from 'zustand'
+
+import type { PathwayTemplate } from '../types/pathwayTemplate'
 
 interface PathwayTemplateEditState {
   editMode: boolean
