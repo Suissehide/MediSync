@@ -33,6 +33,22 @@ const RoleBadge = ({
   </span>
 )
 
+// Statut d'un compte, partage avec la liste des membres du service.
+export const StatutBadge = ({
+  deactivatedAt,
+}: {
+  deactivatedAt: string | null
+}) => (
+  <RoleBadge
+    label={deactivatedAt !== null ? 'Désactivé' : 'Actif'}
+    className={
+      deactivatedAt !== null
+        ? 'bg-gray-100 text-gray-600 border border-gray-200'
+        : 'bg-green-50 text-green-700 border border-green-200'
+    }
+  />
+)
+
 type MemberColumnOptions = {
   // Tâche 14b (tour de correction 1, Important n°2) : la liste COMPLÈTE des
   // services de l'établissement courant (`GET /e/:establishmentId/admin/
@@ -130,19 +146,9 @@ export const getMemberColumns = ({
   columnHelper.display({
     id: 'status',
     header: 'Statut',
-    cell: ({ row }) => {
-      const deactivated = row.original.user.deactivatedAt !== null
-      return (
-        <RoleBadge
-          label={deactivated ? 'Désactivé' : 'Actif'}
-          className={
-            deactivated
-              ? 'bg-gray-100 text-gray-600 border border-gray-200'
-              : 'bg-green-50 text-green-700 border border-green-200'
-          }
-        />
-      )
-    },
+    cell: ({ row }) => (
+      <StatutBadge deactivatedAt={row.original.user.deactivatedAt} />
+    ),
   }),
   columnHelper.display({
     id: 'actions',

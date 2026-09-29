@@ -4,6 +4,7 @@ import { nomDuCompte } from '../components/custom/popup/editSoignantAccountsForm
 import { SERVICE_ROLE_LABEL } from '../constants/member.constant.ts'
 import type { ServiceMember } from '../types/serviceMember.ts'
 import type { Soignant } from '../types/soignant.ts'
+import { StatutBadge } from './member.column.tsx'
 
 const columnHelper = createColumnHelper<ServiceMember>()
 
@@ -36,11 +37,8 @@ export const getServiceMemberColumns = (soignants: Soignant[]) => [
   columnHelper.display({
     id: 'statut',
     header: 'Statut',
-    cell: ({ row }) =>
-      row.original.user.deactivatedAt !== null ? (
-        <span className="text-text-light">Désactivé</span>
-      ) : (
-        'Actif'
-      ),
+    cell: ({ row }) => (
+      <StatutBadge deactivatedAt={row.original.user.deactivatedAt} />
+    ),
   }),
 ]
