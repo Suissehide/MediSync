@@ -88,7 +88,7 @@ function PopoverSeparator({ className }: { className?: string }) {
 // ─── Sub-group ────────────────────────────────────────────────────────────────
 
 // Sous-categorie d'un menu : seulement DECALEE sous son titre, sans filet. Partagee par le
-// selecteur d'acces et les menus de la barre (Organisation) pour qu'ils se lisent pareil.
+// fil d'Ariane et les menus de la barre (Administration) pour qu'ils se lisent pareil.
 function PopoverSubGroup({
   className,
   children,

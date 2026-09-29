@@ -224,14 +224,14 @@ const avecRoles = (
   ],
 })
 
-// Les onglets directs (liens) et, a part, les menus de groupe (boutons) de la barre.
+// Les onglets de la barre et, a part, le bouton Administration du service, a droite.
 const onglets = () =>
   within(screen.getByRole('navigation', { name: 'Navigation' }))
     .queryAllByRole('link')
     .map((lien) => lien.textContent)
 const menus = () =>
-  within(screen.getByRole('navigation', { name: 'Navigation' }))
-    .queryAllByRole('button')
+  screen
+    .queryAllByRole('button', { name: 'Administration' })
     .map((bouton) => bouton.textContent)
 
 describe('onglets de la barre de navigation', () => {
@@ -266,17 +266,22 @@ describe('onglets de la barre de navigation', () => {
     expect(screen.queryByText('Dashboard')).not.toBeInTheDocument()
   })
 
-  it('montre au coordinateur le quotidien en onglets et l organisation en menu, rien de l etablissement', async () => {
+  it('montre au coordinateur le quotidien en onglets et l administration du service en bouton, rien de l etablissement', async () => {
     monterNavbar('/e/e1/s/s1/dashboard', avecRoles('MEMBER', 'COORDINATEUR'))
 
     await waitFor(() => {
       expect(onglets()).toEqual(['Dashboard', 'Agenda', 'Patients', 'Suivi'])
     })
-    expect(menus()).toEqual(['Organisation'])
+    expect(menus()).toEqual(['Administration'])
 
     // Le menu ouvert : ses cinq ecrans, en sous-categories, dont Soignants et Salles (propres au
     // service depuis le 2026-09-29).
-    await userEvent.click(screen.getByRole('button', { name: 'Organisation' }))
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Administration' }),
+    )
+    expect(
+      await screen.findByText('Administration · Cardio'),
+    ).toBeInTheDocument()
     const sousCategories = await screen.findAllByRole('link', {
       name: /Planning|Thématiques|Diagnostics|Soignants|Salles/,
     })
@@ -291,7 +296,7 @@ describe('onglets de la barre de navigation', () => {
     ])
   })
 
-  it('ne montre a l intervenant que les quatre onglets du quotidien, sans menu Organisation', async () => {
+  it('ne montre a l intervenant que les quatre onglets du quotidien, sans bouton Administration', async () => {
     monterNavbar('/e/e1/s/s1/dashboard', avecRoles('MEMBER', 'INTERVENANT'))
 
     await waitFor(() => {
@@ -306,7 +311,7 @@ describe('onglets de la barre de navigation', () => {
     monterNavbar('/e/e1/s/s1/dashboard', avecRoles('ADMIN', 'COORDINATEUR'))
 
     await waitFor(() => {
-      expect(menus()).toEqual(['Organisation'])
+      expect(menus()).toEqual(['Administration'])
     })
     expect(onglets()).not.toContain('Membres')
     expect(onglets()).not.toContain("Journal d'activité")
@@ -318,6 +323,21 @@ describe('onglets de la barre de navigation', () => {
     await waitFor(() => {
       expect(onglets()).toEqual(['Établissements', 'Comptes', 'Journaux'])
     })
+    expect(screen.getByRole('link', { name: 'Plateforme' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+  })
+
+  it('ne montre le bouton Plateforme qu a un super-admin', async () => {
+    monterNavbar('/e/e1/s/s1/dashboard', avecRoles('MEMBER', 'COORDINATEUR'))
+
+    await waitFor(() => {
+      expect(onglets()).toEqual(['Dashboard', 'Agenda', 'Patients', 'Suivi'])
+    })
+    expect(
+      screen.queryByRole('link', { name: 'Plateforme' }),
+    ).not.toBeInTheDocument()
   })
 
   // L'invariant, cote onglets : sur un ecran hors tenant, le store porte encore le dernier

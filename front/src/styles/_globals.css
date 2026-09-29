@@ -18,6 +18,8 @@
 
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary-dark: var(--secondary-dark);
+  --color-secondary-light: var(--secondary-light);
 
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);

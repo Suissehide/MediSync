@@ -1,5 +1,5 @@
 import { Link, useMatchRoute } from '@tanstack/react-router'
-import { ChevronDown, PanelLeft } from 'lucide-react'
+import { ChevronDown, Globe, PanelLeft, Settings2 } from 'lucide-react'
 import { Fragment } from 'react'
 
 import { can } from '../hooks/useCan.ts'
@@ -10,7 +10,7 @@ import {
   useCurrentScale,
 } from '../navigation/navigation.ts'
 import { useAuthStore } from '../store/useAuthStore.ts'
-import { ScaleSelector } from './custom/scaleSelector.tsx'
+import { FilAriane } from './custom/filAriane.tsx'
 import TodoSheet from './custom/todo/todoSheet.tsx'
 import { Button } from './ui/button.tsx'
 import {
@@ -27,23 +27,23 @@ interface NavbarProps {
 
 // Navigation par echelle (2026-09-28) : une seule grammaire. La barre affiche les onglets de
 // l'echelle de la ROUTE courante (`useCurrentScale`), tires de la table `NAVIGATION`, et
-// seulement ceux-la. Le popover de reglages et les bandeaux d'onglets des zones
-// d'administration ont disparu ; un ecran de section sans onglet fait rougir
-// `navigation.test.ts`.
+// seulement ceux-la ; un ecran de section sans onglet fait rougir `navigation.test.ts`.
+// Navigation multi-tenant (2026-09-29) : le contexte se lit dans le fil d'Ariane
+// (`FilAriane`), l'administration du service (groupes de `MENU_GROUPS`) et la plateforme sont
+// des boutons a droite.
 const TAB_CLASS = `relative cursor-pointer transition-colors duration-300
   after:content-[''] after:absolute after:left-0 after:top-full after:w-full after:h-[3px] after:bg-primary after:scale-x-0 after:origin-right after:transition-transform after:duration-300
   hover:after:scale-x-100 hover:after:origin-left`
 
-// Un groupe d'ecrans derriere un seul bouton (l'organisation du service) : ses ecrans sont des
-// SOUS-CATEGORIES, decales vers la droite sous le titre du groupe et reunis par un filet, pour
-// qu'on lise d'un coup d'oeil qu'ils relevent de lui.
-function MenuDeGroupe({
-  nom,
+// L'administration du service : un bouton a droite de la barre, hors des onglets du quotidien.
+// Ses ecrans sont des SOUS-CATEGORIES, decales sous le titre du menu.
+function MenuAdministration({
+  titre,
   items,
   actif,
   params,
 }: {
-  nom: string
+  titre: string
   items: NavItem[]
   actif: boolean
   params: object
@@ -53,19 +53,18 @@ function MenuDeGroupe({
       <PopoverTrigger asChild>
         <Button
           variant="none"
-          className={`h-9 gap-1.5 px-3 rounded-lg border border-solid text-sm ${
-            actif
-              ? 'border-primary text-text'
-              : 'border-transparent text-text-light hover:text-text'
-          } data-[state=open]:border-primary data-[state=open]:bg-white/10 data-[state=open]:text-text`}
+          className={`h-9 gap-1.5 px-3 rounded-lg border border-solid text-sm font-semibold text-white ${
+            actif ? 'bg-primary border-primary' : 'border-border-sidebar'
+          } data-[state=open]:bg-primary data-[state=open]:border-primary`}
         >
-          {nom}
+          <Settings2 className="w-4 h-4" />
+          Administration
           <ChevronDown className="w-4 h-4" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" sideOffset={6} className="w-80 p-2">
+      <PopoverContent align="end" sideOffset={6} className="w-80 p-2">
         <p className="px-3 pt-1 pb-2 text-xs font-semibold uppercase tracking-wide text-text-light">
-          {nom}
+          {titre}
         </p>
         <PopoverSubGroup>
           {items.map((item) => (
@@ -120,11 +119,14 @@ function Navbar({ toggleSidebar }: NavbarProps) {
       ? user?.isSuperAdmin === true
       : item.permission === undefined || can(context, item.permission)
 
-  const onglets = courant ? NAVIGATION[courant.scale].filter(visible) : []
-  // Groupes consecutifs de la table, dans l'ordre : un separateur entre deux groupes, et un menu
-  // deroulant pour un groupe de `MENU_GROUPS`.
+  const visibles = courant ? NAVIGATION[courant.scale].filter(visible) : []
+  const administration = visibles.filter((item) => MENU_GROUPS.has(item.group))
+  // Groupes consecutifs de la table, dans l'ordre : un separateur entre deux groupes.
   const groupes: { nom: string; items: NavItem[] }[] = []
-  for (const item of onglets) {
+  for (const item of visibles) {
+    if (MENU_GROUPS.has(item.group)) {
+      continue
+    }
     const dernier = groupes.at(-1)
     if (dernier && dernier.nom === item.group) {
       dernier.items.push(item)
@@ -153,6 +155,12 @@ function Navbar({ toggleSidebar }: NavbarProps) {
   // jamais — et afficherait les taches d'un autre service.
   // Verrouille par `navbar.test.tsx`.
   const sousLayoutDeService = courant?.scale === 'service'
+  const nomDuService =
+    courant?.scale === 'service'
+      ? user?.establishments
+          .find((e) => e.id === courant.establishmentId)
+          ?.services.find((s) => s.id === courant.serviceId)?.name
+      : undefined
 
   return (
     <div className="fixed top-0 left-0 right-0 z-50 px-4 h-16 flex justify-between items-center bg-foreground text-text border-b border-border-sidebar">
@@ -170,7 +178,7 @@ function Navbar({ toggleSidebar }: NavbarProps) {
           >
             <PanelLeft className="w-5 h-5" />
           </Button>
-          <ScaleSelector />
+          <FilAriane />
         </div>
 
         {groupes.length > 0 && (
@@ -183,41 +191,56 @@ function Navbar({ toggleSidebar }: NavbarProps) {
                     className="h-5 w-px bg-border-sidebar"
                   />
                 )}
-                {MENU_GROUPS.has(groupe.nom) ? (
-                  <MenuDeGroupe
-                    nom={groupe.nom}
-                    items={groupe.items}
-                    actif={groupe.items.some(estActif)}
-                    params={params}
-                  />
-                ) : (
-                  groupe.items.map((item) => (
-                    <Link
-                      key={item.to}
-                      to={item.to}
-                      params={params as never}
-                      aria-current={estActif(item) ? 'page' : undefined}
-                      className={`${TAB_CLASS} whitespace-nowrap ${estActif(item) ? 'text-text after:scale-x-100' : 'text-text-light'}`}
-                    >
-                      {item.label}
-                    </Link>
-                  ))
-                )}
+                {groupe.items.map((item) => (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    params={params as never}
+                    aria-current={estActif(item) ? 'page' : undefined}
+                    className={`${TAB_CLASS} whitespace-nowrap ${estActif(item) ? 'text-text after:scale-x-100' : 'text-text-light'}`}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
               </Fragment>
             ))}
           </nav>
         )}
       </div>
-      <div className="flex gap-8 pl-4 border-l border-border-sidebar">
-        <div className="flex items-center gap-2">
-          {/* Les todos sont un objet de service (`todo:own` est une
-          permission de service, pas d'etablissement) : hors du layout de
-          service, `useTodoQueries` appellerait `tenantApiUrl`, qui leve
-          volontairement. La condition est celle de la ROUTE et non celle du
-          store : voir le commentaire de `sousLayoutDeService` ci-dessus, qui
-          dit pourquoi les deux ne coincident pas. */}
-          {sousLayoutDeService && <TodoSheet />}
-        </div>
+      <div className="flex items-center gap-2.5 shrink-0">
+        {administration.length > 0 && (
+          <MenuAdministration
+            titre={`Administration · ${nomDuService ?? 'service'}`}
+            items={administration}
+            actif={administration.some(estActif)}
+            params={params}
+          />
+        )}
+        {/* Absent, jamais grise, pour un compte sans le drapeau : voir `sidebar.tsx`. */}
+        {user?.isSuperAdmin && (
+          <Link
+            to="/super-admin"
+            className={`h-9 px-3 flex items-center gap-1.5 rounded-lg border border-solid text-sm font-semibold text-white ${
+              courant?.scale === 'platform'
+                ? 'bg-secondary-dark border-secondary-dark'
+                : 'border-border-sidebar hover:bg-white/8'
+            }`}
+          >
+            <Globe className="w-4 h-4" />
+            Plateforme
+          </Link>
+        )}
+        {/* Les todos sont un objet de service (`todo:own` est une
+        permission de service, pas d'etablissement) : hors du layout de
+        service, `useTodoQueries` appellerait `tenantApiUrl`, qui leve
+        volontairement. La condition est celle de la ROUTE et non celle du
+        store : voir le commentaire de `sousLayoutDeService` ci-dessus, qui
+        dit pourquoi les deux ne coincident pas. */}
+        {sousLayoutDeService && (
+          <div className="flex items-center pl-4 ml-1.5 border-l border-border-sidebar">
+            <TodoSheet />
+          </div>
+        )}
       </div>
     </div>
   )

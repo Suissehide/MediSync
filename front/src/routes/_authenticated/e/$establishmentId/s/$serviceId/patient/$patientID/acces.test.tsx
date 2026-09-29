@@ -8,7 +8,7 @@ import {
   Outlet,
   RouterProvider,
 } from '@tanstack/react-router'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -238,7 +238,10 @@ describe('etats de l ecran du journal des acces', () => {
     })
     expect(screen.getByText('Dossier ouvert')).toBeInTheDocument()
     expect(screen.getByText('15/01/2026')).toBeInTheDocument()
-    expect(screen.getByText('Cardio')).toBeInTheDocument()
+    // Le service de la ligne, hors du fil d'Ariane de la barre qui nomme aussi « Cardio ».
+    expect(
+      within(screen.getByRole('main')).getByText('Cardio'),
+    ).toBeInTheDocument()
     expect(screen.queryByText(/chargement/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/impossible de charger/i)).not.toBeInTheDocument()
     // `accesParOctroi: false` (fixture `ligne`) : aucun badge, jamais un "Non" bruyant sur

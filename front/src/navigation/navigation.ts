@@ -25,8 +25,8 @@ export type NavItem = {
   // la matrice ne represente.
   permission?: Permission
   // Regroupement par nature du travail : un separateur vertical fin est dessine entre deux
-  // groupes consecutifs. Un groupe de `MENU_GROUPS` s'affiche en menu deroulant, ses ecrans en
-  // sous-categories decalees.
+  // groupes consecutifs. Un groupe de `MENU_GROUPS` sort des onglets : il devient un bouton a
+  // droite de la barre, dont le menu deroulant presente ses ecrans en sous-categories decalees.
   group: string
   // Une ligne sous l'intitule, dans un menu deroulant : a quoi sert l'ecran.
   description?: string
@@ -37,9 +37,9 @@ export type NavItem = {
   activeAlso?: readonly RoutePath[]
 }
 
-// Groupes affiches en menu deroulant plutot qu'en onglets : l'organisation du service tient cinq
-// ecrans, qui en onglets satureraient la barre.
-export const MENU_GROUPS: ReadonlySet<string> = new Set(['Organisation'])
+// Groupes affiches en menu deroulant plutot qu'en onglets : l'administration du service tient cinq
+// ecrans, qui en onglets satureraient la barre, et releve d'un autre travail que le quotidien.
+export const MENU_GROUPS: ReadonlySet<string> = new Set(['Administration'])
 
 export const SCALE_ROOTS = {
   service: '/e/$establishmentId/s/$serviceId',
@@ -74,21 +74,21 @@ export const NAVIGATION: Record<Scale, readonly NavItem[]> = {
       label: 'Planning',
       to: '/e/$establishmentId/s/$serviceId/planning',
       permission: 'planning:write',
-      group: 'Organisation',
+      group: 'Administration',
       description: 'Semaines types et créneaux des parcours',
     },
     {
       label: 'Thématiques',
       to: '/e/$establishmentId/s/$serviceId/thematic',
       permission: 'referentials:write',
-      group: 'Organisation',
+      group: 'Administration',
       description: "Ateliers d'éducation et soignants habilités",
     },
     {
       label: 'Diagnostics éducatifs',
       to: '/e/$establishmentId/s/$serviceId/diagnostic-template',
       permission: 'referentials:write',
-      group: 'Organisation',
+      group: 'Administration',
       description: 'Modèles de bilan du service',
     },
     // Propres a chaque service depuis le 2026-09-29 : un soignant est un metier du service, une
@@ -97,14 +97,14 @@ export const NAVIGATION: Record<Scale, readonly NavItem[]> = {
       label: 'Soignants',
       to: '/e/$establishmentId/s/$serviceId/soignant',
       permission: 'referentials:write',
-      group: 'Organisation',
+      group: 'Administration',
       description: 'Métiers qui interviennent dans le service',
     },
     {
       label: 'Salles',
       to: '/e/$establishmentId/s/$serviceId/location',
       permission: 'referentials:write',
-      group: 'Organisation',
+      group: 'Administration',
       description: 'Lieux où se tiennent les séances',
     },
   ],
