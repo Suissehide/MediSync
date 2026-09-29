@@ -1,7 +1,14 @@
-import { useRouter } from '@tanstack/react-router'
-import { Building2, ChevronDown, Globe, ShieldCheck } from 'lucide-react'
+import { Building2, ChevronDown } from 'lucide-react'
 import { Fragment } from 'react'
 
+import {
+  cleDestination,
+  grouperDestinations,
+  iconeDestination,
+  intituleDestination,
+  TitreEtablissement,
+  useOuvrirDestination,
+} from '@/components/custom/destinations.tsx'
 import { Button } from '@/components/ui/button.tsx'
 import {
   PopoverContent,
@@ -22,7 +29,9 @@ import {
 // Selecteur d'echelle (navigation par echelle, 2026-09-28). Remplace `TenantSelector`, qui ne
 // connaissait que les couples etablissement › service : il liste TOUTES les destinations du
 // compte — services, administration d'etablissement, plateforme — tirees de
-// `accessibleDestinations`, la derivation que partage `/choose-context`.
+// `accessibleDestinations`, la derivation que partage `/choose-context`, et presentees comme
+// sur cette page (`destinations.tsx`). Pas de lien « Tous les accès… » : il menait a la meme
+// liste ; `/choose-context` ne sert plus que de page de repli.
 //
 // Rendu seulement a partir de deux destinations : un compte qui n'en a qu'une n'a rien a
 // choisir. L'entree Plateforme n'existe que pour un super-admin (jamais grisee ni annoncee :
@@ -31,64 +40,6 @@ import {
 // Comme l'ancien selecteur, ce composant ne fait que naviguer : le client de requetes neuf et
 // la reinitialisation des stores sont armes a l'arrivee sur la route (`useTenantSwitch.ts`,
 // layouts de service et d'etablissement).
-
-// `id` : l'etablissement (ou `null` pour la plateforme). Deux etablissements peuvent porter le
-// meme nom ; le regroupement et la cle React se font donc sur l'identifiant, jamais sur le titre.
-type Groupe = {
-  id: string | null
-  titre: string | null
-  destinations: Destination[]
-}
-
-const grouper = (destinations: Destination[]): Groupe[] => {
-  const groupes: Groupe[] = []
-  for (const destination of destinations) {
-    const id =
-      destination.kind === 'platform' ? null : destination.establishment.id
-    const titre =
-      destination.kind === 'platform' ? null : destination.establishment.name
-    const dernier = groupes.at(-1)
-    if (dernier && dernier.id === id) {
-      dernier.destinations.push(destination)
-    } else {
-      groupes.push({ id, titre, destinations: [destination] })
-    }
-  }
-  return groupes
-}
-
-const cle = (destination: Destination): string => {
-  switch (destination.kind) {
-    case 'service':
-      return `${destination.establishment.id}/${destination.service.id}`
-    case 'admin':
-      return `${destination.establishment.id}/admin`
-    default:
-      return 'plateforme'
-  }
-}
-
-const icone = (destination: Destination) => {
-  switch (destination.kind) {
-    case 'service':
-      return <Building2 className="w-4 h-4" />
-    case 'admin':
-      return <ShieldCheck className="w-4 h-4" />
-    default:
-      return <Globe className="w-4 h-4" />
-  }
-}
-
-const intitule = (destination: Destination): string => {
-  switch (destination.kind) {
-    case 'service':
-      return destination.service.name
-    case 'admin':
-      return "Administration de l'établissement"
-    default:
-      return 'Plateforme'
-  }
-}
 
 const nomEtablissement = (user: User | null, establishmentId: string) =>
   user?.establishments.find((e) => e.id === establishmentId)
@@ -116,7 +67,7 @@ const libelle = (user: User | null, courant: CurrentScale | null): string => {
 }
 
 export const ScaleSelector = () => {
-  const router = useRouter()
+  const ouvrir = useOuvrirDestination()
   const user = useAuthStore((state) => state.user)
   const courant = useCurrentScale()
 
@@ -140,25 +91,6 @@ export const ScaleSelector = () => {
       courant?.scale === 'establishment' &&
       courant.establishmentId === destination.establishment.id)
 
-  const ouvrir = (destination: Destination) => {
-    if (destination.kind === 'service') {
-      void router.navigate({
-        to: '/e/$establishmentId/s/$serviceId/dashboard',
-        params: {
-          establishmentId: destination.establishment.id,
-          serviceId: destination.service.id,
-        },
-      })
-    } else if (destination.kind === 'admin') {
-      void router.navigate({
-        to: '/e/$establishmentId/admin/members',
-        params: { establishmentId: destination.establishment.id },
-      })
-    } else {
-      void router.navigate({ to: '/super-admin' })
-    }
-  }
-
   return (
     <PopoverRoot>
       <PopoverTrigger asChild>
@@ -176,37 +108,40 @@ export const ScaleSelector = () => {
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" sideOffset={2}>
-        {grouper(destinations).map((groupe, index) =>
+        {grouperDestinations(destinations).map((groupe, index) =>
           groupe.titre === null ? (
             <Fragment key="plateforme">
               {index > 0 && <PopoverSeparator />}
               {groupe.destinations.map((destination) => (
                 <PopoverMenuItem
-                  key={cle(destination)}
-                  icon={icone(destination)}
+                  key={cleDestination(destination)}
+                  icon={iconeDestination(destination)}
                   onClick={() => ouvrir(destination)}
                 >
-                  {intitule(destination)}
+                  {intituleDestination(destination)}
                 </PopoverMenuItem>
               ))}
             </Fragment>
           ) : (
-            // L'etablissement en titre, ses services et son administration DECALES dessous : on
-            // lit d'un coup d'oeil qu'ils en relevent.
+            // L'etablissement en titre — cliquable vers son administration pour qui l'administre —
+            // et ses services DECALES dessous : on lit d'un coup d'oeil qu'ils en relevent.
             <div key={groupe.id} className="flex flex-col">
-              <div className="flex items-center gap-2 px-2 pt-2 pb-1 text-sm font-semibold text-text-dark">
-                <Building2 className="w-4 h-4 opacity-70" />
-                {groupe.titre}
-              </div>
+              <TitreEtablissement
+                titre={groupe.titre}
+                onOuvrir={
+                  groupe.administration
+                    ? () => groupe.administration && ouvrir(groupe.administration)
+                    : undefined
+                }
+                courant={
+                  groupe.administration !== null &&
+                  estCourante(groupe.administration)
+                }
+              />
               <PopoverSubGroup className="mb-1">
                 {groupe.destinations.map((destination) => (
                   <PopoverMenuItem
-                    key={cle(destination)}
-                    icon={
-                      destination.kind === 'admin'
-                        ? icone(destination)
-                        : undefined
-                    }
+                    key={cleDestination(destination)}
                     onClick={() => ouvrir(destination)}
                     className={
                       estCourante(destination)
@@ -215,19 +150,13 @@ export const ScaleSelector = () => {
                     }
                     ariaCurrent={estCourante(destination)}
                   >
-                    {intitule(destination)}
+                    {intituleDestination(destination)}
                   </PopoverMenuItem>
                 ))}
               </PopoverSubGroup>
             </div>
           ),
         )}
-        <PopoverSeparator />
-        <PopoverMenuItem
-          onClick={() => void router.navigate({ to: '/choose-context' })}
-        >
-          Tous les accès…
-        </PopoverMenuItem>
       </PopoverContent>
     </PopoverRoot>
   )

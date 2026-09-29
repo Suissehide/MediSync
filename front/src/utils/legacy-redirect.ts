@@ -31,11 +31,12 @@ export const redirectToDefaultService = (
   })
 }
 
-// Navigation par echelle (2026-09-28) : Soignants, Salles et le journal d'activite ont quitte
-// l'echelle du service pour celle de l'etablissement. Leurs anciennes URLs (sans service, ou
-// sous un service) menent a l'administration du premier etablissement administre — le seul
-// endroit ou ces ecrans existent encore. Sans etablissement administre, le choix d'acces, qui
-// dira ce qui reste ouvert au compte.
+// Navigation par echelle (2026-09-28) : le journal d'activite a quitte l'echelle du service
+// pour celle de l'etablissement (Soignants et Salles, eux, sont restes au service : voir
+// `redirectToDefaultService`). Ses anciennes URLs (sans service, ou sous un service) menent a
+// l'administration du premier etablissement administre — le seul endroit ou cet ecran existe
+// encore. Sans etablissement administre, le choix d'acces, qui dira ce qui reste ouvert au
+// compte.
 export const redirectToDefaultAdmin = (
   user: User | null,
   to: string,

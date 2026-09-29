@@ -1,13 +1,16 @@
-import { createFileRoute, redirect, useRouter } from '@tanstack/react-router'
-import { Building2, Globe } from 'lucide-react'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 
-import { useAuthStore } from '@/store/useAuthStore.ts'
 import {
-  type AccessibleCouple,
-  accessibleCouples,
-  accessibleDestinations,
-  administeredEstablishments,
-} from '@/utils/tenant-context.ts'
+  cleDestination,
+  grouperDestinations,
+  iconeDestination,
+  intituleDestination,
+  TitreEtablissement,
+  useOuvrirDestination,
+} from '@/components/custom/destinations.tsx'
+import { useAuthStore } from '@/store/useAuthStore.ts'
+import type { Destination } from '@/utils/tenant-context.ts'
+import { accessibleDestinations } from '@/utils/tenant-context.ts'
 
 export const Route = createFileRoute('/_authenticated/choose-context')({
   // Sans aucun couple ni aucune administration accessible, cette page n'a
@@ -24,126 +27,81 @@ export const Route = createFileRoute('/_authenticated/choose-context')({
   component: ChooseContext,
 })
 
-type Group = {
-  establishment: AccessibleCouple['establishment']
-  couples: AccessibleCouple[]
-}
-
-// Regroupe les couples par etablissement, dans l'ordre ou ils apparaissent
-// dans l'arbre des appartenances.
-const groupByEstablishment = (couples: AccessibleCouple[]): Group[] => {
-  const groups: Group[] = []
-  for (const couple of couples) {
-    const group = groups.find(
-      (g) => g.establishment.id === couple.establishment.id,
-    )
-    if (group) {
-      group.couples.push(couple)
-    } else {
-      groups.push({ establishment: couple.establishment, couples: [couple] })
-    }
-  }
-  return groups
-}
-
+// Page de repli, hors echelle (ni onglets ni panneau lateral) : l'application y envoie quand
+// elle ne sait pas ou mettre le compte — connexion avec plusieurs acces, URL devenue invalide
+// (service retire, droit perdu), ancienne URL sans equivalent. Elle presente les destinations
+// EXACTEMENT comme le selecteur d'echelle (`destinations.tsx`) : l'etablissement en titre
+// (cliquable vers son administration pour qui l'administre), ses services decales dessous, la
+// plateforme a part.
 function ChooseContext() {
-  const router = useRouter()
   const user = useAuthStore((state) => state.user)
-  const groups = groupByEstablishment(accessibleCouples(user))
-  // Etablissements administres : un chemin distinct des couples ci-dessus,
-  // sans quoi un administrateur sans aucune affectation de service n'aurait
-  // rien a choisir sur cette page malgre un acces reel (voir admin.tsx).
-  const administered = administeredEstablishments(user)
+  const ouvrir = useOuvrirDestination()
+  const groupes = grouperDestinations(accessibleDestinations(user))
+
+  // Un bouton, pas un `Link` : le survol ne doit pas laisser croire a un prechargement de
+  // destination sur cet ecran de choix.
+  const entree = (destination: Destination, avecIcone: boolean) => (
+    <button
+      key={cleDestination(destination)}
+      type="button"
+      className="flex items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm text-text-dark transition-colors hover:bg-primary/10 focus-visible:bg-primary/10 outline-none"
+      onClick={() => ouvrir(destination)}
+    >
+      {avecIcone && (
+        <span className="shrink-0 opacity-70">
+          {iconeDestination(destination)}
+        </span>
+      )}
+      <span>{intituleDestination(destination)}</span>
+    </button>
+  )
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-background p-6">
-      <div className="w-full max-w-xl flex flex-col gap-6">
+      <div className="w-full max-w-md flex flex-col gap-4">
         <div>
           <h1 className="text-2xl font-bold text-text-dark">
             Choisir un accès
           </h1>
           <p className="text-text-light">
-            Votre compte a plusieurs accès possibles : choisissez celui que vous
-            voulez ouvrir.
+            Choisissez le service ou l'espace que vous voulez ouvrir.
           </p>
         </div>
 
-        {groups.map(({ establishment, couples }) => (
-          <div key={establishment.id} className="flex flex-col gap-2">
-            <h2 className="text-sm font-semibold text-text-light uppercase tracking-wide">
-              {establishment.name}
-            </h2>
-            <div className="flex flex-col gap-2">
-              {couples.map(({ service }) => (
-                <button
-                  key={service.id}
-                  type="button"
-                  className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 text-left text-text-dark transition-colors hover:bg-primary/10"
-                  onClick={() =>
-                    // Une fiche patient precise n'a pas d'equivalent dans un
-                    // autre service tant que l'etape 3 n'a pas cree les
-                    // sous-dossiers : on ramene donc toujours a l'index du
-                    // service, comme dans le selecteur d'echelle. Un bouton, pas un
-                    // `Link` : le survol ne doit pas laisser croire a un
-                    // prechargement de destination sur cet ecran de choix.
-                    router.navigate({
-                      to: '/e/$establishmentId/s/$serviceId/dashboard',
-                      params: {
-                        establishmentId: establishment.id,
-                        serviceId: service.id,
-                      },
-                    })
+        <div className="flex flex-col rounded-lg border border-border bg-card p-2">
+          {groupes.map((groupe, index) =>
+            groupe.titre === null ? (
+              <div
+                key="plateforme"
+                className={
+                  index > 0 ? 'mt-1 border-t border-border pt-1' : undefined
+                }
+              >
+                {groupe.destinations.map((destination) =>
+                  entree(destination, true),
+                )}
+              </div>
+            ) : (
+              <div key={groupe.id} className="flex flex-col">
+                <TitreEtablissement
+                  titre={groupe.titre}
+                  onOuvrir={
+                    groupe.administration
+                      ? () =>
+                          groupe.administration &&
+                          ouvrir(groupe.administration)
+                      : undefined
                   }
-                >
-                  <Building2 className="w-4 h-4 shrink-0 opacity-70" />
-                  <span>{service.name}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        ))}
-
-        {administered.length > 0 && (
-          <div className="flex flex-col gap-2">
-            <h2 className="text-sm font-semibold text-text-light uppercase tracking-wide">
-              Administration
-            </h2>
-            <div className="flex flex-col gap-2">
-              {administered.map((establishment) => (
-                <button
-                  key={establishment.id}
-                  type="button"
-                  className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 text-left text-text-dark transition-colors hover:bg-primary/10"
-                  onClick={() =>
-                    router.navigate({
-                      to: '/e/$establishmentId/admin/members',
-                      params: { establishmentId: establishment.id },
-                    })
-                  }
-                >
-                  <Building2 className="w-4 h-4 shrink-0 opacity-70" />
-                  <span>{establishment.name}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {user?.isSuperAdmin === true && (
-          <div className="flex flex-col gap-2">
-            <h2 className="text-sm font-semibold text-text-light uppercase tracking-wide">
-              Plateforme
-            </h2>
-            <button
-              type="button"
-              className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 text-left text-text-dark transition-colors hover:bg-primary/10"
-              onClick={() => router.navigate({ to: '/super-admin' })}
-            >
-              <Globe className="w-4 h-4 shrink-0 opacity-70" />
-              <span>Super-administration</span>
-            </button>
-          </div>
-        )}
+                />
+                <div className="ml-6 mb-1 flex flex-col gap-0.5">
+                  {groupe.destinations.map((destination) =>
+                    entree(destination, false),
+                  )}
+                </div>
+              </div>
+            ),
+          )}
+        </div>
       </div>
     </div>
   )

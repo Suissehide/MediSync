@@ -125,7 +125,7 @@ describe('ScaleSelector', () => {
     )
   })
 
-  it('rend une entree par couple accessible, et le lien vers tous les acces', async () => {
+  it('rend une entree par couple accessible, sans lien vers tous les acces', async () => {
     useAuthStore.setState({ user: troisCouples })
 
     monter()
@@ -135,13 +135,14 @@ describe('ScaleSelector', () => {
       await screen.findAllByRole('button', { name: /Cardio|Pneumo/ }),
     ).toHaveLength(3)
     expect(
-      screen.getByRole('button', { name: 'Tous les accès…' }),
-    ).toBeInTheDocument()
+      screen.queryByRole('button', { name: 'Tous les accès…' }),
+    ).not.toBeInTheDocument()
   })
 
   // Un administrateur coordinateur d'un seul service n'avait pas de selecteur : l'administration
   // n'y figurait pas. Il a desormais deux destinations.
-  it('propose l administration de l etablissement a un administrateur', async () => {
+  // L'administration n'est plus une ligne sous les services : le titre de l'etablissement y mene.
+  it('fait du titre de l etablissement l entree de son administration', async () => {
     useAuthStore.setState({ user: adminCoordinateur })
 
     monter()
@@ -149,9 +150,26 @@ describe('ScaleSelector', () => {
 
     expect(
       await screen.findByRole('button', {
-        name: "Administration de l'établissement",
+        name: "CHU — administration de l'établissement",
       }),
     ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', {
+        name: "Administration de l'établissement",
+      }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('laisse le titre inerte pour qui n administre pas l etablissement', async () => {
+    useAuthStore.setState({ user: troisCouples })
+
+    monter()
+    await userEvent.click(await declencheur())
+
+    expect(await screen.findByText('Clinique du Parc')).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /administration/ }),
+    ).not.toBeInTheDocument()
   })
 
   it('ne propose la plateforme qu a un super-admin', async () => {
