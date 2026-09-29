@@ -1,29 +1,29 @@
-import { Check, ChevronDown, X } from "lucide-react";
-import { Popover, Select as RadixSelect } from "radix-ui";
-import React, { useState } from "react";
+import { Check, ChevronDown, X } from 'lucide-react'
+import { Popover, Select as RadixSelect } from 'radix-ui'
+import React, { useState } from 'react'
 
-import { cn } from "../../libs/utils";
+import { cn } from '../../libs/utils'
 
 // ─── Select ──────────────────────────────────────────────────────────────────
 
 export interface SelectOption {
-  value: string | number;
-  label: string;
-  group?: string;
-  color?: string;
+  value: string | number
+  label: string
+  group?: string
+  color?: string
 }
 
 export interface SelectProps {
-  id?: string;
-  options: SelectOption[];
-  placeholder?: string;
-  emptyMessage?: string;
-  className?: string;
-  clearable?: boolean;
-  searchable?: boolean;
-  value?: string | number;
-  onValueChange?: (value: string) => void;
-  disabled?: boolean;
+  id?: string
+  options: SelectOption[]
+  placeholder?: string
+  emptyMessage?: string
+  className?: string
+  clearable?: boolean
+  searchable?: boolean
+  value?: string | number
+  onValueChange?: (value: string) => void
+  disabled?: boolean
 }
 
 const ColorDot = ({ color }: { color?: string }) =>
@@ -32,14 +32,14 @@ const ColorDot = ({ color }: { color?: string }) =>
       className="w-2.5 h-2.5 rounded-full shrink-0"
       style={{ backgroundColor: color }}
     />
-  ) : null;
+  ) : null
 
 export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
   (
     {
       options,
       placeholder,
-      emptyMessage = "Aucune option",
+      emptyMessage = 'Aucune option',
       className,
       id,
       value,
@@ -50,30 +50,30 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
     },
     ref,
   ) => {
-    const [searchTerm, setSearchTerm] = useState("");
-    const [open, setOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('')
+    const [open, setOpen] = useState(false)
 
     const handleClear = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      onValueChange?.("");
-      setSearchTerm("");
-    };
+      e.stopPropagation()
+      onValueChange?.('')
+      setSearchTerm('')
+    }
 
     // ─── Searchable mode (Popover-based) ───
     if (searchable) {
       const filteredOptions = options.filter((o) =>
         o.label.toLowerCase().includes(searchTerm.toLowerCase()),
-      );
+      )
       const selectedOption = options.find(
         (o) => o.value.toString() === value?.toString(),
-      );
-      const selectedLabel = selectedOption?.label;
+      )
+      const selectedLabel = selectedOption?.label
 
       const handleSelect = (val: string) => {
-        onValueChange?.(val);
-        setOpen(false);
-        setSearchTerm("");
-      };
+        onValueChange?.(val)
+        setOpen(false)
+        setSearchTerm('')
+      }
 
       return (
         <Popover.Root open={open} onOpenChange={setOpen}>
@@ -85,16 +85,16 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
                 id={id}
                 disabled={disabled}
                 className={cn(
-                  "inline-flex w-full h-9 items-center justify-between rounded-md border border-border bg-background px-3 py-2 text-sm cursor-pointer",
-                  "focus:outline-none focus:ring-1 focus:ring-inset focus:ring-ring",
-                  disabled ? "opacity-50 cursor-not-allowed" : "text-text-dark",
+                  'inline-flex w-full h-9 items-center justify-between rounded-md border border-border bg-background px-3 py-2 text-sm cursor-pointer',
+                  'focus:outline-none focus:ring-1 focus:ring-inset focus:ring-ring',
+                  disabled ? 'opacity-50 cursor-not-allowed' : 'text-text-dark',
                   className,
                 )}
               >
                 <span
                   className={cn(
-                    "flex items-center gap-2 min-w-0",
-                    !selectedLabel && "text-muted-foreground",
+                    'flex items-center gap-2 min-w-0',
+                    !selectedLabel && 'text-muted-foreground',
                   )}
                 >
                   <ColorDot color={selectedOption?.color} />
@@ -138,13 +138,13 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
               <ul className="p-1 max-h-52 overflow-y-auto">
                 {filteredOptions.length === 0 ? (
                   <li className="px-2 py-1.5 text-sm text-text-light">
-                    {options.length === 0 ? emptyMessage : "Aucun résultat"}
+                    {options.length === 0 ? emptyMessage : 'Aucun résultat'}
                   </li>
                 ) : (
                   filteredOptions.map((option, idx) => {
                     const prevGroup =
-                      idx > 0 ? filteredOptions[idx - 1].group : undefined;
-                    const showSeparator = idx > 0 && option.group !== prevGroup;
+                      idx > 0 ? filteredOptions[idx - 1].group : undefined
+                    const showSeparator = idx > 0 && option.group !== prevGroup
 
                     return (
                       <React.Fragment key={option.value}>
@@ -169,14 +169,14 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
                           </button>
                         </li>
                       </React.Fragment>
-                    );
+                    )
                   })
                 )}
               </ul>
             </Popover.Content>
           </Popover.Portal>
         </Popover.Root>
-      );
+      )
     }
 
     // ─── Standard mode (RadixSelect-based) ───
@@ -192,11 +192,11 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
             ref={ref}
             id={id}
             className={cn(
-              "inline-flex w-full h-9 items-center justify-between rounded-md border border-border bg-background px-3 py-2 text-sm",
-              "focus:outline-none focus:ring-1 focus:ring-ring",
+              'inline-flex w-full h-9 items-center justify-between rounded-md border border-border bg-background px-3 py-2 text-sm',
+              'focus:outline-none focus:ring-1 focus:ring-ring',
               disabled
-                ? "opacity-50 cursor-not-allowed"
-                : "cursor-pointer text-text-dark",
+                ? 'opacity-50 cursor-not-allowed'
+                : 'cursor-pointer text-text-dark',
               className,
             )}
           >
@@ -243,7 +243,7 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
           </RadixSelect.Portal>
         </RadixSelect.Root>
 
-        {clearable && value !== "" && value !== undefined && (
+        {clearable && value !== '' && value !== undefined && (
           <button
             type="button"
             onClick={handleClear}
@@ -253,23 +253,23 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
           </button>
         )}
       </div>
-    );
+    )
   },
-);
-Select.displayName = "Select";
+)
+Select.displayName = 'Select'
 
 // ─── MultiSelect ─────────────────────────────────────────────────────────────
 
-type MultiSelectOption = { value: string; label: string };
+type MultiSelectOption = { value: string; label: string }
 
 interface MultiSelectProps {
-  options: MultiSelectOption[];
-  value: string[];
-  onChange: (value: string[]) => void;
-  placeholder?: string;
-  emptyMessage?: string;
-  maxSelected?: number;
-  disabled?: boolean;
+  options: MultiSelectOption[]
+  value: string[]
+  onChange: (value: string[]) => void
+  placeholder?: string
+  emptyMessage?: string
+  maxSelected?: number
+  disabled?: boolean
 }
 
 export function MultiSelect({
@@ -277,35 +277,33 @@ export function MultiSelect({
   value,
   onChange,
   placeholder,
-  emptyMessage = "Aucune option",
+  emptyMessage = 'Aucune option',
   maxSelected,
   disabled,
 }: MultiSelectProps) {
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState('')
 
   const toggle = (val: string) => {
     if (disabled) {
-      return;
+      return
     }
-    const isSelected = value.includes(val);
+    const isSelected = value.includes(val)
     if (isSelected) {
-      onChange(value.filter((v) => v !== val));
+      onChange(value.filter((v) => v !== val))
     } else if (!maxSelected || value.length < maxSelected) {
-      onChange([...value, val]);
+      onChange([...value, val])
     } else if (maxSelected === 1) {
-      onChange([val]);
+      onChange([val])
     }
-  };
+  }
 
   const filteredOptions = options.filter((o) =>
     o.label.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
-  const selectedOptions = filteredOptions.filter((o) =>
-    value.includes(o.value),
-  );
+  )
+  const selectedOptions = filteredOptions.filter((o) => value.includes(o.value))
   const unselectedOptions = filteredOptions.filter(
     (o) => !value.includes(o.value),
-  );
+  )
 
   return (
     <Popover.Root>
@@ -322,11 +320,11 @@ export function MultiSelect({
                 ? options
                     .filter((o) => value.includes(o.value))
                     .map((o) => o.label)
-                    .join(", ")
+                    .join(', ')
                 : `${options
                     .filter((o) => value.slice(0, 2).includes(o.value))
                     .map((o) => o.label)
-                    .join(", ")} +${value.length - 2}`}
+                    .join(', ')} +${value.length - 2}`}
           </span>
           <ChevronDown className="ml-2 h-4 w-4 text-text-light" />
         </button>
@@ -351,7 +349,7 @@ export function MultiSelect({
           <ul className="p-1 max-h-52 overflow-y-auto">
             {filteredOptions.length === 0 && (
               <li className="px-2 py-1.5 text-sm text-text-light">
-                {options.length === 0 ? emptyMessage : "Aucun résultat"}
+                {options.length === 0 ? emptyMessage : 'Aucun résultat'}
               </li>
             )}
             {selectedOptions.map((option) => (
@@ -392,5 +390,5 @@ export function MultiSelect({
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>
-  );
+  )
 }
