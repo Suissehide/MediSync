@@ -44,12 +44,12 @@ Layout convention: a route segment starting with `_` (`_authenticated.tsx`, `_se
 _authenticated.tsx                          # requires a session; refreshes `authState.user` from /me
 ├── e/$establishmentId/
 │   ├── admin.tsx                           # establishment layout: sets context WITHOUT a service
-│   │   └── admin/{members,services,grants,soignants,locations,activity-log}.tsx
+│   │   └── admin/{members,services,grants,activity-log}.tsx
 │   └── s/$serviceId.tsx                    # service layout: sets context WITH a service
 │       ├── _settings.tsx                   # nested under s/$serviceId, inherits its context
-│       │   └── _settings/{thematic,planning,diagnostic-template}.tsx
+│       │   └── _settings/{thematic,planning,diagnostic-template,soignant,location}.tsx
 │       ├── agenda.tsx, dashboard.tsx, index.tsx, suivi.tsx
-│       ├── {soignant,location,activity-log}.tsx   # old addresses: redirect to admin/…, search kept
+│       ├── activity-log.tsx                # old address: redirects to admin/activity-log, search kept
 │       └── patient/{index,$patientID}.tsx
 ├── choose-context.tsx                      # full-page list of every destination, no context of its own
 ├── super-admin.tsx + super-admin/*         # platform scale, `isSuperAdmin` only
@@ -60,7 +60,7 @@ The old top-level paths (`/agenda`, `/settings/planning`, …) still exist as th
 
 ### Navigation is by scale, and described in one table
 
-Every section screen belongs to exactly one **scale** — service (`/e/:e/s/:s/…`), establishment (`/e/:e/admin/…`) or platform (`/super-admin/…`) — and its URL, its guarding permission and its tab agree. `src/navigation/navigation.ts` is the single description: `NAVIGATION` lists each scale's tabs (label, route, permission, group), `HORS_ONGLETS` lists the object screens deliberately reached from elsewhere (patient file, "Consultations du dossier", establishment file) with the reason. The navbar renders only the tabs of the scale of the **current route** (`useCurrentScale`, a route match — never the store, same reason as the task panel below), filtered by the role; a thin separator marks a change of group. `ScaleSelector` (`components/custom/scaleSelector.tsx`) lists every destination of the account — services, establishment administration, platform — from `accessibleDestinations`, the same derivation `/choose-context` uses.
+Every section screen belongs to exactly one **scale** — service (`/e/:e/s/:s/…`), establishment (`/e/:e/admin/…`) or platform (`/super-admin/…`) — and its URL, its guarding permission and its tab agree. `src/navigation/navigation.ts` is the single description: `NAVIGATION` lists each scale's tabs (label, route, permission, group, optional description); a group listed in `MENU_GROUPS` (the service's « Organisation ») renders as one dropdown whose screens are indented sub-items, `HORS_ONGLETS` lists the object screens deliberately reached from elsewhere (patient file, "Consultations du dossier", establishment file) with the reason. The navbar renders only the tabs of the scale of the **current route** (`useCurrentScale`, a route match — never the store, same reason as the task panel below), filtered by the role; a thin separator marks a change of group. `ScaleSelector` (`components/custom/scaleSelector.tsx`) lists every destination of the account — services, establishment administration, platform — from `accessibleDestinations`, the same derivation `/choose-context` uses.
 
 Adding a screen: put its route under the right scale, then add it to `NAVIGATION` (or to `HORS_ONGLETS` with the place it is reached from). `navigation/navigation.test.ts` fails on a section screen that is in neither, and on a tab guarded by a permission of the other scale. Background and the six defects this replaced: `docs/multi-tenant/decisions-navigation.md`.
 
@@ -72,7 +72,7 @@ Adding a screen: put its route under the right scale, then add it to `NAVIGATION
 2. `constants/config.constant.ts` exposes two URL factories, `tenantApiUrl()` (establishment + service) and `establishmentApiUrl()` (establishment only), which read that same store at **call time** — not at import time, not as a prop.
 3. Every `api/*.ts` and `queries/*.ts` module calls one of these two factories to build its URL.
 
-**Never call `tenantApiUrl()` (or write a query/API module that does) from a screen that does not live under the matching layout.** It throws if no context has been set (or one without a `serviceId` for `tenantApiUrl()` specifically) — by design: a silent fallback would mean a request quietly going to the wrong establishment or service. If you're adding a screen under `admin/` and it needs a service-scoped resource, that's usually a sign the resource needs an establishment-level read endpoint (see `members.tsx`'s use of the establishment-scoped soignants read, added in this step precisely for that reason), not a reason to relax the guard.
+**Never call `tenantApiUrl()` (or write a query/API module that does) from a screen that does not live under the matching layout.** It throws if no context has been set (or one without a `serviceId` for `tenantApiUrl()` specifically) — by design: a silent fallback would mean a request quietly going to the wrong establishment or service. If you're adding a screen under `admin/` and it needs a service-scoped resource, that's usually a sign the resource needs an establishment-level read endpoint (the establishment-scoped soignants read once used by `members.tsx` was the example — gone since soignants became per-service on 2026-09-29, when the member↔soignant link moved to the service side, `GET/PATCH …/s/:s/membres`), not a reason to relax the guard.
 
 The router precaches on hover (`defaultPreload: 'intent'` in `main.tsx`), which runs `beforeLoad` on a mere mouse-over. The layouts therefore split *resolution* (always runs, even on preload — it's cheap and has no side effect) from *side effects* (`setContext`, remembering the last visited context — gated on `!preload`, see the comment in `e/$establishmentId/s/$serviceId.tsx`). Don't remove that gate: without it, hovering a link to another service leaks that service's context into the store before you ever navigate there.
 

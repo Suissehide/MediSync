@@ -1,7 +1,7 @@
 # Navigation par échelle — conception
 
 **Date :** 2026-09-28
-**Statut :** à valider par Léo avant le plan d'implémentation
+**Statut :** implémentée, puis révisée le 2026-09-29 : Soignants et Salles sont revenus dans le service, propres à chaque service (voir `docs/multi-tenant/decisions-navigation.md`, qui fait foi là où cette spec diverge)
 **Plan :** `docs/superpowers/plans/2026-09-28-navigation-par-echelle.md`
 
 ## Le problème

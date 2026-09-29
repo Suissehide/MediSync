@@ -35,7 +35,7 @@ appartenance porte un rôle.
 | Niveau | Rôle | Ce qu'il peut faire |
 | --- | --- | --- |
 | Plateforme | **Super-admin** | Créer les établissements, nommer leur premier administrateur, consulter la santé globale de la plateforme, rechercher un compte par adresse et réémettre son lien de connexion, s'accorder un accès d'intervention temporaire. **Aucun accès au contenu des dossiers patients** — voir la nuance sur le nombre de dossiers et sur l'octroi, plus bas. |
-| Établissement | **Administrateur d'établissement** (`ADMIN`) | Créer et désactiver les services, gérer les lieux et les profils soignants, rattacher les comptes à l'établissement, les affecter aux services avec un rôle, désactiver les comptes, lire le journal d'activité et le journal des accès aux dossiers patients. |
+| Établissement | **Administrateur d'établissement** (`ADMIN`) | Créer et désactiver les services, rattacher les comptes à l'établissement, les affecter aux services avec un rôle, désactiver les comptes, lire le journal d'activité et le journal des accès aux dossiers patients. |
 | Établissement | **Membre** (`MEMBER`) | Aucun droit propre : simple rattachement qui permet d'être affecté à des services. |
 | Service | **Coordinateur** (`COORDINATEUR`) | Tout ce que fait l'ancien rôle `ADMIN` dans le périmètre du service : modèles de parcours, planning, thématiques, semaines interdites, cycle de planification, modèles de diagnostic, dossiers patients et contenu clinique. |
 | Service | **Intervenant** (`INTERVENANT`) | L'équivalent de l'ancien rôle `USER` : agenda, présences, transmissions, dossier patient et diagnostics éducatifs, tâches personnelles. |
@@ -55,8 +55,8 @@ associe les permissions aux rôles. C'est cette matrice qui fait foi.
 | --- | --- | :-: | :-: | :-: | :-: |
 | `planning:read` | Lecture des modèles de parcours et de créneaux, parcours, créneaux, cycle de planification, semaines interdites | ✔ | ✔ | ✔ | ✔ |
 | `planning:write` | Modèles de parcours et de créneaux, parcours, créneaux, cycle de planification, semaines interdites | ✔ | | | |
-| `referentials:read` | Lecture des thématiques, modèles de diagnostic, soignants et lieux | ✔ | ✔ | ✔ | ✔ |
-| `referentials:write` | Thématiques, modèles de diagnostic éducatif | ✔ | | | |
+| `referentials:read` | Lecture des thématiques, modèles de diagnostic, soignants et salles du service | ✔ | ✔ | ✔ | ✔ |
+| `referentials:write` | Thématiques, modèles de diagnostic éducatif ; soignants et salles du service, et le rattachement d'un membre du service à un soignant (depuis le 2026-09-29, `decisions-navigation.md`) | ✔ | | | |
 | `patient:read` | Identité, contact, contexte social, sous-dossier hors champs cliniques, planning individuel, suivi | ✔ | ✔ | ✔ | ✔ |
 | `patient:write` | Création et modification de l'identité, du contact, du social et du sous-dossier hors champs cliniques | ✔ | ✔ | ✔ | |
 | `patient:delete` | Suppression d'un dossier patient | ✔ | | | |
@@ -154,8 +154,6 @@ Règles associées :
 | Permission | Administrateur d'établissement | Super-admin |
 | --- | :-: | :-: |
 | `services:manage` (créer, renommer, désactiver un service) | ✔ | |
-| `locations:manage` | ✔ | |
-| `soignants:manage` (profils soignants de l'établissement) | ✔ | |
 | `members:manage` (rattacher un compte, affecter aux services, changer les rôles, désactiver) | ✔ | |
 | `activity-log:read` (journal d'activité de l'établissement, **tous services**, filtrable par service — écran « Journal d'activité » de l'administration depuis la navigation par échelle, `decisions-navigation.md`) | ✔ | |
 | `activity-log:write` (purge des entrées du journal d'activité, sur le même périmètre que la lecture) | ✔ | |
@@ -251,4 +249,4 @@ sont créés, et les comptes actuels sont convertis ainsi :
 | `USER` | `MEMBER` | `INTERVENANT` |
 | `NONE` (en attente) | aucune | aucune |
 
-Le lien `User.soignantId` actuel devient `EstablishmentMembership.soignantId`.
+Le lien `User.soignantId` actuel devient `EstablishmentMembership.soignantId`. (Depuis le 2026-09-29, il vit sur `ServiceMembership.soignantId` : les soignants sont propres à chaque service — voir `decisions-navigation.md`.)
