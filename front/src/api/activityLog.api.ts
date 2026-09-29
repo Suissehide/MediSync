@@ -5,6 +5,9 @@ import { fetchWithAuth } from './fetchWithAuth.ts'
 
 export type GetActivityLogsParams = {
   page?: number
+  pageSize?: number
+  // Recherche d'un auteur par son nom, faite par le serveur sur tout le journal.
+  user?: string
   action?: string
   userID?: string
   from?: string
@@ -17,6 +20,8 @@ export const ActivityLogApi = {
   getAll: async (params: GetActivityLogsParams = {}): Promise<ActivityLogsResponse> => {
     const query = new URLSearchParams()
     if (params.page) { query.set('page', String(params.page)) }
+    if (params.pageSize) { query.set('pageSize', String(params.pageSize)) }
+    if (params.user) { query.set('user', params.user) }
     if (params.action) { query.set('action', params.action) }
     if (params.userID) { query.set('userID', params.userID) }
     if (params.from) { query.set('from', params.from) }

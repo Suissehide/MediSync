@@ -2,7 +2,7 @@ import { createFileRoute, redirect } from '@tanstack/react-router'
 import { createColumnHelper } from '@tanstack/react-table'
 import dayjs from 'dayjs'
 import { RotateCcw, Search } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { activityLogColumns } from '@/columns/activityLog.column.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
@@ -38,21 +38,56 @@ export const Route = createFileRoute('/_authenticated/e/$establishmentId/admin/a
 
 const DEFAULT_FILTERS = { action: '', periodDays: '', userSearch: '', serviceId: '' }
 
+// Pagination et recherche cote serveur (2026-09-29) : le journal couvre tout l'etablissement, la
+// premiere page de 50 lignes ne suffisait plus, et chercher un auteur dans la seule page affichee
+// rendait « aucune activite » alors que ses lignes existaient plus loin.
+const PREMIERE_PAGE = { pageIndex: 0, pageSize: 25 }
+
+// Meme delai que la recherche de compte de l'ecran plateforme (`super-admin/access-log.tsx`) :
+// sans lui, chaque frappe lancerait une recherche sur tout le journal.
+const DELAI_SAISIE_MS = 300
+
 const columnHelper = createColumnHelper<ActivityLog>()
 
 function ActivityLogPage() {
   const [filters, setFilters] = useState(DEFAULT_FILTERS)
+  const [pagination, setPagination] = useState(PREMIERE_PAGE)
 
   const hasActiveFilters = Object.values(filters).some(Boolean)
 
-  const from = filters.periodDays
-    ? dayjs().subtract(Number(filters.periodDays), 'day').toISOString()
-    : undefined
+  // Tout changement de filtre ramene a la premiere page, DANS la meme mise a jour que le filtre :
+  // la page 7 d'une recherche plus etroite n'existe peut-etre pas, et un effet apres coup
+  // enverrait d'abord une requete pour cette page-la.
+  const revenirAuDebut = () => setPagination((courant) => ({ ...courant, pageIndex: 0 }))
+
+  const [userApplique, setUserApplique] = useState('')
+  useEffect(() => {
+    const minuteur = setTimeout(() => {
+      // Les deux mises a jour partent ensemble : une seule requete, sur la premiere page. Cet
+      // effet ne tourne que si la saisie a change ; au montage, la page est deja la premiere.
+      setUserApplique(filters.userSearch.trim())
+      setPagination((courant) => (courant.pageIndex === 0 ? courant : { ...courant, pageIndex: 0 }))
+    }, DELAI_SAISIE_MS)
+    return () => clearTimeout(minuteur)
+  }, [filters.userSearch])
+
+  // Calculee une fois par periode choisie, et non a chaque rendu : l'instant fait partie de la
+  // cle de requete, et une cle qui change a chaque rendu relancerait la requete a chaque reponse.
+  const from = useMemo(
+    () =>
+      filters.periodDays
+        ? dayjs().subtract(Number(filters.periodDays), 'day').toISOString()
+        : undefined,
+    [filters.periodDays],
+  )
 
   const { data, isPending } = useActivityLogsQuery({
+    page: pagination.pageIndex + 1,
+    pageSize: pagination.pageSize,
     action: filters.action || undefined,
     from,
     serviceId: filters.serviceId || undefined,
+    user: userApplique || undefined,
   })
 
   // Services de l'etablissement, actifs ou non : une ligne ancienne peut venir d'un service
@@ -76,21 +111,15 @@ function ActivityLogPage() {
     return [...activityLogColumns.slice(0, 3), colonneService, ...activityLogColumns.slice(3)]
   }, [services])
 
-  const logs = useMemo(() => {
-    const all = data?.data ?? []
-    if (!filters.userSearch) {
-      return all
-    }
-    const q = filters.userSearch.toLowerCase()
-    return all.filter((log) => {
-      const fullName =
-        `${log.userFirstName ?? ''} ${log.userLastName ?? ''}`.toLowerCase()
-      return fullName.includes(q) || log.userID.toLowerCase().includes(q)
-    })
-  }, [data, filters.userSearch])
+  const logs = data?.data ?? []
 
-  const set = (key: keyof typeof DEFAULT_FILTERS) => (v: string) =>
+  const set = (key: keyof typeof DEFAULT_FILTERS) => (v: string) => {
     setFilters((prev) => ({ ...prev, [key]: v }))
+    // La recherche d'auteur revient au debut quand elle s'applique, apres le delai de saisie.
+    if (key !== 'userSearch') {
+      revenirAuDebut()
+    }
+  }
 
   return (
     <DashboardLayout>
@@ -104,7 +133,11 @@ function ActivityLogPage() {
         <ReactTable<ActivityLog>
           data={logs}
           columns={columns}
-          pagination
+          serverPagination={{
+            ...pagination,
+            rowCount: data?.total ?? 0,
+            onChange: setPagination,
+          }}
           filterId="activity-log"
           isLoading={isPending}
           emptyState={
@@ -152,7 +185,10 @@ function ActivityLogPage() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => setFilters(DEFAULT_FILTERS)}
+                  onClick={() => {
+                    setFilters(DEFAULT_FILTERS)
+                    revenirAuDebut()
+                  }}
                   className="text-text-light"
                 >
                   <RotateCcw className="h-3 w-3" />

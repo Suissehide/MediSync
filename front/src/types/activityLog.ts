@@ -16,4 +16,5 @@ export type ActivityLogsResponse = {
   data: ActivityLog[]
   total: number
   page: number
+  pageSize?: number
 }

@@ -20,8 +20,12 @@ export type ActivityLogCreateEntityRepo = Omit<
 
 export type ActivityLogFindManyParams = {
   page: number
+  // Absente : 50, la taille historique de la page.
+  pageSize?: number
   action?: string
   userID?: string
+  // Recherche par nom (prenom ou nom recopies dans la ligne), mot par mot.
+  user?: string
   from?: Date
   // Navigation par echelle (2026-09-28) : filtre facultatif sur un service, honore seulement
   // sous le contexte d'etablissement (voir `ActivityLogRepository.scopeFilter`).
@@ -36,6 +40,7 @@ export type ActivityLogFindManyResult = {
   data: ActivityLogEntityRepo[]
   total: number
   page: number
+  pageSize: number
 }
 
 // Tâche 6, étape 4b : `GET /super-admin/access-log` (source=activite). Filtres libres — sous

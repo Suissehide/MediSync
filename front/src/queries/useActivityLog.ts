@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { ActivityLogApi, type GetActivityLogsParams } from '../api/activityLog.api.ts'
 import { ACTIVITY_LOG } from '../constants/process.constant.ts'
@@ -16,6 +16,9 @@ export const useActivityLogsQuery = (params: GetActivityLogsParams = {}) => {
     queryKey: [ACTIVITY_LOG.GET_ALL, params],
     queryFn: () => ActivityLogApi.getAll(params),
     retry: 0,
+    // Changer de page garde la page precedente affichee jusqu'a l'arrivee de la suivante, plutot
+    // que de vider la table (meme choix que `useSlot.ts`).
+    placeholderData: keepPreviousData,
   })
 
   useDataFetching({ isPending, isError, error })

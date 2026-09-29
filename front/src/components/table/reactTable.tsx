@@ -50,6 +50,16 @@ type CustomColumnDef<TData, TValue = unknown> = ColumnDef<TData, TValue> & {
   meta?: CustomMeta<TData, TValue>
 }
 
+// Pagination tenue par le serveur : la table n'affiche que la page recue, et le total vient de
+// la reponse. L'ecran garde l'etat (page, taille) et le passe a sa requete. Exclusive de
+// `pagination` (pagination cote client, sur des donnees deja toutes chargees).
+export type ServerPagination = {
+  pageIndex: number
+  pageSize: number
+  rowCount: number
+  onChange: (next: { pageIndex: number; pageSize: number }) => void
+}
+
 type ReactTableProps<TData extends { id: string }> = {
   columns: CustomColumnDef<TData, any>[]
   data: TData[]
@@ -58,6 +68,7 @@ type ReactTableProps<TData extends { id: string }> = {
   customHeader?: (rows: Row<TData>[]) => ReactNode
   filterId?: string
   pagination?: boolean
+  serverPagination?: ServerPagination
   onRowClick?: (row: TData) => void
   maxHeight?: string
   emptyState?: ReactNode
@@ -73,6 +84,7 @@ export function ReactTable<TData extends { id: string }>({
   customHeader,
   filterId = 'default',
   pagination = false,
+  serverPagination,
   onRowClick,
   maxHeight = '600px',
   emptyState,
@@ -108,6 +120,14 @@ export function ReactTable<TData extends { id: string }>({
       rowSelection,
       columnFilters,
       ...(pagination ? { pagination: paginationState } : {}),
+      ...(serverPagination
+        ? {
+            pagination: {
+              pageIndex: serverPagination.pageIndex,
+              pageSize: serverPagination.pageSize,
+            },
+          }
+        : {}),
     },
     filterFns: {
       text: textFilterFn,
@@ -123,8 +143,21 @@ export function ReactTable<TData extends { id: string }>({
       minSize: 0,
     },
     globalFilterFn: textFilterFn,
-    manualPagination: false,
-    onPaginationChange: pagination ? setPaginationState : undefined,
+    manualPagination: serverPagination !== undefined,
+    ...(serverPagination ? { rowCount: serverPagination.rowCount } : {}),
+    onPaginationChange: serverPagination
+      ? (updater) => {
+          const courant = {
+            pageIndex: serverPagination.pageIndex,
+            pageSize: serverPagination.pageSize,
+          }
+          serverPagination.onChange(
+            typeof updater === 'function' ? updater(courant) : updater,
+          )
+        }
+      : pagination
+        ? setPaginationState
+        : undefined,
     getPaginationRowModel: pagination ? getPaginationRowModel() : undefined,
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
@@ -186,7 +219,8 @@ export function ReactTable<TData extends { id: string }>({
     }
   }, [table])
 
-  const totalRows = table.getFilteredRowModel().rows.length
+  const totalRows =
+    serverPagination?.rowCount ?? table.getFilteredRowModel().rows.length
   const tableContainerRef = useRef(null)
 
   return (
@@ -222,7 +256,7 @@ export function ReactTable<TData extends { id: string }>({
         </div>
       </div>
 
-      {pagination ? (
+      {pagination || serverPagination ? (
         <PaginationTable table={table} totalRows={totalRows} />
       ) : (
         <div className="flex justify-end py-2">

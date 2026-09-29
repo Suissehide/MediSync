@@ -102,8 +102,10 @@ class ActivityLogRepository implements ActivityLogRepositoryInterface {
 
   async findMany({
     page,
+    pageSize = PAGE_SIZE,
     action,
     userID,
+    user,
     from,
     serviceId,
   }: ActivityLogFindManyParams): Promise<ActivityLogFindManyResult> {
@@ -113,17 +115,34 @@ class ActivityLogRepository implements ActivityLogRepositoryInterface {
       ...(action ? { action } : {}),
       ...(userID ? { userID } : {}),
       ...(from ? { createdAt: { gte: from } } : {}),
+      // Chaque mot doit figurer dans le prenom ou le nom recopies dans la ligne (ceux de
+      // l'auteur au moment de l'action). Cote serveur, et non plus sur la seule page affichee :
+      // c'est ce qui rend la recherche juste sur tout le journal (relecture de branche,
+      // 2026-09-28). `AND` et non `OR` au premier niveau : `scopeFilter` peut deja poser un `OR`.
+      ...(user ? { AND: this.userSearchFilter(user) } : {}),
     }
     const [data, total] = await Promise.all([
       this.prisma.activityLog.findMany({
         where,
         orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * PAGE_SIZE,
-        take: PAGE_SIZE,
+        skip: (page - 1) * pageSize,
+        take: pageSize,
       }),
       this.prisma.activityLog.count({ where }),
     ])
-    return { data, total, page }
+    return { data, total, page, pageSize }
+  }
+
+  private userSearchFilter(user: string) {
+    return user
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((mot) => ({
+        OR: [
+          { userFirstName: { contains: mot, mode: 'insensitive' as const } },
+          { userLastName: { contains: mot, mode: 'insensitive' as const } },
+        ],
+      }))
   }
 
   // Tâche 6, étape 4b : `GET /super-admin/access-log` (source=activite) — SANS borne de tenant,

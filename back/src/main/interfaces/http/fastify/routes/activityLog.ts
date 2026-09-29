@@ -29,8 +29,8 @@ const activityLogRouter: FastifyPluginAsync = (fastify) => {
       config: { permission: 'activity-log:read' },
     },
     (request) => {
-      const { page, action, userID, from, serviceId } = request.query
-      return activityLogDomain.findMany({ page, action, userID, from, serviceId })
+      const { page, pageSize, action, userID, user, from, serviceId } = request.query
+      return activityLogDomain.findMany({ page, pageSize, action, userID, user, from, serviceId })
     },
   )
 

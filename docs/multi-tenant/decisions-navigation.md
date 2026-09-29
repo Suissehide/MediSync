@@ -8,8 +8,8 @@
 
 | | Avant (`main`, eca1ffb) | Après |
 |---|---|---|
-| Back, e2e | 280 | 288 (+ `location-admin`, `activity-log-etablissement`) |
-| Front, vitest | 51 fichiers, 255 tests | 54 fichiers, 288 tests |
+| Back, e2e | 280 | 291 (+ `location-admin`, `activity-log-etablissement`, `activity-log-pagination`) |
+| Front, vitest | 51 fichiers, 255 tests | 55 fichiers, 291 tests |
 | Front, lint | 0 erreur, 34 avertissements | 0 erreur, 34 avertissements |
 | Front, `tsc -b` et `vite build` | verts | verts |
 
@@ -52,6 +52,15 @@ Vingt écrans, rangés par quatre étapes successives sans décision d'ensemble 
   visible pour les administrateurs, à annoncer au déploiement.** Le champ `serviceId` n'est
   ajouté qu'à la réponse de ce journal, pas au détail d'établissement du super-admin, dont les
   clés sont figées par `super-admin-consultation.test.ts`.
+- **Le journal d'activité est paginé et cherché par le serveur** (2026-09-29, relecture de
+  branche). L'écran n'affichait que les 50 lignes les plus récentes, et sa recherche d'auteur ne
+  portait que sur elles. Il envoie désormais la page, la taille (25 par défaut, 100 au plus) et
+  le nom cherché (`user`, chaque mot dans le prénom ou le nom recopiés, sans casse), et affiche
+  le total du serveur. `ReactTable` gagne une pagination serveur optionnelle
+  (`serverPagination`), sans rien changer aux autres écrans. Changer de filtre revient à la
+  première page dans la même mise à jour, pour n'envoyer qu'une requête. La date de début du
+  filtre de période n'est plus recalculée à chaque rendu : elle faisait partie de la clé de
+  requête et relançait la lecture à chaque réponse.
 - **Un nom par journal** (défaut 5) : « Journal d'activité » (établissement), « Consultations du
   dossier » (fiche patient), « Journaux » (plateforme).
 - **Un sélecteur d'échelle** remplace le sélecteur de service : services, administration,
@@ -68,11 +77,6 @@ Vingt écrans, rangés par quatre étapes successives sans décision d'ensemble 
 
 ## Ce qui reste ouvert
 
-- **Le journal d'activité n'affiche que ses 50 lignes les plus récentes** (relecture de branche,
-  point Important). Le front n'envoie jamais `page` ; la pagination et la recherche par
-  utilisateur de l'écran travaillent sur ces 50 lignes. Le défaut existait déjà, mais le journal
-  couvrant désormais tout l'établissement, 50 lignes portent beaucoup moins loin. Correctif :
-  pagination côté serveur (`page`, `total`) et recherche d'utilisateur envoyée au back.
 - Une ancienne adresse de service (`/e/E/s/S/soignant`…) passe d'abord par la garde du layout de
   service : un administrateur retiré de ce service arrive sur `/choose-context`, pas sur
   l'administration.
