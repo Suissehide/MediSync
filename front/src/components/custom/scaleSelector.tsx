@@ -141,7 +141,7 @@ export const ScaleSelector = () => {
         redonnee ici. */}
         <Button
           variant="none"
-          className="h-9 gap-2 px-3 max-w-72 truncate rounded-lg border border-border-sidebar bg-white/5 text-text hover:bg-white/10"
+          className="h-9 gap-2 px-3 max-w-72 truncate rounded-lg border border-solid border-border-sidebar bg-white/5 text-text hover:bg-white/10"
           aria-label={`Changer d'accès (actuellement : ${libelle(user, courant)})`}
         >
           <Building2 className="w-4 h-4 shrink-0" />
