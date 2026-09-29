@@ -12,7 +12,10 @@ import { useCallback, useMemo, useState } from 'react'
 
 import { PatientApi } from '../../../../api/patient.api.ts'
 import { getContrastTextColor, hexToRGBA } from '../../../../libs/color.ts'
-import { getSlotDisplayRange } from '../../../../libs/slotAvailability.ts'
+import {
+  getPathwayStartDates,
+  getSlotDisplayRange,
+} from '../../../../libs/slotAvailability.ts'
 import {
   usePatientMutations,
   usePatientPathwaysQuery,
@@ -115,6 +118,7 @@ function EnrollmentIssueRow({
 
 function PathwayCard({
   pathway,
+  startDate,
   index,
   isDragged,
   onDragStart,
@@ -123,6 +127,7 @@ function PathwayCard({
   onRemove,
 }: {
   pathway: PatientPathway
+  startDate: string
   index: number
   isDragged: boolean
   onDragStart: (index: number) => void
@@ -132,7 +137,7 @@ function PathwayCard({
 }) {
   const color = pathway.templateColor ?? '#6b7280'
   const formattedDate = dayjs
-    .utc(pathway.startDate)
+    .utc(startDate)
     .format('D MMMM YYYY')
     .replace(/^./, (c) => c.toUpperCase())
 
@@ -217,6 +222,11 @@ export default function OverviewPatient({ patient }: OverviewPatientProps) {
 
     return { upcoming, past }
   }, [slots, patient])
+
+  const pathwayStartDates = useMemo(
+    () => getPathwayStartDates(slots, patient?.id),
+    [slots, patient],
+  )
 
   const [removeTarget, setRemoveTarget] = useState<{
     pathwayID: string
@@ -334,6 +344,10 @@ export default function OverviewPatient({ patient }: OverviewPatientProps) {
                 <PathwayCard
                   key={pathway.pathwayID}
                   pathway={pathway}
+                  startDate={
+                    pathwayStartDates.get(pathway.pathwayID) ??
+                    pathway.startDate
+                  }
                   index={index}
                   isDragged={draggedIndex === index}
                   onDragStart={handleDragStart}

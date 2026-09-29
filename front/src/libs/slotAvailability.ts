@@ -167,3 +167,38 @@ export const getSlotDisplayRange = (
   }
   return { start: slot.startDate, end: slot.endDate }
 }
+
+/**
+ * Date de début de chaque parcours POUR UN PATIENT : son premier rendez-vous
+ * dedans, indexé par identifiant de parcours.
+ *
+ * `Pathway.startDate` ne convient pas à cet affichage : c'est le début de la
+ * session entière. Sur un parcours individuel (`firstAppointmentOnly`), elle
+ * couvre plusieurs semaines et a démarré bien avant l'inscription, d'où une
+ * date affichée dans le passé. Les parcours de groupe (RC, RI) ne bougent pas :
+ * on n'y entre qu'à leur première séance.
+ */
+export const getPathwayStartDates = (
+  slots: Slot[] | undefined,
+  patientID?: string,
+): Map<string, string> => {
+  const startDates = new Map<string, string>()
+  if (!slots || !patientID) {
+    return startDates
+  }
+
+  for (const slot of slots) {
+    const pathwayID = slot.pathway?.id
+    if (!pathwayID || !isPatientBookedOnSlot(slot, patientID)) {
+      continue
+    }
+    // Sur un créneau individuel, l'horaire du patient, pas celui du créneau.
+    const { start } = getSlotDisplayRange(slot, patientID)
+    const current = startDates.get(pathwayID)
+    if (!current || dayjs.utc(start).isBefore(dayjs.utc(current))) {
+      startDates.set(pathwayID, start)
+    }
+  }
+
+  return startDates
+}
