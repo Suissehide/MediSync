@@ -8,6 +8,7 @@ import {
   PopoverMenuItem,
   PopoverRoot,
   PopoverSeparator,
+  PopoverSubGroup,
   PopoverTrigger,
 } from '@/components/ui/popover.tsx'
 import { type CurrentScale, useCurrentScale } from '@/navigation/navigation.ts'
@@ -169,14 +170,14 @@ export const ScaleSelector = () => {
               ))}
             </Fragment>
           ) : (
-            // L'etablissement en titre, ses services et son administration DECALES dessous, reunis
-            // par un filet : on lit d'un coup d'oeil qu'ils en relevent.
+            // L'etablissement en titre, ses services et son administration DECALES dessous : on
+            // lit d'un coup d'oeil qu'ils en relevent.
             <div key={groupe.id} className="flex flex-col">
               <div className="flex items-center gap-2 px-2 pt-2 pb-1 text-sm font-semibold text-text-dark">
                 <Building2 className="w-4 h-4 opacity-70" />
                 {groupe.titre}
               </div>
-              <div className="ml-6 mb-1 flex flex-col">
+              <PopoverSubGroup className="mb-1">
                 {groupe.destinations.map((destination) => (
                   <PopoverMenuItem
                     key={cle(destination)}
@@ -188,7 +189,7 @@ export const ScaleSelector = () => {
                     {intitule(destination)}
                   </PopoverMenuItem>
                 ))}
-              </div>
+              </PopoverSubGroup>
             </div>
           ),
         )}

@@ -8,7 +8,7 @@ import { useAuthStore } from '../store/useAuthStore.ts'
 import { ScaleSelector } from './custom/scaleSelector.tsx'
 import TodoSheet from './custom/todo/todoSheet.tsx'
 import { Button } from './ui/button.tsx'
-import { PopoverClose, PopoverContent, PopoverRoot, PopoverTrigger } from './ui/popover.tsx'
+import { PopoverClose, PopoverContent, PopoverRoot, PopoverSubGroup, PopoverTrigger } from './ui/popover.tsx'
 
 interface NavbarProps {
   toggleSidebar: () => void
@@ -52,7 +52,7 @@ function MenuDeGroupe({
       </PopoverTrigger>
       <PopoverContent align="start" sideOffset={6} className="w-80 p-2">
         <p className="px-3 pt-1 pb-2 text-xs font-semibold uppercase tracking-wide text-text-light">{nom}</p>
-        <div className="ml-3 flex flex-col gap-0.5 border-l-2 border-border pl-3">
+        <PopoverSubGroup>
           {items.map((item) => (
             <PopoverClose asChild key={item.to}>
               <Link
@@ -66,7 +66,7 @@ function MenuDeGroupe({
               </Link>
             </PopoverClose>
           ))}
-        </div>
+        </PopoverSubGroup>
       </PopoverContent>
     </PopoverRoot>
   )
