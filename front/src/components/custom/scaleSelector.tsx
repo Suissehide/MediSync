@@ -136,9 +136,12 @@ export const ScaleSelector = () => {
   return (
     <PopoverRoot>
       <PopoverTrigger asChild>
+        {/* Meme rendu que la maquette : texte clair sur la barre sombre, fond et bordure
+        legers. La variante `none` du bouton impose `text-primary` (bleu), d'ou la couleur
+        redonnee ici. */}
         <Button
           variant="none"
-          className="gap-2 px-2 max-w-72 truncate"
+          className="h-9 gap-2 px-3 max-w-72 truncate rounded-lg border border-border-sidebar bg-white/5 text-text hover:bg-white/10"
           aria-label={`Changer d'accès (actuellement : ${libelle(user, courant)})`}
         >
           <Building2 className="w-4 h-4 shrink-0" />
