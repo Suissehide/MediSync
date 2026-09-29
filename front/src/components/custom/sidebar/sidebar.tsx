@@ -22,9 +22,16 @@ interface SidebarProps {
   components: string[]
   isVisible: boolean
   quickActions?: React.ReactNode[]
+  // Le bandeau d'echelle occupe 36px sous la barre du haut.
+  sousUnBandeau?: boolean
 }
 
-function Sidebar({ isVisible, components, quickActions }: SidebarProps) {
+function Sidebar({
+  isVisible,
+  components,
+  quickActions,
+  sousUnBandeau = false,
+}: SidebarProps) {
   const router = useRouter()
   const { logoutMutation } = useLogout()
   const authState = router.options.context?.authState
@@ -53,7 +60,7 @@ function Sidebar({ isVisible, components, quickActions }: SidebarProps) {
 
   return (
     <div
-      className={`z-40 bg-foreground text-text fixed top-16 h-[calc(100vh-4rem)] w-64 border-r border-border-sidebar transition-all duration-300 ${
+      className={`z-40 bg-foreground text-text fixed ${sousUnBandeau ? 'top-[100px] h-[calc(100vh-100px)]' : 'top-16 h-[calc(100vh-4rem)]'} w-64 border-r border-border-sidebar transition-all duration-300 ${
         isVisible ? 'translate-x-0' : '-translate-x-64'
       } bg-card text-text text-sm`}
     >

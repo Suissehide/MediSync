@@ -216,6 +216,25 @@ export const defaultTenantContext = (
   return null
 }
 
+// Le service vers lequel revenir depuis l'administration ou la plateforme (segment service du
+// fil d'Ariane) : le dernier visite, s'il est dans l'etablissement demande ; sinon le premier
+// service de cet etablissement. Sans etablissement demande, le dernier visite ou le premier
+// couple, comme l'index.
+export const serviceDeRetour = (
+  user: User | null,
+  establishmentId?: string,
+): TenantContext | null => {
+  const dernier = defaultTenantContext(user)
+  if (!establishmentId || dernier?.establishmentId === establishmentId) {
+    return dernier
+  }
+  const establishment = establishmentOf(user, establishmentId)
+  const service = establishment ? servicesOf(establishment)[0] : undefined
+  return service
+    ? resolveTenantContext(user, { establishmentId, serviceId: service.id })
+    : null
+}
+
 // Navigation par echelle (2026-09-28) : toutes les destinations d'un compte, dans l'ordre ou le
 // selecteur d'echelle et `/choose-context` les presentent — pour chaque etablissement, ses
 // services puis son administration si le compte l'administre ; la plateforme en dernier, pour

@@ -23,6 +23,8 @@ interface CreateGrantFormProps {
   // le tenant implicite ne le couvre pas).
   establishmentId: string
   trigger?: React.ReactNode
+  // Apres creation : la liste de la plateforme y enchaine l'ouverture de l'etablissement.
+  onGranted?: () => void
 }
 
 const DEFAULT_DURATION_HOURS = 4
@@ -34,7 +36,11 @@ const MAX_DURATION_HOURS = 24
 // vide est refusé, une durée hors de ]0, 24] aussi — avant même d'atteindre
 // le réseau, pour ne pas laisser croire qu'un octroi a été demandé quand il
 // ne l'a pas été.
-function CreateGrantForm({ establishmentId, trigger }: CreateGrantFormProps) {
+function CreateGrantForm({
+  establishmentId,
+  trigger,
+  onGranted,
+}: CreateGrantFormProps) {
   const [open, setOpen] = useState(false)
   const createGrant = useSuperAdminCreateGrant()
   const recordGrant = useLastGrantStore((state) => state.recordGrant)
@@ -69,6 +75,7 @@ function CreateGrantForm({ establishmentId, trigger }: CreateGrantFormProps) {
             // révoquer.
             recordGrant(establishmentId, grant.id)
             setOpen(false)
+            onGranted?.()
           },
         },
       )

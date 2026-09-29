@@ -1,6 +1,7 @@
 import type React from 'react'
 import { useState } from 'react'
 
+import { BandeauEchelle, useBandeauEchelle } from './custom/bandeauEchelle.tsx'
 import Sidebar from './custom/sidebar/sidebar.tsx'
 import Navbar from './navbar.tsx'
 
@@ -17,6 +18,8 @@ function DashboardLayout({
   children: React.ReactNode
 }) {
   const [sidebarVisible, setSidebarVisible] = useState(true)
+  // Le bandeau d'echelle (36px) s'ajoute sous la barre : tout le reste descend d'autant.
+  const bandeau = useBandeauEchelle()
 
   const toggleSidebar = () => {
     setSidebarVisible(!sidebarVisible)
@@ -25,8 +28,16 @@ function DashboardLayout({
   return (
     <div className="h-screen overflow-hidden bg-foreground">
       <Navbar toggleSidebar={toggleSidebar} />
-      <div className="flex mt-16 h-[calc(100vh-4rem)] overflow-hidden">
+      {bandeau && <BandeauEchelle bandeau={bandeau} />}
+      <div
+        className={`flex overflow-hidden ${
+          bandeau
+            ? 'mt-[100px] h-[calc(100vh-100px)]'
+            : 'mt-16 h-[calc(100vh-4rem)]'
+        }`}
+      >
         <Sidebar
+          sousUnBandeau={bandeau !== null}
           components={components ?? []}
           quickActions={quickActions}
           isVisible={sidebarVisible}
