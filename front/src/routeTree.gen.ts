@@ -51,6 +51,7 @@ import { Route as AuthenticatedEEstablishmentIdSServiceIdPatientIndexImport } fr
 import { Route as AuthenticatedEEstablishmentIdSServiceIdSettingsThematicImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/_settings/thematic'
 import { Route as AuthenticatedEEstablishmentIdSServiceIdSettingsSoignantImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/_settings/soignant'
 import { Route as AuthenticatedEEstablishmentIdSServiceIdSettingsPlanningImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/_settings/planning'
+import { Route as AuthenticatedEEstablishmentIdSServiceIdSettingsMembersImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/_settings/members'
 import { Route as AuthenticatedEEstablishmentIdSServiceIdSettingsLocationImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/_settings/location'
 import { Route as AuthenticatedEEstablishmentIdSServiceIdSettingsDiagnosticTemplateImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/_settings/diagnostic-template'
 import { Route as AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDIndexImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/index'
@@ -322,6 +323,13 @@ const AuthenticatedEEstablishmentIdSServiceIdSettingsPlanningRoute =
   AuthenticatedEEstablishmentIdSServiceIdSettingsPlanningImport.update({
     id: '/planning',
     path: '/planning',
+    getParentRoute: () => AuthenticatedEEstablishmentIdSServiceIdSettingsRoute,
+  } as any)
+
+const AuthenticatedEEstablishmentIdSServiceIdSettingsMembersRoute =
+  AuthenticatedEEstablishmentIdSServiceIdSettingsMembersImport.update({
+    id: '/members',
+    path: '/members',
     getParentRoute: () => AuthenticatedEEstablishmentIdSServiceIdSettingsRoute,
   } as any)
 
@@ -626,6 +634,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsLocationImport
       parentRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsImport
     }
+    '/_authenticated/e/$establishmentId/s/$serviceId/_settings/members': {
+      id: '/_authenticated/e/$establishmentId/s/$serviceId/_settings/members'
+      path: '/members'
+      fullPath: '/e/$establishmentId/s/$serviceId/members'
+      preLoaderRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsMembersImport
+      parentRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsImport
+    }
     '/_authenticated/e/$establishmentId/s/$serviceId/_settings/planning': {
       id: '/_authenticated/e/$establishmentId/s/$serviceId/_settings/planning'
       path: '/planning'
@@ -722,6 +737,7 @@ const AuthenticatedEEstablishmentIdAdminRouteWithChildren =
 interface AuthenticatedEEstablishmentIdSServiceIdSettingsRouteChildren {
   AuthenticatedEEstablishmentIdSServiceIdSettingsDiagnosticTemplateRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsDiagnosticTemplateRoute
   AuthenticatedEEstablishmentIdSServiceIdSettingsLocationRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsLocationRoute
+  AuthenticatedEEstablishmentIdSServiceIdSettingsMembersRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsMembersRoute
   AuthenticatedEEstablishmentIdSServiceIdSettingsPlanningRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsPlanningRoute
   AuthenticatedEEstablishmentIdSServiceIdSettingsSoignantRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsSoignantRoute
   AuthenticatedEEstablishmentIdSServiceIdSettingsThematicRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsThematicRoute
@@ -733,6 +749,8 @@ const AuthenticatedEEstablishmentIdSServiceIdSettingsRouteChildren: Authenticate
       AuthenticatedEEstablishmentIdSServiceIdSettingsDiagnosticTemplateRoute,
     AuthenticatedEEstablishmentIdSServiceIdSettingsLocationRoute:
       AuthenticatedEEstablishmentIdSServiceIdSettingsLocationRoute,
+    AuthenticatedEEstablishmentIdSServiceIdSettingsMembersRoute:
+      AuthenticatedEEstablishmentIdSServiceIdSettingsMembersRoute,
     AuthenticatedEEstablishmentIdSServiceIdSettingsPlanningRoute:
       AuthenticatedEEstablishmentIdSServiceIdSettingsPlanningRoute,
     AuthenticatedEEstablishmentIdSServiceIdSettingsSoignantRoute:
@@ -872,6 +890,7 @@ export interface FileRoutesByFullPath {
   '/e/$establishmentId/s/$serviceId/': typeof AuthenticatedEEstablishmentIdSServiceIdIndexRoute
   '/e/$establishmentId/s/$serviceId/diagnostic-template': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsDiagnosticTemplateRoute
   '/e/$establishmentId/s/$serviceId/location': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsLocationRoute
+  '/e/$establishmentId/s/$serviceId/members': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsMembersRoute
   '/e/$establishmentId/s/$serviceId/planning': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsPlanningRoute
   '/e/$establishmentId/s/$serviceId/soignant': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsSoignantRoute
   '/e/$establishmentId/s/$serviceId/thematic': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsThematicRoute
@@ -915,6 +934,7 @@ export interface FileRoutesByTo {
   '/e/$establishmentId/s/$serviceId/suivi': typeof AuthenticatedEEstablishmentIdSServiceIdSuiviRoute
   '/e/$establishmentId/s/$serviceId/diagnostic-template': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsDiagnosticTemplateRoute
   '/e/$establishmentId/s/$serviceId/location': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsLocationRoute
+  '/e/$establishmentId/s/$serviceId/members': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsMembersRoute
   '/e/$establishmentId/s/$serviceId/planning': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsPlanningRoute
   '/e/$establishmentId/s/$serviceId/soignant': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsSoignantRoute
   '/e/$establishmentId/s/$serviceId/thematic': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsThematicRoute
@@ -963,6 +983,7 @@ export interface FileRoutesById {
   '/_authenticated/e/$establishmentId/s/$serviceId/': typeof AuthenticatedEEstablishmentIdSServiceIdIndexRoute
   '/_authenticated/e/$establishmentId/s/$serviceId/_settings/diagnostic-template': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsDiagnosticTemplateRoute
   '/_authenticated/e/$establishmentId/s/$serviceId/_settings/location': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsLocationRoute
+  '/_authenticated/e/$establishmentId/s/$serviceId/_settings/members': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsMembersRoute
   '/_authenticated/e/$establishmentId/s/$serviceId/_settings/planning': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsPlanningRoute
   '/_authenticated/e/$establishmentId/s/$serviceId/_settings/soignant': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsSoignantRoute
   '/_authenticated/e/$establishmentId/s/$serviceId/_settings/thematic': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsThematicRoute
@@ -1011,6 +1032,7 @@ export interface FileRouteTypes {
     | '/e/$establishmentId/s/$serviceId/'
     | '/e/$establishmentId/s/$serviceId/diagnostic-template'
     | '/e/$establishmentId/s/$serviceId/location'
+    | '/e/$establishmentId/s/$serviceId/members'
     | '/e/$establishmentId/s/$serviceId/planning'
     | '/e/$establishmentId/s/$serviceId/soignant'
     | '/e/$establishmentId/s/$serviceId/thematic'
@@ -1053,6 +1075,7 @@ export interface FileRouteTypes {
     | '/e/$establishmentId/s/$serviceId/suivi'
     | '/e/$establishmentId/s/$serviceId/diagnostic-template'
     | '/e/$establishmentId/s/$serviceId/location'
+    | '/e/$establishmentId/s/$serviceId/members'
     | '/e/$establishmentId/s/$serviceId/planning'
     | '/e/$establishmentId/s/$serviceId/soignant'
     | '/e/$establishmentId/s/$serviceId/thematic'
@@ -1099,6 +1122,7 @@ export interface FileRouteTypes {
     | '/_authenticated/e/$establishmentId/s/$serviceId/'
     | '/_authenticated/e/$establishmentId/s/$serviceId/_settings/diagnostic-template'
     | '/_authenticated/e/$establishmentId/s/$serviceId/_settings/location'
+    | '/_authenticated/e/$establishmentId/s/$serviceId/_settings/members'
     | '/_authenticated/e/$establishmentId/s/$serviceId/_settings/planning'
     | '/_authenticated/e/$establishmentId/s/$serviceId/_settings/soignant'
     | '/_authenticated/e/$establishmentId/s/$serviceId/_settings/thematic'
@@ -1303,6 +1327,7 @@ export const routeTree = rootRoute
       "children": [
         "/_authenticated/e/$establishmentId/s/$serviceId/_settings/diagnostic-template",
         "/_authenticated/e/$establishmentId/s/$serviceId/_settings/location",
+        "/_authenticated/e/$establishmentId/s/$serviceId/_settings/members",
         "/_authenticated/e/$establishmentId/s/$serviceId/_settings/planning",
         "/_authenticated/e/$establishmentId/s/$serviceId/_settings/soignant",
         "/_authenticated/e/$establishmentId/s/$serviceId/_settings/thematic"
@@ -1334,6 +1359,10 @@ export const routeTree = rootRoute
     },
     "/_authenticated/e/$establishmentId/s/$serviceId/_settings/location": {
       "filePath": "_authenticated/e/$establishmentId/s/$serviceId/_settings/location.tsx",
+      "parent": "/_authenticated/e/$establishmentId/s/$serviceId/_settings"
+    },
+    "/_authenticated/e/$establishmentId/s/$serviceId/_settings/members": {
+      "filePath": "_authenticated/e/$establishmentId/s/$serviceId/_settings/members.tsx",
       "parent": "/_authenticated/e/$establishmentId/s/$serviceId/_settings"
     },
     "/_authenticated/e/$establishmentId/s/$serviceId/_settings/planning": {

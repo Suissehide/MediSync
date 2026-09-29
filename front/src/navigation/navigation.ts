@@ -37,7 +37,7 @@ export type NavItem = {
   activeAlso?: readonly RoutePath[]
 }
 
-// Groupes affiches en menu deroulant plutot qu'en onglets : l'administration du service tient cinq
+// Groupes affiches en menu deroulant plutot qu'en onglets : l'administration du service tient six
 // ecrans, qui en onglets satureraient la barre, et releve d'un autre travail que le quotidien.
 export const MENU_GROUPS: ReadonlySet<string> = new Set(['Administration'])
 
@@ -90,6 +90,13 @@ export const NAVIGATION: Record<Scale, readonly NavItem[]> = {
       permission: 'referentials:write',
       group: 'Administration',
       description: 'Modèles de bilan du service',
+    },
+    {
+      label: 'Membres',
+      to: '/e/$establishmentId/s/$serviceId/members',
+      permission: 'referentials:write',
+      group: 'Administration',
+      description: 'Comptes qui travaillent dans le service',
     },
     // Propres a chaque service depuis le 2026-09-29 : un soignant est un metier du service, une
     // salle un lieu du service.

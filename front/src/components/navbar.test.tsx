@@ -274,7 +274,7 @@ describe('onglets de la barre de navigation', () => {
     })
     expect(menus()).toEqual(['Administration'])
 
-    // Le menu ouvert : ses cinq ecrans, en sous-categories, dont Soignants et Salles (propres au
+    // Le menu ouvert : ses six ecrans, en sous-categories, dont Membres, Soignants et Salles (propres au
     // service depuis le 2026-09-29).
     await userEvent.click(
       screen.getByRole('button', { name: 'Administration' }),
@@ -283,7 +283,7 @@ describe('onglets de la barre de navigation', () => {
       await screen.findByText('Administration · Cardio'),
     ).toBeInTheDocument()
     const sousCategories = await screen.findAllByRole('link', {
-      name: /Planning|Thématiques|Diagnostics|Soignants|Salles/,
+      name: /Planning|Thématiques|Diagnostics|Membres|Soignants|Salles/,
     })
     expect(
       sousCategories.map((lien) => lien.querySelector('span')?.textContent),
@@ -291,6 +291,7 @@ describe('onglets de la barre de navigation', () => {
       'Planning',
       'Thématiques',
       'Diagnostics éducatifs',
+      'Membres',
       'Soignants',
       'Salles',
     ])
