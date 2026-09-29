@@ -3,6 +3,7 @@ import type {
   MembershipRow,
   MembershipUpdateRepo,
   ServiceAssignment,
+  ServiceMemberRow,
 } from '../infra/orm/repositories/membership.repository.interface'
 
 // Miroir des types du repository : le domaine n'ajoute ni ne retire de
@@ -13,7 +14,6 @@ export type MembershipUpdateDomain = MembershipUpdateRepo
 export type MembershipAddByEmailDomain = {
   email: string
   role: EstablishmentRole
-  soignantId: string | null
   services: ServiceAssignment[]
 }
 
@@ -34,7 +34,11 @@ export type MembershipCreateAccountResult = {
   accessLink: { token: string }
 }
 
+export type ServiceMemberRowDomain = ServiceMemberRow
+
 export interface MembershipDomainInterface {
+  findServiceMembers: () => Promise<ServiceMemberRowDomain[]>
+  setServiceSoignant: (serviceMembershipId: string, soignantId: string | null) => Promise<ServiceMemberRowDomain>
   findAll: () => Promise<MembershipRowDomain[]>
   addByEmail: (
     params: MembershipAddByEmailDomain,

@@ -20,18 +20,21 @@ class LocationRepository implements LocationRepositoryInterface {
     this.tenantContext = tenantContext
   }
 
-  private get establishmentScope() {
-    return this.tenantContext.establishmentScope()
+  // Modele de service depuis le 2026-09-29 (migration `soignants_salles_par_service`) : chaque
+  // service tient sa propre liste. `scope()` porte serviceId ET establishmentId ; il leve hors
+  // d'un contexte de service.
+  private get scope() {
+    return this.tenantContext.scope()
   }
 
   findAll(): Promise<LocationEntityRepo[]> {
-    return this.prisma.location.findMany({ where: this.establishmentScope })
+    return this.prisma.location.findMany({ where: this.scope })
   }
 
   async findByID(locationID: string): Promise<LocationEntityRepo> {
     try {
       return await this.prisma.location.findUniqueOrThrow({
-        where: { id_establishmentId: { id: locationID, ...this.establishmentScope } },
+        where: { id_serviceId: { id: locationID, serviceId: this.scope.serviceId } },
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
@@ -46,7 +49,7 @@ class LocationRepository implements LocationRepositoryInterface {
   ): Promise<LocationEntityRepo> {
     try {
       return await this.prisma.location.create({
-        data: { name: locationCreateParams.name, ...this.establishmentScope },
+        data: { name: locationCreateParams.name, ...this.scope },
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
@@ -62,7 +65,7 @@ class LocationRepository implements LocationRepositoryInterface {
   ): Promise<LocationEntityRepo> {
     try {
       return await this.prisma.location.update({
-        where: { id_establishmentId: { id: locationID, ...this.establishmentScope } },
+        where: { id_serviceId: { id: locationID, serviceId: this.scope.serviceId } },
         data: { name: locationUpdateParams.name },
       })
     } catch (err) {
@@ -76,7 +79,7 @@ class LocationRepository implements LocationRepositoryInterface {
   async delete(locationID: string): Promise<LocationEntityRepo> {
     try {
       return await this.prisma.location.delete({
-        where: { id_establishmentId: { id: locationID, ...this.establishmentScope } },
+        where: { id_serviceId: { id: locationID, serviceId: this.scope.serviceId } },
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({

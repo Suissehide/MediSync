@@ -17,8 +17,8 @@ export const createService = (
 type MembershipFixture = {
   establishmentId: string
   role?: EstablishmentRole
-  soignantId?: string | null
-  services?: { serviceId: string; role: ServiceRole }[]
+  // Le soignant incarne dans un service se pose sur l'affectation de service (2026-09-29).
+  services?: { serviceId: string; role: ServiceRole; soignantId?: string | null }[]
 }
 
 // Crée un compte et, pour chaque etablissement donné, son appartenance ainsi
@@ -46,11 +46,11 @@ export const createUser = async (params: {
         userId: user.id,
         establishmentId: m.establishmentId,
         role: m.role ?? 'MEMBER',
-        soignantId: m.soignantId ?? null,
         serviceMemberships: {
           create: (m.services ?? []).map((s) => ({
             serviceId: s.serviceId,
             role: s.role,
+            soignantId: s.soignantId ?? null,
             establishmentId: m.establishmentId,
           })),
         },

@@ -45,8 +45,6 @@ model Establishment {
   services               Service[]
   memberships            EstablishmentMembership[]
   patients               Patient[]
-  soignants              Soignant[]
-  locations              Location[]
   superAdminAccessGrants SuperAdminAccessGrant[]
 }
 
@@ -71,28 +69,18 @@ model EstablishmentMembership {
   userId          String
   establishmentId String
   role            EstablishmentRole @default(MEMBER)
-  soignantId      String?
   createdAt       DateTime          @default(now())
 
   user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   establishment      Establishment       @relation(fields: [establishmentId], references: [id])
-  // Référence simple, et non composite. ATTENTION : la raison écrite ici jusqu'à l'étape 4b
-  // était FAUSSE — elle disait « composite impossible : soignantId nullable, establishmentId
-  // requis ». Mesuré à la tâche 4 de l'étape 4b, par édition temporaire du schéma puis
-  // `prisma validate` et `prisma generate` : Prisma 7.8 accepte une relation composite dont un
-  // seul des deux champs référents est nullable (seul un avertissement bénin sur
-  // `onDelete: SetNull` apparaît). Le composite est donc POSSIBLE ici ; il n'est simplement pas
-  // posé, et la cohérence d'établissement est vérifiée par MembershipDomain.
-  // Ce qu'il en coûte de le laisser simple : rien ne garantit au niveau de la base qu'un
-  // soignant rattaché ici appartienne au même établissement que l'appartenance — seule cette
-  // vérification applicative le tient.
-  soignant           Soignant?           @relation(fields: [soignantId], references: [id], onDelete: SetNull)
+  // Le rattachement a un soignant a quitte cette table pour `ServiceMembership.soignantId` :
+  // les soignants sont propres a chaque service depuis le 2026-09-29 (voir
+  // docs/multi-tenant/decisions-navigation.md).
   serviceMemberships ServiceMembership[]
 
   @@unique([userId, establishmentId])
   @@unique([id, establishmentId])
   @@index([establishmentId])
-  @@index([soignantId])
 }
 
 model ServiceMembership {
@@ -101,13 +89,20 @@ model ServiceMembership {
   serviceId                 String
   establishmentId           String
   role                      ServiceRole
+  // Le soignant (un metier du service) que ce membre incarne DANS CE SERVICE — ses taches, par
+  // exemple. Reference simple, nullable : la coherence de service (le soignant appartient bien au
+  // service de cette affectation) est verifiee par MembershipDomain, comme l'etait celle
+  // d'etablissement quand ce lien vivait sur `EstablishmentMembership`.
+  soignantId                String?
   createdAt                 DateTime    @default(now())
 
   establishmentMembership EstablishmentMembership @relation(fields: [establishmentMembershipId], references: [id], onDelete: Cascade)
   service                 Service                 @relation(fields: [serviceId, establishmentId], references: [id, establishmentId])
+  soignant                Soignant?               @relation(fields: [soignantId], references: [id], onDelete: SetNull)
 
   @@unique([establishmentMembershipId, serviceId])
   @@index([serviceId])
+  @@index([soignantId])
 }
 
 model SlotTemplateSoignant {
@@ -117,7 +112,7 @@ model SlotTemplateSoignant {
   establishmentId String
 
   slotTemplate SlotTemplate @relation(fields: [slotTemplateId, serviceId], references: [id, serviceId], onDelete: Cascade)
-  soignant     Soignant     @relation(fields: [soignantId, establishmentId], references: [id, establishmentId], onDelete: Cascade)
+  soignant     Soignant     @relation(fields: [soignantId, serviceId], references: [id, serviceId], onDelete: Cascade)
 
   @@id([slotTemplateId, soignantId])
   @@index([soignantId])
@@ -130,7 +125,7 @@ model SoignantThematic {
   serviceId       String
   establishmentId String
 
-  soignant Soignant @relation(fields: [soignantId, establishmentId], references: [id, establishmentId], onDelete: Cascade)
+  soignant Soignant @relation(fields: [soignantId, serviceId], references: [id, serviceId], onDelete: Cascade)
   thematic Thematic @relation(fields: [thematicId, serviceId], references: [id, serviceId], onDelete: Cascade)
 
   @@id([soignantId, thematicId])
@@ -307,19 +302,22 @@ model Slot {
   @@index([serviceId])
 }
 
+// Un soignant est un METIER qui intervient dans un service (« Infirmiere d'education »,
+// « Dieteticienne »), pas une personne unique de l'etablissement : modele de service depuis le
+// 2026-09-29. Les soignants d'avant ont ete copies dans chaque service de leur etablissement.
 model Soignant {
   id              String @id @default(cuid())
   establishmentId String
+  serviceId       String
   name            String
 
-  establishment     Establishment             @relation(fields: [establishmentId], references: [id])
-  slotTemplateLinks SlotTemplateSoignant[]
-  thematicLinks     SoignantThematic[]
-  todos             Todo[]
-  memberships       EstablishmentMembership[]
+  slotTemplateLinks  SlotTemplateSoignant[]
+  thematicLinks      SoignantThematic[]
+  todos              Todo[]
+  serviceMemberships ServiceMembership[]
 
-  @@unique([id, establishmentId])
-  @@index([establishmentId])
+  @@unique([id, serviceId])
+  @@index([serviceId])
 }
 
 model Thematic {
@@ -341,16 +339,19 @@ model Thematic {
   @@index([serviceId])
 }
 
+// Une salle est propre a un service depuis le 2026-09-29, comme les soignants : chaque service
+// tient sa liste de lieux. Les salles d'avant ont ete copiees dans chaque service.
 model Location {
   id              String @id @default(cuid())
   establishmentId String
+  serviceId       String
   name            String
 
-  establishment Establishment  @relation(fields: [establishmentId], references: [id])
   slotTemplates SlotTemplate[]
 
-  @@unique([establishmentId, name])
-  @@unique([id, establishmentId])
+  @@unique([serviceId, name])
+  @@unique([id, serviceId])
+  @@index([serviceId])
 }
 
 model Patient {

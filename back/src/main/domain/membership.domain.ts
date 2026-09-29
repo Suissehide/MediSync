@@ -10,16 +10,17 @@ import type {
   MembershipCreateAccountResult,
   MembershipDomainInterface,
   MembershipRowDomain,
+  ServiceMemberRowDomain,
   MembershipUpdateDomain,
 } from '../types/domain/membership.domain.interface'
 import type {
   MembershipRepositoryInterface,
   ServiceAssignment,
 } from '../types/infra/orm/repositories/membership.repository.interface'
-import type { SoignantRepositoryInterface } from '../types/infra/orm/repositories/soignant.repository.interface'
 import type { UserRepositoryInterface } from '../types/infra/orm/repositories/user.repository.interface'
 import type { TenantContextInterface } from '../types/utils/tenant-context'
 import type { AppEventBus } from '../utils/app-event-bus'
+import type { SoignantRepositoryInterface } from '../types/infra/orm/repositories/soignant.repository.interface'
 import { hashPassword, randomToken } from '../utils/hash'
 
 // QUATRE refus, un seul message : adresse inconnue, adresse déjà membre d'ici, compte
@@ -77,16 +78,16 @@ const SUPER_ADMIN_ACTIVATION =
 class MembershipDomain implements MembershipDomainInterface {
   private readonly membershipRepository: MembershipRepositoryInterface
   private readonly userRepository: UserRepositoryInterface
-  private readonly soignantRepository: SoignantRepositoryInterface
   private readonly tenantContext: TenantContextInterface
   private readonly appEventBus: AppEventBus
   private readonly accessLinkDomain: AccessLinkDomainInterface
   private readonly postgresOrm: PostgresOrm
+  private readonly soignantRepository: SoignantRepositoryInterface
 
   constructor({
     membershipRepository,
-    userRepository,
     soignantRepository,
+    userRepository,
     tenantContext,
     appEventBus,
     accessLinkDomain,
@@ -94,27 +95,48 @@ class MembershipDomain implements MembershipDomainInterface {
   }: IocContainer) {
     this.membershipRepository = membershipRepository
     this.userRepository = userRepository
-    this.soignantRepository = soignantRepository
     this.tenantContext = tenantContext
     this.appEventBus = appEventBus
     this.accessLinkDomain = accessLinkDomain
     this.postgresOrm = postgresOrm
+    this.soignantRepository = soignantRepository
+  }
+
+  // Sous le contexte de SERVICE (2026-09-29) : les membres du service courant, et le soignant
+  // que chacun y incarne. Le coordinateur regle ce rattachement depuis son service, le seul
+  // endroit ou les soignants — propres a chaque service — sont lisibles.
+  findServiceMembers(): Promise<ServiceMemberRowDomain[]> {
+    return this.membershipRepository.findServiceMembers()
+  }
+
+  async setServiceSoignant(
+    serviceMembershipId: string,
+    soignantId: string | null,
+  ): Promise<ServiceMemberRowDomain> {
+    // Le soignant est lu par un depot borne au service courant : un soignant d'un autre service
+    // (ou d'un autre etablissement) rend 404, jamais un rattachement.
+    if (soignantId) {
+      await this.soignantRepository.findByID(soignantId)
+    }
+    const updated = await this.membershipRepository.setServiceSoignant(serviceMembershipId, soignantId)
+    if (!updated) {
+      throw Boom.notFound('Service member not found')
+    }
+    this.emit('member.updated', updated.establishmentMembershipId)
+    return updated
   }
 
   findAll(): Promise<MembershipRowDomain[]> {
     return this.membershipRepository.findAll()
   }
 
-  // Les références venues du client sont vérifiées dans l'établissement
-  // courant avant toute écriture : le soignant par un repository filtré par
-  // establishmentId, les services par un `count` lui aussi filtré.
+  // Les services venus du client sont vérifiés dans l'établissement courant avant toute
+  // écriture, par un `count` filtré. Le rattachement à un soignant n'est plus posé ici : les
+  // soignants sont propres à chaque service depuis le 2026-09-29, et le coordinateur le règle
+  // depuis son service (`ServiceMemberDomain`).
   private async assertReferences(
-    soignantId: string | null | undefined,
     services: ServiceAssignment[] | undefined,
   ): Promise<void> {
-    if (soignantId) {
-      await this.soignantRepository.findByID(soignantId)
-    }
     for (const service of services ?? []) {
       if (!(await this.membershipRepository.serviceExists(service.serviceId))) {
         throw Boom.notFound(`Service ${service.serviceId} not found`)
@@ -125,7 +147,6 @@ class MembershipDomain implements MembershipDomainInterface {
   async addByEmail({
     email,
     role,
-    soignantId,
     services,
   }: MembershipAddByEmailDomain): Promise<MembershipRowDomain> {
     const user = await this.userRepository.findByEmail(email).catch(() => {
@@ -144,11 +165,10 @@ class MembershipDomain implements MembershipDomainInterface {
     if (user.isSuperAdmin) {
       throw Boom.badRequest(UNADDABLE_EMAIL)
     }
-    await this.assertReferences(soignantId, services)
+    await this.assertReferences(services)
     const membership = await this.membershipRepository.create({
       userId: user.id,
       role,
-      soignantId,
       services,
     })
     this.emit('member.added', membership.id)
@@ -316,7 +336,7 @@ class MembershipDomain implements MembershipDomainInterface {
       await this.assertNotLastAdmin(membership)
     }
     this.assertNotSelfDemotion(membership, params.role)
-    await this.assertReferences(params.soignantId, params.services)
+    await this.assertReferences(params.services)
     const updated = await this.membershipRepository.update(id, params)
     this.emit('member.updated', id)
     return updated
@@ -380,7 +400,6 @@ class MembershipDomain implements MembershipDomainInterface {
     firstName,
     lastName,
     role,
-    soignantId,
     services,
   }: MembershipCreateAccountDomain): Promise<MembershipCreateAccountResult> {
     // Une LECTURE d'abord, jamais un `upsert` : un compte déjà connu ne doit être écrasé ni
@@ -415,7 +434,7 @@ class MembershipDomain implements MembershipDomainInterface {
 
     // Les références soumises sont vérifiées dans l'établissement courant AVANT d'ouvrir la
     // transaction : un 404/400 ne doit rien avoir écrit, ni rien avoir gardé ouvert.
-    await this.assertReferences(soignantId, services)
+    await this.assertReferences(services)
 
     if (existing) {
       // Hors transaction : brûler ~50 ms de CPU la garderait ouverte pour rien.
@@ -442,7 +461,7 @@ class MembershipDomain implements MembershipDomainInterface {
             tx,
           ))
         const membership = await this.membershipRepository.create(
-          { userId: account.id, role, soignantId, services },
+          { userId: account.id, role, services },
           tx,
         )
         const accessLink = await this.accessLinkDomain.issue(

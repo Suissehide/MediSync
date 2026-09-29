@@ -21,7 +21,6 @@ const row = (over: Partial<MembershipRow>): MembershipRow => ({
   userId: 'u1',
   establishmentId: 'e1',
   role: 'ADMIN',
-  soignantId: null,
   createdAt: new Date(),
   user: user(),
   serviceMemberships: [],
@@ -182,7 +181,6 @@ const asAdmin = <T>(ctx: TenantContext, fn: () => Promise<T>) =>
       establishmentRole: 'ADMIN',
       serviceId: null,
       serviceRole: null,
-      soignantId: null,
     },
     fn,
   )
@@ -219,7 +217,6 @@ describe('MembershipDomain', () => {
       domain.addByEmail({
         email: 'new@b.fr',
         role: 'MEMBER',
-        soignantId: 'so1',
         services: [{ serviceId: 's1', role: 'INTERVENANT' }],
       }),
     )
@@ -227,30 +224,19 @@ describe('MembershipDomain', () => {
     expect(events).toEqual(['member.added'])
   })
 
-  it('refuse un service etranger et un soignant etranger', async () => {
+  it('refuse un service etranger', async () => {
     const { domain, ctx } = build([row({})])
     await rejectsWith(
       asAdmin(ctx, () =>
         domain.addByEmail({
           email: 'new@b.fr',
           role: 'MEMBER',
-          soignantId: null,
           services: [{ serviceId: 'zz', role: 'LECTURE' }],
         }),
       ),
       404,
       'Service zz not found',
     )
-    await expect(
-      asAdmin(ctx, () =>
-        domain.addByEmail({
-          email: 'new@b.fr',
-          role: 'MEMBER',
-          soignantId: 'zz',
-          services: [],
-        }),
-      ),
-    ).rejects.toMatchObject({ output: { statusCode: 404 } })
   })
 
   // Sinon un administrateur peut deviner quelles adresses ont un compte sur
@@ -262,7 +248,6 @@ describe('MembershipDomain', () => {
         domain.addByEmail({
           email,
           role: 'MEMBER',
-          soignantId: null,
           services: [],
         }),
       ).catch((err: { output: { payload: unknown } }) => err.output.payload)
@@ -439,7 +424,7 @@ describe('MembershipDomain', () => {
       domain.update('em1', { services: [{ serviceId: 's1', role: 'LECTURE' }] }),
     )
     // Une mise a jour qui ne touche pas du tout aux services reste permise.
-    await asAdmin(ctx, () => domain.update('em1', { soignantId: 'so1' }))
+    await asAdmin(ctx, () => domain.update('em1', { role: 'ADMIN' }))
     expect(calls).toEqual(['update', 'update'])
   })
 
@@ -465,7 +450,6 @@ describe('MembershipDomain', () => {
         firstName: 'Neuf',
         lastName: 'Compte',
         role: 'MEMBER',
-        soignantId: 'so1',
         services: [{ serviceId: 's1', role: 'INTERVENANT' }],
       }),
     )
@@ -487,7 +471,6 @@ describe('MembershipDomain', () => {
       domain.createAccount({
         email: 'new@b.fr',
         role: 'MEMBER',
-        soignantId: null,
         services: [],
       }),
     )
@@ -502,7 +485,6 @@ describe('MembershipDomain', () => {
       domain.createAccount({
         email: 'inconnu@b.fr',
         role: 'MEMBER',
-        soignantId: null,
         services: [],
       }),
     )
@@ -516,7 +498,6 @@ describe('MembershipDomain', () => {
         domain.createAccount({
           email,
           role: 'MEMBER',
-          soignantId: null,
           services: [],
         }),
       )
@@ -534,7 +515,6 @@ describe('MembershipDomain', () => {
         domain.createAccount({
           email: 'inconnu@b.fr',
           role: 'MEMBER',
-          soignantId: null,
           services: [{ serviceId: 'zz', role: 'LECTURE' }],
         }),
       ),
@@ -606,7 +586,6 @@ describe('MembershipDomain', () => {
       domain.createAccount({
         email,
         role: 'MEMBER',
-        soignantId: null,
         services: [],
       } as never),
     )
@@ -642,7 +621,6 @@ describe('MembershipDomain', () => {
       permis.domain.addByEmail({
         email: 'ailleurs@b.fr',
         role: 'MEMBER',
-        soignantId: null,
         services: [],
       }),
     )
@@ -654,7 +632,6 @@ describe('MembershipDomain', () => {
         refuse.domain.addByEmail({
           email: 'superadmin@b.fr',
           role: 'MEMBER',
-          soignantId: null,
           services: [],
         }),
       ),

@@ -1,0 +1,153 @@
+import { buildTestApp, type TestApp } from './setup/app'
+import { testDb, truncateAll } from './setup/db'
+import { adminUrl, createEstablishment, createService, createUser, signIn, tenantUrl } from './setup/fixtures'
+
+// Soignants et salles propres a chaque service (2026-09-29). Un soignant est un METIER du service,
+// une salle un lieu du service ; le coordinateur les gere (`referentials:write`) et regle, depuis
+// son service, quel membre incarne quel soignant (`ServiceMembership.soignantId`).
+//
+// Un seul scenario, monte une fois : la connexion est limitee en debit par instance
+// d'application, et chaque cas ne lit ou n'ecrit que ce qu'il a besoin d'eprouver.
+describe('soignants et salles a l echelle du service', () => {
+  let t: TestApp
+  let E: string
+  let A: string
+  let B: string
+  let coordA: { access_token: string }
+  let intervenantA: { access_token: string }
+  let admin: { access_token: string }
+  let membreId: string
+
+  const call = (
+    cookies: { access_token: string },
+    method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
+    url: string,
+    payload?: object,
+  ) => t.app.inject({ method, url, cookies, ...(payload ? { payload } : {}) })
+
+  beforeAll(async () => {
+    t = await buildTestApp()
+    await truncateAll()
+    E = (await createEstablishment('CHU Haut-Leveque')).id
+    A = (await createService(E, 'Cardiologie')).id
+    B = (await createService(E, 'Pneumologie')).id
+    await createUser({
+      email: 'coord@test.fr',
+      memberships: [{ establishmentId: E, services: [{ serviceId: A, role: 'COORDINATEUR' }] }],
+    })
+    await createUser({
+      email: 'intervenant@test.fr',
+      memberships: [
+        {
+          establishmentId: E,
+          services: [
+            { serviceId: A, role: 'INTERVENANT' },
+            { serviceId: B, role: 'INTERVENANT' },
+          ],
+        },
+      ],
+    })
+    await createUser({
+      email: 'admin@test.fr',
+      memberships: [{ establishmentId: E, role: 'ADMIN' }],
+    })
+    coordA = await signIn(t.app, 'coord@test.fr')
+    intervenantA = await signIn(t.app, 'intervenant@test.fr')
+    admin = await signIn(t.app, 'admin@test.fr')
+    membreId = (
+      await testDb.establishmentMembership.findFirstOrThrow({ where: { user: { email: 'intervenant@test.fr' } } })
+    ).id
+  })
+
+  afterAll(async () => {
+    await t.close()
+    await testDb.$disconnect()
+  })
+
+  it('le coordinateur cree, renomme et supprime un soignant et une salle de son service', async () => {
+    const soignant = await call(coordA, 'POST', tenantUrl(E, A, '/soignant'), { name: 'Dieteticienne' })
+    expect(soignant.statusCode).toBe(201)
+    const salle = await call(coordA, 'POST', tenantUrl(E, A, '/location'), { name: 'Salle d education 1' })
+    expect(salle.statusCode).toBe(201)
+
+    const renomme = await call(coordA, 'PATCH', tenantUrl(E, A, `/soignant/${soignant.json().id}`), {
+      name: 'Dieteticien(ne)',
+      active: true,
+    })
+    expect(renomme.statusCode).toBe(200)
+
+    // Propre au service A : invisible depuis B, meme pour un membre des deux services.
+    const dansB = await call(intervenantA, 'GET', tenantUrl(E, B, '/soignant'))
+    expect(dansB.statusCode).toBe(200)
+    expect(dansB.json()).toEqual([])
+
+    expect((await call(coordA, 'DELETE', tenantUrl(E, A, `/location/${salle.json().id}`))).statusCode).toBe(204)
+  })
+
+  it('refuse l ecriture a un intervenant, qui garde la lecture', async () => {
+    expect((await call(intervenantA, 'POST', tenantUrl(E, A, '/soignant'), { name: 'X' })).statusCode).toBe(403)
+    expect((await call(intervenantA, 'POST', tenantUrl(E, A, '/location'), { name: 'X' })).statusCode).toBe(403)
+    expect((await call(intervenantA, 'GET', tenantUrl(E, A, '/soignant'))).statusCode).toBe(200)
+  })
+
+  it('les anciennes routes d administration n existent plus', async () => {
+    expect((await call(admin, 'GET', adminUrl(E, '/soignant'))).statusCode).toBe(404)
+    expect((await call(admin, 'GET', adminUrl(E, '/location'))).statusCode).toBe(404)
+  })
+
+  it('le coordinateur rattache un membre de son service a un soignant de son service, et /me le reflete', async () => {
+    const infirmiere = await call(coordA, 'POST', tenantUrl(E, A, '/soignant'), { name: 'Infirmiere d education' })
+    const membres = await call(coordA, 'GET', tenantUrl(E, A, '/membres'))
+    expect(membres.statusCode).toBe(200)
+    // Les membres du service A seulement : le coordinateur et l'intervenant, pas l'administrateur.
+    expect(membres.json().map((m: { user: { email: string } }) => m.user.email).sort()).toEqual([
+      'coord@test.fr',
+      'intervenant@test.fr',
+    ])
+    const affectation = membres.json().find((m: { user: { email: string } }) => m.user.email === 'intervenant@test.fr')
+
+    const rattache = await call(coordA, 'PATCH', tenantUrl(E, A, `/membres/${affectation.id}/soignant`), {
+      soignantId: infirmiere.json().id,
+    })
+    expect(rattache.statusCode).toBe(200)
+    expect(rattache.json()).toMatchObject({ soignantId: infirmiere.json().id, user: { email: 'intervenant@test.fr' } })
+
+    const me = await call(intervenantA, 'GET', '/me')
+    const services = me.json().establishments[0].services as { id: string; soignantId: string | null }[]
+    expect(services.find((s) => s.id === A)?.soignantId).toBe(infirmiere.json().id)
+    expect(services.find((s) => s.id === B)?.soignantId).toBeNull()
+
+    // Garder ses services depuis l'administration ne perd pas le rattachement.
+    const maj = await call(admin, 'PATCH', adminUrl(E, `/members/${membreId}`), {
+      services: [
+        { serviceId: A, role: 'INTERVENANT' },
+        { serviceId: B, role: 'LECTURE' },
+      ],
+    })
+    expect(maj.statusCode).toBe(200)
+    const apres = await testDb.serviceMembership.findFirstOrThrow({ where: { id: affectation.id } })
+    expect(apres.soignantId).toBe(infirmiere.json().id)
+  })
+
+  it('refuse un soignant d un autre service et une affectation d un autre service', async () => {
+    const soignantB = await testDb.soignant.create({ data: { name: 'Kine', establishmentId: E, serviceId: B } })
+    const membres = (await call(coordA, 'GET', tenantUrl(E, A, '/membres'))).json() as { id: string }[]
+    const affectationA = membres[0].id
+    const affectationB = (
+      await testDb.serviceMembership.findFirstOrThrow({ where: { serviceId: B } })
+    ).id
+
+    expect(
+      (await call(coordA, 'PATCH', tenantUrl(E, A, `/membres/${affectationA}/soignant`), { soignantId: soignantB.id }))
+        .statusCode,
+    ).toBe(404)
+    expect(
+      (await call(coordA, 'PATCH', tenantUrl(E, A, `/membres/${affectationB}/soignant`), { soignantId: null }))
+        .statusCode,
+    ).toBe(404)
+    expect(
+      (await call(intervenantA, 'PATCH', tenantUrl(E, A, `/membres/${affectationA}/soignant`), { soignantId: null }))
+        .statusCode,
+    ).toBe(403)
+  })
+})

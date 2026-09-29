@@ -13,8 +13,7 @@ export type MeResponse = {
     id: string
     name: string
     role: EstablishmentRole
-    soignantId: string | null
-    services: { id: string; name: string; role: ServiceRole }[]
+    services: { id: string; name: string; role: ServiceRole; soignantId: string | null }[]
     // Dit à l'écran d'où vient cet accès — voir R2 (décisions étape 4a) et
     // `EffectiveMembership.origine` (types/domain/accessGrant.domain.interface.ts). Sans ce
     // champ, `/me` ne pourrait jamais distinguer un établissement où l'utilisateur est
@@ -67,18 +66,18 @@ export const toMeResponse = (
         const serviceById = new Map(
           (membership?.serviceMemberships ?? []).map((sm) => [
             sm.serviceId,
-            sm.service.name,
+            { name: sm.service.name, soignantId: sm.soignantId },
           ]),
         )
         return {
           id: effective.establishmentId,
           name: membership?.establishment.name ?? '',
           role: effective.role,
-          soignantId: membership?.soignantId ?? null,
           services: effective.services.map((service) => ({
             id: service.id,
-            name: serviceById.get(service.id) ?? '',
+            name: serviceById.get(service.id)?.name ?? '',
             role: service.role,
+            soignantId: serviceById.get(service.id)?.soignantId ?? null,
           })),
           origine: effective.origine,
         }
@@ -93,11 +92,12 @@ export const toMeResponse = (
         id: effective.establishmentId,
         name: grant?.establishmentName ?? '',
         role: effective.role,
-        soignantId: null,
         services: effective.services.map((service) => ({
           id: service.id,
           name: serviceNameById.get(service.id) ?? '',
           role: service.role,
+          // Un octroi ne rattache jamais a un soignant.
+          soignantId: null,
         })),
         origine: effective.origine,
       }

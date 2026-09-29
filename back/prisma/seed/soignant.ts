@@ -11,7 +11,7 @@ export default async function seedSoignants(
   const createdSoignants = await Promise.all(
     SOIGNANTS.map((s) =>
       prisma.soignant.create({
-        data: { ...s, establishmentId: tenant.establishmentId },
+        data: { ...s, establishmentId: tenant.establishmentId, serviceId: tenant.serviceId },
       }),
     ),
   )

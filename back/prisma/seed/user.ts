@@ -38,7 +38,9 @@ export default async function seedUsers(
   prisma: PrismaClient,
   establishmentId: string,
   services: { serviceA: Service; serviceB: Service },
-  soignants: Soignant[],
+  // Les soignants de chaque service : le rattachement d'un compte a un soignant se pose sur
+  // chacune de ses affectations, vers le soignant de meme rang dans ce service (2026-09-29).
+  soignantsParService: Map<string, Soignant[]>,
 ) {
   console.log('→ Seeding users...')
 
@@ -90,8 +92,8 @@ export default async function seedUsers(
         lastName: u.lastName,
       },
     })
-    const soignantId =
-      u.soignantIndex !== null ? (soignants[u.soignantIndex]?.id ?? null) : null
+    const soignantDans = (serviceId: string) =>
+      u.soignantIndex !== null ? (soignantsParService.get(serviceId)?.[u.soignantIndex]?.id ?? null) : null
     await prisma.establishmentMembership.upsert({
       where: {
         userId_establishmentId: { userId: user.id, establishmentId },
@@ -101,12 +103,12 @@ export default async function seedUsers(
         userId: user.id,
         establishmentId,
         role: u.establishmentRole,
-        soignantId,
         serviceMemberships: {
           create: u.serviceMemberships.map(({ service, role }) => ({
             serviceId: service.id,
             establishmentId,
             role,
+            soignantId: soignantDans(service.id),
           })),
         },
       },

@@ -11,11 +11,13 @@ export const meResponseSchema = z.object({
       id: z.string(),
       name: z.string(),
       role: z.enum(['ADMIN', 'MEMBER']),
-      soignantId: z.string().nullable(),
       services: z.array(
         z.object({
           id: z.string(),
           name: z.string(),
+          // Le soignant (metier du service) que ce compte incarne DANS CE SERVICE, s'il y en a
+          // un. Porte par l'affectation de service depuis le 2026-09-29.
+          soignantId: z.string().nullable(),
           role: z.enum([
             'COORDINATEUR',
             'INTERVENANT',

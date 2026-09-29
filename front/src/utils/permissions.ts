@@ -49,8 +49,6 @@ export type ServicePermission =
 
 export type EstablishmentPermission =
   | 'services:manage'
-  | 'locations:manage'
-  | 'soignants:manage'
   | 'members:manage'
   | 'activity-log:read'
   | 'activity-log:write'
@@ -100,8 +98,6 @@ export const SERVICE_PERMISSIONS: Record<ServiceRole, readonly ServicePermission
 export const ESTABLISHMENT_PERMISSIONS: Record<EstablishmentRole, readonly EstablishmentPermission[]> = {
   ADMIN: [
     'services:manage',
-    'locations:manage',
-    'soignants:manage',
     'members:manage',
     'activity-log:read',
     'activity-log:write',

@@ -63,31 +63,11 @@ const locationReadRouter: FastifyPluginAsync = (fastify) => {
   return Promise.resolve()
 }
 
-// Administration, sous le préfixe d'établissement : /e/:establishmentId/admin/location.
-const locationAdminRouter: FastifyPluginAsync = (fastify) => {
+// Ecriture, sous le prefixe de service comme la lecture : les locations sont propres a chaque
+// service depuis le 2026-09-29, et leur gestion revient au coordinateur (`referentials:write`,
+// le droit qui gere deja les thematiques et les modeles de diagnostic).
+const locationWriteRouter: FastifyPluginAsync = (fastify) => {
   const { locationDomain, logger } = fastify.iocContainer
-
-  // Get all, pour l'ecran Salles de l'administration d'etablissement, qui vit
-  // sans service en contexte. Meme patron que la liste des soignants
-  // (`soignantAdminRouter`) : aucune permission de lecture des lieux n'existe
-  // au niveau etablissement, on garde donc `locations:manage`, comme les
-  // routes d'ecriture voisines. Meme `locationDomain.findAll()` que la
-  // lecture de service : le repository filtre par etablissement, jamais par
-  // service, les deux routes renvoient donc le meme ensemble.
-  fastify.get(
-    '/',
-    {
-      schema: {
-        response: {
-          200: locationsResponseSchema,
-        },
-      },
-      config: { permission: 'locations:manage' },
-    },
-    () => {
-      return locationDomain.findAll()
-    },
-  )
 
   // Create
   fastify.post<{ Body: CreateLocationBody }>(
@@ -99,7 +79,7 @@ const locationAdminRouter: FastifyPluginAsync = (fastify) => {
           201: locationResponseSchema,
         },
       },
-      config: { permission: 'locations:manage' },
+      config: { permission: 'referentials:write' },
     },
     async (request, reply) => {
       const location = await locationDomain.create(request.body)
@@ -119,7 +99,7 @@ const locationAdminRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
-      config: { permission: 'locations:manage' },
+      config: { permission: 'referentials:write' },
     },
     async (request) => {
       const { locationID } = request.params
@@ -142,7 +122,7 @@ const locationAdminRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
-      config: { permission: 'locations:manage' },
+      config: { permission: 'referentials:write' },
     },
     async (request, reply) => {
       const { locationID } = request.params
@@ -158,4 +138,4 @@ const locationAdminRouter: FastifyPluginAsync = (fastify) => {
   return Promise.resolve()
 }
 
-export { locationReadRouter, locationAdminRouter }
+export { locationReadRouter, locationWriteRouter }

@@ -25,13 +25,15 @@ export const SERVICE_MODELS: readonly string[] = [
   'SoignantThematic',
   'PatientServiceFile',
   'PatientAccessLog',
+  // Modeles de service depuis le 2026-09-29 (un soignant est un metier du service, une salle un
+  // lieu du service) : voir la migration `soignants_salles_par_service`.
+  'Soignant',
+  'Location',
 ]
 
 // Modèles rattachés à un établissement : portent establishmentId.
 export const ESTABLISHMENT_MODELS: readonly string[] = [
   'Patient',
-  'Soignant',
-  'Location',
   'Service',
   'EstablishmentMembership',
   'ServiceMembership',
@@ -184,8 +186,6 @@ export const GLOBAL_TENANT_RELATIONS: Record<string, readonly string[]> = {
     'services',
     'memberships',
     'patients',
-    'soignants',
-    'locations',
   ],
 }
 
@@ -282,8 +282,6 @@ export const MODEL_RELATIONS: Record<string, Record<string, ModelRelation>> = {
     services: many('Service'),
     memberships: many('EstablishmentMembership'),
     patients: many('Patient'),
-    soignants: many('Soignant'),
-    locations: many('Location'),
     superAdminAccessGrants: many('SuperAdminAccessGrant'),
   },
   // Tâche 2, étape 4a : `AccessLink` et `SuperAdminAccessGrant` sont globaux eux aussi (voir
@@ -304,17 +302,6 @@ export const MODEL_RELATIONS: Record<string, Record<string, ModelRelation>> = {
     serviceFiles: many('PatientServiceFile'),
     accessLogs: many('PatientAccessLog'),
   },
-  Soignant: {
-    establishment: one('Establishment'),
-    slotTemplateLinks: many('SlotTemplateSoignant'),
-    thematicLinks: many('SoignantThematic'),
-    todos: many('Todo'),
-    memberships: many('EstablishmentMembership'),
-  },
-  Location: {
-    establishment: one('Establishment'),
-    slotTemplates: many('SlotTemplate'),
-  },
   Service: {
     establishment: one('Establishment'),
     memberships: many('ServiceMembership'),
@@ -324,12 +311,12 @@ export const MODEL_RELATIONS: Record<string, Record<string, ModelRelation>> = {
   EstablishmentMembership: {
     user: one('User'),
     establishment: one('Establishment'),
-    soignant: one('Soignant'),
     serviceMemberships: many('ServiceMembership'),
   },
   ServiceMembership: {
     establishmentMembership: one('EstablishmentMembership'),
     service: one('Service'),
+    soignant: one('Soignant'),
   },
   // `ActivityLog` ne déclare aucune relation dans le schéma : tout include y est donc refusé.
   ActivityLog: {},
@@ -388,6 +375,15 @@ export const MODEL_RELATIONS: Record<string, Record<string, ModelRelation>> = {
   PlanningCycle: {},
   Todo: {
     soignant: one('Soignant'),
+  },
+  Soignant: {
+    slotTemplateLinks: many('SlotTemplateSoignant'),
+    thematicLinks: many('SoignantThematic'),
+    todos: many('Todo'),
+    serviceMemberships: many('ServiceMembership'),
+  },
+  Location: {
+    slotTemplates: many('SlotTemplate'),
   },
   SlotTemplateSoignant: {
     slotTemplate: one('SlotTemplate'),

@@ -27,7 +27,6 @@ describe('routes membres', () => {
   let cookies: { access_token: string }
   let establishmentId: string
   let serviceId: string
-  let soignantId: string
   let selfMembershipId: string
 
   beforeAll(async () => {
@@ -36,10 +35,6 @@ describe('routes membres', () => {
     establishmentId = establishment.id
     const service = await createService(establishmentId, 'S')
     serviceId = service.id
-    const soignant = await testDb.soignant.create({
-      data: { establishmentId, name: 'So' },
-    })
-    soignantId = soignant.id
 
     // Le compte administrateur est aussi coordinateur du service : c'est ce
     // qui lui permet d'atteindre le journal d'activite, monte sous le prefixe
@@ -96,7 +91,6 @@ describe('routes membres', () => {
     const added = await call('POST', '/', {
       email: 'new@b.fr',
       role: 'MEMBER',
-      soignantId,
       services: [{ serviceId, role: 'INTERVENANT' }],
     })
     expect(added.statusCode).toBe(201)
@@ -205,22 +199,7 @@ describe('routes membres', () => {
     expect(unknownEmail.statusCode).toBe(400)
   })
 
-  it('refuse un soignant etranger et deux affectations au meme service', async () => {
-    const foreignSoignant = await testDb.soignant.create({
-      data: {
-        establishmentId: (await createEstablishment('Autre')).id,
-        name: 'Etranger',
-      },
-    })
-    expect(
-      (
-        await call('POST', '/', {
-          email: 'new@b.fr',
-          role: 'MEMBER',
-          soignantId: foreignSoignant.id,
-        })
-      ).statusCode,
-    ).toBe(404)
+  it('refuse deux affectations au meme service', async () => {
     expect(
       (
         await call('POST', '/', {
@@ -354,7 +333,6 @@ describe('routes membres', () => {
       firstName: 'Neuf',
       lastName: 'Compte',
       role: 'MEMBER',
-      soignantId,
       services: [{ serviceId, role: 'INTERVENANT' }],
     })
 
@@ -363,7 +341,6 @@ describe('routes membres', () => {
     expect(res.json().member.serviceMemberships).toEqual([
       { serviceId, role: 'INTERVENANT' },
     ])
-    expect(res.json().member.soignantId).toBe(soignantId)
 
     // 201 ne prouverait rien seul : le compte doit exister, porter le nom soumis, et le
     // jeton doit reellement poser un mot de passe qui ouvre une session.

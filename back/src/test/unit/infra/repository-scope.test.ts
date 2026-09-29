@@ -132,7 +132,8 @@ describe('scoping des repositories d etablissement', () => {
     expect(calls[2]).toMatchObject({ model: 'patient', op: 'create', args: { data: { establishmentId: 'e1' } } })
   })
 
-  it('SoignantRepository et LocationRepository filtrent sur establishmentId', async () => {
+  // Modeles de service depuis le 2026-09-29 : chaque service tient sa liste.
+  it('SoignantRepository et LocationRepository filtrent sur le service courant', async () => {
     const { prisma, calls } = buildFakePrisma()
     const ctx = new TenantContext()
     const soignants = new SoignantRepository(buildContainer(prisma, ctx))
@@ -142,9 +143,9 @@ describe('scoping des repositories d etablissement', () => {
       await soignants.update('so1', { name: 'N' })
       await locations.delete('l1')
     })
-    expect(calls[0]?.args).toMatchObject({ where: { establishmentId: 'e1' } })
-    expect(calls[1]?.args).toMatchObject({ where: { id_establishmentId: { id: 'so1', establishmentId: 'e1' } } })
-    expect(calls[2]?.args).toMatchObject({ where: { id_establishmentId: { id: 'l1', establishmentId: 'e1' } } })
+    expect(calls[0]?.args).toMatchObject({ where: { establishmentId: 'e1', serviceId: 's1' } })
+    expect(calls[1]?.args).toMatchObject({ where: { id_serviceId: { id: 'so1', serviceId: 's1' } } })
+    expect(calls[2]?.args).toMatchObject({ where: { id_serviceId: { id: 'l1', serviceId: 's1' } } })
   })
 
   it('ActivityLogRepository pose le contexte du tenant a l ecriture, null hors requete', async () => {
@@ -496,12 +497,23 @@ describe('MembershipRepository (gestion des membres)', () => {
   })
 
   it('update verifie l appartenance dans le tenant avant de rebattre les affectations', async () => {
-    const { prisma, calls } = buildFakePrisma()
+    // Une affectation existante (sv0, a retirer) et une deja presente (sv2, a garder) : la mise a
+    // jour ne doit plus tout effacer puis tout recreer, ce qui perdrait le soignant rattache a
+    // une affectation conservee (`ServiceMembership.soignantId`, 2026-09-29).
+    const { prisma, calls } = buildFakePrisma({
+      'serviceMembership.findMany': [{ serviceId: 'sv0' }, { serviceId: 'sv2' }],
+    })
     const ctx = new TenantContext()
     const repo = new MembershipRepository(buildContainer(prisma, ctx))
 
     await ctx.run(tenant, () =>
-      repo.update('em1', { role: 'ADMIN', services: [{ serviceId: 'sv1', role: 'LECTURE' }] }))
+      repo.update('em1', {
+        role: 'ADMIN',
+        services: [
+          { serviceId: 'sv1', role: 'LECTURE' },
+          { serviceId: 'sv2', role: 'COORDINATEUR' },
+        ],
+      }))
 
     // L'identifiant d'appartenance sert de cle etrangere aux ServiceMembership
     // ecrits ensuite : il est d'abord prouve appartenir a l'etablissement.
@@ -510,19 +522,31 @@ describe('MembershipRepository (gestion des membres)', () => {
       args: { where: { id_establishmentId: { id: 'em1', establishmentId: 'e1' } } },
     })
     expect(calls[1]).toMatchObject({
-      model: 'serviceMembership', op: 'deleteMany',
+      model: 'serviceMembership', op: 'findMany',
       args: { where: { establishmentMembershipId: 'em1', establishmentId: 'e1' } },
     })
     expect(calls[2]).toMatchObject({
-      model: 'serviceMembership', op: 'createMany',
-      args: {
-        data: [{
-          establishmentMembershipId: 'em1', serviceId: 'sv1',
-          role: 'LECTURE', establishmentId: 'e1',
-        }],
-      },
+      model: 'serviceMembership', op: 'deleteMany',
+      args: { where: { establishmentMembershipId: 'em1', establishmentId: 'e1', serviceId: { in: ['sv0'] } } },
     })
     expect(calls[3]).toMatchObject({
+      model: 'serviceMembership', op: 'create',
+      args: {
+        data: {
+          establishmentMembershipId: 'em1', serviceId: 'sv1',
+          role: 'LECTURE', establishmentId: 'e1',
+        },
+      },
+    })
+    // L'affectation conservee est mise a jour sur place : son soignant n'est pas touche.
+    expect(calls[4]).toMatchObject({
+      model: 'serviceMembership', op: 'updateMany',
+      args: {
+        where: { establishmentMembershipId: 'em1', establishmentId: 'e1', serviceId: 'sv2' },
+        data: { role: 'COORDINATEUR' },
+      },
+    })
+    expect(calls[5]).toMatchObject({
       model: 'establishmentMembership', op: 'update',
       args: {
         where: { id_establishmentId: { id: 'em1', establishmentId: 'e1' } },

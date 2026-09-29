@@ -15,7 +15,7 @@ import { diagnosticEducatifRouter } from './diagnosticEducatif'
 import { diagnosticEducatifTemplateRouter } from './diagnosticEducatifTemplate'
 import { enrollmentIssueRouter } from './enrollmentIssue'
 import { forbiddenWeekRouter } from './forbiddenWeek'
-import { locationReadRouter } from './location'
+import { locationReadRouter, locationWriteRouter } from './location'
 import { pathwayRouter } from './pathway'
 import { pathwayTemplateRouter } from './pathwayTemplate'
 import { patientAccessLogRouter } from './patientAccessLog'
@@ -24,7 +24,8 @@ import { patientServiceFileRouter } from './patientServiceFile'
 import { planningCycleRouter } from './planningCycle'
 import { slotRouter } from './slot'
 import { slotTemplateRouter } from './slotTemplate'
-import { soignantReadRouter } from './soignant'
+import { serviceMembersRouter } from './serviceMembers'
+import { soignantReadRouter, soignantWriteRouter } from './soignant'
 import { thematicRouter } from './thematic'
 import { todoRouter } from './todo'
 
@@ -168,8 +169,10 @@ const tenantRoutes: FastifyPluginAsyncZod = async (fastify) => {
   await fastify.register(pathwayRouter, { prefix: '/pathway' })
   await fastify.register(pathwayTemplateRouter, { prefix: '/pathway-template' })
   await fastify.register(soignantReadRouter, { prefix: '/soignant' })
+  await fastify.register(soignantWriteRouter, { prefix: '/soignant' })
   await fastify.register(thematicRouter, { prefix: '/thematic' })
   await fastify.register(locationReadRouter, { prefix: '/location' })
+  await fastify.register(locationWriteRouter, { prefix: '/location' })
   await fastify.register(patientRouter, { prefix: '/patient' })
   await fastify.register(patientServiceFileRouter, { prefix: '/patient/:patientID/service-file' })
   await fastify.register(diagnosticEducatifTemplateRouter, { prefix: '/diagnostic-template' })
@@ -178,6 +181,7 @@ const tenantRoutes: FastifyPluginAsyncZod = async (fastify) => {
   await fastify.register(patientAccessLogRouter, { prefix: '/patient/:patientID/acces' })
   await fastify.register(forbiddenWeekRouter, { prefix: '/forbidden-week' })
   await fastify.register(planningCycleRouter, { prefix: '/planning-cycle' })
+  await fastify.register(serviceMembersRouter, { prefix: '/membres' })
 }
 
 export { tenantRoutes }

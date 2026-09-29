@@ -5,14 +5,14 @@ import type {
 
 export type SoignantEntityDomain = Soignant
 // Miroir de SoignantCreateEntityRepo/SoignantUpdateEntityRepo : le repository
-// pose establishmentId lui-même, l'appelant ne le fournit pas.
+// pose establishmentId et serviceId lui-même, l'appelant ne les fournit pas.
 export type SoignantCreateEntityDomain = Omit<
   Prisma.SoignantUncheckedCreateInput,
-  'establishmentId' | 'slotTemplateLinks'
+  'establishmentId' | 'serviceId' | 'slotTemplateLinks'
 >
 export type SoignantUpdateEntityDomain = Omit<
   Prisma.SoignantUncheckedUpdateInput,
-  'establishmentId'
+  'establishmentId' | 'serviceId'
 >
 
 export interface SoignantDomainInterface {

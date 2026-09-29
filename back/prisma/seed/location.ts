@@ -12,13 +12,13 @@ export default async function seedLocations(
     LOCATIONS.map((name) =>
       prisma.location.upsert({
         where: {
-          establishmentId_name: {
-            establishmentId: tenant.establishmentId,
+          serviceId_name: {
+            serviceId: tenant.serviceId,
             name,
           },
         },
         update: {},
-        create: { name, establishmentId: tenant.establishmentId },
+        create: { name, establishmentId: tenant.establishmentId, serviceId: tenant.serviceId },
       }),
     ),
   )

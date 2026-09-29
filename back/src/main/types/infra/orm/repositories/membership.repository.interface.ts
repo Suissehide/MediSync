@@ -25,16 +25,37 @@ export type ServiceAssignment = { serviceId: string; role: ServiceRole }
 export type MembershipCreateRepo = {
   userId: string
   role: EstablishmentRole
-  soignantId: string | null
   services: ServiceAssignment[]
 }
 export type MembershipUpdateRepo = {
   role?: EstablishmentRole
-  soignantId?: string | null
   services?: ServiceAssignment[]
 }
 
+// Un membre d'UN service, vu depuis ce service (2026-09-29) : son affectation, son role et le
+// soignant qu'il incarne ici. L'identite du compte n'y figure que pour l'afficher.
+export type ServiceMemberRow = {
+  id: string
+  establishmentMembershipId: string
+  role: ServiceRole
+  soignantId: string | null
+  establishmentMembership: {
+    user: {
+      id: string
+      email: string
+      firstName: string | null
+      lastName: string | null
+      deactivatedAt: Date | null
+    }
+  }
+}
+
 export interface MembershipRepositoryInterface {
+  // Sous le contexte de SERVICE : les affectations du service courant.
+  findServiceMembers: () => Promise<ServiceMemberRow[]>
+  // Sous le contexte de SERVICE : pose le soignant d'une affectation du service courant. `null`
+  // si l'affectation n'est pas de ce service (le domaine en fait un 404).
+  setServiceSoignant: (serviceMembershipId: string, soignantId: string | null) => Promise<ServiceMemberRow | null>
   findAll: () => Promise<MembershipRow[]>
   findByID: (id: string) => Promise<MembershipRow>
   findByUserID: (userId: string) => Promise<MembershipRow | null>

@@ -3,11 +3,9 @@ import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 import { assertRoutePermission } from '../plugins/tenant.plugin'
 import { activityLogRouter } from './activityLog'
 import { grantsRouter } from './grants'
-import { locationAdminRouter } from './location'
 import { membersRouter } from './members'
 import { patientAccessLogAdminRouter } from './patientAccessLog'
 import { servicesRouter } from './services'
-import { soignantAdminRouter } from './soignant'
 
 const establishmentAdminRoutes: FastifyPluginAsyncZod = async (fastify) => {
   fastify.addHook('onRoute', assertRoutePermission)
@@ -22,8 +20,6 @@ const establishmentAdminRoutes: FastifyPluginAsyncZod = async (fastify) => {
   fastify.addHook('preSerialization', fastify.stripClinicalFields)
 
   await fastify.register(membersRouter, { prefix: '/members' })
-  await fastify.register(soignantAdminRouter, { prefix: '/soignant' })
-  await fastify.register(locationAdminRouter, { prefix: '/location' })
   await fastify.register(grantsRouter, { prefix: '/grants' })
   await fastify.register(servicesRouter, { prefix: '/services' })
   await fastify.register(patientAccessLogAdminRouter, { prefix: '/patients/:patientID/acces' })

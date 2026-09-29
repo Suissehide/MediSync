@@ -29,7 +29,6 @@ const assignmentsSchema = z
 export const memberResponseSchema = z.object({
   id: z.string(),
   role: establishmentRoleSchema,
-  soignantId: z.string().nullable(),
   user: z.object({
     id: z.string(),
     email: z.string(),
@@ -48,12 +47,10 @@ export const membersResponseSchema = z.array(memberResponseSchema)
 export const addMemberSchema = z.object({
   email: z.email(),
   role: establishmentRoleSchema,
-  soignantId: z.cuid().nullable().default(null),
   services: assignmentsSchema.default([]),
 })
 export const updateMemberSchema = z.object({
   role: establishmentRoleSchema.optional(),
-  soignantId: z.cuid().nullable().optional(),
   services: assignmentsSchema.optional(),
 })
 // Meme raison : les appartenances des comptes preexistants portent `em_...`, fabrique par la
@@ -77,7 +74,6 @@ export const createMemberAccountSchema = z.object({
   firstName: z.string().trim().optional(),
   lastName: z.string().trim().optional(),
   role: establishmentRoleSchema,
-  soignantId: z.cuid().nullable().default(null),
   services: assignmentsSchema.default([]),
 })
 
@@ -100,7 +96,6 @@ export const createMemberAccountResponseSchema = z.object({
   member: z.object({
     id: z.string(),
     role: establishmentRoleSchema,
-    soignantId: z.string().nullable(),
     serviceMemberships: z.array(
       z.object({ serviceId: z.string(), role: serviceRoleSchema }),
     ),
@@ -144,12 +139,10 @@ export const memberAccessLinkResponseSchema = z.object({
 export const projectCreatedMember = (member: {
   id: string
   role: 'ADMIN' | 'MEMBER'
-  soignantId: string | null
   serviceMemberships: { serviceId: string; role: ServiceRole }[]
 }) => ({
   id: member.id,
   role: member.role,
-  soignantId: member.soignantId,
   serviceMemberships: member.serviceMemberships,
 })
 

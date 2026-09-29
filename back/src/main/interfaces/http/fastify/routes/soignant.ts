@@ -63,33 +63,11 @@ const soignantReadRouter: FastifyPluginAsync = (fastify) => {
   return Promise.resolve()
 }
 
-// Administration, sous le préfixe d'établissement : /e/:establishmentId/soignant.
-const soignantAdminRouter: FastifyPluginAsync = (fastify) => {
+// Ecriture, sous le prefixe de service comme la lecture : les soignants sont propres a chaque
+// service depuis le 2026-09-29, et leur gestion revient au coordinateur (`referentials:write`,
+// le droit qui gere deja les thematiques et les modeles de diagnostic).
+const soignantWriteRouter: FastifyPluginAsync = (fastify) => {
   const { soignantDomain, logger } = fastify.iocContainer
-
-  // Get all. Aucune permission de lecture des soignants n'existe au niveau
-  // établissement (voir docs/multi-tenant/habilitations.md) : on garde donc
-  // `soignants:manage`, comme les trois routes voisines de ce routeur — un
-  // administrateur qui gère les soignants peut aussi en lister la liste.
-  // Même `soignantDomain.findAll()` que la route de lecture montée sous le
-  // préfixe de service (`soignantReadRouter` ci-dessus) : le repository
-  // filtre déjà par établissement, jamais par service (voir
-  // `SoignantRepository.findAll`), les deux routes renvoient donc le même
-  // ensemble — seuls le préfixe d'URL et la permission exigée diffèrent.
-  fastify.get(
-    '/',
-    {
-      schema: {
-        response: {
-          200: soignantsResponseSchema,
-        },
-      },
-      config: { permission: 'soignants:manage' },
-    },
-    () => {
-      return soignantDomain.findAll()
-    },
-  )
 
   // Create
   fastify.post<{ Body: CreateSoignantBody }>(
@@ -101,7 +79,7 @@ const soignantAdminRouter: FastifyPluginAsync = (fastify) => {
           201: soignantResponseSchema,
         },
       },
-      config: { permission: 'soignants:manage' },
+      config: { permission: 'referentials:write' },
     },
     async (request, reply) => {
       const soignant = await soignantDomain.create(request.body)
@@ -121,7 +99,7 @@ const soignantAdminRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
-      config: { permission: 'soignants:manage' },
+      config: { permission: 'referentials:write' },
     },
     async (request) => {
       const { soignantID } = request.params
@@ -144,7 +122,7 @@ const soignantAdminRouter: FastifyPluginAsync = (fastify) => {
           404: z.object({ message: z.string() }),
         },
       },
-      config: { permission: 'soignants:manage' },
+      config: { permission: 'referentials:write' },
     },
     async (request, reply) => {
       const { soignantID } = request.params
@@ -160,4 +138,4 @@ const soignantAdminRouter: FastifyPluginAsync = (fastify) => {
   return Promise.resolve()
 }
 
-export { soignantReadRouter, soignantAdminRouter }
+export { soignantReadRouter, soignantWriteRouter }

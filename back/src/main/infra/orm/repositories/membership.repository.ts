@@ -4,6 +4,7 @@ import type {
   MembershipRepositoryInterface,
   MembershipRow,
   MembershipUpdateRepo,
+  ServiceMemberRow,
 } from '../../../types/infra/orm/repositories/membership.repository.interface'
 import type { PrimaTransactionClient } from '../../../types/infra/orm/client'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
@@ -34,6 +35,45 @@ class MembershipRepository implements MembershipRepositoryInterface {
 
   private get establishmentScope() {
     return this.tenantContext.establishmentScope()
+  }
+
+  // Les membres d'un SERVICE (2026-09-29), lus sous le contexte de ce service : `scope()` porte
+  // establishmentId (le filtre qu'exige cette famille) ET serviceId (le service courant). Meme
+  // regle B que ci-dessus pour `user` : une identite precise, sans `password` ni `salt`.
+  private readonly serviceMemberSelect = {
+    id: true,
+    establishmentMembershipId: true,
+    role: true,
+    soignantId: true,
+    establishmentMembership: {
+      select: {
+        user: {
+          select: { id: true, email: true, firstName: true, lastName: true, deactivatedAt: true },
+        },
+      },
+    },
+  } as const
+
+  findServiceMembers(): Promise<ServiceMemberRow[]> {
+    const { establishmentId, serviceId } = this.tenantContext.scope()
+    return this.prisma.serviceMembership.findMany({
+      where: { establishmentId, serviceId },
+      select: this.serviceMemberSelect,
+      orderBy: { createdAt: 'asc' },
+    })
+  }
+
+  async setServiceSoignant(
+    serviceMembershipId: string,
+    soignantId: string | null,
+  ): Promise<ServiceMemberRow | null> {
+    const { establishmentId, serviceId } = this.tenantContext.scope()
+    const where = { id: serviceMembershipId, establishmentId, serviceId }
+    const { count } = await this.prisma.serviceMembership.updateMany({ where, data: { soignantId } })
+    if (count === 0) {
+      return null
+    }
+    return this.prisma.serviceMembership.findFirst({ where, select: this.serviceMemberSelect })
   }
 
   private get rowInclude() {
@@ -185,17 +225,39 @@ class MembershipRepository implements MembershipRepositoryInterface {
           where: { id_establishmentId: { id, establishmentId } },
         })
         if (services) {
-          await tx.serviceMembership.deleteMany({
+          // Retirer, mettre a jour ou ajouter, jamais tout effacer puis tout recreer : une
+          // affectation conservee garde son rattachement a un soignant du service
+          // (`ServiceMembership.soignantId`, regle par le coordinateur), que l'ecran des membres
+          // de l'etablissement ne connait pas et ne renvoie donc pas.
+          const existantes = await tx.serviceMembership.findMany({
             where: { establishmentMembershipId: id, establishmentId },
+            select: { serviceId: true },
           })
-          await tx.serviceMembership.createMany({
-            data: services.map((service) => ({
-              establishmentMembershipId: id,
-              serviceId: service.serviceId,
-              role: service.role,
-              establishmentId,
-            })),
-          })
+          const voulues = new Set(services.map((service) => service.serviceId))
+          const retirees = existantes.map((a) => a.serviceId).filter((serviceId) => !voulues.has(serviceId))
+          if (retirees.length > 0) {
+            await tx.serviceMembership.deleteMany({
+              where: { establishmentMembershipId: id, establishmentId, serviceId: { in: retirees } },
+            })
+          }
+          const deja = new Set(existantes.map((a) => a.serviceId))
+          for (const service of services) {
+            if (deja.has(service.serviceId)) {
+              await tx.serviceMembership.updateMany({
+                where: { establishmentMembershipId: id, establishmentId, serviceId: service.serviceId },
+                data: { role: service.role },
+              })
+            } else {
+              await tx.serviceMembership.create({
+                data: {
+                  establishmentMembershipId: id,
+                  serviceId: service.serviceId,
+                  role: service.role,
+                  establishmentId,
+                },
+              })
+            }
+          }
         }
         return await tx.establishmentMembership.update({
           where: { id_establishmentId: { id, establishmentId } },

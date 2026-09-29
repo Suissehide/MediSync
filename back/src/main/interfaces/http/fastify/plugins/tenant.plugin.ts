@@ -98,15 +98,17 @@ export const resolveTenantFromUser = (
   if (!membership) {
     throw Boom.notFound()
   }
-  // Le soignant lié n'existe que pour une appartenance RÉELLE (un octroi n'en pose jamais) : lu
-  // séparément sur `user.establishmentMemberships`, une simple consultation de donnée déjà
-  // chargée — pas une seconde décision sur ce qui est accessible, qui reste entièrement celle
+  // Le soignant lié n'existe que pour une appartenance RÉELLE (un octroi n'en pose jamais), et
+  // seulement dans un SERVICE : depuis le 2026-09-29, il est porté par l'affectation de service
+  // (`ServiceMembership.soignantId`), les soignants étant propres à chaque service. Lu sur
+  // `user.establishmentMemberships`, une simple consultation de donnée déjà chargée — pas une
+  // seconde décision sur ce qui est accessible, qui reste entièrement celle
   // d'`effectiveMemberships` ci-dessus.
-  const soignantId =
+  const soignantDuService = (serviceId: string): string | null =>
     membership.origine === 'reelle'
-      ? (user.establishmentMemberships.find(
-          (m) => m.establishmentId === params.establishmentId,
-        )?.soignantId ?? null)
+      ? (user.establishmentMemberships
+          .find((m) => m.establishmentId === params.establishmentId)
+          ?.serviceMemberships.find((sm) => sm.serviceId === serviceId)?.soignantId ?? null)
       : null
   if (options.requireEstablishmentAdmin) {
     if (membership.role !== 'ADMIN') {
@@ -118,7 +120,7 @@ export const resolveTenantFromUser = (
       establishmentRole: membership.role,
       serviceId: null,
       serviceRole: null,
-      soignantId,
+      soignantId: null,
       // Etape 4b, tache 2 : le journal des consultations (`PatientAccessLogDomain.record`) doit
       // pouvoir distinguer un acces obtenu par octroi temporaire d'un acces reel — sans quoi les
       // deux seraient indiscernables l'un de l'autre dans le journal, precisement ce qu'un
@@ -138,7 +140,7 @@ export const resolveTenantFromUser = (
     establishmentRole: membership.role,
     serviceId: service.id,
     serviceRole: service.role,
-    soignantId,
+    soignantId: soignantDuService(service.id),
     origine: membership.origine,
   }
 }

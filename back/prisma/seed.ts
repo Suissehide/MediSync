@@ -63,16 +63,19 @@ async function seedService(
   prisma: PrismaClient,
   establishmentId: string,
   service: Service,
-  soignants: Awaited<ReturnType<typeof seedSoignants>>,
-  locations: Awaited<ReturnType<typeof seedLocations>>,
   content: ServiceContent,
 ) {
   const tenant = { establishmentId, serviceId: service.id }
 
+  // Soignants et salles sont propres a chaque service depuis le 2026-09-29 : chaque service
+  // recoit son propre jeu, sous les memes noms.
+  const soignants = await seedSoignants(prisma, tenant)
+  const locations = await seedLocations(prisma, tenant)
   const thematics = await seedThematics(prisma, soignants, tenant)
   await seedPatients(prisma, tenant, content.patients)
   await seedPathwayTemplates(prisma, soignants, locations, thematics, tenant)
   await seedTodos(prisma, tenant, content.todos)
+  return soignants
 }
 
 async function main() {
@@ -80,40 +83,17 @@ async function main() {
 
   const { establishment, serviceA, serviceB } = await seedTenant(prisma)
 
-  // Soignants et locaux sont des ressources d'établissement (pas de
-  // service) : le personnel et les salles sont partagés entre les deux
-  // services, ils ne sont donc peuplés qu'une fois.
-  const soignants = await seedSoignants(prisma, {
-    establishmentId: establishment.id,
-    serviceId: serviceA.id,
-  })
-  const locations = await seedLocations(prisma, {
-    establishmentId: establishment.id,
-    serviceId: serviceA.id,
-  })
-
-  await seedService(
-    prisma,
-    establishment.id,
-    serviceA,
-    soignants,
-    locations,
-    CARDIOLOGIE,
-  )
-  await seedService(
-    prisma,
-    establishment.id,
-    serviceB,
-    soignants,
-    locations,
-    PNEUMOLOGIE,
-  )
+  const soignantsA = await seedService(prisma, establishment.id, serviceA, CARDIOLOGIE)
+  const soignantsB = await seedService(prisma, establishment.id, serviceB, PNEUMOLOGIE)
 
   await seedUsers(
     prisma,
     establishment.id,
     { serviceA, serviceB },
-    soignants,
+    new Map([
+      [serviceA.id, soignantsA],
+      [serviceB.id, soignantsB],
+    ]),
   )
 
   console.log('✅ Seeding completed successfully!')

@@ -840,21 +840,21 @@ describe('assertTenantScope', () => {
       expect(() =>
         assertTenantScope(
           {
-            model: 'Soignant',
+            model: 'Patient',
             operation: 'findMany',
-            args: { where: { establishmentId: 'e1' }, select: { id: true, todos: true } },
+            args: { where: { establishmentId: 'e1' }, select: { id: true, serviceFiles: true } },
           },
           store,
         ),
-      ).toThrow(/todos/)
+      ).toThrow(/serviceFiles/)
       expect(() =>
         assertTenantScope(
           {
-            model: 'Soignant',
+            model: 'Patient',
             operation: 'findMany',
             args: {
               where: { establishmentId: 'e1' },
-              select: { id: true, todos: { where: { serviceId: 's1' } } },
+              select: { id: true, serviceFiles: { where: { serviceId: 's1' } } },
             },
           },
           store,
@@ -863,9 +863,9 @@ describe('assertTenantScope', () => {
       expect(() =>
         assertTenantScope(
           {
-            model: 'Soignant',
+            model: 'Patient',
             operation: 'findMany',
-            args: { where: { establishmentId: 'e1' }, include: { todos: false } },
+            args: { where: { establishmentId: 'e1' }, include: { serviceFiles: false } },
           },
           store,
         ),
@@ -957,12 +957,14 @@ describe('assertTenantScope', () => {
           adminStore,
         ),
       ).not.toThrow()
+      // Depuis le 2026-09-29, `Soignant` est un modele de SERVICE : l'administration
+      // d'etablissement, sans service en contexte, ne peut plus le lire.
       expect(() =>
         assertTenantScope(
           { model: 'Soignant', operation: 'findMany', args: { where: { establishmentId: 'e1' } } },
           adminStore,
         ),
-      ).not.toThrow()
+      ).toThrow(TenantScopeMissingError)
     })
   })
 
@@ -1074,7 +1076,7 @@ describe('assertTenantScope', () => {
       expect(() => chain(true)).not.toThrow()
     })
 
-    it('refuse soignant > todos atteint par todo > soignant', () => {
+    it('laisse passer soignant > todos atteint par todo > soignant, toute la chaine etant de service depuis le 2026-09-29', () => {
       const chain = (filtered: boolean) =>
         assertTenantScope(
           {
@@ -1091,11 +1093,13 @@ describe('assertTenantScope', () => {
           },
           store,
         )
-      expect(() => chain(false)).toThrow(TenantScopeMissingError)
+      // `Soignant` et `Location` sont des modeles de service : plus aucune transition
+      // etablissement -> service dans cette chaine, donc plus de filtre exige.
+      expect(() => chain(false)).not.toThrow()
       expect(() => chain(true)).not.toThrow()
     })
 
-    it('refuse soignant > todos atteint par thematic > soignantLinks > soignant', () => {
+    it('laisse passer soignant > todos atteint par thematic > soignantLinks > soignant, toute la chaine etant de service depuis le 2026-09-29', () => {
       const chain = (filtered: boolean) =>
         assertTenantScope(
           {
@@ -1116,11 +1120,13 @@ describe('assertTenantScope', () => {
           },
           store,
         )
-      expect(() => chain(false)).toThrow(TenantScopeMissingError)
+      // `Soignant` et `Location` sont des modeles de service : plus aucune transition
+      // etablissement -> service dans cette chaine, donc plus de filtre exige.
+      expect(() => chain(false)).not.toThrow()
       expect(() => chain(true)).not.toThrow()
     })
 
-    it('refuse location > slotTemplates atteint par slotTemplate > location', () => {
+    it('laisse passer location > slotTemplates atteint par slotTemplate > location, toute la chaine etant de service depuis le 2026-09-29', () => {
       const chain = (filtered: boolean) =>
         assertTenantScope(
           {
@@ -1137,7 +1143,9 @@ describe('assertTenantScope', () => {
           },
           store,
         )
-      expect(() => chain(false)).toThrow(TenantScopeMissingError)
+      // `Soignant` et `Location` sont des modeles de service : plus aucune transition
+      // etablissement -> service dans cette chaine, donc plus de filtre exige.
+      expect(() => chain(false)).not.toThrow()
       expect(() => chain(true)).not.toThrow()
     })
 

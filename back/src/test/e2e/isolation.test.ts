@@ -39,6 +39,25 @@ type IsolationCase = {
 }
 
 const cases: IsolationCase[] = [
+  // Soignants et salles : modeles de service depuis le 2026-09-29.
+  {
+    name: 'soignant',
+    create: (s, e) =>
+      testDb.soignant
+        .create({ data: { name: 'Dieteticienne', serviceId: s, establishmentId: e } })
+        .then((r) => r.id),
+    path: (id) => `/soignant/${id}`,
+    ownerStatus: 200,
+  },
+  {
+    name: 'location',
+    create: (s, e) =>
+      testDb.location
+        .create({ data: { name: 'Salle 1', serviceId: s, establishmentId: e } })
+        .then((r) => r.id),
+    path: (id) => `/location/${id}`,
+    ownerStatus: 200,
+  },
   {
     name: 'thematic',
     create: (s, e) =>
@@ -598,52 +617,6 @@ describe('isolation par tenant', () => {
         cookies,
       })
       expect(own.statusCode).toBe(200)
-    })
-  })
-
-  // Route ajoutee au tour de correction 1 de la tache 8 : l'ecran des
-  // membres (/e/:id/admin/members) vit sous un contexte sans service, et le
-  // front visait a tort le prefixe de service (`tenantApiUrl`) pour lister
-  // les soignants — une fabrique qui leve volontairement sans service en
-  // contexte. Cette route de liste, montee sous /e/:id/admin/soignant,
-  // reutilise `soignantDomain.findAll()` ; le repository filtre par
-  // etablissement, jamais par service (voir `SoignantRepository.findAll`).
-  // Ce test le prouve au niveau HTTP, sur ce nouveau prefixe.
-  describe('isolation entre etablissements : soignants (admin)', () => {
-    beforeEach(truncateAll)
-
-    it('la liste des soignants d un etablissement ne contient pas ceux d un autre, et un autre etablissement renvoie 404', async () => {
-      const est = await createEstablishment('E1')
-      const other = await createEstablishment('E2')
-      await createUser({
-        email: 'admin@test.fr',
-        memberships: [{ establishmentId: est.id, role: 'ADMIN' }],
-      })
-      const cookies = await signIn(t.app, 'admin@test.fr')
-
-      const ownSoignant = await testDb.soignant.create({
-        data: { establishmentId: est.id, name: 'Local' },
-      })
-      const foreignSoignant = await testDb.soignant.create({
-        data: { establishmentId: other.id, name: 'Etranger' },
-      })
-
-      const foreign = await t.app.inject({
-        method: 'GET',
-        url: adminUrl(other.id, '/soignant'),
-        cookies,
-      })
-      expect(foreign.statusCode).toBe(404)
-
-      const own = await t.app.inject({
-        method: 'GET',
-        url: adminUrl(est.id, '/soignant'),
-        cookies,
-      })
-      expect(own.statusCode).toBe(200)
-      const ids = (own.json() as { id: string }[]).map((s) => s.id)
-      expect(ids).toContain(ownSoignant.id)
-      expect(ids).not.toContain(foreignSoignant.id)
     })
   })
 

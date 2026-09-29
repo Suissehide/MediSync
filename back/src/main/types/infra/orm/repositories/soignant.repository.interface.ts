@@ -7,11 +7,11 @@ export type SoignantEntityRepo = Soignant
 // Le repository pose establishmentId lui-même : l'appelant ne le fournit pas.
 export type SoignantCreateEntityRepo = Omit<
   Prisma.SoignantUncheckedCreateInput,
-  'establishmentId' | 'slotTemplateLinks'
+  'establishmentId' | 'serviceId' | 'slotTemplateLinks'
 >
 export type SoignantUpdateEntityRepo = Omit<
   Prisma.SoignantUncheckedUpdateInput,
-  'establishmentId'
+  'establishmentId' | 'serviceId'
 >
 
 export interface SoignantRepositoryInterface {

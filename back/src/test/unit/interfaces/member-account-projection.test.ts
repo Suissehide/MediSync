@@ -17,7 +17,7 @@ import {
 // celle SOUMISE, et `user.id` est un cuid — qui encode l'instant de creation du compte. Trois
 // oracles d'existence de comptes, dans des VALEURS plutot que dans la forme (meme lecon qu'a la
 // tache 6, `createEstablishmentResponseSchema`).
-const CLES_ATTENDUES = ['id', 'role', 'serviceMemberships', 'soignantId']
+const CLES_ATTENDUES = ['id', 'role', 'serviceMemberships']
 
 // Une ligne d'appartenance telle que le domaine la rend : complete, identite comprise.
 const appartenanceComplete = {
@@ -25,7 +25,6 @@ const appartenanceComplete = {
   userId: 'u1',
   establishmentId: 'e1',
   role: 'MEMBER' as const,
-  soignantId: null,
   createdAt: new Date('2026-01-02T03:04:05.000Z'),
   serviceMemberships: [{ serviceId: 's1', role: 'INTERVENANT' as const }],
   user: {

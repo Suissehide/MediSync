@@ -20,18 +20,21 @@ class SoignantRepository implements SoignantRepositoryInterface {
     this.tenantContext = tenantContext
   }
 
-  private get establishmentScope() {
-    return this.tenantContext.establishmentScope()
+  // Modele de service depuis le 2026-09-29 (migration `soignants_salles_par_service`) : chaque
+  // service tient sa propre liste. `scope()` porte serviceId ET establishmentId ; il leve hors
+  // d'un contexte de service.
+  private get scope() {
+    return this.tenantContext.scope()
   }
 
   findAll(): Promise<SoignantEntityRepo[]> {
-    return this.prisma.soignant.findMany({ where: this.establishmentScope })
+    return this.prisma.soignant.findMany({ where: this.scope })
   }
 
   async findByID(soignantID: string): Promise<SoignantEntityRepo> {
     try {
       return await this.prisma.soignant.findUniqueOrThrow({
-        where: { id_establishmentId: { id: soignantID, ...this.establishmentScope } },
+        where: { id_serviceId: { id: soignantID, serviceId: this.scope.serviceId } },
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
@@ -46,7 +49,7 @@ class SoignantRepository implements SoignantRepositoryInterface {
   ): Promise<SoignantEntityRepo> {
     try {
       return await this.prisma.soignant.create({
-        data: { ...soignantCreateParams, ...this.establishmentScope },
+        data: { ...soignantCreateParams, ...this.scope },
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
@@ -62,7 +65,7 @@ class SoignantRepository implements SoignantRepositoryInterface {
   ): Promise<SoignantEntityRepo> {
     try {
       return await this.prisma.soignant.update({
-        where: { id_establishmentId: { id: soignantID, ...this.establishmentScope } },
+        where: { id_serviceId: { id: soignantID, serviceId: this.scope.serviceId } },
         data: soignantUpdateParams,
       })
     } catch (err) {
@@ -76,7 +79,7 @@ class SoignantRepository implements SoignantRepositoryInterface {
   async delete(soignantID: string): Promise<SoignantEntityRepo> {
     try {
       return await this.prisma.soignant.delete({
-        where: { id_establishmentId: { id: soignantID, ...this.establishmentScope } },
+        where: { id_serviceId: { id: soignantID, serviceId: this.scope.serviceId } },
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
