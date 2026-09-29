@@ -19,7 +19,7 @@ const ESTABLISHMENT_ROLE_STYLE: Record<EstablishmentRole, string> = {
   MEMBER: 'bg-blue-50 text-blue-700 border border-blue-200',
 }
 
-const RoleBadge = ({
+export const RoleBadge = ({
   label,
   className,
 }: {

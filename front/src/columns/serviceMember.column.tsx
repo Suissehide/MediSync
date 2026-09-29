@@ -1,16 +1,31 @@
 import { createColumnHelper } from '@tanstack/react-table'
 
+import { CopyableId } from '../components/custom/copyableId.tsx'
 import { nomDuCompte } from '../components/custom/popup/editSoignantAccountsForm.tsx'
 import { SERVICE_ROLE_LABEL } from '../constants/member.constant.ts'
 import type { ServiceMember } from '../types/serviceMember.ts'
 import type { Soignant } from '../types/soignant.ts'
-import { StatutBadge } from './member.column.tsx'
+import { RoleBadge, StatutBadge } from './member.column.tsx'
 
 const columnHelper = createColumnHelper<ServiceMember>()
 
 // Membres du service courant, en lecture : les comptes, leurs roles et affectations se gerent a
 // l'administration de l'etablissement ; le soignant incarne, sur l'ecran Soignants.
-export const getServiceMemberColumns = (soignants: Soignant[]) => [
+// `avecIdentifiant` : l'identifiant du compte, pour le super-admin seulement (diagnostic, recoupement
+// avec les journaux de la plateforme).
+export const getServiceMemberColumns = (
+  soignants: Soignant[],
+  avecIdentifiant: boolean,
+) => [
+  ...(avecIdentifiant
+    ? [
+        columnHelper.display({
+          id: 'accountId',
+          header: 'Identifiant',
+          cell: ({ row }) => <CopyableId value={row.original.user.id} />,
+        }),
+      ]
+    : []),
   columnHelper.display({
     id: 'nom',
     header: 'Nom',
@@ -24,7 +39,12 @@ export const getServiceMemberColumns = (soignants: Soignant[]) => [
   columnHelper.display({
     id: 'role',
     header: 'Rôle',
-    cell: ({ row }) => SERVICE_ROLE_LABEL[row.original.role],
+    cell: ({ row }) => (
+      <RoleBadge
+        label={SERVICE_ROLE_LABEL[row.original.role]}
+        className="bg-primary/10 text-primary border border-primary/20"
+      />
+    ),
   }),
   columnHelper.display({
     id: 'soignant',
