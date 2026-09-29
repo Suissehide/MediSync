@@ -9,7 +9,7 @@ export type SeedTenant = { establishmentId: string; serviceId: string }
 export default async function seedTenant(prisma: PrismaClient) {
   console.log('→ Seeding establishment and two services...')
   const establishment = await prisma.establishment.create({
-    data: { name: 'CHU de démonstration' },
+    data: { name: 'CHU Haut-Lévêque' },
   })
   const serviceA = await prisma.service.create({
     data: { establishmentId: establishment.id, name: 'Cardiologie' },

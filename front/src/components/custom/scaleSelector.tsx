@@ -176,7 +176,7 @@ export const ScaleSelector = () => {
                 <Building2 className="w-4 h-4 opacity-70" />
                 {groupe.titre}
               </div>
-              <div className="ml-4 mb-1 flex flex-col border-l-2 border-border pl-2">
+              <div className="ml-6 mb-1 flex flex-col">
                 {groupe.destinations.map((destination) => (
                   <PopoverMenuItem
                     key={cle(destination)}
