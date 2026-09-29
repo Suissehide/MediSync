@@ -2,6 +2,7 @@ import { createColumnHelper } from '@tanstack/react-table'
 import { Trash2 } from 'lucide-react'
 
 import EditThematicSoignantsForm from '../components/custom/popup/editThematicSoignantsForm.tsx'
+import { Etiquette } from '../components/table/etiquette.tsx'
 import { Button } from '../components/ui/button.tsx'
 import type { Thematic } from '../types/thematic.ts'
 
@@ -67,12 +68,7 @@ export const getThematicColumns = ({
         return (
           <div className="flex items-center gap-1 overflow-hidden">
             {visible.map((s) => (
-              <span
-                key={s.id}
-                className="inline-flex items-center shrink-0 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary"
-              >
-                {s.name}
-              </span>
+              <Etiquette key={s.id}>{s.name}</Etiquette>
             ))}
             {rest > 0 && (
               <span className="shrink-0 text-xs text-muted-foreground font-medium">

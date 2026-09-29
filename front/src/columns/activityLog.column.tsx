@@ -1,6 +1,7 @@
 import { createColumnHelper } from '@tanstack/react-table'
 import dayjs from 'dayjs'
 
+import { Etiquette } from '../components/table/etiquette.tsx'
 import {
   ACTION_LABELS,
   TYPE_LABELS,
@@ -41,11 +42,7 @@ export const activityLogColumns = [
     size: 140,
     cell: (info) => {
       const label = TYPE_LABELS[info.getValue()] ?? info.getValue()
-      return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-primary/10 text-primary">
-          {label}
-        </span>
-      )
+      return <Etiquette>{label}</Etiquette>
     },
   }),
 ]

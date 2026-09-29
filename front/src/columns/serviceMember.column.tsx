@@ -2,10 +2,10 @@ import { createColumnHelper } from '@tanstack/react-table'
 
 import { CopyableId } from '../components/custom/copyableId.tsx'
 import { nomDuCompte } from '../components/custom/popup/editSoignantAccountsForm.tsx'
+import { Etiquette, EtiquetteStatut } from '../components/table/etiquette.tsx'
 import { SERVICE_ROLE_LABEL } from '../constants/member.constant.ts'
 import type { ServiceMember } from '../types/serviceMember.ts'
 import type { Soignant } from '../types/soignant.ts'
-import { RoleBadge, StatutBadge } from './member.column.tsx'
 
 const columnHelper = createColumnHelper<ServiceMember>()
 
@@ -40,10 +40,7 @@ export const getServiceMemberColumns = (
     id: 'role',
     header: 'Rôle',
     cell: ({ row }) => (
-      <RoleBadge
-        label={SERVICE_ROLE_LABEL[row.original.role]}
-        className="bg-primary/10 text-primary border border-primary/20"
-      />
+      <Etiquette>{SERVICE_ROLE_LABEL[row.original.role]}</Etiquette>
     ),
   }),
   columnHelper.display({
@@ -58,7 +55,7 @@ export const getServiceMemberColumns = (
     id: 'statut',
     header: 'Statut',
     cell: ({ row }) => (
-      <StatutBadge deactivatedAt={row.original.user.deactivatedAt} />
+      <EtiquetteStatut deactivatedAt={row.original.user.deactivatedAt} />
     ),
   }),
 ]

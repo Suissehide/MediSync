@@ -3,6 +3,11 @@ import { Ban, RotateCcw, Trash } from 'lucide-react'
 
 import { CopyableId } from '../components/custom/copyableId.tsx'
 import EditMemberForm from '../components/custom/popup/editMemberForm.tsx'
+import {
+  Etiquette,
+  EtiquetteStatut,
+  type TonEtiquette,
+} from '../components/table/etiquette.tsx'
 import { Button } from '../components/ui/button.tsx'
 import {
   ESTABLISHMENT_ROLE_LABEL,
@@ -14,40 +19,10 @@ import type { Service } from '../types/service.ts'
 
 const columnHelper = createColumnHelper<Member>()
 
-const ESTABLISHMENT_ROLE_STYLE: Record<EstablishmentRole, string> = {
-  ADMIN: 'bg-red-50 text-red-700 border border-red-200',
-  MEMBER: 'bg-blue-50 text-blue-700 border border-blue-200',
+const ESTABLISHMENT_ROLE_TON: Record<EstablishmentRole, TonEtiquette> = {
+  ADMIN: 'danger',
+  MEMBER: 'primaire',
 }
-
-export const RoleBadge = ({
-  label,
-  className,
-}: {
-  label: string
-  className: string
-}) => (
-  <span
-    className={`inline-flex items-center px-2.5 py-1 rounded-md text-sm font-medium whitespace-nowrap ${className}`}
-  >
-    {label}
-  </span>
-)
-
-// Statut d'un compte, partage avec la liste des membres du service.
-export const StatutBadge = ({
-  deactivatedAt,
-}: {
-  deactivatedAt: string | null
-}) => (
-  <RoleBadge
-    label={deactivatedAt !== null ? 'Désactivé' : 'Actif'}
-    className={
-      deactivatedAt !== null
-        ? 'bg-gray-100 text-gray-600 border border-gray-200'
-        : 'bg-green-50 text-green-700 border border-green-200'
-    }
-  />
-)
 
 type MemberColumnOptions = {
   // Tâche 14b (tour de correction 1, Important n°2) : la liste COMPLÈTE des
@@ -103,10 +78,9 @@ export const getMemberColumns = ({
     id: 'establishmentRole',
     header: 'Rôle établissement',
     cell: ({ row }) => (
-      <RoleBadge
-        label={ESTABLISHMENT_ROLE_LABEL[row.original.role]}
-        className={ESTABLISHMENT_ROLE_STYLE[row.original.role]}
-      />
+      <Etiquette ton={ESTABLISHMENT_ROLE_TON[row.original.role]}>
+        {ESTABLISHMENT_ROLE_LABEL[row.original.role]}
+      </Etiquette>
     ),
   }),
   columnHelper.display({
@@ -131,13 +105,7 @@ export const getMemberColumns = ({
             const label = service
               ? `${service.name} : ${SERVICE_ROLE_LABEL[assignment.role]}`
               : SERVICE_ROLE_LABEL[assignment.role]
-            return (
-              <RoleBadge
-                key={assignment.serviceId}
-                label={label}
-                className="bg-primary/10 text-primary border border-primary/20"
-              />
-            )
+            return <Etiquette key={assignment.serviceId}>{label}</Etiquette>
           })}
         </div>
       )
@@ -147,7 +115,7 @@ export const getMemberColumns = ({
     id: 'status',
     header: 'Statut',
     cell: ({ row }) => (
-      <StatutBadge deactivatedAt={row.original.user.deactivatedAt} />
+      <EtiquetteStatut deactivatedAt={row.original.user.deactivatedAt} />
     ),
   }),
   columnHelper.display({
