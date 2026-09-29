@@ -11,7 +11,6 @@ import type React from 'react'
 import { useCallback, useMemo, useState } from 'react'
 
 import { PatientApi } from '../../../../api/patient.api.ts'
-import { getContrastTextColor, hexToRGBA } from '../../../../libs/color.ts'
 import {
   getPathwayStartDates,
   getSlotDisplayRange,
@@ -27,6 +26,7 @@ import type {
   PatientPathway,
 } from '../../../../types/patient.ts'
 import type { Slot } from '../../../../types/slot.ts'
+import { Etiquette } from '../../../table/etiquette.tsx'
 import { ColorLegend } from '../../colorLegend.tsx'
 import { ConfirmDeleteForm } from '../../popup/confirmDeleteForm.tsx'
 
@@ -155,16 +155,7 @@ function PathwayCard({
     >
       <GripVertical className="h-4 w-4 text-text-light flex-shrink-0 cursor-move" />
       <div className="flex flex-wrap gap-1 flex-1 min-w-0">
-        <span
-          className="inline-block px-2 py-1 rounded text-xs font-medium border"
-          style={{
-            backgroundColor: hexToRGBA(color, 0.15),
-            color: getContrastTextColor(color),
-            borderColor: hexToRGBA(color, 0.6),
-          }}
-        >
-          {label}
-        </span>
+        <Etiquette couleur={color}>{label}</Etiquette>
       </div>
       <span className="text-xs text-text-sidebar flex-shrink-0">
         Début : {formattedDate}

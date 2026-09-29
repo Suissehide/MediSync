@@ -6,6 +6,7 @@ import EditSoignantAccountsForm, {
   nomDuCompte,
 } from '../components/custom/popup/editSoignantAccountsForm.tsx'
 import EditSoignantThematicsForm from '../components/custom/popup/editSoignantThematicsForm.tsx'
+import { Etiquette } from '../components/table/etiquette.tsx'
 import { Button } from '../components/ui/button.tsx'
 import type { ServiceMember } from '../types/serviceMember.ts'
 import type { Soignant } from '../types/soignant.ts'
@@ -48,12 +49,7 @@ export const getSoignantColumns = ({
         return (
           <div className="flex items-center gap-1 overflow-hidden">
             {visible.map((t) => (
-              <span
-                key={t.id}
-                className="inline-flex items-center shrink-0 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary"
-              >
-                {t.name}
-              </span>
+              <Etiquette key={t.id}>{t.name}</Etiquette>
             ))}
             {rest > 0 && (
               <span className="shrink-0 text-xs text-muted-foreground font-medium">

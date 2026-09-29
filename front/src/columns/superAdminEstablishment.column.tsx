@@ -5,6 +5,7 @@ import dayjs from 'dayjs'
 import { CopyableId } from '../components/custom/copyableId.tsx'
 import { useOuvrirDestination } from '../components/custom/destinations.tsx'
 import CreateGrantForm from '../components/custom/popup/createGrantForm.tsx'
+import { Etiquette, EtiquetteStatut } from '../components/table/etiquette.tsx'
 import { Button } from '../components/ui/button.tsx'
 import { meQueryOptions } from '../queries/useMe.ts'
 import { useAuthStore } from '../store/useAuthStore.ts'
@@ -12,18 +13,6 @@ import type { EstablishmentListItem } from '../types/superAdmin.ts'
 import { accessibleDestinations } from '../utils/tenant-context.ts'
 
 const columnHelper = createColumnHelper<EstablishmentListItem>()
-
-const StatutBadge = ({ deactivatedAt }: { deactivatedAt: string | null }) => (
-  <span
-    className={`inline-flex items-center px-2.5 py-1 rounded-md text-sm font-medium whitespace-nowrap ${
-      deactivatedAt !== null
-        ? 'bg-gray-100 text-gray-600 border border-gray-200'
-        : 'bg-green-50 text-green-700 border border-green-200'
-    }`}
-  >
-    {deactivatedAt !== null ? 'Désactivé' : 'Actif'}
-  </span>
-)
 
 // Colonnes de la liste des établissements (spec §3.3, task-12-brief.md,
 // step 1) : une par clé exacte de `establishmentListItemSchema` (voir
@@ -48,7 +37,7 @@ export const superAdminEstablishmentColumns = [
     id: 'status',
     header: 'Statut',
     cell: ({ row }) => (
-      <StatutBadge deactivatedAt={row.original.deactivatedAt} />
+      <EtiquetteStatut deactivatedAt={row.original.deactivatedAt} />
     ),
   }),
   columnHelper.accessor('serviceCount', {
@@ -101,11 +90,7 @@ const AccesCell = ({ establishmentId }: { establishmentId: string }) => {
     return <span className="text-text-light">—</span>
   }
   if (appartenance.origine === 'octroi') {
-    return (
-      <span className="px-1.5 py-px rounded bg-secondary-light text-xs font-semibold text-secondary-dark whitespace-nowrap">
-        Accès temporaire
-      </span>
-    )
+    return <Etiquette ton="temporaire">Accès temporaire</Etiquette>
   }
   return appartenance.role === 'ADMIN' ? 'Membre · Admin' : 'Membre'
 }

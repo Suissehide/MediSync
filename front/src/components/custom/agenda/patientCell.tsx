@@ -4,15 +4,9 @@ import { useState } from 'react'
 
 import type { DayAppointmentRow } from '../../../libs/utils.ts'
 import { useAuthStore } from '../../../store/useAuthStore.ts'
+import { Etiquette } from '../../table/etiquette.tsx'
 import { Button } from '../../ui/button.tsx'
-import { CHIP_CLASS, MAX_VISIBLE_CHIPS } from './chip.ts'
-
-/**
- * Le bouton de dépliage : même famille visuelle que les pastilles patients,
- * mais neutre et bordé, pour qu'il se lise comme un contrôle avant tout survol.
- */
-const TOGGLE_CHIP_CLASS =
-  'inline-flex items-center shrink-0 rounded-full border border-border px-2 py-0.5 text-xs font-medium text-muted-foreground cursor-pointer transition-colors hover:border-primary/40 hover:text-primary hover:bg-primary/5'
+import { MAX_VISIBLE_CHIPS } from './chip.ts'
 
 type PatientCellProps = {
   row: DayAppointmentRow
@@ -71,43 +65,53 @@ export default function PatientCell({ row, onAddPatient }: PatientCellProps) {
       >
         {visible.map((appointmentPatient) =>
           context?.serviceId ? (
-            <Link
+            <Etiquette
+              asChild
               key={appointmentPatient.patient.id}
-              to="/e/$establishmentId/s/$serviceId/patient/$patientID"
-              params={{
-                establishmentId: context.establishmentId,
-                serviceId: context.serviceId,
-                patientID: appointmentPatient.patient.id,
-              }}
-              className={`${CHIP_CLASS} hover:bg-primary/20`}
+              className="hover:bg-primary/20"
             >
-              {appointmentPatient.patient.firstName}{' '}
-              {appointmentPatient.patient.lastName}
-            </Link>
+              <Link
+                to="/e/$establishmentId/s/$serviceId/patient/$patientID"
+                params={{
+                  establishmentId: context.establishmentId,
+                  serviceId: context.serviceId,
+                  patientID: appointmentPatient.patient.id,
+                }}
+              >
+                {appointmentPatient.patient.firstName}{' '}
+                {appointmentPatient.patient.lastName}
+              </Link>
+            </Etiquette>
           ) : (
-            <span key={appointmentPatient.patient.id} className={CHIP_CLASS}>
+            <Etiquette key={appointmentPatient.patient.id}>
               {appointmentPatient.patient.firstName}{' '}
               {appointmentPatient.patient.lastName}
-            </span>
+            </Etiquette>
           ),
         )}
 
         {hidden > 0 && (
-          <button
-            type="button"
-            onClick={() => setExpanded((value) => !value)}
-            aria-expanded={expanded}
-            aria-label={
-              expanded
-                ? 'Réduire la liste des patients'
-                : hidden > 1
-                  ? `Afficher les ${hidden} patients masqués`
-                  : 'Afficher le patient masqué'
-            }
-            className={TOGGLE_CHIP_CLASS}
+          // Le bouton de depliage : une etiquette neutre, pour qu'il se lise comme un controle.
+          <Etiquette
+            asChild
+            ton="neutre"
+            className="cursor-pointer hover:border-primary/40 hover:text-primary"
           >
-            {expanded ? 'Voir moins' : `+${hidden}`}
-          </button>
+            <button
+              type="button"
+              onClick={() => setExpanded((value) => !value)}
+              aria-expanded={expanded}
+              aria-label={
+                expanded
+                  ? 'Réduire la liste des patients'
+                  : hidden > 1
+                    ? `Afficher les ${hidden} patients masqués`
+                    : 'Afficher le patient masqué'
+              }
+            >
+              {expanded ? 'Voir moins' : `+${hidden}`}
+            </button>
+          </Etiquette>
         )}
       </div>
       {addButton}

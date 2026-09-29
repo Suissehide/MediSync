@@ -2,8 +2,8 @@ import { createColumnHelper } from '@tanstack/react-table'
 import dayjs from 'dayjs'
 import { AlertTriangle, Eye } from 'lucide-react'
 
+import { Etiquette } from '../components/table/etiquette.tsx'
 import { Button } from '../components/ui/button.tsx'
-import { getContrastTextColor, hexToRGBA } from '../libs/color.ts'
 import type { PathwayTemplate } from '../types/pathwayTemplate.ts'
 import type { PatientWithTags } from '../types/patient.ts'
 
@@ -38,10 +38,10 @@ export const getPatientColumns = ({
         }
         return (
           <div className="flex items-center justify-center">
-            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold bg-amber-100 text-amber-700 leading-none">
-              <AlertTriangle className="w-2.5 h-2.5" />
+            <Etiquette ton="alerte">
+              <AlertTriangle className="w-3 h-3" />
               {count}
-            </span>
+            </Etiquette>
           </div>
         )
       },
@@ -80,25 +80,9 @@ export const getPatientColumns = ({
             {tags.map((tag) => {
               const color = tagColorMap.get(tag)
               return (
-                <span
-                  key={tag}
-                  className="inline-block px-2 py-1 rounded-md text-[10px] font-medium leading-none"
-                  style={
-                    color
-                      ? {
-                          backgroundColor: hexToRGBA(color, 0.4),
-                          color: getContrastTextColor(color),
-                          border: `1px solid ${hexToRGBA(color, 0.8)}`,
-                        }
-                      : {
-                          backgroundColor: 'hsl(var(--muted))',
-                          color: 'hsl(var(--muted-foreground))',
-                          border: '1px solid hsl(var(--border))',
-                        }
-                  }
-                >
+                <Etiquette key={tag} couleur={color} ton="neutre">
                   {tag}
-                </span>
+                </Etiquette>
               )
             })}
           </div>

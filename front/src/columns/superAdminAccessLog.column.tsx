@@ -3,6 +3,7 @@ import dayjs from 'dayjs'
 import { ShieldAlert } from 'lucide-react'
 
 import { CopyableId } from '../components/custom/copyableId.tsx'
+import { Etiquette } from '../components/table/etiquette.tsx'
 import { superAdminAccessLogActionLabels } from '../constants/superAdminAccessLog.constant.ts'
 import type { EstablishmentListItem } from '../types/superAdmin.ts'
 import type {
@@ -108,10 +109,10 @@ export const getSuperAdminAccessLogColumns = ({
             return null
           }
           return (
-            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold bg-amber-100 text-amber-700 leading-none">
+            <Etiquette ton="alerte">
               <ShieldAlert className="w-3 h-3" />
               Accès par octroi
-            </span>
+            </Etiquette>
           )
         },
       }),

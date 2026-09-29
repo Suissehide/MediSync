@@ -2,11 +2,9 @@ import { createColumnHelper } from '@tanstack/react-table'
 import dayjs from 'dayjs'
 import { Eye, Trash2 } from 'lucide-react'
 
-import {
-  CHIP_CLASS,
-  MAX_VISIBLE_CHIPS,
-} from '../components/custom/agenda/chip.ts'
+import { MAX_VISIBLE_CHIPS } from '../components/custom/agenda/chip.ts'
 import PatientCell from '../components/custom/agenda/patientCell.tsx'
+import { Etiquette } from '../components/table/etiquette.tsx'
 import { Button } from '../components/ui/button.tsx'
 import { APPOINTMENT_TYPE } from '../constants/appointment.constant.ts'
 import type { DayAppointmentRow } from '../libs/utils.ts'
@@ -58,9 +56,7 @@ export const getDayAppointmentColumns = ({
         return (
           <div className="flex items-center gap-1 overflow-hidden">
             {visible.map((soignant) => (
-              <span key={soignant.id} className={CHIP_CLASS}>
-                {soignant.name}
-              </span>
+              <Etiquette key={soignant.id}>{soignant.name}</Etiquette>
             ))}
             {rest > 0 && (
               <span className="shrink-0 text-xs text-muted-foreground font-medium">
