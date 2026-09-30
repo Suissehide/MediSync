@@ -22,9 +22,6 @@ RUN npm ci --prefer-offline --include=dev --ignore-scripts --loglevel verbose
 COPY ../.swcrc tsconfig.json prisma.config.ts ./
 COPY ../src ./src
 COPY ../prisma ./prisma
-# `npm run build` typecheck AUSSI scripts/ (wireit build:check-typedefs:scripts,
-# ajoute a l'etape 4a) : sans ce COPY, le build casse sur
-# `TS5058: The specified path does not exist: 'scripts/tsconfig.json'`.
 COPY ../scripts ./scripts
 
 RUN npx prisma generate
