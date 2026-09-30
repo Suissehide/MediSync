@@ -22,7 +22,6 @@ import {
   PopupHeader,
   PopupTitle,
 } from '../../ui/popup.tsx'
-import { MultiSelect } from '../../ui/select.tsx'
 import {
   AppointmentTimeFields,
   AppointmentTypeField,
@@ -205,7 +204,7 @@ function AddAppointmentForm({
               )}
             </form.Field>
 
-            <form.Field
+            <form.AppField
               name="patientIDs"
               validators={{
                 onSubmit: ({ value }) => {
@@ -220,24 +219,19 @@ function AddAppointmentForm({
               }}
             >
               {(field) => (
-                <FormField>
-                  <Label htmlFor={field.name}>Patients</Label>
-                  <MultiSelect
-                    options={patientOptions}
-                    value={field.state.value}
-                    onChange={(val) => field.handleChange(val)}
-                    placeholder={
-                      type === 'individual'
-                        ? 'Sélectionner un patient'
-                        : 'Sélectionner un ou plusieurs patients'
-                    }
-                    maxSelected={type === 'individual' ? 1 : capacity}
-                    disabled={!!defaultPatientIDs?.length}
-                  />
-                  <FieldInfo field={field} />
-                </FormField>
+                <field.MultiSelect
+                  label="Patients"
+                  options={patientOptions}
+                  placeholder={
+                    type === 'individual'
+                      ? 'Sélectionner un patient'
+                      : 'Sélectionner un ou plusieurs patients'
+                  }
+                  maxSelected={type === 'individual' ? 1 : capacity}
+                  disabled={!!defaultPatientIDs?.length}
+                />
               )}
-            </form.Field>
+            </form.AppField>
           </form>
         </PopupBody>
 

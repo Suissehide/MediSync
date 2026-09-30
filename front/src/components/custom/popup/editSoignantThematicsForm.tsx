@@ -8,7 +8,6 @@ import { useThematicMutations } from '../../../queries/useThematic.ts'
 import type { Soignant } from '../../../types/soignant.ts'
 import type { Thematic } from '../../../types/thematic.ts'
 import { Button } from '../../ui/button.tsx'
-import { Label } from '../../ui/label.tsx'
 import {
   Popup,
   PopupBody,
@@ -18,7 +17,6 @@ import {
   PopupTitle,
   PopupTrigger,
 } from '../../ui/popup.tsx'
-import { MultiSelect } from '../../ui/select.tsx'
 
 interface EditSoignantThematicsFormProps {
   soignant: Soignant
@@ -135,19 +133,15 @@ function EditSoignantThematicsForm({
               {(field) => <field.Input label="Nom" />}
             </form.AppField>
 
-            <form.Field name="thematicIDs">
+            <form.AppField name="thematicIDs">
               {(field) => (
-                <div className="flex flex-col gap-1">
-                  <Label className="text-sm font-medium">Thématiques</Label>
-                  <MultiSelect
-                    options={thematicOptions}
-                    value={field.state.value}
-                    onChange={(val) => field.handleChange(val)}
-                    placeholder="Sélectionner des thématiques"
-                  />
-                </div>
+                <field.MultiSelect
+                  label="Thématiques"
+                  options={thematicOptions}
+                  placeholder="Sélectionner des thématiques"
+                />
               )}
-            </form.Field>
+            </form.AppField>
           </div>
         </PopupBody>
 

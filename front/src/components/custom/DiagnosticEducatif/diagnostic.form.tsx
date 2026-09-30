@@ -6,7 +6,6 @@ import { useAppForm } from '../../../hooks/formConfig.tsx'
 import type { DiagnosticEducatif } from '../../../types/diagnosticEducatif.ts'
 import { Button } from '../../ui/button.tsx'
 import { FixedBar } from '../../ui/fixedbar.tsx'
-import { Input, TextArea } from '../../ui/input.tsx'
 import { Switch } from '../../ui/switch.tsx'
 import { ConfirmDeleteForm } from '../popup/confirmDeleteForm.tsx'
 
@@ -79,12 +78,7 @@ export function DiagnosticForm({ diagnostic, onSave, onDelete }: Props) {
       <div className="flex justify-between items-center gap-4 mt-4">
         <form.AppField name="title">
           {(field) => (
-            <Input
-              placeholder="Sans titre"
-              value={String(field.state.value ?? '')}
-              onChange={(e) => field.handleChange(e.target.value)}
-              onBlur={field.handleBlur}
-            />
+            <field.Input placeholder="Sans titre" className="flex-1" />
           )}
         </form.AppField>
         <Button
@@ -138,34 +132,11 @@ export function DiagnosticForm({ diagnostic, onSave, onDelete }: Props) {
                         <form.AppField name={field.id}>
                           {(f) =>
                             field.type === 'textarea' ? (
-                              <TextArea
-                                value={String(f.state.value ?? '')}
-                                onChange={(e) => f.handleChange(e.target.value)}
-                                onBlur={f.handleBlur}
-                              />
+                              <f.TextArea />
                             ) : field.type === 'number' ? (
-                              <Input
-                                type="number"
-                                value={
-                                  f.state.value != null
-                                    ? String(f.state.value)
-                                    : ''
-                                }
-                                onChange={(e) =>
-                                  f.handleChange(
-                                    e.target.value === ''
-                                      ? undefined
-                                      : Number(e.target.value),
-                                  )
-                                }
-                                onBlur={f.handleBlur}
-                              />
+                              <f.Number />
                             ) : (
-                              <Input
-                                value={String(f.state.value ?? '')}
-                                onChange={(e) => f.handleChange(e.target.value)}
-                                onBlur={f.handleBlur}
-                              />
+                              <f.Input />
                             )
                           }
                         </form.AppField>

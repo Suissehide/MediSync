@@ -7,7 +7,6 @@ import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { useSoignantQueries } from '../../../queries/useSoignant.ts'
 import { useThematicMutations } from '../../../queries/useThematic.ts'
 import { Button } from '../../ui/button.tsx'
-import { Label } from '../../ui/label.tsx'
 import {
   Popup,
   PopupBody,
@@ -17,7 +16,6 @@ import {
   PopupTitle,
   PopupTrigger,
 } from '../../ui/popup.tsx'
-import { MultiSelect } from '../../ui/select.tsx'
 
 interface AddThematicFormProps {
   trigger?: React.ReactNode
@@ -104,19 +102,15 @@ function AddThematicForm({ trigger }: AddThematicFormProps) {
               )}
             </form.AppField>
 
-            <form.Field name="soignantIDs">
+            <form.AppField name="soignantIDs">
               {(field) => (
-                <div className="flex flex-col gap-1">
-                  <Label className="text-sm font-medium">Soignants</Label>
-                  <MultiSelect
-                    options={soignantOptions}
-                    value={field.state.value}
-                    onChange={(val) => field.handleChange(val)}
-                    placeholder="Sélectionner des soignants"
-                  />
-                </div>
+                <field.MultiSelect
+                  label="Soignants"
+                  options={soignantOptions}
+                  placeholder="Sélectionner des soignants"
+                />
               )}
-            </form.Field>
+            </form.AppField>
           </form>
         </PopupBody>
 

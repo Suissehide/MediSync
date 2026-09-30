@@ -1,12 +1,12 @@
+import { useStore } from '@tanstack/react-form'
 import { Check, X } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 
+import { useAppForm } from '../../../hooks/formConfig.tsx'
 import type { DayAppointmentRow } from '../../../libs/utils.ts'
 import { usePatientQueries } from '../../../queries/usePatient.tsx'
 import type { UpdateAppointmentParams } from '../../../types/appointment.ts'
 import { Button } from '../../ui/button.tsx'
-import { FormField } from '../../ui/formField.tsx'
-import { Label } from '../../ui/label.tsx'
 import {
   Popup,
   PopupBody,
@@ -15,7 +15,6 @@ import {
   PopupHeader,
   PopupTitle,
 } from '../../ui/popup.tsx'
-import { MultiSelect } from '../../ui/select.tsx'
 
 type AddPatientToAppointmentFormProps = {
   open: boolean
@@ -35,10 +34,6 @@ export default function AddPatientToAppointmentForm({
   isPending = false,
 }: AddPatientToAppointmentFormProps) {
   const { patients } = usePatientQueries()
-  const [selectedIDs, setSelectedIDs] = useState<string[]>(() =>
-    row.patients.map((appointmentPatient) => appointmentPatient.patient.id),
-  )
-
   const patientOptions = useMemo(() => {
     return (patients ?? [])
       .map((patient) => ({
@@ -50,34 +45,42 @@ export default function AddPatientToAppointmentForm({
       .map(({ value, label }) => ({ value, label }))
   }, [patients])
 
-  const handleConfirm = () => {
-    if (selectedIDs.length === 0) {
-      onRequestDelete()
-      return
-    }
+  const form = useAppForm({
+    defaultValues: {
+      patientIDs: row.patients.map(
+        (appointmentPatient) => appointmentPatient.patient.id,
+      ),
+    },
+    onSubmit: ({ value }) => {
+      if (value.patientIDs.length === 0) {
+        onRequestDelete()
+        return
+      }
 
-    onConfirm({
-      id: row.id,
-      thematicId: row.thematicId,
-      type: row.type,
-      appointmentPatients: selectedIDs.map((patientID) => {
-        const existing = row.patients.find(
-          (appointmentPatient) => appointmentPatient.patient.id === patientID,
-        )
+      onConfirm({
+        id: row.id,
+        thematicId: row.thematicId,
+        type: row.type,
+        appointmentPatients: value.patientIDs.map((patientID) => {
+          const existing = row.patients.find(
+            (appointmentPatient) => appointmentPatient.patient.id === patientID,
+          )
 
-        return existing
-          ? {
-              id: existing.id,
-              patientID,
-              accompanying: existing.accompanying,
-              status: existing.status,
-              rejectionReason: existing.rejectionReason,
-              transmissionNotes: existing.transmissionNotes,
-            }
-          : { patientID }
-      }),
-    })
-  }
+          return existing
+            ? {
+                id: existing.id,
+                patientID,
+                accompanying: existing.accompanying,
+                status: existing.status,
+                rejectionReason: existing.rejectionReason,
+                transmissionNotes: existing.transmissionNotes,
+              }
+            : { patientID }
+        }),
+      })
+    },
+  })
+  const selectedIDs = useStore(form.store, (state) => state.values.patientIDs)
 
   return (
     <Popup modal open={open} onOpenChange={setOpen}>
@@ -87,7 +90,13 @@ export default function AddPatientToAppointmentForm({
         </PopupHeader>
 
         <PopupBody>
-          <div className="flex flex-col gap-2 max-w-md">
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault()
+              await form.handleSubmit()
+            }}
+            className="flex flex-col gap-2 max-w-md"
+          >
             <p className="text-sm text-text-light">
               {selectedIDs.length}/{row.capacity} patient
               {row.capacity > 1 ? 's' : ''}
@@ -106,23 +115,17 @@ export default function AddPatientToAppointmentForm({
               </p>
             )}
 
-            <FormField>
-              <Label>Patients</Label>
-              <MultiSelect
-                options={patientOptions}
-                value={selectedIDs}
-                onChange={(next) => {
-                  if (
-                    next.length <= selectedIDs.length ||
-                    next.length <= row.capacity
-                  ) {
-                    setSelectedIDs(next)
-                  }
-                }}
-                placeholder="Sélectionner un ou plusieurs patients"
-              />
-            </FormField>
-          </div>
+            <form.AppField name="patientIDs">
+              {(field) => (
+                <field.MultiSelect
+                  label="Patients"
+                  options={patientOptions}
+                  maxSelected={row.capacity}
+                  placeholder="Sélectionner un ou plusieurs patients"
+                />
+              )}
+            </form.AppField>
+          </form>
         </PopupBody>
 
         <PopupFooter>
@@ -132,7 +135,7 @@ export default function AddPatientToAppointmentForm({
           </Button>
           <Button
             variant="default"
-            onClick={handleConfirm}
+            onClick={() => form.handleSubmit()}
             isLoading={isPending}
           >
             <Check className="w-4 h-4" />
