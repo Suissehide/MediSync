@@ -22,6 +22,7 @@ import {
   useServiceMutations,
   useServicesQuery,
 } from '@/queries/useServices.ts'
+import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { Service } from '@/types/service.ts'
 import { resolveEstablishmentContext } from '@/utils/tenant-context.ts'
 
@@ -89,14 +90,16 @@ function ServicesAdmin() {
     [updateService],
   )
 
+  const superAdmin = useAuthStore((state) => state.user?.isSuperAdmin === true)
   const columns = useMemo(
     () =>
       getServiceColumns({
         onRename: setRenameTarget,
         onToggleActive: handleToggleActive,
         isToggling,
+        avecIdentifiant: superAdmin,
       }),
-    [handleToggleActive, isToggling],
+    [handleToggleActive, isToggling, superAdmin],
   )
 
   const closeDeactivateDialog = () => {
