@@ -36,7 +36,7 @@ const TAB_CLASS = `relative cursor-pointer transition-colors duration-300
   hover:after:scale-x-100 hover:after:origin-left`
 
 // L'administration du service : un bouton a droite de la barre, hors des onglets du quotidien.
-// Ses ecrans sont des SOUS-CATEGORIES, decales sous le titre du menu.
+// Ses ecrans sont des SOUS-CATEGORIES, alignees sur le titre du menu (pas de decalage).
 function MenuAdministration({
   titre,
   items,
@@ -66,7 +66,7 @@ function MenuAdministration({
         <p className="px-3 pt-1 pb-2 text-xs font-semibold uppercase tracking-wide text-text-light">
           {titre}
         </p>
-        <PopoverSubGroup>
+        <PopoverSubGroup className="ml-0">
           {items.map((item) => (
             <PopoverClose asChild key={item.to}>
               <Link
