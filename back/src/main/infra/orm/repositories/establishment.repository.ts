@@ -104,12 +104,16 @@ class EstablishmentRepository implements EstablishmentRepositoryInterface {
     }
   }
 
-  // `Establishment` est global : écriture nue, comme `create`. 404 si l'id est inconnu.
+  // Les routes `/super-admin` s'exécutent sans store : sans ce `runAsSuperAdmin`, l'`update`
+  // tomberait sous NO_CONTEXT_GLOBAL_OPERATIONS, qui le refuse (500). Même piège d'`await` que
+  // `attachAdmin`. 404 si l'id est inconnu.
   async rename(id: string, name: string) {
     try {
-      return await this.prisma.establishment.update({
-        where: { id },
-        data: { name },
+      return await this.tenantContext.runAsSuperAdmin(async () => {
+        return await this.prisma.establishment.update({
+          where: { id },
+          data: { name },
+        })
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
