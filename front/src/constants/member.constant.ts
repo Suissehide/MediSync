@@ -16,7 +16,8 @@ export const SERVICE_ROLE_LABEL: Record<ServiceRole, string> = {
   LECTURE: 'Lecture',
 }
 
-// Ce que chaque rôle permet, affiché dans l'aide des formulaires de membre.
+// Ce que chaque rôle permet, affiché sous le champ de rôle des formulaires
+// de membre.
 // Référence : docs/multi-tenant/habilitations.md (et utils/permissions.ts).
 export const ESTABLISHMENT_ROLE_DESCRIPTION: Record<EstablishmentRole, string> =
   {
@@ -36,3 +37,10 @@ export const SERVICE_ROLE_DESCRIPTION: Record<ServiceRole, string> = {
   LECTURE:
     'Consultation du suivi, du planning et des listes, sans modification ni accès au contenu clinique.',
 }
+
+// Rôle de service affiché, non modifiable, quand le rôle établissement est
+// Chef d'établissement (coordinateur implicite de tous les services).
+export const ADMIN_SERVICE_ROLE_LABEL =
+  "Coordinateur (via Chef d'établissement)"
+export const ADMIN_SERVICE_ROLE_DESCRIPTION =
+  "Le chef d'établissement est coordinateur de tous les services : pas de rôle à choisir."

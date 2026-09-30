@@ -2,7 +2,9 @@ import { Check, Pencil, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import {
+  ESTABLISHMENT_ROLE_DESCRIPTION,
   ESTABLISHMENT_ROLE_LABEL,
+  SERVICE_ROLE_DESCRIPTION,
   SERVICE_ROLE_LABEL,
 } from '../../../constants/member.constant.ts'
 import { useAppForm } from '../../../hooks/formConfig.tsx'
@@ -22,7 +24,7 @@ import {
   PopupTitle,
   PopupTrigger,
 } from '../../ui/popup.tsx'
-import RolesHelp from './rolesHelp.tsx'
+import AdminServiceRole from './adminServiceRole.tsx'
 
 interface EditMemberFormProps {
   member: Member
@@ -191,20 +193,30 @@ function EditMemberForm({ member }: EditMemberFormProps) {
               {member.user.email}
             </p>
 
-            <RolesHelp />
-
             <form.AppField name="role">
               {(field) => (
                 <field.Select
                   label="Rôle établissement"
                   options={ESTABLISHMENT_ROLE_OPTIONS}
                   clearable={false}
+                  description={
+                    ESTABLISHMENT_ROLE_DESCRIPTION[
+                      field.state.value as EstablishmentRole
+                    ]
+                  }
                 />
               )}
             </form.AppField>
 
-            <div className="space-y-2">
-              <h4 className="text-sm font-semibold text-text-dark">Services</h4>
+            <div className="space-y-2.5">
+              <div className="flex items-baseline justify-between">
+                <h4 className="text-[15px] font-semibold text-text-foreground">
+                  Services
+                </h4>
+                <span className="text-xs text-text-light">
+                  Un rôle par service
+                </span>
+              </div>
 
               {servicesPending && (
                 <p className="text-sm text-text-light">
@@ -226,28 +238,49 @@ function EditMemberForm({ member }: EditMemberFormProps) {
                   </p>
                 )}
 
-              <div className="space-y-4 border-l-2 border-border pl-3">
-                {!servicesPending &&
+              {/* Chef d'établissement : coordinateur de tous les services, les
+              rôles choisis restent en mémoire (et enregistrés) s'il repasse
+              Membre. */}
+              <form.Subscribe selector={(state) => state.values.role}>
+                {(role) =>
+                  !servicesPending &&
                   !servicesError &&
-                  sortedServices.map((service) => (
-                    <form.AppField
-                      key={service.id}
-                      name={`serviceRoles.${service.id}`}
-                    >
-                      {(field) => (
-                        <field.Select
-                          label={
-                            service.deactivatedAt !== null
-                              ? `${service.name} (désactivé)`
-                              : service.name
-                          }
-                          options={SERVICE_ROLE_OPTIONS}
-                          clearable={false}
-                        />
-                      )}
-                    </form.AppField>
-                  ))}
-              </div>
+                  sortedServices.map((service) => {
+                    const label =
+                      service.deactivatedAt !== null
+                        ? `${service.name} (désactivé)`
+                        : service.name
+                    return (
+                      <div
+                        key={service.id}
+                        className="border-l-2 border-border pl-3.5"
+                      >
+                        {role === 'ADMIN' ? (
+                          <AdminServiceRole
+                            id={`serviceRoles.${service.id}`}
+                            label={label}
+                          />
+                        ) : (
+                          <form.AppField name={`serviceRoles.${service.id}`}>
+                            {(field) => (
+                              <field.Select
+                                label={label}
+                                options={SERVICE_ROLE_OPTIONS}
+                                clearable={false}
+                                description={
+                                  SERVICE_ROLE_DESCRIPTION[
+                                    field.state.value as ServiceRole
+                                  ]
+                                }
+                              />
+                            )}
+                          </form.AppField>
+                        )}
+                      </div>
+                    )
+                  })
+                }
+              </form.Subscribe>
             </div>
           </form>
         </PopupBody>

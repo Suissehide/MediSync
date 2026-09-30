@@ -3,6 +3,12 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import {
+  ADMIN_SERVICE_ROLE_DESCRIPTION,
+  ADMIN_SERVICE_ROLE_LABEL,
+  ESTABLISHMENT_ROLE_DESCRIPTION,
+  SERVICE_ROLE_DESCRIPTION,
+} from '@/constants/member.constant.ts'
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import { useToastStore } from '@/store/useToastStore.ts'
 import type { User } from '@/types/auth.ts'
@@ -455,5 +461,55 @@ describe('buildServiceAssignments (fonction pure)', () => {
       existingMemberships: [{ serviceId: 'svc-disparu', role: 'LECTURE' }],
     })
     expect(result).toEqual([{ serviceId: 'svc-disparu', role: 'LECTURE' }])
+  })
+})
+
+describe('EditMemberForm — description du rôle sous chaque champ', () => {
+  it('décrit le rôle choisi, relié au champ, et suit le changement de rôle', async () => {
+    renderForm(buildFetchMock([routeSoignants, routeServices()]))
+    await ouvrir()
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Neurologie')).toBeInTheDocument()
+    })
+
+    expect(
+      screen.getByLabelText('Rôle établissement'),
+    ).toHaveAccessibleDescription(ESTABLISHMENT_ROLE_DESCRIPTION.MEMBER)
+    expect(screen.getByLabelText('Neurologie')).toHaveAccessibleDescription(
+      SERVICE_ROLE_DESCRIPTION.INTERVENANT,
+    )
+
+    await userEvent.click(screen.getByLabelText('Neurologie'))
+    await userEvent.click(
+      await screen.findByRole('option', { name: 'Secrétariat' }),
+    )
+    expect(screen.getByLabelText('Neurologie')).toHaveAccessibleDescription(
+      SERVICE_ROLE_DESCRIPTION.SECRETARIAT,
+    )
+  })
+
+  it("Chef d'établissement : chaque service affiche un champ désactivé, sans rôle à choisir", async () => {
+    renderForm(buildFetchMock([routeSoignants, routeServices()]))
+    await ouvrir()
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Neurologie')).toBeInTheDocument()
+    })
+
+    await userEvent.click(screen.getByLabelText('Rôle établissement'))
+    await userEvent.click(
+      await screen.findByRole('option', { name: "Chef d'établissement" }),
+    )
+
+    const neurologie = screen.getByLabelText('Neurologie')
+    expect(neurologie).toBeDisabled()
+    expect(neurologie).toHaveValue(ADMIN_SERVICE_ROLE_LABEL)
+    expect(neurologie).toHaveAccessibleDescription(
+      ADMIN_SERVICE_ROLE_DESCRIPTION,
+    )
+    expect(
+      screen.getByLabelText('Rôle établissement'),
+    ).toHaveAccessibleDescription(ESTABLISHMENT_ROLE_DESCRIPTION.ADMIN)
   })
 })

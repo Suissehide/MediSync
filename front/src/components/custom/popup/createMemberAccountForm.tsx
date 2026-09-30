@@ -3,7 +3,9 @@ import { useEffect, useMemo, useState } from 'react'
 
 import { CopyableId } from '@/components/custom/copyableId.tsx'
 import {
+  ESTABLISHMENT_ROLE_DESCRIPTION,
   ESTABLISHMENT_ROLE_LABEL,
+  SERVICE_ROLE_DESCRIPTION,
   SERVICE_ROLE_LABEL,
 } from '@/constants/member.constant.ts'
 import { useAppForm } from '@/hooks/formConfig.tsx'
@@ -22,7 +24,7 @@ import {
   PopupTitle,
   PopupTrigger,
 } from '../../ui/popup.tsx'
-import RolesHelp from './rolesHelp.tsx'
+import AdminServiceRole from './adminServiceRole.tsx'
 
 const NO_SERVICE = 'NONE'
 const NO_SERVICE_ROLE = 'NONE'
@@ -191,14 +193,17 @@ function CreateMemberAccountForm() {
                   {(field) => <field.Input label="Nom" />}
                 </form.AppField>
 
-                <RolesHelp />
-
                 <form.AppField name="role">
                   {(field) => (
                     <field.Select
                       label="Rôle établissement"
                       options={ESTABLISHMENT_ROLE_OPTIONS}
                       clearable={false}
+                      description={
+                        ESTABLISHMENT_ROLE_DESCRIPTION[
+                          field.state.value as EstablishmentRole
+                        ]
+                      }
                     />
                   )}
                 </form.AppField>
@@ -223,19 +228,40 @@ function CreateMemberAccountForm() {
                   </p>
                 )}
 
-                <form.Subscribe selector={(state) => state.values.serviceId}>
-                  {(serviceId) => (
-                    <form.AppField name="serviceRole">
-                      {(field) => (
-                        <field.Select
-                          label="Rôle dans le service"
-                          options={SERVICE_ROLE_OPTIONS}
-                          clearable={false}
-                          disabled={serviceId === NO_SERVICE}
-                        />
-                      )}
-                    </form.AppField>
-                  )}
+                {/* Chef d'établissement : coordinateur de tous les services, pas de
+                rôle à choisir. Sinon, pas de rôle sans service choisi. */}
+                <form.Subscribe
+                  selector={(state) => [
+                    state.values.role,
+                    state.values.serviceId,
+                  ]}
+                >
+                  {([role, serviceId]) =>
+                    role === 'ADMIN' ? (
+                      <AdminServiceRole
+                        id="serviceRole"
+                        label="Rôle dans le service"
+                      />
+                    ) : (
+                      <form.AppField name="serviceRole">
+                        {(field) => (
+                          <field.Select
+                            label="Rôle dans le service"
+                            options={SERVICE_ROLE_OPTIONS}
+                            clearable={false}
+                            disabled={serviceId === NO_SERVICE}
+                            description={
+                              serviceId === NO_SERVICE
+                                ? undefined
+                                : SERVICE_ROLE_DESCRIPTION[
+                                    field.state.value as ServiceRole
+                                  ]
+                            }
+                          />
+                        )}
+                      </form.AppField>
+                    )
+                  }
                 </form.Subscribe>
               </form>
             </PopupBody>
