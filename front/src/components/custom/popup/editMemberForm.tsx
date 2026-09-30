@@ -13,7 +13,6 @@ import type { EstablishmentRole, ServiceRole } from '../../../types/auth.ts'
 import type { Member, MemberServiceAssignment } from '../../../types/member.ts'
 import type { Service } from '../../../types/service.ts'
 import { Button } from '../../ui/button.tsx'
-import { Label } from '../../ui/label.tsx'
 import {
   Popup,
   PopupBody,
@@ -202,7 +201,7 @@ function EditMemberForm({ member }: EditMemberFormProps) {
             </form.AppField>
 
             <div className="space-y-2">
-              <Label>Services</Label>
+              <h4 className="text-sm font-semibold text-text-dark">Services</h4>
 
               {servicesPending && (
                 <p className="text-sm text-text-light">
@@ -224,26 +223,28 @@ function EditMemberForm({ member }: EditMemberFormProps) {
                   </p>
                 )}
 
-              {!servicesPending &&
-                !servicesError &&
-                sortedServices.map((service) => (
-                  <form.AppField
-                    key={service.id}
-                    name={`serviceRoles.${service.id}`}
-                  >
-                    {(field) => (
-                      <field.Select
-                        label={
-                          service.deactivatedAt !== null
-                            ? `${service.name} (désactivé)`
-                            : service.name
-                        }
-                        options={SERVICE_ROLE_OPTIONS}
-                        clearable={false}
-                      />
-                    )}
-                  </form.AppField>
-                ))}
+              <div className="space-y-4 border-l-2 border-border pl-3">
+                {!servicesPending &&
+                  !servicesError &&
+                  sortedServices.map((service) => (
+                    <form.AppField
+                      key={service.id}
+                      name={`serviceRoles.${service.id}`}
+                    >
+                      {(field) => (
+                        <field.Select
+                          label={
+                            service.deactivatedAt !== null
+                              ? `${service.name} (désactivé)`
+                              : service.name
+                          }
+                          options={SERVICE_ROLE_OPTIONS}
+                          clearable={false}
+                        />
+                      )}
+                    </form.AppField>
+                  ))}
+              </div>
             </div>
           </form>
         </PopupBody>
