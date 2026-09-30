@@ -229,7 +229,19 @@ describe('etats de l ecran des services', () => {
   // (decisions-etape-4a.md, D3/D4) n'etait tenu que pour l'etablissement —
   // le geste de depannage reel n'avait nulle part ou se poser sur cet
   // ecran non plus.
-  it("affiche l'identifiant du service, copiable", async () => {
+  // Reservee au super-admin depuis le 2026-09-30 : un administrateur ne la voit pas.
+  it("n'affiche pas l'identifiant du service a un administrateur", async () => {
+    monter([routeGetServices([serviceActif])])
+
+    await waitFor(() => {
+      expect(screen.getByText('Cardio')).toBeInTheDocument()
+    })
+    expect(screen.queryByText('Identifiant')).not.toBeInTheDocument()
+    expect(screen.queryByText(serviceActif.id)).not.toBeInTheDocument()
+  })
+
+  it("affiche l'identifiant du service, copiable, au super-admin", async () => {
+    useAuthStore.setState({ user: { ...admin, isSuperAdmin: true } })
     monter([routeGetServices([serviceActif])])
 
     await waitFor(() => {

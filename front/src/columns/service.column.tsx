@@ -16,12 +16,15 @@ type ServiceColumnOptions = {
   onRename: (service: Service) => void
   onToggleActive: (service: Service) => void
   isToggling: (service: Service) => boolean
+  // L'identifiant n'est montre qu'au super-admin (2026-09-30).
+  avecIdentifiant: boolean
 }
 
 export const getServiceColumns = ({
   onRename,
   onToggleActive,
   isToggling,
+  avecIdentifiant,
 }: ServiceColumnOptions) => [
   columnHelper.display({
     id: 'name',
@@ -29,12 +32,17 @@ export const getServiceColumns = ({
     cell: ({ row }) => row.original.name,
   }),
   // Revue finale de l'étape 4a, Important n°3 : « identifiants copiables »
-  // (decisions-etape-4a.md, D3/D4) — le geste de dépannage réel.
-  columnHelper.display({
-    id: 'serviceId',
-    header: 'Identifiant',
-    cell: ({ row }) => <CopyableId value={row.original.id} />,
-  }),
+  // (decisions-etape-4a.md, D3/D4) — le geste de dépannage réel. Reserve au
+  // super-admin depuis le 2026-09-30, comme partout.
+  ...(avecIdentifiant
+    ? [
+        columnHelper.display({
+          id: 'serviceId',
+          header: 'Identifiant',
+          cell: ({ row }) => <CopyableId value={row.original.id} />,
+        }),
+      ]
+    : []),
   columnHelper.display({
     id: 'createdAt',
     header: 'Créé le',
