@@ -132,10 +132,24 @@ const ecranPlateforme = createRoute({
   component: () => <Navbar toggleSidebar={replierLaBarre} />,
 })
 
+const ecranJournaux = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'super-admin/access-log',
+  component: () => <Navbar toggleSidebar={replierLaBarre} />,
+})
+
+const ficheEtablissement = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'super-admin/$establishmentId',
+  component: () => <Navbar toggleSidebar={replierLaBarre} />,
+})
+
 const arbre = rootRoute.addChildren([
   layoutDeService.addChildren([ecranDeService]),
   layoutAdmin.addChildren([ecranAdmin]),
   ecranPlateforme,
+  ecranJournaux,
+  ficheEtablissement,
   ecranHorsTenant,
 ])
 
@@ -328,6 +342,24 @@ describe('onglets de la barre de navigation', () => {
       'aria-current',
       'page',
     )
+  })
+
+  // `/super-admin/access-log` a la forme de `/super-admin/$establishmentId` : l'onglet
+  // Etablissements ne doit s'allumer que sur la VRAIE fiche.
+  it.each([
+    ['/super-admin/access-log', 'Journaux'],
+    ['/super-admin/e1', 'Établissements'],
+  ])('sur %s, seul l onglet %s est actif', async (depart, actif) => {
+    monterNavbar(depart, avecRoles('MEMBER', null, true))
+
+    await waitFor(() => {
+      expect(
+        screen
+          .getAllByRole('link', { current: 'page' })
+          .map((lien) => lien.textContent)
+          .filter((nom) => nom !== 'Plateforme'),
+      ).toEqual([actif])
+    })
   })
 
   it('ne montre le bouton Plateforme qu a un super-admin', async () => {
