@@ -1,4 +1,4 @@
-import { Link, useMatchRoute } from '@tanstack/react-router'
+import { Link, useMatchRoute, useRouterState } from '@tanstack/react-router'
 import { ChevronDown, Globe, PanelLeft, Settings2 } from 'lucide-react'
 import { Fragment } from 'react'
 
@@ -97,6 +97,9 @@ function MenuAdministration({
 
 function Navbar({ toggleSidebar }: NavbarProps) {
   const matchRoute = useMatchRoute()
+  // La route RÉELLEMENT atteinte, pas un motif : `matchRoute('/super-admin/$establishmentId')`
+  // matche aussi `/super-admin/access-log`.
+  const feuille = useRouterState({ select: (s) => s.matches.at(-1)?.fullPath })
   const courant = useCurrentScale()
   // Les permissions se lisent sur le contexte que le layout de la route a pose — le store ne
   // decide jamais de l'ECHELLE (voir `useCurrentScale`), seulement, a l'interieur de celle-ci,
@@ -140,8 +143,7 @@ function Navbar({ toggleSidebar }: NavbarProps) {
       to: item.to,
       params: params as never,
       fuzzy: item.matchPrefix ?? false,
-    }) ||
-    (item.activeAlso ?? []).some((to) => !!matchRoute({ to, fuzzy: false }))
+    }) || (item.activeAlso ?? []).some((to) => to === feuille)
 
   // INVARIANT MULTI-TENANT — cette condition porte sur la ROUTE, jamais sur
   // le store. Cette barre est rendue par `DashboardLayout`, donc aussi par
@@ -196,6 +198,9 @@ function Navbar({ toggleSidebar }: NavbarProps) {
                     key={item.to}
                     to={item.to}
                     params={params as never}
+                    // Sans `exact`, le Link s'estime actif par prefixe et pose lui-meme
+                    // `aria-current` : `estActif` en decide seul.
+                    activeOptions={{ exact: true }}
                     aria-current={estActif(item) ? 'page' : undefined}
                     className={`${TAB_CLASS} whitespace-nowrap ${estActif(item) ? 'text-text after:scale-x-100' : 'text-text-light'}`}
                   >

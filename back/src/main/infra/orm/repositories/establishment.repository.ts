@@ -104,6 +104,21 @@ class EstablishmentRepository implements EstablishmentRepositoryInterface {
     }
   }
 
+  // `Establishment` est global : écriture nue, comme `create`. 404 si l'id est inconnu.
+  async rename(id: string, name: string) {
+    try {
+      return await this.prisma.establishment.update({
+        where: { id },
+        data: { name },
+      })
+    } catch (err) {
+      throw this.errorHandler.boomErrorFromPrismaError({
+        entityName: 'Establishment',
+        error: err,
+      })
+    }
+  }
+
   async findManyByIds(ids: string[]) {
     if (ids.length === 0) {
       return []

@@ -159,6 +159,10 @@ class EstablishmentDomain implements EstablishmentDomainInterface {
   // Tâche 7 : la liste du super-admin (spec §3.3). Une lecture nue (`findAll`, modèle global)
   // puis, PAR établissement, ses compteurs (`countersFor`, sous contexte superadmin) — voir le
   // commentaire de `EstablishmentCounters` pour ce que chaque compteur expose et pourquoi.
+  rename(id: string, name: string) {
+    return this.establishmentRepository.rename(id, name)
+  }
+
   async list(): Promise<EstablishmentListRow[]> {
     const establishments = await this.establishmentRepository.findAll()
     return Promise.all(

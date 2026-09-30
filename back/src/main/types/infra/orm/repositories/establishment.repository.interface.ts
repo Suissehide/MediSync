@@ -144,6 +144,7 @@ export interface EstablishmentRepositoryInterface {
   findAll: () => Promise<EstablishmentEntityRepo[]>
   findByIdOrThrow: (id: string) => Promise<EstablishmentEntityRepo>
   findManyByIds: (ids: string[]) => Promise<EstablishmentEntityRepo[]>
+  rename: (id: string, name: string) => Promise<EstablishmentEntityRepo>
   // Les quatre compteurs et signaux de la liste/du détail (spec §3.3), pour un établissement —
   // voir le commentaire sur `EstablishmentCounters`.
   countersFor: (establishmentId: string) => Promise<EstablishmentCounters>

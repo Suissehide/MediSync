@@ -9,6 +9,7 @@ import type {
   CreateEstablishmentInput,
   CreateGrantInput,
 } from '../types/superAdmin.ts'
+import { meQueryOptions } from './useMe.ts'
 
 // Écrans du super-admin (tâche 12) : hors de tout tenant. Aucune clé de
 // requête ici ne porte d'établissement ou de service au sens de
@@ -104,6 +105,40 @@ export const useSuperAdminCreateEstablishment = () => {
       queryClient.invalidateQueries({
         queryKey: [SUPER_ADMIN.GET_ALL_ESTABLISHMENTS],
       }),
+  })
+}
+
+// Le nom figure aussi dans `/me` (bandeau, choix du contexte) : relu avec la liste et la fiche.
+export const useSuperAdminRenameEstablishment = () => {
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+
+  return useMutation({
+    mutationKey: [SUPER_ADMIN.RENAME_ESTABLISHMENT],
+    mutationFn: SuperAdminApi.renameEstablishment,
+    onSuccess: () => {
+      toast({
+        title: 'Établissement renommé',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
+    },
+    onError: (error) => {
+      toast({
+        title: "Erreur lors du renommage de l'établissement",
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
+    },
+    onSettled: () =>
+      Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: [SUPER_ADMIN.GET_ALL_ESTABLISHMENTS],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: [SUPER_ADMIN.GET_ESTABLISHMENT],
+        }),
+        queryClient.invalidateQueries({ queryKey: meQueryOptions.queryKey }),
+      ]),
   })
 }
 

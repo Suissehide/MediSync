@@ -1,9 +1,11 @@
 import { createFileRoute, useNavigate, useParams } from '@tanstack/react-router'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Pencil } from 'lucide-react'
+import { useState } from 'react'
 
 import { activityLogColumns } from '@/columns/activityLog.column.tsx'
 import { CopyableId } from '@/components/custom/copyableId.tsx'
 import CreateGrantForm from '@/components/custom/popup/createGrantForm.tsx'
+import RenameEstablishmentForm from '@/components/custom/popup/renameEstablishmentForm.tsx'
 import { ActiveGrantNotice } from '@/components/custom/superAdmin/activeGrantNotice.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
 import { EtiquetteStatut } from '@/components/table/etiquette.tsx'
@@ -29,6 +31,7 @@ export const Route = createFileRoute(
 
 function SuperAdminEstablishmentDetail() {
   const navigate = useNavigate()
+  const [renommer, setRenommer] = useState(false)
   // Le paramètre de route DÉSIGNE l'établissement demandé (§6.2) : ce n'est
   // pas ici un tenant implicite, il n'est jamais posé dans le store
   // (`setContext`) ni utilisé par une fabrique d'URL de tenant — voir le
@@ -94,14 +97,30 @@ function SuperAdminEstablishmentDetail() {
               <ArrowLeft className="w-4 h-4" />
             </Button>
             <div>
-              <h1 className="text-xl font-semibold text-text-dark">
-                {establishment.name}
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-semibold text-text-dark">
+                  {establishment.name}
+                </h1>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setRenommer(true)}
+                  title="Renommer l'établissement"
+                  aria-label="Renommer l'établissement"
+                >
+                  <Pencil className="w-4 h-4" />
+                </Button>
+              </div>
               <CopyableId value={establishment.id} />
             </div>
           </div>
           <CreateGrantForm establishmentId={establishment.id} />
         </div>
+
+        <RenameEstablishmentForm
+          establishment={renommer ? establishment : null}
+          onClose={() => setRenommer(false)}
+        />
 
         <ActiveGrantNotice establishmentId={establishment.id} />
 
