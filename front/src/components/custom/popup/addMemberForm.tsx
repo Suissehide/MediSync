@@ -21,6 +21,7 @@ import {
   PopupTitle,
   PopupTrigger,
 } from '../../ui/popup.tsx'
+import RolesHelp from './rolesHelp.tsx'
 
 interface AddMemberFormProps {
   trigger?: React.ReactNode
@@ -153,6 +154,8 @@ function AddMemberForm({ trigger }: AddMemberFormProps) {
               La personne doit déjà avoir créé son propre compte : ce formulaire
               ne fait que le rattacher à l'établissement.
             </p>
+
+            <RolesHelp />
 
             <form.AppField name="role">
               {(field) => (

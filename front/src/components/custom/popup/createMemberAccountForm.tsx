@@ -22,6 +22,7 @@ import {
   PopupTitle,
   PopupTrigger,
 } from '../../ui/popup.tsx'
+import RolesHelp from './rolesHelp.tsx'
 
 const NO_SERVICE = 'NONE'
 const NO_SERVICE_ROLE = 'NONE'
@@ -189,6 +190,8 @@ function CreateMemberAccountForm() {
                 <form.AppField name="lastName">
                   {(field) => <field.Input label="Nom" />}
                 </form.AppField>
+
+                <RolesHelp />
 
                 <form.AppField name="role">
                   {(field) => (
