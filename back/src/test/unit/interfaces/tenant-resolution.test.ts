@@ -16,7 +16,13 @@ const membership: UserWithMemberships['establishmentMemberships'][number] = {
   establishmentId: 'e1',
   role: 'MEMBER',
   createdAt: now,
-  establishment: { id: 'e1', name: 'E', createdAt: now, deactivatedAt: null },
+  establishment: {
+    id: 'e1',
+    name: 'E',
+    createdAt: now,
+    deactivatedAt: null,
+    services: [],
+  },
   serviceMemberships: [
     {
       id: 'sm1',

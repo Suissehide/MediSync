@@ -57,6 +57,7 @@ export type EstablishmentPermission =
   | 'activity-log:read'
   | 'activity-log:write'
   | 'access-log:read'
+  | 'establishment:rename'
 
 // Portée par le drapeau `User.isSuperAdmin`, jamais par un rôle d'établissement ou de service
 // (habilitations.md, table « Permissions d'établissement et de plateforme » — colonne
@@ -120,6 +121,7 @@ export const ESTABLISHMENT_PERMISSIONS: Record<
     'activity-log:read',
     'activity-log:write',
     'access-log:read',
+    'establishment:rename',
   ],
   MEMBER: [],
 }

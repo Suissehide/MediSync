@@ -70,15 +70,25 @@ const appartenancesReelles = (
     .map((membership) => ({
       establishmentId: membership.establishmentId,
       role: membership.role,
-      services: membership.serviceMemberships
-        .filter(
-          (serviceMembership) =>
-            serviceMembership.service.deactivatedAt === null,
-        )
-        .map((serviceMembership) => ({
-          id: serviceMembership.serviceId,
-          role: serviceMembership.role,
-        })),
+      // Le chef d'établissement (`ADMIN`) est COORDINATEUR sur TOUS les services actifs, affecté
+      // ou non — comme sous un octroi. Les autres ne voient que leurs affectations.
+      services:
+        membership.role === 'ADMIN'
+          ? membership.establishment.services
+              .filter((service) => service.deactivatedAt === null)
+              .map((service) => ({
+                id: service.id,
+                role: 'COORDINATEUR' as const,
+              }))
+          : membership.serviceMemberships
+              .filter(
+                (serviceMembership) =>
+                  serviceMembership.service.deactivatedAt === null,
+              )
+              .map((serviceMembership) => ({
+                id: serviceMembership.serviceId,
+                role: serviceMembership.role,
+              })),
       origine: 'reelle' as const,
     }))
 

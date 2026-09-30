@@ -1,8 +1,8 @@
+import type { UseMutationResult } from '@tanstack/react-query'
 import { Check, X } from 'lucide-react'
 import { useEffect } from 'react'
 
 import { useAppForm } from '@/hooks/formConfig.tsx'
-import { useSuperAdminRenameEstablishment } from '@/queries/useSuperAdmin.ts'
 import { Button } from '../../ui/button.tsx'
 import {
   Popup,
@@ -16,16 +16,18 @@ import {
 interface RenameEstablishmentFormProps {
   establishment: { id: string; name: string } | null
   onClose: () => void
+  // Super-admin ou chef d'établissement : chacun passe sa propre mutation.
+  rename: UseMutationResult<unknown, Error, { id: string; name: string }>
 }
 
-// Fiche d'un établissement (super-admin) : renommer. Même forme que `renameServiceForm.tsx` :
-// `establishment` vaut `null` tant que la popup est fermée.
+// Renommer un établissement (fiche super-admin, ou administration par son chef).
+// Même forme que `renameServiceForm.tsx` : `establishment` vaut `null` tant
+// que la popup est fermée.
 function RenameEstablishmentForm({
   establishment,
   onClose,
+  rename: renameEstablishment,
 }: RenameEstablishmentFormProps) {
-  const renameEstablishment = useSuperAdminRenameEstablishment()
-
   const form = useAppForm({
     defaultValues: { name: establishment?.name ?? '' },
     onSubmit: ({ value }) => {

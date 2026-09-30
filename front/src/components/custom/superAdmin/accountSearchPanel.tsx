@@ -23,7 +23,7 @@ import {
 } from '../../ui/popup.tsx'
 
 const ESTABLISHMENT_ROLE_LABEL: Record<string, string> = {
-  ADMIN: 'Administrateur',
+  ADMIN: "Chef d'établissement",
   MEMBER: 'Membre',
 }
 

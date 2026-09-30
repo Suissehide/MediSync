@@ -1,10 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { ServicesApi } from '@/api/services.api.ts'
+import { renameCurrentEstablishment, ServicesApi } from '@/api/services.api.ts'
 import { SERVICE_ADMIN } from '@/constants/process.constant.ts'
 import { TOAST_SEVERITY } from '@/constants/ui.constant.ts'
 import { useDataFetching } from '@/hooks/useDataFetching.ts'
 import { useToast } from '@/hooks/useToast.ts'
+import { meQueryOptions } from '@/queries/useMe.ts'
+import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { CreateServiceInput, UpdateServiceInput } from '@/types/service.ts'
 
 // * QUERIES
@@ -92,6 +94,37 @@ export const useServiceDeactivationImpact = () => {
     onError: (error) => {
       toast({
         title: "Impossible de calculer l'impact de la désactivation",
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
+    },
+  })
+}
+
+// Le nom de l'établissement vient de `/me` (bandeau, sélecteur) : on le relit frais puis on
+// le repose dans le store, sans toucher au contexte courant.
+export const useRenameEstablishment = () => {
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+
+  return useMutation({
+    mutationKey: [SERVICE_ADMIN.RENAME_ESTABLISHMENT],
+    mutationFn: ({ name }: { id: string; name: string }) =>
+      renameCurrentEstablishment(name),
+    onSuccess: async () => {
+      toast({
+        title: 'Établissement renommé',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
+      const user = await queryClient.fetchQuery({
+        ...meQueryOptions,
+        staleTime: 0,
+      })
+      useAuthStore.getState().update(user)
+    },
+    onError: (error) => {
+      toast({
+        title: "Erreur lors du renommage de l'établissement",
         message: error.message,
         severity: TOAST_SEVERITY.ERROR,
       })

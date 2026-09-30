@@ -10,7 +10,7 @@ import type { PrimaTransactionClient } from '../client'
 export type UserEntityRepo = User
 export type UserWithMemberships = User & {
   establishmentMemberships: (EstablishmentMembership & {
-    establishment: Establishment
+    establishment: Establishment & { services: Service[] }
     serviceMemberships: (ServiceMembership & { service: Service })[]
   })[]
 }

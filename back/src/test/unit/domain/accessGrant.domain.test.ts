@@ -163,6 +163,30 @@ describe('effectiveMemberships', () => {
             name: 'E1',
             createdAt: maintenant,
             deactivatedAt: null,
+            // s3 : service actif ou l'ADMIN n'est PAS affecte — il y accede quand meme.
+            services: [
+              {
+                id: 's1',
+                establishmentId: 'e1',
+                name: 'S1',
+                createdAt: maintenant,
+                deactivatedAt: null,
+              },
+              {
+                id: 's2',
+                establishmentId: 'e1',
+                name: 'S2',
+                createdAt: maintenant,
+                deactivatedAt: maintenant,
+              },
+              {
+                id: 's3',
+                establishmentId: 'e1',
+                name: 'S3',
+                createdAt: maintenant,
+                deactivatedAt: null,
+              },
+            ],
           },
           serviceMemberships: [
             {
@@ -219,7 +243,10 @@ describe('effectiveMemberships', () => {
       {
         establishmentId: 'e1',
         role: 'ADMIN',
-        services: [{ id: 's1', role: 'COORDINATEUR' }],
+        services: [
+          { id: 's1', role: 'COORDINATEUR' },
+          { id: 's3', role: 'COORDINATEUR' },
+        ],
         origine: 'reelle',
       },
     ])

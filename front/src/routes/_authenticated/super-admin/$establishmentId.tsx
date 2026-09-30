@@ -12,11 +12,14 @@ import { EtiquetteStatut } from '@/components/table/etiquette.tsx'
 import ReactTable from '@/components/table/reactTable.tsx'
 import { Button } from '@/components/ui/button.tsx'
 import { queryState } from '@/libs/queryState.ts'
-import { useSuperAdminEstablishmentQuery } from '@/queries/useSuperAdmin.ts'
+import {
+  useSuperAdminEstablishmentQuery,
+  useSuperAdminRenameEstablishment,
+} from '@/queries/useSuperAdmin.ts'
 import type { ActivityLog } from '@/types/activityLog.ts'
 
 const ESTABLISHMENT_ROLE_LABEL: Record<string, string> = {
-  ADMIN: 'Administrateur',
+  ADMIN: "Chef d'établissement",
   MEMBER: 'Membre',
 }
 
@@ -32,6 +35,7 @@ export const Route = createFileRoute(
 function SuperAdminEstablishmentDetail() {
   const navigate = useNavigate()
   const [renommer, setRenommer] = useState(false)
+  const renameEstablishment = useSuperAdminRenameEstablishment()
   // Le paramètre de route DÉSIGNE l'établissement demandé (§6.2) : ce n'est
   // pas ici un tenant implicite, il n'est jamais posé dans le store
   // (`setContext`) ni utilisé par une fabrique d'URL de tenant — voir le
@@ -120,6 +124,7 @@ function SuperAdminEstablishmentDetail() {
         <RenameEstablishmentForm
           establishment={renommer ? establishment : null}
           onClose={() => setRenommer(false)}
+          rename={renameEstablishment}
         />
 
         <ActiveGrantNotice establishmentId={establishment.id} />

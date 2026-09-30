@@ -68,10 +68,14 @@ export const toMeResponse = (
         const membership = membershipByEstablishment.get(
           effective.establishmentId,
         )
-        const serviceById = new Map(
+        // Noms lus sur les services de l'établissement : un ADMIN y accède sans y être affecté.
+        const serviceNameById = new Map(
+          (membership?.establishment.services ?? []).map((s) => [s.id, s.name]),
+        )
+        const soignantByService = new Map(
           (membership?.serviceMemberships ?? []).map((sm) => [
             sm.serviceId,
-            { name: sm.service.name, soignantId: sm.soignantId },
+            sm.soignantId,
           ]),
         )
         return {
@@ -80,9 +84,9 @@ export const toMeResponse = (
           role: effective.role,
           services: effective.services.map((service) => ({
             id: service.id,
-            name: serviceById.get(service.id)?.name ?? '',
+            name: serviceNameById.get(service.id) ?? '',
             role: service.role,
-            soignantId: serviceById.get(service.id)?.soignantId ?? null,
+            soignantId: soignantByService.get(service.id) ?? null,
           })),
           origine: effective.origine,
         }
