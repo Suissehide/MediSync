@@ -357,3 +357,51 @@ describe('POST /super-admin/establishments', () => {
     })
   })
 })
+
+describe('PATCH /super-admin/establishments/:id', () => {
+  let testApp: TestApp
+  let superAdminCookies: { access_token: string }
+
+  beforeAll(async () => {
+    await truncateAll()
+    testApp = await buildTestApp()
+    await createUser({ email: 'super@medisync.fr', isSuperAdmin: true })
+    superAdminCookies = await signIn(testApp.app, 'super@medisync.fr')
+  })
+
+  afterAll(async () => {
+    await testApp.close()
+    await testDb.$disconnect()
+  })
+
+  const rename = (id: string, name: string) =>
+    testApp.app.inject({
+      method: 'PATCH',
+      url: `/super-admin/establishments/${id}`,
+      cookies: superAdminCookies,
+      payload: { name },
+    })
+
+  it("renomme l'etablissement", async () => {
+    const { id } = await testDb.establishment.create({
+      data: { name: 'Ancien nom' },
+    })
+
+    const res = await rename(id, '  Nouveau nom  ')
+
+    expect(res.statusCode).toBe(200)
+    expect(res.json()).toMatchObject({ id, name: 'Nouveau nom' })
+    const stored = await testDb.establishment.findUniqueOrThrow({
+      where: { id },
+    })
+    expect(stored.name).toBe('Nouveau nom')
+  })
+
+  it('refuse un nom vide (400) et un id inconnu (404)', async () => {
+    const { id } = await testDb.establishment.create({ data: { name: 'X' } })
+    expect((await rename(id, '   ')).statusCode).toBe(400)
+    expect(
+      (await rename('00000000-0000-0000-0000-000000000000', 'Y')).statusCode,
+    ).toBe(404)
+  })
+})

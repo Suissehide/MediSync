@@ -8,6 +8,9 @@ import {
   establishmentDetailResponseSchema,
   establishmentIdParamsSchema,
   establishmentListResponseSchema,
+  type RenameEstablishmentBody,
+  renameEstablishmentResponseSchema,
+  renameEstablishmentSchema,
 } from '../../schemas/establishment.schema'
 
 // Sous `/super-admin` (super-admin.routes.ts) : hérite de `assertRoutePermission`
@@ -59,6 +62,23 @@ const establishmentsRouter: FastifyPluginAsync = (fastify) => {
       reply.code(201)
       return result
     },
+  )
+
+  fastify.patch<{
+    Params: EstablishmentIdParams
+    Body: RenameEstablishmentBody
+  }>(
+    '/:id',
+    {
+      schema: {
+        params: establishmentIdParamsSchema,
+        body: renameEstablishmentSchema,
+        response: { 200: renameEstablishmentResponseSchema },
+      },
+      config: { permission: 'establishments:manage' },
+    },
+    (request) =>
+      establishmentDomain.rename(request.params.id, request.body.name),
   )
 
   return Promise.resolve()

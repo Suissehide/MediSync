@@ -82,6 +82,14 @@ export const establishmentListResponseSchema = z.array(
   establishmentListItemSchema,
 )
 
+export const renameEstablishmentSchema = z.object({
+  name: z.string().trim().min(1, 'Establishment name is required'),
+})
+export type RenameEstablishmentBody = z.infer<typeof renameEstablishmentSchema>
+
+export const renameEstablishmentResponseSchema =
+  createEstablishmentResponseSchema.shape.establishment
+
 export const establishmentIdParamsSchema = z.object({ id: z.string() })
 export type EstablishmentIdParams = z.infer<typeof establishmentIdParamsSchema>
 

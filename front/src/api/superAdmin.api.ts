@@ -74,6 +74,26 @@ export const SuperAdminApi = {
     return response.json()
   },
 
+  renameEstablishment: async ({
+    id,
+    name,
+  }: {
+    id: string
+    name: string
+  }): Promise<void> => {
+    const response = await fetchWithAuth(
+      `${SUPER_ADMIN_URL()}/establishments/${id}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      },
+    )
+    if (!response.ok) {
+      handleHttpError(response, {}, "Impossible de renommer l'établissement")
+    }
+  },
+
   searchAccount: async (email: string): Promise<AccountSearchResult> => {
     const response = await fetchWithAuth(
       `${SUPER_ADMIN_URL()}/users?email=${encodeURIComponent(email)}`,

@@ -51,4 +51,5 @@ export interface EstablishmentDomainInterface {
   // augmentée des services, membres et journal d'activité de cet établissement. `Boom.notFound`
   // si l'id est inconnu (`findByIdOrThrow`).
   getById: (id: string) => Promise<EstablishmentDetail>
+  rename: (id: string, name: string) => Promise<Establishment>
 }
