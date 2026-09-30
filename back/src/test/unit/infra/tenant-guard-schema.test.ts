@@ -589,7 +589,7 @@ describe('SUPERADMIN_GLOBAL_OPERATIONS reflete le schema', () => {
     ]
     expect(SUPERADMIN_GLOBAL_OPERATIONS).toEqual({
       User: [...lectures, 'create'],
-      Establishment: [...lectures, 'create'],
+      Establishment: [...lectures, 'create', 'update'],
       AccessLink: [...lectures, 'create', 'updateMany'],
       SuperAdminAccessGrant: [...lectures, 'create', 'update'],
     })

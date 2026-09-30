@@ -2538,11 +2538,6 @@ describe('ecritures declarees sur un modele global sous superadmin (revue, tour 
     },
     {
       model: 'Establishment',
-      operation: 'update',
-      args: { where: { id: 'e1' }, data: { name: 'x' } },
-    },
-    {
-      model: 'Establishment',
       operation: 'updateMany',
       args: { data: { name: 'x' } },
     },

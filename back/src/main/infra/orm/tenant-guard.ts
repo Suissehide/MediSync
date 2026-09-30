@@ -476,8 +476,9 @@ const UPDATE_OPERATIONS = new Set([
 //     ou le mot de passe. PAS `update` : `lastLoginAt` (tâche 7 step 4) est posé sur le chemin de
 //     connexion, qui n'a aucun contexte, et la désactivation d'un membre (tâche 10 step 2) se fait
 //     sous contexte tenant, où un modèle global n'est pas soumis à cette table.
-//   - `Establishment.create` : tâche 6. PAS `update`/`delete(Many)` : aucune route de ce plan ne
-//     modifie ni ne supprime un établissement sous ce contexte.
+//   - `Establishment.create` : tâche 6. `update` : `PATCH /super-admin/establishments/:id`
+//     (renommer) — son `data` ne porte que `name`, toute écriture imbriquée restant refusée. PAS
+//     `updateMany`/`upsert`/`delete(Many)` : aucune route ne s'en sert sous ce contexte.
 //   - `AccessLink.create` + `updateMany` : tâches 4, 6 et 10 — émettre un lien, et invalider les
 //     liens précédents du même compte à la réémission (`updateMany` conditionné sur
 //     `usedAt: null`, tâche 4 steps 1 et 3).
@@ -513,7 +514,7 @@ export const SUPERADMIN_GLOBAL_OPERATIONS: Readonly<
   Record<string, readonly string[]>
 > = {
   User: [...LECTURES_GLOBALES_SANS_MUTATION, 'create'],
-  Establishment: [...LECTURES_GLOBALES_SANS_MUTATION, 'create'],
+  Establishment: [...LECTURES_GLOBALES_SANS_MUTATION, 'create', 'update'],
   AccessLink: [...LECTURES_GLOBALES_SANS_MUTATION, 'create', 'updateMany'],
   SuperAdminAccessGrant: [
     ...LECTURES_GLOBALES_SANS_MUTATION,
