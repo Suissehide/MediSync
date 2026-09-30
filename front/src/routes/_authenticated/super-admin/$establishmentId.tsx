@@ -6,6 +6,7 @@ import { CopyableId } from '@/components/custom/copyableId.tsx'
 import CreateGrantForm from '@/components/custom/popup/createGrantForm.tsx'
 import { ActiveGrantNotice } from '@/components/custom/superAdmin/activeGrantNotice.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
+import { EtiquetteStatut } from '@/components/table/etiquette.tsx'
 import ReactTable from '@/components/table/reactTable.tsx'
 import { Button } from '@/components/ui/button.tsx'
 import { queryState } from '@/libs/queryState.ts'
@@ -118,9 +119,7 @@ function SuperAdminEstablishmentDetail() {
                   className="flex justify-between border-b border-border py-1 text-sm"
                 >
                   <span>{service.name}</span>
-                  <span className="text-text-light">
-                    {service.deactivatedAt !== null ? 'Désactivé' : 'Actif'}
-                  </span>
+                  <EtiquetteStatut deactivatedAt={service.deactivatedAt} />
                 </li>
               ))}
             </ul>

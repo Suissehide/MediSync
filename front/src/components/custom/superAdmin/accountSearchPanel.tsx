@@ -8,6 +8,7 @@ import {
   useSuperAdminAccountSearch,
   useSuperAdminReissueAccessLink,
 } from '../../../queries/useSuperAdmin.ts'
+import { EtiquetteStatut } from '../../table/etiquette.tsx'
 import { Button } from '../../ui/button.tsx'
 import { Card } from '../../ui/card.tsx'
 import { Input } from '../../ui/input.tsx'
@@ -86,9 +87,9 @@ export const AccountSearchPanel = () => {
             <CopyableId value={account.id} />
           </div>
 
-          <div className="text-sm">
+          <div className="flex items-center gap-1 text-sm">
             <span className="text-text-light">Statut : </span>
-            {account.deactivatedAt !== null ? 'Désactivé' : 'Actif'}
+            <EtiquetteStatut deactivatedAt={account.deactivatedAt} />
           </div>
 
           <div className="text-sm">

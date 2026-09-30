@@ -3,6 +3,7 @@ import dayjs from 'dayjs'
 import { Ban, Pencil, RotateCcw } from 'lucide-react'
 
 import { CopyableId } from '@/components/custom/copyableId.tsx'
+import { EtiquetteStatut } from '@/components/table/etiquette.tsx'
 import { Button } from '@/components/ui/button.tsx'
 import type { Service } from '@/types/service.ts'
 
@@ -51,8 +52,9 @@ export const getServiceColumns = ({
   columnHelper.display({
     id: 'status',
     header: 'Statut',
-    cell: ({ row }) =>
-      row.original.deactivatedAt !== null ? 'Désactivé' : 'Actif',
+    cell: ({ row }) => (
+      <EtiquetteStatut deactivatedAt={row.original.deactivatedAt} />
+    ),
   }),
   columnHelper.display({
     id: 'actions',

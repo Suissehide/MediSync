@@ -3,6 +3,7 @@ import dayjs from 'dayjs'
 import { useMemo } from 'react'
 
 import DashboardLayout from '@/components/dashboard.layout.tsx'
+import { Etiquette } from '@/components/table/etiquette.tsx'
 import { can } from '@/hooks/useCan.ts'
 import { queryState } from '@/libs/queryState.ts'
 import { useEstablishmentGrantsQuery } from '@/queries/useGrants.ts'
@@ -36,11 +37,19 @@ const grantedByLabel = (grant: EstablishmentGrant) =>
 const estEnCours = (grant: EstablishmentGrant, maintenant: Date) =>
   grant.revokedAt === null && new Date(grant.expiresAt) > maintenant
 
-const statutPasse = (grant: EstablishmentGrant, maintenant: Date): string => {
+const statutPasse = (grant: EstablishmentGrant, maintenant: Date) => {
   if (grant.revokedAt !== null) {
-    return `Révoqué le ${dayjs.utc(grant.revokedAt).format('DD/MM/YYYY HH:mm')}`
+    return (
+      <Etiquette ton="danger">
+        Révoqué le {dayjs.utc(grant.revokedAt).format('DD/MM/YYYY HH:mm')}
+      </Etiquette>
+    )
   }
-  return new Date(grant.expiresAt) <= maintenant ? 'Expiré' : 'En cours'
+  return new Date(grant.expiresAt) <= maintenant ? (
+    <Etiquette ton="neutre">Expiré</Etiquette>
+  ) : (
+    <Etiquette ton="succes">En cours</Etiquette>
+  )
 }
 
 function GrantsAdmin() {
@@ -138,9 +147,7 @@ function GrantsAdmin() {
                             .format('DD/MM/YYYY HH:mm')}
                         </div>
                       </div>
-                      <div className="text-text-light whitespace-nowrap">
-                        {statutPasse(grant, maintenant)}
-                      </div>
+                      <div>{statutPasse(grant, maintenant)}</div>
                     </li>
                   ))}
                 </ul>
