@@ -17,7 +17,9 @@ import type { PostgresPrismaClient } from '../postgres-client'
 const membershipsInclude = {
   establishmentMemberships: {
     include: {
-      establishment: true,
+      // Services de l'établissement : un chef d'établissement (`ADMIN`) y accède tous, voir
+      // `effectiveMemberships`.
+      establishment: { include: { services: true } },
       serviceMemberships: { include: { service: true } },
     },
   },

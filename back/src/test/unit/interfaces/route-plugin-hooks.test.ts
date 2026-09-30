@@ -32,6 +32,7 @@ const collectHooks = async (
     addHook: (event: string, handler: unknown) =>
       hooks.push({ event, handler }),
     register: () => Promise.resolve(),
+    patch: () => undefined,
   }
   await plugin(fastify, {})
   return { hooks, decorators, onRequestName }

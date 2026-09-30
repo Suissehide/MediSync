@@ -11,11 +11,16 @@ const base = {
   isSuperAdmin: false,
   deactivatedAt: null,
 }
-const est = (id: string, deactivatedAt: Date | null = null) => ({
+const est = (
+  id: string,
+  deactivatedAt: Date | null = null,
+  services: ReturnType<typeof svc>[] = [],
+) => ({
   id,
   name: `Etab ${id}`,
   createdAt: new Date(),
   deactivatedAt,
+  services,
 })
 const svc = (
   id: string,
@@ -40,7 +45,12 @@ describe('toMeResponse', () => {
           establishmentId: 'e1',
           role: 'ADMIN',
           createdAt: new Date(),
-          establishment: est('e1'),
+          // s3 : service actif ou l'ADMIN n'est pas affecte — liste quand meme, sans soignant.
+          establishment: est('e1', null, [
+            svc('s1', 'e1'),
+            svc('s2', 'e1', new Date()),
+            svc('s3', 'e1'),
+          ]),
           serviceMemberships: [
             {
               id: 'sm1',
@@ -94,6 +104,12 @@ describe('toMeResponse', () => {
               name: 'Svc s1',
               role: 'COORDINATEUR',
               soignantId: 'so1',
+            },
+            {
+              id: 's3',
+              name: 'Svc s3',
+              role: 'COORDINATEUR',
+              soignantId: null,
             },
           ],
           origine: 'reelle',

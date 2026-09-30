@@ -1,6 +1,11 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 
-import { assertRoutePermission } from '../plugins/tenant.plugin'
+import { assertRoutePermission, requireTenant } from '../plugins/tenant.plugin'
+import {
+  type RenameEstablishmentBody,
+  renameEstablishmentResponseSchema,
+  renameEstablishmentSchema,
+} from '../schemas/establishment.schema'
 import { activityLogRouter } from './activityLog'
 import { grantsRouter } from './grants'
 import { membersRouter } from './members'
@@ -18,6 +23,24 @@ const establishmentAdminRoutes: FastifyPluginAsyncZod = async (fastify) => {
   // `Patient` est un modèle d'établissement — une route future pourrait en
   // renvoyer, et elle serait filtrée sans qu'on ait à y penser.
   fastify.addHook('preSerialization', fastify.stripClinicalFields)
+
+  // Le chef d'établissement renomme SON établissement : l'id vient du tenant résolu, jamais du
+  // corps ni de l'URL. Même méthode de dépôt que la route super-admin.
+  fastify.patch<{ Body: RenameEstablishmentBody }>(
+    '/',
+    {
+      schema: {
+        body: renameEstablishmentSchema,
+        response: { 200: renameEstablishmentResponseSchema },
+      },
+      config: { permission: 'establishment:rename' },
+    },
+    (request) =>
+      fastify.iocContainer.establishmentDomain.rename(
+        requireTenant(request).establishmentId,
+        request.body.name,
+      ),
+  )
 
   await fastify.register(membersRouter, { prefix: '/members' })
   await fastify.register(grantsRouter, { prefix: '/grants' })

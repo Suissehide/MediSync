@@ -5,7 +5,7 @@ import type { EstablishmentRole, ServiceRole } from '../types/auth.ts'
 // un service donné, porté par `serviceMemberships`. Partagé par les
 // colonnes du tableau et par les formulaires d'ajout/modification.
 export const ESTABLISHMENT_ROLE_LABEL: Record<EstablishmentRole, string> = {
-  ADMIN: 'Administrateur',
+  ADMIN: "Chef d'établissement",
   MEMBER: 'Membre',
 }
 

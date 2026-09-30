@@ -12,6 +12,20 @@ import { fetchWithAuth } from './fetchWithAuth.ts'
 // `members.api.ts` : administration d'établissement, contexte sans service.
 const SERVICES_URL = () => `${establishmentApiUrl()}/services`
 
+// Renommer l'établissement courant (chef d'établissement) : `PATCH /e/:establishmentId/admin`.
+export const renameCurrentEstablishment = async (
+  name: string,
+): Promise<void> => {
+  const response = await fetchWithAuth(establishmentApiUrl(), {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  })
+  if (!response.ok) {
+    handleHttpError(response, {}, "Impossible de renommer l'établissement")
+  }
+}
+
 export const ServicesApi = {
   getAll: async (): Promise<Service[]> => {
     const response = await fetchWithAuth(SERVICES_URL(), { method: 'GET' })

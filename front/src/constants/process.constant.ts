@@ -144,6 +144,7 @@ export const SERVICE_ADMIN = {
   CREATE: 'create_service_admin',
   UPDATE: 'update_service_admin',
   DEACTIVATION_IMPACT: 'service_admin_deactivation_impact',
+  RENAME_ESTABLISHMENT: 'rename_establishment_admin',
 }
 
 // Onglet des accès temporaires de l'administration d'établissement (tâche
