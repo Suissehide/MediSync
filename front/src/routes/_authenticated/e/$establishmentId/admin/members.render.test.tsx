@@ -312,20 +312,34 @@ describe('etats de l ecran des membres', () => {
   // n'avait nulle part ou se poser sur cet ecran. L'identifiant montre est
   // celui du COMPTE (`member.user.id`), le meme que celui affiche par la
   // recherche de comptes du super-admin (`accountSearchPanel.tsx`).
-  it("affiche l'identifiant du compte, copiable", async () => {
-    monter([
-      routeSoignants,
-      routeServices(),
-      {
-        match: (url, method) =>
-          url.endsWith('/admin/members') && method === 'GET',
-        respond: () => ({
-          ok: true,
-          status: 200,
-          json: async () => [membreActif],
-        }),
-      },
-    ])
+  const routesUnMembre = (): Route[] => [
+    routeSoignants,
+    routeServices(),
+    {
+      match: (url, method) =>
+        url.endsWith('/admin/members') && method === 'GET',
+      respond: () => ({
+        ok: true,
+        status: 200,
+        json: async () => [membreActif],
+      }),
+    },
+  ]
+
+  // Reservee au super-admin depuis le 2026-09-30 : un administrateur ne la voit pas.
+  it("n'affiche pas l'identifiant du compte a un administrateur", async () => {
+    monter(routesUnMembre())
+
+    await waitFor(() => {
+      expect(screen.getByText('membre@chu.fr')).toBeInTheDocument()
+    })
+    expect(screen.queryByText('Identifiant')).not.toBeInTheDocument()
+    expect(screen.queryByText(membreActif.user.id)).not.toBeInTheDocument()
+  })
+
+  it("affiche l'identifiant du compte, copiable, au super-admin", async () => {
+    useAuthStore.setState({ user: { ...admin, isSuperAdmin: true } })
+    monter(routesUnMembre())
 
     await waitFor(() => {
       expect(screen.getByText('membre@chu.fr')).toBeInTheDocument()

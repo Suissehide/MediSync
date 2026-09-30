@@ -11,6 +11,7 @@ import { can } from '@/hooks/useCan.ts'
 import { queryState } from '@/libs/queryState.ts'
 import { useMemberMutations, useMembersQuery } from '@/queries/useMembers.ts'
 import { useServicesQuery } from '@/queries/useServices.ts'
+import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { Member } from '@/types/member.ts'
 import { resolveEstablishmentContext } from '@/utils/tenant-context.ts'
 
@@ -89,6 +90,7 @@ function MemberSettings() {
     [deactivateMember, reactivateMember],
   )
 
+  const superAdmin = useAuthStore((state) => state.user?.isSuperAdmin === true)
   const columns = useMemo(
     () =>
       getMemberColumns({
@@ -96,8 +98,9 @@ function MemberSettings() {
         onToggleActive: handleToggleActive,
         onRemove: setRemoveTarget,
         isToggling,
+        avecIdentifiant: superAdmin,
       }),
-    [services, handleToggleActive, isToggling],
+    [services, handleToggleActive, isToggling, superAdmin],
   )
 
   return (
