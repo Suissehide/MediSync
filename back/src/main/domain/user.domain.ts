@@ -25,7 +25,7 @@ import {
 import type { AppEventBus } from '../utils/app-event-bus'
 import { verifyPassword } from '../utils/hash'
 
-// Repli défensif, nommé plutôt que laissé en `?? ''` silencieux (tour de correction 1, mineur) :
+// Repli défensif, nommé plutôt que laissé en `?? ''` silencieux :
 // `establishmentIds` vient d'être extrait des rattachements eux-mêmes, `findManyByIds` DEVRAIT
 // donc toujours résoudre un nom pour chacun — sauf incohérence (aucune route ne supprime un
 // établissement aujourd'hui). Une chaîne vide plutôt qu'une exception, pour la même raison que
@@ -39,13 +39,12 @@ const UNRESOLVED_ESTABLISHMENT_NAME = ''
 const DEACTIVATED_ACCOUNT =
   'This account is deactivated; its access link cannot be reissued'
 
-// Tâche 11 (étape 4a) : adresse inconnue — même refus qu'à la recherche de compte
+// Adresse inconnue — même refus qu'à la recherche de compte
 // (`searchByEmail`), mais depuis un script en ligne de commande plutôt qu'une route HTTP.
 const UNKNOWN_EMAIL = 'No account with this email'
 
 // Acteur du journal d'activité pour une écriture faite HORS de toute requête, par un script en
-// ligne de commande plutôt qu'une personne connectée (tâche 11, arbitrage de rapport — absent du
-// brief, qui ne dit rien de cette ligne). Deux refus délibérés :
+// ligne de commande plutôt qu'une personne connectée. Deux refus délibérés :
 //   - PAS d'acteur inventé (un `'system'` ou un `'cli'` qui ne renverrait sur rien) : la relecture
 //     du souscripteur (`activity-log.subscriber.ts` — ici contournée, voir plus bas) chercherait
 //     un compte, ne le trouverait jamais, et laisserait les deux noms à `null`, ce qui est
@@ -111,11 +110,11 @@ class UserDomain implements UserDomainInterface {
     await this.userRepository.updatePassword(userID, newPassword)
   }
 
-  // Tâche 7 (étape 4a) : recherche d'un compte (spec §3.4). `findByEmail` lève `Boom.notFound`
+  // Recherche d'un compte (spec §3.4). `findByEmail` lève `Boom.notFound`
   // pour une adresse inconnue (findUniqueOrThrow), mais avec le message générique de
   // `errorHandler.boomErrorFromPrismaError` (« User with this ID doesn't exist ») — juste pour
-  // une recherche par IDENTIFIANT technique, trompeur ici où l'appelant a cherché par ADRESSE
-  // (tour de correction 1, mineur). Recomposé avec un message propre à cette route ; c'est le
+  // une recherche par IDENTIFIANT technique, trompeur ici où l'appelant a cherché par ADRESSE.
+  // Recomposé avec un message propre à cette route ; c'est le
   // SEUL endroit du fichier où `findByEmail` peut atteindre un appelant HTTP sans avoir d'abord
   // été absorbé (`AuthDomain.signIn` retombe sur un 401 générique, `EstablishmentDomain.
   // createWithFirstAdmin` sur `null`) — les autres n'ont donc pas ce problème.
@@ -145,7 +144,7 @@ class UserDomain implements UserDomainInterface {
     return {
       id: user.id,
       email: user.email,
-      // Tour de correction 2 (arbitrage de Léo) : le nom est visible, comme partout où le
+      // Le nom est visible, comme partout où le
       // super-admin regarde — voir le commentaire sur `FirstAdmin`
       // (establishment.repository.interface.ts).
       firstName: user.firstName,
@@ -162,7 +161,7 @@ class UserDomain implements UserDomainInterface {
     }
   }
 
-  // LA SOUPAPE de la garde du jeton (tâche 10, tour de correction 1, arbitrage n°3) — voir le
+  // LA SOUPAPE de la garde du jeton — voir le
   // commentaire sur `UserDomainInterface.reissueAccessLink`, et celui d'
   // `assertIssuableToken` (membership.domain.ts) pour ce qu'elle rend tenable.
   //
@@ -183,7 +182,7 @@ class UserDomain implements UserDomainInterface {
       throw Boom.conflict(DEACTIVATED_ACCOUNT)
     }
     const accessLink = await this.accessLinkDomain.issue(user.id, issuedBy)
-    // Tache 7 (etape 4b) : la route la plus puissante du systeme n'emettait rien — seule la
+    // La route la plus puissante du systeme n'emettait rien — seule la
     // colonne `AccessLink.createdBy` en gardait trace. `issuedBy` est le super-admin qui agit
     // (`request.currentUser.id`, superAdminUser.ts) : pas `this.tenantContext.current().userId`
     // comme dans `MembershipDomain.emit`, cette route n'a AUCUN contexte de tenant a lire
@@ -195,7 +194,7 @@ class UserDomain implements UserDomainInterface {
     return accessLink
   }
 
-  // Tâche 11 (étape 4a) : voir le commentaire sur `UserDomainInterface.bootstrapSuperAdmin` pour
+  // Voir le commentaire sur `UserDomainInterface.bootstrapSuperAdmin` pour
   // le pourquoi (adresse inconnue refusée, réactivation, idempotence). Encadrée en mode système
   // (`runAsSystem`, ci-dessous) : hors de toute requête, il n'existe aucun tenant à poser, et
   // l'écriture dans `ActivityLog` (modèle d'établissement, pas global) l'exige — même motif que
@@ -213,7 +212,7 @@ class UserDomain implements UserDomainInterface {
   // eu le temps d'aboutir, perdant la ligne de journal en silence. `activityLogRepository.create`
   // est donc appelé ICI directement, `await`É, plutôt que par l'intermédiaire du bus d'événements.
   //
-  // TOUR DE CORRECTION 1, Important n°1 (revue) : les écritures sur `User` et sur `ActivityLog`
+  // Les écritures sur `User` et sur `ActivityLog`
   // partageaient deux appels distincts, sans transaction — si la ligne de journal échouait APRÈS
   // que le drapeau ait été posé, l'appelant recevait un rejet (le compte SEMBLE ne pas avoir été
   // promu), alors que la promotion avait réellement eu lieu ; et l'idempotence (délibérée,

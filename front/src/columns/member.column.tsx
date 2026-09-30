@@ -25,11 +25,11 @@ const ESTABLISHMENT_ROLE_TON: Record<EstablishmentRole, TonEtiquette> = {
 }
 
 type MemberColumnOptions = {
-  // Tâche 14b (tour de correction 1, Important n°2) : la liste COMPLÈTE des
+  // La liste COMPLÈTE des
   // services de l'établissement courant (`GET /e/:establishmentId/admin/
   // services`, même requête qu'`EditMemberForm`) — sert à résoudre le NOM
-  // d'un service à partir de `serviceMemberships[].serviceId`. Avant cette
-  // tâche, la colonne « Rôle service » ne montrait que le rôle dans le
+  // d'un service à partir de `serviceMemberships[].serviceId`. Auparavant,
+  // la colonne « Rôle service » ne montrait que le rôle dans le
   // service d'un CONTEXTE qui n'existe jamais sur cet écran (toujours
   // `null`) : elle affichait donc systématiquement « — », y compris pour un
   // membre réellement affecté — un geste comblé mais invisible ailleurs que
@@ -66,8 +66,7 @@ export const getMemberColumns = ({
     header: 'Email',
     cell: ({ row }) => row.original.user.email,
   }),
-  // Revue finale de l'étape 4a, Important n°3 : « identifiants copiables »
-  // (decisions-etape-4a.md, D3/D4) — le geste de dépannage réel, « donne-moi
+  // « Identifiants copiables » — le geste de dépannage réel, « donne-moi
   // l'identifiant de ce compte ». L'identifiant du COMPTE (`user.id`), pas
   // celui du rattachement (`Member.id`) : c'est le même que celui affiché
   // par la recherche de comptes du super-admin (`accountSearchPanel.tsx`),

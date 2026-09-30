@@ -21,8 +21,8 @@ const FAKE_ID = 'clzzzzzzzzzzzzzzzzzzzzzzz'
 // chemin complet d'une ligne est la concaténation des libellés de la racine jusqu'à elle —
 // exactement ce que Fastify assemble lui-même pour router une requête, donc rejouable tel quel
 // dans `app.inject`. C'est ce mécanisme, et non une liste de routes recopiées à la main, qui
-// permet de balayer *chaque* route sous `/super-admin` sans en oublier une à la tâche 6, 7 ou 8
-// (voir le brief de cette tâche : « à l'étape 3, balayer les soixante routes de lecture »).
+// permet de balayer *chaque* route sous `/super-admin` sans en oublier une, même quand de
+// nouveaux routeurs s'ajoutent sous ce préfixe.
 const ANCESTOR_CONTINUES = '│   '
 const ANCESTOR_DONE = '    '
 const OWN_MIDDLE = '├── '
@@ -95,12 +95,12 @@ describe('acces au prefixe /super-admin', () => {
 
   // Ce test est rouge sans son mécanisme : commenter l'un ou l'autre `addHook` dans
   // super-admin.routes.ts le fait échouer immédiatement (vérifié par exécution avant de compter
-  // ce test — voir le rapport de tâche).
+  // ce test).
   //
-  // `register` a été ajouté au double du vrai `fastify` (tâche 6) : le plugin enregistre
-  // désormais `establishmentsRouter` en plus des deux crochets, exactement ce que le commentaire
-  // de `superAdminRoutes` (super-admin.routes.ts) annonçait depuis la tâche 5 — « les tâches 6, 7
-  // et 8 enregistrent ici leurs routeurs ». Un double sans cette méthode ferait rejeter la
+  // `register` a été ajouté au double du vrai `fastify` : le plugin enregistre
+  // `establishmentsRouter` en plus des deux crochets, exactement ce que le commentaire
+  // de `superAdminRoutes` (super-admin.routes.ts) annonce — les routeurs sous ce préfixe
+  // s'y enregistrent. Un double sans cette méthode ferait rejeter la
   // promesse ci-dessous (`fastify.register is not a function`) sans jamais atteindre l'assertion
   // sur les crochets ; ce n'est pas ce que ce test veut éprouver, d'où le stub minimal plutôt
   // qu'une réécriture de son assertion.
@@ -166,24 +166,23 @@ describe('acces au prefixe /super-admin', () => {
     })
   })
 
-  // La propriété visée par la tâche : balayée par `fastify.printRoutes()`, pas sur un
-  // échantillon choisi à la main — c'est ce qui la garde juste sans y penser quand les tâches 7
-  // et 8 enregistreront leurs propres routeurs sous ce préfixe. Depuis la tâche 6
-  // (`POST /super-admin/establishments`), le sous-ensemble /super-admin n'est PLUS vide — c'est
-  // même la première route que cette garde examine réellement (voir le commentaire d'origine,
-  // ci-dessous, écrit quand le filtre ne trouvait encore rien à parcourir).
+  // La propriété visée : balayée par `fastify.printRoutes()`, pas sur un
+  // échantillon choisi à la main — c'est ce qui la garde juste sans y penser quand de nouveaux
+  // routeurs s'enregistrent sous ce préfixe. Le sous-ensemble /super-admin n'est PLUS vide
+  // (`POST /super-admin/establishments`) — c'est même la première route que cette garde examine
+  // réellement (voir le commentaire d'origine, ci-dessous, écrit quand le filtre ne trouvait
+  // encore rien à parcourir).
   //
-  // Tour de correction 1 (relecture externe, tâche 5) : rien, sans la ligne qui suit, ne
-  // distinguait « zéro route parce qu'il n'y en a légitimement aucune sous /super-admin » de
-  // « zéro route parce que l'énumération elle-même est cassée » — ce dernier cas laissait ce
-  // test vert sans avoir rien examiné. On assertait alors seulement que `parsePrintedRoutes` rend
-  // quelque chose sur l'application ENTIÈRE avant tout filtre (146 routes à l'écriture de ce
-  // test, HEAD exclu) : un total qui s'effondre trahit une énumération cassée, y compris quand
-  // /super-admin ne contenait encore rien. Montré rouge par exécution en corrompant
-  // volontairement `parsePrintedRoutes` (retour `[]` inconditionnel) avant de compter ce test —
-  // voir le rapport de la tâche 5. Le sous-ensemble /super-admin étant maintenant non vide
-  // (tâche 6), la ligne ci-dessous l'affirme explicitement : la garde de l'énumération globale
-  // ne suffirait plus à elle seule à couvrir « le filtre n'a simplement rien trouvé ».
+  // Rien, sans la ligne qui suit, ne distinguait « zéro route parce qu'il n'y en a légitimement
+  // aucune sous /super-admin » de « zéro route parce que l'énumération elle-même est cassée » —
+  // ce dernier cas laissait ce test vert sans avoir rien examiné. On assertait alors seulement que
+  // `parsePrintedRoutes` rend quelque chose sur l'application ENTIÈRE avant tout filtre (146
+  // routes à l'écriture de ce test, HEAD exclu) : un total qui s'effondre trahit une énumération
+  // cassée, y compris quand /super-admin ne contenait encore rien. Montré rouge par exécution en
+  // corrompant volontairement `parsePrintedRoutes` (retour `[]` inconditionnel) avant de compter
+  // ce test. Le sous-ensemble /super-admin étant maintenant non vide, la ligne ci-dessous
+  // l'affirme explicitement : la garde de l'énumération globale ne suffirait plus à elle seule à
+  // couvrir « le filtre n'a simplement rien trouvé ».
   it('chaque route enregistree sous /super-admin rend 404 a un compte sans le drapeau', async () => {
     await createUser({ email: 'membre-ordinaire@test.fr', isSuperAdmin: false })
     const cookies = await signIn(testApp.app, 'membre-ordinaire@test.fr')
@@ -197,9 +196,9 @@ describe('acces au prefixe /super-admin', () => {
     const routes = allRoutes.filter((route) =>
       route.url.startsWith('/super-admin'),
     )
-    // Le sous-ensemble n'est plus vide depuis la tâche 6 : sans cette ligne, un filtre cassé
+    // Le sous-ensemble n'est plus vide : sans cette ligne, un filtre cassé
     // rendant `[]` laisserait la boucle ci-dessous ne rien examiner et ce test resterait vert à
-    // tort (exactement le défaut que le tour de correction 1 avait fermé côté énumération
+    // tort (exactement le défaut fermé plus haut côté énumération
     // globale, pas encore côté sous-ensemble).
     expect(routes.length).toBeGreaterThan(0)
 

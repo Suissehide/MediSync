@@ -1,4 +1,4 @@
-// Tache 10, tour de correction 1, arbitrage n°3 : LA SOUPAPE.
+// LA SOUPAPE.
 //
 // La garde du jeton (`MembershipDomain.assertIssuableToken`) refuse a un administrateur
 // d'etablissement d'emettre un lien pour un compte rattache ailleurs — sans quoi l'administrateur
@@ -65,7 +65,7 @@ describe('soupape super-admin : reemettre le lien d un compte multi-etablissemen
     })
     superAdminId = superAdmin.id
     // Pose independamment du chemin eprouve : c'est precisement le nom qu'on verifie plus bas
-    // (Tache 7, meme raison que `activity-log-auteur.test.ts` — une ligne qui existe ne prouve
+    // (meme raison que `activity-log-auteur.test.ts` — une ligne qui existe ne prouve
     // rien, seul le nom prouve que le souscripteur a lu le bon compte).
     await testDb.user.update({
       where: { id: superAdmin.id },
@@ -166,7 +166,7 @@ describe('soupape super-admin : reemettre le lien d un compte multi-etablissemen
     expect((await reissue(bilocalId, ordinaire)).statusCode).toBe(404)
   })
 
-  // Tache 7 (etape 4b) : la route la plus puissante du systeme — elle reemet le lien d'acces de
+  // La route la plus puissante du systeme — elle reemet le lien d'acces de
   // N'IMPORTE QUEL compte — n'apparaissait dans aucun journal ; seule la colonne
   // `AccessLink.createdBy` en gardait trace. Compte CIBLE DEDIE (jamais `bilocalId`, deja
   // reemis par un test precedent) et filtre par `entityID` en plus de l'action : ce fichier
@@ -208,11 +208,11 @@ describe('soupape super-admin : reemettre le lien d un compte multi-etablissemen
     // (`access-link-token-leak.test.ts` surveille les autres canaux ; ici, la colonne dediee).
     expect(JSON.stringify(lignes[0])).not.toContain(res.json().accessLink.token)
 
-    // Une ligne que personne ne peut lire ne sert a rien (tache 7, point 4 du brief) : cette
+    // Une ligne que personne ne peut lire ne sert a rien : cette
     // ligne porte `establishmentId: null` (aucun contexte sous `/super-admin`), donc NI la
     // lecture de tenant ordinaire (qui n'existe que sous un tenant) NI la lecture
     // d'etablissement (qui exige un `establishmentId` precis) ne peuvent l'atteindre. Seule
-    // `GET /super-admin/access-log` (tache 6, sans borne d'etablissement) le peut — verifie ici
+    // `GET /super-admin/access-log` (sans borne d'etablissement) le peut — verifie ici
     // plutot que suppose.
     const journalPlateforme = await testApp.app.inject({
       method: 'GET',

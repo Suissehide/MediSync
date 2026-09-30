@@ -45,7 +45,7 @@ vi.mock('@tanstack/react-virtual', () => ({
 
 const optionsDe = (route: AnyRoute) => route.options
 
-// Fixture OBLIGATOIRE (brief tâche 11) : un compte réellement dépourvu du drapeau, ET un compte
+// Fixture OBLIGATOIRE : un compte réellement dépourvu du drapeau, ET un compte
 // qui le porte — avec un seul des deux, le test de discrétion ci-dessous ne comparerait rien
 // (la pathologie mesurée huit fois sur ce dépôt, front/CLAUDE.md).
 const superAdmin: User = {
@@ -360,9 +360,9 @@ describe("etats de l'ecran plateforme du journal des acces", () => {
     expect(screen.getByText('CHU Bordeaux')).toBeInTheDocument()
   })
 
-  // Tour de correction 1 (tâche 10, reproduit ici) : `accesParOctroi` distingue un accès de
-  // dépannage (octroi temporaire de super-admin) d'un accès de soin ordinaire — le point même de
-  // CE journal-ci. Une fixture où TOUTES les lignes portent la même valeur ne prouverait rien :
+  // `accesParOctroi` distingue un accès de dépannage (octroi temporaire de super-admin) d'un
+  // accès de soin ordinaire — le point même de CE journal-ci. Une fixture où TOUTES les lignes
+  // portent la même valeur ne prouverait rien :
   // celle-ci mélange délibérément les deux, et lie chaque assertion à SA ligne.
   it("distingue un acces reel d'un acces par octroi, sans jamais les confondre", async () => {
     vi.stubGlobal(
@@ -404,7 +404,7 @@ describe("etats de l'ecran plateforme du journal des acces", () => {
   })
 
   // Les lignes du script d'amorçage (`establishmentId: null`) : la seule route qui peut les
-  // lire (back, tâche 6/11) — elles doivent se distinguer explicitement, jamais une cellule vide
+  // lire — elles doivent se distinguer explicitement, jamais une cellule vide
   // ambiguë qui se confondrait avec une erreur de résolution.
   it("rend distinctement les lignes du script d'amorcage (etablissement nul)", async () => {
     vi.stubGlobal(
@@ -478,10 +478,9 @@ describe("etats de l'ecran plateforme du journal des acces", () => {
     expect(screen.getByText('Alice Martin')).toBeInTheDocument()
   })
 
-  // Tour de correction 1 : ce cas manquait — sans lui, remplacer
-  // `action: filtres.action || undefined` par `action: undefined` (le filtre jamais envoyé au
-  // serveur, quel que soit le choix de l'utilisateur) laissait les onze tests d'alors tout
-  // verts. Même discipline que le filtre établissement : deux lignes dont les actions ne se
+  // Sans ce cas, remplacer `action: filtres.action || undefined` par `action: undefined` (le
+  // filtre jamais envoyé au serveur, quel que soit le choix de l'utilisateur) laissait les onze
+  // tests d'alors tout verts. Même discipline que le filtre établissement : deux lignes dont les actions ne se
   // recouvrent pas, la sélection de l'une fait disparaître l'autre.
   it("le filtre action exclut les lignes dont l'action ne correspond pas", async () => {
     vi.stubGlobal(
@@ -527,7 +526,7 @@ describe("etats de l'ecran plateforme du journal des acces", () => {
     expect(screen.getByText('Alice Martin')).toBeInTheDocument()
   })
 
-  // REVUE FINALE DE BRANCHE, Important n°1 — LE FILTRE « COMPTE » EST SERVEUR, ET CES DEUX CAS
+  // LE FILTRE « COMPTE » EST SERVEUR, ET CES DEUX CAS
   // NE PEUVENT PAS ETRE SATISFAITS PAR UN FILTRE NAVIGATEUR.
   //
   // L'ancien cas donnait au bouchon les MEMES deux lignes quelle que soit la requete, et
@@ -592,7 +591,7 @@ describe("etats de l'ecran plateforme du journal des acces", () => {
   // desc` : les lignes plus anciennes d'un compte n'apparaissent JAMAIS dans la reponse non
   // filtree. Le bouchon reproduit exactement cela — Zoe n'est rendue QUE lorsque `compte` est
   // envoye. Un filtre navigateur, qui ne peut que reduire la page recue, rendrait ici « aucune
-  // entree » alors que les lignes existent : c'est le constat de la revue, mot pour mot.
+  // entree » alors que les lignes existent.
   it('trouve un compte dont les lignes sont HORS de la page non filtree (ce que le filtre navigateur ne pouvait pas)', async () => {
     vi.stubGlobal(
       'fetch',
@@ -637,7 +636,7 @@ describe("etats de l'ecran plateforme du journal des acces", () => {
     })
   })
 
-  // REVUE FINALE DE BRANCHE, Important n°1 — VISER LES LIGNES SANS ETABLISSEMENT. Sans cette
+  // VISER LES LIGNES SANS ETABLISSEMENT. Sans cette
   // option, les lignes du script d'amorcage (les plus ANCIENNES de la table, donc les premieres
   // a tomber hors de la page de 200) ne sont visables par aucun filtre : la liste deroulante ne
   // proposait que des etablissements REELS.
@@ -687,7 +686,7 @@ describe("etats de l'ecran plateforme du journal des acces", () => {
     await waitFor(() => {
       expect(screen.getByText('Patient créé')).toBeInTheDocument()
     })
-    // Le libellé de l'action d'amorçage existe désormais (Important n°2) : la ligne ne s'affiche
+    // Le libellé de l'action d'amorçage existe : la ligne ne s'affiche
     // plus sous son nom technique.
     expect(screen.getByText('Super-admin accordé (script)')).toBeInTheDocument()
 
@@ -735,11 +734,11 @@ describe("etats de l'ecran plateforme du journal des acces", () => {
   })
 
   // Le vocabulaire d'action de l'ecran plateforme couvre les DIX-NEUF valeurs que le journal
-  // d'activite peut porter, pas les huit de l'ecran de service (Important n°2). Le contrat qui
+  // d'activite peut porter, pas les huit de l'ecran de service. Le contrat qui
   // le tient vit cote back (`unit/utils/access-log-vocabulaire.test.ts`, qui lit ce dictionnaire
   // et `AppEvents`) ; ce cas-ci verifie que l'ecran s'en sert reellement, sur la valeur qui
   // comptait le plus : la reemission de lien par le super-admin, la route la plus puissante du
-  // systeme, et la ligne que la tache 7 existe pour creer.
+  // systeme.
   it("propose user.accessLinkReissued dans le filtre Action du journal d'activite", async () => {
     vi.stubGlobal(
       'fetch',

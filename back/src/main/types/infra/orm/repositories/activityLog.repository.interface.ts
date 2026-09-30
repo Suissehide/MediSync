@@ -43,7 +43,7 @@ export type ActivityLogFindManyResult = {
   pageSize: number
 }
 
-// Tâche 6, étape 4b : `GET /super-admin/access-log` (source=activite). Filtres libres — sous
+// `GET /super-admin/access-log` (source=activite). Filtres libres — sous
 // superadmin, `assertTenantReadScope` (tenant-guard.ts) ne s'applique qu'au contexte `tenant`,
 // jamais à `superadmin` : rien n'exige donc un `where` particulier ici, contrairement au
 // `findMany` ci-dessus (tenant ordinaire). Les trois filtres sont optionnels ; `page`/`pageSize`
@@ -60,7 +60,7 @@ export type ActivityLogFindManyResult = {
 // lignes du script d'amorçage par un filtre est plus court que de pousser la pagination jusqu'aux
 // plus anciennes lignes de la plateforme.
 //
-// REVUE FINALE DE BRANCHE, Important n°1 — deux champs ont changé, et le mot « libres » ci-dessus
+// Deux de ces champs méritent une précision, et le mot « libres » ci-dessus
 // ne doit pas laisser croire qu'ils sont interchangeables :
 //   - `sansEtablissement` cible les lignes à `establishmentId: null` — celles du script
 //     d'amorçage, les plus ANCIENNES de la table, donc les premières à tomber hors de la page de
@@ -89,7 +89,7 @@ export type PlatformAccessLogPage = {
 }
 
 export interface ActivityLogRepositoryInterface {
-  // `client` optionnel (tâche 11, étape 4a, tour de correction 1) : voir le commentaire sur
+  // `client` optionnel : voir le commentaire sur
   // l'implémentation.
   create: (
     params: ActivityLogCreateEntityRepo,

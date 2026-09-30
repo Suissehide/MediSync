@@ -10,8 +10,9 @@ import { join } from 'node:path'
 // `AppointmentPatient` et `PatientPathwayPriority` portent, eux aussi, un `serviceId` lie au
 // patient, et n'appellent PAS `ensureExists` — sans consequence aujourd'hui puisqu'aucun des
 // deux ne porte cette cle etrangere. Ce test tient exactement cette absence : si l'un des deux
-// modeles gagne un jour une relation vers `PatientServiceFile` dans le schema (la tache 6
-// remplace des relations `patient` par `serviceFile` sur d'autres modeles, sur ce meme terrain),
+// modeles gagne un jour une relation vers `PatientServiceFile` dans le schema (comme d'autres
+// modeles ont deja vu leurs relations `patient` remplacees par `serviceFile` sur ce meme
+// terrain),
 // ce test rougit — le signal qu'il faut relire le commentaire de `ensureExists` et, si la
 // relation le demande, ajouter l'appel avant de deployer la migration.
 //

@@ -19,10 +19,10 @@ interface RenameServiceFormProps {
   onClose: () => void
 }
 
-// Onglet des services (tâche 13, step 1) : renommer. Ouvert depuis
-// `services.tsx` (bouton crayon de `service.column.tsx`), plutôt qu'un
-// déclencheur local : `service` vaut `null` tant qu'aucune ligne n'est
-// choisie, ce qui ferme la popup.
+// Onglet des services : renommer. Ouvert depuis `services.tsx` (bouton
+// crayon de `service.column.tsx`), plutôt qu'un déclencheur local :
+// `service` vaut `null` tant qu'aucune ligne n'est choisie, ce qui ferme
+// la popup.
 function RenameServiceForm({ service, onClose }: RenameServiceFormProps) {
   const { updateService } = useServiceMutations()
 

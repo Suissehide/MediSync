@@ -21,8 +21,8 @@ const estVivant = (grant: LiveGrant, now: Date): boolean =>
 const commeOctroi = (grant: LiveGrant): EffectiveMembership => ({
   establishmentId: grant.establishmentId,
   role: 'ADMIN',
-  // `grant.services ?? []` : le brief teste la vivacité d'un octroi avec un littéral à trois
-  // champs (`{ establishmentId, expiresAt, revokedAt }`, sans `services`) — non typé (src/test
+  // `grant.services ?? []` : certains tests vérifient la vivacité d'un octroi avec un littéral à
+  // trois champs (`{ establishmentId, expiresAt, revokedAt }`, sans `services`) — non typé (src/test
   // n'est pas vérifié par tsc, voir back/CLAUDE.md), mais réel à l'exécution. `AccessGrantRepository`
   // fournit toujours `services` en production ; ce repli ne change donc rien en dehors des tests
   // qui ne testent pas ce champ.
@@ -33,8 +33,7 @@ const commeOctroi = (grant: LiveGrant): EffectiveMembership => ({
   origine: 'octroi',
 })
 
-// TOUR DE CORRECTION 1 (tâche 8, étape 4a) — Important n°2 de la relecture : rien n'empêchait
-// deux octrois VIVANTS sur le MÊME établissement (un premier pas encore expiré, un second
+// Rien n'empêchait deux octrois VIVANTS sur le MÊME établissement (un premier pas encore expiré, un second
 // s'accordé par-dessus) de produire ici DEUX `EffectiveMembership` identiques par
 // `establishmentId` — `/me` listait alors deux fois le même établissement. La résolution de
 // tenant s'en sortait (elle prend le premier match, `Array.find`), mais le sélecteur du front
@@ -70,15 +69,25 @@ const appartenancesReelles = (
     .map((membership) => ({
       establishmentId: membership.establishmentId,
       role: membership.role,
-      services: membership.serviceMemberships
-        .filter(
-          (serviceMembership) =>
-            serviceMembership.service.deactivatedAt === null,
-        )
-        .map((serviceMembership) => ({
-          id: serviceMembership.serviceId,
-          role: serviceMembership.role,
-        })),
+      // Le chef d'établissement (`ADMIN`) est COORDINATEUR sur TOUS les services actifs, affecté
+      // ou non — comme sous un octroi. Les autres ne voient que leurs affectations.
+      services:
+        membership.role === 'ADMIN'
+          ? membership.establishment.services
+              .filter((service) => service.deactivatedAt === null)
+              .map((service) => ({
+                id: service.id,
+                role: 'COORDINATEUR' as const,
+              }))
+          : membership.serviceMemberships
+              .filter(
+                (serviceMembership) =>
+                  serviceMembership.service.deactivatedAt === null,
+              )
+              .map((serviceMembership) => ({
+                id: serviceMembership.serviceId,
+                role: serviceMembership.role,
+              })),
       origine: 'reelle' as const,
     }))
 
@@ -87,12 +96,11 @@ const appartenancesReelles = (
 // src/test/unit/domain/effectiveMemberships-seul-appelant.test.ts, qui rougit si un appelant
 // nommé disparaît ou si un troisième apparaît (ce test ne peut pas voir une réimplémentation
 // locale qui ne nommerait jamais cette fonction — voir son commentaire pour ce qu'il garantit
-// réellement). C'est le point le plus délicat de l'étape 4a : deux chemins qui calculeraient les
+// réellement). C'est le point le plus délicat : deux chemins qui calculeraient les
 // appartenances chacun à sa façon finiraient par diverger, et la divergence se solderait par un
 // accès que l'un accorde et que l'autre refuse — ou l'inverse, ce qui est pire.
 //
-// Deux garanties, chacune ajoutée après une revue qui a démontré par exécution qu'elle manquait
-// (tour de correction 1, tâche 3) :
+// Deux garanties :
 //
 //   - Un octroi ne confère RIEN si son titulaire n'est plus super-admin, jugé ICI, à la lecture,
 //     contre le MÊME `user` que celui dont dépendent les appartenances réelles — jamais mis en
@@ -100,8 +108,8 @@ const appartenancesReelles = (
 //     tardivement : la requête suivante le referme, sans reconnexion, et le remet tout aussi vite
 //     si le drapeau revient (200 → 404 → 200, éprouvé par exécution). Seconde barrière,
 //     redondante et pas un substitut à celle-ci : `AccessGrantRepository.findForUser` (PAS
-//     `liveGrantsForUser`, qui n'est plus qu'un relais depuis le tour de correction 1, tâche 8 —
-//     voir son commentaire) relit elle-même `User.isSuperAdmin`, fraîche, avant d'entrer le
+//     `liveGrantsForUser`, qui n'est plus qu'un relais — voir son commentaire) relit elle-même
+//     `User.isSuperAdmin`, fraîche, avant d'entrer le
 //     contexte superadmin ; un compte qui n'a structurellement rien à y trouver n'y entre donc
 //     jamais.
 //
@@ -113,8 +121,8 @@ const appartenancesReelles = (
 //     là où aucune voie ne doit passer. `etablissementsAvecAppartenance` est donc construit sur
 //     la liste BRUTE des appartenances, pas sur `reelles` (déjà filtrée).
 //
-//   - Deux octrois vivants sur le MÊME établissement ne produisent jamais deux entrées (tour de
-//     correction 1, tâche 8) : voir `dedoublonneParEtablissement` ci-dessous.
+//   - Deux octrois vivants sur le MÊME établissement ne produisent jamais deux entrées : voir
+//     `dedoublonneParEtablissement` ci-dessous.
 //
 // Ce qu'elle ne garantit PAS, et qui reste à la charge de l'appelant : qu'un octroi visant un
 // établissement désactivé — sans qu'aucune appartenance réelle, active ou non, ne l'atteste —
@@ -147,36 +155,30 @@ export const effectiveMemberships = (
 // Seul appelant légitime de `AccessGrantRepositoryInterface.findForUser` : voir
 // src/test/unit/domain/effectiveMemberships-seul-appelant.test.ts.
 //
-// TOUR DE CORRECTION 1 (tâche 8, étape 4a) — CE QUE LE TOUR PRÉCÉDENT N'A PAS FERMÉ. Cette
-// fonction prenait un `UserEntityRepo` (= `User` complet) et faisait confiance à SON CHAMP
-// `isSuperAdmin` pour décider de lire. La relecture a reconstruit le littéral complet — neuf
-// champs scalaires, mot de passe et sel VIDES — pour un compte réellement titulaire d'un octroi
-// mais RETIRÉ du drapeau super-admin depuis (exactement le scénario de « l octroi ne confere
-// plus rien des que son titulaire n est plus super-admin », tenant-resolution.test.ts) : en
-// prétendant `isSuperAdmin: true` dans le littéral, l'appel faisait ressortir l'octroi RÉEL de ce
-// compte — établissement, services — alors que la vérité actuelle en base est `false`. Élargir le
-// type de deux à neuf champs n'avait rien fermé : AUCUN type ne peut empêcher qui que ce soit de
-// fabriquer un objet conforme, `src/main` étant vérifié par `tsc` mais pas exécuté sous un
-// vérificateur à l'exécution — la fonction devait cesser de faire confiance à CE QU'ON LUI DONNE
-// SUR CE POINT.
+// CE QUE CETTE FONCTION NE DOIT PAS FAIRE : prendre un `UserEntityRepo` (= `User` complet) et
+// faire confiance à SON CHAMP `isSuperAdmin` pour décider de lire. Un littéral conforme au type
+// peut être fabriqué par n'importe quel appelant — `src/main` est vérifié par `tsc` mais pas
+// exécuté sous un vérificateur à l'exécution — donc un objet prétendant `isSuperAdmin: true` ferait
+// ressortir l'octroi RÉEL d'un compte dont la vérité actuelle en base est `false` (exactement le
+// scénario de « l octroi ne confere plus rien des que son titulaire n est plus super-admin »,
+// tenant-resolution.test.ts). Élargir le type ne fermerait rien : AUCUN type ne peut empêcher qui
+// que ce soit de fabriquer un objet conforme — la fonction doit cesser de faire confiance à CE
+// QU'ON LUI DONNE sur ce point.
 //
-// REMÈDE : plus aucun champ `isSuperAdmin` en entrée — seulement un `userId`. CE N'EST PAS « plus
-// rien à mentir » (tour de correction 2 — la relecture a montré que cette phrase promettait un
-// cran de trop) : l'identifiant LUI-MÊME reste une valeur qu'un appelant pourrait substituer — un
+// REMÈDE : plus aucun champ `isSuperAdmin` en entrée — seulement un `userId`. Cela ne supprime pas
+// toute confiance : l'identifiant LUI-MÊME reste une valeur qu'un appelant pourrait substituer — un
 // id de tiers obtiendrait les octrois de ce tiers, et rien ici ne le distingue d'un appel
 // légitime, ni le compilateur, ni le lint, ni le garde-fou statique. Ce qui est vrai : la
 // confiance ne porte plus sur NEUF champs (dont un booléen qu'il suffisait d'affirmer) mais sur
-// UN SEUL — et c'est ce seul-là que surveille désormais
-// `effectiveMemberships-seul-appelant.test.ts` (tour de correction 2 : il relit désormais aussi
-// les appels à CETTE fonction, comme il le faisait déjà pour `effectiveMemberships`) : un appel
-// non nommé dans sa liste fait rougir le test, que son argument soit fabriqué ou légitime. La
-// vérité du DRAPEAU, elle, est rechargée ELLE-MÊME, fraîche, par
-// `AccessGrantRepository.findForUser` (une lecture triviale de
+// UN SEUL — et c'est ce seul-là que surveille
+// `effectiveMemberships-seul-appelant.test.ts`, qui relit aussi les appels à CETTE fonction,
+// comme il le fait déjà pour `effectiveMemberships` : un appel non nommé dans sa liste fait
+// rougir le test, que son argument soit fabriqué ou légitime. La vérité du DRAPEAU, elle, est
+// rechargée ELLE-MÊME, fraîche, par `AccessGrantRepository.findForUser` (une lecture triviale de
 // `User.isSuperAdmin`, avant toute autre chose — voir son commentaire), jamais mise en cache ni
-// acceptée d'un appelant : rejouer exactement le scénario du relecteur (compte démis, octroi non
-// révoqué encore en base) rend désormais `[]`, voir tenant-resolution.test.ts, « la lecture
-// directe du depot ne fait plus confiance a une pretention isSuperAdmin ». Ce que cela NE ferme
-// PAS — porté au journal de décisions de l'étape (tâche 14) plutôt que traité ici : que
+// acceptée d'un appelant : rejouer exactement ce scénario (compte démis, octroi non révoqué
+// encore en base) rend désormais `[]`, voir tenant-resolution.test.ts, « la lecture directe du
+// depot ne fait plus confiance a une pretention isSuperAdmin ». Ce que cela NE garantit PAS : que
 // `userId` provienne bien, à chaque appel, d'une session authentifiée plutôt que d'un id soumis.
 //
 // Coût assumé : un aller-retour Postgres de plus par requête (une lecture d'une seule colonne,

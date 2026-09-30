@@ -13,7 +13,7 @@ import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { TenantContextInterface } from '../../../types/utils/tenant-context'
 import type { PostgresPrismaClient } from '../postgres-client'
 
-// Repli défensif, nommé plutôt que laissé en `?? ''` silencieux (tour de correction 1, mineur) :
+// Repli défensif, nommé plutôt que laissé en `?? ''` silencieux :
 // `membersFor` vient de lire la ligne `EstablishmentMembership`, son `userId` DEVRAIT donc
 // toujours trouver un `User` — sauf suppression physique d'un compte, qu'aucune route n'effectue
 // aujourd'hui. Une chaîne vide plutôt qu'une exception : un diagnostic de super-admin doit
@@ -42,16 +42,15 @@ class EstablishmentRepository implements EstablishmentRepositoryInterface {
     }
   }
 
-  // `EstablishmentMembership.create` figure dans SUPERADMIN_OPERATIONS (tenant-guard.ts, tâche
-  // 1) : c'est la seule écriture qu'un compte super-admin peut effectuer sur un modèle
+  // `EstablishmentMembership.create` figure dans SUPERADMIN_OPERATIONS (tenant-guard.ts) :
+  // c'est la seule écriture qu'un compte super-admin peut effectuer sur un modèle
   // d'établissement, hors de tout tenant courant. Encadrée par `runAsSuperAdmin`, avec
-  // `await` À L'INTÉRIEUR du rappel — une requête Prisma est paresseuse (piège de la tâche 1,
-  // resurgi identique ici : sans ce `await` interne, la requête part hors de la portée du
-  // contexte et le garde-fou lit le tenant ambiant, pas `superadmin`). Ce `runAsSuperAdmin`
-  // reste posé ici même quand l'appelant (`EstablishmentDomain.createWithFirstAdmin`, tour de
-  // correction 1) en a déjà ouvert un englobant : nester deux `run` de même nature est sans
-  // effet (`AsyncLocalStorage.run` est réentrant), et ça garde cette méthode sûre par
-  // elle-même pour un futur appelant qui ne l'ouvrirait pas.
+  // `await` À L'INTÉRIEUR du rappel — une requête Prisma est paresseuse : sans ce `await`
+  // interne, la requête part hors de la portée du contexte et le garde-fou lit le tenant
+  // ambiant, pas `superadmin`. Ce `runAsSuperAdmin` reste posé ici même quand l'appelant
+  // (`EstablishmentDomain.createWithFirstAdmin`) en a déjà ouvert un englobant : nester deux
+  // `run` de même nature est sans effet (`AsyncLocalStorage.run` est réentrant), et ça garde
+  // cette méthode sûre par elle-même pour un futur appelant qui ne l'ouvrirait pas.
   async attachAdmin(
     establishmentId: string,
     userId: string,
@@ -71,7 +70,7 @@ class EstablishmentRepository implements EstablishmentRepositoryInterface {
     }
   }
 
-  // Tâche 7 : lecture nue d'un modèle global, sans contexte — comme `create` ci-dessus.
+  // Lecture nue d'un modèle global, sans contexte — comme `create` ci-dessus.
   async findAll() {
     try {
       return await this.prisma.establishment.findMany({
@@ -98,12 +97,16 @@ class EstablishmentRepository implements EstablishmentRepositoryInterface {
     }
   }
 
-  // `Establishment` est global : écriture nue, comme `create`. 404 si l'id est inconnu.
+  // Les routes `/super-admin` s'exécutent sans store : sans ce `runAsSuperAdmin`, l'`update`
+  // tomberait sous NO_CONTEXT_GLOBAL_OPERATIONS, qui le refuse (500). Même piège d'`await` que
+  // `attachAdmin`. 404 si l'id est inconnu.
   async rename(id: string, name: string) {
     try {
-      return await this.prisma.establishment.update({
-        where: { id },
-        data: { name },
+      return await this.tenantContext.runAsSuperAdmin(async () => {
+        return await this.prisma.establishment.update({
+          where: { id },
+          data: { name },
+        })
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
@@ -131,13 +134,13 @@ class EstablishmentRepository implements EstablishmentRepositoryInterface {
 
   // Compteurs de la liste/du détail (spec §3.3) pour UN établissement. `Service.count`,
   // `EstablishmentMembership.findMany`, `Patient.count` et `ActivityLog.findMany` sont déclarés
-  // dans SUPERADMIN_OPERATIONS (tâche 1) : encadrés par `runAsSuperAdmin`, `await` À
+  // dans SUPERADMIN_OPERATIONS : encadrés par `runAsSuperAdmin`, `await` À
   // L'INTÉRIEUR du rappel (même piège que `attachAdmin` ci-dessus). `Patient.findMany` n'est
   // volontairement PAS déclaré : seul `count` l'est, donc seul un nombre peut sortir d'ici,
   // jamais une ligne.
   //
-  // RÈGLE DE COMPTAGE DES DÉSACTIVÉS (tour de correction 1, Important n°2) — voir le
-  // commentaire complet sur `EstablishmentCounters` (établissement.repository.interface.ts) :
+  // RÈGLE DE COMPTAGE DES DÉSACTIVÉS — voir le commentaire complet sur `EstablishmentCounters`
+  // (établissement.repository.interface.ts) :
   // `serviceCount` exclut les services désactivés (`deactivatedAt: null` en base, sans jointure
   // — une colonne propre à `Service`) ; `accountCount` exclut, EN MÉMOIRE, les comptes dont le
   // `User` lié est désactivé, pour la même raison que `firstAdmin` juste en dessous : ces trois
@@ -149,10 +152,10 @@ class EstablishmentRepository implements EstablishmentRepositoryInterface {
   // une SECONDE lecture nue sur `User` par ses identifiants, puis une jointure EN MÉMOIRE — le
   // contournement sûr documenté au-dessus de `SUPERADMIN_OPERATIONS` (tenant-guard.ts).
   //
-  // `lastActivityAt` (tour de correction 1, Important n°3, RENOMMÉ depuis `lastAccessAt`) vient
-  // d'`ActivityLog`, filtré sur CET établissement — jamais de `User.lastLoginAt`, qui ne dit
-  // rien sur CET établissement précisément (un membre de deux établissements connecté à l'un
-  // faisait, à tort, bouger l'autre).
+  // `lastActivityAt` (RENOMMÉ depuis `lastAccessAt`) vient d'`ActivityLog`, filtré sur CET
+  // établissement — jamais de `User.lastLoginAt`, qui ne dit rien sur CET établissement
+  // précisément (un membre de deux établissements connecté à l'un faisait, à tort, bouger
+  // l'autre).
   async countersFor(establishmentId: string): Promise<EstablishmentCounters> {
     try {
       return await this.tenantContext.runAsSuperAdmin(async () => {
@@ -231,8 +234,8 @@ class EstablishmentRepository implements EstablishmentRepositoryInterface {
     }
   }
 
-  // `Patient.count` pour `EstablishmentDomain.getById` (tour de correction 2, mineur) : la
-  // seule lecture du détail qui ne peut pas être dérivée d'un tableau déjà chargé
+  // `Patient.count` pour `EstablishmentDomain.getById` : la seule lecture du détail qui ne
+  // peut pas être dérivée d'un tableau déjà chargé
   // (`Patient.findMany` n'est pas déclaré, spec §3.3) — une petite duplication du `count` inline
   // de `countersFor` ci-dessus, préférée à un partage qui aurait fait sortir l'appel Prisma de
   // son `runAsSuperAdmin` synchrone (même piège que partout ailleurs : `await` À L'INTÉRIEUR du
@@ -250,10 +253,10 @@ class EstablishmentRepository implements EstablishmentRepositoryInterface {
     }
   }
 
-  // Recherche d'un compte (spec §3.4, tâche 7) : tous les rattachements d'UN compte, tous
-  // établissements confondus. `EstablishmentMembership.findMany` est déclaré (tâche 1) ; le nom
-  // de chaque établissement est résolu ailleurs (`findManyByIds`, appelé par
-  // `UserDomain.searchByEmail`), jamais par un `include` imbriqué.
+  // Recherche d'un compte (spec §3.4) : tous les rattachements d'UN compte, tous
+  // établissements confondus. `EstablishmentMembership.findMany` est déclaré dans
+  // SUPERADMIN_OPERATIONS ; le nom de chaque établissement est résolu ailleurs
+  // (`findManyByIds`, appelé par `UserDomain.searchByEmail`), jamais par un `include` imbriqué.
   async membershipsForUser(
     userId: string,
   ): Promise<EstablishmentMembershipRow[]> {
@@ -279,7 +282,7 @@ class EstablishmentRepository implements EstablishmentRepositoryInterface {
     }
   }
 
-  // Détail d'un établissement (spec §6.2, tour de correction 1) : ses services, quel que soit
+  // Détail d'un établissement (spec §6.2) : ses services, quel que soit
   // leur état — désactivé n'est pas supprimé, l'écran de diagnostic doit le montrer, à la
   // différence du compteur `serviceCount` ci-dessus qui, lui, ne compte que l'utilisable.
   async servicesFor(

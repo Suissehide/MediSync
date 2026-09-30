@@ -119,9 +119,9 @@ export const MembersApi = {
     return response.json()
   },
 
-  // `POST /e/:establishmentId/admin/members/account` (tâche 13, step 3) :
-  // le chemin réel est SANS `/admin` dans le brief mais ce routeur est monté
-  // sous ce préfixe (voir le commentaire du back, `members.ts`) —
+  // `POST /e/:establishmentId/admin/members/account` :
+  // le chemin réel est SANS `/admin` mais ce routeur est monté
+  // sous ce préfixe (voir le commentaire sur `members.ts` côté back) —
   // `MEMBERS_URL()` le porte déjà.
   createAccount: async (
     input: CreateMemberAccountInput,

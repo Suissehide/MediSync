@@ -148,13 +148,13 @@ class MembershipRepository implements MembershipRepositoryInterface {
     })
   }
 
-  // TACHE 15 (etape 4a) — « CE COMPTE EST-IL RATTACHE AILLEURS ? », UN BOOLEEN ET RIEN D'AUTRE.
+  // « CE COMPTE EST-IL RATTACHE AILLEURS ? », UN BOOLEEN ET RIEN D'AUTRE.
   //
   // CE QU'ELLE REMPLACE. `MembershipDomain` lisait `UserRepository.findByID`, qui embarque
   // l'arbre COMPLET des appartenances du compte — tous etablissements confondus, avec leur nom et
   // leurs services — pour n'en garder qu'un `length` ou un `filter(...).length > 0`. Cette
   // lecture-la repart du modele GLOBAL `User` par une relation A-PLUSIEURS, et c'est le pont que
-  // la tache 15 ferme sur le chemin de tenant (`assertNoGlobalToManyBridge`, tenant-guard.ts).
+  // cette methode ferme sur le chemin de tenant (`assertNoGlobalToManyBridge`, tenant-guard.ts).
   // La question elle-meme reste legitime — `User.deactivatedAt` et un lien d'acces sont GLOBAUX,
   // donc agir dessus depuis un etablissement toucherait les autres, et c'est precisement ce que
   // les gardes appelantes refusent. Mais elle se pose en rendant UN BOOLEEN, jamais un
@@ -192,7 +192,7 @@ class MembershipRepository implements MembershipRepositoryInterface {
     return count > 0
   }
 
-  // `client` optionnel (tâche 10, step 1) : voir le commentaire équivalent sur
+  // `client` optionnel : voir le commentaire équivalent sur
   // `UserRepositoryInterface.create`. Sert à inscrire le rattachement dans la MÊME
   // transaction que la création du compte et l'émission du lien.
   async create(

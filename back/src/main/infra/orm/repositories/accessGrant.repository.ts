@@ -23,10 +23,9 @@ class AccessGrantRepository implements AccessGrantRepositoryInterface {
     this.errorHandler = errorHandler
   }
 
-  // TOUR DE CORRECTION 1 (tâche 8, étape 4a) — voir CONTRAT 2 sur l'interface
-  // (`AccessGrantRepositoryInterface.findForUser`) : la relecture a démontré par exécution
-  // qu'élargir le type de l'ancien appelant (`liveGrantsForUser`, deux champs puis neuf) ne
-  // fermait rien — un littéral fabriqué prétendant `isSuperAdmin: true` pour l'id d'un compte
+  // Voir CONTRAT 2 sur l'interface (`AccessGrantRepositoryInterface.findForUser`) : élargir le
+  // type de l'ancien appelant (`liveGrantsForUser`, deux champs puis neuf) ne fermait rien — un
+  // littéral fabriqué prétendant `isSuperAdmin: true` pour l'id d'un compte
   // RÉELLEMENT démis de ce drapeau, mais encore titulaire d'un octroi non révoqué, faisait
   // ressortir cet octroi RÉEL. `liveGrantsForUser` ne porte donc plus ce champ du tout : la
   // vérité est rechargée ICI, fraîche, à CHAQUE appel — jamais acceptée d'un appelant. Lecture
@@ -120,7 +119,7 @@ class AccessGrantRepository implements AccessGrantRepositoryInterface {
     })
   }
 
-  // Tour de correction 1 (tâche 8) : appelée par `SuperAdminGrantDomain.grant` avant d'écrire —
+  // Appelée par `SuperAdminGrantDomain.grant` avant d'écrire —
   // voir le commentaire sur l'interface pour la définition exacte de « vivant » ici (plus étroit
   // que `revokedAt: null` seul). `count` est déclarée pour `SuperAdminAccessGrant` sous le
   // contexte superadmin (`LECTURES_GLOBALES_SANS_MUTATION`, tenant-guard.ts).
@@ -144,7 +143,7 @@ class AccessGrantRepository implements AccessGrantRepositoryInterface {
 
   // `DELETE /super-admin/grants/:id` : `.update` (pas `.delete`, jamais déclarée — voir le
   // commentaire au-dessus de `SUPERADMIN_GLOBAL_OPERATIONS`) pose `revokedAt`, la ligne survit.
-  // Voir le commentaire sur l'interface pour les deux points corrigés en tour de correction 1 :
+  // Voir le commentaire sur l'interface pour les deux points garantis ici :
   // restriction au titulaire, et préservation de la PREMIÈRE date de révocation.
   async revoke(id: string, callerId: string, at: Date): Promise<void> {
     await this.tenantContext.runAsSuperAdmin(async () => {

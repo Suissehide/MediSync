@@ -15,7 +15,7 @@ import type { User } from '@/types/auth.ts'
 import { useLogout } from './useAuth.ts'
 
 // ---------------------------------------------------------------------------
-// Tour de correction 1, Important n°3 : « les données survivent à un
+// « les données survivent à un
 // changement de compte ». `useTenantQueryClient` (`hooks/useTenantSwitch.ts`)
 // ne construit un client neuf QUE si `tenantKey(context)` change ; ce couple
 // vaut la chaîne vide pour TOUT compte qui n'a jamais posé de contexte de

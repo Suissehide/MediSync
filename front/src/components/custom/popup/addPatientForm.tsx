@@ -52,11 +52,11 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
   const identitySearch = usePatientIdentitySearch()
   const { attachExistingPatient } = usePatientServiceFileMutations()
   // `null` : aucune recherche encore lancée. `[]` : recherche faite, aucune identité trouvée —
-  // les deux sont affichés différemment (tâche 13, spec §6).
+  // les deux sont affichés différemment (spec §6).
   const [identityMatches, setIdentityMatches] = useState<
     PatientIdentityMatch[] | null
   >(null)
-  // `hasMore` (tâche 13, tour de correction 1, point 4) : vingt résultats affichés au plus, sans
+  // `hasMore` : vingt résultats affichés au plus, sans
   // dire le total — voir `PatientIdentitySearchResult`. Affiché seulement quand une recherche a
   // été faite, comme `identityMatches`.
   const [identityMatchesHasMore, setIdentityMatchesHasMore] = useState(false)
@@ -131,7 +131,7 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
     setOpen(false)
   }
 
-  // Recherche d'identité existante avant création (tâche 13, spec §6) : cherche dans tout
+  // Recherche d'identité existante avant création (spec §6) : cherche dans tout
   // l'établissement, sur le prénom/nom déjà saisis dans le formulaire — jamais automatique, un
   // clic explicite. Le résultat ne porte jamais que l'identité (id, prénom, nom, date de
   // naissance) : rien de plus à afficher, rien de plus à masquer.
@@ -157,12 +157,12 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
   }
 
   // Choisir une identité existante crée le sous-dossier dans le service courant, sans jamais
-  // toucher à l'identité (consigne 3 du brief) : ce chemin n'appelle jamais `createPatient` ni
-  // `PATCH /patient/:id`. Le cas « déjà suivi ici » (consigne 4) est dit par le toast de
+  // toucher à l'identité : ce chemin n'appelle jamais `createPatient` ni
+  // `PATCH /patient/:id`. Le cas « déjà suivi ici » est dit par le toast de
   // `attachExistingPatient` (voir usePatientServiceFile.ts) ; la popup se ferme dans les deux
   // cas, comme pour la création.
   //
-  // IRREVERSIBLE (revue tache 13, tour de correction 1 ; connu depuis la tache 7) : choisir la
+  // IRREVERSIBLE : choisir la
   // mauvaise ligne d'une liste d'homonymes cree un sous-dossier vide dans ce service qu'aucun
   // ecran, aucune route, ne permet de retirer ensuite — voir le commentaire de
   // `PatientServiceFileDomain.attachToCurrentService` (back). Rien ici ne le confirme avant
@@ -279,7 +279,7 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
                     </ul>
                   )}
 
-                  {/* Troncature (tâche 13, tour de correction 1, point 4) : la recherche existe
+                  {/* Troncature : la recherche existe
                       pour éviter les doublons — ne pas dire qu'il y a plus de résultats ferait
                       croire à tort qu'une identité n'existe pas. Jamais un total exact, voir
                       `PatientIdentitySearchResult`. */}

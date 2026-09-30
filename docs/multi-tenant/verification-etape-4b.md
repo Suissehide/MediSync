@@ -261,15 +261,21 @@ Puis, point par point :
    **Attendu** : les lignes posées par `npm run bootstrap:super-admin` sont visibles — elles n'ont
    pas d'établissement, et **aucune autre route de l'application ne peut les lire**. C'est l'un des
    deux trous que cet écran ferme.
-   **Sur une base de démonstration, oui ; sur une base vivante, PAS FORCÉMENT** — et c'est la
-   correction la plus utile de la revue finale de branche : la lecture est bornée à **200 lignes**,
-   triées de la plus récente à la plus ancienne. Les lignes d'amorçage étant par construction les
-   **plus anciennes** de la table, elles sortent de la page dès que le journal d'activité dépasse
-   200 entrées.
+   **Sur une base de démonstration, oui ; sur une base vivante, PAS SUR LA PREMIÈRE PAGE** — les
+   lignes d'amorçage sont par construction les **plus anciennes** de la table, et le tri va de la
+   plus récente à la plus ancienne. Jusqu'au 2026-10-01 la lecture était bornée à **200 lignes** sans
+   pagination, donc elles devenaient carrément **inatteignables** passé 200 entrées ; elle est
+   paginée depuis, donc elles sont désormais sur la **dernière** page. Le pied du tableau donne le
+   nombre total de lignes et le numéro de la dernière page.
+   *À vérifier au passage* : le total affiché doit dépasser le nombre de lignes visibles dès que le
+   journal a plus de 25 entrées — c'est ce que la borne dure ne pouvait pas dire (une réponse de 200
+   lignes ne distinguait pas « il y en a 200 » de « il y en a 200 000 »).
 5. bis. **Viser les lignes d'amorçage explicitement.** Toujours sur **Journal d'activité**, ouvrir
    le filtre **Établissement** : la première option est **« Sans établissement (amorçage) »**.
    **Attendu** : il ne reste que les lignes sans établissement, y compris sur un journal de
-   plusieurs milliers d'entrées. Vérifier aussi que cette option **n'existe pas** sur le journal des
+   plusieurs milliers d'entrées — et le retour à la **première page** au moment où le filtre
+   s'applique. Ce chemin reste plus court que de paginer jusqu'à la dernière page, c'est pourquoi
+   l'option n'a pas été retirée avec la borne. Vérifier aussi que cette option **n'existe pas** sur le journal des
    consultations : une ligne de consultation a toujours un établissement, la question n'aurait pas
    de sens (le serveur y répond 400, l'écran ne propose donc pas de la poser).
 6. **Un compte ordinaire ne sait pas que la zone existe.** Se déconnecter, se reconnecter avec

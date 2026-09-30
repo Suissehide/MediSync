@@ -28,8 +28,8 @@ const accessLinkRouter: FastifyPluginAsync = (fastify) => {
         rateLimit: { max: 10, timeWindow: '1 minute' },
       },
     },
-    // Pas de nouvelle validation manuelle ici (étape 4a, tâche 4, tour de correction 1, Important
-    // n°5 — CODE MORT, retiré) : le `schema.body` ci-dessus est déjà appliqué par Fastify — via
+    // Pas de nouvelle validation manuelle ici (CODE MORT, retiré) : le `schema.body` ci-dessus
+    // est déjà appliqué par Fastify — via
     // le `validatorCompiler` de `fastify-type-provider-zod`, enregistré globalement
     // (`fastify-http-server.ts`) — AVANT que ce gestionnaire ne s'exécute. Un corps qui ne
     // correspond pas à `accessLinkConsumeSchema` ne l'atteint donc jamais ; `request.body` est ici

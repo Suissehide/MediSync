@@ -29,16 +29,15 @@ const row = (over: Partial<MembershipRow>): MembershipRow => ({
 
 // `admins` est le nombre d'administrateurs **actifs** (ce que compte le
 // repository) ; `establishments` le nombre d'etablissements de l'identite
-// visee (tache 15 : lu via membershipRepository.estRattacheAilleurs, plus via un include).
+// visee (lu via membershipRepository.estRattacheAilleurs, plus via un include).
 // Marqueur du client transactionnel : les trois ecritures de `createAccount` (le compte, le
 // rattachement, le lien) doivent TOUTES le recevoir, sans quoi elles ne partagent pas un sort.
 const TX = Symbol('transaction')
 
 // Le decor d'un compte GLOBAL : le drapeau super-admin et la liste des etablissements auxquels
 // il est rattache. La garde du jeton (`assertIssuableToken`) lit les DEUX — un stub qui rendrait
-// `[{}, {}]` sans identifiant d'etablissement, comme le faisait une version precedente de ce
-// fichier, ne peut rien prouver d'un predicat qui compare des identifiants. Depuis la tache 15
-// (etape 4a) ces deux faits sortent de DEUX lectures distinctes du domaine
+// `[{}, {}]` sans identifiant d'etablissement ne peut rien prouver d'un predicat qui compare des
+// identifiants. Ces deux faits sortent de DEUX lectures distinctes du domaine
 // (`userRepository.findIdentity` et `membershipRepository.estRattacheAilleurs`), et non plus
 // d'un seul arbre : les deux stubs ci-dessous lisent donc la meme description.
 type CompteGlobal = { isSuperAdmin?: boolean; establishmentIds?: string[] }
@@ -78,7 +77,7 @@ const build = (
       findByUserID: (userId: string) =>
         Promise.resolve(rows.find((r) => r.userId === userId) ?? null),
       countAdmins: () => Promise.resolve(admins),
-      // TACHE 15 : le booleen qui a remplace la lecture de l'arbre complet des appartenances.
+      // Le booleen qui a remplace la lecture de l'arbre complet des appartenances.
       // Derive de la MEME description de decor que `findIdentity` plus bas.
       estRattacheAilleurs: (userId: string) =>
         Promise.resolve(
@@ -125,7 +124,7 @@ const build = (
           'new@b.fr': { id: 'u2', deactivatedAt: null },
           'deja@b.fr': { id: 'u1', deactivatedAt: null },
           'dormant@b.fr': { id: 'u3', deactivatedAt: new Date() },
-          // Les deux comptes que la garde du jeton doit refuser (tour de correction 1).
+          // Les deux comptes que la garde du jeton doit refuser.
           'superadmin@b.fr': { id: 'u8', deactivatedAt: null },
           'ailleurs@b.fr': { id: 'u9', deactivatedAt: null },
         }
@@ -147,7 +146,7 @@ const build = (
         )
         return Promise.resolve({ id: 'u-neuf', deactivatedAt: null })
       },
-      // TACHE 15 (etape 4a) : `findIdentity` — la LIGNE `User` seule — remplace `findByID` pour
+      // `findIdentity` — la LIGNE `User` seule — remplace `findByID` pour
       // les deux gardes du domaine. L'arbre des appartenances n'en sort plus : la question
       // « rattache ailleurs ? » est posee separement a
       // `membershipRepository.estRattacheAilleurs`, plus haut, qui lit la MEME description de
@@ -173,7 +172,7 @@ const build = (
   return { domain: new MembershipDomain(container), ctx, calls, events }
 }
 
-// Generique (tour de correction 1, Important n°3) : rendait `Promise<unknown>`, si bien que
+// Generique : rendait `Promise<unknown>`, si bien que
 // `(await asAdmin(...)).accessLink` etait une erreur TS18046 — invisible en test (swc ne type
 // pas) mais reelle, et la seule erreur de type NEUVE du commit precedent.
 const asAdmin = <T>(ctx: TenantContext, fn: () => Promise<T>) =>
@@ -399,9 +398,9 @@ describe('MembershipDomain', () => {
     expect(calls).toEqual([])
   })
 
-  // Le garde de l'etape 1 n'existait que parce qu'un administrateur sans
-  // service se retrouvait sans aucun ecran accessible. Les taches 8 et 12
-  // lui donnent l'administration d'etablissement sous une URL sans service :
+  // Ce garde n'existait que parce qu'un administrateur sans
+  // service se retrouvait sans aucun ecran accessible. L'administration d'etablissement est
+  // desormais accessible sous une URL sans service :
   // vider sa propre liste de services est donc redevenu une operation comme
   // une autre.
   it('autorise l utilisateur courant a vider sa propre liste de services', async () => {
@@ -446,7 +445,7 @@ describe('MembershipDomain', () => {
     expect(events).toEqual(['member.reactivated'])
   })
 
-  // --- Tache 10, step 1 : creer un compte de membre ---
+  // --- Creer un compte de membre ---
 
   it('cree le compte, le rattache et emet son lien dans une seule transaction', async () => {
     const { domain, ctx, calls } = build([row({})])
@@ -530,7 +529,7 @@ describe('MembershipDomain', () => {
     expect(calls).toEqual([])
   })
 
-  // --- Tache 10, step 3 : reemettre un lien ---
+  // --- Reemettre un lien ---
 
   it('reemet un lien pour l identite portee par l appartenance, jamais pour un id soumis', async () => {
     const { domain, ctx, calls } = build([
@@ -546,7 +545,7 @@ describe('MembershipDomain', () => {
     expect(resultat).toEqual({ token: 'JETON-FACTICE' })
   })
 
-  // La garde la plus importante de la tache : un lien reinitialise le mot de passe du `User`,
+  // La garde la plus importante ici : un lien reinitialise le mot de passe du `User`,
   // qui est GLOBAL. Sans elle, l'administrateur de A prend le controle de l'acces a B.
   it('refuse de reemettre un lien pour un compte appartenant a plusieurs etablissements', async () => {
     const { domain, ctx, calls } = build([row({})], 1, 2)
@@ -577,7 +576,7 @@ describe('MembershipDomain', () => {
     expect(events).toEqual(['member.accessLinkReissued'])
   })
 
-  // --- Tour de correction 1 : LA GARDE DU JETON, partagee par les deux emissions ---
+  // --- LA GARDE DU JETON, partagee par les deux emissions ---
 
   const SUPER_ADMIN = { u8: { isSuperAdmin: true } }
   const RATTACHE_AILLEURS = { u9: { establishmentIds: ['e-autre'] } }
@@ -619,8 +618,7 @@ describe('MembershipDomain', () => {
 
   it('rattache sans jeton une adresse deja en poste ailleurs, mais refuse un super-admin', async () => {
     // La question symetrique : `addByEmail` n'emet AUCUN jeton, donc le rattachement d'une
-    // personne qui exerce dans deux structures reste permis. Seul le super-admin y est refuse
-    // (premier maillon de la chaine de la Critique n°2).
+    // personne qui exerce dans deux structures reste permis. Seul le super-admin y est refuse.
     const permis = build([row({})], 1, 1, RATTACHE_AILLEURS)
     await asAdmin(permis.ctx, () =>
       permis.domain.addByEmail({

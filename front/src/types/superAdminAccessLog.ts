@@ -1,4 +1,4 @@
-// Étape 4b, tâche 11 : forme EXACTE de `superAdminAccessLogEntryResponseSchema` (back,
+// Forme EXACTE de `superAdminAccessLogEntryResponseSchema` (back,
 // `superAdminAccessLog.schema.ts`), pour `GET /super-admin/access-log`. Une forme UNIQUE pour les
 // deux journaux (jamais une union discriminée) : le back construit ce DTO champ par champ, jamais
 // un `...row` étalé (voir le commentaire du schéma back) — ce type reprend exactement la même
@@ -29,7 +29,7 @@ export type SuperAdminAccessLogEntry = {
 // jamais les deux journaux à la fois), les trois autres sont les filtres optionnels de la spec
 // (établissement, compte, action).
 //
-// REVUE FINALE DE BRANCHE, Important n°1 — deux évolutions, côté back comme ici :
+// Deux évolutions, côté back comme ici :
 //   - `establishmentId` accepte la valeur réservée `SANS_ETABLISSEMENT`
 //     (`constants/superAdminAccessLog.constant.ts`), qui vise les lignes SANS établissement —
 //     celles du script d'amorçage, les plus anciennes de la table. Elle existait parce qu'elles

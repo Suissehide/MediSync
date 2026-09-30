@@ -127,23 +127,23 @@ export interface IocContainer {
   // PlanningCycle
   readonly planningCycleDomain: PlanningCycleDomainInterface
   readonly planningCycleRepository: PlanningCycleRepositoryInterface
-  // AccessGrant (octroi temporaire d'acces, etape 4a) — la lecture (`effectiveMemberships`,
+  // AccessGrant (octroi temporaire d'acces) — la lecture (`effectiveMemberships`,
   // domain/accessGrant.domain.ts) reste une fonction pure, sans dependance a injecter ;
-  // l'ecriture (s'accorder un octroi, le revoquer, tache 8) est `superAdminGrantDomain`
+  // l'ecriture (s'accorder un octroi, le revoquer) est `superAdminGrantDomain`
   // ci-dessous, seul appelant des methodes d'ecriture du meme depot.
   readonly accessGrantRepository: AccessGrantRepositoryInterface
   readonly superAdminGrantDomain: SuperAdminGrantDomainInterface
-  // AccessLink (lien d'acces, etape 4a tache 4)
+  // AccessLink (lien d'acces)
   readonly accessLinkDomain: AccessLinkDomainInterface
   readonly accessLinkRepository: AccessLinkRepositoryInterface
-  // Establishment (creation d'un etablissement et de son premier administrateur, etape 4a tache 6)
+  // Establishment (creation d'un etablissement et de son premier administrateur)
   readonly establishmentDomain: EstablishmentDomainInterface
   readonly establishmentRepository: EstablishmentRepositoryInterface
-  // Service (creation, renommage, (des)activation d'un service, etape 4a tache 9)
+  // Service (creation, renommage, (des)activation d'un service)
   readonly serviceDomain: ServiceDomainInterface
   readonly serviceRepository: ServiceRepositoryInterface
-  // PatientAccessLog (journal des consultations, etape 4b tache 2) — le crochet qui appelle
-  // `record` vient de la tache 3 ; cette tache pose seulement le chemin d'ecriture.
+  // PatientAccessLog (journal des consultations) — le crochet qui appelle
+  // `record` est un dispositif distinct ; ceci ne pose que le chemin d'ecriture.
   readonly patientAccessLogDomain: PatientAccessLogDomainInterface
   readonly patientAccessLogRepository: PatientAccessLogRepositoryInterface
 }

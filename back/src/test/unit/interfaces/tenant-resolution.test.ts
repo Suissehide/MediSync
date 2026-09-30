@@ -16,7 +16,13 @@ const membership: UserWithMemberships['establishmentMemberships'][number] = {
   establishmentId: 'e1',
   role: 'MEMBER',
   createdAt: now,
-  establishment: { id: 'e1', name: 'E', createdAt: now, deactivatedAt: null },
+  establishment: {
+    id: 'e1',
+    name: 'E',
+    createdAt: now,
+    deactivatedAt: null,
+    services: [],
+  },
   serviceMemberships: [
     {
       id: 'sm1',
@@ -65,7 +71,7 @@ const user: UserWithMemberships = {
 }
 
 // `[]` explicite à chaque appel de `resolveTenantFromUser` ci-dessous : `grants` n'a plus de
-// valeur par défaut (tour de correction 1, tâche 3) — précisément pour qu'un appel qui l'omet ne
+// valeur par défaut — précisément pour qu'un appel qui l'omet ne
 // compile plus silencieusement dans `src/main`. Ce fichier n'est pas vérifié par `tsc` (voir
 // back/CLAUDE.md), mais le dit explicitement plutôt que de s'appuyer sur l'ancien défaut.
 describe('resolveTenantFromUser', () => {
@@ -187,7 +193,7 @@ describe('resolveTenantFromUser', () => {
     })
   })
 
-  // Etape 4b, tache 2 : `origine` doit distinguer un octroi temporaire d'une appartenance
+  // `origine` doit distinguer un octroi temporaire d'une appartenance
   // reelle jusque dans le `Tenant` resolu — pas seulement dans `EffectiveMembership`
   // (accessGrant.domain.ts), qui l'a toujours porte. Sans ce test, un retrait silencieux de
   // `origine: membership.origine` dans `resolveTenantFromUser` (les deux `return`) laisserait
@@ -225,7 +231,7 @@ describe('resolveTenantFromUser', () => {
     })
   })
 
-  // TOUR DE CORRECTION 1 (revue) — le test precedent ne croise l'octroi qu'avec la branche
+  // Le test precedent ne croise l'octroi qu'avec la branche
   // SERVICE (`requireEstablishmentAdmin: false`) de `resolveTenantFromUser`. Celle-ci a une
   // seconde branche, l'administration d'etablissement (`requireEstablishmentAdmin: true`), avec
   // son propre `return` litteral qui pose aussi `origine: membership.origine` — jamais exercee

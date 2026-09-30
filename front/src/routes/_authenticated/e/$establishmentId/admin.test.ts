@@ -64,7 +64,7 @@ describe('beforeLoad du layout d etablissement', () => {
   })
 
   it('refuse un membre sans role ADMIN sur cet etablissement', () => {
-    // C'est ici que se referme le trou de permission laisse par la tache 7 :
+    // C'est ici que se referme le trou de permission :
     // sans ce garde, quiconque est authentifie atteindrait /e/:id/admin/*.
     // `resolveEstablishmentContext` exige le role ADMIN ; un simple membre
     // est redirige avant que le contexte ne soit jamais pose.

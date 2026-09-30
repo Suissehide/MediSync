@@ -37,10 +37,10 @@ class PatientAccessLogDomain implements PatientAccessLogDomainInterface {
   // avant tout appel au depot : une ligne dont les filtres portent une des quatre cles reservees
   // a `clinical:read` (`utils/clinical-fields.ts`) n'est jamais ecrite, meme partiellement.
   //
-  // TOUR DE CORRECTION 1 (revue) — cette garde est verifiee sur le CHEMIN REEL
+  // Cette garde est verifiee sur le CHEMIN REEL
   // (patientAccessLog.domain.test.ts monte desormais un `tenantContext` reel, entre par
   // `ctx.run`, avant d'appeler `record`), pas seulement avec un domaine construit sans
-  // tenantContext. La revue a demontre par execution que l'ancienne version du test (domaine
+  // tenantContext. L'ancienne version du test (domaine
   // sans tenantContext) rougissait bien sous un sabotage etroit (retirer `notes` de la liste
   // verifiee) — mais pour la MAUVAISE raison : un `TypeError` sur `this.tenantContext.current()`
   // undefined, pas le rejet clinique que l'assertion `/clinique/i` pretendait eprouver. Rejoue
@@ -50,7 +50,7 @@ class PatientAccessLogDomain implements PatientAccessLogDomainInterface {
   // resultat de ce test desormais.
   async record(input: RecordAccessInput): Promise<void> {
     this.assertNoClinicalContent(input.exportFilters)
-    // Decision du 2026-09-27 (etape 4b) : un acces obtenu par octroi temporaire (superadmin muni
+    // Decision du 2026-09-27 : un acces obtenu par octroi temporaire (superadmin muni
     // d'un SuperAdminAccessGrant vivant) emprunte le chemin de tenant ordinaire, avec les memes
     // appartenances qu'un membre reel (`effectiveMemberships`,
     // domain/accessGrant.domain.ts) — il serait donc journalise de facon indiscernable d'un
@@ -65,7 +65,7 @@ class PatientAccessLogDomain implements PatientAccessLogDomainInterface {
     })
   }
 
-  // Etape 4b, tache 5 : simples relais vers le depot — aucune logique metier ici, le
+  // Simples relais vers le depot — aucune logique metier ici, le
   // cloisonnement se joue entierement dans `PatientAccessLogRepository` (`scope()` vs
   // `establishmentScope()`, voir son commentaire). Le filtrage du contenu clinique (aucun ici,
   // par construction du schema Zod de reponse) n'a pas besoin d'etre reecrit : ce que ces deux
@@ -96,7 +96,7 @@ class PatientAccessLogDomain implements PatientAccessLogDomainInterface {
     return this.patientAccessLogRepository.findAllPlatformWide(filters)
   }
 
-  // Retention parametrable (tache 8, etape 4b) : `config.logRetentionMonths`, jamais douze en
+  // Retention parametrable : `config.logRetentionMonths`, jamais douze en
   // dur -- meme calcul qu'`ActivityLogDomain.cleanup`, DUPLIQUE plutot que factorise a dessein
   // (voir son commentaire) : un sabotage qui remet douze en dur ici seul ne doit faire rougir que
   // le test de CE domaine.
@@ -108,7 +108,7 @@ class PatientAccessLogDomain implements PatientAccessLogDomainInterface {
     return { deleted }
   }
 
-  // TOUR DE CORRECTION 1 (revue) — deux trous elargis a dessein, sur la SEULE barriere qui
+  // Deux trous elargis a dessein, sur la SEULE barriere qui
   // protege ce journal de contenu clinique :
   //   - la verification etait limitee au premier niveau des cles ; un filtre exotique portant
   //     la cle clinique sous un objet ou un tableau imbrique (`{ criteres: [{ notes: '...' }] }`)

@@ -35,7 +35,7 @@ appartenance porte un rôle.
 | Niveau | Rôle | Ce qu'il peut faire |
 | --- | --- | --- |
 | Plateforme | **Super-admin** | Créer les établissements, nommer leur premier administrateur, consulter la santé globale de la plateforme, rechercher un compte par adresse et réémettre son lien de connexion, s'accorder un accès d'intervention temporaire. **Aucun accès au contenu des dossiers patients** — voir la nuance sur le nombre de dossiers et sur l'octroi, plus bas. |
-| Établissement | **Administrateur d'établissement** (`ADMIN`) | Créer et désactiver les services, rattacher les comptes à l'établissement, les affecter aux services avec un rôle, désactiver les comptes, lire le journal d'activité et le journal des accès aux dossiers patients. |
+| Établissement | **Chef d'établissement** (`ADMIN`, libellé « Administrateur » jusqu'au 2026-10-01) | Renommer l'établissement, créer et désactiver les services, rattacher les comptes à l'établissement, les affecter aux services avec un rôle, désactiver les comptes, lire le journal d'activité et le journal des accès aux dossiers patients. **Coordinateur implicite sur tous les services actifs** de l'établissement, affecté ou non — donc accès clinique à tous les dossiers suivis dans l'établissement (depuis le 2026-10-01, décision de Léo). Porté par `effectiveMemberships` (`domain/accessGrant.domain.ts`), comme l'octroi super-admin. |
 | Établissement | **Membre** (`MEMBER`) | Aucun droit propre : simple rattachement qui permet d'être affecté à des services. |
 | Service | **Coordinateur** (`COORDINATEUR`) | Tout ce que fait l'ancien rôle `ADMIN` dans le périmètre du service : modèles de parcours, planning, thématiques, semaines interdites, cycle de planification, modèles de diagnostic, dossiers patients et contenu clinique. |
 | Service | **Intervenant** (`INTERVENANT`) | L'équivalent de l'ancien rôle `USER` : agenda, présences, transmissions, dossier patient et diagnostics éducatifs, tâches personnelles. |
@@ -158,6 +158,7 @@ Règles associées :
 | `activity-log:read` (journal d'activité de l'établissement, **tous services**, filtrable par service — écran « Journal d'activité » de l'administration depuis la navigation par échelle, `decisions-navigation.md`) | ✔ | |
 | `activity-log:write` (purge des entrées du journal d'activité, sur le même périmètre que la lecture) | ✔ | |
 | `access-log:read` (journal des accès aux dossiers patients, **tous services** de l'établissement — depuis l'étape 4b ; **aucun écran ne l'appelle encore**, voir `deploiement-etape-4b.md` §10) | ✔ | |
+| `establishment:rename` (renommer **son** établissement — l'id vient du tenant résolu, jamais de la requête ; `PATCH /e/:establishmentId/admin`) | ✔ | |
 | `establishments:manage` (créer un établissement, nommer son premier administrateur, rechercher un compte, réémettre un lien, s'accorder un octroi) | | ✔ |
 
 Le super-admin n'a, **en propre**, aucune permission de service ni

@@ -7,13 +7,13 @@ import {
   signIn,
 } from './setup/fixtures'
 
-// Tache 6, etape 4b : `GET /super-admin/access-log`. Ferme deux trous laisses par l'etape
-// precedente (taches 1 a 5) -- voir le commentaire de tete de
+// `GET /super-admin/access-log`. Ferme deux trous laisses par une implementation
+// precedente -- voir le commentaire de tete de
 // interfaces/http/fastify/routes/super-admin/access-log.ts pour le detail.
 //
-// DEUX ETABLISSEMENTS REELLEMENT PEUPLES, PAS UN SEUL (tour de correction 1, tache 5 -- lecon
-// tiree par la revue de cette tache-la : une fixture a un seul etablissement laissait les 234
-// tests e2e verts quand on retirait la borne d'etablissement d'une lecture voisine). Cette route
+// DEUX ETABLISSEMENTS REELLEMENT PEUPLES, PAS UN SEUL (une fixture a un seul etablissement
+// laissait les 234 tests e2e verts quand on retirait la borne d'etablissement d'une lecture
+// voisine). Cette route
 // lit a l'echelle de la PLATEFORME entiere : sans un second etablissement reellement peuple, rien
 // ne distinguerait « la route ignore le filtre d'etablissement » de « il n'y a qu'un
 // etablissement de toute facon ».
@@ -63,8 +63,8 @@ describe('GET /super-admin/access-log', () => {
     // Les lignes du journal des CONSULTATIONS, sur les DEUX etablissements -- ecrites
     // directement en base plutot que rejouees via le crochet (deja eprouve par
     // patient-access-log.test.ts), une par etablissement, avec un compte et une action
-    // distincts pour eprouver les trois filtres. `accesParOctroi` DIFFERE entre les deux
-    // (tour de correction 1, tache 10) : une fixture a valeur unique ne prouverait pas que la
+    // distincts pour eprouver les trois filtres. `accesParOctroi` DIFFERE entre les deux :
+    // une fixture a valeur unique ne prouverait pas que la
     // route rend la vraie valeur de chaque ligne plutot qu'une constante.
     await testDb.patientAccessLog.createMany({
       data: [
@@ -121,7 +121,7 @@ describe('GET /super-admin/access-log', () => {
     await testDb.$disconnect()
   })
 
-  // Etape 1 du brief (task-6-brief.md), inchange : la ligne du script d'amorcage, qu'aucune
+  // Inchange : la ligne du script d'amorcage, qu'aucune
   // autre route ne peut lire (verifie par balayage sur /super-admin dans
   // super-admin-acces.test.ts, et par construction ici : ni la route d'etablissement -- qui
   // exige un `establishmentId` precis, absent sur cette ligne -- ni aucune route de tenant --
@@ -149,11 +149,11 @@ describe('GET /super-admin/access-log', () => {
     expect(res.statusCode).toBe(404)
   })
 
-  // Le second trou que cette tache ferme : AUCUNE route ne lisait `PatientAccessLog` a
-  // l'echelle de la plateforme avant cette tache. Preuve directe : les DEUX etablissements
+  // Le second trou que cette route ferme : AUCUNE route ne lisait `PatientAccessLog` a
+  // l'echelle de la plateforme avant elle. Preuve directe : les DEUX etablissements
   // apparaissent, sans filtre.
   //
-  // SABORDAGE ETROIT (etape 4, brief), EPROUVE PAR EXECUTION PUIS REVERTE AVANT CE COMMIT :
+  // SABORDAGE ETROIT, EPROUVE PAR EXECUTION PUIS REVERTE AVANT CE COMMIT :
   // retirer l'entree `PatientAccessLog` de `SUPERADMIN_OPERATIONS` (tenant-guard.ts) fait
   // rougir CE test (et les trois suivants, qui partagent le meme `source=acces`) avec un 500
   // (`TenantScopeMissingError`, absorbe par le gestionnaire d'erreurs Fastify) -- jamais une
@@ -200,7 +200,7 @@ describe('GET /super-admin/access-log', () => {
     expect(body.every((l) => l.userID === 'u-coordinateur-b')).toBe(true)
   })
 
-  // REVUE FINALE DE BRANCHE, Important n°1 : le filtre accepte desormais AUSSI un fragment de
+  // Le filtre accepte desormais AUSSI un fragment de
   // prenom/nom, insensible a la casse — la forme que l'ecran produit reellement. C'est ce qui
   // permet de le brancher au serveur sans perdre la recherche par nom que l'ecran offrait (et
   // qu'il appliquait, lui, sur la page deja tronquee).
@@ -241,7 +241,7 @@ describe('GET /super-admin/access-log', () => {
     expect(body.every((l) => l.action === 'export')).toBe(true)
   })
 
-  // Tour de correction 1 (tache 10) : `accesParOctroi` doit sortir de cette route aussi,
+  // `accesParOctroi` doit sortir de cette route aussi,
   // liee a la BONNE etablissement -- pas une constante. La fixture porte true pour A, false
   // pour B (voir plus haut) : un test qui ne verifierait qu'une des deux valeurs ne
   // prouverait pas que l'autre est bien rendue.
@@ -277,7 +277,7 @@ describe('GET /super-admin/access-log', () => {
     expect(body.every((l) => l.accesParOctroi === null)).toBe(true)
   })
 
-  // Arbitrage de l'etape 4a, non rouvert ici (voir le brief) : le super-admin compte les
+  // Arbitrage non rouvert ici : le super-admin compte les
   // patients, il ne les lit pas. Cette route ne rend donc jamais une IDENTITE de patient --
   // seulement un identifiant (`patientId`). Verifie par recherche de sous-chaine sur le corps
   // BRUT (meme double verification que superAdminUser.schema.ts, accountSearchResponseSchema),

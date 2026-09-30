@@ -15,11 +15,12 @@ import { queryState } from '@/libs/queryState.ts'
 import {
   useSuperAdminEstablishmentActivityLogQuery,
   useSuperAdminEstablishmentQuery,
+  useSuperAdminRenameEstablishment,
 } from '@/queries/useSuperAdmin.ts'
 import type { ActivityLog } from '@/types/activityLog.ts'
 
 const ESTABLISHMENT_ROLE_LABEL: Record<string, string> = {
-  ADMIN: 'Administrateur',
+  ADMIN: "Chef d'établissement",
   MEMBER: 'Membre',
 }
 
@@ -29,7 +30,7 @@ const ESTABLISHMENT_ROLE_LABEL: Record<string, string> = {
 // autres journaux du dépôt.
 const PREMIERE_PAGE = { pageIndex: 0, pageSize: 25 }
 
-// Task-12-brief.md, step 2 : « le détail d'un établissement — services,
+// « Le détail d'un établissement — services,
 // membres, journal, bouton d'octroi avec motif obligatoire et durée ».
 // Écran hors de tout tenant : voir `../super-admin.tsx`.
 export const Route = createFileRoute(
@@ -41,6 +42,7 @@ export const Route = createFileRoute(
 function SuperAdminEstablishmentDetail() {
   const navigate = useNavigate()
   const [renommer, setRenommer] = useState(false)
+  const renameEstablishment = useSuperAdminRenameEstablishment()
   const [pagination, setPagination] = useState(PREMIERE_PAGE)
   // Le paramètre de route DÉSIGNE l'établissement demandé (§6.2) : ce n'est
   // pas ici un tenant implicite, il n'est jamais posé dans le store
@@ -59,7 +61,7 @@ function SuperAdminEstablishmentDetail() {
       pageSize: pagination.pageSize,
     })
 
-  // Tour de correction 1, Important n°4 : avec `retry: 0`, une requête en
+  // Avec `retry: 0`, une requête en
   // échec repasse `isPending` à `false` sans jamais poser `establishment` —
   // une garde `isPending || !establishment` restait donc vraie pour
   // toujours devant une vraie erreur (identifiant supprimé ou mal
@@ -137,6 +139,7 @@ function SuperAdminEstablishmentDetail() {
         <RenameEstablishmentForm
           establishment={renommer ? establishment : null}
           onClose={() => setRenommer(false)}
+          rename={renameEstablishment}
         />
 
         <ActiveGrantNotice establishmentId={establishment.id} />

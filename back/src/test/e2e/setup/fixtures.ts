@@ -86,7 +86,7 @@ export const signIn = async (
   return { access_token: token }
 }
 
-// Un octroi temporaire, tel que le posera plus tard la route d'émission (tâche 8) — ici créé
+// Un octroi temporaire, tel que le posera plus tard la route d'émission — ici créé
 // directement en base, ce test n'exerçant que la lecture (résolution de tenant / `/me`).
 export const grantAccess = (params: {
   userId: string

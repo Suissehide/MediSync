@@ -23,9 +23,9 @@ export const isKey = <T extends object>(o: T, k: PropertyKey): k is keyof T => {
 }
 
 // N'importe quelle cle dont le nom contient "secret" (JWT, cookie, ou un futur secret de
-// config) : jamais sa valeur en clair dans un journal, quel que soit le niveau
-// (task-5-re-review-3.md, tour 5 — `jwtSecret`/`jwtRefreshSecret`/`cookieSecret` partaient en
-// clair dans `awilix-ioc-container.ts` a `debug`, des le demarrage). Filtre sur le NOM de la cle,
+// config) : jamais sa valeur en clair dans un journal, quel que soit le niveau —
+// `jwtSecret`/`jwtRefreshSecret`/`cookieSecret` partaient en clair dans
+// `awilix-ioc-container.ts` a `debug`, des le demarrage. Filtre sur le NOM de la cle,
 // pas sur une liste figee, pour couvrir un secret de config ajoute plus tard sans y repenser.
 const SECRET_KEY_PATTERN = /secret/i
 

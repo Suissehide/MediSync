@@ -23,7 +23,7 @@ import {
 const establishmentsRouter: FastifyPluginAsync = (fastify) => {
   const { establishmentDomain } = fastify.iocContainer
 
-  // Tâche 7 : la liste et ses compteurs (spec §3.3). `establishmentDomain.list` encadre chaque
+  // La liste et ses compteurs (spec §3.3). `establishmentDomain.list` encadre chaque
   // compteur d'établissement sous le contexte superadmin — rien à répéter ici.
   fastify.get(
     '/',
@@ -34,7 +34,7 @@ const establishmentsRouter: FastifyPluginAsync = (fastify) => {
     () => establishmentDomain.list(),
   )
 
-  // Le détail d'UN établissement (spec §6.2, tour de correction 1) : la ligne de la liste,
+  // Le détail d'UN établissement (spec §6.2) : la ligne de la liste,
   // augmentée des services et des membres. 404 si l'id est inconnu. NE REND PLUS LE JOURNAL
   // (2026-10-01) : il a sa propre route paginée, juste en dessous.
   fastify.get<{ Params: EstablishmentIdParams }>(

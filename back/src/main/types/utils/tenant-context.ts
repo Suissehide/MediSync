@@ -7,7 +7,7 @@ export type Tenant = {
   serviceId: string | null
   serviceRole: ServiceRole | null
   soignantId: string | null
-  // Optionnel a dessein (etape 4b, tache 2) : seule `resolveTenantFromUser`
+  // Optionnel a dessein : seule `resolveTenantFromUser`
   // (interfaces/http/fastify/plugins/tenant.plugin.ts) le pose, depuis
   // `EffectiveMembership.origine` (domain/accessGrant.domain.interface.ts) — le SEUL endroit qui
   // sait distinguer une appartenance reelle d'un octroi temporaire. Un `Tenant` construit
@@ -16,8 +16,7 @@ export type Tenant = {
   // traite son absence comme un acces reel plutot que comme un octroi — un defaut sur, jamais
   // l'inverse. Le rendre obligatoire aurait force une mise a jour de chaque fixture `Tenant` du
   // depot (plusieurs fichiers, aucun rapport avec les octrois) pour une information qu'un seul
-  // appelant sait produire : cable etroit, plutot qu'un cablage large pour ce que cette tache ne
-  // couvre pas.
+  // appelant sait produire : cable etroit, plutot qu'un cablage large.
   origine?: 'reelle' | 'octroi'
 }
 

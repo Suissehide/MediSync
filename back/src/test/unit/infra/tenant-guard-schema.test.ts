@@ -13,7 +13,7 @@ import {
 } from '../../../main/infra/orm/tenant-guard'
 
 // Le garde-fou controle les include imbriques (a n'importe quelle profondeur, depuis une racine
-// de service, d'etablissement, ou globale depuis le tour de correction 1 sur la tache 9/etape 3)
+// de service, d'etablissement, ou globale)
 // a partir d'une table ecrite a la main,
 // MODEL_RELATIONS, qui couvre desormais TOUS les modeles du schema et pas seulement ceux
 // d'etablissement (l'ancienne TENANT_CHILD_RELATIONS). Sur `include`, une relation absente de la
@@ -55,7 +55,7 @@ const modelNames = new Set(models.keys())
 // construction, puisqu'ils ne sont pas declares par un bloc `model`. Les attributs de bloc
 // (`@@unique`, `@@index`, `@@id`) sont ignores : ils commencent par `@@`, jamais par un nom.
 //
-// TACHE 15 (etape 4a) — la CARDINALITE est desormais lue elle aussi, depuis le `[]` du type
+// La CARDINALITE est desormais lue elle aussi, depuis le `[]` du type
 // (`EstablishmentMembership[]` -> a-plusieurs, `User` ou `User?` -> a-un). C'est le seul endroit
 // du depot qui la connaisse de source sure ; MODEL_RELATIONS la recopie a la main et les tests
 // ci-dessous tiennent les deux sens, donc une relation qui passe de `Type` a `Type[]` — ou
@@ -151,11 +151,11 @@ describe('SERVICE_MODELS reflete prisma/schema.prisma', () => {
   })
 })
 
-// MODEL_RELATIONS (tache 9/etape 3) couvre TOUS les modeles du schema, pas seulement ceux
+// MODEL_RELATIONS couvre TOUS les modeles du schema, pas seulement ceux
 // d'etablissement : c'est ce qui permet au garde-fou de suivre la famille du modele courant a
 // n'importe quelle profondeur d'inclusion imbriquee, et de reconnaitre une transition
 // etablissement -> service la ou qu'elle se trouve dans l'arbre, pas seulement au premier
-// niveau depuis la racine de la requete. Avant cette tache, cette table s'appelait
+// niveau depuis la racine de la requete. Cette table s'appelait auparavant
 // TENANT_CHILD_RELATIONS et ne couvrait que ESTABLISHMENT_MODELS ; les tests ci-dessous
 // portaient alors sur `[...ESTABLISHMENT_MODELS]`, ils portent maintenant sur `[...modelNames]`
 // (tous les modeles reellement declares au schema, la meme source que relationsOf).
@@ -196,17 +196,16 @@ describe('MODEL_RELATIONS reflete prisma/schema.prisma', () => {
     },
   )
 
-  // TACHE 15 — la CARDINALITE, enoncee separement de l'egalite exacte ci-dessus pour que l'echec
+  // La CARDINALITE, enoncee separement de l'egalite exacte ci-dessus pour que l'echec
   // dise « telle relation a change de cardinalite » plutot que « deux objets different ». C'est
   // la seule information de cette table dont `assertNoGlobalToManyBridge` se sert pour decider,
   // et une cardinalite perimee ne se voit pas a l'usage : une relation devenue a-plusieurs et
   // restee declaree `one` rouvrirait le pont en silence, sans qu'aucune requete du depot ne
   // change de forme. Les deux sens sont tenus en une fois (l'ecart est symetrique).
   //
-  // TROIS SENS, PAS DEUX (tour de correction 1 de la tache 15 — la version precedente n'en
-  // tenait que deux, et la revue l'a montre par execution : en SUPPRIMANT une relation du schema
+  // TROIS SENS, PAS DEUX — verifie par execution : en SUPPRIMANT une relation du schema
   // tout en gardant son entree dans la table, trois tests rougissaient mais PAS celui-ci, qui
-  // est justement le seul a dire QUELLE relation a bouge). Les trois ecarts possibles entre la
+  // est justement le seul a dire QUELLE relation a bouge. Les trois ecarts possibles entre la
   // table et le schema sont donc nommes ici, chacun avec son mot :
   //   - `cardinalite` : la relation existe des deux cotes, mais `one`/`many` ne correspond pas ;
   //   - `absente de la table` : le schema la declare, la table l'ignore ;
@@ -256,7 +255,7 @@ describe('MODEL_RELATIONS reflete prisma/schema.prisma', () => {
     expect(inconnus).toEqual([])
   })
 
-  // Et la propriete que la tache 15 exploite vraiment, dite en clair plutot que laissee a deduire
+  // Et la propriete que le garde-fou exploite vraiment, dite en clair plutot que laissee a deduire
   // de la table : AUCUNE relation qui MENE a un modele global n'est a-plusieurs. C'est elle qui
   // rend sur le chemin de tenant la descente vers un global inoffensive, et donc le refus
   // limitable au sens inverse (voir assertNoGlobalToManyBridge). Le jour ou le schema en
@@ -308,9 +307,9 @@ describe('MODEL_RELATIONS reflete prisma/schema.prisma', () => {
 // `assertGlobalInclude` echoue OUVERT — une relation absente de la table n'est pas vue, donc
 // l'include passe sans controle, la ou `assertNestedInclude` refuse ce qu'il ne connait pas. Avant
 // ce test, la table avait deja derive : elle declarait un `User.soignant` disparu du schema
-// depuis l'etape 1, ou le lien vers `Soignant` est passe a `EstablishmentMembership`.
+// depuis que le lien vers `Soignant` est passe a `EstablishmentMembership`.
 //
-// MAIS L'OBLIGATION N'EST PAS LA MEME, et ce paragraphe a longtemps affirme le contraire.
+// MAIS L'OBLIGATION N'EST PAS LA MEME.
 // MODEL_RELATIONS est une liste blanche qui EXIGE : ce qui n'y figure pas est refuse, donc
 // y declarer une relation la rend simplement lisible et l'exhaustivite ne coute rien.
 // GLOBAL_TENANT_RELATIONS fait l'inverse : y declarer une relation la RESTREINT, puisque
@@ -382,8 +381,8 @@ describe('GLOBAL_TENANT_RELATIONS reflete prisma/schema.prisma', () => {
   // des trois listes) peut tres bien redescendre vers du tenant au niveau suivant, et
   // `assertGlobalInclude` ne regarde que le premier niveau. La descente dans les inclusions
   // imbriquees est desormais couverte ailleurs : `assertNestedInclude`, dans tenant-guard.ts, est
-  // appelee aussi depuis une racine globale (tour de correction 1 sur la relecture de la tache
-  // 9) et attrape toute transition etablissement -> service rencontree en profondeur — mais elle
+  // appelee aussi depuis une racine globale et attrape toute transition
+  // etablissement -> service rencontree en profondeur — mais elle
   // ne remplace pas cette liste-ci, propre au premier niveau et a la question, differente, de
   // savoir si une relation de modele global merite d'etre restreinte a findUnique(OrThrow).
   //
@@ -394,7 +393,7 @@ describe('GLOBAL_TENANT_RELATIONS reflete prisma/schema.prisma', () => {
   // C'est la friction, et elle est a sa place : le cout est une ligne a ecrire, le benefice est
   // qu'aucune relation d'un modele global n'entre au schema sans que quelqu'un ait tranche.
   //
-  // Tache 2 (etape 4a) : `User.accessLinks` et `User.superAdminAccessGrants` /
+  // `User.accessLinks` et `User.superAdminAccessGrants` /
   // `Establishment.superAdminAccessGrants` sont les relations inverses, exigees par Prisma,
   // vers `AccessLink` et `SuperAdminAccessGrant` — deux modeles GLOBAUX eux-memes (declares ni
   // dans SERVICE_MODELS ni dans ESTABLISHMENT_MODELS). Une relation entre deux modeles globaux
@@ -447,7 +446,7 @@ describe('NESTED_RELATIONS reflete prisma/schema.prisma', () => {
   })
 })
 
-// La quatrieme table ecrite a la main, SUPERADMIN_OPERATIONS (tache 1, etape 4a) : la liste
+// La quatrieme table ecrite a la main, SUPERADMIN_OPERATIONS : la liste
 // declaree des couples (modele, operation) permis sous le contexte superadmin (voir son
 // commentaire dans tenant-guard.ts). Deux proprietes, dans les deux sens ou l'une des deux
 // directions n'a pas de sens :
@@ -472,9 +471,9 @@ describe('SUPERADMIN_OPERATIONS reflete le schema', () => {
     }
   })
 
-  // TOUR DE CORRECTION 1 (tache 1) — Important de la revue : les deux tests ci-dessus ne tiennent
+  // Les deux tests ci-dessus ne tiennent
   // que la CONFORMITE au schema (modeles existants, modeles de tenant), jamais le CONTENU. Ils
-  // restaient verts si la revue ajoutait `Soignant: ['findMany', 'deleteMany', 'updateMany']` —
+  // resteraient verts si on ajoutait `Soignant: ['findMany', 'deleteMany', 'updateMany']` —
   // Soignant est un modele de tenant qui existe au schema, donc les deux tests structurels
   // n'avaient rien a y redire, alors que la liste est la frontiere entre le super-admin et les
   // donnees de sante : c'est son CONTENU exact, pas seulement sa forme, qui doit etre tenu. Ce
@@ -483,8 +482,8 @@ describe('SUPERADMIN_OPERATIONS reflete le schema', () => {
   // leur ORDRE au sein d'un meme modele (`toEqual` compare les tableaux element par element) —
   // fait rougir ce test, forcant une revue deliberee au lieu d'un silence.
   //
-  // CE QUE CE TEST NE TIENT PAS, dit platement plutot qu'affirme a tort (tour de correction 2 —
-  // verifie par execution : `require('util').isDeepStrictEqual({a:1,b:2}, {b:2,a:1})` vaut
+  // CE QUE CE TEST NE TIENT PAS, dit platement plutot qu'affirme a tort (verifie par
+  // execution : `require('util').isDeepStrictEqual({a:1,b:2}, {b:2,a:1})` vaut
   // `true`, la meme semantique que `toEqual` sur un objet) : l'ORDRE DES CLES de
   // SUPERADMIN_OPERATIONS lui-meme (`Service` avant ou apres `Patient`, par exemple) n'est pas
   // observable par une egalite structurelle sur un objet JavaScript, et ce reordonnancement-la ne
@@ -502,17 +501,17 @@ describe('SUPERADMIN_OPERATIONS reflete le schema', () => {
       ServiceMembership: ['count', 'findMany'],
       Patient: ['count'],
       ActivityLog: ['findMany', 'count'],
-      // Tâche 6, étape 4b : `GET /super-admin/access-log` (source=acces) — voir le commentaire
-      // sur cette entrée dans tenant-guard.ts. `count` y a été RETIRÉ à la revue finale de branche
-      // (déclaré « par symétrie » avec `ActivityLog` juste au-dessus, exercé par aucun appel), puis
-      // RE-DÉCLARÉ le 2026-10-01 : la pagination de cette route lui donne enfin sa route, le
-      // décompte du même `where` hors page, sans lequel la dernière page n'est pas atteignable.
+      // `GET /super-admin/access-log` (source=acces) — voir le commentaire sur cette entrée dans
+      // tenant-guard.ts. `count` y a été RETIRÉ (déclaré « par symétrie » avec `ActivityLog` juste
+      // au-dessus, exercé par aucun appel), puis RE-DÉCLARÉ le 2026-10-01 : la pagination de cette
+      // route lui donne enfin sa route, le décompte du même `where` hors page, sans lequel la
+      // dernière page n'est pas atteignable.
       PatientAccessLog: ['findMany', 'count'],
     })
   })
 })
 
-// TOUR DE CORRECTION 4 (tache 1) — Critique de la re-revue : le resserrement du tour 3 refusait
+// LE RESSERREMENT PRECEDENT refusait
 // TOUTE mutation d'un modele global sous superadmin, par un ensemble d'OPERATIONS sans
 // granularite par modele, et sans aucune porte pour en rouvrir une seule. SUPERADMIN_GLOBAL_
 // OPERATIONS lui substitue une table PAR MODELE, symetrique de SUPERADMIN_OPERATIONS ci-dessus.
@@ -520,11 +519,11 @@ describe('SUPERADMIN_OPERATIONS reflete le schema', () => {
 // pour les tables de tenant : elle est donc tenue ici dans les MEMES trois directions — modeles
 // qui existent, modeles de la bonne famille, et contenu exact epingle.
 //
-// Les deux modeles que la tache 1 avait declares par avance (`AccessLink`, `SuperAdminAccessGrant`)
-// existent desormais au schema (tache 2) : la liste d'attente qui bornait cette avance est donc
+// Les deux modeles declares par avance (`AccessLink`, `SuperAdminAccessGrant`)
+// existent desormais au schema : la liste d'attente qui bornait cette avance est donc
 // retiree ci-dessous — le troisieme test faisait volontairement POURRIR ce fichier des que les
 // tables arriveraient, plutot que de laisser vivre l'attente indefiniment. Voir tenant-guard.ts
-// pour la relecture des operations declarees maintenant que les colonnes existent vraiment
+// pour le detail des operations declarees maintenant que les colonnes existent vraiment
 // (`usedAt`, `revokedAt` confirmes conformes a la specification).
 const MODELES_GLOBAUX_A_VENIR: readonly string[] = []
 
@@ -546,15 +545,15 @@ describe('SUPERADMIN_GLOBAL_OPERATIONS reflete le schema', () => {
     expect(communs).toEqual([])
   })
 
-  it('ne declare que des modeles qui existent, ou nommement en attente de la tache 2', () => {
+  it('ne declare que des modeles qui existent, ou nommement en attente d ajout au schema', () => {
     const inconnus = Object.keys(SUPERADMIN_GLOBAL_OPERATIONS).filter(
       (modele) =>
         !modelNames.has(modele) && !MODELES_GLOBAUX_A_VENIR.includes(modele),
     )
     expect(inconnus).toEqual([])
 
-    // L'autre sens, celui qui fait pourrir la liste d'attente : des que la tache 2 ajoute une de
-    // ces tables au schema, ce test rougit. Le remede attendu est de RETIRER le modele de
+    // L'autre sens, celui qui fait pourrir la liste d'attente : des qu'une de
+    // ces tables est ajoutee au schema, ce test rougit. Le remede attendu est de RETIRER le modele de
     // MODELES_GLOBAUX_A_VENIR (le premier sens ci-dessus le couvrira alors par le schema), et, en
     // le faisant, de relire les operations declarees pour lui dans SUPERADMIN_GLOBAL_OPERATIONS
     // maintenant que ses colonnes existent vraiment.
@@ -590,7 +589,7 @@ describe('SUPERADMIN_GLOBAL_OPERATIONS reflete le schema', () => {
     ]
     expect(SUPERADMIN_GLOBAL_OPERATIONS).toEqual({
       User: [...lectures, 'create'],
-      Establishment: [...lectures, 'create'],
+      Establishment: [...lectures, 'create', 'update'],
       AccessLink: [...lectures, 'create', 'updateMany'],
       SuperAdminAccessGrant: [...lectures, 'create', 'update'],
     })

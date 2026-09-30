@@ -42,10 +42,10 @@ vi.mock('@tanstack/react-virtual', () => ({
   }),
 }))
 
-// Onglet des services (tâche 13, step 1). Deux lecons du brief verrouillees
+// Onglet des services. Deux lecons verrouillees
 // ici :
-// 1. « Distingue toujours trois etats » (chargement/erreur/vide) — la
-//    tache 12 a livre un « Chargement... » perpetuel sur une erreur.
+// 1. « Distingue toujours trois etats » (chargement/erreur/vide) — une
+//    version precedente a livre un « Chargement... » perpetuel sur une erreur.
 // 2. Les DEUX compteurs de l'impact de desactivation NE DISENT PAS LA MEME
 //    CHOSE : `suivisIci` et `suivisNullePartAilleurs` doivent rester
 //    distincts a l'ecran, avec une fixture ou ils DIFFERENT — sinon rien ne
@@ -225,8 +225,7 @@ describe('etats de l ecran des services', () => {
     expect(screen.queryByText(/impossible de charger/i)).not.toBeInTheDocument()
   })
 
-  // Revue finale de l'étape 4a, Important n°3 : « identifiants copiables »
-  // (decisions-etape-4a.md, D3/D4) n'etait tenu que pour l'etablissement —
+  // « identifiants copiables » n'etait tenu que pour l'etablissement —
   // le geste de depannage reel n'avait nulle part ou se poser sur cet
   // ecran non plus.
   // Reservee au super-admin depuis le 2026-09-30 : un administrateur ne la voit pas.
@@ -254,7 +253,7 @@ describe('etats de l ecran des services', () => {
     ).toBeInTheDocument()
   })
 
-  // Mineur (tour de correction 1, tâche 13) : cette propriété n'avait pas
+  // Cette propriété n'avait pas
   // de nom propre - elle vivait implicitement sous un test qui parle de
   // REACTIVATION (« reactiver ne calcule aucun impact »), qui ne couvre pas
   // le simple RENDU de la liste. `buildFetchMock` leve deja sur un appel
@@ -303,7 +302,7 @@ describe('desactivation d un service : les deux compteurs', () => {
           url.endsWith('/admin/services/s1/impact-desactivation') &&
           method === 'GET',
         // Fixture ou les deux nombres DIFFERENT : sinon rien ne prouve
-        // qu'on affiche le bon des deux (brief tache 13).
+        // qu'on affiche le bon des deux.
         respond: () => ({
           ok: true,
           status: 200,
@@ -317,13 +316,13 @@ describe('desactivation d un service : les deux compteurs', () => {
       screen.getByRole('button', { name: /désactiver le service/i }),
     )
 
-    // Tour de correction 1, Critique n°1 : `getByText('5')` /
+    // `getByText('5')` /
     // `getByText('2')` existent et sont forcement des noeuds distincts
     // (deux requetes de texte exact ne peuvent jamais rendre le meme
-    // noeud) - ca ne prouve RIEN sur QUEL nombre porte QUEL libelle. Le
-    // relecteur a echange les deux libelles dans `services.tsx` (le nombre
-    // sous « suivis ici » devient celui qui compte, et inversement) et les
-    // neuf tests precedents restaient verts. On attache donc chaque
+    // noeud) - ca ne prouve RIEN sur QUEL nombre porte QUEL libelle. Un sabotage qui echange les
+    // deux libelles dans `services.tsx` (le nombre
+    // sous « suivis ici » devient celui qui compte, et inversement) laisse les
+    // neuf tests precedents verts. On attache donc chaque
     // assertion au CONTENEUR du libelle, pas au noeud de texte nu.
     await screen.findByText(/suivis dans ce service/i)
     const suivisIciParagraphe = screen

@@ -8,9 +8,9 @@
 // secrétariat a de bonnes raisons de voir.
 //
 // `notes`, `details` et `medicalDiagnosis` n'existent plus que sur
-// `PatientServiceFile`, le sous-dossier de service d'un patient (étape 3 du
-// multi-tenant a déplacé et retiré ces colonnes de `Patient`, qui ne les
-// porte plus). `transmissionNotes` n'existe qu'une fois, sur
+// `PatientServiceFile`, le sous-dossier de service d'un patient — une
+// migration a déplacé et retiré ces colonnes de `Patient`, qui ne les
+// porte plus. `transmissionNotes` n'existe qu'une fois, sur
 // `AppointmentPatient`. Si l'un de ces noms venait à apparaître sur un
 // modèle qui n'a rien de clinique, il faudrait repasser à un filtrage par
 // forme — un test le rappelle, en nommant les modèles porteurs attendus

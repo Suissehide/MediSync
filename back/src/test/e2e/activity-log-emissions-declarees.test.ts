@@ -7,14 +7,14 @@ import {
 import { buildTestApp, type TestApp } from './setup/app'
 import { testDb, truncateAll } from './setup/db'
 
-// LA GARDE DYNAMIQUE (tache 7, tour de correction 1) — ce que le statique ne peut pas voir.
+// LA GARDE DYNAMIQUE — ce que le statique ne peut pas voir.
 //
 // Un garde-fou STATIQUE (« chaque evenement declare dans `AppEvents` a-t-il une souscription
-// `.on(...)` ? ») n'attrape PAS le vrai defaut qu'a eu la tache 7 : `user.accessLinkReissued`
+// `.on(...)` ? ») n'attrape PAS le vrai defaut deja rencontre ici : `user.accessLinkReissued`
 // ETAIT souscrit — c'est la LIGNE qui mourait, avalee par le `catch` de `#log` apres un refus du
 // garde-fou de tenant (`ActivityLog` est un modele d'etablissement, refuse sans store). Rien
 // n'echouait, rien ne manquait visiblement ; seule la trace disparaissait. Ce defaut a deja mordu
-// DEUX FOIS sur ce chantier — la colonne auteur videe en silence a l'etape 4a (`findByID` sous
+// DEUX FOIS sur ce chantier — la colonne auteur videe en silence (`findByID` sous
 // tenant), la ligne elle-meme jamais ecrite ici — les deux fois sans le moindre signal.
 //
 // Ce fichier prouve donc, par EXECUTION, que chaque evenement declare produit reellement une
@@ -23,7 +23,7 @@ import { testDb, truncateAll } from './setup/db'
 //   1. Les evenements sont lus depuis la SOURCE de `AppEvents` (`app-event-bus.ts`, lu par
 //      `../shared/app-events-source.ts`), jamais recopies a la main : un evenement ajoute au
 //      type et oublie ici fait echouer ce fichier plutot que de passer inapercu — Y COMPRIS
-//      declare sur plusieurs lignes, ce qui n'a PAS ete vrai jusqu'a la revue finale de branche
+//      declare sur plusieurs lignes, ce qui n'etait pas garanti auparavant
 //      (voir le commentaire de ce module, et l'`EXEMPLE_MULTILIGNE` plus bas qui le tient).
 //   2. `CONTEXTES_REELS` : UNE entree par evenement, qui NOMME le contexte sous lequel ce site
 //      d'appel emet reellement (tenant de service, tenant d'administration, ou aucun contexte —
@@ -32,12 +32,13 @@ import { testDb, truncateAll } from './setup/db'
 //   3. `EXEMPTIONS` : une liste NOMMEE, jamais un pourcentage implicite — vide aujourd'hui.
 //      Un evenement absent des deux echoue ce fichier en listant precisement lequel.
 //
-// SABOTAGE QUI DEVRAIT FAIRE ROUGIR CE FICHIER (verifie par execution, voir task-7-report.md) :
+// SABOTAGE QUI DEVRAIT FAIRE ROUGIR CE FICHIER (verifie par execution) :
 // retirer la souscription d'un evenement (`#subscribe`, activity-log.subscriber.ts) — plus rien
 // n'ecrit sous son action, ce fichier rougit sur CET evenement precis, jamais sur un autre. Le
 // VRAI Prisma garde-fou (`infra/orm/tenant-guard.ts`) est celui qui tourne ici (via `buildTestApp`,
 // la vraie base de test) : contrairement a un simple bouchon de depot, il refuse REELLEMENT une
-// ecriture sur `ActivityLog` sans store, exactement ce qui a fait tomber la ligne de la tache 7 —
+// ecriture sur `ActivityLog` sans store, exactement ce qui a fait tomber la ligne dans le cas
+// reel decrit plus haut —
 // c'est pour ca que ce fichier vit en e2e, jamais en unitaire (un depot bouchonne ne peut pas
 // reproduire ce refus).
 type ContexteReel =
@@ -75,11 +76,11 @@ const CONTEXTES_REELS: Record<string, ContexteReel> = {
   'member.reactivated': { genre: 'tenant-administration' },
   'member.accountCreated': { genre: 'tenant-administration' },
   'member.accessLinkReissued': { genre: 'tenant-administration' },
-  // domain/user.domain.ts#reissueAccessLink : sous `/super-admin`, aucun store (tache 7).
+  // domain/user.domain.ts#reissueAccessLink : sous `/super-admin`, aucun store.
   'user.accessLinkReissued': { genre: 'aucun' },
 }
 
-// Liste NOMMEE, jamais un pourcentage implicite (consigne du tour de correction 1) : un evenement
+// Liste NOMMEE, jamais un pourcentage implicite : un evenement
 // present ici est EXEMPTE de cette preuve, avec sa raison ecrite a cote. Vide aujourd'hui — tous
 // les evenements declares passent par `ActivityLogSubscriber.#log` et doivent donc ecrire.
 const EXEMPTIONS: Record<string, string> = {}
@@ -88,8 +89,8 @@ const EXEMPTIONS: Record<string, string> = {}
 // `runAsSystem-unicite.test.ts`, qui grep sa propre source plutot que de maintenir une liste
 // separee qui pourrait deriver).
 //
-// LA LECTURE ELLE-MEME VIT DANS `../shared/app-events-source.ts` (revue finale de branche,
-// Important n°4) : elle etait ecrite ici, en une regex LIGNE PAR LIGNE qui exigeait l'accolade
+// LA LECTURE ELLE-MEME VIT DANS `../shared/app-events-source.ts` : elle etait ecrite ici,
+// en une regex LIGNE PAR LIGNE qui exigeait l'accolade
 // fermante sur la meme ligne, et ECHOUAIT DONC OUVERT sur un evenement declare sur plusieurs
 // lignes — voir le commentaire de ce module pour la mesure et le remede. Elle est desormais
 // partagee avec le contrat de vocabulaire (`unit/utils/access-log-vocabulaire.test.ts`), pour
@@ -104,7 +105,7 @@ const chargeSynthetique = (
     evenement.champs.map((champ) => [champ, `synthetique-${champ}`]),
   )
 
-// LA PREUVE PAR L'EXEMPLE MULTILIGNE (revue finale de branche, Important n°4). Ce `describe` est
+// LA PREUVE PAR L'EXEMPLE MULTILIGNE. Ce `describe` est
 // la contre-epreuve de la lecture elle-meme : il ne regarde pas `app-event-bus.ts`, il donne a
 // `evenementsDansSource` la forme que le motif precedent ne voyait pas, et exige qu'elle la
 // voie. Avec la lecture ligne par ligne d'avant, le second cas ci-dessous rend `[]` pour

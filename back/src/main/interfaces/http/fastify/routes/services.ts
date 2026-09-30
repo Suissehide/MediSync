@@ -13,9 +13,7 @@ import {
 } from '../schemas/service.schema'
 
 // Gestion des services, sous le préfixe d'établissement :
-// /e/:establishmentId/admin/services (spec §6.2 — le tableau de la spécification portait le
-// mauvais préfixe, corrigé au commit ca68a27 ; les routes d'administration d'établissement le
-// portent depuis l'étape 1).
+// /e/:establishmentId/admin/services (spec §6.2).
 const servicesRouter: FastifyPluginAsync = (fastify) => {
   const { serviceDomain } = fastify.iocContainer
 
@@ -61,8 +59,8 @@ const servicesRouter: FastifyPluginAsync = (fastify) => {
     (request) => serviceDomain.update(request.params.id, request.body),
   )
 
-  // Décision 3.6 (spec §3.6) : les compteurs affichés avant de désactiver. Route ajoutée par la
-  // tâche 9 — absente du tableau initial de la spécification, qui avait tort : l'écran ne peut
+  // Décision 3.6 (spec §3.6) : les compteurs affichés avant de désactiver — absente du tableau
+  // initial de la spécification, qui avait tort : l'écran ne peut
   // pas avertir sans compter.
   fastify.get<{ Params: ServiceParams }>(
     '/:id/impact-desactivation',

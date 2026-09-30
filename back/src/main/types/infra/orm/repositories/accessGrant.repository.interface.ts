@@ -1,6 +1,6 @@
 import type { LiveGrant } from '../../../domain/accessGrant.domain.interface'
 
-// Tâche 8 (étape 4a) : la moitié « écriture » du mécanisme — s'accorder un octroi, le révoquer
+// La moitié « écriture » du mécanisme — s'accorder un octroi, le révoquer
 // avant terme. `SuperAdminAccessGrant.create` et `.update` sont déclarées pour le contexte
 // superadmin (SUPERADMIN_GLOBAL_OPERATIONS, tenant-guard.ts) ; PAS `.delete`/`.deleteMany` — la
 // révocation pose `revokedAt`, elle ne supprime jamais la ligne (spec §4.3 : « les octrois en
@@ -48,8 +48,7 @@ export interface AccessGrantRepositoryInterface {
   // temps : c'est `effectiveMemberships` qui tranche la vivacité, pas cette lecture — voir
   // `types/domain/accessGrant.domain.interface.ts`.
   //
-  // CONTRAT 1 (tâche 8, étape 4a — écrit ici après une revue qui a montré, par exécution, qu'il
-  // n'était écrit NULLE PART) : cette méthode DOIT exclure tout octroi dont l'établissement est
+  // CONTRAT 1 : cette méthode DOIT exclure tout octroi dont l'établissement est
   // désactivé — l'implémentation le fait par un `deactivatedAt: null` sur la lecture
   // d'`Establishment` qui enrichit chaque octroi. `effectiveMemberships`
   // (domain/accessGrant.domain.ts, section « Ce qu'elle ne garantit PAS ») fait CONFIANCE à cette
@@ -57,16 +56,15 @@ export interface AccessGrantRepositoryInterface {
   // permettrait de la vérifier elle-même. Retirer ce filtre ici rouvre donc un accès COMPLET
   // (rôle ADMIN d'établissement, COORDINATEUR sur tous les services) à un établissement désactivé
   // pour quiconque détient un octroi dessus — sans qu'aucune couche au-dessus ne le rattrape, et
-  // sans qu'aucune porte de conformité existante (build, lint, unitaires, e2e d'alors) ne rougisse :
+  // sans qu'aucune porte de conformité existante (build, lint, unitaires, e2e) ne rougisse :
   // aucun test ne portait sur CE croisement précis (octroi + établissement désactivé) avant
   // `tenant-resolution.test.ts`, « un octroi sur un établissement désactivé ne redonne rien ».
   // Toute réimplémentation de cette méthode doit préserver ce filtre ; ce test rougit sinon.
   //
-  // CONTRAT 2 (tâche 8, tour de correction 1 — la relecture a démontré par exécution que
-  // `userId` seul ne suffisait pas à fermer la fuite : élargir le type de l'APPELANT
-  // (`liveGrantsForUser`) de deux à neuf champs ne changeait rien, un littéral fabriqué avec
-  // `isSuperAdmin: true` faisait toujours ressortir les octrois RÉELS d'un compte démis de ce
-  // drapeau) : cette méthode DOIT elle-même revérifier, fraîche, la valeur ACTUELLE de
+  // CONTRAT 2 : `userId` seul ne suffit pas à fermer la fuite : élargir le type de l'APPELANT
+  // (`liveGrantsForUser`) de deux à neuf champs ne change rien, un littéral fabriqué avec
+  // `isSuperAdmin: true` ferait toujours ressortir les octrois RÉELS d'un compte démis de ce
+  // drapeau. Cette méthode DOIT elle-même revérifier, fraîche, la valeur ACTUELLE de
   // `User.isSuperAdmin` pour `userId` — jamais accepter cette information d'un appelant, quelle
   // que soit sa forme. `liveGrantsForUser` ne porte plus ce champ du tout précisément pour cette
   // raison : il n'y a plus rien à mentir en amont, la vérité ne se lit qu'ICI. Un id fabriqué ou
@@ -77,7 +75,7 @@ export interface AccessGrantRepositoryInterface {
   // (`SuperAdminAccessGrant.create` n'est déclarée que sous ce contexte).
   create: (params: CreateGrantRepo) => Promise<SuperAdminGrantEntityRepo>
 
-  // Tour de correction 1 (tâche 8) — Important n°2 : rien n'empêchait deux octrois VIVANTS sur
+  // Rien n'empêchait deux octrois VIVANTS sur
   // le même établissement, ce qui dédoublait la ligne dans `/me` (voir
   // `dedoublonneParEtablissement`, domain/accessGrant.domain.ts, qui absorbe le cas en défense
   // mais ne l'empêche pas). `SuperAdminGrantDomain.grant` appelle cette méthode AVANT d'écrire, et
@@ -94,7 +92,7 @@ export interface AccessGrantRepositoryInterface {
   // `DELETE /super-admin/grants/:id` : encadré par `runAsSuperAdmin`, pose `revokedAt`, ne
   // supprime jamais la ligne — voir le commentaire sur `SuperAdminGrantEntityRepo`.
   //
-  // Mineur signalé en relecture (tâche 8, tour de correction 1), corrigé ici — deux points :
+  // Deux points :
   //   - `callerId` : seul le TITULAIRE de l'octroi (celui qui se l'est accordé, spec §3.5) peut
   //     le révoquer — pas n'importe quel autre super-admin. `Boom.notFound` (jamais `forbidden`)
   //     si l'id est inconnu OU si `callerId` n'en est pas le titulaire : même parti pris que

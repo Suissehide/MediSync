@@ -115,8 +115,7 @@ class AppointmentRepository implements AppointmentRepositoryInterface {
       // AppointmentPatient par une creation de premier niveau (meme forme que
       // `addPatientToAppointment` et la branche `create` de l'`upsert` de `update()`
       // ci-dessous, qui passent deja `...this.scope` en entier), dans une transaction pour
-      // rester atomique. Defaut preexistant, etape 1/2 du multi-tenant (commit `dacff75`,
-      // task-5-re-review.md, point 3).
+      // rester atomique.
       return await this.prisma.$transaction(async (tx) => {
         const appointment = await tx.appointment.create({
           data: { ...rest, ...this.scope },

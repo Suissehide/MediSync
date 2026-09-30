@@ -95,7 +95,7 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
           ),
         },
       )
-      // Journal des consultations (etape 4b, tache 4) : cette route n'a aucun identifiant de
+      // Journal des consultations : cette route n'a aucun identifiant de
       // patient dans son URL, donc `recordPatientAccess` (onResponse, plugins/tenant.plugin.ts)
       // ne peut pas savoir combien de dossiers l'export a rendus sans le lire ici -- c'est le
       // SEUL endroit qui le sait. Pose AVANT de repondre : le crochet `onResponse` s'execute
@@ -113,13 +113,13 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
     },
   )
 
-  // Recherche d'identite existante avant creation (design §6, tache 13, must be before
+  // Recherche d'identite existante avant creation (design §6, must be before
   // /:patientID). Meme permission que la lecture du patient (`patient:read`) : aucune permission
   // nouvelle — un secretariat obtient exactement la meme reponse qu'un coordinateur, la
-  // recherche ne portant aucun champ clinique (consigne 5 du brief, verifie par
+  // recherche ne portant aucun champ clinique (verifie par
   // patient-search-identite.test.ts).
   //
-  // Ce qui tient reellement la forme de la reponse (revue tache 13, tour 1, point 5) : le corps
+  // Ce qui tient reellement la forme de la reponse : le corps
   // HTTP effectivement rendu, verifie par `patient-search-identite.test.ts`
   // (`expect(Object.keys(match).sort()).toEqual([...])` sur la reponse reelle, pas sur un type).
   // Le `select` du depot (`PatientRepository.searchByIdentity`) et

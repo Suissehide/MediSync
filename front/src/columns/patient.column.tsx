@@ -53,9 +53,9 @@ export const getPatientColumns = ({
       header: 'Nom',
     }),
     // `entryDate` a quitté `Patient` pour le sous-dossier de service (`PatientServiceFile`,
-    // `types/patientServiceFile.ts`, étape 3 du multi-tenant), mais `GET /patient/with-tags`
-    // joint déjà ce sous-dossier filtré sur le service courant et l'aplatit sur la ligne (back,
-    // tâche 12 du plan) : la colonne se lit donc sur `PatientWithTags.entryDate`, comme avant.
+    // `types/patientServiceFile.ts`), mais `GET /patient/with-tags`
+    // joint déjà ce sous-dossier filtré sur le service courant et l'aplatit sur la ligne (back)
+    // : la colonne se lit donc sur `PatientWithTags.entryDate`, comme avant.
     columnHelper.accessor(
       (row) =>
         row.entryDate ? dayjs.utc(row.entryDate).format('DD/MM/YYYY') : '',

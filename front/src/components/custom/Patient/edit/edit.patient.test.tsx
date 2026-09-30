@@ -105,7 +105,7 @@ describe('EditPatient — une lecture du sous-dossier en échec (refus d’accè
     // Le refus d'accès (403) doit remonter comme une vraie erreur affichée — pas comme une
     // absence de sous-dossier (ce dernier cas, la 404, est verrouillé côté hook par
     // `usePatientServiceFile.test.tsx`, et désormais aussi à ce niveau, voir plus bas « le
-    // sous-dossier est absent (404) », m6).
+    // sous-dossier est absent (404) »).
     await waitFor(() =>
       expect(useToastStore.getState().toasts.length).toBeGreaterThan(0),
     )
@@ -180,7 +180,7 @@ describe('EditPatient — une lecture du sous-dossier en échec (refus d’accè
   })
 })
 
-// Correctif tour 2 (tâche 11, revue, mineur m6) — ce chemin (la 404 normale, spec §2.1/§5.1) ne
+// Ce chemin (la 404 normale, spec §2.1/§5.1) ne
 // pouvait pas s'écrire au niveau du composant avant que `.env.test` fixe
 // `VITE_API_BASE_URL` : `fetchWithAuth` fait `new URL(response.url)` sur toute réponse 404
 // (`api/fetchWithAuth.ts:89-90`), et sans base d'URL définie, `tenantApiUrl()` produit une URL
@@ -428,7 +428,7 @@ describe('EditPatient — deux écritures indépendantes, la vérité si l’une
   })
 })
 
-// Correctif tour 1 (tâche 11, revue, Critiques C1/C2, Importants I1/I4) — la propriété que ces tests tiennent :
+// LA PROPRIÉTÉ QUE CES TESTS TIENNENT :
 // « le corps envoyé ne contient jamais un champ que l'utilisateur n'a pas touché », à travers
 // plusieurs enregistrements, plusieurs relectures, un champ modifié puis rétabli. `FormApi.update`
 // (`@tanstack/form-core`) recopie `options.defaultValues` à chaque relecture, mais ne rafraîchit
@@ -437,7 +437,7 @@ describe('EditPatient — deux écritures indépendantes, la vérité si l’une
 // suivre une cible qui bouge sous ses pieds. C'est cette divergence que `serviceFileSnapshot`
 // (`edit.patient.tsx`) ferme : une référence qui ne bouge que deux fois — au premier chargement,
 // et après un enregistrement réussi, à partir de ce que le serveur a confirmé.
-describe('EditPatient — deux enregistrements successifs, une relecture entre les deux (C1)', () => {
+describe('EditPatient — deux enregistrements successifs, une relecture entre les deux', () => {
   it('après une création sur sous-dossier absent (404), le second enregistrement ne renvoie que le champ touché à ce tour-ci', async () => {
     let created: Record<string, unknown> | null = null
     const bodies: Record<string, unknown>[] = []
@@ -494,7 +494,7 @@ describe('EditPatient — deux enregistrements successifs, une relecture entre l
     expect(bodies[0]).toEqual({ notes: 'premiere note' })
 
     // La relecture déclenchée par `onSettled` ramène l'objet créé, avec les quinze autres
-    // colonnes à `null` — c'est exactement la séquence de C1. La barre s'est refermée (I1) : le
+    // colonnes à `null`. La barre s'est refermée : le
     // bouton précédent est démonté, il en faut un nouveau.
     await waitFor(() => expect(created).not.toBeNull())
     await waitFor(() =>
@@ -517,7 +517,7 @@ describe('EditPatient — deux enregistrements successifs, une relecture entre l
   })
 })
 
-describe('EditPatient — une relecture pose une valeur ailleurs entre deux enregistrements (C2)', () => {
+describe('EditPatient — une relecture pose une valeur ailleurs entre deux enregistrements', () => {
   it("n'écrase pas ce qu'un enregistrement suivant, non lié au champ édité, a posé sur le sous-dossier", async () => {
     let server: Record<string, unknown> = { ...serviceFileFixture }
     const bodies: Record<string, unknown>[] = []
@@ -718,13 +718,13 @@ describe('EditPatient — un champ touché puis remis à sa valeur d’origine',
   })
 })
 
-// Correctif tour 2 (tâche 11, revue, mineur m3) — même garde que côté sous-dossier
+// Même garde que côté sous-dossier
 // (`changedFields.length === 0 → return`, plus haut), appliquée au formulaire du patient : sans
 // elle, cliquer « Sauvegarder » sans avoir touché un seul champ du patient PATCHait quand même
 // l'objet complet (la photographie lue, réécrite telle quelle — une perte de mise à jour
 // possible si quelqu'un d'autre l'a modifié entre-temps) et affichait « Patient modifié avec
 // succès » alors que rien n'avait changé.
-describe('EditPatient — rien à écrire côté patient (m3)', () => {
+describe('EditPatient — rien à écrire côté patient', () => {
   it('ne PATCH pas le patient et ne montre pas son toast de succès', async () => {
     const patientBodies: Record<string, unknown>[] = []
     const fetchMock = buildFetchMock([
@@ -859,7 +859,7 @@ describe('EditPatient — rien à écrire côté sous-dossier', () => {
   })
 })
 
-describe('EditPatient — la barre « Modifications non sauvegardées » (I1)', () => {
+describe('EditPatient — la barre « Modifications non sauvegardées »', () => {
   it('se referme après un enregistrement réussi', async () => {
     const fetchMock = buildFetchMock([
       {
@@ -907,10 +907,10 @@ describe('EditPatient — la barre « Modifications non sauvegardées » (I1)', 
   })
 })
 
-// Décision 2.3 de la spec, correctif I2 (tâche 11, revue) : chaque écran qui affiche des champs
+// Décision 2.3 de la spec : chaque écran qui affiche des champs
 // de `Patient` ou de `PatientServiceFile` doit dire à quelle portée ils appartiennent — pas
 // seulement l'onglet « Profil & Contexte ».
-describe('EditPatient — la portée est nommée sur les trois onglets qui en manquaient (I2)', () => {
+describe('EditPatient — la portée est nommée sur les trois onglets qui en manquaient', () => {
   it('« Informations générales » et « Contact » disent qu’ils sont partagés entre les services', async () => {
     vi.stubGlobal(
       'fetch',
@@ -964,13 +964,13 @@ describe('EditPatient — la portée est nommée sur les trois onglets qui en ma
   })
 })
 
-// Correctif tour 2 (tâche 11, revue, mineur m2) — l'ancien écran enveloppait tout dans un seul
+// L'ancien écran enveloppait tout dans un seul
 // `<form onSubmit>` ; le remplacer par un `<Button type="button">` hors de tout formulaire avait
 // fait disparaître l'enregistrement par la touche Entrée, une régression réelle sur un écran de
 // saisie utilisé toute la journée. Le remède est un seul `<form>` natif pour tout l'écran (pas
 // un par bloc, qui referait le défaut des deux formulaires indépendants), dont le bouton
 // « Sauvegarder » est `type="submit"`.
-describe('EditPatient — la touche Entrée enregistre (m2)', () => {
+describe('EditPatient — la touche Entrée enregistre', () => {
   it('déclenche le même enregistrement que le bouton « Sauvegarder »', async () => {
     // Un champ à une ligne (`field.Input`, pas `field.TextArea` comme « Notes » — une zone de
     // texte multi-lignes ne doit surtout pas se mettre à enregistrer sur Entrée, ce serait
@@ -1009,14 +1009,14 @@ describe('EditPatient — la touche Entrée enregistre (m2)', () => {
   })
 })
 
-// Tâche 14 (spec §5.3/§6) — le signal de suivi ailleurs. Trois états, pas deux (revue tâche 13,
-// tour 1, point 1) : `followedElsewhere` vrai affiche la mention, faux et absent n'affichent
+// Le signal de suivi ailleurs (spec §5.3/§6). Trois états, pas deux :
+// `followedElsewhere` vrai affiche la mention, faux et absent n'affichent
 // RIEN — ni l'un ni l'autre ne doit se distinguer à l'écran d'une absence de question posée. Le
 // booléen vient de `patient` (déjà lu par `GET /patient/:id`, la même requête qui a rempli tout
 // le reste de l'écran) : aucun de ces trois cas ne doit faire varier le nombre d'appels réseau.
 const MENTION_TEXT = "Suivi existant dans un autre service de l'établissement."
 
-describe('EditPatient — le signal de suivi ailleurs (IdentiteFields, tâche 14)', () => {
+describe('EditPatient — le signal de suivi ailleurs (IdentiteFields)', () => {
   it('affiche la mention, mot pour mot, quand followedElsewhere est vrai', async () => {
     const fetchMock = buildFetchMock([
       {

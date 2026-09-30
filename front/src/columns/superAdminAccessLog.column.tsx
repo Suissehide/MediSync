@@ -21,7 +21,7 @@ type ColumnOptions = {
   establishments: Pick<EstablishmentListItem, 'id' | 'name'>[]
 }
 
-// Étape 4b, tâche 11 : CE QUE CET ÉCRAN MONTRE — deux jeux de colonnes, choisis par `source`,
+// CE QUE CET ÉCRAN MONTRE — deux jeux de colonnes, choisis par `source`,
 // jamais les deux à la fois (même parti pris que le schéma back : les champs propres à une
 // source et absents de l'autre ne se rendent pas comme des cellules vides sur l'autre journal).
 //

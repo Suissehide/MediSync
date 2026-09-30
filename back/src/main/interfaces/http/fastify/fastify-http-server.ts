@@ -50,8 +50,7 @@ class FastifyHttpServer implements HttpServer {
       exposeHeadRoutes: false,
       forceCloseConnections: 'idle',
       requestTimeout: 3000,
-      // Etape 4a, tache 4, tour de correction 1, Important n°2, PUIS tour de correction 2,
-      // Critique (la valeur du tour 1 etait une regression) : sans confiance explicite dans le
+      // Sans confiance explicite dans le
       // proxy, `request.ip` (donc la cle par defaut de `@fastify/rate-limit`,
       // `defaultKeyGenerator = (req) => req.ip`, node_modules/@fastify/rate-limit/index.js) vaut
       // l'adresse du DERNIER sauteur TCP. TOUTES les requetes de TOUS les utilisateurs
@@ -59,7 +58,7 @@ class FastifyHttpServer implements HttpServer {
       // `/auth/sign-in`/`/auth/access-link/consume` serait partagee par tout le monde plutot
       // qu'appliquee par client.
       //
-      // CE QUE LE TOUR 1 AVAIT FAIT DE FAUX — `trustProxy: 1` — mesure par exécution contre de
+      // CE QUE `trustProxy: 1` AVAIT FAIT DE FAUX — mesure par exécution contre de
       // VRAIES connexions TCP (voir back/src/test/unit/interfaces/trust-proxy.test.ts) :
       // `getTrustProxyFn` (node_modules/fastify/lib/request.js) traduit un NOMBRE en
       // `(adresse, i) => i < n` — une confiance PUREMENT POSITIONNELLE, qui ne regarde JAMAIS qui
@@ -70,8 +69,8 @@ class FastifyHttpServer implements HttpServer {
       // mesurees : zero refus, la de la limite mordait quinze fois des que ce reglage etait
       // retire).
       //
-      // LE REMEDE, qui NE renvoie PAS la question a l'infrastructure (tour 2 : « le code peut se
-      // proteger seul ») : une confiance PAR ADRESSE/PLAGE plutot que par POSITION —
+      // LE REMEDE, qui NE renvoie PAS la question a l'infrastructure (le code peut se
+      // proteger seul) : une confiance PAR ADRESSE/PLAGE plutot que par POSITION —
       // `@fastify/proxy-addr` (dont Fastify se sert pour toute valeur non numerique) ne lit alors
       // `X-Forwarded-For` QUE si le pair TCP DIRECT appartient lui-meme a une des plages
       // ci-dessous ; sinon `request.ip` reste l'adresse reelle du socket, sans jamais consulter
@@ -81,8 +80,7 @@ class FastifyHttpServer implements HttpServer {
       // exacte) ; `loopback`/`linklocal` couvrent les deux autres formes usuelles d'un saut de
       // confiance local.
       //
-      // RESERVE (tour de correction 3 -- la version precedente etait trop rassurante, plus etroite
-      // que la vraie breche mesuree). MESURE par execution : un appelant qui atteint le port
+      // RESERVE. MESURE par execution : un appelant qui atteint le port
       // PUBLIE du conteneur `back` -- que ce soit un appel LOCAL (meme machine) ou un appel via
       // l'adresse RESEAU DE L'HOTE lui-meme (le port publie ecoute sur toutes les interfaces,
       // `ports: - '${PORT}:${PORT}'` dans `deploy/compose.yaml`, jamais modifie ici -- question de
@@ -119,7 +117,7 @@ class FastifyHttpServer implements HttpServer {
       )
     })
     fastify.setNotFoundHandler(notFoundHandler)
-    // `prismaErrorNormalizer` a ete retire (task-5-re-review-3.md, tour 5) : sa detection
+    // `prismaErrorNormalizer` a ete retire : sa detection
     // (`error.type === 'PrismaClientKnownRequestError'`) ne correspond a aucun champ reel d'une
     // PrismaClientKnownRequestError (verifie contre une vraie instance : `.type` vaut toujours
     // `undefined`), donc il ne s'executait jamais. Une PrismaClientKnownRequestError qui atteint

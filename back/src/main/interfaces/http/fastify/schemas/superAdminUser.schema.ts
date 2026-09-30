@@ -1,10 +1,9 @@
 import { z } from 'zod/v4'
 
-// `GET /super-admin/users?email=` (spec §3.4, §6.2, tâche 7) : « untel ne voit plus ses
+// `GET /super-admin/users?email=` (spec §3.4, §6.2) : « untel ne voit plus ses
 // patients » se diagnostique avec des rattachements et des dates, jamais un contenu de dossier.
 // Aucune donnée de patient ici — un test le vérifie par recherche de sous-chaîne sur le corps
-// brut, en plus des clés exactes (task-7-brief.md, Step 3, même double vérification qu'au Step
-// 1).
+// brut, en plus des clés exactes.
 const establishmentRoleSchema = z.enum(['ADMIN', 'MEMBER'])
 
 export const accountMembershipSchema = z.object({
@@ -14,7 +13,7 @@ export const accountMembershipSchema = z.object({
   createdAt: z.coerce.date(),
 })
 
-// Nom visible (tour de correction 2, arbitrage de Léo qui revient sur le tour précédent) : le
+// Nom visible (arbitrage de Léo) : le
 // journal d'activité rend déjà les noms de l'auteur, les cacher ici serait un théâtre — un nom de
 // collègue n'est pas une donnée de santé, et le diagnostic de support en a besoin. Voir le
 // commentaire sur `FirstAdmin` (establishment.repository.interface.ts).
@@ -35,7 +34,7 @@ export const searchAccountQuerySchema = z.object({
   }),
 })
 
-// `POST /super-admin/users/:userId/access-link` (tâche 10, tour de correction 1, arbitrage n°3) :
+// `POST /super-admin/users/:userId/access-link` :
 // LA SOUPAPE. La garde du jeton refuse à un administrateur d'établissement de réémettre un lien
 // pour un compte rattaché ailleurs ou pour un super-admin ; sans ce recours, une personne en
 // poste dans deux établissements qui perd son mot de passe n'en aurait aucun (il n'existe ni

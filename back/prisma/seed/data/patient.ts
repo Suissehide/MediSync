@@ -1,5 +1,5 @@
 // `clinicalFile`, quand il est present, porte les champs qui vivent desormais sur
-// `PatientServiceFile` (etape 3 du multi-tenant) et non plus sur `Patient` : la migration
+// `PatientServiceFile` et non plus sur `Patient` : la migration
 // `patient_service_file` a deplace ces colonnes, `seedPatients` cree le sous-dossier a part.
 // Le reste de l'objet reste l'identite du patient, ecrite telle quelle sur `Patient`.
 

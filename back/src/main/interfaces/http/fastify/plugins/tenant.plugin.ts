@@ -41,7 +41,7 @@ declare module 'fastify' {
     // hooks suivants s'exécutent quand même sur la réponse d'erreur. Le
     // déclarer non optionnel faisait passer les déstructurations pour sûres.
     tenant?: Tenant
-    // Journal des consultations, export (etape 4b, tache 4). `GET /patient/export` n'a aucun
+    // Journal des consultations, export. `GET /patient/export` n'a aucun
     // parametre de route ou lire un identifiant de patient : `recordPatientAccess` (plus bas)
     // n'a donc pas d'autre moyen de savoir combien de dossiers l'export a rendus que de le lire
     // ici -- seul le handler (`routes/patient.ts`) le sait, et il le pose juste avant de
@@ -61,7 +61,7 @@ declare module 'fastify' {
     enforcePermission: preHandlerAsyncHookHandler
     stripClinicalFields: preSerializationAsyncHookHandler
     stripClinicalInput: preValidationAsyncHookHandler
-    // Journal des consultations (etape 4b, tache 3). Pose en `onResponse`, donc APRES que la
+    // Journal des consultations. Pose en `onResponse`, donc APRES que la
     // reponse soit partie : le code de statut est connu (on ne journalise pas un echec), et une
     // ecriture lente n'allonge jamais la lecture du dossier.
     recordPatientAccess: onResponseAsyncHookHandler
@@ -77,9 +77,9 @@ type TenantParams = { establishmentId: string; serviceId?: string }
 // le tenant. 404 dans tous les cas d'échec, y compris un octroi qui vient d'expirer, pour ne pas
 // révéler l'existence d'un établissement ou d'un service auquel on n'a plus accès.
 //
-// `grants` N'A PAS de valeur par défaut, à dessein (tour de correction 1, tâche 3) : un défaut
+// `grants` N'A PAS de valeur par défaut, à dessein : un défaut
 // à `[]` compilerait sans broncher pour un appelant qui aurait oublié de lire les octrois — la
-// divergence exacte que cette tâche existe pour empêcher, silencieuse puisque ce fichier est
+// divergence exacte qu'il faut empêcher, silencieuse puisque ce fichier est
 // typé et vérifié par `tsc` (voir back/CLAUDE.md). Chaque appelant, y compris un test, doit donc
 // dire explicitement « aucun octroi » (`[]`) plutôt que de le recevoir par omission. `now` garde
 // un défaut (`new Date()`) : aucun appelant ne peut se tromper en omettant l'heure réelle, ce
@@ -122,7 +122,7 @@ export const resolveTenantFromUser = (
       serviceId: null,
       serviceRole: null,
       soignantId: null,
-      // Etape 4b, tache 2 : le journal des consultations (`PatientAccessLogDomain.record`) doit
+      // Le journal des consultations (`PatientAccessLogDomain.record`) doit
       // pouvoir distinguer un acces obtenu par octroi temporaire d'un acces reel — sans quoi les
       // deux seraient indiscernables l'un de l'autre dans le journal, precisement ce qu'un
       // journal d'audit existe pour empecher. `membership.origine` le sait deja
@@ -191,8 +191,8 @@ export const isReadRoute = (method: unknown): boolean =>
     'GET',
   )
 
-// Troisieme fail-safe de demarrage, frere des deux ci-dessus, et LA propriete centrale de
-// l'etape 4b : une route de lecture qui designe un dossier patient est journalisee par defaut,
+// Troisieme fail-safe de demarrage, frere des deux ci-dessus : une route de lecture qui
+// designe un dossier patient est journalisee par defaut,
 // ou le serveur refuse de demarrer. Sans lui, la couverture du journal serait une liste tenue a
 // la main, qui se desynchronise au premier routeur ajoute — en silence, et dans le sens qui
 // perd des traces.
@@ -203,12 +203,12 @@ export const isReadRoute = (method: unknown): boolean =>
 // `patientIdParamOf` (utils/access-log-routes.ts) qui le reconnait, pas une comparaison
 // litterale, sans quoi les trois routes de diagnostic seraient passees au travers.
 //
-// PORTEE, corrigee au tour de correction 1 : ce crochet est pose par `tenantRoutes`
+// PORTEE : ce crochet est pose par `tenantRoutes`
 // (routes/tenant.routes.ts), au meme endroit que le crochet d'ecriture `recordPatientAccess` —
 // donc tout ce qu'il examine est aussi ce que le crochet couvre, et inversement, ce qui est
 // exactement la propriete voulue (une entree de `LOGGED_PATIENT_ROUTES` est toujours REELLEMENT
-// journalisee). Le premier jet ajoutait ici « meme limite, assumee, qu'`assertTenantShapedRoute` »
-// pour le hors-greffon : c'etait FAUX, et dans le sens qui arrange — ce dernier est pose A LA
+// journalisee). Le hors-greffon N'A PAS la meme limite qu'`assertTenantShapedRoute` : ce
+// dernier est pose A LA
 // RACINE precisement pour NE PAS avoir cette limite (« la forme de l'URL suffit a exiger la
 // declaration, ou que la route soit posee », son commentaire trente lignes plus haut), et
 // `assertSuperAdminShapedRoute` de meme. Le hors-greffon est donc couvert ici aussi, par un frere
@@ -281,7 +281,7 @@ export const requireTenant = (request: FastifyRequest): Tenant => {
 }
 
 // Ce qu'il y a a journaliser pour CETTE requete -- un dossier (les quatre routes de
-// `LOGGED_PATIENT_ROUTES`) ou l'export (tache 4, dispositif dedie) -- ou `null`. Petite fonction
+// `LOGGED_PATIENT_ROUTES`) ou l'export (dispositif dedie) -- ou `null`. Petite fonction
 // a part, pour que `recordPatientAccess` (plus bas) reste lisible d'un trait : le lint l'impose
 // (`noExcessiveCognitiveComplexity`). La connaissance de CE qu'il faut journaliser reste
 // entierement dans `utils/access-log-routes.ts` ; ce crochet ne fait qu'assembler les deux
@@ -314,16 +314,15 @@ const tenantPlugin: FastifyPluginAsync = fastifyPlugin(
     const { tenantContext, accessGrantRepository, patientAccessLogDomain } =
       fastify.iocContainer
 
-    // Depuis la tâche 3 (étape 4a), résoudre le tenant lit aussi les octrois vivants de
-    // l'utilisateur (`liveGrantsForUser` — depuis le tour de correction 1 de la tâche 8, un
+    // Résoudre le tenant lit aussi les octrois vivants de
+    // l'utilisateur (`liveGrantsForUser` — un
     // relais qui appelle TOUJOURS `AccessGrantRepository.findForUser` ; c'est cette dernière qui
     // décide, en interne, si la lecture va plus loin qu'une seule colonne — voir
     // accessGrant.domain.ts) AVANT d'appeler `tenantContext.enter` — alors qu'avant, `enter` était
     // le tout premier geste, synchrone, du hook. Ce délai réel change la forme qu'exige
     // `tenantContext.enter` (qui repose sur `AsyncLocalStorage.enterWith`).
     //
-    // CE N'EST PAS UN DÉFAUT DE CONCURRENCE — corrigé dans la description après une revue qui l'a
-    // démontré par exécution (tour de correction 1, tâche 3) : posé en mode PROMESSE (fonction
+    // CE N'EST PAS UN DÉFAUT DE CONCURRENCE — démontré par exécution : posé en mode PROMESSE (fonction
     // `async` à un seul argument, comme le reste de ce fichier), le contexte posé par
     // `enterWith` ne survivait pas jusqu'au handler pour une requête SEULE et SÉQUENTIELLE — pas
     // seulement sous deux requêtes concurrentes. La suite e2e entière le démontrait (79 des 113
@@ -351,7 +350,7 @@ const tenantPlugin: FastifyPluginAsync = fastifyPlugin(
           .then((grants) => {
             // Horloge prise ICI, à l'instant de la résolution — jamais mise en cache d'une
             // requête à l'autre : c'est ce qui fait qu'un octroi qui vient d'expirer est refusé
-            // dès la requête suivante, sans attendre une reconnexion (Review Focus n°2).
+            // dès la requête suivante, sans attendre une reconnexion.
             const tenant = resolveTenantFromUser(
               request.currentUser,
               paramsOf(request),
@@ -450,7 +449,7 @@ const tenantPlugin: FastifyPluginAsync = fastifyPlugin(
         return Promise.resolve()
       },
     )
-    // Journal des consultations (etape 4b, tache 3). Pose en crochet plutot que recopie dans
+    // Journal des consultations. Pose en crochet plutot que recopie dans
     // chaque handler, pour la meme raison que les deux filtres cliniques ci-dessus : une route de
     // lecture nouvelle est couverte sans que son auteur ait a y penser — et, ici, le garde-fou de
     // demarrage `assertPatientReadLogged` le lui rappelle de toute facon.
@@ -462,7 +461,7 @@ const tenantPlugin: FastifyPluginAsync = fastifyPlugin(
     //
     // Un crochet `onResponse` s'execute apres la fin de la reponse, donc rien ne garantit a
     // priori qu'il herite encore de la portee `AsyncLocalStorage` teintee par `resolveTenant`.
-    // MESURE plutot que supposee (sonde jetable, voir le rapport de tache) : le contexte survit,
+    // MESURE plutot que supposee (sonde jetable) : le contexte survit,
     // par `app.inject` COMME par une vraie connexion TCP. Mais une mesure n'est pas une
     // garantie, et ce crochet ne peut pas non plus reposer le store lui-meme : poser un store
     // hors de `utils/tenant-context.ts` est precisement ce que le volet B de
@@ -484,7 +483,7 @@ const tenantPlugin: FastifyPluginAsync = fastifyPlugin(
         }
         // 1 bis. Une requete HEAD ne rend AUCUN corps : personne n'a rien lu. Le jumeau qu'en
         //    cree `exposeHeadRoutes` porte pourtant la MEME `routeOptions.url` que la route GET,
-        //    donc rien d'autre ici ne l'en distinguerait. MESURE au tour de correction 1 :
+        //    donc rien d'autre ici ne l'en distinguerait. MESURE :
         //    aujourd'hui l'application n'expose aucune route HEAD (`exposeHeadRoutes: false`,
         //    fastify-http-server.ts) et un HEAD recoit 404 — ce filtre ne change donc rien
         //    AUJOURD'HUI, il rend la propriete independante d'un reglage qui tient en un mot
@@ -493,7 +492,7 @@ const tenantPlugin: FastifyPluginAsync = fastifyPlugin(
         if (request.method !== 'GET') {
           return Promise.resolve()
         }
-        // 1 ter. L'export (tache 4) est le SEUL cas ou ce crochet peut savoir qu'une ligne est
+        // 1 ter. L'export est le SEUL cas ou ce crochet peut savoir qu'une ligne est
         //    due sans pouvoir la construire : `request.patientExportCount` vient du handler
         //    (`routes/patient.ts`), pose juste avant de repondre. Absent ici, sur CETTE route,
         //    c'est un bug d'assemblage -- un export sans aucun resultat pose `0`, jamais rien --

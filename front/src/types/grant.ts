@@ -5,7 +5,7 @@
 // Délibérément asymétrique avec le super-admin (`back/CLAUDE.md`,
 // `grants.ts`) : l'établissement voit qui dispose d'un accès chez lui, le
 // super-admin ne dispose pas de la liste des siens (aucune route `GET` ne
-// l'expose — voir task-12-report.md, « ce qui contredit le brief », point 1).
+// l'expose).
 export type EstablishmentGrant = {
   id: string
   reason: string

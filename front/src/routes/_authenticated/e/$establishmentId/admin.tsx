@@ -14,7 +14,7 @@ export const Route = createFileRoute(
   beforeLoad: ({ context, params, preload }) => {
     const tenant = resolveEstablishmentContext(context.authState.user, params)
     if (!tenant) {
-      // `/choose-context` existe depuis la tache 12 : `to` verifie la
+      // `/choose-context` : `to` verifie la
       // destination contre l'arbre de routes genere — voir la meme remarque
       // dans `s/$serviceId.tsx`.
       throw redirect({ to: '/choose-context' })

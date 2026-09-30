@@ -8,8 +8,7 @@ import { useToastStore } from '@/store/useToastStore.ts'
 import type { User } from '@/types/auth.ts'
 import AddMemberForm from './addMemberForm.tsx'
 
-// Revue finale de l'étape 4a, Important n°2 : ce formulaire (rattacher un
-// compte DÉJÀ créé) construisait son menu de services depuis
+// Ce formulaire (rattacher un compte DÉJÀ créé) construisait son menu de services depuis
 // `user.establishments[].services` — les appartenances de service de
 // l'ADMINISTRATEUR CONNECTÉ, données de `/me` — au lieu de la liste des
 // services de L'ÉTABLISSEMENT (`GET /e/:establishmentId/admin/services`,

@@ -15,11 +15,11 @@ import AddPatientForm from './addPatientForm.tsx'
 // via `AdapterDayjs` (même convention que `edit.patient.test.tsx`).
 dayjs.extend(utc)
 
-// Tâche 13 (étape 3 du multi-tenant, spec §6) : avant de créer un patient, l'écran cherche une
-// identité existante dans l'établissement, pour éviter les doublons. Choisir un résultat crée
-// le sous-dossier dans le service courant sans toucher à l'identité — ces tests verrouillent
-// que le flux emprunte bien cette route (POST .../service-file), jamais POST /patient ni
-// PATCH /patient/:id, et que le cas « déjà suivi ici » est distingué.
+// Avant de créer un patient, l'écran cherche une identité existante dans l'établissement (spec
+// §6), pour éviter les doublons. Choisir un résultat crée le sous-dossier dans le service
+// courant sans toucher à l'identité — ces tests verrouillent que le flux emprunte bien cette
+// route (POST .../service-file), jamais POST /patient ni PATCH /patient/:id, et que le cas
+// « déjà suivi ici » est distingué.
 
 const context = {
   establishmentId: 'e1',
@@ -83,7 +83,7 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-describe('AddPatientForm — recherche d’identité existante (tâche 13)', () => {
+describe('AddPatientForm — recherche d’identité existante', () => {
   it('le bouton de recherche est désactivé tant qu aucun prénom ni nom n est saisi', async () => {
     vi.stubGlobal('fetch', buildFetchMock([]))
     renderForm()
@@ -168,7 +168,7 @@ describe('AddPatientForm — recherche d’identité existante (tâche 13)', () 
 
   it(
     'choisir une identité existante appelle POST .../patient/:id/service-file, jamais ' +
-      'POST /patient ni PATCH /patient/:id (consigne 3 : ne touche pas à l identité)',
+      'POST /patient ni PATCH /patient/:id (ne touche pas à l identité)',
     async () => {
       const fetchMock = buildFetchMock([
         {
@@ -246,7 +246,7 @@ describe('AddPatientForm — recherche d’identité existante (tâche 13)', () 
     },
   )
 
-  it('le cas déjà suivi ici (consigne 4) : le dit clairement, sans laisser croire à une création', async () => {
+  it('le cas déjà suivi ici : le dit clairement, sans laisser croire à une création', async () => {
     const fetchMock = buildFetchMock([
       {
         match: (url, method) =>
@@ -299,7 +299,7 @@ describe('AddPatientForm — recherche d’identité existante (tâche 13)', () 
     expect(toast.message).toMatch(/n'a pas été modifié|n a pas ete modifie/i)
   })
 
-  // Tâche 13, tour de correction 1, point 4 : la troncature à vingt résultats ne doit pas être
+  // La troncature à vingt résultats ne doit pas être
   // muette — sinon un utilisateur qui ne voit pas l'identité qu'il cherche croit à tort qu'elle
   // n'existe pas et crée un doublon.
   it('affiche un message quand la recherche indique qu il y a plus de résultats (`hasMore`)', async () => {

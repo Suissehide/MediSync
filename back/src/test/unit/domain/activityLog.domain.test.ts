@@ -1,6 +1,6 @@
 import { ActivityLogDomain } from '../../../main/domain/activityLog.domain'
 
-// Tache 8, etape 4b : la retention (config.logRetentionMonths) doit gouverner la purge, jamais
+// La retention (config.logRetentionMonths) doit gouverner la purge, jamais
 // une valeur de douze mois recopiee en dur dans le domaine. Sabotage etroit eprouve par
 // execution : remettre `12` en dur ICI SEUL fait rougir ce test-ci, et lui seul (voir
 // patientAccessLog.domain.test.ts pour l'equivalent de l'autre journal, calcule

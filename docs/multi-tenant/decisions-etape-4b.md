@@ -575,7 +575,8 @@ champ** par la route, jamais par un `...row` étalé.
 *Ce que le code tient, et par quels tests* : `back/src/test/e2e/super-admin-access-log.test.ts`
 (**quinze** cas, dont « rend les lignes du script d amorcage, que nulle autre route ne peut lire »,
 les trois filtres, et « ne rend jamais d identite de patient — seulement des identifiants ») ;
-`front/src/routes/_authenticated/super-admin/access-log.test.tsx` côté écran (**seize** cas).
+`front/src/routes/_authenticated/super-admin/access-log.test.tsx` côté écran (seize cas à la clôture
+de l'étape, **vingt** depuis la pagination du 2026-10-01).
 
 **Ce que la revue finale de branche a changé sur cet écran, et pourquoi ce n'étaient pas des
 détails.** Trois défauts se tenaient par la main, et aucun n'était visible en regardant une seule
@@ -591,7 +592,8 @@ tâche :
    branché. La saisie est différée de 300 ms avant l'envoi : sans cela, chaque frappe déclencherait
    un `ILIKE` sur toute la plateforme.
 2. **Les lignes du script d'amorçage redevenaient invisibles** au-delà de 200 entrées — voir
-   « Ce qui reste ouvert », §8. Une valeur réservée du filtre d'établissement
+   « Ce qui reste ouvert », §8, dont la borne a depuis été remplacée par une pagination
+   (2026-10-01). Une valeur réservée du filtre d'établissement
    (`SANS_ETABLISSEMENT`, miroir vérifié par un test entre les deux dépôts) les vise désormais.
    Elle n'est proposée que sur `activite` : `PatientAccessLog.establishmentId` est non nullable, et
    le back répond **400** à la combinaison plutôt qu'une liste vide qui se lirait « aucune
@@ -668,7 +670,9 @@ journal qui en manque.
 ## Ce qui reste ouvert
 
 **Neuf** limites, mesurées et nommées. Aucune n'est un oubli : chacune a été examinée, et la raison
-de ne pas la fermer ici est écrite.
+de ne pas la fermer ici est écrite. **La §8 a été fermée depuis, le 2026-10-01** — elle reste dans ce
+registre plutôt que d'en être retirée, parce que l'arbitrage qui avait d'abord refusé de la fermer est
+la partie instructive.
 
 *(La revue finale de branche a relevé deux choses sur cette phrase. D'abord l'arithmétique : elle
 annonçait **six** limites et en listait **sept** — corrigé. Ensuite, et c'est le vrai point, deux
@@ -676,6 +680,12 @@ limites réelles étaient déclarées ailleurs dans le dépôt mais **absentes d
 le document désigné comme faisant foi : la **borne de 200 lignes** de l'écran plateforme, et les
 **deux colonnes de l'export que personne ne rend**. Elles sont les §8 et §9 ci-dessous. Une limite
 écrite dans un commentaire de code mais pas ici est une limite que personne ne relira.)*
+
+*(Et la suite l'a confirmé dans les deux sens. La §8, inscrite ici, a été relue et **fermée** le
+2026-10-01. Les deux autres journaux fermés du même geste — les deux lectures de `PatientAccessLog`
+par dossier, **sans aucune borne**, et le journal du détail d'établissement borné à 100 lignes —
+étaient, eux, déclarés dans des commentaires de code et **nulle part dans ce registre** : personne ne
+les avait relus. C'est exactement ce que la parenthèse ci-dessus annonçait, mesuré deux fois.)*
 
 ### 1. Le garde-fou couvre les routes qui **nomment** un patient, pas celles qui en **rendent** les données
 
@@ -774,40 +784,69 @@ une garantie différente de « chaque site est nommé et justifié »**, et le v
 pas se lire comme promettant la seconde. Lacune préexistante, **aggravée de deux sites par cette
 étape**, et dite ici plutôt que tue.
 
-### 8. L'écran plateforme ne rend jamais plus de **200 lignes**, et rien ne permet de remonter plus loin
+### 8. ~~L'écran plateforme ne rend jamais plus de **200 lignes**~~ — **FERMÉE le 2026-10-01**
 
-`PLATFORM_ACCESS_LOG_LIMIT` vaut **200** dans les deux dépôts de journaux, le tri est
-`createdAt desc`. Au-delà de 200 lignes dans le périmètre demandé, **les plus anciennes sortent de
-la réponse**, et **aucune pagination ne permet d'y revenir**. La seule façon de les atteindre est de
-**resserrer les filtres** jusqu'à ce que le périmètre tienne sous la borne.
+**Cette limite est fermée. Le reste de cette section est conservé parce que l'arbitrage qui a d'abord
+refusé la pagination est, lui, instructif — pas parce que la limite tient encore.**
 
-**Ce que cela a réellement cassé, et qui n'avait pas été vu** (revue finale de branche) : les lignes
-du script d'amorçage sont, par construction, **les plus anciennes de la table**. Passé 200 entrées
-dans le journal d'activité, elles tombaient hors de la page — et **aucun filtre ne permettait de les
-viser**, le filtre d'établissement ne sachant pas demander « sans établissement » et la liste
+`PLATFORM_ACCESS_LOG_LIMIT` valait **200** dans les deux dépôts de journaux, tri `createdAt desc` :
+au-delà de 200 lignes dans le périmètre demandé, **les plus anciennes sortaient de la réponse**, et
+**aucune pagination ne permettait d'y revenir**. La seule façon de les atteindre était de **resserrer
+les filtres** jusqu'à ce que le périmètre tienne sous la borne.
+
+**Ce que cela avait réellement cassé, et qui n'avait pas été vu** (revue finale de branche) : les
+lignes du script d'amorçage sont, par construction, **les plus anciennes de la table**. Passé 200
+entrées dans le journal d'activité, elles tombaient hors de la page — et **aucun filtre ne permettait
+de les viser**, le filtre d'établissement ne sachant pas demander « sans établissement » et la liste
 déroulante ne proposant que des établissements réels. La documentation présentait pourtant cette
 lisibilité comme **acquise** (« l'un des deux trous que cet écran ferme », § 9 du guide de
 vérification) : elle ne l'était que sur un journal jeune.
 
-**Trois choses ont changé, aucune ne supprime la borne** :
-- le filtre **compte** est désormais évalué **en base** et non dans le navigateur (il l'était : il
-  ne pouvait donc que réduire une page déjà tronquée, et rendait « aucune entrée » pour un compte
-  dont les lignes existaient) ;
+**Ce que la revue finale avait changé, sans supprimer la borne** :
+- le filtre **compte** est évalué **en base** et non dans le navigateur (il l'était : il ne pouvait
+  donc que réduire une page déjà tronquée, et rendait « aucune entrée » pour un compte dont les
+  lignes existaient) ;
 - le filtre d'établissement accepte une valeur réservée, **« Sans établissement »**, qui vise
   exactement les lignes d'amorçage ;
-- la borne est **déclarée** — ici, et dans les deux fichiers qui la portent.
+- la borne était **déclarée** — ici, et dans les deux fichiers qui la portaient.
 
-**Pourquoi pas une pagination** : c'est l'arbitrage rendu, et il mérite d'être écrit plutôt que
-supposé. Une pagination sur cette route demanderait un curseur stable (`createdAt` n'est pas unique),
-un total, et une pagination côté écran pour les deux sources — un chantier qui dépasse une passe de
-revue, sur un écran de **diagnostic** dont le besoin réel est « retrouver les lignes de X », auquel
-un filtre serveur répond mieux qu'un défilement de pages. **Si le journal devient un outil
-d'investigation rétrospective plutôt que de diagnostic, c'est cette décision-là qu'il faut rouvrir**,
-pas la valeur 200.
+**L'arbitrage qui refusait la pagination, et pourquoi il était faux sur un point.** Il disait : une
+pagination demanderait « un curseur stable (`createdAt` n'est pas unique), un total, et une pagination
+côté écran pour les deux sources — un chantier qui dépasse une passe de revue », sur un écran de
+**diagnostic** dont le besoin réel est « retrouver les lignes de X », auquel un filtre serveur répond
+mieux qu'un défilement de pages.
 
-*Coût si c'est faux* : un écran d'audit qui affirme « aucune entrée » là où il devrait dire « pas
-dans les 200 dernières ». La distinction n'est pas affichée aujourd'hui — l'écran ne signale pas
-qu'il a tronqué.
+Deux de ces trois exigences étaient réelles et ont été payées (le total, la pagination d'écran pour
+les deux sources) ; **la troisième était un surdimensionnement**. Le curseur stable n'a pas été
+nécessaire : le journal d'administration d'établissement était déjà paginé depuis le 2026-09-29 par
+un `skip`/`take` ordinaire, et c'est exactement ce que cet écran-ci utilise désormais. Le
+**mécanisme existait déjà dans le dépôt** — `ServerPagination` (`components/table/reactTable.tsx`),
+l'enveloppe `{ data, total, page, pageSize }`, et le patron complet de l'écran voisin — quand cet
+arbitrage a conclu au « chantier ». C'est la leçon à retenir de cette section : *le coût estimé d'une
+fermeture doit être mesuré contre ce que le dépôt porte déjà, pas contre la solution la plus
+générale.* La limite d'un `skip`/`take` est connue et assumée : sur un journal qui reçoit des lignes
+pendant qu'on le feuillette, une ligne peut glisser d'une page à l'autre. Sur un journal d'audit trié
+`createdAt desc`, les insertions arrivent **en tête**, donc ce glissement ne cache jamais les lignes
+anciennes — celles-là même que cette limite rendait inatteignables.
+
+**Ce qui est en place depuis le 2026-10-01** : `page`/`pageSize` (défaut 1 et 50, `pageSize` plafonné
+à **100** — la borne de requête n'a pas disparu, elle est passée *par page*) et `total`, sur les deux
+sources ; l'écran porte le même pied de pagination que ses voisins. `SANS_ETABLISSEMENT` **reste** :
+viser les lignes d'amorçage par un filtre est plus court que de paginer jusqu'aux plus anciennes
+lignes de la plateforme.
+
+**Les deux autres journaux ont été fermés du même geste**, parce qu'ils étaient pires et que ce
+registre ne les nommait pas : les deux lectures de `PatientAccessLog` par dossier
+(`GET /e/:e/s/:s/patient/:id/acces`, `GET /e/:e/admin/patients/:id/acces`) n'avaient **aucune borne
+du tout**, et le journal du détail d'établissement du super-admin était borné à **100 lignes** dans la
+réponse de `GET /super-admin/establishments/:id` — il vit désormais sur sa propre route,
+`GET /super-admin/establishments/:id/activity-log`.
+
+**Une capacité a dû être re-déclarée** : `PatientAccessLog.count` dans `SUPERADMIN_OPERATIONS`
+(`tenant-guard.ts`). Elle avait été retirée à la revue finale de l'étape 4b, à juste titre — aucun
+appel ne l'exerçait. La pagination lui en donne un : sans décompte, la dernière page n'est pas
+atteignable. Vérifié par sabotage — retirer l'entrée fait répondre **500** (le garde-fou refuse avant
+d'atteindre la base), jamais un total de zéro.
 
 ### 9. Deux colonnes de l'export ne sont rendues par **aucune** lecture ni **aucun** écran
 

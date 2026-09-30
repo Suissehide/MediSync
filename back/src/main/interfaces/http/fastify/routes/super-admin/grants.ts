@@ -42,8 +42,8 @@ const grantsRouter: FastifyPluginAsync = (fastify) => {
   // Révoque avant terme (spec §6.2). PAS une suppression : `SuperAdminGrantDomain.revoke` pose
   // `revokedAt`, la ligne survit — le `DELETE` est un verbe HTTP, pas une opération de
   // suppression en base (voir le commentaire sur `SuperAdminGrantEntityRepo`). `callerId` :
-  // seul le titulaire de l'octroi peut le révoquer (tour de correction 1, tâche 8) — jamais un
-  // id soumis, `request.currentUser.id` uniquement.
+  // seul le titulaire de l'octroi peut le révoquer — jamais un id soumis,
+  // `request.currentUser.id` uniquement.
   fastify.delete<{ Params: GrantIdParams }>(
     '/:id',
     {

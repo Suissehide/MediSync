@@ -32,7 +32,7 @@ const SERVICE_ROLE_OPTIONS = [
   ...toSelectOptions(SERVICE_ROLE_LABEL),
 ]
 
-// Onglet des membres (tâche 13, step 3) : créer un compte NEUF (adresse
+// Onglet des membres : créer un compte NEUF (adresse
 // sans compte existant), à la différence d'`AddMemberForm` qui rattache un
 // compte déjà créé. LE LIEN RENDU EST UN MOT DE PASSE À USAGE UNIQUE : il
 // s'affiche UNE SEULE FOIS, ici, avec un bouton de copie — jamais ailleurs
@@ -41,7 +41,7 @@ const SERVICE_ROLE_OPTIONS = [
 function CreateMemberAccountForm() {
   const [open, setOpen] = useState(false)
   const { createMemberAccount } = useMemberMutations()
-  // Revue finale de l'étape 4a, Important n°2 : les services PROPOSÉS sont
+  // Les services PROPOSÉS sont
   // la liste COMPLÈTE de l'établissement courant
   // (`GET /e/:establishmentId/admin/services`), jamais celle de
   // l'administrateur connecté (`user.establishments[].services`, données de

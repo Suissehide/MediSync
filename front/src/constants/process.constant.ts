@@ -4,7 +4,7 @@ export const AUTH = {
   ME: 'getMe',
 }
 
-// Écrans du super-admin (étape 4a, tâche 12) : hors de tout tenant, donc
+// Écrans du super-admin : hors de tout tenant, donc
 // aucune clé ici n'a besoin — ni ne doit — porter un établissement ou un
 // service (front/CLAUDE.md, § « Query keys deliberately do not carry the
 // tenant »). `GET_ESTABLISHMENT` prend malgré tout l'identifiant en clé
@@ -20,7 +20,7 @@ export const SUPER_ADMIN = {
   REISSUE_ACCESS_LINK: 'reissue_super_admin_access_link',
   CREATE_GRANT: 'create_super_admin_grant',
   REVOKE_GRANT: 'revoke_super_admin_grant',
-  // Étape 4b, tâche 11 : les deux journaux à l'échelle de la plateforme (`GET
+  // Les deux journaux à l'échelle de la plateforme (`GET
   // /super-admin/access-log`) — une seule clé, la requête entière (filtres compris) figurant en
   // second élément du tableau `queryKey` (voir `useSuperAdminAccessLogQuery`), comme
   // `PATIENT_ACCESS_LOG.GET_BY_PATIENT` le fait déjà de `patientID`.
@@ -69,14 +69,14 @@ export const PATIENT = {
   REORDER_PATHWAYS: 'reorder_patient_pathways',
 }
 
-// Sous-dossier de service du patient (étape 3 du multi-tenant) : clé volontairement sans le
+// Sous-dossier de service du patient : clé volontairement sans le
 // tenant (établissement/service), comme le reste des clés de ce fichier — voir `front/CLAUDE.md`
 // § « Query keys deliberately do not carry the tenant ».
 export const PATIENT_SERVICE_FILE = {
   GET_BY_PATIENT: 'get_patient_service_file',
   UPDATE: 'update_patient_service_file',
   // Rattachement d'une identité existante (trouvée par PATIENT.SEARCH_IDENTITY) au service
-  // courant — tâche 13 du plan.
+  // courant.
   ATTACH_EXISTING: 'attach_existing_patient_service_file',
 }
 
@@ -133,24 +133,25 @@ export const MEMBER = {
   UPDATE: 'update_member',
   REMOVE: 'remove_member',
   DEACTIVATE: 'deactivate_member',
-  // Tâche 13, step 3 : création de compte, distincte de `ADD` (rattachement
+  // Création de compte, distincte de `ADD` (rattachement
   // d'un compte existant).
   CREATE_ACCOUNT: 'create_member_account',
 }
 
-// Onglet des services de l'administration d'établissement (tâche 13, step
-// 1). `DEACTIVATION_IMPACT` n'est JAMAIS appelée pour toute la liste
-// (arbitrage transmis par Léo, task-13-brief.md) : seulement à la demande,
+// Onglet des services de l'administration d'établissement.
+// `DEACTIVATION_IMPACT` n'est JAMAIS appelée pour toute la liste
+// (arbitrage transmis par Léo) : seulement à la demande,
 // au moment de désactiver un service précis.
 export const SERVICE_ADMIN = {
   GET_ALL: 'get_all_services_admin',
   CREATE: 'create_service_admin',
   UPDATE: 'update_service_admin',
   DEACTIVATION_IMPACT: 'service_admin_deactivation_impact',
+  RENAME_ESTABLISHMENT: 'rename_establishment_admin',
 }
 
-// Onglet des accès temporaires de l'administration d'établissement (tâche
-// 13, step 2) : `GET /e/:establishmentId/admin/grants`, en cours ET passés.
+// Onglet des accès temporaires de l'administration d'établissement :
+// `GET /e/:establishmentId/admin/grants`, en cours ET passés.
 export const GRANT_ESTABLISHMENT = {
   GET_ALL: 'get_all_establishment_grants',
 }
@@ -191,7 +192,7 @@ export const ACTIVITY_LOG = {
   CLEANUP: 'cleanup_activity_logs',
 }
 
-// Journal des consultations d'un dossier patient (étape 4b, tâche 10). Clé sans le tenant, comme
+// Journal des consultations d'un dossier patient. Clé sans le tenant, comme
 // le reste de ce fichier (`front/CLAUDE.md` § « Query keys deliberately do not carry the
 // tenant ») ; elle porte `patientID`, exactement comme `PATIENT_SERVICE_FILE.GET_BY_PATIENT` porte
 // l'identifiant de la ressource demandée, pas celui d'un tenant.

@@ -40,8 +40,8 @@ class ErrorHandler implements ErrorHandlerInterface {
     } else if (error instanceof Prisma.PrismaClientKnownRequestError) {
       const { code } = error
       // Meme exigence pour un code Prisma reconnu : on journalise le code et l'entite, jamais
-      // `error.message`. `meta` n'est plus lu du tout ici : verifie contre un vrai Postgres
-      // (task-5-re-review-3.md, m1 puis re-verifie au tour 4), aucun des trois champs qu'on
+      // `error.message`. `meta` n'est plus lu du tout ici : verifie contre un vrai Postgres,
+      // aucun des trois champs qu'on
       // lisait jusqu'ici (`meta.cause`, `meta.constraint`, `meta.target`) n'existe plus au premier
       // niveau de `meta` sous Prisma 7.8 — quand l'equivalent existe, c'est desormais imbrique
       // sous `meta.driverAdapterError.cause.constraint`. Les trois lectures etaient donc du code

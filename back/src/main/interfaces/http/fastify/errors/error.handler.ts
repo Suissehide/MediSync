@@ -36,9 +36,8 @@ const normalizeResponse = (
 }
 
 // Ne garde, dans une pile, que les lignes de frame (`    at ...`). Verifie contre une vraie
-// PrismaClientValidationError et une vraie PrismaClientKnownRequestError (task-5-re-review-3.md,
-// I2, demandait de verifier plutot que de croire que « la pile ne contient pas la charge utile ») :
-// c'est FAUX en l'etat, les deux ont un `.stack` dont les premieres lignes SONT le message (V8
+// PrismaClientValidationError et une vraie PrismaClientKnownRequestError plutot que suppose :
+// « la pile ne contient pas la charge utile » est FAUX en l'etat, les deux ont un `.stack` dont les premieres lignes SONT le message (V8
 // prefixe une pile par `${name}: ${message}`), donc une valeur soumise portee par le message s'y
 // retrouve integralement si on la journalise telle quelle. Ne garder que les lignes qui matchent
 // `/^\s*at\s/` retire ce prefixe quel que soit le nombre de lignes qu'il occupe, sans dependre de
@@ -57,7 +56,7 @@ const isBoomLike = (error: unknown): boolean =>
   (error as { isBoom?: boolean }).isBoom === true
 
 // Erreurs maison dont le message est un texte que NOUS avons ecrit, jamais recopie d'une entree
-// soumise — au meme titre qu'un Boom (task-5-re-review-4.md, I3). `TenantScopeMissingError` et
+// soumise — au meme titre qu'un Boom. `TenantScopeMissingError` et
 // `TenantContextMissingError` (`utils/tenant-errors.ts`) portent, dans leur message, le nom du
 // modele/de l'operation/du champ manquant que `back/CLAUDE.md` promet de journaliser ("the error
 // message names the entry to add") : sans cette ligne, le garde-fou de tenant refuse une requete
@@ -90,7 +89,7 @@ const diagnosticOf = (error: unknown): string => {
 }
 
 // Chemin seul, sans chaine de requete : meme regle que le journal des requetes dans
-// fastify-http-server.ts (task-5-re-review-3.md, I3) — les deux partagent `pathWithoutQuery`.
+// fastify-http-server.ts — les deux partagent `pathWithoutQuery`.
 const routeOf = (request: FastifyRequest): string =>
   `${request.method} ${pathWithoutQuery(request.url)}`
 
@@ -101,8 +100,8 @@ const buildErrorHandler = (...errorNormalizers: ErrorNormalizer[]) => {
     request: FastifyRequest,
     reply: FastifyReply,
   ): string | { error: string; message: string; statusCode: number } {
-    // Pas de `this.log.debug(error)` ici : c'etait un second canal d'erreur brute
-    // (task-5-re-review-3.md, m3), recopiant l'objet entier, message et pile compris. Il n'etait
+    // Pas de `this.log.debug(error)` ici : c'etait un second canal d'erreur brute,
+    // recopiant l'objet entier, message et pile compris. Il n'etait
     // eteint qu'a `LOG_LEVEL=INFO` en production — pas a `DEBUG`, qui est justement le reglage
     // qu'on active pour enqueter sur un incident, c'est-a-dire le moment ou ce canal est lu. Le
     // diagnostic ci-dessous (classe, route, pile filtree aux frames) est deja journalise a
@@ -133,7 +132,7 @@ const buildErrorHandler = (...errorNormalizers: ErrorNormalizer[]) => {
   }
 }
 
-// Exportée (tâche 11, étape 4a, tour de correction 1) : `scripts/bootstrap-super-admin.ts` la
+// Exportée : `scripts/bootstrap-super-admin.ts` la
 // réutilise pour la même raison qu'ici — un message d'erreur n'est sûr à afficher que si NOUS
 // l'avons écrit (Boom ou une des erreurs maison ci-dessus), jamais s'il vient de recopier une
 // erreur brute (Prisma, entre autres) qui peut porter une valeur soumise.

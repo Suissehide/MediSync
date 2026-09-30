@@ -26,14 +26,12 @@ import { hashPassword, randomToken } from '../utils/hash'
 // QUATRE refus, un seul message : adresse inconnue, adresse déjà membre d'ici, compte
 // super-admin, compte rattaché à un AUTRE établissement.
 //
-// TOUR DE CORRECTION 2 — CE QUE CE MESSAGE ACHÈTE, ET CE QU'IL N'ACHÈTE PAS. La version
-// précédente de ce commentaire disait « sinon un administrateur pourrait énumérer les adresses
-// qui ont un compte » : vrai pour `addByEmail` (une adresse inconnue y reçoit le MÊME 400, donc
-// les quatre refus y sont réellement indiscernables), FAUX pour `createAccount`, où une adresse
-// inconnue reçoit 201 — le seul fait d'y être refusé annonce donc « cette adresse a un compte ».
-// Mesuré, pas relu : voir « constat : le couple de refus des deux routes d ajout identifie la
-// nature du compte » (members.test.ts), écrit d'abord tel que CETTE phrase décrivait le système,
-// et tombé rouge en imprimant le contraire.
+// CE QUE CE MESSAGE ACHÈTE, ET CE QU'IL N'ACHÈTE PAS. « Sinon un administrateur pourrait
+// énumérer les adresses qui ont un compte » est vrai pour `addByEmail` (une adresse inconnue y
+// reçoit le MÊME 400, donc les quatre refus y sont réellement indiscernables), FAUX pour
+// `createAccount`, où une adresse inconnue reçoit 201 — le seul fait d'y être refusé annonce donc
+// « cette adresse a un compte ». Mesuré, pas supposé : voir « constat : le couple de refus des
+// deux routes d ajout identifie la nature du compte » (members.test.ts).
 //
 // Ce que le message partagé achète réellement : le MOTIF du refus reste caché. Un 400 sur
 // `createAccount` ne dit pas « super-admin » plutôt que « rattaché ailleurs » — il faut croiser
@@ -71,7 +69,6 @@ const MULTI_ESTABLISHMENT_LINK =
 const DEACTIVATED_LINK =
   'This account is deactivated; its access link cannot be reissued'
 
-// Tour de correction 1, trouvé en traitant la Critique n°2, hors des trois verbes demandés.
 const SUPER_ADMIN_ACTIVATION =
   'This account cannot be activated or deactivated from an establishment'
 
@@ -158,7 +155,7 @@ class MembershipDomain implements MembershipDomainInterface {
     if (await this.membershipRepository.findByUserID(user.id)) {
       throw Boom.badRequest(UNADDABLE_EMAIL)
     }
-    // Tour de correction 1, Critique n°2, PREMIER MAILLON de la chaîne : rattacher un
+    // PREMIER MAILLON de la chaîne : rattacher un
     // super-admin à son établissement lui donnait ensuite une appartenance UNIQUE, donc une
     // réémission que l'ancienne garde laissait passer. Cette méthode n'émet aucun jeton — elle
     // n'appelle donc pas `assertIssuableToken` —, mais elle prépare le terrain de celle qui en
@@ -222,7 +219,7 @@ class MembershipDomain implements MembershipDomainInterface {
   // la désactivation n'est pas portée par l'appartenance, on refuse les deux
   // sens (couper comme rétablir) sur un compte multi-établissement.
   //
-  // TÂCHE 15 (étape 4a) — CE QUI A CHANGÉ, ET CE QUI NE CHANGE PAS. Le prédicat était
+  // CE QUI A CHANGÉ, ET CE QUI NE CHANGE PAS. Le prédicat était
   // `user.establishmentMemberships.length > 1`, lu sur l'arbre COMPLET des appartenances que
   // `UserRepository.findByID` embarquait. Cette lecture-là repart du modèle global `User` par une
   // relation à-plusieurs : le garde-fou la refuse désormais sous un contexte de tenant (voir
@@ -244,9 +241,8 @@ class MembershipDomain implements MembershipDomainInterface {
     }
   }
 
-  // MÊME CLASSE QUE LA CRITIQUE n°2, AUTRE CONSÉQUENCE — trouvé en la traitant, hors des trois
-  // verbes du tour (rattachement, création, réémission), et reproduit de bout en bout avant
-  // d'être fermé (`members.test.ts`, « ne desactive pas le compte global d un super-admin »).
+  // AUTRE CONSÉQUENCE DE LA MÊME CLASSE DE PROBLÈME, vérifiée de bout en bout par
+  // `members.test.ts` (« ne desactive pas le compte global d un super-admin »).
   // Ce n'est pas une prise de contrôle mais un DÉNI DE SERVICE : `deactivatedAt` vit sur le
   // `User`, global, et un simple ADMIN d'établissement coupait l'accès du super-admin à TOUTE
   // la plateforme. Ni `assertRattachementUnique` (aucun rattachement ailleurs suffit à la
@@ -264,19 +260,19 @@ class MembershipDomain implements MembershipDomainInterface {
     }
   }
 
-  // LA GARDE DU JETON (tour de correction 1, Critiques n°1 et n°2). Appelée avant CHAQUE
+  // LA GARDE DU JETON. Appelée avant CHAQUE
   // `issue()` de ce niveau — une seule méthode, pas une copie par route : c'est
   // `access-link-issue-sites.test.ts` qui exige que chaque site d'émission de `src/main` soit
   // déclaré, et que ce fichier en appelle autant que d'émissions.
   //
   // POURQUOI ELLE PORTE SUR LE JETON ET NON SUR LA ROUTE. Un lien d'accès réinitialise le mot
   // de passe du `User`, qui est GLOBAL : il ne donne pas accès « à cet établissement », il donne
-  // accès AU COMPTE, donc à tout ce que ce compte atteint. Le tour précédent avait posé cette
-  // garde sur la seule réémission ; `POST /account` la contournait entièrement (Critique n°1) —
-  // l'administrateur de A soumettait l'adresse d'une personne administratrice de B, recevait un
-  // jeton, et administrait B. Deux refus :
+  // accès AU COMPTE, donc à tout ce que ce compte atteint. Poser cette garde sur la seule
+  // réémission ne suffit pas : `POST /account` la contournerait entièrement —
+  // l'administrateur de A soumettrait l'adresse d'une personne administratrice de B, recevrait un
+  // jeton, et administrerait B. Deux refus :
   //
-  //   1. UN COMPTE SUPER-ADMIN NE SE DÉPANNE JAMAIS DEPUIS UN ÉTABLISSEMENT (Critique n°2).
+  //   1. UN COMPTE SUPER-ADMIN NE SE DÉPANNE JAMAIS DEPUIS UN ÉTABLISSEMENT.
   //      Rien, ailleurs, ne lisait `isSuperAdmin` : un simple ADMIN prenait le compte
   //      super-admin en un appel, ou en trois via `addByEmail` puis la réémission. Message
   //      OPAQUE (`UNADDABLE_EMAIL`) plutôt qu'un motif propre : un refus qui dirait « cette
@@ -299,7 +295,7 @@ class MembershipDomain implements MembershipDomainInterface {
     userId: string,
     refusRattachementAilleurs: () => Error,
   ): Promise<void> {
-    // TÂCHE 15 : `findIdentity` (la ligne `User` seule) et non `findByID` (qui embarque l'arbre
+    // `findIdentity` (la ligne `User` seule) et non `findByID` (qui embarque l'arbre
     // des appartenances de TOUS les établissements). Les deux faits dont cette garde a besoin
     // sont désormais lus séparément : `isSuperAdmin` est une colonne du compte, et « rattaché
     // ailleurs » un booléen — voir `assertRattachementUnique` plus haut pour le détail.
@@ -353,19 +349,17 @@ class MembershipDomain implements MembershipDomainInterface {
     this.emit('member.removed', id)
   }
 
-  // TÂCHE 6, LE RAISONNEMENT QU'ON NE REPREND PAS. Là-bas, créer un compte calcule un PBKDF2 à
+  // LE RAISONNEMENT QU'ON NE REPREND PAS (voir `establishment.domain.ts#createWithFirstAdmin`).
+  // Là-bas, créer un compte calcule un PBKDF2 à
   // 210 000 itérations là où réutiliser un compte existant ne le fait pas : le temps de réponse
   // dit donc, à lui seul, si l'adresse a déjà un compte. Cette fuite y a été ASSUMÉE au motif que
   // l'appelant est un super-admin, qui dispose de toute façon d'une recherche de comptes par
-  // adresse (`GET /super-admin/users?email=`, tâche 7). CETTE PRÉMISSE EST FAUSSE ICI :
+  // adresse (`GET /super-admin/users?email=`). CETTE PRÉMISSE EST FAUSSE ICI :
   // l'appelant est un administrateur d'établissement, qui n'a pas la recherche de comptes du
   // super-admin (`GET /super-admin/users?email=`).
   //
-  // DEUX JUSTIFICATIONS SUCCESSIVES, TOUTES DEUX FAUSSES, ET CE QUI LES REMPLACE.
-  //
-  // Tour 1 disait « aucune route ne lui offre de recherche de comptes » : faux, `POST
-  // /e/:establishmentId/admin/members` en est une. Tour 2 l'a remplacée par « ce qui reste coûte
-  // une écriture journalisée » : faux aussi, et mesuré — le couple (400, 400) rendu par les deux
+  // CE QUE CE HACHAGE NE FERME PAS. Il existe une route de recherche de comptes
+  // (`POST /e/:establishmentId/admin/members`), et le couple (400, 400) rendu par les deux
   // routes d'ajout identifie EXACTEMENT un super-admin, en deux appels, sans écrire une seule
   // ligne (« constat : le couple de refus … », members.test.ts). Il existe donc bel et bien un
   // oracle gratuit et sans trace, que ce hachage ne ferme pas.
@@ -405,7 +399,7 @@ class MembershipDomain implements MembershipDomainInterface {
     services,
   }: MembershipCreateAccountDomain): Promise<MembershipCreateAccountResult> {
     // Une LECTURE d'abord, jamais un `upsert` : un compte déjà connu ne doit être écrasé ni
-    // dans son nom ni dans son mot de passe (tâche 6, Review Focus n°4). `findByEmail` lève
+    // dans son nom ni dans son mot de passe. `findByEmail` lève
     // plutôt que de rendre `null` ; absorbé ici comme dans `addByEmail` ci-dessus.
     const existing = await this.userRepository
       .findByEmail(email)
@@ -417,7 +411,7 @@ class MembershipDomain implements MembershipDomainInterface {
       if (await this.membershipRepository.findByUserID(existing.id)) {
         throw Boom.conflict(ALREADY_MEMBER)
       }
-      // Tour de correction 1, Critique n°1 : AVANT le refus « désactivé » ci-dessous, à dessein.
+      // AVANT le refus « désactivé » ci-dessous, à dessein.
       // Un compte désactivé rattaché à un AUTRE établissement reçoit ainsi le refus opaque,
       // jamais le 409 qui dirait son état — le fait le plus sensible l'emporte.
       await this.assertIssuableToken(existing.id, () =>
@@ -426,7 +420,7 @@ class MembershipDomain implements MembershipDomainInterface {
       // Refusé EN AMONT, avant la moindre écriture : `AccessLinkDomain.consume` refuse un compte
       // désactivé, donc la route rendrait 201 sur un accès qui ne pourra jamais être consommé.
       //
-      // DIVULGATION RÉSIDUELLE, ASSUMÉE ET NOMMÉE (rapport de tâche) : ce 409 dit « cette adresse
+      // DIVULGATION RÉSIDUELLE, ASSUMÉE ET NOMMÉE : ce 409 dit « cette adresse
       // a un compte, et il est désactivé ». Elle est plus étroite que l'oracle général (elle ne
       // porte que sur les comptes désactivés) et elle ne peut pas être masquée sans mentir à
       // l'appelant — un 201 qui ne créerait rien laisserait un administrateur attendre un accès
@@ -480,7 +474,7 @@ class MembershipDomain implements MembershipDomainInterface {
     return { member: membership, accessLink }
   }
 
-  // ÉTAPE LA PLUS DANGEREUSE DE LA TÂCHE 10, et le brief ne le dit pas : un lien d'accès
+  // LE POINT LE PLUS DANGEREUX DE CETTE MÉTHODE : un lien d'accès
   // réinitialise le mot de passe du `User`, qui est GLOBAL — pas celui de l'appartenance. Un
   // administrateur de l'établissement A qui réémet un lien pour un compte membre AUSSI de B
   // prendrait, par ce lien, le contrôle de son accès à B, où il n'a aucun droit.
@@ -519,7 +513,7 @@ class MembershipDomain implements MembershipDomainInterface {
   ): Promise<MembershipRowDomain> {
     const membership = await this.membershipRepository.findByID(id)
     // La ligne `User` seule pour la garde super-admin, qui porte sur une colonne du compte ; le
-    // rattachement ailleurs se demande à part, en un booléen (tâche 15).
+    // rattachement ailleurs se demande à part, en un booléen.
     const user = await this.userRepository.findIdentity(membership.userId)
     this.assertNotSuperAdmin(user)
     await this.assertRattachementUnique(

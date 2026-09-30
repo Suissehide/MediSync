@@ -23,7 +23,7 @@ export type ServicePermission =
   | 'pdf:export'
   | 'todo:own'
   | 'members:read'
-  // Etape 4b, tache 5 : lire le journal des consultations (`PatientAccessLog`), a l'echelle du
+  // Lire le journal des consultations (`PatientAccessLog`), a l'echelle du
   // SEUL service courant. `access-log:read` (EstablishmentPermission ci-dessous, deja present
   // pour ADMIN depuis la toute premiere version de ce fichier, bd26a72) ne convient pas pour
   // cette route DE SERVICE : `hasPermission` (plus bas) choisit sa branche — service ou
@@ -34,9 +34,9 @@ export type ServicePermission =
   // TOUJOURS, quel que soit son `establishmentRole`. Verifie par execution en ecrivant d'abord
   // ce test faux.
   //
-  // TOUR DE CORRECTION 1 (revue) — `accessLog:read` (premier jet) etait un homographe presque
+  // `accessLog:read` (premier jet) etait un homographe presque
   // parfait d'`access-log:read`, dans une matrice DUPLIQUEE entre deux depots (back et front) :
-  // un piege de lecture permanent, pas seulement pour cette tache. Le court-circuit ci-dessus
+  // un piege de lecture permanent. Le court-circuit ci-dessus
   // explique pourquoi deux permissions DISTINCTES sont necessaires ; il n'explique pas pourquoi
   // choisir un nom qui ne se distingue de l'autre que par la casse et un trait d'union. Renomme
   // en `consultations:read` : aucune parente visuelle avec `access-log:read`, et un mot qui n'est
@@ -57,6 +57,7 @@ export type EstablishmentPermission =
   | 'activity-log:read'
   | 'activity-log:write'
   | 'access-log:read'
+  | 'establishment:rename'
 
 // Portée par le drapeau `User.isSuperAdmin`, jamais par un rôle d'établissement ou de service
 // (habilitations.md, table « Permissions d'établissement et de plateforme » — colonne
@@ -120,6 +121,7 @@ export const ESTABLISHMENT_PERMISSIONS: Record<
     'activity-log:read',
     'activity-log:write',
     'access-log:read',
+    'establishment:rename',
   ],
   MEMBER: [],
 }

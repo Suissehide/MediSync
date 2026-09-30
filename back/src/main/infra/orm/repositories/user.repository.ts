@@ -17,7 +17,9 @@ import type { PostgresPrismaClient } from '../postgres-client'
 const membershipsInclude = {
   establishmentMemberships: {
     include: {
-      establishment: true,
+      // Services de l'établissement : un chef d'établissement (`ADMIN`) y accède tous, voir
+      // `effectiveMemberships`.
+      establishment: { include: { services: true } },
       serviceMemberships: { include: { service: true } },
     },
   },
@@ -46,14 +48,14 @@ class UserRepository implements UserRepositoryInterface {
     }
   }
 
-  // TACHE 15 (etape 4a) — L'IDENTITE GLOBALE SEULE, SANS SON ARBRE D'APPARTENANCES.
+  // L'IDENTITE GLOBALE SEULE, SANS SON ARBRE D'APPARTENANCES.
   //
   // `findByID` ci-dessus embarque `membershipsInclude`, qui repart du modele GLOBAL `User` par la
   // relation A-PLUSIEURS `establishmentMemberships` : il ramene donc les appartenances de TOUS
   // les etablissements du compte, avec le nom de chacun et la liste de ses services. Sur le
   // chemin de connexion (aucun contexte) c'est exactement ce qu'il faut — c'est la lecture qui
   // ETABLIT a quels etablissements le compte appartient. Sous un contexte de TENANT, c'est le
-  // pont que la tache 15 ferme (`assertNoGlobalToManyBridge`, tenant-guard.ts) : un
+  // pont que ferme `assertNoGlobalToManyBridge` (tenant-guard.ts) : un
   // administrateur de l'etablissement A n'a pas a faire charger l'arbre de B pour une adresse
   // qu'il choisit lui-meme.
   //
@@ -142,7 +144,7 @@ class UserRepository implements UserRepositoryInterface {
     }
   }
 
-  // `client` optionnel (tâche 11, étape 4a) : `UserDomain.bootstrapSuperAdmin` l'appelle sous
+  // `client` optionnel : `UserDomain.bootstrapSuperAdmin` l'appelle sous
   // transaction, avec `grantSuperAdmin` et l'écriture d'`ActivityLog` — voir le commentaire sur
   // cette méthode. Les appelants existants (membership.domain.ts) ne le fournissent pas et
   // retombent sur `this.prisma`, sans changement de comportement.
@@ -164,7 +166,7 @@ class UserRepository implements UserRepositoryInterface {
     }
   }
 
-  // Tâche 7 : posée sur le chemin de connexion (`AuthDomain.signIn`), qui n'a aucun contexte de
+  // Posée sur le chemin de connexion (`AuthDomain.signIn`), qui n'a aucun contexte de
   // tenant ni de superadmin — `User` est global, cette écriture n'a donc rien à encadrer (voir
   // le commentaire au-dessus de `SUPERADMIN_GLOBAL_OPERATIONS`, tenant-guard.ts : PAS `update`
   // pour cette raison précise).
@@ -182,13 +184,13 @@ class UserRepository implements UserRepositoryInterface {
     }
   }
 
-  // Tâche 11 (étape 4a) : appelée uniquement par `UserDomain.bootstrapSuperAdmin`, elle-même
+  // Appelée uniquement par `UserDomain.bootstrapSuperAdmin`, elle-même
   // encadrée en mode système (`tenantContext`, voir ce fichier) — seul appelant, hors de toute
   // requête HTTP. `client` optionnel, même motif que `setDeactivated` ci-dessus : les deux, plus
-  // l'écriture d'`ActivityLog`, partagent une seule transaction (tour de correction 1, Important
-  // n°1 — sans elle, une promotion pouvait rester acquise en base alors que sa ligne de journal
-  // échouait, perdue sans recours puisque l'idempotence de `bootstrapSuperAdmin` empêche ensuite
-  // tout second appel de rejouer cette branche).
+  // l'écriture d'`ActivityLog`, partagent une seule transaction — sans elle, une promotion pouvait
+  // rester acquise en base alors que sa ligne de journal échouait, perdue sans recours puisque
+  // l'idempotence de `bootstrapSuperAdmin` empêche ensuite tout second appel de rejouer cette
+  // branche.
   async grantSuperAdmin(
     userID: string,
     client: PrimaTransactionClient = this.prisma,

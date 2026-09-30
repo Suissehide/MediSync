@@ -5,7 +5,7 @@ import { SUPER_ADMIN } from '../constants/process.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
 import type { SuperAdminAccessLogQuery } from '../types/superAdminAccessLog.ts'
 
-// Étape 4b, tâche 11 : les deux journaux à l'échelle de la plateforme — `GET
+// Les deux journaux à l'échelle de la plateforme — `GET
 // /super-admin/access-log`. Même raisonnement que `useSuperAdminEstablishmentQuery` (exception
 // déclarée dans `conventions-tenant-api-queries.test.ts`) : les filtres passés dans `params`
 // (établissement, compte, action) sont des DONNÉES de la requête demandée, jamais un tenant

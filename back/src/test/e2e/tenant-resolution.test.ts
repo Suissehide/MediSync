@@ -116,7 +116,7 @@ describe('resolution du tenant', () => {
     expect(res.statusCode).toBe(404)
   })
 
-  // Review Focus n°2 (tâche 3, étape 4a) : un octroi qui expire pendant une session déjà
+  // Un octroi qui expire pendant une session déjà
   // ouverte doit être refusé dès la requête SUIVANTE, sans attendre une reconnexion — c'est la
   // raison d'être de l'évaluation à la lecture (`effectiveMemberships` appelée à chaque
   // résolution de tenant, jamais mise en cache). 404, pas 403 : la forme que
@@ -164,7 +164,7 @@ describe('resolution du tenant', () => {
     }
   })
 
-  // Tour de correction 1 (tâche 3) — Important n°1 de la revue : retirer le drapeau super-admin
+  // Retirer le drapeau super-admin
   // ne retirait pas l'accès. Jugé à la lecture, comme l'expiration : la requête suivante, sur le
   // MÊME cookie, referme l'accès sans reconnexion.
   it('l octroi ne confere plus rien des que son titulaire n est plus super-admin', async () => {
@@ -203,15 +203,15 @@ describe('resolution du tenant', () => {
     expect(apres.statusCode).toBe(404)
   })
 
-  // TOUR DE CORRECTION 1 (tâche 8, étape 4a) — reconstruit EXACTEMENT le scénario que la
-  // relecture a démontré par exécution : un compte réellement démis du drapeau super-admin,
+  // Reconstruit EXACTEMENT le scénario démontré par exécution : un compte réellement démis du
+  // drapeau super-admin,
   // dont l'octroi (non révoqué, non expiré) reste en base, appelé DIRECTEMENT au niveau du
   // dépôt — le point d'entrée le plus bas, celui qu'un appelant fabriqué atteindrait, sans
-  // passer par `/me` ni par une session HTTP. Avant ce tour, `liveGrantsForUser` acceptait un
+  // passer par `/me` ni par une session HTTP. Avant ce correctif, `liveGrantsForUser` acceptait un
   // `User` complet et faisait confiance à SON champ `isSuperAdmin` : un appel direct au dépôt
   // avec l'id de ce compte démis, depuis n'importe quel code de `src/main`, aurait tout de même
   // fait ressortir l'octroi RÉEL (établissement, services) si l'appelant avait — à tort —
-  // prétendu `isSuperAdmin: true`. Depuis ce tour, `AccessGrantRepository.findForUser` ne prend
+  // prétendu `isSuperAdmin: true`. Désormais, `AccessGrantRepository.findForUser` ne prend
   // plus qu'un `userId` et relit LUI-MÊME `User.isSuperAdmin`, frais, à chaque appel : aucune
   // prétention d'aucune sorte ne peut plus rien changer au résultat. Ce test rougit si cette
   // relecture fraîche disparaît (par exemple si `findForUser` redevenait un simple filtre sur
@@ -243,7 +243,7 @@ describe('resolution du tenant', () => {
     expect(grants).toEqual([])
   })
 
-  // Fermeture (tâche 8, étape 4a — voir le contrat écrit sur
+  // Fermeture (voir le contrat écrit sur
   // `AccessGrantRepositoryInterface.findForUser`) : un octroi RÉEL, non révoqué, non expiré, sur
   // un établissement qui devient désactivé APRÈS coup, ne doit plus rien conférer — ni la lecture
   // (`/me` ne le liste plus), ni l'entrée en tenant (404, comme pour un membre réel, voir « un
@@ -307,9 +307,9 @@ describe('resolution du tenant', () => {
     })
   })
 
-  // Tour de correction 1 (tâche 3) — Important n°2 de la revue : aucun test n'affirmait que
+  // Aucun test n'affirmait que
   // `/me` liste bien un établissement octroyé, alors que c'est le second des deux seuls
-  // appelants de `effectiveMemberships` — la moitié de la garantie de cette tâche n'était donc
+  // appelants de `effectiveMemberships` — la moitié de cette garantie n'était donc
   // vérifiée par rien.
   it('/me liste un etablissement octroye, avec son origine', async () => {
     const est = await createEstablishment('Octroi')

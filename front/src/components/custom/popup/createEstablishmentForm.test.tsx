@@ -9,10 +9,10 @@ import { useToastStore } from '@/store/useToastStore.ts'
 import type { User } from '@/types/auth.ts'
 import CreateEstablishmentForm from './createEstablishmentForm.tsx'
 
-// Tâche 14b (hors plan, étape 4a) : « créer un établissement » — le back
-// l'expose (`POST /super-admin/establishments`, tâche 6) mais aucun écran
-// ne l'appelait. Même précédent que `createMemberAccountForm.tsx` (tâche
-// 13) : LE LIEN D'ACCÈS RENDU EST UN MOT DE PASSE À USAGE UNIQUE, affiché
+// « créer un établissement » — le back
+// l'expose (`POST /super-admin/establishments`) mais aucun écran
+// ne l'appelait. Même précédent que `createMemberAccountForm.tsx` :
+// LE LIEN D'ACCÈS RENDU EST UN MOT DE PASSE À USAGE UNIQUE, affiché
 // UNE SEULE FOIS, avec un bouton de copie et la mention qu'il ne sera plus
 // affiché — et la preuve qui compte se fait en ROUVRANT, pas en fermant
 // (Radix démonte le contenu à la fermeture, ce qui rendrait cette
@@ -28,7 +28,7 @@ const superAdmin: User = {
 }
 
 const JETON = 'jeton-de-test-etablissement-neuf-ne-jamais-fuiter'
-// Revue finale de l'étape 4a, mineur : l'écran affichait le jeton NU alors
+// L'écran affichait le jeton NU alors
 // qu'il annonce un « lien à usage unique » — le destinataire recevait
 // quelque chose qui n'est pas un lien. `LIEN_ATTENDU` est ce qui doit
 // apparaître désormais à l'écran, pas `JETON` seul (voir `buildAccessLinkUrl`).

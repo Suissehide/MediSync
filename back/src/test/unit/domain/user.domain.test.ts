@@ -5,10 +5,9 @@ import type { IocContainer } from '../../../main/types/application/ioc'
 import type { UserEntityRepo } from '../../../main/types/infra/orm/repositories/user.repository.interface'
 import { TenantContext } from '../../../main/utils/tenant-context'
 
-// Tâche 11 (étape 4a) : `UserDomain.bootstrapSuperAdmin` est la fonction que
-// `back/scripts/bootstrap-super-admin.ts` appelle — le script lui-même n'a rien à tester, voir
-// le brief. Exigences qui n'appartiennent PAS au brief mais s'imposent au vu du code déjà en
-// place (voir le rapport de tâche pour le détail) :
+// `UserDomain.bootstrapSuperAdmin` est la fonction que
+// `back/scripts/bootstrap-super-admin.ts` appelle — le script lui-même n'a rien à tester.
+// Exigences qui s'imposent au vu du code déjà en place :
 //   - un script hors HTTP n'a aucun tenant à poser : la fonction doit s'encadrer elle-même dans
 //     `tenantContext.runAsSystem`, sans compter sur son appelant pour le faire (comme
 //     `scheduleActivityLogCleanup`, application/starter.ts) ;
@@ -17,7 +16,7 @@ import { TenantContext } from '../../../main/utils/tenant-context'
 //     `/super-admin` n'écrit `deactivatedAt` non plus. Un super-admin désactivé n'a donc AUCUN
 //     chemin de retour ailleurs que par ce script : il doit pouvoir réactiver, pas seulement
 //     poser le drapeau ;
-//   - tour de correction 1 (revue) : les écritures `User` + `ActivityLog` d'un même appel
+//   - les écritures `User` + `ActivityLog` d'un même appel
 //     partagent une seule transaction Postgres, pour qu'une promotion ne puisse jamais survivre
 //     seule à l'échec de sa ligne de journal (voir le test « annule TOUTE la promotion… »
 //     ci-dessous).
@@ -272,7 +271,7 @@ describe('UserDomain.bootstrapSuperAdmin', () => {
     expect(transactionOpenCount.value).toBe(0) // rien à changer : pas la peine d'ouvrir une transaction
   })
 
-  // Tour de correction 1, Important n°1 (revue) : sans transaction, une ligne de journal en échec
+  // Sans transaction, une ligne de journal en échec
   // APRÈS une promotion réussie laissait le compte réellement promu tout en rejetant l'appel — et
   // l'idempotence (ci-dessus, délibérée) empêchait ensuite tout second appel de rejouer cette
   // branche, perdant pour toujours la trace de « qui a créé ce super-admin, et quand ».

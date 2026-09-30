@@ -236,7 +236,7 @@ describe('journal des consultations : le crochet sur le chemin reel', () => {
     })
   })
 
-  // ARBITRAGE DE LEO (tour de correction 1) : les echecs d'inscription sont JOURNALISES, avec
+  // ARBITRAGE DE LEO : les echecs d'inscription sont JOURNALISES, avec
   // une quatrieme action a eux. Le verifier sur le chemin reel, et pas seulement dans la liste —
   // c'est aussi ce qui prouve que la quatrieme valeur traverse le domaine et arrive en base,
   // dont la colonne `action` est une chaine libre.
@@ -262,7 +262,7 @@ describe('journal des consultations : le crochet sur le chemin reel', () => {
     })
   })
 
-  // LE POINT DE LA REVIEW FOCUS n°1. Non vide par construction : la comparaison porte sur un
+  // Non vide par construction : la comparaison porte sur un
   // dossier qui EXISTE et un qui n'existe pas, sur la MEME route et avec les MEMES droits. Sans
   // la premiere moitie, « zero ligne » ne distinguerait pas « le crochet a refuse l'erreur » de
   // « le crochet n'ecrit jamais rien ».
@@ -292,10 +292,10 @@ describe('journal des consultations : le crochet sur le chemin reel', () => {
     expect(lignes[0]?.patientId).toBe(patientBarriere.id)
   })
 
-  // LE POINT DE LA REVIEW FOCUS n°2. `request.tenant` est optionnel par construction : la
+  // `request.tenant` est optionnel par construction : la
   // resolution repond 404 AVANT le handler, donc il vaut `undefined` quand le crochet s'execute.
   //
-  // RESERVE, dite plutot que tue (voir le rapport) : sur CE chemin, la garde de statut suffit
+  // RESERVE, dite plutot que tue : sur CE chemin, la garde de statut suffit
   // deja a sortir, donc ce test n'isole PAS la garde `request.tenant` — aucune requete HTTP ne
   // peut produire « succes ET tenant absent » sous `tenantRoutes`. C'est le test unitaire
   // (access-log-hook.test.ts, « n ecrit rien, et ne leve pas, quand le tenant n est pas
@@ -331,14 +331,14 @@ describe('journal des consultations : le crochet sur le chemin reel', () => {
 })
 
 // ---------------------------------------------------------------------------
-// L'export (tache 4) : structurellement hors du filet ci-dessus -- `GET /patient/export` n'a
+// L'export : structurellement hors du filet ci-dessus -- `GET /patient/export` n'a
 // aucun identifiant de patient dans son URL. Dispositif dedie (voir
 // utils/access-log-routes.ts) : une seule ligne par export, avec le nombre de dossiers rendus
 // et les criteres de la requete, jamais un identifiant de patient (`patientId` est desormais
 // nullable en base -- voir la migration `make_patient_access_log_patient_id_nullable`).
 // ---------------------------------------------------------------------------
 
-describe('journal des consultations : l export, en une ligne (tache 4)', () => {
+describe('journal des consultations : l export, en une ligne', () => {
   let testApp: TestApp
   let etab: { id: string }
   let service: { id: string }
@@ -429,7 +429,7 @@ describe('journal des consultations : l export, en une ligne (tache 4)', () => {
     })
   })
 
-  // Review Focus n°2 (cahier des charges) : un export dont le filtre ne rend aucun dossier est
+  // Un export dont le filtre ne rend aucun dossier est
   // journalise quand meme, avec `exportCount: 0` -- jamais confondu avec « rien a journaliser ».
   it('trace un export qui ne rend aucun dossier', async () => {
     const res = await exporter('search=personne-de-ce-nom')
@@ -447,7 +447,7 @@ describe('journal des consultations : l export, en une ligne (tache 4)', () => {
 })
 
 // ---------------------------------------------------------------------------
-// Tache 5 (etape 4b) : les deux premieres LECTURES du journal — celle du coordinateur de
+// Les deux premieres LECTURES du journal — celle du coordinateur de
 // service (scope()) et celle de l administrateur d etablissement (establishmentScope()).
 // ---------------------------------------------------------------------------
 
@@ -459,7 +459,7 @@ describe('journal des consultations : l export, en une ligne (tache 4)', () => {
 const lignesDe = <T,>(res: { json: () => unknown }): T[] =>
   (res.json() as { data: T[] }).data
 
-describe('journal des consultations : le lire, par service et par etablissement (tache 5)', () => {
+describe('journal des consultations : le lire, par service et par etablissement', () => {
   let testApp: TestApp
   let etab: { id: string }
   let serviceA: { id: string }
@@ -537,7 +537,7 @@ describe('journal des consultations : le lire, par service et par etablissement 
 
     // Les lignes du journal elles-memes : ecrites directement en base plutot que rejouees via
     // le crochet (deja eprouve par les blocs precedents) — une par service, sur le MEME patient.
-    // `accesParOctroi` DIFFERE entre les deux lignes (tour de correction 1, tache 10) : une
+    // `accesParOctroi` DIFFERE entre les deux lignes : une
     // fixture ou les deux lignes portent la meme valeur ne prouverait rien sur le fait que la
     // route rend bien LA VALEUR DE CHAQUE LIGNE, plutot qu'une constante.
     await testDb.patientAccessLog.createMany({
@@ -630,7 +630,7 @@ describe('journal des consultations : le lire, par service et par etablissement 
   })
 
   // Le schema de reponse ne porte que l auteur, l action, la date, le service et
-  // `accesParOctroi` (tour de correction 1, tache 10 -- ce dernier champ etait exclu a tort,
+  // `accesParOctroi` (ce dernier champ etait exclu a tort,
   // voir le commentaire de `patientAccessLogEntryResponseSchema`) : jamais `patientId`,
   // `exportCount`, `exportFilters` ni les identifiants de tenant, meme si le depot les rend
   // tous.
@@ -682,7 +682,7 @@ describe('journal des consultations : le lire, par service et par etablissement 
     }
   })
 
-  // Tour de correction 1 (tache 10) : `accesParOctroi` distingue un acces de depannage (octroi
+  // `accesParOctroi` distingue un acces de depannage (octroi
   // temporaire de super-admin) d'un acces de soin ordinaire — l'interet meme d'un journal
   // d'audit. La fixture de ce bloc porte deux valeurs DIFFERENTES (service A: true, service B:
   // false) precisement pour que ce test ne soit pas vrai par vacuite : une reponse qui rendrait
@@ -959,7 +959,7 @@ describe('journal des consultations : le garde-fou de demarrage', () => {
     await fermer(app)
   }, 30000)
 
-  // LA SONDE DU RELECTEUR (tour de correction 1). Ces quatre routes sont posees EXACTEMENT comme
+  // LA SONDE. Ces quatre routes sont posees EXACTEMENT comme
   // celles du vrai routeur patient — chemin relatif sous le prefixe du greffon, `config.
   // permission` declaree — et portent un nom de parametre auquel personne n'avait pense. Avant
   // la detection structurelle, `GET /patient/:patient_id/sonde-revue` demarrait sans broncher,
@@ -1056,8 +1056,8 @@ describe('journal des consultations : le refus racine du hors-greffon', () => {
     30000,
   )
 
-  // TOUR DE CORRECTION 1 (revue, tache 5) — LA SONDE DU RELECTEUR, REJOUEE SUR L APPLICATION
-  // REELLE. La revue a demontre que renommer un parametre de route (`:patientID` -> `:patientRef`)
+  // LA MEME SONDE, REJOUEE SUR L APPLICATION
+  // REELLE. Renommer un parametre de route (`:patientID` -> `:patientRef`)
   // pour sortir des filets de `patientIdParamOf` etait un contournement, pas une exemption : une
   // route posee sous ce nom rendait un dossier complet, sans ecrire de ligne, et rien ne le
   // signalait. `EXEMPTED_ADMIN_PATIENT_ROUTES` a remplace le renommage — mais l'exemption ne

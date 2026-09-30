@@ -5,13 +5,12 @@ import Fastify, {
   type FastifyServerOptions,
 } from 'fastify'
 
-// Etape 4a, tache 4, tour de correction 1, Important n°2, PUIS tour de correction 2, CRITIQUE
-// (la valeur retenue au tour 1 — `trustProxy: 1` — etait une REGRESSION, mesuree sur de vraies
+// La valeur `trustProxy: 1` etait une REGRESSION, mesuree sur de vraies
 // connexions TCP : un appelant qui se connecte DIRECTEMENT obtenait l'adresse qu'il s'attribue
-// lui-meme via l'en-tete, rendant la limite de 10/minute totalement contournable). Ce fichier
+// lui-meme via l'en-tete, rendant la limite de 10/minute totalement contournable. Ce fichier
 // n'utilise donc plus `fastify.inject` (qui ne passe par aucune vraie socket) : il ouvre un VRAI
 // serveur TCP (`app.listen`) et lui envoie de VRAIES requetes HTTP (`node:http`), pour les deux
-// chemins que le tour 2 exige d'eprouver : par le proxy (l'adresse du client est retenue, la
+// chemins qu'il faut eprouver : par le proxy (l'adresse du client est retenue, la
 // limite la distingue) et en direct (l'adresse retenue est celle du socket, la limite mord).
 //
 // Valeur de production (`fastify-http-server.ts`) : `'loopback,linklocal,uniquelocal'` — une
@@ -21,7 +20,7 @@ import Fastify, {
 // a un nombre (`trustProxy: 1`), qui ne regarde jamais qui est le pair, seulement sa POSITION.
 const TRUSTED_RANGES = 'loopback,linklocal,uniquelocal'
 
-// Tour de correction 3, mineur : le test « en direct » utilisait `trustProxy: false` (confiance
+// Le test « en direct » utilisait `trustProxy: false` (confiance
 // TOTALEMENT desactivee) plutot que la valeur de production — la branche qui compte (« avec la
 // configuration reelle active, un pair HORS des plages configurees n'est pas honore ») n'etait
 // donc pas couverte par ce test-la. Ce fichier ne peut pas reproduire LITTERALEMENT la valeur de
@@ -110,9 +109,9 @@ const buildRealServer = async (
 describe('confiance dans le proxy (request.ip), dont depend la clef de la limite de debit — sur de vraies connexions TCP', () => {
   // `app.close()` est systematiquement dans un `finally` : une premiere version de ce fichier ne
   // fermait le serveur qu'apres les assertions, et une assertion en echec laissait alors une
-  // vraie socket TCP ouverte — jest restait alors accroche indefiniment (constate par execution,
-  // pendant la demonstration du rouge du tour 2 : le fichier sabote a fait tourner le processus
-  // jusqu'au delai, tue explicitement plutot que laisse en fond).
+  // vraie socket TCP ouverte — jest restait alors accroche indefiniment (constate par execution
+  // en sabotant le fichier : le processus tournait jusqu'au delai, tue explicitement plutot que
+  // laisse en fond).
   it("sans confiance dans le proxy, un X-Forwarded-For fabrique est ignore : request.ip reste l'adresse REELLE du socket (le pair TCP, pas une plage de confiance)", async () => {
     const { app, port } = await buildRealServer(false)
     try {
@@ -136,7 +135,7 @@ describe('confiance dans le proxy (request.ip), dont depend la clef de la limite
     }
   })
 
-  // Chemin n°1 exige par le tour 2 : « par le proxy, l'adresse du client est bien retenue et la
+  // Premier chemin a couvrir : « par le proxy, l'adresse du client est bien retenue et la
   // limite le distingue ». Quatre clients DIFFERENTS derriere le meme proxy (quatre
   // X-Forwarded-For distincts, une seule requete chacun) : aucun ne doit heriter du compteur d'un
   // autre.
@@ -175,14 +174,13 @@ describe('confiance dans le proxy (request.ip), dont depend la clef de la limite
     }
   })
 
-  // Chemin n°2 exige par le tour 2 : « en direct avec un en-tete fabrique, l'adresse retenue est
+  // Second chemin a couvrir : « en direct avec un en-tete fabrique, l'adresse retenue est
   // celle du socket et la limite mord ». Un appelant qui se connecte SANS passer par une plage de
   // confiance et change son en-tete a CHAQUE requete (ce qu'un attaquant ferait pour tenter de
   // contourner la limite) reste sur la MEME adresse reelle : la limite mord quand meme, à la
-  // meme requete qu'un attaquant qui n'aurait jamais changé d'adresse. C'est la régression du
-  // tour 1 : avec `trustProxy: 1`, ces quatre requetes passaient TOUTES (l'en-tete etait honore,
-  // donc chacune avait sa propre clef) — montré rouge par exécution, puis rétabli (voir
-  // task-4-report.md).
+  // meme requete qu'un attaquant qui n'aurait jamais changé d'adresse. C'est la régression evitee :
+  // avec `trustProxy: 1`, ces quatre requetes passeraient TOUTES (l'en-tete serait honore,
+  // donc chacune aurait sa propre clef).
   it("en direct (hors plage de confiance -- avec la CONFIGURATION active, pas la confiance desactivee), un en-tete fabrique DIFFERENT a chaque requete ne deplace rien : la limite mord comme si l'appelant n'avait jamais change d'adresse", async () => {
     const { app, port } = await buildRealServer(
       PRODUCTION_RANGES_WITHOUT_LOOPBACK,
@@ -203,7 +201,7 @@ describe('confiance dans le proxy (request.ip), dont depend la clef de la limite
   // Ce que la confiance PAR PLAGE ne protege pas — nomme dans un commentaire plutot que dans un
   // test qui ne pourrait rien affirmer de plus qu'une tautologie (une vraie topologie Docker a
   // deux niveaux ne se simule pas dans ce fichier) : elle suppose que tout pair TCP appartenant a
-  // une plage privee EST le proxy legitime. Tour de correction 3 : ce residu est PLUS LARGE que
+  // une plage privee EST le proxy legitime. Ce residu est PLUS LARGE que
   // « un autre conteneur deja present sur le reseau Docker `proxy` » — mesure par execution
   // (voir `fastify-http-server.ts`) : un appelant qui atteint le port PUBLIE du conteneur `back`,
   // que ce soit LOCALEMENT ou via l'adresse RESEAU DE L'HOTE lui-meme, voit son adresse traduite
@@ -215,5 +213,5 @@ describe('confiance dans le proxy (request.ip), dont depend la clef de la limite
   // production est vulnerable par ce vecteur pour un appelant public ordinaire, ni de l'exclure.
   // C'est pourquoi le remede retenu (la plage, pas une adresse exacte non plus fixee par Docker)
   // reste le bon compromis SANS toucher `deploy/compose.yaml` (question d'infrastructure, pas de
-  // code — voir task-4-report.md).
+  // code).
 })

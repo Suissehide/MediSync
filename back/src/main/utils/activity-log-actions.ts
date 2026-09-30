@@ -7,8 +7,8 @@
 //     hors du bus, parce qu'un SCRIPT peut se terminer avant qu'une ecriture « tire et oublie »
 //     n'aboutisse (voir le commentaire de cette methode) — deux valeurs, celles-ci.
 //
-// POURQUOI ELLES SONT NOMMEES ICI PLUTOT QU'ECRITES EN CLAIR A LEUR SITE D'ECRITURE (revue
-// finale de branche, Important n°2). Le vocabulaire complet du journal d'activite vaut DIX-NEUF
+// POURQUOI ELLES SONT NOMMEES ICI PLUTOT QU'ECRITES EN CLAIR A LEUR SITE D'ECRITURE.
+// Le vocabulaire complet du journal d'activite vaut DIX-NEUF
 // valeurs, et le front doit savoir les nommer toutes sur l'ecran plateforme. Les dix-sept
 // premieres se lisent depuis `AppEvents` ; ces deux-la n'etaient lisibles nulle part sans
 // chercher un litteral au milieu d'une transaction. Le contrat entre les deux depots

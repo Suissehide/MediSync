@@ -38,8 +38,8 @@ const meRouter: FastifyPluginAsync = (fastify) => {
           newPassword,
         })
       }
-      // `liveGrantsForUser` ne lit plus `isSuperAdmin` sur `updated` (tour de correction 1,
-      // tâche 8) : `AccessGrantRepository.findForUser` relit ce drapeau lui-même, frais, à
+      // `liveGrantsForUser` ne lit plus `isSuperAdmin` sur `updated` :
+      // `AccessGrantRepository.findForUser` relit ce drapeau lui-même, frais, à
       // l'instant de l'appel — la fraîcheur ne dépend donc plus de l'ordre entre les deux
       // lectures. `updated` reste nécessaire pour `toMeResponse` (l'arbre des appartenances).
       const updated = await userDomain.findByID(userID)

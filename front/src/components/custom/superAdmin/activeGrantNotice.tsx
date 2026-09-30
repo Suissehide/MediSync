@@ -9,10 +9,8 @@ interface ActiveGrantNoticeProps {
   establishmentId: string
 }
 
-// Tour de correction 1, Important n°2 : `GET /me` dit déjà, par
-// établissement, si l'accès du compte connecté vient d'un octroi
-// (`origine: 'octroi'`) — le front le lisait sans jamais s'en servir.
-// Affiché sur l'écran de détail : ça décourage le doublon (le back refuse
+// `GET /me` dit déjà, par établissement, si l'accès du compte connecté vient d'un octroi
+// (`origine: 'octroi'`). Affiché sur l'écran de détail : ça décourage le doublon (le back refuse
 // de toute façon un second octroi actif sur le même établissement,
 // `ACTIVE_GRANT_EXISTS`), et ça rend `useSuperAdminRevokeGrant` atteignable
 // pour l'octroi que CE client vient de créer (voir `useLastGrantStore.ts`

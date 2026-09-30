@@ -10,7 +10,7 @@ import {
   TenantScopeMissingError,
 } from '../../../main/utils/tenant-errors'
 
-// Reproduit task-5-re-review-3.md C1 : les 29 methodes de depot sans `catch` (dont tout le depot
+// Les 29 methodes de depot sans `catch` (dont tout le depot
 // `activityLog`) laissent une erreur Prisma brute tomber directement dans ce gestionnaire —
 // exactement la meme chaine de normalizers que celle enregistree dans `fastify-http-server.ts`.
 const CLINICAL_VALUE = 'MOTIF-CLINIQUE-CONFIDENTIEL'
@@ -41,14 +41,14 @@ const LOG_LEVELS: LogLevel[] = [
 
 // Un harnais minimal du meme contrat que `FastifyInstance`/`FastifyRequest`/`FastifyReply`, pour
 // executer `buildErrorHandler` sans monter de vrai serveur Fastify. Les SIX niveaux de log
-// possibles sont cables, pas seulement `debug`/`error` (task-5-re-review-4.md, I1) : les tests
+// possibles sont cables, pas seulement `debug`/`error` : les tests
 // precedents ne gardaient que le canal auquel leur auteur pensait, si bien qu'une fuite ecrite
 // par un canal voisin (`warn`, `info`, ...) passait au vert. `callsByLevel` garde le detail par
 // niveau pour les assertions structurelles (« exactement 2 lignes `error`, 0 `debug` ») ;
 // `allCalls` est la liste fusionnee de tous les niveaux, celle qu'une assertion anti-fuite doit
 // boucler dessus pour garder une PROPRIETE plutot qu'un CAS. `accept` choisit la branche du
 // gestionnaire exercee (JSON par defaut, HTML sur demande — la branche HTML n'etait exercee par
-// aucun test avant ce tour).
+// aucun test avant celui-ci).
 const buildHarness = (accept: 'json' | 'html' = 'json') => {
   const callsByLevel: Record<LogLevel, string[]> = {
     trace: [],
@@ -93,7 +93,7 @@ const buildHarness = (accept: 'json' | 'html' = 'json') => {
   }
 }
 
-// `prismaErrorNormalizer` a ete retire (task-5-re-review-3.md, tour 5, voir
+// `prismaErrorNormalizer` a ete retire (voir
 // fastify-http-server.ts) : c'etait du code mort qui, une fois "corrige", aurait recopie
 // `error.message` pour toute PrismaClientKnownRequestError non attrapee. La chaine reelle ne
 // compte donc plus que ces deux normalizers.
@@ -127,12 +127,12 @@ describe('la chaine de normalizers ne renvoie jamais une valeur soumise pour une
     expect(body.error).not.toContain(CLINICAL_VALUE)
 
     expect(harness.callsByLevel.error).toHaveLength(2)
-    // Le gestionnaire ne journalise plus rien a `debug` (task-5-re-review-3.md, m3 : l'ancien
+    // Le gestionnaire ne journalise plus rien a `debug` (l'ancien
     // `this.log.debug(error)` recopiait l'erreur brute, message et pile compris, et n'etait
     // eteint qu'a `LOG_LEVEL=INFO` — pas a `DEBUG`, le reglage qu'on active justement pour
     // enqueter). Le diagnostic de `error` suffit deja ; `debug` n'ajoute plus rien qui puisse fuir.
     expect(harness.callsByLevel.debug).toHaveLength(0)
-    // Et rien sur AUCUN canal (task-5-re-review-4.md, I1) : une ligne ajoutee demain sur `warn`
+    // Et rien sur AUCUN canal : une ligne ajoutee demain sur `warn`
     // ou `info` doit faire rougir ce test, pas seulement une ligne ajoutee sur `error`.
     for (const line of harness.allCalls) {
       expect(line).not.toContain(CLINICAL_VALUE)
@@ -140,7 +140,7 @@ describe('la chaine de normalizers ne renvoie jamais une valeur soumise pour une
     }
   })
 
-  it('meme requete, demandee en HTML : le corps rendu (branche HTML du gestionnaire) ne fuit pas non plus (task-5-re-review-4.md, I1)', () => {
+  it('meme requete, demandee en HTML : le corps rendu (branche HTML du gestionnaire) ne fuit pas non plus', () => {
     const harness = buildHarness('html')
 
     const body = runHandler(buildUnexpectedPrismaError(), harness)
@@ -216,7 +216,7 @@ describe('la chaine de normalizers ne renvoie jamais une valeur soumise pour une
     )
   })
 
-  // task-5-re-review-4.md, I3 : le message d'une TenantScopeMissingError/TenantContextMissingError
+  // Le message d'une TenantScopeMissingError/TenantContextMissingError
   // (`utils/tenant-errors.ts`) est, au meme titre que celui d'un Boom, un texte que notre propre
   // code a ecrit — jamais recopie d'une entree soumise. `back/CLAUDE.md` promet que ce message
   // "names the entry to add" : sans lui au journal, le garde-fou de tenant refuse une requete
@@ -249,11 +249,11 @@ describe('la chaine de normalizers ne renvoie jamais une valeur soumise pour une
     )
   })
 
-  // task-5-re-review-3.md, I1 : le tour precedent ne testait la chaine qu'avec une
+  // Les tests precedents ne testaient la chaine qu'avec une
   // PrismaClientValidationError et une Error nue — jamais une PrismaClientKnownRequestError,
   // pourtant la seule qui porte `meta` et la seule dont un depot (boomErrorFromPrismaError) tire
   // des messages 404/409 rendus au client. Ici, la meme erreur atteint le gestionnaire *sans*
-  // etre passee par boomErrorFromPrismaError (exactement le cas d'un depot sans `catch`, C1) :
+  // etre passee par boomErrorFromPrismaError (exactement le cas d'un depot sans `catch`) :
   // `meta` peut porter une valeur soumise (constraint, target...) et ne doit jamais atteindre ni
   // le corps ni le journal.
   it('une PrismaClientKnownRequestError non attrapee (meta compris) ne fuit ni dans le corps, ni dans le journal, quel que soit le code', () => {

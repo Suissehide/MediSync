@@ -4,7 +4,7 @@ import { patientFormOpts } from './form.patient.ts'
 
 // Champs de `Patient` (décision 2.3 de la spec) : partagés entre les services de
 // l'établissement, comme le bloc « Identité partagée » de `identite.patient.tsx` — d'où la même
-// mention dans les deux titres ci-dessous. Avant ce correctif (tâche 11, revue, Important I2), cet
+// mention dans les deux titres ci-dessous. Avant ce correctif, cet
 // onglet était l'un des trois à afficher ces champs sans dire à qui ils appartiennent.
 export const IdentityFields = withForm({
   ...patientFormOpts,

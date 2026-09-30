@@ -1,14 +1,13 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
 
-// Le risque le plus grave de la tache 3 (etape 4a) n'est pas qu'`effectiveMemberships` soit
+// Le risque le plus grave n'est pas qu'`effectiveMemberships` soit
 // fausse, c'est qu'elle soit calculee a deux endroits : `/me` alimente le selecteur du front, la
 // resolution de tenant decide de ce qu'une requete a le droit de lire. Si les deux divergent d'un
 // cheveu, il existera un acces que l'un accorde et que l'autre refuse — ou l'inverse, ce qui est
 // pire.
 //
-// CE QUE CE FICHIER GARANTIT, DIT SANS EXAGERER (tour de correction 1, tache 3 — la revue a
-// montre qu'une version precedente de ce commentaire pretendait plus) : il relit les sources,
+// CE QUE CE FICHIER GARANTIT, DIT SANS EXAGERER : il relit les sources,
 // a la maniere de `front/src/test/lecture-directe-du-cache.test.ts`, et surveille TROIS choses,
 // chacune par un NOM :
 //
@@ -17,12 +16,12 @@ import { join, relative, sep } from 'node:path'
 //      silence) ;
 //   B. tout appel a `.findForUser(` (la lecture du repository) — attrape un appelant qui
 //      court-circuiterait `liveGrantsForUser` (accessGrant.domain.ts). Le garde superadmin
-//      lui-meme vit desormais DANS `AccessGrantRepository.findForUser` (tour de correction 1,
-//      tache 8) : `liveGrantsForUser` n'est plus qu'un relais vers un `userId`, precisement pour
+//      lui-meme vit desormais DANS `AccessGrantRepository.findForUser` :
+//      `liveGrantsForUser` n'est plus qu'un relais vers un `userId`, precisement pour
 //      qu'aucun appelant ne puisse plus PRETENDRE un `isSuperAdmin` — la verite est relue fraiche
 //      a chaque appel, jamais acceptee d'un argument ;
-//   C. tout appel a `liveGrantsForUser(` — ajoute au tour de correction 2 (tache 8). Ce que ce
-//      relais ne ferme PAS, et que la revue a signale a ce tour : reduire son argument a un seul
+//   C. tout appel a `liveGrantsForUser(`. Ce que ce
+//      relais ne ferme PAS : reduire son argument a un seul
 //      `userId` ne l'empeche pas d'etre un id de TIERS — rien ici ne distingue un appel legitime
 //      (toujours l'id de l'appelant AUTHENTIFIE, jamais soumis) d'un appel qui passerait un id
 //      arbitraire, et un tel appel obtiendrait les octrois de ce tiers. Surveiller le NOM de ses
@@ -34,8 +33,7 @@ import { join, relative, sep } from 'node:path'
 // d'appartenances (ou relirait le repository via un detour — alias, `.bind`, cle de crochet
 // calculee) SANS JAMAIS PRONONCER CES TROIS NOMS echapperait entierement a ce test — et, pour C.,
 // un appel LEGITIMEMENT NOMME mais dont l'argument serait un id de tiers plutot que celui de
-// l'appelant echapperait aussi : ce risque-la reste porte au journal de decisions de l'etape
-// (tache 14), pas ferme ici. Fermer le reste exigerait soit une analyse de flux de donnees
+// l'appelant echapperait aussi : ce risque-la reste non ferme ici. Fermer le reste exigerait soit une analyse de flux de donnees
 // complete, soit une instrumentation a l'execution (intercepter reellement les fonctions
 // exportees) — un chantier a part, hors de ce qu'une lecture statique des sources peut
 // honnetement garantir (meme limite, deja actee, que `runAsSystem-unicite.test.ts`, fin de
@@ -64,8 +62,8 @@ const AUTORISES_EFFECTIVE_MEMBERSHIPS = [
 
 // Seul appelant legitime de `AccessGrantRepositoryInterface.findForUser` : `liveGrantsForUser`,
 // qui relaie TOUJOURS l'appel — c'est `AccessGrantRepository.findForUser` elle-meme qui decide,
-// en interne, si la lecture va plus loin qu'une verification fraiche du drapeau (tour de
-// correction 1, tache 8 ; voir accessGrant.domain.ts). Tout autre appel contournerait ce relais.
+// en interne, si la lecture va plus loin qu'une verification fraiche du drapeau (voir
+// accessGrant.domain.ts). Tout autre appel contournerait ce relais.
 const AUTORISES_FIND_FOR_USER = [
   {
     fichier: 'domain/accessGrant.domain.ts',
@@ -75,7 +73,7 @@ const AUTORISES_FIND_FOR_USER = [
   },
 ]
 
-// Tour de correction 2 (tache 8) : les cinq seuls appelants legitimes de `liveGrantsForUser` —
+// Les cinq seuls appelants legitimes de `liveGrantsForUser` —
 // toujours avec l'id de l'appelant AUTHENTIFIE (`request.currentUser.id`, ou un id fraichement
 // relu depuis la meme session), jamais un id soumis. Voir le commentaire en tete de fichier,
 // point C., pour ce que cette liste ferme et ce qu'elle ne ferme pas.
@@ -178,12 +176,10 @@ describe('unicite des appelants nommes d effectiveMemberships et de findForUser'
     )
   })
 
-  // Tour de correction 2 (tache 8) : voir le commentaire en tete de fichier, point C., pour ce
+  // Voir le commentaire en tete de fichier, point C., pour ce
   // que ce test ferme et ce qu'il ne ferme pas.
-  // Revue finale de l'etape 4a, mineur : ce titre disait « cinq emplacements » — or
   // `AUTORISES_LIVE_GRANTS_FOR_USER` (ci-dessus) nomme TROIS fichiers, pour CINQ appels au total
-  // (2 + 2 + 1). « Emplacement » se lisait comme un fichier ; c'est le nombre d'appels qu'il
-  // fallait dire.
+  // (2 + 2 + 1).
   it('liveGrantsForUser n est appelee, dans back/src/main, qu aux trois fichiers autorises (cinq appels au total)', () => {
     verifieUnicite(
       appelsTrouves(APPEL_LIVE_GRANTS_FOR_USER, false),

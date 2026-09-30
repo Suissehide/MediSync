@@ -19,7 +19,7 @@ export type MeResponse = {
       role: ServiceRole
       soignantId: string | null
     }[]
-    // Dit à l'écran d'où vient cet accès — voir R2 (décisions étape 4a) et
+    // Dit à l'écran d'où vient cet accès — voir
     // `EffectiveMembership.origine` (types/domain/accessGrant.domain.interface.ts). Sans ce
     // champ, `/me` ne pourrait jamais distinguer un établissement où l'utilisateur est
     // réellement membre d'un établissement qu'un octroi temporaire lui ouvre.
@@ -34,11 +34,11 @@ export type MeResponse = {
 // jamais diverger de ce que `/me` affiche — voir
 // src/test/unit/domain/effectiveMemberships-seul-appelant.test.ts.
 //
-// `grants` N'A PAS de valeur par défaut, à dessein (tour de correction 1, tâche 3) : un défaut à
+// `grants` N'A PAS de valeur par défaut, à dessein : un défaut à
 // `[]` compilait sans broncher pour un appelant qui aurait oublié de lire les octrois —
-// exactement la divergence que cette tâche existe pour empêcher (démontré par la revue :
-// `routes/me.ts` omettant les octrois passait toute la suite existante, sans qu'aucun test ne
-// s'en aperçoive). `tsc` (voir back/CLAUDE.md) force donc chaque appelant de `src/main`, y
+// exactement le genre de divergence qu'un défaut masquerait (`routes/me.ts` omettant les octrois
+// passait toute la suite existante, sans qu'aucun test ne s'en aperçoive). `tsc` (voir
+// back/CLAUDE.md) force donc chaque appelant de `src/main`, y
 // compris un futur, à dire explicitement « aucun octroi » (`[]`). `now` garde un défaut
 // (`new Date()`) : aucun appelant ne peut se tromper en omettant l'heure réelle, ce n'est pas la
 // même classe de risque.
@@ -68,10 +68,14 @@ export const toMeResponse = (
         const membership = membershipByEstablishment.get(
           effective.establishmentId,
         )
-        const serviceById = new Map(
+        // Noms lus sur les services de l'établissement : un ADMIN y accède sans y être affecté.
+        const serviceNameById = new Map(
+          (membership?.establishment.services ?? []).map((s) => [s.id, s.name]),
+        )
+        const soignantByService = new Map(
           (membership?.serviceMemberships ?? []).map((sm) => [
             sm.serviceId,
-            { name: sm.service.name, soignantId: sm.soignantId },
+            sm.soignantId,
           ]),
         )
         return {
@@ -80,9 +84,9 @@ export const toMeResponse = (
           role: effective.role,
           services: effective.services.map((service) => ({
             id: service.id,
-            name: serviceById.get(service.id)?.name ?? '',
+            name: serviceNameById.get(service.id) ?? '',
             role: service.role,
-            soignantId: serviceById.get(service.id)?.soignantId ?? null,
+            soignantId: soignantByService.get(service.id) ?? null,
           })),
           origine: effective.origine,
         }

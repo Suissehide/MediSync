@@ -31,7 +31,7 @@ class ActivityLogDomain implements ActivityLogDomainInterface {
     return this.activityLogRepository.findAllPlatformWide(filters)
   }
 
-  // Retention parametrable (tache 8, etape 4b) : `config.logRetentionMonths`, jamais douze en
+  // Retention parametrable : `config.logRetentionMonths`, jamais douze en
   // dur. Calcul duplique a l'identique dans `PatientAccessLogDomain.cleanup` plutot que
   // factorise -- un sabotage qui remet douze en dur dans UN SEUL des deux domaines doit faire
   // rougir le test de CE domaine seul, jamais les deux ensemble.
