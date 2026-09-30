@@ -22,6 +22,7 @@ import {
   PopupTitle,
   PopupTrigger,
 } from '../../ui/popup.tsx'
+import RolesHelp from './rolesHelp.tsx'
 
 interface EditMemberFormProps {
   member: Member
@@ -189,6 +190,8 @@ function EditMemberForm({ member }: EditMemberFormProps) {
             <p className="text-sm text-text-dark font-medium">
               {member.user.email}
             </p>
+
+            <RolesHelp />
 
             <form.AppField name="role">
               {(field) => (
