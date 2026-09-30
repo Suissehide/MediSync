@@ -270,7 +270,7 @@ const MenuDesServices = ({
                     type="button"
                     onClick={() => ouvrir(administration)}
                     title="Administration de l'établissement"
-                    className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left outline-none hover:bg-primary/10 focus-visible:bg-primary/10"
+                    className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left outline-none cursor-pointer hover:bg-primary/10 focus-visible:bg-primary/10"
                   >
                     {entete}
                   </button>
@@ -280,7 +280,7 @@ const MenuDesServices = ({
                   {entete}
                 </div>
               )}
-              <PopoverSubGroup className="ml-[22px] mb-1">
+              <PopoverSubGroup className="ml-[22px] mt-1 mb-1">
                 {groupe.destinations.map((destination) => {
                   if (destination.kind !== 'service') {
                     return null
@@ -294,7 +294,7 @@ const MenuDesServices = ({
                         type="button"
                         onClick={() => ouvrir(destination)}
                         aria-current={estCourant ? 'true' : undefined}
-                        className={`flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-none hover:bg-primary/10 focus-visible:bg-primary/10 ${
+                        className={`flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-none cursor-pointer hover:bg-primary/10 focus-visible:bg-primary/10 ${
                           estCourant
                             ? 'bg-primary/10 font-semibold text-primary'
                             : 'text-text-dark'
@@ -323,7 +323,7 @@ const MenuDesServices = ({
             <PopoverClose asChild>
               <Link
                 to="/super-admin"
-                className="flex items-center gap-2 rounded px-2 py-1.5 text-[13px] text-text-light outline-none hover:bg-primary/10 focus-visible:bg-primary/10"
+                className="flex items-center gap-2 rounded px-2 py-1.5 text-[13px] text-text-light outline-none cursor-pointer hover:bg-primary/10 focus-visible:bg-primary/10"
               >
                 <Globe className="w-3.5 h-3.5" />
                 Gérer les établissements (Plateforme)
