@@ -241,46 +241,49 @@ function EditMemberForm({ member }: EditMemberFormProps) {
               {/* Chef d'établissement : coordinateur de tous les services, les
               rôles choisis restent en mémoire (et enregistrés) s'il repasse
               Membre. */}
-              <form.Subscribe selector={(state) => state.values.role}>
-                {(role) =>
-                  !servicesPending &&
-                  !servicesError &&
-                  sortedServices.map((service) => {
-                    const label =
-                      service.deactivatedAt !== null
-                        ? `${service.name} (désactivé)`
-                        : service.name
-                    return (
-                      <div
-                        key={service.id}
-                        className="border-l-2 border-border pl-3.5"
-                      >
-                        {role === 'ADMIN' ? (
-                          <AdminServiceRole
-                            id={`serviceRoles.${service.id}`}
-                            label={label}
-                          />
-                        ) : (
-                          <form.AppField name={`serviceRoles.${service.id}`}>
-                            {(field) => (
-                              <field.Select
-                                label={label}
-                                options={SERVICE_ROLE_OPTIONS}
-                                clearable={false}
-                                description={
-                                  SERVICE_ROLE_DESCRIPTION[
-                                    field.state.value as ServiceRole
-                                  ]
-                                }
-                              />
-                            )}
-                          </form.AppField>
-                        )}
-                      </div>
-                    )
-                  })
-                }
-              </form.Subscribe>
+              {!servicesPending &&
+                !servicesError &&
+                sortedServices.length > 0 && (
+                  <div className="space-y-4 border-l-2 border-border pl-3.5">
+                    <form.Subscribe selector={(state) => state.values.role}>
+                      {(role) =>
+                        sortedServices.map((service) => {
+                          const label =
+                            service.deactivatedAt !== null
+                              ? `${service.name} (désactivé)`
+                              : service.name
+                          return (
+                            <div key={service.id}>
+                              {role === 'ADMIN' ? (
+                                <AdminServiceRole
+                                  id={`serviceRoles.${service.id}`}
+                                  label={label}
+                                />
+                              ) : (
+                                <form.AppField
+                                  name={`serviceRoles.${service.id}`}
+                                >
+                                  {(field) => (
+                                    <field.Select
+                                      label={label}
+                                      options={SERVICE_ROLE_OPTIONS}
+                                      clearable={false}
+                                      description={
+                                        SERVICE_ROLE_DESCRIPTION[
+                                          field.state.value as ServiceRole
+                                        ]
+                                      }
+                                    />
+                                  )}
+                                </form.AppField>
+                              )}
+                            </div>
+                          )
+                        })
+                      }
+                    </form.Subscribe>
+                  </div>
+                )}
             </div>
           </form>
         </PopupBody>
