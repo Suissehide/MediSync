@@ -216,7 +216,11 @@ describe('EditMemberForm — affecter un membre a un service', () => {
     // Change UNIQUEMENT le role de Neurologie (svcB), par un vrai clic dans
     // le VRAI menu deroulant.
     await userEvent.click(screen.getByLabelText('Neurologie'))
-    await userEvent.click(await screen.findByText('Secrétariat'))
+    // Radix double le menu d'un `<select>` natif caché dans un `<form>` :
+    // on vise l'option du menu ouvert, pas le texte.
+    await userEvent.click(
+      await screen.findByRole('option', { name: 'Secrétariat' }),
+    )
 
     // Immediatement apres le clic, AVANT toute soumission : Cardiologie
     // (svcA), jamais touchee, doit toujours afficher SON role d'origine.
