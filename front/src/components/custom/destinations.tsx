@@ -109,7 +109,7 @@ export const TitreEtablissement = ({
       aria-label={`${titre} — administration de l'établissement`}
       aria-current={courant ? 'true' : undefined}
       title="Administration de l'établissement"
-      className={`mt-1 flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm font-semibold outline-none transition-colors hover:bg-primary/20 focus-visible:bg-primary/20 ${
+      className={`mt-1 flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm font-semibold outline-none transition-colors cursor-pointer hover:bg-primary/20 focus-visible:bg-primary/20 ${
         courant ? 'bg-primary/10 text-primary' : 'text-text-dark'
       }`}
     >

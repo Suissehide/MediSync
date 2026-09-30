@@ -129,7 +129,7 @@ const EtablissementsAdministres = ({
                 to="/e/$establishmentId/admin/members"
                 params={{ establishmentId: etablissement.id }}
                 aria-current={estCourant ? 'true' : undefined}
-                className={`flex items-center gap-2 rounded px-2 py-1.5 text-sm outline-none hover:bg-primary/10 focus-visible:bg-primary/10 ${
+                className={`flex items-center gap-2 rounded px-2 py-1.5 text-sm outline-none cursor-pointer hover:bg-primary/10 focus-visible:bg-primary/10 ${
                   estCourant
                     ? 'bg-primary/10 font-semibold text-primary'
                     : 'text-text-dark'

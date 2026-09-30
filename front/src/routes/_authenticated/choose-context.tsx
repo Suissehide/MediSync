@@ -45,7 +45,7 @@ function ChooseContext() {
     <button
       key={cleDestination(destination)}
       type="button"
-      className="flex items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm text-text-dark transition-colors hover:bg-primary/10 focus-visible:bg-primary/10 outline-none"
+      className="flex items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm text-text-dark transition-colors cursor-pointer hover:bg-primary/10 focus-visible:bg-primary/10 outline-none"
       onClick={() => ouvrir(destination)}
     >
       {avecIcone && (
@@ -89,13 +89,12 @@ function ChooseContext() {
                   onOuvrir={
                     groupe.administration
                       ? () =>
-                          groupe.administration &&
-                          ouvrir(groupe.administration)
+                          groupe.administration && ouvrir(groupe.administration)
                       : undefined
                   }
                 />
                 {groupe.destinations.length > 0 && (
-                  <div className="ml-6 mb-1 flex flex-col gap-0.5">
+                  <div className="ml-6 mt-1 mb-1 flex flex-col gap-0.5">
                     <LibelleServices />
                     {groupe.destinations.map((destination) =>
                       entree(destination, false),
