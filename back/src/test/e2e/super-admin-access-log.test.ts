@@ -17,6 +17,13 @@ import {
 // lit a l'echelle de la PLATEFORME entiere : sans un second etablissement reellement peuple, rien
 // ne distinguerait « la route ignore le filtre d'etablissement » de « il n'y a qu'un
 // etablissement de toute facon ».
+// ENVELOPPE PAGINEE depuis le 2026-10-01 : la reponse n'est plus un tableau nu mais
+// `{ data, total, page, pageSize }` (§8 de docs/multi-tenant/decisions-etape-4b.md, fermee ce
+// jour-la). Ce raccourci evite de recopier `.data` dans quarante assertions dont le sujet est le
+// FILTRE, pas la pagination ; les tests de pagination, eux, lisent `total`/`page` explicitement.
+const lignes = <T,>(res: { json: () => unknown }): T[] =>
+  (res.json() as { data: T[] }).data
+
 describe('GET /super-admin/access-log', () => {
   let testApp: TestApp
   let etabA: { id: string }
@@ -127,11 +134,9 @@ describe('GET /super-admin/access-log', () => {
     })
     expect(res.statusCode).toBe(200)
     expect(
-      res
-        .json()
-        .some(
-          (l: { userID: string }) => l.userID === 'cli:bootstrap-super-admin',
-        ),
+      lignes<{ userID: string }>(res).some(
+        (l) => l.userID === 'cli:bootstrap-super-admin',
+      ),
     ).toBe(true)
   })
 
@@ -166,7 +171,7 @@ describe('GET /super-admin/access-log', () => {
     expect(res.statusCode).toBe(200)
     expect(
       new Set(
-        res.json().map((l: { establishmentId: string }) => l.establishmentId),
+        lignes<{ establishmentId: string }>(res).map((l) => l.establishmentId),
       ),
     ).toEqual(new Set([etabA.id, etabB.id]))
   })
@@ -178,7 +183,7 @@ describe('GET /super-admin/access-log', () => {
       cookies: cookiesSuperAdmin,
     })
     expect(res.statusCode).toBe(200)
-    const body = res.json() as { establishmentId: string }[]
+    const body = lignes<{ establishmentId: string }>(res)
     expect(body.length).toBeGreaterThan(0)
     expect(body.every((l) => l.establishmentId === etabA.id)).toBe(true)
   })
@@ -190,7 +195,7 @@ describe('GET /super-admin/access-log', () => {
       cookies: cookiesSuperAdmin,
     })
     expect(res.statusCode).toBe(200)
-    const body = res.json() as { userID: string }[]
+    const body = lignes<{ userID: string }>(res)
     expect(body.length).toBeGreaterThan(0)
     expect(body.every((l) => l.userID === 'u-coordinateur-b')).toBe(true)
   })
@@ -206,7 +211,7 @@ describe('GET /super-admin/access-log', () => {
       cookies: cookiesSuperAdmin,
     })
     expect(res.statusCode).toBe(200)
-    const body = res.json() as { userID: string }[]
+    const body = lignes<{ userID: string }>(res)
     expect(body.length).toBeGreaterThan(0)
     expect(body.every((l) => l.userID === 'u-coordinateur-b')).toBe(true)
   })
@@ -221,7 +226,7 @@ describe('GET /super-admin/access-log', () => {
       cookies: cookiesSuperAdmin,
     })
     expect(res.statusCode).toBe(200)
-    expect(res.json()).toEqual([])
+    expect(lignes(res)).toEqual([])
   })
 
   it('filtre par action', async () => {
@@ -231,7 +236,7 @@ describe('GET /super-admin/access-log', () => {
       cookies: cookiesSuperAdmin,
     })
     expect(res.statusCode).toBe(200)
-    const body = res.json() as { action: string }[]
+    const body = lignes<{ action: string }>(res)
     expect(body.length).toBeGreaterThan(0)
     expect(body.every((l) => l.action === 'export')).toBe(true)
   })
@@ -247,10 +252,10 @@ describe('GET /super-admin/access-log', () => {
       cookies: cookiesSuperAdmin,
     })
     expect(res.statusCode).toBe(200)
-    const body = res.json() as {
+    const body = lignes<{
       establishmentId: string
       accesParOctroi: boolean
-    }[]
+    }>(res)
     const ligneA = body.find((l) => l.establishmentId === etabA.id)
     const ligneB = body.find((l) => l.establishmentId === etabB.id)
     expect(ligneA?.accesParOctroi).toBe(true)
@@ -267,7 +272,7 @@ describe('GET /super-admin/access-log', () => {
       cookies: cookiesSuperAdmin,
     })
     expect(res.statusCode).toBe(200)
-    const body = res.json() as { accesParOctroi: boolean | null }[]
+    const body = lignes<{ accesParOctroi: boolean | null }>(res)
     expect(body.length).toBeGreaterThan(0)
     expect(body.every((l) => l.accesParOctroi === null)).toBe(true)
   })
@@ -279,17 +284,19 @@ describe('GET /super-admin/access-log', () => {
   // en plus de la cle exacte : un nom de patient qui fuiterait sous une cle imprevue serait
   // invisible a une assertion qui ne regarderait que les cles connues.
   // ------------------------------------------------------------------------------------
-  // LA BORNE DE 200 LIGNES, ET CE QU'ELLE REND INATTEIGNABLE SANS FILTRE SERVEUR
-  // (revue finale de branche, Important n°1).
+  // AU-DELA DE LA PREMIERE PAGE : CE QUE LE FILTRE SERVEUR ATTEINT, ET CE QUE LA PAGINATION
+  // ATTEINT DEPUIS LE 2026-10-01.
   // ------------------------------------------------------------------------------------
   //
-  // `PLATFORM_ACCESS_LOG_LIMIT` vaut 200, le tri est `createdAt desc`. Les deux cas ci-dessous
-  // peuplent le journal AU-DELA de cette borne, puis cherchent une ligne qui est, par
-  // construction, hors de la premiere page : un filtre applique dans le navigateur ne pourrait
-  // JAMAIS la trouver, puisqu'il ne voit que les 200 lignes deja rendues. Ce sont donc les deux
-  // cas que l'ecran ne pouvait pas satisfaire avant ce correctif, et que le filtre serveur
-  // satisfait.
-  describe('au-dela de la borne de 200 lignes', () => {
+  // CE BLOC A CHANGE DE SUJET, ET LES DEUX SUJETS COMPTENT. Il eprouvait `PLATFORM_ACCESS_LOG_LIMIT`
+  // (200, `createdAt desc`) : une ligne ancienne tombait hors de la reponse, et le filtre serveur
+  // etait la SEULE facon de la ramener — un filtre navigateur, lui, ne voit que ce qui est deja
+  // arrive. Cette borne dure n'existe plus (§8 de docs/multi-tenant/decisions-etape-4b.md, fermee),
+  // remplacee par une pagination. Les cas de filtre restent : ils prouvent toujours que le filtre
+  // est evalue EN BASE, ce qui n'a rien perdu de son importance. S'y ajoutent les cas qui prouvent
+  // ce que la borne rendait impossible : atteindre cette ligne ancienne EN PAGINANT, et savoir
+  // qu'elle existe (`total`).
+  describe('au-dela de la premiere page', () => {
     const ANCIEN = new Date('2020-01-01T00:00:00.000Z')
 
     beforeAll(async () => {
@@ -323,16 +330,123 @@ describe('GET /super-admin/access-log', () => {
       })
     })
 
-    it('la page non filtree ne porte PAS la ligne ancienne — la borne mord reellement', async () => {
+    it('la premiere page ne porte PAS la ligne ancienne, mais le total dit qu elle existe', async () => {
       const res = await testApp.app.inject({
         method: 'GET',
         url: '/super-admin/access-log?source=activite',
         cookies: cookiesSuperAdmin,
       })
       expect(res.statusCode).toBe(200)
-      const body = res.json() as { userID: string }[]
-      expect(body.length).toBe(200)
-      expect(body.some((l) => l.userID === 'u-tres-ancien')).toBe(false)
+      const body = res.json() as {
+        data: { userID: string }[]
+        total: number
+        page: number
+        pageSize: number
+      }
+      // Taille de page par defaut du schema (50), pas la borne dure de 200 qui n'existe plus.
+      expect(body.pageSize).toBe(50)
+      expect(body.page).toBe(1)
+      expect(body.data.length).toBe(50)
+      expect(body.data.some((l) => l.userID === 'u-tres-ancien')).toBe(false)
+      // CE QUE LA BORNE DURE NE DISAIT PAS : une reponse de 200 lignes ne distinguait pas « il y en
+      // a 200 » de « il y en a 200 000 ». `total` compte TOUT le perimetre demande, hors page.
+      expect(body.total).toBeGreaterThan(250)
+    })
+
+    // LE CAS QUE LA BORNE DURE RENDAIT IMPOSSIBLE, et la raison d'etre de cette pagination : la
+    // ligne la plus ANCIENNE du perimetre est atteignable, sans aucun filtre, en demandant la
+    // derniere page. Le numero de cette page est DERIVE de `total`, jamais ecrit en dur : une
+    // constante ici se desynchroniserait du volume de la fixture a la premiere ligne ajoutee, et le
+    // test deviendrait vrai par hasard.
+    it('la derniere page porte la ligne la plus ancienne, sans aucun filtre', async () => {
+      const premiere = await testApp.app.inject({
+        method: 'GET',
+        url: '/super-admin/access-log?source=activite&pageSize=100',
+        cookies: cookiesSuperAdmin,
+      })
+      const { total } = premiere.json() as { total: number }
+      const derniere = Math.ceil(total / 100)
+      expect(derniere).toBeGreaterThan(1)
+
+      const res = await testApp.app.inject({
+        method: 'GET',
+        url: `/super-admin/access-log?source=activite&pageSize=100&page=${derniere}`,
+        cookies: cookiesSuperAdmin,
+      })
+      expect(res.statusCode).toBe(200)
+      const body = res.json() as {
+        data: { userID: string }[]
+        page: number
+      }
+      expect(body.page).toBe(derniere)
+      expect(body.data.some((l) => l.userID === 'u-tres-ancien')).toBe(true)
+    })
+
+    // Deux pages consecutives ne se recouvrent pas et ne sautent rien : c'est l'arithmetique
+    // `skip = (page - 1) * pageSize`. Un `skip` egal a `page` (l'erreur classique) ferait se
+    // recouvrir les deux pages presque entierement, et ce test-la rougirait.
+    it('deux pages consecutives ne partagent aucune ligne', async () => {
+      const [p1, p2] = await Promise.all([
+        testApp.app.inject({
+          method: 'GET',
+          url: '/super-admin/access-log?source=activite&pageSize=10&page=1',
+          cookies: cookiesSuperAdmin,
+        }),
+        testApp.app.inject({
+          method: 'GET',
+          url: '/super-admin/access-log?source=activite&pageSize=10&page=2',
+          cookies: cookiesSuperAdmin,
+        }),
+      ])
+      const ids1 = lignes<{ id: string }>(p1).map((l) => l.id)
+      const ids2 = lignes<{ id: string }>(p2).map((l) => l.id)
+      expect(ids1).toHaveLength(10)
+      expect(ids2).toHaveLength(10)
+      expect(ids1.filter((id) => ids2.includes(id))).toEqual([])
+    })
+
+    // Sans plafond, `pageSize=100000` referait exactement la lecture non bornee que cette
+    // pagination remplace — la borne de requete a change de place, elle n'a pas disparu.
+    it('refuse une taille de page au-dela de 100', async () => {
+      const res = await testApp.app.inject({
+        method: 'GET',
+        url: '/super-admin/access-log?source=activite&pageSize=500',
+        cookies: cookiesSuperAdmin,
+      })
+      expect(res.statusCode).toBe(400)
+    })
+
+    // LE DECOMPTE SUIT LE PERIMETRE DEMANDE, jamais la table entiere : un `total` calcule sur un
+    // `where` plus large annoncerait des pages vides, et la table du front proposerait des numeros
+    // de page qui ne rendent rien. Le filtre ci-dessous ne retient qu'UNE ligne.
+    it('total compte le perimetre demande, pas toute la table', async () => {
+      const res = await testApp.app.inject({
+        method: 'GET',
+        url: '/super-admin/access-log?source=activite&compte=ancienne',
+        cookies: cookiesSuperAdmin,
+      })
+      expect(res.statusCode).toBe(200)
+      const body = res.json() as { data: unknown[]; total: number }
+      expect(body.total).toBe(1)
+      expect(body.data).toHaveLength(1)
+    })
+
+    // `source=acces` PAGINE AUSSI, et c'est cette lecture-la qui a exige de RE-DECLARER
+    // `PatientAccessLog.count` dans `SUPERADMIN_OPERATIONS` (tenant-guard.ts). SABOTAGE EPROUVE :
+    // retirer cette entree fait repondre 500 a ce test (le garde-fou refuse le decompte avant
+    // d'atteindre la base), jamais un `total` de zero.
+    it('source=acces rend aussi un total, decompte en base', async () => {
+      const res = await testApp.app.inject({
+        method: 'GET',
+        url: '/super-admin/access-log?source=acces&pageSize=1',
+        cookies: cookiesSuperAdmin,
+      })
+      expect(res.statusCode).toBe(200)
+      const body = res.json() as { data: unknown[]; total: number }
+      expect(body.data).toHaveLength(1)
+      // Deux lignes de consultation dans la fixture, sur deux etablissements : le total les voit
+      // toutes les deux alors que la page n'en porte qu'une.
+      expect(body.total).toBe(2)
     })
 
     it('le filtre compte, lui, la trouve — ce qu un filtre navigateur ne pouvait pas', async () => {
@@ -342,7 +456,7 @@ describe('GET /super-admin/access-log', () => {
         cookies: cookiesSuperAdmin,
       })
       expect(res.statusCode).toBe(200)
-      const body = res.json() as { userID: string }[]
+      const body = lignes<{ userID: string }>(res)
       expect(body.length).toBe(1)
       expect(body[0]?.userID).toBe('u-tres-ancien')
     })
@@ -352,18 +466,16 @@ describe('GET /super-admin/access-log', () => {
     // sort de la page, et AUCUN filtre ne permettait de la viser — la liste deroulante de
     // l'ecran ne propose que des etablissements REELS. La documentation presentait pourtant sa
     // lisibilite comme ACQUISE (« l'un des deux trous que cet ecran ferme »).
-    it('la ligne du script d amorcage sort de la page non filtree, mais reste visable', async () => {
+    it('la ligne du script d amorcage sort de la premiere page, mais reste visable', async () => {
       const sansFiltre = await testApp.app.inject({
         method: 'GET',
         url: '/super-admin/access-log?source=activite',
         cookies: cookiesSuperAdmin,
       })
       expect(
-        sansFiltre
-          .json()
-          .some(
-            (l: { userID: string }) => l.userID === 'cli:bootstrap-super-admin',
-          ),
+        lignes<{ userID: string }>(sansFiltre).some(
+          (l) => l.userID === 'cli:bootstrap-super-admin',
+        ),
       ).toBe(false)
 
       const cible = await testApp.app.inject({
@@ -372,10 +484,10 @@ describe('GET /super-admin/access-log', () => {
         cookies: cookiesSuperAdmin,
       })
       expect(cible.statusCode).toBe(200)
-      const body = cible.json() as {
+      const body = lignes<{
         userID: string
         establishmentId: string | null
-      }[]
+      }>(cible)
       expect(body.length).toBeGreaterThan(0)
       expect(body.every((l) => l.establishmentId === null)).toBe(true)
       expect(body.some((l) => l.userID === 'cli:bootstrap-super-admin')).toBe(
@@ -407,7 +519,7 @@ describe('GET /super-admin/access-log', () => {
     expect(res.body).not.toContain('Nom-A-Confidentiel')
     expect(res.body).not.toContain('Prenom-B-Confidentiel')
     expect(res.body).not.toContain('Nom-B-Confidentiel')
-    const body = res.json() as { patientId: string | null }[]
+    const body = lignes<{ patientId: string | null }>(res)
     expect(
       body.some(
         (l) => typeof l.patientId === 'string' && l.patientId.length > 0,

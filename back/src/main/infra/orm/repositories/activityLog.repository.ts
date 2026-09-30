@@ -2,12 +2,12 @@ import type { IocContainer } from '../../../types/application/ioc'
 import type { PrimaTransactionClient } from '../../../types/infra/orm/client'
 import type {
   ActivityLogCreateEntityRepo,
-  ActivityLogEntityRepo,
   ActivityLogFindManyParams,
   ActivityLogFindManyResult,
   ActivityLogRepositoryInterface,
   ActivityLogScopeFilters,
   PlatformAccessLogFilters,
+  PlatformAccessLogPage,
 } from '../../../types/infra/orm/repositories/activityLog.repository.interface'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { TenantContextInterface } from '../../../types/utils/tenant-context'
@@ -15,19 +15,6 @@ import { platformCompteFilter } from '../../../utils/platform-access-log-filters
 import type { PostgresPrismaClient } from '../postgres-client'
 
 const PAGE_SIZE = 50
-
-// Écran de diagnostic plateforme (tâche 6, étape 4b), pas un export complet — même esprit que
-// `ACTIVITY_LOG_DETAIL_LIMIT` (establishment.repository.ts), qui borne le journal d'UN
-// établissement pour la même raison.
-//
-// CE QUE CETTE BORNE REND INATTEIGNABLE, dit ici plutôt que découvert (revue finale de branche,
-// Important n°1) : le tri est `createdAt desc`, donc au-delà de 200 lignes dans le périmètre
-// demandé, les PLUS ANCIENNES sortent de la réponse — et aucune pagination ne permet d'y
-// revenir. Ce sont précisément les lignes du script d'amorçage (`establishmentId: null`), dont
-// la documentation présentait la lisibilité comme acquise. D'où le filtre `sansEtablissement`
-// ci-dessous : il resserre le périmètre à ces lignes-là, qui tiennent alors très largement sous
-// la borne. Voir « Ce qui reste ouvert » (§8), docs/multi-tenant/decisions-etape-4b.md.
-const PLATFORM_ACCESS_LOG_LIMIT = 200
 
 class ActivityLogRepository implements ActivityLogRepositoryInterface {
   private readonly prisma: PostgresPrismaClient
@@ -155,6 +142,11 @@ class ActivityLogRepository implements ActivityLogRepositoryInterface {
   // `establishmentId` précis), ni le tenant ordinaire (`findMany` ci-dessus, qui n'existe que
   // sous un tenant).
   //
+  // PAGINÉE DEPUIS LE 2026-10-01, ce qui ferme la limite §8 de
+  // `docs/multi-tenant/decisions-etape-4b.md` : la borne dure de 200 lignes
+  // (`PLATFORM_ACCESS_LOG_LIMIT`, supprimée avec ce commentaire) rendait les plus anciennes lignes
+  // du périmètre demandé INATTEIGNABLES, sans rien pour y revenir.
+  //
   // `await` À L'INTÉRIEUR du rappel — mais lisez `utils/tenant-context.ts#runAsSuperAdmin` avant
   // de recopier cette forme ailleurs. ÉNONCÉ EXACT (revue finale de branche, Important n°5 — ce
   // commentaire portait encore l'énoncé intermédiaire, « ce qui tient la portée est l'enrobage
@@ -169,28 +161,40 @@ class ActivityLogRepository implements ActivityLogRepositoryInterface {
   // lisibilité.
   async findAllPlatformWide(
     filters: PlatformAccessLogFilters,
-  ): Promise<ActivityLogEntityRepo[]> {
+  ): Promise<PlatformAccessLogPage> {
+    const where = {
+      // Trois états, jamais deux à la fois — la valeur réservée `SANS_ETABLISSEMENT` du
+      // schéma HTTP arrive ici sous la forme du booléen, pas d'un identifiant, et elle
+      // l'emporte si jamais les deux venaient à coexister (voir le commentaire de
+      // `PlatformAccessLogFilters`). Ce filtre était, avant la pagination, la SEULE façon
+      // d'atteindre les lignes du script d'amorçage une fois le journal au-delà de 200 entrées :
+      // elles n'ont pas d'établissement, et ce sont les plus anciennes de la table. Il reste le
+      // chemin le plus court vers elles, il n'est plus le seul.
+      ...(filters.sansEtablissement
+        ? { establishmentId: null }
+        : filters.establishmentId
+          ? { establishmentId: filters.establishmentId }
+          : {}),
+      ...platformCompteFilter(filters.compte),
+      ...(filters.action ? { action: filters.action } : {}),
+    }
     try {
       return await this.tenantContext.runAsSuperAdmin(async () => {
-        return await this.prisma.activityLog.findMany({
-          where: {
-            // Trois états, jamais deux à la fois — la valeur réservée `SANS_ETABLISSEMENT` du
-            // schéma HTTP arrive ici sous la forme du booléen, pas d'un identifiant, et elle
-            // l'emporte si jamais les deux venaient à coexister (voir le commentaire de
-            // `PlatformAccessLogFilters`). C'est la SEULE façon d'atteindre les lignes du script
-            // d'amorçage une fois le journal au-delà de 200 entrées : elles n'ont pas
-            // d'établissement, et ce sont les plus anciennes de la table.
-            ...(filters.sansEtablissement
-              ? { establishmentId: null }
-              : filters.establishmentId
-                ? { establishmentId: filters.establishmentId }
-                : {}),
-            ...platformCompteFilter(filters.compte),
-            ...(filters.action ? { action: filters.action } : {}),
-          },
-          orderBy: { createdAt: 'desc' },
-          take: PLATFORM_ACCESS_LOG_LIMIT,
-        })
+        // LES DEUX LECTURES PARTENT ENSEMBLE, ET DANS LE MÊME `runAsSuperAdmin` : `count` est une
+        // opération de `SUPERADMIN_OPERATIONS` comme `findMany`, elle a besoin du même contexte.
+        // Un `Promise.all` construit les deux promesses AVANT de rendre la main, donc les deux
+        // lectures du contexte surviennent avant le premier point de suspension — ce que la règle
+        // du dépôt exige (voir le commentaire ci-dessus, et `back/CLAUDE.md`).
+        const [data, total] = await Promise.all([
+          this.prisma.activityLog.findMany({
+            where,
+            orderBy: { createdAt: 'desc' },
+            skip: (filters.page - 1) * filters.pageSize,
+            take: filters.pageSize,
+          }),
+          this.prisma.activityLog.count({ where }),
+        ])
+        return { data, total }
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({

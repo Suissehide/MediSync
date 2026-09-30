@@ -2,12 +2,12 @@ import type { Config } from '../types/application/config'
 import type { IocContainer } from '../types/application/ioc'
 import type { ActivityLogDomainInterface } from '../types/domain/activityLog.domain.interface'
 import type {
-  ActivityLogEntityRepo,
   ActivityLogFindManyParams,
   ActivityLogFindManyResult,
   ActivityLogRepositoryInterface,
   ActivityLogScopeFilters,
   PlatformAccessLogFilters,
+  PlatformAccessLogPage,
 } from '../types/infra/orm/repositories/activityLog.repository.interface'
 
 class ActivityLogDomain implements ActivityLogDomainInterface {
@@ -27,7 +27,7 @@ class ActivityLogDomain implements ActivityLogDomainInterface {
 
   findAllPlatformWide(
     filters: PlatformAccessLogFilters,
-  ): Promise<ActivityLogEntityRepo[]> {
+  ): Promise<PlatformAccessLogPage> {
     return this.activityLogRepository.findAllPlatformWide(filters)
   }
 

@@ -1,8 +1,8 @@
 import { apiUrl } from '../constants/config.constant.ts'
 import { handleHttpError } from '../libs/httpErrorHandler.ts'
 import type {
-  SuperAdminAccessLogEntry,
   SuperAdminAccessLogQuery,
+  SuperAdminAccessLogResponse,
 } from '../types/superAdminAccessLog.ts'
 import { fetchWithAuth } from './fetchWithAuth.ts'
 
@@ -25,13 +25,22 @@ const buildQuery = (params: SuperAdminAccessLogQuery): string => {
   if (params.action) {
     query.set('action', params.action)
   }
+  // Pagination (2026-10-01) : absents, ils ne sont pas envoyés du tout — c'est le back qui pose
+  // les défauts (1 et 50), une seule fois, dans son schéma Zod. Même forme que les deux autres
+  // journaux (`api/activityLog.api.ts`, `api/accessLog.api.ts`).
+  if (params.page) {
+    query.set('page', String(params.page))
+  }
+  if (params.pageSize) {
+    query.set('pageSize', String(params.pageSize))
+  }
   return query.toString()
 }
 
 export const SuperAdminAccessLogApi = {
   getAll: async (
     params: SuperAdminAccessLogQuery,
-  ): Promise<SuperAdminAccessLogEntry[]> => {
+  ): Promise<SuperAdminAccessLogResponse> => {
     const response = await fetchWithAuth(
       `${SUPER_ADMIN_URL()}/access-log?${buildQuery(params)}`,
       { method: 'GET' },

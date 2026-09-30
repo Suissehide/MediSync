@@ -451,6 +451,14 @@ describe('journal des consultations : l export, en une ligne (tache 4)', () => {
 // service (scope()) et celle de l administrateur d etablissement (establishmentScope()).
 // ---------------------------------------------------------------------------
 
+// ENVELOPPE PAGINEE depuis le 2026-10-01 : les deux lectures rendent `{ data, total, page,
+// pageSize }` au lieu d'un tableau nu — elles n'avaient AUCUNE borne, et un dossier tres consulte
+// rendait tout son journal d'une traite. Ce raccourci evite de recopier `.data` dans les assertions
+// dont le sujet est le CLOISONNEMENT ou la FORME DES LIGNES ; la pagination elle-meme est eprouvee
+// dans son propre describe, plus bas.
+const lignesDe = <T,>(res: { json: () => unknown }): T[] =>
+  (res.json() as { data: T[] }).data
+
 describe('journal des consultations : le lire, par service et par etablissement (tache 5)', () => {
   let testApp: TestApp
   let etab: { id: string }
@@ -598,9 +606,13 @@ describe('journal des consultations : le lire, par service et par etablissement 
       cookies: cookiesCoordinateurA,
     })
     expect(res.statusCode).toBe(200)
-    expect(res.json().map((l: { serviceId: string }) => l.serviceId)).toEqual([
-      serviceA.id,
-    ])
+    expect(
+      lignesDe<{ serviceId: string }>(res).map((l) => l.serviceId),
+    ).toEqual([serviceA.id])
+    // Le TOTAL suit le meme cloisonnement que la page : un decompte qui perdrait `serviceId`
+    // annoncerait a ce service le volume de consultations d'un autre, alors meme que la page
+    // resterait juste — une fuite d'un bit, mais une fuite.
+    expect((res.json() as { total: number }).total).toBe(1)
   })
 
   it('un admin d etablissement voit les acces de TOUS les services de son etablissement', async () => {
@@ -611,7 +623,9 @@ describe('journal des consultations : le lire, par service et par etablissement 
     })
     expect(res.statusCode).toBe(200)
     expect(
-      new Set(res.json().map((l: { serviceId: string }) => l.serviceId)),
+      new Set(
+        lignesDe<{ serviceId: string }>(res).map((l) => l.serviceId),
+      ),
     ).toEqual(new Set([serviceA.id, serviceB.id]))
   })
 
@@ -627,8 +641,8 @@ describe('journal des consultations : le lire, par service et par etablissement 
       cookies: cookiesCoordinateurA,
     })
     expect(res.statusCode).toBe(200)
-    const [ligne] = res.json()
-    expect(Object.keys(ligne).sort()).toEqual(
+    const [ligne] = lignesDe<Record<string, unknown>>(res)
+    expect(Object.keys(ligne ?? {}).sort()).toEqual(
       [
         'accesParOctroi',
         'action',
@@ -653,7 +667,7 @@ describe('journal des consultations : le lire, par service et par etablissement 
       cookies: cookiesAdmin,
     })
     expect(res.statusCode).toBe(200)
-    for (const ligne of res.json()) {
+    for (const ligne of lignesDe<Record<string, unknown>>(res)) {
       expect(Object.keys(ligne).sort()).toEqual(
         [
           'accesParOctroi',
@@ -680,10 +694,10 @@ describe('journal des consultations : le lire, par service et par etablissement 
       cookies: cookiesAdmin,
     })
     expect(resAdmin.statusCode).toBe(200)
-    const lignes = resAdmin.json() as {
+    const lignes = lignesDe<{
       serviceId: string
       accesParOctroi: boolean
-    }[]
+    }>(resAdmin)
     const ligneA = lignes.find((l) => l.serviceId === serviceA.id)
     const ligneB = lignes.find((l) => l.serviceId === serviceB.id)
     expect(ligneA?.accesParOctroi).toBe(true)
@@ -697,7 +711,7 @@ describe('journal des consultations : le lire, par service et par etablissement 
       cookies: cookiesCoordinateurA,
     })
     expect(resService.statusCode).toBe(200)
-    const [ligneService] = resService.json() as { accesParOctroi: boolean }[]
+    const [ligneService] = lignesDe<{ accesParOctroi: boolean }>(resService)
     expect(ligneService?.accesParOctroi).toBe(true)
   })
 
@@ -724,6 +738,143 @@ describe('journal des consultations : le lire, par service et par etablissement 
       cookies: cookiesMembre,
     })
     expect(res.statusCode).toBe(404)
+  })
+
+  // ------------------------------------------------------------------------------------
+  // PAGINATION (2026-10-01) : ces deux lectures n'avaient AUCUNE borne.
+  // ------------------------------------------------------------------------------------
+  //
+  // Ni page, ni nombre de lignes : un dossier tres consulte rendait TOUT son journal en une seule
+  // reponse — et ce journal gagne une ligne a chaque ouverture du dossier, la purge de retention
+  // (douze mois par defaut) etant la seule chose qui le rogne. Les deux routes sont eprouvees, pas
+  // seulement celle de service : elles ont deux schemas de reponse et deux perimetres distincts,
+  // donc deux preuves distinctes (meme raisonnement que les deux tests de forme ci-dessus).
+  describe('pagination des deux lectures', () => {
+    // 60 lignes de plus sur le service A, dates strictement croissantes : le tri `createdAt desc`
+    // est alors TOTAL, sans departage arbitraire — sans quoi l'ordre des pages serait non
+    // deterministe et ce bloc intermittent.
+    beforeAll(async () => {
+      await testDb.patientAccessLog.createMany({
+        data: Array.from({ length: 60 }, (_, i) => ({
+          establishmentId: etab.id,
+          serviceId: serviceA.id,
+          patientId: patient.id,
+          userID: 'u-volume',
+          // Prenom INDEXE : c'est le seul champ de la reponse qui permette de nommer UNE ligne
+          // precise (le schema ne rend ni `userID` ni `patientId`). Sans lui, « la derniere page
+          // porte la plus ancienne » ne serait verifiable que par un comptage, qui ne dit rien de
+          // l'ORDRE.
+          userFirstName: `Volume-${i}`,
+          userLastName: 'Consultations',
+          action: 'dossier.ouvert',
+          accesParOctroi: false,
+          createdAt: new Date(Date.UTC(2026, 0, 2, 0, i)),
+        })),
+      })
+    })
+
+    it('la lecture de service pagine, et son total compte tout le perimetre du service', async () => {
+      const res = await testApp.app.inject({
+        method: 'GET',
+        url: tenantUrl(
+          etab.id,
+          serviceA.id,
+          `/patient/${patient.id}/acces?pageSize=25`,
+        ),
+        cookies: cookiesCoordinateurA,
+      })
+      expect(res.statusCode).toBe(200)
+      const body = res.json()
+      expect(body).toMatchObject({ page: 1, pageSize: 25 })
+      expect(body.data).toHaveLength(25)
+      // 60 lignes ajoutees ici + la ligne du service A posee par la fixture du describe parent.
+      // JAMAIS 61 + celles du service B : le decompte porte le meme `where` que la page.
+      expect(body.total).toBe(61)
+    })
+
+    it('deux pages consecutives ne partagent aucune ligne', async () => {
+      const page = (n: number) =>
+        testApp.app.inject({
+          method: 'GET',
+          url: tenantUrl(
+            etab.id,
+            serviceA.id,
+            `/patient/${patient.id}/acces?pageSize=10&page=${n}`,
+          ),
+          cookies: cookiesCoordinateurA,
+        })
+      const [p1, p2] = await Promise.all([page(1), page(2)])
+      const ids = (res: { json: () => { data: { id: string }[] } }) =>
+        res.json().data.map((l) => l.id)
+      expect(ids(p1)).toHaveLength(10)
+      expect(ids(p2)).toHaveLength(10)
+      expect(ids(p1).filter((id) => ids(p2).includes(id))).toEqual([])
+    })
+
+    // LA PROPRIETE QUI JUSTIFIE TOUT CE BLOC : la ligne la plus ANCIENNE est atteignable. Elle est
+    // en queue du tri decroissant, donc sur la derniere page — et `Volume-0` porte la plus petite
+    // date des soixante. L'assertion est LIEE A CETTE LIGNE-LA, jamais a un simple comptage : un
+    // `skip` faux rendrait onze lignes tout aussi bien, mais pas celles-ci.
+    it('la derniere page porte la ligne la plus ancienne, jamais la premiere', async () => {
+      const page = (n: number) =>
+        testApp.app.inject({
+          method: 'GET',
+          url: tenantUrl(
+            etab.id,
+            serviceA.id,
+            `/patient/${patient.id}/acces?pageSize=50&page=${n}`,
+          ),
+          cookies: cookiesCoordinateurA,
+        })
+      const [p1, p2] = await Promise.all([page(1), page(2)])
+      expect(p2.statusCode).toBe(200)
+      const prenoms = (res: { json: () => { data: { userFirstName: string }[] } }) =>
+        res.json().data.map((l) => l.userFirstName)
+
+      expect(prenoms(p2)).toHaveLength(11)
+      expect(prenoms(p2)).toContain('Volume-0')
+      expect(prenoms(p1)).not.toContain('Volume-0')
+      // Et la plus RECENTE est bien en tete de la premiere page : c'est la ligne de la fixture du
+      // describe parent, ecrite sans `createdAt` (donc a l'instant du test), la seule a porter
+      // `accesParOctroi: true`.
+      expect(p1.json().data[0]).toMatchObject({
+        userFirstName: 'Ada',
+        accesParOctroi: true,
+      })
+    })
+
+    it('la lecture d etablissement pagine aussi, sur TOUS les services', async () => {
+      const res = await testApp.app.inject({
+        method: 'GET',
+        url: adminUrl(etab.id, `/patients/${patient.id}/acces?pageSize=5`),
+        cookies: cookiesAdmin,
+      })
+      expect(res.statusCode).toBe(200)
+      const body = res.json()
+      expect(body.data).toHaveLength(5)
+      // 61 pour le service A, plus la ligne du service B : le perimetre de cette route est bien
+      // plus large que celui de la route de service, et son total le dit.
+      expect(body.total).toBe(62)
+    })
+
+    it('refuse une taille de page au-dela de 100, sur les deux routes', async () => {
+      const service = await testApp.app.inject({
+        method: 'GET',
+        url: tenantUrl(
+          etab.id,
+          serviceA.id,
+          `/patient/${patient.id}/acces?pageSize=500`,
+        ),
+        cookies: cookiesCoordinateurA,
+      })
+      const admin = await testApp.app.inject({
+        method: 'GET',
+        url: adminUrl(etab.id, `/patients/${patient.id}/acces?pageSize=500`),
+        cookies: cookiesAdmin,
+      })
+      expect(service.statusCode).toBe(400)
+      expect(admin.statusCode).toBe(400)
+    })
   })
 })
 

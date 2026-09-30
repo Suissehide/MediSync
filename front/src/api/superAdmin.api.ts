@@ -5,6 +5,7 @@ import type {
   CreateEstablishmentInput,
   CreateEstablishmentResult,
   CreateGrantInput,
+  EstablishmentActivityLogResponse,
   EstablishmentDetail,
   EstablishmentListItem,
   ReissueAccessLinkResult,
@@ -49,6 +50,41 @@ export const SuperAdminApi = {
     )
     if (!response.ok) {
       handleHttpError(response, {}, "Impossible de récupérer l'établissement")
+    }
+    return response.json()
+  },
+
+  // Le journal d'activité de l'établissement, paginé (2026-10-01). Il
+  // arrivait DANS `getEstablishment`, borné à 100 lignes et sans rien pour
+  // aller au-delà ni même pour savoir qu'il y avait un au-delà. Même remarque
+  // que ci-dessus sur `establishmentId` : une DONNÉE du chemin, pas un tenant
+  // implicite.
+  getEstablishmentActivityLog: async ({
+    establishmentId,
+    page,
+    pageSize,
+  }: {
+    establishmentId: string
+    page?: number
+    pageSize?: number
+  }): Promise<EstablishmentActivityLogResponse> => {
+    const query = new URLSearchParams()
+    if (page) {
+      query.set('page', String(page))
+    }
+    if (pageSize) {
+      query.set('pageSize', String(pageSize))
+    }
+    const response = await fetchWithAuth(
+      `${SUPER_ADMIN_URL()}/establishments/${establishmentId}/activity-log?${query}`,
+      { method: 'GET' },
+    )
+    if (!response.ok) {
+      handleHttpError(
+        response,
+        {},
+        "Impossible de récupérer le journal de l'établissement",
+      )
     }
     return response.json()
   },

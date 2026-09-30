@@ -41,6 +41,12 @@ type Filtres = {
 // Délai avant d'envoyer la saisie du champ « Compte » au serveur — voir son usage plus bas.
 const DELAI_SAISIE_MS = 300
 
+// Pagination côté serveur (2026-10-01) : ferme la limite §8 de
+// `docs/multi-tenant/decisions-etape-4b.md`. La lecture était tronquée à 200 lignes, sans rien pour
+// remonter plus loin — et sans rien, non plus, pour DIRE qu'il y avait plus loin. Même taille de
+// première page que le journal d'administration d'établissement (`admin/activity-log.tsx`).
+const PREMIERE_PAGE = { pageIndex: 0, pageSize: 25 }
+
 const FILTRES_PAR_DEFAUT: Filtres = {
   // Le journal des CONSULTATIONS par défaut : c'est celui où `accesParOctroi` distingue
   // l'anomalie qu'un super-admin cherche en premier sur cet écran (voir
@@ -53,6 +59,15 @@ const FILTRES_PAR_DEFAUT: Filtres = {
 
 function SuperAdminAccessLogPage() {
   const [filtres, setFiltres] = useState<Filtres>(FILTRES_PAR_DEFAUT)
+  const [pagination, setPagination] = useState(PREMIERE_PAGE)
+
+  // Tout changement de filtre (ou de journal) ramène à la première page : la page 7 d'un périmètre
+  // plus étroit n'existe peut-être pas, et une requête pour cette page-là rendrait un tableau vide
+  // indiscernable d'un « aucune entrée ». Même raisonnement que `admin/activity-log.tsx`.
+  const revenirAuDebut = () =>
+    setPagination((courant) =>
+      courant.pageIndex === 0 ? courant : { ...courant, pageIndex: 0 },
+    )
 
   // LE FILTRE « COMPTE » EST DIFFÉRÉ AVANT D'ÊTRE ENVOYÉ. Il est devenu un filtre SERVEUR (voir
   // juste en dessous) : sans ce délai, chaque frappe déclencherait une lecture de toute la table
@@ -63,10 +78,18 @@ function SuperAdminAccessLogPage() {
   // local, et sans dépendance nouvelle.
   const [compteApplique, setCompteApplique] = useState('')
   useEffect(() => {
-    const minuteur = setTimeout(
-      () => setCompteApplique(filtres.compte.trim()),
-      DELAI_SAISIE_MS,
-    )
+    const minuteur = setTimeout(() => {
+      // Les deux mises à jour partent ensemble : une seule requête, sur la première page. Cet effet
+      // ne tourne que si la saisie a changé ; au montage, la page est déjà la première.
+      //
+      // `setPagination` EN CLAIR ICI, et non l'appel à `revenirAuDebut` : cette fonction est
+      // recréée à chaque rendu, donc la déclarer en dépendance relancerait ce minuteur à chaque
+      // rendu. Même forme, pour la même raison, que `admin/activity-log.tsx`.
+      setCompteApplique(filtres.compte.trim())
+      setPagination((courant) =>
+        courant.pageIndex === 0 ? courant : { ...courant, pageIndex: 0 },
+      )
+    }, DELAI_SAISIE_MS)
     return () => clearTimeout(minuteur)
   }, [filtres.compte])
 
@@ -79,14 +102,16 @@ function SuperAdminAccessLogPage() {
   // n'acceptait qu'un `userID` EXACT, que personne ne tape de mémoire, et n'était donc appelé par
   // personne. Il accepte désormais les deux formes que cette saisie peut produire (identifiant
   // exact ou fragment de prénom/nom), et c'est LUI qui est branché ici.
-  const { entries, isPending, error } = useSuperAdminAccessLogQuery({
+  const { data, isPending, error } = useSuperAdminAccessLogQuery({
     source: filtres.source,
     establishmentId: filtres.establishmentId || undefined,
     compte: compteApplique || undefined,
     action: filtres.action || undefined,
+    page: pagination.pageIndex + 1,
+    pageSize: pagination.pageSize,
   })
 
-  const rows = entries ?? []
+  const rows = data?.data ?? []
 
   const hasActiveFilters = Boolean(
     filtres.establishmentId || filtres.action || filtres.compte,
@@ -94,8 +119,14 @@ function SuperAdminAccessLogPage() {
 
   const set =
     <K extends keyof Filtres>(key: K) =>
-    (value: Filtres[K]) =>
+    (value: Filtres[K]) => {
       setFiltres((prev) => ({ ...prev, [key]: value }))
+      // La recherche de compte revient au début quand elle s'APPLIQUE, après le délai de saisie —
+      // pas à chaque frappe, qui n'envoie encore rien.
+      if (key !== 'compte') {
+        revenirAuDebut()
+      }
+    }
 
   const changerSource = (value: string) => {
     const source = (value || 'acces') as SuperAdminAccessLogSource
@@ -118,6 +149,9 @@ function SuperAdminAccessLogPage() {
           ? ''
           : prev.establishmentId,
     }))
+    // Les deux journaux n'ont ni le même volume ni les mêmes lignes : rester en page 7 en changeant
+    // de journal demanderait une page qui n'existe probablement pas dans l'autre.
+    revenirAuDebut()
   }
 
   // « Sans établissement » n'est proposée que sur le journal d'activité : c'est le seul des deux
@@ -170,6 +204,11 @@ function SuperAdminAccessLogPage() {
           <ReactTable<SuperAdminAccessLogEntry>
             data={rows}
             columns={columns}
+            serverPagination={{
+              ...pagination,
+              rowCount: data?.total ?? 0,
+              onChange: setPagination,
+            }}
             filterId="super-admin-access-log"
             isLoading={isPending}
             emptyState={
@@ -218,7 +257,10 @@ function SuperAdminAccessLogPage() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => setFiltres(FILTRES_PAR_DEFAUT)}
+                    onClick={() => {
+                      setFiltres(FILTRES_PAR_DEFAUT)
+                      revenirAuDebut()
+                    }}
                     className="text-text-light"
                   >
                     <RotateCcw className="h-3 w-3" />

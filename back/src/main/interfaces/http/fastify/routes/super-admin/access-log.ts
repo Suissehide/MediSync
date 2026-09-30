@@ -2,7 +2,7 @@ import type { FastifyPluginAsync } from 'fastify'
 
 import {
   SANS_ETABLISSEMENT,
-  type SuperAdminAccessLogEntry,
+  type SuperAdminAccessLogPage,
   type SuperAdminAccessLogQuery,
   superAdminAccessLogQuerySchema,
   superAdminAccessLogsResponseSchema,
@@ -33,8 +33,9 @@ const accessLogRouter: FastifyPluginAsync = (fastify) => {
       },
       config: { permission: 'establishments:manage' },
     },
-    async (request): Promise<SuperAdminAccessLogEntry[]> => {
-      const { source, establishmentId, compte, action } = request.query
+    async (request): Promise<SuperAdminAccessLogPage> => {
+      const { source, establishmentId, compte, action, page, pageSize } =
+        request.query
       // LA VALEUR RESERVEE EST TRADUITE ICI, UNE FOIS, et n'atteint jamais les depots sous sa
       // forme textuelle (revue finale de branche, Important n°1) : un depot qui comparerait
       // lui-meme `establishmentId` a la chaine `'aucun'` serait un second endroit ou cette
@@ -46,11 +47,19 @@ const accessLogRouter: FastifyPluginAsync = (fastify) => {
         sansEtablissement,
         compte,
         action,
+        page,
+        pageSize,
       }
 
+      // `page`/`pageSize` SONT RECOPIES DEPUIS LA REQUETE, jamais renvoyes par un depot : ce sont
+      // les valeurs que Zod vient de valider (defauts compris), et une reponse qui les tiendrait
+      // d'ailleurs pourrait diverger de ce qui a reellement ete lu. `total`, lui, ne peut venir
+      // que du depot -- c'est le decompte du meme `where`, hors page.
       if (source === 'activite') {
-        const rows = await activityLogDomain.findAllPlatformWide(filters)
-        return rows.map((row) => ({
+        const { data, total } = await activityLogDomain.findAllPlatformWide(
+          filters,
+        )
+        const entries = data.map((row) => ({
           id: row.id,
           source: 'activite' as const,
           establishmentId: row.establishmentId,
@@ -67,6 +76,7 @@ const accessLogRouter: FastifyPluginAsync = (fastify) => {
           // schema de reponse (tour de correction 1, tache 10).
           accesParOctroi: null,
         }))
+        return { data: entries, total, page, pageSize }
       }
 
       // `source === 'acces'` : PatientAccessLog. Construction CHAMP PAR CHAMP (jamais `...row`) --
@@ -74,8 +84,9 @@ const accessLogRouter: FastifyPluginAsync = (fastify) => {
       // atteindre ce DTO). `accesParOctroi` EST lue et rendue ici depuis le tour de correction 1
       // de la tache 10 -- un booleen sur la provenance de l'acces, jamais un contenu clinique ni
       // une identite (voir le commentaire du schema de reponse pour le raisonnement complet).
-      const rows = await patientAccessLogDomain.findAllPlatformWide(filters)
-      return rows.map((row) => ({
+      const { data, total } =
+        await patientAccessLogDomain.findAllPlatformWide(filters)
+      const entries = data.map((row) => ({
         id: row.id,
         source: 'acces' as const,
         establishmentId: row.establishmentId,
@@ -90,6 +101,7 @@ const accessLogRouter: FastifyPluginAsync = (fastify) => {
         patientId: row.patientId ?? null,
         accesParOctroi: row.accesParOctroi,
       }))
+      return { data: entries, total, page, pageSize }
     },
   )
 

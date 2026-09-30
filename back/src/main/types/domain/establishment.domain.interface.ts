@@ -1,4 +1,5 @@
 import type { Establishment } from '../../../generated/client'
+import type { PlatformAccessLogPage } from '../infra/orm/repositories/activityLog.repository.interface'
 import type {
   EstablishmentDetail,
   EstablishmentListRow,
@@ -51,5 +52,12 @@ export interface EstablishmentDomainInterface {
   // augmentée des services, membres et journal d'activité de cet établissement. `Boom.notFound`
   // si l'id est inconnu (`findByIdOrThrow`).
   getById: (id: string) => Promise<EstablishmentDetail>
+  // Le journal d'activité d'UN établissement, paginé (2026-10-01) : extrait de `getById`, qui le
+  // rendait borné à 100 lignes et sans moyen d'aller au-delà. Voir l'implémentation pour pourquoi
+  // cette route ne vérifie PAS l'existence de l'établissement (elle rend une page vide).
+  activityLogFor: (
+    id: string,
+    params: { page: number; pageSize: number },
+  ) => Promise<PlatformAccessLogPage>
   rename: (id: string, name: string) => Promise<Establishment>
 }

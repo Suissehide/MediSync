@@ -4,8 +4,11 @@ import {
   type CreateEstablishmentBody,
   createEstablishmentResponseSchema,
   createEstablishmentSchema,
-  type EstablishmentIdParams,
+  type EstablishmentActivityLogQuery,
+  establishmentActivityLogQuerySchema,
+  establishmentActivityLogResponseSchema,
   establishmentDetailResponseSchema,
+  type EstablishmentIdParams,
   establishmentIdParamsSchema,
   establishmentListResponseSchema,
   type RenameEstablishmentBody,
@@ -32,7 +35,8 @@ const establishmentsRouter: FastifyPluginAsync = (fastify) => {
   )
 
   // Le détail d'UN établissement (spec §6.2, tour de correction 1) : la ligne de la liste,
-  // augmentée des services, des membres et du journal d'activité. 404 si l'id est inconnu.
+  // augmentée des services et des membres. 404 si l'id est inconnu. NE REND PLUS LE JOURNAL
+  // (2026-10-01) : il a sa propre route paginée, juste en dessous.
   fastify.get<{ Params: EstablishmentIdParams }>(
     '/:id',
     {
@@ -43,6 +47,33 @@ const establishmentsRouter: FastifyPluginAsync = (fastify) => {
       config: { permission: 'establishments:manage' },
     },
     (request) => establishmentDomain.getById(request.params.id),
+  )
+
+  // Le journal d'activité de l'établissement, paginé (2026-10-01). Il vivait DANS la réponse
+  // ci-dessus, borné à 100 lignes et sans rien pour aller au-delà — ni pour savoir qu'il y avait
+  // un au-delà. Même permission que ses voisines (`establishments:manage`) : c'est la même zone,
+  // et `assertSuperAdminShapedRoute` exige de toute façon qu'elle soit déclarée.
+  fastify.get<{
+    Params: EstablishmentIdParams
+    Querystring: EstablishmentActivityLogQuery
+  }>(
+    '/:id/activity-log',
+    {
+      schema: {
+        params: establishmentIdParamsSchema,
+        querystring: establishmentActivityLogQuerySchema,
+        response: { 200: establishmentActivityLogResponseSchema },
+      },
+      config: { permission: 'establishments:manage' },
+    },
+    async (request) => {
+      const { page, pageSize } = request.query
+      const { data, total } = await establishmentDomain.activityLogFor(
+        request.params.id,
+        { page, pageSize },
+      )
+      return { data, total, page, pageSize }
+    },
   )
 
   fastify.post<{ Body: CreateEstablishmentBody }>(

@@ -503,10 +503,11 @@ describe('SUPERADMIN_OPERATIONS reflete le schema', () => {
       Patient: ['count'],
       ActivityLog: ['findMany', 'count'],
       // Tâche 6, étape 4b : `GET /super-admin/access-log` (source=acces) — voir le commentaire
-      // sur cette entrée dans tenant-guard.ts. `count` a été RETIRÉ à la revue finale de
-      // branche : déclaré « par symétrie » avec `ActivityLog` juste au-dessus, il n'était exercé
-      // par aucun appel (`patientAccessLog.count` n'existe nulle part dans `src/main`).
-      PatientAccessLog: ['findMany'],
+      // sur cette entrée dans tenant-guard.ts. `count` y a été RETIRÉ à la revue finale de branche
+      // (déclaré « par symétrie » avec `ActivityLog` juste au-dessus, exercé par aucun appel), puis
+      // RE-DÉCLARÉ le 2026-10-01 : la pagination de cette route lui donne enfin sa route, le
+      // décompte du même `where` hors page, sans lequel la dernière page n'est pas atteignable.
+      PatientAccessLog: ['findMany', 'count'],
     })
   })
 })

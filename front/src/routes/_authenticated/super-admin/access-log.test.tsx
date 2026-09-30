@@ -184,16 +184,30 @@ const routeEtablissements = (data: EstablishmentListItem[]): RouteMock => ({
   respond: () => new Response(JSON.stringify(data), { status: 200 }),
 })
 
+// ENVELOPPE PAGINEE depuis le 2026-10-01 (§8 de `docs/multi-tenant/decisions-etape-4b.md`, fermee
+// ce jour-la) : les tests ci-dessous continuent de decrire des LIGNES, ce helper les emballe. Par
+// defaut `total` vaut leur nombre — une seule page, ce qu'eprouvent les tests de filtres et de
+// colonnes. `total` est surchargeable pour les tests de pagination, ou il DOIT differer de la
+// longueur de la page : c'est la seule facon de distinguer « le total » de « ce que la page
+// contient », et une fixture ou les deux coincident ne prouverait rien de la derniere page.
 const routeAccessLog = (
   data: SuperAdminAccessLogEntry[] | ((url: URL) => SuperAdminAccessLogEntry[]),
+  total?: number,
 ): RouteMock => ({
   match: (url, method) =>
     url.pathname.endsWith('/super-admin/access-log') && method === 'GET',
-  respond: (url) =>
-    new Response(
-      JSON.stringify(typeof data === 'function' ? data(url) : data),
+  respond: (url) => {
+    const lignes = typeof data === 'function' ? data(url) : data
+    return new Response(
+      JSON.stringify({
+        data: lignes,
+        total: total ?? lignes.length,
+        page: Number(url.searchParams.get('page') ?? 1),
+        pageSize: Number(url.searchParams.get('pageSize') ?? 25),
+      }),
       { status: 200 },
-    ),
+    )
+  },
 })
 
 afterEach(() => {
@@ -803,5 +817,153 @@ describe("etats de l'ecran plateforme du journal des acces", () => {
       String(url).includes('source=activite'),
     )
     expect(appelJournalActivite).toBeDefined()
+  })
+})
+
+// ------------------------------------------------------------------------------------------
+// PAGINATION (2026-10-01) : ferme la limite §8 de docs/multi-tenant/decisions-etape-4b.md.
+// ------------------------------------------------------------------------------------------
+//
+// L'ecran affichait une lecture tronquee a 200 lignes, sans pied de pagination et sans rien qui
+// dise combien de lignes existaient reellement. LE POINT DE CES TESTS EST QUE LA PAGE EST
+// DEMANDEE AU SERVEUR : le bouchon honore `page`/`pageSize`, donc un decoupage fait dans le
+// navigateur — sur une page deja recue — ne les satisferait pas.
+describe("pagination de l'ecran plateforme", () => {
+  // 120 lignes au total, une seule rendue par page, reconnaissable a son nom : c'est ce qui permet
+  // d'affirmer QUELLE page est affichee, et pas seulement qu'il y en a une.
+  const routePaginee = (total = 120) =>
+    routeAccessLog(
+      (url) => [
+        ligneAcces({
+          id: `log-p${url.searchParams.get('page') ?? '1'}`,
+          userFirstName: 'Page',
+          userLastName: String(url.searchParams.get('page') ?? '1'),
+        }),
+      ],
+      total,
+    )
+
+  const requetesJournal = (mock: {
+    mock: { calls: [unknown, ...unknown[]][] }
+  }) =>
+    mock.mock.calls
+      .map(([u]) => new URL(String(u), 'http://localhost'))
+      .filter((u) => u.pathname.endsWith('/super-admin/access-log'))
+
+  it('demande la premiere page et affiche le total du serveur, pas la taille de la page recue', async () => {
+    const fetchMock = buildFetchMock([
+      routeEtablissements([chu]),
+      routePaginee(),
+    ])
+    vi.stubGlobal('fetch', fetchMock)
+
+    monter(superAdmin)
+
+    // Le total vient du serveur (120), jamais du nombre de lignes recues (1) : c'est exactement ce
+    // que la borne dure de 200 ne pouvait pas dire.
+    expect(
+      await screen.findByText('120 résultats', {}, { timeout: 3000 }),
+    ).toBeInTheDocument()
+    const derniere = requetesJournal(fetchMock).at(-1)?.searchParams
+    expect(derniere?.get('page')).toBe('1')
+    expect(derniere?.get('pageSize')).toBe('25')
+    // 120 lignes par pages de 25 : la 5e page est la derniere proposee, jamais une 6e.
+    expect(screen.getByRole('button', { name: '5' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '6' })).not.toBeInTheDocument()
+  })
+
+  it('demande au SERVEUR la page choisie', async () => {
+    const fetchMock = buildFetchMock([
+      routeEtablissements([chu]),
+      routePaginee(),
+    ])
+    vi.stubGlobal('fetch', fetchMock)
+
+    monter(superAdmin)
+    await screen.findByText('120 résultats', {}, { timeout: 3000 })
+
+    await userEvent.click(screen.getByRole('button', { name: '3' }))
+
+    await waitFor(() => {
+      expect(requetesJournal(fetchMock).at(-1)?.searchParams.get('page')).toBe(
+        '3',
+      )
+    })
+  })
+
+  // CHANGER DE FILTRE RAMENE A LA PREMIERE PAGE, ET LA MEME REQUETE PORTE LES DEUX. La page 7 d'un
+  // perimetre plus etroit n'existe peut-etre pas : une requete intermediaire pour cette page-la
+  // rendrait un tableau vide indiscernable d'un « aucune entree ».
+  it('changer de filtre revient a la premiere page, dans la meme requete', async () => {
+    const fetchMock = buildFetchMock([
+      routeEtablissements([chu]),
+      routePaginee(),
+    ])
+    vi.stubGlobal('fetch', fetchMock)
+
+    monter(superAdmin)
+    await screen.findByText('120 résultats', {}, { timeout: 3000 })
+    await userEvent.click(screen.getByRole('button', { name: '3' }))
+    await waitFor(() => {
+      expect(requetesJournal(fetchMock).at(-1)?.searchParams.get('page')).toBe(
+        '3',
+      )
+    })
+
+    await userEvent.click(screen.getByLabelText('Action'))
+    await userEvent.click(
+      await screen.findByRole('option', { name: 'Dossier ouvert' }),
+    )
+
+    await waitFor(() => {
+      expect(
+        requetesJournal(fetchMock).at(-1)?.searchParams.get('action'),
+      ).toBe('dossier.ouvert')
+    })
+    expect(requetesJournal(fetchMock).at(-1)?.searchParams.get('page')).toBe(
+      '1',
+    )
+    // AUCUNE requete ne demande la page 3 AVEC le filtre : les deux mises a jour partent ensemble.
+    expect(
+      requetesJournal(fetchMock).filter(
+        (u) =>
+          u.searchParams.get('action') === 'dossier.ouvert' &&
+          u.searchParams.get('page') !== '1',
+      ),
+    ).toEqual([])
+  })
+
+  // Changer de journal revient aussi au debut : les deux journaux n'ont ni le meme volume ni les
+  // memes lignes, et rester en page 3 demanderait une page qui n'existe probablement pas dans
+  // l'autre.
+  it('changer de journal revient a la premiere page', async () => {
+    const fetchMock = buildFetchMock([
+      routeEtablissements([chu]),
+      routePaginee(),
+    ])
+    vi.stubGlobal('fetch', fetchMock)
+
+    monter(superAdmin)
+    await screen.findByText('120 résultats', {}, { timeout: 3000 })
+    await userEvent.click(screen.getByRole('button', { name: '3' }))
+    await waitFor(() => {
+      expect(requetesJournal(fetchMock).at(-1)?.searchParams.get('page')).toBe(
+        '3',
+      )
+    })
+
+    await userEvent.click(screen.getByLabelText('Journal'))
+    await userEvent.click(
+      await screen.findByRole('option', { name: "Journal d'activité" }),
+    )
+
+    await waitFor(() => {
+      expect(
+        requetesJournal(fetchMock).at(-1)?.searchParams.get('source'),
+      ).toBe('activite')
+    })
+    expect(requetesJournal(fetchMock).at(-1)?.searchParams.get('page')).toBe(
+      '1',
+    )
   })
 })

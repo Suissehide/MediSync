@@ -4,7 +4,7 @@ import type {
 } from '../../../../../generated/client'
 import type { EstablishmentRole } from '../../../../../generated/enums'
 import type { PrimaTransactionClient } from '../client'
-import type { ActivityLogEntityRepo } from './activityLog.repository.interface'
+import type { PlatformAccessLogPage } from './activityLog.repository.interface'
 
 export type EstablishmentEntityRepo = Establishment
 
@@ -104,10 +104,15 @@ export type EstablishmentMemberRow = {
   deactivatedAt: Date | null
 }
 
+// `activityLog` A ETE RETIRE de cette forme le 2026-10-01, en meme temps que sa borne de 100
+// lignes. Le journal se lit desormais par sa propre route paginee (`GET
+// /super-admin/establishments/:id/activity-log`) : le garder ICI EN PLUS aurait donne DEUX sources
+// a une seule et meme table a l'ecran — la premiere page venant du detail, les suivantes de la
+// route, avec un aller-retour reseau de trop des le montage. `lastActivityAt`, lui, reste sur cette
+// forme (herite d'`EstablishmentListRow`) : `getById` le derive d'une lecture d'UNE ligne.
 export type EstablishmentDetail = EstablishmentListRow & {
   services: EstablishmentServiceRow[]
   members: EstablishmentMemberRow[]
-  activityLog: ActivityLogEntityRepo[]
 }
 
 // Rattachement brut d'un compte (recherche d'un compte, tâche 7) : ni l'e-mail ni aucune donnée
@@ -160,11 +165,15 @@ export interface EstablishmentRepositoryInterface {
   // lecture pour `list()`, qui n'a pas besoin des tableaux complets.
   servicesFor: (establishmentId: string) => Promise<EstablishmentServiceRow[]>
   membersFor: (establishmentId: string) => Promise<EstablishmentMemberRow[]>
-  // Bornée (voir l'implémentation pour la limite) : cet écran est un diagnostic, pas un export
-  // complet — `ActivityLog.findMany` est déclaré sans limite de page dans SUPERADMIN_OPERATIONS,
-  // la borne est prise ici, côté appelant. Le PREMIER élément (ordre décroissant) est aussi la
-  // valeur de `lastActivityAt` — `getById` le lit ici plutôt que de rappeler `countersFor`.
-  activityLogFor: (establishmentId: string) => Promise<ActivityLogEntityRepo[]>
+  // PAGINÉE depuis le 2026-10-01, à la place de la borne dure de 100 lignes qui la coiffait : voir
+  // l'implémentation pour ce que cette borne rendait inatteignable. Deux appelants — la route
+  // dédiée `GET /super-admin/establishments/:id/activity-log`, et `EstablishmentDomain.getById`,
+  // qui demande `pageSize: 1` parce que la TÊTE de la première page (ordre décroissant) EST
+  // `lastActivityAt` ; il le lit donc ici plutôt qu'en rappelant `countersFor`.
+  activityLogFor: (
+    establishmentId: string,
+    params: { page: number; pageSize: number },
+  ) => Promise<PlatformAccessLogPage>
   // Extrait de `countersFor` (tour de correction 2) : seule lecture que `getById` ne peut pas
   // dériver d'un tableau déjà chargé (`Patient.findMany` n'est pas déclaré, spec §3.3).
   patientCountFor: (establishmentId: string) => Promise<number>

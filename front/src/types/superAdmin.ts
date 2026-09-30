@@ -50,13 +50,30 @@ export type EstablishmentDetailMember = {
 }
 
 // `establishmentDetailResponseSchema` : la ligne de liste ci-dessus,
-// augmentée des services, des membres et du journal — désactivés compris
-// dans les deux listes (tour de correction 2, arbitrage de Léo), à la
-// différence des compteurs agrégés hérités de `EstablishmentListItem`.
+// augmentée des services et des membres — désactivés compris dans les deux
+// listes (tour de correction 2, arbitrage de Léo), à la différence des
+// compteurs agrégés hérités de `EstablishmentListItem`.
+//
+// `activityLog` A ÉTÉ RETIRÉ D'ICI le 2026-10-01, avec la borne de 100 lignes
+// qui le coiffait : le journal a sa propre route paginée (`GET
+// /super-admin/establishments/:id/activity-log`, type ci-dessous). Le garder
+// ici EN PLUS donnerait deux sources à une seule table à l'écran, et une
+// première page chargée deux fois à chaque montage. `lastActivityAt` reste,
+// hérité d'`EstablishmentListItem`.
 export type EstablishmentDetail = EstablishmentListItem & {
   services: EstablishmentDetailService[]
   members: EstablishmentDetailMember[]
-  activityLog: ActivityLog[]
+}
+
+// Miroir d'`establishmentActivityLogResponseSchema` (back) : mêmes quatre clés
+// que les deux autres journaux. La LIGNE, elle, est inchangée — `ActivityLog`
+// sans `serviceId` (ce champ n'est rendu que par le journal d'administration
+// d'établissement, voir `types/activityLog.ts`).
+export type EstablishmentActivityLogResponse = {
+  data: ActivityLog[]
+  total: number
+  page: number
+  pageSize: number
 }
 
 // `CreateEstablishmentInput`/`CreateEstablishmentResult` (POST

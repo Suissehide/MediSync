@@ -11,15 +11,20 @@ export const superAdminAccessLogSourceSchema = z.enum(['activite', 'acces'])
 
 // Valeur RESERVEE du filtre d'etablissement : « les lignes qui n'ont AUCUN etablissement ».
 //
-// REVUE FINALE DE BRANCHE, Important n°1 — POURQUOI ELLE EXISTE. La lecture plateforme est
-// bornee a `PLATFORM_ACCESS_LOG_LIMIT` lignes (200, `createdAt desc`, les deux depots). Les
+// REVUE FINALE DE BRANCHE, Important n°1 — POURQUOI ELLE EXISTE, ET CE QUI A CHANGE DEPUIS. La
+// lecture plateforme etait bornee a `PLATFORM_ACCESS_LOG_LIMIT` lignes (200, `createdAt desc`, les
+// deux depots) ; elle est PAGINEE depuis le 2026-10-01, donc les lignes visees ci-dessous sont
+// desormais atteignables autrement. CETTE VALEUR RESERVEE RESTE, et ce n'est pas par inertie : un
+// filtre qui les vise directement est plus court que de paginer jusqu'aux plus anciennes lignes de
+// toute la plateforme, et c'est encore ce que propose la liste deroulante de l'ecran. Les
 // lignes du script d'amorcage (`UserDomain.bootstrapSuperAdmin`, `establishmentId: null`) sont
 // par construction LES PLUS ANCIENNES de la table : des que le journal d'activite depasse 200
 // entrees, elles tombent hors de la page, et AUCUN filtre ne permettait de les viser -- le
 // filtre d'etablissement ne savait pas demander « sans etablissement », et la liste deroulante
 // du front ne propose que des etablissements REELS. La documentation presentait pourtant cette
 // lisibilite comme ACQUISE (« l'un des deux trous que cet ecran ferme ») : elle ne l'etait que
-// sur un journal jeune.
+// sur un journal jeune. C'est cette borne-la, pas cette valeur reservee, que la pagination a
+// supprimee.
 //
 // UNE VALEUR RESERVEE PLUTOT QU'UN SECOND CHAMP : un `sansEtablissement` a cote
 // d'`establishmentId` rendrait representable une demande contradictoire (« l'etablissement A, et
@@ -29,8 +34,9 @@ export const superAdminAccessLogSourceSchema = z.enum(['activite', 'acces'])
 export const SANS_ETABLISSEMENT = 'aucun'
 
 // Trois filtres, tous optionnels : `establishmentId` (etablissement, ou `SANS_ETABLISSEMENT`),
-// `compte`, `action` (chaine libre dans les deux modeles). Sans aucun filtre, la lecture rend
-// les 200 dernieres lignes du journal choisi (voir `PLATFORM_ACCESS_LOG_LIMIT`).
+// `compte`, `action` (chaine libre dans les deux modeles). Sans aucun filtre, la lecture rend la
+// page demandee du journal choisi, `createdAt desc`, et son total (voir `page`/`pageSize`
+// ci-dessous) -- avant le 2026-10-01 elle rendait les 200 dernieres lignes, et rien d'autre.
 //
 // `compte` REMPLACE `userID` (revue finale de branche, Important n°1). L'ancien filtre exigeait
 // un identifiant EXACT ; l'ecran, lui, offre une recherche par NOM, qu'il appliquait cote
@@ -52,6 +58,13 @@ export const superAdminAccessLogQuerySchema = z
     establishmentId: z.string().optional(),
     compte: z.string().optional(),
     action: z.string().optional(),
+    // PAGINATION (2026-10-01) : memes bornes, memes noms et meme defaut que le journal de
+    // l'administration d'etablissement (`getActivityLogsQuerySchema`, activityLog.schema.ts) --
+    // cet ecran-ci n'a aucune raison de se paginer autrement que son voisin. `max(100)` borne la
+    // requete : sans plafond, `pageSize=100000` referait exactement la lecture non bornee que
+    // cette pagination remplace.
+    page: z.coerce.number().int().positive().default(1),
+    pageSize: z.coerce.number().int().min(1).max(100).default(50),
   })
   // `PatientAccessLog.establishmentId` est NON NULLABLE (prisma/schema.prisma) : une ligne de
   // consultation sans etablissement n'existe pas, et ne peut pas exister. Demander
@@ -106,13 +119,24 @@ export const superAdminAccessLogEntryResponseSchema = z.object({
   accesParOctroi: z.boolean().nullable(),
 })
 
-export const superAdminAccessLogsResponseSchema = z.array(
-  superAdminAccessLogEntryResponseSchema,
-)
+// ENVELOPPE PAGINEE (2026-10-01), et non plus un tableau nu : memes quatre cles, dans le meme
+// ordre, que `activityLogsResponseSchema` (activityLog.schema.ts). `total` est le decompte du
+// perimetre demande HORS page -- c'est la seule valeur qui rende la derniere page atteignable, et
+// c'est elle qui manquait quand la lecture etait tronquee a 200 lignes : rien, dans une reponse de
+// 200 lignes, ne disait s'il y en avait 200 ou 200 000.
+export const superAdminAccessLogsResponseSchema = z.object({
+  data: z.array(superAdminAccessLogEntryResponseSchema),
+  total: z.number(),
+  page: z.number(),
+  pageSize: z.number(),
+})
 
 export type SuperAdminAccessLogQuery = z.infer<
   typeof superAdminAccessLogQuerySchema
 >
 export type SuperAdminAccessLogEntry = z.infer<
   typeof superAdminAccessLogEntryResponseSchema
+>
+export type SuperAdminAccessLogPage = z.infer<
+  typeof superAdminAccessLogsResponseSchema
 >

@@ -722,7 +722,10 @@ describe('isolation par tenant', () => {
         cookies: cookiesA,
       })
       expect(croise.statusCode).toBe(200)
-      expect(croise.json()).toEqual([])
+      // Enveloppe paginee depuis le 2026-10-01 : `data` VIDE, et `total` A ZERO. Les deux
+      // comptent — un `total` non nul sur une page vide dirait « il y a des lignes, ailleurs »,
+      // ce qui serait deja une fuite d'un bit sur l'existence du dossier de B.
+      expect(croise.json()).toMatchObject({ data: [], total: 0 })
 
       // Contrepoint 1 : admin de A voit bien SA PROPRE ligne, sur son propre patient — la route
       // fonctionne reellement, le tableau vide ci-dessus n'est pas un defaut de la route.
@@ -732,7 +735,8 @@ describe('isolation par tenant', () => {
         cookies: cookiesA,
       })
       expect(propre.statusCode).toBe(200)
-      expect(propre.json()).toHaveLength(1)
+      expect(propre.json()).toMatchObject({ total: 1 })
+      expect(propre.json().data).toHaveLength(1)
 
       // Contrepoint 2 : admin de B, sur SON PROPRE patient homonyme, voit bien sa ligne — la
       // fixture est reelle, ce n'est pas B qui est vide par erreur de preparation.
@@ -742,7 +746,8 @@ describe('isolation par tenant', () => {
         cookies: cookiesB,
       })
       expect(chezB.statusCode).toBe(200)
-      expect(chezB.json()).toHaveLength(1)
+      expect(chezB.json()).toMatchObject({ total: 1 })
+      expect(chezB.json().data).toHaveLength(1)
     })
   })
 

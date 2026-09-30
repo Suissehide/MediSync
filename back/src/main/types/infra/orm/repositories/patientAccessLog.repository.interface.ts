@@ -39,11 +39,33 @@ export type PatientAccessLogCreateEntityRepo = {
 //
 // `compte` remplace `userID` (revue finale de branche, Important n°1) : identifiant exact ou
 // fragment de prenom/nom — voir le commentaire du schema HTTP pour le pourquoi.
+// `page`/`pageSize` (2026-10-01) REMPLACENT UNE BORNE DURE : la lecture etait tronquee a 200
+// lignes (`PLATFORM_ACCESS_LOG_LIMIT`), les plus anciennes du perimetre demande etant alors
+// inatteignables — la limite §8 de `docs/multi-tenant/decisions-etape-4b.md`, desormais fermee.
+// Dupliques ici comme le reste de ce type, pour la meme raison.
 export type PlatformAccessLogFilters = {
   establishmentId?: string
   sansEtablissement?: boolean
   compte?: string
   action?: string
+  page: number
+  pageSize: number
+}
+
+// Une page de journal et le total du meme `where` hors page — forme commune aux TROIS lectures
+// paginees de ce depot (les deux par dossier, et celle de la plateforme). `page`/`pageSize` n'y
+// figurent pas : l'appelant vient de les fournir, c'est a lui de les recopier dans sa reponse.
+export type PatientAccessLogPage = {
+  data: PatientAccessLogEntityRepo[]
+  total: number
+}
+
+// Pagination des deux lectures par dossier (2026-10-01) : elles n'avaient AUCUNE borne — un
+// dossier tres consulte rendait tout son journal en une seule reponse, qui grossit sans limite
+// tant que la purge de retention ne l'a pas rattrape.
+export type PatientAccessLogPageParams = {
+  page: number
+  pageSize: number
 }
 
 export interface PatientAccessLogRepositoryInterface {
@@ -57,15 +79,17 @@ export interface PatientAccessLogRepositoryInterface {
   // seul) : elle rend les acces de TOUS les services de l'etablissement, pour l'administrateur.
   findByPatientInService: (
     patientId: string,
-  ) => Promise<PatientAccessLogEntityRepo[]>
+    params: PatientAccessLogPageParams,
+  ) => Promise<PatientAccessLogPage>
   findByPatientInEstablishment: (
     patientId: string,
-  ) => Promise<PatientAccessLogEntityRepo[]>
+    params: PatientAccessLogPageParams,
+  ) => Promise<PatientAccessLogPage>
   // Etape 4b, tache 6 : la TROISIEME lecture, a l'echelle de la PLATEFORME entiere -- sous
   // `runAsSuperAdmin`, jamais sous un tenant. Voir le commentaire sur l'implementation.
   findAllPlatformWide: (
     filters: PlatformAccessLogFilters,
-  ) => Promise<PatientAccessLogEntityRepo[]>
+  ) => Promise<PatientAccessLogPage>
   // Tache 8, etape 4b : purge planifiee (retention parametrable, voir PatientAccessLogDomain.
   // cleanup). Voir le commentaire de l'implementation pour le mecanisme de bornage.
   deleteOlderThan: (date: Date) => Promise<number>

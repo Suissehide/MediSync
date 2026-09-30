@@ -4,10 +4,11 @@ import type { Config } from '../types/application/config'
 import type { IocContainer } from '../types/application/ioc'
 import type {
   PatientAccessLogDomainInterface,
-  PatientAccessLogEntityDomain,
   RecordAccessInput,
 } from '../types/domain/patientAccessLog.domain.interface'
 import type {
+  PatientAccessLogPage,
+  PatientAccessLogPageParams,
   PatientAccessLogRepositoryInterface,
   PlatformAccessLogFilters,
 } from '../types/infra/orm/repositories/patientAccessLog.repository.interface'
@@ -71,21 +72,27 @@ class PatientAccessLogDomain implements PatientAccessLogDomainInterface {
   // methodes rendent n'est jamais un dossier patient, seulement des lignes du journal d'audit.
   findByPatientInService(
     patientId: string,
-  ): Promise<PatientAccessLogEntityDomain[]> {
-    return this.patientAccessLogRepository.findByPatientInService(patientId)
+    params: PatientAccessLogPageParams,
+  ): Promise<PatientAccessLogPage> {
+    return this.patientAccessLogRepository.findByPatientInService(
+      patientId,
+      params,
+    )
   }
 
   findByPatientInEstablishment(
     patientId: string,
-  ): Promise<PatientAccessLogEntityDomain[]> {
+    params: PatientAccessLogPageParams,
+  ): Promise<PatientAccessLogPage> {
     return this.patientAccessLogRepository.findByPatientInEstablishment(
       patientId,
+      params,
     )
   }
 
   findAllPlatformWide(
     filters: PlatformAccessLogFilters,
-  ): Promise<PatientAccessLogEntityDomain[]> {
+  ): Promise<PatientAccessLogPage> {
     return this.patientAccessLogRepository.findAllPlatformWide(filters)
   }
 

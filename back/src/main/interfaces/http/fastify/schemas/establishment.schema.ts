@@ -119,9 +119,38 @@ const establishmentDetailMemberSchema = z.object({
   deactivatedAt: z.coerce.date().nullable(),
 })
 
+// `activityLog` A ETE RETIRE de cette reponse le 2026-10-01 : le journal a sa propre route
+// paginee (ci-dessous). Le laisser ici EN PLUS donnerait deux sources a une seule table a l'ecran,
+// et une premiere page chargee deux fois a chaque montage. `lastActivityAt` reste, herite
+// d'`establishmentListItemSchema`.
 export const establishmentDetailResponseSchema =
   establishmentListItemSchema.extend({
     services: z.array(establishmentDetailServiceSchema),
     members: z.array(establishmentDetailMemberSchema),
-    activityLog: z.array(activityLogResponseSchema),
   })
+
+// `GET /super-admin/establishments/:id/activity-log` (2026-10-01). Le journal d'UN etablissement
+// etait servi DANS le detail ci-dessus, borne a 100 lignes (`ACTIVITY_LOG_DETAIL_LIMIT`, supprimee)
+// et sans rien pour aller plus loin, ni meme pour savoir qu'il y avait plus loin. Memes quatre cles
+// de reponse, memes noms et memes bornes de requete que les deux autres journaux
+// (`activityLogsResponseSchema`, `superAdminAccessLogsResponseSchema`) : un seul vocabulaire de
+// pagination pour les trois.
+//
+// `activityLogResponseSchema` sans extension : les cles de la LIGNE ne changent pas (elles sont
+// figees par `super-admin-consultation.test.ts`). Pas de `serviceId` ici, a la difference du journal
+// d'administration d'etablissement — voir le commentaire d'`activityLog.schema.ts`.
+export const establishmentActivityLogQuerySchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(50),
+})
+
+export type EstablishmentActivityLogQuery = z.infer<
+  typeof establishmentActivityLogQuerySchema
+>
+
+export const establishmentActivityLogResponseSchema = z.object({
+  data: z.array(activityLogResponseSchema),
+  total: z.number(),
+  page: z.number(),
+  pageSize: z.number(),
+})

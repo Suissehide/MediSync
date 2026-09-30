@@ -31,9 +31,31 @@ export const patientAccessLogEntryResponseSchema = z.object({
   accesParOctroi: z.boolean(),
 })
 
-export const patientAccessLogsResponseSchema = z.array(
-  patientAccessLogEntryResponseSchema,
-)
+// ENVELOPPE PAGINEE (2026-10-01), et non plus un tableau nu : memes quatre cles que
+// `activityLogsResponseSchema` et `superAdminAccessLogsResponseSchema`. Ces deux lectures n'avaient
+// AUCUNE borne -- ni page, ni nombre de lignes : un dossier tres consulte rendait tout son journal
+// en une seule reponse, qui ne cesse de grossir (chaque ouverture du dossier y ajoute une ligne)
+// et que seule la purge de retention rogne, douze mois plus tard par defaut. Le `strip` de Zod
+// s'applique toujours aux lignes de `data`, a l'identique : cette enveloppe n'ajoute aucun champ
+// aux lignes elles-memes.
+export const patientAccessLogsResponseSchema = z.object({
+  data: z.array(patientAccessLogEntryResponseSchema),
+  total: z.number(),
+  page: z.number(),
+  pageSize: z.number(),
+})
+
+// Memes bornes, memes noms et meme defaut que les deux autres journaux
+// (`getActivityLogsQuerySchema`, `superAdminAccessLogQuerySchema`) : un seul vocabulaire de
+// pagination pour les trois, plutot qu'un par ecran. PARTAGE PAR LES DEUX ROUTES (service et
+// administration d'etablissement) : elles lisent le meme journal a deux echelles, et une
+// pagination qui differerait d'une echelle a l'autre n'aurait aucune justification.
+export const patientAccessLogQuerySchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(50),
+})
+
+export type PatientAccessLogQuery = z.infer<typeof patientAccessLogQuerySchema>
 
 // Route de service : `GET /e/:establishmentId/s/:serviceId/patient/:patientID/acces`. Meme nom
 // de parametre que `enrollmentIssuePatientParamsSchema`/`patientServiceFileRouter` (`:patientID`,

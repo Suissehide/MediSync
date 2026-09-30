@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 
 import { SuperAdminAccessLogApi } from '../api/superAdminAccessLog.api.ts'
 import { SUPER_ADMIN } from '../constants/process.constant.ts'
@@ -14,18 +14,16 @@ import type { SuperAdminAccessLogQuery } from '../types/superAdminAccessLog.ts'
 export const useSuperAdminAccessLogQuery = (
   params: SuperAdminAccessLogQuery,
 ) => {
-  const {
-    data: entries,
-    isPending,
-    isError,
-    error,
-  } = useQuery({
+  const { data, isPending, isError, error } = useQuery({
     queryKey: [SUPER_ADMIN.GET_ACCESS_LOG, params],
     queryFn: () => SuperAdminAccessLogApi.getAll(params),
     retry: 0,
+    // Changer de page garde la page précédente affichée jusqu'à l'arrivée de la suivante, plutôt
+    // que de vider la table (même choix que `useActivityLogsQuery`, l'autre journal paginé).
+    placeholderData: keepPreviousData,
   })
 
   useDataFetching({ isPending, isError, error })
 
-  return { entries, isPending, error }
+  return { data, isPending, error }
 }

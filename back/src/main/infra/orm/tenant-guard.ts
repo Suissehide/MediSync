@@ -97,14 +97,17 @@ export const SUPERADMIN_OPERATIONS: Readonly<
   // et sa réponse HTTP ne porte que `patientId` comme IDENTIFIANT (jamais un nom) — voir
   // `superAdminAccessLog.schema.ts`.
   //
-  // `count` A ÉTÉ RETIRÉ à la revue finale de branche : il était déclaré « par symétrie » avec
-  // `ActivityLog` juste au-dessus, et AUCUN appel ne l'exerçait — `patientAccessLog.count`
-  // n'existe nulle part dans `src/main`. La discipline posée à la tâche 9, et écrite en toutes
-  // lettres au-dessus de `NO_CONTEXT_GLOBAL_OPERATIONS` (« chaque entrée porte la route qui la
-  // justifie ; une entrée sans route est une entrée à supprimer »), vaut pour cette table-ci
-  // aussi : une capacité déclarée « au cas où » est une capacité que personne ne re-justifiera
-  // le jour où quelqu'un s'en servira.
-  PatientAccessLog: ['findMany'],
+  // `count` A ÉTÉ RETIRÉ à la revue finale de branche, puis RE-DÉCLARÉ le 2026-10-01 — et la
+  // séquence entière compte, pas seulement son état final. Il était d'abord là « par symétrie »
+  // avec `ActivityLog` juste au-dessus, sans qu'aucun appel ne l'exerce : la discipline écrite en
+  // toutes lettres au-dessus de `NO_CONTEXT_GLOBAL_OPERATIONS` (« chaque entrée porte la route qui
+  // la justifie ; une entrée sans route est une entrée à supprimer ») le condamnait, et l'a
+  // condamné. Il revient parce que la pagination de `GET /super-admin/access-log` lui donne
+  // enfin cette route : `PatientAccessLogRepository.findAllPlatformWide` compte désormais le même
+  // `where` hors page, sans quoi la dernière page n'est pas atteignable. Retirer cette entrée ne
+  // rend PAS un total de zéro — la table échoue fermé, donc la route répond 500 (vérifié par
+  // sabotage : les vingt cas `source=acces` de `super-admin-access-log.test.ts` passent en 500).
+  PatientAccessLog: ['findMany', 'count'],
 }
 
 // Relations dont les écritures imbriquées sont vérifiées (parent → champ → enfant). C'est une
