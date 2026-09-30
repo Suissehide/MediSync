@@ -23,7 +23,6 @@ import {
   PopupTitle,
   PopupTrigger,
 } from '../../ui/popup.tsx'
-import { Select } from '../../ui/select.tsx'
 
 interface EditMemberFormProps {
   member: Member
@@ -123,19 +122,17 @@ function EditMemberForm({ member }: EditMemberFormProps) {
     [services],
   )
 
-  // Rôle choisi pour chaque service MONTRÉ, tenu à part du reste du
-  // formulaire (liste dynamique, une entrée par service de l'établissement,
-  // pas une forme fixe que `useAppForm` connaîtrait à l'avance).
-  const [serviceRoles, setServiceRoles] = useState<Record<string, string>>({})
-
   const form = useAppForm({
     defaultValues: {
       role: member.role,
+      // Rôle choisi pour chaque service MONTRÉ, indexé par identifiant de
+      // service (un champ par service de l'établissement).
+      serviceRoles: {} as Record<string, string>,
     },
     onSubmit: ({ value }) => {
       const servicesPayload = buildServiceAssignments({
         services: sortedServices,
-        serviceRoles,
+        serviceRoles: value.serviceRoles,
         existingMemberships: member.serviceMemberships,
       })
       updateMember.mutate({
@@ -151,10 +148,11 @@ function EditMemberForm({ member }: EditMemberFormProps) {
     if (open) {
       form.reset({
         role: member.role,
+        serviceRoles: buildDefaultServiceRoles(
+          sortedServices,
+          member.serviceMemberships,
+        ),
       })
-      setServiceRoles(
-        buildDefaultServiceRoles(sortedServices, member.serviceMemberships),
-      )
     }
     // `sortedServices` en dépendance : la liste des services peut finir de
     // charger APRÈS l'ouverture (requête encore en vol) — sans cette
@@ -182,7 +180,13 @@ function EditMemberForm({ member }: EditMemberFormProps) {
         </PopupHeader>
 
         <PopupBody>
-          <div className="space-y-4 max-w-md">
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault()
+              await form.handleSubmit()
+            }}
+            className="space-y-4 max-w-md"
+          >
             <p className="text-sm text-text-dark font-medium">
               {member.user.email}
             </p>
@@ -222,32 +226,26 @@ function EditMemberForm({ member }: EditMemberFormProps) {
 
               {!servicesPending &&
                 !servicesError &&
-                sortedServices.map((service) => {
-                  const fieldId = `edit-member-service-role-${service.id}`
-                  return (
-                    <div key={service.id} className="flex items-center gap-2">
-                      <Label htmlFor={fieldId} className="flex-1 truncate">
-                        {service.name}
-                        {service.deactivatedAt !== null && ' (désactivé)'}
-                      </Label>
-                      <Select
-                        id={fieldId}
-                        className="w-44"
+                sortedServices.map((service) => (
+                  <form.AppField
+                    key={service.id}
+                    name={`serviceRoles.${service.id}`}
+                  >
+                    {(field) => (
+                      <field.Select
+                        label={
+                          service.deactivatedAt !== null
+                            ? `${service.name} (désactivé)`
+                            : service.name
+                        }
                         options={SERVICE_ROLE_OPTIONS}
                         clearable={false}
-                        value={serviceRoles[service.id] ?? NO_SERVICE_ROLE}
-                        onValueChange={(value) =>
-                          setServiceRoles((prev) => ({
-                            ...prev,
-                            [service.id]: value,
-                          }))
-                        }
                       />
-                    </div>
-                  )
-                })}
+                    )}
+                  </form.AppField>
+                ))}
             </div>
-          </div>
+          </form>
         </PopupBody>
 
         <PopupFooter>
