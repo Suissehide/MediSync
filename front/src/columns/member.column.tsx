@@ -40,6 +40,8 @@ type MemberColumnOptions = {
   // Un seul jeu de mutations sert toutes les lignes : on ne veut faire
   // tourner l'icône de chargement que sur la ligne réellement concernée.
   isToggling: (member: Member) => boolean
+  // L'identifiant du compte n'est montre qu'au super-admin (2026-09-30).
+  avecIdentifiant: boolean
 }
 
 export const getMemberColumns = ({
@@ -47,6 +49,7 @@ export const getMemberColumns = ({
   onToggleActive,
   onRemove,
   isToggling,
+  avecIdentifiant,
 }: MemberColumnOptions) => [
   columnHelper.display({
     id: 'firstName',
@@ -69,11 +72,16 @@ export const getMemberColumns = ({
   // celui du rattachement (`Member.id`) : c'est le même que celui affiché
   // par la recherche de comptes du super-admin (`accountSearchPanel.tsx`),
   // qui recoupe par la même donnée.
-  columnHelper.display({
-    id: 'accountId',
-    header: 'Identifiant',
-    cell: ({ row }) => <CopyableId value={row.original.user.id} />,
-  }),
+  // Reserve au super-admin depuis le 2026-09-30, comme sur les membres du service.
+  ...(avecIdentifiant
+    ? [
+        columnHelper.display({
+          id: 'accountId',
+          header: 'Identifiant',
+          cell: ({ row }) => <CopyableId value={row.original.user.id} />,
+        }),
+      ]
+    : []),
   columnHelper.display({
     id: 'establishmentRole',
     header: 'Rôle établissement',
