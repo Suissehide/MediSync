@@ -5,9 +5,6 @@ import { withForm } from '../../../../hooks/formConfig.tsx'
 import { useLocationQueries } from '../../../../queries/useLocation.ts'
 import { useThematicQueries } from '../../../../queries/useThematic.ts'
 import { useSoignantStore } from '../../../../store/useSoignantStore.ts'
-import { FieldInfo } from '../../../ui/fieldInfo.tsx'
-import { FormField } from '../../../ui/formField.tsx'
-import { MultiSelect } from '../../../ui/select.tsx'
 import { eventFormOpts } from './eventFormOpts.ts'
 
 export const EventFormFields = withForm({
@@ -78,22 +75,15 @@ export const EventFormFields = withForm({
 
     return (
       <>
-        <form.Field name="soignantIDs">
+        <form.AppField name="soignantIDs">
           {(field) => (
-            <FormField>
-              <div className="text-sm text-text-light font-medium">
-                Soignants
-              </div>
-              <MultiSelect
-                options={soignantOptions}
-                value={field.state.value}
-                onChange={(values) => field.handleChange(values)}
-                placeholder="Sélectionnez un ou plusieurs soignants"
-              />
-              <FieldInfo field={field} />
-            </FormField>
+            <field.MultiSelect
+              label="Soignants"
+              options={soignantOptions}
+              placeholder="Sélectionnez un ou plusieurs soignants"
+            />
           )}
-        </form.Field>
+        </form.AppField>
 
         <form.AppField name="thematicId">
           {(field) => (

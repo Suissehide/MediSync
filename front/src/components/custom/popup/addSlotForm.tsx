@@ -23,7 +23,6 @@ import {
   PopupHeader,
   PopupTitle,
 } from '../../ui/popup.tsx'
-import { MultiSelect } from '../../ui/select.tsx'
 import { TimePicker } from '../../ui/timePicker.tsx'
 
 interface AddSlotFormProps {
@@ -264,22 +263,15 @@ function AddSlotForm({
               )}
             </div>
 
-            <form.Field name="soignantIDs">
+            <form.AppField name="soignantIDs">
               {(field) => (
-                <FormField>
-                  <div className="text-sm text-text-light font-medium">
-                    Soignants
-                  </div>
-                  <MultiSelect
-                    options={soignantOptions}
-                    value={field.state.value}
-                    onChange={(values) => field.handleChange(values)}
-                    placeholder="Sélectionnez un ou plusieurs soignants"
-                  />
-                  <FieldInfo field={field} />
-                </FormField>
+                <field.MultiSelect
+                  label="Soignants"
+                  options={soignantOptions}
+                  placeholder="Sélectionnez un ou plusieurs soignants"
+                />
               )}
-            </form.Field>
+            </form.AppField>
 
             <form.AppField name="thematicId">
               {(field) => (

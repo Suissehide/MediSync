@@ -10,7 +10,11 @@ import { DatePicker } from '../components/ui/datePicker.tsx'
 import { FieldInfo } from '../components/ui/fieldInfo.tsx'
 import { Checkbox, Input, TextArea } from '../components/ui/input.tsx'
 import { Label } from '../components/ui/label.tsx'
-import { Select, type SelectOption } from '../components/ui/select.tsx'
+import {
+  MultiSelect,
+  Select,
+  type SelectOption,
+} from '../components/ui/select.tsx'
 import { TimePicker } from '../components/ui/timePicker.tsx'
 import { cn } from '../libs/utils.ts'
 import {
@@ -37,6 +41,12 @@ interface SelectFieldProps extends FieldComponentProps {
   placeholder?: string
   searchable?: boolean
   clearable?: boolean
+}
+
+interface MultiSelectFieldProps extends FieldComponentProps {
+  options: { value: string; label: string }[]
+  placeholder?: string
+  maxSelected?: number
 }
 
 interface ToggleFieldProps extends FieldComponentProps {
@@ -289,6 +299,32 @@ function TextAreaField({
   )
 }
 
+function MultiSelectField({
+  label,
+  disabled,
+  className,
+  options,
+  placeholder,
+  maxSelected,
+}: MultiSelectFieldProps) {
+  const field = useFieldContext<string[]>()
+
+  return (
+    <div className={cn('flex flex-col gap-1', className)}>
+      {label && <Label>{label}</Label>}
+      <MultiSelect
+        options={options}
+        value={field.state.value ?? []}
+        disabled={disabled}
+        placeholder={placeholder}
+        maxSelected={maxSelected}
+        onChange={(values) => field.handleChange(values)}
+      />
+      <FieldInfo field={field} />
+    </div>
+  )
+}
+
 // Palette du sélecteur de couleur : 8 teintes x 6 nuances, puis une ligne
 // de neutres. L'ordre est celui de l'affichage (8 pastilles par ligne).
 const COLOR_PICKER_PALETTE = [
@@ -520,6 +556,7 @@ export const { useAppForm, withForm } = createFormHook({
     Input: TextField,
     Password: PasswordField,
     Select: SelectField,
+    MultiSelect: MultiSelectField,
     Number: NumberField,
     DatePicker: DatePickerField,
     TimePicker: TimePickerField,

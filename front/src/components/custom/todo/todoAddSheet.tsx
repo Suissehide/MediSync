@@ -1,15 +1,10 @@
-import { useForm } from '@tanstack/react-form'
 import { Plus } from 'lucide-react'
 import { useMemo } from 'react'
 
+import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { useTodoMutations } from '../../../queries/useTodo.ts'
 import { useSoignantStore } from '../../../store/useSoignantStore.ts'
 import { Button } from '../../ui/button.tsx'
-import { FieldInfo } from '../../ui/fieldInfo.tsx'
-import { FormField } from '../../ui/formField.tsx'
-import { Input } from '../../ui/input.tsx'
-import { Label } from '../../ui/label.tsx'
-import { Select } from '../../ui/select.tsx'
 import {
   Sheet,
   SheetContent,
@@ -36,7 +31,7 @@ export default function TodoAddSheet({
     [soignants],
   )
 
-  const form = useForm({
+  const form = useAppForm({
     defaultValues: {
       title: '',
       description: '',
@@ -85,56 +80,25 @@ export default function TodoAddSheet({
             }}
             className="space-y-2"
           >
-            <form.Field
+            <form.AppField
               name="title"
               validators={{
                 onChange: ({ value }) =>
                   value ? undefined : 'Le titre est nécessaire',
               }}
             >
-              {(field) => (
-                <FormField>
-                  <Label htmlFor={field.name}>Titre</Label>
-                  <Input
-                    id={field.name}
-                    value={field.state.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    onBlur={field.handleBlur}
-                  />
-                  <FieldInfo field={field} />
-                </FormField>
-              )}
-            </form.Field>
+              {(field) => <field.Input label="Titre" />}
+            </form.AppField>
 
-            <form.Field name="description">
-              {(field) => (
-                <FormField>
-                  <Label htmlFor={field.name}>Description</Label>
-                  <Input
-                    id={field.name}
-                    value={field.state.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    onBlur={field.handleBlur}
-                  />
-                  <FieldInfo field={field} />
-                </FormField>
-              )}
-            </form.Field>
+            <form.AppField name="description">
+              {(field) => <field.Input label="Description" />}
+            </form.AppField>
 
-            <form.Field name="soignant">
+            <form.AppField name="soignant">
               {(field) => (
-                <FormField>
-                  <Label htmlFor={field.name}>Assigné à</Label>
-                  <Select
-                    id={field.name}
-                    options={soignantOptions}
-                    value={field.state.value}
-                    onValueChange={(value) => field.handleChange(value)}
-                  />
-                  <FieldInfo field={field} />
-                </FormField>
+                <field.Select label="Assigné à" options={soignantOptions} />
               )}
-            </form.Field>
+            </form.AppField>
 
             <Button type="submit" className="mt-2">
               Ajouter
