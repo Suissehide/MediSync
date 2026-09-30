@@ -10,6 +10,19 @@
 //
 // `accesParOctroi` : voir `columns/accessLog.column.tsx` pour comment ce booléen est rendu
 // VISIBLE, pas seulement présent.
+
+// PAGINÉE DEPUIS LE 2026-10-01 : cette lecture n'avait AUCUNE borne, ni de page ni de nombre de
+// lignes — un dossier très consulté rendait tout son journal d'une traite, et ce journal grossit à
+// chaque ouverture du dossier. `total` est le décompte hors page, ce que `ReactTable` attend en
+// `rowCount`. Enveloppe identique aux deux autres journaux du dépôt (`ActivityLogsResponse`,
+// `SuperAdminAccessLogResponse`).
+export type PatientAccessLogResponse = {
+  data: PatientAccessLogEntry[]
+  total: number
+  page: number
+  pageSize: number
+}
+
 export type PatientAccessLogEntry = {
   id: string
   action: string

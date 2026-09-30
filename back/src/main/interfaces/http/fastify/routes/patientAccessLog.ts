@@ -2,8 +2,10 @@ import type { FastifyPluginAsync } from 'fastify'
 
 import {
   type PatientAccessLogAdminParams,
+  type PatientAccessLogQuery,
   type PatientAccessLogServiceParams,
   patientAccessLogAdminParamsSchema,
+  patientAccessLogQuerySchema,
   patientAccessLogServiceParamsSchema,
   patientAccessLogsResponseSchema,
 } from '../schemas/patientAccessLog.schema'
@@ -22,17 +24,31 @@ import {
 const patientAccessLogRouter: FastifyPluginAsync = (fastify) => {
   const { patientAccessLogDomain } = fastify.iocContainer
 
-  fastify.get<{ Params: PatientAccessLogServiceParams }>(
+  fastify.get<{
+    Params: PatientAccessLogServiceParams
+    Querystring: PatientAccessLogQuery
+  }>(
     '/',
     {
       schema: {
         params: patientAccessLogServiceParamsSchema,
+        querystring: patientAccessLogQuerySchema,
         response: { 200: patientAccessLogsResponseSchema },
       },
       config: { permission: 'consultations:read' },
     },
-    (request) =>
-      patientAccessLogDomain.findByPatientInService(request.params.patientID),
+    // PAGINEE DEPUIS LE 2026-10-01 : `page`/`pageSize` viennent de la requete (defauts poses par
+    // Zod) et sont RECOPIES dans la reponse a cote du `total` que le depot compte -- la meme forme
+    // que les deux autres journaux. Le domaine reste un simple relais.
+    async (request) => {
+      const { page, pageSize } = request.query
+      const { data, total } =
+        await patientAccessLogDomain.findByPatientInService(
+          request.params.patientID,
+          { page, pageSize },
+        )
+      return { data, total, page, pageSize }
+    },
   )
 
   return Promise.resolve()
@@ -67,19 +83,28 @@ const patientAccessLogRouter: FastifyPluginAsync = (fastify) => {
 const patientAccessLogAdminRouter: FastifyPluginAsync = (fastify) => {
   const { patientAccessLogDomain } = fastify.iocContainer
 
-  fastify.get<{ Params: PatientAccessLogAdminParams }>(
+  fastify.get<{
+    Params: PatientAccessLogAdminParams
+    Querystring: PatientAccessLogQuery
+  }>(
     '/',
     {
       schema: {
         params: patientAccessLogAdminParamsSchema,
+        querystring: patientAccessLogQuerySchema,
         response: { 200: patientAccessLogsResponseSchema },
       },
       config: { permission: 'access-log:read' },
     },
-    (request) =>
-      patientAccessLogDomain.findByPatientInEstablishment(
-        request.params.patientID,
-      ),
+    async (request) => {
+      const { page, pageSize } = request.query
+      const { data, total } =
+        await patientAccessLogDomain.findByPatientInEstablishment(
+          request.params.patientID,
+          { page, pageSize },
+        )
+      return { data, total, page, pageSize }
+    },
   )
 
   return Promise.resolve()

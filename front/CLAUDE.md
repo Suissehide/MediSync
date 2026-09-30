@@ -241,16 +241,31 @@ source** in both directions — the same kind of cross-repo contract the permiss
 had. Do not add a label here without an action behind it, and do not add an action on the back
 without a label here: either way that test reddens.
 
-**Every filter on the platform screen is a SERVER filter, and the account one must stay that way.**
-The read is bounded to **200 rows** (`PLATFORM_ACCESS_LOG_LIMIT`, back, `createdAt desc`) with no
-pagination. A filter applied in the browser can therefore only narrow an already-truncated page:
-the account filter used to be client-side and answered "aucune entrée" for accounts whose rows
-existed a few thousand lines further down. It now sends `compte` (exact id **or** a first/last-name
-fragment, case-insensitive), debounced 300 ms — without the debounce every keystroke would run an
-`ILIKE` across the whole platform. The establishment filter also carries a reserved value,
-`SANS_ETABLISSEMENT` (mirrored byte-for-byte on the back, held by a test), offered **only** on
-`activite`: it is the only way to reach the bootstrap-script rows, which have no establishment and
-are the oldest in the table, once the journal passes 200 entries.
+**Every filter on the platform screen is a SERVER filter, and so is the page.** The read used to be
+bounded to **200 rows** (`PLATFORM_ACCESS_LOG_LIMIT`, back, `createdAt desc`) with no pagination — a
+filter applied in the browser could therefore only narrow an already-truncated page, and the account
+filter, which was client-side, answered "aucune entrée" for accounts whose rows existed a few thousand
+lines further down. It now sends `compte` (exact id **or** a first/last-name fragment,
+case-insensitive), debounced 300 ms — without the debounce every keystroke would run an `ILIKE` across
+the whole platform. The establishment filter also carries a reserved value, `SANS_ETABLISSEMENT`
+(mirrored byte-for-byte on the back, held by a test), offered **only** on `activite`: it targets the
+bootstrap-script rows, which have no establishment and are the oldest in the table.
+
+**The hard 200-row bound is gone since 2026-10-01** (the §8 limit of
+`docs/multi-tenant/decisions-etape-4b.md`): this screen sends `page`/`pageSize` and reads `total`,
+like its two siblings. `SANS_ETABLISSEMENT` stays — a filter that targets those rows directly is
+shorter than paging to the oldest rows of the whole platform.
+
+**All three journal screens paginate the same way, through `ReactTable`'s `serverPagination`, and
+none of them slices in the browser.** The screen owns `{ pageIndex, pageSize }`, passes
+`page: pageIndex + 1` to its query, and hands `rowCount: data.total` to the table — the footer's row
+count and page buttons are the server's answer, never the length of the page received. Two rules that
+each cost a defect elsewhere in this repo: **changing any filter must return to the first page in the
+SAME state update as the filter** (page 7 of a narrower scope may not exist, and an effect running
+afterwards would first request that page and render a blank table indistinguishable from "no
+entries"), and a debounced filter returns to the first page **when it applies**, not on every
+keystroke. `placeholderData: keepPreviousData` on every journal query keeps the previous page visible
+while the next arrives instead of blanking the table.
 
 **"Origine" (`accesParOctroi`) is not decoration.** It distinguishes a temporary-grant
 (troubleshooting) access from a care access — a super-admin under a grant travels the ordinary

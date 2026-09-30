@@ -9,6 +9,7 @@ import {
   RouterProvider,
 } from '@tanstack/react-router'
 import { render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -145,9 +146,17 @@ const monter = (routes: Route[], user: User = coordinateur) => {
   )
 }
 
-const routeGetAcces = (data: unknown): Route => ({
-  match: (url, method) => url.endsWith('/patient/p1/acces') && method === 'GET',
-  respond: () => ({ ok: true, status: 200, json: async () => data }),
+// Enveloppe paginee depuis le 2026-10-01 : les tests d'ecran ci-dessous passent toujours des
+// LIGNES, et ce helper les emballe — `total` valant leur nombre, la table n'affiche alors qu'une
+// seule page, ce qui est bien ce que ces tests-la eprouvent. La pagination elle-meme est eprouvee
+// a part, plus bas, avec un `total` plus grand que la page.
+const routeGetAcces = (lignes: unknown[], total = lignes.length): Route => ({
+  match: (url, method) => url.includes('/patient/p1/acces') && method === 'GET',
+  respond: () => ({
+    ok: true,
+    status: 200,
+    json: async () => ({ data: lignes, total, page: 1, pageSize: 25 }),
+  }),
 })
 
 const ligne = {
@@ -206,7 +215,7 @@ describe('etats de l ecran du journal des acces', () => {
     monter([
       {
         match: (url, method) =>
-          url.endsWith('/patient/p1/acces') && method === 'GET',
+          url.includes('/patient/p1/acces') && method === 'GET',
         respond: () => ({ ok: false, status: 500, json: async () => ({}) }),
       },
     ])
@@ -350,5 +359,88 @@ describe('beforeLoad de l ecran du journal des acces — garde consultations:rea
         to: '/e/$establishmentId/s/$serviceId/dashboard',
       }),
     )
+  })
+})
+
+// ------------------------------------------------------------------------------------------
+// PAGINATION (2026-10-01) : cette lecture n'avait AUCUNE borne.
+// ------------------------------------------------------------------------------------------
+//
+// Ni page, ni nombre de lignes : un dossier tres consulte rendait tout son journal d'une traite, et
+// ce journal gagne une ligne a chaque ouverture du dossier. LE POINT DE CES TESTS EST QUE LA PAGE
+// EST DEMANDEE AU SERVEUR — le bouchon honore `page`, donc un decoupage fait dans le navigateur, sur
+// une page deja recue, ne les satisferait pas.
+describe('pagination du journal des acces', () => {
+  const monterPagine = () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = new URL(input.toString(), 'http://localhost')
+      // Meme discipline que `buildFetchMock` plus haut : tout appel hors du journal echoue plutot
+      // que de recevoir une reponse qui ne lui correspond pas — un bouchon universel repondait ici
+      // l'enveloppe du journal a la requete des taches de la barre du haut, qui plantait dessus.
+      if (!url.pathname.includes('/acces')) {
+        throw new Error(
+          `Appel fetch non attendu dans ce test : ${url.pathname}`,
+        )
+      }
+      const page = Number(url.searchParams.get('page') ?? 1)
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        url: url.toString(),
+        // Une ligne par page, reconnaissable a son auteur : c'est ce qui permet d'affirmer QUELLE
+        // page est affichee. 120 au total, une valeur que la page ne porte jamais.
+        json: async () => ({
+          data: [{ ...ligne, id: `l${page}`, userFirstName: `Page${page}` }],
+          total: 120,
+          page,
+          pageSize: Number(url.searchParams.get('pageSize') ?? 50),
+        }),
+      })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+    const router = createRouter({
+      routeTree,
+      history: createMemoryHistory({ initialEntries: [URL_INITIALE] }),
+      context: { authState: { isAuthenticated: true, user: coordinateur } },
+    })
+    render(
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    )
+    const requetes = () =>
+      fetchMock.mock.calls
+        .map(([u]) => new URL(String(u), 'http://localhost'))
+        .filter((u) => u.pathname.includes('/acces'))
+    return { requetes }
+  }
+
+  const piedCharge = () =>
+    screen.findByText('120 résultats', {}, { timeout: 3000 })
+
+  it('demande la premiere page et affiche le total du serveur, pas la taille de la page recue', async () => {
+    const { requetes } = monterPagine()
+
+    expect(await piedCharge()).toBeInTheDocument()
+    const derniere = requetes().at(-1)?.searchParams
+    expect(derniere?.get('page')).toBe('1')
+    expect(derniere?.get('pageSize')).toBe('25')
+    // 120 lignes par pages de 25 : la 5e page est la derniere, jamais une 6e.
+    expect(screen.getByRole('button', { name: '5' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '6' })).not.toBeInTheDocument()
+  })
+
+  it('demande au SERVEUR la page choisie', async () => {
+    const { requetes } = monterPagine()
+    await piedCharge()
+
+    await userEvent.click(screen.getByRole('button', { name: '3' }))
+
+    await waitFor(() => {
+      expect(requetes().at(-1)?.searchParams.get('page')).toBe('3')
+    })
   })
 })

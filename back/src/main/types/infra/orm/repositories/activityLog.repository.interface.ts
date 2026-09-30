@@ -46,8 +46,19 @@ export type ActivityLogFindManyResult = {
 // `GET /super-admin/access-log` (source=activite). Filtres libres — sous
 // superadmin, `assertTenantReadScope` (tenant-guard.ts) ne s'applique qu'au contexte `tenant`,
 // jamais à `superadmin` : rien n'exige donc un `where` particulier ici, contrairement au
-// `findMany` ci-dessus (tenant ordinaire). Tous optionnels : sans aucun, la lecture rend les 200
-// dernières lignes de la table (`PLATFORM_ACCESS_LOG_LIMIT`, voir l'implémentation).
+// `findMany` ci-dessus (tenant ordinaire). Les trois filtres sont optionnels ; `page`/`pageSize`
+// ne le sont pas.
+//
+// PAGINATION (2026-10-01) — CE CHAMP REMPLACE UNE BORNE DURE, ce n'est pas une commodité ajoutée
+// à côté d'elle. La lecture était tronquée à 200 lignes (`PLATFORM_ACCESS_LOG_LIMIT`,
+// `createdAt desc`) SANS aucun moyen de remonter plus loin : au-delà, les plus anciennes lignes du
+// périmètre demandé étaient inatteignables, et la seule parade était de resserrer les filtres
+// jusqu'à ce que le périmètre tienne sous la borne. C'était la limite §8 de
+// `docs/multi-tenant/decisions-etape-4b.md`, écrite comme ouverte ; elle est fermée ici, du même
+// geste et avec la même forme que le journal d'administration l'a été le 2026-09-29
+// (`ActivityLogFindManyParams` ci-dessus). `sansEtablissement` reste utile après coup : viser les
+// lignes du script d'amorçage par un filtre est plus court que de pousser la pagination jusqu'aux
+// plus anciennes lignes de la plateforme.
 //
 // Deux de ces champs méritent une précision, et le mot « libres » ci-dessus
 // ne doit pas laisser croire qu'ils sont interchangeables :
@@ -64,6 +75,17 @@ export type PlatformAccessLogFilters = {
   sansEtablissement?: boolean
   compte?: string
   action?: string
+  page: number
+  pageSize: number
+}
+
+// `page`/`pageSize` ne figurent PAS ici : la route les connaît déjà (elle vient de les lire dans
+// sa requête) et les recopie dans sa réponse. Un dépôt qui les renverrait donnerait à croire
+// qu'il peut les corriger — il ne le fait pas, il les applique. `total` est le décompte du même
+// `where`, hors page : c'est lui, et lui seul, qui rend la dernière page atteignable.
+export type PlatformAccessLogPage = {
+  data: ActivityLogEntityRepo[]
+  total: number
 }
 
 export interface ActivityLogRepositoryInterface {
@@ -78,7 +100,7 @@ export interface ActivityLogRepositoryInterface {
   ) => Promise<ActivityLogFindManyResult>
   findAllPlatformWide: (
     filters: PlatformAccessLogFilters,
-  ) => Promise<ActivityLogEntityRepo[]>
+  ) => Promise<PlatformAccessLogPage>
   deleteOlderThan: (
     date: Date,
     filters?: ActivityLogScopeFilters,

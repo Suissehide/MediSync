@@ -175,11 +175,15 @@ Key cross-cutting concerns:
     - `SUPERADMIN_OPERATIONS` — tenant models. Today: `Service` (`count`, `findMany`),
       `EstablishmentMembership` (`count`, `findMany`, `create`), `ServiceMembership` (`count`,
       `findMany`), `Patient` (**`count` only** — never a row), `ActivityLog` (`findMany`, `count`),
-      `PatientAccessLog` (**`findMany` only**, étape 4b — the audit journal behind
-      `GET /super-admin/access-log?source=acces`, never a `Patient` row; `count` was declared "for
-      symmetry" with `ActivityLog` and removed at the final branch review because **no call site
-      exercised it**. The discipline written above `NO_CONTEXT_GLOBAL_OPERATIONS` — "an entry with
-      no route is an entry to delete" — applies to this table too).
+      `PatientAccessLog` (`findMany`, `count` — the audit journal behind
+      `GET /super-admin/access-log?source=acces`, never a `Patient` row). **`count` has been in and
+      out of this table, and the round trip is the lesson**: it was first declared "for symmetry"
+      with `ActivityLog` and removed at the final branch review because **no call site exercised
+      it** (the discipline written above `NO_CONTEXT_GLOBAL_OPERATIONS` — "an entry with no route is
+      an entry to delete" — applies here too), then **re-declared on 2026-10-01** when the
+      pagination of that route gave it one: `findAllPlatformWide` now counts the same `where`
+      outside the page, without which the last page is unreachable. Removing the entry does **not**
+      yield a total of zero — the table fails closed, so the route answers **500**.
     - `SUPERADMIN_GLOBAL_OPERATIONS` — global models, its exact mirror. A global model **absent
       from this table is refused in full under `superadmin`, reads included**. Writes are named
       one by one: `User.create` (not `upsert`, which would overwrite an existing account),
@@ -475,6 +479,21 @@ Key cross-cutting concerns:
   diverge. `patientId` is nullable **for that reason alone**. `exportFilters` is the only free-text
   column of the table and `PatientAccessLogDomain.record` refuses any clinical key in it,
   recursively, refusing rather than accepting anything it cannot parse.
+  **All three journal reads are paginated since 2026-10-01, and the pagination is one shape, not
+  three.** Every journal response is `{ data, total, page, pageSize }`, `page`/`pageSize` default to
+  1 and 50, and `pageSize` is capped at **100** by the Zod query schema. Before that date only the
+  establishment-administration journal was paginated (2026-09-29): `GET /super-admin/access-log` was
+  truncated to a hard **200 rows** with nothing to reach past it (the §8 limit of
+  `docs/multi-tenant/decisions-etape-4b.md`, now closed), the establishment detail carried its
+  journal inline capped at **100**, and the two per-record reads of `PatientAccessLog` had **no
+  bound at all**. Two consequences to keep: the `total` must be counted on **exactly** the page's
+  `where` and without `take` (a wider `where` advertises pages that render nothing; a `take` on the
+  count caps the total at the page size, which is the old hard bound wearing a total's clothes), and
+  the journal of an establishment now lives on its **own** route
+  (`GET /super-admin/establishments/:id/activity-log`) rather than inside
+  `GET /super-admin/establishments/:id` — serving it in both places would give one on-screen table
+  two sources. `EstablishmentDomain.getById` still derives `lastActivityAt` from that same read, with
+  `pageSize: 1`.
   **Retention is configurable**: `LOG_RETENTION_MONTHS`, twelve months by default, applied to
   **both** journals by two separate scheduled purges in `application/starter.ts` (the month
   arithmetic is **duplicated** between the two domains on purpose — a sabotage that hardcodes twelve

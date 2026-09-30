@@ -3,6 +3,7 @@ import Boom from '@hapi/boom'
 import type { PostgresOrm } from '../infra/orm/postgres-client'
 import type { IocContainer } from '../types/application/ioc'
 import type { AccessLinkDomainInterface } from '../types/domain/accessLink.domain.interface'
+import type { PlatformAccessLogPage } from '../types/infra/orm/repositories/activityLog.repository.interface'
 import type {
   CreateEstablishmentInput,
   CreateEstablishmentResult,
@@ -182,22 +183,30 @@ class EstablishmentDomain implements EstablishmentDomainInterface {
   //
   // N'appelle PLUS `countersFor`, qui relirait une seconde fois
   // `Service`, `EstablishmentMembership` et `ActivityLog` — les mêmes tables que `servicesFor`,
-  // `membersFor` et `activityLogFor` viennent de lire pour construire les trois tableaux
-  // ci-dessous. `serviceCount`/`accountCount`/`firstAdmin`/`lastActivityAt` sont donc dérivés de
-  // CES tableaux, déjà chargés ; `patientCount` reste une lecture à part
-  // (`patientCountFor`) — c'est la seule que rien d'autre ici ne charge (`Patient.findMany`
-  // n'est pas déclaré, spec §3.3). Les deux listes utilisées ici (`services`/`members`) portent
-  // TOUJOURS les désactivés (arbitrage de Léo — voir le commentaire sur
-  // `EstablishmentServiceRow`) ; seuls les compteurs filtrent, en re-dérivant depuis ces mêmes
-  // tableaux plutôt qu'en refaisant la requête.
+  // `membersFor` et `activityLogFor` viennent de lire pour construire les tableaux ci-dessous.
+  // `serviceCount`/`accountCount`/`firstAdmin`/`lastActivityAt` sont donc dérivés de CES lectures,
+  // déjà faites ; `patientCount` reste une lecture à part (`patientCountFor`) — c'est la seule que
+  // rien d'autre ici ne charge (`Patient.findMany` n'est pas déclaré, spec §3.3). Les deux listes
+  // utilisées ici (`services`/`members`) portent TOUJOURS les désactivés (arbitrage de Léo — voir
+  // le commentaire sur `EstablishmentServiceRow`) ; seuls les compteurs filtrent, en re-dérivant
+  // depuis ces mêmes tableaux plutôt qu'en refaisant la requête.
+  //
+  // NE REND PLUS LE JOURNAL (2026-10-01) : il a sa propre route paginée (`activityLogFor`
+  // ci-dessous), et le servir ici EN PLUS donnerait deux sources à une seule table à l'écran. La
+  // seule chose que ce détail en tire encore est `lastActivityAt`, d'où le `pageSize: 1` —
+  // l'ordre est `createdAt desc`, donc la tête de la première page EST la dernière activité.
   async getById(id: string): Promise<EstablishmentDetail> {
     const establishment = await this.establishmentRepository.findByIdOrThrow(id)
-    const [services, members, activityLog, patientCount] = await Promise.all([
-      this.establishmentRepository.servicesFor(establishment.id),
-      this.establishmentRepository.membersFor(establishment.id),
-      this.establishmentRepository.activityLogFor(establishment.id),
-      this.establishmentRepository.patientCountFor(establishment.id),
-    ])
+    const [services, members, derniereActivite, patientCount] =
+      await Promise.all([
+        this.establishmentRepository.servicesFor(establishment.id),
+        this.establishmentRepository.membersFor(establishment.id),
+        this.establishmentRepository.activityLogFor(establishment.id, {
+          page: 1,
+          pageSize: 1,
+        }),
+        this.establishmentRepository.patientCountFor(establishment.id),
+      ])
 
     const serviceCount = services.filter(
       (service) => service.deactivatedAt === null,
@@ -218,10 +227,10 @@ class EstablishmentDomain implements EstablishmentDomainInterface {
           lastName: firstAdminMember.lastName,
         }
       : null
-    // `activityLog` est trié par `createdAt` décroissant (activityLogFor) : son premier élément
-    // EST la dernière activité, quelle que soit la borne de page appliquée à la liste — la borne
-    // ne coupe que la QUEUE d'une liste déjà triée, jamais la tête.
-    const lastActivityAt = activityLog[0]?.createdAt ?? null
+    // Trié par `createdAt` décroissant (activityLogFor) : le premier élément de la PREMIÈRE page
+    // EST la dernière activité, quelle que soit la taille de page demandée — une page ne coupe que
+    // la QUEUE d'une liste déjà triée, jamais sa tête.
+    const lastActivityAt = derniereActivite.data[0]?.createdAt ?? null
 
     return {
       ...establishment,
@@ -232,8 +241,23 @@ class EstablishmentDomain implements EstablishmentDomainInterface {
       lastActivityAt,
       services,
       members,
-      activityLog,
     }
+  }
+
+  // Le journal d'activité d'UN établissement, paginé (2026-10-01) : `GET
+  // /super-admin/establishments/:id/activity-log`. Simple relais, comme
+  // `ActivityLogDomain.findAllPlatformWide` — le contexte `superadmin` et le décompte se jouent
+  // entièrement dans `EstablishmentRepository.activityLogFor`.
+  //
+  // PAS DE `findByIdOrThrow` EN AMONT, à la différence de `getById`, et c'est délibéré : sur un
+  // identifiant inconnu cette route rend une page vide plutôt qu'un 404. L'écran a déjà chargé son
+  // établissement par `getById`, qui lève, lui ; un second 404 depuis le tableau, sur la même page,
+  // ne dirait rien de plus et ferait payer une lecture à chaque changement de page.
+  activityLogFor(
+    id: string,
+    params: { page: number; pageSize: number },
+  ): Promise<PlatformAccessLogPage> {
+    return this.establishmentRepository.activityLogFor(id, params)
   }
 }
 

@@ -4,6 +4,7 @@ import type {
   ActivityLogFindManyResult,
   ActivityLogScopeFilters,
   PlatformAccessLogFilters,
+  PlatformAccessLogPage,
 } from '../infra/orm/repositories/activityLog.repository.interface'
 
 export type ActivityLogEntity = ActivityLogEntityRepo
@@ -17,6 +18,6 @@ export interface ActivityLogDomainInterface {
   // plateforme) se joue entièrement dans `ActivityLogRepository.findAllPlatformWide`.
   findAllPlatformWide: (
     filters: PlatformAccessLogFilters,
-  ) => Promise<ActivityLogEntity[]>
+  ) => Promise<PlatformAccessLogPage>
   cleanup: (filters?: ActivityLogScopeFilters) => Promise<{ deleted: number }>
 }

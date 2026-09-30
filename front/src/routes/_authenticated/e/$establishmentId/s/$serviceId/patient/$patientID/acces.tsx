@@ -1,4 +1,5 @@
 import { createFileRoute, redirect, useParams } from '@tanstack/react-router'
+import { useState } from 'react'
 
 import { getAccessLogColumns } from '@/columns/accessLog.column.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
@@ -31,11 +32,20 @@ export const Route = createFileRoute(
   component: PatientAccessLogPage,
 })
 
+// Pagination côté serveur (2026-10-01) : cette lecture n'avait AUCUNE borne — un dossier très
+// consulté rendait tout son journal d'une traite, et ce journal gagne une ligne à chaque ouverture
+// du dossier. Même taille de première page que les deux autres journaux du dépôt.
+const PREMIERE_PAGE = { pageIndex: 0, pageSize: 25 }
+
 function PatientAccessLogPage() {
   const { establishmentId, patientID } = useParams({
     from: '/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/acces',
   })
-  const { entries, isPending, error } = usePatientAccessLogQuery(patientID)
+  const [pagination, setPagination] = useState(PREMIERE_PAGE)
+  const { data, isPending, error } = usePatientAccessLogQuery(patientID, {
+    page: pagination.pageIndex + 1,
+    pageSize: pagination.pageSize,
+  })
 
   // Résout `serviceId` en nom lisible pour la colonne « Service » (`columns/accessLog.column.tsx`) :
   // la liste des services de CET établissement vient déjà de la session (`GET /me`), aucune
@@ -46,7 +56,7 @@ function PatientAccessLogPage() {
       (establishment) => establishment.id === establishmentId,
     )?.services ?? []
 
-  const etat = queryState({ isPending, error, hasData: entries !== undefined })
+  const etat = queryState({ isPending, error, hasData: data !== undefined })
 
   const columns = getAccessLogColumns({ services })
 
@@ -71,10 +81,15 @@ function PatientAccessLogPage() {
           </div>
         )}
 
-        {etat === 'ready' && entries && (
+        {etat === 'ready' && data && (
           <ReactTable<PatientAccessLogEntry>
-            data={entries}
+            data={data.data}
             columns={columns}
+            serverPagination={{
+              ...pagination,
+              rowCount: data.total,
+              onChange: setPagination,
+            }}
             filterId="patient-access-log"
             emptyState={
               <div className="text-sm text-text-light py-6 text-center">

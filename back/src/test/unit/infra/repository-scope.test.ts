@@ -130,6 +130,12 @@ const tenant: Tenant = {
   soignantId: 'so1',
 }
 
+// Page par defaut des trois journaux, depuis leur pagination (2026-10-01). Les tests dont le sujet
+// est le CLOISONNEMENT la passent telle quelle : elle n'a aucune influence sur le `where`, qui est
+// ce qu'ils eprouvent. L'arithmetique `page`/`pageSize` -> `skip`/`take` est eprouvee a part, avec
+// une page 3 — la page 1 rendrait un `skip` de zero, indiscernable d'un `skip` oublie.
+const PAGE = { page: 1, pageSize: 50 }
+
 const buildContainer = (prisma: unknown, tenantContext: TenantContext) =>
   ({
     postgresOrm: { prisma },
@@ -289,6 +295,7 @@ describe('scoping des repositories d etablissement', () => {
       establishmentId: 'e9',
       compte: 'u9',
       action: 'a9',
+      ...PAGE,
     })
     expect(calls[0]).toMatchObject({
       model: 'activityLog',
@@ -313,7 +320,7 @@ describe('scoping des repositories d etablissement', () => {
     // fois le journal au-dela de 200 entrees. Un booleen ici, jamais la valeur reservee du
     // schema HTTP — la route la traduit une fois, avant d'appeler ce depot.
     calls.length = 0
-    await repo.findAllPlatformWide({ sansEtablissement: true })
+    await repo.findAllPlatformWide({ sansEtablissement: true, ...PAGE })
     expect(calls[0]).toMatchObject({
       model: 'activityLog',
       op: 'findMany',
@@ -326,12 +333,13 @@ describe('scoping des repositories d etablissement', () => {
     await repo.findAllPlatformWide({
       sansEtablissement: true,
       establishmentId: 'e9',
+      ...PAGE,
     })
     expect(calls[0]?.args.where).toMatchObject({ establishmentId: null })
 
     calls.length = 0
 
-    await repo.findAllPlatformWide({})
+    await repo.findAllPlatformWide(PAGE)
     // Sans filtre, AUCUNE cle forcee dans le `where` — c'est precisement ce qui rend lisibles
     // les lignes du script d'amorcage (`establishmentId: null`) : un `establishmentId` impose,
     // meme `null`, les exclurait d'un `where: { establishmentId: null }` qui ne matcherait que
@@ -340,6 +348,36 @@ describe('scoping des repositories d etablissement', () => {
       model: 'activityLog',
       op: 'findMany',
       args: { where: {} },
+    })
+    // LE DECOMPTE PORTE LE MEME `where` QUE LA PAGE, et ne porte NI `skip` NI `take` (2026-10-01).
+    // Les deux moities de la propriete comptent : un `total` compte sur un `where` plus large
+    // annoncerait des pages qui n'existent pas, et un `total` a qui l'on passerait `take`
+    // plafonnerait a la taille de page — soit exactement la borne de 200 lignes que cette
+    // pagination remplace, deguisee en total.
+    expect(calls[1]).toMatchObject({
+      model: 'activityLog',
+      op: 'count',
+      args: { where: {} },
+    })
+    expect(calls[1]?.args).not.toHaveProperty('take')
+    expect(calls[1]?.args).not.toHaveProperty('skip')
+  })
+
+  // Pagination (2026-10-01) : ferme la limite §8 de `docs/multi-tenant/decisions-etape-4b.md`.
+  // `skip` DERIVE de la page demandee, il n'est pas recopie : une page 3 de 25 saute 50 lignes,
+  // pas 3. C'est l'erreur classique de cette arithmetique, et elle ne se voit pas sur la page 1
+  // (ou `skip` vaut zero dans les deux lectures) — d'ou une page 3, jamais une page 1 ici.
+  it('ActivityLogRepository.findAllPlatformWide traduit page/pageSize en skip/take', async () => {
+    const { prisma, calls } = buildFakePrisma()
+    const ctx = new TenantContext()
+    const repo = new ActivityLogRepository(buildContainer(prisma, ctx))
+
+    await repo.findAllPlatformWide({ page: 3, pageSize: 25 })
+
+    expect(calls[0]).toMatchObject({
+      model: 'activityLog',
+      op: 'findMany',
+      args: { skip: 50, take: 25, orderBy: { createdAt: 'desc' } },
     })
   })
 
@@ -385,9 +423,16 @@ describe('scoping des repositories d etablissement', () => {
     const { prisma, storesAuDispatch } = buildLazyFakePrisma(ctx)
     const repo = new ActivityLogRepository(buildContainer(prisma, ctx))
 
-    await repo.findAllPlatformWide({})
+    await repo.findAllPlatformWide(PAGE)
 
-    expect(storesAuDispatch).toEqual([{ kind: 'superadmin' }])
+    // DEUX dispatches depuis la pagination (2026-10-01), et LES DEUX doivent voir `superadmin` :
+    // le decompte est une operation de `SUPERADMIN_OPERATIONS` comme la page, et un `count` qui
+    // sortirait de la portee du contexte serait refuse par le garde-fou — la route repondrait 500,
+    // jamais un total de zero.
+    expect(storesAuDispatch).toEqual([
+      { kind: 'superadmin' },
+      { kind: 'superadmin' },
+    ])
   })
 })
 
@@ -1960,7 +2005,7 @@ describe('PatientAccessLogRepository', () => {
     const ctx = new TenantContext()
     const repo = new PatientAccessLogRepository(buildContainer(prisma, ctx))
 
-    await ctx.run(tenant, () => repo.findByPatientInService('p1'))
+    await ctx.run(tenant, () => repo.findByPatientInService('p1', PAGE))
 
     expect(calls[0]).toMatchObject({
       model: 'patientAccessLog',
@@ -1969,6 +2014,35 @@ describe('PatientAccessLogRepository', () => {
         where: { patientId: 'p1', establishmentId: 'e1', serviceId: 's1' },
       },
     })
+    // Pagination (2026-10-01) : LE DECOMPTE PORTE LE MEME `where` QUE LA PAGE — donc le meme
+    // cloisonnement par service. Un `count` dont le `where` perdrait `serviceId` annoncerait a un
+    // service le volume de consultations d'un autre, alors meme que la page, elle, resterait juste.
+    expect(calls[1]).toMatchObject({
+      model: 'patientAccessLog',
+      op: 'count',
+      args: {
+        where: { patientId: 'p1', establishmentId: 'e1', serviceId: 's1' },
+      },
+    })
+  })
+
+  // `skip` DERIVE de la page, il n'est pas recopie : page 3 de 25 saute 50 lignes. Invisible sur
+  // la page 1, ou les deux valent zero — d'ou une page 3 ici.
+  it('findByPatientInService traduit page/pageSize en skip/take', async () => {
+    const { prisma, calls } = buildFakePrisma()
+    const ctx = new TenantContext()
+    const repo = new PatientAccessLogRepository(buildContainer(prisma, ctx))
+
+    await ctx.run(tenant, () =>
+      repo.findByPatientInService('p1', { page: 3, pageSize: 25 }),
+    )
+
+    expect(calls[0]).toMatchObject({
+      model: 'patientAccessLog',
+      op: 'findMany',
+      args: { skip: 50, take: 25, orderBy: { createdAt: 'desc' } },
+    })
+    expect(calls[1]?.args).not.toHaveProperty('take')
   })
 
   // Un tenant d'administration d'etablissement (`serviceId: null`, comme le rend
@@ -1992,7 +2066,7 @@ describe('PatientAccessLogRepository', () => {
     const repo = new PatientAccessLogRepository(buildContainer(prisma, ctx))
 
     await ctx.run(tenantAdminEtablissement, () =>
-      repo.findByPatientInEstablishment('p1'),
+      repo.findByPatientInEstablishment('p1', PAGE),
     )
 
     expect(spy).toHaveBeenCalledTimes(1)
@@ -2044,6 +2118,7 @@ describe('PatientAccessLogRepository', () => {
       establishmentId: 'e9',
       compte: 'u9',
       action: 'a9',
+      ...PAGE,
     })
     expect(calls[0]).toMatchObject({
       model: 'patientAccessLog',
@@ -2063,7 +2138,7 @@ describe('PatientAccessLogRepository', () => {
     // le tient : s'il venait a le lire, le `where` porterait `establishmentId: null` et cette
     // assertion rougirait.
     calls.length = 0
-    await repo.findAllPlatformWide({ sansEtablissement: true })
+    await repo.findAllPlatformWide({ sansEtablissement: true, ...PAGE })
     expect(calls[0]).toMatchObject({
       model: 'patientAccessLog',
       op: 'findMany',
@@ -2072,12 +2147,20 @@ describe('PatientAccessLogRepository', () => {
     expect(calls[0]?.args.where).not.toHaveProperty('establishmentId')
 
     calls.length = 0
-    await repo.findAllPlatformWide({})
+    await repo.findAllPlatformWide(PAGE)
     expect(calls[0]).toMatchObject({
       model: 'patientAccessLog',
       op: 'findMany',
       args: { where: {} },
     })
+    // Meme `where` pour le decompte, ni `skip` ni `take` : voir le meme couple d'assertions sur
+    // `ActivityLogRepository.findAllPlatformWide`, et pourquoi les deux moities comptent.
+    expect(calls[1]).toMatchObject({
+      model: 'patientAccessLog',
+      op: 'count',
+      args: { where: {} },
+    })
+    expect(calls[1]?.args).not.toHaveProperty('take')
   })
 
   it('la forme sans borne de findAllPlatformWide est refusee hors du contexte superadmin, et permise dedans', () => {
@@ -2112,8 +2195,14 @@ describe('PatientAccessLogRepository', () => {
     const { prisma, storesAuDispatch } = buildLazyFakePrisma(ctx)
     const repo = new PatientAccessLogRepository(buildContainer(prisma, ctx))
 
-    await repo.findAllPlatformWide({})
+    await repo.findAllPlatformWide(PAGE)
 
-    expect(storesAuDispatch).toEqual([{ kind: 'superadmin' }])
+    // DEUX dispatches depuis la pagination, et les deux sous `superadmin` — voir le commentaire de
+    // l'assertion jumelle sur `ActivityLogRepository`. C'est cette entree-la qui a exige de
+    // RE-DECLARER `PatientAccessLog.count` dans `SUPERADMIN_OPERATIONS`.
+    expect(storesAuDispatch).toEqual([
+      { kind: 'superadmin' },
+      { kind: 'superadmin' },
+    ])
   })
 })

@@ -151,6 +151,17 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
       cookies: superAdminCookies,
     })
 
+  // Le journal d'activite de l'etablissement a sa propre route PAGINEE depuis le 2026-10-01 : il
+  // arrivait dans la reponse de `getEstablishment` ci-dessus, borne a 100 lignes
+  // (`ACTIVITY_LOG_DETAIL_LIMIT`, supprimee) et sans rien pour aller plus loin, ni meme pour savoir
+  // qu'il y avait un plus loin.
+  const getActivityLog = (id: string, query = '') =>
+    testApp.app.inject({
+      method: 'GET',
+      url: `/super-admin/establishments/${id}/activity-log${query}`,
+      cookies: superAdminCookies,
+    })
+
   const searchAccount = (email: string) =>
     testApp.app.inject({
       method: 'GET',
@@ -426,9 +437,12 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
         const body = res.json()
 
         // Clés EXACTES du corps ENTIER — pas seulement de la ligne.
+        // `activityLog` A DISPARU de cette liste le 2026-10-01 : le journal a sa propre route
+        // paginée (voir le describe dédié plus bas). `lastActivityAt`, lui, RESTE — il était
+        // dérivé de `activityLog[0]`, il l'est désormais d'une lecture d'UNE ligne, et son
+        // assertion plus bas dans ce même test est ce qui empêche qu'il se perde au change.
         expect(Object.keys(body).sort()).toEqual([
           'accountCount',
-          'activityLog',
           'createdAt',
           'deactivatedAt',
           'firstAdmin',
@@ -513,8 +527,16 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
         expect(globalPatientCount).toBeGreaterThan(2)
         expect(body.patientCount).toBe(2)
 
-        expect(body.activityLog).toHaveLength(2)
-        for (const entry of body.activityLog) {
+        // LE JOURNAL N'EST PLUS DANS CE CORPS, et cette assertion-ci est ce qui le tient : le
+        // remettre dans la réponse du détail donnerait deux sources à une seule table à l'écran, et
+        // une première page chargée deux fois à chaque montage.
+        expect(body).not.toHaveProperty('activityLog')
+        // Il est TOUJOURS LISIBLE, par sa route : les deux lignes de cette fixture y sont, avec les
+        // mêmes clés exactes qu'avant le découpage.
+        const journal = (await getActivityLog(est.id)).json()
+        expect(journal.total).toBe(2)
+        expect(journal.data).toHaveLength(2)
+        for (const entry of journal.data) {
           expect(Object.keys(entry).sort()).toEqual([
             'action',
             'createdAt',
@@ -526,7 +548,7 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
             'userLastName',
           ])
         }
-        expect(body.activityLog).toEqual(
+        expect(journal.data).toEqual(
           expect.arrayContaining([
             expect.objectContaining({
               action: 'patient.updated',
@@ -556,6 +578,116 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
 
     it('rend 404 pour un identifiant inconnu', async () => {
       const res = await getEstablishment('clzzzzzzzzzzzzzzzzzzzzzzz')
+      expect(res.statusCode).toBe(404)
+    })
+  })
+
+  // Le journal d'activite d'UN etablissement, extrait du detail et PAGINE (2026-10-01). Il y etait
+  // borne a 100 lignes : au-dela, rien ne disait qu'il y en avait davantage, et rien ne permettait
+  // d'y aller. Les cles de la LIGNE, elles, sont inchangees — verifiees dans le test du detail
+  // ci-dessus, qui lit desormais cette route.
+  describe('GET /super-admin/establishments/:id/activity-log', () => {
+    let estJournal: { id: string }
+
+    beforeAll(async () => {
+      estJournal = await createEstablishment('Etablissement Journal Pagine')
+      // 120 lignes : AU-DELA des 100 de l'ancienne borne. En dessous, ce describe serait vrai par
+      // vacuite — l'ancienne borne l'aurait passe tout aussi bien.
+      await testDb.activityLog.createMany({
+        data: Array.from({ length: 120 }, (_, i) => ({
+          establishmentId: estJournal.id,
+          serviceId: null,
+          userID: 'staff-journal',
+          userFirstName: 'Prenom',
+          userLastName: 'ActeurJournal',
+          action: 'patient.updated',
+          entityType: 'Patient',
+          entityID: `ligne-${String(i).padStart(3, '0')}`,
+          // Dates strictement croissantes : le tri `createdAt desc` est alors TOTAL, sans
+          // departage arbitraire — sans quoi 120 lignes au meme instant rendraient l'ordre des
+          // pages non deterministe, et ce test intermittent.
+          createdAt: new Date(Date.UTC(2026, 0, 1, 0, i)),
+        })),
+      })
+    })
+
+    it('rend la premiere page et le total de TOUT le journal, pas de la page', async () => {
+      const res = await getActivityLog(estJournal.id, '?pageSize=25')
+      expect(res.statusCode).toBe(200)
+      const body = res.json()
+      expect(body).toMatchObject({ total: 120, page: 1, pageSize: 25 })
+      expect(body.data).toHaveLength(25)
+    })
+
+    // CE QUE L'ANCIENNE BORNE DE 100 RENDAIT INATTEIGNABLE : la 101e ligne et les suivantes. La
+    // plus ANCIENNE du journal (`ligne-000`, la plus petite date) est en queue du tri decroissant,
+    // donc sur la derniere page — et elle y est.
+    it('la derniere page porte la ligne la plus ancienne, au-dela des 100 de l ancienne borne', async () => {
+      const res = await getActivityLog(estJournal.id, '?pageSize=25&page=5')
+      expect(res.statusCode).toBe(200)
+      const body = res.json()
+      expect(body.page).toBe(5)
+      expect(body.data).toHaveLength(20)
+      expect(
+        body.data.map((l: { entityID: string }) => l.entityID),
+      ).toContain('ligne-000')
+    })
+
+    it('deux pages consecutives ne partagent aucune ligne', async () => {
+      const [p1, p2] = await Promise.all([
+        getActivityLog(estJournal.id, '?pageSize=10&page=1'),
+        getActivityLog(estJournal.id, '?pageSize=10&page=2'),
+      ])
+      const ids = (res: { json: () => { data: { id: string }[] } }) =>
+        res.json().data.map((l) => l.id)
+      expect(ids(p1).filter((id) => ids(p2).includes(id))).toEqual([])
+    })
+
+    it('refuse une taille de page au-dela de 100', async () => {
+      const res = await getActivityLog(estJournal.id, '?pageSize=500')
+      expect(res.statusCode).toBe(400)
+    })
+
+    // LE JOURNAL RESTE BORNE A SON ETABLISSEMENT. C'est la propriete que le decoupage ne devait
+    // surtout pas perdre : la route lit sous `runAsSuperAdmin`, donc sans tenant — seul le `where`
+    // de `activityLogFor` la tient. Un autre etablissement a ses propres lignes dans cette base
+    // (celles du test du detail ci-dessus) ; le total de celui-ci n'en voit aucune.
+    it('ne rend que les lignes de CET etablissement', async () => {
+      const total = await testDb.activityLog.count()
+      expect(total).toBeGreaterThan(120)
+
+      const res = await getActivityLog(estJournal.id, '?pageSize=100')
+      const body = res.json()
+      expect(body.total).toBe(120)
+      expect(
+        body.data.every(
+          (l: { entityID: string }) => l.entityID.startsWith('ligne-'),
+        ),
+      ).toBe(true)
+    })
+
+    // Une page vide, jamais un 404, sur un identifiant inconnu — voir le commentaire de
+    // `EstablishmentDomain.activityLogFor` : l'ecran a deja charge son etablissement par `getById`,
+    // qui leve, lui ; un second 404 a chaque changement de page ne dirait rien de plus.
+    it('rend une page vide, pas un 404, pour un etablissement inconnu', async () => {
+      const res = await getActivityLog('clzzzzzzzzzzzzzzzzzzzzzzz')
+      expect(res.statusCode).toBe(200)
+      expect(res.json()).toMatchObject({ data: [], total: 0 })
+    })
+
+    it('repond 404 a un compte sans le drapeau isSuperAdmin, jamais 403', async () => {
+      const ordinaire = await createUser({
+        email: 'sans-drapeau-journal@test.fr',
+        memberships: [{ establishmentId: estJournal.id, role: 'ADMIN' }],
+      })
+      expect(ordinaire.id).toBeDefined()
+      const cookies = await signIn(testApp.app, 'sans-drapeau-journal@test.fr')
+
+      const res = await testApp.app.inject({
+        method: 'GET',
+        url: `/super-admin/establishments/${estJournal.id}/activity-log`,
+        cookies,
+      })
       expect(res.statusCode).toBe(404)
     })
   })

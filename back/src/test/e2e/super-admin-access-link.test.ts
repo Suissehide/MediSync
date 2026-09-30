@@ -220,7 +220,10 @@ describe('soupape super-admin : reemettre le lien d un compte multi-etablissemen
       cookies: superAdminCookies,
     })
     expect(journalPlateforme.statusCode).toBe(200)
-    const lignesVisibles = journalPlateforme.json() as { entityID: string }[]
+    // Enveloppe paginee depuis le 2026-10-01 : `{ data, total, page, pageSize }`.
+    const lignesVisibles = (
+      journalPlateforme.json() as { data: { entityID: string }[] }
+    ).data
     expect(lignesVisibles.some((l) => l.entityID === cible.id)).toBe(true)
   })
 })

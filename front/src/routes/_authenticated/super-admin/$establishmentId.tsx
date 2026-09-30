@@ -13,6 +13,7 @@ import ReactTable from '@/components/table/reactTable.tsx'
 import { Button } from '@/components/ui/button.tsx'
 import { queryState } from '@/libs/queryState.ts'
 import {
+  useSuperAdminEstablishmentActivityLogQuery,
   useSuperAdminEstablishmentQuery,
   useSuperAdminRenameEstablishment,
 } from '@/queries/useSuperAdmin.ts'
@@ -22,6 +23,12 @@ const ESTABLISHMENT_ROLE_LABEL: Record<string, string> = {
   ADMIN: "Chef d'établissement",
   MEMBER: 'Membre',
 }
+
+// Pagination côté serveur du journal (2026-10-01) : il arrivait dans la réponse
+// du détail, borné à 100 lignes, sans rien pour aller au-delà ni même pour
+// savoir qu'il y avait un au-delà. Même taille de première page que les deux
+// autres journaux du dépôt.
+const PREMIERE_PAGE = { pageIndex: 0, pageSize: 25 }
 
 // « Le détail d'un établissement — services,
 // membres, journal, bouton d'octroi avec motif obligatoire et durée ».
@@ -36,6 +43,7 @@ function SuperAdminEstablishmentDetail() {
   const navigate = useNavigate()
   const [renommer, setRenommer] = useState(false)
   const renameEstablishment = useSuperAdminRenameEstablishment()
+  const [pagination, setPagination] = useState(PREMIERE_PAGE)
   // Le paramètre de route DÉSIGNE l'établissement demandé (§6.2) : ce n'est
   // pas ici un tenant implicite, il n'est jamais posé dans le store
   // (`setContext`) ni utilisé par une fabrique d'URL de tenant — voir le
@@ -45,6 +53,13 @@ function SuperAdminEstablishmentDetail() {
   })
   const { establishment, isPending, error } =
     useSuperAdminEstablishmentQuery(establishmentId)
+  // Requête séparée du détail : changer de page ne relit ni les services, ni
+  // les membres, ni les compteurs.
+  const { data: journal, isPending: journalEnCours } =
+    useSuperAdminEstablishmentActivityLogQuery(establishmentId, {
+      page: pagination.pageIndex + 1,
+      pageSize: pagination.pageSize,
+    })
 
   // Avec `retry: 0`, une requête en
   // échec repasse `isPending` à `false` sans jamais poser `establishment` —
@@ -184,9 +199,15 @@ function SuperAdminEstablishmentDetail() {
             Journal d'activité
           </h2>
           <ReactTable<ActivityLog>
-            data={establishment.activityLog}
+            data={journal?.data ?? []}
             columns={activityLogColumns}
+            serverPagination={{
+              ...pagination,
+              rowCount: journal?.total ?? 0,
+              onChange: setPagination,
+            }}
             filterId="super-admin-establishment-activity-log"
+            isLoading={journalEnCours}
           />
         </section>
       </div>

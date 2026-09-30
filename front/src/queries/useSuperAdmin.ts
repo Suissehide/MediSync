@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 
 import { SuperAdminApi } from '../api/superAdmin.api.ts'
 import { SUPER_ADMIN } from '../constants/process.constant.ts'
@@ -68,6 +73,34 @@ export const useSuperAdminEstablishmentQuery = (establishmentId: string) => {
   useDataFetching({ isPending, isError, error })
 
   return { establishment, isPending, error }
+}
+
+// Le journal d'activité d'UN établissement, paginé (2026-10-01). Requête
+// SÉPARÉE de `useSuperAdminEstablishmentQuery` : changer de page ne doit pas
+// relire les services, les membres et les compteurs de l'établissement, que
+// rien n'a bougés. `params` figure dans la clé — sans lui, changer de page ne
+// changerait pas de requête.
+export const useSuperAdminEstablishmentActivityLogQuery = (
+  establishmentId: string,
+  params: { page?: number; pageSize?: number } = {},
+) => {
+  const { data, isPending, isError, error } = useQuery({
+    queryKey: [
+      SUPER_ADMIN.GET_ESTABLISHMENT_ACTIVITY_LOG,
+      establishmentId,
+      params,
+    ],
+    queryFn: () =>
+      SuperAdminApi.getEstablishmentActivityLog({ establishmentId, ...params }),
+    retry: 0,
+    // Changer de page garde la page précédente affichée jusqu'à l'arrivée de la
+    // suivante, comme sur les deux autres journaux.
+    placeholderData: keepPreviousData,
+  })
+
+  useDataFetching({ isPending, isError, error })
+
+  return { data, isPending, error }
 }
 
 // * MUTATIONS

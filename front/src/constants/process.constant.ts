@@ -25,6 +25,9 @@ export const SUPER_ADMIN = {
   // second élément du tableau `queryKey` (voir `useSuperAdminAccessLogQuery`), comme
   // `PATIENT_ACCESS_LOG.GET_BY_PATIENT` le fait déjà de `patientID`.
   GET_ACCESS_LOG: 'get_super_admin_access_log',
+  // Journal d'activité d'UN établissement, paginé (2026-10-01) : extrait de
+  // `GET_ESTABLISHMENT`, dont la réponse le portait borné à 100 lignes.
+  GET_ESTABLISHMENT_ACTIVITY_LOG: 'get_super_admin_establishment_activity_log',
 }
 
 // Membres du service courant et leur rattachement a un soignant (2026-09-29).

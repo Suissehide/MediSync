@@ -1,6 +1,6 @@
 import type { IocContainer } from '../../../types/application/ioc'
 import type { PrimaTransactionClient } from '../../../types/infra/orm/client'
-import type { ActivityLogEntityRepo } from '../../../types/infra/orm/repositories/activityLog.repository.interface'
+import type { PlatformAccessLogPage } from '../../../types/infra/orm/repositories/activityLog.repository.interface'
 import type {
   EstablishmentCounters,
   EstablishmentMemberRow,
@@ -12,12 +12,6 @@ import type {
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { TenantContextInterface } from '../../../types/utils/tenant-context'
 import type { PostgresPrismaClient } from '../postgres-client'
-
-// Le détail d'un établissement (spec §6.2) est un écran de diagnostic, pas un export complet :
-// la dernière tranche du journal, pas son historique entier. `ActivityLog.findMany` est déclaré
-// SANS limite de page dans SUPERADMIN_OPERATIONS — la borne est donc prise ici, côté
-// appelant, nommée pour qu'elle ne soit pas un nombre magique perdu dans un `take`.
-const ACTIVITY_LOG_DETAIL_LIMIT = 100
 
 // Repli défensif, nommé plutôt que laissé en `?? ''` silencieux :
 // `membersFor` vient de lire la ligne `EstablishmentMembership`, son `userId` DEVRAIT donc
@@ -365,21 +359,40 @@ class EstablishmentRepository implements EstablishmentRepositoryInterface {
     }
   }
 
-  // Le journal d'activité de l'établissement (spec §6.2), borné — voir
-  // `ACTIVITY_LOG_DETAIL_LIMIT`. Aucune identité de patient : les colonnes `userFirstName`/
-  // `userLastName` du modèle désignent l'AUTEUR de l'action (un membre du personnel), jamais un
-  // patient — `entityID` peut être l'identifiant d'un patient, un identifiant copiable comme la
-  // spec §3.4 les autorise tous, jamais son nom.
+  // Le journal d'activité de l'établissement (spec §6.2). Aucune identité de patient : les
+  // colonnes `userFirstName`/`userLastName` du modèle désignent l'AUTEUR de l'action (un membre du
+  // personnel), jamais un patient — `entityID` peut être l'identifiant d'un patient, un
+  // identifiant copiable comme la spec §3.4 les autorise tous, jamais son nom.
+  //
+  // PAGINÉE DEPUIS LE 2026-10-01, à la place d'`ACTIVITY_LOG_DETAIL_LIMIT` (100, supprimée avec
+  // son commentaire). Cette borne était défendue comme « la dernière tranche du journal, pas son
+  // historique entier » — vrai du besoin, faux du résultat : au-delà de 100 lignes, rien ne disait
+  // qu'il y en avait davantage, et rien ne permettait d'y aller. `total` répond à la première
+  // question, `page`/`pageSize` à la seconde. La borne de requête n'a pas disparu pour autant, elle
+  // a changé de place : c'est le `max(100)` du schéma HTTP qui la tient désormais, par page.
+  //
+  // DEUX APPELANTS, deux besoins distincts : la route dédiée (`GET
+  // /super-admin/establishments/:id/activity-log`), et `EstablishmentDomain.getById`, qui ne veut
+  // qu'une ligne — la plus récente, pour `lastActivityAt`. Le second passe `pageSize: 1` plutôt
+  // qu'une seconde méthode : le tri est `createdAt desc`, donc la tête de la première page EST la
+  // dernière activité, quelle que soit la taille de page.
   async activityLogFor(
     establishmentId: string,
-  ): Promise<ActivityLogEntityRepo[]> {
+    { page, pageSize }: { page: number; pageSize: number },
+  ): Promise<PlatformAccessLogPage> {
+    const where = { establishmentId }
     try {
       return await this.tenantContext.runAsSuperAdmin(async () => {
-        return await this.prisma.activityLog.findMany({
-          where: { establishmentId },
-          orderBy: { createdAt: 'desc' },
-          take: ACTIVITY_LOG_DETAIL_LIMIT,
-        })
+        const [data, total] = await Promise.all([
+          this.prisma.activityLog.findMany({
+            where,
+            orderBy: { createdAt: 'desc' },
+            skip: (page - 1) * pageSize,
+            take: pageSize,
+          }),
+          this.prisma.activityLog.count({ where }),
+        ])
+        return { data, total }
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({

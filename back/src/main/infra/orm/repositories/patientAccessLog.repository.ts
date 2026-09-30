@@ -2,6 +2,8 @@ import type { IocContainer } from '../../../types/application/ioc'
 import type {
   PatientAccessLogCreateEntityRepo,
   PatientAccessLogEntityRepo,
+  PatientAccessLogPage,
+  PatientAccessLogPageParams,
   PatientAccessLogRepositoryInterface,
   PlatformAccessLogFilters,
 } from '../../../types/infra/orm/repositories/patientAccessLog.repository.interface'
@@ -9,20 +11,6 @@ import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { TenantContextInterface } from '../../../types/utils/tenant-context'
 import { platformCompteFilter } from '../../../utils/platform-access-log-filters'
 import type { PostgresPrismaClient } from '../postgres-client'
-
-// Ecran de diagnostic plateforme, pas un export complet — meme esprit que
-// `ACTIVITY_LOG_DETAIL_LIMIT` (establishment.repository.ts) et son homologue
-// `PLATFORM_ACCESS_LOG_LIMIT` (activityLog.repository.ts, meme valeur — duplique
-// plutot que partage, comme le type `PlatformAccessLogFilters` : voir son commentaire).
-//
-// CE QUE CETTE BORNE REND INATTEIGNABLE, dit ici plutot que decouvert : le tri est
-// `createdAt desc`, donc au-dela de 200 lignes dans le perimetre
-// demande, les PLUS ANCIENNES sortent de la reponse — et AUCUNE pagination ne permet d'y
-// revenir. La seule facon de les atteindre est de RESSERRER les filtres (etablissement, compte,
-// action) jusqu'a ce que le perimetre demande tienne sous la borne. C'est pour cela que les
-// filtres sont evalues EN BASE et non dans le navigateur : un filtre navigateur ne peut, par
-// construction, que reduire une page deja tronquee.
-const PLATFORM_ACCESS_LOG_LIMIT = 200
 
 // Modele : service.repository.ts. Le constructeur ne lit
 // jamais le scope — chaque methode le fait a son propre appel, via `this.scope` ou
@@ -107,15 +95,31 @@ class PatientAccessLogRepository
   }
 
   // Meme piege que `create`, meme remede : `await` a l'interieur, pour lire `this.scope` avant
-  // de quitter la portee synchrone du contexte de tenant.
+  // de quitter la portee synchrone du contexte de tenant. `this.scope` est lu UNE fois et partage
+  // par les deux requetes, pour la meme raison : les deux doivent voir exactement le meme
+  // perimetre, et une seconde lecture du contexte serait une seconde occasion de le perdre.
+  //
+  // PAGINEE DEPUIS LE 2026-10-01 : cette lecture n'avait AUCUNE borne, ni de page ni de nombre de
+  // lignes. Un dossier tres consulte rendait tout son journal d'un coup — la table grossit a
+  // chaque ouverture du dossier, et seule la purge de retention (douze mois par defaut) la
+  // rognait. `total` compte le meme `where` hors page : c'est lui qui rend la derniere page
+  // atteignable.
   async findByPatientInService(
     patientId: string,
-  ): Promise<PatientAccessLogEntityRepo[]> {
+    { page, pageSize }: PatientAccessLogPageParams,
+  ): Promise<PatientAccessLogPage> {
+    const where = { patientId, ...this.scope }
     try {
-      return await this.prisma.patientAccessLog.findMany({
-        where: { patientId, ...this.scope },
-        orderBy: { createdAt: 'desc' },
-      })
+      const [data, total] = await Promise.all([
+        this.prisma.patientAccessLog.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          skip: (page - 1) * pageSize,
+          take: pageSize,
+        }),
+        this.prisma.patientAccessLog.count({ where }),
+      ])
+      return { data, total }
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
         entityName: 'PatientAccessLog',
@@ -130,14 +134,25 @@ class PatientAccessLogRepository
   // Prisma n'execute reellement la requete, et le garde-fou verrait alors le mauvais store.
   async findByPatientInEstablishment(
     patientId: string,
-  ): Promise<PatientAccessLogEntityRepo[]> {
+    { page, pageSize }: PatientAccessLogPageParams,
+  ): Promise<PatientAccessLogPage> {
     const { establishmentId } = this.establishmentScope
+    const where = { patientId, establishmentId }
     try {
       return await this.tenantContext.runAsSystem(async () => {
-        return await this.prisma.patientAccessLog.findMany({
-          where: { patientId, establishmentId },
-          orderBy: { createdAt: 'desc' },
-        })
+        // Les deux promesses sont CONSTRUITES avant le premier point de suspension (`Promise.all`
+        // les cree toutes deux, puis attend) : la propriete que le commentaire de classe exige
+        // tient donc pour le decompte comme pour la page.
+        const [data, total] = await Promise.all([
+          this.prisma.patientAccessLog.findMany({
+            where,
+            orderBy: { createdAt: 'desc' },
+            skip: (page - 1) * pageSize,
+            take: pageSize,
+          }),
+          this.prisma.patientAccessLog.count({ where }),
+        ])
+        return { data, total }
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
@@ -171,23 +186,33 @@ class PatientAccessLogRepository
   // rendre une liste vide (verifie par sabotage).
   async findAllPlatformWide(
     filters: PlatformAccessLogFilters,
-  ): Promise<PatientAccessLogEntityRepo[]> {
+  ): Promise<PatientAccessLogPage> {
+    const where = {
+      // `filters.sansEtablissement` n'est jamais lu ici : `establishmentId` est NON
+      // NULLABLE sur ce modele, et le schema HTTP refuse la combinaison par un 400 —
+      // voir le commentaire de `PlatformAccessLogFilters` (interface de ce depot).
+      ...(filters.establishmentId
+        ? { establishmentId: filters.establishmentId }
+        : {}),
+      ...platformCompteFilter(filters.compte),
+      ...(filters.action ? { action: filters.action } : {}),
+    }
     try {
       return await this.tenantContext.runAsSuperAdmin(async () => {
-        return await this.prisma.patientAccessLog.findMany({
-          where: {
-            // `filters.sansEtablissement` n'est jamais lu ici : `establishmentId` est NON
-            // NULLABLE sur ce modele, et le schema HTTP refuse la combinaison par un 400 —
-            // voir le commentaire de `PlatformAccessLogFilters` (interface de ce depot).
-            ...(filters.establishmentId
-              ? { establishmentId: filters.establishmentId }
-              : {}),
-            ...platformCompteFilter(filters.compte),
-            ...(filters.action ? { action: filters.action } : {}),
-          },
-          orderBy: { createdAt: 'desc' },
-          take: PLATFORM_ACCESS_LOG_LIMIT,
-        })
+        // `count` A DU ETRE RE-DECLARE dans `SUPERADMIN_OPERATIONS` (tenant-guard.ts) pour cette
+        // ligne-ci. Il y avait ete retire a la revue finale de l'etape 4b, a juste titre : aucun
+        // appel ne l'exercait. Il en a un depuis la pagination — sans decompte, la derniere page
+        // n'est pas atteignable, et la table refuserait l'appel plutot que de rendre un zero.
+        const [data, total] = await Promise.all([
+          this.prisma.patientAccessLog.findMany({
+            where,
+            orderBy: { createdAt: 'desc' },
+            skip: (filters.page - 1) * filters.pageSize,
+            take: filters.pageSize,
+          }),
+          this.prisma.patientAccessLog.count({ where }),
+        ])
+        return { data, total }
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({

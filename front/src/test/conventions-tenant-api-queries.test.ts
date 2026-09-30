@@ -45,11 +45,14 @@ const CLE_AVEC_FABRIQUE_URL =
 // `establishmentId` en toutes lettres plutot que de chercher un nom qui echappe au motif (ce
 // serait faire passer le test sans honorer la convention). Chaque compte a ete verifie par
 // lecture ligne a ligne :
-//   - `api/superAdmin.api.ts` : 2 occurrences, dans `getEstablishment` (le parametre de fonction
-//     et l'interpolation dans l'URL) — la seule methode du module qui vise UN etablissement
-//     precis plutot que la collection ou une action independante de tout etablissement.
-//   - `queries/useSuperAdmin.ts` : 3 occurrences, dans `useSuperAdminEstablishmentQuery` (le
-//     parametre du hook, la cle de requete et l'appel a `getEstablishment`) — la cle de requete
+//   - `api/superAdmin.api.ts` : 5 occurrences (2 avant la pagination des journaux du 2026-10-01),
+//     dans les DEUX methodes qui visent UN etablissement precis plutot que la collection ou une
+//     action independante de tout etablissement — `getEstablishment` (le parametre de fonction et
+//     l'interpolation dans l'URL) et `getEstablishmentActivityLog` (le champ de l'objet d'entree,
+//     sa destructuration et l'interpolation dans l'URL).
+//   - `queries/useSuperAdmin.ts` : 6 occurrences (3 avant cette meme date), dans
+//     `useSuperAdminEstablishmentQuery` et `useSuperAdminEstablishmentActivityLogQuery` — pour
+//     chacune : le parametre du hook, la cle de requete et l'appel a l'API. La cle de requete
 //     porte l'identifiant pour la MEME raison qu'une fiche patient porte `patientID` dans la
 //     sienne (identite de la ressource demandee), pas pour cloisonner un cache par tenant : ces
 //     ecrans vivent tous sous un seul et meme `QueryClient`, jamais sous un layout de tenant.
@@ -57,16 +60,18 @@ const EXCEPTIONS: { fichier: string; raison: string; occurrences: number }[] = [
   {
     fichier: 'api/superAdmin.api.ts',
     raison:
-      'le super-admin designe un etablissement comme une DONNEE de GET /super-admin/establishments/:id, ' +
+      'le super-admin designe un etablissement comme une DONNEE de GET /super-admin/establishments/:id ' +
+      'et de GET /super-admin/establishments/:id/activity-log (journal pagine, 2026-10-01), ' +
       'pas comme un tenant implicite',
-    occurrences: 2,
+    occurrences: 5,
   },
   {
     fichier: 'queries/useSuperAdmin.ts',
     raison:
       'meme donnee que ci-dessus, plus la cle de requete qui identifie la ressource demandee ' +
-      '(comme PATIENT.GET_BY_ID le fait de patientID), sans lien avec le cloisonnement par tenant',
-    occurrences: 3,
+      '(comme PATIENT.GET_BY_ID le fait de patientID), sans lien avec le cloisonnement par tenant ' +
+      '-- deux hooks depuis la pagination du journal (2026-10-01), trois occurrences chacun',
+    occurrences: 6,
   },
   {
     fichier: 'api/superAdminAccessLog.api.ts',
