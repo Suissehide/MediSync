@@ -3,6 +3,11 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import {
+  ADMIN_SERVICE_ROLE_DESCRIPTION,
+  ESTABLISHMENT_ROLE_DESCRIPTION,
+  SERVICE_ROLE_DESCRIPTION,
+} from '@/constants/member.constant.ts'
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import { useToastStore } from '@/store/useToastStore.ts'
 import type { User } from '@/types/auth.ts'
@@ -182,5 +187,44 @@ describe('AddMemberForm', () => {
     })
     const body = JSON.parse(String(postCall[1]?.body))
     expect(body.services).toEqual([{ serviceId: 'svcB', role: 'INTERVENANT' }])
+  })
+})
+
+describe('AddMemberForm — description du rôle sous chaque champ', () => {
+  it("décrit le rôle choisi et remplace le rôle de service pour un Chef d'établissement", async () => {
+    vi.stubGlobal(
+      'fetch',
+      buildFetchMock([routeSoignants, routeServices(servicesFixture)]),
+    )
+    renderForm()
+
+    await userEvent.click(
+      screen.getByRole('button', { name: /ajouter un membre/i }),
+    )
+    expect(
+      screen.getByLabelText('Rôle établissement'),
+    ).toHaveAccessibleDescription(ESTABLISHMENT_ROLE_DESCRIPTION.MEMBER)
+
+    await userEvent.click(screen.getByLabelText('Service'))
+    await userEvent.click(
+      await screen.findByRole('option', { name: 'Cardiologie' }),
+    )
+    await userEvent.click(screen.getByLabelText(/rôle dans le service/i))
+    await userEvent.click(
+      await screen.findByRole('option', { name: 'Lecture' }),
+    )
+    expect(
+      screen.getByLabelText(/rôle dans le service/i),
+    ).toHaveAccessibleDescription(SERVICE_ROLE_DESCRIPTION.LECTURE)
+
+    await userEvent.click(screen.getByLabelText('Rôle établissement'))
+    await userEvent.click(
+      await screen.findByRole('option', { name: "Chef d'établissement" }),
+    )
+    const roleService = screen.getByLabelText(/rôle dans le service/i)
+    expect(roleService).toBeDisabled()
+    expect(roleService).toHaveAccessibleDescription(
+      ADMIN_SERVICE_ROLE_DESCRIPTION,
+    )
   })
 })

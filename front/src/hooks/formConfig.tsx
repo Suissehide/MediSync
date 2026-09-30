@@ -41,6 +41,8 @@ interface SelectFieldProps extends FieldComponentProps {
   placeholder?: string
   searchable?: boolean
   clearable?: boolean
+  // Phrase d'aide sous le champ, reliée par `aria-describedby`.
+  description?: string
 }
 
 interface MultiSelectFieldProps extends FieldComponentProps {
@@ -138,9 +140,11 @@ function SelectField({
   placeholder,
   searchable,
   clearable,
+  description,
 }: SelectFieldProps) {
   const field = useFieldContext<string | number>()
   const value = field.state.value ?? ''
+  const descriptionId = `${field.name}-description`
 
   return (
     <div className={cn('flex flex-col gap-1', className)}>
@@ -154,8 +158,17 @@ function SelectField({
         placeholder={placeholder}
         searchable={searchable}
         clearable={clearable}
+        aria-describedby={description ? descriptionId : undefined}
         onValueChange={(value) => field.handleChange(value)}
       />
+      {description && (
+        <p
+          id={descriptionId}
+          className="mt-0.5 text-[13px] leading-snug text-text-light text-pretty"
+        >
+          {description}
+        </p>
+      )}
       <FieldInfo field={field} />
     </div>
   )

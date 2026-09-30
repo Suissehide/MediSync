@@ -24,6 +24,7 @@ export interface SelectProps {
   value?: string | number
   onValueChange?: (value: string) => void
   disabled?: boolean
+  'aria-describedby'?: string
 }
 
 const ColorDot = ({ color }: { color?: string }) =>
@@ -47,6 +48,7 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
       clearable = true,
       searchable = false,
       disabled,
+      'aria-describedby': ariaDescribedBy,
     },
     ref,
   ) => {
@@ -83,6 +85,7 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
                 ref={ref}
                 type="button"
                 id={id}
+                aria-describedby={ariaDescribedBy}
                 disabled={disabled}
                 className={cn(
                   'inline-flex w-full h-9 items-center justify-between rounded-md border border-border bg-background px-3 py-2 text-sm cursor-pointer',
@@ -191,6 +194,7 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
           <RadixSelect.Trigger
             ref={ref}
             id={id}
+            aria-describedby={ariaDescribedBy}
             className={cn(
               'inline-flex w-full h-9 items-center justify-between rounded-md border border-border bg-background px-3 py-2 text-sm',
               'focus:outline-none focus:ring-1 focus:ring-ring',
