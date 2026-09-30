@@ -3,7 +3,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { AccountSearchPanel } from '@/components/custom/superAdmin/accountSearchPanel.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
 
-// Task-12-brief.md, step 3 : « la recherche d'un compte, qui répond à
+// « la recherche d'un compte, qui répond à
 // "untel ne voit plus ses patients", avec réémission de lien ». Écran hors
 // de tout tenant : voir `../super-admin.tsx`. Toute la logique vit dans
 // `AccountSearchPanel`, testée isolément (`accountSearchPanel.test.tsx`) —

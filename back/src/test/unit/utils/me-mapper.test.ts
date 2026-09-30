@@ -85,8 +85,8 @@ describe('toMeResponse', () => {
         },
       ],
     }
-    // `[]` explicite : `grants` n'a plus de valeur par défaut (tour de correction 1, tâche 3),
-    // précisément pour qu'un appel qui l'omettrait ne compile plus silencieusement.
+    // `[]` explicite : `grants` n'a pas de valeur par défaut, précisément pour qu'un appel qui
+    // l'omettrait ne compile plus silencieusement.
     expect(toMeResponse(user, [])).toEqual({
       id: 'u1',
       email: 'a@b.fr',

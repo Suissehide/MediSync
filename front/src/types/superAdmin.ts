@@ -1,7 +1,7 @@
 import type { ActivityLog } from './activityLog.ts'
 import type { EstablishmentRole } from './auth.ts'
 
-// Miroir des schémas Zod du back (tâche 12, brief) :
+// Miroir des schémas Zod du back :
 // `back/src/main/interfaces/http/fastify/schemas/establishment.schema.ts`,
 // `superAdminUser.schema.ts`, `superAdminGrant.schema.ts` — lus plutôt que
 // devinés. `src/types` n'est couvert par aucune convention de tenant
@@ -19,7 +19,7 @@ export type SuperAdminFirstAdmin = {
 }
 
 // `establishmentListItemSchema` (spec §3.3) : clés exactes, une par colonne
-// de la liste (étape 1 de la tâche).
+// de la liste.
 export type EstablishmentListItem = {
   id: string
   name: string
@@ -51,7 +51,7 @@ export type EstablishmentDetailMember = {
 
 // `establishmentDetailResponseSchema` : la ligne de liste ci-dessus,
 // augmentée des services, des membres et du journal — désactivés compris
-// dans les deux listes (tour de correction 2, arbitrage de Léo), à la
+// dans les deux listes (arbitrage de Léo), à la
 // différence des compteurs agrégés hérités de `EstablishmentListItem`.
 export type EstablishmentDetail = EstablishmentListItem & {
   services: EstablishmentDetailService[]
@@ -62,11 +62,11 @@ export type EstablishmentDetail = EstablishmentListItem & {
 // `CreateEstablishmentInput`/`CreateEstablishmentResult` (POST
 // /super-admin/establishments, `createEstablishmentSchema`/
 // `createEstablishmentResponseSchema` côté back) avaient été retirés ici
-// (tour de correction 1, Important n°5) faute d'écran, de requête ou de
-// test — réintroduits à la tâche 14b (hors plan, étape 4a), avec les trois
+// faute d'écran, de requête ou de
+// test — réintroduits ensuite, avec les trois
 // à la fois : voir `createEstablishmentForm.tsx` et son test, qui gardent
-// le jeton (`accessLink.token`) sur les mêmes cinq canaux qu'à la tâche 13
-// (`createMemberAccountForm.tsx`).
+// le jeton (`accessLink.token`) sur les mêmes cinq canaux que
+// `createMemberAccountForm.tsx`.
 export type CreateEstablishmentInput = {
   name: string
   email: string

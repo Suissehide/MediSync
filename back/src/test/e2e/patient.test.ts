@@ -1,6 +1,5 @@
-// Regle de robustesse de ce filet, pour toute tache qui le touchera plus
-// tard : on peut changer comment le test atteint la donnee, jamais ce qu'il
-// affirme.
+// Regle de robustesse de ce filet : on peut changer comment le test atteint
+// la donnee, jamais ce qu'il affirme.
 import { buildTestApp, type TestApp } from './setup/app'
 import { testDb, truncateAll } from './setup/db'
 import {
@@ -13,9 +12,9 @@ import {
 
 type Cookies = { access_token: string }
 
-// Filet avant l'etape 3 : elle a sorti seize colonnes de parcours et de
-// contenu clinique de la table Patient vers un sous-dossier par service, et
-// les a retirees de l'objet de validation du patient (patient.schema.ts) —
+// Ce filet couvre le deplacement de seize colonnes de parcours et de
+// contenu clinique de la table Patient vers un sous-dossier par service,
+// retirees de l'objet de validation du patient (patient.schema.ts) —
 // Zod retire silencieusement les cles inconnues d'un corps de requete, donc
 // l'ECRITURE de ces colonnes a change de route autant que leur LECTURE :
 // toutes deux passent desormais par /patient/:id/service-file plutot que par
@@ -148,7 +147,7 @@ describe('routes du patient', () => {
     }
 
     // Les seize colonnes vivent desormais sur le sous-dossier de service du
-    // patient (etape 3 du multi-tenant), plus sur le patient lui-meme : elles
+    // patient, plus sur le patient lui-meme : elles
     // s'ecrivent et se relisent donc sous /patient/:id/service-file plutot
     // que sous /patient/:id, en PATCH (une charge partielle y fait une mise
     // a jour partielle, pas un remplacement — voir la route). C'est le seul
@@ -176,9 +175,10 @@ describe('routes du patient', () => {
 
     // Les seize noms sont ecrits ici un par un, pour chaque patient : c'est
     // le compte etabli contre back/prisma/schema.prisma, et c'est
-    // precisement la liste que l'etape 3 va deplacer hors de la table
-    // Patient. Chaque valeur attendue porte le nom du patient auquel elle
-    // appartient : un echec dit donc lui-meme qui a recu la valeur de qui.
+    // precisement la liste portee par le sous-dossier de service plutot que
+    // par la table Patient. Chaque valeur attendue porte le nom du patient
+    // auquel elle appartient : un echec dit donc lui-meme qui a recu la
+    // valeur de qui.
     expect(pierreFetched.medicalDiagnosis).toBe(pierreValues.medicalDiagnosis)
     expect(new Date(pierreFetched.entryDate).toISOString()).toBe(
       pierreValues.entryDate,
@@ -244,12 +244,12 @@ describe('routes du patient', () => {
 
   it('refuse en 400 un corps qui porte un des seize champs de service, sur POST et PATCH /patient', async () => {
     // Les seize champs ont quitte patient.schema.ts pour
-    // patientServiceFile.schema.ts (etape 3) ; sans `.strict()`, Zod les
-    // retirerait en silence d'un corps de requete au lieu de les rejeter,
-    // et l'appelant croirait avoir enregistre une saisie clinique qui n'a
-    // jamais ete ecrite nulle part (tache 5, revue, Important I2). Le front actuel
-    // envoie encore ces champs a chaque enregistrement : ce 400 est le
-    // signal voulu pendant la fenetre qui nous separe des taches 10/11.
+    // patientServiceFile.schema.ts ; sans `.strict()`, Zod les retirerait en
+    // silence d'un corps de requete au lieu de les rejeter, et l'appelant
+    // croirait avoir enregistre une saisie clinique qui n'a jamais ete
+    // ecrite nulle part. Le front actuel envoie encore ces champs a chaque
+    // enregistrement : ce 400 est le signal voulu en attendant que le front
+    // s'aligne sur le nouveau schema.
     const createdWithClinical = await post('/patient', {
       firstName: 'Refuse',
       lastName: 'Creation',
@@ -319,16 +319,16 @@ describe('routes du patient', () => {
 
     // Le diagnostic et le probleme d'inscription pointent vers le
     // sous-dossier de service du patient, pas directement vers le patient
-    // (etape 3 du multi-tenant, clef etrangere posee par la migration
-    // 20260924160131), et ce sous-dossier n'existe pas encore pour un
-    // patient tout neuf. C'est desormais le chemin applicatif lui-meme qui
-    // le cree — a la creation d'un diagnostic et a l'inscription en parcours
-    // (voir PatientServiceFileDomain.ensureExists, appele depuis
+    // (clef etrangere posee par la migration 20260924160131), et ce
+    // sous-dossier n'existe pas encore pour un patient tout neuf. C'est
+    // desormais le chemin applicatif lui-meme qui le cree — a la creation
+    // d'un diagnostic et a l'inscription en parcours (voir
+    // PatientServiceFileDomain.ensureExists, appele depuis
     // DiagnosticEducatifDomain.create et PatientDomain.processEnrollments)
     // — donc ce test passe par les deux routes reelles plutot que par un
     // `testDb.patientServiceFile.create` qui fabriquerait un etat que la
-    // production ne sait pas produire : ce contournement a ete la bonne
-    // alerte au mauvais endroit (voir tache 5, revue, Critique C1).
+    // production ne sait pas produire : un tel contournement fabrique la
+    // bonne alerte au mauvais endroit.
     const diagnosticRes = await post(`/patient/${patientId}/diagnostic`, {
       title: 'Diagnostic de test',
     })
@@ -391,9 +391,9 @@ describe('routes du patient', () => {
     expect(res.statusCode).toBe(200)
 
     // L'ecriture clinique doit laisser une trace, exactement comme le
-    // faisait PATCH /patient/:id avant que ces colonnes ne demenagent
-    // (voir tache 5, revue, Critique C2) : sans cet evenement, le journal ne bouge
-    // jamais et l'assertion ci-dessous resterait a 0 meme apres l'attente.
+    // faisait PATCH /patient/:id avant que ces colonnes ne demenagent :
+    // sans cet evenement, le journal ne bouge jamais et l'assertion
+    // ci-dessous resterait a 0 meme apres l'attente.
     // L'attente courte tient compte de la forme suivie (AppEventBus.emit
     // n'est pas attendu par le domaine, comme pour PATCH /patient/:id) :
     // ActivityLogSubscriber ecrit en arriere-plan, apres que la reponse
@@ -428,14 +428,13 @@ describe('routes du patient', () => {
   })
 })
 
-// Tache 12 (etape 3 du multi-tenant) : jusqu'ici, `GET /patient/with-tags` rendait tous les
-// patients de l'etablissement, quel que soit le service consulte — les deux services montraient
-// donc la meme liste, ce qui rendait toute demonstration de cloisonnement non concluante (voir
-// task-12-brief.md). La liste doit desormais ne rendre que les patients ayant un sous-dossier
-// (`PatientServiceFile`) dans le service courant. Ce bloc utilise deux services du meme
-// etablissement et un seul compte, membre coordinateur des deux, pour comparer directement ce
-// que chaque service voit.
-describe('cloisonnement de la liste des patients par service (tache 12)', () => {
+// `GET /patient/with-tags` rendait autrefois tous les patients de l'etablissement, quel que soit
+// le service consulte — les deux services montraient donc la meme liste, ce qui rendait toute
+// demonstration de cloisonnement non concluante. La liste doit desormais ne rendre que les
+// patients ayant un sous-dossier (`PatientServiceFile`) dans le service courant. Ce bloc utilise
+// deux services du meme etablissement et un seul compte, membre coordinateur des deux, pour
+// comparer directement ce que chaque service voit.
+describe('cloisonnement de la liste des patients par service', () => {
   let testApp: TestApp
   let establishmentId: string
   let serviceAId: string
@@ -565,16 +564,14 @@ describe('cloisonnement de la liste des patients par service (tache 12)', () => 
     await testDb.patient.delete({ where: { id: patientId } })
   })
 
-  // Tache 12, tour de correction 1 : le tour precedent a etabli, preuve a l'appui (voir le
-  // commit qui a introduit ce fichier), qu'un patient cree par le bouton « Creer sans parcours »
-  // du formulaire d'ajout (POST /patient seul, sans inscription ni diagnostic ni ecriture du
-  // sous-dossier — exactement ce que fait `createPatientInService` ci-dessus) ne recevait AUCUN
-  // sous-dossier : plus aucun chemin de creation ne rendait `ensureExists`, et le filtre de liste
-  // introduit par ce commit le faisait donc disparaitre de la liste de TOUT service, y compris
-  // celui ou il vient d'etre cree. Il restait en base et dans l'export (aucune route ne le
-  // supprime), mais sans porte d'entree normale pour le rouvrir — une perte d'acces a un dossier
-  // de sante. Rouge avant le correctif de `PatientDomain.create` (voir le commentaire au-dessus
-  // de l'appel a `ensureExists`), vert apres.
+  // Un patient cree par le bouton « Creer sans parcours » du formulaire d'ajout (POST /patient
+  // seul, sans inscription ni diagnostic ni ecriture du sous-dossier — exactement ce que fait
+  // `createPatientInService` ci-dessus) ne recevait AUCUN sous-dossier : plus aucun chemin de
+  // creation ne rendait `ensureExists`, et le filtre de liste le faisait donc disparaitre de la
+  // liste de TOUT service, y compris celui ou il vient d'etre cree. Il restait en base et dans
+  // l'export (aucune route ne le supprime), mais sans porte d'entree normale pour le rouvrir —
+  // une perte d'acces a un dossier de sante. Rouge avant le correctif de `PatientDomain.create`
+  // (voir le commentaire au-dessus de l'appel a `ensureExists`), vert apres.
   it('un patient cree sans parcours apparait dans la liste du service ou il a ete cree, et pas dans celle de l autre', async () => {
     const patientId = await createPatientInService(serviceAId, {
       firstName: 'SansParcours',

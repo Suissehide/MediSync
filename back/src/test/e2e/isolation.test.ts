@@ -349,7 +349,7 @@ describe('isolation par tenant', () => {
       },
     )
 
-    // Sous-dossier patient (etape 3 du multi-tenant). Cas dedie, hors de la
+    // Sous-dossier patient. Cas dedie, hors de la
     // table `cases` ci-dessus : son ecriture est un PUT (upsert), hors du
     // type `IsolationCase`, limite a GET/DELETE. Une lecture depuis A doit
     // rendre 404 comme les autres cas ; une ECRITURE depuis A ne doit ni
@@ -415,12 +415,12 @@ describe('isolation par tenant', () => {
       expect(readFromB.json().notes).toBe('SECRET-SERVICE-B')
     })
 
-    // Enfants du sous-dossier de service (tache 6 : diagnostics et problemes d'inscription
+    // Enfants du sous-dossier de service (diagnostics et problemes d'inscription
     // rattaches a PatientServiceFile plutot qu'a Patient). Cas dedies, hors de la table `cases` :
     // leurs routes sont imbriquees sous /patient/:patientId/…, un second identifiant que le type
-    // `IsolationCase` (un seul `path(id)`) ne porte pas. `back/CLAUDE.md` (etape 8, "Adding a new
-    // entity") exige un cas par entite de service ; aucun n'existait pour ces deux-la avant ce
-    // tour de correction (tache 6, revue, Critique C1).
+    // `IsolationCase` (un seul `path(id)`) ne porte pas. `back/CLAUDE.md` ("Adding a new
+    // entity") exige un cas par entite de service ; aucun n'existait pour ces deux-la avant
+    // l'ajout de ce test.
     it('un probleme d inscription cree dans un service n est ni lisible ni supprimable depuis l autre', async () => {
       const { est, serviceA, serviceB, cookiesA, cookiesB } = scenario
       const patient = await testDb.patient.create({
@@ -637,7 +637,7 @@ describe('isolation par tenant', () => {
     })
   })
 
-  // Tache 5 (etape 4b) : le journal des consultations, cote administration d'etablissement
+  // Le journal des consultations, cote administration d'etablissement
   // (`findByPatientInEstablishment`). CE CAS-CI EST DIFFERENT des deux precedents (membres,
   // soignants) : ceux-la prouvent que l'IDENTIFIANT D'ETABLISSEMENT DE L'URL est cloisonne —
   // deja garanti par `resolveEstablishmentAdmin`, commun a toutes les routes d'administration.
@@ -649,7 +649,7 @@ describe('isolation par tenant', () => {
   // etablissement (URL valide, pas de 404 de resolution), mais avec l'IDENTIFIANT DE PATIENT
   // D'UN AUTRE ETABLISSEMENT (B) — le seul chemin qui exercerait reellement ce filtre s'il
   // disparaissait un jour.
-  describe('isolation entre etablissements : journal des consultations (tache 5)', () => {
+  describe('isolation entre etablissements : journal des consultations', () => {
     beforeEach(truncateAll)
 
     it('un administrateur de A ne voit pas la ligne de B, meme en visant son propre etablissement avec l identifiant du patient de B', async () => {
@@ -746,8 +746,8 @@ describe('isolation par tenant', () => {
     })
   })
 
-  // Tache 8 (etape 4a) : l'octroi temporaire de super-admin (spec §3.5, §4.3). C'est CE fichier
-  // qu'un relecteur consulte pour l'isolation — un cas ailleurs (par exemple dans
+  // L'octroi temporaire de super-admin (spec §3.5, §4.3). C'est CE fichier
+  // qui fait foi pour l'isolation — un cas ailleurs (par exemple dans
   // `super-admin-grants.test.ts` ou `tenant-resolution.test.ts`) ne le remplace pas. Un octroi
   // sur l'etablissement A ne doit rien laisser passer sur B, alors meme que le titulaire de
   // l'octroi devient membre ordinaire (role ADMIN, spec §4.3) de A : le contrepoint (A repond

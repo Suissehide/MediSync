@@ -10,22 +10,21 @@ import type { TenantContextInterface } from '../../../types/utils/tenant-context
 import { platformCompteFilter } from '../../../utils/platform-access-log-filters'
 import type { PostgresPrismaClient } from '../postgres-client'
 
-// Ecran de diagnostic plateforme (tache 6, etape 4b), pas un export complet — meme esprit que
+// Ecran de diagnostic plateforme, pas un export complet — meme esprit que
 // `ACTIVITY_LOG_DETAIL_LIMIT` (establishment.repository.ts) et son homologue
-// `PLATFORM_ACCESS_LOG_LIMIT` (activityLog.repository.ts, meme tache, meme valeur — duplique
+// `PLATFORM_ACCESS_LOG_LIMIT` (activityLog.repository.ts, meme valeur — duplique
 // plutot que partage, comme le type `PlatformAccessLogFilters` : voir son commentaire).
 //
-// CE QUE CETTE BORNE REND INATTEIGNABLE, dit ici plutot que decouvert (revue finale de branche,
-// Important n°1) : le tri est `createdAt desc`, donc au-dela de 200 lignes dans le perimetre
+// CE QUE CETTE BORNE REND INATTEIGNABLE, dit ici plutot que decouvert : le tri est
+// `createdAt desc`, donc au-dela de 200 lignes dans le perimetre
 // demande, les PLUS ANCIENNES sortent de la reponse — et AUCUNE pagination ne permet d'y
 // revenir. La seule facon de les atteindre est de RESSERRER les filtres (etablissement, compte,
 // action) jusqu'a ce que le perimetre demande tienne sous la borne. C'est pour cela que les
 // filtres sont evalues EN BASE et non dans le navigateur : un filtre navigateur ne peut, par
-// construction, que reduire une page deja tronquee. Voir « Ce qui reste ouvert » (§8),
-// docs/multi-tenant/decisions-etape-4b.md.
+// construction, que reduire une page deja tronquee.
 const PLATFORM_ACCESS_LOG_LIMIT = 200
 
-// Modele : service.repository.ts (cahier des charges de la tache). Le constructeur ne lit
+// Modele : service.repository.ts. Le constructeur ne lit
 // jamais le scope — chaque methode le fait a son propre appel, via `this.scope` ou
 // `this.establishmentScope`. Un acces se journalise toujours a l'interieur d'un service (le
 // journal existe pour la consultation d'un dossier patient, qui n'a lieu que sous
@@ -34,7 +33,7 @@ const PLATFORM_ACCESS_LOG_LIMIT = 200
 // contexte d'administration d'etablissement, sans service — est le comportement voulu (voir
 // patientAccessLog.domain.test.ts, qui le montre par execution plutot que de le contourner).
 //
-// Etape 4b, tache 5 (les deux premieres LECTURES) : `findByPatientInService` reprend le meme
+// `findByPatientInService` reprend le meme
 // `scope()` que `create` — le cloisonnement par service vient de la, jamais d'un `where` recopie
 // a la main.
 //
@@ -148,7 +147,7 @@ class PatientAccessLogRepository
     }
   }
 
-  // Etape 4b, tache 6 : `GET /super-admin/access-log` (source=acces) — SANS borne de tenant, a
+  // `GET /super-admin/access-log` (source=acces) — SANS borne de tenant, a
   // l'echelle de la PLATEFORME entiere. `PatientAccessLog: ['findMany']` est desormais declare
   // dans `SUPERADMIN_OPERATIONS` (tenant-guard.ts) : sous `runAsSuperAdmin`,
   // `assertTenantReadScope` ne s'applique qu'au contexte `tenant` (jamais `superadmin`), donc
@@ -156,12 +155,10 @@ class PatientAccessLogRepository
   // au-dessus de `SUPERADMIN_OPERATIONS`).
   //
   // `await` A L'INTERIEUR du rappel — mais lisez `utils/tenant-context.ts#runAsSuperAdmin` avant
-  // de recopier cette forme ailleurs. ENONCE EXACT (revue finale de branche, Important n°5 — ce
-  // commentaire portait encore l'enonce intermediaire, « ce qui tient la portee est l'enrobage
-  // `async` », que `back/CLAUDE.md` et l'annexe des decisions nomment desormais comme un
-  // SYMPTOME) : **ce qui compte, c'est que la lecture du contexte survienne AVANT le premier
-  // point de suspension**. Un rappel SYNCHRONE NU perd le contexte ICI (mesure, tour de
-  // correction 1 de la tache 6 : 5 tests rougissent en 500, exactement les cinq `source=acces`)
+  // de recopier cette forme ailleurs : **ce qui compte, c'est que la lecture du contexte
+  // survienne AVANT le premier point de suspension**, pas l'enrobage `async` en lui-meme. Un
+  // rappel SYNCHRONE NU perd le contexte ICI (mesure : 5 tests rougissent en 500, exactement les
+  // cinq `source=acces`)
   // parce que la requete Prisma est PARESSEUSE — rien n'est lu avant que `run` n'ait rendu la
   // main. Le meme rappel synchrone nu convient parfaitement a `deleteOlderThan`, quarante lignes
   // plus bas, qui lit `tenantContext.peek()` synchroniquement en tete de son corps. L'`await`
@@ -171,7 +168,7 @@ class PatientAccessLogRepository
   // frontiere non declaree sous `runAsSystem` : c'est la capacite superadmin, exhaustive par
   // construction, qui autorise explicitement ce couple (modele, operation) — retirer l'entree de
   // `SUPERADMIN_OPERATIONS` fait refuser cette methode avec `TenantScopeMissingError`, jamais
-  // rendre une liste vide (verifie par sabotage, voir le rapport de tache).
+  // rendre une liste vide (verifie par sabotage).
   async findAllPlatformWide(
     filters: PlatformAccessLogFilters,
   ): Promise<PatientAccessLogEntityRepo[]> {
@@ -200,7 +197,7 @@ class PatientAccessLogRepository
     }
   }
 
-  // Purge planifiee (tache 8, etape 4b) : meme mecanisme qu'`ActivityLogRepository.
+  // Purge planifiee : meme mecanisme qu'`ActivityLogRepository.
   // deleteOlderThan`. Sous `runAsSystem` (kind 'system'), `tenantContext.peek()` ne rend jamais
   // 'tenant' : la purge touche alors TOUTE la table, sans poser `serviceId` -- a la difference
   // d'`ActivityLog`, `PatientAccessLog` n'a pas de ligne "hors service" (`create` pose toujours

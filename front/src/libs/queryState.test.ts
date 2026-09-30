@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { queryState } from './queryState.ts'
 
-// Tour de correction 1, Important n°4 : « une erreur de chargement donne un
+// « une erreur de chargement donne un
 // "Chargement…" perpétuel ». Avec `retry: 0`, une requête en échec retombe
 // `isPending: false` sans jamais poser `establishment` — une condition qui
 // ne teste que `isPending || !establishment` reste donc vraie pour

@@ -32,8 +32,7 @@ export const getServiceColumns = ({
     header: 'Nom',
     cell: ({ row }) => row.original.name,
   }),
-  // Revue finale de l'étape 4a, Important n°3 : « identifiants copiables »
-  // (decisions-etape-4a.md, D3/D4) — le geste de dépannage réel. Reserve au
+  // « identifiants copiables » : le geste de dépannage réel. Reserve au
   // super-admin depuis le 2026-09-30, comme partout.
   ...(avecIdentifiant
     ? [

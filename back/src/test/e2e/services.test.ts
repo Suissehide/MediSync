@@ -36,11 +36,10 @@ const TIMERS_REELS = [
   'clearTimeout',
 ] as const
 
-// Tâche 9 (étape 4a) : le second service — ce qui rend enfin démontrable, à l'écran, le
-// cloisonnement par service que trois étapes précédentes ont préparé sans pouvoir le vérifier
-// (design §1). Trois décisions y sont éprouvées : créer un service y rattache son créateur,
+// Le second service — ce qui rend enfin démontrable, à l'écran, le
+// cloisonnement par service (design §1). Trois décisions y sont éprouvées : créer un service y rattache son créateur,
 // comme COORDINATEUR (§3.2) ; désactiver avertit plutôt que d'exiger un transfert, et réactiver
-// rend tout (§3.6) ; et le Review Focus n°3 — un service désactivé sous les pieds d'un membre —
+// rend tout (§3.6) ; et un service désactivé sous les pieds d'un membre —
 // ne doit plus servir sa requête suivante, sans révéler plus qu'un tenant inconnu (404).
 describe('routes services', () => {
   let testApp: TestApp
@@ -90,7 +89,7 @@ describe('routes services', () => {
     return establishment?.services ?? []
   }
 
-  // Step 1 : créer un service y rattache son créateur, comme COORDINATEUR (spec §3.2). Le motif
+  // Créer un service y rattache son créateur, comme COORDINATEUR (spec §3.2). Le motif
   // (pourquoi ce n'est pas un accès de plus) vit dans le domaine (`ServiceDomain.create`) et dans
   // la spécification, pas ici — ce test éprouve seulement que le rattachement a bien lieu.
   it('cree un service et y rattache son createur comme coordinateur, visible depuis /me', async () => {
@@ -109,7 +108,7 @@ describe('routes services', () => {
     })
   })
 
-  // Tour de correction 1 (relecture) — Important n°2 : sous un octroi temporaire (spec §4.3),
+  // Sous un octroi temporaire (spec §4.3),
   // l'acteur est un membre ordinaire au sens des permissions, mais AUCUNE appartenance réelle
   // n'est jamais matérialisée. Créer un service ne doit donc PAS échouer faute d'appartenance à
   // rattacher, et ne doit PAS non plus en créer une — l'octroi donne déjà accès à tous les
@@ -148,9 +147,9 @@ describe('routes services', () => {
     expect(acces.statusCode).toBe(200)
   })
 
-  // Mineur (tour de correction 2) : le cœur de l'argument « pas de rattachement réel » est
+  // Le cœur de l'argument « pas de rattachement réel » est
   // l'expiration — sans elle, rien ne distingue ce choix d'un rattachement classique qui
-  // survivrait de toute façon. Non gardé par un test au tour précédent ; ajouté ici. L'horloge
+  // survivrait de toute façon. L'horloge
   // est avancée plutôt qu'attendue (même convention que tenant-resolution.test.ts).
   it('apres expiration de l octroi, le service reste actif et visible de l etablissement, mais son createur recoit 404 partout', async () => {
     const superAdmin = await createUser({
@@ -213,8 +212,7 @@ describe('routes services', () => {
     }
   })
 
-  // Mineur (tour de correction 2) — nomme un cas que la relecture a trouve sans que je l'aie
-  // nomme : un super-admin qui est REELLEMENT membre (non-administrateur) d'un AUTRE
+  // Un super-admin qui est REELLEMENT membre (non-administrateur) d'un AUTRE
   // etablissement, et cree un service sous octroi ICI. Sans le filtre `establishmentId` dans
   // `ServiceRepository.create` (`findFirst({ where: { userId, establishmentId } })`), une
   // recherche par le seul `userId` aurait pu rattacher le service neuf a l'appartenance de
@@ -267,7 +265,7 @@ describe('routes services', () => {
     expect(second.statusCode).toBe(409)
   })
 
-  // Step 2 : les compteurs de la désactivation (spec §3.6). Le second compte
+  // Les compteurs de la désactivation (spec §3.6). Le second compte
   // (`suivisNullePartAilleurs`) est celui qui importe : trois patients suivis dans le service
   // évalué, dont deux le sont AUSSI dans un autre service du même établissement — seul le
   // troisième deviendrait invisible de toutes les listes. Un jeu où les deux comptes
@@ -313,7 +311,7 @@ describe('routes services', () => {
     expect(resB.json()).toEqual({ suivisIci: 2, suivisNullePartAilleurs: 0 })
   })
 
-  // Tour de correction 1 (relecture) — Important n°1 : un patient dont le SEUL autre
+  // Un patient dont le SEUL autre
   // sous-dossier vit dans un service DÉJÀ désactivé deviendra tout aussi invisible qu'un
   // patient qui n'a aucun autre sous-dossier — l'équivalence promise par la spec §3.6 (« suivi
   // nulle part ailleurs = deviendra invisible ») exige donc de ne compter comme « ailleurs » que
@@ -371,7 +369,7 @@ describe('routes services', () => {
     ).toBe(404)
   })
 
-  describe('Review Focus n3 (desactivation sous les pieds d un membre) et reactivation', () => {
+  describe('desactivation sous les pieds d un membre et reactivation', () => {
     let serviceD: { id: string; name: string }
     let cookiesD: Cookies
     let patientId: string
@@ -473,7 +471,7 @@ describe('routes services', () => {
       },
     )
 
-    // Step 4 : réactiver rend tout. Sans cette preuve, la décision « avertir plutôt qu'exiger un
+    // Réactiver rend tout. Sans cette preuve, la décision « avertir plutôt qu'exiger un
     // transfert » (§3.6) ne serait pas acceptable — un dossier invisible sans retour possible
     // serait une perte, pas un avertissement.
     it('reactive : le dossier ET le membre sont de retour, sans rien avoir ete recree', async () => {

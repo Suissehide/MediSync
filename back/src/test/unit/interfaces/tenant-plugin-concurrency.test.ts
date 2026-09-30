@@ -103,7 +103,7 @@ describe('tenantPlugin — isolation entre requetes concurrentes', () => {
     const tenantContext = new TenantContext()
     const fastify = Fastify()
     // `tenantContext` et `accessGrantRepository` sont les deux seuls lus par le plugin à
-    // l'enregistrement (depuis la tâche 3, étape 4a : `resolveTenant`/`resolveEstablishmentAdmin`
+    // l'enregistrement (`resolveTenant`/`resolveEstablishmentAdmin`
     // consultent les octrois vivants de l'utilisateur) — pas besoin du reste du conteneur pour ce
     // test. Aucun octroi ici : le tableau vide suffit à isoler ce que ce test observe
     // (l'étanchéité du tenant entre deux requêtes concurrentes), sans rapport avec les octrois.

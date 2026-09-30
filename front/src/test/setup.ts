@@ -23,7 +23,7 @@ globalThis.localStorage = jsdom.window.localStorage
 globalThis.sessionStorage = jsdom.window.sessionStorage
 
 // Chaque test part d'un stockage local vide. C'est precisement ce qu'aucun
-// test ne faisait a l'etape 1, ou un etat persiste d'une version anterieure a
+// test ne faisait auparavant, ou un etat persiste d'une version anterieure a
 // remplace l'application par un ecran d'erreur pour tous les comptes.
 beforeEach(() => {
   localStorage.clear()
@@ -36,7 +36,7 @@ beforeEach(() => {
 // `components/ui/select.tsx`) les appelle a l'ouverture d'un menu deroulant,
 // ce qui levait `TypeError: target.hasPointerCapture is not a function` et
 // empechait TOUT test d'interagir avec un `<Select>` non-recherchable
-// (verifie par execution, tache 14b, tour de correction 1 : aucun test du
+// (verifie par execution : aucun test du
 // depot n'ouvrait un tel menu avant ce polyfill). Poser des no-ops suffit :
 // aucun test n'a besoin du VRAI comportement de capture de pointeur, juste
 // que Radix ne leve pas en l'appelant.

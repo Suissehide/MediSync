@@ -91,13 +91,13 @@ const buildFakePrisma = (responses: Partial<Record<string, unknown>> = {}) => {
 
 // Mimique la paresse REELLE de Prisma (deja documentee partout dans ce depot, et desormais dans
 // le commentaire de `runAsSuperAdmin`, utils/tenant-context.ts) : `buildFakePrisma` ci-dessus
-// resout IMMEDIATEMENT (`Promise.resolve`), ce qui masque exactement la question posee par le
-// tour de correction 1 de la tache 6 -- ce faux depot-ci rend la reponse a « quel store
-// `tenantContext.peek()` un abonnement `.then()` REEL verrait-il », pas « quel store un simple
-// appel synchrone verrait-il » (les deux coincident pour `Promise.resolve`, ils divergent pour
-// une requete paresseuse). Necessaire pour eprouver `findAllPlatformWide`
-// (`ActivityLogRepository`, `PatientAccessLogRepository`) : voir leurs tests dans ce fichier, et
-// `tenant-context.test.ts` pour la preuve generale, independante de tout depot.
+// resout IMMEDIATEMENT (`Promise.resolve`), ce qui masque la question -- ce faux depot-ci rend
+// la reponse a « quel store `tenantContext.peek()` un abonnement `.then()` REEL verrait-il »,
+// pas « quel store un simple appel synchrone verrait-il » (les deux coincident pour
+// `Promise.resolve`, ils divergent pour une requete paresseuse). Necessaire pour eprouver
+// `findAllPlatformWide` (`ActivityLogRepository`, `PatientAccessLogRepository`) : voir leurs
+// tests dans ce fichier, et `tenant-context.test.ts` pour la preuve generale, independante de
+// tout depot.
 const buildLazyFakePrisma = (tenantContext: TenantContext) => {
   const calls: Call[] = []
   const storesAuDispatch: unknown[] = []
@@ -277,10 +277,9 @@ describe('scoping des repositories d etablissement', () => {
     expect(calls[1]?.args.where).not.toHaveProperty('establishmentId')
   })
 
-  // Etape 4b, tache 6 (tour de correction 1) : entree manquante pour `findAllPlatformWide`,
-  // signalee par la revue. `ActivityLog.findMany` est deja declare dans `SUPERADMIN_OPERATIONS`
-  // (tache 1) ; cette methode-ci l'exerce SANS aucune borne de tenant dans le `where` — a la
-  // difference de `findMany` plus haut (tenant ordinaire, `establishmentId` + service obligatoires).
+  // `ActivityLog.findMany` est deja declare dans `SUPERADMIN_OPERATIONS` ; cette methode-ci
+  // l'exerce SANS aucune borne de tenant dans le `where` — a la difference de `findMany` plus
+  // haut (tenant ordinaire, `establishmentId` + service obligatoires).
   it('ActivityLogRepository.findAllPlatformWide envoie les filtres recus, aucun de force, sous runAsSuperAdmin', async () => {
     const { prisma, calls } = buildFakePrisma()
     const ctx = new TenantContext()
@@ -297,8 +296,8 @@ describe('scoping des repositories d etablissement', () => {
       args: { where: { establishmentId: 'e9', action: 'a9' } },
     })
     // Le filtre « compte » est un `OR` : identifiant EXACT ou fragment de prenom/nom, insensible
-    // a la casse (revue finale de branche, Important n°1 — voir `utils/platform-access-log-
-    // filters.ts`). La forme exacte est verifiee ici, pas seulement sa presence : un `contains`
+    // a la casse (voir `utils/platform-access-log-filters.ts`). La forme exacte est verifiee
+    // ici, pas seulement sa presence : un `contains`
     // qui perdrait `mode: 'insensitive'` rendrait la recherche par nom inutilisable en pratique,
     // et un `userID: { contains }` a la place de l'egalite elargirait silencieusement ce que
     // l'ancien filtre exact promettait.
@@ -347,7 +346,7 @@ describe('scoping des repositories d etablissement', () => {
   // Meme demonstration que pour PatientAccessLogRepository plus bas : la forme exacte envoyee
   // (aucune borne) est refusee par le garde-fou reel hors du contexte superadmin — y compris
   // sous un tenant ordinaire, ou `ActivityLog` (ESTABLISHMENT_MODELS) exige `establishmentId` — et
-  // permise dedans, parce que `ActivityLog` y est declare (tache 1), pas parce que le garde-fou
+  // permise dedans, parce que `ActivityLog` y est declare, pas parce que le garde-fou
   // aurait ete contourne.
   it('la forme sans borne de findAllPlatformWide est refusee hors du contexte superadmin, et permise dedans', () => {
     const args = { where: {} }
@@ -374,8 +373,8 @@ describe('scoping des repositories d etablissement', () => {
     ).not.toThrow()
   })
 
-  // LA PROPRIETE QUI A COUTE UN TOUR DE CORRECTION (tache 6) : ce que `Promise.resolve()`
-  // (buildFakePrisma) ne peut pas montrer, parce qu'il resout deja au moment de l'appel.
+  // CE QUE `Promise.resolve()` (buildFakePrisma) NE PEUT PAS MONTRER, parce qu'il resout deja au
+  // moment de l'appel.
   // `buildLazyFakePrisma` differe la lecture du store jusqu'au `.then()` REEL, exactement comme
   // le fait Prisma — et prouve que le rappel de `findAllPlatformWide`, tel qu'ecrit en
   // production (un `async` SANS mutation du mecanisme), conserve bien `superadmin` jusque-la.
@@ -546,7 +545,7 @@ describe('MembershipRepository (gestion des membres)', () => {
     ).resolves.toBeUndefined()
   })
 
-  // TACHE 15 (etape 4a) — `estRattacheAilleurs` est le CINQUIEME emploi declare du mode systeme
+  // `estRattacheAilleurs` est le CINQUIEME emploi declare du mode systeme
   // (`runAsSystem-unicite.test.ts`, qui garde la CAPACITE). C'est ICI que sont gardees ses
   // BORNES, comme pour `estSuiviAilleurs` et `impactDesactivation` plus bas : la forme exacte de
   // la requete, et la preuve que cette forme serait refusee par le garde-fou hors du mode
@@ -1036,12 +1035,11 @@ describe('scoping des repositories de diagnostic', () => {
     })
   })
 
-  // EnrollmentIssueRepository est l'autre modele de service deplace par la tache 6 (motifs
-  // d'echec d'inscription, rattaches au sous-dossier de service). Jusqu'ici seul
-  // DiagnosticEducatifRepository avait un bloc ici : sur cinq sabotages du filtre de service
-  // pratiques en revue, les deux qui touchaient EnrollmentIssueRepository (findByPatientID et
-  // delete) ne faisaient rougir aucun test — voir tache 6, revue, Critique C1. Ce bloc couvre ses trois
-  // methodes, calque sur celui de DiagnosticEducatifRepository ci-dessus.
+  // EnrollmentIssueRepository est l'autre modele de service (motifs d'echec d'inscription,
+  // rattaches au sous-dossier de service). Jusqu'ici seul DiagnosticEducatifRepository avait un
+  // bloc ici : sur cinq sabotages du filtre de service, les deux qui touchaient
+  // EnrollmentIssueRepository (findByPatientID et delete) ne faisaient rougir aucun test. Ce
+  // bloc couvre ses trois methodes, calque sur celui de DiagnosticEducatifRepository ci-dessus.
   it('EnrollmentIssueRepository filtre, cree et supprime avec les cles de tenant', async () => {
     const { prisma, calls } = buildFakePrisma()
     const ctx = new TenantContext()
@@ -1649,9 +1647,9 @@ describe('scoping appointment', () => {
   })
 })
 
-// Etape 3 du multi-tenant, tache 7 : `estSuiviAilleurs` traverse volontairement la frontiere
-// entre services (design §5.3) — `impactDesactivation`, plus bas dans ce fichier (tache 9), en
-// est une autre. Ce bloc verifie le mecanisme, pas seulement le resultat : la forme exacte de la
+// `estSuiviAilleurs` traverse volontairement la frontiere entre services (design §5.3) —
+// `impactDesactivation`, plus bas dans ce fichier, en est une autre. Ce bloc verifie le
+// mecanisme, pas seulement le resultat : la forme exacte de la
 // requete (ses deux bornes, memes sous `runAsSystem`), et — a la place ou l'aurait laissee un
 // simple test de retour — la preuve que cette forme precise serait refusee par le garde-fou
 // d'ORM sans le mode encadre. C'EST CE BLOC-CI (et son equivalent pour `impactDesactivation`) qui
@@ -1745,7 +1743,7 @@ describe('PatientServiceFileRepository.estSuiviAilleurs', () => {
   })
 })
 
-// Design §3.6, tache 9 : un autre emploi declare de l'exception (voir runAsSystem-unicite.
+// Design §3.6 : un autre emploi declare de l'exception (voir runAsSystem-unicite.
 // test.ts pour la CAPACITE ; ce bloc-ci pour les BORNES — deux tests, deux proprietes, voir le
 // commentaire au-dessus d'`estSuiviAilleurs` dans patientServiceFile.repository.ts). Appele
 // depuis l'administration d'etablissement — AUCUN service dans le tenant courant
@@ -1810,10 +1808,9 @@ describe('PatientServiceFileRepository.impactDesactivation', () => {
     // Seconde requete : parmi CES MEMES patients, ceux suivis dans un AUTRE service ACTIF du
     // MEME etablissement — jamais un autre etablissement (impossible de toute facon par la cle
     // etrangere composite, mais la requete porte quand meme sa propre borne, comme
-    // `estSuiviAilleurs`). `service: { deactivatedAt: null }` (tour de correction 1, relecture,
-    // Important n°1) : un service DEJA desactive ne protege plus personne de l'invisibilite,
-    // donc il ne doit pas compter comme un « ailleurs » qui sauve le patient du compte qui
-    // importe.
+    // `estSuiviAilleurs`). `service: { deactivatedAt: null }` : un service DEJA desactive ne
+    // protege plus personne de l'invisibilite, donc il ne doit pas compter comme un « ailleurs »
+    // qui sauve le patient du compte qui importe.
     expect(calls[1]).toMatchObject({
       model: 'patientServiceFile',
       op: 'findMany',
@@ -1880,11 +1877,11 @@ describe('PatientServiceFileRepository.impactDesactivation', () => {
   })
 })
 
-// TOUR DE CORRECTION 1 (revue, tache 2 etape 4b) — DUPLIQUE (ne deplace pas) les deux memes
-// bornes que `patientAccessLog.domain.test.ts` prouve deja depuis le domaine : ce fichier tient
-// la liste des depots dont le scoping est couvert, et `PatientAccessLogRepository` n'y figurait
-// pas. Sans cette entree, un futur resserrement du garde-fou qui casserait ce depot ne serait vu
-// que si quelqu'un pense a aller regarder le fichier du domaine — rien ici ne l'y forcerait.
+// DUPLIQUE (ne deplace pas) les deux memes bornes que `patientAccessLog.domain.test.ts` prouve
+// deja depuis le domaine : ce fichier tient la liste des depots dont le scoping est couvert, et
+// `PatientAccessLogRepository` n'y figurait pas. Sans cette entree, un futur resserrement du
+// garde-fou qui casserait ce depot ne serait vu que si quelqu'un pense a aller regarder le
+// fichier du domaine — rien ici ne l'y forcerait.
 describe('PatientAccessLogRepository', () => {
   it('pose establishmentId/serviceId depuis le scope, jamais depuis l appelant', async () => {
     const { prisma, calls } = buildFakePrisma()
@@ -1954,7 +1951,7 @@ describe('PatientAccessLogRepository', () => {
     await expect(repo.create(params)).rejects.toThrow(TenantContextMissingError)
   })
 
-  // Tache 5 (etape 4b) : les deux premieres LECTURES. `findByPatientInService` reprend le meme
+  // Les deux premieres LECTURES. `findByPatientInService` reprend le meme
   // `scope()` que `create` — le sabotage etroit (remplacer `scope()` par `establishmentScope()`
   // dans ce depot) est prouve cote e2e (patient-access-log.test.ts, deux services reellement
   // peuples) ; ce test-ci tient la forme EXACTE envoyee a Prisma, comme pour `create` plus haut.
@@ -2034,12 +2031,10 @@ describe('PatientAccessLogRepository', () => {
     ).not.toThrow()
   })
 
-  // Etape 4b, tache 6 (tour de correction 1) : entree manquante pour `findAllPlatformWide`,
-  // signalee par la revue — comme pour `ActivityLogRepository` plus haut. `PatientAccessLog`
-  // reste dans `SERVICE_MODELS` : cette methode-ci est la SEULE lecture du depot qui ne porte ni
+  // Comme pour `ActivityLogRepository` plus haut, `PatientAccessLog` reste dans
+  // `SERVICE_MODELS` : cette methode-ci est la SEULE lecture du depot qui ne porte ni
   // `establishmentId` ni `serviceId` dans son `where`, rendue possible par la declaration de
-  // `PatientAccessLog` dans `SUPERADMIN_OPERATIONS` (tache 6), jamais par un contournement du
-  // garde-fou.
+  // `PatientAccessLog` dans `SUPERADMIN_OPERATIONS`, jamais par un contournement du garde-fou.
   it('findAllPlatformWide envoie les filtres recus, aucun de force, sous runAsSuperAdmin', async () => {
     const { prisma, calls } = buildFakePrisma()
     const ctx = new TenantContext()

@@ -111,7 +111,7 @@ declare module '@tanstack/react-router' {
 //
 // `router.options.context?.queryClient`, jamais une variable capturee au
 // chargement du module : un client neuf est construit a chaque changement
-// de contexte (tache 10), et `AppRoutes` ne le pose sur
+// de contexte, et `AppRoutes` ne le pose sur
 // `router.options.context` qu'au rendu suivant (meme mecanisme que
 // `context.queryClient` dans `_authenticated.tsx`). Lire cette propriete au
 // moment ou le rappel se declenche, plutot qu'une reference figee a l'appel

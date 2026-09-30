@@ -2,12 +2,12 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-// Correctif tour 1 (tâche 11, revue, Important I4/S5) — le sabotage que la revue a rejoué sans qu'aucun
-// test ne bouge : déplacer « Profession » (`occupation`, un champ de `Patient`) du bloc
+// Ce test existe pour empêcher un sabotage précis : déplacer « Profession »
+// (`occupation`, un champ de `Patient`) du bloc
 // « Identité partagée » (`identite.patient.tsx`) vers le bloc « Dossier de ce service »
-// (`details.patient.tsx`). C'est exactement le défaut que la tâche 11 existe pour empêcher —
-// afficher côté service un champ que les autres services de l'établissement partagent, ou
-// inversement — et rien ne le gardait.
+// (`details.patient.tsx`) — afficher côté service un champ que les
+// autres services de l'établissement partagent, ou inversement — sans qu'aucun autre test ne le
+// détecte.
 //
 // Patron repris du back (`back/src/test/unit/infra/patientServiceFile-coverage.test.ts`) : lire
 // `prisma/schema.prisma`, la déclaration qui fait autorité sur qui porte quoi, et comparer dans

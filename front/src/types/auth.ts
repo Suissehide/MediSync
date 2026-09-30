@@ -27,9 +27,8 @@ export type User = {
     }[]
     // `GET /me` (back/src/main/utils/me-mapper.ts) rend TOUJOURS ce champ —
     // une appartenance réelle ou un accès ouvert par un octroi temporaire
-    // (spec §3.5). Optionnel ici plutôt que requis (tour de correction 1,
-    // Important n°2) pour ne pas devoir retoucher la douzaine de fixtures
-    // de test qui construisent un `User` sans lui : une entrée sans
+    // (spec §3.5). Optionnel ici plutôt que requis pour ne pas devoir
+    // retoucher la douzaine de fixtures de test qui construisent un `User` sans lui : une entrée sans
     // `origine` se traite exactement comme 'reelle' par tout code qui ne
     // teste que `=== 'octroi'`, ce qui est la seule lecture qu'en fait
     // aujourd'hui `$establishmentId.tsx` (voir `activeGrantNotice.tsx`).
@@ -65,7 +64,7 @@ export type LoginInput = {
   password: string
 }
 
-// `POST /auth/access-link/consume` (tâche 13, page publique) : le jeton est
+// `POST /auth/access-link/consume` (page publique) : le jeton est
 // un mot de passe à usage unique. Il arrive dans l'URL du navigateur, mais
 // ce type ne doit JAMAIS être sérialisé dans une URL d'appel — il part dans
 // le corps de la requête (voir `AuthApi.consumeAccessLink`,

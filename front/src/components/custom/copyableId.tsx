@@ -9,7 +9,7 @@ interface CopyableIdProps {
   className?: string
 }
 
-// Écrans du super-admin (tâche 12, step 1) : « les identifiants copiables »
+// Écrans du super-admin : « les identifiants copiables »
 // — le support recoupe un identifiant avec un journal ou une base, il ne le
 // ressaisit jamais à la main. Utilisé dans une ligne de tableau cliquable
 // (navigation vers le détail) : `stopPropagation` empêche le clic de copie

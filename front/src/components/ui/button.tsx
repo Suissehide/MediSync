@@ -84,7 +84,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           // vaut vrai, `Comp` est le `Slot` de Radix, qui clone ses props (`className`, `ref`)
           // sur cet unique enfant. Un `Fragment` refuse `className` (React lève « Invalid prop
           // `className` supplied to `React.Fragment` », découvert en écrivant le premier test
-          // de `Button asChild` de ce dépôt, étape 4b tâche 11). Rendre `children` nu ici
+          // de `Button asChild` de ce dépôt). Rendre `children` nu ici
           // restitue à `Slot` l'élément réel qu'il attend.
           <>
             <Loader2 className="h-4 w-4 animate-spin" />

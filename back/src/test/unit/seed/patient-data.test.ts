@@ -3,14 +3,14 @@ import {
   PATIENTS_PNEUMOLOGIE,
 } from '../../../../prisma/seed/data/patient'
 
-// Tour de correction 1 de la tache 4 (dc08867) a repare la forme du seed (identite a plat,
-// valeurs cliniques sous `clinicalFile`) et, dans le meme geste, a fait disparaitre deux
-// patients entiers — Francois Thomas (Cardiologie) et Karim Haddad (Pneumologie), avec leurs
-// huit valeurs cliniques — sans qu'aucune porte ne le remarque : `tsc`, `prisma db seed` et
-// `npm run lint` sortaient tous a zero, parce que retirer deux elements d'un tableau litteral
-// est invisible a tout ce que ce depot sait verifier automatiquement. Seule la relecture du
-// diff pouvait le voir, et le diff le cachait : les deux blocs supprimes etaient adjacents aux
-// blocs ou `clinicalFile` etait ajoute, ce qui presentait la perte comme un simple remaniement.
+// Un remaniement de la forme du seed (identite a plat, valeurs cliniques sous `clinicalFile`)
+// a, dans le meme geste, fait disparaitre deux patients entiers — Francois Thomas (Cardiologie)
+// et Karim Haddad (Pneumologie), avec leurs huit valeurs cliniques — sans qu'aucune porte ne le
+// remarque : `tsc`, `prisma db seed` et `npm run lint` sortaient tous a zero, parce que retirer
+// deux elements d'un tableau litteral est invisible a tout ce que ce depot sait verifier
+// automatiquement. Seule la relecture du diff pouvait le voir, et le diff le cachait : les deux
+// blocs supprimes etaient adjacents aux blocs ou `clinicalFile` etait ajoute, ce qui presentait
+// la perte comme un simple remaniement.
 //
 // Ce test rend ce geste impossible a refaire sans le voir : il compte et NOMME les patients de
 // chaque service. Toucher `back/prisma/seed/data/patient.ts` — ajouter, retirer ou renommer un

@@ -10,8 +10,8 @@ import type {
 // Les soignants d'un modèle de créneau passent par la table de liaison
 // SlotTemplateSoignant : ce module l'aplatit systématiquement pour que
 // domaines, schémas de réponse et front n'aient jamais à savoir qu'elle
-// existe. Partagé avec les repositories pathway et appointment (tâches 12,
-// 13), qui n'incluent parfois que les liens soignants — d'où le type
+// existe. Partagé avec les repositories pathway et appointment, qui
+// n'incluent parfois que les liens soignants — d'où le type
 // partiel ci-dessous.
 export const soignantLinksInclude = {
   soignantLinks: { include: { soignant: true } },
@@ -28,8 +28,8 @@ export const soignantLinksInclude = {
 // toujours lu via une requête déjà filtrée par service. Cette sûreté ne
 // vient donc pas de l'`include`, mais de la garantie que ces trois id ne
 // sont jamais écrits sans vérifier au préalable qu'ils désignent une ligne
-// du service courant — c'est le travail de la tâche 14 (validation des
-// références à l'écriture). Si cet invariant venait à changer (écriture
+// du service courant — c'est le travail de la validation des
+// références à l'écriture. Si cet invariant venait à changer (écriture
 // directe de ces colonnes sans passer par une validation), ces trois
 // relations cesseraient d'être sûres et il faudrait leur ajouter un filtre
 // explicite, comme `soignantLinks`/`soignant` ci-dessus le font via leurs
@@ -44,7 +44,7 @@ export const slotTemplateInclude = {
 // Les champs autres que `soignantLinks` sont optionnels : un `include`
 // partiel (ex. seulement `soignantLinksInclude`) doit satisfaire ce type
 // sans contorsion, pour que flattenSlotTemplate reste utilisable par les
-// tâches 12 et 13.
+// repositories pathway et appointment.
 type SlotTemplateRow = SlotTemplate & {
   soignantLinks: { soignant: Soignant }[]
   template?: PathwayTemplate | null

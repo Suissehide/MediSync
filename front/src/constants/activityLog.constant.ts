@@ -7,8 +7,8 @@ import { toSelectOptions } from '../libs/utils.ts'
 // c'est l'écran plateforme qui les voit (`constants/superAdminAccessLog.constant.ts`, qui
 // COMPLÈTE ce dictionnaire plutôt que de le réutiliser tel quel).
 //
-// `patient.removedFromPathway` A ÉTÉ AJOUTÉ à la revue finale de branche (étape 4b). Il manquait
-// depuis l'étape 2 : l'événement existe sur `main` depuis l'origine du bus, il est bien écrit
+// `patient.removedFromPathway` A ÉTÉ AJOUTÉ récemment. Il manquait
+// depuis longtemps : l'événement existe sur `main` depuis l'origine du bus, il est bien écrit
 // sous un contexte de service, et le filtre « Action » de cet écran-ci ne le proposait pas —
 // une ligne réelle s'affichait donc sous son nom technique, et aucune valeur du filtre ne
 // permettait de l'isoler. Trouvé par le contrat de vocabulaire

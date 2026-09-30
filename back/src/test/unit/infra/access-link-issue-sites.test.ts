@@ -2,20 +2,18 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
 import ts from 'typescript'
 
-// TACHE 10, TOUR DE CORRECTION 1, ARBITRAGE n°1 : la garde porte sur LE JETON, pas sur la route.
+// ARBITRAGE n°1 : la garde porte sur LE JETON, pas sur la route.
 //
 // `AccessLinkDomain.issue` rend un jeton en clair qui, consomme, REINITIALISE LE MOT DE PASSE DU
 // `User` — un modele GLOBAL. Un jeton ne donne donc pas acces « a cet etablissement » : il donne
 // acces AU COMPTE, et a tout ce que ce compte atteint, y compris d'autres etablissements et, si
 // le compte porte le drapeau, le prefixe `/super-admin`.
 //
-// C'est exactement par la que le tour precedent a echoue : la garde avait ete posee sur la seule
-// REEMISSION, et `POST /account` — la route d'a cote, dans le meme fichier — la contournait
-// entierement. Une garde par route se reoublie a la route suivante ; ce fichier rend l'oubli
-// visible a l'execution plutot qu'en revue.
+// Une garde posee sur la seule REEMISSION laissait `POST /account` — la route d'a cote, dans le
+// meme fichier — la contourner entierement. Une garde par route se reoublie a la route suivante ;
+// ce fichier rend l'oubli visible a l'execution plutot qu'a la lecture.
 //
-// TOUR DE CORRECTION 2 — CETTE PHRASE DISAIT « VISIBLE EN CI », ET ELLE ETAIT FAUSSE LA OU
-// L'OUBLI SE PRODUIT. `test:unit` (wireit, package.json) ne declarait pas `src/main/**` dans ses
+// `test:unit` (wireit, package.json) ne declarait pas `src/main/**` dans ses
 // `files` : apres l'ajout d'un cinquieme site d'emission dans `src/main`, `npm run test:unit`
 // repondait « Ran 0 scripts and skipped 2 » — vert, en reutilisant son cache — alors que ce
 // fichier etait bel et bien rouge sous Jest direct. Un garde-fou qui ne rougit que si on pense a
@@ -23,9 +21,8 @@ import ts from 'typescript'
 // `src/main/**` (verifie : le meme sabotage rend « Tests: 1 failed, 421 passed » par la commande
 // npm). `test:e2e` et `cover:unit` ne souffraient pas du defaut, ils le declaraient deja.
 //
-// Il garde DEUX proprietes distinctes, et il faut dire laquelle fait quoi (lecon de
-// `runAsSystem-unicite.test.ts`, qui a coute deux tours a ce depot pour avoir confondu les
-// siennes) :
+// Il garde DEUX proprietes distinctes, et il faut dire laquelle fait quoi (meme lecon que
+// `runAsSystem-unicite.test.ts`, qui distingue les siennes) :
 //
 //   A. Chaque site d'emission de `src/main` est DECLARE ici, nomme, avec sa raison et son
 //      nombre d'appels. Un cinquieme site — une quatrieme route qui remet un jeton — fait

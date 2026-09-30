@@ -19,13 +19,13 @@ export interface AuthStoreActions {
 }
 
 // Délègue à `defaultTenantContext` (front/src/utils/tenant-context.ts), le
-// module pur écrit pour l'étape 2 : même résolution du premier couple
+// module pur qui fait foi : même résolution du premier couple
 // établissement/service, même repli sur le dernier contexte visité, même
 // garde contre un `user` de forme inattendue (état persisté d'une version
 // antérieure, stockage corrompu). Deux implémentations du même calcul
 // avaient déjà divergé sur cette garde ; `deriveContext` ne reste ici que
-// parce que ses appelants ne sont pas encore réécrits — sa suppression est
-// portée par les tâches qui les remplacent.
+// parce que ses appelants ne sont pas encore réécrits — sa suppression viendra
+// quand ils le seront.
 export const deriveContext = (user: User | null): TenantContext | null =>
   defaultTenantContext(user)
 

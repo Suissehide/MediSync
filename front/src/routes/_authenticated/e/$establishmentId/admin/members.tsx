@@ -41,7 +41,7 @@ function MemberSettings() {
   const { members, isPending, error } = useMembersQuery()
   // Même requête que l'onglet des services (`admin/services.tsx`) : sert à
   // résoudre le NOM d'un service pour la colonne « Rôle service »
-  // (`member.column.tsx`, tour de correction 1, Important n°2) — sans
+  // (`member.column.tsx`) — sans
   // état de chargement/erreur dédié ici (une liste absente ou pas encore
   // chargée retombe sur `[]`, et la colonne affiche alors le rôle sans le
   // nom plutôt que rien).
@@ -51,11 +51,11 @@ function MemberSettings() {
 
   const [removeTarget, setRemoveTarget] = useState<Member | null>(null)
 
-  // Important n°4 (tour de correction 1, tâche 13) : sans ceci, un 500 sur
+  // Sans ceci, un 500 sur
   // `GET /members` laisse `members` à `undefined` et le tableau se
   // contente d'un rendu vide, indiscernable de « aucun membre » une fois le
   // toast disparu (`useDataFetching` en pose un, mais il s'efface). Même
-  // leçon que `services.tsx`/`grants.tsx` (et déjà tirée à la tâche 12) :
+  // leçon que `services.tsx`/`grants.tsx` :
   // distinguer chargement / erreur / prêt, jamais laisser l'un se faire
   // passer pour l'autre.
   const etat = queryState({ isPending, error, hasData: members !== undefined })

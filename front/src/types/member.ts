@@ -34,7 +34,7 @@ export type UpdateMemberInput = {
   services?: MemberServiceAssignment[]
 }
 
-// `POST /e/:establishmentId/admin/members/account` (tâche 13, step 3) : crée
+// `POST /e/:establishmentId/admin/members/account` : crée
 // un compte de membre (adresse sans compte existant) et rend son lien de
 // première connexion. Distinct de `AddMemberInput` : celui-ci rattache un
 // compte qui existe déjà (voir `addMemberForm.tsx`), celui-là en crée un.

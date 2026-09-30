@@ -8,14 +8,12 @@ import ts from 'typescript'
 // `if (store.kind === 'system') { return }`). C'est une exception assumee au cloisonnement
 // multi-tenant.
 //
-// TOUR DE CORRECTION 2 (relecture, tache 9) — CE FICHIER-CI NE GARDE QU'UNE SEULE DES DEUX
-// PROPRIETES QUI RENDENT L'EXCEPTION SURE, ET IL FAUT LE DIRE PRECISEMENT : le tour precedent
-// affirmait que « chaque emploi soit declare » ET que « sa requete porte ses propres bornes »
-// etaient TOUS DEUX garantis ICI — FAUX, demontre par execution : poser un `where: {}` vide sur
-// LES DEUX lectures de `patientServiceFile.repository.ts` (estSuiviAilleurs ET
-// impactDesactivation) laisse CE FICHIER 3 tests sur 3 VERTS, puisqu'il ne lit jamais le contenu
-// d'une requete — seulement OU (quel fichier, quelle methode nommee) la CAPACITE d'entrer dans
-// un mode non-tenant est invoquee. Ce qui rougirait sur un `where` vide, c'est un AUTRE fichier :
+// CE FICHIER-CI NE GARDE QU'UNE SEULE DES DEUX PROPRIETES QUI RENDENT L'EXCEPTION SURE, ET IL
+// FAUT LE DIRE PRECISEMENT : poser un `where: {}` vide sur LES DEUX lectures de
+// `patientServiceFile.repository.ts` (estSuiviAilleurs ET impactDesactivation) laisse CE FICHIER
+// 3 tests sur 3 VERTS, puisqu'il ne lit jamais le contenu d'une requete — seulement OU (quel
+// fichier, quelle methode nommee) la CAPACITE d'entrer dans un mode non-tenant est invoquee. Ce
+// qui rougirait sur un `where` vide, c'est un AUTRE fichier :
 // `back/src/test/unit/infra/repository-scope.test.ts` (describes `PatientServiceFileRepository.
 // estSuiviAilleurs` et `.impactDesactivation`), qui capture les arguments REELS envoyes a Prisma
 // et prouve, pour CHAQUE emploi, que sa forme precise serait refusee par le garde-fou hors du
@@ -23,17 +21,9 @@ import ts from 'typescript'
 // mais DEUX tests distincts les gardent, pas un seul.
 //
 // Il n'y a pas de plafond a priori sur le NOMBRE d'emplois : ce que CE fichier garde, c'est que
-// chacun soit DECLARE (enumere ci-dessous, avec sa raison, dans un fichier PRECIS). Une version
-// anterieure de ce commentaire disait « deux fois seulement » avant que la tache 9 n'ajoute un
-// troisieme emploi legitime dans le meme fichier que le second — la prose mentait alors que les
-// assertions, elles, restaient justes ; corrige une premiere fois en pretendant a tort que la
-// CAPACITE et les BORNES etaient toutes deux couvertes ici, corrige a nouveau ci-dessus.
+// chacun soit DECLARE (enumere ci-dessous, avec sa raison, dans un fichier PRECIS).
 //
-// LE COMPTE, DIT UNE SEULE FOIS ET DANS UNE SEULE UNITE (revue finale de branche : la prose
-// melait deux unites, « emplois declares » et « appels », et la liste numerotee ci-dessous ne
-// correspondait NI a l'une NI a l'autre — elle enumerait SEPT sites en six numeros, en scindant
-// `patientServiceFile.repository.ts` en deux entrees et en omettant purement et simplement le
-// site de la tache 7) :
+// LE COMPTE, DIT UNE SEULE FOIS ET DANS UNE SEULE UNITE :
 //   - SIX emplois DECLARES, c'est-a-dire six entrees d'`AUTORISES` ci-dessous, une par FICHIER,
 //     chacune avec sa raison ;
 //   - HUIT APPELS au total, `application/starter.ts` et `patientServiceFile.repository.ts` en
@@ -42,12 +32,12 @@ import ts from 'typescript'
 // La liste ci-dessous enumere les SITES D'APPEL, groupes par question posee — c'est l'unite qui
 // se relit, pas celle qui se compte. Elle en porte SEPT, parce que les deux appels de
 // `application/starter.ts` repondent a la meme question (purger un journal) alors que les deux
-// de `patientServiceFile.repository.ts` en posent deux distinctes. Le SEPTIEME, ajoute a la
-// revue finale de branche, est le site de la tache 7 (etape 4b) : il etait declare dans
-// `AUTORISES` depuis son commit, mais n'avait jamais rejoint cette liste-ci.
+// de `patientServiceFile.repository.ts` en posent deux distinctes, et que le site de la
+// reemission de lien par le super-admin (`services/activity-log.subscriber.ts`) en ajoute un
+// septieme :
 //
 //   1. La purge planifiee des DEUX journaux (`application/starter.ts`,
-//      `scheduleActivityLogCleanup` ET, depuis la tache 8, `schedulePatientAccessLogCleanup`) :
+//      `scheduleActivityLogCleanup` ET `schedulePatientAccessLogCleanup`) :
 //      hors de toute requete HTTP, il n'existe alors aucun tenant a poser, et chaque purge doit
 //      toucher TOUTE sa table, pas un seul etablissement. Retention parametrable
 //      (`config.logRetentionMonths`) pour les deux, calculee independamment dans chaque domaine
@@ -58,22 +48,22 @@ import ts from 'typescript'
 //      service courants, captures AVANT d'entrer dans le mode encadre) sont verifiees par
 //      `repository-scope.test.ts`, pas par ce fichier-ci.
 //   3. L'impact d'une desactivation de service (meme fichier, `impactDesactivation`, design
-//      §3.6, tache 9) : appelee depuis l'administration d'etablissement (aucun service courant
+//      §3.6) : appelee depuis l'administration d'etablissement (aucun service courant
 //      a ce niveau), elle traverse la meme frontiere pour rendre DEUX NOMBRES agreges — jamais
 //      un identifiant, un nom ou un contenu. Ses bornes (etablissement ET service dont on evalue
 //      la desactivation, recus EXPLICITEMENT de l'appelant) sont, de meme, verifiees par
 //      `repository-scope.test.ts`. CE N'EST PAS LE MEME CALCUL que le signal de suivi ailleurs
 //      (question differente : « ce patient va-t-il devenir invisible » contre « un sous-dossier
 //      existe-t-il ailleurs ») — voir le commentaire sur `impactDesactivation` pour le detail.
-//   4. Le script d'amorcage du super-admin (`domain/user.domain.ts`, `bootstrapSuperAdmin`,
-//      tache 11, etape 4a) : seul appelant `scripts/bootstrap-super-admin.ts`, hors de toute
+//   4. Le script d'amorcage du super-admin (`domain/user.domain.ts`, `bootstrapSuperAdmin`) :
+//      seul appelant `scripts/bootstrap-super-admin.ts`, hors de toute
 //      requete HTTP — meme motif que 1. L'ecriture qu'elle encadre n'est pas la meme table
 //      (`User`, un modele GLOBAL, pour poser `isSuperAdmin` et, si besoin, reactiver le compte)
 //      mais aussi `ActivityLog` (modele d'ETABLISSEMENT) pour sa ligne de journal — cette
 //      deuxieme ecriture est la raison structurelle de l'encadrement : un modele global n'exige
 //      pas `runAsSystem` pour lui-meme, `ActivityLog` si.
 //   5. « Ce compte est-il rattache ailleurs ? » (`infra/orm/repositories/membership.repository.ts`,
-//      `estRattacheAilleurs`, tache 15, etape 4a) : meme forme que 2 et 3 — une traversee
+//      `estRattacheAilleurs`) : meme forme que 2 et 3 — une traversee
 //      volontaire de frontiere qui ne rend qu'un BOOLEEN, jamais un identifiant ni un nom
 //      d'etablissement. Elle REMPLACE une lecture strictement plus large : `MembershipDomain`
 //      chargeait l'arbre COMPLET des appartenances du compte (`UserRepository.findByID`, un
@@ -84,8 +74,8 @@ import ts from 'typescript'
 //      capture AVANT d'entrer dans le mode encadre) sont verifiees par `repository-scope.test.ts`,
 //      pas par ce fichier-ci.
 //   6. La lecture du journal des consultations, a l'echelle de l'etablissement
-//      (`infra/orm/repositories/patientAccessLog.repository.ts`, `findByPatientInEstablishment`,
-//      tache 5, etape 4b) : appelee depuis l'administration d'etablissement (aucun service
+//      (`infra/orm/repositories/patientAccessLog.repository.ts`, `findByPatientInEstablishment`) :
+//      appelee depuis l'administration d'etablissement (aucun service
 //      courant a ce niveau), pour rendre TOUTES les lignes du journal d'un patient, tous
 //      services confondus — jamais de contenu clinique (voir le schema de reponse HTTP). Meme
 //      forme que 2 et 3 : la borne (`establishmentId`, capturee AVANT d'entrer dans le mode
@@ -97,9 +87,7 @@ import ts from 'typescript'
 //      contexte, 119 sous superadmin, mais surtout 325 sous tenant ORDINAIRE et 300 sous
 //      administration d'etablissement, la majorite du total.
 //   7. La ligne de journal de la reemission de lien par le super-admin
-//      (`services/activity-log.subscriber.ts`, souscription a `user.accessLinkReissued`, tache 7,
-//      etape 4b — SITE AJOUTE A CETTE LISTE A LA REVUE FINALE DE BRANCHE : il etait declare dans
-//      `AUTORISES` des son commit, mais la prose ci-dessus ne l'avait jamais integre).
+//      (`services/activity-log.subscriber.ts`, souscription a `user.accessLinkReissued`) :
 //      `/super-admin` s'execute sans AUCUN contexte (pas seulement sans tenant) et `ActivityLog`
 //      est un modele d'ETABLISSEMENT : le garde-fou refusait categoriquement l'ecriture, et le
 //      `catch` de `#log` avalait le refus — rien n'echouait, rien ne manquait visiblement, seule
@@ -110,11 +98,11 @@ import ts from 'typescript'
 //      DECLARATION du site ; que la ligne soit reellement ecrite est prouve par execution
 //      ailleurs (`src/test/e2e/activity-log-emissions-declarees.test.ts`).
 //
-// `runAsSuperAdmin` (meme fichier, tache 1 / etape 4a) y ajoute un troisieme mode, qui ne retire
+// `runAsSuperAdmin` (meme fichier) y ajoute un troisieme mode, qui ne retire
 // rien mais substitue au filtre de tenant une liste declaree et exhaustive de couples (modele,
 // operation) — SUPERADMIN_OPERATIONS, infra/orm/tenant-guard.ts.
 //
-// CE QUE CE FICHIER NE FAIT PAS, A DIRE PLUTOT QUE LAISSER SUPPOSER (revue finale, mineur) : le
+// CE QUE CE FICHIER NE FAIT PAS, A DIRE PLUTOT QUE LAISSER SUPPOSER : le
 // volet A ci-dessus (AUTORISES, un tableau nomme fichier par fichier) N'EXISTE QUE POUR
 // `runAsSystem`. Les APPELS a `.runAsSuperAdmin(` (douze dans src/main, aujourd'hui) ne sont
 // enumeres nulle part ici — un treizieme site, ajoute n'importe ou dans src/main, laisserait les
@@ -133,25 +121,24 @@ import ts from 'typescript'
 // sources plutot que de faire confiance a la memoire, a la maniere de
 // `front/src/test/lecture-directe-du-cache.test.ts`.
 //
-// REVUE tache 7, tour 1, constat Critique C1 : une garde qui ne surveille que le NOM
-// `runAsSystem` se contourne par trois idiomes ordinaires qu'un simple extract-variable ou un
-// espace produisent sans y penser — `const f = ctx.runAsSystem.bind(ctx)`, `.runAsSystem (fn)`
-// (espace avant la parenthese), et, le plus grave, une SECONDE methode qui entre en mode
-// systeme sans jamais prononcer le nom `runAsSystem` : `uneAutreMethode(fn) { return
-// this.storage.run({ kind: 'system' }, fn) }`. La revue a prouve par execution que cette
+// Une garde qui ne surveille que le NOM `runAsSystem` se contourne par trois idiomes ordinaires
+// qu'un simple extract-variable ou un espace produisent sans y penser — `const f =
+// ctx.runAsSystem.bind(ctx)`, `.runAsSystem (fn)` (espace avant la parenthese), et, le plus
+// grave, une SECONDE methode qui entre en mode systeme sans jamais prononcer le nom
+// `runAsSystem` : `uneAutreMethode(fn) { return
+// this.storage.run({ kind: 'system' }, fn) }`. Preuve par execution : cette
 // derniere forme desactive reellement le garde-fou (un `findMany` sans aucun filtre de tenant
 // passe sous elle). Ce fichier surveille donc deux choses, pas une :
 //
 //   A. tout ce qui REFERENCE la methode `runAsSystem` (au-dela du seul appel direct — voir
 //      APPEL_RUN_AS_SYSTEM ci-dessous) ;
 //   B. tout ce qui INVOQUE la capacite d'entrer dans un mode non-tenant (system OU superadmin),
-//      par QUELQUE PORTE que ce soit de `AsyncLocalStorage` — REECRIT au tour de correction 1 de
-//      la tache 1, puis a nouveau resserre au tour de correction 2 (voir le commentaire
-//      d'appelsCapaciteDeStore plus bas pour le detail des deux tours) ;
+//      par QUELQUE PORTE que ce soit de `AsyncLocalStorage` (voir le commentaire
+//      d'appelsCapaciteDeStore plus bas pour le detail des deux portes) ;
 //   C. tout ce qui ECRIT LITTERALEMENT la valeur `{ kind: 'system' }` / `{ kind: 'superadmin' }`
-//      — l'ANCIEN volet B, retabli au tour de correction 3 a cote du nouveau plutot qu'a sa
-//      place : les deux se completent, aucun des deux seul ne suffit (voir le commentaire juste
-//      avant METHODES_QUI_POSENT_UN_STORE pour le detail).
+//      — ce volet complete le volet B plutot que de le remplacer : les deux se completent,
+//      aucun des deux seul ne suffit (voir le commentaire juste avant METHODES_QUI_POSENT_UN_STORE
+//      pour le detail).
 //
 // Volet A : reference a `runAsSystem`, sous forme d'ACCES A LA PROPRIETE plutot que du seul
 // appel `.runAsSystem(`. `\b` (limite de mot) ferme la forme sur `.bind` (V2) et sur l'espace
@@ -169,7 +156,7 @@ const AUTORISES = [
     fichier: 'application/starter.ts',
     raison:
       'purge planifiee des DEUX journaux, hors de toute requete : le journal d activite ' +
-      '(scheduleActivityLogCleanup) et, depuis la tache 8 (etape 4b), le journal des ' +
+      '(scheduleActivityLogCleanup) et le journal des ' +
       'consultations (schedulePatientAccessLogCleanup) — retention parametrable ' +
       '(config.logRetentionMonths) pour les deux',
     appels: 2,
@@ -178,20 +165,20 @@ const AUTORISES = [
     fichier: 'infra/orm/repositories/patientServiceFile.repository.ts',
     raison:
       'estSuiviAilleurs — le signal de suivi ailleurs — ET impactDesactivation — les ' +
-      'compteurs de l ecran de desactivation d un service (design §3.6, tache 9)',
+      'compteurs de l ecran de desactivation d un service (design §3.6)',
     appels: 2,
   },
   {
     fichier: 'domain/user.domain.ts',
     raison:
-      'bootstrapSuperAdmin (tache 11, etape 4a) — seul point qui pose User.isSuperAdmin, ' +
+      'bootstrapSuperAdmin — seul point qui pose User.isSuperAdmin, ' +
       'appele par scripts/bootstrap-super-admin.ts, hors de toute requete HTTP',
     appels: 1,
   },
   {
     fichier: 'infra/orm/repositories/membership.repository.ts',
     raison:
-      'estRattacheAilleurs (tache 15, etape 4a) — « ce compte est-il rattache a un AUTRE ' +
+      'estRattacheAilleurs — « ce compte est-il rattache a un AUTRE ' +
       'etablissement que le courant ? », un BOOLEEN et rien d autre. La question porte par ' +
       'nature sur les autres etablissements (User.deactivatedAt et un lien d acces sont ' +
       'GLOBAUX : agir dessus depuis un etablissement toucherait les autres, ce que les gardes ' +
@@ -206,7 +193,7 @@ const AUTORISES = [
   {
     fichier: 'infra/orm/repositories/patientAccessLog.repository.ts',
     raison:
-      'findByPatientInEstablishment (tache 5, etape 4b) — la route d administration ' +
+      'findByPatientInEstablishment — la route d administration ' +
       'd etablissement du journal des consultations, sans service courant. PatientAccessLog ' +
       'reste dans SERVICE_MODELS (tenant-guard.ts), dont le garde-fou exige serviceId pour ' +
       'toute operation ; reclasser le modele en ESTABLISHMENT_MODELS pour eviter runAsSystem a ' +
@@ -220,7 +207,7 @@ const AUTORISES = [
   {
     fichier: 'services/activity-log.subscriber.ts',
     raison:
-      'la reemission de lien par le super-admin (tache 7, etape 4b, evenement ' +
+      'la reemission de lien par le super-admin (evenement ' +
       '`user.accessLinkReissued`) : `/super-admin` s execute sans AUCUN contexte (pas seulement ' +
       'sans tenant), et `ActivityLog` est un modele d ETABLISSEMENT (tenant-guard.ts, ' +
       'ESTABLISHMENT_MODELS) — le garde-fou refuse categoriquement une ecriture dessus en ' +
@@ -240,17 +227,17 @@ const AUTORISES = [
 // legitime d'ou peut naitre un changement de store — tenant, non-tenant, ou son effacement.
 const SEUL_CONSTRUCTEUR_LEGITIME = 'utils/tenant-context.ts'
 
-// Volet C (retabli au tour de correction 3) : construction TEXTUELLE de la valeur
+// Volet C : construction TEXTUELLE de la valeur
 // `{ kind: 'system' }` / `{ kind: 'superadmin' }` (avec ou sans espaces, guillemets simples ou
 // doubles) — PAS sa lecture (`store.kind === 'system'`, dans tenant-guard.ts, ne matche pas : il
 // n'y a pas de `:` entre `kind` et `'system'`). Ligne par ligne, comme l'ancien volet B : les
 // limites connues (multi-ligne, virgule finale, gabarit, etalement, constante intermediaire) sont
-// les memes qu'au tour de correction 1, et c'est PRECISEMENT pour ca que ce volet ne remplace pas
+// les memes, et c'est PRECISEMENT pour ca que ce volet ne remplace pas
 // le volet B — il le complete, sur les formes que le volet B ne voit pas (`.call`, `.apply`,
 // `Reflect.apply`, cle de crochet calculee, tant que la VALEUR reste ecrite en clair).
 //
-// SES FAUX POSITIFS, declares plutot que decouverts en CI (tour de correction 4, mineur de la
-// re-revue, les deux prouves par execution) : ce volet lit du TEXTE, pas du code, donc il ne
+// SES FAUX POSITIFS, declares plutot que decouverts en CI (les deux prouves par execution) : ce
+// volet lit du TEXTE, pas du code, donc il ne
 // distingue pas un litteral executable d'une simple mention. Un COMMENTAIRE qui cite l'idiome
 // (`// … storage.run({ kind: 'system' }, fn)`) et une CHAINE DE CARACTERES qui le contient
 // (`const DOC = "… { kind: 'superadmin' } …"`) le font rougir tous les deux, alors qu'aucun des
@@ -302,9 +289,9 @@ const lignesCorrespondantes = (racine: string, motif: RegExp) =>
       .filter((emplacement) => motif.test(emplacement.texte))
   })
 
-// TOUR DE CORRECTION 1 (tache 1) — Critique 2 de la revue : l'ancien volet B cherchait la VALEUR
-// `{ kind: 'system' }` / `{ kind: 'superadmin' }` comme une chaine de caracteres, ligne par
-// ligne. Sur sept sabotages soumis a l'epreuve, cinq passaient a travers : gabarit
+// L'ancien volet B cherchait la VALEUR `{ kind: 'system' }` / `{ kind: 'superadmin' }` comme une
+// chaine de caracteres, ligne par ligne. Sur sept sabotages soumis a l'epreuve, cinq passaient a
+// travers : gabarit
 // (`` `system` `` plutot que `'system'`), litteral etale sur plusieurs lignes, virgule finale
 // avant l'accolade, etalement (`{ ...marqueurExistant }`) et constante intermediaire construite
 // hors du litteral inline. Les trois premiers ne sont que des artefacts du DECOUPAGE PAR LIGNE
@@ -325,38 +312,31 @@ const lignesCorrespondantes = (racine: string, motif: RegExp) =>
 // VALEUR du premier argument ferme l'etalement et la constante intermediaire, puisque ni l'un ni
 // l'autre ne change la FORME de l'appel lui-meme.
 //
-// TOUR DE CORRECTION 2 (tache 1) — deux angles morts trouves dans CETTE reecriture, l'un par la
-// re-revue (Critique 2), l'autre nomme par elle sans etre encore ferme (Important) :
+// Volet B surveille deux portes que `AsyncLocalStorage` expose pour poser un store, et couvre
+// les deux sans condition sur le nombre d'arguments :
 //
-//   - Critique 2 : la version precedente ne cherchait qu'un appel a la methode `run` — or
-//     `AsyncLocalStorage` pose aussi un store avec `enterWith(store)`, une porte DIFFERENTE, tout
-//     aussi capable d'entrer dans un mode non-tenant (prouve par execution par la revue :
-//     `peek()` rend bien `{ kind: 'superadmin' }` apres un `storage.enterWith({ kind:
-//     'superadmin' })`, et une operation sans filtre passe ensuite), et qui figure DEJA
-//     legitimement trois lignes plus haut dans ce meme fichier (`enter`, `clear`). Une regle qui
-//     ne visait qu'un nom de methode (`run`) a donc reproduit exactement le defaut que la
-//     reecriture visait a corriger — un nom, pas une capacite. Volet B surveille maintenant les
-//     DEUX portes : `run` et `enterWith`.
-//   - Important : la condition `arguments.length === 2` sur `run` etait trop etroite — la
-//     signature reelle est variadique (`run(store, callback, ...args)`), donc
-//     `storage.run(store, fn, undefined)` ou un appel par etalement (`storage.run(...args)`, ou
-//     `argsArray.length` different de 2 au runtime) y echappaient. Aucune des deux methodes
-//     surveillees n'impose plus de condition sur le nombre d'arguments : le NOM de la methode
-//     visee (par acces direct ou par crochet a cle litterale) est desormais la seule condition,
-//     ce qui couvre aussi bien `run(store, fn)` que `run(store, fn, undefined)` ou un appel
-//     etale.
+//   - `enterWith(store)`, une porte DIFFERENTE de `run`, tout aussi capable d'entrer dans un
+//     mode non-tenant (prouve par execution : `peek()` rend bien `{ kind: 'superadmin' }` apres
+//     un `storage.enterWith({ kind: 'superadmin' })`, et une operation sans filtre passe
+//     ensuite), et qui figure DEJA legitimement trois lignes plus haut dans ce meme fichier
+//     (`enter`, `clear`). Une regle qui ne viserait qu'un nom de methode (`run`) reproduirait
+//     exactement le defaut que cette approche corrige — un nom, pas une capacite.
+//   - La signature de `run` est variadique (`run(store, callback, ...args)`) : une condition sur
+//     `arguments.length === 2` serait trop etroite et laisserait passer `storage.run(store, fn,
+//     undefined)` ou un appel par etalement (`storage.run(...args)`). Le NOM de la methode visee
+//     (par acces direct ou par crochet a cle litterale) est donc la seule condition, ce qui
+//     couvre aussi bien `run(store, fn)` que `run(store, fn, undefined)` ou un appel etale.
 //
-// TOUR DE CORRECTION 3 (tache 1) — Important de la re-revue : le volet B (nom de methode) perd
-// quatre couvertures que l'ANCIEN volet, purement textuel, tenait sans meme les viser
-// deliberement — `.call`, `.apply`, `Reflect.apply` et une cle de crochet CALCULEE partagent un
-// point commun que le volet B, fonde sur le nom de la methode APPELEE, ne peut pas voir : aucun
-// n'ecrit litteralement `run(` ou `enterWith(` a l'endroit de l'appel — mais TOUS, dans leur
-// forme la plus simple, continuent d'ecrire la VALEUR `{ kind: 'system' }` ou
-// `{ kind: 'superadmin' }` en clair, quelque part sur la meme ligne. C'est exactement ce que
-// l'ancien volet textuel (Critique 2, tour 1) surveillait, et qu'aucun volet n'a plus surveille
-// depuis qu'il a ete remplace plutot que complete. Remede retenu ici, estime a dix lignes par la
-// revue : GARDER l'ancien volet textuel comme TROISIEME volet, a cote du volet B plutot qu'a sa
-// place — les deux se completent, aucun des deux ne remplace l'autre (voir Volet C plus bas).
+// Le volet B (nom de methode) perd quatre couvertures que l'ANCIEN volet, purement textuel,
+// tenait sans meme les viser deliberement — `.call`, `.apply`, `Reflect.apply` et une cle de
+// crochet CALCULEE partagent un point commun que le volet B, fonde sur le nom de la methode
+// APPELEE, ne peut pas voir : aucun n'ecrit litteralement `run(` ou `enterWith(` a l'endroit de
+// l'appel — mais TOUS, dans leur forme la plus simple, continuent d'ecrire la VALEUR
+// `{ kind: 'system' }` ou `{ kind: 'superadmin' }` en clair, quelque part sur la meme ligne.
+// C'est exactement ce que l'ancien volet textuel surveillait, et qu'aucun volet ne surveillait
+// plus depuis qu'il avait ete remplace plutot que complete. Remede retenu ici : GARDER l'ancien
+// volet textuel comme TROISIEME volet, a cote du volet B plutot qu'a sa place — les deux se
+// completent, aucun des deux ne remplace l'autre (voir Volet C plus bas).
 //
 // CE QUE CES TROIS VOLETS NE COUVRENT TOUJOURS PAS, dit honnetement plutot que par une expression
 // qui ferait semblant de le couvrir : une valeur CONSTRUITE PROGRESSIVEMENT SANS jamais ecrire le
@@ -373,26 +353,25 @@ const lignesCorrespondantes = (racine: string, motif: RegExp) =>
 // qu'aucune analyse de SOURCE ne puisse s'y opposer — une vraie frontiere exigerait une
 // encapsulation qui survit a l'execution (`#champPrive` ou `WeakMap`), pas seulement au typage.
 //
-// DEUX PORTES SUPPLEMENTAIRES, TROUVEES PAR EXECUTION AU TOUR 3, DECLAREES ICI FAUTE DE POUVOIR
+// DEUX PORTES SUPPLEMENTAIRES, TROUVEES PAR EXECUTION, DECLAREES ICI FAUTE DE POUVOIR
 // LES FERMER PAR UNE LECTURE STATIQUE DES SOURCES :
 //
 //   1. MUTER EN PLACE l'objet que `peek()`/`getStore()` renvoie (`const s = tenantContext.peek();
 //      (s as any).kind = 'superadmin'`) — aucun appel a `run`/`enterWith`, aucun litteral
 //      `{ kind: ... }` nulle part : rien qu'un des trois volets ci-dessous puisse voir. FERMEE,
-//      elle, mais PAS par un volet de ce fichier : le store est desormais gele
+//      elle, mais PAS par un volet de ce fichier : le store est gele
 //      (`Object.freeze`) a sa construction dans `utils/tenant-context.ts`, donc une mutation de
 //      ce genre echoue a l'execution (`TypeError` en mode strict — voir
 //      `tenant-context.test.ts`, qui le prouve par execution) plutot que de reussir en silence.
 //      C'est un remede a l'execution, pas une declaration : « si peek() peut rendre une copie
 //      figee sans casser d'appelant, c'est mieux qu'une declaration » — verifie, ca ne casse
 //      aucun appelant connu (les deux emplois de `peek()` hors de ce fichier ne font que LIRE).
-//      TOUR DE CORRECTION 4 : au tour 3, cette declaration promettait plus que le code ne tenait.
-//      Le gel etait SUPERFICIEL — il protegeait `kind`, pas `store.tenant`, et la re-revue a
-//      prouve par execution que `peek().tenant.establishmentId = 'e9'` reussissait, survivait a un
-//      tick, et repointait tout le contexte sur un autre etablissement (une porte PLUS large que
-//      celle qui etait fermee : tous les modeles d'un autre etablissement, pas seulement les cinq
+//      Le gel doit etre PROFOND, pas seulement sur `kind` : un gel superficiel laisserait
+//      `peek().tenant.establishmentId = 'e9'` reussir, survivre a un
+//      tick, et repointer tout le contexte sur un autre etablissement (une porte PLUS large que
+//      celle visee ici : tous les modeles d'un autre etablissement, pas seulement les cinq
 //      de la liste declaree), la meme reference etant en outre distribuee aux handlers par
-//      `request.tenant`. Le tenant imbrique est desormais gele lui aussi ; `Tenant` ne portant que
+//      `request.tenant`. Le tenant imbrique est donc gele lui aussi ; `Tenant` ne portant que
 //      des scalaires, ce gel est total, et un test de `tenant-context.test.ts` rougit si une
 //      colonne imbriquee y apparaissait un jour.
 //   2. REJOUER UN INSTANTANE D'`AsyncLocalStorage` CAPTURE DANS UNE PORTEE LEGITIME — Node expose
@@ -520,19 +499,18 @@ describe('unicite de l exception runAsSystem au cloisonnement multi-tenant', () 
 })
 
 // Ce que ces trois volets NE couvrent PAS, dit honnetement plutot que par une expression qui
-// ferait semblant de le couvrir (revue tache 7, tour 1 ; complete aux tours de correction 1, 2 et
-// 3 de la tache 1 — voir le commentaire d'appelsCapaciteDeStore pour le detail des trois volets,
-// et les deux portes declarees juste apres lui) : un appel a `runAsSystem`/`runAsSuperAdmin`, une
-// invocation directe de `.run(`/`.enterWith(`, ou une construction litterale de
-// `{ kind: 'system' }`/`{ kind: 'superadmin' }`, depuis `back/src/test` (par exemple un test qui
-// fabriquerait un contexte systeme ou superadmin de toutes pieces). `RACINE` ne lit que
-// `src/main` — le code de production livre — jamais `src/test`. Ce n'est pas un oubli : les
-// tests unitaires legitimes de ce depot construisent deja `{ kind: 'system' }` et
-// `{ kind: 'superadmin' }` directement (repository-scope.test.ts, tenant-context.test.ts,
-// tenant-guard.test.ts) pour eprouver le garde-fou lui-meme, si bien qu'etendre ce scan a
-// `src/test` exigerait une liste d'autorisation separee pour les tests — un chantier a part, hors
-// du remede demande ici, et qui recoupe la meme limite deja actee pour la porte de typage
-// (`npm run build` ne type pas `src/test` non plus : voir tache 7, revue, mineur m4). Un
-// `runAsSystem`, un `runAsSuperAdmin`, un appel `.run(`/`.enterWith(` ou une construction
+// ferait semblant de le couvrir (voir le commentaire d'appelsCapaciteDeStore pour le detail des
+// trois volets, et les deux portes declarees juste apres lui) : un appel a
+// `runAsSystem`/`runAsSuperAdmin`, une invocation directe de `.run(`/`.enterWith(`, ou une
+// construction litterale de `{ kind: 'system' }`/`{ kind: 'superadmin' }`, depuis
+// `back/src/test` (par exemple un test qui fabriquerait un contexte systeme ou superadmin de
+// toutes pieces). `RACINE` ne lit que `src/main` — le code de production livre — jamais
+// `src/test`. Ce n'est pas un oubli : les tests unitaires legitimes de ce depot construisent
+// deja `{ kind: 'system' }` et `{ kind: 'superadmin' }` directement (repository-scope.test.ts,
+// tenant-context.test.ts, tenant-guard.test.ts) pour eprouver le garde-fou lui-meme, si bien
+// qu'etendre ce scan a `src/test` exigerait une liste d'autorisation separee pour les tests — un
+// chantier a part, hors du remede demande ici, et qui recoupe la meme limite deja actee pour la
+// porte de typage (`npm run build` ne type pas `src/test` non plus). Un `runAsSystem`, un
+// `runAsSuperAdmin`, un appel `.run(`/`.enterWith(` ou une construction
 // litterale ecrits dans un fichier de test n'activent d'ailleurs rien en production : ils ne
 // peuvent agir que sur l'execution de ce test-la.

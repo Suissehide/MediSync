@@ -10,11 +10,11 @@ import {
 
 // LE NOM DE L'AUTEUR DANS LE JOURNAL D'ACTIVITE — la propriete qu'aucune porte ne tenait.
 //
-// POURQUOI CE FICHIER EXISTE (tache 15, tour de correction 1). `ActivityLogSubscriber.#log`
+// POURQUOI CE FICHIER EXISTE. `ActivityLogSubscriber.#log`
 // resout le nom de l'auteur avant d'ecrire sa ligne, et il le fait derriere un
 // `.catch(() => null)` : si cette lecture echoue, la ligne est ecrite QUAND MEME, amputee de
 // `userFirstName`/`userLastName`, sans la moindre trace. C'est arrive pour de vrai — le
-// resserrement du garde-fou (tache 15) a fait tomber la lecture que ce souscripteur employait,
+// resserrement du garde-fou a fait tomber la lecture que ce souscripteur employait,
 // et la tracabilite de QUI A FAIT QUOI s'est degradee en silence sur TOUTES les actions
 // journalisees depuis une route de tenant (patients, diagnostics, rendez-vous, membres).
 //
@@ -117,7 +117,7 @@ describe('journal d activite : le nom de l auteur, pas seulement le nombre de li
     }).toEqual({ userFirstName: PRENOM, userLastName: NOM })
   })
 
-  // La meme propriete sur le second chemin cite par la revue : la gestion des membres, sous
+  // La meme propriete sur le second chemin : la gestion des membres, sous
   // `/e/:id/admin`, un contexte de tenant SANS service. Les deux chemins passent par le meme
   // souscripteur, mais ils n'entrent pas dans le contexte par la meme porte
   // (`resolveTenant` contre `resolveEstablishmentAdmin`) — et c'est le contexte qui decide si la

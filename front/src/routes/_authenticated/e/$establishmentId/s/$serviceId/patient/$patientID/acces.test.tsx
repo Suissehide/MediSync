@@ -42,7 +42,7 @@ vi.mock('@tanstack/react-virtual', () => ({
   }),
 }))
 
-// Etape 4b, tâche 10 : journal des accès à un dossier, à l'échelle du
+// Journal des accès à un dossier, à l'échelle du
 // service courant. Trois leçons déjà tirées ailleurs sur ce dépôt
 // (front/CLAUDE.md, § Testing) verrouillées ici : chargement, erreur, vide,
 // TOUJOURS distincts — un tableau vide indiscernable d'une panne a été livré
@@ -249,13 +249,13 @@ describe('etats de l ecran du journal des acces', () => {
     expect(screen.queryByText(/accès par octroi/i)).not.toBeInTheDocument()
   })
 
-  // Tour de correction 1 (tâche 10) : `accesParOctroi` distingue un accès de dépannage (octroi
+  // `accesParOctroi` distingue un accès de dépannage (octroi
   // temporaire de super-admin) d'un accès de soin ordinaire — le point même de ce journal
   // d'audit. Une fixture où TOUTES les lignes portent la même valeur ne prouverait rien (la
   // pathologie du test vrai par vacuité, déjà mesurée sept fois sur ce dépôt) : celle-ci mélange
   // délibérément les deux, et lie chaque assertion à SA ligne — jamais une présence "quelque
   // part dans le document", le piège qui a déjà laissé passer un échange de libellés ailleurs
-  // sur ce dépôt (`admin/services.test.tsx`, revue de la tâche 13).
+  // sur ce dépôt (`admin/services.test.tsx`).
   it("distingue un acces reel d'un acces par octroi, sans jamais les confondre", async () => {
     monter([
       routeGetAcces([

@@ -65,7 +65,7 @@ describe('assertPatientReadLogged', () => {
   })
 
   // LA REGLE QUI PORTE LA PROMESSE EST STRUCTURELLE : un segment `/patient/` suivi d'un
-  // parametre, quel qu'en soit le nom. C'est la sonde du relecteur (tour de correction 1) :
+  // parametre, quel qu'en soit le nom. Cette sonde verifie precisement ce point :
   // `:patient_id`, `:id`, `:pid` demarraient sans broncher et n'ecrivaient rien.
   it('reconnait un dossier a la STRUCTURE de l URL, quel que soit le nom du parametre', () => {
     for (const nom of ['patient_id', 'id', 'pid', 'x']) {
@@ -176,7 +176,7 @@ describe('assertNoDeadPatientAccessEntry', () => {
 })
 
 // ---------------------------------------------------------------------------
-// L'export (tache 4) : structurellement hors du filet ci-dessus, cote fonctions pures.
+// L'export : structurellement hors du filet ci-dessus, cote fonctions pures.
 // ---------------------------------------------------------------------------
 
 describe('plannedPatientExportAccess', () => {
@@ -235,7 +235,7 @@ describe('plannedPatientExportAccess', () => {
     )
   })
 
-  // Revue de la tache 4, mineur n°2 : une etiquette unique arrive en CHAINE dans la chaine de
+  // Une etiquette unique arrive en CHAINE dans la chaine de
   // requete, alors que le gestionnaire (`routes/patient.ts`) la normalise en tableau avant de
   // filtrer. Sans normalisation ici, le journal dirait `"asthme"` la ou le filtre applique etait
   // `["asthme"]` — une forme de critere qui n'a jamais ete celle du filtrage reel.
@@ -302,9 +302,9 @@ describe('assertPatientRouteUnderTenant', () => {
     ).not.toThrow()
   })
 
-  // TOUR DE CORRECTION 1 (tache 5) — LA TROISIEME VOIE. Le relecteur a demontre, par une sonde
-  // reelle (`GET /e/:establishmentId/admin/patients/:patientRef/sonde`, servie par un vrai
-  // `findUniqueOrThrow` sur `Patient`), que renommer le parametre pour sortir des deux filets de
+  // LA TROISIEME VOIE. Une sonde reelle
+  // (`GET /e/:establishmentId/admin/patients/:patientRef/sonde`, servie par un vrai
+  // `findUniqueOrThrow` sur `Patient`) demontre que renommer le parametre pour sortir des deux filets de
   // `patientIdParamOf` etait un contournement : le meme code, le meme fichier, seul le nom du
   // parametre change, separe un dossier complet rendu sans aucune ligne de journal d'un refus de
   // demarrage. `EXEMPTED_ADMIN_PATIENT_ROUTES` est la reponse retenue : une route qui vit
@@ -321,13 +321,13 @@ describe('assertPatientRouteUnderTenant', () => {
     }
   })
 
-  // La sonde du relecteur elle-meme, REDEVENUE REFUSEE : meme forme exacte
+  // La meme sonde, REDEVENUE REFUSEE : meme forme exacte
   // (`/admin/patients/:xxx/...`, hors du prefixe de tenant), mais UNE route non declaree.
   // L'exemption ne s'accorde jamais par ressemblance de forme, seulement par URL exacte.
   it('refuse toujours une route non declaree de la meme forme (patients/:xxx, plurielle)', () => {
     // Une seule URL a de quoi surprendre : `:patientID` matche le filet secondaire de
     // `patientIdParamOf` (nom reconnu, quel que soit le segment) — c'est CETTE forme que la
-    // sonde du relecteur employait, et qu'une exemption non exacte aurait laissee passer par
+    // sonde ci-dessus employait, et qu'une exemption non exacte aurait laissee passer par
     // ressemblance. `:patientRef` ne matche NI le filet primaire (segment `patients/`, pluriel)
     // NI le secondaire (nom non reconnu) : `patientIdParamOf` y rend `null` par construction,
     // donc `assertPatientRouteUnderTenant` ne la voit meme pas comme designant un dossier — ce
@@ -404,7 +404,7 @@ describe('attache des crochets du journal dans tenantRoutes', () => {
 })
 
 // ---------------------------------------------------------------------------
-// LE SENS INVERSE, ATTACHE POUR DE BON (revue finale de branche, Important n°3).
+// LE SENS INVERSE, ATTACHE POUR DE BON.
 // ---------------------------------------------------------------------------
 //
 // CE QUI MANQUAIT. Les deux controles d'entree morte — `assertNoDeadPatientAccessEntry` (sous
@@ -825,7 +825,7 @@ describe('recordPatientAccess', () => {
   })
 
   // ---------------------------------------------------------------------
-  // L'export (tache 4) : meme crochet, dispositif dedie (voir access-log-routes.ts).
+  // L'export : meme crochet, dispositif dedie (voir access-log-routes.ts).
   // ---------------------------------------------------------------------
 
   it('ecrit une ligne pour l export, sans identifiant de patient, avec le compte et les criteres', async () => {

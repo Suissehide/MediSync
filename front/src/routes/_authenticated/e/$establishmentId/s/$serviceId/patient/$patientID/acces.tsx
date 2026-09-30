@@ -10,9 +10,9 @@ import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { PatientAccessLogEntry } from '@/types/accessLog.ts'
 import { resolveTenantContext } from '@/utils/tenant-context.ts'
 
-// Etape 4b, tâche 10 : premier écran de front de cette étape — le journal des accès à UN
+// Le journal des accès à UN
 // dossier patient, à l'échelle du service courant (`GET /e/:establishmentId/s/:serviceId/patient/
-// :patientID/acces`, back tâche 5). Réservé à `consultations:read` (rôle COORDINATEUR
+// :patientID/acces`). Réservé à `consultations:read` (rôle COORDINATEUR
 // uniquement, `utils/permissions.ts`) : même garde, même redirection que `activity-log.tsx`
 // (vers le tableau de bord, pas `/choose-context` — le contexte lui-même reste valide, seule la
 // permission manque).

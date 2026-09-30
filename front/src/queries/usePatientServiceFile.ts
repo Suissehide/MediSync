@@ -69,7 +69,7 @@ export const usePatientServiceFileMutations = () => {
         PATIENT_SERVICE_FILE.GET_BY_PATIENT,
         updated.patientID,
       ])
-      // Correctif tour 2 (tâche 11, revue, mineur m4) — `updated` porte `patientID` (le paramètre de
+      // `updated` porte `patientID` (le paramètre de
       // mutation, qui désigne le patient) en plus des champs du sous-dossier ; l'entité en cache
       // porte, elle, `patientId` (minuscule). Sans cette exclusion, `{...old, ...updated}`
       // injectait une clé `patientID` étrangère dans l'objet `PatientServiceFile` optimiste —
@@ -107,7 +107,7 @@ export const usePatientServiceFileMutations = () => {
   })
 
   // Rattache une identite existante (trouvee par PatientApi.searchIdentity) au service courant
-  // (tache 13, spec §6) : cree le sous-dossier s'il n'existe pas deja, sans jamais toucher a
+  // (spec §6) : cree le sous-dossier s'il n'existe pas deja, sans jamais toucher a
   // l'identite ni au sous-dossier d'un autre service. Pas de mise a jour optimiste du cache — le
   // sous-dossier cree est vide, et le seul contenu que ce flux ecrit est "ce patient est
   // desormais suivi ici" : la liste du service courant (PATIENT.GET_ALL_WITH_TAGS) est invalidee
@@ -124,7 +124,7 @@ export const usePatientServiceFileMutations = () => {
       })
     },
     onSuccess: async (result) => {
-      // Consigne 4 (tâche 13) : le cas « déjà suivi ici » doit être dit clairement, sans laisser
+      // Le cas « déjà suivi ici » doit être dit clairement, sans laisser
       // croire qu'un nouveau sous-dossier vient d'être créé — d'où un message et une sévérité
       // distincts, jamais le même toast de succès que pour un vrai rattachement.
       toast(

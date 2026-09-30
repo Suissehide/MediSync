@@ -1,7 +1,7 @@
 import { pathWithoutQuery } from '../../../main/utils/url-helper'
 
 describe('pathWithoutQuery', () => {
-  it('retire la chaine de requete, qui peut porter une donnee personnelle (task-5-re-review-3.md, I3)', () => {
+  it('retire la chaine de requete, qui peut porter une donnee personnelle', () => {
     expect(pathWithoutQuery('/patient/export?search=Dupont-Nom-Patient')).toBe(
       '/patient/export',
     )
@@ -17,10 +17,9 @@ describe('pathWithoutQuery', () => {
     ).toBe('/patient/export')
   })
 
-  // Etape 4a, tache 4, tour de correction 1, Important n°1 : un segment de CHEMIN (pas une
-  // chaine de requete) sous ce prefixe precis doit disparaitre, quelle que soit sa forme — c'est
-  // le vecteur qu'un jeton d'acces glisse par erreur dans une URL emprunterait (voir
-  // access-link-token-leak.test.ts).
+  // Un segment de CHEMIN (pas une chaine de requete) sous ce prefixe precis doit disparaitre,
+  // quelle que soit sa forme — c'est le vecteur qu'un jeton d'acces glisse par erreur dans une
+  // URL emprunterait (voir access-link-token-leak.test.ts).
   it("tronque un segment de chemin supplementaire sous /auth/access-link/consume (le jeton n'y voyage jamais legitimement)", () => {
     expect(
       pathWithoutQuery('/auth/access-link/consume/UN-JETON-QUELCONQUE'),
@@ -51,9 +50,9 @@ describe('pathWithoutQuery', () => {
     )
   })
 
-  // Tour de correction 2, mineur : la comparaison ne reconnaissait le prefixe qu'a l'octet pres —
-  // dix variantes de la MEME route sabotee y echappaient (relecture externe). Chacune des cinq
-  // formes ci-dessous doit tronquer IDENTIQUEMENT a la forme nue.
+  // La comparaison ne doit pas reconnaitre le prefixe qu'a l'octet pres — dix variantes de la
+  // MEME route sabotee y echapperaient sinon. Chacune des cinq formes ci-dessous doit tronquer
+  // IDENTIQUEMENT a la forme nue.
   it('tronque quelle que soit la casse du chemin', () => {
     expect(pathWithoutQuery('/AUTH/Access-Link/CONSUME/UN-JETON')).toBe(
       '/auth/access-link/consume',
@@ -96,9 +95,9 @@ describe('pathWithoutQuery', () => {
     expect(pathWithoutQuery('/patient/export%')).toBe('/patient/export%')
   })
 
-  // Tour de correction 3, mineur : six formes voisines fuyaient encore — un caractere blanc ou
-  // invisible glisse au milieu d'un segment, ou une traversee de chemin (`.`/`..`) qui casse la
-  // continuite litterale du prefixe. Chacune doit tronquer IDENTIQUEMENT a la forme nue.
+  // Six formes voisines peuvent fuir : un caractere blanc ou invisible glisse au milieu d'un
+  // segment, ou une traversee de chemin (`.`/`..`) qui casse la continuite litterale du prefixe.
+  // Chacune doit tronquer IDENTIQUEMENT a la forme nue.
   it('tronque malgre un espace glisse au milieu du segment (encode en %20)', () => {
     expect(pathWithoutQuery('/auth/access-link/con%20sume/UN-JETON')).toBe(
       '/auth/access-link/consume',

@@ -11,7 +11,7 @@ export type PasswordChangeDomain = {
   newPassword: string
 }
 
-// Recherche d'un compte (spec §3.4, tâche 7) : « untel ne voit plus ses patients » se diagnostique
+// Recherche d'un compte (spec §3.4) : « untel ne voit plus ses patients » se diagnostique
 // avec des rattachements et des dates, jamais un contenu de dossier. Le nom est visible (tour de
 // correction 2, arbitrage de Léo — voir le commentaire sur `FirstAdmin`, establishment.
 // repository.interface.ts) : un nom de collègue n'est pas une donnée de santé, et le diagnostic
@@ -32,7 +32,7 @@ export type AccountSearchResult = {
   memberships: AccountMembership[]
 }
 
-// Tâche 11 (étape 4a), tour de correction 1 : `granted`/`reactivated` disent ce qui a été
+// `granted`/`reactivated` disent ce qui a été
 // EFFECTIVEMENT changé par CET appel (pas l'état final, que `user` porte déjà) — l'opérateur du
 // script doit savoir qu'il vient de réactiver un compte, pas seulement de le promouvoir. Les
 // deux sont `false` sur un second appel idempotent (rien n'a changé).
@@ -52,11 +52,11 @@ export interface UserDomainInterface {
     userID: string,
     params: PasswordChangeDomain,
   ) => Promise<void>
-  // Tâche 7 : rattachements, rôles, désactivations et dernier accès d'UN compte — jamais de
+  // Rattachements, rôles, désactivations et dernier accès d'UN compte — jamais de
   // donnée de patient (spec §3.4). `Boom.notFound` (via `UserRepository.findByEmail`) si
   // l'adresse est inconnue.
   searchByEmail: (email: string) => Promise<AccountSearchResult>
-  // LA SOUPAPE (tâche 10, tour de correction 1, arbitrage n°3). Réémet le lien d'accès d'un
+  // LA SOUPAPE. Réémet le lien d'accès d'un
   // compte quel que soit le nombre d'établissements auxquels il appartient : c'est précisément
   // ce que la garde du jeton interdit au niveau établissement
   // (`MembershipDomain.assertIssuableToken`), et que seul le super-admin peut faire. Lève
@@ -66,7 +66,7 @@ export interface UserDomainInterface {
     userID: string,
     issuedBy: string,
   ) => Promise<{ token: string }>
-  // Tâche 11 (étape 4a) : SEULE fonction qui pose `User.isSuperAdmin` — aucune route ne l'écrit,
+  // SEULE fonction qui pose `User.isSuperAdmin` — aucune route ne l'écrit,
   // délibérément. Appelée uniquement par `scripts/bootstrap-super-admin.ts`, hors de toute
   // requête : elle s'encadre elle-même en mode système (voir `TenantContext`, utils/
   // tenant-context.ts), le script n'ayant lui-même aucun tenant à poser. Lève `Boom.notFound`
@@ -77,8 +77,8 @@ export interface UserDomainInterface {
   // dès que `isSuperAdmin` est vrai (assertNotSuperAdmin, membership.domain.ts), et aucune route
   // de `/super-admin` n'écrit `deactivatedAt` — un super-admin désactivé n'a donc aucun autre
   // chemin de retour. Idempotent : un second appel sur un compte déjà super-admin et déjà actif
-  // n'écrit rien, ni sur `User` ni dans le journal d'activité. Tour de correction 1, Important
-  // n°1 : les écritures (`User` ET `ActivityLog`) partagent une seule transaction Postgres —
+  // n'écrit rien, ni sur `User` ni dans le journal d'activité. Les écritures
+  // (`User` ET `ActivityLog`) partagent une seule transaction Postgres —
   // sans elle, une promotion pouvait rester acquise en base alors que sa ligne de journal
   // échouait, perdue sans recours puisque l'idempotence empêche ensuite tout second appel de
   // rejouer cette branche.

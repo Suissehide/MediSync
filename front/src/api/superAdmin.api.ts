@@ -53,10 +53,9 @@ export const SuperAdminApi = {
     return response.json()
   },
 
-  // Réintroduit à la tâche 14b (hors plan, étape 4a) : « aucun écran ne
-  // l'appelait » n'est plus vrai, voir `createEstablishmentForm.tsx`, qui
-  // porte la garde manquante (le jeton `accessLink.token` ne quitte jamais
-  // l'écran — cinq canaux, comme `createMemberAccount`).
+  // Appelé par `createEstablishmentForm.tsx`, qui porte la garde requise : le
+  // jeton `accessLink.token` ne quitte jamais l'écran — cinq canaux, comme
+  // `createMemberAccount`.
   createEstablishment: async (
     input: CreateEstablishmentInput,
   ): Promise<CreateEstablishmentResult> => {
@@ -105,7 +104,7 @@ export const SuperAdminApi = {
     return response.json()
   },
 
-  // LA SOUPAPE (back/CLAUDE.md, tâche 10) : réémet un lien d'accès pour
+  // LA SOUPAPE (back/CLAUDE.md) : réémet un lien d'accès pour
   // n'importe quel compte de la plateforme. Le jeton rendu ne doit jamais
   // être journalisé ici — cette fonction se contente de le renvoyer à son
   // appelant, qui l'affiche et rien de plus (voir `users.tsx`).

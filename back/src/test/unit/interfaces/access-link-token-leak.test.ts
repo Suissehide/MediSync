@@ -24,16 +24,15 @@ import { ErrorHandler } from '../../../main/utils/error-handler'
 import { sha256Hex } from '../../../main/utils/hash'
 
 // Reprend le harnais d'`error-response-leak.test.ts` : les SIX niveaux de journal sont câblés,
-// pas seulement `debug`/`error` — à l'étape 3, six tests ne surveillaient que le canal `error` et
+// pas seulement `debug`/`error` — six tests ne surveillaient auparavant que le canal `error` et
 // cinq sabotages passaient parce qu'ils fuyaient par `warn`, par `info` ou ailleurs.
 //
-// Tour de correction 1 (relecture externe) : sur les six sabotages qu'elle a essayés contre la
-// version précédente de ce fichier, TROIS passaient — parce que ce fichier ne regardait que le
-// journal applicatif. Élargi à ce qui sort réellement vers le client (en-têtes de réponse, corps
-// de réponse) et vers le terminal en dehors du logger (`process.stdout`/`process.stderr`, qu'un
-// `console.log` malencontreux emprunte aussi).
+// Sur six sabotages essayés contre une version précédente de ce fichier, TROIS passaient —
+// parce que ce fichier ne regardait que le journal applicatif. Élargi à ce qui sort réellement
+// vers le client (en-têtes de réponse, corps de réponse) et vers le terminal en dehors du logger
+// (`process.stdout`/`process.stderr`, qu'un `console.log` malencontreux emprunte aussi).
 //
-// Tour de correction 2, Important : SEPT sabotages sur sept passaient encore, tous de la forme
+// SEPT sabotages sur sept passaient encore, tous de la forme
 // objet que pino recommande et qu'emploie le journal de requête réel —
 // `log.error({ jeton }, 'message')`. La capture ne gardait que le PREMIER argument, converti par
 // `String(...)` : `String({ token: 'SECRET' })` rend `"[object Object]"`, qui ne contient jamais
@@ -44,8 +43,8 @@ import { sha256Hex } from '../../../main/utils/hash'
 // `AccessLinkRepository` — un faux Prisma en mémoire remplace la base, mais aucune des deux
 // classes n'est réimplémentée ni bouchonnée.
 //
-// Tour de correction 3 — CE QUE CE GARDE-FOU NE TIENT PAS, dit précisément plutôt que résumé en
-// « tout est surveillé » (la relecture externe a montré, par sabotage, que cette phrase promettait
+// CE QUE CE GARDE-FOU NE TIENT PAS, dit précisément plutôt que résumé en
+// « tout est surveillé » (mesuré par sabotage : cette phrase promettait
 // plus que le mécanisme ne tient) : trois formes que le VRAI pino imprime sans lever échappent
 // encore à `serializeLogArg` (plus bas) —
 //   1. `log.error(err)`, un objet `Error` passé tel quel : `JSON.stringify(err)` rend `"{}"`
@@ -131,7 +130,7 @@ const buildCapturingLogger = () => {
 
 // Capture tout ce qu'écrit DIRECTEMENT le processus pendant `fn()` — `console.log`/`console.error`
 // entre autres, qui empruntent `process.stdout`/`process.stderr` — sans passer par le logger
-// (tour de correction 1, Important n°4 : un des trois sabotages qui passaient était une écriture
+// (un des trois sabotages qui passaient était une écriture
 // directe sur la sortie standard). Toujours restauré, y compris si `fn()` lève ou si une
 // assertion échoue ensuite.
 const withCapturedStdWrites = async (
@@ -306,7 +305,7 @@ const buildApp = (
 
 // Assertion complète : sur la sortie brute du JOURNAL (tous canaux, tous arguments), sur les
 // EN-TÊTES de la réponse, et sur le CORPS de la réponse. Les trois ensemble sont « ce qui sort
-// réellement vers le client et vers le terminal » (tour de correction 1, Important n°4), pas
+// réellement vers le client et vers le terminal », pas
 // seulement le journal applicatif que la version précédente de ce fichier surveillait seule.
 const expectNoLeak = (
   secret: string,
@@ -401,7 +400,7 @@ describe("le lien d'acces (POST /auth/access-link/consume) ne fait jamais fuir l
     await app.close()
   })
 
-  // Tour de correction 1, Critique nommé « Important n°1 » : un jeton en SEGMENT D'URL, contre
+  // Un jeton en SEGMENT D'URL, contre
   // une URL qui ne correspond à AUCUNE route déclarée, atteignait quand même le client et le
   // journal — par le gestionnaire de route inconnue (`notFoundHandler`), qui recopiait le chemin
   // en entier dans le message du Boom 404, ET par les deux crochets génériques ci-dessus, qui
@@ -430,8 +429,7 @@ describe("le lien d'acces (POST /auth/access-link/consume) ne fait jamais fuir l
     await app.close()
   })
 
-  // Tour de correction 2, mineur, puis tour de correction 3 (six formes voisines de plus) : la
-  // troncature ne reconnaissait le préfixe qu'à l'octet près. Variantes de la MÊME route sabotée
+  // La troncature ne reconnaissait le préfixe qu'à l'octet près. Variantes de la MÊME route sabotée
   // (casse, encodage pourcent, double encodage, séparateur encodé, double slash, paramètre
   // matriciel `;...`, caractères blancs/invisibles glissés dans un segment, traversée de chemin
   // `.`/`..`) — toutes doivent tronquer identiquement.
@@ -442,7 +440,7 @@ describe("le lien d'acces (POST /auth/access-link/consume) ne fait jamais fuir l
     `/auth/access-link/%2563onsume/${TOKEN}`,
     `/auth//access-link/consume/${TOKEN}`,
     `/auth/access-link/consume;jsessionid=x/${TOKEN}`,
-    // Tour de correction 3, mineur : six formes voisines fuyaient encore — caracteres blancs ou
+    // Six formes voisines fuyaient encore — caracteres blancs ou
     // invisibles glisses au milieu du segment, et traversee de chemin (`.`/`..`).
     `/auth/access-link/con%20sume/${TOKEN}`,
     `/auth/access-link/con%09sume/${TOKEN}`,
@@ -486,11 +484,11 @@ describe("le lien d'acces (POST /auth/access-link/consume) ne fait jamais fuir l
   })
 })
 
-// Tour de correction 1 (revue, tâche 7, étape 4b) : le filet ci-dessus n'exerçait QUE la
+// Le filet ci-dessus n'exerçait QUE la
 // CONSOMMATION d'un lien (`POST /auth/access-link/consume`). La route qui ÉMET un jeton —
 // `UserDomain.reissueAccessLink`, sous `/super-admin` — n'était couverte par AUCUN test de ce
-// type ; seule une assertion ad hoc sur la ligne en base (`super-admin-access-link.test.ts`,
-// tâche 7) en disait quelque chose, et elle ne dit rien du journal applicatif, des en-têtes de
+// type ; seule une assertion ad hoc sur la ligne en base (`super-admin-access-link.test.ts`)
+// en disait quelque chose, et elle ne dit rien du journal applicatif, des en-têtes de
 // réponse, ni de la sortie standard — exactement ce que ce fichier surveille pour la route
 // jumelle. Même harnais (VRAI `AccessLinkDomain`, VRAI `AccessLinkRepository`, faux Prisma en
 // mémoire, VRAI `UserDomain`, VRAIS formateurs de journal, mêmes six niveaux de journal

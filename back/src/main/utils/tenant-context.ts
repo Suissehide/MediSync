@@ -23,7 +23,7 @@ import { TenantContextMissingError } from './tenant-errors'
 class TenantContext implements TenantContextInterface {
   private readonly storage = new AsyncLocalStorage<TenantStore | undefined>()
 
-  // TOUR DE CORRECTION 3 (tâche 1) — la revue a trouvé, par exécution, une porte que ni le nom
+  // Mesuré par exécution : une porte que ni le nom
   // d'une méthode ni la forme d'un appel ne peuvent surveiller : muter en place l'objet que
   // `peek()`/`getStore()` renvoie (`const s = tenantContext.peek(); (s as any).kind =
   // 'superadmin'`) change le store que TOUT code lira ensuite dans la même portée asynchrone —
@@ -33,12 +33,11 @@ class TenantContext implements TenantContextInterface {
   // strict, ou lève un `TypeError` en mode strict (les modules ES le sont — voir
   // `tenant-context.test.ts` pour la preuve par exécution).
   //
-  // TOUR DE CORRECTION 4 — ce gel était SUPERFICIEL, et la re-revue a montré par exécution que la
-  // porte restait grande ouverte à côté : `Object.freeze` ne gèle que l'enveloppe, donc
+  // Ce premier gel était SUPERFICIEL : la porte restait grande ouverte à côté, mesuré par
+  // exécution : `Object.freeze` ne gèle que l'enveloppe, donc
   // `peek().tenant.establishmentId = 'e9'` réussissait, survivait à une frontière asynchrone, et
   // repointait TOUT le contexte sur un autre établissement — une lecture filtrée sur
-  // l'établissement substitué passait alors le garde-fou. Pire que le trou : ce fichier et
-  // `runAsSystem-unicite.test.ts` déclaraient cette porte « fermée ». Le `tenant` imbriqué est
+  // l'établissement substitué passait alors le garde-fou. Le `tenant` imbriqué est
   // donc gelé lui aussi. `Tenant` ne porte que des scalaires (voir types/utils/tenant-context.ts,
   // six colonnes : chaînes, ou `null`), donc ce second gel est TOTAL, pas un niveau de plus dans
   // une récursion inachevée — un test le tient (`tenant-context.test.ts`, « aucune colonne de
@@ -53,8 +52,8 @@ class TenantContext implements TenantContextInterface {
   // NEUF à chaque requête, et `currentService()` plus bas en rend une copie étalée plutôt que de
   // l'amender. Le gel se propage volontairement à `request.tenant`, qui est le MÊME objet que
   // celui posé ici (`tenant.plugin.ts` : `request.tenant = tenant` puis `tenantContext.enter(tenant)`)
-  // et que `requireTenant` distribue à tous les handlers : c'était l'autre chemin par lequel la
-  // re-revue atteignait le store sans jamais appeler `peek()`.
+  // et que `requireTenant` distribue à tous les handlers : c'était l'autre chemin par lequel le
+  // store était atteint sans jamais appeler `peek()`.
   enter(tenant: Tenant): void {
     this.storage.enterWith(
       Object.freeze({ kind: 'tenant', tenant: Object.freeze(tenant) }),
@@ -110,13 +109,11 @@ class TenantContext implements TenantContextInterface {
     return this.storage.run(Object.freeze({ kind: 'system' }), fn)
   }
 
-  // Troisieme contexte du garde-fou (tache 1, etape 4a) : substitue au filtre de tenant une
+  // Troisieme contexte du garde-fou : substitue au filtre de tenant une
   // liste declaree et exhaustive de couples (modele, operation) permis — voir
   // SUPERADMIN_OPERATIONS, infra/orm/tenant-guard.ts.
   //
-  // LE PIEGE REEL, MESURE (etape 4b, tache 6 ; enonce corrige une TROISIEME et derniere fois a
-  // la revue finale de branche — ce fichier fait autorite, et il portait encore l'avant-dernier
-  // enonce, que `back/CLAUDE.md` et l'annexe des decisions nomment desormais comme un SYMPTOME).
+  // LE PIEGE REEL, MESURE — ce fichier fait autorite sur l'enonce qui suit.
   //
   // L'ENONCE EXACT, ET C'EST LE SEUL A RECOPIER AILLEURS :
   //
@@ -128,14 +125,13 @@ class TenantContext implements TenantContextInterface {
   // executee. Un rappel SYNCHRONE NU qui se contente de RENDRE cette promesse —
   // `runAsSuperAdmin(() => prisma.x.findMany(...))` — a donc deja quitte la portee quand la
   // lecture arrive : le garde-fou lit le contexte ambiant. Mesure par sabotage e2e sur un
-  // appelant reel (`PatientAccessLogRepository.findAllPlatformWide`, task-6-report.md) : 5 tests
+  // appelant reel (`PatientAccessLogRepository.findAllPlatformWide`) : 5 tests
   // sur 244 echouent, tous en `TenantScopeMissingError` (500).
   //
-  // POURQUOI CE N'EST PAS « L'ENROBAGE `async` QUI TIENT LA PROPRIETE » — l'enonce precedent,
-  // plus juste que le premier (« toujours `await` a l'interieur ») mais toujours faux, et faux
-  // DANS LE SENS QUI FAIT MAL. Il decrivait le symptome : une fonction `async` qui rend une
-  // valeur "thenable" la fait passer par une resolution de promesse que Node rattache a la
-  // portee active, ce qui revient a ne pas suspendre avant d'avoir lu. Mais generalise, il
+  // POURQUOI CE N'EST PAS « L'ENROBAGE `async` QUI TIENT LA PROPRIETE » — une croyance repandue,
+  // et fausse DANS LE SENS QUI FAIT MAL. Elle decrit le symptome : une fonction `async` qui rend
+  // une valeur "thenable" la fait passer par une resolution de promesse que Node rattache a la
+  // portee active, ce qui revient a ne pas suspendre avant d'avoir lu. Mais generalisee, elle
   // trompe deux fois :
   //   - il declare DEFECTUEUX un appelant de production qui va tres bien. `deleteOlderThan`
   //     (activityLog.repository.ts ET patientAccessLog.repository.ts) est appele par un rappel

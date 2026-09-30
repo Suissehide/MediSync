@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { AuthApi } from './auth.api.ts'
 
-// Le jeton d'un lien d'accès est un mot de passe à usage unique (tâche 13,
-// brief) : il arrive dans l'URL du navigateur, mais ne doit JAMAIS repartir
+// Le jeton d'un lien d'accès est un mot de passe à usage unique : il arrive
+// dans l'URL du navigateur, mais ne doit JAMAIS repartir
 // dans l'URL d'un appel d'API — il part dans le CORPS de la requête. Même
 // exigence que côté back (`access-link.router.ts`, commentaire de tête).
 const JETON = 'jeton-tres-secret-a-ne-jamais-mettre-dans-une-url'

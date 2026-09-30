@@ -2,7 +2,7 @@ import { create } from 'zustand'
 
 interface LastGrantState {
   // Établissement -> identifiant du DERNIER octroi créé PAR CE CLIENT pour
-  // cet établissement (tour de correction 1, Important n°2). Volontairement
+  // cet établissement. Volontairement
   // en mémoire, jamais persisté : `GET /me` dit qu'un octroi est actif
   // (`origine: 'octroi'`) mais ne rend jamais l'identifiant de la ligne
   // (`EffectiveMembership`, back/src/main/types/domain/

@@ -8,14 +8,14 @@ import { useConsumeAccessLink, useLogin } from '../../queries/useAuth.ts'
 
 type AccessLinkSearch = { token: string }
 
-// LE JETON EST UN MOT DE PASSE À USAGE UNIQUE (brief tâche 13) : il arrive
+// LE JETON EST UN MOT DE PASSE À USAGE UNIQUE : il arrive
 // ICI, dans l'URL du navigateur — c'est ainsi qu'on le transmet à la
 // personne — mais ne doit JAMAIS repartir dans l'URL d'un appel d'API : il
 // part dans le CORPS de `POST /auth/access-link/consume`
 // (`AuthApi.consumeAccessLink`), jamais dans une clé de cache de requête,
 // jamais dans un journal de console. Voir `access-link.test.tsx`, qui
 // reprend les quatre canaux de `accountSearchPanel.test.tsx` — PLUS un
-// cinquième, nommé par la revue du tour de correction 1 : le jeton ne doit
+// cinquième : le jeton ne doit
 // pas non plus rester dans la barre d'adresse après une consommation
 // réussie (voir `consumedSuccessfully`/`replace: true` plus bas).
 //
@@ -31,8 +31,7 @@ export const Route = createFileRoute('/auth/access-link')({
   component: AccessLinkPage,
 })
 
-// ARBITRAGE DE LÉO, TRANSMIS PAR LE BRIEF DE LA TÂCHE (pas dans le brief
-// écrit) : c'est CETTE PAGE qui appelle la connexion ordinaire après
+// ARBITRAGE DE LÉO : c'est CETTE PAGE qui appelle la connexion ordinaire après
 // consommation, JAMAIS la route de consommation elle-même — celle-ci ne
 // rend qu'un `{ success }` (voir `accessLinkConsumeResponseSchema`, back),
 // aucun cookie de session, aucune identité. La page appelle donc
@@ -44,8 +43,7 @@ function AccessLinkPage() {
   const consume = useConsumeAccessLink()
   const { loginMutation, isPending: isLoginPending } = useLogin()
   const [loginFailed, setLoginFailed] = useState(false)
-  // Cinquième canal, nommé par la revue (le brief et mon propre commentaire
-  // n'en comptaient que quatre) : entre la consommation réussie et la
+  // Cinquième canal : entre la consommation réussie et la
   // connexion, `token` est purgé de la recherche d'URL (voir plus bas) — le
   // composant se re-rend alors avec `token === ''`, ce qui retomberait sur
   // la branche « lien invalide » sans ce drapeau, pile pendant la fenêtre où
@@ -74,7 +72,7 @@ function AccessLinkPage() {
         {
           onSuccess: async () => {
             setConsumedSuccessfully(true)
-            // CINQUIÈME CANAL (Important n°1 de la revue) : sans ceci, le
+            // CINQUIÈME CANAL : sans ceci, le
             // jeton reste dans la barre d'adresse après une consommation
             // réussie — un retour arrière re-affiche le formulaire avec le
             // jeton encore visible dans l'URL, et une re-soumission
@@ -202,8 +200,7 @@ function AccessLinkPage() {
             <form.AppField
               name="password"
               validators={{
-                // Même message que `user/settings.tsx` (précédent existant,
-                // non suivi au premier tour — Important n°2 de la revue) :
+                // Même message que `user/settings.tsx` (précédent existant) :
                 // le back exige 12 caractères (`accessLinkConsumeSchema`),
                 // et sans ce contrôle côté client, l'écran par lequel une
                 // personne ENTRE dans l'application se contentait d'un

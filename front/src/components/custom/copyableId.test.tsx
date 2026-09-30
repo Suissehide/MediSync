@@ -4,9 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { CopyableId } from './copyableId.tsx'
 
-// Étape 4a, tâche 12, step 1 : « les identifiants copiables ». Le support
-// a besoin de copier un identifiant (établissement, compte...) pour le
-// recouper avec un journal ou une base — jamais de le saisir à la main.
+// « Les identifiants copiables » : le support a besoin de copier un
+// identifiant (établissement, compte...) pour le recouper avec un
+// journal ou une base — jamais de le saisir à la main.
 
 describe('CopyableId', () => {
   let writeText: ReturnType<typeof vi.fn>

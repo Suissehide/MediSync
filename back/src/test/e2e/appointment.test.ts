@@ -10,15 +10,14 @@ import {
 
 type Cookies = { access_token: string }
 
-// Défaut préexistant (task-5-re-review.md, point 3) : `AppointmentRepository.create` passait
-// `serviceId` dans la création imbriquée `appointmentPatients: { create: [...] }`, où Prisma
-// l'interdit — `serviceId` fait partie de la clé étrangère composite de la relation
-// `appointment`, donc implicite dès qu'on crée sous elle. Conséquence : tout rendez-vous pris
-// avec au moins un patient rendait 500, et toute inscription en parcours qui en découle ne
-// créait aucun rendez-vous (l'échec était avalé par un `catch {}` muet dans
-// `patient.domain.ts`, `enrollOnPathway`, qui rendait un 200 avec `success: false`). Origine :
-// commit `dacff75`, 2026-09-22 (étape 1/2 du multi-tenant), pas la tâche 5 — mais c'est la
-// fonction quotidienne de l'application, et rien ne la voyait avant ce fichier.
+// Défaut préexistant : `AppointmentRepository.create` passait `serviceId` dans la création
+// imbriquée `appointmentPatients: { create: [...] }`, où Prisma l'interdit — `serviceId` fait
+// partie de la clé étrangère composite de la relation `appointment`, donc implicite dès qu'on
+// crée sous elle. Conséquence : tout rendez-vous pris avec au moins un patient rendait 500, et
+// toute inscription en parcours qui en découle ne créait aucun rendez-vous (l'échec était avalé
+// par un `catch {}` muet dans `patient.domain.ts`, `enrollOnPathway`, qui rendait un 200 avec
+// `success: false`). Origine : commit `dacff75`, 2026-09-22 — mais c'est la fonction quotidienne
+// de l'application, et rien ne la voyait avant ce fichier.
 describe('rendez-vous avec un patient', () => {
   let testApp: TestApp
   let establishmentId: string
@@ -228,8 +227,7 @@ describe('rendez-vous avec un patient', () => {
     })
 
     // Un identifiant de la bonne forme (cuid, valide par le schema Zod) mais introuvable en
-    // base : on cree un patient puis on le supprime, pour obtenir la meme situation que
-    // `PROBE A3-fk` de la revue precedente, sans dependre du format interne d'un cuid.
+    // base : on cree un patient puis on le supprime, sans dependre du format interne d'un cuid.
     const ghostPatient = await testDb.patient.create({
       data: {
         firstName: 'Fantome',

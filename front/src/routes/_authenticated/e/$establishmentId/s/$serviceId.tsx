@@ -14,9 +14,9 @@ export const Route = createFileRoute(
   beforeLoad: ({ context, params, preload }) => {
     const tenant = resolveTenantContext(context.authState.user, params)
     if (!tenant) {
-      // `/choose-context` existe depuis la tache 12 (selecteur et page de
-      // choix) : `to` verifie desormais la destination contre l'arbre de
-      // routes genere, plutot que de s'en remettre a une chaine libre.
+      // `/choose-context` (selecteur et page de choix) : `to` verifie
+      // desormais la destination contre l'arbre de routes genere, plutot
+      // que de s'en remettre a une chaine libre.
       throw redirect({ to: '/choose-context' })
     }
     // Le routeur precharge a l'intention (`defaultPreload: 'intent'` dans

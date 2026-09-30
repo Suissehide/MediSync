@@ -57,20 +57,20 @@ class ServiceRepository implements ServiceRepositoryInterface {
   // `creatorUserId` vient du tenant courant (`ServiceDomain.create`, jamais du corps de la
   // requête) : le créateur ne choisit pas qui devient coordinateur, c'est toujours lui-même.
   //
-  // TOUR DE CORRECTION 1 (relecture) — Important n°2 : sous un octroi temporaire (spec §4.3),
+  // Sous un octroi temporaire (spec §4.3),
   // l'acteur est un membre ordinaire de l'établissement au sens des permissions, mais AUCUNE
   // `EstablishmentMembership` réelle n'est, ni ne doit être, créée — l'octroi est évalué à
   // chaque requête, jamais matérialisé (spec §4.3 : « pas de rattachement réel, sans quoi il
   // survivrait à l'expiration »). `findUniqueOrThrow` faisait donc échouer la création elle-même
-  // sous un octroi (aucune ligne à trouver), une brèche dans la propriété centrale de l'étape
-  // (un octroi ne doit jamais faire diverger le chemin d'écriture du chemin de lecture). Remède,
-  // tranché par la revue : `findFirst`, qui ne suppose plus rien. Trouvée (acteur réellement
+  // sous un octroi (aucune ligne à trouver), une brèche dans l'invariant central (un octroi ne
+  // doit jamais faire diverger le chemin d'écriture du chemin de lecture). Remède : `findFirst`,
+  // qui ne suppose plus rien. Trouvée (acteur réellement
   // membre), on rattache (décision 3.2 s'applique). Absente (acteur sous octroi), on NE rattache
   // rien — il a déjà accès à tous les services actifs de l'établissement par son octroi, et un
   // rattachement réel survivrait précisément à ce que l'octroi doit borner dans le temps ; le
   // service se crée quand même, sans coordinateur ajouté.
   //
-  // CONSEQUENCE A CONNAITRE (mineur, tour de correction 2) : un service créé sous octroi naît
+  // CONSEQUENCE A CONNAITRE : un service créé sous octroi naît
   // donc SANS AUCUN MEMBRE, et le reste DÉFINITIVEMENT — passée l'expiration de l'octroi qui l'a
   // créé, plus personne ne le rejoint automatiquement (voir le test e2e d'expiration,
   // `services.test.ts` : le service persiste, actif, mais inatteignable par son créateur). Ce

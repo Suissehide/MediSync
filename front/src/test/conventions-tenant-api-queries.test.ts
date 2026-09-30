@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-// `front/CLAUDE.md` porte deux conventions decidees a l'etape 2, sur les DEUX memes dossiers
+// `front/CLAUDE.md` porte deux conventions, sur les DEUX memes dossiers
 // (`src/api`, `src/queries`) :
 //
 // 1. « Le contexte est implicite » — le tenant (etablissement/service) n'est jamais un
@@ -16,16 +16,15 @@ import { describe, expect, it } from 'vitest'
 // `src/test/layouts-de-tenant.test.ts` ne lit que `src/routes` : il ne voit ni `src/api` ni
 // `src/queries`. `src/test/lecture-directe-du-cache.test.ts` balaie bien tout `src`, mais son
 // sujet est la restauration de photographie (`getQueryData`/`getQueriesData`), pas ces deux
-// conventions-ci — verifie tache 10, revue, Important I3 : les deux sabotages ci-dessous le
-// laissent vert.
+// conventions-ci : les deux sabotages ci-dessous le laissent vert.
 //
 // D'ou cette regle, de la meme forme que les deux tests cites (traversee de fichiers, motif de
 // lignes, aucune liste a maintenir a la main). Les deux conventions se lisent par LE MEME
 // vocabulaire : le seul moyen de faire porter le tenant a un module ou a une cle de requete est
 // de nommer l'un de ses deux identifiants (`establishmentId`, `serviceId` — les deux seuls
 // champs de tenant que `useAuthStore`/`TenantContext` exposent) ou de le designer par le mot
-// `tenant` lui-meme (le sabotage F du relecteur : `getByPatient(patientID, tenant?)`). Une seule
-// expression suffit donc aux deux infractions eprouvees par la revue (sabotages A et F) — voir
+// `tenant` lui-meme (ex. `getByPatient(patientID, tenant?)`). Une seule
+// expression suffit donc aux deux infractions possibles — voir
 // plus bas les deux essais qui le prouvent.
 //
 // CE QUE CETTE REGLE NE PEUT PAS TENIR HONNETEMENT, PAR LECTURE SEULE : un module qui
@@ -39,13 +38,13 @@ const IDENTIFIANTS_DE_TENANT = /\b(establishmentId|serviceId|tenant)\b/i
 const CLE_AVEC_FABRIQUE_URL =
   /\b(queryKey|mutationKey)\s*:.*\b(tenantApiUrl|establishmentApiUrl)\s*\(/
 
-// Tache 12 (etape 4a) : le super-admin est HORS DE TOUT TENANT (front/CLAUDE.md, § « Le contexte
+// Le super-admin est HORS DE TOUT TENANT (front/CLAUDE.md, § « Le contexte
 // est implicite ») — `GET /super-admin/establishments/:id` prend un identifiant d'etablissement
 // comme une DONNEE de son chemin, exactement comme une route prendrait un `patientID`, jamais
 // comme un tenant implicite lu dans le store. Les deux fichiers ci-dessous nomment donc
 // `establishmentId` en toutes lettres plutot que de chercher un nom qui echappe au motif (ce
 // serait faire passer le test sans honorer la convention). Chaque compte a ete verifie par
-// lecture ligne a ligne (voir aussi la commande qui les recompte, citee dans task-12-report.md) :
+// lecture ligne a ligne :
 //   - `api/superAdmin.api.ts` : 2 occurrences, dans `getEstablishment` (le parametre de fonction
 //     et l'interpolation dans l'URL) — la seule methode du module qui vise UN etablissement
 //     precis plutot que la collection ou une action independante de tout etablissement.
@@ -59,7 +58,7 @@ const EXCEPTIONS: { fichier: string; raison: string; occurrences: number }[] = [
     fichier: 'api/superAdmin.api.ts',
     raison:
       'le super-admin designe un etablissement comme une DONNEE de GET /super-admin/establishments/:id, ' +
-      'pas comme un tenant implicite (task-12-brief.md)',
+      'pas comme un tenant implicite',
     occurrences: 2,
   },
   {
@@ -73,8 +72,8 @@ const EXCEPTIONS: { fichier: string; raison: string; occurrences: number }[] = [
     fichier: 'api/superAdminAccessLog.api.ts',
     raison:
       'meme raisonnement que superAdmin.api.ts#getEstablishment : `establishmentId` est un FILTRE ' +
-      'optionnel de GET /super-admin/access-log, une DONNEE de la requete (etablissement/compte/action, ' +
-      'task-11-brief.md), jamais un tenant implicite -- ces ecrans vivent hors de tout layout de tenant',
+      'optionnel de GET /super-admin/access-log, une DONNEE de la requete (etablissement/compte/action), ' +
+      'jamais un tenant implicite -- ces ecrans vivent hors de tout layout de tenant',
     occurrences: 2,
   },
   {

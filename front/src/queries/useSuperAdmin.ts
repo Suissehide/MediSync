@@ -11,15 +11,14 @@ import type {
 } from '../types/superAdmin.ts'
 import { meQueryOptions } from './useMe.ts'
 
-// Écrans du super-admin (tâche 12) : hors de tout tenant. Aucune clé de
+// Écrans du super-admin : hors de tout tenant. Aucune clé de
 // requête ici ne porte d'établissement ou de service au sens de
 // front/CLAUDE.md (§ « Query keys deliberately do not carry the tenant »),
 // et pour cause : ces écrans ne vivent sous AUCUN des deux layouts de
 // tenant, donc `hooks/useTenantSwitch.ts` ne les distingue jamais les uns
 // des autres — `tenantKey(null)` vaut la chaîne vide pour tout compte qui
 // n'a jamais posé de contexte, quel que soit ce compte. Ce n'est PAS « un
-// seul et même `QueryClient` » pour toujours (erreur corrigée ici, tour de
-// correction 1, Important n°3) : ils vivent sous LE CLIENT DU COUPLE
+// seul et même `QueryClient` » pour toujours : ils vivent sous LE CLIENT DU COUPLE
 // COURANT, qui peut très bien être celui d'un compte précédent si personne
 // n'a changé de couple entre deux — par exemple deux super-admins qui se
 // succèdent sans qu'aucun des deux ne visite jamais un écran de tenant.
@@ -73,10 +72,9 @@ export const useSuperAdminEstablishmentQuery = (establishmentId: string) => {
 
 // * MUTATIONS
 
-// Réintroduit à la tâche 14b (hors plan, étape 4a) — voir
-// `api/superAdmin.api.ts`. LE JETON RENDU EST UN MOT DE PASSE À USAGE
-// UNIQUE (même exigence que `useMemberMutations().createMemberAccount`,
-// tâche 13) : cette mutation ne l'écrit dans AUCUNE clé de requête, AUCUN
+// Voir `api/superAdmin.api.ts`. LE JETON RENDU EST UN MOT DE PASSE À USAGE
+// UNIQUE (même exigence que `useMemberMutations().createMemberAccount`) :
+// cette mutation ne l'écrit dans AUCUNE clé de requête, AUCUN
 // cache — son seul effet observable pour l'appelant est
 // `createEstablishment.data`, tenu par React Query dans le cache des
 // MUTATIONS (jamais atteignable par `getQueryData`/`getQueriesData`).
@@ -162,9 +160,8 @@ export const useSuperAdminAccountSearch = () => {
   })
 }
 
-// LE JETON RENDU NE DOIT JAMAIS ATTERRIR AILLEURS QU'À L'ÉCRAN (brief
-// tâche 12) : cette mutation ne l'écrit dans aucune clé de requête, aucun
-// cache, aucune URL — son seul effet est de le renvoyer à l'appelant via
+// LE JETON RENDU NE DOIT JAMAIS ATTERRIR AILLEURS QU'À L'ÉCRAN : cette mutation ne l'écrit
+// dans aucune clé de requête, aucun cache, aucune URL — son seul effet est de le renvoyer à l'appelant via
 // `data`, tenu par React Query dans le cache des MUTATIONS (jamais
 // atteignable par `getQueryData`/`getQueriesData`, qui ne lisent que le
 // cache des requêtes). `users.tsx` l'affiche et rien de plus.

@@ -102,7 +102,7 @@ const buildDomain = (
 
   // Un seul mock de logger PARTAGE (modele `buildFakeLogger` de `error-handler.test.ts`) : toutes
   // les methodes poussent dans la meme liste `loggerCalls`, pas seulement `error`
-  // (task-5-re-review-4.md, I1) — sans ca, une fuite par un canal voisin (`warn`, ici) passe au
+  // — sans ca, une fuite par un canal voisin (`warn`, ici) passe au
   // vert.
   const loggerCalls: string[] = []
   const recordLog = (message: string) => loggerCalls.push(message)
@@ -508,11 +508,11 @@ describe('PatientDomain – report du motif dans une transmission clinique', () 
   })
 })
 
-// task-5-re-review-3.md (re-revue du tour 5) : le catch de processEnrollments/enrollInSlot
+// Le catch de processEnrollments/enrollInSlot
 // (ci-dessous, patient.domain.ts) traite tout `error instanceof Error` de la meme facon,
 // Boom ou non. C'est sans risque pour un Boom (son message est toujours ecrit par notre
 // propre code — boomErrorFromPrismaError ou un `Boom.xxx(...)` explicite). Mais 17 depots sur
-// 19 ont des methodes sans `catch` (task-5-re-review-3.md, C1) : si l'une d'elles jette une
+// 19 ont des methodes sans `catch` : si l'une d'elles jette une
 // erreur brute au lieu d'un Boom, ce catch en recopierait aujourd'hui le message tel quel dans
 // la reponse HTTP (`failedEnrollments[].reason`, affiche a l'ecran par
 // front/src/queries/usePatient.tsx) ET dans le journal applicatif. Reproduit ici sans toucher
@@ -546,7 +546,7 @@ describe("PatientDomain – une erreur inattendue (non-Boom) pendant l'inscripti
       expect(message).not.toContain(RAW_ERROR_MARKER)
     }
 
-    // Tous les canaux, pas seulement `error` (task-5-re-review-4.md, I1) : un `logger.warn`
+    // Tous les canaux, pas seulement `error` : un `logger.warn`
     // ajoute dans le `catch` d'inscription, avant la ligne corrigee, doit faire rougir ce test.
     for (const line of loggerCalls) {
       expect(line).not.toContain(RAW_ERROR_MARKER)
@@ -554,7 +554,7 @@ describe("PatientDomain – une erreur inattendue (non-Boom) pendant l'inscripti
   })
 })
 
-// Tache 12, tour de correction 1 : `PatientDomain.create` appelle desormais `ensureExists`,
+// `PatientDomain.create` appelle desormais `ensureExists`,
 // comme `processEnrollments` et `DiagnosticEducatifDomain.create` (voir le commentaire dans
 // patient.domain.ts). Garde-fou unitaire, rapide, en plus de la preuve e2e
 // (patient.test.ts, describe "cloisonnement de la liste des patients par service") qui montre

@@ -1,4 +1,4 @@
-// Tâche 8 (étape 4a) : les octrois temporaires (spec §3.5, §4.3, §6.2). Trois routes :
+// Les octrois temporaires (spec §3.5, §4.3, §6.2). Trois routes :
 //   - `POST /super-admin/grants` : s'accorder l'accès, motif obligatoire, durée bornée.
 //   - `DELETE /super-admin/grants/:id` : révoquer avant terme (pose `revokedAt`, ne supprime
 //     jamais la ligne).
@@ -9,9 +9,9 @@
 // `POST /auth/sign-in` porte une limite de débit de DIX par minute
 // (`interfaces/http/fastify/routes/auth/sign-in.router.ts`), et ce fichier tourne en une seule
 // fois, `--runInBand`, sur la MÊME instance d'application — une connexion PAR TEST l'aurait
-// dépassée (démontré par exécution lors de la première version de ce fichier : 429 dès le
-// sixième test). Chaque test crée en revanche son PROPRE établissement (gratuit, hors limite),
-// pour rester indépendant des autres sans jamais tronquer la base entre deux tests : tronquer
+// dépassée dès le sixième test (429). Chaque test crée en revanche son PROPRE établissement
+// (gratuit, hors limite), pour rester indépendant des autres sans jamais tronquer la base entre
+// deux tests : tronquer
 // aurait invalidé les cookies déjà obtenus (le compte qu'ils désignent aurait disparu).
 import { buildTestApp, type TestApp } from './setup/app'
 import { testDb, truncateAll } from './setup/db'
@@ -30,7 +30,7 @@ const HOUR_MS = 60 * 60 * 1000
 // 24h se traduirait par un écart de PLUSIEURS MINUTES au minimum).
 const TOLERANCE_MS = 5000
 
-describe('octrois temporaires (tache 8)', () => {
+describe('octrois temporaires', () => {
   let t: TestApp
   let superAdminId: string
   let superAdminCookies: { access_token: string }
@@ -52,8 +52,7 @@ describe('octrois temporaires (tache 8)', () => {
     superAdminCookies = await signIn(t.app, 'super@test.fr')
 
     // Un SECOND super-admin, distinct du premier — sert uniquement à prouver qu'il ne peut pas
-    // révoquer les octrois du premier (tour de correction 1, tâche 8, mineur signalé en
-    // relecture).
+    // révoquer les octrois du premier.
     await createUser({ email: 'autre-super@test.fr', isSuperAdmin: true })
     autreSuperAdminCookies = await signIn(t.app, 'autre-super@test.fr')
 
@@ -97,7 +96,7 @@ describe('octrois temporaires (tache 8)', () => {
       expect(await countGrantsFor(est.id)).toBe(0)
     })
 
-    // Step 1 (task-8-brief.md) : une chaine VIDE est refusee elle aussi — pas seulement une
+    // Une chaine VIDE est refusee elle aussi — pas seulement une
     // absence de champ. Sans cette exigence precise, un motif " " passerait.
     it('refuse un motif vide (chaine vide, y compris espaces)', async () => {
       const est = await createEstablishment('MotifVide')
@@ -114,7 +113,7 @@ describe('octrois temporaires (tache 8)', () => {
       expect(await countGrantsFor(est.id)).toBe(0)
     })
 
-    // Step 2 (task-8-brief.md) : quatre heures par defaut quand la duree est omise.
+    // Quatre heures par defaut quand la duree est omise.
     it('accorde un acces de quatre heures par defaut', async () => {
       const est = await createEstablishment('DureeDefaut')
 
@@ -131,7 +130,7 @@ describe('octrois temporaires (tache 8)', () => {
       expect(Math.abs(delta - 4 * HOUR_MS)).toBeLessThan(TOLERANCE_MS)
     })
 
-    // Step 2 : vingt-quatre heures, la borne haute, est ACCEPTEE.
+    // Vingt-quatre heures, la borne haute, est ACCEPTEE.
     it('accepte une demande de vingt-quatre heures, exactement', async () => {
       const est = await createEstablishment('Duree24h')
 
@@ -149,7 +148,7 @@ describe('octrois temporaires (tache 8)', () => {
       expect(Math.abs(delta - 24 * HOUR_MS)).toBeLessThan(TOLERANCE_MS)
     })
 
-    // Step 2, l'exigence centrale : quarante-huit heures est REFUSEE, pas ramenee a
+    // L'exigence centrale : quarante-huit heures est REFUSEE, pas ramenee a
     // vingt-quatre en silence. On verifie a la fois le statut ET qu'aucune ligne n'a ete
     // ecrite avec une duree tronquee.
     it('refuse une demande de quarante-huit heures, sans la ramener a vingt-quatre', async () => {
@@ -177,7 +176,7 @@ describe('octrois temporaires (tache 8)', () => {
       expect(await testDb.superAdminAccessGrant.count()).toBe(avant)
     })
 
-    // Mineur signalé en relecture (tâche 8, tour de correction 1) : sans ce garde, la route
+    // Sans ce garde, la route
     // rendait 201 sur un établissement désactivé, sans jamais rien accorder derrière — un octroi
     // sur un établissement désactivé n'apparaît jamais dans une lecture (CONTRAT 1,
     // `accessGrant.repository.interface.ts`). Refusé désormais à l'écriture, pour ne pas laisser
@@ -198,7 +197,7 @@ describe('octrois temporaires (tache 8)', () => {
       expect(await countGrantsFor(est.id)).toBe(0)
     })
 
-    // Tour de correction 1 (tâche 8) — Important n°2 de la relecture : sans ce garde, un second
+    // Sans ce garde, un second
     // octroi vivant sur le même établissement était accepté (201), et `/me` aurait listé
     // l'établissement deux fois (voir `accessGrant.domain.test.ts`, « dedoublonne deux octrois
     // vivants... », pour la moitié « lecture » du remède ; ce test couvre la moitié « écriture »,
@@ -298,7 +297,7 @@ describe('octrois temporaires (tache 8)', () => {
       expect(res.statusCode).toBe(404)
     })
 
-    // Mineur signalé en relecture (tâche 8, tour de correction 1) : la révocation n'était
+    // La révocation n'était
     // restreinte à personne — n'importe quel super-admin pouvait clore l'octroi d'un autre.
     // Restreint désormais au titulaire (spec §3.5, « s'accorder l'accès ») : 404, jamais 403,
     // pour ne pas distinguer « n'existe pas » de « n'est pas à vous ».
@@ -323,7 +322,7 @@ describe('octrois temporaires (tache 8)', () => {
       expect(row.revokedAt).toBeNull()
     })
 
-    // Mineur signalé en relecture : une double révocation réécrivait `revokedAt` avec
+    // Une double révocation réécrivait `revokedAt` avec
     // l'horodatage courant. Idempotent désormais, PRÉCISION comprise : la PREMIÈRE date reste.
     it('revoquer un octroi deja revoque garde la premiere date', async () => {
       const est = await createEstablishment('DoubleRevocation')
@@ -365,9 +364,9 @@ describe('octrois temporaires (tache 8)', () => {
 
   describe('GET /e/:establishmentId/admin/grants', () => {
     it("l'administrateur de l'etablissement voit les octrois en cours et passes, avec motif et auteur", async () => {
-      // `passe` DOIT être créé et révoqué AVANT `enCours` : depuis le tour de correction 1
-      // (tâche 8), un second octroi vivant sur un établissement qui en a déjà un est refusé
-      // (409) — les deux ne peuvent donc jamais coexister VIVANTS, seulement l'un après l'autre.
+      // `passe` DOIT être créé et révoqué AVANT `enCours` : un second octroi vivant sur un
+      // établissement qui en a déjà un est refusé (409) — les deux ne peuvent donc jamais
+      // coexister VIVANTS, seulement l'un après l'autre.
       const passe = await postGrant({
         establishmentId: cible.id,
         reason: 'diagnostic clos',

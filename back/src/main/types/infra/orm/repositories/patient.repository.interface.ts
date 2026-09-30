@@ -9,16 +9,14 @@ export type PatientWithTagsEntityRepo = Patient & {
   enrollmentIssues: EnrollmentIssueEntityRepo[]
   // Date d'entree dans le service courant : vit sur PatientServiceFile, mais
   // `findAllWithTags` joint deja le sous-dossier filtre sur le service (comme pour
-  // `enrollmentIssues` ci-dessus) et l'aplatit ici plutot que d'exposer le sous-dossier entier
-  // (tache 12 du plan, Step 2 — pas la tache 11, qui ne touche pas au back ni a cette liste).
+  // `enrollmentIssues` ci-dessus) et l'aplatit ici plutot que d'exposer le sous-dossier entier.
   // Optionnelle : seule `findAllWithTags` la pose. `findForExport`, qui expose le sous-dossier
   // complet sous `serviceFile` (voir `PatientForExportEntityRepo` plus bas), lit
   // `serviceFile.entryDate` et ne duplique pas la valeur ici.
   entryDate?: Date | null
 }
 // Utilise par l'export Excel : le parcours et le contenu clinique vivent desormais sur le
-// sous-dossier de service (etape 3 du multi-tenant), `null` quand le patient n'en a pas encore
-// dans le service courant.
+// sous-dossier de service, `null` quand le patient n'en a pas encore dans le service courant.
 export type PatientForExportEntityRepo = PatientWithTagsEntityRepo & {
   serviceFile: PatientServiceFileEntityRepo | null
 }
@@ -47,7 +45,7 @@ export type PatientPathwayEntityRepo = {
   priority: number | null
 }
 
-// Recherche d'identite existante avant creation (design §6, tache 13) : filtre facultatif par
+// Recherche d'identite existante avant creation (design §6) : filtre facultatif par
 // prenom/nom (insensible a la casse, "contains") et date de naissance exacte.
 export type PatientIdentitySearchFilters = {
   firstName?: string
@@ -66,7 +64,7 @@ export type PatientIdentitySearchResultRepo = {
   birthDate: Date | null
 }
 
-// `hasMore` (revue tache 13, tour 1, point 4) : vrai s'il existe plus de
+// `hasMore` : vrai s'il existe plus de
 // `IDENTITY_SEARCH_LIMIT` correspondances — jamais le nombre exact, voir le commentaire de
 // `PatientRepository.searchByIdentity`.
 export type PatientIdentitySearchRepoResult = {

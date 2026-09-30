@@ -34,10 +34,7 @@ import { todoRouter } from './todo'
 // forme que `SUPER_ADMIN_PREFIX` (super-admin.routes.ts), et pour la meme raison.
 export const TENANT_PREFIX = '/e/:establishmentId/s/:serviceId'
 
-// TROISIEME garde-fou racine, frere d'`assertTenantShapedRoute` et d'`assertSuperAdminShapedRoute`
-// (et ecrit APRES avoir constate, au tour de correction 1, que la premiere version de cette tache
-// s'attribuait « la meme limite qu'assertTenantShapedRoute » alors que c'est exactement l'inverse :
-// celui-la est a la racine POUR NE PAS l'avoir).
+// TROISIEME garde-fou racine, frere d'`assertTenantShapedRoute` et d'`assertSuperAdminShapedRoute`.
 //
 // Le probleme qu'il ferme : `assertPatientReadLogged` et `recordPatientAccess` sont poses par
 // `tenantRoutes`, donc invisibles a une route enregistree AILLEURS. Une route de lecture qui
@@ -50,12 +47,11 @@ export const TENANT_PREFIX = '/e/:establishmentId/s/:serviceId'
 // la, ne tiendrait pas. La seule reponse juste POUR UNE ROUTE QUI LIT UN DOSSIER est « remets
 // cette route sous le prefixe de tenant ».
 //
-// TOUR DE CORRECTION 1 (revue, tache 5) — CE QUE LE PREMIER JET CROYAIT A TORT, ET LA TROISIEME
-// VOIE QUE LA REVUE A PROTOTYPEE. Le premier jet en deduisait que l'absolu valait aussi pour une
-// route qui ne lit JAMAIS le dossier — une lecture du JOURNAL des consultations, qui filtre une
-// table d'audit par un identifiant de patient sans jamais rendre le dossier — et la faisait
-// echapper au filet en renommant son parametre (`:patientID` -> un nom que `patientIdParamOf`
-// ne reconnait pas). DEMONTRE FAUX PAR EXECUTION : une sonde reelle enregistree sous ce nom
+// CE QUE L'ABSOLU NE COUVRE PAS SANS Y PRENDRE GARDE : une route qui ne lit JAMAIS le dossier —
+// une lecture du JOURNAL des consultations, qui filtre une table d'audit par un identifiant de
+// patient sans jamais rendre le dossier — pourrait echapper au filet en renommant son parametre
+// (`:patientID` -> un nom que `patientIdParamOf` ne reconnait pas). DEMONTRE FAUX PAR EXECUTION :
+// une sonde reelle enregistree sous ce nom
 // renomme (`GET /e/:establishmentId/admin/patients/:patientRef/sonde`, servie par un vrai
 // `findUniqueOrThrow` sur `Patient`) rendait un dossier COMPLET, sans ecrire aucune ligne de
 // journal, et rien ne le signalait — le meme code, le meme fichier, seul le nom du parametre
@@ -133,7 +129,7 @@ export const assertNoDeadAdminPatientExemption = (
 // démarrage sinon (fail-safe).
 const tenantRoutes: FastifyPluginAsyncZod = async (fastify) => {
   fastify.addHook('onRoute', assertRoutePermission)
-  // Journal des consultations (etape 4b, tache 3) — LA propriete centrale du chantier : toute
+  // Journal des consultations — LA propriete centrale du chantier : toute
   // route GET posee ici dont l'URL designe un dossier patient est journalisee ou explicitement
   // exemptee, sinon le demarrage echoue. Voir assertPatientReadLogged (tenant.plugin.ts) et les
   // deux listes (utils/access-log-routes.ts).

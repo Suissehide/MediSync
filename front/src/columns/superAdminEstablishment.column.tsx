@@ -14,10 +14,10 @@ import { accessibleDestinations } from '../utils/tenant-context.ts'
 
 const columnHelper = createColumnHelper<EstablishmentListItem>()
 
-// Colonnes de la liste des établissements (spec §3.3, task-12-brief.md,
-// step 1) : une par clé exacte de `establishmentListItemSchema` (voir
+// Colonnes de la liste des établissements (spec §3.3) : une par clé exacte de
+// `establishmentListItemSchema` (voir
 // `back/src/main/interfaces/http/fastify/schemas/establishment.schema.ts`),
-// plus l'identifiant copiable exigé par le brief.
+// plus l'identifiant copiable requis.
 export const superAdminEstablishmentColumns = [
   columnHelper.display({
     id: 'id',

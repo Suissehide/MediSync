@@ -15,11 +15,10 @@ type Cookies = { access_token: string }
 // Le document d'habilitations reserve le contenu clinique a `clinical:read` :
 // ni le secretariat ni la lecture seule ne doivent le voir, y compris quand
 // le patient est embarque par une autre reponse, ou quand ce contenu vit sur
-// le sous-dossier de service plutot que sur le patient lui-meme (etape 3 du
-// multi-tenant : notes/details/medicalDiagnosis ont demenage vers
-// `PatientServiceFile` ; etpDecision/goal/programType/stopReason avec eux,
-// mais restent des donnees administratives visibles de tous — voir
-// utils/clinical-fields.ts).
+// le sous-dossier de service plutot que sur le patient lui-meme
+// (notes/details/medicalDiagnosis ont demenage vers `PatientServiceFile` ;
+// etpDecision/goal/programType/stopReason avec eux, mais restent des donnees
+// administratives visibles de tous — voir utils/clinical-fields.ts).
 describe('filtrage des champs cliniques selon clinical:read / clinical:write', () => {
   let testApp: TestApp
   let establishmentId: string
@@ -91,8 +90,8 @@ describe('filtrage des champs cliniques selon clinical:read / clinical:write', (
     })
     patientId = patient.id
 
-    // Sous-dossier de service (etape 3 du multi-tenant) : les seize colonnes
-    // de parcours et de contenu clinique vivent ici, plus sur Patient.
+    // Sous-dossier de service : les seize colonnes de parcours et de contenu
+    // clinique vivent ici, plus sur Patient.
     // notes/details/medicalDiagnosis sont cliniques ; etpDecision/goal/
     // programType/stopReason sont administratifs, visibles de tous.
     await testDb.patientServiceFile.create({
@@ -182,11 +181,10 @@ describe('filtrage des champs cliniques selon clinical:read / clinical:write', (
 
     const list = (await get(cookies, '/patient')).json()
     expect(list).toHaveLength(1)
-    // `notes` n'est plus une colonne de `Patient` depuis l'etape 3 : cette
-    // assertion passe deja quand le crochet de sortie est entierement
-    // neutralise (verifie a la relecture de la tache 8), elle ne prouve donc
-    // rien aujourd'hui. Gardee volontairement comme filet d'avance pour les
-    // taches 6/7/12/13, qui vont imbriquer le sous-dossier dans la liste.
+    // `notes` n'est plus une colonne de `Patient` : cette assertion passe
+    // deja quand le crochet de sortie est entierement neutralise, elle ne
+    // prouve donc rien aujourd'hui. Gardee volontairement comme filet
+    // d'avance pour le jour ou le sous-dossier sera imbrique dans la liste.
     expect(list[0]).not.toHaveProperty('notes')
 
     // Patient embarque par un creneau : rendez-vous -> participant -> patient.
@@ -320,8 +318,7 @@ describe('filtrage des champs cliniques selon clinical:read / clinical:write', (
     expect(stored.details).toBe('DETAIL-SECRET')
   })
 
-  // Cas qui aurait pu etre Critique (releve a la relecture de la tache 8) :
-  // le schema `upsertPatientServiceFileBodySchema` declare les trois champs
+  // Cas delicat : le schema `upsertPatientServiceFileBodySchema` declare les trois champs
   // `.optional().nullable()`, donc `null` est syntaxiquement recevable par
   // Zod. Un secretariat pourrait donc croire qu'envoyer `null` explicitement
   // — par exemple en vidant un champ de formulaire — efface la colonne, la ou
@@ -425,12 +422,11 @@ describe('filtrage des champs cliniques selon clinical:read / clinical:write', (
   })
 
   // Second chemin peu exerce : la creation, pas seulement la modification,
-  // du sous-dossier par un role sans `clinical:write`. Avant l'etape 3, ce
-  // test creait un patient directement avec `notes` dans le corps de
-  // `POST /patient` : la colonne a quitte `Patient` pour
-  // `PatientServiceFile`, qui n'est jamais cree par `POST /patient` (spec
-  // §5.1) mais seulement a sa premiere ecriture — donc ici, par le premier
-  // `PATCH /patient/:id/service-file` du patient nouvellement cree.
+  // du sous-dossier par un role sans `clinical:write`. La colonne `notes` a
+  // quitte `Patient` pour `PatientServiceFile`, qui n'est jamais cree par
+  // `POST /patient` (spec §5.1) mais seulement a sa premiere ecriture — donc
+  // ici, par le premier `PATCH /patient/:id/service-file` du patient
+  // nouvellement cree.
   it('cree le sous-dossier a sa premiere ecriture sans les champs cliniques envoyes par un secretariat', async () => {
     const cookies = secretariatCookies
 

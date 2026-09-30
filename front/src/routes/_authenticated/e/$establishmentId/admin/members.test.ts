@@ -35,7 +35,7 @@ const stranger: User = {
   lastName: null,
   isSuperAdmin: false,
   // Authentifie, mais sans aucun rattachement a cet etablissement : c'est le
-  // scenario du trou de permission ouvert par la tache 7 — l'ecran des
+  // scenario du trou de permission qui existait — l'ecran des
   // membres, deplace de /settings/user sans aucune garde, etait atteignable
   // par n'importe quel compte authentifie. `resolveEstablishmentContext`
   // renvoie ici `null` (aucun etablissement ne correspond), donc `can(null,

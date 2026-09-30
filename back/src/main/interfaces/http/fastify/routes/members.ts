@@ -49,7 +49,7 @@ const membersRouter: FastifyPluginAsync = (fastify) => {
     },
   )
 
-  // Tâche 10, step 1. Chemin réel : `POST /e/:establishmentId/admin/members/account` — le brief
+  // Chemin réel : `POST /e/:establishmentId/admin/members/account` — la spec
   // l'écrit sans `/admin`, mais ce routeur est monté sous ce préfixe (establishment-admin.
   // routes.ts) et une route portant `:establishmentId` enregistrée hors de ces greffons fait
   // échouer le démarrage (`assertTenantShapedRoute`).
@@ -59,7 +59,7 @@ const membersRouter: FastifyPluginAsync = (fastify) => {
   // d'existence de comptes sur une adresse déjà connue — voir
   // `createMemberAccountResponseSchema`. Le schéma Zod l'élaguerait déjà à la sérialisation ;
   // la projection le dit à la lecture du code plutôt que de s'en remettre à cet effet de bord,
-  // et `projectCreatedMember` est éprouvée à part (tour de correction 2, mineur n°3 : tant
+  // et `projectCreatedMember` est éprouvée à part (tant
   // qu'elle vivait en ligne ici, aucun test ne pouvait la tenir). ATTENTION, la limite est
   // mesurée, pas supposée : c'est le CONTENU de la projection qui est éprouvé, jamais SON
   // APPEL DEPUIS CETTE LIGNE — retirer `projectCreatedMember(...)` ci-dessous ne fait rougir
@@ -112,7 +112,7 @@ const membersRouter: FastifyPluginAsync = (fastify) => {
     },
   )
 
-  // Tâche 10, step 3 : réémettre un lien — la réinitialisation d'un accès oublié, qui
+  // Réémettre un lien — la réinitialisation d'un accès oublié, qui
   // n'existait par aucun moyen. Le client désigne une APPARTENANCE, jamais un compte : voir
   // `MembershipDomain.reissueAccessLink` pour ce que cette distinction protège.
   fastify.post<{ Params: MemberParams }>(

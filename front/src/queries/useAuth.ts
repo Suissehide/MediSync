@@ -60,7 +60,7 @@ export const useLogout = () => {
       return await AuthApi.logout()
     },
     onSuccess: () => {
-      // Tour de correction 1, Important n°3 : `hooks/useTenantSwitch.ts` ne
+      // `hooks/useTenantSwitch.ts` ne
       // construit un `QueryClient` neuf que si `tenantKey(context)` change,
       // et ce couple vaut la chaîne vide pour TOUT compte qui n'a jamais
       // posé de contexte de tenant (super-admin sans établissement, par
@@ -116,7 +116,7 @@ export const useUpdateMe = () => {
   return mutation
 }
 
-// `POST /auth/access-link/consume` (tâche 13, page publique) : pose le
+// `POST /auth/access-link/consume` (page publique) : pose le
 // nouveau mot de passe. Volontairement SANS `useDataFetching` : cette
 // mutation ne toaste rien elle-même — `routes/auth/access-link.tsx` lit
 // `isError`/`error` pour distinguer à l'écran un 410 (lien invalide ou

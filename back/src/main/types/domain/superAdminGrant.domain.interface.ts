@@ -3,7 +3,7 @@ import type {
   SuperAdminGrantEntityRepo,
 } from '../infra/orm/repositories/accessGrant.repository.interface'
 
-// Tâche 8 (étape 4a) : s'accorder un accès temporaire — motif obligatoire, durée bornée (spec
+// S'accorder un accès temporaire — motif obligatoire, durée bornée (spec
 // §3.5). `userId` est TOUJOURS celui de l'appelant (`request.currentUser.id`, jamais du corps de
 // la requête) : le mécanisme est un accès qu'on S'ACCORDE, pas un octroi qu'on poserait sur un
 // tiers.
@@ -22,9 +22,9 @@ export interface SuperAdminGrantDomainInterface {
   // est global, cette route n'a aucun tenant ambiant pour le garantir autrement).
   grant: (input: GrantInput) => Promise<SuperAdminGrantEntityRepo>
   // Révoque avant terme (spec §6.2). Lève `Boom.notFound` si l'id est inconnu, OU si
-  // `callerId` n'est pas le titulaire de cet octroi (tour de correction 1, tâche 8 — mineur
-  // signalé en relecture : seul celui qui s'est accordé l'octroi peut le révoquer, jamais un
-  // autre super-admin) — même 404, pour ne pas distinguer les deux cas. Idempotent, PRÉCISION
+  // `callerId` n'est pas le titulaire de cet octroi (seul celui qui s'est accordé l'octroi peut
+  // le révoquer, jamais un autre super-admin) — même 404, pour ne pas distinguer les deux cas.
+  // Idempotent, PRÉCISION
   // comprise : révoquer un octroi déjà révoqué est un no-op qui garde la PREMIÈRE date (voir
   // `AccessGrantRepository.revoke`, qui lit la ligne avant d'écrire).
   revoke: (id: string, callerId: string) => Promise<void>

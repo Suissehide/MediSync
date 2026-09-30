@@ -281,10 +281,10 @@ describe('routes membres', () => {
   })
 
   // ------------------------------------------------------------------
-  // Tache 10, step 1 : creer un compte de membre et rendre son lien.
+  // Creer un compte de membre et rendre son lien.
   //
   // La route vit sous `/e/:establishmentId/admin/members/account`, PAS
-  // `/e/:establishmentId/members/account` comme l'ecrit le brief : `membersRouter` est
+  // `/e/:establishmentId/members/account` : `membersRouter` est
   // monte sous le prefixe `/admin` (establishment-admin.routes.ts), et une route portant
   // `:establishmentId` enregistree hors de ces greffons fait echouer le demarrage
   // (`assertTenantShapedRoute`, tenant.plugin.ts).
@@ -356,8 +356,8 @@ describe('routes membres', () => {
     )
   })
 
-  // TOUR DE CORRECTION 1 : ce test attachait auparavant un compte membre d'un AUTRE
-  // etablissement, et attendait 201. Sa fixture ETAIT l'escalade de la Critique n°1 — c'est
+  // Ce test attachait auparavant un compte membre d'un AUTRE
+  // etablissement, et attendait 201. Sa fixture reproduisait la faille corrigee plus haut — c'est
   // desormais un 400 opaque (voir « ne remet aucun jeton pour une adresse rattachee a un AUTRE
   // etablissement »). Le cas legitime que ce test doit garder est celui d'un compte qui existe
   // deja mais n'est rattache NULLE PART : une personne dont le compte a ete cree puis
@@ -386,7 +386,7 @@ describe('routes membres', () => {
     expect(res.statusCode).toBe(201)
     expect(Object.keys(res.json()).sort()).toEqual(['accessLink', 'member'])
     // La reponse ne porte AUCUNE valeur que l'appelant n'ait pas soumise : ni le nom
-    // stocke (qui differe du nom soumis — c'est l'oracle d'existence ferme a la tache 6),
+    // stocke (qui differe du nom soumis — c'est l'oracle d'existence ferme plus haut),
     // ni l'identifiant du compte (un cuid encode l'instant de sa creation).
     const corps = JSON.stringify(res.json())
     expect(corps).not.toContain('Ancien')
@@ -407,8 +407,9 @@ describe('routes membres', () => {
     ).toBe(1)
   })
 
-  // Le raisonnement de la tache 6 (« divulgation assumee : le super-admin dispose de toute
-  // facon d'une recherche de comptes par adresse ») NE TIENT PAS ici : l'appelant est un
+  // Le raisonnement (« divulgation assumee : le super-admin dispose de toute
+  // facon d'une recherche de comptes par adresse », voir `establishment.domain.ts`) NE TIENT PAS
+  // ici : l'appelant est un
   // administrateur d'etablissement, qui n'a aucune recherche de comptes. Le canal est donc
   // ferme, et mesure ici plutot qu'affirme.
   it('ne dit pas, par son temps de reponse, si l adresse a deja un compte', async () => {
@@ -515,9 +516,9 @@ describe('routes membres', () => {
   })
 
   // ------------------------------------------------------------------
-  // Tache 10, step 3 : reemettre un lien pour un membre existant.
+  // Reemettre un lien pour un membre existant.
   //
-  // C'EST L'ETAPE LA PLUS DANGEREUSE DE LA TACHE, et le brief ne le dit pas. Un lien
+  // C'EST LE POINT LE PLUS DANGEREUX DE CETTE ROUTE. Un lien
   // d'acces reinitialise le mot de passe du `User`, qui est GLOBAL — pas celui de
   // l'appartenance. Un administrateur de A qui reemet un lien pour un compte membre de A
   // ET de B prendrait le controle de son acces a B, ou il n'a aucun droit. La reemission
@@ -529,8 +530,8 @@ describe('routes membres', () => {
     call('POST', `/${membershipId}/access-link`)
 
   // Fabrique un membre de CET etablissement, avec son compte et son lien, sans dependre
-  // d'aucun autre test (mineur n°3 du tour de correction 1 : les dependances d'ordre entre
-  // tests e2e).
+  // d'aucun autre test (les dependances d'ordre entre
+  // tests e2e restent fragiles).
   const nouveauMembre = async (email: string) => {
     const res = await createAccount({ email, role: 'MEMBER' })
     expect(res.statusCode).toBe(201)
@@ -661,9 +662,9 @@ describe('routes membres', () => {
   // ecran : l'une fabrique une identite, l'autre remet le pouvoir de reinitialiser un mot de
   // passe. Elles doivent etre imputables au meme titre qu'un changement de role — un
   // commentaire qui l'affirme ne suffit pas.
-  // IMPUTABLE, pas seulement journalise (tour de correction 1, mineur n°2) : la version
-  // precedente de ce test n'affirmait ni l'ACTEUR ni l'appartenance VISEE, alors que le
-  // souscripteur ecrit les deux — le nom du test promettait plus que ses assertions.
+  // IMPUTABLE, pas seulement journalise : une assertion qui ne verifierait ni l'ACTEUR ni
+  // l'appartenance VISEE, alors que le souscripteur ecrit les deux, promettrait plus que ce
+  // qu'elle teste.
   it('journalise la creation de compte et la reemission de lien, avec leur auteur et leur cible', async () => {
     const { compte, membershipId } = await nouveauMembre('journal@b.fr')
     expect((await reissue(membershipId)).statusCode).toBe(201)
@@ -707,7 +708,7 @@ describe('routes membres', () => {
   })
 
   // ------------------------------------------------------------------
-  // Tour de correction 1 — les deux escalades de privilege.
+  // Les deux escalades de privilege.
   //
   // La garde porte sur LE JETON, pas sur la route : toute route de ce niveau qui rend un
   // jeton la porte, parce qu'un jeton d'acces reinitialise le mot de passe du `User`, qui
@@ -739,7 +740,7 @@ describe('routes membres', () => {
     return atteinte.statusCode
   }
 
-  // CRITIQUE n°1. L'administrateur de A soumet l'adresse d'une personne administratrice de
+  // L'administrateur de A soumet l'adresse d'une personne administratrice de
   // B seulement. Sans garde : 201 + jeton, `consume` pose le mot de passe, et
   // `GET /e/B/admin/members` rend 200 — l'administrateur de A administre B.
   it('ne remet aucun jeton pour une adresse rattachee a un AUTRE etablissement', async () => {
@@ -783,7 +784,7 @@ describe('routes membres', () => {
     ).toBe(0)
   })
 
-  // CRITIQUE n°2, chemin court : le super-admin n'est membre de rien, un seul appel suffit.
+  // Chemin court : le super-admin n'est membre de rien, un seul appel suffit.
   it('ne remet aucun jeton pour un compte super-admin', async () => {
     const sa = await createUser({
       email: 'sa-libre@plateforme.fr',
@@ -813,7 +814,7 @@ describe('routes membres', () => {
     expect(await testDb.accessLink.count({ where: { userId: sa.id } })).toBe(0)
   })
 
-  // CRITIQUE n°2, premier maillon : `addByEmail` rattachait un super-admin sans rien dire.
+  // Premier maillon : `addByEmail` rattachait un super-admin sans rien dire.
   // Le refus doit etre INDISCERNABLE de celui d'une adresse inconnue — sinon la route
   // devient un detecteur de super-admins, utilisable sur n'importe quelle adresse.
   it('refuse de rattacher un super-admin, du meme refus exactement qu une adresse inconnue', async () => {
@@ -837,11 +838,11 @@ describe('routes membres', () => {
     expect(superAdmin.json().message).toBe(UNADDABLE_EMAIL)
   })
 
-  // CRITIQUE n°2, second maillon : un super-admin DEJA membre de cet etablissement — ce que
+  // Second maillon : un super-admin DEJA membre de cet etablissement — ce que
   // `EstablishmentDomain.createWithFirstAdmin` peut produire legitimement. L'ancienne garde
   // (`assertSingleEstablishment`) le laissait passer, puisqu'il n'a qu'une appartenance.
-  // LA CHAINE EN TROIS APPELS, D'UN SEUL TENANT (tour de correction 2, point n°5). Le tour
-  // precedent eprouvait chaque maillon separement : la JONCTION n'etait tenue par rien.
+  // LA CHAINE EN TROIS APPELS, D'UN SEUL TENANT. Eprouver chaque maillon separement ne suffit
+  // pas : la JONCTION n'est tenue par rien tant qu'elle n'est pas testee bout en bout.
   it('la chaine en trois appels meurt au premier maillon, et le second refuserait aussi', async () => {
     const sa = await createUser({
       email: 'sa-chaine@plateforme.fr',
@@ -920,8 +921,8 @@ describe('routes membres', () => {
     ).toBe(0)
   })
 
-  // TROUVE EN TRAITANT LA CRITIQUE n°2, HORS DES TROIS VERBES DEMANDES — meme classe, autre
-  // consequence : ce n'est pas une prise de controle mais un DENI DE SERVICE. `deactivatedAt`
+  // AUTRE CONSEQUENCE DE LA MEME CLASSE DE PROBLEME : ce n'est pas une prise de controle mais
+  // un DENI DE SERVICE. `deactivatedAt`
   // vit sur le `User`, global : un simple ADMIN d'etablissement coupait l'acces du super-admin
   // A TOUTE LA PLATEFORME. L'ancienne garde ne s'y opposait pas (une seule appartenance), et la
   // regle du dernier administrateur non plus des qu'un second administrateur existe.
@@ -963,8 +964,8 @@ describe('routes membres', () => {
     ).toBeNull()
   })
 
-  // LE SENS INVERSE (tour de correction 2, point n°4) : il n'etait assure que par la POSITION
-  // du code, aucun test ne le tenait, alors que le rapport annoncait « les deux sens ». Un
+  // LE SENS INVERSE : il n'etait assure que par la POSITION
+  // du code, aucun test ne le tenait. Un
   // super-admin desactive l'a ete deliberement, au niveau de la plateforme ; un administrateur
   // d'etablissement n'a pas a defaire cette decision.
   it('ne reactive pas non plus le compte global d un super-admin depuis un etablissement', async () => {
@@ -990,9 +991,9 @@ describe('routes membres', () => {
     ).not.toBeNull()
   })
 
-  // TEST DE CONSTAT (tour de correction 2, Important) — il n'affirme pas une propriete
+  // TEST DE CONSTAT — il n'affirme pas une propriete
   // souhaitable, il MESURE une divulgation qui reste ouverte, a la maniere de
-  // « emissions simultanees » (access-link.test.ts, tache 4).
+  // « emissions simultanees » (access-link.test.ts).
   //
   // CE QU'IL CONSTATE : les deux routes d'ajout du niveau administrateur, prises ENSEMBLE,
   // rendent un couple de statuts DIFFERENT pour chacune des trois natures d'adresse — et le
@@ -1001,16 +1002,15 @@ describe('routes membres', () => {
   // trace, apprendre : « inconnue », « a un compte ordinaire rattache ailleurs », ou « est un
   // super-admin ».
   //
-  // POURQUOI ON NE LE FERME PAS (arbitrage de Leo, tour 2) : toute reponse honnete a
+  // POURQUOI ON NE LE FERME PAS (arbitrage de Leo) : toute reponse honnete a
   // l'appelant legitime divulgue ce fait, et le seul moyen de le fermer serait de MENTIR a
   // l'administrateur sur le sort de sa demande — lui rendre 201 sans rien creer le laisserait
   // attendre un acces qui n'arrivera jamais. Ce n'est plus une prise de controle : les trois
   // verbes (rattacher, creer, reemettre) sont refuses ; il ne reste que du renseignement.
   //
-  // CE TEST A ETE ECRIT D'ABORD TEL QUE LE COMMENTAIRE D'`UNADDABLE_EMAIL` DECRIVAIT LE
-  // SYSTEME — trois couples identiques (400, 400) et zero ecriture partout. Il est tombe rouge
-  // en imprimant la realite ci-dessous : c'est cette execution, pas une relecture, qui a
-  // etabli que deux phrases du code etaient fausses.
+  // CE TEST MESURE LA REALITE CI-DESSOUS, ET NON CE QUE LE COMMENTAIRE D'`UNADDABLE_EMAIL`
+  // DECRIT — les trois couples ne sont PAS tous (400, 400) avec zero ecriture partout : deux
+  // phrases du code se sont revelees fausses a l'execution.
   it('constat : le couple de refus des deux routes d ajout identifie la nature du compte', async () => {
     await peuplerAutreEtablissement()
     await createUser({

@@ -17,7 +17,7 @@ import type { AuthState, User } from '@/types/auth.ts'
 import { Route as detailRoute } from './$establishmentId.tsx'
 
 // ---------------------------------------------------------------------------
-// Tour de correction 2 : « il n'existe aucun fichier de test pour cette
+// « il n'existe aucun fichier de test pour cette
 // route ». Le code de `$establishmentId.tsx` distingue bien trois états
 // (chargement/erreur/vide-ou-prêt via `libs/queryState.ts`), mais rien ne
 // garde cette distinction dans le temps — un `isPending || !establishment`
@@ -120,7 +120,7 @@ describe('etats de l ecran de detail d etablissement', () => {
     ).not.toBeInTheDocument()
   })
 
-  // LE CAS QUI COMPTE LE PLUS (revue, tour de correction 2) : c'est lui qui
+  // LE CAS QUI COMPTE LE PLUS : c'est lui qui
   // donnait un « Chargement… » perpétuel sur un identifiant supprimé ou mal
   // recopié — le geste même que cet écran sert.
   it("affiche une erreur distincte, jamais un chargement perpetuel, quand l'etablissement ne peut pas etre charge", async () => {

@@ -9,7 +9,7 @@ import { useToastStore } from '@/store/useToastStore.ts'
 import type { User } from '@/types/auth.ts'
 import { ActiveGrantNotice } from './activeGrantNotice.tsx'
 
-// Tour de correction 1, Important n°2 : « `/me` porte déjà la réponse à la
+// « `/me` porte déjà la réponse à la
 // question des octrois, et le front la jette. » L'écran de détail doit
 // montrer que le super-admin connecté a déjà un octroi actif sur
 // l'établissement consulté — ce qui décourage le doublon (le back refuse de

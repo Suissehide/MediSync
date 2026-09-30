@@ -45,7 +45,7 @@ export function verifyPassword({
 }
 
 // Jeton aléatoire encodé en base64url (URL-safe, sans padding) : sert de jeton d'accès (lien de
-// première connexion / réinitialisation, étape 4a, tâche 4). Le jeton lui-même n'est JAMAIS
+// première connexion / réinitialisation). Le jeton lui-même n'est JAMAIS
 // stocké ; seule son empreinte (`sha256Hex`, ci-dessous) rejoint la base.
 export function randomToken(byteLength: number): string {
   return crypto.randomBytes(byteLength).toString('base64url')

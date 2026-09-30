@@ -9,19 +9,18 @@ import {
   sansCommentaires,
 } from '../../shared/app-events-source'
 
-// LE CONTRAT DE VOCABULAIRE ENTRE LES DEUX DEPOTS (revue finale de branche, mineur : « le
-// vocabulaire d'actions n'a AUCUN test de contrat entre les deux depots, la ou les matrices de
-// permissions en ont un »).
+// LE CONTRAT DE VOCABULAIRE ENTRE LES DEUX DEPOTS : le vocabulaire d'actions n'avait AUCUN test
+// de contrat entre les deux depots, la ou les matrices de permissions en ont un.
 //
 // CE QU'IL EXISTAIT DEJA, ET CE QUI MANQUAIT. `unit/utils/permissions.test.ts` tient la matrice
 // de permissions identique entre back et front, par lecture des deux fichiers. Le VOCABULAIRE
-// D'ACTIONS des deux journaux n'avait rien de tel — et c'est exactement par la que le defaut de
-// la tache 11 est passe : l'ecran plateforme a reutilise le dictionnaire de l'ecran d'activite
-// DE SERVICE (huit cles) pour afficher un journal qui peut en porter DIX-NEUF. Manquaient les
-// sept `member.*`, `patient.removedFromPathway`, les deux actions d'amorcage, et
-// `user.accessLinkReissued` — la ligne que la tache 7 existe pour creer, sur la route la plus
-// puissante du systeme. Rien ne rougissait : un libelle manquant retombe sur la valeur brute, et
-// le filtre « Action » ne proposait simplement pas la valeur.
+// D'ACTIONS des deux journaux n'avait rien de tel — et c'est exactement par la qu'un defaut est
+// passe : l'ecran plateforme a reutilise le dictionnaire de l'ecran d'activite DE SERVICE (huit
+// cles) pour afficher un journal qui peut en porter DIX-NEUF. Manquaient les sept `member.*`,
+// `patient.removedFromPathway`, les deux actions d'amorcage, et `user.accessLinkReissued` — la
+// ligne correspondant a la route la plus puissante du systeme. Rien ne rougissait : un libelle
+// manquant retombe sur la valeur brute, et le filtre « Action » ne proposait simplement pas la
+// valeur.
 //
 // CE FICHIER LIE DONC LE DICTIONNAIRE A LA SOURCE, dans les DEUX sens :
 //   - une action que le back peut ecrire et que le front ne sait pas nommer fait rougir ;
@@ -151,9 +150,9 @@ describe('le vocabulaire du journal des consultations est couvert par le front, 
   })
 })
 
-// La valeur reservee du filtre d'etablissement est une convention PARTAGEE entre les deux depots
-// (revue finale de branche, Important n°1) : le front l'envoie, le back la reconnait. Deux
-// litteraux qui doivent rester egaux, exactement comme la matrice de permissions.
+// La valeur reservee du filtre d'etablissement est une convention PARTAGEE entre les deux depots :
+// le front l'envoie, le back la reconnait. Deux litteraux qui doivent rester egaux, exactement
+// comme la matrice de permissions.
 describe('la valeur reservee « sans etablissement » est la meme des deux cotes', () => {
   it('le front envoie exactement ce que le back reconnait', () => {
     const [valeurFront] = [

@@ -63,11 +63,11 @@ export interface MembershipRepositoryInterface {
   findByID: (id: string) => Promise<MembershipRow>
   findByUserID: (userId: string) => Promise<MembershipRow | null>
   countAdmins: () => Promise<number>
-  // Tache 15 (etape 4a) : « ce compte est-il rattache a un AUTRE etablissement que le courant ? ».
+  // « ce compte est-il rattache a un AUTRE etablissement que le courant ? ».
   // UN BOOLEEN, jamais un identifiant ni un nom — voir l'implementation pour le pourquoi du mode
   // encadre et ce qu'elle remplace (l'arbre complet des appartenances, lu depuis `User`).
   estRattacheAilleurs: (userId: string) => Promise<boolean>
-  // `client` optionnel (tâche 10, step 1) : le rattachement d'un compte fraîchement créé doit
+  // `client` optionnel : le rattachement d'un compte fraîchement créé doit
   // partager le sort de la création du compte et de l'émission de son lien.
   create: (
     params: MembershipCreateRepo,

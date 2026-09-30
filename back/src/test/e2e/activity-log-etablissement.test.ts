@@ -9,7 +9,7 @@ import {
   tenantUrl,
 } from './setup/fixtures'
 
-// Navigation par echelle (2026-09-28), tache 2 : le journal d'activite quitte le prefixe de
+// Navigation par echelle (2026-09-28) : le journal d'activite quitte le prefixe de
 // service pour l'administration d'etablissement. Il couvre desormais tout l'etablissement
 // (perimetre que `docs/multi-tenant/habilitations.md` donne a `activity-log:read`), filtrable par
 // service, et reste borne a l'etablissement de l'URL.

@@ -86,8 +86,8 @@ export const useMemberMutations = () => {
     onSettled: () => invalidate(),
   })
 
-  // LE JETON RENDU EST UN MOT DE PASSE À USAGE UNIQUE (tâche 13, step 3,
-  // même exigence que `useSuperAdminReissueAccessLink`) : cette mutation ne
+  // LE JETON RENDU EST UN MOT DE PASSE À USAGE UNIQUE (même exigence que
+  // `useSuperAdminReissueAccessLink`) : cette mutation ne
   // l'écrit dans AUCUNE clé de requête, AUCUN cache — son seul effet
   // observable pour l'appelant est `createMemberAccount.data`, tenu par
   // React Query dans le cache des MUTATIONS (jamais atteignable par
@@ -127,7 +127,7 @@ export const useMemberMutations = () => {
     onSettled: () => invalidate(),
   })
 
-  // Le brief ne prévoit qu'une clé `DEACTIVATE` pour ce couple d'actions
+  // Une seule clé `DEACTIVATE` existe pour ce couple d'actions
   // (activer/désactiver un même compte) : les deux mutations la partagent.
   const deactivateMember = useMutation({
     mutationKey: [MEMBER.DEACTIVATE],

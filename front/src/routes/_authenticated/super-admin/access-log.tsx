@@ -21,8 +21,8 @@ import type {
   SuperAdminAccessLogSource,
 } from '@/types/superAdminAccessLog.ts'
 
-// Étape 4b, tâche 11 : l'écran plateforme du super-admin, dernier des deux journaux — `GET
-// /super-admin/access-log` (back, tâche 6). Écran hors de tout tenant, comme ses voisins : voir
+// L'écran plateforme du super-admin, dernier des deux journaux — `GET
+// /super-admin/access-log` (back). Écran hors de tout tenant, comme ses voisins : voir
 // `../super-admin.tsx`, le layout parent qui pose la SEULE garde (`isSuperAdmin`, `notFound()`
 // jamais une redirection). Ce fichier ne redéclare rien ici, exactement comme `index.tsx` et
 // `users.tsx` — un compte sans le drapeau ne voit jamais ce composant : `beforeLoad` du parent
@@ -71,7 +71,7 @@ function SuperAdminAccessLogPage() {
   }, [filtres.compte])
 
   const { establishments } = useSuperAdminEstablishmentsQuery()
-  // LES TROIS FILTRES SONT SERVEUR (revue finale de branche, Important n°1). Le filtre « compte »
+  // LES TROIS FILTRES SONT SERVEUR. Le filtre « compte »
   // était appliqué DANS LE NAVIGATEUR, sur la page déjà tronquée à 200 lignes (`createdAt desc`,
   // `PLATFORM_ACCESS_LOG_LIMIT`, les deux dépôts) : chercher un compte rendait « aucune entrée »
   // alors que ses lignes existaient, plus bas dans la table. Un filtre navigateur ne peut, par
@@ -103,7 +103,7 @@ function SuperAdminAccessLogPage() {
     // vocabulaire d'action (voir `constants/superAdminAccessLog.constant.ts`) — garder l'ancienne
     // valeur filtrerait sur une action qui n'existe pas dans l'autre journal.
     //
-    // ET RÉINITIALISE « Sans établissement » (revue finale de branche) : cette valeur n'existe
+    // ET RÉINITIALISE « Sans établissement » : cette valeur n'existe
     // que sur le journal d'activité, et la garder en basculant sur les consultations enverrait
     // au back une requête qu'il refuse par un 400 (`PatientAccessLog.establishmentId` est non
     // nullable — voir le `.refine` du schéma). L'écran ne doit jamais pouvoir formuler cette

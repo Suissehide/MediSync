@@ -1,5 +1,5 @@
 // Miroir de `back/src/main/interfaces/http/fastify/schemas/service.schema.ts`
-// (tâche 13, onglet des services de l'administration d'établissement).
+// (onglet des services de l'administration d'établissement).
 export type Service = {
   id: string
   name: string
@@ -15,8 +15,8 @@ export type UpdateServiceInput = {
   deactivated?: boolean
 }
 
-// `GET /e/:establishmentId/admin/services/:id/impact-desactivation` (back,
-// tâche 9) : les deux compteurs NE DISENT PAS LA MÊME CHOSE — voir
+// `GET /e/:establishmentId/admin/services/:id/impact-desactivation` (back) :
+// les deux compteurs NE DISENT PAS LA MÊME CHOSE — voir
 // `back/CLAUDE.md` § « Multi-tenant » et `service.schema.ts`.
 // `suivisIci` : combien de patients ce service suit aujourd'hui.
 // `suivisNullePartAilleurs` : combien d'entre eux ne sont suivis dans AUCUN

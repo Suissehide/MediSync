@@ -3,20 +3,18 @@ import type { SuperAdminAccessLogSource } from '../types/superAdminAccessLog.ts'
 import { ACCESS_LOG_ACTION_LABELS } from './accessLog.constant.ts'
 import { ACTION_LABELS } from './activityLog.constant.ts'
 
-// Étape 4b, tâche 11 : l'écran plateforme lit UN SEUL des deux journaux à la fois (`source`
+// L'écran plateforme lit UN SEUL des deux journaux à la fois (`source`
 // obligatoire côté back — voir le commentaire de `superAdminAccessLogSourceSchema`, back) : jamais
 // un merge des deux (leurs colonnes ne se recouvrent qu'en partie, voir le commentaire du schéma
 // back).
 //
-// REVUE FINALE DE BRANCHE, Important n°2 — CE FICHIER RÉUTILISAIT UN DICTIONNAIRE TROP ÉTROIT.
-// Le premier jet se justifiait ainsi : « les deux dictionnaires existent déjà, chacun éprouvé par
-// l'écran qui les a introduits ». Vrai de leur PROVENANCE, faux de leur COUVERTURE ici.
+// CE DICTIONNAIRE NE DOIT PAS RESTER TROP ÉTROIT.
 // `ACTION_LABELS` a été écrit pour l'écran d'activité DE SERVICE, qui ne voit jamais les actions
-// écrites hors d'un service : il portait **8** clés quand le journal d'activité peut en porter
+// écrites hors d'un service : il porte **8** clés quand le journal d'activité peut en porter
 // **19**. Manquaient les sept `member.*` (écrites sous le contexte d'administration),
-// `patient.removedFromPathway` (oubliée depuis l'étape 2, corrigée dans `activityLog.constant.ts`),
-// les deux actions du script d'amorçage, et surtout `user.accessLinkReissued` — la ligne que la
-// tâche 7 existe pour créer, sur la route la plus puissante du système. Aucune des onze n'était
+// `patient.removedFromPathway` (corrigée dans `activityLog.constant.ts`),
+// les deux actions du script d'amorçage, et surtout `user.accessLinkReissued` — la ligne qui
+// existe pour marquer la route la plus puissante du système. Aucune des onze n'était
 // proposée par le filtre « Action » de l'écran plateforme : on ne pouvait pas filtrer sur ce que
 // cet écran est justement le seul à pouvoir montrer.
 //
@@ -29,9 +27,7 @@ import { ACTION_LABELS } from './activityLog.constant.ts'
 // `back/src/test/unit/utils/access-log-vocabulaire.test.ts` le lie à la SOURCE (les clés de
 // `AppEvents` plus `ACTIVITY_LOG_SCRIPT_ACTIONS`, côté back) et rougit sur tout écart, dans les
 // deux sens. Un vingtième événement ajouté au back fait échouer ce contrat plutôt que de
-// s'afficher ici sous son nom technique — c'est exactement le défaut que la tâche 11 avait
-// reproduit, et la raison pour laquelle le mineur « aucun test de contrat entre les deux dépôts »
-// est traité en même temps que celui-ci.
+// s'afficher ici sous son nom technique.
 export const SUPER_ADMIN_ACCESS_LOG_SOURCE_OPTIONS: {
   value: SuperAdminAccessLogSource
   label: string
@@ -54,8 +50,8 @@ export const PLATFORM_ONLY_ACTIVITY_ACTION_LABELS: Record<string, string> = {
   'member.accessLinkReissued': "Lien d'accès réémis (établissement)",
   // La route la plus puissante du système : réémission d'un lien pour N'IMPORTE QUEL compte,
   // hors de la garde de jeton qui borne la variante d'établissement ci-dessus. Le libellé
-  // distingue les deux explicitement — les confondre effacerait précisément ce que la tâche 7
-  // a créé cet événement pour porter.
+  // distingue les deux explicitement — les confondre effacerait précisément ce que cet
+  // événement existe pour porter.
   'user.accessLinkReissued': "Lien d'accès réémis (super-admin)",
   // Script d'amorçage (`npm run bootstrap:super-admin`) : les lignes sans établissement, que
   // seul cet écran peut lire — et seulement, au-delà de 200 entrées, en filtrant sur

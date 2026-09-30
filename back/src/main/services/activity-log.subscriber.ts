@@ -82,14 +82,10 @@ class ActivityLogSubscriber {
         this.#log(action, 'member', p.userID, p.membershipId),
       )
     }
-    // Tache 7 (etape 4b) : la reemission par le super-admin. `entityType: 'user'`, pas
+    // La reemission par le super-admin. `entityType: 'user'`, pas
     // `'member'` — cette route vise un COMPTE, hors de toute appartenance.
     //
-    // MESURE, PAS SUPPOSE (une premiere version de ce commentaire affirmait a tort que
-    // `activityLogRepository.create` ecrirait simplement `establishmentId`/`serviceId` a `null`
-    // et s'arretait la — FAUX, demontre par execution : le premier essai a laisse le test rouge
-    // en boucle, `expected [] to have length 1`, meme apres 2 secondes d'attente). La route
-    // `/super-admin` s'execute SANS AUCUN CONTEXTE (back/CLAUDE.md : tout le prefixe tourne sans
+    // La route `/super-admin` s'execute SANS AUCUN CONTEXTE (back/CLAUDE.md : tout le prefixe tourne sans
     // store, ses depots n'entrant en `runAsSuperAdmin` qu'au cas par cas) — pas seulement sans
     // contexte de TENANT.
     // `ActivityLog` est un modele d'ETABLISSEMENT (tenant-guard.ts, ESTABLISHMENT_MODELS), et le
@@ -113,18 +109,18 @@ class ActivityLogSubscriber {
     // douze actions ci-dessus) : les elargir toutes masquerait silencieusement une VRAIE perte de
     // contexte sur une route de tenant (elle continuerait a s'ecrire avec un etablissement nul
     // plutot que de faire echouer, puis journaliser, l'ecriture comme aujourd'hui) — un risque
-    // que cette tache n'a pas a rouvrir. Rappel ASYNC AVEC UN `await` INTERNE, jamais un rappel
-    // synchrone nu (tenant-context.ts#runAsSuperAdmin, tour de correction 1, tache 6 : mesure sur
+    // qu'il ne faut pas rouvrir ici. Rappel ASYNC AVEC UN `await` INTERNE, jamais un rappel
+    // synchrone nu (tenant-context.ts#runAsSuperAdmin : mesure sur
     // un appelant reel, un rappel synchrone nu perd la portee — 5 tests sur 244 tombent en 500).
     // Site declare dans `runAsSystem-unicite.test.ts` (AUTORISES).
     //
-    // TOUR DE CORRECTION 1 (revue) — POURQUOI `#log` UTILISE `findIdentity` ICI N'EST *PAS* LE
+    // POURQUOI `#log` UTILISE `findIdentity` ICI N'EST *PAS* LE
     // MOTIF ECRIT PLUS BAS SUR `#log` (le pont a-plusieurs refuse par le garde-fou), et le dire
     // aurait laisse une regression invisible. Ce site tourne sous `runAsSystem`, or le refus du
     // pont (`assertNoGlobalToManyBridge`, tenant-guard.ts) NE S'APPLIQUE NI au mode systeme NI a
     // l'absence de store — seuls `tenant` et `superadmin` sont couverts. `findByID` n'y serait
     // donc PAS refuse : mesure par sabotage reel (remplacer `findIdentity` par `findByID` ici),
-    // le test e2e de la tache 7 (`super-admin-access-link.test.ts`) restait VERT, parce que le
+    // le test e2e (`super-admin-access-link.test.ts`) restait VERT, parce que le
     // super-admin n'a par nature aucune appartenance a charger — les deux methodes y rendent
     // EXACTEMENT le meme resultat. La bonne raison, propre a CE site, est donc plus modeste :
     // NE CHARGER QUE CE DONT `#log` A BESOIN (deux colonnes), jamais un refus du garde-fou. La
@@ -149,13 +145,13 @@ class ActivityLogSubscriber {
     entityID: string,
   ): Promise<void> {
     try {
-      // TACHE 15 (etape 4a, tour de correction 1) — `findIdentity`, PAS `findByID`.
+      // `findIdentity`, PAS `findByID`.
       //
       // Ce souscripteur n'a besoin que de `firstName`/`lastName`, deux colonnes de la ligne
       // `User`. `findByID` y ajoutait l'arbre COMPLET des appartenances (`membershipsInclude`),
-      // c'est-a-dire une relation A-PLUSIEURS repartant d'un modele GLOBAL — le pont que la
-      // tache 15 ferme sous contexte de tenant (`assertNoGlobalToManyBridge`,
-      // infra/orm/tenant-guard.ts).
+      // c'est-a-dire une relation A-PLUSIEURS repartant d'un modele GLOBAL — le pont que ferme
+      // `assertNoGlobalToManyBridge` sous contexte de tenant
+      // (infra/orm/tenant-guard.ts).
       //
       // ET CE SOUSCRIPTEUR S'EXECUTE BIEN SOUS CONTEXTE DE TENANT : `appEventBus.emit` est
       // SYNCHRONE, donc ce rappel demarre dans la portee `AsyncLocalStorage` de la requete. La
@@ -188,8 +184,8 @@ class ActivityLogSubscriber {
     } catch (err) {
       // Jamais `${err}` : ce depot (`activityLog.repository.ts`) n'a lui-meme aucun `catch`, donc
       // une erreur Prisma brute peut remonter ici telle quelle, et son message recopie
-      // integralement le `data` de l'ecriture qui a echoue — userFirstName/userLastName compris
-      // (task-5-re-review-3.md, tour 5). Seule la classe de l'erreur, qui ne peut jamais porter
+      // integralement le `data` de l'ecriture qui a echoue — userFirstName/userLastName compris.
+      // Seule la classe de l'erreur, qui ne peut jamais porter
       // une valeur soumise, va au journal.
       const errorClass =
         err instanceof Error ? err.constructor.name : typeof err

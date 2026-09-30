@@ -5,8 +5,8 @@ import type { AccessAction } from '../types/domain/patientAccessLog.domain.inter
 // La premiere version de ce fichier reconnaissait un dossier au NOM du parametre (`:patientID`,
 // puis `:patientId` pour les routes de diagnostic, la casse en moins). C'etait deja un cran
 // au-dessus d'une comparaison litterale, et ca ne suffisait pas : une detection par nom, meme
-// tolerante, ne peut PAS porter une promesse de couverture par defaut. Montre par execution (tour
-// de correction 1) — la route reelle `GET /patient/:patient_id/sonde-revue`, ajoutee dans le vrai
+// tolerante, ne peut PAS porter une promesse de couverture par defaut. Montre par execution : la
+// route reelle `GET /patient/:patient_id/sonde-revue`, ajoutee dans le vrai
 // routeur patient, demarrait sans broncher, servait un dossier identifie, n'ecrivait aucune ligne,
 // et rien nulle part ne le signalait. Idem avec `:id`, idem avec `:pid`. Ce depot a DEJA prouve que
 // le nom derive (`:patientID` chez les uns, `:patientId` chez `diagnosticEducatifRouter`) ; il
@@ -48,7 +48,7 @@ export const patientIdParamOf = (url: string): string | null =>
 // meme endroit que le crochet d'ecriture `recordPatientAccess` : ils voient donc exactement les
 // memes routes, et une entree de `LOGGED_PATIENT_ROUTES` est toujours reellement journalisee,
 // jamais promise en l'air. Ce qui vit HORS de ce greffon n'est pas laisse de cote pour autant —
-// et surtout, contrairement a ce que ce commentaire affirmait au premier jet, ce n'est PAS « la
+// et surtout, ce n'est PAS « la
 // meme limite qu'`assertTenantShapedRoute` » : ce dernier est pose A LA RACINE precisement pour ne
 // pas l'avoir (« la forme de l'URL suffit a exiger la declaration, ou que la route soit posee »),
 // et `assertSuperAdminShapedRoute` de meme. Le troisieme garde-fou a donc lui aussi son frere
@@ -64,7 +64,7 @@ export const LOGGED_PATIENT_ROUTES: Record<string, AccessAction> = {
   '/e/:establishmentId/s/:serviceId/patient/:patientID/service-file':
     'sousDossier.ouvert',
   // ECART ASSUME par rapport a la liste du cahier des charges, qui ne connaissait pas ces deux
-  // routes (voir le rapport de tache). Elles rendent le contenu clinique d'un patient nomme
+  // routes. Elles rendent le contenu clinique d'un patient nomme
   // (permission `clinical:read`, `diagnosticEducatifRouter`) ; l'onglet « diagnostic » du dossier
   // n'est monte que lorsqu'on le choisit, donc c'est un acte de consultation DISTINCT de
   // l'ouverture du dossier, pas un doublon comme `/pathways`.
@@ -72,17 +72,12 @@ export const LOGGED_PATIENT_ROUTES: Record<string, AccessAction> = {
     'sousDossier.ouvert',
   '/e/:establishmentId/s/:serviceId/patient/:patientId/diagnostic/:diagnosticId':
     'sousDossier.ouvert',
-  // ARBITRAGE DE LEO (tour de correction 1), qui RENVERSE le premier jet : cette route est
-  // JOURNALISEE, et c'est une quatrieme valeur d'`AccessAction` qui la decrit, pas une etiquette
-  // approximative empruntee aux trois autres.
-  //
-  // Le premier jet l'exemptait, en s'appuyant sur deux faits que la revue a montres FAUX :
-  // `enrollmentIssueResponseSchema` (schemas/enrollmentIssue.schema.ts) porte bel et bien
-  // `patientId`, donc la reponse designe nommement un dossier ; et `reason` est une chaine LIBRE,
-  // que rien dans le schema ni dans le modele Prisma ne borne a un « motif technique » — rien
-  // n'empeche qu'un motif de refus d'inscription a un parcours de soin en dise long sur le
-  // patient. Le refus d'une etiquette approximative etait juste ; la conclusion qu'on en tirait
-  // (exempter) ne l'etait pas.
+  // Cette route est JOURNALISEE, et c'est une quatrieme valeur d'`AccessAction` qui la decrit,
+  // pas une etiquette approximative empruntee aux trois autres : `enrollmentIssueResponseSchema`
+  // (schemas/enrollmentIssue.schema.ts) porte bel et bien `patientId`, donc la reponse designe
+  // nommement un dossier ; et `reason` est une chaine LIBRE, que rien dans le schema ni dans le
+  // modele Prisma ne borne a un « motif technique » — rien n'empeche qu'un motif de refus
+  // d'inscription a un parcours de soin en dise long sur le patient.
   '/e/:establishmentId/s/:serviceId/patient/:patientID/enrollment-issue':
     'echecsInscription.consultes',
 }
@@ -94,25 +89,20 @@ export const EXEMPTED_PATIENT_ROUTES: Record<string, string> = {
     "appelee par l'ecran du dossier en meme temps que l'ouverture : la journaliser doublerait chaque ligne sans rien apprendre",
   '/e/:establishmentId/s/:serviceId/patient/:patientID/pathway/:pathwayID/appointments-count':
     'rend un nombre, aucune identite, aucun contenu',
-  // Tache 5 (etape 4b) : la route qui LIT le journal, cote service
+  // La route qui LIT le journal, cote service
   // (interfaces/http/fastify/routes/patientAccessLog.ts). Lire le journal des consultations
   // d'un dossier n'est pas consulter ce dossier : elle ne rend aucune identite ni aucun contenu
-  // clinique (voir `patientAccessLogsResponseSchema`, schemas/patientAccessLog.schema.ts —
-  // CINQ champs : l'auteur, l'action, la date, le service et `accesParOctroi`), seulement la
+  // clinique DE PATIENT (voir `patientAccessLogsResponseSchema`, schemas/patientAccessLog.schema.ts
+  // — CINQ champs : l'auteur, l'action, la date, le service et `accesParOctroi`), seulement la
   // liste de qui a ouvert quoi, quand, et par quelle provenance. La journaliser ferait de plus
   // grossir le journal a chaque fois qu'on le consulte, jusqu'a noyer les acces de soin sous
   // les acces d'audit.
-  // REVUE FINALE DE BRANCHE : cette enumeration disait encore « uniquement l'auteur, l'action,
-  // la date et le service », la liste du cahier des charges de la tache 5 — periMEE depuis que
-  // la tache 10 a expose `accesParOctroi`. C'est la MEME phrase, au mot pres, qui avait rendu ce
-  // champ invisible cinq taches durant : une enumeration recopiee d'un brief, laissee derriere
-  // le code qu'elle est censee decrire. Une raison d'exemption qui enumere doit etre relue
-  // chaque fois que le schema cite change, ou ne pas enumerer du tout.
-  // Tour de correction 1 (revue) : le premier jet disait « aucune identite », un absolu faux —
-  // la reponse porte le nom de l'AGENT (auteur de l'acces), une identite reelle. Ce qu'elle ne
-  // porte jamais, c'est l'identite ou le contenu clinique DU PATIENT (voir
-  // `patientAccessLogsResponseSchema` : `userFirstName`/`userLastName` y sont l'auteur, jamais
-  // le patient, qui n'apparait que par l'URL deja connue de l'appelant).
+  // Une raison d'exemption qui enumere les champs d'un schema doit etre relue chaque fois que ce
+  // schema change, ou ne pas enumerer du tout : la reponse porte aussi le nom de l'AGENT (auteur
+  // de l'acces), une identite reelle. Ce qu'elle ne porte jamais, c'est l'identite ou le contenu
+  // clinique DU PATIENT (voir `patientAccessLogsResponseSchema` :
+  // `userFirstName`/`userLastName` y sont l'auteur, jamais le patient, qui n'apparait que par
+  // l'URL deja connue de l'appelant).
   '/e/:establishmentId/s/:serviceId/patient/:patientID/acces':
     "lit le journal des consultations d'un dossier, n'en constitue pas une : aucune identite DE PATIENT ni contenu clinique rendus (l'auteur de l'acces, oui) — et la journaliser ferait grossir le journal a chaque consultation de lui-meme",
 }
@@ -129,20 +119,18 @@ export const EXEMPTED_PATIENT_ROUTES: Record<string, string> = {
 // dossier lui-meme : elle FILTRE une table d'audit par un identifiant de patient, sans jamais
 // rendre son contenu.
 //
-// TOUR DE CORRECTION 1 (revue, tache 5) — CE QUE CETTE LISTE REMPLACE, ET POURQUOI CE N'ETAIT
-// PAS UN DETAIL. Le premier jet renommait le parametre de la route d'administration
-// (`:patientID` -> `:patientRef`) pour sortir des deux filets de `patientIdParamOf` et
-// echapper ainsi a `assertPatientRouteUnderTenant`. Demontre FAUX par la revue, avec une sonde
-// reelle : `GET /e/:establishmentId/admin/patients/:patientRef/sonde`, servie par un vrai
+// CE QUE CETTE LISTE REMPLACE, ET POURQUOI CE N'ETAIT PAS UN DETAIL. Renommer le parametre de
+// la route d'administration (`:patientID` -> `:patientRef`) pour sortir des deux filets de
+// `patientIdParamOf` echapperait a `assertPatientRouteUnderTenant`. Une sonde reelle le montre :
+// `GET /e/:establishmentId/admin/patients/:patientRef/sonde`, servie par un vrai
 // `findUniqueOrThrow` sur `Patient`, rendait un dossier COMPLET (200), sans ecrire aucune ligne
-// de journal, et rien — ni le demarrage, ni les 21 suites e2e — ne le signalait. Le
-// contrefactuel etait sans appel : meme code, seul le nom du parametre change, et le serveur
-// refuse de demarrer en nommant la route. Un renommage n'est donc pas une exemption : il ne
-// declare rien, il rend le filet aveugle pour TOUTE future route qui choisirait ce nom, pas
-// seulement celle-ci. Cette liste-ci, elle, ne desarme rien : `patientIdParamOf` continue de
-// reconnaitre `:patientID` normalement, et seule l'URL EXACTE declaree ci-dessous echappe au
-// refus — une route non declaree de la meme forme (`/admin/patients/:xxx/...`) reste refusee
-// (voir le test `refuse toujours une route non declaree de la meme forme`,
+// de journal, et rien — ni le demarrage, ni les suites e2e — ne le signalait. Meme code, seul le
+// nom du parametre change, et le serveur refuse de demarrer en nommant la route : un renommage
+// n'est donc pas une exemption, il rend le filet aveugle pour TOUTE future route qui choisirait
+// ce nom, pas seulement celle-ci. Cette liste-ci, elle, ne desarme rien : `patientIdParamOf`
+// continue de reconnaitre `:patientID` normalement, et seule l'URL EXACTE declaree ci-dessous
+// echappe au refus — une route non declaree de la meme forme (`/admin/patients/:xxx/...`) reste
+// refusee (voir le test `refuse toujours une route non declaree de la meme forme`,
 // access-log-hook.test.ts).
 //
 // GARDE DE L'EXEMPTION ELLE-MEME, SYMETRIQUE DE `assertNoDeadPatientAccessEntry` : une entree
@@ -184,13 +172,13 @@ export const plannedPatientAccess = (
 }
 
 // ---------------------------------------------------------------------------
-// L'export (tache 4, etape 4b) : structurellement hors du filet ci-dessus.
+// L'export : structurellement hors du filet ci-dessus.
 // ---------------------------------------------------------------------------
 //
 // `GET /patient/export` n'a AUCUN parametre dans son URL : `patientIdParamOf` y rend `null`,
 // donc `assertPatientReadLogged` ne l'exige dans aucune des deux listes ci-dessus, et
 // `plannedPatientAccess` n'a rien a y lire. C'est voulu, pas un trou -- c'est exactement la
-// raison d'etre de cette tache. Un dispositif dedie, symetrique de celui-ci mais construit
+// raison d'etre de cet export. Un dispositif dedie, symetrique de celui-ci mais construit
 // depuis la chaine de requete plutot que depuis un parametre de route, journalise cette route
 // EN UNE SEULE LIGNE (le nombre de dossiers rendus, pas un par dossier -- une ligne par
 // patient reproduirait exactement le defaut qui a fait exclure « toute lecture identifiante »
@@ -211,8 +199,7 @@ export type PatientExportQuery = {
 // requete brute. `search` est un texte libre (potentiellement un nom de patient, voir
 // `utils/url-helper.ts`) ; c'est precisement pour cela que `PatientAccessLogDomain.record`
 // (domain/patientAccessLog.domain.ts) refuse toute cle clinique dans `exportFilters` -- la
-// seule barriere qui protege ce journal de contenu clinique, deja ecrite a la tache 2, et
-// deliberement pas reecrite ici.
+// seule barriere qui protege ce journal de contenu clinique, deliberement pas reecrite ici.
 //
 // `JSON.stringify` omet de lui-meme une propriete dont la valeur est `undefined` : un critere
 // absent de la requete n'apparait donc jamais dans le JSON produit, sans condition explicite.

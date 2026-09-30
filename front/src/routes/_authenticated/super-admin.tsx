@@ -1,6 +1,6 @@
 import { createFileRoute, notFound, Outlet } from '@tanstack/react-router'
 
-// Écrans du super-admin (tâche 12, étape 4a) : hors de tout tenant. Ce
+// Écrans du super-admin : hors de tout tenant. Ce
 // layout ne pose donc AUCUN contexte (`setContext`) et ne déclare aucune
 // `remountDeps` — `src/test/layouts-de-tenant.test.ts` exige que les deux
 // ensembles (fichiers appelant `setContext`, fichiers déclarant
@@ -18,7 +18,7 @@ import { createFileRoute, notFound, Outlet } from '@tanstack/react-router'
 // zone existe (spec §5.2/§6.2 ; back rend 404, jamais 403, pour la même
 // raison).
 //
-// Tour de correction 1, Important n°1 : une REDIRECTION vers '/' a d'abord
+// Une REDIRECTION vers '/' a d'abord
 // été utilisée ici, et c'était un défaut — elle est discernable d'une URL
 // réellement inconnue en deux essais (aucun `notFoundComponent` n'est
 // déclaré dans ce dépôt, voir `__root.tsx` : une URL inconnue rend donc le
