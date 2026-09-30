@@ -77,7 +77,7 @@ export default function EditPatient({ patient }: PatientParam) {
   // back pour treize d'entre eux — voir `form.patient.ts` pour le patron à ne pas reproduire.
   const serviceFileReady = !isServiceFilePending && !isServiceFileError
 
-  // Correctif tour 1 (tâche 11, revue, Critiques C1/C2) — pourquoi une référence figée plutôt que
+  // POURQUOI une référence figée plutôt que
   // `serviceFile` lu en direct :
   // `FormApi.update()` (appelé à chaque rendu par `useForm`) recopie `options.defaultValues`
   // *sans condition*, mais ne touche `state.values` que si le formulaire n'a encore jamais été
@@ -93,7 +93,7 @@ export default function EditPatient({ patient }: PatientParam) {
   // enregistrement réussi (`onSuccess` du formulaire, plus bas), toujours à partir de ce que le
   // serveur a effectivement renvoyé. Une relecture en arrière-plan qui n'est pas la nôtre — y
   // compris celle déclenchée par notre propre `onSettled` — ne le touche jamais : c'est
-  // précisément ce qui empêche une valeur périmée d'écraser une valeur posée ailleurs (C2).
+  // précisément ce qui empêche une valeur périmée d'écraser une valeur posée ailleurs.
   const [serviceFileSnapshot, setServiceFileSnapshot] =
     useState<PatientServiceFile | null>(null)
   const hasHydratedServiceFile = useRef(false)
@@ -110,8 +110,8 @@ export default function EditPatient({ patient }: PatientParam) {
   // requête vivante (`usePatientByIDQuery`, invalidée par notre propre `onSettled`), qui ne
   // doit pas faire bouger la référence pendant que le formulaire est touché. Le formulaire
   // patient renvoie toujours l'objet complet (jamais de filtre `isDefaultValue` sur ce corps,
-  // voir `m3` de la revue) : figer ce côté sert `reset()`/I1, pas une propriété de charge
-  // partielle.
+  // voir la garde plus bas dans `serviceFileForm.onSubmit`) : figer ce côté sert `reset()`,
+  // pas une propriété de charge partielle.
   const [patientSnapshot] = useState<Patient | undefined>(patient)
 
   const patientForm = useAppForm({
@@ -122,7 +122,7 @@ export default function EditPatient({ patient }: PatientParam) {
         return
       }
 
-      // Correctif tour 2 (tâche 11, revue, mineur m3) — exactement la même garde que côté
+      // Exactement la même garde que côté
       // sous-dossier (`serviceFileForm.onSubmit`, plus bas) : sans elle, ce formulaire
       // s'enregistrait à chaque clic sur « Sauvegarder », même quand aucun de ses champs n'avait
       // été touché — un toast « Patient modifié avec succès » qui ment, et une écriture qui
@@ -145,7 +145,7 @@ export default function EditPatient({ patient }: PatientParam) {
 
       updatePatient.mutate(updatePatientData, {
         onSuccess: (response) => {
-          // Referme la barre (I1) et resynchronise valeurs et défauts, pour que le prochain
+          // Referme la barre et resynchronise valeurs et défauts, pour que le prochain
           // enregistrement compare à nouveau à ce que le serveur vient de confirmer.
           formApi.reset(buildPatientDefaults(response))
         },
@@ -187,7 +187,7 @@ export default function EditPatient({ patient }: PatientParam) {
         },
         {
           onSuccess: (response) => {
-            // Même correctif que côté patient : referme la barre (I1), et surtout avance
+            // Même correctif que côté patient : referme la barre, et surtout avance
             // `serviceFileSnapshot` à ce que le serveur vient de confirmer — jamais à ce
             // qu'une relecture en arrière-plan pourrait rapporter entre-temps.
             setServiceFileSnapshot(response)
@@ -206,7 +206,7 @@ export default function EditPatient({ patient }: PatientParam) {
   // tout a été enregistré. `serviceFileForm.handleSubmit()` n'est jamais appelé si la lecture du
   // sous-dossier n'a pas abouti.
   //
-  // Correctif tour 2 (tâche 11, revue, mineur m5) — les deux `await` ci-dessous ne mettent PAS les
+  // Les deux `await` ci-dessous ne mettent PAS les
   // deux soumissions en séquence : `handleSubmit` tel qu'exposé par `useForm`
   // (`@tanstack/react-form/dist/esm/useForm.js`) appelle `formApi._handleSubmit(...)` sans en
   // renvoyer la promesse, donc il rend `undefined` et l'`await` ne porte sur rien. Les deux
@@ -223,14 +223,14 @@ export default function EditPatient({ patient }: PatientParam) {
     }
   }
 
-  // Correctif tour 2 (tâche 11, revue, mineur m2) — la touche Entrée doit de nouveau enregistrer,
+  // La touche Entrée doit de nouveau enregistrer,
   // comme sur l'ancien écran à un seul `<form>`. Le remède n'est PAS de rendre chacun des deux
   // formulaires TanStack Form indépendant (un `<form>` par bloc) : deux `<form>` imbriqués ou
   // côte à côte referaient le défaut que ce correctif doit éviter — l'Entrée dans un champ ne
   // déclencherait que LE formulaire natif qui le contient, jamais les deux écritures. Un seul
   // `<form>` natif enveloppe donc tout l'écran ; son `onSubmit` appelle le même `handleSave` que
-  // le bouton, qui soumet les deux formulaires TanStack Form l'un après l'autre (voir plus haut,
-  // m5, pour ce que « l'un après l'autre » veut dire réellement).
+  // le bouton, qui soumet les deux formulaires TanStack Form l'un après l'autre (voir plus haut
+  // pour ce que « l'un après l'autre » veut dire réellement).
   const handleFormSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     void handleSave()
@@ -260,7 +260,7 @@ export default function EditPatient({ patient }: PatientParam) {
         <IdentityFields form={patientForm} />
       </Section>
       <Section show={selected === 'profile'}>
-        {/* Tâche 14 : `patient` (pas `patientSnapshot`, qui ne sert qu'à figer les défauts du
+        {/* `patient` (pas `patientSnapshot`, qui ne sert qu'à figer les défauts du
             formulaire) porte `followedElsewhere` — champ non éditable, jamais dans
             `patientFormOpts`. Aucun appel réseau supplémentaire : c'est la même lecture qui a
             déjà rempli cet écran. */}

@@ -18,7 +18,7 @@ import type { AuthState, User } from '@/types/auth.ts'
 import { Route as adminRoute } from '../admin.tsx'
 import { Route as grantsRoute } from './grants.tsx'
 
-// Onglet des accès temporaires (tâche 13, step 2). `GET
+// Onglet des accès temporaires. `GET
 // /e/:establishmentId/admin/grants` : délibérément asymétrique avec le
 // super-admin (arbitrage transmis par Léo) — vérifié ici en observant
 // simplement que cette route établissement suffit à afficher les deux

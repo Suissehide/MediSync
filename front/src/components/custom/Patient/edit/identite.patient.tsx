@@ -13,9 +13,9 @@ import { patientFormOpts } from './form.patient.ts'
 // sous-dossier : à ne pas confondre avec le bloc « dossier de ce service » de
 // `details.patient.tsx`, qui lui est propre au service courant et invisible des autres.
 //
-// Tâche 14 (spec §5.3/§6) : `followedElsewhere` vit ici, pas sur le sous-dossier — c'est une
-// propriété de la personne, pas du dossier de ce service. Trois états, pas deux (revue tâche 13,
-// tour 1, point 1) : `true` affiche la mention, `false` et `undefined` n'affichent RIEN — ni
+// (spec §5.3/§6) : `followedElsewhere` vit ici, pas sur le sous-dossier — c'est une
+// propriété de la personne, pas du dossier de ce service. Trois états, pas deux :
+// `true` affiche la mention, `false` et `undefined` n'affichent RIEN — ni
 // l'un ni l'autre ne doit se distinguer à l'écran, un `undefined` qui afficherait « non » ou un
 // espace réservé trahirait qu'on a posé la question à un service qui n'a pas encore de
 // sous-dossier pour ce patient. Le booléen vient de `patient` (prop de `edit.patient.tsx`, lu

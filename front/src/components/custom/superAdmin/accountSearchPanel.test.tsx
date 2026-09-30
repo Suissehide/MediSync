@@ -15,14 +15,14 @@ import { AccountSearchPanel } from './accountSearchPanel.tsx'
 // `navbar.test.tsx`, `addPatientForm.test.tsx`).
 dayjs.extend(utc)
 
-// Task-12-brief.md, step 3 : « la recherche d'un compte, qui répond à
+// « la recherche d'un compte, qui répond à
 // "untel ne voit plus ses patients", avec réémission de lien ». Le jeton
 // rendu par la réémission est une donnée à usage unique : « ne doit jamais
 // atterrir ailleurs qu'à l'écran — ni dans une clé de requête, ni dans une
 // URL, ni dans un journal de console, ni dans le cache d'une requête ».
 
 const JETON_UNIQUE = 'jeton-de-test-ne-jamais-fuiter'
-// Revue finale de l'étape 4a, mineur : l'écran affichait le jeton NU alors
+// L'écran affichait le jeton NU alors
 // qu'il annonce un « lien à usage unique » — voir `buildAccessLinkUrl`.
 const LIEN_ATTENDU = buildAccessLinkUrl(JETON_UNIQUE)
 
@@ -121,8 +121,8 @@ describe('AccountSearchPanel', () => {
     expect(screen.getByText('CHU')).toBeInTheDocument()
   })
 
-  // Tour de correction 1, Mineur : « la réémission part sur un simple clic,
-  // sans confirmation ». C'est un mot de passe à usage unique sur le
+  // « la réémission part sur un simple clic,
+  // sans confirmation » : c'est un mot de passe à usage unique sur le
   // compte d'AUTRUI — le clic seul ne doit rien envoyer.
   it('demande une confirmation avant de reemettre le lien : le premier clic seul n envoie aucune requete', async () => {
     const fetchMock = buildFetchMock([
@@ -153,12 +153,11 @@ describe('AccountSearchPanel', () => {
   })
 
   it("le jeton reemis n'atterrit jamais ailleurs qu'a l'ecran", async () => {
-    // Tour de correction 1, Critique n°2 : les QUATRE canaux que le
-    // commentaire ci-dessus énumère, chacun avec sa propre garde — le
-    // relecteur a démontré qu'une garde qui n'en couvre que deux (le cache
-    // via `state.data` seul, `console.log`/`console.error` seuls) reste
-    // verte devant une fuite écrite dans une CLÉ de cache et journalisée
-    // par `console.warn`.
+    // Les QUATRE canaux que le commentaire ci-dessus énumère, chacun avec sa
+    // propre garde : une garde qui n'en couvre que deux (le cache via
+    // `state.data` seul, `console.log`/`console.error` seuls) reste verte
+    // devant une fuite écrite dans une CLÉ de cache et journalisée par
+    // `console.warn`.
     const consoleSpies = (
       ['log', 'warn', 'error', 'info', 'debug'] as const
     ).map((methode) =>
@@ -203,7 +202,7 @@ describe('AccountSearchPanel', () => {
     )
 
     // Affiché à l'écran : c'est le seul endroit où il doit apparaître —
-    // sous forme de LIEN complet, pas de jeton nu (revue finale, mineur).
+    // sous forme de LIEN complet, pas de jeton nu.
     expect(await screen.findByText(LIEN_ATTENDU)).toBeInTheDocument()
 
     // Canal 1/4 — jamais dans la VALEUR d'une entrée du cache des requêtes

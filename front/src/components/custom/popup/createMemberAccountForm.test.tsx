@@ -9,15 +9,14 @@ import { useToastStore } from '@/store/useToastStore.ts'
 import type { User } from '@/types/auth.ts'
 import CreateMemberAccountForm from './createMemberAccountForm.tsx'
 
-// Onglet des membres (tâche 13, step 3) : « le lien s'affiche UNE SEULE
+// Onglet des membres : « le lien s'affiche UNE SEULE
 // FOIS, avec un bouton de copie et la mention qu'il ne sera plus affiché ».
 // LE JETON EST UN MOT DE PASSE À USAGE UNIQUE — même exigence, même forme
-// de garde, que `accountSearchPanel.test.tsx` (tâche 12, tour de correction
-// 1, Critique n°2) : quatre canaux distincts, chacun éprouvé par une
+// de garde, que `accountSearchPanel.test.tsx` : quatre canaux distincts, chacun éprouvé par une
 // injection séparée.
 
 const JETON = 'jeton-de-test-compte-neuf-ne-jamais-fuiter'
-// Revue finale de l'étape 4a, mineur : l'écran affichait le jeton NU alors
+// L'écran affichait le jeton NU alors
 // qu'il annonce un « lien à usage unique » — voir `buildAccessLinkUrl`.
 const LIEN_ATTENDU = buildAccessLinkUrl(JETON)
 
@@ -30,7 +29,7 @@ const admin: User = {
   establishments: [{ id: 'e1', name: 'CHU', role: 'ADMIN', services: [] }],
 }
 
-// Revue finale de l'etape 4a, Important n°2 : l'administrateur connecte
+// L'administrateur connecte
 // n'est membre que de Cardiologie (`admin.establishments[0].services`,
 // donnee de `/me`) — mais l'etablissement a DEUX services. Le menu doit
 // proposer les deux, pas seulement celui de l'administrateur : ce
@@ -169,8 +168,7 @@ describe('CreateMemberAccountForm', () => {
     // Fermer la popup : Radix demonte simplement le CONTENU au ferme, donc
     // `queryByText(LIEN_ATTENDU)` serait deja absent ici meme SANS aucune
     // remise a zero de la mutation - cette seule assertion ne prouve rien
-    // (Critique n°2, tour de correction 1 : le relecteur a retire `reset()`
-    // et les deux tests d'origine restaient verts).
+    // (demontrable en retirant `reset()` : les deux tests restent verts).
     await userEvent.click(screen.getByRole('button', { name: /fermer/i }))
     expect(screen.queryByText(LIEN_ATTENDU)).not.toBeInTheDocument()
 
@@ -244,7 +242,7 @@ describe('CreateMemberAccountForm', () => {
     }
   })
 
-  // Revue finale, Important n°2 : la fixture ci-dessus portait `services: []`
+  // La fixture ci-dessus portait `services: []`
   // (voir le commentaire au sommet du fichier), ce qui rendait ce defaut
   // invisible — le menu n'etait jamais exerce non vide. Etablissement a
   // DEUX services, administrateur membre d'UN SEUL : le menu doit proposer

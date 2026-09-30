@@ -467,7 +467,7 @@ model PatientAccessLog {
   exportCount   Int?
   exportFilters String?
 
-  // Decision du 2026-09-27 (etape 4b, tache 2) : un acces obtenu par octroi temporaire
+  // Decision du 2026-09-27 : un acces obtenu par octroi temporaire
   // (superadmin muni d'un SuperAdminAccessGrant vivant, domain/accessGrant.domain.ts) emprunte
   // le chemin de tenant ordinaire -- memes appartenances effectives qu'un membre reel -- et
   // serait donc journalise de facon indiscernable d'un acces de soin sans cette colonne. Defaut
@@ -500,8 +500,8 @@ model EnrollmentIssue {
 
   // Relation dérivée de patientId + serviceId, déjà portées par ce modèle : aucune colonne
   // supplémentaire, elle relie simplement la ligne à son sous-dossier de service. Seul parent
-  // désormais (la tâche 6 a retiré la relation `patient` vers Patient(id, establishmentId) qui
-  // coexistait ici) : ce modèle est un modèle de service, il dépend d'un sous-dossier de
+  // désormais (la relation `patient` vers Patient(id, establishmentId), qui coexistait
+  // ici, a été retirée) : ce modèle est un modèle de service, il dépend d'un sous-dossier de
   // service, pas d'un parent d'établissement.
   serviceFile PatientServiceFile @relation(fields: [patientId, serviceId], references: [patientId, serviceId], onDelete: Cascade)
 
@@ -640,8 +640,8 @@ model DiagnosticEducatif {
   template DiagnosticEducatifTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
   // Relation dérivée de patientId + serviceId, déjà portées par ce modèle : aucune colonne
   // supplémentaire, elle relie simplement la ligne à son sous-dossier de service. Seul parent
-  // désormais (la tâche 6 a retiré la relation `patient` vers Patient(id, establishmentId) qui
-  // coexistait ici) : ce modèle est un modèle de service, il dépend d'un sous-dossier de
+  // désormais (la relation `patient` vers Patient(id, establishmentId), qui coexistait
+  // ici, a été retirée) : ce modèle est un modèle de service, il dépend d'un sous-dossier de
   // service, pas d'un parent d'établissement.
   serviceFile PatientServiceFile @relation(fields: [patientId, serviceId], references: [patientId, serviceId], onDelete: Cascade)
 

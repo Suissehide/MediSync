@@ -1,9 +1,9 @@
 import { buildTestApp, type TestApp } from './setup/app'
 import { testDb, truncateAll } from './setup/db'
 
-// TACHE 15 (etape 4a) — LA CHAINE D'EXPLOITATION, EN VRAI, SUR LA VRAIE BASE.
+// LA CHAINE D'EXPLOITATION, EN VRAI, SUR LA VRAIE BASE.
 //
-// Le test unitaire (`src/test/unit/infra/tenant-guard.test.ts`, bloc « tache 15 ») epingle le
+// Le test unitaire (`src/test/unit/infra/tenant-guard.test.ts`) epingle le
 // VERDICT du garde-fou sur la forme de la requete. Ce fichier-ci epingle autre chose, et c'est
 // pour cela qu'il existe en plus : que la chaine soit REELLEMENT exploitable, donc que le refus
 // porte sur quelque chose. Les deux pathologies qu'il ferme :
@@ -109,7 +109,7 @@ describe('le pont par un modele global, sous un contexte de tenant ordinaire', (
   // LECTURE. Avant le correctif, cette requete rendait
   // `[{etab:"Etab A",patient:"Alice DE-A"},{etab:"Etab B",patient:"Bruno DE-B"}]` : « Bruno
   // DE-B », patient de l'etablissement B, traversait jusqu'a un appelant dont le tenant est A.
-  it('refuse la chaine du brief, celle qui ramenait le patient de l autre etablissement', async () => {
+  it('refuse la chaine qui ramenait le patient de l autre etablissement', async () => {
     const { prisma } = t.instances.postgresOrm
     await expect(
       t.instances.tenantContext.run(tenantDe(decor), async () => {
@@ -130,7 +130,7 @@ describe('le pont par un modele global, sous un contexte de tenant ordinaire', (
     ).rejects.toThrow(/relation 'establishmentMemberships'/)
   })
 
-  // ECRITURE, exemple du brief. Avant le correctif, cet appel creait l'etablissement C ET, dans
+  // ECRITURE. Avant le correctif, cet appel creait l'etablissement C ET, dans
   // la foulee, un patient « Charlie DE-C » DANS CET ETABLISSEMENT C — depuis un contexte dont le
   // tenant est A.
   it('refuse de creer un etablissement avec un patient imbrique', async () => {

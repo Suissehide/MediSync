@@ -65,8 +65,7 @@ class PatientServiceFileRepository
   // garantir que la ligne existe, pour que les enfants de service (EnrollmentIssue,
   // DiagnosticEducatif) puissent poser leur cle etrangere (patientId, serviceId).
   //
-  // CE QUE CET APPEL COUVRE REELLEMENT, ET CE QU'IL NE COUVRE PAS (task-5-re-review.md, point 1 ;
-  // mis a jour tache 12, tour de correction 1) : trois chemins appellent `ensureExists`
+  // CE QUE CET APPEL COUVRE REELLEMENT, ET CE QU'IL NE COUVRE PAS : trois chemins appellent `ensureExists`
   // aujourd'hui. Deux le font parce qu'un enfant de service pose sa cle etrangere composite
   // (patientId, serviceId) vers `PatientServiceFile` et en a besoin pour ecrire sans violer
   // cette contrainte — `processEnrollments` (patient.domain.ts, point de passage unique de
@@ -90,8 +89,8 @@ class PatientServiceFileRepository
   // ses parcours) serait un comportement que personne n'a demande.
   //
   // Cette phrase engage l'avenir, pas seulement le present : si l'un des deux gagne un jour une
-  // telle cle etrangere (la tache 6 travaille exactement sur ce terrain — elle remplace la
-  // relation `patient` par `serviceFile` sur d'autres modeles), l'appel a `ensureExists` doit
+  // telle cle etrangere (ce terrain est amene a bouger : la relation `patient` peut etre
+  // remplacee par `serviceFile` sur d'autres modeles), l'appel a `ensureExists` doit
   // etre ajoute AU MEME MOMENT, avant que la migration ne soit deployee. Le test
   // `src/test/unit/infra/patientServiceFile-coverage.test.ts` relit prisma/schema.prisma et
   // rougit des qu'une cle etrangere vers `PatientServiceFile` apparait sur l'un des deux modeles
@@ -108,7 +107,7 @@ class PatientServiceFileRepository
         update: {},
       })
     } catch (err) {
-      // Idempotence de bout en bout (revue tache 13, tour 1, point 3) : sous concurrence (deux
+      // Idempotence de bout en bout : sous concurrence (deux
       // rattachements simultanes sur le meme patient, via `PatientServiceFileDomain.
       // attachToCurrentService`), l'upsert lui-meme peut heurter la contrainte d'unicite
       // `(patientId, serviceId)` — verifie par execution, six appels HTTP en parallele, dans
@@ -134,12 +133,10 @@ class PatientServiceFileRepository
 
   // EXCEPTION ASSUMEE au cloisonnement inter-service (design §5.3) : une lecture qui traverse
   // volontairement la frontiere entre services — `impactDesactivation`, plus bas dans ce meme
-  // fichier (design §3.6, tache 9), en est une autre, qui rend un compte plutot qu'un booleen
+  // fichier (design §3.6), en est une autre, qui rend un compte plutot qu'un booleen
   // mais ne franchit jamais la frontiere autrement.
   //
-  // DEUX TESTS DIFFERENTS GARDENT DEUX PROPRIETES DIFFERENTES DE CETTE EXCEPTION (tour de
-  // correction 2, tache 9 — une version precedente de ce commentaire pretendait qu'un SEUL test
-  // garantissait les deux, ce qui etait faux) :
+  // DEUX TESTS DIFFERENTS GARDENT DEUX PROPRIETES DIFFERENTES DE CETTE EXCEPTION :
   //   - `back/src/test/unit/infra/runAsSystem-unicite.test.ts` garde la CAPACITE : que le seul
   //     moyen d'entrer dans un mode non-tenant (system ou superadmin), dans tout `src/main`, se
   //     trouve aux emplacements DECLARES (nommes, avec leur raison) — il ne regarde JAMAIS le
@@ -161,8 +158,8 @@ class PatientServiceFileRepository
   // elle-meme : meme etablissement (`establishmentId`), service different du courant
   // (`serviceId: { not }`). Le garde-fou ne les impose plus ici ; rien ne rattrape un oubli.
   //
-  // Le filtre `establishmentId` ci-dessous n'est PAS une ligne morte, verifie par execution
-  // (revue tache 7, tour 1, I3) : aujourd'hui, la cle etrangere composite
+  // Le filtre `establishmentId` ci-dessous n'est PAS une ligne morte, verifie par execution :
+  // aujourd'hui, la cle etrangere composite
   // `PatientServiceFile.patient` (-> `Patient(id, establishmentId)`) empeche bien qu'un
   // `patientId` porte deux `establishmentId` differents, donc ce filtre ne change rien au
   // resultat pour une ligne que le chemin normal peut produire. Mais en retirant les deux cles
@@ -170,15 +167,15 @@ class PatientServiceFileRepository
   // qu'elles interdisent (un `patientId` de l'etablissement E1 associe a un
   // `establishmentId` = E2), le signal mesure reste FAUX avec ce filtre en place, et devient VRAI
   // des qu'on le retire. C'est donc la SEULE piece qui tienne la borne d'etablissement des que la
-  // contrainte de cle etrangere cede — et l'etape 4 de ce chantier (creation de services depuis
-  // l'interface) est exactement le terrain ou ce genre de cle composite est amene a bouger. Il
+  // contrainte de cle etrangere cede — et la creation de services depuis
+  // l'interface est exactement le terrain ou ce genre de cle composite est amene a bouger. Il
   // reste ecrit explicitement plutot que de s'appuyer sur la contrainte de schema : c'est la
   // consigne (la requete porte SES bornes), et une garantie en dur qui ne depend pas d'une
   // contrainte de base de donnees ailleurs dans le schema.
   //
   // Ne renvoie jamais qu'un booleen : seule la presence ou l'absence d'une ligne sort d'ici,
   // jamais son identifiant, le nom du service, un compte, une date ou un contenu. `select:
-  // { patientId: true }` (et non `{ id: true }`, revue tache 7 tour 1, m1) : `patientId` est une
+  // { patientId: true }` (et non `{ id: true }`) : `patientId` est une
   // valeur que l'appelant connait deja (c'est son parametre d'entree), donc la selectionner ne
   // fait entrer AUCUNE information nouvelle en memoire sur le sous-dossier de l'autre service —
   // contrairement a `id`, qui aurait fait transiter le cuid du sous-dossier d'un autre service.
@@ -210,8 +207,8 @@ class PatientServiceFileRepository
     return autreSousDossier !== null
   }
 
-  // Une autre lecture qui traverse volontairement la frontiere entre services (design §3.6,
-  // tache 9) — voir le commentaire au-dessus d'`estSuiviAilleurs` pour la CAPACITE (deux tests
+  // Une autre lecture qui traverse volontairement la frontiere entre services (design §3.6)
+  // — voir le commentaire au-dessus d'`estSuiviAilleurs` pour la CAPACITE (deux tests
   // differents, deux proprietes differentes). Appelee depuis le contexte d'ADMINISTRATION
   // D'ETABLISSEMENT (`/e/:establishmentId/admin/services/:id/impact-desactivation`), pas depuis
   // un service : `this.scope` (qui exige un service courant) n'y est donc pas disponible, et
@@ -232,7 +229,7 @@ class PatientServiceFileRepository
   // deux ensembles donne le compte qui importe. Meme piege que ci-dessus : les DEUX `await` sont
   // a l'INTERIEUR du seul rappel `runAsSystem`, jamais une promesse rendue sans etre attendue.
   //
-  // TOUR DE CORRECTION 1 (relecture) — Important n°1 : un patient dont le SEUL autre
+  // Un patient dont le SEUL autre
   // sous-dossier vit dans un service DEJA DESACTIVE deviendrait tout aussi invisible que celui
   // qui n'a litteralement aucun autre sous-dossier. La spec §3.6 promet l'equivalence « suivi
   // nulle part ailleurs = deviendra invisible » ; compter ce patient comme « suivi ailleurs » la
@@ -241,9 +238,8 @@ class PatientServiceFileRepository
   // autre service ENCORE ACTIF compte comme un « ailleurs » qui protege reellement le patient de
   // l'invisibilite.
   //
-  // TOUR DE CORRECTION 2 (relecture) — CE N'EST PAS LE MEME CALCUL QU'`estSuiviAilleurs`, ET CE
-  // N'EN DEVRAIT PAS ETRE UN (le brief de cette tache parlait d'un « miroir » ; c'etait le
-  // mauvais mot, tranche par le coordinateur). Cette methode-ci repond « ce patient va-t-il
+  // CE N'EST PAS LE MEME CALCUL QU'`estSuiviAilleurs`, ET CE
+  // N'EN DEVRAIT PAS ETRE UN. Cette methode-ci repond « ce patient va-t-il
   // devenir invisible partout » — un ailleurs deja desactive ne protege de rien, d'ou le filtre
   // sur les services actifs. `estSuiviAilleurs` repond une question DIFFERENTE, « un
   // sous-dossier existe-t-il ailleurs », et reste VRAIE meme si cet ailleurs est desactive : le

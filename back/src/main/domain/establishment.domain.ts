@@ -24,7 +24,7 @@ import { randomToken } from '../utils/hash'
 // usage différent : ici une valeur jetée, jamais recomposée.
 const PLACEHOLDER_PASSWORD_BYTES = 32
 
-// Tour de correction 1 (relecture externe), Important n°4 : message volontairement générique —
+// Message volontairement générique —
 // il ne dit ni depuis quand le compte est désactivé, ni à combien d'établissements il appartient
 // déjà ; juste assez pour qu'un super-admin comprenne pourquoi la création s'arrête là.
 const DEACTIVATED_ACCOUNT =
@@ -55,7 +55,7 @@ class EstablishmentDomain implements EstablishmentDomainInterface {
     { name, email, firstName, lastName }: CreateEstablishmentInput,
     issuedBy: string,
   ): Promise<CreateEstablishmentResult> {
-    // Review Focus n°4 (task-6-brief.md) : une lecture d'abord, jamais un upsert — voir le
+    // Une lecture d'abord, jamais un upsert — voir le
     // commentaire détaillé sur `CreateEstablishmentResult` (types/domain/establishment.domain.
     // interface.ts) pour ce que cette lecture protège. `findByEmail` lève (compte inconnu)
     // plutôt que de rendre `null` ; absorbé ici, exactement comme
@@ -64,40 +64,38 @@ class EstablishmentDomain implements EstablishmentDomainInterface {
     // et elle reste hors de toute transaction — seules les ÉCRITURES ci-dessous doivent être
     // atomiques entre elles.
     //
-    // DIVULGATION ASSUMÉE ET BORNÉE (tour de correction 1, relecture externe — tranché
-    // explicitement par Léo, PAS fermée) : créer le compte (branche `existing === null`,
-    // ci-dessous) calcule un PBKDF2 à 210 000 itérations (`hashPassword`, utils/hash.ts) sur le
-    // mot de passe aléatoire, ce que la branche `existing` ne fait pas — mesuré à 49 ms contre
-    // 11 ms, sans recouvrement. Cette différence dit donc, par le seul temps de réponse, si
-    // l'adresse soumise a déjà un compte — la même information que Review Focus n°4 ferme
-    // autrement (contenu de la réponse, jamais le temps). Volontairement non fermée : cette
-    // route est réservée aux super-admins déjà authentifiés (`requireSuperAdmin`), qui
-    // disposeront de toute façon d'une recherche de comptes par adresse (tâche 7) — un calcul
-    // factice ajouté ici compliquerait le code pour masquer un secret que l'appelant légitime
-    // peut obtenir par un autre moyen, déjà prévu.
+    // DIVULGATION ASSUMÉE ET BORNÉE (tranché explicitement par Léo, PAS fermée) : créer le
+    // compte (branche `existing === null`, ci-dessous) calcule un PBKDF2 à 210 000 itérations
+    // (`hashPassword`, utils/hash.ts) sur le mot de passe aléatoire, ce que la branche `existing`
+    // ne fait pas — mesuré à 49 ms contre 11 ms, sans recouvrement. Cette différence dit donc,
+    // par le seul temps de réponse, si l'adresse soumise a déjà un compte — la même information
+    // que le refus ci-dessous ferme autrement (contenu de la réponse, jamais le temps).
+    // Volontairement non fermée : cette route est réservée aux super-admins déjà authentifiés
+    // (`requireSuperAdmin`), qui disposeront de toute façon d'une recherche de comptes par
+    // adresse — un calcul factice ajouté ici compliquerait le code pour masquer un secret que
+    // l'appelant légitime peut obtenir par un autre moyen, déjà prévu.
     const existing = await this.userRepository
       .findByEmail(email)
       .catch(() => null)
 
-    // Tour de correction 1, Important n°4 : refusé EN AMONT, avant la moindre écriture — un
+    // Refusé EN AMONT, avant la moindre écriture — un
     // compte désactivé ne peut ni se connecter, ni consommer le lien qu'on s'apprêterait à
     // émettre (AccessLinkDomain.consume refuse un compte désactivé). Sans ce refus, la route
     // rendait 201 et créait un établissement dont l'unique administrateur ne pouvait jamais y
     // entrer, sans qu'aucun signal ne le dise.
     //
-    // SECONDE DIVULGATION ASSUMÉE ET BORNÉE (tour de correction 2, mineur signalé par le
-    // coordinateur) : ce 409 dit « cette adresse a déjà un compte, et il est désactivé » — un
-    // oracle plus commode que le canal temporel ci-dessus (aucun coût de calcul, un statut HTTP
-    // sans ambiguïté à énumérer). Laissé ouvert pour le même motif que le canal temporel : cette
-    // route est déjà réservée à des super-admins authentifiés, qui disposeront d'une recherche
-    // de comptes par adresse (tâche 7) — cacher ce refus (un 201 qui ne créerait rien, par
-    // exemple) coûterait plus cher en confusion opérationnelle qu'il ne fermerait de surface
-    // réellement nouvelle.
+    // SECONDE DIVULGATION ASSUMÉE ET BORNÉE : ce 409 dit « cette adresse a déjà un compte, et
+    // il est désactivé » — un oracle plus commode que le canal temporel ci-dessus (aucun coût de
+    // calcul, un statut HTTP sans ambiguïté à énumérer). Laissé ouvert pour le même motif que le
+    // canal temporel : cette route est déjà réservée à des super-admins authentifiés, qui
+    // disposeront d'une recherche de comptes par adresse — cacher ce refus (un 201 qui ne
+    // créerait rien, par exemple) coûterait plus cher en confusion opérationnelle qu'il ne
+    // fermerait de surface réellement nouvelle.
     if (existing && existing.deactivatedAt !== null) {
       throw Boom.conflict(DEACTIVATED_ACCOUNT)
     }
 
-    // Tour de correction 1, Importants n°2 et n°3 : les TROIS écritures (l'établissement, le
+    // Les TROIS écritures (l'établissement, le
     // compte s'il est neuf, le rattachement) PLUS l'émission du lien sont désormais une seule
     // transaction Postgres, ouverte SOUS le contexte super-admin — un `$transaction` appelé
     // depuis l'intérieur de `runAsSuperAdmin` est accepté par le garde-fou (chaque écriture, une
@@ -151,12 +149,12 @@ class EstablishmentDomain implements EstablishmentDomainInterface {
         )
       })
 
-    // Tour de correction 1, Important n°1 : ne rend plus rien sur le compte au-delà de ce qui
+    // Ne rend plus rien sur le compte au-delà de ce qui
     // est nécessaire — voir le commentaire sur `CreateEstablishmentResult`.
     return { establishment, accessLink }
   }
 
-  // Tâche 7 : la liste du super-admin (spec §3.3). Une lecture nue (`findAll`, modèle global)
+  // La liste du super-admin (spec §3.3). Une lecture nue (`findAll`, modèle global)
   // puis, PAR établissement, ses compteurs (`countersFor`, sous contexte superadmin) — voir le
   // commentaire de `EstablishmentCounters` pour ce que chaque compteur expose et pourquoi.
   rename(id: string, name: string) {
@@ -175,21 +173,21 @@ class EstablishmentDomain implements EstablishmentDomainInterface {
     )
   }
 
-  // Le détail d'UN établissement (spec §6.2, tour de correction 1) : la ligne de la liste,
-  // augmentée de ses services, ses membres et son journal d'activité — le mandat donné en revue
-  // pour que cet écran serve réellement le diagnostic (« untel ne voit plus ses patients » se
-  // comprend par des rattachements, pas par un compteur seul). `findByIdOrThrow` lève
+  // Le détail d'UN établissement (spec §6.2) : la ligne de la liste,
+  // augmentée de ses services, ses membres et son journal d'activité — pour que cet écran serve
+  // réellement le diagnostic (« untel ne voit plus ses patients » se comprend par des
+  // rattachements, pas par un compteur seul). `findByIdOrThrow` lève
   // `Boom.notFound` (via `errorHandler.boomErrorFromPrismaError`) si l'id est inconnu — avant
   // toute autre lecture, pour ne pas construire un détail sur un établissement qui n'existe pas.
   //
-  // Tour de correction 2 (mineur) : n'appelle PLUS `countersFor`, qui relirait une seconde fois
+  // N'appelle PLUS `countersFor`, qui relirait une seconde fois
   // `Service`, `EstablishmentMembership` et `ActivityLog` — les mêmes tables que `servicesFor`,
   // `membersFor` et `activityLogFor` viennent de lire pour construire les trois tableaux
   // ci-dessous. `serviceCount`/`accountCount`/`firstAdmin`/`lastActivityAt` sont donc dérivés de
   // CES tableaux, déjà chargés ; `patientCount` reste une lecture à part
   // (`patientCountFor`) — c'est la seule que rien d'autre ici ne charge (`Patient.findMany`
   // n'est pas déclaré, spec §3.3). Les deux listes utilisées ici (`services`/`members`) portent
-  // TOUJOURS les désactivés (arbitrage de Léo, tour de correction 2 — voir le commentaire sur
+  // TOUJOURS les désactivés (arbitrage de Léo — voir le commentaire sur
   // `EstablishmentServiceRow`) ; seuls les compteurs filtrent, en re-dérivant depuis ces mêmes
   // tableaux plutôt qu'en refaisant la requête.
   async getById(id: string): Promise<EstablishmentDetail> {

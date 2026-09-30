@@ -5,9 +5,9 @@ import { pathWithoutQuery } from '../../../../utils/url-helper'
 // Fastify complet. Comportement inchangé : ce sont les deux mêmes lignes qu'avant l'extraction.
 //
 // `pathWithoutQuery` (utils/url-helper.ts) ne retire que la CHAINE DE REQUÊTE (`?...`), jamais un
-// segment de chemin (task-5-re-review-3.md, I3, pour la fuite qu'il ferme déjà). Un jeton passé
+// segment de chemin, pour la fuite qu'il ferme déjà. Un jeton passé
 // en paramètre d'URL (`/consume/:token`) resterait donc entier dans ces deux lignes — c'est
-// précisément ce que le test de fuite du jeton (étape 4a, tâche 4) démontre par exécution, et
+// précisément ce que le test de fuite du jeton démontre par exécution, et
 // pourquoi le lien d'accès ne voyage QUE dans le corps d'un POST (spec §6.1).
 export const incomingRequestLog = (
   requestId: string | number,

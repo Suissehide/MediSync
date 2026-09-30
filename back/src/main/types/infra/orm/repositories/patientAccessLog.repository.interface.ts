@@ -4,14 +4,14 @@ export type PatientAccessLogEntityRepo = PatientAccessLog
 
 // Omet `establishmentId`/`serviceId` : c'est le depot qui les pose depuis
 // `tenantContext.scope()`, jamais l'appelant (voir service.repository.ts, le modele explicite
-// du cahier des charges de cette tache).
+// du cahier des charges).
 //
-// `accesParOctroi` (decision du 2026-09-27, etape 4b) N'EST PAS dans `RecordAccessInput`
+// `accesParOctroi` N'EST PAS dans `RecordAccessInput`
 // (types/domain/patientAccessLog.domain.interface.ts) : c'est `PatientAccessLogDomain.record`
 // qui la calcule depuis `tenantContext.current().origine` et la fournit ici, exactement comme
 // `ServiceRepository.create` recoit `creatorUserId` du domaine plutot que de l'appelant HTTP.
 export type PatientAccessLogCreateEntityRepo = {
-  // Optionnel depuis la tache 4 (etape 4b) : une ligne d'export n'a pas d'identifiant de patient
+  // Optionnel : une ligne d'export n'a pas d'identifiant de patient
   // (voir le commentaire de `RecordAccessInput`, types/domain/patientAccessLog.domain.interface.ts).
   patientId?: string
   userID: string
@@ -23,7 +23,7 @@ export type PatientAccessLogCreateEntityRepo = {
   accesParOctroi: boolean
 }
 
-// Tache 6, etape 4b : `GET /super-admin/access-log` (source=acces). Memes filtres, libres,
+// `GET /super-admin/access-log` (source=acces). Memes filtres, libres,
 // qu'`activityLog.repository.interface.ts#PlatformAccessLogFilters` — dupliques plutot que
 // partages entre deux depots de modeles distincts, comme `ACTIVITY_LOG_DETAIL_LIMIT`/
 // `UNRESOLVED_ACCOUNT_EMAIL` (establishment.repository.ts) le font deja pour de petites
@@ -37,7 +37,7 @@ export type PatientAccessLogCreateEntityRepo = {
 // ce depot rendre une liste vide qu'on lirait « aucune aujourd'hui ». L'implementation ci-dessous
 // ne lit jamais ce champ.
 //
-// `compte` remplace `userID` (revue finale de branche, Important n°1) : identifiant exact ou
+// `compte` remplace `userID` : identifiant exact ou
 // fragment de prenom/nom — voir le commentaire du schema HTTP pour le pourquoi.
 export type PlatformAccessLogFilters = {
   establishmentId?: string
@@ -50,7 +50,7 @@ export interface PatientAccessLogRepositoryInterface {
   create: (
     params: PatientAccessLogCreateEntityRepo,
   ) => Promise<PatientAccessLogEntityRepo>
-  // Etape 4b, tache 5 : les deux premieres LECTURES du journal. `findByPatientInService` filtre
+  // Les deux premieres LECTURES du journal. `findByPatientInService` filtre
   // par `tenantContext.scope()` (establishmentId + serviceId du tenant courant) : c'est ce filtre
   // qui isole les acces d'un service de ceux d'un autre, jamais un `where` recopie a la main.
   // `findByPatientInEstablishment` filtre par `tenantContext.establishmentScope()` (establishmentId
@@ -61,12 +61,12 @@ export interface PatientAccessLogRepositoryInterface {
   findByPatientInEstablishment: (
     patientId: string,
   ) => Promise<PatientAccessLogEntityRepo[]>
-  // Etape 4b, tache 6 : la TROISIEME lecture, a l'echelle de la PLATEFORME entiere -- sous
+  // La TROISIEME lecture, a l'echelle de la PLATEFORME entiere -- sous
   // `runAsSuperAdmin`, jamais sous un tenant. Voir le commentaire sur l'implementation.
   findAllPlatformWide: (
     filters: PlatformAccessLogFilters,
   ) => Promise<PatientAccessLogEntityRepo[]>
-  // Tache 8, etape 4b : purge planifiee (retention parametrable, voir PatientAccessLogDomain.
+  // Purge planifiee (retention parametrable, voir PatientAccessLogDomain.
   // cleanup). Voir le commentaire de l'implementation pour le mecanisme de bornage.
   deleteOlderThan: (date: Date) => Promise<number>
 }

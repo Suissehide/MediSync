@@ -7,7 +7,7 @@ import ReactTable from '@/components/table/reactTable.tsx'
 import { useSuperAdminEstablishmentsQuery } from '@/queries/useSuperAdmin.ts'
 import type { EstablishmentListItem } from '@/types/superAdmin.ts'
 
-// Task-12-brief.md, step 1 : « la liste, avec les colonnes de la décision
+// « La liste, avec les colonnes de la décision
 // 3.3 et les identifiants copiables ». Écran hors de tout tenant : voir
 // `../super-admin.tsx`, le layout parent qui pose la seule garde
 // (`isSuperAdmin`).
@@ -30,7 +30,7 @@ function SuperAdminEstablishmentsList() {
           <CreateEstablishmentForm />
         </div>
 
-        {/* Tour de correction 1, Important n°4 : une erreur de chargement
+        {/* Une erreur de chargement
         rendait un tableau vide, indiscernable d'un « aucun établissement »
         réel (`establishments ?? []` retombe sur le même tableau vide dans
         les deux cas). L'erreur est désormais affichée à part, avant même

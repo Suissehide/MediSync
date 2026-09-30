@@ -19,7 +19,7 @@ const userAvecService: User = {
   ],
 }
 
-// Le cas que le garde de l'etape 1 empechait de rencontrer : un
+// Le cas que la garde empechait de rencontrer : un
 // administrateur d'etablissement qui n'a plus aucune affectation de service
 // (par exemple apres avoir vide sa propre liste, desormais permis).
 const adminSansService: User = {
@@ -40,8 +40,8 @@ const sansAcces: User = {
   establishments: [],
 }
 
-// Tour de correction 1, Critique n°1 : l'etat exact qu'un compte laisse par
-// le script d'amorcage de la tache 11 porte reellement — le drapeau posE,
+// L'etat exact qu'un compte laisse par
+// le script d'amorcage porte reellement — le drapeau posE,
 // aucun rattachement (le script ne cree jamais d'appartenance). Avant ce
 // correctif, ce compte tombait sur /pending, qui lui ment (il n'attend rien).
 const superAdminSansEtablissement: User = {
@@ -53,7 +53,7 @@ const superAdminSansEtablissement: User = {
   establishments: [],
 }
 
-// Tour de correction 2 (revue) : un compte peut porter isSuperAdmin ET
+// Un compte peut porter isSuperAdmin ET
 // exercer réellement quelque part (le drapeau n'exclut rien côté back — un
 // même compte peut être praticien dans un établissement). La garde
 // isSuperAdmin est placée APRÈS les deux vérifications de tenant dans
@@ -96,9 +96,9 @@ describe('beforeLoad de l index authentifie', () => {
     )
   })
 
-  // Le defaut que la revue a releve : sans ce cas, cet administrateur
+  // Le defaut : sans ce cas, cet administrateur
   // retombait sur /pending, un ecran sans aucun lien sortant — la meme
-  // impasse que le garde supprime en tache 15 empechait par un autre moyen.
+  // impasse qu'une garde desormais supprimee empechait par un autre moyen.
   it('envoie un administrateur sans aucune affectation de service vers son administration', () => {
     expect(() => runBeforeLoad(adminSansService)).toThrow(
       expect.objectContaining({
@@ -115,7 +115,7 @@ describe('beforeLoad de l index authentifie', () => {
     )
   })
 
-  // Critique n°1 (tour de correction 1) : sans ce cas, un super-admin fraichement
+  // Sans ce cas, un super-admin fraichement
   // amorce (isSuperAdmin: true, aucun etablissement) retombait sur /pending —
   // un ecran qui lui annonce a tort etre en attente d'approbation, et qui ne
   // monte pas DashboardLayout, donc aucune barre laterale, donc aucun moyen
@@ -126,7 +126,7 @@ describe('beforeLoad de l index authentifie', () => {
     )
   })
 
-  // Tour de correction 2 : un super-admin qui exerce aussi comme praticien
+  // Un super-admin qui exerce aussi comme praticien
   // retrouve son tableau de bord de service, jamais /super-admin — la garde
   // du drapeau ne doit s'appliquer qu'en dernier recours, après le couple
   // service/établissement et l'établissement administré.

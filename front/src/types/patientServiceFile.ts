@@ -1,4 +1,4 @@
-// Sous-dossier d'un patient pour le service courant (étape 3 du multi-tenant) : les seize
+// Sous-dossier d'un patient pour le service courant : les seize
 // champs de parcours quittent `Patient` (partagé entre services) pour vivre ici, un par couple
 // patient/service. Mêmes seize noms, même forme optionnelle, que ceux qu'ils remplacent dans
 // `types/patient.ts` — voir ce fichier pour l'historique. Le signal de suivi ailleurs

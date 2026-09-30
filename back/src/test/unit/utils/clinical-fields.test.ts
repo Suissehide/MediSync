@@ -113,8 +113,8 @@ describe('withoutClinicalFields', () => {
   // schema, par le meme decoupage en blocs `model X { … }` que
   // `tenant-guard-schema.test.ts`. `notes`, `details` et `medicalDiagnosis`
   // sont portes uniquement par le sous-dossier de service
-  // `PatientServiceFile` (etape 3 du multi-tenant a deplace et retire ces
-  // colonnes de `Patient`, qui ne les porte plus) ; `transmissionNotes`
+  // `PatientServiceFile` (ces colonnes ont ete deplacees et retirees de
+  // `Patient`, qui ne les porte plus) ; `transmissionNotes`
   // uniquement par `AppointmentPatient`. Si l'un de ces noms apparaissait sur
   // un modele non prevu ici, ce test tombe et nomme le modele en trop plutot
   // qu'un simple ecart de compte, et impose de repasser a un filtrage par

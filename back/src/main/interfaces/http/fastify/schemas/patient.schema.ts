@@ -18,7 +18,7 @@ const patientEntity = {
   currentActivity: z.string().optional().nullable(), // Activité actuelle
 
   // Le parcours, le diagnostic medical et les notes ont demenage vers le
-  // sous-dossier de service (etape 3 du multi-tenant) : voir
+  // sous-dossier de service : voir
   // patientServiceFile.schema.ts, seul endroit du back ou ces seize champs
   // sont encore enumeres a la main.
 }
@@ -44,33 +44,32 @@ export const patientResponseSchema = z.object({
 
 export const patientsResponseSchema = z.array(patientResponseSchema)
 
-// Signal de suivi ailleurs (spec §5.3/§6, tache 7 — deplace ici au tour de correction 1 de la
-// revue, I1) : vrai si ce patient a au moins un sous-dossier dans un AUTRE service du meme
-// etablissement. Calcule, jamais stocke ; absent de `patientEntity` (partagee avec les corps
-// d'ecriture) pour qu'aucune ecriture ne puisse le poser. Champ administratif, pas clinique : ni
-// `stripClinicalFields` ni `stripClinicalInput` (utils/clinical-fields.ts) ne le nomment, il est
-// donc visible du secretariat comme les autres champs administratifs du patient — decision 2.2.
+// Signal de suivi ailleurs (spec §5.3/§6) : vrai si ce patient a au moins un sous-dossier dans
+// un AUTRE service du meme etablissement. Calcule, jamais stocke ; absent de `patientEntity`
+// (partagee avec les corps d'ecriture) pour qu'aucune ecriture ne puisse le poser. Champ
+// administratif, pas clinique : ni `stripClinicalFields` ni `stripClinicalInput`
+// (utils/clinical-fields.ts) ne le nomment, il est donc visible du secretariat comme les autres
+// champs administratifs du patient.
 //
 // Pose UNIQUEMENT sur `GET /patient/:patientID` (le detail d'un patient, "le bloc d'identite"
 // de la spec §6), pas sur `patientResponseSchema` en general : celui-ci est aussi le squelette
 // de `patientsResponseSchema` (liste) et de `patientWithTagsResponseSchema` (liste avec tags).
 // Le calculer pour CHAQUE ligne d'une liste couterait une requete `runAsSystem` supplementaire
-// par patient affiche (le meme cout que m3 de la revue de la tache 7 relevait deja sur le PATCH
-// du sous-dossier, mais multiplie par la taille de la liste au lieu d'une seule fois) — pour un
-// signal que la spec §6 place dans le bloc d'identite d'un patient OUVERT, jamais dans une
-// liste. Ce choix n'est pas cense etre definitif : s'il s'avere qu'une liste a besoin du signal,
-// il faudra soit l'y calculer explicitement (avec son cout assume), soit le derouler autrement
-// (jointure unique plutot qu'un appel par ligne).
+// par patient affiche (le meme cout que releve deja le PATCH du sous-dossier, mais multiplie
+// par la taille de la liste au lieu d'une seule fois) — pour un signal que la spec §6 place dans
+// le bloc d'identite d'un patient OUVERT, jamais dans une liste. Ce choix n'est pas cense etre
+// definitif : s'il s'avere qu'une liste a besoin du signal, il faudra soit l'y calculer
+// explicitement (avec son cout assume), soit le derouler autrement (jointure unique plutot
+// qu'un appel par ligne).
 //
-// `.optional()` (revue tache 13, tour 1, point 1 — Critique C1 ; voir D3,
-// `docs/multi-tenant/decisions-etape-3.md`) : le champ n'est
-// present QUE si le service courant a deja son propre sous-dossier pour ce patient. La spec §6
-// est explicite — « trouver quelqu'un ne revele que son identite, jamais son suivi » — et la
-// tache 13 a arme un chemin qui obtient un `id` par la recherche (ouverte a `patient:read`, donc
-// a LECTURE) puis lit ce signal en une seconde requete, pour un patient que le service demandeur
-// ne suit meme pas. `false` dirait « je sais, et c'est non » — une information tout autant
-// interdite par la spec qu'un `true` non sollicite ; seule l'absence de la cle ne dit rien.
-// Voir `PatientDomain.findByID` pour le calcul, et `dossier-service.test.ts` pour les trois cas.
+// `.optional()` : le champ n'est present QUE si le service courant a deja son propre
+// sous-dossier pour ce patient. La spec §6 est explicite — « trouver quelqu'un ne revele que
+// son identite, jamais son suivi » — et un chemin existe qui obtient un `id` par la recherche
+// (ouverte a `patient:read`, donc a LECTURE) puis lit ce signal en une seconde requete, pour un
+// patient que le service demandeur ne suit meme pas. `false` dirait « je sais, et c'est non » —
+// une information tout autant interdite par la spec qu'un `true` non sollicite ; seule l'absence
+// de la cle ne dit rien. Voir `PatientDomain.findByID` pour le calcul, et
+// `dossier-service.test.ts` pour les trois cas.
 export const patientDetailResponseSchema = patientResponseSchema.extend({
   followedElsewhere: z.boolean().optional(),
 })
@@ -79,7 +78,7 @@ export const patientWithTagsResponseSchema = patientResponseSchema.extend({
   pathwayTemplateTags: z.array(z.string()),
   // Date d'entree dans le service courant : jointe depuis le sous-dossier de service filtre
   // sur ce service (`findAllWithTags`, back), pas depuis `patientEntity` — `null` si le
-  // patient n'a pas encore de sous-dossier dans ce service. Tache 12 du plan.
+  // patient n'a pas encore de sous-dossier dans ce service.
   entryDate: z.coerce.date().optional().nullable(),
 })
 
@@ -87,7 +86,7 @@ export const patientsWithTagsResponseSchema = z.array(
   patientWithTagsResponseSchema,
 )
 
-// Recherche d'identite existante avant creation (design §6, tache 13) : au moins un prenom ou un
+// Recherche d'identite existante avant creation (design §6) : au moins un prenom ou un
 // nom est exige, pour eviter qu'un appel sans filtre ne rende tout l'etablissement — la date de
 // naissance seule ne suffit pas non plus a la declencher. `.refine` plutot que deux champs
 // obligatoires : chacun des trois filtres reste facultatif pris seul.
@@ -113,7 +112,7 @@ export const patientIdentityMatchSchema = z.object({
   birthDate: z.coerce.date().nullable(),
 })
 
-// `results` + `hasMore` (revue tache 13, tour 1, point 4 — Important I4) : la
+// `results` + `hasMore` : la
 // recherche s'arrete a vingt lignes (voir le `take` du depot), et le SEUL but declare de cette
 // route est d'eviter les doublons — un utilisateur qui ne voit pas l'identite qu'il cherche
 // conclut a tort qu'elle n'existe pas et en cree une seconde. `hasMore` dit seulement qu'il y a
@@ -134,9 +133,9 @@ export const getPatientByIdParamsSchema = z.object({
 })
 
 // `.strict()` : les seize colonnes de parcours/clinique ont quitté ce schéma pour
-// patientServiceFile.schema.ts (étape 3 du multi-tenant), mais Zod, sans `.strict()`, retire
+// patientServiceFile.schema.ts, mais Zod, sans `.strict()`, retire
 // silencieusement les clés inconnues d'un corps de requête au lieu de les rejeter — un appelant
-// qui envoie encore l'un des seize champs ici (le front actuel le fait, tâches 10/11) perdrait
+// qui envoie encore l'un des seize champs ici (le front actuel le fait) perdrait
 // sa saisie sans aucune erreur. `.strict()` transforme cette perte silencieuse en 400 explicite,
 // le temps que les appelants soient corrigés.
 export const createPatientSchema = z.object(patientEntity).strict()
@@ -176,7 +175,7 @@ export const pathwayEnrollmentSchema = z.object({
 export const enrollPatientInPathwaysSchema = z.object({
   // `.strict()` : meme raison que sur createPatientSchema/updatePatientByIdSchema ci-dessus —
   // sans elle, un des seize champs de service envoye ici serait retire en silence par Zod, et
-  // l'appelant croirait l'avoir enregistre (task-5-re-review.md, point 2).
+  // l'appelant croirait l'avoir enregistre.
   patientData: patientSchema.strict(),
   startDate: z.coerce.date(),
   pathways: z.array(pathwayEnrollmentSchema).min(1),

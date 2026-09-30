@@ -19,10 +19,10 @@ import { Route as superAdminIndexRoute } from './super-admin/index.tsx'
 import { Route as superAdminLayoutRoute } from './super-admin.tsx'
 
 // ---------------------------------------------------------------------------
-// Tour de correction 1, Critique n°1 : « l'écran que tout le chantier existe
+// « l'écran que tout le chantier existe
 // pour servir est inatteignable ». Un compte `isSuperAdmin: true` avec
-// `establishments: []` — l'état EXACT que laisse le script d'amorçage de la
-// tâche 11, qui ne crée jamais d'appartenance d'établissement — se
+// `establishments: []` — l'état EXACT que laisse le script d'amorçage, qui ne
+// crée jamais d'appartenance d'établissement — se
 // connectait, arrivait sur `/`, et se faisait renvoyer vers `/pending`, un
 // écran sans `DashboardLayout` (donc sans barre latérale, donc sans l'entrée
 // « Super-administration ») qui lui ment de surcroît (« en attente
@@ -145,7 +145,7 @@ describe('parcours complet : connexion super-admin sans etablissement -> ecran a
     expect(screen.queryByText(/attente d.approbation/i)).not.toBeInTheDocument()
   })
 
-  // Important n°4 (tour de correction 1) : une erreur de chargement rendait
+  // Une erreur de chargement rendait
   // un tableau vide, indiscernable d'un « aucun établissement » réel. Ce
   // test remplace la réponse 200 vide du `beforeEach` par une 500, et
   // exige le message d'erreur — jamais la table vide par défaut.

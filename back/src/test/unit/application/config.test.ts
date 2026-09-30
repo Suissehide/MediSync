@@ -20,7 +20,7 @@ const envValide: Record<string, string> = {
 }
 
 describe('loadConfig, LOG_RETENTION_MONTHS', () => {
-  // Task 8, etape 1 (Review Focus n°3) : une purge tourne seule, a intervalle regulier, sans
+  // Une purge tourne seule, a intervalle regulier, sans
   // personne pour regarder son resultat -- une retention absurde doit donc faire echouer le
   // DEMARRAGE, jamais laisser la purge planifiee interpreter zero (ou une valeur non numerique)
   // litteralement au premier passage, ce qui viderait les deux journaux.

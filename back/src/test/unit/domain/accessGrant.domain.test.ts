@@ -5,10 +5,10 @@ import type { UserWithMemberships } from '../../../main/types/infra/orm/reposito
 const maintenant = new Date('2026-09-25T12:00:00Z')
 
 // `isSuperAdmin: true` par défaut : un octroi (`SuperAdminAccessGrant`) n'existe dans ce dépôt
-// que pour un compte qui l'est — voir la tâche 8, qui émet ces lignes. Les fixtures qui
+// que pour un compte qui l'est. Les fixtures qui
 // N'exercent aucun octroi (ex. `retire les etablissements et services desactives...`) restent
 // valides quelle que soit cette valeur, puisqu'elles ne passent jamais de `grants`. Les tests qui
-// veulent spécifiquement le cas « plus super-admin » (tour de correction 1) le disent en toutes
+// veulent spécifiquement le cas « plus super-admin » le disent en toutes
 // lettres, en écrasant ce champ.
 const baseUser = {
   id: 'u1',
@@ -111,7 +111,7 @@ describe('effectiveMemberships', () => {
     expect(effectives[0]?.origine).toBe('reelle')
   })
 
-  // Step 2 du brief : la spécification tranche le rôle de SERVICE (« coordinateur ») mais pas
+  // La spécification tranche le rôle de SERVICE (« coordinateur ») mais pas
   // le rôle d'ÉTABLISSEMENT qui l'accompagne — tranché ici (ADMIN), avec le motif écrit dans
   // accessGrant.domain.ts. Sur TOUS les services actifs : un octroi qui n'en couvrirait qu'une
   // partie laisserait par construction hors de portée le service où le problème à diagnostiquer
@@ -225,7 +225,7 @@ describe('effectiveMemberships', () => {
     ])
   })
 
-  // Tour de correction 1 (tâche 3) — Important n°1 de la revue : retirer le drapeau super-admin
+  // Retirer le drapeau super-admin
   // ne retirait pas l'accès. Jugé ICI, contre le MÊME `user` que les appartenances réelles —
   // jamais mis en cache — donc éprouvable sans reconnexion, exactement comme l'expiration.
   it('un octroi ne confere rien si son titulaire n est plus super-admin', () => {
@@ -249,7 +249,7 @@ describe('effectiveMemberships', () => {
     ).toEqual([])
   })
 
-  // Tour de correction 1 (tâche 8) — Important n°2 de la relecture : deux octrois VIVANTS sur le
+  // Deux octrois VIVANTS sur le
   // MÊME établissement (ex. un second s'accordé avant le terme du premier) ne doivent produire
   // qu'UNE SEULE entrée — sans quoi `/me` liste deux fois le même établissement, même
   // identifiant. Le contenu (services) est identique quelle que soit la ligne d'octroi qui le
@@ -285,7 +285,7 @@ describe('effectiveMemberships', () => {
     ])
   })
 
-  // Tour de correction 1 (tâche 3) — Important n°4 de la revue : un membre réel d'un
+  // Un membre réel d'un
   // établissement DÉSACTIVÉ (donc invisible, comme partout ailleurs) ne doit pas voir cette
   // absence comblée par un octroi visant le même établissement — ce que ferait une primauté
   // « réelle sur octroi » calculée seulement sur les appartenances déjà filtrées actives.

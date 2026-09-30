@@ -1,9 +1,9 @@
 import { buildTestApp, type TestApp } from './setup/app'
 import { testDb, truncateAll } from './setup/db'
 
-// POURQUOI CE FICHIER EXISTE (tache 9, etape 4b).
+// POURQUOI CE FICHIER EXISTE.
 //
-// La tache 9 fait de l'absence de contexte un QUATRIEME contexte declare : sans store, un modele
+// L'absence de contexte est un QUATRIEME contexte declare : sans store, un modele
 // global ne passe plus que par les couples nommes dans `NO_CONTEXT_GLOBAL_OPERATIONS`
 // (tenant-guard.ts). Cette liste a ete etablie par MESURE — le garde-fou instrumente, la suite
 // e2e complete lancee, 1 243 appels sans contexte, 8 couples distincts.
@@ -12,7 +12,7 @@ import { testDb, truncateAll } from './setup/db'
 // `UserRepository.create` depuis `AuthDomain.register`, n'apparaissait donc dans aucune mesure,
 // alors que c'est la seule route non tenant qui cree un compte hors `runAsSuperAdmin`. Une liste
 // tiree telle quelle du journal aurait ferme cette route en production sans qu'un seul test du
-// depot rougisse — le genre exact de defaut que la tache 9 existe pour empecher.
+// depot rougisse — le genre exact de defaut que cette liste existe pour empecher.
 //
 // Ce fichier rend la methode de decouverte complete : la route est desormais couverte, donc une
 // prochaine instrumentation verrait `User.create`. Preuve par sabotage, suites completes

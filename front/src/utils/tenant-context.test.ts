@@ -175,7 +175,7 @@ describe('defaultTenantContext', () => {
 })
 
 // `isTenantRouteStale` tranche entre les deux causes d'un 404 de route de
-// tenant, indiscernables cote back (tache 13, tour de correction 1) : une
+// tenant, indiscernables cote back : une
 // ressource absente du service courant (couple toujours dans l'arbre — 404
 // legitime, aucune navigation) et un arbre des appartenances perime
 // (couple disparu — direction confirmee du choix de contexte).

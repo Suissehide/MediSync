@@ -9,7 +9,7 @@ import {
   superAdminUserParamsSchema,
 } from '../../schemas/superAdminUser.schema'
 
-// `GET /super-admin/users?email=` (spec §3.4, §6.2, tâche 7) : la recherche d'un compte, qui
+// `GET /super-admin/users?email=` (spec §3.4, §6.2) : la recherche d'un compte, qui
 // répond à « untel ne voit plus ses patients » — ses rattachements, ses rôles, ses
 // désactivations, son dernier accès. Hérite de `assertRoutePermission`/`requireSuperAdmin`
 // (super-admin.routes.ts), comme `establishmentsRouter`.
@@ -28,7 +28,7 @@ const usersRouter: FastifyPluginAsync = (fastify) => {
     (request) => userDomain.searchByEmail(request.query.email),
   )
 
-  // LA SOUPAPE (tâche 10, tour de correction 1, arbitrage n°3) : le seul recours d'une personne
+  // LA SOUPAPE : le seul recours d'une personne
   // en poste dans plusieurs établissements qui perd son mot de passe — la garde du jeton
   // l'interdit à ses administrateurs d'établissement, et il n'existe aucune route de mot de
   // passe oublié. Voir `UserDomain.reissueAccessLink`.

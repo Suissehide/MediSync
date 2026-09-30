@@ -87,9 +87,9 @@ const buildDomain = (knownUser: UserEntityRepo = buildKnownUser()) => {
     warn: jest.fn(),
   }
 
-  // Depuis la tâche 3 (étape 4a) : `AuthDomain` consulte les octrois vivants de l'utilisateur à
-  // chaque connexion/rafraîchissement (`toMeResponse` en a besoin pour l'arbre effectif). Aucun
-  // octroi ici, sans rapport avec ce que ce fichier éprouve (la non-énumération des comptes).
+  // `AuthDomain` consulte les octrois vivants de l'utilisateur à chaque
+  // connexion/rafraîchissement (`toMeResponse` en a besoin pour l'arbre effectif). Aucun octroi
+  // ici, sans rapport avec ce que ce fichier éprouve (la non-énumération des comptes).
   const accessGrantRepository = { findForUser: () => Promise.resolve([]) }
 
   const domain = new AuthDomain({

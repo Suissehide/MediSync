@@ -33,7 +33,7 @@ describe('POST /super-admin/establishments', () => {
       payload: body,
     })
 
-  // Step 1 (task-6-brief.md) : le chemin complet. Créer un établissement avec le nom et
+  // Le chemin complet. Créer un établissement avec le nom et
   // l'adresse d'un premier administrateur crée l'établissement, le compte, son rattachement en
   // ADMIN, et rend un lien — que l'on consomme ensuite pour se connecter, et `/me` montre bien
   // l'établissement créé.
@@ -51,12 +51,12 @@ describe('POST /super-admin/establishments', () => {
     expect(body.establishment.id).toEqual(expect.any(String))
     expect(typeof body.accessLink.token).toBe('string')
     expect(body.accessLink.token.length).toBeGreaterThan(0)
-    // Tour de correction 1, Important n°1 : la reponse ne porte plus AUCUNE information sur le
+    // La reponse ne porte AUCUNE information sur le
     // compte — seulement l'etablissement et le lien.
     expect(Object.keys(body).sort()).toEqual(['accessLink', 'establishment'])
 
-    // Le compte a bien ete cree avec les prenom/nom SOUMIS (verifie en base, plus dans la
-    // reponse depuis le tour de correction 1).
+    // Le compte a bien ete cree avec les prenom/nom SOUMIS (verifie en base, pas dans la
+    // reponse).
     const createdAdmin = await testDb.user.findUniqueOrThrow({
       where: { email: 'premiere-admin@clinique.fr' },
     })
@@ -105,8 +105,7 @@ describe('POST /super-admin/establishments', () => {
     )
   })
 
-  // Step 2, Review Focus n°4 (task-6-brief.md) : une adresse deja connue. Trois exigences,
-  // chacune sa propre assertion.
+  // Une adresse deja connue. Trois exigences, chacune sa propre assertion.
   describe('creer un etablissement avec l adresse d un compte deja existant', () => {
     it("le compte existant n'est PAS ecrase (ni le nom, ni le mot de passe)", async () => {
       const existing = await createUser({
@@ -185,8 +184,7 @@ describe('POST /super-admin/establishments', () => {
       // un champ supplementaire (« reused », « existed », un booleen quelconque) ferait
       // rougir CE test meme s'il portait la MEME cle des deux cotes avec des valeurs
       // differentes — ce qu'une simple comparaison nouveau/reutilise ne peut pas voir, puisque
-      // le NOM de la cle serait identique dans les deux reponses (montre par sabotage : voir
-      // task-6-report.md). Depuis le tour de correction 1, la reponse ne porte plus AUCUNE
+      // le NOM de la cle serait identique dans les deux reponses. La reponse ne porte AUCUNE
       // information sur le compte : la liste attendue est reduite d'autant.
       const expectedTopLevelKeys = ['accessLink', 'establishment'].sort()
       for (const res of [nouveau, reutilise]) {
@@ -194,8 +192,7 @@ describe('POST /super-admin/establishments', () => {
       }
     })
 
-    // Tour de correction 1 (relecture externe), Important n°1 : la regression precise que le
-    // relecteur a demontree — un appel avec un nom different sur une adresse DEJA connue
+    // Un appel avec un nom different sur une adresse DEJA connue
     // rendait l'ANCIEN nom stocke, jamais celui soumis, ce qu'une comparaison par NOM de cle ne
     // pouvait pas voir. Prouve ici en envoyant des noms differents et en verifiant qu'AUCUN des
     // deux (ni le stocke, ni le soumis) n'apparait nulle part dans le corps de la reponse — la
@@ -234,8 +231,8 @@ describe('POST /super-admin/establishments', () => {
     })
   })
 
-  // Step 3, tour de correction 1, Important n°4 : un compte desactive ne peut ni se connecter
-  // ni consommer un lien (AccessLinkDomain.consume). Le refus doit avoir lieu EN AMONT de toute
+  // Un compte desactive ne peut ni se connecter ni consommer un lien
+  // (AccessLinkDomain.consume). Le refus doit avoir lieu EN AMONT de toute
   // ecriture : aucun etablissement orphelin, inutilisable, cree en silence.
   it('refuse en amont un compte desactive : aucun etablissement ni rattachement n est cree', async () => {
     const deactivated = await createUser({ email: 'desactive@ailleurs.fr' })
@@ -260,17 +257,17 @@ describe('POST /super-admin/establishments', () => {
     expect(membership).toBeNull()
   })
 
-  // Step 3 (tour de correction 1, Importants n°2 et n°3) : les trois ecritures (etablissement,
-  // compte, rattachement) PLUS l'emission du lien sont une seule transaction. Prouve en faisant
+  // Les trois ecritures (etablissement, compte, rattachement) PLUS l'emission du lien sont une
+  // seule transaction. Prouve en faisant
   // echouer, tour a tour, la DEUXIEME ecriture (le rattachement) puis la TROISIEME etape
   // (l'emission du lien) — sur les VRAIS singletons de l'IoC (pas une reimplementation), pour
   // que l'echec traverse la VRAIE transaction plutot qu'une simulee.
   //
-  // Tour de correction 2 (relecture externe), l'Important : `mockRejectedValueOnce` remplace
-  // la methode entiere — elle ne s'execute donc JAMAIS, et le sabotage ne peut rien ecrire avant
+  // `mockRejectedValueOnce` remplace la methode entiere — elle ne s'execute donc JAMAIS, et le
+  // sabotage ne peut rien ecrire avant
   // de rejeter. Un test construit ainsi est aveugle a la regression precise qu'il existe pour
   // empecher (omettre le client de transaction sur UN SEUL appel) : rien n'est ecrit hors
-  // transaction de toute facon, puisque rien n'est ecrit du tout. Demontre par le relecteur :
+  // transaction de toute facon, puisque rien n'est ecrit du tout. On peut le demontrer :
   // en retirant `tx` du seul appel a `accessLinkDomain.issue`, `npm run build` reste vert et ces
   // deux tests aussi, alors que deux ecritures sortent silencieusement de la transaction sur la
   // branche du compte preexistant. Remplace par un PASSE-PLAT : appeler la VRAIE implementation

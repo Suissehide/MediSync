@@ -28,7 +28,7 @@ import { Route as serviceRoute } from './s/$serviceId.tsx'
 // CE QUE CE FICHIER VERROUILLE — la promesse d'ensemble du cloisonnement,
 // pas une de ses pieces.
 //
-// Le mecanisme de l'etape 2 tient en deux moities : `useTenantQueryClient`
+// Le mecanisme tient en deux moities : `useTenantQueryClient`
 // construit un `QueryClient` neuf par couple etablissement/service, et les
 // deux layouts de tenant DEMONTENT leur sous-arbre quand le couple change.
 // La seconde moitie n'est pas automatique : le routeur ne rend le composant

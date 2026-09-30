@@ -1,16 +1,16 @@
-// Tache 13 (etape 3 du multi-tenant) : avant de creer un patient, l'ecran cherche une identite
-// existante dans l'etablissement, pour eviter les doublons (spec §6). La propriete centrale de
-// cette tache (consigne 7 du brief) : la recherche ne doit JAMAIS rendre autre chose que
+// Avant de creer un patient, l'ecran cherche une identite
+// existante dans l'etablissement, pour eviter les doublons (spec §6). La propriete centrale :
+// la recherche ne doit JAMAIS rendre autre chose que
 // l'identite — nom, prenom, date de naissance — meme quand le patient trouve a un dossier riche
 // dans un AUTRE service. Ce fichier prouve cette propriete par execution, champ par champ, avant
 // de prouver le reste du flux (cloisonnement d'etablissement, parite secretariat, et le
 // rattachement d'une identite existante au service courant).
 //
-// Tour de correction 1 (revue de la tache 13) ajoute trois choses, en execution reelle : la
-// reponse est desormais `{ results, hasMore }` (point 4, la troncature a vingt n'est plus
-// muette) ; `%`/`_` dans un nom cherche sont traites comme du texte, pas des jokers LIKE (point
-// 2) ; et le rattachement en PARALLELE (pas seulement en sequence) est idempotent — aucune
-// reponse 409 pour une operation qui reussit (point 3).
+// Ce fichier verifie aussi, en execution reelle : la
+// reponse est desormais `{ results, hasMore }` (la troncature a vingt n'est plus
+// muette) ; `%`/`_` dans un nom cherche sont traites comme du texte, pas des jokers LIKE ;
+// et le rattachement en PARALLELE (pas seulement en sequence) est idempotent — aucune
+// reponse 409 pour une operation qui reussit.
 import { buildTestApp, type TestApp } from './setup/app'
 import { testDb, truncateAll } from './setup/db'
 import {
@@ -23,7 +23,7 @@ import {
 
 type Cookies = { access_token: string }
 
-describe('recherche d identite existante avant creation de patient (tache 13)', () => {
+describe('recherche d identite existante avant creation de patient', () => {
   let testApp: TestApp
   let establishmentId: string
   let serviceAId: string
@@ -98,7 +98,7 @@ describe('recherche d identite existante avant creation de patient (tache 13)', 
     autreServiceId = autreService.id
 
     // COORDINATEUR des deux services de l'etablissement E, pour comparer directement ce que
-    // chaque service voit (meme forme que le test de cloisonnement de la tache 12).
+    // chaque service voit.
     await createUser({
       email: 'coordo@identite.fr',
       memberships: [
@@ -114,7 +114,7 @@ describe('recherche d identite existante avant creation de patient (tache 13)', 
     })
 
     // SECRETARIAT du service A : la recherche ne porte aucun champ clinique, elle doit donc
-    // rendre exactement la meme chose qu'au coordinateur (consigne 5 du brief).
+    // rendre exactement la meme chose qu'au coordinateur.
     await createUser({
       email: 'secretariat@identite.fr',
       memberships: [
@@ -154,7 +154,7 @@ describe('recherche d identite existante avant creation de patient (tache 13)', 
   it(
     "la recherche ne rend que l'identite (id, prenom, nom, date de naissance) — jamais le " +
       'suivi, un service, un contenu clinique ou un compte — meme quand le patient trouve a un ' +
-      'dossier riche dans un AUTRE service (design §5.3/§6, la propriete centrale de cette tache)',
+      'dossier riche dans un AUTRE service (design §5.3/§6)',
     async () => {
       // Le patient est cree, et suivi, dans le service A — avec des champs d'identite ET des
       // champs de contact qui ne sont PAS de l'identite au sens de la spec (genre, telephones,
@@ -195,7 +195,7 @@ describe('recherche d identite existante avant creation de patient (tache 13)', 
       expect(richServiceFile.statusCode).toBe(200)
 
       // Cherche depuis le service B, qui ne suit PAS ce patient : c'est exactement le cas
-      // d'usage de la tache (eviter un doublon en cherchant dans TOUT l'etablissement).
+      // d'usage vise (eviter un doublon en cherchant dans TOUT l'etablissement).
       const res = await searchFrom(
         serviceBId,
         coordoCookies,
@@ -203,7 +203,7 @@ describe('recherche d identite existante avant creation de patient (tache 13)', 
       )
       expect(res.statusCode).toBe(200)
 
-      // `{ results, hasMore }` (revue tache 13, tour 1, point 4) : pas un tableau nu.
+      // `{ results, hasMore }` : pas un tableau nu.
       const body = res.json() as { results: unknown[]; hasMore: boolean }
       expect(body.results).toHaveLength(1)
       expect(body.hasMore).toBe(false)
@@ -283,7 +283,7 @@ describe('recherche d identite existante avant creation de patient (tache 13)', 
     await testDb.patient.delete({ where: { id: patientId } })
   })
 
-  it('un secretariat obtient exactement la meme reponse de recherche qu un coordinateur (consigne 5 : aucun champ clinique, aucune permission nouvelle)', async () => {
+  it('un secretariat obtient exactement la meme reponse de recherche qu un coordinateur (aucun champ clinique, aucune permission nouvelle)', async () => {
     const created = await post(serviceAId, coordoCookies, '/patient', {
       firstName: 'Simone',
       lastName: 'Perrin',
@@ -312,10 +312,10 @@ describe('recherche d identite existante avant creation de patient (tache 13)', 
 
   it(
     'choisir une identite existante cree le sous-dossier dans le service courant, sans toucher ' +
-      "a l'identite ni au sous-dossier d'un autre service (consigne 3)",
+      "a l'identite ni au sous-dossier d'un autre service",
     async () => {
       // Cree et suivi dans le service A uniquement (PatientDomain.create y cree deja le
-      // sous-dossier, tache 12).
+      // sous-dossier).
       const created = await post(serviceAId, coordoCookies, '/patient', {
         firstName: 'Robert',
         lastName: 'Girard',
@@ -410,7 +410,7 @@ describe('recherche d identite existante avant creation de patient (tache 13)', 
 
   it(
     'le cas deja suivi ici : rattacher une identite qui a deja un sous-dossier dans le service ' +
-      'courant le dit clairement et n ecrase rien (consigne 4)',
+      'courant le dit clairement et n ecrase rien',
     async () => {
       const created = await post(serviceAId, coordoCookies, '/patient', {
         firstName: 'Nadia',
@@ -430,7 +430,7 @@ describe('recherche d identite existante avant creation de patient (tache 13)', 
       expect(serviceFileWrite.statusCode).toBe(200)
       const before = serviceFileWrite.json()
 
-      // Le patient a deja un sous-dossier dans le service A (cree a sa creation, tache 12) :
+      // Le patient a deja un sous-dossier dans le service A (cree a sa creation) :
       // tenter de rattacher la meme identite depuis A doit le dire, et ne rien ecraser.
       const attach = await post(
         serviceAId,
@@ -452,7 +452,7 @@ describe('recherche d identite existante avant creation de patient (tache 13)', 
     },
   )
 
-  // Revue tache 13, tour de correction 1, point 2 (Important I1) : `%` et `_` sont
+  // `%` et `_` sont
   // des jokers du motif `LIKE`/`ILIKE` sous-jacent a `contains`. Sans echappement, une recherche
   // par `%` seul contourne la garde du `.refine` ("au moins un prenom ou un nom") et rend tout
   // l'etablissement ; `_` fait de meme en matchant n'importe quel caractere unique. Ce test
@@ -557,7 +557,7 @@ describe('recherche d identite existante avant creation de patient (tache 13)', 
     },
   )
 
-  // Revue tache 13, tour de correction 1, point 4 (Important I4) : la recherche
+  // La recherche
   // s'arrete a vingt resultats sans le dire, sur la fonction dont le seul but est d'eviter les
   // doublons. `hasMore` doit dire qu'il y en a davantage — jamais combien.
   it('la recherche coupe a vingt resultats et le dit via `hasMore`, sans rendre le total exact', async () => {
@@ -587,7 +587,7 @@ describe('recherche d identite existante avant creation de patient (tache 13)', 
     await testDb.patient.deleteMany({ where: { id: { in: ids } } })
   })
 
-  // Revue tache 13, tour de correction 1, point 3 (Important I3) : le rattachement
+  // Le rattachement
   // doit etre idempotent de bout en bout. Six appels HTTP reels en PARALLELE (pas en sequence,
   // qui ne reproduit jamais la course) sur le meme patient depuis le meme service : une seule
   // ligne en base, et AUCUNE reponse en erreur — le cas "deja suivi ici" est un resultat normal,

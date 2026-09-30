@@ -30,8 +30,8 @@ interface CreateGrantFormProps {
 const DEFAULT_DURATION_HOURS = 4
 const MAX_DURATION_HOURS = 24
 
-// « bouton d'octroi avec motif obligatoire et durée » (task-12-brief.md,
-// step 2). Deux gardes CÔTÉ FORMULAIRE, en écho aux deux exigences du
+// « bouton d'octroi avec motif obligatoire et durée ». Deux gardes CÔTÉ
+// FORMULAIRE, en écho aux deux exigences du
 // schéma back (`createGrantSchema`, superAdminGrant.schema.ts) : un motif
 // vide est refusé, une durée hors de ]0, 24] aussi — avant même d'atteindre
 // le réseau, pour ne pas laisser croire qu'un octroi a été demandé quand il

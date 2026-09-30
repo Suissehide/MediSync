@@ -75,7 +75,7 @@ describe('assertTenantScope', () => {
         store,
       ),
     ).toThrow(TenantScopeMissingError)
-    // TACHE 15 — CETTE ATTENTE A CHANGE DE SENS, et le changement EST le correctif. Elle disait
+    // CETTE ATTENTE A CHANGE DE SENS, et le changement EST le correctif. Elle disait
     // `not.toThrow()` : `assertGlobalInclude` laissait passer un include de relation de tenant
     // des lors que l'operation ne visait qu'UNE ligne, au motif — ecrit tel quel au-dessus de
     // GLOBAL_TENANT_RELATIONS — que ce serait « la seule facon de garantir que les enfants
@@ -104,25 +104,23 @@ describe('assertTenantScope', () => {
     ).not.toThrow()
   })
 
-  // Revue finale de l'etape 4a, Important n°1 : `assertGlobalInclude` (la garde ci-dessus) est
-  // la SEULE des deux barrieres a s'appliquer SANS contexte — `assertNoGlobalToManyBridge`
-  // (tache 15) se limite explicitement a `store?.kind === 'tenant' || store?.kind ===
-  // 'superadmin'` et rend la main sans rien verifier des que `store` est `undefined`. Or
-  // `undefined` est exactement le contexte de TOUTE route hors tenant : `/auth`, `/me` et tout
-  // `/super-admin` (back/CLAUDE.md, "il ne s'applique pas sans contexte"). Le test ci-dessus
-  // passe sous `store` (kind 'tenant') : le meme verdict y est DEJA rendu, redondamment, par
-  // `assertNoGlobalToManyBridge` — desactiver `assertGlobalInclude` ne le fait donc pas rougir.
-  // Celui-ci reproduit les memes appels sans aucun contexte, ce qui isole la seule garde qui
-  // les tient reellement a cet endroit.
+  // `assertGlobalInclude` (la garde ci-dessus) est la SEULE des deux barrieres a s'appliquer
+  // SANS contexte — `assertNoGlobalToManyBridge` se limite explicitement a `store?.kind ===
+  // 'tenant' || store?.kind === 'superadmin'` et rend la main sans rien verifier des que `store`
+  // est `undefined`. Or `undefined` est exactement le contexte de TOUTE route hors tenant :
+  // `/auth`, `/me` et tout `/super-admin` (back/CLAUDE.md, "il ne s'applique pas sans contexte").
+  // Le test ci-dessus passe sous `store` (kind 'tenant') : le meme verdict y est DEJA rendu,
+  // redondamment, par `assertNoGlobalToManyBridge` — desactiver `assertGlobalInclude` ne le fait
+  // donc pas rougir. Celui-ci reproduit les memes appels sans aucun contexte, ce qui isole la
+  // seule garde qui les tient reellement a cet endroit.
   //
-  // TOUR DE CORRECTION 1 DE LA TACHE 9 (etape 4b) — CE TEST S'ETAIT VIDE EN SILENCE, ET C'EST
-  // EXACTEMENT LA CLASSE DE DEFAUT QUE LA TACHE 9 FERME. La version d'avant portait trois
-  // assertions : `Establishment.findMany`, `Establishment.findFirst`, `User.findMany`. En
-  // faisant de l'absence de contexte un contexte DECLARE (NO_CONTEXT_GLOBAL_OPERATIONS), la
-  // tache 9 a rendu `Establishment.findFirst` et `User.findMany` non declares : ces deux-la sont
-  // desormais refuses par la PORTE DE PERMISSION, en tete de `assertGlobalScope`, et
-  // n'atteignent plus jamais `assertGlobalInclude`. Le test restait VERT en ne couvrant plus
-  // qu'un cas sur trois — une garde dont la couverture s'erode sans que rien ne rougisse.
+  // CE TEST S'ETAIT VIDE EN SILENCE — LA VERSION D'AVANT PORTAIT TROIS ASSERTIONS :
+  // `Establishment.findMany`, `Establishment.findFirst`, `User.findMany`. Depuis que l'absence de
+  // contexte est un contexte DECLARE (NO_CONTEXT_GLOBAL_OPERATIONS), `Establishment.findFirst` et
+  // `User.findMany` ne sont plus declares : ces deux-la sont desormais refuses par la PORTE DE
+  // PERMISSION, en tete de `assertGlobalScope`, et n'atteignent plus jamais
+  // `assertGlobalInclude`. Le test restait VERT en ne couvrant plus qu'un cas sur trois — une
+  // garde dont la couverture s'erode sans que rien ne rougisse.
   //
   // DEUX CHANGEMENTS POUR QUE CELA NE PUISSE PAS SE REPRODUIRE :
   //   - les trois cas sont choisis parmi les couples DECLARES (donc ils franchissent la porte de
@@ -741,12 +739,12 @@ describe('assertTenantScope', () => {
     })
   })
 
-  // Correction 3 : include/select sur une relation de tenant depuis un modele global.
+  // include/select sur une relation de tenant depuis un modele global.
   // La relation citee ici est `establishmentMemberships`, la seule que `model User` declare
-  // reellement. L'exemple portait auparavant sur un `User.soignant` disparu du schema depuis
-  // l'etape 1 : le test passait donc sur une relation inexistante, et n'aurait rien vu si la
-  // vraie relation avait quitte GLOBAL_TENANT_RELATIONS. C'est desormais
-  // `tenant-guard-schema.test.ts` qui tient la table contre le schema, dans les deux sens.
+  // reellement. L'exemple portait auparavant sur un `User.soignant` disparu du schema : le test
+  // passait donc sur une relation inexistante, et n'aurait rien vu si la vraie relation avait
+  // quitte GLOBAL_TENANT_RELATIONS. C'est desormais `tenant-guard-schema.test.ts` qui tient la
+  // table contre le schema, dans les deux sens.
   it('refuse un include de relation de tenant hors findUnique(OrThrow)', () => {
     expect(() =>
       assertTenantScope(
@@ -758,10 +756,11 @@ describe('assertTenantScope', () => {
         store,
       ),
     ).toThrow(TenantScopeMissingError)
-    // TACHE 15 — meme retournement que sur `Establishment` plus haut, meme raison : UNE ligne de
+    // Meme retournement que sur `Establishment` plus haut, meme raison : UNE ligne de
     // `User` porte les appartenances de TOUS ses etablissements. « Une seule ligne » ne garantit
     // « un seul tenant » que pour une relation a-UN ; `establishmentMemberships` est
-    // a-PLUSIEURS. Voir le bloc « tache 15 » en fin de fichier.
+    // a-PLUSIEURS. Voir plus bas le bloc sur le franchissement d'un modele global par une
+    // relation a-plusieurs.
     expect(() =>
       assertTenantScope(
         {
@@ -908,7 +907,7 @@ describe('assertTenantScope', () => {
     ).toThrow(TenantScopeMissingError)
   })
 
-  // Correction 2, tour 2 : descente dans les relations imbriquees sous update/updateMany/upsert.
+  // Descente dans les relations imbriquees sous update/updateMany/upsert.
   it('accepte une creation imbriquee sous update avec les bonnes colonnes', () => {
     const okData = {
       soignantLinks: {
@@ -1005,7 +1004,7 @@ describe('assertTenantScope', () => {
     ).not.toThrow()
   })
 
-  it('accepte le cas reel de la tache 10 : deleteMany puis create imbriques', () => {
+  it('accepte un cas reel : deleteMany puis create imbriques', () => {
     const replaceLinks = {
       soignantLinks: {
         deleteMany: {},
@@ -1027,12 +1026,12 @@ describe('assertTenantScope', () => {
     ).not.toThrow()
   })
 
-  // Correction 7 : include/select depuis un modele d'etablissement vers un modele de service.
+  // include/select depuis un modele d'etablissement vers un modele de service.
   // Noms de relations repris de prisma/schema.prisma (modeles Patient, Soignant,
   // EstablishmentMembership).
   describe('inclusions depuis un modele d etablissement', () => {
-    // Fuite reelle trouvee a l'etape 1 : un patient (etablissement) incluant un modele de
-    // service remontait celui de tous les services. Depuis la tache 6, ce n'est plus
+    // Fuite reelle trouvee : un patient (etablissement) incluant un modele de
+    // service remontait celui de tous les services. Ce n'est plus
     // `enrollmentIssues` qui l'illustre (retire de Patient : les problemes d'inscription
     // dependent desormais du sous-dossier de service, pas du patient) mais `serviceFiles`,
     // la relation de Patient vers PatientServiceFile qui porte la meme exigence de filtre.
@@ -1271,16 +1270,16 @@ describe('assertTenantScope', () => {
     })
   })
 
-  // Tache 9 / etape 3 : le garde-fou descend desormais dans les inclusions imbriquees, a
+  // Le garde-fou descend desormais dans les inclusions imbriquees, a
   // n'importe quelle profondeur, depuis une racine de service ou d'etablissement — pas
-  // seulement au premier niveau depuis une racine d'etablissement (bloc precedent). Preuve
-  // attendue par le brief de la tache : la chaine appointment > appointmentPatients > patient >
+  // seulement au premier niveau depuis une racine d'etablissement (bloc precedent). La
+  // chaine appointment > appointmentPatients > patient >
   // serviceFiles, seule chaine ETABLISSEMENT -> SERVICE effectivement franchissable en pratique
-  // (revue tache 6) avant ce correctif, passait sans filtre ; elle est refusee apres. Les autres
+  // avant ce correctif, passait sans filtre ; elle est refusee apres. Les autres
   // it() de ce describe eprouvent chacune des chaines nommees par l'ancien commentaire de limite
   // (git history sur assertNestedInclude), une par une.
-  describe('descente recursive dans les inclusions imbriquees (tache 9)', () => {
-    // LA PREUVE : avant cette tache, cette meme requete ne levait AUCUNE erreur — le sous-dossier
+  describe('descente recursive dans les inclusions imbriquees', () => {
+    // LA PREUVE : avant ce correctif, cette meme requete ne levait AUCUNE erreur — le sous-dossier
     // de service de TOUS les services etait ramene par une lecture qui ne part meme pas de
     // Patient. C'est exactement la fuite documentee par la limite retiree de tenant-guard.ts.
     it('refuse appointment > appointmentPatients > patient > serviceFiles sans filtre', () => {
@@ -1597,15 +1596,15 @@ describe('assertTenantScope', () => {
     })
   })
 
-  // Tour de correction 1 sur la relecture de la tache 9, important 2 : `_count` sous `select`
+  // `_count` sous `select`
   // echappait au controle la ou il est refuse sous `include` (non declare dans MODEL_RELATIONS,
   // donc refuse la-bas ; sous `select`, une cle non declaree est ignoree en silence par
   // construction, puisque `select` mele colonnes scalaires et relations). `_count` n'est ni l'un
   // ni l'autre : c'est un mot reserve de Prisma. Fuite de cardinalite seule (pas de contenu) :
   // "ce patient a N dossiers de service" revele qu'il est suivi ailleurs, sans dire ou — demontre
-  // contre une vraie base (tache 9, revue, Important 2) avec un patient ayant un dossier dans
+  // contre une vraie base avec un patient ayant un dossier dans
   // deux services, ou `_count.serviceFiles` valait 2 pour un tenant scope au seul service A1.
-  describe('_count sous select (tour de correction 1, important 2)', () => {
+  describe('_count sous select', () => {
     it('refuse _count sous select comme sous include, a la racine', () => {
       expect(() =>
         assertTenantScope(
@@ -1657,7 +1656,7 @@ describe('assertTenantScope', () => {
     })
 
     // La recursion etend la portee du probleme a n'importe quelle profondeur : verifie ici sur
-    // la meme chaine imbriquee que la tache 9 (appointment > appointmentPatients > patient).
+    // la meme chaine imbriquee (appointment > appointmentPatients > patient).
     it('refuse _count sous select en profondeur, atteint par la meme chaine imbriquee', () => {
       expect(() =>
         assertTenantScope(
@@ -1686,14 +1685,14 @@ describe('assertTenantScope', () => {
     })
   })
 
-  // Tour de correction 1 sur la relecture de la tache 9 : assertNestedInclude n'etait jamais
+  // assertNestedInclude n'etait jamais
   // appelee pour une racine globale (voir l'ancien commentaire « PERIMETRE NON COUVERT » retire
   // de tenant-guard.ts). Une lecture qui franchissait assertGlobalInclude (une seule ligne, via
   // findUnique(OrThrow)) pouvait ensuite descendre sans plus aucun filtre jusqu'a une transition
-  // etablissement -> service. Prouve contre une vraie base (tache 9, revue, point A6) : un compte
+  // etablissement -> service. Prouve contre une vraie base : un compte
   // membre du seul etablissement A lisait medicalDiagnosis et notes d'un patient de
   // l'etablissement B par cette meme chaine, en partant de User.
-  describe('descente recursive depuis une racine globale (tour de correction 1)', () => {
+  describe('descente recursive depuis une racine globale', () => {
     const dangerousChain = {
       establishmentMemberships: {
         include: {
@@ -1730,8 +1729,8 @@ describe('assertTenantScope', () => {
       ).toThrow(TenantScopeMissingError)
     })
 
-    // TACHE 15 — CETTE ATTENTE A CHANGE DE SENS. Filtrer la transition etablissement -> service
-    // (`serviceFiles: { where: { serviceId } }`) fermait le SEUL defaut que l'etape 3 connaissait
+    // CETTE ATTENTE A CHANGE DE SENS. Filtrer la transition etablissement -> service
+    // (`serviceFiles: { where: { serviceId } }`) fermait le SEUL defaut alors connu
     // sur cette chaine ; il en restait un autre, deux sauts plus haut et invisible d'ici : le
     // premier saut, `User -> establishmentMemberships`, repart d'un modele GLOBAL par une
     // relation A-PLUSIEURS, et ramene les appartenances de tous les etablissements du compte.
@@ -1749,11 +1748,11 @@ describe('assertTenantScope', () => {
           store,
         ),
       ).toThrow(/relation 'establishmentMemberships'/)
-      // AUCUN REFUS DEPLACE : sans contexte, ou la regle de la tache 15 ne s'applique pas
+      // AUCUN REFUS DEPLACE : sans contexte, ou la regle ne s'applique pas
       // (voir assertNoGlobalToManyBridge), cette meme chaine reste refusee pour la raison
       // d'AVANT — la transition etablissement -> service, qu'aucun `serviceId` ne peut satisfaire
       // faute de tenant a comparer. Les deux refus coexistent, chacun nomme par son message ;
-      // la tache 15 en ajoute un, elle n'en remplace aucun.
+      // ce refus en ajoute un, il n'en remplace aucun.
       expect(() =>
         assertTenantScope(
           {
@@ -1871,14 +1870,13 @@ describe('contexte superadmin', () => {
     ).not.toThrow()
   })
 
-  // TOUR DE CORRECTION 1 (tache 1) — Critique 1 de la revue : la premiere version de la branche
-  // superadmin faisait `return` juste apres la porte de permission, sautant toute la descente
-  // structurelle (assertNestedInclude, assertData -> assertNestedRelations) prouvee a l'etape 3.
-  // Les trois cas ci-dessous sont ceux nommes par la revue ; chacun doit rester refuse APRES le
+  // La premiere version de la branche superadmin faisait `return` juste apres la porte de
+  // permission, sautant toute la descente structurelle (assertNestedInclude, assertData ->
+  // assertNestedRelations). Les trois cas ci-dessous doivent rester refuses APRES le
   // correctif (assertSuperAdminOperationDeclared ne fait plus sortir la fonction), et le dernier
   // test du bloc verifie l'autre sens : une operation declaree SANS inclusion imbriquee doit
   // continuer a passer, sans quoi le correctif aurait ferme la liste en la rendant inutilisable.
-  describe('la descente structurelle reste active sous superadmin (revue, tour 1)', () => {
+  describe('la descente structurelle reste active sous superadmin', () => {
     it('refuse Service.findMany decore d une inclusion qui descend jusqu a Patient', () => {
       // Service (etablissement) -> patientServiceFiles (service) -> patient (etablissement),
       // diagnostics et enrollmentIssues (donnees cliniques). La transition etablissement ->
@@ -1953,7 +1951,7 @@ describe('contexte superadmin', () => {
     })
 
     it('laisse toujours passer une operation declaree sans inclusion imbriquee', () => {
-      // L'autre sens, explicitement demande par la revue : le correctif ne doit pas fermer la
+      // L'autre sens : le correctif ne doit pas fermer la
       // liste au point de la rendre inutilisable. Une lecture nue et une ecriture plate (sans
       // relation imbriquee) doivent rester vertes.
       expect(() =>
@@ -1978,14 +1976,13 @@ describe('contexte superadmin', () => {
   })
 })
 
-// Preuve de monotonie (tache 1, step 7) : le resserrement de l'etape 3 n'avait perdu aucun refus
-// (6 649 chemins enumeres, comparaison des deux versions du garde-fou — voir
-// docs/multi-tenant/decisions-etape-3.md). Le troisieme contexte doit tenir la meme propriete
-// pour les deux contextes preexistants.
+// Preuve de monotonie : le resserrement precedent n'avait perdu aucun refus
+// (6 649 chemins enumeres, comparaison des deux versions du garde-fou). Le troisieme contexte
+// doit tenir la meme propriete pour les deux contextes preexistants.
 //
-// Choix retenu ici entre les deux options du brief : OPTION A (rejouer un echantillon avant et
-// apres le changement), pas l'option B (importer les deux versions du fichier cote a cote).
-// Raison : le diff de cette tache sur assertTenantScope ajoute une nouvelle table
+// Choix retenu ici entre deux options : rejouer un echantillon avant et
+// apres le changement, plutot qu'importer les deux versions du fichier cote a cote.
+// Raison : ce changement sur assertTenantScope ajoute une nouvelle table
 // (SUPERADMIN_OPERATIONS) et deux fonctions, et remplace UNE seule ligne preexistante —
 // `if (store.kind === 'system') { return }` devient `if (isNonTenantStore(store)) {
 // assertNonTenantStore(store, model, operation); return }` (extraction exigee par le linter,
@@ -2002,10 +1999,10 @@ describe('contexte superadmin', () => {
 // aussi etroit.
 //
 // Cette preuve a ete faite empiriquement, pas seulement argumentee : la version de
-// tenant-guard.ts telle qu'elle existait juste avant cette tache (commit e06d057) a ete remise en
-// place temporairement (copie de cote puis restauree, jamais de `git stash`) et ce meme bloc de
-// cas a ete rejoue contre elle — memes verdicts. Voir le rapport de tache pour la trace de cette
-// epreuve ; elle n'est pas gardee ici en permanence, pour la raison ci-dessus.
+// tenant-guard.ts telle qu'elle existait juste avant ce changement (commit e06d057) a ete remise
+// en place temporairement (copie de cote puis restauree, jamais de `git stash`) et ce meme bloc
+// de cas a ete rejoue contre elle — memes verdicts. Cette epreuve n'est pas gardee ici en
+// permanence, pour la raison ci-dessus.
 describe('monotonie : le contexte superadmin ne change aucun verdict pour tenant et system', () => {
   const casTenantEtSysteme: Array<{
     nom: string
@@ -2064,8 +2061,9 @@ describe('monotonie : le contexte superadmin ne change aucun verdict pour tenant
       attendu: 'refuse',
     },
     {
-      // TACHE 15 : `passe` jusqu'ici, `refuse` desormais. « Une seule ligne » ne borne rien quand
-      // la relation est a-plusieurs ET que la ligne est globale (voir le bloc « tache 15 »). Un
+      // `passe` jusqu'ici, `refuse` desormais. « Une seule ligne » ne borne rien quand
+      // la relation est a-plusieurs ET que la ligne est globale (voir plus bas le bloc sur le
+      // franchissement d'un modele global par une relation a-plusieurs). Un
       // refus GAGNE, jamais un refus perdu : la monotonie porte sur les refus qui disparaissent.
       nom: 'tenant, meme include mais sous findUnique(id) — une seule ligne',
       store,
@@ -2130,22 +2128,22 @@ describe('monotonie : le contexte superadmin ne change aucun verdict pour tenant
   )
 })
 
-// TOUR DE CORRECTION 2 (tache 1) — Critique 1 de la revue : un modele GLOBAL sert de pont.
+// Un modele GLOBAL sert de pont.
 // `Service.findMany({ include: { establishment: { include: { patients: true } } } })` passait :
 // la transition etablissement -> service (assertServiceRelationFilter) ne dit rien d'une
 // relation vers un modele global, ni d'une relation qui en repart. Voir le commentaire de
 // assertNoGlobalBridgeUnderSuperAdmin (tenant-guard.ts) pour le detail du remede et pourquoi il
 // reste local au contexte superadmin (le contexte tenant est protege par le `where` de sa
 // racine, jamais pose sous superadmin — sauf par une relation A-PLUSIEURS d'un modele global,
-// qui reste un trou preexistant non traite ici, voir le meme commentaire, tour 3).
+// qui reste un trou preexistant non traite ici, voir le paragraphe suivant).
 //
-// TOUR DE CORRECTION 3 — Critique : une racine GLOBALE contournait ENTIEREMENT la liste, puisque
+// Une racine GLOBALE contournait par ailleurs ENTIEREMENT la liste, puisque
 // `assertTenantScope` retourne via `assertGlobalScope` avant meme d'atteindre la porte de
 // permission. `Establishment.findUnique({ include: { patients: true } })` et
 // `Establishment.deleteMany({})` passaient tous deux. La recherche ci-dessous porte donc
 // maintenant aussi sur les racines globales (`User`, `Establishment`), pas seulement sur les
 // racines declarees dans SUPERADMIN_OPERATIONS.
-describe('aucun pont par un modele global sous superadmin (revue, tours 2 et 3)', () => {
+describe('aucun pont par un modele global sous superadmin', () => {
   const store = { kind: 'superadmin' } as const
 
   type Famille = 'service' | 'etablissement' | 'global'
@@ -2177,7 +2175,7 @@ describe('aucun pont par un modele global sous superadmin (revue, tours 2 et 3)'
   // graphe porte des cycles (Slot <-> Appointment, Pathway <-> Slot...), la profondeur est donc
   // la seule garde necessaire, pas un ensemble de visites. Chaque chemin retenu s'arrete au
   // PREMIER saut qui franchit la frontiere global/tenant (dans un sens comme dans l'autre — voir
-  // TOUR 3 ci-dessus : une racine globale franchit la frontiere des le premier saut, pas apres
+  // ci-dessus : une racine globale franchit la frontiere des le premier saut, pas apres
   // avoir atteint un modele global en profondeur, puisqu'elle EST deja ce modele) : c'est le
   // point exact ou assertNoGlobalBridgeUnderSuperAdmin doit refuser, et un chemin plus long
   // derriere lui ne serait de toute facon jamais atteint — la recursion de assertNestedInclude
@@ -2219,19 +2217,18 @@ describe('aucun pont par un modele global sous superadmin (revue, tours 2 et 3)'
     .filter(([, operations]) => operations.includes('findMany'))
     .map(([modele]) => modele)
 
-  // Les deux racines globales (tour 3) : declarees en lecture dans SUPERADMIN_GLOBAL_OPERATIONS
+  // Les deux racines globales : declarees en lecture dans SUPERADMIN_GLOBAL_OPERATIONS
   // (tenant-guard.ts), donc des racines tout aussi legitimes qu'un modele de tenant declare.
   // `findUnique` plutot que `findMany` : assertGlobalInclude bloque deja `findMany` + un include
   // vers une relation de GLOBAL_TENANT_RELATIONS, independamment de cette recherche — c'est
-  // precisement le cas (`findUnique`, autorise par assertGlobalInclude) que la revue a cite, et
-  // c'est lui qui isole vraiment ce que assertNoGlobalBridgeUnderSuperAdmin doit refuser seul.
+  // precisement le cas (`findUnique`, autorise par assertGlobalInclude)
+  // qui isole vraiment ce que assertNoGlobalBridgeUnderSuperAdmin doit refuser seul.
   //
-  // TOUR DE CORRECTION 4 — `create` s'y ajoute, pour la meme raison qu'au tour 3 : ce tour rend
-  // `User.create` et `Establishment.create` PERMIS sous superadmin, donc ces deux couples
-  // deviennent a leur tour des racines depuis lesquelles une chaine d'inclusion pourrait franchir
-  // la frontiere (`create ... include` rend exactement ce qu'un `findMany ... include` rendrait).
-  // Le balayage doit donc repartir de la, sans quoi l'elargissement de ce tour rouvrirait
-  // precisement ce que le tour 3 a ferme.
+  // `create` s'y ajoute : depuis que `User.create` et `Establishment.create` sont PERMIS sous
+  // superadmin, ces deux couples deviennent a leur tour des racines depuis lesquelles une chaine
+  // d'inclusion pourrait franchir la frontiere (`create ... include` rend exactement ce qu'un
+  // `findMany ... include` rendrait). Le balayage doit donc repartir de la, sans quoi cet
+  // elargissement rouvrirait precisement ce que la garde ci-dessus a ferme.
   const racinesGlobales: Array<{
     racine: string
     operation: string
@@ -2257,8 +2254,8 @@ describe('aucun pont par un modele global sous superadmin (revue, tours 2 et 3)'
     ])
   })
 
-  // Le coeur de l'epreuve demandee par la revue : chercher la chaine qui passe encore, pas
-  // seulement verifier que l'exemple cite echoue — et, au tour 3, depuis une racine globale
+  // Le coeur de l'epreuve : chercher la chaine qui passe encore, pas
+  // seulement verifier qu'un exemple donne echoue — depuis une racine globale
   // comme depuis les autres. Le tableau des violations (vide si tout est refuse) s'affiche dans
   // le diff Jest en cas d'echec, avec la racine et le chemin exact qui aurait fui.
   it('refuse toute chaine qui franchit la frontiere globale/tenant, depuis chaque racine — declaree ou globale —, a toute profondeur', () => {
@@ -2301,10 +2298,10 @@ describe('aucun pont par un modele global sous superadmin (revue, tours 2 et 3)'
     expect(violations).toEqual([])
   })
 
-  // Les deux exemples nommes par la revue, gardes tels quels en plus de la recherche ci-dessus :
+  // Deux exemples concrets, gardes tels quels en plus de la recherche ci-dessus :
   // un echec de lecture isole sur ces cas precis doit rester lisible sans avoir a interpreter un
   // tableau de violations.
-  it('refuse Service.findMany -> establishment -> patients, l exemple cite au tour 2', () => {
+  it('refuse Service.findMany -> establishment -> patients', () => {
     expect(() =>
       assertTenantScope(
         {
@@ -2317,7 +2314,7 @@ describe('aucun pont par un modele global sous superadmin (revue, tours 2 et 3)'
     ).toThrow(TenantScopeMissingError)
   })
 
-  it('refuse Establishment.findUnique -> patients, l exemple cite au tour 3', () => {
+  it('refuse Establishment.findUnique -> patients', () => {
     expect(() =>
       assertTenantScope(
         {
@@ -2330,7 +2327,7 @@ describe('aucun pont par un modele global sous superadmin (revue, tours 2 et 3)'
     ).toThrow(TenantScopeMissingError)
   })
 
-  it('refuse Establishment.deleteMany, l autre exemple cite au tour 3', () => {
+  it('refuse Establishment.deleteMany', () => {
     expect(() =>
       assertTenantScope(
         { model: 'Establishment', operation: 'deleteMany', args: {} },
@@ -2339,12 +2336,11 @@ describe('aucun pont par un modele global sous superadmin (revue, tours 2 et 3)'
     ).toThrow(TenantScopeMissingError)
   })
 
-  // L'autre sens, explicitement demande par la revue : le correctif ne doit pas avoir referme
+  // L'autre sens : le correctif ne doit pas avoir referme
   // plus que necessaire. Les dix couples declares (SUPERADMIN_OPERATIONS), nus et avec un
-  // `where` libre, doivent tous continuer a passer — et, depuis le tour 3, une lecture NUE (sans
+  // `where` libre, doivent tous continuer a passer — et une lecture NUE (sans
   // include) d'une racine globale doit rester possible : c'est le contournement documente
-  // au-dessus de SUPERADMIN_OPERATIONS (deux lectures separees, jointure en memoire) pour les
-  // taches 6, 7 et 9.
+  // au-dessus de SUPERADMIN_OPERATIONS (deux lectures separees, jointure en memoire).
   it('laisse passer les dix couples declares, nus et avec un where libre, et les lectures nues de User/Establishment', () => {
     const casDeclares: Array<{
       model: string
@@ -2401,15 +2397,15 @@ describe('aucun pont par un modele global sous superadmin (revue, tours 2 et 3)'
   })
 })
 
-// TOUR DE CORRECTION 4 (tache 1) — Critique de la re-revue : le resserrement du tour 3 avait ferme
-// dix-huit couples (modele, operation) d'ecriture sur un modele global, dont ceux dont les taches
-// 4, 6, 8 et 10 dependent, et il n'existait AUCUNE porte declarative pour en rouvrir un seul (un
-// modele global n'atteint jamais SUPERADMIN_OPERATIONS ; l'ancien ensemble n'avait pas de
-// granularite par modele). SUPERADMIN_GLOBAL_OPERATIONS est cette porte. Ce bloc l'eprouve dans
-// les DEUX sens, et le second compte autant que le premier : ce dont le plan a besoin passe, et
-// tout le reste — mutations non declarees, modeles globaux non declares, ecritures imbriquees sous
-// un `data` pourtant declare — reste refuse.
-describe('ecritures declarees sur un modele global sous superadmin (revue, tour 4)', () => {
+// Le resserrement precedent avait ferme
+// dix-huit couples (modele, operation) d'ecriture sur un modele global, dont plusieurs
+// fonctionnalites de super-admin dependent, et il n'existait AUCUNE porte declarative pour en
+// rouvrir un seul (un modele global n'atteint jamais SUPERADMIN_OPERATIONS ; l'ancien ensemble
+// n'avait pas de granularite par modele). SUPERADMIN_GLOBAL_OPERATIONS est cette porte. Ce bloc
+// l'eprouve dans les DEUX sens, et le second compte autant que le premier : ce dont ces
+// fonctionnalites ont besoin passe, et tout le reste — mutations non declarees, modeles globaux
+// non declares, ecritures imbriquees sous un `data` pourtant declare — reste refuse.
+describe('ecritures declarees sur un modele global sous superadmin', () => {
   const store = { kind: 'superadmin' } as const
   // Le store de tenant ordinaire, pour la contrepartie de monotonie en fin de bloc (le `store`
   // du module est masque ici par celui du superadmin).
@@ -2425,8 +2421,8 @@ describe('ecritures declarees sur un modele global sous superadmin (revue, tour 
     },
   }
 
-  // Ce dont les quatre taches ont besoin, nomme une par une plutot que par un balayage : un echec
-  // ici doit dire QUELLE tache se retrouve bloquee.
+  // Ce dont chaque fonctionnalite a besoin, nomme une par une plutot que par un balayage : un
+  // echec ici doit dire QUEL besoin se retrouve bloque.
   const besoinsDesTaches: Array<{
     tache: string
     model: string
@@ -2434,13 +2430,13 @@ describe('ecritures declarees sur un modele global sous superadmin (revue, tour 
     args: Record<string, unknown>
   }> = [
     {
-      tache: 'tache 6 — creer un etablissement',
+      tache: 'creer un etablissement',
       model: 'Establishment',
       operation: 'create',
       args: { data: { name: 'CH de Test' } },
     },
     {
-      tache: 'taches 6 et 10 — creer un compte',
+      tache: 'creer un compte',
       model: 'User',
       operation: 'create',
       args: {
@@ -2448,14 +2444,13 @@ describe('ecritures declarees sur un modele global sous superadmin (revue, tour 
       },
     },
     {
-      tache:
-        'taches 6 et 10 — l adresse deja connue : lire avant de creer, sans ecraser',
+      tache: 'l adresse deja connue : lire avant de creer, sans ecraser',
       model: 'User',
       operation: 'findUnique',
       args: { where: { email: 'a@b.c' } },
     },
     {
-      tache: 'taches 4, 6 et 10 — emettre un lien d acces',
+      tache: 'emettre un lien d acces',
       model: 'AccessLink',
       operation: 'create',
       args: {
@@ -2468,8 +2463,7 @@ describe('ecritures declarees sur un modele global sous superadmin (revue, tour 
       },
     },
     {
-      tache:
-        'tache 4 — la reemission invalide les liens precedents du meme compte',
+      tache: 'la reemission invalide les liens precedents du meme compte',
       model: 'AccessLink',
       operation: 'updateMany',
       args: {
@@ -2478,7 +2472,7 @@ describe('ecritures declarees sur un modele global sous superadmin (revue, tour 
       },
     },
     {
-      tache: 'tache 8 — octroyer un acces temporaire',
+      tache: 'octroyer un acces temporaire',
       model: 'SuperAdminAccessGrant',
       operation: 'create',
       args: {
@@ -2491,23 +2485,23 @@ describe('ecritures declarees sur un modele global sous superadmin (revue, tour 
       },
     },
     {
-      // La revue attendait ici `.delete`. Le modele porte `revokedAt DateTime?` (specification §5)
-      // et la tache 8 step 4 exige que l'administrateur voie les octrois « en cours ET PASSES,
+      // On pourrait s'attendre ici a `.delete`. Le modele porte `revokedAt DateTime?`
+      // (specification §5) et l'administrateur doit voir les octrois « en cours ET PASSES,
       // avec leur motif et leur auteur » : supprimer la ligne detruirait la trace comptable qui
       // justifie le mecanisme. Revoquer est donc un `update`, et c'est lui qui est declare.
-      tache: 'tache 8 — revoquer un octroi (revokedAt, pas un delete)',
+      tache: 'revoquer un octroi (revokedAt, pas un delete)',
       model: 'SuperAdminAccessGrant',
       operation: 'update',
       args: { where: { id: 'g1' }, data: { revokedAt: new Date() } },
     },
     {
-      tache: 'tache 7 — lister les etablissements',
+      tache: 'lister les etablissements',
       model: 'Establishment',
       operation: 'findMany',
       args: {},
     },
     {
-      tache: 'tache 7 — chercher un compte par son adresse',
+      tache: 'chercher un compte par son adresse',
       model: 'User',
       operation: 'findMany',
       args: { where: { email: { contains: 'a@b.c' } } },
@@ -2524,7 +2518,8 @@ describe('ecritures declarees sur un modele global sous superadmin (revue, tour 
   )
 
   // L'autre sens, celui qui compte autant : l'elargissement ne doit rien rouvrir d'autre. Chaque
-  // couple ci-dessous est une mutation que le tour 3 avait fermee et que ce tour NE rouvre pas.
+  // couple ci-dessous est une mutation que le resserrement precedent avait fermee et que cet
+  // elargissement NE rouvre pas.
   const mutationsNonDeclarees: Array<{
     model: string
     operation: string
@@ -2582,7 +2577,8 @@ describe('ecritures declarees sur un modele global sous superadmin (revue, tour 
     },
     { model: 'SuperAdminAccessGrant', operation: 'deleteMany', args: {} },
     // Un modele global qu'aucune entree ne declare est refuse EN ENTIER, lecture comprise : c'est
-    // la difference avec le tour 3, ou tout modele global etait lisible sans declaration.
+    // la difference avec l'ancien comportement, ou tout modele global etait lisible sans
+    // declaration.
     { model: 'UnModeleGlobalDeDemain', operation: 'findMany', args: {} },
     { model: 'UnModeleGlobalDeDemain', operation: 'count', args: {} },
     {
@@ -2681,7 +2677,7 @@ describe('ecritures declarees sur un modele global sous superadmin (revue, tour 
 
   // Une ecriture declaree n'ouvre QUE sa propre ligne. Sans cette garde, declarer
   // `Establishment.create` rouvrirait par son `data` le pont vers les modeles de tenant que
-  // assertNoGlobalBridgeUnderSuperAdmin ferme du cote `include` — le trou du tour 2, rouvert par
+  // assertNoGlobalBridgeUnderSuperAdmin ferme du cote `include` — le meme trou, rouvert par
   // l'autre porte.
   const ecrituresImbriquees: Array<{
     nom: string
@@ -2767,18 +2763,18 @@ describe('ecritures declarees sur un modele global sous superadmin (revue, tour 
     },
   )
 
-  // Et la contrepartie de monotonie, a l'echelle de ce bloc : ce tour n'a rien change hors du
+  // Et la contrepartie de monotonie, a l'echelle de ce bloc : cet ajout n'a rien change hors du
   // contexte superadmin. Les memes couples, sous tenant et sous systeme, rendent le meme verdict
   // qu'avant — un modele global n'y est soumis a aucune des deux tables.
   //
-  // TACHE 9 (etape 4b) — « SANS CONTEXTE » A ETE RETIRE DE CETTE LISTE, A DESSEIN. Ce test
+  // « SANS CONTEXTE » A ETE RETIRE DE CETTE LISTE, A DESSEIN. Ce test
   // affirmait aussi `assertTenantScope(cas, undefined)` sans refus, pour les quatre couples
   // ci-dessous. C'etait vrai, et c'etait precisement le trou : hors tenant, un modele global ne
-  // rencontrait AUCUNE porte de permission. La tache 9 en fait un quatrieme contexte declare
+  // rencontrait AUCUNE porte de permission. Ceci en fait un quatrieme contexte declare
   // (NO_CONTEXT_GLOBAL_OPERATIONS), donc ces quatre couples y sont maintenant refuses — c'est
-  // l'objet meme de cette tache, pas un assouplissement subi. La propriete que ce test gardait
+  // l'objet meme de ce changement, pas un assouplissement subi. La propriete que ce test gardait
   // reste tenue pour les deux contextes ou elle a encore un sens ; le cas sans contexte est
-  // repris, en refus, par le bloc « tache 9 » en fin de fichier.
+  // repris, en refus, par le bloc sur l'absence de contexte en fin de fichier.
   it('ne change aucun verdict sous tenant ni sous systeme', () => {
     const casHorsSuperadmin: Array<{
       model: string
@@ -2801,7 +2797,7 @@ describe('ecritures declarees sur un modele global sous superadmin (revue, tour 
     for (const cas of casHorsSuperadmin) {
       expect(() => assertTenantScope(cas, storeTenant)).not.toThrow()
       expect(() => assertTenantScope(cas, { kind: 'system' })).not.toThrow()
-      // Et, depuis la tache 9, refuses sans contexte — jamais laisses passer.
+      // Et, sans aucun contexte, refuses — jamais laisses passer.
       expect(() => assertTenantScope(cas, undefined)).toThrow(
         TenantScopeMissingError,
       )
@@ -2809,19 +2805,18 @@ describe('ecritures declarees sur un modele global sous superadmin (revue, tour 
   })
 })
 
-// TACHE 15 (etape 4a) — LE PONT PAR UN MODELE GLOBAL, SUR LE CHEMIN ORDINAIRE.
+// LE PONT PAR UN MODELE GLOBAL, SUR LE CHEMIN ORDINAIRE.
 //
-// Ce que les tours 2 et 3 de la tache 1 avaient nomme sans le fermer (voir le commentaire de
+// Ce que la protection existante avait nomme sans le fermer (voir le commentaire de
 // `assertNoGlobalBridgeUnderSuperAdmin`, tenant-guard.ts) : la protection du chemin de tenant
 // repose sur le `where` de la RACINE, qui epingle l'etablissement. Les relations qui MENENT a un
 // modele global sont toutes a-un (verifie : `EstablishmentMembership.user`, `Patient.establishment`,
 // `AccessLink.user`… — voir MODEL_RELATIONS, ou elles portent toutes `one`), donc inoffensives :
 // une ligne deja epinglee ne mene qu'a UNE ligne globale. Mais une relation qui REPART d'un
 // modele global peut etre a-PLUSIEURS, et celle-la traverse les etablissements — c'est
-// l'asymetrie que ni la descente recursive de l'etape 3 ni la liste declaree de la tache 1 ne
-// voyaient.
+// l'asymetrie que ni la descente recursive ni la liste declaree ne voyaient.
 //
-// MESURE, PAS IMPRESSION (step 1, avant correctif, sur la vraie base — voir
+// MESURE, PAS IMPRESSION (avant correctif, sur la vraie base — voir
 // `tenant-guard-pont-global.test.ts` pour la version permanente) : deux etablissements peuples
 // (A : patient « Alice DE-A », B : patient « Bruno DE-B ») et UN compte membre des deux. Sous le
 // contexte de tenant de A, la chaine ci-dessous rendait
@@ -2829,7 +2824,7 @@ describe('ecritures declarees sur un modele global sous superadmin (revue, tour 
 // a traverse, sans aucun refus. Cote ecriture, `Establishment.update({where:{id:B}, data:{
 // patients:{create:{…Dora}}}})` sous ce meme contexte a ECRIT « Dora DE-D » dans l'etablissement
 // B, qui contenait ensuite « Bruno DE-B » et « Dora DE-D ».
-describe('tache 15 : franchir un modele global par une relation a-plusieurs', () => {
+describe('franchir un modele global par une relation a-plusieurs', () => {
   const patient = {
     firstName: 'X',
     lastName: 'Y',
@@ -3021,16 +3016,16 @@ describe('tache 15 : franchir un modele global par une relation a-plusieurs', ()
   })
 })
 
-// TACHE 9 (etape 4b) — L'ABSENCE DE CONTEXTE EST UN QUATRIEME CONTEXTE DECLARE.
+// L'ABSENCE DE CONTEXTE EST UN QUATRIEME CONTEXTE DECLARE.
 //
 // Le defaut ferme ici : `routes/index.ts` appelle `tenantContext.clear()` en tete de CHAQUE
 // requete et `tenant.plugin.ts` est le seul a appeler `enter()`, donc `/auth`, `/me` et TOUT le
 // prefixe `/super-admin` s'executent SANS store. Pour un modele de TENANT, ce cas etait deja
 // refuse (`assertTenantScope` leve des que `!store`) ; pour un modele GLOBAL, il ne l'etait pas
-// du tout : la porte de permission etait franchie avant meme d'exister. Ces trois appels, cites
-// tels quels par le brief de la tache 9, passaient jusqu'ici.
-describe('tache 9 : sans aucun contexte, un modele global suit une liste declaree', () => {
-  // Les trois appels cites par le brief, mesures passants a l'etape precedente.
+// du tout : la porte de permission etait franchie avant meme d'exister. Ces trois appels
+// passaient jusqu'ici.
+describe('sans aucun contexte, un modele global suit une liste declaree', () => {
+  // Les trois appels ci-dessous, mesures passants avant ce correctif.
   it.each([
     [
       'Establishment',
@@ -3209,7 +3204,7 @@ describe('tache 9 : sans aucun contexte, un modele global suit une liste declare
     },
   ]
 
-  // Le MOTIF est epingle, pas seulement le type (tour de correction 1, mineur) : sans cela, un
+  // Le MOTIF est epingle, pas seulement le type : sans cela, un
   // de ces cas pourrait un jour etre refuse par une AUTRE regle et rester vert en ne disant plus
   // rien de la porte de permission. C'est precisement ce qui venait d'arriver au test de
   // `assertGlobalInclude` en tete de ce fichier.

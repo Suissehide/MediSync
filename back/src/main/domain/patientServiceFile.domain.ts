@@ -47,18 +47,18 @@ class PatientServiceFileDomain implements PatientServiceFileDomainInterface {
     return this.patientServiceFileRepository.ensureExists(patientId)
   }
 
-  // Rattache une identite existante au service courant (design §6, tache 13 — le pendant de
+  // Rattache une identite existante au service courant (design §6 — le pendant de
   // "Creer sans parcours" pour un patient qu'on vient de trouver par la recherche d'identite,
   // plutot que de creer). Lit d'abord (findByPatient, deja filtre sur le service courant par
   // `this.scope` dans le depot) pour savoir s'il existe deja un sous-dossier ICI : si oui, ne
-  // rien faire d'autre que le dire (consigne 4 du brief — "le cas deja suivi ici" ne doit rien
+  // rien faire d'autre que le dire ("le cas deja suivi ici" ne doit rien
   // ecraser) ; si non, `ensureExists` le cree vide, jamais en copiant le contenu d'un autre
   // service. `ensureExists` etant lui-meme idempotent (upsert avec `update: {}`, et desormais
   // silencieux sur un P2002 concurrent — voir son commentaire), l'appeler dans les deux cas
   // serait inoffensif — mais le lire d'abord permet de savoir QUOI rendre a l'ecran
   // (`alreadyFollowedHere`) et de n'emettre l'evenement d'activite que pour une creation reelle.
   //
-  // IRREVERSIBLE (connu et assume depuis la tache 7, cf. `patientServiceFile.ts` — le routeur ne
+  // IRREVERSIBLE (connu et assume, cf. `patientServiceFile.ts` — le routeur ne
   // declare que GET, POST et PATCH, jamais DELETE) : un rattachement sur la mauvaise ligne
   // d'homonymes (deux identites proches, la date de naissance souvent absente) cree un
   // sous-dossier vide qu'aucune route ne permet de retirer, et allume `estSuiviAilleurs` pour

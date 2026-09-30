@@ -10,7 +10,7 @@ import { join } from 'node:path'
 // ELLE VIT ICI, ET PAS DANS L'UN DES DEUX, pour que les deux posent EXACTEMENT la meme question
 // a la meme source. Deux lecteurs distincts du meme fichier, c'est deux facons de deriver.
 //
-// REVUE FINALE DE BRANCHE, Important n°4 — POURQUOI CE N'EST PLUS UNE REGEX LIGNE PAR LIGNE.
+// POURQUOI CE N'EST PLUS UNE REGEX LIGNE PAR LIGNE.
 // La premiere version exigeait l'accolade fermante sur la MEME ligne
 // (`/^\s*'([\w.]+)':\s*\{([^}]*)\}/`). Un evenement declare sur quatre lignes — la forme que le
 // formateur produit de lui-meme des que la charge depasse la largeur de ligne, et un evenement

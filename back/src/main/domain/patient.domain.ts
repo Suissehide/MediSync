@@ -58,7 +58,7 @@ const formatDate = (value: Date | string | null | undefined): string =>
 // (`failedEnrollments[].reason`, affichee a l'ecran par front/src/queries/usePatient.tsx) et le
 // journal en portent le message. Un Boom est sans risque : son message est toujours ecrit par
 // notre propre code (`boomErrorFromPrismaError`, ou un `Boom.xxx(...)` explicite d'un domaine).
-// Mais 17 depots sur 19 ont des methodes sans `catch` (task-5-re-review-3.md, C1) : si l'une
+// Mais 17 depots sur 19 ont des methodes sans `catch` : si l'une
 // d'elles est appelee ici et jette une erreur brute (Prisma ou autre), ce n'est plus un Boom, et
 // son message peut porter integralement les arguments de l'appel qui a echoue. On ne fait donc
 // jamais confiance a `error.message` en dehors d'un Boom : seule sa classe, qui ne peut porter
@@ -87,8 +87,8 @@ const describeEnrollmentFailure = (
 // (ni tsc, ni un schema Zod) ne les reliait, et un decalage entre les deux ne produisait aucune
 // erreur, seulement des largeurs de colonnes fausses a l'ouverture du fichier. Les cles de
 // `careMode`, `orientation`, `entryDate`, `exitDate`, `stopReason` et `medicalDiagnosis` vivent
-// desormais sur le sous-dossier de service (`p.serviceFile`), plus sur `Patient` (etape 3 du
-// multi-tenant) — `null` quand le patient n'a pas encore de sous-dossier dans le service courant.
+// desormais sur le sous-dossier de service (`p.serviceFile`), plus sur `Patient` — `null` quand
+// le patient n'a pas encore de sous-dossier dans le service courant.
 type ExportColumn = {
   header: string
   width: number
@@ -204,32 +204,30 @@ class PatientDomain implements PatientDomainInterface {
     return this.patientRepository.findAllWithTags()
   }
 
-  // Recherche d'identite existante avant creation (design §6, tache 13) : passe-plat vers le
+  // Recherche d'identite existante avant creation (design §6) : passe-plat vers le
   // depot, SANS `runAsSystem`. Contrairement a `estSuiviAilleurs` (patientServiceFile.repository
   // .ts), qui doit traverser la frontiere entre SERVICES, cette recherche ne traverse qu'une
   // frontiere de SERVICE a l'interieur du MEME etablissement : Patient est un modele
   // d'etablissement (voir `establishmentScope` dans patient.repository.ts, deja utilise par
   // `findByID`/`findAll`/`create`), donc une lecture filtree sur l'etablissement courant du
   // garde-fou d'ORM normal suffit — nul besoin d'assouplir quoi que ce soit. Ne pas y ajouter
-  // `runAsSystem` : l'exception unique de l'etape reste `estSuiviAilleurs`, et
-  // `runAsSystem-unicite.test.ts` le verifie par lecture de source, pas par relecture humaine.
+  // `runAsSystem` : l'exception unique ici reste `estSuiviAilleurs`, et
+  // `runAsSystem-unicite.test.ts` le verifie par lecture de source.
   //
-  // `hasMore` (revue tache 13, tour 1, point 4) fait partie de la reponse depuis le depot
-  // lui-meme : c'est lui qui possede le `take` et la limite, voir
-  // `PatientRepository.searchByIdentity`. Passe-plat pur, comme avant.
+  // `hasMore` fait partie de la reponse depuis le depot lui-meme : c'est lui qui possede le
+  // `take` et la limite, voir `PatientRepository.searchByIdentity`. Passe-plat pur, comme avant.
   searchByIdentity(
     filters: PatientIdentitySearchFilters,
   ): Promise<PatientIdentitySearchResultDomain> {
     return this.patientRepository.searchByIdentity(filters)
   }
 
-  // Le signal de suivi ailleurs (spec §5.3/§6, tache 7 tour 1, I1) est porte ici, pas sur le
-  // sous-dossier de service. `followedElsewhere` (revue tache 13, tour 1, point 1 — Critique C1 ;
-  // voir D3, `docs/multi-tenant/decisions-etape-3.md`) n'est calcule, et present dans la reponse, QUE si le service courant a
-  // deja son propre sous-dossier pour ce patient : depuis la tache 12, tout patient cree ou
+  // Le signal de suivi ailleurs (spec §5.3/§6) est porte ici, pas sur le
+  // sous-dossier de service. `followedElsewhere` n'est calcule, et present dans la reponse, QUE
+  // si le service courant a deja son propre sous-dossier pour ce patient : tout patient cree ou
   // rattache dans un service y possede un sous-dossier (`ensureExists`), donc cette condition
   // recouvre exactement « ce patient est chez moi ». Le signal existe pour avertir un service
-  // qui suit DEJA un patient qu'il est suivi ailleurs (decision 2.1) — pas pour renseigner
+  // qui suit DEJA un patient qu'il est suivi ailleurs — pas pour renseigner
   // quelqu'un qui se contente de le chercher : la recherche (`searchByIdentity` ci-dessus) rend
   // un `id` accessible a `patient:read`, donc a LECTURE, et cet `id` mene ici. Sans cette garde,
   // deux requetes HTTP sans aucune ecriture suffisaient a apprendre qu'un patient est suivi dans
@@ -239,11 +237,10 @@ class PatientDomain implements PatientDomainInterface {
   // `estSuiviAilleurs` traverse la frontiere entre services (spec §5.3) : seule la condition qui
   // decide de l'appeler a change ici.
   //
-  // CE QU'IL REPOND, ET POURQUOI CE N'EST PAS LE MEME CALCUL QUE L'IMPACT D'UNE DESACTIVATION
-  // (tour de correction 2, tache 9 — la spec §3.6 a d'abord parle d'un « miroir », a tort) :
+  // CE QU'IL REPOND, ET POURQUOI CE N'EST PAS LE MEME CALCUL QUE L'IMPACT D'UNE DESACTIVATION :
   // `estSuiviAilleurs` repond « un sous-dossier existe-t-il ailleurs », vrai MEME si cet ailleurs
   // est un service aujourd'hui desactive — le sous-dossier existe toujours, et ce service peut
-  // etre reactive (decision 3.6 : reactiver rend tout). `ServiceDomain.impactDesactivation`
+  // etre reactive (reactiver rend tout). `ServiceDomain.impactDesactivation`
   // (via `PatientServiceFileRepository.impactDesactivation`) repond une question DIFFERENTE : «
   // ce patient va-t-il devenir invisible partout », et un ailleurs deja desactive ne protege de
   // rien — il compte donc les services ACTIFS seulement. Deux questions, deux reponses justes,
@@ -282,7 +279,7 @@ class PatientDomain implements PatientDomainInterface {
       type: 'buffer',
       bookType: 'xlsx',
     }) as Buffer
-    // `count` (etape 4b, tache 4) : le nombre de dossiers REELLEMENT rendus, pour le journal des
+    // `count` : le nombre de dossiers REELLEMENT rendus, pour le journal des
     // consultations -- voir `PatientExportResult` (types/domain/patient.domain.interface.ts).
     return { buffer, count: patients.length }
   }
@@ -309,7 +306,7 @@ class PatientDomain implements PatientDomainInterface {
     // mais plus aucune route normale ne permettait de le rouvrir. Une perte d'acces a un dossier
     // de sante, sur un chemin de creation qui existe dans l'interface.
     //
-    // Decision (tache 12, tour de correction 1) : creer un patient depuis un service, c'est le
+    // Decision : creer un patient depuis un service, c'est le
     // suivre dans ce service. Le cout est connu et assume : un patient cree par erreur dans le
     // mauvais service y laissera un sous-dossier vide IRREVERSIBLE (aucune route ne supprime un
     // sous-dossier, voir le commentaire au-dessus de `ensureExists` dans
@@ -897,11 +894,10 @@ class PatientDomain implements PatientDomainInterface {
         }
       } catch (error) {
         // Catch muet corrige : c'est lui qui a laisse vivre trois jours, sans aucune trace,
-        // le defaut de composite key de AppointmentRepository.create (task-5-re-review.md,
-        // point 3) — une erreur de programmation rendue au patient comme un probleme de
-        // disponibilite de creneau. Meme forme que le catch de enrollPatientInPathways
-        // ci-dessus : describeEnrollmentFailure, jamais le message brut d'une erreur qui
-        // n'est pas un Boom (task-5-re-review-3.md, tour 5).
+        // le defaut de composite key de AppointmentRepository.create — une erreur de
+        // programmation rendue au patient comme un probleme de disponibilite de creneau. Meme
+        // forme que le catch de enrollPatientInPathways ci-dessus : describeEnrollmentFailure,
+        // jamais le message brut d'une erreur qui n'est pas un Boom.
         const { reason, logLine } = describeEnrollmentFailure(
           `au créneau du ${slot.startDate}`,
           error,

@@ -26,12 +26,12 @@ const routes: FastifyPluginAsyncZod = async (fastify) => {
   fastify.addHook('onRoute', assertTenantShapedRoute)
   // Même garde, pour le même défaut, côté préfixe super-admin — voir assertSuperAdminShapedRoute.
   fastify.addHook('onRoute', assertSuperAdminShapedRoute)
-  // Troisième de la famille (étape 4b) : une route de LECTURE qui désigne un dossier patient et
+  // Troisième de la famille : une route de LECTURE qui désigne un dossier patient et
   // qui serait enregistrée hors du greffon de tenant échapperait au journal des consultations,
   // sans que rien ne le signale. Elle est refusée au démarrage — voir
   // assertPatientRouteUnderTenant. Sauf déclaration explicite dans EXEMPTED_ADMIN_PATIENT_ROUTES
   // (utils/access-log-routes.ts), pour les routes de lecture qui ne lisent jamais le dossier
-  // lui-même (tour de correction 1, tâche 5, étape 4b) — voir le commentaire du garde-fou.
+  // lui-même — voir le commentaire du garde-fou.
   fastify.addHook('onRoute', assertPatientRouteUnderTenant)
   // Contrepartie du garde-fou ci-dessus, posée ICI (racine) plutôt que sous `tenantRoutes` :
   // c'est ici qu'`assertPatientRouteUnderTenant` vit, et les routes d'administration

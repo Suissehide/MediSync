@@ -1,15 +1,13 @@
-// Tâche 7 (étape 4a) : la liste des établissements et ses compteurs (spec §3.3), le détail d'un
-// établissement — services, membres, journal d'activité (spec §6.2, tour de correction 1) — et
-// la recherche d'un compte (spec §3.4) — l'écran qui répond à « untel ne voit plus ses
-// patients ».
+// La liste des établissements et ses compteurs (spec §3.3), le détail d'un établissement —
+// services, membres, journal d'activité (spec §6.2) — et la recherche d'un compte (spec §3.4)
+// — l'écran qui répond à « untel ne voit plus ses patients ».
 //
-// Property centrale (task-7-brief.md, Steps 1 et 3) : ces réponses ne portent JAMAIS de donnée
-// de patient — ni son IDENTITÉ, ni le CONTENU de son dossier (diagnostic, notes, détails). Prouvé
-// DEUX fois, comme à l'étape 3 : les clés EXACTES (`Object.keys(...).sort()`), puis une recherche
-// de sous-chaîne sur le corps BRUT ENTIER — pas seulement sur une ligne.
+// Property centrale : ces réponses ne portent JAMAIS de donnée de patient — ni son IDENTITÉ,
+// ni le CONTENU de son dossier (diagnostic, notes, détails). Prouvé DEUX fois : les clés
+// EXACTES (`Object.keys(...).sort()`), puis une recherche de sous-chaîne sur le corps BRUT
+// ENTIER — pas seulement sur une ligne.
 //
-// LEÇON DE CE FICHIER, ÉCRITE ICI PARCE QUE C'EST LA TROISIÈME FOIS QU'ELLE COÛTE UN TOUR (tour
-// de correction 2) : le filet a manqué trois fois, JAMAIS par erreur de raisonnement — par
+// LEÇON DE CE FICHIER : le filet a manqué trois fois, JAMAIS par erreur de raisonnement — par
 // PAUVRETÉ DU JEU D'ESSAI.
 //   1. Une ligne fantôme nommée du patient, ajoutée AILLEURS dans un tableau, laissait toutes
 //      les assertions de clés/valeurs vertes tant que la sous-chaîne n'était vérifiée que sur la
@@ -160,12 +158,12 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
       cookies: superAdminCookies,
     })
 
-  // Step 1 (task-7-brief.md) : le contenu exact de la liste, et ses compteurs.
+  // Le contenu exact de la liste, et ses compteurs.
   describe('GET /super-admin/establishments', () => {
     it(
       'affiche les cles EXACTES et les bons compteurs — serviceCount/accountCount ne comptent ' +
-        "QUE l'utilisable (tour de correction 1), firstAdmin est le premier ENCORE actif avec " +
-        'son nom (tour de correction 2), et aucune identite de patient dans le corps brut',
+        "QUE l'utilisable, firstAdmin est le premier ENCORE actif avec " +
+        'son nom, et aucune identite de patient dans le corps brut',
       async () => {
         const est = await createEstablishment('Etablissement Alpha Liste')
         await createService(est.id, 'Service Alpha 1')
@@ -219,7 +217,7 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
         const row = findRow(body, est.id)
         expect(row).toBeDefined()
 
-        // Clés EXACTES — pas seulement l'absence de quelques champs (Step 1).
+        // Clés EXACTES — pas seulement l'absence de quelques champs.
         expect(Object.keys(row).sort()).toEqual([
           'accountCount',
           'createdAt',
@@ -255,7 +253,7 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
         // Aucune ligne de journal pour cet etablissement : « jamais » se voit par `null`.
         expect(row.lastActivityAt).toBeNull()
 
-        // Double vérification (Step 1) : aucune identité de patient dans le corps BRUT.
+        // Double vérification : aucune identité de patient dans le corps BRUT.
         expect(res.payload).not.toContain('PrenomSecretPatientAlphaUn')
         expect(res.payload).not.toContain('NomSecretPatientAlphaUn')
         expect(res.payload).not.toContain('PrenomSecretPatientAlphaDeux')
@@ -276,8 +274,7 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
       expect(row?.firstAdmin).toBeNull()
     })
 
-    // Mineur (tour de correction 1), refait au tour 2 : le relecteur a montré que ma première
-    // tentative échouait parce que l'ordre PHYSIQUE des lignes coïncidait avec l'ordre par
+    // L'ordre PHYSIQUE des lignes peut coïncider avec l'ordre par
     // identifiant — Postgres, sans ORDER BY explicite sur `userId`, rend un scan dans l'ordre
     // d'insertion pour une table fraîchement écrite. En insérant D'ABORD la ligne du plus GRAND
     // identifiant, l'ordre physique et l'ordre voulu (userId croissant) DIVERGENT : le test
@@ -317,8 +314,7 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
       )
     })
 
-    // Tour de correction 1, Important n°3 : la regression precise que la revue a demontree —
-    // une connexion, meme PARTAGEE entre deux etablissements, ne doit plus faire bouger AUCUN
+    // Une connexion, meme PARTAGEE entre deux etablissements, ne doit plus faire bouger AUCUN
     // des deux. Seule une vraie ligne de journal, DANS un etablissement, fait bouger CELUI-LA.
     it(
       "lastActivityAt vient du journal d'activite de CET etablissement — une connexion, meme " +
@@ -429,7 +425,7 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
         expect(res.statusCode).toBe(200)
         const body = res.json()
 
-        // Clés EXACTES du corps ENTIER — pas seulement de la ligne (tour de correction 1).
+        // Clés EXACTES du corps ENTIER — pas seulement de la ligne.
         expect(Object.keys(body).sort()).toEqual([
           'accountCount',
           'activityLog',
@@ -544,8 +540,8 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
         )
 
         // Double vérification sur le corps ENTIER (toutes les lignes, pas seulement la
-        // première) — précisément ce que la revue a montré absent : une ligne fantôme nommée du
-        // patient, ailleurs dans un tableau, échappait à toute assertion de clé/valeur ci-dessus.
+        // première) : une ligne fantôme nommée du patient, ailleurs dans un tableau, échappait
+        // à toute assertion de clé/valeur ci-dessus.
         // IDENTITÉ :
         expect(res.payload).not.toContain('PrenomSecretDetailUn')
         expect(res.payload).not.toContain('NomSecretDetailUn')
@@ -564,11 +560,11 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
     })
   })
 
-  // Step 3 (task-7-brief.md) : la recherche d'un compte — rattachements, rôles, désactivations
+  // La recherche d'un compte — rattachements, rôles, désactivations
   // et dernier accès. Aucune donnée de patient.
   describe('GET /super-admin/users?email=', () => {
     it(
-      'rend les cles EXACTES du compte (avec son nom, tour de correction 2) et de chaque ' +
+      'rend les cles EXACTES du compte (avec son nom) et de chaque ' +
         "rattachement, avec le role et le nom de l'etablissement, et aucune identite de " +
         'patient dans le corps brut',
       async () => {
@@ -643,7 +639,7 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
           ]),
         )
 
-        // Double vérification (Step 3, même exigence qu'au Step 1) : aucune identité de patient
+        // Double vérification, même exigence que sur la liste : aucune identité de patient
         // dans le corps BRUT — même nichée dans un champ par ailleurs permis.
         expect(res.payload).not.toContain('PrenomSecretRechercheUn')
         expect(res.payload).not.toContain('NomSecretRechercheUn')
@@ -663,7 +659,7 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
       expect(body.lastLoginAt).not.toBeNull()
     })
 
-    // Mineur (tour de correction 1) : le message ne doit pas parler d'« ID » pour une recherche
+    // Le message ne doit pas parler d'« ID » pour une recherche
     // par ADRESSE — le message générique de l'error handler ('User with this ID doesn't exist')
     // est trompeur ici, seul endroit du fichier où il pouvait atteindre un appelant HTTP.
     it("rend 404 pour une adresse inconnue, avec un message qui parle d'adresse, pas d'ID", async () => {
@@ -682,7 +678,7 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
     })
   })
 
-  // Step 4 (task-7-brief.md) : la connexion pose `lastLoginAt` — sans quoi la liste ment en
+  // La connexion pose `lastLoginAt` — sans quoi la liste ment en
   // affichant « jamais » pour tout le monde.
   describe('User.lastLoginAt est alimente a la connexion (auth.domain.ts#signIn)', () => {
     it('est null avant toute connexion, puis pose apres une connexion reussie', async () => {

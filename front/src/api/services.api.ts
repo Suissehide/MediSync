@@ -47,8 +47,7 @@ export const ServicesApi = {
     return response.json()
   },
 
-  // ARBITRAGE TRANSMIS PAR LÉO (pas dans le brief, task-13-brief.md) :
-  // appelée À LA DEMANDE, jamais pour toute la liste des services — voir
+  // Appelée À LA DEMANDE, jamais pour toute la liste des services — voir
   // `back/CLAUDE.md` § « Multi-tenant » sur `impactDesactivation` (une
   // lecture inter-services, à coût et périmètre particuliers).
   impactDesactivation: async (

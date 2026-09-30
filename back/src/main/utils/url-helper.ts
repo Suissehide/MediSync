@@ -5,8 +5,8 @@ export const toLocalhostIfLinux = (address: string): string =>
     ? address.replace('127.0.0.1', 'localhost').replace('0.0.0.0', 'localhost')
     : address
 
-// Prefixes de route dont AUCUN segment supplementaire n'est legitime (etape 4a, tache 4, tour de
-// correction 1, Important n°1). `pathWithoutQuery` ne retirait que la chaine de requete, jamais
+// Prefixes de route dont AUCUN segment supplementaire n'est legitime.
+// `pathWithoutQuery` ne retirait que la chaine de requete, jamais
 // un segment de CHEMIN : une requete vers `/auth/access-link/consume/<jeton>` — qui ne correspond
 // a aucune route declaree, puisque le lien d'acces ne voyage que dans le corps d'un POST — tombe
 // sur le gestionnaire de route inconnue (`not-found.handler.ts`), qui recopiait ce chemin en
@@ -22,8 +22,7 @@ export const toLocalhostIfLinux = (address: string): string =>
 // journal, ni un en-tete de reponse).
 const NO_SUFFIX_PATH_PREFIXES: readonly string[] = ['/auth/access-link/consume']
 
-// Tour de correction 2 (mineur), puis tour de correction 3 (mineur, six formes voisines
-// ajoutees) : la comparaison ne reconnaissait le prefixe qu'a l'octet pres — seize variantes de
+// La comparaison ne reconnaissait le prefixe qu'a l'octet pres — seize variantes de
 // la MEME route sabotee y echappaient au total : casse differente, un octet du chemin encode en
 // pourcent (`%63onsume` = « consume » avec le premier `c` encode), le separateur `/` lui-meme
 // encode (`consume%2F...`), un double encodage, un slash double, un parametre matriciel HTTP

@@ -17,9 +17,9 @@ export type MembershipAddByEmailDomain = {
   services: ServiceAssignment[]
 }
 
-// Tâche 10, step 1 : créer un compte de membre. `addByEmail` rattache une adresse DÉJÀ pourvue
+// Créer un compte de membre. `addByEmail` rattache une adresse DÉJÀ pourvue
 // d'un compte ; celle-ci crée le compte s'il n'existe pas, et se contente de le rattacher s'il
-// existe — jamais d'écrasement (ni le nom, ni le mot de passe), même leçon qu'à la tâche 6.
+// existe — jamais d'écrasement (ni le nom, ni le mot de passe).
 export type MembershipCreateAccountDomain = MembershipAddByEmailDomain & {
   firstName?: string
   lastName?: string
@@ -63,7 +63,7 @@ export interface MembershipDomainInterface {
   createAccount: (
     params: MembershipCreateAccountDomain,
   ) => Promise<MembershipCreateAccountResult>
-  // Tâche 10, step 3 : réémettre le lien d'un membre existant (réinitialisation d'un accès
+  // Réémettre le lien d'un membre existant (réinitialisation d'un accès
   // oublié). `id` est un `membershipId`, chargé par un repository filtré sur l'établissement
   // courant — JAMAIS un `userId` reçu du client : un lien réinitialise le mot de passe du
   // `User`, qui est GLOBAL. Lève `Boom.conflict` si le compte appartient à plusieurs

@@ -5,7 +5,7 @@ import {
 } from '../../../main/application/starter'
 import type { IocContainer } from '../../../main/types/application/ioc'
 
-// task-5-re-review-3.md (re-revue du tour 5), "Ce qu'il reste" : `starter.ts` journalise
+// `starter.ts` journalise
 // `${err}` brut sur un echec du nettoyage periodique du journal d'activite.
 // `activityLogRepository.deleteOlderThan` n'a lui-meme aucun `catch` : une erreur Prisma brute
 // peut donc arriver ici telle quelle.
@@ -27,7 +27,7 @@ describe("scheduleActivityLogCleanup – un echec de nettoyage ne journalise pas
     jest.useFakeTimers()
     // Un seul mock de logger PARTAGE (modele `buildFakeLogger` de `error-handler.test.ts`) :
     // toutes les methodes poussent dans la meme liste `calls`, pas seulement `error`
-    // (task-5-re-review-4.md, I1) — sans ca, une fuite par un canal voisin (`info`, ici) passe
+    // — sans ca, une fuite par un canal voisin (`info`, ici) passe
     // au vert.
     const calls: string[] = []
     const record = (message: string) => calls.push(message)
@@ -68,7 +68,7 @@ describe("scheduleActivityLogCleanup – un echec de nettoyage ne journalise pas
     expect(message).not.toContain('deleteMany')
     expect(message).toContain('PrismaClientValidationError')
 
-    // Tous les canaux, pas seulement `error` (task-5-re-review-4.md, I1) : un `logger.info`
+    // Tous les canaux, pas seulement `error` : un `logger.info`
     // ajoute dans le `.catch()`, avant la ligne corrigee, doit faire rougir ce test.
     for (const line of calls) {
       expect(line).not.toContain('SABOTAGE_COLONNE_INCONNUE')
@@ -79,9 +79,9 @@ describe("scheduleActivityLogCleanup – un echec de nettoyage ne journalise pas
   })
 })
 
-// REVUE DE LA TACHE 8, Important : la purge NEUVE portait la meme promesse — « meme raison que
-// le catch ci-dessus » — sans aucun test qui rougirait si elle cessait d'etre vraie. Mesure du
-// relecteur : remplacer son `catch` par `logger.error(`... ${err}`)` laissait les 521 tests
+// La purge NEUVE portait la meme promesse — « meme raison que
+// le catch ci-dessus » — sans aucun test qui rougirait si elle cessait d'etre vraie. Remplacer
+// son `catch` par `logger.error(`... ${err}`)` laissait les 521 tests
 // verts. Le `describe` ci-dessus n'importait que `scheduleActivityLogCleanup`.
 //
 // Meme propriete, meme forme, sur l'autre journal. Le depot de `PatientAccessLog` n'a pas plus

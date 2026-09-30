@@ -4,14 +4,14 @@ import type { IocContainer } from '../../../main/types/application/ioc'
 import { AppEventBus } from '../../../main/utils/app-event-bus'
 import { TenantContext } from '../../../main/utils/tenant-context'
 
-// task-5-re-review-3.md (re-revue du tour 5), "Ce qu'il reste" : ActivityLogSubscriber
+// ActivityLogSubscriber
 // journalise `${err}` brut sur un depot (`activityLog.repository.ts`) qui n'a lui-meme aucun
 // `catch` — ses trois methodes sont nues. Le `data` de `create` porte `userFirstName`/
 // `userLastName`, des noms reels : un echec Prisma sur cette ecriture (colonne inconnue,
 // contrainte violee, ...) recopie integralement ce `data` dans son message.
 // Un seul mock de logger PARTAGE (modele `buildFakeLogger` de `error-handler.test.ts`) : toutes
-// les methodes poussent dans la meme liste `calls`, pas seulement `error` dans un mock a part
-// (task-5-re-review-4.md, I1). Sans ca, une fuite ecrite par un canal voisin (`warn`, `info`, ...)
+// les methodes poussent dans la meme liste `calls`, pas seulement `error` dans un mock a part.
+// Sans ca, une fuite ecrite par un canal voisin (`warn`, `info`, ...)
 // passe au vert alors que ce test la garde precisement pour l'empecher.
 const buildSubscriber = () => {
   const calls: string[] = []
@@ -29,7 +29,7 @@ const buildSubscriber = () => {
     findMany: jest.fn(),
     deleteOlderThan: jest.fn(),
   }
-  // TACHE 15 (etape 4a, tour de correction 1) : `findIdentity`, pas `findByID` — le souscripteur
+  // `findIdentity`, pas `findByID` — le souscripteur
   // n'a jamais eu besoin que de deux colonnes de la ligne `User`, et `findByID` y ajoutait
   // l'arbre des appartenances, refuse sous contexte de tenant depuis le resserrement du
   // garde-fou. CE BOUCHON EST PRECISEMENT CE QUI A AVEUGLE CE FICHIER : il rend ce qu'on lui
@@ -37,8 +37,7 @@ const buildSubscriber = () => {
   // nom de l'auteur est bien inscrit » est tenue ailleurs, sur la vraie base :
   // `src/test/e2e/activity-log-auteur.test.ts`.
   //
-  // TOUR DE CORRECTION 1 (tache 7, revue) : `findByID` est AUSSI bouchonne ici, desormais — et
-  // c'est le point precis que la revue a trouve en defaut. Sans ce bouchon, remplacer
+  // `findByID` est AUSSI bouchonne ici, desormais. Sans ce bouchon, remplacer
   // `findIdentity` par `findByID` dans `#log` (une regression reelle, sabotee et mesuree —
   // voir le test plus bas) rendait `userRepository.findByID` `undefined` : l'appel aurait leve
   // un `TypeError`, avale par le `catch` de `#log`, et un test qui n'attend que « une ligne
@@ -59,7 +58,7 @@ const buildSubscriber = () => {
       lastName: 'Sabotage',
     })),
   }
-  // Requis depuis la tache 7 (etape 4b) : la souscription a `user.accessLinkReissued` encadre
+  // La souscription a `user.accessLinkReissued` encadre
   // son ecriture dans `tenantContext.runAsSystem` (activity-log.subscriber.ts) — sans un VRAI
   // `TenantContext` ici, cet appel leverait un `TypeError` (`this.tenantContext` vaudrait
   // `undefined`) avant meme d'atteindre `#log`.
@@ -152,7 +151,7 @@ describe("ActivityLogSubscriber – un echec d'ecriture ne fuit pas le nom de l'
     expect(message).not.toContain('SABOTAGE_COLONNE_INCONNUE')
     expect(message).toContain('PrismaClientValidationError')
 
-    // Tous les canaux, pas seulement `error` (task-5-re-review-4.md, I1) : un `logger.warn`
+    // Tous les canaux, pas seulement `error` : un `logger.warn`
     // ajoute dans le `catch`, avant la ligne corrigee, doit faire rougir ce test.
     for (const line of calls) {
       expect(line).not.toContain(USER_FIRST_NAME)
@@ -162,14 +161,14 @@ describe("ActivityLogSubscriber – un echec d'ecriture ne fuit pas le nom de l'
   })
 })
 
-// Tour de correction 1 (tache 7, revue) : le test e2e de la tache 7
+// Le test e2e
 // (`super-admin-access-link.test.ts`) affirme la LIGNE en base — auteur, cible, prenom, nom — et
 // c'est une PREUVE INDIRECTE : `findIdentity` et `findByID` rendent tous deux, pour un
 // super-admin (par nature sans appartenance a charger), EXACTEMENT le meme resultat, et la
 // souscription tourne sous `runAsSystem`, un mode que le pont a-plusieurs depuis un modele
 // global (`assertNoGlobalToManyBridge`, tenant-guard.ts) ne couvre PAS davantage que l'absence
 // de store — remplacer `findIdentity` par `findByID` dans `activity-log.subscriber.ts` (mesure
-// par sabotage reel, tour de correction 1) laisse donc le test e2e VERT. Le motif que le
+// par sabotage reel) laisse donc le test e2e VERT. Le motif que le
 // commentaire de `#log` invoquait pour `findIdentity` — le pont refuse par le garde-fou sous
 // contexte de tenant — NE VAUT PAS pour ce site precis : ni le mode systeme, ni le compte
 // super-admin qui n'a rien a charger, ne le rendent observable ici. La bonne raison, propre a

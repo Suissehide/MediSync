@@ -16,7 +16,7 @@ export type PathwayWithSlotsRepo = PathwayEntityRepo & {
 }
 // Le repository pose serviceId/establishmentId (tenant) lui-même. Le
 // `connect` composite sur `template` n'est pas utilisé (cohérence de
-// service vérifiée par le domaine, tâche 14) : la relation brute `template`
+// service vérifiée par le domaine) : la relation brute `template`
 // est donc omise au profit du seul scalaire `templateID`. `slots` est
 // remplacé par `slotIDs`, converti en `connect` par clé composite dans le
 // repository.

@@ -2,7 +2,7 @@ import type { FastifyPluginAsync } from 'fastify'
 
 import { establishmentGrantResponseSchema } from '../schemas/superAdminGrant.schema'
 
-// `GET /e/:establishmentId/admin/grants` (spec §3.5, §6.2, tâche 8) : les octrois — en cours ET
+// `GET /e/:establishmentId/admin/grants` (spec §3.5, §6.2) : les octrois — en cours ET
 // passés — dont CET établissement a fait l'objet, avec leur motif et leur auteur. Sous le
 // préfixe d'établissement (établishment-admin.routes.ts) : hérite de `resolveEstablishmentAdmin`
 // (l'appelant doit être ADMIN de CET établissement, sans quoi 404 avant même d'atteindre ce

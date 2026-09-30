@@ -11,7 +11,7 @@ import type { EstablishmentGrant } from '@/types/grant.ts'
 import { resolveEstablishmentContext } from '@/utils/tenant-context.ts'
 
 // `GET /e/:establishmentId/admin/grants` (back, `grants.ts`) : DÉLIBÉRÉMENT
-// asymétrique avec le super-admin (task-13-brief.md, arbitrage transmis par
+// asymétrique avec le super-admin (arbitrage transmis par
 // Léo) — l'établissement voit qui dispose d'un accès chez lui, le
 // super-admin ne dispose pas de la liste des siens.
 export const Route = createFileRoute(
@@ -57,7 +57,7 @@ function GrantsAdmin() {
 
   const etat = queryState({ isPending, error, hasData: grants !== undefined })
 
-  // Mineur (tour de correction 1, tâche 13) : UNE seule valeur de temps
+  // UNE seule valeur de temps
   // pour tout le rendu — `new Date()` appelé une seconde fois plus bas (au
   // moment d'étiqueter un accès passé) pouvait, à la seconde de bascule,
   // classer un octroi comme « passé » ici puis l'étiqueter « En cours »

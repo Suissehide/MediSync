@@ -11,7 +11,7 @@ import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { TenantContext } from '@/types/auth.ts'
 import { PatientAccessLogButton } from './patientAccessLogButton.tsx'
 
-// Étape 4b, tâche 11 (brief, « un petit reste de la tâche 10 ») : le bouton « Consultations du dossier » (anciennement « Journal des accès »)
+// Le bouton « Consultations du dossier » (anciennement « Journal des accès »)
 // de la fiche patient n'avait AUCUN test — ni sa visibilité conditionnelle (`consultations:read`,
 // réservée au rôle COORDINATEUR — `utils/permissions.ts`), ni les paramètres de son lien. Ce
 // fichier ferme les deux, sur le VRAI composant (`patientAccessLogButton.tsx`, extrait de

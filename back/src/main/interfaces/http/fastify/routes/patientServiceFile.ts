@@ -12,7 +12,7 @@ import {
 } from '../schemas/patientServiceFile.schema'
 
 // Sous-dossier d'un patient dans ce service : identite partagee sur Patient, parcours et
-// contenu clinique ici (etape 3 du multi-tenant). Meme permissions que le patient
+// contenu clinique ici. Meme permissions que le patient
 // (`patient:read`/`patient:write`) — aucune permission nouvelle, comme prevu par la conception.
 const patientServiceFileRouter: FastifyPluginAsync = (fastify) => {
   const { patientServiceFileDomain } = fastify.iocContainer
@@ -42,7 +42,7 @@ const patientServiceFileRouter: FastifyPluginAsync = (fastify) => {
     },
   )
 
-  // Rattachement d'une identite existante au service courant (design §6, tache 13) : choisir un
+  // Rattachement d'une identite existante au service courant (design §6) : choisir un
   // resultat de la recherche d'identite (GET /patient/search) mene ici, pas vers POST /patient —
   // aucune ecriture sur l'identite partagee (Patient), seulement la creation du sous-dossier
   // dans ce service s'il n'existe pas deja. Meme permission que l'ecriture du sous-dossier

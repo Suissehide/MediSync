@@ -37,7 +37,7 @@ vi.mock('@tanstack/react-virtual', () => ({
   }),
 }))
 
-// Important n°4 (tour de correction 1, tâche 13) : `members.tsx` ne lisait
+// `members.tsx` ne lisait
 // jamais `error` — sur un 500, `members` restait `undefined` et le tableau
 // se contentait d'un rendu vide, indiscernable de « aucun membre » une fois
 // le toast disparu. `services.tsx`/`grants.tsx` distinguaient déjà les
@@ -185,7 +185,7 @@ describe('etats de l ecran des membres', () => {
     ).not.toBeInTheDocument()
   })
 
-  // Le cas qui compte le plus (meme lecon qu'a la tache 12) : sans le
+  // Le cas qui compte le plus : sans le
   // filet, un 500 laisse `members` a `undefined`, le tableau se contente
   // d'un rendu vide et rien ne distingue « panne » d' « aucun membre ».
   it('affiche une erreur distincte, jamais un tableau vide silencieux, sur une panne', async () => {
@@ -252,7 +252,7 @@ describe('etats de l ecran des membres', () => {
     ).not.toBeInTheDocument()
   })
 
-  // Tour de correction 1 (Important n°2) : avant cette tache, la colonne
+  // Avant ce correctif, la colonne
   // « Role service » ne montrait QUE le role dans un contexte de service qui
   // n'existe jamais sur cet ecran — toujours « — », meme pour un membre
   // reellement affecte. Verrouille le VRAI rendu (virtualiseur simule, sinon
@@ -306,8 +306,8 @@ describe('etats de l ecran des membres', () => {
     expect(screen.getByText('Lecture')).toBeInTheDocument()
   })
 
-  // Revue finale de l'etape 4a, Important n°3 : « identifiants copiables »
-  // (decisions-etape-4a.md, D3/D4) n'etait tenu que pour l'etablissement —
+  // « identifiants copiables »
+  // n'etait tenu que pour l'etablissement —
   // le geste de depannage reel (« donne-moi l'identifiant de ce compte »)
   // n'avait nulle part ou se poser sur cet ecran. L'identifiant montre est
   // celui du COMPTE (`member.user.id`), le meme que celui affiche par la

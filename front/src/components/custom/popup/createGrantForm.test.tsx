@@ -7,11 +7,9 @@ import { useLastGrantStore } from '@/store/useLastGrantStore.ts'
 import { useToastStore } from '@/store/useToastStore.ts'
 import CreateGrantForm from './createGrantForm.tsx'
 
-// Task-12-brief.md, step 2 : « bouton d'octroi avec motif obligatoire et
-// durée ». Sans le garde du motif, « la moitié comptable du mécanisme ne
-// vaut rien » (task-8-brief.md, repris ici côté front) : ces tests
-// verrouillent que le formulaire REFUSE d'envoyer la requête tant que le
-// motif est vide, ou que la durée sort de ]0, 24].
+// « Bouton d'octroi avec motif obligatoire et durée ». Sans le garde du motif, « la moitié
+// comptable du mécanisme ne vaut rien » : ces tests verrouillent que le formulaire REFUSE
+// d'envoyer la requête tant que le motif est vide, ou que la durée sort de ]0, 24].
 
 type Route = {
   match: (url: string, method: string) => boolean
@@ -133,9 +131,8 @@ describe('CreateGrantForm — motif obligatoire et durée bornée', () => {
       durationHours: 4,
     })
 
-    // Tour de correction 1, Important n°2 : `GET /me` ne rend jamais
-    // l'identifiant d'un octroi, seulement son `origine` — le SEUL moment
-    // où le front voit cet identifiant est cette réponse de création. Sans
+    // `GET /me` ne rend jamais l'identifiant d'un octroi, seulement son `origine` — le SEUL
+    // moment où le front voit cet identifiant est cette réponse de création. Sans
     // le mémoriser ici, `ActiveGrantNotice` ne peut jamais proposer de
     // révoquer l'octroi qu'on vient soi-même de créer.
     await waitFor(() =>

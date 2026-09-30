@@ -10,17 +10,15 @@ type PatientAccessLogButtonProps = {
   patientID: string
 }
 
-// Étape 4b, tâche 10 : bouton « Journal des accès » de la fiche patient, vers
+// Bouton « Journal des accès » de la fiche patient, vers
 // `patient/$patientID/acces.tsx` — réservé à `consultations:read` (rôle COORDINATEUR uniquement,
 // `utils/permissions.ts`), la même garde que la route elle-même : un lien vers un écran
 // inaccessible serait pire qu'une absence de lien.
 //
-// Étape 4b, tâche 11 (brief, « un petit reste de la tâche 10 ») : extrait de
-// `patient/$patientID/index.tsx` en composant à part, pour être éprouvé isolément — monter
-// l'écran entier (`PatientDetails`) exigerait aussi `OverviewPatient`, `AddPatientForm` et leurs
-// requêtes propres, sans rapport avec ce que ce bouton doit garantir : sa visibilité
-// conditionnelle et les paramètres de son lien. Voir `patientAccessLogButton.test.tsx`, le test
-// qui manquait.
+// Extrait de `patient/$patientID/index.tsx` en composant à part, pour être éprouvé isolément —
+// monter l'écran entier (`PatientDetails`) exigerait aussi `OverviewPatient`, `AddPatientForm` et
+// leurs requêtes propres, sans rapport avec ce que ce bouton doit garantir : sa visibilité
+// conditionnelle et les paramètres de son lien. Voir `patientAccessLogButton.test.tsx`.
 export const PatientAccessLogButton = ({
   establishmentId,
   serviceId,

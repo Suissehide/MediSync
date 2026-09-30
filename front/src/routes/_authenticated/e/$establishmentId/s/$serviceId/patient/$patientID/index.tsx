@@ -26,9 +26,9 @@ import {
 } from '@/queries/usePatient.tsx'
 import { useDiagnosticStore } from '@/store/useDiagnosticStore.ts'
 
-// Etape 4b, tâche 10 — CE FICHIER A ÉTÉ DÉPLACÉ (`$patientID.tsx` → `$patientID/index.tsx`),
-// PAS SEULEMENT RENOMMÉ, pour une raison qui n'est écrite nulle part dans le brief de cette
-// tâche : `patient/$patientID/acces.tsx` (nouveau, cette tâche) et `$patientID.tsx` (l'ancien
+// CE FICHIER A ÉTÉ DÉPLACÉ (`$patientID.tsx` → `$patientID/index.tsx`),
+// PAS SEULEMENT RENOMMÉ :
+// `patient/$patientID/acces.tsx` (nouveau) et `$patientID.tsx` (l'ancien
 // fichier) auraient sinon partagé le MÊME segment de route sous TanStack Router — le premier
 // devenant, de fait, le PARENT du second. Or `PatientDetails` ne rend jamais `<Outlet/>` : sans
 // ce déplacement, `/patient/$patientID/acces` aurait matché les deux routes, rendu SEULEMENT

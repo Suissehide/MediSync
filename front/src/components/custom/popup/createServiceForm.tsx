@@ -14,7 +14,7 @@ import {
   PopupTrigger,
 } from '../../ui/popup.tsx'
 
-// Onglet des services (tâche 13, step 1) : créer un service — voir
+// Onglet des services : créer un service — voir
 // `services.tsx`. Créer y rattache automatiquement le créateur, comme
 // COORDINATEUR (back, `serviceDomain.create`) ; rien à choisir ici.
 function CreateServiceForm() {

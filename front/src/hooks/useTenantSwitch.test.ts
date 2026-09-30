@@ -365,7 +365,7 @@ describe('stores persistes rehydrates au changement de service', () => {
     expect(usePlanningStore.getState().viewEnd).toBe('')
   })
 
-  // Correction de revue (tour 1) : le tiroir etait recalcule depuis le
+  // Le tiroir etait recalcule depuis le
   // contexte a CHAQUE acces au stockage. Or `useTenantQueryClient` bascule le
   // contexte PENDANT le rendu, et ne rehydrate que dans l'effet du PARENT —
   // qui s'execute apres les effets des enfants. Toute ecriture programmee

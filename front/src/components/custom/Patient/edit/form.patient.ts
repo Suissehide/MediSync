@@ -5,9 +5,9 @@ import type { PatientServiceFile } from '../../../../types/patientServiceFile.ts
 
 // Les seize champs de parcours, d'inclusion et de contenu clinique qui vivaient ici ont
 // déménagé vers `patientServiceFileFormOpts`, plus bas dans ce fichier : ils appartiennent au
-// sous-dossier de service (`types/patientServiceFile.ts`), pas au patient (étape 3 du
-// multi-tenant, décision 2.3/3.2 de la spec). Les envoyer encore dans le corps du patient est
-// précisément ce qui cassait ce formulaire : le back les refuse depuis la tâche 4 par un 400
+// sous-dossier de service (`types/patientServiceFile.ts`), pas au patient (décision 2.3/3.2 de
+// la spec). Les envoyer encore dans le corps du patient est précisément ce qui cassait ce
+// formulaire : le back les refuse par un 400
 // (`patient.schema.ts`, `.strict()`) — ne les réintroduis pas ici.
 export const patientFormOpts = formOptions({
   defaultValues: {
@@ -31,9 +31,9 @@ export const patientFormOpts = formOptions({
   },
 })
 
-// Le sous-dossier de service (étape 3 du multi-tenant, `types/patientServiceFile.ts`) : les
+// Le sous-dossier de service (`types/patientServiceFile.ts`) : les
 // seize champs ci-dessus, avec les mêmes noms. Ces défauts à '' ne doivent JAMAIS partir tels
-// quels sur le réseau — c'est le patron que `patientFormOpts` a laissé filer jusqu'à la tâche 4.
+// quels sur le réseau — c'est le patron que `patientFormOpts` a laissé filer.
 // `edit.patient.tsx` ne monte les blocs qui s'appuient sur ce formulaire (`serviceFileReady`)
 // qu'une fois la lecture du sous-dossier résolue, moment où ces défauts sont déjà remplacés par
 // les valeurs lues (ou restent vides si le sous-dossier n'existe pas encore — absence normale,
@@ -68,7 +68,7 @@ export const patientServiceFileFormOpts = formOptions({
   },
 })
 
-// Correctif tour 1 (tâche 11, revue, Critiques C1/C2, Important I1) — les deux fonctions qui suivent construisent
+// Les deux fonctions qui suivent construisent
 // les défauts d'un formulaire à partir d'une lecture serveur : le premier montage ET la
 // resynchronisation après un enregistrement réussi (`edit.patient.tsx`) passent par elles, pour
 // ne jamais faire dériver `defaultValues` de deux façons différentes. Une seule règle des deux

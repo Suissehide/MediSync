@@ -16,17 +16,17 @@ import type { PostgresPrismaClient } from '../postgres-client'
 
 const PAGE_SIZE = 50
 
-// Écran de diagnostic plateforme (tâche 6, étape 4b), pas un export complet — même esprit que
+// Écran de diagnostic plateforme, pas un export complet — même esprit que
 // `ACTIVITY_LOG_DETAIL_LIMIT` (establishment.repository.ts), qui borne le journal d'UN
 // établissement pour la même raison.
 //
-// CE QUE CETTE BORNE REND INATTEIGNABLE, dit ici plutôt que découvert (revue finale de branche,
-// Important n°1) : le tri est `createdAt desc`, donc au-delà de 200 lignes dans le périmètre
+// CE QUE CETTE BORNE REND INATTEIGNABLE, dit ici plutôt que découvert : le tri est
+// `createdAt desc`, donc au-delà de 200 lignes dans le périmètre
 // demandé, les PLUS ANCIENNES sortent de la réponse — et aucune pagination ne permet d'y
 // revenir. Ce sont précisément les lignes du script d'amorçage (`establishmentId: null`), dont
 // la documentation présentait la lisibilité comme acquise. D'où le filtre `sansEtablissement`
 // ci-dessous : il resserre le périmètre à ces lignes-là, qui tiennent alors très largement sous
-// la borne. Voir « Ce qui reste ouvert » (§8), docs/multi-tenant/decisions-etape-4b.md.
+// la borne.
 const PLATFORM_ACCESS_LOG_LIMIT = 200
 
 class ActivityLogRepository implements ActivityLogRepositoryInterface {
@@ -55,10 +55,10 @@ class ActivityLogRepository implements ActivityLogRepositoryInterface {
     }
   }
 
-  // `client` optionnel (tour de correction 1, tâche 11) : `UserDomain.bootstrapSuperAdmin`
+  // `client` optionnel : `UserDomain.bootstrapSuperAdmin`
   // l'appelle sous transaction, avec les écritures de `User` qu'elle journalise — pour qu'une
-  // écriture ne puisse jamais survivre seule à l'échec de l'autre. Try/catch ajouté au même
-  // tour : cette méthode était la seule du dépôt à écrire sans passer par
+  // écriture ne puisse jamais survivre seule à l'échec de l'autre. Try/catch : cette méthode
+  // était la seule du dépôt à écrire sans passer par
   // `errorHandler.boomErrorFromPrismaError`, contrairement à toutes ses voisines
   // (`user.repository.ts` notamment) — une erreur Prisma brute, dont le message recopie
   // intégralement le `data` de l'écriture ratée (userID, action, entityID…), pouvait donc
@@ -117,8 +117,8 @@ class ActivityLogRepository implements ActivityLogRepositoryInterface {
       ...(from ? { createdAt: { gte: from } } : {}),
       // Chaque mot doit figurer dans le prenom ou le nom recopies dans la ligne (ceux de
       // l'auteur au moment de l'action). Cote serveur, et non plus sur la seule page affichee :
-      // c'est ce qui rend la recherche juste sur tout le journal (relecture de branche,
-      // 2026-09-28). `AND` et non `OR` au premier niveau : `scopeFilter` peut deja poser un `OR`.
+      // c'est ce qui rend la recherche juste sur tout le journal. `AND` et non `OR` au premier
+      // niveau : `scopeFilter` peut deja poser un `OR`.
       ...(user ? { AND: this.userSearchFilter(user) } : {}),
     }
     const [data, total] = await Promise.all([
@@ -145,9 +145,9 @@ class ActivityLogRepository implements ActivityLogRepositoryInterface {
       }))
   }
 
-  // Tâche 6, étape 4b : `GET /super-admin/access-log` (source=activite) — SANS borne de tenant,
+  // `GET /super-admin/access-log` (source=activite) — SANS borne de tenant,
   // à l'échelle de la plateforme entière. `ActivityLog.findMany` est déjà déclaré dans
-  // `SUPERADMIN_OPERATIONS` (tâche 1) : encadré par `runAsSuperAdmin`. C'est cette lecture, sans
+  // `SUPERADMIN_OPERATIONS` : encadré par `runAsSuperAdmin`. C'est cette lecture, sans
   // aucun `establishmentId` dans le `where`, qui rend enfin lisibles les lignes du script
   // d'amorçage (`UserDomain.bootstrapSuperAdmin`, écrites sous `runAsSystem`,
   // `establishmentId: null`) : aucune autre route ne les filtrait jusqu'ici, ni la lecture
@@ -156,17 +156,15 @@ class ActivityLogRepository implements ActivityLogRepositoryInterface {
   // sous un tenant).
   //
   // `await` À L'INTÉRIEUR du rappel — mais lisez `utils/tenant-context.ts#runAsSuperAdmin` avant
-  // de recopier cette forme ailleurs. ÉNONCÉ EXACT (revue finale de branche, Important n°5 — ce
-  // commentaire portait encore l'énoncé intermédiaire, « ce qui tient la portée est l'enrobage
-  // `async` », que `back/CLAUDE.md` et l'annexe des décisions nomment désormais comme un
-  // SYMPTÔME) : **ce qui compte, c'est que la lecture du contexte survienne AVANT le premier
-  // point de suspension**. Un rappel SYNCHRONE NU perd le contexte ICI (mesuré, tour de
-  // correction 1 de la tâche 6 : 5 tests rougissent en 500) parce que la requête Prisma est
-  // PARESSEUSE — rien n'est lu avant que `run` n'ait rendu la main. Le même rappel synchrone nu
-  // convient parfaitement ailleurs s'il lit tout de suite : `deleteOlderThan`, quarante lignes
-  // plus bas, appelle `tenantContext.peek()` synchroniquement en tête de son corps, et la
-  // propriété tient. L'`await` ci-dessous reste écrit pour le lint (`suspicious/useAwait`) et la
-  // lisibilité.
+  // de recopier cette forme ailleurs. Ce n'est PAS parce que l'enrobage `async` tiendrait la
+  // portée du contexte — `back/CLAUDE.md` et l'annexe des décisions nomment cet énoncé comme un
+  // SYMPTÔME : **ce qui compte, c'est que la lecture du contexte survienne AVANT le premier
+  // point de suspension**. Un rappel SYNCHRONE NU perd le contexte ICI (mesuré : 5 tests
+  // rougissent en 500) parce que la requête Prisma est PARESSEUSE — rien n'est lu avant que
+  // `run` n'ait rendu la main. Le même rappel synchrone nu convient parfaitement ailleurs s'il
+  // lit tout de suite : `deleteOlderThan`, quarante lignes plus bas, appelle
+  // `tenantContext.peek()` synchroniquement en tête de son corps, et la propriété tient.
+  // L'`await` ci-dessous reste écrit pour le lint (`suspicious/useAwait`) et la lisibilité.
   async findAllPlatformWide(
     filters: PlatformAccessLogFilters,
   ): Promise<ActivityLogEntityRepo[]> {

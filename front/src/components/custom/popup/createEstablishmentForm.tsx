@@ -17,13 +17,12 @@ import {
 } from '../../ui/popup.tsx'
 
 // Liste des établissements (`super-admin/index.tsx`) : le back expose la
-// création (`POST /super-admin/establishments`, tâche 6) mais aucun écran
-// ne l'appelait — retiré à tort à la tâche 12 (tour de correction 1,
-// Important n°5) en même temps que le client d'API, faute d'écran ET de
+// création (`POST /super-admin/establishments`) mais aucun écran
+// ne l'appelait — retiré à tort, en même temps que le client d'API, faute d'écran ET de
 // garde. Réintroduit ici avec les deux à la fois.
 //
 // LE LIEN D'ACCÈS RENDU EST UN MOT DE PASSE À USAGE UNIQUE (même motif que
-// `createMemberAccountForm.tsx`, tâche 13) : il s'affiche UNE SEULE FOIS,
+// `createMemberAccountForm.tsx`) : il s'affiche UNE SEULE FOIS,
 // ici, avec un bouton de copie — jamais ailleurs (voir
 // `useSuperAdminCreateEstablishment`, dont la donnée ne vit que dans le
 // cache des MUTATIONS, jamais dans une clé de requête).

@@ -2,8 +2,8 @@ import { withForm } from '../../../../hooks/formConfig.tsx'
 import { patientServiceFileFormOpts } from './form.patient.ts'
 
 // Bloc « dossier de ce service » (décision 2.3 de la spec) : ces quatre champs vivent sur le
-// sous-dossier de service (`types/patientServiceFile.ts`, étape 3 du multi-tenant) — invisibles
-// des autres services de l'établissement, d'où le titre explicite ci-dessous. Lié à
+// sous-dossier de service (`types/patientServiceFile.ts`) — invisibles des autres services de
+// l'établissement, d'où le titre explicite ci-dessous. Lié à
 // `patientServiceFileFormOpts`, pas au formulaire patient : à ne pas confondre avec le bloc
 // « identité partagée » de `identite.patient.tsx`. `edit.patient.tsx` ne monte ce composant
 // qu'une fois la lecture du sous-dossier résolue (`serviceFileReady`) — voir ce fichier pour la

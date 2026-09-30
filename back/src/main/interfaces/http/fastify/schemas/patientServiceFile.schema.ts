@@ -1,6 +1,6 @@
 import { z } from 'zod/v4'
 
-// Les seize champs deplaces hors de `patient.schema.ts` (etape 3 du multi-tenant), a
+// Les seize champs deplaces hors de `patient.schema.ts`, a
 // l'identique : memes types, memes contraintes. C'est desormais le seul endroit du back ou ils
 // sont enumeres a la main.
 const patientServiceFileEntity = {
@@ -29,13 +29,12 @@ const patientServiceFileEntity = {
   etpFinalOutcome: z.string().optional().nullable(), // Point final parcours ETP
 }
 
-// Le signal de suivi ailleurs (spec §5.3/§6, tache 7) vivait ici jusqu'au tour de correction 1 de
-// la revue de cette tache (I1) : indisponible tant qu'aucun sous-dossier local n'existe encore,
-// c'est-a-dire exactement au moment ou la decision 2.1 le rend le plus utile (un second service
-// qui accueille un patient deja suivi ailleurs part d'un sous-dossier vide, donc d'un 404). Il
-// vit desormais sur la lecture du patient (`patient.schema.ts`, `patientDetailResponseSchema`),
-// disponible avant qu'aucun sous-dossier de service n'existe — voir domain/patient.domain.ts,
-// `findByID`.
+// Le signal de suivi ailleurs (spec §5.3/§6) vivait ici : indisponible tant qu'aucun sous-dossier
+// local n'existe encore, c'est-a-dire exactement au moment ou la decision 2.1 le rend le plus
+// utile (un second service qui accueille un patient deja suivi ailleurs part d'un sous-dossier
+// vide, donc d'un 404). Il vit desormais sur la lecture du patient (`patient.schema.ts`,
+// `patientDetailResponseSchema`), disponible avant qu'aucun sous-dossier de service n'existe —
+// voir domain/patient.domain.ts, `findByID`.
 export const patientServiceFileResponseSchema = z.object({
   id: z.cuid(),
   patientId: z.string(),
@@ -53,10 +52,10 @@ export const upsertPatientServiceFileBodySchema = z.object(
   patientServiceFileEntity,
 )
 
-// Rattachement d'une identite existante au service courant (design §6, tache 13) : cree le
+// Rattachement d'une identite existante au service courant (design §6) : cree le
 // sous-dossier s'il n'existe pas encore, sans toucher a une seule de ses colonnes s'il existe
 // deja — `alreadyFollowedHere` le dit explicitement, pour que l'ecran distingue les deux cas
-// (consigne 4 du brief) sans avoir a comparer un etat avant/apres lui-meme. Volontairement
+// sans avoir a comparer un etat avant/apres lui-meme. Volontairement
 // minimal : ni le contenu du sous-dossier (cree vide, ou deja existant et donc potentiellement
 // clinique) ni l'identite du patient n'ont a transiter dans cette reponse pour que l'ecran sache
 // quoi faire.

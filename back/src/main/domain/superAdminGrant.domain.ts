@@ -12,11 +12,11 @@ import type {
 } from '../types/infra/orm/repositories/accessGrant.repository.interface'
 import type { EstablishmentRepositoryInterface } from '../types/infra/orm/repositories/establishment.repository.interface'
 
-// Tour de correction 1 (tâche 8) — Important n°2 de la relecture : deux octrois vivants sur le
-// même établissement dédoublaient la ligne dans `/me` (`effectiveMemberships` en absorbe
-// désormais le cas en défense, voir domain/accessGrant.domain.ts, `dedoublonneParEtablissement`)
-// — mais la revue demandait aussi de trancher : empêcher un second octroi, ou se contenter du
-// dédoublonnage. CHOIX RETENU : empêcher. S'accorder un DEUXIÈME octroi sur un établissement où
+// Deux octrois vivants sur le même établissement dédoublaient la ligne dans `/me`
+// (`effectiveMemberships` en absorbe désormais le cas en défense, voir
+// domain/accessGrant.domain.ts, `dedoublonneParEtablissement`) — reste à trancher entre
+// empêcher un second octroi, ou se contenter du dédoublonnage. CHOIX RETENU : empêcher.
+// S'accorder un DEUXIÈME octroi sur un établissement où
 // l'on en détient déjà un ACTIF n'a aucune valeur d'usage (l'accès existe déjà) et ne fait que
 // semer la confusion comptable (deux lignes pour la même intervention, avec des motifs et des
 // échéances possiblement différents). Le message ci-dessous ne cache pas la raison : révoquer
@@ -24,7 +24,7 @@ import type { EstablishmentRepositoryInterface } from '../types/infra/orm/reposi
 const ACTIVE_GRANT_EXISTS =
   'An active grant already exists for this establishment — revoke it before requesting a new one'
 
-// Mineur signalé en relecture (tâche 8, tour de correction 1) : un octroi sur un établissement
+// Un octroi sur un établissement
 // désactivé était accepté (201) et sans le moindre effet — `AccessGrantRepository.findForUser`
 // l'exclut déjà de toute lecture (CONTRAT 1, accessGrant.repository.interface.ts), donc l'accès
 // promis n'existerait jamais. Refusé ICI, à l'écriture, plutôt que de laisser l'appelant croire
@@ -37,8 +37,8 @@ const ESTABLISHMENT_DEACTIVATED =
 // qu'un octroi oublié devienne un accès permanent ». Le plafond de vingt-quatre heures, lui,
 // n'est PAS appliqué ici : il est tenu par le schéma HTTP (`superAdminGrant.schema.ts`,
 // `durationHours: z.number().positive().max(24)`), qui REFUSE une demande hors bornes plutôt que
-// de la ramener silencieusement à la limite — « un plafond qui tronque sans le dire fait croire à
-// ce qu'on a demandé » (task-8-brief.md). Dupliquer la borne ici serait une seconde source de
+// de la ramener silencieusement à la limite — un plafond qui tronque sans le dire fait croire à
+// ce qu'on a demandé. Dupliquer la borne ici serait une seconde source de
 // vérité pour la même règle, avec le risque qu'elles divergent un jour.
 const DEFAULT_GRANT_DURATION_HOURS = 4
 const MS_PER_HOUR = 60 * 60 * 1000
@@ -72,9 +72,8 @@ class SuperAdminGrantDomain implements SuperAdminGrantDomainInterface {
       throw Boom.conflict(ESTABLISHMENT_DEACTIVATED)
     }
     const now = new Date()
-    // Tour de correction 1 : refuse AVANT d'écrire — voir le commentaire au-dessus de
-    // `ACTIVE_GRANT_EXISTS`. COURSE SYSTÉMATIQUE, PAS HYPOTHÉTIQUE (tour de correction 2 — la
-    // relecture a mesuré, et je l'ai reproduit par exécution : trois essais, trois fois deux
+    // Refuse AVANT d'écrire — voir le commentaire au-dessus de `ACTIVE_GRANT_EXISTS`. COURSE
+    // SYSTÉMATIQUE, PAS HYPOTHÉTIQUE (reproduit par exécution : trois essais, trois fois deux
     // octrois vivants créés) : deux requêtes concurrentes qui visent le MÊME établissement
     // passent TOUJOURS ce contrôle toutes les deux avant que l'une n'écrive — la fenêtre s'ouvre
     // à chaque fois, elle ne se referme jamais d'elle-même. Sans conséquence de sûreté : le
@@ -86,7 +85,7 @@ class SuperAdminGrantDomain implements SuperAdminGrantDomainInterface {
     // (une expiration COURANTE, `expiresAt > now()`, n'est pas un prédicat d'index partiel
     // valide : elle varie dans le temps, contrairement à `revokedAt IS NULL`, qui bloquerait à
     // tort un octroi FUTUR après la simple expiration naturelle d'un précédent jamais révoqué).
-    // Porté au journal de décisions de l'étape (tâche 14) plutôt que fermé ici.
+    // Non fermé ici — assumé volontairement (voir plus haut).
     const dejaVivant = await this.accessGrantRepository.hasLiveGrant(
       userId,
       establishmentId,

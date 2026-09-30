@@ -34,10 +34,10 @@ export const PatientServiceFileApi = {
 
   // Rattache une identité existante (trouvée par `PatientApi.searchIdentity`) au service
   // courant : crée le sous-dossier s'il n'existe pas déjà, sans jamais toucher à l'identité
-  // partagée ni au sous-dossier d'un autre service (tâche 13, spec §6). Aucun corps : cette
+  // partagée ni au sous-dossier d'un autre service (spec §6). Aucun corps : cette
   // route ne fait que dire "ce patient est désormais suivi ici", jamais écrire un contenu.
   // `alreadyFollowedHere` distingue les deux cas pour que l'écran le dise clairement, sans
-  // écraser un sous-dossier déjà présent (consigne 4 du brief).
+  // écraser un sous-dossier déjà présent.
   attachExisting: async (
     patientID: string,
   ): Promise<AttachExistingPatientResult> => {

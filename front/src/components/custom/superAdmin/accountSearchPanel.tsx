@@ -27,10 +27,9 @@ const ESTABLISHMENT_ROLE_LABEL: Record<string, string> = {
   MEMBER: 'Membre',
 }
 
-// « la recherche d'un compte, qui répond à "untel ne voit plus ses
-// patients" » (task-12-brief.md, step 3) — rattachements, rôles,
-// désactivations, dernier accès ; jamais un contenu de dossier patient (le
-// back ne le rend d'ailleurs pas, voir `superAdminUser.schema.ts`).
+// « la recherche d'un compte, qui répond à "untel ne voit plus ses patients" » — rattachements,
+// rôles, désactivations, dernier accès ; jamais un contenu de dossier patient (le back ne le
+// rend d'ailleurs pas, voir `superAdminUser.schema.ts`).
 //
 // LE JETON RENDU PAR LA RÉÉMISSION EST UN MOT DE PASSE À USAGE UNIQUE : il
 // ne vit que dans l'état local de la mutation (`reissue.data`, ci-dessous),
@@ -132,8 +131,8 @@ export const AccountSearchPanel = () => {
             Réémettre un lien d'accès
           </Button>
 
-          {/* Tour de correction 1, Mineur : un mot de passe à usage unique
-          sur le compte D'AUTRUI ne part jamais sur un simple clic. */}
+          {/* Un mot de passe à usage unique sur le compte D'AUTRUI ne part jamais sur un simple
+          clic. */}
           <Popup
             modal
             open={confirmingReissue}

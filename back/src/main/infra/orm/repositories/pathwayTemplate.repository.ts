@@ -29,12 +29,12 @@ import type { PostgresPrismaClient } from '../postgres-client'
 // à une PathwayTemplate passe par `create`/`update` ci-dessous, qui
 // connectent par clé composite `id_serviceId` (donc un SlotTemplate d'un
 // autre service ne peut pas être rattaché par ce chemin). Mais
-// SlotTemplateRepository (tâche 11) accepte aussi `templateID` en scalaire
+// SlotTemplateRepository accepte aussi `templateID` en scalaire
 // brut sur `create`/`update`, sans vérification de service : si ce chemin
 // est utilisé pour écrire un `templateID` inter-service, cette liste
 // ramènerait un SlotTemplate d'un autre tenant. Cette sûreté-là dépend donc,
-// comme `template`/`location`/`thematic`, de la validation des références à
-// l'écriture prévue par la tâche 14.
+// comme `template`/`location`/`thematic`, d'une validation des références à
+// l'écriture qui reste à poser.
 const withSlotTemplates = {
   slotTemplates: {
     include: { ...soignantLinksInclude, location: true, thematic: true },

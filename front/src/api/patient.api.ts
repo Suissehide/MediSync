@@ -75,11 +75,11 @@ export const PatientApi = {
     return response.json()
   },
 
-  // Recherche d'identite existante avant creation (étape 3 du multi-tenant, tâche 13, spec
-  // §6) : cherche dans TOUT l'établissement, pas seulement le service courant (le patient est un
-  // modèle d'établissement) — mais la réponse ne porte jamais que l'identité, voir
-  // `PatientIdentityMatch`. Contrat back : `GET /patient/search` exige un prénom ou un nom ;
-  // n'envoyer que les paramètres effectivement renseignés.
+  // Recherche d'identite existante avant creation (spec §6) : cherche dans TOUT l'établissement,
+  // pas seulement le service courant (le patient est un modèle d'établissement) — mais la
+  // réponse ne porte jamais que l'identité, voir `PatientIdentityMatch`. Contrat back :
+  // `GET /patient/search` exige un prénom ou un nom ; n'envoyer que les paramètres effectivement
+  // renseignés.
   searchIdentity: async (
     params: SearchPatientIdentityParams,
   ): Promise<PatientIdentitySearchResult> => {

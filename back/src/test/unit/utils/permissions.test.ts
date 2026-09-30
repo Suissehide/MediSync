@@ -80,9 +80,9 @@ describe('permissions', () => {
     ).toBe(false)
   })
 
-  // Etape 4b, tache 5 : deux permissions distinctes portent le journal des consultations,
+  // Deux permissions distinctes portent le journal des consultations,
   // `consultations:read` (service, COORDINATEUR) et `access-log:read` (etablissement, ADMIN) —
-  // noms volontairement NON HOMOGRAPHES (tour de correction 1 : le premier jet, `accessLog:read`,
+  // noms volontairement NON HOMOGRAPHES (le premier jet, `accessLog:read`,
   // ne se distinguait de `access-log:read` que par la casse et un trait d'union — un piege de
   // lecture permanent dans une matrice dupliquee entre deux depots), voir le commentaire
   // au-dessus de `consultations:read` (utils/permissions.ts). Ce test tient la propriete qui
@@ -118,7 +118,7 @@ describe('permissions', () => {
     ).toBe(false)
   })
 
-  // `establishments:manage` (etape 4a, tache 6) n'est accordee par AUCUN role d'etablissement ni
+  // `establishments:manage` n'est accordee par AUCUN role d'etablissement ni
   // de service (habilitations.md : seule la colonne Super-admin est cochee) : c'est
   // `requireSuperAdmin` (drapeau `isSuperAdmin`), pas cette matrice, qui protege
   // `POST /super-admin/establishments`. Verifie meme avec le role le plus permissif (ADMIN).

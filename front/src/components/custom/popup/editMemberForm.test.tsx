@@ -9,7 +9,7 @@ import type { User } from '@/types/auth.ts'
 import type { Member } from '@/types/member.ts'
 import EditMemberForm, { buildServiceAssignments } from './editMemberForm.tsx'
 
-// Tâche 14b (hors plan, étape 4a) : « affecter un membre à un service » est
+// « Affecter un membre à un service » est
 // aujourd'hui IMPOSSIBLE depuis cet écran — `serviceId` valait toujours
 // `null` (contexte du layout d'établissement, qui n'en porte jamais), la
 // commande de rôle de service restait désactivée en permanence. Ce fichier
@@ -64,10 +64,9 @@ const servicesFixture = [
     createdAt: '2026-01-01T00:00:00.000Z',
     deactivatedAt: null,
   },
-  // Minutieusement absent des fixtures avant le tour de correction 1 : rien
-  // n'éprouvait alors le suffixe « (désactivé) » de la liste — un service
-  // désactivé, sans affectation, reste proposé (l'établissement peut le
-  // réactiver, voir `admin/services.tsx`).
+  // Un service désactivé, sans affectation, reste proposé dans la liste
+  // (avec son suffixe « (désactivé) ») — l'établissement peut le
+  // réactiver, voir `admin/services.tsx`.
   {
     id: 'svcD',
     name: 'Urgences',
@@ -145,12 +144,11 @@ afterEach(() => {
 })
 
 describe('EditMemberForm — affecter un membre a un service', () => {
-  // Tour de correction 1 : la version precedente de ce test ne verifiait
-  // que la presence des libelles et `toBeEnabled()` — devenu vrai par
-  // vacuite depuis que la desactivation conditionnelle a disparu du
-  // composant (il n'y a plus DE commande a desactiver). Verifie desormais
-  // des valeurs par defaut PRECISES, une par service, chacune liee a son
-  // propre libelle plutot qu'affirmee en vrac.
+  // Verifie des valeurs par defaut PRECISES, une par service, chacune liee a
+  // son propre libelle plutot qu'affirmee en vrac — la desactivation
+  // conditionnelle de la commande de role a disparu du composant (il n'y a
+  // plus DE commande a desactiver), un simple `toBeEnabled()` global serait
+  // donc vrai par vacuite.
   it("propose TOUS les services de l'etablissement, chacun pre-rempli avec le role reellement affecte (ou Aucun), y compris un service desactive", async () => {
     renderForm(buildFetchMock([routeSoignants, routeServices()]))
     await ouvrir()
@@ -181,12 +179,11 @@ describe('EditMemberForm — affecter un membre a un service', () => {
     expect(screen.getByLabelText('Pédiatrie')).toBeEnabled()
   })
 
-  // LE GESTE REEL DE L'UTILISATEUR (tour de correction 1, Important n°1) :
-  // la fonction pure `buildServiceAssignments` etait eprouvee, mais rien ne
-  // couvrait le CABLAGE React qui alimente `serviceRoles` a chaque clic — le
-  // relecteur a remplace la fusion (`setServiceRoles((prev) => ({ ...prev,
+  // LE GESTE REEL DE L'UTILISATEUR : la fonction pure `buildServiceAssignments`
+  // etait eprouvee, mais rien ne couvrait le CABLAGE React qui alimente
+  // `serviceRoles` a chaque clic — remplacer la fusion (`setServiceRoles((prev) => ({ ...prev,
   // [id]: value }))`) par un ecrasement (`setServiceRoles({ [id]: value })`)
-  // sans faire rougir aucun des neuf tests precedents. Necessite le
+  // ne fait rougir aucun des neuf tests precedents. Necessite le
   // polyfill de `hasPointerCapture`/`scrollIntoView` (`src/test/setup.ts`) :
   // sans lui, RadixSelect leve a l'ouverture sous jsdom.
   it("changer le role d'un service via le VRAI composant ne touche pas le role deja choisi d'un autre service", async () => {

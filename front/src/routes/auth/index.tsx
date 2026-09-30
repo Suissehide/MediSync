@@ -31,8 +31,8 @@ function Index() {
             const redirect = new URLSearchParams(window.location.search).get(
               'redirect',
             )
-            // `/dashboard` a demenage sous /e/:establishmentId/s/:serviceId
-            // (etape 2, tache 6) ; `/` redirige vers le tableau de bord du
+            // `/dashboard` a demenage sous /e/:establishmentId/s/:serviceId ;
+            // `/` redirige vers le tableau de bord du
             // contexte par defaut sans avoir a le connaitre ici.
             await navigate({ to: redirect || '/' })
           },

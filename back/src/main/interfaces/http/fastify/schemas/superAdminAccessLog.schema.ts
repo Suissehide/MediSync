@@ -1,17 +1,17 @@
 import { z } from 'zod/v4'
 
-// `GET /super-admin/access-log` (spec, tache 6, etape 4b) : ferme deux trous laisses par
-// l'etape precedente -- voir routes/super-admin/access-log.ts pour le detail. `source` choisit
+// `GET /super-admin/access-log` : ferme deux trous non couverts jusqu'ici -- voir
+// routes/super-admin/access-log.ts pour le detail. `source` choisit
 // LEQUEL des deux journaux lire (jamais les deux a la fois : leurs colonnes ne se recouvrent
 // qu'en partie, et un merge silencieux masquerait plus qu'il n'eclairerait un ecran de
 // diagnostic plateforme) :
-//   - `activite` -> `ActivityLog`, deja declare dans SUPERADMIN_OPERATIONS (tache 1) ;
-//   - `acces`    -> `PatientAccessLog`, declare a cette tache (tenant-guard.ts).
+//   - `activite` -> `ActivityLog`, deja declare dans SUPERADMIN_OPERATIONS ;
+//   - `acces`    -> `PatientAccessLog`, egalement declare dans SUPERADMIN_OPERATIONS (tenant-guard.ts).
 export const superAdminAccessLogSourceSchema = z.enum(['activite', 'acces'])
 
 // Valeur RESERVEE du filtre d'etablissement : « les lignes qui n'ont AUCUN etablissement ».
 //
-// REVUE FINALE DE BRANCHE, Important n°1 — POURQUOI ELLE EXISTE. La lecture plateforme est
+// POURQUOI ELLE EXISTE. La lecture plateforme est
 // bornee a `PLATFORM_ACCESS_LOG_LIMIT` lignes (200, `createdAt desc`, les deux depots). Les
 // lignes du script d'amorcage (`UserDomain.bootstrapSuperAdmin`, `establishmentId: null`) sont
 // par construction LES PLUS ANCIENNES de la table : des que le journal d'activite depasse 200
@@ -32,7 +32,7 @@ export const SANS_ETABLISSEMENT = 'aucun'
 // `compte`, `action` (chaine libre dans les deux modeles). Sans aucun filtre, la lecture rend
 // les 200 dernieres lignes du journal choisi (voir `PLATFORM_ACCESS_LOG_LIMIT`).
 //
-// `compte` REMPLACE `userID` (revue finale de branche, Important n°1). L'ancien filtre exigeait
+// `compte` REMPLACE `userID`. L'ancien filtre exigeait
 // un identifiant EXACT ; l'ecran, lui, offre une recherche par NOM, qu'il appliquait cote
 // navigateur -- donc sur la page DEJA TRONQUEE a 200 lignes. Chercher un compte rendait « aucune
 // entree » alors que ses lignes existaient, quelques milliers de lignes plus bas. Ce filtre-ci
@@ -78,9 +78,9 @@ export const superAdminAccessLogQuerySchema = z
 // table qui pourrait porter du contenu clinique, voir domain/patientAccessLog.domain.ts) n'est
 // jamais lu par cette route.
 //
-// `accesParOctroi` N'EST PLUS DANS LA LISTE DES CHAMPS EXCLUS (tour de correction 1, tache 10) --
+// `accesParOctroi` N'EST PLUS DANS LA LISTE DES CHAMPS EXCLUS --
 // voir le commentaire equivalent dans `patientAccessLog.schema.ts` pour la raison complete (un
-// defaut de cahier des charges a la tache 5, pas un choix delibere de securite). Un booleen sur
+// defaut de cahier des charges, pas un choix delibere de securite). Un booleen sur
 // la PROVENANCE de l'acces n'a jamais porte de contenu clinique ni d'identite ; `null` sur les
 // lignes `activite` (le seul cas ou cette notion n'existe pas), jamais `false` -- `false`
 // affirmerait a tort un acces reel la ou aucun octroi n'existe meme conceptuellement.

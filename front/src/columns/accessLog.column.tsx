@@ -15,15 +15,15 @@ type AccessLogColumnOptions = {
   services: { id: string; name: string }[]
 }
 
-// Etape 4b, tache 10 (tour de correction 1) : CE QUE CET ECRAN MONTRE.
+// CE QUE CET ECRAN MONTRE.
 //
 // `patientAccessLogEntryResponseSchema` (back) rend l'auteur (`userFirstName`/`userLastName`),
 // l'action, la date (`createdAt`), le service (`serviceId`) et `accesParOctroi` — une colonne par
 // champ ci-dessous, plus une pour ce dernier.
 //
-// HISTORIQUE DE CETTE COLONNE : le premier jet de cette tâche ne l'affichait PAS, parce
+// HISTORIQUE DE CETTE COLONNE : elle n'était pas affichée à l'origine, parce
 // qu'aucune des trois lectures du journal ne la rendait alors (un défaut du cahier des charges
-// de la tâche 5, pas un choix délibéré — voir le rapport de tâche). Le back l'expose désormais
+// initial, pas un choix délibéré). Le back l'expose désormais
 // dans ses trois schémas de réponse (`patientAccessLog.schema.ts`,
 // `superAdminAccessLog.schema.ts`) ; ce fichier l'affiche à son tour.
 //

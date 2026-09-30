@@ -18,7 +18,7 @@ export type LiveGrant = {
   services: { id: string; name: string }[]
 }
 
-// R2 (décisions étape 4a, tâche 3) — la forme exacte qu'emploient les tests de la tâche 3.
+// La forme exacte qu'emploient les tests.
 // `origine` n'est pas décoratif : une appartenance RÉELLE prime toujours sur un octroi (voir
 // `effectiveMemberships` ci-dessous), et le futur écran d'administration s'en sert pour dire
 // qu'un accès vient d'un octroi plutôt que d'une appartenance ordinaire.

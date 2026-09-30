@@ -90,7 +90,7 @@ export const AuthApi = {
     return response
   },
 
-  // `POST /auth/access-link/consume` (tâche 13, page publique) : le jeton
+  // `POST /auth/access-link/consume` (page publique) : le jeton
   // est un mot de passe à usage unique, transmis dans l'URL du navigateur
   // mais qui part ICI dans le CORPS de la requête — jamais dans l'URL de
   // cet appel (voir `back/.../auth/access-link.router.ts`, même exigence

@@ -20,7 +20,7 @@ const ESTABLISHMENT_ROLE_LABEL: Record<string, string> = {
   MEMBER: 'Membre',
 }
 
-// Task-12-brief.md, step 2 : « le détail d'un établissement — services,
+// « Le détail d'un établissement — services,
 // membres, journal, bouton d'octroi avec motif obligatoire et durée ».
 // Écran hors de tout tenant : voir `../super-admin.tsx`.
 export const Route = createFileRoute(
@@ -42,7 +42,7 @@ function SuperAdminEstablishmentDetail() {
   const { establishment, isPending, error } =
     useSuperAdminEstablishmentQuery(establishmentId)
 
-  // Tour de correction 1, Important n°4 : avec `retry: 0`, une requête en
+  // Avec `retry: 0`, une requête en
   // échec repasse `isPending` à `false` sans jamais poser `establishment` —
   // une garde `isPending || !establishment` restait donc vraie pour
   // toujours devant une vraie erreur (identifiant supprimé ou mal

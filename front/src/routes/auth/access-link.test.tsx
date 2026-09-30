@@ -17,12 +17,10 @@ import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { AuthState } from '@/types/auth.ts'
 import { Route as accessLinkRoute } from './access-link.tsx'
 
-// La page publique de consommation d'un lien d'accès (tâche 13, step 4) —
-// LE POINT LE PLUS SENSIBLE DU BRIEF : le jeton arrive dans l'URL du
-// navigateur (c'est ainsi qu'on le transmet), mais ne doit JAMAIS repartir
+// La page publique de consommation d'un lien d'accès — LE POINT LE PLUS SENSIBLE : le jeton
+// arrive dans l'URL du navigateur (c'est ainsi qu'on le transmet), mais ne doit JAMAIS repartir
 // dans l'URL d'un appel d'API, ni dans une clé de cache, ni dans un journal
-// de console — mêmes quatre canaux qu'`accountSearchPanel.test.tsx`
-// (tâche 12, tour de correction 1, Critique n°2), chacun éprouvé par une
+// de console — mêmes quatre canaux qu'`accountSearchPanel.test.tsx`, chacun éprouvé par une
 // injection distincte.
 //
 // Cette page vit sous `routes/auth/`, donc HORS de `_authenticated` :
@@ -98,9 +96,8 @@ const monter = (path: string, fetchMock: ReturnType<typeof buildFetchMock>) => {
     history: createMemoryHistory({ initialEntries: [path] }),
     // JAMAIS `isAuthenticated: true` sur CET arbre synthetique : voir plus
     // bas, describe dedie, pour la preuve d'atteignabilite sans session sur
-    // le VRAI arbre de routes (mineur, tour de correction 1 — cet arbre-ci
-    // ne peut rien prouver sur ce point, il ne declare meme pas de route
-    // `_authenticated`).
+    // le VRAI arbre de routes — cet arbre-ci ne peut rien prouver sur ce
+    // point, il ne declare meme pas de route `_authenticated`.
     context: { authState: { isAuthenticated: false, user: null } },
   })
   render(
@@ -266,8 +263,7 @@ describe('page publique de consommation d un lien d acces', () => {
     expect(consumeCalls).toHaveLength(1)
   })
 
-  // Important n°1 (tour de correction 1) : cinquieme canal nomme par la
-  // revue. Login volontairement en echec (401, deterministe) pour observer
+  // Cinquieme canal a verifier. Login volontairement en echec (401, deterministe) pour observer
   // l'etat du routeur JUSTE apres la purge, sans dependre de l'issue de la
   // connexion qui suit.
   it("purge le jeton de l'URL et REMPLACE l'entree d'historique des la consommation reussie, avant meme la connexion", async () => {
@@ -296,13 +292,12 @@ describe('page publique de consommation d un lien d acces', () => {
     expect(router.history.length).toBe(longueurHistoriqueAvant)
   })
 
-  // Important n°2 (tour de correction 1) : le back exige 12 caracteres
+  // Le back exige 12 caracteres
   // (`accessLinkConsumeSchema`) ; sans ce controle cote client, huit
   // caracteres partaient en requete, revenaient 400, et l'ecran affichait
   // une phrase qui ne parlait jamais de longueur — sur l'ecran par lequel
-  // une personne ENTRE dans l'application. Precedent existant et pas suivi
-  // au premier tour : `user/settings.tsx` (« Le mot de passe doit contenir
-  // au moins 12 caracteres »).
+  // une personne ENTRE dans l'application. Precedent existant : `user/settings.tsx` (« Le mot
+  // de passe doit contenir au moins 12 caracteres »).
   it('un mot de passe trop court est refuse cote client, avec le message exact, avant tout appel reseau', async () => {
     const fetchMock = buildFetchMock([])
     monter(`/auth/access-link?token=${JETON}`, fetchMock)
@@ -324,7 +319,7 @@ describe('page publique de consommation d un lien d acces', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  // Important n°2, seconde moitie : la banniere d'erreur affichait UNE
+  // La banniere d'erreur affichait UNE
   // PHRASE FIGEE quel que soit le statut (« Une erreur est survenue.
   // Verifiez... »), qui ne reflete jamais le VRAI message d'erreur. Ici, un
   // 500 (ni 410 ni 401) doit afficher le message reel de l'API, et laisser
@@ -412,10 +407,10 @@ describe('page publique de consommation d un lien d acces', () => {
   })
 })
 
-// Mineur (tour de correction 1) : « ton harnais ne prouve pas
+// Le harnais synthetique ci-dessus ne prouve pas
 // l'atteignabilite sans session — il construit son propre arbre, ou aucun
 // `_authenticated` ne figure ; rien n'aurait donc pu rediriger, quelle que
-// soit la place reelle du fichier ». Vrai. Ce describe utilise le VRAI
+// soit la place reelle du fichier. Ce describe utilise le VRAI
 // `routeTree.gen.ts` — celui que `main.tsx` monte reellement — pour
 // verifier la SEULE chose que l'arbre synthetique ci-dessus ne peut pas
 // prouver : que `/auth/access-link` est bien enregistree HORS DE

@@ -15,8 +15,7 @@ const tenant: Tenant = {
 // `client.modele.operation(args)`, seul un `.then()` ulterieur (ce que `await` fait) declenche le
 // travail — ici, lire le store ALS ambiant au moment ou ce travail a lieu reellement. C'est cette
 // paresse, pas `Promise.resolve()` (deja regle des la construction), qui reproduit fidelement le
-// mecanisme mesure sur le vrai depot (etape 4b, tache 6, tour de correction 1) sans toucher a une
-// vraie base.
+// mecanisme mesure sur le vrai depot sans toucher a une vraie base.
 class RequetePrismaFictive {
   private readonly lireStore: () => unknown
   constructor(lireStore: () => unknown) {
@@ -66,7 +65,7 @@ describe('TenantContext', () => {
     expect(ctx.peek()).toBeUndefined()
   })
 
-  // Meme forme que runAsSystem ci-dessus, pour le troisieme contexte (tache 1, etape 4a).
+  // Meme forme que runAsSystem ci-dessus, pour le troisieme contexte.
   it('runAsSuperAdmin pose le marqueur superadmin', async () => {
     const ctx = new TenantContext()
     await ctx.runAsSuperAdmin(async () => {
@@ -77,11 +76,10 @@ describe('TenantContext', () => {
     expect(ctx.peek()).toBeUndefined()
   })
 
-  // CE QUE CE TEST CORRIGE (etape 4b, tache 6, tour de correction 1) : l'ancien commentaire ici
-  // affirmait que le `await` A L'INTERIEUR du rappel etait ce qui tenait la portee du contexte.
-  // Mesure par execution (sabotage sur un appelant reel, `PatientAccessLogRepository.
-  // findAllPlatformWide`, task-6-report.md) : FAUX. Les trois cas suivants, avec la MEME
-  // requete paresseuse (`RequetePrismaFictive`, qui ne lit le store qu'a l'instant ou `.then()`
+  // CE QUE CE TEST VERIFIE : contrairement a l'intuition, le `await` A L'INTERIEUR du rappel
+  // n'est PAS ce qui tient la portee du contexte. Mesure par execution (sabotage sur un appelant
+  // reel, `PatientAccessLogRepository.findAllPlatformWide`) : les trois cas suivants, avec la
+  // MEME requete paresseuse (`RequetePrismaFictive`, qui ne lit le store qu'a l'instant ou `.then()`
   // est reellement invoque — exactement le "Prisma est paresseux" repete partout ailleurs dans
   // ce depot) :
   //   - rappel `async` SANS aucun `await` interne -> contexte CORRECT ;
@@ -90,7 +88,7 @@ describe('TenantContext', () => {
   // Ce qui tient la propriete est donc l'ENROBAGE `async` du rappel, pas le mot-cle `await`
   // lui-meme : une fonction `async` qui REND une valeur "thenable" la fait passer par une
   // resolution de promesse que Node associe a la portee `AsyncLocalStorage` active au moment de
-  // l'appel — exactement comme le ferait un `await` explicite. Voir le commentaire corrige de
+  // l'appel — exactement comme le ferait un `await` explicite. Voir le commentaire de
   // `runAsSuperAdmin` (utils/tenant-context.ts) pour la regle complete, y compris pourquoi
   // l'`await` interne reste neanmoins la convention du depot (Biome `suspicious/useAwait`,
   // lisibilite) — jamais parce qu'il tiendrait a lui seul cette propriete-ci.
@@ -114,13 +112,12 @@ describe('TenantContext', () => {
     expect(contexteAppelSynchrone).toBeUndefined()
   })
 
-  // TOUR DE CORRECTION 3 (tache 1) — Important de la revue : muter en place l'objet rendu par
-  // `peek()` est une porte d'entree dans un mode non-tenant qu'aucune analyse de source ne peut
-  // surveiller (voir runAsSystem-unicite.test.ts). Le remede choisi n'est pas une declaration de
-  // cette limite, mais une fermeture a l'execution : le store est gele (`Object.freeze`) avant
-  // d'entrer dans le stockage. Preuve par execution, dans les DEUX sens demandes par la revue —
-  // que ca casse un appelant legitime (non : la lecture continue de fonctionner), et que ca ferme
-  // reellement la porte (oui : la mutation leve, elle ne reussit jamais silencieusement).
+  // Muter en place l'objet rendu par `peek()` est une porte d'entree dans un mode non-tenant
+  // qu'aucune analyse de source ne peut surveiller (voir runAsSystem-unicite.test.ts). Le remede
+  // choisi n'est pas une declaration de cette limite, mais une fermeture a l'execution : le store
+  // est gele (`Object.freeze`) avant d'entrer dans le stockage. Preuve par execution, dans les
+  // deux sens : que ca ne casse pas un appelant legitime (la lecture continue de fonctionner), et
+  // que ca ferme reellement la porte (la mutation leve, elle ne reussit jamais silencieusement).
   it('gele le store : une mutation en place echoue plutot que de faire glisser le contexte', async () => {
     const ctx = new TenantContext()
     await ctx.runAsSuperAdmin(async () => {
@@ -140,13 +137,12 @@ describe('TenantContext', () => {
     })
   })
 
-  // TOUR DE CORRECTION 4 (tache 1) — la re-revue a montre par execution que le gel du tour 3 etait
-  // SUPERFICIEL : `Object.freeze` ne gele que l'enveloppe, donc `peek().tenant.establishmentId =
-  // 'e9'` reussissait, survivait a une frontiere asynchrone, et repointait tout le contexte sur un
-  // autre etablissement — alors que ce fichier et `runAsSystem-unicite.test.ts` declaraient la
-  // porte « fermee ». Ces trois tests tiennent la fermeture complete : le tenant imbrique est gele
-  // lui aussi, l'objet que le plugin pose sur `request.tenant` est le MEME (donc gele par la meme
-  // occasion), et `Tenant` reste plat — sans quoi un gel a deux niveaux ne suffirait plus.
+  // Le gel simple de l'enveloppe est SUPERFICIEL : `Object.freeze` ne gele que l'enveloppe, donc
+  // `peek().tenant.establishmentId = 'e9'` reussirait, survivrait a une frontiere asynchrone, et
+  // repointerait tout le contexte sur un autre etablissement. Ces trois tests tiennent la
+  // fermeture complete : le tenant imbrique est gele lui aussi, l'objet que le plugin pose sur
+  // `request.tenant` est le MEME (donc gele par la meme occasion), et `Tenant` reste plat — sans
+  // quoi un gel a deux niveaux ne suffirait plus.
   it('gele aussi le tenant imbrique : repointer l etablissement echoue, avant comme apres un tick', async () => {
     const ctx = new TenantContext()
     await ctx.run({ ...tenant }, async () => {
@@ -160,8 +156,8 @@ describe('TenantContext', () => {
         ;(tenantDuStore as any).establishmentId = 'e9'
       }).toThrow(TypeError)
       expect(ctx.current().establishmentId).toBe('e1')
-      // La porte exacte que la revue a exploitee : la mutation survivait a un tick asynchrone et
-      // valait pour tout le reste de la portee.
+      // La porte precise ici : la mutation survivait a un tick asynchrone et valait pour tout le
+      // reste de la portee.
       await Promise.resolve()
       expect(ctx.peek()).toEqual({ kind: 'tenant', tenant })
     })

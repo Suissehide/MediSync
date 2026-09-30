@@ -15,9 +15,9 @@ type PatientCellProps = {
 
 export default function PatientCell({ row, onAddPatient }: PatientCellProps) {
   const [expanded, setExpanded] = useState(false)
-  // La fiche patient vit sous /e/:establishmentId/s/:serviceId depuis
-  // l'etape 2 (tache 6) : le contexte vient du store, pose par le layout de
-  // service avant que cet ecran (agenda) ne puisse se rendre.
+  // La fiche patient vit sous /e/:establishmentId/s/:serviceId : le contexte
+  // vient du store, pose par le layout de service avant que cet ecran (agenda)
+  // ne puisse se rendre.
   const context = useAuthStore((state) => state.context)
 
   const { patients, isIndividual } = row

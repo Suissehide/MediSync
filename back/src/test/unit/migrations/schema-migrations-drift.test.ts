@@ -5,8 +5,8 @@ import { config as loadDotenv } from 'dotenv'
 import { Client } from 'pg'
 
 // Garde contre la derive silencieuse entre `schema.prisma` et le contenu reel des migrations :
-// le defaut que ce fichier existe pour attraper. Le tour de correction 1 de la tache 6 a
-// trouve `EnrollmentIssue` et `DiagnosticEducatif` toujours contraints vers `Patient` EN BASE
+// le defaut que ce fichier existe pour attraper : `EnrollmentIssue` et `DiagnosticEducatif`
+// etaient toujours contraints vers `Patient` EN BASE
 // (par les cles posees dans la migration `multi_tenant_socle`) alors que `schema.prisma` ne
 // declarait plus que la relation vers `PatientServiceFile` — les deux anciennes clefs
 // etrangeres n'avaient jamais ete retirees. Rien dans le depot ne l'aurait vue : ni `npm run
@@ -24,10 +24,9 @@ import { Client } from 'pg'
 // par `prisma migrate diff --help`).
 //
 // Preuve que ce test attrape reellement le defaut ci-dessus (et pas seulement un defaut
-// imaginaire) : rejoue manuellement avec l'ancien contenu (avant ce tour de correction) de
+// imaginaire) : rejoue manuellement avec l'ancien contenu de
 // `20260924160131_patient_service_file/migration.sql`, cette meme commande rend le code 2 et
-// imprime exactement les deux `DROP CONSTRAINT` qui manquaient. Voir le rapport du tour de
-// correction 1 pour la sortie complete.
+// imprime exactement les deux `DROP CONSTRAINT` qui manquaient.
 
 jest.setTimeout(180_000)
 

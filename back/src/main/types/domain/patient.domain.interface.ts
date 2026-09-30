@@ -15,8 +15,8 @@ import type { EnrollmentIssueEntityDomain } from './enrollmentIssue.domain.inter
 export type PatientEntityDomain = PatientEntityRepo
 export type PatientWithTagsDomain = PatientWithTagsEntityRepo
 export type PatientIdentityMatchDomain = PatientIdentitySearchResultRepo
-// Recherche d'identite : `hasMore` dit qu'il y a plus de vingt resultats, jamais combien (revue
-// tache 13, tour 1, point 4) — voir le commentaire de `patientIdentitySearchResponseSchema`.
+// Recherche d'identite : `hasMore` dit qu'il y a plus de vingt resultats, jamais combien —
+// voir le commentaire de `patientIdentitySearchResponseSchema`.
 export type PatientIdentitySearchResultDomain = {
   results: PatientIdentityMatchDomain[]
   hasMore: boolean
@@ -27,10 +27,10 @@ export type PatientWithAppointmentsDomain = PatientEntityDomain & {
   })[]
   enrollmentIssues: EnrollmentIssueEntityDomain[]
 }
-// Signal de suivi ailleurs (spec §5.3/§6, tache 7 tour 1, I1) porte par la lecture du patient,
+// Signal de suivi ailleurs (spec §5.3/§6) porte par la lecture du patient,
 // pas par celle du sous-dossier : voir PatientDomain.findByID.
 //
-// `followedElsewhere?` (revue tache 13, tour 1, point 1) : absent quand le service courant n'a
+// `followedElsewhere?` : absent quand le service courant n'a
 // pas encore de sous-dossier pour ce patient — jamais `false` dans ce cas, un `false` dirait
 // « je sais, et c'est non ». Voir le commentaire de `patientDetailResponseSchema`.
 export type PatientDetailDomain = PatientWithAppointmentsDomain & {
@@ -99,7 +99,7 @@ export type PatientExportFilters = {
 // dire explicitement s'il a `clinical:read`.
 export type PatientExportOptions = { includeClinicalFields: boolean }
 
-// `count` (etape 4b, tache 4) : le nombre de dossiers effectivement rendus par l'export,
+// `count` : le nombre de dossiers effectivement rendus par l'export,
 // necessaire au handler (`routes/patient.ts`) pour poser `request.patientExportCount` avant de
 // repondre -- le journal des consultations (`recordPatientAccess`, plugins/tenant.plugin.ts) en
 // a besoin et ne peut pas le recalculer lui-meme sans rejouer integralement la meme requete.

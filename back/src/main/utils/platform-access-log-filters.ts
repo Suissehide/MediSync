@@ -1,7 +1,6 @@
 import { escapeLikePattern } from './like-pattern'
 
-// REVUE FINALE DE BRANCHE (etape 4b), Important n°1 — LE FILTRE « COMPTE » DE LA LECTURE
-// PLATEFORME, evalue EN BASE.
+// LE FILTRE « COMPTE » DE LA LECTURE PLATEFORME, evalue EN BASE.
 //
 // Ce qu'il remplace : l'ecran plateforme filtrait le compte DANS LE NAVIGATEUR, sur la page deja
 // tronquee a `PLATFORM_ACCESS_LOG_LIMIT` (200 lignes, `createdAt desc`). Chercher un compte

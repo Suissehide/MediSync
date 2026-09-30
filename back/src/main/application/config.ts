@@ -50,8 +50,8 @@ const configSchema = z.object({
     .transform((val) => Number.parseInt(val, 10)),
   isTestRunning: z.boolean().default(false),
 
-  // Retention des deux journaux de tracabilite (ActivityLog, PatientAccessLog — tache 8, etape
-  // 4b) : entier strictement positif, defaut douze mois. Une purge planifiee tourne seule, sans
+  // Retention des deux journaux de tracabilite (ActivityLog, PatientAccessLog) : entier
+  // strictement positif, defaut douze mois. Une purge planifiee tourne seule, sans
   // personne pour regarder son resultat (application/starter.ts) ; une valeur absurde (zero,
   // negative, non numerique) doit donc faire echouer le DEMARRAGE plutot que de laisser la purge
   // interpreter zero mois litteralement au premier passage planifie (ce qui viderait les deux
@@ -79,7 +79,7 @@ const envVarNames = [
   'LOG_RETENTION_MONTHS',
 ]
 
-// `env` optionnel (tache 8, etape 4b) : `process.env` par defaut, pour que tout appelant de
+// `env` optionnel : `process.env` par defaut, pour que tout appelant de
 // production (starter.ts, e2e/setup/app.ts) continue de fonctionner sans argument. Injectable
 // pour eprouver une retention absurde sans jamais toucher au `process.env` reel du process de
 // test (config.test.ts).

@@ -10,9 +10,9 @@ import type { TenantStore } from '../../../main/types/utils/tenant-context'
 
 // LA MESURE DE MONOTONIE, REJOUABLE — pas un chiffre dans un rapport.
 //
-// POURQUOI CE FICHIER EXISTE (tache 15, tour de correction 1). Les quatre tours de la tache 1,
-// puis la tache 15, ont chacun mesure « aucun refus n'a ete PERDU » avec un harnais jetable,
-// supprime aussitot apres. Le chiffre finissait dans un rapport et n'etait reproductible par
+// POURQUOI CE FICHIER EXISTE. Le meme balayage — « aucun refus n'a ete PERDU » — a deja ete
+// mesure plusieurs fois avec un harnais jetable, supprime aussitot apres. Le chiffre finissait
+// dans un rapport et n'etait reproductible par
 // personne — or un balayage qu'on ne peut pas rejouer ne protege pas la PROCHAINE modification
 // du garde-fou, qui est exactement le moment ou il servirait. Ce fichier verse le harnais au
 // depot.
@@ -32,22 +32,18 @@ import type { TenantStore } from '../../../main/types/utils/tenant-context'
 // nomme la reference :
 //     MONOTONIE_REF=<ref> PROFONDEUR=9 npx jest -c src/test/jest.config.ts \
 //       --selectProjects unit --testPathPatterns tenant-guard-monotonie
-// (« se rejoue EXACTEMENT » a ete retire de cette phrase a la tache 9, etape 4b : la commande
-// rejoue bien la COMPARAISON, jamais le CHIFFRE. L'espace balaye depend de MODEL_RELATIONS et
-// des formes definies plus bas, qui ont change deux fois depuis la tache 15 — voir plus bas.)
+// (la commande rejoue bien la COMPARAISON, jamais le CHIFFRE. L'espace balaye depend de
+// MODEL_RELATIONS et des formes definies plus bas, qui ont change plusieurs fois — voir plus bas.)
 //
-// CE QUE `MONOTONIE_REF=main` REND, ET CE QUE CELA VEUT DIRE — mesure REFAITE a la tache 9
-// (etape 4b), parce que ce paragraphe etait perime sur les trois plans a la fois : le nombre,
-// la repartition, et la CAUSE. Il annoncait « 1 800 refus perdus, dont 1 552 sans contexte »,
-// imputes aux tables `AccessLink`/`SuperAdminAccessGrant` nees a la tache 2. Mesure actuelle, a
+// CE QUE `MONOTONIE_REF=main` REND, ET CE QUE CELA VEUT DIRE. Mesure actuelle, a
 // profondeur 4, sur 202 250 cas :
 //     349 refus perdus — {"tenant":315,"superadmin":34}, et ZERO sans contexte.
-// Les deux ecarts ont chacun leur raison, et aucune n'est celle qui etait ecrite ici :
-//   - zero sans contexte, parce que la tache 9 a justement referme cette famille entiere (la
-//     porte de permission NO_CONTEXT_GLOBAL_OPERATIONS) ;
+// Les deux ecarts ont chacun leur raison :
+//   - zero sans contexte, parce que la porte de permission NO_CONTEXT_GLOBAL_OPERATIONS a
+//     referme cette famille entiere ;
 //   - les 349 restants sont, verifies un par un par filtrage de la liste complete (349 sur 349,
 //     pas un echantillon), tous des cas dont la racine ou une etape est `PatientAccessLog` /
-//     `accessLogs` — un modele ajoute a l'etape 4b, pas a la 4a. Meme MECANISME que
+//     `accessLogs` — un modele ajoute apres coup au graphe. Meme MECANISME que
 //     l'explication d'origine, autre modele : avant son entree dans MODEL_RELATIONS, tout
 //     `include` le nommant etait refuse comme « non declare ». Le declarer le rend utilisable ;
 //     ce n'est pas un refus perdu au sens du cloisonnement, c'est une table qui nait.
@@ -59,14 +55,12 @@ import type { TenantStore } from '../../../main/types/utils/tenant-context'
 //   - REFUS PERDU (refuse avant, passe maintenant) => ECHEC. C'est la propriete.
 //   - refus gagne (passe avant, refuse maintenant) => compte et affiche, jamais un echec : c'est
 //     ce que fait un resserrement.
-// L'ESPACE BALAYE, DECRIT EXACTEMENT — et il a ete decrit trop largement jusqu'a la tache 9
-// (etape 4b, tour de correction 1 : la revue a montre que cet en-tete promettait plus que la
-// boucle ne couvrait, dans l'instrument meme auquel tout le monde se fie). Deux familles, et
+// L'ESPACE BALAYE, DECRIT EXACTEMENT. Deux familles, et
 // c'est la reunion des deux qui fait l'espace :
 //   1. PROFONDEUR 0 — les formes NUES (`FORMES_NUES` plus bas) : chaque racine x chaque verbe,
 //      SANS aucun `include` ni `select`. Elles manquaient entierement : toutes les formes
 //      etaient decorees d'au moins une relation incluse, si bien qu'un `Establishment.deleteMany
-//      ({})` nu — la forme meme que la tache 9 modifie — n'etait jamais compare.
+//      ({})` nu n'etait jamais compare.
 //   2. PROFONDEURS 1..PROFONDEUR — les formes DECOREES (`formes()`) : chaque racine x chaque
 //      forme x chaque chaine d'inclusion du graphe MODEL_RELATIONS (parcours en PROFONDEUR — le
 //      graphe porte des cycles, la profondeur est la seule garde ; en largeur, un niveau entier
@@ -77,7 +71,7 @@ import type { TenantStore } from '../../../main/types/utils/tenant-context'
 // findMany, findUnique, findFirst, count, create, update, updateMany, upsert, delete,
 // deleteMany. Les formes nues les portent tous les dix ; les formes decorees en portent huit
 // (ni `updateMany` ni `deleteMany`, qui n'acceptent pas d'`include` chez Prisma — les decorer
-// mesurerait une forme qui ne peut pas exister). Avant la tache 9, les formes decorees n'en
+// mesurerait une forme qui ne peut pas exister). Auparavant, les formes decorees n'en
 // couvraient que six et les nues n'existaient pas : `delete`, `deleteMany`, `updateMany` et
 // `upsert` n'etaient balayes nulle part. Ce qui reste hors du balayage, nomme plutot que
 // sous-entendu : `findFirstOrThrow`, `findUniqueOrThrow`, `createMany`, `createManyAndReturn`,
@@ -89,9 +83,9 @@ import type { TenantStore } from '../../../main/types/utils/tenant-context'
 // rapide. Le balayage profond se lance a la main et c'est lui qui vaut preuve.
 //
 // LE NOMBRE DE CAS N'EST PAS UNE CONSTANTE, ne le recopiez pas d'un rapport : il se derive de
-// MODEL_RELATIONS et grossit a chaque relation ajoutee au schema, et il a change deux fois pour
-// cette seule raison. Profondeur 9 : 61 923 360 cas quand la tache 15 l'a mesure contre
-// `f022ef9` ; 80 198 400 au debut de la tache 9 (etape 4b), le graphe ayant gagne
+// MODEL_RELATIONS et grossit a chaque relation ajoutee au schema, et il a deja change plusieurs
+// fois pour cette seule raison. Profondeur 9 : 61 923 360 cas mesures contre
+// `f022ef9` ; 80 198 400 apres que le graphe a gagne
 // `PatientAccessLog` ; et davantage depuis que cet en-tete elargit l'espace. Citez le chiffre
 // que VOTRE execution a imprime — le `console.log` du second test le donne en entier.
 //
@@ -104,7 +98,7 @@ const PROFONDEUR = Number(process.env.PROFONDEUR ?? '4')
 const REF = process.env.MONOTONIE_REF ?? 'HEAD'
 
 const CHEMIN_DANS_LE_DEPOT = 'back/src/main/infra/orm/tenant-guard.ts'
-// Revue finale de l'étape 4a, mineur : ce fichier matérialisait sa copie EN PLUS, à côté du
+// Ce fichier matérialisait sa copie EN PLUS, à côté du
 // garde-fou, DANS `src/main` — pendant toute la durée du test, `npm run lint` la lint, `npm run
 // build` l'émet (elle vit sous `src/main/tsconfig.json`), et les énumérations de ce dossier la
 // balaient. Supprimée en `afterAll`, mais un jest interrompu (crash, kill -9, CI coupée) la
@@ -213,10 +207,9 @@ const selectDuChemin = (chemin: readonly string[]): Record<string, unknown> => {
 
 const LIGNE_DE_TENANT = { establishmentId: 'e1', serviceId: 's1' }
 
-// PROFONDEUR 0 — les formes NUES, sans `include` ni `select` (tache 9, etape 4b, tour de
-// correction 1). Appliquees une fois par racine, en plus des formes decorees ci-dessous. C'est
-// ici, et nulle part ailleurs, que `Establishment.deleteMany({})` — la forme citee par le brief
-// de la tache 9 — entre dans le balayage. Les dix verbes y figurent, y compris les deux
+// PROFONDEUR 0 — les formes NUES, sans `include` ni `select`.
+// Appliquees une fois par racine, en plus des formes decorees ci-dessous. C'est
+// ici, et nulle part ailleurs, que `Establishment.deleteMany({})` entre dans le balayage. Les dix verbes y figurent, y compris les deux
 // (`updateMany`, `deleteMany`) que Prisma n'accepte pas avec un `include`.
 const FORMES_NUES: { operation: string; args: Record<string, unknown> }[] = [
   { operation: 'findMany', args: {} },
@@ -236,8 +229,8 @@ const FORMES_NUES: { operation: string; args: Record<string, unknown> }[] = [
 
 // Les huit formes DECOREES : lectures nues, la forme `select`, des ECRITURES decorees d'un
 // `include` (un `create ... include` rend ce qu'un `findMany ... include` rendrait), et la
-// chaine filtree sur le service courant a chaque saut. `delete` et `upsert` s'y sont ajoutes a
-// la tache 9 (etape 4b) — tous deux acceptent un `include` chez Prisma, et `upsert` porte en
+// chaine filtree sur le service courant a chaque saut. `delete` et `upsert`
+// acceptent tous deux un `include` chez Prisma, et `upsert` porte en
 // plus ses deux branches `create`/`update`, que rien ne decorait jusqu'ici.
 const formes = (chemin: readonly string[]) => {
   const inc = includeDuChemin(chemin, false)

@@ -7,7 +7,7 @@ import type { SeedTenant } from './tenant'
 // qu'une fuite entre services saute aux yeux plutôt que de se noyer dans des
 // données identiques.
 //
-// Depuis la migration `patient_service_file` (étape 3 du multi-tenant), les seize colonnes
+// Depuis la migration `patient_service_file`, les seize colonnes
 // de parcours ne vivent plus sur `Patient` : `p.clinicalFile`, quand il est présent, porte
 // celles que ce jeu de données utilise. Le sous-dossier créé ici est rattaché au service de
 // l'appelant (`tenant.serviceId`) — le seed connaît déjà ce service, un jeu de patients par

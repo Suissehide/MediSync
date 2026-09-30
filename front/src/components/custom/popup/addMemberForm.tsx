@@ -44,7 +44,7 @@ function AddMemberForm({ trigger }: AddMemberFormProps) {
   const { addMember } = useMemberMutations()
   // Aucun soignant ici : ils sont propres a chaque service depuis le
   // 2026-09-29, et le coordinateur rattache les membres depuis son service.
-  // Revue finale de l'étape 4a, Important n°2 : les services PROPOSÉS sont
+  // Les services PROPOSÉS sont
   // la liste COMPLÈTE de l'établissement courant
   // (`GET /e/:establishmentId/admin/services`, déjà listée par l'onglet des
   // services), jamais celle de l'administrateur connecté

@@ -176,7 +176,7 @@ export const forgetContext = (userId: string): void => {
 // redupliquée ici) plutôt qu'un filtre direct sur `establishment.role`.
 // Utile à l'index (destination de repli) et à `/choose-context` (liste
 // complète) pour qui n'a aucun couple établissement/service accessible :
-// depuis les tâches 8 et 12, l'administration d'établissement reste un
+// l'administration d'établissement reste un
 // accès réel, à distinguer de l'absence totale d'accès qui seule mérite
 // l'écran d'attente.
 export const administeredEstablishments = (

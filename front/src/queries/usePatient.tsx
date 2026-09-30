@@ -115,7 +115,7 @@ export const usePatientWithTagsQuery = () => {
   return { patients, isPending }
 }
 
-// Recherche d'identite existante avant creation (etape 3 du multi-tenant, tache 13) : une
+// Recherche d'identite existante avant creation : une
 // `useMutation`, pas une `useQuery` — la recherche est declenchee a la demande (un clic, une
 // saisie validee), jamais automatiquement au montage ni tenue a jour en arriere-plan comme le
 // reste des donnees de ce fichier. Rien a invalider en retour : le resultat ne modifie aucun
