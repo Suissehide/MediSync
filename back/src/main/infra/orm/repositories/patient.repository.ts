@@ -33,14 +33,15 @@ export const IDENTITY_SEARCH_LIMIT = 20
 // Tags principaux distincts des parcours auxquels un patient est inscrit.
 const distinctMainTags = (
   appointmentPatients: AppointmentPatientWithMainTag[],
-): string[] => [
-  ...new Set(
-    appointmentPatients.flatMap((ap) => {
-      const mainTag = ap.appointment?.slot?.pathway?.template?.mainTag
-      return mainTag ? [mainTag] : []
-    }),
-  ),
-]
+): string[] =>
+  [
+    ...new Set(
+      appointmentPatients.flatMap((ap) => {
+        const mainTag = ap.appointment?.slot?.pathway?.template?.mainTag
+        return mainTag ? [mainTag] : []
+      }),
+    ),
+  ].sort((a, b) => a.localeCompare(b, 'fr'))
 
 class PatientRepository implements PatientRepositoryInterface {
   private readonly prisma: PostgresPrismaClient
