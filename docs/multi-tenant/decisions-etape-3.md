@@ -474,6 +474,10 @@ que ce chantier a identifiée sans la fermer.
    complètes à l'échelle de l'établissement, sans filtre de service.**
    Alimente quatre écrans du front. Préexistant à cette étape (le patient
    étant un modèle d'établissement depuis l'étape 1), non corrigé ici.
+   **FERMÉ depuis** : `findAll` filtre désormais par sous-dossier du service
+   courant, comme `findAllWithTags` — et `findForExport` avec lui, le même
+   trou étant ouvert dans l'export Excel (test de cloisonnement dans
+   `patient.test.ts`).
 5. **Le test d'unicité de l'exception de lecture inter-services
    (`runAsSystem-unicite.test.ts`) ne couvre pas les appels depuis
    `src/test`.** Plusieurs tests légitimes construisent le store système pour
