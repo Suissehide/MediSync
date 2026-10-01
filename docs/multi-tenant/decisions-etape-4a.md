@@ -668,7 +668,8 @@ plateforme.** C'est le périmètre naturel de l'étape 4b.
 8. **`GET /patient` (`findAll`) rend encore les patients de tout l'établissement, sans filtre de
    service.** Vérifié : `PatientRepository.findAll` n'applique que `establishmentScope`, là où
    `findAllWithTags` filtre bien par sous-dossier du service courant. Manque connu depuis
-   l'étape 3, pas fermé par l'étape 4a.
+   l'étape 3, pas fermé par l'étape 4a. **FERMÉ depuis**, en même temps que le même trou dans
+   `findForExport` (export Excel) — voir la limite 4 de `decisions-etape-3.md`.
 
 9. **Le pont par modèle global sous contexte de TENANT ordinaire — FERMÉ par la tâche 15, et il
    n'était pas théorique.** Une relation partant d'un modèle global peut être à-plusieurs et
