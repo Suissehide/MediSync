@@ -63,7 +63,7 @@ const monter = (depart: string) => {
   const rootRoute = createRootRoute({ component: FilAriane })
   const enfants = [
     '/e/$establishmentId/s/$serviceId/dashboard',
-    '/e/$establishmentId/admin/members',
+    '/e/$establishmentId/admin',
     '/super-admin',
     '/user/settings',
   ].map((path) => createRoute({ getParentRoute: () => rootRoute, path }))
@@ -100,7 +100,7 @@ describe('FilAriane', () => {
 
     expect(
       within(await fil()).getByRole('link', { name: /CHU/ }),
-    ).toHaveAttribute('href', '/e/e1/admin/members')
+    ).toHaveAttribute('href', '/e/e1/admin')
   })
 
   it('liste les services par etablissement, marque le courant et l acces temporaire', async () => {
@@ -137,7 +137,7 @@ describe('FilAriane', () => {
       LAST_CONTEXT_KEY('u1'),
       JSON.stringify({ establishmentId: 'e1', serviceId: 's2' }),
     )
-    monter('/e/e1/admin/members')
+    monter('/e/e1/admin')
 
     const retour = within(await fil()).getByRole('link', {
       name: /Pneumo/,
@@ -156,7 +156,7 @@ describe('FilAriane', () => {
       LAST_CONTEXT_KEY('u1'),
       JSON.stringify({ establishmentId: 'e2', serviceId: 's3' }),
     )
-    monter('/e/e1/admin/members')
+    monter('/e/e1/admin')
 
     expect(
       within(await fil()).getByRole('link', { name: /Cardio/ }),

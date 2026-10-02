@@ -117,15 +117,20 @@ export const NAVIGATION: Record<Scale, readonly NavItem[]> = {
   ],
   establishment: [
     {
-      label: 'Membres',
-      to: '/e/$establishmentId/admin/members',
-      permission: 'members:manage',
+      label: 'Résumé',
+      to: '/e/$establishmentId/admin',
       group: 'Accès',
     },
     {
       label: 'Services',
       to: '/e/$establishmentId/admin/services',
       permission: 'services:manage',
+      group: 'Accès',
+    },
+    {
+      label: 'Membres',
+      to: '/e/$establishmentId/admin/members',
+      permission: 'members:manage',
       group: 'Accès',
     },
     {

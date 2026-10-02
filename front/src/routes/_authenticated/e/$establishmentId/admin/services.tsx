@@ -1,10 +1,8 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import { Pencil } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
 
 import { getServiceColumns } from '@/columns/service.column.tsx'
 import CreateServiceForm from '@/components/custom/popup/createServiceForm.tsx'
-import RenameEstablishmentForm from '@/components/custom/popup/renameEstablishmentForm.tsx'
 import RenameServiceForm from '@/components/custom/popup/renameServiceForm.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
 import ReactTable from '@/components/table/reactTable.tsx'
@@ -20,7 +18,6 @@ import {
 import { can } from '@/hooks/useCan.ts'
 import { queryState } from '@/libs/queryState.ts'
 import {
-  useRenameEstablishment,
   useServiceDeactivationImpact,
   useServiceMutations,
   useServicesQuery,
@@ -52,13 +49,6 @@ export const Route = createFileRoute(
 })
 
 function ServicesAdmin() {
-  const { establishmentId } = Route.useParams()
-  const user = useAuthStore((state) => state.user)
-  const establishment = user?.establishments.find(
-    (e) => e.id === establishmentId,
-  )
-  const renameEstablishment = useRenameEstablishment()
-  const [renommer, setRenommer] = useState(false)
   const { services, isPending, error } = useServicesQuery()
   const { updateService } = useServiceMutations()
   const impact = useServiceDeactivationImpact()
@@ -131,30 +121,11 @@ function ServicesAdmin() {
     <DashboardLayout>
       <div className="flex-1 min-h-0 bg-background p-6 rounded-lg flex flex-col w-full gap-4">
         <div className="flex justify-between items-center gap-3">
-          <div className="flex items-center gap-2">
-            <h1 className="h-9 flex items-center text-text-dark text-xl font-semibold">
-              Services — {establishment?.name}
-            </h1>
-            {establishment && (
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setRenommer(true)}
-                title="Renommer l'établissement"
-                aria-label="Renommer l'établissement"
-              >
-                <Pencil className="w-4 h-4" />
-              </Button>
-            )}
-          </div>
+          <h1 className="h-9 flex items-center text-text-dark text-xl font-semibold">
+            Services
+          </h1>
           <CreateServiceForm />
         </div>
-
-        <RenameEstablishmentForm
-          establishment={renommer && establishment ? establishment : null}
-          onClose={() => setRenommer(false)}
-          rename={renameEstablishment}
-        />
 
         {etat === 'pending' && (
           <div className="flex-1 flex items-center justify-center text-text-light">
