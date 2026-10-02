@@ -37,11 +37,15 @@ describe('cellule des parcours', () => {
   it('ne propage pas le clic a la ligne', async () => {
     const onRowClick = vi.fn()
     render(
-      // biome-ignore lint/a11y/noStaticElementInteractions: reproduit le <tr> cliquable du tableau
-      // biome-ignore lint/a11y/useKeyWithClickEvents: idem
-      <div onClick={onRowClick}>
-        <CelluleParcours tags={tags} couleurParTag={couleurs} />
-      </div>,
+      <table>
+        <tbody>
+          <tr onClick={onRowClick}>
+            <td>
+              <CelluleParcours tags={tags} couleurParTag={couleurs} />
+            </td>
+          </tr>
+        </tbody>
+      </table>,
     )
 
     await userEvent.click(screen.getByRole('button', { name: '+3' }))
