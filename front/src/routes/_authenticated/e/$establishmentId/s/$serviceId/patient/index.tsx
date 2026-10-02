@@ -92,7 +92,7 @@ function PatientList() {
       )
   }, [patients, searchTerm])
 
-  // Chaque compteur tient compte des autres filtres, pas du sien.
+  // Le compteur d'un parcours tient compte du statut, pas des autres parcours.
   const byTags = searched.filter((p) => matchesTags(p, selectedTags))
   const byStatus = searched.filter((p) => matchesStatus(p, status))
   const filteredPatients = byTags.filter((p) => matchesStatus(p, status))
@@ -177,9 +177,6 @@ function PatientList() {
             {(Object.keys(STATUSES) as Status[]).map((key) => (
               <ToggleGroupItem key={key} value={key}>
                 {STATUSES[key]}
-                <span className="text-xs text-text-light tabular-nums">
-                  {byTags.filter((p) => matchesStatus(p, key)).length}
-                </span>
               </ToggleGroupItem>
             ))}
           </ToggleGroup>
