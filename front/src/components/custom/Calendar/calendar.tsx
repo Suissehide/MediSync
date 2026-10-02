@@ -324,6 +324,14 @@ function Calendar({
         return
       }
 
+      // Un rendez-vous est posé dans un créneau de fond, que FullCalendar ne
+      // reconnaît pas comme un événement : sans ça le clic démarre une
+      // sélection de dates, qui repeint le calendrier et avale le clic.
+      if (target.closest('[data-appointment-id]')) {
+        e.stopPropagation()
+        return
+      }
+
       const el = target.closest('.fc-event-hero')
       if (!el) {
         return
@@ -349,11 +357,12 @@ function Calendar({
       }
     }
 
-    document.addEventListener('mousedown', handleMouseDown)
+    // Capture : il faut court-circuiter FullCalendar, qui écoute plus bas.
+    document.addEventListener('mousedown', handleMouseDown, true)
     document.addEventListener('mouseup', handleMouseUp)
 
     return () => {
-      document.removeEventListener('mousedown', handleMouseDown)
+      document.removeEventListener('mousedown', handleMouseDown, true)
       document.removeEventListener('mouseup', handleMouseUp)
     }
   }, [handleClickEvent])

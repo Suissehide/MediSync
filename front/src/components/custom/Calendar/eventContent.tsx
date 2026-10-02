@@ -283,6 +283,7 @@ export const EventContent = ({
                 setOpenEventId?.(`appointment_${appointment.id}`)
               }}
               key={appointment.id}
+              data-appointment-id={appointment.id}
               style={
                 isRowLayout
                   ? { backgroundColor: appointmentColor }
@@ -318,6 +319,7 @@ export const EventContent = ({
             <button
               type="button"
               key={appointment.id}
+              data-appointment-id={appointment.id}
               onClick={(e) => {
                 e.stopPropagation()
                 setOpenEventId?.(`appointment_${appointment.id}`)
