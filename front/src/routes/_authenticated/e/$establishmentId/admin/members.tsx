@@ -105,7 +105,7 @@ function MemberSettings() {
 
   return (
     <DashboardLayout>
-      <div className="flex-1 bg-background p-6 rounded-lg flex flex-col w-full gap-4">
+      <div className="flex-1 min-h-0 bg-background p-6 rounded-lg flex flex-col w-full gap-4">
         <div className="flex justify-between items-center gap-3">
           <h1 className="h-9 flex items-center text-text-dark text-xl font-semibold">
             Membres de l'établissement

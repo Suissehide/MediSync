@@ -70,7 +70,6 @@ type ReactTableProps<TData extends { id: string }> = {
   pagination?: boolean
   serverPagination?: ServerPagination
   onRowClick?: (row: TData) => void
-  maxHeight?: string
   emptyState?: ReactNode
   isRowDisabled?: (row: TData) => boolean
   isRowMuted?: (row: TData) => boolean
@@ -87,7 +86,6 @@ export function ReactTable<TData extends { id: string }>({
   pagination = false,
   serverPagination,
   onRowClick,
-  maxHeight = '600px',
   emptyState,
   isRowDisabled,
   isRowMuted,
@@ -226,7 +224,7 @@ export function ReactTable<TData extends { id: string }>({
   const tableContainerRef = useRef(null)
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-1 min-h-0 flex-col">
       {title && <div className="px-4 mb-4 text-2xl font-bold">{title}</div>}
 
       <div className="react-table__filter">
@@ -235,10 +233,9 @@ export function ReactTable<TData extends { id: string }>({
         {customHeader?.(table.getRowModel().rows)}
       </div>
 
-      <div className="relative rounded-lg border border-border-dark">
+      <div className="relative flex min-h-0 flex-1 flex-col rounded-lg border border-border-dark">
         <div
-          className="w-full overflow-auto rounded-lg"
-          style={{ maxHeight }}
+          className="w-full min-h-0 flex-1 overflow-auto rounded-lg"
           ref={tableContainerRef}
         >
           <table className="table w-max min-w-full border-separate border-spacing-0">

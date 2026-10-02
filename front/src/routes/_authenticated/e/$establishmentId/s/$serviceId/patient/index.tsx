@@ -125,7 +125,7 @@ function PatientList() {
         <AddPatientToSlotForm key="add-patient-to-slot" />,
       ]}
     >
-      <div className="flex-1 bg-background p-6 rounded-lg flex flex-col w-full gap-4">
+      <div className="flex-1 min-h-0 bg-background p-6 rounded-lg flex flex-col w-full gap-4">
         <div className="min-h-9 flex items-center gap-3">
           <Button
             variant="outline"
@@ -173,7 +173,7 @@ function PatientList() {
           </div>
         </div>
 
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 min-h-0 flex flex-col">
           <ReactTable<PatientWithTags>
             data={filteredPatients}
             columns={columns}

@@ -106,7 +106,7 @@ function Agenda() {
         <AddPatientToSlotForm key="add-patient-to-slot" />,
       ]}
     >
-      <div className="flex-1 bg-background p-6 rounded-lg flex flex-col w-full gap-4">
+      <div className="flex-1 min-h-0 bg-background p-6 rounded-lg flex flex-col w-full gap-4">
         <div className="min-h-9 flex justify-between items-center gap-3 flex-wrap">
           <div className="self-start min-h-9 flex gap-2 items-center">
             <div className="flex items-center justify-center bg-foreground p-2 rounded-full">
