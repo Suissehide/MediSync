@@ -73,6 +73,7 @@ type ReactTableProps<TData extends { id: string }> = {
   maxHeight?: string
   emptyState?: ReactNode
   isRowDisabled?: (row: TData) => boolean
+  isRowMuted?: (row: TData) => boolean
   isLoading?: boolean
   autoRowHeight?: boolean
 }
@@ -89,6 +90,7 @@ export function ReactTable<TData extends { id: string }>({
   maxHeight = '600px',
   emptyState,
   isRowDisabled,
+  isRowMuted,
   isLoading,
   autoRowHeight,
 }: ReactTableProps<TData>) {
@@ -254,6 +256,7 @@ export function ReactTable<TData extends { id: string }>({
               onRowClick={onRowClick}
               emptyState={emptyState}
               isRowDisabled={isRowDisabled}
+              isRowMuted={isRowMuted}
               isLoading={isLoading}
             />
           </table>

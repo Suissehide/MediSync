@@ -180,6 +180,7 @@ function PatientList() {
             filterId="patient"
             pagination
             isLoading={isPending}
+            isRowMuted={(patient) => Boolean(patient.exitDate)}
             onRowClick={(patient) => handleRedirectPatient(patient.id)}
           />
         </div>

@@ -20,6 +20,7 @@ type VirtualizedBodyTableProps<TData> = {
   onRowClick?: (row: TData) => void
   emptyState?: ReactNode
   isRowDisabled?: (row: TData) => boolean
+  isRowMuted?: (row: TData) => boolean
   isLoading?: boolean
 }
 
@@ -32,6 +33,7 @@ export function VirtualizedBodyTable<TData>({
   onRowClick,
   emptyState,
   isRowDisabled,
+  isRowMuted,
   isLoading,
 }: VirtualizedBodyTableProps<TData>) {
   const rows = table.getRowModel().rows
@@ -141,6 +143,7 @@ export function VirtualizedBodyTable<TData>({
                 : onRowClick
                   ? 'cursor-pointer hover:bg-primary/5'
                   : 'hover:bg-primary/5',
+              isRowMuted?.(row.original) && 'bg-gray-100 text-text-light',
             )}
           >
             {row.getVisibleCells().map((cell) => {
