@@ -263,7 +263,7 @@ export function ReactTable<TData extends { id: string }>({
       {pagination || serverPagination ? (
         <PaginationTable table={table} totalRows={totalRows} />
       ) : (
-        <div className="flex justify-end py-2">
+        <div className="flex justify-end pt-2">
           <span className="text-text-light text-xs">
             {totalRows.toLocaleString()}{' '}
             {totalRows > 1 ? 'résultats' : 'résultat'}
