@@ -109,6 +109,18 @@ export const getPatientColumns = ({
         header: "Date d'entrée",
       },
     ),
+    columnHelper.accessor(
+      (row) =>
+        row.exitDate ? dayjs.utc(row.exitDate).format('DD/MM/YYYY') : '',
+      {
+        id: 'exitDate',
+        header: 'Sortie',
+        cell: ({ getValue }) =>
+          getValue() ? (
+            <Etiquette ton="neutre">Sorti le {getValue()}</Etiquette>
+          ) : null,
+      },
+    ),
     columnHelper.accessor('pathwayTemplateTags', {
       id: 'pathwayTemplateTags',
       header: 'Parcours',

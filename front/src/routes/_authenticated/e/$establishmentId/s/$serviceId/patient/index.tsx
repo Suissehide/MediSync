@@ -21,6 +21,11 @@ export const Route = createFileRoute(
   component: PatientList,
 })
 
+const EXIT_STATUSES: Record<string, string> = {
+  exited: 'Sortis',
+  notExited: 'Non sortis',
+}
+
 function PatientList() {
   const navigate = useNavigate()
   const { establishmentId, serviceId } = Route.useParams()
@@ -28,6 +33,7 @@ function PatientList() {
   const { pathwayTemplates } = usePathwayTemplateQueries()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [exitStatuses, setExitStatuses] = useState<string[]>([])
   const [isExporting, setIsExporting] = useState(false)
 
   const handleRedirectPatient = async (patientID: string) => {
@@ -47,16 +53,24 @@ function PatientList() {
     [pathwayTemplates],
   )
 
-  const tagFilters = allTags.map((tag) => ({
-    id: tag,
-    label: tag,
-    checked: selectedTags.includes(tag),
-  }))
+  const filters = [
+    ...Object.entries(EXIT_STATUSES).map(([id, label]) => ({
+      id,
+      label,
+      group: 'Sortie',
+      checked: exitStatuses.includes(id),
+    })),
+    ...allTags.map((tag) => ({
+      id: tag,
+      label: tag,
+      group: 'Parcours',
+      checked: selectedTags.includes(tag),
+    })),
+  ]
 
-  const handleTagFilterChange = (id: string, checked: boolean) => {
-    setSelectedTags((prev) =>
-      checked ? [...prev, id] : prev.filter((t) => t !== id),
-    )
+  const handleFilterChange = (id: string, checked: boolean) => {
+    const setter = id in EXIT_STATUSES ? setExitStatuses : setSelectedTags
+    setter((prev) => (checked ? [...prev, id] : prev.filter((t) => t !== id)))
   }
 
   const handleExport = async () => {
@@ -92,13 +106,17 @@ function PatientList() {
         selectedTags.some((tag) => p.pathwayTemplateTags?.includes(tag)),
       )
     }
+    if (exitStatuses.length === 1) {
+      const wantExited = exitStatuses[0] === 'exited'
+      result = result.filter((p) => Boolean(p.exitDate) === wantExited)
+    }
     return [...result].sort((a, b) =>
       `${a.lastName ?? ''} ${a.firstName ?? ''}`.localeCompare(
         `${b.lastName ?? ''} ${b.firstName ?? ''}`,
         'fr',
       ),
     )
-  }, [patients, searchTerm, selectedTags])
+  }, [patients, searchTerm, selectedTags, exitStatuses])
 
   return (
     <DashboardLayout
@@ -140,12 +158,10 @@ function PatientList() {
           </div>
           <div className="flex-1 border-t border-border" />
           <div className="flex gap-3">
-            {tagFilters.length > 0 && (
-              <DropdownFilter
-                filters={tagFilters}
-                onFilterChange={handleTagFilterChange}
-              />
-            )}
+            <DropdownFilter
+              filters={filters}
+              onFilterChange={handleFilterChange}
+            />
             <Button
               variant="outline"
               size="icon"

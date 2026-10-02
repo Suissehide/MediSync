@@ -14,6 +14,7 @@ export type PatientWithTagsEntityRepo = Patient & {
   // complet sous `serviceFile` (voir `PatientForExportEntityRepo` plus bas), lit
   // `serviceFile.entryDate` et ne duplique pas la valeur ici.
   entryDate?: Date | null
+  exitDate?: Date | null
 }
 // Utilise par l'export Excel : le parcours et le contenu clinique vivent desormais sur le
 // sous-dossier de service, `null` quand le patient n'en a pas encore dans le service courant.
