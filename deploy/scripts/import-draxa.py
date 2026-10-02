@@ -191,7 +191,7 @@ def main():
             p["divers"] if not blank(p["divers"]) else None,
         ] if x)
         pat_rows.append("(" + ",".join([
-            q(pid), ":'est'", q(p["prenom"] or "-"), q(p["nom"] or "-"), q(opt("gender", p["sexe"])),
+            q(pid), ":'est'", q((p["prenom"] or "-").strip().title()), q(p["nom"] or "-"), q(opt("gender", p["sexe"])),
             q(day(p["date"])), q(p["tel1"]), q(p["tel2"]), q(p["email"]), q(opt("distance", p["distance"])),
             q(opt("education", p["etude"])), q(opt("occupation", p["profession"])),
             q(opt("activity", p["activite"])), q(day(p["dedate"])) if day(p["dedate"]) else "now()",
