@@ -36,6 +36,7 @@ import { Route as AuthenticatedSettingsDiagnosticTemplateImport } from './routes
 import { Route as AuthenticatedSettingsActivityLogImport } from './routes/_authenticated/settings/activity-log'
 import { Route as AuthenticatedPatientPatientIDImport } from './routes/_authenticated/patient/$patientID'
 import { Route as AuthenticatedEEstablishmentIdAdminImport } from './routes/_authenticated/e/$establishmentId/admin'
+import { Route as AuthenticatedEEstablishmentIdAdminIndexImport } from './routes/_authenticated/e/$establishmentId/admin/index'
 import { Route as AuthenticatedEEstablishmentIdSServiceIdImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId'
 import { Route as AuthenticatedEEstablishmentIdAdminServicesImport } from './routes/_authenticated/e/$establishmentId/admin/services'
 import { Route as AuthenticatedEEstablishmentIdAdminMembersImport } from './routes/_authenticated/e/$establishmentId/admin/members'
@@ -220,6 +221,13 @@ const AuthenticatedEEstablishmentIdAdminRoute =
     id: '/e/$establishmentId/admin',
     path: '/e/$establishmentId/admin',
     getParentRoute: () => AuthenticatedRoute,
+  } as any)
+
+const AuthenticatedEEstablishmentIdAdminIndexRoute =
+  AuthenticatedEEstablishmentIdAdminIndexImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedEEstablishmentIdAdminRoute,
   } as any)
 
 const AuthenticatedEEstablishmentIdSServiceIdRoute =
@@ -578,6 +586,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEEstablishmentIdSServiceIdImport
       parentRoute: typeof AuthenticatedImport
     }
+    '/_authenticated/e/$establishmentId/admin/': {
+      id: '/_authenticated/e/$establishmentId/admin/'
+      path: '/'
+      fullPath: '/e/$establishmentId/admin/'
+      preLoaderRoute: typeof AuthenticatedEEstablishmentIdAdminIndexImport
+      parentRoute: typeof AuthenticatedEEstablishmentIdAdminImport
+    }
     '/_authenticated/e/$establishmentId/s/$serviceId/_settings': {
       id: '/_authenticated/e/$establishmentId/s/$serviceId/_settings'
       path: ''
@@ -715,6 +730,7 @@ interface AuthenticatedEEstablishmentIdAdminRouteChildren {
   AuthenticatedEEstablishmentIdAdminGrantsRoute: typeof AuthenticatedEEstablishmentIdAdminGrantsRoute
   AuthenticatedEEstablishmentIdAdminMembersRoute: typeof AuthenticatedEEstablishmentIdAdminMembersRoute
   AuthenticatedEEstablishmentIdAdminServicesRoute: typeof AuthenticatedEEstablishmentIdAdminServicesRoute
+  AuthenticatedEEstablishmentIdAdminIndexRoute: typeof AuthenticatedEEstablishmentIdAdminIndexRoute
 }
 
 const AuthenticatedEEstablishmentIdAdminRouteChildren: AuthenticatedEEstablishmentIdAdminRouteChildren =
@@ -727,6 +743,8 @@ const AuthenticatedEEstablishmentIdAdminRouteChildren: AuthenticatedEEstablishme
       AuthenticatedEEstablishmentIdAdminMembersRoute,
     AuthenticatedEEstablishmentIdAdminServicesRoute:
       AuthenticatedEEstablishmentIdAdminServicesRoute,
+    AuthenticatedEEstablishmentIdAdminIndexRoute:
+      AuthenticatedEEstablishmentIdAdminIndexRoute,
   }
 
 const AuthenticatedEEstablishmentIdAdminRouteWithChildren =
@@ -883,6 +901,7 @@ export interface FileRoutesByFullPath {
   '/e/$establishmentId/admin/members': typeof AuthenticatedEEstablishmentIdAdminMembersRoute
   '/e/$establishmentId/admin/services': typeof AuthenticatedEEstablishmentIdAdminServicesRoute
   '/e/$establishmentId/s/$serviceId': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsRouteWithChildren
+  '/e/$establishmentId/admin/': typeof AuthenticatedEEstablishmentIdAdminIndexRoute
   '/e/$establishmentId/s/$serviceId/activity-log': typeof AuthenticatedEEstablishmentIdSServiceIdActivityLogRoute
   '/e/$establishmentId/s/$serviceId/agenda': typeof AuthenticatedEEstablishmentIdSServiceIdAgendaRoute
   '/e/$establishmentId/s/$serviceId/dashboard': typeof AuthenticatedEEstablishmentIdSServiceIdDashboardRoute
@@ -922,11 +941,11 @@ export interface FileRoutesByTo {
   '/user/settings': typeof AuthenticatedUserSettingsRoute
   '/patient': typeof AuthenticatedPatientIndexRoute
   '/super-admin': typeof AuthenticatedSuperAdminIndexRoute
-  '/e/$establishmentId/admin': typeof AuthenticatedEEstablishmentIdAdminRouteWithChildren
   '/e/$establishmentId/admin/activity-log': typeof AuthenticatedEEstablishmentIdAdminActivityLogRoute
   '/e/$establishmentId/admin/grants': typeof AuthenticatedEEstablishmentIdAdminGrantsRoute
   '/e/$establishmentId/admin/members': typeof AuthenticatedEEstablishmentIdAdminMembersRoute
   '/e/$establishmentId/admin/services': typeof AuthenticatedEEstablishmentIdAdminServicesRoute
+  '/e/$establishmentId/admin': typeof AuthenticatedEEstablishmentIdAdminIndexRoute
   '/e/$establishmentId/s/$serviceId': typeof AuthenticatedEEstablishmentIdSServiceIdIndexRoute
   '/e/$establishmentId/s/$serviceId/activity-log': typeof AuthenticatedEEstablishmentIdSServiceIdActivityLogRoute
   '/e/$establishmentId/s/$serviceId/agenda': typeof AuthenticatedEEstablishmentIdSServiceIdAgendaRoute
@@ -975,6 +994,7 @@ export interface FileRoutesById {
   '/_authenticated/e/$establishmentId/admin/members': typeof AuthenticatedEEstablishmentIdAdminMembersRoute
   '/_authenticated/e/$establishmentId/admin/services': typeof AuthenticatedEEstablishmentIdAdminServicesRoute
   '/_authenticated/e/$establishmentId/s/$serviceId': typeof AuthenticatedEEstablishmentIdSServiceIdRouteWithChildren
+  '/_authenticated/e/$establishmentId/admin/': typeof AuthenticatedEEstablishmentIdAdminIndexRoute
   '/_authenticated/e/$establishmentId/s/$serviceId/_settings': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsRouteWithChildren
   '/_authenticated/e/$establishmentId/s/$serviceId/activity-log': typeof AuthenticatedEEstablishmentIdSServiceIdActivityLogRoute
   '/_authenticated/e/$establishmentId/s/$serviceId/agenda': typeof AuthenticatedEEstablishmentIdSServiceIdAgendaRoute
@@ -1025,6 +1045,7 @@ export interface FileRouteTypes {
     | '/e/$establishmentId/admin/members'
     | '/e/$establishmentId/admin/services'
     | '/e/$establishmentId/s/$serviceId'
+    | '/e/$establishmentId/admin/'
     | '/e/$establishmentId/s/$serviceId/activity-log'
     | '/e/$establishmentId/s/$serviceId/agenda'
     | '/e/$establishmentId/s/$serviceId/dashboard'
@@ -1063,11 +1084,11 @@ export interface FileRouteTypes {
     | '/user/settings'
     | '/patient'
     | '/super-admin'
-    | '/e/$establishmentId/admin'
     | '/e/$establishmentId/admin/activity-log'
     | '/e/$establishmentId/admin/grants'
     | '/e/$establishmentId/admin/members'
     | '/e/$establishmentId/admin/services'
+    | '/e/$establishmentId/admin'
     | '/e/$establishmentId/s/$serviceId'
     | '/e/$establishmentId/s/$serviceId/activity-log'
     | '/e/$establishmentId/s/$serviceId/agenda'
@@ -1114,6 +1135,7 @@ export interface FileRouteTypes {
     | '/_authenticated/e/$establishmentId/admin/members'
     | '/_authenticated/e/$establishmentId/admin/services'
     | '/_authenticated/e/$establishmentId/s/$serviceId'
+    | '/_authenticated/e/$establishmentId/admin/'
     | '/_authenticated/e/$establishmentId/s/$serviceId/_settings'
     | '/_authenticated/e/$establishmentId/s/$serviceId/activity-log'
     | '/_authenticated/e/$establishmentId/s/$serviceId/agenda'
@@ -1287,7 +1309,8 @@ export const routeTree = rootRoute
         "/_authenticated/e/$establishmentId/admin/activity-log",
         "/_authenticated/e/$establishmentId/admin/grants",
         "/_authenticated/e/$establishmentId/admin/members",
-        "/_authenticated/e/$establishmentId/admin/services"
+        "/_authenticated/e/$establishmentId/admin/services",
+        "/_authenticated/e/$establishmentId/admin/"
       ]
     },
     "/_authenticated/e/$establishmentId/admin/activity-log": {
@@ -1320,6 +1343,10 @@ export const routeTree = rootRoute
         "/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/acces",
         "/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/"
       ]
+    },
+    "/_authenticated/e/$establishmentId/admin/": {
+      "filePath": "_authenticated/e/$establishmentId/admin/index.tsx",
+      "parent": "/_authenticated/e/$establishmentId/admin"
     },
     "/_authenticated/e/$establishmentId/s/$serviceId/_settings": {
       "filePath": "_authenticated/e/$establishmentId/s/$serviceId/_settings.tsx",

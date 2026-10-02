@@ -141,7 +141,7 @@ export const useOuvrirDestination = () => {
       })
     } else if (destination.kind === 'admin') {
       void router.navigate({
-        to: '/e/$establishmentId/admin/members',
+        to: '/e/$establishmentId/admin',
         params: { establishmentId: destination.establishment.id },
       })
     } else {

@@ -130,7 +130,7 @@ export const FilAriane = () => {
     >
       {administre ? (
         <Link
-          to="/e/$establishmentId/admin/members"
+          to="/e/$establishmentId/admin"
           params={{ establishmentId: etablissement.id }}
           title="Administration de l'établissement"
           aria-current={surEtablissement ? 'page' : undefined}

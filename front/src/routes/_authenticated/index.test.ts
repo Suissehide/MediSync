@@ -103,7 +103,7 @@ describe('beforeLoad de l index authentifie', () => {
     expect(() => runBeforeLoad(adminSansService)).toThrow(
       expect.objectContaining({
         isRedirect: true,
-        to: '/e/$establishmentId/admin/members',
+        to: '/e/$establishmentId/admin',
         params: { establishmentId: 'e1' },
       }),
     )

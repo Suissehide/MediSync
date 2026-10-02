@@ -125,6 +125,13 @@ const ecranAdmin = createRoute({
   component: () => <Navbar toggleSidebar={replierLaBarre} />,
 })
 
+// Le resume : l'ecran d'entree de l'echelle, atteint en cliquant sur l'etablissement.
+const ecranResume = createRoute({
+  getParentRoute: () => layoutAdmin,
+  path: '/',
+  component: () => <Navbar toggleSidebar={replierLaBarre} />,
+})
+
 // La plateforme : son layout reel exige le drapeau ; seul le chemin compte pour la barre.
 const ecranPlateforme = createRoute({
   getParentRoute: () => rootRoute,
@@ -146,7 +153,7 @@ const ficheEtablissement = createRoute({
 
 const arbre = rootRoute.addChildren([
   layoutDeService.addChildren([ecranDeService]),
-  layoutAdmin.addChildren([ecranAdmin]),
+  layoutAdmin.addChildren([ecranResume, ecranAdmin]),
   ecranPlateforme,
   ecranJournaux,
   ficheEtablissement,
@@ -266,12 +273,13 @@ describe('onglets de la barre de navigation', () => {
   // Le defaut n° 3 de l'inventaire, ferme : un administrateur sans aucune affectation de service
   // atteint enfin Soignants, Salles et le journal.
   it('montre les onglets d etablissement a un administrateur sans service, et aucun onglet de service', async () => {
-    monterNavbar('/e/e1/admin/members', avecRoles('ADMIN', null))
+    monterNavbar('/e/e1/admin', avecRoles('ADMIN', null))
 
     await waitFor(() => {
       expect(onglets()).toEqual([
-        'Membres',
+        'Résumé',
         'Services',
+        'Membres',
         'Accès temporaires',
         "Journal d'activité",
       ])
