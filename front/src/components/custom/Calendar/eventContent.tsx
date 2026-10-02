@@ -59,8 +59,8 @@ export const EventContent = ({
     isIndividual: isIndividualTemplate,
     secondaryTags = [],
   } = event.extendedProps
-  const isWeekView = view.type === 'timeGridWeek'
-  const isRowLayout = !isWeekView
+  const isTimeGridView = view.type.startsWith('timeGrid')
+  const isRowLayout = !isTimeGridView
 
   const isIndividual = containsKeyword(states, ['individual'])
   const isMultiple = containsKeyword(states, ['multiple'])
@@ -245,11 +245,6 @@ export const EventContent = ({
           isRowLayout ? 'w-48 shrink-0' : '',
         )}
       >
-        {view.type === 'dayGridDay' && event.start && event.end && (
-          <div className="text-[0.65rem] whitespace-nowrap">
-            {`${dayjs.utc(event.start).format('H:mm')} - ${dayjs.utc(event.end).format('H:mm')}`}
-          </div>
-        )}
         <div className="text-[0.6rem]">{event.title}</div>
         <div className="text-[0.6rem] font-semibold truncate">{thematic}</div>
         {showSecondaryTags && secondaryTags.length > 0 && (

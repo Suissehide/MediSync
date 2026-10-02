@@ -5,7 +5,6 @@ import type {
   ToolbarInput,
 } from '@fullcalendar/core'
 import frLocale from '@fullcalendar/core/locales/fr'
-import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin, {
   type EventResizeDoneArg,
 } from '@fullcalendar/interaction'
@@ -239,10 +238,10 @@ function Calendar({
     applySlotLayout()
   }, [applySlotLayout])
 
-  // In day/list views, background events are hidden by FullCalendar.
+  // In day-grid/list views, background events are hidden by FullCalendar.
   // Override display to 'auto' so slots remain visible in those views.
   const viewEvents = useMemo(() => {
-    if (currentView === 'timeGridWeek') {
+    if (currentView.startsWith('timeGrid')) {
       return events
     }
     return events.map((e) =>
@@ -251,7 +250,7 @@ function Calendar({
   }, [events, currentView])
 
   const showDayEmptyState = useMemo(() => {
-    if (currentView !== 'dayGridDay' || !currentViewStart) {
+    if (currentView !== 'timeGridDay' || !currentViewStart) {
       return false
     }
     const dayStart = dayjs(currentViewStart).startOf('day')
@@ -371,7 +370,7 @@ function Calendar({
     <div className={`${editMode ? 'edit-mode' : ''} h-full relative`}>
       <FullCalendar
         ref={calendarRef}
-        plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
+        plugins={[timeGridPlugin, listPlugin, interactionPlugin]}
         initialView="timeGridWeek"
         initialDate={
           initialDate || anchorMonday?.toISOString() || dayjs().toISOString()
@@ -396,7 +395,7 @@ function Calendar({
         headerToolbar={
           headerToolbar ?? {
             left: 'title',
-            center: 'timeGridWeek,dayGridDay,listWeek',
+            center: 'timeGridWeek,timeGridDay,listWeek',
             right: 'selectDateButton prev,next today',
           }
         }
