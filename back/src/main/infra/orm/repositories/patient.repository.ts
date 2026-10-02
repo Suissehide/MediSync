@@ -113,7 +113,7 @@ class PatientRepository implements PatientRepositoryInterface {
         // donc pas de doublon).
         serviceFiles: {
           where: { serviceId: this.scope.serviceId },
-          select: { enrollmentIssues: true, entryDate: true },
+          select: { enrollmentIssues: true, entryDate: true, exitDate: true },
         },
       },
     })
@@ -124,6 +124,7 @@ class PatientRepository implements PatientRepositoryInterface {
         pathwayTemplateTags: distinctMainTags(appointmentPatients),
         enrollmentIssues: serviceFiles.flatMap((f) => f.enrollmentIssues),
         entryDate: serviceFiles[0]?.entryDate ?? null,
+        exitDate: serviceFiles[0]?.exitDate ?? null,
       }),
     )
   }

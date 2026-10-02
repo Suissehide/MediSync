@@ -44,6 +44,7 @@ export type PatientWithTags = Patient & {
   // #findAllWithTags). N'existe donc que sur cette liste, pas sur
   // `Patient` en général (création/édition, qui passent par `PatientServiceFileApi`).
   entryDate?: string
+  exitDate?: string
 }
 
 export type EnrollmentIssue = {
