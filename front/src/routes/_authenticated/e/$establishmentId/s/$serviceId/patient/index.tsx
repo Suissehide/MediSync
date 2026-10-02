@@ -1,5 +1,12 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { ArrowLeft, Download, Search } from 'lucide-react'
+import {
+  ArrowLeft,
+  Download,
+  RotateCcw,
+  Route as RouteIcon,
+  Search,
+  X,
+} from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import { PatientApi } from '@/api/patient.api.ts'
@@ -11,6 +18,7 @@ import ReactTable from '@/components/table/reactTable.tsx'
 import { Button } from '@/components/ui/button.tsx'
 import DropdownFilter from '@/components/ui/dropdownFilter.tsx'
 import { Input } from '@/components/ui/input.tsx'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group.tsx'
 import { usePathwayTemplateQueries } from '@/queries/usePathwayTemplate.ts'
 import { usePatientWithTagsQuery } from '@/queries/usePatient.tsx'
 import type { PatientWithTags } from '@/types/patient.ts'
@@ -21,10 +29,18 @@ export const Route = createFileRoute(
   component: PatientList,
 })
 
-const EXIT_STATUSES: Record<string, string> = {
+const STATUSES = {
+  all: 'Tous',
+  active: 'En cours',
   exited: 'Sortis',
-  notExited: 'Non sortis',
-}
+} as const
+type Status = keyof typeof STATUSES
+
+const matchesStatus = (p: PatientWithTags, status: Status) =>
+  status === 'all' || Boolean(p.exitDate) === (status === 'exited')
+
+const matchesTags = (p: PatientWithTags, tags: string[]) =>
+  tags.length === 0 || tags.some((tag) => p.pathwayTemplateTags?.includes(tag))
 
 function PatientList() {
   const navigate = useNavigate()
@@ -33,7 +49,7 @@ function PatientList() {
   const { pathwayTemplates } = usePathwayTemplateQueries()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
-  const [exitStatuses, setExitStatuses] = useState<string[]>([])
+  const [status, setStatus] = useState<Status>('all')
   const [isExporting, setIsExporting] = useState(false)
 
   const handleRedirectPatient = async (patientID: string) => {
@@ -48,29 +64,56 @@ function PatientList() {
     pathwayTemplates: pathwayTemplates ?? [],
   })
 
-  const allTags = useMemo(
-    () => [...new Set((pathwayTemplates ?? []).map((t) => t.mainTag))].sort(),
-    [pathwayTemplates],
-  )
+  // Couleur d'un tag principal : celle du premier parcours qui le porte.
+  const tagColors = useMemo(() => {
+    const colors = new Map<string, string>()
+    for (const t of pathwayTemplates ?? []) {
+      if (!colors.has(t.mainTag)) {
+        colors.set(t.mainTag, t.color)
+      }
+    }
+    return colors
+  }, [pathwayTemplates])
 
-  const filters = [
-    ...Object.entries(EXIT_STATUSES).map(([id, label]) => ({
-      id,
-      label,
-      group: 'Sortie',
-      checked: exitStatuses.includes(id),
-    })),
-    ...allTags.map((tag) => ({
-      id: tag,
-      label: tag,
-      group: 'Parcours',
-      checked: selectedTags.includes(tag),
-    })),
-  ]
+  const searched = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase()
+    return (patients ?? [])
+      .filter(
+        (p) =>
+          !term ||
+          p.firstName?.toLowerCase().includes(term) ||
+          p.lastName?.toLowerCase().includes(term),
+      )
+      .sort((a, b) =>
+        `${a.lastName ?? ''} ${a.firstName ?? ''}`.localeCompare(
+          `${b.lastName ?? ''} ${b.firstName ?? ''}`,
+          'fr',
+        ),
+      )
+  }, [patients, searchTerm])
 
-  const handleFilterChange = (id: string, checked: boolean) => {
-    const setter = id in EXIT_STATUSES ? setExitStatuses : setSelectedTags
-    setter((prev) => (checked ? [...prev, id] : prev.filter((t) => t !== id)))
+  // Chaque compteur tient compte des autres filtres, pas du sien.
+  const byTags = searched.filter((p) => matchesTags(p, selectedTags))
+  const byStatus = searched.filter((p) => matchesStatus(p, status))
+  const filteredPatients = byTags.filter((p) => matchesStatus(p, status))
+
+  const tagFilters = [...tagColors.keys()].sort().map((tag) => ({
+    id: tag,
+    label: tag,
+    color: tagColors.get(tag),
+    checked: selectedTags.includes(tag),
+    count: byStatus.filter((p) => p.pathwayTemplateTags?.includes(tag)).length,
+  }))
+
+  const handleTagChange = (id: string, checked: boolean) => {
+    setSelectedTags((prev) =>
+      checked ? [...prev, id] : prev.filter((t) => t !== id),
+    )
+  }
+
+  const resetFilters = () => {
+    setStatus('all')
+    setSelectedTags([])
   }
 
   const handleExport = async () => {
@@ -90,33 +133,6 @@ function PatientList() {
       setIsExporting(false)
     }
   }
-
-  const filteredPatients = useMemo(() => {
-    let result = patients ?? []
-    if (searchTerm.trim()) {
-      const term = searchTerm.toLowerCase()
-      result = result.filter(
-        (p) =>
-          p.firstName?.toLowerCase().includes(term) ||
-          p.lastName?.toLowerCase().includes(term),
-      )
-    }
-    if (selectedTags.length) {
-      result = result.filter((p) =>
-        selectedTags.some((tag) => p.pathwayTemplateTags?.includes(tag)),
-      )
-    }
-    if (exitStatuses.length === 1) {
-      const wantExited = exitStatuses[0] === 'exited'
-      result = result.filter((p) => Boolean(p.exitDate) === wantExited)
-    }
-    return [...result].sort((a, b) =>
-      `${a.lastName ?? ''} ${a.firstName ?? ''}`.localeCompare(
-        `${b.lastName ?? ''} ${b.firstName ?? ''}`,
-        'fr',
-      ),
-    )
-  }, [patients, searchTerm, selectedTags, exitStatuses])
 
   return (
     <DashboardLayout
@@ -144,33 +160,65 @@ function PatientList() {
           </h1>
         </div>
 
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <Input
-              id="patient-search"
-              iconLeft={<Search className="w-4 h-4" />}
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Nom, prénom..."
-              className="w-72"
-            />
-          </div>
-          <div className="flex-1 border-t border-border" />
-          <div className="flex gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <Input
+            id="patient-search"
+            iconLeft={<Search className="w-4 h-4" />}
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Nom, prénom..."
+            className="w-72"
+          />
+          <ToggleGroup
+            value={status}
+            onValueChange={(v) => v && setStatus(v as Status)}
+          >
+            {(Object.keys(STATUSES) as Status[]).map((key) => (
+              <ToggleGroupItem key={key} value={key}>
+                {STATUSES[key]}
+                <span className="text-xs text-text-light tabular-nums">
+                  {byTags.filter((p) => matchesStatus(p, key)).length}
+                </span>
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+          {tagFilters.length > 0 && (
             <DropdownFilter
-              filters={filters}
-              onFilterChange={handleFilterChange}
+              filters={tagFilters}
+              onFilterChange={handleTagChange}
+              triggerLabel={
+                selectedTags.length
+                  ? `Parcours · ${selectedTags.length}`
+                  : 'Parcours'
+              }
+              TriggerIcon={RouteIcon}
+              headerAction={
+                selectedTags.length
+                  ? {
+                      label: 'Tout effacer',
+                      icon: RotateCcw,
+                      onSelect: () => setSelectedTags([]),
+                    }
+                  : undefined
+              }
             />
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleExport}
-              isLoading={isExporting}
-            >
-              <Download className="w-4 h-4" />
+          )}
+          {(status !== 'all' || selectedTags.length > 0) && (
+            <Button variant="ghost" onClick={resetFilters}>
+              <X className="w-4 h-4" />
+              Réinitialiser
             </Button>
-          </div>
+          )}
+          <div className="flex-1 border-t border-border" />
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleExport}
+            isLoading={isExporting}
+          >
+            <Download className="w-4 h-4" />
+          </Button>
         </div>
 
         <div className="flex-1 min-h-0 flex flex-col">
