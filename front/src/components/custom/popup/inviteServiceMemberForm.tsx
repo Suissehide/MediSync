@@ -1,5 +1,5 @@
 import { Check, Plus, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { InvitationSent } from '@/components/custom/invitationSent.tsx'
 import {
@@ -10,6 +10,7 @@ import { useAppForm } from '@/hooks/formConfig.tsx'
 import { buildAccessLinkUrl } from '@/libs/accessLink.ts'
 import { toSelectOptions } from '@/libs/utils.ts'
 import { useServiceMemberMutations } from '@/queries/useServiceMembers.ts'
+import { useSoignantQueries } from '@/queries/useSoignant.ts'
 import type { ServiceRole } from '@/types/auth.ts'
 import { Button } from '../../ui/button.tsx'
 import {
@@ -36,6 +37,15 @@ const SERVICE_ROLE_OPTIONS = toSelectOptions(SERVICE_ROLE_LABEL)
 function InviteServiceMemberForm() {
   const [open, setOpen] = useState(false)
   const { inviteMember } = useServiceMemberMutations()
+  const { soignants } = useSoignantQueries()
+  const soignantOptions = useMemo(
+    () =>
+      (soignants ?? [])
+        .filter((s) => s.active)
+        .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+        .map((s) => ({ value: s.id, label: s.name })),
+    [soignants],
+  )
 
   const form = useAppForm({
     defaultValues: {
@@ -43,6 +53,7 @@ function InviteServiceMemberForm() {
       firstName: '',
       lastName: '',
       role: 'INTERVENANT',
+      soignantId: '',
     },
     onSubmit: ({ value }) => {
       inviteMember.mutate({
@@ -50,6 +61,7 @@ function InviteServiceMemberForm() {
         firstName: value.firstName || undefined,
         lastName: value.lastName || undefined,
         role: value.role as ServiceRole,
+        soignantId: value.soignantId || null,
       })
     },
   })
@@ -161,6 +173,17 @@ function InviteServiceMemberForm() {
                           field.state.value as ServiceRole
                         ]
                       }
+                    />
+                  )}
+                </form.AppField>
+
+                <form.AppField name="soignantId">
+                  {(field) => (
+                    <field.Select
+                      label="Soignant"
+                      options={soignantOptions}
+                      placeholder="Aucun"
+                      description="Le métier que la personne exerce dans ce service. Elle pourra le changer dans ses paramètres."
                     />
                   )}
                 </form.AppField>

@@ -115,12 +115,19 @@ class MembershipRepository implements MembershipRepositoryInterface {
   async addServiceMember(
     establishmentMembershipId: string,
     role: ServiceRole,
+    soignantId: string | null = null,
     client: PrimaTransactionClient = this.prisma,
   ): Promise<ServiceMemberRow> {
     const { establishmentId, serviceId } = this.tenantContext.scope()
     try {
       return await client.serviceMembership.create({
-        data: { establishmentMembershipId, serviceId, establishmentId, role },
+        data: {
+          establishmentMembershipId,
+          serviceId,
+          establishmentId,
+          role,
+          soignantId,
+        },
         select: this.serviceMemberSelect,
       })
     } catch (err) {
@@ -279,6 +286,7 @@ class MembershipRepository implements MembershipRepositoryInterface {
             create: services.map((service) => ({
               serviceId: service.serviceId,
               role: service.role,
+              soignantId: service.soignantId ?? null,
               establishmentId,
             })),
           },

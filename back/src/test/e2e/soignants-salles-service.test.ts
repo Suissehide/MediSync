@@ -256,4 +256,79 @@ describe('soignants et salles a l echelle du service', () => {
       ).statusCode,
     ).toBe(403)
   })
+
+  it('le coordinateur invite avec un soignant, chacun regle ensuite le sien', async () => {
+    const kine = (
+      await call(coordA, 'POST', tenantUrl(E, A, '/soignant'), { name: 'Kine' })
+    ).json()
+    const soignantB = await testDb.soignant.create({
+      data: { name: 'Dieteticien', establishmentId: E, serviceId: B },
+    })
+
+    expect(
+      (
+        await call(coordA, 'POST', tenantUrl(E, A, '/membres'), {
+          email: 'ailleurs@test.fr',
+          role: 'INTERVENANT',
+          soignantId: soignantB.id,
+        })
+      ).statusCode,
+    ).toBe(404)
+
+    const invite = await call(coordA, 'POST', tenantUrl(E, A, '/membres'), {
+      email: 'kine@test.fr',
+      role: 'INTERVENANT',
+      soignantId: kine.id,
+    })
+    expect(invite.statusCode).toBe(201)
+    const affectation = await testDb.serviceMembership.findFirstOrThrow({
+      where: { establishmentMembership: { user: { email: 'kine@test.fr' } } },
+    })
+    expect(affectation.soignantId).toBe(kine.id)
+
+    const moi = await call(
+      intervenantA,
+      'PATCH',
+      tenantUrl(E, A, '/membres/me/soignant'),
+      { soignantId: kine.id },
+    )
+    expect(moi.statusCode).toBe(200)
+    expect(moi.json()).toMatchObject({
+      soignantId: kine.id,
+      user: { email: 'intervenant@test.fr' },
+    })
+    expect(
+      (
+        await call(
+          intervenantA,
+          'PATCH',
+          tenantUrl(E, A, '/membres/me/soignant'),
+          { soignantId: soignantB.id },
+        )
+      ).statusCode,
+    ).toBe(404)
+
+    const services = (await call(intervenantA, 'GET', '/me')).json()
+      .establishments[0].services as {
+      id: string
+      soignantId: string | null
+      affecte: boolean
+    }[]
+    expect(services.find((s) => s.id === A)).toMatchObject({
+      soignantId: kine.id,
+      affecte: true,
+    })
+
+    // Le chef d'etablissement est coordinateur implicite, sans affectation a regler.
+    const adminServices = (await call(admin, 'GET', '/me')).json()
+      .establishments[0].services as { id: string; affecte: boolean }[]
+    expect(adminServices.find((s) => s.id === A)?.affecte).toBe(false)
+    expect(
+      (
+        await call(admin, 'PATCH', tenantUrl(E, A, '/membres/me/soignant'), {
+          soignantId: null,
+        })
+      ).statusCode,
+    ).toBe(404)
+  })
 })

@@ -47,6 +47,7 @@ export const inviteServiceMemberSchema = z.object({
   firstName: z.string().trim().optional(),
   lastName: z.string().trim().optional(),
   role: serviceRoleSchema,
+  soignantId: z.cuid().nullable().optional(),
 })
 
 export const setServiceRoleSchema = z.object({ role: serviceRoleSchema })

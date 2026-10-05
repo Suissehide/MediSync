@@ -90,6 +90,14 @@ const EXCEPTIONS: { fichier: string; raison: string; occurrences: number }[] = [
       '(`establishmentApiUrl()` sans argument)',
     occurrences: 6,
   },
+  {
+    fichier: 'api/serviceMembers.api.ts',
+    raison:
+      '`setOwnSoignant` (MDS-37) : les parametres du compte, hors de tout layout de tenant, reglent ' +
+      'le soignant de CHACUNE des affectations du compte -- etablissement et service y designent ' +
+      "l'affectation visee, une DONNEE de la requete, jamais un tenant implicite",
+    occurrences: 5,
+  },
 ]
 
 // Vitest s'execute depuis `front/`, et l'environnement jsdom ne donne pas d'`import.meta.url` de

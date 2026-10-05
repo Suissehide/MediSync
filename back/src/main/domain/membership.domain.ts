@@ -117,11 +117,16 @@ class MembershipDomain implements MembershipDomainInterface {
     return establishment.name
   }
 
-  private async sendInvitation(email: string, token: string): Promise<void> {
+  private async sendInvitation(
+    email: string,
+    token: string,
+    soignantName?: string,
+  ): Promise<void> {
     this.accessLinkDomain.sendInvitation({
       email,
       token,
       establishmentName: await this.establishmentName(),
+      soignantName,
     })
   }
 
@@ -152,6 +157,23 @@ class MembershipDomain implements MembershipDomainInterface {
     return updated
   }
 
+  async setOwnServiceSoignant(
+    soignantId: string | null,
+  ): Promise<ServiceMemberRowDomain> {
+    const membership = await this.membershipRepository.findByUserID(
+      this.currentUserId(),
+    )
+    const affectation = membership
+      ? await this.membershipRepository.findServiceMemberByMembership(
+          membership.id,
+        )
+      : null
+    if (!affectation) {
+      throw Boom.notFound('Service member not found')
+    }
+    return this.setServiceSoignant(affectation.id, soignantId)
+  }
+
   // L'EQUIPE DU SERVICE COURANT, geree par son coordinateur (`service-members:manage`) : il
   // invite, change le role de service et retire. Jamais le rattachement d'etablissement, jamais
   // un autre service — `serviceId` vient du tenant resolu, et les depots appeles sont bornes a
@@ -167,10 +189,15 @@ class MembershipDomain implements MembershipDomainInterface {
     firstName,
     lastName,
     role,
+    soignantId = null,
   }: ServiceInviteDomain): Promise<ServiceInviteResult> {
     const { serviceId } = this.tenantContext.scope()
-    const services = [{ serviceId, role }]
+    const services = [{ serviceId, role, soignantId }]
     await this.assertReferences(services)
+    // Depot borne au service courant : un soignant d'ailleurs rend 404.
+    const soignant = soignantId
+      ? await this.soignantRepository.findByID(soignantId)
+      : null
 
     const user = await this.userRepository.findByEmail(email).catch(() => null)
     const membership = user
@@ -188,7 +215,11 @@ class MembershipDomain implements MembershipDomainInterface {
       if (membership.user.deactivatedAt !== null) {
         throw Boom.conflict(DEACTIVATED_ACCOUNT)
       }
-      await this.membershipRepository.addServiceMember(membership.id, role)
+      await this.membershipRepository.addServiceMember(
+        membership.id,
+        role,
+        soignantId,
+      )
       this.emit('serviceMember.added', membership.id)
       return { accessLink: null }
     }
@@ -196,13 +227,10 @@ class MembershipDomain implements MembershipDomainInterface {
     // Compte neuf, ou compte existant rattache nulle part : `createAccountCore` porte TOUTES les
     // gardes de jeton (super-admin, rattache ailleurs, desactive), elles ne sont pas recopiees
     // ici. `role: 'MEMBER'` n'est jamais soumis — un coordinateur n'accorde pas l'etablissement.
-    const { member, accessLink } = await this.createAccountCore({
-      email,
-      firstName,
-      lastName,
-      role: 'MEMBER',
-      services,
-    })
+    const { member, accessLink } = await this.createAccountCore(
+      { email, firstName, lastName, role: 'MEMBER', services },
+      soignant?.name,
+    )
     this.emit(
       accessLink ? 'serviceMember.accountCreated' : 'serviceMember.added',
       member.id,
@@ -506,13 +534,16 @@ class MembershipDomain implements MembershipDomainInterface {
   // LE COEUR, SANS EVENEMENT : deux surfaces le partagent — l'administration d'etablissement
   // (`createAccount`) et l'invitation par un coordinateur (`inviteToService`) —, et chacune
   // nomme son action dans le journal. Toutes les gardes de compte vivent ici, une seule fois.
-  private async createAccountCore({
-    email,
-    firstName,
-    lastName,
-    role,
-    services,
-  }: MembershipCreateAccountDomain): Promise<MembershipCreateAccountResult> {
+  private async createAccountCore(
+    {
+      email,
+      firstName,
+      lastName,
+      role,
+      services,
+    }: MembershipCreateAccountDomain,
+    soignantName?: string,
+  ): Promise<MembershipCreateAccountResult> {
     // Une LECTURE d'abord, jamais un `upsert` : un compte déjà connu ne doit être écrasé ni
     // dans son nom ni dans son mot de passe. `findByEmail` lève
     // plutôt que de rendre `null` ; absorbé ici.
@@ -595,7 +626,11 @@ class MembershipDomain implements MembershipDomainInterface {
     // doivent l'envoyer, et un seul endroit l'envoie. L'EVENEMENT, lui, reste a l'appelant : c'est
     // la seule chose qui differe entre les deux (`member.accountCreated` contre
     // `serviceMember.accountCreated`).
-    await this.sendInvitation(membership.user.email, accessLink.token)
+    await this.sendInvitation(
+      membership.user.email,
+      accessLink.token,
+      soignantName,
+    )
     return { member: membership, accessLink }
   }
 

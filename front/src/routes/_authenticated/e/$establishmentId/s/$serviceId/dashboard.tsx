@@ -18,6 +18,7 @@ import { buildCalendarEventsFromSlots, containsKeyword } from '@/libs/utils.ts'
 import { useAppointmentMutations } from '@/queries/useAppointment.ts'
 import { usePathwayTemplateQueries } from '@/queries/usePathwayTemplate.ts'
 import { useSlotsInRangeQuery } from '@/queries/useSlot.ts'
+import { useAuthStore } from '@/store/useAuthStore.ts'
 import { useDashboardFilterStore } from '@/store/useDashboardFilterStore.ts'
 import { usePlanningStore } from '@/store/usePlanningStore.ts'
 import { useSoignantStore } from '@/store/useSoignantStore.ts'
@@ -78,6 +79,26 @@ function Dashboard() {
   const unselectSoignant = useSoignantStore((state) => state.unselectSoignant)
   const savedDate = usePlanningStore((state) => state.viewStart)
   const selectedSoignants = soignants.filter((s) => selectedIDs.includes(s.id))
+  const toggleSoignant = useSoignantStore((state) => state.toggleSoignant)
+  const { establishmentId, serviceId } = Route.useParams()
+  const mySoignantId = useAuthStore(
+    (state) =>
+      state.user?.establishments
+        .find((e) => e.id === establishmentId)
+        ?.services.find((s) => s.id === serviceId)?.soignantId ?? null,
+  )
+  // MDS-37 : sans sélection, on ouvre sur le soignant du compte connecté — une fois par visite,
+  // pour qu'effacer la sélection reste possible.
+  const preselected = useRef(false)
+  useEffect(() => {
+    if (preselected.current || !mySoignantId) {
+      return
+    }
+    preselected.current = true
+    if (selectedIDs.length === 0) {
+      toggleSoignant(mySoignantId)
+    }
+  }, [mySoignantId, selectedIDs.length, toggleSoignant])
 
   const mode = useDashboardFilterStore((state) => state.mode)
   const selectedPathwayTemplateIDs = useDashboardFilterStore(

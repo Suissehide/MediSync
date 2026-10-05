@@ -18,6 +18,8 @@ export type MeResponse = {
       name: string
       role: ServiceRole
       soignantId: string | null
+      // Vraie affectation ; faux pour le coordinateur implicite (chef d'etablissement) ou un octroi.
+      affecte: boolean
     }[]
     // Dit à l'écran d'où vient cet accès — voir
     // `EffectiveMembership.origine` (types/domain/accessGrant.domain.interface.ts). Sans ce
@@ -87,6 +89,7 @@ export const toMeResponse = (
             name: serviceNameById.get(service.id) ?? '',
             role: service.role,
             soignantId: soignantByService.get(service.id) ?? null,
+            affecte: soignantByService.has(service.id),
           })),
           origine: effective.origine,
         }
@@ -107,6 +110,7 @@ export const toMeResponse = (
           role: service.role,
           // Un octroi ne rattache jamais a un soignant.
           soignantId: null,
+          affecte: false,
         })),
         origine: effective.origine,
       }

@@ -43,6 +43,7 @@ export type ServiceInviteDomain = {
   firstName?: string
   lastName?: string
   role: ServiceRole
+  soignantId?: string | null
 }
 
 // `accessLink` a `null` quand le compte etait deja rattache a l'etablissement : il a son mot de
@@ -56,6 +57,10 @@ export interface MembershipDomainInterface {
     soignantId: string | null,
   ) => Promise<ServiceMemberRowDomain>
   inviteToService: (params: ServiceInviteDomain) => Promise<ServiceInviteResult>
+  // Le soignant que le membre connecte incarne dans le service courant. 404 sans affectation.
+  setOwnServiceSoignant: (
+    soignantId: string | null,
+  ) => Promise<ServiceMemberRowDomain>
   // Leve `Boom.conflict` sur sa propre affectation : un coordinateur ne se retrograde pas, et ne
   // se retire pas de son service.
   setServiceMemberRole: (

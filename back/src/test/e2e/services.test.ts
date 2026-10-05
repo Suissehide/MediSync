@@ -105,6 +105,7 @@ describe('routes services', () => {
       name: 'Cardiologie',
       role: 'COORDINATEUR',
       soignantId: null,
+      affecte: true,
     })
   })
 
@@ -429,6 +430,7 @@ describe('routes services', () => {
         name: 'D-focus',
         role: 'LECTURE',
         soignantId: null,
+        affecte: true,
       })
     })
 
@@ -496,6 +498,7 @@ describe('routes services', () => {
         name: 'D-focus',
         role: 'LECTURE',
         soignantId: null,
+        affecte: true,
       })
     })
 

@@ -105,6 +105,25 @@ const serviceMembersRouter: FastifyPluginAsync = (fastify) => {
     },
   )
 
+  // Le membre connecte regle lui-meme le soignant qu'il incarne ici : `referentials:read`, comme
+  // la liste des soignants dans laquelle il le choisit.
+  fastify.patch<{ Body: SetServiceSoignantBody }>(
+    '/me/soignant',
+    {
+      schema: {
+        body: setServiceSoignantSchema,
+        response: { 200: serviceMemberResponseSchema },
+      },
+      config: { permission: 'referentials:read' },
+    },
+    async (request) =>
+      (
+        await project([
+          await membershipDomain.setOwnServiceSoignant(request.body.soignantId),
+        ])
+      )[0],
+  )
+
   fastify.patch<{ Params: ServiceMemberParams; Body: SetServiceSoignantBody }>(
     '/:serviceMembershipId/soignant',
     {

@@ -49,6 +49,7 @@ export const TODO = {
 
 export const SOIGNANT = {
   GET_ALL: 'get_all_soignants',
+  GET_ALL_OF_SERVICE: 'get_all_soignants_of_service',
   GET: 'get_soignant',
   CREATE: 'create_soignant',
   UPDATE: 'update_soignant',

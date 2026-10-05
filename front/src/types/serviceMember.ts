@@ -26,6 +26,7 @@ export type InviteServiceMemberInput = {
   firstName?: string
   lastName?: string
   role: ServiceRole
+  soignantId?: string | null
 }
 
 // `accessLink` a `null` quand le compte etait deja rattache a l'etablissement : il a son mot de
