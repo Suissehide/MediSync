@@ -557,6 +557,11 @@ function Calendar({
         anchorEl={anchorEl}
         setAnchorEl={setAnchorEl}
         onChange={handleDateChange}
+        value={
+          anchorEl
+            ? dayjs.utc(calendarRef.current?.getApi().getDate())
+            : undefined
+        }
       />
     </div>
   )
