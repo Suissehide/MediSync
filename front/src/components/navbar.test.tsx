@@ -311,8 +311,8 @@ describe('onglets de la barre de navigation', () => {
       sousCategories.map((lien) => lien.querySelector('span')?.textContent),
     ).toEqual([
       'Planning',
-      'Thématiques',
       'Membres',
+      'Thématiques',
       'Soignants',
       'Salles',
       'Diagnostics éducatifs',
