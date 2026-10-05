@@ -12,6 +12,7 @@ const PERIODE = {
 }
 
 const presence = (p: Partial<ArsPresence> = {}): ArsPresence => ({
+  patientId: 'p1',
   date: new Date('2026-03-01'),
   type: 'ambulatory',
   individual: true,
@@ -30,7 +31,11 @@ const dossier = (f: Partial<ArsFile> = {}): ArsFile => ({
   ...f,
 })
 
-const cohorte = (files: ArsFile[]): ArsCohort => ({ ...PERIODE, files })
+const cohorte = (files: ArsFile[]): ArsCohort => ({
+  ...PERIODE,
+  files,
+  presences: files.flatMap((f) => f.presences),
+})
 
 const valeur = (cohort: ArsCohort, code: string): number | null => {
   const found = computeArsIndicators(cohort).find((i) => i.code === code)
@@ -87,16 +92,17 @@ describe('groupe 1 — entrée', () => {
 
   // Review Focus 2 : ni NaN, ni exception, le dossier est simplement hors cohorte.
   it('1.1 ignore un dossier sans date d entree et sans rendez-vous de diagnostic educatif', () => {
-    const c = cohorte([
-      dossier({ entryDate: null, presences: [presence()] }),
-    ])
+    const c = cohorte([dossier({ entryDate: null, presences: [presence()] })])
     expect(valeur(c, '1.1')).toBe(0)
   })
 
   // Review Focus 4 : un rendez-vous sans thematique ne leve pas et ne porte aucun role.
   it('1.1 traite un rendez-vous sans thematique sans lever', () => {
     const c = cohorte([
-      dossier({ entryDate: null, presences: [presence({ thematicName: null })] }),
+      dossier({
+        entryDate: null,
+        presences: [presence({ thematicName: null })],
+      }),
     ])
     expect(() => valeur(c, '1.1')).not.toThrow()
     expect(valeur(c, '1.1')).toBe(0)
@@ -145,7 +151,10 @@ describe('groupe 2 — séances et mode de prise en charge', () => {
       }),
       dossier({
         patientId: 'p2',
-        presences: [presence({ type: 'hospital' }), presence({ type: 'ambulatory' })],
+        presences: [
+          presence({ type: 'hospital' }),
+          presence({ type: 'ambulatory' }),
+        ],
       }),
     ])
     expect(valeur(c, '2.1')).toBe(1)
@@ -310,6 +319,9 @@ describe('groupe 3 — sortie', () => {
   })
 
   // Draxa recopiait 3.1 ici : la correction est l'objet de ce cas.
+  // La cohorte porte DEUX dossiers, et c'est ce qui rend le cas falsifiable : avec un seul
+  // dossier mixte, `3.1` et `3.4` valent tous deux 1 et le bug de Draxa (`3.4` renvoyait `3.1`)
+  // passerait le test. Ici `3.1 = 2` et `3.4 = 1` : la copie rougirait.
   it('3.4 compte le parcours mixte, pas le total de 3.1', () => {
     const mixte = dossier({
       presences: [
@@ -317,9 +329,16 @@ describe('groupe 3 — sortie', () => {
         reactu({ type: 'ambulatory', date: new Date('2026-06-01') }),
       ],
     })
-    const c = cohorte([mixte])
-    expect(valeur(c, '3.1')).toBe(1)
-    expect(valeur(c, '3.2')).toBe(0)
+    const hospitSeul = dossier({
+      patientId: 'p2',
+      presences: [
+        presence({ type: 'hospital', date: new Date('2026-03-01') }),
+        reactu({ type: 'hospital', date: new Date('2026-06-01') }),
+      ],
+    })
+    const c = cohorte([mixte, hospitSeul])
+    expect(valeur(c, '3.1')).toBe(2)
+    expect(valeur(c, '3.2')).toBe(1)
     expect(valeur(c, '3.3')).toBe(0)
     expect(valeur(c, '3.4')).toBe(1)
   })
@@ -421,5 +440,90 @@ describe('table complète', () => {
       ...Array(6).fill('Sortie'),
       ...Array(6).fill('Modalités'),
     ])
+  })
+})
+
+describe('bornes de la période', () => {
+  // C1 : la borne haute arrive à minuit (`z.coerce.date()` sur « 2026-12-31 »). Une séance tenue
+  // le 31 décembre dans l'après-midi doit compter : sinon l'enquête perd son dernier jour, tous
+  // les ans, en silence.
+  it('compte une seance tenue le dernier jour de la periode, dans l apres-midi', () => {
+    const c = cohorte([
+      dossier({
+        presences: [
+          presence({
+            individual: true,
+            date: new Date('2026-12-31T14:00:00Z'),
+          }),
+        ],
+      }),
+    ])
+    expect(valeur(c, '2.6')).toBe(1)
+  })
+
+  it('ne compte pas une seance du surlendemain de la borne haute', () => {
+    const c = cohorte([
+      dossier({
+        presences: [
+          presence({
+            individual: true,
+            date: new Date('2027-01-02T09:00:00Z'),
+          }),
+        ],
+      }),
+    ])
+    expect(valeur(c, '2.6')).toBe(0)
+  })
+})
+
+describe('séances des patients sans sous-dossier dans le service', () => {
+  // I2 : `AppointmentPatient` s'écrit SANS `PatientServiceFile` (décision assumée, voir le
+  // commentaire d'`ensureExists`). Les totaux de séances comptent des SÉANCES RÉALISÉES, pas des
+  // patients inscrits : une séance tenue pour un patient sans sous-dossier a bien eu lieu.
+  it('compte les seances du service, meme sans dossier correspondant dans la cohorte', () => {
+    const c = {
+      ...PERIODE,
+      files: [],
+      presences: [
+        presence({ patientId: 'sans-dossier', individual: true }),
+        presence({
+          patientId: 'sans-dossier',
+          individual: false,
+          slotId: 'atelier-1',
+        }),
+      ],
+    }
+    expect(valeur(c, '2.6')).toBe(1)
+    expect(valeur(c, '2.7')).toBe(1)
+  })
+
+  it('compte dans 2.8 les participants sans sous-dossier', () => {
+    const c = {
+      ...PERIODE,
+      files: [],
+      presences: [
+        presence({ patientId: 'a', individual: false, slotId: 'atelier-1' }),
+        presence({ patientId: 'b', individual: false, slotId: 'atelier-1' }),
+      ],
+    }
+    expect(valeur(c, '2.8')).toBe(2)
+  })
+
+  it('2.9 compte des patients distincts parmi toutes les presences du service', () => {
+    const c = {
+      ...PERIODE,
+      files: [],
+      presences: [
+        presence({ patientId: 'a', accompanied: true }),
+        presence({
+          patientId: 'a',
+          accompanied: true,
+          date: new Date('2026-04-01'),
+        }),
+        presence({ patientId: 'b', accompanied: true }),
+      ],
+    }
+    expect(valeur(c, '2.9')).toBe(2)
+    expect(valeur(c, '2.10')).toBe(3)
   })
 })

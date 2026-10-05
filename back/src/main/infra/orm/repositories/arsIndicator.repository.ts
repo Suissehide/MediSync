@@ -1,7 +1,10 @@
 import type { IocContainer } from '../../../types/application/ioc'
-import type { ArsIndicatorRepositoryInterface } from '../../../types/infra/orm/repositories/arsIndicator.repository.interface'
+import type {
+  ArsCohortRows,
+  ArsIndicatorRepositoryInterface,
+} from '../../../types/infra/orm/repositories/arsIndicator.repository.interface'
 import type { TenantContextInterface } from '../../../types/utils/tenant-context'
-import type { ArsFile } from '../../../utils/ars-indicators'
+import type { ArsFile, ArsPresence } from '../../../utils/ars-indicators'
 import type { PostgresPrismaClient } from '../postgres-client'
 
 // Pas de borne de date basse : plusieurs indicateurs remontent jusqu'à la date d'entrée, qui
@@ -20,37 +23,33 @@ class ArsIndicatorRepository implements ArsIndicatorRepositoryInterface {
     return this.tenantContext.scope()
   }
 
-  async findCohort(): Promise<ArsFile[]> {
-    const { serviceId } = this.scope
-    const files = await this.prisma.patientServiceFile.findMany({
-      where: this.scope,
-      select: {
-        patientId: true,
-        entryDate: true,
-        orientation: true,
-        patient: {
-          select: {
-            appointmentPatients: {
-              // Isolation : les rendez-vous du patient dans un AUTRE service ne comptent pas.
-              where: { serviceId },
-              select: {
-                status: true,
-                accompanying: true,
-                appointment: {
-                  select: {
-                    startDate: true,
-                    type: true,
-                    slotID: true,
-                    thematic: { select: { name: true } },
-                    slot: {
-                      select: {
-                        slotTemplate: {
-                          select: {
-                            isIndividual: true,
-                            thematic: { select: { name: true } },
-                          },
-                        },
-                      },
+  // Deux lectures plutôt qu'un `include` imbriqué depuis le sous-dossier : les rendez-vous du
+  // service ne sont pas tous rattachés à un sous-dossier, et partir d'`AppointmentPatient` (modèle
+  // de service) évite la traversée établissement→service que le garde-fou doit arbitrer.
+  async findCohort(): Promise<ArsCohortRows> {
+    const [serviceFiles, appointmentPatients] = await Promise.all([
+      this.prisma.patientServiceFile.findMany({
+        where: this.scope,
+        select: { patientId: true, entryDate: true, orientation: true },
+      }),
+      this.prisma.appointmentPatient.findMany({
+        where: this.scope,
+        select: {
+          patientId: true,
+          status: true,
+          accompanying: true,
+          appointment: {
+            select: {
+              startDate: true,
+              type: true,
+              slotID: true,
+              thematic: { select: { name: true } },
+              slot: {
+                select: {
+                  slotTemplate: {
+                    select: {
+                      isIndividual: true,
+                      thematic: { select: { name: true } },
                     },
                   },
                 },
@@ -58,26 +57,36 @@ class ArsIndicatorRepository implements ArsIndicatorRepositoryInterface {
             },
           },
         },
-      },
-    })
+      }),
+    ])
 
-    return files.map((f) => ({
+    const presences: ArsPresence[] = appointmentPatients.map((ap) => ({
+      patientId: ap.patientId,
+      date: ap.appointment.startDate,
+      type: ap.appointment.type,
+      individual: ap.appointment.slot.slotTemplate.isIndividual,
+      slotId: ap.appointment.slotID,
+      thematicName:
+        ap.appointment.thematic?.name ??
+        ap.appointment.slot.slotTemplate.thematic?.name ??
+        null,
+      honored: ap.status === 'yes',
+      accompanied: ap.accompanying === 'Oui',
+    }))
+
+    const byPatient = new Map<string, ArsPresence[]>()
+    for (const p of presences) {
+      byPatient.set(p.patientId, [...(byPatient.get(p.patientId) ?? []), p])
+    }
+
+    const files: ArsFile[] = serviceFiles.map((f) => ({
       patientId: f.patientId,
       entryDate: f.entryDate,
       orientation: f.orientation,
-      presences: f.patient.appointmentPatients.map((ap) => ({
-        date: ap.appointment.startDate,
-        type: ap.appointment.type,
-        individual: ap.appointment.slot.slotTemplate.isIndividual,
-        slotId: ap.appointment.slotID,
-        thematicName:
-          ap.appointment.thematic?.name ??
-          ap.appointment.slot.slotTemplate.thematic?.name ??
-          null,
-        honored: ap.status === 'yes',
-        accompanied: ap.accompanying === 'Oui',
-      })),
+      presences: byPatient.get(f.patientId) ?? [],
     }))
+
+    return { files, presences }
   }
 
   async findServiceName(): Promise<string> {

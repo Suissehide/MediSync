@@ -18,6 +18,7 @@ export const ARS_THEMATIC_ROLES = {
 type ThematicRole = keyof typeof ARS_THEMATIC_ROLES
 
 export type ArsPresence = {
+  patientId: string
   date: Date
   type: AppointmentType | null
   individual: boolean
@@ -34,7 +35,16 @@ export type ArsFile = {
   presences: ArsPresence[]
 }
 
-export type ArsCohort = { from: Date; to: Date; files: ArsFile[] }
+// `files` : les sous-dossiers du service, pour les indicateurs qui comptent des PATIENTS pris
+// en charge. `presences` : TOUS les rendez-vous du service, pour ceux qui comptent des SÉANCES
+// RÉALISÉES — un `AppointmentPatient` s'écrit sans `PatientServiceFile` (décision assumée du
+// dépôt, voir `ensureExists`), et une séance tenue pour un tel patient a bien eu lieu.
+export type ArsCohort = {
+  from: Date
+  to: Date
+  files: ArsFile[]
+  presences: ArsPresence[]
+}
 
 export type ArsGroup = 'Entrée' | 'Séances' | 'Sortie' | 'Modalités'
 
@@ -60,7 +70,8 @@ const inRange = (date: Date | null, from: Date, to: Date): boolean =>
   date !== null && date >= from && date <= to
 
 const isRole = (role: ThematicRole, name: string | null): boolean =>
-  name !== null && (ARS_THEMATIC_ROLES[role] as readonly string[]).includes(name)
+  name !== null &&
+  (ARS_THEMATIC_ROLES[role] as readonly string[]).includes(name)
 
 const honored = (file: ArsFile): ArsPresence[] =>
   file.presences.filter((p) => p.honored)
@@ -85,10 +96,7 @@ const countFiles = (c: ArsCohort, keep: (f: ArsFile) => boolean): number =>
   c.files.filter(keep).length
 
 const countOriented = (c: ArsCohort, orientation: string): number =>
-  countFiles(
-    c,
-    (f) => deDate(f, c) !== null && f.orientation === orientation,
-  )
+  countFiles(c, (f) => deDate(f, c) !== null && f.orientation === orientation)
 
 // Les présences honorées entre la date de DE et la fin de période. `null` sans date de DE.
 const sinceDe = (file: ArsFile, c: ArsCohort): ArsPresence[] | null => {
@@ -113,7 +121,7 @@ const onlyOfTypes = (
 }
 
 const presencesInPeriod = (c: ArsCohort): ArsPresence[] =>
-  c.files.flatMap((f) => honored(f)).filter((p) => inRange(p.date, c.from, c.to))
+  c.presences.filter((p) => p.honored && inRange(p.date, c.from, c.to))
 
 const collectiveSlots = (c: ArsCohort): Map<string, ArsPresence[]> => {
   const slots = new Map<string, ArsPresence[]>()
@@ -238,7 +246,7 @@ export const ARS_INDICATORS: readonly ArsIndicator[] = [
     code: '2.4',
     group: 'Séances',
     label:
-      "Nombre de patients pris en charge en programme mixte (hospitalisation + soins externes)",
+      'Nombre de patients pris en charge en programme mixte (hospitalisation + soins externes)',
     compute: (c) =>
       countFiles(c, (f) => {
         const ps = sinceDe(f, c)
@@ -265,8 +273,7 @@ export const ARS_INDICATORS: readonly ArsIndicator[] = [
   {
     code: '2.6bis',
     group: 'Séances',
-    label:
-      "Dont nombre de séances individuelles d'ETP réalisées en distanciel",
+    label: "Dont nombre de séances individuelles d'ETP réalisées en distanciel",
     compute: (c) =>
       presencesInPeriod(c).filter(
         (p) => p.individual && p.type === 'telephonic',
@@ -305,12 +312,15 @@ export const ARS_INDICATORS: readonly ArsIndicator[] = [
     group: 'Séances',
     label:
       'Nombre de proches et/ou aidants du patient ayant participé au programme',
+    // Faute de pouvoir identifier les proches eux-mêmes (`accompanying` est un Oui/Non), on compte
+    // les patients distincts ayant été accompagnés au moins une fois — là où 2.10 compte des
+    // séances. Draxa recopiait 2.10 ici.
     compute: (c) =>
-      countFiles(c, (f) =>
-        honored(f).some(
-          (p) => inRange(p.date, c.from, c.to) && p.accompanied,
-        ),
-      ),
+      new Set(
+        presencesInPeriod(c)
+          .filter((p) => p.accompanied)
+          .map((p) => p.patientId),
+      ).size,
   },
   {
     code: '2.10',
@@ -385,8 +395,7 @@ export const ARS_INDICATORS: readonly ArsIndicator[] = [
     group: 'Modalités',
     label:
       "Nombre de patients ayant bénéficié d'un programme personnalisé lors d'une offre initiale d'ETP",
-    compute: (c) =>
-      countFiles(c, (f) => (sinceDe(f, c)?.length ?? 0) >= 3),
+    compute: (c) => countFiles(c, (f) => (sinceDe(f, c)?.length ?? 0) >= 3),
   },
   {
     code: '4.1bis',
@@ -400,8 +409,7 @@ export const ARS_INDICATORS: readonly ArsIndicator[] = [
           countAround(
             f,
             c,
-            (times, all) =>
-              all.filter((t) => t < Math.max(...times)).length,
+            (times, all) => all.filter((t) => t < Math.max(...times)).length,
           ) >= 3,
       ),
   },
@@ -424,8 +432,7 @@ export const ARS_INDICATORS: readonly ArsIndicator[] = [
           countAround(
             f,
             c,
-            (times, all) =>
-              all.filter((t) => t > Math.min(...times)).length,
+            (times, all) => all.filter((t) => t > Math.min(...times)).length,
           ) >= 3,
       ),
   },
@@ -454,12 +461,24 @@ export const ARS_INDICATORS: readonly ArsIndicator[] = [
     label:
       "Nombre de patients dont la synthèse de l'évaluation des compétences acquises a été transmise au moins à leur médecin traitant",
     unavailable:
-      "Aucun modèle ne trace cet envoi (relève du ticket « Envoi du bilan par MSSanté »)",
+      'Aucun modèle ne trace cet envoi (relève du ticket « Envoi du bilan par MSSanté »)',
   },
 ]
 
-export const computeArsIndicators = (c: ArsCohort): ArsIndicatorResult[] =>
-  ARS_INDICATORS.map((i) => {
+const UN_JOUR_MS = 24 * 60 * 60 * 1000
+
+// La borne haute désigne un JOUR, pas un instant : « 2026-12-31 » arrive à minuit, et sans cela
+// une séance tenue ce jour-là l'après-midi tomberait hors période — l'enquête perdrait son dernier
+// jour, tous les ans, sans rien signaler.
+// ponytail: fin de journée en UTC ; le fuseau de l'établissement n'est pas modélisé, il reste donc
+// un décalage d'une heure en hiver. À reprendre le jour où un fuseau est porté par l'établissement.
+const finDeJournee = (to: Date): Date => new Date(to.getTime() + UN_JOUR_MS - 1)
+
+export const computeArsIndicators = (
+  cohort: ArsCohort,
+): ArsIndicatorResult[] => {
+  const c: ArsCohort = { ...cohort, to: finDeJournee(cohort.to) }
+  return ARS_INDICATORS.map((i) => {
     const base = { code: i.code, group: i.group, label: i.label }
     if ('compute' in i) {
       return { ...base, value: i.compute(c), note: null }
@@ -469,3 +488,4 @@ export const computeArsIndicators = (c: ArsCohort): ArsIndicatorResult[] =>
     }
     return { ...base, value: null, note: i.manual }
   })
+}

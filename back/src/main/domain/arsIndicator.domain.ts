@@ -19,8 +19,8 @@ class ArsIndicatorDomain implements ArsIndicatorDomainInterface {
   }
 
   async findAll({ from, to }: ArsRange): Promise<ArsIndicatorResult[]> {
-    const files = await this.arsIndicatorRepository.findCohort()
-    return computeArsIndicators({ from, to, files })
+    const { files, presences } = await this.arsIndicatorRepository.findCohort()
+    return computeArsIndicators({ from, to, files, presences })
   }
 
   async exportExcel(range: ArsRange): Promise<Buffer> {
@@ -39,7 +39,7 @@ class ArsIndicatorDomain implements ArsIndicatorDomainInterface {
       ...indicators.map((i) => ({
         Code: i.code,
         Libellé: i.label,
-        Valeur: i.value ?? (i.note ?? ''),
+        Valeur: i.value ?? i.note ?? '',
       })),
     ]
 

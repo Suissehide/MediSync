@@ -41,13 +41,30 @@ Quatre points tranchés avec Léo avant l'écriture de cette spec, qui cadrent t
 Vocabulaire commun à tout le document :
 
 - **Période** `[from, to]` — par défaut l'année civile choisie.
-- **Cohorte** — les `PatientServiceFile` du service courant (le dossier d'un patient dans ce
-  service), et les rendez-vous de leurs patients.
+- **Cohorte** — deux volets, et la distinction porte des chiffres :
+  - les `PatientServiceFile` du service courant, pour les indicateurs qui comptent des **patients
+    pris en charge** (groupe 1, 2.1 à 2.4, groupes 3 et 4) ;
+  - **tous** les rendez-vous du service, pour ceux qui comptent des **séances réalisées** (2.6 à
+    2.10). Un `AppointmentPatient` s'écrit sans `PatientServiceFile` — décision assumée du dépôt,
+    documentée sur `ensureExists` — et une séance tenue pour un patient suivi ailleurs a bien eu
+    lieu dans ce service. Partir du seul sous-dossier perdrait ces séances, et ferait même
+    disparaître un atelier dont aucun participant n'a de sous-dossier ici.
 - **Présence honorée** — `AppointmentPatient.status = 'yes'`. C'est l'équivalent exact du
   `etat = "Oui"` de Draxa.
-- **Date de diagnostic éducatif (date de DE)** — `PatientServiceFile.entryDate`, équivalent du
-  `dedate` de Draxa ; à défaut, la date du premier rendez-vous honoré dans la période portant une
-  thématique de rôle `diagnosticEducatif`. C'est la transposition de `getDiagnosticEducatifDate`.
+- **Date de diagnostic éducatif (date de DE)** — `PatientServiceFile.entryDate` **si elle tombe
+  dans la période** ; sinon, la date du premier rendez-vous honoré dans la période portant une
+  thématique de rôle `diagnosticEducatif`. C'est la transposition exacte de
+  `getDiagnosticEducatifDate`, y compris sa conséquence : **un patient entré en 2024 qui repasse un
+  diagnostic éducatif en 2026 est compté comme entrant 2026**, et tout son parcours est recalé sur
+  cette date pour les groupes 2, 3 et 4. Ce n'est pas un effet de bord, c'est le comportement de
+  l'application dont on reprend la grille — mais il mérite d'être confirmé par le coordinateur du
+  pilote lors de la validation sur une année réelle (dernière case du ticket), au même titre que
+  l'incohérence 2.2/3.3 ci-dessous. La ligne à changer est `deDate` dans `ars-indicators.ts`.
+- **Borne haute de la période** — `to` désigne un **jour**, pas un instant : le calcul la reporte à
+  la fin de la journée. Sans cela, « 2026-12-31 » arrivant à minuit, une séance tenue ce jour-là
+  l'après-midi tomberait hors période et l'enquête perdrait son dernier jour tous les ans, en
+  silence. Le fuseau de l'établissement n'étant pas modélisé, la fin de journée est calculée en UTC
+  — il reste un décalage d'une heure en hiver, nommé dans le code.
 - **Séance individuelle / collective** — `Slot.slotTemplate.isIndividual`. Draxa distinguait par un
   champ texte `categorie` (`Entretien`/`Consultation`/`Coaching` contre `Atelier`) ; MediSync porte
   l'information en booléen, la règle devient exacte au lieu d'être une énumération à maintenir.

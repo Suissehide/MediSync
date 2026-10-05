@@ -1,10 +1,10 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useState } from 'react'
 
+import { ArsIndicatorApi } from '@/api/arsIndicator.api.ts'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
 import { Button } from '@/components/ui/button.tsx'
 import { can } from '@/hooks/useCan.ts'
-import { ArsIndicatorApi } from '@/api/arsIndicator.api.ts'
 import { useArsIndicatorsQuery } from '@/queries/useArsIndicator.ts'
 import { resolveTenantContext } from '@/utils/tenant-context.ts'
 
@@ -30,19 +30,35 @@ const GROUPES = ['Entrée', 'Séances', 'Sortie', 'Modalités'] as const
 
 function ArsIndicatorsPage() {
   const [year, setYear] = useState(new Date().getFullYear())
-  const { indicators, isPending, from, to } = useArsIndicatorsQuery(year)
+  const { indicators, isPending, isError, from, to } =
+    useArsIndicatorsQuery(year)
+  const [exportEnCours, setExportEnCours] = useState(false)
+  const [erreurExport, setErreurExport] = useState<string | null>(null)
 
+  // Un échec d'export doit se voir : `handleHttpError` lève, et sans ce catch le bouton resterait
+  // muet sur un rejet non traité.
   const telecharger = async () => {
-    const blob = await ArsIndicatorApi.exportExcel(from, to)
-    const href = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = href
-    a.download = `indicateurs-ars_${from}_${to}.xlsx`
-    a.click()
-    URL.revokeObjectURL(href)
+    setExportEnCours(true)
+    setErreurExport(null)
+    try {
+      const blob = await ArsIndicatorApi.exportExcel(from, to)
+      const href = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = href
+      a.download = `indicateurs-ars_${from}_${to}.xlsx`
+      a.click()
+      URL.revokeObjectURL(href)
+    } catch {
+      setErreurExport("L'export a échoué. Réessayez dans un instant.")
+    } finally {
+      setExportEnCours(false)
+    }
   }
 
-  const annees = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i)
+  const annees = Array.from(
+    { length: 6 },
+    (_, i) => new Date().getFullYear() - i,
+  )
 
   return (
     <DashboardLayout>
@@ -61,28 +77,54 @@ function ArsIndicatorsPage() {
               </option>
             ))}
           </select>
-          <Button onClick={telecharger} disabled={isPending}>
+          <Button
+            onClick={telecharger}
+            disabled={isPending || isError || exportEnCours}
+          >
             Exporter
           </Button>
         </div>
       </div>
 
+      {erreurExport ? (
+        <p role="alert" className="mt-4 text-(--color-destructive)">
+          {erreurExport}
+        </p>
+      ) : null}
+
+      {/* Chargement, erreur et absence de données doivent TOUJOURS être distincts : un tableau
+          vide indiscernable d'une panne a déjà été livré deux fois sur ce dépôt. */}
       {isPending ? (
         <p className="mt-6">Chargement…</p>
+      ) : isError ? (
+        <p role="alert" className="mt-6 text-(--color-destructive)">
+          Impossible de charger les indicateurs. Réessayez dans un instant.
+        </p>
       ) : (
         GROUPES.map((groupe) => (
           <section key={groupe} className="mt-8">
             <h2 className="mb-2 text-lg font-medium">{groupe}</h2>
             <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-(--color-border) text-left text-(--color-muted-foreground)">
+                  <th className="w-16 py-1 font-medium">Code</th>
+                  <th className="py-1 font-medium">Libellé</th>
+                  <th className="w-64 py-1 text-right font-medium">Valeur</th>
+                </tr>
+              </thead>
               <tbody>
                 {indicators
                   .filter((i) => i.group === groupe)
                   .map((i) => (
                     <tr
                       key={i.code}
-                      className={i.note ? 'text-(--color-muted-foreground)' : ''}
+                      className={
+                        i.note ? 'text-(--color-muted-foreground)' : ''
+                      }
                     >
-                      <td className="w-16 py-1 align-top font-mono">{i.code}</td>
+                      <td className="w-16 py-1 align-top font-mono">
+                        {i.code}
+                      </td>
                       <td className="py-1 align-top">{i.label}</td>
                       <td className="w-64 py-1 text-right align-top">
                         {i.value ?? i.note}
