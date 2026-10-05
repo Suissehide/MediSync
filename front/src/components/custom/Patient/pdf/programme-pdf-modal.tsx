@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react'
 
 import { useForbiddenWeekQueries } from '../../../../queries/useForbiddenWeek.ts'
 import { usePatientPathwaysQuery } from '../../../../queries/usePatient.tsx'
-import { useAllSlotsQuery } from '../../../../queries/useSlot.ts'
+import { usePatientSlotsQuery } from '../../../../queries/useSlot.ts'
 import { useThematicQueries } from '../../../../queries/useThematic.ts'
 import type { Patient } from '../../../../types/patient.ts'
 import { Button } from '../../../ui/button.tsx'
@@ -27,7 +27,7 @@ export default function ProgrammePDFModal({
   onClose,
   previewMode = true,
 }: ProgrammePDFModalProps) {
-  const { slots } = useAllSlotsQuery()
+  const { slots } = usePatientSlotsQuery(patient?.id)
   const { pathways = [] } = usePatientPathwaysQuery(patient.id)
   const { forbiddenWeeks } = useForbiddenWeekQueries()
   const { thematics } = useThematicQueries()

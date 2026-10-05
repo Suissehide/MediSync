@@ -19,7 +19,7 @@ import {
   usePatientMutations,
   usePatientPathwaysQuery,
 } from '../../../../queries/usePatient.tsx'
-import { useAllSlotsQuery } from '../../../../queries/useSlot.ts'
+import { usePatientSlotsQuery } from '../../../../queries/useSlot.ts'
 import type {
   EnrollmentIssue,
   Patient,
@@ -178,7 +178,7 @@ function PathwayCard({
 }
 
 export default function OverviewPatient({ patient }: OverviewPatientProps) {
-  const { slots } = useAllSlotsQuery()
+  const { slots } = usePatientSlotsQuery(patient?.id)
   const { dismissEnrollmentIssue, removeFromPathway, reorderPathways } =
     usePatientMutations()
   const { pathways: patientPathways = [] } = usePatientPathwaysQuery(

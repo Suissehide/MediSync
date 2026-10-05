@@ -50,6 +50,7 @@ export type SlotUpdateEntityRepo = Omit<
 export type SlotDateRangeRepo = {
   from?: Date
   to?: Date
+  patientID?: string
 }
 
 export interface SlotRepositoryInterface {
