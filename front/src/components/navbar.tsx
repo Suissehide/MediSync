@@ -1,5 +1,5 @@
 import { Link, useMatchRoute, useRouterState } from '@tanstack/react-router'
-import { ChevronDown, Globe, PanelLeft, Settings2 } from 'lucide-react'
+import { ChevronDown, Globe, Menu, PanelLeft, Settings2 } from 'lucide-react'
 import { Fragment } from 'react'
 
 import { can } from '../hooks/useCan.ts'
@@ -95,7 +95,8 @@ function MenuAdministration({
   )
 }
 
-function Navbar({ toggleSidebar }: NavbarProps) {
+// Les onglets de l'echelle courante, partages par la barre et la navigation mobile.
+export function useOnglets() {
   const matchRoute = useMatchRoute()
   // La route RÉELLEMENT atteinte, pas un motif : `matchRoute('/super-admin/$establishmentId')`
   // matche aussi `/super-admin/access-log`.
@@ -164,27 +165,58 @@ function Navbar({ toggleSidebar }: NavbarProps) {
           ?.services.find((s) => s.id === courant.serviceId)?.name
       : undefined
 
+  return {
+    courant,
+    user,
+    params,
+    groupes,
+    administration,
+    estActif,
+    sousLayoutDeService,
+    nomDuService,
+  }
+}
+
+function Navbar({ toggleSidebar }: NavbarProps) {
+  const {
+    courant,
+    user,
+    params,
+    groupes,
+    administration,
+    estActif,
+    sousLayoutDeService,
+    nomDuService,
+  } = useOnglets()
+
   return (
     <div className="fixed top-0 left-0 right-0 z-50 px-4 h-16 flex justify-between items-center bg-foreground text-text border-b border-border-sidebar">
       <div className="flex items-center gap-4 min-w-0">
         <div className="flex items-center gap-2 shrink-0">
-          <h2 className="px-2 text-3xl font-bold">
+          <h2 className="px-2 text-2xl md:text-3xl font-bold">
             <span className="text-primary">Medi</span>Sync
           </h2>
           <Button
             variant="none"
             size="icon"
             onClick={toggleSidebar}
-            className="cursor-pointer text-text"
+            className="cursor-pointer text-text -order-1 md:order-none"
             aria-label="Afficher ou masquer le panneau latéral"
           >
-            <PanelLeft className="w-5 h-5" />
+            <Menu className="w-6 h-6 md:hidden" />
+            <PanelLeft className="w-5 h-5 hidden md:block" />
           </Button>
-          <FilAriane />
+          {/* Sur telephone, le contexte et l'administration passent dans le tiroir. */}
+          <div className="hidden md:flex min-w-0">
+            <FilAriane />
+          </div>
         </div>
 
         {groupes.length > 0 && (
-          <nav aria-label="Navigation" className="flex items-center gap-4 pl-2">
+          <nav
+            aria-label="Navigation"
+            className="hidden md:flex items-center gap-4 pl-2"
+          >
             {groupes.map((groupe, index) => (
               <Fragment key={groupe.nom || `groupe-${index}`}>
                 {index > 0 && (
@@ -214,18 +246,20 @@ function Navbar({ toggleSidebar }: NavbarProps) {
       </div>
       <div className="flex items-center gap-2.5 shrink-0">
         {administration.length > 0 && (
-          <MenuAdministration
-            titre={`Administration · ${nomDuService ?? 'service'}`}
-            items={administration}
-            actif={administration.some(estActif)}
-            params={params}
-          />
+          <div className="hidden md:block">
+            <MenuAdministration
+              titre={`Administration · ${nomDuService ?? 'service'}`}
+              items={administration}
+              actif={administration.some(estActif)}
+              params={params}
+            />
+          </div>
         )}
         {/* Absent, jamais grise, pour un compte sans le drapeau : voir `sidebar.tsx`. */}
         {user?.isSuperAdmin && (
           <Link
             to="/super-admin"
-            className={`h-9 px-3 flex items-center gap-1.5 rounded-lg border border-solid text-sm font-semibold text-white ${
+            className={`h-9 px-3 hidden md:flex items-center gap-1.5 rounded-lg border border-solid text-sm font-semibold text-white ${
               courant?.scale === 'platform'
                 ? 'bg-secondary-dark border-secondary-dark'
                 : 'border-border-sidebar hover:bg-white/8'
@@ -242,7 +276,7 @@ function Navbar({ toggleSidebar }: NavbarProps) {
         store : voir le commentaire de `sousLayoutDeService` ci-dessus, qui
         dit pourquoi les deux ne coincident pas. */}
         {sousLayoutDeService && (
-          <div className="flex items-center pl-4 ml-1.5 border-l border-border-sidebar">
+          <div className="flex items-center md:pl-4 md:ml-1.5 md:border-l border-border-sidebar">
             <TodoSheet />
           </div>
         )}

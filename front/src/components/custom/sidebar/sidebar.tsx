@@ -3,6 +3,7 @@ import { ChevronDown, LogOut, Settings, Zap } from 'lucide-react'
 import { Fragment, type JSX } from 'react'
 
 import { useLogout } from '../../../queries/useAuth.ts'
+import { TeteDuTiroir } from '../../navigationMobile.tsx'
 import { Button } from '../../ui/button.tsx'
 import {
   PopoverContent,
@@ -60,11 +61,13 @@ function Sidebar({
 
   return (
     <div
-      className={`z-40 bg-foreground text-text fixed ${sousUnBandeau ? 'top-[100px] h-[calc(100vh-100px)]' : 'top-16 h-[calc(100vh-4rem)]'} w-64 border-r border-border-sidebar transition-all duration-300 ${
-        isVisible ? 'translate-x-0' : '-translate-x-64'
+      inert={!isVisible}
+      className={`z-40 bg-foreground text-text fixed ${sousUnBandeau ? 'top-[100px] h-[calc(100dvh-100px)]' : 'top-16 h-[calc(100dvh-4rem)]'} w-[min(18rem,85vw)] md:w-64 border-r border-border-sidebar transition-all duration-300 ${
+        isVisible ? 'translate-x-0' : '-translate-x-full'
       } bg-card text-text text-sm`}
     >
       <div className="flex flex-col justify-between h-full">
+        <TeteDuTiroir />
         {/* Custom sidebar */}
         <div className="flex flex-col flex-1 min-h-0">
           <div className="flex flex-col flex-1 min-h-0">

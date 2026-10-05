@@ -8,7 +8,7 @@ import {
   Outlet,
   RouterProvider,
 } from '@tanstack/react-router'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
@@ -259,10 +259,14 @@ describe("discretion de l'ecran plateforme du journal des acces", () => {
         screen.getByRole('heading', { name: 'Journaux' }),
       ).toBeInTheDocument()
     })
-    expect(screen.getByRole('link', { name: 'Journaux' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Comptes' })).toBeInTheDocument()
+    // Les onglets existent aussi dans la barre mobile : on lit ceux du bureau.
+    const onglets = within(
+      screen.getByRole('navigation', { name: 'Navigation' }),
+    )
+    expect(onglets.getByRole('link', { name: 'Journaux' })).toBeInTheDocument()
+    expect(onglets.getByRole('link', { name: 'Comptes' })).toBeInTheDocument()
     expect(
-      screen.getByRole('link', { name: 'Établissements' }),
+      onglets.getByRole('link', { name: 'Établissements' }),
     ).toBeInTheDocument()
     expect(screen.queryByText('Not Found')).not.toBeInTheDocument()
   })
