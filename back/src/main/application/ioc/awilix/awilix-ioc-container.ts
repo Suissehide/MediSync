@@ -1,6 +1,7 @@
 import { type Cradle, diContainer } from '@fastify/awilix'
 import { type AwilixContainer, asClass, asValue } from 'awilix'
 import type { Resolver } from 'awilix/lib/resolvers'
+import nodemailer from 'nodemailer'
 
 import { AccessLinkDomain } from '../../../domain/accessLink.domain'
 import { ActivityLogDomain } from '../../../domain/activityLog.domain'
@@ -29,6 +30,7 @@ import { TodoDomain } from '../../../domain/todo.domain'
 import { UserDomain } from '../../../domain/user.domain'
 import { HttpClient } from '../../../infra/http/http-client'
 import { PinoLogger } from '../../../infra/logger/pino/pino-logger'
+import { Mailer } from '../../../infra/mail/mailer'
 import { PostgresOrm } from '../../../infra/orm/postgres-client'
 import { AccessGrantRepository } from '../../../infra/orm/repositories/accessGrant.repository'
 import { AccessLinkRepository } from '../../../infra/orm/repositories/accessLink.repository'
@@ -153,6 +155,8 @@ class AwilixIocContainer {
     // AccessGrant
     this.#registerAccessGrantRepository()
     this.#registerSuperAdminGrantDomain()
+    // Mail
+    this.#registerMailer(config)
     // AccessLink
     this.#registerAccessLinkDomain()
     this.#registerAccessLinkRepository()
@@ -463,6 +467,22 @@ class AwilixIocContainer {
       'superAdminGrantDomain',
       asClass(SuperAdminGrantDomain).singleton(),
     )
+  }
+
+  // Mail
+  #registerMailer(config: Config): void {
+    const transport = config.smtpHost
+      ? nodemailer.createTransport({
+          host: config.smtpHost,
+          port: config.smtpPort,
+          secure: config.smtpSecure,
+          auth: config.smtpUser
+            ? { user: config.smtpUser, pass: config.smtpPass }
+            : undefined,
+        })
+      : null
+    this.register('mailTransport', asValue(transport))
+    this.register('mailer', asClass(Mailer).singleton())
   }
 
   // AccessLink

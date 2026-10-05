@@ -10,7 +10,7 @@ Before `npm start`, the Postgres container and the external `proxy` Docker netwo
 
 ```sh
 docker network create proxy            # one-time
-cd ../deploy && docker compose --profile db up -d
+cd ../deploy && docker compose --profile db --profile dev up -d   # dev = Mailpit, UI http://localhost:8027
 ```
 
 Node/npm versions are pinned by Volta in `package.json` (Node 24, npm 11).
@@ -321,8 +321,10 @@ Key cross-cutting concerns:
   the guard on the token, never on the route**: the previous round put it on reissue only, and
   `POST /account` walked straight past it. The escape hatch that makes the refusal tenable is
   `UserDomain.reissueAccessLink`, under `/super-admin` — do not remove it without reopening the
-  question (there is no forgotten-password route and `PATCH /me` does not change a password).
-- **Never log an access-link token, and never put one in a URL.** The token travels only in the
+  question. Self-service `POST /auth/password-forgot` (MDS-35) is the other way out: it issues a
+  1-hour link to the account's **own** address, so it crosses no privilege and needs no guard.
+- **Never log an access-link token, and never put one in a URL.** E-mailed links carry it in the
+  **fragment** (`/auth/access-link#<token>`), which browsers never send to a server. The token travels only in the
   **body** of `POST /auth/access-link/consume`; the DB holds only its SHA-256
   (`AccessLink.tokenHash`), never the token. `pathWithoutQuery` (`utils/url-helper.ts`) strips
   only the query string, so a token in a *path segment* would survive into the request log intact

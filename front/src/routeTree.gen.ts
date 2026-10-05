@@ -15,6 +15,7 @@ import { Route as PendingImport } from './routes/pending'
 import { Route as AuthenticatedImport } from './routes/_authenticated'
 import { Route as AuthIndexImport } from './routes/auth/index'
 import { Route as AuthenticatedIndexImport } from './routes/_authenticated/index'
+import { Route as AuthForgotPasswordImport } from './routes/auth/forgot-password'
 import { Route as AuthAccessLinkImport } from './routes/auth/access-link'
 import { Route as AuthenticatedSuperAdminImport } from './routes/_authenticated/super-admin'
 import { Route as AuthenticatedSuiviImport } from './routes/_authenticated/suivi'
@@ -81,6 +82,12 @@ const AuthenticatedIndexRoute = AuthenticatedIndexImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthenticatedRoute,
+} as any)
+
+const AuthForgotPasswordRoute = AuthForgotPasswordImport.update({
+  id: '/auth/forgot-password',
+  path: '/auth/forgot-password',
+  getParentRoute: () => rootRoute,
 } as any)
 
 const AuthAccessLinkRoute = AuthAccessLinkImport.update({
@@ -430,6 +437,13 @@ declare module '@tanstack/react-router' {
       path: '/auth/access-link'
       fullPath: '/auth/access-link'
       preLoaderRoute: typeof AuthAccessLinkImport
+      parentRoute: typeof rootRoute
+    }
+    '/auth/forgot-password': {
+      id: '/auth/forgot-password'
+      path: '/auth/forgot-password'
+      fullPath: '/auth/forgot-password'
+      preLoaderRoute: typeof AuthForgotPasswordImport
       parentRoute: typeof rootRoute
     }
     '/_authenticated/': {
@@ -879,6 +893,7 @@ export interface FileRoutesByFullPath {
   '/suivi': typeof AuthenticatedSuiviRoute
   '/super-admin': typeof AuthenticatedSuperAdminRouteWithChildren
   '/auth/access-link': typeof AuthAccessLinkRoute
+  '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthIndexRoute
   '/patient/$patientID': typeof AuthenticatedPatientPatientIDRoute
@@ -925,6 +940,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/suivi': typeof AuthenticatedSuiviRoute
   '/auth/access-link': typeof AuthAccessLinkRoute
+  '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthIndexRoute
   '/patient/$patientID': typeof AuthenticatedPatientPatientIDRoute
@@ -972,6 +988,7 @@ export interface FileRoutesById {
   '/_authenticated/suivi': typeof AuthenticatedSuiviRoute
   '/_authenticated/super-admin': typeof AuthenticatedSuperAdminRouteWithChildren
   '/auth/access-link': typeof AuthAccessLinkRoute
+  '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/auth/': typeof AuthIndexRoute
   '/_authenticated/patient/$patientID': typeof AuthenticatedPatientPatientIDRoute
@@ -1023,6 +1040,7 @@ export interface FileRouteTypes {
     | '/suivi'
     | '/super-admin'
     | '/auth/access-link'
+    | '/auth/forgot-password'
     | '/'
     | '/auth'
     | '/patient/$patientID'
@@ -1068,6 +1086,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/suivi'
     | '/auth/access-link'
+    | '/auth/forgot-password'
     | '/'
     | '/auth'
     | '/patient/$patientID'
@@ -1113,6 +1132,7 @@ export interface FileRouteTypes {
     | '/_authenticated/suivi'
     | '/_authenticated/super-admin'
     | '/auth/access-link'
+    | '/auth/forgot-password'
     | '/_authenticated/'
     | '/auth/'
     | '/_authenticated/patient/$patientID'
@@ -1158,6 +1178,7 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   PendingRoute: typeof PendingRoute
   AuthAccessLinkRoute: typeof AuthAccessLinkRoute
+  AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
   AuthIndexRoute: typeof AuthIndexRoute
 }
 
@@ -1165,6 +1186,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   PendingRoute: PendingRoute,
   AuthAccessLinkRoute: AuthAccessLinkRoute,
+  AuthForgotPasswordRoute: AuthForgotPasswordRoute,
   AuthIndexRoute: AuthIndexRoute,
 }
 
@@ -1181,6 +1203,7 @@ export const routeTree = rootRoute
         "/_authenticated",
         "/pending",
         "/auth/access-link",
+        "/auth/forgot-password",
         "/auth/"
       ]
     },
@@ -1238,6 +1261,9 @@ export const routeTree = rootRoute
     },
     "/auth/access-link": {
       "filePath": "auth/access-link.tsx"
+    },
+    "/auth/forgot-password": {
+      "filePath": "auth/forgot-password.tsx"
     },
     "/_authenticated/": {
       "filePath": "_authenticated/index.tsx",

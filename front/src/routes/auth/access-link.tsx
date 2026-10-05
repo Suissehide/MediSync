@@ -1,4 +1,8 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import {
+  createFileRoute,
+  useLocation,
+  useNavigate,
+} from '@tanstack/react-router'
 import { useState } from 'react'
 
 import { Button } from '../../components/ui/button.tsx'
@@ -6,10 +10,9 @@ import { useAppForm } from '../../hooks/formConfig.tsx'
 import { isApiError } from '../../libs/httpErrorHandler.ts'
 import { useConsumeAccessLink, useLogin } from '../../queries/useAuth.ts'
 
-type AccessLinkSearch = { token: string }
-
 // LE JETON EST UN MOT DE PASSE À USAGE UNIQUE : il arrive
-// ICI, dans l'URL du navigateur — c'est ainsi qu'on le transmet à la
+// ICI, dans le FRAGMENT de l'URL (`#…`, jamais envoyé à un serveur, donc
+// absent des journaux d'accès) — c'est ainsi que l'e-mail le transmet à la
 // personne — mais ne doit JAMAIS repartir dans l'URL d'un appel d'API : il
 // part dans le CORPS de `POST /auth/access-link/consume`
 // (`AuthApi.consumeAccessLink`), jamais dans une clé de cache de requête,
@@ -25,9 +28,6 @@ type AccessLinkSearch = { token: string }
 // VRAI arbre de routes »), pas seulement sur un arbre de test synthétique
 // qui ne pourrait rien prouver sur ce point précis.
 export const Route = createFileRoute('/auth/access-link')({
-  validateSearch: (search: Record<string, unknown>): AccessLinkSearch => ({
-    token: typeof search.token === 'string' ? search.token : '',
-  }),
   component: AccessLinkPage,
 })
 
@@ -38,13 +38,13 @@ export const Route = createFileRoute('/auth/access-link')({
 // `POST /auth/sign-in` avec l'adresse et le mot de passe que la personne
 // vient de saisir sur ce même formulaire.
 function AccessLinkPage() {
-  const { token } = Route.useSearch()
+  const token = useLocation({ select: (location) => location.hash })
   const navigate = useNavigate()
   const consume = useConsumeAccessLink()
   const { loginMutation, isPending: isLoginPending } = useLogin()
   const [loginFailed, setLoginFailed] = useState(false)
   // Cinquième canal : entre la consommation réussie et la
-  // connexion, `token` est purgé de la recherche d'URL (voir plus bas) — le
+  // connexion, `token` est purgé du fragment d'URL (voir plus bas) — le
   // composant se re-rend alors avec `token === ''`, ce qui retomberait sur
   // la branche « lien invalide » sans ce drapeau, pile pendant la fenêtre où
   // la connexion est en cours.
@@ -82,11 +82,7 @@ function AccessLinkPage() {
             // nouvelle : un retour arrière ne peut plus jamais retomber sur
             // l'URL porteuse du jeton, elle n'existe plus dans l'historique.
             // Fait AVANT d'appeler la connexion, comme demandé.
-            await navigate({
-              to: '/auth/access-link',
-              search: { token: '' },
-              replace: true,
-            })
+            await navigate({ to: '/auth/access-link', replace: true })
             loginMutation(
               { email: value.email, password: value.password },
               {
@@ -109,7 +105,7 @@ function AccessLinkPage() {
   if (!token && !consumedSuccessfully) {
     return (
       <Shell>
-        <Message text="Ce lien est invalide. Demandez-en un autre à votre établissement." />
+        <Message text="Ce lien est invalide. Demandez-en un autre à votre établissement, ou utilisez « Mot de passe oublié »." />
         <RetourConnexion />
       </Shell>
     )
@@ -138,7 +134,7 @@ function AccessLinkPage() {
     if (status === 410) {
       return (
         <Shell>
-          <Message text="Ce lien n'est plus valable. Demandez-en un autre à votre établissement." />
+          <Message text="Ce lien n'est plus valable. Demandez-en un autre à votre établissement, ou utilisez « Mot de passe oublié »." />
           <RetourConnexion />
         </Shell>
       )

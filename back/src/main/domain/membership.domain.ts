@@ -13,6 +13,7 @@ import type {
   MembershipUpdateDomain,
   ServiceMemberRowDomain,
 } from '../types/domain/membership.domain.interface'
+import type { EstablishmentRepositoryInterface } from '../types/infra/orm/repositories/establishment.repository.interface'
 import type {
   MembershipRepositoryInterface,
   ServiceAssignment,
@@ -80,10 +81,12 @@ class MembershipDomain implements MembershipDomainInterface {
   private readonly accessLinkDomain: AccessLinkDomainInterface
   private readonly postgresOrm: PostgresOrm
   private readonly soignantRepository: SoignantRepositoryInterface
+  private readonly establishmentRepository: EstablishmentRepositoryInterface
 
   constructor({
     membershipRepository,
     soignantRepository,
+    establishmentRepository,
     userRepository,
     tenantContext,
     appEventBus,
@@ -97,6 +100,18 @@ class MembershipDomain implements MembershipDomainInterface {
     this.accessLinkDomain = accessLinkDomain
     this.postgresOrm = postgresOrm
     this.soignantRepository = soignantRepository
+    this.establishmentRepository = establishmentRepository
+  }
+
+  private async sendInvitation(email: string, token: string): Promise<void> {
+    const { establishmentId } = this.tenantContext.establishmentScope()
+    const establishment =
+      await this.establishmentRepository.findByIdOrThrow(establishmentId)
+    this.accessLinkDomain.sendInvitation({
+      email,
+      token,
+      establishmentName: establishment.name,
+    })
   }
 
   // Sous le contexte de SERVICE (2026-09-29) : les membres du service courant, et le soignant
@@ -286,8 +301,8 @@ class MembershipDomain implements MembershipDomainInterface {
   //      que pour la seconde.
   //
   // LA SOUPAPE, sans laquelle cette garde serait une impasse : une personne réellement en poste
-  // dans deux établissements qui perd son mot de passe n'a aucun recours ici (il n'existe ni
-  // route de mot de passe oublié, ni changement de mot de passe sans l'ancien). Elle passe par
+  // dans deux établissements qui perd son mot de passe n'a aucun recours ici. Elle passe par
+  // « mot de passe oublié » (le lien part à SA propre adresse, MDS-35) ou par
   // `UserDomain.reissueAccessLink`, sous le préfixe super-admin — l'autorité qui traverse
   // légitimement les établissements. C'est elle qui rend ce refus tenable ; ne pas la retirer
   // sans rouvrir la question.
@@ -471,6 +486,7 @@ class MembershipDomain implements MembershipDomainInterface {
       })
 
     this.emit('member.accountCreated', membership.id)
+    await this.sendInvitation(membership.user.email, accessLink.token)
     return { member: membership, accessLink }
   }
 
@@ -504,6 +520,7 @@ class MembershipDomain implements MembershipDomainInterface {
       this.currentUserId(),
     )
     this.emit('member.accessLinkReissued', id)
+    await this.sendInvitation(membership.user.email, accessLink.token)
     return accessLink
   }
 
