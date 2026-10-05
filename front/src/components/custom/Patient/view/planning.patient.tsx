@@ -329,6 +329,7 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
             }
             unselectRef={calendarUnselectRef}
             onRangeChange={handleRangeChange}
+            saveDates={false}
             headerToolbar={{
               left: 'title',
               right: 'selectDateButton prev,next today',

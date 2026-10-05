@@ -152,6 +152,10 @@ interface CalendarProps {
   planningCycle?: PlanningCycle | null
   /** Notifie la plage réellement affichée, pour ne charger que celle-ci. */
   onRangeChange?: (range: { from: string; to: string }) => void
+  initialView?: string
+  onViewChange?: (view: string) => void
+  /** Faux : la période affichée n'écrase pas celle mémorisée du planning. */
+  saveDates?: boolean
 }
 
 function Calendar({
@@ -180,6 +184,9 @@ function Calendar({
   weekAnchorDate,
   planningCycle,
   onRangeChange,
+  initialView = 'timeGridWeek',
+  onViewChange,
+  saveDates = true,
 }: CalendarProps) {
   const anchorMonday = useMemo(
     () =>
@@ -197,7 +204,7 @@ function Calendar({
     }
   }, [unselectRef])
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
-  const [currentView, setCurrentView] = useState('timeGridWeek')
+  const [currentView, setCurrentView] = useState(initialView)
   const [currentViewStart, setCurrentViewStart] = useState<string>('')
 
   const slotLayout = useMemo(
@@ -371,7 +378,7 @@ function Calendar({
       <FullCalendar
         ref={calendarRef}
         plugins={[timeGridPlugin, listPlugin, interactionPlugin]}
-        initialView="timeGridWeek"
+        initialView={initialView}
         initialDate={
           initialDate || anchorMonday?.toISOString() || dayjs().toISOString()
         }
@@ -498,12 +505,15 @@ function Calendar({
         )}
         datesSet={(arg) => {
           setCurrentView(arg.view.type)
+          onViewChange?.(arg.view.type)
           setCurrentViewStart(arg.view.currentStart.toISOString())
-          usePlanningStore.getState().setPlanningDates({
-            currentDate: arg.startStr,
-            viewStart: arg.view.currentStart.toISOString(),
-            viewEnd: arg.view.currentEnd.toISOString(),
-          })
+          if (saveDates) {
+            usePlanningStore.getState().setPlanningDates({
+              currentDate: arg.startStr,
+              viewStart: arg.view.currentStart.toISOString(),
+              viewEnd: arg.view.currentEnd.toISOString(),
+            })
+          }
           // arg.start/end, pas currentStart/End : ils incluent les jours
           // débordant de la période et réellement rendus. Fin exclusive.
           onRangeChange?.({

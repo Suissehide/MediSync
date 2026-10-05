@@ -12,6 +12,7 @@ import {
   type PaginationState,
   type Row,
   type RowSelectionState,
+  type SortingState,
   useReactTable,
   type VisibilityState,
 } from '@tanstack/react-table'
@@ -101,6 +102,9 @@ export function ReactTable<TData extends { id: string }>({
     {},
   )
 
+  const [sorting, setSorting] = useState<SortingState>(
+    safeParse(localStorage.getItem(`sorting/${filterId}`), []),
+  )
   const [columnFilters, setColumnFilters] =
     useState<ColumnFiltersState>(initialColumnFilters)
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
@@ -116,6 +120,7 @@ export function ReactTable<TData extends { id: string }>({
     data: data,
     columns: columns,
     state: {
+      sorting,
       columnVisibility,
       rowSelection,
       columnFilters,
@@ -159,6 +164,7 @@ export function ReactTable<TData extends { id: string }>({
         ? setPaginationState
         : undefined,
     getPaginationRowModel: pagination ? getPaginationRowModel() : undefined,
+    onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
@@ -177,6 +183,10 @@ export function ReactTable<TData extends { id: string }>({
     debugHeaders: false,
     debugColumns: false,
   })
+
+  useEffect(() => {
+    localStorage.setItem(`sorting/${filterId}`, JSON.stringify(sorting))
+  }, [sorting, filterId])
 
   useEffect(() => {
     localStorage.setItem(`filters/${filterId}`, JSON.stringify(columnFilters))
