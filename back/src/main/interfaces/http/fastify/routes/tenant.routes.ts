@@ -11,6 +11,7 @@ import {
   isReadRoute,
 } from '../plugins/tenant.plugin'
 import { appointmentRouter } from './appointment'
+import { arsIndicatorRouter } from './arsIndicator'
 import { diagnosticEducatifRouter } from './diagnosticEducatif'
 import { diagnosticEducatifTemplateRouter } from './diagnosticEducatifTemplate'
 import { enrollmentIssueRouter } from './enrollmentIssue'
@@ -191,6 +192,9 @@ const tenantRoutes: FastifyPluginAsyncZod = async (fastify) => {
   await fastify.register(forbiddenWeekRouter, { prefix: '/forbidden-week' })
   await fastify.register(planningCycleRouter, { prefix: '/planning-cycle' })
   await fastify.register(serviceMembersRouter, { prefix: '/membres' })
+  await fastify.register(arsIndicatorRouter, {
+    prefix: '/indicateurs-ars',
+  })
 }
 
 export { tenantRoutes }
