@@ -78,13 +78,6 @@ export const NAVIGATION: Record<Scale, readonly NavItem[]> = {
       description: 'Semaines types et créneaux des parcours',
     },
     {
-      label: 'Thématiques',
-      to: '/e/$establishmentId/s/$serviceId/thematic',
-      permission: 'referentials:write',
-      group: 'Administration',
-      description: "Ateliers d'éducation et soignants habilités",
-    },
-    {
       label: 'Membres',
       to: '/e/$establishmentId/s/$serviceId/members',
       // La MEME permission que le `beforeLoad` de l'ecran (MDS-17) : un onglet garde autrement
@@ -92,6 +85,13 @@ export const NAVIGATION: Record<Scale, readonly NavItem[]> = {
       permission: 'service-members:manage',
       group: 'Administration',
       description: "L'équipe du service : inviter, changer un rôle, retirer",
+    },
+    {
+      label: 'Thématiques',
+      to: '/e/$establishmentId/s/$serviceId/thematic',
+      permission: 'referentials:write',
+      group: 'Administration',
+      description: "Ateliers d'éducation et soignants habilités",
     },
     // Propres a chaque service depuis le 2026-09-29 : un soignant est un metier du service, une
     // salle un lieu du service.
