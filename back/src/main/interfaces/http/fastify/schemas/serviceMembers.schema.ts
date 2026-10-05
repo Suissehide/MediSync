@@ -1,5 +1,7 @@
 import { z } from 'zod/v4'
 
+import { projectUserStatus } from './members.schema'
+
 // Membres d'un service, vus depuis ce service (2026-09-29) : chaque affectation, son role, et le
 // soignant (metier du service) que le membre y incarne. Voir `routes/serviceMembers.ts`.
 export const serviceMemberResponseSchema = z.object({
@@ -12,6 +14,7 @@ export const serviceMemberResponseSchema = z.object({
     firstName: z.string().nullable(),
     lastName: z.string().nullable(),
     deactivatedAt: z.coerce.date().nullable(),
+    invitationPending: z.boolean(),
   }),
 })
 export const serviceMembersResponseSchema = z.array(serviceMemberResponseSchema)
@@ -72,11 +75,12 @@ export const projectServiceMember = (row: {
       firstName: string | null
       lastName: string | null
       deactivatedAt: Date | null
+      lastLoginAt: Date | null
     }
   }
 }) => ({
   id: row.id,
   role: row.role,
   soignantId: row.soignantId,
-  user: row.establishmentMembership.user,
+  user: projectUserStatus(row.establishmentMembership.user),
 })

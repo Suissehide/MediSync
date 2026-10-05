@@ -570,7 +570,7 @@ describe('routes services', () => {
 
       const res = await testApp.app.inject({
         method: 'POST',
-        url: adminUrl(etab.id, '/members'),
+        url: adminUrl(etab.id, '/members/account'),
         cookies,
         payload: {
           email: cible.email,
@@ -580,7 +580,7 @@ describe('routes services', () => {
       })
 
       expect(res.statusCode).toBe(201)
-      expect(res.json().serviceMemberships).toEqual([
+      expect(res.json().member.serviceMemberships).toEqual([
         { serviceId: svc.id, role: 'INTERVENANT' },
       ])
     })

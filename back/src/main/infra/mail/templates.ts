@@ -69,3 +69,23 @@ export const passwordResetMail = ({
     ),
   }
 }
+
+export const memberAddedMail = ({
+  to,
+  link,
+  establishmentName,
+}: {
+  to: string
+  link: string
+  establishmentName: string
+}): Mail => {
+  const intro = `Vous avez désormais accès à ${establishmentName} sur MediSync.`
+  const how =
+    'Connectez-vous avec votre adresse et votre mot de passe habituels.'
+  return {
+    to,
+    subject: 'Nouvel accès sur MediSync',
+    text: `${intro}\n\n${how}\n${link}`,
+    html: layout([escapeHtml(intro), escapeHtml(how)], link, 'Se connecter'),
+  }
+}

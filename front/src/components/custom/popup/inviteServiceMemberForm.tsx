@@ -29,8 +29,8 @@ const SERVICE_ROLE_OPTIONS = toSelectOptions(SERVICE_ROLE_LABEL)
 //
 // DEUX ISSUES, ET LA POPUP LES DISTINGUE. Une adresse sans compte ici recoit un e-mail
 // d'invitation (MDS-35) et son LIEN DE PREMIERE CONNEXION s'affiche ici UNE SEULE FOIS, pour la
-// remise en main propre (c'est un mot de passe a usage unique) ; un compte deja rattache a
-// l'etablissement n'en recoit aucun — il a deja le sien. Rien d'autre n'est rendu par la route, a
+// remise en main propre (c'est un mot de passe a usage unique) ; un compte deja rattache ici ou
+// en poste dans un autre etablissement n'en recoit aucun — il a deja le sien. Rien d'autre n'est rendu par la route, a
 // dessein : le nom stocke et l'identifiant d'un compte preexistant seraient des oracles
 // d'existence (voir `inviteToService`, back).
 function InviteServiceMemberForm() {
@@ -103,7 +103,7 @@ function InviteServiceMemberForm() {
                 </div>
               ) : (
                 <p className="text-sm text-text-light">
-                  Ce compte existait déjà dans l'établissement : il accède au
+                  Cette personne a déjà un compte MediSync : elle accède au
                   service avec son mot de passe habituel, il n'y a aucun lien à
                   transmettre.
                 </p>
@@ -144,9 +144,9 @@ function InviteServiceMemberForm() {
                 </form.AppField>
 
                 <p className="text-xs text-text-light">
-                  Si cette adresse a déjà un compte dans l'établissement, elle
-                  est simplement affectée à ce service. Sinon, un compte est
-                  créé et un lien de première connexion s'affiche ici.
+                  Si cette adresse a déjà un compte MediSync, elle est
+                  simplement affectée à ce service. Sinon, un compte est créé et
+                  un lien de première connexion s'affiche ici.
                 </p>
 
                 {/* Prénom et nom ne servent qu'au compte CRÉÉ : un compte existant garde

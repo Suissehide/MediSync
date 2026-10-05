@@ -2,8 +2,6 @@ import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod/v4'
 
 import {
-  type AddMemberBody,
-  addMemberSchema,
   type CreateMemberAccountBody,
   createMemberAccountResponseSchema,
   createMemberAccountSchema,
@@ -13,6 +11,7 @@ import {
   memberResponseSchema,
   membersResponseSchema,
   projectCreatedMember,
+  projectMember,
   type UpdateMemberBody,
   updateMemberSchema,
 } from '../schemas/members.schema'
@@ -30,23 +29,7 @@ const membersRouter: FastifyPluginAsync = (fastify) => {
       schema: { response: { 200: membersResponseSchema } },
       config: { permission: 'members:manage' },
     },
-    () => membershipDomain.findAll(),
-  )
-
-  fastify.post<{ Body: AddMemberBody }>(
-    '/',
-    {
-      schema: {
-        body: addMemberSchema,
-        response: { 201: memberResponseSchema },
-      },
-      config: { permission: 'members:manage' },
-    },
-    async (request, reply) => {
-      const member = await membershipDomain.addByEmail(request.body)
-      reply.code(201)
-      return member
-    },
+    async () => (await membershipDomain.findAll()).map(projectMember),
   )
 
   // Chemin réel : `POST /e/:establishmentId/admin/members/account` — la spec
@@ -93,8 +76,13 @@ const membersRouter: FastifyPluginAsync = (fastify) => {
       },
       config: { permission: 'members:manage' },
     },
-    (request) =>
-      membershipDomain.update(request.params.membershipId, request.body),
+    async (request) =>
+      projectMember(
+        await membershipDomain.update(
+          request.params.membershipId,
+          request.body,
+        ),
+      ),
   )
 
   fastify.delete<{ Params: MemberParams }>(
@@ -142,8 +130,13 @@ const membersRouter: FastifyPluginAsync = (fastify) => {
       },
       config: { permission: 'members:manage' },
     },
-    (request) =>
-      membershipDomain.setDeactivated(request.params.membershipId, true),
+    async (request) =>
+      projectMember(
+        await membershipDomain.setDeactivated(
+          request.params.membershipId,
+          true,
+        ),
+      ),
   )
 
   fastify.post<{ Params: MemberParams }>(
@@ -155,8 +148,13 @@ const membersRouter: FastifyPluginAsync = (fastify) => {
       },
       config: { permission: 'members:manage' },
     },
-    (request) =>
-      membershipDomain.setDeactivated(request.params.membershipId, false),
+    async (request) =>
+      projectMember(
+        await membershipDomain.setDeactivated(
+          request.params.membershipId,
+          false,
+        ),
+      ),
   )
 
   return Promise.resolve()

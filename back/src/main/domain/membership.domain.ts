@@ -1,6 +1,7 @@
 import Boom from '@hapi/boom'
 
 import type { EstablishmentRole, ServiceRole } from '../../generated/enums'
+import { memberAddedMail } from '../infra/mail/templates'
 import type { PostgresOrm } from '../infra/orm/postgres-client'
 import type { IocContainer } from '../types/application/ioc'
 import type { AccessLinkDomainInterface } from '../types/domain/accessLink.domain.interface'
@@ -15,6 +16,7 @@ import type {
   ServiceInviteResult,
   ServiceMemberRowDomain,
 } from '../types/domain/membership.domain.interface'
+import type { MailerInterface } from '../types/infra/mail/mailer.interface'
 import type { EstablishmentRepositoryInterface } from '../types/infra/orm/repositories/establishment.repository.interface'
 import type {
   MembershipRepositoryInterface,
@@ -26,20 +28,10 @@ import type { TenantContextInterface } from '../types/utils/tenant-context'
 import type { AppEventBus } from '../utils/app-event-bus'
 import { hashPassword, randomToken } from '../utils/hash'
 
-// QUATRE refus, un seul message : adresse inconnue, adresse déjà membre d'ici, compte
-// super-admin, compte rattaché à un AUTRE établissement.
-//
-// CE QUE CE MESSAGE ACHÈTE, ET CE QU'IL N'ACHÈTE PAS. « Sinon un administrateur pourrait
-// énumérer les adresses qui ont un compte » est vrai pour `addByEmail` (une adresse inconnue y
-// reçoit le MÊME 400, donc les quatre refus y sont réellement indiscernables), FAUX pour
-// `createAccount`, où une adresse inconnue reçoit 201 — le seul fait d'y être refusé annonce donc
-// « cette adresse a un compte ». Mesuré, pas supposé : voir « constat : le couple de refus des
-// deux routes d ajout identifie la nature du compte » (members.test.ts).
-//
-// Ce que le message partagé achète réellement : le MOTIF du refus reste caché. Un 400 sur
-// `createAccount` ne dit pas « super-admin » plutôt que « rattaché ailleurs » — il faut croiser
-// avec `POST /members` pour les séparer. Ce que l'appelant apprend de toute façon, et qu'on
-// n'essaie plus de nier ici : qu'il y a un compte.
+// Le refus opaque de l'invitation : compte super-admin, ou compte désactivé en poste ailleurs.
+// Il cache le MOTIF, pas l'existence d'un compte — une adresse inconnue reçoit 201. Mesuré, pas
+// supposé : voir « constat : la reponse de l invitation identifie la nature du compte »
+// (members.test.ts).
 const UNADDABLE_EMAIL = 'This e-mail address cannot be added as a member'
 
 // Message lu tel quel par `front/src/api/members.api.ts`, qui le fait
@@ -91,6 +83,8 @@ class MembershipDomain implements MembershipDomainInterface {
   private readonly postgresOrm: PostgresOrm
   private readonly soignantRepository: SoignantRepositoryInterface
   private readonly establishmentRepository: EstablishmentRepositoryInterface
+  private readonly mailer: MailerInterface
+  private readonly frontUrl: string
 
   constructor({
     membershipRepository,
@@ -101,6 +95,8 @@ class MembershipDomain implements MembershipDomainInterface {
     appEventBus,
     accessLinkDomain,
     postgresOrm,
+    mailer,
+    config,
   }: IocContainer) {
     this.membershipRepository = membershipRepository
     this.userRepository = userRepository
@@ -110,16 +106,22 @@ class MembershipDomain implements MembershipDomainInterface {
     this.postgresOrm = postgresOrm
     this.soignantRepository = soignantRepository
     this.establishmentRepository = establishmentRepository
+    this.mailer = mailer
+    this.frontUrl = config.frontUrl
   }
 
-  private async sendInvitation(email: string, token: string): Promise<void> {
+  private async establishmentName(): Promise<string> {
     const { establishmentId } = this.tenantContext.establishmentScope()
     const establishment =
       await this.establishmentRepository.findByIdOrThrow(establishmentId)
+    return establishment.name
+  }
+
+  private async sendInvitation(email: string, token: string): Promise<void> {
     this.accessLinkDomain.sendInvitation({
       email,
       token,
-      establishmentName: establishment.name,
+      establishmentName: await this.establishmentName(),
     })
   }
 
@@ -201,7 +203,10 @@ class MembershipDomain implements MembershipDomainInterface {
       role: 'MEMBER',
       services,
     })
-    this.emit('serviceMember.accountCreated', member.id)
+    this.emit(
+      accessLink ? 'serviceMember.accountCreated' : 'serviceMember.added',
+      member.id,
+    )
     return { accessLink }
   }
 
@@ -265,37 +270,6 @@ class MembershipDomain implements MembershipDomainInterface {
         throw Boom.notFound(`Service ${service.serviceId} not found`)
       }
     }
-  }
-
-  async addByEmail({
-    email,
-    role,
-    services,
-  }: MembershipAddByEmailDomain): Promise<MembershipRowDomain> {
-    const user = await this.userRepository.findByEmail(email).catch(() => {
-      throw Boom.badRequest(UNADDABLE_EMAIL)
-    })
-    if (await this.membershipRepository.findByUserID(user.id)) {
-      throw Boom.badRequest(UNADDABLE_EMAIL)
-    }
-    // PREMIER MAILLON de la chaîne : rattacher un
-    // super-admin à son établissement lui donnait ensuite une appartenance UNIQUE, donc une
-    // réémission que l'ancienne garde laissait passer. Cette méthode n'émet aucun jeton — elle
-    // n'appelle donc pas `assertIssuableToken` —, mais elle prépare le terrain de celle qui en
-    // émet. Même message que les deux refus ci-dessus : indiscernable, un test l'exige.
-    // Le rattachement d'une personne qui exerce DÉJÀ ailleurs reste permis, lui : sans jeton,
-    // il ne déplace aucun pouvoir (elle garde son propre mot de passe).
-    if (user.isSuperAdmin) {
-      throw Boom.badRequest(UNADDABLE_EMAIL)
-    }
-    await this.assertReferences(services)
-    const membership = await this.membershipRepository.create({
-      userId: user.id,
-      role,
-      services,
-    })
-    this.emit('member.added', membership.id)
-    return membership
   }
 
   // Un établissement doit garder au moins un administrateur actif. Un compte
@@ -397,7 +371,7 @@ class MembershipDomain implements MembershipDomainInterface {
   //
   //   1. UN COMPTE SUPER-ADMIN NE SE DÉPANNE JAMAIS DEPUIS UN ÉTABLISSEMENT.
   //      Rien, ailleurs, ne lisait `isSuperAdmin` : un simple ADMIN prenait le compte
-  //      super-admin en un appel, ou en trois via `addByEmail` puis la réémission. Message
+  //      super-admin en un appel, ou en trois via un rattachement puis la réémission. Message
   //      OPAQUE (`UNADDABLE_EMAIL`) plutôt qu'un motif propre : un refus qui dirait « cette
   //      adresse est un super-admin » ferait de la route un détecteur de super-admins,
   //      utilisable sur n'importe quelle adresse. CONSÉQUENCE ASSUMÉE : un super-admin qui
@@ -530,7 +504,7 @@ class MembershipDomain implements MembershipDomainInterface {
   }: MembershipCreateAccountDomain): Promise<MembershipCreateAccountResult> {
     // Une LECTURE d'abord, jamais un `upsert` : un compte déjà connu ne doit être écrasé ni
     // dans son nom ni dans son mot de passe. `findByEmail` lève
-    // plutôt que de rendre `null` ; absorbé ici comme dans `addByEmail` ci-dessus.
+    // plutôt que de rendre `null` ; absorbé ici.
     const existing = await this.userRepository
       .findByEmail(email)
       .catch(() => null)
@@ -540,6 +514,11 @@ class MembershipDomain implements MembershipDomainInterface {
       // corriger, et il ne lui apprend rien (`GET /members` le lui montre déjà).
       if (await this.membershipRepository.findByUserID(existing.id)) {
         throw Boom.conflict(ALREADY_MEMBER)
+      }
+      // Déjà en poste ailleurs : rattaché SANS jeton (un lien réinitialiserait un mot de passe
+      // qui sert aussi là-bas, voir `assertIssuableToken`) ; la personne garde le sien.
+      if (await this.membershipRepository.estRattacheAilleurs(existing.id)) {
+        return await this.attachExistingAccount(existing, role, services)
       }
       // AVANT le refus « désactivé » ci-dessous, à dessein.
       // Un compte désactivé rattaché à un AUTRE établissement reçoit ainsi le refus opaque,
@@ -609,11 +588,46 @@ class MembershipDomain implements MembershipDomainInterface {
     return { member: membership, accessLink }
   }
 
+  // Super-admin et compte désactivé : le refus opaque, comme une adresse qu'on ne peut pas
+  // ajouter — jamais un message qui dirait l'état d'un compte d'un autre établissement.
+  private async attachExistingAccount(
+    user: {
+      id: string
+      email: string
+      isSuperAdmin: boolean
+      deactivatedAt: Date | null
+    },
+    role: MembershipCreateAccountDomain['role'],
+    services: ServiceAssignment[],
+  ): Promise<MembershipCreateAccountResult> {
+    if (user.isSuperAdmin || user.deactivatedAt !== null) {
+      throw Boom.badRequest(UNADDABLE_EMAIL)
+    }
+    await this.assertReferences(services)
+    const member = await this.membershipRepository.create({
+      userId: user.id,
+      role,
+      services,
+    })
+    this.mailer.send(
+      'member-added',
+      memberAddedMail({
+        to: user.email,
+        link: `${this.frontUrl}/auth`,
+        establishmentName: await this.establishmentName(),
+      }),
+    )
+    return { member, accessLink: null }
+  }
+
   async createAccount(
     params: MembershipCreateAccountDomain,
   ): Promise<MembershipCreateAccountResult> {
     const result = await this.createAccountCore(params)
-    this.emit('member.accountCreated', result.member.id)
+    this.emit(
+      result.accessLink ? 'member.accountCreated' : 'member.added',
+      result.member.id,
+    )
     return result
   }
 

@@ -63,13 +63,19 @@ export function Etiquette({
   )
 }
 
-// Statut d'un compte ou d'un etablissement : actif, ou desactive a une date.
+// Statut d'un compte ou d'un etablissement : actif, desactive, ou invite sans s'etre encore connecte.
 export const EtiquetteStatut = ({
   deactivatedAt,
+  invitationPending = false,
 }: {
   deactivatedAt: string | null
-}) => (
-  <Etiquette ton={deactivatedAt !== null ? 'neutre' : 'succes'}>
-    {deactivatedAt !== null ? 'Désactivé' : 'Actif'}
-  </Etiquette>
-)
+  invitationPending?: boolean
+}) => {
+  if (deactivatedAt !== null) {
+    return <Etiquette ton="neutre">Désactivé</Etiquette>
+  }
+  if (invitationPending) {
+    return <Etiquette ton="alerte">Invitation en attente</Etiquette>
+  }
+  return <Etiquette ton="succes">Actif</Etiquette>
+}

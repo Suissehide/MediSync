@@ -70,7 +70,10 @@ export const getServiceMemberColumns = ({
     id: 'statut',
     header: 'Statut',
     cell: ({ row }) => (
-      <EtiquetteStatut deactivatedAt={row.original.user.deactivatedAt} />
+      <EtiquetteStatut
+        deactivatedAt={row.original.user.deactivatedAt}
+        invitationPending={row.original.user.invitationPending}
+      />
     ),
   }),
   columnHelper.display({
