@@ -214,3 +214,7 @@ export const PLANNING_CYCLE = {
   SAVE: 'save_planning_cycle',
   RESET: 'reset_planning_cycle',
 }
+
+export const ARS_INDICATOR = {
+  GET: 'get_ars_indicators',
+}

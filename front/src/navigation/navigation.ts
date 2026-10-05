@@ -116,6 +116,13 @@ export const NAVIGATION: Record<Scale, readonly NavItem[]> = {
       group: 'Administration',
       description: 'Modèles de bilan du service',
     },
+    {
+      label: 'Indicateurs ARS',
+      to: '/e/$establishmentId/s/$serviceId/indicateurs-ars',
+      permission: 'stats:read',
+      group: 'Administration',
+      description: "Chiffres agrégés de l'enquête annuelle",
+    },
   ],
   establishment: [
     {

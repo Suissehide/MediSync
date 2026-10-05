@@ -45,6 +45,7 @@ import { Route as AuthenticatedEEstablishmentIdAdminGrantsImport } from './route
 import { Route as AuthenticatedEEstablishmentIdAdminActivityLogImport } from './routes/_authenticated/e/$establishmentId/admin/activity-log'
 import { Route as AuthenticatedEEstablishmentIdSServiceIdIndexImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/index'
 import { Route as AuthenticatedEEstablishmentIdSServiceIdSuiviImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/suivi'
+import { Route as AuthenticatedEEstablishmentIdSServiceIdIndicateursArsImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/indicateurs-ars'
 import { Route as AuthenticatedEEstablishmentIdSServiceIdDashboardImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/dashboard'
 import { Route as AuthenticatedEEstablishmentIdSServiceIdAgendaImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/agenda'
 import { Route as AuthenticatedEEstablishmentIdSServiceIdActivityLogImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/activity-log'
@@ -283,6 +284,13 @@ const AuthenticatedEEstablishmentIdSServiceIdSuiviRoute =
   AuthenticatedEEstablishmentIdSServiceIdSuiviImport.update({
     id: '/suivi',
     path: '/suivi',
+    getParentRoute: () => AuthenticatedEEstablishmentIdSServiceIdRoute,
+  } as any)
+
+const AuthenticatedEEstablishmentIdSServiceIdIndicateursArsRoute =
+  AuthenticatedEEstablishmentIdSServiceIdIndicateursArsImport.update({
+    id: '/indicateurs-ars',
+    path: '/indicateurs-ars',
     getParentRoute: () => AuthenticatedEEstablishmentIdSServiceIdRoute,
   } as any)
 
@@ -635,6 +643,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEEstablishmentIdSServiceIdDashboardImport
       parentRoute: typeof AuthenticatedEEstablishmentIdSServiceIdImport
     }
+    '/_authenticated/e/$establishmentId/s/$serviceId/indicateurs-ars': {
+      id: '/_authenticated/e/$establishmentId/s/$serviceId/indicateurs-ars'
+      path: '/indicateurs-ars'
+      fullPath: '/e/$establishmentId/s/$serviceId/indicateurs-ars'
+      preLoaderRoute: typeof AuthenticatedEEstablishmentIdSServiceIdIndicateursArsImport
+      parentRoute: typeof AuthenticatedEEstablishmentIdSServiceIdImport
+    }
     '/_authenticated/e/$establishmentId/s/$serviceId/suivi': {
       id: '/_authenticated/e/$establishmentId/s/$serviceId/suivi'
       path: '/suivi'
@@ -801,6 +816,7 @@ interface AuthenticatedEEstablishmentIdSServiceIdRouteChildren {
   AuthenticatedEEstablishmentIdSServiceIdActivityLogRoute: typeof AuthenticatedEEstablishmentIdSServiceIdActivityLogRoute
   AuthenticatedEEstablishmentIdSServiceIdAgendaRoute: typeof AuthenticatedEEstablishmentIdSServiceIdAgendaRoute
   AuthenticatedEEstablishmentIdSServiceIdDashboardRoute: typeof AuthenticatedEEstablishmentIdSServiceIdDashboardRoute
+  AuthenticatedEEstablishmentIdSServiceIdIndicateursArsRoute: typeof AuthenticatedEEstablishmentIdSServiceIdIndicateursArsRoute
   AuthenticatedEEstablishmentIdSServiceIdSuiviRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSuiviRoute
   AuthenticatedEEstablishmentIdSServiceIdIndexRoute: typeof AuthenticatedEEstablishmentIdSServiceIdIndexRoute
   AuthenticatedEEstablishmentIdSServiceIdPatientIndexRoute: typeof AuthenticatedEEstablishmentIdSServiceIdPatientIndexRoute
@@ -818,6 +834,8 @@ const AuthenticatedEEstablishmentIdSServiceIdRouteChildren: AuthenticatedEEstabl
       AuthenticatedEEstablishmentIdSServiceIdAgendaRoute,
     AuthenticatedEEstablishmentIdSServiceIdDashboardRoute:
       AuthenticatedEEstablishmentIdSServiceIdDashboardRoute,
+    AuthenticatedEEstablishmentIdSServiceIdIndicateursArsRoute:
+      AuthenticatedEEstablishmentIdSServiceIdIndicateursArsRoute,
     AuthenticatedEEstablishmentIdSServiceIdSuiviRoute:
       AuthenticatedEEstablishmentIdSServiceIdSuiviRoute,
     AuthenticatedEEstablishmentIdSServiceIdIndexRoute:
@@ -920,6 +938,7 @@ export interface FileRoutesByFullPath {
   '/e/$establishmentId/s/$serviceId/activity-log': typeof AuthenticatedEEstablishmentIdSServiceIdActivityLogRoute
   '/e/$establishmentId/s/$serviceId/agenda': typeof AuthenticatedEEstablishmentIdSServiceIdAgendaRoute
   '/e/$establishmentId/s/$serviceId/dashboard': typeof AuthenticatedEEstablishmentIdSServiceIdDashboardRoute
+  '/e/$establishmentId/s/$serviceId/indicateurs-ars': typeof AuthenticatedEEstablishmentIdSServiceIdIndicateursArsRoute
   '/e/$establishmentId/s/$serviceId/suivi': typeof AuthenticatedEEstablishmentIdSServiceIdSuiviRoute
   '/e/$establishmentId/s/$serviceId/': typeof AuthenticatedEEstablishmentIdSServiceIdIndexRoute
   '/e/$establishmentId/s/$serviceId/diagnostic-template': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsDiagnosticTemplateRoute
@@ -966,6 +985,7 @@ export interface FileRoutesByTo {
   '/e/$establishmentId/s/$serviceId/activity-log': typeof AuthenticatedEEstablishmentIdSServiceIdActivityLogRoute
   '/e/$establishmentId/s/$serviceId/agenda': typeof AuthenticatedEEstablishmentIdSServiceIdAgendaRoute
   '/e/$establishmentId/s/$serviceId/dashboard': typeof AuthenticatedEEstablishmentIdSServiceIdDashboardRoute
+  '/e/$establishmentId/s/$serviceId/indicateurs-ars': typeof AuthenticatedEEstablishmentIdSServiceIdIndicateursArsRoute
   '/e/$establishmentId/s/$serviceId/suivi': typeof AuthenticatedEEstablishmentIdSServiceIdSuiviRoute
   '/e/$establishmentId/s/$serviceId/diagnostic-template': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsDiagnosticTemplateRoute
   '/e/$establishmentId/s/$serviceId/location': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsLocationRoute
@@ -1016,6 +1036,7 @@ export interface FileRoutesById {
   '/_authenticated/e/$establishmentId/s/$serviceId/activity-log': typeof AuthenticatedEEstablishmentIdSServiceIdActivityLogRoute
   '/_authenticated/e/$establishmentId/s/$serviceId/agenda': typeof AuthenticatedEEstablishmentIdSServiceIdAgendaRoute
   '/_authenticated/e/$establishmentId/s/$serviceId/dashboard': typeof AuthenticatedEEstablishmentIdSServiceIdDashboardRoute
+  '/_authenticated/e/$establishmentId/s/$serviceId/indicateurs-ars': typeof AuthenticatedEEstablishmentIdSServiceIdIndicateursArsRoute
   '/_authenticated/e/$establishmentId/s/$serviceId/suivi': typeof AuthenticatedEEstablishmentIdSServiceIdSuiviRoute
   '/_authenticated/e/$establishmentId/s/$serviceId/': typeof AuthenticatedEEstablishmentIdSServiceIdIndexRoute
   '/_authenticated/e/$establishmentId/s/$serviceId/_settings/diagnostic-template': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsDiagnosticTemplateRoute
@@ -1067,6 +1088,7 @@ export interface FileRouteTypes {
     | '/e/$establishmentId/s/$serviceId/activity-log'
     | '/e/$establishmentId/s/$serviceId/agenda'
     | '/e/$establishmentId/s/$serviceId/dashboard'
+    | '/e/$establishmentId/s/$serviceId/indicateurs-ars'
     | '/e/$establishmentId/s/$serviceId/suivi'
     | '/e/$establishmentId/s/$serviceId/'
     | '/e/$establishmentId/s/$serviceId/diagnostic-template'
@@ -1112,6 +1134,7 @@ export interface FileRouteTypes {
     | '/e/$establishmentId/s/$serviceId/activity-log'
     | '/e/$establishmentId/s/$serviceId/agenda'
     | '/e/$establishmentId/s/$serviceId/dashboard'
+    | '/e/$establishmentId/s/$serviceId/indicateurs-ars'
     | '/e/$establishmentId/s/$serviceId/suivi'
     | '/e/$establishmentId/s/$serviceId/diagnostic-template'
     | '/e/$establishmentId/s/$serviceId/location'
@@ -1160,6 +1183,7 @@ export interface FileRouteTypes {
     | '/_authenticated/e/$establishmentId/s/$serviceId/activity-log'
     | '/_authenticated/e/$establishmentId/s/$serviceId/agenda'
     | '/_authenticated/e/$establishmentId/s/$serviceId/dashboard'
+    | '/_authenticated/e/$establishmentId/s/$serviceId/indicateurs-ars'
     | '/_authenticated/e/$establishmentId/s/$serviceId/suivi'
     | '/_authenticated/e/$establishmentId/s/$serviceId/'
     | '/_authenticated/e/$establishmentId/s/$serviceId/_settings/diagnostic-template'
@@ -1363,6 +1387,7 @@ export const routeTree = rootRoute
         "/_authenticated/e/$establishmentId/s/$serviceId/activity-log",
         "/_authenticated/e/$establishmentId/s/$serviceId/agenda",
         "/_authenticated/e/$establishmentId/s/$serviceId/dashboard",
+        "/_authenticated/e/$establishmentId/s/$serviceId/indicateurs-ars",
         "/_authenticated/e/$establishmentId/s/$serviceId/suivi",
         "/_authenticated/e/$establishmentId/s/$serviceId/",
         "/_authenticated/e/$establishmentId/s/$serviceId/patient/",
@@ -1396,6 +1421,10 @@ export const routeTree = rootRoute
     },
     "/_authenticated/e/$establishmentId/s/$serviceId/dashboard": {
       "filePath": "_authenticated/e/$establishmentId/s/$serviceId/dashboard.tsx",
+      "parent": "/_authenticated/e/$establishmentId/s/$serviceId"
+    },
+    "/_authenticated/e/$establishmentId/s/$serviceId/indicateurs-ars": {
+      "filePath": "_authenticated/e/$establishmentId/s/$serviceId/indicateurs-ars.tsx",
       "parent": "/_authenticated/e/$establishmentId/s/$serviceId"
     },
     "/_authenticated/e/$establishmentId/s/$serviceId/suivi": {
