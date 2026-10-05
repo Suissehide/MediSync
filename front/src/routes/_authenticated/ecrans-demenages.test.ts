@@ -1,14 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
 import type { User } from '@/types/auth.ts'
-import { Route as ancienJournalDeService } from './e/$establishmentId/s/$serviceId/activity-log.tsx'
 import { Route as ancienJournal } from './settings/activity-log.tsx'
 
-// Navigation par echelle (2026-09-28) : le journal d'activite a quitte l'echelle du service. Ses
-// anciennes adresses — sous un service, et plus anciennes encore, sans tenant — menent a
-// l'administration de l'etablissement, parametres de recherche compris (`search: true`, que
-// TanStack Router ne pose pas de lui-meme : voir decisions-etape-2.md). Soignants et Salles, eux,
-// sont revenus dans le service le 2026-09-29 : leurs adresses sont de nouveau des ecrans.
+// Navigation par echelle (2026-09-28) : l'ancienne adresse sans tenant du journal d'activite mene
+// a l'administration de l'etablissement, parametres de recherche compris (`search: true`, que
+// TanStack Router ne pose pas de lui-meme : voir decisions-etape-2.md). L'adresse de service est
+// redevenue un ecran le 2026-10-05 : le journal du chef de service.
 
 type AvecBeforeLoad = { options: { beforeLoad?: unknown } }
 
@@ -38,30 +36,6 @@ const admin: User = {
     { id: 'e2', name: 'Clinique', role: 'ADMIN', services: [] },
   ],
 }
-
-describe('anciennes adresses de service des ecrans demenages', () => {
-  it.each([
-    [
-      'activity-log',
-      ancienJournalDeService,
-      '/e/$establishmentId/admin/activity-log',
-    ],
-  ])(
-    '%s mene a l administration du meme etablissement, recherche comprise',
-    (_, route, cible) => {
-      expect(() =>
-        lancer(route, { params: { establishmentId: 'e9', serviceId: 's9' } }),
-      ).toThrow(
-        expect.objectContaining({
-          isRedirect: true,
-          to: cible,
-          params: { establishmentId: 'e9' },
-          search: true,
-        }),
-      )
-    },
-  )
-})
 
 describe('anciennes adresses sans tenant des ecrans demenages', () => {
   it.each([

@@ -75,14 +75,12 @@ class ActivityLogRepository implements ActivityLogRepositoryInterface {
   // l'etablissement »), prerogative de l'administrateur. `filters.serviceId` le resserre a un
   // service ; `establishmentScope()` garantit qu'un service d'un autre etablissement ne rend rien.
   //
-  // Sous un contexte de SERVICE : le service courant plus les lignes sans service, comme
-  // avant le demenagement. Aucune route ne l'emprunte plus ; la branche reste pour que le depot
-  // ne s'ouvre jamais a tout l'etablissement depuis un prefixe de service si une route y
-  // revenait. `filters` y est ignore.
+  // Sous un contexte de SERVICE (journal du chef de service) : le seul service courant, sans les
+  // lignes d'administration de l'etablissement. `filters` y est ignore.
   private scopeFilter(filters: ActivityLogScopeFilters = {}) {
     const { serviceId } = this.tenantContext.current()
     if (serviceId !== null) {
-      return { OR: [{ serviceId }, { serviceId: null }] }
+      return { serviceId }
     }
     return filters.serviceId ? { serviceId: filters.serviceId } : {}
   }

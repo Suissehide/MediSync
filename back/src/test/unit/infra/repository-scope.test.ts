@@ -228,13 +228,10 @@ describe('scoping des repositories d etablissement', () => {
     })
   })
 
-  // Le service courant PLUS les entrees sans service : les operations de
-  // gestion des membres se font dans le contexte d'administration, qui n'a
-  // pas de service, et seraient invisibles sinon. On n'ouvre pas pour autant
-  // l'activite des autres services.
-  const serviceOrNull = { OR: [{ serviceId: 's1' }, { serviceId: null }] }
+  // Le seul service courant : ni les autres services, ni l'administration de l'etablissement.
+  const serviceSeul = { serviceId: 's1' }
 
-  it('ActivityLogRepository.findMany filtre par etablissement, service courant ou sans service', async () => {
+  it('ActivityLogRepository.findMany filtre par etablissement et service courant', async () => {
     const { prisma, calls } = buildFakePrisma()
     const ctx = new TenantContext()
     const repo = new ActivityLogRepository(buildContainer(prisma, ctx))
@@ -244,12 +241,12 @@ describe('scoping des repositories d etablissement', () => {
     expect(calls[0]).toMatchObject({
       model: 'activityLog',
       op: 'findMany',
-      args: { where: { establishmentId: 'e1', ...serviceOrNull } },
+      args: { where: { establishmentId: 'e1', ...serviceSeul } },
     })
     expect(calls[1]).toMatchObject({
       model: 'activityLog',
       op: 'count',
-      args: { where: { establishmentId: 'e1', ...serviceOrNull } },
+      args: { where: { establishmentId: 'e1', ...serviceSeul } },
     })
   })
 
@@ -270,7 +267,7 @@ describe('scoping des repositories d etablissement', () => {
       args: {
         where: {
           establishmentId: 'e1',
-          ...serviceOrNull,
+          ...serviceSeul,
           createdAt: { lt: date },
         },
       },

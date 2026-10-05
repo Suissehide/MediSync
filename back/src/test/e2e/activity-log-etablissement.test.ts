@@ -108,19 +108,41 @@ describe('journal d activite a l echelle de l etablissement', () => {
     expect(entites(res.json())).toEqual([])
   })
 
-  it('n est plus servi sous le prefixe de service', async () => {
+  it('montre au chef de service son seul service, sans l administration ni les autres services', async () => {
     const { E, A } = await scenario()
     await createUser({
-      email: 'admin-coord@test.fr',
+      email: 'coord-a@test.fr',
       memberships: [
         {
           establishmentId: E.id,
-          role: 'ADMIN',
           services: [{ serviceId: A.id, role: 'COORDINATEUR' }],
         },
       ],
     })
-    const cookies = await signIn(t.app, 'admin-coord@test.fr')
+    const cookies = await signIn(t.app, 'coord-a@test.fr')
+
+    const res = await t.app.inject({
+      method: 'GET',
+      url: tenantUrl(E.id, A.id, '/activity-log?serviceId=ignore'),
+      cookies,
+    })
+
+    expect(res.statusCode).toBe(200)
+    expect(entites(res.json())).toEqual(['dans-A'])
+  })
+
+  it('reste ferme sous le prefixe de service a un intervenant', async () => {
+    const { E, A } = await scenario()
+    await createUser({
+      email: 'interv@test.fr',
+      memberships: [
+        {
+          establishmentId: E.id,
+          services: [{ serviceId: A.id, role: 'INTERVENANT' }],
+        },
+      ],
+    })
+    const cookies = await signIn(t.app, 'interv@test.fr')
 
     const res = await t.app.inject({
       method: 'GET',
@@ -128,7 +150,7 @@ describe('journal d activite a l echelle de l etablissement', () => {
       cookies,
     })
 
-    expect(res.statusCode).toBe(404)
+    expect(res.statusCode).toBe(403)
   })
 
   it('reste ferme a un coordinateur, qui n administre pas l etablissement', async () => {
