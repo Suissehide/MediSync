@@ -62,7 +62,15 @@ function filterSlotsByPathwayTemplates(slots: Slot[], templateIDs: string[]) {
   })
 }
 
+const VIEW_STORAGE_KEY = 'dashboard/view'
+const DASHBOARD_VIEWS = ['timeGridWeek', 'timeGridDay', 'listWeek']
+
 function Dashboard() {
+  const [initialView] = useState(() => {
+    const stored = localStorage.getItem(VIEW_STORAGE_KEY)
+    return stored && DASHBOARD_VIEWS.includes(stored) ? stored : 'timeGridWeek'
+  })
+
   const queryClient = useQueryClient()
   const [openEventId, setOpenEventId] = useState('')
   const selectedIDs = useSoignantStore((state) => state.selectedSoignantIDs)
@@ -234,6 +242,10 @@ function Dashboard() {
               overlap={false}
               showSecondaryTags={false}
               initialDate={savedDate}
+              initialView={initialView}
+              onViewChange={(view) =>
+                localStorage.setItem(VIEW_STORAGE_KEY, view)
+              }
               onRangeChange={handleRangeChange}
               handleSelectEvent={handleSelectAppointment}
               handleClickEvent={handleAddAppointment}
