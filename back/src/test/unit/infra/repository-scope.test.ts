@@ -2203,3 +2203,48 @@ describe('PatientAccessLogRepository', () => {
     ])
   })
 })
+
+// `soignantDuService` (MDS-37), emploi declare du mode systeme (`runAsSystem-unicite.test.ts`) :
+// ses BORNES sont gardees ici.
+describe('MembershipRepository.soignantDuService', () => {
+  const adminEtab = { ...tenant, serviceId: null, serviceRole: null }
+
+  it('compte sous runAsSystem, borne au service vise ET a l etablissement courant', async () => {
+    const { prisma, calls } = buildFakePrisma({ 'soignant.count': 1 })
+    const ctx = new TenantContext()
+    const spy = jest.spyOn(ctx, 'runAsSystem')
+    const repo = new MembershipRepository(buildContainer(prisma, ctx))
+
+    const resultat = await ctx.run(adminEtab, () =>
+      repo.soignantDuService('so1', 'sv2'),
+    )
+
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(calls).toEqual([
+      {
+        model: 'soignant',
+        op: 'count',
+        args: { where: { id: 'so1', serviceId: 'sv2', establishmentId: 'e1' } },
+      },
+    ])
+    expect(resultat).toBe(true)
+  })
+
+  it('la forme de requete est refusee sans service courant, et permise dans le mode encadre', () => {
+    const args = {
+      where: { id: 'so1', serviceId: 'sv2', establishmentId: 'e1' },
+    }
+    expect(() =>
+      assertTenantScope(
+        { model: 'Soignant', operation: 'count', args },
+        { kind: 'tenant', tenant: adminEtab },
+      ),
+    ).toThrow(TenantScopeMissingError)
+    expect(() =>
+      assertTenantScope(
+        { model: 'Soignant', operation: 'count', args },
+        { kind: 'system' },
+      ),
+    ).not.toThrow()
+  })
+})

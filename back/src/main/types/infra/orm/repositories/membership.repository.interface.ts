@@ -17,7 +17,10 @@ export type MembershipRow = EstablishmentMembership & {
     User,
     'id' | 'email' | 'firstName' | 'lastName' | 'deactivatedAt' | 'lastLoginAt'
   >
-  serviceMemberships: Pick<ServiceMembership, 'serviceId' | 'role'>[]
+  serviceMemberships: Pick<
+    ServiceMembership,
+    'serviceId' | 'role' | 'soignantId'
+  >[]
 }
 
 export type ServiceAssignment = {
@@ -109,5 +112,7 @@ export interface MembershipRepositoryInterface {
   ) => Promise<MembershipRow>
   update: (id: string, params: MembershipUpdateRepo) => Promise<MembershipRow>
   delete: (id: string) => Promise<void>
+  // Le soignant est-il de CE service de l'etablissement courant ? (mode systeme, voir l'implementation)
+  soignantDuService: (soignantId: string, serviceId: string) => Promise<boolean>
   serviceExists: (serviceId: string) => Promise<boolean>
 }

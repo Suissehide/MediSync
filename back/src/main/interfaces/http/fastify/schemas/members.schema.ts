@@ -16,6 +16,7 @@ const establishmentRoleSchema = z.enum(['ADMIN', 'MEMBER'])
 const assignmentSchema = z.object({
   serviceId: z.string().min(1),
   role: serviceRoleSchema,
+  soignantId: z.cuid().nullable().optional(),
 })
 
 // Un membre n'a qu'un rôle par service : deux affectations au même service
@@ -43,7 +44,11 @@ export const memberResponseSchema = z.object({
     invitationResendableAt: z.coerce.date().nullable(),
   }),
   serviceMemberships: z.array(
-    z.object({ serviceId: z.string(), role: serviceRoleSchema }),
+    z.object({
+      serviceId: z.string(),
+      role: serviceRoleSchema,
+      soignantId: z.string().nullable(),
+    }),
   ),
 })
 export const membersResponseSchema = z.array(memberResponseSchema)

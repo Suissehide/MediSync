@@ -253,8 +253,8 @@ describe('EditMemberForm — affecter un membre a un service', () => {
     const body = JSON.parse(String(patchCall?.[1]?.body))
     expect(body.services).toEqual(
       expect.arrayContaining([
-        { serviceId: 'svcA', role: 'COORDINATEUR' },
-        { serviceId: 'svcB', role: 'SECRETARIAT' },
+        { serviceId: 'svcA', role: 'COORDINATEUR', soignantId: null },
+        { serviceId: 'svcB', role: 'SECRETARIAT', soignantId: null },
       ]),
     )
     expect(body.services).toHaveLength(2)
@@ -300,8 +300,8 @@ describe('EditMemberForm — affecter un membre a un service', () => {
     const body = JSON.parse(String(patchCall?.[1]?.body))
     expect(body.services).toEqual(
       expect.arrayContaining([
-        { serviceId: 'svcA', role: 'COORDINATEUR' },
-        { serviceId: 'svcB', role: 'INTERVENANT' },
+        { serviceId: 'svcA', role: 'COORDINATEUR', soignantId: null },
+        { serviceId: 'svcB', role: 'INTERVENANT', soignantId: null },
       ]),
     )
     expect(body.services).toHaveLength(2)

@@ -41,7 +41,7 @@ const sansService: TenantContext = {
   serviceRole: null,
 }
 
-const soignantDuServiceA: Soignant = { id: 'so1', name: 'Dupont', active: true }
+const soignantDuServiceA: Soignant = { id: 'so1', name: 'Dupont' }
 const tacheDuServiceA: Todo = {
   id: 't1',
   title: 'Appeler la famille',

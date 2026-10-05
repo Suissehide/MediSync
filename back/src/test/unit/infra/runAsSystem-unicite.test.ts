@@ -26,8 +26,8 @@ import ts from 'typescript'
 // LE COMPTE, DIT UNE SEULE FOIS ET DANS UNE SEULE UNITE :
 //   - SIX emplois DECLARES, c'est-a-dire six entrees d'`AUTORISES` ci-dessous, une par FICHIER,
 //     chacune avec sa raison ;
-//   - HUIT APPELS au total, `application/starter.ts` et `patientServiceFile.repository.ts` en
-//     portant deux chacun.
+//   - NEUF APPELS au total, `application/starter.ts`, `patientServiceFile.repository.ts` et
+//     `membership.repository.ts` en portant deux chacun.
 //
 // La liste ci-dessous enumere les SITES D'APPEL, groupes par question posee — c'est l'unite qui
 // se relit, pas celle qui se compte. Elle en porte SEPT, parce que les deux appels de
@@ -187,8 +187,13 @@ const AUTORISES = [
       'appartenances via UserRepository.findByID pour n en garder qu un length — un include qui ' +
       'repart du modele GLOBAL User par une relation a-plusieurs, que le garde-fou refuse ' +
       'desormais sous contexte de tenant (assertNoGlobalToManyBridge). Ce qui traverse la ' +
-      'frontiere passe de l arbre entier a un bit. Bornes verifiees par repository-scope.test.ts',
-    appels: 1,
+      'frontiere passe de l arbre entier a un bit. Bornes verifiees par repository-scope.test.ts. ' +
+      'ET soignantDuService (MDS-37) — « ce soignant est-il de CE service de l etablissement ' +
+      'courant ? », un BOOLEEN : l administration d etablissement n a pas de service courant et ' +
+      'Soignant est un modele de service, que le garde-fou ne laisse lire qu avec le serviceId ' +
+      'du tenant. Borne (etablissement courant, lu avant le mode encadre) verifiee par ' +
+      'repository-scope.test.ts',
+    appels: 2,
   },
   {
     fichier: 'infra/orm/repositories/patientAccessLog.repository.ts',
