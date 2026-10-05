@@ -18,21 +18,23 @@ import { useToast } from '../hooks/useToast.ts'
 import type {
   CreateSlotParams,
   Slot,
-  SlotDateRange,
+  SlotQuery,
   UpdateSlotParams,
 } from '../types/slot.ts'
 
 // * QUERIES
 
-export const useAllSlotsQuery = () => {
+// Créneaux où le patient a un rendez-vous, et seulement eux.
+export const usePatientSlotsQuery = (patientID?: string) => {
   const {
     data: slots,
     isPending,
     isError,
     error,
   } = useQuery({
-    queryKey: [SLOT.GET_ALL],
-    queryFn: () => SlotApi.getAll(),
+    queryKey: [SLOT.GET_ALL, 'patient', patientID],
+    queryFn: () => SlotApi.getAll({ patientID }),
+    enabled: !!patientID,
     retry: 0,
   })
 
@@ -49,7 +51,7 @@ export const useAllSlotsQuery = () => {
  * La fenêtre fait partie de la clé de cache, et `keepPreviousData` garde la
  * semaine courante à l'écran pendant le chargement de la suivante.
  */
-export const useSlotsInRangeQuery = (range: SlotDateRange | null) => {
+export const useSlotsInRangeQuery = (range: SlotQuery | null) => {
   const {
     data: slots,
     isPending,

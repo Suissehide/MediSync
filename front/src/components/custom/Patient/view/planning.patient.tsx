@@ -1,16 +1,20 @@
 import type { DateSelectArg } from '@fullcalendar/core'
 import { useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
-import { useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 
 import { SLOT } from '../../../../constants/process.constant.ts'
 import { buildCalendarEventsFromSlots } from '../../../../libs/utils.ts'
 import { useAppointmentMutations } from '../../../../queries/useAppointment.ts'
 import { usePathwayTemplateQueries } from '../../../../queries/usePathwayTemplate.ts'
-import { useAllSlotsQuery } from '../../../../queries/useSlot.ts'
+import {
+  usePatientSlotsQuery,
+  useSlotsInRangeQuery,
+} from '../../../../queries/useSlot.ts'
 import { usePlanningStore } from '../../../../store/usePlanningStore.ts'
 import type { CreateAppointmentParams } from '../../../../types/appointment.ts'
 import type { Patient } from '../../../../types/patient.ts'
+import type { SlotDateRange } from '../../../../types/slot.ts'
 import type { Soignant } from '../../../../types/soignant.ts'
 import { Select } from '../../../ui/select.tsx'
 import type { CalendarEvent } from '../../Calendar/calendar.tsx'
@@ -23,7 +27,6 @@ interface PlanningPatientProps {
 }
 
 export default function PlanningPatient({ patient }: PlanningPatientProps) {
-  const { slots } = useAllSlotsQuery()
   const savedDate = usePlanningStore((state) => state.viewStart)
 
   const { pathwayTemplates } = usePathwayTemplateQueries()
@@ -33,6 +36,29 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
   )
 
   const [selectedTag, setSelectedTag] = useState('')
+  const [visibleRange, setVisibleRange] = useState<SlotDateRange | null>(null)
+  const handleRangeChange = useCallback((next: SlotDateRange) => {
+    setVisibleRange((prev) =>
+      prev && prev.from === next.from && prev.to === next.to ? prev : next,
+    )
+  }, [])
+
+  // Les rendez-vous du patient, plus les créneaux de la période affichée quand
+  // un tag est choisi (pour l'inscrire) : jamais tout l'historique du service.
+  const { slots: patientSlots } = usePatientSlotsQuery(patient?.id)
+  const { slots: rangeSlots } = useSlotsInRangeQuery(
+    selectedTag ? visibleRange : null,
+  )
+  const slots = useMemo(() => {
+    if (!patientSlots) {
+      return undefined
+    }
+    const byId = new Map(patientSlots.map((slot) => [slot.id, slot]))
+    for (const slot of selectedTag ? (rangeSlots ?? []) : []) {
+      byId.set(slot.id, slot)
+    }
+    return [...byId.values()]
+  }, [patientSlots, rangeSlots, selectedTag])
   const [openCreateAppointmentModal, setOpenCreateAppointmentModal] =
     useState(false)
   const [openAppointmentId, setOpenAppointmentId] = useState('')
@@ -302,6 +328,7 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
                 : undefined
             }
             unselectRef={calendarUnselectRef}
+            onRangeChange={handleRangeChange}
             headerToolbar={{
               left: 'title',
               right: 'selectDateButton prev,next today',

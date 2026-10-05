@@ -64,6 +64,17 @@ class SlotRepository implements SlotRepositoryInterface {
         ...this.scope,
         ...(dateRange?.from ? { endDate: { gt: dateRange.from } } : {}),
         ...(dateRange?.to ? { startDate: { lt: dateRange.to } } : {}),
+        ...(dateRange?.patientID
+          ? {
+              appointments: {
+                some: {
+                  appointmentPatients: {
+                    some: { patientId: dateRange.patientID },
+                  },
+                },
+              },
+            }
+          : {}),
       },
       include: slotInclude,
     })

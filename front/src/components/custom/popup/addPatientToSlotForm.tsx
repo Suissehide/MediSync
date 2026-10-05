@@ -16,7 +16,7 @@ import {
 import { cn, generateDurationOptions } from '../../../libs/utils.ts'
 import { useAppointmentMutations } from '../../../queries/useAppointment.ts'
 import { usePatientQueries } from '../../../queries/usePatient.tsx'
-import { useAllSlotsQuery } from '../../../queries/useSlot.ts'
+import { useSlotsInRangeQuery } from '../../../queries/useSlot.ts'
 import { useThematicQueries } from '../../../queries/useThematic.ts'
 import type { Appointment } from '../../../types/appointment.ts'
 import type { Slot } from '../../../types/slot.ts'
@@ -327,7 +327,14 @@ function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
   const { toast } = useToast()
   const { createAppointment, updateAppointment } = useAppointmentMutations()
 
-  const { slots } = useAllSlotsQuery()
+  // Seuls les créneaux à venir à partir de la date de recherche sont proposés.
+  const upcomingRange = useMemo(() => {
+    const today = dayjs.utc().startOf('day')
+    return {
+      from: (fromDate.isAfter(today) ? fromDate : today).format('YYYY-MM-DD'),
+    }
+  }, [fromDate])
+  const { slots } = useSlotsInRangeQuery(upcomingRange)
   const { patients } = usePatientQueries()
   const { thematics } = useThematicQueries()
 
