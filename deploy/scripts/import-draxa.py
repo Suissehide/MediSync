@@ -309,6 +309,15 @@ INSERT INTO clgx_soi SELECT {old}, (SELECT id FROM "Soignant" WHERE "serviceId" 
                                              "accompanying", "status", "rejectionReason", "transmissionNotes",
                                              "convocationSent"],
                       ap_rows))
+    # Thématique sans soignant : relier les soignants de ses rendez-vous.
+    out.append("""INSERT INTO "SoignantThematic"("soignantId","thematicId","serviceId","establishmentId")
+SELECT DISTINCT sts."soignantId", a."thematicId", a."serviceId", a."establishmentId"
+FROM "Appointment" a
+JOIN "Slot" s ON s.id = a."slotID"
+JOIN "SlotTemplateSoignant" sts ON sts."slotTemplateId" = s."slotTemplateID"
+WHERE a."serviceId" = :'svc' AND a."thematicId" IS NOT NULL
+  AND NOT EXISTS (SELECT 1 FROM "SoignantThematic" x WHERE x."thematicId" = a."thematicId")
+ON CONFLICT DO NOTHING;""")
     out.append("COMMIT;")
     print("\n".join(out))
 
