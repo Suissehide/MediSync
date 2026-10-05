@@ -104,7 +104,10 @@ function ArsIndicatorsPage() {
 
   return (
     <DashboardLayout>
-      <div className="flex-1 min-h-0 bg-background p-6 rounded-lg flex flex-col w-full gap-4">
+      {/* `overflow-hidden` + une zone de défilement interne : sans cela la grille (trente lignes,
+          ~1360px) débordait sous la carte et emportait l'en-tête au défilement, alors que les
+          autres écrans gardent leurs contrôles en place. Même découpe que `suivi.tsx`. */}
+      <div className="flex-1 min-h-0 bg-background p-6 rounded-lg flex flex-col w-full gap-4 overflow-hidden">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <h1 className="h-9 flex items-center text-text-dark text-xl font-semibold">
             Indicateurs ARS
@@ -174,7 +177,9 @@ function ArsIndicatorsPage() {
         )}
 
         {etat === 'ready' && indicators && (
-          <TableIndicateurs indicateurs={indicators} />
+          <div className="flex-1 min-h-0 overflow-auto">
+            <TableIndicateurs indicateurs={indicators} />
+          </div>
         )}
       </div>
     </DashboardLayout>
@@ -183,7 +188,9 @@ function ArsIndicatorsPage() {
 
 function TableIndicateurs({ indicateurs }: { indicateurs: ArsIndicator[] }) {
   return (
-    <table className="w-full text-sm border-collapse">
+    // `border-separate` plutôt que `border-collapse` : le `sticky` de la bande de groupe est ignoré
+    // sur une cellule d'un tableau fusionné. Les filets vivent donc sur les cellules.
+    <table className="w-full text-sm border-separate border-spacing-0">
       <thead className="sr-only">
         <tr>
           <th>Code</th>
@@ -196,7 +203,7 @@ function TableIndicateurs({ indicateurs }: { indicateurs: ArsIndicator[] }) {
           <tr>
             <th
               colSpan={3}
-              className="bg-muted text-left text-text-dark font-semibold px-3 py-2 rounded"
+              className="sticky top-0 z-10 bg-muted text-left text-text-dark font-semibold px-3 py-2"
             >
               {groupe}
             </th>
@@ -204,11 +211,11 @@ function TableIndicateurs({ indicateurs }: { indicateurs: ArsIndicator[] }) {
           {indicateurs
             .filter((indicateur) => indicateur.group === groupe)
             .map((indicateur) => (
-              <tr key={indicateur.code} className="border-b border-border">
-                <td className="w-20 px-3 py-2 align-top text-text-light tabular-nums">
+              <tr key={indicateur.code}>
+                <td className="w-20 px-3 py-2 align-top text-text-light tabular-nums border-b border-border">
                   {indicateur.code}
                 </td>
-                <td className="px-3 py-2 align-top">
+                <td className="px-3 py-2 align-top border-b border-border">
                   <span
                     className={
                       indicateur.note ? 'text-text-light' : 'text-text-dark'
@@ -225,7 +232,7 @@ function TableIndicateurs({ indicateurs }: { indicateurs: ArsIndicator[] }) {
                     </span>
                   )}
                 </td>
-                <td className="w-24 px-3 py-2 align-top text-right">
+                <td className="w-24 px-3 py-2 align-top text-right border-b border-border">
                   {indicateur.value === null ? (
                     <span className="text-text-light">
                       <span aria-hidden="true">—</span>
