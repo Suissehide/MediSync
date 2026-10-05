@@ -7,7 +7,7 @@ import {
   Search,
   X,
 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { PatientApi } from '@/api/patient.api.ts'
 import { getPatientColumns } from '@/columns/patient.column.tsx'
@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button.tsx'
 import DropdownFilter from '@/components/ui/dropdownFilter.tsx'
 import { Input } from '@/components/ui/input.tsx'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group.tsx'
+import { safeParse } from '@/libs/utils.ts'
 import { usePathwayTemplateQueries } from '@/queries/usePathwayTemplate.ts'
 import { usePatientWithTagsQuery } from '@/queries/usePatient.tsx'
 import type { PatientWithTags } from '@/types/patient.ts'
@@ -35,6 +36,9 @@ const STATUSES = {
   exited: 'Sortis',
 } as const
 type Status = keyof typeof STATUSES
+const DEFAULT_STATUS: Status = 'active'
+
+const filtersStorageKey = (serviceId: string) => `patient/filters/${serviceId}`
 
 const matchesStatus = (p: PatientWithTags, status: Status) =>
   status === 'all' || Boolean(p.exitDate) === (status === 'exited')
@@ -48,9 +52,28 @@ function PatientList() {
   const { patients, isPending } = usePatientWithTagsQuery()
   const { pathwayTemplates } = usePathwayTemplateQueries()
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedTags, setSelectedTags] = useState<string[]>([])
-  const [status, setStatus] = useState<Status>('all')
+  const [storedFilters] = useState(() =>
+    safeParse<{ status?: string; tags?: string[] }>(
+      localStorage.getItem(filtersStorageKey(serviceId)),
+      {},
+    ),
+  )
+  const [selectedTags, setSelectedTags] = useState<string[]>(
+    Array.isArray(storedFilters.tags) ? storedFilters.tags : [],
+  )
+  const [status, setStatus] = useState<Status>(
+    storedFilters.status && storedFilters.status in STATUSES
+      ? (storedFilters.status as Status)
+      : DEFAULT_STATUS,
+  )
   const [isExporting, setIsExporting] = useState(false)
+
+  useEffect(() => {
+    localStorage.setItem(
+      filtersStorageKey(serviceId),
+      JSON.stringify({ status, tags: selectedTags }),
+    )
+  }, [serviceId, status, selectedTags])
 
   const handleRedirectPatient = async (patientID: string) => {
     await navigate({
@@ -112,7 +135,7 @@ function PatientList() {
   }
 
   const resetFilters = () => {
-    setStatus('all')
+    setStatus(DEFAULT_STATUS)
     setSelectedTags([])
   }
 
@@ -201,7 +224,7 @@ function PatientList() {
               }
             />
           )}
-          {(status !== 'all' || selectedTags.length > 0) && (
+          {(status !== DEFAULT_STATUS || selectedTags.length > 0) && (
             <Button variant="ghost" onClick={resetFilters}>
               <X className="w-4 h-4" />
               Réinitialiser
