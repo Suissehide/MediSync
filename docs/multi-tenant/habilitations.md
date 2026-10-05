@@ -37,7 +37,7 @@ appartenance porte un rôle.
 | Plateforme | **Super-admin** | Créer les établissements, nommer leur premier administrateur, consulter la santé globale de la plateforme, rechercher un compte par adresse et réémettre son lien de connexion, s'accorder un accès d'intervention temporaire. **Aucun accès au contenu des dossiers patients** — voir la nuance sur le nombre de dossiers et sur l'octroi, plus bas. |
 | Établissement | **Chef d'établissement** (`ADMIN`, libellé « Administrateur » jusqu'au 2026-10-01) | Renommer l'établissement, créer et désactiver les services, rattacher les comptes à l'établissement, les affecter aux services avec un rôle, désactiver les comptes, lire le journal d'activité et le journal des accès aux dossiers patients. **Coordinateur implicite sur tous les services actifs** de l'établissement, affecté ou non — donc accès clinique à tous les dossiers suivis dans l'établissement (depuis le 2026-10-01, décision de Léo). Porté par `effectiveMemberships` (`domain/accessGrant.domain.ts`), comme l'octroi super-admin. |
 | Établissement | **Membre** (`MEMBER`) | Aucun droit propre : simple rattachement qui permet d'être affecté à des services. |
-| Service | **Coordinateur** (`COORDINATEUR`) | Tout ce que fait l'ancien rôle `ADMIN` dans le périmètre du service : modèles de parcours, planning, thématiques, semaines interdites, cycle de planification, modèles de diagnostic, dossiers patients et contenu clinique. |
+| Service | **Coordinateur** (`COORDINATEUR`) | Tout ce que fait l'ancien rôle `ADMIN` dans le périmètre du service : modèles de parcours, planning, thématiques, semaines interdites, cycle de planification, modèles de diagnostic, dossiers patients et contenu clinique. **Plus l'équipe de son service depuis le 2026-10-05 (MDS-17)** : inviter, changer un rôle de service, retirer du service — jamais le rattachement d'établissement. |
 | Service | **Intervenant** (`INTERVENANT`) | L'équivalent de l'ancien rôle `USER` : agenda, présences, transmissions, dossier patient et diagnostics éducatifs, tâches personnelles. |
 | Service | **Secrétariat** (`SECRETARIAT`) | Identité et contact des patients, sous-dossier administratif, prise de rendez-vous, présences, export PDF du programme. Pas d'accès au contenu clinique (diagnostics éducatifs, transmissions, notes). |
 | Service | **Lecture seule** (`LECTURE`) | Direction ou cadre : consultation du suivi, du planning et des listes, sans modification ni accès au contenu clinique. |
@@ -67,6 +67,7 @@ associe les permissions aux rôles. C'est cette matrice qui fait foi.
 | `todo:own` | Ses propres tâches | ✔ | ✔ | ✔ | ✔ |
 | `members:read` | Voir les membres du service et leur rôle | ✔ | ✔ | ✔ | ✔ |
 | `consultations:read` | Lire le journal des consultations (`PatientAccessLog`) du service courant : qui a ouvert quel dossier, quand — jamais un contenu clinique | ✔ | | | |
+| `service-members:manage` | Gérer l'équipe du **seul service courant** : inviter (y compris en créant le compte et son lien de première connexion), changer le rôle de service, retirer du service — depuis le 2026-10-05, MDS-17 | ✔ | | | |
 
 Règles associées :
 
@@ -89,6 +90,31 @@ Règles associées :
 - La suppression d'un dossier patient (`patient:delete`) est réservée au
   coordinateur : ni le secrétariat ni l'intervenant ne peuvent supprimer un
   dossier, même s'ils peuvent le modifier.
+- **`service-members:manage` et `members:manage` sont deux échelles, pas un
+  doublon** (MDS-17, 2026-10-05). La première ouvre la gestion de l'équipe **du
+  service courant** au coordinateur : inviter une adresse (le service vient du
+  tenant résolu, jamais de la requête), changer un rôle **de service**, retirer
+  **l'affectation**. La seconde reste au chef d'établissement et porte ce que la
+  première ne touche jamais : le rattachement d'établissement, le rôle
+  d'établissement, la désactivation d'un compte, la réémission d'un lien. Un
+  coordinateur ne rattache donc **qu'en `MEMBER`**, et retirer quelqu'un de son
+  service ne retire ni son compte, ni son rattachement, ni ses autres services.
+  - **Le coordinateur peut nommer un autre coordinateur de son service** : les
+    quatre rôles de service lui sont ouverts. Décision de Léo, MDS-17.
+  - **Inviter émet un lien de première connexion, qui réinitialise le mot de
+    passe d'un `User` GLOBAL** : les refus de `assertIssuableToken` (compte
+    super-admin, compte rattaché à un autre établissement) s'appliquent donc
+    **tels quels** depuis cette route, par appel du même cœur partagé
+    (`MembershipDomain.createAccountCore`) — jamais par une copie. La réponse ne
+    porte que `accessLink`, `null` quand le compte était déjà rattaché ici :
+    rendre le nom stocké ou l'identifiant du compte en ferait un oracle
+    d'existence, exactement comme sur `POST /members/account`.
+  - **Un coordinateur ne se rétrograde pas et ne se retire pas lui-même**, par
+    symétrie avec `assertNotSelf` à l'échelle de l'établissement.
+  - **Limite ouverte, assumée : aucune garde « dernier coordinateur du
+    service ».** Le chef d'établissement étant coordinateur implicite de tous les
+    services actifs, un service sans coordinateur reste administrable — à
+    rouvrir si ce coordinateur implicite disparaît.
 - **`consultations:read` et `access-log:read` sont deux permissions distinctes,
   et ce n'est pas un doublon.** La première ouvre la lecture du journal des
   consultations **du service courant** (coordinateur) ; la seconde, celle de
@@ -147,7 +173,13 @@ Règles associées :
 - Toute opération de gestion des membres (rattachement, changement de rôle,
   affectation de service, désactivation, réactivation, retrait) écrit une
   ligne dans le journal d'activité, avec l'utilisateur qui l'a effectuée :
-  c'est la surface qui accorde les droits, elle doit être imputable.
+  c'est la surface qui accorde les droits, elle doit être imputable. La surface
+  **de service** (MDS-17) écrit ses propres actions — `serviceMember.added`,
+  `serviceMember.accountCreated`, `serviceMember.updated`,
+  `serviceMember.removed` — et non les `member.*` : l'autorité et le périmètre
+  diffèrent, les confondre effacerait la distinction que le journal doit porter.
+  Écrites sous un contexte de service, elles sont donc visibles de l'écran
+  d'activité **du service**, là où les `member.*` ne le sont pas.
 
 ## Permissions d'établissement et de plateforme
 

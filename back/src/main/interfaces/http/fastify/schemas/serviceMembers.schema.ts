@@ -23,8 +23,41 @@ export const setServiceSoignantSchema = z.object({
   soignantId: z.cuid().nullable(),
 })
 
+const serviceRoleSchema = z.enum([
+  'COORDINATEUR',
+  'INTERVENANT',
+  'SECRETARIAT',
+  'LECTURE',
+])
+
+// Inviter dans le service courant. NI `serviceId` NI role d'etablissement dans le corps : le
+// premier vient du tenant resolu, le second est toujours `MEMBER` (voir `inviteToService`).
+// `firstName`/`lastName` optionnels, comme `createMemberAccountSchema` : un compte existant
+// garde le sien, un compte neuf peut rester sans nom jusqu'a ce que son titulaire le complete.
+export const inviteServiceMemberSchema = z.object({
+  email: z.email({
+    error: (issue) =>
+      issue.input === undefined ? 'Email is required' : 'Email is not valid',
+  }),
+  firstName: z.string().trim().optional(),
+  lastName: z.string().trim().optional(),
+  role: serviceRoleSchema,
+})
+
+export const setServiceRoleSchema = z.object({ role: serviceRoleSchema })
+
+// VOLONTAIREMENT REDUIT A UN SEUL CHAMP, et c'est le point : rendre l'affectation creee
+// porterait le nom STOCKE du compte et son cuid, deux oracles d'existence sur une adresse qui a
+// deja un compte (meme motif que `createMemberAccountResponseSchema`). Le tableau se rafraichit
+// par `GET /membres`, qui coute une lecture journalisee.
+export const inviteServiceMemberResponseSchema = z.object({
+  accessLink: z.object({ token: z.string() }).nullable(),
+})
+
 export type ServiceMemberParams = z.infer<typeof serviceMemberParamsSchema>
 export type SetServiceSoignantBody = z.infer<typeof setServiceSoignantSchema>
+export type InviteServiceMemberBody = z.infer<typeof inviteServiceMemberSchema>
+export type SetServiceRoleBody = z.infer<typeof setServiceRoleSchema>
 
 // Aplatit la ligne du depot : l'identite du compte au premier niveau, jamais rien d'autre de
 // l'appartenance d'etablissement.

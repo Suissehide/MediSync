@@ -15,6 +15,11 @@ const MEMBER_ACTIONS = [
   'member.reactivated',
   'member.accountCreated',
   'member.accessLinkReissued',
+  // Memes charge utile et entite visee, ecrites depuis le contexte d'un service.
+  'serviceMember.added',
+  'serviceMember.accountCreated',
+  'serviceMember.updated',
+  'serviceMember.removed',
 ] as const
 
 class ActivityLogSubscriber {

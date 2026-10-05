@@ -34,6 +34,9 @@ export const SUPER_ADMIN = {
 export const SERVICE_MEMBER = {
   GET_ALL: 'get_all_service_members',
   SET_SOIGNANT: 'set_service_member_soignant',
+  INVITE: 'invite_service_member',
+  SET_ROLE: 'set_service_member_role',
+  REMOVE: 'remove_service_member',
 }
 
 export const TODO = {

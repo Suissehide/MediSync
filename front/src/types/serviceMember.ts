@@ -15,3 +15,19 @@ export type ServiceMember = {
     deactivatedAt: string | null
   }
 }
+
+// Inviter dans le service courant (MDS-17). Ni service ni role d'etablissement : le back les
+// pose lui-meme (le service vient du tenant resolu, le rattachement est toujours `MEMBER`).
+export type InviteServiceMemberInput = {
+  email: string
+  firstName?: string
+  lastName?: string
+  role: ServiceRole
+}
+
+// `accessLink` a `null` quand le compte etait deja rattache a l'etablissement : il a son mot de
+// passe, il n'y a aucun lien a transmettre. La reponse ne porte rien d'autre, a dessein — voir
+// `inviteServiceMemberResponseSchema` (back).
+export type InviteServiceMemberResult = {
+  accessLink: { token: string } | null
+}

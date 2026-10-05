@@ -23,6 +23,10 @@ export type ServicePermission =
   | 'pdf:export'
   | 'todo:own'
   | 'members:read'
+  // Gerer l'equipe du SEUL service courant : inviter, changer le role de service, retirer.
+  // Distincte de `members:manage` (etablissement), qui porte les comptes et les
+  // rattachements : un coordinateur n'en a aucun.
+  | 'service-members:manage'
   // Lire le journal des consultations (`PatientAccessLog`), a l'echelle du
   // SEUL service courant. `access-log:read` (EstablishmentPermission ci-dessous, deja present
   // pour ADMIN depuis la toute premiere version de ce fichier, bd26a72) ne convient pas pour
@@ -93,6 +97,7 @@ export const SERVICE_PERMISSIONS: Record<
     'appointment:write',
     'pdf:export',
     'consultations:read',
+    'service-members:manage',
   ],
   INTERVENANT: [
     ...READ_ALL,
