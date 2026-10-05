@@ -332,7 +332,7 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
             saveDates={false}
             headerToolbar={{
               left: 'title',
-              right: 'selectDateButton prev,next today',
+              right: 'today selectDateButton prev,next',
             }}
           />
         )}

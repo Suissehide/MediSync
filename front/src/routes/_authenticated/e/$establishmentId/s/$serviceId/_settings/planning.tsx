@@ -889,7 +889,7 @@ function Planning() {
                   headerToolbar={{
                     left: 'title',
                     center: 'multiMonthYear,dayGridYear',
-                    right: 'prev,next today',
+                    right: 'today prev,next',
                   }}
                   buttonText={{
                     multiMonthYear: 'Grille',
