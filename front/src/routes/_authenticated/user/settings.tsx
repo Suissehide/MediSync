@@ -5,6 +5,7 @@ import { useState } from 'react'
 import DashboardLayout from '../../../components/dashboard.layout.tsx'
 import { Button } from '../../../components/ui/button.tsx'
 import { useAppForm } from '../../../hooks/formConfig.tsx'
+import { passwordError } from '../../../libs/password.ts'
 import { useUpdateMe } from '../../../queries/useAuth.ts'
 
 export const Route = createFileRoute('/_authenticated/user/settings')({
@@ -155,15 +156,7 @@ function UserSettings() {
                 <passwordForm.AppField
                   name="newPassword"
                   validators={{
-                    onChange: ({ value }) => {
-                      if (!value || value.length === 0) {
-                        return 'Le nouveau mot de passe est requis'
-                      }
-                      if (value.length < 12) {
-                        return 'Le mot de passe doit contenir au moins 12 caractères'
-                      }
-                      return undefined
-                    },
+                    onChange: ({ value }) => passwordError(value),
                   }}
                 >
                   {(field) => (
