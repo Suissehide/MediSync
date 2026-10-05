@@ -42,6 +42,15 @@ class AccessLinkRepository implements AccessLinkRepositoryInterface {
     }
   }
 
+  async findLatestCreatedAt(userId: string): Promise<Date | null> {
+    const latest = await this.prisma.accessLink.findFirst({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      select: { createdAt: true },
+    })
+    return latest?.createdAt ?? null
+  }
+
   async findUserIdsWithActiveLink(
     userIds: string[],
     now: Date,

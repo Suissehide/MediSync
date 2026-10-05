@@ -113,6 +113,7 @@ const build = (
         return Promise.resolve({ token: 'JETON-FACTICE' })
       },
       sendInvitation: () => undefined,
+      assertResendAllowed: () => Promise.resolve(),
     },
     mailer: {
       send: (kind: string, mail: { to: string }) => {

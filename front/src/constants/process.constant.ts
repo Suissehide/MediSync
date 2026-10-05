@@ -135,6 +135,7 @@ export const MEMBER = {
   UPDATE: 'update_member',
   REMOVE: 'remove_member',
   DEACTIVATE: 'deactivate_member',
+  RESEND_INVITATION: 'resend_member_invitation',
   // Création de compte, distincte de `ADD` (rattachement
   // d'un compte existant).
   CREATE_ACCOUNT: 'create_member_account',
