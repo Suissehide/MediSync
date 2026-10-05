@@ -47,6 +47,26 @@ interface AppointmentSheetProps {
   handleDeleteEvent?: (eventID: string) => void
 }
 
+const PRESENCE: Record<string, { className: string; label: string }> = {
+  yes: { className: 'bg-emerald-500', label: 'Venu' },
+  no: { className: 'bg-destructive', label: 'Absent' },
+}
+
+function PastillePresence({ status }: { status?: string | null }) {
+  const { className, label } = PRESENCE[status ?? ''] ?? {
+    className: 'border border-muted-foreground',
+    label: 'Présence non renseignée',
+  }
+  return (
+    <span
+      role="img"
+      aria-label={label}
+      title={label}
+      className={`size-2.5 shrink-0 rounded-full ${className}`}
+    />
+  )
+}
+
 export default function AppointmentSheet({
   open,
   setOpen,
@@ -367,7 +387,10 @@ export default function AppointmentSheet({
                             className="border border-border rounded-md py-2 px-4"
                           >
                             <div className="flex justify-between items-center">
-                              <div className="text-sm">
+                              <div className="text-sm flex items-center gap-2">
+                                <PastillePresence
+                                  status={appointmentPatient.status}
+                                />
                                 {patientData
                                   ? `${patientData.firstName} ${patientData.lastName}`
                                   : ``}
