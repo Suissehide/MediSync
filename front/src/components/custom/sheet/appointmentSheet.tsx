@@ -37,6 +37,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '../../ui/sheet.tsx'
+import { PastillePresence } from '../pastillePresence.tsx'
 import { ConfirmDeleteForm } from '../popup/confirmDeleteForm.tsx'
 
 interface AppointmentSheetProps {
@@ -45,26 +46,6 @@ interface AppointmentSheetProps {
   eventID: string
   soignants?: Soignant[]
   handleDeleteEvent?: (eventID: string) => void
-}
-
-const PRESENCE: Record<string, { className: string; label: string }> = {
-  yes: { className: 'bg-emerald-500', label: 'Venu' },
-  no: { className: 'bg-destructive', label: 'Absent' },
-}
-
-function PastillePresence({ status }: { status?: string | null }) {
-  const { className, label } = PRESENCE[status ?? ''] ?? {
-    className: 'border border-muted-foreground',
-    label: 'Présence non renseignée',
-  }
-  return (
-    <span
-      role="img"
-      aria-label={label}
-      title={label}
-      className={`size-2.5 shrink-0 rounded-full ${className}`}
-    />
-  )
 }
 
 export default function AppointmentSheet({
