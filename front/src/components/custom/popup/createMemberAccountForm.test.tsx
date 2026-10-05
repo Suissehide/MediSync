@@ -162,7 +162,7 @@ describe('CreateMemberAccountForm', () => {
       screen.getByText(/il ne sera plus jamais affiché/i),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('button', { name: /copier l'identifiant/i }),
+      screen.getByRole('button', { name: /copier le lien/i }),
     ).toBeInTheDocument()
 
     // Fermer la popup : Radix demonte simplement le CONTENU au ferme, donc

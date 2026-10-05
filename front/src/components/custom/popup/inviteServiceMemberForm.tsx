@@ -1,7 +1,7 @@
 import { Check, Plus, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
-import { CopyableId } from '@/components/custom/copyableId.tsx'
+import { InvitationSent } from '@/components/custom/invitationSent.tsx'
 import {
   SERVICE_ROLE_DESCRIPTION,
   SERVICE_ROLE_LABEL,
@@ -90,24 +90,15 @@ function InviteServiceMemberForm() {
         {invited ? (
           <>
             <PopupBody>
-              {invited.accessLink ? (
-                <div className="bg-input p-3 rounded-lg flex flex-col gap-1">
-                  <p className="text-xs text-text-light">
-                    Un e-mail d'invitation a été envoyé. Vous pouvez aussi
-                    transmettre ce lien à usage unique en main propre, il ne
-                    sera plus jamais affiché.
-                  </p>
-                  <CopyableId
-                    value={buildAccessLinkUrl(invited.accessLink.token)}
-                  />
-                </div>
-              ) : (
-                <p className="text-sm text-text-light">
-                  Cette personne a déjà un compte MediSync : elle accède au
-                  service avec son mot de passe habituel, il n'y a aucun lien à
-                  transmettre.
-                </p>
-              )}
+              <InvitationSent
+                email={inviteMember.variables?.email ?? ''}
+                link={
+                  invited.accessLink
+                    ? buildAccessLinkUrl(invited.accessLink.token)
+                    : null
+                }
+                existingAccountMessage="Elle avait déjà un compte MediSync : elle accède au service avec son mot de passe habituel."
+              />
             </PopupBody>
             <PopupFooter>
               <Button variant="default" onClick={closeAndReset}>

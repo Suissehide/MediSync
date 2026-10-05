@@ -1,7 +1,7 @@
 import { Check, Plus, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
-import { CopyableId } from '@/components/custom/copyableId.tsx'
+import { InvitationSent } from '@/components/custom/invitationSent.tsx'
 import {
   ESTABLISHMENT_ROLE_DESCRIPTION,
   ESTABLISHMENT_ROLE_LABEL,
@@ -135,24 +135,15 @@ function CreateMemberAccountForm() {
         {created ? (
           <>
             <PopupBody>
-              {created.accessLink ? (
-                <div className="bg-input p-3 rounded-lg flex flex-col gap-1">
-                  <p className="text-xs text-text-light">
-                    Un e-mail d'invitation a été envoyé. Vous pouvez aussi
-                    transmettre ce lien à usage unique en main propre, il ne
-                    sera plus jamais affiché.
-                  </p>
-                  <CopyableId
-                    value={buildAccessLinkUrl(created.accessLink.token)}
-                  />
-                </div>
-              ) : (
-                <p className="text-sm text-text-dark">
-                  Cette personne a déjà un compte MediSync : elle a été ajoutée
-                  et prévenue par e-mail. Elle se connecte avec son mot de passe
-                  habituel.
-                </p>
-              )}
+              <InvitationSent
+                email={createMemberAccount.variables?.email ?? ''}
+                link={
+                  created.accessLink
+                    ? buildAccessLinkUrl(created.accessLink.token)
+                    : null
+                }
+                existingAccountMessage="Elle avait déjà un compte MediSync : un e-mail l'a prévenue, elle se connecte avec son mot de passe habituel."
+              />
             </PopupBody>
             <PopupFooter>
               <Button variant="default" onClick={closeAndReset}>
