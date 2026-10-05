@@ -2,12 +2,20 @@ import { createFileRoute, useNavigate, useRouter } from '@tanstack/react-router'
 import { ArrowLeft, Shield, UserRoundPen } from 'lucide-react'
 import { useState } from 'react'
 
-import { MesSoignants } from '../../../components/custom/mesSoignants.tsx'
+import { AuthApi } from '../../../api/auth.api.ts'
+import { ServiceMembersApi } from '../../../api/serviceMembers.api.ts'
+import {
+  affectationsDe,
+  MesSoignants,
+} from '../../../components/custom/mesSoignants.tsx'
 import DashboardLayout from '../../../components/dashboard.layout.tsx'
 import { Button } from '../../../components/ui/button.tsx'
+import { TOAST_SEVERITY } from '../../../constants/ui.constant.ts'
 import { useAppForm } from '../../../hooks/formConfig.tsx'
+import { useToast } from '../../../hooks/useToast.ts'
 import { passwordError } from '../../../libs/password.ts'
 import { useUpdateMe } from '../../../queries/useAuth.ts'
+import { useAuthStore } from '../../../store/useAuthStore.ts'
 
 export const Route = createFileRoute('/_authenticated/user/settings')({
   component: UserSettings,
@@ -19,6 +27,9 @@ function UserSettings() {
   const authState = router.options.context?.authState
   const user = authState?.user
   const updateMe = useUpdateMe()
+  const updateUser = useAuthStore((state) => state.update)
+  const { toast } = useToast()
+  const affectations = affectationsDe(user)
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false)
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false)
 
@@ -26,6 +37,9 @@ function UserSettings() {
     defaultValues: {
       firstName: user?.firstName || '',
       lastName: user?.lastName || '',
+      soignants: Object.fromEntries(
+        affectations.map((a) => [a.serviceId, a.soignantId]),
+      ) as Record<string, string | null>,
     },
     onSubmit: async ({ value }) => {
       setIsUpdatingProfile(true)
@@ -34,6 +48,27 @@ function UserSettings() {
           firstName: value.firstName,
           lastName: value.lastName,
         })
+        const modifiees = affectations.filter(
+          (a) => (value.soignants[a.serviceId] ?? null) !== a.soignantId,
+        )
+        try {
+          for (const a of modifiees) {
+            await ServiceMembersApi.setOwnSoignant({
+              establishmentId: a.establishmentId,
+              serviceId: a.serviceId,
+              soignantId: value.soignants[a.serviceId] ?? null,
+            })
+          }
+        } catch (error) {
+          toast({
+            title: "Erreur lors de l'enregistrement du soignant",
+            message: error instanceof Error ? error.message : undefined,
+            severity: TOAST_SEVERITY.ERROR,
+          })
+        }
+        if (modifiees.length > 0) {
+          updateUser(await AuthApi.me())
+        }
       } finally {
         setIsUpdatingProfile(false)
       }
@@ -107,13 +142,27 @@ function UserSettings() {
                 </profileForm.AppField>
               </div>
 
+              <profileForm.Field name="soignants">
+                {(field) => (
+                  <MesSoignants
+                    affectations={affectations}
+                    value={field.state.value}
+                    onChange={(serviceId, soignantId) =>
+                      field.handleChange({
+                        ...field.state.value,
+                        [serviceId]: soignantId,
+                      })
+                    }
+                  />
+                )}
+              </profileForm.Field>
+
               <div className="flex justify-end">
                 <Button type="submit" disabled={isUpdatingProfile}>
                   {isUpdatingProfile ? 'Enregistrement...' : 'Enregistrer'}
                 </Button>
               </div>
             </form>
-            <MesSoignants />
           </div>
         </div>
 
