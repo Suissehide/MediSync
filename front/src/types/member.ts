@@ -22,6 +22,8 @@ export type Member = {
     deactivatedAt: string | null
     // Jamais connecté : invitation en attente, ou expirée faute de lien encore valide.
     invitationStatus: InvitationStatus
+    // Fin du délai de 5 minutes entre deux renvois ; null si le renvoi est possible.
+    invitationResendableAt: string | null
   }
   serviceMemberships: MemberServiceAssignment[]
 }

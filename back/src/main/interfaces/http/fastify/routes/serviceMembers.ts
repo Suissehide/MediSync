@@ -36,10 +36,10 @@ const serviceMembersRouter: FastifyPluginAsync = (fastify) => {
   const project = async (
     rows: Parameters<typeof projectServiceMember>[0][],
   ) => {
-    const active = await accessLinkDomain.activeLinkUserIds(
+    const links = await accessLinkDomain.invitationLinks(
       neverLoggedIn(rows.map((row) => row.establishmentMembership.user)),
     )
-    return rows.map((row) => projectServiceMember(row, active))
+    return rows.map((row) => projectServiceMember(row, links))
   }
 
   fastify.get(

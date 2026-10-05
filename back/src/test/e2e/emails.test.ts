@@ -213,6 +213,23 @@ describe('e-mails d invitation et mot de passe oublie', () => {
       'admin@lilas.fr': null,
       'invitee@lilas.fr': 'pending',
     })
+    const resendableAt = async () =>
+      (
+        await testApp.app.inject({
+          method: 'GET',
+          url: adminUrl(establishmentId, '/members'),
+          cookies,
+        })
+      )
+        .json()
+        .find(
+          (m: { user: { email: string } }) =>
+            m.user.email === 'invitee@lilas.fr',
+        ).user.invitationResendableAt
+    // Juste invitee : renvoi bloque 5 minutes, le bouton reste grise jusqu'a cette heure.
+    const fin = new Date(await resendableAt()).getTime()
+    expect(Math.round((fin - Date.now()) / 60_000)).toBe(5)
+
     const link = await testDb.accessLink.findFirstOrThrow()
     const days =
       (link.expiresAt.getTime() - link.createdAt.getTime()) / 86_400_000
@@ -226,6 +243,7 @@ describe('e-mails d invitation et mot de passe oublie', () => {
     await testDb.accessLink.updateMany({
       data: { createdAt: new Date(Date.now() - 10 * 60_000) },
     })
+    expect(await resendableAt()).toBeNull()
     const reissued = await testApp.app.inject({
       method: 'POST',
       url: adminUrl(
@@ -236,6 +254,7 @@ describe('e-mails d invitation et mot de passe oublie', () => {
     })
     expect(reissued.statusCode).toBe(201)
     expect((await statuts())['invitee@lilas.fr']).toBe('pending')
+    expect(await resendableAt()).not.toBeNull()
 
     await setPasswordAndSignIn(
       tokenOf(sent[sent.length - 1].mail),

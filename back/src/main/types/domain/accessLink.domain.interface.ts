@@ -2,6 +2,9 @@ import type { PrimaTransactionClient } from '../infra/orm/client'
 
 // Le lien de première connexion / réinitialisation d'accès (spec §6.1) : émis par
 // `establishments:manage`, `members:manage`, le super-admin, et le « mot de passe oublié ».
+// `resendableAt` : null si le renvoi est déjà possible, sinon la fin du délai de 5 minutes.
+export type InvitationLinkState = { active: boolean; resendableAt: Date | null }
+
 export interface AccessLinkDomainInterface {
   // Le jeton en clair n'est rendu QU'ICI, à l'émission — jamais relu ensuite (la table ne stocke
   // qu'une empreinte, voir accessLink.repository.ts). `issuedBy` est l'identifiant du compte qui
@@ -21,7 +24,9 @@ export interface AccessLinkDomainInterface {
     token: string
     establishmentName?: string
   }) => void
-  activeLinkUserIds: (userIds: string[]) => Promise<Set<string>>
+  invitationLinks: (
+    userIds: string[],
+  ) => Promise<Map<string, InvitationLinkState>>
   // 429 si un lien a été émis pour ce compte il y a moins de 5 minutes.
   assertResendAllowed: (userId: string) => Promise<void>
   // Mot de passe oublié : ne lève rien et ne révèle pas si l'adresse existe.

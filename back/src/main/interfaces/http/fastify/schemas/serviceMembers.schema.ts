@@ -1,5 +1,6 @@
 import { z } from 'zod/v4'
 
+import type { InvitationLinkState } from '../../../../types/domain/accessLink.domain.interface'
 import { invitationStatusSchema, projectUserStatus } from './members.schema'
 
 // Membres d'un service, vus depuis ce service (2026-09-29) : chaque affectation, son role, et le
@@ -15,6 +16,7 @@ export const serviceMemberResponseSchema = z.object({
     lastName: z.string().nullable(),
     deactivatedAt: z.coerce.date().nullable(),
     invitationStatus: invitationStatusSchema,
+    invitationResendableAt: z.coerce.date().nullable(),
   }),
 })
 export const serviceMembersResponseSchema = z.array(serviceMemberResponseSchema)
@@ -80,10 +82,10 @@ export const projectServiceMember = (
       }
     }
   },
-  activeLinks: ReadonlySet<string>,
+  links: ReadonlyMap<string, InvitationLinkState>,
 ) => ({
   id: row.id,
   role: row.role,
   soignantId: row.soignantId,
-  user: projectUserStatus(row.establishmentMembership.user, activeLinks),
+  user: projectUserStatus(row.establishmentMembership.user, links),
 })
