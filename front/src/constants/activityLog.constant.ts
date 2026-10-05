@@ -3,9 +3,9 @@ import { toSelectOptions } from '../libs/utils.ts'
 // Les actions que l'écran d'activité DE SERVICE peut rencontrer
 // (`routes/.../s/$serviceId/_settings/activity-log.tsx`) : celles écrites sous un contexte de
 // tenant AVEC un service courant. Les actions de gestion des membres (`member.*`) sont écrites
-// sous le contexte d'ADMINISTRATION, qui n'a pas de service, et n'apparaissent donc jamais ici —
-// c'est l'écran plateforme qui les voit (`constants/superAdminAccessLog.constant.ts`, qui
-// COMPLÈTE ce dictionnaire plutôt que de le réutiliser tel quel).
+// sous le contexte d'ADMINISTRATION, qui n'a pas de service : leurs libellés vivent dans
+// `constants/superAdminAccessLog.constant.ts`, qui COMPLÈTE ce dictionnaire, et la colonne
+// « Action » (`columns/activityLog.column.tsx`) lit l'union des deux.
 //
 // `patient.removedFromPathway` A ÉTÉ AJOUTÉ récemment. Il manquait
 // depuis longtemps : l'événement existe sur `main` depuis l'origine du bus, il est bien écrit
@@ -41,6 +41,8 @@ export const TYPE_LABELS: Record<string, string> = {
   slot: 'Créneau',
   slotTemplate: 'Template',
   pathway: 'Parcours',
+  member: 'Membre',
+  user: 'Compte',
 }
 
 export const PERIOD_DAYS: Record<string, string> = {

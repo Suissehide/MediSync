@@ -47,9 +47,8 @@ _authenticated.tsx                          # requires a session; refreshes `aut
 │   │   └── admin/{members,services,grants,activity-log}.tsx
 │   └── s/$serviceId.tsx                    # service layout: sets context WITH a service
 │       ├── _settings.tsx                   # nested under s/$serviceId, inherits its context
-│       │   └── _settings/{thematic,planning,diagnostic-template,soignant,location}.tsx
+│       │   └── _settings/{thematic,planning,diagnostic-template,soignant,location,members,activity-log}.tsx
 │       ├── agenda.tsx, dashboard.tsx, index.tsx, suivi.tsx
-│       ├── activity-log.tsx                # old address: redirects to admin/activity-log, search kept
 │       └── patient/{index,$patientID}.tsx
 ├── choose-context.tsx                      # full-page list of every destination, no context of its own
 ├── super-admin.tsx + super-admin/*         # platform scale, `isSuperAdmin` only

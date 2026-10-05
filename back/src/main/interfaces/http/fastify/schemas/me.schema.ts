@@ -1,5 +1,7 @@
 import { z } from 'zod/v4'
 
+import { passwordSchema } from './password.schema'
+
 export const meResponseSchema = z.object({
   id: z.string(),
   email: z.string(),
@@ -38,10 +40,7 @@ export const updateMeSchema = z
     firstName: z.string().trim().optional(),
     lastName: z.string().trim().optional(),
     currentPassword: z.string().optional(),
-    newPassword: z
-      .string()
-      .min(12, 'Password must be at least 12 characters long')
-      .optional(),
+    newPassword: passwordSchema.optional(),
   })
   .refine(
     (v) => (v.newPassword === undefined) === (v.currentPassword === undefined),

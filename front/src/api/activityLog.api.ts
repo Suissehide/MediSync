@@ -1,4 +1,7 @@
-import { establishmentApiUrl } from '../constants/config.constant.ts'
+import {
+  establishmentApiUrl,
+  tenantApiUrl,
+} from '../constants/config.constant.ts'
 import { handleHttpError } from '../libs/httpErrorHandler.ts'
 import type { ActivityLogsResponse } from '../types/activityLog.ts'
 import { fetchWithAuth } from './fetchWithAuth.ts'
@@ -14,6 +17,8 @@ export type GetActivityLogsParams = {
   // Navigation par échelle (2026-09-28) : le journal couvre tout l'établissement ; ce filtre le
   // resserre à un service.
   serviceId?: string
+  // Le journal du seul service courant (chef de service), sous le prefixe de service.
+  echelle?: 'service' | 'establishment'
 }
 
 export const ActivityLogApi = {
@@ -43,7 +48,7 @@ export const ActivityLogApi = {
       query.set('serviceId', params.serviceId)
     }
     const response = await fetchWithAuth(
-      `${establishmentApiUrl()}/activity-log?${query}`,
+      `${params.echelle === 'service' ? tenantApiUrl() : establishmentApiUrl()}/activity-log?${query}`,
       { method: 'GET' },
     )
     if (!response.ok) {

@@ -7,6 +7,7 @@ import {
 } from '../../components/custom/authLayout.tsx'
 import { Button } from '../../components/ui/button.tsx'
 import { useAppForm } from '../../hooks/formConfig.tsx'
+import { passwordError } from '../../libs/password.ts'
 import { cn } from '../../libs/utils.ts'
 import { useLogin, useRegister } from '../../queries/useAuth.ts'
 
@@ -185,7 +186,10 @@ function Index() {
             {(field) => <field.Input label="Nom" />}
           </registerForm.AppField>
 
-          <registerForm.AppField name="password">
+          <registerForm.AppField
+            name="password"
+            validators={{ onChange: ({ value }) => passwordError(value) }}
+          >
             {(field) => <field.Password label="Mot de passe" />}
           </registerForm.AppField>
 

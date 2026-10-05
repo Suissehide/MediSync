@@ -1,6 +1,7 @@
 import { z } from 'zod/v4'
 
 import { meResponseSchema } from './me.schema'
+import { passwordSchema } from './password.schema'
 
 export const userSchema = z.object({
   email: z.email({
@@ -18,11 +19,7 @@ export const registerSchema = userSchema
     lastName: true,
   })
   .extend({
-    password: z
-      .string({
-        error: () => 'Password is required',
-      })
-      .min(12, 'Password must be at least 12 characters long'),
+    password: passwordSchema,
   })
 export const registerResponseSchema = userSchema.extend({
   id: z.string(),
@@ -46,14 +43,11 @@ export const accessLinkConsumeSchema = z.object({
   token: z.string({
     error: () => 'Token is required',
   }),
-  password: z
-    .string({
-      error: () => 'Password is required',
-    })
-    .min(12, 'Password must be at least 12 characters long'),
+  password: passwordSchema,
 })
 export const accessLinkConsumeResponseSchema = z.object({
   success: z.boolean(),
+  email: z.string(),
 })
 
 export type AccessLinkConsumeInput = z.infer<typeof accessLinkConsumeSchema>

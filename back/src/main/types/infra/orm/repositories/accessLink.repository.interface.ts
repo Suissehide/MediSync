@@ -6,7 +6,7 @@ export type AccessLinkEntityRepo = AccessLink
 // Jointure minimale nécessaire à `AccessLinkDomain.consume` : seul `deactivatedAt` du compte
 // cible importe, jamais le reste du profil — `select`, pas `include: true`.
 export type AccessLinkWithUser = AccessLink & {
-  user: Pick<User, 'id' | 'deactivatedAt'>
+  user: Pick<User, 'id' | 'email' | 'deactivatedAt'>
 }
 
 export type AccessLinkCreateEntityRepo = {

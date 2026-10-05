@@ -168,7 +168,7 @@ type FakeLinkRow = {
   usedAt: Date | null
   expiresAt: Date
 }
-type FakeUserRow = { id: string; deactivatedAt: Date | null }
+type FakeUserRow = { id: string; email: string; deactivatedAt: Date | null }
 
 // Un Prisma en mémoire, juste assez large pour que le VRAI `AccessLinkRepository` fonctionne
 // contre lui : ni une base réelle (ce fichier reste un test unitaire, sans DB), ni une
@@ -180,7 +180,11 @@ const buildFakePrisma = (link: FakeLinkRow, user: FakeUserRow) => ({
         where.tokenHash === link.tokenHash
           ? {
               ...link,
-              user: { id: user.id, deactivatedAt: user.deactivatedAt },
+              user: {
+                id: user.id,
+                email: user.email,
+                deactivatedAt: user.deactivatedAt,
+              },
             }
           : null,
       ),
@@ -226,6 +230,7 @@ const buildRealAccessLinkDomain = (
   }
   const user: FakeUserRow = {
     id: 'user-1',
+    email: 'premier@etab.fr',
     deactivatedAt: outcome === 'deactivated' ? now : null,
   }
   const prisma = buildFakePrisma(link, user)

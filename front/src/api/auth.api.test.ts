@@ -23,7 +23,7 @@ describe('AuthApi.consumeAccessLink', () => {
 
     await AuthApi.consumeAccessLink({
       token: JETON,
-      password: 'un-mot-de-passe-suffisant',
+      password: 'MotDePasse-Suffisant1',
     })
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
@@ -43,7 +43,7 @@ describe('AuthApi.consumeAccessLink', () => {
     await expect(
       AuthApi.consumeAccessLink({
         token: JETON,
-        password: 'un-mot-de-passe-suffisant',
+        password: 'MotDePasse-Suffisant1',
       }),
     ).rejects.toMatchObject({ status: 410 })
   })
