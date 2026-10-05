@@ -46,7 +46,7 @@ export function getContrastTextColor(hex: string): string {
 
 // Couleur d'un soignant dans la palette, d'après son rang dans la liste du service
 // (triée par id : un nouveau soignant ne décale pas les couleurs des autres).
-// ponytail: au-delà de 12 soignants les couleurs se répètent ; ajouter une couleur en base si besoin.
+// ponytail: au-delà de 24 soignants les couleurs se répètent ; ajouter une couleur en base si besoin.
 // Paires [teinte, texte foncé de la même teinte] : le texte reste lisible sur le fond pâle.
 const PALETTE_SOIGNANTS: [string, string][] = [
   ['#3b82f6', '#1e40af'],
@@ -61,6 +61,18 @@ const PALETTE_SOIGNANTS: [string, string][] = [
   ['#64748b', '#1e293b'],
   ['#14b8a6', '#115e59'],
   ['#eab308', '#713f12'],
+  ['#0ea5e9', '#075985'],
+  ['#f43f5e', '#9f1239'],
+  ['#d946ef', '#86198f'],
+  ['#6366f1', '#3730a3'],
+  ['#a855f7', '#6b21a8'],
+  ['#22c55e', '#166534'],
+  ['#78716c', '#292524'],
+  ['#a16207', '#422006'],
+  ['#1e3a8a', '#1e3a8a'],
+  ['#7f1d1d', '#7f1d1d'],
+  ['#4d7c0f', '#365314'],
+  ['#701a75', '#701a75'],
 ]
 
 export function styleSoignant(id: string, soignantIDs: string[]) {
