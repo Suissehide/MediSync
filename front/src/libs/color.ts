@@ -58,9 +58,9 @@ const PALETTE_SOIGNANTS: [string, string][] = [
   ['#ec4899', '#9d174d'],
   ['#84cc16', '#3f6212'],
   ['#f97316', '#9a3412'],
-  ['#6366f1', '#3730a3'],
+  ['#64748b', '#1e293b'],
   ['#14b8a6', '#115e59'],
-  ['#a855f7', '#6b21a8'],
+  ['#eab308', '#713f12'],
 ]
 
 export function styleSoignant(id: string, soignantIDs: string[]) {
