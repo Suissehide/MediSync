@@ -68,6 +68,7 @@ associe les permissions aux rôles. C'est cette matrice qui fait foi.
 | `members:read` | Voir les membres du service et leur rôle | ✔ | ✔ | ✔ | ✔ |
 | `consultations:read` | Lire le journal des consultations (`PatientAccessLog`) du service courant : qui a ouvert quel dossier, quand — jamais un contenu clinique | ✔ | | | |
 | `service-members:manage` | Gérer l'équipe du **seul service courant** : inviter (y compris en créant le compte et son lien de première connexion), changer le rôle de service, retirer du service — depuis le 2026-10-05, MDS-17 | ✔ | | | |
+| `service-journal:read` | Lire le journal d'activité du **seul service courant** (écran « Journal d'activité » du menu Administration du service), sans les opérations d'administration de l'établissement — depuis le 2026-10-05 | ✔ | | | |
 
 Règles associées :
 

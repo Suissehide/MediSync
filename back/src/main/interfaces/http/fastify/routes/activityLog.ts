@@ -1,4 +1,4 @@
-import type { FastifyPluginAsync } from 'fastify'
+import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 
 import {
   activityLogsResponseSchema,
@@ -16,32 +16,26 @@ import {
 // depuis la navigation par échelle (2026-09-28) : il couvre tout
 // l'établissement, filtrable par service (`ActivityLogRepository.scopeFilter`),
 // et un administrateur sans affectation de service peut enfin l'atteindre.
+const lireLeJournal =
+  (permission: 'activity-log:read' | 'service-journal:read') =>
+  (fastify: FastifyInstance) =>
+    fastify.get<{ Querystring: GetActivityLogsQuery }>(
+      '/',
+      {
+        schema: {
+          querystring: getActivityLogsQuerySchema,
+          response: { 200: activityLogsResponseSchema },
+        },
+        config: { permission },
+      },
+      (request) =>
+        fastify.iocContainer.activityLogDomain.findMany(request.query),
+    )
+
 const activityLogRouter: FastifyPluginAsync = (fastify) => {
   const { activityLogDomain } = fastify.iocContainer
 
-  fastify.get<{ Querystring: GetActivityLogsQuery }>(
-    '/',
-    {
-      schema: {
-        querystring: getActivityLogsQuerySchema,
-        response: { 200: activityLogsResponseSchema },
-      },
-      config: { permission: 'activity-log:read' },
-    },
-    (request) => {
-      const { page, pageSize, action, userID, user, from, serviceId } =
-        request.query
-      return activityLogDomain.findMany({
-        page,
-        pageSize,
-        action,
-        userID,
-        user,
-        from,
-        serviceId,
-      })
-    },
-  )
+  lireLeJournal('activity-log:read')(fastify)
 
   fastify.post<{ Querystring: CleanupActivityLogsQuery }>(
     '/cleanup',
@@ -60,4 +54,11 @@ const activityLogRouter: FastifyPluginAsync = (fastify) => {
   return Promise.resolve()
 }
 
-export { activityLogRouter }
+// Journal du chef de service, sous le prefixe de service : `ActivityLogRepository.scopeFilter`
+// le borne au service courant.
+const serviceActivityLogRouter: FastifyPluginAsync = (fastify) => {
+  lireLeJournal('service-journal:read')(fastify)
+  return Promise.resolve()
+}
+
+export { activityLogRouter, serviceActivityLogRouter }

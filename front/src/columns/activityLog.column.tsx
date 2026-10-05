@@ -2,10 +2,8 @@ import { createColumnHelper } from '@tanstack/react-table'
 import dayjs from 'dayjs'
 
 import { Etiquette } from '../components/table/etiquette.tsx'
-import {
-  ACTION_LABELS,
-  TYPE_LABELS,
-} from '../constants/activityLog.constant.ts'
+import { TYPE_LABELS } from '../constants/activityLog.constant.ts'
+import { PLATFORM_ACTIVITY_ACTION_LABELS } from '../constants/superAdminAccessLog.constant.ts'
 import type { ActivityLog } from '../types/activityLog.ts'
 
 const columnHelper = createColumnHelper<ActivityLog>()
@@ -34,7 +32,9 @@ export const activityLogColumns = [
   ),
   columnHelper.accessor('action', {
     header: 'Action',
-    cell: (info) => ACTION_LABELS[info.getValue()] ?? info.getValue(),
+    // Toutes les actions du journal, `member.*` compris : l'administration les voit.
+    cell: (info) =>
+      PLATFORM_ACTIVITY_ACTION_LABELS[info.getValue()] ?? info.getValue(),
     size: 240,
   }),
   columnHelper.accessor('entityType', {

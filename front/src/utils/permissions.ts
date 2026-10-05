@@ -54,6 +54,9 @@ export type ServicePermission =
   // sa seule appartenance de service, une confusion durable que cette tache ne doit pas
   // introduire dans une fonction dont depend chaque route du depot.
   | 'consultations:read'
+  // Journal d'activite du SEUL service courant (chef de service). Nom distinct d'`activity-log:read`
+  // pour la meme raison que `consultations:read`.
+  | 'service-journal:read'
 
 export type EstablishmentPermission =
   | 'services:manage'
@@ -98,6 +101,7 @@ export const SERVICE_PERMISSIONS: Record<
     'pdf:export',
     'consultations:read',
     'service-members:manage',
+    'service-journal:read',
   ],
   INTERVENANT: [
     ...READ_ALL,
