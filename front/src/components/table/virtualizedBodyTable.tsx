@@ -133,7 +133,17 @@ export function VirtualizedBodyTable<TData>({
             data-state={isSelected ? 'selected' : undefined}
             onClick={
               !disabled && onRowClick
-                ? () => onRowClick(row.original)
+                ? (event) => {
+                    // Un contrôle de la ligne (lien, bouton, case) garde son propre effet.
+                    if (
+                      (event.target as HTMLElement).closest(
+                        'a, button, input, label',
+                      )
+                    ) {
+                      return
+                    }
+                    onRowClick(row.original)
+                  }
                 : undefined
             }
             className={cn(
