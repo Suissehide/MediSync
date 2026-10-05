@@ -94,9 +94,11 @@ export const NAVIGATION: Record<Scale, readonly NavItem[]> = {
     {
       label: 'Membres',
       to: '/e/$establishmentId/s/$serviceId/members',
-      permission: 'referentials:write',
+      // La MEME permission que le `beforeLoad` de l'ecran (MDS-17) : un onglet garde autrement
+      // mene a une redirection, et l'ecart ne se verrait qu'au clic.
+      permission: 'service-members:manage',
       group: 'Administration',
-      description: 'Comptes qui travaillent dans le service',
+      description: "L'équipe du service : inviter, changer un rôle, retirer",
     },
     // Propres a chaque service depuis le 2026-09-29 : un soignant est un metier du service, une
     // salle un lieu du service.

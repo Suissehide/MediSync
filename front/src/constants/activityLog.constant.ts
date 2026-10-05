@@ -24,6 +24,12 @@ export const ACTION_LABELS: Record<string, string> = {
   'diagnostic.updated': 'Diagnostic modifié',
   'appointment.created': 'Rendez-vous créé',
   'appointment.updated': 'Rendez-vous modifié',
+  // Gestion de l'équipe du service par son coordinateur : écrite sous un contexte de service,
+  // donc visible ici — à la différence des `member.*` de l'administration d'établissement.
+  'serviceMember.added': 'Membre affecté au service',
+  'serviceMember.accountCreated': 'Compte créé et affecté au service',
+  'serviceMember.updated': 'Rôle dans le service modifié',
+  'serviceMember.removed': 'Membre retiré du service',
 }
 
 export const ACTION_OPTIONS = toSelectOptions(ACTION_LABELS)

@@ -1,6 +1,6 @@
 import Boom from '@hapi/boom'
 
-import type { EstablishmentRole } from '../../generated/enums'
+import type { EstablishmentRole, ServiceRole } from '../../generated/enums'
 import type { PostgresOrm } from '../infra/orm/postgres-client'
 import type { IocContainer } from '../types/application/ioc'
 import type { AccessLinkDomainInterface } from '../types/domain/accessLink.domain.interface'
@@ -11,6 +11,8 @@ import type {
   MembershipDomainInterface,
   MembershipRowDomain,
   MembershipUpdateDomain,
+  ServiceInviteDomain,
+  ServiceInviteResult,
   ServiceMemberRowDomain,
 } from '../types/domain/membership.domain.interface'
 import type { EstablishmentRepositoryInterface } from '../types/infra/orm/repositories/establishment.repository.interface'
@@ -69,6 +71,13 @@ const MULTI_ESTABLISHMENT_LINK =
 
 const DEACTIVATED_LINK =
   'This account is deactivated; its access link cannot be reissued'
+
+// L'appelant est coordinateur de ce service : `GET /membres` lui montre deja cette adresse, le
+// refus ne lui apprend rien.
+const ALREADY_SERVICE_MEMBER =
+  'This account is already a member of this service'
+
+const SELF_SERVICE_ACTION = 'Cannot apply this action to your own account'
 
 const SUPER_ADMIN_ACTIVATION =
   'This account cannot be activated or deactivated from an establishment'
@@ -139,6 +148,105 @@ class MembershipDomain implements MembershipDomainInterface {
     }
     this.emit('member.updated', updated.establishmentMembershipId)
     return updated
+  }
+
+  // L'EQUIPE DU SERVICE COURANT, geree par son coordinateur (`service-members:manage`) : il
+  // invite, change le role de service et retire. Jamais le rattachement d'etablissement, jamais
+  // un autre service — `serviceId` vient du tenant resolu, et les depots appeles sont bornes a
+  // ce service.
+  //
+  // CE QUE L'INVITATION REND, ET CE QU'ELLE NE REND PAS : `accessLink` seul, jamais l'identite du
+  // compte. Meme motif que `createMemberAccountResponseSchema` — sur une adresse qui a DEJA un
+  // compte, le nom STOCKE et le cuid (qui encode l'instant de creation) seraient des oracles
+  // d'existence. `null` dit « ce compte etait deja rattache ici, il a son mot de passe » : le
+  // seul fait dont l'appelant a besoin pour savoir s'il a un lien a transmettre.
+  async inviteToService({
+    email,
+    firstName,
+    lastName,
+    role,
+  }: ServiceInviteDomain): Promise<ServiceInviteResult> {
+    const { serviceId } = this.tenantContext.scope()
+    const services = [{ serviceId, role }]
+    await this.assertReferences(services)
+
+    const user = await this.userRepository.findByEmail(email).catch(() => null)
+    const membership = user
+      ? await this.membershipRepository.findByUserID(user.id)
+      : null
+
+    if (membership) {
+      if (
+        await this.membershipRepository.findServiceMemberByMembership(
+          membership.id,
+        )
+      ) {
+        throw Boom.conflict(ALREADY_SERVICE_MEMBER)
+      }
+      if (membership.user.deactivatedAt !== null) {
+        throw Boom.conflict(DEACTIVATED_ACCOUNT)
+      }
+      await this.membershipRepository.addServiceMember(membership.id, role)
+      this.emit('serviceMember.added', membership.id)
+      return { accessLink: null }
+    }
+
+    // Compte neuf, ou compte existant rattache nulle part : `createAccountCore` porte TOUTES les
+    // gardes de jeton (super-admin, rattache ailleurs, desactive), elles ne sont pas recopiees
+    // ici. `role: 'MEMBER'` n'est jamais soumis — un coordinateur n'accorde pas l'etablissement.
+    const { member, accessLink } = await this.createAccountCore({
+      email,
+      firstName,
+      lastName,
+      role: 'MEMBER',
+      services,
+    })
+    this.emit('serviceMember.accountCreated', member.id)
+    return { accessLink }
+  }
+
+  // Un coordinateur ne se retire ni ne se retrograde lui-meme, meme regle qu'`assertNotSelf` a
+  // l'echelle de l'etablissement : sans elle il se ferme la porte de son propre service.
+  //
+  // ponytail: aucune garde « dernier coordinateur du service » — le chef d'etablissement est
+  // coordinateur implicite de tous les services actifs (`effectiveMemberships`), donc un service
+  // sans coordinateur reste administrable. A rouvrir si ce coordinateur implicite disparait.
+  private async assertOtherServiceMember(
+    serviceMembershipId: string,
+  ): Promise<ServiceMemberRowDomain> {
+    const affectation =
+      await this.membershipRepository.findServiceMemberByID(serviceMembershipId)
+    if (!affectation) {
+      throw Boom.notFound('Service member not found')
+    }
+    if (affectation.establishmentMembership.user.id === this.currentUserId()) {
+      throw Boom.conflict(SELF_SERVICE_ACTION)
+    }
+    return affectation
+  }
+
+  async setServiceMemberRole(
+    serviceMembershipId: string,
+    role: ServiceRole,
+  ): Promise<ServiceMemberRowDomain> {
+    const affectation = await this.assertOtherServiceMember(serviceMembershipId)
+    const updated = await this.membershipRepository.setServiceRole(
+      serviceMembershipId,
+      role,
+    )
+    if (!updated) {
+      throw Boom.notFound('Service member not found')
+    }
+    this.emit('serviceMember.updated', affectation.establishmentMembershipId)
+    return updated
+  }
+
+  // Retire l'AFFECTATION, jamais le compte ni son rattachement d'etablissement : le membre garde
+  // ses autres services.
+  async removeServiceMember(serviceMembershipId: string): Promise<void> {
+    const affectation = await this.assertOtherServiceMember(serviceMembershipId)
+    await this.membershipRepository.deleteServiceMember(serviceMembershipId)
+    this.emit('serviceMember.removed', affectation.establishmentMembershipId)
   }
 
   findAll(): Promise<MembershipRowDomain[]> {
@@ -335,7 +443,11 @@ class MembershipDomain implements MembershipDomainInterface {
       | 'member.deactivated'
       | 'member.reactivated'
       | 'member.accountCreated'
-      | 'member.accessLinkReissued',
+      | 'member.accessLinkReissued'
+      | 'serviceMember.added'
+      | 'serviceMember.accountCreated'
+      | 'serviceMember.updated'
+      | 'serviceMember.removed',
     membershipId: string,
   ): void {
     this.appEventBus.emit(event, { userID: this.currentUserId(), membershipId })
@@ -406,7 +518,10 @@ class MembershipDomain implements MembershipDomainInterface {
     hashPassword(randomToken(PLACEHOLDER_PASSWORD_BYTES))
   }
 
-  async createAccount({
+  // LE COEUR, SANS EVENEMENT : deux surfaces le partagent — l'administration d'etablissement
+  // (`createAccount`) et l'invitation par un coordinateur (`inviteToService`) —, et chacune
+  // nomme son action dans le journal. Toutes les gardes de compte vivent ici, une seule fois.
+  private async createAccountCore({
     email,
     firstName,
     lastName,
@@ -485,9 +600,21 @@ class MembershipDomain implements MembershipDomainInterface {
         return { membership, accessLink }
       })
 
-    this.emit('member.accountCreated', membership.id)
+    // L'E-MAIL PART DU COEUR, comme l'emission du jeton (MDS-35 + MDS-17) : les DEUX surfaces qui
+    // creent un compte — l'administration d'etablissement et l'invitation par un coordinateur —
+    // doivent l'envoyer, et un seul endroit l'envoie. L'EVENEMENT, lui, reste a l'appelant : c'est
+    // la seule chose qui differe entre les deux (`member.accountCreated` contre
+    // `serviceMember.accountCreated`).
     await this.sendInvitation(membership.user.email, accessLink.token)
     return { member: membership, accessLink }
+  }
+
+  async createAccount(
+    params: MembershipCreateAccountDomain,
+  ): Promise<MembershipCreateAccountResult> {
+    const result = await this.createAccountCore(params)
+    this.emit('member.accountCreated', result.member.id)
+    return result
   }
 
   // LE POINT LE PLUS DANGEREUX DE CETTE MÉTHODE : un lien d'accès

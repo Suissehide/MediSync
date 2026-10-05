@@ -46,5 +46,60 @@ export const useServiceMemberMutations = () => {
     },
   })
 
-  return { setSoignant }
+  // MDS-17. L'INVITATION NE VIT QUE DANS LE CACHE DE MUTATION : son lien de premiere connexion
+  // est un mot de passe a usage unique, il ne doit jamais entrer dans une cle de REQUETE (que
+  // n'importe quel ecran pourrait relire). Meme regle que `createMemberAccount`
+  // (`useMembers.ts`). Pas de toast de succes : le lien s'affiche dans la popup.
+  const inviteMember = useMutation({
+    mutationKey: [SERVICE_MEMBER.INVITE],
+    mutationFn: ServiceMembersApi.invite,
+    onError: (error) => {
+      toast({
+        title: "Erreur lors de l'invitation",
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: [SERVICE_MEMBER.GET_ALL],
+      })
+    },
+  })
+
+  const setRole = useMutation({
+    mutationKey: [SERVICE_MEMBER.SET_ROLE],
+    mutationFn: ServiceMembersApi.setRole,
+    onError: (error) => {
+      toast({
+        title: 'Erreur lors du changement de rôle',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: [SERVICE_MEMBER.GET_ALL],
+      })
+    },
+  })
+
+  const removeMember = useMutation({
+    mutationKey: [SERVICE_MEMBER.REMOVE],
+    mutationFn: ServiceMembersApi.remove,
+    onError: (error) => {
+      toast({
+        title: 'Erreur lors du retrait',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: [SERVICE_MEMBER.GET_ALL],
+      })
+    },
+  })
+
+  return { setSoignant, inviteMember, setRole, removeMember }
 }

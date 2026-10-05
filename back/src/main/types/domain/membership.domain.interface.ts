@@ -1,4 +1,4 @@
-import type { EstablishmentRole } from '../../../generated/enums'
+import type { EstablishmentRole, ServiceRole } from '../../../generated/enums'
 import type {
   MembershipRow,
   MembershipUpdateRepo,
@@ -36,12 +36,33 @@ export type MembershipCreateAccountResult = {
 
 export type ServiceMemberRowDomain = ServiceMemberRow
 
+// Inviter dans le SERVICE courant : le service n'est jamais soumis (il vient du tenant resolu),
+// et le role d'etablissement non plus — un coordinateur ne rattache qu'en `MEMBER`.
+export type ServiceInviteDomain = {
+  email: string
+  firstName?: string
+  lastName?: string
+  role: ServiceRole
+}
+
+// `accessLink` a `null` quand le compte etait deja rattache a l'etablissement : il a son mot de
+// passe, il n'y a aucun lien a transmettre. Rien d'autre n'est rendu — voir `inviteToService`.
+export type ServiceInviteResult = { accessLink: { token: string } | null }
+
 export interface MembershipDomainInterface {
   findServiceMembers: () => Promise<ServiceMemberRowDomain[]>
   setServiceSoignant: (
     serviceMembershipId: string,
     soignantId: string | null,
   ) => Promise<ServiceMemberRowDomain>
+  inviteToService: (params: ServiceInviteDomain) => Promise<ServiceInviteResult>
+  // Leve `Boom.conflict` sur sa propre affectation : un coordinateur ne se retrograde pas, et ne
+  // se retire pas de son service.
+  setServiceMemberRole: (
+    serviceMembershipId: string,
+    role: ServiceRole,
+  ) => Promise<ServiceMemberRowDomain>
+  removeServiceMember: (serviceMembershipId: string) => Promise<void>
   findAll: () => Promise<MembershipRowDomain[]>
   addByEmail: (
     params: MembershipAddByEmailDomain,

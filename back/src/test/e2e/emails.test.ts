@@ -7,6 +7,7 @@ import {
   createService,
   createUser,
   signIn,
+  tenantUrl,
 } from './setup/fixtures'
 
 const NEW_PASSWORD = 'NouveauMotDePasseValide123!!'
@@ -98,6 +99,46 @@ describe('e-mails d invitation et mot de passe oublie', () => {
     expect(tokenOf(mail)).toBe(res.json().accessLink.token)
 
     await setPasswordAndSignIn(tokenOf(mail), 'nouvelle@lilas.fr')
+  })
+
+  // MDS-17 : l'invitation par un coordinateur est le CINQUIEME chemin qui remet un jeton, et il
+  // passe par le meme coeur (`createAccountCore`) — donc par le meme envoi. Le dire par
+  // execution : si l'envoi redescendait dans `createAccount` seul, cette personne resterait sans
+  // acces alors que la route a rendu 201.
+  it('invite par e-mail quand c est un coordinateur qui invite dans son service', async () => {
+    await createUser({
+      email: 'coord@lilas.fr',
+      memberships: [
+        { establishmentId, services: [{ serviceId, role: 'COORDINATEUR' }] },
+      ],
+    })
+    const cookies = await signIn(testApp.app, 'coord@lilas.fr')
+
+    const res = await testApp.app.inject({
+      method: 'POST',
+      url: tenantUrl(establishmentId, serviceId, '/membres'),
+      cookies,
+      payload: {
+        email: 'recrue@lilas.fr',
+        firstName: 'Noé',
+        role: 'SECRETARIAT',
+      },
+    })
+
+    expect(res.statusCode).toBe(201)
+    await waitForMail()
+    expect(sent.map((s) => [s.kind, s.mail.to])).toEqual([
+      ['invitation', 'recrue@lilas.fr'],
+    ])
+    expect(sent[0].mail.text).toContain('Clinique des Lilas')
+    // Toujours pas le service : il dit la specialite, donc la pathologie.
+    const mail = sent[0].mail
+    expect(`${mail.subject}${mail.text}${mail.html}`).not.toContain(
+      'Cardiologie',
+    )
+    expect(tokenOf(mail)).toBe(res.json().accessLink.token)
+
+    await setPasswordAndSignIn(tokenOf(mail), 'recrue@lilas.fr')
   })
 
   it('renvoie l e-mail a la reemission du lien', async () => {
