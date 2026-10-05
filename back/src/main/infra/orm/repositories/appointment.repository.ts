@@ -79,7 +79,7 @@ class AppointmentRepository implements AppointmentRepositoryInterface {
     })
   }
 
-  async findByID(appointmentID: string): Promise<AppointmentEntityRepo> {
+  async findByID(appointmentID: string) {
     try {
       const row = await this.prisma.appointment.findUniqueOrThrow({
         where: {

@@ -15,8 +15,8 @@ export type ActivityLogEntityRepo = {
 
 export type ActivityLogCreateEntityRepo = Omit<
   ActivityLogEntityRepo,
-  'id' | 'createdAt' | 'establishmentId' | 'serviceId'
->
+  'id' | 'createdAt' | 'establishmentId' | 'serviceId' | 'detail'
+> & { detail?: string | null }
 
 export type ActivityLogFindManyParams = {
   page: number

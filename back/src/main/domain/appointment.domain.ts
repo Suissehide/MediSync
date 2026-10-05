@@ -113,6 +113,7 @@ class AppointmentDomain implements AppointmentDomainInterface {
     this.appEventBus.emit('appointment.updated', {
       userID,
       appointmentId: appointmentID,
+      detail: convocationSent ? 'convocation envoyée' : 'convocation annulée',
     })
   }
 

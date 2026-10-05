@@ -1,9 +1,29 @@
+import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc'
+
 import type { IocContainer } from '../types/application/ioc'
 import type { ActivityLogRepositoryInterface } from '../types/infra/orm/repositories/activityLog.repository.interface'
 import type { UserRepositoryInterface } from '../types/infra/orm/repositories/user.repository.interface'
 import type { Logger } from '../types/utils/logger'
 import type { TenantContextInterface } from '../types/utils/tenant-context'
 import type { AppEventBus } from '../utils/app-event-bus'
+
+dayjs.extend(utc)
+
+const ROLES_DE_SERVICE: Record<string, string> = {
+  COORDINATEUR: 'Coordinateur',
+  INTERVENANT: 'Intervenant',
+  SECRETARIAT: 'Secrétariat',
+  LECTURE: 'Lecture',
+}
+
+type Personne = {
+  firstName: string | null
+  lastName: string | null
+  email?: string | null
+}
+const nom = (p: Personne) =>
+  [p.lastName, p.firstName].filter(Boolean).join(' ') || p.email || '—'
 
 // Les operations de gestion des membres partagent la meme forme de charge
 // utile : une seule boucle suffit a les journaliser toutes.
@@ -28,6 +48,10 @@ class ActivityLogSubscriber {
   private readonly userRepository: UserRepositoryInterface
   private readonly logger: Logger
   private readonly tenantContext: TenantContextInterface
+  private readonly patientRepository: IocContainer['patientRepository']
+  private readonly appointmentRepository: IocContainer['appointmentRepository']
+  private readonly diagnosticEducatifRepository: IocContainer['diagnosticEducatifRepository']
+  private readonly membershipRepository: IocContainer['membershipRepository']
 
   constructor({
     appEventBus,
@@ -35,36 +59,62 @@ class ActivityLogSubscriber {
     userRepository,
     logger,
     tenantContext,
+    patientRepository,
+    appointmentRepository,
+    diagnosticEducatifRepository,
+    membershipRepository,
   }: IocContainer) {
     this.appEventBus = appEventBus
     this.activityLogRepository = activityLogRepository
     this.userRepository = userRepository
     this.logger = logger
     this.tenantContext = tenantContext
+    this.patientRepository = patientRepository
+    this.appointmentRepository = appointmentRepository
+    this.diagnosticEducatifRepository = diagnosticEducatifRepository
+    this.membershipRepository = membershipRepository
     this.#subscribe()
   }
 
   #subscribe(): void {
     this.appEventBus.on('patient.created', (p) =>
-      this.#log('patient.created', 'patient', p.userID, p.patientId),
+      this.#log('patient.created', 'patient', p.userID, p.patientId, p.detail),
     )
     this.appEventBus.on('patient.updated', (p) =>
-      this.#log('patient.updated', 'patient', p.userID, p.patientId),
+      this.#log('patient.updated', 'patient', p.userID, p.patientId, p.detail),
     )
     this.appEventBus.on('patient.deleted', (p) =>
-      this.#log('patient.deleted', 'patient', p.userID, p.patientId),
+      this.#log('patient.deleted', 'patient', p.userID, p.patientId, p.detail),
     )
     this.appEventBus.on('patient.enrolled', (p) =>
-      this.#log('patient.enrolled', 'patient', p.userID, p.patientId),
+      this.#log('patient.enrolled', 'patient', p.userID, p.patientId, p.detail),
     )
     this.appEventBus.on('patient.removedFromPathway', (p) =>
-      this.#log('patient.removedFromPathway', 'patient', p.userID, p.patientId),
+      this.#log(
+        'patient.removedFromPathway',
+        'patient',
+        p.userID,
+        p.patientId,
+        p.detail,
+      ),
     )
     this.appEventBus.on('diagnostic.created', (p) =>
-      this.#log('diagnostic.created', 'diagnostic', p.userID, p.diagnosticId),
+      this.#log(
+        'diagnostic.created',
+        'diagnostic',
+        p.userID,
+        p.diagnosticId,
+        p.detail,
+      ),
     )
     this.appEventBus.on('diagnostic.updated', (p) =>
-      this.#log('diagnostic.updated', 'diagnostic', p.userID, p.diagnosticId),
+      this.#log(
+        'diagnostic.updated',
+        'diagnostic',
+        p.userID,
+        p.diagnosticId,
+        p.detail,
+      ),
     )
     this.appEventBus.on('appointment.created', (p) =>
       this.#log(
@@ -72,6 +122,7 @@ class ActivityLogSubscriber {
         'appointment',
         p.userID,
         p.appointmentId,
+        p.detail,
       ),
     )
     this.appEventBus.on('appointment.updated', (p) =>
@@ -80,11 +131,12 @@ class ActivityLogSubscriber {
         'appointment',
         p.userID,
         p.appointmentId,
+        p.detail,
       ),
     )
     for (const action of MEMBER_ACTIONS) {
       this.appEventBus.on(action, (p) =>
-        this.#log(action, 'member', p.userID, p.membershipId),
+        this.#log(action, 'member', p.userID, p.membershipId, p.detail),
       )
     }
     // La reemission par le super-admin. `entityType: 'user'`, pas
@@ -138,6 +190,7 @@ class ActivityLogSubscriber {
           'user',
           p.userID,
           p.targetUserId,
+          p.detail,
         )
       }),
     )
@@ -148,6 +201,7 @@ class ActivityLogSubscriber {
     entityType: string,
     userID: string,
     entityID: string,
+    complement?: string,
   ): Promise<void> {
     try {
       // `findIdentity`, PAS `findByID`.
@@ -178,6 +232,7 @@ class ActivityLogSubscriber {
       const user = await this.userRepository
         .findIdentity(userID)
         .catch(() => null)
+      const entite = await this.#decrire(entityType, entityID).catch(() => null)
       await this.activityLogRepository.create({
         userID,
         userFirstName: user?.firstName ?? null,
@@ -185,6 +240,7 @@ class ActivityLogSubscriber {
         action,
         entityType,
         entityID,
+        detail: [entite, complement].filter(Boolean).join(' — ') || null,
       })
     } catch (err) {
       // Jamais `${err}` : ce depot (`activityLog.repository.ts`) n'a lui-meme aucun `catch`, donc
@@ -195,6 +251,41 @@ class ActivityLogSubscriber {
       const errorClass =
         err instanceof Error ? err.constructor.name : typeof err
       this.logger.error(`ActivityLog: failed to log ${action} [${errorClass}]`)
+    }
+  }
+
+  // L'entite visee, lue juste apres l'action, sous le meme contexte de tenant. Rejette si elle
+  // n'existe plus : l'evenement porte alors son nom dans `detail`.
+  async #decrire(entityType: string, entityID: string): Promise<string | null> {
+    switch (entityType) {
+      case 'patient':
+        return nom(await this.patientRepository.findByID(entityID))
+      case 'diagnostic': {
+        const diag = await this.diagnosticEducatifRepository.findByID(entityID)
+        return nom(await this.patientRepository.findByID(diag.patientId))
+      }
+      case 'appointment': {
+        const rdv = await this.appointmentRepository.findByID(entityID)
+        return [
+          rdv.appointmentPatients.map((ap) => nom(ap.patient)).join(', '),
+          dayjs.utc(rdv.startDate).format('DD/MM/YYYY à HH:mm'),
+          rdv.thematic?.name,
+        ]
+          .filter(Boolean)
+          .join(' — ')
+      }
+      case 'member': {
+        const membre = await this.membershipRepository.findByID(entityID)
+        const serviceId = this.tenantContext.current().serviceId
+        const role = membre.serviceMemberships.find(
+          (s) => s.serviceId === serviceId,
+        )?.role
+        return role
+          ? `${nom(membre.user)} (${ROLES_DE_SERVICE[role] ?? role})`
+          : nom(membre.user)
+      }
+      default:
+        return null
     }
   }
 }

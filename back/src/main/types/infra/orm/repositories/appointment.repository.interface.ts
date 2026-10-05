@@ -38,7 +38,11 @@ export type AppointmentUpdateEntityRepo = Omit<
 
 export interface AppointmentRepositoryInterface {
   findAll: () => Promise<AppointmentEntityRepo[]>
-  findByID: (id: string) => Promise<AppointmentEntityRepo>
+  findByID: (
+    id: string,
+  ) => Promise<
+    AppointmentWithPatientsRepo & { thematic: { name: string } | null }
+  >
   create: (
     appointmentCreateParams: AppointmentCreateEntityRepo,
   ) => Promise<AppointmentEntityRepo>

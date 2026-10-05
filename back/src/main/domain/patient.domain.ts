@@ -350,7 +350,12 @@ class PatientDomain implements PatientDomainInterface {
       await this.appointmentRepository.deleteOrphanedByIds(appointmentIDs)
     }
 
-    this.appEventBus.emit('patient.deleted', { userID, patientId: deleted.id })
+    // Le dossier n'existe plus quand le journal s'ecrit : son nom voyage avec l'evenement.
+    this.appEventBus.emit('patient.deleted', {
+      userID,
+      patientId: deleted.id,
+      detail: `${deleted.lastName} ${deleted.firstName}`,
+    })
     return deleted
   }
 
@@ -370,6 +375,10 @@ class PatientDomain implements PatientDomainInterface {
     pathwayID: string,
     userID: string,
   ): Promise<RemoveFromPathwayResult> {
+    // Lu avant le retrait : le parcours ne figure plus parmi ceux du patient ensuite.
+    const parcours = (
+      await this.patientRepository.getPathwaysForPatient(patientID)
+    ).find((p) => p.pathwayID === pathwayID)
     const result = await this.patientRepository.removeFromPathway(
       patientID,
       pathwayID,
@@ -379,6 +388,9 @@ class PatientDomain implements PatientDomainInterface {
       userID,
       patientId: patientID,
       pathwayId: pathwayID,
+      detail: parcours?.templateName
+        ? `parcours ${parcours.templateName}`
+        : undefined,
     })
 
     return result
@@ -638,7 +650,13 @@ class PatientDomain implements PatientDomainInterface {
       )
     }
 
-    this.appEventBus.emit('patient.enrolled', { userID, patientId: patient.id })
+    this.appEventBus.emit('patient.enrolled', {
+      userID,
+      patientId: patient.id,
+      detail: enrollments.length
+        ? `parcours ${enrollments.map((e) => e.slotTemplate.name ?? e.slotTemplate.id).join(', ')}`
+        : undefined,
+    })
 
     return {
       patient: await this.patientRepository.findByID(patient.id),
