@@ -9,6 +9,8 @@ export type MemberServiceAssignment = {
   role: ServiceRole
 }
 
+export type InvitationStatus = 'pending' | 'expired' | null
+
 export type Member = {
   id: string
   role: EstablishmentRole
@@ -18,8 +20,8 @@ export type Member = {
     firstName: string | null
     lastName: string | null
     deactivatedAt: string | null
-    // Jamais connecté : l'invitation n'a pas encore été acceptée.
-    invitationPending: boolean
+    // Jamais connecté : invitation en attente, ou expirée faute de lien encore valide.
+    invitationStatus: InvitationStatus
   }
   serviceMemberships: MemberServiceAssignment[]
 }

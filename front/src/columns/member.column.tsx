@@ -124,7 +124,7 @@ export const getMemberColumns = ({
     cell: ({ row }) => (
       <EtiquetteStatut
         deactivatedAt={row.original.user.deactivatedAt}
-        invitationPending={row.original.user.invitationPending}
+        invitationStatus={row.original.user.invitationStatus}
       />
     ),
   }),

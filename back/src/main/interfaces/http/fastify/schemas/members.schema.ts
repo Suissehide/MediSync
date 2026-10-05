@@ -26,6 +26,8 @@ const assignmentsSchema = z
     { message: 'Un service ne peut apparaitre qu une fois' },
   )
 
+export const invitationStatusSchema = z.enum(['pending', 'expired']).nullable()
+
 export const memberResponseSchema = z.object({
   id: z.string(),
   role: establishmentRoleSchema,
@@ -35,7 +37,7 @@ export const memberResponseSchema = z.object({
     firstName: z.string().nullable(),
     lastName: z.string().nullable(),
     deactivatedAt: z.coerce.date().nullable(),
-    invitationPending: z.boolean(),
+    invitationStatus: invitationStatusSchema,
   }),
   serviceMemberships: z.array(
     z.object({ serviceId: z.string(), role: serviceRoleSchema }),
@@ -43,16 +45,32 @@ export const memberResponseSchema = z.object({
 })
 export const membersResponseSchema = z.array(memberResponseSchema)
 
-// Un booléen, jamais la date : `lastLoginAt` est global et dirait l'activité dans les autres
-// établissements. Jamais connecté = invitation pas encore acceptée.
-export const projectUserStatus = <T extends { lastLoginAt: Date | null }>({
-  lastLoginAt,
-  ...user
-}: T) => ({ ...user, invitationPending: lastLoginAt === null })
+// Un statut, jamais la date : `lastLoginAt` est global et dirait l'activité dans les autres
+// établissements. Jamais connecté : invitation en attente tant qu'un lien reste utilisable,
+// expirée sinon. `null` : la personne s'est déjà connectée.
+type UserWithLogin = { id: string; lastLoginAt: Date | null }
 
-export const projectMember = <T extends { user: { lastLoginAt: Date | null } }>(
+export const projectUserStatus = <T extends UserWithLogin>(
+  { lastLoginAt, ...user }: T,
+  activeLinks: ReadonlySet<string>,
+) => ({
+  ...user,
+  invitationStatus:
+    lastLoginAt !== null
+      ? null
+      : activeLinks.has(user.id)
+        ? ('pending' as const)
+        : ('expired' as const),
+})
+
+// Les seuls comptes dont le statut dépend d'un lien : ceux qui ne se sont jamais connectés.
+export const neverLoggedIn = (users: UserWithLogin[]) =>
+  users.filter((user) => user.lastLoginAt === null).map((user) => user.id)
+
+export const projectMember = <T extends { user: UserWithLogin }>(
   row: T,
-) => ({ ...row, user: projectUserStatus(row.user) })
+  activeLinks: ReadonlySet<string>,
+) => ({ ...row, user: projectUserStatus(row.user, activeLinks) })
 
 export const updateMemberSchema = z.object({
   role: establishmentRoleSchema.optional(),

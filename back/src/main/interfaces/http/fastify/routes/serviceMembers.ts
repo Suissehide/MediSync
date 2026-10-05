@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod/v4'
 
+import { neverLoggedIn } from '../schemas/members.schema'
 import {
   type InviteServiceMemberBody,
   inviteServiceMemberResponseSchema,
@@ -31,7 +32,15 @@ import {
 // perimetre s'arrete au service courant ; les comptes et les rattachements d'etablissement
 // restent a `members:manage`.
 const serviceMembersRouter: FastifyPluginAsync = (fastify) => {
-  const { membershipDomain } = fastify.iocContainer
+  const { membershipDomain, accessLinkDomain } = fastify.iocContainer
+  const project = async (
+    rows: Parameters<typeof projectServiceMember>[0][],
+  ) => {
+    const active = await accessLinkDomain.activeLinkUserIds(
+      neverLoggedIn(rows.map((row) => row.establishmentMembership.user)),
+    )
+    return rows.map((row) => projectServiceMember(row, active))
+  }
 
   fastify.get(
     '/',
@@ -39,8 +48,7 @@ const serviceMembersRouter: FastifyPluginAsync = (fastify) => {
       schema: { response: { 200: serviceMembersResponseSchema } },
       config: { permission: 'members:read' },
     },
-    async () =>
-      (await membershipDomain.findServiceMembers()).map(projectServiceMember),
+    async () => await project(await membershipDomain.findServiceMembers()),
   )
 
   fastify.post<{ Body: InviteServiceMemberBody }>(
@@ -70,12 +78,14 @@ const serviceMembersRouter: FastifyPluginAsync = (fastify) => {
       config: { permission: 'service-members:manage' },
     },
     async (request) =>
-      projectServiceMember(
-        await membershipDomain.setServiceMemberRole(
-          request.params.serviceMembershipId,
-          request.body.role,
-        ),
-      ),
+      (
+        await project([
+          await membershipDomain.setServiceMemberRole(
+            request.params.serviceMembershipId,
+            request.body.role,
+          ),
+        ])
+      )[0],
   )
 
   fastify.delete<{ Params: ServiceMemberParams }>(
@@ -106,12 +116,14 @@ const serviceMembersRouter: FastifyPluginAsync = (fastify) => {
       config: { permission: 'referentials:write' },
     },
     async (request) =>
-      projectServiceMember(
-        await membershipDomain.setServiceSoignant(
-          request.params.serviceMembershipId,
-          request.body.soignantId,
-        ),
-      ),
+      (
+        await project([
+          await membershipDomain.setServiceSoignant(
+            request.params.serviceMembershipId,
+            request.body.soignantId,
+          ),
+        ])
+      )[0],
   )
 
   return Promise.resolve()

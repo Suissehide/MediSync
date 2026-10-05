@@ -42,6 +42,18 @@ class AccessLinkRepository implements AccessLinkRepositoryInterface {
     }
   }
 
+  async findUserIdsWithActiveLink(
+    userIds: string[],
+    now: Date,
+  ): Promise<string[]> {
+    const rows = await this.prisma.accessLink.findMany({
+      where: { userId: { in: userIds }, usedAt: null, expiresAt: { gt: now } },
+      select: { userId: true },
+      distinct: ['userId'],
+    })
+    return rows.map((row) => row.userId)
+  }
+
   findByTokenHashWithUser(
     tokenHash: string,
   ): Promise<AccessLinkWithUser | null> {
