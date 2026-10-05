@@ -28,6 +28,7 @@ import type {
 import type { Slot } from '../../../../types/slot.ts'
 import { Etiquette } from '../../../table/etiquette.tsx'
 import { ColorLegend } from '../../colorLegend.tsx'
+import { PastillePresence } from '../../pastillePresence.tsx'
 import { ConfirmDeleteForm } from '../../popup/confirmDeleteForm.tsx'
 
 interface OverviewPatientProps {
@@ -56,6 +57,9 @@ function AppointmentCard({
     .format('dddd D MMMM YYYY [de] HH:mm')
     .replace(/^./, (c) => c.toUpperCase())
   const endTime = dayjs.utc(end).format('HH:mm')
+  const status = slot.appointments
+    ?.flatMap((a) => a.appointmentPatients ?? [])
+    .find((ap) => ap.patient.id === patientID)?.status
 
   return (
     <div
@@ -67,7 +71,8 @@ function AppointmentCard({
         style={{ backgroundColor: color }}
       />
       <div className="flex flex-col gap-1 min-w-0">
-        <span className="font-medium text-sm truncate">
+        <span className="font-medium text-sm truncate flex items-center gap-2">
+          <PastillePresence status={status} />
           {soignant ?? thematic}
           {location && (
             <span className="text-text-light font-normal">
