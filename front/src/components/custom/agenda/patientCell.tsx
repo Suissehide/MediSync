@@ -1,6 +1,5 @@
 import { Link } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
-import { useState } from 'react'
 
 import type { DayAppointmentRow } from '../../../libs/utils.ts'
 import { useConvocationSentMutation } from '../../../queries/useAppointment.ts'
@@ -8,7 +7,6 @@ import { useAuthStore } from '../../../store/useAuthStore.ts'
 import { Etiquette } from '../../table/etiquette.tsx'
 import { Button } from '../../ui/button.tsx'
 import { Checkbox } from '../../ui/input.tsx'
-import { MAX_VISIBLE_CHIPS } from './chip.ts'
 
 function ConvocationCheckbox({
   appointmentID,
@@ -48,7 +46,6 @@ type PatientCellProps = {
 }
 
 export default function PatientCell({ row, onAddPatient }: PatientCellProps) {
-  const [expanded, setExpanded] = useState(false)
   // La fiche patient vit sous /e/:establishmentId/s/:serviceId : le contexte
   // vient du store, pose par le layout de service avant que cet ecran (agenda)
   // ne puisse se rendre.
@@ -77,27 +74,10 @@ export default function PatientCell({ row, onAddPatient }: PatientCellProps) {
     )
   }
 
-  const hidden = patients.length - MAX_VISIBLE_CHIPS
-  const visible = expanded ? patients : patients.slice(0, MAX_VISIBLE_CHIPS)
-
   return (
-    <div className="flex items-center gap-1">
-      <div
-        // The table uses `table w-max min-w-full` (auto layout at max-content
-        // width), so a flex-wrap container's max-content contribution is the
-        // sum of all items on one line — wrapping alone won't shrink it.
-        // An explicit max-width forces the wrap. 216px comes from the
-        // `patients` column's declared size (280, see
-        // dayAppointment.column.tsx) minus the <td> horizontal padding
-        // (px-4 = 32px) minus the manage "+" button and its gap (~28px):
-        // 280 − 32 − 28 ≈ 216.
-        className={
-          expanded
-            ? 'flex flex-wrap items-center gap-1 max-w-[216px]'
-            : 'flex items-center gap-1 overflow-hidden'
-        }
-      >
-        {visible.map((appointmentPatient) => (
+    <div className="flex items-start gap-1">
+      <div className="flex flex-col items-start gap-1">
+        {patients.map((appointmentPatient) => (
           <div
             key={appointmentPatient.patient.id}
             className="flex shrink-0 items-center gap-1"
@@ -132,30 +112,6 @@ export default function PatientCell({ row, onAddPatient }: PatientCellProps) {
             )}
           </div>
         ))}
-
-        {hidden > 0 && (
-          // Le bouton de depliage : une etiquette neutre, pour qu'il se lise comme un controle.
-          <Etiquette
-            asChild
-            ton="neutre"
-            className="cursor-pointer hover:border-primary/40 hover:text-primary"
-          >
-            <button
-              type="button"
-              onClick={() => setExpanded((value) => !value)}
-              aria-expanded={expanded}
-              aria-label={
-                expanded
-                  ? 'Réduire la liste des patients'
-                  : hidden > 1
-                    ? `Afficher les ${hidden} patients masqués`
-                    : 'Afficher le patient masqué'
-              }
-            >
-              {expanded ? 'Voir moins' : `+${hidden}`}
-            </button>
-          </Etiquette>
-        )}
       </div>
       {addButton}
     </div>
