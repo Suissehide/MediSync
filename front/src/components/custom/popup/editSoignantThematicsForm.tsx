@@ -53,7 +53,6 @@ function EditSoignantThematicsForm({
         updateSoignant.mutate({
           id: soignant.id,
           name: value.name,
-          active: true,
         })
       }
 

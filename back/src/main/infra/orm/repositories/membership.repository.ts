@@ -179,7 +179,7 @@ class MembershipRepository implements MembershipRepositoryInterface {
       },
       serviceMemberships: {
         where: { establishmentId },
-        select: { serviceId: true, role: true },
+        select: { serviceId: true, role: true, soignantId: true },
       },
     } as const
   }
@@ -257,6 +257,23 @@ class MembershipRepository implements MembershipRepositoryInterface {
     return await this.tenantContext.runAsSystem(async () => {
       const count = await this.prisma.establishmentMembership.count({
         where: { userId, establishmentId: { not: establishmentId } },
+      })
+      return count > 0
+    })
+  }
+
+  // Le soignant appartient-il a CE service de l'etablissement courant ? Un BOOLEEN, rien d'autre.
+  // L'administration d'etablissement n'a pas de service courant, et `Soignant` est un modele de
+  // service : seul le mode systeme permet la lecture, bornee par l'etablissement lu AVANT d'y
+  // entrer. Bornes verifiees par `repository-scope.test.ts`.
+  async soignantDuService(
+    soignantId: string,
+    serviceId: string,
+  ): Promise<boolean> {
+    const { establishmentId } = this.establishmentScope
+    return await this.tenantContext.runAsSystem(async () => {
+      const count = await this.prisma.soignant.count({
+        where: { id: soignantId, serviceId, establishmentId },
       })
       return count > 0
     })
@@ -345,7 +362,13 @@ class MembershipRepository implements MembershipRepositoryInterface {
                   establishmentId,
                   serviceId: service.serviceId,
                 },
-                data: { role: service.role },
+                // `soignantId` absent : le rattachement existant est garde.
+                data: {
+                  role: service.role,
+                  ...(service.soignantId !== undefined && {
+                    soignantId: service.soignantId,
+                  }),
+                },
               })
             } else {
               await tx.serviceMembership.create({
@@ -353,6 +376,7 @@ class MembershipRepository implements MembershipRepositoryInterface {
                   establishmentMembershipId: id,
                   serviceId: service.serviceId,
                   role: service.role,
+                  soignantId: service.soignantId ?? null,
                   establishmentId,
                 },
               })

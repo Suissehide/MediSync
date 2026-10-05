@@ -40,8 +40,7 @@ function InviteServiceMemberForm() {
   const { soignants } = useSoignantQueries()
   const soignantOptions = useMemo(
     () =>
-      (soignants ?? [])
-        .filter((s) => s.active)
+      [...(soignants ?? [])]
         .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
         .map((s) => ({ value: s.id, label: s.name })),
     [soignants],

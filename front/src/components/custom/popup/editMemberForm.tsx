@@ -11,6 +11,7 @@ import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { toSelectOptions } from '../../../libs/utils.ts'
 import { useMemberMutations } from '../../../queries/useMembers.ts'
 import { useServicesQuery } from '../../../queries/useServices.ts'
+import { useAuthStore } from '../../../store/useAuthStore.ts'
 import type { EstablishmentRole, ServiceRole } from '../../../types/auth.ts'
 import type { Member, MemberServiceAssignment } from '../../../types/member.ts'
 import type { Service } from '../../../types/service.ts'
@@ -24,6 +25,7 @@ import {
   PopupTitle,
   PopupTrigger,
 } from '../../ui/popup.tsx'
+import { SoignantDuServiceSelect } from '../soignantDuServiceSelect.tsx'
 import AdminServiceRole from './adminServiceRole.tsx'
 
 interface EditMemberFormProps {
@@ -55,10 +57,12 @@ const SERVICE_ROLE_OPTIONS = [
 export function buildServiceAssignments({
   services,
   serviceRoles,
+  serviceSoignants,
   existingMemberships,
 }: {
   services: { id: string }[]
   serviceRoles: Record<string, string>
+  serviceSoignants?: Record<string, string | null>
   existingMemberships: MemberServiceAssignment[]
 }): MemberServiceAssignment[] {
   const shownServiceIds = new Set(services.map((service) => service.id))
@@ -73,6 +77,9 @@ export function buildServiceAssignments({
     .map((service) => ({
       serviceId: service.id,
       role: serviceRoles[service.id] as ServiceRole,
+      ...(serviceSoignants && {
+        soignantId: serviceSoignants[service.id] ?? null,
+      }),
     }))
   return [...orphanMemberships, ...chosenAssignments]
 }
@@ -100,8 +107,9 @@ function buildDefaultServiceRoles(
 function EditMemberForm({ member }: EditMemberFormProps) {
   const [open, setOpen] = useState(false)
   const { updateMember } = useMemberMutations()
-  // Aucun soignant ici : ils sont propres a chaque service depuis le
-  // 2026-09-29, et le coordinateur rattache les membres depuis son service.
+  const establishmentId = useAuthStore(
+    (state) => state.context?.establishmentId ?? '',
+  )
   // Les services PROPOSÉS sont la liste COMPLÈTE de l'établissement
   // courant (`GET /e/:establishmentId/admin/services`, déjà listée par
   // l'onglet des services, `admin/services.tsx`) — jamais celle d'un
@@ -130,11 +138,13 @@ function EditMemberForm({ member }: EditMemberFormProps) {
       // Rôle choisi pour chaque service MONTRÉ, indexé par identifiant de
       // service (un champ par service de l'établissement).
       serviceRoles: {} as Record<string, string>,
+      serviceSoignants: {} as Record<string, string | null>,
     },
     onSubmit: ({ value }) => {
       const servicesPayload = buildServiceAssignments({
         services: sortedServices,
         serviceRoles: value.serviceRoles,
+        serviceSoignants: value.serviceSoignants,
         existingMemberships: member.serviceMemberships,
       })
       updateMember.mutate({
@@ -153,6 +163,12 @@ function EditMemberForm({ member }: EditMemberFormProps) {
         serviceRoles: buildDefaultServiceRoles(
           sortedServices,
           member.serviceMemberships,
+        ),
+        serviceSoignants: Object.fromEntries(
+          member.serviceMemberships.map((m) => [
+            m.serviceId,
+            m.soignantId ?? null,
+          ]),
         ),
       })
     }
@@ -260,22 +276,47 @@ function EditMemberForm({ member }: EditMemberFormProps) {
                                   label={label}
                                 />
                               ) : (
-                                <form.AppField
-                                  name={`serviceRoles.${service.id}`}
-                                >
-                                  {(field) => (
-                                    <field.Select
-                                      label={label}
-                                      options={SERVICE_ROLE_OPTIONS}
-                                      clearable={false}
-                                      description={
-                                        SERVICE_ROLE_DESCRIPTION[
-                                          field.state.value as ServiceRole
-                                        ]
-                                      }
-                                    />
-                                  )}
-                                </form.AppField>
+                                <div className="space-y-2">
+                                  <form.AppField
+                                    name={`serviceRoles.${service.id}`}
+                                  >
+                                    {(field) => (
+                                      <field.Select
+                                        label={label}
+                                        options={SERVICE_ROLE_OPTIONS}
+                                        clearable={false}
+                                        description={
+                                          SERVICE_ROLE_DESCRIPTION[
+                                            field.state.value as ServiceRole
+                                          ]
+                                        }
+                                      />
+                                    )}
+                                  </form.AppField>
+                                  <form.Subscribe
+                                    selector={(state) =>
+                                      state.values.serviceRoles[service.id]
+                                    }
+                                  >
+                                    {(serviceRole) =>
+                                      serviceRole &&
+                                      serviceRole !== NO_SERVICE_ROLE && (
+                                        <form.Field
+                                          name={`serviceSoignants.${service.id}`}
+                                        >
+                                          {(field) => (
+                                            <SoignantDuServiceSelect
+                                              establishmentId={establishmentId}
+                                              serviceId={service.id}
+                                              value={field.state.value ?? null}
+                                              onChange={field.handleChange}
+                                            />
+                                          )}
+                                        </form.Field>
+                                      )
+                                    }
+                                  </form.Subscribe>
+                                </div>
                               )}
                             </div>
                           )

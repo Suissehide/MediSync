@@ -7,6 +7,8 @@ import type { EstablishmentRole, ServiceRole } from './auth.ts'
 export type MemberServiceAssignment = {
   serviceId: string
   role: ServiceRole
+  // Absent à l'écriture : le back garde le rattachement existant.
+  soignantId?: string | null
 }
 
 export type InvitationStatus = 'pending' | 'expired' | null

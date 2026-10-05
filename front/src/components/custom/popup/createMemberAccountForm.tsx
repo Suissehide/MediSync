@@ -13,6 +13,7 @@ import { buildAccessLinkUrl } from '@/libs/accessLink.ts'
 import { toSelectOptions } from '@/libs/utils.ts'
 import { useMemberMutations } from '@/queries/useMembers.ts'
 import { useServicesQuery } from '@/queries/useServices.ts'
+import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { EstablishmentRole, ServiceRole } from '@/types/auth.ts'
 import { Button } from '../../ui/button.tsx'
 import {
@@ -24,6 +25,7 @@ import {
   PopupTitle,
   PopupTrigger,
 } from '../../ui/popup.tsx'
+import { SoignantDuServiceSelect } from '../soignantDuServiceSelect.tsx'
 import AdminServiceRole from './adminServiceRole.tsx'
 
 const NO_SERVICE = 'NONE'
@@ -44,6 +46,9 @@ const SERVICE_ROLE_OPTIONS = [
 function CreateMemberAccountForm() {
   const [open, setOpen] = useState(false)
   const { createMemberAccount } = useMemberMutations()
+  const establishmentId = useAuthStore(
+    (state) => state.context?.establishmentId ?? '',
+  )
   // Les services PROPOSÉS sont
   // la liste COMPLÈTE de l'établissement courant
   // (`GET /e/:establishmentId/admin/services`), jamais celle de
@@ -78,6 +83,7 @@ function CreateMemberAccountForm() {
       role: 'MEMBER',
       serviceId: NO_SERVICE,
       serviceRole: NO_SERVICE_ROLE,
+      soignantId: null as string | null,
     },
     onSubmit: ({ value }) => {
       const services =
@@ -87,6 +93,7 @@ function CreateMemberAccountForm() {
               {
                 serviceId: value.serviceId,
                 role: value.serviceRole as ServiceRole,
+                soignantId: value.soignantId,
               },
             ]
       createMemberAccount.mutate({
@@ -208,7 +215,12 @@ function CreateMemberAccountForm() {
                   )}
                 </form.AppField>
 
-                <form.AppField name="serviceId">
+                <form.AppField
+                  name="serviceId"
+                  listeners={{
+                    onChange: () => form.setFieldValue('soignantId', null),
+                  }}
+                >
                   {(field) => (
                     <field.Select
                       label="Service"
@@ -260,6 +272,31 @@ function CreateMemberAccountForm() {
                           />
                         )}
                       </form.AppField>
+                    )
+                  }
+                </form.Subscribe>
+
+                <form.Subscribe
+                  selector={(state) => [
+                    state.values.role,
+                    state.values.serviceId,
+                    state.values.serviceRole,
+                  ]}
+                >
+                  {([role, serviceId, serviceRole]) =>
+                    role !== 'ADMIN' &&
+                    serviceId !== NO_SERVICE &&
+                    serviceRole !== NO_SERVICE_ROLE && (
+                      <form.Field name="soignantId">
+                        {(field) => (
+                          <SoignantDuServiceSelect
+                            establishmentId={establishmentId}
+                            serviceId={serviceId}
+                            value={field.state.value}
+                            onChange={field.handleChange}
+                          />
+                        )}
+                      </form.Field>
                     )
                   }
                 </form.Subscribe>

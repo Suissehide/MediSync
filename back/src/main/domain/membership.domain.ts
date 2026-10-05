@@ -297,6 +297,15 @@ class MembershipDomain implements MembershipDomainInterface {
       if (!(await this.membershipRepository.serviceExists(service.serviceId))) {
         throw Boom.notFound(`Service ${service.serviceId} not found`)
       }
+      if (
+        service.soignantId &&
+        !(await this.membershipRepository.soignantDuService(
+          service.soignantId,
+          service.serviceId,
+        ))
+      ) {
+        throw Boom.notFound(`Soignant ${service.soignantId} not found`)
+      }
     }
   }
 

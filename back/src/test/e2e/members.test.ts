@@ -109,7 +109,7 @@ describe('routes membres', () => {
     expect(patched.statusCode).toBe(200)
     expect(patched.json().role).toBe('ADMIN')
     expect(patched.json().serviceMemberships).toEqual([
-      { serviceId, role: 'COORDINATEUR' },
+      { serviceId, role: 'COORDINATEUR', soignantId: null },
     ])
 
     const off = await call('POST', `/${membershipId}/deactivate`)

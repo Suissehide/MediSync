@@ -331,4 +331,50 @@ describe('soignants et salles a l echelle du service', () => {
       ).statusCode,
     ).toBe(404)
   })
+
+  it('le chef d etablissement choisit le soignant de chaque affectation', async () => {
+    const ide = (
+      await call(coordA, 'POST', tenantUrl(E, A, '/soignant'), { name: 'IDE' })
+    ).json()
+    const soignantB = await testDb.soignant.create({
+      data: { name: 'APA', establishmentId: E, serviceId: B },
+    })
+
+    expect(
+      (
+        await call(admin, 'POST', adminUrl(E, '/members/account'), {
+          email: 'mauvais@test.fr',
+          role: 'MEMBER',
+          services: [
+            { serviceId: A, role: 'INTERVENANT', soignantId: soignantB.id },
+          ],
+        })
+      ).statusCode,
+    ).toBe(404)
+
+    const cree = await call(admin, 'POST', adminUrl(E, '/members/account'), {
+      email: 'ide@test.fr',
+      role: 'MEMBER',
+      services: [{ serviceId: A, role: 'INTERVENANT', soignantId: ide.id }],
+    })
+    expect(cree.statusCode).toBe(201)
+    const id = cree.json().member.id
+
+    const maj = await call(admin, 'PATCH', adminUrl(E, `/members/${id}`), {
+      services: [
+        { serviceId: A, role: 'INTERVENANT', soignantId: null },
+        { serviceId: B, role: 'LECTURE', soignantId: soignantB.id },
+      ],
+    })
+    expect(maj.statusCode).toBe(200)
+
+    const membres = (await call(admin, 'GET', adminUrl(E, '/members'))).json()
+    const membre = membres.find((m: { id: string }) => m.id === id)
+    expect(membre.serviceMemberships).toEqual(
+      expect.arrayContaining([
+        { serviceId: A, role: 'INTERVENANT', soignantId: null },
+        { serviceId: B, role: 'LECTURE', soignantId: soignantB.id },
+      ]),
+    )
+  })
 })
