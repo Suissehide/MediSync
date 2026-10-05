@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { Plus } from 'lucide-react'
+import { MessageSquareTextIcon, Plus } from 'lucide-react'
 import { useState } from 'react'
 
 import type { DayAppointmentRow } from '../../../libs/utils.ts'
@@ -8,6 +8,12 @@ import { useAuthStore } from '../../../store/useAuthStore.ts'
 import { Etiquette } from '../../table/etiquette.tsx'
 import { Button } from '../../ui/button.tsx'
 import { Checkbox } from '../../ui/input.tsx'
+import {
+  TooltipContent,
+  TooltipProvider,
+  TooltipRoot,
+  TooltipTrigger,
+} from '../../ui/tooltip.tsx'
 
 function ConvocationCheckbox({
   appointmentID,
@@ -116,6 +122,21 @@ export default function PatientCell({ row, onAddPatient }: PatientCellProps) {
                 {appointmentPatient.patient.firstName}{' '}
                 {appointmentPatient.patient.lastName}
               </Etiquette>
+            )}
+            {appointmentPatient.transmissionNotes && (
+              <TooltipProvider>
+                <TooltipRoot>
+                  <TooltipTrigger asChild>
+                    <MessageSquareTextIcon
+                      className="h-3.5 w-3.5 shrink-0 text-text-light"
+                      aria-label="Notes de transmission"
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent className="whitespace-pre-wrap">
+                    {appointmentPatient.transmissionNotes}
+                  </TooltipContent>
+                </TooltipRoot>
+              </TooltipProvider>
             )}
           </div>
         ))}

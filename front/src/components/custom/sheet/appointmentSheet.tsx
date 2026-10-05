@@ -391,15 +391,20 @@ export default function AppointmentSheet({
                             key={`index_${patientData?.id}`}
                             className="border border-border rounded-md py-2 px-4"
                           >
-                            <div className="flex justify-between items-center">
-                              <div className="text-sm flex items-center gap-2">
+                            <div className="flex justify-between items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={toggleExpand}
+                                aria-expanded={isExpanded}
+                                className="flex-1 self-stretch text-sm flex items-center gap-2 text-left cursor-pointer"
+                              >
                                 <PastillePresence
                                   status={appointmentPatient.status}
                                 />
                                 {patientData
                                   ? `${patientData.firstName} ${patientData.lastName}`
                                   : ``}
-                              </div>
+                              </button>
                               <div className="flex gap-2 items-center">
                                 <form.Field
                                   name={`appointmentPatients[${index}].convocationSent`}
