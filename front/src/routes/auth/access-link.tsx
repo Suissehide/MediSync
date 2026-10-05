@@ -9,6 +9,7 @@ import { AuthCard, AuthLayout } from '../../components/custom/authLayout.tsx'
 import { Button } from '../../components/ui/button.tsx'
 import { useAppForm } from '../../hooks/formConfig.tsx'
 import { isApiError } from '../../libs/httpErrorHandler.ts'
+import { PASSWORD_RULES, passwordError } from '../../libs/password.ts'
 import { useConsumeAccessLink, useLogin } from '../../queries/useAuth.ts'
 
 // LE JETON EST UN MOT DE PASSE À USAGE UNIQUE : il arrive
@@ -182,25 +183,14 @@ function AccessLinkPage() {
           <form.AppField
             name="password"
             validators={{
-              // Même message que `user/settings.tsx` (précédent existant) :
-              // le back exige 12 caractères (`accessLinkConsumeSchema`),
-              // et sans ce contrôle côté client, l'écran par lequel une
-              // personne ENTRE dans l'application se contentait d'un
-              // « une erreur est survenue » qui ne dit jamais quoi
-              // corriger.
-              onChange: ({ value }) => {
-                if (!value) {
-                  return 'Le mot de passe est nécessaire'
-                }
-                if (value.length < 12) {
-                  return 'Le mot de passe doit contenir au moins 12 caractères'
-                }
-                return undefined
-              },
+              // Même règle que le back (`passwordSchema`) : sans ce contrôle, l'écran
+              // n'afficherait qu'un « une erreur est survenue » sans dire quoi corriger.
+              onChange: ({ value }) => passwordError(value),
             }}
           >
             {(field) => <field.Password label="Nouveau mot de passe" />}
           </form.AppField>
+          <p className="text-xs text-text-light -mt-1">{PASSWORD_RULES}</p>
 
           <form.AppField name="confirmPassword">
             {(field) => <field.Password label="Confirmer le mot de passe" />}

@@ -164,7 +164,7 @@ describe('page publique de consommation d un lien d acces', () => {
       ]),
     )
 
-    await remplirEtValider('un-mot-de-passe-suffisant')
+    await remplirEtValider('MotDePasse-Suffisant1')
 
     expect(
       await screen.findByText(/ce lien n'est plus valable/i),
@@ -184,7 +184,7 @@ describe('page publique de consommation d un lien d acces', () => {
       ]),
     )
 
-    await remplirEtValider('un-mot-de-passe-suffisant')
+    await remplirEtValider('MotDePasse-Suffisant1')
 
     expect(await screen.findByText(/compte est désactivé/i)).toBeInTheDocument()
     expect(
@@ -207,7 +207,7 @@ describe('page publique de consommation d un lien d acces', () => {
     ])
     monter(`/auth/access-link#${JETON}`, fetchMock)
 
-    await remplirEtValider('un-mot-de-passe-suffisant')
+    await remplirEtValider('MotDePasse-Suffisant1')
 
     await waitFor(() => {
       expect(screen.getByText('Tableau de bord')).toBeInTheDocument()
@@ -219,7 +219,7 @@ describe('page publique de consommation d un lien d acces', () => {
     expect(consumeCall).toBeDefined()
     expect(JSON.parse(String(consumeCall?.[1]?.body))).toEqual({
       token: JETON,
-      password: 'un-mot-de-passe-suffisant',
+      password: 'MotDePasse-Suffisant1',
     })
 
     const signInCall = fetchMock.mock.calls.find(([url]) =>
@@ -228,7 +228,7 @@ describe('page publique de consommation d un lien d acces', () => {
     expect(signInCall).toBeDefined()
     expect(JSON.parse(String(signInCall?.[1]?.body))).toEqual({
       email: 'quelqu.un@chu.fr',
-      password: 'un-mot-de-passe-suffisant',
+      password: 'MotDePasse-Suffisant1',
     })
   })
 
@@ -243,7 +243,7 @@ describe('page publique de consommation d un lien d acces', () => {
     ])
     monter(`/auth/access-link#${JETON}`, fetchMock)
 
-    await remplirEtValider('un-mot-de-passe-suffisant')
+    await remplirEtValider('MotDePasse-Suffisant1')
 
     expect(
       await screen.findByText(/la connexion automatique a échoué/i),
@@ -276,7 +276,7 @@ describe('page publique de consommation d un lien d acces', () => {
     const { router } = monter(`/auth/access-link#${JETON}`, fetchMock)
     const longueurHistoriqueAvant = router.history.length
 
-    await remplirEtValider('un-mot-de-passe-suffisant')
+    await remplirEtValider('MotDePasse-Suffisant1')
 
     await screen.findByText(/la connexion automatique a échoué/i)
 
@@ -290,25 +290,21 @@ describe('page publique de consommation d un lien d acces', () => {
     expect(router.history.length).toBe(longueurHistoriqueAvant)
   })
 
-  // Le back exige 12 caracteres
-  // (`accessLinkConsumeSchema`) ; sans ce controle cote client, huit
-  // caracteres partaient en requete, revenaient 400, et l'ecran affichait
-  // une phrase qui ne parlait jamais de longueur — sur l'ecran par lequel
-  // une personne ENTRE dans l'application. Precedent existant : `user/settings.tsx` (« Le mot
-  // de passe doit contenir au moins 12 caracteres »).
+  // Le back refuse un mot de passe hors regle (`passwordSchema`) : sans ce controle cote
+  // client, l'ecran renverrait un 400 sans dire quoi corriger.
   it('un mot de passe trop court est refuse cote client, avec le message exact, avant tout appel reseau', async () => {
     const fetchMock = buildFetchMock([])
     monter(`/auth/access-link#${JETON}`, fetchMock)
 
     await userEvent.type(
       screen.getByLabelText(/^nouveau mot de passe/i),
-      'trop-court',
+      'Court1!',
     )
     // Blur explicite (clic sur le champ suivant) : declenche la validation.
     await userEvent.click(screen.getByLabelText(/confirmer le mot de passe/i))
 
     expect(
-      await screen.findByText(/doit contenir au moins 12 caractères/i),
+      await screen.findByText(/doit contenir au moins 8 caractères/i),
     ).toBeInTheDocument()
     expect(fetchMock).not.toHaveBeenCalled()
   })
@@ -331,7 +327,7 @@ describe('page publique de consommation d un lien d acces', () => {
       ]),
     )
 
-    await remplirEtValider('un-mot-de-passe-suffisant')
+    await remplirEtValider('MotDePasse-Suffisant1')
 
     expect(
       await screen.findByText(/une erreur interne est survenue/i),
@@ -363,7 +359,7 @@ describe('page publique de consommation d un lien d acces', () => {
     ])
     const { queryClient } = monter(`/auth/access-link#${JETON}`, fetchMock)
 
-    await remplirEtValider('un-mot-de-passe-suffisant')
+    await remplirEtValider('MotDePasse-Suffisant1')
 
     await waitFor(() => {
       expect(screen.getByText('Tableau de bord')).toBeInTheDocument()
