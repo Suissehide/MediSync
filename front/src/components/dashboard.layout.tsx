@@ -4,8 +4,7 @@ import { useEffect, useState } from 'react'
 
 import { BandeauEchelle, useBandeauEchelle } from './custom/bandeauEchelle.tsx'
 import Sidebar from './custom/sidebar/sidebar.tsx'
-import Navbar, { useOnglets } from './navbar.tsx'
-import { BarreOnglets } from './navigationMobile.tsx'
+import Navbar from './navbar.tsx'
 
 interface DashboardLayoutProps {
   components?: string[]
@@ -31,7 +30,6 @@ function DashboardLayout({
       setSidebarVisible(false)
     }
   }
-  const avecOnglets = useOnglets().groupes.length > 0
   // Le bandeau d'echelle (36px) s'ajoute sous la barre : tout le reste descend d'autant.
   const bandeau = useBandeauEchelle()
 
@@ -81,7 +79,7 @@ function DashboardLayout({
         <main
           className={`flex-1 min-w-0 overflow-hidden bg-background rounded transition-all duration-300 ${
             sidebarVisible ? 'md:ml-64' : 'ml-0'
-          } ${avecOnglets ? 'pb-[calc(3.5rem+env(safe-area-inset-bottom))] md:pb-0' : ''}`}
+          }`}
         >
           <div className="h-full bg-foreground p-2 flex flex-col overflow-hidden">
             <div className="flex-1 min-h-0 bg-card p-3 md:p-6 rounded-xl flex flex-col overflow-hidden">
@@ -92,7 +90,6 @@ function DashboardLayout({
           </div>
         </main>
       </div>
-      <BarreOnglets />
     </div>
   )
 }
