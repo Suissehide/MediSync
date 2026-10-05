@@ -4,6 +4,7 @@ import { Copy, Minus, Plus, X } from 'lucide-react'
 import type { PlanningCycle } from '../../../types/planningCycle.ts'
 import { cycleWeekNumber } from '../../../utils/weekCycle.ts'
 import { Button } from '../../ui/button.tsx'
+import { FormField } from '../../ui/formField.tsx'
 import { Label } from '../../ui/label.tsx'
 import {
   Popup,
@@ -114,10 +115,10 @@ function NormalModeContent({
 
   return (
     <>
-      <Label className="block text-sm font-medium text-text-dark mb-1">
-        Semaine cible
-      </Label>
-      <WeekPicker value={weekDate} onChange={onWeekChange} />
+      <FormField>
+        <Label>Semaine cible</Label>
+        <WeekPicker value={weekDate} onChange={onWeekChange} />
+      </FormField>
 
       {weekStart && (
         <p className="mt-2 text-sm text-text-light">
@@ -140,44 +141,44 @@ function EditModeContent({
 }) {
   return (
     <>
-      <Label className="block text-sm font-medium text-text-dark mb-2">
-        Semaine cible du parcours
-      </Label>
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() =>
-            onTargetWeekNumberChange(Math.max(1, targetWeekNumber - 1))
-          }
-          className="flex items-center justify-center h-9 w-9 rounded-md border border-border bg-background hover:bg-muted transition-colors cursor-pointer"
-        >
-          <Minus className="h-4 w-4 text-text-dark" />
-        </button>
+      <FormField>
+        <Label>Semaine cible du parcours</Label>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() =>
+              onTargetWeekNumberChange(Math.max(1, targetWeekNumber - 1))
+            }
+            className="flex items-center justify-center h-9 w-9 rounded-md border border-border bg-background hover:bg-muted transition-colors cursor-pointer"
+          >
+            <Minus className="h-4 w-4 text-text-dark" />
+          </button>
 
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-text-light">Semaine</span>
-          <input
-            type="number"
-            min={1}
-            value={targetWeekNumber}
-            onChange={(e) => {
-              const v = parseInt(e.target.value, 10)
-              if (!Number.isNaN(v) && v >= 1) {
-                onTargetWeekNumberChange(v)
-              }
-            }}
-            className="w-16 h-9 rounded-md border border-border bg-background px-2 text-center text-sm font-medium text-text-dark focus:outline-none focus:ring-1 focus:ring-ring"
-          />
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-text-light">Semaine</span>
+            <input
+              type="number"
+              min={1}
+              value={targetWeekNumber}
+              onChange={(e) => {
+                const v = parseInt(e.target.value, 10)
+                if (!Number.isNaN(v) && v >= 1) {
+                  onTargetWeekNumberChange(v)
+                }
+              }}
+              className="w-16 h-9 rounded-md border border-border bg-background px-2 text-center text-sm font-medium text-text-dark focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => onTargetWeekNumberChange(targetWeekNumber + 1)}
+            className="flex items-center justify-center h-9 w-9 rounded-md border border-border bg-background hover:bg-muted transition-colors cursor-pointer"
+          >
+            <Plus className="h-4 w-4 text-text-dark" />
+          </button>
         </div>
-
-        <button
-          type="button"
-          onClick={() => onTargetWeekNumberChange(targetWeekNumber + 1)}
-          className="flex items-center justify-center h-9 w-9 rounded-md border border-border bg-background hover:bg-muted transition-colors cursor-pointer"
-        >
-          <Plus className="h-4 w-4 text-text-dark" />
-        </button>
-      </div>
+      </FormField>
     </>
   )
 }

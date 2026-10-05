@@ -317,7 +317,7 @@ export default function AppointmentSheet({
                 {(field) => (
                   <div className="flex-1 flex flex-col min-h-0">
                     <div className="flex items-end gap-4 shrink-0">
-                      <div className="flex-1">
+                      <FormField className="flex-1">
                         <Label htmlFor={'patient-selection'}>
                           Ajouter des patients
                         </Label>
@@ -333,7 +333,7 @@ export default function AppointmentSheet({
                           }
                           disabled={isAtCapacity}
                         />
-                      </div>
+                      </FormField>
                       <Button
                         type="button"
                         variant="default"

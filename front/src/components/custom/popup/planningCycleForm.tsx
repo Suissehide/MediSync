@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import type { PlanningCycle } from '../../../types/planningCycle.ts'
 import { cycleWeekNumber } from '../../../utils/weekCycle.ts'
 import { Button } from '../../ui/button.tsx'
+import { FormField } from '../../ui/formField.tsx'
 import { Label } from '../../ui/label.tsx'
 import {
   Popup,
@@ -84,40 +85,42 @@ export function PlanningCycleForm({
             de semaine de l’année.
           </p>
 
-          <Label className="block text-sm font-medium text-text-dark mb-1">
-            Semaine de départ
-          </Label>
-          <WeekPicker value={weekStart} onChange={handleWeekChange} />
+          <div className="flex flex-col gap-4">
+            <FormField>
+              <Label>Semaine de départ</Label>
+              <WeekPicker value={weekStart} onChange={handleWeekChange} />
+            </FormField>
 
-          <Label className="block text-sm font-medium text-text-dark mt-4 mb-2">
-            Longueur du cycle
-          </Label>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() =>
-                setWeekCount((count) => Math.max(MIN_WEEK_COUNT, count - 1))
-              }
-              disabled={weekCount <= MIN_WEEK_COUNT}
-              className="flex items-center justify-center h-9 w-9 rounded-md border border-border bg-background hover:bg-muted transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Minus className="h-4 w-4 text-text-dark" />
-            </button>
+            <FormField>
+              <Label>Longueur du cycle</Label>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setWeekCount((count) => Math.max(MIN_WEEK_COUNT, count - 1))
+                  }
+                  disabled={weekCount <= MIN_WEEK_COUNT}
+                  className="flex items-center justify-center h-9 w-9 rounded-md border border-border bg-background hover:bg-muted transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Minus className="h-4 w-4 text-text-dark" />
+                </button>
 
-            <span className="w-24 text-center text-sm font-medium text-text-dark">
-              {weekCount} semaine{weekCount > 1 ? 's' : ''}
-            </span>
+                <span className="w-24 text-center text-sm font-medium text-text-dark">
+                  {weekCount} semaine{weekCount > 1 ? 's' : ''}
+                </span>
 
-            <button
-              type="button"
-              onClick={() =>
-                setWeekCount((count) => Math.min(MAX_WEEK_COUNT, count + 1))
-              }
-              disabled={weekCount >= MAX_WEEK_COUNT}
-              className="flex items-center justify-center h-9 w-9 rounded-md border border-border bg-background hover:bg-muted transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Plus className="h-4 w-4 text-text-dark" />
-            </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setWeekCount((count) => Math.min(MAX_WEEK_COUNT, count + 1))
+                  }
+                  disabled={weekCount >= MAX_WEEK_COUNT}
+                  className="flex items-center justify-center h-9 w-9 rounded-md border border-border bg-background hover:bg-muted transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Plus className="h-4 w-4 text-text-dark" />
+                </button>
+              </div>
+            </FormField>
           </div>
 
           <p className="mt-4 text-sm text-text-light">
