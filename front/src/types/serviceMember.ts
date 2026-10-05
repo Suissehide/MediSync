@@ -15,6 +15,7 @@ export type ServiceMember = {
     lastName: string | null
     deactivatedAt: string | null
     invitationStatus: InvitationStatus
+    invitationResendableAt: string | null
   }
 }
 

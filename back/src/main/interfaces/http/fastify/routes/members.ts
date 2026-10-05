@@ -25,10 +25,10 @@ import {
 const membersRouter: FastifyPluginAsync = (fastify) => {
   const { membershipDomain, accessLinkDomain } = fastify.iocContainer
   const project = async (rows: MembershipRowDomain[]) => {
-    const active = await accessLinkDomain.activeLinkUserIds(
+    const links = await accessLinkDomain.invitationLinks(
       neverLoggedIn(rows.map((row) => row.user)),
     )
-    return rows.map((row) => projectMember(row, active))
+    return rows.map((row) => projectMember(row, links))
   }
 
   fastify.get(

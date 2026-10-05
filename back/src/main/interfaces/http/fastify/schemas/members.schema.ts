@@ -1,5 +1,7 @@
 import { z } from 'zod/v4'
 
+import type { InvitationLinkState } from '../../../../types/domain/accessLink.domain.interface'
+
 type ServiceRole = 'COORDINATEUR' | 'INTERVENANT' | 'SECRETARIAT' | 'LECTURE'
 
 const serviceRoleSchema = z.enum([
@@ -38,6 +40,7 @@ export const memberResponseSchema = z.object({
     lastName: z.string().nullable(),
     deactivatedAt: z.coerce.date().nullable(),
     invitationStatus: invitationStatusSchema,
+    invitationResendableAt: z.coerce.date().nullable(),
   }),
   serviceMemberships: z.array(
     z.object({ serviceId: z.string(), role: serviceRoleSchema }),
@@ -52,16 +55,21 @@ type UserWithLogin = { id: string; lastLoginAt: Date | null }
 
 export const projectUserStatus = <T extends UserWithLogin>(
   { lastLoginAt, ...user }: T,
-  activeLinks: ReadonlySet<string>,
-) => ({
-  ...user,
-  invitationStatus:
-    lastLoginAt !== null
-      ? null
-      : activeLinks.has(user.id)
-        ? ('pending' as const)
-        : ('expired' as const),
-})
+  links: ReadonlyMap<string, InvitationLinkState>,
+) => {
+  const link = lastLoginAt === null ? links.get(user.id) : undefined
+  return {
+    ...user,
+    invitationStatus:
+      lastLoginAt !== null
+        ? null
+        : link?.active
+          ? ('pending' as const)
+          : ('expired' as const),
+    // Fin du délai entre deux renvois, pour griser le bouton ; null si le renvoi est possible.
+    invitationResendableAt: link?.resendableAt ?? null,
+  }
+}
 
 // Les seuls comptes dont le statut dépend d'un lien : ceux qui ne se sont jamais connectés.
 export const neverLoggedIn = (users: UserWithLogin[]) =>
@@ -69,8 +77,8 @@ export const neverLoggedIn = (users: UserWithLogin[]) =>
 
 export const projectMember = <T extends { user: UserWithLogin }>(
   row: T,
-  activeLinks: ReadonlySet<string>,
-) => ({ ...row, user: projectUserStatus(row.user, activeLinks) })
+  links: ReadonlyMap<string, InvitationLinkState>,
+) => ({ ...row, user: projectUserStatus(row.user, links) })
 
 export const updateMemberSchema = z.object({
   role: establishmentRoleSchema.optional(),

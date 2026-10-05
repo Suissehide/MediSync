@@ -4,6 +4,7 @@ import type {
   AccessLinkCreateEntityRepo,
   AccessLinkRepositoryInterface,
   AccessLinkWithUser,
+  LatestAccessLink,
 } from '../../../types/infra/orm/repositories/accessLink.repository.interface'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { PostgresPrismaClient } from '../postgres-client'
@@ -51,16 +52,14 @@ class AccessLinkRepository implements AccessLinkRepositoryInterface {
     return latest?.createdAt ?? null
   }
 
-  async findUserIdsWithActiveLink(
-    userIds: string[],
-    now: Date,
-  ): Promise<string[]> {
-    const rows = await this.prisma.accessLink.findMany({
-      where: { userId: { in: userIds }, usedAt: null, expiresAt: { gt: now } },
-      select: { userId: true },
+  // Le dernier lien de chaque compte : émettre invalide les précédents, c'est donc le seul utile.
+  findLatestLinks(userIds: string[]): Promise<LatestAccessLink[]> {
+    return this.prisma.accessLink.findMany({
+      where: { userId: { in: userIds } },
+      orderBy: { createdAt: 'desc' },
       distinct: ['userId'],
+      select: { userId: true, createdAt: true, usedAt: true, expiresAt: true },
     })
-    return rows.map((row) => row.userId)
   }
 
   findByTokenHashWithUser(

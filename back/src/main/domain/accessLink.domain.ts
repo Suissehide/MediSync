@@ -2,7 +2,10 @@ import Boom from '@hapi/boom'
 
 import { invitationMail, passwordResetMail } from '../infra/mail/templates'
 import type { IocContainer } from '../types/application/ioc'
-import type { AccessLinkDomainInterface } from '../types/domain/accessLink.domain.interface'
+import type {
+  AccessLinkDomainInterface,
+  InvitationLinkState,
+} from '../types/domain/accessLink.domain.interface'
 import type { MailerInterface } from '../types/infra/mail/mailer.interface'
 import type { PrimaTransactionClient } from '../types/infra/orm/client'
 import type { AccessLinkRepositoryInterface } from '../types/infra/orm/repositories/accessLink.repository.interface'
@@ -87,16 +90,26 @@ class AccessLinkDomain implements AccessLinkDomainInterface {
     }
   }
 
-  // Parmi ces comptes, ceux qui ont encore un lien utilisable : sert au statut d'invitation.
-  async activeLinkUserIds(userIds: string[]): Promise<Set<string>> {
+  // Pour chaque compte : son lien est-il encore utilisable, et à partir de quand le renvoyer.
+  async invitationLinks(
+    userIds: string[],
+  ): Promise<Map<string, InvitationLinkState>> {
     if (userIds.length === 0) {
-      return new Set()
+      return new Map()
     }
-    return new Set(
-      await this.accessLinkRepository.findUserIdsWithActiveLink(
-        userIds,
-        new Date(),
-      ),
+    const now = Date.now()
+    const links = await this.accessLinkRepository.findLatestLinks(userIds)
+    return new Map(
+      links.map((link) => {
+        const resendableAt = link.createdAt.getTime() + RESEND_COOLDOWN_MS
+        return [
+          link.userId,
+          {
+            active: link.usedAt === null && link.expiresAt.getTime() > now,
+            resendableAt: resendableAt > now ? new Date(resendableAt) : null,
+          },
+        ]
+      }),
     )
   }
 
