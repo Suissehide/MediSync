@@ -1,3 +1,5 @@
+import { LocalizationProvider } from '@mui/x-date-pickers'
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { AnyRoute } from '@tanstack/react-router'
 import {
@@ -129,9 +131,11 @@ const monter = (
     context: { authState: { isAuthenticated: true, user } },
   })
   render(
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>,
+    <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="fr">
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>
+    </LocalizationProvider>,
   )
 }
 
@@ -175,8 +179,9 @@ describe('écran des indicateurs ARS', () => {
 
     const alerte = await screen.findByRole('alert')
     expect(alerte).toHaveTextContent(/Impossible de charger les indicateurs/i)
-    expect(screen.queryByText('Chargement…')).not.toBeInTheDocument()
-    expect(screen.queryByRole('columnheader')).not.toBeInTheDocument()
+    expect(screen.queryByText('Chargement...')).not.toBeInTheDocument()
+    expect(screen.queryByRole('rowheader')).not.toBeInTheDocument()
+    expect(screen.queryByText('Entrée')).not.toBeInTheDocument()
   })
 
   it('desactive l export tant que la lecture n a pas abouti', async () => {
@@ -184,6 +189,38 @@ describe('écran des indicateurs ARS', () => {
 
     await screen.findByRole('alert')
     expect(screen.getByRole('button', { name: 'Exporter' })).toBeDisabled()
+  })
+
+  // La période est le paramètre de l'écran : le raccourci d'année règle les deux bornes, et la
+  // requête part sur l'année civile sélectionnée.
+  it('interroge le serveur sur l annee civile du raccourci actif', async () => {
+    monter({
+      ok: true,
+      status: 200,
+      corps: { from: '2026-01-01', to: '2026-12-31', indicators: indicateurs },
+    })
+
+    await screen.findByText('7')
+    const appels = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls
+      .map(([entree]) => String(entree))
+      .filter((url) => url.includes('/indicateurs-ars'))
+    expect(appels[0]).toContain('from=2026-01-01')
+    expect(appels[0]).toContain('to=2026-12-31')
+  })
+
+  it('propose les trois dernieres annees en raccourci, et les deux bornes de periode', async () => {
+    monter({
+      ok: true,
+      status: 200,
+      corps: { from: '2026-01-01', to: '2026-12-31', indicators: indicateurs },
+    })
+
+    await screen.findByText('7')
+    for (const annee of ['2026', '2025', '2024']) {
+      expect(screen.getByRole('radio', { name: annee })).toBeInTheDocument()
+    }
+    expect(screen.getByText('du')).toBeInTheDocument()
+    expect(screen.getByText('au')).toBeInTheDocument()
   })
 
   it('renvoie au tableau de bord un role sans stats:read', async () => {
