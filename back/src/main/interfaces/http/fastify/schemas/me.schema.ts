@@ -20,6 +20,7 @@ export const meResponseSchema = z.object({
           // Le soignant (metier du service) que ce compte incarne DANS CE SERVICE, s'il y en a
           // un. Porte par l'affectation de service depuis le 2026-09-29.
           soignantId: z.string().nullable(),
+          affecte: z.boolean(),
           role: z.enum([
             'COORDINATEUR',
             'INTERVENANT',

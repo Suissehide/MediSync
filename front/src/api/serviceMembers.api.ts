@@ -1,4 +1,4 @@
-import { tenantApiUrl } from '../constants/config.constant.ts'
+import { apiUrl, tenantApiUrl } from '../constants/config.constant.ts'
 import { handleHttpError } from '../libs/httpErrorHandler.ts'
 import type {
   InviteServiceMemberInput,
@@ -130,6 +130,30 @@ export const ServiceMembersApi = {
         'Impossible de retirer ce membre du service',
       )
     }
+  },
+
+  // Le soignant que le compte connecté incarne dans ce service, réglé par lui-même.
+  setOwnSoignant: async ({
+    establishmentId,
+    serviceId,
+    soignantId,
+  }: {
+    establishmentId: string
+    serviceId: string
+    soignantId: string | null
+  }): Promise<ServiceMember> => {
+    const response = await fetchWithAuth(
+      `${apiUrl}/e/${establishmentId}/s/${serviceId}/membres/me/soignant`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ soignantId }),
+      },
+    )
+    if (!response.ok) {
+      handleHttpError(response, {}, 'Impossible de changer votre soignant')
+    }
+    return response.json()
   },
 
   // `affectationId` : l'identifiant de l'affectation de service (la ligne renvoyee par

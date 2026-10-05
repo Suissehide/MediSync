@@ -65,6 +65,7 @@ describe('chef d etablissement', () => {
         name: 'Non affecte',
         role: 'COORDINATEUR',
         soignantId: null,
+        affecte: false,
       },
     ])
   })

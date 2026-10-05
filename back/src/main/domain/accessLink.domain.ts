@@ -51,6 +51,7 @@ class AccessLinkDomain implements AccessLinkDomainInterface {
     email: string
     token: string
     establishmentName?: string
+    soignantName?: string
   }): void {
     this.mailer.send(
       'invitation',
@@ -58,6 +59,7 @@ class AccessLinkDomain implements AccessLinkDomainInterface {
         to: params.email,
         link: this.linkFor(params.token),
         establishmentName: params.establishmentName,
+        soignantName: params.soignantName,
       }),
     )
   }

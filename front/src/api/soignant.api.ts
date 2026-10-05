@@ -8,9 +8,10 @@ import type {
 import { fetchWithAuth } from './fetchWithAuth.ts'
 
 export const SoignantApi = {
-  getAll: async (): Promise<Soignant[]> => {
+  // `baseUrl` : un autre service que le courant (paramètres du compte).
+  getAll: async (baseUrl = tenantApiUrl()): Promise<Soignant[]> => {
     const response = await fetchWithAuth(
-      `${tenantApiUrl()}/soignant?action=getAllSoignants`,
+      `${baseUrl}/soignant?action=getAllSoignants`,
       {
         method: 'GET',
       },

@@ -20,7 +20,11 @@ export type MembershipRow = EstablishmentMembership & {
   serviceMemberships: Pick<ServiceMembership, 'serviceId' | 'role'>[]
 }
 
-export type ServiceAssignment = { serviceId: string; role: ServiceRole }
+export type ServiceAssignment = {
+  serviceId: string
+  role: ServiceRole
+  soignantId?: string | null
+}
 
 // Le repository pose establishmentId (tenant) lui-même : l'appelant ne le
 // fournit pas. `serviceMemberships` (la relation brute Prisma) est remplacée
@@ -78,6 +82,7 @@ export interface MembershipRepositoryInterface {
   addServiceMember: (
     establishmentMembershipId: string,
     role: ServiceRole,
+    soignantId?: string | null,
     client?: PrimaTransactionClient,
   ) => Promise<ServiceMemberRow>
   // Sous le contexte de SERVICE : le role d'une affectation du service courant.

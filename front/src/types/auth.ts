@@ -24,6 +24,8 @@ export type User = {
       name: string
       role: ServiceRole
       soignantId?: string | null
+      // Vraie affectation : faux pour le coordinateur implicite ou un octroi.
+      affecte?: boolean
     }[]
     // `GET /me` (back/src/main/utils/me-mapper.ts) rend TOUJOURS ce champ —
     // une appartenance réelle ou un accès ouvert par un octroi temporaire

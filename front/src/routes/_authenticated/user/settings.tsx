@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate, useRouter } from '@tanstack/react-router'
 import { ArrowLeft, Shield, UserRoundPen } from 'lucide-react'
 import { useState } from 'react'
 
+import { MesSoignants } from '../../../components/custom/mesSoignants.tsx'
 import DashboardLayout from '../../../components/dashboard.layout.tsx'
 import { Button } from '../../../components/ui/button.tsx'
 import { useAppForm } from '../../../hooks/formConfig.tsx'
@@ -112,6 +113,7 @@ function UserSettings() {
                 </Button>
               </div>
             </form>
+            <MesSoignants />
           </div>
         </div>
 

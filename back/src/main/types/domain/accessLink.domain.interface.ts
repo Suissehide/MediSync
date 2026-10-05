@@ -23,6 +23,7 @@ export interface AccessLinkDomainInterface {
     email: string
     token: string
     establishmentName?: string
+    soignantName?: string
   }) => void
   invitationLinks: (
     userIds: string[],

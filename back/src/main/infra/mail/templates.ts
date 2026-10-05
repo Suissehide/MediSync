@@ -22,13 +22,16 @@ export const invitationMail = ({
   to,
   link,
   establishmentName,
+  soignantName,
 }: {
   to: string
   link: string
   establishmentName?: string
+  soignantName?: string
 }): Mail => {
   const where = establishmentName ? ` pour ${establishmentName}` : ''
-  const intro = `Un accès à MediSync a été ouvert à votre nom${where}.`
+  const asWhat = soignantName ? `, en tant que ${soignantName}` : ''
+  const intro = `Un accès à MediSync a été ouvert à votre nom${where}${asWhat}.`
   const validity =
     "Ce lien est personnel, à usage unique et valable 30 jours. Si vous n'attendiez pas cet e-mail, ignorez-le."
   return {
