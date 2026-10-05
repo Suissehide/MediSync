@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, useRouter } from '@tanstack/react-router'
-import { ArrowLeft, Shield, UserRoundPen } from 'lucide-react'
+import { ArrowLeft, Hospital, Shield, UserRoundPen } from 'lucide-react'
 import { useState } from 'react'
 
 import { AuthApi } from '../../../api/auth.api.ts'
@@ -31,15 +31,13 @@ function UserSettings() {
   const { toast } = useToast()
   const affectations = affectationsDe(user)
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false)
+  const [isUpdatingServices, setIsUpdatingServices] = useState(false)
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false)
 
   const profileForm = useAppForm({
     defaultValues: {
       firstName: user?.firstName || '',
       lastName: user?.lastName || '',
-      soignants: Object.fromEntries(
-        affectations.map((a) => [a.serviceId, a.soignantId]),
-      ) as Record<string, string | null>,
     },
     onSubmit: async ({ value }) => {
       setIsUpdatingProfile(true)
@@ -48,6 +46,21 @@ function UserSettings() {
           firstName: value.firstName,
           lastName: value.lastName,
         })
+      } finally {
+        setIsUpdatingProfile(false)
+      }
+    },
+  })
+
+  const servicesForm = useAppForm({
+    defaultValues: {
+      soignants: Object.fromEntries(
+        affectations.map((a) => [a.serviceId, a.soignantId]),
+      ) as Record<string, string | null>,
+    },
+    onSubmit: async ({ value }) => {
+      setIsUpdatingServices(true)
+      try {
         const modifiees = affectations.filter(
           (a) => (value.soignants[a.serviceId] ?? null) !== a.soignantId,
         )
@@ -70,7 +83,7 @@ function UserSettings() {
           updateUser(await AuthApi.me())
         }
       } finally {
-        setIsUpdatingProfile(false)
+        setIsUpdatingServices(false)
       }
     },
   })
@@ -142,21 +155,6 @@ function UserSettings() {
                 </profileForm.AppField>
               </div>
 
-              <profileForm.Field name="soignants">
-                {(field) => (
-                  <MesSoignants
-                    affectations={affectations}
-                    value={field.state.value}
-                    onChange={(serviceId, soignantId) =>
-                      field.handleChange({
-                        ...field.state.value,
-                        [serviceId]: soignantId,
-                      })
-                    }
-                  />
-                )}
-              </profileForm.Field>
-
               <div className="flex justify-end">
                 <Button type="submit" disabled={isUpdatingProfile}>
                   {isUpdatingProfile ? 'Enregistrement...' : 'Enregistrer'}
@@ -165,6 +163,48 @@ function UserSettings() {
             </form>
           </div>
         </div>
+
+        {affectations.length > 0 && (
+          <div className="mt-4">
+            <div className="flex items-center gap-2 mb-4">
+              <Hospital className="h-4 w-4" />
+              <h3 className="text-md font-semibold text-text-dark">
+                Mes services
+              </h3>
+              <div className="mt-1 ml-1 flex-1 border-t border-border" />
+            </div>
+
+            <div className="bg-input p-6 rounded-lg">
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault()
+                  await servicesForm.handleSubmit()
+                }}
+              >
+                <servicesForm.Field name="soignants">
+                  {(field) => (
+                    <MesSoignants
+                      affectations={affectations}
+                      value={field.state.value}
+                      onChange={(serviceId, soignantId) =>
+                        field.handleChange({
+                          ...field.state.value,
+                          [serviceId]: soignantId,
+                        })
+                      }
+                    />
+                  )}
+                </servicesForm.Field>
+
+                <div className="flex justify-end">
+                  <Button type="submit" disabled={isUpdatingServices}>
+                    {isUpdatingServices ? 'Enregistrement...' : 'Enregistrer'}
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         {/* Formulaire de mot de passe */}
         <div className="mt-4">
