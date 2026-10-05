@@ -184,10 +184,20 @@ export default function AppointmentSheet({
         map.set(t.id, { value: t.id, label: t.name })
       }
     }
+    // La thématique actuelle reste proposée même si aucun soignant du créneau n'y est relié.
+    const currentID = appointment?.thematicId
+    if (currentID && !map.has(currentID)) {
+      const label =
+        thematics?.find((t) => t.id === currentID)?.name ??
+        appointment?.thematic
+      if (label) {
+        map.set(currentID, { value: currentID, label })
+      }
+    }
     return [...map.values()].sort((a, b) =>
       a.label.localeCompare(b.label, 'fr'),
     )
-  }, [soignants, thematics])
+  }, [soignants, thematics, appointment])
 
   return (
     <Sheet
@@ -359,9 +369,16 @@ export default function AppointmentSheet({
                     </div>
                     <div className="flex-1 min-h-0 overflow-y-scroll space-y-2">
                       {field.state.value.map((appointmentPatient, index) => {
-                        const patientData = patients?.find(
-                          (p) => p.id === appointmentPatient.patientID,
-                        )
+                        // Le rendez-vous porte déjà ses patients ; la liste complète,
+                        // chargée à part, ne sert qu'aux patients tout juste ajoutés.
+                        const patientData =
+                          appointment?.appointmentPatients?.find(
+                            (ap) =>
+                              ap.patient.id === appointmentPatient.patientID,
+                          )?.patient ??
+                          patients?.find(
+                            (p) => p.id === appointmentPatient.patientID,
+                          )
                         const isExpanded = expandedSections[index] ?? false
                         const toggleExpand = () =>
                           setExpandedSections((prev) => ({
