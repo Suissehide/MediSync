@@ -312,10 +312,10 @@ describe('onglets de la barre de navigation', () => {
     ).toEqual([
       'Planning',
       'Thématiques',
-      'Diagnostics éducatifs',
       'Membres',
       'Soignants',
       'Salles',
+      'Diagnostics éducatifs',
     ])
   })
 

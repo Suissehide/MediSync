@@ -85,13 +85,6 @@ export const NAVIGATION: Record<Scale, readonly NavItem[]> = {
       description: "Ateliers d'éducation et soignants habilités",
     },
     {
-      label: 'Diagnostics éducatifs',
-      to: '/e/$establishmentId/s/$serviceId/diagnostic-template',
-      permission: 'referentials:write',
-      group: 'Administration',
-      description: 'Modèles de bilan du service',
-    },
-    {
       label: 'Membres',
       to: '/e/$establishmentId/s/$serviceId/members',
       // La MEME permission que le `beforeLoad` de l'ecran (MDS-17) : un onglet garde autrement
@@ -115,6 +108,13 @@ export const NAVIGATION: Record<Scale, readonly NavItem[]> = {
       permission: 'referentials:write',
       group: 'Administration',
       description: 'Lieux où se tiennent les séances',
+    },
+    {
+      label: 'Diagnostics éducatifs',
+      to: '/e/$establishmentId/s/$serviceId/diagnostic-template',
+      permission: 'referentials:write',
+      group: 'Administration',
+      description: 'Modèles de bilan du service',
     },
   ],
   establishment: [
