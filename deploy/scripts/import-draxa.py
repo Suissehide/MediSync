@@ -175,7 +175,7 @@ def main():
     slots = rows("slot", ["id", "soignant_id", "date", "heure_debut", "heure_fin", "type", "location",
                           "categorie", "thematique", "place"])
     rdvs = rows("rendez_vous", ["id", "patient_id", "date", "heure", "accompagnant", "etat", "motif_refus",
-                                "slot_id", "categorie", "notes", "thematique", "type"])
+                                "slot_id", "categorie", "notes", "thematique", "type", "send"])
 
     out = ["\\set ON_ERROR_STOP on",
            "BEGIN;",
@@ -306,7 +306,8 @@ INSERT INTO clgx_soi SELECT {old}, (SELECT id FROM "Soignant" WHERE "serviceId" 
     out.append(insert("Appointment", ["id", "establishmentId", "serviceId", "startDate", "endDate",
                                       "thematicId", "type", "slotID"], appt_rows))
     out.append(insert("AppointmentPatient", ["id", "establishmentId", "serviceId", "appointmentId", "patientId",
-                                             "accompanying", "status", "rejectionReason", "transmissionNotes"],
+                                             "accompanying", "status", "rejectionReason", "transmissionNotes",
+                                             "convocationSent"],
                       ap_rows))
     out.append("COMMIT;")
     print("\n".join(out))
@@ -329,7 +330,7 @@ def appt_patient(aid, r):
     return "(" + ",".join([
         q(f"clgx_app_{r['id']}"), ":'est'", ":'svc'", q(aid), q(f"clgx_pa_{r['patient_id']}"),
         q(YES_NO.get(norm(r["accompagnant"]))), q(st) + ('::"AppointmentStatus"' if st else ""),
-        q(r["motif_refus"]), q(r["notes"]),
+        q(r["motif_refus"]), q(r["notes"]), q(norm(r["send"]) == "oui"),
     ]) + ")"
 
 

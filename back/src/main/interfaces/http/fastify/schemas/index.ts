@@ -50,6 +50,7 @@ export const appointmentPatientSchema = z.object({
   status: appointmentStatusSchema,
   rejectionReason: z.string().optional().nullable(),
   transmissionNotes: z.string().optional().nullable(),
+  convocationSent: z.boolean().optional(),
 
   get patient() {
     return patientSchema.optional().nullable()

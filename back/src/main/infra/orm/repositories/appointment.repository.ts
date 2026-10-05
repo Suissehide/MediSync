@@ -201,6 +201,7 @@ class AppointmentRepository implements AppointmentRepositoryInterface {
               status: ap.status,
               rejectionReason: ap.rejectionReason,
               transmissionNotes: ap.transmissionNotes,
+              convocationSent: ap.convocationSent,
             },
             create: {
               ...this.scope,
@@ -208,6 +209,7 @@ class AppointmentRepository implements AppointmentRepositoryInterface {
               status: ap.status,
               rejectionReason: ap.rejectionReason,
               transmissionNotes: ap.transmissionNotes,
+              convocationSent: ap.convocationSent,
               appointmentId: appointmentID,
               patientId: ap.patientID,
             },
@@ -272,6 +274,30 @@ class AppointmentRepository implements AppointmentRepositoryInterface {
       },
     })
     return result.count
+  }
+
+  async setConvocationSent(
+    appointmentID: string,
+    appointmentPatientID: string,
+    convocationSent: boolean,
+  ): Promise<void> {
+    try {
+      await this.prisma.appointmentPatient.update({
+        where: {
+          id_serviceId: {
+            id: appointmentPatientID,
+            serviceId: this.scope.serviceId,
+          },
+          appointmentId: appointmentID,
+        },
+        data: { convocationSent },
+      })
+    } catch (err) {
+      throw this.errorHandler.boomErrorFromPrismaError({
+        entityName: 'AppointmentPatient',
+        error: err,
+      })
+    }
   }
 
   async delete(appointmentID: string): Promise<AppointmentEntityRepo> {

@@ -78,6 +78,32 @@ export const AppointmentApi = {
     return response.json()
   },
 
+  setConvocationSent: async ({
+    appointmentID,
+    appointmentPatientID,
+    convocationSent,
+  }: {
+    appointmentID: string
+    appointmentPatientID: string
+    convocationSent: boolean
+  }): Promise<void> => {
+    const response = await fetchWithAuth(
+      `${tenantApiUrl()}/appointment/${appointmentID}/patients/${appointmentPatientID}/convocation`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ convocationSent }),
+      },
+    )
+    if (!response.ok) {
+      handleHttpError(
+        response,
+        {},
+        'Impossible de modifier la convocation du patient',
+      )
+    }
+  },
+
   delete: async (appointmentID: string): Promise<void> => {
     const response = await fetchWithAuth(
       `${tenantApiUrl()}/appointment/${appointmentID}?action=deleteAppointment`,

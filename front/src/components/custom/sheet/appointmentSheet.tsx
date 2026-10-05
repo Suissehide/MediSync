@@ -28,7 +28,7 @@ import type { UpdateAppointmentParams } from '../../../types/appointment.ts'
 import type { Soignant } from '../../../types/soignant.ts'
 import { Button } from '../../ui/button.tsx'
 import { FormField } from '../../ui/formField.tsx'
-import { Input } from '../../ui/input.tsx'
+import { Checkbox, Input } from '../../ui/input.tsx'
 import { Label } from '../../ui/label.tsx'
 import { MultiSelect } from '../../ui/select.tsx'
 import {
@@ -83,6 +83,7 @@ export default function AppointmentSheet({
           status: '',
           rejectionReason: '',
           transmissionNotes: '',
+          convocationSent: false,
           patientID: '',
         },
       ],
@@ -149,6 +150,7 @@ export default function AppointmentSheet({
                     status: ap.status ?? '',
                     rejectionReason: ap.rejectionReason ?? '',
                     transmissionNotes: ap.transmissionNotes ?? '',
+                    convocationSent: ap.convocationSent ?? false,
                     patientID: ap.patient.id,
                   })) ?? [],
               },
@@ -329,6 +331,7 @@ export default function AppointmentSheet({
                               status: '',
                               rejectionReason: '',
                               transmissionNotes: '',
+                              convocationSent: false,
                               patientID,
                             })
                           }
@@ -377,6 +380,28 @@ export default function AppointmentSheet({
                                   : ``}
                               </div>
                               <div className="flex gap-2 items-center">
+                                <form.Field
+                                  name={`appointmentPatients[${index}].convocationSent`}
+                                >
+                                  {(subField) => (
+                                    <div className="flex items-center gap-1.5 text-xs text-text-light">
+                                      <span aria-hidden="true">
+                                        Convocation
+                                      </span>
+                                      <Checkbox
+                                        aria-label="Convocation envoyée"
+                                        title="Convocation envoyée"
+                                        checked={!!subField.state.value}
+                                        onChange={(e) =>
+                                          subField.handleChange(
+                                            e.target.checked,
+                                          )
+                                        }
+                                      />
+                                    </div>
+                                  )}
+                                </form.Field>
+                                <div className="h-6 border-l border-border"></div>
                                 <Button
                                   variant="ghost"
                                   size="icon"
