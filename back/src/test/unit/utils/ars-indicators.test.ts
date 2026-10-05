@@ -133,3 +133,141 @@ describe('groupe 1 — entrée', () => {
     expect(valeur(c, '1.4')).toBe(1)
   })
 })
+
+describe('groupe 2 — séances et mode de prise en charge', () => {
+  it('2.1 compte les patients pris en charge uniquement en hospitalisation', () => {
+    const c = cohorte([
+      dossier({
+        presences: [
+          presence({ type: 'hospital' }),
+          presence({ type: 'hospital', date: new Date('2026-05-01') }),
+        ],
+      }),
+      dossier({
+        patientId: 'p2',
+        presences: [presence({ type: 'hospital' }), presence({ type: 'ambulatory' })],
+      }),
+    ])
+    expect(valeur(c, '2.1')).toBe(1)
+  })
+
+  it('2.2 compte les patients pris en charge uniquement en soins externes, distanciel compris', () => {
+    const c = cohorte([
+      dossier({
+        presences: [
+          presence({ type: 'ambulatory' }),
+          presence({ type: 'telephonic' }),
+        ],
+      }),
+    ])
+    expect(valeur(c, '2.2')).toBe(1)
+  })
+
+  it('2.4 compte le parcours mixte, ni 2.1 ni 2.2', () => {
+    const c = cohorte([
+      dossier({
+        presences: [
+          presence({ type: 'hospital' }),
+          presence({ type: 'ambulatory' }),
+        ],
+      }),
+    ])
+    expect(valeur(c, '2.1')).toBe(0)
+    expect(valeur(c, '2.2')).toBe(0)
+    expect(valeur(c, '2.4')).toBe(1)
+  })
+
+  it('2.6 compte les seances individuelles honorees de la periode', () => {
+    const c = cohorte([
+      dossier({
+        presences: [
+          presence({ individual: true }),
+          presence({ individual: true, honored: false }),
+          presence({ individual: false }),
+          presence({ individual: true, date: new Date('2025-03-01') }),
+        ],
+      }),
+    ])
+    expect(valeur(c, '2.6')).toBe(1)
+  })
+
+  it('2.6bis compte celles qui ont eu lieu par telephone', () => {
+    const c = cohorte([
+      dossier({
+        presences: [
+          presence({ individual: true, type: 'telephonic' }),
+          presence({ individual: true, type: 'ambulatory' }),
+        ],
+      }),
+    ])
+    expect(valeur(c, '2.6bis')).toBe(1)
+  })
+
+  it('2.7 compte les creneaux collectifs distincts, pas les presences', () => {
+    const c = cohorte([
+      dossier({
+        presences: [
+          presence({ individual: false, slotId: 'a' }),
+          presence({ individual: false, slotId: 'a' }),
+          presence({ individual: false, slotId: 'b' }),
+        ],
+      }),
+    ])
+    expect(valeur(c, '2.7')).toBe(2)
+  })
+
+  // Draxa rendait 0 en dur ici : la correction est l'objet de ce cas.
+  it('2.7bis compte les creneaux collectifs entierement en distanciel', () => {
+    const c = cohorte([
+      dossier({
+        presences: [
+          presence({ individual: false, slotId: 'a', type: 'telephonic' }),
+          presence({ individual: false, slotId: 'b', type: 'telephonic' }),
+          presence({ individual: false, slotId: 'b', type: 'ambulatory' }),
+        ],
+      }),
+    ])
+    expect(valeur(c, '2.7bis')).toBe(1)
+  })
+
+  it('2.8 rend la moyenne de patients par seance collective, a une decimale', () => {
+    const c = cohorte([
+      dossier({
+        presences: [
+          presence({ individual: false, slotId: 'a' }),
+          presence({ individual: false, slotId: 'a' }),
+          presence({ individual: false, slotId: 'b' }),
+        ],
+      }),
+    ])
+    expect(valeur(c, '2.8')).toBe(1.5)
+  })
+
+  // Review Focus 1 : aucune division par zero quand la periode est vide.
+  it('2.8 vaut 0 sans aucune seance collective', () => {
+    expect(valeur(cohorte([]), '2.8')).toBe(0)
+  })
+
+  // Review Focus 1 : une periode sans dossier rend 0 partout, jamais NaN ni null.
+  it('rend 0 pour tous les indicateurs calcules sur une periode vide', () => {
+    for (const r of computeArsIndicators(cohorte([]))) {
+      if (r.note === null) {
+        expect(r.value).toBe(0)
+      }
+    }
+  })
+
+  // Draxa recopiait 2.10 ici : la correction est l'objet de ce cas.
+  it('2.9 compte des patients distincts, la ou 2.10 compte des seances', () => {
+    const c = cohorte([
+      dossier({
+        presences: [
+          presence({ accompanied: true }),
+          presence({ accompanied: true, date: new Date('2026-04-01') }),
+        ],
+      }),
+    ])
+    expect(valeur(c, '2.9')).toBe(1)
+    expect(valeur(c, '2.10')).toBe(2)
+  })
+})

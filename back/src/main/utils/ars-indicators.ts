@@ -90,6 +90,39 @@ const countOriented = (c: ArsCohort, orientation: string): number =>
     (f) => deDate(f, c) !== null && f.orientation === orientation,
   )
 
+// Les présences honorées entre la date de DE et la fin de période. `null` sans date de DE.
+const sinceDe = (file: ArsFile, c: ArsCohort): ArsPresence[] | null => {
+  const start = deDate(file, c)
+  if (start === null) {
+    return null
+  }
+  return honored(file).filter((p) => p.date >= start && p.date <= c.to)
+}
+
+const onlyOfTypes = (
+  file: ArsFile,
+  c: ArsCohort,
+  types: readonly AppointmentType[],
+): boolean => {
+  const ps = sinceDe(file, c)
+  return (
+    ps !== null &&
+    ps.length > 0 &&
+    ps.every((p) => p.type !== null && types.includes(p.type))
+  )
+}
+
+const presencesInPeriod = (c: ArsCohort): ArsPresence[] =>
+  c.files.flatMap((f) => honored(f)).filter((p) => inRange(p.date, c.from, c.to))
+
+const collectiveSlots = (c: ArsCohort): Map<string, ArsPresence[]> => {
+  const slots = new Map<string, ArsPresence[]>()
+  for (const p of presencesInPeriod(c).filter((p) => !p.individual)) {
+    slots.set(p.slotId, [...(slots.get(p.slotId) ?? []), p])
+  }
+  return slots
+}
+
 export const ARS_INDICATORS: readonly ArsIndicator[] = [
   {
     code: '1.1',
@@ -135,6 +168,122 @@ export const ARS_INDICATORS: readonly ArsIndicator[] = [
     label:
       "Nombre de patients orientés par un professionnel de santé à l'hôpital en consultation externe",
     compute: (c) => countOriented(c, 'Orientation pro santé en Cs'),
+  },
+  {
+    code: '2.1',
+    group: 'Séances',
+    label:
+      "Nombre de patients pris en charge au cours d'une hospitalisation (de jour, de semaine, complète) en établissement de santé uniquement",
+    compute: (c) => countFiles(c, (f) => onlyOfTypes(f, c, ['hospital'])),
+  },
+  {
+    code: '2.2',
+    group: 'Séances',
+    label:
+      "Nombre de patients pris en charge en soins externes d'un établissement de santé uniquement",
+    compute: (c) =>
+      countFiles(c, (f) => onlyOfTypes(f, c, ['ambulatory', 'telephonic'])),
+  },
+  {
+    code: '2.3',
+    group: 'Séances',
+    label:
+      'Nombre de patients pris en charge en soins de ville uniquement (MSP, association, ex-réseau de PS libéraux…)',
+    unavailable:
+      'Aucune notion de soins de ville : le type de rendez-vous vaut ambulatoire, hôpital ou téléphonique',
+  },
+  {
+    code: '2.4',
+    group: 'Séances',
+    label:
+      "Nombre de patients pris en charge en programme mixte (hospitalisation + soins externes)",
+    compute: (c) =>
+      countFiles(c, (f) => {
+        const ps = sinceDe(f, c)
+        return (
+          ps !== null &&
+          ps.length > 0 &&
+          !onlyOfTypes(f, c, ['hospital']) &&
+          !onlyOfTypes(f, c, ['ambulatory', 'telephonic'])
+        )
+      }),
+  },
+  {
+    code: '2.5',
+    group: 'Séances',
+    label: 'Autre type de prise en charge à chiffrer et à expliquer',
+    manual: "Champ libre de l'enquête, à renseigner à la main",
+  },
+  {
+    code: '2.6',
+    group: 'Séances',
+    label: "Nombre total de séances individuelles d'ETP réalisées",
+    compute: (c) => presencesInPeriod(c).filter((p) => p.individual).length,
+  },
+  {
+    code: '2.6bis',
+    group: 'Séances',
+    label:
+      "Dont nombre de séances individuelles d'ETP réalisées en distanciel",
+    compute: (c) =>
+      presencesInPeriod(c).filter(
+        (p) => p.individual && p.type === 'telephonic',
+      ).length,
+  },
+  {
+    code: '2.7',
+    group: 'Séances',
+    label: "Nombre total de séances collectives d'ETP réalisées",
+    compute: (c) => collectiveSlots(c).size,
+  },
+  {
+    code: '2.7bis',
+    group: 'Séances',
+    label: "Dont nombre de séances collectives d'ETP réalisées en distanciel",
+    compute: (c) =>
+      [...collectiveSlots(c).values()].filter((ps) =>
+        ps.every((p) => p.type === 'telephonic'),
+      ).length,
+  },
+  {
+    code: '2.8',
+    group: 'Séances',
+    label: 'Nombre moyen de patients par séance collective',
+    compute: (c) => {
+      const slots = collectiveSlots(c)
+      if (slots.size === 0) {
+        return 0
+      }
+      const total = [...slots.values()].reduce((n, ps) => n + ps.length, 0)
+      return Math.round((total / slots.size) * 10) / 10
+    },
+  },
+  {
+    code: '2.9',
+    group: 'Séances',
+    label:
+      'Nombre de proches et/ou aidants du patient ayant participé au programme',
+    compute: (c) =>
+      countFiles(c, (f) =>
+        honored(f).some(
+          (p) => inRange(p.date, c.from, c.to) && p.accompanied,
+        ),
+      ),
+  },
+  {
+    code: '2.10',
+    group: 'Séances',
+    label:
+      "Nombre total de séances d'ETP avec une participation de proches et/ou aidants du patient",
+    compute: (c) => presencesInPeriod(c).filter((p) => p.accompanied).length,
+  },
+  {
+    code: '2.11',
+    group: 'Séances',
+    label:
+      'Nombre total de séances destinées exclusivement aux proches et/ou aidants du patient',
+    unavailable:
+      'Un rendez-vous est toujours rattaché à des patients : une séance sans patient ne se représente pas',
   },
 ]
 
