@@ -24,6 +24,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover.tsx'
 import { SERVICE_ROLE_LABEL } from '@/constants/member.constant.ts'
+import { cn } from '@/libs/utils.ts'
 import { type CurrentScale, useCurrentScale } from '@/navigation/navigation.ts'
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { User } from '@/types/auth.ts'
@@ -94,7 +95,7 @@ const aAfficher = (
   }
 }
 
-export const FilAriane = () => {
+export const FilAriane = ({ className }: { className?: string }) => {
   const user = useAuthStore((state) => state.user)
   const courant = useCurrentScale()
   const affiche = aAfficher(user, courant)
@@ -126,7 +127,10 @@ export const FilAriane = () => {
   return (
     <nav
       aria-label="Fil d'Ariane"
-      className="h-9 flex items-center gap-0.5 pl-2 border-l border-border-sidebar min-w-0"
+      className={cn(
+        'h-9 flex items-center gap-0.5 pl-2 border-l border-border-sidebar min-w-0',
+        className,
+      )}
     >
       {administre ? (
         <Link

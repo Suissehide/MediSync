@@ -62,11 +62,11 @@ function Sidebar({
   return (
     <div
       inert={!isVisible}
-      className={`z-40 bg-foreground text-text fixed ${sousUnBandeau ? 'top-[100px] h-[calc(100dvh-100px)]' : 'top-16 h-[calc(100dvh-4rem)]'} w-[min(18rem,85vw)] md:w-64 border-r border-border-sidebar transition-all duration-300 ${
+      className={`z-40 bg-foreground text-text fixed ${sousUnBandeau ? 'top-[100px] h-[calc(100dvh-100px)]' : 'top-16 h-[calc(100dvh-4rem)]'} w-[min(18rem,85vw)] md:w-64 border-r border-border-sidebar overflow-y-auto md:overflow-y-visible transition-all duration-300 ${
         isVisible ? 'translate-x-0' : '-translate-x-full'
       } bg-card text-text text-sm`}
     >
-      <div className="flex flex-col justify-between h-full">
+      <div className="flex flex-col justify-between min-h-full md:h-full">
         <TeteDuTiroir />
         {/* Custom sidebar */}
         <div className="flex flex-col flex-1 min-h-0">
