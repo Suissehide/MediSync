@@ -9,11 +9,11 @@ import type { AccessLinkRepositoryInterface } from '../types/infra/orm/repositor
 import type { UserRepositoryInterface } from '../types/infra/orm/repositories/user.repository.interface'
 import { randomToken, sha256Hex } from '../utils/hash'
 
-// 32 octets, encodés en base64url par `randomToken` (utils/hash.ts). Invitation : sept jours, un
-// e-mail lu un vendredi ne doit pas tout faire recommencer le lundi (spec §6.1). Mot de passe
+// 32 octets, encodés en base64url par `randomToken` (utils/hash.ts). Invitation : trente jours,
+// au-delà l'invitation s'affiche « expirée » et l'admin la renvoie. Mot de passe
 // oublié : une heure, la personne vient de le demander (MDS-35).
 const TOKEN_BYTES = 32
-const INVITATION_VALIDITY_MS = 7 * 24 * 60 * 60 * 1000
+const INVITATION_VALIDITY_MS = 30 * 24 * 60 * 60 * 1000
 const RESET_VALIDITY_MS = 60 * 60 * 1000
 
 const INVALID_OR_EXPIRED = 'Invalid or expired access link'
@@ -76,6 +76,19 @@ class AccessLinkDomain implements AccessLinkDomainInterface {
     )
   }
 
+  // Parmi ces comptes, ceux qui ont encore un lien utilisable : sert au statut d'invitation.
+  async activeLinkUserIds(userIds: string[]): Promise<Set<string>> {
+    if (userIds.length === 0) {
+      return new Set()
+    }
+    return new Set(
+      await this.accessLinkRepository.findUserIdsWithActiveLink(
+        userIds,
+        new Date(),
+      ),
+    )
+  }
+
   async issue(
     userId: string,
     issuedBy: string,
@@ -108,7 +121,7 @@ class AccessLinkDomain implements AccessLinkDomainInterface {
     // NULL`) ou un verrou consultatif par compte — une migration de schéma ou un mécanisme de
     // verrouillage qu'aucune exigence actuelle ne réclame, pour un scénario rare (le MÊME compte
     // administrateur émettant pour le MÊME utilisateur au même instant) et auto-limité par
-    // l'expiration (sept jours au plus) de tout lien qui en résulterait. Choix assumé : documenter la
+    // l'expiration (trente jours au plus) de tout lien qui en résulterait. Choix assumé : documenter la
     // limite plutôt que la fermer sans qu'elle soit demandée — voir « emissions simultanees »
     // dans access-link.test.ts, qui constate ce comportement (plus d'un lien utilisable) plutôt
     // que d'affirmer le contraire.

@@ -1,6 +1,6 @@
 import { z } from 'zod/v4'
 
-import { projectUserStatus } from './members.schema'
+import { invitationStatusSchema, projectUserStatus } from './members.schema'
 
 // Membres d'un service, vus depuis ce service (2026-09-29) : chaque affectation, son role, et le
 // soignant (metier du service) que le membre y incarne. Voir `routes/serviceMembers.ts`.
@@ -14,7 +14,7 @@ export const serviceMemberResponseSchema = z.object({
     firstName: z.string().nullable(),
     lastName: z.string().nullable(),
     deactivatedAt: z.coerce.date().nullable(),
-    invitationPending: z.boolean(),
+    invitationStatus: invitationStatusSchema,
   }),
 })
 export const serviceMembersResponseSchema = z.array(serviceMemberResponseSchema)
@@ -64,23 +64,26 @@ export type SetServiceRoleBody = z.infer<typeof setServiceRoleSchema>
 
 // Aplatit la ligne du depot : l'identite du compte au premier niveau, jamais rien d'autre de
 // l'appartenance d'etablissement.
-export const projectServiceMember = (row: {
-  id: string
-  role: 'COORDINATEUR' | 'INTERVENANT' | 'SECRETARIAT' | 'LECTURE'
-  soignantId: string | null
-  establishmentMembership: {
-    user: {
-      id: string
-      email: string
-      firstName: string | null
-      lastName: string | null
-      deactivatedAt: Date | null
-      lastLoginAt: Date | null
+export const projectServiceMember = (
+  row: {
+    id: string
+    role: 'COORDINATEUR' | 'INTERVENANT' | 'SECRETARIAT' | 'LECTURE'
+    soignantId: string | null
+    establishmentMembership: {
+      user: {
+        id: string
+        email: string
+        firstName: string | null
+        lastName: string | null
+        deactivatedAt: Date | null
+        lastLoginAt: Date | null
+      }
     }
-  }
-}) => ({
+  },
+  activeLinks: ReadonlySet<string>,
+) => ({
   id: row.id,
   role: row.role,
   soignantId: row.soignantId,
-  user: projectUserStatus(row.establishmentMembership.user),
+  user: projectUserStatus(row.establishmentMembership.user, activeLinks),
 })

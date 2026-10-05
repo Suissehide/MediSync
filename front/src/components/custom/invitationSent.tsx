@@ -67,7 +67,7 @@ export const InvitationSent = ({
           </Button>
         </div>
         <p className="text-xs text-text-light">
-          Utile si l'e-mail n'arrive pas. Usage unique, valable 7 jours : il ne
+          Utile si l'e-mail n'arrive pas. Usage unique, valable 30 jours : il ne
           sera plus jamais affiché.
         </p>
       </div>

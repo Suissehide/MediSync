@@ -185,9 +185,9 @@ describe('e-mails d invitation et mot de passe oublie', () => {
     expect(sent[0].mail.text).not.toContain('#')
   })
 
-  it('marque l invitation en attente jusqu a la premiere connexion', async () => {
+  it('suit l invitation : en attente, expiree apres 30 jours, renvoyee, puis acceptee', async () => {
     const cookies = await signIn(testApp.app, 'admin@lilas.fr')
-    await testApp.app.inject({
+    const created = await testApp.app.inject({
       method: 'POST',
       url: adminUrl(establishmentId, '/members/account'),
       cookies,
@@ -203,19 +203,42 @@ describe('e-mails d invitation et mot de passe oublie', () => {
           })
         )
           .json()
-          .map((m: { user: { email: string; invitationPending: boolean } }) => [
+          .map((m: { user: { email: string; invitationStatus: string } }) => [
             m.user.email,
-            m.user.invitationPending,
+            m.user.invitationStatus,
           ]),
       )
 
     expect(await statuts()).toEqual({
-      'admin@lilas.fr': false,
-      'invitee@lilas.fr': true,
+      'admin@lilas.fr': null,
+      'invitee@lilas.fr': 'pending',
     })
+    const link = await testDb.accessLink.findFirstOrThrow()
+    const days =
+      (link.expiresAt.getTime() - link.createdAt.getTime()) / 86_400_000
+    expect(Math.round(days)).toBe(30)
 
-    await setPasswordAndSignIn(tokenOf(sent[0].mail), 'invitee@lilas.fr')
-    expect((await statuts())['invitee@lilas.fr']).toBe(false)
+    await testDb.accessLink.updateMany({
+      data: { expiresAt: new Date(Date.now() - 1000) },
+    })
+    expect((await statuts())['invitee@lilas.fr']).toBe('expired')
+
+    const reissued = await testApp.app.inject({
+      method: 'POST',
+      url: adminUrl(
+        establishmentId,
+        `/members/${created.json().member.id}/access-link`,
+      ),
+      cookies,
+    })
+    expect(reissued.statusCode).toBe(201)
+    expect((await statuts())['invitee@lilas.fr']).toBe('pending')
+
+    await setPasswordAndSignIn(
+      tokenOf(sent[sent.length - 1].mail),
+      'invitee@lilas.fr',
+    )
+    expect((await statuts())['invitee@lilas.fr']).toBeNull()
   })
 
   it('mot de passe oublie : meme reponse que l adresse existe ou non, lien d une heure', async () => {

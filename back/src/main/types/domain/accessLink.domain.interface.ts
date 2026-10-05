@@ -21,6 +21,7 @@ export interface AccessLinkDomainInterface {
     token: string
     establishmentName?: string
   }) => void
+  activeLinkUserIds: (userIds: string[]) => Promise<Set<string>>
   // Mot de passe oublié : ne lève rien et ne révèle pas si l'adresse existe.
   requestPasswordReset: (email: string) => Promise<void>
   // Consomme un lien et pose le mot de passe. Lève :

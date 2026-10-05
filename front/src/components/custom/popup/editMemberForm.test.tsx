@@ -44,7 +44,7 @@ const memberFixture: Member = {
     firstName: 'Un',
     lastName: 'Membre',
     deactivatedAt: null,
-    invitationPending: false,
+    invitationStatus: null,
   },
   serviceMemberships: [
     { serviceId: 'svcA', role: 'COORDINATEUR' },

@@ -30,7 +30,7 @@ export const invitationMail = ({
   const where = establishmentName ? ` pour ${establishmentName}` : ''
   const intro = `Un accès à MediSync a été ouvert à votre nom${where}.`
   const validity =
-    "Ce lien est personnel, à usage unique et valable 7 jours. Si vous n'attendiez pas cet e-mail, ignorez-le."
+    "Ce lien est personnel, à usage unique et valable 30 jours. Si vous n'attendiez pas cet e-mail, ignorez-le."
   return {
     to,
     subject: 'Votre accès à MediSync',
