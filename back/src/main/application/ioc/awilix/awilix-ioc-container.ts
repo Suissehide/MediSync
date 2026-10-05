@@ -6,6 +6,7 @@ import nodemailer from 'nodemailer'
 import { AccessLinkDomain } from '../../../domain/accessLink.domain'
 import { ActivityLogDomain } from '../../../domain/activityLog.domain'
 import { AppointmentDomain } from '../../../domain/appointment.domain'
+import { ArsIndicatorDomain } from '../../../domain/arsIndicator.domain'
 import { AuthDomain } from '../../../domain/auth.domain'
 import { DiagnosticEducatifDomain } from '../../../domain/diagnosticEducatif.domain'
 import { DiagnosticEducatifTemplateDomain } from '../../../domain/diagnosticEducatifTemplate.domain'
@@ -36,6 +37,7 @@ import { AccessGrantRepository } from '../../../infra/orm/repositories/accessGra
 import { AccessLinkRepository } from '../../../infra/orm/repositories/accessLink.repository'
 import { ActivityLogRepository } from '../../../infra/orm/repositories/activityLog.repository'
 import { AppointmentRepository } from '../../../infra/orm/repositories/appointment.repository'
+import { ArsIndicatorRepository } from '../../../infra/orm/repositories/arsIndicator.repository'
 import { DiagnosticEducatifRepository } from '../../../infra/orm/repositories/diagnosticEducatif.repository'
 import { DiagnosticEducatifTemplateRepository } from '../../../infra/orm/repositories/diagnosticEducatifTemplate.repository'
 import { EnrollmentIssueRepository } from '../../../infra/orm/repositories/enrollmentIssue.repository'
@@ -138,6 +140,9 @@ class AwilixIocContainer {
     // EnrollmentIssue
     this.#registerEnrollmentIssueDomain()
     this.#registerEnrollmentIssueRepository()
+    // ArsIndicator
+    this.#registerArsIndicatorDomain()
+    this.#registerArsIndicatorRepository()
     // Error (must be before ActivityLog subscriber which depends on userRepository -> errorHandler)
     this.registerErrorHandler()
     // ActivityLog
@@ -234,6 +239,17 @@ class AwilixIocContainer {
     this.register(
       'membershipRepository',
       asClass(MembershipRepository).singleton(),
+    )
+  }
+
+  // ArsIndicator
+  #registerArsIndicatorDomain(): void {
+    this.register('arsIndicatorDomain', asClass(ArsIndicatorDomain).singleton())
+  }
+  #registerArsIndicatorRepository(): void {
+    this.register(
+      'arsIndicatorRepository',
+      asClass(ArsIndicatorRepository).singleton(),
     )
   }
 

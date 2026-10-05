@@ -28,6 +28,13 @@ describe('permissions', () => {
     )
   })
 
+  it('reserve les indicateurs ARS au coordinateur', () => {
+    expect(SERVICE_PERMISSIONS.COORDINATEUR).toContain('stats:read')
+    for (const role of ['INTERVENANT', 'SECRETARIAT', 'LECTURE'] as const) {
+      expect(SERVICE_PERMISSIONS[role]).not.toContain('stats:read')
+    }
+  })
+
   it('refuse le contenu clinique au secretariat et a la lecture', () => {
     expect(SERVICE_PERMISSIONS.SECRETARIAT).not.toContain('clinical:read')
     expect(SERVICE_PERMISSIONS.LECTURE).not.toContain('clinical:read')

@@ -106,6 +106,20 @@ const probes: {
     path: `/patient/${FAKE_ID}/enrollment-issue/${FAKE_ID}`,
   },
   { permission: 'todo:own', method: 'GET', path: '/todo', heldStatus: 200 },
+  {
+    permission: 'stats:read',
+    method: 'GET',
+    path: '/indicateurs-ars?from=2026-01-01&to=2026-12-31',
+    heldStatus: 200,
+  },
+  // L'export a sa propre sonde : `assertRoutePermission` exige qu'une permission soit DÉCLARÉE,
+  // pas qu'elle soit la bonne. Une erreur de littéral sur cette route-là boote sans broncher.
+  {
+    permission: 'stats:read',
+    method: 'GET',
+    path: '/indicateurs-ars/export?from=2026-01-01&to=2026-12-31',
+    heldStatus: 200,
+  },
 ]
 
 const roles: ServiceRole[] = [

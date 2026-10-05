@@ -57,6 +57,9 @@ export type ServicePermission =
   // Journal d'activite du SEUL service courant (chef de service). Nom distinct d'`activity-log:read`
   // pour la meme raison que `consultations:read`.
   | 'service-journal:read'
+  // Indicateurs de l'enquete annuelle ARS du service courant, en chiffres agreges et sans donnee
+  // nominative (MDS-26). Non accordee a LECTURE : la direction lira le tableau de bord de MDS-40.
+  | 'stats:read'
 
 export type EstablishmentPermission =
   | 'services:manage'
@@ -102,6 +105,7 @@ export const SERVICE_PERMISSIONS: Record<
     'consultations:read',
     'service-members:manage',
     'service-journal:read',
+    'stats:read',
   ],
   INTERVENANT: [
     ...READ_ALL,
