@@ -105,4 +105,22 @@ describe('indicateurs ARS', () => {
     })
     expect(res.statusCode).toBe(400)
   })
+
+  it('rend un classeur nomme par le service et la periode', async () => {
+    const res = await t.app.inject({
+      method: 'GET',
+      url: tenantUrl(
+        establishmentId,
+        serviceA,
+        '/indicateurs-ars/export?from=2026-01-01&to=2026-12-31',
+      ),
+      cookies,
+    })
+    expect(res.statusCode).toBe(200)
+    expect(res.headers['content-type']).toContain('spreadsheetml')
+    expect(res.rawPayload.length).toBeGreaterThan(0)
+    expect(res.headers['content-disposition']).toContain(
+      'indicateurs-ars_2026-01-01_2026-12-31.xlsx',
+    )
+  })
 })

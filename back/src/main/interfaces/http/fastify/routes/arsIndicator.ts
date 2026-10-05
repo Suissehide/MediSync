@@ -30,6 +30,29 @@ const arsIndicatorRouter: FastifyPluginAsync = (fastify) => {
     },
   )
 
+  // Le classeur est un Buffer : pas de `response` Zod, la sérialisation JSON ne s'y applique pas.
+  fastify.get<{ Querystring: ArsIndicatorQuery }>(
+    '/export',
+    {
+      schema: { querystring: arsIndicatorQuerySchema },
+      config: { permission: 'stats:read' },
+    },
+    async (request, reply) => {
+      const { from, to } = request.query
+      const buffer = await arsIndicatorDomain.exportExcel({ from, to })
+      const nom = `indicateurs-ars_${from.toISOString().slice(0, 10)}_${to
+        .toISOString()
+        .slice(0, 10)}.xlsx`
+      await reply
+        .header(
+          'Content-Type',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+        .header('Content-Disposition', `attachment; filename="${nom}"`)
+        .send(buffer)
+    },
+  )
+
   return Promise.resolve()
 }
 
