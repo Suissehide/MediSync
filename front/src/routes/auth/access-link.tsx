@@ -5,6 +5,7 @@ import {
 } from '@tanstack/react-router'
 import { useState } from 'react'
 
+import { AuthCard, AuthLayout } from '../../components/custom/authLayout.tsx'
 import { Button } from '../../components/ui/button.tsx'
 import { useAppForm } from '../../hooks/formConfig.tsx'
 import { isApiError } from '../../libs/httpErrorHandler.ts'
@@ -155,98 +156,81 @@ function AccessLinkPage() {
   }
 
   return (
-    <div className="overflow-hidden w-full h-screen flex relative">
-      <div className="absolute top-6 left-2 z-20">
-        <h1 className="px-2 text-3xl font-bold">
-          <span className="text-primary">Medi</span>Sync
-        </h1>
-      </div>
+    <AuthLayout>
+      <AuthCard>
+        <h2 className="text-left w-full text-2xl font-bold mb-4">
+          Choisissez votre mot de passe
+        </h2>
 
-      <div className="flex-1 flex justify-end">
-        <div className="z-10 w-auto sm:w-[450px] left-4 right-4 sm:left-auto top-1/2 -translate-y-1/2 bg-card/45 flex flex-col items-center px-6 py-6 sm:px-12 sm:py-8 rounded-2xl border border-gray-100 backdrop-blur-sm absolute sm:right-8">
-          <h2 className="text-left w-full text-2xl font-bold mb-4">
-            Choisissez votre mot de passe
-          </h2>
+        {consume.isError && (
+          <p className="w-full text-sm text-destructive mb-2">
+            {consume.error instanceof Error
+              ? consume.error.message
+              : 'Une erreur est survenue. Réessayez.'}
+          </p>
+        )}
 
-          {consume.isError && (
-            <p className="w-full text-sm text-destructive mb-2">
-              {consume.error instanceof Error
-                ? consume.error.message
-                : 'Une erreur est survenue. Réessayez.'}
-            </p>
-          )}
-
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault()
-              await form.handleSubmit()
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault()
+            await form.handleSubmit()
+          }}
+          className="w-full flex flex-col gap-2"
+        >
+          <form.AppField
+            name="email"
+            validators={{
+              onSubmit: ({ value }) =>
+                value ? undefined : "L'e-mail est nécessaire",
             }}
-            className="w-full flex flex-col gap-2"
           >
-            <form.AppField
-              name="email"
-              validators={{
-                onSubmit: ({ value }) =>
-                  value ? undefined : "L'e-mail est nécessaire",
-              }}
-            >
-              {(field) => <field.Input type="email" label="Adresse e-mail" />}
-            </form.AppField>
+            {(field) => <field.Input type="email" label="Adresse e-mail" />}
+          </form.AppField>
 
-            <form.AppField
-              name="password"
-              validators={{
-                // Même message que `user/settings.tsx` (précédent existant) :
-                // le back exige 12 caractères (`accessLinkConsumeSchema`),
-                // et sans ce contrôle côté client, l'écran par lequel une
-                // personne ENTRE dans l'application se contentait d'un
-                // « une erreur est survenue » qui ne dit jamais quoi
-                // corriger.
-                onChange: ({ value }) => {
-                  if (!value) {
-                    return 'Le mot de passe est nécessaire'
-                  }
-                  if (value.length < 12) {
-                    return 'Le mot de passe doit contenir au moins 12 caractères'
-                  }
-                  return undefined
-                },
-              }}
-            >
-              {(field) => <field.Password label="Nouveau mot de passe" />}
-            </form.AppField>
+          <form.AppField
+            name="password"
+            validators={{
+              // Même message que `user/settings.tsx` (précédent existant) :
+              // le back exige 12 caractères (`accessLinkConsumeSchema`),
+              // et sans ce contrôle côté client, l'écran par lequel une
+              // personne ENTRE dans l'application se contentait d'un
+              // « une erreur est survenue » qui ne dit jamais quoi
+              // corriger.
+              onChange: ({ value }) => {
+                if (!value) {
+                  return 'Le mot de passe est nécessaire'
+                }
+                if (value.length < 12) {
+                  return 'Le mot de passe doit contenir au moins 12 caractères'
+                }
+                return undefined
+              },
+            }}
+          >
+            {(field) => <field.Password label="Nouveau mot de passe" />}
+          </form.AppField>
 
-            <form.AppField name="confirmPassword">
-              {(field) => <field.Password label="Confirmer le mot de passe" />}
-            </form.AppField>
+          <form.AppField name="confirmPassword">
+            {(field) => <field.Password label="Confirmer le mot de passe" />}
+          </form.AppField>
 
-            <Button
-              type="submit"
-              className="w-full mt-2"
-              isLoading={consume.isPending || isLoginPending}
-            >
-              Définir le mot de passe et se connecter
-            </Button>
-          </form>
-        </div>
-      </div>
-    </div>
+          <Button
+            type="submit"
+            className="w-full mt-2"
+            isLoading={consume.isPending || isLoginPending}
+          >
+            Définir le mot de passe et se connecter
+          </Button>
+        </form>
+      </AuthCard>
+    </AuthLayout>
   )
 }
 
 const Shell = ({ children }: { children: React.ReactNode }) => (
-  <div className="overflow-hidden w-full h-screen flex relative">
-    <div className="absolute top-6 left-2 z-20">
-      <h1 className="px-2 text-3xl font-bold">
-        <span className="text-primary">Medi</span>Sync
-      </h1>
-    </div>
-    <div className="flex-1 flex justify-end">
-      <div className="z-10 w-auto sm:w-[450px] left-4 right-4 sm:left-auto top-1/2 -translate-y-1/2 bg-card/45 flex flex-col items-center gap-4 px-6 py-6 sm:px-12 sm:py-8 rounded-2xl border border-gray-100 backdrop-blur-sm absolute sm:right-8 text-center">
-        {children}
-      </div>
-    </div>
-  </div>
+  <AuthLayout>
+    <AuthCard className="gap-4 text-center">{children}</AuthCard>
+  </AuthLayout>
 )
 
 const Message = ({ text }: { text: string }) => (
