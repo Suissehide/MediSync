@@ -52,7 +52,7 @@ function AccessLinkPage() {
   const [consumedSuccessfully, setConsumedSuccessfully] = useState(false)
 
   const form = useAppForm({
-    defaultValues: { email: '', password: '', confirmPassword: '' },
+    defaultValues: { password: '', confirmPassword: '' },
     validators: {
       onSubmit: ({ value }) => {
         if (value.password !== value.confirmPassword) {
@@ -71,7 +71,7 @@ function AccessLinkPage() {
       consume.consumeMutation(
         { token, password: value.password },
         {
-          onSuccess: async () => {
+          onSuccess: async ({ email }) => {
             setConsumedSuccessfully(true)
             // CINQUIÈME CANAL : sans ceci, le
             // jeton reste dans la barre d'adresse après une consommation
@@ -85,7 +85,9 @@ function AccessLinkPage() {
             // Fait AVANT d'appeler la connexion, comme demandé.
             await navigate({ to: '/auth/access-link', replace: true })
             loginMutation(
-              { email: value.email, password: value.password },
+              // L'adresse est celle du compte que le lien désigne, jamais une saisie :
+              // une adresse tapée de travers connectait (ou échouait sur) un autre compte.
+              { email, password: value.password },
               {
                 onSuccess: async () => {
                   await navigate({ to: '/', replace: true })
@@ -177,16 +179,6 @@ function AccessLinkPage() {
           }}
           className="w-full flex flex-col gap-2"
         >
-          <form.AppField
-            name="email"
-            validators={{
-              onSubmit: ({ value }) =>
-                value ? undefined : "L'e-mail est nécessaire",
-            }}
-          >
-            {(field) => <field.Input type="email" label="Adresse e-mail" />}
-          </form.AppField>
-
           <form.AppField
             name="password"
             validators={{

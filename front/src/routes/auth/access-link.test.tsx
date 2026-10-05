@@ -119,8 +119,7 @@ const routeSignIn = (respond: Route['respond']): Route => ({
   respond,
 })
 
-const remplirEtValider = async (email: string, password: string) => {
-  await userEvent.type(screen.getByLabelText(/adresse e-mail/i), email)
+const remplirEtValider = async (password: string) => {
   await userEvent.type(
     screen.getByLabelText(/^nouveau mot de passe/i),
     password,
@@ -165,7 +164,7 @@ describe('page publique de consommation d un lien d acces', () => {
       ]),
     )
 
-    await remplirEtValider('quelqu.un@chu.fr', 'un-mot-de-passe-suffisant')
+    await remplirEtValider('un-mot-de-passe-suffisant')
 
     expect(
       await screen.findByText(/ce lien n'est plus valable/i),
@@ -185,7 +184,7 @@ describe('page publique de consommation d un lien d acces', () => {
       ]),
     )
 
-    await remplirEtValider('quelqu.un@chu.fr', 'un-mot-de-passe-suffisant')
+    await remplirEtValider('un-mot-de-passe-suffisant')
 
     expect(await screen.findByText(/compte est désactivé/i)).toBeInTheDocument()
     expect(
@@ -198,7 +197,7 @@ describe('page publique de consommation d un lien d acces', () => {
       routeConsume(() => ({
         ok: true,
         status: 200,
-        json: async () => ({ success: true }),
+        json: async () => ({ success: true, email: 'quelqu.un@chu.fr' }),
       })),
       routeSignIn(() => ({
         ok: true,
@@ -208,7 +207,7 @@ describe('page publique de consommation d un lien d acces', () => {
     ])
     monter(`/auth/access-link#${JETON}`, fetchMock)
 
-    await remplirEtValider('quelqu.un@chu.fr', 'un-mot-de-passe-suffisant')
+    await remplirEtValider('un-mot-de-passe-suffisant')
 
     await waitFor(() => {
       expect(screen.getByText('Tableau de bord')).toBeInTheDocument()
@@ -238,16 +237,13 @@ describe('page publique de consommation d un lien d acces', () => {
       routeConsume(() => ({
         ok: true,
         status: 200,
-        json: async () => ({ success: true }),
+        json: async () => ({ success: true, email: 'quelqu.un@chu.fr' }),
       })),
       routeSignIn(() => ({ ok: false, status: 401, json: async () => ({}) })),
     ])
     monter(`/auth/access-link#${JETON}`, fetchMock)
 
-    await remplirEtValider(
-      'adresse-mal-recopiee@chu.fr',
-      'un-mot-de-passe-suffisant',
-    )
+    await remplirEtValider('un-mot-de-passe-suffisant')
 
     expect(
       await screen.findByText(/la connexion automatique a échoué/i),
@@ -255,7 +251,9 @@ describe('page publique de consommation d un lien d acces', () => {
     // Le formulaire (avec ses champs email/mot de passe) a disparu : le
     // jeton est brûlé (usage unique), retenter reviendrait à consommer un
     // jeton déjà consommé.
-    expect(screen.queryByLabelText(/adresse e-mail/i)).not.toBeInTheDocument()
+    expect(
+      screen.queryByLabelText(/^nouveau mot de passe/i),
+    ).not.toBeInTheDocument()
 
     const consumeCalls = fetchMock.mock.calls.filter(([url]) =>
       String(url).endsWith('/auth/access-link/consume'),
@@ -271,14 +269,14 @@ describe('page publique de consommation d un lien d acces', () => {
       routeConsume(() => ({
         ok: true,
         status: 200,
-        json: async () => ({ success: true }),
+        json: async () => ({ success: true, email: 'quelqu.un@chu.fr' }),
       })),
       routeSignIn(() => ({ ok: false, status: 401, json: async () => ({}) })),
     ])
     const { router } = monter(`/auth/access-link#${JETON}`, fetchMock)
     const longueurHistoriqueAvant = router.history.length
 
-    await remplirEtValider('quelqu.un@chu.fr', 'un-mot-de-passe-suffisant')
+    await remplirEtValider('un-mot-de-passe-suffisant')
 
     await screen.findByText(/la connexion automatique a échoué/i)
 
@@ -302,10 +300,6 @@ describe('page publique de consommation d un lien d acces', () => {
     const fetchMock = buildFetchMock([])
     monter(`/auth/access-link#${JETON}`, fetchMock)
 
-    await userEvent.type(
-      screen.getByLabelText(/adresse e-mail/i),
-      'quelqu.un@chu.fr',
-    )
     await userEvent.type(
       screen.getByLabelText(/^nouveau mot de passe/i),
       'trop-court',
@@ -337,7 +331,7 @@ describe('page publique de consommation d un lien d acces', () => {
       ]),
     )
 
-    await remplirEtValider('quelqu.un@chu.fr', 'un-mot-de-passe-suffisant')
+    await remplirEtValider('un-mot-de-passe-suffisant')
 
     expect(
       await screen.findByText(/une erreur interne est survenue/i),
@@ -345,7 +339,7 @@ describe('page publique de consommation d un lien d acces', () => {
     expect(
       screen.queryByText(/vérifiez les informations saisies et réessayez/i),
     ).not.toBeInTheDocument()
-    expect(screen.getByLabelText(/adresse e-mail/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/^nouveau mot de passe/i)).toBeInTheDocument()
   })
 
   it("le jeton n'atterrit jamais ailleurs qu'a l'ecran (quatre canaux)", async () => {
@@ -359,7 +353,7 @@ describe('page publique de consommation d un lien d acces', () => {
       routeConsume(() => ({
         ok: true,
         status: 200,
-        json: async () => ({ success: true }),
+        json: async () => ({ success: true, email: 'quelqu.un@chu.fr' }),
       })),
       routeSignIn(() => ({
         ok: true,
@@ -369,7 +363,7 @@ describe('page publique de consommation d un lien d acces', () => {
     ])
     const { queryClient } = monter(`/auth/access-link#${JETON}`, fetchMock)
 
-    await remplirEtValider('quelqu.un@chu.fr', 'un-mot-de-passe-suffisant')
+    await remplirEtValider('un-mot-de-passe-suffisant')
 
     await waitFor(() => {
       expect(screen.getByText('Tableau de bord')).toBeInTheDocument()

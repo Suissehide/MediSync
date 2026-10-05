@@ -43,8 +43,8 @@ const accessLinkRouter: FastifyPluginAsync = (fastify) => {
     // exécutée, Fastify ayant déjà tranché avant elle.
     async (request) => {
       const { token, password } = request.body
-      await accessLinkDomain.consume(token, password)
-      return { success: true }
+      const { email } = await accessLinkDomain.consume(token, password)
+      return { success: true, email }
     },
   )
   return Promise.resolve()

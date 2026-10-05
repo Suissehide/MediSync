@@ -35,5 +35,5 @@ export interface AccessLinkDomainInterface {
   //   - `Boom.resourceGone` (410) si le jeton est inconnu, déjà consommé ou expiré ;
   //   - `Boom.unauthorized` (401) si le compte cible est désactivé — SANS consommer le lien
   //     (refuser ne doit jamais brûler le jeton).
-  consume: (token: string, password: string) => Promise<void>
+  consume: (token: string, password: string) => Promise<{ email: string }>
 }

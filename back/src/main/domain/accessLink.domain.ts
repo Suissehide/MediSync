@@ -164,7 +164,7 @@ class AccessLinkDomain implements AccessLinkDomainInterface {
     return { token }
   }
 
-  async consume(token: string, password: string): Promise<void> {
+  async consume(token: string, password: string): Promise<{ email: string }> {
     const tokenHash = sha256Hex(token)
     const link =
       await this.accessLinkRepository.findByTokenHashWithUser(tokenHash)
@@ -189,6 +189,8 @@ class AccessLinkDomain implements AccessLinkDomainInterface {
       throw Boom.resourceGone(INVALID_OR_EXPIRED)
     }
     await this.userRepository.updatePassword(link.userId, password)
+    // L'adresse du compte que le lien désigne : la page s'y connecte, sans la redemander.
+    return { email: link.user.email }
   }
 }
 

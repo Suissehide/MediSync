@@ -67,7 +67,9 @@ class AccessLinkRepository implements AccessLinkRepositoryInterface {
   ): Promise<AccessLinkWithUser | null> {
     return this.prisma.accessLink.findUnique({
       where: { tokenHash },
-      include: { user: { select: { id: true, deactivatedAt: true } } },
+      include: {
+        user: { select: { id: true, email: true, deactivatedAt: true } },
+      },
     })
   }
 

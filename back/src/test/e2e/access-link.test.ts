@@ -51,6 +51,8 @@ describe('POST /auth/access-link/consume', () => {
     const res = await consume(token)
 
     expect(res.statusCode).toBe(200)
+    // L'adresse du compte designe par le lien : la page s'y connecte sans la redemander.
+    expect(res.json().email).toBe('premier@etab.fr')
     const signIn = await testApp.app.inject({
       method: 'POST',
       url: '/auth/sign-in',
@@ -136,7 +138,9 @@ describe('POST /auth/access-link/consume', () => {
       output: { statusCode: 410 },
     })
 
-    await expect(consumeDirect(current.token)).resolves.toBeUndefined()
+    await expect(consumeDirect(current.token)).resolves.toEqual({
+      email: 'reemis@etab.fr',
+    })
   })
 
   // Un jeton JAMAIS ÉMIS emprunte une branche distincte

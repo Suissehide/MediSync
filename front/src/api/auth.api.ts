@@ -102,7 +102,7 @@ export const AuthApi = {
   consumeAccessLink: async ({
     token,
     password,
-  }: ConsumeAccessLinkInput): Promise<{ success: boolean }> => {
+  }: ConsumeAccessLinkInput): Promise<{ success: boolean; email: string }> => {
     const response = await fetch(`${apiUrl}/auth/access-link/consume`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
