@@ -7,6 +7,7 @@ import PatientCell from '../components/custom/agenda/patientCell.tsx'
 import { Etiquette } from '../components/table/etiquette.tsx'
 import { Button } from '../components/ui/button.tsx'
 import { APPOINTMENT_TYPE } from '../constants/appointment.constant.ts'
+import { styleSoignant } from '../libs/color.ts'
 import type { DayAppointmentRow } from '../libs/utils.ts'
 
 const columnHelper = createColumnHelper<DayAppointmentRow>()
@@ -15,12 +16,14 @@ type DayAppointmentActions = {
   onOpen: (row: DayAppointmentRow) => void
   onDelete: (row: DayAppointmentRow) => void
   onAddPatient: (row: DayAppointmentRow) => void
+  soignantIDs: string[]
 }
 
 export const getDayAppointmentColumns = ({
   onOpen,
   onDelete,
   onAddPatient,
+  soignantIDs,
 }: DayAppointmentActions) => {
   return [
     columnHelper.accessor('startDate', {
@@ -56,7 +59,12 @@ export const getDayAppointmentColumns = ({
         return (
           <div className="flex items-center gap-1 overflow-hidden">
             {visible.map((soignant) => (
-              <Etiquette key={soignant.id}>{soignant.name}</Etiquette>
+              <Etiquette
+                key={soignant.id}
+                style={styleSoignant(soignant.id, soignantIDs)}
+              >
+                {soignant.name}
+              </Etiquette>
             ))}
             {rest > 0 && (
               <span className="shrink-0 text-xs text-muted-foreground font-medium">

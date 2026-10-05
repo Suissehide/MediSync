@@ -73,6 +73,8 @@ function Agenda() {
   const selectedSoignantIDs = useSoignantStore(
     (state) => state.selectedSoignantIDs,
   )
+  const soignants = useSoignantStore((state) => state.soignants)
+  const soignantIDs = useMemo(() => soignants.map((s) => s.id), [soignants])
 
   // Sans sélection, on affiche tout ; sinon on garde les rendez-vous
   // dont au moins un soignant est coché dans la barre latérale.
@@ -95,8 +97,9 @@ function Agenda() {
         onOpen: (row) => setOpenedRow(row),
         onDelete: (row) => setDeleteTarget(row),
         onAddPatient: (row) => setAddPatientTargetId(row.id),
+        soignantIDs,
       }),
-    [],
+    [soignantIDs],
   )
 
   return (

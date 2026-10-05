@@ -43,3 +43,35 @@ export function getContrastTextColor(hex: string): string {
   const brightness = (r * 299 + g * 587 + b * 114) / 1000
   return brightness > 125 ? '#000' : '#fff'
 }
+
+// Couleur d'un soignant dans la palette, d'après son rang dans la liste du service
+// (triée par id : un nouveau soignant ne décale pas les couleurs des autres).
+// ponytail: au-delà de 12 soignants les couleurs se répètent ; ajouter une couleur en base si besoin.
+// Paires [teinte, texte foncé de la même teinte] : le texte reste lisible sur le fond pâle.
+const PALETTE_SOIGNANTS: [string, string][] = [
+  ['#3b82f6', '#1e40af'],
+  ['#10b981', '#065f46'],
+  ['#f59e0b', '#92400e'],
+  ['#ef4444', '#991b1b'],
+  ['#8b5cf6', '#5b21b6'],
+  ['#06b6d4', '#155e75'],
+  ['#ec4899', '#9d174d'],
+  ['#84cc16', '#3f6212'],
+  ['#f97316', '#9a3412'],
+  ['#6366f1', '#3730a3'],
+  ['#14b8a6', '#115e59'],
+  ['#a855f7', '#6b21a8'],
+]
+
+export function styleSoignant(id: string, soignantIDs: string[]) {
+  const rang = [...soignantIDs].sort().indexOf(id)
+  if (rang === -1) {
+    return undefined
+  }
+  const [teinte, texte] = PALETTE_SOIGNANTS[rang % PALETTE_SOIGNANTS.length]
+  return {
+    backgroundColor: hexToRGBA(teinte, 0.15),
+    borderColor: hexToRGBA(teinte, 0.5),
+    color: texte,
+  }
+}
