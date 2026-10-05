@@ -56,7 +56,11 @@ describe('indicateurs ARS', () => {
     })
 
   // Une séance individuelle honorée dans `serviceId`, pour `patientId`.
-  const seanceHonoree = async (serviceId: string, patientId: string) => {
+  const seanceHonoree = async (
+    serviceId: string,
+    patientId: string,
+    accompanying?: string,
+  ) => {
     const template = await testDb.slotTemplate.create({
       data: {
         startTime: new Date(),
@@ -94,6 +98,7 @@ describe('indicateurs ARS', () => {
         serviceId,
         establishmentId,
         status: 'yes',
+        accompanying,
       },
     })
   }
@@ -136,6 +141,33 @@ describe('indicateurs ARS', () => {
     expect(indicateur(vuDeB, '2.6').value).toBe(1)
     // Le patient est entré dans les deux services : chacun le compte une fois, pas deux.
     expect(indicateur(vuDeA, '1.1').value).toBe(1)
+  })
+
+  // Même piège que les orientations : `APPOINTMENT_ACCOMPANYING` est un dictionnaire clé→libellé,
+  // et c'est la CLÉ (`yes`) qui est stockée. Comparer « Oui » laissait 2.9 et 2.10 à zéro sur un
+  // établissement qui compte des centaines de séances accompagnées.
+  it('compte une seance accompagnee, sur la valeur reellement stockee', async () => {
+    const patient = await testDb.patient.create({
+      data: {
+        establishmentId,
+        firstName: 'Accompagne',
+        lastName: 'Test',
+        createDate: new Date(),
+      },
+    })
+    await testDb.patientServiceFile.create({
+      data: {
+        establishmentId,
+        serviceId: serviceB,
+        patientId: patient.id,
+        entryDate: new Date('2026-05-01'),
+      },
+    })
+    await seanceHonoree(serviceB, patient.id, 'yes')
+
+    const res = await lire(serviceB)
+    expect(indicateur(res, '2.10').value).toBeGreaterThanOrEqual(1)
+    expect(indicateur(res, '2.9').value).toBeGreaterThanOrEqual(1)
   })
 
   it('rend les 30 indicateurs', async () => {

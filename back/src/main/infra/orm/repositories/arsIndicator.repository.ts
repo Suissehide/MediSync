@@ -4,7 +4,11 @@ import type {
   ArsIndicatorRepositoryInterface,
 } from '../../../types/infra/orm/repositories/arsIndicator.repository.interface'
 import type { TenantContextInterface } from '../../../types/utils/tenant-context'
-import type { ArsFile, ArsPresence } from '../../../utils/ars-indicators'
+import {
+  ARS_ACCOMPANYING_YES,
+  type ArsFile,
+  type ArsPresence,
+} from '../../../utils/ars-indicators'
 import type { PostgresPrismaClient } from '../postgres-client'
 
 // Pas de borne de date basse : plusieurs indicateurs remontent jusqu'à la date d'entrée, qui
@@ -71,7 +75,7 @@ class ArsIndicatorRepository implements ArsIndicatorRepositoryInterface {
         ap.appointment.slot.slotTemplate.thematic?.name ??
         null,
       honored: ap.status === 'yes',
-      accompanied: ap.accompanying === 'Oui',
+      accompanied: ap.accompanying === ARS_ACCOMPANYING_YES,
     }))
 
     const byPatient = new Map<string, ArsPresence[]>()

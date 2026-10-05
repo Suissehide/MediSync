@@ -81,8 +81,15 @@ Vocabulaire commun à tout le document :
 | 1.3 | Orientés au cours d'une hospitalisation | 1.1 et `orientation = 'Orientation pro santé au cours hospit'` |
 | 1.4 | Orientés à l'hôpital en consultation externe | 1.1 et `orientation = 'Orientation pro santé en Cs'` |
 
-Les trois valeurs d'orientation existent telles quelles dans `ORIENTATION`
-(`front/src/constants/patient.constant.ts`), héritées de Draxa.
+**La base stocke la CLÉ du dictionnaire, pas le libellé.** `toSelectOptions`
+(`front/src/libs/utils.ts`) écrit `value: <clé>`, donc `PatientServiceFile.orientation` vaut
+`ORIENTATION_PRO_SANTE_HOSPIT`, jamais « Orientation pro santé au cours hospit ». La première
+version de la grille comparait le libellé — vu dans l'application sur les données réelles, 1.1
+valait 557 et 1.2/1.3/1.4 valaient 0 alors que 2452 dossiers portent une orientation. Même piège
+sur `AppointmentPatient.accompanying`, qui vaut `yes`/`no` et non « Oui »/« Non » : 2.9 et 2.10
+restaient nuls malgré 89 séances accompagnées. Les clés utilisées sont tenues contre les
+dictionnaires du front par un test, sur le patron d'`access-log-vocabulaire.test.ts` — renommer une
+clé côté front sans toucher ici remettrait les indicateurs à zéro en silence.
 
 ### 3.2 Groupe 2 — Séances d'ETP et mode de prise en charge
 

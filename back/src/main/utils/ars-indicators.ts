@@ -17,6 +17,20 @@ export const ARS_THEMATIC_ROLES = {
 
 type ThematicRole = keyof typeof ARS_THEMATIC_ROLES
 
+// Les trois orientations de la grille, par la CLÉ que la base stocke. `toSelectOptions`
+// (`front/src/libs/utils.ts`) écrit la clé du dictionnaire `ORIENTATION`, jamais son libellé :
+// comparer le libellé rendait 1.2, 1.3 et 1.4 nuls sur un établissement qui en a des milliers.
+// `ars-indicators.test.ts` tient ces trois clés contre le dictionnaire du front.
+export const ARS_ORIENTATIONS = {
+  horsHopital: 'ORIENTATION_PRO_SANTE_EXT',
+  hospitalisation: 'ORIENTATION_PRO_SANTE_HOSPIT',
+  consultationExterne: 'ORIENTATION_PRO_SANTE_CS',
+} as const
+
+// Même piège que les orientations : `APPOINTMENT_ACCOMPANYING` est un dictionnaire clé→libellé et
+// c'est la CLÉ qui est stockée, jamais « Oui ».
+export const ARS_ACCOMPANYING_YES = 'yes'
+
 export type ArsPresence = {
   patientId: string
   date: Date
@@ -203,21 +217,21 @@ export const ARS_INDICATORS: readonly ArsIndicator[] = [
     group: 'Entrée',
     label:
       "Nombre de patients orientés par un professionnel de santé en dehors d'un hôpital (dont médecin traitant)",
-    compute: (c) => countOriented(c, 'Orientation pro santé ext hôpital'),
+    compute: (c) => countOriented(c, ARS_ORIENTATIONS.horsHopital),
   },
   {
     code: '1.3',
     group: 'Entrée',
     label:
       "Nombre de patients orientés par un professionnel de santé au cours d'une hospitalisation",
-    compute: (c) => countOriented(c, 'Orientation pro santé au cours hospit'),
+    compute: (c) => countOriented(c, ARS_ORIENTATIONS.hospitalisation),
   },
   {
     code: '1.4',
     group: 'Entrée',
     label:
       "Nombre de patients orientés par un professionnel de santé à l'hôpital en consultation externe",
-    compute: (c) => countOriented(c, 'Orientation pro santé en Cs'),
+    compute: (c) => countOriented(c, ARS_ORIENTATIONS.consultationExterne),
   },
   {
     code: '2.1',

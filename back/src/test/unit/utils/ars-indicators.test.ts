@@ -1,4 +1,9 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+
 import {
+  ARS_ACCOMPANYING_YES,
+  ARS_ORIENTATIONS,
   ARS_THEMATIC_ROLES,
   type ArsCohort,
   type ArsFile,
@@ -122,21 +127,6 @@ describe('groupe 1 — entrée', () => {
       dossier({ patientId: 'p2' }),
     ])
     expect(valeur(c, '1.1bis')).toBe(1)
-  })
-
-  it('1.2, 1.3 et 1.4 ventilent par orientation', () => {
-    const c = cohorte([
-      dossier({ orientation: 'Orientation pro santé ext hôpital' }),
-      dossier({
-        patientId: 'p2',
-        orientation: 'Orientation pro santé au cours hospit',
-      }),
-      dossier({ patientId: 'p3', orientation: 'Orientation pro santé en Cs' }),
-      dossier({ patientId: 'p4', orientation: 'Venue spontanée' }),
-    ])
-    expect(valeur(c, '1.2')).toBe(1)
-    expect(valeur(c, '1.3')).toBe(1)
-    expect(valeur(c, '1.4')).toBe(1)
   })
 })
 
@@ -525,5 +515,69 @@ describe('séances des patients sans sous-dossier dans le service', () => {
     }
     expect(valeur(c, '2.9')).toBe(2)
     expect(valeur(c, '2.10')).toBe(3)
+  })
+})
+
+describe('orientations : la BASE stocke la CLÉ, pas le libellé', () => {
+  // Défaut trouvé en vérifiant l'écran sur les données réelles : 1.1 valait 557 et 1.2/1.3/1.4
+  // valaient 0 alors que 2452 dossiers portent une orientation. `toSelectOptions`
+  // (`front/src/libs/utils.ts`) écrit la CLÉ du dictionnaire (`ORIENTATION_PRO_SANTE_HOSPIT`),
+  // jamais son libellé (« Orientation pro santé au cours hospit »), que la grille comparait.
+  it('ventile sur les cles stockees en base', () => {
+    const c = cohorte([
+      dossier({ orientation: 'ORIENTATION_PRO_SANTE_EXT' }),
+      dossier({ patientId: 'p2', orientation: 'ORIENTATION_PRO_SANTE_HOSPIT' }),
+      dossier({ patientId: 'p3', orientation: 'ORIENTATION_PRO_SANTE_CS' }),
+      dossier({ patientId: 'p4', orientation: 'VENUE_SPONTANEE' }),
+    ])
+    expect(valeur(c, '1.2')).toBe(1)
+    expect(valeur(c, '1.3')).toBe(1)
+    expect(valeur(c, '1.4')).toBe(1)
+  })
+
+  it('ne ventile PAS sur les libelles affiches', () => {
+    const c = cohorte([
+      dossier({ orientation: 'Orientation pro santé au cours hospit' }),
+    ])
+    expect(valeur(c, '1.3')).toBe(0)
+  })
+
+  // Contrat entre les deux dépôts, sur le patron d'`access-log-vocabulaire.test.ts` : les trois
+  // clés doivent exister dans le dictionnaire du front. Renommer une clé là-bas sans toucher ici
+  // remettrait silencieusement les trois indicateurs à zéro — c'est exactement ce qui vient
+  // d'arriver.
+  it('chaque cle utilisee existe dans ORIENTATION du front', () => {
+    const source = readFileSync(
+      join(__dirname, '../../../../../front/src/constants/patient.constant.ts'),
+      'utf8',
+    )
+    const bloc = source.match(/export const ORIENTATION = \{([^}]*)\}/)
+    if (!bloc) {
+      throw new Error('ORIENTATION introuvable dans patient.constant.ts')
+    }
+    const clesDuFront = [...bloc[1].matchAll(/^\s*([A-Z_]+):/gm)].map(
+      (m) => m[1],
+    )
+    expect(clesDuFront.length).toBeGreaterThanOrEqual(5)
+    for (const cle of Object.values(ARS_ORIENTATIONS)) {
+      expect(clesDuFront).toContain(cle)
+    }
+  })
+  it('la cle accompagnant existe dans APPOINTMENT_ACCOMPANYING du front', () => {
+    const source = readFileSync(
+      join(
+        __dirname,
+        '../../../../../front/src/constants/appointment.constant.ts',
+      ),
+      'utf8',
+    )
+    const bloc = source.match(
+      /export const APPOINTMENT_ACCOMPANYING = \{([^}]*)\}/,
+    )
+    if (!bloc) {
+      throw new Error('APPOINTMENT_ACCOMPANYING introuvable')
+    }
+    const cles = [...bloc[1].matchAll(/^\s*([a-zA-Z_]+):/gm)].map((m) => m[1])
+    expect(cles).toContain(ARS_ACCOMPANYING_YES)
   })
 })
