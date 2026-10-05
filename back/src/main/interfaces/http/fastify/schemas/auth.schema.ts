@@ -54,6 +54,7 @@ export const accessLinkConsumeSchema = z.object({
 })
 export const accessLinkConsumeResponseSchema = z.object({
   success: z.boolean(),
+  email: z.string(),
 })
 
 export type AccessLinkConsumeInput = z.infer<typeof accessLinkConsumeSchema>
