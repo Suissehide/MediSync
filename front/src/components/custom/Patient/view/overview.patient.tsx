@@ -2,6 +2,7 @@ import dayjs from 'dayjs'
 import {
   AlertTriangle,
   CalendarClock,
+  EyeIcon,
   GripVertical,
   Route,
   Siren,
@@ -30,6 +31,7 @@ import { Etiquette } from '../../../table/etiquette.tsx'
 import { ColorLegend } from '../../colorLegend.tsx'
 import { PastillePresence } from '../../pastillePresence.tsx'
 import { ConfirmDeleteForm } from '../../popup/confirmDeleteForm.tsx'
+import AppointmentSheet from '../../sheet/appointmentSheet.tsx'
 
 interface OverviewPatientProps {
   patient?: Patient
@@ -38,9 +40,11 @@ interface OverviewPatientProps {
 function AppointmentCard({
   slot,
   patientID,
+  onOpen,
 }: {
   slot: Slot
   patientID?: string
+  onOpen: (slot: Slot) => void
 }) {
   const color = slot.slotTemplate?.color ?? '#6b7280'
   const thematic = slot.slotTemplate?.thematic || 'Rendez-vous'
@@ -62,15 +66,17 @@ function AppointmentCard({
     .find((ap) => ap.patient.id === patientID)?.status
 
   return (
-    <div
-      className="flex gap-3 rounded-lg px-3 py-3 border border-border transition-colors"
+    <button
+      type="button"
+      onClick={() => onOpen(slot)}
+      className="cursor-pointer flex items-center gap-3 rounded-lg px-3 py-3 border border-border text-left transition-colors hover:border-text-light"
       style={{ backgroundColor: `${color}18` }}
     >
       <div
         className="w-1 self-stretch rounded-full flex-shrink-0"
         style={{ backgroundColor: color }}
       />
-      <div className="flex flex-col gap-1 min-w-0">
+      <div className="flex flex-col gap-1 min-w-0 flex-1">
         <span className="font-medium text-sm truncate flex items-center gap-2">
           <PastillePresence status={status} />
           {soignant ?? thematic}
@@ -85,7 +91,11 @@ function AppointmentCard({
           {formattedDate} – {endTime}
         </span>
       </div>
-    </div>
+      <EyeIcon
+        className="h-4 w-4 flex-shrink-0 text-text-light"
+        aria-label="Voir le rendez-vous"
+      />
+    </button>
   )
 }
 
@@ -231,6 +241,22 @@ export default function OverviewPatient({ patient }: OverviewPatientProps) {
   } | null>(null)
 
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
+  const [openAppointment, setOpenAppointment] = useState<{
+    id: string
+    slot: Slot
+  } | null>(null)
+
+  const handleOpenAppointment = useCallback(
+    (slot: Slot) => {
+      const appointment = slot.appointments?.find((a) =>
+        a.appointmentPatients?.some((ap) => ap.patient.id === patient?.id),
+      )
+      if (appointment) {
+        setOpenAppointment({ id: appointment.id, slot })
+      }
+    },
+    [patient],
+  )
 
   const handleDragStart = useCallback(
     (index: number) => setDraggedIndex(index),
@@ -395,6 +421,7 @@ export default function OverviewPatient({ patient }: OverviewPatientProps) {
                       key={slot.id}
                       slot={slot}
                       patientID={patient?.id}
+                      onOpen={handleOpenAppointment}
                     />
                   ))
                 ) : (
@@ -416,6 +443,7 @@ export default function OverviewPatient({ patient }: OverviewPatientProps) {
                       key={slot.id}
                       slot={slot}
                       patientID={patient?.id}
+                      onOpen={handleOpenAppointment}
                     />
                   ))
                 ) : (
@@ -428,6 +456,17 @@ export default function OverviewPatient({ patient }: OverviewPatientProps) {
           </div>
         </div>
       </div>
+
+      <AppointmentSheet
+        open={!!openAppointment}
+        setOpen={(id) => {
+          if (!id) {
+            setOpenAppointment(null)
+          }
+        }}
+        eventID={openAppointment?.id ?? ''}
+        soignants={openAppointment?.slot.slotTemplate?.soignants ?? []}
+      />
     </div>
   )
 }
