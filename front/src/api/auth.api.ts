@@ -127,6 +127,27 @@ export const AuthApi = {
     return response.json()
   },
 
+  // Toujours 204, que l'adresse existe ou non.
+  forgotPassword: async (email: string): Promise<void> => {
+    const response = await fetch(`${apiUrl}/auth/password-forgot`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    })
+    if (!response.ok) {
+      handleHttpError(
+        response,
+        {
+          429: {
+            title: 'Trop de demandes',
+            message: 'Réessayez dans quelques minutes.',
+          },
+        },
+        "Impossible d'envoyer l'e-mail",
+      )
+    }
+  },
+
   me: async (): Promise<User> => {
     const response = await fetchWithAuth(`${apiUrl}/me`, { method: 'GET' })
     if (!response.ok) {

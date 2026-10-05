@@ -155,7 +155,7 @@ describe('page publique de consommation d un lien d acces', () => {
 
   it('410 (lien invalide ou expire) : message distinct, invite a en demander un autre', async () => {
     monter(
-      `/auth/access-link?token=${JETON}`,
+      `/auth/access-link#${JETON}`,
       buildFetchMock([
         routeConsume(() => ({
           ok: false,
@@ -175,7 +175,7 @@ describe('page publique de consommation d un lien d acces', () => {
 
   it('401 (compte desactive) : message distinct du 410, ne parle jamais de lien invalide', async () => {
     monter(
-      `/auth/access-link?token=${JETON}`,
+      `/auth/access-link#${JETON}`,
       buildFetchMock([
         routeConsume(() => ({
           ok: false,
@@ -206,7 +206,7 @@ describe('page publique de consommation d un lien d acces', () => {
         json: async () => utilisateurConnecte,
       })),
     ])
-    monter(`/auth/access-link?token=${JETON}`, fetchMock)
+    monter(`/auth/access-link#${JETON}`, fetchMock)
 
     await remplirEtValider('quelqu.un@chu.fr', 'un-mot-de-passe-suffisant')
 
@@ -242,7 +242,7 @@ describe('page publique de consommation d un lien d acces', () => {
       })),
       routeSignIn(() => ({ ok: false, status: 401, json: async () => ({}) })),
     ])
-    monter(`/auth/access-link?token=${JETON}`, fetchMock)
+    monter(`/auth/access-link#${JETON}`, fetchMock)
 
     await remplirEtValider(
       'adresse-mal-recopiee@chu.fr',
@@ -275,7 +275,7 @@ describe('page publique de consommation d un lien d acces', () => {
       })),
       routeSignIn(() => ({ ok: false, status: 401, json: async () => ({}) })),
     ])
-    const { router } = monter(`/auth/access-link?token=${JETON}`, fetchMock)
+    const { router } = monter(`/auth/access-link#${JETON}`, fetchMock)
     const longueurHistoriqueAvant = router.history.length
 
     await remplirEtValider('quelqu.un@chu.fr', 'un-mot-de-passe-suffisant')
@@ -283,7 +283,7 @@ describe('page publique de consommation d un lien d acces', () => {
     await screen.findByText(/la connexion automatique a échoué/i)
 
     // Le jeton n'est plus dans la recherche d'URL courante...
-    expect(router.state.location.search).toEqual({ token: '' })
+    expect(router.state.location.hash).toBe('')
     expect(String(router.state.location.href)).not.toContain(JETON)
     // ...et aucune NOUVELLE entree d'historique n'a ete empilee : c'est un
     // REMPLACEMENT (`replace: true`), pas une navigation ordinaire — un
@@ -300,7 +300,7 @@ describe('page publique de consommation d un lien d acces', () => {
   // de passe doit contenir au moins 12 caracteres »).
   it('un mot de passe trop court est refuse cote client, avec le message exact, avant tout appel reseau', async () => {
     const fetchMock = buildFetchMock([])
-    monter(`/auth/access-link?token=${JETON}`, fetchMock)
+    monter(`/auth/access-link#${JETON}`, fetchMock)
 
     await userEvent.type(
       screen.getByLabelText(/adresse e-mail/i),
@@ -327,7 +327,7 @@ describe('page publique de consommation d un lien d acces', () => {
   // par une simple panne serveur.
   it("une erreur qui n'est ni 410 ni 401 affiche le vrai message d'API, pas une phrase figee, et laisse le formulaire pour reessayer", async () => {
     monter(
-      `/auth/access-link?token=${JETON}`,
+      `/auth/access-link#${JETON}`,
       buildFetchMock([
         routeConsume(() => ({
           ok: false,
@@ -367,10 +367,7 @@ describe('page publique de consommation d un lien d acces', () => {
         json: async () => utilisateurConnecte,
       })),
     ])
-    const { queryClient } = monter(
-      `/auth/access-link?token=${JETON}`,
-      fetchMock,
-    )
+    const { queryClient } = monter(`/auth/access-link#${JETON}`, fetchMock)
 
     await remplirEtValider('quelqu.un@chu.fr', 'un-mot-de-passe-suffisant')
 
@@ -426,7 +423,7 @@ describe('atteignabilite sans session, sur le VRAI arbre de routes', () => {
     const router = createRouter({
       routeTree: vraiRouteTree,
       history: createMemoryHistory({
-        initialEntries: [`/auth/access-link?token=${JETON}`],
+        initialEntries: [`/auth/access-link#${JETON}`],
       }),
       // JAMAIS authentifie : c'est exactement le cas que cette page doit
       // servir. Si `access-link.tsx` etait (par erreur) enregistre sous

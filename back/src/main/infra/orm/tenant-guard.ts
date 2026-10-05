@@ -596,7 +596,7 @@ export const NO_CONTEXT_GLOBAL_OPERATIONS: Readonly<
     'findUnique',
     // `UserRepository.findByID` / `.findIdentity` / `.findByEmail` : le crochet `onRequest` de
     // `routes/index.ts` (via `cookie.plugin.ts`, donc TOUTE requête authentifiée),
-    // `POST /auth/sign-in`, `POST /auth/refresh`, `GET`/`PATCH /me`, `GET /super-admin/users`,
+    // `POST /auth/sign-in`, `POST /auth/refresh`, `POST /auth/password-forgot`, `GET`/`PATCH /me`, `GET /super-admin/users`,
     // `POST /super-admin/establishments`, `POST /super-admin/users/:id/access-link`.
     'findUniqueOrThrow',
     // `UserRepository.recordLogin` (`POST /auth/sign-in`, pose `lastLoginAt`),
@@ -619,7 +619,7 @@ export const NO_CONTEXT_GLOBAL_OPERATIONS: Readonly<
     // `AccessLinkRepository.findByTokenHashWithUser` : `POST /auth/access-link/consume`.
     'findUnique',
     // `AccessLinkRepository.create` depuis `AccessLinkDomain.issue` :
-    // `POST /super-admin/users/:id/access-link`. (Le même `issue` sous
+    // `POST /super-admin/users/:id/access-link`, `POST /auth/password-forgot`. (Le même `issue` sous
     // `POST /super-admin/establishments` passe, lui, par `runAsSuperAdmin`.)
     'create',
     // `AccessLinkRepository.invalidateActiveForUser` (réémission, même route que `create`) et

@@ -242,6 +242,8 @@ const buildRealAccessLinkDomain = (
   return new AccessLinkDomain({
     accessLinkRepository,
     userRepository,
+    mailer: { send: () => undefined },
+    config: { frontUrl: 'http://front.test' },
   } as unknown as IocContainer)
 }
 
@@ -542,6 +544,8 @@ describe("le lien d'acces (POST /super-admin/users/:userId/access-link) ne fait 
     const accessLinkDomain = new AccessLinkDomain({
       accessLinkRepository,
       userRepository,
+      mailer: { send: () => undefined },
+      config: { frontUrl: 'http://front.test' },
     } as unknown as IocContainer)
     // Le bus RÉEL, sans souscripteur enregistré : `emit` reste un appel réel (pas un bouchon
     // muet), mais n'a ici aucun effet observable — la ligne de journal elle-même est déjà

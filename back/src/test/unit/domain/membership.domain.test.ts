@@ -112,6 +112,10 @@ const build = (
         )
         return Promise.resolve({ token: 'JETON-FACTICE' })
       },
+      sendInvitation: () => undefined,
+    },
+    establishmentRepository: {
+      findByIdOrThrow: (id: string) => Promise.resolve({ id, name: 'Etab' }),
     },
     userRepository: {
       // Trois adresses : une inconnue (tout le reste), une connue et libre, une connue mais

@@ -139,6 +139,14 @@ export const useConsumeAccessLink = () => {
   return { consumeMutation, isPending, isError, error, data, reset }
 }
 
+// Sans `useDataFetching` : la page affiche le même message de confirmation
+// que l'adresse existe ou non, seule une vraie erreur (429, réseau) s'affiche.
+export const useForgotPassword = () =>
+  useMutation({
+    mutationFn: (email: string) => AuthApi.forgotPassword(email),
+    retry: 0,
+  })
+
 export const useRegister = () => {
   const {
     mutate: registerMutation,

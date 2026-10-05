@@ -27,11 +27,12 @@ const SERVICE_ROLE_OPTIONS = toSelectOptions(SERVICE_ROLE_LABEL)
 // MDS-17 : le coordinateur invite dans SON service. Ni service ni role d'etablissement a choisir
 // — le back pose le premier depuis le tenant resolu, et le second est toujours « Membre ».
 //
-// DEUX ISSUES, ET LA POPUP LES DISTINGUE. Une adresse sans compte ici recoit un LIEN DE PREMIERE
-// CONNEXION, affiche UNE SEULE FOIS (c'est un mot de passe a usage unique) ; un compte deja
-// rattache a l'etablissement n'en recoit aucun — il a deja le sien. Rien d'autre n'est rendu par
-// la route, a dessein : le nom stocke et l'identifiant d'un compte preexistant seraient des
-// oracles d'existence (voir `inviteToService`, back).
+// DEUX ISSUES, ET LA POPUP LES DISTINGUE. Une adresse sans compte ici recoit un e-mail
+// d'invitation (MDS-35) et son LIEN DE PREMIERE CONNEXION s'affiche ici UNE SEULE FOIS, pour la
+// remise en main propre (c'est un mot de passe a usage unique) ; un compte deja rattache a
+// l'etablissement n'en recoit aucun — il a deja le sien. Rien d'autre n'est rendu par la route, a
+// dessein : le nom stocke et l'identifiant d'un compte preexistant seraient des oracles
+// d'existence (voir `inviteToService`, back).
 function InviteServiceMemberForm() {
   const [open, setOpen] = useState(false)
   const { inviteMember } = useServiceMemberMutations()
@@ -92,7 +93,8 @@ function InviteServiceMemberForm() {
               {invited.accessLink ? (
                 <div className="bg-input p-3 rounded-lg flex flex-col gap-1">
                   <p className="text-xs text-text-light">
-                    Lien à usage unique — transmettez-le en main propre, il ne
+                    Un e-mail d'invitation a été envoyé. Vous pouvez aussi
+                    transmettre ce lien à usage unique en main propre, il ne
                     sera plus jamais affiché.
                   </p>
                   <CopyableId
