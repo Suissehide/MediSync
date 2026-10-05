@@ -208,16 +208,28 @@ function TableIndicateurs({ indicateurs }: { indicateurs: ArsIndicator[] }) {
                 <td className="w-20 px-3 py-2 align-top text-text-light tabular-nums">
                   {indicateur.code}
                 </td>
-                <td
-                  className={`px-3 py-2 align-top ${
-                    indicateur.note ? 'text-text-light' : 'text-text-dark'
-                  }`}
-                >
-                  {indicateur.label}
+                <td className="px-3 py-2 align-top">
+                  <span
+                    className={
+                      indicateur.note ? 'text-text-light' : 'text-text-dark'
+                    }
+                  >
+                    {indicateur.label}
+                  </span>
+                  {/* Le motif vit sous son libellé, pas dans la colonne des valeurs : à droite il
+                      s'étalait sur trois lignes et mettait de la prose là où l'œil cherche des
+                      nombres. */}
+                  {indicateur.note && (
+                    <span className="block text-xs text-text-light mt-0.5">
+                      {indicateur.note}
+                    </span>
+                  )}
                 </td>
-                <td className="w-72 px-3 py-2 align-top text-right">
+                <td className="w-24 px-3 py-2 align-top text-right">
                   {indicateur.value === null ? (
-                    <span className="text-text-light">{indicateur.note}</span>
+                    <span className="text-text-light" aria-label="Sans valeur">
+                      —
+                    </span>
                   ) : (
                     <span className="text-text-dark font-medium tabular-nums">
                       {indicateur.value}
