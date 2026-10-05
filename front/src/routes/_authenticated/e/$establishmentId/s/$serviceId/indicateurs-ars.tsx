@@ -1,12 +1,22 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
+import dayjs, { type Dayjs } from 'dayjs'
+import utc from 'dayjs/plugin/utc'
 import { useState } from 'react'
 
 import { ArsIndicatorApi } from '@/api/arsIndicator.api.ts'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
 import { Button } from '@/components/ui/button.tsx'
+import { DatePicker } from '@/components/ui/datePicker.tsx'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group.tsx'
 import { can } from '@/hooks/useCan.ts'
+import { queryState } from '@/libs/queryState.ts'
 import { useArsIndicatorsQuery } from '@/queries/useArsIndicator.ts'
+import type { ArsIndicator } from '@/types/arsIndicator.ts'
 import { resolveTenantContext } from '@/utils/tenant-context.ts'
+
+// Ce module lit `dayjs.utc` des son chargement : il enregistre le greffon lui-meme, comme
+// `utils/weekCycle.ts` et `ui/weekPicker.tsx` — `main.tsx` n'est pas charge sous test.
+dayjs.extend(utc)
 
 // Indicateurs de l'enquête annuelle ARS, en chiffres agrégés (MDS-26). Même garde et même
 // redirection que `patient/$patientID/acces.tsx` : le contexte reste valide, seule la permission
@@ -28,114 +38,209 @@ export const Route = createFileRoute(
 
 const GROUPES = ['Entrée', 'Séances', 'Sortie', 'Modalités'] as const
 
+const FORMAT = 'YYYY-MM-DD'
+
+const anneeCivile = (annee: number) => ({
+  from: dayjs.utc(`${annee}-01-01`),
+  to: dayjs.utc(`${annee}-12-31`),
+})
+
+// Raccourci, pas seul chemin : l'enquête se remplit par année civile, l'évaluation quadriennale
+// par une plage libre.
+const ANNEES = [0, 1, 2].map((recul) => dayjs.utc().year() - recul)
+
 function ArsIndicatorsPage() {
-  const [year, setYear] = useState(new Date().getFullYear())
-  const { indicators, isPending, isError, from, to } =
-    useArsIndicatorsQuery(year)
+  const [periode, setPeriode] = useState(() => anneeCivile(ANNEES[0]))
+  const { indicators, isPending, error } = useArsIndicatorsQuery(
+    periode.from.format(FORMAT),
+    periode.to.format(FORMAT),
+  )
   const [exportEnCours, setExportEnCours] = useState(false)
   const [erreurExport, setErreurExport] = useState<string | null>(null)
 
-  // Un échec d'export doit se voir : `handleHttpError` lève, et sans ce catch le bouton resterait
-  // muet sur un rejet non traité.
+  const etat = queryState({
+    isPending,
+    error,
+    hasData: indicators !== undefined,
+  })
+
+  // L'année active n'est un état que si la période tombe pile sur elle : dès qu'une borne est
+  // déplacée à la main, aucun segment n'est sélectionné.
+  const anneeActive = ANNEES.find((annee) => {
+    const civile = anneeCivile(annee)
+    return (
+      periode.from.isSame(civile.from, 'day') &&
+      periode.to.isSame(civile.to, 'day')
+    )
+  })
+
+  const deplacerBorne = (borne: 'from' | 'to') => (valeur: Dayjs | null) => {
+    if (valeur?.isValid()) {
+      setPeriode((actuelle) => ({ ...actuelle, [borne]: valeur }))
+    }
+  }
+
+  // `handleHttpError` lève : sans ce catch le bouton resterait muet sur un rejet non traité.
   const telecharger = async () => {
     setExportEnCours(true)
     setErreurExport(null)
     try {
-      const blob = await ArsIndicatorApi.exportExcel(from, to)
+      const blob = await ArsIndicatorApi.exportExcel(
+        periode.from.format(FORMAT),
+        periode.to.format(FORMAT),
+      )
       const href = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = href
-      a.download = `indicateurs-ars_${from}_${to}.xlsx`
-      a.click()
+      const lien = document.createElement('a')
+      lien.href = href
+      lien.download = `indicateurs-ars_${periode.from.format(FORMAT)}_${periode.to.format(FORMAT)}.xlsx`
+      lien.click()
       URL.revokeObjectURL(href)
     } catch {
-      setErreurExport("L'export a échoué. Réessayez dans un instant.")
+      setErreurExport("L'export a échoué. Réessayez plus tard.")
     } finally {
       setExportEnCours(false)
     }
   }
 
-  const annees = Array.from(
-    { length: 6 },
-    (_, i) => new Date().getFullYear() - i,
-  )
-
   return (
     <DashboardLayout>
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-xl font-semibold">Indicateurs ARS</h1>
-        <div className="flex items-center gap-2">
-          <select
-            aria-label="Année"
-            value={year}
-            onChange={(e) => setYear(Number(e.target.value))}
-            className="h-9 rounded-md border border-(--color-border) px-2"
-          >
-            {annees.map((a) => (
-              <option key={a} value={a}>
-                {a}
-              </option>
-            ))}
-          </select>
-          <Button
-            onClick={telecharger}
-            disabled={isPending || isError || exportEnCours}
-          >
-            Exporter
-          </Button>
+      <div className="flex-1 min-h-0 bg-background p-6 rounded-lg flex flex-col w-full gap-4">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <h1 className="h-9 flex items-center text-text-dark text-xl font-semibold">
+            Indicateurs ARS
+          </h1>
+
+          <div className="flex items-center gap-3 flex-wrap">
+            <ToggleGroup
+              value={anneeActive ? String(anneeActive) : ''}
+              onValueChange={(valeur) =>
+                valeur && setPeriode(anneeCivile(Number(valeur)))
+              }
+            >
+              {ANNEES.map((annee) => (
+                <ToggleGroupItem key={annee} value={String(annee)}>
+                  {annee}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+
+            <div className="flex items-center gap-2 text-sm text-text-light">
+              <span>du</span>
+              <DatePicker
+                value={periode.from}
+                onChange={deplacerBorne('from')}
+                className="w-40"
+                format="DD/MM/YYYY"
+                maxDate={periode.to}
+              />
+              <span>au</span>
+              <DatePicker
+                value={periode.to}
+                onChange={deplacerBorne('to')}
+                className="w-40"
+                format="DD/MM/YYYY"
+                minDate={periode.from}
+              />
+            </div>
+
+            <Button
+              onClick={telecharger}
+              disabled={etat !== 'ready' || exportEnCours}
+            >
+              {exportEnCours ? 'Export…' : 'Exporter'}
+            </Button>
+          </div>
         </div>
+
+        {erreurExport && (
+          <p role="alert" className="text-sm text-destructive">
+            {erreurExport}
+          </p>
+        )}
+
+        {etat === 'pending' && (
+          <div className="flex-1 flex items-center justify-center text-text-light">
+            Chargement...
+          </div>
+        )}
+
+        {(etat === 'error' || etat === 'empty') && (
+          <div
+            role="alert"
+            className="flex-1 flex items-center justify-center text-text-light"
+          >
+            Impossible de charger les indicateurs. Réessayez plus tard.
+          </div>
+        )}
+
+        {etat === 'ready' && indicators && (
+          <TableIndicateurs indicateurs={indicators} />
+        )}
       </div>
-
-      {erreurExport ? (
-        <p role="alert" className="mt-4 text-(--color-destructive)">
-          {erreurExport}
-        </p>
-      ) : null}
-
-      {/* Chargement, erreur et absence de données doivent TOUJOURS être distincts : un tableau
-          vide indiscernable d'une panne a déjà été livré deux fois sur ce dépôt. */}
-      {isPending ? (
-        <p className="mt-6">Chargement…</p>
-      ) : isError ? (
-        <p role="alert" className="mt-6 text-(--color-destructive)">
-          Impossible de charger les indicateurs. Réessayez dans un instant.
-        </p>
-      ) : (
-        GROUPES.map((groupe) => (
-          <section key={groupe} className="mt-8">
-            <h2 className="mb-2 text-lg font-medium">{groupe}</h2>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-(--color-border) text-left text-(--color-muted-foreground)">
-                  <th className="w-16 py-1 font-medium">Code</th>
-                  <th className="py-1 font-medium">Libellé</th>
-                  <th className="w-64 py-1 text-right font-medium">Valeur</th>
-                </tr>
-              </thead>
-              <tbody>
-                {indicators
-                  .filter((i) => i.group === groupe)
-                  .map((i) => (
-                    <tr
-                      key={i.code}
-                      className={
-                        i.note ? 'text-(--color-muted-foreground)' : ''
-                      }
-                    >
-                      <td className="w-16 py-1 align-top font-mono">
-                        {i.code}
-                      </td>
-                      <td className="py-1 align-top">{i.label}</td>
-                      <td className="w-64 py-1 text-right align-top">
-                        {i.value ?? i.note}
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          </section>
-        ))
-      )}
     </DashboardLayout>
+  )
+}
+
+function TableIndicateurs({ indicateurs }: { indicateurs: ArsIndicator[] }) {
+  return (
+    <table className="w-full text-sm border-collapse">
+      <thead className="sr-only">
+        <tr>
+          <th>Code</th>
+          <th>Libellé</th>
+          <th>Valeur</th>
+        </tr>
+      </thead>
+      {GROUPES.map((groupe) => (
+        <tbody key={groupe}>
+          <tr>
+            <th
+              colSpan={3}
+              className="bg-muted text-left text-text-dark font-semibold px-3 py-2 rounded"
+            >
+              {groupe}
+            </th>
+          </tr>
+          {indicateurs
+            .filter((indicateur) => indicateur.group === groupe)
+            .map((indicateur) => (
+              <tr key={indicateur.code} className="border-b border-border">
+                <td className="w-20 px-3 py-2 align-top text-text-light tabular-nums">
+                  {indicateur.code}
+                </td>
+                <td className="px-3 py-2 align-top">
+                  <span
+                    className={
+                      indicateur.note ? 'text-text-light' : 'text-text-dark'
+                    }
+                  >
+                    {indicateur.label}
+                  </span>
+                  {/* Le motif vit sous son libellé, pas dans la colonne des valeurs : à droite il
+                      s'étalait sur trois lignes et mettait de la prose là où l'œil cherche des
+                      nombres. */}
+                  {indicateur.note && (
+                    <span className="block text-xs text-text-light mt-0.5">
+                      {indicateur.note}
+                    </span>
+                  )}
+                </td>
+                <td className="w-24 px-3 py-2 align-top text-right">
+                  {indicateur.value === null ? (
+                    <span className="text-text-light">
+                      <span aria-hidden="true">—</span>
+                      <span className="sr-only">Sans valeur</span>
+                    </span>
+                  ) : (
+                    <span className="text-text-dark font-medium tabular-nums">
+                      {indicateur.value}
+                    </span>
+                  )}
+                </td>
+              </tr>
+            ))}
+        </tbody>
+      ))}
+    </table>
   )
 }
