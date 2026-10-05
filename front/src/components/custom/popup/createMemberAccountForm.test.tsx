@@ -107,10 +107,10 @@ const renderForm = () => {
 
 const remplirEtCreer = async () => {
   await userEvent.click(
-    screen.getByRole('button', { name: /créer un compte/i }),
+    screen.getByRole('button', { name: /inviter un membre/i }),
   )
   await userEvent.type(screen.getByLabelText(/e-mail/i), 'nouveau@chu.fr')
-  await userEvent.click(screen.getByRole('button', { name: /^créer$/i }))
+  await userEvent.click(screen.getByRole('button', { name: /^inviter$/i }))
 }
 
 beforeEach(() => {
@@ -178,7 +178,7 @@ describe('CreateMemberAccountForm', () => {
     // rien ne l'a explicitement remise a zero. Sans `reset()`, le jeton
     // reapparaitrait ici.
     await userEvent.click(
-      screen.getByRole('button', { name: /créer un compte/i }),
+      screen.getByRole('button', { name: /inviter un membre/i }),
     )
     expect(screen.queryByText(LIEN_ATTENDU)).not.toBeInTheDocument()
     expect(screen.getByLabelText(/e-mail/i)).toBeInTheDocument()
@@ -256,7 +256,7 @@ describe('CreateMemberAccountForm', () => {
     renderForm()
 
     await userEvent.click(
-      screen.getByRole('button', { name: /créer un compte/i }),
+      screen.getByRole('button', { name: /inviter un membre/i }),
     )
     await userEvent.click(screen.getByLabelText('Service'))
 

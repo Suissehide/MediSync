@@ -13,7 +13,10 @@ import type { PrimaTransactionClient } from '../client'
 // EstablishmentMembership, l'identité qu'elle rattache (jamais le mot de
 // passe ni le sel) et les affectations de service déjà aplaties.
 export type MembershipRow = EstablishmentMembership & {
-  user: Pick<User, 'id' | 'email' | 'firstName' | 'lastName' | 'deactivatedAt'>
+  user: Pick<
+    User,
+    'id' | 'email' | 'firstName' | 'lastName' | 'deactivatedAt' | 'lastLoginAt'
+  >
   serviceMemberships: Pick<ServiceMembership, 'serviceId' | 'role'>[]
 }
 
@@ -46,6 +49,7 @@ export type ServiceMemberRow = {
       firstName: string | null
       lastName: string | null
       deactivatedAt: Date | null
+      lastLoginAt: Date | null
     }
   }
 }

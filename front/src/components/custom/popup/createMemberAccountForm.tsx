@@ -35,9 +35,9 @@ const SERVICE_ROLE_OPTIONS = [
   ...toSelectOptions(SERVICE_ROLE_LABEL),
 ]
 
-// Onglet des membres : créer un compte NEUF (adresse
-// sans compte existant), à la différence d'`AddMemberForm` qui rattache un
-// compte déjà créé. LE LIEN RENDU EST UN MOT DE PASSE À USAGE UNIQUE : il
+// Onglet des membres : inviter un membre. Compte créé (ou repris s'il n'est
+// rattaché nulle part) avec un lien, ou, s'il exerce déjà dans un autre
+// établissement, rattaché sans lien. LE LIEN RENDU EST UN MOT DE PASSE À USAGE UNIQUE : il
 // s'affiche UNE SEULE FOIS, ici, avec un bouton de copie — jamais ailleurs
 // (voir `useMemberMutations`, `createMemberAccount`, dont la donnée ne vit
 // que dans le cache des MUTATIONS, jamais dans une clé de requête).
@@ -121,30 +121,38 @@ function CreateMemberAccountForm() {
       <PopupTrigger asChild>
         <Button variant="default" onClick={() => setOpen(true)}>
           <Plus className="w-4 h-4" />
-          Créer un compte
+          Inviter un membre
         </Button>
       </PopupTrigger>
 
       <PopupContent>
         <PopupHeader>
           <PopupTitle className="font-bold text-xl">
-            {created ? 'Compte créé' : 'Créer un compte'}
+            {created ? 'Invitation envoyée' : 'Inviter un membre'}
           </PopupTitle>
         </PopupHeader>
 
         {created ? (
           <>
             <PopupBody>
-              <div className="bg-input p-3 rounded-lg flex flex-col gap-1">
-                <p className="text-xs text-text-light">
-                  Un e-mail d'invitation a été envoyé. Vous pouvez aussi
-                  transmettre ce lien à usage unique en main propre, il ne sera
-                  plus jamais affiché.
+              {created.accessLink ? (
+                <div className="bg-input p-3 rounded-lg flex flex-col gap-1">
+                  <p className="text-xs text-text-light">
+                    Un e-mail d'invitation a été envoyé. Vous pouvez aussi
+                    transmettre ce lien à usage unique en main propre, il ne
+                    sera plus jamais affiché.
+                  </p>
+                  <CopyableId
+                    value={buildAccessLinkUrl(created.accessLink.token)}
+                  />
+                </div>
+              ) : (
+                <p className="text-sm text-text-dark">
+                  Cette personne a déjà un compte MediSync : elle a été ajoutée
+                  et prévenue par e-mail. Elle se connecte avec son mot de passe
+                  habituel.
                 </p>
-                <CopyableId
-                  value={buildAccessLinkUrl(created.accessLink.token)}
-                />
-              </div>
+              )}
             </PopupBody>
             <PopupFooter>
               <Button variant="default" onClick={closeAndReset}>
@@ -278,7 +286,7 @@ function CreateMemberAccountForm() {
                 isLoading={createMemberAccount.isPending}
               >
                 <Check className="w-4 h-4" />
-                Créer
+                Inviter
               </Button>
             </PopupFooter>
           </>

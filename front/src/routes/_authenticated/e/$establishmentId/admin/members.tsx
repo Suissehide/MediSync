@@ -2,7 +2,6 @@ import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useCallback, useMemo, useState } from 'react'
 
 import { getMemberColumns } from '@/columns/member.column.tsx'
-import AddMemberForm from '@/components/custom/popup/addMemberForm.tsx'
 import { ConfirmDeleteForm } from '@/components/custom/popup/confirmDeleteForm.tsx'
 import CreateMemberAccountForm from '@/components/custom/popup/createMemberAccountForm.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
@@ -110,10 +109,7 @@ function MemberSettings() {
           <h1 className="h-9 flex items-center text-text-dark text-xl font-semibold">
             Membres de l'établissement
           </h1>
-          <div className="flex gap-2">
-            <CreateMemberAccountForm />
-            <AddMemberForm />
-          </div>
+          <CreateMemberAccountForm />
         </div>
 
         {etat === 'pending' && (

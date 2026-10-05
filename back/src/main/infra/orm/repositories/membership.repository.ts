@@ -55,6 +55,7 @@ class MembershipRepository implements MembershipRepositoryInterface {
             firstName: true,
             lastName: true,
             deactivatedAt: true,
+            lastLoginAt: true,
           },
         },
       },
@@ -166,6 +167,7 @@ class MembershipRepository implements MembershipRepositoryInterface {
           firstName: true,
           lastName: true,
           deactivatedAt: true,
+          lastLoginAt: true,
         },
       },
       serviceMemberships: {

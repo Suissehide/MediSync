@@ -60,7 +60,7 @@ class EstablishmentDomain implements EstablishmentDomainInterface {
     // commentaire détaillé sur `CreateEstablishmentResult` (types/domain/establishment.domain.
     // interface.ts) pour ce que cette lecture protège. `findByEmail` lève (compte inconnu)
     // plutôt que de rendre `null` ; absorbé ici, exactement comme
-    // `membership.domain.ts#addByEmail` absorbe la même absence pour la même raison. Ce n'est
+    // `membership.domain.ts#createAccountCore` absorbe la même absence pour la même raison. Ce n'est
     // qu'une LECTURE sur un modèle global : aucun contexte de tenant n'est requis (spec §4.1),
     // et elle reste hors de toute transaction — seules les ÉCRITURES ci-dessous doivent être
     // atomiques entre elles.

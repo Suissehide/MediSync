@@ -154,7 +154,9 @@ describe('l equipe d un service, geree par son coordinateur', () => {
     expect(res.json().accessLink).toBeNull()
 
     const services = await testDb.serviceMembership.findMany({
-      where: { establishmentMembership: { user: { email: 'polyvalent@test.fr' } } },
+      where: {
+        establishmentMembership: { user: { email: 'polyvalent@test.fr' } },
+      },
       select: { serviceId: true, role: true },
       orderBy: { createdAt: 'asc' },
     })
@@ -170,25 +172,34 @@ describe('l equipe d un service, geree par son coordinateur', () => {
     expect(res.json().message).toMatch(/already a member of this service/)
   })
 
-  // Les DEUX refus de `assertIssuableToken`, vus depuis cette route : c'est ce qui prouve que le
-  // coeur de creation de compte est bien PARTAGE, et non recopie.
-  it('refuse un compte super-admin et un compte rattache ailleurs, sans rien ecrire', async () => {
-    const [superAdmin, ailleurs] = await Promise.all([
-      inviter({ email: 'super@test.fr', role: 'LECTURE' }),
-      inviter({ email: 'ailleurs@test.fr', role: 'LECTURE' }),
-    ])
-    expect([superAdmin.statusCode, ailleurs.statusCode]).toEqual([400, 400])
-    // Message OPAQUE, le meme pour les deux : la route ne doit pas devenir un detecteur de
-    // super-admins ni de rattachements etrangers.
-    expect(superAdmin.json().message).toBe(ailleurs.json().message)
-    expect(
-      await testDb.serviceMembership.count({
+  // Depuis cette route aussi, le coeur est PARTAGE : super-admin refuse sans rien ecrire, compte
+  // en poste ailleurs rattache SANS jeton (un lien reinitialiserait un mot de passe qui sert
+  // aussi dans l'autre etablissement).
+  it('refuse un compte super-admin et rattache sans jeton un compte en poste ailleurs', async () => {
+    const superAdmin = await inviter({
+      email: 'super@test.fr',
+      role: 'LECTURE',
+    })
+    const ailleurs = await inviter({
+      email: 'ailleurs@test.fr',
+      role: 'LECTURE',
+    })
+    expect([superAdmin.statusCode, ailleurs.statusCode]).toEqual([400, 201])
+    expect(ailleurs.json().accessLink).toBeNull()
+    const affectes = (email: string) =>
+      testDb.serviceMembership.count({
         where: {
           serviceId: A,
-          establishmentMembership: {
-            user: { email: { in: ['super@test.fr', 'ailleurs@test.fr'] } },
-          },
+          establishmentMembership: { user: { email } },
         },
+      })
+    expect([
+      await affectes('super@test.fr'),
+      await affectes('ailleurs@test.fr'),
+    ]).toEqual([0, 1])
+    expect(
+      await testDb.accessLink.count({
+        where: { user: { email: 'ailleurs@test.fr' } },
       }),
     ).toBe(0)
   })

@@ -35,6 +35,7 @@ export const memberResponseSchema = z.object({
     firstName: z.string().nullable(),
     lastName: z.string().nullable(),
     deactivatedAt: z.coerce.date().nullable(),
+    invitationPending: z.boolean(),
   }),
   serviceMemberships: z.array(
     z.object({ serviceId: z.string(), role: serviceRoleSchema }),
@@ -42,13 +43,17 @@ export const memberResponseSchema = z.object({
 })
 export const membersResponseSchema = z.array(memberResponseSchema)
 
-// L'identité est rattachée par e-mail : le client ne désigne jamais une
-// appartenance ni un utilisateur par identifiant technique.
-export const addMemberSchema = z.object({
-  email: z.email(),
-  role: establishmentRoleSchema,
-  services: assignmentsSchema.default([]),
-})
+// Un booléen, jamais la date : `lastLoginAt` est global et dirait l'activité dans les autres
+// établissements. Jamais connecté = invitation pas encore acceptée.
+export const projectUserStatus = <T extends { lastLoginAt: Date | null }>({
+  lastLoginAt,
+  ...user
+}: T) => ({ ...user, invitationPending: lastLoginAt === null })
+
+export const projectMember = <T extends { user: { lastLoginAt: Date | null } }>(
+  row: T,
+) => ({ ...row, user: projectUserStatus(row.user) })
+
 export const updateMemberSchema = z.object({
   role: establishmentRoleSchema.optional(),
   services: assignmentsSchema.optional(),
@@ -100,7 +105,8 @@ export const createMemberAccountResponseSchema = z.object({
       z.object({ serviceId: z.string(), role: serviceRoleSchema }),
     ),
   }),
-  accessLink: accessLinkSchema,
+  // null : compte déjà en poste ailleurs, rattaché sans lien.
+  accessLink: accessLinkSchema.nullable(),
 })
 
 // `POST /e/:establishmentId/admin/members/:membershipId/access-link` :
@@ -146,7 +152,6 @@ export const projectCreatedMember = (member: {
 })
 
 export type MemberResponse = z.infer<typeof memberResponseSchema>
-export type AddMemberBody = z.infer<typeof addMemberSchema>
 export type UpdateMemberBody = z.infer<typeof updateMemberSchema>
 export type MemberParams = z.infer<typeof memberParamsSchema>
 export type CreateMemberAccountBody = z.infer<typeof createMemberAccountSchema>

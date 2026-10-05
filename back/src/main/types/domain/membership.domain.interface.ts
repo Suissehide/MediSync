@@ -17,9 +17,9 @@ export type MembershipAddByEmailDomain = {
   services: ServiceAssignment[]
 }
 
-// Créer un compte de membre. `addByEmail` rattache une adresse DÉJÀ pourvue
-// d'un compte ; celle-ci crée le compte s'il n'existe pas, et se contente de le rattacher s'il
-// existe — jamais d'écrasement (ni le nom, ni le mot de passe).
+// Inviter un membre : crée le compte s'il n'existe pas, le rattache s'il existe — jamais
+// d'écrasement (ni le nom, ni le mot de passe). Un compte déjà en poste ailleurs est rattaché
+// sans lien (`accessLink: null`) et prévenu par e-mail.
 export type MembershipCreateAccountDomain = MembershipAddByEmailDomain & {
   firstName?: string
   lastName?: string
@@ -31,7 +31,7 @@ export type MembershipCreateAccountDomain = MembershipAddByEmailDomain & {
 // STOCKÉE d'un compte préexistant ne serve d'oracle d'existence.
 export type MembershipCreateAccountResult = {
   member: MembershipRowDomain
-  accessLink: { token: string }
+  accessLink: { token: string } | null
 }
 
 export type ServiceMemberRowDomain = ServiceMemberRow
@@ -64,9 +64,6 @@ export interface MembershipDomainInterface {
   ) => Promise<ServiceMemberRowDomain>
   removeServiceMember: (serviceMembershipId: string) => Promise<void>
   findAll: () => Promise<MembershipRowDomain[]>
-  addByEmail: (
-    params: MembershipAddByEmailDomain,
-  ) => Promise<MembershipRowDomain>
   update: (
     id: string,
     params: MembershipUpdateDomain,

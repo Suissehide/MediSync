@@ -13,6 +13,7 @@ export type ServiceMember = {
     firstName: string | null
     lastName: string | null
     deactivatedAt: string | null
+    invitationPending: boolean
   }
 }
 

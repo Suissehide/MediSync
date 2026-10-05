@@ -162,6 +162,62 @@ describe('e-mails d invitation et mot de passe oublie', () => {
     expect(tokenOf(sent[0].mail)).toBe(res.json().accessLink.token)
   })
 
+  it('previent sans jeton un compte deja en poste ailleurs, rattache directement', async () => {
+    const cookies = await signIn(testApp.app, 'admin@lilas.fr')
+    const autre = await createEstablishment('Autre')
+    await createUser({
+      email: 'bilocal@lilas.fr',
+      memberships: [{ establishmentId: autre.id }],
+    })
+
+    const res = await testApp.app.inject({
+      method: 'POST',
+      url: adminUrl(establishmentId, '/members/account'),
+      cookies,
+      payload: { email: 'bilocal@lilas.fr', role: 'MEMBER' },
+    })
+
+    expect(res.statusCode).toBe(201)
+    expect(res.json().accessLink).toBeNull()
+    expect(sent).toHaveLength(1)
+    expect(sent[0].kind).toBe('member-added')
+    expect(sent[0].mail.text).toContain('Clinique des Lilas')
+    expect(sent[0].mail.text).not.toContain('#')
+  })
+
+  it('marque l invitation en attente jusqu a la premiere connexion', async () => {
+    const cookies = await signIn(testApp.app, 'admin@lilas.fr')
+    await testApp.app.inject({
+      method: 'POST',
+      url: adminUrl(establishmentId, '/members/account'),
+      cookies,
+      payload: { email: 'invitee@lilas.fr', role: 'MEMBER' },
+    })
+    const statuts = async () =>
+      Object.fromEntries(
+        (
+          await testApp.app.inject({
+            method: 'GET',
+            url: adminUrl(establishmentId, '/members'),
+            cookies,
+          })
+        )
+          .json()
+          .map((m: { user: { email: string; invitationPending: boolean } }) => [
+            m.user.email,
+            m.user.invitationPending,
+          ]),
+      )
+
+    expect(await statuts()).toEqual({
+      'admin@lilas.fr': false,
+      'invitee@lilas.fr': true,
+    })
+
+    await setPasswordAndSignIn(tokenOf(sent[0].mail), 'invitee@lilas.fr')
+    expect((await statuts())['invitee@lilas.fr']).toBe(false)
+  })
+
   it('mot de passe oublie : meme reponse que l adresse existe ou non, lien d une heure', async () => {
     await createUser({ email: 'oubli@lilas.fr' })
 

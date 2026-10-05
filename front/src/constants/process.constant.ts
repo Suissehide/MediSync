@@ -132,7 +132,6 @@ export const THEMATIC = {
 
 export const MEMBER = {
   GET_ALL: 'get_all_members',
-  ADD: 'add_member',
   UPDATE: 'update_member',
   REMOVE: 'remove_member',
   DEACTIVATE: 'deactivate_member',

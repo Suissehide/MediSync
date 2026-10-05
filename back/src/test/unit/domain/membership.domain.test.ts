@@ -114,6 +114,12 @@ const build = (
       },
       sendInvitation: () => undefined,
     },
+    mailer: {
+      send: (kind: string, mail: { to: string }) => {
+        calls.push(`mail(${kind},${mail.to})`)
+      },
+    },
+    config: { frontUrl: 'http://front.test' },
     establishmentRepository: {
       findByIdOrThrow: (id: string) => Promise.resolve({ id, name: 'Etab' }),
     },
@@ -137,10 +143,11 @@ const build = (
           return Promise.reject(Boom.notFound())
         }
         // `UserEntityRepo` EST la ligne `User` complete (findUniqueOrThrow sans `select`) :
-        // elle porte donc `isSuperAdmin`, que `addByEmail` lit ici plutot que de refaire une
+        // elle porte donc `isSuperAdmin`, que `createAccount` lit ici plutot que de refaire une
         // lecture. Le stub doit le rendre, sinon il ne peut pas prouver ce refus.
         return Promise.resolve({
           ...compte,
+          email,
           isSuperAdmin: comptesGlobaux[compte.id]?.isSuperAdmin ?? false,
         })
       },
@@ -218,25 +225,30 @@ const rejectsWith = (
   })
 
 describe('MembershipDomain', () => {
-  it('rattache une identite existante par e-mail', async () => {
-    const { domain, ctx, calls, events } = build([row({})])
-    await asAdmin(ctx, () =>
-      domain.addByEmail({
-        email: 'new@b.fr',
+  it('rattache sans jeton un compte deja en poste ailleurs, et le previent par e-mail', async () => {
+    const { domain, ctx, calls, events } = build([row({})], 1, 1, {
+      u9: { establishmentIds: ['e-autre'] },
+    })
+    const res = await asAdmin(ctx, () =>
+      domain.createAccount({
+        email: 'ailleurs@b.fr',
         role: 'MEMBER',
         services: [{ serviceId: 's1', role: 'INTERVENANT' }],
       }),
     )
-    expect(calls).toEqual(['create'])
+    expect(res.accessLink).toBeNull()
+    expect(calls).toEqual(['create', 'mail(member-added,ailleurs@b.fr)'])
     expect(events).toEqual(['member.added'])
   })
 
   it('refuse un service etranger', async () => {
-    const { domain, ctx } = build([row({})])
+    const { domain, ctx } = build([row({})], 1, 1, {
+      u9: { establishmentIds: ['e-autre'] },
+    })
     await rejectsWith(
       asAdmin(ctx, () =>
-        domain.addByEmail({
-          email: 'new@b.fr',
+        domain.createAccount({
+          email: 'ailleurs@b.fr',
           role: 'MEMBER',
           services: [{ serviceId: 'zz', role: 'LECTURE' }],
         }),
@@ -244,27 +256,6 @@ describe('MembershipDomain', () => {
       404,
       'Service zz not found',
     )
-  })
-
-  // Sinon un administrateur peut deviner quelles adresses ont un compte sur
-  // la plateforme, en lisant la difference entre les deux refus.
-  it('rend le meme refus pour une adresse inconnue et une adresse deja membre', async () => {
-    const { domain, ctx, calls } = build([row({ userId: 'u2' })])
-    const add = (email: string) =>
-      asAdmin(ctx, () =>
-        domain.addByEmail({
-          email,
-          role: 'MEMBER',
-          services: [],
-        }),
-      ).catch((err: { output: { payload: unknown } }) => err.output.payload)
-
-    const unknownEmail = await add('inconnu@b.fr')
-    const alreadyMember = await add('new@b.fr')
-
-    expect(unknownEmail).toEqual(alreadyMember)
-    expect(unknownEmail).toMatchObject({ statusCode: 400 })
-    expect(calls).toEqual([])
   })
 
   // Cible : un AUTRE administrateur, et il n'en reste qu'un actif. Seule la
@@ -583,7 +574,6 @@ describe('MembershipDomain', () => {
   // --- LA GARDE DU JETON, partagee par les deux emissions ---
 
   const SUPER_ADMIN = { u8: { isSuperAdmin: true } }
-  const RATTACHE_AILLEURS = { u9: { establishmentIds: ['e-autre'] } }
 
   const creerCompte = (
     domain: { createAccount: (p: never) => Promise<unknown> },
@@ -608,44 +598,16 @@ describe('MembershipDomain', () => {
     expect(calls).toEqual([])
   })
 
-  it('ne cree aucun compte pour une adresse rattachee a un autre etablissement', async () => {
-    const { domain, ctx, calls } = build([row({})], 1, 1, RATTACHE_AILLEURS)
-    // MEME refus, mot pour mot, que pour un super-admin ci-dessus et qu'une adresse inconnue :
-    // les distinguer ferait de la route un detecteur de comptes.
+  it('ne rattache pas un super-admin en poste ailleurs, du refus opaque partage', async () => {
+    const { domain, ctx, calls } = build([row({})], 1, 1, {
+      u8: { isSuperAdmin: true, establishmentIds: ['e-autre'] },
+    })
     await rejectsWith(
-      creerCompte(domain, ctx, 'ailleurs@b.fr'),
+      creerCompte(domain, ctx, 'superadmin@b.fr'),
       400,
       UNADDABLE_EMAIL,
     )
     expect(calls).toEqual([])
-  })
-
-  it('rattache sans jeton une adresse deja en poste ailleurs, mais refuse un super-admin', async () => {
-    // La question symetrique : `addByEmail` n'emet AUCUN jeton, donc le rattachement d'une
-    // personne qui exerce dans deux structures reste permis. Seul le super-admin y est refuse.
-    const permis = build([row({})], 1, 1, RATTACHE_AILLEURS)
-    await asAdmin(permis.ctx, () =>
-      permis.domain.addByEmail({
-        email: 'ailleurs@b.fr',
-        role: 'MEMBER',
-        services: [],
-      }),
-    )
-    expect(permis.calls).toEqual(['create'])
-
-    const refuse = build([row({})], 1, 1, SUPER_ADMIN)
-    await rejectsWith(
-      asAdmin(refuse.ctx, () =>
-        refuse.domain.addByEmail({
-          email: 'superadmin@b.fr',
-          role: 'MEMBER',
-          services: [],
-        }),
-      ),
-      400,
-      UNADDABLE_EMAIL,
-    )
-    expect(refuse.calls).toEqual([])
   })
 
   it('ne reemet aucun lien pour un membre super-admin, meme avec une seule appartenance', async () => {
