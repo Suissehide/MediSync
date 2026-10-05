@@ -49,6 +49,11 @@ export interface AppointmentRepositoryInterface {
   addPatientToAppointment: (
     appointmentPatientUpdateParams: AppointmentPatientAddEntityRepo,
   ) => Promise<AppointmentPatientEntityRepo>
+  setConvocationSent: (
+    appointmentID: string,
+    appointmentPatientID: string,
+    convocationSent: boolean,
+  ) => Promise<void>
   delete: (appointmentID: string) => Promise<AppointmentEntityRepo>
   deleteOrphanedByIds: (appointmentIDs: string[]) => Promise<number>
 }

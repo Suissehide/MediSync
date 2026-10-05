@@ -196,3 +196,22 @@ export const useAppointmentMutations = () => {
 
   return { createAppointment, deleteAppointment, updateAppointment }
 }
+
+// Case « convocation envoyée » de l'agenda : enregistrée au clic, sans toast.
+export const useConvocationSentMutation = () => {
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+
+  return useMutation({
+    mutationFn: AppointmentApi.setConvocationSent,
+    onError: (error) => {
+      toast({
+        title: 'Erreur lors de la mise à jour de la convocation',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
+    },
+    onSettled: () =>
+      queryClient.invalidateQueries({ queryKey: [SLOT.GET_ALL] }),
+  })
+}

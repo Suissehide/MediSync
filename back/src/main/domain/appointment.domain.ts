@@ -99,6 +99,23 @@ class AppointmentDomain implements AppointmentDomainInterface {
     return appointment
   }
 
+  async setConvocationSent(
+    appointmentID: string,
+    appointmentPatientID: string,
+    convocationSent: boolean,
+    userID: string,
+  ): Promise<void> {
+    await this.appointmentRepository.setConvocationSent(
+      appointmentID,
+      appointmentPatientID,
+      convocationSent,
+    )
+    this.appEventBus.emit('appointment.updated', {
+      userID,
+      appointmentId: appointmentID,
+    })
+  }
+
   delete(appointmentID: string): Promise<AppointmentEntityDomain> {
     return this.appointmentRepository.delete(appointmentID)
   }

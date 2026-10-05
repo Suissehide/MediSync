@@ -3,10 +3,44 @@ import { Plus } from 'lucide-react'
 import { useState } from 'react'
 
 import type { DayAppointmentRow } from '../../../libs/utils.ts'
+import { useConvocationSentMutation } from '../../../queries/useAppointment.ts'
 import { useAuthStore } from '../../../store/useAuthStore.ts'
 import { Etiquette } from '../../table/etiquette.tsx'
 import { Button } from '../../ui/button.tsx'
+import { Checkbox } from '../../ui/input.tsx'
 import { MAX_VISIBLE_CHIPS } from './chip.ts'
+
+function ConvocationCheckbox({
+  appointmentID,
+  appointmentPatientID,
+  convocationSent,
+  patientName,
+}: {
+  appointmentID: string
+  appointmentPatientID: string
+  convocationSent: boolean
+  patientName: string
+}) {
+  const { mutate, isPending, variables } = useConvocationSentMutation()
+  // Valeur envoyée affichée pendant l'enregistrement, pour que la case réagisse tout de suite.
+  const checked = isPending ? !!variables?.convocationSent : convocationSent
+
+  return (
+    <Checkbox
+      aria-label={`Convocation envoyée à ${patientName}`}
+      title="Convocation envoyée"
+      checked={checked}
+      disabled={isPending}
+      onChange={(e) =>
+        mutate({
+          appointmentID,
+          appointmentPatientID,
+          convocationSent: e.target.checked,
+        })
+      }
+    />
+  )
+}
 
 type PatientCellProps = {
   row: DayAppointmentRow
@@ -63,32 +97,41 @@ export default function PatientCell({ row, onAddPatient }: PatientCellProps) {
             : 'flex items-center gap-1 overflow-hidden'
         }
       >
-        {visible.map((appointmentPatient) =>
-          context?.serviceId ? (
-            <Etiquette
-              asChild
-              key={appointmentPatient.patient.id}
-              className="hover:bg-primary/20"
-            >
-              <Link
-                to="/e/$establishmentId/s/$serviceId/patient/$patientID"
-                params={{
-                  establishmentId: context.establishmentId,
-                  serviceId: context.serviceId,
-                  patientID: appointmentPatient.patient.id,
-                }}
-              >
+        {visible.map((appointmentPatient) => (
+          <div
+            key={appointmentPatient.patient.id}
+            className="flex shrink-0 items-center gap-1"
+          >
+            {appointmentPatient.id && (
+              <ConvocationCheckbox
+                appointmentID={row.id}
+                appointmentPatientID={appointmentPatient.id}
+                convocationSent={!!appointmentPatient.convocationSent}
+                patientName={`${appointmentPatient.patient.firstName} ${appointmentPatient.patient.lastName}`}
+              />
+            )}
+            {context?.serviceId ? (
+              <Etiquette asChild className="hover:bg-primary/20">
+                <Link
+                  to="/e/$establishmentId/s/$serviceId/patient/$patientID"
+                  params={{
+                    establishmentId: context.establishmentId,
+                    serviceId: context.serviceId,
+                    patientID: appointmentPatient.patient.id,
+                  }}
+                >
+                  {appointmentPatient.patient.firstName}{' '}
+                  {appointmentPatient.patient.lastName}
+                </Link>
+              </Etiquette>
+            ) : (
+              <Etiquette>
                 {appointmentPatient.patient.firstName}{' '}
                 {appointmentPatient.patient.lastName}
-              </Link>
-            </Etiquette>
-          ) : (
-            <Etiquette key={appointmentPatient.patient.id}>
-              {appointmentPatient.patient.firstName}{' '}
-              {appointmentPatient.patient.lastName}
-            </Etiquette>
-          ),
-        )}
+              </Etiquette>
+            )}
+          </div>
+        ))}
 
         {hidden > 0 && (
           // Le bouton de depliage : une etiquette neutre, pour qu'il se lise comme un controle.

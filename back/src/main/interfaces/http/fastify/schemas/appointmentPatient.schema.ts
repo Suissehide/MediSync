@@ -26,6 +26,7 @@ export const createAppointmentPatientSchema = appointmentPatientSchema
     status: true,
     rejectionReason: true,
     transmissionNotes: true,
+    convocationSent: true,
   })
   .extend({
     patientID: z.cuid(),
@@ -40,6 +41,14 @@ export const updateAppointmentPatientByIdSchema = {
     id: z.cuid().optional(),
     patientID: z.cuid(),
   }),
+}
+
+export const setConvocationSentSchema = {
+  params: z.object({
+    appointmentID: z.cuid(),
+    appointmentPatientID: z.cuid(),
+  }),
+  body: z.object({ convocationSent: z.boolean() }),
 }
 
 export type AppointmentPatientInput = z.infer<typeof appointmentPatientSchema>
@@ -60,4 +69,10 @@ export type DeleteAppointmentPatientByIdParams = z.infer<
 >
 export type AppointmentPatientResponse = z.infer<
   typeof appointmentPatientResponseSchema
+>
+export type SetConvocationSentParams = z.infer<
+  typeof setConvocationSentSchema.params
+>
+export type SetConvocationSentBody = z.infer<
+  typeof setConvocationSentSchema.body
 >
