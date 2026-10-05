@@ -1,4 +1,5 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
+import { Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import { getThematicColumns } from '@/columns/thematic.column.tsx'
@@ -6,6 +7,7 @@ import AddThematicForm from '@/components/custom/popup/addThematicForm.tsx'
 import { ConfirmDeleteForm } from '@/components/custom/popup/confirmDeleteForm.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
 import ReactTable from '@/components/table/reactTable.tsx'
+import { Input } from '@/components/ui/input.tsx'
 import { can, useCan } from '@/hooks/useCan.ts'
 import { useSoignantQueries } from '@/queries/useSoignant.ts'
 import {
@@ -40,11 +42,14 @@ function ThematicSettings() {
   const { deleteThematic } = useThematicMutations()
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
 
-  const sortedThematics = useMemo(
-    () =>
-      [...(thematics ?? [])].sort((a, b) => a.name.localeCompare(b.name, 'fr')),
-    [thematics],
-  )
+  const [searchTerm, setSearchTerm] = useState('')
+
+  const sortedThematics = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase()
+    return (thematics ?? [])
+      .filter((x) => !term || x.name.toLowerCase().includes(term))
+      .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+  }, [thematics, searchTerm])
 
   const soignantOptions = useMemo(
     () =>
@@ -66,12 +71,22 @@ function ThematicSettings() {
 
   return (
     <DashboardLayout>
-      <div className="flex-1 bg-background p-6 rounded-lg flex flex-col w-full gap-4">
+      <div className="flex-1 min-h-0 bg-background p-6 rounded-lg flex flex-col w-full gap-4">
         <div className="flex justify-between items-center gap-3">
           <h1 className="h-9 flex items-center text-text-dark text-xl font-semibold">
             Thématiques
           </h1>
-          {canManage && <AddThematicForm />}
+          <div className="flex items-center gap-3">
+            <Input
+              iconLeft={<Search className="w-4 h-4" />}
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Nom de la thématique..."
+              className="w-72"
+            />
+            {canManage && <AddThematicForm />}
+          </div>
         </div>
 
         <ReactTable<Thematic>

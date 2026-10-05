@@ -5,6 +5,7 @@ import { CalendarDays } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import { getDayAppointmentColumns } from '@/columns/dayAppointment.column.tsx'
+import { DATE_CALENDAR_SX } from '@/components/custom/Calendar/calendarDatePickerButton.tsx'
 import AddPatientForm from '@/components/custom/popup/addPatientForm.tsx'
 import AddPatientToAppointmentForm from '@/components/custom/popup/addPatientToAppointmentForm.tsx'
 import AddPatientToSlotForm from '@/components/custom/popup/addPatientToSlotForm.tsx'
@@ -72,6 +73,8 @@ function Agenda() {
   const selectedSoignantIDs = useSoignantStore(
     (state) => state.selectedSoignantIDs,
   )
+  const soignants = useSoignantStore((state) => state.soignants)
+  const soignantIDs = useMemo(() => soignants.map((s) => s.id), [soignants])
 
   // Sans sélection, on affiche tout ; sinon on garde les rendez-vous
   // dont au moins un soignant est coché dans la barre latérale.
@@ -94,8 +97,9 @@ function Agenda() {
         onOpen: (row) => setOpenedRow(row),
         onDelete: (row) => setDeleteTarget(row),
         onAddPatient: (row) => setAddPatientTargetId(row.id),
+        soignantIDs,
       }),
-    [],
+    [soignantIDs],
   )
 
   return (
@@ -106,7 +110,7 @@ function Agenda() {
         <AddPatientToSlotForm key="add-patient-to-slot" />,
       ]}
     >
-      <div className="flex-1 bg-background p-6 rounded-lg flex flex-col w-full gap-4">
+      <div className="flex-1 min-h-0 bg-background p-6 rounded-lg flex flex-col w-full gap-4">
         <div className="min-h-9 flex justify-between items-center gap-3 flex-wrap">
           <div className="self-start min-h-9 flex gap-2 items-center">
             <div className="flex items-center justify-center bg-foreground p-2 rounded-full">
@@ -145,6 +149,7 @@ function Agenda() {
               </PopoverTrigger>
               <PopoverContent align="end" className="p-0 w-auto">
                 <DateCalendar
+                  sx={DATE_CALENDAR_SX}
                   value={selectedDay}
                   onChange={(newDate) => {
                     if (newDate) {
@@ -167,6 +172,7 @@ function Agenda() {
           filterId="day-appointment"
           isLoading={isPending}
           emptyState="Aucun rendez-vous ce jour-là"
+          onRowClick={(row) => setOpenedRow(row)}
           autoRowHeight
         />
 

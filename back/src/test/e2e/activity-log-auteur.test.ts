@@ -125,7 +125,7 @@ describe('journal d activite : le nom de l auteur, pas seulement le nombre de li
   it('inscrit aussi le nom de l auteur pour une action d administration d etablissement', async () => {
     const ajout = await t.app.inject({
       method: 'POST',
-      url: `/e/${establishmentId}/admin/members/`,
+      url: `/e/${establishmentId}/admin/members/account`,
       cookies,
       payload: { email: 'membre@exemple.test', role: 'MEMBER' } as never,
     })

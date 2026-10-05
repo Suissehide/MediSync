@@ -112,11 +112,11 @@ const runBeforeLoad = (user: User) => {
 }
 
 describe('beforeLoad de l ancienne URL /settings/user', () => {
-  it('redirige vers l administration des membres de l etablissement, recherche conservee', () => {
+  it('redirige vers l administration de l etablissement, recherche conservee', () => {
     expect(() => runBeforeLoad(user)).toThrow(
       expect.objectContaining({
         isRedirect: true,
-        to: '/e/$establishmentId/admin/members',
+        to: '/e/$establishmentId/admin',
         params: { establishmentId: 'e1' },
         search: true,
       }),
@@ -130,7 +130,7 @@ describe('beforeLoad de l ancienne URL /settings/user', () => {
     expect(() => runBeforeLoad(adminSansService)).toThrow(
       expect.objectContaining({
         isRedirect: true,
-        to: '/e/$establishmentId/admin/members',
+        to: '/e/$establishmentId/admin',
         params: { establishmentId: 'e1' },
         search: true,
       }),
@@ -152,7 +152,7 @@ describe('beforeLoad de l ancienne URL /settings/user', () => {
     expect(() => runBeforeLoad(membreIciAdministrateurLaBas)).toThrow(
       expect.objectContaining({
         isRedirect: true,
-        to: '/e/$establishmentId/admin/members',
+        to: '/e/$establishmentId/admin',
         params: { establishmentId: 'e2' },
         search: true,
       }),
@@ -166,7 +166,7 @@ describe('beforeLoad de l ancienne URL /settings/user', () => {
     expect(() => runBeforeLoad(administrateurDeDeux)).toThrow(
       expect.objectContaining({
         isRedirect: true,
-        to: '/e/$establishmentId/admin/members',
+        to: '/e/$establishmentId/admin',
         params: { establishmentId: 'e2' },
         search: true,
       }),

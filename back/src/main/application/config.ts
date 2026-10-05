@@ -63,6 +63,24 @@ const configSchema = z.object({
     .default('12')
     .transform((val) => Number.parseInt(val, 10))
     .pipe(z.number().int().positive()),
+
+  // Pas de SMTP_HOST = envoi d'e-mails désactivé (les liens restent copiables par l'admin).
+  smtpHost: z.string().optional(),
+  // `|| défaut` : une variable de compose non renseignée arrive en chaîne vide, pas absente.
+  smtpPort: z
+    .string()
+    .optional()
+    .transform((val) => Number.parseInt(val || '587', 10)),
+  smtpSecure: z
+    .string()
+    .default('false')
+    .transform((val) => val === 'true'),
+  smtpUser: z.string().optional(),
+  smtpPass: z.string().optional(),
+  smtpFrom: z
+    .string()
+    .optional()
+    .transform((val) => val || 'MediSync <no-reply@medisync.local>'),
 })
 const envVarNames = [
   'CORS_ORIGIN',
@@ -77,6 +95,12 @@ const envVarNames = [
   'PORT',
   'MOCK_SERVER_PORT',
   'LOG_RETENTION_MONTHS',
+  'SMTP_HOST',
+  'SMTP_PORT',
+  'SMTP_SECURE',
+  'SMTP_USER',
+  'SMTP_PASS',
+  'SMTP_FROM',
 ]
 
 // `env` optionnel : `process.env` par defaut, pour que tout appelant de

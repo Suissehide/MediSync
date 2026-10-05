@@ -1,6 +1,7 @@
 import Boom from '@hapi/boom'
 
-import type { EstablishmentRole } from '../../generated/enums'
+import type { EstablishmentRole, ServiceRole } from '../../generated/enums'
+import { memberAddedMail } from '../infra/mail/templates'
 import type { PostgresOrm } from '../infra/orm/postgres-client'
 import type { IocContainer } from '../types/application/ioc'
 import type { AccessLinkDomainInterface } from '../types/domain/accessLink.domain.interface'
@@ -11,8 +12,12 @@ import type {
   MembershipDomainInterface,
   MembershipRowDomain,
   MembershipUpdateDomain,
+  ServiceInviteDomain,
+  ServiceInviteResult,
   ServiceMemberRowDomain,
 } from '../types/domain/membership.domain.interface'
+import type { MailerInterface } from '../types/infra/mail/mailer.interface'
+import type { EstablishmentRepositoryInterface } from '../types/infra/orm/repositories/establishment.repository.interface'
 import type {
   MembershipRepositoryInterface,
   ServiceAssignment,
@@ -23,20 +28,10 @@ import type { TenantContextInterface } from '../types/utils/tenant-context'
 import type { AppEventBus } from '../utils/app-event-bus'
 import { hashPassword, randomToken } from '../utils/hash'
 
-// QUATRE refus, un seul message : adresse inconnue, adresse déjà membre d'ici, compte
-// super-admin, compte rattaché à un AUTRE établissement.
-//
-// CE QUE CE MESSAGE ACHÈTE, ET CE QU'IL N'ACHÈTE PAS. « Sinon un administrateur pourrait
-// énumérer les adresses qui ont un compte » est vrai pour `addByEmail` (une adresse inconnue y
-// reçoit le MÊME 400, donc les quatre refus y sont réellement indiscernables), FAUX pour
-// `createAccount`, où une adresse inconnue reçoit 201 — le seul fait d'y être refusé annonce donc
-// « cette adresse a un compte ». Mesuré, pas supposé : voir « constat : le couple de refus des
-// deux routes d ajout identifie la nature du compte » (members.test.ts).
-//
-// Ce que le message partagé achète réellement : le MOTIF du refus reste caché. Un 400 sur
-// `createAccount` ne dit pas « super-admin » plutôt que « rattaché ailleurs » — il faut croiser
-// avec `POST /members` pour les séparer. Ce que l'appelant apprend de toute façon, et qu'on
-// n'essaie plus de nier ici : qu'il y a un compte.
+// Le refus opaque de l'invitation : compte super-admin, ou compte désactivé en poste ailleurs.
+// Il cache le MOTIF, pas l'existence d'un compte — une adresse inconnue reçoit 201. Mesuré, pas
+// supposé : voir « constat : la reponse de l invitation identifie la nature du compte »
+// (members.test.ts).
 const UNADDABLE_EMAIL = 'This e-mail address cannot be added as a member'
 
 // Message lu tel quel par `front/src/api/members.api.ts`, qui le fait
@@ -69,6 +64,13 @@ const MULTI_ESTABLISHMENT_LINK =
 const DEACTIVATED_LINK =
   'This account is deactivated; its access link cannot be reissued'
 
+// L'appelant est coordinateur de ce service : `GET /membres` lui montre deja cette adresse, le
+// refus ne lui apprend rien.
+const ALREADY_SERVICE_MEMBER =
+  'This account is already a member of this service'
+
+const SELF_SERVICE_ACTION = 'Cannot apply this action to your own account'
+
 const SUPER_ADMIN_ACTIVATION =
   'This account cannot be activated or deactivated from an establishment'
 
@@ -80,15 +82,21 @@ class MembershipDomain implements MembershipDomainInterface {
   private readonly accessLinkDomain: AccessLinkDomainInterface
   private readonly postgresOrm: PostgresOrm
   private readonly soignantRepository: SoignantRepositoryInterface
+  private readonly establishmentRepository: EstablishmentRepositoryInterface
+  private readonly mailer: MailerInterface
+  private readonly frontUrl: string
 
   constructor({
     membershipRepository,
     soignantRepository,
+    establishmentRepository,
     userRepository,
     tenantContext,
     appEventBus,
     accessLinkDomain,
     postgresOrm,
+    mailer,
+    config,
   }: IocContainer) {
     this.membershipRepository = membershipRepository
     this.userRepository = userRepository
@@ -97,6 +105,24 @@ class MembershipDomain implements MembershipDomainInterface {
     this.accessLinkDomain = accessLinkDomain
     this.postgresOrm = postgresOrm
     this.soignantRepository = soignantRepository
+    this.establishmentRepository = establishmentRepository
+    this.mailer = mailer
+    this.frontUrl = config.frontUrl
+  }
+
+  private async establishmentName(): Promise<string> {
+    const { establishmentId } = this.tenantContext.establishmentScope()
+    const establishment =
+      await this.establishmentRepository.findByIdOrThrow(establishmentId)
+    return establishment.name
+  }
+
+  private async sendInvitation(email: string, token: string): Promise<void> {
+    this.accessLinkDomain.sendInvitation({
+      email,
+      token,
+      establishmentName: await this.establishmentName(),
+    })
   }
 
   // Sous le contexte de SERVICE (2026-09-29) : les membres du service courant, et le soignant
@@ -126,6 +152,108 @@ class MembershipDomain implements MembershipDomainInterface {
     return updated
   }
 
+  // L'EQUIPE DU SERVICE COURANT, geree par son coordinateur (`service-members:manage`) : il
+  // invite, change le role de service et retire. Jamais le rattachement d'etablissement, jamais
+  // un autre service — `serviceId` vient du tenant resolu, et les depots appeles sont bornes a
+  // ce service.
+  //
+  // CE QUE L'INVITATION REND, ET CE QU'ELLE NE REND PAS : `accessLink` seul, jamais l'identite du
+  // compte. Meme motif que `createMemberAccountResponseSchema` — sur une adresse qui a DEJA un
+  // compte, le nom STOCKE et le cuid (qui encode l'instant de creation) seraient des oracles
+  // d'existence. `null` dit « ce compte etait deja rattache ici, il a son mot de passe » : le
+  // seul fait dont l'appelant a besoin pour savoir s'il a un lien a transmettre.
+  async inviteToService({
+    email,
+    firstName,
+    lastName,
+    role,
+  }: ServiceInviteDomain): Promise<ServiceInviteResult> {
+    const { serviceId } = this.tenantContext.scope()
+    const services = [{ serviceId, role }]
+    await this.assertReferences(services)
+
+    const user = await this.userRepository.findByEmail(email).catch(() => null)
+    const membership = user
+      ? await this.membershipRepository.findByUserID(user.id)
+      : null
+
+    if (membership) {
+      if (
+        await this.membershipRepository.findServiceMemberByMembership(
+          membership.id,
+        )
+      ) {
+        throw Boom.conflict(ALREADY_SERVICE_MEMBER)
+      }
+      if (membership.user.deactivatedAt !== null) {
+        throw Boom.conflict(DEACTIVATED_ACCOUNT)
+      }
+      await this.membershipRepository.addServiceMember(membership.id, role)
+      this.emit('serviceMember.added', membership.id)
+      return { accessLink: null }
+    }
+
+    // Compte neuf, ou compte existant rattache nulle part : `createAccountCore` porte TOUTES les
+    // gardes de jeton (super-admin, rattache ailleurs, desactive), elles ne sont pas recopiees
+    // ici. `role: 'MEMBER'` n'est jamais soumis — un coordinateur n'accorde pas l'etablissement.
+    const { member, accessLink } = await this.createAccountCore({
+      email,
+      firstName,
+      lastName,
+      role: 'MEMBER',
+      services,
+    })
+    this.emit(
+      accessLink ? 'serviceMember.accountCreated' : 'serviceMember.added',
+      member.id,
+    )
+    return { accessLink }
+  }
+
+  // Un coordinateur ne se retire ni ne se retrograde lui-meme, meme regle qu'`assertNotSelf` a
+  // l'echelle de l'etablissement : sans elle il se ferme la porte de son propre service.
+  //
+  // ponytail: aucune garde « dernier coordinateur du service » — le chef d'etablissement est
+  // coordinateur implicite de tous les services actifs (`effectiveMemberships`), donc un service
+  // sans coordinateur reste administrable. A rouvrir si ce coordinateur implicite disparait.
+  private async assertOtherServiceMember(
+    serviceMembershipId: string,
+  ): Promise<ServiceMemberRowDomain> {
+    const affectation =
+      await this.membershipRepository.findServiceMemberByID(serviceMembershipId)
+    if (!affectation) {
+      throw Boom.notFound('Service member not found')
+    }
+    if (affectation.establishmentMembership.user.id === this.currentUserId()) {
+      throw Boom.conflict(SELF_SERVICE_ACTION)
+    }
+    return affectation
+  }
+
+  async setServiceMemberRole(
+    serviceMembershipId: string,
+    role: ServiceRole,
+  ): Promise<ServiceMemberRowDomain> {
+    const affectation = await this.assertOtherServiceMember(serviceMembershipId)
+    const updated = await this.membershipRepository.setServiceRole(
+      serviceMembershipId,
+      role,
+    )
+    if (!updated) {
+      throw Boom.notFound('Service member not found')
+    }
+    this.emit('serviceMember.updated', affectation.establishmentMembershipId)
+    return updated
+  }
+
+  // Retire l'AFFECTATION, jamais le compte ni son rattachement d'etablissement : le membre garde
+  // ses autres services.
+  async removeServiceMember(serviceMembershipId: string): Promise<void> {
+    const affectation = await this.assertOtherServiceMember(serviceMembershipId)
+    await this.membershipRepository.deleteServiceMember(serviceMembershipId)
+    this.emit('serviceMember.removed', affectation.establishmentMembershipId)
+  }
+
   findAll(): Promise<MembershipRowDomain[]> {
     return this.membershipRepository.findAll()
   }
@@ -142,37 +270,6 @@ class MembershipDomain implements MembershipDomainInterface {
         throw Boom.notFound(`Service ${service.serviceId} not found`)
       }
     }
-  }
-
-  async addByEmail({
-    email,
-    role,
-    services,
-  }: MembershipAddByEmailDomain): Promise<MembershipRowDomain> {
-    const user = await this.userRepository.findByEmail(email).catch(() => {
-      throw Boom.badRequest(UNADDABLE_EMAIL)
-    })
-    if (await this.membershipRepository.findByUserID(user.id)) {
-      throw Boom.badRequest(UNADDABLE_EMAIL)
-    }
-    // PREMIER MAILLON de la chaîne : rattacher un
-    // super-admin à son établissement lui donnait ensuite une appartenance UNIQUE, donc une
-    // réémission que l'ancienne garde laissait passer. Cette méthode n'émet aucun jeton — elle
-    // n'appelle donc pas `assertIssuableToken` —, mais elle prépare le terrain de celle qui en
-    // émet. Même message que les deux refus ci-dessus : indiscernable, un test l'exige.
-    // Le rattachement d'une personne qui exerce DÉJÀ ailleurs reste permis, lui : sans jeton,
-    // il ne déplace aucun pouvoir (elle garde son propre mot de passe).
-    if (user.isSuperAdmin) {
-      throw Boom.badRequest(UNADDABLE_EMAIL)
-    }
-    await this.assertReferences(services)
-    const membership = await this.membershipRepository.create({
-      userId: user.id,
-      role,
-      services,
-    })
-    this.emit('member.added', membership.id)
-    return membership
   }
 
   // Un établissement doit garder au moins un administrateur actif. Un compte
@@ -274,7 +371,7 @@ class MembershipDomain implements MembershipDomainInterface {
   //
   //   1. UN COMPTE SUPER-ADMIN NE SE DÉPANNE JAMAIS DEPUIS UN ÉTABLISSEMENT.
   //      Rien, ailleurs, ne lisait `isSuperAdmin` : un simple ADMIN prenait le compte
-  //      super-admin en un appel, ou en trois via `addByEmail` puis la réémission. Message
+  //      super-admin en un appel, ou en trois via un rattachement puis la réémission. Message
   //      OPAQUE (`UNADDABLE_EMAIL`) plutôt qu'un motif propre : un refus qui dirait « cette
   //      adresse est un super-admin » ferait de la route un détecteur de super-admins,
   //      utilisable sur n'importe quelle adresse. CONSÉQUENCE ASSUMÉE : un super-admin qui
@@ -286,8 +383,8 @@ class MembershipDomain implements MembershipDomainInterface {
   //      que pour la seconde.
   //
   // LA SOUPAPE, sans laquelle cette garde serait une impasse : une personne réellement en poste
-  // dans deux établissements qui perd son mot de passe n'a aucun recours ici (il n'existe ni
-  // route de mot de passe oublié, ni changement de mot de passe sans l'ancien). Elle passe par
+  // dans deux établissements qui perd son mot de passe n'a aucun recours ici. Elle passe par
+  // « mot de passe oublié » (le lien part à SA propre adresse, MDS-35) ou par
   // `UserDomain.reissueAccessLink`, sous le préfixe super-admin — l'autorité qui traverse
   // légitimement les établissements. C'est elle qui rend ce refus tenable ; ne pas la retirer
   // sans rouvrir la question.
@@ -320,7 +417,11 @@ class MembershipDomain implements MembershipDomainInterface {
       | 'member.deactivated'
       | 'member.reactivated'
       | 'member.accountCreated'
-      | 'member.accessLinkReissued',
+      | 'member.accessLinkReissued'
+      | 'serviceMember.added'
+      | 'serviceMember.accountCreated'
+      | 'serviceMember.updated'
+      | 'serviceMember.removed',
     membershipId: string,
   ): void {
     this.appEventBus.emit(event, { userID: this.currentUserId(), membershipId })
@@ -391,7 +492,10 @@ class MembershipDomain implements MembershipDomainInterface {
     hashPassword(randomToken(PLACEHOLDER_PASSWORD_BYTES))
   }
 
-  async createAccount({
+  // LE COEUR, SANS EVENEMENT : deux surfaces le partagent — l'administration d'etablissement
+  // (`createAccount`) et l'invitation par un coordinateur (`inviteToService`) —, et chacune
+  // nomme son action dans le journal. Toutes les gardes de compte vivent ici, une seule fois.
+  private async createAccountCore({
     email,
     firstName,
     lastName,
@@ -400,7 +504,7 @@ class MembershipDomain implements MembershipDomainInterface {
   }: MembershipCreateAccountDomain): Promise<MembershipCreateAccountResult> {
     // Une LECTURE d'abord, jamais un `upsert` : un compte déjà connu ne doit être écrasé ni
     // dans son nom ni dans son mot de passe. `findByEmail` lève
-    // plutôt que de rendre `null` ; absorbé ici comme dans `addByEmail` ci-dessus.
+    // plutôt que de rendre `null` ; absorbé ici.
     const existing = await this.userRepository
       .findByEmail(email)
       .catch(() => null)
@@ -410,6 +514,11 @@ class MembershipDomain implements MembershipDomainInterface {
       // corriger, et il ne lui apprend rien (`GET /members` le lui montre déjà).
       if (await this.membershipRepository.findByUserID(existing.id)) {
         throw Boom.conflict(ALREADY_MEMBER)
+      }
+      // Déjà en poste ailleurs : rattaché SANS jeton (un lien réinitialiserait un mot de passe
+      // qui sert aussi là-bas, voir `assertIssuableToken`) ; la personne garde le sien.
+      if (await this.membershipRepository.estRattacheAilleurs(existing.id)) {
+        return await this.attachExistingAccount(existing, role, services)
       }
       // AVANT le refus « désactivé » ci-dessous, à dessein.
       // Un compte désactivé rattaché à un AUTRE établissement reçoit ainsi le refus opaque,
@@ -470,8 +579,56 @@ class MembershipDomain implements MembershipDomainInterface {
         return { membership, accessLink }
       })
 
-    this.emit('member.accountCreated', membership.id)
+    // L'E-MAIL PART DU COEUR, comme l'emission du jeton (MDS-35 + MDS-17) : les DEUX surfaces qui
+    // creent un compte — l'administration d'etablissement et l'invitation par un coordinateur —
+    // doivent l'envoyer, et un seul endroit l'envoie. L'EVENEMENT, lui, reste a l'appelant : c'est
+    // la seule chose qui differe entre les deux (`member.accountCreated` contre
+    // `serviceMember.accountCreated`).
+    await this.sendInvitation(membership.user.email, accessLink.token)
     return { member: membership, accessLink }
+  }
+
+  // Super-admin et compte désactivé : le refus opaque, comme une adresse qu'on ne peut pas
+  // ajouter — jamais un message qui dirait l'état d'un compte d'un autre établissement.
+  private async attachExistingAccount(
+    user: {
+      id: string
+      email: string
+      isSuperAdmin: boolean
+      deactivatedAt: Date | null
+    },
+    role: MembershipCreateAccountDomain['role'],
+    services: ServiceAssignment[],
+  ): Promise<MembershipCreateAccountResult> {
+    if (user.isSuperAdmin || user.deactivatedAt !== null) {
+      throw Boom.badRequest(UNADDABLE_EMAIL)
+    }
+    await this.assertReferences(services)
+    const member = await this.membershipRepository.create({
+      userId: user.id,
+      role,
+      services,
+    })
+    this.mailer.send(
+      'member-added',
+      memberAddedMail({
+        to: user.email,
+        link: `${this.frontUrl}/auth`,
+        establishmentName: await this.establishmentName(),
+      }),
+    )
+    return { member, accessLink: null }
+  }
+
+  async createAccount(
+    params: MembershipCreateAccountDomain,
+  ): Promise<MembershipCreateAccountResult> {
+    const result = await this.createAccountCore(params)
+    this.emit(
+      result.accessLink ? 'member.accountCreated' : 'member.added',
+      result.member.id,
+    )
+    return result
   }
 
   // LE POINT LE PLUS DANGEREUX DE CETTE MÉTHODE : un lien d'accès
@@ -499,11 +656,13 @@ class MembershipDomain implements MembershipDomainInterface {
     if (membership.user.deactivatedAt !== null) {
       throw Boom.conflict(DEACTIVATED_LINK)
     }
+    await this.accessLinkDomain.assertResendAllowed(membership.userId)
     const accessLink = await this.accessLinkDomain.issue(
       membership.userId,
       this.currentUserId(),
     )
     this.emit('member.accessLinkReissued', id)
+    await this.sendInvitation(membership.user.email, accessLink.token)
     return accessLink
   }
 

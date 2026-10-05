@@ -1,7 +1,6 @@
 import { establishmentApiUrl } from '../constants/config.constant.ts'
 import { handleHttpError } from '../libs/httpErrorHandler.ts'
 import type {
-  AddMemberInput,
   CreateMemberAccountInput,
   CreateMemberAccountResult,
   Member,
@@ -46,6 +45,17 @@ const CONFLICT_MESSAGES: Record<string, { title: string; message: string }> = {
     message:
       "Vous ne pouvez pas retirer votre propre rôle d'administrateur : ce retrait est réservé à un autre administrateur, comme le retrait ou la désactivation de votre propre compte. Demandez à un collègue administrateur de le faire.",
   },
+  'An invitation was sent less than 5 minutes ago': {
+    title: 'Invitation déjà envoyée',
+    message:
+      'Une invitation a été envoyée il y a moins de 5 minutes. Réessayez un peu plus tard.',
+  },
+  'This account belongs to several establishments; its access link cannot be reissued from here':
+    {
+      title: 'Compte rattaché à plusieurs établissements',
+      message:
+        "Ce compte est rattaché à plusieurs établissements : l'invitation ne peut pas être renvoyée depuis un établissement en particulier.",
+    },
   'This account belongs to several establishments; its activation cannot be changed from here':
     {
       title: 'Compte rattaché à plusieurs établissements',
@@ -91,34 +101,6 @@ export const MembersApi = {
     return response.json()
   },
 
-  add: async (input: AddMemberInput): Promise<Member> => {
-    const response = await fetchWithAuth(MEMBERS_URL(), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(input),
-    })
-    if (!response.ok) {
-      handleHttpError(
-        response,
-        {
-          // Une adresse inconnue et une adresse déjà membre renvoient
-          // volontairement la même erreur, indistinguable, pour ne pas
-          // permettre à un administrateur d'énumérer les comptes de la
-          // plateforme (voir `membership.domain.ts`, `UNADDABLE_EMAIL`) : on
-          // affiche donc un message unique et neutre, sans reconstruire la
-          // distinction côté front.
-          400: {
-            title: 'Ajout impossible',
-            message:
-              "Cette adresse ne peut pas être ajoutée : vérifiez qu'elle correspond à un compte existant qui n'est pas déjà membre de cet établissement.",
-          },
-        },
-        "Impossible d'ajouter le membre",
-      )
-    }
-    return response.json()
-  },
-
   // `POST /e/:establishmentId/admin/members/account` :
   // le chemin réel est SANS `/admin` mais ce routeur est monté
   // sous ce préfixe (voir le commentaire sur `members.ts` côté back) —
@@ -136,12 +118,16 @@ export const MembersApi = {
         response,
         {
           400: {
-            title: 'Création impossible',
+            title: 'Invitation impossible',
+            message: 'Cette adresse ne peut pas être invitée.',
+          },
+          409: {
+            title: 'Invitation impossible',
             message:
-              'Cette adresse a déjà un compte : utilisez plutôt "Ajouter un membre" pour la rattacher.',
+              'Cette personne est déjà membre de cet établissement, ou son compte est désactivé.',
           },
         },
-        'Impossible de créer le compte',
+        "Impossible d'inviter ce membre",
       )
     }
     return response.json()
@@ -165,6 +151,16 @@ export const MembersApi = {
     })
     if (!response.ok) {
       await throwMemberError(response, 'Impossible de retirer le membre')
+    }
+  },
+
+  // Renvoie l'invitation : nouveau lien (l'ancien est invalidé) et nouvel e-mail.
+  resendInvitation: async (id: string): Promise<void> => {
+    const response = await fetchWithAuth(`${MEMBERS_URL()}/${id}/access-link`, {
+      method: 'POST',
+    })
+    if (!response.ok) {
+      await throwMemberError(response, "Impossible de renvoyer l'invitation")
     }
   },
 

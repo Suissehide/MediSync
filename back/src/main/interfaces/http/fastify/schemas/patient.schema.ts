@@ -80,6 +80,7 @@ export const patientWithTagsResponseSchema = patientResponseSchema.extend({
   // sur ce service (`findAllWithTags`, back), pas depuis `patientEntity` — `null` si le
   // patient n'a pas encore de sous-dossier dans ce service.
   entryDate: z.coerce.date().optional().nullable(),
+  exitDate: z.coerce.date().optional().nullable(),
 })
 
 export const patientsWithTagsResponseSchema = z.array(

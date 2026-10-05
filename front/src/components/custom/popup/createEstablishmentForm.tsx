@@ -85,8 +85,9 @@ function CreateEstablishmentForm() {
             <PopupBody>
               <div className="bg-input p-3 rounded-lg flex flex-col gap-1">
                 <p className="text-xs text-text-light">
-                  Lien à usage unique — transmettez-le en main propre, il ne
-                  sera plus jamais affiché.
+                  Un e-mail d'invitation a été envoyé. Vous pouvez aussi
+                  transmettre ce lien à usage unique en main propre, il ne sera
+                  plus jamais affiché.
                 </p>
                 <CopyableId
                   value={buildAccessLinkUrl(created.accessLink.token)}

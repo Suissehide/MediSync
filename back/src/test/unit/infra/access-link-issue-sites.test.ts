@@ -75,6 +75,13 @@ const SITES_DECLARES = [
       'de comptage, a dessein — c est ce qui rend la garde du niveau etablissement tenable.',
     appels: 1,
   },
+  {
+    fichier: 'domain/accessLink.domain.ts',
+    raison:
+      'mot de passe oublie (POST /auth/password-forgot) : le lien part a l adresse DU COMPTE ' +
+      'lui-meme, jamais a l appelant — aucun privilege a franchir, donc aucune garde de comptage.',
+    appels: 1,
+  },
 ]
 
 // Jest tourne via @swc/jest en module CommonJS (jest.config.ts) : __dirname est disponible.

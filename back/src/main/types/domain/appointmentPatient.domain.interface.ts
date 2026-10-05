@@ -13,5 +13,9 @@ export type AppointmentPatientWithAppointmentDomain =
 // optionnel (nouveau participant vs participant déjà inscrit).
 export type AppointmentPatientUpdateEntityDomain = Pick<
   AppointmentPatientUpdateEntityRepo,
-  'accompanying' | 'status' | 'rejectionReason' | 'transmissionNotes'
+  | 'accompanying'
+  | 'status'
+  | 'rejectionReason'
+  | 'transmissionNotes'
+  | 'convocationSent'
 > & { id?: string; patientID: string }

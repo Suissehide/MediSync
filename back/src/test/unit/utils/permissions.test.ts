@@ -54,6 +54,41 @@ describe('permissions', () => {
     expect(ESTABLISHMENT_PERMISSIONS.MEMBER).toHaveLength(0)
   })
 
+  // MDS-17 : l'equipe d'un service se gere depuis ce service, par son coordinateur seul. La
+  // propriete qui compte ici est la SEPARATION des deux echelles, pas le nom choisi :
+  // `service-members:manage` ne doit jamais tomber dans la branche d'etablissement (un ADMIN
+  // sans service courant l'obtiendrait alors sur une route DE SERVICE), et `members:manage` ne
+  // doit jamais s'obtenir par un role de service.
+  it('reserve l equipe du service au coordinateur, sans toucher a members:manage', () => {
+    expect(SERVICE_PERMISSIONS.COORDINATEUR).toContain(
+      'service-members:manage',
+    )
+    for (const role of ['INTERVENANT', 'SECRETARIAT', 'LECTURE'] as const) {
+      expect(SERVICE_PERMISSIONS[role]).not.toContain('service-members:manage')
+    }
+    expect(ESTABLISHMENT_PERMISSIONS.ADMIN).not.toContain(
+      'service-members:manage',
+    )
+    expect(
+      hasPermission(
+        { serviceRole: 'COORDINATEUR', establishmentRole: 'MEMBER' },
+        'service-members:manage',
+      ),
+    ).toBe(true)
+    expect(
+      hasPermission(
+        { serviceRole: 'COORDINATEUR', establishmentRole: 'MEMBER' },
+        'members:manage',
+      ),
+    ).toBe(false)
+    expect(
+      hasPermission(
+        { serviceRole: null, establishmentRole: 'ADMIN' },
+        'service-members:manage',
+      ),
+    ).toBe(false)
+  })
+
   it('hasPermission route vers le bon niveau', () => {
     const roles = {
       serviceRole: 'SECRETARIAT',

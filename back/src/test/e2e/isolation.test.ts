@@ -577,6 +577,15 @@ describe('isolation par tenant', () => {
           establishmentId: est.id,
         },
       })
+      // Sans sous-dossier dans le service, la liste l'omettrait pour une autre raison que
+      // celle qu'eprouve ce test.
+      await testDb.patientServiceFile.create({
+        data: {
+          patientId: ownPatient.id,
+          serviceId: serviceA.id,
+          establishmentId: est.id,
+        },
+      })
 
       const foreign = await t.app.inject({
         method: 'GET',
@@ -592,8 +601,7 @@ describe('isolation par tenant', () => {
       })
       expect(own.statusCode).toBe(200)
 
-      // Meme preuve que pour la liste des thematiques, mais sur une entite
-      // d'etablissement (findMany filtre par establishmentId, pas serviceId).
+      // La liste filtre sur l'etablissement ET sur le service ; ici on eprouve le premier.
       const list = await t.app.inject({
         method: 'GET',
         url: tenantUrl(est.id, serviceA.id, '/patient'),

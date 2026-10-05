@@ -15,6 +15,7 @@ import { Route as PendingImport } from './routes/pending'
 import { Route as AuthenticatedImport } from './routes/_authenticated'
 import { Route as AuthIndexImport } from './routes/auth/index'
 import { Route as AuthenticatedIndexImport } from './routes/_authenticated/index'
+import { Route as AuthForgotPasswordImport } from './routes/auth/forgot-password'
 import { Route as AuthAccessLinkImport } from './routes/auth/access-link'
 import { Route as AuthenticatedSuperAdminImport } from './routes/_authenticated/super-admin'
 import { Route as AuthenticatedSuiviImport } from './routes/_authenticated/suivi'
@@ -36,6 +37,7 @@ import { Route as AuthenticatedSettingsDiagnosticTemplateImport } from './routes
 import { Route as AuthenticatedSettingsActivityLogImport } from './routes/_authenticated/settings/activity-log'
 import { Route as AuthenticatedPatientPatientIDImport } from './routes/_authenticated/patient/$patientID'
 import { Route as AuthenticatedEEstablishmentIdAdminImport } from './routes/_authenticated/e/$establishmentId/admin'
+import { Route as AuthenticatedEEstablishmentIdAdminIndexImport } from './routes/_authenticated/e/$establishmentId/admin/index'
 import { Route as AuthenticatedEEstablishmentIdSServiceIdImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId'
 import { Route as AuthenticatedEEstablishmentIdAdminServicesImport } from './routes/_authenticated/e/$establishmentId/admin/services'
 import { Route as AuthenticatedEEstablishmentIdAdminMembersImport } from './routes/_authenticated/e/$establishmentId/admin/members'
@@ -80,6 +82,12 @@ const AuthenticatedIndexRoute = AuthenticatedIndexImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthenticatedRoute,
+} as any)
+
+const AuthForgotPasswordRoute = AuthForgotPasswordImport.update({
+  id: '/auth/forgot-password',
+  path: '/auth/forgot-password',
+  getParentRoute: () => rootRoute,
 } as any)
 
 const AuthAccessLinkRoute = AuthAccessLinkImport.update({
@@ -220,6 +228,13 @@ const AuthenticatedEEstablishmentIdAdminRoute =
     id: '/e/$establishmentId/admin',
     path: '/e/$establishmentId/admin',
     getParentRoute: () => AuthenticatedRoute,
+  } as any)
+
+const AuthenticatedEEstablishmentIdAdminIndexRoute =
+  AuthenticatedEEstablishmentIdAdminIndexImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedEEstablishmentIdAdminRoute,
   } as any)
 
 const AuthenticatedEEstablishmentIdSServiceIdRoute =
@@ -424,6 +439,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthAccessLinkImport
       parentRoute: typeof rootRoute
     }
+    '/auth/forgot-password': {
+      id: '/auth/forgot-password'
+      path: '/auth/forgot-password'
+      fullPath: '/auth/forgot-password'
+      preLoaderRoute: typeof AuthForgotPasswordImport
+      parentRoute: typeof rootRoute
+    }
     '/_authenticated/': {
       id: '/_authenticated/'
       path: '/'
@@ -578,6 +600,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEEstablishmentIdSServiceIdImport
       parentRoute: typeof AuthenticatedImport
     }
+    '/_authenticated/e/$establishmentId/admin/': {
+      id: '/_authenticated/e/$establishmentId/admin/'
+      path: '/'
+      fullPath: '/e/$establishmentId/admin/'
+      preLoaderRoute: typeof AuthenticatedEEstablishmentIdAdminIndexImport
+      parentRoute: typeof AuthenticatedEEstablishmentIdAdminImport
+    }
     '/_authenticated/e/$establishmentId/s/$serviceId/_settings': {
       id: '/_authenticated/e/$establishmentId/s/$serviceId/_settings'
       path: ''
@@ -715,6 +744,7 @@ interface AuthenticatedEEstablishmentIdAdminRouteChildren {
   AuthenticatedEEstablishmentIdAdminGrantsRoute: typeof AuthenticatedEEstablishmentIdAdminGrantsRoute
   AuthenticatedEEstablishmentIdAdminMembersRoute: typeof AuthenticatedEEstablishmentIdAdminMembersRoute
   AuthenticatedEEstablishmentIdAdminServicesRoute: typeof AuthenticatedEEstablishmentIdAdminServicesRoute
+  AuthenticatedEEstablishmentIdAdminIndexRoute: typeof AuthenticatedEEstablishmentIdAdminIndexRoute
 }
 
 const AuthenticatedEEstablishmentIdAdminRouteChildren: AuthenticatedEEstablishmentIdAdminRouteChildren =
@@ -727,6 +757,8 @@ const AuthenticatedEEstablishmentIdAdminRouteChildren: AuthenticatedEEstablishme
       AuthenticatedEEstablishmentIdAdminMembersRoute,
     AuthenticatedEEstablishmentIdAdminServicesRoute:
       AuthenticatedEEstablishmentIdAdminServicesRoute,
+    AuthenticatedEEstablishmentIdAdminIndexRoute:
+      AuthenticatedEEstablishmentIdAdminIndexRoute,
   }
 
 const AuthenticatedEEstablishmentIdAdminRouteWithChildren =
@@ -861,6 +893,7 @@ export interface FileRoutesByFullPath {
   '/suivi': typeof AuthenticatedSuiviRoute
   '/super-admin': typeof AuthenticatedSuperAdminRouteWithChildren
   '/auth/access-link': typeof AuthAccessLinkRoute
+  '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthIndexRoute
   '/patient/$patientID': typeof AuthenticatedPatientPatientIDRoute
@@ -883,6 +916,7 @@ export interface FileRoutesByFullPath {
   '/e/$establishmentId/admin/members': typeof AuthenticatedEEstablishmentIdAdminMembersRoute
   '/e/$establishmentId/admin/services': typeof AuthenticatedEEstablishmentIdAdminServicesRoute
   '/e/$establishmentId/s/$serviceId': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsRouteWithChildren
+  '/e/$establishmentId/admin/': typeof AuthenticatedEEstablishmentIdAdminIndexRoute
   '/e/$establishmentId/s/$serviceId/activity-log': typeof AuthenticatedEEstablishmentIdSServiceIdActivityLogRoute
   '/e/$establishmentId/s/$serviceId/agenda': typeof AuthenticatedEEstablishmentIdSServiceIdAgendaRoute
   '/e/$establishmentId/s/$serviceId/dashboard': typeof AuthenticatedEEstablishmentIdSServiceIdDashboardRoute
@@ -906,6 +940,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/suivi': typeof AuthenticatedSuiviRoute
   '/auth/access-link': typeof AuthAccessLinkRoute
+  '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthIndexRoute
   '/patient/$patientID': typeof AuthenticatedPatientPatientIDRoute
@@ -922,11 +957,11 @@ export interface FileRoutesByTo {
   '/user/settings': typeof AuthenticatedUserSettingsRoute
   '/patient': typeof AuthenticatedPatientIndexRoute
   '/super-admin': typeof AuthenticatedSuperAdminIndexRoute
-  '/e/$establishmentId/admin': typeof AuthenticatedEEstablishmentIdAdminRouteWithChildren
   '/e/$establishmentId/admin/activity-log': typeof AuthenticatedEEstablishmentIdAdminActivityLogRoute
   '/e/$establishmentId/admin/grants': typeof AuthenticatedEEstablishmentIdAdminGrantsRoute
   '/e/$establishmentId/admin/members': typeof AuthenticatedEEstablishmentIdAdminMembersRoute
   '/e/$establishmentId/admin/services': typeof AuthenticatedEEstablishmentIdAdminServicesRoute
+  '/e/$establishmentId/admin': typeof AuthenticatedEEstablishmentIdAdminIndexRoute
   '/e/$establishmentId/s/$serviceId': typeof AuthenticatedEEstablishmentIdSServiceIdIndexRoute
   '/e/$establishmentId/s/$serviceId/activity-log': typeof AuthenticatedEEstablishmentIdSServiceIdActivityLogRoute
   '/e/$establishmentId/s/$serviceId/agenda': typeof AuthenticatedEEstablishmentIdSServiceIdAgendaRoute
@@ -953,6 +988,7 @@ export interface FileRoutesById {
   '/_authenticated/suivi': typeof AuthenticatedSuiviRoute
   '/_authenticated/super-admin': typeof AuthenticatedSuperAdminRouteWithChildren
   '/auth/access-link': typeof AuthAccessLinkRoute
+  '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/auth/': typeof AuthIndexRoute
   '/_authenticated/patient/$patientID': typeof AuthenticatedPatientPatientIDRoute
@@ -975,6 +1011,7 @@ export interface FileRoutesById {
   '/_authenticated/e/$establishmentId/admin/members': typeof AuthenticatedEEstablishmentIdAdminMembersRoute
   '/_authenticated/e/$establishmentId/admin/services': typeof AuthenticatedEEstablishmentIdAdminServicesRoute
   '/_authenticated/e/$establishmentId/s/$serviceId': typeof AuthenticatedEEstablishmentIdSServiceIdRouteWithChildren
+  '/_authenticated/e/$establishmentId/admin/': typeof AuthenticatedEEstablishmentIdAdminIndexRoute
   '/_authenticated/e/$establishmentId/s/$serviceId/_settings': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsRouteWithChildren
   '/_authenticated/e/$establishmentId/s/$serviceId/activity-log': typeof AuthenticatedEEstablishmentIdSServiceIdActivityLogRoute
   '/_authenticated/e/$establishmentId/s/$serviceId/agenda': typeof AuthenticatedEEstablishmentIdSServiceIdAgendaRoute
@@ -1003,6 +1040,7 @@ export interface FileRouteTypes {
     | '/suivi'
     | '/super-admin'
     | '/auth/access-link'
+    | '/auth/forgot-password'
     | '/'
     | '/auth'
     | '/patient/$patientID'
@@ -1025,6 +1063,7 @@ export interface FileRouteTypes {
     | '/e/$establishmentId/admin/members'
     | '/e/$establishmentId/admin/services'
     | '/e/$establishmentId/s/$serviceId'
+    | '/e/$establishmentId/admin/'
     | '/e/$establishmentId/s/$serviceId/activity-log'
     | '/e/$establishmentId/s/$serviceId/agenda'
     | '/e/$establishmentId/s/$serviceId/dashboard'
@@ -1047,6 +1086,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/suivi'
     | '/auth/access-link'
+    | '/auth/forgot-password'
     | '/'
     | '/auth'
     | '/patient/$patientID'
@@ -1063,11 +1103,11 @@ export interface FileRouteTypes {
     | '/user/settings'
     | '/patient'
     | '/super-admin'
-    | '/e/$establishmentId/admin'
     | '/e/$establishmentId/admin/activity-log'
     | '/e/$establishmentId/admin/grants'
     | '/e/$establishmentId/admin/members'
     | '/e/$establishmentId/admin/services'
+    | '/e/$establishmentId/admin'
     | '/e/$establishmentId/s/$serviceId'
     | '/e/$establishmentId/s/$serviceId/activity-log'
     | '/e/$establishmentId/s/$serviceId/agenda'
@@ -1092,6 +1132,7 @@ export interface FileRouteTypes {
     | '/_authenticated/suivi'
     | '/_authenticated/super-admin'
     | '/auth/access-link'
+    | '/auth/forgot-password'
     | '/_authenticated/'
     | '/auth/'
     | '/_authenticated/patient/$patientID'
@@ -1114,6 +1155,7 @@ export interface FileRouteTypes {
     | '/_authenticated/e/$establishmentId/admin/members'
     | '/_authenticated/e/$establishmentId/admin/services'
     | '/_authenticated/e/$establishmentId/s/$serviceId'
+    | '/_authenticated/e/$establishmentId/admin/'
     | '/_authenticated/e/$establishmentId/s/$serviceId/_settings'
     | '/_authenticated/e/$establishmentId/s/$serviceId/activity-log'
     | '/_authenticated/e/$establishmentId/s/$serviceId/agenda'
@@ -1136,6 +1178,7 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   PendingRoute: typeof PendingRoute
   AuthAccessLinkRoute: typeof AuthAccessLinkRoute
+  AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
   AuthIndexRoute: typeof AuthIndexRoute
 }
 
@@ -1143,6 +1186,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   PendingRoute: PendingRoute,
   AuthAccessLinkRoute: AuthAccessLinkRoute,
+  AuthForgotPasswordRoute: AuthForgotPasswordRoute,
   AuthIndexRoute: AuthIndexRoute,
 }
 
@@ -1159,6 +1203,7 @@ export const routeTree = rootRoute
         "/_authenticated",
         "/pending",
         "/auth/access-link",
+        "/auth/forgot-password",
         "/auth/"
       ]
     },
@@ -1216,6 +1261,9 @@ export const routeTree = rootRoute
     },
     "/auth/access-link": {
       "filePath": "auth/access-link.tsx"
+    },
+    "/auth/forgot-password": {
+      "filePath": "auth/forgot-password.tsx"
     },
     "/_authenticated/": {
       "filePath": "_authenticated/index.tsx",
@@ -1287,7 +1335,8 @@ export const routeTree = rootRoute
         "/_authenticated/e/$establishmentId/admin/activity-log",
         "/_authenticated/e/$establishmentId/admin/grants",
         "/_authenticated/e/$establishmentId/admin/members",
-        "/_authenticated/e/$establishmentId/admin/services"
+        "/_authenticated/e/$establishmentId/admin/services",
+        "/_authenticated/e/$establishmentId/admin/"
       ]
     },
     "/_authenticated/e/$establishmentId/admin/activity-log": {
@@ -1320,6 +1369,10 @@ export const routeTree = rootRoute
         "/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/acces",
         "/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/"
       ]
+    },
+    "/_authenticated/e/$establishmentId/admin/": {
+      "filePath": "_authenticated/e/$establishmentId/admin/index.tsx",
+      "parent": "/_authenticated/e/$establishmentId/admin"
     },
     "/_authenticated/e/$establishmentId/s/$serviceId/_settings": {
       "filePath": "_authenticated/e/$establishmentId/s/$serviceId/_settings.tsx",

@@ -76,6 +76,11 @@ const CONTEXTES_REELS: Record<string, ContexteReel> = {
   'member.reactivated': { genre: 'tenant-administration' },
   'member.accountCreated': { genre: 'tenant-administration' },
   'member.accessLinkReissued': { genre: 'tenant-administration' },
+  // domain/membership.domain.ts, surface de service : sous `/e/:e/s/:s/membres`.
+  'serviceMember.added': { genre: 'tenant-service' },
+  'serviceMember.accountCreated': { genre: 'tenant-service' },
+  'serviceMember.updated': { genre: 'tenant-service' },
+  'serviceMember.removed': { genre: 'tenant-service' },
   // domain/user.domain.ts#reissueAccessLink : sous `/super-admin`, aucun store.
   'user.accessLinkReissued': { genre: 'aucun' },
 }

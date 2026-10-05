@@ -34,6 +34,9 @@ export const SUPER_ADMIN = {
 export const SERVICE_MEMBER = {
   GET_ALL: 'get_all_service_members',
   SET_SOIGNANT: 'set_service_member_soignant',
+  INVITE: 'invite_service_member',
+  SET_ROLE: 'set_service_member_role',
+  REMOVE: 'remove_service_member',
 }
 
 export const TODO = {
@@ -129,10 +132,10 @@ export const THEMATIC = {
 
 export const MEMBER = {
   GET_ALL: 'get_all_members',
-  ADD: 'add_member',
   UPDATE: 'update_member',
   REMOVE: 'remove_member',
   DEACTIVATE: 'deactivate_member',
+  RESEND_INVITATION: 'resend_member_invitation',
   // Création de compte, distincte de `ADD` (rattachement
   // d'un compte existant).
   CREATE_ACCOUNT: 'create_member_account',

@@ -1,6 +1,13 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { ArrowLeft, Download, Search } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import {
+  ArrowLeft,
+  Download,
+  RotateCcw,
+  Route as RouteIcon,
+  Search,
+  X,
+} from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { PatientApi } from '@/api/patient.api.ts'
 import { getPatientColumns } from '@/columns/patient.column.tsx'
@@ -11,6 +18,8 @@ import ReactTable from '@/components/table/reactTable.tsx'
 import { Button } from '@/components/ui/button.tsx'
 import DropdownFilter from '@/components/ui/dropdownFilter.tsx'
 import { Input } from '@/components/ui/input.tsx'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group.tsx'
+import { safeParse } from '@/libs/utils.ts'
 import { usePathwayTemplateQueries } from '@/queries/usePathwayTemplate.ts'
 import { usePatientWithTagsQuery } from '@/queries/usePatient.tsx'
 import type { PatientWithTags } from '@/types/patient.ts'
@@ -21,14 +30,50 @@ export const Route = createFileRoute(
   component: PatientList,
 })
 
+const STATUSES = {
+  all: 'Tous',
+  active: 'En cours',
+  exited: 'Sortis',
+} as const
+type Status = keyof typeof STATUSES
+const DEFAULT_STATUS: Status = 'active'
+
+const filtersStorageKey = (serviceId: string) => `patient/filters/${serviceId}`
+
+const matchesStatus = (p: PatientWithTags, status: Status) =>
+  status === 'all' || Boolean(p.exitDate) === (status === 'exited')
+
+const matchesTags = (p: PatientWithTags, tags: string[]) =>
+  tags.length === 0 || tags.some((tag) => p.pathwayTemplateTags?.includes(tag))
+
 function PatientList() {
   const navigate = useNavigate()
   const { establishmentId, serviceId } = Route.useParams()
   const { patients, isPending } = usePatientWithTagsQuery()
   const { pathwayTemplates } = usePathwayTemplateQueries()
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [storedFilters] = useState(() =>
+    safeParse<{ status?: string; tags?: string[] }>(
+      localStorage.getItem(filtersStorageKey(serviceId)),
+      {},
+    ),
+  )
+  const [selectedTags, setSelectedTags] = useState<string[]>(
+    Array.isArray(storedFilters.tags) ? storedFilters.tags : [],
+  )
+  const [status, setStatus] = useState<Status>(
+    storedFilters.status && storedFilters.status in STATUSES
+      ? (storedFilters.status as Status)
+      : DEFAULT_STATUS,
+  )
   const [isExporting, setIsExporting] = useState(false)
+
+  useEffect(() => {
+    localStorage.setItem(
+      filtersStorageKey(serviceId),
+      JSON.stringify({ status, tags: selectedTags }),
+    )
+  }, [serviceId, status, selectedTags])
 
   const handleRedirectPatient = async (patientID: string) => {
     await navigate({
@@ -42,21 +87,56 @@ function PatientList() {
     pathwayTemplates: pathwayTemplates ?? [],
   })
 
-  const allTags = useMemo(
-    () => [...new Set((pathwayTemplates ?? []).map((t) => t.mainTag))].sort(),
-    [pathwayTemplates],
-  )
+  // Couleur d'un tag principal : celle du premier parcours qui le porte.
+  const tagColors = useMemo(() => {
+    const colors = new Map<string, string>()
+    for (const t of pathwayTemplates ?? []) {
+      if (!colors.has(t.mainTag)) {
+        colors.set(t.mainTag, t.color)
+      }
+    }
+    return colors
+  }, [pathwayTemplates])
 
-  const tagFilters = allTags.map((tag) => ({
+  const searched = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase()
+    return (patients ?? [])
+      .filter(
+        (p) =>
+          !term ||
+          p.firstName?.toLowerCase().includes(term) ||
+          p.lastName?.toLowerCase().includes(term),
+      )
+      .sort((a, b) =>
+        `${a.lastName ?? ''} ${a.firstName ?? ''}`.localeCompare(
+          `${b.lastName ?? ''} ${b.firstName ?? ''}`,
+          'fr',
+        ),
+      )
+  }, [patients, searchTerm])
+
+  // Le compteur d'un parcours tient compte du statut, pas des autres parcours.
+  const byTags = searched.filter((p) => matchesTags(p, selectedTags))
+  const byStatus = searched.filter((p) => matchesStatus(p, status))
+  const filteredPatients = byTags.filter((p) => matchesStatus(p, status))
+
+  const tagFilters = [...tagColors.keys()].sort().map((tag) => ({
     id: tag,
     label: tag,
+    color: tagColors.get(tag),
     checked: selectedTags.includes(tag),
+    count: byStatus.filter((p) => p.pathwayTemplateTags?.includes(tag)).length,
   }))
 
-  const handleTagFilterChange = (id: string, checked: boolean) => {
+  const handleTagChange = (id: string, checked: boolean) => {
     setSelectedTags((prev) =>
       checked ? [...prev, id] : prev.filter((t) => t !== id),
     )
+  }
+
+  const resetFilters = () => {
+    setStatus(DEFAULT_STATUS)
+    setSelectedTags([])
   }
 
   const handleExport = async () => {
@@ -77,29 +157,6 @@ function PatientList() {
     }
   }
 
-  const filteredPatients = useMemo(() => {
-    let result = patients ?? []
-    if (searchTerm.trim()) {
-      const term = searchTerm.toLowerCase()
-      result = result.filter(
-        (p) =>
-          p.firstName?.toLowerCase().includes(term) ||
-          p.lastName?.toLowerCase().includes(term),
-      )
-    }
-    if (selectedTags.length) {
-      result = result.filter((p) =>
-        selectedTags.some((tag) => p.pathwayTemplateTags?.includes(tag)),
-      )
-    }
-    return [...result].sort((a, b) =>
-      `${a.lastName ?? ''} ${a.firstName ?? ''}`.localeCompare(
-        `${b.lastName ?? ''} ${b.firstName ?? ''}`,
-        'fr',
-      ),
-    )
-  }, [patients, searchTerm, selectedTags])
-
   return (
     <DashboardLayout
       quickActions={[
@@ -107,7 +164,7 @@ function PatientList() {
         <AddPatientToSlotForm key="add-patient-to-slot" />,
       ]}
     >
-      <div className="flex-1 bg-background p-6 rounded-lg flex flex-col w-full gap-4">
+      <div className="flex-1 min-h-0 bg-background p-6 rounded-lg flex flex-col w-full gap-4">
         <div className="min-h-9 flex items-center gap-3">
           <Button
             variant="outline"
@@ -126,44 +183,72 @@ function PatientList() {
           </h1>
         </div>
 
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <Input
-              id="patient-search"
-              iconLeft={<Search className="w-4 h-4" />}
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Nom, prénom..."
-              className="w-72"
+        <div className="flex flex-wrap items-center gap-3">
+          <Input
+            id="patient-search"
+            iconLeft={<Search className="w-4 h-4" />}
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Nom, prénom..."
+            className="w-72"
+          />
+          <ToggleGroup
+            value={status}
+            onValueChange={(v) => v && setStatus(v as Status)}
+          >
+            {(Object.keys(STATUSES) as Status[]).map((key) => (
+              <ToggleGroupItem key={key} value={key}>
+                {STATUSES[key]}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+          {tagFilters.length > 0 && (
+            <DropdownFilter
+              filters={tagFilters}
+              onFilterChange={handleTagChange}
+              triggerLabel={
+                selectedTags.length
+                  ? `Parcours · ${selectedTags.length}`
+                  : 'Parcours'
+              }
+              TriggerIcon={RouteIcon}
+              headerAction={
+                selectedTags.length
+                  ? {
+                      label: 'Tout effacer',
+                      icon: RotateCcw,
+                      onSelect: () => setSelectedTags([]),
+                    }
+                  : undefined
+              }
             />
-          </div>
-          <div className="flex-1 border-t border-border" />
-          <div className="flex gap-3">
-            {tagFilters.length > 0 && (
-              <DropdownFilter
-                filters={tagFilters}
-                onFilterChange={handleTagFilterChange}
-              />
-            )}
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleExport}
-              isLoading={isExporting}
-            >
-              <Download className="w-4 h-4" />
+          )}
+          {(status !== DEFAULT_STATUS || selectedTags.length > 0) && (
+            <Button variant="ghost" onClick={resetFilters}>
+              <X className="w-4 h-4" />
+              Réinitialiser
             </Button>
-          </div>
+          )}
+          <div className="flex-1 border-t border-border" />
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleExport}
+            isLoading={isExporting}
+          >
+            <Download className="w-4 h-4" />
+          </Button>
         </div>
 
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 min-h-0 flex flex-col">
           <ReactTable<PatientWithTags>
             data={filteredPatients}
             columns={columns}
             filterId="patient"
             pagination
             isLoading={isPending}
+            isRowMuted={(patient) => Boolean(patient.exitDate)}
             onRowClick={(patient) => handleRedirectPatient(patient.id)}
           />
         </div>

@@ -16,7 +16,16 @@ export type AccessLinkCreateEntityRepo = {
   expiresAt: Date
 }
 
+export type LatestAccessLink = {
+  userId: string
+  createdAt: Date
+  usedAt: Date | null
+  expiresAt: Date
+}
+
 export interface AccessLinkRepositoryInterface {
+  findLatestCreatedAt: (userId: string) => Promise<Date | null>
+  findLatestLinks: (userIds: string[]) => Promise<LatestAccessLink[]>
   // Invalide (marque consommés) tous les liens NON consommés de ce compte. Appelé avant de créer
   // le nouveau lien à l'émission : une réémission invalide les liens précédents du même compte
   // (spec §6.1), pour un appelant SÉQUENTIEL (l'usage attendu). Ceci NE ferme PAS la course entre

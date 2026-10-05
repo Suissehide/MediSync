@@ -2,7 +2,6 @@ import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useCallback, useMemo, useState } from 'react'
 
 import { getMemberColumns } from '@/columns/member.column.tsx'
-import AddMemberForm from '@/components/custom/popup/addMemberForm.tsx'
 import { ConfirmDeleteForm } from '@/components/custom/popup/confirmDeleteForm.tsx'
 import CreateMemberAccountForm from '@/components/custom/popup/createMemberAccountForm.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
@@ -46,7 +45,7 @@ function MemberSettings() {
   // chargée retombe sur `[]`, et la colonne affiche alors le rôle sans le
   // nom plutôt que rien).
   const { services } = useServicesQuery()
-  const { removeMember, deactivateMember, reactivateMember } =
+  const { removeMember, deactivateMember, reactivateMember, resendInvitation } =
     useMemberMutations()
 
   const [removeTarget, setRemoveTarget] = useState<Member | null>(null)
@@ -97,23 +96,24 @@ function MemberSettings() {
         services: services ?? [],
         onToggleActive: handleToggleActive,
         onRemove: setRemoveTarget,
+        onResendInvitation: (member) => resendInvitation.mutate(member.id),
+        isResending: (member) =>
+          resendInvitation.isPending &&
+          resendInvitation.variables === member.id,
         isToggling,
         avecIdentifiant: superAdmin,
       }),
-    [services, handleToggleActive, isToggling, superAdmin],
+    [services, handleToggleActive, isToggling, superAdmin, resendInvitation],
   )
 
   return (
     <DashboardLayout>
-      <div className="flex-1 bg-background p-6 rounded-lg flex flex-col w-full gap-4">
+      <div className="flex-1 min-h-0 bg-background p-6 rounded-lg flex flex-col w-full gap-4">
         <div className="flex justify-between items-center gap-3">
           <h1 className="h-9 flex items-center text-text-dark text-xl font-semibold">
             Membres de l'établissement
           </h1>
-          <div className="flex gap-2">
-            <CreateMemberAccountForm />
-            <AddMemberForm />
-          </div>
+          <CreateMemberAccountForm />
         </div>
 
         {etat === 'pending' && (

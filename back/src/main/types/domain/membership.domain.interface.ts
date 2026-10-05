@@ -1,4 +1,4 @@
-import type { EstablishmentRole } from '../../../generated/enums'
+import type { EstablishmentRole, ServiceRole } from '../../../generated/enums'
 import type {
   MembershipRow,
   MembershipUpdateRepo,
@@ -17,9 +17,9 @@ export type MembershipAddByEmailDomain = {
   services: ServiceAssignment[]
 }
 
-// Créer un compte de membre. `addByEmail` rattache une adresse DÉJÀ pourvue
-// d'un compte ; celle-ci crée le compte s'il n'existe pas, et se contente de le rattacher s'il
-// existe — jamais d'écrasement (ni le nom, ni le mot de passe).
+// Inviter un membre : crée le compte s'il n'existe pas, le rattache s'il existe — jamais
+// d'écrasement (ni le nom, ni le mot de passe). Un compte déjà en poste ailleurs est rattaché
+// sans lien (`accessLink: null`) et prévenu par e-mail.
 export type MembershipCreateAccountDomain = MembershipAddByEmailDomain & {
   firstName?: string
   lastName?: string
@@ -31,10 +31,23 @@ export type MembershipCreateAccountDomain = MembershipAddByEmailDomain & {
 // STOCKÉE d'un compte préexistant ne serve d'oracle d'existence.
 export type MembershipCreateAccountResult = {
   member: MembershipRowDomain
-  accessLink: { token: string }
+  accessLink: { token: string } | null
 }
 
 export type ServiceMemberRowDomain = ServiceMemberRow
+
+// Inviter dans le SERVICE courant : le service n'est jamais soumis (il vient du tenant resolu),
+// et le role d'etablissement non plus — un coordinateur ne rattache qu'en `MEMBER`.
+export type ServiceInviteDomain = {
+  email: string
+  firstName?: string
+  lastName?: string
+  role: ServiceRole
+}
+
+// `accessLink` a `null` quand le compte etait deja rattache a l'etablissement : il a son mot de
+// passe, il n'y a aucun lien a transmettre. Rien d'autre n'est rendu — voir `inviteToService`.
+export type ServiceInviteResult = { accessLink: { token: string } | null }
 
 export interface MembershipDomainInterface {
   findServiceMembers: () => Promise<ServiceMemberRowDomain[]>
@@ -42,10 +55,15 @@ export interface MembershipDomainInterface {
     serviceMembershipId: string,
     soignantId: string | null,
   ) => Promise<ServiceMemberRowDomain>
+  inviteToService: (params: ServiceInviteDomain) => Promise<ServiceInviteResult>
+  // Leve `Boom.conflict` sur sa propre affectation : un coordinateur ne se retrograde pas, et ne
+  // se retire pas de son service.
+  setServiceMemberRole: (
+    serviceMembershipId: string,
+    role: ServiceRole,
+  ) => Promise<ServiceMemberRowDomain>
+  removeServiceMember: (serviceMembershipId: string) => Promise<void>
   findAll: () => Promise<MembershipRowDomain[]>
-  addByEmail: (
-    params: MembershipAddByEmailDomain,
-  ) => Promise<MembershipRowDomain>
   update: (
     id: string,
     params: MembershipUpdateDomain,

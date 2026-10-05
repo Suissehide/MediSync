@@ -3,19 +3,22 @@ import { handleHttpError } from '../libs/httpErrorHandler.ts'
 import type {
   CreateSlotParams,
   Slot,
-  SlotDateRange,
+  SlotQuery,
   UpdateSlotParams,
 } from '../types/slot.ts'
 import { fetchWithAuth } from './fetchWithAuth.ts'
 
 export const SlotApi = {
-  getAll: async (range?: SlotDateRange): Promise<Slot[]> => {
+  getAll: async (query?: SlotQuery): Promise<Slot[]> => {
     const params = new URLSearchParams({ action: 'getAllSlots' })
-    if (range?.from) {
-      params.set('from', range.from)
+    if (query?.from) {
+      params.set('from', query.from)
     }
-    if (range?.to) {
-      params.set('to', range.to)
+    if (query?.to) {
+      params.set('to', query.to)
+    }
+    if (query?.patientID) {
+      params.set('patientID', query.patientID)
     }
     const response = await fetchWithAuth(`${tenantApiUrl()}/slot?${params}`, {
       method: 'GET',

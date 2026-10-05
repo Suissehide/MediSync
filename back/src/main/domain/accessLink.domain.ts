@@ -1,37 +1,123 @@
 import Boom from '@hapi/boom'
 
+import { invitationMail, passwordResetMail } from '../infra/mail/templates'
 import type { IocContainer } from '../types/application/ioc'
-import type { AccessLinkDomainInterface } from '../types/domain/accessLink.domain.interface'
+import type {
+  AccessLinkDomainInterface,
+  InvitationLinkState,
+} from '../types/domain/accessLink.domain.interface'
+import type { MailerInterface } from '../types/infra/mail/mailer.interface'
 import type { PrimaTransactionClient } from '../types/infra/orm/client'
 import type { AccessLinkRepositoryInterface } from '../types/infra/orm/repositories/accessLink.repository.interface'
 import type { UserRepositoryInterface } from '../types/infra/orm/repositories/user.repository.interface'
 import { randomToken, sha256Hex } from '../utils/hash'
 
-// 32 octets, encodés en base64url par `randomToken` (utils/hash.ts). Sept jours plutôt que deux :
-// la transmission est manuelle (aucune infrastructure de courriel), et un appel qui n'aboutit pas
-// un vendredi ne doit pas tout faire recommencer le lundi (spec §6.1).
+// 32 octets, encodés en base64url par `randomToken` (utils/hash.ts). Invitation : trente jours,
+// au-delà l'invitation s'affiche « expirée » et l'admin la renvoie. Mot de passe
+// oublié : une heure, la personne vient de le demander (MDS-35).
 const TOKEN_BYTES = 32
-const VALIDITY_DAYS = 7
-const MS_PER_DAY = 24 * 60 * 60 * 1000
-
-const addDays = (date: Date, days: number): Date =>
-  new Date(date.getTime() + days * MS_PER_DAY)
+const INVITATION_VALIDITY_MS = 30 * 24 * 60 * 60 * 1000
+const RESET_VALIDITY_MS = 60 * 60 * 1000
+// Délai minimal entre deux renvois d'invitation : évite d'inonder la boîte de la personne.
+const RESEND_COOLDOWN_MS = 5 * 60 * 1000
 
 const INVALID_OR_EXPIRED = 'Invalid or expired access link'
 
 class AccessLinkDomain implements AccessLinkDomainInterface {
   private readonly accessLinkRepository: AccessLinkRepositoryInterface
   private readonly userRepository: UserRepositoryInterface
+  private readonly mailer: MailerInterface
+  private readonly frontUrl: string
 
-  constructor({ accessLinkRepository, userRepository }: IocContainer) {
+  constructor({
+    accessLinkRepository,
+    userRepository,
+    mailer,
+    config,
+  }: IocContainer) {
     this.accessLinkRepository = accessLinkRepository
     this.userRepository = userRepository
+    this.mailer = mailer
+    this.frontUrl = config.frontUrl
+  }
+
+  // Le jeton part en FRAGMENT (`#`) : jamais envoyé au serveur par le navigateur, donc absent
+  // des journaux d'accès et des en-têtes Referer.
+  private linkFor(token: string): string {
+    return `${this.frontUrl}/auth/access-link#${token}`
+  }
+
+  sendInvitation(params: {
+    email: string
+    token: string
+    establishmentName?: string
+  }): void {
+    this.mailer.send(
+      'invitation',
+      invitationMail({
+        to: params.email,
+        link: this.linkFor(params.token),
+        establishmentName: params.establishmentName,
+      }),
+    )
+  }
+
+  // Ne lève jamais et ne dit rien : la route répond pareil que l'adresse existe ou non.
+  // Un compte désactivé ne reçoit rien (`consume` le refuserait de toute façon).
+  async requestPasswordReset(email: string): Promise<void> {
+    const user = await this.userRepository.findByEmail(email).catch(() => null)
+    if (!user || user.deactivatedAt !== null) {
+      return
+    }
+    const { token } = await this.issue(
+      user.id,
+      user.id,
+      undefined,
+      RESET_VALIDITY_MS,
+    )
+    this.mailer.send(
+      'password-reset',
+      passwordResetMail({ to: user.email, link: this.linkFor(token) }),
+    )
+  }
+
+  async assertResendAllowed(userId: string): Promise<void> {
+    const last = await this.accessLinkRepository.findLatestCreatedAt(userId)
+    if (last && Date.now() - last.getTime() < RESEND_COOLDOWN_MS) {
+      throw Boom.tooManyRequests(
+        'An invitation was sent less than 5 minutes ago',
+      )
+    }
+  }
+
+  // Pour chaque compte : son lien est-il encore utilisable, et à partir de quand le renvoyer.
+  async invitationLinks(
+    userIds: string[],
+  ): Promise<Map<string, InvitationLinkState>> {
+    if (userIds.length === 0) {
+      return new Map()
+    }
+    const now = Date.now()
+    const links = await this.accessLinkRepository.findLatestLinks(userIds)
+    return new Map(
+      links.map((link) => {
+        const resendableAt = link.createdAt.getTime() + RESEND_COOLDOWN_MS
+        return [
+          link.userId,
+          {
+            active: link.usedAt === null && link.expiresAt.getTime() > now,
+            resendableAt: resendableAt > now ? new Date(resendableAt) : null,
+          },
+        ]
+      }),
+    )
   }
 
   async issue(
     userId: string,
     issuedBy: string,
     client?: PrimaTransactionClient,
+    validityMs: number = INVITATION_VALIDITY_MS,
   ): Promise<{ token: string }> {
     const now = new Date()
     const token = randomToken(TOKEN_BYTES)
@@ -59,7 +145,7 @@ class AccessLinkDomain implements AccessLinkDomainInterface {
     // NULL`) ou un verrou consultatif par compte — une migration de schéma ou un mécanisme de
     // verrouillage qu'aucune exigence actuelle ne réclame, pour un scénario rare (le MÊME compte
     // administrateur émettant pour le MÊME utilisateur au même instant) et auto-limité par
-    // l'expiration à sept jours de tout lien qui en résulterait. Choix assumé : documenter la
+    // l'expiration (trente jours au plus) de tout lien qui en résulterait. Choix assumé : documenter la
     // limite plutôt que la fermer sans qu'elle soit demandée — voir « emissions simultanees »
     // dans access-link.test.ts, qui constate ce comportement (plus d'un lien utilisable) plutôt
     // que d'affirmer le contraire.
@@ -69,7 +155,7 @@ class AccessLinkDomain implements AccessLinkDomainInterface {
         userId,
         tokenHash: sha256Hex(token),
         createdBy: issuedBy,
-        expiresAt: addDays(now, VALIDITY_DAYS),
+        expiresAt: new Date(now.getTime() + validityMs),
       },
       client,
     )

@@ -57,3 +57,6 @@ export const accessLinkConsumeResponseSchema = z.object({
 })
 
 export type AccessLinkConsumeInput = z.infer<typeof accessLinkConsumeSchema>
+
+export const passwordForgotSchema = signInSchema.pick({ email: true })
+export type PasswordForgotInput = z.infer<typeof passwordForgotSchema>

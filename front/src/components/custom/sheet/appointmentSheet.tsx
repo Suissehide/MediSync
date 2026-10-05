@@ -28,7 +28,7 @@ import type { UpdateAppointmentParams } from '../../../types/appointment.ts'
 import type { Soignant } from '../../../types/soignant.ts'
 import { Button } from '../../ui/button.tsx'
 import { FormField } from '../../ui/formField.tsx'
-import { Input } from '../../ui/input.tsx'
+import { Checkbox, Input } from '../../ui/input.tsx'
 import { Label } from '../../ui/label.tsx'
 import { MultiSelect } from '../../ui/select.tsx'
 import {
@@ -37,6 +37,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '../../ui/sheet.tsx'
+import { PastillePresence } from '../pastillePresence.tsx'
 import { ConfirmDeleteForm } from '../popup/confirmDeleteForm.tsx'
 
 interface AppointmentSheetProps {
@@ -70,6 +71,9 @@ export default function AppointmentSheet({
     Record<number, boolean>
   >({})
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  // Rendez-vous dont le formulaire est rempli : avant, ses valeurs par défaut
+  // (une ligne patient vide) s'afficheraient le temps du chargement.
+  const [loadedID, setLoadedID] = useState('')
 
   const form = useAppForm({
     defaultValues: {
@@ -82,6 +86,7 @@ export default function AppointmentSheet({
           status: '',
           rejectionReason: '',
           transmissionNotes: '',
+          convocationSent: false,
           patientID: '',
         },
       ],
@@ -148,18 +153,20 @@ export default function AppointmentSheet({
                     status: ap.status ?? '',
                     rejectionReason: ap.rejectionReason ?? '',
                     transmissionNotes: ap.transmissionNotes ?? '',
+                    convocationSent: ap.convocationSent ?? false,
                     patientID: ap.patient.id,
                   })) ?? [],
               },
               { keepDefaultValues: true },
             )
+            setLoadedID(eventID)
           }
         })
         .catch(() => {
           setOpen('')
         })
     }
-  }, [open, form, refetch, setOpen])
+  }, [open, form, refetch, setOpen, eventID])
 
   const isIndividual = appointment?.slot?.slotTemplate?.isIndividual ?? true
   const capacity = isIndividual
@@ -177,10 +184,20 @@ export default function AppointmentSheet({
         map.set(t.id, { value: t.id, label: t.name })
       }
     }
+    // La thématique actuelle reste proposée même si aucun soignant du créneau n'y est relié.
+    const currentID = appointment?.thematicId
+    if (currentID && !map.has(currentID)) {
+      const label =
+        thematics?.find((t) => t.id === currentID)?.name ??
+        appointment?.thematic
+      if (label) {
+        map.set(currentID, { value: currentID, label })
+      }
+    }
     return [...map.values()].sort((a, b) =>
       a.label.localeCompare(b.label, 'fr'),
     )
-  }, [soignants, thematics])
+  }, [soignants, thematics, appointment])
 
   return (
     <Sheet
@@ -212,7 +229,7 @@ export default function AppointmentSheet({
         </SheetHeader>
 
         <div className="flex-1 flex flex-col min-h-0">
-          {isPending ? (
+          {isPending || loadedID !== eventID ? (
             <div className="flex-1 flex justify-center items-center">
               <Loader2Icon className="size-10 animate-spin text-foreground" />
             </div>
@@ -328,6 +345,7 @@ export default function AppointmentSheet({
                               status: '',
                               rejectionReason: '',
                               transmissionNotes: '',
+                              convocationSent: false,
                               patientID,
                             })
                           }
@@ -351,9 +369,16 @@ export default function AppointmentSheet({
                     </div>
                     <div className="flex-1 min-h-0 overflow-y-scroll space-y-2">
                       {field.state.value.map((appointmentPatient, index) => {
-                        const patientData = patients?.find(
-                          (p) => p.id === appointmentPatient.patientID,
-                        )
+                        // Le rendez-vous porte déjà ses patients ; la liste complète,
+                        // chargée à part, ne sert qu'aux patients tout juste ajoutés.
+                        const patientData =
+                          appointment?.appointmentPatients?.find(
+                            (ap) =>
+                              ap.patient.id === appointmentPatient.patientID,
+                          )?.patient ??
+                          patients?.find(
+                            (p) => p.id === appointmentPatient.patientID,
+                          )
                         const isExpanded = expandedSections[index] ?? false
                         const toggleExpand = () =>
                           setExpandedSections((prev) => ({
@@ -366,13 +391,43 @@ export default function AppointmentSheet({
                             key={`index_${patientData?.id}`}
                             className="border border-border rounded-md py-2 px-4"
                           >
-                            <div className="flex justify-between items-center">
-                              <div className="text-sm">
+                            <div className="flex justify-between items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={toggleExpand}
+                                aria-expanded={isExpanded}
+                                className="flex-1 self-stretch text-sm flex items-center gap-2 text-left cursor-pointer"
+                              >
+                                <PastillePresence
+                                  status={appointmentPatient.status}
+                                />
                                 {patientData
                                   ? `${patientData.firstName} ${patientData.lastName}`
                                   : ``}
-                              </div>
+                              </button>
                               <div className="flex gap-2 items-center">
+                                <form.Field
+                                  name={`appointmentPatients[${index}].convocationSent`}
+                                >
+                                  {(subField) => (
+                                    <div className="flex items-center gap-1.5 text-xs text-text-light">
+                                      <span aria-hidden="true">
+                                        Convocation
+                                      </span>
+                                      <Checkbox
+                                        aria-label="Convocation envoyée"
+                                        title="Convocation envoyée"
+                                        checked={!!subField.state.value}
+                                        onChange={(e) =>
+                                          subField.handleChange(
+                                            e.target.checked,
+                                          )
+                                        }
+                                      />
+                                    </div>
+                                  )}
+                                </form.Field>
+                                <div className="h-6 border-l border-border"></div>
                                 <Button
                                   variant="ghost"
                                   size="icon"
@@ -469,7 +524,7 @@ export default function AppointmentSheet({
           )}
         </div>
 
-        {!isPending && (
+        {!isPending && loadedID === eventID && (
           <div className="shrink-0">
             <div className="w-full border-t border-border-dark"></div>
 

@@ -11,6 +11,7 @@ export type DropdownFilterItem = {
   checked: boolean
   group?: string
   color?: string
+  count?: number
 }
 
 /** Single action rendered above a separator at the top of the menu. */
@@ -118,6 +119,11 @@ const DropdownFilter = ({
                   <span className="flex-1 text-sm select-none">
                     {filter.label}
                   </span>
+                  {filter.count !== undefined && (
+                    <span className="text-xs text-text-light tabular-nums">
+                      {filter.count}
+                    </span>
+                  )}
                 </DropdownMenu.CheckboxItem>
               </Fragment>
             )

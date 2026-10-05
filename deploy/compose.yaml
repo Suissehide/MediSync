@@ -56,6 +56,12 @@ services:
       - NODE_TLS_REJECT_UNAUTHORIZED
       - PORT
       - FRONT_URL
+      - SMTP_HOST
+      - SMTP_PORT
+      - SMTP_SECURE
+      - SMTP_USER
+      - SMTP_PASS
+      - SMTP_FROM
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.${APP_IMAGE_NAME}-back.rule=Host(`${TRAEFIK_BACK_HOST}`)"
@@ -167,6 +173,18 @@ services:
         max-file: "3"
     restart: unless-stopped
 
+  # Dev local uniquement : capture tous les e-mails sortants, UI sur http://localhost:${MAILPIT_PORT:-8027}.
+  mailpit:
+    container_name: "${APP_IMAGE_NAME}-mailpit"
+    image: axllent/mailpit:latest
+    profiles:
+      - dev
+    ports:
+      - "127.0.0.1:${MAILPIT_PORT:-8027}:8025"
+      - "127.0.0.1:${MAILPIT_SMTP_PORT:-1027}:1025"
+    environment:
+      - MP_MAX_MESSAGES=500
+    restart: unless-stopped
 
 volumes:
   postgres:

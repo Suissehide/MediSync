@@ -20,6 +20,7 @@ type VirtualizedBodyTableProps<TData> = {
   onRowClick?: (row: TData) => void
   emptyState?: ReactNode
   isRowDisabled?: (row: TData) => boolean
+  isRowMuted?: (row: TData) => boolean
   isLoading?: boolean
 }
 
@@ -32,6 +33,7 @@ export function VirtualizedBodyTable<TData>({
   onRowClick,
   emptyState,
   isRowDisabled,
+  isRowMuted,
   isLoading,
 }: VirtualizedBodyTableProps<TData>) {
   const rows = table.getRowModel().rows
@@ -131,7 +133,17 @@ export function VirtualizedBodyTable<TData>({
             data-state={isSelected ? 'selected' : undefined}
             onClick={
               !disabled && onRowClick
-                ? () => onRowClick(row.original)
+                ? (event) => {
+                    // Un contrôle de la ligne (lien, bouton, case) garde son propre effet.
+                    if (
+                      (event.target as HTMLElement).closest(
+                        'a, button, input, label',
+                      )
+                    ) {
+                      return
+                    }
+                    onRowClick(row.original)
+                  }
                 : undefined
             }
             className={cn(
@@ -141,6 +153,7 @@ export function VirtualizedBodyTable<TData>({
                 : onRowClick
                   ? 'cursor-pointer hover:bg-primary/5'
                   : 'hover:bg-primary/5',
+              isRowMuted?.(row.original) && 'bg-gray-100 text-text-light',
             )}
           >
             {row.getVisibleCells().map((cell) => {
@@ -152,7 +165,10 @@ export function VirtualizedBodyTable<TData>({
               return (
                 <td
                   key={cell.id}
-                  className="px-4 py-2 text-sm border-b border-border"
+                  className={cn(
+                    'px-4 py-2 text-sm border-b border-border',
+                    autoRowHeight && 'align-top',
+                  )}
                   style={{
                     ...getCommonPinningStyles(column),
                     minWidth: column.getSize(),

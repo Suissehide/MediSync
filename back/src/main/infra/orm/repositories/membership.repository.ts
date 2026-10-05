@@ -1,3 +1,4 @@
+import type { ServiceRole } from '../../../../generated/enums'
 import type { IocContainer } from '../../../types/application/ioc'
 import type { PrimaTransactionClient } from '../../../types/infra/orm/client'
 import type {
@@ -54,6 +55,7 @@ class MembershipRepository implements MembershipRepositoryInterface {
             firstName: true,
             lastName: true,
             deactivatedAt: true,
+            lastLoginAt: true,
           },
         },
       },
@@ -88,6 +90,73 @@ class MembershipRepository implements MembershipRepositoryInterface {
     })
   }
 
+  findServiceMemberByID(
+    serviceMembershipId: string,
+  ): Promise<ServiceMemberRow | null> {
+    const { establishmentId, serviceId } = this.tenantContext.scope()
+    return this.prisma.serviceMembership.findFirst({
+      where: { id: serviceMembershipId, establishmentId, serviceId },
+      select: this.serviceMemberSelect,
+    })
+  }
+
+  findServiceMemberByMembership(
+    establishmentMembershipId: string,
+  ): Promise<ServiceMemberRow | null> {
+    const { establishmentId, serviceId } = this.tenantContext.scope()
+    return this.prisma.serviceMembership.findFirst({
+      where: { establishmentMembershipId, establishmentId, serviceId },
+      select: this.serviceMemberSelect,
+    })
+  }
+
+  // `client` optionnel, meme raison que `create` plus bas : l'affectation d'un compte
+  // fraichement cree partage le sort de sa creation et de l'emission de son lien.
+  async addServiceMember(
+    establishmentMembershipId: string,
+    role: ServiceRole,
+    client: PrimaTransactionClient = this.prisma,
+  ): Promise<ServiceMemberRow> {
+    const { establishmentId, serviceId } = this.tenantContext.scope()
+    try {
+      return await client.serviceMembership.create({
+        data: { establishmentMembershipId, serviceId, establishmentId, role },
+        select: this.serviceMemberSelect,
+      })
+    } catch (err) {
+      throw this.errorHandler.boomErrorFromPrismaError({
+        entityName: 'ServiceMembership',
+        error: err,
+      })
+    }
+  }
+
+  async setServiceRole(
+    serviceMembershipId: string,
+    role: ServiceRole,
+  ): Promise<ServiceMemberRow | null> {
+    const { establishmentId, serviceId } = this.tenantContext.scope()
+    const where = { id: serviceMembershipId, establishmentId, serviceId }
+    const { count } = await this.prisma.serviceMembership.updateMany({
+      where,
+      data: { role },
+    })
+    if (count === 0) {
+      return null
+    }
+    return this.prisma.serviceMembership.findFirst({
+      where,
+      select: this.serviceMemberSelect,
+    })
+  }
+
+  async deleteServiceMember(serviceMembershipId: string): Promise<void> {
+    const { establishmentId, serviceId } = this.tenantContext.scope()
+    await this.prisma.serviceMembership.deleteMany({
+      where: { id: serviceMembershipId, establishmentId, serviceId },
+    })
+  }
+
   private get rowInclude() {
     const { establishmentId } = this.establishmentScope
     return {
@@ -98,6 +167,7 @@ class MembershipRepository implements MembershipRepositoryInterface {
           firstName: true,
           lastName: true,
           deactivatedAt: true,
+          lastLoginAt: true,
         },
       },
       serviceMemberships: {

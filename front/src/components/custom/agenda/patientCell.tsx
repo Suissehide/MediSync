@@ -1,12 +1,53 @@
 import { Link } from '@tanstack/react-router'
-import { Plus } from 'lucide-react'
+import { MessageSquareTextIcon, Plus } from 'lucide-react'
 import { useState } from 'react'
 
 import type { DayAppointmentRow } from '../../../libs/utils.ts'
+import { useConvocationSentMutation } from '../../../queries/useAppointment.ts'
 import { useAuthStore } from '../../../store/useAuthStore.ts'
 import { Etiquette } from '../../table/etiquette.tsx'
 import { Button } from '../../ui/button.tsx'
-import { MAX_VISIBLE_CHIPS } from './chip.ts'
+import { Checkbox } from '../../ui/input.tsx'
+import {
+  TooltipContent,
+  TooltipProvider,
+  TooltipRoot,
+  TooltipTrigger,
+} from '../../ui/tooltip.tsx'
+
+function ConvocationCheckbox({
+  appointmentID,
+  appointmentPatientID,
+  convocationSent,
+  patientName,
+}: {
+  appointmentID: string
+  appointmentPatientID: string
+  convocationSent: boolean
+  patientName: string
+}) {
+  const { mutate, isPending, variables } = useConvocationSentMutation()
+  // Valeur envoyée affichée pendant l'enregistrement, pour que la case réagisse tout de suite.
+  const checked = isPending ? !!variables?.convocationSent : convocationSent
+
+  return (
+    <Checkbox
+      aria-label={`Convocation envoyée à ${patientName}`}
+      title="Convocation envoyée"
+      checked={checked}
+      disabled={isPending}
+      onChange={(e) =>
+        mutate({
+          appointmentID,
+          appointmentPatientID,
+          convocationSent: e.target.checked,
+        })
+      }
+    />
+  )
+}
+
+const MAX_VISIBLE_PATIENTS = 5
 
 type PatientCellProps = {
   row: DayAppointmentRow
@@ -43,75 +84,73 @@ export default function PatientCell({ row, onAddPatient }: PatientCellProps) {
     )
   }
 
-  const hidden = patients.length - MAX_VISIBLE_CHIPS
-  const visible = expanded ? patients : patients.slice(0, MAX_VISIBLE_CHIPS)
+  const hidden = patients.length - MAX_VISIBLE_PATIENTS
+  const visible = expanded ? patients : patients.slice(0, MAX_VISIBLE_PATIENTS)
 
   return (
-    <div className="flex items-center gap-1">
-      <div
-        // The table uses `table w-max min-w-full` (auto layout at max-content
-        // width), so a flex-wrap container's max-content contribution is the
-        // sum of all items on one line — wrapping alone won't shrink it.
-        // An explicit max-width forces the wrap. 216px comes from the
-        // `patients` column's declared size (280, see
-        // dayAppointment.column.tsx) minus the <td> horizontal padding
-        // (px-4 = 32px) minus the manage "+" button and its gap (~28px):
-        // 280 − 32 − 28 ≈ 216.
-        className={
-          expanded
-            ? 'flex flex-wrap items-center gap-1 max-w-[216px]'
-            : 'flex items-center gap-1 overflow-hidden'
-        }
-      >
-        {visible.map((appointmentPatient) =>
-          context?.serviceId ? (
-            <Etiquette
-              asChild
-              key={appointmentPatient.patient.id}
-              className="hover:bg-primary/20"
-            >
-              <Link
-                to="/e/$establishmentId/s/$serviceId/patient/$patientID"
-                params={{
-                  establishmentId: context.establishmentId,
-                  serviceId: context.serviceId,
-                  patientID: appointmentPatient.patient.id,
-                }}
-              >
+    <div className="flex items-start gap-1">
+      <div className="flex flex-col items-start gap-1">
+        {visible.map((appointmentPatient) => (
+          <div
+            key={appointmentPatient.patient.id}
+            className="flex shrink-0 items-center gap-1"
+          >
+            {appointmentPatient.id && (
+              <ConvocationCheckbox
+                appointmentID={row.id}
+                appointmentPatientID={appointmentPatient.id}
+                convocationSent={!!appointmentPatient.convocationSent}
+                patientName={`${appointmentPatient.patient.firstName} ${appointmentPatient.patient.lastName}`}
+              />
+            )}
+            {context?.serviceId ? (
+              <Etiquette asChild className="hover:bg-primary/20">
+                <Link
+                  to="/e/$establishmentId/s/$serviceId/patient/$patientID"
+                  params={{
+                    establishmentId: context.establishmentId,
+                    serviceId: context.serviceId,
+                    patientID: appointmentPatient.patient.id,
+                  }}
+                >
+                  {appointmentPatient.patient.firstName}{' '}
+                  {appointmentPatient.patient.lastName}
+                </Link>
+              </Etiquette>
+            ) : (
+              <Etiquette>
                 {appointmentPatient.patient.firstName}{' '}
                 {appointmentPatient.patient.lastName}
-              </Link>
-            </Etiquette>
-          ) : (
-            <Etiquette key={appointmentPatient.patient.id}>
-              {appointmentPatient.patient.firstName}{' '}
-              {appointmentPatient.patient.lastName}
-            </Etiquette>
-          ),
-        )}
-
+              </Etiquette>
+            )}
+            {appointmentPatient.transmissionNotes && (
+              <TooltipProvider>
+                <TooltipRoot>
+                  <TooltipTrigger asChild>
+                    <MessageSquareTextIcon
+                      className="h-3.5 w-3.5 shrink-0 text-text-light"
+                      aria-label="Notes de transmission"
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent className="whitespace-pre-wrap">
+                    {appointmentPatient.transmissionNotes}
+                  </TooltipContent>
+                </TooltipRoot>
+              </TooltipProvider>
+            )}
+          </div>
+        ))}
         {hidden > 0 && (
-          // Le bouton de depliage : une etiquette neutre, pour qu'il se lise comme un controle.
-          <Etiquette
-            asChild
-            ton="neutre"
-            className="cursor-pointer hover:border-primary/40 hover:text-primary"
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-6 px-1 text-xs text-primary"
+            aria-expanded={expanded}
+            onClick={() => setExpanded((value) => !value)}
           >
-            <button
-              type="button"
-              onClick={() => setExpanded((value) => !value)}
-              aria-expanded={expanded}
-              aria-label={
-                expanded
-                  ? 'Réduire la liste des patients'
-                  : hidden > 1
-                    ? `Afficher les ${hidden} patients masqués`
-                    : 'Afficher le patient masqué'
-              }
-            >
-              {expanded ? 'Voir moins' : `+${hidden}`}
-            </button>
-          </Etiquette>
+            {expanded ? 'Voir moins' : `Voir plus (${hidden})`}
+          </Button>
         )}
       </div>
       {addButton}

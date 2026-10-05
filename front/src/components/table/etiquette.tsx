@@ -3,6 +3,7 @@ import type React from 'react'
 
 import { getContrastTextColor, hexToRGBA } from '../../libs/color.ts'
 import { cn } from '../../libs/utils.ts'
+import type { InvitationStatus } from '../../types/member.ts'
 
 // L'etiquette des tableaux et des listes : une seule forme (coins, taille, marges) pour toute
 // l'application — roles, statuts, types, parcours, soignants et patients de l'agenda. Seule la
@@ -63,13 +64,22 @@ export function Etiquette({
   )
 }
 
-// Statut d'un compte ou d'un etablissement : actif, ou desactive a une date.
+// Statut d'un compte ou d'un etablissement : actif, desactive, ou invite sans s'etre encore connecte.
 export const EtiquetteStatut = ({
   deactivatedAt,
+  invitationStatus = null,
 }: {
   deactivatedAt: string | null
-}) => (
-  <Etiquette ton={deactivatedAt !== null ? 'neutre' : 'succes'}>
-    {deactivatedAt !== null ? 'Désactivé' : 'Actif'}
-  </Etiquette>
-)
+  invitationStatus?: InvitationStatus
+}) => {
+  if (deactivatedAt !== null) {
+    return <Etiquette ton="neutre">Désactivé</Etiquette>
+  }
+  if (invitationStatus === 'pending') {
+    return <Etiquette ton="alerte">Invitation en attente</Etiquette>
+  }
+  if (invitationStatus === 'expired') {
+    return <Etiquette ton="danger">Invitation expirée</Etiquette>
+  }
+  return <Etiquette ton="succes">Actif</Etiquette>
+}

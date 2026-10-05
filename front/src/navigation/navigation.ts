@@ -78,25 +78,20 @@ export const NAVIGATION: Record<Scale, readonly NavItem[]> = {
       description: 'Semaines types et créneaux des parcours',
     },
     {
+      label: 'Membres',
+      to: '/e/$establishmentId/s/$serviceId/members',
+      // La MEME permission que le `beforeLoad` de l'ecran (MDS-17) : un onglet garde autrement
+      // mene a une redirection, et l'ecart ne se verrait qu'au clic.
+      permission: 'service-members:manage',
+      group: 'Administration',
+      description: "L'équipe du service : inviter, changer un rôle, retirer",
+    },
+    {
       label: 'Thématiques',
       to: '/e/$establishmentId/s/$serviceId/thematic',
       permission: 'referentials:write',
       group: 'Administration',
       description: "Ateliers d'éducation et soignants habilités",
-    },
-    {
-      label: 'Diagnostics éducatifs',
-      to: '/e/$establishmentId/s/$serviceId/diagnostic-template',
-      permission: 'referentials:write',
-      group: 'Administration',
-      description: 'Modèles de bilan du service',
-    },
-    {
-      label: 'Membres',
-      to: '/e/$establishmentId/s/$serviceId/members',
-      permission: 'referentials:write',
-      group: 'Administration',
-      description: 'Comptes qui travaillent dans le service',
     },
     // Propres a chaque service depuis le 2026-09-29 : un soignant est un metier du service, une
     // salle un lieu du service.
@@ -114,18 +109,30 @@ export const NAVIGATION: Record<Scale, readonly NavItem[]> = {
       group: 'Administration',
       description: 'Lieux où se tiennent les séances',
     },
+    {
+      label: 'Diagnostics éducatifs',
+      to: '/e/$establishmentId/s/$serviceId/diagnostic-template',
+      permission: 'referentials:write',
+      group: 'Administration',
+      description: 'Modèles de bilan du service',
+    },
   ],
   establishment: [
     {
-      label: 'Membres',
-      to: '/e/$establishmentId/admin/members',
-      permission: 'members:manage',
+      label: 'Résumé',
+      to: '/e/$establishmentId/admin',
       group: 'Accès',
     },
     {
       label: 'Services',
       to: '/e/$establishmentId/admin/services',
       permission: 'services:manage',
+      group: 'Accès',
+    },
+    {
+      label: 'Membres',
+      to: '/e/$establishmentId/admin/members',
+      permission: 'members:manage',
       group: 'Accès',
     },
     {

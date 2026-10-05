@@ -36,8 +36,8 @@ const slotRouter: FastifyPluginAsync = (fastify) => {
       config: { permission: 'planning:read' },
     },
     async (request) => {
-      const { from, to } = request.query
-      return await slotDomain.findAll({ from, to })
+      const { from, to, patientID } = request.query
+      return await slotDomain.findAll({ from, to, patientID })
     },
   )
 

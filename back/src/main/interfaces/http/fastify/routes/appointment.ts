@@ -17,6 +17,11 @@ import {
   getAppointmentByIdParamsSchema,
   updateAppointmentByIdSchema,
 } from '../schemas/appointment.schema'
+import {
+  type SetConvocationSentBody,
+  type SetConvocationSentParams,
+  setConvocationSentSchema,
+} from '../schemas/appointmentPatient.schema'
 
 const appointmentRouter: FastifyPluginAsync = (fastify) => {
   const { iocContainer } = fastify
@@ -112,6 +117,31 @@ const appointmentRouter: FastifyPluginAsync = (fastify) => {
         throw Boom.notFound('Appointment not found')
       }
       return updated
+    },
+  )
+
+  // Convocation envoyée, cochée depuis l'agenda : ne touche qu'à ce champ.
+  fastify.patch<{
+    Params: SetConvocationSentParams
+    Body: SetConvocationSentBody
+  }>(
+    '/:appointmentID/patients/:appointmentPatientID/convocation',
+    {
+      schema: {
+        ...setConvocationSentSchema,
+        response: { 204: z.null() },
+      },
+      config: { permission: 'appointment:write' },
+    },
+    async (request, reply) => {
+      const { appointmentID, appointmentPatientID } = request.params
+      await appointmentDomain.setConvocationSent(
+        appointmentID,
+        appointmentPatientID,
+        request.body.convocationSent,
+        request.user.userID,
+      )
+      reply.code(204).send()
     },
   )
 

@@ -388,6 +388,20 @@ describe('journal des consultations : l export, en une ligne', () => {
       ],
     })
 
+    // Sans sous-dossier dans le service, l'export ne rendrait rien et le compte journalise
+    // ne prouverait plus rien du filtre « dup ».
+    const patients = await testDb.patient.findMany({
+      where: { establishmentId: etab.id },
+      select: { id: true },
+    })
+    await testDb.patientServiceFile.createMany({
+      data: patients.map(({ id }) => ({
+        patientId: id,
+        serviceId: service.id,
+        establishmentId: etab.id,
+      })),
+    })
+
     cookies = await signIn(testApp.app, 'export@test.fr')
   })
 
@@ -456,7 +470,7 @@ describe('journal des consultations : l export, en une ligne', () => {
 // rendait tout son journal d'une traite. Ce raccourci evite de recopier `.data` dans les assertions
 // dont le sujet est le CLOISONNEMENT ou la FORME DES LIGNES ; la pagination elle-meme est eprouvee
 // dans son propre describe, plus bas.
-const lignesDe = <T,>(res: { json: () => unknown }): T[] =>
+const lignesDe = <T>(res: { json: () => unknown }): T[] =>
   (res.json() as { data: T[] }).data
 
 describe('journal des consultations : le lire, par service et par etablissement', () => {
@@ -623,9 +637,7 @@ describe('journal des consultations : le lire, par service et par etablissement'
     })
     expect(res.statusCode).toBe(200)
     expect(
-      new Set(
-        lignesDe<{ serviceId: string }>(res).map((l) => l.serviceId),
-      ),
+      new Set(lignesDe<{ serviceId: string }>(res).map((l) => l.serviceId)),
     ).toEqual(new Set([serviceA.id, serviceB.id]))
   })
 
@@ -828,8 +840,9 @@ describe('journal des consultations : le lire, par service et par etablissement'
         })
       const [p1, p2] = await Promise.all([page(1), page(2)])
       expect(p2.statusCode).toBe(200)
-      const prenoms = (res: { json: () => { data: { userFirstName: string }[] } }) =>
-        res.json().data.map((l) => l.userFirstName)
+      const prenoms = (res: {
+        json: () => { data: { userFirstName: string }[] }
+      }) => res.json().data.map((l) => l.userFirstName)
 
       expect(prenoms(p2)).toHaveLength(11)
       expect(prenoms(p2)).toContain('Volume-0')

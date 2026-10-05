@@ -237,6 +237,7 @@ model AppointmentPatient {
   status            AppointmentStatus?
   rejectionReason   String?
   transmissionNotes String?
+  convocationSent   Boolean            @default(false)
 
   appointment Appointment @relation(fields: [appointmentId, serviceId], references: [id, serviceId], onDelete: Cascade)
   patient     Patient     @relation(fields: [patientId, establishmentId], references: [id, establishmentId], onDelete: Cascade)

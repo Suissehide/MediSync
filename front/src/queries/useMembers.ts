@@ -6,7 +6,6 @@ import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
 import { useToast } from '../hooks/useToast.ts'
 import type {
-  AddMemberInput,
   CreateMemberAccountInput,
   UpdateMemberInput,
 } from '../types/member.ts'
@@ -54,22 +53,6 @@ export const useMemberMutations = () => {
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: [MEMBER.GET_ALL] })
 
-  const addMember = useMutation({
-    mutationKey: [MEMBER.ADD],
-    mutationFn: (input: AddMemberInput) => MembersApi.add(input),
-    onSuccess: () => {
-      toast({ title: 'Membre ajouté', severity: TOAST_SEVERITY.SUCCESS })
-    },
-    onError: (error) => {
-      toast({
-        title: "Erreur lors de l'ajout du membre",
-        message: error.message,
-        severity: TOAST_SEVERITY.ERROR,
-      })
-    },
-    onSettled: () => invalidate(),
-  })
-
   const updateMember = useMutation({
     mutationKey: [MEMBER.UPDATE],
     mutationFn: (input: UpdateMemberInput) => MembersApi.update(input),
@@ -99,11 +82,11 @@ export const useMemberMutations = () => {
     mutationFn: (input: CreateMemberAccountInput) =>
       MembersApi.createAccount(input),
     onSuccess: () => {
-      toast({ title: 'Compte créé', severity: TOAST_SEVERITY.SUCCESS })
+      toast({ title: 'Invitation envoyée', severity: TOAST_SEVERITY.SUCCESS })
     },
     onError: (error) => {
       toast({
-        title: 'Erreur lors de la création du compte',
+        title: "Erreur lors de l'invitation",
         message: error.message,
         severity: TOAST_SEVERITY.ERROR,
       })
@@ -129,6 +112,22 @@ export const useMemberMutations = () => {
 
   // Une seule clé `DEACTIVATE` existe pour ce couple d'actions
   // (activer/désactiver un même compte) : les deux mutations la partagent.
+  const resendInvitation = useMutation({
+    mutationKey: [MEMBER.RESEND_INVITATION],
+    mutationFn: (id: string) => MembersApi.resendInvitation(id),
+    onSuccess: () => {
+      toast({ title: 'Invitation renvoyée', severity: TOAST_SEVERITY.SUCCESS })
+    },
+    onError: (error) => {
+      toast({
+        title: "Erreur lors du renvoi de l'invitation",
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
+    },
+    onSettled: () => invalidate(),
+  })
+
   const deactivateMember = useMutation({
     mutationKey: [MEMBER.DEACTIVATE],
     mutationFn: (id: string) => MembersApi.deactivate(id),
@@ -162,11 +161,11 @@ export const useMemberMutations = () => {
   })
 
   return {
-    addMember,
     createMemberAccount,
     updateMember,
     removeMember,
     deactivateMember,
     reactivateMember,
+    resendInvitation,
   }
 }

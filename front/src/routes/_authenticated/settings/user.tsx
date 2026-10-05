@@ -32,7 +32,7 @@ export const Route = createFileRoute('/_authenticated/settings/user')({
       ) ?? administres[0]
     if (cible) {
       throw redirect({
-        to: '/e/$establishmentId/admin/members',
+        to: '/e/$establishmentId/admin',
         params: { establishmentId: cible.id },
         // Meme regle que `redirectToDefaultService` : conserver les
         // parametres de recherche entrants.

@@ -12,6 +12,7 @@ import {
   type PaginationState,
   type Row,
   type RowSelectionState,
+  type SortingState,
   useReactTable,
   type VisibilityState,
 } from '@tanstack/react-table'
@@ -70,9 +71,9 @@ type ReactTableProps<TData extends { id: string }> = {
   pagination?: boolean
   serverPagination?: ServerPagination
   onRowClick?: (row: TData) => void
-  maxHeight?: string
   emptyState?: ReactNode
   isRowDisabled?: (row: TData) => boolean
+  isRowMuted?: (row: TData) => boolean
   isLoading?: boolean
   autoRowHeight?: boolean
 }
@@ -86,9 +87,9 @@ export function ReactTable<TData extends { id: string }>({
   pagination = false,
   serverPagination,
   onRowClick,
-  maxHeight = '600px',
   emptyState,
   isRowDisabled,
+  isRowMuted,
   isLoading,
   autoRowHeight,
 }: ReactTableProps<TData>) {
@@ -101,6 +102,9 @@ export function ReactTable<TData extends { id: string }>({
     {},
   )
 
+  const [sorting, setSorting] = useState<SortingState>(
+    safeParse(localStorage.getItem(`sorting/${filterId}`), []),
+  )
   const [columnFilters, setColumnFilters] =
     useState<ColumnFiltersState>(initialColumnFilters)
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
@@ -116,6 +120,7 @@ export function ReactTable<TData extends { id: string }>({
     data: data,
     columns: columns,
     state: {
+      sorting,
       columnVisibility,
       rowSelection,
       columnFilters,
@@ -159,6 +164,7 @@ export function ReactTable<TData extends { id: string }>({
         ? setPaginationState
         : undefined,
     getPaginationRowModel: pagination ? getPaginationRowModel() : undefined,
+    onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
@@ -177,6 +183,10 @@ export function ReactTable<TData extends { id: string }>({
     debugHeaders: false,
     debugColumns: false,
   })
+
+  useEffect(() => {
+    localStorage.setItem(`sorting/${filterId}`, JSON.stringify(sorting))
+  }, [sorting, filterId])
 
   useEffect(() => {
     localStorage.setItem(`filters/${filterId}`, JSON.stringify(columnFilters))
@@ -224,7 +234,7 @@ export function ReactTable<TData extends { id: string }>({
   const tableContainerRef = useRef(null)
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-1 min-h-0 flex-col">
       {title && <div className="px-4 mb-4 text-2xl font-bold">{title}</div>}
 
       <div className="react-table__filter">
@@ -233,10 +243,9 @@ export function ReactTable<TData extends { id: string }>({
         {customHeader?.(table.getRowModel().rows)}
       </div>
 
-      <div className="relative rounded-lg border border-border-dark">
+      <div className="relative flex min-h-0 flex-1 flex-col rounded-lg border border-border-dark">
         <div
-          className="w-full overflow-auto rounded-lg"
-          style={{ maxHeight }}
+          className="w-full min-h-0 flex-1 overflow-auto rounded-lg"
           ref={tableContainerRef}
         >
           <table className="table w-max min-w-full border-separate border-spacing-0">
@@ -254,6 +263,7 @@ export function ReactTable<TData extends { id: string }>({
               onRowClick={onRowClick}
               emptyState={emptyState}
               isRowDisabled={isRowDisabled}
+              isRowMuted={isRowMuted}
               isLoading={isLoading}
             />
           </table>
@@ -263,7 +273,7 @@ export function ReactTable<TData extends { id: string }>({
       {pagination || serverPagination ? (
         <PaginationTable table={table} totalRows={totalRows} />
       ) : (
-        <div className="flex justify-end py-2">
+        <div className="flex justify-end pt-2">
           <span className="text-text-light text-xs">
             {totalRows.toLocaleString()}{' '}
             {totalRows > 1 ? 'résultats' : 'résultat'}

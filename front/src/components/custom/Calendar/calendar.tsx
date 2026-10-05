@@ -5,7 +5,6 @@ import type {
   ToolbarInput,
 } from '@fullcalendar/core'
 import frLocale from '@fullcalendar/core/locales/fr'
-import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin, {
   type EventResizeDoneArg,
 } from '@fullcalendar/interaction'
@@ -153,6 +152,10 @@ interface CalendarProps {
   planningCycle?: PlanningCycle | null
   /** Notifie la plage réellement affichée, pour ne charger que celle-ci. */
   onRangeChange?: (range: { from: string; to: string }) => void
+  initialView?: string
+  onViewChange?: (view: string) => void
+  /** Faux : la période affichée n'écrase pas celle mémorisée du planning. */
+  saveDates?: boolean
 }
 
 function Calendar({
@@ -181,6 +184,9 @@ function Calendar({
   weekAnchorDate,
   planningCycle,
   onRangeChange,
+  initialView = 'timeGridWeek',
+  onViewChange,
+  saveDates = true,
 }: CalendarProps) {
   const anchorMonday = useMemo(
     () =>
@@ -198,7 +204,7 @@ function Calendar({
     }
   }, [unselectRef])
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
-  const [currentView, setCurrentView] = useState('timeGridWeek')
+  const [currentView, setCurrentView] = useState(initialView)
   const [currentViewStart, setCurrentViewStart] = useState<string>('')
 
   const slotLayout = useMemo(
@@ -239,10 +245,10 @@ function Calendar({
     applySlotLayout()
   }, [applySlotLayout])
 
-  // In day/list views, background events are hidden by FullCalendar.
+  // In day-grid/list views, background events are hidden by FullCalendar.
   // Override display to 'auto' so slots remain visible in those views.
   const viewEvents = useMemo(() => {
-    if (currentView === 'timeGridWeek') {
+    if (currentView.startsWith('timeGrid')) {
       return events
     }
     return events.map((e) =>
@@ -251,7 +257,7 @@ function Calendar({
   }, [events, currentView])
 
   const showDayEmptyState = useMemo(() => {
-    if (currentView !== 'dayGridDay' || !currentViewStart) {
+    if (currentView !== 'timeGridDay' || !currentViewStart) {
       return false
     }
     const dayStart = dayjs(currentViewStart).startOf('day')
@@ -324,6 +330,14 @@ function Calendar({
         return
       }
 
+      // Un rendez-vous est posé dans un créneau de fond, que FullCalendar ne
+      // reconnaît pas comme un événement : sans ça le clic démarre une
+      // sélection de dates, qui repeint le calendrier et avale le clic.
+      if (target.closest('[data-appointment-id]')) {
+        e.stopPropagation()
+        return
+      }
+
       const el = target.closest('.fc-event-hero')
       if (!el) {
         return
@@ -349,11 +363,12 @@ function Calendar({
       }
     }
 
-    document.addEventListener('mousedown', handleMouseDown)
+    // Capture : il faut court-circuiter FullCalendar, qui écoute plus bas.
+    document.addEventListener('mousedown', handleMouseDown, true)
     document.addEventListener('mouseup', handleMouseUp)
 
     return () => {
-      document.removeEventListener('mousedown', handleMouseDown)
+      document.removeEventListener('mousedown', handleMouseDown, true)
       document.removeEventListener('mouseup', handleMouseUp)
     }
   }, [handleClickEvent])
@@ -362,8 +377,8 @@ function Calendar({
     <div className={`${editMode ? 'edit-mode' : ''} h-full relative`}>
       <FullCalendar
         ref={calendarRef}
-        plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
-        initialView="timeGridWeek"
+        plugins={[timeGridPlugin, listPlugin, interactionPlugin]}
+        initialView={initialView}
         initialDate={
           initialDate || anchorMonday?.toISOString() || dayjs().toISOString()
         }
@@ -387,8 +402,8 @@ function Calendar({
         headerToolbar={
           headerToolbar ?? {
             left: 'title',
-            center: 'timeGridWeek,dayGridDay,listWeek',
-            right: 'selectDateButton prev,next today',
+            center: 'timeGridWeek,timeGridDay,listWeek',
+            right: 'today selectDateButton prev,next',
           }
         }
         titleFormat={(arg) => {
@@ -490,12 +505,15 @@ function Calendar({
         )}
         datesSet={(arg) => {
           setCurrentView(arg.view.type)
+          onViewChange?.(arg.view.type)
           setCurrentViewStart(arg.view.currentStart.toISOString())
-          usePlanningStore.getState().setPlanningDates({
-            currentDate: arg.startStr,
-            viewStart: arg.view.currentStart.toISOString(),
-            viewEnd: arg.view.currentEnd.toISOString(),
-          })
+          if (saveDates) {
+            usePlanningStore.getState().setPlanningDates({
+              currentDate: arg.startStr,
+              viewStart: arg.view.currentStart.toISOString(),
+              viewEnd: arg.view.currentEnd.toISOString(),
+            })
+          }
           // arg.start/end, pas currentStart/End : ils incluent les jours
           // débordant de la période et réellement rendus. Fin exclusive.
           onRangeChange?.({
@@ -539,6 +557,11 @@ function Calendar({
         anchorEl={anchorEl}
         setAnchorEl={setAnchorEl}
         onChange={handleDateChange}
+        value={
+          anchorEl
+            ? dayjs.utc(calendarRef.current?.getApi().getDate())
+            : undefined
+        }
       />
     </div>
   )

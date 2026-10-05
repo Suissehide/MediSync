@@ -78,9 +78,12 @@ describe('routes membres', () => {
     })
 
   const addSecondAdmin = async () => {
-    const res = await call('POST', '/', { email: 'new@b.fr', role: 'ADMIN' })
+    const res = await call('POST', '/account', {
+      email: 'new@b.fr',
+      role: 'ADMIN',
+    })
     expect(res.statusCode).toBe(201)
-    return res.json().id as string
+    return res.json().member.id as string
   }
 
   it('liste, ajoute, met a jour, desactive, reactive et retire un membre', async () => {
@@ -88,14 +91,14 @@ describe('routes membres', () => {
     expect(list0.statusCode).toBe(200)
     expect(list0.json()).toHaveLength(1)
 
-    const added = await call('POST', '/', {
+    const added = await call('POST', '/account', {
       email: 'new@b.fr',
       role: 'MEMBER',
       services: [{ serviceId, role: 'INTERVENANT' }],
     })
     expect(added.statusCode).toBe(201)
-    const membershipId = added.json().id as string
-    expect(added.json().serviceMemberships).toEqual([
+    const membershipId = added.json().member.id as string
+    expect(added.json().member.serviceMemberships).toEqual([
       { serviceId, role: 'INTERVENANT' },
     ])
 
@@ -151,7 +154,7 @@ describe('routes membres', () => {
     }
 
     expect((await read()).sort()).toEqual([
-      'member.added',
+      'member.accountCreated',
       'member.deactivated',
       'member.reactivated',
       'member.removed',
@@ -182,27 +185,10 @@ describe('routes membres', () => {
     expect((await call('DELETE', `/${membershipId}`)).statusCode).toBe(204)
   })
 
-  // Sinon un administrateur peut deviner quelles adresses ont un compte sur
-  // la plateforme, en lisant la difference entre les deux refus.
-  it('rend le meme refus pour une adresse inconnue et une adresse deja membre', async () => {
-    const unknownEmail = await call('POST', '/', {
-      email: 'inconnu@b.fr',
-      role: 'MEMBER',
-    })
-    const alreadyMember = await call('POST', '/', {
-      email: 'admin@b.fr',
-      role: 'MEMBER',
-    })
-
-    expect(unknownEmail.statusCode).toBe(alreadyMember.statusCode)
-    expect(unknownEmail.json()).toEqual(alreadyMember.json())
-    expect(unknownEmail.statusCode).toBe(400)
-  })
-
   it('refuse deux affectations au meme service', async () => {
     expect(
       (
-        await call('POST', '/', {
+        await call('POST', '/account', {
           email: 'new@b.fr',
           role: 'MEMBER',
           services: [
@@ -526,8 +512,14 @@ describe('routes membres', () => {
   // motif jumeau.
   // ------------------------------------------------------------------
 
-  const reissue = (membershipId: string) =>
-    call('POST', `/${membershipId}/access-link`)
+  // Vieillit les liens existants : sans quoi le délai de 5 minutes entre deux envois refuserait
+  // toute réémission faite juste après la création (voir le test du délai, plus bas).
+  const reissue = async (membershipId: string) => {
+    await testDb.accessLink.updateMany({
+      data: { createdAt: new Date(Date.now() - 10 * 60_000) },
+    })
+    return await call('POST', `/${membershipId}/access-link`)
+  }
 
   // Fabrique un membre de CET etablissement, avec son compte et son lien, sans dependre
   // d'aucun autre test (les dependances d'ordre entre
@@ -553,6 +545,16 @@ describe('routes membres', () => {
     })
     return { compte, membershipId: appartenance.id }
   }
+
+  it('refuse de renvoyer une invitation moins de 5 minutes apres la precedente', async () => {
+    const { membershipId } = await nouveauMembre('renvoi-rapide@b.fr')
+    const avant = await testDb.accessLink.count()
+
+    const res = await call('POST', `/${membershipId}/access-link`)
+
+    expect(res.statusCode).toBe(429)
+    expect(await testDb.accessLink.count()).toBe(avant)
+  })
 
   it('reemet un lien : le precedent devient inutilisable, le nouveau ouvre une session', async () => {
     // Fabrique son propre membre, n'appartenant qu'a cet etablissement : aucune dependance
@@ -594,7 +596,7 @@ describe('routes membres', () => {
     })
     expect(
       (
-        await call('POST', '/', {
+        await call('POST', '/account', {
           email: 'deux-etablissements@autre.fr',
           role: 'MEMBER',
         })
@@ -741,8 +743,8 @@ describe('routes membres', () => {
   }
 
   // L'administrateur de A soumet l'adresse d'une personne administratrice de
-  // B seulement. Sans garde : 201 + jeton, `consume` pose le mot de passe, et
-  // `GET /e/B/admin/members` rend 200 — l'administrateur de A administre B.
+  // B seulement. Avec un jeton, `consume` poserait le mot de passe et `GET /e/B/admin/members`
+  // rendrait 200 — l'administrateur de A administrerait B. Elle est donc rattachee SANS jeton.
   it('ne remet aucun jeton pour une adresse rattachee a un AUTRE etablissement', async () => {
     await peuplerAutreEtablissement()
     const victime = await createUser({
@@ -769,16 +771,16 @@ describe('routes membres', () => {
     // Un seul `expect` pour les deux faits : le diff montre d'un coup le statut ET l'acces
     // reellement obtenu sur B, plutot que de s'arreter au premier.
     expect({ statut: res.statusCode, adminDeB: priseDeControle }).toEqual({
-      statut: 400,
+      statut: 201,
       adminDeB: 0,
     })
-    expect(res.json().message).toBe(UNADDABLE_EMAIL)
-    // Rien ecrit : ni rattachement a A, ni lien.
+    expect(res.json().accessLink).toBeNull()
+    // Rattachee a A, mais aucun lien.
     expect(
       await testDb.establishmentMembership.count({
         where: { userId: victime.id },
       }),
-    ).toBe(1)
+    ).toBe(2)
     expect(
       await testDb.accessLink.count({ where: { userId: victime.id } }),
     ).toBe(0)
@@ -814,28 +816,26 @@ describe('routes membres', () => {
     expect(await testDb.accessLink.count({ where: { userId: sa.id } })).toBe(0)
   })
 
-  // Premier maillon : `addByEmail` rattachait un super-admin sans rien dire.
-  // Le refus doit etre INDISCERNABLE de celui d'une adresse inconnue — sinon la route
-  // devient un detecteur de super-admins, utilisable sur n'importe quelle adresse.
-  it('refuse de rattacher un super-admin, du meme refus exactement qu une adresse inconnue', async () => {
-    await createUser({
+  // Premier maillon : un super-admin deja en poste ailleurs passerait par le rattachement sans
+  // jeton. Refus opaque, et rien d'ecrit.
+  it('refuse de rattacher un super-admin en poste dans un autre etablissement', async () => {
+    await peuplerAutreEtablissement()
+    const sa = await createUser({
       email: 'sa-rattachement@plateforme.fr',
       isSuperAdmin: true,
+      memberships: [{ establishmentId: autreEtablissementId, role: 'MEMBER' }],
     })
 
-    const superAdmin = await call('POST', '/', {
+    const res = await call('POST', '/account', {
       email: 'sa-rattachement@plateforme.fr',
       role: 'MEMBER',
     })
-    const inconnue = await call('POST', '/', {
-      email: 'personne-du-tout@b.fr',
-      role: 'MEMBER',
-    })
 
-    expect(superAdmin.statusCode).toBe(inconnue.statusCode)
-    expect(superAdmin.json()).toEqual(inconnue.json())
-    expect(superAdmin.statusCode).toBe(400)
-    expect(superAdmin.json().message).toBe(UNADDABLE_EMAIL)
+    expect(res.statusCode).toBe(400)
+    expect(res.json().message).toBe(UNADDABLE_EMAIL)
+    expect(
+      await testDb.establishmentMembership.count({ where: { userId: sa.id } }),
+    ).toBe(1)
   })
 
   // Second maillon : un super-admin DEJA membre de cet etablissement — ce que
@@ -850,7 +850,7 @@ describe('routes membres', () => {
     })
 
     // MAILLON 1, PAR LA ROUTE : rattacher le super-admin a cet etablissement.
-    const rattachement = await call('POST', '/', {
+    const rattachement = await call('POST', '/account', {
       email: 'sa-chaine@plateforme.fr',
       role: 'MEMBER',
     })
@@ -904,18 +904,19 @@ describe('routes membres', () => {
       ],
     })
 
-    const res = await call('POST', '/', {
+    const res = await call('POST', '/account', {
       email: 'deux-postes@autre.fr',
       role: 'MEMBER',
     })
 
     expect(res.statusCode).toBe(201)
+    expect(res.json().accessLink).toBeNull()
     expect(
       await testDb.establishmentMembership.count({
         where: { userId: bilocal.id },
       }),
     ).toBe(2)
-    // Aucun jeton : `addByEmail` n'en a jamais emis, et ce n'est pas ce tour qui le change.
+    // Aucun jeton : un lien reinitialiserait un mot de passe qui sert aussi dans l'autre etablissement.
     expect(
       await testDb.accessLink.count({ where: { userId: bilocal.id } }),
     ).toBe(0)
@@ -991,27 +992,17 @@ describe('routes membres', () => {
     ).not.toBeNull()
   })
 
-  // TEST DE CONSTAT — il n'affirme pas une propriete
-  // souhaitable, il MESURE une divulgation qui reste ouverte, a la maniere de
-  // « emissions simultanees » (access-link.test.ts).
+  // TEST DE CONSTAT — il MESURE une divulgation qui reste ouverte, il n'affirme pas une
+  // propriete souhaitable (meme demarche que « emissions simultanees », access-link.test.ts).
   //
-  // CE QU'IL CONSTATE : les deux routes d'ajout du niveau administrateur, prises ENSEMBLE,
-  // rendent un couple de statuts DIFFERENT pour chacune des trois natures d'adresse — et le
-  // couple (400, 400), celui du super-admin, s'obtient SANS LA MOINDRE ECRITURE. Un
-  // administrateur d'etablissement peut donc, sur n'importe quelle adresse et sans laisser de
-  // trace, apprendre : « inconnue », « a un compte ordinaire rattache ailleurs », ou « est un
-  // super-admin ».
+  // CE QU'IL CONSTATE : la reponse de l'invitation distingue trois natures d'adresse sur
+  // quatre — refusee (super-admin, sans aucune ecriture), rattachee sans lien (compte en poste
+  // ailleurs), ou lien remis (inconnue ou compte libre, indiscernables). Avant la fusion des
+  // deux routes d'ajout, le meme renseignement s'obtenait en combinant leurs deux reponses.
   //
-  // POURQUOI ON NE LE FERME PAS (arbitrage de Leo) : toute reponse honnete a
-  // l'appelant legitime divulgue ce fait, et le seul moyen de le fermer serait de MENTIR a
-  // l'administrateur sur le sort de sa demande — lui rendre 201 sans rien creer le laisserait
-  // attendre un acces qui n'arrivera jamais. Ce n'est plus une prise de controle : les trois
-  // verbes (rattacher, creer, reemettre) sont refuses ; il ne reste que du renseignement.
-  //
-  // CE TEST MESURE LA REALITE CI-DESSOUS, ET NON CE QUE LE COMMENTAIRE D'`UNADDABLE_EMAIL`
-  // DECRIT — les trois couples ne sont PAS tous (400, 400) avec zero ecriture partout : deux
-  // phrases du code se sont revelees fausses a l'execution.
-  it('constat : le couple de refus des deux routes d ajout identifie la nature du compte', async () => {
+  // POURQUOI ON NE LE FERME PAS (arbitrage de Leo) : toute reponse honnete a l'appelant
+  // legitime divulgue ce fait ; le fermer demanderait de lui mentir sur le sort de sa demande.
+  it('constat : la reponse de l invitation identifie la nature du compte', async () => {
     await peuplerAutreEtablissement()
     await createUser({
       email: 'sonde-ailleurs@autre.fr',
@@ -1034,53 +1025,27 @@ describe('routes membres', () => {
       return comptes + appartenances + liens
     }
 
-    // Les DEUX routes d'ajout du meme routeur, avec la meme permission, sur la meme adresse.
     const sonder = async (email: string) => {
       const avant = await totaux()
-      const parCreation = await call('POST', '/account', {
-        email,
-        role: 'MEMBER',
-      })
-      const parRattachement = await call('POST', '/', { email, role: 'MEMBER' })
+      const res = await call('POST', '/account', { email, role: 'MEMBER' })
       return {
-        couple: [parCreation.statusCode, parRattachement.statusCode],
+        reponse: `${res.statusCode}/${res.statusCode === 201 ? (res.json().accessLink ? 'lien' : 'sans-lien') : '-'}`,
         lignesEcrites: (await totaux()) - avant,
       }
     }
 
-    const inconnue = await sonder('sonde-inconnue@b.fr')
-    const ailleurs = await sonder('sonde-ailleurs@autre.fr')
-    const superAdmin = await sonder('sonde-sa@plateforme.fr')
-    const libre = await sonder('sonde-libre@autre.fr')
-
-    // Mesure, pas souhait. Les trois couples sont DISTINCTS deux a deux — c'est la
-    // divulgation elle-meme ; et seule la troisieme sonde est GRATUITE (aucune ecriture),
-    // donc repetable a volonte sans laisser de trace.
-    expect({ inconnue, ailleurs, superAdmin, libre }).toEqual({
-      // `/account` cree le compte : la sonde reussit, et ecrit trois lignes (compte,
-      // rattachement, lien). `POST /members` rend ensuite 400, l'adresse etant desormais
-      // membre d'ici.
-      inconnue: { couple: [201, 400], lignesEcrites: 3 },
-      // Refusee a la creation (elle aurait remis un jeton), rattachee sans jeton : une ligne.
-      ailleurs: { couple: [400, 201], lignesEcrites: 1 },
-      // LE CAS QUI COMPTE : refusee des deux cotes, et RIEN d'ecrit. Le journal d'activite ne
-      // bouge donc pas non plus.
-      superAdmin: { couple: [400, 400], lignesEcrites: 0 },
-      // Compte existant, rattache nulle part : MEME couple que l'adresse inconnue — seul le
-      // nombre de lignes ecrites differe (deux, pas trois : le compte existait deja), et
-      // l'appelant ne voit pas ce nombre.
-      libre: { couple: [201, 400], lignesEcrites: 2 },
+    expect({
+      inconnue: await sonder('sonde-inconnue@b.fr'),
+      ailleurs: await sonder('sonde-ailleurs@autre.fr'),
+      superAdmin: await sonder('sonde-sa@plateforme.fr'),
+      libre: await sonder('sonde-libre@autre.fr'),
+    }).toEqual({
+      inconnue: { reponse: '201/lien', lignesEcrites: 3 },
+      ailleurs: { reponse: '201/sans-lien', lignesEcrites: 1 },
+      // Refusee, et RIEN d'ecrit : la seule sonde gratuite, repetable sans trace.
+      superAdmin: { reponse: '400/-', lignesEcrites: 0 },
+      // Meme reponse que l'adresse inconnue ; seul le nombre de lignes, invisible, differe.
+      libre: { reponse: '201/lien', lignesEcrites: 2 },
     })
-
-    // TROIS natures distinguables sur QUATRE : « inconnue » et « compte libre » rendent le
-    // MEME couple, et la reponse de `/account` ne porte, dans les deux cas, que des valeurs
-    // soumises par l'appelant. C'est ce qui rend la fermeture du canal temporel NON REDONDANTE
-    // avec la divulgation constatee ici : sur ces deux natures-la, le temps de reponse etait
-    // le SEUL discriminant qui restait (voir « ne dit pas, par son temps de reponse ... »).
-    const couples = [inconnue, ailleurs, superAdmin, libre].map((sonde) =>
-      sonde.couple.join('/'),
-    )
-    expect(new Set(couples).size).toBe(3)
-    expect(libre.couple).toEqual(inconnue.couple)
   })
 })

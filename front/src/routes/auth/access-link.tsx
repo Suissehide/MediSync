@@ -1,15 +1,19 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import {
+  createFileRoute,
+  useLocation,
+  useNavigate,
+} from '@tanstack/react-router'
 import { useState } from 'react'
 
+import { AuthCard, AuthLayout } from '../../components/custom/authLayout.tsx'
 import { Button } from '../../components/ui/button.tsx'
 import { useAppForm } from '../../hooks/formConfig.tsx'
 import { isApiError } from '../../libs/httpErrorHandler.ts'
 import { useConsumeAccessLink, useLogin } from '../../queries/useAuth.ts'
 
-type AccessLinkSearch = { token: string }
-
 // LE JETON EST UN MOT DE PASSE À USAGE UNIQUE : il arrive
-// ICI, dans l'URL du navigateur — c'est ainsi qu'on le transmet à la
+// ICI, dans le FRAGMENT de l'URL (`#…`, jamais envoyé à un serveur, donc
+// absent des journaux d'accès) — c'est ainsi que l'e-mail le transmet à la
 // personne — mais ne doit JAMAIS repartir dans l'URL d'un appel d'API : il
 // part dans le CORPS de `POST /auth/access-link/consume`
 // (`AuthApi.consumeAccessLink`), jamais dans une clé de cache de requête,
@@ -25,9 +29,6 @@ type AccessLinkSearch = { token: string }
 // VRAI arbre de routes »), pas seulement sur un arbre de test synthétique
 // qui ne pourrait rien prouver sur ce point précis.
 export const Route = createFileRoute('/auth/access-link')({
-  validateSearch: (search: Record<string, unknown>): AccessLinkSearch => ({
-    token: typeof search.token === 'string' ? search.token : '',
-  }),
   component: AccessLinkPage,
 })
 
@@ -38,13 +39,13 @@ export const Route = createFileRoute('/auth/access-link')({
 // `POST /auth/sign-in` avec l'adresse et le mot de passe que la personne
 // vient de saisir sur ce même formulaire.
 function AccessLinkPage() {
-  const { token } = Route.useSearch()
+  const token = useLocation({ select: (location) => location.hash })
   const navigate = useNavigate()
   const consume = useConsumeAccessLink()
   const { loginMutation, isPending: isLoginPending } = useLogin()
   const [loginFailed, setLoginFailed] = useState(false)
   // Cinquième canal : entre la consommation réussie et la
-  // connexion, `token` est purgé de la recherche d'URL (voir plus bas) — le
+  // connexion, `token` est purgé du fragment d'URL (voir plus bas) — le
   // composant se re-rend alors avec `token === ''`, ce qui retomberait sur
   // la branche « lien invalide » sans ce drapeau, pile pendant la fenêtre où
   // la connexion est en cours.
@@ -82,11 +83,7 @@ function AccessLinkPage() {
             // nouvelle : un retour arrière ne peut plus jamais retomber sur
             // l'URL porteuse du jeton, elle n'existe plus dans l'historique.
             // Fait AVANT d'appeler la connexion, comme demandé.
-            await navigate({
-              to: '/auth/access-link',
-              search: { token: '' },
-              replace: true,
-            })
+            await navigate({ to: '/auth/access-link', replace: true })
             loginMutation(
               { email: value.email, password: value.password },
               {
@@ -109,7 +106,7 @@ function AccessLinkPage() {
   if (!token && !consumedSuccessfully) {
     return (
       <Shell>
-        <Message text="Ce lien est invalide. Demandez-en un autre à votre établissement." />
+        <Message text="Ce lien est invalide. Demandez-en un autre à votre établissement, ou utilisez « Mot de passe oublié »." />
         <RetourConnexion />
       </Shell>
     )
@@ -138,7 +135,7 @@ function AccessLinkPage() {
     if (status === 410) {
       return (
         <Shell>
-          <Message text="Ce lien n'est plus valable. Demandez-en un autre à votre établissement." />
+          <Message text="Ce lien n'est plus valable. Demandez-en un autre à votre établissement, ou utilisez « Mot de passe oublié »." />
           <RetourConnexion />
         </Shell>
       )
@@ -159,98 +156,81 @@ function AccessLinkPage() {
   }
 
   return (
-    <div className="overflow-hidden w-full h-screen flex relative">
-      <div className="absolute top-6 left-2 z-20">
-        <h1 className="px-2 text-3xl font-bold">
-          <span className="text-primary">Medi</span>Sync
-        </h1>
-      </div>
+    <AuthLayout>
+      <AuthCard>
+        <h2 className="text-left w-full text-2xl font-bold mb-4">
+          Choisissez votre mot de passe
+        </h2>
 
-      <div className="flex-1 flex justify-end">
-        <div className="z-10 w-auto sm:w-[450px] left-4 right-4 sm:left-auto top-1/2 -translate-y-1/2 bg-card/45 flex flex-col items-center px-6 py-6 sm:px-12 sm:py-8 rounded-2xl border border-gray-100 backdrop-blur-sm absolute sm:right-8">
-          <h2 className="text-left w-full text-2xl font-bold mb-4">
-            Choisissez votre mot de passe
-          </h2>
+        {consume.isError && (
+          <p className="w-full text-sm text-destructive mb-2">
+            {consume.error instanceof Error
+              ? consume.error.message
+              : 'Une erreur est survenue. Réessayez.'}
+          </p>
+        )}
 
-          {consume.isError && (
-            <p className="w-full text-sm text-destructive mb-2">
-              {consume.error instanceof Error
-                ? consume.error.message
-                : 'Une erreur est survenue. Réessayez.'}
-            </p>
-          )}
-
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault()
-              await form.handleSubmit()
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault()
+            await form.handleSubmit()
+          }}
+          className="w-full flex flex-col gap-2"
+        >
+          <form.AppField
+            name="email"
+            validators={{
+              onSubmit: ({ value }) =>
+                value ? undefined : "L'e-mail est nécessaire",
             }}
-            className="w-full flex flex-col gap-2"
           >
-            <form.AppField
-              name="email"
-              validators={{
-                onSubmit: ({ value }) =>
-                  value ? undefined : "L'e-mail est nécessaire",
-              }}
-            >
-              {(field) => <field.Input type="email" label="Adresse e-mail" />}
-            </form.AppField>
+            {(field) => <field.Input type="email" label="Adresse e-mail" />}
+          </form.AppField>
 
-            <form.AppField
-              name="password"
-              validators={{
-                // Même message que `user/settings.tsx` (précédent existant) :
-                // le back exige 12 caractères (`accessLinkConsumeSchema`),
-                // et sans ce contrôle côté client, l'écran par lequel une
-                // personne ENTRE dans l'application se contentait d'un
-                // « une erreur est survenue » qui ne dit jamais quoi
-                // corriger.
-                onChange: ({ value }) => {
-                  if (!value) {
-                    return 'Le mot de passe est nécessaire'
-                  }
-                  if (value.length < 12) {
-                    return 'Le mot de passe doit contenir au moins 12 caractères'
-                  }
-                  return undefined
-                },
-              }}
-            >
-              {(field) => <field.Password label="Nouveau mot de passe" />}
-            </form.AppField>
+          <form.AppField
+            name="password"
+            validators={{
+              // Même message que `user/settings.tsx` (précédent existant) :
+              // le back exige 12 caractères (`accessLinkConsumeSchema`),
+              // et sans ce contrôle côté client, l'écran par lequel une
+              // personne ENTRE dans l'application se contentait d'un
+              // « une erreur est survenue » qui ne dit jamais quoi
+              // corriger.
+              onChange: ({ value }) => {
+                if (!value) {
+                  return 'Le mot de passe est nécessaire'
+                }
+                if (value.length < 12) {
+                  return 'Le mot de passe doit contenir au moins 12 caractères'
+                }
+                return undefined
+              },
+            }}
+          >
+            {(field) => <field.Password label="Nouveau mot de passe" />}
+          </form.AppField>
 
-            <form.AppField name="confirmPassword">
-              {(field) => <field.Password label="Confirmer le mot de passe" />}
-            </form.AppField>
+          <form.AppField name="confirmPassword">
+            {(field) => <field.Password label="Confirmer le mot de passe" />}
+          </form.AppField>
 
-            <Button
-              type="submit"
-              className="w-full mt-2"
-              isLoading={consume.isPending || isLoginPending}
-            >
-              Définir le mot de passe et se connecter
-            </Button>
-          </form>
-        </div>
-      </div>
-    </div>
+          <Button
+            type="submit"
+            className="w-full mt-2"
+            isLoading={consume.isPending || isLoginPending}
+          >
+            Définir le mot de passe et se connecter
+          </Button>
+        </form>
+      </AuthCard>
+    </AuthLayout>
   )
 }
 
 const Shell = ({ children }: { children: React.ReactNode }) => (
-  <div className="overflow-hidden w-full h-screen flex relative">
-    <div className="absolute top-6 left-2 z-20">
-      <h1 className="px-2 text-3xl font-bold">
-        <span className="text-primary">Medi</span>Sync
-      </h1>
-    </div>
-    <div className="flex-1 flex justify-end">
-      <div className="z-10 w-auto sm:w-[450px] left-4 right-4 sm:left-auto top-1/2 -translate-y-1/2 bg-card/45 flex flex-col items-center gap-4 px-6 py-6 sm:px-12 sm:py-8 rounded-2xl border border-gray-100 backdrop-blur-sm absolute sm:right-8 text-center">
-        {children}
-      </div>
-    </div>
-  </div>
+  <AuthLayout>
+    <AuthCard className="gap-4 text-center">{children}</AuthCard>
+  </AuthLayout>
 )
 
 const Message = ({ text }: { text: string }) => (

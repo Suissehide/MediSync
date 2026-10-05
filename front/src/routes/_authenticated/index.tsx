@@ -24,7 +24,7 @@ export const Route = createFileRoute('/_authenticated/')({
     const [administered] = administeredEstablishments(context.authState.user)
     if (administered) {
       throw redirect({
-        to: '/e/$establishmentId/admin/members',
+        to: '/e/$establishmentId/admin',
         params: { establishmentId: administered.id },
       })
     }

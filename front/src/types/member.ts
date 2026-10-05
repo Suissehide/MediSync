@@ -9,6 +9,8 @@ export type MemberServiceAssignment = {
   role: ServiceRole
 }
 
+export type InvitationStatus = 'pending' | 'expired' | null
+
 export type Member = {
   id: string
   role: EstablishmentRole
@@ -18,14 +20,12 @@ export type Member = {
     firstName: string | null
     lastName: string | null
     deactivatedAt: string | null
+    // Jamais connecté : invitation en attente, ou expirée faute de lien encore valide.
+    invitationStatus: InvitationStatus
+    // Fin du délai de 5 minutes entre deux renvois ; null si le renvoi est possible.
+    invitationResendableAt: string | null
   }
   serviceMemberships: MemberServiceAssignment[]
-}
-
-export type AddMemberInput = {
-  email: string
-  role: EstablishmentRole
-  services: MemberServiceAssignment[]
 }
 
 export type UpdateMemberInput = {
@@ -34,10 +34,9 @@ export type UpdateMemberInput = {
   services?: MemberServiceAssignment[]
 }
 
-// `POST /e/:establishmentId/admin/members/account` : crée
-// un compte de membre (adresse sans compte existant) et rend son lien de
-// première connexion. Distinct de `AddMemberInput` : celui-ci rattache un
-// compte qui existe déjà (voir `addMemberForm.tsx`), celui-là en crée un.
+// `POST /e/:establishmentId/admin/members/account` : invite un membre. Crée
+// le compte s'il n'existe pas et rend son lien de première connexion ; un
+// compte déjà en poste dans un autre établissement est rattaché sans lien.
 export type CreateMemberAccountInput = {
   email: string
   firstName?: string
@@ -57,5 +56,5 @@ export type CreateMemberAccountResult = {
     role: EstablishmentRole
     serviceMemberships: MemberServiceAssignment[]
   }
-  accessLink: { token: string }
+  accessLink: { token: string } | null
 }

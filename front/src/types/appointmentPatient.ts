@@ -6,15 +6,25 @@ export type AppointmentPatient = {
   status?: string
   rejectionReason?: string
   transmissionNotes?: string
+  convocationSent?: boolean
   patient: Patient
 }
 
 export type CreateAppointmentPatientParams = Pick<
   AppointmentPatient,
-  'accompanying' | 'status' | 'rejectionReason' | 'transmissionNotes'
+  | 'accompanying'
+  | 'status'
+  | 'rejectionReason'
+  | 'transmissionNotes'
+  | 'convocationSent'
 > & { patientID: string }
 
 export type UpdateAppointmentPatientParams = Pick<
   AppointmentPatient,
-  'id' | 'accompanying' | 'status' | 'rejectionReason' | 'transmissionNotes'
+  | 'id'
+  | 'accompanying'
+  | 'status'
+  | 'rejectionReason'
+  | 'transmissionNotes'
+  | 'convocationSent'
 > & { patientID: string }

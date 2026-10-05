@@ -44,6 +44,8 @@ export const getSlotByIdParamsSchema = z.object({
 export const getSlotsQuerySchema = z.object({
   from: z.coerce.date().optional(),
   to: z.coerce.date().optional(),
+  // Seulement les créneaux où ce patient a un rendez-vous.
+  patientID: z.cuid().optional(),
 })
 
 export const createSlotSchemaBase = slotSchema

@@ -1,5 +1,6 @@
 import { createColumnHelper } from '@tanstack/react-table'
-import { Ban, RotateCcw, Trash } from 'lucide-react'
+import { Ban, RotateCcw, Send, Trash } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
 import { CopyableId } from '../components/custom/copyableId.tsx'
 import EditMemberForm from '../components/custom/popup/editMemberForm.tsx'
@@ -19,6 +20,45 @@ import type { Service } from '../types/service.ts'
 
 const columnHelper = createColumnHelper<Member>()
 
+// Grisé jusqu'à la fin du délai de 5 minutes, puis réactivé sans rechargement.
+const ResendInvitationButton = ({
+  resendableAt,
+  onClick,
+  isLoading,
+}: {
+  resendableAt: string | null
+  onClick: () => void
+  isLoading: boolean
+}) => {
+  const until = resendableAt ? new Date(resendableAt).getTime() : 0
+  const [now, setNow] = useState(Date.now)
+  useEffect(() => {
+    const wait = until - Date.now()
+    if (wait <= 0) {
+      return
+    }
+    const timer = window.setTimeout(() => setNow(Date.now()), wait)
+    return () => window.clearTimeout(timer)
+  }, [until])
+  const blocked = until > now
+  const label = blocked
+    ? `Invitation renvoyée récemment, à nouveau possible à ${new Date(until).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
+    : "Renvoyer l'invitation"
+  return (
+    <Button
+      variant="outline"
+      size="icon"
+      onClick={onClick}
+      disabled={blocked}
+      isLoading={isLoading}
+      title={label}
+      aria-label={label}
+    >
+      <Send className="w-4 h-4" />
+    </Button>
+  )
+}
+
 const ESTABLISHMENT_ROLE_TON: Record<EstablishmentRole, TonEtiquette> = {
   ADMIN: 'danger',
   MEMBER: 'primaire',
@@ -37,6 +77,8 @@ type MemberColumnOptions = {
   services: Service[]
   onToggleActive: (member: Member) => void
   onRemove: (member: Member) => void
+  onResendInvitation: (member: Member) => void
+  isResending: (member: Member) => boolean
   // Un seul jeu de mutations sert toutes les lignes : on ne veut faire
   // tourner l'icône de chargement que sur la ligne réellement concernée.
   isToggling: (member: Member) => boolean
@@ -48,6 +90,8 @@ export const getMemberColumns = ({
   services,
   onToggleActive,
   onRemove,
+  onResendInvitation,
+  isResending,
   isToggling,
   avecIdentifiant,
 }: MemberColumnOptions) => [
@@ -122,19 +166,29 @@ export const getMemberColumns = ({
     id: 'status',
     header: 'Statut',
     cell: ({ row }) => (
-      <EtiquetteStatut deactivatedAt={row.original.user.deactivatedAt} />
+      <EtiquetteStatut
+        deactivatedAt={row.original.user.deactivatedAt}
+        invitationStatus={row.original.user.invitationStatus}
+      />
     ),
   }),
   columnHelper.display({
     id: 'actions',
     header: '',
-    size: 140,
+    size: 180,
     meta: { align: 'right' },
     cell: ({ row }) => {
       const member = row.original
       const deactivated = member.user.deactivatedAt !== null
       return (
         <div className="flex justify-end gap-2">
+          {member.user.invitationStatus !== null && !deactivated && (
+            <ResendInvitationButton
+              resendableAt={member.user.invitationResendableAt}
+              onClick={() => onResendInvitation(member)}
+              isLoading={isResending(member)}
+            />
+          )}
           <EditMemberForm member={member} />
           <Button
             variant="outline"

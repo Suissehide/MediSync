@@ -65,8 +65,15 @@ class PatientRepository implements PatientRepositoryInterface {
     return this.tenantContext.scope()
   }
 
+  // Filtre de service de `findAllWithTags` ci-dessous : enumerer les patients d'un service
+  // ne doit jamais rendre ceux d'un autre.
   findAll(): Promise<PatientEntityRepo[]> {
-    return this.prisma.patient.findMany({ where: this.establishmentScope })
+    return this.prisma.patient.findMany({
+      where: {
+        ...this.establishmentScope,
+        serviceFiles: { some: { serviceId: this.scope.serviceId } },
+      },
+    })
   }
 
   async findAllWithTags(): Promise<PatientWithTagsEntityRepo[]> {
@@ -106,7 +113,7 @@ class PatientRepository implements PatientRepositoryInterface {
         // donc pas de doublon).
         serviceFiles: {
           where: { serviceId: this.scope.serviceId },
-          select: { enrollmentIssues: true, entryDate: true },
+          select: { enrollmentIssues: true, entryDate: true, exitDate: true },
         },
       },
     })
@@ -117,6 +124,7 @@ class PatientRepository implements PatientRepositoryInterface {
         pathwayTemplateTags: distinctMainTags(appointmentPatients),
         enrollmentIssues: serviceFiles.flatMap((f) => f.enrollmentIssues),
         entryDate: serviceFiles[0]?.entryDate ?? null,
+        exitDate: serviceFiles[0]?.exitDate ?? null,
       }),
     )
   }
@@ -129,6 +137,8 @@ class PatientRepository implements PatientRepositoryInterface {
     const patients = await this.prisma.patient.findMany({
       where: {
         ...this.establishmentScope,
+        // Meme filtre de service que `findAll` : l'export est une enumeration de plus.
+        serviceFiles: { some: { serviceId: this.scope.serviceId } },
         ...(search
           ? {
               OR: [

@@ -126,7 +126,7 @@ const EtablissementsAdministres = ({
           return (
             <PopoverClose asChild key={etablissement.id}>
               <Link
-                to="/e/$establishmentId/admin/members"
+                to="/e/$establishmentId/admin"
                 params={{ establishmentId: etablissement.id }}
                 aria-current={estCourant ? 'true' : undefined}
                 className={`flex items-center gap-2 rounded px-2 py-1.5 text-sm outline-none cursor-pointer hover:bg-primary/10 focus-visible:bg-primary/10 ${

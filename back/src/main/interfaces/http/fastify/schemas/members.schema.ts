@@ -1,5 +1,7 @@
 import { z } from 'zod/v4'
 
+import type { InvitationLinkState } from '../../../../types/domain/accessLink.domain.interface'
+
 type ServiceRole = 'COORDINATEUR' | 'INTERVENANT' | 'SECRETARIAT' | 'LECTURE'
 
 const serviceRoleSchema = z.enum([
@@ -26,6 +28,8 @@ const assignmentsSchema = z
     { message: 'Un service ne peut apparaitre qu une fois' },
   )
 
+export const invitationStatusSchema = z.enum(['pending', 'expired']).nullable()
+
 export const memberResponseSchema = z.object({
   id: z.string(),
   role: establishmentRoleSchema,
@@ -35,6 +39,8 @@ export const memberResponseSchema = z.object({
     firstName: z.string().nullable(),
     lastName: z.string().nullable(),
     deactivatedAt: z.coerce.date().nullable(),
+    invitationStatus: invitationStatusSchema,
+    invitationResendableAt: z.coerce.date().nullable(),
   }),
   serviceMemberships: z.array(
     z.object({ serviceId: z.string(), role: serviceRoleSchema }),
@@ -42,13 +48,38 @@ export const memberResponseSchema = z.object({
 })
 export const membersResponseSchema = z.array(memberResponseSchema)
 
-// L'identité est rattachée par e-mail : le client ne désigne jamais une
-// appartenance ni un utilisateur par identifiant technique.
-export const addMemberSchema = z.object({
-  email: z.email(),
-  role: establishmentRoleSchema,
-  services: assignmentsSchema.default([]),
-})
+// Un statut, jamais la date : `lastLoginAt` est global et dirait l'activité dans les autres
+// établissements. Jamais connecté : invitation en attente tant qu'un lien reste utilisable,
+// expirée sinon. `null` : la personne s'est déjà connectée.
+type UserWithLogin = { id: string; lastLoginAt: Date | null }
+
+export const projectUserStatus = <T extends UserWithLogin>(
+  { lastLoginAt, ...user }: T,
+  links: ReadonlyMap<string, InvitationLinkState>,
+) => {
+  const link = lastLoginAt === null ? links.get(user.id) : undefined
+  return {
+    ...user,
+    invitationStatus:
+      lastLoginAt !== null
+        ? null
+        : link?.active
+          ? ('pending' as const)
+          : ('expired' as const),
+    // Fin du délai entre deux renvois, pour griser le bouton ; null si le renvoi est possible.
+    invitationResendableAt: link?.resendableAt ?? null,
+  }
+}
+
+// Les seuls comptes dont le statut dépend d'un lien : ceux qui ne se sont jamais connectés.
+export const neverLoggedIn = (users: UserWithLogin[]) =>
+  users.filter((user) => user.lastLoginAt === null).map((user) => user.id)
+
+export const projectMember = <T extends { user: UserWithLogin }>(
+  row: T,
+  links: ReadonlyMap<string, InvitationLinkState>,
+) => ({ ...row, user: projectUserStatus(row.user, links) })
+
 export const updateMemberSchema = z.object({
   role: establishmentRoleSchema.optional(),
   services: assignmentsSchema.optional(),
@@ -100,7 +131,8 @@ export const createMemberAccountResponseSchema = z.object({
       z.object({ serviceId: z.string(), role: serviceRoleSchema }),
     ),
   }),
-  accessLink: accessLinkSchema,
+  // null : compte déjà en poste ailleurs, rattaché sans lien.
+  accessLink: accessLinkSchema.nullable(),
 })
 
 // `POST /e/:establishmentId/admin/members/:membershipId/access-link` :
@@ -146,7 +178,6 @@ export const projectCreatedMember = (member: {
 })
 
 export type MemberResponse = z.infer<typeof memberResponseSchema>
-export type AddMemberBody = z.infer<typeof addMemberSchema>
 export type UpdateMemberBody = z.infer<typeof updateMemberSchema>
 export type MemberParams = z.infer<typeof memberParamsSchema>
 export type CreateMemberAccountBody = z.infer<typeof createMemberAccountSchema>

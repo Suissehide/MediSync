@@ -1,6 +1,7 @@
 import { createColumnHelper } from '@tanstack/react-table'
 import dayjs from 'dayjs'
 import { AlertTriangle, Eye } from 'lucide-react'
+import { useState } from 'react'
 
 import { Etiquette } from '../components/table/etiquette.tsx'
 import { Button } from '../components/ui/button.tsx'
@@ -8,6 +9,50 @@ import type { PathwayTemplate } from '../types/pathwayTemplate.ts'
 import type { PatientWithTags } from '../types/patient.ts'
 
 const columnHelper = createColumnHelper<PatientWithTags>()
+
+// Etiquettes de parcours affichees avant le bouton de depliage : au-dela, la cellule tenait
+// sur plusieurs lignes et faisait grandir toute la ligne du tableau.
+const PARCOURS_REPLIES = 2
+
+// Composant et non une fonction appelee dans `cell` : l'etat de depliage doit survivre aux
+// rendus de `getPatientColumns`, qui recree les colonnes a chaque rendu de la page.
+export function CelluleParcours({
+  tags,
+  couleurParTag,
+}: {
+  tags: string[]
+  couleurParTag: Map<string, string>
+}) {
+  const [deploye, setDeploye] = useState(false)
+  const caches = tags.length - PARCOURS_REPLIES
+  const visibles = deploye ? tags : tags.slice(0, PARCOURS_REPLIES)
+
+  return (
+    <div className="flex flex-wrap gap-1">
+      {visibles.map((tag) => (
+        <Etiquette key={tag} couleur={couleurParTag.get(tag)} ton="neutre">
+          {tag}
+        </Etiquette>
+      ))}
+      {caches > 0 && (
+        <Etiquette asChild ton="neutre">
+          <button
+            type="button"
+            // `stopPropagation` : la ligne entiere ouvre la fiche du patient (`onRowClick`).
+            onClick={(event) => {
+              event.stopPropagation()
+              setDeploye((ouvert) => !ouvert)
+            }}
+            aria-expanded={deploye}
+            className="cursor-pointer hover:bg-gray-200"
+          >
+            {deploye ? 'Réduire' : `+${caches}`}
+          </button>
+        </Etiquette>
+      )}
+    </div>
+  )
+}
 
 type PatientActions = {
   onView: (id: string) => void
@@ -75,18 +120,7 @@ export const getPatientColumns = ({
           return null
         }
 
-        return (
-          <div className="flex flex-wrap gap-1">
-            {tags.map((tag) => {
-              const color = tagColorMap.get(tag)
-              return (
-                <Etiquette key={tag} couleur={color} ton="neutre">
-                  {tag}
-                </Etiquette>
-              )
-            })}
-          </div>
-        )
+        return <CelluleParcours tags={tags} couleurParTag={tagColorMap} />
       },
     }),
     columnHelper.display({

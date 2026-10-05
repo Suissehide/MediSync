@@ -1,5 +1,7 @@
 // Regle de robustesse de ce filet : on peut changer comment le test atteint
 // la donnee, jamais ce qu'il affirme.
+import * as XLSX from 'xlsx'
+
 import { buildTestApp, type TestApp } from './setup/app'
 import { testDb, truncateAll } from './setup/db'
 import {
@@ -484,6 +486,32 @@ describe('cloisonnement de la liste des patients par service', () => {
       })
       .then((res) => res.json() as { id: string; entryDate: string | null }[])
 
+  const list = (serviceId: string) =>
+    testApp.app
+      .inject({
+        method: 'GET',
+        url: tenantUrl(establishmentId, serviceId, '/patient'),
+        cookies,
+      })
+      .then((res) => res.json() as { id: string }[])
+
+  // Ce qui fuit ici, ce sont des lignes : on relit le .xlsx, pas sa taille.
+  const exportRows = (serviceId: string) =>
+    testApp.app
+      .inject({
+        method: 'GET',
+        url: tenantUrl(establishmentId, serviceId, '/patient/export'),
+        cookies,
+      })
+      .then((res) => {
+        expect(res.statusCode).toBe(200)
+        const wb = XLSX.read(res.rawPayload, { type: 'buffer' })
+        const sheet = wb.Sheets[wb.SheetNames[0] as string]
+        return XLSX.utils.sheet_to_json<Record<string, string>>(
+          sheet as XLSX.WorkSheet,
+        )
+      })
+
   const createPatientInService = (serviceId: string, payload: unknown) =>
     testApp.app
       .inject({
@@ -585,6 +613,25 @@ describe('cloisonnement de la liste des patients par service', () => {
     // pas faire apparaitre le patient dans un service qui ne le suit pas.
     const listB = await listWithTags(serviceBId)
     expect(listB.map((p) => p.id)).not.toContain(patientId)
+
+    await testDb.patient.delete({ where: { id: patientId } })
+  })
+
+  // `findAll` et `findForExport` ne filtraient que sur l'etablissement : un intervenant de B
+  // obtenait l'identite complete des patients de A, en liste et en fichier.
+  it('un patient du service A n apparait ni dans la liste ni dans l export du service B', async () => {
+    const patientId = await createPatientInService(serviceAId, {
+      firstName: 'Cloisonne',
+      lastName: 'ServiceAUniquement',
+    })
+
+    expect((await list(serviceAId)).map((p) => p.id)).toContain(patientId)
+    expect((await list(serviceBId)).map((p) => p.id)).not.toContain(patientId)
+
+    const nomsExportesDepuisA = (await exportRows(serviceAId)).map((r) => r.Nom)
+    const nomsExportesDepuisB = (await exportRows(serviceBId)).map((r) => r.Nom)
+    expect(nomsExportesDepuisA).toContain('ServiceAUniquement')
+    expect(nomsExportesDepuisB).not.toContain('ServiceAUniquement')
 
     await testDb.patient.delete({ where: { id: patientId } })
   })

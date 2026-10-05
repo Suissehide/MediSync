@@ -13,7 +13,10 @@ import type { PrimaTransactionClient } from '../client'
 // EstablishmentMembership, l'identité qu'elle rattache (jamais le mot de
 // passe ni le sel) et les affectations de service déjà aplaties.
 export type MembershipRow = EstablishmentMembership & {
-  user: Pick<User, 'id' | 'email' | 'firstName' | 'lastName' | 'deactivatedAt'>
+  user: Pick<
+    User,
+    'id' | 'email' | 'firstName' | 'lastName' | 'deactivatedAt' | 'lastLoginAt'
+  >
   serviceMemberships: Pick<ServiceMembership, 'serviceId' | 'role'>[]
 }
 
@@ -46,6 +49,7 @@ export type ServiceMemberRow = {
       firstName: string | null
       lastName: string | null
       deactivatedAt: Date | null
+      lastLoginAt: Date | null
     }
   }
 }
@@ -59,6 +63,31 @@ export interface MembershipRepositoryInterface {
     serviceMembershipId: string,
     soignantId: string | null,
   ) => Promise<ServiceMemberRow | null>
+  // Sous le contexte de SERVICE : une affectation du service courant, par son id. `null` si elle
+  // appartient a un autre service (le domaine en fait un 404).
+  findServiceMemberByID: (
+    serviceMembershipId: string,
+  ) => Promise<ServiceMemberRow | null>
+  // Sous le contexte de SERVICE : l'affectation de cette appartenance d'etablissement au service
+  // courant, si elle existe.
+  findServiceMemberByMembership: (
+    establishmentMembershipId: string,
+  ) => Promise<ServiceMemberRow | null>
+  // Sous le contexte de SERVICE : affecte une appartenance d'etablissement au service courant.
+  // N'ajoute QU'une affectation — contrairement a `update`, qui remplace la liste entiere.
+  addServiceMember: (
+    establishmentMembershipId: string,
+    role: ServiceRole,
+    client?: PrimaTransactionClient,
+  ) => Promise<ServiceMemberRow>
+  // Sous le contexte de SERVICE : le role d'une affectation du service courant.
+  setServiceRole: (
+    serviceMembershipId: string,
+    role: ServiceRole,
+  ) => Promise<ServiceMemberRow | null>
+  // Sous le contexte de SERVICE : retire une affectation du service courant, sans toucher au
+  // rattachement d'etablissement ni aux autres services.
+  deleteServiceMember: (serviceMembershipId: string) => Promise<void>
   findAll: () => Promise<MembershipRow[]>
   findByID: (id: string) => Promise<MembershipRow>
   findByUserID: (userId: string) => Promise<MembershipRow | null>

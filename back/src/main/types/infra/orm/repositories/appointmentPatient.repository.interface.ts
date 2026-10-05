@@ -15,7 +15,11 @@ export type AppointmentPatientEntityRepo = AppointmentPatient
 // jour).
 export type AppointmentPatientUpdateEntityRepo = Pick<
   Prisma.AppointmentPatientUncheckedCreateInput,
-  'accompanying' | 'status' | 'rejectionReason' | 'transmissionNotes'
+  | 'accompanying'
+  | 'status'
+  | 'rejectionReason'
+  | 'transmissionNotes'
+  | 'convocationSent'
 > & {
   id?: string
   patientID: string
