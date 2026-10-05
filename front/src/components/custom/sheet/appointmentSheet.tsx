@@ -242,7 +242,7 @@ export default function AppointmentSheet({
               }}
               className="w-full flex-1 flex flex-col min-h-0 gap-3 px-4"
             >
-              <FormField className="flex flex-col gap-1">
+              <FormField>
                 <Label>Soignants</Label>
                 <Input
                   value={
@@ -286,7 +286,7 @@ export default function AppointmentSheet({
                 </form.AppField>
               )}
 
-              <FormField className="flex flex-col gap-1">
+              <FormField>
                 <Label>Salle</Label>
                 <Input
                   value={

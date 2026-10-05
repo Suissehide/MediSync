@@ -53,7 +53,7 @@ export function AppointmentTimeFields({
         </div>
       )}
 
-      <FormField className="flex items-center gap-2">
+      <FormField className="flex-row items-center gap-2">
         <div className="text-sm text-text-light font-medium mb-0">à</div>
         <div>
           <TimePicker
@@ -67,7 +67,7 @@ export function AppointmentTimeFields({
         </div>
       </FormField>
 
-      <FormField className="flex items-center gap-2">
+      <FormField className="flex-row items-center gap-2">
         <div className="text-sm text-text-light font-medium mb-0">pendant</div>
         <div>
           <Select

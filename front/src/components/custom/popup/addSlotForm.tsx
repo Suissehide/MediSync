@@ -188,7 +188,7 @@ function AddSlotForm({
                 }}
               >
                 {(field) => (
-                  <FormField className="flex items-center gap-2">
+                  <FormField className="flex-row items-center gap-2">
                     <div className="text-sm text-text-light font-medium">
                       Le
                     </div>
@@ -207,7 +207,7 @@ function AddSlotForm({
 
               <form.Field name="startTime">
                 {(field) => (
-                  <FormField className="flex items-center gap-2">
+                  <FormField className="flex-row items-center gap-2">
                     <div className="text-sm text-text-light font-medium">
                       de
                     </div>
@@ -226,7 +226,7 @@ function AddSlotForm({
 
               <form.Field name="endTime">
                 {(field) => (
-                  <FormField className="flex items-center gap-2">
+                  <FormField className="flex-row items-center gap-2">
                     <div className="text-sm text-text-light font-medium">à</div>
                     <div>
                       <TimePicker
