@@ -227,8 +227,9 @@ function TableIndicateurs({ indicateurs }: { indicateurs: ArsIndicator[] }) {
                 </td>
                 <td className="w-24 px-3 py-2 align-top text-right">
                   {indicateur.value === null ? (
-                    <span className="text-text-light" aria-label="Sans valeur">
-                      —
+                    <span className="text-text-light">
+                      <span aria-hidden="true">—</span>
+                      <span className="sr-only">Sans valeur</span>
                     </span>
                   ) : (
                     <span className="text-text-dark font-medium tabular-nums">
