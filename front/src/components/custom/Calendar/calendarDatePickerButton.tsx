@@ -7,12 +7,15 @@ interface Props {
   anchorEl: HTMLElement | null
   setAnchorEl: Dispatch<SetStateAction<HTMLElement | null>>
   onChange: (date: Dayjs | null) => void
+  /** Date affichée par le calendrier, présélectionnée à l'ouverture. */
+  value?: Dayjs
 }
 
 export default function CalendarDatePickerButton({
   anchorEl,
   setAnchorEl,
   onChange,
+  value,
 }: Props) {
   if (!anchorEl) {
     return null
@@ -40,7 +43,7 @@ export default function CalendarDatePickerButton({
       >
         <DateCalendar
           onChange={onChange}
-          defaultValue={dayjs.utc()}
+          defaultValue={value ?? dayjs.utc()}
           timezone="UTC"
         />
       </div>
