@@ -403,7 +403,7 @@ function Calendar({
           headerToolbar ?? {
             left: 'title',
             center: 'timeGridWeek,timeGridDay,listWeek',
-            right: 'selectDateButton prev,next today',
+            right: 'today selectDateButton prev,next',
           }
         }
         titleFormat={(arg) => {

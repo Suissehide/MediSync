@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
+import { useState } from 'react'
 
 import type { DayAppointmentRow } from '../../../libs/utils.ts'
 import { useConvocationSentMutation } from '../../../queries/useAppointment.ts'
@@ -40,12 +41,15 @@ function ConvocationCheckbox({
   )
 }
 
+const MAX_VISIBLE_PATIENTS = 5
+
 type PatientCellProps = {
   row: DayAppointmentRow
   onAddPatient: (row: DayAppointmentRow) => void
 }
 
 export default function PatientCell({ row, onAddPatient }: PatientCellProps) {
+  const [expanded, setExpanded] = useState(false)
   // La fiche patient vit sous /e/:establishmentId/s/:serviceId : le contexte
   // vient du store, pose par le layout de service avant que cet ecran (agenda)
   // ne puisse se rendre.
@@ -74,10 +78,13 @@ export default function PatientCell({ row, onAddPatient }: PatientCellProps) {
     )
   }
 
+  const hidden = patients.length - MAX_VISIBLE_PATIENTS
+  const visible = expanded ? patients : patients.slice(0, MAX_VISIBLE_PATIENTS)
+
   return (
     <div className="flex items-start gap-1">
       <div className="flex flex-col items-start gap-1">
-        {patients.map((appointmentPatient) => (
+        {visible.map((appointmentPatient) => (
           <div
             key={appointmentPatient.patient.id}
             className="flex shrink-0 items-center gap-1"
@@ -112,6 +119,18 @@ export default function PatientCell({ row, onAddPatient }: PatientCellProps) {
             )}
           </div>
         ))}
+        {hidden > 0 && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-6 px-1 text-xs text-primary"
+            aria-expanded={expanded}
+            onClick={() => setExpanded((value) => !value)}
+          >
+            {expanded ? 'Voir moins' : `Voir plus (${hidden})`}
+          </Button>
+        )}
       </div>
       {addButton}
     </div>

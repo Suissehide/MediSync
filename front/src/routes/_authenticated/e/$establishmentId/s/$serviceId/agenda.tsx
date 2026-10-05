@@ -5,6 +5,7 @@ import { CalendarDays } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import { getDayAppointmentColumns } from '@/columns/dayAppointment.column.tsx'
+import { DATE_CALENDAR_SX } from '@/components/custom/Calendar/calendarDatePickerButton.tsx'
 import AddPatientForm from '@/components/custom/popup/addPatientForm.tsx'
 import AddPatientToAppointmentForm from '@/components/custom/popup/addPatientToAppointmentForm.tsx'
 import AddPatientToSlotForm from '@/components/custom/popup/addPatientToSlotForm.tsx'
@@ -145,6 +146,7 @@ function Agenda() {
               </PopoverTrigger>
               <PopoverContent align="end" className="p-0 w-auto">
                 <DateCalendar
+                  sx={DATE_CALENDAR_SX}
                   value={selectedDay}
                   onChange={(newDate) => {
                     if (newDate) {

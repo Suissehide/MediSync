@@ -165,7 +165,10 @@ export function VirtualizedBodyTable<TData>({
               return (
                 <td
                   key={cell.id}
-                  className="px-4 py-2 text-sm border-b border-border"
+                  className={cn(
+                    'px-4 py-2 text-sm border-b border-border',
+                    autoRowHeight && 'align-top',
+                  )}
                   style={{
                     ...getCommonPinningStyles(column),
                     minWidth: column.getSize(),

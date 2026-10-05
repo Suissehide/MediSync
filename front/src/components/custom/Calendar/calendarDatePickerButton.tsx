@@ -3,6 +3,15 @@ import dayjs, { type Dayjs } from 'dayjs'
 import type { Dispatch, SetStateAction } from 'react'
 import { createPortal } from 'react-dom'
 
+// Aujourd'hui reste bien visible à côté de la date sélectionnée.
+export const DATE_CALENDAR_SX = {
+  '& .MuiPickersDay-today:not(.Mui-selected)': {
+    borderColor: 'var(--primary)',
+    color: 'var(--primary)',
+    fontWeight: 600,
+  },
+}
+
 interface Props {
   anchorEl: HTMLElement | null
   setAnchorEl: Dispatch<SetStateAction<HTMLElement | null>>
@@ -45,6 +54,7 @@ export default function CalendarDatePickerButton({
           onChange={onChange}
           defaultValue={value ?? dayjs.utc()}
           timezone="UTC"
+          sx={DATE_CALENDAR_SX}
         />
       </div>
     </>,
