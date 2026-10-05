@@ -188,9 +188,10 @@ function ArsIndicatorsPage() {
 
 function TableIndicateurs({ indicateurs }: { indicateurs: ArsIndicator[] }) {
   return (
-    // `border-separate` plutôt que `border-collapse` : le `sticky` de la bande de groupe est ignoré
-    // sur une cellule d'un tableau fusionné. Les filets vivent donc sur les cellules.
-    <table className="w-full text-sm border-separate border-spacing-0">
+    // Bande de groupe NON collante : chaque `tbody` collerait la sienne indépendamment, et les
+    // quatre s'empileraient en haut de la zone de défilement. La grille tient en trente lignes,
+    // on n'est jamais loin d'une bande.
+    <table className="w-full text-sm border-collapse">
       <thead className="sr-only">
         <tr>
           <th>Code</th>
@@ -203,7 +204,7 @@ function TableIndicateurs({ indicateurs }: { indicateurs: ArsIndicator[] }) {
           <tr>
             <th
               colSpan={3}
-              className="sticky top-0 z-10 bg-muted text-left text-text-dark font-semibold px-3 py-2"
+              className="bg-muted text-left text-text-dark font-semibold px-3 py-2"
             >
               {groupe}
             </th>
@@ -211,11 +212,11 @@ function TableIndicateurs({ indicateurs }: { indicateurs: ArsIndicator[] }) {
           {indicateurs
             .filter((indicateur) => indicateur.group === groupe)
             .map((indicateur) => (
-              <tr key={indicateur.code}>
-                <td className="w-20 px-3 py-2 align-top text-text-light tabular-nums border-b border-border">
+              <tr key={indicateur.code} className="border-b border-border">
+                <td className="w-20 px-3 py-2 align-top text-text-light tabular-nums">
                   {indicateur.code}
                 </td>
-                <td className="px-3 py-2 align-top border-b border-border">
+                <td className="px-3 py-2 align-top">
                   <span
                     className={
                       indicateur.note ? 'text-text-light' : 'text-text-dark'
@@ -232,7 +233,7 @@ function TableIndicateurs({ indicateurs }: { indicateurs: ArsIndicator[] }) {
                     </span>
                   )}
                 </td>
-                <td className="w-24 px-3 py-2 align-top text-right border-b border-border">
+                <td className="w-24 px-3 py-2 align-top text-right">
                   {indicateur.value === null ? (
                     <span className="text-text-light">
                       <span aria-hidden="true">—</span>
