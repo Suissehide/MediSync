@@ -130,7 +130,8 @@ function Index() {
             <div className="w-full text-right -mt-2">
               <button
                 type="button"
-                className="cursor-pointer text-sm text-text-light"
+                onClick={() => navigate({ to: '/auth/forgot-password' })}
+                className="cursor-pointer text-sm text-text-light hover:underline"
               >
                 Mot de passe oublié ?
               </button>

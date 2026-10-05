@@ -4,9 +4,10 @@
 // n'affichaient que le jeton NU — le destinataire recevait quelque chose
 // qui n'est pas un lien, à charge pour qui le transmet de reconstituer
 // l'URL à la main. `route/auth/access-link.tsx` (la page qui consomme le
-// jeton) vit à `/auth/access-link?token=…`.
+// jeton) vit à `/auth/access-link#…` : en fragment, le jeton n'est jamais
+// envoyé à un serveur (ni journal d'accès, ni Referer).
 // Fonction pure, testée indépendamment du rendu : elle ne fait QUE
 // concaténer, jamais d'accès réseau ni d'état.
 export function buildAccessLinkUrl(token: string): string {
-  return `${window.location.origin}/auth/access-link?token=${token}`
+  return `${window.location.origin}/auth/access-link#${token}`
 }

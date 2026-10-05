@@ -191,6 +191,10 @@ class UserDomain implements UserDomainInterface {
       userID: issuedBy,
       targetUserId: user.id,
     })
+    this.accessLinkDomain.sendInvitation({
+      email: user.email,
+      token: accessLink.token,
+    })
     return accessLink
   }
 

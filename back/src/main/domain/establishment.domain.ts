@@ -150,6 +150,11 @@ class EstablishmentDomain implements EstablishmentDomainInterface {
         )
       })
 
+    this.accessLinkDomain.sendInvitation({
+      email,
+      token: accessLink.token,
+      establishmentName: establishment.name,
+    })
     // Ne rend plus rien sur le compte au-delà de ce qui
     // est nécessaire — voir le commentaire sur `CreateEstablishmentResult`.
     return { establishment, accessLink }

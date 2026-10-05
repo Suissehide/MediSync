@@ -27,6 +27,10 @@ import type { ThematicDomainInterface } from '../domain/thematic.domain.interfac
 import type { TodoDomainInterface } from '../domain/todo.domain.interface'
 import type { UserDomainInterface } from '../domain/user.domain.interface'
 import type { HttpClientInterface } from '../infra/http/http-client'
+import type {
+  MailerInterface,
+  MailTransport,
+} from '../infra/mail/mailer.interface'
 import type { AccessGrantRepositoryInterface } from '../infra/orm/repositories/accessGrant.repository.interface'
 import type { AccessLinkRepositoryInterface } from '../infra/orm/repositories/accessLink.repository.interface'
 import type { ActivityLogRepositoryInterface } from '../infra/orm/repositories/activityLog.repository.interface'
@@ -133,6 +137,9 @@ export interface IocContainer {
   // ci-dessous, seul appelant des methodes d'ecriture du meme depot.
   readonly accessGrantRepository: AccessGrantRepositoryInterface
   readonly superAdminGrantDomain: SuperAdminGrantDomainInterface
+  // Mail (null : envoi désactivé, faute de SMTP_HOST)
+  readonly mailTransport: MailTransport | null
+  readonly mailer: MailerInterface
   // AccessLink (lien d'acces)
   readonly accessLinkDomain: AccessLinkDomainInterface
   readonly accessLinkRepository: AccessLinkRepositoryInterface
