@@ -1,4 +1,5 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
+import { Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import { getLocationColumns } from '@/columns/location.column.tsx'
@@ -6,6 +7,7 @@ import AddLocationForm from '@/components/custom/popup/addLocationForm.tsx'
 import { ConfirmDeleteForm } from '@/components/custom/popup/confirmDeleteForm.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
 import ReactTable from '@/components/table/reactTable.tsx'
+import { Input } from '@/components/ui/input.tsx'
 import { can, useCan } from '@/hooks/useCan.ts'
 import {
   useLocationMutations,
@@ -38,11 +40,14 @@ function LocationSettings() {
   const { deleteLocation } = useLocationMutations()
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
 
-  const sortedLocations = useMemo(
-    () =>
-      [...(locations ?? [])].sort((a, b) => a.name.localeCompare(b.name, 'fr')),
-    [locations],
-  )
+  const [searchTerm, setSearchTerm] = useState('')
+
+  const sortedLocations = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase()
+    return (locations ?? [])
+      .filter((x) => !term || x.name.toLowerCase().includes(term))
+      .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+  }, [locations, searchTerm])
 
   const columns = useMemo(
     () =>
@@ -60,7 +65,17 @@ function LocationSettings() {
           <h1 className="h-9 flex items-center text-text-dark text-xl font-semibold">
             Salles
           </h1>
-          {canManage && <AddLocationForm />}
+          <div className="flex items-center gap-3">
+            <Input
+              iconLeft={<Search className="w-4 h-4" />}
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Nom de la salle..."
+              className="w-72"
+            />
+            {canManage && <AddLocationForm />}
+          </div>
         </div>
 
         <ReactTable<Location>
