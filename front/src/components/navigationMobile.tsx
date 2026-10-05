@@ -53,9 +53,7 @@ export function TeteDuTiroir() {
 
   return (
     <div className="md:hidden shrink-0 flex flex-col gap-1 py-3 border-b border-border-sidebar">
-      <div className="px-2 -ml-px">
-        <FilAriane />
-      </div>
+      <FilAriane className="h-auto flex-wrap gap-y-1 px-2 border-l-0" />
 
       {administration.length > 0 && (
         <>
@@ -69,7 +67,7 @@ export function TeteDuTiroir() {
               params={params as never}
               activeOptions={{ exact: true }}
               aria-current={estActif(item) ? 'page' : undefined}
-              className={`mx-2 px-3 py-2.5 rounded-md text-sm ${
+              className={`mx-2 px-3 py-2 rounded-md text-sm ${
                 estActif(item)
                   ? 'bg-primary/20 text-text font-semibold'
                   : 'text-text-light hover:bg-white/8'
