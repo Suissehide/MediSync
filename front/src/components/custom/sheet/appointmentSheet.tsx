@@ -71,6 +71,9 @@ export default function AppointmentSheet({
     Record<number, boolean>
   >({})
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  // Rendez-vous dont le formulaire est rempli : avant, ses valeurs par défaut
+  // (une ligne patient vide) s'afficheraient le temps du chargement.
+  const [loadedID, setLoadedID] = useState('')
 
   const form = useAppForm({
     defaultValues: {
@@ -156,13 +159,14 @@ export default function AppointmentSheet({
               },
               { keepDefaultValues: true },
             )
+            setLoadedID(eventID)
           }
         })
         .catch(() => {
           setOpen('')
         })
     }
-  }, [open, form, refetch, setOpen])
+  }, [open, form, refetch, setOpen, eventID])
 
   const isIndividual = appointment?.slot?.slotTemplate?.isIndividual ?? true
   const capacity = isIndividual
@@ -215,7 +219,7 @@ export default function AppointmentSheet({
         </SheetHeader>
 
         <div className="flex-1 flex flex-col min-h-0">
-          {isPending ? (
+          {isPending || loadedID !== eventID ? (
             <div className="flex-1 flex justify-center items-center">
               <Loader2Icon className="size-10 animate-spin text-foreground" />
             </div>
@@ -498,7 +502,7 @@ export default function AppointmentSheet({
           )}
         </div>
 
-        {!isPending && (
+        {!isPending && loadedID === eventID && (
           <div className="shrink-0">
             <div className="w-full border-t border-border-dark"></div>
 
