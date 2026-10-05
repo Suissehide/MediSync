@@ -123,6 +123,48 @@ const collectiveSlots = (c: ArsCohort): Map<string, ArsPresence[]> => {
   return slots
 }
 
+const isReactu = (p: ArsPresence): boolean =>
+  isRole('reactualisation', p.thematicName)
+
+// Programme complet : un diagnostic éducatif, au moins une séance et au moins une
+// réactualisation après lui.
+const completeProgram = (
+  file: ArsFile,
+  c: ArsCohort,
+  types?: readonly AppointmentType[],
+): boolean => {
+  const ps = sinceDe(file, c)
+  if (ps === null) {
+    return false
+  }
+  if (types && !ps.every((p) => p.type !== null && types.includes(p.type))) {
+    return false
+  }
+  return ps.some((p) => !isReactu(p)) && ps.some(isReactu)
+}
+
+const reactuTimes = (ps: ArsPresence[]): number[] =>
+  ps.filter(isReactu).map((p) => p.date.getTime())
+
+const countAround = (
+  file: ArsFile,
+  c: ArsCohort,
+  pick: (times: number[], all: number[]) => number,
+): number => {
+  const ps = sinceDe(file, c)
+  if (ps === null) {
+    return 0
+  }
+  const times = reactuTimes(ps)
+  if (times.length === 0) {
+    return 0
+  }
+  return pick(
+    times,
+    ps.map((p) => p.date.getTime()),
+  )
+}
+
 export const ARS_INDICATORS: readonly ArsIndicator[] = [
   {
     code: '1.1',
@@ -284,6 +326,135 @@ export const ARS_INDICATORS: readonly ArsIndicator[] = [
       'Nombre total de séances destinées exclusivement aux proches et/ou aidants du patient',
     unavailable:
       'Un rendez-vous est toujours rattaché à des patients : une séance sans patient ne se représente pas',
+  },
+  {
+    code: '3.1',
+    group: 'Sortie',
+    label:
+      'Nombre de patients ayant suivi un programme personnalisé complet (quel que soit le mode de prise en charge)',
+    compute: (c) => countFiles(c, (f) => completeProgram(f, c)),
+  },
+  {
+    code: '3.2',
+    group: 'Sortie',
+    label:
+      "Nombre de patients ayant suivi un programme personnalisé complet (au cours d'une hospitalisation complète ou de jour)",
+    compute: (c) => countFiles(c, (f) => completeProgram(f, c, ['hospital'])),
+  },
+  {
+    code: '3.3',
+    group: 'Sortie',
+    label:
+      "Nombre de patients ayant suivi un programme personnalisé complet (au cours d'une venue en soins externes)",
+    compute: (c) => countFiles(c, (f) => completeProgram(f, c, ['ambulatory'])),
+  },
+  {
+    code: '3.4',
+    group: 'Sortie',
+    label:
+      'Nombre de patients ayant suivi un programme personnalisé complet (au cours d’une venue mixte)',
+    compute: (c) =>
+      countFiles(
+        c,
+        (f) =>
+          completeProgram(f, c) &&
+          !completeProgram(f, c, ['hospital']) &&
+          !completeProgram(f, c, ['ambulatory']),
+      ),
+  },
+  {
+    code: '3.5',
+    group: 'Sortie',
+    label:
+      "Nombre de patients ayant suivi un programme personnalisé complet (au cours de séances d'ETP pratiquées en soins de ville)",
+    unavailable:
+      'Aucune notion de soins de ville : le type de rendez-vous vaut ambulatoire, hôpital ou téléphonique',
+  },
+  {
+    code: '3.6',
+    group: 'Sortie',
+    label:
+      "Nombre de patients ayant bénéficié d'une évaluation individuelle des compétences acquises de l'ETP",
+    compute: (c) =>
+      countFiles(c, (f) =>
+        honored(f).some((p) => inRange(p.date, c.from, c.to) && isReactu(p)),
+      ),
+  },
+  {
+    code: '4.1',
+    group: 'Modalités',
+    label:
+      "Nombre de patients ayant bénéficié d'un programme personnalisé lors d'une offre initiale d'ETP",
+    compute: (c) =>
+      countFiles(c, (f) => (sinceDe(f, c)?.length ?? 0) >= 3),
+  },
+  {
+    code: '4.1bis',
+    group: 'Modalités',
+    label:
+      'Dont nombre de patients ayant terminé par une réactualisation (Réactu 1 à 4)',
+    compute: (c) =>
+      countFiles(
+        c,
+        (f) =>
+          countAround(
+            f,
+            c,
+            (times, all) =>
+              all.filter((t) => t < Math.max(...times)).length,
+          ) >= 3,
+      ),
+  },
+  {
+    code: '4.2',
+    group: 'Modalités',
+    label:
+      'Une offre de suivi ou de renforcement dans un nouveau programme est-elle proposée au sein de la structure ?',
+    manual: 'Question oui/non sur la structure, à renseigner à la main',
+  },
+  {
+    code: '4.3',
+    group: 'Modalités',
+    label:
+      "Nombre de patients ayant bénéficié d'un programme personnalisé lors d'une offre de suivi ou de renforcement d'ETP commençant par une réactualisation",
+    compute: (c) =>
+      countFiles(
+        c,
+        (f) =>
+          countAround(
+            f,
+            c,
+            (times, all) =>
+              all.filter((t) => t > Math.min(...times)).length,
+          ) >= 3,
+      ),
+  },
+  {
+    code: '4.3bis',
+    group: 'Modalités',
+    label:
+      'Dont nombre de patients ayant également terminé par une réactualisation (Réactu 1 à 4)',
+    compute: (c) =>
+      countFiles(
+        c,
+        (f) =>
+          countAround(f, c, (times, all) => {
+            if (times.length < 2) {
+              return 0
+            }
+            const first = Math.min(...times)
+            const last = Math.max(...times)
+            return all.filter((t) => t > first && t < last).length
+          }) >= 3,
+      ),
+  },
+  {
+    code: '4.4',
+    group: 'Modalités',
+    label:
+      "Nombre de patients dont la synthèse de l'évaluation des compétences acquises a été transmise au moins à leur médecin traitant",
+    unavailable:
+      "Aucun modèle ne trace cet envoi (relève du ticket « Envoi du bilan par MSSanté »)",
   },
 ]
 

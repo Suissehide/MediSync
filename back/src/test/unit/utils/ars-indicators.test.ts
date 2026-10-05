@@ -271,3 +271,155 @@ describe('groupe 2 — séances et mode de prise en charge', () => {
     expect(valeur(c, '2.10')).toBe(2)
   })
 })
+
+const reactu = (p: Partial<ArsPresence> = {}) =>
+  presence({ thematicName: 'Réactu 1', ...p })
+
+describe('groupe 3 — sortie', () => {
+  it('3.1 exige une seance et une reactualisation apres le diagnostic educatif', () => {
+    const complet = dossier({
+      presences: [
+        presence({ date: new Date('2026-03-01') }),
+        reactu({ date: new Date('2026-06-01') }),
+      ],
+    })
+    const sansReactu = dossier({
+      patientId: 'p2',
+      presences: [presence({ date: new Date('2026-03-01') })],
+    })
+    expect(valeur(cohorte([complet, sansReactu]), '3.1')).toBe(1)
+  })
+
+  it('3.2 et 3.3 restreignent au type de prise en charge', () => {
+    const hospit = dossier({
+      presences: [
+        presence({ type: 'hospital', date: new Date('2026-03-01') }),
+        reactu({ type: 'hospital', date: new Date('2026-06-01') }),
+      ],
+    })
+    const ambu = dossier({
+      patientId: 'p2',
+      presences: [
+        presence({ type: 'ambulatory', date: new Date('2026-03-01') }),
+        reactu({ type: 'ambulatory', date: new Date('2026-06-01') }),
+      ],
+    })
+    const c = cohorte([hospit, ambu])
+    expect(valeur(c, '3.2')).toBe(1)
+    expect(valeur(c, '3.3')).toBe(1)
+  })
+
+  // Draxa recopiait 3.1 ici : la correction est l'objet de ce cas.
+  it('3.4 compte le parcours mixte, pas le total de 3.1', () => {
+    const mixte = dossier({
+      presences: [
+        presence({ type: 'hospital', date: new Date('2026-03-01') }),
+        reactu({ type: 'ambulatory', date: new Date('2026-06-01') }),
+      ],
+    })
+    const c = cohorte([mixte])
+    expect(valeur(c, '3.1')).toBe(1)
+    expect(valeur(c, '3.2')).toBe(0)
+    expect(valeur(c, '3.3')).toBe(0)
+    expect(valeur(c, '3.4')).toBe(1)
+  })
+
+  it('3.6 compte les patients ayant eu une reactualisation dans la periode', () => {
+    const c = cohorte([dossier({ presences: [reactu()] })])
+    expect(valeur(c, '3.6')).toBe(1)
+  })
+})
+
+describe('groupe 4 — modalités', () => {
+  it('4.1 exige au moins trois seances honorees depuis le diagnostic educatif', () => {
+    const trois = dossier({
+      presences: [
+        presence({ date: new Date('2026-03-01') }),
+        presence({ date: new Date('2026-04-01') }),
+        presence({ date: new Date('2026-05-01') }),
+      ],
+    })
+    const deux = dossier({
+      patientId: 'p2',
+      presences: [
+        presence({ date: new Date('2026-03-01') }),
+        presence({ date: new Date('2026-04-01') }),
+      ],
+    })
+    expect(valeur(cohorte([trois, deux]), '4.1')).toBe(1)
+  })
+
+  it('4.1bis exige trois seances avant la derniere reactualisation', () => {
+    const c = cohorte([
+      dossier({
+        presences: [
+          presence({ date: new Date('2026-03-01') }),
+          presence({ date: new Date('2026-04-01') }),
+          presence({ date: new Date('2026-05-01') }),
+          reactu({ date: new Date('2026-06-01') }),
+        ],
+      }),
+    ])
+    expect(valeur(c, '4.1bis')).toBe(1)
+  })
+
+  it('4.3 exige trois seances apres la premiere reactualisation', () => {
+    const c = cohorte([
+      dossier({
+        presences: [
+          reactu({ date: new Date('2026-02-01') }),
+          presence({ date: new Date('2026-03-01') }),
+          presence({ date: new Date('2026-04-01') }),
+          presence({ date: new Date('2026-05-01') }),
+        ],
+      }),
+    ])
+    expect(valeur(c, '4.3')).toBe(1)
+  })
+
+  it('4.3bis exige trois seances entre deux reactualisations', () => {
+    const c = cohorte([
+      dossier({
+        presences: [
+          reactu({ date: new Date('2026-02-01') }),
+          presence({ date: new Date('2026-03-01') }),
+          presence({ date: new Date('2026-04-01') }),
+          presence({ date: new Date('2026-05-01') }),
+          reactu({ thematicName: 'Réactu 2', date: new Date('2026-06-01') }),
+        ],
+      }),
+    ])
+    expect(valeur(c, '4.3bis')).toBe(1)
+  })
+})
+
+describe('table complète', () => {
+  it('rend une valeur nulle et une raison pour 2.3, 2.11, 3.5 et 4.4', () => {
+    const resultats = computeArsIndicators(cohorte([]))
+    for (const code of ['2.3', '2.11', '3.5', '4.4']) {
+      const i = resultats.find((r) => r.code === code)
+      expect(i?.value).toBeNull()
+      expect(i?.note).toEqual(expect.any(String))
+    }
+  })
+
+  it('marque 2.5 et 4.2 comme a renseigner a la main', () => {
+    const resultats = computeArsIndicators(cohorte([]))
+    for (const code of ['2.5', '4.2']) {
+      const i = resultats.find((r) => r.code === code)
+      expect(i?.value).toBeNull()
+      expect(i?.note).toContain('renseigner')
+    }
+  })
+
+  it('rend les 30 indicateurs, dans l ordre des groupes', () => {
+    const resultats = computeArsIndicators(cohorte([]))
+    expect(resultats).toHaveLength(30)
+    expect(resultats.map((r) => r.group)).toEqual([
+      ...Array(5).fill('Entrée'),
+      ...Array(13).fill('Séances'),
+      ...Array(6).fill('Sortie'),
+      ...Array(6).fill('Modalités'),
+    ])
+  })
+})
