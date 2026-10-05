@@ -178,6 +178,16 @@ function AddAppointmentForm({
               />
             </FormField>
 
+            <FormField>
+              <Label>Salle</Label>
+              <Input
+                value={
+                  slot?.slotTemplate?.location?.name ?? 'Aucune salle associée'
+                }
+                disabled
+              />
+            </FormField>
+
             <form.AppField name="thematicId">
               {(field) => (
                 <field.Select

@@ -53,6 +53,7 @@ export const EventContent = ({
     states,
     appointments,
     thematic,
+    location,
     type,
     locked,
     capacity,
@@ -239,27 +240,13 @@ export const EventContent = ({
           </Button>
         )}
 
-      <span
-        className={clsx(
-          'relative z-10 p-0.5 pointer-events-none',
-          isRowLayout ? 'w-48 shrink-0' : '',
-        )}
-      >
-        <div className="text-[0.6rem]">{event.title}</div>
-        <div className="text-[0.6rem] font-semibold truncate">{thematic}</div>
-        {showSecondaryTags && secondaryTags.length > 0 && (
-          <div className="flex flex-wrap gap-0.5 mt-0.5">
-            {secondaryTags.map((tag: string) => (
-              <span
-                key={tag}
-                className="inline-block rounded bg-black/25 px-1 text-[0.5rem] font-medium leading-tight"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
-      </span>
+      <EventLabel
+        title={event.title}
+        thematic={thematic}
+        location={location}
+        secondaryTags={showSecondaryTags ? secondaryTags : []}
+        isRowLayout={isRowLayout}
+      />
 
       {/* Individual */}
       {isIndividual && appointments && appointments.length > 0 && (
@@ -373,6 +360,53 @@ export const EventContent = ({
           </div>
         )}
     </div>
+  )
+}
+
+/** Soignants, thematique et salle du creneau, puis ses tags secondaires. */
+function EventLabel({
+  title,
+  thematic,
+  location,
+  secondaryTags,
+  isRowLayout,
+}: {
+  title: string
+  thematic?: string
+  location?: string
+  secondaryTags: string[]
+  isRowLayout: boolean
+}) {
+  return (
+    <span
+      className={clsx(
+        'relative z-10 p-0.5 pointer-events-none',
+        isRowLayout ? 'w-48 shrink-0' : '',
+      )}
+    >
+      <div className="text-[0.6rem]">{title}</div>
+      <div className="text-[0.6rem] font-semibold truncate">
+        {thematic}
+        {location && (
+          <span className="font-normal opacity-80">
+            {thematic ? ' · ' : ''}
+            {location}
+          </span>
+        )}
+      </div>
+      {secondaryTags.length > 0 && (
+        <div className="flex flex-wrap gap-0.5 mt-0.5">
+          {secondaryTags.map((tag) => (
+            <span
+              key={tag}
+              className="inline-block rounded bg-black/25 px-1 text-[0.5rem] font-medium leading-tight"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
+    </span>
   )
 }
 
