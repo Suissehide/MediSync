@@ -223,6 +223,9 @@ describe('e-mails d invitation et mot de passe oublie', () => {
     })
     expect((await statuts())['invitee@lilas.fr']).toBe('expired')
 
+    await testDb.accessLink.updateMany({
+      data: { createdAt: new Date(Date.now() - 10 * 60_000) },
+    })
     const reissued = await testApp.app.inject({
       method: 'POST',
       url: adminUrl(

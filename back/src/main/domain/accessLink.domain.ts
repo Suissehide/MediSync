@@ -15,6 +15,8 @@ import { randomToken, sha256Hex } from '../utils/hash'
 const TOKEN_BYTES = 32
 const INVITATION_VALIDITY_MS = 30 * 24 * 60 * 60 * 1000
 const RESET_VALIDITY_MS = 60 * 60 * 1000
+// Délai minimal entre deux renvois d'invitation : évite d'inonder la boîte de la personne.
+const RESEND_COOLDOWN_MS = 5 * 60 * 1000
 
 const INVALID_OR_EXPIRED = 'Invalid or expired access link'
 
@@ -74,6 +76,15 @@ class AccessLinkDomain implements AccessLinkDomainInterface {
       'password-reset',
       passwordResetMail({ to: user.email, link: this.linkFor(token) }),
     )
+  }
+
+  async assertResendAllowed(userId: string): Promise<void> {
+    const last = await this.accessLinkRepository.findLatestCreatedAt(userId)
+    if (last && Date.now() - last.getTime() < RESEND_COOLDOWN_MS) {
+      throw Boom.tooManyRequests(
+        'An invitation was sent less than 5 minutes ago',
+      )
+    }
   }
 
   // Parmi ces comptes, ceux qui ont encore un lien utilisable : sert au statut d'invitation.

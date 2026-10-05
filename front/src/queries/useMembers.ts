@@ -112,6 +112,22 @@ export const useMemberMutations = () => {
 
   // Une seule clé `DEACTIVATE` existe pour ce couple d'actions
   // (activer/désactiver un même compte) : les deux mutations la partagent.
+  const resendInvitation = useMutation({
+    mutationKey: [MEMBER.RESEND_INVITATION],
+    mutationFn: (id: string) => MembersApi.resendInvitation(id),
+    onSuccess: () => {
+      toast({ title: 'Invitation renvoyée', severity: TOAST_SEVERITY.SUCCESS })
+    },
+    onError: (error) => {
+      toast({
+        title: "Erreur lors du renvoi de l'invitation",
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
+    },
+    onSettled: () => invalidate(),
+  })
+
   const deactivateMember = useMutation({
     mutationKey: [MEMBER.DEACTIVATE],
     mutationFn: (id: string) => MembersApi.deactivate(id),
@@ -150,5 +166,6 @@ export const useMemberMutations = () => {
     removeMember,
     deactivateMember,
     reactivateMember,
+    resendInvitation,
   }
 }

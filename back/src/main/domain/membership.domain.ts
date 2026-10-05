@@ -656,6 +656,7 @@ class MembershipDomain implements MembershipDomainInterface {
     if (membership.user.deactivatedAt !== null) {
       throw Boom.conflict(DEACTIVATED_LINK)
     }
+    await this.accessLinkDomain.assertResendAllowed(membership.userId)
     const accessLink = await this.accessLinkDomain.issue(
       membership.userId,
       this.currentUserId(),

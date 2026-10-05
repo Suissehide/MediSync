@@ -45,6 +45,17 @@ const CONFLICT_MESSAGES: Record<string, { title: string; message: string }> = {
     message:
       "Vous ne pouvez pas retirer votre propre rôle d'administrateur : ce retrait est réservé à un autre administrateur, comme le retrait ou la désactivation de votre propre compte. Demandez à un collègue administrateur de le faire.",
   },
+  'An invitation was sent less than 5 minutes ago': {
+    title: 'Invitation déjà envoyée',
+    message:
+      'Une invitation a été envoyée il y a moins de 5 minutes. Réessayez un peu plus tard.',
+  },
+  'This account belongs to several establishments; its access link cannot be reissued from here':
+    {
+      title: 'Compte rattaché à plusieurs établissements',
+      message:
+        "Ce compte est rattaché à plusieurs établissements : l'invitation ne peut pas être renvoyée depuis un établissement en particulier.",
+    },
   'This account belongs to several establishments; its activation cannot be changed from here':
     {
       title: 'Compte rattaché à plusieurs établissements',
@@ -140,6 +151,16 @@ export const MembersApi = {
     })
     if (!response.ok) {
       await throwMemberError(response, 'Impossible de retirer le membre')
+    }
+  },
+
+  // Renvoie l'invitation : nouveau lien (l'ancien est invalidé) et nouvel e-mail.
+  resendInvitation: async (id: string): Promise<void> => {
+    const response = await fetchWithAuth(`${MEMBERS_URL()}/${id}/access-link`, {
+      method: 'POST',
+    })
+    if (!response.ok) {
+      await throwMemberError(response, "Impossible de renvoyer l'invitation")
     }
   },
 

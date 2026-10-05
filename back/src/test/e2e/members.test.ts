@@ -512,8 +512,14 @@ describe('routes membres', () => {
   // motif jumeau.
   // ------------------------------------------------------------------
 
-  const reissue = (membershipId: string) =>
-    call('POST', `/${membershipId}/access-link`)
+  // Vieillit les liens existants : sans quoi le délai de 5 minutes entre deux envois refuserait
+  // toute réémission faite juste après la création (voir le test du délai, plus bas).
+  const reissue = async (membershipId: string) => {
+    await testDb.accessLink.updateMany({
+      data: { createdAt: new Date(Date.now() - 10 * 60_000) },
+    })
+    return await call('POST', `/${membershipId}/access-link`)
+  }
 
   // Fabrique un membre de CET etablissement, avec son compte et son lien, sans dependre
   // d'aucun autre test (les dependances d'ordre entre
@@ -539,6 +545,16 @@ describe('routes membres', () => {
     })
     return { compte, membershipId: appartenance.id }
   }
+
+  it('refuse de renvoyer une invitation moins de 5 minutes apres la precedente', async () => {
+    const { membershipId } = await nouveauMembre('renvoi-rapide@b.fr')
+    const avant = await testDb.accessLink.count()
+
+    const res = await call('POST', `/${membershipId}/access-link`)
+
+    expect(res.statusCode).toBe(429)
+    expect(await testDb.accessLink.count()).toBe(avant)
+  })
 
   it('reemet un lien : le precedent devient inutilisable, le nouveau ouvre une session', async () => {
     // Fabrique son propre membre, n'appartenant qu'a cet etablissement : aucune dependance

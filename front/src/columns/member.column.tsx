@@ -1,5 +1,5 @@
 import { createColumnHelper } from '@tanstack/react-table'
-import { Ban, RotateCcw, Trash } from 'lucide-react'
+import { Ban, RotateCcw, Send, Trash } from 'lucide-react'
 
 import { CopyableId } from '../components/custom/copyableId.tsx'
 import EditMemberForm from '../components/custom/popup/editMemberForm.tsx'
@@ -37,6 +37,8 @@ type MemberColumnOptions = {
   services: Service[]
   onToggleActive: (member: Member) => void
   onRemove: (member: Member) => void
+  onResendInvitation: (member: Member) => void
+  isResending: (member: Member) => boolean
   // Un seul jeu de mutations sert toutes les lignes : on ne veut faire
   // tourner l'icône de chargement que sur la ligne réellement concernée.
   isToggling: (member: Member) => boolean
@@ -48,6 +50,8 @@ export const getMemberColumns = ({
   services,
   onToggleActive,
   onRemove,
+  onResendInvitation,
+  isResending,
   isToggling,
   avecIdentifiant,
 }: MemberColumnOptions) => [
@@ -131,13 +135,25 @@ export const getMemberColumns = ({
   columnHelper.display({
     id: 'actions',
     header: '',
-    size: 140,
+    size: 180,
     meta: { align: 'right' },
     cell: ({ row }) => {
       const member = row.original
       const deactivated = member.user.deactivatedAt !== null
       return (
         <div className="flex justify-end gap-2">
+          {member.user.invitationStatus !== null && !deactivated && (
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => onResendInvitation(member)}
+              isLoading={isResending(member)}
+              title="Renvoyer l'invitation"
+              aria-label="Renvoyer l'invitation"
+            >
+              <Send className="w-4 h-4" />
+            </Button>
+          )}
           <EditMemberForm member={member} />
           <Button
             variant="outline"
