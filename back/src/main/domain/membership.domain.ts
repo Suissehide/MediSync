@@ -423,8 +423,13 @@ class MembershipDomain implements MembershipDomainInterface {
       | 'serviceMember.updated'
       | 'serviceMember.removed',
     membershipId: string,
+    detail?: string,
   ): void {
-    this.appEventBus.emit(event, { userID: this.currentUserId(), membershipId })
+    this.appEventBus.emit(event, {
+      userID: this.currentUserId(),
+      membershipId,
+      detail,
+    })
   }
 
   async update(
@@ -447,7 +452,13 @@ class MembershipDomain implements MembershipDomainInterface {
     this.assertNotSelf(membership)
     await this.assertNotLastAdmin(membership)
     await this.membershipRepository.delete(id)
-    this.emit('member.removed', id)
+    // Le rattachement n'existe plus quand le journal s'ecrit : le nom voyage avec l'evenement.
+    const { firstName, lastName } = membership.user
+    this.emit(
+      'member.removed',
+      id,
+      [lastName, firstName].filter(Boolean).join(' ') || membership.user.email,
+    )
   }
 
   // LE RAISONNEMENT QU'ON NE REPREND PAS (voir `establishment.domain.ts#createWithFirstAdmin`).

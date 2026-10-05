@@ -680,6 +680,8 @@ model ActivityLog {
   action          String
   entityType      String
   entityID        String
+  // Ce que la ligne designe, en clair et fige au moment de l'action (patient, rendez-vous, membre).
+  detail          String?
   createdAt       DateTime @default(now())
 
   @@index([userID])

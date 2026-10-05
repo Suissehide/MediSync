@@ -47,16 +47,22 @@ type AppEvents = {
   'user.accessLinkReissued': { userID: string; targetUserId: string }
 }
 
+// Complement du libelle du journal, quand l'entite ne le dit pas seule (supprimee, parcours vises…).
+type AvecDetail = { detail?: string }
+
 class AppEventBus {
   private emitter = new EventEmitter()
 
-  emit<K extends keyof AppEvents>(event: K, payload: AppEvents[K]): void {
+  emit<K extends keyof AppEvents>(
+    event: K,
+    payload: AppEvents[K] & AvecDetail,
+  ): void {
     this.emitter.emit(event, payload)
   }
 
   on<K extends keyof AppEvents>(
     event: K,
-    handler: (payload: AppEvents[K]) => void,
+    handler: (payload: AppEvents[K] & AvecDetail) => void,
   ): void {
     this.emitter.on(event, handler)
   }

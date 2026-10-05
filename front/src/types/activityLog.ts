@@ -9,6 +9,8 @@ export type ActivityLog = {
   action: string
   entityType: string
   entityID: string
+  // Ce que la ligne designe, en clair. Absent du detail d'etablissement du super-admin.
+  detail?: string | null
   createdAt: string
 }
 

@@ -1,3 +1,4 @@
+import { Link, useParams } from '@tanstack/react-router'
 import { createColumnHelper } from '@tanstack/react-table'
 import dayjs from 'dayjs'
 import { RotateCcw, Search } from 'lucide-react'
@@ -107,9 +108,41 @@ export function JournalActivite({ services }: Props) {
     [services],
   )
 
+  const { establishmentId, serviceId } = useParams({ strict: false })
+
   const columns = useMemo(() => {
+    // Apres l'action : ce qu'elle vise. Le patient s'ouvre depuis le journal du service, dont
+    // il depend ; un dossier supprime n'a plus de fiche.
+    const colonneDetail = columnHelper.accessor((row) => row.detail ?? '', {
+      id: 'detail',
+      header: 'Détail',
+      size: 320,
+      cell: ({ row: { original: ligne } }) => {
+        if (!ligne.detail) {
+          return '—'
+        }
+        const ouvrable =
+          !services &&
+          establishmentId &&
+          serviceId &&
+          ligne.entityType === 'patient' &&
+          ligne.action !== 'patient.deleted'
+        return ouvrable ? (
+          <Link
+            to="/e/$establishmentId/s/$serviceId/patient/$patientID"
+            params={{ establishmentId, serviceId, patientID: ligne.entityID }}
+            className="underline underline-offset-2 hover:text-primary"
+          >
+            {ligne.detail}
+          </Link>
+        ) : (
+          <span title={ligne.detail}>{ligne.detail}</span>
+        )
+      },
+    })
+    const [date, heure, auteur, action, ...reste] = activityLogColumns
     if (!services) {
-      return activityLogColumns
+      return [date, heure, auteur, action, colonneDetail, ...reste]
     }
     const nomDuService = new Map(services.map((s) => [s.id, s.name]))
     const colonneService = columnHelper.accessor(
@@ -121,11 +154,15 @@ export function JournalActivite({ services }: Props) {
     )
     // Apres l'utilisateur : la date, l'heure, l'utilisateur, puis d'ou vient la ligne.
     return [
-      ...activityLogColumns.slice(0, 3),
+      date,
+      heure,
+      auteur,
       colonneService,
-      ...activityLogColumns.slice(3),
+      action,
+      colonneDetail,
+      ...reste,
     ]
-  }, [services])
+  }, [services, establishmentId, serviceId])
 
   const logs = data?.data ?? []
 
