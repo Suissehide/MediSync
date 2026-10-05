@@ -45,7 +45,7 @@ function MemberSettings() {
   // chargée retombe sur `[]`, et la colonne affiche alors le rôle sans le
   // nom plutôt que rien).
   const { services } = useServicesQuery()
-  const { removeMember, deactivateMember, reactivateMember } =
+  const { removeMember, deactivateMember, reactivateMember, resendInvitation } =
     useMemberMutations()
 
   const [removeTarget, setRemoveTarget] = useState<Member | null>(null)
@@ -96,10 +96,14 @@ function MemberSettings() {
         services: services ?? [],
         onToggleActive: handleToggleActive,
         onRemove: setRemoveTarget,
+        onResendInvitation: (member) => resendInvitation.mutate(member.id),
+        isResending: (member) =>
+          resendInvitation.isPending &&
+          resendInvitation.variables === member.id,
         isToggling,
         avecIdentifiant: superAdmin,
       }),
-    [services, handleToggleActive, isToggling, superAdmin],
+    [services, handleToggleActive, isToggling, superAdmin, resendInvitation],
   )
 
   return (

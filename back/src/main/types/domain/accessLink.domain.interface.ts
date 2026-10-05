@@ -22,6 +22,8 @@ export interface AccessLinkDomainInterface {
     establishmentName?: string
   }) => void
   activeLinkUserIds: (userIds: string[]) => Promise<Set<string>>
+  // 429 si un lien a été émis pour ce compte il y a moins de 5 minutes.
+  assertResendAllowed: (userId: string) => Promise<void>
   // Mot de passe oublié : ne lève rien et ne révèle pas si l'adresse existe.
   requestPasswordReset: (email: string) => Promise<void>
   // Consomme un lien et pose le mot de passe. Lève :
