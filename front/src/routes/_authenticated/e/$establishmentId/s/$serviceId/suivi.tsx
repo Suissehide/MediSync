@@ -23,6 +23,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover.tsx'
 import { hexToRGBA } from '@/libs/color.ts'
+import { type SuiviDay, type SuiviMark, suiviDays } from '@/libs/suiviDay.ts'
 import { usePathwayTrackingQuery } from '@/queries/usePathway.ts'
 
 export const Route = createFileRoute(
@@ -41,7 +42,28 @@ type SuiviRow = {
   pathwayEndDate?: string | null
   firstName: string
   lastName: string
-  days: Map<number, { status: string | null }>
+  days: Map<number, SuiviDay>
+}
+
+const MARK_LABEL: Record<SuiviMark, string> = {
+  present: 'Présent',
+  absent: 'Absent / refus',
+  pending: 'Non pointé',
+}
+
+function SuiviMarkIcon({ mark, color }: { mark: SuiviMark; color: string }) {
+  if (mark === 'absent') {
+    return <X className="w-3 h-3 mx-auto text-red-500" />
+  }
+  return (
+    <span
+      className="w-2 h-2 rounded-full inline-block border"
+      style={{
+        borderColor: color,
+        backgroundColor: mark === 'present' ? color : 'transparent',
+      }}
+    />
+  )
 }
 
 function getCommonPinningStyles(
@@ -113,12 +135,7 @@ function SuiviPage() {
         pathwayName: name,
         firstName: patient.firstName,
         lastName: patient.lastName,
-        days: new Map(
-          patient.appointments.map((apt) => [
-            dayjs.utc(apt.date).date(),
-            { status: apt.status },
-          ]),
-        ),
+        days: suiviDays(patient.appointments),
       }))
 
       return [groupRow, ...patientRows]
@@ -152,17 +169,20 @@ function SuiviPage() {
           if (row.original.type === 'group') {
             return null
           }
-          const apt = row.original.days.get(d)
-          if (!apt) {
+          const day = row.original.days.get(d)
+          if (!day) {
             return null
           }
-          return apt.status != null ? (
-            <X className="w-3 h-3 mx-auto text-red-500" />
-          ) : (
+          return (
             <span
-              className="w-2 h-2 rounded-full inline-block"
-              style={{ backgroundColor: row.original.pathwayColor }}
-            />
+              className="flex"
+              title={`${day.count} rendez-vous : ${MARK_LABEL[day.mark].toLowerCase()}`}
+            >
+              <SuiviMarkIcon
+                mark={day.mark}
+                color={row.original.pathwayColor}
+              />
+            </span>
           )
         },
       })),
@@ -381,14 +401,12 @@ function SuiviPage() {
 
           {trackingPathways && trackingPathways.length > 0 && (
             <div className="mt-3 shrink-0 flex items-center gap-4 text-xs text-text-light">
-              <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-foreground inline-block" />
-                Présent
-              </span>
-              <span className="flex items-center gap-1.5">
-                <X className="w-3 h-3 text-red-500" />
-                Absent / refus
-              </span>
+              {(['present', 'absent', 'pending'] as const).map((mark) => (
+                <span key={mark} className="flex items-center gap-1.5">
+                  <SuiviMarkIcon mark={mark} color="var(--color-foreground)" />
+                  {MARK_LABEL[mark]}
+                </span>
+              ))}
             </div>
           )}
         </div>

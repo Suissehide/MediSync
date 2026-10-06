@@ -1361,7 +1361,19 @@ describe('scoping pathwayTemplate et pathway', () => {
     expect(calls[1]).toMatchObject({
       model: 'pathway',
       op: 'findMany',
-      args: { where: { serviceId: 's1' } },
+      args: {
+        where: {
+          serviceId: 's1',
+          slots: {
+            some: {
+              startDate: {
+                gte: new Date('2026-03-01T00:00:00.000Z'),
+                lte: new Date('2026-03-31T23:59:59.999Z'),
+              },
+            },
+          },
+        },
+      },
     })
     expect(calls[2]).toMatchObject({
       model: 'slot',

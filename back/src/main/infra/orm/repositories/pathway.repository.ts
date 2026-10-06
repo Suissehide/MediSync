@@ -366,8 +366,8 @@ class PathwayRepository implements PathwayRepositoryInterface {
     year: number,
     month: number,
   ): Promise<TrackingPathwayRepo[]> {
-    const startOfMonth = new Date(year, month - 1, 1)
-    const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999)
+    const startOfMonth = new Date(Date.UTC(year, month - 1, 1))
+    const endOfMonth = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999))
 
     const pathways = await this.prisma.pathway.findMany({
       where: {
