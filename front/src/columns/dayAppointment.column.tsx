@@ -30,20 +30,30 @@ export const getDayAppointmentColumns = ({
       id: 'schedule',
       header: 'Horaire',
       size: 140,
-      cell: ({ row }) =>
-        `${dayjs.utc(row.original.startDate).format('HH:mm')} – ${dayjs
+      cell: ({ row }) => {
+        const range = `${dayjs.utc(row.original.startDate).format('HH:mm')} – ${dayjs
           .utc(row.original.endDate)
-          .format('HH:mm')}`,
+          .format('HH:mm')}`
+        return row.depth > 0 ? (
+          <span className="ml-1 border-l-2 border-border-dark pl-3 text-text-light">
+            {range}
+          </span>
+        ) : (
+          range
+        )
+      },
     }),
     columnHelper.accessor('thematic', {
       header: 'Thématique',
       size: 180,
-      cell: ({ getValue }) => getValue() || '—',
+      cell: ({ row, getValue }) =>
+        row.original.kind === 'free' ? null : getValue() || '—',
     }),
+    // Lieu, soignant et places sont ceux du créneau : pas répétés sur ses sous-lignes.
     columnHelper.accessor('location', {
       header: 'Lieu',
       size: 160,
-      cell: ({ getValue }) => getValue() || '—',
+      cell: ({ row, getValue }) => (row.depth > 0 ? null : getValue() || '—'),
     }),
     columnHelper.display({
       id: 'soignants',
@@ -51,6 +61,9 @@ export const getDayAppointmentColumns = ({
       size: 240,
       cell: ({ row }) => {
         const soignants = row.original.soignants
+        if (row.depth > 0) {
+          return null
+        }
         if (soignants.length === 0) {
           return '—'
         }
@@ -80,7 +93,9 @@ export const getDayAppointmentColumns = ({
       header: 'Places',
       size: 90,
       cell: ({ row }) =>
-        `${row.original.patients.length}/${row.original.capacity}`,
+        row.depth > 0
+          ? null
+          : `${row.original.patients.length}/${row.original.capacity}`,
     }),
     columnHelper.display({
       id: 'patients',
@@ -93,10 +108,10 @@ export const getDayAppointmentColumns = ({
     columnHelper.accessor('type', {
       header: 'Type',
       size: 140,
-      cell: ({ getValue }) => {
+      cell: ({ row, getValue }) => {
         const type = getValue()
         if (!type) {
-          return '—'
+          return row.original.kind === 'free' ? null : '—'
         }
         return (APPOINTMENT_TYPE as Record<string, string>)[type] ?? type
       },

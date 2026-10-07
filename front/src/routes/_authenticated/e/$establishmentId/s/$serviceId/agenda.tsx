@@ -39,15 +39,22 @@ export const Route = createFileRoute(
 
 const SELECTED_DAY_STORAGE_KEY = 'agenda/selected-day'
 
-// Popup « Nouveau rendez-vous » du Planning : créneau individuel sur son premier
-// intervalle libre, collectif sur le créneau entier.
+// Popup « Nouveau rendez-vous » du Planning : sur l'intervalle libre choisi, le
+// premier intervalle libre d'un créneau individuel, ou le créneau collectif entier.
+const getBookingInterval = (row: DaySlotRow, slot: Slot) => {
+  if (row.kind === 'free') {
+    return { start: row.startDate, end: row.endDate }
+  }
+  return row.isIndividual
+    ? getFreeIntervals(slot)[0]
+    : { start: slot.startDate, end: slot.endDate }
+}
+
 const getNewAppointmentProps = (row: DaySlotRow | null, slot?: Slot) => {
   if (!row || !slot || (row.appointmentId && !row.isIndividual)) {
     return null
   }
-  const interval = row.isIndividual
-    ? getFreeIntervals(slot)[0]
-    : { start: slot.startDate, end: slot.endDate }
+  const interval = getBookingInterval(row, slot)
   if (!interval) {
     return null
   }
@@ -130,10 +137,12 @@ function Agenda() {
   }, [rows, selectedSoignantIDs])
 
   const addPatientTarget =
-    rows.find((row) => row.id === addPatientTargetId) ?? null
+    rows
+      .flatMap((row) => [row, ...(row.subRows ?? [])])
+      .find((row) => row.id === addPatientTargetId) ?? null
   const newAppointment = getNewAppointmentProps(
     addPatientTarget,
-    slots?.find((slot) => slot.id === addPatientTargetId),
+    slots?.find((slot) => slot.id === addPatientTarget?.slotId),
   )
 
   const columns = useMemo(
@@ -238,6 +247,7 @@ function Agenda() {
                 <ReactTable<DaySlotRow>
                   data={soignantRows}
                   columns={columns}
+                  getSubRows={(row) => row.subRows}
                   filterId="day-appointment"
                   onRowClick={(row) => row.appointmentId && setOpenedRow(row)}
                   autoRowHeight

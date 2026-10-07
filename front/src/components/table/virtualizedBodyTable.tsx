@@ -154,6 +154,7 @@ export function VirtualizedBodyTable<TData>({
                   ? 'cursor-pointer hover:bg-primary/5'
                   : 'hover:bg-primary/5',
               isRowMuted?.(row.original) && 'bg-gray-100 text-text-light',
+              row.depth > 0 && 'bg-card/60',
             )}
           >
             {row.getVisibleCells().map((cell) => {

@@ -79,6 +79,20 @@ export default function PatientCell({ row, onAddPatient }: PatientCellProps) {
     </Button>
   )
 
+  // Les patients sont dans les sous-lignes du créneau.
+  if (row.subRows) {
+    return null
+  }
+
+  if (row.kind === 'free') {
+    return (
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-text-light">Libre</span>
+        {addButton}
+      </div>
+    )
+  }
+
   if (patients.length === 0) {
     return addButton || '—'
   }
