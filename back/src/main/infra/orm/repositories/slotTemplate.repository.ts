@@ -29,7 +29,10 @@ class SlotTemplateRepository implements SlotTemplateRepositoryInterface {
   }
 
   private links(soignantIDs: string[]) {
-    return soignantIDs.map((soignantId) => ({ soignantId, ...this.scope }))
+    return soignantIDs.map((soignantId) => ({
+      soignantId,
+      establishmentId: this.scope.establishmentId,
+    }))
   }
 
   private createData(params: SlotTemplateCreateEntityRepo) {

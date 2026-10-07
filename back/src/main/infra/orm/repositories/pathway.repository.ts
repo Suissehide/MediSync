@@ -266,7 +266,7 @@ class PathwayRepository implements PathwayRepositoryInterface {
                 soignantLinks: {
                   create: slotTemplate.soignantLinks.map((l) => ({
                     soignantId: l.soignantId,
-                    ...this.scope,
+                    establishmentId: this.scope.establishmentId,
                   })),
                 },
               },
