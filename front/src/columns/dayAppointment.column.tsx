@@ -92,10 +92,17 @@ export const getDayAppointmentColumns = ({
       id: 'places',
       header: 'Places',
       size: 90,
-      cell: ({ row }) =>
-        row.depth > 0
-          ? null
-          : `${row.original.patients.length}/${row.original.capacity}`,
+      cell: ({ row }) => {
+        const { subRows, patients, capacity } = row.original
+        if (row.depth > 0) {
+          return null
+        }
+        // Créneau individuel découpé : chaque rendez-vous a sa sous-ligne.
+        if (subRows) {
+          return `${subRows.filter((r) => r.kind === 'appointment').length} RDV`
+        }
+        return `${patients.length}/${capacity}`
+      },
     }),
     columnHelper.display({
       id: 'patients',
@@ -111,7 +118,9 @@ export const getDayAppointmentColumns = ({
       cell: ({ row, getValue }) => {
         const type = getValue()
         if (!type) {
-          return row.original.kind === 'free' ? null : '—'
+          return row.original.kind === 'free' || row.original.subRows
+            ? null
+            : '—'
         }
         return (APPOINTMENT_TYPE as Record<string, string>)[type] ?? type
       },
