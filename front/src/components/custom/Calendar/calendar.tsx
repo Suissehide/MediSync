@@ -300,7 +300,7 @@ function Calendar({
     const button = document.querySelector('.fc-selectDateButton-button')
     if (button && !button.querySelector('svg')) {
       const root = createRoot(button)
-      root.render(<CalendarIcon size={18} />)
+      root.render(<CalendarIcon size={16} />)
     }
   }, [])
 
