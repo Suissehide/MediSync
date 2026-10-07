@@ -326,7 +326,7 @@ function Calendar({
         return
       }
 
-      if (target.closest('[data-lock-toggle]')) {
+      if (target.closest('[data-event-action]')) {
         return
       }
 

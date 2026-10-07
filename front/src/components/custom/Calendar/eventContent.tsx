@@ -125,6 +125,7 @@ export const EventContent = ({
         !containsKeyword(states, ['editable']) && (
           <button
             type="button"
+            data-event-action
             className={clsx(
               'absolute bottom-0.5 left-0.5 z-20 h-4 w-4 rounded border flex items-center justify-center transition-all cursor-pointer',
               isSelected
@@ -155,7 +156,7 @@ export const EventContent = ({
           />
           <button
             type="button"
-            data-lock-toggle
+            data-event-action
             className={clsx(
               'absolute top-0.5 left-0.5 z-10 p-0.5 rounded bg-black/40 text-white',
               onToggleLock
@@ -186,7 +187,7 @@ export const EventContent = ({
         !containsKeyword(states, ['editable', 'individual', 'multiple']) &&
         type === 'slot' && (
           <Button
-            data-lock-toggle
+            data-event-action
             variant="none"
             className="absolute top-0.5 left-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10 h-auto w-auto p-0.5 rounded bg-black/20 hover:bg-black/40 text-white"
             onClick={(e) => {
@@ -212,6 +213,7 @@ export const EventContent = ({
         !containsKeyword(states, ['editable', 'individual', 'multiple']) &&
         (type === 'slot' || type === 'template') && (
           <Button
+            data-event-action
             variant="none"
             className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10 h-auto w-auto p-0.5 rounded bg-black/20 hover:bg-black/40 text-white"
             onClick={(e) => {
@@ -228,6 +230,7 @@ export const EventContent = ({
         !containsKeyword(states, ['editable', 'individual', 'multiple']) &&
         (type === 'slot' || type === 'template') && (
           <Button
+            data-event-action
             variant="none"
             className="absolute top-5 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10 h-auto w-auto p-0.5 rounded bg-black/20 hover:bg-red-500 text-white"
             onClick={(e) => {
