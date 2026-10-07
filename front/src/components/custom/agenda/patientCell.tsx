@@ -51,6 +51,13 @@ const MAX_VISIBLE_PATIENTS = 5
 
 const TON_PRESENCE: Record<string, TonEtiquette> = { yes: 'succes', no: 'rose' }
 
+// Survol des étiquettes-liens, dans la teinte de leur présence.
+const HOVER: Partial<Record<TonEtiquette, string>> = {
+  primaire: 'hover:bg-primary/20',
+  succes: 'hover:bg-green-100',
+  rose: 'hover:bg-pink-100',
+}
+
 type PatientCellProps = {
   row: DaySlotRow
   onAddPatient: (row: DaySlotRow) => void
@@ -115,7 +122,11 @@ export default function PatientCell({ row, onAddPatient }: PatientCellProps) {
               <Etiquette
                 asChild
                 ton={TON_PRESENCE[appointmentPatient.status ?? '']}
-                className="hover:brightness-95"
+                className={
+                  HOVER[
+                    TON_PRESENCE[appointmentPatient.status ?? ''] ?? 'primaire'
+                  ]
+                }
               >
                 <Link
                   to="/e/$establishmentId/s/$serviceId/patient/$patientID"
