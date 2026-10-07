@@ -36,7 +36,7 @@
     "deps:version:check:ci": "wireit",
     "deps:version:update": "wireit",
     "deps:version:update:main": "wireit",
-    "dev": "npm run start:development --watch",
+    "dev": "WIREIT_WATCH=true npm run start:development",
     "lint": "wireit",
     "lint:ci": "biome ci src",
     "load-test": "npm run with:artillery -- run load-tests/scenario.yaml",
@@ -504,6 +504,6 @@
     "jest": "30.2.0",
     "tsx": "4.21.0",
     "typescript": "5.9.3",
-    "wireit": "0.14.12"
+    "wireit": "0.14.13"
   }
 }
