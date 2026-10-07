@@ -7,7 +7,6 @@ import { useMemo, useState } from 'react'
 import { getDayAppointmentColumns } from '@/columns/dayAppointment.column.tsx'
 import { DATE_CALENDAR_SX } from '@/components/custom/Calendar/calendarDatePickerButton.tsx'
 import AddPatientForm from '@/components/custom/popup/addPatientForm.tsx'
-import AddPatientToAppointmentForm from '@/components/custom/popup/addPatientToAppointmentForm.tsx'
 import AddPatientToSlotForm from '@/components/custom/popup/addPatientToSlotForm.tsx'
 import { ConfirmDeleteForm } from '@/components/custom/popup/confirmDeleteForm.tsx'
 import AppointmentSheet from '@/components/custom/sheet/appointmentSheet.tsx'
@@ -67,8 +66,7 @@ function Agenda() {
     [selectedDay],
   )
   const { slots, isPending } = useSlotsInRangeQuery(dayRange)
-  const { createAppointment, deleteAppointment, updateAppointment } =
-    useAppointmentMutations()
+  const { deleteAppointment } = useAppointmentMutations()
   const selectedSoignantIDs = useSoignantStore(
     (state) => state.selectedSoignantIDs,
   )
@@ -104,8 +102,7 @@ function Agenda() {
     return result
   }, [rows, selectedSoignantIDs])
 
-  const addPatientTarget =
-    rows.find((row) => row.id === addPatientTargetId) ?? null
+  const addPatientSlot = slots?.find((slot) => slot.id === addPatientTargetId)
 
   const columns = useMemo(
     () =>
@@ -227,40 +224,14 @@ function Agenda() {
           />
         )}
 
-        {addPatientTarget && (
-          <AddPatientToAppointmentForm
-            open={!!addPatientTarget}
-            setOpen={(open) => {
+        {addPatientSlot && (
+          <AddPatientToSlotForm
+            slot={addPatientSlot}
+            open
+            onOpenChange={(open) => {
               if (!open) {
                 setAddPatientTargetId(null)
               }
-            }}
-            row={addPatientTarget}
-            isPending={
-              updateAppointment.isPending || createAppointment.isPending
-            }
-            onConfirm={(params) => {
-              if (addPatientTarget.appointmentId) {
-                updateAppointment.mutate(params)
-              } else {
-                createAppointment.mutate({
-                  startDate: addPatientTarget.startDate,
-                  endDate: addPatientTarget.endDate,
-                  slotID: addPatientTarget.id,
-                  thematicId: addPatientTarget.thematicId,
-                  type: addPatientTarget.type,
-                  patientIDs: params.appointmentPatients.map(
-                    (p) => p.patientID,
-                  ),
-                })
-              }
-              setAddPatientTargetId(null)
-            }}
-            onRequestDelete={() => {
-              if (addPatientTarget.appointmentId) {
-                setDeleteTarget(addPatientTarget)
-              }
-              setAddPatientTargetId(null)
             }}
           />
         )}
