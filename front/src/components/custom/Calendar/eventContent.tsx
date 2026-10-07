@@ -70,6 +70,9 @@ export const EventContent = ({
 
   const slotColor = event.backgroundColor || event.borderColor || '#2563eb'
   const appointmentColor = darkenHex(slotColor, 0.3)
+  const durationMinutes = event.end
+    ? dayjs(event.end).diff(dayjs(event.start), 'minute')
+    : 0
 
   const calculateAppointmentStyle = (appointment: Appointment) => {
     if (!isIndividual) {
@@ -249,6 +252,7 @@ export const EventContent = ({
         location={location}
         secondaryTags={showSecondaryTags ? secondaryTags : []}
         isRowLayout={isRowLayout}
+        locationOnOwnLine={durationMinutes > 30}
       />
 
       {/* Individual */}
@@ -373,12 +377,14 @@ function EventLabel({
   location,
   secondaryTags,
   isRowLayout,
+  locationOnOwnLine,
 }: {
   title: string
   thematic?: string
   location?: string
   secondaryTags: string[]
   isRowLayout: boolean
+  locationOnOwnLine: boolean
 }) {
   return (
     <span
@@ -387,16 +393,19 @@ function EventLabel({
         isRowLayout ? 'w-48 shrink-0' : '',
       )}
     >
-      <div className="text-[0.6rem]">{title}</div>
+      <div className="text-[0.6rem] truncate">{title}</div>
       <div className="text-[0.6rem] font-semibold truncate">
         {thematic}
-        {location && (
+        {location && !locationOnOwnLine && (
           <span className="font-normal opacity-80">
             {thematic ? ' · ' : ''}
             {location}
           </span>
         )}
       </div>
+      {location && locationOnOwnLine && (
+        <div className="text-[0.6rem] opacity-80 truncate">{location}</div>
+      )}
       {secondaryTags.length > 0 && (
         <div className="flex flex-wrap gap-0.5 mt-0.5">
           {secondaryTags.map((tag) => (
