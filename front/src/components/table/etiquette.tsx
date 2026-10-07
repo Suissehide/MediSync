@@ -13,6 +13,7 @@ export type TonEtiquette =
   | 'succes'
   | 'neutre'
   | 'danger'
+  | 'rose'
   | 'alerte'
   | 'temporaire'
 
@@ -21,6 +22,7 @@ const TONS: Record<TonEtiquette, string> = {
   succes: 'bg-green-50 text-green-700 border-green-200',
   neutre: 'bg-gray-100 text-gray-600 border-gray-200',
   danger: 'bg-red-50 text-red-700 border-red-200',
+  rose: 'bg-pink-50 text-pink-700 border-pink-200',
   alerte: 'bg-amber-100 text-amber-700 border-amber-200',
   temporaire: 'bg-secondary-light text-secondary-dark border-secondary-dark/20',
 }
