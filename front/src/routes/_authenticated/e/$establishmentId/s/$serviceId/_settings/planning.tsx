@@ -204,6 +204,7 @@ function Planning() {
   const [moveWeekDate, setMoveWeekDate] = useState<dayjs.Dayjs | null>(null)
   const [moveTargetWeek, setMoveTargetWeek] = useState(1)
   const [showMoveModal, setShowMoveModal] = useState(false)
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false)
 
   const handleToggleSelect = useCallback((eventId: string) => {
     setSelectedSlotIds((prev) => {
@@ -596,6 +597,35 @@ function Planning() {
     }
   }
 
+  const handleBulkDelete = () => {
+    const prefix = editMode ? 'template_' : 'slot_'
+    let skipped = 0
+    for (const eventId of selectedSlotIds) {
+      if (!eventId.startsWith(prefix)) {
+        continue
+      }
+      const id = eventId.replace(prefix, '')
+      if (editMode) {
+        deleteSlotTemplate.mutate(id)
+        continue
+      }
+      if (slots?.find((s) => s.id === id)?.appointments?.length) {
+        skipped++
+        continue
+      }
+      deleteSlot.mutate(id)
+    }
+    if (skipped > 0) {
+      toast({
+        title: 'Suppression partielle',
+        message: `${skipped} créneau(x) contenant des rendez-vous n'ont pas été supprimé(s).`,
+        severity: TOAST_SEVERITY.ERROR,
+      })
+    }
+    setShowBulkDeleteModal(false)
+    handleClearSelection()
+  }
+
   const handleForbiddenWeekCreate = (date: string) => {
     setCreateForbiddenWeekDate(date)
   }
@@ -798,11 +828,12 @@ function Planning() {
               {selectedSlotIds.size > 1 ? 's' : ''}
             </span>
 
-            <div className="w-48">
+            <div className="w-72">
               <Select
                 options={[
                   { value: 'duplicate', label: 'Dupliquer sur une semaine' },
                   { value: 'move', label: 'Déplacer sur une semaine' },
+                  { value: 'delete', label: 'Supprimer la sélection' },
                 ]}
                 placeholder="Action..."
                 value={bulkAction}
@@ -832,6 +863,8 @@ function Planning() {
                       )
                     }
                     setShowMoveModal(true)
+                  } else if (v === 'delete') {
+                    setShowBulkDeleteModal(true)
                   }
                 }}
                 clearable={false}
@@ -1100,6 +1133,19 @@ function Planning() {
           loading={deleteSlot.isPending || deleteSlotTemplate.isPending}
           title="Supprimer le créneau"
           description="Voulez-vous vraiment supprimer ce créneau ? Cette action est irréversible."
+        />
+
+        <ConfirmDeleteForm
+          open={showBulkDeleteModal}
+          setOpen={(open) => {
+            setShowBulkDeleteModal(open)
+            if (!open) {
+              setBulkAction('')
+            }
+          }}
+          onConfirm={handleBulkDelete}
+          title="Supprimer la sélection"
+          description={`Voulez-vous vraiment supprimer ${selectedSlotIds.size} créneau(x) ? Cette action est irréversible.`}
         />
 
         <AddSlotForm
