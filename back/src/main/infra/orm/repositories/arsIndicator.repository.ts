@@ -11,6 +11,18 @@ import {
 } from '../../../utils/ars-indicators'
 import type { PostgresPrismaClient } from '../postgres-client'
 
+// Libellé lisible d'un parcours : son modèle (ou son absence) et sa date de début.
+const libelleParcours = (pathway: {
+  startDate: Date
+  template: { name: string } | null
+}): string => {
+  const [annee, mois, jour] = pathway.startDate
+    .toISOString()
+    .slice(0, 10)
+    .split('-')
+  return `${pathway.template?.name ?? 'Parcours sans modèle'} — ${jour}/${mois}/${annee}`
+}
+
 // Pas de borne de date basse : plusieurs indicateurs remontent jusqu'à la date d'entrée, qui
 // précède souvent la période demandée.
 // ponytail: charge tout le service en mémoire ; filtrer en base si un service pèse trop.
@@ -34,7 +46,13 @@ class ArsIndicatorRepository implements ArsIndicatorRepositoryInterface {
     const [serviceFiles, appointmentPatients] = await Promise.all([
       this.prisma.patientServiceFile.findMany({
         where: this.scope,
-        select: { patientId: true, entryDate: true, orientation: true },
+        select: {
+          patientId: true,
+          entryDate: true,
+          exitDate: true,
+          stopReason: true,
+          orientation: true,
+        },
       }),
       this.prisma.appointmentPatient.findMany({
         where: this.scope,
@@ -50,10 +68,22 @@ class ArsIndicatorRepository implements ArsIndicatorRepositoryInterface {
               thematic: { select: { name: true } },
               slot: {
                 select: {
+                  startDate: true,
+                  endDate: true,
+                  pathway: {
+                    select: {
+                      id: true,
+                      startDate: true,
+                      template: { select: { name: true } },
+                    },
+                  },
                   slotTemplate: {
                     select: {
                       isIndividual: true,
                       thematic: { select: { name: true } },
+                      soignantLinks: {
+                        select: { soignant: { select: { name: true } } },
+                      },
                     },
                   },
                 },
@@ -76,6 +106,18 @@ class ArsIndicatorRepository implements ArsIndicatorRepositoryInterface {
         null,
       honored: ap.status === 'yes',
       accompanied: ap.accompanying === ARS_ACCOMPANYING_YES,
+      status: ap.status,
+      pathwayId: ap.appointment.slot.pathway?.id ?? null,
+      pathwayLabel: ap.appointment.slot.pathway
+        ? libelleParcours(ap.appointment.slot.pathway)
+        : null,
+      slotMinutes:
+        (ap.appointment.slot.endDate.getTime() -
+          ap.appointment.slot.startDate.getTime()) /
+        60_000,
+      soignants: ap.appointment.slot.slotTemplate.soignantLinks.map(
+        (l) => l.soignant.name,
+      ),
     }))
 
     const byPatient = new Map<string, ArsPresence[]>()
@@ -86,6 +128,8 @@ class ArsIndicatorRepository implements ArsIndicatorRepositoryInterface {
     const files: ArsFile[] = serviceFiles.map((f) => ({
       patientId: f.patientId,
       entryDate: f.entryDate,
+      exitDate: f.exitDate,
+      stopReason: f.stopReason,
       orientation: f.orientation,
       presences: byPatient.get(f.patientId) ?? [],
     }))

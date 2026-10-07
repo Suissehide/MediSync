@@ -25,12 +25,20 @@ const presence = (p: Partial<ArsPresence> = {}): ArsPresence => ({
   thematicName: 'Mes médicaments',
   honored: true,
   accompanied: false,
+  pathwayId: null,
+  pathwayLabel: null,
+  slotMinutes: 60,
+  soignants: [],
   ...p,
+  status:
+    p.status !== undefined ? p.status : p.honored === false ? 'no' : 'yes',
 })
 
 const dossier = (f: Partial<ArsFile> = {}): ArsFile => ({
   patientId: 'p1',
   entryDate: new Date('2026-02-01'),
+  exitDate: null,
+  stopReason: null,
   orientation: null,
   presences: [],
   ...f,
