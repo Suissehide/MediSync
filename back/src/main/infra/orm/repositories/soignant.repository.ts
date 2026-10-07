@@ -27,10 +27,15 @@ class SoignantRepository implements SoignantRepositoryInterface {
     return this.tenantContext.scope()
   }
 
-  findAll(): Promise<SoignantEntityRepo[]> {
-    return this.prisma.soignant.findMany({ where: this.scope })
+  findAll(archived = false): Promise<SoignantEntityRepo[]> {
+    return this.prisma.soignant.findMany({
+      where: { ...this.scope, archivedAt: archived ? { not: null } : null },
+    })
   }
 
+  // Ne filtre pas les archivees, volontairement : les domaines s'en servent pour
+  // valider la cible d'une reference. Filtrer ici casserait le simple
+  // reenregistrement d'une ligne qui en porte deja une archivee.
   async findByID(soignantID: string): Promise<SoignantEntityRepo> {
     try {
       return await this.prisma.soignant.findUniqueOrThrow({
@@ -63,28 +68,18 @@ class SoignantRepository implements SoignantRepositoryInterface {
 
   async update(
     soignantID: string,
-    soignantUpdateParams: SoignantUpdateEntityRepo,
+    { archived, ...soignantUpdateParams }: SoignantUpdateEntityRepo,
   ): Promise<SoignantEntityRepo> {
     try {
       return await this.prisma.soignant.update({
         where: {
           id_serviceId: { id: soignantID, serviceId: this.scope.serviceId },
         },
-        data: soignantUpdateParams,
-      })
-    } catch (err) {
-      throw this.errorHandler.boomErrorFromPrismaError({
-        entityName: 'Soignant',
-        error: err,
-      })
-    }
-  }
-
-  async delete(soignantID: string): Promise<SoignantEntityRepo> {
-    try {
-      return await this.prisma.soignant.delete({
-        where: {
-          id_serviceId: { id: soignantID, serviceId: this.scope.serviceId },
+        data: {
+          ...soignantUpdateParams,
+          ...(archived !== undefined && {
+            archivedAt: archived ? new Date() : null,
+          }),
         },
       })
     } catch (err) {

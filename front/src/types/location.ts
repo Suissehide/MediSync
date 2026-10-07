@@ -10,4 +10,6 @@ export type CreateLocationParams = {
 export type UpdateLocationParams = {
   id: string
   name?: string
+  /** `true` archive, `false` restaure. */
+  archived?: boolean
 }

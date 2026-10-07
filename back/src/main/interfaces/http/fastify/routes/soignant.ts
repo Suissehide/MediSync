@@ -9,6 +9,8 @@ import {
   deleteSoignantByIdParamsSchema,
   type GetSoignantByIdParams,
   getSoignantByIdParamsSchema,
+  type ListSoignantsQuery,
+  listSoignantsQuerySchema,
   soignantResponseSchema,
   soignantsResponseSchema,
   type UpdateSoignantBody,
@@ -21,10 +23,11 @@ const soignantReadRouter: FastifyPluginAsync = (fastify) => {
   const { soignantDomain } = fastify.iocContainer
 
   // Get all
-  fastify.get(
+  fastify.get<{ Querystring: ListSoignantsQuery }>(
     '/',
     {
       schema: {
+        querystring: listSoignantsQuerySchema,
         response: {
           200: soignantsResponseSchema,
           404: z.object({ message: z.string() }),
@@ -32,8 +35,8 @@ const soignantReadRouter: FastifyPluginAsync = (fastify) => {
       },
       config: { permission: 'referentials:read' },
     },
-    () => {
-      return soignantDomain.findAll()
+    (request) => {
+      return soignantDomain.findAll(request.query.archived)
     },
   )
 
@@ -112,6 +115,7 @@ const soignantWriteRouter: FastifyPluginAsync = (fastify) => {
   )
 
   // Delete
+  // Archive (la restauration passe par PATCH { archived: false })
   fastify.delete<{ Params: DeleteSoignantByIdParams }>(
     '/:soignantID',
     {
@@ -126,8 +130,10 @@ const soignantWriteRouter: FastifyPluginAsync = (fastify) => {
     },
     async (request, reply) => {
       const { soignantID } = request.params
-      const deleted = await soignantDomain.delete(soignantID)
-      if (!deleted) {
+      const archived = await soignantDomain.update(soignantID, {
+        archived: true,
+      })
+      if (!archived) {
         logger.info('Soignant not found')
         throw Boom.notFound('Soignant not found')
       }

@@ -9,6 +9,8 @@ import {
   diagnosticEducatifTemplateResponseSchema,
   diagnosticEducatifTemplatesResponseSchema,
   diagnosticTemplateParamsSchema,
+  type ListDiagnosticTemplatesQuery,
+  listDiagnosticTemplatesQuerySchema,
   type UpdateDiagnosticEducatifTemplateBody,
   type UpdateDiagnosticEducatifTemplateParams,
   updateDiagnosticEducatifTemplateSchema,
@@ -18,13 +20,17 @@ const diagnosticEducatifTemplateRouter: FastifyPluginAsync = (fastify) => {
   const { diagnosticEducatifTemplateDomain } = fastify.iocContainer
 
   // Get all
-  fastify.get(
+  fastify.get<{ Querystring: ListDiagnosticTemplatesQuery }>(
     '/',
     {
-      schema: { response: { 200: diagnosticEducatifTemplatesResponseSchema } },
+      schema: {
+        querystring: listDiagnosticTemplatesQuerySchema,
+        response: { 200: diagnosticEducatifTemplatesResponseSchema },
+      },
       config: { permission: 'referentials:read' },
     },
-    () => diagnosticEducatifTemplateDomain.findAll(),
+    (request) =>
+      diagnosticEducatifTemplateDomain.findAll(request.query.archived),
   )
 
   // Get by ID
@@ -91,7 +97,7 @@ const diagnosticEducatifTemplateRouter: FastifyPluginAsync = (fastify) => {
     },
   )
 
-  // Delete
+  // Archive (la restauration passe par PATCH { archived: false })
   fastify.delete<{ Params: DiagnosticTemplateParams }>(
     '/:templateId',
     {
@@ -102,7 +108,9 @@ const diagnosticEducatifTemplateRouter: FastifyPluginAsync = (fastify) => {
       config: { permission: 'referentials:write' },
     },
     async (request, reply) => {
-      await diagnosticEducatifTemplateDomain.delete(request.params.templateId)
+      await diagnosticEducatifTemplateDomain.update(request.params.templateId, {
+        archived: true,
+      })
       reply.code(204).send()
     },
   )

@@ -312,6 +312,11 @@ model Soignant {
   serviceId       String
   name            String
 
+  // Archivage au lieu de suppression, comme Thematic. Ici un DELETE faisait pire
+  // qu'un SetNull : `slotTemplateLinks` et `thematicLinks` sont en Cascade, donc
+  // les lignes de liaison disparaissaient — le planning perdait qui anime quoi.
+  archivedAt      DateTime?
+
   slotTemplateLinks  SlotTemplateSoignant[]
   thematicLinks      SoignantThematic[]
   todos              Todo[]
@@ -351,6 +356,10 @@ model Location {
   establishmentId String
   serviceId       String
   name            String
+
+  // Archivage au lieu de suppression, comme Thematic : un DELETE vidait le
+  // `locationID` de tous les creneaux modeles (onDelete: SetNull).
+  archivedAt      DateTime?
 
   slotTemplates SlotTemplate[]
 
@@ -521,6 +530,9 @@ model DiagnosticEducatifTemplate {
   serviceId       String
   name            String
   activeFields    String[]
+  // Archivage au lieu de suppression, comme Thematic : un DELETE vidait le
+  // `templateId` de tous les diagnostics deja remplis (onDelete: SetNull).
+  archivedAt      DateTime?
 
   diagnostics DiagnosticEducatif[]
 

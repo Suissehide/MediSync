@@ -8,9 +8,9 @@ import type {
 import { fetchWithAuth } from './fetchWithAuth.ts'
 
 export const LocationApi = {
-  getAll: async (): Promise<Location[]> => {
+  getAll: async (archived = false): Promise<Location[]> => {
     const response = await fetchWithAuth(
-      `${tenantApiUrl()}/location?action=getAllLocations`,
+      `${tenantApiUrl()}/location?action=getAllLocations&archived=${archived}`,
       {
         method: 'GET',
       },
@@ -60,15 +60,15 @@ export const LocationApi = {
     return response.json()
   },
 
-  delete: async (locationID: string): Promise<void> => {
+  archive: async (locationID: string): Promise<void> => {
     const response = await fetchWithAuth(
-      `${tenantApiUrl()}/location/${locationID}?action=deleteLocation`,
+      `${tenantApiUrl()}/location/${locationID}?action=archiveLocation`,
       {
         method: 'DELETE',
       },
     )
     if (!response.ok) {
-      handleHttpError(response, {}, 'Impossible de supprimer la salle')
+      handleHttpError(response, {}, 'Impossible d’archiver la salle')
     }
     return
   },

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 
 import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { useSoignantMutations } from '../../../queries/useSoignant.ts'
-import { useThematicMutations } from '../../../queries/useThematic.tsx'
+import { useThematicMutations } from '../../../queries/useThematic.ts'
 import type { Soignant } from '../../../types/soignant.ts'
 import type { Thematic } from '../../../types/thematic.ts'
 import { Button } from '../../ui/button.tsx'

@@ -1,7 +1,7 @@
 import { createColumnHelper } from '@tanstack/react-table'
-import { Trash } from 'lucide-react'
+import { Archive, Undo2 } from 'lucide-react'
 
-import DeleteSoignantForm from '../components/custom/popup/deleteSoignantForm.tsx'
+import ArchiveSoignantForm from '../components/custom/popup/archiveSoignantForm.tsx'
 import EditSoignantAccountsForm, {
   nomDuCompte,
 } from '../components/custom/popup/editSoignantAccountsForm.tsx'
@@ -15,6 +15,10 @@ import type { Thematic } from '../types/thematic.ts'
 const columnHelper = createColumnHelper<Soignant>()
 
 type SoignantColumnOptions = {
+  onRestore: (id: string) => void
+  // Les archives se consultent dans la meme table : seules les actions
+  // changent, un archive ne se reedite pas.
+  archived: boolean
   thematics: Thematic[]
   thematicOptions: { value: string; label: string }[]
   // Membres du service et le soignant que chacun incarne (2026-09-29).
@@ -26,6 +30,8 @@ type SoignantColumnOptions = {
 }
 
 export const getSoignantColumns = ({
+  onRestore,
+  archived,
   thematics,
   thematicOptions,
   members,
@@ -90,6 +96,21 @@ export const getSoignantColumns = ({
       meta: { align: 'right' },
       cell: ({ row }) => {
         const soignant = row.original
+        if (archived) {
+          return (
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                aria-label={`Restaurer ${soignant.name}`}
+                title="Restaurer"
+                onClick={() => onRestore(soignant.id)}
+              >
+                <Undo2 className="w-4 h-4" />
+              </Button>
+            </div>
+          )
+        }
         return (
           <div className="flex justify-end gap-2">
             <EditSoignantAccountsForm soignant={soignant} members={members} />
@@ -98,15 +119,15 @@ export const getSoignantColumns = ({
               thematics={thematics}
               thematicOptions={thematicOptions}
             />
-            <DeleteSoignantForm
+            <ArchiveSoignantForm
               soignant={soignant}
               trigger={
                 <Button
                   variant="outline"
                   size="icon"
-                  aria-label={`Supprimer ${soignant.name}`}
+                  aria-label={`Archiver ${soignant.name}`}
                 >
-                  <Trash className="w-4 h-4 text-destructive" />
+                  <Archive className="w-4 h-4 text-destructive" />
                 </Button>
               }
             />

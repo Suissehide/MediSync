@@ -6,10 +6,12 @@ export type LocationCreateEntityDomain = {
 }
 export type LocationUpdateEntityDomain = {
   name?: string
+  // `true` archive, `false` restaure.
+  archived?: boolean
 }
 
 export interface LocationDomainInterface {
-  findAll: () => Promise<LocationEntityDomain[]>
+  findAll: (archived?: boolean) => Promise<LocationEntityDomain[]>
   findByID: (locationID: string) => Promise<LocationEntityDomain>
   create: (
     locationCreateParams: LocationCreateEntityDomain,
@@ -18,5 +20,4 @@ export interface LocationDomainInterface {
     locationID: string,
     locationUpdateParams: LocationUpdateEntityDomain,
   ) => Promise<LocationEntityDomain>
-  delete: (locationID: string) => Promise<LocationEntityDomain>
 }

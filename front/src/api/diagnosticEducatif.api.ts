@@ -84,10 +84,11 @@ export const DiagnosticEducatifApi = {
 }
 
 export const DiagnosticEducatifTemplateApi = {
-  getAll: async (): Promise<DiagnosticEducatifTemplate[]> => {
-    const res = await fetchWithAuth(`${tenantApiUrl()}/diagnostic-template`, {
-      method: 'GET',
-    })
+  getAll: async (archived = false): Promise<DiagnosticEducatifTemplate[]> => {
+    const res = await fetchWithAuth(
+      `${tenantApiUrl()}/diagnostic-template?archived=${archived}`,
+      { method: 'GET' },
+    )
     if (!res.ok) {
       handleHttpError(res, {}, 'Impossible de récupérer les templates')
     }
@@ -126,13 +127,13 @@ export const DiagnosticEducatifTemplateApi = {
     return res.json()
   },
 
-  delete: async (id: string): Promise<void> => {
+  archive: async (id: string): Promise<void> => {
     const res = await fetchWithAuth(
       `${tenantApiUrl()}/diagnostic-template/${id}`,
       { method: 'DELETE' },
     )
     if (!res.ok) {
-      handleHttpError(res, {}, 'Impossible de supprimer le template')
+      handleHttpError(res, {}, 'Impossible d’archiver le modèle')
     }
   },
 }

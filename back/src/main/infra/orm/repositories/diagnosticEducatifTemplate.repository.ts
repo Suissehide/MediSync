@@ -26,13 +26,16 @@ class DiagnosticEducatifTemplateRepository
     return this.tenantContext.scope()
   }
 
-  findAll(): Promise<DiagnosticEducatifTemplateEntity[]> {
+  findAll(archived = false): Promise<DiagnosticEducatifTemplateEntity[]> {
     return this.prisma.diagnosticEducatifTemplate.findMany({
-      where: this.scope,
+      where: { ...this.scope, archivedAt: archived ? { not: null } : null },
       orderBy: { name: 'asc' },
     })
   }
 
+  // Ne filtre pas les archivees, volontairement : les domaines s'en servent pour
+  // valider la cible d'une reference. Filtrer ici casserait le simple
+  // reenregistrement d'une ligne qui en porte deja une archivee.
   async findByID(id: string): Promise<DiagnosticEducatifTemplateEntity> {
     try {
       return await this.prisma.diagnosticEducatifTemplate.findUniqueOrThrow({
@@ -63,25 +66,17 @@ class DiagnosticEducatifTemplateRepository
 
   async update(
     id: string,
-    params: DiagnosticEducatifTemplateUpdateEntity,
+    { archived, ...params }: DiagnosticEducatifTemplateUpdateEntity,
   ): Promise<DiagnosticEducatifTemplateEntity> {
     try {
       return await this.prisma.diagnosticEducatifTemplate.update({
         where: { id_serviceId: { id, serviceId: this.scope.serviceId } },
-        data: params,
-      })
-    } catch (err) {
-      throw this.errorHandler.boomErrorFromPrismaError({
-        entityName: 'DiagnosticEducatifTemplate',
-        error: err,
-      })
-    }
-  }
-
-  async delete(id: string): Promise<DiagnosticEducatifTemplateEntity> {
-    try {
-      return await this.prisma.diagnosticEducatifTemplate.delete({
-        where: { id_serviceId: { id, serviceId: this.scope.serviceId } },
+        data: {
+          ...params,
+          ...(archived !== undefined && {
+            archivedAt: archived ? new Date() : null,
+          }),
+        },
       })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({

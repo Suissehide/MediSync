@@ -7,10 +7,15 @@ import AddSoignantForm from '@/components/custom/popup/addSoignantForm.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
 import ReactTable from '@/components/table/reactTable.tsx'
 import { Input } from '@/components/ui/input.tsx'
+import { Label } from '@/components/ui/label.tsx'
+import { Switch } from '@/components/ui/switch.tsx'
 import { can, useCan } from '@/hooks/useCan.ts'
 import { useServiceMembersQuery } from '@/queries/useServiceMembers.ts'
-import { useSoignantQueries } from '@/queries/useSoignant.ts'
-import { useThematicQueries } from '@/queries/useThematic.tsx'
+import {
+  useSoignantMutations,
+  useSoignantQueries,
+} from '@/queries/useSoignant.ts'
+import { useThematicQueries } from '@/queries/useThematic.ts'
 import type { Soignant } from '@/types/soignant.ts'
 import { resolveTenantContext } from '@/utils/tenant-context.ts'
 
@@ -37,7 +42,9 @@ function SoignantSettings() {
   // mais l'URL se tape à la main : les actions d'écriture se gardent aussi
   // ici, indépendamment du menu.
   const canManage = useCan('referentials:write')
-  const { soignants, isPending } = useSoignantQueries()
+  const [showArchived, setShowArchived] = useState(false)
+  const { soignants, isPending } = useSoignantQueries(showArchived)
+  const { restoreSoignant } = useSoignantMutations()
   const { thematics } = useThematicQueries()
   const { members } = useServiceMembersQuery()
 
@@ -61,12 +68,21 @@ function SoignantSettings() {
   const columns = useMemo(
     () =>
       getSoignantColumns({
+        onRestore: (id) => restoreSoignant.mutate(id),
+        archived: showArchived,
         thematics: thematics ?? [],
         thematicOptions,
         members: members ?? [],
         canManage,
       }),
-    [thematics, thematicOptions, members, canManage],
+    [
+      thematics,
+      thematicOptions,
+      members,
+      canManage,
+      showArchived,
+      restoreSoignant,
+    ],
   )
 
   return (
@@ -85,7 +101,15 @@ function SoignantSettings() {
               placeholder="Nom du soignant..."
               className="w-72"
             />
-            {canManage && <AddSoignantForm />}
+            <div className="flex items-center gap-2">
+              <Switch
+                id="soignants-archives"
+                checked={showArchived}
+                onCheckedChange={setShowArchived}
+              />
+              <Label htmlFor="soignants-archives">Archivés</Label>
+            </div>
+            {canManage && !showArchived && <AddSoignantForm />}
           </div>
         </div>
 

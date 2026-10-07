@@ -1,4 +1,5 @@
-import { LayoutTemplate, Loader2Icon, Plus, Trash2 } from 'lucide-react'
+import { Archive, LayoutTemplate, Loader2Icon, Plus, Undo2 } from 'lucide-react'
+import { useState } from 'react'
 
 import { useCan } from '../../../hooks/useCan.ts'
 import {
@@ -7,6 +8,8 @@ import {
 } from '../../../queries/useDiagnosticEducatif.ts'
 import { useDiagnosticTemplateStore } from '../../../store/useDiagnosticTemplateStore.ts'
 import { Button } from '../../ui/button.tsx'
+import { Label } from '../../ui/label.tsx'
+import { Switch } from '../../ui/switch.tsx'
 
 function SidebarDiagnosticTemplate() {
   // Le menu ne montre cet écran qu'aux détenteurs de `referentials:write`,
@@ -14,8 +17,10 @@ function SidebarDiagnosticTemplate() {
   // ici, indépendamment du menu.
   const canManage = useCan('referentials:write')
   const { selectedId, setSelectedId } = useDiagnosticTemplateStore()
-  const { templates, isPending } = useDiagnosticTemplatesQuery()
-  const { createTemplate, deleteTemplate } = useDiagnosticTemplateMutations()
+  const [showArchived, setShowArchived] = useState(false)
+  const { templates, isPending } = useDiagnosticTemplatesQuery(showArchived)
+  const { createTemplate, archiveTemplate, restoreTemplate } =
+    useDiagnosticTemplateMutations()
 
   const handleCreate = () => {
     createTemplate.mutate(
@@ -27,12 +32,22 @@ function SidebarDiagnosticTemplate() {
   return (
     <>
       <div className="pl-4 pr-2 flex justify-between items-center text-text-sidebar py-2">
-        <p>Templates</p>
-        {canManage && (
-          <Button variant="gradient" size="icon" onClick={handleCreate}>
-            <Plus className="w-5 h-5" />
-          </Button>
-        )}
+        <p>Modèles</p>
+        <div className="flex items-center gap-2">
+          <Switch
+            id="modeles-archives"
+            checked={showArchived}
+            onCheckedChange={setShowArchived}
+          />
+          <Label htmlFor="modeles-archives" className="text-text-sidebar">
+            Archivés
+          </Label>
+          {canManage && !showArchived && (
+            <Button variant="gradient" size="icon" onClick={handleCreate}>
+              <Plus className="w-5 h-5" />
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="px-2 pb-2 flex-1 flex flex-col min-h-0">
@@ -45,7 +60,7 @@ function SidebarDiagnosticTemplate() {
             {(!templates || templates.length === 0) && (
               <li className="bg-sidebar rounded-xl text-xs text-text-sidebar text-center py-36 flex flex-col items-center gap-2">
                 <LayoutTemplate className="w-6 h-6 opacity-40" />
-                Aucun template
+                {showArchived ? 'Aucun modèle archivé' : 'Aucun modèle'}
               </li>
             )}
             {templates?.map((t) => {
@@ -77,13 +92,25 @@ function SidebarDiagnosticTemplate() {
                         </div>
                       </div>
                     </button>
-                    {canManage && (
+                    {canManage && showArchived && (
                       <Button
                         variant="none"
                         size="icon-sm"
+                        aria-label={`Restaurer ${t.name}`}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                        onClick={() => restoreTemplate.mutate(t.id)}
+                      >
+                        <Undo2 className="w-4 h-4" />
+                      </Button>
+                    )}
+                    {canManage && !showArchived && (
+                      <Button
+                        variant="none"
+                        size="icon-sm"
+                        aria-label={`Archiver ${t.name}`}
                         className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
                         onClick={() => {
-                          deleteTemplate.mutate(t.id, {
+                          archiveTemplate.mutate(t.id, {
                             onSuccess: () => {
                               if (selectedId === t.id) {
                                 setSelectedId(null)
@@ -92,7 +119,7 @@ function SidebarDiagnosticTemplate() {
                           })
                         }}
                       >
-                        <Trash2 className="w-4 h-4 text-destructive" />
+                        <Archive className="w-4 h-4 text-destructive" />
                       </Button>
                     )}
                   </div>

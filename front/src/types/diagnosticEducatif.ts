@@ -142,4 +142,6 @@ export type UpdateDiagnosticEducatifTemplateParams = {
   id: string
   name?: string
   activeFields?: string[]
+  /** `true` archive, `false` restaure. */
+  archived?: boolean
 }

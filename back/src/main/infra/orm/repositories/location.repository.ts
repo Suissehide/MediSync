@@ -27,10 +27,15 @@ class LocationRepository implements LocationRepositoryInterface {
     return this.tenantContext.scope()
   }
 
-  findAll(): Promise<LocationEntityRepo[]> {
-    return this.prisma.location.findMany({ where: this.scope })
+  findAll(archived = false): Promise<LocationEntityRepo[]> {
+    return this.prisma.location.findMany({
+      where: { ...this.scope, archivedAt: archived ? { not: null } : null },
+    })
   }
 
+  // Ne filtre pas les archivees, volontairement : les domaines s'en servent pour
+  // valider la cible d'une reference. Filtrer ici casserait le simple
+  // reenregistrement d'une ligne qui en porte deja une archivee.
   async findByID(locationID: string): Promise<LocationEntityRepo> {
     try {
       return await this.prisma.location.findUniqueOrThrow({
@@ -70,21 +75,11 @@ class LocationRepository implements LocationRepositoryInterface {
         where: {
           id_serviceId: { id: locationID, serviceId: this.scope.serviceId },
         },
-        data: { name: locationUpdateParams.name },
-      })
-    } catch (err) {
-      throw this.errorHandler.boomErrorFromPrismaError({
-        entityName: 'Location',
-        error: err,
-      })
-    }
-  }
-
-  async delete(locationID: string): Promise<LocationEntityRepo> {
-    try {
-      return await this.prisma.location.delete({
-        where: {
-          id_serviceId: { id: locationID, serviceId: this.scope.serviceId },
+        data: {
+          name: locationUpdateParams.name,
+          ...(locationUpdateParams.archived !== undefined && {
+            archivedAt: locationUpdateParams.archived ? new Date() : null,
+          }),
         },
       })
     } catch (err) {

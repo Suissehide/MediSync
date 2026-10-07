@@ -8,11 +8,12 @@ export type SoignantCreateEntityRepo = Omit<
 >
 export type SoignantUpdateEntityRepo = Omit<
   Prisma.SoignantUncheckedUpdateInput,
-  'establishmentId' | 'serviceId'
->
+  'establishmentId' | 'serviceId' | 'archivedAt'
+  // `archivedAt` est remplace par `archived` : une seule facon d'archiver.
+> & { archived?: boolean }
 
 export interface SoignantRepositoryInterface {
-  findAll: () => Promise<SoignantEntityRepo[]>
+  findAll: (archived?: boolean) => Promise<SoignantEntityRepo[]>
   findByID: (soignantID: string) => Promise<SoignantEntityRepo>
   create: (
     soignantCreateParams: SoignantCreateEntityRepo,
@@ -21,5 +22,4 @@ export interface SoignantRepositoryInterface {
     soignantID: string,
     soignantUpdateParams: SoignantUpdateEntityRepo,
   ) => Promise<SoignantEntityRepo>
-  delete: (soignantID: string) => Promise<SoignantEntityRepo>
 }

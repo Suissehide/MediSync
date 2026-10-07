@@ -1,4 +1,4 @@
-import { Trash, X } from 'lucide-react'
+import { Archive, X } from 'lucide-react'
 import type React from 'react'
 import { useState } from 'react'
 
@@ -15,17 +15,18 @@ import {
   PopupTrigger,
 } from '../../ui/popup.tsx'
 
-interface DeleteSoignantFormProps {
+interface ArchiveSoignantFormProps {
   soignant: Soignant
   trigger?: React.ReactNode
 }
 
-function DeleteSoignantForm({ soignant, trigger }: DeleteSoignantFormProps) {
+function ArchiveSoignantForm({ soignant, trigger }: ArchiveSoignantFormProps) {
   const [open, setOpen] = useState(false)
-  const { deleteSoignant } = useSoignantMutations()
+  const { archiveSoignant } = useSoignantMutations()
 
-  const handleDelete = () => {
-    deleteSoignant.mutate(soignant.id)
+  const handleArchive = () => {
+    archiveSoignant.mutate(soignant.id)
+    setOpen(false)
   }
 
   return (
@@ -33,18 +34,24 @@ function DeleteSoignantForm({ soignant, trigger }: DeleteSoignantFormProps) {
       <PopupTrigger asChild>
         {trigger ?? (
           <Button variant="absolute" size="icon" onClick={() => setOpen(true)}>
-            <Trash className="w-4 h-4 text-red-500" />
+            <Archive className="w-4 h-4 text-red-500" />
           </Button>
         )}
       </PopupTrigger>
 
       <PopupContent>
         <PopupHeader>
-          <PopupTitle className="font-bold text-xl">Suppression</PopupTitle>
+          <PopupTitle className="font-bold text-xl">
+            Archiver le soignant
+          </PopupTitle>
         </PopupHeader>
 
         <PopupBody>
-          <div>Voulez-vous supprimer ce soignant : {soignant.name} ?</div>
+          <p className="text-sm text-text-light">
+            {soignant.name} sort des listes de choix. Les créneaux, thématiques
+            et tâches qui le portent le conservent, et il se restaure depuis le
+            filtre « Archivés ».
+          </p>
         </PopupBody>
 
         <PopupFooter>
@@ -52,9 +59,13 @@ function DeleteSoignantForm({ soignant, trigger }: DeleteSoignantFormProps) {
             <X className="w-4 h-4" />
             Annuler
           </Button>
-          <Button variant="destructive" onClick={() => handleDelete()}>
-            <Trash className="w-4 h-4" />
-            Supprimer
+          <Button
+            variant="outline"
+            onClick={handleArchive}
+            disabled={archiveSoignant.isPending}
+          >
+            <Archive className="w-4 h-4" />
+            {archiveSoignant.isPending ? 'Archivage...' : 'Archiver'}
           </Button>
         </PopupFooter>
       </PopupContent>
@@ -62,4 +73,4 @@ function DeleteSoignantForm({ soignant, trigger }: DeleteSoignantFormProps) {
   )
 }
 
-export default DeleteSoignantForm
+export default ArchiveSoignantForm
