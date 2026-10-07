@@ -355,23 +355,51 @@ function Planning() {
     }
   }
 
+  /** Un créneau qui porte des rendez-vous est archivé : le supprimer les perdrait. */
+  const archiveOrDeleteSlots = (ids: string[]) => {
+    const toArchive = ids.filter(
+      (id) => slots?.find((s) => s.id === id)?.appointments?.length,
+    )
+    for (const id of ids) {
+      if (!toArchive.includes(id)) {
+        deleteSlot.mutate(id)
+      }
+    }
+    if (toArchive.length === 0) {
+      return
+    }
+    archiveSlots.mutate(
+      { ids: toArchive, archived: true },
+      {
+        onSuccess: () =>
+          toast({
+            title: `${toArchive.length} créneau(x) archivé(s) au lieu d'être supprimé(s)`,
+            message:
+              'Ils portent des rendez-vous, qui restent visibles sur le Dashboard.',
+            severity: TOAST_SEVERITY.SUCCESS,
+            action: (
+              <Button
+                variant="none"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() =>
+                  archiveSlots.mutate({ ids: toArchive, archived: false })
+                }
+              >
+                Annuler
+              </Button>
+            ),
+          }),
+      },
+    )
+  }
+
   const handleDeleteEvent = (id: string) => {
     if (editMode) {
       deleteSlotTemplate.mutate(id)
-    } else {
-      const slot = slots?.find((s) => s.id === id)
-      if (slot && slot.appointments && slot.appointments.length > 0) {
-        toast({
-          title: 'Suppression impossible',
-          message:
-            "Ce créneau contient des rendez-vous déjà programmés. Veuillez d'abord supprimer les rendez-vous avant de supprimer le créneau.",
-          severity: TOAST_SEVERITY.ERROR,
-        })
-        return
-      }
-      setEvents((prev) => prev.filter((event) => event.id !== id))
-      deleteSlot.mutate(id)
+      return
     }
+    archiveOrDeleteSlots([id])
   }
 
   const handleDeleteHoverSlot = (eventId: string) => {
@@ -598,58 +626,18 @@ function Planning() {
 
   const handleBulkDelete = () => {
     const prefix = editMode ? 'template_' : 'slot_'
-    let skipped = 0
-    for (const eventId of selectedSlotIds) {
-      if (!eventId.startsWith(prefix)) {
-        continue
-      }
-      const id = eventId.replace(prefix, '')
-      if (editMode) {
+    const ids = [...selectedSlotIds]
+      .filter((eventId) => eventId.startsWith(prefix))
+      .map((eventId) => eventId.replace(prefix, ''))
+
+    if (editMode) {
+      for (const id of ids) {
         deleteSlotTemplate.mutate(id)
-        continue
       }
-      if (slots?.find((s) => s.id === id)?.appointments?.length) {
-        skipped++
-        continue
-      }
-      deleteSlot.mutate(id)
-    }
-    if (skipped > 0) {
-      toast({
-        title: 'Suppression partielle',
-        message: `${skipped} créneau(x) contenant des rendez-vous n'ont pas été supprimé(s).`,
-        severity: TOAST_SEVERITY.ERROR,
-      })
+    } else {
+      archiveOrDeleteSlots(ids)
     }
     setShowBulkDeleteModal(false)
-    handleClearSelection()
-  }
-
-  const handleBulkArchive = () => {
-    const ids = [...selectedSlotIds]
-      .filter((eventId) => eventId.startsWith('slot_'))
-      .map((eventId) => eventId.replace('slot_', ''))
-    archiveSlots.mutate(
-      { ids, archived: true },
-      {
-        onSuccess: () =>
-          toast({
-            title: `${ids.length} créneau(x) archivé(s)`,
-            message: 'Leurs rendez-vous restent visibles sur le Dashboard.',
-            severity: TOAST_SEVERITY.SUCCESS,
-            action: (
-              <Button
-                variant="none"
-                size="sm"
-                className="h-7 px-2 text-xs"
-                onClick={() => archiveSlots.mutate({ ids, archived: false })}
-              >
-                Annuler
-              </Button>
-            ),
-          }),
-      },
-    )
     handleClearSelection()
   }
 
@@ -860,14 +848,6 @@ function Planning() {
                 options={[
                   { value: 'duplicate', label: 'Dupliquer sur une semaine' },
                   { value: 'move', label: 'Déplacer sur une semaine' },
-                  ...(editMode
-                    ? []
-                    : [
-                        {
-                          value: 'archive',
-                          label: 'Archiver (masquer du planning)',
-                        },
-                      ]),
                   { value: 'delete', label: 'Supprimer la sélection' },
                 ]}
                 placeholder="Action..."
@@ -898,8 +878,6 @@ function Planning() {
                       )
                     }
                     setShowMoveModal(true)
-                  } else if (v === 'archive') {
-                    handleBulkArchive()
                   } else if (v === 'delete') {
                     setShowBulkDeleteModal(true)
                   }
@@ -1170,7 +1148,7 @@ function Planning() {
           onConfirm={handleConfirmDeleteHoverSlot}
           loading={deleteSlot.isPending || deleteSlotTemplate.isPending}
           title="Supprimer le créneau"
-          description="Voulez-vous vraiment supprimer ce créneau ? Cette action est irréversible."
+          description="Voulez-vous vraiment supprimer ce créneau ? S'il porte des rendez-vous, il sera archivé plutôt que supprimé."
         />
 
         <ConfirmDeleteForm
@@ -1183,7 +1161,7 @@ function Planning() {
           }}
           onConfirm={handleBulkDelete}
           title="Supprimer la sélection"
-          description={`Voulez-vous vraiment supprimer ${selectedSlotIds.size} créneau(x) ? Cette action est irréversible.`}
+          description={`Voulez-vous vraiment supprimer ${selectedSlotIds.size} créneau(x) ? Ceux qui portent des rendez-vous seront archivés plutôt que supprimés.`}
         />
 
         <AddSlotForm
