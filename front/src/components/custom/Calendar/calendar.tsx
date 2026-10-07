@@ -134,6 +134,7 @@ interface CalendarProps {
   editMode?: boolean
   headerToolbar?: ToolbarInput
   editable?: boolean
+  /** false : les créneaux simultanés se partagent la colonne au lieu de se recouvrir. */
   overlap?: boolean
   initialDate?: string
   forbiddenWeeks?: { id: string; startOfWeek: string }[]
@@ -485,7 +486,6 @@ function Calendar({
           }, 0)
         }}
         events={[...viewEvents, ...forbiddenWeekEvents]}
-        eventOverlap={overlap}
         slotEventOverlap={overlap}
         eventContent={(eventContent) => (
           <EventContent

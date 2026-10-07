@@ -925,6 +925,7 @@ function Planning() {
             {view === 'calendar' ? (
               <Calendar
                 events={mergedEvents}
+                overlap={false}
                 handleSelectEvent={handleSelectSlot}
                 handleEditEvent={handleEditSlot}
                 handleDropEvent={handleInstantiatePathway}
