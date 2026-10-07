@@ -73,6 +73,10 @@ export const EventContent = ({
   const durationMinutes = event.end
     ? dayjs(event.end).diff(dayjs(event.start), 'minute')
     : 0
+  // Les trois lignes du libellé sont tronquées : le survol les rend en entier.
+  const hoverTitle = [event.title, thematic, location]
+    .filter(Boolean)
+    .join('\n')
 
   const calculateAppointmentStyle = (appointment: Appointment) => {
     if (!isIndividual) {
@@ -104,6 +108,7 @@ export const EventContent = ({
   return (
     <div
       {...(event.id ? { 'data-event-id': `${event.id}` } : {})}
+      title={hoverTitle || undefined}
       className={clsx(
         'fc-event-hero relative group cursor-pointer h-full w-full flex text-left p-0.5 transition duration-200',
         isRowLayout ? 'flex-row' : 'flex-col',
