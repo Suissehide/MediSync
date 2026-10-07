@@ -5,6 +5,7 @@ import nodemailer from 'nodemailer'
 
 import { AccessLinkDomain } from '../../../domain/accessLink.domain'
 import { ActivityLogDomain } from '../../../domain/activityLog.domain'
+import { ActivityReportDomain } from '../../../domain/activityReport.domain'
 import { AppointmentDomain } from '../../../domain/appointment.domain'
 import { ArsIndicatorDomain } from '../../../domain/arsIndicator.domain'
 import { AuthDomain } from '../../../domain/auth.domain'
@@ -143,6 +144,8 @@ class AwilixIocContainer {
     // ArsIndicator
     this.#registerArsIndicatorDomain()
     this.#registerArsIndicatorRepository()
+    // ActivityReport
+    this.#registerActivityReportDomain()
     // Error (must be before ActivityLog subscriber which depends on userRepository -> errorHandler)
     this.registerErrorHandler()
     // ActivityLog
@@ -250,6 +253,14 @@ class AwilixIocContainer {
     this.register(
       'arsIndicatorRepository',
       asClass(ArsIndicatorRepository).singleton(),
+    )
+  }
+
+  // ActivityReport
+  #registerActivityReportDomain(): void {
+    this.register(
+      'activityReportDomain',
+      asClass(ActivityReportDomain).singleton(),
     )
   }
 
