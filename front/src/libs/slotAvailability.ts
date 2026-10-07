@@ -125,28 +125,24 @@ export const getUpcomingSlotSuggestions = (
     )
     .sort((a, b) => dayjs.utc(a.startDate).diff(dayjs.utc(b.startDate)))
     .slice(0, limit)
-    .map((slot) => toSlotSuggestion(slot, patientID))
-}
+    .map((slot) => {
+      const isIndividual = !!slot.slotTemplate?.isIndividual
+      const existingAppointment = slot.appointments?.[0]
 
-/** Disponibilité d'un créneau pour un patient donné. */
-export const toSlotSuggestion = (
-  slot: Slot,
-  patientID: string,
-): SlotSuggestion => {
-  const isIndividual = !!slot.slotTemplate?.isIndividual
-  const existingAppointment = slot.appointments?.[0]
-
-  return {
-    slot,
-    alreadyBooked: isPatientBookedOnSlot(slot, patientID),
-    isFull: !hasSlotAvailability(slot),
-    bookedCount: getBookedPatientCount(slot),
-    capacity: getSlotCapacity(slot),
-    isIndividual,
-    freeInterval: isIndividual ? getFreeIntervals(slot)[0] : undefined,
-    joinableAppointmentID:
-      !isIndividual && existingAppointment ? existingAppointment.id : undefined,
-  }
+      return {
+        slot,
+        alreadyBooked: isPatientBookedOnSlot(slot, patientID),
+        isFull: !hasSlotAvailability(slot),
+        bookedCount: getBookedPatientCount(slot),
+        capacity: getSlotCapacity(slot),
+        isIndividual,
+        freeInterval: isIndividual ? getFreeIntervals(slot)[0] : undefined,
+        joinableAppointmentID:
+          !isIndividual && existingAppointment
+            ? existingAppointment.id
+            : undefined,
+      }
+    })
 }
 
 /**

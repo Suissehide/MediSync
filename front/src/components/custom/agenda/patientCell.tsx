@@ -65,11 +65,13 @@ export default function PatientCell({ row, onAddPatient }: PatientCellProps) {
 
   const { patients } = row
 
-  const addButton = row.canBook && (
+  // Rendez-vous collectif existant : on gère ses patients ; sinon on en crée un.
+  const canManage = !!row.appointmentId && !row.isIndividual
+  const addButton = (canManage || row.canBook) && (
     <Button
       variant="outline"
       size="icon-sm"
-      aria-label="Prendre un rendez-vous"
+      aria-label={canManage ? 'Gérer les patients' : 'Prendre un rendez-vous'}
       className="shrink-0"
       onClick={() => onAddPatient(row)}
     >
@@ -78,12 +80,7 @@ export default function PatientCell({ row, onAddPatient }: PatientCellProps) {
   )
 
   if (patients.length === 0) {
-    return (
-      <div className="flex items-center gap-1">
-        <span>—</span>
-        {addButton}
-      </div>
-    )
+    return addButton || '—'
   }
 
   const hidden = patients.length - MAX_VISIBLE_PATIENTS

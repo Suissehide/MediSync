@@ -12,7 +12,6 @@ import {
   type FreeInterval,
   getUpcomingSlotSuggestions,
   type SlotSuggestion,
-  toSlotSuggestion,
 } from '../../../libs/slotAvailability.ts'
 import { cn, generateDurationOptions } from '../../../libs/utils.ts'
 import { useAppointmentMutations } from '../../../queries/useAppointment.ts'
@@ -39,10 +38,6 @@ import { AppointmentTimeFields } from '../appointmentDetailsFields.tsx'
 
 interface AddPatientToSlotFormProps {
   trigger?: React.ReactNode
-  // Créneau imposé (Agenda) : la popup est alors pilotée par l'appelant.
-  slot?: Slot
-  open?: boolean
-  onOpenChange?: (open: boolean) => void
 }
 
 /**
@@ -287,32 +282,23 @@ const buildJoinPayload = (target: Appointment, patientID: string) => ({
   ],
 })
 
-function AddPatientToSlotForm({
-  trigger,
-  slot,
-  open: controlledOpen,
-  onOpenChange,
-}: AddPatientToSlotFormProps) {
-  const [localOpen, setLocalOpen] = useState(false)
-  const open = controlledOpen ?? localOpen
-  const setOpen = onOpenChange ?? setLocalOpen
+function AddPatientToSlotForm({ trigger }: AddPatientToSlotFormProps) {
+  const [open, setOpen] = useState(false)
 
   return (
     <Popup modal open={open} onOpenChange={setOpen}>
-      {!slot && (
-        <PopupTrigger asChild>
-          {trigger ?? (
-            <Button
-              type="button"
-              variant="gradient"
-              className="w-full"
-              onClick={() => setOpen(true)}
-            >
-              Nouveau rendez-vous
-            </Button>
-          )}
-        </PopupTrigger>
-      )}
+      <PopupTrigger asChild>
+        {trigger ?? (
+          <Button
+            type="button"
+            variant="gradient"
+            className="w-full"
+            onClick={() => setOpen(true)}
+          >
+            Nouveau rendez-vous
+          </Button>
+        )}
+      </PopupTrigger>
 
       <PopupContent size="lg">
         <PopupHeader>
@@ -321,104 +307,17 @@ function AddPatientToSlotForm({
 
         {/* Les hooks de données (créneaux, patients, thématiques) ne se
         montent qu'à l'ouverture de la popup, pas au chargement de la page. */}
-        {open && (
-          <AddPatientToSlotContent slot={slot} onClose={() => setOpen(false)} />
-        )}
+        {open && <AddPatientToSlotContent onClose={() => setOpen(false)} />}
       </PopupContent>
     </Popup>
   )
 }
 
-const SlotSuggestionList = ({
-  isReady,
-  suggestions,
-  onSelect,
-}: {
-  isReady: boolean
-  suggestions: SlotSuggestion[]
-  onSelect: (suggestion: SlotSuggestion) => void
-}) => {
-  if (!isReady) {
-    return (
-      <EmptySlotList>
-        Sélectionnez un patient et une thématique pour voir les créneaux à
-        venir.
-      </EmptySlotList>
-    )
-  }
-  if (suggestions.length === 0) {
-    return (
-      <EmptySlotList>
-        Aucun créneau à partir de cette date pour cette thématique.
-      </EmptySlotList>
-    )
-  }
-  return (
-    <ul className="flex flex-col max-h-72 overflow-y-auto border border-border rounded-lg divide-y divide-border">
-      {suggestions.map((suggestion) => (
-        <SlotSuggestionRow
-          key={suggestion.slot.id}
-          suggestion={suggestion}
-          onSelect={onSelect}
-        />
-      ))}
-    </ul>
-  )
-}
-
-const FromDateField = ({
-  value,
-  onChange,
-}: {
-  value: Dayjs
-  onChange: (value: Dayjs) => void
-}) => (
-  <FormField>
-    <Label>À partir du</Label>
-    <DatePicker
-      value={value}
-      // Pendant la saisie au clavier, le champ émet des dates incomplètes donc
-      // invalides : les ignorer, sinon le rendu suivant casse sur `toISOString()`.
-      onChange={(next) => {
-        if (next?.isValid()) {
-          onChange(next.startOf('day'))
-        }
-      }}
-      minDate={dayjs.utc().startOf('day')}
-    />
-  </FormField>
-)
-
-const getSlotThematicID = (slot?: Slot) => slot?.slotTemplate?.thematicId ?? ''
-
-// Créneau imposé : lui seul, sinon les prochains créneaux de la thématique.
-const getSuggestions = (
-  slot: Slot | undefined,
-  slots: Slot[] | undefined,
-  thematicID: string,
-  patientID: string,
-  fromDate: Dayjs,
-): SlotSuggestion[] => {
-  if (slot) {
-    return patientID ? [toSlotSuggestion(slot, patientID)] : []
-  }
-  return getUpcomingSlotSuggestions(
-    slots,
-    thematicID,
-    patientID,
-    fromDate.toISOString(),
-  )
-}
-
 interface AddPatientToSlotContentProps {
-  slot?: Slot
   onClose: () => void
 }
 
-function AddPatientToSlotContent({
-  slot,
-  onClose,
-}: AddPatientToSlotContentProps) {
+function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
   // État d'interface : la navigation de l'assistant, le créneau retenu et le
   // filtre de recherche ne sont pas des valeurs envoyées au serveur.
   const [step, setStep] = useState(1)
@@ -444,7 +343,7 @@ function AddPatientToSlotContent({
   // boucler à l'infini. On ne les construit qu'une fois.
   const [defaultValues] = useState(() => ({
     patientID: '',
-    thematicID: getSlotThematicID(slot),
+    thematicID: '',
     startTime: dayjs.utc(),
     duration: '',
     appointmentType: '',
@@ -482,8 +381,14 @@ function AddPatientToSlotContent({
   )
 
   const suggestions = useMemo(
-    () => getSuggestions(slot, slots, thematicID, patientID, fromDate),
-    [slot, slots, thematicID, patientID, fromDate],
+    () =>
+      getUpcomingSlotSuggestions(
+        slots,
+        thematicID,
+        patientID,
+        fromDate.toISOString(),
+      ),
+    [slots, thematicID, patientID, fromDate],
   )
 
   const selectedPatient = patients?.find((patient) => patient.id === patientID)
@@ -641,16 +546,45 @@ function AddPatientToSlotContent({
               )}
             </form.AppField>
 
-            {!slot && <FromDateField value={fromDate} onChange={setFromDate} />}
+            <FormField>
+              <Label>À partir du</Label>
+              <DatePicker
+                value={fromDate}
+                // Pendant la saisie au clavier, le champ émet des dates
+                // incomplètes donc invalides : les ignorer, sinon le rendu
+                // suivant casse sur `toISOString()`.
+                onChange={(value) => {
+                  if (value?.isValid()) {
+                    setFromDate(value.startOf('day'))
+                  }
+                }}
+                minDate={dayjs.utc().startOf('day')}
+              />
+            </FormField>
 
             <div className="flex flex-col gap-2">
-              <Label>{slot ? 'Créneau' : 'Prochains créneaux'}</Label>
+              <Label>Prochains créneaux</Label>
 
-              <SlotSuggestionList
-                isReady={!!patientID && !!thematicID}
-                suggestions={suggestions}
-                onSelect={handleSelectSuggestion}
-              />
+              {!patientID || !thematicID ? (
+                <EmptySlotList>
+                  Sélectionnez un patient et une thématique pour voir les
+                  créneaux à venir.
+                </EmptySlotList>
+              ) : suggestions.length === 0 ? (
+                <EmptySlotList>
+                  Aucun créneau à partir de cette date pour cette thématique.
+                </EmptySlotList>
+              ) : (
+                <ul className="flex flex-col max-h-72 overflow-y-auto border border-border rounded-lg divide-y divide-border">
+                  {suggestions.map((suggestion) => (
+                    <SlotSuggestionRow
+                      key={suggestion.slot.id}
+                      suggestion={suggestion}
+                      onSelect={handleSelectSuggestion}
+                    />
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
         )}
