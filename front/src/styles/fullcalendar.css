@@ -51,6 +51,11 @@
   gap: 8px;
 }
 
+/* FullCalendar espace ses groupes de boutons par une marge, en plus du gap. */
+.fc .fc-header-toolbar .fc-toolbar-chunk:last-child > * {
+  margin-left: 0;
+}
+
 .fc
   .fc-header-toolbar
   .fc-toolbar-chunk:last-child
