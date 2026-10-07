@@ -200,5 +200,34 @@ export const useSoignantMutations = () => {
     },
   })
 
-  return { createSoignant, archiveSoignant, restoreSoignant, updateSoignant }
+  // Suppression definitive, depuis la liste archivee. Le serveur refuse en 409
+  // tant que quelque chose reference la ligne, et son message nomme quoi.
+  const deleteForeverSoignant = useMutation({
+    mutationKey: [SOIGNANT.DELETE_FOREVER],
+    mutationFn: SoignantApi.deleteForever,
+    onSuccess: () => {
+      toast({
+        title: 'Soignant supprimé définitivement',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
+    },
+    onError: (error) => {
+      toast({
+        title: 'Suppression impossible',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: [SOIGNANT.GET_ALL] })
+    },
+  })
+
+  return {
+    createSoignant,
+    archiveSoignant,
+    restoreSoignant,
+    updateSoignant,
+    deleteForeverSoignant,
+  }
 }

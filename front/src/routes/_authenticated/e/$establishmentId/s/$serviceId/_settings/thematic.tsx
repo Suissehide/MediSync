@@ -42,8 +42,10 @@ function ThematicSettings() {
   const [showArchived, setShowArchived] = useState(false)
   const { thematics, isPending } = useThematicQueries(showArchived)
   const { soignants } = useSoignantQueries()
-  const { archiveThematic, restoreThematic } = useThematicMutations()
+  const { archiveThematic, restoreThematic, deleteForeverThematic } =
+    useThematicMutations()
   const [archiveTargetId, setArchiveTargetId] = useState<string | null>(null)
+  const [purgeTargetId, setPurgeTargetId] = useState<string | null>(null)
 
   const [searchTerm, setSearchTerm] = useState('')
 
@@ -67,6 +69,7 @@ function ThematicSettings() {
       getThematicColumns({
         onArchive: (id) => setArchiveTargetId(id),
         onRestore: (id) => restoreThematic.mutate(id),
+        onDeleteForever: (id) => setPurgeTargetId(id),
         archived: showArchived,
         soignantOptions,
         canManage,
@@ -128,6 +131,24 @@ function ThematicSettings() {
           confirmLabel="Archiver"
           confirmLoadingLabel="Archivage..."
           confirmIcon={<Archive className="w-4 h-4" />}
+        />
+
+        <ConfirmDeleteForm
+          open={!!purgeTargetId}
+          setOpen={(open) => {
+            if (!open) {
+              setPurgeTargetId(null)
+            }
+          }}
+          onConfirm={() => {
+            if (purgeTargetId) {
+              deleteForeverThematic.mutate(purgeTargetId)
+            }
+            setPurgeTargetId(null)
+          }}
+          loading={deleteForeverThematic.isPending}
+          title="Supprimer définitivement"
+          description="Cette thématique disparaîtra pour de bon. L'opération est refusée tant que la thématique est utilisée quelque part."
         />
       </div>
     </DashboardLayout>

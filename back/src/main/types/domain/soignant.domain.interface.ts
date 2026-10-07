@@ -23,4 +23,7 @@ export interface SoignantDomainInterface {
     soignantID: string,
     soignantUpdateParams: SoignantUpdateEntityDomain,
   ) => Promise<SoignantEntityDomain>
+  // Suppression definitive : refusee si la ligne n'est pas archivee,
+  // ou si quoi que ce soit la reference encore.
+  deleteForever: (soignantID: string) => Promise<void>
 }

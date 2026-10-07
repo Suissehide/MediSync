@@ -1,5 +1,5 @@
 import { tenantApiUrl } from '../constants/config.constant.ts'
-import { handleHttpError } from '../libs/httpErrorHandler.ts'
+import { handleHttpError, messageDuServeur } from '../libs/httpErrorHandler.ts'
 import type {
   CreateDiagnosticEducatifParams,
   CreateDiagnosticEducatifTemplateParams,
@@ -125,6 +125,21 @@ export const DiagnosticEducatifTemplateApi = {
       handleHttpError(res, {}, 'Impossible de mettre à jour le template')
     }
     return res.json()
+  },
+
+  deleteForever: async (id: string): Promise<void> => {
+    const res = await fetchWithAuth(
+      `${tenantApiUrl()}/diagnostic-template/${id}/definitive`,
+      { method: 'DELETE' },
+    )
+    if (!res.ok) {
+      const message = await messageDuServeur(res)
+      handleHttpError(
+        res,
+        message ? { 409: { title: 'Suppression impossible', message } } : {},
+        'Impossible de supprimer définitivement le modèle',
+      )
+    }
   },
 
   archive: async (id: string): Promise<void> => {

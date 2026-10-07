@@ -40,8 +40,10 @@ function LocationSettings() {
   const canManage = useCan('referentials:write')
   const [showArchived, setShowArchived] = useState(false)
   const { locations, isPending } = useLocationQueries(showArchived)
-  const { archiveLocation, restoreLocation } = useLocationMutations()
+  const { archiveLocation, restoreLocation, deleteForeverLocation } =
+    useLocationMutations()
   const [archiveTargetId, setArchiveTargetId] = useState<string | null>(null)
+  const [purgeTargetId, setPurgeTargetId] = useState<string | null>(null)
 
   const [searchTerm, setSearchTerm] = useState('')
 
@@ -57,6 +59,7 @@ function LocationSettings() {
       getLocationColumns({
         onArchive: (id) => setArchiveTargetId(id),
         onRestore: (id) => restoreLocation.mutate(id),
+        onDeleteForever: (id) => setPurgeTargetId(id),
         archived: showArchived,
         canManage,
       }),
@@ -117,6 +120,24 @@ function LocationSettings() {
           confirmLabel="Archiver"
           confirmLoadingLabel="Archivage..."
           confirmIcon={<Archive className="w-4 h-4" />}
+        />
+
+        <ConfirmDeleteForm
+          open={!!purgeTargetId}
+          setOpen={(open) => {
+            if (!open) {
+              setPurgeTargetId(null)
+            }
+          }}
+          onConfirm={() => {
+            if (purgeTargetId) {
+              deleteForeverLocation.mutate(purgeTargetId)
+            }
+            setPurgeTargetId(null)
+          }}
+          loading={deleteForeverLocation.isPending}
+          title="Supprimer définitivement"
+          description="Cette salle disparaîtra pour de bon. L'opération est refusée tant que la salle est utilisée quelque part."
         />
       </div>
     </DashboardLayout>

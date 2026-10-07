@@ -141,6 +141,27 @@ const locationWriteRouter: FastifyPluginAsync = (fastify) => {
     },
   )
 
+  // Suppression DEFINITIVE d'une ligne deja archivee. Refusee en 409 tant que
+  // quelque chose la reference ; la base le refuse de toute facon.
+  fastify.delete<{ Params: DeleteLocationByIdParams }>(
+    '/:locationID/definitive',
+    {
+      schema: {
+        params: deleteLocationByIdParamsSchema,
+        response: {
+          204: z.null(),
+          404: z.object({ message: z.string() }),
+          409: z.object({ message: z.string() }),
+        },
+      },
+      config: { permission: 'referentials:write' },
+    },
+    async (request, reply) => {
+      await locationDomain.deleteForever(request.params.locationID)
+      reply.code(204).send()
+    },
+  )
+
   return Promise.resolve()
 }
 

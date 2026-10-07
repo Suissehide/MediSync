@@ -1,5 +1,5 @@
 import { tenantApiUrl } from '../constants/config.constant.ts'
-import { handleHttpError } from '../libs/httpErrorHandler.ts'
+import { handleHttpError, messageDuServeur } from '../libs/httpErrorHandler.ts'
 import type {
   CreateThematicParams,
   Thematic,
@@ -69,6 +69,24 @@ export const ThematicApi = {
     )
     if (!response.ok) {
       handleHttpError(response, {}, 'Impossible d’archiver la thématique')
+    }
+    return
+  },
+
+  deleteForever: async (thematicID: string): Promise<void> => {
+    const response = await fetchWithAuth(
+      `${tenantApiUrl()}/thematic/${thematicID}/definitive`,
+      {
+        method: 'DELETE',
+      },
+    )
+    if (!response.ok) {
+      const message = await messageDuServeur(response)
+      handleHttpError(
+        response,
+        message ? { 409: { title: 'Suppression impossible', message } } : {},
+        'Impossible de supprimer définitivement la thématique',
+      )
     }
     return
   },

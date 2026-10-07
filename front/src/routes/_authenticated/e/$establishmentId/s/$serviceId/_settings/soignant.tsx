@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 
 import { getSoignantColumns } from '@/columns/soignant.column.tsx'
 import AddSoignantForm from '@/components/custom/popup/addSoignantForm.tsx'
+import { ConfirmDeleteForm } from '@/components/custom/popup/confirmDeleteForm.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
 import ReactTable from '@/components/table/reactTable.tsx'
 import { Input } from '@/components/ui/input.tsx'
@@ -44,7 +45,8 @@ function SoignantSettings() {
   const canManage = useCan('referentials:write')
   const [showArchived, setShowArchived] = useState(false)
   const { soignants, isPending } = useSoignantQueries(showArchived)
-  const { restoreSoignant } = useSoignantMutations()
+  const { restoreSoignant, deleteForeverSoignant } = useSoignantMutations()
+  const [purgeTargetId, setPurgeTargetId] = useState<string | null>(null)
   const { thematics } = useThematicQueries()
   const { members } = useServiceMembersQuery()
 
@@ -69,6 +71,7 @@ function SoignantSettings() {
     () =>
       getSoignantColumns({
         onRestore: (id) => restoreSoignant.mutate(id),
+        onDeleteForever: (id) => setPurgeTargetId(id),
         archived: showArchived,
         thematics: thematics ?? [],
         thematicOptions,
@@ -118,6 +121,24 @@ function SoignantSettings() {
           columns={columns}
           filterId="soignant"
           isLoading={isPending}
+        />
+
+        <ConfirmDeleteForm
+          open={!!purgeTargetId}
+          setOpen={(open) => {
+            if (!open) {
+              setPurgeTargetId(null)
+            }
+          }}
+          onConfirm={() => {
+            if (purgeTargetId) {
+              deleteForeverSoignant.mutate(purgeTargetId)
+            }
+            setPurgeTargetId(null)
+          }}
+          loading={deleteForeverSoignant.isPending}
+          title="Supprimer définitivement"
+          description="Ce soignant disparaîtra pour de bon. L'opération est refusée tant qu'il figure au planning, porte une tâche ou est incarné par un membre."
         />
       </div>
     </DashboardLayout>

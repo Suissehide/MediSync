@@ -20,4 +20,7 @@ export interface LocationDomainInterface {
     locationID: string,
     locationUpdateParams: LocationUpdateEntityDomain,
   ) => Promise<LocationEntityDomain>
+  // Suppression definitive : refusee si la ligne n'est pas archivee,
+  // ou si quoi que ce soit la reference encore.
+  deleteForever: (locationID: string) => Promise<void>
 }

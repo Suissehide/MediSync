@@ -188,5 +188,34 @@ export const useLocationMutations = () => {
     },
   })
 
-  return { createLocation, archiveLocation, restoreLocation, updateLocation }
+  // Suppression definitive, depuis la liste archivee. Le serveur refuse en 409
+  // tant que quelque chose reference la ligne, et son message nomme quoi.
+  const deleteForeverLocation = useMutation({
+    mutationKey: [LOCATION.DELETE_FOREVER],
+    mutationFn: LocationApi.deleteForever,
+    onSuccess: () => {
+      toast({
+        title: 'Salle supprimée définitivement',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
+    },
+    onError: (error) => {
+      toast({
+        title: 'Suppression impossible',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: [LOCATION.GET_ALL] })
+    },
+  })
+
+  return {
+    createLocation,
+    archiveLocation,
+    restoreLocation,
+    updateLocation,
+    deleteForeverLocation,
+  }
 }

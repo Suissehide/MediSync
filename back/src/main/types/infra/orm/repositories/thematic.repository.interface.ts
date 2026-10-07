@@ -29,4 +29,7 @@ export interface ThematicRepositoryInterface {
     thematicID: string,
     thematicUpdateParams: ThematicUpdateEntityRepo,
   ) => Promise<ThematicWithSoignantsEntityRepo>
+  // Suppression definitive : refusee si la ligne n'est pas archivee,
+  // ou si quoi que ce soit la reference encore.
+  deleteForever: (thematicID: string) => Promise<void>
 }

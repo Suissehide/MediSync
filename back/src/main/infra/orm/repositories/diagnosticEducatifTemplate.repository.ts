@@ -1,3 +1,5 @@
+import Boom from '@hapi/boom'
+
 import type { IocContainer } from '../../../types/application/ioc'
 import type {
   DiagnosticEducatifTemplateCreateEntity,
@@ -7,6 +9,7 @@ import type {
 import type { DiagnosticEducatifTemplateRepositoryInterface } from '../../../types/infra/orm/repositories/diagnosticEducatifTemplate.repository.interface'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { TenantContextInterface } from '../../../types/utils/tenant-context'
+import { phraseDesReferences } from '../../../utils/references-referentiel'
 import type { PostgresPrismaClient } from '../postgres-client'
 
 class DiagnosticEducatifTemplateRepository
@@ -83,6 +86,38 @@ class DiagnosticEducatifTemplateRepository
         entityName: 'DiagnosticEducatifTemplate',
         error: err,
       })
+    }
+  }
+  // Suppression DEFINITIVE, reservee aux lignes deja archivees. Le refus de
+  // fond vient de la base (`onDelete: Restrict`) ; ce comptage ne sert qu'a
+  // dire en francais ce qui bloque, avant d'aller buter dessus.
+  async deleteForever(id: string): Promise<void> {
+    const comptes = await Promise.all([
+      this.prisma.diagnosticEducatif.count({
+        where: { templateId: id, ...this.scope },
+      }),
+    ])
+    const bloquant = phraseDesReferences([
+      {
+        count: comptes[0] as number,
+        singulier: 'diagnostic',
+        pluriel: 'diagnostics',
+      },
+    ])
+    if (bloquant) {
+      throw Boom.conflict(
+        `Suppression impossible : encore utilisé par ${bloquant}.`,
+      )
+    }
+    // `deleteMany` et non `delete` : c'est le seul moyen d'exiger
+    // `archivedAt` non nul dans le meme ordre, sans lecture prealable.
+    const { count } = await this.prisma.diagnosticEducatifTemplate.deleteMany({
+      where: { id: id, ...this.scope, archivedAt: { not: null } },
+    })
+    if (count === 0) {
+      throw Boom.notFound(
+        `DiagnosticEducatifTemplate introuvable ou non archivé`,
+      )
     }
   }
 }

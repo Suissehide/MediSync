@@ -1,3 +1,5 @@
+import Boom from '@hapi/boom'
+
 import type { IocContainer } from '../../../types/application/ioc'
 import type {
   LocationCreateEntityRepo,
@@ -7,6 +9,7 @@ import type {
 } from '../../../types/infra/orm/repositories/location.repository.interface'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { TenantContextInterface } from '../../../types/utils/tenant-context'
+import { phraseDesReferences } from '../../../utils/references-referentiel'
 import type { PostgresPrismaClient } from '../postgres-client'
 
 class LocationRepository implements LocationRepositoryInterface {
@@ -87,6 +90,34 @@ class LocationRepository implements LocationRepositoryInterface {
         entityName: 'Location',
         error: err,
       })
+    }
+  }
+  // Suppression DEFINITIVE, reservee aux lignes deja archivees. Le refus de
+  // fond vient de la base (`onDelete: Restrict`) ; ce comptage ne sert qu'a
+  // dire en francais ce qui bloque, avant d'aller buter dessus.
+  async deleteForever(locationID: string): Promise<void> {
+    const comptes = await Promise.all([
+      this.prisma.slotTemplate.count({ where: { locationID, ...this.scope } }),
+    ])
+    const bloquant = phraseDesReferences([
+      {
+        count: comptes[0] as number,
+        singulier: 'créneau modèle',
+        pluriel: 'créneaux modèles',
+      },
+    ])
+    if (bloquant) {
+      throw Boom.conflict(
+        `Suppression impossible : encore utilisé par ${bloquant}.`,
+      )
+    }
+    // `deleteMany` et non `delete` : c'est le seul moyen d'exiger
+    // `archivedAt` non nul dans le meme ordre, sans lecture prealable.
+    const { count } = await this.prisma.location.deleteMany({
+      where: { id: locationID, ...this.scope, archivedAt: { not: null } },
+    })
+    if (count === 0) {
+      throw Boom.notFound(`Location introuvable ou non archivé`)
     }
   }
 }

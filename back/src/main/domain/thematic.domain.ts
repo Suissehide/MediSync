@@ -34,6 +34,9 @@ class ThematicDomain implements ThematicDomainInterface {
   ): Promise<ThematicWithSoignantsEntityDomain> {
     return this.thematicRepository.update(thematicID, thematicUpdateParams)
   }
+  deleteForever(thematicID: string): Promise<void> {
+    return this.thematicRepository.deleteForever(thematicID)
+  }
 }
 
 export { ThematicDomain }
