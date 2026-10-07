@@ -1,11 +1,12 @@
 import type { Row } from '@tanstack/react-table'
 import dayjs from 'dayjs'
-import { ChevronRight } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 
 import { cn, type DaySlotRow } from '../../../libs/utils.ts'
 import { rowDomId } from '../../table/reactTable.tsx'
+import { Button } from '../../ui/button.tsx'
 
-const formatRange = (row: DaySlotRow) =>
+export const formatRange = (row: DaySlotRow) =>
   `${dayjs.utc(row.startDate).format('HH:mm')} – ${dayjs.utc(row.endDate).format('HH:mm')}`
 
 const formatDuration = (row: DaySlotRow) => {
@@ -24,7 +25,7 @@ const describe = (row: DaySlotRow) => {
   return `${formatRange(row)} · ${patient ? `${patient.firstName} ${patient.lastName}` : 'Libre'}`
 }
 
-// Horaire d'une plage découpée : chevron qui replie ou déplie ses créneaux.
+// Fin de ligne d'une plage découpée : replie ou déplie ses créneaux.
 export function RangeToggle({
   row,
   idPrefix,
@@ -34,26 +35,23 @@ export function RangeToggle({
 }) {
   const open = row.getIsExpanded()
   return (
-    <span className="flex items-center gap-2">
-      <button
-        type="button"
-        onClick={row.getToggleExpandedHandler()}
-        aria-expanded={open}
-        aria-controls={row.subRows
-          .map((sub) => rowDomId(idPrefix, sub.id))
-          .join(' ')}
-        aria-label={open ? 'Masquer les créneaux' : 'Afficher les créneaux'}
-        className="flex size-6 cursor-pointer items-center justify-center rounded-[5px] hover:bg-card"
-      >
-        <ChevronRight
-          className={cn(
-            'size-4 text-text-dark transition-transform duration-150',
-            open && 'rotate-90',
-          )}
-        />
-      </button>
-      {formatRange(row.original)}
-    </span>
+    <Button
+      variant="outline"
+      size="icon"
+      onClick={row.getToggleExpandedHandler()}
+      aria-expanded={open}
+      aria-controls={row.subRows
+        .map((sub) => rowDomId(idPrefix, sub.id))
+        .join(' ')}
+      aria-label={open ? 'Masquer les créneaux' : 'Afficher les créneaux'}
+    >
+      <ChevronDown
+        className={cn(
+          'size-4 transition-transform duration-150',
+          open && 'rotate-180',
+        )}
+      />
+    </Button>
   )
 }
 
