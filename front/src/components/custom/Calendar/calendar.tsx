@@ -12,7 +12,7 @@ import listPlugin from '@fullcalendar/list'
 import FullCalendar from '@fullcalendar/react'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import dayjs, { type Dayjs } from 'dayjs'
-import { CalendarIcon, CalendarOff } from 'lucide-react'
+import { CalendarDays, CalendarOff } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 
@@ -300,7 +300,7 @@ function Calendar({
     const button = document.querySelector('.fc-selectDateButton-button')
     if (button && !button.querySelector('svg')) {
       const root = createRoot(button)
-      root.render(<CalendarIcon size={18} />)
+      root.render(<CalendarDays size={16} />)
     }
   }, [])
 
