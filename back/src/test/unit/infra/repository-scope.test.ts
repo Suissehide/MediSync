@@ -892,8 +892,8 @@ describe('scoping des repositories de service simples', () => {
           establishmentId: 'e1',
           soignantLinks: {
             create: [
-              { soignantId: 'so1', serviceId: 's1', establishmentId: 'e1' },
-              { soignantId: 'so2', serviceId: 's1', establishmentId: 'e1' },
+              { soignantId: 'so1', establishmentId: 'e1' },
+              { soignantId: 'so2', establishmentId: 'e1' },
             ],
           },
         },
@@ -1190,9 +1190,7 @@ describe('scoping slotTemplate et slot', () => {
           serviceId: 's1',
           establishmentId: 'e1',
           soignantLinks: {
-            create: [
-              { soignantId: 'so1', serviceId: 's1', establishmentId: 'e1' },
-            ],
+            create: [{ soignantId: 'so1', establishmentId: 'e1' }],
           },
         },
       },
@@ -1286,9 +1284,7 @@ describe('scoping slotTemplate et slot', () => {
         data: {
           soignantLinks: {
             deleteMany: {},
-            create: [
-              { soignantId: 'so2', serviceId: 's1', establishmentId: 'e1' },
-            ],
+            create: [{ soignantId: 'so2', establishmentId: 'e1' }],
           },
         },
       },
@@ -1476,9 +1472,7 @@ describe('scoping pathwayTemplate et pathway', () => {
           serviceId: 's1',
           establishmentId: 'e1',
           soignantLinks: {
-            create: [
-              { soignantId: 'so1', serviceId: 's1', establishmentId: 'e1' },
-            ],
+            create: [{ soignantId: 'so1', establishmentId: 'e1' }],
           },
         },
       },

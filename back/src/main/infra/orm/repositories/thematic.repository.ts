@@ -70,7 +70,10 @@ class ThematicRepository implements ThematicRepositoryInterface {
   }
 
   private links(soignantIDs: string[]) {
-    return soignantIDs.map((soignantId) => ({ soignantId, ...this.scope }))
+    return soignantIDs.map((soignantId) => ({
+      soignantId,
+      establishmentId: this.scope.establishmentId,
+    }))
   }
 
   async create(

@@ -377,4 +377,28 @@ describe('soignants et salles a l echelle du service', () => {
       ]),
     )
   })
+  it('le coordinateur cree et modifie une thematique avec des soignants', async () => {
+    const soignant = (
+      await call(coordA, 'POST', tenantUrl(E, A, '/soignant'), {
+        name: 'Dieteticien',
+      })
+    ).json()
+    const cree = await call(coordA, 'POST', tenantUrl(E, A, '/thematic'), {
+      name: 'Nutrition',
+      soignantIDs: [soignant.id],
+    })
+    expect(cree.statusCode).toBe(201)
+    expect(cree.json().soignants).toEqual([
+      { id: soignant.id, name: 'Dieteticien' },
+    ])
+
+    const maj = await call(
+      coordA,
+      'PATCH',
+      tenantUrl(E, A, `/thematic/${cree.json().id}`),
+      { soignantIDs: [soignant.id] },
+    )
+    expect(maj.statusCode).toBe(200)
+    expect(maj.json().soignants).toHaveLength(1)
+  })
 })

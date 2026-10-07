@@ -908,10 +908,10 @@ describe('assertTenantScope', () => {
   })
 
   // Descente dans les relations imbriquees sous update/updateMany/upsert.
-  it('accepte une creation imbriquee sous update avec les bonnes colonnes', () => {
+  it('accepte une creation imbriquee sous update, serviceId herite du parent', () => {
     const okData = {
       soignantLinks: {
-        create: [{ soignantId: 'so1', serviceId: 's1', establishmentId: 'e1' }],
+        create: [{ soignantId: 'so1', establishmentId: 'e1' }],
       },
     }
     expect(() =>

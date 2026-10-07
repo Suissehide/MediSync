@@ -773,16 +773,19 @@ const assertNoTenantMove = (
   }
 }
 
-// Vérifie que `row` porte les colonnes de tenant attendues pour son modèle.
+// Vérifie que `row` porte les colonnes de tenant attendues pour son modèle. Une ligne imbriquée
+// peut omettre serviceId : Prisma l'hérite du parent déjà vérifié par la clé composite, ou refuse.
 const assertRowScope = (
   model: string,
   operation: string,
   row: Dict,
   store: TenantStore,
+  nested: boolean,
 ): void => {
   const family = familyOf(model)
   if (
     family === 'service' &&
+    !(nested && row.serviceId === undefined) &&
     row.serviceId !== expectedValue(store, 'serviceId', model, operation)
   ) {
     throw new TenantScopeMissingError(model, operation, 'serviceId')
@@ -832,7 +835,7 @@ const assertConnectOrCreate = (
       continue
     }
     if ('create' in entry) {
-      assertData(model, `${operation}.create`, entry.create, store)
+      assertData(model, `${operation}.create`, entry.create, store, true)
     }
     assertWhereLike(model, `${operation}.where`, entry.where, field, store)
   }
@@ -852,7 +855,7 @@ const assertNestedUpsert = (
       continue
     }
     if ('create' in entry) {
-      assertData(childModel, `${operation}.create`, entry.create, store)
+      assertData(childModel, `${operation}.create`, entry.create, store, true)
     }
     assertUpdatePayload(childModel, `${operation}.update`, entry.update, store)
   }
@@ -884,7 +887,7 @@ const assertNestedWrite = (
   const field =
     familyOf(childModel) === 'service' ? 'serviceId' : 'establishmentId'
   if ('create' in value) {
-    assertData(childModel, `${operation}.create`, value.create, store)
+    assertData(childModel, `${operation}.create`, value.create, store, true)
   }
   if (isDict(value.createMany) && 'data' in value.createMany) {
     assertData(
@@ -892,6 +895,7 @@ const assertNestedWrite = (
       `${operation}.createMany`,
       value.createMany.data,
       store,
+      true,
     )
   }
   if ('connectOrCreate' in value) {
@@ -977,13 +981,14 @@ const assertData = (
   operation: string,
   data: unknown,
   store: TenantStore,
+  nested = false,
 ): void => {
   const rows = Array.isArray(data) ? data : [data]
   for (const row of rows) {
     if (!isDict(row)) {
       throw new TenantScopeMissingError(model, operation, 'data')
     }
-    assertRowScope(model, operation, row, store)
+    assertRowScope(model, operation, row, store, nested)
     assertNestedRelations(model, operation, row, store)
   }
 }

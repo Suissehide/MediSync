@@ -134,7 +134,7 @@ class SlotRepository implements SlotRepositoryInterface {
                 deleteMany: {},
                 create: soignantIDs.map((soignantId) => ({
                   soignantId,
-                  ...this.scope,
+                  establishmentId: this.scope.establishmentId,
                 })),
               },
             }),
