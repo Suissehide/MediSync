@@ -153,6 +153,13 @@ describe('completion', () => {
     ])
   })
 
+  it('ne compte pas un motif d arret vide comme un abandon', () => {
+    const r = computeActivity(
+      cohorte([dossier({ exitDate: new Date('2026-05-01'), stopReason: '' })]),
+    )
+    expect(r.completion.dropouts).toBe(0)
+  })
+
   // Review Focus 2.
   it('rend un taux nul plutot qu une division par zero sans sortie', () => {
     const r = computeActivity(cohorte([dossier()]))
@@ -237,6 +244,34 @@ describe('absences', () => {
       'Hors parcours',
       'Réadaptation — 05/10/2026',
     ])
+  })
+
+  it('distingue deux parcours de meme libelle par leur identifiant', () => {
+    const r = computeActivity(
+      cohorte(
+        [],
+        [
+          presence({
+            status: 'no',
+            pathwayId: 'pw1',
+            pathwayLabel: 'Réadaptation — 05/10/2026',
+          }),
+          presence({
+            status: 'no',
+            pathwayId: 'pw2',
+            pathwayLabel: 'Réadaptation — 05/10/2026',
+          }),
+        ],
+      ),
+    )
+    expect(r.absences.byPathway).toHaveLength(2)
+  })
+
+  it('ne designe pas de pire case quand personne n est absent', () => {
+    const r = computeActivity(
+      cohorte([], pointes(SEUIL_ABSENCES, { status: 'yes' })),
+    )
+    expect(r.absences.worst).toBeNull()
   })
 })
 

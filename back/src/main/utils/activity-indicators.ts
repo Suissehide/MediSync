@@ -58,7 +58,13 @@ const groupBy = <K>(
 ): Map<K, ArsPresence[]> => {
   const groups = new Map<K, ArsPresence[]>()
   for (const p of ps) {
-    groups.set(key(p), [...(groups.get(key(p)) ?? []), p])
+    const k = key(p)
+    const group = groups.get(k)
+    if (group) {
+      group.push(p)
+    } else {
+      groups.set(k, [p])
+    }
   }
   return groups
 }
@@ -92,7 +98,7 @@ const absences = (pointed: ArsPresence[]): ActivityReport['absences'] => {
     .sort((a, b) => b.total.pointed - a.total.pointed)
 
   let worst: ActivityReport['absences']['worst'] = null
-  let worstRate = -1
+  let worstRate = 0
   for (const t of byThematic) {
     for (const [d, day] of t.cells.entries()) {
       if (day.rate !== null && day.rate > worstRate) {
@@ -107,8 +113,11 @@ const absences = (pointed: ArsPresence[]): ActivityReport['absences'] => {
     worst,
     weekdays: [...new Set(pointed.map((p) => weekday(p.date)))].sort(),
     byThematic,
-    byPathway: [...groupBy(pointed, (p) => p.pathwayLabel ?? 'Hors parcours')]
-      .map(([pathway, ps]) => ({ pathway, cell: cell(ps) }))
+    byPathway: [...groupBy(pointed, (p) => p.pathwayId ?? 'hors-parcours')]
+      .map(([, ps]) => ({
+        pathway: ps[0]?.pathwayLabel ?? 'Hors parcours',
+        cell: cell(ps),
+      }))
       .sort((a, b) => b.cell.pointed - a.cell.pointed),
   }
 }
@@ -143,7 +152,7 @@ export const computeActivity = (cohort: ArsCohort): ActivityReport => {
   const depuisToujours: ArsCohort = { ...c, from: new Date(0) }
   const completed = exited.filter((f) => completeProgram(f, depuisToujours))
   const dropped = exited.filter(
-    (f) => f.stopReason !== null && f.stopReason !== FIN_DE_PARCOURS,
+    (f) => Boolean(f.stopReason) && f.stopReason !== FIN_DE_PARCOURS,
   )
 
   return {
