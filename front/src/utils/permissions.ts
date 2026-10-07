@@ -58,8 +58,11 @@ export type ServicePermission =
   // pour la meme raison que `consultations:read`.
   | 'service-journal:read'
   // Indicateurs de l'enquete annuelle ARS du service courant, en chiffres agreges et sans donnee
-  // nominative (MDS-26). Non accordee a LECTURE : la direction lira le tableau de bord de MDS-40.
+  // nominative (MDS-26). Non accordee a LECTURE : la direction lit `activity:read`.
   | 'stats:read'
+  // Tableau de bord d'activite du service courant, en chiffres agreges (MDS-40). Accordee a
+  // LECTURE : c'est l'ecran de la direction.
+  | 'activity:read'
 
 export type EstablishmentPermission =
   | 'services:manage'
@@ -106,6 +109,7 @@ export const SERVICE_PERMISSIONS: Record<
     'service-members:manage',
     'service-journal:read',
     'stats:read',
+    'activity:read',
   ],
   INTERVENANT: [
     ...READ_ALL,
@@ -121,7 +125,7 @@ export const SERVICE_PERMISSIONS: Record<
     'appointment:write',
     'pdf:export',
   ],
-  LECTURE: [...READ_ALL],
+  LECTURE: [...READ_ALL, 'activity:read'],
 }
 
 export const ESTABLISHMENT_PERMISSIONS: Record<
