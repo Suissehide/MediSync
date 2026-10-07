@@ -2,7 +2,7 @@ import type { DateSelectArg } from '@fullcalendar/core'
 import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import dayjs from 'dayjs'
-import { CalendarRange, Route as RouteIcon, X } from 'lucide-react'
+import { CalendarRange, DoorOpen, Route as RouteIcon, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import Calendar, {
@@ -16,6 +16,7 @@ import DashboardLayout from '@/components/dashboard.layout.tsx'
 import { SLOT } from '@/constants/process.constant.ts'
 import { buildCalendarEventsFromSlots, containsKeyword } from '@/libs/utils.ts'
 import { useAppointmentMutations } from '@/queries/useAppointment.ts'
+import { useLocationQueries } from '@/queries/useLocation.ts'
 import { usePathwayTemplateQueries } from '@/queries/usePathwayTemplate.ts'
 import { useSlotsInRangeQuery } from '@/queries/useSlot.ts'
 import { useAuthStore } from '@/store/useAuthStore.ts'
@@ -60,6 +61,14 @@ function filterSlotsByPathwayTemplates(slots: Slot[], templateIDs: string[]) {
     const templateID =
       slot.pathway?.template?.id ?? slot.pathway?.pathwayTemplateID
     return !!templateID && templateIDs.includes(templateID)
+  })
+}
+
+function filterSlotsByLocations(slots: Slot[], locationIDs: string[]) {
+  return slots.filter((slot) => {
+    const locationID =
+      slot.slotTemplate?.location?.id ?? slot.slotTemplate?.locationID
+    return !!locationID && locationIDs.includes(locationID)
   })
 }
 
@@ -108,9 +117,18 @@ function Dashboard() {
     (state) => state.unselectPathwayTemplates,
   )
   const { pathwayTemplates } = usePathwayTemplateQueries()
-  const isPathwayMode = mode === 'pathway'
   const selectedPathwayTemplates = (pathwayTemplates ?? []).filter((t) =>
     selectedPathwayTemplateIDs.includes(t.id),
+  )
+  const selectedLocationIDs = useDashboardFilterStore(
+    (state) => state.selectedLocationIDs,
+  )
+  const unselectLocations = useDashboardFilterStore(
+    (state) => state.unselectLocations,
+  )
+  const { locations } = useLocationQueries()
+  const selectedLocations = (locations ?? []).filter((l) =>
+    selectedLocationIDs.includes(l.id),
   )
 
   const [visibleRange, setVisibleRange] = useState<SlotDateRange | null>(null)
@@ -133,9 +151,12 @@ function Dashboard() {
 
   useEffect(() => {
     if (slots) {
-      const filtered = isPathwayMode
-        ? filterSlotsByPathwayTemplates(slots, selectedPathwayTemplateIDs)
-        : filterSlotsBySoignants(slots, selectedIDs)
+      const filtered = {
+        soignant: () => filterSlotsBySoignants(slots, selectedIDs),
+        pathway: () =>
+          filterSlotsByPathwayTemplates(slots, selectedPathwayTemplateIDs),
+        location: () => filterSlotsByLocations(slots, selectedLocationIDs),
+      }[mode]()
 
       const slotEvents = buildCalendarEventsFromSlots(filtered, ['fillable'])
 
@@ -145,7 +166,13 @@ function Dashboard() {
         ),
       )
     }
-  }, [slots, selectedIDs, isPathwayMode, selectedPathwayTemplateIDs])
+  }, [
+    slots,
+    selectedIDs,
+    mode,
+    selectedPathwayTemplateIDs,
+    selectedLocationIDs,
+  ])
 
   const handleSelectAppointment = (dateSelectArg: DateSelectArg) => {
     setSelectedDate({
@@ -211,15 +238,31 @@ function Dashboard() {
   const isAppointment = openEventId.startsWith('appointment_')
   const appointmentId = openEventId.replace(/^.*?_/, '')
 
-  const selectedLabels = isPathwayMode
-    ? selectedPathwayTemplates.map((t) => t.name)
-    : selectedSoignants.map((s) => s.name)
-  const emptyLabel = isPathwayMode
-    ? 'Sélectionnez un parcours'
-    : 'Sélectionnez un soignant'
-  const clearSelection = isPathwayMode
-    ? unselectPathwayTemplates
-    : unselectSoignant
+  const {
+    labels: selectedLabels,
+    emptyLabel,
+    clearSelection,
+    Icon,
+  } = {
+    soignant: {
+      labels: selectedSoignants.map((s) => s.name),
+      emptyLabel: 'Sélectionnez un soignant',
+      clearSelection: unselectSoignant,
+      Icon: CalendarRange,
+    },
+    pathway: {
+      labels: selectedPathwayTemplates.map((t) => t.name),
+      emptyLabel: 'Sélectionnez un parcours',
+      clearSelection: unselectPathwayTemplates,
+      Icon: RouteIcon,
+    },
+    location: {
+      labels: selectedLocations.map((l) => l.name),
+      emptyLabel: 'Sélectionnez une salle',
+      clearSelection: unselectLocations,
+      Icon: DoorOpen,
+    },
+  }[mode]
 
   return (
     <DashboardLayout
@@ -233,11 +276,7 @@ function Dashboard() {
         <div className="flex flex-col h-full">
           <div className="px-6 mt-6 mb-4 min-h-9 flex gap-2 items-center">
             <div className="flex items-center justify-center bg-foreground p-2 rounded-full">
-              {isPathwayMode ? (
-                <RouteIcon className="h-4 w-4 text-white" />
-              ) : (
-                <CalendarRange className="h-4 w-4 text-white" />
-              )}
+              <Icon className="h-4 w-4 text-white" />
             </div>
             <h1 className="text-text-dark text-xl font-semibold">
               {selectedLabels.length > 0
