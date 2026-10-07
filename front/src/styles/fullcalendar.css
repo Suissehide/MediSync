@@ -45,6 +45,47 @@
   justify-content: flex-end;
 }
 
+/* Navigation de date : mêmes boutons que l'Agenda (Button outline, 36px, séparés). */
+.fc .fc-header-toolbar .fc-toolbar-chunk:last-child,
+.fc .fc-header-toolbar .fc-toolbar-chunk:last-child .fc-button-group {
+  gap: 8px;
+}
+
+.fc
+  .fc-header-toolbar
+  .fc-toolbar-chunk:last-child
+  .fc-button.fc-button-primary {
+  height: 36px;
+  margin-left: 0;
+  border-radius: 6px;
+  background-color: transparent;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.fc .fc-header-toolbar .fc-toolbar-chunk:last-child .fc-button.fc-prev-button,
+.fc .fc-header-toolbar .fc-toolbar-chunk:last-child .fc-button.fc-next-button,
+.fc
+  .fc-header-toolbar
+  .fc-toolbar-chunk:last-child
+  .fc-button.fc-selectDateButton-button {
+  width: 36px;
+  padding: 0;
+  border-radius: 8px;
+}
+
+.fc
+  .fc-header-toolbar
+  .fc-toolbar-chunk:last-child
+  .fc-button.fc-button-primary:hover {
+  background-color: var(--card);
+}
+
+/* Comme l'Agenda : « Aujourd'hui » disparaît quand on y est déjà, sans décaler les autres. */
+.fc .fc-today-button:disabled {
+  visibility: hidden;
+}
+
 .fc .fc-toolbar-title {
   color: var(--text-dark);
   font-size: 15px;
