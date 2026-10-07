@@ -7,7 +7,7 @@ import { useSoignantMutations } from '../../../queries/useSoignant.ts'
 import {
   useThematicMutations,
   useThematicQueries,
-} from '../../../queries/useThematic.ts'
+} from '../../../queries/useThematic.tsx'
 import { Button } from '../../ui/button.tsx'
 import {
   Popup,

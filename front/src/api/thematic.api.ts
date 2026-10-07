@@ -8,9 +8,9 @@ import type {
 import { fetchWithAuth } from './fetchWithAuth.ts'
 
 export const ThematicApi = {
-  getAll: async (): Promise<Thematic[]> => {
+  getAll: async (archived = false): Promise<Thematic[]> => {
     const response = await fetchWithAuth(
-      `${tenantApiUrl()}/thematic?action=getAllThematics`,
+      `${tenantApiUrl()}/thematic?action=getAllThematics&archived=${archived}`,
       {
         method: 'GET',
       },
@@ -60,15 +60,15 @@ export const ThematicApi = {
     return response.json()
   },
 
-  delete: async (thematicID: string): Promise<void> => {
+  archive: async (thematicID: string): Promise<void> => {
     const response = await fetchWithAuth(
-      `${tenantApiUrl()}/thematic/${thematicID}?action=deleteThematic`,
+      `${tenantApiUrl()}/thematic/${thematicID}?action=archiveThematic`,
       {
         method: 'DELETE',
       },
     )
     if (!response.ok) {
-      handleHttpError(response, {}, 'Impossible de supprimer la thématique')
+      handleHttpError(response, {}, 'Impossible d’archiver la thématique')
     }
     return
   },

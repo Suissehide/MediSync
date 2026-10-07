@@ -330,6 +330,10 @@ model Thematic {
   // Consigne affichee au patient dans le PDF du programme, avant chaque
   // semaine contenant un creneau de cette thematique.
   pdfNotice       String?
+  // Archivage au lieu de suppression : une thematique retiree de la liste sort
+  // des listes de choix mais garde ses liens, la ou un DELETE vidait le
+  // `thematicId` de tous les rendez-vous deja crees (onDelete: SetNull).
+  archivedAt      DateTime?
 
   soignantLinks SoignantThematic[]
   appointments  Appointment[]
