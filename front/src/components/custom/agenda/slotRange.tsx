@@ -20,10 +20,13 @@ const formatDuration = (row: DaySlotRow) => {
   return `${Math.floor(minutes / 60)} h${rest ? String(rest).padStart(2, '0') : ''}`
 }
 
-const describe = (row: DaySlotRow) => {
+const patientName = (row: DaySlotRow) => {
   const patient = row.patients[0]?.patient
-  return `${formatRange(row)} · ${patient ? `${patient.firstName} ${patient.lastName}` : 'Libre'}`
+  return patient ? `${patient.firstName} ${patient.lastName}` : ''
 }
+
+const describe = (row: DaySlotRow) =>
+  `${formatRange(row)} · ${patientName(row) || 'Libre'}`
 
 // Fin de ligne d'une plage découpée : replie ou déplie ses créneaux.
 export function RangeToggle({
@@ -123,9 +126,7 @@ export function SlotFrieze({
               isFree ? 'border-border-dark' : 'border-blue-300 bg-blue-100',
             )}
           >
-            <span className="truncate">
-              {slot.patients[0]?.patient.firstName}
-            </span>
+            <span className="truncate">{patientName(slot)}</span>
           </button>
         )
       })}
