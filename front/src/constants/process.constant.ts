@@ -55,6 +55,7 @@ export const SOIGNANT = {
   UPDATE: 'update_soignant',
   ARCHIVE: 'archive_soignant',
   RESTORE: 'restore_soignant',
+  DELETE_FOREVER: 'delete_forever_soignant',
 }
 
 export const PATIENT = {
@@ -131,6 +132,7 @@ export const THEMATIC = {
   UPDATE: 'update_thematic',
   ARCHIVE: 'archive_thematic',
   RESTORE: 'restore_thematic',
+  DELETE_FOREVER: 'delete_forever_thematic',
 }
 
 export const MEMBER = {
@@ -168,6 +170,7 @@ export const LOCATION = {
   UPDATE: 'update_location',
   ARCHIVE: 'archive_location',
   RESTORE: 'restore_location',
+  DELETE_FOREVER: 'delete_forever_location',
 }
 
 export const APPOINTMENT = {
@@ -193,6 +196,7 @@ export const DIAGNOSTIC_EDUCATIF_TEMPLATE = {
   UPDATE: 'update_diagnostic_template',
   ARCHIVE: 'archive_diagnostic_template',
   RESTORE: 'restore_diagnostic_template',
+  DELETE_FOREVER: 'delete_forever_diagnostic_template',
 }
 
 export const ACTIVITY_LOG = {

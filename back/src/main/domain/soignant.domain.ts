@@ -37,6 +37,9 @@ class SoignantDomain implements SoignantDomainInterface {
   ): Promise<SoignantEntityDomain> {
     return this.soignantRepository.update(soignantID, soignantUpdateParams)
   }
+  deleteForever(soignantID: string): Promise<void> {
+    return this.soignantRepository.deleteForever(soignantID)
+  }
 }
 
 export { SoignantDomain }

@@ -181,5 +181,31 @@ export const useDiagnosticTemplateMutations = () => {
       }),
   })
 
-  return { createTemplate, updateTemplate, archiveTemplate, restoreTemplate }
+  // Suppression definitive, depuis la liste archivee. Le serveur refuse en 409
+  // tant que des diagnostics portent encore ce modele, et son message le dit.
+  const deleteForeverTemplate = useMutation({
+    mutationKey: [DIAGNOSTIC_EDUCATIF_TEMPLATE.DELETE_FOREVER],
+    mutationFn: (id: string) => DiagnosticEducatifTemplateApi.deleteForever(id),
+    onSuccess: () => {
+      toast({
+        title: 'Modèle supprimé définitivement',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
+      queryClient.invalidateQueries({ queryKey })
+    },
+    onError: (error) =>
+      toast({
+        title: 'Suppression impossible',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      }),
+  })
+
+  return {
+    createTemplate,
+    updateTemplate,
+    archiveTemplate,
+    restoreTemplate,
+    deleteForeverTemplate,
+  }
 }

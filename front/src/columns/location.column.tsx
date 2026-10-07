@@ -1,5 +1,5 @@
 import { createColumnHelper } from '@tanstack/react-table'
-import { Archive, Undo2 } from 'lucide-react'
+import { Archive, Trash2, Undo2 } from 'lucide-react'
 
 import EditLocationForm from '../components/custom/popup/editLocationForm.tsx'
 import { Button } from '../components/ui/button.tsx'
@@ -10,6 +10,7 @@ const columnHelper = createColumnHelper<Location>()
 type LocationActions = {
   onArchive: (id: string) => void
   onRestore: (id: string) => void
+  onDeleteForever: (id: string) => void
   // Les archivees se consultent dans la meme table : seules les actions
   // changent, une archivee ne se reedite pas.
   archived: boolean
@@ -22,6 +23,7 @@ type LocationActions = {
 export const getLocationColumns = ({
   onArchive,
   onRestore,
+  onDeleteForever,
   archived,
   canManage,
 }: LocationActions) => {
@@ -54,6 +56,14 @@ export const getLocationColumns = ({
                 onClick={() => onRestore(location.id)}
               >
                 <Undo2 className="w-3 h-3" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                title="Supprimer définitivement"
+                onClick={() => onDeleteForever(location.id)}
+              >
+                <Trash2 className="w-3 h-3 text-destructive" />
               </Button>
             </div>
           )

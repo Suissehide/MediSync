@@ -1,3 +1,5 @@
+import Boom from '@hapi/boom'
+
 import type { IocContainer } from '../../../types/application/ioc'
 import type {
   SoignantCreateEntityRepo,
@@ -7,6 +9,7 @@ import type {
 } from '../../../types/infra/orm/repositories/soignant.repository.interface'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { TenantContextInterface } from '../../../types/utils/tenant-context'
+import { phraseDesReferences } from '../../../utils/references-referentiel'
 import type { PostgresPrismaClient } from '../postgres-client'
 
 class SoignantRepository implements SoignantRepositoryInterface {
@@ -87,6 +90,42 @@ class SoignantRepository implements SoignantRepositoryInterface {
         entityName: 'Soignant',
         error: err,
       })
+    }
+  }
+  // Suppression DEFINITIVE, reservee aux lignes deja archivees. Le refus de
+  // fond vient de la base (`onDelete: Restrict`) ; ce comptage ne sert qu'a
+  // dire en francais ce qui bloque, avant d'aller buter dessus.
+  async deleteForever(soignantID: string): Promise<void> {
+    const comptes = await Promise.all([
+      this.prisma.slotTemplateSoignant.count({
+        where: { soignantId: soignantID, ...this.scope },
+      }),
+      this.prisma.todo.count({ where: { soignantID, ...this.scope } }),
+      this.prisma.serviceMembership.count({
+        where: { soignantId: soignantID, ...this.scope },
+      }),
+    ])
+    const bloquant = phraseDesReferences([
+      {
+        count: comptes[0] as number,
+        singulier: 'créneau modèle',
+        pluriel: 'créneaux modèles',
+      },
+      { count: comptes[1] as number, singulier: 'tâche', pluriel: 'tâches' },
+      { count: comptes[2] as number, singulier: 'membre', pluriel: 'membres' },
+    ])
+    if (bloquant) {
+      throw Boom.conflict(
+        `Suppression impossible : encore utilisé par ${bloquant}.`,
+      )
+    }
+    // `deleteMany` et non `delete` : c'est le seul moyen d'exiger
+    // `archivedAt` non nul dans le meme ordre, sans lecture prealable.
+    const { count } = await this.prisma.soignant.deleteMany({
+      where: { id: soignantID, ...this.scope, archivedAt: { not: null } },
+    })
+    if (count === 0) {
+      throw Boom.notFound(`Soignant introuvable ou non archivé`)
     }
   }
 }

@@ -1,5 +1,5 @@
 import { tenantApiUrl } from '../constants/config.constant.ts'
-import { handleHttpError } from '../libs/httpErrorHandler.ts'
+import { handleHttpError, messageDuServeur } from '../libs/httpErrorHandler.ts'
 import type {
   CreateLocationParams,
   Location,
@@ -69,6 +69,24 @@ export const LocationApi = {
     )
     if (!response.ok) {
       handleHttpError(response, {}, 'Impossible d’archiver la salle')
+    }
+    return
+  },
+
+  deleteForever: async (locationID: string): Promise<void> => {
+    const response = await fetchWithAuth(
+      `${tenantApiUrl()}/location/${locationID}/definitive`,
+      {
+        method: 'DELETE',
+      },
+    )
+    if (!response.ok) {
+      const message = await messageDuServeur(response)
+      handleHttpError(
+        response,
+        message ? { 409: { title: 'Suppression impossible', message } } : {},
+        'Impossible de supprimer définitivement la salle',
+      )
     }
     return
   },

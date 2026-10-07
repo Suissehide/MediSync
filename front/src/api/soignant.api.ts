@@ -1,5 +1,5 @@
 import { tenantApiUrl } from '../constants/config.constant.ts'
-import { handleHttpError } from '../libs/httpErrorHandler.ts'
+import { handleHttpError, messageDuServeur } from '../libs/httpErrorHandler.ts'
 import type {
   CreateSoignantParams,
   Soignant,
@@ -73,6 +73,24 @@ export const SoignantApi = {
     )
     if (!response.ok) {
       handleHttpError(response, {}, 'Impossible d’archiver le soignant')
+    }
+    return
+  },
+
+  deleteForever: async (soignantID: string): Promise<void> => {
+    const response = await fetchWithAuth(
+      `${tenantApiUrl()}/soignant/${soignantID}/definitive`,
+      {
+        method: 'DELETE',
+      },
+    )
+    if (!response.ok) {
+      const message = await messageDuServeur(response)
+      handleHttpError(
+        response,
+        message ? { 409: { title: 'Suppression impossible', message } } : {},
+        'Impossible de supprimer définitivement le soignant',
+      )
     }
     return
   },

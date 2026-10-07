@@ -141,6 +141,27 @@ const soignantWriteRouter: FastifyPluginAsync = (fastify) => {
     },
   )
 
+  // Suppression DEFINITIVE d'une ligne deja archivee. Refusee en 409 tant que
+  // quelque chose la reference ; la base le refuse de toute facon.
+  fastify.delete<{ Params: DeleteSoignantByIdParams }>(
+    '/:soignantID/definitive',
+    {
+      schema: {
+        params: deleteSoignantByIdParamsSchema,
+        response: {
+          204: z.null(),
+          404: z.object({ message: z.string() }),
+          409: z.object({ message: z.string() }),
+        },
+      },
+      config: { permission: 'referentials:write' },
+    },
+    async (request, reply) => {
+      await soignantDomain.deleteForever(request.params.soignantID)
+      reply.code(204).send()
+    },
+  )
+
   return Promise.resolve()
 }
 

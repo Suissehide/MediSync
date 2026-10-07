@@ -34,6 +34,9 @@ class LocationDomain implements LocationDomainInterface {
   ): Promise<LocationEntityDomain> {
     return this.locationRepository.update(locationID, locationUpdateParams)
   }
+  deleteForever(locationID: string): Promise<void> {
+    return this.locationRepository.deleteForever(locationID)
+  }
 }
 
 export { LocationDomain }

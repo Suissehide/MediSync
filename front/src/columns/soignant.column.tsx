@@ -1,5 +1,5 @@
 import { createColumnHelper } from '@tanstack/react-table'
-import { Archive, Undo2 } from 'lucide-react'
+import { Archive, Trash2, Undo2 } from 'lucide-react'
 
 import ArchiveSoignantForm from '../components/custom/popup/archiveSoignantForm.tsx'
 import EditSoignantAccountsForm, {
@@ -16,6 +16,7 @@ const columnHelper = createColumnHelper<Soignant>()
 
 type SoignantColumnOptions = {
   onRestore: (id: string) => void
+  onDeleteForever: (id: string) => void
   // Les archives se consultent dans la meme table : seules les actions
   // changent, un archive ne se reedite pas.
   archived: boolean
@@ -31,6 +32,7 @@ type SoignantColumnOptions = {
 
 export const getSoignantColumns = ({
   onRestore,
+  onDeleteForever,
   archived,
   thematics,
   thematicOptions,
@@ -107,6 +109,15 @@ export const getSoignantColumns = ({
                 onClick={() => onRestore(soignant.id)}
               >
                 <Undo2 className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                aria-label={`Supprimer définitivement ${soignant.name}`}
+                title="Supprimer définitivement"
+                onClick={() => onDeleteForever(soignant.id)}
+              >
+                <Trash2 className="w-4 h-4 text-destructive" />
               </Button>
             </div>
           )

@@ -1,4 +1,11 @@
-import { Archive, LayoutTemplate, Loader2Icon, Plus, Undo2 } from 'lucide-react'
+import {
+  Archive,
+  LayoutTemplate,
+  Loader2Icon,
+  Plus,
+  Trash2,
+  Undo2,
+} from 'lucide-react'
 import { useState } from 'react'
 
 import { useCan } from '../../../hooks/useCan.ts'
@@ -10,6 +17,7 @@ import { useDiagnosticTemplateStore } from '../../../store/useDiagnosticTemplate
 import { Button } from '../../ui/button.tsx'
 import { Label } from '../../ui/label.tsx'
 import { Switch } from '../../ui/switch.tsx'
+import { ConfirmDeleteForm } from '../popup/confirmDeleteForm.tsx'
 
 function SidebarDiagnosticTemplate() {
   // Le menu ne montre cet écran qu'aux détenteurs de `referentials:write`,
@@ -18,9 +26,14 @@ function SidebarDiagnosticTemplate() {
   const canManage = useCan('referentials:write')
   const { selectedId, setSelectedId } = useDiagnosticTemplateStore()
   const [showArchived, setShowArchived] = useState(false)
+  const [purgeTargetId, setPurgeTargetId] = useState<string | null>(null)
   const { templates, isPending } = useDiagnosticTemplatesQuery(showArchived)
-  const { createTemplate, archiveTemplate, restoreTemplate } =
-    useDiagnosticTemplateMutations()
+  const {
+    createTemplate,
+    archiveTemplate,
+    restoreTemplate,
+    deleteForeverTemplate,
+  } = useDiagnosticTemplateMutations()
 
   const handleCreate = () => {
     createTemplate.mutate(
@@ -93,15 +106,26 @@ function SidebarDiagnosticTemplate() {
                       </div>
                     </button>
                     {canManage && showArchived && (
-                      <Button
-                        variant="none"
-                        size="icon-sm"
-                        aria-label={`Restaurer ${t.name}`}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                        onClick={() => restoreTemplate.mutate(t.id)}
-                      >
-                        <Undo2 className="w-4 h-4" />
-                      </Button>
+                      <>
+                        <Button
+                          variant="none"
+                          size="icon-sm"
+                          aria-label={`Restaurer ${t.name}`}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                          onClick={() => restoreTemplate.mutate(t.id)}
+                        >
+                          <Undo2 className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="none"
+                          size="icon-sm"
+                          aria-label={`Supprimer définitivement ${t.name}`}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                          onClick={() => setPurgeTargetId(t.id)}
+                        >
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                      </>
                     )}
                     {canManage && !showArchived && (
                       <Button
@@ -129,6 +153,24 @@ function SidebarDiagnosticTemplate() {
           </ul>
         )}
       </div>
+
+      <ConfirmDeleteForm
+        open={!!purgeTargetId}
+        setOpen={(open) => {
+          if (!open) {
+            setPurgeTargetId(null)
+          }
+        }}
+        onConfirm={() => {
+          if (purgeTargetId) {
+            deleteForeverTemplate.mutate(purgeTargetId)
+          }
+          setPurgeTargetId(null)
+        }}
+        loading={deleteForeverTemplate.isPending}
+        title="Supprimer définitivement"
+        description="Ce modèle disparaîtra pour de bon. L'opération est refusée tant que des diagnostics déjà remplis le portent."
+      />
     </>
   )
 }

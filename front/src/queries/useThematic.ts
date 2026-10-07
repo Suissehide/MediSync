@@ -193,5 +193,34 @@ export const useThematicMutations = () => {
     },
   })
 
-  return { createThematic, archiveThematic, restoreThematic, updateThematic }
+  // Suppression definitive, depuis la liste archivee. Le serveur refuse en 409
+  // tant que quelque chose reference la ligne, et son message nomme quoi.
+  const deleteForeverThematic = useMutation({
+    mutationKey: [THEMATIC.DELETE_FOREVER],
+    mutationFn: ThematicApi.deleteForever,
+    onSuccess: () => {
+      toast({
+        title: 'Thématique supprimée définitivement',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
+    },
+    onError: (error) => {
+      toast({
+        title: 'Suppression impossible',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: [THEMATIC.GET_ALL] })
+    },
+  })
+
+  return {
+    createThematic,
+    archiveThematic,
+    restoreThematic,
+    updateThematic,
+    deleteForeverThematic,
+  }
 }

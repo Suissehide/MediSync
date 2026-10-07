@@ -37,6 +37,9 @@ class DiagnosticEducatifTemplateDomain
   ): Promise<DiagnosticEducatifTemplateEntity> {
     return this.diagnosticEducatifTemplateRepository.update(id, params)
   }
+  deleteForever(id: string): Promise<void> {
+    return this.diagnosticEducatifTemplateRepository.deleteForever(id)
+  }
 }
 
 export { DiagnosticEducatifTemplateDomain }

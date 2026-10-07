@@ -22,4 +22,7 @@ export interface SoignantRepositoryInterface {
     soignantID: string,
     soignantUpdateParams: SoignantUpdateEntityRepo,
   ) => Promise<SoignantEntityRepo>
+  // Suppression definitive : refusee si la ligne n'est pas archivee,
+  // ou si quoi que ce soit la reference encore.
+  deleteForever: (soignantID: string) => Promise<void>
 }
