@@ -1,6 +1,6 @@
 const PRESENCE: Record<string, { className: string; label: string }> = {
   yes: { className: 'bg-emerald-500', label: 'Venu' },
-  no: { className: 'bg-destructive', label: 'Absent' },
+  no: { className: 'bg-pink-500', label: 'Absent' },
 }
 
 export function PastillePresence({ status }: { status?: string | null }) {

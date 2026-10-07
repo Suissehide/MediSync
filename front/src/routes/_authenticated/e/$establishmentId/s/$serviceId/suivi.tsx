@@ -53,7 +53,7 @@ const MARK_LABEL: Record<SuiviMark, string> = {
 
 function SuiviMarkIcon({ mark, color }: { mark: SuiviMark; color: string }) {
   if (mark === 'absent') {
-    return <X className="w-3 h-3 mx-auto text-red-500" />
+    return <X className="w-3 h-3 mx-auto text-pink-500" />
   }
   return (
     <span

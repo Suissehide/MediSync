@@ -99,57 +99,68 @@ export const buildCalendarEventsFromSlots = (
 }
 
 /**
- * Une ligne du tableau Agenda : un rendez-vous, enrichi des informations
- * portées par son créneau (lieu, soignants).
+ * Une ligne du tableau Agenda : un créneau du jour, avec les patients de
+ * tous ses rendez-vous.
  */
-export type DayAppointmentRow = {
+export type DaySlotRow = {
   id: string
-  slotId: string
+  // Le rendez-vous du créneau quand il n'y en a qu'un : cible des actions de la ligne.
+  appointmentId: string | null
+  appointmentCount: number
   startDate: string
   endDate: string
   thematic: string
   thematicId?: string | null
   location: string
   soignants: Soignant[]
-  patients: AppointmentPatient[]
+  patients: (AppointmentPatient & { appointmentId: string })[]
   type?: string
   isIndividual: boolean
   capacity: number
 }
 
 /**
- * Aplatit les créneaux en rendez-vous, ne garde que ceux du jour demandé
- * (comparaison en UTC), et trie par heure de début croissante.
+ * Garde les créneaux du jour demandé (comparaison en UTC), sauf les archivés
+ * restés vides, et trie par heure de début croissante.
  */
-export const buildDayAppointmentRows = (
+export const buildDaySlotRows = (
   slots: Slot[] | undefined,
   day: Dayjs,
-): DayAppointmentRow[] => {
+): DaySlotRow[] => {
   if (!slots) {
     return []
   }
 
   return slots
-    .flatMap((slot) =>
-      (slot.appointments ?? [])
-        .filter((appointment) =>
-          dayjs.utc(appointment.startDate).isSame(day, 'day'),
-        )
-        .map((appointment) => ({
-          id: appointment.id,
-          slotId: slot.id,
-          startDate: appointment.startDate,
-          endDate: appointment.endDate,
-          thematic: appointment.thematic ?? slot.slotTemplate?.thematic ?? '',
-          thematicId: appointment.thematicId,
-          location: slot.slotTemplate?.location?.name ?? '',
-          soignants: slot.slotTemplate?.soignants ?? [],
-          patients: appointment.appointmentPatients ?? [],
-          type: appointment.type,
-          isIndividual: slot.slotTemplate?.isIndividual ?? false,
-          capacity: slot.slotTemplate?.capacity ?? 1,
-        })),
+    .filter(
+      (slot) =>
+        dayjs.utc(slot.startDate).isSame(day, 'day') &&
+        (!slot.archivedAt || slot.appointments?.length),
     )
+    .map((slot) => {
+      const appointments = slot.appointments ?? []
+      const single = appointments.length === 1 ? appointments[0] : null
+      return {
+        id: slot.id,
+        appointmentId: single?.id ?? null,
+        appointmentCount: appointments.length,
+        startDate: slot.startDate,
+        endDate: slot.endDate,
+        thematic: single?.thematic ?? slot.slotTemplate?.thematic ?? '',
+        thematicId: single?.thematicId ?? slot.slotTemplate?.thematicId,
+        location: slot.slotTemplate?.location?.name ?? '',
+        soignants: slot.slotTemplate?.soignants ?? [],
+        patients: appointments.flatMap((appointment) =>
+          (appointment.appointmentPatients ?? []).map((appointmentPatient) => ({
+            ...appointmentPatient,
+            appointmentId: appointment.id,
+          })),
+        ),
+        type: single?.type,
+        isIndividual: slot.slotTemplate?.isIndividual ?? false,
+        capacity: slot.slotTemplate?.capacity ?? 1,
+      }
+    })
     .sort((a, b) => dayjs(a.startDate).valueOf() - dayjs(b.startDate).valueOf())
 }
 

@@ -8,14 +8,14 @@ import { Etiquette } from '../components/table/etiquette.tsx'
 import { Button } from '../components/ui/button.tsx'
 import { APPOINTMENT_TYPE } from '../constants/appointment.constant.ts'
 import { styleSoignant } from '../libs/color.ts'
-import type { DayAppointmentRow } from '../libs/utils.ts'
+import type { DaySlotRow } from '../libs/utils.ts'
 
-const columnHelper = createColumnHelper<DayAppointmentRow>()
+const columnHelper = createColumnHelper<DaySlotRow>()
 
 type DayAppointmentActions = {
-  onOpen: (row: DayAppointmentRow) => void
-  onDelete: (row: DayAppointmentRow) => void
-  onAddPatient: (row: DayAppointmentRow) => void
+  onOpen: (row: DaySlotRow) => void
+  onDelete: (row: DaySlotRow) => void
+  onAddPatient: (row: DaySlotRow) => void
   soignantIDs: string[]
 }
 
@@ -99,26 +99,27 @@ export const getDayAppointmentColumns = ({
       header: '',
       size: 100,
       meta: { align: 'right' },
-      cell: ({ row }) => (
-        <div className="flex justify-end gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            aria-label="Ouvrir le rendez-vous"
-            onClick={() => onOpen(row.original)}
-          >
-            <Eye className="w-3 h-3" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            aria-label="Supprimer le rendez-vous"
-            onClick={() => onDelete(row.original)}
-          >
-            <Trash2 className="w-3 h-3 text-destructive" />
-          </Button>
-        </div>
-      ),
+      cell: ({ row }) =>
+        row.original.appointmentId && (
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label="Ouvrir le rendez-vous"
+              onClick={() => onOpen(row.original)}
+            >
+              <Eye className="w-3 h-3" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label="Supprimer le rendez-vous"
+              onClick={() => onDelete(row.original)}
+            >
+              <Trash2 className="w-3 h-3 text-destructive" />
+            </Button>
+          </div>
+        ),
     }),
   ]
 }

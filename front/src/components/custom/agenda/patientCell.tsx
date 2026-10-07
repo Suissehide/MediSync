@@ -2,10 +2,10 @@ import { Link } from '@tanstack/react-router'
 import { MessageSquareTextIcon, Plus } from 'lucide-react'
 import { useState } from 'react'
 
-import type { DayAppointmentRow } from '../../../libs/utils.ts'
+import type { DaySlotRow } from '../../../libs/utils.ts'
 import { useConvocationSentMutation } from '../../../queries/useAppointment.ts'
 import { useAuthStore } from '../../../store/useAuthStore.ts'
-import { Etiquette } from '../../table/etiquette.tsx'
+import { Etiquette, type TonEtiquette } from '../../table/etiquette.tsx'
 import { Button } from '../../ui/button.tsx'
 import { Checkbox } from '../../ui/input.tsx'
 import {
@@ -49,9 +49,11 @@ function ConvocationCheckbox({
 
 const MAX_VISIBLE_PATIENTS = 5
 
+const TON_PRESENCE: Record<string, TonEtiquette> = { yes: 'succes', no: 'rose' }
+
 type PatientCellProps = {
-  row: DayAppointmentRow
-  onAddPatient: (row: DayAppointmentRow) => void
+  row: DaySlotRow
+  onAddPatient: (row: DaySlotRow) => void
 }
 
 export default function PatientCell({ row, onAddPatient }: PatientCellProps) {
@@ -63,17 +65,19 @@ export default function PatientCell({ row, onAddPatient }: PatientCellProps) {
 
   const { patients, isIndividual } = row
 
-  const addButton = isIndividual ? null : (
-    <Button
-      variant="outline"
-      size="icon-sm"
-      aria-label="Gérer les patients"
-      className="shrink-0"
-      onClick={() => onAddPatient(row)}
-    >
-      <Plus className="w-3 h-3" />
-    </Button>
-  )
+  // Plusieurs rendez-vous sur un créneau collectif : on ne sait pas lequel compléter.
+  const addButton =
+    isIndividual || row.appointmentCount > 1 ? null : (
+      <Button
+        variant="outline"
+        size="icon-sm"
+        aria-label="Gérer les patients"
+        className="shrink-0"
+        onClick={() => onAddPatient(row)}
+      >
+        <Plus className="w-3 h-3" />
+      </Button>
+    )
 
   if (patients.length === 0) {
     return (
@@ -97,14 +101,18 @@ export default function PatientCell({ row, onAddPatient }: PatientCellProps) {
           >
             {appointmentPatient.id && (
               <ConvocationCheckbox
-                appointmentID={row.id}
+                appointmentID={appointmentPatient.appointmentId}
                 appointmentPatientID={appointmentPatient.id}
                 convocationSent={!!appointmentPatient.convocationSent}
                 patientName={`${appointmentPatient.patient.firstName} ${appointmentPatient.patient.lastName}`}
               />
             )}
             {context?.serviceId ? (
-              <Etiquette asChild className="hover:bg-primary/20">
+              <Etiquette
+                asChild
+                ton={TON_PRESENCE[appointmentPatient.status ?? '']}
+                className="hover:brightness-95"
+              >
                 <Link
                   to="/e/$establishmentId/s/$serviceId/patient/$patientID"
                   params={{
@@ -118,7 +126,7 @@ export default function PatientCell({ row, onAddPatient }: PatientCellProps) {
                 </Link>
               </Etiquette>
             ) : (
-              <Etiquette>
+              <Etiquette ton={TON_PRESENCE[appointmentPatient.status ?? '']}>
                 {appointmentPatient.patient.firstName}{' '}
                 {appointmentPatient.patient.lastName}
               </Etiquette>
