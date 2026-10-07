@@ -35,6 +35,11 @@ export const ACTIVITY_DEFINITIONS = [
       "Sortis avec un motif d'arrêt autre que « Plus de besoin / Fin de parcours ».",
   },
   {
+    label: 'Taux de complétion',
+    definition:
+      'Ont terminé divisés par les sortis ; « — » sans sortie dans la période.',
+  },
+  {
     label: 'Absentéisme',
     definition:
       'Absents divisés par les rendez-vous pointés (présents et absents) ; les rendez-vous non pointés sont exclus. Moins de 5 rendez-vous pointés : pas de taux.',
@@ -56,6 +61,10 @@ export const ACTIVITY_DEFINITIONS = [
     label: 'Bilans de fin',
     definition:
       "Présences à une réactualisation : approximation, il n'existe pas de bilan de fin dédié.",
+  },
+  {
+    label: 'Diagnostics éducatifs réalisés',
+    definition: 'Présences à une thématique de diagnostic éducatif.',
   },
   {
     label: 'Délai adressage → entrée',

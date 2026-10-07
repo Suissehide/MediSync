@@ -203,6 +203,9 @@ describe('ecran d activite', () => {
     expect(
       screen.getByRole('button', { name: 'Exporter en CSV' }),
     ).toBeDisabled()
+    expect(
+      screen.getByRole('button', { name: 'Réessayer' }),
+    ).toBeInTheDocument()
   })
 
   it('invite a changer de periode quand rien ne s est passe', async () => {

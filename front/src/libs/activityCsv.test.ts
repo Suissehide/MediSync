@@ -51,18 +51,32 @@ const rapport: ActivityReport = {
 
 describe('activityCsv', () => {
   it('commence par le BOM et l en-tete, separe par des points-virgules', () => {
-    const csv = activityCsv(rapport)
+    const csv = activityCsv(rapport, 'Cardio')
     expect(csv.startsWith('﻿section;libellé;valeur;définition\r\n')).toBe(true)
   })
 
+  it('ecrit le service juste avant la periode', () => {
+    const csv = activityCsv(rapport, 'Cardio')
+    const lignes = csv.split('\r\n')
+    const indexService = lignes.findIndex((l) => l.startsWith('Service;'))
+    const indexPeriode = lignes.findIndex((l) => l.startsWith('Période;'))
+    expect(indexService).toBeGreaterThanOrEqual(0)
+    expect(indexPeriode).toBe(indexService + 1)
+    expect(lignes[indexService]).toBe('Service;Cardio;;')
+  })
+
+  it('neutralise le nom du service comme les autres libelles', () => {
+    expect(activityCsv(rapport, '=Cardio')).toContain("Service;'=Cardio;;")
+  })
+
   it('ecrit les motifs par leur libelle et les nombres decimaux a la francaise', () => {
-    const csv = activityCsv(rapport)
+    const csv = activityCsv(rapport, 'Cardio')
     expect(csv).toContain("Motifs d'arrêt;Perdu de vue;5;")
     expect(csv).toContain('Heures soignant;IDE;120,5;')
   })
 
   it('protege un libelle qui contient le separateur', () => {
-    expect(activityCsv(rapport)).toContain('"Coaching; PRM — mardi"')
+    expect(activityCsv(rapport, 'Cardio')).toContain('"Coaching; PRM — mardi"')
   })
 
   it('formate un taux absent en tiret', () => {
@@ -72,7 +86,7 @@ describe('activityCsv', () => {
 
   it('arrondit les heures a une decimale, comme l ecran', () => {
     expect(heures(50 / 60)).toBe('0,8')
-    expect(activityCsv(rapport)).toContain('Heures soignant;AS;0,8;')
+    expect(activityCsv(rapport, 'Cardio')).toContain('Heures soignant;AS;0,8;')
   })
 
   it('neutralise un libelle qui ressemble a une formule tableur', () => {
@@ -85,6 +99,8 @@ describe('activityCsv', () => {
         ],
       },
     }
-    expect(activityCsv(piege)).toContain("Absences par thématique;'=SUM(A1);")
+    expect(activityCsv(piege, 'Cardio')).toContain(
+      "Absences par thématique;'=SUM(A1);",
+    )
   })
 })

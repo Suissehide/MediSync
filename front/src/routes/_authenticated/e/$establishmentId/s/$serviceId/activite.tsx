@@ -15,8 +15,23 @@ import { can } from '@/hooks/useCan.ts'
 import { activityCsv, heures, pourcent } from '@/libs/activityCsv.ts'
 import { queryState } from '@/libs/queryState.ts'
 import { useActivityQuery } from '@/queries/useActivity.ts'
+import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { AbsenceCell, ActivityReport } from '@/types/activity.ts'
-import { resolveTenantContext } from '@/utils/tenant-context.ts'
+import {
+  accessibleCouples,
+  resolveTenantContext,
+} from '@/utils/tenant-context.ts'
+
+// Lettres, chiffres et tirets uniquement : le nom du service devient le segment du fichier.
+const slugify = (nom: string): string => {
+  const slug = nom
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+  return slug || 'service'
+}
 
 // Tableau de bord d'activité du service, en chiffres agrégés (MDS-40).
 export const Route = createFileRoute(
@@ -41,10 +56,19 @@ const estVide = (r: ActivityReport) =>
   r.absences.overall.pointed === 0
 
 function ActivitePage() {
+  const params = Route.useParams()
+  const user = useAuthStore((state) => state.user)
+  const serviceName =
+    accessibleCouples(user).find(
+      (c) =>
+        c.establishment.id === params.establishmentId &&
+        c.service.id === params.serviceId,
+    )?.service.name ?? 'Service'
+
   const [periode, setPeriode] = useState(() => anneeCivile(ANNEES[0]))
   const from = periode.from.format(PERIOD_FORMAT)
   const to = periode.to.format(PERIOD_FORMAT)
-  const { report, isPending, error } = useActivityQuery(from, to)
+  const { report, isPending, error, refetch } = useActivityQuery(from, to)
   const etat = queryState({ isPending, error, hasData: report !== undefined })
 
   const exporter = () => {
@@ -52,11 +76,13 @@ function ActivitePage() {
       return
     }
     const href = URL.createObjectURL(
-      new Blob([activityCsv(report)], { type: 'text/csv;charset=utf-8' }),
+      new Blob([activityCsv(report, serviceName)], {
+        type: 'text/csv;charset=utf-8',
+      }),
     )
     const lien = document.createElement('a')
     lien.href = href
-    lien.download = `activite_${from}_${to}.csv`
+    lien.download = `activite-${slugify(serviceName)}-${from}-${to}.csv`
     lien.click()
     URL.revokeObjectURL(href)
   }
@@ -77,7 +103,17 @@ function ActivitePage() {
         </div>
 
         {etat === 'pending' && <p className="text-text-light">Chargement...</p>}
-        {(etat === 'error' || etat === 'empty') && (
+        {etat === 'error' && (
+          <div className="flex flex-col gap-2">
+            <p role="alert" className="text-text-light">
+              Impossible de charger l'activité du service. Réessayez plus tard.
+            </p>
+            <Button className="self-start" onClick={() => refetch()}>
+              Réessayer
+            </Button>
+          </div>
+        )}
+        {etat === 'empty' && (
           <p role="alert" className="text-text-light">
             Impossible de charger l'activité du service. Réessayez plus tard.
           </p>
@@ -236,36 +272,45 @@ function CarteAbsences({ r }: { r: ActivityReport }) {
         <table className="w-max min-w-full text-sm border-separate border-spacing-0">
           <thead>
             <tr className="text-text-light">
-              <th className="sticky left-0 bg-background text-left font-normal px-3 py-2">
+              <th
+                scope="col"
+                className="sticky left-0 bg-background text-left font-normal px-3 py-2"
+              >
                 Thématique
               </th>
               {jours.map((d) => (
-                <th key={d} className="font-normal px-3 py-2 capitalize">
+                <th
+                  key={d}
+                  scope="col"
+                  className="font-normal px-3 py-2 capitalize"
+                >
                   {JOURS[d]}
                 </th>
               ))}
-              <th className="font-normal px-3 py-2">Total</th>
+              <th scope="col" className="font-normal px-3 py-2">
+                Total
+              </th>
             </tr>
           </thead>
           <tbody>
             {r.absences.byThematic.map((t) => (
-              <tr key={t.thematic} className="border-t border-border">
+              <tr key={t.thematic}>
                 <th
                   scope="row"
-                  className="sticky left-0 bg-background text-left font-normal text-text-dark px-3 py-2 whitespace-nowrap"
+                  className="sticky left-0 bg-background text-left font-normal text-text-dark px-3 py-2 whitespace-nowrap border-t border-border"
                 >
                   {t.thematic}
                 </th>
                 {jours.map((d) => (
                   <td
                     key={d}
-                    className="px-3 py-2 text-center tabular-nums"
+                    className="px-3 py-2 text-center tabular-nums border-t border-border"
                     style={teinte(t.cells[d])}
                   >
                     <Case c={t.cells[d]} />
                   </td>
                 ))}
-                <td className="px-3 py-2 text-center tabular-nums font-medium">
+                <td className="px-3 py-2 text-center tabular-nums font-medium border-t border-border">
                   <Case c={t.total} />
                 </td>
               </tr>

@@ -22,9 +22,10 @@ const definition = (label: string): string =>
   ACTIVITY_DEFINITIONS.find((d) => d.label === label)?.definition ?? ''
 
 // BOM et point-virgule : Excel en français ouvre le fichier sans assistant d'import.
-export const activityCsv = (r: ActivityReport): string => {
+export const activityCsv = (r: ActivityReport, serviceName: string): string => {
   const lignes: string[][] = [
     ['section', 'libellé', 'valeur', 'définition'],
+    ['Service', serviceName, '', ''],
     ['Période', `${r.from} au ${r.to}`, '', ''],
     [
       'Patients',
@@ -45,7 +46,12 @@ export const activityCsv = (r: ActivityReport): string => {
       nombre(r.completion.completed),
       definition('Ont terminé'),
     ],
-    ['Parcours', 'Taux de complétion', pourcent(r.completion.rate), ''],
+    [
+      'Parcours',
+      'Taux de complétion',
+      pourcent(r.completion.rate),
+      definition('Taux de complétion'),
+    ],
     [
       'Parcours',
       'Abandons',
@@ -106,7 +112,7 @@ export const activityCsv = (r: ActivityReport): string => {
       'Séances',
       'Diagnostics éducatifs',
       nombre(r.sessions.educationalDiagnoses),
-      '',
+      definition('Diagnostics éducatifs réalisés'),
     ],
     [
       'Séances',
