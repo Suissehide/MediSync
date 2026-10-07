@@ -48,3 +48,44 @@ describe('buildDaySlotRows', () => {
     expect(rows.map((r) => r.canBook)).toEqual([false, false, true])
   })
 })
+
+describe('buildDaySlotRows, créneau individuel', () => {
+  it('à partir de deux rendez-vous, un sous-tableau avec les intervalles libres', () => {
+    const at = (h: string) => `2026-03-02T${h}:00.000Z`
+    const [row] = buildDaySlotRows(
+      [
+        slot('ind', at('10:00'), {
+          endDate: at('12:00'),
+          slotTemplate: { soignants: [], isIndividual: true },
+          appointments: [
+            {
+              ...appointment('a2', 'p2'),
+              startDate: at('11:00'),
+              endDate: at('11:30'),
+            },
+            {
+              ...appointment('a1', 'p1'),
+              startDate: at('10:00'),
+              endDate: at('10:30'),
+            },
+          ],
+        } as unknown as Partial<Slot>),
+      ],
+      dayjs.utc('2026-03-02'),
+    )
+
+    expect(row.canBook).toBe(false)
+    expect(
+      row.subRows?.map((r) => [
+        r.kind,
+        dayjs.utc(r.startDate).format('HH:mm'),
+        r.canBook,
+      ]),
+    ).toEqual([
+      ['appointment', '10:00', false],
+      ['free', '10:30', true],
+      ['appointment', '11:00', false],
+      ['free', '11:30', true],
+    ])
+  })
+})

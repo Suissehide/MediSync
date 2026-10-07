@@ -3,6 +3,7 @@ import {
   type ColumnDef,
   type ColumnFiltersState,
   getCoreRowModel,
+  getExpandedRowModel,
   getFacetedMinMaxValues,
   getFacetedRowModel,
   getFacetedUniqueValues,
@@ -76,6 +77,8 @@ type ReactTableProps<TData extends { id: string }> = {
   isRowMuted?: (row: TData) => boolean
   isLoading?: boolean
   autoRowHeight?: boolean
+  // Sous-lignes d'une ligne, toujours dépliées sous elle.
+  getSubRows?: (row: TData) => TData[] | undefined
 }
 
 export function ReactTable<TData extends { id: string }>({
@@ -92,6 +95,7 @@ export function ReactTable<TData extends { id: string }>({
   isRowMuted,
   isLoading,
   autoRowHeight,
+  getSubRows,
 }: ReactTableProps<TData>) {
   const initialColumnFilters = safeParse(
     localStorage.getItem(`filters/${filterId}`),
@@ -124,6 +128,7 @@ export function ReactTable<TData extends { id: string }>({
       columnVisibility,
       rowSelection,
       columnFilters,
+      expanded: true,
       ...(pagination ? { pagination: paginationState } : {}),
       ...(serverPagination
         ? {
@@ -169,6 +174,8 @@ export function ReactTable<TData extends { id: string }>({
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
     getRowId: (row) => row.id,
+    getSubRows,
+    getExpandedRowModel: getExpandedRowModel(),
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
