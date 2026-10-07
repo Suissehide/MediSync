@@ -76,6 +76,13 @@ export const getDayAppointmentColumns = ({
       },
     }),
     columnHelper.display({
+      id: 'places',
+      header: 'Places',
+      size: 90,
+      cell: ({ row }) =>
+        `${row.original.patients.length}/${row.original.capacity}`,
+    }),
+    columnHelper.display({
       id: 'patients',
       header: 'Patients',
       size: 280,

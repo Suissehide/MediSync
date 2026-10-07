@@ -9,6 +9,7 @@ import type { Slot } from '../types/slot.ts'
 import type { SlotTemplate } from '../types/slotTemplate.ts'
 import type { Soignant } from '../types/soignant.ts'
 import { getContrastTextColor } from './color.ts'
+import { hasSlotAvailability } from './slotAvailability.ts'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -117,6 +118,8 @@ export type DaySlotRow = {
   type?: string
   isIndividual: boolean
   capacity: number
+  // Un patient peut encore y prendre rendez-vous.
+  canBook: boolean
 }
 
 /**
@@ -159,6 +162,7 @@ export const buildDaySlotRows = (
         type: single?.type,
         isIndividual: slot.slotTemplate?.isIndividual ?? false,
         capacity: slot.slotTemplate?.capacity ?? 1,
+        canBook: !slot.locked && hasSlotAvailability(slot),
       }
     })
     .sort((a, b) => dayjs(a.startDate).valueOf() - dayjs(b.startDate).valueOf())

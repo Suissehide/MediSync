@@ -45,5 +45,6 @@ describe('buildDaySlotRows', () => {
     expect(rows.map((r) => r.id)).toEqual(['deux', 'un', 'vide'])
     expect(rows.map((r) => r.appointmentId)).toEqual([null, 'a3', null])
     expect(rows[0].patients.map((p) => p.appointmentId)).toEqual(['a1', 'a2'])
+    expect(rows.map((r) => r.canBook)).toEqual([false, false, true])
   })
 })

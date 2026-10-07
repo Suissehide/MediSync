@@ -63,21 +63,19 @@ export default function PatientCell({ row, onAddPatient }: PatientCellProps) {
   // ne puisse se rendre.
   const context = useAuthStore((state) => state.context)
 
-  const { patients, isIndividual } = row
+  const { patients } = row
 
-  // Plusieurs rendez-vous sur un créneau collectif : on ne sait pas lequel compléter.
-  const addButton =
-    isIndividual || row.appointmentCount > 1 ? null : (
-      <Button
-        variant="outline"
-        size="icon-sm"
-        aria-label="Gérer les patients"
-        className="shrink-0"
-        onClick={() => onAddPatient(row)}
-      >
-        <Plus className="w-3 h-3" />
-      </Button>
-    )
+  const addButton = row.canBook && (
+    <Button
+      variant="outline"
+      size="icon-sm"
+      aria-label="Prendre un rendez-vous"
+      className="shrink-0"
+      onClick={() => onAddPatient(row)}
+    >
+      <Plus className="w-3 h-3" />
+    </Button>
+  )
 
   if (patients.length === 0) {
     return (
