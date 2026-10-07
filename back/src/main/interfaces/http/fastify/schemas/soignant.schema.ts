@@ -15,6 +15,10 @@ export const soignantResponseSchema = z.object({
 
 export const soignantsResponseSchema = z.array(soignantResponseSchema)
 
+export const listSoignantsQuerySchema = z.object({
+  archived: z.stringbool().default(false),
+})
+
 export const getSoignantByIdParamsSchema = z.object({
   soignantID: z.cuid(),
 })
@@ -27,9 +31,10 @@ export const deleteSoignantByIdParamsSchema = getSoignantByIdParamsSchema
 
 export const updateSoignantByIdSchema = {
   params: getSoignantByIdParamsSchema,
-  body: soignantSchema.partial(),
+  body: soignantSchema.partial().extend({ archived: z.boolean().optional() }),
 }
 
+export type ListSoignantsQuery = z.infer<typeof listSoignantsQuerySchema>
 export type SoignantInput = z.infer<typeof soignantSchema>
 export type GetSoignantByIdParams = z.infer<typeof getSoignantByIdParamsSchema>
 export type CreateSoignantBody = z.infer<typeof createSoignantSchema>

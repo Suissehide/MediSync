@@ -15,7 +15,7 @@ import { useSoignantQueries } from '@/queries/useSoignant.ts'
 import {
   useThematicMutations,
   useThematicQueries,
-} from '@/queries/useThematic.tsx'
+} from '@/queries/useThematic.ts'
 import type { Thematic } from '@/types/thematic.ts'
 import { resolveTenantContext } from '@/utils/tenant-context.ts'
 

@@ -1,10 +1,10 @@
-import { CheckCheck, Stethoscope, Trash, X } from 'lucide-react'
+import { Archive, CheckCheck, Stethoscope, X } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
 
 import { useSoignantQueries } from '../../../queries/useSoignant.ts'
 import { useSoignantStore } from '../../../store/useSoignantStore.ts'
 import { Button } from '../../ui/button.tsx'
-import DeleteSoignantForm from '../popup/deleteSoignantForm.tsx'
+import ArchiveSoignantForm from '../popup/archiveSoignantForm.tsx'
 import { selectionPillClass } from './sidebarFilter.styles.ts'
 
 interface SoignantFilterSectionProps {
@@ -86,11 +86,11 @@ function SoignantFilterSection({
               </button>
 
               {isAdmin && isHovered === soignant.id && (
-                <DeleteSoignantForm
+                <ArchiveSoignantForm
                   soignant={soignant}
                   trigger={
                     <Button variant="absolute" size="icon">
-                      <Trash className="w-4 h-4 text-red-500" />
+                      <Archive className="w-4 h-4 text-red-500" />
                     </Button>
                   }
                 />

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 
 import { SLOT_DURATION_OPTIONS } from '../../../constants/slot.constant.ts'
 import { useAppForm } from '../../../hooks/formConfig.tsx'
-import { useThematicMutations } from '../../../queries/useThematic.tsx'
+import { useThematicMutations } from '../../../queries/useThematic.ts'
 import type { Thematic, UpdateThematicParams } from '../../../types/thematic.ts'
 import { Button } from '../../ui/button.tsx'
 import {

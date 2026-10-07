@@ -4,6 +4,7 @@ import {
   DiagnosticEducatifApi,
   DiagnosticEducatifTemplateApi,
 } from '../api/diagnosticEducatif.api.ts'
+import { undoToastAction } from '../components/custom/undoToastAction.tsx'
 import {
   DIAGNOSTIC_EDUCATIF,
   DIAGNOSTIC_EDUCATIF_TEMPLATE,
@@ -35,15 +36,15 @@ export const useDiagnosticsByPatientQuery = (patientId: string) => {
   return { diagnostics, isPending }
 }
 
-export const useDiagnosticTemplatesQuery = () => {
+export const useDiagnosticTemplatesQuery = (archived = false) => {
   const {
     data: templates,
     isPending,
     isError,
     error,
   } = useQuery({
-    queryKey: [DIAGNOSTIC_EDUCATIF_TEMPLATE.GET_ALL],
-    queryFn: DiagnosticEducatifTemplateApi.getAll,
+    queryKey: [DIAGNOSTIC_EDUCATIF_TEMPLATE.GET_ALL, archived],
+    queryFn: () => DiagnosticEducatifTemplateApi.getAll(archived),
     retry: 0,
   })
   useDataFetching({ isPending, isError, error })
@@ -144,19 +145,41 @@ export const useDiagnosticTemplateMutations = () => {
       }),
   })
 
-  const deleteTemplate = useMutation({
-    mutationFn: (id: string) => DiagnosticEducatifTemplateApi.delete(id),
+  const restoreTemplate = useMutation({
+    mutationKey: [DIAGNOSTIC_EDUCATIF_TEMPLATE.RESTORE],
+    mutationFn: (id: string) =>
+      DiagnosticEducatifTemplateApi.update({ id, archived: false }),
     onSuccess: () => {
-      toast({ title: 'Template supprimé', severity: TOAST_SEVERITY.SUCCESS })
+      toast({ title: 'Modèle restauré', severity: TOAST_SEVERITY.SUCCESS })
       queryClient.invalidateQueries({ queryKey })
     },
     onError: (error) =>
       toast({
-        title: 'Erreur',
+        title: 'Erreur lors de la restauration du modèle',
         message: error.message,
         severity: TOAST_SEVERITY.ERROR,
       }),
   })
 
-  return { createTemplate, updateTemplate, deleteTemplate }
+  const archiveTemplate = useMutation({
+    mutationKey: [DIAGNOSTIC_EDUCATIF_TEMPLATE.ARCHIVE],
+    mutationFn: (id: string) => DiagnosticEducatifTemplateApi.archive(id),
+    onSuccess: (_, id) => {
+      toast({
+        title: 'Modèle archivé',
+        message: 'Les diagnostics déjà remplis le conservent.',
+        severity: TOAST_SEVERITY.SUCCESS,
+        action: undoToastAction(() => restoreTemplate.mutate(id)),
+      })
+      queryClient.invalidateQueries({ queryKey })
+    },
+    onError: (error) =>
+      toast({
+        title: 'Erreur lors de l’archivage du modèle',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      }),
+  })
+
+  return { createTemplate, updateTemplate, archiveTemplate, restoreTemplate }
 }

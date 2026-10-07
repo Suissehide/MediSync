@@ -11,10 +11,13 @@ export type DiagnosticEducatifTemplateCreateEntity = Pick<
 >
 
 export type DiagnosticEducatifTemplateUpdateEntity =
-  Partial<DiagnosticEducatifTemplateCreateEntity>
+  Partial<DiagnosticEducatifTemplateCreateEntity> & {
+    // `true` archive, `false` restaure.
+    archived?: boolean
+  }
 
 export interface DiagnosticEducatifTemplateDomainInterface {
-  findAll: () => Promise<DiagnosticEducatifTemplateEntity[]>
+  findAll: (archived?: boolean) => Promise<DiagnosticEducatifTemplateEntity[]>
   findByID: (id: string) => Promise<DiagnosticEducatifTemplateEntity>
   create: (
     params: DiagnosticEducatifTemplateCreateEntity,
@@ -23,5 +26,4 @@ export interface DiagnosticEducatifTemplateDomainInterface {
     id: string,
     params: DiagnosticEducatifTemplateUpdateEntity,
   ) => Promise<DiagnosticEducatifTemplateEntity>
-  delete: (id: string) => Promise<DiagnosticEducatifTemplateEntity>
 }

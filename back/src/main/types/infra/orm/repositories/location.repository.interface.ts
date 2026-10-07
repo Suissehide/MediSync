@@ -6,10 +6,12 @@ export type LocationCreateEntityRepo = {
 }
 export type LocationUpdateEntityRepo = {
   name?: string
+  // `true` archive, `false` restaure.
+  archived?: boolean
 }
 
 export interface LocationRepositoryInterface {
-  findAll: () => Promise<LocationEntityRepo[]>
+  findAll: (archived?: boolean) => Promise<LocationEntityRepo[]>
   findByID: (locationID: string) => Promise<LocationEntityRepo>
   create: (
     locationCreateParams: LocationCreateEntityRepo,
@@ -18,5 +20,4 @@ export interface LocationRepositoryInterface {
     locationID: string,
     locationUpdateParams: LocationUpdateEntityRepo,
   ) => Promise<LocationEntityRepo>
-  delete: (locationID: string) => Promise<LocationEntityRepo>
 }

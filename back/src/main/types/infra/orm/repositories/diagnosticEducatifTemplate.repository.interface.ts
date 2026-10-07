@@ -5,7 +5,7 @@ import type {
 } from '../../../domain/diagnosticEducatifTemplate.domain.interface'
 
 export interface DiagnosticEducatifTemplateRepositoryInterface {
-  findAll: () => Promise<DiagnosticEducatifTemplateEntity[]>
+  findAll: (archived?: boolean) => Promise<DiagnosticEducatifTemplateEntity[]>
   findByID: (id: string) => Promise<DiagnosticEducatifTemplateEntity>
   create: (
     params: DiagnosticEducatifTemplateCreateEntity,
@@ -14,5 +14,4 @@ export interface DiagnosticEducatifTemplateRepositoryInterface {
     id: string,
     params: DiagnosticEducatifTemplateUpdateEntity,
   ) => Promise<DiagnosticEducatifTemplateEntity>
-  delete: (id: string) => Promise<DiagnosticEducatifTemplateEntity>
 }

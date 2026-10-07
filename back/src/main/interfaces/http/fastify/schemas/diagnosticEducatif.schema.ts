@@ -15,10 +15,18 @@ export const createDiagnosticEducatifTemplateSchema =
   diagnosticEducatifTemplateSchema
 export const updateDiagnosticEducatifTemplateSchema = {
   params: z.object({ templateId: z.cuid() }),
-  body: diagnosticEducatifTemplateSchema.partial(),
+  body: diagnosticEducatifTemplateSchema
+    .partial()
+    .extend({ archived: z.boolean().optional() }),
 }
+export const listDiagnosticTemplatesQuerySchema = z.object({
+  archived: z.stringbool().default(false),
+})
 export const diagnosticTemplateParamsSchema = z.object({ templateId: z.cuid() })
 
+export type ListDiagnosticTemplatesQuery = z.infer<
+  typeof listDiagnosticTemplatesQuerySchema
+>
 export type DiagnosticEducatifTemplateResponse = z.infer<
   typeof diagnosticEducatifTemplateResponseSchema
 >

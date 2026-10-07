@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { ThematicApi } from '../api/thematic.api.ts'
-import { Button } from '../components/ui/button.tsx'
+import { undoToastAction } from '../components/custom/undoToastAction.tsx'
 import { THEMATIC } from '../constants/process.constant.ts'
 import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
@@ -134,16 +134,7 @@ export const useThematicMutations = () => {
         title: 'Thématique archivée',
         message: 'Les rendez-vous existants la conservent.',
         severity: TOAST_SEVERITY.SUCCESS,
-        action: (
-          <Button
-            variant="none"
-            size="sm"
-            className="h-7 px-2 text-xs"
-            onClick={() => restoreThematic.mutate(thematicID)}
-          >
-            Annuler
-          </Button>
-        ),
+        action: undoToastAction(() => restoreThematic.mutate(thematicID)),
       })
     },
     onError: (error, __, context) => {

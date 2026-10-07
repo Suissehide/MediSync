@@ -187,17 +187,24 @@ describe('scoping des repositories d etablissement', () => {
     await ctx.run(tenant, async () => {
       await soignants.findAll()
       await soignants.update('so1', { name: 'N' })
-      await locations.delete('l1')
+      // L'archivage passe par `update` : ces repositories n'ont plus de
+      // suppression dure du tout.
+      await locations.update('l1', { archived: true })
     })
     expect(calls[0]?.args).toMatchObject({
-      where: { establishmentId: 'e1', serviceId: 's1' },
+      where: { establishmentId: 'e1', serviceId: 's1', archivedAt: null },
     })
     expect(calls[1]?.args).toMatchObject({
       where: { id_serviceId: { id: 'so1', serviceId: 's1' } },
     })
-    expect(calls[2]?.args).toMatchObject({
-      where: { id_serviceId: { id: 'l1', serviceId: 's1' } },
+    expect(calls[2]).toMatchObject({
+      model: 'location',
+      op: 'update',
+      args: { where: { id_serviceId: { id: 'l1', serviceId: 's1' } } },
     })
+    expect(calls[2]?.args).not.toHaveProperty('data.archived')
+    expect((calls[2]?.args as { data: { archivedAt: Date } }).data.archivedAt)
+      .toBeInstanceOf(Date)
   })
 
   it('ActivityLogRepository pose le contexte du tenant a l ecriture, null hors requete', async () => {
@@ -1133,12 +1140,14 @@ describe('scoping des repositories de diagnostic', () => {
       await repo.findByID('dt1')
       await repo.create({ name: 'T', activeFields: [] })
       await repo.update('dt1', { name: 'T2' })
-      await repo.delete('dt1')
+      await repo.update('dt1', { archived: true })
     })
     expect(calls[0]).toMatchObject({
       model: 'diagnosticEducatifTemplate',
       op: 'findMany',
-      args: { where: { serviceId: 's1', establishmentId: 'e1' } },
+      args: {
+        where: { serviceId: 's1', establishmentId: 'e1', archivedAt: null },
+      },
     })
     expect(calls[1]).toMatchObject({
       model: 'diagnosticEducatifTemplate',
@@ -1158,11 +1167,16 @@ describe('scoping des repositories de diagnostic', () => {
         data: { name: 'T2' },
       },
     })
+    // L'archivage passe par `update` : ce repository n'a plus de suppression
+    // dure, et `archived` ne doit jamais atteindre Prisma tel quel.
     expect(calls[4]).toMatchObject({
       model: 'diagnosticEducatifTemplate',
-      op: 'delete',
+      op: 'update',
       args: { where: { id_serviceId: { id: 'dt1', serviceId: 's1' } } },
     })
+    expect(calls[4]?.args).not.toHaveProperty('data.archived')
+    expect((calls[4]?.args as { data: { archivedAt: Date } }).data.archivedAt)
+      .toBeInstanceOf(Date)
   })
 })
 

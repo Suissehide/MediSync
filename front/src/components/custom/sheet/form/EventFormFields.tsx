@@ -3,7 +3,7 @@ import { useEffect, useMemo } from 'react'
 
 import { withForm } from '../../../../hooks/formConfig.tsx'
 import { useLocationQueries } from '../../../../queries/useLocation.ts'
-import { useThematicQueries } from '../../../../queries/useThematic.tsx'
+import { useThematicQueries } from '../../../../queries/useThematic.ts'
 import { useSoignantStore } from '../../../../store/useSoignantStore.ts'
 import { eventFormOpts } from './eventFormOpts.ts'
 
