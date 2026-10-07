@@ -401,4 +401,171 @@ describe('soignants et salles a l echelle du service', () => {
     expect(maj.statusCode).toBe(200)
     expect(maj.json().soignants).toHaveLength(1)
   })
+  it('refuse de lier a une thematique ou a un creneau un soignant d un autre service', async () => {
+    const etranger = await testDb.soignant.create({
+      data: { name: 'Soignant de B', serviceId: B, establishmentId: E },
+    })
+    const thematique = await call(
+      coordA,
+      'POST',
+      tenantUrl(E, A, '/thematic'),
+      {
+        name: 'Thematique piege',
+        soignantIDs: [etranger.id],
+      },
+    )
+    expect(thematique.statusCode).toBeGreaterThanOrEqual(400)
+    const modele = await call(
+      coordA,
+      'POST',
+      tenantUrl(E, A, '/slot-template'),
+      {
+        startTime: '2026-11-02T09:00:00.000Z',
+        endTime: '2026-11-02T10:00:00.000Z',
+        offsetDays: 0,
+        color: '#123456',
+        isIndividual: false,
+        soignantIDs: [etranger.id],
+      },
+    )
+    expect(modele.statusCode).toBeGreaterThanOrEqual(400)
+    expect(
+      await testDb.soignantThematic.count({
+        where: { soignantId: etranger.id },
+      }),
+    ).toBe(0)
+    expect(
+      await testDb.slotTemplateSoignant.count({
+        where: { soignantId: etranger.id },
+      }),
+    ).toBe(0)
+  })
+
+  describe('liens soignants des creneaux', () => {
+    const creneau = {
+      startTime: '2026-11-02T09:00:00.000Z',
+      endTime: '2026-11-02T10:00:00.000Z',
+      offsetDays: 0,
+      color: '#123456',
+      isIndividual: false,
+    }
+    const nouveauSoignant = async (name: string): Promise<string> =>
+      (
+        await call(coordA, 'POST', tenantUrl(E, A, '/soignant'), { name })
+      ).json().id
+
+    it('cree et modifie un modele de creneau avec des soignants', async () => {
+      const s1 = await nouveauSoignant('Infirmier modele')
+      const s2 = await nouveauSoignant('Medecin modele')
+      const cree = await call(
+        coordA,
+        'POST',
+        tenantUrl(E, A, '/slot-template'),
+        {
+          ...creneau,
+          soignantIDs: [s1],
+        },
+      )
+      expect(cree.statusCode).toBe(201)
+      expect(cree.json().soignants.map((s: { id: string }) => s.id)).toEqual([
+        s1,
+      ])
+
+      const maj = await call(
+        coordA,
+        'PATCH',
+        tenantUrl(E, A, `/slot-template/${cree.json().id}`),
+        { soignantIDs: [s1, s2] },
+      )
+      expect(maj.statusCode).toBe(200)
+      expect(
+        maj
+          .json()
+          .soignants.map((s: { id: string }) => s.id)
+          .sort(),
+      ).toEqual([s1, s2].sort())
+    })
+
+    it('cree un creneau avec son modele et ses soignants, puis les remplace', async () => {
+      const s1 = await nouveauSoignant('Kine creneau')
+      const s2 = await nouveauSoignant('Psy creneau')
+      const cree = await call(coordA, 'POST', tenantUrl(E, A, '/slot'), {
+        startDate: '2026-11-03T09:00:00.000Z',
+        endDate: '2026-11-03T10:00:00.000Z',
+        slotTemplate: { ...creneau, soignantIDs: [s1] },
+      })
+      expect(cree.statusCode).toBe(201)
+      expect(
+        cree.json().slotTemplate.soignants.map((s: { id: string }) => s.id),
+      ).toEqual([s1])
+
+      const maj = await call(
+        coordA,
+        'PATCH',
+        tenantUrl(E, A, `/slot/${cree.json().id}`),
+        {
+          slotTemplate: { id: cree.json().slotTemplate.id, soignantIDs: [s2] },
+        },
+      )
+      expect(maj.statusCode).toBe(200)
+      expect(
+        maj.json().slotTemplate.soignants.map((s: { id: string }) => s.id),
+      ).toEqual([s2])
+    })
+
+    it('la regeneration d un parcours recopie les soignants du modele', async () => {
+      const s1 = await nouveauSoignant('Dieteticien parcours')
+      const modele = (
+        await call(coordA, 'POST', tenantUrl(E, A, '/slot-template'), {
+          ...creneau,
+          soignantIDs: [s1],
+        })
+      ).json()
+      const parcoursType = await call(
+        coordA,
+        'POST',
+        tenantUrl(E, A, '/pathway-template'),
+        {
+          name: 'Parcours regenere',
+          color: '#654321',
+          mainTag: 'ETP',
+          slotTemplateIDs: [modele.id],
+        },
+      )
+      expect(parcoursType.statusCode).toBe(201)
+      const pathway = await testDb.pathway.create({
+        data: {
+          establishmentId: E,
+          serviceId: A,
+          startDate: new Date('2026-11-09'),
+          templateID: parcoursType.json().id,
+        },
+      })
+
+      const regen = await call(
+        coordA,
+        'POST',
+        tenantUrl(E, A, '/pathway/regenerate'),
+        {
+          pathwayTemplateID: parcoursType.json().id,
+          fromDate: '2026-11-01',
+        },
+      )
+      expect(regen.statusCode).toBe(200)
+      expect(regen.json().slotsCreated).toBe(1)
+
+      const slot = await testDb.slot.findFirstOrThrow({
+        where: { pathwayID: pathway.id },
+        include: { slotTemplate: { include: { soignantLinks: true } } },
+      })
+      expect(slot.slotTemplate.id).not.toBe(modele.id)
+      expect(slot.slotTemplate.soignantLinks).toEqual([
+        expect.objectContaining({
+          soignantId: s1,
+          serviceId: A,
+          establishmentId: E,
+        }),
+      ])
+    })
+  })
 })
