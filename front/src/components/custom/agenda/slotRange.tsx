@@ -6,6 +6,12 @@ import { cn, type DaySlotRow } from '../../../libs/utils.ts'
 import { rowDomId } from '../../table/reactTable.tsx'
 import { Button } from '../../ui/button.tsx'
 
+// Segment de rendez-vous : vert si le patient est venu, rose s'il n'est pas venu, bleu sinon.
+const PRESENCE_SEGMENT: Record<string, string> = {
+  yes: 'border-green-300 bg-green-100 text-green-800 hover:bg-green-200',
+  no: 'border-pink-300 bg-pink-100 text-pink-800 hover:bg-pink-200',
+}
+
 export const formatRange = (row: DaySlotRow) =>
   `${dayjs.utc(row.startDate).format('HH:mm')} – ${dayjs.utc(row.endDate).format('HH:mm')}`
 
@@ -122,8 +128,11 @@ export function SlotFrieze({
               }),
             }}
             className={cn(
-              'flex min-w-0 cursor-pointer items-center overflow-hidden whitespace-nowrap rounded border px-1.5 text-[11px] font-semibold text-blue-800',
-              isFree ? 'border-border-dark' : 'border-blue-300 bg-blue-100',
+              'flex min-w-0 cursor-pointer items-center overflow-hidden whitespace-nowrap rounded border px-1.5 text-[11px] font-semibold transition-colors',
+              isFree
+                ? 'border-border-dark hover:border-slate-400'
+                : (PRESENCE_SEGMENT[slot.patients[0]?.status ?? ''] ??
+                    'border-blue-300 bg-blue-100 text-blue-800 hover:bg-blue-200'),
             )}
           >
             <span className="truncate">{patientName(slot)}</span>
