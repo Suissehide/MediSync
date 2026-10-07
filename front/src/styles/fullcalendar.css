@@ -55,6 +55,9 @@
   .fc-header-toolbar
   .fc-toolbar-chunk:last-child
   .fc-button.fc-button-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   height: 36px;
   margin-left: 0;
   border-radius: 6px;
