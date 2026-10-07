@@ -110,7 +110,8 @@ function Planning() {
   const { slots } = useSlotsInRangeQuery(visibleRange)
   const { pathways } = usePathwayQueries()
   const { pathwayTemplates } = usePathwayTemplateQueries()
-  const { createSlot, updateSlot, deleteSlot } = useSlotMutations()
+  const { createSlot, updateSlot, deleteSlot, archiveSlots } =
+    useSlotMutations()
   const { instantiatePathway, deletePathway } = usePathwayMutations()
   const { toast } = useToast()
   const lastDropTimeRef = useRef<number>(0)
@@ -227,11 +228,9 @@ function Planning() {
     if (!slots) {
       return []
     }
-    if (hiddenPathwayIds.size === 0) {
-      return slots
-    }
     return slots.filter(
       (slot) =>
+        !slot.archivedAt &&
         !hiddenPathwayIds.has(slot.pathway?.template?.id ?? NO_PATHWAY_KEY),
     )
   }, [slots, hiddenPathwayIds])
@@ -626,6 +625,34 @@ function Planning() {
     handleClearSelection()
   }
 
+  const handleBulkArchive = () => {
+    const ids = [...selectedSlotIds]
+      .filter((eventId) => eventId.startsWith('slot_'))
+      .map((eventId) => eventId.replace('slot_', ''))
+    archiveSlots.mutate(
+      { ids, archived: true },
+      {
+        onSuccess: () =>
+          toast({
+            title: `${ids.length} créneau(x) archivé(s)`,
+            message: 'Leurs rendez-vous restent visibles sur le Dashboard.',
+            severity: TOAST_SEVERITY.SUCCESS,
+            action: (
+              <Button
+                variant="none"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => archiveSlots.mutate({ ids, archived: false })}
+              >
+                Annuler
+              </Button>
+            ),
+          }),
+      },
+    )
+    handleClearSelection()
+  }
+
   const handleForbiddenWeekCreate = (date: string) => {
     setCreateForbiddenWeekDate(date)
   }
@@ -833,6 +860,14 @@ function Planning() {
                 options={[
                   { value: 'duplicate', label: 'Dupliquer sur une semaine' },
                   { value: 'move', label: 'Déplacer sur une semaine' },
+                  ...(editMode
+                    ? []
+                    : [
+                        {
+                          value: 'archive',
+                          label: 'Archiver (masquer du planning)',
+                        },
+                      ]),
                   { value: 'delete', label: 'Supprimer la sélection' },
                 ]}
                 placeholder="Action..."
@@ -863,6 +898,8 @@ function Planning() {
                       )
                     }
                     setShowMoveModal(true)
+                  } else if (v === 'archive') {
+                    handleBulkArchive()
                   } else if (v === 'delete') {
                     setShowBulkDeleteModal(true)
                   }

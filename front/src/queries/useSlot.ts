@@ -262,5 +262,23 @@ export const useSlotMutations = () => {
     },
   })
 
-  return { createSlot, deleteSlot, updateSlot }
+  // ponytail: un PATCH par créneau, un endpoint groupé si les sélections dépassent la centaine.
+  const archiveSlots = useMutation({
+    mutationFn: ({ ids, archived }: { ids: string[]; archived: boolean }) => {
+      const archivedAt = archived ? new Date().toISOString() : null
+      return Promise.all(ids.map((id) => SlotApi.update({ id, archivedAt })))
+    },
+    onError: (error) => {
+      toast({
+        title: 'Erreur lors de l’archivage des créneaux',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: [SLOT.GET_ALL] })
+    },
+  })
+
+  return { createSlot, deleteSlot, updateSlot, archiveSlots }
 }

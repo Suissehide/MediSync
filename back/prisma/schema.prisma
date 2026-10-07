@@ -285,6 +285,8 @@ model Slot {
   startDate       DateTime
   endDate         DateTime
   locked          Boolean       @default(false)
+  // Masque le créneau du Planning ; il reste sur le Dashboard avec ses rendez-vous.
+  archivedAt      DateTime?
   appointments    Appointment[]
   pathwayID       String?
   slotTemplateID  String        @unique
