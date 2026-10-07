@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { ThematicApi } from '../api/thematic.api.ts'
+import { Button } from '../components/ui/button.tsx'
 import { THEMATIC } from '../constants/process.constant.ts'
 import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
@@ -17,15 +18,15 @@ import type {
 
 // * QUERIES
 
-export const useThematicQueries = () => {
+export const useThematicQueries = (archived = false) => {
   const {
     data: thematics,
     isPending,
     isError,
     error,
   } = useQuery({
-    queryKey: [THEMATIC.GET_ALL],
-    queryFn: ThematicApi.getAll,
+    queryKey: [THEMATIC.GET_ALL, archived],
+    queryFn: () => ThematicApi.getAll(archived),
     retry: 0,
   })
 
@@ -52,9 +53,10 @@ export const useThematicMutations = () => {
 
       const previousThematics = snapshotForTenant(queryClient, [
         THEMATIC.GET_ALL,
+        false,
       ])
       queryClient.setQueryData(
-        [THEMATIC.GET_ALL],
+        [THEMATIC.GET_ALL, false],
         (oldThematics: Thematic[]) => [
           ...(oldThematics || []),
           { ...newThematic, id: 'temp', soignants: [] },
@@ -83,34 +85,72 @@ export const useThematicMutations = () => {
     },
   })
 
-  const deleteThematic = useMutation({
-    mutationKey: [THEMATIC.DELETE],
-    mutationFn: ThematicApi.delete,
-    onMutate: async (thematicID) => {
+  const restoreThematic = useMutation({
+    mutationKey: [THEMATIC.RESTORE],
+    mutationFn: (thematicID: string) =>
+      ThematicApi.update({ id: thematicID, archived: false }),
+    onSuccess: () => {
+      toast({
+        title: 'Thématique restaurée',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
+    },
+    onError: (error) => {
+      toast({
+        title: 'Erreur lors de la restauration de la thématique',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: [THEMATIC.GET_ALL] })
+    },
+  })
+
+  const archiveThematic = useMutation({
+    mutationKey: [THEMATIC.ARCHIVE],
+    mutationFn: ThematicApi.archive,
+    onMutate: async (thematicID: string) => {
       await queryClient.cancelQueries({ queryKey: [THEMATIC.GET_ALL] })
 
       const previousThematics = snapshotForTenant(queryClient, [
         THEMATIC.GET_ALL,
+        false,
       ])
-      queryClient.setQueryData([THEMATIC.GET_ALL], (oldThematics: Thematic[]) =>
-        oldThematics?.filter(
-          (thematic: Thematic) => thematic.id !== thematicID,
-        ),
+      queryClient.setQueryData(
+        [THEMATIC.GET_ALL, false],
+        (oldThematics: Thematic[]) =>
+          oldThematics?.filter(
+            (thematic: Thematic) => thematic.id !== thematicID,
+          ),
       )
 
       return { previousThematics }
     },
-    onSuccess: () => {
+    onSuccess: (_, thematicID) => {
+      // L'archivage est deja reversible cote serveur : « Annuler » rejoue une
+      // restauration, il n'y a rien a rattraper dans un delai.
       toast({
-        title: 'Thématique supprimée avec succès',
+        title: 'Thématique archivée',
+        message: 'Les rendez-vous existants la conservent.',
         severity: TOAST_SEVERITY.SUCCESS,
+        action: (
+          <Button
+            variant="none"
+            size="sm"
+            className="h-7 px-2 text-xs"
+            onClick={() => restoreThematic.mutate(thematicID)}
+          >
+            Annuler
+          </Button>
+        ),
       })
     },
     onError: (error, __, context) => {
       restoreForTenant(queryClient, context?.previousThematics)
 
       toast({
-        title: 'Erreur lors de la suppression de la thématique',
+        title: 'Erreur lors de l’archivage de la thématique',
         message: error.message,
         severity: TOAST_SEVERITY.ERROR,
       })
@@ -128,13 +168,16 @@ export const useThematicMutations = () => {
 
       const previousThematics = snapshotForTenant(queryClient, [
         THEMATIC.GET_ALL,
+        false,
       ])
-      queryClient.setQueryData([THEMATIC.GET_ALL], (oldThematics: Thematic[]) =>
-        oldThematics?.map((thematic: Thematic) =>
-          thematic.id === updatedThematic.id
-            ? { ...thematic, ...updatedThematic }
-            : thematic,
-        ),
+      queryClient.setQueryData(
+        [THEMATIC.GET_ALL, false],
+        (oldThematics: Thematic[]) =>
+          oldThematics?.map((thematic: Thematic) =>
+            thematic.id === updatedThematic.id
+              ? { ...thematic, ...updatedThematic }
+              : thematic,
+          ),
       )
 
       return { previousThematics }
@@ -159,5 +202,5 @@ export const useThematicMutations = () => {
     },
   })
 
-  return { createThematic, deleteThematic, updateThematic }
+  return { createThematic, archiveThematic, restoreThematic, updateThematic }
 }

@@ -2,7 +2,6 @@ import type { Soignant, Thematic } from '../../../../generated/client'
 import type { IocContainer } from '../../../types/application/ioc'
 import type {
   ThematicCreateEntityRepo,
-  ThematicEntityRepo,
   ThematicRepositoryInterface,
   ThematicUpdateEntityRepo,
   ThematicWithSoignantsEntityRepo,
@@ -44,14 +43,18 @@ class ThematicRepository implements ThematicRepositoryInterface {
     return this.tenantContext.scope()
   }
 
-  async findAll(): Promise<ThematicWithSoignantsEntityRepo[]> {
+  async findAll(archived = false): Promise<ThematicWithSoignantsEntityRepo[]> {
     const rows = await this.prisma.thematic.findMany({
-      where: this.scope,
+      where: { ...this.scope, archivedAt: archived ? { not: null } : null },
       ...withSoignants,
     })
     return rows.map(flatten)
   }
 
+  // Ne filtre pas les archivees, volontairement : les domaines rendez-vous,
+  // modele de creneau et parcours s'en servent pour valider la cible d'un
+  // `thematicId`. Filtrer ici casserait le simple reenregistrement d'un
+  // rendez-vous qui porte deja une thematique archivee.
   async findByID(thematicID: string): Promise<ThematicWithSoignantsEntityRepo> {
     try {
       const row = await this.prisma.thematic.findUniqueOrThrow({
@@ -114,6 +117,9 @@ class ThematicRepository implements ThematicRepositoryInterface {
           name: thematicUpdateParams.name,
           duration: thematicUpdateParams.duration,
           pdfNotice: thematicUpdateParams.pdfNotice,
+          ...(thematicUpdateParams.archived !== undefined && {
+            archivedAt: thematicUpdateParams.archived ? new Date() : null,
+          }),
           ...(thematicUpdateParams.soignantIDs && {
             soignantLinks: {
               deleteMany: {},
@@ -124,21 +130,6 @@ class ThematicRepository implements ThematicRepositoryInterface {
         ...withSoignants,
       })
       return flatten(row)
-    } catch (err) {
-      throw this.errorHandler.boomErrorFromPrismaError({
-        entityName: 'Thematic',
-        error: err,
-      })
-    }
-  }
-
-  async delete(thematicID: string): Promise<ThematicEntityRepo> {
-    try {
-      return await this.prisma.thematic.delete({
-        where: {
-          id_serviceId: { id: thematicID, serviceId: this.scope.serviceId },
-        },
-      })
     } catch (err) {
       throw this.errorHandler.boomErrorFromPrismaError({
         entityName: 'Thematic',

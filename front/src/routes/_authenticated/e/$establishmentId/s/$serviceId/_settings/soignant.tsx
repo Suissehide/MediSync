@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input.tsx'
 import { can, useCan } from '@/hooks/useCan.ts'
 import { useServiceMembersQuery } from '@/queries/useServiceMembers.ts'
 import { useSoignantQueries } from '@/queries/useSoignant.ts'
-import { useThematicQueries } from '@/queries/useThematic.ts'
+import { useThematicQueries } from '@/queries/useThematic.tsx'
 import type { Soignant } from '@/types/soignant.ts'
 import { resolveTenantContext } from '@/utils/tenant-context.ts'
 

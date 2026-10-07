@@ -128,7 +128,8 @@ export const THEMATIC = {
   GET_ALL: 'get_all_thematics',
   CREATE: 'create_thematic',
   UPDATE: 'update_thematic',
-  DELETE: 'delete_thematic',
+  ARCHIVE: 'archive_thematic',
+  RESTORE: 'restore_thematic',
 }
 
 export const MEMBER = {

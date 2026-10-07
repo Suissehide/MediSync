@@ -20,4 +20,6 @@ export type UpdateThematicParams = {
   duration?: number | null
   pdfNotice?: string | null
   soignantIDs?: string[]
+  /** `true` archive, `false` restaure. */
+  archived?: boolean
 }
