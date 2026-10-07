@@ -292,7 +292,13 @@ describe('onglets de la barre de navigation', () => {
     monterNavbar('/e/e1/s/s1/dashboard', avecRoles('MEMBER', 'COORDINATEUR'))
 
     await waitFor(() => {
-      expect(onglets()).toEqual(['Dashboard', 'Agenda', 'Patients', 'Suivi'])
+      expect(onglets()).toEqual([
+        'Dashboard',
+        'Agenda',
+        'Patients',
+        'Suivi',
+        'Activité',
+      ])
     })
     expect(menus()).toEqual(['Administration'])
 
@@ -374,7 +380,13 @@ describe('onglets de la barre de navigation', () => {
     monterNavbar('/e/e1/s/s1/dashboard', avecRoles('MEMBER', 'COORDINATEUR'))
 
     await waitFor(() => {
-      expect(onglets()).toEqual(['Dashboard', 'Agenda', 'Patients', 'Suivi'])
+      expect(onglets()).toEqual([
+        'Dashboard',
+        'Agenda',
+        'Patients',
+        'Suivi',
+        'Activité',
+      ])
     })
     expect(
       screen.queryByRole('link', { name: 'Plateforme' }),
