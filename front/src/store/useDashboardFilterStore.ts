@@ -3,11 +3,12 @@ import { persist } from 'zustand/middleware'
 
 import { scopedStorage } from './scoped-storage.ts'
 
-export type DashboardFilterMode = 'soignant' | 'pathway'
+export type DashboardFilterMode = 'soignant' | 'pathway' | 'location'
 
 interface DashboardFilterState {
   mode: DashboardFilterMode
   selectedPathwayTemplateIDs: string[]
+  selectedLocationIDs: string[]
 }
 
 interface DashboardFilterActions {
@@ -16,12 +17,17 @@ interface DashboardFilterActions {
   togglePathwayTemplate: (id: string) => void
   selectAllPathwayTemplates: (ids: string[]) => void
   unselectPathwayTemplates: () => void
+
+  toggleLocation: (id: string) => void
+  selectAllLocations: (ids: string[]) => void
+  unselectLocations: () => void
 }
 
 type PersistedDashboardFilterState = Pick<
   DashboardFilterState,
   'mode' | 'selectedPathwayTemplateIDs'
->
+> &
+  Partial<Pick<DashboardFilterState, 'selectedLocationIDs'>>
 
 // Narrowing sans assertion de type : `in` sur un `unknown` deja ramene a
 // `object` restreint l'acces aux proprietes testees (TS 4.9+).
@@ -31,7 +37,9 @@ const estEtatFiltrePersiste = (
   typeof valeur === 'object' &&
   valeur !== null &&
   'mode' in valeur &&
-  (valeur.mode === 'soignant' || valeur.mode === 'pathway') &&
+  (valeur.mode === 'soignant' ||
+    valeur.mode === 'pathway' ||
+    valeur.mode === 'location') &&
   'selectedPathwayTemplateIDs' in valeur &&
   Array.isArray(valeur.selectedPathwayTemplateIDs)
 
@@ -42,6 +50,7 @@ export const useDashboardFilterStore = create<
     (set) => ({
       mode: 'soignant',
       selectedPathwayTemplateIDs: [],
+      selectedLocationIDs: [],
 
       setMode: (mode) => set({ mode }),
 
@@ -58,6 +67,17 @@ export const useDashboardFilterStore = create<
       selectAllPathwayTemplates: (ids) =>
         set({ selectedPathwayTemplateIDs: ids }),
       unselectPathwayTemplates: () => set({ selectedPathwayTemplateIDs: [] }),
+
+      toggleLocation: (id) =>
+        set((state) => ({
+          selectedLocationIDs: state.selectedLocationIDs.includes(id)
+            ? state.selectedLocationIDs.filter(
+                (selectedID) => selectedID !== id,
+              )
+            : [...state.selectedLocationIDs, id],
+        })),
+      selectAllLocations: (ids) => set({ selectedLocationIDs: ids }),
+      unselectLocations: () => set({ selectedLocationIDs: [] }),
     }),
     {
       name: 'dashboard-filter-store',
@@ -72,6 +92,11 @@ export const useDashboardFilterStore = create<
         selectedPathwayTemplateIDs: estEtatFiltrePersiste(persisted)
           ? persisted.selectedPathwayTemplateIDs
           : [],
+        selectedLocationIDs:
+          estEtatFiltrePersiste(persisted) &&
+          Array.isArray(persisted.selectedLocationIDs)
+            ? persisted.selectedLocationIDs
+            : [],
       }),
     },
   ),
