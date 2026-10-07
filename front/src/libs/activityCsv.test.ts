@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import type { ActivityReport } from '../types/activity.ts'
-import { activityCsv, pourcent } from './activityCsv.ts'
+import { activityCsv, heures, pourcent } from './activityCsv.ts'
 
 const vide = { absent: 0, pointed: 0, rate: null }
 
@@ -43,7 +43,10 @@ const rapport: ActivityReport = {
     educationalDiagnoses: 41,
     finalReviews: 28,
   },
-  hoursBySoignant: [{ soignant: 'IDE', hours: 120.5 }],
+  hoursBySoignant: [
+    { soignant: 'IDE', hours: 120.5 },
+    { soignant: 'AS', hours: 50 / 60 },
+  ],
 }
 
 describe('activityCsv', () => {
@@ -65,5 +68,23 @@ describe('activityCsv', () => {
   it('formate un taux absent en tiret', () => {
     expect(pourcent(null)).toBe('—')
     expect(pourcent(0.738)).toBe('74 %')
+  })
+
+  it('arrondit les heures a une decimale, comme l ecran', () => {
+    expect(heures(50 / 60)).toBe('0,8')
+    expect(activityCsv(rapport)).toContain('Heures soignant;AS;0,8;')
+  })
+
+  it('neutralise un libelle qui ressemble a une formule tableur', () => {
+    const piege: ActivityReport = {
+      ...rapport,
+      absences: {
+        ...rapport.absences,
+        byThematic: [
+          { ...rapport.absences.byThematic[0], thematic: '=SUM(A1)' },
+        ],
+      },
+    }
+    expect(activityCsv(piege)).toContain("Absences par thématique;'=SUM(A1);")
   })
 })

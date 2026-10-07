@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button.tsx'
 import { ACTIVITY_DEFINITIONS, JOURS } from '@/constants/activity.constant.ts'
 import { STOP_REASON } from '@/constants/patient.constant.ts'
 import { can } from '@/hooks/useCan.ts'
-import { activityCsv, pourcent } from '@/libs/activityCsv.ts'
+import { activityCsv, heures, pourcent } from '@/libs/activityCsv.ts'
 import { queryState } from '@/libs/queryState.ts'
 import { useActivityQuery } from '@/queries/useActivity.ts'
 import type { AbsenceCell, ActivityReport } from '@/types/activity.ts'
@@ -154,7 +154,7 @@ function Rapport({ r }: { r: ActivityReport }) {
             lignes={r.hoursBySoignant.map((h) => ({
               libelle: h.soignant,
               valeur: h.hours,
-              texte: `${String(Math.round(h.hours * 10) / 10).replace('.', ',')} h`,
+              texte: `${heures(h.hours)} h`,
             }))}
             vide="Aucun créneau réalisé avec un soignant affecté."
           />

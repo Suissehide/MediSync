@@ -7,6 +7,14 @@ export const pourcent = (rate: number | null): string =>
 
 const nombre = (n: number): string => String(n).replace('.', ',')
 
+// Une décimale, comme l'écran (`activite.tsx`) : les deux doivent toujours s'accorder.
+export const heures = (h: number): string => nombre(Math.round(h * 10) / 10)
+
+// Neutralise l'injection de formule tableur : un libellé saisi par un soignant (thématique,
+// parcours, motif) qui commence par `=`, `+`, `-`, `@`, une tabulation ou un retour chariot est
+// préfixé d'une apostrophe avant d'être cité — Excel/LibreOffice le lisent alors comme du texte.
+const neutralise = (v: string): string => (/^[=+\-@\t\r]/.test(v) ? `'${v}` : v)
+
 const champ = (v: string): string =>
   /[;"\r\n]/.test(v) ? `"${v.split('"').join('""')}"` : v
 
@@ -109,9 +117,11 @@ export const activityCsv = (r: ActivityReport): string => {
     ...r.hoursBySoignant.map((h) => [
       'Heures soignant',
       h.soignant,
-      nombre(h.hours),
+      heures(h.hours),
       definition('Heures soignant'),
     ]),
   ]
-  return `﻿${lignes.map((l) => l.map(champ).join(';')).join('\r\n')}\r\n`
+  return `﻿${lignes
+    .map((l) => [l[0], neutralise(l[1]), l[2], l[3]].map(champ).join(';'))
+    .join('\r\n')}\r\n`
 }
