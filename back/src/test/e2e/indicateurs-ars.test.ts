@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx'
 
+import type { Tenant } from '../../main/types/utils/tenant-context'
 import { buildTestApp, type TestApp } from './setup/app'
 import { testDb, truncateAll } from './setup/db'
 import {
@@ -266,5 +267,124 @@ describe('indicateurs ARS', () => {
       patient.id,
     ]
     expect(interdits.filter((terme) => texte.includes(terme))).toEqual([])
+  })
+
+  // Les champs ajoutes pour MDS-40 (cohorte etendue) ne sont lus par aucun indicateur ARS :
+  // ce cas appelle le repository directement, contre la vraie base, pour prouver les jointures
+  // (parcours, duree, soignants) et la sortie de dossier plutot que de les supposer correctes.
+  it('findCohort restitue parcours, duree, soignants, statut et sortie depuis la base', async () => {
+    const patient = await testDb.patient.create({
+      data: {
+        establishmentId,
+        firstName: 'Cohorte',
+        lastName: 'Etendue',
+        createDate: new Date(),
+      },
+    })
+    const template = await testDb.pathwayTemplate.create({
+      data: {
+        name: 'Réadaptation',
+        color: '#fff',
+        mainTag: 'TAG-COHORTE-ETENDUE',
+        secondaryTags: [],
+        serviceId: serviceA,
+        establishmentId,
+      },
+    })
+    const pathway = await testDb.pathway.create({
+      data: {
+        startDate: new Date('2026-10-05'),
+        templateID: template.id,
+        serviceId: serviceA,
+        establishmentId,
+      },
+    })
+    const slotTemplate = await testDb.slotTemplate.create({
+      data: {
+        startTime: new Date(),
+        endTime: new Date(),
+        offsetDays: 0,
+        isIndividual: true,
+        color: '#fff',
+        serviceId: serviceA,
+        establishmentId,
+      },
+    })
+    const soignant = await testDb.soignant.create({
+      data: { name: 'IDE', establishmentId, serviceId: serviceA },
+    })
+    await testDb.slotTemplateSoignant.create({
+      data: {
+        slotTemplateId: slotTemplate.id,
+        soignantId: soignant.id,
+        serviceId: serviceA,
+        establishmentId,
+      },
+    })
+    const slot = await testDb.slot.create({
+      data: {
+        startDate: new Date('2026-10-05T09:00:00Z'),
+        endDate: new Date('2026-10-05T10:30:00Z'),
+        serviceId: serviceA,
+        establishmentId,
+        slotTemplateID: slotTemplate.id,
+        pathwayID: pathway.id,
+      },
+    })
+    const appointment = await testDb.appointment.create({
+      data: {
+        startDate: new Date('2026-10-05T09:00:00Z'),
+        endDate: new Date('2026-10-05T10:30:00Z'),
+        type: 'ambulatory',
+        serviceId: serviceA,
+        establishmentId,
+        slotID: slot.id,
+      },
+    })
+    await testDb.appointmentPatient.create({
+      data: {
+        appointmentId: appointment.id,
+        patientId: patient.id,
+        serviceId: serviceA,
+        establishmentId,
+        status: 'no',
+      },
+    })
+    await testDb.patientServiceFile.create({
+      data: {
+        establishmentId,
+        serviceId: serviceA,
+        patientId: patient.id,
+        entryDate: new Date('2026-09-01'),
+        exitDate: new Date('2026-06-01'),
+        stopReason: 'PERDU_DE_VUE',
+      },
+    })
+
+    const { arsIndicatorRepository, tenantContext } = t.instances
+    const tenant: Tenant = {
+      userId: 'test-user-cohorte-etendue',
+      establishmentId,
+      establishmentRole: 'ADMIN',
+      serviceId: serviceA,
+      serviceRole: 'COORDINATEUR',
+      soignantId: null,
+    }
+    const cohorte = await tenantContext.run(tenant, () =>
+      arsIndicatorRepository.findCohort(),
+    )
+
+    const presence = cohorte.presences.find((p) => p.patientId === patient.id)
+    expect(presence).toBeDefined()
+    expect(presence?.status).toBe('no')
+    expect(presence?.pathwayId).toBe(pathway.id)
+    expect(presence?.pathwayLabel).toBe('Réadaptation — 05/10/2026')
+    expect(presence?.slotMinutes).toBe(90)
+    expect(presence?.soignants).toEqual(['IDE'])
+
+    const fichier = cohorte.files.find((f) => f.patientId === patient.id)
+    expect(fichier).toBeDefined()
+    expect(fichier?.exitDate).toEqual(new Date('2026-06-01'))
+    expect(fichier?.stopReason).toBe('PERDU_DE_VUE')
   })
 })
