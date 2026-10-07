@@ -59,7 +59,7 @@ export const getDayAppointmentColumns = ({
     columnHelper.accessor('startDate', {
       id: 'schedule',
       header: 'Horaire',
-      size: 200,
+      size: 180,
       sortingFn: parentsOnly,
       cell: ({ row, table }) => {
         if (row.depth > 0) {
@@ -102,7 +102,7 @@ export const getDayAppointmentColumns = ({
     columnHelper.display({
       id: 'soignants',
       header: 'Soignant',
-      size: 240,
+      size: 200,
       cell: ({ row }) => {
         const soignants = row.original.soignants
         if (row.depth > 0) {
