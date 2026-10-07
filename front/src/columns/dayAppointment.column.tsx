@@ -3,12 +3,12 @@ import {
   type SortingFn,
   sortingFns,
 } from '@tanstack/react-table'
-import dayjs from 'dayjs'
 import { Eye, Trash2 } from 'lucide-react'
 
 import { MAX_VISIBLE_CHIPS } from '../components/custom/agenda/chip.ts'
 import PatientCell from '../components/custom/agenda/patientCell.tsx'
 import {
+  formatRange,
   RangeToggle,
   SlotFrieze,
   SlotTimeline,
@@ -61,17 +61,11 @@ export const getDayAppointmentColumns = ({
       header: 'Horaire',
       size: 180,
       sortingFn: parentsOnly,
-      cell: ({ row, table }) => {
+      cell: ({ row }) => {
         if (row.depth > 0) {
           return <SlotTimeline row={row} />
         }
-        if (isRange(row.original)) {
-          const { rowIdPrefix } = table.options.meta as { rowIdPrefix: string }
-          return <RangeToggle row={row} idPrefix={rowIdPrefix} />
-        }
-        return `${dayjs.utc(row.original.startDate).format('HH:mm')} – ${dayjs
-          .utc(row.original.endDate)
-          .format('HH:mm')}`
+        return formatRange(row.original)
       },
     }),
     columnHelper.accessor('thematic', {
@@ -179,27 +173,34 @@ export const getDayAppointmentColumns = ({
       header: '',
       size: 100,
       meta: { align: 'right' },
-      cell: ({ row }) =>
-        row.original.appointmentId && (
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              aria-label="Ouvrir le rendez-vous"
-              onClick={() => onOpen(row.original)}
-            >
-              <Eye className="w-3 h-3" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              aria-label="Supprimer le rendez-vous"
-              onClick={() => onDelete(row.original)}
-            >
-              <Trash2 className="w-3 h-3 text-destructive" />
-            </Button>
-          </div>
-        ),
+      cell: ({ row, table }) => {
+        if (isRange(row.original)) {
+          const { rowIdPrefix } = table.options.meta as { rowIdPrefix: string }
+          return <RangeToggle row={row} idPrefix={rowIdPrefix} />
+        }
+        return (
+          row.original.appointmentId && (
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                aria-label="Ouvrir le rendez-vous"
+                onClick={() => onOpen(row.original)}
+              >
+                <Eye className="w-3 h-3" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                aria-label="Supprimer le rendez-vous"
+                onClick={() => onDelete(row.original)}
+              >
+                <Trash2 className="w-3 h-3 text-destructive" />
+              </Button>
+            </div>
+          )
+        )
+      },
     }),
   ]
 }
