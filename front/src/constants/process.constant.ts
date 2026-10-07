@@ -219,3 +219,7 @@ export const PLANNING_CYCLE = {
 export const ARS_INDICATOR = {
   GET: 'get_ars_indicators',
 }
+
+export const ACTIVITY = {
+  GET: 'get_activity',
+}

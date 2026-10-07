@@ -1,13 +1,17 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import dayjs, { type Dayjs } from 'dayjs'
+import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
 import { useState } from 'react'
 
 import { ArsIndicatorApi } from '@/api/arsIndicator.api.ts'
+import {
+  ANNEES,
+  anneeCivile,
+  PERIOD_FORMAT,
+  PeriodPicker,
+} from '@/components/custom/periodPicker.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
 import { Button } from '@/components/ui/button.tsx'
-import { DatePicker } from '@/components/ui/datePicker.tsx'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group.tsx'
 import { can } from '@/hooks/useCan.ts'
 import { queryState } from '@/libs/queryState.ts'
 import { useArsIndicatorsQuery } from '@/queries/useArsIndicator.ts'
@@ -38,22 +42,11 @@ export const Route = createFileRoute(
 
 const GROUPES = ['Entrée', 'Séances', 'Sortie', 'Modalités'] as const
 
-const FORMAT = 'YYYY-MM-DD'
-
-const anneeCivile = (annee: number) => ({
-  from: dayjs.utc(`${annee}-01-01`),
-  to: dayjs.utc(`${annee}-12-31`),
-})
-
-// Raccourci, pas seul chemin : l'enquête se remplit par année civile, l'évaluation quadriennale
-// par une plage libre.
-const ANNEES = [0, 1, 2].map((recul) => dayjs.utc().year() - recul)
-
 function ArsIndicatorsPage() {
   const [periode, setPeriode] = useState(() => anneeCivile(ANNEES[0]))
   const { indicators, isPending, error } = useArsIndicatorsQuery(
-    periode.from.format(FORMAT),
-    periode.to.format(FORMAT),
+    periode.from.format(PERIOD_FORMAT),
+    periode.to.format(PERIOD_FORMAT),
   )
   const [exportEnCours, setExportEnCours] = useState(false)
   const [erreurExport, setErreurExport] = useState<string | null>(null)
@@ -64,35 +57,19 @@ function ArsIndicatorsPage() {
     hasData: indicators !== undefined,
   })
 
-  // L'année active n'est un état que si la période tombe pile sur elle : dès qu'une borne est
-  // déplacée à la main, aucun segment n'est sélectionné.
-  const anneeActive = ANNEES.find((annee) => {
-    const civile = anneeCivile(annee)
-    return (
-      periode.from.isSame(civile.from, 'day') &&
-      periode.to.isSame(civile.to, 'day')
-    )
-  })
-
-  const deplacerBorne = (borne: 'from' | 'to') => (valeur: Dayjs | null) => {
-    if (valeur?.isValid()) {
-      setPeriode((actuelle) => ({ ...actuelle, [borne]: valeur }))
-    }
-  }
-
   // `handleHttpError` lève : sans ce catch le bouton resterait muet sur un rejet non traité.
   const telecharger = async () => {
     setExportEnCours(true)
     setErreurExport(null)
     try {
       const blob = await ArsIndicatorApi.exportExcel(
-        periode.from.format(FORMAT),
-        periode.to.format(FORMAT),
+        periode.from.format(PERIOD_FORMAT),
+        periode.to.format(PERIOD_FORMAT),
       )
       const href = URL.createObjectURL(blob)
       const lien = document.createElement('a')
       lien.href = href
-      lien.download = `indicateurs-ars_${periode.from.format(FORMAT)}_${periode.to.format(FORMAT)}.xlsx`
+      lien.download = `indicateurs-ars_${periode.from.format(PERIOD_FORMAT)}_${periode.to.format(PERIOD_FORMAT)}.xlsx`
       lien.click()
       URL.revokeObjectURL(href)
     } catch {
@@ -114,37 +91,7 @@ function ArsIndicatorsPage() {
           </h1>
 
           <div className="flex items-center gap-3 flex-wrap">
-            <ToggleGroup
-              value={anneeActive ? String(anneeActive) : ''}
-              onValueChange={(valeur) =>
-                valeur && setPeriode(anneeCivile(Number(valeur)))
-              }
-            >
-              {ANNEES.map((annee) => (
-                <ToggleGroupItem key={annee} value={String(annee)}>
-                  {annee}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
-
-            <div className="flex items-center gap-2 text-sm text-text-light">
-              <span>du</span>
-              <DatePicker
-                value={periode.from}
-                onChange={deplacerBorne('from')}
-                className="w-40"
-                format="DD/MM/YYYY"
-                maxDate={periode.to}
-              />
-              <span>au</span>
-              <DatePicker
-                value={periode.to}
-                onChange={deplacerBorne('to')}
-                className="w-40"
-                format="DD/MM/YYYY"
-                minDate={periode.from}
-              />
-            </div>
+            <PeriodPicker periode={periode} onChange={setPeriode} />
 
             <Button
               onClick={telecharger}
