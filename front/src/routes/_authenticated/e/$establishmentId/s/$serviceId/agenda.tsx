@@ -6,7 +6,9 @@ import { useMemo, useState } from 'react'
 
 import { getDayAppointmentColumns } from '@/columns/dayAppointment.column.tsx'
 import { DATE_CALENDAR_SX } from '@/components/custom/Calendar/calendarDatePickerButton.tsx'
+import AddAppointmentForm from '@/components/custom/popup/addAppointmentForm.tsx'
 import AddPatientForm from '@/components/custom/popup/addPatientForm.tsx'
+import AddPatientToAppointmentForm from '@/components/custom/popup/addPatientToAppointmentForm.tsx'
 import AddPatientToSlotForm from '@/components/custom/popup/addPatientToSlotForm.tsx'
 import { ConfirmDeleteForm } from '@/components/custom/popup/confirmDeleteForm.tsx'
 import AppointmentSheet from '@/components/custom/sheet/appointmentSheet.tsx'
@@ -21,10 +23,12 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover.tsx'
 import { styleSoignant } from '@/libs/color.ts'
+import { getFreeIntervals } from '@/libs/slotAvailability.ts'
 import { buildDaySlotRows, type DaySlotRow } from '@/libs/utils.ts'
 import { useAppointmentMutations } from '@/queries/useAppointment.ts'
 import { useSlotsInRangeQuery } from '@/queries/useSlot.ts'
 import { useSoignantStore } from '@/store/useSoignantStore.ts'
+import type { Slot } from '@/types/slot.ts'
 import type { Soignant } from '@/types/soignant.ts'
 
 export const Route = createFileRoute(
@@ -34,6 +38,28 @@ export const Route = createFileRoute(
 })
 
 const SELECTED_DAY_STORAGE_KEY = 'agenda/selected-day'
+
+// Popup « Nouveau rendez-vous » du Planning : créneau individuel sur son premier
+// intervalle libre, collectif sur le créneau entier.
+const getNewAppointmentProps = (row: DaySlotRow | null, slot?: Slot) => {
+  if (!row || !slot || (row.appointmentId && !row.isIndividual)) {
+    return null
+  }
+  const interval = row.isIndividual
+    ? getFreeIntervals(slot)[0]
+    : { start: slot.startDate, end: slot.endDate }
+  if (!interval) {
+    return null
+  }
+  return {
+    slotID: slot.id,
+    startDate: interval.start,
+    endDate: interval.end,
+    maxDate: interval.end,
+    soignants: row.soignants,
+    type: row.isIndividual ? 'individual' : 'multiple',
+  }
+}
 
 function Agenda() {
   const [selectedDay, setSelectedDay] = useState(() => {
@@ -66,7 +92,8 @@ function Agenda() {
     [selectedDay],
   )
   const { slots, isPending } = useSlotsInRangeQuery(dayRange)
-  const { deleteAppointment } = useAppointmentMutations()
+  const { createAppointment, deleteAppointment, updateAppointment } =
+    useAppointmentMutations()
   const selectedSoignantIDs = useSoignantStore(
     (state) => state.selectedSoignantIDs,
   )
@@ -102,7 +129,12 @@ function Agenda() {
     return result
   }, [rows, selectedSoignantIDs])
 
-  const addPatientSlot = slots?.find((slot) => slot.id === addPatientTargetId)
+  const addPatientTarget =
+    rows.find((row) => row.id === addPatientTargetId) ?? null
+  const newAppointment = getNewAppointmentProps(
+    addPatientTarget,
+    slots?.find((slot) => slot.id === addPatientTargetId),
+  )
 
   const columns = useMemo(
     () =>
@@ -224,15 +256,41 @@ function Agenda() {
           />
         )}
 
-        {addPatientSlot && (
-          <AddPatientToSlotForm
-            slot={addPatientSlot}
+        {addPatientTarget?.appointmentId && !addPatientTarget.isIndividual && (
+          <AddPatientToAppointmentForm
             open
-            onOpenChange={(open) => {
+            setOpen={(open) => {
               if (!open) {
                 setAddPatientTargetId(null)
               }
             }}
+            row={addPatientTarget}
+            isPending={updateAppointment.isPending}
+            onConfirm={(params) => {
+              updateAppointment.mutate(params)
+              setAddPatientTargetId(null)
+            }}
+            onRequestDelete={() => {
+              setDeleteTarget(addPatientTarget)
+              setAddPatientTargetId(null)
+            }}
+          />
+        )}
+
+        {newAppointment && (
+          <AddAppointmentForm
+            open
+            setOpen={(open) => {
+              if (!open) {
+                setAddPatientTargetId(null)
+              }
+            }}
+            {...newAppointment}
+            handleCreateAppointment={(params) => {
+              createAppointment.mutate(params)
+              setAddPatientTargetId(null)
+            }}
+            isPending={createAppointment.isPending}
           />
         )}
 
