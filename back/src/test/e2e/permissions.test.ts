@@ -120,6 +120,12 @@ const probes: {
     path: '/indicateurs-ars/export?from=2026-01-01&to=2026-12-31',
     heldStatus: 200,
   },
+  {
+    permission: 'activity:read',
+    method: 'GET',
+    path: '/activite?from=2026-01-01&to=2026-12-31',
+    heldStatus: 200,
+  },
 ]
 
 const roles: ServiceRole[] = [

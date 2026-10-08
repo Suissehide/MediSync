@@ -3,6 +3,7 @@ import type { ActivityLogSubscriber } from '../../services/activity-log.subscrib
 import type { AppEventBus } from '../../utils/app-event-bus'
 import type { AccessLinkDomainInterface } from '../domain/accessLink.domain.interface'
 import type { ActivityLogDomainInterface } from '../domain/activityLog.domain.interface'
+import type { ActivityReportDomainInterface } from '../domain/activityReport.domain.interface'
 import type { AppointmentDomainInterface } from '../domain/appointment.domain.interface'
 import type { ArsIndicatorDomainInterface } from '../domain/arsIndicator.domain.interface'
 import type { AuthDomainInterface } from '../domain/auth.domain.interface'
@@ -86,6 +87,8 @@ export interface IocContainer {
   // ArsIndicator (indicateurs de l'enquête annuelle ARS)
   readonly arsIndicatorDomain: ArsIndicatorDomainInterface
   readonly arsIndicatorRepository: ArsIndicatorRepositoryInterface
+  // ActivityReport (tableau de bord d'activité)
+  readonly activityReportDomain: ActivityReportDomainInterface
   // Slot
   readonly slotDomain: SlotDomainInterface
   readonly slotRepository: SlotRepositoryInterface

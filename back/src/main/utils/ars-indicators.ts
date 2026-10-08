@@ -31,6 +31,8 @@ export const ARS_ORIENTATIONS = {
 // c'est la CLÉ qui est stockée, jamais « Oui ».
 export const ARS_ACCOMPANYING_YES = 'yes'
 
+export type PresenceStatus = 'yes' | 'no' | null
+
 export type ArsPresence = {
   patientId: string
   date: Date
@@ -40,11 +42,18 @@ export type ArsPresence = {
   thematicName: string | null
   honored: boolean
   accompanied: boolean
+  status: PresenceStatus
+  pathwayId: string | null
+  pathwayLabel: string | null
+  slotMinutes: number
+  soignants: string[]
 }
 
 export type ArsFile = {
   patientId: string
   entryDate: Date | null
+  exitDate: Date | null
+  stopReason: string | null
   orientation: string | null
   presences: ArsPresence[]
 }
@@ -80,10 +89,10 @@ export type ArsIndicatorResult = {
   note: string | null
 }
 
-const inRange = (date: Date | null, from: Date, to: Date): boolean =>
+export const inRange = (date: Date | null, from: Date, to: Date): boolean =>
   date !== null && date >= from && date <= to
 
-const isRole = (role: ThematicRole, name: string | null): boolean =>
+export const isRole = (role: ThematicRole, name: string | null): boolean =>
   name !== null &&
   (ARS_THEMATIC_ROLES[role] as readonly string[]).includes(name)
 
@@ -92,7 +101,7 @@ const honored = (file: ArsFile): ArsPresence[] =>
 
 // Date du diagnostic éducatif : la date d'entrée du dossier si elle tombe dans la période, sinon
 // le premier rendez-vous honoré de thématique « diagnostic éducatif » dans la période.
-const deDate = (file: ArsFile, c: ArsCohort): Date | null => {
+export const deDate = (file: ArsFile, c: ArsCohort): Date | null => {
   if (inRange(file.entryDate, c.from, c.to)) {
     return file.entryDate
   }
@@ -150,7 +159,7 @@ const isReactu = (p: ArsPresence): boolean =>
 
 // Programme complet : un diagnostic éducatif, au moins une séance et au moins une
 // réactualisation après lui.
-const completeProgram = (
+export const completeProgram = (
   file: ArsFile,
   c: ArsCohort,
   types?: readonly AppointmentType[],
@@ -486,7 +495,8 @@ const UN_JOUR_MS = 24 * 60 * 60 * 1000
 // jour, tous les ans, sans rien signaler.
 // ponytail: fin de journée en UTC ; le fuseau de l'établissement n'est pas modélisé, il reste donc
 // un décalage d'une heure en hiver. À reprendre le jour où un fuseau est porté par l'établissement.
-const finDeJournee = (to: Date): Date => new Date(to.getTime() + UN_JOUR_MS - 1)
+export const finDeJournee = (to: Date): Date =>
+  new Date(to.getTime() + UN_JOUR_MS - 1)
 
 export const computeArsIndicators = (
   cohort: ArsCohort,

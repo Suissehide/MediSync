@@ -11,6 +11,7 @@ import {
   isReadRoute,
 } from '../plugins/tenant.plugin'
 import { serviceActivityLogRouter } from './activityLog'
+import { activityReportRouter } from './activityReport'
 import { appointmentRouter } from './appointment'
 import { arsIndicatorRouter } from './arsIndicator'
 import { diagnosticEducatifRouter } from './diagnosticEducatif'
@@ -197,6 +198,7 @@ const tenantRoutes: FastifyPluginAsyncZod = async (fastify) => {
   await fastify.register(arsIndicatorRouter, {
     prefix: '/indicateurs-ars',
   })
+  await fastify.register(activityReportRouter, { prefix: '/activite' })
 }
 
 export { tenantRoutes }
