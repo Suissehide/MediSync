@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react'
 
 import { getDayAppointmentColumns } from '@/columns/dayAppointment.column.tsx'
 import { DATE_CALENDAR_SX } from '@/components/custom/Calendar/calendarDatePickerButton.tsx'
+import AddAppointmentForm from '@/components/custom/popup/addAppointmentForm.tsx'
 import AddPatientForm from '@/components/custom/popup/addPatientForm.tsx'
 import AddPatientToAppointmentForm from '@/components/custom/popup/addPatientToAppointmentForm.tsx'
 import AddPatientToSlotForm from '@/components/custom/popup/addPatientToSlotForm.tsx'
@@ -13,6 +14,7 @@ import { ConfirmDeleteForm } from '@/components/custom/popup/confirmDeleteForm.t
 import AppointmentSheet from '@/components/custom/sheet/appointmentSheet.tsx'
 import WeekDayStrip from '@/components/custom/weekDayStrip.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
+import { Etiquette } from '@/components/table/etiquette.tsx'
 import ReactTable from '@/components/table/reactTable.tsx'
 import { Button } from '@/components/ui/button.tsx'
 import {
@@ -20,13 +22,14 @@ import {
   PopoverRoot,
   PopoverTrigger,
 } from '@/components/ui/popover.tsx'
-import {
-  buildDayAppointmentRows,
-  type DayAppointmentRow,
-} from '@/libs/utils.ts'
+import { styleSoignant } from '@/libs/color.ts'
+import { getFreeIntervals } from '@/libs/slotAvailability.ts'
+import { buildDaySlotRows, type DaySlotRow } from '@/libs/utils.ts'
 import { useAppointmentMutations } from '@/queries/useAppointment.ts'
 import { useSlotsInRangeQuery } from '@/queries/useSlot.ts'
 import { useSoignantStore } from '@/store/useSoignantStore.ts'
+import type { Slot } from '@/types/slot.ts'
+import type { Soignant } from '@/types/soignant.ts'
 
 export const Route = createFileRoute(
   '/_authenticated/e/$establishmentId/s/$serviceId/agenda',
@@ -35,6 +38,35 @@ export const Route = createFileRoute(
 })
 
 const SELECTED_DAY_STORAGE_KEY = 'agenda/selected-day'
+
+// Popup « Nouveau rendez-vous » du Planning : sur l'intervalle libre choisi, le
+// premier intervalle libre d'un créneau individuel, ou le créneau collectif entier.
+const getBookingInterval = (row: DaySlotRow, slot: Slot) => {
+  if (row.kind === 'free') {
+    return { start: row.startDate, end: row.endDate }
+  }
+  return row.isIndividual
+    ? getFreeIntervals(slot)[0]
+    : { start: slot.startDate, end: slot.endDate }
+}
+
+const getNewAppointmentProps = (row: DaySlotRow | null, slot?: Slot) => {
+  if (!row || !slot || (row.appointmentId && !row.isIndividual)) {
+    return null
+  }
+  const interval = getBookingInterval(row, slot)
+  if (!interval) {
+    return null
+  }
+  return {
+    slotID: slot.id,
+    startDate: interval.start,
+    endDate: interval.end,
+    maxDate: interval.end,
+    soignants: row.soignants,
+    type: row.isIndividual ? 'individual' : 'multiple',
+  }
+}
 
 function Agenda() {
   const [selectedDay, setSelectedDay] = useState(() => {
@@ -45,10 +77,8 @@ function Agenda() {
       ? parsed.startOf('day')
       : dayjs.utc().startOf('day')
   })
-  const [openedRow, setOpenedRow] = useState<DayAppointmentRow | null>(null)
-  const [deleteTarget, setDeleteTarget] = useState<DayAppointmentRow | null>(
-    null,
-  )
+  const [openedRow, setOpenedRow] = useState<DaySlotRow | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<DaySlotRow | null>(null)
   const [addPatientTargetId, setAddPatientTargetId] = useState<string | null>(
     null,
   )
@@ -69,27 +99,51 @@ function Agenda() {
     [selectedDay],
   )
   const { slots, isPending } = useSlotsInRangeQuery(dayRange)
-  const { deleteAppointment, updateAppointment } = useAppointmentMutations()
+  const { createAppointment, deleteAppointment, updateAppointment } =
+    useAppointmentMutations()
   const selectedSoignantIDs = useSoignantStore(
     (state) => state.selectedSoignantIDs,
   )
   const soignants = useSoignantStore((state) => state.soignants)
   const soignantIDs = useMemo(() => soignants.map((s) => s.id), [soignants])
 
-  // Sans sélection, on affiche tout ; sinon on garde les rendez-vous
-  // dont au moins un soignant est coché dans la barre latérale.
-  const rows = useMemo(() => {
-    const allRows = buildDayAppointmentRows(slots, selectedDay)
-    if (selectedSoignantIDs.length === 0) {
-      return allRows
-    }
-    return allRows.filter((row) =>
-      row.soignants.some((s) => selectedSoignantIDs.includes(s.id)),
+  const rows = useMemo(
+    () => buildDaySlotRows(slots, selectedDay),
+    [slots, selectedDay],
+  )
+
+  // Un tableau par soignant (un créneau partagé apparaît dans chacun), limité
+  // aux soignants cochés dans la barre latérale s'il y en a.
+  const groups = useMemo(() => {
+    const isShown = (id: string) =>
+      selectedSoignantIDs.length === 0 || selectedSoignantIDs.includes(id)
+    const bySoignant = new Map(
+      rows.flatMap((row) => row.soignants).map((s) => [s.id, s]),
     )
-  }, [slots, selectedDay, selectedSoignantIDs])
+    const result = [...bySoignant.values()]
+      .filter((soignant) => isShown(soignant.id))
+      .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+      .map((soignant) => ({
+        soignant: soignant as Soignant | null,
+        rows: rows.filter((row) =>
+          row.soignants.some((s) => s.id === soignant.id),
+        ),
+      }))
+    const withoutSoignant = rows.filter((row) => row.soignants.length === 0)
+    if (selectedSoignantIDs.length === 0 && withoutSoignant.length > 0) {
+      result.push({ soignant: null, rows: withoutSoignant })
+    }
+    return result
+  }, [rows, selectedSoignantIDs])
 
   const addPatientTarget =
-    rows.find((row) => row.id === addPatientTargetId) ?? null
+    rows
+      .flatMap((row) => [row, ...(row.subRows ?? [])])
+      .find((row) => row.id === addPatientTargetId) ?? null
+  const newAppointment = getNewAppointmentProps(
+    addPatientTarget,
+    slots?.find((slot) => slot.id === addPatientTarget?.slotId),
+  )
 
   const columns = useMemo(
     () =>
@@ -166,28 +220,55 @@ function Agenda() {
           </div>
         </div>
 
-        <ReactTable<DayAppointmentRow>
-          data={rows}
-          columns={columns}
-          filterId="day-appointment"
-          isLoading={isPending}
-          emptyState="Aucun rendez-vous ce jour-là"
-          onRowClick={(row) => setOpenedRow(row)}
-          autoRowHeight
-        />
+        {isPending || groups.length === 0 ? (
+          <ReactTable<DaySlotRow>
+            data={[]}
+            columns={columns}
+            filterId="day-appointment"
+            isLoading={isPending}
+            emptyState="Aucun créneau ce jour-là"
+          />
+        ) : (
+          <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-6">
+            {groups.map(({ soignant, rows: soignantRows }) => (
+              <section
+                key={soignant?.id ?? 'sans-soignant'}
+                className="shrink-0 flex flex-col gap-2"
+              >
+                <h2>
+                  {soignant ? (
+                    <Etiquette style={styleSoignant(soignant.id, soignantIDs)}>
+                      {soignant.name}
+                    </Etiquette>
+                  ) : (
+                    <Etiquette ton="neutre">Sans soignant</Etiquette>
+                  )}
+                </h2>
+                <ReactTable<DaySlotRow>
+                  data={soignantRows}
+                  columns={columns}
+                  getSubRows={(row) => row.subRows}
+                  filterId="day-appointment"
+                  onRowClick={(row) => row.appointmentId && setOpenedRow(row)}
+                  autoRowHeight
+                />
+              </section>
+            ))}
+          </div>
+        )}
 
-        {openedRow && (
+        {openedRow?.appointmentId && (
           <AppointmentSheet
             open={!!openedRow}
             setOpen={() => setOpenedRow(null)}
-            eventID={openedRow.id}
+            eventID={openedRow.appointmentId}
             soignants={openedRow.soignants}
           />
         )}
 
-        {addPatientTarget && (
+        {addPatientTarget?.appointmentId && !addPatientTarget.isIndividual && (
           <AddPatientToAppointmentForm
-            open={!!addPatientTarget}
+            open
             setOpen={(open) => {
               if (!open) {
                 setAddPatientTargetId(null)
@@ -206,6 +287,23 @@ function Agenda() {
           />
         )}
 
+        {newAppointment && (
+          <AddAppointmentForm
+            open
+            setOpen={(open) => {
+              if (!open) {
+                setAddPatientTargetId(null)
+              }
+            }}
+            {...newAppointment}
+            handleCreateAppointment={(params) => {
+              createAppointment.mutate(params)
+              setAddPatientTargetId(null)
+            }}
+            isPending={createAppointment.isPending}
+          />
+        )}
+
         <ConfirmDeleteForm
           open={!!deleteTarget}
           setOpen={(open) => {
@@ -214,8 +312,8 @@ function Agenda() {
             }
           }}
           onConfirm={() => {
-            if (deleteTarget) {
-              deleteAppointment.mutate(deleteTarget.id)
+            if (deleteTarget?.appointmentId) {
+              deleteAppointment.mutate(deleteTarget.appointmentId)
             }
             setDeleteTarget(null)
           }}

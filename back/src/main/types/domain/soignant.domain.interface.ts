@@ -9,11 +9,12 @@ export type SoignantCreateEntityDomain = Omit<
 >
 export type SoignantUpdateEntityDomain = Omit<
   Prisma.SoignantUncheckedUpdateInput,
-  'establishmentId' | 'serviceId'
->
+  'establishmentId' | 'serviceId' | 'archivedAt'
+  // `archivedAt` est remplace par `archived` : une seule facon d'archiver.
+> & { archived?: boolean }
 
 export interface SoignantDomainInterface {
-  findAll: () => Promise<SoignantEntityDomain[]>
+  findAll: (archived?: boolean) => Promise<SoignantEntityDomain[]>
   findByID: (soignantID: string) => Promise<SoignantEntityDomain>
   create: (
     soignantCreateParams: SoignantCreateEntityDomain,
@@ -22,5 +23,7 @@ export interface SoignantDomainInterface {
     soignantID: string,
     soignantUpdateParams: SoignantUpdateEntityDomain,
   ) => Promise<SoignantEntityDomain>
-  delete: (soignantID: string) => Promise<SoignantEntityDomain>
+  // Suppression definitive : refusee si la ligne n'est pas archivee,
+  // ou si quoi que ce soit la reference encore.
+  deleteForever: (soignantID: string) => Promise<void>
 }

@@ -70,6 +70,13 @@ export const EventContent = ({
 
   const slotColor = event.backgroundColor || event.borderColor || '#2563eb'
   const appointmentColor = darkenHex(slotColor, 0.3)
+  const durationMinutes = event.end
+    ? dayjs(event.end).diff(dayjs(event.start), 'minute')
+    : 0
+  // Les trois lignes du libellé sont tronquées : le survol les rend en entier.
+  const hoverTitle = [event.title, thematic, location]
+    .filter(Boolean)
+    .join('\n')
 
   const calculateAppointmentStyle = (appointment: Appointment) => {
     if (!isIndividual) {
@@ -101,6 +108,7 @@ export const EventContent = ({
   return (
     <div
       {...(event.id ? { 'data-event-id': `${event.id}` } : {})}
+      title={hoverTitle || undefined}
       className={clsx(
         'fc-event-hero relative group cursor-pointer h-full w-full flex text-left p-0.5 transition duration-200',
         isRowLayout ? 'flex-row' : 'flex-col',
@@ -125,6 +133,7 @@ export const EventContent = ({
         !containsKeyword(states, ['editable']) && (
           <button
             type="button"
+            data-event-action
             className={clsx(
               'absolute bottom-0.5 left-0.5 z-20 h-4 w-4 rounded border flex items-center justify-center transition-all cursor-pointer',
               isSelected
@@ -155,7 +164,7 @@ export const EventContent = ({
           />
           <button
             type="button"
-            data-lock-toggle
+            data-event-action
             className={clsx(
               'absolute top-0.5 left-0.5 z-10 p-0.5 rounded bg-black/40 text-white',
               onToggleLock
@@ -186,7 +195,7 @@ export const EventContent = ({
         !containsKeyword(states, ['editable', 'individual', 'multiple']) &&
         type === 'slot' && (
           <Button
-            data-lock-toggle
+            data-event-action
             variant="none"
             className="absolute top-0.5 left-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10 h-auto w-auto p-0.5 rounded bg-black/20 hover:bg-black/40 text-white"
             onClick={(e) => {
@@ -212,6 +221,7 @@ export const EventContent = ({
         !containsKeyword(states, ['editable', 'individual', 'multiple']) &&
         (type === 'slot' || type === 'template') && (
           <Button
+            data-event-action
             variant="none"
             className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10 h-auto w-auto p-0.5 rounded bg-black/20 hover:bg-black/40 text-white"
             onClick={(e) => {
@@ -228,6 +238,7 @@ export const EventContent = ({
         !containsKeyword(states, ['editable', 'individual', 'multiple']) &&
         (type === 'slot' || type === 'template') && (
           <Button
+            data-event-action
             variant="none"
             className="absolute top-5 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10 h-auto w-auto p-0.5 rounded bg-black/20 hover:bg-red-500 text-white"
             onClick={(e) => {
@@ -246,6 +257,7 @@ export const EventContent = ({
         location={location}
         secondaryTags={showSecondaryTags ? secondaryTags : []}
         isRowLayout={isRowLayout}
+        locationOnOwnLine={durationMinutes > 30}
       />
 
       {/* Individual */}
@@ -370,12 +382,14 @@ function EventLabel({
   location,
   secondaryTags,
   isRowLayout,
+  locationOnOwnLine,
 }: {
   title: string
   thematic?: string
   location?: string
   secondaryTags: string[]
   isRowLayout: boolean
+  locationOnOwnLine: boolean
 }) {
   return (
     <span
@@ -384,16 +398,19 @@ function EventLabel({
         isRowLayout ? 'w-48 shrink-0' : '',
       )}
     >
-      <div className="text-[0.6rem]">{title}</div>
+      <div className="text-[0.6rem] truncate">{title}</div>
       <div className="text-[0.6rem] font-semibold truncate">
         {thematic}
-        {location && (
+        {location && !locationOnOwnLine && (
           <span className="font-normal opacity-80">
             {thematic ? ' · ' : ''}
             {location}
           </span>
         )}
       </div>
+      {location && locationOnOwnLine && (
+        <div className="text-[0.6rem] opacity-80 truncate">{location}</div>
+      )}
       {secondaryTags.length > 0 && (
         <div className="flex flex-wrap gap-0.5 mt-0.5">
           {secondaryTags.map((tag) => (

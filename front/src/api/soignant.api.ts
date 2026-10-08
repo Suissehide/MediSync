@@ -1,5 +1,5 @@
 import { tenantApiUrl } from '../constants/config.constant.ts'
-import { handleHttpError } from '../libs/httpErrorHandler.ts'
+import { handleHttpError, messageDuServeur } from '../libs/httpErrorHandler.ts'
 import type {
   CreateSoignantParams,
   Soignant,
@@ -9,9 +9,12 @@ import { fetchWithAuth } from './fetchWithAuth.ts'
 
 export const SoignantApi = {
   // `baseUrl` : un autre service que le courant (paramètres du compte).
-  getAll: async (baseUrl = tenantApiUrl()): Promise<Soignant[]> => {
+  getAll: async (
+    baseUrl = tenantApiUrl(),
+    archived = false,
+  ): Promise<Soignant[]> => {
     const response = await fetchWithAuth(
-      `${baseUrl}/soignant?action=getAllSoignants`,
+      `${baseUrl}/soignant?action=getAllSoignants&archived=${archived}`,
       {
         method: 'GET',
       },
@@ -61,15 +64,33 @@ export const SoignantApi = {
     return response.json()
   },
 
-  delete: async (soignantID: string): Promise<void> => {
+  archive: async (soignantID: string): Promise<void> => {
     const response = await fetchWithAuth(
-      `${tenantApiUrl()}/soignant/${soignantID}?action=deleteSoignant`,
+      `${tenantApiUrl()}/soignant/${soignantID}?action=archiveSoignant`,
       {
         method: 'DELETE',
       },
     )
     if (!response.ok) {
-      handleHttpError(response, {}, 'Impossible de supprimer la tâche')
+      handleHttpError(response, {}, 'Impossible d’archiver le soignant')
+    }
+    return
+  },
+
+  deleteForever: async (soignantID: string): Promise<void> => {
+    const response = await fetchWithAuth(
+      `${tenantApiUrl()}/soignant/${soignantID}/definitive`,
+      {
+        method: 'DELETE',
+      },
+    )
+    if (!response.ok) {
+      const message = await messageDuServeur(response)
+      handleHttpError(
+        response,
+        message ? { 409: { title: 'Suppression impossible', message } } : {},
+        'Impossible de supprimer définitivement le soignant',
+      )
     }
     return
   },

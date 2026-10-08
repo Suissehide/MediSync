@@ -17,8 +17,8 @@ class DiagnosticEducatifTemplateDomain
       diagnosticEducatifTemplateRepository
   }
 
-  findAll(): Promise<DiagnosticEducatifTemplateEntity[]> {
-    return this.diagnosticEducatifTemplateRepository.findAll()
+  findAll(archived?: boolean): Promise<DiagnosticEducatifTemplateEntity[]> {
+    return this.diagnosticEducatifTemplateRepository.findAll(archived)
   }
 
   findByID(id: string): Promise<DiagnosticEducatifTemplateEntity> {
@@ -37,9 +37,8 @@ class DiagnosticEducatifTemplateDomain
   ): Promise<DiagnosticEducatifTemplateEntity> {
     return this.diagnosticEducatifTemplateRepository.update(id, params)
   }
-
-  delete(id: string): Promise<DiagnosticEducatifTemplateEntity> {
-    return this.diagnosticEducatifTemplateRepository.delete(id)
+  deleteForever(id: string): Promise<void> {
+    return this.diagnosticEducatifTemplateRepository.deleteForever(id)
   }
 }
 

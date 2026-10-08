@@ -53,7 +53,9 @@ export const SOIGNANT = {
   GET: 'get_soignant',
   CREATE: 'create_soignant',
   UPDATE: 'update_soignant',
-  DELETE: 'delete_soignant',
+  ARCHIVE: 'archive_soignant',
+  RESTORE: 'restore_soignant',
+  DELETE_FOREVER: 'delete_forever_soignant',
 }
 
 export const PATIENT = {
@@ -128,7 +130,9 @@ export const THEMATIC = {
   GET_ALL: 'get_all_thematics',
   CREATE: 'create_thematic',
   UPDATE: 'update_thematic',
-  DELETE: 'delete_thematic',
+  ARCHIVE: 'archive_thematic',
+  RESTORE: 'restore_thematic',
+  DELETE_FOREVER: 'delete_forever_thematic',
 }
 
 export const MEMBER = {
@@ -164,7 +168,9 @@ export const LOCATION = {
   GET_ALL: 'get_all_locations',
   CREATE: 'create_location',
   UPDATE: 'update_location',
-  DELETE: 'delete_location',
+  ARCHIVE: 'archive_location',
+  RESTORE: 'restore_location',
+  DELETE_FOREVER: 'delete_forever_location',
 }
 
 export const APPOINTMENT = {
@@ -188,7 +194,9 @@ export const DIAGNOSTIC_EDUCATIF_TEMPLATE = {
   GET_BY_ID: 'get_diagnostic_template_by_id',
   CREATE: 'create_diagnostic_template',
   UPDATE: 'update_diagnostic_template',
-  DELETE: 'delete_diagnostic_template',
+  ARCHIVE: 'archive_diagnostic_template',
+  RESTORE: 'restore_diagnostic_template',
+  DELETE_FOREVER: 'delete_forever_diagnostic_template',
 }
 
 export const ACTIVITY_LOG = {

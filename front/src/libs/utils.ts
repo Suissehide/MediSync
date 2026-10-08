@@ -3,12 +3,14 @@ import dayjs, { type Dayjs } from 'dayjs'
 import { twMerge } from 'tailwind-merge'
 
 import type { CalendarEvent } from '../components/custom/Calendar/calendar.tsx'
+import type { Appointment } from '../types/appointment.ts'
 import type { AppointmentPatient } from '../types/appointmentPatient.ts'
 import type { Pathway } from '../types/pathway.ts'
 import type { Slot } from '../types/slot.ts'
 import type { SlotTemplate } from '../types/slotTemplate.ts'
 import type { Soignant } from '../types/soignant.ts'
 import { getContrastTextColor } from './color.ts'
+import { getFreeIntervals, hasSlotAvailability } from './slotAvailability.ts'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -99,58 +101,125 @@ export const buildCalendarEventsFromSlots = (
 }
 
 /**
- * Une ligne du tableau Agenda : un rendez-vous, enrichi des informations
- * portées par son créneau (lieu, soignants).
+ * Une ligne du tableau Agenda : un créneau du jour, avec les patients de
+ * tous ses rendez-vous.
  */
-export type DayAppointmentRow = {
+export type DaySlotRow = {
   id: string
   slotId: string
+  // Sous-ligne d'un créneau individuel : un de ses rendez-vous, ou un intervalle libre.
+  kind?: 'appointment' | 'free'
+  subRows?: DaySlotRow[]
+  // Le rendez-vous du créneau quand il n'y en a qu'un : cible des actions de la ligne.
+  appointmentId: string | null
   startDate: string
   endDate: string
   thematic: string
   thematicId?: string | null
   location: string
   soignants: Soignant[]
-  patients: AppointmentPatient[]
+  patients: (AppointmentPatient & { appointmentId: string })[]
   type?: string
   isIndividual: boolean
   capacity: number
+  // Un patient peut encore y prendre rendez-vous.
+  canBook: boolean
+}
+
+const toRowPatients = (appointments: Appointment[]) =>
+  appointments.flatMap((appointment) =>
+    (appointment.appointmentPatients ?? []).map((appointmentPatient) => ({
+      ...appointmentPatient,
+      appointmentId: appointment.id,
+    })),
+  )
+
+const byStartDate = (a: { startDate: string }, b: { startDate: string }) =>
+  dayjs(a.startDate).valueOf() - dayjs(b.startDate).valueOf()
+
+const buildDaySlotRow = (slot: Slot): DaySlotRow => {
+  const appointments = slot.appointments ?? []
+  const single = appointments.length === 1 ? appointments[0] : null
+  const isIndividual = slot.slotTemplate?.isIndividual ?? false
+  const row: DaySlotRow = {
+    id: slot.id,
+    slotId: slot.id,
+    appointmentId: single?.id ?? null,
+    startDate: slot.startDate,
+    endDate: slot.endDate,
+    thematic: single?.thematic ?? slot.slotTemplate?.thematic ?? '',
+    thematicId: single?.thematicId ?? slot.slotTemplate?.thematicId,
+    location: slot.slotTemplate?.location?.name ?? '',
+    soignants: slot.slotTemplate?.soignants ?? [],
+    patients: toRowPatients(appointments),
+    type: single?.type,
+    isIndividual,
+    capacity: slot.slotTemplate?.capacity ?? 1,
+    canBook: !slot.locked && hasSlotAvailability(slot),
+  }
+  if (!isIndividual || appointments.length < 2) {
+    return row
+  }
+
+  // Plusieurs rendez-vous sur un créneau individuel : un sous-tableau, où l'on
+  // prend rendez-vous sur les intervalles libres.
+  const empty = {
+    thematic: '',
+    thematicId: null,
+    patients: [],
+    type: undefined,
+  }
+  return {
+    ...row,
+    canBook: false,
+    subRows: [
+      ...appointments.map((appointment) => ({
+        ...row,
+        id: appointment.id,
+        kind: 'appointment' as const,
+        appointmentId: appointment.id,
+        startDate: appointment.startDate,
+        endDate: appointment.endDate,
+        thematic: appointment.thematic ?? row.thematic,
+        thematicId: appointment.thematicId,
+        patients: toRowPatients([appointment]),
+        type: appointment.type,
+        canBook: false,
+      })),
+      ...getFreeIntervals(slot).map((interval) => ({
+        ...row,
+        ...empty,
+        id: `${slot.id}_libre_${interval.start}`,
+        kind: 'free' as const,
+        appointmentId: null,
+        startDate: interval.start,
+        endDate: interval.end,
+        canBook: !slot.locked,
+      })),
+    ].sort(byStartDate),
+  }
 }
 
 /**
- * Aplatit les créneaux en rendez-vous, ne garde que ceux du jour demandé
- * (comparaison en UTC), et trie par heure de début croissante.
+ * Garde les créneaux du jour demandé (comparaison en UTC), sauf les archivés
+ * restés vides, et trie par heure de début croissante.
  */
-export const buildDayAppointmentRows = (
+export const buildDaySlotRows = (
   slots: Slot[] | undefined,
   day: Dayjs,
-): DayAppointmentRow[] => {
+): DaySlotRow[] => {
   if (!slots) {
     return []
   }
 
   return slots
-    .flatMap((slot) =>
-      (slot.appointments ?? [])
-        .filter((appointment) =>
-          dayjs.utc(appointment.startDate).isSame(day, 'day'),
-        )
-        .map((appointment) => ({
-          id: appointment.id,
-          slotId: slot.id,
-          startDate: appointment.startDate,
-          endDate: appointment.endDate,
-          thematic: appointment.thematic ?? slot.slotTemplate?.thematic ?? '',
-          thematicId: appointment.thematicId,
-          location: slot.slotTemplate?.location?.name ?? '',
-          soignants: slot.slotTemplate?.soignants ?? [],
-          patients: appointment.appointmentPatients ?? [],
-          type: appointment.type,
-          isIndividual: slot.slotTemplate?.isIndividual ?? false,
-          capacity: slot.slotTemplate?.capacity ?? 1,
-        })),
+    .filter(
+      (slot) =>
+        dayjs.utc(slot.startDate).isSame(day, 'day') &&
+        (!slot.archivedAt || slot.appointments?.length),
     )
-    .sort((a, b) => dayjs(a.startDate).valueOf() - dayjs(b.startDate).valueOf())
+    .map(buildDaySlotRow)
+    .sort(byStartDate)
 }
 
 export const buildCalendarEventsFromSlotTemplates = (

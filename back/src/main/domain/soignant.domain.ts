@@ -14,8 +14,8 @@ class SoignantDomain implements SoignantDomainInterface {
     this.soignantRepository = soignantRepository
   }
 
-  findAll(): Promise<SoignantEntityDomain[]> {
-    return this.soignantRepository.findAll()
+  findAll(archived?: boolean): Promise<SoignantEntityDomain[]> {
+    return this.soignantRepository.findAll(archived)
   }
 
   findByID(soignantID: string): Promise<SoignantEntityDomain> {
@@ -37,9 +37,8 @@ class SoignantDomain implements SoignantDomainInterface {
   ): Promise<SoignantEntityDomain> {
     return this.soignantRepository.update(soignantID, soignantUpdateParams)
   }
-
-  delete(soignantID: string): Promise<SoignantEntityDomain> {
-    return this.soignantRepository.delete(soignantID)
+  deleteForever(soignantID: string): Promise<void> {
+    return this.soignantRepository.deleteForever(soignantID)
   }
 }
 

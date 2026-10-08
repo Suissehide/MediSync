@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import { Search } from 'lucide-react'
+import { Archive, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import { getLocationColumns } from '@/columns/location.column.tsx'
@@ -8,6 +8,8 @@ import { ConfirmDeleteForm } from '@/components/custom/popup/confirmDeleteForm.t
 import DashboardLayout from '@/components/dashboard.layout.tsx'
 import ReactTable from '@/components/table/reactTable.tsx'
 import { Input } from '@/components/ui/input.tsx'
+import { Label } from '@/components/ui/label.tsx'
+import { Switch } from '@/components/ui/switch.tsx'
 import { can, useCan } from '@/hooks/useCan.ts'
 import {
   useLocationMutations,
@@ -36,9 +38,12 @@ function LocationSettings() {
   // mais l'URL se tape à la main : les actions d'écriture se gardent aussi
   // ici, indépendamment du menu.
   const canManage = useCan('referentials:write')
-  const { locations, isPending } = useLocationQueries()
-  const { deleteLocation } = useLocationMutations()
-  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
+  const [showArchived, setShowArchived] = useState(false)
+  const { locations, isPending } = useLocationQueries(showArchived)
+  const { archiveLocation, restoreLocation, deleteForeverLocation } =
+    useLocationMutations()
+  const [archiveTargetId, setArchiveTargetId] = useState<string | null>(null)
+  const [purgeTargetId, setPurgeTargetId] = useState<string | null>(null)
 
   const [searchTerm, setSearchTerm] = useState('')
 
@@ -52,10 +57,13 @@ function LocationSettings() {
   const columns = useMemo(
     () =>
       getLocationColumns({
-        onDelete: (id) => setDeleteTargetId(id),
+        onArchive: (id) => setArchiveTargetId(id),
+        onRestore: (id) => restoreLocation.mutate(id),
+        onDeleteForever: (id) => setPurgeTargetId(id),
+        archived: showArchived,
         canManage,
       }),
-    [canManage],
+    [canManage, showArchived, restoreLocation],
   )
 
   return (
@@ -74,7 +82,15 @@ function LocationSettings() {
               placeholder="Nom de la salle..."
               className="w-72"
             />
-            {canManage && <AddLocationForm />}
+            <div className="flex items-center gap-2">
+              <Switch
+                id="salles-archivees"
+                checked={showArchived}
+                onCheckedChange={setShowArchived}
+              />
+              <Label htmlFor="salles-archivees">Archivées</Label>
+            </div>
+            {canManage && !showArchived && <AddLocationForm />}
           </div>
         </div>
 
@@ -86,21 +102,42 @@ function LocationSettings() {
         />
 
         <ConfirmDeleteForm
-          open={!!deleteTargetId}
+          open={!!archiveTargetId}
           setOpen={(open) => {
             if (!open) {
-              setDeleteTargetId(null)
+              setArchiveTargetId(null)
             }
           }}
           onConfirm={() => {
-            if (deleteTargetId) {
-              deleteLocation.mutate(deleteTargetId)
+            if (archiveTargetId) {
+              archiveLocation.mutate(archiveTargetId)
             }
-            setDeleteTargetId(null)
+            setArchiveTargetId(null)
           }}
-          loading={deleteLocation.isPending}
-          title="Supprimer la salle"
-          description="Voulez-vous vraiment supprimer cette salle ? Cette action est irréversible."
+          loading={archiveLocation.isPending}
+          title="Archiver la salle"
+          description="Elle sort des listes de choix. Les créneaux qui la portent la conservent, et elle se restaure depuis le filtre « Archivées »."
+          confirmLabel="Archiver"
+          confirmLoadingLabel="Archivage..."
+          confirmIcon={<Archive className="w-4 h-4" />}
+        />
+
+        <ConfirmDeleteForm
+          open={!!purgeTargetId}
+          setOpen={(open) => {
+            if (!open) {
+              setPurgeTargetId(null)
+            }
+          }}
+          onConfirm={() => {
+            if (purgeTargetId) {
+              deleteForeverLocation.mutate(purgeTargetId)
+            }
+            setPurgeTargetId(null)
+          }}
+          loading={deleteForeverLocation.isPending}
+          title="Supprimer définitivement"
+          description="Cette salle disparaîtra pour de bon. L'opération est refusée tant que la salle est utilisée quelque part."
         />
       </div>
     </DashboardLayout>

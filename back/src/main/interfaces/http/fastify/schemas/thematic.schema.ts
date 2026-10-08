@@ -16,6 +16,10 @@ export const thematicResponseSchema = z.object({
 
 export const thematicsResponseSchema = z.array(thematicResponseSchema)
 
+export const listThematicsQuerySchema = z.object({
+  archived: z.stringbool().default(false),
+})
+
 export const getThematicByIdParamsSchema = z.object({
   thematicID: z.cuid(),
 })
@@ -30,6 +34,7 @@ export const updateThematicSchema = z.object({
   duration: z.number().optional().nullable(),
   pdfNotice: z.string().optional().nullable(),
   soignantIDs: z.array(z.cuid()).optional(),
+  archived: z.boolean().optional(),
 })
 
 export const deleteThematicByIdParamsSchema = getThematicByIdParamsSchema
@@ -39,6 +44,7 @@ export const updateThematicByIdSchema = {
   body: updateThematicSchema,
 }
 
+export type ListThematicsQuery = z.infer<typeof listThematicsQuerySchema>
 export type GetThematicByIdParams = z.infer<typeof getThematicByIdParamsSchema>
 export type CreateThematicBody = z.infer<typeof createThematicSchema>
 export type UpdateThematicParams = z.infer<

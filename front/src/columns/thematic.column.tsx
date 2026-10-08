@@ -1,5 +1,5 @@
 import { createColumnHelper } from '@tanstack/react-table'
-import { Trash2 } from 'lucide-react'
+import { Archive, Trash2, Undo2 } from 'lucide-react'
 
 import EditThematicSoignantsForm from '../components/custom/popup/editThematicSoignantsForm.tsx'
 import { Etiquette } from '../components/table/etiquette.tsx'
@@ -9,7 +9,12 @@ import type { Thematic } from '../types/thematic.ts'
 const columnHelper = createColumnHelper<Thematic>()
 
 type ThematicActions = {
-  onDelete: (id: string) => void
+  onArchive: (id: string) => void
+  onRestore: (id: string) => void
+  onDeleteForever: (id: string) => void
+  // Les archivees se consultent dans la meme table : seules les actions
+  // changent, une archivee ne se reedite pas.
+  archived: boolean
   soignantOptions: { value: string; label: string }[]
   // L'écran reste consultable par lecture seule ; sans `referentials:write`,
   // les actions d'écriture ne doivent pas apparaître (le menu n'est pas la
@@ -18,7 +23,10 @@ type ThematicActions = {
 }
 
 export const getThematicColumns = ({
-  onDelete,
+  onArchive,
+  onRestore,
+  onDeleteForever,
+  archived,
   soignantOptions,
   canManage,
 }: ThematicActions) => {
@@ -94,6 +102,28 @@ export const getThematicColumns = ({
       meta: { align: 'right' },
       cell: ({ row }) => {
         const thematic = row.original
+        if (archived) {
+          return (
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                title="Restaurer"
+                onClick={() => onRestore(thematic.id)}
+              >
+                <Undo2 className="w-3 h-3" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                title="Supprimer définitivement"
+                onClick={() => onDeleteForever(thematic.id)}
+              >
+                <Trash2 className="w-3 h-3 text-destructive" />
+              </Button>
+            </div>
+          )
+        }
         return (
           <div className="flex justify-end gap-2">
             <EditThematicSoignantsForm
@@ -103,9 +133,10 @@ export const getThematicColumns = ({
             <Button
               variant="outline"
               size="icon"
-              onClick={() => onDelete(thematic.id)}
+              title="Archiver"
+              onClick={() => onArchive(thematic.id)}
             >
-              <Trash2 className="w-3 h-3 text-destructive" />
+              <Archive className="w-3 h-3 text-destructive" />
             </Button>
           </div>
         )

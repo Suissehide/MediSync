@@ -1,6 +1,8 @@
 /.idea/
 /.npm/
 /.claude/worktrees/
+# Permissions personnelles de Claude Code ; settings.json, lui, est versionne.
+/.claude/settings.local.json
 /.superpowers/
 
 # Configuration locale : seuls les .env.example sont versionnes
@@ -15,3 +17,6 @@
 # supprimee en fin de test) — ne doit jamais etre versionnee.
 back/src/main/infra/orm/tenant-guard.baseline-monotonie.ts
 graphify-out/
+
+# Dechets macOS
+.DS_Store

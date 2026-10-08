@@ -2,7 +2,6 @@ import type { IocContainer } from '../types/application/ioc'
 import type {
   ThematicCreateEntityDomain,
   ThematicDomainInterface,
-  ThematicEntityDomain,
   ThematicUpdateEntityDomain,
   ThematicWithSoignantsEntityDomain,
 } from '../types/domain/thematic.domain.interface'
@@ -15,8 +14,8 @@ class ThematicDomain implements ThematicDomainInterface {
     this.thematicRepository = thematicRepository
   }
 
-  findAll(): Promise<ThematicWithSoignantsEntityDomain[]> {
-    return this.thematicRepository.findAll()
+  findAll(archived?: boolean): Promise<ThematicWithSoignantsEntityDomain[]> {
+    return this.thematicRepository.findAll(archived)
   }
 
   findByID(thematicID: string): Promise<ThematicWithSoignantsEntityDomain> {
@@ -35,9 +34,8 @@ class ThematicDomain implements ThematicDomainInterface {
   ): Promise<ThematicWithSoignantsEntityDomain> {
     return this.thematicRepository.update(thematicID, thematicUpdateParams)
   }
-
-  delete(thematicID: string): Promise<ThematicEntityDomain> {
-    return this.thematicRepository.delete(thematicID)
+  deleteForever(thematicID: string): Promise<void> {
+    return this.thematicRepository.deleteForever(thematicID)
   }
 }
 

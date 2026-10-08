@@ -1,4 +1,5 @@
 import {
+  type Cell,
   type Column,
   flexRender,
   type Row,
@@ -9,7 +10,7 @@ import type React from 'react'
 import { type ReactNode, type RefObject, useEffect } from 'react'
 
 import { cn } from '../../libs/utils.ts'
-import type { CustomMeta } from './reactTable.tsx'
+import { type CustomMeta, rowDomId } from './reactTable.tsx'
 
 type VirtualizedBodyTableProps<TData> = {
   table: Table<TData>
@@ -22,6 +23,49 @@ type VirtualizedBodyTableProps<TData> = {
   isRowDisabled?: (row: TData) => boolean
   isRowMuted?: (row: TData) => boolean
   isLoading?: boolean
+}
+
+const getRowClass = ({
+  disabled,
+  clickable,
+  muted,
+  tinted,
+}: {
+  disabled?: boolean
+  clickable: boolean
+  muted: boolean
+  // Sous-ligne, ou ligne dont les sous-lignes sont dépliées.
+  tinted: boolean
+}) => {
+  let interaction = 'hover:bg-primary/5'
+  if (disabled) {
+    interaction = 'opacity-50 cursor-not-allowed pointer-events-none'
+  } else if (clickable) {
+    interaction = 'cursor-pointer hover:bg-primary/5'
+  }
+  return cn(
+    'transition-colors data-[state=selected]:bg-primary/10',
+    interaction,
+    muted && 'bg-gray-100 text-text-light',
+    tinted && 'bg-slate-50',
+  )
+}
+
+// Cellules à rendre, une cellule couvrant `colSpan` colonnes masquant les suivantes.
+function spanCells<TData>(row: Row<TData>) {
+  const result: { cell: Cell<TData, unknown>; span: number }[] = []
+  let skip = 0
+  for (const cell of row.getVisibleCells()) {
+    if (skip > 0) {
+      skip--
+      continue
+    }
+    const meta = cell.column.columnDef.meta as CustomMeta<TData, unknown>
+    const span = meta?.colSpan?.(row.original) ?? 1
+    skip = span - 1
+    result.push({ cell, span })
+  }
+  return result
 }
 
 export function VirtualizedBodyTable<TData>({
@@ -46,6 +90,7 @@ export function VirtualizedBodyTable<TData>({
     overscan: 3,
   })
 
+  const { rowIdPrefix } = (table.options.meta ?? {}) as { rowIdPrefix?: string }
   const virtualRows = rowVirtualizer.getVirtualItems()
   const paddingTop = virtualRows.length > 0 ? virtualRows[0].start : 0
   const paddingBottom =
@@ -117,9 +162,12 @@ export function VirtualizedBodyTable<TData>({
         const row: Row<TData> = rows[virtualRow.index]
         const disabled = isRowDisabled?.(row.original)
         const isSelected = row.getIsSelected()
+        const isChild = row.depth > 0
+        const isLastChild = row.getParentRow()?.subRows.at(-1)?.id === row.id
 
         return (
           <tr
+            id={rowIdPrefix && rowDomId(rowIdPrefix, row.id)}
             data-index={virtualRow.index}
             ref={(node) => {
               if (node) {
@@ -146,17 +194,15 @@ export function VirtualizedBodyTable<TData>({
                   }
                 : undefined
             }
-            className={cn(
-              'transition-colors data-[state=selected]:bg-primary/10',
-              disabled
-                ? 'opacity-50 cursor-not-allowed pointer-events-none'
-                : onRowClick
-                  ? 'cursor-pointer hover:bg-primary/5'
-                  : 'hover:bg-primary/5',
-              isRowMuted?.(row.original) && 'bg-gray-100 text-text-light',
-            )}
+            className={getRowClass({
+              disabled,
+              clickable: !!onRowClick,
+              muted: !!isRowMuted?.(row.original),
+              tinted:
+                isChild || (row.getIsExpanded() && row.subRows.length > 0),
+            })}
           >
-            {row.getVisibleCells().map((cell) => {
+            {spanCells(row).map(({ cell, span }) => {
               const { column } = cell
               const meta = column.columnDef.meta as CustomMeta<TData, unknown>
               const grow = meta?.grow
@@ -165,9 +211,11 @@ export function VirtualizedBodyTable<TData>({
               return (
                 <td
                   key={cell.id}
+                  colSpan={span}
                   className={cn(
                     'px-4 py-2 text-sm border-b border-border',
                     autoRowHeight && 'align-top',
+                    isChild && !isLastChild && 'border-b-[#eef2f6]',
                   )}
                   style={{
                     ...getCommonPinningStyles(column),

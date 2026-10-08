@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import { Search } from 'lucide-react'
+import { Archive, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import { getThematicColumns } from '@/columns/thematic.column.tsx'
@@ -8,6 +8,8 @@ import { ConfirmDeleteForm } from '@/components/custom/popup/confirmDeleteForm.t
 import DashboardLayout from '@/components/dashboard.layout.tsx'
 import ReactTable from '@/components/table/reactTable.tsx'
 import { Input } from '@/components/ui/input.tsx'
+import { Label } from '@/components/ui/label.tsx'
+import { Switch } from '@/components/ui/switch.tsx'
 import { can, useCan } from '@/hooks/useCan.ts'
 import { useSoignantQueries } from '@/queries/useSoignant.ts'
 import {
@@ -37,10 +39,13 @@ function ThematicSettings() {
   // mais l'URL se tape à la main : les actions d'écriture se gardent aussi
   // ici, indépendamment du menu.
   const canManage = useCan('referentials:write')
-  const { thematics, isPending } = useThematicQueries()
+  const [showArchived, setShowArchived] = useState(false)
+  const { thematics, isPending } = useThematicQueries(showArchived)
   const { soignants } = useSoignantQueries()
-  const { deleteThematic } = useThematicMutations()
-  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
+  const { archiveThematic, restoreThematic, deleteForeverThematic } =
+    useThematicMutations()
+  const [archiveTargetId, setArchiveTargetId] = useState<string | null>(null)
+  const [purgeTargetId, setPurgeTargetId] = useState<string | null>(null)
 
   const [searchTerm, setSearchTerm] = useState('')
 
@@ -62,11 +67,14 @@ function ThematicSettings() {
   const columns = useMemo(
     () =>
       getThematicColumns({
-        onDelete: (id) => setDeleteTargetId(id),
+        onArchive: (id) => setArchiveTargetId(id),
+        onRestore: (id) => restoreThematic.mutate(id),
+        onDeleteForever: (id) => setPurgeTargetId(id),
+        archived: showArchived,
         soignantOptions,
         canManage,
       }),
-    [soignantOptions, canManage],
+    [soignantOptions, canManage, showArchived, restoreThematic],
   )
 
   return (
@@ -85,7 +93,15 @@ function ThematicSettings() {
               placeholder="Nom de la thématique..."
               className="w-72"
             />
-            {canManage && <AddThematicForm />}
+            <div className="flex items-center gap-2">
+              <Switch
+                id="thematiques-archivees"
+                checked={showArchived}
+                onCheckedChange={setShowArchived}
+              />
+              <Label htmlFor="thematiques-archivees">Archivées</Label>
+            </div>
+            {canManage && !showArchived && <AddThematicForm />}
           </div>
         </div>
 
@@ -97,21 +113,42 @@ function ThematicSettings() {
         />
 
         <ConfirmDeleteForm
-          open={!!deleteTargetId}
+          open={!!archiveTargetId}
           setOpen={(open) => {
             if (!open) {
-              setDeleteTargetId(null)
+              setArchiveTargetId(null)
             }
           }}
           onConfirm={() => {
-            if (deleteTargetId) {
-              deleteThematic.mutate(deleteTargetId)
+            if (archiveTargetId) {
+              archiveThematic.mutate(archiveTargetId)
             }
-            setDeleteTargetId(null)
+            setArchiveTargetId(null)
           }}
-          loading={deleteThematic.isPending}
-          title="Supprimer la thématique"
-          description="Voulez-vous vraiment supprimer cette thématique ? Cette action est irréversible."
+          loading={archiveThematic.isPending}
+          title="Archiver la thématique"
+          description="Elle sort des listes de choix. Les rendez-vous et créneaux qui la portent la conservent, et elle se restaure depuis le filtre « Archivées »."
+          confirmLabel="Archiver"
+          confirmLoadingLabel="Archivage..."
+          confirmIcon={<Archive className="w-4 h-4" />}
+        />
+
+        <ConfirmDeleteForm
+          open={!!purgeTargetId}
+          setOpen={(open) => {
+            if (!open) {
+              setPurgeTargetId(null)
+            }
+          }}
+          onConfirm={() => {
+            if (purgeTargetId) {
+              deleteForeverThematic.mutate(purgeTargetId)
+            }
+            setPurgeTargetId(null)
+          }}
+          loading={deleteForeverThematic.isPending}
+          title="Supprimer définitivement"
+          description="Cette thématique disparaîtra pour de bon. L'opération est refusée tant que la thématique est utilisée quelque part."
         />
       </div>
     </DashboardLayout>

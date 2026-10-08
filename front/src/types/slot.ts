@@ -11,6 +11,7 @@ export type Slot = {
   startDate: string
   endDate: string
   locked: boolean
+  archivedAt?: string | null
   appointments: Appointment[]
   pathway?: Pathway
   slotTemplate: SlotTemplate

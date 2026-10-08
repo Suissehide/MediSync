@@ -15,10 +15,12 @@ export type ThematicUpdateEntityRepo = {
   duration?: number | null
   pdfNotice?: string | null
   soignantIDs?: string[]
+  // `true` archive, `false` restaure.
+  archived?: boolean
 }
 
 export interface ThematicRepositoryInterface {
-  findAll: () => Promise<ThematicWithSoignantsEntityRepo[]>
+  findAll: (archived?: boolean) => Promise<ThematicWithSoignantsEntityRepo[]>
   findByID: (thematicID: string) => Promise<ThematicWithSoignantsEntityRepo>
   create: (
     thematicCreateParams: ThematicCreateEntityRepo,
@@ -27,5 +29,7 @@ export interface ThematicRepositoryInterface {
     thematicID: string,
     thematicUpdateParams: ThematicUpdateEntityRepo,
   ) => Promise<ThematicWithSoignantsEntityRepo>
-  delete: (thematicID: string) => Promise<ThematicEntityRepo>
+  // Suppression definitive : refusee si la ligne n'est pas archivee,
+  // ou si quoi que ce soit la reference encore.
+  deleteForever: (thematicID: string) => Promise<void>
 }

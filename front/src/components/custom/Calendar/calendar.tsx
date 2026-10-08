@@ -12,7 +12,7 @@ import listPlugin from '@fullcalendar/list'
 import FullCalendar from '@fullcalendar/react'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import dayjs, { type Dayjs } from 'dayjs'
-import { CalendarIcon, CalendarOff } from 'lucide-react'
+import { CalendarDays, CalendarOff } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 
@@ -134,6 +134,7 @@ interface CalendarProps {
   editMode?: boolean
   headerToolbar?: ToolbarInput
   editable?: boolean
+  /** false : les créneaux simultanés se partagent la colonne au lieu de se recouvrir. */
   overlap?: boolean
   initialDate?: string
   forbiddenWeeks?: { id: string; startOfWeek: string }[]
@@ -300,7 +301,7 @@ function Calendar({
     const button = document.querySelector('.fc-selectDateButton-button')
     if (button && !button.querySelector('svg')) {
       const root = createRoot(button)
-      root.render(<CalendarIcon size={18} />)
+      root.render(<CalendarDays size={16} />)
     }
   }, [])
 
@@ -326,7 +327,7 @@ function Calendar({
         return
       }
 
-      if (target.closest('[data-lock-toggle]')) {
+      if (target.closest('[data-event-action]')) {
         return
       }
 
@@ -485,7 +486,6 @@ function Calendar({
           }, 0)
         }}
         events={[...viewEvents, ...forbiddenWeekEvents]}
-        eventOverlap={overlap}
         slotEventOverlap={overlap}
         eventContent={(eventContent) => (
           <EventContent

@@ -110,7 +110,8 @@ function Planning() {
   const { slots } = useSlotsInRangeQuery(visibleRange)
   const { pathways } = usePathwayQueries()
   const { pathwayTemplates } = usePathwayTemplateQueries()
-  const { createSlot, updateSlot, deleteSlot } = useSlotMutations()
+  const { createSlot, updateSlot, deleteSlot, archiveSlots } =
+    useSlotMutations()
   const { instantiatePathway, deletePathway } = usePathwayMutations()
   const { toast } = useToast()
   const lastDropTimeRef = useRef<number>(0)
@@ -204,6 +205,7 @@ function Planning() {
   const [moveWeekDate, setMoveWeekDate] = useState<dayjs.Dayjs | null>(null)
   const [moveTargetWeek, setMoveTargetWeek] = useState(1)
   const [showMoveModal, setShowMoveModal] = useState(false)
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false)
 
   const handleToggleSelect = useCallback((eventId: string) => {
     setSelectedSlotIds((prev) => {
@@ -226,11 +228,9 @@ function Planning() {
     if (!slots) {
       return []
     }
-    if (hiddenPathwayIds.size === 0) {
-      return slots
-    }
     return slots.filter(
       (slot) =>
+        !slot.archivedAt &&
         !hiddenPathwayIds.has(slot.pathway?.template?.id ?? NO_PATHWAY_KEY),
     )
   }, [slots, hiddenPathwayIds])
@@ -355,23 +355,51 @@ function Planning() {
     }
   }
 
+  /** Un créneau qui porte des rendez-vous est archivé : le supprimer les perdrait. */
+  const archiveOrDeleteSlots = (ids: string[]) => {
+    const toArchive = ids.filter(
+      (id) => slots?.find((s) => s.id === id)?.appointments?.length,
+    )
+    for (const id of ids) {
+      if (!toArchive.includes(id)) {
+        deleteSlot.mutate(id)
+      }
+    }
+    if (toArchive.length === 0) {
+      return
+    }
+    archiveSlots.mutate(
+      { ids: toArchive, archived: true },
+      {
+        onSuccess: () =>
+          toast({
+            title: `${toArchive.length} créneau(x) archivé(s) au lieu d'être supprimé(s)`,
+            message:
+              'Ils portent des rendez-vous, qui restent visibles sur le Dashboard.',
+            severity: TOAST_SEVERITY.SUCCESS,
+            action: (
+              <Button
+                variant="none"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() =>
+                  archiveSlots.mutate({ ids: toArchive, archived: false })
+                }
+              >
+                Annuler
+              </Button>
+            ),
+          }),
+      },
+    )
+  }
+
   const handleDeleteEvent = (id: string) => {
     if (editMode) {
       deleteSlotTemplate.mutate(id)
-    } else {
-      const slot = slots?.find((s) => s.id === id)
-      if (slot && slot.appointments && slot.appointments.length > 0) {
-        toast({
-          title: 'Suppression impossible',
-          message:
-            "Ce créneau contient des rendez-vous déjà programmés. Veuillez d'abord supprimer les rendez-vous avant de supprimer le créneau.",
-          severity: TOAST_SEVERITY.ERROR,
-        })
-        return
-      }
-      setEvents((prev) => prev.filter((event) => event.id !== id))
-      deleteSlot.mutate(id)
+      return
     }
+    archiveOrDeleteSlots([id])
   }
 
   const handleDeleteHoverSlot = (eventId: string) => {
@@ -596,6 +624,23 @@ function Planning() {
     }
   }
 
+  const handleBulkDelete = () => {
+    const prefix = editMode ? 'template_' : 'slot_'
+    const ids = [...selectedSlotIds]
+      .filter((eventId) => eventId.startsWith(prefix))
+      .map((eventId) => eventId.replace(prefix, ''))
+
+    if (editMode) {
+      for (const id of ids) {
+        deleteSlotTemplate.mutate(id)
+      }
+    } else {
+      archiveOrDeleteSlots(ids)
+    }
+    setShowBulkDeleteModal(false)
+    handleClearSelection()
+  }
+
   const handleForbiddenWeekCreate = (date: string) => {
     setCreateForbiddenWeekDate(date)
   }
@@ -798,11 +843,12 @@ function Planning() {
               {selectedSlotIds.size > 1 ? 's' : ''}
             </span>
 
-            <div className="w-48">
+            <div className="w-72">
               <Select
                 options={[
                   { value: 'duplicate', label: 'Dupliquer sur une semaine' },
                   { value: 'move', label: 'Déplacer sur une semaine' },
+                  { value: 'delete', label: 'Supprimer la sélection' },
                 ]}
                 placeholder="Action..."
                 value={bulkAction}
@@ -832,6 +878,8 @@ function Planning() {
                       )
                     }
                     setShowMoveModal(true)
+                  } else if (v === 'delete') {
+                    setShowBulkDeleteModal(true)
                   }
                 }}
                 clearable={false}
@@ -855,6 +903,7 @@ function Planning() {
             {view === 'calendar' ? (
               <Calendar
                 events={mergedEvents}
+                overlap={false}
                 handleSelectEvent={handleSelectSlot}
                 handleEditEvent={handleEditSlot}
                 handleDropEvent={handleInstantiatePathway}
@@ -1099,7 +1148,20 @@ function Planning() {
           onConfirm={handleConfirmDeleteHoverSlot}
           loading={deleteSlot.isPending || deleteSlotTemplate.isPending}
           title="Supprimer le créneau"
-          description="Voulez-vous vraiment supprimer ce créneau ? Cette action est irréversible."
+          description="Voulez-vous vraiment supprimer ce créneau ? S'il porte des rendez-vous, il sera archivé plutôt que supprimé."
+        />
+
+        <ConfirmDeleteForm
+          open={showBulkDeleteModal}
+          setOpen={(open) => {
+            setShowBulkDeleteModal(open)
+            if (!open) {
+              setBulkAction('')
+            }
+          }}
+          onConfirm={handleBulkDelete}
+          title="Supprimer la sélection"
+          description={`Voulez-vous vraiment supprimer ${selectedSlotIds.size} créneau(x) ? Ceux qui portent des rendez-vous seront archivés plutôt que supprimés.`}
         />
 
         <AddSlotForm

@@ -2,7 +2,9 @@ import {
   type Column,
   type ColumnDef,
   type ColumnFiltersState,
+  type ExpandedState,
   getCoreRowModel,
+  getExpandedRowModel,
   getFacetedMinMaxValues,
   getFacetedRowModel,
   getFacetedUniqueValues,
@@ -21,6 +23,7 @@ import {
   type FC,
   type ReactNode,
   useEffect,
+  useId,
   useRef,
   useState,
 } from 'react'
@@ -45,7 +48,12 @@ export type CustomMeta<TData, TValue> = {
   grow?: boolean
   align?: 'left' | 'center' | 'right'
   filter?: FC<{ column: Column<TData, TValue> }>
+  // Nombre de colonnes couvertes par la cellule de cette ligne (les suivantes sont sautées).
+  colSpan?: (row: TData) => number
 }
+
+// Id DOM d'une ligne, pour la désigner (aria-controls) depuis une autre.
+export const rowDomId = (prefix: string, rowId: string) => `${prefix}-${rowId}`
 
 type CustomColumnDef<TData, TValue = unknown> = ColumnDef<TData, TValue> & {
   meta?: CustomMeta<TData, TValue>
@@ -76,6 +84,8 @@ type ReactTableProps<TData extends { id: string }> = {
   isRowMuted?: (row: TData) => boolean
   isLoading?: boolean
   autoRowHeight?: boolean
+  // Sous-lignes d'une ligne, repliées par défaut.
+  getSubRows?: (row: TData) => TData[] | undefined
 }
 
 export function ReactTable<TData extends { id: string }>({
@@ -92,6 +102,7 @@ export function ReactTable<TData extends { id: string }>({
   isRowMuted,
   isLoading,
   autoRowHeight,
+  getSubRows,
 }: ReactTableProps<TData>) {
   const initialColumnFilters = safeParse(
     localStorage.getItem(`filters/${filterId}`),
@@ -111,6 +122,9 @@ export function ReactTable<TData extends { id: string }>({
     initialColumnVisibility,
   )
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
+  const [expanded, setExpanded] = useState<ExpandedState>({})
+  // Préfixe des id de lignes (aria-controls) : unique même si une ligne est dans deux tableaux.
+  const rowIdPrefix = useId()
   const [paginationState, setPaginationState] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 25,
@@ -124,6 +138,7 @@ export function ReactTable<TData extends { id: string }>({
       columnVisibility,
       rowSelection,
       columnFilters,
+      expanded,
       ...(pagination ? { pagination: paginationState } : {}),
       ...(serverPagination
         ? {
@@ -169,6 +184,10 @@ export function ReactTable<TData extends { id: string }>({
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
     getRowId: (row) => row.id,
+    getSubRows,
+    onExpandedChange: setExpanded,
+    meta: { rowIdPrefix },
+    getExpandedRowModel: getExpandedRowModel(),
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),

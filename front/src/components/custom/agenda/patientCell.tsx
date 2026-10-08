@@ -2,10 +2,10 @@ import { Link } from '@tanstack/react-router'
 import { MessageSquareTextIcon, Plus } from 'lucide-react'
 import { useState } from 'react'
 
-import type { DayAppointmentRow } from '../../../libs/utils.ts'
+import type { DaySlotRow } from '../../../libs/utils.ts'
 import { useConvocationSentMutation } from '../../../queries/useAppointment.ts'
 import { useAuthStore } from '../../../store/useAuthStore.ts'
-import { Etiquette } from '../../table/etiquette.tsx'
+import { Etiquette, type TonEtiquette } from '../../table/etiquette.tsx'
 import { Button } from '../../ui/button.tsx'
 import { Checkbox } from '../../ui/input.tsx'
 import {
@@ -49,9 +49,18 @@ function ConvocationCheckbox({
 
 const MAX_VISIBLE_PATIENTS = 5
 
+const TON_PRESENCE: Record<string, TonEtiquette> = { yes: 'succes', no: 'rose' }
+
+// Survol des étiquettes-liens, dans la teinte de leur présence.
+const HOVER: Partial<Record<TonEtiquette, string>> = {
+  primaire: 'hover:bg-primary/20',
+  succes: 'hover:bg-green-100',
+  rose: 'hover:bg-pink-100',
+}
+
 type PatientCellProps = {
-  row: DayAppointmentRow
-  onAddPatient: (row: DayAppointmentRow) => void
+  row: DaySlotRow
+  onAddPatient: (row: DaySlotRow) => void
 }
 
 export default function PatientCell({ row, onAddPatient }: PatientCellProps) {
@@ -61,13 +70,15 @@ export default function PatientCell({ row, onAddPatient }: PatientCellProps) {
   // ne puisse se rendre.
   const context = useAuthStore((state) => state.context)
 
-  const { patients, isIndividual } = row
+  const { patients } = row
 
-  const addButton = isIndividual ? null : (
+  // Rendez-vous collectif existant : on gère ses patients ; sinon on en crée un.
+  const canManage = !!row.appointmentId && !row.isIndividual
+  const addButton = (canManage || row.canBook) && (
     <Button
       variant="outline"
       size="icon-sm"
-      aria-label="Gérer les patients"
+      aria-label={canManage ? 'Gérer les patients' : 'Prendre un rendez-vous'}
       className="shrink-0"
       onClick={() => onAddPatient(row)}
     >
@@ -75,13 +86,17 @@ export default function PatientCell({ row, onAddPatient }: PatientCellProps) {
     </Button>
   )
 
-  if (patients.length === 0) {
+  if (row.kind === 'free') {
     return (
-      <div className="flex items-center gap-1">
-        <span>—</span>
+      <div className="flex items-center gap-2 text-text-light">
+        Libre
         {addButton}
       </div>
     )
+  }
+
+  if (patients.length === 0) {
+    return addButton || '—'
   }
 
   const hidden = patients.length - MAX_VISIBLE_PATIENTS
@@ -97,14 +112,22 @@ export default function PatientCell({ row, onAddPatient }: PatientCellProps) {
           >
             {appointmentPatient.id && (
               <ConvocationCheckbox
-                appointmentID={row.id}
+                appointmentID={appointmentPatient.appointmentId}
                 appointmentPatientID={appointmentPatient.id}
                 convocationSent={!!appointmentPatient.convocationSent}
                 patientName={`${appointmentPatient.patient.firstName} ${appointmentPatient.patient.lastName}`}
               />
             )}
             {context?.serviceId ? (
-              <Etiquette asChild className="hover:bg-primary/20">
+              <Etiquette
+                asChild
+                ton={TON_PRESENCE[appointmentPatient.status ?? '']}
+                className={
+                  HOVER[
+                    TON_PRESENCE[appointmentPatient.status ?? ''] ?? 'primaire'
+                  ]
+                }
+              >
                 <Link
                   to="/e/$establishmentId/s/$serviceId/patient/$patientID"
                   params={{
@@ -118,7 +141,7 @@ export default function PatientCell({ row, onAddPatient }: PatientCellProps) {
                 </Link>
               </Etiquette>
             ) : (
-              <Etiquette>
+              <Etiquette ton={TON_PRESENCE[appointmentPatient.status ?? '']}>
                 {appointmentPatient.patient.firstName}{' '}
                 {appointmentPatient.patient.lastName}
               </Etiquette>

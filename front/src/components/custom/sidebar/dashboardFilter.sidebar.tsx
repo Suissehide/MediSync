@@ -1,4 +1,4 @@
-import { ChevronDown, Route, Stethoscope } from 'lucide-react'
+import { ChevronDown, DoorOpen, Route, Stethoscope } from 'lucide-react'
 import { useState } from 'react'
 
 import { useCan } from '../../../hooks/useCan.ts'
@@ -12,12 +12,14 @@ import {
   PopoverRoot,
   PopoverTrigger,
 } from '../../ui/popover.tsx'
+import LocationFilterSection from './locationFilter.section.tsx'
 import PathwayTemplateFilterSection from './pathwayTemplateFilter.section.tsx'
 import SoignantFilterSection from './soignantFilter.section.tsx'
 
 const modeLabels: Record<DashboardFilterMode, string> = {
   soignant: 'Soignants',
   pathway: 'Parcours',
+  location: 'Salles',
 }
 
 function SidebarDashboardFilter() {
@@ -52,12 +54,22 @@ function SidebarDashboardFilter() {
         >
           {modeLabels.pathway}
         </PopoverMenuItem>
+        <PopoverMenuItem
+          icon={<DoorOpen className="w-4 h-4" />}
+          onClick={() => handleSelectMode('location')}
+        >
+          {modeLabels.location}
+        </PopoverMenuItem>
       </PopoverContent>
     </PopoverRoot>
   )
 
   if (mode === 'pathway') {
     return <PathwayTemplateFilterSection title={title} />
+  }
+
+  if (mode === 'location') {
+    return <LocationFilterSection title={title} />
   }
 
   return <SoignantFilterSection isAdmin={isAdmin} title={title} />

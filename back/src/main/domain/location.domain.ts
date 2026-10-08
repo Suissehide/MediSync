@@ -14,8 +14,8 @@ class LocationDomain implements LocationDomainInterface {
     this.locationRepository = locationRepository
   }
 
-  findAll(): Promise<LocationEntityDomain[]> {
-    return this.locationRepository.findAll()
+  findAll(archived?: boolean): Promise<LocationEntityDomain[]> {
+    return this.locationRepository.findAll(archived)
   }
 
   findByID(locationID: string): Promise<LocationEntityDomain> {
@@ -34,9 +34,8 @@ class LocationDomain implements LocationDomainInterface {
   ): Promise<LocationEntityDomain> {
     return this.locationRepository.update(locationID, locationUpdateParams)
   }
-
-  delete(locationID: string): Promise<LocationEntityDomain> {
-    return this.locationRepository.delete(locationID)
+  deleteForever(locationID: string): Promise<void> {
+    return this.locationRepository.deleteForever(locationID)
   }
 }
 

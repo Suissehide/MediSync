@@ -45,7 +45,8 @@ export default function CalendarDatePickerButton({
         style={{
           position: 'fixed',
           top: rect.bottom + 8,
-          left: rect.left,
+          // Aligné sur le bord droit du bouton : il est en bout de barre.
+          right: window.innerWidth - rect.right,
           zIndex: 200,
         }}
         className="rounded-md border border-border bg-popover shadow-md animate-in fade-in-0 zoom-in-95"

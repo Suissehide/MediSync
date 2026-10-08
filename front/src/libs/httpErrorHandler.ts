@@ -8,6 +8,21 @@ export const isApiError = (error: unknown): error is ApiError => {
   return error instanceof ApiError
 }
 
+// Le corps d'une erreur porte parfois un message deja redige par le serveur
+// (« encore utilisé par 3 créneaux modèles »). `handleHttpError` ne lit pas le
+// corps : sans ce passage explicite, ce message est perdu et l'utilisateur ne
+// voit qu'un libelle generique qui ne dit pas ce qui bloque.
+export const messageDuServeur = async (
+  response: Response,
+): Promise<string | undefined> => {
+  try {
+    const body = (await response.clone().json()) as { message?: unknown }
+    return typeof body.message === 'string' ? body.message : undefined
+  } catch {
+    return undefined
+  }
+}
+
 export function handleHttpError(
   response: Response,
   overrides: ErrorMessages = {},

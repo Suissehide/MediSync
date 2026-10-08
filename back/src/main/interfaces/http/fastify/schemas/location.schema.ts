@@ -11,6 +11,10 @@ export const locationResponseSchema = z.object({
 
 export const locationsResponseSchema = z.array(locationResponseSchema)
 
+export const listLocationsQuerySchema = z.object({
+  archived: z.stringbool().default(false),
+})
+
 export const getLocationByIdParamsSchema = z.object({
   locationID: z.cuid(),
 })
@@ -21,6 +25,7 @@ export const createLocationSchema = z.object({
 
 export const updateLocationSchema = z.object({
   name: z.string().min(1).optional(),
+  archived: z.boolean().optional(),
 })
 
 export const deleteLocationByIdParamsSchema = getLocationByIdParamsSchema
@@ -30,6 +35,7 @@ export const updateLocationByIdSchema = {
   body: updateLocationSchema,
 }
 
+export type ListLocationsQuery = z.infer<typeof listLocationsQuerySchema>
 export type GetLocationByIdParams = z.infer<typeof getLocationByIdParamsSchema>
 export type CreateLocationBody = z.infer<typeof createLocationSchema>
 export type UpdateLocationParams = z.infer<

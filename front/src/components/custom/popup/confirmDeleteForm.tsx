@@ -17,6 +17,11 @@ interface ConfirmDeleteFormProps {
   loading?: boolean
   title?: string
   description?: React.ReactNode
+  // Les trois valeurs par defaut decrivent une suppression : seul un appelant
+  // qui confirme autre chose (un archivage) a besoin de les changer.
+  confirmLabel?: string
+  confirmLoadingLabel?: string
+  confirmIcon?: React.ReactNode
 }
 
 export function ConfirmDeleteForm({
@@ -26,6 +31,9 @@ export function ConfirmDeleteForm({
   loading = false,
   title = 'Confirmation de suppression',
   description = 'Voulez-vous vraiment supprimer cet élément ? Cette action est irréversible.',
+  confirmLabel = 'Supprimer',
+  confirmLoadingLabel = 'Suppression...',
+  confirmIcon = <Trash className="w-4 h-4 text-destructive" />,
 }: ConfirmDeleteFormProps) {
   return (
     <Popup modal open={open} onOpenChange={setOpen}>
@@ -44,8 +52,8 @@ export function ConfirmDeleteForm({
             Annuler
           </Button>
           <Button variant="outline" onClick={onConfirm} disabled={loading}>
-            <Trash className="w-4 h-4 text-destructive" />
-            {loading ? 'Suppression...' : 'Supprimer'}
+            {confirmIcon}
+            {loading ? confirmLoadingLabel : confirmLabel}
           </Button>
         </PopupFooter>
       </PopupContent>

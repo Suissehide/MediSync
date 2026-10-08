@@ -9,6 +9,8 @@ import {
   deleteLocationByIdParamsSchema,
   type GetLocationByIdParams,
   getLocationByIdParamsSchema,
+  type ListLocationsQuery,
+  listLocationsQuerySchema,
   locationResponseSchema,
   locationsResponseSchema,
   type UpdateLocationBody,
@@ -21,10 +23,11 @@ const locationReadRouter: FastifyPluginAsync = (fastify) => {
   const { locationDomain } = fastify.iocContainer
 
   // Get all
-  fastify.get(
+  fastify.get<{ Querystring: ListLocationsQuery }>(
     '/',
     {
       schema: {
+        querystring: listLocationsQuerySchema,
         response: {
           200: locationsResponseSchema,
           404: z.object({ message: z.string() }),
@@ -32,8 +35,8 @@ const locationReadRouter: FastifyPluginAsync = (fastify) => {
       },
       config: { permission: 'referentials:read' },
     },
-    () => {
-      return locationDomain.findAll()
+    (request) => {
+      return locationDomain.findAll(request.query.archived)
     },
   )
 
@@ -112,6 +115,7 @@ const locationWriteRouter: FastifyPluginAsync = (fastify) => {
   )
 
   // Delete
+  // Archive (la restauration passe par PATCH { archived: false })
   fastify.delete<{ Params: DeleteLocationByIdParams }>(
     '/:locationID',
     {
@@ -126,11 +130,34 @@ const locationWriteRouter: FastifyPluginAsync = (fastify) => {
     },
     async (request, reply) => {
       const { locationID } = request.params
-      const deleted = await locationDomain.delete(locationID)
-      if (!deleted) {
+      const archived = await locationDomain.update(locationID, {
+        archived: true,
+      })
+      if (!archived) {
         logger.info('Location not found')
         throw Boom.notFound('Location not found')
       }
+      reply.code(204).send()
+    },
+  )
+
+  // Suppression DEFINITIVE d'une ligne deja archivee. Refusee en 409 tant que
+  // quelque chose la reference ; la base le refuse de toute facon.
+  fastify.delete<{ Params: DeleteLocationByIdParams }>(
+    '/:locationID/definitive',
+    {
+      schema: {
+        params: deleteLocationByIdParamsSchema,
+        response: {
+          204: z.null(),
+          404: z.object({ message: z.string() }),
+          409: z.object({ message: z.string() }),
+        },
+      },
+      config: { permission: 'referentials:write' },
+    },
+    async (request, reply) => {
+      await locationDomain.deleteForever(request.params.locationID)
       reply.code(204).send()
     },
   )

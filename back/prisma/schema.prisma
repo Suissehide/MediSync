@@ -98,7 +98,7 @@ model ServiceMembership {
 
   establishmentMembership EstablishmentMembership @relation(fields: [establishmentMembershipId], references: [id], onDelete: Cascade)
   service                 Service                 @relation(fields: [serviceId, establishmentId], references: [id, establishmentId])
-  soignant                Soignant?               @relation(fields: [soignantId], references: [id], onDelete: SetNull)
+  soignant                Soignant?               @relation(fields: [soignantId], references: [id], onDelete: Restrict)
 
   @@unique([establishmentMembershipId, serviceId])
   @@index([serviceId])
@@ -112,7 +112,10 @@ model SlotTemplateSoignant {
   establishmentId String
 
   slotTemplate SlotTemplate @relation(fields: [slotTemplateId, serviceId], references: [id, serviceId], onDelete: Cascade)
-  soignant     Soignant     @relation(fields: [soignantId, serviceId], references: [id, serviceId], onDelete: Cascade)
+  // Restrict et non Cascade : cette ligne dit QUI anime la seance, c'est la
+  // donnee du planning, pas une dependance du soignant. La supprimer avec lui
+  // est la perte que l'archivage existe pour empecher.
+  soignant     Soignant     @relation(fields: [soignantId, serviceId], references: [id, serviceId], onDelete: Restrict)
 
   @@id([slotTemplateId, soignantId])
   @@index([soignantId])
@@ -218,7 +221,7 @@ model Appointment {
   // les AppointmentPatient). Sans cela, supprimer un créneau/parcours avec
   // des rendez-vous échoue sur une violation de clé étrangère.
   slot     Slot      @relation(fields: [slotID, serviceId], references: [id, serviceId], onDelete: Cascade)
-  thematic Thematic? @relation(fields: [thematicId], references: [id], onDelete: SetNull)
+  thematic Thematic? @relation(fields: [thematicId], references: [id], onDelete: Restrict)
 
   @@unique([id, serviceId])
   @@index([slotID])
@@ -268,8 +271,8 @@ model SlotTemplate {
 
   soignantLinks SlotTemplateSoignant[]
   template      PathwayTemplate?       @relation(fields: [templateID], references: [id])
-  location      Location?              @relation(fields: [locationID], references: [id], onDelete: SetNull)
-  thematic      Thematic?              @relation(fields: [thematicId], references: [id], onDelete: SetNull)
+  location      Location?              @relation(fields: [locationID], references: [id], onDelete: Restrict)
+  thematic      Thematic?              @relation(fields: [thematicId], references: [id], onDelete: Restrict)
 
   @@unique([id, serviceId])
   @@index([templateID])
@@ -285,6 +288,8 @@ model Slot {
   startDate       DateTime
   endDate         DateTime
   locked          Boolean       @default(false)
+  // Masque le créneau du Planning ; il reste sur le Dashboard avec ses rendez-vous.
+  archivedAt      DateTime?
   appointments    Appointment[]
   pathwayID       String?
   slotTemplateID  String        @unique
@@ -312,6 +317,11 @@ model Soignant {
   serviceId       String
   name            String
 
+  // Archivage au lieu de suppression, comme Thematic. Ici un DELETE faisait pire
+  // qu'un SetNull : `slotTemplateLinks` et `thematicLinks` sont en Cascade, donc
+  // les lignes de liaison disparaissaient — le planning perdait qui anime quoi.
+  archivedAt      DateTime?
+
   slotTemplateLinks  SlotTemplateSoignant[]
   thematicLinks      SoignantThematic[]
   todos              Todo[]
@@ -330,6 +340,10 @@ model Thematic {
   // Consigne affichee au patient dans le PDF du programme, avant chaque
   // semaine contenant un creneau de cette thematique.
   pdfNotice       String?
+  // Archivage au lieu de suppression : une thematique retiree de la liste sort
+  // des listes de choix mais garde ses liens, la ou un DELETE vidait le
+  // `thematicId` de tous les rendez-vous deja crees (onDelete: SetNull).
+  archivedAt      DateTime?
 
   soignantLinks SoignantThematic[]
   appointments  Appointment[]
@@ -347,6 +361,10 @@ model Location {
   establishmentId String
   serviceId       String
   name            String
+
+  // Archivage au lieu de suppression, comme Thematic : un DELETE vidait le
+  // `locationID` de tous les creneaux modeles (onDelete: SetNull).
+  archivedAt      DateTime?
 
   slotTemplates SlotTemplate[]
 
@@ -517,6 +535,9 @@ model DiagnosticEducatifTemplate {
   serviceId       String
   name            String
   activeFields    String[]
+  // Archivage au lieu de suppression, comme Thematic : un DELETE vidait le
+  // `templateId` de tous les diagnostics deja remplis (onDelete: SetNull).
+  archivedAt      DateTime?
 
   diagnostics DiagnosticEducatif[]
 
@@ -638,7 +659,7 @@ model DiagnosticEducatif {
   rapatrier               String?
 
   // Référence simple (templateId nullable) : cohérence vérifiée par le domaine.
-  template DiagnosticEducatifTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  template DiagnosticEducatifTemplate? @relation(fields: [templateId], references: [id], onDelete: Restrict)
   // Relation dérivée de patientId + serviceId, déjà portées par ce modèle : aucune colonne
   // supplémentaire, elle relie simplement la ligne à son sous-dossier de service. Seul parent
   // désormais (la relation `patient` vers Patient(id, establishmentId), qui coexistait
@@ -663,7 +684,7 @@ model Todo {
 
   soignantID String?
 
-  soignant Soignant? @relation(fields: [soignantID], references: [id], onDelete: SetNull)
+  soignant Soignant? @relation(fields: [soignantID], references: [id], onDelete: Restrict)
 
   @@unique([id, serviceId])
   @@index([soignantID])

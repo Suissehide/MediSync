@@ -9,6 +9,8 @@ import {
   deleteThematicByIdParamsSchema,
   type GetThematicByIdParams,
   getThematicByIdParamsSchema,
+  type ListThematicsQuery,
+  listThematicsQuerySchema,
   thematicResponseSchema,
   thematicsResponseSchema,
   type UpdateThematicBody,
@@ -21,10 +23,11 @@ const thematicRouter: FastifyPluginAsync = (fastify) => {
   const { thematicDomain, logger } = iocContainer
 
   // Get all
-  fastify.get(
+  fastify.get<{ Querystring: ListThematicsQuery }>(
     '/',
     {
       schema: {
+        querystring: listThematicsQuerySchema,
         response: {
           200: thematicsResponseSchema,
           404: z.object({ message: z.string() }),
@@ -32,8 +35,8 @@ const thematicRouter: FastifyPluginAsync = (fastify) => {
       },
       config: { permission: 'referentials:read' },
     },
-    () => {
-      return thematicDomain.findAll()
+    (request) => {
+      return thematicDomain.findAll(request.query.archived)
     },
   )
 
@@ -102,7 +105,7 @@ const thematicRouter: FastifyPluginAsync = (fastify) => {
     },
   )
 
-  // Delete
+  // Archive (la restauration passe par PATCH { archived: false })
   fastify.delete<{ Params: DeleteThematicByIdParams }>(
     '/:thematicID',
     {
@@ -117,11 +120,34 @@ const thematicRouter: FastifyPluginAsync = (fastify) => {
     },
     async (request, reply) => {
       const { thematicID } = request.params
-      const deleted = await thematicDomain.delete(thematicID)
-      if (!deleted) {
+      const archived = await thematicDomain.update(thematicID, {
+        archived: true,
+      })
+      if (!archived) {
         logger.info('Thematic not found')
         throw Boom.notFound('Thematic not found')
       }
+      reply.code(204).send()
+    },
+  )
+
+  // Suppression DEFINITIVE d'une ligne deja archivee. Refusee en 409 tant que
+  // quelque chose la reference ; la base le refuse de toute facon.
+  fastify.delete<{ Params: DeleteThematicByIdParams }>(
+    '/:thematicID/definitive',
+    {
+      schema: {
+        params: deleteThematicByIdParamsSchema,
+        response: {
+          204: z.null(),
+          404: z.object({ message: z.string() }),
+          409: z.object({ message: z.string() }),
+        },
+      },
+      config: { permission: 'referentials:write' },
+    },
+    async (request, reply) => {
+      await thematicDomain.deleteForever(request.params.thematicID)
       reply.code(204).send()
     },
   )

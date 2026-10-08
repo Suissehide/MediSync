@@ -1,6 +1,5 @@
 import type { Soignant, Thematic } from '../../../generated/client'
 
-export type ThematicEntityDomain = Thematic
 export type ThematicWithSoignantsEntityDomain = Thematic & {
   soignants: Soignant[]
 }
@@ -15,10 +14,12 @@ export type ThematicUpdateEntityDomain = {
   duration?: number | null
   pdfNotice?: string | null
   soignantIDs?: string[]
+  // `true` archive, `false` restaure.
+  archived?: boolean
 }
 
 export interface ThematicDomainInterface {
-  findAll: () => Promise<ThematicWithSoignantsEntityDomain[]>
+  findAll: (archived?: boolean) => Promise<ThematicWithSoignantsEntityDomain[]>
   findByID: (thematicID: string) => Promise<ThematicWithSoignantsEntityDomain>
   create: (
     thematicCreateParams: ThematicCreateEntityDomain,
@@ -27,5 +28,7 @@ export interface ThematicDomainInterface {
     thematicID: string,
     thematicUpdateParams: ThematicUpdateEntityDomain,
   ) => Promise<ThematicWithSoignantsEntityDomain>
-  delete: (thematicID: string) => Promise<ThematicEntityDomain>
+  // Suppression definitive : refusee si la ligne n'est pas archivee,
+  // ou si quoi que ce soit la reference encore.
+  deleteForever: (thematicID: string) => Promise<void>
 }

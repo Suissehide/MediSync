@@ -3,7 +3,7 @@ import { Check, X } from 'lucide-react'
 import { useMemo } from 'react'
 
 import { useAppForm } from '../../../hooks/formConfig.tsx'
-import type { DayAppointmentRow } from '../../../libs/utils.ts'
+import type { DaySlotRow } from '../../../libs/utils.ts'
 import { usePatientQueries } from '../../../queries/usePatient.tsx'
 import type { UpdateAppointmentParams } from '../../../types/appointment.ts'
 import { Button } from '../../ui/button.tsx'
@@ -19,7 +19,7 @@ import {
 type AddPatientToAppointmentFormProps = {
   open: boolean
   setOpen: (open: boolean) => void
-  row: DayAppointmentRow
+  row: DaySlotRow
   onConfirm: (params: UpdateAppointmentParams) => void
   onRequestDelete: () => void
   isPending?: boolean
@@ -58,7 +58,7 @@ export default function AddPatientToAppointmentForm({
       }
 
       onConfirm({
-        id: row.id,
+        id: row.appointmentId ?? '',
         thematicId: row.thematicId,
         type: row.type,
         appointmentPatients: value.patientIDs.map((patientID) => {
