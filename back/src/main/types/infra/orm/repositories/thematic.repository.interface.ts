@@ -1,4 +1,8 @@
-import type { Soignant, Thematic } from '../../../../../generated/client'
+import type {
+  Soignant,
+  Thematic,
+  ThematicRole,
+} from '../../../../../generated/client'
 
 export type ThematicEntityRepo = Thematic
 export type ThematicWithSoignantsEntityRepo = Thematic & {
@@ -8,12 +12,14 @@ export type ThematicCreateEntityRepo = {
   name: string
   duration?: number | null
   pdfNotice?: string | null
+  role?: ThematicRole | null
   soignantIDs: string[]
 }
 export type ThematicUpdateEntityRepo = {
   name?: string
   duration?: number | null
   pdfNotice?: string | null
+  role?: ThematicRole | null
   soignantIDs?: string[]
   // `true` archive, `false` restaure.
   archived?: boolean
