@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { SLOT_DURATION_OPTIONS } from '../../../constants/slot.constant.ts'
 import {
   NO_THEMATIC_ROLE,
+  PDF_NOTICE_HELP,
   THEMATIC_ROLE_OPTIONS,
   type ThematicRole,
 } from '../../../constants/thematic.constant.ts'
@@ -43,6 +44,7 @@ function AddThematicForm({ trigger }: AddThematicFormProps) {
     defaultValues: {
       name: '',
       duration: 15,
+      pdfNotice: '',
       role: NO_THEMATIC_ROLE,
       soignantIDs: [] as string[],
     },
@@ -50,6 +52,8 @@ function AddThematicForm({ trigger }: AddThematicFormProps) {
       createThematic.mutate({
         name: value.name,
         duration: Number(value.duration),
+        // Une consigne vide vaut « pas de consigne » : null plutot qu'une chaine vide.
+        pdfNotice: value.pdfNotice.trim() || null,
         role:
           value.role === NO_THEMATIC_ROLE ? null : (value.role as ThematicRole),
         soignantIDs: value.soignantIDs,
@@ -106,6 +110,15 @@ function AddThematicForm({ trigger }: AddThematicFormProps) {
                 <field.Select
                   options={SLOT_DURATION_OPTIONS}
                   label="Durée par défaut"
+                />
+              )}
+            </form.AppField>
+
+            <form.AppField name="pdfNotice">
+              {(field) => (
+                <field.TextArea
+                  label="Consigne affichée dans le programme PDF"
+                  description={PDF_NOTICE_HELP}
                 />
               )}
             </form.AppField>
