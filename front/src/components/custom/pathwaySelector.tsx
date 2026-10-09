@@ -319,12 +319,12 @@ function PathwayItem({
           </button>
         </span>
 
-        <span className="w-[22px] h-[22px] rounded-full bg-text text-white text-xs font-bold flex items-center justify-center">
+        <span className="w-[22px] h-[22px] rounded-full bg-foreground text-white text-xs font-bold flex items-center justify-center">
           {index + 1}
         </span>
 
         <div className="flex flex-col gap-1.5 min-w-0">
-          <span className="flex items-center gap-2 text-[15px] font-semibold text-text min-w-0">
+          <span className="flex items-center gap-2 text-[15px] font-semibold text-foreground min-w-0">
             <span
               className="w-2.5 h-2.5 rounded-[3px] shrink-0"
               style={{ backgroundColor: pathway.color }}
@@ -343,7 +343,7 @@ function PathwayItem({
                   className={cn(
                     'h-6 px-2 rounded text-xs whitespace-nowrap cursor-pointer',
                     active
-                      ? 'bg-white text-text font-semibold shadow-sm'
+                      ? 'bg-white text-foreground font-semibold shadow-sm'
                       : 'text-text-light',
                   )}
                 >
@@ -542,7 +542,7 @@ export function PathwaySelector({ state }: PathwaySelectorProps) {
       />
 
       <div className="flex justify-between items-baseline">
-        <span className="text-sm font-semibold text-text">
+        <span className="text-sm font-semibold text-foreground">
           Parcours à inscrire, par priorité
         </span>
         <span className="text-xs text-text-light">
