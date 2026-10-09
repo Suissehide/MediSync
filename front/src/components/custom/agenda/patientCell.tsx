@@ -14,6 +14,7 @@ import {
   TooltipRoot,
   TooltipTrigger,
 } from '../../ui/tooltip.tsx'
+import { Tronque } from './tronque.tsx'
 
 function ConvocationCheckbox({
   appointmentID,
@@ -106,11 +107,10 @@ export default function PatientCell({ row, onAddPatient }: PatientCellProps) {
     <div className="flex items-start gap-1">
       <div className="flex flex-col items-start gap-1">
         {visible.map((appointmentPatient) => (
-          <div
+          <Tronque
             key={appointmentPatient.patient.id}
             className="flex shrink-0 items-center gap-1"
-            // Colonne à largeur figée : un nom long est coupé, le survol le rend entier.
-            title={`${appointmentPatient.patient.firstName} ${appointmentPatient.patient.lastName}`}
+            texte={`${appointmentPatient.patient.firstName} ${appointmentPatient.patient.lastName}`}
           >
             {appointmentPatient.id && (
               <ConvocationCheckbox
@@ -163,7 +163,7 @@ export default function PatientCell({ row, onAddPatient }: PatientCellProps) {
                 </TooltipRoot>
               </TooltipProvider>
             )}
-          </div>
+          </Tronque>
         ))}
         {hidden > 0 && (
           <Button
