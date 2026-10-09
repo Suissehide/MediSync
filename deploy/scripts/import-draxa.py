@@ -156,6 +156,9 @@ COLORS = {"Atelier": "#60a5fa", "Consultation": "#34d399", "Entretien": "#fbbf24
           "Educative": "#a78bfa"}
 APPT_TYPE = {"tel": "telephonic", "ambu": "ambulatory", "hospit": "hospital"}
 YES_NO = {"oui": "yes", "non": "no"}
+# Catégories à plusieurs patients de l'ancien site (son formulaire de créneau y
+# ouvre la sélection multiple de patients, ailleurs un seul patient et 1 place).
+COLLECTIF = {"atelier", "educative", "coaching"}
 
 
 def day(v):
@@ -231,8 +234,12 @@ def main():
         if r["slot_id"] and f"clgx_sl_{r['slot_id']}" in all_slots:
             slot_of_rdv[r["id"]] = f"clgx_sl_{r['slot_id']}"
         else:
-            orphans[(r["date"], r["heure"], r["categorie"], r["thematique"])].append(r)
-    for (d, h, cat, them), group in orphans.items():
+            # Sans créneau d'origine, pas de places : le rdv est individuel, sauf dans
+            # les catégories multi-patients, où le groupe reconstitue le collectif.
+            key = (r["date"], r["heure"], r["categorie"], r["thematique"])
+            orphans[key if norm(r["categorie"]) in COLLECTIF else key + (r["patient_id"],)].append(r)
+    for key, group in orphans.items():
+        d, h, cat, them = key[:4]
         sid = f"clgx_sl_o{min(r['id'] for r in group)}"
         start = ts(d, h)
         # Places = patients distincts : un doublon de l'ancien site ne fait pas un collectif.
