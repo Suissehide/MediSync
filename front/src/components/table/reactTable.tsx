@@ -91,6 +91,7 @@ type ReactTableProps<TData extends { id: string }> = {
   isRowMuted?: (row: TData) => boolean
   isLoading?: boolean
   autoRowHeight?: boolean
+  virtualize?: boolean
   // Largeurs de colonnes figées sur les `size` au lieu de suivre le contenu :
   // plusieurs tables côte à côte s'alignent alors, et le trop-long est coupé.
   fixedLayout?: boolean
@@ -118,6 +119,7 @@ export function ReactTable<TData extends { id: string }>({
   isRowMuted,
   isLoading,
   autoRowHeight,
+  virtualize,
   fixedLayout,
   getSubRows,
   toolbar,
@@ -360,6 +362,7 @@ export function ReactTable<TData extends { id: string }>({
               parentRef={tableContainerRef}
               rowHeight={40}
               autoRowHeight={autoRowHeight}
+              virtualize={virtualize}
               fixedLayout={fixedLayout}
               onRowClick={onRowClick}
               emptyState={emptyState}

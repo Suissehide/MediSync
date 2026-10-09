@@ -121,6 +121,7 @@ function SoignantSettings() {
           columns={columns}
           filterId="soignant"
           isLoading={isPending}
+          virtualize={false}
         />
 
         <ConfirmDeleteForm
