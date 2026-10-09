@@ -189,6 +189,29 @@ describe('écran des indicateurs ARS', () => {
 
     await screen.findByRole('alert')
     expect(screen.getByRole('button', { name: 'Exporter' })).toBeDisabled()
+    expect(
+      screen.getByRole('button', { name: 'Exporter en CSV' }),
+    ).toBeDisabled()
+  })
+
+  it('propose de reessayer quand la lecture echoue', async () => {
+    monter({ ok: false, status: 500 })
+
+    await screen.findByRole('alert')
+    expect(screen.getByRole('button', { name: 'Réessayer' })).toBeEnabled()
+  })
+
+  it('active l export CSV une fois les indicateurs charges', async () => {
+    monter({
+      ok: true,
+      status: 200,
+      corps: { from: '2026-01-01', to: '2026-12-31', indicators: indicateurs },
+    })
+
+    await screen.findByText('7')
+    expect(
+      screen.getByRole('button', { name: 'Exporter en CSV' }),
+    ).toBeEnabled()
   })
 
   // La période est le paramètre de l'écran : le raccourci d'année règle les deux bornes, et la
