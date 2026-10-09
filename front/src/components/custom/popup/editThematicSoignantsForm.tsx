@@ -3,6 +3,11 @@ import type React from 'react'
 import { useEffect, useState } from 'react'
 
 import { SLOT_DURATION_OPTIONS } from '../../../constants/slot.constant.ts'
+import {
+  NO_THEMATIC_ROLE,
+  THEMATIC_ROLE_OPTIONS,
+  type ThematicRole,
+} from '../../../constants/thematic.constant.ts'
 import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { useThematicMutations } from '../../../queries/useThematic.ts'
 import type { Thematic, UpdateThematicParams } from '../../../types/thematic.ts'
@@ -21,6 +26,7 @@ type ThematicFormValues = {
   name: string
   duration: number
   pdfNotice: string
+  role: string
   soignantIDs: string[]
 }
 
@@ -34,6 +40,8 @@ function buildThematicPatch(
   // Une consigne vide vaut « pas de consigne » : on stocke null plutot qu'une
   // chaine vide pour que le PDF n'ait qu'un cas a tester.
   const pdfNotice = value.pdfNotice.trim() || null
+  const role =
+    value.role === NO_THEMATIC_ROLE ? null : (value.role as ThematicRole)
   const currentSoignantIDs = thematic.soignants.map((s) => s.id)
 
   if (value.name !== thematic.name) {
@@ -44,6 +52,9 @@ function buildThematicPatch(
   }
   if (pdfNotice !== (thematic.pdfNotice ?? null)) {
     patch.pdfNotice = pdfNotice
+  }
+  if (role !== (thematic.role ?? null)) {
+    patch.role = role
   }
   if (
     value.soignantIDs.length !== currentSoignantIDs.length ||
@@ -74,6 +85,7 @@ function EditThematicSoignantsForm({
       name: thematic.name,
       duration: thematic.duration ?? 15,
       pdfNotice: thematic.pdfNotice ?? '',
+      role: thematic.role ?? NO_THEMATIC_ROLE,
       soignantIDs: thematic.soignants.map((s) => s.id),
     },
     onSubmit: ({ value }) => {
@@ -93,6 +105,7 @@ function EditThematicSoignantsForm({
         name: thematic.name,
         duration: thematic.duration ?? 15,
         pdfNotice: thematic.pdfNotice ?? '',
+        role: thematic.role ?? NO_THEMATIC_ROLE,
         soignantIDs: thematic.soignants.map((s) => s.id),
       })
     }
@@ -102,7 +115,12 @@ function EditThematicSoignantsForm({
     <Popup modal={true} open={open} onOpenChange={setOpen}>
       <PopupTrigger asChild>
         {trigger ?? (
-          <Button variant="outline" size="icon" onClick={() => setOpen(true)}>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setOpen(true)}
+            title="Modifier la thématique"
+          >
             <Pencil className="w-4 h-4" />
           </Button>
         )}
@@ -139,6 +157,16 @@ function EditThematicSoignantsForm({
             <form.AppField name="pdfNotice">
               {(field) => (
                 <field.TextArea label="Consigne affichée dans le programme PDF" />
+              )}
+            </form.AppField>
+
+            <form.AppField name="role">
+              {(field) => (
+                <field.Select
+                  options={THEMATIC_ROLE_OPTIONS}
+                  label="Rôle dans les indicateurs"
+                  clearable={false}
+                />
               )}
             </form.AppField>
 
