@@ -120,6 +120,26 @@ describe('ReactTable : colonnes optionnelles', () => {
     expect(JSON.parse(localStorage.getItem('sorting/t') ?? '[]')).toEqual([])
   })
 
+  it('propose dans le filtre une valeur absente des choix, avec son compteur', async () => {
+    const avecInconnue: Ligne[] = [
+      ...lignes,
+      { id: '4', nom: 'Delta', diag: 'INSUFFISANCE_CARDIAQUE' },
+    ]
+    render(<ReactTable data={avecInconnue} columns={colonnes} filterId="t" />)
+    await afficherColonne('Diagnostic médical')
+    await userEvent.click(
+      barre().getByRole('button', { name: 'Diagnostic médical' }),
+    )
+    const item = await screen.findByRole('menuitemcheckbox', {
+      name: /INSUFFISANCE_CARDIAQUE/,
+    })
+    expect(within(item).getByText('1')).toBeTruthy()
+    await userEvent.click(item)
+    await userEvent.keyboard('{Escape}')
+    expect(screen.getByText('Delta')).toBeTruthy()
+    expect(noms()).toEqual([])
+  })
+
   it('ignore au chargement un filtre memorise sur une colonne masquee', () => {
     localStorage.setItem('column-visibility/t', JSON.stringify({ diag: false }))
     localStorage.setItem(

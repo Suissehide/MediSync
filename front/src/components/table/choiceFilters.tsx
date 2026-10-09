@@ -20,6 +20,11 @@ export function ChoiceFilters<TData>({ table }: { table: Table<TData> }) {
       column.setFilterValue(next.length ? next : undefined)
       table.setPageIndex(0)
     }
+    const known = new Set(meta.choices.map((c) => c.value))
+    // Valeurs présentes en base mais absentes des choix : filtrables quand même.
+    const unknown = [...counts.keys()]
+      .filter((v): v is string => typeof v === 'string' && !known.has(v))
+      .sort((a, b) => a.localeCompare(b, 'fr'))
     const items = [
       ...meta.choices.map((choice, index) => ({
         id: choice.value,
@@ -27,6 +32,12 @@ export function ChoiceFilters<TData>({ table }: { table: Table<TData> }) {
         color: choiceColor(index),
         checked: selected.includes(choice.value),
         count: counts.get(choice.value) ?? 0,
+      })),
+      ...unknown.map((value) => ({
+        id: value,
+        label: value,
+        checked: selected.includes(value),
+        count: counts.get(value) ?? 0,
       })),
       {
         id: EMPTY_CHOICE,
