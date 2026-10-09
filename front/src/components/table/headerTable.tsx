@@ -8,11 +8,13 @@ import type { CustomMeta } from './reactTable.tsx'
 type HeaderTableProps<TData> = {
   table: Table<TData>
   getCommonPinningStyles: (column: Column<TData>) => React.CSSProperties
+  fixedLayout?: boolean
 }
 
 export function HeaderTable<TData>({
   table,
   getCommonPinningStyles,
+  fixedLayout,
 }: HeaderTableProps<TData>) {
   return (
     <thead className="sticky top-0 z-10 bg-card">
@@ -50,7 +52,9 @@ export function HeaderTable<TData>({
               ...pinningStyles,
               minWidth: header.getSize(),
               maxWidth: maxSize ? maxSize : undefined,
-              width: grow ? '100%' : undefined,
+              // `table-fixed` ne regarde que `width` : sans elle, les colonnes
+              // se partageraient la largeur a parts egales.
+              width: grow ? '100%' : fixedLayout ? header.getSize() : undefined,
               ...(pinningStyles.backgroundColor
                 ? { backgroundColor: 'var(--color-card)' }
                 : {}),

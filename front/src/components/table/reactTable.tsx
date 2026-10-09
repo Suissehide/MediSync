@@ -28,7 +28,7 @@ import {
   useState,
 } from 'react'
 
-import { safeParse } from '../../libs/utils.ts'
+import { cn, safeParse } from '../../libs/utils.ts'
 import {
   dateFilterFn,
   dateRangeFilterFn,
@@ -84,6 +84,9 @@ type ReactTableProps<TData extends { id: string }> = {
   isRowMuted?: (row: TData) => boolean
   isLoading?: boolean
   autoRowHeight?: boolean
+  // Largeurs de colonnes figées sur les `size` au lieu de suivre le contenu :
+  // plusieurs tables côte à côte s'alignent alors, et le trop-long est coupé.
+  fixedLayout?: boolean
   // Sous-lignes d'une ligne, repliées par défaut.
   getSubRows?: (row: TData) => TData[] | undefined
 }
@@ -102,6 +105,7 @@ export function ReactTable<TData extends { id: string }>({
   isRowMuted,
   isLoading,
   autoRowHeight,
+  fixedLayout,
   getSubRows,
 }: ReactTableProps<TData>) {
   const initialColumnFilters = safeParse(
@@ -267,10 +271,16 @@ export function ReactTable<TData extends { id: string }>({
           className="w-full min-h-0 flex-1 overflow-auto rounded-lg"
           ref={tableContainerRef}
         >
-          <table className="table w-max min-w-full border-separate border-spacing-0">
+          <table
+            className={cn(
+              'table border-separate border-spacing-0',
+              fixedLayout ? 'table-fixed w-full' : 'w-max min-w-full',
+            )}
+          >
             <HeaderTable
               table={table}
               getCommonPinningStyles={getCommonPinningStyles}
+              fixedLayout={fixedLayout}
             />
 
             <VirtualizedBodyTable
@@ -279,6 +289,7 @@ export function ReactTable<TData extends { id: string }>({
               parentRef={tableContainerRef}
               rowHeight={40}
               autoRowHeight={autoRowHeight}
+              fixedLayout={fixedLayout}
               onRowClick={onRowClick}
               emptyState={emptyState}
               isRowDisabled={isRowDisabled}
