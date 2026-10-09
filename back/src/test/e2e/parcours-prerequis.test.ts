@@ -171,4 +171,24 @@ describe('parcours prérequis', () => {
       }),
     ).toBe(0)
   })
+
+  it("décale dans l'aperçu un parcours dont le prérequis est demandé en même temps", async () => {
+    const a = await createTemplate('APERCU-PRE-A', [])
+    const b = await createTemplate('APERCU-PRE-B', [a])
+    await createPathway(a, '2027-01-12T09:00:00.000Z')
+    await createPathway(b, '2027-01-05T09:00:00.000Z')
+    await createPathway(b, '2027-01-19T09:00:00.000Z')
+
+    const res = await inject('POST', '/patient/enroll/preview', {
+      pathways: [
+        { tag: 'APERCU-PRE-B', timeOfDay: 'ALL_DAY', startDate: '2027-01-01' },
+        { tag: 'APERCU-PRE-A', timeOfDay: 'ALL_DAY', startDate: '2027-01-01' },
+      ],
+    })
+    expect(res.statusCode).toBe(200)
+    expect(res.json().map((p: { startDate: string }) => p.startDate)).toEqual([
+      '2027-01-19T09:00:00.000Z',
+      '2027-01-12T09:00:00.000Z',
+    ])
+  })
 })
