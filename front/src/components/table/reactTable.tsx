@@ -130,10 +130,17 @@ export function ReactTable<TData extends { id: string }>({
       .filter((c) => c.meta?.optional && c.id)
       .map((c) => [c.id as string, false]),
   )
-  const initialColumnVisibility: VisibilityState = {
-    ...optionalDefaults,
-    ...safeParse(localStorage.getItem(`column-visibility/${filterId}`), {}),
-  }
+  const storedVisibility = safeParse<VisibilityState>(
+    localStorage.getItem(`column-visibility/${filterId}`),
+    {},
+  )
+  // Seules les colonnes optionnelles se masquent : une colonne devenue permanente réapparaît.
+  const initialColumnVisibility: VisibilityState = Object.fromEntries(
+    Object.keys(optionalDefaults).map((id) => [
+      id,
+      storedVisibility[id] ?? false,
+    ]),
+  )
   const initialColumnFilters = safeParse<ColumnFiltersState>(
     localStorage.getItem(`filters/${filterId}`),
     [],

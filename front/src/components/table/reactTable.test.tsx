@@ -184,6 +184,12 @@ describe('ReactTable : colonnes optionnelles', () => {
     expect(screen.getByText('P00')).toBeTruthy()
   })
 
+  it('ignore une visibilite memorisee pour une colonne qui n est pas optionnelle', () => {
+    localStorage.setItem('column-visibility/t', JSON.stringify({ nom: false }))
+    render(<ReactTable data={lignes} columns={colonnes} filterId="t" />)
+    expect(noms()).toEqual(['Alpha', 'Bravo', 'Charlie'])
+  })
+
   it('sans toolbar ni colonne optionnelle, aucune barre d outils', () => {
     render(<ReactTable data={lignes} columns={[colonneNom]} filterId="t" />)
     expect(screen.queryByRole('toolbar')).toBeNull()
