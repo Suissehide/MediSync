@@ -13,6 +13,7 @@ import sys
 import unicodedata
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta
+from pathlib import Path
 
 MYSQL = ["docker", "exec", "draxa-mysql", "mysql", "-uroot", "-proot", "inf",
          "--default-character-set=utf8mb4", "-N", "-B", "-r", "-e"]
@@ -169,6 +170,14 @@ def ts(d, t):
     return datetime.fromisoformat(f"{d}T{t}")
 
 
+MIGRATION_ROLE = Path(__file__).resolve().parents[2] / "back/prisma/migrations/20261009130000_thematic_role/migration.sql"
+
+
+def prefill_thematic_roles():
+    bloc = MIGRATION_ROLE.read_text().split("-- preremplissage-debut")[1].split("-- preremplissage-fin")[0]
+    return bloc.rstrip() + "\n  AND t.\"serviceId\" = :'svc';"
+
+
 def main():
     patients = rows("patient", ["id", "observ", "divers", "sexe", "nom", "prenom", "date", "tel1", "tel2",
                                 "distance", "etude", "profession", "activite", "diagnostic", "dedate",
@@ -254,6 +263,7 @@ def main():
     out.append("CREATE TEMP TABLE clgx_them(name text PRIMARY KEY, id text);")
     for n in them_names:
         out.append(lookup_or_create("Thematic", "clgx_them", n, "clgx_th_"))
+    out.append(prefill_thematic_roles())
     out.append("CREATE TEMP TABLE clgx_loc(name text PRIMARY KEY, id text);")
     for n in loc_names:
         out.append(lookup_or_create("Location", "clgx_loc", n, "clgx_lo_"))
