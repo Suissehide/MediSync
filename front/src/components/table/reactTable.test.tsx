@@ -168,6 +168,60 @@ describe('ReactTable : colonnes optionnelles', () => {
     expect(onActive).toHaveBeenLastCalledWith(false)
   })
 
+  it('revient a la premiere page quand la page reduit ses donnees (recherche)', async () => {
+    const beaucoup: Ligne[] = Array.from({ length: 30 }, (_, i) => ({
+      id: String(i),
+      nom: `P${String(i).padStart(2, '0')}`,
+      diag: null,
+    }))
+    const { rerender } = render(
+      <ReactTable
+        data={beaucoup}
+        columns={[colonneNom]}
+        filterId="t"
+        pagination
+      />,
+    )
+    await userEvent.click(screen.getByRole('button', { name: '2' }))
+    expect(screen.queryByText('P00')).toBeNull()
+
+    rerender(
+      <ReactTable
+        data={beaucoup.slice(0, 3)}
+        columns={[colonneNom]}
+        filterId="t"
+        pagination
+      />,
+    )
+    expect(screen.getByText('P00')).toBeTruthy()
+  })
+
+  it('reste sur sa page quand les donnees sont rechargees a l identique', async () => {
+    const beaucoup: Ligne[] = Array.from({ length: 30 }, (_, i) => ({
+      id: String(i),
+      nom: `P${String(i).padStart(2, '0')}`,
+      diag: null,
+    }))
+    const { rerender } = render(
+      <ReactTable
+        data={beaucoup}
+        columns={[colonneNom]}
+        filterId="t"
+        pagination
+      />,
+    )
+    await userEvent.click(screen.getByRole('button', { name: '2' }))
+    rerender(
+      <ReactTable
+        data={[...beaucoup]}
+        columns={[colonneNom]}
+        filterId="t"
+        pagination
+      />,
+    )
+    expect(screen.getByText('P25')).toBeTruthy()
+  })
+
   it('filtrer revient a la premiere page', async () => {
     const beaucoup: Ligne[] = Array.from({ length: 30 }, (_, i) => ({
       id: String(i),

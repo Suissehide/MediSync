@@ -272,6 +272,16 @@ export function ReactTable<TData extends { id: string }>({
     onFiltersActiveRef.current?.(columnFilters.length > 0)
   }, [columnFilters])
 
+  // Recherche ou filtre de la page : le nombre de lignes change, on repart de la première page.
+  const filteredCount = table.getFilteredRowModel().rows.length
+  const lastFilteredCount = useRef(filteredCount)
+  useEffect(() => {
+    if (filteredCount !== lastFilteredCount.current) {
+      lastFilteredCount.current = filteredCount
+      setPaginationState((p) => ({ ...p, pageIndex: 0 }))
+    }
+  }, [filteredCount])
+
   const getCommonPinningStyles = <TData,>(
     column: Column<TData, unknown>,
   ): CSSProperties => {
