@@ -110,7 +110,7 @@ export const getDayAppointmentColumns = ({
     columnHelper.display({
       id: 'soignants',
       header: 'Soignant',
-      size: 200,
+      size: 220,
       cell: ({ row }) => {
         const soignants = row.original.soignants
         if (row.depth > 0) {
@@ -122,7 +122,11 @@ export const getDayAppointmentColumns = ({
         const visible = soignants.slice(0, MAX_VISIBLE_CHIPS)
         const rest = soignants.length - visible.length
         return (
-          <div className="flex items-center gap-1 overflow-hidden">
+          // Colonne à largeur figée : une pastille coupée se lit au survol.
+          <div
+            className="flex items-center gap-1 overflow-hidden"
+            title={soignants.map((s) => s.name).join(', ')}
+          >
             {visible.map((soignant) => (
               <Etiquette
                 key={soignant.id}

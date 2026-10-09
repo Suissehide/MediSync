@@ -109,6 +109,8 @@ export default function PatientCell({ row, onAddPatient }: PatientCellProps) {
           <div
             key={appointmentPatient.patient.id}
             className="flex shrink-0 items-center gap-1"
+            // Colonne à largeur figée : un nom long est coupé, le survol le rend entier.
+            title={`${appointmentPatient.patient.firstName} ${appointmentPatient.patient.lastName}`}
           >
             {appointmentPatient.id && (
               <ConvocationCheckbox
