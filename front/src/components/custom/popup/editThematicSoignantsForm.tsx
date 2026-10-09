@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { SLOT_DURATION_OPTIONS } from '../../../constants/slot.constant.ts'
 import {
   NO_THEMATIC_ROLE,
+  PDF_NOTICE_HELP,
   THEMATIC_ROLE_OPTIONS,
   type ThematicRole,
 } from '../../../constants/thematic.constant.ts'
@@ -158,7 +159,7 @@ function EditThematicSoignantsForm({
               {(field) => (
                 <field.TextArea
                   label="Consigne affichée dans le programme PDF"
-                  description="%dates% est remplacé par les dates de cette thématique dans le programme du patient (« 12/05, 19/05 et 26/05 »). Une consigne qui contient %dates% n'est rappelée qu'une fois, avant la première semaine concernée."
+                  description={PDF_NOTICE_HELP}
                 />
               )}
             </form.AppField>
