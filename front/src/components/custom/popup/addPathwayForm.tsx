@@ -161,6 +161,7 @@ function AddPathwayForm({ trigger }: AddPathwayFormProps) {
                 options={(pathwayTemplates ?? []).map((t) => ({
                   value: t.id,
                   label: t.name,
+                  color: t.color,
                 }))}
                 value={prerequisiteIDs}
                 onChange={setPrerequisiteIDs}

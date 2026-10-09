@@ -215,7 +215,11 @@ export default function PathwayTemplateSheet({
                   <MultiSelect
                     options={(pathwayTemplates ?? [])
                       .filter((t) => t.id !== pathwayTemplate?.id)
-                      .map((t) => ({ value: t.id, label: t.name }))}
+                      .map((t) => ({
+                        value: t.id,
+                        label: t.name,
+                        color: t.color,
+                      }))}
                     value={prerequisiteIDs}
                     onChange={setPrerequisiteIDs}
                     placeholder="Aucun : le parcours peut commencer à tout moment"
