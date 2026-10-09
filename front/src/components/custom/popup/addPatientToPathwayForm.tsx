@@ -1,10 +1,8 @@
-import dayjs from 'dayjs'
 import { CalendarPlus, Check, X } from 'lucide-react'
 import { useState } from 'react'
 
-import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { usePatientMutations } from '../../../queries/usePatient.tsx'
-import type { Patient, TimeOfDay } from '../../../types/patient.ts'
+import type { Patient } from '../../../types/patient.ts'
 import { Button } from '../../ui/button.tsx'
 import {
   Popup,
@@ -15,11 +13,7 @@ import {
   PopupTitle,
   PopupTrigger,
 } from '../../ui/popup.tsx'
-import {
-  type PathwayPeriod,
-  PathwaySelector,
-  usePathwaySelector,
-} from '../pathwaySelector.tsx'
+import { PathwaySelector, usePathwaySelector } from '../pathwaySelector.tsx'
 
 interface AddPatientToPathwayFormProps {
   patient: Patient
@@ -29,50 +23,18 @@ export function AddPatientToPathwayForm({
   patient,
 }: AddPatientToPathwayFormProps) {
   const [open, setOpen] = useState(false)
-  const pathwayState = usePathwaySelector()
+  const pathwayState = usePathwaySelector(patient.id)
   const { enrollExistingPatient } = usePatientMutations()
 
-  const periodToTimeOfDay: Record<PathwayPeriod, TimeOfDay> = {
-    morning: 'MORNING',
-    afternoon: 'AFTERNOON',
-    fullday: 'ALL_DAY',
-  }
-
-  // Valeurs par défaut construites une seule fois : `useAppForm` réapplique ses
-  // options à chaque rendu et une date recalculée (les millisecondes changent)
-  // le ferait boucler.
-  const [defaultValues] = useState(() => ({
-    startDate: dayjs.utc().toISOString(),
-  }))
-
-  const form = useAppForm({
-    defaultValues,
-    onSubmit: ({ value }) => {
-      if (!pathwayState.addedPathways.length) {
-        return
-      }
-      enrollExistingPatient.mutate(
-        {
-          patientID: patient.id,
-          startDate: value.startDate,
-          pathways: pathwayState.addedPathways.map((p) => ({
-            tag: p.tag,
-            timeOfDay: periodToTimeOfDay[p.period],
-            thematicID: p.thematicID || undefined,
-            type: p.type,
-            motif: p.motif || undefined,
-            duration: p.thematicDuration ?? undefined,
-          })),
-        },
-        { onSuccess: () => setOpen(false) },
-      )
-    },
-  })
+  const submit = () =>
+    enrollExistingPatient.mutate(
+      { patientID: patient.id, pathways: pathwayState.enrollments },
+      { onSuccess: () => setOpen(false) },
+    )
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next)
     if (next) {
-      form.reset({ startDate: dayjs.utc().toISOString() })
       pathwayState.reset()
     }
   }
@@ -99,10 +61,6 @@ export function AddPatientToPathwayForm({
         </PopupHeader>
 
         <PopupBody className="flex flex-col gap-4">
-          <form.AppField name="startDate">
-            {(field) => <field.DatePicker label="Date de début" />}
-          </form.AppField>
-
           <em className="text-sm text-neutral-400">
             Ajoutez des parcours et organisez-les par ordre de priorité
           </em>
@@ -117,7 +75,7 @@ export function AddPatientToPathwayForm({
           </Button>
           <Button
             variant="default"
-            onClick={() => form.handleSubmit()}
+            onClick={submit}
             disabled={
               !pathwayState.addedPathways.length ||
               enrollExistingPatient.isPending ||

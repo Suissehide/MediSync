@@ -171,6 +171,8 @@ export const pathwayEnrollmentSchema = z.object({
   ),
   motif: z.string().optional(),
   duration: z.number().positive().optional(),
+  // Date de début propre au parcours ; à défaut, celle de la requête.
+  startDate: z.coerce.date().optional(),
 })
 
 export const enrollPatientInPathwaysSchema = z.object({
@@ -178,15 +180,30 @@ export const enrollPatientInPathwaysSchema = z.object({
   // sans elle, un des seize champs de service envoye ici serait retire en silence par Zod, et
   // l'appelant croirait l'avoir enregistre.
   patientData: patientSchema.strict(),
-  startDate: z.coerce.date(),
+  startDate: z.coerce.date().optional(),
   pathways: z.array(pathwayEnrollmentSchema).min(1),
 })
 
 export const enrollExistingPatientInPathwaysSchema = z.object({
   patientID: z.cuid(),
-  startDate: z.coerce.date(),
+  startDate: z.coerce.date().optional(),
   pathways: z.array(pathwayEnrollmentSchema).optional().default([]),
 })
+
+export const enrollmentPreviewSchema = z.object({
+  patientID: z.cuid().optional(),
+  pathways: z.array(
+    pathwayEnrollmentSchema.extend({ startDate: z.coerce.date() }),
+  ),
+})
+
+export const enrollmentPreviewResponseSchema = z.array(
+  z.object({
+    tag: z.string(),
+    startDate: z.date().nullable(),
+    reason: z.string().optional(),
+  }),
+)
 
 export const enrollmentAppointmentSchema = z.object({
   id: z.cuid().optional(),
@@ -226,6 +243,7 @@ export type EnrollExistingPatientInPathwaysBody = z.infer<
   typeof enrollExistingPatientInPathwaysSchema
 >
 export type EnrollmentResult = z.infer<typeof enrollmentResultSchema>
+export type EnrollmentPreviewBody = z.infer<typeof enrollmentPreviewSchema>
 
 export const patientPathwayParamsSchema = z.object({
   patientID: z.cuid(),
