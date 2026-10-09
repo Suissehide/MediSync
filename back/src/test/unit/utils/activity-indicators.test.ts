@@ -18,6 +18,7 @@ const presence = (p: Partial<ArsPresence> = {}): ArsPresence => ({
   individual: true,
   slotId: 'slot-1',
   thematicName: 'Mes médicaments',
+  thematicRole: null,
   honored: p.status === undefined || p.status === 'yes',
   accompanied: false,
   status: 'yes',
@@ -101,6 +102,7 @@ describe('completion', () => {
       patientId,
       date: new Date('2026-02-01T09:00:00Z'),
       thematicName: 'Réactu 1',
+      thematicRole: 'REACTUALISATION',
     }),
   ]
 
@@ -118,6 +120,27 @@ describe('completion', () => {
     )
     expect(r.completion.completed).toBe(1)
     expect(r.completion.rate).toBe(1)
+  })
+
+  it('reconnait un programme complet par le role, peu importe le nom de la thematique', () => {
+    const r = computeActivity(
+      cohorte([
+        dossier({
+          entryDate: new Date('2025-09-15'),
+          exitDate: new Date('2026-03-01'),
+          stopReason: 'PLUS_BESOIN_FIN_PARCOURS',
+          presences: [
+            presence({ date: new Date('2025-10-01T09:00:00Z') }),
+            presence({
+              date: new Date('2026-02-01T09:00:00Z'),
+              thematicName: 'SMCP Réactu 1',
+              thematicRole: 'REACTUALISATION',
+            }),
+          ],
+        }),
+      ]),
+    )
+    expect(r.completion.completed).toBe(1)
   })
 
   it('compte les abandons par motif, hors fin de parcours', () => {
@@ -297,9 +320,20 @@ describe('seances et temps soignant', () => {
       cohorte(
         [],
         [
-          presence({ thematicName: 'Diagnostic éducatif' }),
-          presence({ thematicName: 'Réactu 2' }),
-          presence({ thematicName: 'Réactu 3', status: 'no' }),
+          presence({
+            thematicName: 'Diagnostic éducatif',
+            thematicRole: 'DIAGNOSTIC_EDUCATIF',
+          }),
+          presence({ thematicName: 'Bilan', thematicRole: 'BILAN_DE_FIN' }),
+          presence({
+            thematicName: 'Réactu 1',
+            thematicRole: 'REACTUALISATION',
+          }),
+          presence({
+            thematicName: 'Bilan',
+            thematicRole: 'BILAN_DE_FIN',
+            status: 'no',
+          }),
         ],
       ),
     )

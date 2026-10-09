@@ -1,21 +1,4 @@
-import type { AppointmentType } from '../../generated/client'
-
-// Rattachement des thématiques à leur rôle dans la grille ARS. Liste nommée et non préfixe : les
-// quatre libellés de diagnostic éducatif des données réelles diffèrent par la casse de l'accent.
-// ponytail: constante pour le pilote ; devient un réglage par service (champ de rôle sur
-// `Thematic`) quand le chef de service doit le changer lui-même — les `compute` ne bougeront pas,
-// ils reçoivent déjà des rôles résolus.
-export const ARS_THEMATIC_ROLES = {
-  reactualisation: ['Réactu 1', 'Réactu 2', 'Réactu 3', 'Réactu 4'],
-  diagnosticEducatif: [
-    'Diagnostic éducatif',
-    'Diagnostic Éducatif – Bilan CEPTA',
-    'Diagnostic Éducatif – HDJ SMR',
-    'Diagnostic Éducatif – Ambulatoire',
-  ],
-} as const
-
-type ThematicRole = keyof typeof ARS_THEMATIC_ROLES
+import type { AppointmentType, ThematicRole } from '../../generated/client'
 
 // Les trois orientations de la grille, par la CLÉ que la base stocke. `toSelectOptions`
 // (`front/src/libs/utils.ts`) écrit la clé du dictionnaire `ORIENTATION`, jamais son libellé :
@@ -40,6 +23,7 @@ export type ArsPresence = {
   individual: boolean
   slotId: string
   thematicName: string | null
+  thematicRole: ThematicRole | null
   honored: boolean
   accompanied: boolean
   status: PresenceStatus
@@ -92,9 +76,8 @@ export type ArsIndicatorResult = {
 export const inRange = (date: Date | null, from: Date, to: Date): boolean =>
   date !== null && date >= from && date <= to
 
-export const isRole = (role: ThematicRole, name: string | null): boolean =>
-  name !== null &&
-  (ARS_THEMATIC_ROLES[role] as readonly string[]).includes(name)
+export const isRole = (role: ThematicRole, p: ArsPresence): boolean =>
+  p.thematicRole === role
 
 const honored = (file: ArsFile): ArsPresence[] =>
   file.presences.filter((p) => p.honored)
@@ -107,9 +90,7 @@ export const deDate = (file: ArsFile, c: ArsCohort): Date | null => {
   }
   const dates = honored(file)
     .filter(
-      (p) =>
-        inRange(p.date, c.from, c.to) &&
-        isRole('diagnosticEducatif', p.thematicName),
+      (p) => inRange(p.date, c.from, c.to) && isRole('DIAGNOSTIC_EDUCATIF', p),
     )
     .map((p) => p.date.getTime())
   return dates.length > 0 ? new Date(Math.min(...dates)) : null
@@ -154,8 +135,7 @@ const collectiveSlots = (c: ArsCohort): Map<string, ArsPresence[]> => {
   return slots
 }
 
-const isReactu = (p: ArsPresence): boolean =>
-  isRole('reactualisation', p.thematicName)
+const isReactu = (p: ArsPresence): boolean => isRole('REACTUALISATION', p)
 
 // Programme complet : un diagnostic éducatif, au moins une séance et au moins une
 // réactualisation après lui.
@@ -216,7 +196,7 @@ export const ARS_INDICATORS: readonly ArsIndicator[] = [
           honored(f).some(
             (p) =>
               inRange(p.date, c.from, c.to) &&
-              isRole('diagnosticEducatif', p.thematicName) &&
+              isRole('DIAGNOSTIC_EDUCATIF', p) &&
               p.type === 'telephonic',
           ),
       ),

@@ -65,7 +65,7 @@ class ArsIndicatorRepository implements ArsIndicatorRepositoryInterface {
               startDate: true,
               type: true,
               slotID: true,
-              thematic: { select: { name: true } },
+              thematic: { select: { name: true, role: true } },
               slot: {
                 select: {
                   startDate: true,
@@ -80,7 +80,7 @@ class ArsIndicatorRepository implements ArsIndicatorRepositoryInterface {
                   slotTemplate: {
                     select: {
                       isIndividual: true,
-                      thematic: { select: { name: true } },
+                      thematic: { select: { name: true, role: true } },
                       soignantLinks: {
                         select: { soignant: { select: { name: true } } },
                       },
@@ -94,31 +94,33 @@ class ArsIndicatorRepository implements ArsIndicatorRepositoryInterface {
       }),
     ])
 
-    const presences: ArsPresence[] = appointmentPatients.map((ap) => ({
-      patientId: ap.patientId,
-      date: ap.appointment.startDate,
-      type: ap.appointment.type,
-      individual: ap.appointment.slot.slotTemplate.isIndividual,
-      slotId: ap.appointment.slotID,
-      thematicName:
-        ap.appointment.thematic?.name ??
-        ap.appointment.slot.slotTemplate.thematic?.name ??
-        null,
-      honored: ap.status === 'yes',
-      accompanied: ap.accompanying === ARS_ACCOMPANYING_YES,
-      status: ap.status,
-      pathwayId: ap.appointment.slot.pathway?.id ?? null,
-      pathwayLabel: ap.appointment.slot.pathway
-        ? libelleParcours(ap.appointment.slot.pathway)
-        : null,
-      slotMinutes:
-        (ap.appointment.slot.endDate.getTime() -
-          ap.appointment.slot.startDate.getTime()) /
-        60_000,
-      soignants: ap.appointment.slot.slotTemplate.soignantLinks.map(
-        (l) => l.soignant.name,
-      ),
-    }))
+    const presences: ArsPresence[] = appointmentPatients.map((ap) => {
+      const thematique =
+        ap.appointment.thematic ?? ap.appointment.slot.slotTemplate.thematic
+      return {
+        patientId: ap.patientId,
+        date: ap.appointment.startDate,
+        type: ap.appointment.type,
+        individual: ap.appointment.slot.slotTemplate.isIndividual,
+        slotId: ap.appointment.slotID,
+        thematicName: thematique?.name ?? null,
+        thematicRole: thematique?.role ?? null,
+        honored: ap.status === 'yes',
+        accompanied: ap.accompanying === ARS_ACCOMPANYING_YES,
+        status: ap.status,
+        pathwayId: ap.appointment.slot.pathway?.id ?? null,
+        pathwayLabel: ap.appointment.slot.pathway
+          ? libelleParcours(ap.appointment.slot.pathway)
+          : null,
+        slotMinutes:
+          (ap.appointment.slot.endDate.getTime() -
+            ap.appointment.slot.startDate.getTime()) /
+          60_000,
+        soignants: ap.appointment.slot.slotTemplate.soignantLinks.map(
+          (l) => l.soignant.name,
+        ),
+      }
+    })
 
     const byPatient = new Map<string, ArsPresence[]>()
     for (const p of presences) {
