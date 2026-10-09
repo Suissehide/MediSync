@@ -174,8 +174,8 @@ MIGRATION_ROLE = Path(__file__).resolve().parents[2] / "back/prisma/migrations/2
 
 
 def prefill_thematic_roles():
-    bloc = MIGRATION_ROLE.read_text().split("-- preremplissage-debut")[1].split("-- preremplissage-fin")[0]
-    return bloc.rstrip() + "\n  AND t.\"serviceId\" = :'svc';"
+    bloc = MIGRATION_ROLE.read_text(encoding="utf-8").split("-- preremplissage-debut")[1].split("-- preremplissage-fin")[0]
+    return bloc.rstrip() + "\n  AND t.\"serviceId\" = :'svc' AND t.id IN (SELECT id FROM clgx_them);"
 
 
 def main():
