@@ -60,7 +60,7 @@ export const ACTIVITY_DEFINITIONS = [
   {
     label: 'Bilans de fin',
     definition:
-      "Présences à une réactualisation : approximation, il n'existe pas de bilan de fin dédié.",
+      "Présences à une thématique marquée « Bilan de fin » dans l'écran Thématiques.",
   },
   {
     label: 'Diagnostics éducatifs réalisés',

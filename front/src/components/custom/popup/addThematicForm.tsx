@@ -3,6 +3,11 @@ import type React from 'react'
 import { useEffect, useMemo, useState } from 'react'
 
 import { SLOT_DURATION_OPTIONS } from '../../../constants/slot.constant.ts'
+import {
+  NO_THEMATIC_ROLE,
+  THEMATIC_ROLE_OPTIONS,
+  type ThematicRole,
+} from '../../../constants/thematic.constant.ts'
 import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { useSoignantQueries } from '../../../queries/useSoignant.ts'
 import { useThematicMutations } from '../../../queries/useThematic.ts'
@@ -38,12 +43,15 @@ function AddThematicForm({ trigger }: AddThematicFormProps) {
     defaultValues: {
       name: '',
       duration: 15,
+      role: NO_THEMATIC_ROLE,
       soignantIDs: [] as string[],
     },
     onSubmit: ({ value }) => {
       createThematic.mutate({
         name: value.name,
         duration: Number(value.duration),
+        role:
+          value.role === NO_THEMATIC_ROLE ? null : (value.role as ThematicRole),
         soignantIDs: value.soignantIDs,
       })
       setOpen(false)
@@ -98,6 +106,16 @@ function AddThematicForm({ trigger }: AddThematicFormProps) {
                 <field.Select
                   options={SLOT_DURATION_OPTIONS}
                   label="Durée par défaut"
+                />
+              )}
+            </form.AppField>
+
+            <form.AppField name="role">
+              {(field) => (
+                <field.Select
+                  options={THEMATIC_ROLE_OPTIONS}
+                  label="Rôle dans les indicateurs"
+                  clearable={false}
                 />
               )}
             </form.AppField>

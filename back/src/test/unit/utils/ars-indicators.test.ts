@@ -4,7 +4,6 @@ import { join } from 'node:path'
 import {
   ARS_ACCOMPANYING_YES,
   ARS_ORIENTATIONS,
-  ARS_THEMATIC_ROLES,
   type ArsCohort,
   type ArsFile,
   type ArsPresence,
@@ -23,6 +22,7 @@ const presence = (p: Partial<ArsPresence> = {}): ArsPresence => ({
   individual: true,
   slotId: 'slot-1',
   thematicName: 'Mes médicaments',
+  thematicRole: null,
   honored: true,
   accompanied: false,
   pathwayId: null,
@@ -58,27 +58,6 @@ const valeur = (cohort: ArsCohort, code: string): number | null => {
   return found.value
 }
 
-describe('rôles de thématiques', () => {
-  it('reconnaît les quatre libellés de diagnostic éducatif, majuscule accentuée comprise', () => {
-    expect(ARS_THEMATIC_ROLES.diagnosticEducatif).toContain(
-      'Diagnostic Éducatif – HDJ SMR',
-    )
-    expect(ARS_THEMATIC_ROLES.diagnosticEducatif).toContain(
-      'Diagnostic éducatif',
-    )
-  })
-
-  it('ne reconnaît pas une thématique inconnue', () => {
-    expect(ARS_THEMATIC_ROLES.reactualisation).not.toContain('Réactu 5')
-    expect(ARS_THEMATIC_ROLES.reactualisation).toEqual([
-      'Réactu 1',
-      'Réactu 2',
-      'Réactu 3',
-      'Réactu 4',
-    ])
-  })
-})
-
 describe('groupe 1 — entrée', () => {
   it('1.1 compte les dossiers dont la date d entree tombe dans la periode', () => {
     const c = cohorte([
@@ -95,6 +74,7 @@ describe('groupe 1 — entrée', () => {
         presences: [
           presence({
             thematicName: 'Diagnostic Éducatif – Ambulatoire',
+            thematicRole: 'DIAGNOSTIC_EDUCATIF',
             date: new Date('2026-04-02'),
           }),
         ],
@@ -127,6 +107,7 @@ describe('groupe 1 — entrée', () => {
         presences: [
           presence({
             thematicName: 'Diagnostic éducatif',
+            thematicRole: 'DIAGNOSTIC_EDUCATIF',
             type: 'telephonic',
             date: new Date('2026-02-01'),
           }),
@@ -280,7 +261,11 @@ describe('groupe 2 — séances et mode de prise en charge', () => {
 })
 
 const reactu = (p: Partial<ArsPresence> = {}) =>
-  presence({ thematicName: 'Réactu 1', ...p })
+  presence({
+    thematicName: 'Réactu 1',
+    thematicRole: 'REACTUALISATION',
+    ...p,
+  })
 
 describe('groupe 3 — sortie', () => {
   it('3.1 exige une seance et une reactualisation apres le diagnostic educatif', () => {

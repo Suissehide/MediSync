@@ -4,6 +4,7 @@ import { Archive, Trash2, Undo2 } from 'lucide-react'
 import EditThematicSoignantsForm from '../components/custom/popup/editThematicSoignantsForm.tsx'
 import { EtiquettesTronquees } from '../components/table/etiquette.tsx'
 import { Button } from '../components/ui/button.tsx'
+import { THEMATIC_ROLE } from '../constants/thematic.constant.ts'
 import type { Thematic } from '../types/thematic.ts'
 
 const columnHelper = createColumnHelper<Thematic>()
@@ -63,6 +64,15 @@ export const getThematicColumns = ({
             {notice}
           </span>
         )
+      },
+    }),
+    columnHelper.display({
+      id: 'role',
+      header: 'Rôle',
+      size: 160,
+      cell: ({ row }) => {
+        const role = row.original.role
+        return role ? THEMATIC_ROLE[role] : '—'
       },
     }),
     columnHelper.display({

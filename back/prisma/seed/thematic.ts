@@ -33,6 +33,7 @@ export default async function seedThematics(
         },
         update: {
           duration,
+          role: t.role,
           soignantLinks: {
             deleteMany: {},
             create: soignantLinks,
@@ -41,6 +42,7 @@ export default async function seedThematics(
         create: {
           name: t.name,
           duration,
+          role: t.role,
           establishmentId: tenant.establishmentId,
           serviceId: tenant.serviceId,
           soignantLinks: {

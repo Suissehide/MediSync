@@ -43,7 +43,7 @@ const FAKE_ID = 'clzzzzzzzzzzzzzzzzzzzzzzz'
 // route et le domaine).
 const probes: {
   permission: ServicePermission
-  method: 'GET' | 'POST' | 'DELETE'
+  method: 'GET' | 'POST' | 'PATCH' | 'DELETE'
   path: string
   payload?: unknown
   heldStatus?: number
@@ -71,6 +71,12 @@ const probes: {
     method: 'POST',
     path: '/thematic',
     payload: { name: 'X', soignantIDs: [] },
+  },
+  {
+    permission: 'referentials:write',
+    method: 'PATCH',
+    path: `/thematic/${FAKE_ID}`,
+    payload: { role: null },
   },
   {
     permission: 'patient:read',

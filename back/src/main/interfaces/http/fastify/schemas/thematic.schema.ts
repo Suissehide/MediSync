@@ -1,9 +1,16 @@
 import { z } from 'zod/v4'
 
+const thematicRole = z.enum([
+  'DIAGNOSTIC_EDUCATIF',
+  'REACTUALISATION',
+  'BILAN_DE_FIN',
+])
+
 const thematicEntity = {
   name: z.string().min(1),
   duration: z.number().optional().nullable(),
   pdfNotice: z.string().optional().nullable(),
+  role: thematicRole.optional().nullable(),
 }
 
 export const thematicResponseSchema = z.object({
@@ -11,6 +18,7 @@ export const thematicResponseSchema = z.object({
   name: z.string(),
   duration: z.number().optional().nullable(),
   pdfNotice: z.string().optional().nullable(),
+  role: thematicRole.optional().nullable(),
   soignants: z.array(z.object({ id: z.cuid(), name: z.string() })),
 })
 
@@ -33,6 +41,7 @@ export const updateThematicSchema = z.object({
   name: z.string().min(1).optional(),
   duration: z.number().optional().nullable(),
   pdfNotice: z.string().optional().nullable(),
+  role: thematicRole.optional().nullable(),
   soignantIDs: z.array(z.cuid()).optional(),
   archived: z.boolean().optional(),
 })

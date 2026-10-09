@@ -1,3 +1,5 @@
+import type { ThematicRole } from '../../../src/generated/client'
+
 export interface ThematicData {
   name: string
   canevasName?: string
@@ -6,6 +8,7 @@ export interface ThematicData {
   soignantNames: string[]
   locations: string[]
   capacity?: number
+  role?: ThematicRole
 }
 
 export const THEMATICS: ThematicData[] = [
@@ -320,6 +323,7 @@ export const THEMATICS: ThematicData[] = [
     ],
     locations: ['Bureau médical 1', 'Bureau 6', 'Bureau 7'],
     capacity: 1,
+    role: 'DIAGNOSTIC_EDUCATIF',
   },
   {
     name: "Epreuve d'effort Vo2",
@@ -424,6 +428,7 @@ export const THEMATICS: ThematicData[] = [
     durations: [],
     soignantNames: ['IDE Educ1', 'IDE Educ2', 'IDE Educ3', 'Diététicienne'],
     locations: [],
+    role: 'DIAGNOSTIC_EDUCATIF',
   },
   {
     name: 'Diagnostic Éducatif – HDJ SMR',
@@ -431,6 +436,7 @@ export const THEMATICS: ThematicData[] = [
     durations: [],
     soignantNames: ['IDE SSR', 'IDE Educ1', 'IDE Educ2', 'IDE Educ3'],
     locations: [],
+    role: 'DIAGNOSTIC_EDUCATIF',
   },
   {
     name: 'Diagnostic Éducatif – Ambulatoire',
@@ -438,6 +444,7 @@ export const THEMATICS: ThematicData[] = [
     durations: [],
     soignantNames: ['IDE Educ1', 'IDE Educ2', 'IDE Educ3'],
     locations: [],
+    role: 'DIAGNOSTIC_EDUCATIF',
   },
   {
     name: 'Réactu 1',
@@ -445,6 +452,7 @@ export const THEMATICS: ThematicData[] = [
     durations: [],
     soignantNames: ['IDE Educ1', 'IDE Educ2', 'IDE Educ3'],
     locations: [],
+    role: 'REACTUALISATION',
   },
   {
     name: 'Réactu 2',
@@ -452,6 +460,7 @@ export const THEMATICS: ThematicData[] = [
     durations: [],
     soignantNames: ['IDE Educ1', 'IDE Educ2', 'IDE Educ3'],
     locations: [],
+    role: 'REACTUALISATION',
   },
   {
     name: 'Réactu 3',
@@ -459,6 +468,7 @@ export const THEMATICS: ThematicData[] = [
     durations: [],
     soignantNames: ['IDE Educ1', 'IDE Educ2', 'IDE Educ3'],
     locations: [],
+    role: 'REACTUALISATION',
   },
   {
     name: 'Réactu 4',
@@ -466,6 +476,7 @@ export const THEMATICS: ThematicData[] = [
     durations: [],
     soignantNames: ['IDE Educ1', 'IDE Educ2', 'IDE Educ3'],
     locations: [],
+    role: 'REACTUALISATION',
   },
   {
     name: 'Motivation Alimentation',

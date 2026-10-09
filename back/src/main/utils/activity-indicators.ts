@@ -177,11 +177,9 @@ export const computeActivity = (cohort: ArsCohort): ActivityReport => {
         honored.filter((p) => !p.individual).map((p) => p.slotId),
       ).size,
       educationalDiagnoses: honored.filter((p) =>
-        isRole('diagnosticEducatif', p.thematicName),
+        isRole('DIAGNOSTIC_EDUCATIF', p),
       ).length,
-      finalReviews: honored.filter((p) =>
-        isRole('reactualisation', p.thematicName),
-      ).length,
+      finalReviews: honored.filter((p) => isRole('BILAN_DE_FIN', p)).length,
     },
     hoursBySoignant: hoursBySoignant(honored),
   }

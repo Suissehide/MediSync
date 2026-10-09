@@ -299,6 +299,14 @@ describe('indicateurs ARS', () => {
         establishmentId,
       },
     })
+    const thematique = await testDb.thematic.create({
+      data: {
+        name: 'Réactu modèle',
+        role: 'REACTUALISATION',
+        serviceId: serviceA,
+        establishmentId,
+      },
+    })
     const slotTemplate = await testDb.slotTemplate.create({
       data: {
         startTime: new Date(),
@@ -308,6 +316,7 @@ describe('indicateurs ARS', () => {
         color: '#fff',
         serviceId: serviceA,
         establishmentId,
+        thematicId: thematique.id,
       },
     })
     const soignant = await testDb.soignant.create({
@@ -381,6 +390,7 @@ describe('indicateurs ARS', () => {
     expect(presence?.pathwayLabel).toBe('Réadaptation — 05/10/2026')
     expect(presence?.slotMinutes).toBe(90)
     expect(presence?.soignants).toEqual(['IDE'])
+    expect(presence?.thematicRole).toBe('REACTUALISATION')
 
     const fichier = cohorte.files.find((f) => f.patientId === patient.id)
     expect(fichier).toBeDefined()
