@@ -29,6 +29,9 @@ import {
 } from 'react'
 
 import { cn, safeParse } from '../../libs/utils.ts'
+import type { Choice } from './choiceColumn.tsx'
+import { ChoiceFilters } from './choiceFilters.tsx'
+import { ColumnPicker } from './columnPicker.tsx'
 import {
   dateFilterFn,
   dateRangeFilterFn,
@@ -50,6 +53,10 @@ export type CustomMeta<TData, TValue> = {
   filter?: FC<{ column: Column<TData, TValue> }>
   // Nombre de colonnes couvertes par la cellule de cette ligne (les suivantes sont sautées).
   colSpan?: (row: TData) => number
+  // Colonne masquée par défaut, que l'utilisateur ajoute depuis « Colonnes ».
+  optional?: { label: string; group?: string }
+  // Colonne à choix : étiquettes colorées et filtre à cocher dans la barre d'outils.
+  choices?: Choice[]
 }
 
 // Id DOM d'une ligne, pour la désigner (aria-controls) depuis une autre.
@@ -90,6 +97,12 @@ type ReactTableProps<TData extends { id: string }> = {
   fixedLayout?: boolean
   // Sous-lignes d'une ligne, repliées par défaut.
   getSubRows?: (row: TData) => TData[] | undefined
+  // Contrôles de la page, à gauche et à droite de la barre d'outils.
+  toolbar?: ReactNode
+  toolbarEnd?: ReactNode
+  // Chaque changement de valeur vide les filtres de colonnes.
+  resetSignal?: number
+  onColumnFiltersActiveChange?: (active: boolean) => void
 }
 
 export function ReactTable<TData extends { id: string }>({
@@ -109,15 +122,31 @@ export function ReactTable<TData extends { id: string }>({
   virtualize,
   fixedLayout,
   getSubRows,
+  toolbar,
+  toolbarEnd,
+  resetSignal,
+  onColumnFiltersActiveChange,
 }: ReactTableProps<TData>) {
-  const initialColumnFilters = safeParse(
-    localStorage.getItem(`filters/${filterId}`),
-    [],
+  const optionalDefaults: VisibilityState = Object.fromEntries(
+    columns
+      .filter((c) => c.meta?.optional && c.id)
+      .map((c) => [c.id as string, false]),
   )
-  const initialColumnVisibility = safeParse(
+  const storedVisibility = safeParse<VisibilityState>(
     localStorage.getItem(`column-visibility/${filterId}`),
     {},
   )
+  // Seules les colonnes optionnelles se masquent : une colonne devenue permanente réapparaît.
+  const initialColumnVisibility: VisibilityState = Object.fromEntries(
+    Object.keys(optionalDefaults).map((id) => [
+      id,
+      storedVisibility[id] ?? false,
+    ]),
+  )
+  const initialColumnFilters = safeParse<ColumnFiltersState>(
+    localStorage.getItem(`filters/${filterId}`),
+    [],
+  ).filter((f) => initialColumnVisibility[f.id] !== false)
 
   const [sorting, setSorting] = useState<SortingState>(
     safeParse(localStorage.getItem(`sorting/${filterId}`), []),
@@ -224,6 +253,25 @@ export function ReactTable<TData extends { id: string }>({
     )
   }, [columnVisibility, filterId])
 
+  useEffect(() => {
+    const ids = new Set(table.getAllLeafColumns().map((c) => c.id))
+    setColumnFilters((fs) => fs.filter((f) => ids.has(f.id)))
+  }, [table])
+
+  const lastResetSignal = useRef(resetSignal)
+  useEffect(() => {
+    if (resetSignal !== lastResetSignal.current) {
+      lastResetSignal.current = resetSignal
+      setColumnFilters([])
+    }
+  }, [resetSignal])
+
+  const onFiltersActiveRef = useRef(onColumnFiltersActiveChange)
+  onFiltersActiveRef.current = onColumnFiltersActiveChange
+  useEffect(() => {
+    onFiltersActiveRef.current?.(columnFilters.length > 0)
+  }, [columnFilters])
+
   const getCommonPinningStyles = <TData,>(
     column: Column<TData, unknown>,
   ): CSSProperties => {
@@ -254,6 +302,11 @@ export function ReactTable<TData extends { id: string }>({
     }
   }, [table])
 
+  const hasToolbar =
+    toolbar !== undefined ||
+    toolbarEnd !== undefined ||
+    columns.some((c) => c.meta?.optional)
+
   const totalRows =
     serverPagination?.rowCount ?? table.getFilteredRowModel().rows.length
   const tableContainerRef = useRef(null)
@@ -261,6 +314,24 @@ export function ReactTable<TData extends { id: string }>({
   return (
     <div className="flex flex-1 min-h-0 flex-col">
       {title && <div className="px-4 mb-4 text-2xl font-bold">{title}</div>}
+
+      {hasToolbar && (
+        <div
+          role="toolbar"
+          aria-label="Filtres du tableau"
+          className="mb-4 flex flex-wrap items-center gap-3"
+        >
+          {toolbar}
+          <ChoiceFilters table={table} />
+          <ColumnPicker table={table} />
+          {toolbarEnd && (
+            <>
+              <div className="flex-1 border-t border-border" />
+              {toolbarEnd}
+            </>
+          )}
+        </div>
+      )}
 
       <div className="react-table__filter">
         <div className="above-table__container"></div>

@@ -139,7 +139,19 @@ class PatientRepository implements PatientRepositoryInterface {
         },
         serviceFiles: {
           where: { serviceId: this.scope.serviceId },
-          select: { enrollmentIssues: true, entryDate: true, exitDate: true },
+          select: {
+            enrollmentIssues: true,
+            entryDate: true,
+            exitDate: true,
+            medicalDiagnosis: true,
+            careMode: true,
+            orientation: true,
+            etpDecision: true,
+            programType: true,
+            nonInclusionDetails: true,
+            stopReason: true,
+            etpFinalOutcome: true,
+          },
         },
       },
     })
@@ -161,6 +173,14 @@ class PatientRepository implements PatientRepositoryInterface {
           enrollmentIssues: serviceFiles.flatMap((f) => f.enrollmentIssues),
           entryDate: serviceFiles[0]?.entryDate ?? null,
           exitDate: serviceFiles[0]?.exitDate ?? null,
+          medicalDiagnosis: serviceFiles[0]?.medicalDiagnosis ?? null,
+          careMode: serviceFiles[0]?.careMode ?? null,
+          orientation: serviceFiles[0]?.orientation ?? null,
+          etpDecision: serviceFiles[0]?.etpDecision ?? null,
+          programType: serviceFiles[0]?.programType ?? null,
+          nonInclusionDetails: serviceFiles[0]?.nonInclusionDetails ?? null,
+          stopReason: serviceFiles[0]?.stopReason ?? null,
+          etpFinalOutcome: serviceFiles[0]?.etpFinalOutcome ?? null,
         }
       },
     )
