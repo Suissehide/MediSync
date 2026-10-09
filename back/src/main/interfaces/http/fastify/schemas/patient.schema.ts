@@ -76,6 +76,7 @@ export const patientDetailResponseSchema = patientResponseSchema.extend({
 
 export const patientWithTagsResponseSchema = patientResponseSchema.extend({
   pathwayTemplateTags: z.array(z.string()),
+  pathwayTagColors: z.record(z.string(), z.string()).optional(),
   // Date d'entree dans le service courant : jointe depuis le sous-dossier de service filtre
   // sur ce service (`findAllWithTags`, back), pas depuis `patientEntity` — `null` si le
   // patient n'a pas encore de sous-dossier dans ce service.

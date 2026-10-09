@@ -82,10 +82,7 @@ function PatientList() {
     })
   }
 
-  const columns = getPatientColumns({
-    onView: handleRedirectPatient,
-    pathwayTemplates: pathwayTemplates ?? [],
-  })
+  const columns = getPatientColumns({ onView: handleRedirectPatient })
 
   // Couleur d'un tag principal : celle du premier parcours qui le porte.
   const tagColors = useMemo(() => {

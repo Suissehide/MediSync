@@ -38,6 +38,8 @@ export type Patient = {
 
 export type PatientWithTags = Patient & {
   pathwayTemplateTags: string[]
+  // Couleur de chaque tag : celle du parcours du patient le mieux classé qui le porte.
+  pathwayTagColors?: Record<string, string>
   // Date d'entrée dans le service courant : vit sur `PatientServiceFile`
   // (`types/patientServiceFile.ts`), mais `GET /patient/with-tags` joint déjà le sous-dossier
   // filtré sur le service courant et l'aplatit sur la ligne (back, `patient.repository.ts`
