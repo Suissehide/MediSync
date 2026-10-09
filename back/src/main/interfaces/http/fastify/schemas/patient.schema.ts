@@ -82,6 +82,14 @@ export const patientWithTagsResponseSchema = patientResponseSchema.extend({
   // patient n'a pas encore de sous-dossier dans ce service.
   entryDate: z.coerce.date().optional().nullable(),
   exitDate: z.coerce.date().optional().nullable(),
+  medicalDiagnosis: z.string().nullable().optional(),
+  careMode: z.string().nullable().optional(),
+  orientation: z.string().nullable().optional(),
+  etpDecision: z.string().nullable().optional(),
+  programType: z.string().nullable().optional(),
+  nonInclusionDetails: z.string().nullable().optional(),
+  stopReason: z.string().nullable().optional(),
+  etpFinalOutcome: z.string().nullable().optional(),
 })
 
 export const patientsWithTagsResponseSchema = z.array(
