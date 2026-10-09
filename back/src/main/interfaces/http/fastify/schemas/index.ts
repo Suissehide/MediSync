@@ -110,6 +110,7 @@ export const pathwayTemplateSchema = z.object({
   secondaryTags: z.array(z.string()).default([]),
   motifRequired: z.boolean().default(false),
   firstAppointmentOnly: z.boolean().default(false),
+  prerequisiteIDs: z.array(z.cuid()).default([]),
 
   get slotTemplates() {
     return z.array(slotTemplateSchema).optional().nullable()

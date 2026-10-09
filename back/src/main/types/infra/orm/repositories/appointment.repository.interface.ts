@@ -60,4 +60,8 @@ export interface AppointmentRepositoryInterface {
   ) => Promise<void>
   delete: (appointmentID: string) => Promise<AppointmentEntityRepo>
   deleteOrphanedByIds: (appointmentIDs: string[]) => Promise<number>
+  findLastEndDateForPatient: (
+    patientID: string,
+    templateIDs: string[],
+  ) => Promise<Date | null>
 }

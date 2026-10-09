@@ -17,6 +17,7 @@ export type PathwayTemplateCreateEntityRepo = Omit<
 > & {
   slotTemplateIDs?: string[]
   secondaryTags?: string[]
+  prerequisiteIDs?: string[]
 }
 export type PathwayTemplateUpdateEntityRepo = Omit<
   Prisma.PathwayTemplateUncheckedUpdateInput,
@@ -25,6 +26,7 @@ export type PathwayTemplateUpdateEntityRepo = Omit<
   pathwayIDs?: string[]
   slotTemplateIDs?: string[]
   secondaryTags?: string[]
+  prerequisiteIDs?: string[]
 }
 
 export interface PathwayTemplateRepositoryInterface {
