@@ -262,6 +262,22 @@ class AppointmentRepository implements AppointmentRepositoryInterface {
     }
   }
 
+  async findLastEndDateForPatient(
+    patientID: string,
+    templateIDs: string[],
+  ): Promise<Date | null> {
+    const row = await this.prisma.appointment.findFirst({
+      where: {
+        ...this.scope,
+        appointmentPatients: { some: { patientId: patientID } },
+        slot: { pathway: { templateID: { in: templateIDs } } },
+      },
+      orderBy: { endDate: 'desc' },
+      select: { endDate: true },
+    })
+    return row?.endDate ?? null
+  }
+
   async deleteOrphanedByIds(appointmentIDs: string[]): Promise<number> {
     if (appointmentIDs.length === 0) {
       return 0

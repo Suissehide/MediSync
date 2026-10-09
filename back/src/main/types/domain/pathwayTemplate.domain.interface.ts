@@ -14,6 +14,7 @@ export type PathwayTemplateCreateEntityDomain = Omit<
 > & {
   slotTemplateIDs?: string[]
   secondaryTags?: string[]
+  prerequisiteIDs?: string[]
 }
 export type PathwayTemplateUpdateEntityDomain = Omit<
   Prisma.PathwayTemplateUncheckedUpdateInput,
@@ -22,6 +23,7 @@ export type PathwayTemplateUpdateEntityDomain = Omit<
   pathwayIDs?: string[]
   slotTemplateIDs?: string[]
   secondaryTags?: string[]
+  prerequisiteIDs?: string[]
 }
 
 export interface PathwayTemplateDomainInterface {
