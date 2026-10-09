@@ -17,6 +17,7 @@ type VirtualizedBodyTableProps<TData> = {
   getCommonPinningStyles: (column: Column<TData>) => React.CSSProperties
   rowHeight: number
   autoRowHeight?: boolean
+  fixedLayout?: boolean
   parentRef: RefObject<HTMLElement | null>
   onRowClick?: (row: TData) => void
   emptyState?: ReactNode
@@ -73,6 +74,7 @@ export function VirtualizedBodyTable<TData>({
   getCommonPinningStyles,
   rowHeight,
   autoRowHeight = false,
+  fixedLayout,
   parentRef,
   onRowClick,
   emptyState,
@@ -215,6 +217,8 @@ export function VirtualizedBodyTable<TData>({
                   className={cn(
                     'px-4 py-2 text-sm border-b border-border',
                     autoRowHeight && 'align-top',
+                    // Largeur figee : ce qui depasse est coupe, pas etale sur la colonne suivante.
+                    fixedLayout && 'overflow-hidden',
                     isChild && !isLastChild && 'border-b-[#eef2f6]',
                   )}
                   style={{

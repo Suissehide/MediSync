@@ -17,7 +17,7 @@ import { Etiquette } from '../components/table/etiquette.tsx'
 import { Button } from '../components/ui/button.tsx'
 import { APPOINTMENT_TYPE } from '../constants/appointment.constant.ts'
 import { styleSoignant } from '../libs/color.ts'
-import type { DaySlotRow } from '../libs/utils.ts'
+import { cn, type DaySlotRow } from '../libs/utils.ts'
 
 const columnHelper = createColumnHelper<DaySlotRow>()
 
@@ -28,6 +28,19 @@ const parentsOnly: SortingFn<DaySlotRow> = (a, b, columnId) =>
 
 // Une plage repliée : sa frise occupe les colonnes Patients et Type.
 const isRange = (row: DaySlotRow) => !!row.subRows
+
+// Colonnes à largeur figée : le texte trop long est coupé, le survol le rend entier.
+const Tronque = ({
+  children,
+  className,
+}: {
+  children: string
+  className?: string
+}) => (
+  <span className={cn('min-w-0 truncate', className)} title={children}>
+    {children}
+  </span>
+)
 
 const summarizeThematics = (row: DaySlotRow) => {
   const thematics = [
@@ -78,12 +91,12 @@ export const getDayAppointmentColumns = ({
         }
         if (isRange(row.original)) {
           return (
-            <span className="text-text-light">
+            <Tronque className="text-text-light">
               {summarizeThematics(row.original)}
-            </span>
+            </Tronque>
           )
         }
-        return getValue() || '—'
+        return <Tronque>{getValue() || '—'}</Tronque>
       },
     }),
     // Lieu, soignant et places sont ceux du créneau : pas répétés sur ses sous-lignes.
@@ -91,7 +104,8 @@ export const getDayAppointmentColumns = ({
       header: 'Lieu',
       size: 160,
       sortingFn: parentsOnly,
-      cell: ({ row, getValue }) => (row.depth > 0 ? null : getValue() || '—'),
+      cell: ({ row, getValue }) =>
+        row.depth > 0 ? null : <Tronque>{getValue() || '—'}</Tronque>,
     }),
     columnHelper.display({
       id: 'soignants',
