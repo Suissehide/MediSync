@@ -235,8 +235,10 @@ def main():
     for (d, h, cat, them), group in orphans.items():
         sid = f"clgx_sl_o{min(r['id'] for r in group)}"
         start = ts(d, h)
+        # Places = patients distincts : un doublon de l'ancien site ne fait pas un collectif.
         all_slots[sid] = dict(start=start, end=start + timedelta(hours=1), cat=cat,
-                              them=thematic_name(them, cat), loc=None, place=len(group), soignant=None)
+                              them=thematic_name(them, cat), loc=None,
+                              place=len({r["patient_id"] for r in group}), soignant=None)
         for r in group:
             slot_of_rdv[r["id"]] = sid
 
@@ -288,7 +290,11 @@ INSERT INTO clgx_soi SELECT {old}, (SELECT id FROM "Soignant" WHERE "serviceId" 
         s = all_slots[sid]
         them = f"(SELECT id FROM clgx_them WHERE name = {q(s['them'])})"
         if s["place"] <= 1:
-            for r in group:
+            seen = set()
+            for r in sorted(group, key=lambda r: -r["id"]):  # un patient une fois par créneau
+                if r["patient_id"] in seen:
+                    continue
+                seen.add(r["patient_id"])
                 start = ts(r["date"], r["heure"])
                 end = s["end"] if s["end"] > start else start + timedelta(minutes=30)
                 aid = f"clgx_ap_{r['id']}"
