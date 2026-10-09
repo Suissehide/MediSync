@@ -67,6 +67,7 @@ export const PATIENT = {
   CREATE: 'create_patient',
   ENROLL: 'enroll_patient',
   ENROLL_EXISTING: 'enroll_existing_patient',
+  ENROLL_PREVIEW: 'enroll_preview',
   UPDATE: 'update_patient',
   DELETE: 'delete_patient',
   DISMISS_ENROLLMENT_ISSUE: 'dismiss_enrollment_issue',

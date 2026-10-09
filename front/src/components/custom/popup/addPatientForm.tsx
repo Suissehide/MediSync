@@ -23,7 +23,6 @@ import type {
   CreatePatientParams,
   PatientIdentityMatch,
   PatientIdentitySearchResult,
-  TimeOfDay,
 } from '../../../types/patient.ts'
 import { Button } from '../../ui/button.tsx'
 import {
@@ -35,11 +34,7 @@ import {
   PopupTitle,
   PopupTrigger,
 } from '../../ui/popup.tsx'
-import {
-  type PathwayPeriod,
-  PathwaySelector,
-  usePathwaySelector,
-} from '../pathwaySelector.tsx'
+import { PathwaySelector, usePathwaySelector } from '../pathwaySelector.tsx'
 
 interface AddPatientFormProps {
   trigger?: React.ReactNode
@@ -69,15 +64,8 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
       lastName: '',
       gender: '',
       birthDate: '',
-      startDate: dayjs.utc(),
     },
     onSubmit: async ({ value }) => {
-      const periodToTimeOfDay: Record<PathwayPeriod, TimeOfDay> = {
-        morning: 'MORNING',
-        afternoon: 'AFTERNOON',
-        fullday: 'ALL_DAY',
-      }
-
       await enrollPatient.mutateAsync({
         patientData: {
           firstName: value.firstName,
@@ -85,13 +73,7 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
           gender: value.gender,
           birthDate: value.birthDate,
         } satisfies CreatePatientParams,
-        startDate: value.startDate.toISOString(),
-        pathways: pathwayState.addedPathways.map((p) => ({
-          tag: p.tag,
-          timeOfDay: periodToTimeOfDay[p.period],
-          thematicID: p.thematicID || undefined,
-          type: p.type,
-        })),
+        pathways: pathwayState.enrollments,
       })
 
       setOpen(false)
@@ -188,7 +170,10 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
         )}
       </PopupTrigger>
 
-      <PopupContent size="lg">
+      <PopupContent
+        size="lg"
+        className={step === 2 ? 'w-[860px] max-w-[95vw]' : undefined}
+      >
         <PopupHeader>
           <PopupTitle>Ajouter un patient</PopupTitle>
         </PopupHeader>
@@ -296,10 +281,6 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
 
             {step === 2 && (
               <>
-                <form.AppField name="startDate">
-                  {(field) => <field.DatePicker label="Date de début" />}
-                </form.AppField>
-
                 <em className="text-sm text-neutral-400 mb-2">
                   Ajoutez des parcours et organisez-les par ordre de priorité
                 </em>

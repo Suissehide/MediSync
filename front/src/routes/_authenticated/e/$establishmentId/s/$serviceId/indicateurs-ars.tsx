@@ -13,6 +13,9 @@ import {
 import DashboardLayout from '@/components/dashboard.layout.tsx'
 import { Button } from '@/components/ui/button.tsx'
 import { can } from '@/hooks/useCan.ts'
+import { useServiceName } from '@/hooks/useServiceName.ts'
+import { arsCsv } from '@/libs/arsCsv.ts'
+import { slugify, telecharger, telechargerCsv } from '@/libs/csv.ts'
 import { queryState } from '@/libs/queryState.ts'
 import { useArsIndicatorsQuery } from '@/queries/useArsIndicator.ts'
 import type { ArsIndicator } from '@/types/arsIndicator.ts'
@@ -43,10 +46,14 @@ export const Route = createFileRoute(
 const GROUPES = ['Entrée', 'Séances', 'Sortie', 'Modalités'] as const
 
 function ArsIndicatorsPage() {
+  const params = Route.useParams()
+  const serviceName = useServiceName(params.establishmentId, params.serviceId)
   const [periode, setPeriode] = useState(() => anneeCivile(ANNEES[0]))
-  const { indicators, isPending, error } = useArsIndicatorsQuery(
-    periode.from.format(PERIOD_FORMAT),
-    periode.to.format(PERIOD_FORMAT),
+  const from = periode.from.format(PERIOD_FORMAT)
+  const to = periode.to.format(PERIOD_FORMAT)
+  const { indicators, isPending, error, refetch } = useArsIndicatorsQuery(
+    from,
+    to,
   )
   const [exportEnCours, setExportEnCours] = useState(false)
   const [erreurExport, setErreurExport] = useState<string | null>(null)
@@ -58,24 +65,27 @@ function ArsIndicatorsPage() {
   })
 
   // `handleHttpError` lève : sans ce catch le bouton resterait muet sur un rejet non traité.
-  const telecharger = async () => {
+  const exporterExcel = async () => {
     setExportEnCours(true)
     setErreurExport(null)
     try {
-      const blob = await ArsIndicatorApi.exportExcel(
-        periode.from.format(PERIOD_FORMAT),
-        periode.to.format(PERIOD_FORMAT),
+      telecharger(
+        await ArsIndicatorApi.exportExcel(from, to),
+        `indicateurs-ars_${from}_${to}.xlsx`,
       )
-      const href = URL.createObjectURL(blob)
-      const lien = document.createElement('a')
-      lien.href = href
-      lien.download = `indicateurs-ars_${periode.from.format(PERIOD_FORMAT)}_${periode.to.format(PERIOD_FORMAT)}.xlsx`
-      lien.click()
-      URL.revokeObjectURL(href)
     } catch {
       setErreurExport("L'export a échoué. Réessayez plus tard.")
     } finally {
       setExportEnCours(false)
+    }
+  }
+
+  const exporterCsv = () => {
+    if (indicators) {
+      telechargerCsv(
+        arsCsv(indicators, serviceName, from, to),
+        `indicateurs-ars-${slugify(serviceName)}-${from}-${to}.csv`,
+      )
     }
   }
 
@@ -84,7 +94,7 @@ function ArsIndicatorsPage() {
       {/* `overflow-hidden` + une zone de défilement interne : sans cela la grille (trente lignes,
           ~1360px) débordait sous la carte et emportait l'en-tête au défilement, alors que les
           autres écrans gardent leurs contrôles en place. Même découpe que `suivi.tsx`. */}
-      <div className="flex-1 min-h-0 bg-background p-6 rounded-lg flex flex-col w-full gap-4 overflow-hidden">
+      <div className="flex-1 min-h-0 bg-background p-4 md:p-6 rounded-lg flex flex-col w-full gap-4 overflow-hidden">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <h1 className="h-9 flex items-center text-text-dark text-xl font-semibold">
             Indicateurs ARS
@@ -94,10 +104,17 @@ function ArsIndicatorsPage() {
             <PeriodPicker periode={periode} onChange={setPeriode} />
 
             <Button
-              onClick={telecharger}
+              onClick={exporterExcel}
               disabled={etat !== 'ready' || exportEnCours}
             >
-              {exportEnCours ? 'Export…' : 'Exporter'}
+              {exportEnCours ? 'Export…' : 'Exporter en Excel'}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={exporterCsv}
+              disabled={etat !== 'ready'}
+            >
+              Exporter en CSV
             </Button>
           </div>
         </div>
@@ -115,11 +132,11 @@ function ArsIndicatorsPage() {
         )}
 
         {(etat === 'error' || etat === 'empty') && (
-          <div
-            role="alert"
-            className="flex-1 flex items-center justify-center text-text-light"
-          >
-            Impossible de charger les indicateurs. Réessayez plus tard.
+          <div className="flex-1 flex flex-col items-center justify-center gap-3">
+            <p role="alert" className="text-text-light">
+              Impossible de charger les indicateurs. Réessayez plus tard.
+            </p>
+            <Button onClick={() => refetch()}>Réessayer</Button>
           </div>
         )}
 
@@ -141,9 +158,9 @@ function TableIndicateurs({ indicateurs }: { indicateurs: ArsIndicator[] }) {
     <table className="w-full text-sm border-collapse">
       <thead className="sr-only">
         <tr>
-          <th>Code</th>
-          <th>Libellé</th>
-          <th>Valeur</th>
+          <th scope="col">Code</th>
+          <th scope="col">Libellé</th>
+          <th scope="col">Valeur</th>
         </tr>
       </thead>
       {GROUPES.map((groupe) => (

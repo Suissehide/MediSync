@@ -11,6 +11,7 @@ export interface SelectOption {
   label: string
   group?: string
   color?: string
+  hint?: string
 }
 
 export interface SelectProps {
@@ -21,6 +22,7 @@ export interface SelectProps {
   className?: string
   clearable?: boolean
   searchable?: boolean
+  icon?: React.ReactNode
   value?: string | number
   onValueChange?: (value: string) => void
   disabled?: boolean
@@ -47,6 +49,7 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
       onValueChange,
       clearable = true,
       searchable = false,
+      icon,
       disabled,
       'aria-describedby': ariaDescribedBy,
     },
@@ -100,6 +103,7 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
                     !selectedLabel && 'text-muted-foreground',
                   )}
                 >
+                  {icon}
                   <ColorDot color={selectedOption?.color} />
                   <span className="truncate">
                     {selectedLabel || placeholder}
@@ -166,6 +170,11 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
                               <ColorDot color={option.color} />
                               <span className="truncate">{option.label}</span>
                             </span>
+                            {option.hint && (
+                              <span className="ml-auto text-xs text-text-light shrink-0">
+                                {option.hint}
+                              </span>
+                            )}
                             {option.value.toString() === value?.toString() && (
                               <Check className="h-4 w-4 text-primary shrink-0" />
                             )}
@@ -264,7 +273,7 @@ Select.displayName = 'Select'
 
 // ─── MultiSelect ─────────────────────────────────────────────────────────────
 
-type MultiSelectOption = { value: string; label: string }
+type MultiSelectOption = { value: string; label: string; color?: string }
 
 interface MultiSelectProps {
   options: MultiSelectOption[]
@@ -317,18 +326,19 @@ export function MultiSelect({
           disabled={disabled}
           className="inline-flex w-full h-9 items-center justify-between rounded-md border border-border bg-background px-3 py-2 text-sm text-text-dark cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <span className="truncate">
+          <span className="flex items-center gap-2 truncate">
             {value.length === 0
               ? placeholder
-              : value.length <= 2
-                ? options
-                    .filter((o) => value.includes(o.value))
-                    .map((o) => o.label)
-                    .join(', ')
-                : `${options
-                    .filter((o) => value.slice(0, 2).includes(o.value))
-                    .map((o) => o.label)
-                    .join(', ')} +${value.length - 2}`}
+              : options
+                  .filter((o) => value.slice(0, 2).includes(o.value))
+                  .map((o, i) => (
+                    <span key={o.value} className="flex items-center gap-1.5">
+                      <ColorDot color={o.color} />
+                      {o.label}
+                      {i === 0 && value.length > 1 ? ',' : ''}
+                    </span>
+                  ))}
+            {value.length > 2 && `+${value.length - 2}`}
           </span>
           <ChevronDown className="ml-2 h-4 w-4 text-text-light" />
         </button>
@@ -366,7 +376,10 @@ export function MultiSelect({
                   onClick={() => toggle(option.value)}
                   className="cursor-pointer flex w-full items-center justify-between rounded px-2 py-1.5"
                 >
-                  <span>{option.label}</span>
+                  <span className="flex items-center gap-2">
+                    <ColorDot color={option.color} />
+                    {option.label}
+                  </span>
                   <Check className="h-4 w-4 text-primary" />
                 </button>
               </li>
@@ -386,7 +399,10 @@ export function MultiSelect({
                   onClick={() => toggle(option.value)}
                   className="cursor-pointer flex w-full items-center justify-between rounded px-2 py-1.5"
                 >
-                  <span>{option.label}</span>
+                  <span className="flex items-center gap-2">
+                    <ColorDot color={option.color} />
+                    {option.label}
+                  </span>
                 </button>
               </li>
             ))}

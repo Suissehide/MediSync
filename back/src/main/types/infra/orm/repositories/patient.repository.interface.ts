@@ -6,6 +6,8 @@ import type { PatientServiceFileEntityRepo } from './patientServiceFile.reposito
 export type PatientEntityRepo = Patient
 export type PatientWithTagsEntityRepo = Patient & {
   pathwayTemplateTags: string[]
+  // Couleur de chaque tag pour ce patient ; seule `findAllWithTags` la pose.
+  pathwayTagColors?: Record<string, string>
   enrollmentIssues: EnrollmentIssueEntityRepo[]
   // Date d'entree dans le service courant : vit sur PatientServiceFile, mais
   // `findAllWithTags` joint deja le sous-dossier filtre sur le service (comme pour
@@ -15,6 +17,15 @@ export type PatientWithTagsEntityRepo = Patient & {
   // `serviceFile.entryDate` et ne duplique pas la valeur ici.
   entryDate?: Date | null
   exitDate?: Date | null
+  // Champs a choix du sous-dossier du service courant ; seule `findAllWithTags` les pose.
+  medicalDiagnosis?: string | null
+  careMode?: string | null
+  orientation?: string | null
+  etpDecision?: string | null
+  programType?: string | null
+  nonInclusionDetails?: string | null
+  stopReason?: string | null
+  etpFinalOutcome?: string | null
 }
 // Utilise par l'export Excel : le parcours et le contenu clinique vivent desormais sur le
 // sous-dossier de service, `null` quand le patient n'en a pas encore dans le service courant.

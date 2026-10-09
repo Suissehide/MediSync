@@ -1,10 +1,9 @@
-import dayjs from 'dayjs'
-import { CalendarPlus, Check, X } from 'lucide-react'
+import { CalendarPlus, Check, Route, X } from 'lucide-react'
 import { useState } from 'react'
 
-import { useAppForm } from '../../../hooks/formConfig.tsx'
+import { cn } from '../../../libs/utils.ts'
 import { usePatientMutations } from '../../../queries/usePatient.tsx'
-import type { Patient, TimeOfDay } from '../../../types/patient.ts'
+import type { Patient } from '../../../types/patient.ts'
 import { Button } from '../../ui/button.tsx'
 import {
   Popup,
@@ -15,11 +14,7 @@ import {
   PopupTitle,
   PopupTrigger,
 } from '../../ui/popup.tsx'
-import {
-  type PathwayPeriod,
-  PathwaySelector,
-  usePathwaySelector,
-} from '../pathwaySelector.tsx'
+import { PathwaySelector, usePathwaySelector } from '../pathwaySelector.tsx'
 
 interface AddPatientToPathwayFormProps {
   patient: Patient
@@ -29,50 +24,27 @@ export function AddPatientToPathwayForm({
   patient,
 }: AddPatientToPathwayFormProps) {
   const [open, setOpen] = useState(false)
-  const pathwayState = usePathwaySelector()
+  const pathwayState = usePathwaySelector(patient.id)
   const { enrollExistingPatient } = usePatientMutations()
 
-  const periodToTimeOfDay: Record<PathwayPeriod, TimeOfDay> = {
-    morning: 'MORNING',
-    afternoon: 'AFTERNOON',
-    fullday: 'ALL_DAY',
-  }
+  const submit = () =>
+    enrollExistingPatient.mutate(
+      { patientID: patient.id, pathways: pathwayState.plannableEnrollments },
+      { onSuccess: () => setOpen(false) },
+    )
 
-  // Valeurs par défaut construites une seule fois : `useAppForm` réapplique ses
-  // options à chaque rendu et une date recalculée (les millisecondes changent)
-  // le ferait boucler.
-  const [defaultValues] = useState(() => ({
-    startDate: dayjs.utc().toISOString(),
-  }))
-
-  const form = useAppForm({
-    defaultValues,
-    onSubmit: ({ value }) => {
-      if (!pathwayState.addedPathways.length) {
-        return
-      }
-      enrollExistingPatient.mutate(
-        {
-          patientID: patient.id,
-          startDate: value.startDate,
-          pathways: pathwayState.addedPathways.map((p) => ({
-            tag: p.tag,
-            timeOfDay: periodToTimeOfDay[p.period],
-            thematicID: p.thematicID || undefined,
-            type: p.type,
-            motif: p.motif || undefined,
-            duration: p.thematicDuration ?? undefined,
-          })),
-        },
-        { onSuccess: () => setOpen(false) },
-      )
-    },
-  })
+  const plannable = pathwayState.plannableEnrollments.length
+  const blocked = pathwayState.previews?.filter((p) => !p.startDate).length ?? 0
+  const plannableLabel = `${plannable} parcours planifiable${plannable > 1 ? 's' : ''}`
+  const summary = pathwayState.previews
+    ? blocked
+      ? `${plannableLabel} · ${blocked} sans date : ${blocked > 1 ? 'ils seront ignorés' : 'il sera ignoré'}`
+      : plannableLabel
+    : ''
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next)
     if (next) {
-      form.reset({ startDate: dayjs.utc().toISOString() })
       pathwayState.reset()
     }
   }
@@ -91,44 +63,53 @@ export function AddPatientToPathwayForm({
         </Button>
       </PopupTrigger>
 
-      <PopupContent size="lg">
-        <PopupHeader>
-          <PopupTitle className="font-bold text-xl">
-            Ajouter à un parcours
+      <PopupContent className="w-[860px] max-w-[95vw]">
+        <PopupHeader className="py-4">
+          <PopupTitle icon={Route} className="font-bold text-xl">
+            <span className="flex flex-col">
+              Ajouter à un parcours
+              <span className="text-sm font-normal text-text-light">
+                {patient.firstName} {patient.lastName}
+              </span>
+            </span>
           </PopupTitle>
         </PopupHeader>
 
-        <PopupBody className="flex flex-col gap-4">
-          <form.AppField name="startDate">
-            {(field) => <field.DatePicker label="Date de début" />}
-          </form.AppField>
-
-          <em className="text-sm text-neutral-400">
-            Ajoutez des parcours et organisez-les par ordre de priorité
-          </em>
-
+        <PopupBody className="flex flex-col gap-4 py-5">
           <PathwaySelector state={pathwayState} />
         </PopupBody>
 
-        <PopupFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>
-            <X className="w-4 h-4" />
-            Annuler
-          </Button>
-          <Button
-            variant="default"
-            onClick={() => form.handleSubmit()}
-            disabled={
-              !pathwayState.addedPathways.length ||
-              enrollExistingPatient.isPending ||
-              pathwayState.addedPathways.some(
-                (p) => p.motifRequired && !p.motif.trim(),
-              )
-            }
+        <PopupFooter className="justify-between items-center">
+          <span
+            className={cn(
+              'text-[13px]',
+              blocked ? 'text-red-700' : 'text-text-light',
+            )}
           >
-            <Check className="w-4 h-4" />
-            {enrollExistingPatient.isPending ? 'Inscription...' : 'Inscrire'}
-          </Button>
+            {summary}
+          </span>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              <X className="w-4 h-4" />
+              Annuler
+            </Button>
+            <Button
+              variant="default"
+              onClick={submit}
+              disabled={
+                !plannable ||
+                enrollExistingPatient.isPending ||
+                pathwayState.missingMotif
+              }
+            >
+              <Check className="w-4 h-4" />
+              {enrollExistingPatient.isPending
+                ? 'Inscription...'
+                : plannable
+                  ? `Inscrire à ${plannable} parcours`
+                  : 'Inscrire'}
+            </Button>
+          </div>
         </PopupFooter>
       </PopupContent>
     </Popup>

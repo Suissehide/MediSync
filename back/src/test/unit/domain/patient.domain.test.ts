@@ -141,6 +141,7 @@ const buildDomain = (
           secondaryTags: ['INDIV'],
           firstAppointmentOnly: false,
           motifRequired: false,
+          prerequisiteIDs: [] as string[],
         },
         {
           id: 'tpl-indiv',
@@ -148,6 +149,7 @@ const buildDomain = (
           secondaryTags: [],
           firstAppointmentOnly: true,
           motifRequired: false,
+          prerequisiteIDs: [] as string[],
         },
       ]),
     },
@@ -168,6 +170,20 @@ const buildDomain = (
           }
           created.push(appointment)
           return Promise.resolve(appointment)
+        },
+      ),
+      findLastEndDateForPatient: jest.fn(
+        async (patientID: string, templateIDs: string[]) => {
+          const ends = created
+            .filter(
+              (a) =>
+                a.patientIDs.includes(patientID) &&
+                templateIDs.some((id) =>
+                  a.slotID.startsWith(`slot-${id.slice(4)}`),
+                ),
+            )
+            .map((a) => a.endDate.getTime())
+          return ends.length ? new Date(Math.max(...ends)) : null
         },
       ),
       addPatientToAppointment: jest.fn(
@@ -571,5 +587,86 @@ describe('PatientDomain – création du sous-dossier de service a la creation d
     expect(
       container.patientServiceFileDomain.ensureExists,
     ).toHaveBeenCalledWith(created.id)
+  })
+})
+
+describe('PatientDomain – parcours prérequis', () => {
+  const withPrerequisite = (
+    container: ReturnType<typeof buildDomain>['container'],
+    dependent: string,
+    prerequisite: string,
+  ) => {
+    container.pathwayTemplateRepository.findAll.mockResolvedValue([
+      {
+        id: 'tpl-group',
+        mainTag: 'GROUPE',
+        secondaryTags: [],
+        firstAppointmentOnly: false,
+        motifRequired: false,
+        prerequisiteIDs: dependent === 'tpl-group' ? [prerequisite] : [],
+      },
+      {
+        id: 'tpl-indiv',
+        mainTag: 'INDIV',
+        secondaryTags: [],
+        firstAppointmentOnly: true,
+        motifRequired: false,
+        prerequisiteIDs: dependent === 'tpl-indiv' ? [prerequisite] : [],
+      },
+    ] as never)
+  }
+
+  it('inscrit le prérequis en premier et place le parcours dépendant après sa fin', async () => {
+    const { domain, created, container } = buildDomain()
+    withPrerequisite(container, 'tpl-indiv', 'tpl-group')
+
+    const result = await domain.enrollExistingPatientInPathways(
+      {
+        patientID: 'patient-1',
+        startDate: monday(0),
+        pathways: [
+          { tag: 'INDIV', timeOfDay: 'ALL_DAY', duration: 30 },
+          { tag: 'GROUPE', timeOfDay: 'ALL_DAY', duration: 30 },
+        ],
+      },
+      'user-1',
+    )
+
+    expect(result.failedEnrollments).toEqual([])
+    const [groupApt, indivApt] = created as [
+      CreatedAppointment,
+      CreatedAppointment,
+    ]
+    expect(groupApt.slotID).toBe('slot-group-mon')
+    expect(indivApt.slotID).toBe('slot-indiv-tue')
+    expect(indivApt.startDate.getTime()).toBeGreaterThanOrEqual(
+      groupApt.endDate.getTime(),
+    )
+  })
+
+  it('échoue si aucun parcours dépendant ne commence après la fin du prérequis', async () => {
+    const { domain, created, container } = buildDomain([
+      {
+        id: 'apt-existing',
+        startDate: tuesday(14),
+        endDate: tuesday(14, 30),
+        slotID: 'slot-indiv-tue',
+        patientIDs: ['patient-1'],
+      },
+    ])
+    withPrerequisite(container, 'tpl-group', 'tpl-indiv')
+
+    const result = await domain.enrollExistingPatientInPathways(
+      {
+        patientID: 'patient-1',
+        startDate: monday(0),
+        pathways: [{ tag: 'GROUPE', timeOfDay: 'ALL_DAY', duration: 30 }],
+      },
+      'user-1',
+    )
+
+    expect(created).toHaveLength(1)
+    expect(result.failedEnrollments).toHaveLength(1)
+    expect(result.failedEnrollments[0]?.reason).toMatch(/prérequis/)
   })
 })

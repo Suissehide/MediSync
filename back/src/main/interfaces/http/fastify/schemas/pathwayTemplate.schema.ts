@@ -29,6 +29,7 @@ export const createPathwayTemplateSchema = pathwayTemplateSchema
     mainTag: true,
     motifRequired: true,
     firstAppointmentOnly: true,
+    prerequisiteIDs: true,
   })
   .extend({
     slotTemplateIDs: z.array(z.cuid()),
@@ -49,6 +50,7 @@ export const updatePathwayTemplateByIdSchema = {
     .extend({
       slotTemplateIDs: z.array(z.cuid()).optional().default([]),
       secondaryTags: z.array(z.string()).optional(),
+      prerequisiteIDs: z.array(z.cuid()).optional(),
       // pathwayIDs: z.array(z.cuid()).optional().default([]),
     })
     .refine((data) => Object.keys(data).length > 0, {

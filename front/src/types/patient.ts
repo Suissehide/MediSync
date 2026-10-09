@@ -38,6 +38,17 @@ export type Patient = {
 
 export type PatientWithTags = Patient & {
   pathwayTemplateTags: string[]
+  // Couleur de chaque tag : celle du parcours du patient le mieux classé qui le porte.
+  pathwayTagColors?: Record<string, string>
+  // Champs a choix du sous-dossier du service courant (clés des constantes de patient.constant.ts).
+  medicalDiagnosis?: string | null
+  careMode?: string | null
+  orientation?: string | null
+  etpDecision?: string | null
+  programType?: string | null
+  nonInclusionDetails?: string | null
+  stopReason?: string | null
+  etpFinalOutcome?: string | null
   // Date d'entrée dans le service courant : vit sur `PatientServiceFile`
   // (`types/patientServiceFile.ts`), mais `GET /patient/with-tags` joint déjà le sous-dossier
   // filtré sur le service courant et l'aplatit sur la ligne (back, `patient.repository.ts`
@@ -101,18 +112,23 @@ export type PathwayEnrollment = {
   type?: string
   motif?: string
   duration?: number
+  startDate: string
 }
 
 export type EnrollPatientParams = {
   patientData: CreatePatientParams
-  startDate: string
   pathways: PathwayEnrollment[]
 }
 
 export type EnrollExistingPatientParams = {
   patientID: string
-  startDate: string
   pathways: PathwayEnrollment[]
+}
+
+export type EnrollmentPreview = {
+  tag: string
+  startDate: string | null
+  reason?: string
 }
 
 export type EnrollmentResult = {

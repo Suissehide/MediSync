@@ -57,12 +57,17 @@ export const DatePicker = ({
         popper: {
           placement: 'bottom-start',
           disablePortal: true,
+          // Limite = l'écran : sinon un conteneur scrollable (corps de popup) fait basculer le calendrier au-dessus.
           modifiers: [
-            { name: 'flip', enabled: true },
+            {
+              name: 'flip',
+              enabled: true,
+              options: { boundary: document.body },
+            },
             {
               name: 'preventOverflow',
               enabled: true,
-              options: { altAxis: true },
+              options: { altAxis: true, boundary: document.body },
             },
           ],
         },

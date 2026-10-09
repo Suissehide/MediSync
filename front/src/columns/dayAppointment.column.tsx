@@ -13,6 +13,7 @@ import {
   SlotFrieze,
   SlotTimeline,
 } from '../components/custom/agenda/slotRange.tsx'
+import { Tronque } from '../components/custom/agenda/tronque.tsx'
 import { Etiquette } from '../components/table/etiquette.tsx'
 import { Button } from '../components/ui/button.tsx'
 import { APPOINTMENT_TYPE } from '../constants/appointment.constant.ts'
@@ -59,7 +60,7 @@ export const getDayAppointmentColumns = ({
     columnHelper.accessor('startDate', {
       id: 'schedule',
       header: 'Horaire',
-      size: 180,
+      size: 150,
       sortingFn: parentsOnly,
       cell: ({ row }) => {
         if (row.depth > 0) {
@@ -78,12 +79,13 @@ export const getDayAppointmentColumns = ({
         }
         if (isRange(row.original)) {
           return (
-            <span className="text-text-light">
-              {summarizeThematics(row.original)}
-            </span>
+            <Tronque
+              className="text-text-light"
+              texte={summarizeThematics(row.original)}
+            />
           )
         }
-        return getValue() || '—'
+        return <Tronque texte={getValue() || '—'} />
       },
     }),
     // Lieu, soignant et places sont ceux du créneau : pas répétés sur ses sous-lignes.
@@ -91,12 +93,13 @@ export const getDayAppointmentColumns = ({
       header: 'Lieu',
       size: 160,
       sortingFn: parentsOnly,
-      cell: ({ row, getValue }) => (row.depth > 0 ? null : getValue() || '—'),
+      cell: ({ row, getValue }) =>
+        row.depth > 0 ? null : <Tronque texte={getValue() || '—'} />,
     }),
     columnHelper.display({
       id: 'soignants',
       header: 'Soignant',
-      size: 200,
+      size: 220,
       cell: ({ row }) => {
         const soignants = row.original.soignants
         if (row.depth > 0) {
@@ -108,7 +111,10 @@ export const getDayAppointmentColumns = ({
         const visible = soignants.slice(0, MAX_VISIBLE_CHIPS)
         const rest = soignants.length - visible.length
         return (
-          <div className="flex items-center gap-1 overflow-hidden">
+          <Tronque
+            className="flex items-center gap-1"
+            texte={soignants.map((s) => s.name).join(', ')}
+          >
             {visible.map((soignant) => (
               <Etiquette
                 key={soignant.id}
@@ -122,7 +128,7 @@ export const getDayAppointmentColumns = ({
                 +{rest}
               </span>
             )}
-          </div>
+          </Tronque>
         )
       },
     }),

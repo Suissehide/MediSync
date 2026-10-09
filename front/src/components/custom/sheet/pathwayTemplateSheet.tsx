@@ -12,6 +12,7 @@ import type { UpdatePathwayTemplateParams } from '../../../types/pathwayTemplate
 import { Button } from '../../ui/button.tsx'
 import { FieldInfo } from '../../ui/fieldInfo.tsx'
 import { Label } from '../../ui/label.tsx'
+import { MultiSelect } from '../../ui/select.tsx'
 import {
   Sheet,
   SheetContent,
@@ -39,6 +40,7 @@ export default function PathwayTemplateSheet({
   const { pathwayTemplates } = usePathwayTemplateQueries()
 
   const [secondaryTags, setSecondaryTags] = useState<string[]>([])
+  const [prerequisiteIDs, setPrerequisiteIDs] = useState<string[]>([])
 
   const mainTagSuggestions = useMemo(
     () => [...new Set((pathwayTemplates ?? []).map((t) => t.mainTag))].sort(),
@@ -75,6 +77,7 @@ export default function PathwayTemplateSheet({
         color: value.color,
         mainTag: value.mainTag.trim(),
         secondaryTags,
+        prerequisiteIDs,
         motifRequired: value.motifRequired,
         firstAppointmentOnly: value.firstAppointmentOnly,
       }
@@ -109,6 +112,7 @@ export default function PathwayTemplateSheet({
       { keepDefaultValues: true },
     )
     setSecondaryTags(pathwayTemplate.secondaryTags ?? [])
+    setPrerequisiteIDs(pathwayTemplate.prerequisiteIDs ?? [])
   }, [pathwayTemplate, open, reset])
 
   return (
@@ -204,6 +208,26 @@ export default function PathwayTemplateSheet({
                     suggestions={secondaryTagSuggestions}
                     placeholder="Affichés sur le planning..."
                   />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <Label>Dépend des parcours</Label>
+                  <MultiSelect
+                    options={(pathwayTemplates ?? [])
+                      .filter((t) => t.id !== pathwayTemplate?.id)
+                      .map((t) => ({
+                        value: t.id,
+                        label: t.name,
+                        color: t.color,
+                      }))}
+                    value={prerequisiteIDs}
+                    onChange={setPrerequisiteIDs}
+                    placeholder="Aucun : le parcours peut commencer à tout moment"
+                  />
+                  <p className="text-xs text-text-light">
+                    Le patient doit avoir terminé tous les RDV de ces parcours
+                    avant de commencer celui-ci.
+                  </p>
                 </div>
 
                 <form.AppField name="motifRequired">

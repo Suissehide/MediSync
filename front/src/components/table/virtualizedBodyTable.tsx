@@ -17,6 +17,10 @@ type VirtualizedBodyTableProps<TData> = {
   getCommonPinningStyles: (column: Column<TData>) => React.CSSProperties
   rowHeight: number
   autoRowHeight?: boolean
+  // Un tableau court se rend en entier : la virtualisation suppose des lignes de hauteur connue,
+  // ce qu'une ligne depliable n'est pas.
+  virtualize?: boolean
+  fixedLayout?: boolean
   parentRef: RefObject<HTMLElement | null>
   onRowClick?: (row: TData) => void
   emptyState?: ReactNode
@@ -73,6 +77,8 @@ export function VirtualizedBodyTable<TData>({
   getCommonPinningStyles,
   rowHeight,
   autoRowHeight = false,
+  virtualize = true,
+  fixedLayout,
   parentRef,
   onRowClick,
   emptyState,
@@ -92,9 +98,14 @@ export function VirtualizedBodyTable<TData>({
 
   const { rowIdPrefix } = (table.options.meta ?? {}) as { rowIdPrefix?: string }
   const virtualRows = rowVirtualizer.getVirtualItems()
-  const paddingTop = virtualRows.length > 0 ? virtualRows[0].start : 0
+  const visibleRows = virtualize
+    ? virtualRows.map((virtualRow) => rows[virtualRow.index])
+    : rows
+  const hauteurLibre = autoRowHeight || !virtualize
+  const paddingTop =
+    virtualize && virtualRows.length > 0 ? virtualRows[0].start : 0
   const paddingBottom =
-    virtualRows.length > 0
+    virtualize && virtualRows.length > 0
       ? rowVirtualizer.getTotalSize() - virtualRows[virtualRows.length - 1].end
       : 0
 
@@ -158,8 +169,7 @@ export function VirtualizedBodyTable<TData>({
         </tr>
       )}
 
-      {virtualRows.map((virtualRow) => {
-        const row: Row<TData> = rows[virtualRow.index]
+      {visibleRows.map((row: Row<TData>) => {
         const disabled = isRowDisabled?.(row.original)
         const isSelected = row.getIsSelected()
         const isChild = row.depth > 0
@@ -168,15 +178,15 @@ export function VirtualizedBodyTable<TData>({
         return (
           <tr
             id={rowIdPrefix && rowDomId(rowIdPrefix, row.id)}
-            data-index={virtualRow.index}
+            data-index={row.index}
             ref={(node) => {
-              if (node) {
+              if (node && virtualize) {
                 rowVirtualizer.measureElement(node)
               }
             }}
             key={row.id}
             style={
-              autoRowHeight ? { minHeight: rowHeight } : { height: rowHeight }
+              hauteurLibre ? { minHeight: rowHeight } : { height: rowHeight }
             }
             data-state={isSelected ? 'selected' : undefined}
             onClick={
@@ -214,7 +224,9 @@ export function VirtualizedBodyTable<TData>({
                   colSpan={span}
                   className={cn(
                     'px-4 py-2 text-sm border-b border-border',
-                    autoRowHeight && 'align-top',
+                    hauteurLibre && 'align-top',
+                    // Largeur figee : ce qui depasse est coupe, pas etale sur la colonne suivante.
+                    fixedLayout && 'overflow-hidden',
                     isChild && !isLastChild && 'border-b-[#eef2f6]',
                   )}
                   style={{
@@ -222,7 +234,7 @@ export function VirtualizedBodyTable<TData>({
                     minWidth: column.getSize(),
                     maxWidth: column.columnDef.maxSize || undefined,
                     width: grow ? '100%' : undefined,
-                    ...(autoRowHeight
+                    ...(hauteurLibre
                       ? { minHeight: rowHeight }
                       : { height: rowHeight }),
                   }}

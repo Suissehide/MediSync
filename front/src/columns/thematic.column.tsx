@@ -2,7 +2,7 @@ import { createColumnHelper } from '@tanstack/react-table'
 import { Archive, Trash2, Undo2 } from 'lucide-react'
 
 import EditThematicSoignantsForm from '../components/custom/popup/editThematicSoignantsForm.tsx'
-import { Etiquette } from '../components/table/etiquette.tsx'
+import { EtiquettesTronquees } from '../components/table/etiquette.tsx'
 import { Button } from '../components/ui/button.tsx'
 import type { Thematic } from '../types/thematic.ts'
 
@@ -69,23 +69,7 @@ export const getThematicColumns = ({
       id: 'soignants',
       header: 'Soignants',
       size: 300,
-      cell: ({ row }) => {
-        const soignants = row.original.soignants
-        const visible = soignants.slice(0, 3)
-        const rest = soignants.length - visible.length
-        return (
-          <div className="flex items-center gap-1 overflow-hidden">
-            {visible.map((s) => (
-              <Etiquette key={s.id}>{s.name}</Etiquette>
-            ))}
-            {rest > 0 && (
-              <span className="shrink-0 text-xs text-muted-foreground font-medium">
-                +{rest}
-              </span>
-            )}
-          </div>
-        )
-      },
+      cell: ({ row }) => <EtiquettesTronquees items={row.original.soignants} />,
     }),
   ]
 

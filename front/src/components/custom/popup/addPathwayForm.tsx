@@ -19,6 +19,7 @@ import {
   PopupTitle,
   PopupTrigger,
 } from '../../ui/popup.tsx'
+import { MultiSelect } from '../../ui/select.tsx'
 import { TagInput } from '../../ui/tagInput.tsx'
 
 interface AddPathwayFormProps {
@@ -28,6 +29,7 @@ interface AddPathwayFormProps {
 function AddPathwayForm({ trigger }: AddPathwayFormProps) {
   const [open, setOpen] = useState(false)
   const [secondaryTags, setSecondaryTags] = useState<string[]>([])
+  const [prerequisiteIDs, setPrerequisiteIDs] = useState<string[]>([])
   const { createPathwayTemplate } = usePathwayTemplateMutations()
   const { pathwayTemplates } = usePathwayTemplateQueries()
 
@@ -60,6 +62,7 @@ function AddPathwayForm({ trigger }: AddPathwayFormProps) {
         slotTemplateIDs: [],
         mainTag: value.mainTag.trim(),
         secondaryTags,
+        prerequisiteIDs,
         motifRequired: value.motifRequired,
         firstAppointmentOnly: value.firstAppointmentOnly,
       })
@@ -71,6 +74,7 @@ function AddPathwayForm({ trigger }: AddPathwayFormProps) {
     if (open) {
       form.reset()
       setSecondaryTags([])
+      setPrerequisiteIDs([])
     }
   }, [open, form])
 
@@ -149,6 +153,24 @@ function AddPathwayForm({ trigger }: AddPathwayFormProps) {
                 suggestions={secondaryTagSuggestions}
                 placeholder="Affichés sur le planning..."
               />
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <Label>Dépend des parcours</Label>
+              <MultiSelect
+                options={(pathwayTemplates ?? []).map((t) => ({
+                  value: t.id,
+                  label: t.name,
+                  color: t.color,
+                }))}
+                value={prerequisiteIDs}
+                onChange={setPrerequisiteIDs}
+                placeholder="Aucun : le parcours peut commencer à tout moment"
+              />
+              <p className="text-xs text-text-light">
+                Le patient doit avoir terminé tous les RDV de ces parcours avant
+                de commencer celui-ci.
+              </p>
             </div>
 
             <form.AppField name="motifRequired">

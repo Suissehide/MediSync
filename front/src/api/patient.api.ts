@@ -7,8 +7,10 @@ import {
 import type {
   CreatePatientParams,
   EnrollExistingPatientParams,
+  EnrollmentPreview,
   EnrollmentResult,
   EnrollPatientParams,
+  PathwayEnrollment,
   Patient,
   PatientIdentitySearchResult,
   PatientPathway,
@@ -167,6 +169,24 @@ export const PatientApi = {
     )
     if (!response.ok) {
       handleHttpError(response, {}, "Impossible d'inscrire le patient")
+    }
+    return response.json()
+  },
+
+  previewEnrollments: async (
+    pathways: PathwayEnrollment[],
+    patientID?: string,
+  ): Promise<EnrollmentPreview[]> => {
+    const response = await fetchWithAuth(
+      `${tenantApiUrl()}/patient/enroll/preview`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patientID, pathways }),
+      },
+    )
+    if (!response.ok) {
+      handleHttpError(response, {}, "Impossible de calculer l'aperçu")
     }
     return response.json()
   },

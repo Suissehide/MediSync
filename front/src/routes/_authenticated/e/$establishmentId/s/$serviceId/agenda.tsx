@@ -226,6 +226,7 @@ function Agenda() {
             columns={columns}
             filterId="day-appointment"
             isLoading={isPending}
+            fixedLayout
             emptyState="Aucun créneau ce jour-là"
           />
         ) : (
@@ -251,6 +252,7 @@ function Agenda() {
                   filterId="day-appointment"
                   onRowClick={(row) => row.appointmentId && setOpenedRow(row)}
                   autoRowHeight
+                  fixedLayout
                 />
               </section>
             ))}
