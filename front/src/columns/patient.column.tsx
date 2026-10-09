@@ -5,7 +5,6 @@ import { useState } from 'react'
 
 import { Etiquette } from '../components/table/etiquette.tsx'
 import { Button } from '../components/ui/button.tsx'
-import type { PathwayTemplate } from '../types/pathwayTemplate.ts'
 import type { PatientWithTags } from '../types/patient.ts'
 
 const columnHelper = createColumnHelper<PatientWithTags>()
@@ -21,7 +20,7 @@ export function CelluleParcours({
   couleurParTag,
 }: {
   tags: string[]
-  couleurParTag: Map<string, string>
+  couleurParTag: Record<string, string>
 }) {
   const [deploye, setDeploye] = useState(false)
   const caches = tags.length - PARCOURS_REPLIES
@@ -30,7 +29,7 @@ export function CelluleParcours({
   return (
     <div className="flex flex-wrap gap-1">
       {visibles.map((tag) => (
-        <Etiquette key={tag} couleur={couleurParTag.get(tag)} ton="neutre">
+        <Etiquette key={tag} couleur={couleurParTag[tag]} ton="neutre">
           {tag}
         </Etiquette>
       ))}
@@ -56,21 +55,9 @@ export function CelluleParcours({
 
 type PatientActions = {
   onView: (id: string) => void
-  pathwayTemplates?: PathwayTemplate[]
 }
 
-export const getPatientColumns = ({
-  onView,
-  pathwayTemplates = [],
-}: PatientActions) => {
-  // Couleur d'un tag principal : celle du premier parcours qui le porte.
-  const tagColorMap = new Map<string, string>()
-  for (const template of pathwayTemplates) {
-    if (!tagColorMap.has(template.mainTag)) {
-      tagColorMap.set(template.mainTag, template.color)
-    }
-  }
-
+export const getPatientColumns = ({ onView }: PatientActions) => {
   return [
     columnHelper.display({
       id: 'enrollmentAlert',
@@ -114,13 +101,18 @@ export const getPatientColumns = ({
       header: 'Parcours',
       size: 250,
       maxSize: 250,
-      cell: ({ getValue }) => {
+      cell: ({ getValue, row }) => {
         const tags = getValue() ?? []
         if (tags.length === 0) {
           return null
         }
 
-        return <CelluleParcours tags={tags} couleurParTag={tagColorMap} />
+        return (
+          <CelluleParcours
+            tags={tags}
+            couleurParTag={row.original.pathwayTagColors ?? {}}
+          />
+        )
       },
     }),
     columnHelper.display({

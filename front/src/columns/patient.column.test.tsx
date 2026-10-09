@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { CelluleParcours } from './patient.column.tsx'
 
-const couleurs = new Map<string, string>()
+const couleurs: Record<string, string> = {}
 
 const tags = ['asthme', 'BPCO', 'diabète', 'ETP', 'obésité']
 

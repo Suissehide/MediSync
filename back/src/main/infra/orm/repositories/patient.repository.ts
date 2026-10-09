@@ -25,7 +25,7 @@ type AppointmentPatientWithMainTag = {
       pathway: {
         id: string
         startDate: Date
-        template: { mainTag: string } | null
+        template: { mainTag: string; color: string } | null
       } | null
     } | null
   } | null
@@ -36,11 +36,12 @@ type AppointmentPatientWithMainTag = {
 // depend. Exporte pour que la source de verite reste unique (pas un `20` duplique ailleurs).
 export const IDENTITY_SEARCH_LIMIT = 20
 
-// Tags principaux distincts des parcours du patient, dans l'ordre de getPathwaysForPatient.
-export const distinctMainTags = (
+// Tags principaux distincts des parcours du patient, dans l'ordre de getPathwaysForPatient,
+// avec la couleur du parcours le mieux classé qui porte le tag.
+export const orderedMainTags = (
   appointmentPatients: AppointmentPatientWithMainTag[],
   pathwayPriorities: { pathwayID: string; priority: number }[],
-): string[] => {
+): { mainTag: string; color: string }[] => {
   const priorityOf = new Map(
     pathwayPriorities.map((p) => [p.pathwayID, p.priority]),
   )
@@ -53,7 +54,13 @@ export const distinctMainTags = (
     const bp = priorityOf.get(b.id) ?? Number.POSITIVE_INFINITY
     return ap - bp || a.startDate.getTime() - b.startDate.getTime()
   })
-  return [...new Set(pathways.map((p) => p.template?.mainTag ?? ''))]
+  const byTag = new Map<string, { mainTag: string; color: string }>()
+  for (const { template } of pathways) {
+    if (template && !byTag.has(template.mainTag)) {
+      byTag.set(template.mainTag, template)
+    }
+  }
+  return [...byTag.values()]
 }
 
 class PatientRepository implements PatientRepositoryInterface {
@@ -113,7 +120,7 @@ class PatientRepository implements PatientRepositoryInterface {
                       select: {
                         id: true,
                         startDate: true,
-                        template: { select: { mainTag: true } },
+                        template: { select: { mainTag: true, color: true } },
                       },
                     },
                   },
@@ -143,16 +150,19 @@ class PatientRepository implements PatientRepositoryInterface {
         pathwayPriorities,
         serviceFiles,
         ...patient
-      }) => ({
-        ...patient,
-        pathwayTemplateTags: distinctMainTags(
-          appointmentPatients,
-          pathwayPriorities,
-        ),
-        enrollmentIssues: serviceFiles.flatMap((f) => f.enrollmentIssues),
-        entryDate: serviceFiles[0]?.entryDate ?? null,
-        exitDate: serviceFiles[0]?.exitDate ?? null,
-      }),
+      }) => {
+        const tags = orderedMainTags(appointmentPatients, pathwayPriorities)
+        return {
+          ...patient,
+          pathwayTemplateTags: tags.map((t) => t.mainTag),
+          pathwayTagColors: Object.fromEntries(
+            tags.map((t) => [t.mainTag, t.color]),
+          ),
+          enrollmentIssues: serviceFiles.flatMap((f) => f.enrollmentIssues),
+          entryDate: serviceFiles[0]?.entryDate ?? null,
+          exitDate: serviceFiles[0]?.exitDate ?? null,
+        }
+      },
     )
   }
 
@@ -203,7 +213,7 @@ class PatientRepository implements PatientRepositoryInterface {
                       select: {
                         id: true,
                         startDate: true,
-                        template: { select: { mainTag: true } },
+                        template: { select: { mainTag: true, color: true } },
                       },
                     },
                   },
@@ -256,10 +266,10 @@ class PatientRepository implements PatientRepositoryInterface {
           : null
         return {
           ...patient,
-          pathwayTemplateTags: distinctMainTags(
+          pathwayTemplateTags: orderedMainTags(
             appointmentPatients,
             pathwayPriorities,
-          ),
+          ).map((t) => t.mainTag),
           serviceFile,
           enrollmentIssues: serviceFiles.flatMap((f) => f.enrollmentIssues),
         }
