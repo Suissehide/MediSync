@@ -264,7 +264,7 @@ Select.displayName = 'Select'
 
 // ─── MultiSelect ─────────────────────────────────────────────────────────────
 
-type MultiSelectOption = { value: string; label: string }
+type MultiSelectOption = { value: string; label: string; color?: string }
 
 interface MultiSelectProps {
   options: MultiSelectOption[]
@@ -366,7 +366,10 @@ export function MultiSelect({
                   onClick={() => toggle(option.value)}
                   className="cursor-pointer flex w-full items-center justify-between rounded px-2 py-1.5"
                 >
-                  <span>{option.label}</span>
+                  <span className="flex items-center gap-2">
+                    <ColorDot color={option.color} />
+                    {option.label}
+                  </span>
                   <Check className="h-4 w-4 text-primary" />
                 </button>
               </li>
@@ -386,7 +389,10 @@ export function MultiSelect({
                   onClick={() => toggle(option.value)}
                   className="cursor-pointer flex w-full items-center justify-between rounded px-2 py-1.5"
                 >
-                  <span>{option.label}</span>
+                  <span className="flex items-center gap-2">
+                    <ColorDot color={option.color} />
+                    {option.label}
+                  </span>
                 </button>
               </li>
             ))}
