@@ -11,6 +11,7 @@ export interface SelectOption {
   label: string
   group?: string
   color?: string
+  hint?: string
 }
 
 export interface SelectProps {
@@ -21,6 +22,7 @@ export interface SelectProps {
   className?: string
   clearable?: boolean
   searchable?: boolean
+  icon?: React.ReactNode
   value?: string | number
   onValueChange?: (value: string) => void
   disabled?: boolean
@@ -47,6 +49,7 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
       onValueChange,
       clearable = true,
       searchable = false,
+      icon,
       disabled,
       'aria-describedby': ariaDescribedBy,
     },
@@ -100,6 +103,7 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
                     !selectedLabel && 'text-muted-foreground',
                   )}
                 >
+                  {icon}
                   <ColorDot color={selectedOption?.color} />
                   <span className="truncate">
                     {selectedLabel || placeholder}
@@ -166,6 +170,11 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
                               <ColorDot color={option.color} />
                               <span className="truncate">{option.label}</span>
                             </span>
+                            {option.hint && (
+                              <span className="ml-auto text-xs text-text-light shrink-0">
+                                {option.hint}
+                              </span>
+                            )}
                             {option.value.toString() === value?.toString() && (
                               <Check className="h-4 w-4 text-primary shrink-0" />
                             )}
