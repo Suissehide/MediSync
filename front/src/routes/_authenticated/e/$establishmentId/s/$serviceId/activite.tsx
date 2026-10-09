@@ -12,26 +12,13 @@ import { Button } from '@/components/ui/button.tsx'
 import { ACTIVITY_DEFINITIONS, JOURS } from '@/constants/activity.constant.ts'
 import { STOP_REASON } from '@/constants/patient.constant.ts'
 import { can } from '@/hooks/useCan.ts'
+import { useServiceName } from '@/hooks/useServiceName.ts'
 import { activityCsv, heures, pourcent } from '@/libs/activityCsv.ts'
+import { slugify, telechargerCsv } from '@/libs/csv.ts'
 import { queryState } from '@/libs/queryState.ts'
 import { useActivityQuery } from '@/queries/useActivity.ts'
-import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { AbsenceCell, ActivityReport } from '@/types/activity.ts'
-import {
-  accessibleCouples,
-  resolveTenantContext,
-} from '@/utils/tenant-context.ts'
-
-// Lettres, chiffres et tirets uniquement : le nom du service devient le segment du fichier.
-const slugify = (nom: string): string => {
-  const slug = nom
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-  return slug || 'service'
-}
+import { resolveTenantContext } from '@/utils/tenant-context.ts'
 
 // Tableau de bord d'activité du service, en chiffres agrégés (MDS-40).
 export const Route = createFileRoute(
@@ -57,13 +44,7 @@ const estVide = (r: ActivityReport) =>
 
 function ActivitePage() {
   const params = Route.useParams()
-  const user = useAuthStore((state) => state.user)
-  const serviceName =
-    accessibleCouples(user).find(
-      (c) =>
-        c.establishment.id === params.establishmentId &&
-        c.service.id === params.serviceId,
-    )?.service.name ?? 'Service'
+  const serviceName = useServiceName(params.establishmentId, params.serviceId)
 
   const [periode, setPeriode] = useState(() => anneeCivile(ANNEES[0]))
   const from = periode.from.format(PERIOD_FORMAT)
@@ -75,16 +56,10 @@ function ActivitePage() {
     if (!report) {
       return
     }
-    const href = URL.createObjectURL(
-      new Blob([activityCsv(report, serviceName)], {
-        type: 'text/csv;charset=utf-8',
-      }),
+    telechargerCsv(
+      activityCsv(report, serviceName),
+      `activite-${slugify(serviceName)}-${from}-${to}.csv`,
     )
-    const lien = document.createElement('a')
-    lien.href = href
-    lien.download = `activite-${slugify(serviceName)}-${from}-${to}.csv`
-    lien.click()
-    URL.revokeObjectURL(href)
   }
 
   return (

@@ -9,6 +9,7 @@ export type PathwayTemplate = {
   displayOrder: number
   motifRequired: boolean
   firstAppointmentOnly: boolean
+  prerequisiteIDs: string[]
   slotTemplates?: SlotTemplate[]
 }
 
@@ -20,6 +21,7 @@ export type CreatePathwayTemplateParams = Pick<
   secondaryTags?: string[]
   motifRequired?: boolean
   firstAppointmentOnly?: boolean
+  prerequisiteIDs?: string[]
 }
 export type UpdatePathwayTemplateParams = Pick<
   PathwayTemplate,
@@ -29,4 +31,5 @@ export type UpdatePathwayTemplateParams = Pick<
   secondaryTags?: string[]
   motifRequired?: boolean
   firstAppointmentOnly?: boolean
+  prerequisiteIDs?: string[]
 }

@@ -555,8 +555,27 @@ class PatientDomain implements PatientDomainInterface {
       }
     }
 
+    const notBefore = matchingTemplate?.prerequisiteIDs.length
+      ? await this.appointmentRepository.findLastEndDateForPatient(
+          patient.id,
+          matchingTemplate.prerequisiteIDs,
+        )
+      : null
+    const eligiblePathways = notBefore
+      ? this.startingAfter(pathways, notBefore, firstAppointmentOnly)
+      : pathways
+
+    if (eligiblePathways.length === 0) {
+      return {
+        failure: {
+          slotTemplate: { id: enrollment.tag, name: enrollment.tag },
+          reason: `Aucun parcours "${enrollment.tag}" ne commence après la fin des parcours prérequis (${dayjs(notBefore).format('DD/MM/YYYY HH:mm')})`,
+        },
+      }
+    }
+
     const validPathway = this.selectValidPathway(
-      pathways,
+      eligiblePathways,
       enrollment,
       patient,
       thematicDuration,
@@ -590,6 +609,48 @@ class PatientDomain implements PatientDomainInterface {
     }
   }
 
+  // Parcours entier après la date ; en mode « premier créneau », seuls les créneaux après elle.
+  private startingAfter(
+    pathways: PathwayWithSlotsRepo[],
+    notBefore: Date,
+    firstAppointmentOnly: boolean,
+  ): PathwayWithSlotsRepo[] {
+    const isAfter = (slot: { startDate: Date }) =>
+      new Date(slot.startDate) >= notBefore
+    if (!firstAppointmentOnly) {
+      return pathways.filter((pathway) => pathway.slots.every(isAfter))
+    }
+    return pathways
+      .map((pathway) => ({ ...pathway, slots: pathway.slots.filter(isAfter) }))
+      .filter((pathway) => pathway.slots.length > 0)
+  }
+
+  // Les parcours prérequis passent avant ceux qui en dépendent.
+  private async orderByPrerequisites(
+    enrollments: PathwayEnrollmentInput[],
+  ): Promise<PathwayEnrollmentInput[]> {
+    // Échec relevé et journalisé par inscription dans enrollPatientInTag.
+    const templates = await this.pathwayTemplateRepository
+      .findAll()
+      .catch(() => [])
+    const prerequisitesOf = (e: PathwayEnrollmentInput) =>
+      templates.find((t) => t.mainTag === e.tag)?.prerequisiteIDs ?? []
+    const idOf = (e: PathwayEnrollmentInput) =>
+      templates.find((t) => t.mainTag === e.tag)?.id
+    const remaining = [...enrollments]
+    const ordered: PathwayEnrollmentInput[] = []
+    while (remaining.length > 0) {
+      const ready = remaining.findIndex(
+        (e) =>
+          !prerequisitesOf(e).some((id) =>
+            remaining.some((r) => idOf(r) === id),
+          ),
+      )
+      ordered.push(...remaining.splice(Math.max(ready, 0), 1))
+    }
+    return ordered
+  }
+
   private async processEnrollments(
     patient: PatientWithAppointmentsDomain,
     pathwayTemplates: EnrollPatientInPathwaysInput['pathways'],
@@ -607,7 +668,9 @@ class PatientDomain implements PatientDomainInterface {
     const failedEnrollments: EnrollmentResult['failedEnrollments'] = []
     let currentPatient = patient
 
-    for (const enrollment of pathwayTemplates) {
+    for (const enrollment of await this.orderByPrerequisites(
+      pathwayTemplates,
+    )) {
       try {
         const outcome = await this.enrollPatientInTag(
           currentPatient,

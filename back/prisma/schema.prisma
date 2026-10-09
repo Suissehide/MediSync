@@ -163,6 +163,8 @@ model PathwayTemplate {
   displayOrder         Int      @default(0)
   motifRequired        Boolean  @default(false)
   firstAppointmentOnly Boolean  @default(false)
+  // Parcours à terminer avant celui-ci (ids de PathwayTemplate du même service).
+  prerequisiteIDs      String[] @default([])
 
   pathways      Pathway[]
   slotTemplates SlotTemplate[]
