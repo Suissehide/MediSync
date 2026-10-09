@@ -137,9 +137,9 @@ Sinon, rendu inchangé : les usages actuels ne bougent pas.
 - localStorage illisible ou corrompu : `safeParse` existant retombe sur les défauts.
 - Filtre mémorisé sur une colonne qui n'existe plus ou est masquée : effacé au chargement
   (on ne garde que les filtres des colonnes visibles).
-- Valeur en base absente des constantes : affichée telle quelle en étiquette neutre. Le filtre
-  ne la propose pas (il ne liste que les choix connus + « Non renseigné ») ; la ligne disparaît
-  dès qu'un filtre est actif sur la colonne. Aucune n'existe en base aujourd'hui.
+- Valeur en base absente des constantes : affichée telle quelle en étiquette neutre, et proposée
+  dans le filtre après les choix connus (sans couleur, avec son compteur), pour qu'aucun patient
+  ne devienne infiltrable. Aucune n'existe en base aujourd'hui.
 
 ## 6. Tests
 
