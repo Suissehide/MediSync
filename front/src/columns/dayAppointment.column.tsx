@@ -13,11 +13,12 @@ import {
   SlotFrieze,
   SlotTimeline,
 } from '../components/custom/agenda/slotRange.tsx'
+import { Tronque } from '../components/custom/agenda/tronque.tsx'
 import { Etiquette } from '../components/table/etiquette.tsx'
 import { Button } from '../components/ui/button.tsx'
 import { APPOINTMENT_TYPE } from '../constants/appointment.constant.ts'
 import { styleSoignant } from '../libs/color.ts'
-import { cn, type DaySlotRow } from '../libs/utils.ts'
+import type { DaySlotRow } from '../libs/utils.ts'
 
 const columnHelper = createColumnHelper<DaySlotRow>()
 
@@ -28,19 +29,6 @@ const parentsOnly: SortingFn<DaySlotRow> = (a, b, columnId) =>
 
 // Une plage repliée : sa frise occupe les colonnes Patients et Type.
 const isRange = (row: DaySlotRow) => !!row.subRows
-
-// Colonnes à largeur figée : le texte trop long est coupé, le survol le rend entier.
-const Tronque = ({
-  children,
-  className,
-}: {
-  children: string
-  className?: string
-}) => (
-  <span className={cn('min-w-0 truncate', className)} title={children}>
-    {children}
-  </span>
-)
 
 const summarizeThematics = (row: DaySlotRow) => {
   const thematics = [
@@ -72,7 +60,7 @@ export const getDayAppointmentColumns = ({
     columnHelper.accessor('startDate', {
       id: 'schedule',
       header: 'Horaire',
-      size: 180,
+      size: 150,
       sortingFn: parentsOnly,
       cell: ({ row }) => {
         if (row.depth > 0) {
@@ -91,12 +79,13 @@ export const getDayAppointmentColumns = ({
         }
         if (isRange(row.original)) {
           return (
-            <Tronque className="text-text-light">
-              {summarizeThematics(row.original)}
-            </Tronque>
+            <Tronque
+              className="text-text-light"
+              texte={summarizeThematics(row.original)}
+            />
           )
         }
-        return <Tronque>{getValue() || '—'}</Tronque>
+        return <Tronque texte={getValue() || '—'} />
       },
     }),
     // Lieu, soignant et places sont ceux du créneau : pas répétés sur ses sous-lignes.
@@ -105,7 +94,7 @@ export const getDayAppointmentColumns = ({
       size: 160,
       sortingFn: parentsOnly,
       cell: ({ row, getValue }) =>
-        row.depth > 0 ? null : <Tronque>{getValue() || '—'}</Tronque>,
+        row.depth > 0 ? null : <Tronque texte={getValue() || '—'} />,
     }),
     columnHelper.display({
       id: 'soignants',
@@ -122,10 +111,9 @@ export const getDayAppointmentColumns = ({
         const visible = soignants.slice(0, MAX_VISIBLE_CHIPS)
         const rest = soignants.length - visible.length
         return (
-          // Colonne à largeur figée : une pastille coupée se lit au survol.
-          <div
-            className="flex items-center gap-1 overflow-hidden"
-            title={soignants.map((s) => s.name).join(', ')}
+          <Tronque
+            className="flex items-center gap-1"
+            texte={soignants.map((s) => s.name).join(', ')}
           >
             {visible.map((soignant) => (
               <Etiquette
@@ -140,7 +128,7 @@ export const getDayAppointmentColumns = ({
                 +{rest}
               </span>
             )}
-          </div>
+          </Tronque>
         )
       },
     }),
