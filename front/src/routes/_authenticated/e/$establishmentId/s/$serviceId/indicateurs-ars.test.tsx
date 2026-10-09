@@ -188,7 +188,9 @@ describe('écran des indicateurs ARS', () => {
     monter({ ok: false, status: 500 })
 
     await screen.findByRole('alert')
-    expect(screen.getByRole('button', { name: 'Exporter' })).toBeDisabled()
+    expect(
+      screen.getByRole('button', { name: 'Exporter en Excel' }),
+    ).toBeDisabled()
     expect(
       screen.getByRole('button', { name: 'Exporter en CSV' }),
     ).toBeDisabled()

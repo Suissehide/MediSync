@@ -107,7 +107,7 @@ function ArsIndicatorsPage() {
               onClick={exporterExcel}
               disabled={etat !== 'ready' || exportEnCours}
             >
-              {exportEnCours ? 'Export…' : 'Exporter'}
+              {exportEnCours ? 'Export…' : 'Exporter en Excel'}
             </Button>
             <Button
               variant="outline"
