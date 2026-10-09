@@ -2,9 +2,9 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
-import { CelluleParcours } from './patient.column.tsx'
+import { CelluleParcours, getPatientColumns } from './patient.column.tsx'
 
-const couleurs = new Map<string, string>()
+const couleurs: Record<string, string> = {}
 
 const tags = ['asthme', 'BPCO', 'diabète', 'ETP', 'obésité']
 
@@ -50,5 +50,27 @@ describe('cellule des parcours', () => {
 
     await userEvent.click(screen.getByRole('button', { name: '+3' }))
     expect(onRowClick).not.toHaveBeenCalled()
+  })
+})
+
+describe('colonnes optionnelles des patients', () => {
+  it('propose les champs Inclusion et Bilan, masques par defaut', () => {
+    const optionnelles = getPatientColumns({ onView: () => undefined })
+      .filter((c) => (c.meta as { optional?: unknown } | undefined)?.optional)
+      .map((c) => [
+        c.id,
+        (c.meta as { optional: { group: string } }).optional.group,
+      ])
+    expect(optionnelles).toEqual([
+      ['medicalDiagnosis', 'Inclusion'],
+      ['careMode', 'Inclusion'],
+      ['orientation', 'Inclusion'],
+      ['etpDecision', 'Inclusion'],
+      ['programType', 'Inclusion'],
+      ['nonInclusionDetails', 'Inclusion'],
+      ['stopReason', 'Bilan'],
+      ['etpFinalOutcome', 'Bilan'],
+      ['exitDate', 'Bilan'],
+    ])
   })
 })

@@ -1,9 +1,11 @@
 import { Slot } from '@radix-ui/react-slot'
 import type React from 'react'
+import { useState } from 'react'
 
 import { getContrastTextColor, hexToRGBA } from '../../libs/color.ts'
 import { cn } from '../../libs/utils.ts'
 import type { InvitationStatus } from '../../types/member.ts'
+import { Button } from '../ui/button.tsx'
 
 // L'etiquette des tableaux et des listes : une seule forme (coins, taille, marges) pour toute
 // l'application — roles, statuts, types, parcours, soignants et patients de l'agenda. Seule la
@@ -84,4 +86,43 @@ export const EtiquetteStatut = ({
     return <Etiquette ton="danger">Invitation expirée</Etiquette>
   }
   return <Etiquette ton="succes">Actif</Etiquette>
+}
+
+// Liste d'etiquettes dans une cellule de tableau : les premieres en clair, le reste deplie sur
+// place par le « +N », comme les patients de l'agenda (ces tableaux ne sont pas virtualises).
+export function EtiquettesTronquees({
+  items,
+  max = 3,
+}: {
+  items: { id: string; name: string }[]
+  max?: number
+}) {
+  const [deplie, setDeplie] = useState(false)
+  const cachees = items.length - max
+  return (
+    <div
+      className={cn(
+        'flex items-center gap-1',
+        // Le tableau ne tient pas compte de `size` : sans largeur explicite, la liste depliee
+        // s'etale sur une seule ligne et repousse les colonnes suivantes hors de l'ecran.
+        deplie ? 'max-w-[280px] flex-wrap' : 'overflow-hidden',
+      )}
+    >
+      {(deplie ? items : items.slice(0, max)).map((item) => (
+        <Etiquette key={item.id}>{item.name}</Etiquette>
+      ))}
+      {cachees > 0 && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-6 px-1 text-xs text-primary"
+          aria-expanded={deplie}
+          onClick={() => setDeplie((value) => !value)}
+        >
+          {deplie ? 'Voir moins' : `+${cachees}`}
+        </Button>
+      )}
+    </div>
+  )
 }

@@ -3,9 +3,19 @@ import dayjs from 'dayjs'
 import { AlertTriangle, Eye } from 'lucide-react'
 import { useState } from 'react'
 
+import { choiceColumn } from '../components/table/choiceColumn.tsx'
 import { Etiquette } from '../components/table/etiquette.tsx'
 import { Button } from '../components/ui/button.tsx'
-import type { PathwayTemplate } from '../types/pathwayTemplate.ts'
+import {
+  CARE_MODE_OPTIONS,
+  ETP_DECISION_OPTIONS,
+  ETP_FINAL_OUTCOME_OPTIONS,
+  MEDICAL_DIAGNOSIS_OPTIONS,
+  NON_INCLUSION_DETAILS_OPTIONS,
+  ORIENTATION_OPTIONS,
+  PROGRAM_TYPE_OPTIONS,
+  STOP_REASON_OPTIONS,
+} from '../constants/patient.constant.ts'
 import type { PatientWithTags } from '../types/patient.ts'
 
 const columnHelper = createColumnHelper<PatientWithTags>()
@@ -21,7 +31,7 @@ export function CelluleParcours({
   couleurParTag,
 }: {
   tags: string[]
-  couleurParTag: Map<string, string>
+  couleurParTag: Record<string, string>
 }) {
   const [deploye, setDeploye] = useState(false)
   const caches = tags.length - PARCOURS_REPLIES
@@ -30,7 +40,7 @@ export function CelluleParcours({
   return (
     <div className="flex flex-wrap gap-1">
       {visibles.map((tag) => (
-        <Etiquette key={tag} couleur={couleurParTag.get(tag)} ton="neutre">
+        <Etiquette key={tag} couleur={couleurParTag[tag]} ton="neutre">
           {tag}
         </Etiquette>
       ))}
@@ -56,21 +66,9 @@ export function CelluleParcours({
 
 type PatientActions = {
   onView: (id: string) => void
-  pathwayTemplates?: PathwayTemplate[]
 }
 
-export const getPatientColumns = ({
-  onView,
-  pathwayTemplates = [],
-}: PatientActions) => {
-  // Couleur d'un tag principal : celle du premier parcours qui le porte.
-  const tagColorMap = new Map<string, string>()
-  for (const template of pathwayTemplates) {
-    if (!tagColorMap.has(template.mainTag)) {
-      tagColorMap.set(template.mainTag, template.color)
-    }
-  }
-
+export const getPatientColumns = ({ onView }: PatientActions) => {
   return [
     columnHelper.display({
       id: 'enrollmentAlert',
@@ -114,14 +112,77 @@ export const getPatientColumns = ({
       header: 'Parcours',
       size: 250,
       maxSize: 250,
-      cell: ({ getValue }) => {
+      cell: ({ getValue, row }) => {
         const tags = getValue() ?? []
         if (tags.length === 0) {
           return null
         }
 
-        return <CelluleParcours tags={tags} couleurParTag={tagColorMap} />
+        return (
+          <CelluleParcours
+            tags={tags}
+            couleurParTag={row.original.pathwayTagColors ?? {}}
+          />
+        )
       },
+    }),
+    choiceColumn<PatientWithTags>(
+      'medicalDiagnosis',
+      (p) => p.medicalDiagnosis,
+      {
+        label: 'Diagnostic médical',
+        group: 'Inclusion',
+        choices: MEDICAL_DIAGNOSIS_OPTIONS,
+      },
+    ),
+    choiceColumn<PatientWithTags>('careMode', (p) => p.careMode, {
+      label: 'Mode de prise en charge',
+      group: 'Inclusion',
+      choices: CARE_MODE_OPTIONS,
+    }),
+    choiceColumn<PatientWithTags>('orientation', (p) => p.orientation, {
+      label: 'Orientation',
+      group: 'Inclusion',
+      choices: ORIENTATION_OPTIONS,
+    }),
+    choiceColumn<PatientWithTags>('etpDecision', (p) => p.etpDecision, {
+      label: 'ETP décision',
+      group: 'Inclusion',
+      choices: ETP_DECISION_OPTIONS,
+    }),
+    choiceColumn<PatientWithTags>('programType', (p) => p.programType, {
+      label: 'Type de programme',
+      group: 'Inclusion',
+      choices: PROGRAM_TYPE_OPTIONS,
+    }),
+    choiceColumn<PatientWithTags>(
+      'nonInclusionDetails',
+      (p) => p.nonInclusionDetails,
+      {
+        label: 'Précision non inclusion',
+        group: 'Inclusion',
+        choices: NON_INCLUSION_DETAILS_OPTIONS,
+      },
+    ),
+    choiceColumn<PatientWithTags>('stopReason', (p) => p.stopReason, {
+      label: "Motif d'arrêt de programme",
+      group: 'Bilan',
+      choices: STOP_REASON_OPTIONS,
+    }),
+    choiceColumn<PatientWithTags>('etpFinalOutcome', (p) => p.etpFinalOutcome, {
+      label: 'Point final parcours ETP',
+      group: 'Bilan',
+      choices: ETP_FINAL_OUTCOME_OPTIONS,
+    }),
+    columnHelper.accessor((row) => row.exitDate ?? undefined, {
+      id: 'exitDate',
+      header: 'Date de sortie',
+      sortUndefined: 'last',
+      cell: ({ getValue }) => {
+        const value = getValue()
+        return value ? dayjs.utc(value).format('DD/MM/YYYY') : null
+      },
+      meta: { optional: { label: 'Date de sortie', group: 'Bilan' } },
     }),
     columnHelper.display({
       id: 'actions',

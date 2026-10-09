@@ -156,7 +156,10 @@ function EditThematicSoignantsForm({
 
             <form.AppField name="pdfNotice">
               {(field) => (
-                <field.TextArea label="Consigne affichée dans le programme PDF" />
+                <field.TextArea
+                  label="Consigne affichée dans le programme PDF"
+                  description="%dates% est remplacé par les dates de cette thématique dans le programme du patient (« 12/05, 19/05 et 26/05 »). Une consigne qui contient %dates% n'est rappelée qu'une fois, avant la première semaine concernée."
+                />
               )}
             </form.AppField>
 

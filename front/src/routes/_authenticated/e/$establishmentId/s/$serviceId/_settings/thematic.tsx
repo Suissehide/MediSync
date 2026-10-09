@@ -110,6 +110,7 @@ function ThematicSettings() {
           columns={columns}
           filterId="thematic"
           isLoading={isPending}
+          virtualize={false}
         />
 
         <ConfirmDeleteForm

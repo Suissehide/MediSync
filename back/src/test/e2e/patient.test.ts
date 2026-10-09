@@ -592,6 +592,48 @@ describe('cloisonnement de la liste des patients par service', () => {
     await testDb.patient.delete({ where: { id: patientId } })
   })
 
+  it('la liste porte les champs a choix du sous-dossier du service courant, pas ceux de l autre', async () => {
+    const patientId = await createPatientInService(serviceAId, {
+      firstName: 'Choix',
+      lastName: 'Service',
+    })
+    await writeServiceFile(serviceAId, patientId, {
+      medicalDiagnosis: 'AVC',
+      careMode: 'HDJ',
+      stopReason: 'REFUS',
+    })
+    await writeServiceFile(serviceBId, patientId, {
+      medicalDiagnosis: 'AOMI',
+    })
+
+    type Ligne = {
+      id: string
+      medicalDiagnosis: string | null
+      careMode: string | null
+      stopReason: string | null
+      etpFinalOutcome: string | null
+    }
+    const inA = ((await listWithTags(serviceAId)) as unknown as Ligne[]).find(
+      (p) => p.id === patientId,
+    )
+    const inB = ((await listWithTags(serviceBId)) as unknown as Ligne[]).find(
+      (p) => p.id === patientId,
+    )
+    expect(inA).toMatchObject({
+      medicalDiagnosis: 'AVC',
+      careMode: 'HDJ',
+      stopReason: 'REFUS',
+      etpFinalOutcome: null,
+    })
+    expect(inB).toMatchObject({
+      medicalDiagnosis: 'AOMI',
+      careMode: null,
+      stopReason: null,
+    })
+
+    await testDb.patient.delete({ where: { id: patientId } })
+  })
+
   // Un patient cree par le bouton « Creer sans parcours » du formulaire d'ajout (POST /patient
   // seul, sans inscription ni diagnostic ni ecriture du sous-dossier — exactement ce que fait
   // `createPatientInService` ci-dessus) ne recevait AUCUN sous-dossier : plus aucun chemin de

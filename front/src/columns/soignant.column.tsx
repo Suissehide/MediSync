@@ -6,7 +6,7 @@ import EditSoignantAccountsForm, {
   nomDuCompte,
 } from '../components/custom/popup/editSoignantAccountsForm.tsx'
 import EditSoignantThematicsForm from '../components/custom/popup/editSoignantThematicsForm.tsx'
-import { Etiquette } from '../components/table/etiquette.tsx'
+import { EtiquettesTronquees } from '../components/table/etiquette.tsx'
 import { Button } from '../components/ui/button.tsx'
 import type { ServiceMember } from '../types/serviceMember.ts'
 import type { Soignant } from '../types/soignant.ts'
@@ -52,20 +52,7 @@ export const getSoignantColumns = ({
         const soignantThematics = thematics
           .filter((t) => t.soignants.some((s) => s.id === soignant.id))
           .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
-        const visible = soignantThematics.slice(0, 3)
-        const rest = soignantThematics.length - visible.length
-        return (
-          <div className="flex items-center gap-1 overflow-hidden">
-            {visible.map((t) => (
-              <Etiquette key={t.id}>{t.name}</Etiquette>
-            ))}
-            {rest > 0 && (
-              <span className="shrink-0 text-xs text-muted-foreground font-medium">
-                +{rest}
-              </span>
-            )}
-          </div>
-        )
+        return <EtiquettesTronquees items={soignantThematics} />
       },
     }),
     columnHelper.display({

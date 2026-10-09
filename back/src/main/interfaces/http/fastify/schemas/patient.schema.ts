@@ -76,11 +76,20 @@ export const patientDetailResponseSchema = patientResponseSchema.extend({
 
 export const patientWithTagsResponseSchema = patientResponseSchema.extend({
   pathwayTemplateTags: z.array(z.string()),
+  pathwayTagColors: z.record(z.string(), z.string()).optional(),
   // Date d'entree dans le service courant : jointe depuis le sous-dossier de service filtre
   // sur ce service (`findAllWithTags`, back), pas depuis `patientEntity` — `null` si le
   // patient n'a pas encore de sous-dossier dans ce service.
   entryDate: z.coerce.date().optional().nullable(),
   exitDate: z.coerce.date().optional().nullable(),
+  medicalDiagnosis: z.string().nullable().optional(),
+  careMode: z.string().nullable().optional(),
+  orientation: z.string().nullable().optional(),
+  etpDecision: z.string().nullable().optional(),
+  programType: z.string().nullable().optional(),
+  nonInclusionDetails: z.string().nullable().optional(),
+  stopReason: z.string().nullable().optional(),
+  etpFinalOutcome: z.string().nullable().optional(),
 })
 
 export const patientsWithTagsResponseSchema = z.array(
