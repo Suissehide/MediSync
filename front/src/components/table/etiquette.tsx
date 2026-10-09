@@ -4,6 +4,7 @@ import type React from 'react'
 import { getContrastTextColor, hexToRGBA } from '../../libs/color.ts'
 import { cn } from '../../libs/utils.ts'
 import type { InvitationStatus } from '../../types/member.ts'
+import { PopoverContent, PopoverRoot, PopoverTrigger } from '../ui/popover.tsx'
 
 // L'etiquette des tableaux et des listes : une seule forme (coins, taille, marges) pour toute
 // l'application — roles, statuts, types, parcours, soignants et patients de l'agenda. Seule la
@@ -84,4 +85,45 @@ export const EtiquetteStatut = ({
     return <Etiquette ton="danger">Invitation expirée</Etiquette>
   }
   return <Etiquette ton="succes">Actif</Etiquette>
+}
+
+// Liste d'etiquettes dans une cellule de tableau : les premieres en clair, le reste derriere un
+// « +N » qui deplie tout dans un popover (la ligne a une hauteur fixe, elle ne peut pas grandir).
+export function EtiquettesTronquees({
+  items,
+  max = 3,
+}: {
+  items: { id: string; name: string }[]
+  max?: number
+}) {
+  const reste = items.length - max
+  return (
+    <div className="flex items-center gap-1 overflow-hidden">
+      {items.slice(0, max).map((item) => (
+        <Etiquette key={item.id}>{item.name}</Etiquette>
+      ))}
+      {reste > 0 && (
+        <PopoverRoot>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              aria-label={`Afficher les ${items.length} étiquettes`}
+              onClick={(e) => e.stopPropagation()}
+              className="shrink-0 rounded px-1 text-xs font-medium text-muted-foreground hover:text-primary"
+            >
+              +{reste}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent
+            align="start"
+            className="flex max-w-xs flex-wrap gap-1 p-2"
+          >
+            {items.map((item) => (
+              <Etiquette key={item.id}>{item.name}</Etiquette>
+            ))}
+          </PopoverContent>
+        </PopoverRoot>
+      )}
+    </div>
+  )
 }
