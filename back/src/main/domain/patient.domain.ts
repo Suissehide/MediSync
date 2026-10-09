@@ -511,7 +511,8 @@ class PatientDomain implements PatientDomainInterface {
     patientAppointments: AppointmentPatientWithAppointmentDomain[],
     enrollment: PathwayEnrollmentInput,
     startDate: Date,
-    requireMotif = true,
+    // Aperçu : motif non exigé, et fins simulées des prérequis de la même demande (par templateID).
+    preview?: { prerequisiteEnds: Map<string, Date> },
   ): Promise<
     | {
         pathway: PathwayWithSlotsRepo
@@ -529,7 +530,7 @@ class PatientDomain implements PatientDomainInterface {
       (t) => t.mainTag === enrollment.tag,
     )
     if (
-      requireMotif &&
+      !preview &&
       matchingTemplate?.motifRequired &&
       (!enrollment.motif || !enrollment.motif.trim())
     ) {
@@ -563,13 +564,21 @@ class PatientDomain implements PatientDomainInterface {
       }
     }
 
-    const notBefore =
-      patientID && matchingTemplate?.prerequisiteIDs.length
+    const prerequisiteIDs = matchingTemplate?.prerequisiteIDs ?? []
+    const recordedEnd =
+      patientID && prerequisiteIDs.length
         ? await this.appointmentRepository.findLastEndDateForPatient(
             patientID,
-            matchingTemplate.prerequisiteIDs,
+            prerequisiteIDs,
           )
         : null
+    const ends = [
+      recordedEnd,
+      ...prerequisiteIDs.map((id) => preview?.prerequisiteEnds.get(id)),
+    ].filter((d): d is Date => !!d)
+    const notBefore = ends.length
+      ? new Date(Math.max(...ends.map((d) => d.getTime())))
+      : null
     const eligiblePathways = notBefore
       ? this.startingAfter(pathways, notBefore, firstAppointmentOnly)
       : pathways
@@ -640,8 +649,8 @@ class PatientDomain implements PatientDomainInterface {
     }
   }
 
-  // Date du premier rendez-vous que chaque inscription obtiendrait, sans rien écrire.
-  // ponytail: ignore les prérequis entre parcours d'une même demande, l'inscription réelle les applique.
+  // Date du premier rendez-vous que chaque inscription obtiendrait, sans rien écrire. Comme à
+  // l'inscription, les prérequis passent d'abord et leur fin simulée décale les parcours qui en dépendent.
   async previewEnrollments(
     pathways: (PathwayEnrollmentInput & { startDate: Date })[],
     patientID?: string,
@@ -649,54 +658,79 @@ class PatientDomain implements PatientDomainInterface {
     const appointments = patientID
       ? (await this.patientRepository.findByID(patientID)).appointmentPatients
       : []
-    return Promise.all(
-      pathways.map(async (enrollment) => {
-        const found = await this.findPathwayForTag(
-          patientID ?? null,
-          appointments,
-          enrollment,
-          enrollment.startDate,
-          false,
-        ).catch((error) => {
-          const { reason, logLine } = describeEnrollmentFailure(
-            `(aperçu) au parcours avec tag "${enrollment.tag}"`,
-            error,
-          )
-          this.logger.error(logLine)
-          return { failure: { slotTemplate: { id: enrollment.tag }, reason } }
-        })
-        if ('failure' in found) {
-          return {
-            tag: enrollment.tag,
-            startDate: null,
-            reason: found.failure.reason,
-          }
-        }
-        const startOfDay = new Date(enrollment.startDate)
-        startOfDay.setHours(0, 0, 0, 0)
-        const first = [...found.pathway.slots]
-          .sort(
-            (a, b) =>
-              new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
-          )
-          .find(
-            (slot) =>
-              !found.firstAppointmentOnly ||
-              (new Date(slot.startDate) >= startOfDay &&
-                this.isSlotAvailable(
-                  slot,
-                  enrollment.timeOfDay,
-                  appointments,
-                  1,
-                  found.thematicDuration,
-                )),
-          )
-        return {
-          tag: enrollment.tag,
-          startDate: first ? new Date(first.startDate) : null,
-        }
-      }),
+    const prerequisiteEnds = new Map<string, Date>()
+    const previews: EnrollmentPreview[] = []
+    for (const enrollment of await this.orderByPrerequisites(pathways)) {
+      previews[pathways.indexOf(enrollment)] = await this.previewEnrollment(
+        enrollment,
+        patientID ?? null,
+        appointments,
+        prerequisiteEnds,
+      )
+    }
+    return previews
+  }
+
+  private async previewEnrollment(
+    enrollment: PathwayEnrollmentInput & { startDate: Date },
+    patientID: string | null,
+    appointments: AppointmentPatientWithAppointmentDomain[],
+    prerequisiteEnds: Map<string, Date>,
+  ): Promise<EnrollmentPreview> {
+    const found = await this.findPathwayForTag(
+      patientID,
+      appointments,
+      enrollment,
+      enrollment.startDate,
+      { prerequisiteEnds },
+    ).catch((error) => {
+      const { reason, logLine } = describeEnrollmentFailure(
+        `(aperçu) au parcours avec tag "${enrollment.tag}"`,
+        error,
+      )
+      this.logger.error(logLine)
+      return { failure: { slotTemplate: { id: enrollment.tag }, reason } }
+    })
+    if ('failure' in found) {
+      return {
+        tag: enrollment.tag,
+        startDate: null,
+        reason: found.failure.reason,
+      }
+    }
+    const startOfDay = new Date(enrollment.startDate)
+    startOfDay.setHours(0, 0, 0, 0)
+    const slots = [...found.pathway.slots]
+      .sort(
+        (a, b) =>
+          new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
+      )
+      .filter(
+        (slot) =>
+          !found.firstAppointmentOnly ||
+          (new Date(slot.startDate) >= startOfDay &&
+            this.isSlotAvailable(
+              slot,
+              enrollment.timeOfDay,
+              appointments,
+              1,
+              found.thematicDuration,
+            )),
+      )
+    const taken = found.firstAppointmentOnly ? slots.slice(0, 1) : slots
+    // ponytail: fin du créneau, pas du rendez-vous ; un créneau individuel peut finir un peu plus tard.
+    const end = Math.max(
+      ...taken.map((slot) => new Date(slot.endDate).getTime()),
     )
+    const { templateID } = found.pathway
+    const previous = templateID && prerequisiteEnds.get(templateID)
+    if (templateID && taken.length && (!previous || previous.getTime() < end)) {
+      prerequisiteEnds.set(templateID, new Date(end))
+    }
+    return {
+      tag: enrollment.tag,
+      startDate: taken[0] ? new Date(taken[0].startDate) : null,
+    }
   }
 
   // Parcours entier après la date ; en mode « premier créneau », seuls les créneaux après elle.
@@ -716,9 +750,9 @@ class PatientDomain implements PatientDomainInterface {
   }
 
   // Les parcours prérequis passent avant ceux qui en dépendent.
-  private async orderByPrerequisites(
-    enrollments: PathwayEnrollmentInput[],
-  ): Promise<PathwayEnrollmentInput[]> {
+  private async orderByPrerequisites<T extends PathwayEnrollmentInput>(
+    enrollments: T[],
+  ): Promise<T[]> {
     // Échec relevé et journalisé par inscription dans enrollPatientInTag.
     const templates = await this.pathwayTemplateRepository
       .findAll()
@@ -728,7 +762,7 @@ class PatientDomain implements PatientDomainInterface {
     const idOf = (e: PathwayEnrollmentInput) =>
       templates.find((t) => t.mainTag === e.tag)?.id
     const remaining = [...enrollments]
-    const ordered: PathwayEnrollmentInput[] = []
+    const ordered: T[] = []
     while (remaining.length > 0) {
       const ready = remaining.findIndex(
         (e) =>
