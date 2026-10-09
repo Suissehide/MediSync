@@ -170,7 +170,10 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
         )}
       </PopupTrigger>
 
-      <PopupContent size="lg">
+      <PopupContent
+        size="lg"
+        className={step === 2 ? 'w-[860px] max-w-[95vw]' : undefined}
+      >
         <PopupHeader>
           <PopupTitle>Ajouter un patient</PopupTitle>
         </PopupHeader>

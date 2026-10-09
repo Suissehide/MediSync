@@ -1,5 +1,5 @@
 import { cva, type VariantProps } from 'class-variance-authority'
-import { FilePlus, X } from 'lucide-react'
+import { FilePlus, type LucideIcon, X } from 'lucide-react'
 import { Dialog } from 'radix-ui'
 import React from 'react'
 
@@ -108,8 +108,8 @@ PopupHeader.displayName = 'PopupHeader'
 
 const PopupTitle = React.forwardRef<
   React.ComponentRef<typeof Dialog.Title>,
-  React.ComponentPropsWithoutRef<typeof Dialog.Title>
->(({ className, children, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof Dialog.Title> & { icon?: LucideIcon }
+>(({ className, children, icon: Icon, ...props }, ref) => (
   <Dialog.Title
     ref={ref}
     className={cn(
@@ -119,11 +119,15 @@ const PopupTitle = React.forwardRef<
     {...props}
   >
     <div className="pl-2 relative flex justify-center items-center before:z-[-1] before:absolute before:bg-primary/30 before:rounded-full before:w-6.5 before:h-6.5 after:z-[-1] after:absolute after:bg-primary/10 after:rounded-full after:w-9.5 after:h-9.5">
-      <FilePlus
-        fill="#2563eb"
-        strokeWidth={1}
-        className="h-4 w-4 text-card z-1"
-      />
+      {Icon ? (
+        <Icon className="h-4 w-4 text-primary z-1" />
+      ) : (
+        <FilePlus
+          fill="#2563eb"
+          strokeWidth={1}
+          className="h-4 w-4 text-card z-1"
+        />
+      )}
     </div>
     {children}
   </Dialog.Title>
