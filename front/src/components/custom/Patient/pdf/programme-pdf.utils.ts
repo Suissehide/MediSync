@@ -49,23 +49,97 @@ export function computeProgramDuration(slots: Slot[]): {
 // fermeture court donc du lundi au vendredi de la semaine interdite.
 const CLOSURE_LAST_WEEKDAY_OFFSET = 4
 
+// Jeton remplacé dans une consigne par les dates de la thématique sur tout le
+// programme : « Prenez un seul rendez-vous parmi : %dates% ».
+export const NOTICE_DATES_TOKEN = '%dates%'
+
+const byStartDate = (a: Slot, b: Slot) =>
+  dayjs.utc(a.startDate).diff(dayjs.utc(b.startDate))
+
+// Le calendrier n'affiche que le lundi au vendredi.
+const isWeekday = (slot: Slot) => {
+  const dow = dayjs.utc(slot.startDate).day()
+  return dow !== 0 && dow !== 6
+}
+
+// « 12/05 », « 12/05 et 19/05 », « 12/05, 19/05 et 26/05 ».
+function formatDateList(dates: string[]): string {
+  if (dates.length < 2) {
+    return dates.join('')
+  }
+  return `${dates.slice(0, -1).join(', ')} et ${dates[dates.length - 1]}`
+}
+
+// Les dates de chaque thématique sur tout le programme, dédoublonnées et
+// chronologiques : ce que `%dates%` remplace.
+function buildDatesByThematicId(slots: Slot[]): Map<string, string> {
+  const datesByThematicId = new Map<string, string[]>()
+
+  for (const slot of slots.filter(isWeekday).sort(byStartDate)) {
+    const thematicId = slot.slotTemplate?.thematicId
+    if (!thematicId) {
+      continue
+    }
+    const date = dayjs.utc(slot.startDate).format('DD/MM')
+    const dates = datesByThematicId.get(thematicId) ?? []
+    if (!dates.includes(date)) {
+      dates.push(date)
+      datesByThematicId.set(thematicId, dates)
+    }
+  }
+
+  return new Map(
+    [...datesByThematicId].map(([id, dates]) => [id, formatDateList(dates)]),
+  )
+}
+
+// La consigne telle qu'elle s'imprime : jeton résolu, ou `null` si elle a déjà
+// listé ses dates avant une semaine précédente.
+function resolveNotice(
+  notice: string,
+  thematicId: string,
+  datesByThematicId: Map<string, string>,
+  thematicIdsWithDatesEmitted: Set<string>,
+): string | null {
+  if (!notice.includes(NOTICE_DATES_TOKEN)) {
+    return notice
+  }
+  // Une consigne qui liste toutes les dates du programme ne se rappelle
+  // qu'avant la première semaine concernée.
+  if (thematicIdsWithDatesEmitted.has(thematicId)) {
+    return null
+  }
+  thematicIdsWithDatesEmitted.add(thematicId)
+  return notice
+    .split(NOTICE_DATES_TOKEN)
+    .join(datesByThematicId.get(thematicId) ?? '')
+}
+
 // Les consignes d'une semaine, dans l'ordre chronologique des créneaux qui les
 // portent. Une même consigne n'est rappelée qu'une fois par semaine, même si
 // la thématique y revient plusieurs fois.
 function collectWeekNotices(
   weekdaySlots: Slot[],
   noticeByThematicId: Map<string, string>,
+  datesByThematicId: Map<string, string>,
+  thematicIdsWithDatesEmitted: Set<string>,
 ): string[] {
   const notices: string[] = []
-  const chronological = [...weekdaySlots].sort((a, b) =>
-    dayjs.utc(a.startDate).diff(dayjs.utc(b.startDate)),
-  )
 
-  for (const slot of chronological) {
+  for (const slot of [...weekdaySlots].sort(byStartDate)) {
     const thematicId = slot.slotTemplate?.thematicId
     const notice = thematicId ? noticeByThematicId.get(thematicId) : undefined
-    if (notice && !notices.includes(notice)) {
-      notices.push(notice)
+    if (!notice || !thematicId) {
+      continue
+    }
+    const resolved = resolveNotice(
+      notice,
+      thematicId,
+      datesByThematicId,
+      thematicIdsWithDatesEmitted,
+    )
+    if (resolved && !notices.includes(resolved)) {
+      notices.push(resolved)
     }
   }
 
@@ -82,9 +156,7 @@ export function buildCalendarEntries(
     return []
   }
 
-  const sorted = [...slots].sort((a, b) =>
-    dayjs.utc(a.startDate).diff(dayjs.utc(b.startDate)),
-  )
+  const sorted = [...slots].sort(byStartDate)
 
   const programStart = dayjs.utc(sorted[0].startDate).startOf('isoWeek')
   const programEnd = dayjs
@@ -96,6 +168,10 @@ export function buildCalendarEntries(
       dayjs.utc(date).startOf('isoWeek').format('YYYY-MM-DD'),
     ),
   )
+
+  const datesByThematicId = buildDatesByThematicId(slots)
+  // Un jeton de dates couvre tout le programme : une seule mention par thématique.
+  const thematicIdsWithDatesEmitted = new Set<string>()
 
   const entries: CalendarEntry[] = []
   let current = programStart
@@ -121,10 +197,7 @@ export function buildCalendarEntries(
       )
     })
 
-    const weekdaySlots = weekSlots.filter((s) => {
-      const dow = dayjs.utc(s.startDate).day()
-      return dow !== 0 && dow !== 6
-    })
+    const weekdaySlots = weekSlots.filter(isWeekday)
     const timeKeys = Array.from(
       new Set(
         weekdaySlots.map((s) => {
@@ -154,7 +227,12 @@ export function buildCalendarEntries(
 
     if (timeRows.length > 0) {
       flushClosure()
-      const notices = collectWeekNotices(weekdaySlots, noticeByThematicId)
+      const notices = collectWeekNotices(
+        weekdaySlots,
+        noticeByThematicId,
+        datesByThematicId,
+        thematicIdsWithDatesEmitted,
+      )
       notices.forEach((text, noticeIndex) => {
         entries.push({
           kind: 'notice',

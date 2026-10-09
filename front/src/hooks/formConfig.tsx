@@ -291,9 +291,11 @@ function TextAreaField({
   label,
   className,
   inputClassName,
-}: FieldComponentProps) {
+  description,
+}: FieldComponentProps & { description?: string }) {
   const field = useFieldContext<string>()
   const value = field.state.value ?? ''
+  const descriptionId = `${field.name}-description`
 
   return (
     <div className={cn('flex flex-col gap-1', className)}>
@@ -302,11 +304,20 @@ function TextAreaField({
         id={field.name}
         value={value}
         className={inputClassName}
+        aria-describedby={description ? descriptionId : undefined}
         onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
           field.handleChange(e.target.value)
         }
         onBlur={field.handleBlur}
       />
+      {description && (
+        <p
+          id={descriptionId}
+          className="mt-0.5 text-[13px] leading-snug text-text-light text-pretty"
+        >
+          {description}
+        </p>
+      )}
       <FieldInfo field={field} />
     </div>
   )
