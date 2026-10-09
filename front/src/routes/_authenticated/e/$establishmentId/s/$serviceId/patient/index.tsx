@@ -22,6 +22,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group.tsx'
 import { safeParse } from '@/libs/utils.ts'
 import { usePathwayTemplateQueries } from '@/queries/usePathwayTemplate.ts'
 import { usePatientWithTagsQuery } from '@/queries/usePatient.tsx'
+import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { PatientWithTags } from '@/types/patient.ts'
 
 export const Route = createFileRoute(
@@ -67,6 +68,10 @@ function PatientList() {
       : DEFAULT_STATUS,
   )
   const [isExporting, setIsExporting] = useState(false)
+  const userId = useAuthStore((state) => state.user?.id) ?? 'anonyme'
+  const tableId = `patient/${serviceId}/${userId}`
+  const [resetSignal, setResetSignal] = useState(0)
+  const [columnFiltersActive, setColumnFiltersActive] = useState(false)
 
   useEffect(() => {
     localStorage.setItem(
@@ -134,6 +139,7 @@ function PatientList() {
   const resetFilters = () => {
     setStatus(DEFAULT_STATUS)
     setSelectedTags([])
+    setResetSignal((n) => n + 1)
   }
 
   const handleExport = async () => {
@@ -180,73 +186,80 @@ function PatientList() {
           </h1>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <Input
-            id="patient-search"
-            iconLeft={<Search className="w-4 h-4" />}
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Nom, prénom..."
-            className="w-72"
-          />
-          <ToggleGroup
-            value={status}
-            onValueChange={(v) => v && setStatus(v as Status)}
-          >
-            {(Object.keys(STATUSES) as Status[]).map((key) => (
-              <ToggleGroupItem key={key} value={key}>
-                {STATUSES[key]}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-          {tagFilters.length > 0 && (
-            <DropdownFilter
-              filters={tagFilters}
-              onFilterChange={handleTagChange}
-              triggerLabel={
-                selectedTags.length
-                  ? `Parcours · ${selectedTags.length}`
-                  : 'Parcours'
-              }
-              TriggerIcon={RouteIcon}
-              headerAction={
-                selectedTags.length
-                  ? {
-                      label: 'Tout effacer',
-                      icon: RotateCcw,
-                      onSelect: () => setSelectedTags([]),
-                    }
-                  : undefined
-              }
-            />
-          )}
-          {(status !== DEFAULT_STATUS || selectedTags.length > 0) && (
-            <Button variant="ghost" onClick={resetFilters}>
-              <X className="w-4 h-4" />
-              Réinitialiser
-            </Button>
-          )}
-          <div className="flex-1 border-t border-border" />
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={handleExport}
-            isLoading={isExporting}
-          >
-            <Download className="w-4 h-4" />
-          </Button>
-        </div>
-
         <div className="flex-1 min-h-0 flex flex-col">
           <ReactTable<PatientWithTags>
+            key={tableId}
             data={filteredPatients}
             columns={columns}
-            filterId="patient"
+            filterId={tableId}
             pagination
             isLoading={isPending}
             isRowMuted={(patient) => Boolean(patient.exitDate)}
             onRowClick={(patient) => handleRedirectPatient(patient.id)}
+            resetSignal={resetSignal}
+            onColumnFiltersActiveChange={setColumnFiltersActive}
+            toolbar={
+              <>
+                <Input
+                  id="patient-search"
+                  iconLeft={<Search className="w-4 h-4" />}
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Nom, prénom..."
+                  className="w-72"
+                />
+                <ToggleGroup
+                  value={status}
+                  onValueChange={(v) => v && setStatus(v as Status)}
+                >
+                  {(Object.keys(STATUSES) as Status[]).map((key) => (
+                    <ToggleGroupItem key={key} value={key}>
+                      {STATUSES[key]}
+                    </ToggleGroupItem>
+                  ))}
+                </ToggleGroup>
+                {tagFilters.length > 0 && (
+                  <DropdownFilter
+                    filters={tagFilters}
+                    onFilterChange={handleTagChange}
+                    triggerLabel={
+                      selectedTags.length
+                        ? `Parcours · ${selectedTags.length}`
+                        : 'Parcours'
+                    }
+                    TriggerIcon={RouteIcon}
+                    headerAction={
+                      selectedTags.length
+                        ? {
+                            label: 'Tout effacer',
+                            icon: RotateCcw,
+                            onSelect: () => setSelectedTags([]),
+                          }
+                        : undefined
+                    }
+                  />
+                )}
+                {(status !== DEFAULT_STATUS ||
+                  selectedTags.length > 0 ||
+                  columnFiltersActive) && (
+                  <Button variant="ghost" onClick={resetFilters}>
+                    <X className="w-4 h-4" />
+                    Réinitialiser
+                  </Button>
+                )}
+              </>
+            }
+            toolbarEnd={
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleExport}
+                isLoading={isExporting}
+              >
+                <Download className="w-4 h-4" />
+              </Button>
+            }
           />
         </div>
       </div>
