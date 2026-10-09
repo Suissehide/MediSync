@@ -21,7 +21,13 @@ import type { PostgresPrismaClient } from '../postgres-client'
 
 type AppointmentPatientWithMainTag = {
   appointment: {
-    slot: { pathway: { template: { mainTag: string } | null } | null } | null
+    slot: {
+      pathway: {
+        id: string
+        startDate: Date
+        template: { mainTag: string } | null
+      } | null
+    } | null
   } | null
 }
 
@@ -30,18 +36,25 @@ type AppointmentPatientWithMainTag = {
 // depend. Exporte pour que la source de verite reste unique (pas un `20` duplique ailleurs).
 export const IDENTITY_SEARCH_LIMIT = 20
 
-// Tags principaux distincts des parcours auxquels un patient est inscrit.
-const distinctMainTags = (
+// Tags principaux distincts des parcours du patient, dans l'ordre de getPathwaysForPatient.
+export const distinctMainTags = (
   appointmentPatients: AppointmentPatientWithMainTag[],
-): string[] =>
-  [
-    ...new Set(
-      appointmentPatients.flatMap((ap) => {
-        const mainTag = ap.appointment?.slot?.pathway?.template?.mainTag
-        return mainTag ? [mainTag] : []
-      }),
-    ),
-  ].sort((a, b) => a.localeCompare(b, 'fr'))
+  pathwayPriorities: { pathwayID: string; priority: number }[],
+): string[] => {
+  const priorityOf = new Map(
+    pathwayPriorities.map((p) => [p.pathwayID, p.priority]),
+  )
+  const pathways = appointmentPatients.flatMap((ap) => {
+    const pathway = ap.appointment?.slot?.pathway
+    return pathway?.template ? [pathway] : []
+  })
+  pathways.sort((a, b) => {
+    const ap = priorityOf.get(a.id) ?? Number.POSITIVE_INFINITY
+    const bp = priorityOf.get(b.id) ?? Number.POSITIVE_INFINITY
+    return ap - bp || a.startDate.getTime() - b.startDate.getTime()
+  })
+  return [...new Set(pathways.map((p) => p.template?.mainTag ?? ''))]
+}
 
 class PatientRepository implements PatientRepositoryInterface {
   private readonly prisma: PostgresPrismaClient
@@ -98,6 +111,8 @@ class PatientRepository implements PatientRepositoryInterface {
                   select: {
                     pathway: {
                       select: {
+                        id: true,
+                        startDate: true,
                         template: { select: { mainTag: true } },
                       },
                     },
@@ -111,6 +126,10 @@ class PatientRepository implements PatientRepositoryInterface {
         // de service : la lecture passe par lui, puis s'aplatit pour
         // garder la meme forme qu'avant sur le patient (au plus un sous-dossier par service,
         // donc pas de doublon).
+        pathwayPriorities: {
+          where: { serviceId: this.scope.serviceId },
+          select: { pathwayID: true, priority: true },
+        },
         serviceFiles: {
           where: { serviceId: this.scope.serviceId },
           select: { enrollmentIssues: true, entryDate: true, exitDate: true },
@@ -119,9 +138,17 @@ class PatientRepository implements PatientRepositoryInterface {
     })
 
     return patients.map(
-      ({ appointmentPatients, serviceFiles, ...patient }) => ({
+      ({
+        appointmentPatients,
+        pathwayPriorities,
+        serviceFiles,
+        ...patient
+      }) => ({
         ...patient,
-        pathwayTemplateTags: distinctMainTags(appointmentPatients),
+        pathwayTemplateTags: distinctMainTags(
+          appointmentPatients,
+          pathwayPriorities,
+        ),
         enrollmentIssues: serviceFiles.flatMap((f) => f.enrollmentIssues),
         entryDate: serviceFiles[0]?.entryDate ?? null,
         exitDate: serviceFiles[0]?.exitDate ?? null,
@@ -174,6 +201,8 @@ class PatientRepository implements PatientRepositoryInterface {
                   select: {
                     pathway: {
                       select: {
+                        id: true,
+                        startDate: true,
                         template: { select: { mainTag: true } },
                       },
                     },
@@ -201,6 +230,10 @@ class PatientRepository implements PatientRepositoryInterface {
         // apres la requete, plutot que par la forme de la requete elle-meme (`serviceFile` ne
         // doit porter aucune cle que `PatientServiceFileEntityRepo` ne
         // declare pas).
+        pathwayPriorities: {
+          where: { serviceId: this.scope.serviceId },
+          select: { pathwayID: true, priority: true },
+        },
         serviceFiles: {
           where: { serviceId: this.scope.serviceId },
           include: { enrollmentIssues: true },
@@ -209,19 +242,29 @@ class PatientRepository implements PatientRepositoryInterface {
       orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
     })
 
-    return patients.map(({ appointmentPatients, serviceFiles, ...patient }) => {
-      const [primaryServiceFile] = serviceFiles
-      const serviceFile = primaryServiceFile
-        ? (({ enrollmentIssues: _enrollmentIssuesOnServiceFile, ...rest }) =>
-            rest)(primaryServiceFile)
-        : null
-      return {
-        ...patient,
-        pathwayTemplateTags: distinctMainTags(appointmentPatients),
-        serviceFile,
-        enrollmentIssues: serviceFiles.flatMap((f) => f.enrollmentIssues),
-      }
-    })
+    return patients.map(
+      ({
+        appointmentPatients,
+        pathwayPriorities,
+        serviceFiles,
+        ...patient
+      }) => {
+        const [primaryServiceFile] = serviceFiles
+        const serviceFile = primaryServiceFile
+          ? (({ enrollmentIssues: _enrollmentIssuesOnServiceFile, ...rest }) =>
+              rest)(primaryServiceFile)
+          : null
+        return {
+          ...patient,
+          pathwayTemplateTags: distinctMainTags(
+            appointmentPatients,
+            pathwayPriorities,
+          ),
+          serviceFile,
+          enrollmentIssues: serviceFiles.flatMap((f) => f.enrollmentIssues),
+        }
+      },
+    )
   }
 
   // Recherche d'identite existante avant creation (design §6) : rend UNIQUEMENT
