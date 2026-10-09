@@ -11,8 +11,11 @@ import {
   type DeletePatientByIdParams,
   deletePatientByIdParamsSchema,
   type EnrollExistingPatientInPathwaysBody,
+  type EnrollmentPreviewBody,
   type EnrollPatientInPathwaysBody,
   enrollExistingPatientInPathwaysSchema,
+  enrollmentPreviewResponseSchema,
+  enrollmentPreviewSchema,
   enrollmentResultSchema,
   enrollPatientInPathwaysSchema,
   type GetPatientByIdParams,
@@ -283,6 +286,22 @@ const patientRouter: FastifyPluginAsync = (fastify) => {
       reply.code(201)
       return result
     },
+  )
+
+  fastify.post<{ Body: EnrollmentPreviewBody }>(
+    '/enroll/preview',
+    {
+      schema: {
+        body: enrollmentPreviewSchema,
+        response: { 200: enrollmentPreviewResponseSchema },
+      },
+      config: { permission: 'appointment:write' },
+    },
+    (request) =>
+      patientDomain.previewEnrollments(
+        request.body.pathways,
+        request.body.patientID,
+      ),
   )
 
   fastify.post<{ Body: EnrollExistingPatientInPathwaysBody }>(

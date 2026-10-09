@@ -1,12 +1,22 @@
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import dayjs from 'dayjs'
 import { ChevronDown, ChevronUp, GripVertical, Plus, X } from 'lucide-react'
 import type React from 'react'
 import { useCallback, useMemo, useState } from 'react'
 
+import { PatientApi } from '../../api/patient.api.ts'
 import { APPOINTMENT_TYPE_OPTIONS } from '../../constants/appointment.constant.ts'
+import { PATIENT } from '../../constants/process.constant.ts'
 import { SLOT_DURATIONS } from '../../constants/slot.constant.ts'
 import { usePathwayTemplateQueries } from '../../queries/usePathwayTemplate.ts'
 import { useThematicQueries } from '../../queries/useThematic.ts'
+import type {
+  EnrollmentPreview,
+  PathwayEnrollment,
+  TimeOfDay,
+} from '../../types/patient.ts'
 import { Button } from '../ui/button.tsx'
+import { DatePicker } from '../ui/datePicker.tsx'
 import { FormField } from '../ui/formField.tsx'
 import { Input } from '../ui/input.tsx'
 import { Label } from '../ui/label.tsx'
@@ -19,6 +29,12 @@ const DURATION_OPTIONS = SLOT_DURATIONS.map((d) => ({
 
 export type PathwayPeriod = 'morning' | 'afternoon' | 'fullday'
 
+const PERIOD_TO_TIME_OF_DAY: Record<PathwayPeriod, TimeOfDay> = {
+  morning: 'MORNING',
+  afternoon: 'AFTERNOON',
+  fullday: 'ALL_DAY',
+}
+
 export interface AddedPathway {
   id: string
   tag: string
@@ -29,9 +45,10 @@ export interface AddedPathway {
   type: string
   motif: string
   motifRequired: boolean
+  startDate: string
 }
 
-export function usePathwaySelector() {
+export function usePathwaySelector(patientID?: string) {
   const { pathwayTemplates } = usePathwayTemplateQueries()
   const { thematics } = useThematicQueries()
   const [selectedTags, setSelectedTags] = useState<string[]>([])
@@ -61,16 +78,31 @@ export function usePathwaySelector() {
         type: '',
         motif: '',
         motifRequired: template?.motifRequired ?? false,
+        startDate: dayjs.utc().startOf('day').toISOString(),
       }
     })
     setAddedPathways((prev) => [...prev, ...newPathways])
     setSelectedTags([])
-
-    const firstMotifRequired = newPathways.find((p) => p.motifRequired)
-    if (firstMotifRequired) {
-      setExpandedPathwayId(firstMotifRequired.id)
-    }
   }
+
+  const enrollments: PathwayEnrollment[] = addedPathways.map((p) => ({
+    tag: p.tag,
+    timeOfDay: PERIOD_TO_TIME_OF_DAY[p.period],
+    thematicID: p.thematicID || undefined,
+    type: p.type,
+    motif: p.motif || undefined,
+    duration: p.thematicDuration ?? undefined,
+    startDate: p.startDate,
+  }))
+
+  // Sans motif ni type, qui n'influent pas sur le parcours retenu : saisir le motif ne relance pas l'aperçu.
+  const previewInput = enrollments.map(({ motif, type, ...rest }) => rest)
+  const { data: previews, isFetching: isPreviewing } = useQuery({
+    queryKey: [PATIENT.ENROLL_PREVIEW, patientID, previewInput],
+    queryFn: () => PatientApi.previewEnrollments(previewInput, patientID),
+    enabled: previewInput.length > 0,
+    placeholderData: keepPreviousData,
+  })
 
   const toggleExpand = (pathwayId: string) => {
     setExpandedPathwayId((prev) => (prev === pathwayId ? null : pathwayId))
@@ -113,6 +145,10 @@ export function usePathwaySelector() {
   }, [])
 
   return {
+    enrollments,
+    // Tant que l'aperçu ne correspond pas à la liste (ajout, retrait), on ne l'affiche pas.
+    previews: previews?.length === addedPathways.length ? previews : undefined,
+    isPreviewing,
     tagOptions,
     selectedTags,
     setSelectedTags,
@@ -145,6 +181,7 @@ const PERIOD_OPTIONS: { value: PathwayPeriod; label: string }[] = [
 
 interface PathwayItemProps {
   pathway: AddedPathway
+  preview?: EnrollmentPreview
   isExpanded: boolean
   isDragged: boolean
   thematicOptions: { value: string; label: string }[]
@@ -159,6 +196,7 @@ interface PathwayItemProps {
 
 function PathwayItem({
   pathway,
+  preview,
   isExpanded,
   isDragged,
   thematicOptions,
@@ -210,6 +248,31 @@ function PathwayItem({
               </>
             )}
           </div>
+          <div className="text-xs mt-0.5">
+            {preview ? (
+              preview.startDate ? (
+                <span className="text-primary">
+                  Départ théorique :{' '}
+                  {dayjs.utc(preview.startDate).format('DD/MM/YYYY')}
+                </span>
+              ) : (
+                <span className="text-red-600">{preview.reason}</span>
+              )
+            ) : (
+              <span className="text-neutral-400">Calcul du départ…</span>
+            )}
+          </div>
+        </div>
+        <div className="w-40 flex-shrink-0 cursor-auto">
+          <DatePicker
+            aria-label="Date de début"
+            value={dayjs.utc(pathway.startDate)}
+            onChange={(date) => {
+              if (date?.isValid()) {
+                onUpdate({ startDate: date.toISOString() })
+              }
+            }}
+          />
         </div>
         <Button
           type="button"
@@ -345,6 +408,7 @@ export function PathwaySelector({ state }: PathwaySelectorProps) {
     setSelectedTags,
     thematics,
     addedPathways,
+    previews,
     expandedPathwayId,
     draggedIndex,
     handleAddTags,
@@ -400,6 +464,7 @@ export function PathwaySelector({ state }: PathwaySelectorProps) {
                 <PathwayItem
                   key={pathway.id}
                   pathway={pathway}
+                  preview={previews?.[index]}
                   isExpanded={expandedPathwayId === pathway.id}
                   isDragged={draggedIndex === index}
                   thematicOptions={thematicOptions}

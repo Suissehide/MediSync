@@ -101,18 +101,23 @@ export type PathwayEnrollment = {
   type?: string
   motif?: string
   duration?: number
+  startDate: string
 }
 
 export type EnrollPatientParams = {
   patientData: CreatePatientParams
-  startDate: string
   pathways: PathwayEnrollment[]
 }
 
 export type EnrollExistingPatientParams = {
   patientID: string
-  startDate: string
   pathways: PathwayEnrollment[]
+}
+
+export type EnrollmentPreview = {
+  tag: string
+  startDate: string | null
+  reason?: string
 }
 
 export type EnrollmentResult = {

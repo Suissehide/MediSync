@@ -138,4 +138,37 @@ describe('parcours prérequis', () => {
     })
     expect(pathwaysOfB.map((apt) => apt.slot.pathwayID)).toEqual([bAfterA])
   })
+
+  it('donne la date de départ de chaque parcours selon sa propre date de début, sans rien écrire', async () => {
+    const t = await createTemplate('APERCU', [])
+    await createPathway(t, '2026-12-01T09:00:00.000Z')
+    await createPathway(t, '2026-12-15T09:00:00.000Z')
+
+    const res = await inject('POST', '/patient/enroll/preview', {
+      pathways: [
+        {
+          tag: 'APERCU',
+          timeOfDay: 'ALL_DAY',
+          startDate: '2026-11-20T00:00:00.000Z',
+        },
+        {
+          tag: 'APERCU',
+          timeOfDay: 'ALL_DAY',
+          startDate: '2026-12-10T00:00:00.000Z',
+        },
+        { tag: 'INCONNU', timeOfDay: 'ALL_DAY', startDate: '2026-12-10' },
+      ],
+    })
+    expect(res.statusCode).toBe(200)
+    const [first, second, unknown] = res.json()
+    expect(first.startDate).toBe('2026-12-01T09:00:00.000Z')
+    expect(second.startDate).toBe('2026-12-15T09:00:00.000Z')
+    expect(unknown.startDate).toBeNull()
+    expect(unknown.reason).toBeTruthy()
+    expect(
+      await testDb.appointment.count({
+        where: { slot: { pathway: { templateID: t } } },
+      }),
+    ).toBe(0)
+  })
 })
