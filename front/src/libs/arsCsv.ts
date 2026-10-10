@@ -18,16 +18,26 @@ export const arsCsv = (
     [1],
   )
 
-// Une reponse saisie remplace la valeur ; l'explication de 2.5 remplace la note.
+// Une reponse saisie remplace la valeur ; l'explication de 2.5 remplace la note. Une reponse
+// enregistree mais vide (bascule remise a vide, nombre efface sans texte) retombe sur la note
+// de l'indicateur, comme une absence totale de reponse.
 const valeurEtNote = ({ value, note, input, answer }: ArsIndicator) => {
+  const sansReponse: [string, string] = [
+    value === null ? '' : nombre(value),
+    note ?? '',
+  ]
   if (input === 'yesno' && answer && answer.boolValue !== null) {
     return [answer.boolValue ? 'Oui' : 'Non', '']
   }
-  if (input === 'number+text' && answer) {
+  if (
+    input === 'number+text' &&
+    answer &&
+    (answer.numberValue !== null || answer.textValue)
+  ) {
     return [
       answer.numberValue === null ? '' : nombre(answer.numberValue),
       answer.textValue ?? '',
     ]
   }
-  return [value === null ? '' : nombre(value), note ?? '']
+  return sansReponse
 }

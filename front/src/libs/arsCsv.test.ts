@@ -110,4 +110,40 @@ describe('arsCsv', () => {
     )
     expect(sansTexte).toContain('2.5;Autre;3;\r\n')
   })
+
+  it('retombe sur la note quand la reponse enregistree est vide', () => {
+    const vide = arsCsv(
+      [
+        {
+          code: '2.5',
+          group: 'Séances',
+          label: 'Autre',
+          value: null,
+          note: "Champ libre de l'enquête, à renseigner à la main",
+          kind: 'manual',
+          input: 'number+text',
+          answer: { numberValue: null, textValue: null, boolValue: null },
+        },
+        {
+          code: '4.2',
+          group: 'Modalités',
+          label: 'Une offre de suivi est-elle proposée ?',
+          value: null,
+          note: 'Question oui/non sur la structure, à renseigner à la main',
+          kind: 'manual',
+          input: 'yesno',
+          answer: { numberValue: null, textValue: null, boolValue: null },
+        },
+      ],
+      'Cardio',
+      '2026-01-01',
+      '2026-12-31',
+    )
+    expect(vide).toContain(
+      "2.5;Autre;;Champ libre de l'enquête, à renseigner à la main\r\n",
+    )
+    expect(vide).toContain(
+      'Question oui/non sur la structure, à renseigner à la main',
+    )
+  })
 })

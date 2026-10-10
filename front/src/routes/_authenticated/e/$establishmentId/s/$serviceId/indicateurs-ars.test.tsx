@@ -191,6 +191,39 @@ const memoire = {
   },
 }
 
+// Le serveur rend la derniere saisie de 4.2 enregistree pour l'annee demandee ; 2026 seul garde
+// la reponse de depart du jeu de donnees, les autres annees partent non repondues.
+const memoire42 = {
+  ...charge,
+  corps: (url: string) => {
+    const annee = /from=(\d{4})/.exec(url)?.[1]
+    const derniere = enregistrements()
+      .filter((e) => e.url.includes(`/saisies/${annee}/4.2`))
+      .at(-1)
+    return {
+      ...charge.corps,
+      manualYear: Number(annee),
+      indicators: indicateurs.map((i) => {
+        if (i.code !== '4.2') {
+          return i
+        }
+        if (derniere) {
+          return {
+            ...i,
+            answer: { numberValue: null, textValue: null, ...derniere.body },
+          }
+        }
+        return annee === '2026'
+          ? i
+          : {
+              ...i,
+              answer: { numberValue: null, textValue: null, boolValue: null },
+            }
+      }),
+    }
+  },
+}
+
 const enregistrements = () =>
   (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls
     .filter(([, init]) => init?.method === 'PUT')
@@ -600,6 +633,51 @@ describe('écran des indicateurs ARS', () => {
       url: expect.stringContaining('/saisies/2026/2.5'),
       body: { numberValue: 12, textValue: 'Ateliers' },
     })
+  })
+
+  it('n egare pas la reponse d une autre annee au second changement d annee', async () => {
+    monter(memoire42)
+    expect(await screen.findByRole('radio', { name: 'Oui' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    )
+
+    fireEvent.click(screen.getByRole('radio', { name: '2025' }))
+    await waitFor(() =>
+      expect(screen.getByRole('radio', { name: 'Oui' })).toHaveAttribute(
+        'aria-checked',
+        'false',
+      ),
+    )
+    expect(screen.getByRole('radio', { name: 'Non' })).toHaveAttribute(
+      'aria-checked',
+      'false',
+    )
+
+    fireEvent.click(screen.getByRole('radio', { name: '2026' }))
+    await waitFor(() =>
+      expect(screen.getByRole('radio', { name: 'Oui' })).toHaveAttribute(
+        'aria-checked',
+        'true',
+      ),
+    )
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Non' }))
+    await waitFor(() => expect(enregistrements()).toHaveLength(1))
+    expect(await screen.findByText('Enregistré')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('radio', { name: '2025' }))
+    await waitFor(() =>
+      expect(screen.getByRole('radio', { name: 'Oui' })).toHaveAttribute(
+        'aria-checked',
+        'false',
+      ),
+    )
+    expect(screen.getByRole('radio', { name: 'Non' })).toHaveAttribute(
+      'aria-checked',
+      'false',
+    )
+    expect(screen.queryByText('Enregistré')).not.toBeInTheDocument()
   })
 
   it('limite le nombre de 2.5 a six chiffres', async () => {

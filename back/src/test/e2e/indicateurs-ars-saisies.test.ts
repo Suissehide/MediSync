@@ -210,4 +210,32 @@ describe('indicateurs ARS : reponses saisies', () => {
     expect(String(l25?.Libellé)).toMatch(/ — Ateliers en ville$/)
     expect(l42?.Valeur).toBe('Oui')
   })
+
+  // Une reponse enregistree mais vide (bascule remise a vide, nombre efface sans texte) retombe
+  // sur la note de l'indicateur, comme une absence totale de reponse.
+  it('retombe sur la note de l indicateur quand la reponse enregistree est vide', async () => {
+    await saisir(serviceB, 2026, '2.5', { numberValue: null, textValue: null })
+    await saisir(serviceB, 2026, '4.2', { boolValue: null })
+
+    const res = await t.app.inject({
+      method: 'GET',
+      url: tenantUrl(
+        establishmentId,
+        serviceB,
+        '/indicateurs-ars/export?from=2026-01-01&to=2026-12-31',
+      ),
+      cookies,
+    })
+    expect(res.statusCode).toBe(200)
+    const feuille = XLSX.read(res.rawPayload, { type: 'buffer' })
+    const lignes = XLSX.utils.sheet_to_json<Record<string, string | number>>(
+      feuille.Sheets['Indicateurs ARS'] as XLSX.WorkSheet,
+    )
+    const l25 = lignes.find((l) => l.Code === '2.5')
+    const l42 = lignes.find((l) => l.Code === '4.2')
+    expect(l25?.Valeur).toBe("Champ libre de l'enquête, à renseigner à la main")
+    expect(l42?.Valeur).toBe(
+      'Question oui/non sur la structure, à renseigner à la main',
+    )
+  })
 })

@@ -27,14 +27,23 @@ const anneeCivile = ({ from, to }: ArsRange): number | null => {
     : null
 }
 
+// Une reponse enregistree mais vide (bascule remise a vide, nombre efface) retombe sur la note
+// de l'indicateur, comme une absence totale de reponse.
 const valeurExcel = (i: ArsIndicatorResult): string | number => {
   if (i.answer === null) {
     return i.value ?? i.note ?? ''
   }
   if (i.input === 'yesno') {
-    return i.answer.boolValue === null ? '' : i.answer.boolValue ? 'Oui' : 'Non'
+    if (i.answer.boolValue === null) {
+      return i.note ?? ''
+    }
+    return i.answer.boolValue ? 'Oui' : 'Non'
   }
-  return i.answer.numberValue ?? ''
+  if (i.answer.numberValue !== null) {
+    return i.answer.numberValue
+  }
+  // Le texte seul va dans le libelle (cf. exportExcel) : la valeur reste vide.
+  return i.answer.textValue ? '' : (i.note ?? '')
 }
 
 class ArsIndicatorDomain implements ArsIndicatorDomainInterface {

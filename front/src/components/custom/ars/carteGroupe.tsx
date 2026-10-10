@@ -62,7 +62,7 @@ export function CarteGroupe({
         <tbody>
           {lignes.map((i) => (
             <LigneIndicateur
-              key={i.code}
+              key={`${i.code}-${annee}`}
               indicateur={i}
               annee={annee}
               parent={

@@ -318,6 +318,61 @@ describe('isolation par tenant', () => {
       expect(ids).not.toContain(foreignThematic.id)
     })
 
+    // ArsManualAnswer : pas de route par identifiant, elle se lit a travers
+    // GET /indicateurs-ars, embarquee dans la reponse de chaque indicateur.
+    // Le cloisonnement a verifier n'est donc pas un 404, mais une absence de
+    // fuite dans un champ imbrique : la saisie de B ne doit pas apparaitre
+    // quand A lit la meme periode.
+    it('la saisie manuelle de 2.5 par le service B n apparait pas dans la lecture ARS du service A', async () => {
+      const { est, serviceA, serviceB, cookiesA, cookiesB } = scenario
+      const ecriture = await t.app.inject({
+        method: 'PUT',
+        url: tenantUrl(
+          est.id,
+          serviceB.id,
+          '/indicateurs-ars/saisies/2026/2.5',
+        ),
+        cookies: cookiesB,
+        payload: { numberValue: 12, textValue: 'Ateliers en ville' },
+      })
+      expect(ecriture.statusCode).toBe(200)
+
+      const lectureA = await t.app.inject({
+        method: 'GET',
+        url: tenantUrl(
+          est.id,
+          serviceA.id,
+          '/indicateurs-ars?from=2026-01-01&to=2026-12-31',
+        ),
+        cookies: cookiesA,
+      })
+      expect(lectureA.statusCode).toBe(200)
+      const indicateur25DepuisA = (
+        lectureA.json().indicators as { code: string; answer: unknown }[]
+      ).find((i) => i.code === '2.5')
+      expect(indicateur25DepuisA?.answer).toBeNull()
+
+      // Contrepoint : B relit sa propre saisie, pour distinguer un vrai
+      // cloisonnement d'une saisie qui n'aurait pas ete enregistree du tout.
+      const lectureB = await t.app.inject({
+        method: 'GET',
+        url: tenantUrl(
+          est.id,
+          serviceB.id,
+          '/indicateurs-ars?from=2026-01-01&to=2026-12-31',
+        ),
+        cookies: cookiesB,
+      })
+      expect(lectureB.statusCode).toBe(200)
+      const indicateur25DepuisB = (
+        lectureB.json().indicators as {
+          code: string
+          answer: { numberValue: number | null } | null
+        }[]
+      ).find((i) => i.code === '2.5')
+      expect(indicateur25DepuisB?.answer?.numberValue).toBe(12)
+    })
+
     describe.each(cases)(
       '$name',
       ({ create, path, methods = ['GET', 'DELETE'], ownerStatus }) => {
