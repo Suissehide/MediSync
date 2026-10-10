@@ -1,7 +1,7 @@
 import { LocalizationProvider } from '@mui/x-date-pickers'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
@@ -1169,7 +1169,10 @@ const configuredFile = {
   clinicalData: { diag: 'AVC' },
 }
 
-const renderConfigured = (bodies: Record<string, unknown>[] = []) => {
+const renderConfigured = (
+  bodies: Record<string, unknown>[] = [],
+  file: Record<string, unknown> = configuredFile,
+) => {
   const fetchMock = buildFetchMock(
     [
       {
@@ -1178,15 +1181,20 @@ const renderConfigured = (bodies: Record<string, unknown>[] = []) => {
         respond: () => ({
           ok: true,
           status: 200,
-          json: async () => configuredFile,
+          json: async () => file,
         }),
       },
       {
         match: (url, method) =>
           url.includes('/service-file') && method === 'PATCH',
         respond: (_url, init) => {
-          bodies.push(JSON.parse((init?.body as string) ?? '{}'))
-          return { ok: true, status: 200, json: async () => configuredFile }
+          const body = JSON.parse((init?.body as string) ?? '{}')
+          bodies.push(body)
+          const saved = {
+            ...configuredFile,
+            data: { ...configuredFile.data, ...body.data },
+          }
+          return { ok: true, status: 200, json: async () => saved }
         },
       },
     ],
@@ -1263,5 +1271,55 @@ describe('EditPatient — champs configurables du service', () => {
 
     await waitFor(() => expect(bodies).toHaveLength(1))
     expect(bodies[0]).toEqual({ data: { hba1c: null } })
+  })
+
+  it('sans clinical:read, l’enregistrement n’envoie aucune clé clinicalData', async () => {
+    useAuthStore.setState({
+      context: { ...context, serviceRole: 'SECRETARIAT' as const },
+    })
+    const bodies: Record<string, unknown>[] = []
+    renderConfigured(bodies)
+    const hba1c = await screen.findByLabelText('HbA1c (%)')
+    await userEvent.clear(hba1c)
+    await userEvent.type(hba1c, '8')
+    await userEvent.click(
+      await screen.findByRole('button', { name: /Sauvegarder/i }),
+    )
+
+    await waitFor(() => expect(bodies).toHaveLength(1))
+    expect(bodies[0]).toEqual({ data: { hba1c: 8 } })
+  })
+
+  it('un second enregistrement après un succès n’envoie rien', async () => {
+    const bodies: Record<string, unknown>[] = []
+    renderConfigured(bodies)
+    const hba1c = await screen.findByLabelText('HbA1c (%)')
+    await userEvent.clear(hba1c)
+    await userEvent.type(hba1c, '8')
+    await userEvent.click(
+      await screen.findByRole('button', { name: /Sauvegarder/i }),
+    )
+    await waitFor(() => expect(bodies).toHaveLength(1))
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('button', { name: /Sauvegarder/i }),
+      ).not.toBeInTheDocument(),
+    )
+
+    fireEvent.submit(hba1c.closest('form') ?? document.body)
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(bodies).toHaveLength(1)
+  })
+
+  it('un champ vide saisi puis vidé n’envoie rien', async () => {
+    const bodies: Record<string, unknown>[] = []
+    renderConfigured(bodies, { ...configuredFile, data: {} })
+    const hba1c = await screen.findByLabelText('HbA1c (%)')
+    expect(hba1c).toHaveValue(null)
+    await userEvent.type(hba1c, '5')
+    await userEvent.clear(hba1c)
+    fireEvent.submit(hba1c.closest('form') ?? document.body)
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(bodies).toHaveLength(0)
   })
 })

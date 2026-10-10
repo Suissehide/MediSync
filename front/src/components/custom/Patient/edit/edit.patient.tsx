@@ -63,8 +63,7 @@ const Section = ({
   <div className={`flex-col gap-4 ${show ? 'flex' : 'hidden'}`}>{children}</div>
 )
 
-// Champs configurables affichés et modifiés, rangés par colonne ; pas `isDefaultValue`, qui tient
-// un nombre vidé (undefined) pour inchangé.
+// Champs configurables affichés dont la valeur à envoyer diffère de celle lue, rangés par colonne.
 const changedFieldData = (
   fields: ServiceField[],
   values: FieldValues,
@@ -74,13 +73,14 @@ const changedFieldData = (
   const data: FieldValues = {}
   const clinicalData: FieldValues = {}
   for (const f of fields) {
+    const next = toPatchValue(f.type, values[f.key])
     if (
       !f.archived &&
       isMounted(f.key) &&
-      !evaluate(values[f.key], defaults[f.key])
+      !evaluate(next, toPatchValue(f.type, defaults[f.key]))
     ) {
       const target = f.clinical ? clinicalData : data
-      target[f.key] = toPatchValue(f.type, values[f.key])
+      target[f.key] = next
     }
   }
   return {
@@ -202,11 +202,11 @@ export default function EditPatient({ patient }: PatientParam) {
 
       // Seuls les champs réellement modifiés depuis la lecture partent dans le corps du PATCH —
       // jamais un objet reconstruit à partir des défauts de `patientServiceFileFormOpts`.
-      // `isDefaultValue` (pas `isDirty`, qui ne redevient jamais faux une fois un champ touché,
-      // même reporté à sa valeur d'origine) reflète l'écart réel avec ce qui a été lu — et reste
-      // vrai d'un enregistrement à l'autre parce que `defaultValues` vient désormais de
+      // Champs fixes : `isDefaultValue` (pas `isDirty`, qui ne redevient jamais faux une fois un
+      // champ touché, même reporté à sa valeur d'origine) reflète l'écart réel avec ce qui a été
+      // lu — et reste vrai d'un enregistrement à l'autre parce que `defaultValues` vient de
       // `serviceFileSnapshot`, une référence que rien ne bouge sans notre accord (voir plus
-      // haut).
+      // haut). Champs configurables : comparaison des valeurs à envoyer (`changedFieldData`).
       const changedFields = (
         Object.keys(value) as (keyof typeof value)[]
       ).filter(

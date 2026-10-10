@@ -86,7 +86,7 @@ export const useServiceFieldMutations = () => {
   )
   const reorderChoices = useMutation(
     options(
-      SERVICE_FIELD.REORDER,
+      SERVICE_FIELD.REORDER_CHOICES,
       ServiceFieldApi.reorderChoices,
       'Erreur lors du réordonnancement des choix',
     ),

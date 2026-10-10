@@ -205,10 +205,6 @@ export const ACTIVITY_LOG = {
   CLEANUP: 'cleanup_activity_logs',
 }
 
-// Journal des consultations d'un dossier patient. Clé sans le tenant, comme
-// le reste de ce fichier (`front/CLAUDE.md` § « Query keys deliberately do not carry the
-// tenant ») ; elle porte `patientID`, exactement comme `PATIENT_SERVICE_FILE.GET_BY_PATIENT` porte
-// l'identifiant de la ressource demandée, pas celui d'un tenant.
 export const SERVICE_FIELD = {
   GET_ALL: 'get_all_service_fields',
   CREATE: 'create_service_field',
@@ -216,8 +212,13 @@ export const SERVICE_FIELD = {
   CREATE_CHOICE: 'create_service_field_choice',
   UPDATE_CHOICE: 'update_service_field_choice',
   REORDER: 'reorder_service_fields',
+  REORDER_CHOICES: 'reorder_service_field_choices',
 }
 
+// Journal des consultations d'un dossier patient. Clé sans le tenant, comme
+// le reste de ce fichier (`front/CLAUDE.md` § « Query keys deliberately do not carry the
+// tenant ») ; elle porte `patientID`, exactement comme `PATIENT_SERVICE_FILE.GET_BY_PATIENT` porte
+// l'identifiant de la ressource demandée, pas celui d'un tenant.
 export const PATIENT_ACCESS_LOG = {
   GET_BY_PATIENT: 'get_patient_access_log',
 }

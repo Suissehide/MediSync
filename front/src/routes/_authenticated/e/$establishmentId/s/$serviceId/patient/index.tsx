@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button.tsx'
 import DropdownFilter from '@/components/ui/dropdownFilter.tsx'
 import { Input } from '@/components/ui/input.tsx'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group.tsx'
+import { useCan } from '@/hooks/useCan.ts'
 import { safeParse } from '@/libs/utils.ts'
 import { usePathwayTemplateQueries } from '@/queries/usePathwayTemplate.ts'
 import { usePatientWithTagsQuery } from '@/queries/usePatient.tsx'
@@ -53,7 +54,8 @@ function PatientList() {
   const { establishmentId, serviceId } = Route.useParams()
   const { patients, isPending } = usePatientWithTagsQuery()
   const { pathwayTemplates } = usePathwayTemplateQueries()
-  const { fields } = useServiceFieldsQuery()
+  const { fields, isPending: isFieldsPending } = useServiceFieldsQuery()
+  const canReadClinical = useCan('clinical:read')
   const [searchTerm, setSearchTerm] = useState('')
   const [storedFilters] = useState(() =>
     safeParse<{ status?: string; tags?: string[] }>(
@@ -93,8 +95,13 @@ function PatientList() {
   )
 
   const columns = useMemo(
-    () => getPatientColumns({ onView: handleRedirectPatient, fields }),
-    [fields, handleRedirectPatient],
+    () =>
+      getPatientColumns({
+        onView: handleRedirectPatient,
+        fields,
+        canReadClinical,
+      }),
+    [fields, canReadClinical, handleRedirectPatient],
   )
 
   // Couleur d'un tag principal : celle du premier parcours qui le porte.
@@ -195,80 +202,83 @@ function PatientList() {
         </div>
 
         <div className="flex-1 min-h-0 flex flex-col">
-          <ReactTable<PatientWithTags>
-            key={tableId}
-            data={filteredPatients}
-            columns={columns}
-            filterId={tableId}
-            pagination
-            isLoading={isPending}
-            isRowMuted={(patient) => Boolean(patient.exitDate)}
-            onRowClick={(patient) => handleRedirectPatient(patient.id)}
-            resetSignal={resetSignal}
-            onColumnFiltersActiveChange={setColumnFiltersActive}
-            toolbar={
-              <>
-                <Input
-                  id="patient-search"
-                  iconLeft={<Search className="w-4 h-4" />}
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Nom, prénom..."
-                  className="w-72"
-                />
-                <ToggleGroup
-                  value={status}
-                  onValueChange={(v) => v && setStatus(v as Status)}
-                >
-                  {(Object.keys(STATUSES) as Status[]).map((key) => (
-                    <ToggleGroupItem key={key} value={key}>
-                      {STATUSES[key]}
-                    </ToggleGroupItem>
-                  ))}
-                </ToggleGroup>
-                {tagFilters.length > 0 && (
-                  <DropdownFilter
-                    filters={tagFilters}
-                    onFilterChange={handleTagChange}
-                    triggerLabel={
-                      selectedTags.length
-                        ? `Parcours · ${selectedTags.length}`
-                        : 'Parcours'
-                    }
-                    TriggerIcon={RouteIcon}
-                    headerAction={
-                      selectedTags.length
-                        ? {
-                            label: 'Tout effacer',
-                            icon: RotateCcw,
-                            onSelect: () => setSelectedTags([]),
-                          }
-                        : undefined
-                    }
+          {/* Monté une fois les champs connus : ReactTable lit visibilité et filtres sauvés au montage. */}
+          {!isFieldsPending && (
+            <ReactTable<PatientWithTags>
+              key={tableId}
+              data={filteredPatients}
+              columns={columns}
+              filterId={tableId}
+              pagination
+              isLoading={isPending}
+              isRowMuted={(patient) => Boolean(patient.exitDate)}
+              onRowClick={(patient) => handleRedirectPatient(patient.id)}
+              resetSignal={resetSignal}
+              onColumnFiltersActiveChange={setColumnFiltersActive}
+              toolbar={
+                <>
+                  <Input
+                    id="patient-search"
+                    iconLeft={<Search className="w-4 h-4" />}
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Nom, prénom..."
+                    className="w-72"
                   />
-                )}
-                {(status !== DEFAULT_STATUS ||
-                  selectedTags.length > 0 ||
-                  columnFiltersActive) && (
-                  <Button variant="ghost" onClick={resetFilters}>
-                    <X className="w-4 h-4" />
-                    Réinitialiser
-                  </Button>
-                )}
-              </>
-            }
-            toolbarEnd={
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handleExport}
-                isLoading={isExporting}
-              >
-                <Download className="w-4 h-4" />
-              </Button>
-            }
-          />
+                  <ToggleGroup
+                    value={status}
+                    onValueChange={(v) => v && setStatus(v as Status)}
+                  >
+                    {(Object.keys(STATUSES) as Status[]).map((key) => (
+                      <ToggleGroupItem key={key} value={key}>
+                        {STATUSES[key]}
+                      </ToggleGroupItem>
+                    ))}
+                  </ToggleGroup>
+                  {tagFilters.length > 0 && (
+                    <DropdownFilter
+                      filters={tagFilters}
+                      onFilterChange={handleTagChange}
+                      triggerLabel={
+                        selectedTags.length
+                          ? `Parcours · ${selectedTags.length}`
+                          : 'Parcours'
+                      }
+                      TriggerIcon={RouteIcon}
+                      headerAction={
+                        selectedTags.length
+                          ? {
+                              label: 'Tout effacer',
+                              icon: RotateCcw,
+                              onSelect: () => setSelectedTags([]),
+                            }
+                          : undefined
+                      }
+                    />
+                  )}
+                  {(status !== DEFAULT_STATUS ||
+                    selectedTags.length > 0 ||
+                    columnFiltersActive) && (
+                    <Button variant="ghost" onClick={resetFilters}>
+                      <X className="w-4 h-4" />
+                      Réinitialiser
+                    </Button>
+                  )}
+                </>
+              }
+              toolbarEnd={
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleExport}
+                  isLoading={isExporting}
+                >
+                  <Download className="w-4 h-4" />
+                </Button>
+              }
+            />
+          )}
         </div>
       </div>
     </DashboardLayout>

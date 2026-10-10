@@ -66,6 +66,7 @@ export function CelluleParcours({
 type PatientActions = {
   onView: (id: string) => void
   fields: ServiceField[]
+  canReadClinical: boolean
 }
 
 const BOOLEAN_CHOICES: Choice[] = [
@@ -129,7 +130,11 @@ const fieldColumn = (f: ServiceField) => {
   }
 }
 
-export const getPatientColumns = ({ onView, fields }: PatientActions) => {
+export const getPatientColumns = ({
+  onView,
+  fields,
+  canReadClinical,
+}: PatientActions) => {
   return [
     columnHelper.display({
       id: 'enrollmentAlert',
@@ -188,7 +193,12 @@ export const getPatientColumns = ({ onView, fields }: PatientActions) => {
       },
     }),
     ...fields
-      .filter((f) => !f.archived && f.type !== 'longtext')
+      .filter(
+        (f) =>
+          !f.archived &&
+          f.type !== 'longtext' &&
+          (canReadClinical || !f.clinical),
+      )
       .sort(
         (a, b) =>
           Number(a.section === 'outcome') - Number(b.section === 'outcome') ||

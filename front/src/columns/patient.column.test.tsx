@@ -79,7 +79,11 @@ const champs: ServiceField[] = [
   champ({ key: 'bilan', type: 'date', section: 'outcome', order: 1 }),
 ]
 
-const colonnes = getPatientColumns({ onView: () => undefined, fields: champs })
+const colonnes = getPatientColumns({
+  onView: () => undefined,
+  fields: champs,
+  canReadClinical: true,
+})
 
 describe('colonnes optionnelles des patients', () => {
   it('une colonne par champ actif hors texte long, Inclusion puis Bilan, avant la date de sortie', () => {
@@ -98,6 +102,16 @@ describe('colonnes optionnelles des patients', () => {
       ['bilan', 'Bilan'],
       ['exitDate', 'Bilan'],
     ])
+  })
+
+  it('ne genere pas de colonne clinique sans clinical:read', () => {
+    const ids = getPatientColumns({
+      onView: () => undefined,
+      fields: champs,
+      canReadClinical: false,
+    }).map((c) => c.id)
+    expect(ids).not.toContain('diag')
+    expect(ids).toContain('hba1c')
   })
 
   it('lit la valeur dans data ou clinicalData, le booleen en true/false', () => {
