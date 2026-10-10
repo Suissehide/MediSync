@@ -41,6 +41,10 @@ export type NavItem = {
 // ecrans, qui en onglets satureraient la barre, et releve d'un autre travail que le quotidien.
 export const MENU_GROUPS: ReadonlySet<string> = new Set(['Administration'])
 
+// Groupes affiches comme UN onglet a menu, a leur place parmi les onglets ; reduits a un onglet
+// simple portant le nom du groupe quand le role n'en voit qu'un ecran.
+export const TAB_MENU_GROUPS: ReadonlySet<string> = new Set(['Pilotage'])
+
 export const SCALE_ROOTS = {
   service: '/e/$establishmentId/s/$serviceId',
   establishment: '/e/$establishmentId/admin',
@@ -70,15 +74,20 @@ export const NAVIGATION: Record<Scale, readonly NavItem[]> = {
       to: '/e/$establishmentId/s/$serviceId/suivi',
       group: 'Quotidien',
     },
+    // La MEME permission que le `beforeLoad` de chaque ecran.
     {
-      label: 'Pilotage',
+      label: 'Activité',
       to: '/e/$establishmentId/s/$serviceId/activite',
-      // La MEME permission que le `beforeLoad` de l'ecran.
       permission: 'activity:read',
-      group: 'Quotidien',
-      // Indicateurs ARS est atteint par la bascule « Activité | Indicateurs ARS » sous ce
-      // meme onglet (`BasculePilotage`), jamais par un onglet separe : voir HORS_ONGLETS.
-      activeAlso: ['/e/$establishmentId/s/$serviceId/indicateurs-ars'],
+      group: 'Pilotage',
+      description: 'Patients, sorties, absences et séances du service',
+    },
+    {
+      label: 'Indicateurs ARS',
+      to: '/e/$establishmentId/s/$serviceId/indicateurs-ars',
+      permission: 'stats:read',
+      group: 'Pilotage',
+      description: "Grille de l'enquête annuelle ETP",
     },
     {
       label: 'Planning',
@@ -194,8 +203,6 @@ export const HORS_ONGLETS: Readonly<Partial<Record<RoutePath, string>>> = {
     'Consultations du dossier, bouton de la fiche patient',
   '/super-admin/$establishmentId':
     "fiche d'établissement, depuis la liste Établissements",
-  '/e/$establishmentId/s/$serviceId/indicateurs-ars':
-    "bascule « Activité | Indicateurs ARS », depuis l'onglet Pilotage",
 }
 
 export type CurrentScale =
