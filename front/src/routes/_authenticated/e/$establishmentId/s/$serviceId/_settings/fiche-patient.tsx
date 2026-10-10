@@ -115,7 +115,7 @@ function FichePatientSettings() {
                       className="flex items-center gap-2 border border-border rounded px-3 py-2"
                     >
                       <div className="flex-1 min-w-0">
-                        <span className="font-medium text-text">{f.label}</span>
+                        <span className="font-medium text-foreground">{f.label}</span>
                         <span className="text-text-light">
                           {' '}
                           — {SERVICE_FIELD_TYPE_LABELS[f.type]}
