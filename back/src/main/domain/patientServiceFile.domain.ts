@@ -44,17 +44,15 @@ class PatientServiceFileDomain implements PatientServiceFileDomainInterface {
     userID: string,
   ): Promise<PatientServiceFileEntityDomain> {
     const { data, clinicalData, ...fixed } = params
-    let serviceFile = await this.patientServiceFileRepository.upsert(
+    // Valeurs configurables d'abord : un 400 doit laisser tout le dossier intact.
+    if (data !== undefined || clinicalData !== undefined) {
+      await this.patientServiceFileRepository.ensureExists(patientId)
+      await this.writeValues(patientId, data ?? {}, clinicalData ?? {})
+    }
+    const serviceFile = await this.patientServiceFileRepository.upsert(
       patientId,
       fixed,
     )
-    if (data !== undefined || clinicalData !== undefined) {
-      serviceFile = await this.writeValues(
-        patientId,
-        data ?? {},
-        clinicalData ?? {},
-      )
-    }
     // Meme evenement que PATCH /patient/:id : journalise sous la meme entite (activity-log.subscriber.ts).
     this.appEventBus.emit('patient.updated', {
       userID,
@@ -68,7 +66,7 @@ class PatientServiceFileDomain implements PatientServiceFileDomainInterface {
     patientId: string,
     dataPatch: Record<string, unknown>,
     clinicalPatch: Record<string, unknown>,
-  ): Promise<PatientServiceFileEntityDomain> {
+  ): Promise<void> {
     const definitions = (await this.serviceFieldRepository.findAll()).flatMap(
       (d): FieldDefinitionForValidation[] => {
         const type = asFieldType(d.type)
@@ -106,7 +104,7 @@ class PatientServiceFileDomain implements PatientServiceFileDomainInterface {
           next,
         )
       ) {
-        return { ...current, ...next }
+        return
       }
     }
     throw Boom.conflict('Le dossier a été modifié en même temps, réessayez.')

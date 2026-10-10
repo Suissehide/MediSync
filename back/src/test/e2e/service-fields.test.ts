@@ -447,4 +447,30 @@ describe('ecriture de la fiche', () => {
     expect(lecture.statusCode).toBe(200)
     expect(lecture.json()).not.toHaveProperty('clinicalData')
   })
+
+  it('un PATCH mixte valide ecrit les colonnes fixes et les valeurs', async () => {
+    const res = await patchFiche(coordinateurCookies, autrePatientId, {
+      notes: 'Y',
+      data: { orientation: 'B' },
+    })
+    expect(res.statusCode).toBe(200)
+    expect(res.json()).toMatchObject({
+      notes: 'Y',
+      data: { orientation: 'B' },
+    })
+    const file = await stored(autrePatientId)
+    expect(file.notes).toBe('Y')
+    expect(file.data).toEqual({ orientation: 'B' })
+  })
+
+  it('un PATCH mixte dont une valeur est invalide laisse tout le dossier intact', async () => {
+    const res = await patchFiche(coordinateurCookies, autrePatientId, {
+      notes: 'X',
+      data: { orientation: 'Z' },
+    })
+    expect(res.statusCode).toBe(400)
+    const file = await stored(autrePatientId)
+    expect(file.notes).toBe('Y')
+    expect(file.data).toEqual({ orientation: 'B' })
+  })
 })
