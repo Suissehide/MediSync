@@ -2,9 +2,8 @@ import { PrismaPg } from '@prisma/adapter-pg'
 
 import { PrismaClient } from '../../../generated/client'
 
-// Garde-fou : les tests e2e vident les tables. N'accepter que la base de test
-// nommee exactement, pour qu'aucune autre base ne puisse etre tronquee.
-const TEST_DATABASE_NAME = 'medisync_test'
+// Garde-fou : les tests e2e vident les tables. N'accepter qu'une base medisync_test ou medisync_test_<suffixe>.
+const TEST_DATABASE_PATTERN = /^medisync_test(_[a-z]+)?$/
 
 const databaseNameOf = (url: string): string | null => {
   try {
@@ -15,9 +14,9 @@ const databaseNameOf = (url: string): string | null => {
 }
 
 const databaseUrl = process.env.DATABASE_URL ?? ''
-if (databaseNameOf(databaseUrl) !== TEST_DATABASE_NAME) {
+if (!TEST_DATABASE_PATTERN.test(databaseNameOf(databaseUrl) ?? '')) {
   throw new Error(
-    `Les tests e2e exigent la base de test : DATABASE_URL doit nommer la base "${TEST_DATABASE_NAME}", reçu "${databaseUrl}".`,
+    `Les tests e2e exigent une base de test : DATABASE_URL doit nommer medisync_test ou medisync_test_<suffixe>, reçu "${databaseUrl}".`,
   )
 }
 
