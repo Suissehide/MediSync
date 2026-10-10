@@ -5,7 +5,11 @@ import { PATIENT, SERVICE_FIELD } from '../constants/process.constant.ts'
 import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
 import { useToast } from '../hooks/useToast.ts'
-import type { ServiceField } from '../types/serviceField.ts'
+import type {
+  ServiceField,
+  UpdateServiceFieldChoiceParams,
+  UpdateServiceFieldParams,
+} from '../types/serviceField.ts'
 
 const NO_FIELDS: ServiceField[] = []
 
@@ -29,9 +33,11 @@ export const useServiceFieldMutations = () => {
     mutationKey: string,
     mutationFn: (variables: TVariables) => Promise<TData>,
     errorTitle: string,
+    onSuccess?: (data: TData, variables: TVariables) => void,
   ) => ({
     mutationKey: [mutationKey],
     mutationFn,
+    onSuccess,
     onError: (error: Error) => {
       toast({
         title: errorTitle,
@@ -49,11 +55,32 @@ export const useServiceFieldMutations = () => {
     },
   })
 
+  // Le meme PATCH generique porte la modification, l'archivage ET la restauration (`archived`) :
+  // le message de succes se choisit sur la variable envoyee, comme `location`/`soignant` le font
+  // avec des mutations separees.
+  const archivedToast = (archived: boolean | undefined, nom: string) => {
+    if (archived === true) {
+      toast({ title: `${nom} archivé`, severity: TOAST_SEVERITY.SUCCESS })
+    } else if (archived === false) {
+      toast({ title: `${nom} restauré`, severity: TOAST_SEVERITY.SUCCESS })
+    } else {
+      toast({
+        title: `${nom} modifié avec succès`,
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
+    }
+  }
+
   const create = useMutation(
     options(
       SERVICE_FIELD.CREATE,
       ServiceFieldApi.create,
       'Erreur lors de la création du champ',
+      () =>
+        toast({
+          title: 'Champ créé avec succès',
+          severity: TOAST_SEVERITY.SUCCESS,
+        }),
     ),
   )
   const update = useMutation(
@@ -61,6 +88,8 @@ export const useServiceFieldMutations = () => {
       SERVICE_FIELD.UPDATE,
       ServiceFieldApi.update,
       'Erreur lors de la modification du champ',
+      (_data: ServiceField, variables: UpdateServiceFieldParams) =>
+        archivedToast(variables.archived, 'Champ'),
     ),
   )
   const createChoice = useMutation(
@@ -68,6 +97,11 @@ export const useServiceFieldMutations = () => {
       SERVICE_FIELD.CREATE_CHOICE,
       ServiceFieldApi.createChoice,
       'Erreur lors de l’ajout du choix',
+      () =>
+        toast({
+          title: 'Choix ajouté avec succès',
+          severity: TOAST_SEVERITY.SUCCESS,
+        }),
     ),
   )
   const updateChoice = useMutation(
@@ -75,6 +109,8 @@ export const useServiceFieldMutations = () => {
       SERVICE_FIELD.UPDATE_CHOICE,
       ServiceFieldApi.updateChoice,
       'Erreur lors de la modification du choix',
+      (_data: ServiceField, variables: UpdateServiceFieldChoiceParams) =>
+        archivedToast(variables.archived, 'Choix'),
     ),
   )
   const reorder = useMutation(
