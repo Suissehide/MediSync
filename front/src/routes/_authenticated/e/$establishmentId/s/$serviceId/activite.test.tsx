@@ -305,6 +305,21 @@ describe('ecran d activite', () => {
     expect(within(carte).getByText('10 autres sortis')).toBeInTheDocument()
   })
 
+  it('ne compte jamais d autres sortis negatifs', async () => {
+    monter({
+      ok: true,
+      status: 200,
+      corps: {
+        ...rapport,
+        completion: { ...rapport.completion, completed: 35, dropouts: 11 },
+      },
+    })
+    const carte = (await screen.findByText('Combien ont terminé')).closest(
+      'section',
+    ) as HTMLElement
+    expect(within(carte).getByText('0 autres sortis')).toBeInTheDocument()
+  })
+
   it('affiche les definitions a l identique sur demande', async () => {
     monter({ ok: true, status: 200, corps: rapport })
     const fileActive = ACTIVITY_DEFINITIONS.find(

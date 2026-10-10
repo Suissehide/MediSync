@@ -17,7 +17,7 @@ export function Reponses({
     { n: completed, libelle: 'terminés', couleur: 'bg-termine' },
     { n: dropouts, libelle: 'abandons', couleur: 'bg-abandon' },
     {
-      n: exited - completed - dropouts,
+      n: Math.max(exited - completed - dropouts, 0),
       libelle: 'autres sortis',
       couleur: 'bg-autres-sortis',
     },
@@ -47,11 +47,7 @@ export function Reponses({
       >
         <div className="flex h-2.5 mt-1 rounded-full overflow-hidden bg-muted">
           {parts.map((p) => (
-            <span
-              key={p.libelle}
-              className={p.couleur}
-              style={{ flex: Math.max(p.n, 0) }}
-            />
+            <span key={p.libelle} className={p.couleur} style={{ flex: p.n }} />
           ))}
         </div>
         <div className="flex flex-wrap gap-x-3.5 gap-y-1 text-[13px] text-muted-foreground">
