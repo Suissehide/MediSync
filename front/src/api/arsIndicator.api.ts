@@ -1,6 +1,10 @@
 import { tenantApiUrl } from '@/constants/config.constant.ts'
 import { handleHttpError } from '@/libs/httpErrorHandler.ts'
-import type { ArsIndicators } from '@/types/arsIndicator.ts'
+import type {
+  ArsAnswer,
+  ArsAnswerBody,
+  ArsIndicators,
+} from '@/types/arsIndicator.ts'
 import { fetchWithAuth } from './fetchWithAuth.ts'
 
 const url = (from: string, to: string) =>
@@ -23,5 +27,24 @@ export const ArsIndicatorApi = {
       handleHttpError(response, {}, "Impossible d'exporter les indicateurs ARS")
     }
     return await response.blob()
+  },
+
+  saveAnswer: async (
+    year: number,
+    code: string,
+    body: ArsAnswerBody,
+  ): Promise<ArsAnswer> => {
+    const response = await fetchWithAuth(
+      `${tenantApiUrl()}/indicateurs-ars/saisies/${year}/${code}`,
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      },
+    )
+    if (!response.ok) {
+      handleHttpError(response, {}, "Impossible d'enregistrer la réponse")
+    }
+    return await response.json()
   },
 }

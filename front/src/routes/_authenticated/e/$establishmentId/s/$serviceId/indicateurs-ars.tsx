@@ -10,6 +10,7 @@ import {
   PERIOD_FORMAT,
   PeriodPicker,
 } from '@/components/custom/periodPicker.tsx'
+import { BasculePilotage } from '@/components/custom/pilotage/basculePilotage.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
 import { Button } from '@/components/ui/button.tsx'
 import { can } from '@/hooks/useCan.ts'
@@ -95,6 +96,7 @@ function ArsIndicatorsPage() {
           ~1360px) débordait sous la carte et emportait l'en-tête au défilement, alors que les
           autres écrans gardent leurs contrôles en place. Même découpe que `suivi.tsx`. */}
       <div className="flex-1 min-h-0 bg-background p-4 md:p-6 rounded-lg flex flex-col w-full gap-4 overflow-hidden">
+        <BasculePilotage actif="ars" />
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <h1 className="h-9 flex items-center text-text-dark text-xl font-semibold">
             Indicateurs ARS

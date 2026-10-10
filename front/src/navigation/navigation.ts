@@ -76,6 +76,9 @@ export const NAVIGATION: Record<Scale, readonly NavItem[]> = {
       // La MEME permission que le `beforeLoad` de l'ecran.
       permission: 'activity:read',
       group: 'Quotidien',
+      // Indicateurs ARS est atteint par la bascule « Activité | Indicateurs ARS » sous ce
+      // meme onglet (`BasculePilotage`), jamais par un onglet separe : voir HORS_ONGLETS.
+      activeAlso: ['/e/$establishmentId/s/$serviceId/indicateurs-ars'],
     },
     {
       label: 'Planning',
@@ -129,13 +132,6 @@ export const NAVIGATION: Record<Scale, readonly NavItem[]> = {
       permission: 'service-journal:read',
       group: 'Administration',
       description: 'Qui a fait quoi dans le service, et quand',
-    },
-    {
-      label: 'Indicateurs ARS',
-      to: '/e/$establishmentId/s/$serviceId/indicateurs-ars',
-      permission: 'stats:read',
-      group: 'Administration',
-      description: "Chiffres agrégés de l'enquête annuelle",
     },
   ],
   establishment: [
@@ -191,6 +187,8 @@ export const HORS_ONGLETS: Readonly<Partial<Record<RoutePath, string>>> = {
     'Consultations du dossier, bouton de la fiche patient',
   '/super-admin/$establishmentId':
     "fiche d'établissement, depuis la liste Établissements",
+  '/e/$establishmentId/s/$serviceId/indicateurs-ars':
+    "bascule « Activité | Indicateurs ARS », depuis l'onglet Pilotage",
 }
 
 export type CurrentScale =

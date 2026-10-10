@@ -102,6 +102,20 @@ const ecranDeService = createRoute({
   component: () => <Navbar toggleSidebar={replierLaBarre} />,
 })
 
+const ecranActivite = createRoute({
+  getParentRoute: () => layoutDeService,
+  path: 'activite',
+  component: () => <Navbar toggleSidebar={replierLaBarre} />,
+})
+
+// Indicateurs ARS n'a pas d'onglet propre (HORS_ONGLETS) : l'onglet Pilotage doit tout de
+// meme s'allumer dessus (`activeAlso`), via la bascule Activite / Indicateurs ARS.
+const ecranArs = createRoute({
+  getParentRoute: () => layoutDeService,
+  path: 'indicateurs-ars',
+  component: () => <Navbar toggleSidebar={replierLaBarre} />,
+})
+
 // L'ecran hors tenant : `/user/settings` rend bien `DashboardLayout`, donc
 // cette meme barre, sans vivre sous aucun des deux layouts de tenant.
 const ecranHorsTenant = createRoute({
@@ -152,7 +166,7 @@ const ficheEtablissement = createRoute({
 })
 
 const arbre = rootRoute.addChildren([
-  layoutDeService.addChildren([ecranDeService]),
+  layoutDeService.addChildren([ecranDeService, ecranActivite, ecranArs]),
   layoutAdmin.addChildren([ecranResume, ecranAdmin]),
   ecranPlateforme,
   ecranJournaux,
@@ -372,6 +386,22 @@ describe('onglets de la barre de navigation', () => {
           .getAllByRole('link', { current: 'page' })
           .map((lien) => lien.textContent)
           .filter((nom) => nom !== 'Plateforme'),
+      ).toEqual([actif])
+    })
+  })
+
+  // Indicateurs ARS n'a pas d'onglet : Pilotage reste l'onglet actif, via `activeAlso`.
+  it.each([
+    ['/e/e1/s/s1/activite', 'Pilotage'],
+    ['/e/e1/s/s1/indicateurs-ars', 'Pilotage'],
+  ])('sur %s, l onglet %s est actif', async (depart, actif) => {
+    monterNavbar(depart, avecRoles('MEMBER', 'COORDINATEUR'))
+
+    await waitFor(() => {
+      expect(
+        screen
+          .getAllByRole('link', { current: 'page' })
+          .map((l) => l.textContent),
       ).toEqual([actif])
     })
   })
