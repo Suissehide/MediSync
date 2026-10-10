@@ -260,6 +260,7 @@ function TimePickerField({
 
 function CheckboxField({
   label,
+  disabled,
   description,
   className,
   inputClassName,
@@ -273,6 +274,7 @@ function CheckboxField({
       <Checkbox
         id={field.name}
         checked={value}
+        disabled={disabled}
         className={inputClassName}
         onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
           field.handleChange(e.target.checked)

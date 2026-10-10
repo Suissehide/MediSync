@@ -382,7 +382,7 @@ describe('indicateurs ARS', () => {
         patientId: patient.id,
         entryDate: new Date('2026-09-01'),
         exitDate: new Date('2026-06-01'),
-        stopReason: 'PERDU_DE_VUE',
+        data: { stopReason: 'PERDU_DE_VUE' },
       },
     })
 

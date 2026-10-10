@@ -61,10 +61,11 @@ model Service {
   createdAt       DateTime  @default(now())
   deactivatedAt   DateTime?
 
-  establishment       Establishment         @relation(fields: [establishmentId], references: [id])
+  establishment       Establishment            @relation(fields: [establishmentId], references: [id])
   memberships         ServiceMembership[]
   patientServiceFiles PatientServiceFile[]
   accessLogs          PatientAccessLog[]
+  fieldDefinitions    ServiceFieldDefinition[]
 
   @@unique([establishmentId, name])
   @@unique([id, establishmentId])
@@ -328,7 +329,7 @@ model Soignant {
   // Archivage au lieu de suppression, comme Thematic. Ici un DELETE faisait pire
   // qu'un SetNull : `slotTemplateLinks` et `thematicLinks` sont en Cascade, donc
   // les lignes de liaison disparaissaient — le planning perdait qui anime quoi.
-  archivedAt      DateTime?
+  archivedAt DateTime?
 
   slotTemplateLinks  SlotTemplateSoignant[]
   thematicLinks      SoignantThematic[]
@@ -340,7 +341,7 @@ model Soignant {
 }
 
 model Thematic {
-  id              String  @id @default(cuid())
+  id              String        @id @default(cuid())
   establishmentId String
   serviceId       String
   name            String
@@ -374,7 +375,7 @@ model Location {
 
   // Archivage au lieu de suppression, comme Thematic : un DELETE vidait le
   // `locationID` de tous les creneaux modeles (onDelete: SetNull).
-  archivedAt      DateTime?
+  archivedAt DateTime?
 
   slotTemplates SlotTemplate[]
 
@@ -430,19 +431,12 @@ model PatientServiceFile {
   notes              String?
   details            String?
 
-  medicalDiagnosis     String?
-  entryDate            DateTime? @db.Date
-  careMode             String?
-  orientation          String?
-  etpDecision          String?
-  programType          String?
-  nonInclusionDetails  String?
-  customContentDetails String?
-  goal                 String?
+  entryDate DateTime? @db.Date
 
-  exitDate        DateTime? @db.Date
-  stopReason      String?
-  etpFinalOutcome String?
+  exitDate DateTime? @db.Date
+
+  data         Json @default("{}")
+  clinicalData Json @default("{}")
 
   createdAt DateTime @default(now())
 
@@ -456,6 +450,45 @@ model PatientServiceFile {
   @@unique([id, serviceId])
   @@index([serviceId])
   @@index([patientId])
+}
+
+// Champ configurable de la fiche patient d'un service. `key`, `type` et `clinical` sont figés après création.
+model ServiceFieldDefinition {
+  id              String    @id @default(cuid())
+  establishmentId String
+  serviceId       String
+  key             String
+  label           String
+  type            String
+  section         String
+  order           Int
+  clinical        Boolean   @default(false)
+  unit            String?
+  createdAt       DateTime  @default(now())
+  archivedAt      DateTime?
+
+  service Service              @relation(fields: [serviceId, establishmentId], references: [id, establishmentId])
+  choices ServiceFieldChoice[]
+
+  @@unique([serviceId, key])
+  @@unique([id, serviceId])
+  @@index([serviceId])
+}
+
+model ServiceFieldChoice {
+  id              String    @id @default(cuid())
+  establishmentId String
+  serviceId       String
+  fieldId         String
+  key             String
+  label           String
+  order           Int
+  archivedAt      DateTime?
+
+  field ServiceFieldDefinition @relation(fields: [fieldId, serviceId], references: [id, serviceId])
+
+  @@unique([fieldId, key])
+  @@index([fieldId])
 }
 
 // Journal des consultations : qui a ouvert le dossier de quel patient, quand, et le detail d'un
@@ -483,7 +516,7 @@ model PatientServiceFile {
 // reglementaire de conserver la preuve d'acces meme apres suppression du dossier), la ligne a
 // changer est celle-ci -- pas une lecture silencieuse du gap ailleurs.
 model PatientAccessLog {
-  id              String @id @default(cuid())
+  id              String  @id @default(cuid())
   establishmentId String
   serviceId       String
   patientId       String?
@@ -508,7 +541,7 @@ model PatientAccessLog {
   createdAt DateTime @default(now())
 
   patient Patient? @relation(fields: [patientId, establishmentId], references: [id, establishmentId], onDelete: Cascade)
-  service Service @relation(fields: [serviceId, establishmentId], references: [id, establishmentId])
+  service Service  @relation(fields: [serviceId, establishmentId], references: [id, establishmentId])
 
   @@unique([id, serviceId])
   @@index([patientId])
@@ -540,7 +573,7 @@ model EnrollmentIssue {
 }
 
 model DiagnosticEducatifTemplate {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   establishmentId String
   serviceId       String
   name            String
@@ -669,13 +702,13 @@ model DiagnosticEducatif {
   rapatrier               String?
 
   // Référence simple (templateId nullable) : cohérence vérifiée par le domaine.
-  template DiagnosticEducatifTemplate? @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  template    DiagnosticEducatifTemplate? @relation(fields: [templateId], references: [id], onDelete: Restrict)
   // Relation dérivée de patientId + serviceId, déjà portées par ce modèle : aucune colonne
   // supplémentaire, elle relie simplement la ligne à son sous-dossier de service. Seul parent
   // désormais (la relation `patient` vers Patient(id, establishmentId), qui coexistait
   // ici, a été retirée) : ce modèle est un modèle de service, il dépend d'un sous-dossier de
   // service, pas d'un parent d'établissement.
-  serviceFile PatientServiceFile @relation(fields: [patientId, serviceId], references: [patientId, serviceId], onDelete: Cascade)
+  serviceFile PatientServiceFile          @relation(fields: [patientId, serviceId], references: [patientId, serviceId], onDelete: Cascade)
 
   @@unique([id, serviceId])
   @@index([patientId])

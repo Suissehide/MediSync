@@ -1,6 +1,7 @@
 // `clinicalFile`, quand il est present, porte les champs qui vivent desormais sur
 // `PatientServiceFile` et non plus sur `Patient` : la migration
 // `patient_service_file` a deplace ces colonnes, `seedPatients` cree le sous-dossier a part.
+// `data` et `clinicalData` portent des cles du catalogue ETP, jamais des libelles.
 // Le reste de l'objet reste l'identite du patient, ecrite telle quelle sur `Patient`.
 
 // Service Cardiologie : jeu de patients historique du seed, inchangé.
@@ -17,9 +18,11 @@ export const PATIENTS_CARDIOLOGIE = [
     occupation: 'Enseignante',
     currentActivity: 'En activité',
     clinicalFile: {
-      medicalDiagnosis: 'Diabète de type 2',
-      orientation: 'Médecin traitant',
-      programType: 'ETP Diabète',
+      clinicalData: { medicalDiagnosis: 'PREVENTION' },
+      data: {
+        orientation: 'ORIENTATION_PRO_SANTE_EXT',
+        programType: 'VIVA',
+      },
     },
   },
   {
@@ -34,9 +37,11 @@ export const PATIENTS_CARDIOLOGIE = [
     occupation: 'Ingénieur',
     currentActivity: 'En activité',
     clinicalFile: {
-      medicalDiagnosis: 'Hypertension artérielle',
-      orientation: 'Cardiologue',
-      programType: 'ETP HTA',
+      clinicalData: { medicalDiagnosis: 'PREVENTION' },
+      data: {
+        orientation: 'ORIENTATION_PRO_SANTE_CS',
+        programType: 'VIVA',
+      },
     },
   },
   {
@@ -52,10 +57,12 @@ export const PATIENTS_CARDIOLOGIE = [
     occupation: 'Retraitée',
     currentActivity: 'Retraite',
     clinicalFile: {
-      medicalDiagnosis: 'Insuffisance cardiaque',
-      orientation: 'Hospitalisation',
-      programType: 'ETP IC',
-      goal: 'Améliorer la qualité de vie',
+      clinicalData: { medicalDiagnosis: 'CORONAROPATHIE' },
+      data: {
+        orientation: 'ORIENTATION_PRO_SANTE_HOSPIT',
+        programType: 'VIVA',
+        goal: 'Améliorer la qualité de vie',
+      },
     },
   },
   {
@@ -70,10 +77,12 @@ export const PATIENTS_CARDIOLOGIE = [
     occupation: 'Commerçant',
     currentActivity: 'Arrêt maladie',
     clinicalFile: {
-      medicalDiagnosis: 'Post-infarctus du myocarde',
-      orientation: 'Cardiologue',
-      programType: 'Réadaptation cardiaque',
       notes: 'Suivi rapproché nécessaire',
+      clinicalData: { medicalDiagnosis: 'CORONAROPATHIE' },
+      data: {
+        orientation: 'ORIENTATION_PRO_SANTE_CS',
+        programType: 'VIVA',
+      },
     },
   },
   {
@@ -88,10 +97,12 @@ export const PATIENTS_CARDIOLOGIE = [
     occupation: 'Secrétaire médicale',
     currentActivity: 'En activité',
     clinicalFile: {
-      medicalDiagnosis: 'Obésité grade 2',
-      orientation: 'Médecin traitant',
-      programType: 'ETP Obésité',
-      goal: 'Perte de poids durable',
+      clinicalData: { medicalDiagnosis: 'PREVENTION' },
+      data: {
+        orientation: 'ORIENTATION_PRO_SANTE_EXT',
+        programType: 'VIVA',
+        goal: 'Perte de poids durable',
+      },
     },
   },
   {
@@ -106,10 +117,12 @@ export const PATIENTS_CARDIOLOGIE = [
     occupation: 'Retraité',
     currentActivity: 'Retraite',
     clinicalFile: {
-      medicalDiagnosis: 'BPCO stade 3',
-      orientation: 'Pneumologue',
-      programType: 'ETP BPCO',
       notes: 'Ancien fumeur',
+      clinicalData: { medicalDiagnosis: 'PREVENTION' },
+      data: {
+        orientation: 'ORIENTATION_PRO_SANTE_CS',
+        programType: 'VIVA',
+      },
     },
   },
   {
@@ -125,9 +138,11 @@ export const PATIENTS_CARDIOLOGIE = [
     occupation: 'Cadre administratif',
     currentActivity: 'En activité',
     clinicalFile: {
-      medicalDiagnosis: 'Diabète de type 1',
-      orientation: 'Endocrinologue',
-      programType: 'ETP Diabète',
+      clinicalData: { medicalDiagnosis: 'AOMI' },
+      data: {
+        orientation: 'ORIENTATION_PRO_SANTE_CS',
+        programType: 'VIVA_AOMI',
+      },
     },
   },
   {
@@ -142,10 +157,12 @@ export const PATIENTS_CARDIOLOGIE = [
     occupation: 'Technicien',
     currentActivity: 'Arrêt maladie',
     clinicalFile: {
-      medicalDiagnosis: 'Syndrome coronarien aigu',
-      orientation: 'Hospitalisation',
-      programType: 'Réadaptation cardiaque',
-      goal: 'Reprise activité professionnelle',
+      clinicalData: { medicalDiagnosis: 'CORONAROPATHIE' },
+      data: {
+        orientation: 'ORIENTATION_PRO_SANTE_HOSPIT',
+        programType: 'VIVA',
+        goal: 'Reprise activité professionnelle',
+      },
     },
   },
   {
@@ -160,10 +177,12 @@ export const PATIENTS_CARDIOLOGIE = [
     occupation: 'Retraitée',
     currentActivity: 'Retraite',
     clinicalFile: {
-      medicalDiagnosis: 'Insuffisance cardiaque à FEVG préservée',
-      orientation: 'Cardiologue',
-      programType: 'ETP IC',
       notes: 'Patiente très motivée',
+      clinicalData: { medicalDiagnosis: 'AVC' },
+      data: {
+        orientation: 'ORIENTATION_PRO_SANTE_CS',
+        programType: 'VIVA',
+      },
     },
   },
   {
@@ -178,10 +197,12 @@ export const PATIENTS_CARDIOLOGIE = [
     occupation: 'Avocat',
     currentActivity: 'En activité',
     clinicalFile: {
-      medicalDiagnosis: 'HTA résistante',
-      orientation: 'Cardiologue',
-      programType: 'ETP HTA',
-      goal: 'Contrôle tensionnel optimal',
+      clinicalData: { medicalDiagnosis: 'PREVENTION' },
+      data: {
+        orientation: 'ORIENTATION_PRO_SANTE_CS',
+        programType: 'VIVA',
+        goal: 'Contrôle tensionnel optimal',
+      },
     },
   },
 ]
@@ -203,9 +224,11 @@ export const PATIENTS_PNEUMOLOGIE = [
     occupation: 'Comptable',
     currentActivity: 'En activité',
     clinicalFile: {
-      medicalDiagnosis: 'BPCO stade 2',
-      orientation: 'Pneumologue',
-      programType: 'ETP BPCO',
+      clinicalData: { medicalDiagnosis: 'PREVENTION' },
+      data: {
+        orientation: 'ORIENTATION_PRO_SANTE_CS',
+        programType: 'VIVA',
+      },
     },
   },
   {
@@ -220,10 +243,12 @@ export const PATIENTS_PNEUMOLOGIE = [
     occupation: 'Chauffeur routier',
     currentActivity: 'En activité',
     clinicalFile: {
-      medicalDiagnosis: 'Asthme sévère',
-      orientation: 'Médecin traitant',
-      programType: 'ETP Asthme',
       notes: 'Crises fréquentes en période hivernale',
+      clinicalData: { medicalDiagnosis: 'PREVENTION' },
+      data: {
+        orientation: 'ORIENTATION_PRO_SANTE_EXT',
+        programType: 'VIVA',
+      },
     },
   },
   {
@@ -239,10 +264,12 @@ export const PATIENTS_PNEUMOLOGIE = [
     occupation: 'Retraitée',
     currentActivity: 'Retraite',
     clinicalFile: {
-      medicalDiagnosis: 'Fibrose pulmonaire idiopathique',
-      orientation: 'Pneumologue',
-      programType: 'Réadaptation respiratoire',
-      goal: 'Préserver l’autonomie respiratoire',
+      clinicalData: { medicalDiagnosis: 'PREVENTION' },
+      data: {
+        orientation: 'ORIENTATION_PRO_SANTE_CS',
+        programType: 'VIVA',
+        goal: 'Préserver l’autonomie respiratoire',
+      },
     },
   },
   {
@@ -257,9 +284,11 @@ export const PATIENTS_PNEUMOLOGIE = [
     occupation: 'Architecte',
     currentActivity: 'En activité',
     clinicalFile: {
-      medicalDiagnosis: 'Syndrome d’apnées du sommeil',
-      orientation: 'Médecin traitant',
-      programType: 'ETP SAOS',
+      clinicalData: { medicalDiagnosis: 'PREVENTION' },
+      data: {
+        orientation: 'ORIENTATION_PRO_SANTE_EXT',
+        programType: 'VIVA',
+      },
     },
   },
   {
@@ -274,10 +303,12 @@ export const PATIENTS_PNEUMOLOGIE = [
     occupation: 'Graphiste',
     currentActivity: 'En activité',
     clinicalFile: {
-      medicalDiagnosis: 'Mucoviscidose',
-      orientation: 'Pneumologue',
-      programType: 'ETP Mucoviscidose',
       notes: 'Suivi conjoint avec le CRCM',
+      clinicalData: { medicalDiagnosis: 'PREVENTION' },
+      data: {
+        orientation: 'ORIENTATION_PRO_SANTE_CS',
+        programType: 'VIVA',
+      },
     },
   },
   {
@@ -292,10 +323,12 @@ export const PATIENTS_PNEUMOLOGIE = [
     occupation: 'Retraité',
     currentActivity: 'Retraite',
     clinicalFile: {
-      medicalDiagnosis: 'Insuffisance respiratoire chronique',
-      orientation: 'Hospitalisation',
-      programType: 'Réadaptation respiratoire',
-      goal: 'Réduire les hospitalisations',
+      clinicalData: { medicalDiagnosis: 'PREVENTION' },
+      data: {
+        orientation: 'ORIENTATION_PRO_SANTE_HOSPIT',
+        programType: 'VIVA',
+        goal: 'Réduire les hospitalisations',
+      },
     },
   },
 ]

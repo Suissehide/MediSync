@@ -21,6 +21,7 @@ import type { PatientAccessLogDomainInterface } from '../domain/patientAccessLog
 import type { PatientServiceFileDomainInterface } from '../domain/patientServiceFile.domain.interface'
 import type { PlanningCycleDomainInterface } from '../domain/planningCycle.domain.interface'
 import type { ServiceDomainInterface } from '../domain/service.domain.interface'
+import type { ServiceFieldDomainInterface } from '../domain/serviceField.domain.interface'
 import type { SlotDomainInterface } from '../domain/slot.domain.interface'
 import type { SlotTemplateDomainInterface } from '../domain/slotTemplate.domain.interface'
 import type { SoignantDomainInterface } from '../domain/soignant.domain.interface'
@@ -53,6 +54,7 @@ import type { PatientAccessLogRepositoryInterface } from '../infra/orm/repositor
 import type { PatientServiceFileRepositoryInterface } from '../infra/orm/repositories/patientServiceFile.repository.interface'
 import type { PlanningCycleRepositoryInterface } from '../infra/orm/repositories/planningCycle.repository.interface'
 import type { ServiceRepositoryInterface } from '../infra/orm/repositories/service.repository.interface'
+import type { ServiceFieldRepositoryInterface } from '../infra/orm/repositories/serviceField.repository.interface'
 import type { SlotRepositoryInterface } from '../infra/orm/repositories/slot.repository.interface'
 import type { SlotTemplateRepositoryInterface } from '../infra/orm/repositories/slotTemplate.repository.interface'
 import type { SoignantRepositoryInterface } from '../infra/orm/repositories/soignant.repository.interface'
@@ -115,6 +117,9 @@ export interface IocContainer {
   // Thematic
   readonly thematicDomain: ThematicDomainInterface
   readonly thematicRepository: ThematicRepositoryInterface
+  // ServiceField
+  readonly serviceFieldDomain: ServiceFieldDomainInterface
+  readonly serviceFieldRepository: ServiceFieldRepositoryInterface
   // Location
   readonly locationDomain: LocationDomainInterface
   readonly locationRepository: LocationRepositoryInterface

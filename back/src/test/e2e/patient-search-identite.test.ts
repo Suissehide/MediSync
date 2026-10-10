@@ -183,16 +183,23 @@ describe('recherche d identite existante avant creation de patient', () => {
         coordoCookies,
         `/patient/${patientId}/service-file`,
         {
-          medicalDiagnosis: 'SECRET-DIAGNOSTIC-MEDICAL',
           notes: 'SECRET-NOTES-CLINIQUES',
           details: 'SECRET-DETAILS',
-          careMode: 'SECRET-MODE-PRISE-EN-CHARGE',
-          orientation: 'SECRET-ORIENTATION',
           referringCaregiver: 'SECRET-SOIGNANT-REFERENT',
-          stopReason: 'SECRET-MOTIF-ARRET',
         },
       )
       expect(richServiceFile.statusCode).toBe(200)
+      await testDb.patientServiceFile.update({
+        where: { patientId_serviceId: { patientId, serviceId: serviceAId } },
+        data: {
+          clinicalData: { medicalDiagnosis: 'SECRET-DIAGNOSTIC-MEDICAL' },
+          data: {
+            careMode: 'SECRET-MODE-PRISE-EN-CHARGE',
+            orientation: 'SECRET-ORIENTATION',
+            stopReason: 'SECRET-MOTIF-ARRET',
+          },
+        },
+      })
 
       // Cherche depuis le service B, qui ne suit PAS ce patient : c'est exactement le cas
       // d'usage vise (eviter un doublon en cherchant dans TOUT l'etablissement).
@@ -326,17 +333,20 @@ describe('recherche d identite existante avant creation de patient', () => {
       const patientId = created.json().id as string
       const identityBeforeAttach = created.json()
 
-      const serviceFileWrite = await patch(
-        serviceAId,
-        coordoCookies,
-        `/patient/${patientId}/service-file`,
-        {
-          medicalDiagnosis: 'Diagnostic du service A',
-          careMode: 'Mode A',
+      await testDb.patientServiceFile.update({
+        where: { patientId_serviceId: { patientId, serviceId: serviceAId } },
+        data: {
+          clinicalData: { medicalDiagnosis: 'Diagnostic du service A' },
+          data: { careMode: 'Mode A' },
         },
-      )
-      expect(serviceFileWrite.statusCode).toBe(200)
-      const serviceFileABefore = serviceFileWrite.json()
+      })
+      const serviceFileABefore = (
+        await get(
+          serviceAId,
+          coordoCookies,
+          `/patient/${patientId}/service-file`,
+        )
+      ).json()
 
       // Absent du service B avant le rattachement.
       expect(
@@ -401,8 +411,8 @@ describe('recherche d identite existante avant creation de patient', () => {
         `/patient/${patientId}/service-file`,
       )
       expect(serviceFileB.statusCode).toBe(200)
-      expect(serviceFileB.json().medicalDiagnosis).toBeNull()
-      expect(serviceFileB.json().careMode).toBeNull()
+      expect(serviceFileB.json().clinicalData).toEqual({})
+      expect(serviceFileB.json().data).toEqual({})
 
       await testDb.patient.delete({ where: { id: patientId } })
     },
@@ -419,16 +429,17 @@ describe('recherche d identite existante avant creation de patient', () => {
       expect(created.statusCode).toBe(201)
       const patientId = created.json().id as string
 
-      const serviceFileWrite = await patch(
-        serviceAId,
-        coordoCookies,
-        `/patient/${patientId}/service-file`,
-        {
-          medicalDiagnosis: 'Diagnostic existant',
-        },
-      )
-      expect(serviceFileWrite.statusCode).toBe(200)
-      const before = serviceFileWrite.json()
+      await testDb.patientServiceFile.update({
+        where: { patientId_serviceId: { patientId, serviceId: serviceAId } },
+        data: { clinicalData: { medicalDiagnosis: 'Diagnostic existant' } },
+      })
+      const before = (
+        await get(
+          serviceAId,
+          coordoCookies,
+          `/patient/${patientId}/service-file`,
+        )
+      ).json()
 
       // Le patient a deja un sous-dossier dans le service A (cree a sa creation) :
       // tenter de rattacher la meme identite depuis A doit le dire, et ne rien ecraser.

@@ -1,9 +1,8 @@
 import type { AppointmentType, ThematicRole } from '../../generated/client'
 
-// Les trois orientations de la grille, par la CLÉ que la base stocke. `toSelectOptions`
-// (`front/src/libs/utils.ts`) écrit la clé du dictionnaire `ORIENTATION`, jamais son libellé :
-// comparer le libellé rendait 1.2, 1.3 et 1.4 nuls sur un établissement qui en a des milliers.
-// `ars-indicators.test.ts` tient ces trois clés contre le dictionnaire du front.
+// Les trois orientations de la grille, par la CLÉ que la base stocke (jamais le libellé affiché,
+// qui rendait 1.2, 1.3 et 1.4 nuls sur un établissement qui en a des milliers). `ars-indicators.test.ts`
+// tient ces trois clés contre les choix du champ orientation de `ETP_FIELD_PRESET`.
 export const ARS_ORIENTATIONS = {
   horsHopital: 'ORIENTATION_PRO_SANTE_EXT',
   hospitalisation: 'ORIENTATION_PRO_SANTE_HOSPIT',
