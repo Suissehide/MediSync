@@ -1,5 +1,6 @@
 import {
   computeActivity,
+  filterByPathwayTemplate,
   SEUIL_ABSENCES,
 } from '../../../main/utils/activity-indicators'
 import type {
@@ -24,6 +25,7 @@ const presence = (p: Partial<ArsPresence> = {}): ArsPresence => ({
   status: 'yes',
   pathwayId: null,
   pathwayLabel: null,
+  pathwayTemplateId: null,
   slotMinutes: 60,
   soignants: [],
   ...p,
@@ -370,5 +372,127 @@ describe('seances et temps soignant', () => {
       cohorte([], [presence({ status: 'no', soignants: ['IDE'] })]),
     )
     expect(r.hoursBySoignant).toEqual([])
+  })
+})
+
+describe('monthly', () => {
+  const TRIMESTRE = { from: new Date('2026-10-01'), to: new Date('2026-12-31') }
+
+  it('rend un element par mois de la periode', () => {
+    const r = computeActivity({ ...TRIMESTRE, files: [], presences: [] })
+    expect(r.monthly.map((m) => m.month)).toEqual([
+      '2026-10',
+      '2026-11',
+      '2026-12',
+    ])
+  })
+
+  it('range inclus et sortis une seule fois, sommes egales aux totaux', () => {
+    const de1 = presence({
+      patientId: 'a',
+      date: new Date('2026-10-05T09:00:00Z'),
+      thematicRole: 'DIAGNOSTIC_EDUCATIF',
+    })
+    const de2 = presence({
+      patientId: 'a',
+      date: new Date('2026-11-05T09:00:00Z'),
+      thematicRole: 'DIAGNOSTIC_EDUCATIF',
+    })
+    const r = computeActivity({
+      ...TRIMESTRE,
+      files: [
+        dossier({ patientId: 'a', entryDate: null, presences: [de1, de2] }),
+        dossier({
+          patientId: 'b',
+          entryDate: new Date('2026-11-10'),
+          exitDate: new Date('2026-12-02'),
+        }),
+      ],
+      presences: [de1, de2],
+    })
+    expect(r.monthly).toEqual([
+      { month: '2026-10', newlyIncluded: 1, exited: 0, active: 1 },
+      { month: '2026-11', newlyIncluded: 1, exited: 0, active: 1 },
+      { month: '2026-12', newlyIncluded: 0, exited: 1, active: 0 },
+    ])
+    expect(r.monthly.reduce((s, m) => s + m.newlyIncluded, 0)).toBe(
+      r.patients.newlyIncluded,
+    )
+    expect(r.monthly.reduce((s, m) => s + m.exited, 0)).toBe(r.patients.exited)
+  })
+})
+
+describe('byWeekday', () => {
+  it('agrege toutes thematiques par jour avec le seuil', () => {
+    const lundi = new Date('2026-03-02T09:00:00Z')
+    const ps = [
+      ...Array.from({ length: 3 }, (_, i) =>
+        presence({
+          slotId: `a${i}`,
+          thematicName: 'A',
+          date: lundi,
+          status: 'no',
+        }),
+      ),
+      ...Array.from({ length: 2 }, (_, i) =>
+        presence({
+          slotId: `b${i}`,
+          thematicName: 'B',
+          date: lundi,
+          status: 'yes',
+        }),
+      ),
+      presence({
+        thematicName: 'C',
+        date: new Date('2026-03-03T09:00:00Z'),
+        status: 'no',
+      }),
+    ]
+    const r = computeActivity(cohorte([], ps))
+    expect(r.absences.byWeekday).toHaveLength(7)
+    expect(r.absences.byWeekday[0]).toEqual({
+      absent: 3,
+      pointed: 5,
+      rate: 0.6,
+    })
+    expect(r.absences.byWeekday[1]).toEqual({
+      absent: 1,
+      pointed: 1,
+      rate: null,
+    })
+  })
+})
+
+describe('filterByPathwayTemplate', () => {
+  it('garde les patients du modele avec toutes leurs presences et retire les autres', () => {
+    const duModele = presence({
+      patientId: 'a',
+      slotId: 's1',
+      pathwayTemplateId: 'T1',
+    })
+    const horsParcours = presence({
+      patientId: 'a',
+      slotId: 's2',
+      pathwayTemplateId: null,
+    })
+    const autre = presence({
+      patientId: 'b',
+      slotId: 's3',
+      pathwayTemplateId: 'T2',
+    })
+    const c = cohorte([
+      dossier({ patientId: 'a', presences: [duModele, horsParcours] }),
+      dossier({ patientId: 'b', presences: [autre] }),
+    ])
+    const f = filterByPathwayTemplate(c, 'T1')
+    expect(f.files.map((x) => x.patientId)).toEqual(['a'])
+    expect(f.presences).toEqual([duModele, horsParcours])
+  })
+
+  it('rend une cohorte vide pour un modele inconnu', () => {
+    const c = cohorte([dossier({ presences: [presence()] })])
+    const f = filterByPathwayTemplate(c, 'inconnu')
+    expect(f.files).toEqual([])
+    expect(f.presences).toEqual([])
   })
 })
