@@ -18,6 +18,8 @@ export type PatientServiceFileUpsertEntityRepo = Omit<
   | 'createdAt'
   | 'diagnostics'
   | 'enrollmentIssues'
+  | 'data'
+  | 'clinicalData'
 >
 
 // Décision 3.6 (spec §3.6) : ce que l'écran affiche avant de désactiver un service.
@@ -45,6 +47,12 @@ export interface PatientServiceFileRepositoryInterface {
     patientId: string,
     params: PatientServiceFileUpsertEntityRepo,
   ) => Promise<PatientServiceFileEntityRepo>
+  // N'ecrit que si `data` et `clinicalData` valent encore `expected` ; false sinon.
+  writeValues: (
+    patientId: string,
+    expected: { data: Prisma.JsonValue; clinicalData: Prisma.JsonValue },
+    next: { data: Prisma.JsonObject; clinicalData: Prisma.JsonObject },
+  ) => Promise<boolean>
   // Cree le sous-dossier s'il n'existe pas encore, sans toucher a ses colonnes s'il existe deja.
   // Voir PatientServiceFileDomain.ensureExists pour qui l'appelle et pourquoi.
   ensureExists: (patientId: string) => Promise<void>

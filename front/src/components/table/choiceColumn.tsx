@@ -55,3 +55,58 @@ export function choiceColumn<TData>(
     meta: { optional: { label, group }, choices },
   }
 }
+
+// Colonne à choix multiples : une étiquette par valeur, filtre en OU, facettes par valeur.
+export function multiChoiceColumn<TData>(
+  id: string,
+  accessor: (row: TData) => string[] | null | undefined,
+  options: { label: string; group?: string; choices: Choice[] },
+): ColumnDef<TData, string[] | undefined> {
+  const { label, group, choices } = options
+  const indexOf = new Map(choices.map((c, i) => [c.value, i]))
+  const values = (row: TData) => {
+    const v = accessor(row)
+    return v && v.length > 0 ? v : undefined
+  }
+  const joined = (v: string[] | undefined) =>
+    (v ?? []).map((x) => choiceLabel(choices, x)).join(', ')
+
+  const filterFn: FilterFn<TData> = (row, columnId, selected: string[]) => {
+    const v = row.getValue<string[] | undefined>(columnId)
+    return v
+      ? v.some((x) => selected.includes(x))
+      : selected.includes(EMPTY_CHOICE)
+  }
+  filterFn.autoRemove = (v) => !Array.isArray(v) || v.length === 0
+
+  return {
+    id,
+    accessorFn: values,
+    getUniqueValues: (row) => values(row) ?? [undefined],
+    header: label,
+    sortUndefined: 'last',
+    sortingFn: (a, b, columnId) =>
+      joined(a.getValue<string[] | undefined>(columnId)).localeCompare(
+        joined(b.getValue<string[] | undefined>(columnId)),
+        'fr',
+      ),
+    filterFn,
+    cell: ({ getValue }) => (
+      <div className="flex flex-wrap gap-1">
+        {(getValue() ?? []).map((value) => {
+          const index = indexOf.get(value)
+          return (
+            <Etiquette
+              key={value}
+              ton="neutre"
+              couleur={index === undefined ? undefined : choiceColor(index)}
+            >
+              {choiceLabel(choices, value)}
+            </Etiquette>
+          )
+        })}
+      </div>
+    ),
+    meta: { optional: { label, group }, choices },
+  }
+}

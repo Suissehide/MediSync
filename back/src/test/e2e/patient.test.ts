@@ -156,17 +156,45 @@ describe('routes du patient', () => {
     // changement autorise sur ce filet (voir l'en-tete du fichier) : les
     // seize valeurs, une fois ecrites, et les 32 assertions qui les relisent
     // plus bas restent identiques.
-    const pierreUpdateRes = await patch(
-      `/patient/${pierreId}/service-file`,
-      pierreValues,
-    )
-    expect(pierreUpdateRes.statusCode).toBe(200)
-
-    const catherineUpdateRes = await patch(
-      `/patient/${catherineId}/service-file`,
-      catherineValues,
-    )
-    expect(catherineUpdateRes.statusCode).toBe(200)
+    // Les dix champs configurables s'ecrivent desormais dans `data`/`clinicalData` via cette meme route, mais ce tenant de test ne definit aucun ServiceFieldDefinition pour eux : ils passent donc par la base, et seules les six colonnes fixes par la route.
+    const ecrireSousDossier = async (
+      patientId: string,
+      {
+        medicalDiagnosis,
+        careMode,
+        orientation,
+        etpDecision,
+        programType,
+        nonInclusionDetails,
+        customContentDetails,
+        goal,
+        stopReason,
+        etpFinalOutcome,
+        ...fixes
+      }: typeof pierreValues,
+    ) => {
+      const res = await patch(`/patient/${patientId}/service-file`, fixes)
+      expect(res.statusCode).toBe(200)
+      await testDb.patientServiceFile.update({
+        where: { patientId_serviceId: { patientId, serviceId } },
+        data: {
+          clinicalData: { medicalDiagnosis },
+          data: {
+            careMode,
+            orientation,
+            etpDecision,
+            programType,
+            nonInclusionDetails,
+            customContentDetails,
+            goal,
+            stopReason,
+            etpFinalOutcome,
+          },
+        },
+      })
+    }
+    await ecrireSousDossier(pierreId, pierreValues)
+    await ecrireSousDossier(catherineId, catherineValues)
 
     const pierreFetched = (
       await get(`/patient/${pierreId}/service-file`)
@@ -181,26 +209,30 @@ describe('routes du patient', () => {
     // par la table Patient. Chaque valeur attendue porte le nom du patient
     // auquel elle appartient : un echec dit donc lui-meme qui a recu la
     // valeur de qui.
-    expect(pierreFetched.medicalDiagnosis).toBe(pierreValues.medicalDiagnosis)
+    expect(pierreFetched.clinicalData.medicalDiagnosis).toBe(
+      pierreValues.medicalDiagnosis,
+    )
     expect(new Date(pierreFetched.entryDate).toISOString()).toBe(
       pierreValues.entryDate,
     )
-    expect(pierreFetched.careMode).toBe(pierreValues.careMode)
-    expect(pierreFetched.orientation).toBe(pierreValues.orientation)
-    expect(pierreFetched.etpDecision).toBe(pierreValues.etpDecision)
-    expect(pierreFetched.programType).toBe(pierreValues.programType)
-    expect(pierreFetched.nonInclusionDetails).toBe(
+    expect(pierreFetched.data.careMode).toBe(pierreValues.careMode)
+    expect(pierreFetched.data.orientation).toBe(pierreValues.orientation)
+    expect(pierreFetched.data.etpDecision).toBe(pierreValues.etpDecision)
+    expect(pierreFetched.data.programType).toBe(pierreValues.programType)
+    expect(pierreFetched.data.nonInclusionDetails).toBe(
       pierreValues.nonInclusionDetails,
     )
-    expect(pierreFetched.customContentDetails).toBe(
+    expect(pierreFetched.data.customContentDetails).toBe(
       pierreValues.customContentDetails,
     )
-    expect(pierreFetched.goal).toBe(pierreValues.goal)
+    expect(pierreFetched.data.goal).toBe(pierreValues.goal)
     expect(new Date(pierreFetched.exitDate).toISOString()).toBe(
       pierreValues.exitDate,
     )
-    expect(pierreFetched.stopReason).toBe(pierreValues.stopReason)
-    expect(pierreFetched.etpFinalOutcome).toBe(pierreValues.etpFinalOutcome)
+    expect(pierreFetched.data.stopReason).toBe(pierreValues.stopReason)
+    expect(pierreFetched.data.etpFinalOutcome).toBe(
+      pierreValues.etpFinalOutcome,
+    )
     expect(pierreFetched.referringCaregiver).toBe(
       pierreValues.referringCaregiver,
     )
@@ -208,28 +240,28 @@ describe('routes du patient', () => {
     expect(pierreFetched.notes).toBe(pierreValues.notes)
     expect(pierreFetched.details).toBe(pierreValues.details)
 
-    expect(catherineFetched.medicalDiagnosis).toBe(
+    expect(catherineFetched.clinicalData.medicalDiagnosis).toBe(
       catherineValues.medicalDiagnosis,
     )
     expect(new Date(catherineFetched.entryDate).toISOString()).toBe(
       catherineValues.entryDate,
     )
-    expect(catherineFetched.careMode).toBe(catherineValues.careMode)
-    expect(catherineFetched.orientation).toBe(catherineValues.orientation)
-    expect(catherineFetched.etpDecision).toBe(catherineValues.etpDecision)
-    expect(catherineFetched.programType).toBe(catherineValues.programType)
-    expect(catherineFetched.nonInclusionDetails).toBe(
+    expect(catherineFetched.data.careMode).toBe(catherineValues.careMode)
+    expect(catherineFetched.data.orientation).toBe(catherineValues.orientation)
+    expect(catherineFetched.data.etpDecision).toBe(catherineValues.etpDecision)
+    expect(catherineFetched.data.programType).toBe(catherineValues.programType)
+    expect(catherineFetched.data.nonInclusionDetails).toBe(
       catherineValues.nonInclusionDetails,
     )
-    expect(catherineFetched.customContentDetails).toBe(
+    expect(catherineFetched.data.customContentDetails).toBe(
       catherineValues.customContentDetails,
     )
-    expect(catherineFetched.goal).toBe(catherineValues.goal)
+    expect(catherineFetched.data.goal).toBe(catherineValues.goal)
     expect(new Date(catherineFetched.exitDate).toISOString()).toBe(
       catherineValues.exitDate,
     )
-    expect(catherineFetched.stopReason).toBe(catherineValues.stopReason)
-    expect(catherineFetched.etpFinalOutcome).toBe(
+    expect(catherineFetched.data.stopReason).toBe(catherineValues.stopReason)
+    expect(catherineFetched.data.etpFinalOutcome).toBe(
       catherineValues.etpFinalOutcome,
     )
     expect(catherineFetched.referringCaregiver).toBe(
@@ -386,9 +418,7 @@ describe('routes du patient', () => {
     ).toBe(0)
 
     const res = await patch(`/patient/${patientId}/service-file`, {
-      medicalDiagnosis: 'DIAG-JOURNAL',
       notes: 'NOTES-JOURNAL',
-      stopReason: 'MOTIF-JOURNAL',
     })
     expect(res.statusCode).toBe(200)
 
@@ -545,6 +575,20 @@ describe('cloisonnement de la liste des patients par service', () => {
         expect(res.statusCode).toBe(200)
       })
 
+  const writeFieldValues = (
+    serviceId: string,
+    patientId: string,
+    values: {
+      data: Record<string, string>
+      clinicalData: Record<string, string>
+    },
+  ) =>
+    testDb.patientServiceFile.upsert({
+      where: { patientId_serviceId: { patientId, serviceId } },
+      create: { establishmentId, serviceId, patientId, ...values },
+      update: values,
+    })
+
   it('un patient suivi uniquement dans le service A n apparait pas dans la liste du service B', async () => {
     const patientId = await createPatientInService(serviceAId, {
       firstName: 'Solo',
@@ -597,21 +641,19 @@ describe('cloisonnement de la liste des patients par service', () => {
       firstName: 'Choix',
       lastName: 'Service',
     })
-    await writeServiceFile(serviceAId, patientId, {
-      medicalDiagnosis: 'AVC',
-      careMode: 'HDJ',
-      stopReason: 'REFUS',
+    await writeFieldValues(serviceAId, patientId, {
+      clinicalData: { medicalDiagnosis: 'AVC' },
+      data: { careMode: 'HDJ', stopReason: 'REFUS' },
     })
-    await writeServiceFile(serviceBId, patientId, {
-      medicalDiagnosis: 'AOMI',
+    await writeFieldValues(serviceBId, patientId, {
+      clinicalData: { medicalDiagnosis: 'AOMI' },
+      data: {},
     })
 
     type Ligne = {
       id: string
-      medicalDiagnosis: string | null
-      careMode: string | null
-      stopReason: string | null
-      etpFinalOutcome: string | null
+      data: Record<string, string>
+      clinicalData: Record<string, string>
     }
     const inA = ((await listWithTags(serviceAId)) as unknown as Ligne[]).find(
       (p) => p.id === patientId,
@@ -620,16 +662,12 @@ describe('cloisonnement de la liste des patients par service', () => {
       (p) => p.id === patientId,
     )
     expect(inA).toMatchObject({
-      medicalDiagnosis: 'AVC',
-      careMode: 'HDJ',
-      stopReason: 'REFUS',
-      etpFinalOutcome: null,
+      clinicalData: { medicalDiagnosis: 'AVC' },
+      data: { careMode: 'HDJ', stopReason: 'REFUS' },
     })
-    expect(inB).toMatchObject({
-      medicalDiagnosis: 'AOMI',
-      careMode: null,
-      stopReason: null,
-    })
+    expect(inA?.data).not.toHaveProperty('etpFinalOutcome')
+    expect(inB).toMatchObject({ clinicalData: { medicalDiagnosis: 'AOMI' } })
+    expect(inB?.data).toEqual({})
 
     await testDb.patient.delete({ where: { id: patientId } })
   })

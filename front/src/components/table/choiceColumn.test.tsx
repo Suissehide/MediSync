@@ -1,5 +1,7 @@
 import {
   getCoreRowModel,
+  getFacetedRowModel,
+  getFacetedUniqueValues,
   getFilteredRowModel,
   getSortedRowModel,
   useReactTable,
@@ -15,6 +17,7 @@ import {
   choiceLabel,
   EMPTY_CHOICE,
   matchesChoice,
+  multiChoiceColumn,
 } from './choiceColumn.tsx'
 
 type Ligne = { id: string; diag: string | null }
@@ -101,5 +104,71 @@ describe('choiceColumn', () => {
     expect(container.textContent).toBe('')
     rerender(<>{cellule({ getValue: () => 'INCONNU' })}</>)
     expect(screen.getByText('INCONNU')).toBeTruthy()
+  })
+})
+
+type LigneMulti = { id: string; comorbidites: string[] | null }
+
+const CHOIX_MULTI: Choice[] = [
+  { value: 'HTA', label: 'Hypertension' },
+  { value: 'DIAB', label: 'Diabète' },
+]
+
+const lignesMulti: LigneMulti[] = [
+  { id: '1', comorbidites: ['HTA', 'DIAB'] },
+  { id: '2', comorbidites: null },
+  { id: '3', comorbidites: ['DIAB'] },
+  { id: '4', comorbidites: [] },
+]
+
+const colonneMulti = multiChoiceColumn<LigneMulti>(
+  'comorbidites',
+  (l) => l.comorbidites,
+  { label: 'Comorbidités', group: 'Inclusion', choices: CHOIX_MULTI },
+)
+
+const tableMulti = (filtre?: string[]) =>
+  renderHook(() =>
+    useReactTable({
+      data: lignesMulti,
+      columns: [colonneMulti],
+      state: {
+        columnFilters: filtre ? [{ id: 'comorbidites', value: filtre }] : [],
+      },
+      getRowId: (l) => l.id,
+      getCoreRowModel: getCoreRowModel(),
+      getFilteredRowModel: getFilteredRowModel(),
+      getFacetedRowModel: getFacetedRowModel(),
+      getFacetedUniqueValues: getFacetedUniqueValues(),
+    }),
+  ).result.current
+
+describe('multiChoiceColumn', () => {
+  it('rend une etiquette par valeur', () => {
+    const cellule = colonneMulti.cell as (ctx: {
+      getValue: () => string[] | undefined
+    }) => ReactNode
+    render(<div>{cellule({ getValue: () => ['HTA', 'INCONNU'] })}</div>)
+    expect(screen.getByText('Hypertension')).toBeTruthy()
+    expect(screen.getByText('INCONNU')).toBeTruthy()
+  })
+
+  it('retient une ligne si une de ses valeurs est cochee, les vides avec Non renseigne', () => {
+    const ids = (filtre: string[]) =>
+      tableMulti(filtre)
+        .getRowModel()
+        .rows.map((r) => r.id)
+    expect(ids(['HTA'])).toEqual(['1'])
+    expect(ids(['DIAB'])).toEqual(['1', '3'])
+    expect(ids([EMPTY_CHOICE])).toEqual(['2', '4'])
+  })
+
+  it('compte chaque valeur separement dans les facettes', () => {
+    const counts = tableMulti()
+      .getColumn('comorbidites')
+      ?.getFacetedUniqueValues()
+    expect(counts?.get('HTA')).toBe(1)
+    expect(counts?.get('DIAB')).toBe(2)
+    expect(counts?.get(undefined)).toBe(2)
   })
 })

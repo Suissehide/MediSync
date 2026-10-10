@@ -1,18 +1,13 @@
-import {
-  ETP_FINAL_OUTCOME_OPTIONS,
-  STOP_REASON_OPTIONS,
-} from '../../../../constants/patient.constant.ts'
 import { withForm } from '../../../../hooks/formConfig.tsx'
+import type { ServiceField } from '../../../../types/serviceField.ts'
 import { patientServiceFileFormOpts } from './form.patient.ts'
+import { ServiceFieldsSection } from './serviceFields.patient.tsx'
 
-// Tous ces champs vivent sur le sous-dossier de service (`types/patientServiceFile.ts`) : leur
-// découpage ne change pas, seul le formulaire auquel ils sont liés change
-// (`patientServiceFileFormOpts` au lieu de `patientFormOpts`). `edit.patient.tsx` ne monte ce
-// composant qu'une fois la lecture du sous-dossier résolue (`serviceFileReady`). Décision 2.3
-// de la spec.
+// Champs du sous-dossier de service ; les champs configurables viennent du service (`fields`).
 export const OutcomeReviewFields = withForm({
   ...patientServiceFileFormOpts,
-  render: ({ form }) => {
+  props: { fields: [] as ServiceField[] },
+  render: ({ form, fields }) => {
     return (
       <div className="h-fit flex-1 flex flex-col gap-2">
         <div className="flex items-center gap-2 mt-2">
@@ -27,22 +22,7 @@ export const OutcomeReviewFields = withForm({
           <form.AppField name="exitDate">
             {(field) => <field.DatePicker label="Date de sortie" />}
           </form.AppField>
-          <form.AppField name="stopReason">
-            {(field) => (
-              <field.Select
-                options={STOP_REASON_OPTIONS}
-                label="Motif d'arrêt de programme"
-              />
-            )}
-          </form.AppField>
-          <form.AppField name="etpFinalOutcome">
-            {(field) => (
-              <field.Select
-                options={ETP_FINAL_OUTCOME_OPTIONS}
-                label="Point final parcours ETP"
-              />
-            )}
-          </form.AppField>
+          <ServiceFieldsSection form={form} section="outcome" fields={fields} />
         </div>
       </div>
     )

@@ -1,7 +1,7 @@
 import { LocalizationProvider } from '@mui/x-date-pickers'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import { useToastStore } from '@/store/useToastStore.ts'
 import type { Patient } from '@/types/patient.ts'
+import type { ServiceField } from '@/types/serviceField.ts'
 import EditPatient from './edit.patient.tsx'
 
 // `main.tsx` enregistre ce greffon au démarrage de l'application ; les champs `DatePicker` du
@@ -44,7 +45,7 @@ const serviceFileFixture = {
   establishmentId: 'e1',
   createdAt: '2026-01-01T00:00:00.000Z',
   notes: 'note existante',
-  goal: 'objectif existant',
+  data: { goal: 'objectif existant' },
 }
 
 type Route = {
@@ -55,10 +56,15 @@ type Route = {
   ) => { ok: boolean; status: number; json: () => Promise<unknown> }
 }
 
-const buildFetchMock = (routes: Route[]) =>
+// Les définitions de champs (`/service-fields`) passent avant les routes du test, dont les
+// motifs `/service-file` les captureraient aussi.
+const buildFetchMock = (routes: Route[], fields: ServiceField[] = []) =>
   vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = input.toString()
     const method = init?.method ?? 'GET'
+    if (url.endsWith('/service-fields') && method === 'GET') {
+      return { ok: true, status: 200, json: async () => fields, url }
+    }
     const route = routes.find((r) => r.match(url, method))
     if (!route) {
       throw new Error(`Appel fetch non attendu dans ce test : ${method} ${url}`)
@@ -1031,10 +1037,11 @@ describe('EditPatient — le signal de suivi ailleurs (IdentiteFields)', () => {
 
     expect(await screen.findByText(MENTION_TEXT)).toBeInTheDocument()
 
-    // Aucun appel supplémentaire déclenché par l'affichage de la mention : le seul appel réseau
-    // de cet écran reste la lecture du sous-dossier, déjà nécessaire sans le signal.
-    expect(fetchMock.mock.calls).toHaveLength(1)
-    expect(fetchMock.mock.calls[0][0].toString()).toContain('/service-file')
+    // Aucun appel supplémentaire déclenché par la mention : seules les lectures du sous-dossier
+    // et des définitions de champs, déjà nécessaires sans le signal.
+    expect(fetchMock.mock.calls).toHaveLength(2)
+    expect(fetchMock.mock.calls[0][0].toString()).toMatch(/\/service-file$/)
+    expect(fetchMock.mock.calls[1][0].toString()).toMatch(/\/service-fields$/)
   })
 
   it('n’affiche rien quand followedElsewhere est présent et faux (« ce service est le seul »)', async () => {
@@ -1055,7 +1062,7 @@ describe('EditPatient — le signal de suivi ailleurs (IdentiteFields)', () => {
       await screen.findByLabelText("Distance d'habitation"),
     ).toBeInTheDocument()
     expect(screen.queryByText(MENTION_TEXT)).not.toBeInTheDocument()
-    expect(fetchMock.mock.calls).toHaveLength(1)
+    expect(fetchMock.mock.calls).toHaveLength(2)
   })
 
   it('n’affiche rien quand followedElsewhere est absent (le service courant n’a pas encore de sous-dossier)', async () => {
@@ -1076,7 +1083,7 @@ describe('EditPatient — le signal de suivi ailleurs (IdentiteFields)', () => {
       await screen.findByLabelText("Distance d'habitation"),
     ).toBeInTheDocument()
     expect(screen.queryByText(MENTION_TEXT)).not.toBeInTheDocument()
-    expect(fetchMock.mock.calls).toHaveLength(1)
+    expect(fetchMock.mock.calls).toHaveLength(2)
   })
 
   it('reste sobre : ni nom de service, ni nombre, ni date dans la mention', async () => {
@@ -1095,5 +1102,238 @@ describe('EditPatient — le signal de suivi ailleurs (IdentiteFields)', () => {
     // Le texte exact ci-dessus est déjà la preuve la plus forte ; cette assertion protège contre
     // un enrichissement futur du même nœud (ex. un nom de service ajouté après coup).
     expect(mention.textContent).toBe(MENTION_TEXT)
+  })
+})
+
+const choice = (
+  key: string,
+  label: string,
+  order: number,
+  archived = false,
+) => ({
+  id: key,
+  key,
+  label,
+  order,
+  archived,
+})
+
+const configuredField = (over: Partial<ServiceField>): ServiceField => ({
+  id: over.key ?? 'f',
+  key: 'f',
+  label: 'F',
+  type: 'text',
+  section: 'pathway',
+  order: 0,
+  clinical: false,
+  unit: null,
+  archived: false,
+  choices: [],
+  ...over,
+})
+
+// Ordre du tableau volontairement différent de `order` : l'écran doit trier.
+const configuredFields: ServiceField[] = [
+  configuredField({
+    key: 'orientation',
+    label: 'Orientation',
+    type: 'choice',
+    order: 1,
+    choices: [
+      choice('A', 'Choix A', 0),
+      choice('VIEUX', 'VIEUX', 1, true),
+      choice('AUTRE', 'Autre ancien', 2, true),
+    ],
+  }),
+  configuredField({
+    key: 'hba1c',
+    label: 'HbA1c',
+    type: 'number',
+    unit: '%',
+    order: 2,
+  }),
+  configuredField({
+    key: 'diag',
+    label: 'Diagnostic',
+    type: 'choice',
+    clinical: true,
+    order: 0,
+    choices: [choice('AVC', 'AVC', 0), choice('AOMI', 'AOMI', 1)],
+  }),
+  configuredField({ key: 'ancien', label: 'ancien', archived: true, order: 3 }),
+]
+
+const configuredFile = {
+  ...serviceFileFixture,
+  data: { orientation: 'VIEUX', hba1c: 7 },
+  clinicalData: { diag: 'AVC' },
+}
+
+const renderConfigured = (
+  bodies: Record<string, unknown>[] = [],
+  file: Record<string, unknown> = configuredFile,
+) => {
+  const fetchMock = buildFetchMock(
+    [
+      {
+        match: (url, method) =>
+          url.includes('/service-file') && method === 'GET',
+        respond: () => ({
+          ok: true,
+          status: 200,
+          json: async () => file,
+        }),
+      },
+      {
+        match: (url, method) =>
+          url.includes('/service-file') && method === 'PATCH',
+        respond: (_url, init) => {
+          const body = JSON.parse((init?.body as string) ?? '{}')
+          bodies.push(body)
+          const saved = {
+            ...configuredFile,
+            data: { ...configuredFile.data, ...body.data },
+          }
+          return { ok: true, status: 200, json: async () => saved }
+        },
+      },
+    ],
+    configuredFields,
+  )
+  vi.stubGlobal('fetch', fetchMock)
+  return renderEditPatient()
+}
+
+describe('EditPatient — champs configurables du service', () => {
+  it('affiche la date d’entrée puis les champs actifs dans l’ordre configuré', async () => {
+    const { container } = renderConfigured()
+    await screen.findByLabelText('HbA1c (%)')
+
+    const labels = [...container.querySelectorAll('label')].map(
+      (l) => l.textContent,
+    )
+    const pathway = labels.slice(labels.indexOf("Date d'entrée"))
+    expect(pathway.slice(0, 4)).toEqual([
+      "Date d'entrée",
+      'Diagnostic',
+      'Orientation',
+      'HbA1c (%)',
+    ])
+    expect(screen.queryByText('ancien')).not.toBeInTheDocument()
+  })
+
+  it('montre une valeur archivée sans proposer les autres choix archivés', async () => {
+    renderConfigured()
+    const orientation = await screen.findByLabelText('Orientation')
+    expect(orientation).toHaveTextContent('VIEUX (archivé)')
+
+    await userEvent.click(orientation)
+    const options = (await screen.findAllByRole('option')).map(
+      (o) => o.textContent,
+    )
+    expect(options).toContain('Choix A')
+    expect(options).not.toContain('Autre ancien')
+    expect(options).not.toContain('Autre ancien (archivé)')
+  })
+
+  it('ne rend pas un champ clinique sans clinical:read', async () => {
+    useAuthStore.setState({
+      context: { ...context, serviceRole: 'SECRETARIAT' as const },
+    })
+    renderConfigured()
+    await screen.findByLabelText('HbA1c (%)')
+    expect(screen.queryByLabelText('Diagnostic')).not.toBeInTheDocument()
+  })
+
+  it('n’envoie que le champ configurable modifié, dans data', async () => {
+    const bodies: Record<string, unknown>[] = []
+    renderConfigured(bodies)
+    const hba1c = await screen.findByLabelText('HbA1c (%)')
+    expect(hba1c).toHaveValue(7)
+    await userEvent.clear(hba1c)
+    await userEvent.type(hba1c, '8')
+    await userEvent.click(
+      await screen.findByRole('button', { name: /Sauvegarder/i }),
+    )
+
+    await waitFor(() => expect(bodies).toHaveLength(1))
+    expect(bodies[0]).toEqual({ data: { hba1c: 8 } })
+  })
+
+  it('un compte avec clinical:write qui modifie un champ clinique l’envoie dans clinicalData, pas data', async () => {
+    const bodies: Record<string, unknown>[] = []
+    renderConfigured(bodies)
+    const diagnostic = await screen.findByLabelText('Diagnostic')
+    await userEvent.click(diagnostic)
+    await userEvent.click(await screen.findByRole('option', { name: 'AOMI' }))
+    await userEvent.click(
+      await screen.findByRole('button', { name: /Sauvegarder/i }),
+    )
+
+    await waitFor(() => expect(bodies).toHaveLength(1))
+    expect(bodies[0]).toEqual({ clinicalData: { diag: 'AOMI' } })
+  })
+
+  it('vider un champ envoie null', async () => {
+    const bodies: Record<string, unknown>[] = []
+    renderConfigured(bodies)
+    const hba1c = await screen.findByLabelText('HbA1c (%)')
+    await userEvent.clear(hba1c)
+    await userEvent.click(
+      await screen.findByRole('button', { name: /Sauvegarder/i }),
+    )
+
+    await waitFor(() => expect(bodies).toHaveLength(1))
+    expect(bodies[0]).toEqual({ data: { hba1c: null } })
+  })
+
+  it('sans clinical:read, l’enregistrement n’envoie aucune clé clinicalData', async () => {
+    useAuthStore.setState({
+      context: { ...context, serviceRole: 'SECRETARIAT' as const },
+    })
+    const bodies: Record<string, unknown>[] = []
+    renderConfigured(bodies)
+    const hba1c = await screen.findByLabelText('HbA1c (%)')
+    await userEvent.clear(hba1c)
+    await userEvent.type(hba1c, '8')
+    await userEvent.click(
+      await screen.findByRole('button', { name: /Sauvegarder/i }),
+    )
+
+    await waitFor(() => expect(bodies).toHaveLength(1))
+    expect(bodies[0]).toEqual({ data: { hba1c: 8 } })
+  })
+
+  it('un second enregistrement après un succès n’envoie rien', async () => {
+    const bodies: Record<string, unknown>[] = []
+    renderConfigured(bodies)
+    const hba1c = await screen.findByLabelText('HbA1c (%)')
+    await userEvent.clear(hba1c)
+    await userEvent.type(hba1c, '8')
+    await userEvent.click(
+      await screen.findByRole('button', { name: /Sauvegarder/i }),
+    )
+    await waitFor(() => expect(bodies).toHaveLength(1))
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('button', { name: /Sauvegarder/i }),
+      ).not.toBeInTheDocument(),
+    )
+
+    fireEvent.submit(hba1c.closest('form') ?? document.body)
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(bodies).toHaveLength(1)
+  })
+
+  it('un champ vide saisi puis vidé n’envoie rien', async () => {
+    const bodies: Record<string, unknown>[] = []
+    renderConfigured(bodies, { ...configuredFile, data: {} })
+    const hba1c = await screen.findByLabelText('HbA1c (%)')
+    expect(hba1c).toHaveValue(null)
+    await userEvent.type(hba1c, '5')
+    await userEvent.clear(hba1c)
+    fireEvent.submit(hba1c.closest('form') ?? document.body)
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(bodies).toHaveLength(0)
   })
 })

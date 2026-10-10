@@ -1,3 +1,5 @@
+import Boom from '@hapi/boom'
+
 import type { IocContainer } from '../types/application/ioc'
 import type {
   PatientServiceFileDomainInterface,
@@ -5,14 +7,28 @@ import type {
   PatientServiceFileUpsertEntityDomain,
 } from '../types/domain/patientServiceFile.domain.interface'
 import type { PatientServiceFileRepositoryInterface } from '../types/infra/orm/repositories/patientServiceFile.repository.interface'
+import type { ServiceFieldRepositoryInterface } from '../types/infra/orm/repositories/serviceField.repository.interface'
 import type { AppEventBus } from '../utils/app-event-bus'
+import {
+  asFieldType,
+  asValues,
+  type FieldDefinitionForValidation,
+  mergeFieldPatch,
+  toJsonObject,
+} from '../utils/service-field-types'
 
 class PatientServiceFileDomain implements PatientServiceFileDomainInterface {
   private readonly patientServiceFileRepository: PatientServiceFileRepositoryInterface
+  private readonly serviceFieldRepository: ServiceFieldRepositoryInterface
   private readonly appEventBus: AppEventBus
 
-  constructor({ patientServiceFileRepository, appEventBus }: IocContainer) {
+  constructor({
+    patientServiceFileRepository,
+    serviceFieldRepository,
+    appEventBus,
+  }: IocContainer) {
     this.patientServiceFileRepository = patientServiceFileRepository
+    this.serviceFieldRepository = serviceFieldRepository
     this.appEventBus = appEventBus
   }
 
@@ -27,20 +43,94 @@ class PatientServiceFileDomain implements PatientServiceFileDomainInterface {
     params: PatientServiceFileUpsertEntityDomain,
     userID: string,
   ): Promise<PatientServiceFileEntityDomain> {
+    const { data, clinicalData, ...fixed } = params
+    // Valide avant de creer quoi que ce soit : un 400 ne doit laisser aucune trace, pas meme un sous-dossier vide.
+    if (data !== undefined || clinicalData !== undefined) {
+      await this.validateValues(patientId, data ?? {}, clinicalData ?? {})
+      await this.patientServiceFileRepository.ensureExists(patientId)
+      await this.writeValues(patientId, data ?? {}, clinicalData ?? {})
+    }
     const serviceFile = await this.patientServiceFileRepository.upsert(
       patientId,
-      params,
+      fixed,
     )
-    // Meme evenement que PATCH /patient/:id ('patient.updated' -> ActivityLogSubscriber) : le
-    // sous-dossier porte le contenu clinique qui vivait avant sur le patient, et sa modification
-    // doit laisser la meme trace dans le journal d'activite (voir back/src/main/services/
-    // activity-log.subscriber.ts). Aucun evenement dedie : ce reste une modification du dossier
-    // du meme patient, journalisee sous la meme entite.
+    // Meme evenement que PATCH /patient/:id : journalise sous la meme entite (activity-log.subscriber.ts).
     this.appEventBus.emit('patient.updated', {
       userID,
       patientId: serviceFile.patientId,
     })
     return serviceFile
+  }
+
+  private async fieldDefinitions(): Promise<FieldDefinitionForValidation[]> {
+    return (await this.serviceFieldRepository.findAll()).flatMap(
+      (d): FieldDefinitionForValidation[] => {
+        const type = asFieldType(d.type)
+        return type ? [{ ...d, type }] : []
+      },
+    )
+  }
+
+  // Rejoue la validation de `writeValues` sur l'etat actuel (ou {} si le patient n'a encore aucun sous-dossier ici) : un correctif invalide ne doit creer aucune ligne PatientServiceFile.
+  private async validateValues(
+    patientId: string,
+    dataPatch: Record<string, unknown>,
+    clinicalPatch: Record<string, unknown>,
+  ): Promise<void> {
+    const definitions = await this.fieldDefinitions()
+    const current =
+      await this.patientServiceFileRepository.findByPatient(patientId)
+    mergeFieldPatch(definitions, asValues(current?.data), dataPatch, false)
+    mergeFieldPatch(
+      definitions,
+      asValues(current?.clinicalData),
+      clinicalPatch,
+      true,
+    )
+  }
+
+  // Concurrence optimiste : on n'ecrit que si les colonnes JSON n'ont pas bouge depuis la lecture.
+  private async writeValues(
+    patientId: string,
+    dataPatch: Record<string, unknown>,
+    clinicalPatch: Record<string, unknown>,
+  ): Promise<void> {
+    const definitions = await this.fieldDefinitions()
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const current =
+        await this.patientServiceFileRepository.findByPatient(patientId)
+      if (!current) {
+        throw Boom.notFound('PatientServiceFile not found')
+      }
+      const next = {
+        data: toJsonObject(
+          mergeFieldPatch(
+            definitions,
+            asValues(current.data),
+            dataPatch,
+            false,
+          ),
+        ),
+        clinicalData: toJsonObject(
+          mergeFieldPatch(
+            definitions,
+            asValues(current.clinicalData),
+            clinicalPatch,
+            true,
+          ),
+        ),
+      }
+      if (
+        await this.patientServiceFileRepository.writeValues(
+          patientId,
+          current,
+          next,
+        )
+      ) {
+        return
+      }
+    }
+    throw Boom.conflict('Le dossier a été modifié en même temps, réessayez.')
   }
 
   ensureExists(patientId: string): Promise<void> {

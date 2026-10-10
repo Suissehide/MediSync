@@ -1,4 +1,5 @@
 import type { Patient, Prisma } from '../../../../../generated/client'
+import type { FieldValues } from '../../../../utils/service-field-types'
 import type { PatientWithAppointmentsDomain } from '../../../domain/patient.domain.interface'
 import type { EnrollmentIssueEntityRepo } from './enrollmentIssue.repository.interface'
 import type { PatientServiceFileEntityRepo } from './patientServiceFile.repository.interface'
@@ -17,15 +18,9 @@ export type PatientWithTagsEntityRepo = Patient & {
   // `serviceFile.entryDate` et ne duplique pas la valeur ici.
   entryDate?: Date | null
   exitDate?: Date | null
-  // Champs a choix du sous-dossier du service courant ; seule `findAllWithTags` les pose.
-  medicalDiagnosis?: string | null
-  careMode?: string | null
-  orientation?: string | null
-  etpDecision?: string | null
-  programType?: string | null
-  nonInclusionDetails?: string | null
-  stopReason?: string | null
-  etpFinalOutcome?: string | null
+  // Valeurs configurables du sous-dossier du service courant ; seule `findAllWithTags` les pose.
+  data?: FieldValues
+  clinicalData?: FieldValues
 }
 // Utilise par l'export Excel : le parcours et le contenu clinique vivent desormais sur le
 // sous-dossier de service, `null` quand le patient n'en a pas encore dans le service courant.

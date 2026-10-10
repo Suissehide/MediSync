@@ -9,6 +9,7 @@ import {
   type ArsPresence,
   computeArsIndicators,
 } from '../../../main/utils/ars-indicators'
+import { ETP_FIELD_PRESET } from '../../../main/utils/etp-field-preset'
 
 const PERIODE = {
   from: new Date('2026-01-01'),
@@ -536,25 +537,20 @@ describe('orientations : la BASE stocke la CLÉ, pas le libellé', () => {
     expect(valeur(c, '1.3')).toBe(0)
   })
 
-  // Contrat entre les deux dépôts, sur le patron d'`access-log-vocabulaire.test.ts` : les trois
-  // clés doivent exister dans le dictionnaire du front. Renommer une clé là-bas sans toucher ici
-  // remettrait silencieusement les trois indicateurs à zéro — c'est exactement ce qui vient
-  // d'arriver.
-  it('chaque cle utilisee existe dans ORIENTATION du front', () => {
-    const source = readFileSync(
-      join(__dirname, '../../../../../front/src/constants/patient.constant.ts'),
-      'utf8',
+  // Contrat rebâti sur le catalogue ETP (back/src/main/utils/etp-field-preset.ts), qui remplace
+  // l'ancien dictionnaire front ORIENTATION depuis que l'orientation est un champ configurable :
+  // ETP_FIELD_PRESET sème les choix initiaux de ServiceFieldChoice, une clé qui en dérive garantit
+  // qu'elle existe réellement en base pour les services déjà créés.
+  it('chaque cle de ARS_ORIENTATIONS est un choix du champ orientation de ETP_FIELD_PRESET', () => {
+    const champOrientation = ETP_FIELD_PRESET.find(
+      (f) => f.key === 'orientation',
     )
-    const bloc = source.match(/export const ORIENTATION = \{([^}]*)\}/)
-    if (!bloc) {
-      throw new Error('ORIENTATION introuvable dans patient.constant.ts')
+    if (!champOrientation) {
+      throw new Error('champ orientation introuvable dans ETP_FIELD_PRESET')
     }
-    const clesDuFront = [...bloc[1].matchAll(/^\s*([A-Z_]+):/gm)].map(
-      (m) => m[1],
-    )
-    expect(clesDuFront.length).toBeGreaterThanOrEqual(5)
+    const clesDuPreset = champOrientation.choices.map((c) => c.key)
     for (const cle of Object.values(ARS_ORIENTATIONS)) {
-      expect(clesDuFront).toContain(cle)
+      expect(clesDuPreset).toContain(cle)
     }
   })
   it('la cle accompagnant existe dans APPOINTMENT_ACCOMPANYING du front', () => {

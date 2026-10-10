@@ -23,6 +23,7 @@ import { PatientAccessLogDomain } from '../../../domain/patientAccessLog.domain'
 import { PatientServiceFileDomain } from '../../../domain/patientServiceFile.domain'
 import { PlanningCycleDomain } from '../../../domain/planningCycle.domain'
 import { ServiceDomain } from '../../../domain/service.domain'
+import { ServiceFieldDomain } from '../../../domain/serviceField.domain'
 import { SlotDomain } from '../../../domain/slot.domain'
 import { SlotTemplateDomain } from '../../../domain/slotTemplate.domain'
 import { SoignantDomain } from '../../../domain/soignant.domain'
@@ -53,6 +54,7 @@ import { PatientAccessLogRepository } from '../../../infra/orm/repositories/pati
 import { PatientServiceFileRepository } from '../../../infra/orm/repositories/patientServiceFile.repository'
 import { PlanningCycleRepository } from '../../../infra/orm/repositories/planningCycle.repository'
 import { ServiceRepository } from '../../../infra/orm/repositories/service.repository'
+import { ServiceFieldRepository } from '../../../infra/orm/repositories/serviceField.repository'
 import { SlotRepository } from '../../../infra/orm/repositories/slot.repository'
 import { SlotTemplateRepository } from '../../../infra/orm/repositories/slotTemplate.repository'
 import { SoignantRepository } from '../../../infra/orm/repositories/soignant.repository'
@@ -126,6 +128,9 @@ class AwilixIocContainer {
     // Thematic
     this.#registerThematicDomain()
     this.#registerThematicRepository()
+    // ServiceField
+    this.#registerServiceFieldDomain()
+    this.#registerServiceFieldRepository()
     // Location
     this.#registerLocationDomain()
     this.#registerLocationRepository()
@@ -352,6 +357,17 @@ class AwilixIocContainer {
   }
   #registerThematicRepository(): void {
     this.register('thematicRepository', asClass(ThematicRepository).singleton())
+  }
+
+  // ServiceField
+  #registerServiceFieldDomain(): void {
+    this.register('serviceFieldDomain', asClass(ServiceFieldDomain).singleton())
+  }
+  #registerServiceFieldRepository(): void {
+    this.register(
+      'serviceFieldRepository',
+      asClass(ServiceFieldRepository).singleton(),
+    )
   }
 
   // Location

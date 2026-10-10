@@ -7,7 +7,7 @@ import type { PatientData } from './seed/data/patient'
 import { PATIENTS_CARDIOLOGIE, PATIENTS_PNEUMOLOGIE } from './seed/data/patient'
 import seedLocations from './seed/location'
 import seedPathwayTemplates from './seed/pathwayTemplate'
-import seedPatients from './seed/patient'
+import seedPatients, { seedEtpFields } from './seed/patient'
 import seedSoignants from './seed/soignant'
 import seedTenant from './seed/tenant'
 import seedThematics from './seed/thematic'
@@ -72,6 +72,7 @@ async function seedService(
   const soignants = await seedSoignants(prisma, tenant)
   const locations = await seedLocations(prisma, tenant)
   const thematics = await seedThematics(prisma, soignants, tenant)
+  await seedEtpFields(prisma, tenant)
   await seedPatients(prisma, tenant, content.patients)
   await seedPathwayTemplates(prisma, soignants, locations, thematics, tenant)
   await seedTodos(prisma, tenant, content.todos)

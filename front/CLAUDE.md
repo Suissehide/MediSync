@@ -283,6 +283,13 @@ Fragment rather than the real element (React: "Invalid prop `className` supplied
 `React.Fragment`"). It had no other caller before this step, hence the invisibility. Fixed at the source in
 `components/ui/button.tsx` — the Fragment now exists only in the two-children (loading) branch.
 
+## Configurable patient-file fields (fiche configurable)
+
+- The *Parcours & Inclusion* and *Sortie & Bilan* fields are configurable server-side (`ServiceFieldDefinition`); the front has no hardcoded dictionary for them.
+- Their values live in `PatientServiceFile.data`/`clinicalData` and are read/written through `fieldValue`/`toPatchValue` (`constants/serviceFieldTypes.tsx`), never a direct property access.
+- A new field type needs an entry in `front/src/constants/serviceFieldTypes.tsx` matching the one in `back/src/main/utils/service-field-types.ts` — one without the other breaks the pair.
+- The patient list (`routes/.../patient/index.tsx`) mounts `ReactTable` only once the service fields have loaded — columns/filters persistence depends on the fields being known at mount, not patched in afterwards.
+
 ## Testing
 
 Vitest + Testing Library, `jsdom` environment.

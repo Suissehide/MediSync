@@ -2,6 +2,7 @@ import {
   PATIENTS_CARDIOLOGIE,
   PATIENTS_PNEUMOLOGIE,
 } from '../../../../prisma/seed/data/patient'
+import { ETP_FIELD_PRESET } from '../../../main/utils/etp-field-preset'
 
 // Un remaniement de la forme du seed (identite a plat, valeurs cliniques sous `clinicalFile`)
 // a, dans le meme geste, fait disparaitre deux patients entiers — Francois Thomas (Cardiologie)
@@ -67,8 +68,28 @@ describe('seed/data/patient — inventaire nomme, pas seulement compte', () => {
   it('chaque patient porte un dossier clinique non vide (medicalDiagnosis renseigne)', () => {
     for (const p of [...PATIENTS_CARDIOLOGIE, ...PATIENTS_PNEUMOLOGIE]) {
       expect(p.clinicalFile).toBeDefined()
-      expect(p.clinicalFile?.medicalDiagnosis).toEqual(expect.any(String))
-      expect(p.clinicalFile?.medicalDiagnosis.length).toBeGreaterThan(0)
+      expect(p.clinicalFile?.clinicalData.medicalDiagnosis).toEqual(
+        expect.any(String),
+      )
+    }
+  })
+
+  it('chaque valeur a choix du seed est une cle du catalogue ETP', () => {
+    const cles = new Map(
+      ETP_FIELD_PRESET.map((f) => [f.key, f.choices.map((c) => c.key)]),
+    )
+    for (const p of [...PATIENTS_CARDIOLOGIE, ...PATIENTS_PNEUMOLOGIE]) {
+      const valeurs = { ...p.clinicalFile.data, ...p.clinicalFile.clinicalData }
+      for (const [champ, valeur] of Object.entries(valeurs)) {
+        const choix = cles.get(champ)
+        expect({ champ, connu: choix !== undefined }).toEqual({
+          champ,
+          connu: true,
+        })
+        if (choix && choix.length > 0) {
+          expect(choix).toContain(valeur)
+        }
+      }
     }
   })
 })

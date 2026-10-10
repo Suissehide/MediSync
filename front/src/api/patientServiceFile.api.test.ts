@@ -19,6 +19,7 @@ const serviceFile: PatientServiceFile = {
   establishmentId: 'e1',
   createdAt: '2026-01-01T00:00:00.000Z',
   notes: 'une note',
+  data: {},
 }
 
 const okResponse = (body: unknown) => ({
@@ -104,16 +105,16 @@ describe('PatientServiceFileApi', () => {
     await PatientServiceFileApi.update({
       patientID: 'p1',
       notes: 'nouvelle note',
-      goal: 'objectif',
-      careMode: 'ambulatoire',
+      details: 'precision',
+      data: { goal: 'objectif' },
     })
 
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit]
     const body = JSON.parse(init.body as string)
     expect(body).toEqual({
       notes: 'nouvelle note',
-      goal: 'objectif',
-      careMode: 'ambulatoire',
+      details: 'precision',
+      data: { goal: 'objectif' },
     })
     expect(body).not.toHaveProperty('patientID')
   })

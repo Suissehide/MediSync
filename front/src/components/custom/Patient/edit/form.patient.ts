@@ -1,7 +1,12 @@
 import { formOptions } from '@tanstack/react-form'
 
+import {
+  fieldValue,
+  toFormValue,
+} from '../../../../constants/serviceFieldTypes.tsx'
 import type { Patient } from '../../../../types/patient.ts'
 import type { PatientServiceFile } from '../../../../types/patientServiceFile.ts'
+import type { ServiceField } from '../../../../types/serviceField.ts'
 
 // Les seize champs de parcours, d'inclusion et de contenu clinique qui vivaient ici ont
 // déménagé vers `patientServiceFileFormOpts`, plus bas dans ce fichier : ils appartiennent au
@@ -31,8 +36,7 @@ export const patientFormOpts = formOptions({
   },
 })
 
-// Le sous-dossier de service (`types/patientServiceFile.ts`) : les
-// seize champs ci-dessus, avec les mêmes noms. Ces défauts à '' ne doivent JAMAIS partir tels
+// Le sous-dossier de service (`types/patientServiceFile.ts`). Ces défauts à '' ne doivent JAMAIS partir tels
 // quels sur le réseau — c'est le patron que `patientFormOpts` a laissé filer.
 // `edit.patient.tsx` ne monte les blocs qui s'appuient sur ce formulaire (`serviceFileReady`)
 // qu'une fois la lecture du sous-dossier résolue, moment où ces défauts sont déjà remplacés par
@@ -50,21 +54,11 @@ export const patientServiceFileFormOpts = formOptions({
     notes: '',
     details: '',
 
-    // Inclusion Data
-    medicalDiagnosis: '',
     entryDate: '',
-    careMode: '',
-    orientation: '',
-    etpDecision: '',
-    programType: '',
-    nonInclusionDetails: '',
-    customContentDetails: '',
-    goal: '',
-
-    // Exit Data
     exitDate: '',
-    stopReason: '',
-    etpFinalOutcome: '',
+
+    // Champs configurables du service, par clé (voir `serviceFields.patient.tsx`).
+    fields: {} as Record<string, unknown>,
   },
 })
 
@@ -92,13 +86,21 @@ export const buildPatientDefaults = (
 }
 
 export const buildServiceFileDefaults = (
-  data?: Partial<PatientServiceFile> | null,
+  data: Partial<PatientServiceFile> | null | undefined,
+  fields: ServiceField[],
 ): PatientServiceFileFormValues => {
   const source = (data ?? {}) as Record<string, unknown>
-  return Object.fromEntries(
-    Object.keys(patientServiceFileFormOpts.defaultValues).map((key) => [
-      key,
-      source[key] ?? '',
-    ]),
-  ) as PatientServiceFileFormValues
+  const fixed = Object.fromEntries(
+    Object.keys(patientServiceFileFormOpts.defaultValues)
+      .filter((key) => key !== 'fields')
+      .map((key) => [key, source[key] ?? '']),
+  )
+  return {
+    ...fixed,
+    fields: Object.fromEntries(
+      fields
+        .filter((f) => !f.archived)
+        .map((f) => [f.key, toFormValue(f.type, fieldValue(f, data))]),
+    ),
+  } as PatientServiceFileFormValues
 }

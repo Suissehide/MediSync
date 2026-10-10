@@ -438,7 +438,7 @@ describe('signal de suivi ailleurs (lecture du patient)', () => {
     })
     expect(sousDossierSecretariat.json()).not.toHaveProperty('notes')
     expect(sousDossierSecretariat.json()).not.toHaveProperty('details')
-    expect(sousDossierSecretariat.json()).not.toHaveProperty('medicalDiagnosis')
+    expect(sousDossierSecretariat.json()).not.toHaveProperty('clinicalData')
     expect(sousDossierCoordinateur.json().notes).toBe('SECRET')
   })
 

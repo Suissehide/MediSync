@@ -124,6 +124,13 @@ export const NAVIGATION: Record<Scale, readonly NavItem[]> = {
       description: 'Modèles de bilan du service',
     },
     {
+      label: 'Fiche patient',
+      to: '/e/$establishmentId/s/$serviceId/fiche-patient',
+      permission: 'referentials:write',
+      group: 'Administration',
+      description: 'Champs des onglets Parcours et Sortie',
+    },
+    {
       label: "Journal d'activité",
       to: '/e/$establishmentId/s/$serviceId/activity-log',
       permission: 'service-journal:read',

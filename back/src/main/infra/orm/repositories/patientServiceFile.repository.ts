@@ -59,6 +59,23 @@ class PatientServiceFileRepository
     }
   }
 
+  async writeValues(
+    patientId: string,
+    expected: { data: Prisma.JsonValue; clinicalData: Prisma.JsonValue },
+    next: { data: Prisma.JsonObject; clinicalData: Prisma.JsonObject },
+  ): Promise<boolean> {
+    const { count } = await this.prisma.patientServiceFile.updateMany({
+      where: {
+        patientId,
+        ...this.scope,
+        data: { equals: expected.data ?? {} },
+        clinicalData: { equals: expected.clinicalData ?? {} },
+      },
+      data: { data: next.data, clinicalData: next.clinicalData },
+    })
+    return count === 1
+  }
+
   // Deuxieme point de creation exige par la spec (§5.1) : a l'inscription d'un patient dans un
   // parcours du service, en plus de la premiere ecriture couverte par upsert ci-dessus. Un
   // update vide laisse les colonnes deja renseignees intactes ; il ne fait rien d'autre que

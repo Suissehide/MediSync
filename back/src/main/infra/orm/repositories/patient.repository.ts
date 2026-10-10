@@ -17,6 +17,7 @@ import type { TenantContextInterface } from '../../../types/utils/tenant-context
 // `escapeLikePattern` vivait en tete de ce fichier ; extrait pour servir aussi le filtre
 // « compte » de la lecture plateforme des deux journaux.
 import { escapeLikePattern } from '../../../utils/like-pattern'
+import { asValues } from '../../../utils/service-field-types'
 import type { PostgresPrismaClient } from '../postgres-client'
 
 type AppointmentPatientWithMainTag = {
@@ -143,14 +144,8 @@ class PatientRepository implements PatientRepositoryInterface {
             enrollmentIssues: true,
             entryDate: true,
             exitDate: true,
-            medicalDiagnosis: true,
-            careMode: true,
-            orientation: true,
-            etpDecision: true,
-            programType: true,
-            nonInclusionDetails: true,
-            stopReason: true,
-            etpFinalOutcome: true,
+            data: true,
+            clinicalData: true,
           },
         },
       },
@@ -173,14 +168,8 @@ class PatientRepository implements PatientRepositoryInterface {
           enrollmentIssues: serviceFiles.flatMap((f) => f.enrollmentIssues),
           entryDate: serviceFiles[0]?.entryDate ?? null,
           exitDate: serviceFiles[0]?.exitDate ?? null,
-          medicalDiagnosis: serviceFiles[0]?.medicalDiagnosis ?? null,
-          careMode: serviceFiles[0]?.careMode ?? null,
-          orientation: serviceFiles[0]?.orientation ?? null,
-          etpDecision: serviceFiles[0]?.etpDecision ?? null,
-          programType: serviceFiles[0]?.programType ?? null,
-          nonInclusionDetails: serviceFiles[0]?.nonInclusionDetails ?? null,
-          stopReason: serviceFiles[0]?.stopReason ?? null,
-          etpFinalOutcome: serviceFiles[0]?.etpFinalOutcome ?? null,
+          data: asValues(serviceFiles[0]?.data),
+          clinicalData: asValues(serviceFiles[0]?.clinicalData),
         }
       },
     )

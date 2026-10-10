@@ -3,20 +3,19 @@ import dayjs from 'dayjs'
 import { AlertTriangle, Eye } from 'lucide-react'
 import { useState } from 'react'
 
-import { choiceColumn } from '../components/table/choiceColumn.tsx'
+import {
+  type Choice,
+  choiceColumn,
+  multiChoiceColumn,
+} from '../components/table/choiceColumn.tsx'
 import { Etiquette } from '../components/table/etiquette.tsx'
 import { Button } from '../components/ui/button.tsx'
 import {
-  CARE_MODE_OPTIONS,
-  ETP_DECISION_OPTIONS,
-  ETP_FINAL_OUTCOME_OPTIONS,
-  MEDICAL_DIAGNOSIS_OPTIONS,
-  NON_INCLUSION_DETAILS_OPTIONS,
-  ORIENTATION_OPTIONS,
-  PROGRAM_TYPE_OPTIONS,
-  STOP_REASON_OPTIONS,
-} from '../constants/patient.constant.ts'
+  fieldValue,
+  formatFieldValue,
+} from '../constants/serviceFieldTypes.tsx'
 import type { PatientWithTags } from '../types/patient.ts'
+import type { ServiceField } from '../types/serviceField.ts'
 
 const columnHelper = createColumnHelper<PatientWithTags>()
 
@@ -66,9 +65,76 @@ export function CelluleParcours({
 
 type PatientActions = {
   onView: (id: string) => void
+  fields: ServiceField[]
+  canReadClinical: boolean
 }
 
-export const getPatientColumns = ({ onView }: PatientActions) => {
+const BOOLEAN_CHOICES: Choice[] = [
+  { value: 'true', label: 'Oui' },
+  { value: 'false', label: 'Non' },
+]
+
+// Une colonne optionnelle par champ configurable actif, texte long exclu (absent de la liste).
+const fieldColumn = (f: ServiceField) => {
+  const label = f.label
+  const group = f.section === 'pathway' ? 'Inclusion' : 'Bilan'
+  // Choix archivés après les actifs : ils servent encore à libeller les anciennes valeurs.
+  const choices = [
+    ...f.choices.filter((c) => !c.archived),
+    ...f.choices.filter((c) => c.archived),
+  ].map((c) => ({ value: c.key, label: c.label }))
+  const value = (row: PatientWithTags) => fieldValue(f, row)
+
+  switch (f.type) {
+    case 'choice':
+      return choiceColumn<PatientWithTags>(
+        f.key,
+        (row) => {
+          const v = value(row)
+          return typeof v === 'string' ? v : undefined
+        },
+        { label, group, choices },
+      )
+    case 'multichoice':
+      return multiChoiceColumn<PatientWithTags>(
+        f.key,
+        (row) => {
+          const v = value(row)
+          return Array.isArray(v) ? v.map(String) : undefined
+        },
+        { label, group, choices },
+      )
+    case 'boolean':
+      return choiceColumn<PatientWithTags>(
+        f.key,
+        (row) => {
+          const v = value(row)
+          return typeof v === 'boolean' ? String(v) : undefined
+        },
+        { label, group, choices: BOOLEAN_CHOICES },
+      )
+    default:
+      return columnHelper.accessor(
+        (row) => {
+          const v = value(row)
+          return typeof v === 'number' || typeof v === 'string' ? v : undefined
+        },
+        {
+          id: f.key,
+          header: label,
+          sortUndefined: 'last',
+          cell: ({ getValue }) => formatFieldValue(f, getValue()),
+          meta: { optional: { label, group } },
+        },
+      )
+  }
+}
+
+export const getPatientColumns = ({
+  onView,
+  fields,
+  canReadClinical,
+}: PatientActions) => {
   return [
     columnHelper.display({
       id: 'enrollmentAlert',
@@ -126,54 +192,19 @@ export const getPatientColumns = ({ onView }: PatientActions) => {
         )
       },
     }),
-    choiceColumn<PatientWithTags>(
-      'medicalDiagnosis',
-      (p) => p.medicalDiagnosis,
-      {
-        label: 'Diagnostic médical',
-        group: 'Inclusion',
-        choices: MEDICAL_DIAGNOSIS_OPTIONS,
-      },
-    ),
-    choiceColumn<PatientWithTags>('careMode', (p) => p.careMode, {
-      label: 'Mode de prise en charge',
-      group: 'Inclusion',
-      choices: CARE_MODE_OPTIONS,
-    }),
-    choiceColumn<PatientWithTags>('orientation', (p) => p.orientation, {
-      label: 'Orientation',
-      group: 'Inclusion',
-      choices: ORIENTATION_OPTIONS,
-    }),
-    choiceColumn<PatientWithTags>('etpDecision', (p) => p.etpDecision, {
-      label: 'ETP décision',
-      group: 'Inclusion',
-      choices: ETP_DECISION_OPTIONS,
-    }),
-    choiceColumn<PatientWithTags>('programType', (p) => p.programType, {
-      label: 'Type de programme',
-      group: 'Inclusion',
-      choices: PROGRAM_TYPE_OPTIONS,
-    }),
-    choiceColumn<PatientWithTags>(
-      'nonInclusionDetails',
-      (p) => p.nonInclusionDetails,
-      {
-        label: 'Précision non inclusion',
-        group: 'Inclusion',
-        choices: NON_INCLUSION_DETAILS_OPTIONS,
-      },
-    ),
-    choiceColumn<PatientWithTags>('stopReason', (p) => p.stopReason, {
-      label: "Motif d'arrêt de programme",
-      group: 'Bilan',
-      choices: STOP_REASON_OPTIONS,
-    }),
-    choiceColumn<PatientWithTags>('etpFinalOutcome', (p) => p.etpFinalOutcome, {
-      label: 'Point final parcours ETP',
-      group: 'Bilan',
-      choices: ETP_FINAL_OUTCOME_OPTIONS,
-    }),
+    ...fields
+      .filter(
+        (f) =>
+          !f.archived &&
+          f.type !== 'longtext' &&
+          (canReadClinical || !f.clinical),
+      )
+      .sort(
+        (a, b) =>
+          Number(a.section === 'outcome') - Number(b.section === 'outcome') ||
+          a.order - b.order,
+      )
+      .map(fieldColumn),
     columnHelper.accessor((row) => row.exitDate ?? undefined, {
       id: 'exitDate',
       header: 'Date de sortie',
