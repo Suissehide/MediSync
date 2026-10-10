@@ -71,6 +71,20 @@ describe('activityCsv', () => {
     expect(activityCsv(rapport, '=Cardio')).toContain("Service;'=Cardio;;")
   })
 
+  it('ecrit tous les parcours quand aucun filtre n est applique', () => {
+    const csv = activityCsv(rapport, 'Cardio')
+    const lignes = csv.split('\r\n')
+    const indexPeriode = lignes.findIndex((l) => l.startsWith('Période;'))
+    expect(lignes[indexPeriode + 1]).toBe('Parcours;Tous les parcours;;')
+  })
+
+  it('ecrit le nom du parcours filtre juste apres la periode', () => {
+    const csv = activityCsv(rapport, 'Cardio', 'Insuffisance cardiaque')
+    const lignes = csv.split('\r\n')
+    const indexPeriode = lignes.findIndex((l) => l.startsWith('Période;'))
+    expect(lignes[indexPeriode + 1]).toBe('Parcours;Insuffisance cardiaque;;')
+  })
+
   it('ecrit les motifs par leur libelle et les nombres decimaux a la francaise', () => {
     const csv = activityCsv(rapport, 'Cardio')
     expect(csv).toContain("Motifs d'arrêt;Perdu de vue;5;")

@@ -66,13 +66,17 @@ function ActivitePage() {
   const { pathwayTemplates } = usePathwayTemplateQueries()
   const etat = queryState({ isPending, error, hasData: report !== undefined })
 
+  const nomParcours = pathwayTemplates?.find((p) => p.id === parcours)?.name
+
   const exporter = () => {
     if (!report) {
       return
     }
     telechargerCsv(
-      activityCsv(report, serviceName),
-      `activite-${slugify(serviceName)}-${from}-${to}.csv`,
+      activityCsv(report, serviceName, nomParcours),
+      `activite-${slugify(serviceName)}-${from}-${to}${
+        nomParcours ? `-${slugify(nomParcours)}` : ''
+      }.csv`,
     )
   }
 
@@ -143,8 +147,9 @@ function ActivitePage() {
           )}
           {etat === 'ready' && report && estVide(report) && (
             <p className="text-text-light">
-              Aucune activité sur cette période. Choisissez une autre année ou
-              élargissez la plage.
+              {parcours
+                ? 'Aucune activité sur cette période pour ce parcours. Choisissez une autre période ou « Tous les parcours ».'
+                : 'Aucune activité sur cette période. Choisissez une autre année ou élargissez la plage.'}
             </p>
           )}
           {etat === 'ready' && report && !estVide(report) && (
