@@ -298,20 +298,22 @@ class IndicatorSetDomain implements IndicatorSetDomainInterface {
         ? new Map<string, IndicatorAnswerEntityRepo>()
         : this.indicatorSetRepository.findAnswers(setId, manualYear),
     ])
-    const indicators = set.indicators
-      .filter((i) => i.archivedAt === null)
-      .map((i) => ({
-        id: i.id,
-        code: i.code,
-        group: i.group,
-        label: i.label,
-        nature: i.nature,
-        ...computeIndicator(cohort, definitionOf(i), fields),
-        note: i.note,
-        input: i.input,
-        answer: i.nature === 'manual' ? (answers.get(i.id) ?? null) : null,
-        parentId: i.parentId,
-      }))
+    const actifs = set.indicators.filter((i) => i.archivedAt === null)
+    const actifIds = new Set(actifs.map((i) => i.id))
+    const indicators = actifs.map((i) => ({
+      id: i.id,
+      code: i.code,
+      group: i.group,
+      label: i.label,
+      nature: i.nature,
+      ...computeIndicator(cohort, definitionOf(i), fields),
+      note: i.note,
+      input: i.input,
+      answer: i.nature === 'manual' ? (answers.get(i.id) ?? null) : null,
+      // Parent archivé : absent de la liste, l'enfant se rend sans parent.
+      parentId:
+        i.parentId !== null && actifIds.has(i.parentId) ? i.parentId : null,
+    }))
     return { manualYear, indicators }
   }
 
@@ -323,7 +325,9 @@ class IndicatorSetDomain implements IndicatorSetDomainInterface {
     userId: string,
   ): Promise<IndicatorAnswerEntityRepo> {
     const set = await this.indicatorSetRepository.findByID(setId)
-    const indicator = set.indicators.find((i) => i.id === indicatorId)
+    const indicator = set.indicators.find(
+      (i) => i.id === indicatorId && i.archivedAt === null,
+    )
     if (!indicator) {
       throw Boom.notFound('Indicateur introuvable')
     }

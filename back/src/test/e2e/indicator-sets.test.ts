@@ -692,5 +692,40 @@ describe('configuration des jeux d indicateurs', () => {
       })
       expect(res.statusCode).toBe(400)
     })
+
+    const archiver = (id: string) =>
+      testApp.app.inject({
+        method: 'PATCH',
+        url: url(`/indicator-sets/${setId}/indicators/${id}`),
+        cookies: coordinateurCookies,
+        payload: { archived: true } as never,
+      })
+
+    it('rend sans parent l enfant d un indicateur archive', async () => {
+      expect((await archiver(indicatorId)).statusCode).toBe(200)
+      const res = await testApp.app.inject({
+        method: 'GET',
+        url: url(`/indicator-sets/${setId}/results?${periode}`),
+        cookies: coordinateurCookies,
+      })
+      const ids = res.json().indicators.map((i: { id: string }) => i.id)
+      expect(ids).not.toContain(indicatorId)
+      expect(
+        res
+          .json()
+          .indicators.find((i: { id: string }) => i.id === secondIndicatorId),
+      ).toMatchObject({ code: '1.1bis', parentId: null })
+    })
+
+    it('refuse la saisie sur un indicateur archive : 404', async () => {
+      expect((await archiver(secondIndicatorId)).statusCode).toBe(200)
+      const res = await testApp.app.inject({
+        method: 'PUT',
+        url: url(`/indicator-sets/${setId}/answers/2026/${secondIndicatorId}`),
+        cookies: coordinateurCookies,
+        payload: { boolValue: true } as never,
+      })
+      expect(res.statusCode).toBe(404)
+    })
   })
 })
