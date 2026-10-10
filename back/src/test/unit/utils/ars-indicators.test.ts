@@ -3,11 +3,13 @@ import { join } from 'node:path'
 
 import {
   ARS_ACCOMPANYING_YES,
+  ARS_ORIENTATIONS,
   type ArsCohort,
   type ArsFile,
   type ArsPresence,
   computeArsIndicators,
 } from '../../../main/utils/ars-indicators'
+import { ETP_FIELD_PRESET } from '../../../main/utils/etp-field-preset'
 
 const PERIODE = {
   from: new Date('2026-01-01'),
@@ -534,8 +536,22 @@ describe('orientations : la BASE stocke la CLÉ, pas le libellé', () => {
     expect(valeur(c, '1.3')).toBe(0)
   })
 
-  // L'ancien contrat avec ORIENTATION (front/src/constants/patient.constant.ts) n'a plus de sens :
-  // l'orientation est un champ configurable (ServiceFieldChoice), le front n'a plus de dictionnaire statique.
+  // Contrat rebâti sur le catalogue ETP (back/src/main/utils/etp-field-preset.ts), qui remplace
+  // l'ancien dictionnaire front ORIENTATION depuis que l'orientation est un champ configurable :
+  // ETP_FIELD_PRESET sème les choix initiaux de ServiceFieldChoice, une clé qui en dérive garantit
+  // qu'elle existe réellement en base pour les services déjà créés.
+  it('chaque cle de ARS_ORIENTATIONS est un choix du champ orientation de ETP_FIELD_PRESET', () => {
+    const champOrientation = ETP_FIELD_PRESET.find(
+      (f) => f.key === 'orientation',
+    )
+    if (!champOrientation) {
+      throw new Error('champ orientation introuvable dans ETP_FIELD_PRESET')
+    }
+    const clesDuPreset = champOrientation.choices.map((c) => c.key)
+    for (const cle of Object.values(ARS_ORIENTATIONS)) {
+      expect(clesDuPreset).toContain(cle)
+    }
+  })
   it('la cle accompagnant existe dans APPOINTMENT_ACCOMPANYING du front', () => {
     const source = readFileSync(
       join(
