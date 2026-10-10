@@ -7,7 +7,7 @@ import {
   Search,
   X,
 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { PatientApi } from '@/api/patient.api.ts'
 import { getPatientColumns } from '@/columns/patient.column.tsx'
@@ -22,6 +22,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group.tsx'
 import { safeParse } from '@/libs/utils.ts'
 import { usePathwayTemplateQueries } from '@/queries/usePathwayTemplate.ts'
 import { usePatientWithTagsQuery } from '@/queries/usePatient.tsx'
+import { useServiceFieldsQuery } from '@/queries/useServiceField.ts'
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { PatientWithTags } from '@/types/patient.ts'
 
@@ -52,6 +53,7 @@ function PatientList() {
   const { establishmentId, serviceId } = Route.useParams()
   const { patients, isPending } = usePatientWithTagsQuery()
   const { pathwayTemplates } = usePathwayTemplateQueries()
+  const { fields } = useServiceFieldsQuery()
   const [searchTerm, setSearchTerm] = useState('')
   const [storedFilters] = useState(() =>
     safeParse<{ status?: string; tags?: string[] }>(
@@ -80,14 +82,20 @@ function PatientList() {
     )
   }, [serviceId, status, selectedTags])
 
-  const handleRedirectPatient = async (patientID: string) => {
-    await navigate({
-      to: '/e/$establishmentId/s/$serviceId/patient/$patientID',
-      params: { establishmentId, serviceId, patientID },
-    })
-  }
+  const handleRedirectPatient = useCallback(
+    async (patientID: string) => {
+      await navigate({
+        to: '/e/$establishmentId/s/$serviceId/patient/$patientID',
+        params: { establishmentId, serviceId, patientID },
+      })
+    },
+    [navigate, establishmentId, serviceId],
+  )
 
-  const columns = getPatientColumns({ onView: handleRedirectPatient })
+  const columns = useMemo(
+    () => getPatientColumns({ onView: handleRedirectPatient, fields }),
+    [fields, handleRedirectPatient],
+  )
 
   // Couleur d'un tag principal : celle du premier parcours qui le porte.
   const tagColors = useMemo(() => {

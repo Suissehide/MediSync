@@ -1,3 +1,4 @@
+import { evaluate } from '@tanstack/react-form'
 import {
   Bookmark,
   LayoutTemplate,
@@ -8,6 +9,7 @@ import {
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
+import { toPatchValue } from '../../../../constants/serviceFieldTypes.tsx'
 import type { MenuItem } from '../../../../constants/ui.constant.ts'
 import { useAppForm } from '../../../../hooks/formConfig.tsx'
 import { usePatientMutations } from '../../../../queries/usePatient.tsx'
@@ -15,11 +17,16 @@ import {
   usePatientServiceFileMutations,
   usePatientServiceFileQuery,
 } from '../../../../queries/usePatientServiceFile.ts'
+import { useServiceFieldsQuery } from '../../../../queries/useServiceField.ts'
 import type { Patient, UpdatePatientParams } from '../../../../types/patient.ts'
 import type {
   PatientServiceFile,
   UpdatePatientServiceFileFields,
 } from '../../../../types/patientServiceFile.ts'
+import type {
+  FieldValues,
+  ServiceField,
+} from '../../../../types/serviceField.ts'
 import { Button } from '../../../ui/button.tsx'
 import { FixedBar } from '../../../ui/fixedbar.tsx'
 import { ToggleGroup, ToggleGroupItem } from '../../../ui/toggle-group.tsx'
@@ -56,6 +63,32 @@ const Section = ({
   <div className={`flex-col gap-4 ${show ? 'flex' : 'hidden'}`}>{children}</div>
 )
 
+// Champs configurables affichés et modifiés, rangés par colonne ; pas `isDefaultValue`, qui tient
+// un nombre vidé (undefined) pour inchangé.
+const changedFieldData = (
+  fields: ServiceField[],
+  values: FieldValues,
+  defaults: FieldValues,
+  isMounted: (key: string) => boolean,
+): { data?: FieldValues; clinicalData?: FieldValues } => {
+  const data: FieldValues = {}
+  const clinicalData: FieldValues = {}
+  for (const f of fields) {
+    if (
+      !f.archived &&
+      isMounted(f.key) &&
+      !evaluate(values[f.key], defaults[f.key])
+    ) {
+      const target = f.clinical ? clinicalData : data
+      target[f.key] = toPatchValue(f.type, values[f.key])
+    }
+  }
+  return {
+    ...(Object.keys(data).length > 0 && { data }),
+    ...(Object.keys(clinicalData).length > 0 && { clinicalData }),
+  }
+}
+
 export default function EditPatient({ patient }: PatientParam) {
   const { updatePatient } = usePatientMutations()
   const { updatePatientServiceFile } = usePatientServiceFileMutations()
@@ -66,6 +99,7 @@ export default function EditPatient({ patient }: PatientParam) {
     isPending: isServiceFilePending,
     isError: isServiceFileError,
   } = usePatientServiceFileQuery(patient?.id ?? '')
+  const { fields, isPending: isFieldsPending } = useServiceFieldsQuery()
 
   // Le sous-dossier peut ne pas exister (absence normale : `serviceFile` vaut `null`, le
   // premier enregistrement le crée côté back — spec §2.1/§5.1), ou sa lecture peut avoir
@@ -75,7 +109,8 @@ export default function EditPatient({ patient }: PatientParam) {
   // plus bas (jamais affichés), et `handleSave` ne soumet jamais leur formulaire. Un formulaire
   // affiché avant que la lecture ait abouti partirait de seize défauts à '' non protégés côté
   // back pour treize d'entre eux — voir `form.patient.ts` pour le patron à ne pas reproduire.
-  const serviceFileReady = !isServiceFilePending && !isServiceFileError
+  const serviceFileReady =
+    !isServiceFilePending && !isServiceFileError && !isFieldsPending
 
   // POURQUOI une référence figée plutôt que
   // `serviceFile` lu en direct :
@@ -99,12 +134,16 @@ export default function EditPatient({ patient }: PatientParam) {
   const hasHydratedServiceFile = useRef(false)
 
   useEffect(() => {
-    if (hasHydratedServiceFile.current || isServiceFilePending) {
+    if (
+      hasHydratedServiceFile.current ||
+      isServiceFilePending ||
+      isFieldsPending
+    ) {
       return
     }
     hasHydratedServiceFile.current = true
     setServiceFileSnapshot(serviceFile ?? null)
-  }, [isServiceFilePending, serviceFile])
+  }, [isServiceFilePending, isFieldsPending, serviceFile])
 
   // Même figeage côté patient, pour la même raison : `patient` est lui aussi une valeur de
   // requête vivante (`usePatientByIDQuery`, invalidée par notre propre `onSettled`), qui ne
@@ -155,7 +194,7 @@ export default function EditPatient({ patient }: PatientParam) {
 
   const serviceFileForm = useAppForm({
     ...patientServiceFileFormOpts,
-    defaultValues: buildServiceFileDefaults(serviceFileSnapshot),
+    defaultValues: buildServiceFileDefaults(serviceFileSnapshot, fields),
     onSubmit: ({ value, formApi }) => {
       if (!patient?.id || !serviceFileReady) {
         return
@@ -170,15 +209,29 @@ export default function EditPatient({ patient }: PatientParam) {
       // haut).
       const changedFields = (
         Object.keys(value) as (keyof typeof value)[]
-      ).filter((field) => formApi.getFieldMeta(field)?.isDefaultValue === false)
-
-      if (changedFields.length === 0) {
-        return
-      }
+      ).filter(
+        (field) =>
+          field !== 'fields' &&
+          formApi.getFieldMeta(field)?.isDefaultValue === false,
+      )
 
       const changedBody = Object.fromEntries(
         changedFields.map((field) => [field, value[field]]),
       ) as UpdatePatientServiceFileFields
+
+      Object.assign(
+        changedBody,
+        changedFieldData(
+          fields,
+          value.fields,
+          formApi.options.defaultValues?.fields ?? {},
+          (key) => formApi.getFieldMeta(`fields.${key}`) !== undefined,
+        ),
+      )
+
+      if (Object.keys(changedBody).length === 0) {
+        return
+      }
 
       updatePatientServiceFile.mutate(
         {
@@ -191,7 +244,7 @@ export default function EditPatient({ patient }: PatientParam) {
             // `serviceFileSnapshot` à ce que le serveur vient de confirmer — jamais à ce
             // qu'une relecture en arrière-plan pourrait rapporter entre-temps.
             setServiceFileSnapshot(response)
-            formApi.reset(buildServiceFileDefaults(response))
+            formApi.reset(buildServiceFileDefaults(response, fields))
           },
         },
       )
@@ -271,10 +324,14 @@ export default function EditPatient({ patient }: PatientParam) {
         {serviceFileReady && <DetailsFields form={serviceFileForm} />}
       </Section>
       <Section show={selected === 'pathway'}>
-        {serviceFileReady && <PathwayInclusionFields form={serviceFileForm} />}
+        {serviceFileReady && (
+          <PathwayInclusionFields form={serviceFileForm} fields={fields} />
+        )}
       </Section>
       <Section show={selected === 'outcome'}>
-        {serviceFileReady && <OutcomeReviewFields form={serviceFileForm} />}
+        {serviceFileReady && (
+          <OutcomeReviewFields form={serviceFileForm} fields={fields} />
+        )}
       </Section>
 
       <patientForm.Subscribe selector={(state) => state.isDirty}>

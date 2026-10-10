@@ -179,7 +179,7 @@ describe('usePatientServiceFileMutations', () => {
       await result.current.updatePatientServiceFile.mutateAsync({
         patientID: 'p1',
         notes: 'nouvelle note',
-        goal: 'objectif',
+        data: { goal: 'objectif' },
       })
     })
 
@@ -192,7 +192,7 @@ describe('usePatientServiceFileMutations', () => {
     expect(init.method).toBe('PATCH')
     expect(JSON.parse(init.body as string)).toEqual({
       notes: 'nouvelle note',
-      goal: 'objectif',
+      data: { goal: 'objectif' },
     })
 
     await waitFor(() =>

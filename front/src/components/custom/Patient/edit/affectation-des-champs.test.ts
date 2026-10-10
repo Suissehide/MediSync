@@ -22,7 +22,10 @@ import { describe, expect, it } from 'vitest'
 // constat) : les chemins ci-dessous partent de `process.cwd()`, pas d'`import.meta.url`.
 const schemaPath = join(process.cwd(), '..', 'back', 'prisma', 'schema.prisma')
 const schema = readFileSync(schemaPath, 'utf8')
-const schemaWithoutComments = schema.replace(/\/\/.*$/gm, '')
+// Chaînes vidées : l'accolade de `@default("{}")` fermerait le modèle trop tôt.
+const schemaWithoutComments = schema
+  .replace(/\/\/.*$/gm, '')
+  .replace(/"[^"]*"/g, '""')
 
 const modelBody = (name: string): string => {
   const pattern = new RegExp(`model\\s+${name}\\s*\\{([^}]*)\\}`)
@@ -48,6 +51,9 @@ const TECHNICAL_COLUMNS = new Set([
   'createDate',
   'createdAt',
 ])
+
+// Colonnes JSON des champs configurables, rendues par `ServiceFieldsSection`, pas par un nom fixe.
+const CONFIGURABLE_COLUMNS = new Set(['data', 'clinicalData'])
 
 const scalarFieldsOf = (modelName: string): Set<string> => {
   const body = modelBody(modelName)
@@ -88,14 +94,30 @@ const fieldsDeclaredIn = (fileName: string): string[] => {
 
 describe('Affectation des champs Patient / PatientServiceFile — prisma/schema.prisma fait autorité', () => {
   const patientColumns = scalarFieldsOf('Patient')
-  const serviceFileColumns = scalarFieldsOf('PatientServiceFile')
+  const serviceFileAllColumns = scalarFieldsOf('PatientServiceFile')
+  const serviceFileColumns = new Set(
+    [...serviceFileAllColumns].filter((c) => !CONFIGURABLE_COLUMNS.has(c)),
+  )
 
-  it('le schéma porte bien les onze colonnes attendues sur Patient et les seize sur PatientServiceFile', () => {
+  it('le schéma porte bien les onze colonnes attendues sur Patient et les huit sur PatientServiceFile', () => {
     // Garde-fou du garde-fou : si le motif cessait de reconnaître une vraie colonne scalaire (par
     // exemple parce qu'un type Prisma inattendu apparaît), les comparaisons plus bas
     // deviendraient vraies par manque de données plutôt que par preuve.
     expect(patientColumns.size).toBe(11)
-    expect(serviceFileColumns.size).toBe(16)
+    expect(serviceFileAllColumns.size).toBe(8)
+    expect(serviceFileColumns.size).toBe(6)
+  })
+
+  it('les deux onglets du service rendent les champs configurables de leur section', () => {
+    for (const [fileName, section] of [
+      ['pathway-inclusion.patient.tsx', 'pathway'],
+      ['outcome-review.patient.tsx', 'outcome'],
+    ]) {
+      const source = readFileSync(join(editDir, fileName), 'utf8')
+      expect(source).toMatch(
+        new RegExp(`<ServiceFieldsSection[^>]*section="${section}"`),
+      )
+    }
   })
 
   for (const fileName of PATIENT_FILES) {
