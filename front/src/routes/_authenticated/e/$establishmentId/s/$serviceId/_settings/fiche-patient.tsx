@@ -38,9 +38,7 @@ const SECTIONS: { section: ServiceFieldSection; title: string }[] = [
 ]
 
 function FichePatientSettings() {
-  // Le menu ne montre cet ecran qu'aux detenteurs de `referentials:write` (le coordinateur),
-  // mais l'URL se tape a la main : les actions d'ecriture se gardent aussi
-  // ici, independamment du menu.
+  // L'URL se tape a la main : les actions d'ecriture se gardent aussi ici, pas que dans le menu.
   const canManage = useCan('referentials:write')
   const [showArchived, setShowArchived] = useState(false)
   const { fields } = useServiceFieldsQuery()
@@ -58,9 +56,7 @@ function FichePatientSettings() {
     if (targetIndex < 0 || targetIndex >= active.length) {
       return
     }
-    // L'ordre envoye doit porter exactement les identifiants de la section (actifs ET
-    // archives, voir `reorderFields` du domaine back) : on echange les deux positions dans
-    // la liste complete, pas dans le seul sous-ensemble affiche.
+    // L'ordre envoye doit porter tous les identifiants de la section, actifs ET archives (back).
     const all = fields.filter((f) => f.section === section)
     const ids = all.map((f) => f.id)
     const i = ids.indexOf(currentId)
@@ -137,7 +133,7 @@ function FichePatientSettings() {
                             variant="outline"
                             size="icon-sm"
                             aria-label="Monter"
-                            disabled={index <= 0}
+                            disabled={index <= 0 || reorder.isPending}
                             onClick={() => moveField(section, f.id, 'up')}
                           >
                             <ChevronUp className="w-4 h-4" />
@@ -146,7 +142,10 @@ function FichePatientSettings() {
                             variant="outline"
                             size="icon-sm"
                             aria-label="Descendre"
-                            disabled={index === activeInSection.length - 1}
+                            disabled={
+                              index === activeInSection.length - 1 ||
+                              reorder.isPending
+                            }
                             onClick={() => moveField(section, f.id, 'down')}
                           >
                             <ChevronDown className="w-4 h-4" />
@@ -172,6 +171,7 @@ function FichePatientSettings() {
                           <Button
                             variant="outline"
                             size="sm"
+                            disabled={update.isPending}
                             onClick={() =>
                               update.mutate({ id: f.id, archived: false })
                             }

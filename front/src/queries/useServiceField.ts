@@ -55,9 +55,7 @@ export const useServiceFieldMutations = () => {
     },
   })
 
-  // Le meme PATCH generique porte la modification, l'archivage ET la restauration (`archived`) :
-  // le message de succes se choisit sur la variable envoyee, comme `location`/`soignant` le font
-  // avec des mutations separees.
+  // Le meme PATCH generique porte modification/archivage/restauration : le message depend de `archived`.
   const archivedToast = (archived: boolean | undefined, nom: string) => {
     if (archived === true) {
       toast({ title: `${nom} archivé`, severity: TOAST_SEVERITY.SUCCESS })

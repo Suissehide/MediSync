@@ -52,13 +52,19 @@ function ServiceFieldForm({ section, field, trigger }: ServiceFieldFormProps) {
   const { create, update, createChoice, updateChoice, reorderChoices } =
     useServiceFieldMutations()
 
-  const defaultValues = useMemo(
+  const defaultValues = useMemo<{
+    label: string
+    type: ServiceFieldType
+    unit: string
+    clinical: boolean
+    choices: string[]
+  }>(
     () => ({
       label: field?.label ?? '',
-      type: field?.type ?? ('text' as ServiceFieldType),
+      type: field?.type ?? 'text',
       unit: field?.unit ?? '',
       clinical: field?.clinical ?? false,
-      choices: [] as string[],
+      choices: [],
     }),
     [field?.label, field?.type, field?.unit, field?.clinical],
   )
@@ -236,7 +242,7 @@ function ServiceFieldForm({ section, field, trigger }: ServiceFieldFormProps) {
                         variant="outline"
                         size="icon-sm"
                         aria-label="Monter"
-                        disabled={index === 0}
+                        disabled={index === 0 || reorderChoices.isPending}
                         onClick={() => moveChoice('up', index)}
                       >
                         <ChevronUp className="w-4 h-4" />
@@ -245,7 +251,10 @@ function ServiceFieldForm({ section, field, trigger }: ServiceFieldFormProps) {
                         variant="outline"
                         size="icon-sm"
                         aria-label="Descendre"
-                        disabled={index === field.choices.length - 1}
+                        disabled={
+                          index === field.choices.length - 1 ||
+                          reorderChoices.isPending
+                        }
                         onClick={() => moveChoice('down', index)}
                       >
                         <ChevronDown className="w-4 h-4" />
@@ -254,6 +263,7 @@ function ServiceFieldForm({ section, field, trigger }: ServiceFieldFormProps) {
                         <Button
                           variant="outline"
                           size="sm"
+                          disabled={updateChoice.isPending}
                           onClick={() =>
                             updateChoice.mutate({
                               fieldID: field.id,
@@ -269,6 +279,7 @@ function ServiceFieldForm({ section, field, trigger }: ServiceFieldFormProps) {
                         <Button
                           variant="outline"
                           size="sm"
+                          disabled={updateChoice.isPending}
                           onClick={() =>
                             updateChoice.mutate({
                               fieldID: field.id,
@@ -297,7 +308,11 @@ function ServiceFieldForm({ section, field, trigger }: ServiceFieldFormProps) {
                     placeholder="Nouveau choix"
                     className="flex-1"
                   />
-                  <Button variant="outline" onClick={ajouterChoix}>
+                  <Button
+                    variant="outline"
+                    isLoading={createChoice.isPending}
+                    onClick={ajouterChoix}
+                  >
                     <Plus className="w-4 h-4" />
                     Ajouter un choix
                   </Button>

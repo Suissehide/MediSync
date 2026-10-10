@@ -291,6 +291,101 @@ describe('ecran de configuration de la fiche patient', () => {
     })
   })
 
+  it('la fleche descendre porte le jeu complet des identifiants de la section, champ archive inclus', async () => {
+    const fetchMock = monter([
+      routeGetServiceFields([orientation, comorbidite, ancienDiagnostic]),
+      routeReorder(),
+    ])
+
+    await screen.findByText('Orientation')
+    await screen.findByText('Comorbidité')
+
+    const descendreBoutons = screen.getAllByRole('button', {
+      name: 'Descendre',
+    })
+    await userEvent.click(descendreBoutons[0])
+
+    await waitFor(() => {
+      const call = fetchMock.mock.calls.find(
+        ([url, init]) =>
+          String(url).endsWith('/service-fields/order') &&
+          init?.method === 'PUT',
+      )
+      expect(call).toBeDefined()
+      expect(JSON.parse(String(call?.[1]?.body))).toEqual({
+        section: 'pathway',
+        ids: ['f4', 'f1', 'f3'],
+      })
+    })
+  })
+
+  it('deux clics rapides sur Descendre n envoient qu un seul reordonnancement', async () => {
+    let resoudrePut: () => void = () => undefined
+    const putEnCours = new Promise<void>((resolve) => {
+      resoudrePut = resolve
+    })
+
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input.toString()
+      const method = init?.method ?? 'GET'
+      if (url.endsWith('/service-fields') && method === 'GET') {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          url,
+          json: async () => [orientation, comorbidite],
+        })
+      }
+      if (url.endsWith('/service-fields/order') && method === 'PUT') {
+        return putEnCours.then(() => ({
+          ok: true,
+          status: 200,
+          url,
+          json: async () => ({}),
+        }))
+      }
+      throw new Error(`Appel fetch non attendu dans ce test : ${method} ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+    const router = createRouter({
+      routeTree,
+      history: createMemoryHistory({
+        initialEntries: ['/e/e1/s/s1/fiche-patient'],
+      }),
+      context: { authState: { isAuthenticated: true, user } },
+    })
+    render(
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    )
+
+    await screen.findByText('Orientation')
+    await screen.findByText('Comorbidité')
+
+    const descendreBoutons = screen.getAllByRole('button', {
+      name: 'Descendre',
+    })
+    await userEvent.click(descendreBoutons[0])
+    // Le bouton se desactive pendant la mutation en cours : ce second clic doit etre ignore.
+    await userEvent.click(descendreBoutons[0])
+
+    resoudrePut()
+
+    await waitFor(() => {
+      const appels = fetchMock.mock.calls.filter(
+        ([url, init]) =>
+          String(url).endsWith('/service-fields/order') &&
+          init?.method === 'PUT',
+      )
+      expect(appels).toHaveLength(1)
+    })
+  })
+
   it('archive un champ apres confirmation, et l affiche avec Restaurer quand Archives est coche', async () => {
     const fetchMock = monter([
       routeGetServiceFields([orientation]),
