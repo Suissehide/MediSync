@@ -1,5 +1,6 @@
 import Boom from '@hapi/boom'
 import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc'
 import * as XLSX from 'xlsx'
 
 import type { AppointmentType } from '../../generated/enums'
@@ -54,6 +55,8 @@ import type { TenantContextInterface } from '../types/utils/tenant-context'
 import type { AppEventBus } from '../utils/app-event-bus'
 import { hasPermission } from '../utils/permissions'
 import { asValues } from '../utils/service-field-types'
+
+dayjs.extend(utc)
 
 const orEmpty = (value: string | null | undefined): string => value ?? ''
 const formatDate = (value: Date | string | null | undefined): string =>
@@ -165,7 +168,9 @@ const formatFieldValue = (
     return value === true ? 'Oui' : 'Non'
   }
   if (field.type === 'date' && typeof value === 'string') {
-    return formatDate(new Date(`${value}T00:00:00Z`))
+    // `dayjs.utc`, pas `formatDate` : une date sans heure ne doit pas glisser d'un jour
+    // selon le fuseau du serveur.
+    return dayjs.utc(value).format('DD/MM/YYYY')
   }
   return String(value)
 }

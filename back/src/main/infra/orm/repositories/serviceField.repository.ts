@@ -11,7 +11,14 @@ import type {
 } from '../../../types/infra/orm/repositories/serviceField.repository.interface'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { TenantContextInterface } from '../../../types/utils/tenant-context'
+import { SERVICE_FIELD_SECTIONS } from '../../../utils/service-field-types'
 import type { PostgresPrismaClient } from '../postgres-client'
+
+// Rang de chaque section dans l'ordre de l'ecran (Parcours puis Sortie), pas l'ordre
+// alphabetique de Prisma (qui mettrait "outcome" avant "pathway").
+const sectionRank: Record<string, number> = Object.fromEntries(
+  SERVICE_FIELD_SECTIONS.map((section, index) => [section, index]),
+)
 
 class ServiceFieldRepository implements ServiceFieldRepositoryInterface {
   private readonly prisma: PostgresPrismaClient
@@ -28,12 +35,17 @@ class ServiceFieldRepository implements ServiceFieldRepositoryInterface {
     return this.tenantContext.scope()
   }
 
-  findAll(): Promise<ServiceFieldEntityRepo[]> {
-    return this.prisma.serviceFieldDefinition.findMany({
+  // Prisma ne trie pas par l'index d'un tableau : l'ordre par section (Parcours puis Sortie)
+  // est donc applique ici, apres la requete, sur un resultat deja trie par `order`.
+  async findAll(): Promise<ServiceFieldEntityRepo[]> {
+    const fields = await this.prisma.serviceFieldDefinition.findMany({
       where: { ...this.scope },
-      orderBy: [{ section: 'asc' }, { order: 'asc' }],
+      orderBy: [{ order: 'asc' }],
       include: { choices: { orderBy: { order: 'asc' } } },
     })
+    return [...fields].sort(
+      (a, b) => (sectionRank[a.section] ?? 0) - (sectionRank[b.section] ?? 0),
+    )
   }
 
   async findByID(fieldID: string): Promise<ServiceFieldEntityRepo> {

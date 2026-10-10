@@ -756,4 +756,99 @@ describe('liste et export', () => {
       Objectif: OBJECTIF,
     })
   })
+
+  it('un champ outcome cree avant un champ pathway s exporte quand meme apres (ordre par section)', async () => {
+    const establishment = await createEstablishment('E-MIXTE')
+    const idEtablissement = establishment.id
+    const service = await createService(idEtablissement, 'S-MIXTE')
+    const idService = service.id
+    const urlMixte = (path: string) =>
+      tenantUrl(idEtablissement, idService, path)
+
+    await createUser({
+      email: 'coordinateur@mixte.fr',
+      memberships: [
+        {
+          establishmentId: idEtablissement,
+          services: [{ serviceId: idService, role: 'COORDINATEUR' }],
+        },
+      ],
+    })
+    const cookies = await signIn(testApp.app, 'coordinateur@mixte.fr')
+
+    // Cree la section outcome EN PREMIER, la section pathway ensuite : un tri par
+    // `order` seul, ou par `section` alphabetique, la ferait sortir avant.
+    await testDb.serviceFieldDefinition.create({
+      data: {
+        establishmentId: idEtablissement,
+        serviceId: idService,
+        key: 'bilan',
+        label: 'Bilan',
+        type: 'text',
+        section: 'outcome',
+        order: 0,
+      },
+    })
+    await testDb.serviceFieldDefinition.create({
+      data: {
+        establishmentId: idEtablissement,
+        serviceId: idService,
+        key: 'etape',
+        label: 'Etape',
+        type: 'text',
+        section: 'pathway',
+        order: 0,
+      },
+    })
+
+    const liste = await testApp.app.inject({
+      method: 'GET',
+      url: urlMixte('/service-fields'),
+      cookies,
+    })
+    expect(liste.statusCode).toBe(200)
+    expect((liste.json() as ServiceFieldResponse[]).map((f) => f.key)).toEqual([
+      'etape',
+      'bilan',
+    ])
+
+    const patient = await testDb.patient.create({
+      data: {
+        establishmentId: idEtablissement,
+        firstName: 'Marie',
+        lastName: 'Mixte',
+        createDate: new Date('2026-01-01T00:00:00Z'),
+      },
+    })
+    await testDb.patientServiceFile.create({
+      data: {
+        establishmentId: idEtablissement,
+        serviceId: idService,
+        patientId: patient.id,
+        data: { etape: 'E', bilan: 'B' },
+      },
+    })
+
+    const export_ = await testApp.app.inject({
+      method: 'GET',
+      url: urlMixte('/patient/export'),
+      cookies,
+    })
+    expect(export_.statusCode).toBe(200)
+    const workbook = XLSX.read(export_.rawPayload, { type: 'buffer' })
+    const sheetName = workbook.SheetNames[0]
+    if (!sheetName) {
+      throw new Error('classeur exporte sans feuille')
+    }
+    const sheet = workbook.Sheets[sheetName]
+    if (!sheet) {
+      throw new Error('classeur exporte sans feuille nommee')
+    }
+    const rows = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1 })
+    const headerRow = rows[0]
+    if (!headerRow) {
+      throw new Error('classeur exporte sans ligne d en-tete')
+    }
+    expect(headerRow.slice(-2)).toEqual(['Etape', 'Bilan'])
+  })
 })
