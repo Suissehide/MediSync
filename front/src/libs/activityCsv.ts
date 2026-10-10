@@ -86,6 +86,24 @@ export const activityCsv = (r: ActivityReport, serviceName: string): string => {
       pourcent(p.cell.rate),
       `${p.cell.absent} sur ${p.cell.pointed}`,
     ]),
+    ...r.monthly.map((m) => [
+      'Entrées et sorties par mois',
+      m.month,
+      `${nombre(m.newlyIncluded)} inclus, ${nombre(m.exited)} sortis, ${nombre(m.active)} en file active`,
+      '',
+    ]),
+    ...r.absences.byWeekday.flatMap((c, d) =>
+      c.pointed > 0
+        ? [
+            [
+              'Absences toutes thématiques',
+              JOURS[d],
+              pourcent(c.rate),
+              `${c.absent} sur ${c.pointed}`,
+            ],
+          ]
+        : [],
+    ),
     [
       'Séances',
       'Individuelles',

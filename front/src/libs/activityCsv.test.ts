@@ -91,6 +91,32 @@ describe('activityCsv', () => {
     expect(activityCsv(rapport, 'Cardio')).toContain('Heures soignant;AS;0,8;')
   })
 
+  it('ecrit une ligne par mois, apres les absences par parcours', () => {
+    const avecMois: ActivityReport = {
+      ...rapport,
+      monthly: [{ month: '2026-10', newlyIncluded: 12, exited: 9, active: 40 }],
+    }
+    expect(activityCsv(avecMois, 'Cardio')).toContain(
+      'Entrées et sorties par mois;2026-10;12 inclus, 9 sortis, 40 en file active;',
+    )
+  })
+
+  it('ecrit une ligne toutes thematiques par jour pointe', () => {
+    const avecJours: ActivityReport = {
+      ...rapport,
+      absences: {
+        ...rapport.absences,
+        byWeekday: [
+          { absent: 30, pointed: 136, rate: 30 / 136 },
+          ...Array.from({ length: 6 }, () => vide),
+        ],
+      },
+    }
+    const csv = activityCsv(avecJours, 'Cardio')
+    expect(csv).toContain('Absences toutes thématiques;lundi;22 %;30 sur 136')
+    expect(csv).not.toContain('Absences toutes thématiques;mardi')
+  })
+
   it('neutralise un libelle qui ressemble a une formule tableur', () => {
     const piege: ActivityReport = {
       ...rapport,
