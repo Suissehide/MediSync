@@ -524,6 +524,15 @@ Key cross-cutting concerns:
 - Every write to either column goes through `mergeFieldPatch` (`utils/service-field-types.ts`), never a direct `data: {...}` assignment.
 - A new field type needs two entries kept in sync: one in `SERVICE_FIELD_TYPES`/`VALIDATORS` (`back/src/main/utils/service-field-types.ts`), one in `front/src/constants/serviceFieldTypes.tsx`.
 
+## Jeux d'indicateurs configurables (`docs/indicateurs-configurables/`)
+
+- Les indicateurs d'un service vivent en base (`IndicatorSet`/`Indicator`/`IndicatorAnswer`), plus `ArsManualAnswer` codée en dur.
+- Une mesure nouvelle = une entrée de `MEASURES` (`utils/indicators/measures.ts`) + son test (`measures.test.ts`).
+- La grille ARS est `ARS_PRESET` (`utils/indicators/ars-preset.ts`) ; son égalité à l'ancienne grille codée est tenue par `ars-oracle.ts` (`src/test/unit/utils/indicators/ars-oracle.ts`), rejoué dans `ars-grid.test.ts`.
+- Les réglages de l'Activité (motifs d'arrêt) sont sur `Service` : `stopReasonFieldKey`/`completedChoiceKey`, jamais codés en dur (`utils/activity-indicators.ts`).
+- L'export Excel d'un jeu s'appelle `indicateurs_{from}_{to}.xlsx` (en-tête `Content-Disposition` du back) avec une feuille nommée d'après le jeu (« Grille ARS ») ; le front renomme le fichier téléchargé avec un slug du nom du jeu, ne pas s'étonner que les deux noms diffèrent.
+- `setup/db.ts` accepte `medisync_test` **ou** `medisync_test_<suffixe>` (un worktree par suffixe), jamais un autre nom.
+
 ## Adding a new entity
 
 1. Add the Prisma model in `prisma/schema.prisma`. For a service-scoped model add `establishmentId` and
