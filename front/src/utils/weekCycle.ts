@@ -8,7 +8,8 @@ dayjs.extend(isoWeek)
 dayjs.extend(utc)
 
 /**
- * Position de `date` dans le cycle, entre 1 et `cycle.weekCount`.
+ * Position de `date` dans le cycle, entre 1 et `cycle.weekCount`, ou `null`
+ * pour une semaine interdite : celles-ci ne comptent pas dans le cycle.
  *
  * Le modulo est volontairement « positif » : `((n % m) + m) % m`. En JavaScript
  * `-1 % 6` vaut `-1`, ce qui donnerait un numéro nul ou négatif pour les
@@ -16,7 +17,10 @@ dayjs.extend(utc)
  * l'arrière : avec un départ au 05/01 et un cycle de 6, la semaine du 29/12
  * doit afficher S6.
  */
-export function cycleWeekNumber(date: Dayjs, cycle: PlanningCycle): number {
+export function cycleWeekNumber(
+  date: Dayjs,
+  cycle: PlanningCycle,
+): number | null {
   // L'API borne déjà weekCount à un entier 1..52 (Zod et domaine back), mais
   // une valeur invalide écrite directement en base donnerait NaN via un
   // modulo par zéro : on s'en protège ici.
@@ -26,10 +30,23 @@ export function cycleWeekNumber(date: Dayjs, cycle: PlanningCycle): number {
 
   const start = dayjs.utc(cycle.startOfWeek).startOf('isoWeek')
   const current = dayjs.utc(date.format('YYYY-MM-DD')).startOf('isoWeek')
+  const forbidden = (cycle.forbiddenWeekStarts ?? []).map((week) =>
+    dayjs.utc(week).startOf('isoWeek'),
+  )
+
+  if (forbidden.some((week) => week.isSame(current))) {
+    return null
+  }
 
   const weeksFromStart = current.diff(start, 'week')
+  const [from, to] = weeksFromStart >= 0 ? [start, current] : [current, start]
+  const skipped = forbidden.filter(
+    (week) => !week.isBefore(from) && week.isBefore(to),
+  ).length
+  const openWeeks =
+    weeksFromStart >= 0 ? weeksFromStart - skipped : weeksFromStart + skipped
   const position =
-    ((weeksFromStart % cycle.weekCount) + cycle.weekCount) % cycle.weekCount
+    ((openWeeks % cycle.weekCount) + cycle.weekCount) % cycle.weekCount
 
   return position + 1
 }

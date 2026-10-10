@@ -3,4 +3,6 @@ export type PlanningCycle = {
   startOfWeek: string
   /** Longueur du cycle, en semaines (1 à 52). */
   weekCount: number
+  /** Semaines interdites, exclues du décompte ; ajoutées par usePlanningCycleQueries, jamais envoyées à l'API. */
+  forbiddenWeekStarts?: string[]
 }

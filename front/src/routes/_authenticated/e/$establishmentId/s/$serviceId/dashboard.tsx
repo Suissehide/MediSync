@@ -18,6 +18,7 @@ import { buildCalendarEventsFromSlots, containsKeyword } from '@/libs/utils.ts'
 import { useAppointmentMutations } from '@/queries/useAppointment.ts'
 import { useLocationQueries } from '@/queries/useLocation.ts'
 import { usePathwayTemplateQueries } from '@/queries/usePathwayTemplate.ts'
+import { usePlanningCycleQueries } from '@/queries/usePlanningCycle.ts'
 import { useSlotsInRangeQuery } from '@/queries/useSlot.ts'
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import { useDashboardFilterStore } from '@/store/useDashboardFilterStore.ts'
@@ -138,6 +139,7 @@ function Dashboard() {
     )
   }, [])
   const { slots } = useSlotsInRangeQuery(visibleRange)
+  const { planningCycle } = usePlanningCycleQueries()
   const { createAppointment } = useAppointmentMutations()
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [selectedDate, setSelectedDate] = useState({ startStr: '', endStr: '' })
@@ -303,6 +305,7 @@ function Dashboard() {
               showSecondaryTags={false}
               initialDate={savedDate}
               initialView={initialView}
+              planningCycle={planningCycle}
               onViewChange={(view) =>
                 localStorage.setItem(VIEW_STORAGE_KEY, view)
               }

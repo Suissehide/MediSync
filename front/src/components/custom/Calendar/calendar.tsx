@@ -415,9 +415,15 @@ function Calendar({
             return `Semaine ${weekNum}`
           }
           // Cycle du service s'il est configuré, numéro ISO sinon.
-          const weekLabel = planningCycle
-            ? `S${cycleWeekNumber(start, planningCycle)}`
-            : `s${start.isoWeek()}`
+          const cycleWeek = planningCycle
+            ? cycleWeekNumber(start, planningCycle)
+            : undefined
+          const weekLabel =
+            cycleWeek === undefined
+              ? `s${start.isoWeek()}`
+              : cycleWeek === null
+                ? 'Fermée'
+                : `S${cycleWeek}`
           const startStr = start.format('DD MMMM')
           if (!arg.end) {
             return `${weekLabel} / ${startStr}`
