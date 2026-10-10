@@ -277,6 +277,26 @@ describe('definitions des champs de la fiche', () => {
     })
     expect(patch.statusCode).toBe(404)
   })
+
+  it('creer un champ avec la categorie d un autre service : 400 explicite, pas la 409 de la contrainte FK', async () => {
+    const serviceC = await createService(establishmentId, 'S-CHAMPS-C')
+    const { entryId: entryIdC } = await createDateCategories(
+      establishmentId,
+      serviceC.id,
+    )
+
+    const res = await testApp.app.inject({
+      method: 'POST',
+      url: url('/service-fields'),
+      cookies: coordinateurCookies,
+      payload: {
+        label: 'Champ errant',
+        type: 'text',
+        categoryId: entryIdC,
+      } as never,
+    })
+    expect(res.statusCode).toBe(400)
+  })
 })
 
 // Un coordinateur cree les definitions par l'API ; un secretariat ecrit sans clinical:write.

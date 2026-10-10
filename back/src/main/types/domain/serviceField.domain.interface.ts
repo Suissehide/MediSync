@@ -21,6 +21,7 @@ export type ServiceFieldUpdateEntityDomain = {
   label?: string
   unit?: string | null
   archived?: boolean
+  categoryId?: string
 }
 
 export type ServiceFieldChoiceUpdateEntityDomain = {

@@ -22,6 +22,7 @@ import type { PatientServiceFileDomainInterface } from '../domain/patientService
 import type { PlanningCycleDomainInterface } from '../domain/planningCycle.domain.interface'
 import type { ServiceDomainInterface } from '../domain/service.domain.interface'
 import type { ServiceFieldDomainInterface } from '../domain/serviceField.domain.interface'
+import type { ServiceFieldCategoryDomainInterface } from '../domain/serviceFieldCategory.domain.interface'
 import type { SlotDomainInterface } from '../domain/slot.domain.interface'
 import type { SlotTemplateDomainInterface } from '../domain/slotTemplate.domain.interface'
 import type { SoignantDomainInterface } from '../domain/soignant.domain.interface'
@@ -55,6 +56,7 @@ import type { PatientServiceFileRepositoryInterface } from '../infra/orm/reposit
 import type { PlanningCycleRepositoryInterface } from '../infra/orm/repositories/planningCycle.repository.interface'
 import type { ServiceRepositoryInterface } from '../infra/orm/repositories/service.repository.interface'
 import type { ServiceFieldRepositoryInterface } from '../infra/orm/repositories/serviceField.repository.interface'
+import type { ServiceFieldCategoryRepositoryInterface } from '../infra/orm/repositories/serviceFieldCategory.repository.interface'
 import type { SlotRepositoryInterface } from '../infra/orm/repositories/slot.repository.interface'
 import type { SlotTemplateRepositoryInterface } from '../infra/orm/repositories/slotTemplate.repository.interface'
 import type { SoignantRepositoryInterface } from '../infra/orm/repositories/soignant.repository.interface'
@@ -120,6 +122,9 @@ export interface IocContainer {
   // ServiceField
   readonly serviceFieldDomain: ServiceFieldDomainInterface
   readonly serviceFieldRepository: ServiceFieldRepositoryInterface
+  // ServiceFieldCategory
+  readonly serviceFieldCategoryDomain: ServiceFieldCategoryDomainInterface
+  readonly serviceFieldCategoryRepository: ServiceFieldCategoryRepositoryInterface
   // Location
   readonly locationDomain: LocationDomainInterface
   readonly locationRepository: LocationRepositoryInterface

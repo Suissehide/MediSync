@@ -27,6 +27,17 @@ export const DEFAULT_CATEGORIES: readonly {
   { label: 'Sortie & Bilan', dateField: 'exitDate', order: 1 },
 ]
 
+// Vrai si `ids` contient exactement les mêmes éléments que `reference`, sans doublon ni oubli.
+export const sameIds = (reference: string[], ids: string[]): boolean => {
+  const refSet = new Set(reference)
+  const idSet = new Set(ids)
+  return (
+    refSet.size === reference.length &&
+    refSet.size === idSet.size &&
+    [...refSet].every((id) => idSet.has(id))
+  )
+}
+
 export type FieldValues = Record<string, unknown>
 
 export type FieldDefinitionForValidation = {

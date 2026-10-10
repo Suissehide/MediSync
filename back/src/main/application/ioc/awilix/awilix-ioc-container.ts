@@ -24,6 +24,7 @@ import { PatientServiceFileDomain } from '../../../domain/patientServiceFile.dom
 import { PlanningCycleDomain } from '../../../domain/planningCycle.domain'
 import { ServiceDomain } from '../../../domain/service.domain'
 import { ServiceFieldDomain } from '../../../domain/serviceField.domain'
+import { ServiceFieldCategoryDomain } from '../../../domain/serviceFieldCategory.domain'
 import { SlotDomain } from '../../../domain/slot.domain'
 import { SlotTemplateDomain } from '../../../domain/slotTemplate.domain'
 import { SoignantDomain } from '../../../domain/soignant.domain'
@@ -56,6 +57,7 @@ import { PatientServiceFileRepository } from '../../../infra/orm/repositories/pa
 import { PlanningCycleRepository } from '../../../infra/orm/repositories/planningCycle.repository'
 import { ServiceRepository } from '../../../infra/orm/repositories/service.repository'
 import { ServiceFieldRepository } from '../../../infra/orm/repositories/serviceField.repository'
+import { ServiceFieldCategoryRepository } from '../../../infra/orm/repositories/serviceFieldCategory.repository'
 import { SlotRepository } from '../../../infra/orm/repositories/slot.repository'
 import { SlotTemplateRepository } from '../../../infra/orm/repositories/slotTemplate.repository'
 import { SoignantRepository } from '../../../infra/orm/repositories/soignant.repository'
@@ -132,6 +134,9 @@ class AwilixIocContainer {
     // ServiceField
     this.#registerServiceFieldDomain()
     this.#registerServiceFieldRepository()
+    // ServiceFieldCategory
+    this.#registerServiceFieldCategoryDomain()
+    this.#registerServiceFieldCategoryRepository()
     // Location
     this.#registerLocationDomain()
     this.#registerLocationRepository()
@@ -375,6 +380,18 @@ class AwilixIocContainer {
     this.register(
       'serviceFieldRepository',
       asClass(ServiceFieldRepository).singleton(),
+    )
+  }
+  #registerServiceFieldCategoryDomain(): void {
+    this.register(
+      'serviceFieldCategoryDomain',
+      asClass(ServiceFieldCategoryDomain).singleton(),
+    )
+  }
+  #registerServiceFieldCategoryRepository(): void {
+    this.register(
+      'serviceFieldCategoryRepository',
+      asClass(ServiceFieldCategoryRepository).singleton(),
     )
   }
 

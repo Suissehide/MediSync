@@ -9,28 +9,24 @@ import type {
   ServiceFieldUpdateEntityDomain,
 } from '../types/domain/serviceField.domain.interface'
 import type { ServiceFieldRepositoryInterface } from '../types/infra/orm/repositories/serviceField.repository.interface'
+import type { ServiceFieldCategoryRepositoryInterface } from '../types/infra/orm/repositories/serviceFieldCategory.repository.interface'
 import {
   choiceKeyFromLabel,
   fieldKeyFromLabel,
   RESERVED_FIELD_KEYS,
+  sameIds,
 } from '../utils/service-field-types'
-
-// Vrai si `ids` contient exactement les mêmes éléments que `reference`, sans doublon ni oubli.
-const sameIds = (reference: string[], ids: string[]): boolean => {
-  const refSet = new Set(reference)
-  const idSet = new Set(ids)
-  return (
-    refSet.size === reference.length &&
-    refSet.size === idSet.size &&
-    [...refSet].every((id) => idSet.has(id))
-  )
-}
 
 class ServiceFieldDomain implements ServiceFieldDomainInterface {
   private readonly serviceFieldRepository: ServiceFieldRepositoryInterface
+  private readonly serviceFieldCategoryRepository: ServiceFieldCategoryRepositoryInterface
 
-  constructor({ serviceFieldRepository }: IocContainer) {
+  constructor({
+    serviceFieldRepository,
+    serviceFieldCategoryRepository,
+  }: IocContainer) {
     this.serviceFieldRepository = serviceFieldRepository
+    this.serviceFieldCategoryRepository = serviceFieldCategoryRepository
   }
 
   findAll(): Promise<ServiceFieldEntityDomain[]> {
@@ -52,6 +48,10 @@ class ServiceFieldDomain implements ServiceFieldDomainInterface {
       throw Boom.badRequest(
         'Seuls les champs à choix (choice, multichoice) acceptent une liste de choix.',
       )
+    }
+    const categories = await this.serviceFieldCategoryRepository.findAll()
+    if (!categories.some((c) => c.id === params.categoryId)) {
+      throw Boom.badRequest('Catégorie introuvable pour ce service.')
     }
     const existing = await this.serviceFieldRepository.findAll()
     const key = fieldKeyFromLabel(
@@ -79,16 +79,37 @@ class ServiceFieldDomain implements ServiceFieldDomainInterface {
     })
   }
 
-  update(
+  async update(
     fieldID: string,
     params: ServiceFieldUpdateEntityDomain,
   ): Promise<ServiceFieldEntityDomain> {
-    return this.serviceFieldRepository.update(fieldID, {
+    const base = {
       label: params.label,
       unit: params.unit,
       ...(params.archived !== undefined && {
         archivedAt: params.archived ? new Date() : null,
       }),
+    }
+    if (params.categoryId === undefined) {
+      return this.serviceFieldRepository.update(fieldID, base)
+    }
+    const [categories, fields] = await Promise.all([
+      this.serviceFieldCategoryRepository.findAll(),
+      this.serviceFieldRepository.findAll(),
+    ])
+    const target = categories.find(
+      (c) => c.id === params.categoryId && c.archivedAt === null,
+    )
+    if (!target) {
+      throw Boom.badRequest(
+        "Catégorie cible introuvable, supprimée ou d'un autre service.",
+      )
+    }
+    const order = fields.filter((f) => f.categoryId === target.id).length
+    return this.serviceFieldRepository.update(fieldID, {
+      ...base,
+      categoryId: target.id,
+      order,
     })
   }
 

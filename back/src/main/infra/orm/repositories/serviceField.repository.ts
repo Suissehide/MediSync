@@ -99,6 +99,8 @@ class ServiceFieldRepository implements ServiceFieldRepositoryInterface {
           label: params.label,
           unit: params.unit,
           archivedAt: params.archivedAt,
+          categoryId: params.categoryId,
+          order: params.order,
         },
         include: { choices: { orderBy: { order: 'asc' } } },
       })

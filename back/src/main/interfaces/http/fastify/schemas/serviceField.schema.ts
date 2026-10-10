@@ -54,6 +54,7 @@ export const updateServiceFieldSchema = z
     label: z.string().trim().min(1).max(120).optional(),
     unit: z.string().trim().max(20).nullable().optional(),
     archived: z.boolean().optional(),
+    categoryId: z.cuid().optional(),
   })
   .strict()
 

@@ -29,6 +29,8 @@ export type ServiceFieldUpdateEntityRepo = {
   label?: string
   unit?: string | null
   archivedAt?: Date | null
+  categoryId?: string
+  order?: number
 }
 
 export type ServiceFieldChoiceUpdateEntityRepo = {
