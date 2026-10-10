@@ -516,6 +516,14 @@ Key cross-cutting concerns:
   `medisync_test` (`.env.test`, `.env.test.local` for a machine-specific override) via `npm run test:e2e`; the
   pre-commit hook runs unit tests only.
 
+## Configurable patient-file fields (fiche configurable)
+
+- The *Parcours & Inclusion* and *Sortie & Bilan* fields of the patient sub-record are configurable (`ServiceFieldDefinition`), not hardcoded columns.
+- Their values live in `PatientServiceFile.data` and `clinicalData` (two JSONB columns), keyed by `ServiceFieldDefinition.key`.
+- `clinicalData` is filtered by name, exactly like `notes` (`CLINICAL_FIELDS`, `utils/clinical-fields.ts`) — a clinical field's value never needs its own filtering rule.
+- Every write to either column goes through `mergeFieldPatch` (`utils/service-field-types.ts`), never a direct `data: {...}` assignment.
+- A new field type needs two entries kept in sync: one in `SERVICE_FIELD_TYPES`/`VALIDATORS` (`back/src/main/utils/service-field-types.ts`), one in `front/src/constants/serviceFieldTypes.tsx`.
+
 ## Adding a new entity
 
 1. Add the Prisma model in `prisma/schema.prisma`. For a service-scoped model add `establishmentId` and

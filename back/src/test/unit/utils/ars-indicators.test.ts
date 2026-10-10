@@ -3,7 +3,6 @@ import { join } from 'node:path'
 
 import {
   ARS_ACCOMPANYING_YES,
-  ARS_ORIENTATIONS,
   type ArsCohort,
   type ArsFile,
   type ArsPresence,
@@ -535,27 +534,8 @@ describe('orientations : la BASE stocke la CLÉ, pas le libellé', () => {
     expect(valeur(c, '1.3')).toBe(0)
   })
 
-  // Contrat entre les deux dépôts, sur le patron d'`access-log-vocabulaire.test.ts` : les trois
-  // clés doivent exister dans le dictionnaire du front. Renommer une clé là-bas sans toucher ici
-  // remettrait silencieusement les trois indicateurs à zéro — c'est exactement ce qui vient
-  // d'arriver.
-  it('chaque cle utilisee existe dans ORIENTATION du front', () => {
-    const source = readFileSync(
-      join(__dirname, '../../../../../front/src/constants/patient.constant.ts'),
-      'utf8',
-    )
-    const bloc = source.match(/export const ORIENTATION = \{([^}]*)\}/)
-    if (!bloc) {
-      throw new Error('ORIENTATION introuvable dans patient.constant.ts')
-    }
-    const clesDuFront = [...bloc[1].matchAll(/^\s*([A-Z_]+):/gm)].map(
-      (m) => m[1],
-    )
-    expect(clesDuFront.length).toBeGreaterThanOrEqual(5)
-    for (const cle of Object.values(ARS_ORIENTATIONS)) {
-      expect(clesDuFront).toContain(cle)
-    }
-  })
+  // L'ancien contrat avec ORIENTATION (front/src/constants/patient.constant.ts) n'a plus de sens :
+  // l'orientation est un champ configurable (ServiceFieldChoice), le front n'a plus de dictionnaire statique.
   it('la cle accompagnant existe dans APPOINTMENT_ACCOMPANYING du front', () => {
     const source = readFileSync(
       join(
