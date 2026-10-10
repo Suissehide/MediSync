@@ -10,6 +10,7 @@ import {
   finDeJournee,
   type IndicatorCohort,
 } from '../../../../main/utils/indicators/cohort'
+import { applyFilters } from '../../../../main/utils/indicators/filters'
 import { MEASURES } from '../../../../main/utils/indicators/measures'
 import { readChoice } from '../../../../main/utils/service-field-types'
 import { type ArsCohort, computeArsIndicators } from './ars-oracle'
@@ -203,29 +204,6 @@ const versAncienneCohorte = (c: IndicatorCohort): ArsCohort => ({
   })),
 })
 
-// Filtre `in` écrit en ligne, remplacé par `applyFilters` quand il existera.
-const filtrer = (
-  c: IndicatorCohort,
-  config: IndicatorConfig,
-): IndicatorCohort => {
-  const filters = config.filters ?? []
-  if (filters.length === 0) {
-    return c
-  }
-  const files = c.files.filter((f) =>
-    filters.every((cond) => {
-      const v = f.values[cond.field]
-      return typeof v === 'string' && cond.value.includes(v)
-    }),
-  )
-  const gardes = new Set(files.map((f) => f.patientId))
-  return {
-    ...c,
-    files,
-    presences: c.presences.filter((p) => gardes.has(p.patientId)),
-  }
-}
-
 const computeIndicatorValue = (
   c: IndicatorCohort,
   config: IndicatorConfig,
@@ -236,7 +214,7 @@ const computeIndicatorValue = (
   // L'appelant de MEASURES étend la borne haute à la fin du jour, comme `computeArsIndicators`.
   const borne = { ...c, to: finDeJournee(c.to) }
   return MEASURES[config.measure].compute(
-    filtrer(borne, config),
+    applyFilters(borne, config.filters ?? []),
     config.options ?? {},
   )
 }

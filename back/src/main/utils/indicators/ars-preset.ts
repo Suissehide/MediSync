@@ -1,3 +1,4 @@
+import type { FilterCondition } from './filters'
 import type { MeasureKey } from './measures'
 
 // Orientations par la CLÉ stockée, jamais le libellé ; `measures.test.ts` les tient contre `ETP_FIELD_PRESET`.
@@ -6,8 +7,6 @@ export const ARS_ORIENTATIONS = {
   hospitalisation: 'ORIENTATION_PRO_SANTE_HOSPIT',
   consultationExterne: 'ORIENTATION_PRO_SANTE_CS',
 } as const
-
-export type FilterCondition = { field: string; op: 'in'; value: string[] }
 
 export type IndicatorConfig = {
   code: string
