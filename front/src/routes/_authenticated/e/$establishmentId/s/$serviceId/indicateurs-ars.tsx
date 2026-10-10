@@ -14,7 +14,6 @@ import {
   PERIOD_FORMAT,
   PeriodPicker,
 } from '@/components/custom/periodPicker.tsx'
-import { BasculePilotage } from '@/components/custom/pilotage/basculePilotage.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
 import { Button } from '@/components/ui/button.tsx'
 import { can } from '@/hooks/useCan.ts'
@@ -96,7 +95,6 @@ function ArsIndicatorsPage() {
     <DashboardLayout>
       <div className="flex-1 min-h-0 bg-muted p-4 md:p-6 rounded-lg w-full overflow-auto">
         <div className="max-w-[1320px] mx-auto flex flex-col gap-4">
-          <BasculePilotage actif="ars" />
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div className="flex flex-col gap-1">
               <h1 className="text-2xl font-bold text-foreground">

@@ -7,6 +7,7 @@ import {
   MENU_GROUPS,
   NAVIGATION,
   type NavItem,
+  TAB_MENU_GROUPS,
   useCurrentScale,
 } from '../navigation/navigation.ts'
 import { useAuthStore } from '../store/useAuthStore.ts'
@@ -90,6 +91,58 @@ function MenuAdministration({
             </PopoverClose>
           ))}
         </PopoverSubGroup>
+      </PopoverContent>
+    </PopoverRoot>
+  )
+}
+
+// Un onglet a menu (groupe de `TAB_MENU_GROUPS`) : meme allure qu'un onglet, ses ecrans en dessous.
+function MenuOnglet({
+  titre,
+  items,
+  actif,
+  params,
+}: {
+  titre: string
+  items: NavItem[]
+  actif: boolean
+  params: object
+}) {
+  return (
+    <PopoverRoot>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-current={actif ? 'page' : undefined}
+          className={`${TAB_CLASS} flex items-center gap-1 whitespace-nowrap ${actif ? 'text-text after:scale-x-100' : 'text-text-light'} data-[state=open]:text-text`}
+        >
+          {titre}
+          <ChevronDown aria-hidden="true" className="w-3.5 h-3.5" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" sideOffset={10} className="w-72 p-2">
+        {items.map((item) => (
+          <PopoverClose asChild key={item.to}>
+            <Link
+              to={item.to}
+              params={params as never}
+              className="flex flex-col gap-0.5 rounded-md px-3 py-2 hover:bg-primary/10 focus-visible:bg-primary/10 outline-none"
+              activeProps={{
+                'aria-current': 'page',
+                className: 'bg-primary/10',
+              }}
+            >
+              <span className="text-sm font-medium text-text-dark">
+                {item.label}
+              </span>
+              {item.description && (
+                <span className="text-xs text-text-light">
+                  {item.description}
+                </span>
+              )}
+            </Link>
+          </PopoverClose>
+        ))}
       </PopoverContent>
     </PopoverRoot>
   )
@@ -225,20 +278,31 @@ function Navbar({ toggleSidebar }: NavbarProps) {
                     className="h-5 w-px bg-border-sidebar"
                   />
                 )}
-                {groupe.items.map((item) => (
-                  <Link
-                    key={item.to}
-                    to={item.to}
-                    params={params as never}
-                    // Sans `exact`, le Link s'estime actif par prefixe et pose lui-meme
-                    // `aria-current` : `estActif` en decide seul.
-                    activeOptions={{ exact: true }}
-                    aria-current={estActif(item) ? 'page' : undefined}
-                    className={`${TAB_CLASS} whitespace-nowrap ${estActif(item) ? 'text-text after:scale-x-100' : 'text-text-light'}`}
-                  >
-                    {item.label}
-                  </Link>
-                ))}
+                {TAB_MENU_GROUPS.has(groupe.nom) && groupe.items.length > 1 ? (
+                  <MenuOnglet
+                    titre={groupe.nom}
+                    items={groupe.items}
+                    actif={groupe.items.some(estActif)}
+                    params={params}
+                  />
+                ) : (
+                  groupe.items.map((item) => (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      params={params as never}
+                      // Sans `exact`, le Link s'estime actif par prefixe et pose lui-meme
+                      // `aria-current` : `estActif` en decide seul.
+                      activeOptions={{ exact: true }}
+                      aria-current={estActif(item) ? 'page' : undefined}
+                      className={`${TAB_CLASS} whitespace-nowrap ${estActif(item) ? 'text-text after:scale-x-100' : 'text-text-light'}`}
+                    >
+                      {TAB_MENU_GROUPS.has(groupe.nom)
+                        ? groupe.nom
+                        : item.label}
+                    </Link>
+                  ))
+                )}
               </Fragment>
             ))}
           </nav>

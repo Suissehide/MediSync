@@ -9,7 +9,6 @@ import {
   PeriodPicker,
 } from '@/components/custom/periodPicker.tsx'
 import { CarteAbsences } from '@/components/custom/pilotage/absences.tsx'
-import { BasculePilotage } from '@/components/custom/pilotage/basculePilotage.tsx'
 import { Bilans } from '@/components/custom/pilotage/bilans.tsx'
 import { EntreesSorties } from '@/components/custom/pilotage/entreesSorties.tsx'
 import { Motifs } from '@/components/custom/pilotage/motifs.tsx'
@@ -85,7 +84,6 @@ function ActivitePage() {
     <DashboardLayout>
       <div className="flex-1 min-h-0 bg-muted p-4 md:p-6 rounded-lg w-full overflow-auto">
         <div className="max-w-[1320px] mx-auto flex flex-col gap-4">
-          <BasculePilotage actif="activite" />
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div className="flex flex-col gap-1">
               <h1 className="text-2xl font-bold text-foreground">Activité</h1>
