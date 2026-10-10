@@ -53,6 +53,7 @@ describe('tableau de bord d activite', () => {
     serviceId: string,
     patientId: string,
     status: 'yes' | 'no',
+    pathwayID?: string,
   ) => {
     const soignant = await testDb.soignant.create({
       data: { name: 'IDE', serviceId, establishmentId },
@@ -83,6 +84,7 @@ describe('tableau de bord d activite', () => {
         serviceId,
         establishmentId,
         slotTemplateID: template.id,
+        pathwayID,
       },
     })
     const appointment = await testDb.appointment.create({
@@ -146,5 +148,64 @@ describe('tableau de bord d activite', () => {
   it('refuse une periode dont la fin precede le debut', async () => {
     const res = await lire(serviceA, 'from=2026-12-31&to=2026-01-01')
     expect(res.statusCode).toBe(400)
+  })
+
+  it('filtre par modele de parcours, ajoute monthly et byWeekday', async () => {
+    // serviceB : aucun patient actif avant ce test (le seul rendez-vous existant y est en absence).
+    const template = await testDb.pathwayTemplate.create({
+      data: {
+        name: 'Réadaptation',
+        color: '#fff',
+        mainTag: 'TAG-FILTRE-PARCOURS',
+        secondaryTags: [],
+        serviceId: serviceB,
+        establishmentId,
+      },
+    })
+    const pathway = await testDb.pathway.create({
+      data: {
+        startDate: new Date('2026-06-01'),
+        templateID: template.id,
+        serviceId: serviceB,
+        establishmentId,
+      },
+    })
+    const patientA = await testDb.patient.create({
+      data: {
+        establishmentId,
+        firstName: 'Parcours',
+        lastName: 'A',
+        createDate: new Date(),
+      },
+    })
+    const patientB = await testDb.patient.create({
+      data: {
+        establishmentId,
+        firstName: 'SansParcours',
+        lastName: 'B',
+        createDate: new Date(),
+      },
+    })
+    await seance(serviceB, patientA.id, 'yes', pathway.id)
+    await seance(serviceB, patientB.id, 'yes')
+
+    const avecFiltre = await lire(
+      serviceB,
+      `from=2026-01-01&to=2026-12-31&pathwayTemplateId=${template.id}`,
+    )
+    expect(avecFiltre.statusCode).toBe(200)
+    expect(avecFiltre.json().patients.active).toBe(1)
+    expect(avecFiltre.json().monthly).toHaveLength(12)
+    expect(avecFiltre.json().absences.byWeekday).toHaveLength(7)
+
+    const sansFiltre = await lire(serviceB)
+    expect(sansFiltre.json().patients.active).toBe(2)
+
+    const idInconnu = await lire(
+      serviceB,
+      'from=2026-01-01&to=2026-12-31&pathwayTemplateId=cliduinconnu0000000000000',
+    )
+    expect(idInconnu.statusCode).toBe(200)
+    expect(idInconnu.json().patients.active).toBe(0)
   })
 })

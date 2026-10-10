@@ -5,6 +5,7 @@ import type { ArsIndicatorRepositoryInterface } from '../types/infra/orm/reposit
 import {
   type ActivityReport,
   computeActivity,
+  filterByPathwayTemplate,
 } from '../utils/activity-indicators'
 
 // Même cohorte que l'ARS : les deux écrans partagent leurs définitions (MDS-40).
@@ -15,8 +16,14 @@ class ActivityReportDomain implements ActivityReportDomainInterface {
     this.arsIndicatorRepository = arsIndicatorRepository
   }
 
-  async report({ from, to }: ArsRange): Promise<ActivityReport> {
-    const { files, presences } = await this.arsIndicatorRepository.findCohort()
+  async report(
+    { from, to }: ArsRange,
+    pathwayTemplateId?: string,
+  ): Promise<ActivityReport> {
+    const cohort = await this.arsIndicatorRepository.findCohort()
+    const { files, presences } = pathwayTemplateId
+      ? filterByPathwayTemplate({ ...cohort, from, to }, pathwayTemplateId)
+      : cohort
     return computeActivity({ from, to, files, presences })
   }
 }

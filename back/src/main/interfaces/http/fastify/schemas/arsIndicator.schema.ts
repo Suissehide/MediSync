@@ -1,13 +1,14 @@
 import { z } from 'zod'
 
-export const arsIndicatorQuerySchema = z
-  .object({
-    from: z.coerce.date(),
-    to: z.coerce.date(),
-  })
-  .refine((q) => q.from <= q.to, {
-    message: 'La date de début doit précéder la date de fin',
-  })
+export const dateRangeQueryObject = z.object({
+  from: z.coerce.date(),
+  to: z.coerce.date(),
+})
+
+export const arsIndicatorQuerySchema = dateRangeQueryObject.refine(
+  (q) => q.from <= q.to,
+  { message: 'La date de début doit précéder la date de fin' },
+)
 
 export type ArsIndicatorQuery = z.infer<typeof arsIndicatorQuerySchema>
 
