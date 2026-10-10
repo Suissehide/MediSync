@@ -1515,3 +1515,67 @@ describe('EditPatient — un onglet par catégorie', () => {
     ).toBe('cat-parcours')
   })
 })
+
+// Task 3 review : un onglet sélectionné peut disparaître après une relecture (sa catégorie perd
+// son dernier champ visible) — repli sur « Informations générales » plutôt qu'un écran vide sans
+// onglet actif.
+describe('EditPatient — l’onglet sélectionné disparaît après une relecture', () => {
+  it('bascule sur « Informations générales » quand la catégorie perd son dernier champ visible', async () => {
+    let fieldsState: ServiceField[] = [
+      configuredField({
+        key: 'poids',
+        label: 'Poids',
+        categoryId: 'cat-suivi',
+      }),
+    ]
+    const categoriesState = [
+      ...defaultCategories,
+      category({ id: 'cat-suivi', label: 'Suivi', order: 2 }),
+    ]
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    })
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input.toString()
+      const method = init?.method ?? 'GET'
+      if (url.includes('/service-file') && method === 'GET') {
+        return { ok: false, status: 404, url, json: async () => ({}) }
+      }
+      if (url.endsWith('/service-fields') && method === 'GET') {
+        return { ok: true, status: 200, url, json: async () => fieldsState }
+      }
+      if (url.endsWith('/service-field-categories') && method === 'GET') {
+        return { ok: true, status: 200, url, json: async () => categoriesState }
+      }
+      throw new Error(`Appel fetch non attendu dans ce test : ${method} ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="fr">
+          <EditPatient patient={patientFixture} />
+        </LocalizationProvider>
+      </QueryClientProvider>,
+    )
+
+    const ongletSuivi = await screen.findByRole('radio', { name: 'Suivi' })
+    await userEvent.click(ongletSuivi)
+    expect(await screen.findByLabelText('Poids')).toBeInTheDocument()
+
+    // Le champ est supprimé : sa catégorie perd son dernier champ visible, elle n'a pas de date.
+    fieldsState = [{ ...fieldsState[0], archived: true }]
+    await queryClient.invalidateQueries({
+      queryKey: ['get_all_service_fields'],
+    })
+
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('radio', { name: 'Suivi' }),
+      ).not.toBeInTheDocument(),
+    )
+    expect(
+      screen.getByRole('radio', { name: 'Informations générales' }),
+    ).toHaveAttribute('data-state', 'on')
+  })
+})

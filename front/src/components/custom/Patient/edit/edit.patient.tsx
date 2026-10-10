@@ -113,13 +113,17 @@ export default function EditPatient({ patient }: PatientParam) {
   const { categories, isPending: isCategoriesPending } =
     useServiceFieldCategoriesQuery()
   const canReadClinical = useCan('clinical:read')
-  // Une catégorie supprimée, ou sans date ni champ visible, n'a pas d'onglet.
-  const shownCategories = categories.filter(
-    (c) =>
-      !c.archived &&
-      (c.dateField !== null ||
-        visibleFields(fields, c.id, canReadClinical).length > 0),
-  )
+  // Une catégorie supprimée, ou sans date ni champ visible, n'a pas d'onglet. Tri par `order`,
+  // comme la liste des patients (`columns/patient.column.tsx`) : l'API les renvoie déjà triées,
+  // mais les fixtures de test ne le sont pas forcément.
+  const shownCategories = categories
+    .filter(
+      (c) =>
+        !c.archived &&
+        (c.dateField !== null ||
+          visibleFields(fields, c.id, canReadClinical).length > 0),
+    )
+    .sort((a, b) => a.order - b.order)
   const menuItems: MenuItem[] = [
     ...fixedMenuItems,
     ...shownCategories.map((c) => ({
@@ -128,6 +132,17 @@ export default function EditPatient({ patient }: PatientParam) {
       icon: categoryIcon(c),
     })),
   ]
+
+  // Un onglet sélectionné peut disparaître après une relecture (sa catégorie perd son dernier
+  // champ visible, ou est supprimée) : repli sur « Informations générales » plutôt qu'un écran
+  // vide sans onglet actif. Dépendance sur un booléen (pas `menuItems`, recréé à chaque rendu)
+  // pour que l'effet ne tourne que quand la présence de l'onglet change réellement.
+  const selectedTabExists = menuItems.some((item) => item.id === selected)
+  useEffect(() => {
+    if (!selectedTabExists) {
+      setSelected('identity')
+    }
+  }, [selectedTabExists])
 
   // Le sous-dossier peut ne pas exister (absence normale : `serviceFile` vaut `null`, le
   // premier enregistrement le crée côté back — spec §2.1/§5.1), ou sa lecture peut avoir

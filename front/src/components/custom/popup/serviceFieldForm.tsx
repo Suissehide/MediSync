@@ -1,10 +1,10 @@
 import {
-  Archive,
   Check,
   ChevronDown,
   ChevronUp,
   Pencil,
   Plus,
+  Trash,
   Undo2,
   X,
 } from 'lucide-react'
@@ -13,10 +13,15 @@ import { useEffect, useMemo, useState } from 'react'
 
 import { SERVICE_FIELD_TYPE_LABELS } from '../../../constants/serviceFieldTypes.tsx'
 import { useAppForm } from '../../../hooks/formConfig.tsx'
-import { useServiceFieldMutations } from '../../../queries/useServiceField.ts'
+import {
+  useServiceFieldCategoriesQuery,
+  useServiceFieldMutations,
+} from '../../../queries/useServiceField.ts'
 import type {
+  CreateServiceFieldParams,
   ServiceField,
   ServiceFieldType,
+  UpdateServiceFieldParams,
 } from '../../../types/serviceField.ts'
 import { Button } from '../../ui/button.tsx'
 import { Input } from '../../ui/input.tsx'
@@ -39,6 +44,40 @@ const TYPE_OPTIONS = Object.entries(SERVICE_FIELD_TYPE_LABELS).map(
 // Les deux seuls types qui portent des choix.
 const CHOICE_TYPES: ServiceFieldType[] = ['choice', 'multichoice']
 
+type ServiceFieldFormValues = {
+  label: string
+  type: ServiceFieldType
+  categoryId: string
+  unit: string
+  clinical: boolean
+  choices: string[]
+}
+
+// Corps du PATCH : `categoryId` n'est envoyé que s'il change (déplace le champ en fin de la
+// catégorie cible, côté back).
+const buildUpdatePayload = (
+  field: ServiceField,
+  value: ServiceFieldFormValues,
+): UpdateServiceFieldParams => ({
+  id: field.id,
+  label: value.label,
+  ...(value.type === 'number' ? { unit: value.unit || null } : {}),
+  ...(value.categoryId !== field.categoryId
+    ? { categoryId: value.categoryId }
+    : {}),
+})
+
+const buildCreatePayload = (
+  value: ServiceFieldFormValues,
+): CreateServiceFieldParams => ({
+  label: value.label,
+  type: value.type,
+  categoryId: value.categoryId,
+  clinical: value.clinical,
+  ...(value.type === 'number' && value.unit ? { unit: value.unit } : {}),
+  ...(CHOICE_TYPES.includes(value.type) ? { choices: value.choices } : {}),
+})
+
 interface ServiceFieldFormProps {
   categoryId: string
   field?: ServiceField
@@ -54,46 +93,37 @@ function ServiceFieldForm({
   const [newChoiceLabel, setNewChoiceLabel] = useState('')
   const { create, update, createChoice, updateChoice, reorderChoices } =
     useServiceFieldMutations()
+  const { categories } = useServiceFieldCategoriesQuery()
+  const categoryOptions = categories
+    .filter((c) => !c.archived)
+    .map((c) => ({ value: c.id, label: c.label }))
 
-  const defaultValues = useMemo<{
-    label: string
-    type: ServiceFieldType
-    unit: string
-    clinical: boolean
-    choices: string[]
-  }>(
+  const defaultValues = useMemo<ServiceFieldFormValues>(
     () => ({
       label: field?.label ?? '',
       type: field?.type ?? 'text',
+      categoryId: field?.categoryId ?? categoryId,
       unit: field?.unit ?? '',
       clinical: field?.clinical ?? false,
       choices: [],
     }),
-    [field?.label, field?.type, field?.unit, field?.clinical],
+    [
+      field?.label,
+      field?.type,
+      field?.categoryId,
+      categoryId,
+      field?.unit,
+      field?.clinical,
+    ],
   )
 
   const form = useAppForm({
     defaultValues,
     onSubmit: ({ value }) => {
       if (field) {
-        update.mutate({
-          id: field.id,
-          label: value.label,
-          ...(value.type === 'number' ? { unit: value.unit || null } : {}),
-        })
+        update.mutate(buildUpdatePayload(field, value))
       } else {
-        create.mutate({
-          label: value.label,
-          type: value.type,
-          categoryId,
-          clinical: value.clinical,
-          ...(value.type === 'number' && value.unit
-            ? { unit: value.unit }
-            : {}),
-          ...(CHOICE_TYPES.includes(value.type)
-            ? { choices: value.choices }
-            : {}),
-        })
+        create.mutate(buildCreatePayload(value))
       }
       setOpen(false)
     },
@@ -168,6 +198,16 @@ function ServiceFieldForm({
               }}
             >
               {(f) => <f.Input label="Libellé" />}
+            </form.AppField>
+
+            <form.AppField name="categoryId">
+              {(f) => (
+                <f.Select
+                  label="Catégorie"
+                  options={categoryOptions}
+                  clearable={false}
+                />
+              )}
             </form.AppField>
 
             <form.AppField name="type">
@@ -291,8 +331,8 @@ function ServiceFieldForm({
                             })
                           }
                         >
-                          <Archive className="w-4 h-4" />
-                          Archiver
+                          <Trash className="w-4 h-4" />
+                          Supprimer
                         </Button>
                       )}
                     </li>

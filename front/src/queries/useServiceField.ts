@@ -74,15 +74,21 @@ export const useServiceFieldMutations = () => {
     },
   })
 
-  // Le meme PATCH generique porte modification/archivage/restauration : le message depend de `archived`.
-  const archivedToast = (archived: boolean | undefined, nom: string) => {
+  // Le meme PATCH generique porte modification/suppression/restauration : le message depend
+  // de `archived` ; `feminin` accorde le participe (Catégorie supprimée, pas Catégorie supprimé).
+  const archivedToast = (
+    archived: boolean | undefined,
+    nom: string,
+    feminin = false,
+  ) => {
+    const e = feminin ? 'e' : ''
     if (archived === true) {
-      toast({ title: `${nom} archivé`, severity: TOAST_SEVERITY.SUCCESS })
+      toast({ title: `${nom} supprimé${e}`, severity: TOAST_SEVERITY.SUCCESS })
     } else if (archived === false) {
-      toast({ title: `${nom} restauré`, severity: TOAST_SEVERITY.SUCCESS })
+      toast({ title: `${nom} restauré${e}`, severity: TOAST_SEVERITY.SUCCESS })
     } else {
       toast({
-        title: `${nom} modifié avec succès`,
+        title: `${nom} modifié${e} avec succès`,
         severity: TOAST_SEVERITY.SUCCESS,
       })
     }
@@ -165,7 +171,7 @@ export const useServiceFieldMutations = () => {
       (
         _data: ServiceFieldCategory,
         variables: UpdateServiceFieldCategoryParams,
-      ) => archivedToast(variables.archived, 'Catégorie'),
+      ) => archivedToast(variables.archived, 'Catégorie', true),
     ),
   )
   const reorderCategories = useMutation(
