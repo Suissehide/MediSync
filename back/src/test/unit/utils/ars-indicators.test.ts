@@ -8,6 +8,7 @@ import {
   type ArsFile,
   type ArsPresence,
   computeArsIndicators,
+  MANUAL_INPUTS,
 } from '../../../main/utils/ars-indicators'
 import { ETP_FIELD_PRESET } from '../../../main/utils/etp-field-preset'
 
@@ -424,6 +425,257 @@ describe('table complète', () => {
       ...Array(13).fill('Séances'),
       ...Array(6).fill('Sortie'),
       ...Array(6).fill('Modalités'),
+    ])
+  })
+})
+
+describe('kind, input et answer de chaque indicateur', () => {
+  it('kind distingue calcule, non disponible et a saisir', () => {
+    const resultats = computeArsIndicators(cohorte([]))
+    const parCode = (code: string) => resultats.find((r) => r.code === code)
+    expect(parCode('1.1')?.kind).toBe('computed')
+    expect(parCode('2.3')?.kind).toBe('unavailable')
+    expect(parCode('2.5')?.kind).toBe('manual')
+    expect(parCode('2.5')?.input).toBe('number+text')
+    expect(parCode('4.2')?.kind).toBe('manual')
+    expect(parCode('4.2')?.input).toBe('yesno')
+  })
+
+  it('input vaut null hors des deux indicateurs manuels', () => {
+    const resultats = computeArsIndicators(cohorte([]))
+    for (const r of resultats) {
+      if (r.code !== '2.5' && r.code !== '4.2') {
+        expect(r.input).toBeNull()
+      }
+    }
+  })
+
+  it('answer vaut toujours null au calcul : la reponse manuelle arrive par un autre chemin', () => {
+    const resultats = computeArsIndicators(cohorte([]))
+    for (const r of resultats) {
+      expect(r.answer).toBeNull()
+    }
+  })
+
+  it('MANUAL_INPUTS porte exactement les deux memes entrees que la table', () => {
+    expect(MANUAL_INPUTS).toEqual({ '2.5': 'number+text', '4.2': 'yesno' })
+  })
+})
+
+describe('regression : codes, groupes, libelles et notes inchanges par kind/input/answer', () => {
+  it('rend exactement les 30 {code, group, label, note} attendus', () => {
+    const resultats = computeArsIndicators(cohorte([])).map((r) => ({
+      code: r.code,
+      group: r.group,
+      label: r.label,
+      note: r.note,
+    }))
+    expect(resultats).toEqual([
+      {
+        code: '1.1',
+        group: 'Entrée',
+        label: "Nombre de patients ayant bénéficié d'un diagnostic éducatif",
+        note: null,
+      },
+      {
+        code: '1.1bis',
+        group: 'Entrée',
+        label:
+          "Dont nombre de patients ayant bénéficié d'un diagnostic éducatif en distanciel",
+        note: null,
+      },
+      {
+        code: '1.2',
+        group: 'Entrée',
+        label:
+          "Nombre de patients orientés par un professionnel de santé en dehors d'un hôpital (dont médecin traitant)",
+        note: null,
+      },
+      {
+        code: '1.3',
+        group: 'Entrée',
+        label:
+          "Nombre de patients orientés par un professionnel de santé au cours d'une hospitalisation",
+        note: null,
+      },
+      {
+        code: '1.4',
+        group: 'Entrée',
+        label:
+          "Nombre de patients orientés par un professionnel de santé à l'hôpital en consultation externe",
+        note: null,
+      },
+      {
+        code: '2.1',
+        group: 'Séances',
+        label:
+          "Nombre de patients pris en charge au cours d'une hospitalisation (de jour, de semaine, complète) en établissement de santé uniquement",
+        note: null,
+      },
+      {
+        code: '2.2',
+        group: 'Séances',
+        label:
+          "Nombre de patients pris en charge en soins externes d'un établissement de santé uniquement",
+        note: null,
+      },
+      {
+        code: '2.3',
+        group: 'Séances',
+        label:
+          'Nombre de patients pris en charge en soins de ville uniquement (MSP, association, ex-réseau de PS libéraux…)',
+        note: 'Aucune notion de soins de ville : le type de rendez-vous vaut ambulatoire, hôpital ou téléphonique',
+      },
+      {
+        code: '2.4',
+        group: 'Séances',
+        label:
+          'Nombre de patients pris en charge en programme mixte (hospitalisation + soins externes)',
+        note: null,
+      },
+      {
+        code: '2.5',
+        group: 'Séances',
+        label: 'Autre type de prise en charge à chiffrer et à expliquer',
+        note: "Champ libre de l'enquête, à renseigner à la main",
+      },
+      {
+        code: '2.6',
+        group: 'Séances',
+        label: "Nombre total de séances individuelles d'ETP réalisées",
+        note: null,
+      },
+      {
+        code: '2.6bis',
+        group: 'Séances',
+        label:
+          "Dont nombre de séances individuelles d'ETP réalisées en distanciel",
+        note: null,
+      },
+      {
+        code: '2.7',
+        group: 'Séances',
+        label: "Nombre total de séances collectives d'ETP réalisées",
+        note: null,
+      },
+      {
+        code: '2.7bis',
+        group: 'Séances',
+        label:
+          "Dont nombre de séances collectives d'ETP réalisées en distanciel",
+        note: null,
+      },
+      {
+        code: '2.8',
+        group: 'Séances',
+        label: 'Nombre moyen de patients par séance collective',
+        note: null,
+      },
+      {
+        code: '2.9',
+        group: 'Séances',
+        label:
+          'Nombre de proches et/ou aidants du patient ayant participé au programme',
+        note: null,
+      },
+      {
+        code: '2.10',
+        group: 'Séances',
+        label:
+          "Nombre total de séances d'ETP avec une participation de proches et/ou aidants du patient",
+        note: null,
+      },
+      {
+        code: '2.11',
+        group: 'Séances',
+        label:
+          'Nombre total de séances destinées exclusivement aux proches et/ou aidants du patient',
+        note: 'Un rendez-vous est toujours rattaché à des patients : une séance sans patient ne se représente pas',
+      },
+      {
+        code: '3.1',
+        group: 'Sortie',
+        label:
+          'Nombre de patients ayant suivi un programme personnalisé complet (quel que soit le mode de prise en charge)',
+        note: null,
+      },
+      {
+        code: '3.2',
+        group: 'Sortie',
+        label:
+          "Nombre de patients ayant suivi un programme personnalisé complet (au cours d'une hospitalisation complète ou de jour)",
+        note: null,
+      },
+      {
+        code: '3.3',
+        group: 'Sortie',
+        label:
+          "Nombre de patients ayant suivi un programme personnalisé complet (au cours d'une venue en soins externes)",
+        note: null,
+      },
+      {
+        code: '3.4',
+        group: 'Sortie',
+        label:
+          'Nombre de patients ayant suivi un programme personnalisé complet (au cours d’une venue mixte)',
+        note: null,
+      },
+      {
+        code: '3.5',
+        group: 'Sortie',
+        label:
+          "Nombre de patients ayant suivi un programme personnalisé complet (au cours de séances d'ETP pratiquées en soins de ville)",
+        note: 'Aucune notion de soins de ville : le type de rendez-vous vaut ambulatoire, hôpital ou téléphonique',
+      },
+      {
+        code: '3.6',
+        group: 'Sortie',
+        label:
+          "Nombre de patients ayant bénéficié d'une évaluation individuelle des compétences acquises de l'ETP",
+        note: null,
+      },
+      {
+        code: '4.1',
+        group: 'Modalités',
+        label:
+          "Nombre de patients ayant bénéficié d'un programme personnalisé lors d'une offre initiale d'ETP",
+        note: null,
+      },
+      {
+        code: '4.1bis',
+        group: 'Modalités',
+        label:
+          'Dont nombre de patients ayant terminé par une réactualisation (Réactu 1 à 4)',
+        note: null,
+      },
+      {
+        code: '4.2',
+        group: 'Modalités',
+        label:
+          'Une offre de suivi ou de renforcement dans un nouveau programme est-elle proposée au sein de la structure ?',
+        note: 'Question oui/non sur la structure, à renseigner à la main',
+      },
+      {
+        code: '4.3',
+        group: 'Modalités',
+        label:
+          "Nombre de patients ayant bénéficié d'un programme personnalisé lors d'une offre de suivi ou de renforcement d'ETP commençant par une réactualisation",
+        note: null,
+      },
+      {
+        code: '4.3bis',
+        group: 'Modalités',
+        label:
+          'Dont nombre de patients ayant également terminé par une réactualisation (Réactu 1 à 4)',
+        note: null,
+      },
+      {
+        code: '4.4',
+        group: 'Modalités',
+        label:
+          "Nombre de patients dont la synthèse de l'évaluation des compétences acquises a été transmise au moins à leur médecin traitant",
+        note: 'Aucun modèle ne trace cet envoi (relève du ticket « Envoi du bilan par MSSanté »)',
+      },
     ])
   })
 })

@@ -1,15 +1,20 @@
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute, Link, redirect } from '@tanstack/react-router'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
+import { Download, FileSpreadsheet } from 'lucide-react'
 import { useState } from 'react'
 
 import { ArsIndicatorApi } from '@/api/arsIndicator.api.ts'
+import { Bandeau } from '@/components/custom/ars/bandeau.tsx'
+import { CarteGroupe } from '@/components/custom/ars/carteGroupe.tsx'
+import type { Filtre } from '@/components/custom/ars/statut.ts'
 import {
   ANNEES,
   anneeCivile,
   PERIOD_FORMAT,
   PeriodPicker,
 } from '@/components/custom/periodPicker.tsx'
+import { BasculePilotage } from '@/components/custom/pilotage/basculePilotage.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
 import { Button } from '@/components/ui/button.tsx'
 import { can } from '@/hooks/useCan.ts'
@@ -18,7 +23,6 @@ import { arsCsv } from '@/libs/arsCsv.ts'
 import { slugify, telecharger, telechargerCsv } from '@/libs/csv.ts'
 import { queryState } from '@/libs/queryState.ts'
 import { useArsIndicatorsQuery } from '@/queries/useArsIndicator.ts'
-import type { ArsIndicator } from '@/types/arsIndicator.ts'
 import { resolveTenantContext } from '@/utils/tenant-context.ts'
 
 // Ce module lit `dayjs.utc` des son chargement : il enregistre le greffon lui-meme, comme
@@ -51,12 +55,11 @@ function ArsIndicatorsPage() {
   const [periode, setPeriode] = useState(() => anneeCivile(ANNEES[0]))
   const from = periode.from.format(PERIOD_FORMAT)
   const to = periode.to.format(PERIOD_FORMAT)
-  const { indicators, isPending, error, refetch } = useArsIndicatorsQuery(
-    from,
-    to,
-  )
+  const { indicators, manualYear, isPending, error, refetch } =
+    useArsIndicatorsQuery(from, to)
   const [exportEnCours, setExportEnCours] = useState(false)
   const [erreurExport, setErreurExport] = useState<string | null>(null)
+  const [filtre, setFiltre] = useState<Filtre>('tous')
 
   const etat = queryState({
     isPending,
@@ -91,128 +94,96 @@ function ArsIndicatorsPage() {
 
   return (
     <DashboardLayout>
-      {/* `overflow-hidden` + une zone de défilement interne : sans cela la grille (trente lignes,
-          ~1360px) débordait sous la carte et emportait l'en-tête au défilement, alors que les
-          autres écrans gardent leurs contrôles en place. Même découpe que `suivi.tsx`. */}
-      <div className="flex-1 min-h-0 bg-background p-4 md:p-6 rounded-lg flex flex-col w-full gap-4 overflow-hidden">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <h1 className="h-9 flex items-center text-text-dark text-xl font-semibold">
-            Indicateurs ARS
-          </h1>
+      <div className="flex-1 min-h-0 bg-muted p-4 md:p-6 rounded-lg w-full overflow-auto">
+        <div className="max-w-[1320px] mx-auto flex flex-col gap-4">
+          <BasculePilotage actif="ars" />
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div className="flex flex-col gap-1">
+              <h1 className="text-2xl font-bold text-foreground">
+                Indicateurs ARS
+              </h1>
+              <p className="text-[13px] text-text-light">
+                Enquête annuelle ETP · chiffres agrégés, aucune donnée
+                nominative.
+              </p>
+            </div>
 
-          <div className="flex items-center gap-3 flex-wrap">
-            <PeriodPicker periode={periode} onChange={setPeriode} />
-
-            <Button
-              onClick={exporterExcel}
-              disabled={etat !== 'ready' || exportEnCours}
-            >
-              {exportEnCours ? 'Export…' : 'Exporter en Excel'}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={exporterCsv}
-              disabled={etat !== 'ready'}
-            >
-              Exporter en CSV
-            </Button>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <PeriodPicker periode={periode} onChange={setPeriode} />
+              <Button
+                onClick={exporterExcel}
+                disabled={etat !== 'ready' || exportEnCours}
+              >
+                <FileSpreadsheet aria-hidden className="size-4" />
+                {exportEnCours ? 'Export…' : 'Exporter en Excel'}
+              </Button>
+              <Button
+                variant="outline"
+                aria-label="Exporter en CSV"
+                onClick={exporterCsv}
+                disabled={etat !== 'ready'}
+                className="bg-carte"
+              >
+                <Download aria-hidden className="size-4" />
+                CSV
+              </Button>
+            </div>
           </div>
-        </div>
 
-        {erreurExport && (
-          <p role="alert" className="text-sm text-destructive">
-            {erreurExport}
-          </p>
-        )}
-
-        {etat === 'pending' && (
-          <div className="flex-1 flex items-center justify-center text-text-light">
-            Chargement...
-          </div>
-        )}
-
-        {(etat === 'error' || etat === 'empty') && (
-          <div className="flex-1 flex flex-col items-center justify-center gap-3">
-            <p role="alert" className="text-text-light">
-              Impossible de charger les indicateurs. Réessayez plus tard.
+          {erreurExport && (
+            <p role="alert" className="text-sm text-destructive">
+              {erreurExport}
             </p>
-            <Button onClick={() => refetch()}>Réessayer</Button>
-          </div>
-        )}
+          )}
 
-        {etat === 'ready' && indicators && (
-          <div className="flex-1 min-h-0 overflow-auto">
-            <TableIndicateurs indicateurs={indicators} />
-          </div>
-        )}
+          {etat === 'pending' && (
+            <p className="text-text-light">Chargement...</p>
+          )}
+
+          {(etat === 'error' || etat === 'empty') && (
+            <div className="flex flex-col gap-2">
+              <p role="alert" className="text-text-light">
+                Impossible de charger les indicateurs. Réessayez plus tard.
+              </p>
+              <Button className="self-start" onClick={() => refetch()}>
+                Réessayer
+              </Button>
+            </div>
+          )}
+
+          {etat === 'ready' && indicators && (
+            <>
+              <Bandeau
+                indicateurs={indicators}
+                filtre={filtre}
+                onFiltre={setFiltre}
+              />
+              {GROUPES.map((groupe, index) => (
+                <CarteGroupe
+                  key={groupe}
+                  numero={index + 1}
+                  nom={groupe}
+                  indicateurs={indicators.filter((i) => i.group === groupe)}
+                  filtre={filtre}
+                  annee={manualYear}
+                />
+              ))}
+              <p className="text-center text-xs text-text-light">
+                Les valeurs saisies à la main sont reprises dans l'export Excel.
+                Détail des patients, absences et séances dans{' '}
+                <Link
+                  to="/e/$establishmentId/s/$serviceId/activite"
+                  params={params}
+                  className="text-primary hover:text-primary-dark"
+                >
+                  Activité
+                </Link>
+                .
+              </p>
+            </>
+          )}
+        </div>
       </div>
     </DashboardLayout>
-  )
-}
-
-function TableIndicateurs({ indicateurs }: { indicateurs: ArsIndicator[] }) {
-  return (
-    // Bande de groupe NON collante : chaque `tbody` collerait la sienne indépendamment, et les
-    // quatre s'empileraient en haut de la zone de défilement. La grille tient en trente lignes,
-    // on n'est jamais loin d'une bande.
-    <table className="w-full text-sm border-collapse">
-      <thead className="sr-only">
-        <tr>
-          <th scope="col">Code</th>
-          <th scope="col">Libellé</th>
-          <th scope="col">Valeur</th>
-        </tr>
-      </thead>
-      {GROUPES.map((groupe) => (
-        <tbody key={groupe}>
-          <tr>
-            <th
-              colSpan={3}
-              className="bg-muted text-left text-text-dark font-semibold px-3 py-2"
-            >
-              {groupe}
-            </th>
-          </tr>
-          {indicateurs
-            .filter((indicateur) => indicateur.group === groupe)
-            .map((indicateur) => (
-              <tr key={indicateur.code} className="border-b border-border">
-                <td className="w-20 px-3 py-2 align-top text-text-light tabular-nums">
-                  {indicateur.code}
-                </td>
-                <td className="px-3 py-2 align-top">
-                  <span
-                    className={
-                      indicateur.note ? 'text-text-light' : 'text-text-dark'
-                    }
-                  >
-                    {indicateur.label}
-                  </span>
-                  {/* Le motif vit sous son libellé, pas dans la colonne des valeurs : à droite il
-                      s'étalait sur trois lignes et mettait de la prose là où l'œil cherche des
-                      nombres. */}
-                  {indicateur.note && (
-                    <span className="block text-xs text-text-light mt-0.5">
-                      {indicateur.note}
-                    </span>
-                  )}
-                </td>
-                <td className="w-24 px-3 py-2 align-top text-right">
-                  {indicateur.value === null ? (
-                    <span className="text-text-light">
-                      <span aria-hidden="true">—</span>
-                      <span className="sr-only">Sans valeur</span>
-                    </span>
-                  ) : (
-                    <span className="text-text-dark font-medium tabular-nums">
-                      {indicateur.value}
-                    </span>
-                  )}
-                </td>
-              </tr>
-            ))}
-        </tbody>
-      ))}
-    </table>
   )
 }

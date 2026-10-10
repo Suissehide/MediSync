@@ -60,6 +60,9 @@
   --color-segment-actif: var(--segment-actif);
   --color-surface-douce: var(--surface-douce);
   --color-carte: var(--carte);
+  --color-a-saisir: var(--a-saisir);
+  --color-a-saisir-fond: var(--a-saisir-fond);
+  --color-a-saisir-texte: var(--a-saisir-texte);
 }
 
 /* `@theme` ne prend pas de selecteur en Tailwind v4 : la forme `@theme .dark` etait invalide, et

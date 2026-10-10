@@ -10,6 +10,9 @@ const csv = arsCsv(
       label: "Nombre de patients ayant bénéficié d'un diagnostic éducatif",
       value: 7,
       note: null,
+      kind: 'computed',
+      input: null,
+      answer: null,
     },
     {
       code: '2.3',
@@ -17,6 +20,43 @@ const csv = arsCsv(
       label: 'Nombre de patients pris en charge en soins de ville uniquement',
       value: null,
       note: 'Aucune notion de soins de ville',
+      kind: 'unavailable',
+      input: null,
+      answer: null,
+    },
+    {
+      code: '2.5',
+      group: 'Séances',
+      label: 'Autre type de prise en charge à chiffrer et à expliquer',
+      value: null,
+      note: "Champ libre de l'enquête, à renseigner à la main",
+      kind: 'manual',
+      input: 'number+text',
+      answer: {
+        numberValue: 12,
+        textValue: 'Ateliers en ville',
+        boolValue: null,
+      },
+    },
+    {
+      code: '4.2',
+      group: 'Modalités',
+      label: 'Une offre de suivi est-elle proposée ?',
+      value: null,
+      note: 'Question oui/non sur la structure, à renseigner à la main',
+      kind: 'manual',
+      input: 'yesno',
+      answer: { numberValue: null, textValue: null, boolValue: true },
+    },
+    {
+      code: '4.3',
+      group: 'Modalités',
+      label: 'Question sans reponse',
+      value: null,
+      note: 'A renseigner',
+      kind: 'manual',
+      input: 'yesno',
+      answer: null,
     },
   ],
   '=Cardio',
@@ -39,6 +79,71 @@ describe('arsCsv', () => {
     )
     expect(csv).toContain(
       '2.3;Nombre de patients pris en charge en soins de ville uniquement;;Aucune notion de soins de ville\r\n',
+    )
+  })
+
+  it('reprend les reponses saisies a la main', () => {
+    expect(csv).toContain(
+      '2.5;Autre type de prise en charge à chiffrer et à expliquer;12;Ateliers en ville\r\n',
+    )
+    expect(csv).toContain('4.2;Une offre de suivi est-elle proposée ?;Oui;\r\n')
+    expect(csv).toContain('4.3;Question sans reponse;;A renseigner')
+  })
+
+  it('laisse la note vide pour un 2.5 saisi sans explication', () => {
+    const sansTexte = arsCsv(
+      [
+        {
+          code: '2.5',
+          group: 'Séances',
+          label: 'Autre',
+          value: null,
+          note: 'A renseigner',
+          kind: 'manual',
+          input: 'number+text',
+          answer: { numberValue: 3, textValue: null, boolValue: null },
+        },
+      ],
+      'Cardio',
+      '2026-01-01',
+      '2026-12-31',
+    )
+    expect(sansTexte).toContain('2.5;Autre;3;\r\n')
+  })
+
+  it('retombe sur la note quand la reponse enregistree est vide', () => {
+    const vide = arsCsv(
+      [
+        {
+          code: '2.5',
+          group: 'Séances',
+          label: 'Autre',
+          value: null,
+          note: "Champ libre de l'enquête, à renseigner à la main",
+          kind: 'manual',
+          input: 'number+text',
+          answer: { numberValue: null, textValue: null, boolValue: null },
+        },
+        {
+          code: '4.2',
+          group: 'Modalités',
+          label: 'Une offre de suivi est-elle proposée ?',
+          value: null,
+          note: 'Question oui/non sur la structure, à renseigner à la main',
+          kind: 'manual',
+          input: 'yesno',
+          answer: { numberValue: null, textValue: null, boolValue: null },
+        },
+      ],
+      'Cardio',
+      '2026-01-01',
+      '2026-12-31',
+    )
+    expect(vide).toContain(
+      "2.5;Autre;;Champ libre de l'enquête, à renseigner à la main\r\n",
+    )
+    expect(vide).toContain(
+      'Question oui/non sur la structure, à renseigner à la main',
     )
   })
 })

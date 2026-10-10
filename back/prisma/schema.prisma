@@ -767,6 +767,23 @@ model ForbiddenWeek {
   @@index([serviceId])
 }
 
+// Réponse saisie à un indicateur ARS non calculable (2.5, 4.2), par service et année civile.
+model ArsManualAnswer {
+  id              String   @id @default(cuid())
+  establishmentId String
+  serviceId       String
+  year            Int
+  code            String
+  numberValue     Int?
+  textValue       String?
+  boolValue       Boolean?
+  updatedById     String
+  updatedAt       DateTime @updatedAt
+
+  @@unique([serviceId, year, code])
+  @@index([serviceId])
+}
+
 model PlanningCycle {
   id              String   @id @default(cuid())
   establishmentId String

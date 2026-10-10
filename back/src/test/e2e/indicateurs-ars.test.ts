@@ -171,10 +171,26 @@ describe('indicateurs ARS', () => {
     expect(indicateur(res, '2.9').value).toBeGreaterThanOrEqual(1)
   })
 
-  it('rend les 30 indicateurs', async () => {
+  it('rend les 30 indicateurs, avec leur kind/input/answer et manualYear sur l annee civile', async () => {
     const res = await lire(serviceA)
     expect(res.statusCode).toBe(200)
-    expect(res.json().indicators).toHaveLength(30)
+    const body = res.json()
+    expect(body.indicators).toHaveLength(30)
+    expect(body.manualYear).toBe(2026)
+    const manuel25 = indicateur(res, '2.5') as unknown as {
+      kind: string
+      input: string | null
+      answer: unknown
+    }
+    expect(manuel25.kind).toBe('manual')
+    expect(manuel25.input).toBe('number+text')
+    expect(manuel25.answer).toBeNull()
+    const calcule11 = indicateur(res, '1.1') as unknown as {
+      kind: string
+      input: string | null
+    }
+    expect(calcule11.kind).toBe('computed')
+    expect(calcule11.input).toBeNull()
   })
 
   // Review Focus 3 : une période à l'envers est refusée, pas rendue vide en silence.
