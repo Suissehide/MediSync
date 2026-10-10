@@ -63,14 +63,17 @@ model ServiceFieldDefinition {
 }
 
 model ServiceFieldChoice {
-  id         String    @id @default(cuid())
-  fieldId    String
-  key        String    // figée : c'est elle que stocke data
-  label      String
-  order      Int
-  archivedAt DateTime?
+  id              String    @id @default(cuid())
+  fieldId         String
+  serviceId       String
+  establishmentId String
+  key             String    // figée : c'est elle que stocke data
+  label           String
+  order           Int
+  archivedAt      DateTime?
 
-  field ServiceFieldDefinition @relation(fields: [fieldId], references: [id])
+  field   ServiceFieldDefinition @relation(fields: [fieldId], references: [id])
+  service Service                @relation(fields: [serviceId, establishmentId], references: [id, establishmentId])
 
   @@unique([fieldId, key])
   @@index([fieldId])
@@ -80,7 +83,12 @@ model ServiceFieldChoice {
 - `ServiceFieldDefinition` suit le patron des modèles de service (`establishmentId`,
   `@@unique([id, serviceId])`, relation composite vers `Service`) et se déclare au garde-fou
   multi-tenant comme les autres.
+- **Écart** : `ServiceFieldChoice` porte aussi `serviceId` et `establishmentId` : le garde-fou
+  d'ORM classe tout modèle comme modèle de service ou modèle global, et un choix n'est pas global.
 - `PatientServiceFile` gagne `data Json @default("{}")` et perd les dix colonnes migrées.
+- **Écart** : une seconde colonne `clinicalData Json @default("{}")` reçoit les valeurs des
+  champs cliniques, pour que le filtrage clinique retire une clé par son nom, à toute profondeur,
+  sans requête.
 - **Archivage, jamais de suppression**, pour les champs comme pour les choix, comme les
   référentiels. Une valeur archivée reste lisible sur les anciens dossiers et ne peut plus être
   choisie.
@@ -88,6 +96,8 @@ model ServiceFieldChoice {
   référencent, et l'archivage se fait choix par choix.
 - `key` et `type` sont figés après création : changer de type invaliderait les valeurs saisies.
   On crée un nouveau champ et on archive l'ancien.
+- **Écart** : `clinical` est figé après création comme `key` et `type` : changer ce drapeau
+  obligerait à déplacer les valeurs d'une colonne à l'autre.
 
 Forme de `data` :
 
@@ -158,7 +168,8 @@ Code existant adapté dans ce chantier :
 - La clé est générée depuis le libellé à la création (`HbA1c` → `hba1c`, suffixe numérique en
   cas de collision avec une clé existante, archivée comprise) ; le coordinateur ne la voit pas.
   Même règle pour la clé d'un choix.
-- `PATCH` refuse toute modification de `key` ou `type` (400).
+- `PATCH` refuse toute modification de `key` ou `type` (400). **Écart** : `PATCH` refuse aussi
+  toute modification de `clinical`.
 - `GET` renvoie les champs actifs **et** archivés avec tous leurs choix : la liste et l'export
   ont besoin des libellés archivés pour afficher les anciennes valeurs.
 
@@ -180,8 +191,9 @@ Code existant adapté dans ce chantier :
   liste des patients, export).
 - Sans `clinical:write` : ces clés sont retirées du corps avant écriture, comme
   `stripClinicalInput` le fait aujourd'hui.
-- `CLINICAL_FIELDS` perd `medicalDiagnosis` (qui n'est plus une colonne) ; le filtrage de `data`
-  s'appuie sur les définitions du service.
+- `CLINICAL_FIELDS` perd `medicalDiagnosis` (qui n'est plus une colonne). **Écart** :
+  `CLINICAL_FIELDS` gagne `clinicalData` à la place, et le filtrage ne s'appuie plus sur les
+  définitions du service.
 
 ## 6. Front
 
@@ -195,10 +207,17 @@ possible ou non, filtre, format d'export.
 | `text` | `field.Input` | colonne, pas de filtre |
 | `longtext` | `field.TextArea` | ni colonne ni filtre |
 | `number` | `field.Number` + unité | colonne triable, pas de filtre |
-| `date` | `field.DatePicker` | colonne, filtre par plage |
+| `date` | `field.DatePicker` | colonne, pas de filtre |
 | `choice` | `field.Select` | étiquettes colorées, filtre par valeurs |
 | `multichoice` | `field.MultiSelect` | étiquettes, filtre « contient l'une des valeurs » |
-| `boolean` | `field.Toggle` | Oui/Non, filtre Oui/Non |
+| `boolean` | `field.Select` Oui/Non effaçable | Oui/Non, filtre Oui/Non |
+
+- **Écart** : `boolean` se saisit par une liste Oui / Non effaçable, pas par un interrupteur, qui
+  ne sait pas dire « non renseigné » et confondrait « non » avec « non renseigné ».
+- **Écart** : pas de filtre par plage de dates dans ce chantier, comme la colonne « Date de
+  sortie » existante n'en a pas non plus.
+- **Écart** : `STOP_REASON` reste dans `patient.constant.ts` jusqu'au chantier 2, l'écran
+  d'activité s'en servant pour libeller les motifs d'abandon.
 
 ### Fiche patient (`edit.patient.tsx`)
 
