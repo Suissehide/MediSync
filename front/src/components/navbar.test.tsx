@@ -493,3 +493,33 @@ describe('onglets de la barre de navigation', () => {
     ).not.toBeInTheDocument()
   })
 })
+
+// Le logo ramene au tableau de bord du service courant, ou du dernier visite ; sans aucun
+// service accessible, il reste un titre et non un lien casse.
+describe('logo de la barre de navigation', () => {
+  afterEach(() => {
+    useAuthStore.setState({ isAuthenticated: false, user: null, context: null })
+  })
+
+  it('mene au tableau de bord du service courant', async () => {
+    monterNavbar('/e/e1/s/s1/dashboard')
+
+    await waitFor(() => {
+      expect(screen.getByTitle('Tableau de bord')).toHaveAttribute(
+        'href',
+        '/e/e1/s/s1/dashboard',
+      )
+    })
+  })
+
+  it('n est pas un lien pour un compte sans aucun service', async () => {
+    monterNavbar('/e/e1/admin/members', avecRoles('ADMIN', null))
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(
+        'MediSync',
+      )
+    })
+    expect(screen.queryByTitle('Tableau de bord')).not.toBeInTheDocument()
+  })
+})

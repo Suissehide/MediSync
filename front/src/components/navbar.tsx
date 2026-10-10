@@ -11,6 +11,7 @@ import {
   useCurrentScale,
 } from '../navigation/navigation.ts'
 import { useAuthStore } from '../store/useAuthStore.ts'
+import { serviceDeRetour } from '../utils/tenant-context.ts'
 import { FilAriane } from './custom/filAriane.tsx'
 import TodoSheet from './custom/todo/todoSheet.tsx'
 import { Button } from './ui/button.tsx'
@@ -242,12 +243,33 @@ function Navbar({ toggleSidebar }: NavbarProps) {
     nomDuService,
   } = useOnglets()
 
+  // Le logo ramene au tableau de bord : celui du service courant, sinon du dernier visite.
+  const retour = courant?.scale === 'service' ? courant : serviceDeRetour(user)
+  const logo = (
+    <>
+      <span className="text-primary">Medi</span>Sync
+    </>
+  )
+
   return (
     <div className="fixed top-0 left-0 right-0 z-50 px-4 h-16 flex justify-between items-center bg-foreground text-text border-b border-border-sidebar">
       <div className="flex items-center gap-4 min-w-0">
         <div className="flex items-center gap-2 shrink-0">
           <h2 className="px-2 text-2xl md:text-3xl font-bold">
-            <span className="text-primary">Medi</span>Sync
+            {retour?.serviceId ? (
+              <Link
+                to="/e/$establishmentId/s/$serviceId/dashboard"
+                params={{
+                  establishmentId: retour.establishmentId,
+                  serviceId: retour.serviceId,
+                }}
+                title="Tableau de bord"
+              >
+                {logo}
+              </Link>
+            ) : (
+              logo
+            )}
           </h2>
           <Button
             variant="none"
