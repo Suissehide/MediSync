@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/popup.tsx'
 import { Select } from '@/components/ui/select.tsx'
 import { useAppForm } from '@/hooks/formConfig.tsx'
+import { isApiError } from '@/libs/httpErrorHandler.ts'
 import {
   useIndicatorPreviewQuery,
   useIndicatorSetMutations,
@@ -93,16 +94,18 @@ function Apercu({
   setId: string
   definition: IndicatorDefinition
 }) {
-  const { data, isError, isFetching } = useIndicatorPreviewQuery(
+  const { data, error, isFetching } = useIndicatorPreviewQuery(
     setId,
     definition,
     `${ANNEE}-01-01`,
     `${ANNEE}-12-31`,
   )
-  if (isError) {
+  if (error) {
     return (
       <p className="text-sm text-text-light" aria-live="polite">
-        Configuration incomplète
+        {isApiError(error) && error.status === 400
+          ? 'Configuration incomplète'
+          : 'Aperçu indisponible'}
       </p>
     )
   }
@@ -197,10 +200,20 @@ function IndicatorForm({
   }, [open, defaultValues, form])
 
   const groupes = [...new Set(indicators.map((i) => i.group))]
+  // Ni lui-même ni ses descendants : le back refuserait le cycle.
+  const exclus = new Set(indicator ? [indicator.id] : [])
+  for (let ajout = true; ajout; ) {
+    ajout = false
+    for (const i of indicators) {
+      if (i.parentId && exclus.has(i.parentId) && !exclus.has(i.id)) {
+        exclus.add(i.id)
+        ajout = true
+      }
+    }
+  }
   const parents = indicators
-    .filter((i) => !i.archived && i.id !== indicator?.id)
+    .filter((i) => !i.archived && !exclus.has(i.id))
     .map((i) => ({ value: i.id, label: `${i.code} · ${i.label}` }))
-  const champsAChoix = fields.filter((f) => estChampAChoix(f) && !f.archived)
   const requis = (nom: string) => ({
     onSubmit: ({ value }: { value: string }) =>
       value.trim() ? undefined : `${nom} est nécessaire`,
@@ -378,10 +391,17 @@ function IndicatorForm({
                             {(f) => (
                               <f.Select
                                 label="Répartition (facultative)"
-                                options={champsAChoix.map((c) => ({
-                                  value: c.key,
-                                  label: c.label,
-                                }))}
+                                options={fields
+                                  .filter(
+                                    (c) =>
+                                      estChampAChoix(c) &&
+                                      (!c.archived ||
+                                        c.key === values.breakdownField),
+                                  )
+                                  .map((c) => ({
+                                    value: c.key,
+                                    label: c.label,
+                                  }))}
                                 placeholder="Aucune"
                               />
                             )}

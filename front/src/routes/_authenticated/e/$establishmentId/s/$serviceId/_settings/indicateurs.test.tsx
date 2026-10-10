@@ -119,6 +119,7 @@ const fields: ServiceField[] = [
     ['fin', 'Fin de parcours'],
     ['abandon', 'Abandon'],
   ]),
+  champ('ancien', 'Ancienne orientation', 'choice', [['x', 'X']], true),
 ]
 
 const catalog: MeasureCatalogEntry[] = [
@@ -195,9 +196,10 @@ const grille: IndicatorSet = {
       options: {},
       filters: [{ field: 'orientation', op: 'in', value: ['ext'] }],
     }),
-    indicateur('i2', 1, { nature: 'manual', input: 'yesno' }),
+    indicateur('i2', 1, { nature: 'manual', input: 'yesno', parentId: 'i1' }),
     indicateur('i3', 2, {
       group: 'Résultats',
+      parentId: 'i2',
       nature: 'unavailable',
       note: 'Non suivi',
     }),
@@ -517,6 +519,22 @@ describe('liste des jeux', () => {
 })
 
 describe('un jeu', () => {
+  it('restaure un indicateur supprimé d un jeu actif', async () => {
+    const fetchMock = monter([
+      ...lecture(),
+      route('PATCH', '/indicator-sets/j1/indicators/i4', () => ok({})),
+    ])
+    await ligneDuJeu('Grille ARS')
+    await userEvent.click(screen.getByLabelText('Supprimés'))
+    const ligne = await ligneIndicateur('Ancien indicateur')
+    await userEvent.click(ligne.getByRole('button', { name: /^restaurer$/i }))
+    await waitFor(() =>
+      expect(
+        appels(fetchMock, 'PATCH', '/indicator-sets/j1/indicators/i4'),
+      ).toEqual([{ archived: false }]),
+    )
+  })
+
   it('range les indicateurs par groupe avec un resume lisible', async () => {
     monter(lecture())
     expect(
@@ -566,6 +584,44 @@ describe('un jeu', () => {
 })
 
 describe('popup d un indicateur', () => {
+  it('le parent exclut l indicateur et ses descendants', async () => {
+    monter(lecture())
+    const ligne = await ligneIndicateur('Libellé i2')
+    await userEvent.click(ligne.getByRole('button', { name: /^modifier$/i }))
+    await userEvent.click(await screen.findByLabelText(/Parent/))
+    const options = (await screen.findAllByRole('option')).map(
+      (o) => o.textContent,
+    )
+    expect(options).toEqual(['I1 · Entrées hors hôpital'])
+  })
+
+  it('la répartition garde son champ même supprimé', async () => {
+    monter([
+      ...lecture([
+        {
+          ...grille,
+          indicators: [
+            indicateur('i9', 0, {
+              measure: 'patientsEntres',
+              options: {},
+              breakdownField: 'ancien',
+            }),
+          ],
+        },
+      ]),
+      route('POST', '/indicator-sets/j1/preview', () =>
+        ok({ value: 1, breakdown: null, warnings: [] }),
+      ),
+    ])
+    const ligne = await ligneIndicateur('Libellé i9')
+    await userEvent.click(ligne.getByRole('button', { name: /^modifier$/i }))
+    await userEvent.click(await screen.findByLabelText(/Répartition/))
+    const options = (await screen.findAllByRole('option')).map(
+      (o) => o.textContent,
+    )
+    expect(options).toContain('Ancienne orientation')
+  })
+
   it('calcule : mesure avec description, options du catalogue selon leur type', async () => {
     monter(lecture())
     await ouvrirAjout()
@@ -779,6 +835,26 @@ describe('aperçu', () => {
       }),
     ).toBeInTheDocument()
     expect(useToastStore.getState().toasts).toEqual([])
+  })
+})
+
+describe('aperçu indisponible', () => {
+  it('une erreur autre que 400 ne se lit pas comme une configuration incomplète', async () => {
+    monter([
+      ...lecture(),
+      route('POST', '/indicator-sets/j1/preview', () => ({
+        ok: false,
+        status: 500,
+        json: async () => ({}),
+      })),
+    ])
+    await ouvrirAjout()
+    expect(
+      await screen.findByText('Aperçu indisponible', undefined, {
+        timeout: 2000,
+      }),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('Configuration incomplète')).toBeNull()
   })
 })
 

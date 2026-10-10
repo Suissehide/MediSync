@@ -306,8 +306,10 @@ function IndicateursSettings() {
     useIndicatorSetMutations()
 
   const actifs = sets.filter((s) => !s.archived)
-  const visibles = sets.filter((s) => s.archived === showArchived)
-  const jeu = visibles.find((s) => s.id === choisiId) ?? visibles[0] ?? null
+  // « Supprimés » ajoute les jeux supprimés à la liste ; les jeux actifs restent choisissables.
+  const visibles = showArchived ? sets : actifs
+  const jeu =
+    visibles.find((s) => s.id === choisiId) ?? actifs[0] ?? visibles[0] ?? null
 
   const deplacerJeu = (id: string, sens: -1 | 1) => {
     const voisin = actifs[actifs.findIndex((s) => s.id === id) + sens]
@@ -344,22 +346,18 @@ function IndicateursSettings() {
             <h2 className="text-base font-semibold text-text-dark">
               Jeux d'indicateurs
             </h2>
-            {!showArchived && (
-              <NomJeuForm
-                trigger={
-                  <Button variant="default">
-                    <Plus className="w-4 h-4" />
-                    Nouveau jeu
-                  </Button>
-                }
-              />
-            )}
+            <NomJeuForm
+              trigger={
+                <Button variant="default">
+                  <Plus className="w-4 h-4" />
+                  Nouveau jeu
+                </Button>
+              }
+            />
           </div>
           <ul className="flex flex-col gap-2">
             {visibles.length === 0 && (
-              <li className="text-sm text-text-light">
-                {showArchived ? 'Aucun jeu supprimé' : 'Aucun jeu'}
-              </li>
+              <li className="text-sm text-text-light">Aucun jeu</li>
             )}
             {visibles.map((s) => {
               const index = actifs.findIndex((a) => a.id === s.id)
@@ -512,7 +510,7 @@ function JeuDetail({
   onDelete: (i: Indicator) => void
 }) {
   const actifs = jeu.indicators.filter((i) => !i.archived)
-  const visibles = jeu.indicators.filter((i) => i.archived === showArchived)
+  const visibles = showArchived ? jeu.indicators : actifs
   const groupes = [...new Set(visibles.map((i) => i.group))]
 
   const deplacer = (i: Indicator, sens: -1 | 1) => {
@@ -533,7 +531,7 @@ function JeuDetail({
     <section className="flex flex-col gap-3">
       <div className="flex justify-between items-center">
         <h2 className="text-base font-semibold text-text-dark">{jeu.name}</h2>
-        {!showArchived && !jeu.archived && (
+        {!jeu.archived && (
           <IndicatorForm
             setId={jeu.id}
             indicators={jeu.indicators}
@@ -543,9 +541,7 @@ function JeuDetail({
         )}
       </div>
       {groupes.length === 0 && (
-        <p className="text-sm text-text-light">
-          {showArchived ? 'Aucun indicateur supprimé' : 'Aucun indicateur'}
-        </p>
+        <p className="text-sm text-text-light">Aucun indicateur</p>
       )}
       {groupes.map((groupe) => {
         const actifsDuGroupe = actifs.filter((a) => a.group === groupe)
