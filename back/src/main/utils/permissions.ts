@@ -60,6 +60,8 @@ export type ServicePermission =
   // Indicateurs de l'enquete annuelle ARS du service courant, en chiffres agreges et sans donnee
   // nominative (MDS-26). Non accordee a LECTURE : la direction lit `activity:read`.
   | 'stats:read'
+  // Saisir les indicateurs ARS a renseigner a la main (2.5, 4.2) du service courant.
+  | 'stats:write'
   // Tableau de bord d'activite du service courant, en chiffres agreges (MDS-40). Accordee a
   // LECTURE : c'est l'ecran de la direction.
   | 'activity:read'
@@ -109,6 +111,7 @@ export const SERVICE_PERMISSIONS: Record<
     'service-members:manage',
     'service-journal:read',
     'stats:read',
+    'stats:write',
     'activity:read',
   ],
   INTERVENANT: [
