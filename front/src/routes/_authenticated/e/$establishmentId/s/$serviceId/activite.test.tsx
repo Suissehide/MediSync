@@ -148,6 +148,34 @@ const rapport: ActivityReport = {
   hoursBySoignant: [{ soignant: 'IDE', hours: 120.5 }],
 }
 
+const calme: ActivityReport = {
+  ...rapport,
+  patients: { active: 0, newlyIncluded: 0, exited: 0 },
+  monthly: [],
+  completion: {
+    completed: 0,
+    exited: 0,
+    rate: null,
+    dropouts: 0,
+    dropoutReasons: [],
+  },
+  absences: {
+    overall: { absent: 0, pointed: 0, rate: null },
+    worst: null,
+    weekdays: [],
+    byWeekday: Array.from({ length: 7 }, () => vide),
+    byThematic: [],
+    byPathway: [],
+  },
+  sessions: {
+    individual: 0,
+    collective: 0,
+    educationalDiagnoses: 0,
+    finalReviews: 0,
+  },
+  hoursBySoignant: [],
+}
+
 const monter = (
   reponse: { ok: boolean; status: number; corps?: unknown },
   user: User = coordinateur,
@@ -243,36 +271,25 @@ describe('ecran d activite', () => {
   })
 
   it('invite a changer de periode quand rien ne s est passe', async () => {
-    const calme = {
-      ...rapport,
-      patients: { active: 0, newlyIncluded: 0, exited: 0 },
-      monthly: [],
-      completion: {
-        completed: 0,
-        exited: 0,
-        rate: null,
-        dropouts: 0,
-        dropoutReasons: [],
-      },
-      absences: {
-        overall: { absent: 0, pointed: 0, rate: null },
-        worst: null,
-        weekdays: [],
-        byWeekday: Array.from({ length: 7 }, () => vide),
-        byThematic: [],
-        byPathway: [],
-      },
-      sessions: {
-        individual: 0,
-        collective: 0,
-        educationalDiagnoses: 0,
-        finalReviews: 0,
-      },
-      hoursBySoignant: [],
-    }
     monter({ ok: true, status: 200, corps: calme })
     expect(
-      await screen.findByText(/Aucune activité sur cette période/),
+      await screen.findByText(
+        'Aucune activité sur cette période. Choisissez une autre année ou élargissez la plage.',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('invite a changer de parcours quand le filtre explique l absence de resultat', async () => {
+    monter({ ok: true, status: 200, corps: calme })
+    await screen.findByText(/Aucune activité sur cette période\./)
+    await userEvent.click(screen.getByLabelText('Parcours'))
+    await userEvent.click(
+      await screen.findByRole('option', { name: 'Insuffisance cardiaque' }),
+    )
+    expect(
+      await screen.findByText(
+        'Aucune activité sur cette période pour ce parcours. Choisissez une autre période ou « Tous les parcours ».',
+      ),
     ).toBeInTheDocument()
   })
 
@@ -306,6 +323,67 @@ describe('ecran d activite', () => {
     expect(within(carte).getByText('21 terminés')).toBeInTheDocument()
     expect(within(carte).getByText('11 abandons')).toBeInTheDocument()
     expect(within(carte).getByText('10 autres sortis')).toBeInTheDocument()
+  })
+
+  it('accorde les trois bascules de sortie au singulier', async () => {
+    monter({
+      ok: true,
+      status: 200,
+      corps: {
+        ...rapport,
+        completion: {
+          ...rapport.completion,
+          completed: 1,
+          dropouts: 1,
+          exited: 3,
+        },
+      },
+    })
+    const carte = (await screen.findByText('Combien ont terminé')).closest(
+      'section',
+    ) as HTMLElement
+    expect(within(carte).getByText('1 terminé')).toBeInTheDocument()
+    expect(within(carte).getByText('1 abandon')).toBeInTheDocument()
+    expect(within(carte).getByText('1 autre sorti')).toBeInTheDocument()
+  })
+
+  it('ne fait fuiter aucune donnee nominative, y compris dans les attributs title', async () => {
+    const NOM_PATIENT_1 = 'Isabelle Rocher'
+    const NOM_PATIENT_2 = 'Thierry Lefebvre'
+    const utilisateur: User = {
+      ...coordinateur,
+      firstName: 'Isabelle',
+      lastName: 'Rocher',
+    }
+    monter(
+      {
+        ok: true,
+        status: 200,
+        corps: {
+          ...rapport,
+          absences: {
+            ...rapport.absences,
+            byPathway: [
+              {
+                pathway: 'Insuffisance cardiaque',
+                cell: { absent: 2, pointed: 20, rate: 0.1 },
+              },
+            ],
+          },
+        },
+      },
+      utilisateur,
+    )
+    await screen.findByText('148')
+    const page = screen.getByRole('main')
+    for (const el of page.querySelectorAll('[title],[aria-label]')) {
+      expect(el.getAttribute('title') ?? '').not.toContain(NOM_PATIENT_1)
+      expect(el.getAttribute('title') ?? '').not.toContain(NOM_PATIENT_2)
+      expect(el.getAttribute('aria-label') ?? '').not.toContain(NOM_PATIENT_1)
+      expect(el.getAttribute('aria-label') ?? '').not.toContain(NOM_PATIENT_2)
+    }
+    expect(page.textContent).not.toContain(NOM_PATIENT_1)
+    expect(page.textContent).not.toContain(NOM_PATIENT_2)
   })
 
   it('ne compte jamais d autres sortis negatifs', async () => {
@@ -481,7 +559,10 @@ describe('ecran d activite', () => {
           completion: { ...carte.completion, dropouts: 1 },
         },
       })
-      expect(await screen.findByText('1 abandon')).toBeInTheDocument()
+      const motifs = (await screen.findByText("Motifs d'arrêt")).closest(
+        'section',
+      ) as HTMLElement
+      expect(within(motifs).getByText('1 abandon')).toBeInTheDocument()
     })
 
     it('replie les thematiques a faible volume', async () => {
