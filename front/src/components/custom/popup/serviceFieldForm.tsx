@@ -16,7 +16,6 @@ import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { useServiceFieldMutations } from '../../../queries/useServiceField.ts'
 import type {
   ServiceField,
-  ServiceFieldSection,
   ServiceFieldType,
 } from '../../../types/serviceField.ts'
 import { Button } from '../../ui/button.tsx'
@@ -41,12 +40,16 @@ const TYPE_OPTIONS = Object.entries(SERVICE_FIELD_TYPE_LABELS).map(
 const CHOICE_TYPES: ServiceFieldType[] = ['choice', 'multichoice']
 
 interface ServiceFieldFormProps {
-  section: ServiceFieldSection
+  categoryId: string
   field?: ServiceField
   trigger?: React.ReactNode
 }
 
-function ServiceFieldForm({ section, field, trigger }: ServiceFieldFormProps) {
+function ServiceFieldForm({
+  categoryId,
+  field,
+  trigger,
+}: ServiceFieldFormProps) {
   const [open, setOpen] = useState(false)
   const [newChoiceLabel, setNewChoiceLabel] = useState('')
   const { create, update, createChoice, updateChoice, reorderChoices } =
@@ -82,7 +85,7 @@ function ServiceFieldForm({ section, field, trigger }: ServiceFieldFormProps) {
         create.mutate({
           label: value.label,
           type: value.type,
-          section,
+          categoryId,
           clinical: value.clinical,
           ...(value.type === 'number' && value.unit
             ? { unit: value.unit }

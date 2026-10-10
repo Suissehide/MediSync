@@ -213,6 +213,10 @@ export const SERVICE_FIELD = {
   UPDATE_CHOICE: 'update_service_field_choice',
   REORDER: 'reorder_service_fields',
   REORDER_CHOICES: 'reorder_service_field_choices',
+  GET_CATEGORIES: 'get_all_service_field_categories',
+  CREATE_CATEGORY: 'create_service_field_category',
+  UPDATE_CATEGORY: 'update_service_field_category',
+  REORDER_CATEGORIES: 'reorder_service_field_categories',
 }
 
 // Journal des consultations d'un dossier patient. Clé sans le tenant, comme

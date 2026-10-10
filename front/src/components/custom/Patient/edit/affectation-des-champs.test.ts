@@ -52,7 +52,7 @@ const TECHNICAL_COLUMNS = new Set([
   'createdAt',
 ])
 
-// Colonnes JSON des champs configurables, rendues par `ServiceFieldsSection`, pas par un nom fixe.
+// Colonnes JSON des champs configurables, rendues par `CategoryFields`, pas par un nom fixe.
 const CONFIGURABLE_COLUMNS = new Set(['data', 'clinicalData'])
 
 const scalarFieldsOf = (modelName: string): Set<string> => {
@@ -64,7 +64,7 @@ const scalarFieldsOf = (modelName: string): Set<string> => {
   return new Set(fields)
 }
 
-// Les cinq composants qui affichent les champs de `Patient`/`PatientServiceFile`
+// Les quatre composants qui affichent les champs de `Patient`/`PatientServiceFile`
 // (`edit.patient.tsx` les monte tous). Un champ statiquement déclaré ici comme
 // `form.AppField name="..."` engage le composant qui le déclare : c'est le patron que le
 // développeur du tour précédent aurait dû suivre pour bouger « Profession », et que ce test tient
@@ -79,11 +79,7 @@ const editDir = join(
 )
 
 const PATIENT_FILES = ['identity.patient.tsx', 'identite.patient.tsx']
-const SERVICE_FILE_FILES = [
-  'details.patient.tsx',
-  'pathway-inclusion.patient.tsx',
-  'outcome-review.patient.tsx',
-]
+const SERVICE_FILE_FILES = ['details.patient.tsx', 'categoryFields.patient.tsx']
 
 const fieldNamePattern = /form\.AppField\s+name="([a-zA-Z0-9]+)"/g
 
@@ -108,14 +104,16 @@ describe('Affectation des champs Patient / PatientServiceFile — prisma/schema.
     expect(serviceFileColumns.size).toBe(6)
   })
 
-  it('les deux onglets du service rendent les champs configurables de leur section', () => {
-    for (const [fileName, section] of [
-      ['pathway-inclusion.patient.tsx', 'pathway'],
-      ['outcome-review.patient.tsx', 'outcome'],
-    ]) {
-      const source = readFileSync(join(editDir, fileName), 'utf8')
+  it('chaque date fixe ne s’affiche que dans la catégorie qui la porte', () => {
+    const source = readFileSync(
+      join(editDir, 'categoryFields.patient.tsx'),
+      'utf8',
+    )
+    for (const date of ['entryDate', 'exitDate']) {
       expect(source).toMatch(
-        new RegExp(`<ServiceFieldsSection[^>]*section="${section}"`),
+        new RegExp(
+          `category\\.dateField === '${date}' && \\(\\s*<form\\.AppField name="${date}"`,
+        ),
       )
     }
   })
@@ -157,7 +155,7 @@ describe('Affectation des champs Patient / PatientServiceFile — prisma/schema.
     }
   })
 
-  it('chaque colonne de PatientServiceFile est déclarée par exactement un des trois fichiers « sous-dossier »', () => {
+  it('chaque colonne de PatientServiceFile est déclarée par exactement un des deux fichiers « sous-dossier »', () => {
     const declaredByFile = new Map(
       SERVICE_FILE_FILES.map((f) => [f, fieldsDeclaredIn(f)]),
     )
@@ -172,7 +170,7 @@ describe('Affectation des champs Patient / PatientServiceFile — prisma/schema.
     }
   })
 
-  it("aucun champ n'a disparu ni n'est apparu : l'union des cinq fichiers vaut exactement Patient ∪ PatientServiceFile", () => {
+  it("aucun champ n'a disparu ni n'est apparu : l'union des quatre fichiers vaut exactement Patient ∪ PatientServiceFile", () => {
     const declared = [...PATIENT_FILES, ...SERVICE_FILE_FILES].flatMap(
       fieldsDeclaredIn,
     )

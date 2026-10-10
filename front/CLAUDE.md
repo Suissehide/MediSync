@@ -113,7 +113,7 @@ Some Zustand stores use `zustand/middleware`'s `persist` with a storage backend 
 `PatientServiceFile` (the sixteen care-pathway/clinical columns, one row per `(patientId, serviceId)`) are two
 separate reads/writes on the front, mirroring the back split (`back/CLAUDE.md`). `components/custom/Patient/edit/`
 renders them as two visibly separate, explicitly labelled blocks in the same screen — never merge them into one
-form or one payload; `identite.patient.tsx` (shared identity) and `details.patient.tsx`/`pathway-inclusion.patient.tsx`
+form or one payload; `identite.patient.tsx` (shared identity) and `details.patient.tsx`/`categoryFields.patient.tsx`
 (this service's sub-record) each bind to their own form (`form.patient.ts`: `patientFormOpts` vs
 `patientServiceFileFormOpts`). The sub-record is read lazily by its own request and the screen doesn't mount its
 fields until that read resolves (`serviceFileReady` in `edit.patient.tsx`). The save only sends the fields actually
@@ -285,10 +285,10 @@ Fragment rather than the real element (React: "Invalid prop `className` supplied
 
 ## Configurable patient-file fields (fiche configurable)
 
-- The *Parcours & Inclusion* and *Sortie & Bilan* fields are configurable server-side (`ServiceFieldDefinition`); the front has no hardcoded dictionary for them.
+- The patient file's fields are configurable server-side (`ServiceFieldDefinition`), grouped in per-service categories (`GET /service-field-categories`); one tab per active category with a date or a visible field (`CategoryFields`), the two date categories carry `entryDate`/`exitDate`. The front has no hardcoded dictionary for them.
 - Their values live in `PatientServiceFile.data`/`clinicalData` and are read/written through `fieldValue`/`toPatchValue` (`constants/serviceFieldTypes.tsx`), never a direct property access.
 - A new field type needs an entry in `front/src/constants/serviceFieldTypes.tsx` matching the one in `back/src/main/utils/service-field-types.ts` — one without the other breaks the pair.
-- The patient list (`routes/.../patient/index.tsx`) mounts `ReactTable` only once the service fields have loaded — columns/filters persistence depends on the fields being known at mount, not patched in afterwards.
+- The patient list (`routes/.../patient/index.tsx`) mounts `ReactTable` only once the service fields and categories have loaded — columns/filters persistence depends on the fields being known at mount, not patched in afterwards.
 
 ## Testing
 

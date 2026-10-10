@@ -10,7 +10,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import { useToastStore } from '@/store/useToastStore.ts'
 import type { Patient } from '@/types/patient.ts'
-import type { ServiceField } from '@/types/serviceField.ts'
+import type {
+  ServiceField,
+  ServiceFieldCategory,
+} from '@/types/serviceField.ts'
 import EditPatient from './edit.patient.tsx'
 
 // `main.tsx` enregistre ce greffon au démarrage de l'application ; les champs `DatePicker` du
@@ -56,14 +59,44 @@ type Route = {
   ) => { ok: boolean; status: number; json: () => Promise<unknown> }
 }
 
-// Les définitions de champs (`/service-fields`) passent avant les routes du test, dont les
+const category = (
+  over: Partial<ServiceFieldCategory> & { id: string; label: string },
+): ServiceFieldCategory => ({
+  order: 0,
+  dateField: null,
+  archived: false,
+  ...over,
+})
+
+const defaultCategories: ServiceFieldCategory[] = [
+  category({
+    id: 'cat-parcours',
+    label: 'Parcours & Inclusion',
+    dateField: 'entryDate',
+  }),
+  category({
+    id: 'cat-sortie',
+    label: 'Sortie & Bilan',
+    order: 1,
+    dateField: 'exitDate',
+  }),
+]
+
+// Les définitions de champs et de catégories passent avant les routes du test, dont les
 // motifs `/service-file` les captureraient aussi.
-const buildFetchMock = (routes: Route[], fields: ServiceField[] = []) =>
+const buildFetchMock = (
+  routes: Route[],
+  fields: ServiceField[] = [],
+  categories: ServiceFieldCategory[] = defaultCategories,
+) =>
   vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = input.toString()
     const method = init?.method ?? 'GET'
     if (url.endsWith('/service-fields') && method === 'GET') {
       return { ok: true, status: 200, json: async () => fields, url }
+    }
+    if (url.endsWith('/service-field-categories') && method === 'GET') {
+      return { ok: true, status: 200, json: async () => categories, url }
     }
     const route = routes.find((r) => r.match(url, method))
     if (!route) {
@@ -916,7 +949,7 @@ describe('EditPatient — la barre « Modifications non sauvegardées »', () =>
 // Décision 2.3 de la spec : chaque écran qui affiche des champs
 // de `Patient` ou de `PatientServiceFile` doit dire à quelle portée ils appartiennent — pas
 // seulement l'onglet « Profil & Contexte ».
-describe('EditPatient — la portée est nommée sur les trois onglets qui en manquaient', () => {
+describe('EditPatient — la portée est nommée sur chaque onglet', () => {
   it('« Informations générales » et « Contact » disent qu’ils sont partagés entre les services', async () => {
     vi.stubGlobal(
       'fetch',
@@ -941,7 +974,7 @@ describe('EditPatient — la portée est nommée sur les trois onglets qui en ma
     ).toBeInTheDocument()
   })
 
-  it('« Parcours et inclusion » et « Sortie et bilan » disent qu’ils sont propres au service', async () => {
+  it('chaque onglet de catégorie dit qu’il est propre au service', async () => {
     vi.stubGlobal(
       'fetch',
       buildFetchMock([
@@ -961,11 +994,11 @@ describe('EditPatient — la portée est nommée sur les trois onglets qui en ma
 
     expect(
       await screen.findByText(
-        /Parcours et inclusion — dossier de ce service, non visible/,
+        /Parcours & Inclusion — dossier de ce service, non visible/,
       ),
     ).toBeInTheDocument()
     expect(
-      screen.getByText(/Sortie et bilan — dossier de ce service, non visible/),
+      screen.getByText(/Sortie & Bilan — dossier de ce service, non visible/),
     ).toBeInTheDocument()
   })
 })
@@ -1037,11 +1070,15 @@ describe('EditPatient — le signal de suivi ailleurs (IdentiteFields)', () => {
 
     expect(await screen.findByText(MENTION_TEXT)).toBeInTheDocument()
 
-    // Aucun appel supplémentaire déclenché par la mention : seules les lectures du sous-dossier
-    // et des définitions de champs, déjà nécessaires sans le signal.
-    expect(fetchMock.mock.calls).toHaveLength(2)
-    expect(fetchMock.mock.calls[0][0].toString()).toMatch(/\/service-file$/)
-    expect(fetchMock.mock.calls[1][0].toString()).toMatch(/\/service-fields$/)
+    // Aucun appel supplémentaire déclenché par la mention : seules les lectures du sous-dossier,
+    // des champs et des catégories, déjà nécessaires sans le signal.
+    const urls = fetchMock.mock.calls.map(([url]) => url.toString())
+    expect(urls).toHaveLength(3)
+    expect(urls[0]).toMatch(/\/service-file$/)
+    expect(urls.slice(1).sort()).toEqual([
+      expect.stringMatching(/\/service-field-categories$/),
+      expect.stringMatching(/\/service-fields$/),
+    ])
   })
 
   it('n’affiche rien quand followedElsewhere est présent et faux (« ce service est le seul »)', async () => {
@@ -1062,7 +1099,7 @@ describe('EditPatient — le signal de suivi ailleurs (IdentiteFields)', () => {
       await screen.findByLabelText("Distance d'habitation"),
     ).toBeInTheDocument()
     expect(screen.queryByText(MENTION_TEXT)).not.toBeInTheDocument()
-    expect(fetchMock.mock.calls).toHaveLength(2)
+    expect(fetchMock.mock.calls).toHaveLength(3)
   })
 
   it('n’affiche rien quand followedElsewhere est absent (le service courant n’a pas encore de sous-dossier)', async () => {
@@ -1083,7 +1120,7 @@ describe('EditPatient — le signal de suivi ailleurs (IdentiteFields)', () => {
       await screen.findByLabelText("Distance d'habitation"),
     ).toBeInTheDocument()
     expect(screen.queryByText(MENTION_TEXT)).not.toBeInTheDocument()
-    expect(fetchMock.mock.calls).toHaveLength(2)
+    expect(fetchMock.mock.calls).toHaveLength(3)
   })
 
   it('reste sobre : ni nom de service, ni nombre, ni date dans la mention', async () => {
@@ -1123,7 +1160,7 @@ const configuredField = (over: Partial<ServiceField>): ServiceField => ({
   key: 'f',
   label: 'F',
   type: 'text',
-  section: 'pathway',
+  categoryId: 'cat-parcours',
   order: 0,
   clinical: false,
   unit: null,
@@ -1172,6 +1209,8 @@ const configuredFile = {
 const renderConfigured = (
   bodies: Record<string, unknown>[] = [],
   file: Record<string, unknown> = configuredFile,
+  fields: ServiceField[] = configuredFields,
+  categories: ServiceFieldCategory[] = defaultCategories,
 ) => {
   const fetchMock = buildFetchMock(
     [
@@ -1198,7 +1237,8 @@ const renderConfigured = (
         },
       },
     ],
-    configuredFields,
+    fields,
+    categories,
   )
   vi.stubGlobal('fetch', fetchMock)
   return renderEditPatient()
@@ -1335,5 +1375,143 @@ describe('EditPatient — champs configurables du service', () => {
     fireEvent.submit(hba1c.closest('form') ?? document.body)
     await new Promise((resolve) => setTimeout(resolve, 50))
     expect(bodies).toHaveLength(0)
+  })
+})
+
+describe('EditPatient — un onglet par catégorie', () => {
+  const tabLabels = () =>
+    screen.getAllByRole('radio').map((tab) => tab.textContent)
+
+  it('suit l’ordre des catégories et ne garde que les actives qui ont un champ visible ou une date', async () => {
+    const categories = [
+      category({ id: 'cat-suivi', label: 'Suivi', order: 0 }),
+      category({
+        id: 'cat-sortie',
+        label: 'Fin de prise en charge',
+        order: 1,
+        dateField: 'exitDate',
+      }),
+      category({ id: 'cat-vide', label: 'Vide', order: 2 }),
+      category({
+        id: 'cat-supprimee',
+        label: 'Supprimée',
+        order: 3,
+        archived: true,
+      }),
+      category({ id: 'cat-archives', label: 'Que des archivés', order: 4 }),
+      category({ id: 'cat-clinique', label: 'Clinique', order: 5 }),
+      category({
+        id: 'cat-entree',
+        label: 'Admission',
+        order: 6,
+        dateField: 'entryDate',
+      }),
+    ]
+    const fields = [
+      configuredField({
+        key: 'poids',
+        label: 'Poids',
+        categoryId: 'cat-suivi',
+      }),
+      configuredField({
+        key: 'vieux',
+        label: 'Vieux',
+        categoryId: 'cat-archives',
+        archived: true,
+      }),
+      configuredField({
+        key: 'secret',
+        label: 'Secret',
+        categoryId: 'cat-clinique',
+        clinical: true,
+      }),
+    ]
+    useAuthStore.setState({
+      context: { ...context, serviceRole: 'SECRETARIAT' as const },
+    })
+    renderConfigured([], configuredFile, fields, categories)
+    await screen.findByLabelText('Poids')
+
+    expect(tabLabels()).toEqual([
+      'Informations générales',
+      'Profil & Contexte',
+      'Suivi',
+      'Fin de prise en charge',
+      'Admission',
+    ])
+  })
+
+  it('place la date d’entrée et la date de sortie en tête de leur catégorie, même renommée', async () => {
+    const categories = [
+      category({
+        id: 'cat-entree',
+        label: 'Admission',
+        dateField: 'entryDate',
+      }),
+      category({
+        id: 'cat-sortie',
+        label: 'Fin de prise en charge',
+        order: 1,
+        dateField: 'exitDate',
+      }),
+    ]
+    const fields = [
+      configuredField({
+        key: 'poids',
+        label: 'Poids',
+        categoryId: 'cat-entree',
+      }),
+      configuredField({
+        key: 'motif',
+        label: 'Motif',
+        categoryId: 'cat-sortie',
+      }),
+    ]
+    const { container } = renderConfigured(
+      [],
+      configuredFile,
+      fields,
+      categories,
+    )
+    await screen.findByLabelText('Motif')
+
+    const labels = [...container.querySelectorAll('label')].map(
+      (l) => l.textContent,
+    )
+    const from = (label: string) => labels.slice(labels.indexOf(label))
+    expect(from("Date d'entrée").slice(0, 2)).toEqual([
+      "Date d'entrée",
+      'Poids',
+    ])
+    expect(from('Date de sortie').slice(0, 2)).toEqual([
+      'Date de sortie',
+      'Motif',
+    ])
+    expect(
+      screen.getByText(/Admission — dossier de ce service, non visible/),
+    ).toBeInTheDocument()
+  })
+
+  it('affiche les champs de la catégorie choisie dans son onglet', async () => {
+    const categories = [
+      ...defaultCategories,
+      category({ id: 'cat-suivi', label: 'Suivi', order: 2 }),
+    ]
+    const fields = [
+      configuredField({
+        key: 'poids',
+        label: 'Poids',
+        categoryId: 'cat-suivi',
+      }),
+    ]
+    renderConfigured([], configuredFile, fields, categories)
+    const poids = await screen.findByLabelText('Poids')
+
+    const panel = (el: HTMLElement) =>
+      el.closest('[data-category]')?.getAttribute('data-category')
+    expect(panel(poids)).toBe('cat-suivi')
+    expect(
+      panel(screen.getByText("Date d'entrée", { selector: 'label' })),
+    ).toBe('cat-parcours')
   })
 })

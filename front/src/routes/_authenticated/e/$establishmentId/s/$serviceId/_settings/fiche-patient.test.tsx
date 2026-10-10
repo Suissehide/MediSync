@@ -68,7 +68,7 @@ const orientation: ServiceField = {
   key: 'orientation',
   label: 'Orientation',
   type: 'choice',
-  section: 'pathway',
+  categoryId: 'cat-parcours',
   order: 0,
   clinical: false,
   unit: null,
@@ -84,7 +84,7 @@ const comorbidite: ServiceField = {
   key: 'comorbidite',
   label: 'Comorbidité',
   type: 'text',
-  section: 'pathway',
+  categoryId: 'cat-parcours',
   order: 1,
   clinical: false,
   unit: null,
@@ -97,7 +97,7 @@ const motifSortie: ServiceField = {
   key: 'motif_sortie',
   label: 'Motif de sortie',
   type: 'text',
-  section: 'outcome',
+  categoryId: 'cat-sortie',
   order: 0,
   clinical: false,
   unit: null,
@@ -110,7 +110,7 @@ const ancienDiagnostic: ServiceField = {
   key: 'ancien_diagnostic',
   label: 'Ancien diagnostic',
   type: 'text',
-  section: 'pathway',
+  categoryId: 'cat-parcours',
   order: 2,
   clinical: false,
   unit: null,
@@ -123,10 +123,37 @@ type Route = {
   respond: () => { ok: boolean; status: number; json: () => Promise<unknown> }
 }
 
+const categories = [
+  {
+    id: 'cat-parcours',
+    label: 'Parcours & Inclusion',
+    order: 0,
+    dateField: 'entryDate',
+    archived: false,
+  },
+  {
+    id: 'cat-sortie',
+    label: 'Sortie & Bilan',
+    order: 1,
+    dateField: 'exitDate',
+    archived: false,
+  },
+]
+
+const categoriesResponse = (url: string) => ({
+  ok: true,
+  status: 200,
+  url,
+  json: async () => categories,
+})
+
 const buildFetchMock = (routes: Route[]) =>
   vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = input.toString()
     const method = init?.method ?? 'GET'
+    if (url.endsWith('/service-field-categories') && method === 'GET') {
+      return categoriesResponse(url)
+    }
     const route = routes.find((r) => r.match(url, method))
     if (!route) {
       throw new Error(`Appel fetch non attendu dans ce test : ${method} ${url}`)
@@ -244,7 +271,7 @@ describe('ecran de configuration de la fiche patient', () => {
       expect(JSON.parse(String(call?.[1]?.body))).toEqual({
         label: 'Comorbidités',
         type: 'multichoice',
-        section: 'pathway',
+        categoryId: 'cat-parcours',
         clinical: false,
         choices: ['HTA', 'Diabète'],
       })
@@ -285,13 +312,13 @@ describe('ecran de configuration de la fiche patient', () => {
       )
       expect(call).toBeDefined()
       expect(JSON.parse(String(call?.[1]?.body))).toEqual({
-        section: 'pathway',
+        categoryId: 'cat-parcours',
         ids: ['f4', 'f1'],
       })
     })
   })
 
-  it('la fleche descendre porte le jeu complet des identifiants de la section, champ archive inclus', async () => {
+  it('la fleche descendre porte le jeu complet des identifiants de la categorie, champ archive inclus', async () => {
     const fetchMock = monter([
       routeGetServiceFields([orientation, comorbidite, ancienDiagnostic]),
       routeReorder(),
@@ -313,7 +340,7 @@ describe('ecran de configuration de la fiche patient', () => {
       )
       expect(call).toBeDefined()
       expect(JSON.parse(String(call?.[1]?.body))).toEqual({
-        section: 'pathway',
+        categoryId: 'cat-parcours',
         ids: ['f4', 'f1', 'f3'],
       })
     })
@@ -328,6 +355,9 @@ describe('ecran de configuration de la fiche patient', () => {
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = input.toString()
       const method = init?.method ?? 'GET'
+      if (url.endsWith('/service-field-categories') && method === 'GET') {
+        return Promise.resolve(categoriesResponse(url))
+      }
       if (url.endsWith('/service-fields') && method === 'GET') {
         return Promise.resolve({
           ok: true,

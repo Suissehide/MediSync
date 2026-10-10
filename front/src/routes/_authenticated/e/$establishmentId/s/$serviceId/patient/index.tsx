@@ -23,7 +23,10 @@ import { useCan } from '@/hooks/useCan.ts'
 import { safeParse } from '@/libs/utils.ts'
 import { usePathwayTemplateQueries } from '@/queries/usePathwayTemplate.ts'
 import { usePatientWithTagsQuery } from '@/queries/usePatient.tsx'
-import { useServiceFieldsQuery } from '@/queries/useServiceField.ts'
+import {
+  useServiceFieldCategoriesQuery,
+  useServiceFieldsQuery,
+} from '@/queries/useServiceField.ts'
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { PatientWithTags } from '@/types/patient.ts'
 
@@ -55,6 +58,8 @@ function PatientList() {
   const { patients, isPending } = usePatientWithTagsQuery()
   const { pathwayTemplates } = usePathwayTemplateQueries()
   const { fields, isPending: isFieldsPending } = useServiceFieldsQuery()
+  const { categories, isPending: isCategoriesPending } =
+    useServiceFieldCategoriesQuery()
   const canReadClinical = useCan('clinical:read')
   const [searchTerm, setSearchTerm] = useState('')
   const [storedFilters] = useState(() =>
@@ -99,9 +104,10 @@ function PatientList() {
       getPatientColumns({
         onView: handleRedirectPatient,
         fields,
+        categories,
         canReadClinical,
       }),
-    [fields, canReadClinical, handleRedirectPatient],
+    [fields, categories, canReadClinical, handleRedirectPatient],
   )
 
   // Couleur d'un tag principal : celle du premier parcours qui le porte.
@@ -202,8 +208,8 @@ function PatientList() {
         </div>
 
         <div className="flex-1 min-h-0 flex flex-col">
-          {/* Monté une fois les champs connus : ReactTable lit visibilité et filtres sauvés au montage. */}
-          {!isFieldsPending && (
+          {/* Monté une fois champs et catégories connus : ReactTable lit visibilité et filtres sauvés au montage. */}
+          {!isFieldsPending && !isCategoriesPending && (
             <ReactTable<PatientWithTags>
               key={tableId}
               data={filteredPatients}

@@ -6,6 +6,8 @@ import type {
   ReorderServiceFieldChoicesParams,
   ReorderServiceFieldsParams,
   ServiceField,
+  ServiceFieldCategory,
+  UpdateServiceFieldCategoryParams,
   UpdateServiceFieldChoiceParams,
   UpdateServiceFieldParams,
 } from '../types/serviceField.ts'
@@ -106,6 +108,58 @@ export const ServiceFieldApi = {
     )
     if (!response.ok) {
       handleHttpError(response, {}, 'Impossible de réordonner les choix')
+    }
+  },
+
+  getCategories: async (): Promise<ServiceFieldCategory[]> => {
+    const response = await fetchWithAuth(
+      `${tenantApiUrl()}/service-field-categories`,
+      { method: 'GET' },
+    )
+    if (!response.ok) {
+      handleHttpError(
+        response,
+        {},
+        'Impossible de récupérer les catégories de la fiche patient',
+      )
+    }
+    return response.json()
+  },
+
+  createCategory: async (params: {
+    label: string
+  }): Promise<ServiceFieldCategory> => {
+    const response = await fetchWithAuth(
+      `${tenantApiUrl()}/service-field-categories`,
+      send('POST', params),
+    )
+    if (!response.ok) {
+      handleHttpError(response, {}, 'Impossible de créer la catégorie')
+    }
+    return response.json()
+  },
+
+  updateCategory: async ({
+    id,
+    ...body
+  }: UpdateServiceFieldCategoryParams): Promise<ServiceFieldCategory> => {
+    const response = await fetchWithAuth(
+      `${tenantApiUrl()}/service-field-categories/${id}`,
+      send('PATCH', body),
+    )
+    if (!response.ok) {
+      handleHttpError(response, {}, 'Impossible de modifier la catégorie')
+    }
+    return response.json()
+  },
+
+  reorderCategories: async (params: { ids: string[] }): Promise<void> => {
+    const response = await fetchWithAuth(
+      `${tenantApiUrl()}/service-field-categories/order`,
+      send('PUT', params),
+    )
+    if (!response.ok) {
+      handleHttpError(response, {}, 'Impossible de réordonner les catégories')
     }
   },
 }

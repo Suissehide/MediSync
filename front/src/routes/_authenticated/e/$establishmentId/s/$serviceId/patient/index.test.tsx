@@ -15,7 +15,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { AuthState, User } from '@/types/auth.ts'
-import type { ServiceField } from '@/types/serviceField.ts'
+import type {
+  ServiceField,
+  ServiceFieldCategory,
+} from '@/types/serviceField.ts'
 import { Route as serviceLayoutRoute } from '../../$serviceId.tsx'
 import { Route as patientListRoute } from './index.tsx'
 
@@ -67,7 +70,7 @@ const orientation: ServiceField = {
   key: 'orientation',
   label: 'Orientation',
   type: 'choice',
-  section: 'pathway',
+  categoryId: 'cat-parcours',
   order: 0,
   clinical: false,
   unit: null,
@@ -77,6 +80,16 @@ const orientation: ServiceField = {
     { id: 'c2', key: 'B', label: 'Choix B', order: 1, archived: false },
   ],
 }
+
+const categories: ServiceFieldCategory[] = [
+  {
+    id: 'cat-parcours',
+    label: 'Parcours & Inclusion',
+    order: 0,
+    dateField: 'entryDate',
+    archived: false,
+  },
+]
 
 const patients = [
   {
@@ -115,68 +128,94 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-describe('liste des patients, premier chargement', () => {
-  it('garde la visibilite et le filtre sauves d une colonne configurable arrivee apres le premier rendu', async () => {
-    localStorage.setItem(
-      `column-visibility/${TABLE}`,
-      JSON.stringify({ orientation: true }),
-    )
-    localStorage.setItem(
-      `filters/${TABLE}`,
-      JSON.stringify([{ id: 'orientation', value: ['A'] }]),
-    )
+// Visibilité et filtre mémorisés sous l'ancien groupement (Inclusion/Bilan) : seul l'id compte.
+const memoriserColonneOrientation = () => {
+  localStorage.setItem(
+    `column-visibility/${TABLE}`,
+    JSON.stringify({ orientation: true }),
+  )
+  localStorage.setItem(
+    `filters/${TABLE}`,
+    JSON.stringify([{ id: 'orientation', value: ['A'] }]),
+  )
+}
 
-    let livrerChamps: (champs: ServiceField[]) => void = () => undefined
-    const champs = new Promise<ServiceField[]>((resolve) => {
-      livrerChamps = resolve
-    })
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (input: RequestInfo | URL) => {
-        const url = input.toString()
-        if (url.endsWith('/service-fields')) {
-          const corps = await champs
-          return { ok: true, status: 200, url, json: async () => corps }
-        }
-        if (url.includes('/patient/with-tags')) {
-          return { ok: true, status: 200, url, json: async () => patients }
-        }
-        return { ok: true, status: 200, url, json: async () => [] }
-      }),
-    )
-
-    const router = createRouter({
-      routeTree,
-      history: createMemoryHistory({ initialEntries: ['/e/e1/s/s1/patient'] }),
-      context: { authState: { isAuthenticated: true, user } },
-    })
-    render(
-      <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="fr">
-        <QueryClientProvider
-          client={
-            new QueryClient({ defaultOptions: { queries: { retry: false } } })
-          }
-        >
-          <RouterProvider router={router} />
-        </QueryClientProvider>
-      </LocalizationProvider>,
-    )
-
-    await screen.findByText('Liste des patients')
-    // Les patients sont arrivés, pas encore les champs : on laisse les effets tourner.
-    await new Promise((resolve) => setTimeout(resolve, 50))
-    livrerChamps([orientation])
-
-    // Filtre appliqué (une ligne sur deux) et colonne affichée.
-    expect(await screen.findByText('1 résultat')).toBeInTheDocument()
-    expect(
-      screen.getByRole('columnheader', { name: /Orientation/ }),
-    ).toBeInTheDocument()
-    expect(
-      JSON.parse(localStorage.getItem(`column-visibility/${TABLE}`) ?? '{}'),
-    ).toMatchObject({ orientation: true })
-    expect(
-      JSON.parse(localStorage.getItem(`filters/${TABLE}`) ?? '[]'),
-    ).toEqual([{ id: 'orientation', value: ['A'] }])
+// Monte la liste en retenant la réponse d'une des deux lectures ; renvoie de quoi la livrer.
+const monterEnRetenant = (
+  retenue: '/service-fields' | '/service-field-categories',
+) => {
+  let livrer: () => void = () => undefined
+  const livree = new Promise<void>((resolve) => {
+    livrer = resolve
   })
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = input.toString()
+      if (url.endsWith(retenue)) {
+        await livree
+      }
+      if (url.endsWith('/service-fields')) {
+        return { ok: true, status: 200, url, json: async () => [orientation] }
+      }
+      if (url.endsWith('/service-field-categories')) {
+        return { ok: true, status: 200, url, json: async () => categories }
+      }
+      if (url.includes('/patient/with-tags')) {
+        return { ok: true, status: 200, url, json: async () => patients }
+      }
+      return { ok: true, status: 200, url, json: async () => [] }
+    }),
+  )
+
+  const router = createRouter({
+    routeTree,
+    history: createMemoryHistory({ initialEntries: ['/e/e1/s/s1/patient'] }),
+    context: { authState: { isAuthenticated: true, user } },
+  })
+  render(
+    <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="fr">
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <RouterProvider router={router} />
+      </QueryClientProvider>
+    </LocalizationProvider>,
+  )
+  return livrer
+}
+
+const attendreColonneOrientationFiltree = async () => {
+  // Filtre appliqué (une ligne sur deux) et colonne affichée.
+  expect(await screen.findByText('1 résultat')).toBeInTheDocument()
+  expect(
+    screen.getByRole('columnheader', { name: /Orientation/ }),
+  ).toBeInTheDocument()
+  expect(
+    JSON.parse(localStorage.getItem(`column-visibility/${TABLE}`) ?? '{}'),
+  ).toMatchObject({ orientation: true })
+  expect(JSON.parse(localStorage.getItem(`filters/${TABLE}`) ?? '[]')).toEqual([
+    { id: 'orientation', value: ['A'] },
+  ])
+}
+
+describe('liste des patients, premier chargement', () => {
+  for (const retenue of [
+    '/service-fields',
+    '/service-field-categories',
+  ] as const) {
+    it(`garde la visibilite et le filtre sauves d une colonne configurable quand ${retenue} arrive apres le premier rendu`, async () => {
+      memoriserColonneOrientation()
+      const livrer = monterEnRetenant(retenue)
+
+      await screen.findByText('Liste des patients')
+      // Les patients sont arrivés, pas encore la lecture retenue : on laisse les effets tourner.
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      livrer()
+
+      await attendreColonneOrientationFiltree()
+    })
+  }
 })
