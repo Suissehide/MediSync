@@ -1158,7 +1158,7 @@ const configuredFields: ServiceField[] = [
     type: 'choice',
     clinical: true,
     order: 0,
-    choices: [choice('AVC', 'AVC', 0)],
+    choices: [choice('AVC', 'AVC', 0), choice('AOMI', 'AOMI', 1)],
   }),
   configuredField({ key: 'ancien', label: 'ancien', archived: true, order: 3 }),
 ]
@@ -1258,6 +1258,20 @@ describe('EditPatient — champs configurables du service', () => {
 
     await waitFor(() => expect(bodies).toHaveLength(1))
     expect(bodies[0]).toEqual({ data: { hba1c: 8 } })
+  })
+
+  it('un compte avec clinical:write qui modifie un champ clinique l’envoie dans clinicalData, pas data', async () => {
+    const bodies: Record<string, unknown>[] = []
+    renderConfigured(bodies)
+    const diagnostic = await screen.findByLabelText('Diagnostic')
+    await userEvent.click(diagnostic)
+    await userEvent.click(await screen.findByRole('option', { name: 'AOMI' }))
+    await userEvent.click(
+      await screen.findByRole('button', { name: /Sauvegarder/i }),
+    )
+
+    await waitFor(() => expect(bodies).toHaveLength(1))
+    expect(bodies[0]).toEqual({ clinicalData: { diag: 'AOMI' } })
   })
 
   it('vider un champ envoie null', async () => {
