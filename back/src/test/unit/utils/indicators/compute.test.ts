@@ -99,6 +99,13 @@ const champs: FieldDefinition[] = [
   { key: 'debut', label: 'Début', type: 'date', archivedAt: null, choices: [] },
   { key: 'note', label: 'Note', type: 'text', archivedAt: null, choices: [] },
   {
+    key: 'ancienChoix',
+    label: 'Ancien choix',
+    type: 'choice',
+    archivedAt: ARCHIVE,
+    choices: [choix('X', 1)],
+  },
+  {
     key: 'ancien',
     label: 'Ancien champ',
     type: 'number',
@@ -201,6 +208,44 @@ describe('computeIndicator', () => {
     })
   })
 
+  it('les patients comptes sans dossier vont dans non renseigne', () => {
+    const c = {
+      ...cohorte,
+      presences: [...cohorte.presences, presence('x', '2026-04-01T10:00:00Z')],
+    }
+    const r = computeIndicator(
+      c,
+      calcule({ measure: 'patientsSuivis', breakdownField: 'orientation' }),
+      champs,
+    )
+    expect(r.value).toBe(6)
+    expect(r.breakdown?.at(-1)).toEqual({
+      key: EMPTY_KEY,
+      label: 'Non renseigné',
+      value: 1,
+    })
+    expect(r.breakdown?.reduce((n, row) => n + row.value, 0)).toBe(6)
+  })
+
+  it('avertit une seule fois par cause, et sur une repartition par un champ archive', () => {
+    expect(
+      computeIndicator(
+        cohorte,
+        calcule({
+          filters: [
+            { field: 'orientation', op: 'in', value: ['VIEUX'] },
+            { field: 'orientation', op: 'in', value: ['VIEUX', 'MT'] },
+          ],
+          breakdownField: 'ancienChoix',
+        }),
+        champs,
+      ).warnings,
+    ).toEqual([
+      'Filtre sur un choix archivé : Libellé VIEUX',
+      'Répartition sur un champ archivé : Ancien choix',
+    ])
+  })
+
   it('manual et unavailable ne calculent rien', () => {
     const vide = { value: null, breakdown: null, warnings: [] }
     expect(
@@ -232,7 +277,7 @@ describe('validateIndicator', () => {
 
   it('refuse une mesure inconnue ou des options hors schema', () => {
     refuse({ measure: 'inconnue' }, /Mesure inconnue/)
-    refuse({ measure: null }, /Mesure inconnue/)
+    refuse({ measure: null }, /Mesure manquante/)
     refuse(
       { measure: 'patientsParModalite', options: { modalite: 'autre' } },
       /Options invalides/,
@@ -263,6 +308,10 @@ describe('validateIndicator', () => {
     )
     refuse(
       { filters: [{ field: 'debut', op: 'after', value: '01/03/2026' }] },
+      /Filtre invalide/,
+    )
+    refuse(
+      { filters: [{ field: 'debut', op: 'after', value: '2026-02-30' }] },
       /Filtre invalide/,
     )
     refuse(

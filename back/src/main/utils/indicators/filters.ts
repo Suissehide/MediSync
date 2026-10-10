@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import type { ServiceFieldType } from '../service-field-types'
+import { isIsoDay, type ServiceFieldType } from '../service-field-types'
 import type { IndicatorCohort } from './cohort'
 
 export type FilterCondition =
@@ -30,7 +30,7 @@ export const filterConditionSchema: z.ZodType<FilterCondition> = z.union([
   z.object({
     field,
     op: z.enum(['before', 'after']),
-    value: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    value: z.string().refine(isIsoDay),
   }),
 ])
 

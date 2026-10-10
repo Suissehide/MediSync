@@ -130,6 +130,43 @@ const parseBreakdown = (
   return { field, patients: measure.patients }
 }
 
+const parseComputed = (
+  def: IndicatorDefinition,
+  fields: readonly FieldDefinition[],
+): Parsed => {
+  if (def.measure === null) {
+    throw Boom.badRequest('Mesure manquante')
+  }
+  const measure = Object.entries(MEASURES).find(
+    ([key]) => key === def.measure,
+  )?.[1]
+  if (!measure) {
+    throw Boom.badRequest(`Mesure inconnue : ${def.measure}`)
+  }
+  const options = measure.options.safeParse(def.options ?? {})
+  if (!options.success) {
+    throw Boom.badRequest(`Options invalides pour la mesure ${measure.label}`)
+  }
+  const filters = z.array(filterConditionSchema).safeParse(def.filters ?? [])
+  if (!filters.success) {
+    throw Boom.badRequest('Filtre invalide')
+  }
+  const breakdown = parseBreakdown(def.breakdownField, measure, fields)
+  const warnings = [
+    ...filters.data.flatMap((cond) => checkFilter(cond, fields)),
+    ...(breakdown?.field.archivedAt
+      ? [`Répartition sur un champ archivé : ${breakdown.field.label}`]
+      : []),
+  ]
+  return {
+    measure,
+    options: options.data,
+    filters: filters.data,
+    breakdown,
+    warnings: [...new Set(warnings)],
+  }
+}
+
 // `null` pour un indicateur sans calcul ; lève un 400 sur toute définition invalide.
 const parse = (
   def: IndicatorDefinition,
@@ -146,33 +183,8 @@ const parse = (
         throw Boom.badRequest('Note requise pour un indicateur non disponible')
       }
       return null
-    case 'computed': {
-      const measure = Object.entries(MEASURES).find(
-        ([key]) => key === def.measure,
-      )?.[1]
-      if (!measure) {
-        throw Boom.badRequest(`Mesure inconnue : ${def.measure}`)
-      }
-      const options = measure.options.safeParse(def.options ?? {})
-      if (!options.success) {
-        throw Boom.badRequest(
-          `Options invalides pour la mesure ${measure.label}`,
-        )
-      }
-      const filters = z
-        .array(filterConditionSchema)
-        .safeParse(def.filters ?? [])
-      if (!filters.success) {
-        throw Boom.badRequest('Filtre invalide')
-      }
-      return {
-        measure,
-        options: options.data,
-        filters: filters.data,
-        breakdown: parseBreakdown(def.breakdownField, measure, fields),
-        warnings: filters.data.flatMap((cond) => checkFilter(cond, fields)),
-      }
-    }
+    case 'computed':
+      return parseComputed(def, fields)
   }
 }
 
@@ -183,10 +195,11 @@ export const validateIndicator = (
   parse(def, fields)
 }
 
-// Une ligne par choix dans l'ordre (archivés s'ils ont un effectif), puis « Non renseigné ».
+// Une ligne par choix dans l'ordre (archivés s'ils ont un effectif), puis « Non renseigné », qui prend aussi les patients comptés sans dossier.
 const breakdownRows = (
   field: FieldDefinition,
   files: CohortFile[],
+  total: number,
 ): BreakdownRow[] => {
   const known = new Set(field.choices.map((c) => c.key))
   const counts = new Map<string, number>()
@@ -213,7 +226,7 @@ const breakdownRows = (
     {
       key: EMPTY_KEY,
       label: 'Non renseigné',
-      value: counts.get(EMPTY_KEY) ?? 0,
+      value: (counts.get(EMPTY_KEY) ?? 0) + total - files.length,
     },
   ]
 }
@@ -228,10 +241,15 @@ export const computeIndicator = (
     return { value: null, breakdown: null, warnings: [] }
   }
   const c = applyFilters({ ...cohort, to: finDeJournee(cohort.to) }, p.filters)
+  const value = p.measure.compute(c, p.options)
   return {
-    value: p.measure.compute(c, p.options),
+    value,
     breakdown: p.breakdown
-      ? breakdownRows(p.breakdown.field, p.breakdown.patients(c, p.options))
+      ? breakdownRows(
+          p.breakdown.field,
+          p.breakdown.patients(c, p.options),
+          value,
+        )
       : null,
     warnings: p.warnings,
   }
