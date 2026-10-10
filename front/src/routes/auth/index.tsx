@@ -178,12 +178,12 @@ function Index() {
             {(field) => <field.Input label="Email" />}
           </registerForm.AppField>
 
-          <registerForm.AppField name="firstName">
-            {(field) => <field.Input label="Prénom" />}
-          </registerForm.AppField>
-
           <registerForm.AppField name="lastName">
             {(field) => <field.Input label="Nom" />}
+          </registerForm.AppField>
+
+          <registerForm.AppField name="firstName">
+            {(field) => <field.Input label="Prénom" />}
           </registerForm.AppField>
 
           <registerForm.AppField
