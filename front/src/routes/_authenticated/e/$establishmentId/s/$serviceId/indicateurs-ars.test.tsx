@@ -11,6 +11,7 @@ import {
   RouterProvider,
 } from '@tanstack/react-router'
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -98,8 +99,7 @@ const calcule = (code: string, group: string, value: number) => ({
   answer: null,
 })
 
-// Six calcules, deux a saisir (4.2 deja repondu, 2.5 restant), deux non disponibles ; la Sortie
-// n'a que du calcule, l'Entree aussi : deux sections a masquer selon le filtre.
+// 2.5 restant, 4.2 deja repondu ; Entree et Sortie tout en calcule, masquees par le filtre.
 const indicateurs = [
   calcule('1.1', 'Entrée', 560),
   calcule('1.1bis', 'Entrée', 140),
@@ -160,23 +160,55 @@ const charge = {
   },
 }
 
+const LIBELLE_25 = 'Autre type de prise en charge à chiffrer et à expliquer'
+
+// L'annee civile saisissable suit la periode demandee, comme le serveur.
+const parAnnee = {
+  ...charge,
+  corps: (url: string) => ({
+    ...charge.corps,
+    manualYear: Number(/from=(\d{4})/.exec(url)?.[1]),
+  }),
+}
+
+const enregistrements = () =>
+  (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls
+    .filter(([, init]) => init?.method === 'PUT')
+    .map(([entree, init]) => ({
+      url: String(entree),
+      body: JSON.parse(String(init.body)),
+    }))
+
 const monter = (
   reponse: { ok: boolean; status: number; corps?: unknown },
   user: User = coordinateur,
+  enregistrement = { ok: true, status: 200 },
 ) => {
   // Le mock est SÉLECTIF : `DashboardLayout` monte aussi la barre et son panneau de tâches, qui
   // appellent d'autres routes. Une réponse unique pour tout ferait échouer l'écran pour une raison
   // qui n'a rien à voir avec ce qu'on éprouve ici.
   vi.stubGlobal(
     'fetch',
-    vi.fn((input: RequestInfo | URL) => {
+    vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = input.toString()
+      if (init?.method === 'PUT') {
+        const corps = {
+          numberValue: null,
+          textValue: null,
+          boolValue: null,
+          ...JSON.parse(String(init.body)),
+        }
+        return { ...enregistrement, url, json: async () => corps }
+      }
       if (url.includes('/indicateurs-ars')) {
         return {
           ok: reponse.ok,
           status: reponse.status,
           url,
-          json: async () => reponse.corps,
+          json: async () =>
+            typeof reponse.corps === 'function'
+              ? reponse.corps(url)
+              : reponse.corps,
         }
       }
       return { ok: true, status: 200, url, json: async () => [] }
@@ -218,6 +250,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
+  Reflect.deleteProperty(navigator, 'clipboard')
 })
 
 describe('écran des indicateurs ARS', () => {
@@ -309,20 +342,20 @@ describe('écran des indicateurs ARS', () => {
     expect(screen.queryByText('Sans valeur')).not.toBeInTheDocument()
   })
 
-  it('montre les champs de saisie, desactives, remplis par la reponse', async () => {
+  it('montre les champs de saisie remplis par la reponse', async () => {
     monter(charge)
 
     const nombre = await screen.findByRole('textbox', {
       name: 'Autre type de prise en charge à chiffrer et à expliquer',
     })
-    expect(nombre).toBeDisabled()
     expect(nombre).toHaveValue('')
     expect(
       screen.getByRole('textbox', { name: 'Explication du 2.5' }),
-    ).toBeDisabled()
-    const oui = screen.getByRole('radio', { name: 'Oui' })
-    expect(oui).toBeDisabled()
-    expect(oui).toHaveAttribute('aria-checked', 'true')
+    ).toHaveValue('')
+    expect(screen.getByRole('radio', { name: 'Oui' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    )
     expect(screen.getByRole('radio', { name: 'Non' })).toHaveAttribute(
       'aria-checked',
       'false',
@@ -406,6 +439,150 @@ describe('écran des indicateurs ARS', () => {
     expect(
       within(pied).getByRole('link', { name: 'Activité' }),
     ).toHaveAttribute('href', '/e/e1/s/s1/activite')
+  })
+
+  it('enregistre 2.5 une seule fois, apres la frappe, et l annonce', async () => {
+    monter(charge)
+    const nombre = await screen.findByRole('textbox', { name: LIBELLE_25 })
+    const texte = screen.getByRole('textbox', { name: 'Explication du 2.5' })
+
+    vi.useFakeTimers()
+    fireEvent.change(nombre, { target: { value: '1' } })
+    fireEvent.change(nombre, { target: { value: '12' } })
+    fireEvent.change(texte, { target: { value: '  Ateliers en ville ' } })
+    act(() => vi.advanceTimersByTime(499))
+    expect(enregistrements()).toEqual([])
+    act(() => vi.advanceTimersByTime(1))
+    vi.useRealTimers()
+
+    expect(await screen.findByText('Enregistré')).toBeInTheDocument()
+    expect(enregistrements()).toEqual([
+      {
+        url: expect.stringContaining('/indicateurs-ars/saisies/2026/2.5'),
+        body: { numberValue: 12, textValue: 'Ateliers en ville' },
+      },
+    ])
+  })
+
+  it('enregistre des que l on quitte le champ, champs vides a null', async () => {
+    monter(charge)
+    const nombre = await screen.findByRole('textbox', { name: LIBELLE_25 })
+
+    vi.useFakeTimers()
+    fireEvent.change(nombre, { target: { value: '7' } })
+    fireEvent.change(nombre, { target: { value: '' } })
+    fireEvent.blur(nombre)
+    vi.useRealTimers()
+
+    await waitFor(() => expect(enregistrements()).toHaveLength(1))
+    expect(enregistrements()[0].body).toEqual({
+      numberValue: null,
+      textValue: null,
+    })
+  })
+
+  it('n accepte que des chiffres dans le nombre de 2.5', async () => {
+    monter(charge)
+    const nombre = await screen.findByRole('textbox', { name: LIBELLE_25 })
+
+    fireEvent.change(nombre, { target: { value: '-1,5a' } })
+    expect(nombre).toHaveValue('15')
+    fireEvent.blur(nombre)
+    await waitFor(() =>
+      expect(enregistrements()[0]?.body).toEqual({
+        numberValue: 15,
+        textValue: null,
+      }),
+    )
+  })
+
+  it('enregistre 4.2 au clic', async () => {
+    monter(charge)
+
+    fireEvent.click(await screen.findByRole('radio', { name: 'Non' }))
+
+    await waitFor(() => expect(enregistrements()).toHaveLength(1))
+    expect(enregistrements()[0]).toEqual({
+      url: expect.stringContaining('/indicateurs-ars/saisies/2026/4.2'),
+      body: { boolValue: false },
+    })
+  })
+
+  it('passe la ligne 2.5 du fond ambre au blanc une fois enregistree', async () => {
+    monter(charge)
+    const nombre = await screen.findByRole('textbox', { name: LIBELLE_25 })
+    const ligne = nombre.closest('tr')
+    expect(ligne).toHaveClass('bg-a-saisir-fond')
+
+    fireEvent.change(nombre, { target: { value: '12' } })
+    fireEvent.blur(nombre)
+
+    await waitFor(() => expect(ligne).not.toHaveClass('bg-a-saisir-fond'))
+    expect(ligne).toHaveClass('bg-carte')
+  })
+
+  it('garde la valeur et affiche une erreur si l enregistrement echoue', async () => {
+    monter(charge, coordinateur, { ok: false, status: 500 })
+    const nombre = await screen.findByRole('textbox', { name: LIBELLE_25 })
+
+    fireEvent.change(nombre, { target: { value: '12' } })
+    fireEvent.blur(nombre)
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /pas été enregistrée/,
+    )
+    expect(nombre).toHaveValue('12')
+    expect(screen.queryByText('Enregistré')).not.toBeInTheDocument()
+  })
+
+  it('envoie la saisie en attente sur l annee ou elle a ete tapee', async () => {
+    monter(parAnnee)
+    const nombre = await screen.findByRole('textbox', { name: LIBELLE_25 })
+
+    vi.useFakeTimers()
+    fireEvent.change(nombre, { target: { value: '12' } })
+    fireEvent.click(screen.getByRole('radio', { name: '2025' }))
+    vi.useRealTimers()
+
+    await waitFor(() => expect(enregistrements()).toHaveLength(1))
+    expect(enregistrements()[0].url).toContain('/saisies/2026/2.5')
+    await screen.findByRole('textbox', { name: LIBELLE_25 })
+    expect(enregistrements()).toHaveLength(1)
+  })
+
+  it('desactive la saisie hors annee civile et le dit', async () => {
+    monter({ ...charge, corps: { ...charge.corps, manualYear: null } })
+
+    expect(
+      await screen.findByRole('textbox', { name: LIBELLE_25 }),
+    ).toBeDisabled()
+    expect(
+      screen.getByRole('textbox', { name: 'Explication du 2.5' }),
+    ).toBeDisabled()
+    expect(screen.getByRole('radio', { name: 'Oui' })).toBeDisabled()
+    expect(
+      screen.getAllByText('Choisissez une année civile pour saisir'),
+    ).toHaveLength(2)
+  })
+
+  it('desactive la saisie sans stats:write, sans message', async () => {
+    monter(charge)
+    const nombre = await screen.findByRole('textbox', { name: LIBELLE_25 })
+
+    act(() =>
+      useAuthStore.setState((etat) => ({
+        context: etat.context && { ...etat.context, serviceRole: 'LECTURE' },
+      })),
+    )
+
+    expect(nombre).toBeDisabled()
+    expect(
+      screen.getByRole('textbox', { name: 'Explication du 2.5' }),
+    ).toBeDisabled()
+    expect(screen.getByRole('radio', { name: 'Non' })).toBeDisabled()
+    expect(
+      screen.queryByText('Choisissez une année civile pour saisir'),
+    ).not.toBeInTheDocument()
   })
 
   it('renvoie au tableau de bord un role sans stats:read', async () => {

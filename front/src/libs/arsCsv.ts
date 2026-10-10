@@ -13,12 +13,21 @@ export const arsCsv = (
       ['code', 'libellé', 'valeur', 'note'],
       ['Service', serviceName, '', ''],
       ['Période', `${from} au ${to}`, '', ''],
-      ...indicateurs.map((i) => [
-        i.code,
-        i.label,
-        i.value === null ? '' : nombre(i.value),
-        i.note ?? '',
-      ]),
+      ...indicateurs.map((i) => [i.code, i.label, ...valeurEtNote(i)]),
     ],
     [1],
   )
+
+// Une reponse saisie remplace la valeur ; l'explication de 2.5 remplace la note.
+const valeurEtNote = ({ value, note, input, answer }: ArsIndicator) => {
+  if (input === 'yesno' && answer && answer.boolValue !== null) {
+    return [answer.boolValue ? 'Oui' : 'Non', '']
+  }
+  if (input === 'number+text' && answer) {
+    return [
+      answer.numberValue === null ? '' : nombre(answer.numberValue),
+      answer.textValue ?? note ?? '',
+    ]
+  }
+  return [value === null ? '' : nombre(value), note ?? '']
+}

@@ -24,6 +24,40 @@ const csv = arsCsv(
       input: null,
       answer: null,
     },
+    {
+      code: '2.5',
+      group: 'Séances',
+      label: 'Autre type de prise en charge à chiffrer et à expliquer',
+      value: null,
+      note: "Champ libre de l'enquête, à renseigner à la main",
+      kind: 'manual',
+      input: 'number+text',
+      answer: {
+        numberValue: 12,
+        textValue: 'Ateliers en ville',
+        boolValue: null,
+      },
+    },
+    {
+      code: '4.2',
+      group: 'Modalités',
+      label: 'Une offre de suivi est-elle proposée ?',
+      value: null,
+      note: 'Question oui/non sur la structure, à renseigner à la main',
+      kind: 'manual',
+      input: 'yesno',
+      answer: { numberValue: null, textValue: null, boolValue: true },
+    },
+    {
+      code: '4.3',
+      group: 'Modalités',
+      label: 'Question sans reponse',
+      value: null,
+      note: 'A renseigner',
+      kind: 'manual',
+      input: 'yesno',
+      answer: null,
+    },
   ],
   '=Cardio',
   '2026-01-01',
@@ -46,5 +80,13 @@ describe('arsCsv', () => {
     expect(csv).toContain(
       '2.3;Nombre de patients pris en charge en soins de ville uniquement;;Aucune notion de soins de ville\r\n',
     )
+  })
+
+  it('reprend les reponses saisies a la main', () => {
+    expect(csv).toContain(
+      '2.5;Autre type de prise en charge à chiffrer et à expliquer;12;Ateliers en ville\r\n',
+    )
+    expect(csv).toContain('4.2;Une offre de suivi est-elle proposée ?;Oui;')
+    expect(csv).toContain('4.3;Question sans reponse;;A renseigner')
   })
 })

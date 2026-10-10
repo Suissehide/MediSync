@@ -55,10 +55,8 @@ function ArsIndicatorsPage() {
   const [periode, setPeriode] = useState(() => anneeCivile(ANNEES[0]))
   const from = periode.from.format(PERIOD_FORMAT)
   const to = periode.to.format(PERIOD_FORMAT)
-  const { indicators, isPending, error, refetch } = useArsIndicatorsQuery(
-    from,
-    to,
-  )
+  const { indicators, manualYear, isPending, error, refetch } =
+    useArsIndicatorsQuery(from, to)
   const [exportEnCours, setExportEnCours] = useState(false)
   const [erreurExport, setErreurExport] = useState<string | null>(null)
   const [filtre, setFiltre] = useState<Filtre>('tous')
@@ -167,6 +165,7 @@ function ArsIndicatorsPage() {
                   nom={groupe}
                   indicateurs={indicators.filter((i) => i.group === groupe)}
                   filtre={filtre}
+                  annee={manualYear}
                 />
               ))}
               <p className="text-center text-xs text-text-light">

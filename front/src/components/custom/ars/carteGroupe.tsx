@@ -15,11 +15,13 @@ export function CarteGroupe({
   nom,
   indicateurs,
   filtre,
+  annee,
 }: {
   numero: number
   nom: string
   indicateurs: ArsIndicator[]
   filtre: Filtre
+  annee: number | null
 }) {
   const titreId = useId()
   const lignes = indicateurs.filter((i) => visible(statut(i), filtre))
@@ -62,6 +64,7 @@ export function CarteGroupe({
             <LigneIndicateur
               key={i.code}
               indicateur={i}
+              annee={annee}
               parent={
                 i.code.endsWith('bis')
                   ? indicateurs.find((p) => p.code === i.code.slice(0, -3))
