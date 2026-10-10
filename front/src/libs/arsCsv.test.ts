@@ -86,7 +86,28 @@ describe('arsCsv', () => {
     expect(csv).toContain(
       '2.5;Autre type de prise en charge à chiffrer et à expliquer;12;Ateliers en ville\r\n',
     )
-    expect(csv).toContain('4.2;Une offre de suivi est-elle proposée ?;Oui;')
+    expect(csv).toContain('4.2;Une offre de suivi est-elle proposée ?;Oui;\r\n')
     expect(csv).toContain('4.3;Question sans reponse;;A renseigner')
+  })
+
+  it('laisse la note vide pour un 2.5 saisi sans explication', () => {
+    const sansTexte = arsCsv(
+      [
+        {
+          code: '2.5',
+          group: 'Séances',
+          label: 'Autre',
+          value: null,
+          note: 'A renseigner',
+          kind: 'manual',
+          input: 'number+text',
+          answer: { numberValue: 3, textValue: null, boolValue: null },
+        },
+      ],
+      'Cardio',
+      '2026-01-01',
+      '2026-12-31',
+    )
+    expect(sansTexte).toContain('2.5;Autre;3;\r\n')
   })
 })

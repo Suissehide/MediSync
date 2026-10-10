@@ -26,7 +26,7 @@ const valeurEtNote = ({ value, note, input, answer }: ArsIndicator) => {
   if (input === 'number+text' && answer) {
     return [
       answer.numberValue === null ? '' : nombre(answer.numberValue),
-      answer.textValue ?? note ?? '',
+      answer.textValue ?? '',
     ]
   }
   return [value === null ? '' : nombre(value), note ?? '']

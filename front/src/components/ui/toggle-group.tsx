@@ -10,6 +10,7 @@ type ToggleGroupProps = {
   disabled?: boolean
   'aria-label'?: string
   'aria-labelledby'?: string
+  'aria-describedby'?: string
 }
 
 const ToggleGroup = ({

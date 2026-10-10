@@ -171,6 +171,26 @@ const parAnnee = {
   }),
 }
 
+// Le serveur rend la derniere saisie de 2.5 enregistree pour l'annee demandee.
+const memoire = {
+  ...charge,
+  corps: (url: string) => {
+    const annee = /from=(\d{4})/.exec(url)?.[1]
+    const derniere = enregistrements()
+      .filter((e) => e.url.includes(`/saisies/${annee}/2.5`))
+      .at(-1)
+    return {
+      ...charge.corps,
+      manualYear: Number(annee),
+      indicators: indicateurs.map((i) =>
+        i.code === '2.5' && derniere
+          ? { ...i, answer: { boolValue: null, ...derniere.body } }
+          : i,
+      ),
+    }
+  },
+}
+
 const enregistrements = () =>
   (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls
     .filter(([, init]) => init?.method === 'PUT')
@@ -532,7 +552,62 @@ describe('écran des indicateurs ARS', () => {
       /pas été enregistrée/,
     )
     expect(nombre).toHaveValue('12')
+    expect(nombre).toHaveAccessibleDescription(/pas été enregistrée/)
     expect(screen.queryByText('Enregistré')).not.toBeInTheDocument()
+  })
+
+  it('reessaie l enregistrement echoue depuis l alerte', async () => {
+    const enregistrement = { ok: false, status: 500 }
+    monter(charge, coordinateur, enregistrement)
+    const nombre = await screen.findByRole('textbox', { name: LIBELLE_25 })
+
+    fireEvent.change(nombre, { target: { value: '12' } })
+    fireEvent.blur(nombre)
+    const alerte = await screen.findByRole('alert')
+    Object.assign(enregistrement, { ok: true, status: 200 })
+    fireEvent.click(within(alerte).getByRole('button', { name: 'Réessayer' }))
+
+    expect(await screen.findByText('Enregistré')).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(enregistrements().map((e) => e.body)).toEqual([
+      { numberValue: 12, textValue: null },
+      { numberValue: 12, textValue: null },
+    ])
+  })
+
+  it('reprend la reponse enregistree en revenant sur l annee', async () => {
+    monter(memoire)
+    const nombre = await screen.findByRole('textbox', { name: LIBELLE_25 })
+
+    vi.useFakeTimers()
+    fireEvent.change(nombre, { target: { value: '12' } })
+    fireEvent.click(screen.getByRole('radio', { name: '2025' }))
+    vi.useRealTimers()
+    await waitFor(() => expect(enregistrements()).toHaveLength(1))
+    await screen.findByRole('textbox', { name: LIBELLE_25 })
+    fireEvent.click(screen.getByRole('radio', { name: '2026' }))
+
+    await waitFor(() =>
+      expect(screen.getByRole('textbox', { name: LIBELLE_25 })).toHaveValue(
+        '12',
+      ),
+    )
+    const texte = screen.getByRole('textbox', { name: 'Explication du 2.5' })
+    fireEvent.change(texte, { target: { value: 'Ateliers' } })
+    fireEvent.blur(texte)
+    await waitFor(() => expect(enregistrements()).toHaveLength(2))
+    expect(enregistrements()[1]).toEqual({
+      url: expect.stringContaining('/saisies/2026/2.5'),
+      body: { numberValue: 12, textValue: 'Ateliers' },
+    })
+  })
+
+  it('limite le nombre de 2.5 a six chiffres', async () => {
+    monter(charge)
+
+    expect(
+      await screen.findByRole('textbox', { name: LIBELLE_25 }),
+    ).toHaveAttribute('maxlength', '6')
   })
 
   it('envoie la saisie en attente sur l annee ou elle a ete tapee', async () => {
@@ -553,13 +628,20 @@ describe('écran des indicateurs ARS', () => {
   it('desactive la saisie hors annee civile et le dit', async () => {
     monter({ ...charge, corps: { ...charge.corps, manualYear: null } })
 
-    expect(
-      await screen.findByRole('textbox', { name: LIBELLE_25 }),
-    ).toBeDisabled()
+    const nombre = await screen.findByRole('textbox', { name: LIBELLE_25 })
+    expect(nombre).toBeDisabled()
+    expect(nombre).toHaveAccessibleDescription(
+      'Choisissez une année civile pour saisir',
+    )
     expect(
       screen.getByRole('textbox', { name: 'Explication du 2.5' }),
     ).toBeDisabled()
     expect(screen.getByRole('radio', { name: 'Oui' })).toBeDisabled()
+    expect(
+      screen.getByRole('group', {
+        name: 'Une offre de suivi est-elle proposée ?',
+      }),
+    ).toHaveAccessibleDescription('Choisissez une année civile pour saisir')
     expect(
       screen.getAllByText('Choisissez une année civile pour saisir'),
     ).toHaveLength(2)

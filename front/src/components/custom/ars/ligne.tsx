@@ -1,5 +1,12 @@
 import { Check, Copy, Info } from 'lucide-react'
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import {
+  type RefObject,
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from 'react'
 
 import { type Statut, statut } from '@/components/custom/ars/statut.ts'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group.tsx'
@@ -18,7 +25,7 @@ const DELAI = 500
 // L'annee est figee a la frappe : un changement de periode n'egare pas une saisie en attente.
 function useSaisie(code: string, annee: number | null) {
   const { mutateAsync } = useSaveArsAnswerMutation()
-  const [resultat, setResultat] = useState<'enregistre' | 'erreur' | null>(null)
+  const [resultat, setResultat] = useState<Resultat>(null)
   const [reponse, setReponse] = useState<ArsAnswer | null>(null)
   const attente = useRef<{ annee: number; body: ArsAnswerBody } | null>(null)
   const minuteur = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -58,17 +65,32 @@ function useSaisie(code: string, annee: number | null) {
     }
   }
 
-  return { planifier, envoyer, resultat, reponse }
+  const enAttente = useCallback(() => attente.current !== null, [])
+
+  return { planifier, envoyer, enAttente, resultat, reponse }
 }
 
 // Brouillons des champs de 2.5 et 4.2 : ils gardent la frappe meme si l'enregistrement echoue.
 function useChamps(
   answer: ArsAnswer | null,
   saisie: ReturnType<typeof useSaisie>,
+  ligne: RefObject<HTMLTableRowElement | null>,
 ) {
   const [chiffre, setChiffre] = useState(answer?.numberValue?.toString() ?? '')
   const [texte, setTexte] = useState(answer?.textValue ?? '')
   const [choix, setChoix] = useState(answer?.boolValue ?? null)
+  const { enAttente } = saisie
+
+  // Un cache perime a pu monter la ligne avant la relecture : on reprend la reponse du serveur.
+  useEffect(() => {
+    if (enAttente() || ligne.current?.contains(document.activeElement)) {
+      return
+    }
+    setChiffre(answer?.numberValue?.toString() ?? '')
+    setTexte(answer?.textValue ?? '')
+    setChoix(answer?.boolValue ?? null)
+  }, [answer, enAttente, ligne])
+
   return {
     chiffre,
     texte,
@@ -105,12 +127,17 @@ export function LigneIndicateur({
   const libelleId = useId()
   const peutEcrire = useCan('stats:write')
   const lecture = !peutEcrire || annee === null
-  const champs = useChamps(indicateur.answer, saisie)
+  const horsAnnee = peutEcrire && annee === null
+  const ligne = useRef<HTMLTableRowElement>(null)
+  const champs = useChamps(indicateur.answer, saisie, ligne)
+  const annoncesId = useId()
+  const decritPar = decrire(annoncesId, horsAnnee, saisie.resultat)
 
   const pad = bis ? 'pt-2 pb-3' : 'py-3'
 
   return (
     <tr
+      ref={ligne}
       className={cn(
         'border-b border-muted last:border-b-0',
         s === 'restant' ? 'bg-a-saisir-fond' : 'bg-carte',
@@ -153,6 +180,7 @@ export function LigneIndicateur({
           {i.input === 'number+text' && (
             <textarea
               aria-label={`Explication du ${i.code}`}
+              aria-describedby={decritPar}
               placeholder="Expliquer le type de prise en charge…"
               value={champs.texte}
               disabled={lecture}
@@ -163,8 +191,10 @@ export function LigneIndicateur({
           )}
           {i.input && (
             <Annonces
-              horsAnnee={peutEcrire && annee === null}
+              id={annoncesId}
+              horsAnnee={horsAnnee}
               resultat={saisie.resultat}
+              onReessayer={saisie.envoyer}
             />
           )}
         </div>
@@ -176,6 +206,8 @@ export function LigneIndicateur({
               type="text"
               inputMode="numeric"
               aria-labelledby={libelleId}
+              aria-describedby={decritPar}
+              maxLength={6}
               placeholder="À saisir"
               value={champs.chiffre}
               disabled={lecture}
@@ -189,6 +221,7 @@ export function LigneIndicateur({
           ) : i.input === 'yesno' ? (
             <OuiNon
               libelleId={libelleId}
+              decritPar={decritPar}
               valeur={champs.choix}
               disabled={lecture}
               statut={s}
@@ -203,23 +236,44 @@ export function LigneIndicateur({
   )
 }
 
+type Resultat = 'enregistre' | 'erreur' | null
+
+const decrire = (id: string, horsAnnee: boolean, resultat: Resultat) =>
+  [horsAnnee && `${id}-aide`, resultat === 'erreur' && `${id}-erreur`]
+    .filter(Boolean)
+    .join(' ') || undefined
+
 function Annonces({
+  id,
   horsAnnee,
   resultat,
+  onReessayer,
 }: {
+  id: string
   horsAnnee: boolean
-  resultat: 'enregistre' | 'erreur' | null
+  resultat: Resultat
+  onReessayer: () => void
 }) {
   return (
     <>
       {horsAnnee && (
-        <span className="text-xs text-text-light">
+        <span id={`${id}-aide`} className="text-xs text-text-light">
           Choisissez une année civile pour saisir
         </span>
       )}
       {resultat === 'erreur' && (
-        <span role="alert" className="text-xs text-destructive">
-          La réponse n'a pas été enregistrée. Réessayez.
+        <span
+          role="alert"
+          className="flex items-center gap-2 text-xs text-destructive"
+        >
+          <span id={`${id}-erreur`}>La réponse n'a pas été enregistrée.</span>
+          <button
+            type="button"
+            onClick={onReessayer}
+            className="underline cursor-pointer"
+          >
+            Réessayer
+          </button>
         </span>
       )}
       <span aria-live="polite" className="text-xs text-text-light">
@@ -231,12 +285,14 @@ function Annonces({
 
 function OuiNon({
   libelleId,
+  decritPar,
   valeur,
   disabled,
   statut: s,
   onChange,
 }: {
   libelleId: string
+  decritPar?: string
   valeur: boolean | null
   disabled: boolean
   statut: Statut
@@ -245,6 +301,7 @@ function OuiNon({
   return (
     <ToggleGroup
       aria-labelledby={libelleId}
+      aria-describedby={decritPar}
       value={valeur === null ? '' : valeur ? 'oui' : 'non'}
       disabled={disabled}
       onValueChange={(v) => onChange(v === '' ? null : v === 'oui')}
