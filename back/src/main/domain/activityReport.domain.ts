@@ -44,18 +44,22 @@ class ActivityReportDomain implements ActivityReportDomainInterface {
   }
 
   // Motifs d'arrêt : réglages du service (`Service.stopReasonFieldKey`/`completedChoiceKey`), pas
-  // de champ ni de valeur codés en dur (décision 4, spec §2.4).
+  // de champ ni de valeur codés en dur (décision 4, spec §2.4). Réglé seulement si les DEUX clés
+  // sont posées : un champ choisi sans valeur de fin encore désignée (configuration à mi-chemin)
+  // compterait sinon tout motif non vide comme un abandon.
   private async activitySettings(): Promise<ActivitySettings | null> {
     const service = await this.serviceDomain.findCurrent()
-    if (service.stopReasonFieldKey === null) {
+    if (
+      service.stopReasonFieldKey === null ||
+      service.completedChoiceKey === null
+    ) {
       return null
     }
     const fields = await this.serviceFieldRepository.findAll()
     const field = fields.find((f) => f.key === service.stopReasonFieldKey)
     return {
       stopReasonField: service.stopReasonFieldKey,
-      // Chaîne vide : ne matche jamais une clé de choix réelle, donc rien n'est exclu des abandons.
-      completedChoice: service.completedChoiceKey ?? '',
+      completedChoice: service.completedChoiceKey,
       labels: Object.fromEntries(
         (field?.choices ?? []).map((choice) => [choice.key, choice.label]),
       ),

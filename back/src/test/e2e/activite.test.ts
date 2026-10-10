@@ -228,6 +228,36 @@ describe('tableau de bord d activite', () => {
     expect(res.json().completion).toBeNull()
   })
 
+  // Controller fix round 1 : un champ choisi sans valeur de fin encore designee ne doit pas
+  // compter tout motif non vide comme un abandon — la completion reste masquee.
+  it('ne porte pas de completion avec un champ choisi mais sans valeur de fin', async () => {
+    const champ = await t.app.inject({
+      method: 'POST',
+      url: tenantUrl(establishmentId, serviceB, '/service-fields'),
+      cookies: coordinateurCookies,
+      payload: {
+        label: 'Motif a mi-chemin',
+        type: 'choice',
+        section: 'outcome',
+        choices: ['Perdu de vue', 'Terminé'],
+      },
+    })
+    expect(champ.statusCode).toBe(201)
+    const field = champ.json() as { key: string }
+
+    const reglages = await t.app.inject({
+      method: 'PATCH',
+      url: tenantUrl(establishmentId, serviceB, '/activity-settings'),
+      cookies: coordinateurCookies,
+      payload: { stopReasonFieldKey: field.key, completedChoiceKey: null },
+    })
+    expect(reglages.statusCode).toBe(200)
+
+    const res = await lire(serviceB)
+    expect(res.statusCode).toBe(200)
+    expect(res.json().completion).toBeNull()
+  })
+
   it('lit le champ et la valeur de fin designes dans les reglages, pas stopReason', async () => {
     const champ = await t.app.inject({
       method: 'POST',
