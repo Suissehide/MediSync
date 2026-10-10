@@ -25,6 +25,7 @@ const arsIndicatorRouter: FastifyPluginAsync = (fastify) => {
       return {
         from: from.toISOString().slice(0, 10),
         to: to.toISOString().slice(0, 10),
+        manualYear: null,
         indicators: await arsIndicatorDomain.findAll({ from, to }),
       }
     },

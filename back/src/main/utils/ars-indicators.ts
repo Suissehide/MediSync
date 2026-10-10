@@ -56,6 +56,14 @@ export type ArsCohort = {
 
 export type ArsGroup = 'Entrée' | 'Séances' | 'Sortie' | 'Modalités'
 
+export type ArsKind = 'computed' | 'unavailable' | 'manual'
+export type ArsInput = 'number+text' | 'yesno'
+export type ArsAnswer = {
+  numberValue: number | null
+  textValue: string | null
+  boolValue: boolean | null
+}
+
 export type ArsIndicator = {
   code: string
   group: ArsGroup
@@ -63,7 +71,7 @@ export type ArsIndicator = {
 } & (
   | { compute: (cohort: ArsCohort) => number }
   | { unavailable: string }
-  | { manual: string }
+  | { manual: string; input: ArsInput }
 )
 
 export type ArsIndicatorResult = {
@@ -72,6 +80,9 @@ export type ArsIndicatorResult = {
   label: string
   value: number | null
   note: string | null
+  kind: ArsKind
+  input: ArsInput | null
+  answer: ArsAnswer | null
 }
 
 export const inRange = (date: Date | null, from: Date, to: Date): boolean =>
@@ -267,6 +278,7 @@ export const ARS_INDICATORS: readonly ArsIndicator[] = [
     group: 'Séances',
     label: 'Autre type de prise en charge à chiffrer et à expliquer',
     manual: "Champ libre de l'enquête, à renseigner à la main",
+    input: 'number+text',
   },
   {
     code: '2.6',
@@ -423,6 +435,7 @@ export const ARS_INDICATORS: readonly ArsIndicator[] = [
     label:
       'Une offre de suivi ou de renforcement dans un nouveau programme est-elle proposée au sein de la structure ?',
     manual: 'Question oui/non sur la structure, à renseigner à la main',
+    input: 'yesno',
   },
   {
     code: '4.3',
@@ -469,6 +482,14 @@ export const ARS_INDICATORS: readonly ArsIndicator[] = [
   },
 ]
 
+export const MANUAL_INPUTS: Readonly<Record<string, ArsInput>> =
+  Object.fromEntries(
+    ARS_INDICATORS.filter(
+      (i): i is ArsIndicator & { manual: string; input: ArsInput } =>
+        'manual' in i,
+    ).map((i) => [i.code, i.input]),
+  )
+
 const UN_JOUR_MS = 24 * 60 * 60 * 1000
 
 // La borne haute désigne un JOUR, pas un instant : « 2026-12-31 » arrive à minuit, et sans cela
@@ -484,13 +505,31 @@ export const computeArsIndicators = (
 ): ArsIndicatorResult[] => {
   const c: ArsCohort = { ...cohort, to: finDeJournee(cohort.to) }
   return ARS_INDICATORS.map((i) => {
-    const base = { code: i.code, group: i.group, label: i.label }
+    const base = { code: i.code, group: i.group, label: i.label, answer: null }
     if ('compute' in i) {
-      return { ...base, value: i.compute(c), note: null }
+      return {
+        ...base,
+        value: i.compute(c),
+        note: null,
+        kind: 'computed' as const,
+        input: null,
+      }
     }
     if ('unavailable' in i) {
-      return { ...base, value: null, note: i.unavailable }
+      return {
+        ...base,
+        value: null,
+        note: i.unavailable,
+        kind: 'unavailable' as const,
+        input: null,
+      }
     }
-    return { ...base, value: null, note: i.manual }
+    return {
+      ...base,
+      value: null,
+      note: i.manual,
+      kind: 'manual' as const,
+      input: i.input,
+    }
   })
 }

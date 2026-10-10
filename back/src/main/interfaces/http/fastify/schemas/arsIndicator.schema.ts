@@ -15,6 +15,7 @@ export type ArsIndicatorQuery = z.infer<typeof arsIndicatorQuerySchema>
 export const arsIndicatorsResponseSchema = z.object({
   from: z.string(),
   to: z.string(),
+  manualYear: z.number().nullable(),
   indicators: z.array(
     z.object({
       code: z.string(),
@@ -22,6 +23,15 @@ export const arsIndicatorsResponseSchema = z.object({
       label: z.string(),
       value: z.number().nullable(),
       note: z.string().nullable(),
+      kind: z.enum(['computed', 'unavailable', 'manual']),
+      input: z.enum(['number+text', 'yesno']).nullable(),
+      answer: z
+        .object({
+          numberValue: z.number().nullable(),
+          textValue: z.string().nullable(),
+          boolValue: z.boolean().nullable(),
+        })
+        .nullable(),
     }),
   ),
 })
