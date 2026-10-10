@@ -519,6 +519,7 @@ Key cross-cutting concerns:
 ## Configurable patient-file fields (fiche configurable)
 
 - The *Parcours & Inclusion* and *Sortie & Bilan* fields of the patient sub-record are configurable (`ServiceFieldDefinition`), not hardcoded columns.
+- Fields are grouped in per-service categories (`ServiceFieldCategory`); the two date categories (`entryDate`/`exitDate`) can't be deleted and are created on first read for a new service (`ensureDefaults`, `DEFAULT_CATEGORIES`).
 - Their values live in `PatientServiceFile.data` and `clinicalData` (two JSONB columns), keyed by `ServiceFieldDefinition.key`.
 - `clinicalData` is filtered by name, exactly like `notes` (`CLINICAL_FIELDS`, `utils/clinical-fields.ts`) — a clinical field's value never needs its own filtering rule.
 - Every write to either column goes through `mergeFieldPatch` (`utils/service-field-types.ts`), never a direct `data: {...}` assignment.

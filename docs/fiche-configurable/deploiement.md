@@ -175,3 +175,60 @@ SELECT
 
 **Attendu, retour arrière réussi** : `colonnes_dix` = **10**. Si le retour
 arrière a échoué (migration encore appliquée) : `colonnes_dix` = **0**.
+
+## 7. Catégories (migration `20261011090000_service_field_categories`)
+
+Cette migration remplace les deux sections fixes de `ServiceFieldDefinition`
+(`pathway`/`outcome`) par des catégories en base (`ServiceFieldCategory`),
+propres à chaque service. Elle s'applique dans le même déploiement que la
+migration ci-dessus — une seule commande `prisma migrate deploy` au démarrage
+du conteneur neuf, à l'étape 4 — et partage sa sauvegarde (étape 1), son
+arrêt de conteneur (étape 2) et son retour arrière par restauration (étape
+6). Chaque migration garde sa propre transaction (`BEGIN`/`COMMIT`) : un
+échec de la garde ci-dessous n'annule pas la migration précédente si elle a
+déjà committé.
+
+**Avant l'étape 2 (arrêt du conteneur), en lecture seule :**
+
+```sql
+-- lit seulement, ne modifie rien
+SELECT "serviceId", section, count(*) AS "nb_champs"
+FROM "ServiceFieldDefinition"
+GROUP BY "serviceId", section
+ORDER BY "serviceId", section;
+```
+
+**Garder ce résultat** : référence de la comparaison ci-dessous.
+
+À l'étape 4, la migration crée deux catégories à date par service (« Parcours
+& Inclusion » / `entryDate`, « Sortie & Bilan » / `exitDate`), rattache
+chaque champ existant à la catégorie correspondant à son ancienne section,
+puis une garde (bloc `DO $$`) compare, par service, le nombre de champs par
+ancienne section au nombre de champs rattachés à la catégorie
+correspondante, et vérifie qu'aucun champ n'est resté sans catégorie — toute
+différence lève une exception qui annule la transaction entière avant que
+`categoryId` ne devienne obligatoire et que la colonne `section` ne soit
+supprimée.
+
+Cette migration a été répétée avec succès sur une copie jetable de la base
+de développement : 2 catégories créées par service, 11 champs sur 11
+rattachés.
+
+**Après l'étape 4, à comparer au résultat ci-dessus :**
+
+```sql
+-- lit seulement, ne modifie rien
+SELECT c."serviceId", c."dateField", count(f.id) AS "nb_champs"
+FROM "ServiceFieldCategory" c
+LEFT JOIN "ServiceFieldDefinition" f ON f."categoryId" = c.id
+GROUP BY c."serviceId", c."dateField"
+ORDER BY c."serviceId", c."dateField";
+```
+
+**Attendu** : la ligne `entryDate` de chaque service égale son compte
+`pathway` ci-dessus, la ligne `exitDate` égale son compte `outcome`. Deux
+lignes par service, pas plus : la contrainte d'unicité `(serviceId,
+dateField)` empêche d'en créer une troisième à date.
+
+**Retour arrière** : identique à l'étape 6 (restauration de la sauvegarde de
+l'étape 1) ; rien de spécifique à ajouter.

@@ -289,6 +289,7 @@ Fragment rather than the real element (React: "Invalid prop `className` supplied
 - Their values live in `PatientServiceFile.data`/`clinicalData` and are read/written through `fieldValue`/`toPatchValue` (`constants/serviceFieldTypes.tsx`), never a direct property access.
 - A new field type needs an entry in `front/src/constants/serviceFieldTypes.tsx` matching the one in `back/src/main/utils/service-field-types.ts` — one without the other breaks the pair.
 - The patient list (`routes/.../patient/index.tsx`) mounts `ReactTable` only once the service fields and categories have loaded — columns/filters persistence depends on the fields being known at mount, not patched in afterwards.
+- In the fiche-patient configuration screen, deleting a field or a category shows "Supprimer"/"Restaurer" ("Supprimés" to reveal archived ones); the two date categories have neither button, they can't be deleted.
 
 ## Testing
 

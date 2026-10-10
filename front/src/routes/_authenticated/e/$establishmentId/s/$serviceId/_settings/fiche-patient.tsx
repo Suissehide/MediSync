@@ -143,8 +143,7 @@ interface CategoryHeaderProps {
   onRestore: () => void
 }
 
-// En-tête d'un bloc catégorie : titre modifiable en place, flèches, ajout de champ, suppression.
-// Composant séparé pour garder la complexité de la liste de blocs (plus bas) sous le seuil Biome.
+// En-tête d'un bloc catégorie, séparé pour garder la complexité de la liste de blocs sous le seuil Biome.
 function CategoryHeader({
   category,
   canManage,
@@ -388,8 +387,7 @@ function FichePatientSettings() {
   const activeCategories = categories
     .filter((c) => !c.archived)
     .sort((a, b) => a.order - b.order)
-  // La bascule « Supprimés » révèle aussi les catégories supprimées, sinon leur « Restaurer »
-  // serait inatteignable ; les catégories actives restent toujours visibles.
+  // La bascule « Supprimés » révèle aussi les catégories supprimées, sinon leur « Restaurer » serait inatteignable.
   const shownCategories = [
     ...activeCategories,
     ...(showDeleted ? categories.filter((c) => c.archived) : []),

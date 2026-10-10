@@ -74,8 +74,7 @@ export const useServiceFieldMutations = () => {
     },
   })
 
-  // Le meme PATCH generique porte modification/suppression/restauration : le message depend
-  // de `archived` ; `feminin` accorde le participe (Catégorie supprimée, pas Catégorie supprimé).
+  // Le message depend de `archived` ; `feminin` accorde le participe (Catégorie supprimée).
   const archivedToast = (
     archived: boolean | undefined,
     nom: string,

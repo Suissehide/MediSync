@@ -53,8 +53,7 @@ type ServiceFieldFormValues = {
   choices: string[]
 }
 
-// Corps du PATCH : `categoryId` n'est envoyé que s'il change (déplace le champ en fin de la
-// catégorie cible, côté back).
+// Corps du PATCH : `categoryId` n'est envoyé que s'il change (déplace le champ en fin de la catégorie cible, côté back).
 const buildUpdatePayload = (
   field: ServiceField,
   value: ServiceFieldFormValues,
