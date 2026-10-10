@@ -70,10 +70,10 @@ class ArsIndicatorDomain implements ArsIndicatorDomainInterface {
     body: ArsAnswerInput,
     userId: string,
   ): Promise<ArsAnswer> {
-    const input = MANUAL_INPUTS[code]
-    if (input === undefined) {
+    if (!Object.hasOwn(MANUAL_INPUTS, code)) {
       throw Boom.badRequest(`L'indicateur ${code} ne se saisit pas`)
     }
+    const input = MANUAL_INPUTS[code]
     if ((input === 'yesno') !== 'boolValue' in body) {
       throw Boom.badRequest(`Réponse d'un autre type que celui de ${code}`)
     }

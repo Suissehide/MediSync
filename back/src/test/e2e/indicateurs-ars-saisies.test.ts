@@ -145,6 +145,24 @@ describe('indicateurs ARS : reponses saisies', () => {
     ).toBe(400)
   })
 
+  it('refuse un code herite de Object.prototype sans rien ecrire', async () => {
+    for (const code of ['constructor', 'toString']) {
+      expect(
+        (
+          await saisir(serviceA, 2026, code, {
+            numberValue: 1,
+            textValue: null,
+          })
+        ).statusCode,
+      ).toBe(400)
+    }
+    expect(
+      await testDb.arsManualAnswer.count({
+        where: { code: { in: ['constructor', 'toString'] } },
+      }),
+    ).toBe(0)
+  })
+
   // Review Focus 4 : chaque service lit la sienne.
   it('isole les reponses par service', async () => {
     expect(
