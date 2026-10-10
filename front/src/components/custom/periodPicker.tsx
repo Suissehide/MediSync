@@ -112,7 +112,7 @@ export function PeriodPicker({
         </ToggleGroup>
       )}
 
-      <div className="flex items-center gap-2 text-sm text-text-light">
+      <div className="flex flex-wrap items-center gap-2 text-sm text-text-light">
         <span>du</span>
         <DatePicker
           value={periode.from}
