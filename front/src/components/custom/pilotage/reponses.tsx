@@ -14,11 +14,22 @@ export function Reponses({
 }) {
   const { completed, dropouts, exited } = r.completion
   const parts = [
-    { n: completed, libelle: 'terminés', couleur: 'bg-termine' },
-    { n: dropouts, libelle: 'abandons', couleur: 'bg-abandon' },
+    {
+      n: completed,
+      libelle: 'terminés',
+      singulier: 'terminé',
+      couleur: 'bg-termine',
+    },
+    {
+      n: dropouts,
+      libelle: 'abandons',
+      singulier: 'abandon',
+      couleur: 'bg-abandon',
+    },
     {
       n: Math.max(exited - completed - dropouts, 0),
       libelle: 'autres sortis',
+      singulier: 'autre sorti',
       couleur: 'bg-autres-sortis',
     },
   ]
@@ -57,7 +68,7 @@ export function Reponses({
                 aria-hidden
                 className={`size-[9px] rounded-[2px] ${p.couleur}`}
               />
-              {`${p.n} ${p.libelle}`}
+              {`${p.n} ${p.n === 1 ? p.singulier : p.libelle}`}
             </span>
           ))}
         </div>
