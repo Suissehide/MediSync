@@ -96,14 +96,14 @@ export const getMemberColumns = ({
   avecIdentifiant,
 }: MemberColumnOptions) => [
   columnHelper.display({
-    id: 'firstName',
-    header: 'Prénom',
-    cell: ({ row }) => row.original.user.firstName ?? '—',
-  }),
-  columnHelper.display({
     id: 'lastName',
     header: 'Nom',
     cell: ({ row }) => row.original.user.lastName ?? '—',
+  }),
+  columnHelper.display({
+    id: 'firstName',
+    header: 'Prénom',
+    cell: ({ row }) => row.original.user.firstName ?? '—',
   }),
   columnHelper.display({
     id: 'email',

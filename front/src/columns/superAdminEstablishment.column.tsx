@@ -57,7 +57,7 @@ export const superAdminEstablishmentColumns = [
       if (!admin) {
         return <span className="text-text-light">—</span>
       }
-      const name = [admin.firstName, admin.lastName].filter(Boolean).join(' ')
+      const name = [admin.lastName, admin.firstName].filter(Boolean).join(' ')
       return name ? `${name} (${admin.email})` : admin.email
     },
   }),

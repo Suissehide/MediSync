@@ -21,7 +21,7 @@ import {
 // service, et le compte qui l'incarne ici voit ses taches. Un compte n'incarne qu'UN soignant par
 // service : le cocher ici le retire du soignant qu'il incarnait jusque-la.
 export const nomDuCompte = (member: ServiceMember) => {
-  const nom = [member.user.firstName, member.user.lastName]
+  const nom = [member.user.lastName, member.user.firstName]
     .filter(Boolean)
     .join(' ')
   return nom || member.user.email

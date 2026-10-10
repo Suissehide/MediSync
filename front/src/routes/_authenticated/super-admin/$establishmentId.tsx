@@ -179,7 +179,7 @@ function SuperAdminEstablishmentDetail() {
                   className="flex justify-between border-b border-border py-1 text-sm"
                 >
                   <span>
-                    {[member.firstName, member.lastName]
+                    {[member.lastName, member.firstName]
                       .filter(Boolean)
                       .join(' ') || member.email}{' '}
                     <span className="text-text-light">({member.email})</span>

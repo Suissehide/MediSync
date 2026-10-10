@@ -69,7 +69,7 @@ export function AddPatientToPathwayForm({
             <span className="flex flex-col">
               Ajouter à un parcours
               <span className="text-sm font-normal text-text-light">
-                {patient.firstName} {patient.lastName}
+                {patient.lastName} {patient.firstName}
               </span>
             </span>
           </PopupTitle>

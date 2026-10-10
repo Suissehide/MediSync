@@ -154,7 +154,7 @@ function SuiviPage() {
         } satisfies CustomMeta<SuiviRow, unknown>,
         cell: ({ row }) =>
           row.original.type === 'patient'
-            ? `${row.original.firstName} ${row.original.lastName}`
+            ? `${row.original.lastName} ${row.original.firstName}`
             : null,
       },
       ...days.map((d) => ({

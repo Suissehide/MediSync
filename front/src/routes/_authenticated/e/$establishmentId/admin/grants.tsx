@@ -27,7 +27,7 @@ export const Route = createFileRoute(
 })
 
 const grantedByLabel = (grant: EstablishmentGrant) =>
-  [grant.grantedBy.firstName, grant.grantedBy.lastName]
+  [grant.grantedBy.lastName, grant.grantedBy.firstName]
     .filter(Boolean)
     .join(' ') || grant.grantedBy.email
 
