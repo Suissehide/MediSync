@@ -459,6 +459,31 @@ describe('ecran d activite', () => {
       ])
     })
 
+    it('garde 220 px a la colonne des thematiques sur sept jours', async () => {
+      monter({
+        ok: true,
+        status: 200,
+        corps: {
+          ...carte,
+          absences: { ...carte.absences, weekdays: [0, 1, 2, 3, 4, 5, 6] },
+        },
+      })
+      const t = await tableau()
+      expect(t.style.minWidth).toBe(`${220 + 8 * 96}px`)
+    })
+
+    it('accorde abandon au singulier', async () => {
+      monter({
+        ok: true,
+        status: 200,
+        corps: {
+          ...carte,
+          completion: { ...carte.completion, dropouts: 1 },
+        },
+      })
+      expect(await screen.findByText('1 abandon')).toBeInTheDocument()
+    })
+
     it('replie les thematiques a faible volume', async () => {
       monter({ ok: true, status: 200, corps: carte })
       const t = await tableau()

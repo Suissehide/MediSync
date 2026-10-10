@@ -16,7 +16,8 @@ export function Motifs({ r }: { r: ActivityReport }) {
           Motifs d'arrêt
         </h2>
         <span className="text-[13px] text-text-light">
-          {r.completion.dropouts} abandons
+          {r.completion.dropouts}{' '}
+          {r.completion.dropouts > 1 ? 'abandons' : 'abandon'}
         </span>
       </div>
       <Barres

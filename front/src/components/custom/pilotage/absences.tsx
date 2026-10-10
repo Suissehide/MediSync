@@ -121,7 +121,10 @@ export function CarteAbsences({ r }: { r: ActivityReport }) {
       </div>
 
       <div className="border border-border rounded-lg overflow-auto">
-        <table className="w-full min-w-[760px] table-fixed border-collapse text-sm tabular-nums">
+        <table
+          className="w-full table-fixed border-collapse text-sm tabular-nums"
+          style={{ minWidth: 220 + (jours.length + 1) * 96 }}
+        >
           <colgroup>
             <col />
             {jours.map((d) => (
