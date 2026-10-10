@@ -10,11 +10,13 @@ import {
   Outlet,
   RouterProvider,
 } from '@tanstack/react-router'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { ACTIVITY_DEFINITIONS } from '@/constants/activity.constant.ts'
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { ActivityReport } from '@/types/activity.ts'
 import type { AuthState, User } from '@/types/auth.ts'
@@ -89,7 +91,25 @@ const rapport: ActivityReport = {
   from: '2026-01-01',
   to: '2026-12-31',
   patients: { active: 148, newlyIncluded: 57, exited: 42 },
-  monthly: [],
+  monthly: [
+    '01',
+    '02',
+    '03',
+    '04',
+    '05',
+    '06',
+    '07',
+    '08',
+    '09',
+    '10',
+    '11',
+    '12',
+  ].map((m, i) => ({
+    month: `2026-${m}`,
+    newlyIncluded: m === '10' ? 9 : i,
+    exited: m === '10' ? 4 : 1,
+    active: m === '11' ? 999 : 100 + i,
+  })),
   completion: {
     completed: 31,
     exited: 42,
@@ -139,6 +159,14 @@ const monter = (
     'fetch',
     vi.fn((input: RequestInfo | URL) => {
       const url = input.toString()
+      if (url.includes('/pathway-template')) {
+        return {
+          ok: true,
+          status: 200,
+          url,
+          json: async () => [{ id: 'pt1', name: 'Insuffisance cardiaque' }],
+        }
+      }
       if (url.includes('/activite')) {
         return {
           ok: reponse.ok,
@@ -184,6 +212,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.useRealTimers()
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
 })
@@ -248,5 +277,92 @@ describe('ecran d activite', () => {
   it('renvoie un intervenant au tableau de bord', async () => {
     monter({ ok: true, status: 200, corps: rapport }, intervenant)
     expect(await screen.findByText('Tableau de bord')).toBeInTheDocument()
+  })
+
+  it('rappelle que les chiffres sont agreges', async () => {
+    monter({ ok: true, status: 200, corps: rapport })
+    expect(
+      await screen.findByText(
+        'Chiffres agrégés uniquement, aucune donnée nominative.',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('decompose les sortis en termines, abandons et autres sortis', async () => {
+    monter({
+      ok: true,
+      status: 200,
+      corps: {
+        ...rapport,
+        completion: { ...rapport.completion, completed: 21, rate: 21 / 42 },
+      },
+    })
+    const carte = (await screen.findByText('Combien ont terminé')).closest(
+      'section',
+    ) as HTMLElement
+    expect(within(carte).getByText('21 terminés')).toBeInTheDocument()
+    expect(within(carte).getByText('11 abandons')).toBeInTheDocument()
+    expect(within(carte).getByText('10 autres sortis')).toBeInTheDocument()
+  })
+
+  it('affiche les definitions a l identique sur demande', async () => {
+    monter({ ok: true, status: 200, corps: rapport })
+    const fileActive = ACTIVITY_DEFINITIONS.find(
+      (d) => d.label === 'File active',
+    )?.definition as string
+    const bascule = await screen.findByRole('button', { name: 'Définitions' })
+    expect(bascule).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.queryByText(fileActive)).not.toBeInTheDocument()
+    await userEvent.click(bascule)
+    expect(bascule).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByText(fileActive)).toBeInTheDocument()
+  })
+
+  it('laisse vides les mois a venir', async () => {
+    vi.setSystemTime(new Date('2026-10-10'))
+    monter({ ok: true, status: 200, corps: rapport })
+    expect(
+      await screen.findByTitle('Oct : 9 inclus, 4 sortis'),
+    ).toBeInTheDocument()
+    expect(screen.getByText('109')).toBeInTheDocument()
+    expect(screen.getByText('Nov')).toBeInTheDocument()
+    expect(screen.queryByTitle(/^Nov/)).not.toBeInTheDocument()
+    expect(screen.queryByText('999')).not.toBeInTheDocument()
+  })
+
+  it('rapporte les bilans a leur base', async () => {
+    monter({
+      ok: true,
+      status: 200,
+      corps: {
+        ...rapport,
+        patients: { ...rapport.patients, newlyIncluded: 567 },
+        sessions: { ...rapport.sessions, educationalDiagnoses: 92 },
+      },
+    })
+    expect(
+      await screen.findByText(
+        (_, el) =>
+          el?.tagName === 'SPAN' && el.textContent === '92 / 567 · 16\u00a0%',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('relance la requete pour le parcours choisi', async () => {
+    monter({ ok: true, status: 200, corps: rapport })
+    await screen.findByText('148')
+    await userEvent.click(screen.getByLabelText('Parcours'))
+    await userEvent.click(
+      await screen.findByRole('option', { name: 'Insuffisance cardiaque' }),
+    )
+    await vi.waitFor(() =>
+      expect(
+        vi
+          .mocked(fetch)
+          .mock.calls.some(([u]) =>
+            u.toString().includes('pathwayTemplateId=pt1'),
+          ),
+      ).toBe(true),
+    )
   })
 })

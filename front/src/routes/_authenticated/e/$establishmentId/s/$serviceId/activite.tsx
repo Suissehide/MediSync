@@ -1,5 +1,6 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import { type ReactNode, useState } from 'react'
+import { BookOpen, Download, ShieldCheck } from 'lucide-react'
+import { useState } from 'react'
 
 import {
   ANNEES,
@@ -7,9 +8,13 @@ import {
   PERIOD_FORMAT,
   PeriodPicker,
 } from '@/components/custom/periodPicker.tsx'
+import { Bilans } from '@/components/custom/pilotage/bilans.tsx'
+import { EntreesSorties } from '@/components/custom/pilotage/entreesSorties.tsx'
+import { Reponses } from '@/components/custom/pilotage/reponses.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
 import { Button } from '@/components/ui/button.tsx'
-import { ACTIVITY_DEFINITIONS, JOURS } from '@/constants/activity.constant.ts'
+import { Select } from '@/components/ui/select.tsx'
+import { JOURS } from '@/constants/activity.constant.ts'
 import { STOP_REASON } from '@/constants/patient.constant.ts'
 import { can } from '@/hooks/useCan.ts'
 import { useServiceName } from '@/hooks/useServiceName.ts'
@@ -17,6 +22,7 @@ import { activityCsv, heures, pourcent } from '@/libs/activityCsv.ts'
 import { slugify, telechargerCsv } from '@/libs/csv.ts'
 import { queryState } from '@/libs/queryState.ts'
 import { useActivityQuery } from '@/queries/useActivity.ts'
+import { usePathwayTemplateQueries } from '@/queries/usePathwayTemplate.ts'
 import type { AbsenceCell, ActivityReport } from '@/types/activity.ts'
 import { resolveTenantContext } from '@/utils/tenant-context.ts'
 
@@ -47,9 +53,16 @@ function ActivitePage() {
   const serviceName = useServiceName(params.establishmentId, params.serviceId)
 
   const [periode, setPeriode] = useState(() => anneeCivile(ANNEES[0]))
+  const [parcours, setParcours] = useState('')
+  const [definitions, setDefinitions] = useState(false)
   const from = periode.from.format(PERIOD_FORMAT)
   const to = periode.to.format(PERIOD_FORMAT)
-  const { report, isPending, error, refetch } = useActivityQuery(from, to)
+  const { report, isPending, error, refetch } = useActivityQuery(
+    from,
+    to,
+    parcours || undefined,
+  )
+  const { pathwayTemplates } = usePathwayTemplateQueries()
   const etat = queryState({ isPending, error, hasData: report !== undefined })
 
   const exporter = () => {
@@ -64,78 +77,99 @@ function ActivitePage() {
 
   return (
     <DashboardLayout>
-      <div className="flex-1 min-h-0 bg-background p-4 md:p-6 rounded-lg flex flex-col w-full gap-6 overflow-auto">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <h1 className="h-9 flex items-center text-text-dark text-xl font-semibold">
-            Activité
-          </h1>
-          <div className="flex items-center gap-3 flex-wrap">
-            <PeriodPicker periode={periode} onChange={setPeriode} />
-            <Button onClick={exporter} disabled={etat !== 'ready'}>
-              Exporter en CSV
-            </Button>
+      <div className="flex-1 min-h-0 bg-muted p-4 md:p-6 rounded-lg w-full overflow-auto">
+        <div className="max-w-[1320px] mx-auto flex flex-col gap-4">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div className="flex flex-col gap-1">
+              <h1 className="text-2xl font-bold text-foreground">Activité</h1>
+              <p className="flex items-center gap-1.5 text-[13px] text-text-light">
+                <ShieldCheck aria-hidden className="size-3.5" />
+                Chiffres agrégés uniquement, aucune donnée nominative.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <PeriodPicker periode={periode} onChange={setPeriode} presets />
+              <div className="w-56">
+                <label htmlFor="filtre-parcours" className="sr-only">
+                  Parcours
+                </label>
+                <Select
+                  id="filtre-parcours"
+                  className="bg-carte"
+                  placeholder="Tous les parcours"
+                  options={(pathwayTemplates ?? []).map((p) => ({
+                    value: p.id,
+                    label: p.name,
+                  }))}
+                  value={parcours}
+                  onValueChange={setParcours}
+                />
+              </div>
+              <Button
+                variant="outline"
+                aria-pressed={definitions}
+                onClick={() => setDefinitions((d) => !d)}
+                className="font-normal text-text-dark bg-carte aria-pressed:bg-primary/10 aria-pressed:border-primary aria-pressed:text-primary"
+              >
+                <BookOpen aria-hidden className="size-4" />
+                Définitions
+              </Button>
+              <Button onClick={exporter} disabled={etat !== 'ready'}>
+                <Download aria-hidden className="size-4" />
+                Exporter en CSV
+              </Button>
+            </div>
           </div>
-        </div>
 
-        {etat === 'pending' && <p className="text-text-light">Chargement...</p>}
-        {etat === 'error' && (
-          <div className="flex flex-col gap-2">
+          {etat === 'pending' && (
+            <p className="text-text-light">Chargement...</p>
+          )}
+          {etat === 'error' && (
+            <div className="flex flex-col gap-2">
+              <p role="alert" className="text-text-light">
+                Impossible de charger l'activité du service. Réessayez plus
+                tard.
+              </p>
+              <Button className="self-start" onClick={() => refetch()}>
+                Réessayer
+              </Button>
+            </div>
+          )}
+          {etat === 'empty' && (
             <p role="alert" className="text-text-light">
               Impossible de charger l'activité du service. Réessayez plus tard.
             </p>
-            <Button className="self-start" onClick={() => refetch()}>
-              Réessayer
-            </Button>
-          </div>
-        )}
-        {etat === 'empty' && (
-          <p role="alert" className="text-text-light">
-            Impossible de charger l'activité du service. Réessayez plus tard.
-          </p>
-        )}
-        {etat === 'ready' && report && estVide(report) && (
-          <p className="text-text-light">
-            Aucune activité sur cette période. Choisissez une autre année ou
-            élargissez la plage.
-          </p>
-        )}
-        {etat === 'ready' && report && !estVide(report) && (
-          <Rapport r={report} />
-        )}
+          )}
+          {etat === 'ready' && report && estVide(report) && (
+            <p className="text-text-light">
+              Aucune activité sur cette période. Choisissez une autre année ou
+              élargissez la plage.
+            </p>
+          )}
+          {etat === 'ready' && report && !estVide(report) && (
+            <Rapport r={report} definitions={definitions} />
+          )}
+        </div>
       </div>
     </DashboardLayout>
   )
 }
 
-function Rapport({ r }: { r: ActivityReport }) {
-  const pire = r.absences.worst
+function Rapport({
+  r,
+  definitions,
+}: {
+  r: ActivityReport
+  definitions: boolean
+}) {
   return (
     <>
-      <section aria-label="Réponses" className="grid gap-4 md:grid-cols-3">
-        <Reponse
-          question="Combien de patients"
-          chiffre={String(r.patients.active)}
-          unite="en file active"
-        >
-          {r.patients.newlyIncluded} nouveaux inclus, {r.patients.exited} sortis
-        </Reponse>
-        <Reponse
-          question="Combien ont terminé"
-          chiffre={pourcent(r.completion.rate)}
-          unite={`${r.completion.completed} sur ${r.completion.exited} sortis`}
-        >
-          {r.completion.dropouts} abandons
-        </Reponse>
-        <Reponse
-          question="Où sont les absences"
-          chiffre={pourcent(r.absences.overall.rate)}
-          unite="des rendez-vous pointés"
-        >
-          {pire
-            ? `Le plus : ${pire.thematic}, le ${JOURS[pire.weekday]}`
-            : 'Trop peu de rendez-vous pointés pour situer un pic'}
-        </Reponse>
-      </section>
+      <Reponses r={r} definitions={definitions} />
+
+      <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(min(100%,520px),1fr))]">
+        <EntreesSorties mois={r.monthly} />
+        <Bilans r={r} />
+      </div>
 
       <CarteAbsences r={r} />
 
@@ -171,44 +205,7 @@ function Rapport({ r }: { r: ActivityReport }) {
           />
         </section>
       </div>
-
-      <details className="text-sm">
-        <summary className="cursor-pointer text-text-dark font-medium">
-          Définitions
-        </summary>
-        <dl className="mt-3 grid gap-2 max-w-prose">
-          {ACTIVITY_DEFINITIONS.map((d) => (
-            <div key={d.label}>
-              <dt className="font-medium text-text-dark">{d.label}</dt>
-              <dd className="text-text-light">{d.definition}</dd>
-            </div>
-          ))}
-        </dl>
-      </details>
     </>
-  )
-}
-
-function Reponse({
-  question,
-  chiffre,
-  unite,
-  children,
-}: {
-  question: string
-  chiffre: string
-  unite: string
-  children: ReactNode
-}) {
-  return (
-    <div className="flex flex-col gap-1 border-l-2 border-primary pl-4">
-      <h2 className="text-sm text-text-light">{question}</h2>
-      <p className="text-text-dark">
-        <span className="text-4xl font-semibold tabular-nums">{chiffre}</span>{' '}
-        <span className="text-sm">{unite}</span>
-      </p>
-      <p className="text-sm text-text-light">{children}</p>
-    </div>
   )
 }
 
