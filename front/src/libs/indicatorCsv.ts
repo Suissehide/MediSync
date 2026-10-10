@@ -1,9 +1,9 @@
-import type { ArsIndicator } from '../types/arsIndicator.ts'
+import type { IndicatorResult } from '../types/indicatorSet.ts'
 import { nombre, toCsv } from './csv.ts'
 
-// Une ligne par indicateur ; sans valeur, la raison va dans la colonne note.
-export const arsCsv = (
-  indicateurs: ArsIndicator[],
+// Une ligne par indicateur, puis une par ligne de répartition ; sans valeur, la raison va dans la note.
+export const indicatorCsv = (
+  indicateurs: IndicatorResult[],
   serviceName: string,
   from: string,
   to: string,
@@ -13,15 +13,23 @@ export const arsCsv = (
       ['code', 'libellé', 'valeur', 'note'],
       ['Service', serviceName, '', ''],
       ['Période', `${from} au ${to}`, '', ''],
-      ...indicateurs.map((i) => [i.code, i.label, ...valeurEtNote(i)]),
+      ...indicateurs.flatMap((i) => [
+        [i.code, i.label, ...valeurEtNote(i)],
+        ...(i.breakdown ?? []).map((b) => [
+          '',
+          `— ${b.label}`,
+          nombre(b.value),
+          '',
+        ]),
+      ]),
     ],
     [1],
   )
 
-// Une reponse saisie remplace la valeur ; l'explication de 2.5 remplace la note. Une reponse
+// Une reponse saisie remplace la valeur ; l'explication saisie remplace la note. Une reponse
 // enregistree mais vide (bascule remise a vide, nombre efface sans texte) retombe sur la note
 // de l'indicateur, comme une absence totale de reponse.
-const valeurEtNote = ({ value, note, input, answer }: ArsIndicator) => {
+const valeurEtNote = ({ value, note, input, answer }: IndicatorResult) => {
   const sansReponse: [string, string] = [
     value === null ? '' : nombre(value),
     note ?? '',

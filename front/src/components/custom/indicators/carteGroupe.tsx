@@ -1,25 +1,31 @@
-import { useId } from 'react'
+import { Fragment, useId } from 'react'
 
-import { LigneIndicateur } from '@/components/custom/ars/ligne.tsx'
+import { BreakdownRows } from '@/components/custom/indicators/breakdownRows.tsx'
+import { LigneIndicateur } from '@/components/custom/indicators/ligne.tsx'
 import {
   compter,
   type Filtre,
   statut,
   visible,
-} from '@/components/custom/ars/statut.ts'
+} from '@/components/custom/indicators/statut.ts'
 import { Carte } from '@/components/custom/pilotage/carte.tsx'
-import type { ArsIndicator } from '@/types/arsIndicator.ts'
+import type { IndicatorResult } from '@/types/indicatorSet.ts'
 
 export function CarteGroupe({
+  setId,
   numero,
   nom,
   indicateurs,
+  tous,
   filtre,
   annee,
 }: {
+  setId: string
   numero: number
   nom: string
-  indicateurs: ArsIndicator[]
+  indicateurs: IndicatorResult[]
+  // Le parent d'un indicateur peut vivre dans un autre groupe.
+  tous: IndicatorResult[]
   filtre: Filtre
   annee: number | null
 }) {
@@ -61,16 +67,17 @@ export function CarteGroupe({
         </thead>
         <tbody>
           {lignes.map((i) => (
-            <LigneIndicateur
-              key={`${i.code}-${annee}`}
-              indicateur={i}
-              annee={annee}
-              parent={
-                i.code.endsWith('bis')
-                  ? indicateurs.find((p) => p.code === i.code.slice(0, -3))
-                  : undefined
-              }
-            />
+            <Fragment key={`${i.id}-${annee}`}>
+              <LigneIndicateur
+                setId={setId}
+                indicateur={i}
+                annee={annee}
+                parent={tous.find((p) => p.id === i.parentId)}
+              />
+              {i.breakdown && (
+                <BreakdownRows lignes={i.breakdown} total={i.value} />
+              )}
+            </Fragment>
           ))}
         </tbody>
       </table>

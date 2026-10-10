@@ -1,7 +1,7 @@
-import { compter, type Filtre } from '@/components/custom/ars/statut.ts'
+import { compter, type Filtre } from '@/components/custom/indicators/statut.ts'
 import { Carte } from '@/components/custom/pilotage/carte.tsx'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group.tsx'
-import type { ArsIndicator } from '@/types/arsIndicator.ts'
+import type { IndicatorResult } from '@/types/indicatorSet.ts'
 
 const pluriel = (n: number, mot: string) => `${n} ${mot}${n > 1 ? 's' : ''}`
 
@@ -10,7 +10,7 @@ export function Bandeau({
   filtre,
   onFiltre,
 }: {
-  indicateurs: ArsIndicator[]
+  indicateurs: IndicatorResult[]
   filtre: Filtre
   onFiltre: (filtre: Filtre) => void
 }) {
@@ -52,7 +52,7 @@ export function Bandeau({
       <div className="flex flex-col gap-2 flex-1 min-w-[280px]">
         <p className="flex flex-wrap items-baseline gap-2">
           <span className="text-[15px] font-semibold text-foreground">
-            Prêt pour l'enquête
+            Avancement
           </span>
           <span className="text-sm text-muted-foreground">
             {`${calcule} calculés · ${saisi + restant} à saisir (${restant ? pluriel(restant, 'restant') : 'complets'}) · ${indisponible} non disponibles`}

@@ -1,4 +1,4 @@
-import { Check, Copy, Info } from 'lucide-react'
+import { AlertTriangle, Check, Copy, Info } from 'lucide-react'
 import {
   type RefObject,
   useCallback,
@@ -8,26 +8,34 @@ import {
   useState,
 } from 'react'
 
-import { type Statut, statut } from '@/components/custom/ars/statut.ts'
+import { type Statut, statut } from '@/components/custom/indicators/statut.ts'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group.tsx'
+import {
+  TooltipContent,
+  TooltipProvider,
+  TooltipRoot,
+  TooltipTrigger,
+} from '@/components/ui/tooltip.tsx'
 import { useCan } from '@/hooks/useCan.ts'
 import { nombre } from '@/libs/csv.ts'
 import { cn } from '@/libs/utils.ts'
-import { useSaveArsAnswerMutation } from '@/queries/useArsIndicator.ts'
+import { useSaveIndicatorAnswerMutation } from '@/queries/useIndicatorSet.ts'
 import type {
-  ArsAnswer,
-  ArsAnswerBody,
-  ArsIndicator,
-} from '@/types/arsIndicator.ts'
+  IndicatorAnswer,
+  IndicatorAnswerBody,
+  IndicatorResult,
+} from '@/types/indicatorSet.ts'
 
 const DELAI = 500
 
 // L'annee est figee a la frappe : un changement de periode n'egare pas une saisie en attente.
-function useSaisie(code: string, annee: number | null) {
-  const { mutateAsync } = useSaveArsAnswerMutation()
+function useSaisie(setId: string, indicatorId: string, annee: number | null) {
+  const { mutateAsync } = useSaveIndicatorAnswerMutation(setId)
   const [resultat, setResultat] = useState<Resultat>(null)
-  const [reponse, setReponse] = useState<ArsAnswer | null>(null)
-  const attente = useRef<{ annee: number; body: ArsAnswerBody } | null>(null)
+  const [reponse, setReponse] = useState<IndicatorAnswer | null>(null)
+  const attente = useRef<{ annee: number; body: IndicatorAnswerBody } | null>(
+    null,
+  )
   const minuteur = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   const envoyer = useCallback(() => {
@@ -37,7 +45,7 @@ function useSaisie(code: string, annee: number | null) {
     if (!saisie) {
       return
     }
-    mutateAsync({ year: saisie.annee, code, body: saisie.body }).then(
+    mutateAsync({ year: saisie.annee, indicatorId, body: saisie.body }).then(
       (r) => {
         setReponse(r)
         setResultat('enregistre')
@@ -47,11 +55,11 @@ function useSaisie(code: string, annee: number | null) {
         setResultat('erreur')
       },
     )
-  }, [code, mutateAsync])
+  }, [indicatorId, mutateAsync])
 
   useEffect(() => envoyer, [envoyer])
 
-  const planifier = (body: ArsAnswerBody, immediat = false) => {
+  const planifier = (body: IndicatorAnswerBody, immediat = false) => {
     if (annee === null) {
       return
     }
@@ -70,9 +78,9 @@ function useSaisie(code: string, annee: number | null) {
   return { planifier, envoyer, enAttente, resultat, reponse }
 }
 
-// Brouillons des champs de 2.5 et 4.2 : ils gardent la frappe meme si l'enregistrement echoue.
+// Brouillons des champs a saisir : ils gardent la frappe meme si l'enregistrement echoue.
 function useChamps(
-  answer: ArsAnswer | null,
+  answer: IndicatorAnswer | null,
   saisie: ReturnType<typeof useSaisie>,
   ligne: RefObject<HTMLTableRowElement | null>,
 ) {
@@ -112,18 +120,20 @@ function useChamps(
 }
 
 export function LigneIndicateur({
+  setId,
   indicateur,
   parent,
   annee,
 }: {
-  indicateur: ArsIndicator
-  parent?: ArsIndicator
+  setId: string
+  indicateur: IndicatorResult
+  parent?: IndicatorResult
   annee: number | null
 }) {
-  const saisie = useSaisie(indicateur.code, annee)
+  const saisie = useSaisie(setId, indicateur.id, annee)
   const i = { ...indicateur, answer: saisie.reponse ?? indicateur.answer }
   const s = statut(i)
-  const bis = i.code.endsWith('bis')
+  const enfant = i.parentId !== null
   const libelleId = useId()
   const peutEcrire = useCan('stats:write')
   const lecture = !peutEcrire || annee === null
@@ -133,7 +143,7 @@ export function LigneIndicateur({
   const annoncesId = useId()
   const decritPar = decrire(annoncesId, horsAnnee, saisie.resultat)
 
-  const pad = bis ? 'pt-2 pb-3' : 'py-3'
+  const pad = enfant ? 'pt-2 pb-3' : 'py-3'
 
   return (
     <tr
@@ -156,25 +166,28 @@ export function LigneIndicateur({
         <div
           className={cn(
             'flex flex-col gap-1 min-w-0',
-            bis && 'pl-3.5 border-l-2 border-border',
+            enfant && 'pl-3.5 border-l-2 border-border',
           )}
         >
-          <span
-            id={libelleId}
-            className={cn(
-              'text-sm leading-relaxed text-pretty',
-              s === 'indisponible' ? 'text-text-light' : 'text-foreground',
-            )}
-          >
-            {i.label}
-          </span>
-          {i.note && i.kind === 'unavailable' && (
+          <div className="flex items-start gap-1.5">
+            <span
+              id={libelleId}
+              className={cn(
+                'text-sm leading-relaxed text-pretty',
+                s === 'indisponible' ? 'text-text-light' : 'text-foreground',
+              )}
+            >
+              {i.label}
+            </span>
+            {i.warnings.length > 0 && <Avertissement textes={i.warnings} />}
+          </div>
+          {i.note && i.nature === 'unavailable' && (
             <span className="flex items-start gap-1.5 text-xs leading-snug text-text-light">
               <Info aria-hidden className="size-[13px] shrink-0 mt-px" />
               {i.note}
             </span>
           )}
-          {i.note && i.kind === 'manual' && (
+          {i.note && i.nature === 'manual' && (
             <span className="text-xs text-a-saisir-texte">{i.note}</span>
           )}
           {i.input === 'number+text' && (
@@ -228,7 +241,7 @@ export function LigneIndicateur({
               onChange={champs.choisir}
             />
           ) : (
-            <Valeur indicateur={i} parent={parent} bis={bis} />
+            <Valeur indicateur={i} parent={parent} enfant={enfant} />
           )}
         </div>
       </td>
@@ -320,7 +333,7 @@ function OuiNon({
   )
 }
 
-const corps25 = (n: string, t: string): ArsAnswerBody => ({
+const corps25 = (n: string, t: string): IndicatorAnswerBody => ({
   numberValue: n === '' ? null : Number(n),
   textValue: t.trim() || null,
 })
@@ -331,13 +344,13 @@ const bordure = (s: Statut) =>
 function Valeur({
   indicateur: i,
   parent,
-  bis,
+  enfant,
 }: {
-  indicateur: ArsIndicator
-  parent?: ArsIndicator
-  bis: boolean
+  indicateur: IndicatorResult
+  parent?: IndicatorResult
+  enfant: boolean
 }) {
-  if (i.kind === 'unavailable') {
+  if (i.nature === 'unavailable') {
     return (
       <span className="px-2 py-0.5 rounded-full bg-muted text-xs text-text-light whitespace-nowrap">
         Non disponible
@@ -362,7 +375,7 @@ function Valeur({
       <span
         className={cn(
           'font-semibold text-foreground tabular-nums',
-          bis ? 'text-[15px]' : 'text-[17px]',
+          enfant ? 'text-[15px]' : 'text-[17px]',
         )}
       >
         {nombre(i.value)}
@@ -405,5 +418,29 @@ function Copier({ code, valeur }: { code: string; valeur: number }) {
         {copie ? 'Copié' : ''}
       </span>
     </>
+  )
+}
+
+// Le calcul a abouti malgré une configuration à revoir (filtre sur un champ ou un choix archivé).
+function Avertissement({ textes }: { textes: string[] }) {
+  return (
+    <TooltipProvider>
+      <TooltipRoot>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            aria-label="Avertissement"
+            className="mt-1 shrink-0 text-a-saisir-texte cursor-help"
+          >
+            <AlertTriangle aria-hidden className="size-3.5" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>
+          {textes.map((t) => (
+            <p key={t}>{t}</p>
+          ))}
+        </TooltipContent>
+      </TooltipRoot>
+    </TooltipProvider>
   )
 }

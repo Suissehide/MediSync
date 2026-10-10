@@ -235,8 +235,9 @@ export const PLANNING_CYCLE = {
   RESET: 'reset_planning_cycle',
 }
 
-export const ARS_INDICATOR = {
-  GET: 'get_ars_indicators',
+export const INDICATOR_SET = {
+  LIST: 'get_indicator_sets',
+  RESULTS: 'get_indicator_results',
 }
 
 export const ACTIVITY = {

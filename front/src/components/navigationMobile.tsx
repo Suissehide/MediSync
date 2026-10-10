@@ -4,7 +4,7 @@ import { Fragment } from 'react'
 
 import { type NavItem, TAB_MENU_GROUPS } from '../navigation/navigation.ts'
 import { FilAriane } from './custom/filAriane.tsx'
-import { useOnglets } from './navbar.tsx'
+import { cle, useOnglets } from './navbar.tsx'
 
 const lien = (actif: boolean) =>
   `mx-2 px-3 py-2 rounded-md text-sm ${
@@ -20,9 +20,9 @@ export function TeteDuTiroir() {
 
   const lienVers = (item: NavItem, libelle = item.label) => (
     <Link
-      key={item.to}
+      key={cle(item)}
       to={item.to}
-      params={params as never}
+      params={{ ...params, ...item.params } as never}
       activeOptions={{ exact: true }}
       aria-current={estActif(item) ? 'page' : undefined}
       className={lien(estActif(item))}
