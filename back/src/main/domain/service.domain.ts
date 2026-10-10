@@ -1,5 +1,8 @@
+import Boom from '@hapi/boom'
+
 import type { IocContainer } from '../types/application/ioc'
 import type {
+  ActivitySettingsUpdateEntityDomain,
   ServiceCreateEntityDomain,
   ServiceDeactivationImpactDomain,
   ServiceDomainInterface,
@@ -7,21 +10,25 @@ import type {
   ServiceUpdateEntityDomain,
 } from '../types/domain/service.domain.interface'
 import type { PatientServiceFileRepositoryInterface } from '../types/infra/orm/repositories/patientServiceFile.repository.interface'
+import type { ServiceFieldRepositoryInterface } from '../types/infra/orm/repositories/serviceField.repository.interface'
 import type { ServiceRepositoryInterface } from '../types/infra/orm/repositories/service.repository.interface'
 import type { TenantContextInterface } from '../types/utils/tenant-context'
 
 class ServiceDomain implements ServiceDomainInterface {
   private readonly serviceRepository: ServiceRepositoryInterface
   private readonly patientServiceFileRepository: PatientServiceFileRepositoryInterface
+  private readonly serviceFieldRepository: ServiceFieldRepositoryInterface
   private readonly tenantContext: TenantContextInterface
 
   constructor({
     serviceRepository,
     patientServiceFileRepository,
+    serviceFieldRepository,
     tenantContext,
   }: IocContainer) {
     this.serviceRepository = serviceRepository
     this.patientServiceFileRepository = patientServiceFileRepository
+    this.serviceFieldRepository = serviceFieldRepository
     this.tenantContext = tenantContext
   }
 
@@ -67,6 +74,39 @@ class ServiceDomain implements ServiceDomainInterface {
       service.id,
       service.establishmentId,
     )
+  }
+
+  // Le champ motif d'arrêt doit être un champ à choix du service ; la valeur « fin de parcours »
+  // doit être un de ses choix, et n'a de sens que si un champ est choisi.
+  async updateActivitySettings(
+    params: ActivitySettingsUpdateEntityDomain,
+  ): Promise<ServiceEntityDomain> {
+    if (
+      params.completedChoiceKey !== null &&
+      params.stopReasonFieldKey === null
+    ) {
+      throw Boom.badRequest(
+        "La valeur de fin de parcours exige un champ de motif d'arrêt.",
+      )
+    }
+    if (params.stopReasonFieldKey !== null) {
+      const fields = await this.serviceFieldRepository.findAll()
+      const field = fields.find((f) => f.key === params.stopReasonFieldKey)
+      if (!field) {
+        throw Boom.badRequest(`Champ inconnu : ${params.stopReasonFieldKey}`)
+      }
+      if (field.type !== 'choice') {
+        throw Boom.badRequest("Le motif d'arrêt doit être un champ à choix.")
+      }
+      if (
+        params.completedChoiceKey !== null &&
+        !field.choices.some((c) => c.key === params.completedChoiceKey)
+      ) {
+        throw Boom.badRequest(`Choix inconnu : ${params.completedChoiceKey}`)
+      }
+    }
+    const { serviceId } = this.tenantContext.scope()
+    return this.serviceRepository.update(serviceId, params)
   }
 }
 

@@ -140,6 +140,31 @@ const probes: {
     path: '/activite?from=2026-01-01&to=2026-12-31',
     heldStatus: 200,
   },
+  {
+    permission: 'stats:read',
+    method: 'GET',
+    path: '/indicator-sets',
+    heldStatus: 200,
+  },
+  {
+    permission: 'stats:read',
+    method: 'GET',
+    path: '/indicator-catalog',
+    heldStatus: 200,
+  },
+  {
+    permission: 'stats:write',
+    method: 'POST',
+    path: '/indicator-sets',
+    payload: { name: 'X' },
+  },
+  {
+    permission: 'stats:write',
+    method: 'PATCH',
+    path: '/activity-settings',
+    payload: { stopReasonFieldKey: null, completedChoiceKey: null },
+    heldStatus: 200,
+  },
 ]
 
 const roles: ServiceRole[] = [

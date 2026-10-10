@@ -12,6 +12,7 @@ import type { DiagnosticEducatifTemplateDomainInterface } from '../domain/diagno
 import type { EnrollmentIssueDomainInterface } from '../domain/enrollmentIssue.domain.interface'
 import type { EstablishmentDomainInterface } from '../domain/establishment.domain.interface'
 import type { ForbiddenWeekDomainInterface } from '../domain/forbiddenWeek.domain.interface'
+import type { IndicatorSetDomainInterface } from '../domain/indicatorSet.domain.interface'
 import type { LocationDomainInterface } from '../domain/location.domain.interface'
 import type { MembershipDomainInterface } from '../domain/membership.domain.interface'
 import type { PathwayDomainInterface } from '../domain/pathway.domain.interface'
@@ -45,6 +46,7 @@ import type { DiagnosticEducatifTemplateRepositoryInterface } from '../infra/orm
 import type { EnrollmentIssueRepositoryInterface } from '../infra/orm/repositories/enrollmentIssue.repository.interface'
 import type { EstablishmentRepositoryInterface } from '../infra/orm/repositories/establishment.repository.interface'
 import type { ForbiddenWeekRepositoryInterface } from '../infra/orm/repositories/forbiddenWeek.repository.interface'
+import type { IndicatorSetRepositoryInterface } from '../infra/orm/repositories/indicatorSet.repository.interface'
 import type { LocationRepositoryInterface } from '../infra/orm/repositories/location.repository.interface'
 import type { MembershipRepositoryInterface } from '../infra/orm/repositories/membership.repository.interface'
 import type { PathwayRepositoryInterface } from '../infra/orm/repositories/pathway.repository.interface'
@@ -168,4 +170,7 @@ export interface IocContainer {
   // `record` est un dispositif distinct ; ceci ne pose que le chemin d'ecriture.
   readonly patientAccessLogDomain: PatientAccessLogDomainInterface
   readonly patientAccessLogRepository: PatientAccessLogRepositoryInterface
+  // IndicatorSet (jeux d'indicateurs configurables)
+  readonly indicatorSetDomain: IndicatorSetDomainInterface
+  readonly indicatorSetRepository: IndicatorSetRepositoryInterface
 }

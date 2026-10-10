@@ -14,6 +14,7 @@ import { DiagnosticEducatifTemplateDomain } from '../../../domain/diagnosticEduc
 import { EnrollmentIssueDomain } from '../../../domain/enrollmentIssue.domain'
 import { EstablishmentDomain } from '../../../domain/establishment.domain'
 import { ForbiddenWeekDomain } from '../../../domain/forbiddenWeek.domain'
+import { IndicatorSetDomain } from '../../../domain/indicatorSet.domain'
 import { LocationDomain } from '../../../domain/location.domain'
 import { MembershipDomain } from '../../../domain/membership.domain'
 import { PathwayDomain } from '../../../domain/pathway.domain'
@@ -46,6 +47,7 @@ import { DiagnosticEducatifTemplateRepository } from '../../../infra/orm/reposit
 import { EnrollmentIssueRepository } from '../../../infra/orm/repositories/enrollmentIssue.repository'
 import { EstablishmentRepository } from '../../../infra/orm/repositories/establishment.repository'
 import { ForbiddenWeekRepository } from '../../../infra/orm/repositories/forbiddenWeek.repository'
+import { IndicatorSetRepository } from '../../../infra/orm/repositories/indicatorSet.repository'
 import { LocationRepository } from '../../../infra/orm/repositories/location.repository'
 import { MembershipRepository } from '../../../infra/orm/repositories/membership.repository'
 import { PathwayRepository } from '../../../infra/orm/repositories/pathway.repository'
@@ -184,6 +186,9 @@ class AwilixIocContainer {
     // PatientAccessLog
     this.#registerPatientAccessLogDomain()
     this.#registerPatientAccessLogRepository()
+    // IndicatorSet
+    this.#registerIndicatorSetDomain()
+    this.#registerIndicatorSetRepository()
 
     // Server
     this.#registerHttpServer()
@@ -405,6 +410,17 @@ class AwilixIocContainer {
     this.register(
       'patientAccessLogRepository',
       asClass(PatientAccessLogRepository).singleton(),
+    )
+  }
+
+  // IndicatorSet
+  #registerIndicatorSetDomain(): void {
+    this.register('indicatorSetDomain', asClass(IndicatorSetDomain).singleton())
+  }
+  #registerIndicatorSetRepository(): void {
+    this.register(
+      'indicatorSetRepository',
+      asClass(IndicatorSetRepository).singleton(),
     )
   }
 
