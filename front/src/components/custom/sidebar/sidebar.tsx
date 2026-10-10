@@ -101,7 +101,7 @@ function Sidebar({
               </div>
               <div className="min-w-0">
                 <div className="text-md font-semibold truncate">
-                  {authState?.user?.lastName} {authState?.user?.firstName}
+                  {authState?.user?.firstName} {authState?.user?.lastName}
                 </div>
                 <div className="text-text-sidebar text-xs truncate">
                   {authState?.user?.email}
