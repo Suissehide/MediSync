@@ -29,9 +29,12 @@ import {
 const schemaPath = join(__dirname, '../../../../prisma/schema.prisma')
 const schema = readFileSync(schemaPath, 'utf8')
 
-// Retire les commentaires de fin de ligne : un `// Soignant referent` ne doit pas etre lu comme
-// une declaration de champ.
-const withoutComments = schema.replace(/\/\/.*$/gm, '')
+// Retire les commentaires de fin de ligne (un `// Soignant referent` ne doit pas etre lu comme
+// une declaration de champ) et le contenu des chaines entre guillemets : un defaut comme
+// `@default("{}")` contiendrait sinon une accolade qui romprait la detection des blocs `model`.
+const withoutComments = schema
+  .replace(/\/\/.*$/gm, '')
+  .replace(/"[^"]*"/g, '""')
 
 // Blocs `model X { … }`. Le schema n'imbrique aucune accolade dans un bloc de modele : la
 // premiere accolade fermante termine donc le bloc.

@@ -25,6 +25,8 @@ export const SERVICE_MODELS: readonly string[] = [
   'SoignantThematic',
   'PatientServiceFile',
   'PatientAccessLog',
+  'ServiceFieldDefinition',
+  'ServiceFieldChoice',
   // Modeles de service depuis le 2026-09-29 (un soignant est un metier du service, une salle un
   // lieu du service) : voir la migration `soignants_salles_par_service`.
   'Soignant',
@@ -132,6 +134,7 @@ export const NESTED_RELATIONS: Record<string, Record<string, string>> = {
     appointmentPatients: 'AppointmentPatient',
     serviceFiles: 'PatientServiceFile',
   },
+  ServiceFieldDefinition: { choices: 'ServiceFieldChoice' },
 }
 
 // Relations d'un modèle global qui exposent des données de tenant. Un include/select dessus n'est
@@ -304,6 +307,7 @@ export const MODEL_RELATIONS: Record<string, Record<string, ModelRelation>> = {
     memberships: many('ServiceMembership'),
     patientServiceFiles: many('PatientServiceFile'),
     accessLogs: many('PatientAccessLog'),
+    fieldDefinitions: many('ServiceFieldDefinition'),
   },
   EstablishmentMembership: {
     user: one('User'),
@@ -399,6 +403,13 @@ export const MODEL_RELATIONS: Record<string, Record<string, ModelRelation>> = {
   PatientAccessLog: {
     patient: one('Patient'),
     service: one('Service'),
+  },
+  ServiceFieldDefinition: {
+    service: one('Service'),
+    choices: many('ServiceFieldChoice'),
+  },
+  ServiceFieldChoice: {
+    field: one('ServiceFieldDefinition'),
   },
 }
 

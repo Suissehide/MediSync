@@ -1,6 +1,6 @@
 // Champs cliniques que le document d'habilitations réserve à `clinical:read`
 // (le secrétariat et la lecture seule ne doivent pas les voir) :
-//   - sur le patient : notes, details, medicalDiagnosis ;
+//   - sur le sous-dossier de service : notes, details, clinicalData (valeurs des champs configurables cliniques) ;
 //   - sur un patient inscrit à un rendez-vous : transmissionNotes.
 //
 // `etpDecision`, `goal`, `programType` et `stopReason` n'en font volontairement
@@ -20,6 +20,7 @@ export const CLINICAL_FIELDS: readonly string[] = [
   'details',
   'medicalDiagnosis',
   'transmissionNotes',
+  'clinicalData',
 ]
 
 const CLINICAL_FIELD_SET: ReadonlySet<string> = new Set(CLINICAL_FIELDS)

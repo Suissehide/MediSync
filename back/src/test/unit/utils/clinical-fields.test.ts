@@ -7,7 +7,7 @@ import {
 } from '../../../main/utils/clinical-fields'
 
 describe('withoutClinicalFields', () => {
-  it('retire les quatre champs cliniques et garde les champs administratifs', () => {
+  it('retire les cinq champs cliniques et garde les champs administratifs', () => {
     const patient = {
       id: 'p1',
       firstName: 'A',
@@ -29,6 +29,12 @@ describe('withoutClinicalFields', () => {
       programType: 'type',
       stopReason: 'motif',
     })
+
+    // `clinicalData` porte les valeurs des champs configurables cliniques : retire comme les
+    // autres champs cliniques, `data` (les champs non cliniques) reste intact.
+    expect(
+      withoutClinicalFields({ data: { a: 1 }, clinicalData: { b: 2 } }),
+    ).toEqual({ data: { a: 1 } })
   })
 
   it('filtre un patient embarque par un creneau, un rendez-vous et un participant', () => {
@@ -124,7 +130,11 @@ describe('withoutClinicalFields', () => {
       join(__dirname, '../../../../prisma/schema.prisma'),
       'utf8',
     )
-    const withoutComments = schema.replace(/\/\/.*$/gm, '')
+    // Le contenu des chaines entre guillemets est aussi retire : un defaut comme
+    // `@default("{}")` contiendrait sinon une accolade qui romprait la detection des blocs `model`.
+    const withoutComments = schema
+      .replace(/\/\/.*$/gm, '')
+      .replace(/"[^"]*"/g, '""')
 
     // Blocs `model X { … }` : meme technique que tenant-guard-schema.test.ts, le schema
     // n'imbrique aucune accolade dans un bloc de modele.
@@ -150,6 +160,7 @@ describe('withoutClinicalFields', () => {
       details: ['PatientServiceFile'],
       medicalDiagnosis: ['PatientServiceFile'],
       transmissionNotes: ['AppointmentPatient'],
+      clinicalData: ['PatientServiceFile'],
     }
     for (const field of CLINICAL_FIELDS) {
       const expected = expectedModels[field]
