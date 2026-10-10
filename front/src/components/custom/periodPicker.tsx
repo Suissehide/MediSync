@@ -38,6 +38,9 @@ const PREREGLAGES = [
   { id: 'trimestre', label: 'Trimestre', construire: trimestreEnCours },
 ] as const
 
+const SEGMENT_ACTIF =
+  'data-[state=on]:bg-segment-actif data-[state=on]:text-white'
+
 // Raccourcis d'année civile et plage libre : un segment n'est actif que si la période tombe pile sur lui.
 export function PeriodPicker({
   periode,
@@ -73,13 +76,18 @@ export function PeriodPicker({
   return (
     <>
       <ToggleGroup
+        className="bg-carte"
         value={anneeActive ? String(anneeActive) : ''}
         onValueChange={(valeur) =>
           valeur && onChange(anneeCivile(Number(valeur)))
         }
       >
         {ANNEES.map((annee) => (
-          <ToggleGroupItem key={annee} value={String(annee)}>
+          <ToggleGroupItem
+            key={annee}
+            value={String(annee)}
+            className={SEGMENT_ACTIF}
+          >
             {annee}
           </ToggleGroupItem>
         ))}
@@ -87,6 +95,7 @@ export function PeriodPicker({
 
       {presets && (
         <ToggleGroup
+          className="bg-carte"
           value={prereglageActif?.id ?? ''}
           onValueChange={(valeur) => {
             const prereglage = PREREGLAGES.find((p) => p.id === valeur)
@@ -96,11 +105,7 @@ export function PeriodPicker({
           }}
         >
           {PREREGLAGES.map(({ id, label }) => (
-            <ToggleGroupItem
-              key={id}
-              value={id}
-              className="data-[state=on]:bg-segment-actif data-[state=on]:text-white"
-            >
+            <ToggleGroupItem key={id} value={id} className={SEGMENT_ACTIF}>
               {label}
             </ToggleGroupItem>
           ))}

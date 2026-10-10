@@ -222,7 +222,10 @@ describe('ecran d activite', () => {
     monter({ ok: true, status: 200, corps: rapport }, lecture)
     expect(await screen.findByText('148')).toBeInTheDocument()
     expect(screen.getByText(/31 sur 42 sortis/)).toBeInTheDocument()
-    expect(screen.getByText('12 %')).toBeInTheDocument()
+    const absences = screen
+      .getByText('Où sont les absences')
+      .closest('section') as HTMLElement
+    expect(within(absences).getByText('12 %')).toBeInTheDocument()
     expect(screen.getByText(/Coaching; PRM, le mardi/)).toBeInTheDocument()
   })
 
@@ -379,5 +382,169 @@ describe('ecran d activite', () => {
           ),
       ).toBe(true),
     )
+  })
+
+  describe('carte des absences, motifs, seances', () => {
+    const c = (absent: number, pointed: number) => ({
+      absent,
+      pointed,
+      rate: pointed < 5 ? null : absent / pointed,
+    })
+    const ligne = (thematic: string, lundi: ReturnType<typeof c>) => ({
+      thematic,
+      total: lundi,
+      cells: [lundi, vide, vide, vide, vide, vide, vide],
+    })
+    const carte: ActivityReport = {
+      ...rapport,
+      completion: {
+        ...rapport.completion,
+        dropoutReasons: [
+          'PERDU_DE_VUE',
+          'REFUS',
+          'NS',
+          'TRANSPORT',
+          'DECES',
+          'DEMENAGEMENT',
+          'INDISPONIBILITE',
+          'SOUHAIT_ARRET',
+        ].map((reason, i) => ({ reason, count: 20 - i })),
+      },
+      absences: {
+        ...rapport.absences,
+        weekdays: [0],
+        overall: { absent: 21, pointed: 70, rate: 0.3 },
+        byWeekday: [c(7, 35), vide, vide, vide, vide, vide, vide],
+        byThematic: [
+          ligne('Zeta', c(3, 10)),
+          ligne('Alpha', c(1, 10)),
+          ligne('Mid', c(2, 10)),
+          {
+            thematic: 'Bas volume jour',
+            total: c(5, 20),
+            cells: [c(1, 3), c(4, 17), vide, vide, vide, vide, vide],
+          },
+          ligne('Rare', c(1, 3)),
+        ],
+      },
+    }
+    const tableau = async () =>
+      within(
+        (await screen.findByText('Carte des absences')).closest(
+          'section',
+        ) as HTMLElement,
+      ).getByRole('table')
+    const noms = (t: HTMLElement) =>
+      within(t)
+        .getAllByRole('rowheader')
+        .map((th) => th.textContent)
+
+    it('trie par taux total decroissant puis de A a Z', async () => {
+      monter({ ok: true, status: 200, corps: carte })
+      const t = await tableau()
+      expect(noms(t)).toEqual([
+        'Zeta',
+        'Bas volume jour',
+        'Mid',
+        'Alpha',
+        'Toutes thématiques',
+      ])
+      await userEvent.click(screen.getByRole('radio', { name: 'A → Z' }))
+      expect(noms(t)).toEqual([
+        'Alpha',
+        'Bas volume jour',
+        'Mid',
+        'Zeta',
+        'Toutes thématiques',
+      ])
+    })
+
+    it('replie les thematiques a faible volume', async () => {
+      monter({ ok: true, status: 200, corps: carte })
+      const t = await tableau()
+      expect(noms(t)).not.toContain('Rare')
+      expect(within(t).getByText('3 rdv')).toBeInTheDocument()
+      const replie = within(t).getByRole('button', {
+        name: /Autres thématiques · faible volume \(1\)/,
+      })
+      expect(replie).toHaveAttribute('aria-expanded', 'false')
+      await userEvent.click(replie)
+      expect(replie).toHaveAttribute('aria-expanded', 'true')
+      expect(noms(t)).toContain('Rare')
+    })
+
+    it('totalise toutes thematiques par jour', async () => {
+      monter({ ok: true, status: 200, corps: carte })
+      const t = await tableau()
+      const total = within(t)
+        .getByRole('rowheader', { name: 'Toutes thématiques' })
+        .closest('tr') as HTMLElement
+      const cases = within(total).getAllByRole('cell')
+      expect(cases.map((td) => td.textContent)).toEqual(['20 %', '30 %'])
+    })
+
+    it('montre six motifs puis tous', async () => {
+      monter({ ok: true, status: 200, corps: carte })
+      const motifs = (await screen.findByText("Motifs d'arrêt")).closest(
+        'section',
+      ) as HTMLElement
+      expect(within(motifs).getByText('11 abandons')).toBeInTheDocument()
+      expect(within(motifs).getAllByRole('listitem')).toHaveLength(6)
+      await userEvent.click(
+        within(motifs).getByRole('button', { name: 'Voir les 8 motifs' }),
+      )
+      expect(within(motifs).getAllByRole('listitem')).toHaveLength(8)
+      await userEvent.click(
+        within(motifs).getByRole('button', { name: 'Afficher moins' }),
+      )
+      expect(within(motifs).getAllByRole('listitem')).toHaveLength(6)
+    })
+
+    it('repartit les seances et les resume en tuiles', async () => {
+      monter({ ok: true, status: 200, corps: carte })
+      const seances = (
+        await screen.findByText('Séances et temps soignant')
+      ).closest('section') as HTMLElement
+      expect(
+        within(seances).getByText('Individuelles 76 %'),
+      ).toBeInTheDocument()
+      expect(within(seances).getByText('Collectives 24 %')).toBeInTheDocument()
+      for (const [n, libelle] of [
+        ['312', 'séances individuelles'],
+        ['96', 'séances collectives'],
+        ['41', 'diagnostics éducatifs'],
+        ['28', 'bilans de fin'],
+      ]) {
+        const tuile = within(seances).getByText(libelle).parentElement
+        expect(tuile).toHaveTextContent(n)
+      }
+    })
+
+    it('affiche les definitions des seances et des heures', async () => {
+      monter({ ok: true, status: 200, corps: carte })
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Définitions' }),
+      )
+      for (const libelle of [
+        'Séances individuelles',
+        'Séances collectives',
+        'Diagnostics éducatifs réalisés',
+        'Bilans de fin',
+        'Heures soignant',
+      ]) {
+        const texte = ACTIVITY_DEFINITIONS.find((d) => d.label === libelle)
+          ?.definition as string
+        expect(screen.getByText(texte)).toBeInTheDocument()
+      }
+    })
+
+    it('rappelle la regle des taux en pied de page', async () => {
+      monter({ ok: true, status: 200, corps: carte })
+      expect(
+        await screen.findByText(
+          "Moins de 5 rendez-vous pointés : pas de taux. Mêmes définitions à l'écran et dans l'export CSV.",
+        ),
+      ).toBeInTheDocument()
+    })
   })
 })
