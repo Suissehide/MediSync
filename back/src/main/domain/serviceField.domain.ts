@@ -13,7 +13,6 @@ import {
   choiceKeyFromLabel,
   fieldKeyFromLabel,
   RESERVED_FIELD_KEYS,
-  type ServiceFieldSection,
 } from '../utils/service-field-types'
 
 // Vrai si `ids` contient exactement les mêmes éléments que `reference`, sans doublon ni oubli.
@@ -59,7 +58,9 @@ class ServiceFieldDomain implements ServiceFieldDomainInterface {
       params.label,
       new Set([...existing.map((f) => f.key), ...RESERVED_FIELD_KEYS]),
     )
-    const order = existing.filter((f) => f.section === params.section).length
+    const order = existing.filter(
+      (f) => f.categoryId === params.categoryId,
+    ).length
     const taken = new Set<string>()
     const choices = (params.choices ?? []).map((label, i) => {
       const choiceKey = choiceKeyFromLabel(label, taken)
@@ -70,7 +71,7 @@ class ServiceFieldDomain implements ServiceFieldDomainInterface {
       key,
       label: params.label,
       type: params.type,
-      section: params.section,
+      categoryId: params.categoryId,
       clinical: params.clinical ?? false,
       unit: params.type === 'number' ? (params.unit ?? null) : null,
       order,
@@ -123,17 +124,14 @@ class ServiceFieldDomain implements ServiceFieldDomainInterface {
     })
   }
 
-  async reorderFields(
-    section: ServiceFieldSection,
-    ids: string[],
-  ): Promise<void> {
+  async reorderFields(categoryId: string, ids: string[]): Promise<void> {
     const fields = await this.serviceFieldRepository.findAll()
-    const sectionIds = fields
-      .filter((f) => f.section === section)
+    const categoryIds = fields
+      .filter((f) => f.categoryId === categoryId)
       .map((f) => f.id)
-    if (!sameIds(sectionIds, ids)) {
+    if (!sameIds(categoryIds, ids)) {
       throw Boom.badRequest(
-        'La liste ne correspond pas exactement aux champs de cette section.',
+        'La liste ne correspond pas exactement aux champs de cette catégorie.',
       )
     }
     await this.serviceFieldRepository.reorderFields(ids)

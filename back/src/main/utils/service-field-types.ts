@@ -14,8 +14,18 @@ export const SERVICE_FIELD_TYPES = [
 ] as const
 export type ServiceFieldType = (typeof SERVICE_FIELD_TYPES)[number]
 
-export const SERVICE_FIELD_SECTIONS = ['pathway', 'outcome'] as const
-export type ServiceFieldSection = (typeof SERVICE_FIELD_SECTIONS)[number]
+export const CATEGORY_DATE_FIELDS = ['entryDate', 'exitDate'] as const
+export type CategoryDateField = (typeof CATEGORY_DATE_FIELDS)[number]
+
+// Les deux catégories à date que tout service possède, posées par la migration service_field_categories.
+export const DEFAULT_CATEGORIES: readonly {
+  label: string
+  dateField: CategoryDateField
+  order: number
+}[] = [
+  { label: 'Parcours & Inclusion', dateField: 'entryDate', order: 0 },
+  { label: 'Sortie & Bilan', dateField: 'exitDate', order: 1 },
+]
 
 export type FieldValues = Record<string, unknown>
 

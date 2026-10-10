@@ -25,6 +25,7 @@ export const SERVICE_MODELS: readonly string[] = [
   'SoignantThematic',
   'PatientServiceFile',
   'PatientAccessLog',
+  'ServiceFieldCategory',
   'ServiceFieldDefinition',
   'ServiceFieldChoice',
   // Modeles de service depuis le 2026-09-29 (un soignant est un metier du service, une salle un
@@ -309,6 +310,7 @@ export const MODEL_RELATIONS: Record<string, Record<string, ModelRelation>> = {
     patientServiceFiles: many('PatientServiceFile'),
     accessLogs: many('PatientAccessLog'),
     fieldDefinitions: many('ServiceFieldDefinition'),
+    fieldCategories: many('ServiceFieldCategory'),
   },
   EstablishmentMembership: {
     user: one('User'),
@@ -406,8 +408,13 @@ export const MODEL_RELATIONS: Record<string, Record<string, ModelRelation>> = {
     patient: one('Patient'),
     service: one('Service'),
   },
+  ServiceFieldCategory: {
+    service: one('Service'),
+    fields: many('ServiceFieldDefinition'),
+  },
   ServiceFieldDefinition: {
     service: one('Service'),
+    category: one('ServiceFieldCategory'),
     choices: many('ServiceFieldChoice'),
   },
   ServiceFieldChoice: {

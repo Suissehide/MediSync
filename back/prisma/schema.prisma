@@ -66,6 +66,7 @@ model Service {
   patientServiceFiles PatientServiceFile[]
   accessLogs          PatientAccessLog[]
   fieldDefinitions    ServiceFieldDefinition[]
+  fieldCategories     ServiceFieldCategory[]
 
   @@unique([establishmentId, name])
   @@unique([id, establishmentId])
@@ -452,6 +453,26 @@ model PatientServiceFile {
   @@index([patientId])
 }
 
+// Catégorie (onglet) de la fiche patient d'un service.
+model ServiceFieldCategory {
+  id              String    @id @default(cuid())
+  establishmentId String
+  serviceId       String
+  label           String
+  order           Int
+  // entryDate | exitDate : porte une date fixe, non supprimable
+  dateField       String?
+  createdAt       DateTime  @default(now())
+  archivedAt      DateTime?
+
+  service Service                  @relation(fields: [serviceId, establishmentId], references: [id, establishmentId])
+  fields  ServiceFieldDefinition[]
+
+  @@unique([id, serviceId])
+  @@unique([serviceId, dateField])
+  @@index([serviceId])
+}
+
 // Champ configurable de la fiche patient d'un service. `key`, `type` et `clinical` sont figés après création.
 model ServiceFieldDefinition {
   id              String    @id @default(cuid())
@@ -460,15 +481,16 @@ model ServiceFieldDefinition {
   key             String
   label           String
   type            String
-  section         String
+  categoryId      String
   order           Int
   clinical        Boolean   @default(false)
   unit            String?
   createdAt       DateTime  @default(now())
   archivedAt      DateTime?
 
-  service Service              @relation(fields: [serviceId, establishmentId], references: [id, establishmentId])
-  choices ServiceFieldChoice[]
+  service  Service              @relation(fields: [serviceId, establishmentId], references: [id, establishmentId])
+  category ServiceFieldCategory @relation(fields: [categoryId, serviceId], references: [id, serviceId])
+  choices  ServiceFieldChoice[]
 
   @@unique([serviceId, key])
   @@unique([id, serviceId])

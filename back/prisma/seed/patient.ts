@@ -1,30 +1,42 @@
 import type { PrismaClient } from '../../src/generated/client'
-import { ETP_FIELD_PRESET } from '../../src/main/utils/etp-field-preset'
+import {
+  ETP_FIELD_PRESET,
+  SECTION_DATE_FIELD,
+} from '../../src/main/utils/etp-field-preset'
+import { DEFAULT_CATEGORIES } from '../../src/main/utils/service-field-types'
 import type { PatientData } from './data/patient'
 import type { SeedTenant } from './tenant'
 
 // Configuration ETP des services du seed : la migration service_fields ne la pose que sur les services existants.
 export async function seedEtpFields(prisma: PrismaClient, tenant: SeedTenant) {
-  for (const [order, field] of ETP_FIELD_PRESET.entries()) {
-    await prisma.serviceFieldDefinition.create({
-      data: {
-        ...tenant,
-        key: field.key,
-        label: field.label,
-        type: field.type,
-        section: field.section,
-        clinical: field.clinical,
-        order,
-        choices: {
-          create: field.choices.map((c, i) => ({
-            establishmentId: tenant.establishmentId,
-            key: c.key,
-            label: c.label,
-            order: i,
-          })),
-        },
-      },
+  for (const category of DEFAULT_CATEGORIES) {
+    const { id: categoryId } = await prisma.serviceFieldCategory.create({
+      data: { ...tenant, ...category },
     })
+    for (const [order, field] of ETP_FIELD_PRESET.entries()) {
+      if (SECTION_DATE_FIELD[field.section] !== category.dateField) {
+        continue
+      }
+      await prisma.serviceFieldDefinition.create({
+        data: {
+          ...tenant,
+          key: field.key,
+          label: field.label,
+          type: field.type,
+          categoryId,
+          clinical: field.clinical,
+          order,
+          choices: {
+            create: field.choices.map((c, i) => ({
+              establishmentId: tenant.establishmentId,
+              key: c.key,
+              label: c.label,
+              order: i,
+            })),
+          },
+        },
+      })
+    }
   }
 }
 

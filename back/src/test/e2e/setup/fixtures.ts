@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify'
 
 import type { EstablishmentRole, ServiceRole } from '../../../generated/enums'
 import { hashPassword } from '../../../main/utils/hash'
+import { DEFAULT_CATEGORIES } from '../../../main/utils/service-field-types'
 import { testDb } from './db'
 
 export const DEFAULT_PASSWORD = 'Password123!!'
@@ -13,6 +14,24 @@ export const createService = (
   establishmentId: string,
   name = `Service ${Math.random()}`,
 ) => testDb.service.create({ data: { establishmentId, name } })
+
+// Les deux catégories à date d'un service, posées en base comme le fait la migration.
+export const createDateCategories = async (
+  establishmentId: string,
+  serviceId: string,
+) => {
+  const [entry, exit] = await Promise.all(
+    DEFAULT_CATEGORIES.map((c) =>
+      testDb.serviceFieldCategory.create({
+        data: { establishmentId, serviceId, ...c },
+      }),
+    ),
+  )
+  if (!entry || !exit) {
+    throw new Error('DEFAULT_CATEGORIES doit porter deux catégories')
+  }
+  return { entryId: entry.id, exitId: exit.id }
+}
 
 type MembershipFixture = {
   establishmentId: string

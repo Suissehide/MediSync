@@ -1,9 +1,6 @@
 import { z } from 'zod/v4'
 
-import {
-  SERVICE_FIELD_SECTIONS,
-  SERVICE_FIELD_TYPES,
-} from '../../../../utils/service-field-types'
+import { SERVICE_FIELD_TYPES } from '../../../../utils/service-field-types'
 
 // Aplatit `archivedAt` en `archived: boolean`, comme `thematicNameFromRelation` (schemas/index.ts).
 const serviceFieldChoiceResponseSchema = z
@@ -25,7 +22,7 @@ export const serviceFieldResponseSchema = z
     key: z.string(),
     label: z.string(),
     type: z.enum(SERVICE_FIELD_TYPES),
-    section: z.enum(SERVICE_FIELD_SECTIONS),
+    categoryId: z.cuid(),
     order: z.number(),
     clinical: z.boolean(),
     unit: z.string().nullable(),
@@ -46,7 +43,7 @@ export const getServiceFieldByIdParamsSchema = z.object({
 export const createServiceFieldSchema = z.object({
   label: z.string().trim().min(1).max(120),
   type: z.enum(SERVICE_FIELD_TYPES),
-  section: z.enum(SERVICE_FIELD_SECTIONS),
+  categoryId: z.cuid(),
   clinical: z.boolean().optional(),
   unit: z.string().trim().max(20).nullable().optional(),
   choices: z.array(z.string().trim().min(1).max(120)).optional(),
@@ -92,7 +89,7 @@ export const updateServiceFieldChoiceByIdSchema = {
 }
 
 export const reorderServiceFieldsSchema = z.object({
-  section: z.enum(SERVICE_FIELD_SECTIONS),
+  categoryId: z.cuid(),
   ids: z.array(z.cuid()),
 })
 

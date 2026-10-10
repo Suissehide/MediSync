@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx'
 import { buildTestApp, type TestApp } from './setup/app'
 import { testDb, truncateAll } from './setup/db'
 import {
+  createDateCategories,
   createEstablishment,
   createService,
   createUser,
@@ -67,6 +68,7 @@ describe('filtrage des champs cliniques selon clinical:read / clinical:write', (
     const service = await createService(establishmentId, 'S')
     serviceId = service.id
     const tenant = { establishmentId, serviceId }
+    const { entryId } = await createDateCategories(establishmentId, serviceId)
 
     for (const [email, role] of [
       ['secretariat@b.fr', 'SECRETARIAT'],
@@ -117,7 +119,7 @@ describe('filtrage des champs cliniques selon clinical:read / clinical:write', (
         key: 'medicalDiagnosis',
         label: 'Diagnostic médical',
         type: 'text',
-        section: 'pathway',
+        categoryId: entryId,
         order: 0,
         clinical: true,
       },

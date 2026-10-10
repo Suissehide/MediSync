@@ -1,3 +1,5 @@
+import type { CategoryDateField } from './service-field-types'
+
 // Configuration initiale des services existants : reprise exacte des constantes front d'avant la migration service_fields.
 export type EtpFieldPreset = {
   key: string
@@ -7,6 +9,12 @@ export type EtpFieldPreset = {
   clinical: boolean
   choices: readonly { key: string; label: string }[]
 }
+
+// Ancienne section d'un champ → date de la catégorie qui le reçoit.
+export const SECTION_DATE_FIELD = {
+  pathway: 'entryDate',
+  outcome: 'exitDate',
+} as const satisfies Record<EtpFieldPreset['section'], CategoryDateField>
 
 const choices = (dict: Record<string, string>) =>
   Object.entries(dict).map(([key, label]) => ({ key, label }))
