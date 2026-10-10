@@ -125,7 +125,7 @@ export default function CoverPage({
   pathways: PatientPathway[]
 }) {
   const duration = computeProgramDuration(upcomingSlots)
-  const patientLabel = `${patient.firstName} ${patient.lastName}`
+  const patientLabel = `${patient.lastName} ${patient.firstName}`
 
   const firstPathway = pathways[0]
   const circleColor = firstPathway?.templateColor ?? DEFAULT_CIRCLE_COLOR

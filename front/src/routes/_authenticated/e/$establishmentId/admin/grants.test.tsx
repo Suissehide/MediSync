@@ -177,7 +177,7 @@ describe('etats de l ecran des acces temporaires', () => {
 
     // Motif + auteur pour l'accès en cours, dans la bonne section.
     expect(enCoursSection).toHaveTextContent('Panne du compte administrateur')
-    expect(enCoursSection).toHaveTextContent('Ada Min')
+    expect(enCoursSection).toHaveTextContent('Min Ada')
     expect(enCoursSection).not.toHaveTextContent('Astreinte week-end')
     expect(enCoursSection).not.toHaveTextContent('Erreur de saisie')
 

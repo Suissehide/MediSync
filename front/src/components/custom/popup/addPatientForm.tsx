@@ -238,7 +238,7 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
                           className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2 text-sm"
                         >
                           <span>
-                            {match.firstName} {match.lastName}
+                            {match.lastName} {match.firstName}
                             {match.birthDate && (
                               <span className="text-neutral-400">
                                 {' '}

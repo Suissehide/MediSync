@@ -122,7 +122,7 @@ export default function ProgrammePDFModal({
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <h2 className="text-lg font-semibold">
-            Aperçu du programme - {patient.firstName} {patient.lastName}
+            Aperçu du programme - {patient.lastName} {patient.firstName}
           </h2>
           <div className="flex items-center gap-4">
             {OPTIONAL_PAGES.length > 0 && (

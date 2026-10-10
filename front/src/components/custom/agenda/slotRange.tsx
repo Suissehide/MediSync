@@ -28,7 +28,7 @@ const formatDuration = (row: DaySlotRow) => {
 
 const patientName = (row: DaySlotRow) => {
   const patient = row.patients[0]?.patient
-  return patient ? `${patient.firstName} ${patient.lastName}` : ''
+  return patient ? `${patient.lastName} ${patient.firstName}` : ''
 }
 
 const describe = (row: DaySlotRow) =>

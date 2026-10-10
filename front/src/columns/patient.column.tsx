@@ -155,11 +155,11 @@ export const getPatientColumns = ({
         )
       },
     }),
-    columnHelper.accessor('firstName', {
-      header: 'Prénom',
-    }),
     columnHelper.accessor('lastName', {
       header: 'Nom',
+    }),
+    columnHelper.accessor('firstName', {
+      header: 'Prénom',
     }),
     // `entryDate` a quitté `Patient` pour le sous-dossier de service (`PatientServiceFile`,
     // `types/patientServiceFile.ts`), mais `GET /patient/with-tags`
