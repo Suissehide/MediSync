@@ -34,15 +34,21 @@ export const activityReportResponseSchema = z.object({
       active: z.number(),
     }),
   ),
-  completion: z.object({
-    completed: z.number(),
-    exited: z.number(),
-    rate: z.number().nullable(),
-    dropouts: z.number(),
-    dropoutReasons: z.array(
-      z.object({ reason: z.string(), count: z.number() }),
-    ),
-  }),
+  completion: z
+    .object({
+      completed: z.number(),
+      exited: z.number(),
+      rate: z.number().nullable(),
+      dropouts: z.number(),
+      dropoutReasons: z.array(
+        z.object({
+          reason: z.string(),
+          label: z.string(),
+          count: z.number(),
+        }),
+      ),
+    })
+    .nullable(),
   absences: z.object({
     overall: cell,
     worst: z.object({ thematic: z.string(), weekday: z.number() }).nullable(),

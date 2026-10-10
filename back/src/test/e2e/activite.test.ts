@@ -14,6 +14,7 @@ describe('tableau de bord d activite', () => {
   let serviceA: string
   let serviceB: string
   let cookies: { access_token: string }
+  let coordinateurCookies: { access_token: string }
 
   beforeAll(async () => {
     t = await buildTestApp()
@@ -35,6 +36,17 @@ describe('tableau de bord d activite', () => {
       ],
     })
     cookies = await signIn(t.app, 'direction@test.fr')
+    // Seule une personne COORDINATEUR peut regler les champs et l'Activite (stats:write).
+    await createUser({
+      email: 'coordinateur@test.fr',
+      memberships: [
+        {
+          establishmentId,
+          services: [{ serviceId: serviceB, role: 'COORDINATEUR' }],
+        },
+      ],
+    })
+    coordinateurCookies = await signIn(t.app, 'coordinateur@test.fr')
   })
 
   afterAll(async () => {
@@ -207,5 +219,71 @@ describe('tableau de bord d activite', () => {
     )
     expect(idInconnu.statusCode).toBe(200)
     expect(idInconnu.json().patients.active).toBe(0)
+  })
+
+  // Review Focus 3 (decision 4, spec §2.4) : sans reglage, pas de bloc motifs/completion.
+  it('ne porte pas de completion sans reglage de motif d arret', async () => {
+    const res = await lire(serviceA)
+    expect(res.statusCode).toBe(200)
+    expect(res.json().completion).toBeNull()
+  })
+
+  it('lit le champ et la valeur de fin designes dans les reglages, pas stopReason', async () => {
+    const champ = await t.app.inject({
+      method: 'POST',
+      url: tenantUrl(establishmentId, serviceB, '/service-fields'),
+      cookies: coordinateurCookies,
+      payload: {
+        label: 'Motif sortie',
+        type: 'choice',
+        section: 'outcome',
+        choices: ['Perdu de vue', 'Terminé'],
+      },
+    })
+    expect(champ.statusCode).toBe(201)
+    const field = champ.json() as {
+      key: string
+      choices: { key: string; label: string }[]
+    }
+    const termine = field.choices.find((c) => c.label === 'Terminé')
+    expect(termine).toBeDefined()
+
+    const reglages = await t.app.inject({
+      method: 'PATCH',
+      url: tenantUrl(establishmentId, serviceB, '/activity-settings'),
+      cookies: coordinateurCookies,
+      payload: {
+        stopReasonFieldKey: field.key,
+        completedChoiceKey: termine?.key,
+      },
+    })
+    expect(reglages.statusCode).toBe(200)
+
+    const patientAbandon = await testDb.patient.create({
+      data: {
+        establishmentId,
+        firstName: 'Motif',
+        lastName: 'Configurable',
+        createDate: new Date(),
+      },
+    })
+    await testDb.patientServiceFile.create({
+      data: {
+        establishmentId,
+        serviceId: serviceB,
+        patientId: patientAbandon.id,
+        exitDate: new Date('2026-06-01'),
+        data: { [field.key]: 'PERDU_DE_VUE', stopReason: 'DECES' },
+      },
+    })
+
+    const res = await lire(serviceB)
+    expect(res.statusCode).toBe(200)
+    expect(res.json().completion).toMatchObject({
+      dropouts: 1,
+      dropoutReasons: [
+        { reason: 'PERDU_DE_VUE', label: 'Perdu de vue', count: 1 },
+      ],
+    })
   })
 })

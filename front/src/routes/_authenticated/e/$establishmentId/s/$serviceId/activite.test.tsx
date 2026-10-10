@@ -87,6 +87,15 @@ const routeTree = rootRoute.addChildren([
 
 const vide = { absent: 0, pointed: 0, rate: null }
 
+// Type concret (jamais nul), pour pouvoir l'etaler sans que `completion` redevienne optionnel.
+const completionDefaut = {
+  completed: 31,
+  exited: 42,
+  rate: 31 / 42,
+  dropouts: 11,
+  dropoutReasons: [{ reason: 'PERDU_DE_VUE', label: 'Perdu de vue', count: 5 }],
+}
+
 const rapport: ActivityReport = {
   from: '2026-01-01',
   to: '2026-12-31',
@@ -110,13 +119,7 @@ const rapport: ActivityReport = {
     exited: m === '10' ? 4 : 1,
     active: m === '11' ? 999 : 100 + i,
   })),
-  completion: {
-    completed: 31,
-    exited: 42,
-    rate: 31 / 42,
-    dropouts: 11,
-    dropoutReasons: [{ reason: 'PERDU_DE_VUE', count: 5 }],
-  },
+  completion: completionDefaut,
   absences: {
     overall: { absent: 12, pointed: 100, rate: 0.12 },
     worst: { thematic: 'Coaching; PRM', weekday: 1 },
@@ -314,7 +317,7 @@ describe('ecran d activite', () => {
       status: 200,
       corps: {
         ...rapport,
-        completion: { ...rapport.completion, completed: 21, rate: 21 / 42 },
+        completion: { ...completionDefaut, completed: 21, rate: 21 / 42 },
       },
     })
     const carte = (await screen.findByText('Combien ont terminé')).closest(
@@ -325,6 +328,14 @@ describe('ecran d activite', () => {
     expect(within(carte).getByText('10 autres sortis')).toBeInTheDocument()
   })
 
+  // Decision 4 (spec §2.4) : sans reglage de motif d'arret, pas de completion.
+  it('masque la completion et les motifs sans reglage', async () => {
+    monter({ ok: true, status: 200, corps: { ...rapport, completion: null } })
+    await screen.findByText('148')
+    expect(screen.queryByText('Combien ont terminé')).not.toBeInTheDocument()
+    expect(screen.queryByText("Motifs d'arrêt")).not.toBeInTheDocument()
+  })
+
   it('accorde les trois bascules de sortie au singulier', async () => {
     monter({
       ok: true,
@@ -332,7 +343,7 @@ describe('ecran d activite', () => {
       corps: {
         ...rapport,
         completion: {
-          ...rapport.completion,
+          ...completionDefaut,
           completed: 1,
           dropouts: 1,
           exited: 3,
@@ -392,7 +403,7 @@ describe('ecran d activite', () => {
       status: 200,
       corps: {
         ...rapport,
-        completion: { ...rapport.completion, completed: 35, dropouts: 11 },
+        completion: { ...completionDefaut, completed: 35, dropouts: 11 },
       },
     })
     const carte = (await screen.findByText('Combien ont terminé')).closest(
@@ -473,21 +484,22 @@ describe('ecran d activite', () => {
       total: lundi,
       cells: [lundi, vide, vide, vide, vide, vide, vide],
     })
+    const completionCarte = {
+      ...completionDefaut,
+      dropoutReasons: [
+        'PERDU_DE_VUE',
+        'REFUS',
+        'NS',
+        'TRANSPORT',
+        'DECES',
+        'DEMENAGEMENT',
+        'INDISPONIBILITE',
+        'SOUHAIT_ARRET',
+      ].map((reason, i) => ({ reason, label: reason, count: 20 - i })),
+    }
     const carte: ActivityReport = {
       ...rapport,
-      completion: {
-        ...rapport.completion,
-        dropoutReasons: [
-          'PERDU_DE_VUE',
-          'REFUS',
-          'NS',
-          'TRANSPORT',
-          'DECES',
-          'DEMENAGEMENT',
-          'INDISPONIBILITE',
-          'SOUHAIT_ARRET',
-        ].map((reason, i) => ({ reason, count: 20 - i })),
-      },
+      completion: completionCarte,
       absences: {
         ...rapport.absences,
         weekdays: [0],
@@ -556,7 +568,7 @@ describe('ecran d activite', () => {
         status: 200,
         corps: {
           ...carte,
-          completion: { ...carte.completion, dropouts: 1 },
+          completion: { ...completionCarte, dropouts: 1 },
         },
       })
       const motifs = (await screen.findByText("Motifs d'arrêt")).closest(

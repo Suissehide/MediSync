@@ -11,7 +11,13 @@ import {
 import { readChoice } from './service-field-types'
 
 export const SEUIL_ABSENCES = 5
-export const FIN_DE_PARCOURS = 'PLUS_BESOIN_FIN_PARCOURS'
+
+// Désignés par les réglages du service (`Service.stopReasonFieldKey`/`completedChoiceKey`), jamais codés en dur.
+export type ActivitySettings = {
+  stopReasonField: string
+  completedChoice: string
+  labels: Record<string, string>
+}
 
 export type AbsenceCell = {
   absent: number
@@ -34,8 +40,8 @@ export type ActivityReport = {
     exited: number
     rate: number | null
     dropouts: number
-    dropoutReasons: { reason: string; count: number }[]
-  }
+    dropoutReasons: { reason: string; label: string; count: number }[]
+  } | null
   absences: {
     overall: AbsenceCell
     worst: { thematic: string; weekday: number } | null
@@ -202,7 +208,31 @@ const hoursBySoignant = (
     .sort((a, b) => b.hours - a.hours || a.soignant.localeCompare(b.soignant))
 }
 
-export const computeActivity = (cohort: IndicatorCohort): ActivityReport => {
+// Motifs d'arrêt hors « fin de parcours » (la valeur désignée par les réglages), avec leurs libellés.
+const completion = (
+  exited: CohortFile[],
+  completed: CohortFile[],
+  settings: ActivitySettings,
+): NonNullable<ActivityReport['completion']> => {
+  const dropped = exited.flatMap((f) => {
+    const reason = readChoice(f.values, settings.stopReasonField)
+    return reason && reason !== settings.completedChoice ? [reason] : []
+  })
+  return {
+    completed: completed.length,
+    exited: exited.length,
+    rate: exited.length > 0 ? completed.length / exited.length : null,
+    dropouts: dropped.length,
+    dropoutReasons: groupByReason(dropped)
+      .map((d) => ({ ...d, label: settings.labels[d.reason] ?? d.reason }))
+      .sort(byCountDesc),
+  }
+}
+
+export const computeActivity = (
+  cohort: IndicatorCohort,
+  settings: ActivitySettings | null,
+): ActivityReport => {
   const c: IndicatorCohort = { ...cohort, to: finDeJournee(cohort.to) }
   const inPeriod = c.presences.filter((p) => inRange(p.date, c.from, c.to))
   const honored = inPeriod.filter((p) => p.status === 'yes')
@@ -212,10 +242,6 @@ export const computeActivity = (cohort: IndicatorCohort): ActivityReport => {
   // Le programme s'évalue depuis l'origine : un patient inclus l'an dernier peut terminer cette année.
   const depuisToujours: IndicatorCohort = { ...c, from: new Date(0) }
   const completed = exited.filter((f) => completeProgram(f, depuisToujours))
-  const dropped = exited.flatMap((f) => {
-    const reason = readChoice(f.values, 'stopReason')
-    return reason && reason !== FIN_DE_PARCOURS ? [reason] : []
-  })
   const deDates = c.files.map((f) => deDate(f, c))
 
   return {
@@ -225,13 +251,7 @@ export const computeActivity = (cohort: IndicatorCohort): ActivityReport => {
       exited: exited.length,
     },
     monthly: monthly(c, deDates, exited, honored),
-    completion: {
-      completed: completed.length,
-      exited: exited.length,
-      rate: exited.length > 0 ? completed.length / exited.length : null,
-      dropouts: dropped.length,
-      dropoutReasons: [...groupByReason(dropped)].sort(byCountDesc),
-    },
+    completion: settings ? completion(exited, completed, settings) : null,
     absences: absences(pointed),
     sessions: {
       individual: honored.filter((p) => p.individual).length,
