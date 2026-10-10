@@ -1,3 +1,5 @@
+import * as XLSX from 'xlsx'
+
 import { buildTestApp, type TestApp } from './setup/app'
 import { testDb, truncateAll } from './setup/db'
 import {
@@ -472,5 +474,286 @@ describe('ecriture de la fiche', () => {
     const file = await stored(autrePatientId)
     expect(file.notes).toBe('Y')
     expect(file.data).toEqual({ orientation: 'B' })
+  })
+})
+
+// Liste et export construits depuis les definitions du service : la liste retire les champs
+// `longtext` de data/clinicalData, l'export ajoute une colonne par champ actif (clinique
+// seulement a qui a clinical:read), triee par section puis ordre, apres les colonnes fixes.
+describe('liste et export', () => {
+  let testApp: TestApp
+  let establishmentId: string
+  let serviceId: string
+  let patientId: string
+  let coordinateurCookies: Cookies
+  let secretariatCookies: Cookies
+
+  const url = (path: string) => tenantUrl(establishmentId, serviceId, path)
+  const OBJECTIF =
+    'Un objectif redige en plusieurs phrases, assez long pour representer un texte libre.'
+
+  beforeAll(async () => {
+    await truncateAll()
+    const establishment = await createEstablishment('E-LISTE')
+    establishmentId = establishment.id
+    const service = await createService(establishmentId, 'S-LISTE')
+    serviceId = service.id
+    const tenant = { establishmentId, serviceId }
+
+    for (const [email, role] of [
+      ['coordinateur@liste.fr', 'COORDINATEUR'],
+      ['secretariat@liste.fr', 'SECRETARIAT'],
+    ] as const) {
+      await createUser({
+        email,
+        memberships: [{ establishmentId, services: [{ serviceId, role }] }],
+      })
+    }
+
+    await testDb.serviceFieldDefinition.create({
+      data: {
+        ...tenant,
+        key: 'goal',
+        label: 'Objectif',
+        type: 'longtext',
+        section: 'pathway',
+        order: 0,
+      },
+    })
+    await testDb.serviceFieldDefinition.create({
+      data: {
+        ...tenant,
+        key: 'orientation',
+        label: 'Orientation',
+        type: 'choice',
+        section: 'pathway',
+        order: 1,
+        choices: {
+          create: [{ key: 'A', label: 'Alpha', order: 0, establishmentId }],
+        },
+      },
+    })
+    await testDb.serviceFieldDefinition.create({
+      data: {
+        ...tenant,
+        key: 'comorbidites',
+        label: 'Comorbidités',
+        type: 'multichoice',
+        section: 'pathway',
+        order: 2,
+        choices: {
+          create: [
+            { key: 'HTA', label: 'Hypertension', order: 0, establishmentId },
+            { key: 'DIAB', label: 'Diabète', order: 1, establishmentId },
+          ],
+        },
+      },
+    })
+    await testDb.serviceFieldDefinition.create({
+      data: {
+        ...tenant,
+        key: 'tabac',
+        label: 'Tabac',
+        type: 'boolean',
+        section: 'pathway',
+        order: 3,
+      },
+    })
+    await testDb.serviceFieldDefinition.create({
+      data: {
+        ...tenant,
+        key: 'sortie',
+        label: 'Sortie',
+        type: 'date',
+        section: 'pathway',
+        order: 4,
+      },
+    })
+    await testDb.serviceFieldDefinition.create({
+      data: {
+        ...tenant,
+        key: 'diag',
+        label: 'Diag',
+        type: 'choice',
+        section: 'pathway',
+        order: 5,
+        clinical: true,
+        choices: {
+          create: [{ key: 'AVC', label: 'AVC', order: 0, establishmentId }],
+        },
+      },
+    })
+    await testDb.serviceFieldDefinition.create({
+      data: {
+        ...tenant,
+        key: 'ancien',
+        label: 'Ancien',
+        type: 'text',
+        section: 'pathway',
+        order: 6,
+        archivedAt: new Date(),
+      },
+    })
+
+    const patient = await testDb.patient.create({
+      data: {
+        establishmentId,
+        firstName: 'Jean',
+        lastName: 'Complet',
+        createDate: new Date('2026-01-01T00:00:00Z'),
+      },
+    })
+    patientId = patient.id
+    await testDb.patientServiceFile.create({
+      data: {
+        ...tenant,
+        patientId,
+        data: {
+          goal: OBJECTIF,
+          orientation: 'A',
+          comorbidites: ['HTA', 'DIAB'],
+          tabac: true,
+          sortie: '2026-03-01',
+        },
+        clinicalData: { diag: 'AVC' },
+      },
+    })
+
+    testApp = await buildTestApp()
+    coordinateurCookies = await signIn(testApp.app, 'coordinateur@liste.fr')
+    secretariatCookies = await signIn(testApp.app, 'secretariat@liste.fr')
+  })
+
+  afterAll(async () => {
+    await testApp.close()
+    await testDb.$disconnect()
+  })
+
+  it('GET /patient/with-tags retire goal (longtext) de data, clinicalData selon clinical:read', async () => {
+    const coord = await testApp.app.inject({
+      method: 'GET',
+      url: url('/patient/with-tags'),
+      cookies: coordinateurCookies,
+    })
+    expect(coord.statusCode).toBe(200)
+    const coordPatients = coord.json() as {
+      id: string
+      data?: Record<string, unknown>
+      clinicalData?: Record<string, unknown>
+    }[]
+    const coordPatient = coordPatients.find((p) => p.id === patientId)
+    expect(coordPatient?.data).toMatchObject({
+      orientation: 'A',
+      comorbidites: ['HTA', 'DIAB'],
+      tabac: true,
+      sortie: '2026-03-01',
+    })
+    expect(coordPatient?.data).not.toHaveProperty('goal')
+    expect(coordPatient?.clinicalData).toEqual({ diag: 'AVC' })
+
+    const secretariat = await testApp.app.inject({
+      method: 'GET',
+      url: url('/patient/with-tags'),
+      cookies: secretariatCookies,
+    })
+    expect(secretariat.statusCode).toBe(200)
+    const secretariatPatient = (secretariat.json() as { id: string }[]).find(
+      (p) => p.id === patientId,
+    )
+    expect(secretariatPatient).not.toHaveProperty('clinicalData')
+  })
+
+  it('export : une colonne par champ actif, triee, sans le champ archive', async () => {
+    const coord = await testApp.app.inject({
+      method: 'GET',
+      url: url('/patient/export'),
+      cookies: coordinateurCookies,
+    })
+    const secretariat = await testApp.app.inject({
+      method: 'GET',
+      url: url('/patient/export'),
+      cookies: secretariatCookies,
+    })
+    expect(coord.statusCode).toBe(200)
+    expect(secretariat.statusCode).toBe(200)
+
+    const headersOf = (rawPayload: Buffer): string[] => {
+      const workbook = XLSX.read(rawPayload, { type: 'buffer' })
+      const sheetName = workbook.SheetNames[0]
+      if (!sheetName) {
+        throw new Error('classeur exporte sans feuille')
+      }
+      const sheet = workbook.Sheets[sheetName]
+      if (!sheet) {
+        throw new Error('classeur exporte sans feuille nommee')
+      }
+      const rows = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1 })
+      const headerRow = rows[0]
+      if (!headerRow) {
+        throw new Error('classeur exporte sans ligne d en-tete')
+      }
+      return headerRow
+    }
+
+    const rowOf = (rawPayload: Buffer): Record<string, string> => {
+      const workbook = XLSX.read(rawPayload, { type: 'buffer' })
+      const sheetName = workbook.SheetNames[0]
+      if (!sheetName) {
+        throw new Error('classeur exporte sans feuille')
+      }
+      const sheet = workbook.Sheets[sheetName]
+      if (!sheet) {
+        throw new Error('classeur exporte sans feuille nommee')
+      }
+      const rows = XLSX.utils.sheet_to_json<Record<string, string>>(sheet)
+      const row = rows.find((r) => r.Prénom === 'Jean' && r.Nom === 'Complet')
+      if (!row) {
+        throw new Error('ligne du patient introuvable')
+      }
+      return row
+    }
+
+    const secretariatHeaders = headersOf(secretariat.rawPayload)
+    const coordHeaders = headersOf(coord.rawPayload)
+
+    // Apres les colonnes fixes, une colonne par champ actif triee par section puis ordre :
+    // Objectif (longtext, inclus), Orientation, Comorbidités, Tabac, Sortie, puis Diag
+    // (clinique) seulement pour qui a clinical:read. Ancien (archive) n'apparait jamais.
+    expect(secretariatHeaders.slice(-5)).toEqual([
+      'Objectif',
+      'Orientation',
+      'Comorbidités',
+      'Tabac',
+      'Sortie',
+    ])
+    expect(secretariatHeaders).not.toContain('Diag')
+    expect(secretariatHeaders).not.toContain('Ancien')
+
+    expect(coordHeaders.slice(-6)).toEqual([
+      'Objectif',
+      'Orientation',
+      'Comorbidités',
+      'Tabac',
+      'Sortie',
+      'Diag',
+    ])
+    expect(coordHeaders).not.toContain('Ancien')
+
+    const coordRow = rowOf(coord.rawPayload)
+    expect(coordRow).toMatchObject({
+      Orientation: 'Alpha',
+      Comorbidités: 'Hypertension, Diabète',
+      Tabac: 'Oui',
+      Sortie: '01/03/2026',
+      Diag: 'AVC',
+      Objectif: OBJECTIF,
+    })
+
+    const secretariatRow = rowOf(secretariat.rawPayload)
+    expect(secretariatRow).not.toHaveProperty('Diag')
+    expect(secretariatRow).toMatchObject({
+      Orientation: 'Alpha',
+      Objectif: OBJECTIF,
+    })
   })
 })

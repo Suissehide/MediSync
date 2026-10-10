@@ -43,12 +43,17 @@ import type {
   PatientIdentitySearchFilters,
   PatientRepositoryInterface,
 } from '../types/infra/orm/repositories/patient.repository.interface'
+import type {
+  ServiceFieldEntityRepo,
+  ServiceFieldRepositoryInterface,
+} from '../types/infra/orm/repositories/serviceField.repository.interface'
 import type { SlotWithTemplateAndAppointmentsRepo } from '../types/infra/orm/repositories/slot.repository.interface'
 import type { ThematicRepositoryInterface } from '../types/infra/orm/repositories/thematic.repository.interface'
 import type { Logger } from '../types/utils/logger'
 import type { TenantContextInterface } from '../types/utils/tenant-context'
 import type { AppEventBus } from '../utils/app-event-bus'
 import { hasPermission } from '../utils/permissions'
+import { asValues } from '../utils/service-field-types'
 
 const orEmpty = (value: string | null | undefined): string => value ?? ''
 const formatDate = (value: Date | string | null | undefined): string =>
@@ -139,6 +144,32 @@ const EXPORT_COLUMNS: ExportColumn[] = [
   },
 ]
 
+// En-tete = libelle du choix (ou de la valeur telle quelle pour text/number), valeur lue dans
+// `data` ou `clinicalData` selon `field.clinical` (voir `exportExcel` plus bas).
+const formatFieldValue = (
+  field: ServiceFieldEntityRepo,
+  value: unknown,
+): string => {
+  const label = (key: unknown) =>
+    field.choices.find((c) => c.key === key)?.label ?? String(key)
+  if (value === undefined || value === null) {
+    return ''
+  }
+  if (field.type === 'choice') {
+    return label(value)
+  }
+  if (field.type === 'multichoice') {
+    return Array.isArray(value) ? value.map(label).join(', ') : ''
+  }
+  if (field.type === 'boolean') {
+    return value === true ? 'Oui' : 'Non'
+  }
+  if (field.type === 'date' && typeof value === 'string') {
+    return formatDate(new Date(`${value}T00:00:00Z`))
+  }
+  return String(value)
+}
+
 class PatientDomain implements PatientDomainInterface {
   private readonly logger: Logger
   private readonly patientRepository: PatientRepositoryInterface
@@ -148,6 +179,7 @@ class PatientDomain implements PatientDomainInterface {
   private readonly enrollmentIssueRepository: EnrollmentIssueRepositoryInterface
   private readonly thematicRepository: ThematicRepositoryInterface
   private readonly patientServiceFileDomain: PatientServiceFileDomainInterface
+  private readonly serviceFieldRepository: ServiceFieldRepositoryInterface
   private readonly tenantContext: TenantContextInterface
   private readonly appEventBus: AppEventBus
 
@@ -159,6 +191,7 @@ class PatientDomain implements PatientDomainInterface {
     enrollmentIssueRepository,
     thematicRepository,
     patientServiceFileDomain,
+    serviceFieldRepository,
     tenantContext,
     appEventBus,
     logger,
@@ -170,6 +203,7 @@ class PatientDomain implements PatientDomainInterface {
     this.enrollmentIssueRepository = enrollmentIssueRepository
     this.thematicRepository = thematicRepository
     this.patientServiceFileDomain = patientServiceFileDomain
+    this.serviceFieldRepository = serviceFieldRepository
     this.tenantContext = tenantContext
     this.appEventBus = appEventBus
     this.logger = logger
@@ -179,8 +213,25 @@ class PatientDomain implements PatientDomainInterface {
     return this.patientRepository.findAll()
   }
 
-  findAllWithTags(): Promise<PatientWithTagsDomain[]> {
-    return this.patientRepository.findAllWithTags()
+  // Les champs `longtext` n'ont pas leur place dans la liste (texte potentiellement long,
+  // sans usage d'affichage en colonne) : retires de `data`/`clinicalData` ici, pas au depot.
+  async findAllWithTags(): Promise<PatientWithTagsDomain[]> {
+    const [patients, fields] = await Promise.all([
+      this.patientRepository.findAllWithTags(),
+      this.serviceFieldRepository.findAll(),
+    ])
+    const longKeys = new Set(
+      fields.filter((f) => f.type === 'longtext').map((f) => f.key),
+    )
+    const withoutLong = (values: unknown) =>
+      Object.fromEntries(
+        Object.entries(asValues(values)).filter(([k]) => !longKeys.has(k)),
+      )
+    return patients.map((p) => ({
+      ...p,
+      data: withoutLong(p.data),
+      clinicalData: withoutLong(p.clinicalData),
+    }))
   }
 
   // Recherche d'identite existante avant creation (design §6) : passe-plat vers le
@@ -240,10 +291,32 @@ class PatientDomain implements PatientDomainInterface {
     filters: PatientExportFilters,
     { includeClinicalFields }: PatientExportOptions,
   ): Promise<PatientExportResult> {
-    const patients = await this.patientRepository.findForExport(filters)
-    const columns = EXPORT_COLUMNS.filter(
-      (c) => includeClinicalFields || !c.clinical,
-    )
+    const [patients, fields] = await Promise.all([
+      this.patientRepository.findForExport(filters),
+      this.serviceFieldRepository.findAll(),
+    ])
+    // Une colonne par champ actif, apres les colonnes fixes : triees par section puis ordre
+    // (deja l'ordre rendu par `serviceFieldRepository.findAll()`), largeur fixe de 22.
+    const fieldColumns: ExportColumn[] = fields
+      .filter(
+        (f) => f.archivedAt === null && (includeClinicalFields || !f.clinical),
+      )
+      .map((f) => ({
+        header: f.label,
+        width: 22,
+        clinical: f.clinical,
+        value: (p: PatientForExportEntityRepo) =>
+          formatFieldValue(
+            f,
+            asValues(
+              f.clinical ? p.serviceFile?.clinicalData : p.serviceFile?.data,
+            )[f.key],
+          ),
+      }))
+    const columns = [
+      ...EXPORT_COLUMNS.filter((c) => includeClinicalFields || !c.clinical),
+      ...fieldColumns,
+    ]
 
     const rows = patients.map((p) =>
       Object.fromEntries(columns.map((c) => [c.header, c.value(p)])),

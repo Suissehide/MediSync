@@ -281,9 +281,13 @@ describe('filtrage des champs cliniques selon clinical:read / clinical:write', (
     const secretariatHeaders = headersOf(withoutClinical.rawPayload)
     const clinicalHeaders = headersOf(withClinical.rawPayload)
 
-    // Seule `notes` est une colonne clinique de l'export tant que les colonnes des champs
-    // configurables n'y sont pas ; la liste attendue le dit nommement.
-    expect(clinicalHeaders).toEqual([...secretariatHeaders, 'Notes'])
+    // `medicalDiagnosis` est desormais un champ configurable clinique : sa colonne
+    // generee (« Diagnostic médical ») vient apres les colonnes fixes, donc apres « Notes ».
+    expect(clinicalHeaders).toEqual([
+      ...secretariatHeaders,
+      'Notes',
+      'Diagnostic médical',
+    ])
     expect(secretariatHeaders).not.toContain('Diagnostic médical')
     expect(secretariatHeaders).not.toContain('Notes')
   })

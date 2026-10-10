@@ -17,6 +17,7 @@ import type { TenantContextInterface } from '../../../types/utils/tenant-context
 // `escapeLikePattern` vivait en tete de ce fichier ; extrait pour servir aussi le filtre
 // « compte » de la lecture plateforme des deux journaux.
 import { escapeLikePattern } from '../../../utils/like-pattern'
+import { asValues } from '../../../utils/service-field-types'
 import type { PostgresPrismaClient } from '../postgres-client'
 
 type AppointmentPatientWithMainTag = {
@@ -167,8 +168,8 @@ class PatientRepository implements PatientRepositoryInterface {
           enrollmentIssues: serviceFiles.flatMap((f) => f.enrollmentIssues),
           entryDate: serviceFiles[0]?.entryDate ?? null,
           exitDate: serviceFiles[0]?.exitDate ?? null,
-          data: serviceFiles[0]?.data ?? {},
-          clinicalData: serviceFiles[0]?.clinicalData ?? {},
+          data: asValues(serviceFiles[0]?.data),
+          clinicalData: asValues(serviceFiles[0]?.clinicalData),
         }
       },
     )
