@@ -1,6 +1,7 @@
 import Boom from '@hapi/boom'
 
 import type { Prisma } from '../../generated/client'
+import { CLINICAL_FIELDS } from './clinical-fields'
 
 export const SERVICE_FIELD_TYPES = [
   'text',
@@ -134,6 +135,29 @@ const withSuffix = (
   }
   return `${base}${sep}${n}`
 }
+
+// Cles qu'une cle de champ generee ne doit jamais prendre : les champs cliniques filtres par
+// nom (`CLINICAL_FIELDS`), les id de colonnes fixes du tableau patient
+// (front/src/columns/patient.column.tsx) et les noms qui resolvent a travers `obj[key]` sur
+// n'importe quel objet JS (prototype d'Object).
+export const RESERVED_FIELD_KEYS: ReadonlySet<string> = new Set([
+  ...CLINICAL_FIELDS,
+  'actions',
+  'firstName',
+  'lastName',
+  'entryDate',
+  'exitDate',
+  'pathwayTemplateTags',
+  'enrollmentAlert',
+  'constructor',
+  'toString',
+  'valueOf',
+  'hasOwnProperty',
+  '__proto__',
+  'isPrototypeOf',
+  'propertyIsEnumerable',
+  'toLocaleString',
+])
 
 export const fieldKeyFromLabel = (
   label: string,

@@ -44,8 +44,9 @@ class PatientServiceFileDomain implements PatientServiceFileDomainInterface {
     userID: string,
   ): Promise<PatientServiceFileEntityDomain> {
     const { data, clinicalData, ...fixed } = params
-    // Valeurs configurables d'abord : un 400 doit laisser tout le dossier intact.
+    // Valide avant de creer quoi que ce soit : un 400 ne doit laisser aucune trace, pas meme un sous-dossier vide.
     if (data !== undefined || clinicalData !== undefined) {
+      await this.validateValues(patientId, data ?? {}, clinicalData ?? {})
       await this.patientServiceFileRepository.ensureExists(patientId)
       await this.writeValues(patientId, data ?? {}, clinicalData ?? {})
     }
@@ -61,18 +62,40 @@ class PatientServiceFileDomain implements PatientServiceFileDomainInterface {
     return serviceFile
   }
 
+  private async fieldDefinitions(): Promise<FieldDefinitionForValidation[]> {
+    return (await this.serviceFieldRepository.findAll()).flatMap(
+      (d): FieldDefinitionForValidation[] => {
+        const type = asFieldType(d.type)
+        return type ? [{ ...d, type }] : []
+      },
+    )
+  }
+
+  // Rejoue la validation de `writeValues` sur l'etat actuel (ou {} si le patient n'a encore aucun sous-dossier ici) : un correctif invalide ne doit creer aucune ligne PatientServiceFile.
+  private async validateValues(
+    patientId: string,
+    dataPatch: Record<string, unknown>,
+    clinicalPatch: Record<string, unknown>,
+  ): Promise<void> {
+    const definitions = await this.fieldDefinitions()
+    const current =
+      await this.patientServiceFileRepository.findByPatient(patientId)
+    mergeFieldPatch(definitions, asValues(current?.data), dataPatch, false)
+    mergeFieldPatch(
+      definitions,
+      asValues(current?.clinicalData),
+      clinicalPatch,
+      true,
+    )
+  }
+
   // Concurrence optimiste : on n'ecrit que si les colonnes JSON n'ont pas bouge depuis la lecture.
   private async writeValues(
     patientId: string,
     dataPatch: Record<string, unknown>,
     clinicalPatch: Record<string, unknown>,
   ): Promise<void> {
-    const definitions = (await this.serviceFieldRepository.findAll()).flatMap(
-      (d): FieldDefinitionForValidation[] => {
-        const type = asFieldType(d.type)
-        return type ? [{ ...d, type }] : []
-      },
-    )
+    const definitions = await this.fieldDefinitions()
     for (let attempt = 0; attempt < 3; attempt++) {
       const current =
         await this.patientServiceFileRepository.findByPatient(patientId)

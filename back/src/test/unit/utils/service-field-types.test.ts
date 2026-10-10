@@ -6,6 +6,7 @@ import {
   fieldKeyFromLabel,
   mergeFieldPatch,
   readChoice,
+  RESERVED_FIELD_KEYS,
   toJsonObject,
 } from '../../../main/utils/service-field-types'
 
@@ -144,6 +145,14 @@ describe('generation de cles', () => {
     )
     expect(fieldKeyFromLabel('12 mois', new Set())).toBe('champ12Mois')
     expect(fieldKeyFromLabel('!!!', new Set())).toBe('champ')
+  })
+
+  it('evite les cles reservees (champ clinique filtre par nom, id de colonne fixe, prototype)', () => {
+    expect(fieldKeyFromLabel('Notes', RESERVED_FIELD_KEYS)).toBe('notes2')
+    expect(fieldKeyFromLabel('Actions', RESERVED_FIELD_KEYS)).toBe('actions2')
+    expect(fieldKeyFromLabel('Constructor', RESERVED_FIELD_KEYS)).toBe(
+      'constructor2',
+    )
   })
 
   it('derive une cle de choix en majuscules soulignees', () => {

@@ -475,6 +475,27 @@ describe('ecriture de la fiche', () => {
     expect(file.notes).toBe('Y')
     expect(file.data).toEqual({ orientation: 'B' })
   })
+
+  it('PATCH invalide sur un patient sans sous-dossier dans ce service : 400, aucun PatientServiceFile cree', async () => {
+    const patientSansDossier = await testDb.patient.create({
+      data: {
+        establishmentId,
+        firstName: 'Jean',
+        lastName: 'SansDossier',
+        createDate: new Date('2026-01-01T00:00:00Z'),
+      },
+    })
+    const res = await patchFiche(coordinateurCookies, patientSansDossier.id, {
+      data: { orientation: 'Z' },
+    })
+    expect(res.statusCode).toBe(400)
+    const file = await testDb.patientServiceFile.findUnique({
+      where: {
+        patientId_serviceId: { patientId: patientSansDossier.id, serviceId },
+      },
+    })
+    expect(file).toBeNull()
+  })
 })
 
 // Liste et export construits depuis les definitions du service : la liste retire les champs

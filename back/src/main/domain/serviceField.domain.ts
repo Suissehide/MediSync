@@ -12,6 +12,7 @@ import type { ServiceFieldRepositoryInterface } from '../types/infra/orm/reposit
 import {
   choiceKeyFromLabel,
   fieldKeyFromLabel,
+  RESERVED_FIELD_KEYS,
   type ServiceFieldSection,
 } from '../utils/service-field-types'
 
@@ -56,7 +57,7 @@ class ServiceFieldDomain implements ServiceFieldDomainInterface {
     const existing = await this.serviceFieldRepository.findAll()
     const key = fieldKeyFromLabel(
       params.label,
-      new Set(existing.map((f) => f.key)),
+      new Set([...existing.map((f) => f.key), ...RESERVED_FIELD_KEYS]),
     )
     const order = existing.filter((f) => f.section === params.section).length
     const taken = new Set<string>()

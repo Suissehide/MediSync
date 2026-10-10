@@ -19,7 +19,7 @@ const definitions = [
   { key: 'diag', type: 'text', clinical: true, archivedAt: null, choices: [] },
 ]
 
-// Le dossier lu change entre deux lectures : `reads` est consomme dans l'ordre.
+// Le dossier lu change d'une lecture a l'autre : `reads` est consomme dans l'ordre.
 const buildDomain = (reads: Record<string, unknown>[], results: boolean[]) => {
   const writes: unknown[] = []
   const expecteds: unknown[] = []
@@ -52,6 +52,7 @@ describe('PatientServiceFileDomain.upsert, concurrence optimiste', () => {
   it('relit et refusionne le correctif sur la valeur ecrite entre-temps', async () => {
     const { domain, writes, expecteds } = buildDomain(
       [
+        { data: {}, clinicalData: {} },
         { data: {}, clinicalData: {} },
         { data: { orientation: 'B' }, clinicalData: { diag: 'AVC' } },
       ],
