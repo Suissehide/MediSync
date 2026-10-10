@@ -9,6 +9,7 @@ import {
   type ArsFile,
   type ArsPresence,
 } from '../../../utils/ars-indicators'
+import { readChoice } from '../../../utils/service-field-types'
 import type { PostgresPrismaClient } from '../postgres-client'
 
 // Libellé lisible d'un parcours : son modèle (ou son absence) et sa date de début.
@@ -50,8 +51,7 @@ class ArsIndicatorRepository implements ArsIndicatorRepositoryInterface {
           patientId: true,
           entryDate: true,
           exitDate: true,
-          stopReason: true,
-          orientation: true,
+          data: true,
         },
       }),
       this.prisma.appointmentPatient.findMany({
@@ -131,8 +131,8 @@ class ArsIndicatorRepository implements ArsIndicatorRepositoryInterface {
       patientId: f.patientId,
       entryDate: f.entryDate,
       exitDate: f.exitDate,
-      stopReason: f.stopReason,
-      orientation: f.orientation,
+      stopReason: readChoice(f.data, 'stopReason'),
+      orientation: readChoice(f.data, 'orientation'),
       presences: byPatient.get(f.patientId) ?? [],
     }))
 

@@ -3,6 +3,7 @@ import {
   type FieldDefinitionForValidation,
   fieldKeyFromLabel,
   mergeFieldPatch,
+  readChoice,
 } from '../../../main/utils/service-field-types'
 
 const def = (
@@ -148,5 +149,15 @@ describe('generation de cles', () => {
     )
     expect(choiceKeyFromLabel('HTA', new Set(['HTA']))).toBe('HTA_2')
     expect(choiceKeyFromLabel('—', new Set())).toBe('CHOIX')
+  })
+})
+
+describe('readChoice', () => {
+  it('lit une valeur texte et rend null pour tout le reste', () => {
+    expect(readChoice({ a: 'x' }, 'a')).toBe('x')
+    expect(readChoice({ a: 1 }, 'a')).toBeNull()
+    expect(readChoice({}, 'a')).toBeNull()
+    expect(readChoice(null, 'a')).toBeNull()
+    expect(readChoice([], 'a')).toBeNull()
   })
 })

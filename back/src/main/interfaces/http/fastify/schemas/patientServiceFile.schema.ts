@@ -1,8 +1,6 @@
 import { z } from 'zod/v4'
 
-// Les seize champs deplaces hors de `patient.schema.ts`, a
-// l'identique : memes types, memes contraintes. C'est desormais le seul endroit du back ou ils
-// sont enumeres a la main.
+// Colonnes fixes du sous-dossier ; les champs configurables vivent dans `data` et `clinicalData`.
 const patientServiceFileEntity = {
   // Referrals & Context
   referringCaregiver: z.string().optional().nullable(), // Soignant référent
@@ -12,21 +10,8 @@ const patientServiceFileEntity = {
   notes: z.string().optional().nullable(),
   details: z.string().optional().nullable(),
 
-  // Inclusion Data
-  medicalDiagnosis: z.string().optional().nullable(),
   entryDate: z.coerce.date().optional().nullable(),
-  careMode: z.string().optional().nullable(), // Mode de prise en charge
-  orientation: z.string().optional().nullable(),
-  etpDecision: z.string().optional().nullable(), // ETP décision
-  programType: z.string().optional().nullable(),
-  nonInclusionDetails: z.string().optional().nullable(),
-  customContentDetails: z.string().optional().nullable(),
-  goal: z.string().optional().nullable(),
-
-  // Exit Data
   exitDate: z.coerce.date().optional().nullable(),
-  stopReason: z.string().optional().nullable(), // Motif d’arrêt de programme
-  etpFinalOutcome: z.string().optional().nullable(), // Point final parcours ETP
 }
 
 // Le signal de suivi ailleurs (spec §5.3/§6) vivait ici : indisponible tant qu'aucun sous-dossier
@@ -42,6 +27,9 @@ export const patientServiceFileResponseSchema = z.object({
   establishmentId: z.string(),
   createdAt: z.coerce.date(),
   ...patientServiceFileEntity,
+  data: z.record(z.string(), z.unknown()),
+  // Optionnel : le crochet clinique le retire pour qui n'a pas `clinical:read`.
+  clinicalData: z.record(z.string(), z.unknown()).optional(),
 })
 
 export const patientServiceFileParamsSchema = z.object({

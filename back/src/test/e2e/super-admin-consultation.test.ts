@@ -59,7 +59,7 @@ const createClinicalRecord = (params: {
       establishmentId: params.establishmentId,
       serviceId: params.serviceId,
       patientId: params.patientId,
-      medicalDiagnosis: params.medicalDiagnosis,
+      clinicalData: { medicalDiagnosis: params.medicalDiagnosis },
       notes: params.notes,
       details: params.details,
     },
@@ -628,9 +628,9 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
       const body = res.json()
       expect(body.page).toBe(5)
       expect(body.data).toHaveLength(20)
-      expect(
-        body.data.map((l: { entityID: string }) => l.entityID),
-      ).toContain('ligne-000')
+      expect(body.data.map((l: { entityID: string }) => l.entityID)).toContain(
+        'ligne-000',
+      )
     })
 
     it('deux pages consecutives ne partagent aucune ligne', async () => {
@@ -660,8 +660,8 @@ describe('consultation super-admin : liste des etablissements et recherche d un 
       const body = res.json()
       expect(body.total).toBe(120)
       expect(
-        body.data.every(
-          (l: { entityID: string }) => l.entityID.startsWith('ligne-'),
+        body.data.every((l: { entityID: string }) =>
+          l.entityID.startsWith('ligne-'),
         ),
       ).toBe(true)
     })

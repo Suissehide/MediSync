@@ -160,3 +160,12 @@ export const choiceKeyFromLabel = (
   const base = words(label).join('_').toUpperCase() || 'CHOIX'
   return withSuffix(base, taken, '_')
 }
+
+// Lit une valeur texte d'une colonne JSON de valeurs ; null si absente ou d'un autre type.
+export const readChoice = (values: unknown, key: string): string | null => {
+  if (typeof values !== 'object' || values === null || Array.isArray(values)) {
+    return null
+  }
+  const value: unknown = Reflect.get(values, key)
+  return typeof value === 'string' ? value : null
+}

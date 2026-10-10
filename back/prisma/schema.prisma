@@ -431,19 +431,9 @@ model PatientServiceFile {
   notes              String?
   details            String?
 
-  medicalDiagnosis     String?
-  entryDate            DateTime? @db.Date
-  careMode             String?
-  orientation          String?
-  etpDecision          String?
-  programType          String?
-  nonInclusionDetails  String?
-  customContentDetails String?
-  goal                 String?
+  entryDate DateTime? @db.Date
 
-  exitDate        DateTime? @db.Date
-  stopReason      String?
-  etpFinalOutcome String?
+  exitDate DateTime? @db.Date
 
   data         Json @default("{}")
   clinicalData Json @default("{}")

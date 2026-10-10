@@ -86,10 +86,9 @@ const describeEnrollmentFailure = (
 // vivent ensemble, dans cet ordre. `ws['!cols']` etait auparavant un tableau positionnel
 // commente a la main, en regard de l'ordre des cles d'un objet construit juste au-dessus — rien
 // (ni tsc, ni un schema Zod) ne les reliait, et un decalage entre les deux ne produisait aucune
-// erreur, seulement des largeurs de colonnes fausses a l'ouverture du fichier. Les cles de
-// `careMode`, `orientation`, `entryDate`, `exitDate`, `stopReason` et `medicalDiagnosis` vivent
-// desormais sur le sous-dossier de service (`p.serviceFile`), plus sur `Patient` — `null` quand
-// le patient n'a pas encore de sous-dossier dans le service courant.
+// erreur, seulement des largeurs de colonnes fausses a l'ouverture du fichier. `entryDate` et
+// `exitDate` vivent sur le sous-dossier de service (`p.serviceFile`), plus sur `Patient` — `null`
+// quand le patient n'a pas encore de sous-dossier dans le service courant.
 type ExportColumn = {
   header: string
   width: number
@@ -125,16 +124,6 @@ const EXPORT_COLUMNS: ExportColumn[] = [
     width: 30,
     value: (p) => p.pathwayTemplateTags.join(', '),
   },
-  {
-    header: 'Mode de prise en charge',
-    width: 24,
-    value: (p) => orEmpty(p.serviceFile?.careMode),
-  },
-  {
-    header: 'Orientation',
-    width: 18,
-    value: (p) => orEmpty(p.serviceFile?.orientation),
-  },
   { header: 'Profession', width: 20, value: (p) => orEmpty(p.occupation) },
   {
     header: "Niveau d'étude",
@@ -142,17 +131,6 @@ const EXPORT_COLUMNS: ExportColumn[] = [
     value: (p) => orEmpty(p.educationLevel),
   },
   { header: 'Distance', width: 14, value: (p) => orEmpty(p.distance) },
-  {
-    header: 'Motif de sortie',
-    width: 22,
-    value: (p) => orEmpty(p.serviceFile?.stopReason),
-  },
-  {
-    header: 'Diagnostic médical',
-    width: 28,
-    value: (p) => orEmpty(p.serviceFile?.medicalDiagnosis),
-    clinical: true,
-  },
   {
     header: 'Notes',
     width: 40,

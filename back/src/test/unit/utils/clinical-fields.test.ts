@@ -7,13 +7,12 @@ import {
 } from '../../../main/utils/clinical-fields'
 
 describe('withoutClinicalFields', () => {
-  it('retire les cinq champs cliniques et garde les champs administratifs', () => {
+  it('retire les champs cliniques et garde les champs administratifs', () => {
     const patient = {
       id: 'p1',
       firstName: 'A',
       notes: 'secret',
       details: 'secret',
-      medicalDiagnosis: 'secret',
       // Donnees administratives du programme : a NE PAS filtrer.
       etpDecision: 'oui',
       goal: 'objectif',
@@ -117,7 +116,7 @@ describe('withoutClinicalFields', () => {
   // qu'il suffirait de changer pour faire taire un vrai probleme), ce test
   // nomme les modeles porteurs attendus et les compare exactement a ceux du
   // schema, par le meme decoupage en blocs `model X { … }` que
-  // `tenant-guard-schema.test.ts`. `notes`, `details` et `medicalDiagnosis`
+  // `tenant-guard-schema.test.ts`. `notes`, `details` et `clinicalData`
   // sont portes uniquement par le sous-dossier de service
   // `PatientServiceFile` (ces colonnes ont ete deplacees et retirees de
   // `Patient`, qui ne les porte plus) ; `transmissionNotes`
@@ -158,7 +157,6 @@ describe('withoutClinicalFields', () => {
     const expectedModels: Record<string, string[]> = {
       notes: ['PatientServiceFile'],
       details: ['PatientServiceFile'],
-      medicalDiagnosis: ['PatientServiceFile'],
       transmissionNotes: ['AppointmentPatient'],
       clinicalData: ['PatientServiceFile'],
     }

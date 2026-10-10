@@ -1,4 +1,5 @@
 import type { PrismaClient } from '../../src/generated/client'
+import { ETP_FIELD_PRESET } from '../../src/main/utils/etp-field-preset'
 import type { PatientData } from './data/patient'
 import type { SeedTenant } from './tenant'
 
@@ -12,6 +13,31 @@ import type { SeedTenant } from './tenant'
 // celles que ce jeu de données utilise. Le sous-dossier créé ici est rattaché au service de
 // l'appelant (`tenant.serviceId`) — le seed connaît déjà ce service, un jeu de patients par
 // service reçoit donc son propre sous-dossier, jamais celui d'un autre.
+// Configuration ETP des services du seed : la migration service_fields ne la pose que sur les services existants.
+export async function seedEtpFields(prisma: PrismaClient, tenant: SeedTenant) {
+  for (const [order, field] of ETP_FIELD_PRESET.entries()) {
+    await prisma.serviceFieldDefinition.create({
+      data: {
+        ...tenant,
+        key: field.key,
+        label: field.label,
+        type: field.type,
+        section: field.section,
+        clinical: field.clinical,
+        order,
+        choices: {
+          create: field.choices.map((c, i) => ({
+            establishmentId: tenant.establishmentId,
+            key: c.key,
+            label: c.label,
+            order: i,
+          })),
+        },
+      },
+    })
+  }
+}
+
 export default async function seedPatients(
   prisma: PrismaClient,
   tenant: SeedTenant,

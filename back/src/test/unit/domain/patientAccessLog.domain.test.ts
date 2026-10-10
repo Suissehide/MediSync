@@ -141,10 +141,7 @@ describe('PatientAccessLogDomain.record', () => {
           ...validInput,
           action: 'export',
           exportFilters: JSON.stringify({
-            criteres: [
-              { champ: 'age' },
-              { medicalDiagnosis: 'texte clinique' },
-            ],
+            criteres: [{ champ: 'age' }, { clinicalData: 'texte clinique' }],
           }),
         }),
       ),

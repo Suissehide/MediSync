@@ -74,7 +74,7 @@ const patientServiceFileRouter: FastifyPluginAsync = (fastify) => {
   // PATCH, pas PUT : les seize champs sont facultatifs et `update: params` (repository) laisse
   // Prisma ignorer les cles absentes — une charge partielle fait une mise a jour partielle, ce
   // que PUT ne promet pas. Un vrai PUT serait de plus dangereux ici : `stripClinicalInput`
-  // retire notes/details/medicalDiagnosis du corps d'un secretariat pour laisser ces colonnes
+  // retire notes/details/clinicalData du corps d'un secretariat pour laisser ces colonnes
   // inchangees (voir utils/clinical-fields.ts) ; en semantique de remplacement, une cle
   // absente vaudrait "mets a null", et le secretariat effacerait donc ces trois champs a chaque
   // enregistrement — exactement la perte que ce crochet existe pour empecher. Aucun appelant du
