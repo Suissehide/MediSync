@@ -2,6 +2,7 @@ import dayjs, { type Dayjs } from 'dayjs'
 import { Minus, Plus, RotateCcw, Save, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
+import { useForbiddenWeekQueries } from '../../../queries/useForbiddenWeek.ts'
 import type { PlanningCycle } from '../../../types/planningCycle.ts'
 import { cycleWeekNumber } from '../../../utils/weekCycle.ts'
 import { Button } from '../../ui/button.tsx'
@@ -42,6 +43,7 @@ export function PlanningCycleForm({
     dayjs.utc().isoWeekday(1).startOf('day'),
   )
   const [weekCount, setWeekCount] = useState(DEFAULT_WEEK_COUNT)
+  const { forbiddenWeeks } = useForbiddenWeekQueries()
 
   // À chaque ouverture, on repart du cycle enregistré : la popup ne doit pas
   // conserver une saisie abandonnée lors d'une ouverture précédente.
@@ -67,8 +69,14 @@ export function PlanningCycleForm({
   const preview: PlanningCycle = {
     startOfWeek: weekStart.format('YYYY-MM-DD'),
     weekCount,
+    forbiddenWeekStarts: (forbiddenWeeks ?? []).map((w) => w.startOfWeek),
   }
-  const restartWeek = weekStart.add(weekCount * 7, 'day')
+  // Les semaines interdites repoussent le retour à S1.
+  let restartWeek = weekStart.add(7, 'day')
+  while (cycleWeekNumber(restartWeek, preview) !== 1) {
+    restartWeek = restartWeek.add(7, 'day')
+  }
+  const currentWeek = cycleWeekNumber(dayjs.utc(), preview)
 
   return (
     <Popup modal open={open} onOpenChange={setOpen}>
@@ -134,7 +142,7 @@ export function PlanningCycleForm({
             </span>
             . Cette semaine est actuellement{' '}
             <span className="font-medium text-text-dark">
-              S{cycleWeekNumber(dayjs.utc(), preview)}
+              {currentWeek === null ? 'interdite' : `S${currentWeek}`}
             </span>
             .
           </p>
