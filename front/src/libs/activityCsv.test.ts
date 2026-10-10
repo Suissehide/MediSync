@@ -9,6 +9,7 @@ const rapport: ActivityReport = {
   from: '2026-01-01',
   to: '2026-12-31',
   patients: { active: 148, newlyIncluded: 57, exited: 42 },
+  monthly: [],
   completion: {
     completed: 31,
     exited: 42,
@@ -20,6 +21,7 @@ const rapport: ActivityReport = {
     overall: { absent: 12, pointed: 100, rate: 0.12 },
     worst: { thematic: 'Coaching; PRM', weekday: 1 },
     weekdays: [1],
+    byWeekday: Array.from({ length: 7 }, () => vide),
     byThematic: [
       {
         thematic: 'Coaching; PRM',

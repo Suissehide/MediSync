@@ -4,10 +4,18 @@ export type AbsenceCell = {
   rate: number | null
 }
 
+export type MonthlyCell = {
+  month: string
+  newlyIncluded: number
+  exited: number
+  active: number
+}
+
 export type ActivityReport = {
   from: string
   to: string
   patients: { active: number; newlyIncluded: number; exited: number }
+  monthly: MonthlyCell[]
   completion: {
     completed: number
     exited: number
@@ -19,6 +27,7 @@ export type ActivityReport = {
     overall: AbsenceCell
     worst: { thematic: string; weekday: number } | null
     weekdays: number[]
+    byWeekday: AbsenceCell[]
     byThematic: { thematic: string; total: AbsenceCell; cells: AbsenceCell[] }[]
     byPathway: { pathway: string; cell: AbsenceCell }[]
   }
