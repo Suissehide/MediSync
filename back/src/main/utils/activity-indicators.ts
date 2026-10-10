@@ -1,5 +1,6 @@
 import {
   type ArsCohort,
+  type ArsFile,
   type ArsPresence,
   completeProgram,
   deDate,
@@ -17,8 +18,16 @@ export type AbsenceCell = {
   rate: number | null
 }
 
+export type MonthlyCell = {
+  month: string
+  newlyIncluded: number
+  exited: number
+  active: number
+}
+
 export type ActivityReport = {
   patients: { active: number; newlyIncluded: number; exited: number }
+  monthly: MonthlyCell[]
   completion: {
     completed: number
     exited: number
@@ -30,6 +39,7 @@ export type ActivityReport = {
     overall: AbsenceCell
     worst: { thematic: string; weekday: number } | null
     weekdays: number[]
+    byWeekday: AbsenceCell[]
     byThematic: { thematic: string; total: AbsenceCell; cells: AbsenceCell[] }[]
     byPathway: { pathway: string; cell: AbsenceCell }[]
   }
@@ -41,6 +51,53 @@ export type ActivityReport = {
   }
   hoursBySoignant: { soignant: string; hours: number }[]
 }
+
+// Patients ayant au moins un rendez-vous dans un parcours du modèle, avec tous leurs chiffres.
+export const filterByPathwayTemplate = (
+  cohort: ArsCohort,
+  pathwayTemplateId: string,
+): ArsCohort => {
+  const patients = new Set(
+    cohort.presences
+      .filter((p) => p.pathwayTemplateId === pathwayTemplateId)
+      .map((p) => p.patientId),
+  )
+  return {
+    ...cohort,
+    files: cohort.files.filter((f) => patients.has(f.patientId)),
+    presences: cohort.presences.filter((p) => patients.has(p.patientId)),
+  }
+}
+
+const moisDe = (date: Date): string => date.toISOString().slice(0, 7)
+
+const moisDeLaPeriode = (from: Date, to: Date): string[] => {
+  const mois: string[] = []
+  const d = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), 1))
+  while (d <= to) {
+    mois.push(moisDe(d))
+    d.setUTCMonth(d.getUTCMonth() + 1)
+  }
+  return mois
+}
+
+const monthly = (
+  c: ArsCohort,
+  deDates: (Date | null)[],
+  exited: ArsFile[],
+  honored: ArsPresence[],
+): MonthlyCell[] =>
+  moisDeLaPeriode(c.from, c.to).map((month) => ({
+    month,
+    newlyIncluded: deDates.filter((d) => d !== null && moisDe(d) === month)
+      .length,
+    exited: exited.filter(
+      (f) => f.exitDate !== null && moisDe(f.exitDate) === month,
+    ).length,
+    active: new Set(
+      honored.filter((p) => moisDe(p.date) === month).map((p) => p.patientId),
+    ).size,
+  }))
 
 const cell = (ps: ArsPresence[], seuil = SEUIL_ABSENCES): AbsenceCell => {
   const absent = ps.filter((p) => p.status === 'no').length
@@ -112,6 +169,9 @@ const absences = (pointed: ArsPresence[]): ActivityReport['absences'] => {
     overall: cell(pointed, 1),
     worst,
     weekdays: [...new Set(pointed.map((p) => weekday(p.date)))].sort(),
+    byWeekday: Array.from({ length: 7 }, (_, d) =>
+      cell(pointed.filter((p) => weekday(p.date) === d)),
+    ),
     byThematic,
     byPathway: [...groupBy(pointed, (p) => p.pathwayId ?? 'hors-parcours')]
       .map(([, ps]) => ({
@@ -154,13 +214,15 @@ export const computeActivity = (cohort: ArsCohort): ActivityReport => {
   const dropped = exited.filter(
     (f) => Boolean(f.stopReason) && f.stopReason !== FIN_DE_PARCOURS,
   )
+  const deDates = c.files.map((f) => deDate(f, c))
 
   return {
     patients: {
       active: new Set(honored.map((p) => p.patientId)).size,
-      newlyIncluded: c.files.filter((f) => deDate(f, c) !== null).length,
+      newlyIncluded: deDates.filter((d) => d !== null).length,
       exited: exited.length,
     },
+    monthly: monthly(c, deDates, exited, honored),
     completion: {
       completed: completed.length,
       exited: exited.length,

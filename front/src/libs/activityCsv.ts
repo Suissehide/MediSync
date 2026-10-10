@@ -12,11 +12,16 @@ export const heures = (h: number): string => nombre(Math.round(h * 10) / 10)
 const definition = (label: string): string =>
   ACTIVITY_DEFINITIONS.find((d) => d.label === label)?.definition ?? ''
 
-export const activityCsv = (r: ActivityReport, serviceName: string): string => {
+export const activityCsv = (
+  r: ActivityReport,
+  serviceName: string,
+  parcours?: string,
+): string => {
   const lignes: string[][] = [
     ['section', 'libellé', 'valeur', 'définition'],
     ['Service', serviceName, '', ''],
     ['Période', `${r.from} au ${r.to}`, '', ''],
+    ['Parcours', parcours ?? 'Tous les parcours', '', ''],
     [
       'Patients',
       'File active',
@@ -86,6 +91,24 @@ export const activityCsv = (r: ActivityReport, serviceName: string): string => {
       pourcent(p.cell.rate),
       `${p.cell.absent} sur ${p.cell.pointed}`,
     ]),
+    ...r.monthly.map((m) => [
+      'Entrées et sorties par mois',
+      m.month,
+      `${nombre(m.newlyIncluded)} inclus, ${nombre(m.exited)} sortis, ${nombre(m.active)} en file active`,
+      '',
+    ]),
+    ...r.absences.byWeekday.flatMap((c, d) =>
+      c.pointed > 0
+        ? [
+            [
+              'Absences toutes thématiques',
+              JOURS[d],
+              pourcent(c.rate),
+              `${c.absent} sur ${c.pointed}`,
+            ],
+          ]
+        : [],
+    ),
     [
       'Séances',
       'Individuelles',

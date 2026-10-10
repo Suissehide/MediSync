@@ -74,7 +74,7 @@ class ArsIndicatorRepository implements ArsIndicatorRepositoryInterface {
                     select: {
                       id: true,
                       startDate: true,
-                      template: { select: { name: true } },
+                      template: { select: { id: true, name: true } },
                     },
                   },
                   slotTemplate: {
@@ -112,6 +112,7 @@ class ArsIndicatorRepository implements ArsIndicatorRepositoryInterface {
         pathwayLabel: ap.appointment.slot.pathway
           ? libelleParcours(ap.appointment.slot.pathway)
           : null,
+        pathwayTemplateId: ap.appointment.slot.pathway?.template?.id ?? null,
         slotMinutes:
           (ap.appointment.slot.endDate.getTime() -
             ap.appointment.slot.startDate.getTime()) /

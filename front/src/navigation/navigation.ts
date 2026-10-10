@@ -71,7 +71,7 @@ export const NAVIGATION: Record<Scale, readonly NavItem[]> = {
       group: 'Quotidien',
     },
     {
-      label: 'Activité',
+      label: 'Pilotage',
       to: '/e/$establishmentId/s/$serviceId/activite',
       // La MEME permission que le `beforeLoad` de l'ecran.
       permission: 'activity:read',

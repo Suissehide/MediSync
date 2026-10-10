@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>body{margin:0;background:#04182b;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',system-ui,sans-serif}a{color:#2563eb}a:hover{color:#1147bb}button{font-family:inherit}</style>
+</helmet>
+<div style="min-height:100vh;display:flex;flex-direction:column;background:#04182b">
+  <div style="height:64px;flex-shrink:0;padding:0 16px;display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:1px solid #ffffff20;color:#cbd5e1">
+    <div style="display:flex;align-items:center;gap:16px;min-width:0">
+      <h2 style="margin:0;padding:0 8px;font-size:30px;font-weight:700;color:#cbd5e1;white-space:nowrap"><span style="color:#2563eb">Medi</span>Sync</h2>
+      <nav style="height:36px;display:flex;align-items:center;gap:2px;padding-left:8px;border-left:1px solid #ffffff20;min-width:0;overflow:hidden">
+        <span style="height:32px;display:flex;align-items:center;gap:8px;padding:0 8px;font-size:14px;font-weight:500;color:#94a3b8;white-space:nowrap"><span style="width:16px;height:16px;background-color:currentColor;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/building-2.svg) center/contain no-repeat"></span>Hôpital Nord</span>
+        <span style="width:16px;height:16px;flex-shrink:0;background-color:#64748b;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/chevron-right.svg) center/contain no-repeat"></span>
+        <span style="height:32px;display:flex;align-items:center;gap:6px;padding:0 8px;font-size:15px;font-weight:600;color:#ffffff;white-space:nowrap">Cardiologie<span style="width:14px;height:14px;background-color:#94a3b8;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/chevrons-up-down.svg) center/contain no-repeat"></span></span>
+      </nav>
+      <nav style="display:flex;align-items:center;gap:16px;padding-left:8px;flex-shrink:0">
+        <span style="font-size:16px;padding:6px 0 3px;color:#64748b;border-bottom:3px solid transparent">Dashboard</span>
+        <span style="font-size:16px;padding:6px 0 3px;color:#64748b;border-bottom:3px solid transparent">Agenda</span>
+        <span style="font-size:16px;padding:6px 0 3px;color:#64748b;border-bottom:3px solid transparent">Patients</span>
+        <span style="font-size:16px;padding:6px 0 3px;color:#64748b;border-bottom:3px solid transparent">Suivi</span>
+        <span style="font-size:16px;padding:6px 0 3px;color:#cbd5e1;border-bottom:3px solid #2563eb">Activité</span>
+      </nav>
+    </div>
+    <span style="flex-shrink:0;font-size:12px;padding:3px 10px;border-radius:999px;background:#ffffff14;color:#cbd5e1;white-space:nowrap">Lecture</span>
+  </div>
+
+  <div style="flex:1;padding:8px">
+    <div style="background:#f1f5f9;border-radius:12px;padding:28px 24px 40px;box-sizing:border-box">
+      <div style="max-width:1320px;margin:0 auto;display:flex;flex-direction:column;gap:16px">
+
+        <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px">
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <h1 style="margin:0;font-size:24px;font-weight:700;color:#04182b">Activité</h1>
+            <span style="display:flex;align-items:center;gap:6px;font-size:13px;color:#64748b"><span style="width:14px;height:14px;background-color:currentColor;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/shield-check.svg) center/contain no-repeat"></span>Chiffres agrégés uniquement, aucune donnée nominative.</span>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px">
+            <div style="display:flex;gap:2px;padding:3px;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px">
+              <sc-for list="{{ years }}" as="y" hint-placeholder-count="3"><button onClick="{{ y.onClick }}" style="cursor:pointer;height:30px;padding:0 12px;border:none;border-radius:5px;font-size:14px;background:{{ y.bg }};color:{{ y.fg }};font-weight:{{ y.fw }}">{{ y.label }}</button></sc-for>
+            </div>
+            <div style="display:flex;gap:2px;padding:3px;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px">
+              <sc-for list="{{ presets }}" as="y" hint-placeholder-count="2"><button onClick="{{ y.onClick }}" style="cursor:pointer;height:30px;padding:0 12px;border:none;border-radius:5px;font-size:14px;white-space:nowrap;background:{{ y.bg }};color:{{ y.fg }};font-weight:{{ y.fw }}">{{ y.label }}</button></sc-for>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:14px;color:#64748b">
+              du<span style="height:36px;display:flex;align-items:center;gap:8px;padding:0 10px;background:#ffffff;border:1px solid #e2e8f0;border-radius:6px;color:#04182b"><span style="width:15px;height:15px;background-color:#2563eb;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/calendar.svg) center/contain no-repeat"></span>{{ from }}</span>
+              au<span style="height:36px;display:flex;align-items:center;gap:8px;padding:0 10px;background:#ffffff;border:1px solid #e2e8f0;border-radius:6px;color:#04182b"><span style="width:15px;height:15px;background-color:#2563eb;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/calendar.svg) center/contain no-repeat"></span>{{ to }}</span>
+            </div>
+            <div style="height:36px;display:flex;align-items:center;gap:8px;padding:0 12px;background:#ffffff;border:1px solid #e2e8f0;border-radius:6px;font-size:14px;color:#334155;white-space:nowrap">Tous les parcours<span style="width:14px;height:14px;background-color:#64748b;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/chevron-down.svg) center/contain no-repeat"></span></div>
+            <button onClick="{{ toggleDefs }}" style="cursor:pointer;height:36px;display:flex;align-items:center;gap:8px;padding:0 12px;background:{{ defsBtnBg }};border:1px solid {{ defsBtnBd }};border-radius:6px;font-size:14px;color:{{ defsBtnFg }}"><span style="width:16px;height:16px;background-color:currentColor;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/book-open.svg) center/contain no-repeat"></span>Définitions</button>
+            <button style="cursor:pointer;height:36px;display:flex;align-items:center;gap:8px;padding:0 14px;background:#2563eb;border:none;border-radius:6px;font-size:14px;font-weight:600;color:#ffffff"><span style="width:16px;height:16px;background-color:currentColor;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/download.svg) center/contain no-repeat"></span>Exporter en CSV</button>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px">
+          <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:18px 20px;display:flex;flex-direction:column;gap:6px">
+            <span style="font-size:14px;color:#64748b">Combien de patients</span>
+            <div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:40px;font-weight:700;letter-spacing:-.02em;color:#04182b;font-variant-numeric:tabular-nums">523</span><span style="font-size:15px;color:#334155">en file active</span></div>
+            <span style="font-size:14px;color:#475569">560 nouveaux inclus, 429 sortis</span>
+            <sc-if value="{{ showDefs }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:6px;margin-top:6px;padding-top:10px;border-top:1px dashed #e2e8f0;font-size:12px;line-height:1.45;color:#64748b"><sc-for list="{{ defsPatients }}" as="d" hint-placeholder-count="3"><span><strong style="color:#334155">{{ d.label }} : </strong>{{ d.definition }}</span></sc-for></div></sc-if>
+          </div>
+          <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:18px 20px;display:flex;flex-direction:column;gap:6px">
+            <span style="font-size:14px;color:#64748b">Combien ont terminé</span>
+            <div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:40px;font-weight:700;letter-spacing:-.02em;color:#04182b;font-variant-numeric:tabular-nums">0 %</span><span style="font-size:15px;color:#334155">2 sur 429 sortis</span></div>
+            <div style="display:flex;height:10px;border-radius:999px;overflow:hidden;background:#f1f5f9;margin-top:4px">
+              <span style="flex:2;background:#16a34a"></span><span style="flex:336;background:#d97706"></span><span style="flex:91;background:#cbd5e1"></span>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px;color:#475569">
+              <span style="display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:2px;background:#16a34a"></span>2 terminés</span>
+              <span style="display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:2px;background:#d97706"></span>336 abandons</span>
+              <span style="display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:2px;background:#cbd5e1"></span>91 autres sortis</span>
+            </div>
+            <sc-if value="{{ showDefs }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:6px;margin-top:6px;padding-top:10px;border-top:1px dashed #e2e8f0;font-size:12px;line-height:1.45;color:#64748b"><sc-for list="{{ defsCompletion }}" as="d" hint-placeholder-count="3"><span><strong style="color:#334155">{{ d.label }} : </strong>{{ d.definition }}</span></sc-for></div></sc-if>
+          </div>
+          <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:18px 20px;display:flex;flex-direction:column;gap:6px">
+            <span style="font-size:14px;color:#64748b">Où sont les absences</span>
+            <div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:40px;font-weight:700;letter-spacing:-.02em;color:#04182b;font-variant-numeric:tabular-nums">24 %</span><span style="font-size:15px;color:#334155">des rendez-vous pointés</span></div>
+            <span style="font-size:14px;color:#475569;text-wrap:pretty">Le plus : Consultation Diététicienne, le lundi</span>
+            <sc-if value="{{ showDefs }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:6px;margin-top:6px;padding-top:10px;border-top:1px dashed #e2e8f0;font-size:12px;line-height:1.45;color:#64748b"><sc-for list="{{ defsAbs }}" as="d" hint-placeholder-count="1"><span><strong style="color:#334155">{{ d.label }} : </strong>{{ d.definition }}</span></sc-for></div></sc-if>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr));gap:12px">
+          <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:18px 20px;display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px">
+              <span style="font-size:16px;font-weight:600;color:#04182b">Entrées et sorties par mois</span>
+              <span style="display:flex;gap:14px;font-size:12px;color:#475569"><span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:2px;background:#2563eb"></span>Nouveaux inclus</span><span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:2px;background:#94a3b8"></span>Sortis</span></span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:6px;align-items:end;height:150px;border-bottom:1px solid #e2e8f0">
+              <sc-for list="{{ months }}" as="m" hint-placeholder-count="12">
+                <div title="{{ m.title }}" style="display:flex;align-items:flex-end;justify-content:center;gap:2px;height:100%">
+                  <span style="width:42%;max-width:14px;height:{{ m.hIn }};background:#2563eb;border-radius:2px 2px 0 0"></span>
+                  <span style="width:42%;max-width:14px;height:{{ m.hOut }};background:#94a3b8;border-radius:2px 2px 0 0"></span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:6px;text-align:center">
+              <sc-for list="{{ months }}" as="m" hint-placeholder-count="12"><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:12px;color:#64748b">{{ m.label }}</span><span style="font-size:12px;font-weight:600;color:#04182b;font-variant-numeric:tabular-nums">{{ m.active }}</span></div></sc-for>
+            </div>
+            <span style="font-size:12px;color:#64748b">Ligne du bas : file active du mois. Nécessite un agrégat mensuel côté back.</span>
+          </div>
+          <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:18px 20px;display:flex;flex-direction:column;gap:14px">
+            <span style="font-size:16px;font-weight:600;color:#04182b">Bilans et suivi éducatif</span>
+            <sc-for list="{{ bilans }}" as="b" hint-placeholder-count="2">
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:14px"><span style="color:#334155">{{ b.label }}</span><span style="font-variant-numeric:tabular-nums;white-space:nowrap"><strong style="color:#04182b">{{ b.n }}</strong><span style="color:#64748b"> / {{ b.of }} · {{ b.pct }}</span></span></div>
+                <span style="height:8px;background:#f1f5f9;border-radius:3px;overflow:hidden"><span style="display:block;height:100%;width:{{ b.w }};min-width:2px;background:#2563eb;border-radius:3px"></span></span>
+                <span style="font-size:12px;color:#64748b">{{ b.base }}</span>
+              </div>
+            </sc-for>
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding-top:12px;border-top:1px solid #f1f5f9;font-size:14px">
+              <span style="color:#334155">Délai adressage → entrée</span>
+              <span style="font-size:13px;color:#64748b;text-align:right">Non calculé</span>
+            </div>
+            <span style="font-size:12px;line-height:1.45;color:#64748b">{{ defDelay }}</span>
+          </div>
+        </div>
+
+        <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:18px 20px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px">
+            <span style="font-size:16px;font-weight:600;color:#04182b">Carte des absences</span>
+            <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#64748b">Trier par
+              <div style="display:flex;gap:2px;padding:2px;background:#f1f5f9;border-radius:6px">
+                <sc-for list="{{ sorts }}" as="s" hint-placeholder-count="2"><button onClick="{{ s.onClick }}" style="cursor:pointer;height:26px;padding:0 10px;border:none;border-radius:4px;font-size:13px;background:{{ s.bg }};color:{{ s.fg }};font-weight:{{ s.fw }};box-shadow:{{ s.sh }}">{{ s.label }}</button></sc-for>
+              </div>
+            </div>
+          </div>
+          <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:auto">
+            <div style="min-width:760px">
+              <div style="display:grid;grid-template-columns:minmax(220px,1fr) repeat(5,96px) 96px;align-items:center;height:40px;background:#f8fafc;border-bottom:1px solid #e2e8f0;font-size:13px;color:#64748b">
+                <span style="padding:0 14px">Thématique</span><span style="text-align:center">Lundi</span><span style="text-align:center">Mardi</span><span style="text-align:center">Mercredi</span><span style="text-align:center">Jeudi</span><span style="text-align:center">Vendredi</span><span style="text-align:center;border-left:1px solid #e2e8f0;line-height:40px;font-weight:600;color:#334155">Total</span>
+              </div>
+              <sc-for list="{{ rows }}" as="r" hint-placeholder-count="10">
+                <div style="display:grid;grid-template-columns:minmax(220px,1fr) repeat(5,96px) 96px;align-items:stretch;height:40px;border-bottom:1px solid #f1f5f9;font-size:14px;font-variant-numeric:tabular-nums">
+                  <span title="{{ r.name }}" style="display:flex;align-items:center;padding:0 14px;color:#04182b;min-width:0"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0">{{ r.name }}</span></span>
+                  <sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="5"><span title="{{ c.title }}" style="display:flex;align-items:center;justify-content:center;background:{{ c.bg }};color:{{ c.fg }}">{{ c.text }}</span></sc-for>
+                  <span style="display:flex;align-items:center;justify-content:center;border-left:1px solid #e2e8f0;font-weight:600;color:#04182b">{{ r.total }}</span>
+                </div>
+              </sc-for>
+              <div style="display:grid;grid-template-columns:minmax(220px,1fr) repeat(5,96px) 96px;align-items:stretch;height:44px;border-top:2px solid #e2e8f0;border-bottom:1px solid #e2e8f0;font-size:14px;font-weight:600;font-variant-numeric:tabular-nums">
+                <span style="display:flex;align-items:center;padding:0 14px;color:#04182b">Toutes thématiques</span>
+                <sc-for list="{{ dayTotals }}" as="c" hint-placeholder-count="5"><span title="{{ c.title }}" style="display:flex;align-items:center;justify-content:center;background:{{ c.bg }};color:#04182b">{{ c.text }}</span></sc-for>
+                <span style="display:flex;align-items:center;justify-content:center;border-left:1px solid #e2e8f0;color:#04182b">24 %</span>
+              </div>
+              <button onClick="{{ toggleLow }}" style="cursor:pointer;width:100%;height:40px;display:flex;align-items:center;gap:8px;padding:0 14px;border:none;background:#f8fafc;font-size:13px;color:#334155;text-align:left">
+                <span style="width:14px;height:14px;background-color:#64748b;transform:{{ lowRot }};transition:transform .15s;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/chevron-right.svg) center/contain no-repeat"></span>
+                <span style="flex:1">Autres thématiques · faible volume ({{ lowCount }})</span>
+                <span style="font-size:12px;color:#64748b">Moins de 5 rendez-vous pointés : pas de taux</span>
+              </button>
+              <sc-if value="{{ lowOpen }}" hint-placeholder-val="{{ false }}">
+                <sc-for list="{{ lowRows }}" as="r" hint-placeholder-count="7">
+                  <div style="display:grid;grid-template-columns:minmax(220px,1fr) repeat(5,96px) 96px;align-items:center;height:36px;border-top:1px solid #f1f5f9;background:#f8fafc;font-size:13px;color:#64748b;font-variant-numeric:tabular-nums">
+                    <span title="{{ r.name }}" style="padding:0 14px 0 36px;color:#334155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">{{ r.name }}</span>
+                    <sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="5"><span style="text-align:center">{{ c.text }}</span></sc-for>
+                    <span style="text-align:center;border-left:1px solid #e2e8f0;line-height:36px">{{ r.total }}</span>
+                  </div>
+                </sc-for>
+              </sc-if>
+            </div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;font-size:12px;color:#64748b">
+            <span>0 %</span><span style="width:120px;height:8px;border-radius:2px;background:linear-gradient(90deg,rgba(239,68,68,.04),rgba(239,68,68,.32))"></span><span>40 %</span>
+            <span style="margin-left:8px">· aucun rendez-vous pointé</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px;padding-top:14px;border-top:1px solid #f1f5f9">
+            <span style="font-size:14px;font-weight:600;color:#04182b">Par parcours</span>
+            <sc-for list="{{ pathways }}" as="p" hint-placeholder-count="4">
+              <div style="display:grid;grid-template-columns:minmax(0,240px) minmax(0,1fr) 56px;align-items:center;gap:12px;font-size:14px">
+                <span style="color:#334155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="{{ p.name }}">{{ p.name }}</span>
+                <span style="height:8px;background:#f1f5f9;border-radius:3px;overflow:hidden"><span style="display:block;height:100%;width:{{ p.w }};background:#ef4444;opacity:.75;border-radius:3px"></span></span>
+                <span style="text-align:right;font-variant-numeric:tabular-nums;color:{{ p.fg }};font-weight:{{ p.fw }}">{{ p.text }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:12px;align-items:start">
+          <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:18px 20px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><span style="font-size:16px;font-weight:600;color:#04182b">Motifs d'arrêt</span><span style="font-size:13px;color:#64748b">336 abandons</span></div>
+            <sc-for list="{{ reasons }}" as="r" hint-placeholder-count="6">
+              <div style="display:grid;grid-template-columns:minmax(0,210px) minmax(0,1fr) 36px;align-items:center;gap:12px;font-size:14px">
+                <span style="color:#334155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="{{ r.label }}">{{ r.label }}</span>
+                <span style="height:8px;background:#f1f5f9;border-radius:3px;overflow:hidden"><span style="display:block;height:100%;width:{{ r.w }};background:#d97706;border-radius:3px"></span></span>
+                <span style="text-align:right;font-weight:600;color:#04182b;font-variant-numeric:tabular-nums">{{ r.n }}</span>
+              </div>
+            </sc-for>
+            <button onClick="{{ toggleReasons }}" style="cursor:pointer;align-self:flex-start;border:none;background:transparent;padding:0;font-size:13px;font-weight:600;color:#2563eb">{{ reasonsBtn }}</button>
+          </div>
+          <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:18px 20px;display:flex;flex-direction:column;gap:14px">
+            <span style="font-size:16px;font-weight:600;color:#04182b">Séances et temps soignant</span>
+            <div style="display:flex;height:10px;border-radius:999px;overflow:hidden"><span style="flex:1407;background:#2563eb"></span><span style="flex:95;background:#93c5fd"></span></div>
+            <div style="display:flex;gap:14px;font-size:12px;color:#475569"><span style="display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:2px;background:#2563eb"></span>Individuelles 94 %</span><span style="display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:2px;background:#93c5fd"></span>Collectives 6 %</span></div>
+            <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">
+              <sc-for list="{{ sessions }}" as="s" hint-placeholder-count="4">
+                <div style="display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:8px;background:#f8fafc">
+                  <span style="font-size:22px;font-weight:700;color:#04182b;font-variant-numeric:tabular-nums">{{ s.n }}</span>
+                  <span style="font-size:12px;line-height:1.3;color:#64748b">{{ s.label }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <sc-if value="{{ showDefs }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:6px;font-size:12px;line-height:1.45;color:#64748b"><sc-for list="{{ defsSessions }}" as="d" hint-placeholder-count="4"><span><strong style="color:#334155">{{ d.label }} : </strong>{{ d.definition }}</span></sc-for></div></sc-if>
+            <span style="font-size:14px;font-weight:600;color:#04182b;margin-top:4px">Heures par métier</span>
+            <sc-for list="{{ hours }}" as="h" hint-placeholder-count="9">
+              <div style="display:grid;grid-template-columns:minmax(0,160px) minmax(0,1fr) 64px;align-items:center;gap:12px;font-size:14px">
+                <span style="color:#334155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ h.label }}</span>
+                <span style="height:8px;background:#f1f5f9;border-radius:3px;overflow:hidden"><span style="display:block;height:100%;width:{{ h.w }};background:#2563eb;border-radius:3px"></span></span>
+                <span style="text-align:right;color:#04182b;font-variant-numeric:tabular-nums">{{ h.h }}</span>
+              </div>
+            </sc-for>
+            <sc-if value="{{ showDefs }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:1.45;color:#64748b"><strong style="color:#334155">Heures soignant : </strong>{{ defHours }}</span></sc-if>
+          </div>
+        </div>
+
+        <span style="font-size:12px;color:#64748b;text-align:center">Moins de 5 rendez-vous pointés : pas de taux. Mêmes définitions à l'écran et dans l'export CSV.</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showDefinitions&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+const DEFS = {
+  'File active': 'Patients distincts ayant au moins une présence dans la période.',
+  'Nouveaux inclus': "Dossiers dont le diagnostic éducatif tombe dans la période (même règle que l'enquête ARS).",
+  'Sortis': 'Dossiers dont la date de sortie tombe dans la période.',
+  'Ont terminé': "Sortis dont le programme est complet : un diagnostic éducatif, au moins une séance, au moins une réactualisation, depuis l'entrée.",
+  'Abandons': "Sortis avec un motif d'arrêt autre que « Plus de besoin / Fin de parcours ».",
+  'Taux de complétion': 'Ont terminé divisés par les sortis ; « — » sans sortie dans la période.',
+  'Absentéisme': 'Absents divisés par les rendez-vous pointés (présents et absents) ; les rendez-vous non pointés sont exclus. Moins de 5 rendez-vous pointés : pas de taux.',
+  'Séances individuelles': 'Présences sur un créneau individuel.',
+  'Séances collectives': 'Créneaux collectifs ayant eu au moins un présent.',
+  'Heures soignant': 'Durée de chaque créneau réalisé, comptée une fois pour chaque métier affecté au créneau.',
+  'Bilans de fin': "Présences à une réactualisation : approximation, il n'existe pas de bilan de fin dédié.",
+  'Diagnostics éducatifs réalisés': 'Présences à une thématique de diagnostic éducatif.',
+  'Délai adressage → entrée': "Non calculé : MediSync n'enregistre ni liste d'attente ni date d'adressage.",
+};
+const d = (...ks) => ks.map(label => ({ label, definition: DEFS[label] }));
+const N = null;
+const MAIN = [
+  ['Sans thématique', [22, 17, 25, 21, 26], 22], ['Consultation Diététicienne', [40, 33, N, 28, 23], 31],
+  ['Consultation Psychologue', [N, 26, 24, 16, 25], 23], ['Coaching PRM M1 / M2', [33, 23, 16, 30, 35], 25],
+  ['Tabac', [21, 20, 18, 17, 14], 19], ['SMCP Diagnostic éducatif', [35, 8, 8, 16, 22], 17],
+  ['SMCP Réactu 1', [20, 20, 0, 21, 0], 16], ['Gestion du stress aigu', [N, 12, N, 13, N], 12],
+  ['Coaching PRM M3 +', [29, 11, 23, 22, 0], 19], ['Coaching PRM M2 / M3', [20, 35, 33, 36, '4 rdv'], 35],
+  ['Prévention du stress', [N, N, N, 23, N], 23], ['Programme de réentraînement à la marche 2', [N, N, N, N, 40], 40],
+  ['Drive Cuisine', [34, N, N, N, N], 34], ['Gestion des sucres', [N, N, N, 28, N], 28],
+];
+const LOW = [
+  ['Réactu 1', [2, N, 1, N, 1], 4], ['Consultation Tabacologue', [N, N, N, 3, N], 3], ['Diagnostic éducatif', [2, 1, N, N, N], 3],
+  ['Motivation FDR', [1, 1, N, N, N], 2], ['HTA', [N, N, 1, N, N], 1], ['Mes facteurs de risque', [N, N, 1, N, N], 1], ['Réactu 3', [1, N, N, N, N], 1],
+];
+const REASONS = [['Perdu de vue', 98], ['Absence besoins éducatifs', 64], ['Refus', 47], ['Problèmes médicaux à régler', 29], ['Souhait arrêt', 28], ['Problème de santé', 12], ["Distance d'habitation", 10], ['Troubles cognitifs', 10], ['Prise en charge besoins quotidiens', 9], ['Indisponibilité', 6], ['Barrière de la langue', 6], ['Manque de motivation', 5], ["Absence de critères médicaux d'inclusion", 2], ['Déménagement', 2], ['NS', 1], ['Transport', 1]];
+const HOURS = [['IDE SSR', 313], ['IDE Educ3', 235.3], ['Aide-soignante', 195.5], ['Psychologue', 184.3], ['Diététicienne', 182.8], ['IDE Educ1', 108.5], ['IDE Educ2', 108], ['Psychologue étudiant', 18], ['Pharmacienne', 0.8]];
+const PATHWAYS = [['Hors parcours', 24], ['Stress aigu — 21/09/2026', 18], ['IDE SSR — 21/09/2026', '3 rdv'], ['Consultation Psychologue — 05/10/2026', '1 rdv']];
+const fr = n => String(n).replace('.', ',');
+const cell = v => v === N ? { text: '·', bg: 'transparent', fg: '#94a3b8', title: 'Aucun rendez-vous pointé' }
+  : typeof v === 'string' ? { text: v, bg: 'transparent', fg: '#64748b', title: 'Trop peu de rendez-vous pointés pour un taux' }
+  : { text: v + ' %', bg: `rgba(239,68,68,${(0.04 + v / 40 * 0.28).toFixed(3)})`, fg: '#04182b', title: `${v} % d'absents` };
+const MONTHS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+const IN = [62, 55, 68, 59, 51, 64, 38, 22, 71, 70, 0, 0];
+const OUT = [44, 47, 49, 52, 46, 48, 41, 27, 40, 35, 0, 0];
+const DAY_TOTALS = [26, 21, 22, 23, 25];
+class Component extends DCLogic {
+  state = { year: 2026, preset: null, defs: false, sort: 'rate', low: false, allReasons: false };
+  renderVals() {
+    const { year, sort, low, allReasons } = this.state;
+    const showDefs = this.state.defs || !!this.props.showDefinitions;
+    const main = [...MAIN].sort((a, b) => sort === 'rate' ? b[2] - a[2] : a[0].localeCompare(b[0], 'fr'));
+    const maxR = REASONS[0][1], maxH = HOURS[0][1];
+    const seg = (a) => ({ bg: a ? '#ffffff' : 'transparent', fg: a ? '#04182b' : '#64748b', fw: a ? 600 : 400, sh: a ? '0 1px 2px rgba(0,0,0,.08)' : 'none' });
+    return {
+      year, showDefs,
+      years: [2026, 2025, 2024].map(y => { const a = !this.state.preset && y === year;
+        return { label: String(y), onClick: () => this.setState({ year: y, preset: null }), bg: a ? '#04182b' : 'transparent', fg: a ? '#ffffff' : '#334155', fw: a ? 600 : 400 }; }),
+      presets: [['12m', '12 derniers mois'], ['q', 'Trimestre']].map(([k, label]) => { const a = this.state.preset === k;
+        return { label, onClick: () => this.setState({ preset: k }), bg: a ? '#04182b' : 'transparent', fg: a ? '#ffffff' : '#334155', fw: a ? 600 : 400 }; }),
+      from: this.state.preset === '12m' ? '10/10/2025' : this.state.preset === 'q' ? '01/07/2026' : `01/01/${year}`,
+      to: this.state.preset === '12m' ? '09/10/2026' : this.state.preset === 'q' ? '30/09/2026' : `31/12/${year}`,
+      months: (() => { const max = Math.max(...IN, ...OUT); let run = 380;
+        return MONTHS.map((label, i) => { run += IN[i] - OUT[i]; const future = IN[i] === 0 && OUT[i] === 0;
+          return { label, hIn: (IN[i] / max * 100) + '%', hOut: (OUT[i] / max * 100) + '%', active: future ? '' : run, title: `${label} : ${IN[i]} inclus, ${OUT[i]} sortis` }; }); })(),
+      dayTotals: DAY_TOTALS.map(cell),
+      bilans: [
+        { label: 'Diagnostics éducatifs réalisés', n: 1, of: 560, base: 'Rapporté aux nouveaux inclus' },
+        { label: 'Bilans de fin réalisés', n: 2, of: 429, base: 'Rapporté aux sortis' },
+      ].map(b => ({ ...b, w: (b.n / b.of * 100) + '%', pct: Math.round(b.n / b.of * 100) + '\u00a0%' })),
+      toggleDefs: () => this.setState(s => ({ defs: !s.defs })),
+      defsBtnBg: showDefs ? '#eff6ff' : '#ffffff', defsBtnBd: showDefs ? '#2563eb' : '#e2e8f0', defsBtnFg: showDefs ? '#2563eb' : '#334155',
+      defsPatients: d('File active', 'Nouveaux inclus', 'Sortis'),
+      defsCompletion: d('Ont terminé', 'Abandons', 'Taux de complétion'),
+      defsAbs: d('Absentéisme'),
+      defsSessions: d('Séances individuelles', 'Séances collectives', 'Diagnostics éducatifs réalisés', 'Bilans de fin'),
+      defHours: DEFS['Heures soignant'], defDelay: DEFS['Délai adressage → entrée'],
+      sorts: [['rate', 'Taux'], ['az', 'A → Z']].map(([k, label]) => ({ label, onClick: () => this.setState({ sort: k }), ...seg(k === sort) })),
+      rows: main.map(([name, cs, t]) => ({ name, cells: cs.map(cell), total: t + ' %' })),
+      lowRows: LOW.map(([name, cs, t]) => ({ name, cells: cs.map(v => ({ text: v === N ? '·' : v + ' rdv' })), total: t + ' rdv' })),
+      lowCount: LOW.length, lowOpen: low, lowRot: low ? 'rotate(90deg)' : 'none',
+      toggleLow: () => this.setState(s => ({ low: !s.low })),
+      pathways: PATHWAYS.map(([name, v]) => typeof v === 'number'
+        ? { name, w: (v / 40 * 100) + '%', text: v + ' %', fg: '#04182b', fw: 600 }
+        : { name, w: '0%', text: v, fg: '#64748b', fw: 400 }),
+      reasons: (allReasons ? REASONS : REASONS.slice(0, 6)).map(([label, n]) => ({ label, n, w: (n / maxR * 100) + '%' })),
+      reasonsBtn: allReasons ? 'Afficher moins' : `Voir les ${REASONS.length} motifs`,
+      toggleReasons: () => this.setState(s => ({ allReasons: !s.allReasons })),
+      sessions: [[1407, 'séances individuelles'], [95, 'séances collectives'], [1, 'diagnostic éducatif'], [2, 'bilans de fin']].map(([n, label]) => ({ n: n.toLocaleString('fr-FR'), label })),
+      hours: HOURS.map(([label, h]) => ({ label, h: fr(h) + ' h', w: (h / maxH * 100) + '%' })),
+    };
+  }
+}
+</script>
+</body>
+</html>

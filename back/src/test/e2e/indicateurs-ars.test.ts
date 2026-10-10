@@ -388,6 +388,7 @@ describe('indicateurs ARS', () => {
     expect(presence?.status).toBe('no')
     expect(presence?.pathwayId).toBe(pathway.id)
     expect(presence?.pathwayLabel).toBe('Réadaptation — 05/10/2026')
+    expect(presence?.pathwayTemplateId).toBe(template.id)
     expect(presence?.slotMinutes).toBe(90)
     expect(presence?.soignants).toEqual(['IDE'])
     expect(presence?.thematicRole).toBe('REACTUALISATION')

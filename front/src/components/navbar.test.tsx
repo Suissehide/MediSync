@@ -297,7 +297,7 @@ describe('onglets de la barre de navigation', () => {
         'Agenda',
         'Patients',
         'Suivi',
-        'Activité',
+        'Pilotage',
       ])
     })
     expect(menus()).toEqual(['Administration'])
@@ -385,7 +385,7 @@ describe('onglets de la barre de navigation', () => {
         'Agenda',
         'Patients',
         'Suivi',
-        'Activité',
+        'Pilotage',
       ])
     })
     expect(
