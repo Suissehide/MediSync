@@ -1,3 +1,4 @@
+import { seedArsIndicatorSet } from '../../../prisma/seed/indicators'
 import type {
   ServicePermission,
   ServiceRole,
@@ -164,6 +165,7 @@ describe('permissions par role de service', () => {
     const service = await createService(est.id)
     establishmentId = est.id
     serviceId = service.id
+    await seedArsIndicatorSet(testDb, { establishmentId, serviceId })
 
     for (const role of roles) {
       const email = `${role.toLowerCase()}@test.fr`

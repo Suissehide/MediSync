@@ -14,7 +14,7 @@ export type IndicatorConfig = {
   group: string
   nature: 'computed' | 'manual' | 'unavailable'
   measure?: MeasureKey
-  options?: Record<string, unknown>
+  options?: Record<string, string | number | boolean>
   filters?: FilterCondition[]
   breakdownField?: string
   input?: 'number+text' | 'yesno'

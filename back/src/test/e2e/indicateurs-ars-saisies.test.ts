@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx'
 
+import { seedArsIndicatorSet } from '../../../prisma/seed/indicators'
 import { buildTestApp, type TestApp } from './setup/app'
 import { testDb, truncateAll } from './setup/db'
 import {
@@ -33,6 +34,9 @@ describe('indicateurs ARS : reponses saisies', () => {
     establishmentId = est.id
     serviceA = (await createService(est.id, 'Service A')).id
     serviceB = (await createService(est.id, 'Service B')).id
+    for (const serviceId of [serviceA, serviceB]) {
+      await seedArsIndicatorSet(testDb, { establishmentId, serviceId })
+    }
     await createUser({
       email: 'coordo@test.fr',
       memberships: [
@@ -157,8 +161,8 @@ describe('indicateurs ARS : reponses saisies', () => {
       ).toBe(400)
     }
     expect(
-      await testDb.arsManualAnswer.count({
-        where: { code: { in: ['constructor', 'toString'] } },
+      await testDb.indicatorAnswer.count({
+        where: { indicator: { code: { in: ['constructor', 'toString'] } } },
       }),
     ).toBe(0)
   })
@@ -182,8 +186,8 @@ describe('indicateurs ARS : reponses saisies', () => {
       numberValue: 12,
       textValue: 'Ateliers en ville',
     })
-    const lignes = await testDb.arsManualAnswer.findMany({
-      where: { serviceId: serviceA, year: 2026, code: '2.5' },
+    const lignes = await testDb.indicatorAnswer.findMany({
+      where: { serviceId: serviceA, year: 2026, indicator: { code: '2.5' } },
     })
     expect(lignes).toHaveLength(1)
     expect(lignes[0]).toMatchObject({ numberValue: 12 })

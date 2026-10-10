@@ -1,3 +1,4 @@
+import { seedArsIndicatorSet } from '../../../prisma/seed/indicators'
 import { buildTestApp, type TestApp } from './setup/app'
 import { testDb, truncateAll } from './setup/db'
 import {
@@ -267,6 +268,12 @@ describe('isolation par tenant', () => {
     beforeAll(async () => {
       await truncateAll()
       scenario = await twoServicesScenario(t.app)
+      for (const { id } of [scenario.serviceA, scenario.serviceB]) {
+        await seedArsIndicatorSet(testDb, {
+          establishmentId: scenario.est.id,
+          serviceId: id,
+        })
+      }
     })
 
     // Sonde de sante, a executer une seule fois : si les fabriques cessaient
@@ -318,7 +325,7 @@ describe('isolation par tenant', () => {
       expect(ids).not.toContain(foreignThematic.id)
     })
 
-    // ArsManualAnswer : pas de route par identifiant, elle se lit a travers
+    // IndicatorAnswer : pas de route par identifiant, elle se lit a travers
     // GET /indicateurs-ars, embarquee dans la reponse de chaque indicateur.
     // Le cloisonnement a verifier n'est donc pas un 404, mais une absence de
     // fuite dans un champ imbrique : la saisie de B ne doit pas apparaitre

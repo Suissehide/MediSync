@@ -10,6 +10,8 @@ const answerSelect = {
   boolValue: true,
 } as const
 
+const ARS_SET = { name: 'Grille ARS' }
+
 class ArsManualAnswerRepository implements ArsManualAnswerRepositoryInterface {
   private readonly prisma: PostgresPrismaClient
   private readonly tenantContext: TenantContextInterface
@@ -23,26 +25,31 @@ class ArsManualAnswerRepository implements ArsManualAnswerRepositoryInterface {
     return this.tenantContext.scope()
   }
 
+  // Transitoire : lit et écrit IndicatorAnswer sur l'indicateur de même code de la « Grille ARS ».
   async findByYear(year: number): Promise<Map<string, ArsAnswer>> {
-    const rows = await this.prisma.arsManualAnswer.findMany({
-      where: { ...this.scope, year },
-      select: { code: true, ...answerSelect },
+    const rows = await this.prisma.indicatorAnswer.findMany({
+      where: { ...this.scope, year, indicator: { set: ARS_SET } },
+      select: { ...answerSelect, indicator: { select: { code: true } } },
     })
-    return new Map(rows.map(({ code, ...answer }) => [code, answer]))
+    return new Map(
+      rows.map(({ indicator, ...answer }) => [indicator.code, answer]),
+    )
   }
 
-  upsert(
+  async upsert(
     year: number,
     code: string,
     values: ArsAnswer,
     userId: string,
   ): Promise<ArsAnswer> {
+    const { id: indicatorId } = await this.prisma.indicator.findFirstOrThrow({
+      where: { ...this.scope, code, set: ARS_SET },
+      select: { id: true },
+    })
     const data = { ...values, updatedById: userId }
-    return this.prisma.arsManualAnswer.upsert({
-      where: {
-        serviceId_year_code: { serviceId: this.scope.serviceId, year, code },
-      },
-      create: { ...data, year, code, ...this.scope },
+    return this.prisma.indicatorAnswer.upsert({
+      where: { indicatorId_year: { indicatorId, year }, ...this.scope },
+      create: { ...data, year, indicatorId, ...this.scope },
       update: data,
       select: answerSelect,
     })
