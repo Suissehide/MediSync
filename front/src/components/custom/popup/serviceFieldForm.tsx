@@ -288,6 +288,12 @@ function ServiceFieldForm({ section, field, trigger }: ServiceFieldFormProps) {
                   <Input
                     value={newChoiceLabel}
                     onChange={(e) => setNewChoiceLabel(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        ajouterChoix()
+                      }
+                    }}
                     placeholder="Nouveau choix"
                     className="flex-1"
                   />
