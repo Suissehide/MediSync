@@ -58,11 +58,15 @@ const reactu = (
     ...p,
   })
 
-// Dossiers : hospitalisation seule, externe avec DE à distance, mixte, ambulatoire seul, suivi
-// commençant par une réactualisation, entrée hors période, plus un patient sans dossier.
+// Cohorte où les options sœurs d'une même mesure donnent des valeurs distinctes : intervertir deux options se voit.
 const presencesParPatient: Record<string, CohortPresence[]> = {
   hosp: [
     seance('hosp', '2026-03-01', { type: 'hospital' }),
+    seance('hosp', '2026-03-12', {
+      slotId: 'atelier-2',
+      individual: false,
+      type: 'hospital',
+    }),
     reactu('hosp', '2026-06-01', { type: 'hospital' }),
   ],
   ext: [
@@ -91,12 +95,23 @@ const presencesParPatient: Record<string, CohortPresence[]> = {
       accompanied: true,
     }),
     reactu('amb', '2026-04-01'),
+    seance('amb', '2026-04-20', { accompanied: true }),
   ],
   suivi: [
     reactu('suivi', '2026-03-05', { type: 'hospital' }),
     seance('suivi', '2026-03-15', { type: 'hospital' }),
     seance('suivi', '2026-03-25', { type: 'hospital' }),
     seance('suivi', '2026-04-05', { type: 'hospital', accompanied: true }),
+  ],
+  cs2: [
+    seance('cs2', '2026-04-05', { type: 'hospital' }),
+    seance('cs2', '2026-03-12', {
+      slotId: 'atelier-2',
+      individual: false,
+      type: 'hospital',
+    }),
+    seance('cs2', '2026-04-15', { type: 'hospital' }),
+    reactu('cs2', '2026-05-15', { type: 'hospital' }),
   ],
   ancien: [
     seance('ancien', '2026-03-10', { slotId: 'atelier-1', individual: false }),
@@ -153,6 +168,22 @@ const cohorte: IndicatorCohort = {
     dossier('suivi', '2026-03-01', {
       orientation: ARS_ORIENTATIONS.horsHopital,
     }),
+    dossier('cs2', '2026-03-01', {
+      orientation: ARS_ORIENTATIONS.consultationExterne,
+    }),
+    // Entrées sans séance : elles n'écartent que les comptes d'orientation les uns des autres.
+    dossier('o1', '2026-05-01', {
+      orientation: ARS_ORIENTATIONS.hospitalisation,
+    }),
+    dossier('o2', '2026-05-02', {
+      orientation: ARS_ORIENTATIONS.hospitalisation,
+    }),
+    dossier('o3', '2026-05-03', {
+      orientation: ARS_ORIENTATIONS.consultationExterne,
+    }),
+    dossier('o4', '2026-05-04', {
+      orientation: ARS_ORIENTATIONS.consultationExterne,
+    }),
     dossier('ancien', '2025-02-01', {}),
   ],
   presences: Object.values(presencesParPatient).flat(),
@@ -202,6 +233,7 @@ const computeIndicatorValue = (
   if (!config.measure) {
     throw new Error(`${config.code} : mesure absente`)
   }
+  // L'appelant de MEASURES étend la borne haute à la fin du jour, comme `computeArsIndicators`.
   const borne = { ...c, to: finDeJournee(c.to) }
   return MEASURES[config.measure].compute(
     filtrer(borne, config),
@@ -254,10 +286,34 @@ describe('jeu « Grille ARS » calculé par le moteur', () => {
     expect(nuls).toEqual([])
   })
 
-  it('3.3 differe de 3.1 sur cette cohorte, le sabotage de son option se voit', () => {
+  // 2.9 et 2.10 ont des mesures différentes mais se confondaient chez Draxa : elles comptent comme sœurs.
+  it('les codes d une meme mesure ont des valeurs attendues deux a deux distinctes', () => {
     const attendu = computeArsIndicators(versAncienneCohorte(cohorte))
-    const valeur = (code: string) => attendu.find((r) => r.code === code)?.value
-    expect(valeur('3.3')).not.toEqual(valeur('3.1'))
+    const soeurs = new Map<string, string[]>([['2.9/2.10', ['2.9', '2.10']]])
+    for (const config of ARS_PRESET) {
+      if (config.measure) {
+        soeurs.set(config.measure, [
+          ...(soeurs.get(config.measure) ?? []),
+          config.code,
+        ])
+      }
+    }
+    const collisions = [...soeurs.entries()].flatMap(([groupe, codes]) => {
+      const valeurs = codes.map(
+        (code) => attendu.find((r) => r.code === code)?.value,
+      )
+      return new Set(valeurs).size === valeurs.length
+        ? []
+        : [
+            `${groupe} : ${codes.map((c, i) => `${c}=${valeurs[i]}`).join(', ')}`,
+          ]
+    })
+    expect(collisions).toEqual([])
+  })
+
+  it('2.8 arrondit la moyenne au dixieme', () => {
+    const attendu = computeArsIndicators(versAncienneCohorte(cohorte))
+    expect(attendu.find((r) => r.code === '2.8')?.value).toBe(2.3)
   })
 
   it('chaque mesure patients compte ses patients retenus, sauf celles qui comptent des presences', () => {
@@ -281,8 +337,8 @@ describe('jeu « Grille ARS » calculé par le moteur', () => {
   it('patientsSortis et patientsSuivis comptent les sortis et les patients vus', () => {
     const borne = { ...cohorte, to: finDeJournee(cohorte.to) }
     expect(MEASURES.patientsSortis.compute(borne, {})).toBe(1)
-    expect(MEASURES.patientsSuivis.compute(borne, {})).toBe(7)
-    expect(MEASURES.patientsSuivis.patients?.(borne, {}).length).toBe(6)
+    expect(MEASURES.patientsSuivis.compute(borne, {})).toBe(8)
+    expect(MEASURES.patientsSuivis.patients?.(borne, {}).length).toBe(7)
   })
 })
 

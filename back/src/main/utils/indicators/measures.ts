@@ -127,6 +127,7 @@ const PROGRAMME_PERSONNALISE = {
 
 const aDistance = z.object({ aDistance: z.boolean().default(false) })
 
+// L'appelant étend `to` à la fin du jour (`finDeJournee`) avant tout calcul.
 export const MEASURES: Record<MeasureKey, Measure<unknown>> = {
   patientsEntres: patientMeasure({
     label: 'Patients entrés',
@@ -200,8 +201,7 @@ export const MEASURES: Record<MeasureKey, Measure<unknown>> = {
       return Math.round((total / slots.size) * 10) / 10
     },
   }),
-  // Faute de pouvoir identifier les proches eux-mêmes (`accompanying` est un Oui/Non), on compte
-  // les patients distincts accompagnés au moins une fois, avec ou sans dossier.
+  // Proches non identifiables (`accompanying` est un Oui/Non) : patients distincts accompagnés, avec ou sans dossier.
   patientsAccompagnes: measure({
     label: 'Patients accompagnés par un proche',
     description:

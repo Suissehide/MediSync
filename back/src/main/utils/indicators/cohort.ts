@@ -29,10 +29,7 @@ export type CohortFile = {
   presences: CohortPresence[]
 }
 
-// `files` : les sous-dossiers du service, pour les indicateurs qui comptent des PATIENTS pris
-// en charge. `presences` : TOUS les rendez-vous du service, pour ceux qui comptent des SÉANCES
-// RÉALISÉES — un `AppointmentPatient` s'écrit sans `PatientServiceFile` (décision assumée du
-// dépôt, voir `ensureExists`), et une séance tenue pour un tel patient a bien eu lieu.
+// `files` compte des patients ; `presences` (tout le service, dossier ou non) compte des séances réalisées.
 export type IndicatorCohort = {
   from: Date
   to: Date
