@@ -5,7 +5,10 @@ import type {
 
 export type PatientServiceFileEntityDomain = PatientServiceFileEntityRepo
 export type PatientServiceFileUpsertEntityDomain =
-  PatientServiceFileUpsertEntityRepo
+  PatientServiceFileUpsertEntityRepo & {
+    data?: Record<string, unknown>
+    clinicalData?: Record<string, unknown>
+  }
 
 export interface PatientServiceFileDomainInterface {
   findByPatient: (

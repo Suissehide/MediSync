@@ -273,3 +273,178 @@ describe('definitions des champs de la fiche', () => {
     expect(patch.statusCode).toBe(404)
   })
 })
+
+// Un coordinateur cree les definitions par l'API ; un secretariat ecrit sans clinical:write.
+describe('ecriture de la fiche', () => {
+  let testApp: TestApp
+  let establishmentId: string
+  let serviceId: string
+  let patientId: string
+  let autrePatientId: string
+  let coordinateurCookies: Cookies
+  let secretariatCookies: Cookies
+  let orientation: ServiceFieldResponse
+
+  const url = (path: string) => tenantUrl(establishmentId, serviceId, path)
+
+  const patchFiche = (cookies: Cookies, id: string, payload: unknown) =>
+    testApp.app.inject({
+      method: 'PATCH',
+      url: url(`/patient/${id}/service-file`),
+      cookies,
+      payload: payload as never,
+    })
+
+  const stored = (id: string) =>
+    testDb.patientServiceFile.findUniqueOrThrow({
+      where: { patientId_serviceId: { patientId: id, serviceId } },
+    })
+
+  const createField = async (payload: Record<string, unknown>) => {
+    const res = await testApp.app.inject({
+      method: 'POST',
+      url: url('/service-fields'),
+      cookies: coordinateurCookies,
+      payload: { section: 'pathway', ...payload } as never,
+    })
+    expect(res.statusCode).toBe(201)
+    return res.json() as ServiceFieldResponse
+  }
+
+  beforeAll(async () => {
+    await truncateAll()
+    const establishment = await createEstablishment('E-FICHE')
+    establishmentId = establishment.id
+    const service = await createService(establishmentId, 'S-FICHE')
+    serviceId = service.id
+
+    for (const [email, role] of [
+      ['coordinateur@fiche.fr', 'COORDINATEUR'],
+      ['secretariat@fiche.fr', 'SECRETARIAT'],
+    ] as const) {
+      await createUser({
+        email,
+        memberships: [{ establishmentId, services: [{ serviceId, role }] }],
+      })
+    }
+
+    for (const lastName of ['Fiche', 'Vide']) {
+      const patient = await testDb.patient.create({
+        data: {
+          establishmentId,
+          firstName: 'Jean',
+          lastName,
+          createDate: new Date('2026-01-01T00:00:00Z'),
+        },
+      })
+      await testDb.patientServiceFile.create({
+        data: { patientId: patient.id, serviceId, establishmentId },
+      })
+      if (lastName === 'Fiche') {
+        patientId = patient.id
+      } else {
+        autrePatientId = patient.id
+      }
+    }
+
+    testApp = await buildTestApp()
+    coordinateurCookies = await signIn(testApp.app, 'coordinateur@fiche.fr')
+    secretariatCookies = await signIn(testApp.app, 'secretariat@fiche.fr')
+
+    orientation = await createField({
+      label: 'orientation',
+      type: 'choice',
+      choices: ['A', 'B'],
+    })
+    await createField({ label: 'hba1c', type: 'number' })
+    await createField({
+      label: 'diag',
+      type: 'choice',
+      clinical: true,
+      choices: ['AVC', 'AOMI'],
+    })
+  })
+
+  afterAll(async () => {
+    await testApp.close()
+    await testDb.$disconnect()
+  })
+
+  it('le coordinateur ecrit data et clinicalData, rendus et stockes', async () => {
+    const res = await patchFiche(coordinateurCookies, patientId, {
+      data: { orientation: 'A', hba1c: 7.2 },
+      clinicalData: { diag: 'AVC' },
+    })
+    expect(res.statusCode).toBe(200)
+    expect(res.json()).toMatchObject({
+      data: { orientation: 'A', hba1c: 7.2 },
+      clinicalData: { diag: 'AVC' },
+    })
+    const file = await stored(patientId)
+    expect(file.data).toEqual({ orientation: 'A', hba1c: 7.2 })
+    expect(file.clinicalData).toEqual({ diag: 'AVC' })
+  })
+
+  it('null efface la cle, les autres restent', async () => {
+    const res = await patchFiche(coordinateurCookies, patientId, {
+      data: { hba1c: null },
+    })
+    expect(res.statusCode).toBe(200)
+    expect((await stored(patientId)).data).toEqual({ orientation: 'A' })
+  })
+
+  it('refuse un choix inconnu, une cle inconnue et une cle clinique dans data', async () => {
+    for (const data of [
+      { orientation: 'Z' },
+      { inconnu: 1 },
+      { diag: 'AVC' },
+    ]) {
+      const res = await patchFiche(coordinateurCookies, patientId, { data })
+      expect(res.statusCode).toBe(400)
+    }
+    const file = await stored(patientId)
+    expect(file.data).toEqual({ orientation: 'A' })
+    expect(file.clinicalData).toEqual({ diag: 'AVC' })
+  })
+
+  it('un choix archive reste accepte la ou il est deja la valeur, refuse ailleurs', async () => {
+    const choixA = orientation.choices.find((c) => c.key === 'A')
+    const archivage = await testApp.app.inject({
+      method: 'PATCH',
+      url: url(`/service-fields/${orientation.id}/choices/${choixA?.id}`),
+      cookies: coordinateurCookies,
+      payload: { archived: true } as never,
+    })
+    expect(archivage.statusCode).toBe(200)
+
+    const meme = await patchFiche(coordinateurCookies, patientId, {
+      data: { orientation: 'A' },
+    })
+    expect(meme.statusCode).toBe(200)
+
+    const autre = await patchFiche(coordinateurCookies, autrePatientId, {
+      data: { orientation: 'A' },
+    })
+    expect(autre.statusCode).toBe(400)
+    expect((await stored(autrePatientId)).data).toEqual({})
+  })
+
+  it('le secretariat ecrit data mais pas clinicalData, qu il ne relit pas', async () => {
+    const res = await patchFiche(secretariatCookies, patientId, {
+      data: { orientation: 'B' },
+      clinicalData: { diag: 'AOMI' },
+    })
+    expect(res.statusCode).toBe(200)
+    const file = await stored(patientId)
+    expect(file.data).toEqual({ orientation: 'B' })
+    expect(file.clinicalData).toEqual({ diag: 'AVC' })
+
+    const lecture = await testApp.app.inject({
+      method: 'GET',
+      url: url(`/patient/${patientId}/service-file`),
+      cookies: secretariatCookies,
+    })
+    expect(lecture.statusCode).toBe(200)
+    expect(lecture.json()).not.toHaveProperty('clinicalData')
+  })
+})

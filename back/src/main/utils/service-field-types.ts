@@ -1,5 +1,7 @@
 import Boom from '@hapi/boom'
 
+import type { Prisma } from '../../generated/client'
+
 export const SERVICE_FIELD_TYPES = [
   'text',
   'longtext',
@@ -169,3 +171,28 @@ export const readChoice = (values: unknown, key: string): string | null => {
   const value: unknown = Reflect.get(values, key)
   return typeof value === 'string' ? value : null
 }
+
+// Lit une colonne JSON de valeurs ; {} si elle n'est pas un objet.
+export const asValues = (json: unknown): FieldValues =>
+  typeof json === 'object' && json !== null && !Array.isArray(json)
+    ? { ...json }
+    : {}
+
+const isJsonValue = (value: unknown): value is Prisma.JsonValue =>
+  value === null ||
+  typeof value === 'string' ||
+  typeof value === 'boolean' ||
+  (typeof value === 'number' && Number.isFinite(value)) ||
+  (Array.isArray(value) && value.every(isJsonValue)) ||
+  (typeof value === 'object' && Object.values(value).every(isJsonValue))
+
+// Type les valeurs fusionnées pour Prisma ; elles sont déjà validées, rien n'est écarté en pratique.
+export const toJsonObject = (values: FieldValues): Prisma.JsonObject =>
+  Object.fromEntries(
+    Object.entries(values).filter(
+      (entry): entry is [string, Prisma.JsonValue] => isJsonValue(entry[1]),
+    ),
+  )
+
+export const asFieldType = (type: string): ServiceFieldType | undefined =>
+  SERVICE_FIELD_TYPES.find((t) => t === type)

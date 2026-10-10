@@ -1,3 +1,5 @@
+import Boom from '@hapi/boom'
+
 import type { IocContainer } from '../types/application/ioc'
 import type {
   PatientServiceFileDomainInterface,
@@ -5,14 +7,28 @@ import type {
   PatientServiceFileUpsertEntityDomain,
 } from '../types/domain/patientServiceFile.domain.interface'
 import type { PatientServiceFileRepositoryInterface } from '../types/infra/orm/repositories/patientServiceFile.repository.interface'
+import type { ServiceFieldRepositoryInterface } from '../types/infra/orm/repositories/serviceField.repository.interface'
 import type { AppEventBus } from '../utils/app-event-bus'
+import {
+  asFieldType,
+  asValues,
+  type FieldDefinitionForValidation,
+  mergeFieldPatch,
+  toJsonObject,
+} from '../utils/service-field-types'
 
 class PatientServiceFileDomain implements PatientServiceFileDomainInterface {
   private readonly patientServiceFileRepository: PatientServiceFileRepositoryInterface
+  private readonly serviceFieldRepository: ServiceFieldRepositoryInterface
   private readonly appEventBus: AppEventBus
 
-  constructor({ patientServiceFileRepository, appEventBus }: IocContainer) {
+  constructor({
+    patientServiceFileRepository,
+    serviceFieldRepository,
+    appEventBus,
+  }: IocContainer) {
     this.patientServiceFileRepository = patientServiceFileRepository
+    this.serviceFieldRepository = serviceFieldRepository
     this.appEventBus = appEventBus
   }
 
@@ -27,20 +43,73 @@ class PatientServiceFileDomain implements PatientServiceFileDomainInterface {
     params: PatientServiceFileUpsertEntityDomain,
     userID: string,
   ): Promise<PatientServiceFileEntityDomain> {
-    const serviceFile = await this.patientServiceFileRepository.upsert(
+    const { data, clinicalData, ...fixed } = params
+    let serviceFile = await this.patientServiceFileRepository.upsert(
       patientId,
-      params,
+      fixed,
     )
-    // Meme evenement que PATCH /patient/:id ('patient.updated' -> ActivityLogSubscriber) : le
-    // sous-dossier porte le contenu clinique qui vivait avant sur le patient, et sa modification
-    // doit laisser la meme trace dans le journal d'activite (voir back/src/main/services/
-    // activity-log.subscriber.ts). Aucun evenement dedie : ce reste une modification du dossier
-    // du meme patient, journalisee sous la meme entite.
+    if (data !== undefined || clinicalData !== undefined) {
+      serviceFile = await this.writeValues(
+        patientId,
+        data ?? {},
+        clinicalData ?? {},
+      )
+    }
+    // Meme evenement que PATCH /patient/:id : journalise sous la meme entite (activity-log.subscriber.ts).
     this.appEventBus.emit('patient.updated', {
       userID,
       patientId: serviceFile.patientId,
     })
     return serviceFile
+  }
+
+  // Concurrence optimiste : on n'ecrit que si les colonnes JSON n'ont pas bouge depuis la lecture.
+  private async writeValues(
+    patientId: string,
+    dataPatch: Record<string, unknown>,
+    clinicalPatch: Record<string, unknown>,
+  ): Promise<PatientServiceFileEntityDomain> {
+    const definitions = (await this.serviceFieldRepository.findAll()).flatMap(
+      (d): FieldDefinitionForValidation[] => {
+        const type = asFieldType(d.type)
+        return type ? [{ ...d, type }] : []
+      },
+    )
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const current =
+        await this.patientServiceFileRepository.findByPatient(patientId)
+      if (!current) {
+        throw Boom.notFound('PatientServiceFile not found')
+      }
+      const next = {
+        data: toJsonObject(
+          mergeFieldPatch(
+            definitions,
+            asValues(current.data),
+            dataPatch,
+            false,
+          ),
+        ),
+        clinicalData: toJsonObject(
+          mergeFieldPatch(
+            definitions,
+            asValues(current.clinicalData),
+            clinicalPatch,
+            true,
+          ),
+        ),
+      }
+      if (
+        await this.patientServiceFileRepository.writeValues(
+          patientId,
+          current,
+          next,
+        )
+      ) {
+        return { ...current, ...next }
+      }
+    }
+    throw Boom.conflict('Le dossier a été modifié en même temps, réessayez.')
   }
 
   ensureExists(patientId: string): Promise<void> {

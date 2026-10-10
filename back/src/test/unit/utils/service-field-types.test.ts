@@ -1,9 +1,12 @@
 import {
+  asFieldType,
+  asValues,
   choiceKeyFromLabel,
   type FieldDefinitionForValidation,
   fieldKeyFromLabel,
   mergeFieldPatch,
   readChoice,
+  toJsonObject,
 } from '../../../main/utils/service-field-types'
 
 const def = (
@@ -159,5 +162,28 @@ describe('readChoice', () => {
     expect(readChoice({}, 'a')).toBeNull()
     expect(readChoice(null, 'a')).toBeNull()
     expect(readChoice([], 'a')).toBeNull()
+  })
+})
+
+describe('asValues', () => {
+  it('rend un objet simple tel quel et {} pour tout le reste', () => {
+    expect(asValues({ a: 1 })).toEqual({ a: 1 })
+    expect(asValues(null)).toEqual({})
+    expect(asValues([1])).toEqual({})
+    expect(asValues('x')).toEqual({})
+  })
+})
+
+describe('toJsonObject et asFieldType', () => {
+  it('garde les valeurs JSON, ecarte le reste', () => {
+    expect(
+      toJsonObject({ a: 'x', b: 1, c: [true], d: { e: null }, f: undefined }),
+    ).toEqual({ a: 'x', b: 1, c: [true], d: { e: null } })
+    expect(toJsonObject({ n: Number.NaN })).toEqual({})
+  })
+
+  it('reconnait les types connus seulement', () => {
+    expect(asFieldType('choice')).toBe('choice')
+    expect(asFieldType('inconnu')).toBeUndefined()
   })
 })

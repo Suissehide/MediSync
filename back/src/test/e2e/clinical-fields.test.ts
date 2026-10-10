@@ -110,6 +110,19 @@ describe('filtrage des champs cliniques selon clinical:read / clinical:write', (
       },
     })
 
+    // Definition clinique : sans elle, un clinicalData non filtre serait refuse en 400 et non ecrit.
+    await testDb.serviceFieldDefinition.create({
+      data: {
+        ...tenant,
+        key: 'medicalDiagnosis',
+        label: 'Diagnostic médical',
+        type: 'text',
+        section: 'pathway',
+        order: 0,
+        clinical: true,
+      },
+    })
+
     const slotTemplate = await testDb.slotTemplate.create({
       data: {
         ...tenant,
@@ -307,11 +320,15 @@ describe('filtrage des champs cliniques selon clinical:read / clinical:write', (
 
     const res = await patch(cookies, `/patient/${patientId}/service-file`, {
       notes: 'NOTE-MODIFIEE',
+      clinicalData: { medicalDiagnosis: 'DIAGNOSTIC-MODIFIE' },
     })
     expect(res.statusCode).toBe(200)
 
     const stored = await storedServiceFile()
     expect(stored.notes).toBe('NOTE-MODIFIEE')
+    expect(stored.clinicalData).toEqual({
+      medicalDiagnosis: 'DIAGNOSTIC-MODIFIE',
+    })
     // Non envoye : inchange.
     expect(stored.details).toBe('DETAIL-SECRET')
   })
