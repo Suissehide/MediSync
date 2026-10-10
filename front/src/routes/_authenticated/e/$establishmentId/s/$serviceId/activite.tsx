@@ -82,7 +82,7 @@ function ActivitePage() {
 
   return (
     <DashboardLayout>
-      <div className="flex-1 min-h-0 bg-muted p-4 md:p-6 rounded-lg w-full overflow-auto">
+      <div className="relative flex-1 min-h-0 bg-muted p-4 md:p-6 rounded-lg w-full overflow-auto">
         <div className="max-w-[1320px] mx-auto flex flex-col gap-4">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div className="flex flex-col gap-1">

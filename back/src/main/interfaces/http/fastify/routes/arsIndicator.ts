@@ -1,7 +1,12 @@
 import type { FastifyPluginAsync } from 'fastify'
 
 import {
+  type ArsAnswerBody,
+  type ArsAnswerParams,
   type ArsIndicatorQuery,
+  arsAnswerBodySchema,
+  arsAnswerParamsSchema,
+  arsAnswerResponseSchema,
   arsIndicatorQuerySchema,
   arsIndicatorsResponseSchema,
 } from '../schemas/arsIndicator.schema'
@@ -25,9 +30,28 @@ const arsIndicatorRouter: FastifyPluginAsync = (fastify) => {
       return {
         from: from.toISOString().slice(0, 10),
         to: to.toISOString().slice(0, 10),
-        indicators: await arsIndicatorDomain.findAll({ from, to }),
+        ...(await arsIndicatorDomain.findAll({ from, to })),
       }
     },
+  )
+
+  fastify.put<{ Params: ArsAnswerParams; Body: ArsAnswerBody }>(
+    '/saisies/:year/:code',
+    {
+      schema: {
+        params: arsAnswerParamsSchema,
+        body: arsAnswerBodySchema,
+        response: { 200: arsAnswerResponseSchema },
+      },
+      config: { permission: 'stats:write' },
+    },
+    (request) =>
+      arsIndicatorDomain.saveAnswer(
+        request.params.year,
+        request.params.code,
+        request.body,
+        request.user.userID,
+      ),
   )
 
   // Le classeur est un Buffer : pas de `response` Zod, la sérialisation JSON ne s'y applique pas.

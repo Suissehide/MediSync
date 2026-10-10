@@ -8,6 +8,9 @@ type ToggleGroupProps = {
   className?: string
   children?: React.ReactNode
   disabled?: boolean
+  'aria-label'?: string
+  'aria-labelledby'?: string
+  'aria-describedby'?: string
 }
 
 const ToggleGroup = ({
@@ -16,8 +19,10 @@ const ToggleGroup = ({
   onValueChange,
   children,
   disabled,
+  ...aria
 }: ToggleGroupProps) => (
   <ToggleGroupPrimitive.Root
+    {...aria}
     type="single"
     value={value}
     onValueChange={onValueChange}

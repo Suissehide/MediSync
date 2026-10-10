@@ -41,6 +41,10 @@ export type NavItem = {
 // ecrans, qui en onglets satureraient la barre, et releve d'un autre travail que le quotidien.
 export const MENU_GROUPS: ReadonlySet<string> = new Set(['Administration'])
 
+// Groupes affiches comme UN onglet a menu, a leur place parmi les onglets ; reduits a un onglet
+// simple portant le nom du groupe quand le role n'en voit qu'un ecran.
+export const TAB_MENU_GROUPS: ReadonlySet<string> = new Set(['Pilotage'])
+
 export const SCALE_ROOTS = {
   service: '/e/$establishmentId/s/$serviceId',
   establishment: '/e/$establishmentId/admin',
@@ -70,12 +74,20 @@ export const NAVIGATION: Record<Scale, readonly NavItem[]> = {
       to: '/e/$establishmentId/s/$serviceId/suivi',
       group: 'Quotidien',
     },
+    // La MEME permission que le `beforeLoad` de chaque ecran.
     {
-      label: 'Pilotage',
+      label: 'Activité',
       to: '/e/$establishmentId/s/$serviceId/activite',
-      // La MEME permission que le `beforeLoad` de l'ecran.
       permission: 'activity:read',
-      group: 'Quotidien',
+      group: 'Pilotage',
+      description: 'Patients, sorties, absences et séances du service',
+    },
+    {
+      label: 'Indicateurs ARS',
+      to: '/e/$establishmentId/s/$serviceId/indicateurs-ars',
+      permission: 'stats:read',
+      group: 'Pilotage',
+      description: "Grille de l'enquête annuelle ETP",
     },
     {
       label: 'Planning',
@@ -136,13 +148,6 @@ export const NAVIGATION: Record<Scale, readonly NavItem[]> = {
       permission: 'service-journal:read',
       group: 'Administration',
       description: 'Qui a fait quoi dans le service, et quand',
-    },
-    {
-      label: 'Indicateurs ARS',
-      to: '/e/$establishmentId/s/$serviceId/indicateurs-ars',
-      permission: 'stats:read',
-      group: 'Administration',
-      description: "Chiffres agrégés de l'enquête annuelle",
     },
   ],
   establishment: [

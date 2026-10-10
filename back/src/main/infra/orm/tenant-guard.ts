@@ -31,6 +31,7 @@ export const SERVICE_MODELS: readonly string[] = [
   // lieu du service) : voir la migration `soignants_salles_par_service`.
   'Soignant',
   'Location',
+  'ArsManualAnswer',
 ]
 
 // Modèles rattachés à un établissement : portent establishmentId.
@@ -371,9 +372,10 @@ export const MODEL_RELATIONS: Record<string, Record<string, ModelRelation>> = {
     patient: one('Patient'),
     pathway: one('Pathway'),
   },
-  // `ForbiddenWeek` et `PlanningCycle` ne déclarent aucune relation dans le schéma.
+  // `ForbiddenWeek`, `PlanningCycle` et `ArsManualAnswer` ne déclarent aucune relation dans le schéma.
   ForbiddenWeek: {},
   PlanningCycle: {},
+  ArsManualAnswer: {},
   Todo: {
     soignant: one('Soignant'),
   },

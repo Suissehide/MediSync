@@ -8,7 +8,7 @@ import {
   Outlet,
   RouterProvider,
 } from '@tanstack/react-router'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
@@ -19,6 +19,7 @@ import { Route as serviceRoute } from '@/routes/_authenticated/e/$establishmentI
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { AuthState, TenantContext, User } from '@/types/auth.ts'
 import Navbar from './navbar.tsx'
+import { TeteDuTiroir } from './navigationMobile.tsx'
 
 // `main.tsx` enregistre ce greffon au demarrage de l'application ; le panneau
 // des taches appelle `dayjs.utc()` des son montage. Le harnais de test ne
@@ -102,6 +103,26 @@ const ecranDeService = createRoute({
   component: () => <Navbar toggleSidebar={replierLaBarre} />,
 })
 
+const ecranActivite = createRoute({
+  getParentRoute: () => layoutDeService,
+  path: 'activite',
+  component: () => <Navbar toggleSidebar={replierLaBarre} />,
+})
+
+// Activite et Indicateurs ARS sont les deux entrees du menu de l'onglet Pilotage.
+const ecranArs = createRoute({
+  getParentRoute: () => layoutDeService,
+  path: 'indicateurs-ars',
+  component: () => <Navbar toggleSidebar={replierLaBarre} />,
+})
+
+// Le tiroir mobile, sous le layout de service.
+const ecranTiroir = createRoute({
+  getParentRoute: () => layoutDeService,
+  path: 'suivi',
+  component: () => <TeteDuTiroir />,
+})
+
 // L'ecran hors tenant : `/user/settings` rend bien `DashboardLayout`, donc
 // cette meme barre, sans vivre sous aucun des deux layouts de tenant.
 const ecranHorsTenant = createRoute({
@@ -152,7 +173,12 @@ const ficheEtablissement = createRoute({
 })
 
 const arbre = rootRoute.addChildren([
-  layoutDeService.addChildren([ecranDeService]),
+  layoutDeService.addChildren([
+    ecranDeService,
+    ecranActivite,
+    ecranArs,
+    ecranTiroir,
+  ]),
   layoutAdmin.addChildren([ecranResume, ecranAdmin]),
   ecranPlateforme,
   ecranJournaux,
@@ -229,7 +255,7 @@ describe('panneau des taches de la barre de navigation', () => {
 
 const avecRoles = (
   establishmentRole: 'ADMIN' | 'MEMBER',
-  serviceRole: 'COORDINATEUR' | 'INTERVENANT' | null,
+  serviceRole: 'COORDINATEUR' | 'INTERVENANT' | 'LECTURE' | null,
   isSuperAdmin = false,
 ): User => ({
   ...utilisateur,
@@ -246,10 +272,13 @@ const avecRoles = (
 })
 
 // Les onglets de la barre et, a part, le bouton Administration du service, a droite.
+// Liens et onglets a menu (Pilotage), dans l'ordre de la barre.
 const onglets = () =>
-  within(screen.getByRole('navigation', { name: 'Navigation' }))
-    .queryAllByRole('link')
-    .map((lien) => lien.textContent)
+  Array.from(
+    screen
+      .getByRole('navigation', { name: 'Navigation' })
+      .querySelectorAll('a, button'),
+  ).map((element) => element.textContent)
 const menus = () =>
   screen
     .queryAllByRole('button', { name: 'Administration' })
@@ -374,6 +403,61 @@ describe('onglets de la barre de navigation', () => {
           .filter((nom) => nom !== 'Plateforme'),
       ).toEqual([actif])
     })
+  })
+
+  it.each(['/e/e1/s/s1/activite', '/e/e1/s/s1/indicateurs-ars'])(
+    'sur %s, l onglet Pilotage est actif',
+    async (depart) => {
+      monterNavbar(depart, avecRoles('MEMBER', 'COORDINATEUR'))
+
+      const pilotage = await screen.findByRole('button', { name: 'Pilotage' })
+      expect(pilotage).toHaveAttribute('aria-current', 'page')
+      expect(screen.queryAllByRole('link', { current: 'page' })).toEqual([])
+    },
+  )
+
+  it('ouvre au coordinateur un menu Pilotage avec Activite et Indicateurs ARS', async () => {
+    monterNavbar('/e/e1/s/s1/dashboard', avecRoles('MEMBER', 'COORDINATEUR'))
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Pilotage' }),
+    )
+    const entrees = await screen.findAllByRole('link', {
+      name: /Activité|Indicateurs ARS/,
+    })
+    expect(
+      entrees.map((lien) => lien.querySelector('span')?.textContent),
+    ).toEqual(['Activité', 'Indicateurs ARS'])
+    expect(entrees[1]).toHaveAttribute('href', '/e/e1/s/s1/indicateurs-ars')
+  })
+
+  // Une seule entree visible (pas de `stats:read`) : un onglet simple, pas un menu d'un element.
+  it('donne a la lecture un onglet Pilotage simple vers l Activite', async () => {
+    monterNavbar('/e/e1/s/s1/dashboard', avecRoles('MEMBER', 'LECTURE'))
+
+    const pilotage = await screen.findByRole('link', { name: 'Pilotage' })
+    expect(pilotage).toHaveAttribute('href', '/e/e1/s/s1/activite')
+    expect(
+      screen.queryByRole('button', { name: 'Pilotage' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('range Activite et Indicateurs ARS sous Pilotage dans le tiroir mobile', async () => {
+    monterNavbar('/e/e1/s/s1/suivi', avecRoles('MEMBER', 'COORDINATEUR'))
+
+    const titre = await screen.findByText('Pilotage', { selector: 'summary' })
+    await userEvent.click(titre)
+    expect(screen.getByRole('link', { name: 'Activité' })).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Indicateurs ARS' })).toBeVisible()
+  })
+
+  it('donne a la lecture un lien Pilotage simple dans le tiroir mobile', async () => {
+    monterNavbar('/e/e1/s/s1/suivi', avecRoles('MEMBER', 'LECTURE'))
+
+    expect(
+      await screen.findByRole('link', { name: 'Pilotage' }),
+    ).toHaveAttribute('href', '/e/e1/s/s1/activite')
+    expect(screen.queryByText('Pilotage', { selector: 'summary' })).toBeNull()
   })
 
   it('ne montre le bouton Plateforme qu a un super-admin', async () => {

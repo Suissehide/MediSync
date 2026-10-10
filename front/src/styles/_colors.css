@@ -53,6 +53,10 @@
   --segment-actif: #04182b;
   --surface-douce: #f8fafc;
   --carte: #ffffff;
+  /* Indicateurs ARS : reponse manuelle encore a saisir. */
+  --a-saisir: #f59e0b;
+  --a-saisir-fond: #fffbeb;
+  --a-saisir-texte: #b45309;
 }
 
 @layer base {
@@ -99,5 +103,8 @@
     --segment-actif: #1e3a8a;
     --surface-douce: #1e293b;
     --carte: #1e293b;
+    --a-saisir: #fbbf24;
+    --a-saisir-fond: #422006;
+    --a-saisir-texte: #fcd34d;
   }
 }

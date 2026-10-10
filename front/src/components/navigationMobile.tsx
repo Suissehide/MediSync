@@ -2,7 +2,7 @@ import { Link } from '@tanstack/react-router'
 import { ChevronDown, Globe } from 'lucide-react'
 import { Fragment } from 'react'
 
-import type { NavItem } from '../navigation/navigation.ts'
+import { type NavItem, TAB_MENU_GROUPS } from '../navigation/navigation.ts'
 import { FilAriane } from './custom/filAriane.tsx'
 import { useOnglets } from './navbar.tsx'
 
@@ -18,7 +18,7 @@ export function TeteDuTiroir() {
   const { courant, user, params, groupes, administration, estActif } =
     useOnglets()
 
-  const lienVers = (item: NavItem) => (
+  const lienVers = (item: NavItem, libelle = item.label) => (
     <Link
       key={item.to}
       to={item.to}
@@ -27,9 +27,34 @@ export function TeteDuTiroir() {
       aria-current={estActif(item) ? 'page' : undefined}
       className={lien(estActif(item))}
     >
-      {item.label}
+      {libelle}
     </Link>
   )
+
+  // Meme sous-menu repliable que l'Administration.
+  const sousMenu = (titre: string, items: NavItem[]) => (
+    <details className="group flex flex-col gap-1">
+      <summary
+        className={`${lien(items.some(estActif))} flex items-center justify-between cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
+      >
+        {titre}
+        <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
+      </summary>
+      <div className="flex flex-col gap-1 mt-1 ml-3 pl-1 border-l border-border-sidebar">
+        {items.map((item) => lienVers(item))}
+      </div>
+    </details>
+  )
+
+  const groupeDuTiroir = (nom: string, items: NavItem[]) => {
+    if (!TAB_MENU_GROUPS.has(nom)) {
+      return items.map((item) => lienVers(item))
+    }
+    const [seul] = items
+    return items.length === 1 && seul
+      ? lienVers(seul, nom)
+      : sousMenu(nom, items)
+  }
 
   return (
     <nav
@@ -46,22 +71,12 @@ export function TeteDuTiroir() {
               className="mx-4 my-1 h-px bg-border-sidebar"
             />
           )}
-          {groupe.items.map(lienVers)}
+          {groupeDuTiroir(groupe.nom, groupe.items)}
         </Fragment>
       ))}
 
       {administration.length > 0 && (
-        <details className="group flex flex-col gap-1 mt-1">
-          <summary
-            className={`${lien(administration.some(estActif))} flex items-center justify-between cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
-          >
-            Administration
-            <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
-          </summary>
-          <div className="flex flex-col gap-1 mt-1 ml-3 pl-1 border-l border-border-sidebar">
-            {administration.map(lienVers)}
-          </div>
-        </details>
+        <div className="mt-1">{sousMenu('Administration', administration)}</div>
       )}
 
       {/* Absent, jamais grise, pour un compte sans le drapeau : voir `sidebar.tsx`. */}

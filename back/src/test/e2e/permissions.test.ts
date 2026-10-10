@@ -43,7 +43,7 @@ const FAKE_ID = 'clzzzzzzzzzzzzzzzzzzzzzzz'
 // route et le domaine).
 const probes: {
   permission: ServicePermission
-  method: 'GET' | 'POST' | 'PATCH' | 'DELETE'
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
   path: string
   payload?: unknown
   heldStatus?: number
@@ -124,6 +124,13 @@ const probes: {
     permission: 'stats:read',
     method: 'GET',
     path: '/indicateurs-ars/export?from=2026-01-01&to=2026-12-31',
+    heldStatus: 200,
+  },
+  {
+    permission: 'stats:write',
+    method: 'PUT',
+    path: '/indicateurs-ars/saisies/2026/4.2',
+    payload: { boolValue: true },
     heldStatus: 200,
   },
   {

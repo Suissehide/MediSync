@@ -13,12 +13,31 @@ export const arsCsv = (
       ['code', 'libellé', 'valeur', 'note'],
       ['Service', serviceName, '', ''],
       ['Période', `${from} au ${to}`, '', ''],
-      ...indicateurs.map((i) => [
-        i.code,
-        i.label,
-        i.value === null ? '' : nombre(i.value),
-        i.note ?? '',
-      ]),
+      ...indicateurs.map((i) => [i.code, i.label, ...valeurEtNote(i)]),
     ],
     [1],
   )
+
+// Une reponse saisie remplace la valeur ; l'explication de 2.5 remplace la note. Une reponse
+// enregistree mais vide (bascule remise a vide, nombre efface sans texte) retombe sur la note
+// de l'indicateur, comme une absence totale de reponse.
+const valeurEtNote = ({ value, note, input, answer }: ArsIndicator) => {
+  const sansReponse: [string, string] = [
+    value === null ? '' : nombre(value),
+    note ?? '',
+  ]
+  if (input === 'yesno' && answer && answer.boolValue !== null) {
+    return [answer.boolValue ? 'Oui' : 'Non', '']
+  }
+  if (
+    input === 'number+text' &&
+    answer &&
+    (answer.numberValue !== null || answer.textValue)
+  ) {
+    return [
+      answer.numberValue === null ? '' : nombre(answer.numberValue),
+      answer.textValue ?? '',
+    ]
+  }
+  return sansReponse
+}
