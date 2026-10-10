@@ -146,12 +146,12 @@ function UserSettings() {
               }}
             >
               <div className="grid grid-cols-2 gap-4 mb-4">
-                <profileForm.AppField name="firstName">
-                  {(field) => <field.Input label="Prénom" />}
-                </profileForm.AppField>
-
                 <profileForm.AppField name="lastName">
                   {(field) => <field.Input label="Nom" />}
+                </profileForm.AppField>
+
+                <profileForm.AppField name="firstName">
+                  {(field) => <field.Input label="Prénom" />}
                 </profileForm.AppField>
               </div>
 
