@@ -18,10 +18,10 @@ copie jetable de la base de développement (`pg_dump` → restauration →
 archivé créé sur les dix champs** (toutes les valeurs saisies sont des clés
 du catalogue ETP), 2 934 sous-dossiers, 2 911 avec `data` non vide et 2 808
 avec `clinicalData` non vide — exactement le nombre de lignes source ayant au
-moins une valeur non vide (2 911) et un diagnostic non vide (2 808). Voir
-`task-3-report.md` du chantier pour le détail. Cette procédure répète la même
-vérification une deuxième fois, sur les données les plus fraîches possibles,
-juste avant le déploiement.
+moins une valeur non vide (2 911) et un diagnostic non vide (2 808), les
+chiffres de cette répétition. Cette procédure répète la même vérification une
+deuxième fois, sur les données les plus fraîches possibles, juste avant le
+déploiement.
 
 ## 0. Établir l'état réel de la production
 

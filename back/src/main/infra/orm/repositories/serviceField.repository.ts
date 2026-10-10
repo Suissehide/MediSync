@@ -14,8 +14,7 @@ import type { TenantContextInterface } from '../../../types/utils/tenant-context
 import { SERVICE_FIELD_SECTIONS } from '../../../utils/service-field-types'
 import type { PostgresPrismaClient } from '../postgres-client'
 
-// Rang de chaque section dans l'ordre de l'ecran (Parcours puis Sortie), pas l'ordre
-// alphabetique de Prisma (qui mettrait "outcome" avant "pathway").
+// Rang de chaque section dans l'ordre de l'ecran (Parcours puis Sortie), pas l'ordre alphabetique de Prisma.
 const sectionRank: Record<string, number> = Object.fromEntries(
   SERVICE_FIELD_SECTIONS.map((section, index) => [section, index]),
 )
@@ -35,8 +34,7 @@ class ServiceFieldRepository implements ServiceFieldRepositoryInterface {
     return this.tenantContext.scope()
   }
 
-  // Prisma ne trie pas par l'index d'un tableau : l'ordre par section (Parcours puis Sortie)
-  // est donc applique ici, apres la requete, sur un resultat deja trie par `order`.
+  // Prisma ne trie pas par l'index d'un tableau : l'ordre par section est donc applique ici, apres la requete.
   async findAll(): Promise<ServiceFieldEntityRepo[]> {
     const fields = await this.prisma.serviceFieldDefinition.findMany({
       where: { ...this.scope },
@@ -78,8 +76,7 @@ class ServiceFieldRepository implements ServiceFieldRepositoryInterface {
           clinical: params.clinical,
           unit: params.unit,
           ...this.scope,
-          // La ligne nestée refuse `serviceId` à l'exécution (hérité de la relation
-          // composite) même si tsc l'accepte : seul `establishmentId` passe (tâche 3).
+          // La ligne nestée refuse `serviceId` à l'exécution même si tsc l'accepte : seul `establishmentId` passe (tâche 3).
           choices: {
             create: params.choices.map((choice) => ({
               key: choice.key,
@@ -128,8 +125,7 @@ class ServiceFieldRepository implements ServiceFieldRepositoryInterface {
     params: ServiceFieldChoiceCreateEntityRepo,
   ): Promise<ServiceFieldEntityRepo> {
     try {
-      // Création directe (non nestée) : contrairement à `choices.create` sous
-      // une définition, `serviceId` est bien exigé ici (tâche 3).
+      // Création directe (non nestée) : contrairement à `choices.create` sous une définition, `serviceId` est bien exigé ici (tâche 3).
       await this.prisma.serviceFieldChoice.create({
         data: {
           key: params.key,

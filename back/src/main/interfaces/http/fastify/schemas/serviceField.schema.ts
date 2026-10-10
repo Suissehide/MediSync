@@ -5,8 +5,7 @@ import {
   SERVICE_FIELD_TYPES,
 } from '../../../../utils/service-field-types'
 
-// Aplatit `archivedAt` en `archived: boolean`, comme le fait déjà
-// `thematicNameFromRelation` pour une autre relation (schemas/index.ts).
+// Aplatit `archivedAt` en `archived: boolean`, comme `thematicNameFromRelation` (schemas/index.ts).
 const serviceFieldChoiceResponseSchema = z
   .object({
     id: z.cuid(),

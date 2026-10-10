@@ -156,8 +156,7 @@ describe('routes du patient', () => {
     // changement autorise sur ce filet (voir l'en-tete du fichier) : les
     // seize valeurs, une fois ecrites, et les 32 assertions qui les relisent
     // plus bas restent identiques.
-    // Les dix champs configurables s'ecrivent dans `data` / `clinicalData`, que cette route
-    // n'ecrit pas encore : ils passent par la base, les six colonnes fixes par la route.
+    // Les dix champs configurables s'ecrivent desormais dans `data`/`clinicalData` via cette meme route, mais ce tenant de test ne definit aucun ServiceFieldDefinition pour eux : ils passent donc par la base, et seules les six colonnes fixes par la route.
     const ecrireSousDossier = async (
       patientId: string,
       {

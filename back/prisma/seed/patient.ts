@@ -3,16 +3,6 @@ import { ETP_FIELD_PRESET } from '../../src/main/utils/etp-field-preset'
 import type { PatientData } from './data/patient'
 import type { SeedTenant } from './tenant'
 
-// La liste de patients est passée par l'appelant (et non plus importée en dur
-// ici) : chaque service reçoit son propre jeu, avec des noms distincts, pour
-// qu'une fuite entre services saute aux yeux plutôt que de se noyer dans des
-// données identiques.
-//
-// Depuis la migration `patient_service_file`, les seize colonnes
-// de parcours ne vivent plus sur `Patient` : `p.clinicalFile`, quand il est présent, porte
-// celles que ce jeu de données utilise. Le sous-dossier créé ici est rattaché au service de
-// l'appelant (`tenant.serviceId`) — le seed connaît déjà ce service, un jeu de patients par
-// service reçoit donc son propre sous-dossier, jamais celui d'un autre.
 // Configuration ETP des services du seed : la migration service_fields ne la pose que sur les services existants.
 export async function seedEtpFields(prisma: PrismaClient, tenant: SeedTenant) {
   for (const [order, field] of ETP_FIELD_PRESET.entries()) {
@@ -38,6 +28,16 @@ export async function seedEtpFields(prisma: PrismaClient, tenant: SeedTenant) {
   }
 }
 
+// La liste de patients est passée par l'appelant (et non plus importée en dur
+// ici) : chaque service reçoit son propre jeu, avec des noms distincts, pour
+// qu'une fuite entre services saute aux yeux plutôt que de se noyer dans des
+// données identiques.
+//
+// Depuis la migration `patient_service_file`, les seize colonnes
+// de parcours ne vivent plus sur `Patient` : `p.clinicalFile`, quand il est présent, porte
+// celles que ce jeu de données utilise. Le sous-dossier créé ici est rattaché au service de
+// l'appelant (`tenant.serviceId`) — le seed connaît déjà ce service, un jeu de patients par
+// service reçoit donc son propre sous-dossier, jamais celui d'un autre.
 export default async function seedPatients(
   prisma: PrismaClient,
   tenant: SeedTenant,

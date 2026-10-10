@@ -147,8 +147,7 @@ const EXPORT_COLUMNS: ExportColumn[] = [
   },
 ]
 
-// En-tete = libelle du choix (ou de la valeur telle quelle pour text/number), valeur lue dans
-// `data` ou `clinicalData` selon `field.clinical` (voir `exportExcel` plus bas).
+// En-tete = libelle du champ, cellule = libelle du choix (ou la valeur telle quelle pour text/number).
 const formatFieldValue = (
   field: ServiceFieldEntityRepo,
   value: unknown,
@@ -168,8 +167,7 @@ const formatFieldValue = (
     return value === true ? 'Oui' : 'Non'
   }
   if (field.type === 'date' && typeof value === 'string') {
-    // `dayjs.utc`, pas `formatDate` : une date sans heure ne doit pas glisser d'un jour
-    // selon le fuseau du serveur.
+    // `dayjs.utc`, pas `formatDate` : une date sans heure ne doit pas glisser d'un jour selon le fuseau du serveur.
     return dayjs.utc(value).format('DD/MM/YYYY')
   }
   return String(value)
@@ -218,8 +216,7 @@ class PatientDomain implements PatientDomainInterface {
     return this.patientRepository.findAll()
   }
 
-  // Les champs `longtext` n'ont pas leur place dans la liste (texte potentiellement long,
-  // sans usage d'affichage en colonne) : retires de `data`/`clinicalData` ici, pas au depot.
+  // Les champs `longtext` n'ont pas leur place dans la liste : retires de `data`/`clinicalData` ici, pas au depot.
   async findAllWithTags(): Promise<PatientWithTagsDomain[]> {
     const [patients, fields] = await Promise.all([
       this.patientRepository.findAllWithTags(),
@@ -300,8 +297,7 @@ class PatientDomain implements PatientDomainInterface {
       this.patientRepository.findForExport(filters),
       this.serviceFieldRepository.findAll(),
     ])
-    // Une colonne par champ actif, apres les colonnes fixes : triees par section puis ordre
-    // (deja l'ordre rendu par `serviceFieldRepository.findAll()`), largeur fixe de 22.
+    // Une colonne par champ actif, apres les colonnes fixes, triees par section puis ordre (deja rendu par `serviceFieldRepository.findAll()`), largeur fixe de 22.
     const fieldColumns: ExportColumn[] = fields
       .filter(
         (f) => f.archivedAt === null && (includeClinicalFields || !f.clinical),
