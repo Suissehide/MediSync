@@ -10,7 +10,13 @@ import {
   Outlet,
   RouterProvider,
 } from '@tanstack/react-router'
-import { render, screen, waitFor } from '@testing-library/react'
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -81,22 +87,78 @@ const routeTree = rootRoute.addChildren([
   ]),
 ])
 
+const calcule = (code: string, group: string, value: number) => ({
+  code,
+  group,
+  label: `Libelle ${code}`,
+  value,
+  note: null,
+  kind: 'computed',
+  input: null,
+  answer: null,
+})
+
+// Six calcules, deux a saisir (4.2 deja repondu, 2.5 restant), deux non disponibles ; la Sortie
+// n'a que du calcule, l'Entree aussi : deux sections a masquer selon le filtre.
 const indicateurs = [
-  {
-    code: '1.1',
-    group: 'Entrée',
-    label: "Nombre de patients ayant bénéficié d'un diagnostic éducatif",
-    value: 7,
-    note: null,
-  },
+  calcule('1.1', 'Entrée', 560),
+  calcule('1.1bis', 'Entrée', 140),
   {
     code: '2.3',
     group: 'Séances',
     label: 'Nombre de patients pris en charge en soins de ville uniquement',
     value: null,
     note: 'Aucune notion de soins de ville',
+    kind: 'unavailable',
+    input: null,
+    answer: null,
+  },
+  {
+    code: '2.5',
+    group: 'Séances',
+    label: 'Autre type de prise en charge à chiffrer et à expliquer',
+    value: null,
+    note: "Champ libre de l'enquête, à renseigner à la main",
+    kind: 'manual',
+    input: 'number+text',
+    answer: null,
+  },
+  calcule('2.6', 'Séances', 0),
+  calcule('2.6bis', 'Séances', 3),
+  calcule('2.8', 'Séances', 3.7),
+  calcule('3.1', 'Sortie', 2),
+  {
+    code: '4.2',
+    group: 'Modalités',
+    label: 'Une offre de suivi est-elle proposée ?',
+    value: null,
+    note: 'Question oui/non sur la structure, à renseigner à la main',
+    kind: 'manual',
+    input: 'yesno',
+    answer: { numberValue: null, textValue: null, boolValue: true },
+  },
+  {
+    code: '4.4',
+    group: 'Modalités',
+    label: 'Synthese transmise au medecin traitant',
+    value: null,
+    note: 'Aucun modele ne trace cet envoi',
+    kind: 'unavailable',
+    input: null,
+    answer: null,
   },
 ]
+
+const charge = {
+  ok: true,
+  status: 200,
+  corps: {
+    from: '2026-01-01',
+    to: '2026-12-31',
+    manualYear: 2026,
+    indicators: indicateurs,
+  },
+}
 
 const monter = (
   reponse: { ok: boolean; status: number; corps?: unknown },
@@ -160,13 +222,9 @@ afterEach(() => {
 
 describe('écran des indicateurs ARS', () => {
   it('affiche les indicateurs rendus par le serveur', async () => {
-    monter({
-      ok: true,
-      status: 200,
-      corps: { from: '2026-01-01', to: '2026-12-31', indicators: indicateurs },
-    })
+    monter(charge)
 
-    expect(await screen.findByText('7')).toBeInTheDocument()
+    expect(await screen.findByText('560')).toBeInTheDocument()
     expect(
       screen.getByText('Aucune notion de soins de ville'),
     ).toBeInTheDocument()
@@ -204,13 +262,9 @@ describe('écran des indicateurs ARS', () => {
   })
 
   it('active l export CSV une fois les indicateurs charges', async () => {
-    monter({
-      ok: true,
-      status: 200,
-      corps: { from: '2026-01-01', to: '2026-12-31', indicators: indicateurs },
-    })
+    monter(charge)
 
-    await screen.findByText('7')
+    await screen.findByText('560')
     expect(
       screen.getByRole('button', { name: 'Exporter en CSV' }),
     ).toBeEnabled()
@@ -219,13 +273,9 @@ describe('écran des indicateurs ARS', () => {
   // La période est le paramètre de l'écran : le raccourci d'année règle les deux bornes, et la
   // requête part sur l'année civile sélectionnée.
   it('interroge le serveur sur l annee civile du raccourci actif', async () => {
-    monter({
-      ok: true,
-      status: 200,
-      corps: { from: '2026-01-01', to: '2026-12-31', indicators: indicateurs },
-    })
+    monter(charge)
 
-    await screen.findByText('7')
+    await screen.findByText('560')
     const appels = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls
       .map(([entree]) => String(entree))
       .filter((url) => url.includes('/indicateurs-ars'))
@@ -234,18 +284,128 @@ describe('écran des indicateurs ARS', () => {
   })
 
   it('propose les trois dernieres annees en raccourci, et les deux bornes de periode', async () => {
-    monter({
-      ok: true,
-      status: 200,
-      corps: { from: '2026-01-01', to: '2026-12-31', indicators: indicateurs },
-    })
+    monter(charge)
 
-    await screen.findByText('7')
+    await screen.findByText('560')
     for (const annee of ['2026', '2025', '2024']) {
       expect(screen.getByRole('radio', { name: annee })).toBeInTheDocument()
     }
     expect(screen.getByText('du')).toBeInTheDocument()
     expect(screen.getByText('au')).toBeInTheDocument()
+  })
+
+  it('rend chaque indicateur selon sa nature', async () => {
+    monter(charge)
+
+    await screen.findByText('560')
+    expect(screen.getByText('3,7')).toBeInTheDocument()
+    expect(screen.getAllByText('Non disponible')).toHaveLength(2)
+    expect(
+      screen.getByText('Aucune notion de soins de ville'),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("Champ libre de l'enquête, à renseigner à la main"),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('Sans valeur')).not.toBeInTheDocument()
+  })
+
+  it('montre les champs de saisie, desactives, remplis par la reponse', async () => {
+    monter(charge)
+
+    const nombre = await screen.findByRole('textbox', {
+      name: 'Autre type de prise en charge à chiffrer et à expliquer',
+    })
+    expect(nombre).toBeDisabled()
+    expect(nombre).toHaveValue('')
+    expect(
+      screen.getByRole('textbox', { name: 'Explication du 2.5' }),
+    ).toBeDisabled()
+    const oui = screen.getByRole('radio', { name: 'Oui' })
+    expect(oui).toBeDisabled()
+    expect(oui).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('radio', { name: 'Non' })).toHaveAttribute(
+      'aria-checked',
+      'false',
+    )
+  })
+
+  it('resume l avancement de l enquete dans le bandeau', async () => {
+    monter(charge)
+
+    expect(
+      await screen.findByText(
+        '6 calculés · 2 à saisir (1 restant) · 2 non disponibles',
+      ),
+    ).toBeInTheDocument()
+    const parts = Object.fromEntries(
+      [...document.querySelectorAll<HTMLElement>('[data-statut]')].map((el) => [
+        el.dataset.statut,
+        el.style.flexGrow,
+      ]),
+    )
+    expect(parts).toEqual({
+      calcule: '6',
+      saisi: '1',
+      restant: '1',
+      indisponible: '2',
+    })
+  })
+
+  it('filtre les lignes et masque les sections vides', async () => {
+    monter(charge)
+
+    await screen.findByText('560')
+    fireEvent.click(screen.getByRole('radio', { name: /À saisir/ }))
+    expect(screen.queryByText('560')).not.toBeInTheDocument()
+    expect(screen.queryByText('Entrée')).not.toBeInTheDocument()
+    expect(screen.queryByText('Sortie')).not.toBeInTheDocument()
+    expect(screen.getByText('2.5')).toBeInTheDocument()
+    expect(screen.getByText('4.2')).toBeInTheDocument()
+    expect(screen.queryByText('4.4')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('radio', { name: /Non disponibles/ }))
+    expect(screen.getByText('2.3')).toBeInTheDocument()
+    expect(screen.getByText('4.4')).toBeInTheDocument()
+    expect(screen.queryByText('2.5')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('radio', { name: /Calculés/ }))
+    expect(screen.getByText('Sortie')).toBeInTheDocument()
+    expect(screen.queryByText('2.3')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('radio', { name: /Tous/ }))
+    expect(screen.getByText('2.3')).toBeInTheDocument()
+    expect(screen.getByText('2.5')).toBeInTheDocument()
+  })
+
+  it('donne la part d un sous-indicateur seulement si le parent est positif', async () => {
+    monter(charge)
+
+    expect(await screen.findByText('25 % du 1.1')).toBeInTheDocument()
+    expect(screen.queryByText(/% du 2\.6/)).not.toBeInTheDocument()
+  })
+
+  it('copie la valeur brute et annonce la copie', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+    monter(charge)
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Copier la valeur 2.8' }),
+    )
+    expect(writeText).toHaveBeenCalledWith('3.7')
+    expect(await screen.findByText('Copié')).toBeInTheDocument()
+  })
+
+  it('renvoie vers l activite en pied de page', async () => {
+    monter(charge)
+
+    const pied = await screen.findByText(/reprises dans l'export Excel/)
+    expect(
+      within(pied).getByRole('link', { name: 'Activité' }),
+    ).toHaveAttribute('href', '/e/e1/s/s1/activite')
   })
 
   it('renvoie au tableau de bord un role sans stats:read', async () => {
