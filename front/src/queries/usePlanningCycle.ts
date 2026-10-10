@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMemo } from 'react'
 
 import { PlanningCycleApi } from '../api/planningCycle.api.ts'
 import { PLANNING_CYCLE } from '../constants/process.constant.ts'
@@ -6,20 +7,26 @@ import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
 import { useToast } from '../hooks/useToast.ts'
 import type { PlanningCycle } from '../types/planningCycle.ts'
+import { useForbiddenWeekQueries } from './useForbiddenWeek.ts'
 
 export const usePlanningCycleQueries = () => {
-  const {
-    data: planningCycle,
-    isPending,
-    isError,
-    error,
-  } = useQuery({
+  const { data, isPending, isError, error } = useQuery({
     queryKey: [PLANNING_CYCLE.GET],
     queryFn: PlanningCycleApi.get,
     retry: 0,
   })
 
   useDataFetching({ isPending, isError, error })
+
+  const { forbiddenWeeks } = useForbiddenWeekQueries()
+  const planningCycle = useMemo(
+    () =>
+      data && {
+        ...data,
+        forbiddenWeekStarts: (forbiddenWeeks ?? []).map((w) => w.startOfWeek),
+      },
+    [data, forbiddenWeeks],
+  )
 
   return { planningCycle, isPending }
 }

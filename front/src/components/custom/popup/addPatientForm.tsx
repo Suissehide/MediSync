@@ -190,14 +190,14 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
             {step === 1 && (
               <>
                 <div className="w-full flex gap-4">
+                  <form.AppField name="lastName">
+                    {(field) => <field.Input label="Nom" className="w-full" />}
+                  </form.AppField>
+
                   <form.AppField name="firstName">
                     {(field) => (
                       <field.Input label="Prénom" className="w-full" />
                     )}
-                  </form.AppField>
-
-                  <form.AppField name="lastName">
-                    {(field) => <field.Input label="Nom" className="w-full" />}
                   </form.AppField>
                 </div>
 
