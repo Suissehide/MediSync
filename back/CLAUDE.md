@@ -526,9 +526,9 @@ Key cross-cutting concerns:
 
 ## Jeux d'indicateurs configurables (`docs/indicateurs-configurables/`)
 
-- Les indicateurs d'un service vivent en base (`IndicatorSet`/`Indicator`/`IndicatorAnswer`), plus `ArsManualAnswer` codée en dur.
+- Les indicateurs d'un service vivent en base (`IndicatorSet`/`Indicator`/`IndicatorAnswer`) ; l'ancienne table codée en dur `ArsManualAnswer` a été supprimée par la migration `20261010200000_indicator_sets`, plus aucun mécanisme codé en dur ne coexiste.
 - Une mesure nouvelle = une entrée de `MEASURES` (`utils/indicators/measures.ts`) + son test (`measures.test.ts`).
-- La grille ARS est `ARS_PRESET` (`utils/indicators/ars-preset.ts`) ; son égalité à l'ancienne grille codée est tenue par `ars-oracle.ts` (`src/test/unit/utils/indicators/ars-oracle.ts`), rejoué dans `ars-grid.test.ts`.
+- La grille ARS est `ARS_PRESET` (`utils/indicators/ars-preset.ts`). Deux tests distincts, à ne pas confondre : `measures.test.ts` compare `MEASURES` à l'oracle `ars-oracle.ts` (`src/test/unit/utils/indicators/ars-oracle.ts`, qui réimplémente l'ancienne grille) ; `ars-grid.test.ts` rejoue `ARS_PRESET` à travers le moteur (`computeIndicator`) contre des attentes écrites à la main, indicateur par indicateur.
 - Les réglages de l'Activité (motifs d'arrêt) sont sur `Service` : `stopReasonFieldKey`/`completedChoiceKey`, jamais codés en dur (`utils/activity-indicators.ts`).
 - L'export Excel d'un jeu s'appelle `indicateurs_{from}_{to}.xlsx` (en-tête `Content-Disposition` du back) avec une feuille nommée d'après le jeu (« Grille ARS ») ; le front renomme le fichier téléchargé avec un slug du nom du jeu, ne pas s'étonner que les deux noms diffèrent.
 - `setup/db.ts` accepte `medisync_test` **ou** `medisync_test_<suffixe>` (un worktree par suffixe), jamais un autre nom.

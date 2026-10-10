@@ -72,25 +72,17 @@ sauvegarde aussi fraîche que possible juste avant la migration.
 **Attendu** : un fichier `.sql.gz` frais téléchargé. Si le déclenchement
 échoue, **ne pas continuer**.
 
-Commande de restauration, à garder sous la main pour l'étape 5 (retour
+Commande de restauration, à garder sous la main pour l'étape 6 (retour
 arrière) :
 
 ```shell
 deploy/scripts/restore-db-dump.sh <sauvegarde-fraiche.sql.gz>
 ```
 
-## 2. Arrêter l'ancien conteneur
+## 2. Relever l'« avant », en lecture seule — le back tourne encore
 
-Arrêter le service back depuis Dokploy avant toute chose. L'ancien
-conteneur, encore vivant pendant la migration, continuerait d'écrire dans
-`ArsManualAnswer` sans passer par `IndicatorAnswer` : une réponse saisie
-entre la sauvegarde et la suppression de la table serait perdue sans que la
-garde ne la voie. Fenêtre de maintenance : l'application est indisponible
-entre cet arrêt et la fin de l'étape 4.
-
-**Attendu** : le service back n'a plus de conteneur en cours d'exécution.
-
-## 3. Relever l'« avant », en lecture seule
+**Cette étape a besoin de l'ancien conteneur back encore en service** (export
+via l'écran) : la faire avant l'arrêt de l'étape 3, pas après.
 
 **Par service ETP**, depuis l'ancien écran « Indicateurs ARS » (bouton
 d'export) : exporter la grille Excel pour l'année 2025 puis pour l'année
@@ -105,6 +97,17 @@ SELECT * FROM "ArsManualAnswer" ORDER BY "serviceId", code, year;
 ```
 
 Garder ce résultat (export CSV ou copie du résultat).
+
+## 3. Arrêter l'ancien conteneur
+
+Arrêter le service back depuis Dokploy, une fois l'étape 2 terminée. L'ancien
+conteneur, encore vivant pendant la migration, continuerait d'écrire dans
+`ArsManualAnswer` sans passer par `IndicatorAnswer` : une réponse saisie
+entre la sauvegarde et la suppression de la table serait perdue sans que la
+garde ne la voie. Fenêtre de maintenance : l'application est indisponible
+entre cet arrêt et la fin de l'étape 4.
+
+**Attendu** : le service back n'a plus de conteneur en cours d'exécution.
 
 ## 4. Déployer
 
@@ -136,13 +139,13 @@ JOIN "Service" s ON s.id = a."serviceId"
 ORDER BY s.name, i.code, a.year;
 ```
 
-**Attendu** : même nombre de lignes que la liste de l'étape 3, chaque ligne
+**Attendu** : même nombre de lignes que la liste de l'étape 2, chaque ligne
 retrouvée à l'identique (service, code, année, valeurs) — `jeu` vaut
 « Grille ARS » pour toutes.
 
 **Par service ETP**, réexporter les grilles 2025 et 2026 depuis le nouvel
 écran « Grille ARS » (sous Pilotage, menu du service) et comparer, service
-par service et année par année, aux exports de l'étape 3. **Attendu** :
+par service et année par année, aux exports de l'étape 2. **Attendu** :
 mêmes chiffres partout. Le moindre écart, sur une ligne de la requête
 ci-dessus ou sur un indicateur de la grille exportée, signale une perte ou un
 décalage : passer à l'étape 6.
