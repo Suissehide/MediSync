@@ -38,6 +38,7 @@ import type { AccessLinkRepositoryInterface } from '../infra/orm/repositories/ac
 import type { ActivityLogRepositoryInterface } from '../infra/orm/repositories/activityLog.repository.interface'
 import type { AppointmentRepositoryInterface } from '../infra/orm/repositories/appointment.repository.interface'
 import type { ArsIndicatorRepositoryInterface } from '../infra/orm/repositories/arsIndicator.repository.interface'
+import type { ArsManualAnswerRepositoryInterface } from '../infra/orm/repositories/arsManualAnswer.repository.interface'
 import type { DiagnosticEducatifRepositoryInterface } from '../infra/orm/repositories/diagnosticEducatif.repository.interface'
 import type { DiagnosticEducatifTemplateRepositoryInterface } from '../infra/orm/repositories/diagnosticEducatifTemplate.repository.interface'
 import type { EnrollmentIssueRepositoryInterface } from '../infra/orm/repositories/enrollmentIssue.repository.interface'
@@ -87,6 +88,7 @@ export interface IocContainer {
   // ArsIndicator (indicateurs de l'enquête annuelle ARS)
   readonly arsIndicatorDomain: ArsIndicatorDomainInterface
   readonly arsIndicatorRepository: ArsIndicatorRepositoryInterface
+  readonly arsManualAnswerRepository: ArsManualAnswerRepositoryInterface
   // ActivityReport (tableau de bord d'activité)
   readonly activityReportDomain: ActivityReportDomainInterface
   // Slot

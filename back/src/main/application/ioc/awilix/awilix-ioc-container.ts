@@ -39,6 +39,7 @@ import { AccessLinkRepository } from '../../../infra/orm/repositories/accessLink
 import { ActivityLogRepository } from '../../../infra/orm/repositories/activityLog.repository'
 import { AppointmentRepository } from '../../../infra/orm/repositories/appointment.repository'
 import { ArsIndicatorRepository } from '../../../infra/orm/repositories/arsIndicator.repository'
+import { ArsManualAnswerRepository } from '../../../infra/orm/repositories/arsManualAnswer.repository'
 import { DiagnosticEducatifRepository } from '../../../infra/orm/repositories/diagnosticEducatif.repository'
 import { DiagnosticEducatifTemplateRepository } from '../../../infra/orm/repositories/diagnosticEducatifTemplate.repository'
 import { EnrollmentIssueRepository } from '../../../infra/orm/repositories/enrollmentIssue.repository'
@@ -144,6 +145,7 @@ class AwilixIocContainer {
     // ArsIndicator
     this.#registerArsIndicatorDomain()
     this.#registerArsIndicatorRepository()
+    this.#registerArsManualAnswerRepository()
     // ActivityReport
     this.#registerActivityReportDomain()
     // Error (must be before ActivityLog subscriber which depends on userRepository -> errorHandler)
@@ -253,6 +255,12 @@ class AwilixIocContainer {
     this.register(
       'arsIndicatorRepository',
       asClass(ArsIndicatorRepository).singleton(),
+    )
+  }
+  #registerArsManualAnswerRepository(): void {
+    this.register(
+      'arsManualAnswerRepository',
+      asClass(ArsManualAnswerRepository).singleton(),
     )
   }
 

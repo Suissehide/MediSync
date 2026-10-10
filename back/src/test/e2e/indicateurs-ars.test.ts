@@ -171,12 +171,12 @@ describe('indicateurs ARS', () => {
     expect(indicateur(res, '2.9').value).toBeGreaterThanOrEqual(1)
   })
 
-  it('rend les 30 indicateurs, avec leur kind/input/answer et manualYear a null', async () => {
+  it('rend les 30 indicateurs, avec leur kind/input/answer et manualYear sur l annee civile', async () => {
     const res = await lire(serviceA)
     expect(res.statusCode).toBe(200)
     const body = res.json()
     expect(body.indicators).toHaveLength(30)
-    expect(body.manualYear).toBeNull()
+    expect(body.manualYear).toBe(2026)
     const manuel25 = indicateur(res, '2.5') as unknown as {
       kind: string
       input: string | null
