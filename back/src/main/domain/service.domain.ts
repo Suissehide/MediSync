@@ -10,8 +10,8 @@ import type {
   ServiceUpdateEntityDomain,
 } from '../types/domain/service.domain.interface'
 import type { PatientServiceFileRepositoryInterface } from '../types/infra/orm/repositories/patientServiceFile.repository.interface'
-import type { ServiceFieldRepositoryInterface } from '../types/infra/orm/repositories/serviceField.repository.interface'
 import type { ServiceRepositoryInterface } from '../types/infra/orm/repositories/service.repository.interface'
+import type { ServiceFieldRepositoryInterface } from '../types/infra/orm/repositories/serviceField.repository.interface'
 import type { TenantContextInterface } from '../types/utils/tenant-context'
 
 class ServiceDomain implements ServiceDomainInterface {
@@ -74,6 +74,10 @@ class ServiceDomain implements ServiceDomainInterface {
       service.id,
       service.establishmentId,
     )
+  }
+
+  findCurrent(): Promise<ServiceEntityDomain> {
+    return this.serviceRepository.findByID(this.tenantContext.scope().serviceId)
   }
 
   // Le champ motif d'arrêt doit être un champ à choix du service ; la valeur « fin de parcours »

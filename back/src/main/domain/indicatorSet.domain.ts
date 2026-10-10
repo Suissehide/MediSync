@@ -1,17 +1,33 @@
 import Boom from '@hapi/boom'
+import * as XLSX from 'xlsx'
 
 import type { IocContainer } from '../types/application/ioc'
 import type {
+  IndicatorAnswerInput,
   IndicatorEntityDomain,
+  IndicatorResult,
   IndicatorSetDomainInterface,
   IndicatorSetEntityDomain,
+  IndicatorSetResults,
   IndicatorSetUpdateEntityDomain,
   IndicatorUpdateEntityDomain,
   IndicatorWriteEntityDomain,
 } from '../types/domain/indicatorSet.domain.interface'
-import type { IndicatorSetRepositoryInterface } from '../types/infra/orm/repositories/indicatorSet.repository.interface'
+import type { IndicatorCohortRepositoryInterface } from '../types/infra/orm/repositories/indicatorCohort.repository.interface'
+import type {
+  IndicatorAnswerEntityRepo,
+  IndicatorSetRepositoryInterface,
+} from '../types/infra/orm/repositories/indicatorSet.repository.interface'
+import type { ServiceRepositoryInterface } from '../types/infra/orm/repositories/service.repository.interface'
 import type { ServiceFieldRepositoryInterface } from '../types/infra/orm/repositories/serviceField.repository.interface'
-import { validateIndicator } from '../utils/indicators/compute'
+import type { TenantContextInterface } from '../types/utils/tenant-context'
+import type { DateRange } from '../utils/indicators/cohort'
+import {
+  type ComputedResult,
+  computeIndicator,
+  type IndicatorDefinition,
+  validateIndicator,
+} from '../utils/indicators/compute'
 
 // Vrai si `ids` contient exactement les mêmes éléments que `reference`, sans doublon ni oubli.
 const sameIds = (reference: string[], ids: string[]): boolean => {
@@ -34,16 +50,74 @@ type Nature = (typeof NATURES)[number]
 const isNature = (value: string): value is Nature =>
   NATURES.some((n) => n === value)
 
+const natureOf = (value: string): Nature => {
+  if (!isNature(value)) {
+    throw Boom.badImplementation(`Nature inconnue en base : ${value}`)
+  }
+  return value
+}
+
+const definitionOf = (i: IndicatorEntityDomain): IndicatorDefinition => ({
+  nature: natureOf(i.nature),
+  measure: i.measure,
+  options: i.options,
+  filters: i.filters,
+  breakdownField: i.breakdownField,
+  input: i.input,
+  note: i.note,
+})
+
+const jour = (d: Date): string => d.toISOString().slice(0, 10)
+
+// L'année civile quand la période va exactement du 1er janvier au 31 décembre, sinon null.
+const anneeCivile = ({ from, to }: DateRange): number | null => {
+  const annee = from.getUTCFullYear()
+  return jour(from) === `${annee}-01-01` && jour(to) === `${annee}-12-31`
+    ? annee
+    : null
+}
+
+// Une réponse enregistrée mais vide retombe sur la note de l'indicateur, comme une absence de réponse.
+const valeurExcel = (i: IndicatorResult): string | number => {
+  if (i.answer === null) {
+    return i.value ?? i.note ?? ''
+  }
+  if (i.input === 'yesno') {
+    if (i.answer.boolValue === null) {
+      return i.note ?? ''
+    }
+    return i.answer.boolValue ? 'Oui' : 'Non'
+  }
+  if (i.answer.numberValue !== null) {
+    return i.answer.numberValue
+  }
+  // Le texte seul va dans le libellé : la valeur reste vide.
+  return i.answer.textValue ? '' : (i.note ?? '')
+}
+
+// Excel limite un nom de feuille à 31 caractères, sans : \ / ? * [ ].
+const nomFeuille = (name: string): string =>
+  name.replace(/[:\\/?*[\]]/g, ' ').slice(0, 31)
+
 class IndicatorSetDomain implements IndicatorSetDomainInterface {
   private readonly indicatorSetRepository: IndicatorSetRepositoryInterface
   private readonly serviceFieldRepository: ServiceFieldRepositoryInterface
+  private readonly indicatorCohortRepository: IndicatorCohortRepositoryInterface
+  private readonly serviceRepository: ServiceRepositoryInterface
+  private readonly tenantContext: TenantContextInterface
 
   constructor({
     indicatorSetRepository,
     serviceFieldRepository,
+    indicatorCohortRepository,
+    serviceRepository,
+    tenantContext,
   }: IocContainer) {
     this.indicatorSetRepository = indicatorSetRepository
     this.serviceFieldRepository = serviceFieldRepository
+    this.indicatorCohortRepository = indicatorCohortRepository
+    this.serviceRepository = serviceRepository
+    this.tenantContext = tenantContext
   }
 
   findAll(): Promise<IndicatorSetEntityDomain[]> {
@@ -174,12 +248,8 @@ class IndicatorSetDomain implements IndicatorSetDomainInterface {
       params.parentId === undefined
         ? current.parentId
         : this.assertParent(set.indicators, params.parentId, indicatorId)
-    const nature = params.nature ?? current.nature
-    if (!isNature(nature)) {
-      throw Boom.badImplementation(`Nature inconnue en base : ${nature}`)
-    }
     const merged = {
-      nature,
+      nature: natureOf(params.nature ?? current.nature),
       measure: params.measure === undefined ? current.measure : params.measure,
       options: params.options === undefined ? current.options : params.options,
       filters: params.filters === undefined ? current.filters : params.filters,
@@ -215,6 +285,116 @@ class IndicatorSetDomain implements IndicatorSetDomainInterface {
       )
     }
     await this.indicatorSetRepository.reorderIndicators(setId, ids)
+  }
+
+  // Indicateurs actifs du jeu, dans l'ordre ; les réponses ne se joignent que sur une année civile.
+  async results(setId: string, range: DateRange): Promise<IndicatorSetResults> {
+    const manualYear = anneeCivile(range)
+    const [set, fields, cohort, answers] = await Promise.all([
+      this.indicatorSetRepository.findByID(setId),
+      this.serviceFieldRepository.findAll(),
+      this.indicatorCohortRepository.findCohort(range),
+      manualYear === null
+        ? new Map<string, IndicatorAnswerEntityRepo>()
+        : this.indicatorSetRepository.findAnswers(setId, manualYear),
+    ])
+    const indicators = set.indicators
+      .filter((i) => i.archivedAt === null)
+      .map((i) => ({
+        id: i.id,
+        code: i.code,
+        group: i.group,
+        label: i.label,
+        nature: i.nature,
+        ...computeIndicator(cohort, definitionOf(i), fields),
+        note: i.note,
+        input: i.input,
+        answer: i.nature === 'manual' ? (answers.get(i.id) ?? null) : null,
+        parentId: i.parentId,
+      }))
+    return { manualYear, indicators }
+  }
+
+  async saveAnswer(
+    setId: string,
+    year: number,
+    indicatorId: string,
+    body: IndicatorAnswerInput,
+    userId: string,
+  ): Promise<IndicatorAnswerEntityRepo> {
+    const set = await this.indicatorSetRepository.findByID(setId)
+    const indicator = set.indicators.find((i) => i.id === indicatorId)
+    if (!indicator) {
+      throw Boom.notFound('Indicateur introuvable')
+    }
+    if (indicator.nature !== 'manual') {
+      throw Boom.badRequest(`L'indicateur ${indicator.code} ne se saisit pas`)
+    }
+    if ((indicator.input === 'yesno') !== 'boolValue' in body) {
+      throw Boom.badRequest(
+        `Réponse d'un autre type que celui de ${indicator.code}`,
+      )
+    }
+    const values =
+      'boolValue' in body
+        ? { numberValue: null, textValue: null, boolValue: body.boolValue }
+        : { ...body, boolValue: null }
+    return this.indicatorSetRepository.upsertAnswer(
+      indicatorId,
+      year,
+      values,
+      userId,
+    )
+  }
+
+  async preview(
+    setId: string,
+    indicator: IndicatorDefinition,
+    range: DateRange,
+  ): Promise<ComputedResult> {
+    const [, fields, cohort] = await Promise.all([
+      this.indicatorSetRepository.findByID(setId),
+      this.serviceFieldRepository.findAll(),
+      this.indicatorCohortRepository.findCohort(range),
+    ])
+    return computeIndicator(cohort, indicator, fields)
+  }
+
+  async exportExcel(setId: string, range: DateRange): Promise<Buffer> {
+    const [{ indicators }, set, service] = await Promise.all([
+      this.results(setId, range),
+      this.indicatorSetRepository.findByID(setId),
+      this.serviceRepository.findByID(this.tenantContext.scope().serviceId),
+    ])
+    const rows = [
+      { Code: 'Service', Libellé: service.name, Valeur: '' },
+      {
+        Code: 'Période',
+        Libellé: `${jour(range.from)} au ${jour(range.to)}`,
+        Valeur: '',
+      },
+      { Code: '', Libellé: '', Valeur: '' },
+      ...indicators.flatMap((i) => [
+        {
+          Code: i.code,
+          Libellé: i.answer?.textValue
+            ? `${i.label} — ${i.answer.textValue}`
+            : i.label,
+          Valeur: valeurExcel(i),
+        },
+        ...(i.breakdown ?? []).map((b) => ({
+          Code: '',
+          Libellé: `— ${b.label}`,
+          Valeur: b.value,
+        })),
+      ]),
+    ]
+    const ws = XLSX.utils.json_to_sheet(rows)
+    ws['!cols'] = [{ wch: 10 }, { wch: 90 }, { wch: 40 }]
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, nomFeuille(set.name))
+    const buffer: Buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })
+    return buffer
   }
 }
 

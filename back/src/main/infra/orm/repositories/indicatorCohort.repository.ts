@@ -1,15 +1,14 @@
 import type { IocContainer } from '../../../types/application/ioc'
-import type {
-  ArsCohortRows,
-  ArsIndicatorRepositoryInterface,
-} from '../../../types/infra/orm/repositories/arsIndicator.repository.interface'
+import type { IndicatorCohortRepositoryInterface } from '../../../types/infra/orm/repositories/indicatorCohort.repository.interface'
 import type { TenantContextInterface } from '../../../types/utils/tenant-context'
 import {
-  ARS_ACCOMPANYING_YES,
-  type ArsFile,
-  type ArsPresence,
-} from '../../../utils/ars-indicators'
-import { readChoice } from '../../../utils/service-field-types'
+  ACCOMPANYING_YES,
+  type CohortFile,
+  type CohortPresence,
+  type DateRange,
+  type IndicatorCohort,
+} from '../../../utils/indicators/cohort'
+import { asValues } from '../../../utils/service-field-types'
 import type { PostgresPrismaClient } from '../postgres-client'
 
 // Libellé lisible d'un parcours : son modèle (ou son absence) et sa date de début.
@@ -27,7 +26,7 @@ const libelleParcours = (pathway: {
 // Pas de borne de date basse : plusieurs indicateurs remontent jusqu'à la date d'entrée, qui
 // précède souvent la période demandée.
 // ponytail: charge tout le service en mémoire ; filtrer en base si un service pèse trop.
-class ArsIndicatorRepository implements ArsIndicatorRepositoryInterface {
+class IndicatorCohortRepository implements IndicatorCohortRepositoryInterface {
   private readonly prisma: PostgresPrismaClient
   private readonly tenantContext: TenantContextInterface
 
@@ -43,7 +42,7 @@ class ArsIndicatorRepository implements ArsIndicatorRepositoryInterface {
   // Deux lectures plutôt qu'un `include` imbriqué depuis le sous-dossier : les rendez-vous du
   // service ne sont pas tous rattachés à un sous-dossier, et partir d'`AppointmentPatient` (modèle
   // de service) évite la traversée établissement→service que le garde-fou doit arbitrer.
-  async findCohort(): Promise<ArsCohortRows> {
+  async findCohort(range: DateRange): Promise<IndicatorCohort> {
     const [serviceFiles, appointmentPatients] = await Promise.all([
       this.prisma.patientServiceFile.findMany({
         where: this.scope,
@@ -52,6 +51,7 @@ class ArsIndicatorRepository implements ArsIndicatorRepositoryInterface {
           entryDate: true,
           exitDate: true,
           data: true,
+          clinicalData: true,
         },
       }),
       this.prisma.appointmentPatient.findMany({
@@ -94,7 +94,7 @@ class ArsIndicatorRepository implements ArsIndicatorRepositoryInterface {
       }),
     ])
 
-    const presences: ArsPresence[] = appointmentPatients.map((ap) => {
+    const presences: CohortPresence[] = appointmentPatients.map((ap) => {
       const thematique =
         ap.appointment.thematic ?? ap.appointment.slot.slotTemplate.thematic
       return {
@@ -106,7 +106,7 @@ class ArsIndicatorRepository implements ArsIndicatorRepositoryInterface {
         thematicName: thematique?.name ?? null,
         thematicRole: thematique?.role ?? null,
         honored: ap.status === 'yes',
-        accompanied: ap.accompanying === ARS_ACCOMPANYING_YES,
+        accompanied: ap.accompanying === ACCOMPANYING_YES,
         status: ap.status,
         pathwayId: ap.appointment.slot.pathway?.id ?? null,
         pathwayLabel: ap.appointment.slot.pathway
@@ -123,31 +123,21 @@ class ArsIndicatorRepository implements ArsIndicatorRepositoryInterface {
       }
     })
 
-    const byPatient = new Map<string, ArsPresence[]>()
+    const byPatient = new Map<string, CohortPresence[]>()
     for (const p of presences) {
       byPatient.set(p.patientId, [...(byPatient.get(p.patientId) ?? []), p])
     }
 
-    const files: ArsFile[] = serviceFiles.map((f) => ({
+    const files: CohortFile[] = serviceFiles.map((f) => ({
       patientId: f.patientId,
       entryDate: f.entryDate,
       exitDate: f.exitDate,
-      stopReason: readChoice(f.data, 'stopReason'),
-      orientation: readChoice(f.data, 'orientation'),
+      values: { ...asValues(f.data), ...asValues(f.clinicalData) },
       presences: byPatient.get(f.patientId) ?? [],
     }))
 
-    return { files, presences }
-  }
-
-  async findServiceName(): Promise<string> {
-    const { serviceId, establishmentId } = this.scope
-    const service = await this.prisma.service.findUniqueOrThrow({
-      where: { id_establishmentId: { id: serviceId, establishmentId } },
-      select: { name: true },
-    })
-    return service.name
+    return { ...range, files, presences }
   }
 }
 
-export { ArsIndicatorRepository }
+export { IndicatorCohortRepository }

@@ -4,15 +4,15 @@ import {
   SEUIL_ABSENCES,
 } from '../../../main/utils/activity-indicators'
 import type {
-  ArsCohort,
-  ArsFile,
-  ArsPresence,
-} from '../../../main/utils/ars-indicators'
+  CohortFile,
+  CohortPresence,
+  IndicatorCohort,
+} from '../../../main/utils/indicators/cohort'
 
 const PERIODE = { from: new Date('2026-01-01'), to: new Date('2026-12-31') }
 
 // 2026-03-02 est un lundi.
-const presence = (p: Partial<ArsPresence> = {}): ArsPresence => ({
+const presence = (p: Partial<CohortPresence> = {}): CohortPresence => ({
   patientId: 'p1',
   date: new Date('2026-03-02T09:00:00Z'),
   type: 'ambulatory',
@@ -31,17 +31,24 @@ const presence = (p: Partial<ArsPresence> = {}): ArsPresence => ({
   ...p,
 })
 
-const dossier = (f: Partial<ArsFile> = {}): ArsFile => ({
+const dossier = ({
+  stopReason,
+  ...f
+}: Partial<Omit<CohortFile, 'values'>> & {
+  stopReason?: string
+} = {}): CohortFile => ({
   patientId: 'p1',
   entryDate: new Date('2026-02-01'),
   exitDate: null,
-  stopReason: null,
-  orientation: null,
+  values: stopReason === undefined ? {} : { stopReason },
   presences: [],
   ...f,
 })
 
-const cohorte = (files: ArsFile[], extra: ArsPresence[] = []): ArsCohort => ({
+const cohorte = (
+  files: CohortFile[],
+  extra: CohortPresence[] = [],
+): IndicatorCohort => ({
   ...PERIODE,
   files,
   presences: [...files.flatMap((f) => f.presences), ...extra],
@@ -194,7 +201,7 @@ describe('completion', () => {
 })
 
 describe('absences', () => {
-  const pointes = (n: number, p: Partial<ArsPresence>) =>
+  const pointes = (n: number, p: Partial<CohortPresence>) =>
     Array.from({ length: n }, (_, i) => presence({ slotId: `x${i}`, ...p }))
 
   it('exclut les non pointes du taux', () => {

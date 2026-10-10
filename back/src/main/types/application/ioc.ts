@@ -5,7 +5,6 @@ import type { AccessLinkDomainInterface } from '../domain/accessLink.domain.inte
 import type { ActivityLogDomainInterface } from '../domain/activityLog.domain.interface'
 import type { ActivityReportDomainInterface } from '../domain/activityReport.domain.interface'
 import type { AppointmentDomainInterface } from '../domain/appointment.domain.interface'
-import type { ArsIndicatorDomainInterface } from '../domain/arsIndicator.domain.interface'
 import type { AuthDomainInterface } from '../domain/auth.domain.interface'
 import type { DiagnosticEducatifDomainInterface } from '../domain/diagnosticEducatif.domain.interface'
 import type { DiagnosticEducatifTemplateDomainInterface } from '../domain/diagnosticEducatifTemplate.domain.interface'
@@ -39,13 +38,12 @@ import type { AccessGrantRepositoryInterface } from '../infra/orm/repositories/a
 import type { AccessLinkRepositoryInterface } from '../infra/orm/repositories/accessLink.repository.interface'
 import type { ActivityLogRepositoryInterface } from '../infra/orm/repositories/activityLog.repository.interface'
 import type { AppointmentRepositoryInterface } from '../infra/orm/repositories/appointment.repository.interface'
-import type { ArsIndicatorRepositoryInterface } from '../infra/orm/repositories/arsIndicator.repository.interface'
-import type { ArsManualAnswerRepositoryInterface } from '../infra/orm/repositories/arsManualAnswer.repository.interface'
 import type { DiagnosticEducatifRepositoryInterface } from '../infra/orm/repositories/diagnosticEducatif.repository.interface'
 import type { DiagnosticEducatifTemplateRepositoryInterface } from '../infra/orm/repositories/diagnosticEducatifTemplate.repository.interface'
 import type { EnrollmentIssueRepositoryInterface } from '../infra/orm/repositories/enrollmentIssue.repository.interface'
 import type { EstablishmentRepositoryInterface } from '../infra/orm/repositories/establishment.repository.interface'
 import type { ForbiddenWeekRepositoryInterface } from '../infra/orm/repositories/forbiddenWeek.repository.interface'
+import type { IndicatorCohortRepositoryInterface } from '../infra/orm/repositories/indicatorCohort.repository.interface'
 import type { IndicatorSetRepositoryInterface } from '../infra/orm/repositories/indicatorSet.repository.interface'
 import type { LocationRepositoryInterface } from '../infra/orm/repositories/location.repository.interface'
 import type { MembershipRepositoryInterface } from '../infra/orm/repositories/membership.repository.interface'
@@ -89,10 +87,8 @@ export interface IocContainer {
   // Appointment
   readonly appointmentDomain: AppointmentDomainInterface
   readonly appointmentRepository: AppointmentRepositoryInterface
-  // ArsIndicator (indicateurs de l'enquête annuelle ARS)
-  readonly arsIndicatorDomain: ArsIndicatorDomainInterface
-  readonly arsIndicatorRepository: ArsIndicatorRepositoryInterface
-  readonly arsManualAnswerRepository: ArsManualAnswerRepositoryInterface
+  // Cohorte des jeux d'indicateurs et de l'Activité
+  readonly indicatorCohortRepository: IndicatorCohortRepositoryInterface
   // ActivityReport (tableau de bord d'activité)
   readonly activityReportDomain: ActivityReportDomainInterface
   // Slot

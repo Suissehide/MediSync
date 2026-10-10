@@ -37,9 +37,13 @@ export type IndicatorCohort = {
   presences: CohortPresence[]
 }
 
-// Formes minimales : l'ancienne grille d'`ars-indicators.ts` partage ces fonctions tant qu'elle existe.
+export type DateRange = Pick<IndicatorCohort, 'from' | 'to'>
+
+// `APPOINTMENT_ACCOMPANYING` est un dictionnaire clé→libellé : c'est la CLÉ qui est stockée, jamais « Oui ».
+export const ACCOMPANYING_YES = 'yes'
+
 type Dossier = Pick<CohortFile, 'entryDate' | 'presences'>
-type Periode = Pick<IndicatorCohort, 'from' | 'to'>
+type Periode = DateRange
 type Seances = Pick<IndicatorCohort, 'from' | 'to' | 'presences'>
 
 export const inRange = (date: Date | null, from: Date, to: Date): boolean =>

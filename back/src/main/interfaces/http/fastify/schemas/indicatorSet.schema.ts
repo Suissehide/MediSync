@@ -137,3 +137,90 @@ export const indicatorCatalogResponseSchema = z.array(
     options: z.array(measureOptionSchema),
   }),
 )
+
+const periode = { from: z.coerce.date(), to: z.coerce.date() }
+const dansLOrdre = (q: { from: Date; to: Date }) => q.from <= q.to
+const ordreMessage = {
+  message: 'La date de début doit précéder la date de fin',
+}
+
+export const rangeQuerySchema = z
+  .object(periode)
+  .refine(dansLOrdre, ordreMessage)
+
+const answerSchema = z.object({
+  numberValue: z.number().nullable(),
+  textValue: z.string().nullable(),
+  boolValue: z.boolean().nullable(),
+})
+
+const breakdownSchema = z
+  .array(z.object({ key: z.string(), label: z.string(), value: z.number() }))
+  .nullable()
+
+export const resultsResponseSchema = z.object({
+  from: z.string(),
+  to: z.string(),
+  manualYear: z.number().nullable(),
+  indicators: z.array(
+    z.object({
+      id: z.string(),
+      code: z.string(),
+      group: z.string(),
+      label: z.string(),
+      nature: z.string(),
+      value: z.number().nullable(),
+      breakdown: breakdownSchema,
+      note: z.string().nullable(),
+      input: z.string().nullable(),
+      answer: answerSchema.nullable(),
+      parentId: z.string().nullable(),
+      warnings: z.array(z.string()),
+    }),
+  ),
+})
+
+// Identifiant Prisma exact (cuid de 25 caractères) : `z.cuid()` laisse passer « constructor ».
+export const answerParamsSchema = z.object({
+  setId: z.cuid(),
+  year: z.coerce.number().int().min(2000).max(2100),
+  indicatorId: z.string().regex(/^c[a-z0-9]{24}$/),
+})
+
+// Le domaine vérifie que la forme reçue est celle de l'indicateur visé.
+export const answerBodySchema = z.union([
+  z.strictObject({
+    numberValue: z.number().int().min(0).nullable(),
+    textValue: z.string().max(2000).nullable(),
+  }),
+  z.strictObject({ boolValue: z.boolean().nullable() }),
+])
+
+export const answerResponseSchema = answerSchema
+
+export const previewBodySchema = z
+  .object({
+    indicator: createIndicatorSchema.pick({
+      nature: true,
+      measure: true,
+      options: true,
+      filters: true,
+      breakdownField: true,
+      input: true,
+      note: true,
+    }),
+    ...periode,
+  })
+  .strict()
+  .refine(dansLOrdre, ordreMessage)
+
+export const previewResponseSchema = z.object({
+  value: z.number().nullable(),
+  breakdown: breakdownSchema,
+  warnings: z.array(z.string()),
+})
+
+export type RangeQuery = z.infer<typeof rangeQuerySchema>
+export type AnswerParams = z.infer<typeof answerParamsSchema>
+export type AnswerBody = z.infer<typeof answerBodySchema>
+export type PreviewBody = z.infer<typeof previewBodySchema>

@@ -3,18 +3,29 @@ import { z } from 'zod/v4'
 
 import { MEASURE_CATALOG } from '../../../../utils/indicators/catalog'
 import {
+  type AnswerBody,
+  type AnswerParams,
+  answerBodySchema,
+  answerParamsSchema,
+  answerResponseSchema,
   type CreateIndicatorBody,
   type CreateIndicatorSetBody,
   createIndicatorSchema,
   createIndicatorSetSchema,
-  indicatorCatalogResponseSchema,
   type IndicatorIdParams,
+  indicatorCatalogResponseSchema,
   indicatorIdParamsSchema,
   indicatorResponseSchema,
   indicatorSetDtoSchema,
   indicatorSetsResponseSchema,
+  type PreviewBody,
+  previewBodySchema,
+  previewResponseSchema,
+  type RangeQuery,
   type ReorderBody,
+  rangeQuerySchema,
   reorderSchema,
+  resultsResponseSchema,
   type SetIdParams,
   setIdParamsSchema,
   type UpdateIndicatorBody,
@@ -22,6 +33,8 @@ import {
   updateIndicatorSchema,
   updateIndicatorSetSchema,
 } from '../schemas/indicatorSet.schema'
+
+const jour = (d: Date): string => d.toISOString().slice(0, 10)
 
 const indicatorSetRouter: FastifyPluginAsync = (fastify) => {
   const { iocContainer } = fastify
@@ -132,6 +145,95 @@ const indicatorSetRouter: FastifyPluginAsync = (fastify) => {
         request.body.ids,
       )
       reply.code(204).send()
+    },
+  )
+
+  // Chiffres agrégés du jeu, aucune donnée nominative (MDS-26).
+  fastify.get<{ Params: SetIdParams; Querystring: RangeQuery }>(
+    '/:setId/results',
+    {
+      schema: {
+        params: setIdParamsSchema,
+        querystring: rangeQuerySchema,
+        response: { 200: resultsResponseSchema },
+      },
+      config: { permission: 'stats:read' },
+    },
+    async (request) => {
+      const { from, to } = request.query
+      return {
+        from: jour(from),
+        to: jour(to),
+        ...(await indicatorSetDomain.results(request.params.setId, {
+          from,
+          to,
+        })),
+      }
+    },
+  )
+
+  fastify.put<{ Params: AnswerParams; Body: AnswerBody }>(
+    '/:setId/answers/:year/:indicatorId',
+    {
+      schema: {
+        params: answerParamsSchema,
+        body: answerBodySchema,
+        response: { 200: answerResponseSchema },
+      },
+      config: { permission: 'stats:write' },
+    },
+    (request) =>
+      indicatorSetDomain.saveAnswer(
+        request.params.setId,
+        request.params.year,
+        request.params.indicatorId,
+        request.body,
+        request.user.userID,
+      ),
+  )
+
+  fastify.post<{ Params: SetIdParams; Body: PreviewBody }>(
+    '/:setId/preview',
+    {
+      schema: {
+        params: setIdParamsSchema,
+        body: previewBodySchema,
+        response: { 200: previewResponseSchema },
+      },
+      config: { permission: 'stats:write' },
+    },
+    (request) => {
+      const { indicator, from, to } = request.body
+      return indicatorSetDomain.preview(request.params.setId, indicator, {
+        from,
+        to,
+      })
+    },
+  )
+
+  // Le classeur est un Buffer : pas de `response` Zod, la sérialisation JSON ne s'y applique pas.
+  fastify.get<{ Params: SetIdParams; Querystring: RangeQuery }>(
+    '/:setId/export',
+    {
+      schema: { params: setIdParamsSchema, querystring: rangeQuerySchema },
+      config: { permission: 'stats:read' },
+    },
+    async (request, reply) => {
+      const { from, to } = request.query
+      const buffer = await indicatorSetDomain.exportExcel(
+        request.params.setId,
+        { from, to },
+      )
+      await reply
+        .header(
+          'Content-Type',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+        .header(
+          'Content-Disposition',
+          `attachment; filename="indicateurs_${jour(from)}_${jour(to)}.xlsx"`,
+        )
+        .send(buffer)
     },
   )
 

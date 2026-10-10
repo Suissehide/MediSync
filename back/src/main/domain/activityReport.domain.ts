@@ -1,30 +1,31 @@
 import type { IocContainer } from '../types/application/ioc'
 import type { ActivityReportDomainInterface } from '../types/domain/activityReport.domain.interface'
-import type { ArsRange } from '../types/domain/arsIndicator.domain.interface'
-import type { ArsIndicatorRepositoryInterface } from '../types/infra/orm/repositories/arsIndicator.repository.interface'
+import type { IndicatorCohortRepositoryInterface } from '../types/infra/orm/repositories/indicatorCohort.repository.interface'
 import {
   type ActivityReport,
   computeActivity,
   filterByPathwayTemplate,
 } from '../utils/activity-indicators'
+import type { DateRange } from '../utils/indicators/cohort'
 
-// Même cohorte que l'ARS : les deux écrans partagent leurs définitions (MDS-40).
+// Même cohorte que les jeux d'indicateurs : les deux écrans partagent leurs définitions (MDS-40).
 class ActivityReportDomain implements ActivityReportDomainInterface {
-  private readonly arsIndicatorRepository: ArsIndicatorRepositoryInterface
+  private readonly indicatorCohortRepository: IndicatorCohortRepositoryInterface
 
-  constructor({ arsIndicatorRepository }: IocContainer) {
-    this.arsIndicatorRepository = arsIndicatorRepository
+  constructor({ indicatorCohortRepository }: IocContainer) {
+    this.indicatorCohortRepository = indicatorCohortRepository
   }
 
   async report(
-    { from, to }: ArsRange,
+    range: DateRange,
     pathwayTemplateId?: string,
   ): Promise<ActivityReport> {
-    const cohort = await this.arsIndicatorRepository.findCohort()
-    const { files, presences } = pathwayTemplateId
-      ? filterByPathwayTemplate({ ...cohort, from, to }, pathwayTemplateId)
-      : cohort
-    return computeActivity({ from, to, files, presences })
+    const cohort = await this.indicatorCohortRepository.findCohort(range)
+    return computeActivity(
+      pathwayTemplateId
+        ? filterByPathwayTemplate(cohort, pathwayTemplateId)
+        : cohort,
+    )
   }
 }
 

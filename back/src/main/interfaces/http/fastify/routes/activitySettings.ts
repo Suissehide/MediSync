@@ -12,6 +12,21 @@ const activitySettingsRouter: FastifyPluginAsync = (fastify) => {
   const { iocContainer } = fastify
   const { serviceDomain } = iocContainer
 
+  fastify.get(
+    '/',
+    {
+      schema: { response: { 200: activitySettingsResponseSchema } },
+      config: { permission: 'stats:read' },
+    },
+    async () => {
+      const service = await serviceDomain.findCurrent()
+      return {
+        stopReasonFieldKey: service.stopReasonFieldKey,
+        completedChoiceKey: service.completedChoiceKey,
+      }
+    },
+  )
+
   fastify.patch<{ Body: UpdateActivitySettingsBody }>(
     '/',
     {

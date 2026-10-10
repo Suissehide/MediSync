@@ -1,9 +1,11 @@
 import { z } from 'zod'
 
-import { dateRangeQueryObject } from './arsIndicator.schema'
-
-export const activityReportQuerySchema = dateRangeQueryObject
-  .extend({ pathwayTemplateId: z.string().min(1).optional() })
+export const activityReportQuerySchema = z
+  .object({
+    from: z.coerce.date(),
+    to: z.coerce.date(),
+    pathwayTemplateId: z.string().min(1).optional(),
+  })
   .refine((q) => q.from <= q.to, {
     message: 'La date de début doit précéder la date de fin',
   })

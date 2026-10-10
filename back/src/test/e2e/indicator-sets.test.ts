@@ -1,3 +1,5 @@
+import * as XLSX from 'xlsx'
+
 import { buildTestApp, type TestApp } from './setup/app'
 import { testDb, truncateAll } from './setup/db'
 import {
@@ -492,5 +494,203 @@ describe('configuration des jeux d indicateurs', () => {
       payload: { archived: true } as never,
     })
     expect(patch.statusCode).toBe(404)
+  })
+
+  it('relit les reglages de l Activite', async () => {
+    const res = await testApp.app.inject({
+      method: 'GET',
+      url: url('/activity-settings'),
+      cookies: coordinateurCookies,
+    })
+    expect(res.statusCode).toBe(200)
+    expect(res.json()).toEqual({
+      stopReasonFieldKey: motifArret.key,
+      completedChoiceKey: motifArret.choices.find(
+        (c) => c.label === 'Fin de parcours',
+      )?.key,
+    })
+  })
+
+  describe('résultats', () => {
+    const cle = (field: ServiceFieldResponse, label: string): string => {
+      const choice = field.choices.find((c) => c.label === label)
+      if (!choice) {
+        throw new Error(`choix ${label} absent`)
+      }
+      return choice.key
+    }
+
+    const dossier = async (
+      entryDate: string,
+      data: Record<string, string | string[]>,
+    ) => {
+      const patient = await testDb.patient.create({
+        data: {
+          establishmentId,
+          firstName: 'Agrege',
+          lastName: entryDate,
+          createDate: new Date(),
+        },
+      })
+      await testDb.patientServiceFile.create({
+        data: {
+          establishmentId,
+          serviceId,
+          patientId: patient.id,
+          entryDate: new Date(entryDate),
+          data,
+        },
+      })
+    }
+
+    beforeAll(async () => {
+      await dossier('2026-03-01', {
+        [comorbidites.key]: [cle(comorbidites, 'HTA')],
+        [orientation.key]: cle(orientation, 'Hors hôpital'),
+      })
+      await dossier('2026-04-01', {
+        [comorbidites.key]: [
+          cle(comorbidites, 'HTA'),
+          cle(comorbidites, 'Diabète'),
+        ],
+      })
+      await dossier('2026-05-01', {
+        [comorbidites.key]: [cle(comorbidites, 'Diabète')],
+        [orientation.key]: cle(orientation, 'Hospitalisation'),
+      })
+    })
+
+    const periode = 'from=2026-01-01&to=2026-12-31'
+
+    it('calcule un indicateur filtre et reparti', async () => {
+      const res = await testApp.app.inject({
+        method: 'GET',
+        url: url(`/indicator-sets/${setId}/results?${periode}`),
+        cookies: coordinateurCookies,
+      })
+      expect(res.statusCode).toBe(200)
+      expect(res.json().manualYear).toBe(2026)
+      const entres = res
+        .json()
+        .indicators.find((i: { id: string }) => i.id === indicatorId)
+      expect(entres).toMatchObject({
+        code: '1.1',
+        nature: 'computed',
+        value: 2,
+        warnings: [],
+        breakdown: [
+          { label: 'Hors hôpital', value: 1 },
+          { label: 'Hospitalisation', value: 0 },
+          { label: 'Consultation externe', value: 0 },
+          { key: '__empty__', label: 'Non renseigné', value: 1 },
+        ],
+      })
+    })
+
+    it('apercoit un indicateur non enregistre', async () => {
+      const res = await testApp.app.inject({
+        method: 'POST',
+        url: url(`/indicator-sets/${setId}/preview`),
+        cookies: coordinateurCookies,
+        payload: {
+          indicator: {
+            nature: 'computed',
+            measure: 'patientsEntres',
+            filters: [
+              {
+                field: comorbidites.key,
+                op: 'containsAny',
+                value: [cle(comorbidites, 'Diabète')],
+              },
+            ],
+          },
+          from: '2026-01-01',
+          to: '2026-12-31',
+        } as never,
+      })
+      expect(res.statusCode).toBe(200)
+      expect(res.json()).toEqual({ value: 2, breakdown: null, warnings: [] })
+    })
+
+    it('refuse l apercu d un filtre in vide : 400', async () => {
+      const res = await testApp.app.inject({
+        method: 'POST',
+        url: url(`/indicator-sets/${setId}/preview`),
+        cookies: coordinateurCookies,
+        payload: {
+          indicator: {
+            nature: 'computed',
+            measure: 'patientsEntres',
+            filters: [{ field: orientation.key, op: 'in', value: [] }],
+          },
+          from: '2026-01-01',
+          to: '2026-12-31',
+        } as never,
+      })
+      expect(res.statusCode).toBe(400)
+    })
+
+    it('exporte la repartition sous l indicateur', async () => {
+      const res = await testApp.app.inject({
+        method: 'GET',
+        url: url(`/indicator-sets/${setId}/export?${periode}`),
+        cookies: coordinateurCookies,
+      })
+      expect(res.statusCode).toBe(200)
+      const feuille = XLSX.read(res.rawPayload, { type: 'buffer' })
+      const lignes = XLSX.utils.sheet_to_json<Record<string, string | number>>(
+        feuille.Sheets[feuille.SheetNames[0] ?? ''] ?? {},
+        { defval: '' },
+      )
+      const debut = lignes.findIndex((l) => l.Code === '1.1')
+      expect(lignes.slice(debut, debut + 5)).toEqual([
+        { Code: '1.1', Libellé: 'Patients entrés', Valeur: 2 },
+        { Code: '', Libellé: '— Hors hôpital', Valeur: 1 },
+        { Code: '', Libellé: '— Hospitalisation', Valeur: 0 },
+        { Code: '', Libellé: '— Consultation externe', Valeur: 0 },
+        { Code: '', Libellé: '— Non renseigné', Valeur: 1 },
+      ])
+    })
+
+    it('refuse la saisie sur un indicateur d un autre jeu du meme service : 404', async () => {
+      const autre = await testApp.app.inject({
+        method: 'POST',
+        url: url('/indicator-sets'),
+        cookies: coordinateurCookies,
+        payload: { name: 'Autre jeu' } as never,
+      })
+      const autreSetId = (autre.json() as IndicatorSetResponse).id
+      const manuel = await testApp.app.inject({
+        method: 'POST',
+        url: url(`/indicator-sets/${autreSetId}/indicators`),
+        cookies: coordinateurCookies,
+        payload: {
+          code: 'M1',
+          label: 'Saisie',
+          group: 'G',
+          nature: 'manual',
+          input: 'yesno',
+        } as never,
+      })
+      const res = await testApp.app.inject({
+        method: 'PUT',
+        url: url(
+          `/indicator-sets/${setId}/answers/2026/${(manuel.json() as IndicatorResponse).id}`,
+        ),
+        cookies: coordinateurCookies,
+        payload: { boolValue: true } as never,
+      })
+      expect(res.statusCode).toBe(404)
+    })
+
+    it('refuse la saisie sur un indicateur calcule : 400', async () => {
+      const res = await testApp.app.inject({
+        method: 'PUT',
+        url: url(`/indicator-sets/${setId}/answers/2026/${indicatorId}`),
+        cookies: coordinateurCookies,
+        payload: { numberValue: 1, textValue: null } as never,
+      })
+      expect(res.statusCode).toBe(400)
+    })
   })
 })

@@ -1,5 +1,7 @@
 import * as XLSX from 'xlsx'
 
+import { seedArsIndicatorSet } from '../../../prisma/seed/indicators'
+import { seedEtpFields } from '../../../prisma/seed/patient'
 import type { Tenant } from '../../main/types/utils/tenant-context'
 import { buildTestApp, type TestApp } from './setup/app'
 import { testDb, truncateAll } from './setup/db'
@@ -11,12 +13,13 @@ import {
   tenantUrl,
 } from './setup/fixtures'
 
-describe('indicateurs ARS', () => {
+describe('jeu Grille ARS : resultats et export', () => {
   let t: TestApp
   let establishmentId: string
   let serviceA: string
   let serviceB: string
   let cookies: { access_token: string }
+  const sets = new Map<string, string>()
 
   beforeAll(async () => {
     t = await buildTestApp()
@@ -25,6 +28,14 @@ describe('indicateurs ARS', () => {
     establishmentId = est.id
     serviceA = (await createService(est.id, 'Service A')).id
     serviceB = (await createService(est.id, 'Service B')).id
+    for (const serviceId of [serviceA, serviceB]) {
+      await seedEtpFields(testDb, { establishmentId, serviceId })
+      const set = await seedArsIndicatorSet(testDb, {
+        establishmentId,
+        serviceId,
+      })
+      sets.set(serviceId, set.id)
+    }
     await createUser({
       email: 'coordo@test.fr',
       memberships: [
@@ -45,14 +56,17 @@ describe('indicateurs ARS', () => {
     await testDb.$disconnect()
   })
 
+  const setUrl = (serviceId: string, path: string) =>
+    tenantUrl(
+      establishmentId,
+      serviceId,
+      `/indicator-sets/${sets.get(serviceId)}${path}`,
+    )
+
   const lire = async (serviceId: string) =>
     t.app.inject({
       method: 'GET',
-      url: tenantUrl(
-        establishmentId,
-        serviceId,
-        '/indicateurs-ars?from=2026-01-01&to=2026-12-31',
-      ),
+      url: setUrl(serviceId, '/results?from=2026-01-01&to=2026-12-31'),
       cookies,
     })
 
@@ -171,25 +185,25 @@ describe('indicateurs ARS', () => {
     expect(indicateur(res, '2.9').value).toBeGreaterThanOrEqual(1)
   })
 
-  it('rend les 30 indicateurs, avec leur kind/input/answer et manualYear sur l annee civile', async () => {
+  it('rend les 30 indicateurs, avec leur nature/input/answer et manualYear sur l annee civile', async () => {
     const res = await lire(serviceA)
     expect(res.statusCode).toBe(200)
     const body = res.json()
     expect(body.indicators).toHaveLength(30)
     expect(body.manualYear).toBe(2026)
     const manuel25 = indicateur(res, '2.5') as unknown as {
-      kind: string
+      nature: string
       input: string | null
       answer: unknown
     }
-    expect(manuel25.kind).toBe('manual')
+    expect(manuel25.nature).toBe('manual')
     expect(manuel25.input).toBe('number+text')
     expect(manuel25.answer).toBeNull()
     const calcule11 = indicateur(res, '1.1') as unknown as {
-      kind: string
+      nature: string
       input: string | null
     }
-    expect(calcule11.kind).toBe('computed')
+    expect(calcule11.nature).toBe('computed')
     expect(calcule11.input).toBeNull()
   })
 
@@ -197,37 +211,29 @@ describe('indicateurs ARS', () => {
   it('refuse une periode dont la fin precede le debut', async () => {
     const res = await t.app.inject({
       method: 'GET',
-      url: tenantUrl(
-        establishmentId,
-        serviceA,
-        '/indicateurs-ars?from=2026-12-31&to=2026-01-01',
-      ),
+      url: setUrl(serviceA, '/results?from=2026-12-31&to=2026-01-01'),
       cookies,
     })
     expect(res.statusCode).toBe(400)
   })
 
-  it('rend un classeur nomme par le service et la periode', async () => {
+  it('rend un classeur nomme par la periode, feuille au nom du jeu', async () => {
     const res = await t.app.inject({
       method: 'GET',
-      url: tenantUrl(
-        establishmentId,
-        serviceA,
-        '/indicateurs-ars/export?from=2026-01-01&to=2026-12-31',
-      ),
+      url: setUrl(serviceA, '/export?from=2026-01-01&to=2026-12-31'),
       cookies,
     })
     expect(res.statusCode).toBe(200)
     expect(res.headers['content-type']).toContain('spreadsheetml')
     expect(res.rawPayload.length).toBeGreaterThan(0)
     expect(res.headers['content-disposition']).toContain(
-      'indicateurs-ars_2026-01-01_2026-12-31.xlsx',
+      'indicateurs_2026-01-01_2026-12-31.xlsx',
     )
 
     // Le contenu, pas seulement l'en-tête HTTP : le service, la période et les 30 lignes.
     const feuille = XLSX.read(res.rawPayload, { type: 'buffer' })
     const nomFeuille = feuille.SheetNames[0]
-    expect(nomFeuille).toBe('Indicateurs ARS')
+    expect(nomFeuille).toBe('Grille ARS')
     const lignes = XLSX.utils.sheet_to_json<Record<string, string>>(
       feuille.Sheets[nomFeuille],
     )
@@ -264,11 +270,7 @@ describe('indicateurs ARS', () => {
 
     const res = await t.app.inject({
       method: 'GET',
-      url: tenantUrl(
-        establishmentId,
-        serviceA,
-        '/indicateurs-ars/export?from=2026-01-01&to=2026-12-31',
-      ),
+      url: setUrl(serviceA, '/export?from=2026-01-01&to=2026-12-31'),
       cookies,
     })
 
@@ -386,7 +388,7 @@ describe('indicateurs ARS', () => {
       },
     })
 
-    const { arsIndicatorRepository, tenantContext } = t.instances
+    const { indicatorCohortRepository, tenantContext } = t.instances
     const tenant: Tenant = {
       userId: 'test-user-cohorte-etendue',
       establishmentId,
@@ -396,7 +398,10 @@ describe('indicateurs ARS', () => {
       soignantId: null,
     }
     const cohorte = await tenantContext.run(tenant, () =>
-      arsIndicatorRepository.findCohort(),
+      indicatorCohortRepository.findCohort({
+        from: new Date('2026-01-01'),
+        to: new Date('2026-12-31'),
+      }),
     )
 
     const presence = cohorte.presences.find((p) => p.patientId === patient.id)
@@ -412,6 +417,6 @@ describe('indicateurs ARS', () => {
     const fichier = cohorte.files.find((f) => f.patientId === patient.id)
     expect(fichier).toBeDefined()
     expect(fichier?.exitDate).toEqual(new Date('2026-06-01'))
-    expect(fichier?.stopReason).toBe('PERDU_DE_VUE')
+    expect(fichier?.values.stopReason).toBe('PERDU_DE_VUE')
   })
 })

@@ -29,6 +29,12 @@ export type IndicatorSetUpdateEntityRepo = {
   archivedAt?: Date | null
 }
 
+export type IndicatorAnswerEntityRepo = {
+  numberValue: number | null
+  textValue: string | null
+  boolValue: boolean | null
+}
+
 export interface IndicatorSetRepositoryInterface {
   findAll: () => Promise<IndicatorSetEntityRepo[]>
   findByID: (setId: string) => Promise<IndicatorSetEntityRepo>
@@ -51,4 +57,15 @@ export interface IndicatorSetRepositoryInterface {
     params: IndicatorUpdateEntityRepo,
   ) => Promise<IndicatorEntityRepo>
   reorderIndicators: (setId: string, ids: string[]) => Promise<void>
+  // Réponses d'une année, par identifiant d'indicateur du jeu.
+  findAnswers: (
+    setId: string,
+    year: number,
+  ) => Promise<Map<string, IndicatorAnswerEntityRepo>>
+  upsertAnswer: (
+    indicatorId: string,
+    year: number,
+    values: IndicatorAnswerEntityRepo,
+    userId: string,
+  ) => Promise<IndicatorAnswerEntityRepo>
 }

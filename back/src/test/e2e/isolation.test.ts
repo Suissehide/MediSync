@@ -1,4 +1,5 @@
 import { seedArsIndicatorSet } from '../../../prisma/seed/indicators'
+import { seedEtpFields } from '../../../prisma/seed/patient'
 import { buildTestApp, type TestApp } from './setup/app'
 import { testDb, truncateAll } from './setup/db'
 import {
@@ -264,15 +265,16 @@ describe('isolation par tenant', () => {
     // cas de la table : `POST /auth/sign-in` est limité en débit, et une
     // connexion par cas le dépasserait sans rien prouver de plus.
     let scenario: Awaited<ReturnType<typeof twoServicesScenario>>
+    const arsSets = new Map<string, string>()
 
     beforeAll(async () => {
       await truncateAll()
       scenario = await twoServicesScenario(t.app)
       for (const { id } of [scenario.serviceA, scenario.serviceB]) {
-        await seedArsIndicatorSet(testDb, {
-          establishmentId: scenario.est.id,
-          serviceId: id,
-        })
+        const tenant = { establishmentId: scenario.est.id, serviceId: id }
+        await seedEtpFields(testDb, tenant)
+        const set = await seedArsIndicatorSet(testDb, tenant)
+        arsSets.set(id, set.id)
       }
     })
 
@@ -326,18 +328,21 @@ describe('isolation par tenant', () => {
     })
 
     // IndicatorAnswer : pas de route par identifiant, elle se lit a travers
-    // GET /indicateurs-ars, embarquee dans la reponse de chaque indicateur.
+    // GET /indicator-sets/:id/results, embarquee dans la reponse de chaque indicateur.
     // Le cloisonnement a verifier n'est donc pas un 404, mais une absence de
     // fuite dans un champ imbrique : la saisie de B ne doit pas apparaitre
     // quand A lit la meme periode.
     it('la saisie manuelle de 2.5 par le service B n apparait pas dans la lecture ARS du service A', async () => {
       const { est, serviceA, serviceB, cookiesA, cookiesB } = scenario
+      const indicateur25B = await testDb.indicator.findFirstOrThrow({
+        where: { setId: arsSets.get(serviceB.id), code: '2.5' },
+      })
       const ecriture = await t.app.inject({
         method: 'PUT',
         url: tenantUrl(
           est.id,
           serviceB.id,
-          '/indicateurs-ars/saisies/2026/2.5',
+          `/indicator-sets/${arsSets.get(serviceB.id)}/answers/2026/${indicateur25B.id}`,
         ),
         cookies: cookiesB,
         payload: { numberValue: 12, textValue: 'Ateliers en ville' },
@@ -349,7 +354,7 @@ describe('isolation par tenant', () => {
         url: tenantUrl(
           est.id,
           serviceA.id,
-          '/indicateurs-ars?from=2026-01-01&to=2026-12-31',
+          `/indicator-sets/${arsSets.get(serviceA.id)}/results?from=2026-01-01&to=2026-12-31`,
         ),
         cookies: cookiesA,
       })
@@ -366,7 +371,7 @@ describe('isolation par tenant', () => {
         url: tenantUrl(
           est.id,
           serviceB.id,
-          '/indicateurs-ars?from=2026-01-01&to=2026-12-31',
+          `/indicator-sets/${arsSets.get(serviceB.id)}/results?from=2026-01-01&to=2026-12-31`,
         ),
         cookies: cookiesB,
       })

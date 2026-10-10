@@ -1,5 +1,12 @@
 import type { Indicator, IndicatorSet } from '../../../generated/client'
+import type { DateRange } from '../../utils/indicators/cohort'
+import type {
+  BreakdownRow,
+  ComputedResult,
+  IndicatorDefinition,
+} from '../../utils/indicators/compute'
 import type { FilterCondition } from '../../utils/indicators/filters'
+import type { IndicatorAnswerEntityRepo } from '../infra/orm/repositories/indicatorSet.repository.interface'
 
 export type IndicatorEntityDomain = Indicator
 export type IndicatorSetEntityDomain = IndicatorSet & {
@@ -30,6 +37,30 @@ export type IndicatorSetUpdateEntityDomain = {
   archived?: boolean
 }
 
+export type IndicatorAnswerInput =
+  | { numberValue: number | null; textValue: string | null }
+  | { boolValue: boolean | null }
+
+export type IndicatorResult = {
+  id: string
+  code: string
+  group: string
+  label: string
+  nature: string
+  value: number | null
+  breakdown: BreakdownRow[] | null
+  note: string | null
+  input: string | null
+  answer: IndicatorAnswerEntityRepo | null
+  parentId: string | null
+  warnings: string[]
+}
+
+export type IndicatorSetResults = {
+  manualYear: number | null
+  indicators: IndicatorResult[]
+}
+
 export interface IndicatorSetDomainInterface {
   findAll: () => Promise<IndicatorSetEntityDomain[]>
   findByID: (setId: string) => Promise<IndicatorSetEntityDomain>
@@ -49,4 +80,18 @@ export interface IndicatorSetDomainInterface {
     params: IndicatorUpdateEntityDomain,
   ) => Promise<IndicatorEntityDomain>
   reorderIndicators: (setId: string, ids: string[]) => Promise<void>
+  results: (setId: string, range: DateRange) => Promise<IndicatorSetResults>
+  saveAnswer: (
+    setId: string,
+    year: number,
+    indicatorId: string,
+    body: IndicatorAnswerInput,
+    userId: string,
+  ) => Promise<IndicatorAnswerEntityRepo>
+  preview: (
+    setId: string,
+    indicator: IndicatorDefinition,
+    range: DateRange,
+  ) => Promise<ComputedResult>
+  exportExcel: (setId: string, range: DateRange) => Promise<Buffer>
 }

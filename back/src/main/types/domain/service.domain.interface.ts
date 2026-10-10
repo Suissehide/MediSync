@@ -34,6 +34,7 @@ export interface ServiceDomainInterface {
   impactDesactivation: (
     serviceID: string,
   ) => Promise<ServiceDeactivationImpactDomain>
+  findCurrent: () => Promise<ServiceEntityDomain>
   updateActivitySettings: (
     params: ActivitySettingsUpdateEntityDomain,
   ) => Promise<ServiceEntityDomain>

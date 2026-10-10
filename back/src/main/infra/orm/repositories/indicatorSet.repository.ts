@@ -1,6 +1,7 @@
 import { Prisma } from '../../../../generated/client'
 import type { IocContainer } from '../../../types/application/ioc'
 import type {
+  IndicatorAnswerEntityRepo,
   IndicatorEntityRepo,
   IndicatorSetEntityRepo,
   IndicatorSetRepositoryInterface,
@@ -15,6 +16,12 @@ import type { PostgresPrismaClient } from '../postgres-client'
 // `undefined` laisse la colonne JSON intacte (non fournie) ; `null` doit passer par
 // `Prisma.JsonNull` pour devenir un NULL SQL, jamais un JS `null` brut (ignoré par Prisma).
 const jsonInput = (value: unknown) => (value === null ? Prisma.JsonNull : value)
+
+const answerSelect = {
+  numberValue: true,
+  textValue: true,
+  boolValue: true,
+} as const
 
 class IndicatorSetRepository implements IndicatorSetRepositoryInterface {
   private readonly prisma: PostgresPrismaClient
@@ -178,6 +185,34 @@ class IndicatorSetRepository implements IndicatorSetRepositoryInterface {
         }),
       ),
     )
+  }
+
+  async findAnswers(
+    setId: string,
+    year: number,
+  ): Promise<Map<string, IndicatorAnswerEntityRepo>> {
+    const rows = await this.prisma.indicatorAnswer.findMany({
+      where: { ...this.scope, year, indicator: { setId } },
+      select: { ...answerSelect, indicatorId: true },
+    })
+    return new Map(
+      rows.map(({ indicatorId, ...answer }) => [indicatorId, answer]),
+    )
+  }
+
+  upsertAnswer(
+    indicatorId: string,
+    year: number,
+    values: IndicatorAnswerEntityRepo,
+    userId: string,
+  ): Promise<IndicatorAnswerEntityRepo> {
+    const data = { ...values, updatedById: userId }
+    return this.prisma.indicatorAnswer.upsert({
+      where: { indicatorId_year: { indicatorId, year }, ...this.scope },
+      create: { ...data, year, indicatorId, ...this.scope },
+      update: data,
+      select: answerSelect,
+    })
   }
 }
 

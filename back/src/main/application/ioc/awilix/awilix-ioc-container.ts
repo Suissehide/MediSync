@@ -7,7 +7,6 @@ import { AccessLinkDomain } from '../../../domain/accessLink.domain'
 import { ActivityLogDomain } from '../../../domain/activityLog.domain'
 import { ActivityReportDomain } from '../../../domain/activityReport.domain'
 import { AppointmentDomain } from '../../../domain/appointment.domain'
-import { ArsIndicatorDomain } from '../../../domain/arsIndicator.domain'
 import { AuthDomain } from '../../../domain/auth.domain'
 import { DiagnosticEducatifDomain } from '../../../domain/diagnosticEducatif.domain'
 import { DiagnosticEducatifTemplateDomain } from '../../../domain/diagnosticEducatifTemplate.domain'
@@ -40,13 +39,12 @@ import { AccessGrantRepository } from '../../../infra/orm/repositories/accessGra
 import { AccessLinkRepository } from '../../../infra/orm/repositories/accessLink.repository'
 import { ActivityLogRepository } from '../../../infra/orm/repositories/activityLog.repository'
 import { AppointmentRepository } from '../../../infra/orm/repositories/appointment.repository'
-import { ArsIndicatorRepository } from '../../../infra/orm/repositories/arsIndicator.repository'
-import { ArsManualAnswerRepository } from '../../../infra/orm/repositories/arsManualAnswer.repository'
 import { DiagnosticEducatifRepository } from '../../../infra/orm/repositories/diagnosticEducatif.repository'
 import { DiagnosticEducatifTemplateRepository } from '../../../infra/orm/repositories/diagnosticEducatifTemplate.repository'
 import { EnrollmentIssueRepository } from '../../../infra/orm/repositories/enrollmentIssue.repository'
 import { EstablishmentRepository } from '../../../infra/orm/repositories/establishment.repository'
 import { ForbiddenWeekRepository } from '../../../infra/orm/repositories/forbiddenWeek.repository'
+import { IndicatorCohortRepository } from '../../../infra/orm/repositories/indicatorCohort.repository'
 import { IndicatorSetRepository } from '../../../infra/orm/repositories/indicatorSet.repository'
 import { LocationRepository } from '../../../infra/orm/repositories/location.repository'
 import { MembershipRepository } from '../../../infra/orm/repositories/membership.repository'
@@ -149,10 +147,8 @@ class AwilixIocContainer {
     // EnrollmentIssue
     this.#registerEnrollmentIssueDomain()
     this.#registerEnrollmentIssueRepository()
-    // ArsIndicator
-    this.#registerArsIndicatorDomain()
-    this.#registerArsIndicatorRepository()
-    this.#registerArsManualAnswerRepository()
+    // IndicatorCohort
+    this.#registerIndicatorCohortRepository()
     // ActivityReport
     this.#registerActivityReportDomain()
     // Error (must be before ActivityLog subscriber which depends on userRepository -> errorHandler)
@@ -257,20 +253,11 @@ class AwilixIocContainer {
     )
   }
 
-  // ArsIndicator
-  #registerArsIndicatorDomain(): void {
-    this.register('arsIndicatorDomain', asClass(ArsIndicatorDomain).singleton())
-  }
-  #registerArsIndicatorRepository(): void {
+  // IndicatorCohort
+  #registerIndicatorCohortRepository(): void {
     this.register(
-      'arsIndicatorRepository',
-      asClass(ArsIndicatorRepository).singleton(),
-    )
-  }
-  #registerArsManualAnswerRepository(): void {
-    this.register(
-      'arsManualAnswerRepository',
-      asClass(ArsManualAnswerRepository).singleton(),
+      'indicatorCohortRepository',
+      asClass(IndicatorCohortRepository).singleton(),
     )
   }
 

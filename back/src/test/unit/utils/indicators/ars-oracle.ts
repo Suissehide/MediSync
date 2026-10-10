@@ -5,7 +5,7 @@ import type {
 } from '../../../../generated/client'
 
 // Les trois orientations de la grille, par la CLÉ que la base stocke (jamais le libellé affiché,
-// qui rendait 1.2, 1.3 et 1.4 nuls sur un établissement qui en a des milliers). `ars-indicators.test.ts`
+// qui rendait 1.2, 1.3 et 1.4 nuls sur un établissement qui en a des milliers). `ars-grid.test.ts`
 // tient ces trois clés contre les choix du champ orientation de `ETP_FIELD_PRESET`.
 export const ARS_ORIENTATIONS = {
   horsHopital: 'ORIENTATION_PRO_SANTE_EXT',

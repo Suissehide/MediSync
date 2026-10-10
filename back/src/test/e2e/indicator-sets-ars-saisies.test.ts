@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx'
 
 import { seedArsIndicatorSet } from '../../../prisma/seed/indicators'
+import { seedEtpFields } from '../../../prisma/seed/patient'
 import { buildTestApp, type TestApp } from './setup/app'
 import { testDb, truncateAll } from './setup/db'
 import {
@@ -20,12 +21,13 @@ type Indicateur = {
   } | null
 }
 
-describe('indicateurs ARS : reponses saisies', () => {
+describe('jeu Grille ARS : reponses saisies', () => {
   let t: TestApp
   let establishmentId: string
   let serviceA: string
   let serviceB: string
   let cookies: { access_token: string }
+  const sets = new Map<string, string>()
 
   beforeAll(async () => {
     t = await buildTestApp()
@@ -35,7 +37,12 @@ describe('indicateurs ARS : reponses saisies', () => {
     serviceA = (await createService(est.id, 'Service A')).id
     serviceB = (await createService(est.id, 'Service B')).id
     for (const serviceId of [serviceA, serviceB]) {
-      await seedArsIndicatorSet(testDb, { establishmentId, serviceId })
+      await seedEtpFields(testDb, { establishmentId, serviceId })
+      const set = await seedArsIndicatorSet(testDb, {
+        establishmentId,
+        serviceId,
+      })
+      sets.set(serviceId, set.id)
     }
     await createUser({
       email: 'coordo@test.fr',
@@ -57,31 +64,35 @@ describe('indicateurs ARS : reponses saisies', () => {
     await testDb.$disconnect()
   })
 
-  const saisir = (
+  const setUrl = (serviceId: string, path: string) =>
+    tenantUrl(
+      establishmentId,
+      serviceId,
+      `/indicator-sets/${sets.get(serviceId)}${path}`,
+    )
+
+  // Le code désigne l'indicateur du jeu du service ; un code absent passe tel quel dans l'URL.
+  const saisir = async (
     serviceId: string,
     year: number | string,
     code: string,
     payload: unknown,
-  ) =>
-    t.app.inject({
+  ) => {
+    const indicator = await testDb.indicator.findFirst({
+      where: { serviceId, setId: sets.get(serviceId), code },
+    })
+    return t.app.inject({
       method: 'PUT',
-      url: tenantUrl(
-        establishmentId,
-        serviceId,
-        `/indicateurs-ars/saisies/${year}/${code}`,
-      ),
+      url: setUrl(serviceId, `/answers/${year}/${indicator?.id ?? code}`),
       cookies,
       payload: payload as never,
     })
+  }
 
   const lire = (serviceId: string, from: string, to: string) =>
     t.app.inject({
       method: 'GET',
-      url: tenantUrl(
-        establishmentId,
-        serviceId,
-        `/indicateurs-ars?from=${from}&to=${to}`,
-      ),
+      url: setUrl(serviceId, `/results?from=${from}&to=${to}`),
       cookies,
     })
 
@@ -196,17 +207,13 @@ describe('indicateurs ARS : reponses saisies', () => {
   it('porte les reponses dans le classeur', async () => {
     const res = await t.app.inject({
       method: 'GET',
-      url: tenantUrl(
-        establishmentId,
-        serviceA,
-        '/indicateurs-ars/export?from=2026-01-01&to=2026-12-31',
-      ),
+      url: setUrl(serviceA, '/export?from=2026-01-01&to=2026-12-31'),
       cookies,
     })
     expect(res.statusCode).toBe(200)
     const feuille = XLSX.read(res.rawPayload, { type: 'buffer' })
     const lignes = XLSX.utils.sheet_to_json<Record<string, string | number>>(
-      feuille.Sheets['Indicateurs ARS'] as XLSX.WorkSheet,
+      feuille.Sheets['Grille ARS'] as XLSX.WorkSheet,
     )
     const l25 = lignes.find((l) => l.Code === '2.5')
     const l42 = lignes.find((l) => l.Code === '4.2')
@@ -223,17 +230,13 @@ describe('indicateurs ARS : reponses saisies', () => {
 
     const res = await t.app.inject({
       method: 'GET',
-      url: tenantUrl(
-        establishmentId,
-        serviceB,
-        '/indicateurs-ars/export?from=2026-01-01&to=2026-12-31',
-      ),
+      url: setUrl(serviceB, '/export?from=2026-01-01&to=2026-12-31'),
       cookies,
     })
     expect(res.statusCode).toBe(200)
     const feuille = XLSX.read(res.rawPayload, { type: 'buffer' })
     const lignes = XLSX.utils.sheet_to_json<Record<string, string | number>>(
-      feuille.Sheets['Indicateurs ARS'] as XLSX.WorkSheet,
+      feuille.Sheets['Grille ARS'] as XLSX.WorkSheet,
     )
     const l25 = lignes.find((l) => l.Code === '2.5')
     const l42 = lignes.find((l) => l.Code === '4.2')

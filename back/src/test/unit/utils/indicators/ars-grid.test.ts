@@ -1,21 +1,26 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
+import { ETP_FIELD_PRESET } from '../../../../main/utils/etp-field-preset'
+import { ARS_PRESET } from '../../../../main/utils/indicators/ars-preset'
 import {
-  ARS_ACCOMPANYING_YES,
-  type ArsCohort,
-  type ArsFile,
-  type ArsPresence,
-  computeArsIndicators,
-  MANUAL_INPUTS,
-} from '../../../main/utils/ars-indicators'
+  ACCOMPANYING_YES,
+  type CohortFile,
+  type CohortPresence,
+  type IndicatorCohort,
+} from '../../../../main/utils/indicators/cohort'
+import {
+  computeIndicator,
+  type FieldDefinition,
+} from '../../../../main/utils/indicators/compute'
 
+// L'ancienne grille codée, rejouée par le moteur sur le jeu ARS_PRESET : mêmes attentes.
 const PERIODE = {
   from: new Date('2026-01-01'),
   to: new Date('2026-12-31'),
 }
 
-const presence = (p: Partial<ArsPresence> = {}): ArsPresence => ({
+const presence = (p: Partial<CohortPresence> = {}): CohortPresence => ({
   patientId: 'p1',
   date: new Date('2026-03-01'),
   type: 'ambulatory',
@@ -35,24 +40,64 @@ const presence = (p: Partial<ArsPresence> = {}): ArsPresence => ({
     p.status !== undefined ? p.status : p.honored === false ? 'no' : 'yes',
 })
 
-const dossier = (f: Partial<ArsFile> = {}): ArsFile => ({
+const dossier = ({
+  orientation,
+  ...f
+}: Partial<Omit<CohortFile, 'values'>> & {
+  orientation?: string
+} = {}): CohortFile => ({
   patientId: 'p1',
   entryDate: new Date('2026-02-01'),
   exitDate: null,
-  stopReason: null,
-  orientation: null,
+  values: orientation ? { orientation } : {},
   presences: [],
   ...f,
 })
 
-const cohorte = (files: ArsFile[]): ArsCohort => ({
+const cohorte = (files: CohortFile[]): IndicatorCohort => ({
   ...PERIODE,
   files,
   presences: files.flatMap((f) => f.presences),
 })
 
-const valeur = (cohort: ArsCohort, code: string): number | null => {
-  const found = computeArsIndicators(cohort).find((i) => i.code === code)
+const FIELDS: FieldDefinition[] = ETP_FIELD_PRESET.map((f) => ({
+  key: f.key,
+  label: f.label,
+  type: f.type,
+  archivedAt: null,
+  choices: f.choices.map((c, order) => ({
+    key: c.key,
+    label: c.label,
+    order,
+    archivedAt: null,
+  })),
+}))
+
+const grille = (cohort: IndicatorCohort) =>
+  ARS_PRESET.map((i) => ({
+    code: i.code,
+    group: i.group,
+    label: i.label,
+    note: i.note ?? null,
+    nature: i.nature,
+    input: i.input ?? null,
+    value: computeIndicator(
+      cohort,
+      {
+        nature: i.nature,
+        measure: i.measure ?? null,
+        options: i.options ?? null,
+        filters: i.filters ?? null,
+        breakdownField: i.breakdownField ?? null,
+        input: i.input ?? null,
+        note: i.note ?? null,
+      },
+      FIELDS,
+    ).value,
+  }))
+
+const valeur = (cohort: IndicatorCohort, code: string): number | null => {
+  const found = grille(cohort).find((i) => i.code === code)
   if (!found) {
     throw new Error(`indicateur ${code} absent de la table`)
   }
@@ -239,7 +284,7 @@ describe('groupe 2 — séances et mode de prise en charge', () => {
 
   // Review Focus 1 : une periode sans dossier rend 0 partout, jamais NaN ni null.
   it('rend 0 pour tous les indicateurs calcules sur une periode vide', () => {
-    for (const r of computeArsIndicators(cohorte([]))) {
+    for (const r of grille(cohorte([]))) {
       if (r.note === null) {
         expect(r.value).toBe(0)
       }
@@ -261,7 +306,7 @@ describe('groupe 2 — séances et mode de prise en charge', () => {
   })
 })
 
-const reactu = (p: Partial<ArsPresence> = {}) =>
+const reactu = (p: Partial<CohortPresence> = {}) =>
   presence({
     thematicName: 'Réactu 1',
     thematicRole: 'REACTUALISATION',
@@ -398,7 +443,7 @@ describe('groupe 4 — modalités', () => {
 
 describe('table complète', () => {
   it('rend une valeur nulle et une raison pour 2.3, 2.11, 3.5 et 4.4', () => {
-    const resultats = computeArsIndicators(cohorte([]))
+    const resultats = grille(cohorte([]))
     for (const code of ['2.3', '2.11', '3.5', '4.4']) {
       const i = resultats.find((r) => r.code === code)
       expect(i?.value).toBeNull()
@@ -407,7 +452,7 @@ describe('table complète', () => {
   })
 
   it('marque 2.5 et 4.2 comme a renseigner a la main', () => {
-    const resultats = computeArsIndicators(cohorte([]))
+    const resultats = grille(cohorte([]))
     for (const code of ['2.5', '4.2']) {
       const i = resultats.find((r) => r.code === code)
       expect(i?.value).toBeNull()
@@ -416,7 +461,7 @@ describe('table complète', () => {
   })
 
   it('rend les 30 indicateurs, dans l ordre des groupes', () => {
-    const resultats = computeArsIndicators(cohorte([]))
+    const resultats = grille(cohorte([]))
     expect(resultats).toHaveLength(30)
     expect(resultats.map((r) => r.group)).toEqual([
       ...Array(5).fill('Entrée'),
@@ -427,20 +472,20 @@ describe('table complète', () => {
   })
 })
 
-describe('kind, input et answer de chaque indicateur', () => {
-  it('kind distingue calcule, non disponible et a saisir', () => {
-    const resultats = computeArsIndicators(cohorte([]))
+describe('nature et input de chaque indicateur', () => {
+  it('nature distingue calcule, non disponible et a saisir', () => {
+    const resultats = grille(cohorte([]))
     const parCode = (code: string) => resultats.find((r) => r.code === code)
-    expect(parCode('1.1')?.kind).toBe('computed')
-    expect(parCode('2.3')?.kind).toBe('unavailable')
-    expect(parCode('2.5')?.kind).toBe('manual')
+    expect(parCode('1.1')?.nature).toBe('computed')
+    expect(parCode('2.3')?.nature).toBe('unavailable')
+    expect(parCode('2.5')?.nature).toBe('manual')
     expect(parCode('2.5')?.input).toBe('number+text')
-    expect(parCode('4.2')?.kind).toBe('manual')
+    expect(parCode('4.2')?.nature).toBe('manual')
     expect(parCode('4.2')?.input).toBe('yesno')
   })
 
   it('input vaut null hors des deux indicateurs manuels', () => {
-    const resultats = computeArsIndicators(cohorte([]))
+    const resultats = grille(cohorte([]))
     for (const r of resultats) {
       if (r.code !== '2.5' && r.code !== '4.2') {
         expect(r.input).toBeNull()
@@ -448,21 +493,21 @@ describe('kind, input et answer de chaque indicateur', () => {
     }
   })
 
-  it('answer vaut toujours null au calcul : la reponse manuelle arrive par un autre chemin', () => {
-    const resultats = computeArsIndicators(cohorte([]))
-    for (const r of resultats) {
-      expect(r.answer).toBeNull()
-    }
-  })
-
-  it('MANUAL_INPUTS porte exactement les deux memes entrees que la table', () => {
-    expect(MANUAL_INPUTS).toEqual({ '2.5': 'number+text', '4.2': 'yesno' })
+  it('les saisies sont exactement 2.5 et 4.2, avec leur type', () => {
+    expect(
+      Object.fromEntries(
+        ARS_PRESET.filter((i) => i.nature === 'manual').map((i) => [
+          i.code,
+          i.input,
+        ]),
+      ),
+    ).toEqual({ '2.5': 'number+text', '4.2': 'yesno' })
   })
 })
 
-describe('regression : codes, groupes, libelles et notes inchanges par kind/input/answer', () => {
+describe('regression : codes, groupes, libelles et notes inchanges', () => {
   it('rend exactement les 30 {code, group, label, note} attendus', () => {
-    const resultats = computeArsIndicators(cohorte([])).map((r) => ({
+    const resultats = grille(cohorte([])).map((r) => ({
       code: r.code,
       group: r.group,
       label: r.label,
@@ -791,7 +836,7 @@ describe('orientations : la BASE stocke la CLÉ, pas le libellé', () => {
     const source = readFileSync(
       join(
         __dirname,
-        '../../../../../front/src/constants/appointment.constant.ts',
+        '../../../../../../front/src/constants/appointment.constant.ts',
       ),
       'utf8',
     )
@@ -802,6 +847,6 @@ describe('orientations : la BASE stocke la CLÉ, pas le libellé', () => {
       throw new Error('APPOINTMENT_ACCOMPANYING introuvable')
     }
     const cles = [...bloc[1].matchAll(/^\s*([a-zA-Z_]+):/gm)].map((m) => m[1])
-    expect(cles).toContain(ARS_ACCOMPANYING_YES)
+    expect(cles).toContain(ACCOMPANYING_YES)
   })
 })
