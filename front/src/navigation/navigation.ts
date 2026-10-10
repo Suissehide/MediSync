@@ -147,6 +147,13 @@ export const NAVIGATION: Record<Scale, readonly NavItem[]> = {
       description: 'Champs des onglets Parcours et Sortie',
     },
     {
+      label: 'Indicateurs',
+      to: '/e/$establishmentId/s/$serviceId/indicateurs',
+      permission: 'stats:write',
+      group: 'Administration',
+      description: "Jeux d'indicateurs et réglages de l'Activité",
+    },
+    {
       label: "Journal d'activité",
       to: '/e/$establishmentId/s/$serviceId/activity-log',
       permission: 'service-journal:read',

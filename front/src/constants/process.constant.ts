@@ -238,6 +238,9 @@ export const PLANNING_CYCLE = {
 export const INDICATOR_SET = {
   LIST: 'get_indicator_sets',
   RESULTS: 'get_indicator_results',
+  CATALOG: 'get_indicator_catalog',
+  PREVIEW: 'preview_indicator',
+  ACTIVITY_SETTINGS: 'get_activity_settings',
 }
 
 export const ACTIVITY = {
