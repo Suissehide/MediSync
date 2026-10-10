@@ -28,6 +28,7 @@ const presence = (p: Partial<ArsPresence> = {}): ArsPresence => ({
   accompanied: false,
   pathwayId: null,
   pathwayLabel: null,
+  pathwayTemplateId: null,
   slotMinutes: 60,
   soignants: [],
   ...p,

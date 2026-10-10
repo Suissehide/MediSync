@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>body{margin:0;background:#04182b;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',system-ui,sans-serif}a{color:#2563eb}a:hover{color:#1147bb}button,input,textarea{font-family:inherit}</style>
+</helmet>
+<div style="min-height:100vh;display:flex;flex-direction:column;background:#04182b">
+  <div style="height:64px;flex-shrink:0;padding:0 16px;display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:1px solid #ffffff20;color:#cbd5e1">
+    <div style="display:flex;align-items:center;gap:16px;min-width:0">
+      <h2 style="margin:0;padding:0 8px;font-size:30px;font-weight:700;color:#cbd5e1;white-space:nowrap"><span style="color:#2563eb">Medi</span>Sync</h2>
+      <nav style="height:36px;display:flex;align-items:center;gap:2px;padding-left:8px;border-left:1px solid #ffffff20;min-width:0;overflow:hidden">
+        <span style="height:32px;display:flex;align-items:center;gap:8px;padding:0 8px;font-size:14px;font-weight:500;color:#94a3b8;white-space:nowrap"><span style="width:16px;height:16px;background-color:currentColor;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/building-2.svg) center/contain no-repeat"></span>Hôpital Nord</span>
+        <span style="width:16px;height:16px;flex-shrink:0;background-color:#64748b;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/chevron-right.svg) center/contain no-repeat"></span>
+        <span style="height:32px;display:flex;align-items:center;gap:6px;padding:0 8px;font-size:15px;font-weight:600;color:#ffffff;white-space:nowrap">Cardiologie<span style="width:14px;height:14px;background-color:#94a3b8;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/chevrons-up-down.svg) center/contain no-repeat"></span></span>
+      </nav>
+      <nav style="display:flex;align-items:center;gap:16px;padding-left:8px;flex-shrink:0">
+        <span style="font-size:16px;padding:6px 0 3px;color:#64748b;border-bottom:3px solid transparent">Dashboard</span>
+        <span style="font-size:16px;padding:6px 0 3px;color:#64748b;border-bottom:3px solid transparent">Agenda</span>
+        <span style="font-size:16px;padding:6px 0 3px;color:#64748b;border-bottom:3px solid transparent">Patients</span>
+        <span style="font-size:16px;padding:6px 0 3px;color:#64748b;border-bottom:3px solid transparent">Suivi</span>
+        <span style="font-size:16px;padding:6px 0 3px;color:#cbd5e1;border-bottom:3px solid #2563eb">Pilotage</span>
+      </nav>
+    </div>
+    <span style="flex-shrink:0;font-size:12px;padding:3px 10px;border-radius:999px;background:#ffffff14;color:#cbd5e1;white-space:nowrap">Coordinateur</span>
+  </div>
+
+  <div style="flex:1;padding:8px">
+    <div style="background:#f1f5f9;border-radius:12px;padding:20px 24px 40px;box-sizing:border-box">
+      <div style="max-width:1320px;margin:0 auto;display:flex;flex-direction:column;gap:16px">
+
+        <div style="display:flex;gap:2px;padding:3px;background:#e2e8f0;border-radius:8px;align-self:flex-start">
+          <span style="height:30px;padding:0 14px;border-radius:5px;display:flex;align-items:center;font-size:14px;color:#475569">Activité</span>
+          <span style="height:30px;padding:0 14px;border-radius:5px;display:flex;align-items:center;font-size:14px;font-weight:600;color:#04182b;background:#ffffff;box-shadow:0 1px 2px rgba(0,0,0,.08)">Indicateurs ARS</span>
+        </div>
+
+        <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px">
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <h1 style="margin:0;font-size:24px;font-weight:700;color:#04182b">Indicateurs ARS</h1>
+            <span style="font-size:13px;color:#64748b">Enquête annuelle ETP · chiffres agrégés, aucune donnée nominative.</span>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px">
+            <div style="display:flex;gap:2px;padding:3px;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px">
+              <sc-for list="{{ years }}" as="y" hint-placeholder-count="3"><button onClick="{{ y.onClick }}" style="cursor:pointer;height:30px;padding:0 12px;border:none;border-radius:5px;font-size:14px;background:{{ y.bg }};color:{{ y.fg }};font-weight:{{ y.fw }}">{{ y.label }}</button></sc-for>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:14px;color:#64748b">
+              du<span style="height:36px;display:flex;align-items:center;gap:8px;padding:0 10px;background:#ffffff;border:1px solid #e2e8f0;border-radius:6px;color:#04182b"><span style="width:15px;height:15px;background-color:#2563eb;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/calendar.svg) center/contain no-repeat"></span>01/01/{{ year }}</span>
+              au<span style="height:36px;display:flex;align-items:center;gap:8px;padding:0 10px;background:#ffffff;border:1px solid #e2e8f0;border-radius:6px;color:#04182b"><span style="width:15px;height:15px;background-color:#2563eb;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/calendar.svg) center/contain no-repeat"></span>31/12/{{ year }}</span>
+            </div>
+            <button style="cursor:pointer;height:36px;display:flex;align-items:center;gap:8px;padding:0 14px;background:#2563eb;border:none;border-radius:6px;font-size:14px;font-weight:600;color:#ffffff"><span style="width:16px;height:16px;background-color:currentColor;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/file-spreadsheet.svg) center/contain no-repeat"></span>Exporter en Excel</button>
+            <button style="cursor:pointer;height:36px;display:flex;align-items:center;gap:8px;padding:0 14px;background:#ffffff;border:1px solid #e2e8f0;border-radius:6px;font-size:14px;font-weight:600;color:#04182b"><span style="width:16px;height:16px;background-color:currentColor;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/download.svg) center/contain no-repeat"></span>CSV</button>
+          </div>
+        </div>
+
+        <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:16px 20px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px">
+          <div style="display:flex;flex-direction:column;gap:8px;flex:1;min-width:280px">
+            <div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:15px;font-weight:600;color:#04182b">Prêt pour l'enquête</span><span style="font-size:14px;color:#475569">{{ readyText }}</span></div>
+            <div style="display:flex;height:8px;border-radius:999px;overflow:hidden;background:#f1f5f9">
+              <span style="flex:{{ nAuto }};background:#16a34a"></span><span style="flex:{{ nManualDone }};background:#2563eb"></span><span style="flex:{{ nManualTodo }};background:#f59e0b"></span><span style="flex:{{ nNa }};background:#cbd5e1"></span>
+            </div>
+          </div>
+          <div style="display:flex;gap:4px;padding:3px;background:#f1f5f9;border-radius:8px">
+            <sc-for list="{{ filters }}" as="f" hint-placeholder-count="4">
+              <button onClick="{{ f.onClick }}" style="cursor:pointer;height:30px;display:flex;align-items:center;gap:8px;padding:0 12px;border:none;border-radius:5px;font-size:13px;white-space:nowrap;background:{{ f.bg }};color:{{ f.fg }};font-weight:{{ f.fw }};box-shadow:{{ f.sh }}"><span style="width:8px;height:8px;border-radius:50%;background:{{ f.dot }}"></span>{{ f.label }}<span style="font-variant-numeric:tabular-nums;color:#64748b">{{ f.n }}</span></button>
+            </sc-for>
+          </div>
+        </div>
+
+        <sc-for list="{{ groups }}" as="g" hint-placeholder-count="4">
+          <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:14px 20px;border-bottom:1px solid #e2e8f0">
+              <span style="display:flex;align-items:baseline;gap:10px"><span style="font-size:13px;font-weight:700;color:#64748b;font-variant-numeric:tabular-nums">{{ g.num }}</span><span style="font-size:16px;font-weight:600;color:#04182b">{{ g.name }}</span></span>
+              <span style="font-size:13px;color:#64748b">{{ g.count }}</span>
+            </div>
+            <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="5">
+              <div style="display:grid;grid-template-columns:76px minmax(0,1fr) auto;gap:16px;align-items:start;padding:{{ r.pad }};border-bottom:1px solid #f1f5f9;background:{{ r.bg }}">
+                <span style="font-size:13px;color:#64748b;font-variant-numeric:tabular-nums;padding-top:2px">{{ r.code }}</span>
+                <div style="display:flex;flex-direction:column;gap:4px;min-width:0;padding-left:{{ r.indent }};border-left:{{ r.treeLine }}">
+                  <span style="font-size:14px;line-height:1.45;color:{{ r.labelFg }};text-wrap:pretty">{{ r.label }}</span>
+                  <sc-if value="{{ r.isNa }}" hint-placeholder-val="{{ false }}">
+                    <span style="display:flex;align-items:flex-start;gap:6px;font-size:12px;line-height:1.4;color:#64748b"><span style="flex-shrink:0;margin-top:1px;width:13px;height:13px;background-color:currentColor;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/info.svg) center/contain no-repeat"></span>{{ r.note }}</span>
+                  </sc-if>
+                  <sc-if value="{{ r.isManual }}" hint-placeholder-val="{{ false }}">
+                    <span style="font-size:12px;color:#b45309">{{ r.note }}</span>
+                  </sc-if>
+                  <sc-if value="{{ r.isOther }}" hint-placeholder-val="{{ false }}">
+                    <textarea placeholder="Expliquer le type de prise en charge…" style="margin-top:4px;width:100%;max-width:560px;min-height:56px;box-sizing:border-box;padding:8px 10px;border:1px solid #e2e8f0;border-radius:5px;background:#f8fafc;font-size:13px;color:#04182b;resize:vertical"></textarea>
+                  </sc-if>
+                </div>
+                <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;min-width:150px">
+                  <sc-if value="{{ r.isAuto }}" hint-placeholder-val="{{ true }}">
+                    <sc-if value="{{ r.share }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#64748b;white-space:nowrap">{{ r.share }}</span></sc-if>
+                    <span style="font-size:{{ r.valSize }};font-weight:600;color:#04182b;font-variant-numeric:tabular-nums">{{ r.value }}</span>
+                    <button title="Copier la valeur" style="cursor:pointer;width:26px;height:26px;border:none;border-radius:5px;background:transparent;display:flex;align-items:center;justify-content:center" style-hover="background:#f1f5f9"><span style="width:14px;height:14px;background-color:#94a3b8;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/copy.svg) center/contain no-repeat"></span></button>
+                  </sc-if>
+                  <sc-if value="{{ r.isNa }}" hint-placeholder-val="{{ false }}">
+                    <span style="font-size:12px;padding:3px 8px;border-radius:999px;background:#f1f5f9;color:#64748b;white-space:nowrap">Non disponible</span>
+                  </sc-if>
+                  <sc-if value="{{ r.isNumInput }}" hint-placeholder-val="{{ false }}">
+                    <input type="text" inputmode="numeric" placeholder="À saisir" value="{{ r.inputVal }}" onChange="{{ r.onInput }}" style="width:96px;height:34px;box-sizing:border-box;padding:0 10px;border:1px solid {{ r.inputBd }};border-radius:5px;background:#ffffff;text-align:right;font-size:15px;font-weight:600;color:#04182b" />
+                  </sc-if>
+                  <sc-if value="{{ r.isYesNo }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex;gap:2px;padding:2px;border:1px solid {{ r.inputBd }};border-radius:6px;background:#f8fafc">
+                      <sc-for list="{{ r.yesNo }}" as="o" hint-placeholder-count="2"><button onClick="{{ o.onClick }}" style="cursor:pointer;height:28px;padding:0 12px;border:none;border-radius:4px;font-size:13px;background:{{ o.bg }};color:{{ o.fg }};font-weight:{{ o.fw }};box-shadow:{{ o.sh }}">{{ o.label }}</button></sc-for>
+                    </div>
+                  </sc-if>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+
+        <span style="font-size:12px;color:#64748b;text-align:center">Les valeurs saisies à la main sont reprises dans l'export Excel. Détail des patients, absences et séances dans <a href="#">Activité</a>.</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const SC = 'Aucune notion de soins de ville : le type de rendez-vous vaut ambulatoire, hôpital ou téléphonique';
+const IND = [
+  ['1.1', 'Entrée', "Nombre de patients ayant bénéficié d'un diagnostic éducatif", 560],
+  ['1.1bis', 'Entrée', "Dont nombre de patients ayant bénéficié d'un diagnostic éducatif en distanciel", 1],
+  ['1.2', 'Entrée', "Nombre de patients orientés par un professionnel de santé en dehors d'un hôpital (dont médecin traitant)", 11],
+  ['1.3', 'Entrée', "Nombre de patients orientés par un professionnel de santé au cours d'une hospitalisation", 481],
+  ['1.4', 'Entrée', "Nombre de patients orientés par un professionnel de santé à l'hôpital en consultation externe", 59],
+  ['2.1', 'Séances', "Nombre de patients pris en charge au cours d'une hospitalisation (de jour, de semaine, complète) en établissement de santé uniquement", 14],
+  ['2.2', 'Séances', "Nombre de patients pris en charge en soins externes d'un établissement de santé uniquement", 251],
+  ['2.3', 'Séances', 'Nombre de patients pris en charge en soins de ville uniquement (MSP, association, ex-réseau de PS libéraux…)', { na: SC }],
+  ['2.4', 'Séances', 'Nombre de patients pris en charge en programme mixte (hospitalisation + soins externes)', 7],
+  ['2.5', 'Séances', 'Autre type de prise en charge à chiffrer et à expliquer', { manual: "Champ libre de l'enquête, à renseigner à la main", kind: 'other' }],
+  ['2.6', 'Séances', "Nombre total de séances individuelles d'ETP réalisées", 1407],
+  ['2.6bis', 'Séances', "Dont nombre de séances individuelles d'ETP réalisées en distanciel", 901],
+  ['2.7', 'Séances', "Nombre total de séances collectives d'ETP réalisées", 95],
+  ['2.7bis', 'Séances', "Dont nombre de séances collectives d'ETP réalisées en distanciel", 0],
+  ['2.8', 'Séances', 'Nombre moyen de patients par séance collective', 3.7],
+  ['2.9', 'Séances', 'Nombre de proches et/ou aidants du patient ayant participé au programme', 38],
+  ['2.10', 'Séances', "Nombre total de séances d'ETP avec une participation de proches et/ou aidants du patient", 52],
+  ['2.11', 'Séances', 'Nombre total de séances destinées exclusivement aux proches et/ou aidants du patient', { na: 'Un rendez-vous est toujours rattaché à des patients : une séance sans patient ne se représente pas' }],
+  ['3.1', 'Sortie', 'Nombre de patients ayant suivi un programme personnalisé complet (quel que soit le mode de prise en charge)', 2],
+  ['3.2', 'Sortie', "Nombre de patients ayant suivi un programme personnalisé complet (au cours d'une hospitalisation complète ou de jour)", 0],
+  ['3.3', 'Sortie', "Nombre de patients ayant suivi un programme personnalisé complet (au cours d'une venue en soins externes)", 2],
+  ['3.4', 'Sortie', 'Nombre de patients ayant suivi un programme personnalisé complet (au cours d\u2019une venue mixte)', 0],
+  ['3.5', 'Sortie', "Nombre de patients ayant suivi un programme personnalisé complet (au cours de séances d'ETP pratiquées en soins de ville)", { na: SC }],
+  ['3.6', 'Sortie', "Nombre de patients ayant bénéficié d'une évaluation individuelle des compétences acquises de l'ETP", 2],
+  ['4.1', 'Modalités', "Nombre de patients ayant bénéficié d'un programme personnalisé lors d'une offre initiale d'ETP", 412],
+  ['4.1bis', 'Modalités', 'Dont nombre de patients ayant terminé par une réactualisation (Réactu 1 à 4)', 1],
+  ['4.2', 'Modalités', 'Une offre de suivi ou de renforcement dans un nouveau programme est-elle proposée au sein de la structure ?', { manual: 'Question oui/non sur la structure, à renseigner à la main', kind: 'yesno' }],
+  ['4.3', 'Modalités', "Nombre de patients ayant bénéficié d'un programme personnalisé lors d'une offre de suivi ou de renforcement d'ETP commençant par une réactualisation", 3],
+  ['4.3bis', 'Modalités', 'Dont nombre de patients ayant également terminé par une réactualisation (Réactu 1 à 4)', 0],
+  ['4.4', 'Modalités', "Nombre de patients dont la synthèse de l'évaluation des compétences acquises a été transmise au moins à leur médecin traitant", { na: 'Aucun modèle ne trace cet envoi (relève du ticket « Envoi du bilan par MSSanté »)' }],
+];
+const GROUPS = ['Entrée', 'Séances', 'Sortie', 'Modalités'];
+const fr = v => String(v).replace('.', ',');
+const status = (v, m) => typeof v === 'number' ? 'auto' : v.na ? 'na' : (v.kind === 'yesno' ? m[v.kind] : m.other) ? 'done' : 'todo';
+class Component extends DCLogic {
+  state = { year: 2026, filter: 'all', manual: { other: '', yesno: null } };
+  renderVals() {
+    const { year, filter, manual } = this.state;
+    const st = IND.map(([code, , , v]) => status(v, manual));
+    const cnt = k => st.filter(s => s === k).length;
+    const nAuto = cnt('auto'), nDone = cnt('done'), nTodo = cnt('todo'), nNa = cnt('na');
+    const parentOf = {};
+    IND.forEach(([code, , , v]) => { if (!code.endsWith('bis')) parentOf[code] = v; });
+    const show = s => filter === 'all' || (filter === 'todo' && (s === 'todo' || s === 'done')) || filter === s;
+    const seg = a => ({ bg: a ? '#ffffff' : 'transparent', fg: a ? '#04182b' : '#475569', fw: a ? 600 : 400, sh: a ? '0 1px 2px rgba(0,0,0,.08)' : 'none' });
+    const setM = (k, val) => this.setState(s => ({ manual: { ...s.manual, [k]: val } }));
+    return {
+      year,
+      years: [2026, 2025, 2024].map(y => ({ label: String(y), onClick: () => this.setState({ year: y }),
+        bg: y === year ? '#04182b' : 'transparent', fg: y === year ? '#ffffff' : '#334155', fw: y === year ? 600 : 400 })),
+      nAuto, nManualDone: nDone, nManualTodo: nTodo, nNa,
+      readyText: `${nAuto} calculés · ${nDone + nTodo} à saisir${nTodo ? ` (${nTodo} restant${nTodo > 1 ? 's' : ''})` : ' (complets)'} · ${nNa} non disponibles`,
+      filters: [['all', 'Tous', IND.length, '#94a3b8'], ['auto', 'Calculés', nAuto, '#16a34a'], ['todo', 'À saisir', nDone + nTodo, '#f59e0b'], ['na', 'Non disponibles', nNa, '#cbd5e1']]
+        .map(([k, label, n, dot]) => ({ label, n, dot, onClick: () => this.setState({ filter: k }), ...seg(k === filter) })),
+      groups: GROUPS.map((name, gi) => {
+        const items = IND.map((it, i) => [it, st[i]]).filter(([it]) => it[1] === name);
+        const rows = items.filter(([, s]) => show(s)).map(([[code, , label, v], s]) => {
+          const bis = code.endsWith('bis');
+          const parent = parentOf[code.replace('bis', '')];
+          const share = bis && typeof v === 'number' && typeof parent === 'number' && parent > 0 ? `${Math.round(v / parent * 100)} % du ${code.replace('bis', '')}` : '';
+          const isManual = s === 'todo' || s === 'done';
+          return { code, label, note: v.na || v.manual || '', share,
+            isAuto: s === 'auto', isNa: s === 'na', isManual, isOther: v.kind === 'other', isNumInput: v.kind === 'other', isYesNo: v.kind === 'yesno',
+            value: typeof v === 'number' ? fr(v) : '', valSize: bis ? '15px' : '17px',
+            labelFg: s === 'na' ? '#64748b' : '#04182b',
+            indent: bis ? '14px' : '0', treeLine: bis ? '2px solid #e2e8f0' : 'none',
+            pad: bis ? '8px 20px 12px' : '12px 20px', bg: isManual && s === 'todo' ? '#fffbeb' : '#ffffff',
+            inputBd: s === 'todo' ? '#f59e0b' : '#e2e8f0', inputVal: manual.other,
+            onInput: e => setM('other', e.target.value),
+            yesNo: ['Oui', 'Non'].map(o => ({ label: o, onClick: () => setM('yesno', o), ...seg(manual.yesno === o) })) };
+        });
+        const na = items.filter(([, s]) => s === 'na').length, todo = items.filter(([, s]) => s === 'todo').length;
+        return { name, num: gi + 1, rows,
+          count: [`${items.length} indicateurs`, todo ? `${todo} à saisir` : '', na ? `${na} non disponible${na > 1 ? 's' : ''}` : ''].filter(Boolean).join(' · ') };
+      }).filter(g => g.rows.length),
+    };
+  }
+}
+</script>
+</body>
+</html>

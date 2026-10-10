@@ -9,6 +9,7 @@ const rapport: ActivityReport = {
   from: '2026-01-01',
   to: '2026-12-31',
   patients: { active: 148, newlyIncluded: 57, exited: 42 },
+  monthly: [],
   completion: {
     completed: 31,
     exited: 42,
@@ -20,6 +21,7 @@ const rapport: ActivityReport = {
     overall: { absent: 12, pointed: 100, rate: 0.12 },
     worst: { thematic: 'Coaching; PRM', weekday: 1 },
     weekdays: [1],
+    byWeekday: Array.from({ length: 7 }, () => vide),
     byThematic: [
       {
         thematic: 'Coaching; PRM',
@@ -69,6 +71,20 @@ describe('activityCsv', () => {
     expect(activityCsv(rapport, '=Cardio')).toContain("Service;'=Cardio;;")
   })
 
+  it('ecrit tous les parcours quand aucun filtre n est applique', () => {
+    const csv = activityCsv(rapport, 'Cardio')
+    const lignes = csv.split('\r\n')
+    const indexPeriode = lignes.findIndex((l) => l.startsWith('Période;'))
+    expect(lignes[indexPeriode + 1]).toBe('Parcours;Tous les parcours;;')
+  })
+
+  it('ecrit le nom du parcours filtre juste apres la periode', () => {
+    const csv = activityCsv(rapport, 'Cardio', 'Insuffisance cardiaque')
+    const lignes = csv.split('\r\n')
+    const indexPeriode = lignes.findIndex((l) => l.startsWith('Période;'))
+    expect(lignes[indexPeriode + 1]).toBe('Parcours;Insuffisance cardiaque;;')
+  })
+
   it('ecrit les motifs par leur libelle et les nombres decimaux a la francaise', () => {
     const csv = activityCsv(rapport, 'Cardio')
     expect(csv).toContain("Motifs d'arrêt;Perdu de vue;5;")
@@ -87,6 +103,32 @@ describe('activityCsv', () => {
   it('arrondit les heures a une decimale, comme l ecran', () => {
     expect(heures(50 / 60)).toBe('0,8')
     expect(activityCsv(rapport, 'Cardio')).toContain('Heures soignant;AS;0,8;')
+  })
+
+  it('ecrit une ligne par mois, apres les absences par parcours', () => {
+    const avecMois: ActivityReport = {
+      ...rapport,
+      monthly: [{ month: '2026-10', newlyIncluded: 12, exited: 9, active: 40 }],
+    }
+    expect(activityCsv(avecMois, 'Cardio')).toContain(
+      'Entrées et sorties par mois;2026-10;12 inclus, 9 sortis, 40 en file active;',
+    )
+  })
+
+  it('ecrit une ligne toutes thematiques par jour pointe', () => {
+    const avecJours: ActivityReport = {
+      ...rapport,
+      absences: {
+        ...rapport.absences,
+        byWeekday: [
+          { absent: 30, pointed: 136, rate: 30 / 136 },
+          ...Array.from({ length: 6 }, () => vide),
+        ],
+      },
+    }
+    const csv = activityCsv(avecJours, 'Cardio')
+    expect(csv).toContain('Absences toutes thématiques;lundi;22 %;30 sur 136')
+    expect(csv).not.toContain('Absences toutes thématiques;mardi')
   })
 
   it('neutralise un libelle qui ressemble a une formule tableur', () => {

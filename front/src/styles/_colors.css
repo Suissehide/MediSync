@@ -43,6 +43,16 @@
 
   --destructive: #ef4444;
   --destructive-foreground: #b21d1d;
+
+  /* Pilotage : tons des statuts de parcours, de la bascule Definitions et des cartes. */
+  --termine: #16a34a;
+  --abandon: #d97706;
+  --autres-sortis: #cbd5e1;
+  --sortis: #94a3b8;
+  --collectives: #93c5fd;
+  --segment-actif: #04182b;
+  --surface-douce: #f8fafc;
+  --carte: #ffffff;
 }
 
 @layer base {
@@ -80,5 +90,14 @@
 
     --destructive: #dc2626;
     --destructive-foreground: #b21d1d;
+
+    --termine: #4ade80;
+    --abandon: #fbbf24;
+    --autres-sortis: #94a3b8;
+    --sortis: #64748b;
+    --collectives: #60a5fa;
+    --segment-actif: #1e3a8a;
+    --surface-douce: #1e293b;
+    --carte: #1e293b;
   }
 }

@@ -28,6 +28,7 @@ export type ArsPresence = {
   status: PresenceStatus
   pathwayId: string | null
   pathwayLabel: string | null
+  pathwayTemplateId: string | null
   slotMinutes: number
   soignants: string[]
 }
