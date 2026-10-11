@@ -9,6 +9,8 @@ export type ServiceCreateEntityRepo = {
 export type ServiceUpdateEntityRepo = {
   name?: string
   deactivatedAt?: Date | null
+  stopReasonFieldKey?: string | null
+  completedChoiceKey?: string | null
 }
 
 export interface ServiceRepositoryInterface {

@@ -1,9 +1,9 @@
 import type { ActivityReport } from '../../utils/activity-indicators'
-import type { ArsRange } from './arsIndicator.domain.interface'
+import type { DateRange } from '../../utils/indicators/cohort'
 
 export interface ActivityReportDomainInterface {
   report: (
-    range: ArsRange,
+    range: DateRange,
     pathwayTemplateId?: string,
   ) => Promise<ActivityReport>
 }

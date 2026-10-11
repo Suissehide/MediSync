@@ -35,6 +35,10 @@ export type NavItem = {
   // Ecrans d'objet ouverts depuis cet onglet quand un prefixe ne convient pas (celui de
   // `/super-admin` couvrirait aussi Comptes et Journaux).
   activeAlso?: readonly RoutePath[]
+  // Entree deplie par la barre en une entree par jeu d'indicateurs actif du service, a son nom.
+  parJeu?: boolean
+  // Parametres propres a l'entree, en plus de ceux de l'echelle (le jeu d'une entree depliee).
+  params?: { setId: string }
 }
 
 // Groupes affiches en menu deroulant plutot qu'en onglets : l'administration du service tient sept
@@ -83,11 +87,11 @@ export const NAVIGATION: Record<Scale, readonly NavItem[]> = {
       description: 'Patients, sorties, absences et séances du service',
     },
     {
-      label: 'Indicateurs ARS',
-      to: '/e/$establishmentId/s/$serviceId/indicateurs-ars',
+      label: "Jeux d'indicateurs",
+      to: '/e/$establishmentId/s/$serviceId/indicateurs/$setId',
       permission: 'stats:read',
       group: 'Pilotage',
-      description: "Grille de l'enquête annuelle ETP",
+      parJeu: true,
     },
     {
       label: 'Planning',
@@ -141,6 +145,13 @@ export const NAVIGATION: Record<Scale, readonly NavItem[]> = {
       permission: 'referentials:write',
       group: 'Administration',
       description: 'Champs des onglets Parcours et Sortie',
+    },
+    {
+      label: 'Indicateurs',
+      to: '/e/$establishmentId/s/$serviceId/indicateurs',
+      permission: 'stats:write',
+      group: 'Administration',
+      description: "Jeux d'indicateurs et réglages de l'Activité",
     },
     {
       label: "Journal d'activité",
@@ -203,6 +214,8 @@ export const HORS_ONGLETS: Readonly<Partial<Record<RoutePath, string>>> = {
     'Consultations du dossier, bouton de la fiche patient',
   '/super-admin/$establishmentId':
     "fiche d'établissement, depuis la liste Établissements",
+  '/e/$establishmentId/s/$serviceId/indicateurs-ars':
+    'ancienne adresse de la grille ARS, redirige vers son jeu',
 }
 
 export type CurrentScale =

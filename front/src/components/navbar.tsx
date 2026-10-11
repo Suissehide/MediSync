@@ -10,6 +10,7 @@ import {
   TAB_MENU_GROUPS,
   useCurrentScale,
 } from '../navigation/navigation.ts'
+import { useIndicatorSetsQuery } from '../queries/useIndicatorSet.ts'
 import { useAuthStore } from '../store/useAuthStore.ts'
 import { serviceDeRetour } from '../utils/tenant-context.ts'
 import { FilAriane } from './custom/filAriane.tsx'
@@ -36,6 +37,9 @@ interface NavbarProps {
 const TAB_CLASS = `relative cursor-pointer transition-colors duration-300
   after:content-[''] after:absolute after:left-0 after:top-full after:w-full after:h-[3px] after:bg-primary after:scale-x-0 after:origin-right after:transition-transform after:duration-300
   hover:after:scale-x-100 hover:after:origin-left`
+
+// Les entrees depliees d'un meme modele partagent `to` : le jeu les distingue.
+export const cle = (item: NavItem) => `${item.to}${item.params?.setId ?? ''}`
 
 // L'administration du service : un bouton a droite de la barre, hors des onglets du quotidien.
 // Ses ecrans sont des SOUS-CATEGORIES, alignees sur le titre du menu (pas de decalage).
@@ -70,10 +74,10 @@ function MenuAdministration({
         </p>
         <PopoverSubGroup className="ml-0">
           {items.map((item) => (
-            <PopoverClose asChild key={item.to}>
+            <PopoverClose asChild key={cle(item)}>
               <Link
                 to={item.to}
-                params={params as never}
+                params={{ ...params, ...item.params }}
                 className="flex flex-col gap-0.5 rounded-md px-3 py-2 hover:bg-primary/10 focus-visible:bg-primary/10 outline-none"
                 activeProps={{
                   'aria-current': 'page',
@@ -123,10 +127,10 @@ function MenuOnglet({
       </PopoverTrigger>
       <PopoverContent align="start" sideOffset={10} className="w-72 p-2">
         {items.map((item) => (
-          <PopoverClose asChild key={item.to}>
+          <PopoverClose asChild key={cle(item)}>
             <Link
               to={item.to}
-              params={params as never}
+              params={{ ...params, ...item.params }}
               className="flex flex-col gap-0.5 rounded-md px-3 py-2 hover:bg-primary/10 focus-visible:bg-primary/10 outline-none"
               activeProps={{
                 'aria-current': 'page',
@@ -177,7 +181,22 @@ export function useOnglets() {
       ? user?.isSuperAdmin === true
       : item.permission === undefined || can(context, item.permission)
 
-  const visibles = courant ? NAVIGATION[courant.scale].filter(visible) : []
+  // Meme garde de ROUTE que le panneau des taches (voir `sousLayoutDeService`) : hors service, aucune requete.
+  const { sets } = useIndicatorSetsQuery(
+    courant?.scale === 'service' && can(context, 'stats:read'),
+  )
+  const deplier = (item: NavItem): NavItem[] =>
+    item.parJeu
+      ? (sets ?? []).map((set) => ({
+          ...item,
+          label: set.name,
+          params: { setId: set.id },
+        }))
+      : [item]
+
+  const visibles = courant
+    ? NAVIGATION[courant.scale].filter(visible).flatMap(deplier)
+    : []
   const administration = visibles.filter((item) => MENU_GROUPS.has(item.group))
   // Groupes consecutifs de la table, dans l'ordre : un separateur entre deux groupes.
   const groupes: { nom: string; items: NavItem[] }[] = []
@@ -196,7 +215,7 @@ export function useOnglets() {
   const estActif = (item: NavItem) =>
     !!matchRoute({
       to: item.to,
-      params: params as never,
+      params: { ...params, ...item.params },
       fuzzy: item.matchPrefix ?? false,
     }) || (item.activeAlso ?? []).some((to) => to === feuille)
 
@@ -310,9 +329,9 @@ function Navbar({ toggleSidebar }: NavbarProps) {
                 ) : (
                   groupe.items.map((item) => (
                     <Link
-                      key={item.to}
+                      key={cle(item)}
                       to={item.to}
-                      params={params as never}
+                      params={{ ...params, ...item.params }}
                       // Sans `exact`, le Link s'estime actif par prefixe et pose lui-meme
                       // `aria-current` : `estActif` en decide seul.
                       activeOptions={{ exact: true }}

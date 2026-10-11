@@ -5,6 +5,7 @@ import type { Service } from '../src/generated/client'
 import { PrismaClient } from '../src/generated/client'
 import type { PatientData } from './seed/data/patient'
 import { PATIENTS_CARDIOLOGIE, PATIENTS_PNEUMOLOGIE } from './seed/data/patient'
+import { seedArsIndicatorSet } from './seed/indicators'
 import seedLocations from './seed/location'
 import seedPathwayTemplates from './seed/pathwayTemplate'
 import seedPatients, { seedEtpFields } from './seed/patient'
@@ -73,6 +74,7 @@ async function seedService(
   const locations = await seedLocations(prisma, tenant)
   const thematics = await seedThematics(prisma, soignants, tenant)
   await seedEtpFields(prisma, tenant)
+  await seedArsIndicatorSet(prisma, tenant)
   await seedPatients(prisma, tenant, content.patients)
   await seedPathwayTemplates(prisma, soignants, locations, thematics, tenant)
   await seedTodos(prisma, tenant, content.todos)

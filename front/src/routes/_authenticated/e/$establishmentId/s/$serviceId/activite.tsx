@@ -180,7 +180,7 @@ function Rapport({
       <CarteAbsences r={r} />
 
       <div className="grid gap-3 items-start grid-cols-[repeat(auto-fit,minmax(min(100%,460px),1fr))]">
-        <Motifs r={r} />
+        {r.completion && <Motifs completion={r.completion} />}
         <Seances r={r} definitions={definitions} />
       </div>
 

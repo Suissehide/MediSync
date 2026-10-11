@@ -12,6 +12,7 @@ import { resolveTenantContext } from '@/utils/tenant-context.ts'
 const SETTINGS_PERMISSIONS: Permission[] = [
   'planning:write',
   'referentials:write',
+  'stats:write',
 ]
 
 export const Route = createFileRoute(

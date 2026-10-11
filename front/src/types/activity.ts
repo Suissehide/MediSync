@@ -21,8 +21,8 @@ export type ActivityReport = {
     exited: number
     rate: number | null
     dropouts: number
-    dropoutReasons: { reason: string; count: number }[]
-  }
+    dropoutReasons: { reason: string; label: string; count: number }[]
+  } | null
   absences: {
     overall: AbsenceCell
     worst: { thematic: string; weekday: number } | null

@@ -290,6 +290,11 @@ Fragment rather than the real element (React: "Invalid prop `className` supplied
 - A new field type needs an entry in `front/src/constants/serviceFieldTypes.tsx` matching the one in `back/src/main/utils/service-field-types.ts` — one without the other breaks the pair.
 - The patient list (`routes/.../patient/index.tsx`) mounts `ReactTable` only once the service fields have loaded — columns/filters persistence depends on the fields being known at mount, not patched in afterwards.
 
+## Jeux d'indicateurs configurables (`docs/indicateurs-configurables/`)
+
+- Le menu Pilotage liste une entrée par jeu d'indicateurs **actif** du service (`navigation.ts`, `parJeu: true` déplié par `useIndicatorSetsQuery`, qui filtre déjà les jeux archivés) — pas une entrée fixe « Grille ARS ».
+- Les écrans de configuration affichent « Supprimer » sur un jeu ou un indicateur, mais l'API ne fait qu'archiver (`archived: true`) ; rien ne les efface réellement.
+
 ## Testing
 
 Vitest + Testing Library, `jsdom` environment.
