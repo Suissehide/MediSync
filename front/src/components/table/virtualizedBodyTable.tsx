@@ -102,6 +102,10 @@ export function VirtualizedBodyTable<TData>({
     ? virtualRows.map((virtualRow) => rows[virtualRow.index])
     : rows
   const hauteurLibre = autoRowHeight || !virtualize
+  // Hauteur libre : seules les lignes à plusieurs lignes de contenu s'alignent en haut.
+  const alignement = autoRowHeight
+    ? '[tr:has([data-multiligne])>&]:align-top'
+    : hauteurLibre && 'align-top'
   const paddingTop =
     virtualize && virtualRows.length > 0 ? virtualRows[0].start : 0
   const paddingBottom =
@@ -224,7 +228,7 @@ export function VirtualizedBodyTable<TData>({
                   colSpan={span}
                   className={cn(
                     'px-4 py-2 text-sm border-b border-border',
-                    hauteurLibre && 'align-top',
+                    alignement,
                     // Largeur figee : ce qui depasse est coupe, pas etale sur la colonne suivante.
                     fixedLayout && 'overflow-hidden',
                     isChild && !isLastChild && 'border-b-[#eef2f6]',

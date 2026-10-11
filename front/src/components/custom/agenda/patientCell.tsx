@@ -104,7 +104,10 @@ export default function PatientCell({ row, onAddPatient }: PatientCellProps) {
   const visible = expanded ? patients : patients.slice(0, MAX_VISIBLE_PATIENTS)
 
   return (
-    <div className="flex items-start gap-1">
+    <div
+      className="flex items-start gap-1"
+      data-multiligne={patients.length > 1 || undefined}
+    >
       <div className="flex flex-col items-start gap-1">
         {visible.map((appointmentPatient) => (
           <Tronque
