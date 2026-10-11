@@ -1,19 +1,26 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import {
-  Check,
-  ChevronDown,
-  ChevronUp,
-  Pencil,
-  Plus,
-  Trash,
-  Undo2,
-  X,
-} from 'lucide-react'
-import { useRef, useState } from 'react'
+import { Check, Lock, Pencil, Plus, Trash2, X } from 'lucide-react'
+import { useState } from 'react'
 
 import { ConfirmDeleteForm } from '@/components/custom/popup/confirmDeleteForm.tsx'
 import ServiceFieldForm from '@/components/custom/popup/serviceFieldForm.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
+import {
+  ActionSeparator,
+  IconButton,
+  MoveButtons,
+  RestoreButton,
+} from '@/components/settings/iconButton.tsx'
+import {
+  CardFooterButton,
+  SettingsCard,
+  SettingsRow,
+} from '@/components/settings/settingsCard.tsx'
+import {
+  DeletedBanner,
+  SettingsPageHeader,
+} from '@/components/settings/settingsPageHeader.tsx'
+import { Tag } from '@/components/settings/tag.tsx'
 import { Button } from '@/components/ui/button.tsx'
 import { Input } from '@/components/ui/input.tsx'
 import { Label } from '@/components/ui/label.tsx'
@@ -26,9 +33,12 @@ import {
   PopupTitle,
   PopupTrigger,
 } from '@/components/ui/popup.tsx'
-import { Switch } from '@/components/ui/switch.tsx'
-import { SERVICE_FIELD_TYPE_LABELS } from '@/constants/serviceFieldTypes.tsx'
+import {
+  SERVICE_FIELD_TYPE_ICONS,
+  SERVICE_FIELD_TYPE_LABELS,
+} from '@/constants/serviceFieldTypes.tsx'
 import { can, useCan } from '@/hooks/useCan.ts'
+import { cn } from '@/libs/utils.ts'
 import {
   useServiceFieldCategoriesQuery,
   useServiceFieldMutations,
@@ -123,15 +133,8 @@ function AjouterCategorie() {
   )
 }
 
-interface CategoryHeaderProps {
+interface CategoryActionsProps {
   category: ServiceFieldCategory
-  canManage: boolean
-  isEditing: boolean
-  editValue: string
-  onEditValueChange: (value: string) => void
-  onStartEdit: () => void
-  onCommitEdit: () => void
-  onCancelEdit: () => void
   canMoveUp: boolean
   canMoveDown: boolean
   isReorderPending: boolean
@@ -143,16 +146,8 @@ interface CategoryHeaderProps {
   onRestore: () => void
 }
 
-// En-tête d'un bloc catégorie, séparé pour garder la complexité de la liste de blocs sous le seuil Biome.
-function CategoryHeader({
+function CategoryActions({
   category,
-  canManage,
-  isEditing,
-  editValue,
-  onEditValueChange,
-  onStartEdit,
-  onCommitEdit,
-  onCancelEdit,
   canMoveUp,
   canMoveDown,
   isReorderPending,
@@ -162,110 +157,48 @@ function CategoryHeader({
   isCategoryMutationPending,
   onDelete,
   onRestore,
-}: CategoryHeaderProps) {
+}: CategoryActionsProps) {
+  if (category.archived) {
+    return category.dateField === null ? (
+      <RestoreButton
+        aria-label="Restaurer la catégorie"
+        disabled={isCategoryMutationPending}
+        onClick={onRestore}
+      />
+    ) : null
+  }
   return (
-    <div className="flex justify-between items-center gap-2">
-      <div className="flex-1 min-w-0">
-        {isEditing ? (
-          <Input
-            autoFocus
-            aria-label="Libellé de la catégorie"
-            value={editValue}
-            onChange={(e) => onEditValueChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault()
-                e.currentTarget.blur()
-              } else if (e.key === 'Escape') {
-                onCancelEdit()
-              }
-            }}
-            onBlur={onCommitEdit}
-            className="h-8 max-w-xs font-semibold text-foreground"
-          />
-        ) : (
-          <h2
-            data-testid="categorie-titre"
-            className={`text-base font-semibold text-foreground ${
-              canManage ? 'cursor-pointer' : ''
-            }`}
-            tabIndex={canManage ? 0 : undefined}
-            onClick={() => canManage && onStartEdit()}
-            onKeyDown={(e) => {
-              if (canManage && (e.key === 'Enter' || e.key === ' ')) {
-                e.preventDefault()
-                onStartEdit()
-              }
-            }}
+    <>
+      <MoveButtons
+        upLabel="Monter la catégorie"
+        downLabel="Descendre la catégorie"
+        upDisabled={!canMoveUp || isReorderPending}
+        downDisabled={!canMoveDown || isReorderPending}
+        onUp={onMoveUp}
+        onDown={onMoveDown}
+      />
+      {category.dateField === null && (
+        <>
+          <ActionSeparator />
+          <span
+            title={
+              hasActiveFields
+                ? "Déplacez ou supprimez d'abord ses champs"
+                : undefined
+            }
           >
-            {category.label}
-          </h2>
-        )}
-      </div>
-
-      <div className="flex items-center gap-2">
-        {canManage && !category.archived && (
-          <>
-            <Button
-              variant="outline"
-              size="icon-sm"
-              aria-label="Monter la catégorie"
-              disabled={!canMoveUp || isReorderPending}
-              onClick={onMoveUp}
+            <IconButton
+              danger
+              label="Supprimer la catégorie"
+              disabled={hasActiveFields || isCategoryMutationPending}
+              onClick={onDelete}
             >
-              <ChevronUp className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon-sm"
-              aria-label="Descendre la catégorie"
-              disabled={!canMoveDown || isReorderPending}
-              onClick={onMoveDown}
-            >
-              <ChevronDown className="w-4 h-4" />
-            </Button>
-          </>
-        )}
-
-        {canManage && !category.archived && (
-          <ServiceFieldForm categoryId={category.id} />
-        )}
-
-        {canManage &&
-          category.dateField === null &&
-          (category.archived ? (
-            <Button
-              variant="outline"
-              size="sm"
-              aria-label="Restaurer la catégorie"
-              disabled={isCategoryMutationPending}
-              onClick={onRestore}
-            >
-              <Undo2 className="w-4 h-4" />
-              Restaurer
-            </Button>
-          ) : (
-            <span
-              title={
-                hasActiveFields
-                  ? "Déplacez ou supprimez d'abord ses champs"
-                  : undefined
-              }
-            >
-              <Button
-                variant="outline"
-                size="sm"
-                aria-label="Supprimer la catégorie"
-                disabled={hasActiveFields || isCategoryMutationPending}
-                onClick={onDelete}
-              >
-                <Trash className="w-4 h-4" />
-                Supprimer
-              </Button>
-            </span>
-          ))}
-      </div>
-    </div>
+              <Trash2 className="w-4 h-4" />
+            </IconButton>
+          </span>
+        </>
+      )}
+    </>
   )
 }
 
@@ -284,12 +217,10 @@ interface FieldRowProps {
   onRestore: () => void
 }
 
-// Une ligne de champ dans un bloc catégorie.
-function FieldRow({
+function FieldRowActions({
   field,
   categoryId,
   categoryArchived,
-  canManage,
   canMoveUp,
   canMoveDown,
   isReorderPending,
@@ -298,85 +229,78 @@ function FieldRow({
   isUpdatePending,
   onDelete,
   onRestore,
-}: FieldRowProps) {
-  return (
-    <li className="flex items-center gap-2 border border-border rounded px-3 py-2">
-      <div className="flex-1 min-w-0">
-        <span className="font-medium text-foreground">{field.label}</span>
-        <span className="text-text-light">
-          {' '}
-          — {SERVICE_FIELD_TYPE_LABELS[field.type]}
-        </span>
-        {field.clinical && (
-          <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-primary/10 text-primary">
-            Clinique
+}: Omit<FieldRowProps, 'canManage'>) {
+  const modifier = (
+    <ServiceFieldForm
+      categoryId={categoryId}
+      field={field}
+      trigger={
+        <IconButton label="Modifier">
+          <Pencil className="w-4 h-4 text-text-dark" />
+        </IconButton>
+      }
+    />
+  )
+  if (field.archived) {
+    return (
+      <>
+        {modifier}
+        {categoryArchived ? (
+          <span title="Restaurez d'abord sa catégorie">
+            <RestoreButton disabled />
           </span>
-        )}
-      </div>
-
-      {canManage && !field.archived && (
-        <>
-          <Button
-            variant="outline"
-            size="icon-sm"
-            aria-label="Monter"
-            disabled={!canMoveUp || isReorderPending}
-            onClick={onMoveUp}
-          >
-            <ChevronUp className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon-sm"
-            aria-label="Descendre"
-            disabled={!canMoveDown || isReorderPending}
-            onClick={onMoveDown}
-          >
-            <ChevronDown className="w-4 h-4" />
-          </Button>
-        </>
-      )}
-
-      {canManage && (
-        <ServiceFieldForm
-          categoryId={categoryId}
-          field={field}
-          trigger={
-            <Button variant="outline" size="sm">
-              <Pencil className="w-4 h-4" />
-              Modifier
-            </Button>
-          }
-        />
-      )}
-
-      {canManage &&
-        (field.archived ? (
-          categoryArchived ? (
-            <span title="Restaurez d'abord sa catégorie">
-              <Button variant="outline" size="sm" disabled>
-                <Undo2 className="w-4 h-4" />
-                Restaurer
-              </Button>
-            </span>
-          ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={isUpdatePending}
-              onClick={onRestore}
-            >
-              <Undo2 className="w-4 h-4" />
-              Restaurer
-            </Button>
-          )
         ) : (
-          <Button variant="outline" size="sm" onClick={onDelete}>
-            <Trash className="w-4 h-4" />
-            Supprimer
-          </Button>
-        ))}
-    </li>
+          <RestoreButton disabled={isUpdatePending} onClick={onRestore} />
+        )}
+      </>
+    )
+  }
+  return (
+    <>
+      <MoveButtons
+        upDisabled={!canMoveUp || isReorderPending}
+        downDisabled={!canMoveDown || isReorderPending}
+        onUp={onMoveUp}
+        onDown={onMoveDown}
+      />
+      <ActionSeparator />
+      {modifier}
+      <IconButton danger label="Supprimer" onClick={onDelete}>
+        <Trash2 className="w-4 h-4" />
+      </IconButton>
+    </>
+  )
+}
+
+function FieldRow({ canManage, ...props }: FieldRowProps) {
+  const { field } = props
+  const TypeIcon = SERVICE_FIELD_TYPE_ICONS[field.type]
+  return (
+    <SettingsRow
+      deleted={field.archived}
+      actions={canManage && <FieldRowActions {...props} />}
+    >
+      <span
+        className={cn(
+          'truncate text-[15px] font-medium',
+          field.archived ? 'text-text-light' : 'text-foreground',
+        )}
+      >
+        {field.label}
+      </span>
+      <Tag icon={<TypeIcon aria-hidden="true" className="w-[13px] h-[13px]" />}>
+        {SERVICE_FIELD_TYPE_LABELS[field.type]}
+      </Tag>
+      {field.clinical && (
+        <Tag
+          variant="primary"
+          icon={<Lock aria-hidden="true" className="w-3 h-3" />}
+          title="Contenu clinique : masqué aux rôles Secrétariat et Lecture"
+        >
+          Clinique
+        </Tag>
+      )}
+    </SettingsRow>
   )
 }
 
@@ -392,11 +316,6 @@ function FichePatientSettings() {
     useState<ServiceField | null>(null)
   const [deleteCategoryTarget, setDeleteCategoryTarget] =
     useState<ServiceFieldCategory | null>(null)
-  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(
-    null,
-  )
-  const [editValue, setEditValue] = useState('')
-  const skipBlurCommit = useRef(false)
 
   const activeCategories = categories
     .filter((c) => !c.archived)
@@ -444,40 +363,25 @@ function FichePatientSettings() {
     reorderCategories.mutate({ ids })
   }
 
-  const startEditCategory = (category: ServiceFieldCategory) => {
-    skipBlurCommit.current = false
-    setEditingCategoryId(category.id)
-    setEditValue(category.label)
-  }
-
-  const commitEditCategory = (category: ServiceFieldCategory) => {
-    const trimmed = editValue.trim()
-    setEditingCategoryId(null)
-    // Libellé vide refusé : on referme simplement sans rien envoyer.
-    if (trimmed && trimmed !== category.label) {
-      updateCategory.mutate({ id: category.id, label: trimmed })
-    }
-  }
-
   return (
     <DashboardLayout>
-      <div className="flex-1 min-h-0 bg-background p-6 rounded-lg flex flex-col w-full gap-6 overflow-y-auto">
-        <div className="flex justify-between items-center gap-3">
-          <h1 className="h-9 flex items-center text-foreground text-xl font-semibold">
-            Fiche patient
-          </h1>
-          <div className="flex items-center gap-4">
-            {canManage && <AjouterCategorie />}
-            <div className="flex items-center gap-2">
-              <Switch
-                id="elements-supprimes"
-                checked={showDeleted}
-                onCheckedChange={setShowDeleted}
-              />
-              <Label htmlFor="elements-supprimes">Supprimés</Label>
-            </div>
-          </div>
-        </div>
+      <div className="flex-1 min-h-0 bg-background p-6 rounded-lg flex flex-col w-full gap-5 overflow-y-auto">
+        <SettingsPageHeader
+          title="Fiche patient"
+          subtitle="Champs remplis sur la fiche de chaque patient du service."
+          switchId="elements-supprimes"
+          showDeleted={showDeleted}
+          onShowDeletedChange={setShowDeleted}
+          deletedCount={fields.filter((f) => f.archived).length}
+          action={canManage && <AjouterCategorie />}
+        />
+
+        {showDeleted && (
+          <DeletedBanner>
+            Vous voyez les champs supprimés. Les patients qui les portent
+            conservent leur valeur.
+          </DeletedBanner>
+        )}
 
         {shownCategories.map((category) => {
           const categoryId = category.id
@@ -490,47 +394,59 @@ function FichePatientSettings() {
           const categoryIndex = activeCategories.findIndex(
             (c) => c.id === categoryId,
           )
-          const isEditing = editingCategoryId === categoryId
+          const n = activeInCategory.length
 
           return (
-            <div key={categoryId} className="flex flex-col gap-3">
-              <CategoryHeader
-                category={category}
-                canManage={canManage}
-                isEditing={isEditing}
-                editValue={editValue}
-                onEditValueChange={setEditValue}
-                onStartEdit={() => startEditCategory(category)}
-                onCommitEdit={() => {
-                  if (skipBlurCommit.current) {
-                    skipBlurCommit.current = false
-                    return
-                  }
-                  commitEditCategory(category)
-                }}
-                onCancelEdit={() => {
-                  skipBlurCommit.current = true
-                  setEditingCategoryId(null)
-                }}
-                canMoveUp={categoryIndex > 0}
-                canMoveDown={categoryIndex < activeCategories.length - 1}
-                isReorderPending={reorderCategories.isPending}
-                onMoveUp={() => moveCategory(categoryId, 'up')}
-                onMoveDown={() => moveCategory(categoryId, 'down')}
-                hasActiveFields={activeInCategory.length > 0}
-                isCategoryMutationPending={updateCategory.isPending}
-                onDelete={() => setDeleteCategoryTarget(category)}
-                onRestore={() =>
-                  updateCategory.mutate({ id: categoryId, archived: false })
-                }
-              />
-
-              <ul className="flex flex-col gap-2">
-                {shownFields.length === 0 && (
-                  <li className="text-sm text-text-light">
-                    {showDeleted ? 'Aucun champ supprimé' : 'Aucun champ'}
-                  </li>
-                )}
+            <SettingsCard
+              key={categoryId}
+              title={category.label}
+              onRename={
+                canManage
+                  ? (label) => updateCategory.mutate({ id: categoryId, label })
+                  : undefined
+              }
+              renameLabel="Renommer la catégorie"
+              inputLabel="Libellé de la catégorie"
+              count={`${n} champ${n > 1 ? 's' : ''}`}
+              actions={
+                canManage && (
+                  <CategoryActions
+                    category={category}
+                    canMoveUp={categoryIndex > 0}
+                    canMoveDown={categoryIndex < activeCategories.length - 1}
+                    isReorderPending={reorderCategories.isPending}
+                    onMoveUp={() => moveCategory(categoryId, 'up')}
+                    onMoveDown={() => moveCategory(categoryId, 'down')}
+                    hasActiveFields={n > 0}
+                    isCategoryMutationPending={updateCategory.isPending}
+                    onDelete={() => setDeleteCategoryTarget(category)}
+                    onRestore={() =>
+                      updateCategory.mutate({ id: categoryId, archived: false })
+                    }
+                  />
+                )
+              }
+              empty={
+                shownFields.length === 0
+                  ? showDeleted
+                    ? 'Aucun champ supprimé'
+                    : 'Aucun champ'
+                  : undefined
+              }
+              footer={
+                canManage &&
+                !category.archived &&
+                !showDeleted && (
+                  <ServiceFieldForm
+                    categoryId={categoryId}
+                    trigger={
+                      <CardFooterButton>Ajouter un champ</CardFooterButton>
+                    }
+                  />
+                )
+              }
+            >
+              <ul>
                 {shownFields.map((f) => {
                   const index = activeInCategory.findIndex((x) => x.id === f.id)
                   return (
@@ -541,7 +457,7 @@ function FichePatientSettings() {
                       categoryArchived={category.archived}
                       canManage={canManage}
                       canMoveUp={index > 0}
-                      canMoveDown={index < activeInCategory.length - 1}
+                      canMoveDown={index < n - 1}
                       isReorderPending={reorder.isPending}
                       onMoveUp={() => moveField(categoryId, f.id, 'up')}
                       onMoveDown={() => moveField(categoryId, f.id, 'down')}
@@ -554,7 +470,7 @@ function FichePatientSettings() {
                   )
                 })}
               </ul>
-            </div>
+            </SettingsCard>
           )
         })}
 

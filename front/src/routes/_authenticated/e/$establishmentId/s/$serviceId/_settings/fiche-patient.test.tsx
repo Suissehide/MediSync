@@ -526,7 +526,7 @@ describe('ecran de configuration — blocs de catégories', () => {
     ]
     monter([routeGetServiceFields([])], dansLeDesordre)
 
-    const titres = await screen.findAllByTestId('categorie-titre')
+    const titres = await screen.findAllByTestId('carte-titre')
     expect(titres.map((t) => t.textContent)).toEqual([
       'Parcours & Inclusion',
       'Sortie & Bilan',
@@ -987,6 +987,68 @@ describe('ecran de configuration — blocs de catégories', () => {
         label: 'Nouvelle',
       })
     })
+  })
+})
+
+describe('ecran de configuration — cartes', () => {
+  it('le compteur « Supprimés » compte les champs supprimés de toutes les catégories', async () => {
+    const autreSupprime: ServiceField = {
+      ...motifSortie,
+      id: 'f6',
+      key: 'ancien_motif',
+      label: 'Ancien motif',
+      archived: true,
+    }
+    monter([
+      routeGetServiceFields([
+        orientation,
+        ancienDiagnostic,
+        motifSortie,
+        autreSupprime,
+      ]),
+    ])
+
+    await screen.findByText('Orientation')
+    expect(screen.getByTestId('compteur-supprimes')).toHaveTextContent(/^2$/)
+  })
+
+  it('le pied « Ajouter un champ » est masqué en mode Supprimés', async () => {
+    monter([routeGetServiceFields([orientation])])
+
+    await screen.findByText('Orientation')
+    expect(
+      screen.getAllByRole('button', { name: /ajouter un champ/i }),
+    ).toHaveLength(2)
+    await userEvent.click(screen.getByLabelText('Supprimés'))
+    expect(
+      screen.queryByRole('button', { name: /ajouter un champ/i }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('le pied « Ajouter un champ » ouvre la popup sur la catégorie de sa carte', async () => {
+    monter([routeGetServiceFields([orientation])])
+
+    const carte = await screen.findByRole('region', { name: 'Sortie & Bilan' })
+    await userEvent.click(
+      within(carte).getByRole('button', { name: /ajouter un champ/i }),
+    )
+    expect(screen.getByLabelText('Catégorie')).toHaveTextContent(
+      'Sortie & Bilan',
+    )
+  })
+
+  it('le crayon du titre lance l’édition du libellé de la catégorie', async () => {
+    monter([routeGetServiceFields([])])
+
+    const carte = await screen.findByRole('region', {
+      name: 'Parcours & Inclusion',
+    })
+    await userEvent.click(
+      within(carte).getByRole('button', { name: 'Renommer la catégorie' }),
+    )
+    expect(
+      screen.getByRole('textbox', { name: 'Libellé de la catégorie' }),
+    ).toHaveValue('Parcours & Inclusion')
   })
 })
 
