@@ -121,7 +121,7 @@ export function SettingsCard({
   return (
     <section
       aria-label={title}
-      className="bg-white border border-border rounded-[10px] overflow-hidden"
+      className="bg-white border border-border rounded-[10px] overflow-hidden shrink-0"
     >
       <div className="flex items-center gap-3 pl-5 pr-3 py-3.5 border-b border-border">
         <div className="flex flex-1 items-center gap-2 min-w-0">

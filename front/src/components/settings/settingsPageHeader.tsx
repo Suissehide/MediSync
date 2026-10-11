@@ -53,7 +53,7 @@ export function SettingsPageHeader({
 
 export function DeletedBanner({ children }: { children: ReactNode }) {
   return (
-    <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border border-border bg-white text-sm text-text-dark">
+    <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border border-border bg-white text-sm text-text-dark shrink-0">
       <Archive
         aria-hidden="true"
         className="w-4 h-4 shrink-0 text-text-light"
