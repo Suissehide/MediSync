@@ -66,10 +66,7 @@ export const CategoryFields = withForm({
         className="h-fit flex-1 flex flex-col gap-2"
       >
         <div className="flex items-center gap-2 mt-2">
-          <h4 className="relative text-sm font-semibold">
-            {category.label} — dossier de ce service, non visible des autres
-            services
-          </h4>
+          <h4 className="relative text-sm font-semibold">{category.label}</h4>
           <div className="mt-1 ml-1 flex-1 border-t border-border" />
         </div>
         <div className="mt-2 bg-input rounded-lg p-6 flex flex-col gap-3">
