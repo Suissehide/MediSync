@@ -557,6 +557,31 @@ describe('ecran de configuration — blocs de catégories', () => {
     ).toBeInTheDocument()
   })
 
+  it('un champ supprimé dont la catégorie est supprimée n’offre pas de Restaurer', async () => {
+    const categorieSupprimee = category({
+      id: 'cat-suivi',
+      label: 'Suivi diététique',
+      order: 2,
+      archived: true,
+    })
+    const champSupprime: ServiceField = {
+      ...comorbidite,
+      id: 'f5',
+      categoryId: 'cat-suivi',
+      archived: true,
+    }
+    monter(
+      [routeGetServiceFields([champSupprime])],
+      [...categories, categorieSupprimee],
+    )
+
+    await screen.findByText('Parcours & Inclusion')
+    await userEvent.click(screen.getByLabelText('Supprimés'))
+
+    expect(await screen.findByText('Comorbidité')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^restaurer$/i })).toBeDisabled()
+  })
+
   it('le titre d’une catégorie se renomme en place : Entrée enregistre', async () => {
     const fetchMock = monter(
       [
@@ -617,6 +642,50 @@ describe('ecran de configuration — blocs de catégories', () => {
       ([, init]) => (init as RequestInit | undefined)?.method === 'PATCH',
     )
     expect(appelsPatch).toHaveLength(0)
+  })
+
+  it('le titre d’une catégorie : Échap puis une nouvelle édition confirmée par Entrée envoie le PATCH', async () => {
+    const fetchMock = monter(
+      [
+        routeGetServiceFields([]),
+        routePatchCategory(
+          'cat-suivi',
+          category({ id: 'cat-suivi', label: 'Nouveau nom', order: 2 }),
+        ),
+      ],
+      [
+        ...categories,
+        category({ id: 'cat-suivi', label: 'Suivi diététique', order: 2 }),
+      ],
+    )
+
+    await screen.findByText('Suivi diététique')
+    await userEvent.click(screen.getByText('Suivi diététique'))
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'Libellé de la catégorie' }),
+      '{Escape}',
+    )
+
+    // Sans le correctif, skipBlurCommit reste a true (aucun blur sur la suppression du champ
+    // dans certains navigateurs) et avale la validation suivante.
+    await userEvent.click(screen.getByText('Suivi diététique'))
+    const champ = screen.getByRole('textbox', {
+      name: 'Libellé de la catégorie',
+    })
+    await userEvent.clear(champ)
+    await userEvent.type(champ, 'Nouveau nom{enter}')
+
+    await waitFor(() => {
+      const call = fetchMock.mock.calls.find(
+        ([url, init]) =>
+          String(url).endsWith('/service-field-categories/cat-suivi') &&
+          init?.method === 'PATCH',
+      )
+      expect(call).toBeDefined()
+      expect(JSON.parse(String(call?.[1]?.body))).toEqual({
+        label: 'Nouveau nom',
+      })
+    })
   })
 
   it('le titre d’une catégorie : la perte de focus enregistre aussi', async () => {
@@ -825,7 +894,8 @@ describe('ecran de configuration — blocs de catégories', () => {
       name: /^supprimer la catégorie$/i,
     })
     expect(supprimer).toBeDisabled()
-    expect(supprimer).toHaveAttribute(
+    // Le titre porte sur l'élément englobant : certains navigateurs ne le montrent pas sur un bouton désactivé.
+    expect(supprimer.parentElement).toHaveAttribute(
       'title',
       "Déplacez ou supprimez d'abord ses champs",
     )

@@ -245,21 +245,24 @@ function CategoryHeader({
               Restaurer
             </Button>
           ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              aria-label="Supprimer la catégorie"
-              disabled={hasActiveFields || isCategoryMutationPending}
+            <span
               title={
                 hasActiveFields
                   ? "Déplacez ou supprimez d'abord ses champs"
                   : undefined
               }
-              onClick={onDelete}
             >
-              <Trash className="w-4 h-4" />
-              Supprimer
-            </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                aria-label="Supprimer la catégorie"
+                disabled={hasActiveFields || isCategoryMutationPending}
+                onClick={onDelete}
+              >
+                <Trash className="w-4 h-4" />
+                Supprimer
+              </Button>
+            </span>
           ))}
       </div>
     </div>
@@ -269,6 +272,7 @@ function CategoryHeader({
 interface FieldRowProps {
   field: ServiceField
   categoryId: string
+  categoryArchived: boolean
   canManage: boolean
   canMoveUp: boolean
   canMoveDown: boolean
@@ -284,6 +288,7 @@ interface FieldRowProps {
 function FieldRow({
   field,
   categoryId,
+  categoryArchived,
   canManage,
   canMoveUp,
   canMoveDown,
@@ -347,15 +352,24 @@ function FieldRow({
 
       {canManage &&
         (field.archived ? (
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={isUpdatePending}
-            onClick={onRestore}
-          >
-            <Undo2 className="w-4 h-4" />
-            Restaurer
-          </Button>
+          categoryArchived ? (
+            <span title="Restaurez d'abord sa catégorie">
+              <Button variant="outline" size="sm" disabled>
+                <Undo2 className="w-4 h-4" />
+                Restaurer
+              </Button>
+            </span>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isUpdatePending}
+              onClick={onRestore}
+            >
+              <Undo2 className="w-4 h-4" />
+              Restaurer
+            </Button>
+          )
         ) : (
           <Button variant="outline" size="sm" onClick={onDelete}>
             <Trash className="w-4 h-4" />
@@ -431,6 +445,7 @@ function FichePatientSettings() {
   }
 
   const startEditCategory = (category: ServiceFieldCategory) => {
+    skipBlurCommit.current = false
     setEditingCategoryId(category.id)
     setEditValue(category.label)
   }
@@ -523,6 +538,7 @@ function FichePatientSettings() {
                       key={f.id}
                       field={f}
                       categoryId={categoryId}
+                      categoryArchived={category.archived}
                       canManage={canManage}
                       canMoveUp={index > 0}
                       canMoveDown={index < activeInCategory.length - 1}

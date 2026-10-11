@@ -50,7 +50,8 @@ class ServiceFieldDomain implements ServiceFieldDomainInterface {
       )
     }
     const categories = await this.serviceFieldCategoryRepository.findAll()
-    if (!categories.some((c) => c.id === params.categoryId)) {
+    const targetCategory = categories.find((c) => c.id === params.categoryId)
+    if (!targetCategory || targetCategory.archivedAt !== null) {
       throw Boom.badRequest('Catégorie introuvable pour ce service.')
     }
     const existing = await this.serviceFieldRepository.findAll()
@@ -91,6 +92,14 @@ class ServiceFieldDomain implements ServiceFieldDomainInterface {
       }),
     }
     if (params.categoryId === undefined) {
+      if (params.archived === false) {
+        const field = await this.serviceFieldRepository.findByID(fieldID)
+        const categories = await this.serviceFieldCategoryRepository.findAll()
+        const category = categories.find((c) => c.id === field.categoryId)
+        if (!category || category.archivedAt !== null) {
+          throw Boom.badRequest("Restaurez d'abord sa catégorie")
+        }
+      }
       return this.serviceFieldRepository.update(fieldID, base)
     }
     const [categories, fields] = await Promise.all([

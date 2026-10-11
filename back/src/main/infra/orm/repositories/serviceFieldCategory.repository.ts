@@ -51,12 +51,18 @@ class ServiceFieldCategoryRepository
     }
   }
 
-  // Idempotent grace a l'unicite (serviceId, dateField) : un P2002 concurrent veut dire que l'autre lecture a gagne la course.
+  // Lit d'abord pour ne creer que les categories a date manquantes ; le P2002 ci-dessous reste la garde d'une course concurrente.
   async ensureDefaults(): Promise<void> {
+    const existing = await this.prisma.serviceFieldCategory.findMany({
+      where: { ...this.scope, dateField: { not: null } },
+      select: { dateField: true },
+    })
+    const present = new Set(existing.map((c) => c.dateField))
+    const missing = DEFAULT_CATEGORIES.filter(
+      (category) => !present.has(category.dateField),
+    )
     await Promise.all(
-      DEFAULT_CATEGORIES.map((category) =>
-        this.createDefaultIfMissing(category),
-      ),
+      missing.map((category) => this.createDefaultIfMissing(category)),
     )
   }
 

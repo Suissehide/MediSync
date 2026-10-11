@@ -1070,8 +1070,7 @@ describe('EditPatient — le signal de suivi ailleurs (IdentiteFields)', () => {
 
     expect(await screen.findByText(MENTION_TEXT)).toBeInTheDocument()
 
-    // Aucun appel supplémentaire déclenché par la mention : seules les lectures du sous-dossier,
-    // des champs et des catégories, déjà nécessaires sans le signal.
+    // Aucun appel supplémentaire déclenché par la mention : seules les lectures déjà nécessaires sans le signal.
     const urls = fetchMock.mock.calls.map(([url]) => url.toString())
     expect(urls).toHaveLength(3)
     expect(urls[0]).toMatch(/\/service-file$/)
@@ -1516,9 +1515,7 @@ describe('EditPatient — un onglet par catégorie', () => {
   })
 })
 
-// Task 3 review : un onglet sélectionné peut disparaître après une relecture (sa catégorie perd
-// son dernier champ visible) — repli sur « Informations générales » plutôt qu'un écran vide sans
-// onglet actif.
+// Un onglet sélectionné peut disparaître après une relecture : repli sur « Informations générales » plutôt qu'un écran vide.
 describe('EditPatient — l’onglet sélectionné disparaît après une relecture', () => {
   it('bascule sur « Informations générales » quand la catégorie perd son dernier champ visible', async () => {
     let fieldsState: ServiceField[] = [

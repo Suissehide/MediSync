@@ -297,6 +297,73 @@ describe('definitions des champs de la fiche', () => {
     })
     expect(res.statusCode).toBe(400)
   })
+
+  it('restaurer un champ dont la categorie est supprimee est refuse ; creer dans une categorie supprimee aussi', async () => {
+    const categorie = await testApp.app.inject({
+      method: 'POST',
+      url: url('/service-field-categories'),
+      cookies: coordinateurCookies,
+      payload: { label: 'Categorie temporaire' } as never,
+    })
+    expect(categorie.statusCode).toBe(201)
+    const categorieId = (categorie.json() as { id: string }).id
+
+    const champ = await testApp.app.inject({
+      method: 'POST',
+      url: url('/service-fields'),
+      cookies: coordinateurCookies,
+      payload: {
+        label: 'Champ temporaire',
+        type: 'text',
+        categoryId: categorieId,
+      } as never,
+    })
+    expect(champ.statusCode).toBe(201)
+    const champId = (champ.json() as ServiceFieldResponse).id
+
+    const archiveChamp = await testApp.app.inject({
+      method: 'PATCH',
+      url: url(`/service-fields/${champId}`),
+      cookies: coordinateurCookies,
+      payload: { archived: true } as never,
+    })
+    expect(archiveChamp.statusCode).toBe(200)
+
+    const archiveCategorie = await testApp.app.inject({
+      method: 'PATCH',
+      url: url(`/service-field-categories/${categorieId}`),
+      cookies: coordinateurCookies,
+      payload: { archived: true } as never,
+    })
+    expect(archiveCategorie.statusCode).toBe(200)
+
+    const restauration = await testApp.app.inject({
+      method: 'PATCH',
+      url: url(`/service-fields/${champId}`),
+      cookies: coordinateurCookies,
+      payload: { archived: false } as never,
+    })
+    expect(restauration.statusCode).toBe(400)
+    expect(restauration.json()).toMatchObject({
+      message: "Restaurez d'abord sa catégorie",
+    })
+    const relu = await testDb.serviceFieldDefinition.findUniqueOrThrow({
+      where: { id: champId },
+    })
+    expect(relu.archivedAt).not.toBeNull()
+
+    const creationDansSupprimee = await testApp.app.inject({
+      method: 'POST',
+      url: url('/service-fields'),
+      cookies: coordinateurCookies,
+      payload: {
+        label: 'Nouveau champ',
+        type: 'text',
+        categoryId: categorieId,
+      } as never,
+    })
+    expect(creationDansSupprimee.statusCode).toBe(400)
+  })
 })
 
 // Un coordinateur cree les definitions par l'API ; un secretariat ecrit sans clinical:write.
