@@ -147,6 +147,8 @@ function ThematicSettings() {
           loading={deleteForeverThematic.isPending}
           title="Supprimer définitivement"
           description="Cette thématique disparaîtra pour de bon. L'opération est refusée tant que la thématique est utilisée quelque part."
+          confirmLabel="Supprimer définitivement"
+          confirmLoadingLabel="Suppression..."
         />
       </div>
     </DashboardLayout>

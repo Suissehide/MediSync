@@ -240,81 +240,81 @@ function PatientList() {
             !isCategoriesPending &&
             !isFieldsError &&
             !isCategoriesError && (
-            <ReactTable<PatientWithTags>
-              key={tableId}
-              data={filteredPatients}
-              columns={columns}
-              filterId={tableId}
-              pagination
-              isLoading={isPending}
-              isRowMuted={(patient) => Boolean(patient.exitDate)}
-              onRowClick={(patient) => handleRedirectPatient(patient.id)}
-              resetSignal={resetSignal}
-              onColumnFiltersActiveChange={setColumnFiltersActive}
-              toolbar={
-                <>
-                  <Input
-                    id="patient-search"
-                    iconLeft={<Search className="w-4 h-4" />}
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Nom, prénom..."
-                    className="w-72"
-                  />
-                  <ToggleGroup
-                    value={status}
-                    onValueChange={(v) => v && setStatus(v as Status)}
-                  >
-                    {(Object.keys(STATUSES) as Status[]).map((key) => (
-                      <ToggleGroupItem key={key} value={key}>
-                        {STATUSES[key]}
-                      </ToggleGroupItem>
-                    ))}
-                  </ToggleGroup>
-                  {tagFilters.length > 0 && (
-                    <DropdownFilter
-                      filters={tagFilters}
-                      onFilterChange={handleTagChange}
-                      triggerLabel={
-                        selectedTags.length
-                          ? `Parcours · ${selectedTags.length}`
-                          : 'Parcours'
-                      }
-                      TriggerIcon={RouteIcon}
-                      headerAction={
-                        selectedTags.length
-                          ? {
-                              label: 'Tout effacer',
-                              icon: RotateCcw,
-                              onSelect: () => setSelectedTags([]),
-                            }
-                          : undefined
-                      }
+              <ReactTable<PatientWithTags>
+                key={tableId}
+                data={filteredPatients}
+                columns={columns}
+                filterId={tableId}
+                pagination
+                isLoading={isPending}
+                isRowMuted={(patient) => Boolean(patient.exitDate)}
+                onRowClick={(patient) => handleRedirectPatient(patient.id)}
+                resetSignal={resetSignal}
+                onColumnFiltersActiveChange={setColumnFiltersActive}
+                toolbar={
+                  <>
+                    <Input
+                      id="patient-search"
+                      iconLeft={<Search className="w-4 h-4" />}
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Nom, prénom..."
+                      className="w-72"
                     />
-                  )}
-                  {(status !== DEFAULT_STATUS ||
-                    selectedTags.length > 0 ||
-                    columnFiltersActive) && (
-                    <Button variant="ghost" onClick={resetFilters}>
-                      <X className="w-4 h-4" />
-                      Réinitialiser
-                    </Button>
-                  )}
-                </>
-              }
-              toolbarEnd={
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={handleExport}
-                  isLoading={isExporting}
-                >
-                  <Download className="w-4 h-4" />
-                </Button>
-              }
-            />
-          )}
+                    <ToggleGroup
+                      value={status}
+                      onValueChange={(v) => v && setStatus(v as Status)}
+                    >
+                      {(Object.keys(STATUSES) as Status[]).map((key) => (
+                        <ToggleGroupItem key={key} value={key}>
+                          {STATUSES[key]}
+                        </ToggleGroupItem>
+                      ))}
+                    </ToggleGroup>
+                    {tagFilters.length > 0 && (
+                      <DropdownFilter
+                        filters={tagFilters}
+                        onFilterChange={handleTagChange}
+                        triggerLabel={
+                          selectedTags.length
+                            ? `Parcours · ${selectedTags.length}`
+                            : 'Parcours'
+                        }
+                        TriggerIcon={RouteIcon}
+                        headerAction={
+                          selectedTags.length
+                            ? {
+                                label: 'Tout effacer',
+                                icon: RotateCcw,
+                                onSelect: () => setSelectedTags([]),
+                              }
+                            : undefined
+                        }
+                      />
+                    )}
+                    {(status !== DEFAULT_STATUS ||
+                      selectedTags.length > 0 ||
+                      columnFiltersActive) && (
+                      <Button variant="ghost" onClick={resetFilters}>
+                        <X className="w-4 h-4" />
+                        Réinitialiser
+                      </Button>
+                    )}
+                  </>
+                }
+                toolbarEnd={
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={handleExport}
+                    isLoading={isExporting}
+                  >
+                    <Download className="w-4 h-4" />
+                  </Button>
+                }
+              />
+            )}
         </div>
       </div>
     </DashboardLayout>

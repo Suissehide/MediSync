@@ -135,6 +135,8 @@ function LocationSettings() {
           loading={deleteForeverLocation.isPending}
           title="Supprimer définitivement"
           description="Cette salle disparaîtra pour de bon. L'opération est refusée tant que la salle est utilisée quelque part."
+          confirmLabel="Supprimer définitivement"
+          confirmLoadingLabel="Suppression..."
         />
       </div>
     </DashboardLayout>

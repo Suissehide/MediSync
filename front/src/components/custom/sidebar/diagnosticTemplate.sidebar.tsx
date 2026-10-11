@@ -170,6 +170,8 @@ function SidebarDiagnosticTemplate() {
         loading={deleteForeverTemplate.isPending}
         title="Supprimer définitivement"
         description="Ce modèle disparaîtra pour de bon. L'opération est refusée tant que des diagnostics déjà remplis le portent."
+        confirmLabel="Supprimer définitivement"
+        confirmLoadingLabel="Suppression..."
       />
     </>
   )
