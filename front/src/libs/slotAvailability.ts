@@ -243,8 +243,12 @@ export const splitPatientSlots = (
 export type PathwayProgress = { done: number; total: number }
 
 /**
- * Avancement de chaque parcours POUR UN PATIENT : ses présences notées sur
- * `done`, tous ses rendez-vous du parcours sur `total`, indexés par parcours.
+ * Avancement de chaque parcours POUR UN PATIENT : ses présences notées sur des rendez-vous
+ * PASSÉS sur `done`, tous ses rendez-vous du parcours sur `total`, indexés par parcours.
+ *
+ * Le passé est une condition, pas une évidence : la base porte des présences notées sur des
+ * rendez-vous à venir (vu sur le service Cardiologie), et les compter affichait « 1 / 1 réalisés »
+ * sur un parcours qui commence le mois prochain.
  *
  * Dérivé des créneaux déjà chargés (`usePatientSlotsQuery` les rend TOUS, sans
  * fenêtre de dates) plutôt que demandé au back : le lien créneau → parcours est
@@ -261,15 +265,18 @@ export const getPathwayProgress = (
     return progress
   }
 
+  const now = dayjs()
   for (const slot of slots) {
     const pathwayID = slot.pathway?.id
     if (!pathwayID || !isPatientBookedOnSlot(slot, patientID)) {
       continue
     }
     const current = progress.get(pathwayID) ?? { done: 0, total: 0 }
-    const present = (slot.appointments ?? [])
-      .flatMap((appointment) => appointment.appointmentPatients ?? [])
-      .some((ap) => ap.patient.id === patientID && ap.status === 'yes')
+    const present =
+      dayjs(getSlotDisplayRange(slot, patientID).start).isBefore(now) &&
+      (slot.appointments ?? [])
+        .flatMap((appointment) => appointment.appointmentPatients ?? [])
+        .some((ap) => ap.patient.id === patientID && ap.status === 'yes')
     progress.set(pathwayID, {
       done: current.done + (present ? 1 : 0),
       total: current.total + 1,
