@@ -7,6 +7,8 @@ import type { Slot } from '../../../types/slot.ts'
 import {
   getCapacityLabel,
   groupSuggestionsByDay,
+  isMotifMissing,
+  isWindowExhausted,
 } from './addPatientToSlotForm.tsx'
 
 // `main.tsx` l'installe dans l'application ; un test isolé ne le charge pas.
@@ -51,5 +53,35 @@ describe('groupSuggestionsByDay', () => {
       ['2026-10-23', ['2026-10-23T09:45:00Z', '2026-10-23T13:45:00Z']],
       ['2026-11-06', ['2026-11-06T09:45:00Z']],
     ])
+  })
+})
+
+describe('isWindowExhausted', () => {
+  const before = { thematicID: 't1', count: 4 }
+
+  it("conclut quand l'élargissement n'a rien ajouté", () => {
+    expect(isWindowExhausted(before, 't1', false, 4)).toBe(true)
+  })
+
+  it('attend la fin du chargement', () => {
+    expect(isWindowExhausted(before, 't1', true, 4)).toBe(false)
+  })
+
+  it('continue si de nouveaux créneaux sont arrivés', () => {
+    expect(isWindowExhausted(before, 't1', false, 6)).toBe(false)
+  })
+
+  it('ignore un élargissement fait pour une autre thématique', () => {
+    expect(isWindowExhausted(before, 't2', false, 4)).toBe(false)
+    expect(isWindowExhausted(null, 't1', false, 4)).toBe(false)
+  })
+})
+
+describe('isMotifMissing', () => {
+  it('exige un motif non blanc sur un créneau individuel seulement', () => {
+    const individual = suggestion({ isIndividual: true })
+    expect(isMotifMissing(individual, '  ')).toBe(true)
+    expect(isMotifMissing(individual, 'Bilan')).toBe(false)
+    expect(isMotifMissing(suggestion(), '')).toBe(false)
   })
 })
