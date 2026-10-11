@@ -30,17 +30,19 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
   const savedDate = usePlanningStore((state) => state.viewStart)
 
   const { pathwayTemplates } = usePathwayTemplateQueries()
-  // Un tag par entree, avec la couleur du premier modele qui le porte : c'est cette couleur que
-  // le calendrier donne aux creneaux du tag choisi.
+  // Un tag par entree, avec TOUTES les couleurs des modeles qui le portent : ce sont celles que
+  // le calendrier donnera aux creneaux du tag choisi.
   const allTags = useMemo(() => {
-    const couleurParTag = new Map<string, string | undefined>()
+    const couleursParTag = new Map<string, string[]>()
     for (const template of pathwayTemplates ?? []) {
-      if (!couleurParTag.has(template.mainTag)) {
-        couleurParTag.set(template.mainTag, template.color)
+      const couleurs = couleursParTag.get(template.mainTag) ?? []
+      if (template.color && !couleurs.includes(template.color)) {
+        couleurs.push(template.color)
       }
+      couleursParTag.set(template.mainTag, couleurs)
     }
-    return [...couleurParTag]
-      .map(([tag, color]) => ({ tag, color }))
+    return [...couleursParTag]
+      .map(([tag, colors]) => ({ tag, colors }))
       .sort((a, b) => a.tag.localeCompare(b.tag))
   }, [pathwayTemplates])
 
@@ -305,10 +307,10 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
             placeholder="Afficher les créneaux par tag"
             options={[
               { value: '__all__', label: 'Tout afficher', group: 'all' },
-              ...allTags.map(({ tag, color }) => ({
+              ...allTags.map(({ tag, colors }) => ({
                 value: tag,
                 label: tag,
-                color,
+                color: colors,
                 group: 'tags',
               })),
             ]}
@@ -346,6 +348,7 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
             unselectRef={calendarUnselectRef}
             onRangeChange={handleRangeChange}
             saveDates={false}
+            showSecondaryTags={false}
             headerToolbar={{
               left: 'title',
               right: 'today selectDateButton prev,next',

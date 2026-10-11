@@ -10,7 +10,8 @@ export interface SelectOption {
   value: string | number
   label: string
   group?: string
-  color?: string
+  /** Une couleur, ou plusieurs quand le libelle en recouvre plusieurs. */
+  color?: string | string[]
   hint?: string
 }
 
@@ -29,13 +30,22 @@ export interface SelectProps {
   'aria-describedby'?: string
 }
 
-const ColorDot = ({ color }: { color?: string }) =>
-  color ? (
-    <span
-      className="w-2.5 h-2.5 rounded-full shrink-0"
-      style={{ backgroundColor: color }}
-    />
+// Une pastille par couleur : un meme libelle peut en porter plusieurs (un tag de parcours porte
+// par plusieurs modeles, chacun de sa couleur).
+const ColorDot = ({ color }: { color?: string | string[] }) => {
+  const couleurs = Array.isArray(color) ? color : color ? [color] : []
+  return couleurs.length ? (
+    <span className="flex items-center gap-0.5 shrink-0">
+      {couleurs.map((couleur) => (
+        <span
+          key={couleur}
+          className="w-2.5 h-2.5 rounded-full"
+          style={{ backgroundColor: couleur }}
+        />
+      ))}
+    </span>
   ) : null
+}
 
 export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
   (
