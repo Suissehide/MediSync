@@ -263,7 +263,12 @@ export default function CalendarPages({
     <Page size="A4" style={styles.calendarPage}>
       {entries.map((entry) => {
         if (entry.kind === 'week') {
-          return <WeekBlock key={entry.weekLabel} weekData={entry} />
+          return (
+            <WeekBlock
+              key={entry.weekStart.format('YYYY-MM-DD')}
+              weekData={entry}
+            />
+          )
         }
         if (entry.kind === 'notice') {
           return <NoticeBlock key={`consigne-${entry.id}`} notice={entry} />
