@@ -78,7 +78,7 @@ export const AccountSearchPanel = () => {
         <Card className="max-w-lg flex flex-col gap-3">
           <div>
             <div className="font-semibold text-text-dark">
-              {[account.firstName, account.lastName]
+              {[account.lastName, account.firstName]
                 .filter(Boolean)
                 .join(' ') || account.email}
             </div>

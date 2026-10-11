@@ -703,7 +703,7 @@ function Planning() {
   const weekNumberCalculation = useMemo<'ISO' | ((date: Date) => number)>(
     () =>
       planningCycle
-        ? (date: Date) => cycleWeekNumber(dayjs.utc(date), planningCycle)
+        ? (date: Date) => cycleWeekNumber(dayjs.utc(date), planningCycle) ?? 0
         : 'ISO',
     [planningCycle],
   )
@@ -947,6 +947,8 @@ function Planning() {
                   multiMonthMinWidth={600}
                   weekNumbers={true}
                   weekNumberFormat={{ week: 'numeric' }}
+                  // 0 = semaine interdite, hors cycle : pas de numéro.
+                  weekNumberContent={(arg) => (arg.num ? arg.text : '')}
                   // FullCalendar transmet ici dateEnv.toDate(marker), pas le
                   // marker interne : le Date obtenu porte ses champs dans le
                   // fuseau de dateEnv. Le dayjs.utc(date) ci-dessous ne donne

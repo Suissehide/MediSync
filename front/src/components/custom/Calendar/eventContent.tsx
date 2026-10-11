@@ -432,7 +432,7 @@ function PatientName({
 }: {
   appointmentPatient: AppointmentPatient
 }) {
-  const name = `${appointmentPatient.patient.firstName} ${appointmentPatient.patient.lastName}`
+  const name = `${appointmentPatient.patient.lastName} ${appointmentPatient.patient.firstName}`
 
   if (!appointmentPatient.transmissionNotes) {
     return (

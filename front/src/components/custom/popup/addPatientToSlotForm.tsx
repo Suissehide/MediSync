@@ -364,7 +364,7 @@ function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
       (patients ?? [])
         .map((patient) => ({
           value: patient.id,
-          label: `${patient.firstName} ${patient.lastName}`,
+          label: `${patient.lastName} ${patient.firstName}`,
           sortKey: `${patient.lastName} ${patient.firstName}`,
         }))
         .sort((a, b) => a.sortKey.localeCompare(b.sortKey, 'fr'))
@@ -597,7 +597,7 @@ function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
             <div className="text-sm">
               <span className="text-text-light">Patient : </span>
               {selectedPatient
-                ? `${selectedPatient.firstName} ${selectedPatient.lastName}`
+                ? `${selectedPatient.lastName} ${selectedPatient.firstName}`
                 : ''}
             </div>
             <div className="text-sm">

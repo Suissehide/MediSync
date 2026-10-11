@@ -129,7 +129,7 @@ describe('AddPatientForm — recherche d’identité existante', () => {
       screen.getByRole('button', { name: /Rechercher un patient existant/i }),
     )
 
-    expect(await screen.findByText(/Isabelle Fontaine/)).toBeInTheDocument()
+    expect(await screen.findByText(/Fontaine Isabelle/)).toBeInTheDocument()
     expect(screen.getByText(/12\/05\/1980/)).toBeInTheDocument()
 
     const searchCall = fetchMock.mock.calls.find(([url]) =>
@@ -332,7 +332,7 @@ describe('AddPatientForm — recherche d’identité existante', () => {
       screen.getByRole('button', { name: /Rechercher un patient existant/i }),
     )
 
-    expect(await screen.findByText(/Martin Un/)).toBeInTheDocument()
+    expect(await screen.findByText(/Un Martin/)).toBeInTheDocument()
     expect(screen.getByText(/plus de.*résultats/i)).toBeInTheDocument()
   })
 
@@ -366,7 +366,7 @@ describe('AddPatientForm — recherche d’identité existante', () => {
       screen.getByRole('button', { name: /Rechercher un patient existant/i }),
     )
 
-    expect(await screen.findByText(/Martin Deux/)).toBeInTheDocument()
+    expect(await screen.findByText(/Deux Martin/)).toBeInTheDocument()
     expect(screen.queryByText(/plus de.*résultats/i)).not.toBeInTheDocument()
   })
 })

@@ -110,14 +110,14 @@ export default function PatientCell({ row, onAddPatient }: PatientCellProps) {
           <Tronque
             key={appointmentPatient.patient.id}
             className="flex shrink-0 items-center gap-1"
-            texte={`${appointmentPatient.patient.firstName} ${appointmentPatient.patient.lastName}`}
+            texte={`${appointmentPatient.patient.lastName} ${appointmentPatient.patient.firstName}`}
           >
             {appointmentPatient.id && (
               <ConvocationCheckbox
                 appointmentID={appointmentPatient.appointmentId}
                 appointmentPatientID={appointmentPatient.id}
                 convocationSent={!!appointmentPatient.convocationSent}
-                patientName={`${appointmentPatient.patient.firstName} ${appointmentPatient.patient.lastName}`}
+                patientName={`${appointmentPatient.patient.lastName} ${appointmentPatient.patient.firstName}`}
               />
             )}
             {context?.serviceId ? (
@@ -138,14 +138,14 @@ export default function PatientCell({ row, onAddPatient }: PatientCellProps) {
                     patientID: appointmentPatient.patient.id,
                   }}
                 >
-                  {appointmentPatient.patient.firstName}{' '}
-                  {appointmentPatient.patient.lastName}
+                  {appointmentPatient.patient.lastName}{' '}
+                  {appointmentPatient.patient.firstName}
                 </Link>
               </Etiquette>
             ) : (
               <Etiquette ton={TON_PRESENCE[appointmentPatient.status ?? '']}>
-                {appointmentPatient.patient.firstName}{' '}
-                {appointmentPatient.patient.lastName}
+                {appointmentPatient.patient.lastName}{' '}
+                {appointmentPatient.patient.firstName}
               </Etiquette>
             )}
             {appointmentPatient.transmissionNotes && (

@@ -109,7 +109,7 @@ function PatientDetails() {
               <ArrowLeft className="w-4 h-4" />
             </Button>
             <h2 className="text-text-foreground text-xl font-semibold">
-              {patient?.firstName} {patient?.lastName}
+              {patient?.lastName} {patient?.firstName}
             </h2>
             <div className="ml-auto flex items-center gap-2">
               {patient && <AddPatientToPathwayForm patient={patient} />}
@@ -177,7 +177,7 @@ function PatientDetails() {
         open={showDelete}
         setOpen={setShowDelete}
         title="Supprimer le patient"
-        description={`Voulez-vous vraiment supprimer ${patient?.firstName} ${patient?.lastName} ? Cette action est irréversible.`}
+        description={`Voulez-vous vraiment supprimer ${patient?.lastName} ${patient?.firstName} ? Cette action est irréversible.`}
         loading={isDeletePending}
         onConfirm={() => {
           if (!patient) {

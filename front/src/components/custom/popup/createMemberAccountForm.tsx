@@ -192,12 +192,12 @@ function CreateMemberAccountForm() {
                   membre ».
                 </p>
 
-                <form.AppField name="firstName">
-                  {(field) => <field.Input label="Prénom" />}
-                </form.AppField>
-
                 <form.AppField name="lastName">
                   {(field) => <field.Input label="Nom" />}
+                </form.AppField>
+
+                <form.AppField name="firstName">
+                  {(field) => <field.Input label="Prénom" />}
                 </form.AppField>
 
                 <form.AppField name="role">

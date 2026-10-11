@@ -102,7 +102,7 @@ const renderForm = async () => {
   await userEvent.click(
     screen.getByRole('button', { name: /Inscrire à un parcours/i }),
   )
-  await screen.findByText('Sabrina Bernadet')
+  await screen.findByText('Bernadet Sabrina')
 }
 
 const addPathway = async (tag: string) => {

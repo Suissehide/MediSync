@@ -108,10 +108,14 @@ function NormalModeContent({
   const weekEndLabel = weekStart
     ? weekStart.add(4, 'day').format('DD MMMM YYYY')
     : ''
+  const cycleWeek =
+    weekStart && planningCycle ? cycleWeekNumber(weekStart, planningCycle) : 0
   const cycleLabel =
-    weekStart && planningCycle
-      ? `S${cycleWeekNumber(weekStart, planningCycle)} — `
-      : ''
+    cycleWeek === null
+      ? 'Semaine interdite — '
+      : cycleWeek
+        ? `S${cycleWeek} — `
+        : ''
 
   return (
     <>

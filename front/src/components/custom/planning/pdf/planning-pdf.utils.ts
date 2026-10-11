@@ -90,7 +90,7 @@ export function buildPlanningWeeks(
       weekStart,
       isoWeek: weekStart.isoWeek(),
       weekLabel: cycle
-        ? `${cycleWeekNumber(weekStart, cycle)}`
+        ? `${cycleWeekNumber(weekStart, cycle) ?? '—'}`
         : `${weekStart.isoWeek()}`,
       isClosed: closedWeekKeys.has(weekStart.format('YYYY-MM-DD')),
       timeRows,

@@ -106,8 +106,8 @@ type ExportColumn = {
 }
 
 const EXPORT_COLUMNS: ExportColumn[] = [
-  { header: 'Prénom', width: 16, value: (p) => orEmpty(p.firstName) },
   { header: 'Nom', width: 16, value: (p) => orEmpty(p.lastName) },
+  { header: 'Prénom', width: 16, value: (p) => orEmpty(p.firstName) },
   { header: 'Genre', width: 10, value: (p) => orEmpty(p.gender) },
   {
     header: 'Date de naissance',

@@ -119,7 +119,7 @@ export default function AppointmentSheet({
       ?.filter((patient) => !selectedPatientIDs.includes(patient.id))
       .map((patient) => ({
         value: patient.id,
-        label: `${patient.firstName} ${patient.lastName}`,
+        label: `${patient.lastName} ${patient.firstName}`,
         sortKey: `${patient.lastName} ${patient.firstName}`,
       }))
       .sort((a, b) => a.sortKey.localeCompare(b.sortKey, 'fr'))
@@ -402,7 +402,7 @@ export default function AppointmentSheet({
                                   status={appointmentPatient.status}
                                 />
                                 {patientData
-                                  ? `${patientData.firstName} ${patientData.lastName}`
+                                  ? `${patientData.lastName} ${patientData.firstName}`
                                   : ``}
                               </button>
                               <div className="flex gap-2 items-center">

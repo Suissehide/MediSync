@@ -62,7 +62,7 @@ function AddAppointmentForm({
     patients
       ?.map((patient) => ({
         value: patient.id,
-        label: `${patient.firstName} ${patient.lastName}`,
+        label: `${patient.lastName} ${patient.firstName}`,
         sortKey: `${patient.lastName} ${patient.firstName}`,
       }))
       .sort((a, b) => a.sortKey.localeCompare(b.sortKey, 'fr'))

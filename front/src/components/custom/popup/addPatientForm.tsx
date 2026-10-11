@@ -190,14 +190,14 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
             {step === 1 && (
               <>
                 <div className="w-full flex gap-4">
+                  <form.AppField name="lastName">
+                    {(field) => <field.Input label="Nom" className="w-full" />}
+                  </form.AppField>
+
                   <form.AppField name="firstName">
                     {(field) => (
                       <field.Input label="Prénom" className="w-full" />
                     )}
-                  </form.AppField>
-
-                  <form.AppField name="lastName">
-                    {(field) => <field.Input label="Nom" className="w-full" />}
                   </form.AppField>
                 </div>
 
@@ -238,7 +238,7 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
                           className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2 text-sm"
                         >
                           <span>
-                            {match.firstName} {match.lastName}
+                            {match.lastName} {match.firstName}
                             {match.birthDate && (
                               <span className="text-neutral-400">
                                 {' '}
