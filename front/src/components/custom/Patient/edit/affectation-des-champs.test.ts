@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 // Ce test existe pour empêcher un sabotage précis : déplacer « Profession »
 // (`occupation`, un champ de `Patient`) du bloc
-// « Identité partagée » (`identite.patient.tsx`) vers le bloc « Dossier de ce service »
+// « Identité » (`identite.patient.tsx`) vers le bloc « Dossier de ce service »
 // (`details.patient.tsx`) — afficher côté service un champ que les
 // autres services de l'établissement partagent, ou inversement — sans qu'aucun autre test ne le
 // détecte.

@@ -3,7 +3,7 @@ import { withForm } from '../../../../hooks/formConfig.tsx'
 import { patientFormOpts } from './form.patient.ts'
 
 // Champs de `Patient` (décision 2.3 de la spec) : partagés entre les services de
-// l'établissement, comme le bloc « Identité partagée » de `identite.patient.tsx` — d'où la même
+// l'établissement, comme le bloc « Identité » de `identite.patient.tsx` — d'où la même
 // mention dans les deux titres ci-dessous. Avant ce correctif, cet
 // onglet était l'un des trois à afficher ces champs sans dire à qui ils appartiennent.
 export const IdentityFields = withForm({
