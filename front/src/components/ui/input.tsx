@@ -82,6 +82,8 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
           className={cn(
             'h-5 w-5 flex items-center justify-center rounded border border-border bg-background  transition-colors',
             ' peer-checked:[&>svg]:opacity-100',
+            // Un disabled sans fond ni bordure plus marquée se perd sur bg-background : même recette que `AdminServiceRole` (bg-muted + contraste renforcé).
+            'peer-disabled:bg-muted peer-disabled:border-border-dark',
             className,
           )}
           aria-hidden="true"
