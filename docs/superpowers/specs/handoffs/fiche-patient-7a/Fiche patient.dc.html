@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<style>body{margin:0;background:#e2e8f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',system-ui,sans-serif}a{color:#2563eb}a:hover{color:#1147bb}button{font-family:inherit}</style>
+</helmet>
+<section style="padding:48px;display:flex;flex-direction:column;gap:24px">
+  <div style="display:flex;flex-direction:column;gap:6px;max-width:900px">
+    <div style="font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#64748b">Tour 7 · réglages « Fiche patient »</div>
+    <div style="font-size:28px;font-weight:700;color:#04182b">Moins de boutons, plus de lecture</div>
+    <div style="font-size:15px;line-height:1.55;color:#334155;text-wrap:pretty">Chaque ligne portait 4 boutons bordés et chaque catégorie un bouton bleu : la page se lisait comme une liste d'actions. Ici une catégorie = une carte, les actions de ligne passent en icônes discrètes, le type de champ devient une étiquette avec icône, et « Ajouter un champ » ferme chaque liste. Un seul bouton bleu reste sur la page. Monter, descendre, supprimer et la bascule « Supprimés » fonctionnent.</div>
+  </div>
+  <div id="7a" style="display:flex;flex-direction:column;gap:12px;width:1200px;flex-shrink:0">
+    <div style="display:flex;align-items:center;gap:10px"><span style="background:#04182b;color:#ffffff;font-size:13px;font-weight:700;padding:4px 10px;border-radius:6px">7a</span><span style="font-size:18px;font-weight:600;color:#04182b">Cartes par catégorie, actions en icônes</span></div>
+    <div style="background:#f1f5f9;border-radius:12px;padding:28px;display:flex;flex-direction:column;gap:20px">
+
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <h1 style="margin:0;font-size:22px;font-weight:700;color:#04182b">Fiche patient</h1>
+          <span style="font-size:14px;color:#64748b">Champs remplis sur la fiche de chaque patient du service.</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px">
+          <button onClick="{{ toggleDeleted }}" style="cursor:pointer;display:flex;align-items:center;gap:8px;border:none;background:transparent;padding:0;font-size:14px;color:#334155">
+            <span style="width:36px;height:20px;border-radius:999px;background:{{ swBg }};position:relative;transition:background .15s"><span style="position:absolute;top:2px;left:{{ swLeft }};width:16px;height:16px;border-radius:50%;background:#ffffff;transition:left .15s"></span></span>
+            Supprimés<span style="font-size:12px;padding:1px 7px;border-radius:999px;background:#e2e8f0;color:#475569;font-variant-numeric:tabular-nums">{{ deletedCount }}</span>
+          </button>
+          <span style="height:38px;padding:0 14px;border-radius:5px;background:#2563eb;color:#ffffff;font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px"><span style="width:16px;height:16px;background-color:currentColor;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/plus.svg) center/contain no-repeat"></span>Ajouter une catégorie</span>
+        </div>
+      </div>
+
+      <sc-if value="{{ showDeleted }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;background:#ffffff;border:1px solid #e2e8f0;font-size:14px;color:#334155">
+          <span style="width:16px;height:16px;background-color:#64748b;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/archive.svg) center/contain no-repeat"></span>
+          Vous voyez les champs supprimés. Les patients qui les portent conservent leur valeur.
+        </div>
+      </sc-if>
+
+      <sc-for list="{{ cats }}" as="c" hint-placeholder-count="2">
+        <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden">
+          <div style="display:flex;align-items:center;gap:12px;padding:14px 12px 14px 20px;border-bottom:1px solid #e2e8f0">
+            <span style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
+              <span style="font-size:16px;font-weight:600;color:#04182b">{{ c.label }}</span>
+              <span title="Renommer" style="width:24px;height:24px;border-radius:5px;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:#f1f5f9"><span style="width:14px;height:14px;background-color:#94a3b8;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/pencil.svg) center/contain no-repeat"></span></span>
+              <span style="font-size:13px;color:#64748b">{{ c.count }}</span>
+            </span>
+            <div style="display:flex;align-items:center;gap:2px">
+              <button onClick="{{ c.up }}" title="Monter la catégorie" aria-label="Monter la catégorie" style="cursor:pointer;width:32px;height:32px;border:none;border-radius:6px;background:transparent;display:flex;align-items:center;justify-content:center;opacity:{{ c.upOp }}" style-hover="background:#f1f5f9"><span style="width:16px;height:16px;background-color:#475569;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/arrow-up.svg) center/contain no-repeat"></span></button>
+              <button onClick="{{ c.down }}" title="Descendre la catégorie" aria-label="Descendre la catégorie" style="cursor:pointer;width:32px;height:32px;border:none;border-radius:6px;background:transparent;display:flex;align-items:center;justify-content:center;opacity:{{ c.downOp }}" style-hover="background:#f1f5f9"><span style="width:16px;height:16px;background-color:#475569;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/arrow-down.svg) center/contain no-repeat"></span></button>
+              <span style="width:1px;height:20px;background:#e2e8f0;margin:0 6px"></span>
+              <button title="{{ c.delTitle }}" aria-label="Supprimer la catégorie" style="cursor:{{ c.delCursor }};width:32px;height:32px;border:none;border-radius:6px;background:transparent;display:flex;align-items:center;justify-content:center;opacity:{{ c.delOp }}"><span style="width:16px;height:16px;background-color:#dc2626;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/trash-2.svg) center/contain no-repeat"></span></button>
+            </div>
+          </div>
+
+          <sc-if value="{{ c.empty }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:16px 20px;font-size:14px;color:#64748b">{{ c.emptyText }}</div>
+          </sc-if>
+          <sc-for list="{{ c.rows }}" as="r" hint-placeholder-count="4">
+            <div style="display:grid;grid-template-columns:20px minmax(0,1fr) auto;align-items:center;gap:12px;height:52px;padding:0 12px 0 14px;border-bottom:1px solid #f1f5f9;background:{{ r.bg }}" style-hover="background:#f8fafc">
+              <span title="Glisser pour réordonner" style="width:16px;height:16px;cursor:grab;background-color:#cbd5e1;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/grip-vertical.svg) center/contain no-repeat;opacity:{{ r.gripOp }}"></span>
+              <div style="display:flex;align-items:center;gap:10px;min-width:0">
+                <span style="font-size:15px;font-weight:500;color:{{ r.labelFg }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:{{ r.strike }}">{{ r.label }}</span>
+                <span style="flex-shrink:0;display:flex;align-items:center;gap:6px;height:24px;padding:0 8px;border-radius:5px;background:#f1f5f9;font-size:13px;color:#475569"><span style="width:13px;height:13px;background-color:currentColor;mask:url({{ r.icon }}) center/contain no-repeat"></span>{{ r.type }}</span>
+                <sc-if value="{{ r.clinical }}" hint-placeholder-val="{{ false }}"><span title="Contenu clinique : masqué aux rôles Secrétariat et Lecture" style="flex-shrink:0;display:flex;align-items:center;gap:5px;height:24px;padding:0 8px;border-radius:5px;background:rgba(37,99,235,.1);font-size:13px;color:#1147bb"><span style="width:12px;height:12px;background-color:currentColor;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/lock.svg) center/contain no-repeat"></span>Clinique</span></sc-if>
+              </div>
+              <sc-if value="{{ r.active }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;align-items:center;gap:2px">
+                  <button onClick="{{ r.up }}" title="Monter" aria-label="Monter" style="cursor:pointer;width:32px;height:32px;border:none;border-radius:6px;background:transparent;display:flex;align-items:center;justify-content:center;opacity:{{ r.upOp }}" style-hover="background:#e2e8f0"><span style="width:16px;height:16px;background-color:#475569;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/arrow-up.svg) center/contain no-repeat"></span></button>
+                  <button onClick="{{ r.down }}" title="Descendre" aria-label="Descendre" style="cursor:pointer;width:32px;height:32px;border:none;border-radius:6px;background:transparent;display:flex;align-items:center;justify-content:center;opacity:{{ r.downOp }}" style-hover="background:#e2e8f0"><span style="width:16px;height:16px;background-color:#475569;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/arrow-down.svg) center/contain no-repeat"></span></button>
+                  <span style="width:1px;height:20px;background:#e2e8f0;margin:0 6px"></span>
+                  <button title="Modifier" aria-label="Modifier" style="cursor:pointer;width:32px;height:32px;border:none;border-radius:6px;background:transparent;display:flex;align-items:center;justify-content:center" style-hover="background:#e2e8f0"><span style="width:16px;height:16px;background-color:#334155;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/pencil.svg) center/contain no-repeat"></span></button>
+                  <button onClick="{{ r.remove }}" title="Supprimer" aria-label="Supprimer" style="cursor:pointer;width:32px;height:32px;border:none;border-radius:6px;background:transparent;display:flex;align-items:center;justify-content:center" style-hover="background:#fef2f2"><span style="width:16px;height:16px;background-color:#dc2626;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/trash-2.svg) center/contain no-repeat"></span></button>
+                </div>
+              </sc-if>
+              <sc-if value="{{ r.archived }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ r.restore }}" style="cursor:pointer;height:32px;display:flex;align-items:center;gap:6px;padding:0 12px;border:1px solid #e2e8f0;border-radius:6px;background:#ffffff;font-size:13px;font-weight:600;color:#04182b"><span style="width:14px;height:14px;background-color:currentColor;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/undo-2.svg) center/contain no-repeat"></span>Restaurer</button>
+              </sc-if>
+            </div>
+          </sc-for>
+          <sc-if value="{{ c.canAdd }}" hint-placeholder-val="{{ true }}">
+            <button style="cursor:pointer;width:100%;height:46px;display:flex;align-items:center;gap:8px;padding:0 20px;border:none;background:transparent;font-size:14px;font-weight:600;color:#2563eb;text-align:left" style-hover="background:#f8fafc"><span style="width:16px;height:16px;background-color:currentColor;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/plus.svg) center/contain no-repeat"></span>Ajouter un champ</button>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const TYPES = {
+  single: ['Choix unique', 'circle-dot'], multi: ['Choix multiple', 'list-checks'], long: ['Texte long', 'align-left'],
+  short: ['Texte court', 'type'], number: ['Nombre', 'hash'], date: ['Date', 'calendar'],
+};
+const IC = n => `https://unpkg.com/lucide-static@0.460.0/icons/${n}.svg`;
+let id = 0;
+const f = (label, type, extra = {}) => ({ id: ++id, label, type, clinical: false, archived: false, ...extra });
+class Component extends DCLogic {
+  state = {
+    showDeleted: false,
+    cats: [
+      { id: 'parcours', label: 'Parcours & Inclusion', fields: [
+        f('Diagnostic médical', 'single', { clinical: true }), f('Mode de prise en charge', 'single'), f('Orientation', 'single'),
+        f('ETP décision', 'single'), f('Type de programme', 'single'), f('Précision non inclusion', 'single'),
+        f('Précision contenu personnalisé', 'long'), f('Objectif', 'long')] },
+      { id: 'diet', label: 'Suivi diététique', fields: [f('Comorbidités', 'multi'), f("Poids d'entrée", 'number', { archived: true })] },
+    ],
+  };
+  setFields(cid, fn) { this.setState(s => ({ cats: s.cats.map(c => c.id === cid ? { ...c, fields: fn(c.fields) } : c) })); }
+  moveField(cid, fid, d) {
+    this.setFields(cid, fs => {
+      const act = fs.filter(x => !x.archived), i = act.findIndex(x => x.id === fid), j = i + d;
+      if (j < 0 || j >= act.length) return fs;
+      const out = [...fs], a = out.indexOf(act[i]), b = out.indexOf(act[j]);
+      [out[a], out[b]] = [out[b], out[a]]; return out;
+    });
+  }
+  moveCat(i, d) { this.setState(s => { const c = [...s.cats], j = i + d; if (j < 0 || j >= c.length) return null; [c[i], c[j]] = [c[j], c[i]]; return { cats: c }; }); }
+  renderVals() {
+    const { showDeleted, cats } = this.state;
+    const deletedCount = cats.reduce((n, c) => n + c.fields.filter(x => x.archived).length, 0);
+    return {
+      showDeleted, deletedCount,
+      toggleDeleted: () => this.setState(s => ({ showDeleted: !s.showDeleted })),
+      swBg: showDeleted ? '#2563eb' : '#cbd5e1', swLeft: showDeleted ? '18px' : '2px',
+      cats: cats.map((c, ci) => {
+        const active = c.fields.filter(x => !x.archived);
+        const shown = c.fields.filter(x => x.archived === showDeleted);
+        const n = active.length;
+        return {
+          label: c.label,
+          count: `${n} champ${n > 1 ? 's' : ''}`,
+          up: () => this.moveCat(ci, -1), down: () => this.moveCat(ci, 1),
+          upOp: ci === 0 ? .3 : 1, downOp: ci === cats.length - 1 ? .3 : 1,
+          delOp: n ? .3 : 1, delCursor: n ? 'not-allowed' : 'pointer',
+          delTitle: n ? "Déplacez ou supprimez d'abord ses champs" : 'Supprimer la catégorie',
+          empty: shown.length === 0, emptyText: showDeleted ? 'Aucun champ supprimé' : 'Aucun champ',
+          canAdd: !showDeleted,
+          rows: shown.map(x => {
+            const i = active.indexOf(x);
+            const [type, icon] = TYPES[x.type];
+            return {
+              label: x.label, type, icon: IC(icon), clinical: x.clinical,
+              active: !x.archived, archived: x.archived,
+              labelFg: x.archived ? '#64748b' : '#04182b', strike: 'none',
+              gripOp: x.archived ? 0 : 1, bg: '#ffffff',
+              upOp: i === 0 ? .3 : 1, downOp: i === n - 1 ? .3 : 1,
+              up: () => this.moveField(c.id, x.id, -1), down: () => this.moveField(c.id, x.id, 1),
+              remove: () => this.setFields(c.id, fs => fs.map(y => y.id === x.id ? { ...y, archived: true } : y)),
+              restore: () => this.setFields(c.id, fs => fs.map(y => y.id === x.id ? { ...y, archived: false } : y)),
+            };
+          }),
+        };
+      }),
+    };
+  }
+}
+</script>
+</body>
+</html>

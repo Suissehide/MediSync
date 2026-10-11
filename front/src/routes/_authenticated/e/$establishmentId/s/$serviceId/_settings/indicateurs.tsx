@@ -1,12 +1,13 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import {
+  Calculator,
   Check,
-  ChevronDown,
-  ChevronUp,
+  CircleSlash,
+  type LucideIcon,
   Pencil,
+  PenLine,
   Plus,
   Trash2,
-  Undo2,
   X,
 } from 'lucide-react'
 import type React from 'react'
@@ -19,6 +20,22 @@ import IndicatorForm, {
   NATURE_LABELS,
 } from '@/components/custom/popup/indicatorForm.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
+import {
+  ActionSeparator,
+  IconButton,
+  MoveButtons,
+  RestoreButton,
+} from '@/components/settings/iconButton.tsx'
+import {
+  CardFooterButton,
+  SettingsCard,
+  SettingsRow,
+} from '@/components/settings/settingsCard.tsx'
+import {
+  DeletedBanner,
+  SettingsPageHeader,
+} from '@/components/settings/settingsPageHeader.tsx'
+import { Tag } from '@/components/settings/tag.tsx'
 import { Button } from '@/components/ui/button.tsx'
 import { Input } from '@/components/ui/input.tsx'
 import { Label } from '@/components/ui/label.tsx'
@@ -32,7 +49,6 @@ import {
   PopupTrigger,
 } from '@/components/ui/popup.tsx'
 import { Select } from '@/components/ui/select.tsx'
-import { Switch } from '@/components/ui/switch.tsx'
 import { can } from '@/hooks/useCan.ts'
 import { cn } from '@/libs/utils.ts'
 import {
@@ -46,6 +62,7 @@ import { useServiceFieldsQuery } from '@/queries/useServiceField.ts'
 import type {
   ActivitySettings,
   Indicator,
+  IndicatorNature,
   IndicatorSet,
   MeasureCatalogEntry,
 } from '@/types/indicatorSet.ts'
@@ -106,63 +123,23 @@ const echanger = (ids: string[], a: string, b: string) => {
   return suite
 }
 
-function Fleches({
-  onUp,
-  onDown,
-  upDisabled,
-  downDisabled,
-}: {
-  onUp: () => void
-  onDown: () => void
-  upDisabled: boolean
-  downDisabled: boolean
-}) {
-  return (
-    <>
-      <Button
-        variant="outline"
-        size="icon-sm"
-        aria-label="Monter"
-        disabled={upDisabled}
-        onClick={onUp}
-      >
-        <ChevronUp className="w-4 h-4" />
-      </Button>
-      <Button
-        variant="outline"
-        size="icon-sm"
-        aria-label="Descendre"
-        disabled={downDisabled}
-        onClick={onDown}
-      >
-        <ChevronDown className="w-4 h-4" />
-      </Button>
-    </>
-  )
+const NATURE_ICONS: Record<IndicatorNature, LucideIcon> = {
+  computed: Calculator,
+  manual: PenLine,
+  unavailable: CircleSlash,
 }
 
-function NomJeuForm({
-  set,
-  trigger,
-}: {
-  set?: IndicatorSet
-  trigger: React.ReactNode
-}) {
+function NomJeuForm({ trigger }: { trigger: React.ReactNode }) {
   const [open, setOpen] = useState(false)
   const [nom, setNom] = useState('')
-  const { createSet, updateSet } = useIndicatorSetMutations()
-  const enCours = set ? updateSet.isPending : createSet.isPending
+  const { createSet } = useIndicatorSetMutations()
+  const enCours = createSet.isPending
 
   const valider = () => {
     if (enCours || !nom.trim()) {
       return
     }
-    const fermer = { onSuccess: () => setOpen(false) }
-    if (set) {
-      updateSet.mutate({ id: set.id, name: nom.trim() }, fermer)
-    } else {
-      createSet.mutate(nom.trim(), fermer)
-    }
+    createSet.mutate(nom.trim(), { onSuccess: () => setOpen(false) })
   }
 
   return (
@@ -172,16 +149,14 @@ function NomJeuForm({
       onOpenChange={(o) => {
         setOpen(o)
         if (o) {
-          setNom(set?.name ?? '')
+          setNom('')
         }
       }}
     >
       <PopupTrigger asChild>{trigger}</PopupTrigger>
       <PopupContent>
         <PopupHeader>
-          <PopupTitle className="font-bold text-xl">
-            {set ? 'Renommer le jeu' : 'Nouveau jeu'}
-          </PopupTitle>
+          <PopupTitle className="font-bold text-xl">Nouveau jeu</PopupTitle>
         </PopupHeader>
         <PopupBody>
           <form
@@ -211,7 +186,7 @@ function NomJeuForm({
             onClick={valider}
           >
             <Check className="w-4 h-4" />
-            {set ? 'Enregistrer' : 'Créer'}
+            Créer
           </Button>
         </PopupFooter>
       </PopupContent>
@@ -235,64 +210,62 @@ function ReglagesActivite({
   const choisi = fields.find((f) => f.key === champ)
 
   return (
-    <section className="flex flex-col gap-3">
-      <h2 className="text-base font-semibold text-text-dark">
-        Réglages de l'Activité
-      </h2>
-      <p className="text-sm text-text-light">
-        Le bloc des motifs d'arrêt de l'Activité s'affiche quand les deux
-        réglages sont posés ; un seul ne suffit pas, le bloc reste masqué.
-      </p>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl">
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="motif-arret">Champ motif d'arrêt</Label>
-          <Select
-            id="motif-arret"
-            options={proposes.map((f) => ({ value: f.key, label: f.label }))}
-            value={champ}
-            placeholder="Aucun"
-            onValueChange={(v) => {
-              setChamp(v)
-              setValeur('')
-            }}
-          />
+    <SettingsCard title="Réglages de l'Activité">
+      <div className="flex flex-col gap-3 px-5 py-4">
+        <p className="text-sm text-text-light">
+          Le bloc des motifs d'arrêt de l'Activité s'affiche quand les deux
+          réglages sont posés ; un seul ne suffit pas, le bloc reste masqué.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl">
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="motif-arret">Champ motif d'arrêt</Label>
+            <Select
+              id="motif-arret"
+              options={proposes.map((f) => ({ value: f.key, label: f.label }))}
+              value={champ}
+              placeholder="Aucun"
+              onValueChange={(v) => {
+                setChamp(v)
+                setValeur('')
+              }}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="fin-parcours">Valeur « fin de parcours »</Label>
+            <Select
+              id="fin-parcours"
+              options={(choisi?.choices ?? [])
+                .filter((c) => !c.archived || c.key === valeur)
+                .map((c) => ({ value: c.key, label: c.label }))}
+              value={valeur}
+              placeholder="Aucune"
+              disabled={!choisi}
+              onValueChange={setValeur}
+            />
+          </div>
         </div>
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="fin-parcours">Valeur « fin de parcours »</Label>
-          <Select
-            id="fin-parcours"
-            options={(choisi?.choices ?? [])
-              .filter((c) => !c.archived || c.key === valeur)
-              .map((c) => ({ value: c.key, label: c.label }))}
-            value={valeur}
-            placeholder="Aucune"
-            disabled={!choisi}
-            onValueChange={setValeur}
-          />
-        </div>
+        <Button
+          variant="outline"
+          className="w-fit"
+          isLoading={enregistrer.isPending}
+          disabled={enregistrer.isPending}
+          onClick={() =>
+            enregistrer.mutate({
+              stopReasonFieldKey: champ || null,
+              completedChoiceKey: champ && valeur ? valeur : null,
+            })
+          }
+        >
+          <Check className="w-4 h-4" />
+          Enregistrer les réglages
+        </Button>
       </div>
-      <Button
-        variant="default"
-        className="w-fit"
-        isLoading={enregistrer.isPending}
-        disabled={enregistrer.isPending}
-        onClick={() =>
-          enregistrer.mutate({
-            stopReasonFieldKey: champ || null,
-            completedChoiceKey: champ && valeur ? valeur : null,
-          })
-        }
-      >
-        <Check className="w-4 h-4" />
-        Enregistrer les réglages
-      </Button>
-    </section>
+    </SettingsCard>
   )
 }
 
 function IndicateursSettings() {
   const [showArchived, setShowArchived] = useState(false)
-  const [choisiId, setChoisiId] = useState<string | null>(null)
   const [aSupprimer, setASupprimer] = useState<
     | { kind: 'set'; set: IndicatorSet }
     | { kind: 'indicator'; setId: string; indicator: Indicator }
@@ -306,10 +279,11 @@ function IndicateursSettings() {
     useIndicatorSetMutations()
 
   const actifs = sets.filter((s) => !s.archived)
-  // « Supprimés » ajoute les jeux supprimés à la liste ; les jeux actifs restent choisissables.
+  // « Supprimés » ajoute les jeux supprimés aux cartes.
   const visibles = showArchived ? sets : actifs
-  const jeu =
-    visibles.find((s) => s.id === choisiId) ?? actifs[0] ?? visibles[0] ?? null
+  const supprimes =
+    sets.filter((s) => s.archived).length +
+    sets.flatMap((s) => s.indicators).filter((i) => i.archived).length
 
   const deplacerJeu = (id: string, sens: -1 | 1) => {
     const voisin = actifs[actifs.findIndex((s) => s.id === id) + sens]
@@ -326,26 +300,15 @@ function IndicateursSettings() {
 
   return (
     <DashboardLayout>
-      <div className="flex-1 min-h-0 bg-background p-6 rounded-lg flex flex-col w-full gap-6 overflow-y-auto">
-        <div className="flex justify-between items-center gap-3">
-          <h1 className="h-9 flex items-center text-text-dark text-xl font-semibold">
-            Indicateurs
-          </h1>
-          <div className="flex items-center gap-2">
-            <Switch
-              id="indicateurs-supprimes"
-              checked={showArchived}
-              onCheckedChange={setShowArchived}
-            />
-            <Label htmlFor="indicateurs-supprimes">Supprimés</Label>
-          </div>
-        </div>
-
-        <section className="flex flex-col gap-3">
-          <div className="flex justify-between items-center">
-            <h2 className="text-base font-semibold text-text-dark">
-              Jeux d'indicateurs
-            </h2>
+      <div className="flex-1 min-h-0 bg-background p-6 rounded-lg flex flex-col w-full gap-5 overflow-y-auto">
+        <SettingsPageHeader
+          title="Indicateurs"
+          subtitle="Jeux d'indicateurs consultés dans Pilotage."
+          switchId="indicateurs-supprimes"
+          showDeleted={showArchived}
+          onShowDeletedChange={setShowArchived}
+          deletedCount={supprimes}
+          action={
             <NomJeuForm
               trigger={
                 <Button variant="default">
@@ -354,101 +317,77 @@ function IndicateursSettings() {
                 </Button>
               }
             />
-          </div>
-          <ul className="flex flex-col gap-2">
-            {visibles.length === 0 && (
-              <li className="text-sm text-text-light">Aucun jeu</li>
-            )}
-            {visibles.map((s) => {
-              const index = actifs.findIndex((a) => a.id === s.id)
-              return (
-                <li
-                  key={s.id}
-                  className={cn(
-                    'flex items-center gap-2 border border-border rounded px-3 py-2',
-                    jeu?.id === s.id && 'border-primary',
-                  )}
-                >
-                  <button
-                    type="button"
-                    className="flex-1 min-w-0 text-left font-medium text-foreground cursor-pointer"
-                    aria-pressed={jeu?.id === s.id}
-                    onClick={() => setChoisiId(s.id)}
-                  >
-                    {s.name}
-                    <span className="ml-2 text-sm font-normal text-text-light">
-                      {s.indicators.filter((i) => !i.archived).length}{' '}
-                      indicateur(s)
-                    </span>
-                  </button>
-                  {!s.archived && (
-                    <Fleches
-                      onUp={() => deplacerJeu(s.id, -1)}
-                      onDown={() => deplacerJeu(s.id, 1)}
+          }
+        />
+
+        {showArchived && (
+          <DeletedBanner>
+            Vous voyez les jeux et indicateurs supprimés. Leurs réponses saisies
+            sont conservées.
+          </DeletedBanner>
+        )}
+
+        {visibles.length === 0 && (
+          <p className="text-sm text-text-light">Aucun jeu</p>
+        )}
+        {visibles.map((s) => {
+          const index = actifs.findIndex((a) => a.id === s.id)
+          return (
+            <JeuCarte
+              key={s.id}
+              jeu={s}
+              showArchived={showArchived}
+              catalog={catalog}
+              fields={fields}
+              actions={
+                s.archived ? (
+                  <RestoreButton
+                    aria-label="Restaurer le jeu"
+                    disabled={updateSet.isPending}
+                    onClick={() =>
+                      updateSet.mutate({ id: s.id, archived: false })
+                    }
+                  />
+                ) : (
+                  <>
+                    <MoveButtons
+                      upLabel="Monter le jeu"
+                      downLabel="Descendre le jeu"
                       upDisabled={index <= 0 || reorderSets.isPending}
                       downDisabled={
                         index === actifs.length - 1 || reorderSets.isPending
                       }
+                      onUp={() => deplacerJeu(s.id, -1)}
+                      onDown={() => deplacerJeu(s.id, 1)}
                     />
-                  )}
-                  <NomJeuForm
-                    set={s}
-                    trigger={
-                      <Button variant="outline" size="sm">
-                        <Pencil className="w-4 h-4" />
-                        Renommer
-                      </Button>
-                    }
-                  />
-                  {s.archived ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={updateSet.isPending}
-                      onClick={() =>
-                        updateSet.mutate({ id: s.id, archived: false })
-                      }
-                    >
-                      <Undo2 className="w-4 h-4" />
-                      Restaurer
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
+                    <ActionSeparator />
+                    <IconButton
+                      danger
+                      label="Supprimer le jeu"
                       onClick={() => setASupprimer({ kind: 'set', set: s })}
                     >
                       <Trash2 className="w-4 h-4" />
-                      Supprimer
-                    </Button>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
-        </section>
-
-        {jeu && (
-          <JeuDetail
-            jeu={jeu}
-            showArchived={showArchived}
-            catalog={catalog}
-            fields={fields}
-            reorderPending={reorderIndicators.isPending}
-            restorePending={updateIndicator.isPending}
-            onMove={(ids) => reorderIndicators.mutate({ setId: jeu.id, ids })}
-            onRestore={(i) =>
-              updateIndicator.mutate({
-                setId: jeu.id,
-                id: i.id,
-                body: { archived: false },
-              })
-            }
-            onDelete={(i) =>
-              setASupprimer({ kind: 'indicator', setId: jeu.id, indicator: i })
-            }
-          />
-        )}
+                    </IconButton>
+                  </>
+                )
+              }
+              onRename={(name) => updateSet.mutate({ id: s.id, name })}
+              reorderPending={reorderIndicators.isPending}
+              restorePending={updateIndicator.isPending}
+              onMove={(ids) => reorderIndicators.mutate({ setId: s.id, ids })}
+              onRestore={(i) =>
+                updateIndicator.mutate({
+                  setId: s.id,
+                  id: i.id,
+                  body: { archived: false },
+                })
+              }
+              onDelete={(i) =>
+                setASupprimer({ kind: 'indicator', setId: s.id, indicator: i })
+              }
+            />
+          )
+        })}
 
         {settings && <ReglagesActivite initial={settings} fields={fields} />}
 
@@ -488,11 +427,102 @@ function IndicateursSettings() {
   )
 }
 
-function JeuDetail({
+function IndicateurLigne({
+  indicateur: i,
+  jeu,
+  catalog,
+  fields,
+  upDisabled,
+  downDisabled,
+  onUp,
+  onDown,
+  restorePending,
+  onRestore,
+  onDelete,
+}: {
+  indicateur: Indicator
+  jeu: IndicatorSet
+  catalog: MeasureCatalogEntry[]
+  fields: ServiceField[]
+  upDisabled: boolean
+  downDisabled: boolean
+  onUp: () => void
+  onDown: () => void
+  restorePending: boolean
+  onRestore: () => void
+  onDelete: () => void
+}) {
+  const NatureIcon = NATURE_ICONS[i.nature]
+  return (
+    <SettingsRow
+      deleted={i.archived}
+      actions={
+        i.archived ? (
+          <RestoreButton disabled={restorePending} onClick={onRestore} />
+        ) : (
+          <>
+            <MoveButtons
+              upDisabled={upDisabled}
+              downDisabled={downDisabled}
+              onUp={onUp}
+              onDown={onDown}
+            />
+            <ActionSeparator />
+            <IndicatorForm
+              setId={jeu.id}
+              indicators={jeu.indicators}
+              catalog={catalog}
+              fields={fields}
+              indicator={i}
+              trigger={
+                <IconButton label="Modifier">
+                  <Pencil className="w-4 h-4 text-text-dark" />
+                </IconButton>
+              }
+            />
+            <IconButton danger label="Supprimer" onClick={onDelete}>
+              <Trash2 className="w-4 h-4" />
+            </IconButton>
+          </>
+        )
+      }
+    >
+      <div className="flex flex-col min-w-0 py-1.5">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className="shrink-0 text-[13px] text-text-light tabular-nums">
+            {i.code}
+          </span>
+          <span
+            className={cn(
+              'truncate text-[15px] font-medium',
+              i.archived ? 'text-text-light' : 'text-foreground',
+            )}
+          >
+            {i.label}
+          </span>
+          <Tag
+            icon={
+              <NatureIcon aria-hidden="true" className="w-[13px] h-[13px]" />
+            }
+          >
+            {NATURE_LABELS[i.nature]}
+          </Tag>
+        </div>
+        <p className="truncate text-[13px] text-text-light">
+          {resume(i, catalog, fields)}
+        </p>
+      </div>
+    </SettingsRow>
+  )
+}
+
+function JeuCarte({
   jeu,
   showArchived,
   catalog,
   fields,
+  actions,
+  onRename,
   reorderPending,
   restorePending,
   onMove,
@@ -503,6 +533,8 @@ function JeuDetail({
   showArchived: boolean
   catalog: MeasureCatalogEntry[]
   fields: ServiceField[]
+  actions: React.ReactNode
+  onRename: (name: string) => void
   reorderPending: boolean
   restorePending: boolean
   onMove: (ids: string[]) => void
@@ -512,6 +544,7 @@ function JeuDetail({
   const actifs = jeu.indicators.filter((i) => !i.archived)
   const visibles = showArchived ? jeu.indicators : actifs
   const groupes = [...new Set(visibles.map((i) => i.group))]
+  const n = actifs.length
 
   const deplacer = (i: Indicator, sens: -1 | 1) => {
     const groupe = actifs.filter((a) => a.group === i.group)
@@ -528,93 +561,62 @@ function JeuDetail({
   }
 
   return (
-    <section className="flex flex-col gap-3">
-      <div className="flex justify-between items-center">
-        <h2 className="text-base font-semibold text-text-dark">{jeu.name}</h2>
-        {!jeu.archived && (
+    <SettingsCard
+      title={jeu.name}
+      onRename={onRename}
+      renameLabel="Renommer le jeu"
+      inputLabel="Nom du jeu"
+      count={`${n} indicateur${n > 1 ? 's' : ''}`}
+      actions={actions}
+      empty={groupes.length === 0 ? 'Aucun indicateur' : undefined}
+      footer={
+        !jeu.archived &&
+        !showArchived && (
           <IndicatorForm
             setId={jeu.id}
             indicators={jeu.indicators}
             catalog={catalog}
             fields={fields}
+            trigger={<CardFooterButton>Ajouter un indicateur</CardFooterButton>}
           />
-        )}
-      </div>
-      {groupes.length === 0 && (
-        <p className="text-sm text-text-light">Aucun indicateur</p>
-      )}
+        )
+      }
+    >
       {groupes.map((groupe) => {
         const actifsDuGroupe = actifs.filter((a) => a.group === groupe)
         return (
-          <div key={groupe} className="flex flex-col gap-2">
-            <h3 className="text-sm font-semibold text-text-dark">{groupe}</h3>
-            <ul className="flex flex-col gap-2">
+          <div key={groupe}>
+            <h3 className="px-5 pt-3 pb-1 text-[13px] font-semibold text-text-light">
+              {groupe}
+            </h3>
+            <ul>
               {visibles
                 .filter((i) => i.group === groupe)
                 .map((i) => {
                   const index = actifsDuGroupe.findIndex((a) => a.id === i.id)
                   return (
-                    <li
+                    <IndicateurLigne
                       key={i.id}
-                      className="flex items-center gap-2 border border-border rounded px-3 py-2"
-                    >
-                      <div className="flex-1 min-w-0 text-sm">
-                        <span className="font-medium text-foreground">
-                          {i.code} · {i.label}
-                        </span>
-                        <span className="text-text-light">
-                          {' '}
-                          · {NATURE_LABELS[i.nature]}
-                        </span>
-                        <p className="text-text-light truncate">
-                          {resume(i, catalog, fields)}
-                        </p>
-                      </div>
-                      {!i.archived && (
-                        <Fleches
-                          onUp={() => deplacer(i, -1)}
-                          onDown={() => deplacer(i, 1)}
-                          upDisabled={index <= 0 || reorderPending}
-                          downDisabled={
-                            index === actifsDuGroupe.length - 1 ||
-                            reorderPending
-                          }
-                        />
-                      )}
-                      <IndicatorForm
-                        setId={jeu.id}
-                        indicators={jeu.indicators}
-                        catalog={catalog}
-                        fields={fields}
-                        indicator={i}
-                      />
-                      {i.archived ? (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={restorePending}
-                          onClick={() => onRestore(i)}
-                        >
-                          <Undo2 className="w-4 h-4" />
-                          Restaurer
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => onDelete(i)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          Supprimer
-                        </Button>
-                      )}
-                    </li>
+                      indicateur={i}
+                      jeu={jeu}
+                      catalog={catalog}
+                      fields={fields}
+                      upDisabled={index <= 0 || reorderPending}
+                      downDisabled={
+                        index === actifsDuGroupe.length - 1 || reorderPending
+                      }
+                      onUp={() => deplacer(i, -1)}
+                      onDown={() => deplacer(i, 1)}
+                      restorePending={restorePending}
+                      onRestore={() => onRestore(i)}
+                      onDelete={() => onDelete(i)}
+                    />
                   )
                 })}
             </ul>
           </div>
         )
       })}
-    </section>
+    </SettingsCard>
   )
 }

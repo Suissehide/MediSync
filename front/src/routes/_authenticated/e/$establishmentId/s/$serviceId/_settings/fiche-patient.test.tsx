@@ -526,7 +526,7 @@ describe('ecran de configuration — blocs de catégories', () => {
     ]
     monter([routeGetServiceFields([])], dansLeDesordre)
 
-    const titres = await screen.findAllByTestId('categorie-titre')
+    const titres = await screen.findAllByTestId('carte-titre')
     expect(titres.map((t) => t.textContent)).toEqual([
       'Parcours & Inclusion',
       'Sortie & Bilan',
@@ -579,7 +579,16 @@ describe('ecran de configuration — blocs de catégories', () => {
     await userEvent.click(screen.getByLabelText('Supprimés'))
 
     expect(await screen.findByText('Comorbidité')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /^restaurer$/i })).toBeDisabled()
+    const restaurer = screen.getByRole('button', { name: /^restaurer$/i })
+    expect(restaurer).toBeDisabled()
+    // Bouton outline désactivé sans événements pointeur : le title porte sur l'élément englobant.
+    expect(restaurer.parentElement).toHaveAttribute(
+      'title',
+      "Restaurez d'abord sa catégorie",
+    )
+    expect(
+      screen.queryByRole('button', { name: /^modifier$/i }),
+    ).not.toBeInTheDocument()
   })
 
   it('le titre d’une catégorie se renomme en place : Entrée enregistre', async () => {
@@ -894,8 +903,7 @@ describe('ecran de configuration — blocs de catégories', () => {
       name: /^supprimer la catégorie$/i,
     })
     expect(supprimer).toBeDisabled()
-    // Le titre porte sur l'élément englobant : certains navigateurs ne le montrent pas sur un bouton désactivé.
-    expect(supprimer.parentElement).toHaveAttribute(
+    expect(supprimer).toHaveAttribute(
       'title',
       "Déplacez ou supprimez d'abord ses champs",
     )
@@ -987,6 +995,70 @@ describe('ecran de configuration — blocs de catégories', () => {
         label: 'Nouvelle',
       })
     })
+  })
+})
+
+describe('ecran de configuration — cartes', () => {
+  it('le compteur « Supprimés » compte les champs supprimés de toutes les catégories', async () => {
+    const autreSupprime: ServiceField = {
+      ...motifSortie,
+      id: 'f6',
+      key: 'ancien_motif',
+      label: 'Ancien motif',
+      archived: true,
+    }
+    monter([
+      routeGetServiceFields([
+        orientation,
+        ancienDiagnostic,
+        motifSortie,
+        autreSupprime,
+      ]),
+    ])
+
+    await screen.findByText('Orientation')
+    expect(screen.getByTestId('compteur-supprimes')).toHaveTextContent(
+      /^2 éléments supprimés$/,
+    )
+  })
+
+  it('le pied « Ajouter un champ » est masqué en mode Supprimés', async () => {
+    monter([routeGetServiceFields([orientation])])
+
+    await screen.findByText('Orientation')
+    expect(
+      screen.getAllByRole('button', { name: /ajouter un champ/i }),
+    ).toHaveLength(2)
+    await userEvent.click(screen.getByLabelText('Supprimés'))
+    expect(
+      screen.queryByRole('button', { name: /ajouter un champ/i }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('le pied « Ajouter un champ » ouvre la popup sur la catégorie de sa carte', async () => {
+    monter([routeGetServiceFields([orientation])])
+
+    const carte = await screen.findByRole('region', { name: 'Sortie & Bilan' })
+    await userEvent.click(
+      within(carte).getByRole('button', { name: /ajouter un champ/i }),
+    )
+    expect(screen.getByLabelText('Catégorie')).toHaveTextContent(
+      'Sortie & Bilan',
+    )
+  })
+
+  it('le crayon du titre lance l’édition du libellé de la catégorie', async () => {
+    monter([routeGetServiceFields([])])
+
+    const carte = await screen.findByRole('region', {
+      name: 'Parcours & Inclusion',
+    })
+    await userEvent.click(
+      within(carte).getByRole('button', { name: 'Renommer la catégorie' }),
+    )
+    expect(
+      screen.getByRole('textbox', { name: 'Libellé de la catégorie' }),
+    ).toHaveValue('Parcours & Inclusion')
   })
 })
 

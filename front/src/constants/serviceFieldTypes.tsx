@@ -1,5 +1,15 @@
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
+import {
+  AlignLeft,
+  Calendar,
+  CircleDot,
+  Hash,
+  ListChecks,
+  type LucideIcon,
+  ToggleLeft,
+  Type,
+} from 'lucide-react'
 
 import type {
   FieldValues,
@@ -17,6 +27,16 @@ export const SERVICE_FIELD_TYPE_LABELS: Record<ServiceFieldType, string> = {
   choice: 'Choix unique',
   multichoice: 'Choix multiple',
   boolean: 'Oui / Non',
+}
+
+export const SERVICE_FIELD_TYPE_ICONS: Record<ServiceFieldType, LucideIcon> = {
+  text: Type,
+  longtext: AlignLeft,
+  number: Hash,
+  date: Calendar,
+  choice: CircleDot,
+  multichoice: ListChecks,
+  boolean: ToggleLeft,
 }
 
 export const fieldValue = (
