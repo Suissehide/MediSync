@@ -547,7 +547,7 @@ describe('soignants et salles a l echelle du service', () => {
         'POST',
         tenantUrl(E, A, '/pathway/regenerate'),
         {
-          pathwayTemplateID: parcoursType.json().id,
+          pathwayTemplateIDs: [parcoursType.json().id],
           fromDate: '2026-11-01',
         },
       )

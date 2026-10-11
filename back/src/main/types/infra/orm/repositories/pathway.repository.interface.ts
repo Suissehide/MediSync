@@ -88,7 +88,7 @@ export interface PathwayRepositoryInterface {
   ) => Promise<PathwayEntityRepo>
   delete: (pathwayID: string) => Promise<PathwayEntityRepo>
   regenerate: (
-    pathwayTemplateID: string,
+    pathwayTemplateIDs: string[],
     fromDate: Date,
   ) => Promise<RegeneratePathwaysResultRepo>
 }

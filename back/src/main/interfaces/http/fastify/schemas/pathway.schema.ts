@@ -44,7 +44,7 @@ export const instantiatePathwayBody = z.object({
 })
 
 export const regeneratePathwaysBody = z.object({
-  pathwayTemplateID: z.cuid(),
+  pathwayTemplateIDs: z.array(z.cuid()).min(1),
   fromDate: z.coerce.date(),
 })
 

@@ -245,7 +245,7 @@ const pathwayRouter: FastifyPluginAsync = (fastify) => {
     },
   )
 
-  // Regenerate instantiated pathways from the current template
+  // Regenerate instantiated pathways from the current templates
   fastify.post<{ Body: RegeneratePathwaysBody }>(
     '/regenerate',
     {
@@ -259,8 +259,8 @@ const pathwayRouter: FastifyPluginAsync = (fastify) => {
       config: { permission: 'planning:write' },
     },
     (request) => {
-      const { pathwayTemplateID, fromDate } = request.body
-      return pathwayDomain.regenerate(pathwayTemplateID, fromDate)
+      const { pathwayTemplateIDs, fromDate } = request.body
+      return pathwayDomain.regenerate(pathwayTemplateIDs, fromDate)
     },
   )
 

@@ -1410,24 +1410,26 @@ describe('scoping pathwayTemplate et pathway', () => {
     // sur un modele clone (templateID null) : la regeneration doit purger
     // ce creneau vide et son clone, puis recreer le pas de programme.
     const { prisma, calls } = buildFakePrisma({
-      'pathwayTemplate.findUnique': {
-        id: 'pt1',
-        slotTemplates: [
-          {
-            id: 'stMaster1',
-            startTime: new Date('1970-01-01T09:00:00.000Z'),
-            endTime: new Date('1970-01-01T10:00:00.000Z'),
-            offsetDays: 0,
-            isIndividual: true,
-            capacity: null,
-            thematicId: null,
-            locationID: null,
-            description: null,
-            color: '#fff',
-            soignantLinks: [{ soignantId: 'so1' }],
-          },
-        ],
-      },
+      'pathwayTemplate.findMany': [
+        {
+          id: 'pt1',
+          slotTemplates: [
+            {
+              id: 'stMaster1',
+              startTime: new Date('1970-01-01T09:00:00.000Z'),
+              endTime: new Date('1970-01-01T10:00:00.000Z'),
+              offsetDays: 0,
+              isIndividual: true,
+              capacity: null,
+              thematicId: null,
+              locationID: null,
+              description: null,
+              color: '#fff',
+              soignantLinks: [{ soignantId: 'so1' }],
+            },
+          ],
+        },
+      ],
       'pathway.findMany': [
         {
           id: 'pw1',
@@ -1441,12 +1443,14 @@ describe('scoping pathwayTemplate et pathway', () => {
     const ctx = new TenantContext()
     const repo = new PathwayRepository(buildContainer(prisma, ctx))
 
-    await ctx.run(tenant, () => repo.regenerate('pt1', new Date('2026-03-01')))
+    await ctx.run(tenant, () =>
+      repo.regenerate(['pt1'], new Date('2026-03-01')),
+    )
 
     expect(calls[0]).toMatchObject({
       model: 'pathwayTemplate',
-      op: 'findUnique',
-      args: { where: { id_serviceId: { id: 'pt1', serviceId: 's1' } } },
+      op: 'findMany',
+      args: { where: { id: { in: ['pt1'] }, serviceId: 's1' } },
     })
     expect(calls[1]).toMatchObject({
       model: 'forbiddenWeek',

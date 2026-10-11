@@ -145,29 +145,22 @@ class PathwayRepository implements PathwayRepositoryInterface {
   }
 
   async regenerate(
-    pathwayTemplateID: string,
+    pathwayTemplateIDs: string[],
     fromDate: Date,
   ): Promise<RegeneratePathwaysResultRepo> {
-    const template = await this.prisma.pathwayTemplate.findUnique({
+    const templates = await this.prisma.pathwayTemplate.findMany({
       where: {
-        id_serviceId: {
-          id: pathwayTemplateID,
-          serviceId: this.scope.serviceId,
-        },
+        id: { in: pathwayTemplateIDs },
+        serviceId: this.scope.serviceId,
       },
       include: { slotTemplates: { include: soignantLinksInclude } },
     })
-    if (!template) {
+    if (templates.length !== new Set(pathwayTemplateIDs).size) {
       throw Boom.notFound('PathwayTemplate not found')
     }
 
     const startOfDay = new Date(fromDate)
     startOfDay.setHours(0, 0, 0, 0)
-
-    const maxOffsetDays =
-      template.slotTemplates.length > 0
-        ? Math.max(...template.slotTemplates.map((st) => st.offsetDays ?? 0))
-        : 0
 
     try {
       return await this.prisma.$transaction(async (tx) => {
@@ -175,118 +168,129 @@ class PathwayRepository implements PathwayRepositoryInterface {
           where: this.scope,
         })
 
-        const pathways = await tx.pathway.findMany({
-          where: {
-            ...this.scope,
-            templateID: pathwayTemplateID,
-            startDate: { gte: startOfDay },
-          },
-          include: {
-            slots: {
-              include: { appointments: { select: { id: true } } },
-            },
-          },
-        })
-
+        let pathwaysUpdated = 0
         let slotsDeleted = 0
         let slotsKept = 0
         let slotsCreated = 0
 
-        for (const pathway of pathways) {
-          const occupiedSlots = pathway.slots.filter(
-            (slot) => slot.appointments.length > 0,
-          )
-          const emptySlots = pathway.slots.filter(
-            (slot) => slot.appointments.length === 0,
-          )
+        for (const template of templates) {
+          const maxOffsetDays =
+            template.slotTemplates.length > 0
+              ? Math.max(
+                  ...template.slotTemplates.map((st) => st.offsetDays ?? 0),
+                )
+              : 0
 
-          // Remove empty slots and their cloned slot templates.
-          if (emptySlots.length > 0) {
-            const emptySlotIDs = emptySlots.map((slot) => slot.id)
-            const emptyTemplateIDs = emptySlots.map(
-              (slot) => slot.slotTemplateID,
-            )
-            await tx.slot.deleteMany({
-              where: {
-                id: { in: emptySlotIDs },
-                serviceId: this.scope.serviceId,
+          const pathways = await tx.pathway.findMany({
+            where: {
+              ...this.scope,
+              templateID: template.id,
+              startDate: { gte: startOfDay },
+            },
+            include: {
+              slots: {
+                include: { appointments: { select: { id: true } } },
               },
-            })
-            // Guard: only cloned slot templates (templateID null) are ever
-            // deleted — never a master template shared by a PathwayTemplate.
-            await tx.slotTemplate.deleteMany({
-              where: {
-                id: { in: emptyTemplateIDs },
-                templateID: null,
-                serviceId: this.scope.serviceId,
-              },
-            })
-            slotsDeleted += emptySlots.length
-          }
+            },
+          })
+          pathwaysUpdated += pathways.length
 
-          slotsKept += occupiedSlots.length
-
-          const weekMapping = buildWeekMapping(
-            pathway.startDate,
-            maxOffsetDays,
-            forbiddenWeeks,
-          )
-
-          for (const slotTemplate of template.slotTemplates) {
-            const effectiveOffset = computeEffectiveOffset(
-              slotTemplate.offsetDays ?? 0,
-              weekMapping,
+          for (const pathway of pathways) {
+            const occupiedSlots = pathway.slots.filter(
+              (slot) => slot.appointments.length > 0,
             )
-            const base = dayjs(pathway.startDate)
-              .add(effectiveOffset, 'day')
-              .toISOString()
-            const start = combineDateAndTime(base, slotTemplate.startTime)
-            const end = combineDateAndTime(base, slotTemplate.endTime)
-
-            // Skip regenerating a step already covered by a kept slot.
-            const alreadyCovered = occupiedSlots.some(
-              (slot) => slot.startDate.getTime() === start.getTime(),
+            const emptySlots = pathway.slots.filter(
+              (slot) => slot.appointments.length === 0,
             )
-            if (alreadyCovered) {
-              continue
+
+            // Remove empty slots and their cloned slot templates.
+            if (emptySlots.length > 0) {
+              const emptySlotIDs = emptySlots.map((slot) => slot.id)
+              const emptyTemplateIDs = emptySlots.map(
+                (slot) => slot.slotTemplateID,
+              )
+              await tx.slot.deleteMany({
+                where: {
+                  id: { in: emptySlotIDs },
+                  serviceId: this.scope.serviceId,
+                },
+              })
+              // Guard: only cloned slot templates (templateID null) are ever
+              // deleted — never a master template shared by a PathwayTemplate.
+              await tx.slotTemplate.deleteMany({
+                where: {
+                  id: { in: emptyTemplateIDs },
+                  templateID: null,
+                  serviceId: this.scope.serviceId,
+                },
+              })
+              slotsDeleted += emptySlots.length
             }
 
-            const clonedSlotTemplate = await tx.slotTemplate.create({
-              data: {
-                ...this.scope,
-                startTime: slotTemplate.startTime,
-                endTime: slotTemplate.endTime,
-                offsetDays: effectiveOffset,
-                isIndividual: slotTemplate.isIndividual,
-                capacity: slotTemplate.capacity,
-                thematicId: slotTemplate.thematicId,
-                locationID: slotTemplate.locationID,
-                description: slotTemplate.description,
-                color: slotTemplate.color,
-                soignantLinks: {
-                  create: slotTemplate.soignantLinks.map((l) => ({
-                    soignantId: l.soignantId,
-                    establishmentId: this.scope.establishmentId,
-                  })),
-                },
-              },
-            })
+            slotsKept += occupiedSlots.length
 
-            await tx.slot.create({
-              data: {
-                ...this.scope,
-                startDate: start,
-                endDate: end,
-                slotTemplateID: clonedSlotTemplate.id,
-                pathwayID: pathway.id,
-              },
-            })
-            slotsCreated += 1
+            const weekMapping = buildWeekMapping(
+              pathway.startDate,
+              maxOffsetDays,
+              forbiddenWeeks,
+            )
+
+            for (const slotTemplate of template.slotTemplates) {
+              const effectiveOffset = computeEffectiveOffset(
+                slotTemplate.offsetDays ?? 0,
+                weekMapping,
+              )
+              const base = dayjs(pathway.startDate)
+                .add(effectiveOffset, 'day')
+                .toISOString()
+              const start = combineDateAndTime(base, slotTemplate.startTime)
+              const end = combineDateAndTime(base, slotTemplate.endTime)
+
+              // Skip regenerating a step already covered by a kept slot.
+              const alreadyCovered = occupiedSlots.some(
+                (slot) => slot.startDate.getTime() === start.getTime(),
+              )
+              if (alreadyCovered) {
+                continue
+              }
+
+              const clonedSlotTemplate = await tx.slotTemplate.create({
+                data: {
+                  ...this.scope,
+                  startTime: slotTemplate.startTime,
+                  endTime: slotTemplate.endTime,
+                  offsetDays: effectiveOffset,
+                  isIndividual: slotTemplate.isIndividual,
+                  capacity: slotTemplate.capacity,
+                  thematicId: slotTemplate.thematicId,
+                  locationID: slotTemplate.locationID,
+                  description: slotTemplate.description,
+                  color: slotTemplate.color,
+                  soignantLinks: {
+                    create: slotTemplate.soignantLinks.map((l) => ({
+                      soignantId: l.soignantId,
+                      establishmentId: this.scope.establishmentId,
+                    })),
+                  },
+                },
+              })
+
+              await tx.slot.create({
+                data: {
+                  ...this.scope,
+                  startDate: start,
+                  endDate: end,
+                  slotTemplateID: clonedSlotTemplate.id,
+                  pathwayID: pathway.id,
+                },
+              })
+              slotsCreated += 1
+            }
           }
         }
 
         return {
-          pathwaysUpdated: pathways.length,
+          pathwaysUpdated,
           slotsDeleted,
           slotsKept,
           slotsCreated,
