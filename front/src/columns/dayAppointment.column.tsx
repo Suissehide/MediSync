@@ -3,7 +3,7 @@ import {
   type SortingFn,
   sortingFns,
 } from '@tanstack/react-table'
-import { Eye, Trash2 } from 'lucide-react'
+import { Eye, Trash2, User, Users } from 'lucide-react'
 
 import { MAX_VISIBLE_CHIPS } from '../components/custom/agenda/chip.ts'
 import PatientCell from '../components/custom/agenda/patientCell.tsx'
@@ -135,17 +135,31 @@ export const getDayAppointmentColumns = ({
     columnHelper.display({
       id: 'places',
       header: 'Places',
-      size: 90,
+      size: 120,
       cell: ({ row }) => {
-        const { subRows, patients, capacity } = row.original
+        const { subRows, patients, capacity, isIndividual } = row.original
         if (row.depth > 0) {
           return null
         }
-        // Créneau individuel découpé : chaque rendez-vous a sa sous-ligne.
-        if (subRows) {
-          return `${subRows.filter((r) => r.kind === 'appointment').length} RDV`
-        }
-        return `${patients.length}/${capacity}`
+        const Icon = isIndividual ? User : Users
+        const label = isIndividual ? 'Individuel' : 'Collectif'
+        return (
+          <span className="flex items-center gap-1.5">
+            <Icon
+              className="w-3.5 h-3.5 shrink-0 text-muted-foreground"
+              aria-label={label}
+              role="img"
+            >
+              <title>{label}</title>
+            </Icon>
+            {/* Créneau individuel découpé : chaque rendez-vous a sa sous-ligne. */}
+            {subRows
+              ? `${subRows.filter((r) => r.kind === 'appointment').length} RDV`
+              : isIndividual
+                ? 'Individuel'
+                : `${patients.length}/${capacity}`}
+          </span>
+        )
       },
     }),
     columnHelper.display({
