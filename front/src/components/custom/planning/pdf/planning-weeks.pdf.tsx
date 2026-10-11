@@ -2,7 +2,7 @@ import { Document, Page, StyleSheet, Text, View } from '@react-pdf/renderer'
 
 import { getContrastTextColor } from '../../../../libs/color.ts'
 import type { Slot } from '../../../../types/slot.ts'
-import type { PlanningWeek } from './planning-pdf.utils.ts'
+import { type PlanningWeek, timeKeyOf } from './planning-pdf.utils.ts'
 
 const PAGE_PADDING = 22
 const DAY_HEADER_HEIGHT = 24
@@ -182,10 +182,12 @@ function computeThematicMaxLines(rowHeight: number) {
 
 function SlotBlock({
   slot,
+  rowTimeKey,
   fontScale,
   thematicMaxLines,
 }: {
   slot: Slot
+  rowTimeKey: string
   fontScale: number
   thematicMaxLines: number
 }) {
@@ -200,7 +202,12 @@ function SlotBlock({
   const location = slot.slotTemplate?.location?.name
   // Soignants et salle sur une seule ligne : en hauteur, chaque ligne gagnée
   // permet une police plus grande sur une semaine dense.
-  const details = [soignants, location].filter(Boolean).join(' - ')
+  // Horaire rappelé seulement s'il diffère de la plage de la ligne.
+  const slotTimeKey = timeKeyOf(slot)
+  const time = slotTimeKey !== rowTimeKey && slotTimeKey.replace('-', '–')
+  const details = [time, [soignants, location].filter(Boolean).join(' - ')]
+    .filter(Boolean)
+    .join(' · ')
 
   return (
     <View style={[styles.slotBlock, { backgroundColor: background }]}>
@@ -274,7 +281,7 @@ function WeekPage({ week }: { week: PlanningWeek }) {
 
           {week.timeRows.map((row) => (
             <View
-              key={row.timeLabel}
+              key={row.timeKey}
               style={[styles.timeRow, { height: rowHeight }]}
               wrap={false}
             >
@@ -294,6 +301,7 @@ function WeekPage({ week }: { week: PlanningWeek }) {
                     <SlotBlock
                       key={slot.id}
                       slot={slot}
+                      rowTimeKey={row.timeKey}
                       fontScale={fontScale}
                       thematicMaxLines={thematicMaxLines}
                     />
