@@ -161,7 +161,10 @@ function Agenda() {
       components={['soignant']}
       quickActions={[
         <AddPatientForm key="add-patient" />,
-        <AddPatientToSlotForm key="add-patient-to-slot" />,
+        <AddPatientToSlotForm
+          key="add-patient-to-slot"
+          onBooked={handleDayChange}
+        />,
       ]}
     >
       <div className="flex-1 min-h-0 bg-background p-6 rounded-lg flex flex-col w-full gap-4">
