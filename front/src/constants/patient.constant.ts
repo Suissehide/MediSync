@@ -42,28 +42,6 @@ export const CURRENT_ACTIVITY = {
   SANS_EMPLOI: 'Sans emploi',
 }
 
-export const STOP_REASON = {
-  ABSENCE_BESOINS_EDUCATIFS: 'Absence besoins éducatifs',
-  ABSENCE_CRITERES_MEDICAUX: "Absence de critères médicaux d'inclusion",
-  BARRIERE_LANGUE: 'Barrière de la langue',
-  DISTANCE_HABITATION: "Distance d'habitation",
-  DECES: 'Décès',
-  DEMENAGEMENT: 'Déménagement',
-  INDISPONIBILITE: 'Indisponibilité',
-  MANQUE_MOTIVATION: 'Manque de motivation',
-  NS: 'NS',
-  PERDU_DE_VUE: 'Perdu de vue',
-  PLUS_BESOIN_FIN_PARCOURS: 'Plus de besoin/Fin de parcours',
-  PRISE_CHARGE_BESOINS_QUOTIDIENS: 'Prise en charge besoins quotidiens',
-  PROBLEME_SANTE: 'Problème de santé',
-  PROBLEMES_MEDICAUX: 'Problèmes médicaux à régler',
-  REFUS: 'Refus',
-  SOUHAIT_ARRET: 'Souhait arrêt',
-  TRANSPORT: 'Transport',
-  TROUBLES_COGNITIFS: 'Troubles cognitifs',
-  TROUBLES_PSYCHIATRIQUES: 'Troubles psychiatriques',
-}
-
 export const GENDER_OPTIONS = toSelectOptions(GENDER)
 export const DISTANCE_OPTIONS = toSelectOptions(DISTANCE)
 export const EDUCATION_LEVEL_OPTIONS = toSelectOptions(EDUCATION_LEVEL)

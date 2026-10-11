@@ -9,6 +9,11 @@ export type ServiceUpdateEntityDomain = {
   deactivated?: boolean
 }
 
+export type ActivitySettingsUpdateEntityDomain = {
+  stopReasonFieldKey: string | null
+  completedChoiceKey: string | null
+}
+
 // Décision 3.6 (spec §3.6) : ce que rend l'écran avant de désactiver — voir
 // `PatientServiceFileDeactivationImpactRepo` (types/infra/orm/repositories/
 // patientServiceFile.repository.interface.ts) pour ce que chaque nombre signifie.
@@ -29,4 +34,8 @@ export interface ServiceDomainInterface {
   impactDesactivation: (
     serviceID: string,
   ) => Promise<ServiceDeactivationImpactDomain>
+  findCurrent: () => Promise<ServiceEntityDomain>
+  updateActivitySettings: (
+    params: ActivitySettingsUpdateEntityDomain,
+  ) => Promise<ServiceEntityDomain>
 }

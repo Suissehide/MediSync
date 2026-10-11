@@ -291,6 +291,11 @@ Fragment rather than the real element (React: "Invalid prop `className` supplied
 - The patient list (`routes/.../patient/index.tsx`) mounts `ReactTable` only once the service fields and categories have loaded — columns/filters persistence depends on the fields being known at mount, not patched in afterwards.
 - In the fiche-patient configuration screen, deleting a field or a category shows "Supprimer"/"Restaurer" ("Supprimés" to reveal archived ones); the two date categories have neither button, they can't be deleted.
 
+## Jeux d'indicateurs configurables (`docs/indicateurs-configurables/`)
+
+- Le menu Pilotage liste une entrée par jeu d'indicateurs **actif** du service (`navigation.ts`, `parJeu: true` déplié par `useIndicatorSetsQuery`, qui filtre déjà les jeux archivés) — pas une entrée fixe « Grille ARS ».
+- Les écrans de configuration affichent « Supprimer » sur un jeu ou un indicateur, mais l'API ne fait qu'archiver (`archived: true`) ; rien ne les efface réellement.
+
 ## Testing
 
 Vitest + Testing Library, `jsdom` environment.

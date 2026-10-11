@@ -15,7 +15,9 @@ const rapport: ActivityReport = {
     exited: 42,
     rate: 31 / 42,
     dropouts: 11,
-    dropoutReasons: [{ reason: 'PERDU_DE_VUE', count: 5 }],
+    dropoutReasons: [
+      { reason: 'PERDU_DE_VUE', label: 'Perdu de vue', count: 5 },
+    ],
   },
   absences: {
     overall: { absent: 12, pointed: 100, rate: 0.12 },
@@ -129,6 +131,13 @@ describe('activityCsv', () => {
     const csv = activityCsv(avecJours, 'Cardio')
     expect(csv).toContain('Absences toutes thématiques;lundi;22 %;30 sur 136')
     expect(csv).not.toContain('Absences toutes thématiques;mardi')
+  })
+
+  it('omet la completion et les motifs sans reglage du service', () => {
+    const sansReglage: ActivityReport = { ...rapport, completion: null }
+    const csv = activityCsv(sansReglage, 'Cardio')
+    expect(csv).not.toContain('Ont terminé')
+    expect(csv).not.toContain("Motifs d'arrêt")
   })
 
   it('neutralise un libelle qui ressemble a une formule tableur', () => {

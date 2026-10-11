@@ -109,10 +109,10 @@ const ecranActivite = createRoute({
   component: () => <Navbar toggleSidebar={replierLaBarre} />,
 })
 
-// Activite et Indicateurs ARS sont les deux entrees du menu de l'onglet Pilotage.
-const ecranArs = createRoute({
+// Activite puis un ecran par jeu d'indicateurs actif : les entrees du menu de l'onglet Pilotage.
+const ecranJeu = createRoute({
   getParentRoute: () => layoutDeService,
-  path: 'indicateurs-ars',
+  path: 'indicateurs/$setId',
   component: () => <Navbar toggleSidebar={replierLaBarre} />,
 })
 
@@ -176,7 +176,7 @@ const arbre = rootRoute.addChildren([
   layoutDeService.addChildren([
     ecranDeService,
     ecranActivite,
-    ecranArs,
+    ecranJeu,
     ecranTiroir,
   ]),
   layoutAdmin.addChildren([ecranResume, ecranAdmin]),
@@ -284,14 +284,37 @@ const menus = () =>
     .queryAllByRole('button', { name: 'Administration' })
     .map((bouton) => bouton.textContent)
 
+// Les jeux du service, dans le desordre et avec un jeu archive : la barre trie et ecarte.
+const JEUX = [
+  { id: 'q', name: 'Qualité', order: 1, archived: false },
+  { id: 'vieux', name: 'Ancienne grille', order: 2, archived: true },
+  { id: 'ars', name: 'Grille ARS', order: 0, archived: false },
+]
+
+const repondreAvecLesJeux = (jeux: unknown[]) =>
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(
+      async (input: RequestInfo | URL) =>
+        new Response(
+          JSON.stringify(
+            input.toString().endsWith('/indicator-sets') ? jeux : [],
+          ),
+          { status: 200 },
+        ),
+    ),
+  )
+
+const lecturesDesJeux = () =>
+  (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.filter(([url]) =>
+    String(url).endsWith('/indicator-sets'),
+  )
+
 describe('onglets de la barre de navigation', () => {
   beforeEach(() => {
     localStorage.clear()
     useAuthStore.setState({ isAuthenticated: true, context: null })
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => new Response('[]', { status: 200 })),
-    )
+    repondreAvecLesJeux(JEUX)
   })
 
   afterEach(() => {
@@ -405,7 +428,7 @@ describe('onglets de la barre de navigation', () => {
     })
   })
 
-  it.each(['/e/e1/s/s1/activite', '/e/e1/s/s1/indicateurs-ars'])(
+  it.each(['/e/e1/s/s1/activite', '/e/e1/s/s1/indicateurs/ars'])(
     'sur %s, l onglet Pilotage est actif',
     async (depart) => {
       monterNavbar(depart, avecRoles('MEMBER', 'COORDINATEUR'))
@@ -416,22 +439,52 @@ describe('onglets de la barre de navigation', () => {
     },
   )
 
-  it('ouvre au coordinateur un menu Pilotage avec Activite et Indicateurs ARS', async () => {
+  it('ouvre au coordinateur un menu Pilotage avec Activite puis chaque jeu actif, dans l ordre', async () => {
     monterNavbar('/e/e1/s/s1/dashboard', avecRoles('MEMBER', 'COORDINATEUR'))
 
     await userEvent.click(
       await screen.findByRole('button', { name: 'Pilotage' }),
     )
     const entrees = await screen.findAllByRole('link', {
-      name: /Activité|Indicateurs ARS/,
+      name: /Activité|Grille ARS|Qualité|Ancienne grille/,
     })
     expect(
       entrees.map((lien) => lien.querySelector('span')?.textContent),
-    ).toEqual(['Activité', 'Indicateurs ARS'])
-    expect(entrees[1]).toHaveAttribute('href', '/e/e1/s/s1/indicateurs-ars')
+    ).toEqual(['Activité', 'Grille ARS', 'Qualité'])
+    expect(entrees[1]).toHaveAttribute('href', '/e/e1/s/s1/indicateurs/ars')
+    expect(entrees[2]).toHaveAttribute('href', '/e/e1/s/s1/indicateurs/q')
   })
 
-  // Une seule entree visible (pas de `stats:read`) : un onglet simple, pas un menu d'un element.
+  it('marque dans le menu le seul jeu affiche', async () => {
+    monterNavbar(
+      '/e/e1/s/s1/indicateurs/q',
+      avecRoles('MEMBER', 'COORDINATEUR'),
+    )
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Pilotage' }),
+    )
+    const courantes = await screen.findAllByRole('link', { current: 'page' })
+    expect(courantes.map((lien) => lien.getAttribute('href'))).toEqual([
+      '/e/e1/s/s1/indicateurs/q',
+    ])
+  })
+
+  // Une seule entree visible : un onglet simple, pas un menu d'un element.
+  it('donne au coordinateur d un service sans jeu un onglet Pilotage simple', async () => {
+    repondreAvecLesJeux([])
+    monterNavbar('/e/e1/s/s1/dashboard', avecRoles('MEMBER', 'COORDINATEUR'))
+
+    await waitFor(() => expect(lecturesDesJeux()).toHaveLength(1))
+    expect(
+      await screen.findByRole('link', { name: 'Pilotage' }),
+    ).toHaveAttribute('href', '/e/e1/s/s1/activite')
+    expect(
+      screen.queryByRole('button', { name: 'Pilotage' }),
+    ).not.toBeInTheDocument()
+  })
+
+  // Sans `stats:read`, les jeux ne sont meme pas demandes.
   it('donne a la lecture un onglet Pilotage simple vers l Activite', async () => {
     monterNavbar('/e/e1/s/s1/dashboard', avecRoles('MEMBER', 'LECTURE'))
 
@@ -440,15 +493,19 @@ describe('onglets de la barre de navigation', () => {
     expect(
       screen.queryByRole('button', { name: 'Pilotage' }),
     ).not.toBeInTheDocument()
+    expect(lecturesDesJeux()).toEqual([])
   })
 
-  it('range Activite et Indicateurs ARS sous Pilotage dans le tiroir mobile', async () => {
+  it('range Activite et les jeux sous Pilotage dans le tiroir mobile', async () => {
     monterNavbar('/e/e1/s/s1/suivi', avecRoles('MEMBER', 'COORDINATEUR'))
 
     const titre = await screen.findByText('Pilotage', { selector: 'summary' })
     await userEvent.click(titre)
     expect(screen.getByRole('link', { name: 'Activité' })).toBeVisible()
-    expect(screen.getByRole('link', { name: 'Indicateurs ARS' })).toBeVisible()
+    expect(
+      await screen.findByRole('link', { name: 'Grille ARS' }),
+    ).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Qualité' })).toBeVisible()
   })
 
   it('donne a la lecture un lien Pilotage simple dans le tiroir mobile', async () => {
@@ -491,6 +548,7 @@ describe('onglets de la barre de navigation', () => {
     expect(
       screen.queryByRole('navigation', { name: 'Navigation' }),
     ).not.toBeInTheDocument()
+    expect(lecturesDesJeux()).toEqual([])
   })
 })
 

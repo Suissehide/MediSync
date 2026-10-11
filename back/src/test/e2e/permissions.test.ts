@@ -124,31 +124,69 @@ const probes: {
     path: `/patient/${FAKE_ID}/enrollment-issue/${FAKE_ID}`,
   },
   { permission: 'todo:own', method: 'GET', path: '/todo', heldStatus: 200 },
+  // Jeu inexistant : le détenteur reçoit 404, jamais 403. L'export a sa propre sonde : une erreur
+  // de littéral de permission sur cette route-là boote sans broncher.
   {
     permission: 'stats:read',
     method: 'GET',
-    path: '/indicateurs-ars?from=2026-01-01&to=2026-12-31',
-    heldStatus: 200,
+    path: `/indicator-sets/${FAKE_ID}/results?from=2026-01-01&to=2026-12-31`,
   },
-  // L'export a sa propre sonde : `assertRoutePermission` exige qu'une permission soit DÉCLARÉE,
-  // pas qu'elle soit la bonne. Une erreur de littéral sur cette route-là boote sans broncher.
   {
     permission: 'stats:read',
     method: 'GET',
-    path: '/indicateurs-ars/export?from=2026-01-01&to=2026-12-31',
-    heldStatus: 200,
+    path: `/indicator-sets/${FAKE_ID}/export?from=2026-01-01&to=2026-12-31`,
   },
   {
     permission: 'stats:write',
     method: 'PUT',
-    path: '/indicateurs-ars/saisies/2026/4.2',
+    path: `/indicator-sets/${FAKE_ID}/answers/2026/${FAKE_ID}`,
     payload: { boolValue: true },
+  },
+  {
+    permission: 'stats:write',
+    method: 'POST',
+    path: `/indicator-sets/${FAKE_ID}/preview`,
+    payload: {
+      indicator: { nature: 'unavailable', note: 'x' },
+      from: '2026-01-01',
+      to: '2026-12-31',
+    },
+  },
+  {
+    permission: 'stats:read',
+    method: 'GET',
+    path: '/activity-settings',
     heldStatus: 200,
   },
   {
     permission: 'activity:read',
     method: 'GET',
     path: '/activite?from=2026-01-01&to=2026-12-31',
+    heldStatus: 200,
+  },
+  {
+    permission: 'stats:read',
+    method: 'GET',
+    path: '/indicator-sets',
+    heldStatus: 200,
+  },
+  {
+    permission: 'stats:read',
+    method: 'GET',
+    path: '/indicator-catalog',
+    heldStatus: 200,
+  },
+  {
+    permission: 'stats:write',
+    method: 'POST',
+    path: '/indicator-sets',
+    payload: { name: 'X' },
+  },
+  {
+    permission: 'stats:write',
+    method: 'PATCH',
+    path: '/activity-settings',
+    payload: { stopReasonFieldKey: null, completedChoiceKey: null },
     heldStatus: 200,
   },
 ]

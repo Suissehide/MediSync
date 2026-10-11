@@ -1,5 +1,4 @@
 import { ACTIVITY_DEFINITIONS, JOURS } from '../constants/activity.constant.ts'
-import { STOP_REASON } from '../constants/patient.constant.ts'
 import type { ActivityReport } from '../types/activity.ts'
 import { nombre, toCsv } from './csv.ts'
 
@@ -35,30 +34,34 @@ export const activityCsv = (
       definition('Nouveaux inclus'),
     ],
     ['Patients', 'Sortis', nombre(r.patients.exited), definition('Sortis')],
-    [
-      'Parcours',
-      'Ont terminé',
-      nombre(r.completion.completed),
-      definition('Ont terminé'),
-    ],
-    [
-      'Parcours',
-      'Taux de complétion',
-      pourcent(r.completion.rate),
-      definition('Taux de complétion'),
-    ],
-    [
-      'Parcours',
-      'Abandons',
-      nombre(r.completion.dropouts),
-      definition('Abandons'),
-    ],
-    ...r.completion.dropoutReasons.map((m) => [
-      "Motifs d'arrêt",
-      STOP_REASON[m.reason as keyof typeof STOP_REASON] ?? m.reason,
-      nombre(m.count),
-      '',
-    ]),
+    ...(r.completion
+      ? [
+          [
+            'Parcours',
+            'Ont terminé',
+            nombre(r.completion.completed),
+            definition('Ont terminé'),
+          ],
+          [
+            'Parcours',
+            'Taux de complétion',
+            pourcent(r.completion.rate),
+            definition('Taux de complétion'),
+          ],
+          [
+            'Parcours',
+            'Abandons',
+            nombre(r.completion.dropouts),
+            definition('Abandons'),
+          ],
+          ...r.completion.dropoutReasons.map((m) => [
+            "Motifs d'arrêt",
+            m.label,
+            nombre(m.count),
+            '',
+          ]),
+        ]
+      : []),
     [
       'Absences',
       'Ensemble',

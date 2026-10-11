@@ -12,12 +12,13 @@ import {
 } from '../plugins/tenant.plugin'
 import { serviceActivityLogRouter } from './activityLog'
 import { activityReportRouter } from './activityReport'
+import { activitySettingsRouter } from './activitySettings'
 import { appointmentRouter } from './appointment'
-import { arsIndicatorRouter } from './arsIndicator'
 import { diagnosticEducatifRouter } from './diagnosticEducatif'
 import { diagnosticEducatifTemplateRouter } from './diagnosticEducatifTemplate'
 import { enrollmentIssueRouter } from './enrollmentIssue'
 import { forbiddenWeekRouter } from './forbiddenWeek'
+import { indicatorCatalogRouter, indicatorSetRouter } from './indicatorSet'
 import { locationReadRouter, locationWriteRouter } from './location'
 import { pathwayRouter } from './pathway'
 import { pathwayTemplateRouter } from './pathwayTemplate'
@@ -201,10 +202,14 @@ const tenantRoutes: FastifyPluginAsyncZod = async (fastify) => {
   await fastify.register(planningCycleRouter, { prefix: '/planning-cycle' })
   await fastify.register(serviceMembersRouter, { prefix: '/membres' })
   await fastify.register(serviceActivityLogRouter, { prefix: '/activity-log' })
-  await fastify.register(arsIndicatorRouter, {
-    prefix: '/indicateurs-ars',
-  })
   await fastify.register(activityReportRouter, { prefix: '/activite' })
+  await fastify.register(indicatorSetRouter, { prefix: '/indicator-sets' })
+  await fastify.register(indicatorCatalogRouter, {
+    prefix: '/indicator-catalog',
+  })
+  await fastify.register(activitySettingsRouter, {
+    prefix: '/activity-settings',
+  })
 }
 
 export { tenantRoutes }

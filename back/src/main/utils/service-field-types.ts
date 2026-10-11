@@ -51,7 +51,7 @@ export type FieldDefinitionForValidation = {
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/
 
 // Refuse aussi un jour qui n'existe pas (2026-02-30), que Date reporterait au mois suivant.
-const isIsoDay = (value: unknown): boolean => {
+export const isIsoDay = (value: unknown): boolean => {
   if (typeof value !== 'string' || !ISO_DAY.test(value)) {
     return false
   }

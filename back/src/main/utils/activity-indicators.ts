@@ -1,16 +1,23 @@
 import {
-  type ArsCohort,
-  type ArsFile,
-  type ArsPresence,
+  type CohortFile,
+  type CohortPresence,
   completeProgram,
   deDate,
   finDeJournee,
+  type IndicatorCohort,
   inRange,
   isRole,
-} from './ars-indicators'
+} from './indicators/cohort'
+import { readChoice } from './service-field-types'
 
 export const SEUIL_ABSENCES = 5
-export const FIN_DE_PARCOURS = 'PLUS_BESOIN_FIN_PARCOURS'
+
+// Désignés par les réglages du service (`Service.stopReasonFieldKey`/`completedChoiceKey`), jamais codés en dur.
+export type ActivitySettings = {
+  stopReasonField: string
+  completedChoice: string
+  labels: Record<string, string>
+}
 
 export type AbsenceCell = {
   absent: number
@@ -33,8 +40,8 @@ export type ActivityReport = {
     exited: number
     rate: number | null
     dropouts: number
-    dropoutReasons: { reason: string; count: number }[]
-  }
+    dropoutReasons: { reason: string; label: string; count: number }[]
+  } | null
   absences: {
     overall: AbsenceCell
     worst: { thematic: string; weekday: number } | null
@@ -54,9 +61,9 @@ export type ActivityReport = {
 
 // Patients ayant au moins un rendez-vous dans un parcours du modèle, avec tous leurs chiffres.
 export const filterByPathwayTemplate = (
-  cohort: ArsCohort,
+  cohort: IndicatorCohort,
   pathwayTemplateId: string,
-): ArsCohort => {
+): IndicatorCohort => {
   const patients = new Set(
     cohort.presences
       .filter((p) => p.pathwayTemplateId === pathwayTemplateId)
@@ -82,10 +89,10 @@ const moisDeLaPeriode = (from: Date, to: Date): string[] => {
 }
 
 const monthly = (
-  c: ArsCohort,
+  c: IndicatorCohort,
   deDates: (Date | null)[],
-  exited: ArsFile[],
-  honored: ArsPresence[],
+  exited: CohortFile[],
+  honored: CohortPresence[],
 ): MonthlyCell[] =>
   moisDeLaPeriode(c.from, c.to).map((month) => ({
     month,
@@ -99,7 +106,7 @@ const monthly = (
     ).size,
   }))
 
-const cell = (ps: ArsPresence[], seuil = SEUIL_ABSENCES): AbsenceCell => {
+const cell = (ps: CohortPresence[], seuil = SEUIL_ABSENCES): AbsenceCell => {
   const absent = ps.filter((p) => p.status === 'no').length
   const pointed = ps.length
   return {
@@ -110,10 +117,10 @@ const cell = (ps: ArsPresence[], seuil = SEUIL_ABSENCES): AbsenceCell => {
 }
 
 const groupBy = <K>(
-  ps: ArsPresence[],
-  key: (p: ArsPresence) => K,
-): Map<K, ArsPresence[]> => {
-  const groups = new Map<K, ArsPresence[]>()
+  ps: CohortPresence[],
+  key: (p: CohortPresence) => K,
+): Map<K, CohortPresence[]> => {
+  const groups = new Map<K, CohortPresence[]>()
   for (const p of ps) {
     const k = key(p)
     const group = groups.get(k)
@@ -140,7 +147,7 @@ const groupByReason = (reasons: string[]) =>
     ),
   ].map(([reason, count]) => ({ reason, count }))
 
-const absences = (pointed: ArsPresence[]): ActivityReport['absences'] => {
+const absences = (pointed: CohortPresence[]): ActivityReport['absences'] => {
   const byThematic = [
     ...groupBy(pointed, (p) => p.thematicName ?? 'Sans thématique'),
   ]
@@ -183,7 +190,7 @@ const absences = (pointed: ArsPresence[]): ActivityReport['absences'] => {
 }
 
 const hoursBySoignant = (
-  honored: ArsPresence[],
+  honored: CohortPresence[],
 ): ActivityReport['hoursBySoignant'] => {
   const realizedSlots = groupBy(honored, (p) => p.slotId)
   const minutes = new Map<string, number>()
@@ -201,19 +208,40 @@ const hoursBySoignant = (
     .sort((a, b) => b.hours - a.hours || a.soignant.localeCompare(b.soignant))
 }
 
-export const computeActivity = (cohort: ArsCohort): ActivityReport => {
-  const c: ArsCohort = { ...cohort, to: finDeJournee(cohort.to) }
+// Motifs d'arrêt hors « fin de parcours » (la valeur désignée par les réglages), avec leurs libellés.
+const completion = (
+  exited: CohortFile[],
+  completed: CohortFile[],
+  settings: ActivitySettings,
+): NonNullable<ActivityReport['completion']> => {
+  const dropped = exited.flatMap((f) => {
+    const reason = readChoice(f.values, settings.stopReasonField)
+    return reason && reason !== settings.completedChoice ? [reason] : []
+  })
+  return {
+    completed: completed.length,
+    exited: exited.length,
+    rate: exited.length > 0 ? completed.length / exited.length : null,
+    dropouts: dropped.length,
+    dropoutReasons: groupByReason(dropped)
+      .map((d) => ({ ...d, label: settings.labels[d.reason] ?? d.reason }))
+      .sort(byCountDesc),
+  }
+}
+
+export const computeActivity = (
+  cohort: IndicatorCohort,
+  settings: ActivitySettings | null,
+): ActivityReport => {
+  const c: IndicatorCohort = { ...cohort, to: finDeJournee(cohort.to) }
   const inPeriod = c.presences.filter((p) => inRange(p.date, c.from, c.to))
   const honored = inPeriod.filter((p) => p.status === 'yes')
   const pointed = inPeriod.filter((p) => p.status !== null)
 
   const exited = c.files.filter((f) => inRange(f.exitDate, c.from, c.to))
   // Le programme s'évalue depuis l'origine : un patient inclus l'an dernier peut terminer cette année.
-  const depuisToujours: ArsCohort = { ...c, from: new Date(0) }
+  const depuisToujours: IndicatorCohort = { ...c, from: new Date(0) }
   const completed = exited.filter((f) => completeProgram(f, depuisToujours))
-  const dropped = exited.filter(
-    (f) => Boolean(f.stopReason) && f.stopReason !== FIN_DE_PARCOURS,
-  )
   const deDates = c.files.map((f) => deDate(f, c))
 
   return {
@@ -223,15 +251,7 @@ export const computeActivity = (cohort: ArsCohort): ActivityReport => {
       exited: exited.length,
     },
     monthly: monthly(c, deDates, exited, honored),
-    completion: {
-      completed: completed.length,
-      exited: exited.length,
-      rate: exited.length > 0 ? completed.length / exited.length : null,
-      dropouts: dropped.length,
-      dropoutReasons: [
-        ...groupByReason(dropped.map((f) => f.stopReason as string)),
-      ].sort(byCountDesc),
-    },
+    completion: settings ? completion(exited, completed, settings) : null,
     absences: absences(pointed),
     sessions: {
       individual: honored.filter((p) => p.individual).length,

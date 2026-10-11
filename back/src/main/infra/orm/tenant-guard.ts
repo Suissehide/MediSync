@@ -32,7 +32,9 @@ export const SERVICE_MODELS: readonly string[] = [
   // lieu du service) : voir la migration `soignants_salles_par_service`.
   'Soignant',
   'Location',
-  'ArsManualAnswer',
+  'IndicatorSet',
+  'Indicator',
+  'IndicatorAnswer',
 ]
 
 // Modèles rattachés à un établissement : portent establishmentId.
@@ -137,6 +139,7 @@ export const NESTED_RELATIONS: Record<string, Record<string, string>> = {
     serviceFiles: 'PatientServiceFile',
   },
   ServiceFieldDefinition: { choices: 'ServiceFieldChoice' },
+  IndicatorSet: { indicators: 'Indicator' },
 }
 
 // Relations d'un modèle global qui exposent des données de tenant. Un include/select dessus n'est
@@ -311,6 +314,7 @@ export const MODEL_RELATIONS: Record<string, Record<string, ModelRelation>> = {
     accessLogs: many('PatientAccessLog'),
     fieldDefinitions: many('ServiceFieldDefinition'),
     fieldCategories: many('ServiceFieldCategory'),
+    indicatorSets: many('IndicatorSet'),
   },
   EstablishmentMembership: {
     user: one('User'),
@@ -374,10 +378,9 @@ export const MODEL_RELATIONS: Record<string, Record<string, ModelRelation>> = {
     patient: one('Patient'),
     pathway: one('Pathway'),
   },
-  // `ForbiddenWeek`, `PlanningCycle` et `ArsManualAnswer` ne déclarent aucune relation dans le schéma.
+  // `ForbiddenWeek` et `PlanningCycle` ne déclarent aucune relation dans le schéma.
   ForbiddenWeek: {},
   PlanningCycle: {},
-  ArsManualAnswer: {},
   Todo: {
     soignant: one('Soignant'),
   },
@@ -419,6 +422,19 @@ export const MODEL_RELATIONS: Record<string, Record<string, ModelRelation>> = {
   },
   ServiceFieldChoice: {
     field: one('ServiceFieldDefinition'),
+  },
+  IndicatorSet: {
+    service: one('Service'),
+    indicators: many('Indicator'),
+  },
+  Indicator: {
+    set: one('IndicatorSet'),
+    parent: one('Indicator'),
+    children: many('Indicator'),
+    answers: many('IndicatorAnswer'),
+  },
+  IndicatorAnswer: {
+    indicator: one('Indicator'),
   },
 }
 
