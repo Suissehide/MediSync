@@ -72,7 +72,7 @@ export const SoignantApi = {
       },
     )
     if (!response.ok) {
-      handleHttpError(response, {}, 'Impossible d’archiver le soignant')
+      handleHttpError(response, {}, 'Impossible de supprimer le soignant')
     }
     return
   },

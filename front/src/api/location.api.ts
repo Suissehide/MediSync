@@ -68,7 +68,7 @@ export const LocationApi = {
       },
     )
     if (!response.ok) {
-      handleHttpError(response, {}, 'Impossible d’archiver la salle')
+      handleHttpError(response, {}, 'Impossible de supprimer la salle')
     }
     return
   },

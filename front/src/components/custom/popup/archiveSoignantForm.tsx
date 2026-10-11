@@ -1,4 +1,4 @@
-import { Archive, X } from 'lucide-react'
+import { Trash, X } from 'lucide-react'
 import type React from 'react'
 import { useState } from 'react'
 
@@ -34,7 +34,7 @@ function ArchiveSoignantForm({ soignant, trigger }: ArchiveSoignantFormProps) {
       <PopupTrigger asChild>
         {trigger ?? (
           <Button variant="absolute" size="icon" onClick={() => setOpen(true)}>
-            <Archive className="w-4 h-4 text-red-500" />
+            <Trash className="w-4 h-4 text-red-500" />
           </Button>
         )}
       </PopupTrigger>
@@ -42,7 +42,7 @@ function ArchiveSoignantForm({ soignant, trigger }: ArchiveSoignantFormProps) {
       <PopupContent>
         <PopupHeader>
           <PopupTitle className="font-bold text-xl">
-            Archiver le soignant
+            Supprimer le soignant
           </PopupTitle>
         </PopupHeader>
 
@@ -50,7 +50,7 @@ function ArchiveSoignantForm({ soignant, trigger }: ArchiveSoignantFormProps) {
           <p className="text-sm text-text-light">
             {soignant.name} sort des listes de choix. Les créneaux, thématiques
             et tâches qui le portent le conservent, et il se restaure depuis le
-            filtre « Archivés ».
+            filtre « Supprimés ».
           </p>
         </PopupBody>
 
@@ -64,8 +64,8 @@ function ArchiveSoignantForm({ soignant, trigger }: ArchiveSoignantFormProps) {
             onClick={handleArchive}
             disabled={archiveSoignant.isPending}
           >
-            <Archive className="w-4 h-4" />
-            {archiveSoignant.isPending ? 'Archivage...' : 'Archiver'}
+            <Trash className="w-4 h-4" />
+            {archiveSoignant.isPending ? 'Suppression...' : 'Supprimer'}
           </Button>
         </PopupFooter>
       </PopupContent>

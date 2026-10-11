@@ -73,10 +73,10 @@ const checkChoices = (field: FieldDefinition, keys: string[]): string[] =>
     }
     return choice.archivedAt === null
       ? []
-      : [`Filtre sur un choix archivé : ${choice.label}`]
+      : [`Filtre sur un choix supprimé : ${choice.label}`]
   })
 
-// Rend les avertissements du filtre : champ ou choix archivé reste appliqué.
+// Rend les avertissements du filtre : champ ou choix supprimé reste appliqué.
 const checkFilter = (
   cond: FilterCondition,
   fields: readonly FieldDefinition[],
@@ -101,7 +101,7 @@ const checkFilter = (
   return [
     ...(field.archivedAt === null
       ? []
-      : [`Filtre sur un champ archivé : ${field.label}`]),
+      : [`Filtre sur un champ supprimé : ${field.label}`]),
     ...(cond.op === 'in' || cond.op === 'containsAny'
       ? checkChoices(field, cond.value)
       : []),
@@ -155,7 +155,7 @@ const parseComputed = (
   const warnings = [
     ...filters.data.flatMap((cond) => checkFilter(cond, fields)),
     ...(breakdown?.field.archivedAt
-      ? [`Répartition sur un champ archivé : ${breakdown.field.label}`]
+      ? [`Répartition sur un champ supprimé : ${breakdown.field.label}`]
       : []),
   ]
   return {

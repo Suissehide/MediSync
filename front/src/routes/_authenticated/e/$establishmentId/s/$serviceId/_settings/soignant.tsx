@@ -110,7 +110,7 @@ function SoignantSettings() {
                 checked={showArchived}
                 onCheckedChange={setShowArchived}
               />
-              <Label htmlFor="soignants-archives">Archivés</Label>
+              <Label htmlFor="soignants-archives">Supprimés</Label>
             </div>
             {canManage && !showArchived && <AddSoignantForm />}
           </div>

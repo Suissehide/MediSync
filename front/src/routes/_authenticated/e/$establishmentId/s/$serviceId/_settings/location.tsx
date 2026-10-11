@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import { Archive, Search } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import { getLocationColumns } from '@/columns/location.column.tsx'
@@ -88,7 +88,7 @@ function LocationSettings() {
                 checked={showArchived}
                 onCheckedChange={setShowArchived}
               />
-              <Label htmlFor="salles-archivees">Archivées</Label>
+              <Label htmlFor="salles-archivees">Supprimées</Label>
             </div>
             {canManage && !showArchived && <AddLocationForm />}
           </div>
@@ -115,11 +115,8 @@ function LocationSettings() {
             setArchiveTargetId(null)
           }}
           loading={archiveLocation.isPending}
-          title="Archiver la salle"
-          description="Elle sort des listes de choix. Les créneaux qui la portent la conservent, et elle se restaure depuis le filtre « Archivées »."
-          confirmLabel="Archiver"
-          confirmLoadingLabel="Archivage..."
-          confirmIcon={<Archive className="w-4 h-4" />}
+          title="Supprimer la salle"
+          description="Elle sort des listes de choix. Les créneaux qui la portent la conservent, et elle se restaure depuis le filtre « Supprimées »."
         />
 
         <ConfirmDeleteForm

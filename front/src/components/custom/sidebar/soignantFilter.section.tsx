@@ -1,4 +1,4 @@
-import { Archive, CheckCheck, Stethoscope, X } from 'lucide-react'
+import { CheckCheck, Stethoscope, Trash, X } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
 
 import { useSoignantQueries } from '../../../queries/useSoignant.ts'
@@ -90,7 +90,7 @@ function SoignantFilterSection({
                   soignant={soignant}
                   trigger={
                     <Button variant="absolute" size="icon">
-                      <Archive className="w-4 h-4 text-red-500" />
+                      <Trash className="w-4 h-4 text-red-500" />
                     </Button>
                   }
                 />

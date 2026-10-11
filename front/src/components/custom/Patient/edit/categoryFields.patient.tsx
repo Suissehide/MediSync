@@ -22,7 +22,7 @@ const choiceOptions = (field: ServiceField, current: unknown) => {
     )
     .map((v) => ({
       value: v,
-      label: `${field.choices.find((c) => c.key === v)?.label ?? v} (archivé)`,
+      label: `${field.choices.find((c) => c.key === v)?.label ?? v} (supprimé)`,
     }))
   return [...active.map((c) => ({ value: c.key, label: c.label })), ...stale]
 }

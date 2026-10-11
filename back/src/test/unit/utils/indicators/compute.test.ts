@@ -191,7 +191,7 @@ describe('computeIndicator', () => {
     ).toEqual({
       value: 0,
       breakdown: null,
-      warnings: ['Filtre sur un champ archivé : Ancien champ'],
+      warnings: ['Filtre sur un champ supprimé : Ancien champ'],
     })
     expect(
       computeIndicator(
@@ -204,7 +204,7 @@ describe('computeIndicator', () => {
     ).toEqual({
       value: 4,
       breakdown: null,
-      warnings: ['Filtre sur un choix archivé : Libellé VIEUX'],
+      warnings: ['Filtre sur un choix supprimé : Libellé VIEUX'],
     })
   })
 
@@ -241,8 +241,8 @@ describe('computeIndicator', () => {
         champs,
       ).warnings,
     ).toEqual([
-      'Filtre sur un choix archivé : Libellé VIEUX',
-      'Répartition sur un champ archivé : Ancien choix',
+      'Filtre sur un choix supprimé : Libellé VIEUX',
+      'Répartition sur un champ supprimé : Ancien choix',
     ])
   })
 

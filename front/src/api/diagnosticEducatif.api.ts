@@ -148,7 +148,7 @@ export const DiagnosticEducatifTemplateApi = {
       { method: 'DELETE' },
     )
     if (!res.ok) {
-      handleHttpError(res, {}, 'Impossible d’archiver le modèle')
+      handleHttpError(res, {}, 'Impossible de supprimer le modèle')
     }
   },
 }

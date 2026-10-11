@@ -373,7 +373,7 @@ function Planning() {
       {
         onSuccess: () =>
           toast({
-            title: `${toArchive.length} créneau(x) archivé(s) au lieu d'être supprimé(s)`,
+            title: `${toArchive.length} créneau(x) conservé(s) au lieu d'être supprimé(s)`,
             message:
               'Ils portent des rendez-vous, qui restent visibles sur le Dashboard.',
             severity: TOAST_SEVERITY.SUCCESS,
@@ -1150,7 +1150,7 @@ function Planning() {
           onConfirm={handleConfirmDeleteHoverSlot}
           loading={deleteSlot.isPending || deleteSlotTemplate.isPending}
           title="Supprimer le créneau"
-          description="Voulez-vous vraiment supprimer ce créneau ? S'il porte des rendez-vous, il sera archivé plutôt que supprimé."
+          description="Voulez-vous vraiment supprimer ce créneau ? S'il porte des rendez-vous, il sera conservé plutôt que supprimé."
         />
 
         <ConfirmDeleteForm
@@ -1163,7 +1163,7 @@ function Planning() {
           }}
           onConfirm={handleBulkDelete}
           title="Supprimer la sélection"
-          description={`Voulez-vous vraiment supprimer ${selectedSlotIds.size} créneau(x) ? Ceux qui portent des rendez-vous seront archivés plutôt que supprimés.`}
+          description={`Voulez-vous vraiment supprimer ${selectedSlotIds.size} créneau(x) ? Ceux qui portent des rendez-vous seront conservés plutôt que supprimés.`}
         />
 
         <AddSlotForm

@@ -166,7 +166,7 @@ export const useDiagnosticTemplateMutations = () => {
     mutationFn: (id: string) => DiagnosticEducatifTemplateApi.archive(id),
     onSuccess: (_, id) => {
       toast({
-        title: 'Modèle archivé',
+        title: 'Modèle supprimé',
         message: 'Les diagnostics déjà remplis le conservent.',
         severity: TOAST_SEVERITY.SUCCESS,
         action: undoToastAction(() => restoreTemplate.mutate(id)),
@@ -175,7 +175,7 @@ export const useDiagnosticTemplateMutations = () => {
     },
     onError: (error) =>
       toast({
-        title: 'Erreur lors de l’archivage du modèle',
+        title: 'Erreur lors de la suppression du modèle',
         message: error.message,
         severity: TOAST_SEVERITY.ERROR,
       }),

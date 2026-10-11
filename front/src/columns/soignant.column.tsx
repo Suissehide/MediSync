@@ -1,5 +1,5 @@
 import { createColumnHelper } from '@tanstack/react-table'
-import { Archive, Trash2, Undo2 } from 'lucide-react'
+import { Trash, Trash2, Undo2 } from 'lucide-react'
 
 import ArchiveSoignantForm from '../components/custom/popup/archiveSoignantForm.tsx'
 import EditSoignantAccountsForm, {
@@ -123,9 +123,9 @@ export const getSoignantColumns = ({
                 <Button
                   variant="outline"
                   size="icon"
-                  aria-label={`Archiver ${soignant.name}`}
+                  aria-label={`Supprimer ${soignant.name}`}
                 >
-                  <Archive className="w-4 h-4 text-destructive" />
+                  <Trash className="w-4 h-4 text-destructive" />
                 </Button>
               }
             />

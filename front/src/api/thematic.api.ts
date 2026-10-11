@@ -68,7 +68,7 @@ export const ThematicApi = {
       },
     )
     if (!response.ok) {
-      handleHttpError(response, {}, 'Impossible d’archiver la thématique')
+      handleHttpError(response, {}, 'Impossible de supprimer la thématique')
     }
     return
   },

@@ -1,5 +1,5 @@
 import { createColumnHelper } from '@tanstack/react-table'
-import { Archive, Trash2, Undo2 } from 'lucide-react'
+import { Trash, Trash2, Undo2 } from 'lucide-react'
 
 import EditThematicSoignantsForm from '../components/custom/popup/editThematicSoignantsForm.tsx'
 import { EtiquettesTronquees } from '../components/table/etiquette.tsx'
@@ -127,10 +127,10 @@ export const getThematicColumns = ({
             <Button
               variant="outline"
               size="icon"
-              title="Archiver"
+              title="Supprimer"
               onClick={() => onArchive(thematic.id)}
             >
-              <Archive className="w-3 h-3 text-destructive" />
+              <Trash className="w-3 h-3 text-destructive" />
             </Button>
           </div>
         )

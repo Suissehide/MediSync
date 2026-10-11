@@ -42,7 +42,7 @@ const CAS = [
     hook: useThematicMutations,
     archiver: (m: Record<string, { mutate: (id: string) => void }>) =>
       m.archiveThematic,
-    titre: 'Thématique archivée',
+    titre: 'Thématique supprimée',
   },
   {
     nom: 'salle',
@@ -50,7 +50,7 @@ const CAS = [
     hook: useLocationMutations,
     archiver: (m: Record<string, { mutate: (id: string) => void }>) =>
       m.archiveLocation,
-    titre: 'Salle archivée',
+    titre: 'Salle supprimée',
   },
   {
     nom: 'soignant',
@@ -58,7 +58,7 @@ const CAS = [
     hook: useSoignantMutations,
     archiver: (m: Record<string, { mutate: (id: string) => void }>) =>
       m.archiveSoignant,
-    titre: 'Soignant archivé',
+    titre: 'Soignant supprimé',
   },
   {
     nom: 'modèle de diagnostic',
@@ -66,7 +66,7 @@ const CAS = [
     hook: useDiagnosticTemplateMutations,
     archiver: (m: Record<string, { mutate: (id: string) => void }>) =>
       m.archiveTemplate,
-    titre: 'Modèle archivé',
+    titre: 'Modèle supprimé',
   },
 ] as const
 
