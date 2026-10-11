@@ -16,7 +16,7 @@ import type {
 const NO_FIELDS: ServiceField[] = []
 
 export const useServiceFieldsQuery = () => {
-  const { data, isPending, isError, error } = useQuery({
+  const { data, isPending, isError, error, refetch } = useQuery({
     queryKey: [SERVICE_FIELD.GET_ALL],
     queryFn: ServiceFieldApi.getAll,
     retry: 0,
@@ -24,13 +24,13 @@ export const useServiceFieldsQuery = () => {
 
   useDataFetching({ isPending, isError, error })
 
-  return { fields: data ?? NO_FIELDS, isPending }
+  return { fields: data ?? NO_FIELDS, isPending, isError, refetch }
 }
 
 const NO_CATEGORIES: ServiceFieldCategory[] = []
 
 export const useServiceFieldCategoriesQuery = () => {
-  const { data, isPending, isError, error } = useQuery({
+  const { data, isPending, isError, error, refetch } = useQuery({
     queryKey: [SERVICE_FIELD.GET_CATEGORIES],
     queryFn: ServiceFieldApi.getCategories,
     retry: 0,
@@ -38,7 +38,7 @@ export const useServiceFieldCategoriesQuery = () => {
 
   useDataFetching({ isPending, isError, error })
 
-  return { categories: data ?? NO_CATEGORIES, isPending }
+  return { categories: data ?? NO_CATEGORIES, isPending, isError, refetch }
 }
 
 export const useServiceFieldMutations = () => {

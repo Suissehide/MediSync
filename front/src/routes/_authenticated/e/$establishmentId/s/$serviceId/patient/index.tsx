@@ -57,9 +57,18 @@ function PatientList() {
   const { establishmentId, serviceId } = Route.useParams()
   const { patients, isPending } = usePatientWithTagsQuery()
   const { pathwayTemplates } = usePathwayTemplateQueries()
-  const { fields, isPending: isFieldsPending } = useServiceFieldsQuery()
-  const { categories, isPending: isCategoriesPending } =
-    useServiceFieldCategoriesQuery()
+  const {
+    fields,
+    isPending: isFieldsPending,
+    isError: isFieldsError,
+    refetch: refetchFields,
+  } = useServiceFieldsQuery()
+  const {
+    categories,
+    isPending: isCategoriesPending,
+    isError: isCategoriesError,
+    refetch: refetchCategories,
+  } = useServiceFieldCategoriesQuery()
   const canReadClinical = useCan('clinical:read')
   const [searchTerm, setSearchTerm] = useState('')
   const [storedFilters] = useState(() =>
@@ -208,8 +217,29 @@ function PatientList() {
         </div>
 
         <div className="flex-1 min-h-0 flex flex-col">
+          {/* Une erreur compte comme "réglée" pour React Query : sans cette garde, ReactTable monterait
+              sans champs configurables et écraserait la visibilité/les filtres déjà sauvés. */}
+          {(isFieldsError || isCategoriesError) && (
+            <div className="flex flex-col gap-2">
+              <p role="alert" className="text-text-light">
+                Impossible de charger les champs du service.
+              </p>
+              <Button
+                className="self-start"
+                onClick={() => {
+                  refetchFields()
+                  refetchCategories()
+                }}
+              >
+                Réessayer
+              </Button>
+            </div>
+          )}
           {/* Monté une fois champs et catégories connus : ReactTable lit visibilité et filtres sauvés au montage. */}
-          {!isFieldsPending && !isCategoriesPending && (
+          {!isFieldsPending &&
+            !isCategoriesPending &&
+            !isFieldsError &&
+            !isCategoriesError && (
             <ReactTable<PatientWithTags>
               key={tableId}
               data={filteredPatients}
