@@ -4,6 +4,7 @@ import { config as loadDotenv } from 'dotenv'
 import { Client } from 'pg'
 import { z } from 'zod/v4'
 
+import { answerParamsSchema } from '../../../main/interfaces/http/fastify/schemas/indicatorSet.schema'
 import { ARS_PRESET } from '../../../main/utils/indicators/ars-preset'
 
 // Joue la VRAIE migration `indicator_sets` sur des bases jetables (jamais `medisync` ni `medisync_test`), sans test.skip.
@@ -333,6 +334,15 @@ describe('migration indicator_sets', () => {
       )
       expect(ids.filter((id) => !z.cuid().safeParse(id).success)).toEqual([])
       expect(new Set(ids).size).toBe(ids.length)
+      const refuses = indicators.rows.filter(
+        (i) =>
+          !answerParamsSchema.safeParse({
+            setId: i.setId,
+            year: 2026,
+            indicatorId: i.id,
+          }).success,
+      )
+      expect(refuses.map((i) => i.code)).toEqual([])
     } finally {
       await c.end()
     }

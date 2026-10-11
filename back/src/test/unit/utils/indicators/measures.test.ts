@@ -2,7 +2,6 @@ import { ETP_FIELD_PRESET } from '../../../../main/utils/etp-field-preset'
 import {
   ARS_ORIENTATIONS,
   ARS_PRESET,
-  type IndicatorConfig,
 } from '../../../../main/utils/indicators/ars-preset'
 import {
   type CohortFile,
@@ -10,7 +9,10 @@ import {
   finDeJournee,
   type IndicatorCohort,
 } from '../../../../main/utils/indicators/cohort'
-import { applyFilters } from '../../../../main/utils/indicators/filters'
+import {
+  computeIndicator,
+  type FieldDefinition,
+} from '../../../../main/utils/indicators/compute'
 import { MEASURES } from '../../../../main/utils/indicators/measures'
 import { readChoice } from '../../../../main/utils/service-field-types'
 import { type ArsCohort, computeArsIndicators } from './ars-oracle'
@@ -204,20 +206,18 @@ const versAncienneCohorte = (c: IndicatorCohort): ArsCohort => ({
   })),
 })
 
-const computeIndicatorValue = (
-  c: IndicatorCohort,
-  config: IndicatorConfig,
-): number => {
-  if (!config.measure) {
-    throw new Error(`${config.code} : mesure absente`)
-  }
-  // L'appelant de MEASURES étend la borne haute à la fin du jour, comme `computeArsIndicators`.
-  const borne = { ...c, to: finDeJournee(c.to) }
-  return MEASURES[config.measure].compute(
-    applyFilters(borne, config.filters ?? []),
-    config.options ?? {},
-  )
-}
+const FIELDS: FieldDefinition[] = ETP_FIELD_PRESET.map((f) => ({
+  key: f.key,
+  label: f.label,
+  type: f.type,
+  archivedAt: null,
+  choices: f.choices.map((c, order) => ({
+    key: c.key,
+    label: c.label,
+    order,
+    archivedAt: null,
+  })),
+}))
 
 describe('jeu « Grille ARS » calculé par le moteur', () => {
   it('le jeu ARS calcule par le moteur egale l ancienne grille, code par code', () => {
@@ -228,15 +228,29 @@ describe('jeu « Grille ARS » calculé par le moteur', () => {
         code: config.code,
         label: config.label,
         group: config.group,
+        input: config.input ?? null,
       }).toEqual({
         code: ancien?.code,
         label: ancien?.label,
         group: ancien?.group,
+        input: ancien?.input,
       })
       if (config.nature === 'computed') {
         expect({
           code: config.code,
-          value: computeIndicatorValue(cohorte, config),
+          value: computeIndicator(
+            cohorte,
+            {
+              nature: config.nature,
+              measure: config.measure ?? null,
+              options: config.options ?? null,
+              filters: config.filters ?? null,
+              breakdownField: config.breakdownField ?? null,
+              input: config.input ?? null,
+              note: config.note ?? null,
+            },
+            FIELDS,
+          ).value,
         }).toEqual({
           code: config.code,
           value: ancien?.value,

@@ -180,11 +180,11 @@ export const resultsResponseSchema = z.object({
   ),
 })
 
-// Identifiant Prisma exact (cuid de 25 caractères) : `z.cuid()` laisse passer « constructor ».
+// Pas de longueur fixe : les ids posés par la migration font 33 caractères, le domaine renvoie 404 sur un id inconnu.
 export const answerParamsSchema = z.object({
   setId: z.cuid(),
   year: z.coerce.number().int().min(2000).max(2100),
-  indicatorId: z.string().regex(/^c[a-z0-9]{24}$/),
+  indicatorId: z.cuid(),
 })
 
 // Le domaine vérifie que la forme reçue est celle de l'indicateur visé.

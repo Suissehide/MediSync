@@ -160,22 +160,23 @@ describe('jeu Grille ARS : reponses saisies', () => {
     ).toBe(400)
   })
 
-  it('refuse un code herite de Object.prototype sans rien ecrire', async () => {
-    for (const code of ['constructor', 'toString']) {
+  it('renvoie 404 sur un id inconnu ou herite de Object.prototype sans rien ecrire', async () => {
+    const avant = await testDb.indicatorAnswer.count()
+    for (const id of ['constructor', 'c00000000000000000000000000000000']) {
       expect(
-        (
-          await saisir(serviceA, 2026, code, {
-            numberValue: 1,
-            textValue: null,
-          })
-        ).statusCode,
-      ).toBe(400)
+        (await saisir(serviceA, 2026, id, { numberValue: 1, textValue: null }))
+          .statusCode,
+      ).toBe(404)
     }
     expect(
-      await testDb.indicatorAnswer.count({
-        where: { indicator: { code: { in: ['constructor', 'toString'] } } },
-      }),
-    ).toBe(0)
+      (
+        await saisir(serviceA, 2026, 'toString', {
+          numberValue: 1,
+          textValue: null,
+        })
+      ).statusCode,
+    ).toBe(400)
+    expect(await testDb.indicatorAnswer.count()).toBe(avant)
   })
 
   // Review Focus 4 : chaque service lit la sienne.

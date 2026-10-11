@@ -150,6 +150,13 @@ mêmes chiffres partout. Le moindre écart, sur une ligne de la requête
 ci-dessus ou sur un indicateur de la grille exportée, signale une perte ou un
 décalage : passer à l'étape 6.
 
+**Enregistrer (puis remettre) une réponse 2.5 ou 4.2 depuis l'écran**, sur
+un service ETP : modifier la valeur, enregistrer, recharger, puis remettre la
+valeur d'origine. **Attendu** : les deux enregistrements passent et la valeur
+d'origine est de nouveau affichée. Un refus (erreur 400 ou 404) signale que
+les identifiants posés par la migration ne passent pas la route de saisie :
+passer à l'étape 6.
+
 ## 6. Retour arrière
 
 **Restauration de sauvegarde, sans détour.** `ArsManualAnswer` est
