@@ -185,7 +185,11 @@ class PathwayRepository implements PathwayRepositoryInterface {
             where: {
               ...this.scope,
               templateID: template.id,
-              startDate: { gte: startOfDay },
+              // Parcours en cours à la date choisie : démarré avant mais avec des créneaux après.
+              OR: [
+                { startDate: { gte: startOfDay } },
+                { slots: { some: { startDate: { gte: startOfDay } } } },
+              ],
             },
             include: {
               slots: {
@@ -196,11 +200,13 @@ class PathwayRepository implements PathwayRepositoryInterface {
           pathwaysUpdated += pathways.length
 
           for (const pathway of pathways) {
+            // Avant la date choisie, rien ne bouge : ces créneaux sont conservés comme occupés.
             const occupiedSlots = pathway.slots.filter(
-              (slot) => slot.appointments.length > 0,
+              (slot) =>
+                slot.appointments.length > 0 || slot.startDate < startOfDay,
             )
             const emptySlots = pathway.slots.filter(
-              (slot) => slot.appointments.length === 0,
+              (slot) => !occupiedSlots.includes(slot),
             )
 
             // Remove empty slots and their cloned slot templates.
@@ -250,7 +256,7 @@ class PathwayRepository implements PathwayRepositoryInterface {
               const alreadyCovered = occupiedSlots.some(
                 (slot) => slot.startDate.getTime() === start.getTime(),
               )
-              if (alreadyCovered) {
+              if (alreadyCovered || start < startOfDay) {
                 continue
               }
 

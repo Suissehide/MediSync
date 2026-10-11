@@ -567,5 +567,61 @@ describe('soignants et salles a l echelle du service', () => {
         }),
       ])
     })
+
+    it('la regeneration decale un parcours deja commence a partir de la date choisie', async () => {
+      const modeles = await Promise.all(
+        [0, 14].map(
+          async (offsetDays) =>
+            (
+              await call(coordA, 'POST', tenantUrl(E, A, '/slot-template'), {
+                ...creneau,
+                offsetDays,
+              })
+            ).json().id,
+        ),
+      )
+      const parcoursType = (
+        await call(coordA, 'POST', tenantUrl(E, A, '/pathway-template'), {
+          name: 'Parcours en cours',
+          color: '#654321',
+          mainTag: 'ETP',
+          slotTemplateIDs: modeles,
+        })
+      ).json()
+      const pathway = (
+        await call(coordA, 'POST', tenantUrl(E, A, '/pathway/instantiate'), {
+          pathwayTemplateID: parcoursType.id,
+          startDate: '2026-11-02',
+        })
+      ).json()
+      await testDb.forbiddenWeek.create({
+        data: {
+          establishmentId: E,
+          serviceId: A,
+          startOfWeek: new Date('2026-11-09'),
+        },
+      })
+
+      const regen = await call(
+        coordA,
+        'POST',
+        tenantUrl(E, A, '/pathway/regenerate'),
+        { pathwayTemplateIDs: [parcoursType.id], fromDate: '2026-11-05' },
+      )
+      expect(regen.json()).toMatchObject({
+        pathwaysUpdated: 1,
+        slotsDeleted: 1,
+        slotsKept: 1,
+        slotsCreated: 1,
+      })
+
+      const jours = (
+        await testDb.slot.findMany({
+          where: { pathwayID: pathway.id },
+          orderBy: { startDate: 'asc' },
+        })
+      ).map((slot) => slot.startDate.toISOString().slice(0, 10))
+      expect(jours).toEqual(['2026-11-02', '2026-11-23'])
+    })
   })
 })
