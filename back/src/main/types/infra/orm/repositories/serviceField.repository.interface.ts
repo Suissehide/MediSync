@@ -2,10 +2,7 @@ import type {
   ServiceFieldChoice,
   ServiceFieldDefinition,
 } from '../../../../../generated/client'
-import type {
-  ServiceFieldSection,
-  ServiceFieldType,
-} from '../../../../utils/service-field-types'
+import type { ServiceFieldType } from '../../../../utils/service-field-types'
 
 export type ServiceFieldEntityRepo = ServiceFieldDefinition & {
   choices: ServiceFieldChoice[]
@@ -21,7 +18,7 @@ export type ServiceFieldCreateEntityRepo = {
   key: string
   label: string
   type: ServiceFieldType
-  section: ServiceFieldSection
+  categoryId: string
   order: number
   clinical: boolean
   unit: string | null
@@ -32,6 +29,8 @@ export type ServiceFieldUpdateEntityRepo = {
   label?: string
   unit?: string | null
   archivedAt?: Date | null
+  categoryId?: string
+  order?: number
 }
 
 export type ServiceFieldChoiceUpdateEntityRepo = {

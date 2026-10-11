@@ -15,7 +15,10 @@ import {
   formatFieldValue,
 } from '../constants/serviceFieldTypes.tsx'
 import type { PatientWithTags } from '../types/patient.ts'
-import type { ServiceField } from '../types/serviceField.ts'
+import type {
+  ServiceField,
+  ServiceFieldCategory,
+} from '../types/serviceField.ts'
 
 const columnHelper = createColumnHelper<PatientWithTags>()
 
@@ -66,6 +69,7 @@ export function CelluleParcours({
 type PatientActions = {
   onView: (id: string) => void
   fields: ServiceField[]
+  categories: ServiceFieldCategory[]
   canReadClinical: boolean
 }
 
@@ -75,9 +79,8 @@ const BOOLEAN_CHOICES: Choice[] = [
 ]
 
 // Une colonne optionnelle par champ configurable actif, texte long exclu (absent de la liste).
-const fieldColumn = (f: ServiceField) => {
+const fieldColumn = (f: ServiceField, group: string) => {
   const label = f.label
-  const group = f.section === 'pathway' ? 'Inclusion' : 'Bilan'
   // Choix archivés après les actifs : ils servent encore à libeller les anciennes valeurs.
   const choices = [
     ...f.choices.filter((c) => !c.archived),
@@ -130,11 +133,43 @@ const fieldColumn = (f: ServiceField) => {
   }
 }
 
+const exitDateColumn = (group: string) =>
+  columnHelper.accessor((row) => row.exitDate ?? undefined, {
+    id: 'exitDate',
+    header: 'Date de sortie',
+    sortUndefined: 'last',
+    cell: ({ getValue }) => {
+      const value = getValue()
+      return value ? dayjs.utc(value).format('DD/MM/YYYY') : null
+    },
+    meta: { optional: { label: 'Date de sortie', group } },
+  })
+
 export const getPatientColumns = ({
   onView,
   fields,
+  categories,
   canReadClinical,
 }: PatientActions) => {
+  const listed = fields
+    .filter(
+      (f) =>
+        !f.archived &&
+        f.type !== 'longtext' &&
+        (canReadClinical || !f.clinical),
+    )
+    .sort((a, b) => a.order - b.order)
+  // Colonnes de chaque catégorie active, dans l'ordre ; la date de sortie clôt la sienne.
+  const categoryColumns = categories
+    .filter((c) => !c.archived)
+    .sort((a, b) => a.order - b.order)
+    .flatMap((c) => [
+      ...listed
+        .filter((f) => f.categoryId === c.id)
+        .map((f) => fieldColumn(f, c.label)),
+      ...(c.dateField === 'exitDate' ? [exitDateColumn(c.label)] : []),
+    ])
+
   return [
     columnHelper.display({
       id: 'enrollmentAlert',
@@ -192,29 +227,7 @@ export const getPatientColumns = ({
         )
       },
     }),
-    ...fields
-      .filter(
-        (f) =>
-          !f.archived &&
-          f.type !== 'longtext' &&
-          (canReadClinical || !f.clinical),
-      )
-      .sort(
-        (a, b) =>
-          Number(a.section === 'outcome') - Number(b.section === 'outcome') ||
-          a.order - b.order,
-      )
-      .map(fieldColumn),
-    columnHelper.accessor((row) => row.exitDate ?? undefined, {
-      id: 'exitDate',
-      header: 'Date de sortie',
-      sortUndefined: 'last',
-      cell: ({ getValue }) => {
-        const value = getValue()
-        return value ? dayjs.utc(value).format('DD/MM/YYYY') : null
-      },
-      meta: { optional: { label: 'Date de sortie', group: 'Bilan' } },
-    }),
+    ...categoryColumns,
     columnHelper.display({
       id: 'actions',
       header: '',

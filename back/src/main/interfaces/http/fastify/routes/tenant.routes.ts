@@ -27,6 +27,7 @@ import { patientAccessLogRouter } from './patientAccessLog'
 import { patientServiceFileRouter } from './patientServiceFile'
 import { planningCycleRouter } from './planningCycle'
 import { serviceFieldRouter } from './serviceField'
+import { serviceFieldCategoryRouter } from './serviceFieldCategory'
 import { serviceMembersRouter } from './serviceMembers'
 import { slotRouter } from './slot'
 import { slotTemplateRouter } from './slotTemplate'
@@ -176,6 +177,9 @@ const tenantRoutes: FastifyPluginAsyncZod = async (fastify) => {
   await fastify.register(soignantWriteRouter, { prefix: '/soignant' })
   await fastify.register(thematicRouter, { prefix: '/thematic' })
   await fastify.register(serviceFieldRouter, { prefix: '/service-fields' })
+  await fastify.register(serviceFieldCategoryRouter, {
+    prefix: '/service-field-categories',
+  })
   await fastify.register(locationReadRouter, { prefix: '/location' })
   await fastify.register(locationWriteRouter, { prefix: '/location' })
   await fastify.register(patientRouter, { prefix: '/patient' })

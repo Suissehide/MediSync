@@ -9,29 +9,24 @@ import type {
   ServiceFieldUpdateEntityDomain,
 } from '../types/domain/serviceField.domain.interface'
 import type { ServiceFieldRepositoryInterface } from '../types/infra/orm/repositories/serviceField.repository.interface'
+import type { ServiceFieldCategoryRepositoryInterface } from '../types/infra/orm/repositories/serviceFieldCategory.repository.interface'
 import {
   choiceKeyFromLabel,
   fieldKeyFromLabel,
   RESERVED_FIELD_KEYS,
-  type ServiceFieldSection,
+  sameIds,
 } from '../utils/service-field-types'
-
-// Vrai si `ids` contient exactement les mêmes éléments que `reference`, sans doublon ni oubli.
-const sameIds = (reference: string[], ids: string[]): boolean => {
-  const refSet = new Set(reference)
-  const idSet = new Set(ids)
-  return (
-    refSet.size === reference.length &&
-    refSet.size === idSet.size &&
-    [...refSet].every((id) => idSet.has(id))
-  )
-}
 
 class ServiceFieldDomain implements ServiceFieldDomainInterface {
   private readonly serviceFieldRepository: ServiceFieldRepositoryInterface
+  private readonly serviceFieldCategoryRepository: ServiceFieldCategoryRepositoryInterface
 
-  constructor({ serviceFieldRepository }: IocContainer) {
+  constructor({
+    serviceFieldRepository,
+    serviceFieldCategoryRepository,
+  }: IocContainer) {
     this.serviceFieldRepository = serviceFieldRepository
+    this.serviceFieldCategoryRepository = serviceFieldCategoryRepository
   }
 
   findAll(): Promise<ServiceFieldEntityDomain[]> {
@@ -54,12 +49,19 @@ class ServiceFieldDomain implements ServiceFieldDomainInterface {
         'Seuls les champs à choix (choice, multichoice) acceptent une liste de choix.',
       )
     }
+    const categories = await this.serviceFieldCategoryRepository.findAll()
+    const targetCategory = categories.find((c) => c.id === params.categoryId)
+    if (!targetCategory || targetCategory.archivedAt !== null) {
+      throw Boom.badRequest('Catégorie introuvable pour ce service.')
+    }
     const existing = await this.serviceFieldRepository.findAll()
     const key = fieldKeyFromLabel(
       params.label,
       new Set([...existing.map((f) => f.key), ...RESERVED_FIELD_KEYS]),
     )
-    const order = existing.filter((f) => f.section === params.section).length
+    const order = existing.filter(
+      (f) => f.categoryId === params.categoryId,
+    ).length
     const taken = new Set<string>()
     const choices = (params.choices ?? []).map((label, i) => {
       const choiceKey = choiceKeyFromLabel(label, taken)
@@ -70,7 +72,7 @@ class ServiceFieldDomain implements ServiceFieldDomainInterface {
       key,
       label: params.label,
       type: params.type,
-      section: params.section,
+      categoryId: params.categoryId,
       clinical: params.clinical ?? false,
       unit: params.type === 'number' ? (params.unit ?? null) : null,
       order,
@@ -78,16 +80,45 @@ class ServiceFieldDomain implements ServiceFieldDomainInterface {
     })
   }
 
-  update(
+  async update(
     fieldID: string,
     params: ServiceFieldUpdateEntityDomain,
   ): Promise<ServiceFieldEntityDomain> {
-    return this.serviceFieldRepository.update(fieldID, {
+    const base = {
       label: params.label,
       unit: params.unit,
       ...(params.archived !== undefined && {
         archivedAt: params.archived ? new Date() : null,
       }),
+    }
+    if (params.categoryId === undefined) {
+      if (params.archived === false) {
+        const field = await this.serviceFieldRepository.findByID(fieldID)
+        const categories = await this.serviceFieldCategoryRepository.findAll()
+        const category = categories.find((c) => c.id === field.categoryId)
+        if (!category || category.archivedAt !== null) {
+          throw Boom.badRequest("Restaurez d'abord sa catégorie")
+        }
+      }
+      return this.serviceFieldRepository.update(fieldID, base)
+    }
+    const [categories, fields] = await Promise.all([
+      this.serviceFieldCategoryRepository.findAll(),
+      this.serviceFieldRepository.findAll(),
+    ])
+    const target = categories.find(
+      (c) => c.id === params.categoryId && c.archivedAt === null,
+    )
+    if (!target) {
+      throw Boom.badRequest(
+        "Catégorie cible introuvable, supprimée ou d'un autre service.",
+      )
+    }
+    const order = fields.filter((f) => f.categoryId === target.id).length
+    return this.serviceFieldRepository.update(fieldID, {
+      ...base,
+      categoryId: target.id,
+      order,
     })
   }
 
@@ -123,17 +154,14 @@ class ServiceFieldDomain implements ServiceFieldDomainInterface {
     })
   }
 
-  async reorderFields(
-    section: ServiceFieldSection,
-    ids: string[],
-  ): Promise<void> {
+  async reorderFields(categoryId: string, ids: string[]): Promise<void> {
     const fields = await this.serviceFieldRepository.findAll()
-    const sectionIds = fields
-      .filter((f) => f.section === section)
+    const categoryIds = fields
+      .filter((f) => f.categoryId === categoryId)
       .map((f) => f.id)
-    if (!sameIds(sectionIds, ids)) {
+    if (!sameIds(categoryIds, ids)) {
       throw Boom.badRequest(
-        'La liste ne correspond pas exactement aux champs de cette section.',
+        'La liste ne correspond pas exactement aux champs de cette catégorie.',
       )
     }
     await this.serviceFieldRepository.reorderFields(ids)

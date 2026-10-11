@@ -79,6 +79,18 @@ const probes: {
     payload: { role: null },
   },
   {
+    permission: 'referentials:read',
+    method: 'GET',
+    path: '/service-field-categories',
+    heldStatus: 200,
+  },
+  {
+    permission: 'referentials:write',
+    method: 'POST',
+    path: '/service-field-categories',
+    payload: { label: 'X' },
+  },
+  {
     permission: 'patient:read',
     method: 'GET',
     path: '/patient',

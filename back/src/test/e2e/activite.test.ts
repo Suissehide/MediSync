@@ -1,6 +1,7 @@
 import { buildTestApp, type TestApp } from './setup/app'
 import { testDb, truncateAll } from './setup/db'
 import {
+  createDateCategories,
   createEstablishment,
   createService,
   createUser,
@@ -13,6 +14,7 @@ describe('tableau de bord d activite', () => {
   let establishmentId: string
   let serviceA: string
   let serviceB: string
+  let exitIdB: string
   let cookies: { access_token: string }
   let coordinateurCookies: { access_token: string }
 
@@ -23,6 +25,10 @@ describe('tableau de bord d activite', () => {
     establishmentId = est.id
     serviceA = (await createService(est.id, 'Service A')).id
     serviceB = (await createService(est.id, 'Service B')).id
+    ;({ exitId: exitIdB } = await createDateCategories(
+      establishmentId,
+      serviceB,
+    ))
     await createUser({
       email: 'direction@test.fr',
       memberships: [
@@ -238,7 +244,7 @@ describe('tableau de bord d activite', () => {
       payload: {
         label: 'Motif a mi-chemin',
         type: 'choice',
-        section: 'outcome',
+        categoryId: exitIdB,
         choices: ['Perdu de vue', 'Terminé'],
       },
     })
@@ -266,7 +272,7 @@ describe('tableau de bord d activite', () => {
       payload: {
         label: 'Motif sortie',
         type: 'choice',
-        section: 'outcome',
+        categoryId: exitIdB,
         choices: ['Perdu de vue', 'Terminé'],
       },
     })

@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx'
 import { buildTestApp, type TestApp } from './setup/app'
 import { testDb, truncateAll } from './setup/db'
 import {
+  createDateCategories,
   createEstablishment,
   createService,
   createUser,
@@ -25,7 +26,7 @@ type ServiceFieldResponse = {
   key: string
   label: string
   type: string
-  section: string
+  categoryId: string
   order: number
   clinical: boolean
   unit: string | null
@@ -39,6 +40,7 @@ describe('definitions des champs de la fiche', () => {
   let testApp: TestApp
   let establishmentId: string
   let serviceId: string
+  let entryId: string
   let coordinateurCookies: Cookies
   let intervenantCookies: Cookies
 
@@ -50,6 +52,7 @@ describe('definitions des champs de la fiche', () => {
     establishmentId = establishment.id
     const service = await createService(establishmentId, 'S-CHAMPS')
     serviceId = service.id
+    ;({ entryId } = await createDateCategories(establishmentId, serviceId))
 
     await createUser({
       email: 'coordinateur@champs.fr',
@@ -91,7 +94,7 @@ describe('definitions des champs de la fiche', () => {
       payload: {
         label: 'Comorbidités',
         type: 'multichoice',
-        section: 'pathway',
+        categoryId: entryId,
         choices: ['HTA', 'Diabète type 2'],
       } as never,
     })
@@ -111,7 +114,7 @@ describe('definitions des champs de la fiche', () => {
       payload: {
         label: 'Comorbidités',
         type: 'multichoice',
-        section: 'pathway',
+        categoryId: entryId,
       } as never,
     })
     expect(res.statusCode).toBe(201)
@@ -198,13 +201,13 @@ describe('definitions des champs de la fiche', () => {
     expect(choixArchive?.archived).toBe(true)
   })
 
-  it('PUT /order inverse les deux champs de la section pathway', async () => {
+  it('PUT /order inverse les deux champs de la categorie d entree', async () => {
     const res = await testApp.app.inject({
       method: 'PUT',
       url: url('/service-fields/order'),
       cookies: coordinateurCookies,
       payload: {
-        section: 'pathway',
+        categoryId: entryId,
         ids: [secondChampId, premierChampId],
       } as never,
     })
@@ -217,7 +220,7 @@ describe('definitions des champs de la fiche', () => {
     })
     const champs = liste.json() as ServiceFieldResponse[]
     const pathwayIds = champs
-      .filter((f) => f.section === 'pathway')
+      .filter((f) => f.categoryId === entryId)
       .sort((a, b) => a.order - b.order)
       .map((f) => f.id)
     expect(pathwayIds).toEqual([secondChampId, premierChampId])
@@ -231,7 +234,7 @@ describe('definitions des champs de la fiche', () => {
       payload: {
         label: 'Autre champ',
         type: 'text',
-        section: 'pathway',
+        categoryId: entryId,
       } as never,
     })
     expect(creation.statusCode).toBe(403)
@@ -274,6 +277,93 @@ describe('definitions des champs de la fiche', () => {
     })
     expect(patch.statusCode).toBe(404)
   })
+
+  it('creer un champ avec la categorie d un autre service : 400 explicite, pas la 409 de la contrainte FK', async () => {
+    const serviceC = await createService(establishmentId, 'S-CHAMPS-C')
+    const { entryId: entryIdC } = await createDateCategories(
+      establishmentId,
+      serviceC.id,
+    )
+
+    const res = await testApp.app.inject({
+      method: 'POST',
+      url: url('/service-fields'),
+      cookies: coordinateurCookies,
+      payload: {
+        label: 'Champ errant',
+        type: 'text',
+        categoryId: entryIdC,
+      } as never,
+    })
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('restaurer un champ dont la categorie est supprimee est refuse ; creer dans une categorie supprimee aussi', async () => {
+    const categorie = await testApp.app.inject({
+      method: 'POST',
+      url: url('/service-field-categories'),
+      cookies: coordinateurCookies,
+      payload: { label: 'Categorie temporaire' } as never,
+    })
+    expect(categorie.statusCode).toBe(201)
+    const categorieId = (categorie.json() as { id: string }).id
+
+    const champ = await testApp.app.inject({
+      method: 'POST',
+      url: url('/service-fields'),
+      cookies: coordinateurCookies,
+      payload: {
+        label: 'Champ temporaire',
+        type: 'text',
+        categoryId: categorieId,
+      } as never,
+    })
+    expect(champ.statusCode).toBe(201)
+    const champId = (champ.json() as ServiceFieldResponse).id
+
+    const archiveChamp = await testApp.app.inject({
+      method: 'PATCH',
+      url: url(`/service-fields/${champId}`),
+      cookies: coordinateurCookies,
+      payload: { archived: true } as never,
+    })
+    expect(archiveChamp.statusCode).toBe(200)
+
+    const archiveCategorie = await testApp.app.inject({
+      method: 'PATCH',
+      url: url(`/service-field-categories/${categorieId}`),
+      cookies: coordinateurCookies,
+      payload: { archived: true } as never,
+    })
+    expect(archiveCategorie.statusCode).toBe(200)
+
+    const restauration = await testApp.app.inject({
+      method: 'PATCH',
+      url: url(`/service-fields/${champId}`),
+      cookies: coordinateurCookies,
+      payload: { archived: false } as never,
+    })
+    expect(restauration.statusCode).toBe(400)
+    expect(restauration.json()).toMatchObject({
+      message: "Restaurez d'abord sa catégorie",
+    })
+    const relu = await testDb.serviceFieldDefinition.findUniqueOrThrow({
+      where: { id: champId },
+    })
+    expect(relu.archivedAt).not.toBeNull()
+
+    const creationDansSupprimee = await testApp.app.inject({
+      method: 'POST',
+      url: url('/service-fields'),
+      cookies: coordinateurCookies,
+      payload: {
+        label: 'Nouveau champ',
+        type: 'text',
+        categoryId: categorieId,
+      } as never,
+    })
+    expect(creationDansSupprimee.statusCode).toBe(400)
+  })
 })
 
 // Un coordinateur cree les definitions par l'API ; un secretariat ecrit sans clinical:write.
@@ -286,6 +376,7 @@ describe('ecriture de la fiche', () => {
   let coordinateurCookies: Cookies
   let secretariatCookies: Cookies
   let orientation: ServiceFieldResponse
+  let entryId: string
 
   const url = (path: string) => tenantUrl(establishmentId, serviceId, path)
 
@@ -307,7 +398,7 @@ describe('ecriture de la fiche', () => {
       method: 'POST',
       url: url('/service-fields'),
       cookies: coordinateurCookies,
-      payload: { section: 'pathway', ...payload } as never,
+      payload: { categoryId: entryId, ...payload } as never,
     })
     expect(res.statusCode).toBe(201)
     return res.json() as ServiceFieldResponse
@@ -319,6 +410,7 @@ describe('ecriture de la fiche', () => {
     establishmentId = establishment.id
     const service = await createService(establishmentId, 'S-FICHE')
     serviceId = service.id
+    ;({ entryId } = await createDateCategories(establishmentId, serviceId))
 
     for (const [email, role] of [
       ['coordinateur@fiche.fr', 'COORDINATEUR'],
@@ -500,7 +592,7 @@ describe('ecriture de la fiche', () => {
 
 // Liste et export construits depuis les definitions du service : la liste retire les champs
 // `longtext` de data/clinicalData, l'export ajoute une colonne par champ actif (clinique
-// seulement a qui a clinical:read), triee par section puis ordre, apres les colonnes fixes.
+// seulement a qui a clinical:read), triee par categorie puis ordre, apres les colonnes fixes.
 describe('liste et export', () => {
   let testApp: TestApp
   let establishmentId: string
@@ -520,6 +612,7 @@ describe('liste et export', () => {
     const service = await createService(establishmentId, 'S-LISTE')
     serviceId = service.id
     const tenant = { establishmentId, serviceId }
+    const { entryId } = await createDateCategories(establishmentId, serviceId)
 
     for (const [email, role] of [
       ['coordinateur@liste.fr', 'COORDINATEUR'],
@@ -537,7 +630,7 @@ describe('liste et export', () => {
         key: 'goal',
         label: 'Objectif',
         type: 'longtext',
-        section: 'pathway',
+        categoryId: entryId,
         order: 0,
       },
     })
@@ -547,7 +640,7 @@ describe('liste et export', () => {
         key: 'orientation',
         label: 'Orientation',
         type: 'choice',
-        section: 'pathway',
+        categoryId: entryId,
         order: 1,
         choices: {
           create: [{ key: 'A', label: 'Alpha', order: 0, establishmentId }],
@@ -560,7 +653,7 @@ describe('liste et export', () => {
         key: 'comorbidites',
         label: 'Comorbidités',
         type: 'multichoice',
-        section: 'pathway',
+        categoryId: entryId,
         order: 2,
         choices: {
           create: [
@@ -576,7 +669,7 @@ describe('liste et export', () => {
         key: 'tabac',
         label: 'Tabac',
         type: 'boolean',
-        section: 'pathway',
+        categoryId: entryId,
         order: 3,
       },
     })
@@ -586,7 +679,7 @@ describe('liste et export', () => {
         key: 'sortie',
         label: 'Sortie',
         type: 'date',
-        section: 'pathway',
+        categoryId: entryId,
         order: 4,
       },
     })
@@ -596,7 +689,7 @@ describe('liste et export', () => {
         key: 'diag',
         label: 'Diag',
         type: 'choice',
-        section: 'pathway',
+        categoryId: entryId,
         order: 5,
         clinical: true,
         choices: {
@@ -610,7 +703,7 @@ describe('liste et export', () => {
         key: 'ancien',
         label: 'Ancien',
         type: 'text',
-        section: 'pathway',
+        categoryId: entryId,
         order: 6,
         archivedAt: new Date(),
       },
@@ -737,7 +830,7 @@ describe('liste et export', () => {
     const secretariatHeaders = headersOf(secretariat.rawPayload)
     const coordHeaders = headersOf(coord.rawPayload)
 
-    // Apres les colonnes fixes, une colonne par champ actif triee par section puis ordre :
+    // Apres les colonnes fixes, une colonne par champ actif triee par categorie puis ordre :
     // Objectif (longtext, inclus), Orientation, Comorbidités, Tabac, Sortie, puis Diag
     // (clinique) seulement pour qui a clinical:read. Ancien (archive) n'apparait jamais.
     expect(secretariatHeaders.slice(-5)).toEqual([
@@ -778,11 +871,15 @@ describe('liste et export', () => {
     })
   })
 
-  it('un champ outcome cree avant un champ pathway s exporte quand meme apres (ordre par section)', async () => {
+  it('un champ de sortie cree avant un champ d entree s exporte quand meme apres (ordre par categorie)', async () => {
     const establishment = await createEstablishment('E-MIXTE')
     const idEtablissement = establishment.id
     const service = await createService(idEtablissement, 'S-MIXTE')
     const idService = service.id
+    const { entryId, exitId } = await createDateCategories(
+      idEtablissement,
+      idService,
+    )
     const urlMixte = (path: string) =>
       tenantUrl(idEtablissement, idService, path)
 
@@ -797,8 +894,7 @@ describe('liste et export', () => {
     })
     const cookies = await signIn(testApp.app, 'coordinateur@mixte.fr')
 
-    // Cree la section outcome EN PREMIER, la section pathway ensuite : un tri par
-    // `order` seul, ou par `section` alphabetique, la ferait sortir avant.
+    // Cree le champ de sortie EN PREMIER, celui d'entree ensuite : un tri par `order` seul le ferait sortir avant.
     await testDb.serviceFieldDefinition.create({
       data: {
         establishmentId: idEtablissement,
@@ -806,7 +902,7 @@ describe('liste et export', () => {
         key: 'bilan',
         label: 'Bilan',
         type: 'text',
-        section: 'outcome',
+        categoryId: exitId,
         order: 0,
       },
     })
@@ -817,7 +913,7 @@ describe('liste et export', () => {
         key: 'etape',
         label: 'Etape',
         type: 'text',
-        section: 'pathway',
+        categoryId: entryId,
         order: 0,
       },
     })

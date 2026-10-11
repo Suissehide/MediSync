@@ -12,7 +12,7 @@ const field = (over: Partial<ServiceField>): ServiceField => ({
   key: 'k',
   label: 'K',
   type: 'text',
-  section: 'pathway',
+  categoryId: 'cat-parcours',
   order: 0,
   clinical: false,
   unit: null,

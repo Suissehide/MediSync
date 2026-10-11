@@ -1,6 +1,7 @@
 import { evaluate } from '@tanstack/react-form'
 import {
   Bookmark,
+  LayoutList,
   LayoutTemplate,
   LoaderCircle,
   Route as RouteIcon,
@@ -12,12 +13,16 @@ import { useEffect, useRef, useState } from 'react'
 import { toPatchValue } from '../../../../constants/serviceFieldTypes.tsx'
 import type { MenuItem } from '../../../../constants/ui.constant.ts'
 import { useAppForm } from '../../../../hooks/formConfig.tsx'
+import { useCan } from '../../../../hooks/useCan.ts'
 import { usePatientMutations } from '../../../../queries/usePatient.tsx'
 import {
   usePatientServiceFileMutations,
   usePatientServiceFileQuery,
 } from '../../../../queries/usePatientServiceFile.ts'
-import { useServiceFieldsQuery } from '../../../../queries/useServiceField.ts'
+import {
+  useServiceFieldCategoriesQuery,
+  useServiceFieldsQuery,
+} from '../../../../queries/useServiceField.ts'
 import type { Patient, UpdatePatientParams } from '../../../../types/patient.ts'
 import type {
   PatientServiceFile,
@@ -26,10 +31,12 @@ import type {
 import type {
   FieldValues,
   ServiceField,
+  ServiceFieldCategory,
 } from '../../../../types/serviceField.ts'
 import { Button } from '../../../ui/button.tsx'
 import { FixedBar } from '../../../ui/fixedbar.tsx'
 import { ToggleGroup, ToggleGroupItem } from '../../../ui/toggle-group.tsx'
+import { CategoryFields, visibleFields } from './categoryFields.patient.tsx'
 import { DetailsFields } from './details.patient.tsx'
 import {
   buildPatientDefaults,
@@ -39,19 +46,22 @@ import {
 } from './form.patient.ts'
 import { IdentiteFields } from './identite.patient.tsx'
 import { IdentityFields } from './identity.patient.tsx'
-import { OutcomeReviewFields } from './outcome-review.patient.tsx'
-import { PathwayInclusionFields } from './pathway-inclusion.patient.tsx'
 
 type PatientParam = {
   patient?: Patient
 }
 
-const menuItems: MenuItem[] = [
+const fixedMenuItems: MenuItem[] = [
   { id: 'identity', label: 'Informations générales', icon: LayoutTemplate },
   { id: 'profile', label: 'Profil & Contexte', icon: User },
-  { id: 'pathway', label: 'Parcours & Inclusion', icon: RouteIcon },
-  { id: 'outcome', label: 'Sortie & Bilan', icon: Bookmark },
 ]
+
+const categoryIcon = ({ dateField }: ServiceFieldCategory) => {
+  if (dateField === 'entryDate') {
+    return RouteIcon
+  }
+  return dateField === 'exitDate' ? Bookmark : LayoutList
+}
 
 const Section = ({
   show,
@@ -100,6 +110,34 @@ export default function EditPatient({ patient }: PatientParam) {
     isError: isServiceFileError,
   } = usePatientServiceFileQuery(patient?.id ?? '')
   const { fields, isPending: isFieldsPending } = useServiceFieldsQuery()
+  const { categories, isPending: isCategoriesPending } =
+    useServiceFieldCategoriesQuery()
+  const canReadClinical = useCan('clinical:read')
+  // Une catégorie supprimée, ou sans date ni champ visible, n'a pas d'onglet ; tri par `order` car les fixtures de test ne le sont pas forcément.
+  const shownCategories = categories
+    .filter(
+      (c) =>
+        !c.archived &&
+        (c.dateField !== null ||
+          visibleFields(fields, c.id, canReadClinical).length > 0),
+    )
+    .sort((a, b) => a.order - b.order)
+  const menuItems: MenuItem[] = [
+    ...fixedMenuItems,
+    ...shownCategories.map((c) => ({
+      id: c.id,
+      label: c.label,
+      icon: categoryIcon(c),
+    })),
+  ]
+
+  // Un onglet sélectionné peut disparaître après une relecture : repli sur « Informations générales » plutôt qu'un écran vide.
+  const selectedTabExists = menuItems.some((item) => item.id === selected)
+  useEffect(() => {
+    if (!selectedTabExists) {
+      setSelected('identity')
+    }
+  }, [selectedTabExists])
 
   // Le sous-dossier peut ne pas exister (absence normale : `serviceFile` vaut `null`, le
   // premier enregistrement le crée côté back — spec §2.1/§5.1), ou sa lecture peut avoir
@@ -110,7 +148,10 @@ export default function EditPatient({ patient }: PatientParam) {
   // affiché avant que la lecture ait abouti partirait de seize défauts à '' non protégés côté
   // back pour treize d'entre eux — voir `form.patient.ts` pour le patron à ne pas reproduire.
   const serviceFileReady =
-    !isServiceFilePending && !isServiceFileError && !isFieldsPending
+    !isServiceFilePending &&
+    !isServiceFileError &&
+    !isFieldsPending &&
+    !isCategoriesPending
 
   // POURQUOI une référence figée plutôt que
   // `serviceFile` lu en direct :
@@ -323,16 +364,17 @@ export default function EditPatient({ patient }: PatientParam) {
         />
         {serviceFileReady && <DetailsFields form={serviceFileForm} />}
       </Section>
-      <Section show={selected === 'pathway'}>
-        {serviceFileReady && (
-          <PathwayInclusionFields form={serviceFileForm} fields={fields} />
-        )}
-      </Section>
-      <Section show={selected === 'outcome'}>
-        {serviceFileReady && (
-          <OutcomeReviewFields form={serviceFileForm} fields={fields} />
-        )}
-      </Section>
+      {shownCategories.map((category) => (
+        <Section key={category.id} show={selected === category.id}>
+          {serviceFileReady && (
+            <CategoryFields
+              form={serviceFileForm}
+              category={category}
+              fields={fields}
+            />
+          )}
+        </Section>
+      ))}
 
       <patientForm.Subscribe selector={(state) => state.isDirty}>
         {(isPatientDirty) => (

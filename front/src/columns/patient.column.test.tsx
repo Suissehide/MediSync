@@ -2,7 +2,10 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
-import type { ServiceField } from '../types/serviceField.ts'
+import type {
+  ServiceField,
+  ServiceFieldCategory,
+} from '../types/serviceField.ts'
 import { CelluleParcours, getPatientColumns } from './patient.column.tsx'
 
 const couleurs: Record<string, string> = {}
@@ -59,7 +62,7 @@ const champ = (over: Partial<ServiceField>): ServiceField => ({
   key: 'f',
   label: 'F',
   type: 'text',
-  section: 'pathway',
+  categoryId: 'inclusion',
   order: 0,
   clinical: false,
   unit: null,
@@ -69,24 +72,45 @@ const champ = (over: Partial<ServiceField>): ServiceField => ({
 })
 
 const champs: ServiceField[] = [
-  champ({ key: 'sortie', type: 'choice', section: 'outcome', order: 0 }),
+  champ({ key: 'sortie', type: 'choice', categoryId: 'bilan', order: 0 }),
   champ({ key: 'note', type: 'longtext', order: 1 }),
   champ({ key: 'ancien', type: 'text', order: 2, archived: true }),
   champ({ key: 'hba1c', type: 'number', order: 3 }),
   champ({ key: 'diag', type: 'choice', order: 0, clinical: true }),
   champ({ key: 'comorb', type: 'multichoice', order: 4 }),
   champ({ key: 'fumeur', type: 'boolean', order: 5 }),
-  champ({ key: 'bilan', type: 'date', section: 'outcome', order: 1 }),
+  champ({ key: 'bilan', type: 'date', categoryId: 'bilan', order: 1 }),
+  champ({ key: 'poids', type: 'number', categoryId: 'suivi', order: 0 }),
+]
+
+// Ordre du tableau volontairement différent de `order`, libellés renommés.
+const categories: ServiceFieldCategory[] = [
+  {
+    id: 'bilan',
+    label: 'Fin de prise en charge',
+    order: 2,
+    dateField: 'exitDate',
+    archived: false,
+  },
+  { id: 'suivi', label: 'Suivi', order: 1, dateField: null, archived: false },
+  {
+    id: 'inclusion',
+    label: 'Admission',
+    order: 0,
+    dateField: 'entryDate',
+    archived: false,
+  },
 ]
 
 const colonnes = getPatientColumns({
   onView: () => undefined,
   fields: champs,
+  categories,
   canReadClinical: true,
 })
 
 describe('colonnes optionnelles des patients', () => {
-  it('une colonne par champ actif hors texte long, Inclusion puis Bilan, avant la date de sortie', () => {
+  it('une colonne par champ actif hors texte long, groupée sous le libellé de sa catégorie, catégories puis champs dans l ordre, date de sortie dans sa catégorie', () => {
     const optionnelles = colonnes
       .filter((c) => (c.meta as { optional?: unknown } | undefined)?.optional)
       .map((c) => [
@@ -94,13 +118,14 @@ describe('colonnes optionnelles des patients', () => {
         (c.meta as { optional: { group: string } }).optional.group,
       ])
     expect(optionnelles).toEqual([
-      ['diag', 'Inclusion'],
-      ['hba1c', 'Inclusion'],
-      ['comorb', 'Inclusion'],
-      ['fumeur', 'Inclusion'],
-      ['sortie', 'Bilan'],
-      ['bilan', 'Bilan'],
-      ['exitDate', 'Bilan'],
+      ['diag', 'Admission'],
+      ['hba1c', 'Admission'],
+      ['comorb', 'Admission'],
+      ['fumeur', 'Admission'],
+      ['poids', 'Suivi'],
+      ['sortie', 'Fin de prise en charge'],
+      ['bilan', 'Fin de prise en charge'],
+      ['exitDate', 'Fin de prise en charge'],
     ])
   })
 
@@ -108,6 +133,7 @@ describe('colonnes optionnelles des patients', () => {
     const ids = getPatientColumns({
       onView: () => undefined,
       fields: champs,
+      categories,
       canReadClinical: false,
     }).map((c) => c.id)
     expect(ids).not.toContain('diag')

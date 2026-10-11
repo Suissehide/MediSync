@@ -55,20 +55,11 @@ garde-fou de `deploy/scripts/restore-db-dump.sh`) :
 deploy/scripts/restore-db-dump.sh <sauvegarde-fraiche.sql.gz>
 ```
 
-## 2. Arrêter l'ancien conteneur
+## 2. Relever l'« avant », en lecture seule
 
-**Avant toute chose, arrêter l'ancien conteneur applicatif** (depuis Dokploy,
-arrêter le service back), ou à défaut interdire les écritures sur la base.
-L'ancien conteneur, encore vivant pendant la migration, continuerait d'écrire
-sur les dix colonnes sans passer par `data`/`clinicalData` : une ligne
-modifiée entre la recopie et la suppression des colonnes serait recopiée dans
-un état déjà périmé, ou ferait échouer la garde. C'est une fenêtre de
-maintenance : l'application est indisponible entre cet arrêt et la fin de
-l'étape 5.
-
-**Attendu** : le service back n'a plus de conteneur en cours d'exécution.
-
-## 3. Relever l'« avant », en lecture seule
+**À faire avant l'arrêt du conteneur** (étape 3) : l'export ARS ci-dessous
+passe par l'écran applicatif, donc par l'ancien conteneur encore vivant — le
+relever après l'arrêt ne donnerait plus accès à l'écran.
 
 **Compte des dix colonnes**, une chaîne vide valant absence comme dans la
 migration (`NULLIF(col, '')`) :
@@ -95,6 +86,18 @@ FROM "PatientServiceFile";
 choisir une période (par exemple l'année en cours) et exporter la grille.
 **Garder l'export** : même référence, côté indicateurs plutôt que colonnes.
 
+## 3. Arrêter l'ancien conteneur
+
+**Arrêter l'ancien conteneur applicatif** (depuis Dokploy, arrêter le
+service back), ou à défaut interdire les écritures sur la base. L'ancien
+conteneur, encore vivant pendant la migration, continuerait d'écrire sur les
+dix colonnes sans passer par `data`/`clinicalData` : une ligne modifiée entre
+la recopie et la suppression des colonnes serait recopiée dans un état déjà
+périmé, ou ferait échouer la garde. C'est une fenêtre de maintenance :
+l'application est indisponible entre cet arrêt et la fin de l'étape 5.
+
+**Attendu** : le service back n'a plus de conteneur en cours d'exécution.
+
 ## 4. Déployer
 
 La migration s'applique automatiquement au démarrage du conteneur de
@@ -119,7 +122,7 @@ successfully applied.` suivi de `Server is ready`.
 ## 5. Comparer
 
 **Clés par champ dans `data`/`clinicalData`**, à comparer colonne par colonne
-avec le résultat de l'étape 3 (même décompte, sous une autre forme : une clé
+avec le résultat de l'étape 2 (même décompte, sous une autre forme : une clé
 n'existe dans le JSON que si la valeur source n'était pas vide, par
 construction de la migration) :
 
@@ -136,12 +139,12 @@ ORDER BY key;
 ```
 
 **Attendu** : la ligne `medicalDiagnosis` égale le compte de la colonne
-`medicalDiagnosis` de l'étape 3, et chacune des neuf autres lignes égale le
+`medicalDiagnosis` de l'étape 2, et chacune des neuf autres lignes égale le
 compte de sa colonne correspondante. **Le moindre écart signale une perte ou
 un décalage de données** : passer à l'étape 6.
 
 **Grille ARS de la même période**, réexportée depuis l'écran « Indicateurs
-ARS » : comparer à l'export pris avant migration à l'étape 3. **Attendu** :
+ARS » : comparer à l'export pris avant migration à l'étape 2. **Attendu** :
 mêmes chiffres. Un écart sur un seul indicateur vaut le même traitement
 qu'un écart sur les colonnes.
 
@@ -175,3 +178,66 @@ SELECT
 
 **Attendu, retour arrière réussi** : `colonnes_dix` = **10**. Si le retour
 arrière a échoué (migration encore appliquée) : `colonnes_dix` = **0**.
+
+## 7. Catégories (migration `20261011090000_service_field_categories`)
+
+Cette migration remplace les deux sections fixes de `ServiceFieldDefinition`
+(`pathway`/`outcome`) par des catégories en base (`ServiceFieldCategory`),
+propres à chaque service. **Les migrations Prisma s'appliquent dans l'ordre
+de leur nom, toutes au même démarrage de conteneur** :
+`20261010120000_service_fields` (ci-dessus), puis
+`20261010200000_indicator_sets` (chantier `worktree-indicateurs-configurables`,
+fusionné séparément sur `main`), puis `20261011090000_service_field_categories`
+(celle-ci). **Ne pas déployer cette catégorie avant que `indicator_sets` ait
+été fusionnée sur `main`** : les trois migrations ne font qu'une seule
+commande `prisma migrate deploy`, et aucune des trois ne peut être insérée
+entre les deux autres sans renommer les fichiers de migration. Elle partage
+la sauvegarde (étape 1), l'arrêt de conteneur (étape 3) et le retour arrière
+par restauration (étape 6) de la migration ci-dessus ; elle ouvre sa propre
+transaction (`BEGIN`/`COMMIT`) : un échec de la garde ci-dessous n'annule pas
+la migration précédente si elle a déjà committé.
+
+**Avant l'étape 3 (arrêt du conteneur), en lecture seule :**
+
+```sql
+-- lit seulement, ne modifie rien
+SELECT "serviceId", section, count(*) AS "nb_champs"
+FROM "ServiceFieldDefinition"
+GROUP BY "serviceId", section
+ORDER BY "serviceId", section;
+```
+
+**Garder ce résultat** : référence de la comparaison ci-dessous.
+
+À l'étape 4, la migration crée deux catégories à date par service (« Parcours
+& Inclusion » / `entryDate`, « Sortie & Bilan » / `exitDate`), rattache
+chaque champ existant à la catégorie correspondant à son ancienne section,
+puis une garde (bloc `DO $$`) compare, par service, le nombre de champs par
+ancienne section au nombre de champs rattachés à la catégorie
+correspondante, et vérifie qu'aucun champ n'est resté sans catégorie — toute
+différence lève une exception qui annule la transaction entière avant que
+`categoryId` ne devienne obligatoire et que la colonne `section` ne soit
+supprimée.
+
+Cette migration a été répétée avec succès sur une copie jetable de la base
+de développement : 2 catégories créées par service, 11 champs sur 11
+rattachés.
+
+**Après l'étape 4, à comparer au résultat ci-dessus :**
+
+```sql
+-- lit seulement, ne modifie rien
+SELECT c."serviceId", c."dateField", count(f.id) AS "nb_champs"
+FROM "ServiceFieldCategory" c
+LEFT JOIN "ServiceFieldDefinition" f ON f."categoryId" = c.id
+GROUP BY c."serviceId", c."dateField"
+ORDER BY c."serviceId", c."dateField";
+```
+
+**Attendu** : la ligne `entryDate` de chaque service égale son compte
+`pathway` ci-dessus, la ligne `exitDate` égale son compte `outcome`. Deux
+lignes par service, pas plus : la contrainte d'unicité `(serviceId,
+dateField)` empêche d'en créer une troisième à date.
+
+**Retour arrière** : identique à l'étape 6 (restauration de la sauvegarde de
+l'étape 1) ; rien de spécifique à ajouter.

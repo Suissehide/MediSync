@@ -135,7 +135,7 @@ const serviceFieldRouter: FastifyPluginAsync = (fastify) => {
     },
     async (request, reply) => {
       await serviceFieldDomain.reorderFields(
-        request.body.section,
+        request.body.categoryId,
         request.body.ids,
       )
       reply.code(204).send()

@@ -7,7 +7,13 @@ export type ServiceFieldType =
   | 'multichoice'
   | 'boolean'
 
-export type ServiceFieldSection = 'pathway' | 'outcome'
+export type ServiceFieldCategory = {
+  id: string
+  label: string
+  order: number
+  dateField: 'entryDate' | 'exitDate' | null
+  archived: boolean
+}
 
 export type ServiceFieldChoice = {
   id: string
@@ -22,7 +28,7 @@ export type ServiceField = {
   key: string
   label: string
   type: ServiceFieldType
-  section: ServiceFieldSection
+  categoryId: string
   order: number
   clinical: boolean
   unit: string | null
@@ -35,7 +41,7 @@ export type FieldValues = Record<string, unknown>
 export type CreateServiceFieldParams = {
   label: string
   type: ServiceFieldType
-  section: ServiceFieldSection
+  categoryId: string
   clinical?: boolean
   unit?: string | null
   choices?: string[]
@@ -46,6 +52,7 @@ export type UpdateServiceFieldParams = {
   label?: string
   unit?: string | null
   archived?: boolean
+  categoryId?: string
 }
 
 export type CreateServiceFieldChoiceParams = { fieldID: string; label: string }
@@ -58,8 +65,14 @@ export type UpdateServiceFieldChoiceParams = {
 }
 
 export type ReorderServiceFieldsParams = {
-  section: ServiceFieldSection
+  categoryId: string
   ids: string[]
+}
+
+export type UpdateServiceFieldCategoryParams = {
+  id: string
+  label?: string
+  archived?: boolean
 }
 
 export type ReorderServiceFieldChoicesParams = {
