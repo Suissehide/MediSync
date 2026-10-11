@@ -45,6 +45,12 @@ def q(v):
     return "'" + str(v).strip().replace("'", "''") + "'"
 
 
+def jsonb(d):
+    """Champ de fiche configurable : les valeurs vides valent absence (cf. jsonb_strip_nulls)."""
+    kept = {k: str(v).strip() for k, v in d.items() if not blank(v)}
+    return q(json.dumps(kept, ensure_ascii=False)) + "::jsonb"
+
+
 # Valeurs stockées = clés des constantes du front (front/src/constants/patient.constant.ts).
 OPTIONS = {
     "gender": {"male": "Homme", "female": "Femme", "other": "Autre"},
@@ -208,22 +214,28 @@ def main():
             q(opt("education", p["etude"])), q(opt("occupation", p["profession"])),
             q(opt("activity", p["activite"])), q(day(p["dedate"])) if day(p["dedate"]) else "now()",
         ]) + ")")
+        # Champs de fiche configurables : `data` + `clinicalData` (medicalDiagnosis seul), même
+        # répartition que la migration 20261010120000_service_fields.
         file_rows.append("(" + ",".join([
             q(f"clgx_psf_{p['id']}"), q(pid), ":'svc'", ":'est'", q(p["soignant_referent"]), q(p["notes"]),
-            q(details), q(opt("diagnosis", p["diagnostic"])), q(day(p["dedate"])), q(opt("careMode", p["mode"])),
-            q(opt("orientation", p["orientation"])), q(opt("etpDecision", p["etpdecision"])),
-            q(opt("programType", p["progetp"])), q(opt("nonInclusion", p["precisions"])),
-            q(p["precisionsperso"]), q(p["objectif"]), q(day(p["dentree"])), q(opt("stopReason", p["motif"])),
-            q(opt("etpFinalOutcome", p["etp"])),
+            q(details), q(day(p["dedate"])), q(day(p["dentree"])),
+            jsonb({"careMode": opt("careMode", p["mode"]),
+                   "orientation": opt("orientation", p["orientation"]),
+                   "etpDecision": opt("etpDecision", p["etpdecision"]),
+                   "programType": opt("programType", p["progetp"]),
+                   "nonInclusionDetails": opt("nonInclusion", p["precisions"]),
+                   "customContentDetails": p["precisionsperso"],
+                   "goal": p["objectif"],
+                   "stopReason": opt("stopReason", p["motif"]),
+                   "etpFinalOutcome": opt("etpFinalOutcome", p["etp"])}),
+            jsonb({"medicalDiagnosis": opt("diagnosis", p["diagnostic"])}),
         ]) + ")")
     out.append(insert("Patient", ["id", "establishmentId", "firstName", "lastName", "gender", "birthDate",
                                   "phone1", "phone2", "email", "distance", "educationLevel", "occupation",
                                   "currentActivity", "createDate"], pat_rows))
     out.append(insert("PatientServiceFile", ["id", "patientId", "serviceId", "establishmentId",
-                                             "referringCaregiver", "notes", "details", "medicalDiagnosis",
-                                             "entryDate", "careMode", "orientation", "etpDecision",
-                                             "programType", "nonInclusionDetails", "customContentDetails",
-                                             "goal", "exitDate", "stopReason", "etpFinalOutcome"], file_rows))
+                                             "referringCaregiver", "notes", "details", "entryDate",
+                                             "exitDate", "data", "clinicalData"], file_rows))
 
     # --- Créneaux : anciens slots + créneaux reconstitués pour les rdv sans slot ------------------
     # slot -> dict(start, end, them, cat, type, loc, place, soignant)
