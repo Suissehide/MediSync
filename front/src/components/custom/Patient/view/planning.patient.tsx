@@ -283,7 +283,7 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
 
   return (
     <div className="flex-1 min-h-0 overflow-hidden flex flex-col gap-3 mt-4">
-      <div className="flex justify-end items-center gap-2">
+      <div className="flex justify-end items-center gap-2 h-9">
         <div className="w-64">
           <Select
             searchable
@@ -300,7 +300,11 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-hidden [&_.fc_.fc-header-toolbar]:!p-0">
+      {/* La barre d'outils du calendrier est remontee sur la ligne du filtre (-3rem : hauteur de
+          la ligne + gap-3), et s'arrete avant lui (16rem de Select + 0.5rem). FullCalendar rend
+          cette barre lui-meme : la remonter en CSS evite d'aller greffer le Select dans son DOM,
+          ou de reecrire titre et navigation a la main. */}
+      <div className="flex-1 min-h-0 overflow-hidden [&_.fc_.fc-header-toolbar]:!p-0 [&_.fc_.fc-header-toolbar]:!-mt-12 [&_.fc_.fc-header-toolbar]:!pr-[16.5rem]">
         {slots && (
           <Calendar
             key={selectedTag}
