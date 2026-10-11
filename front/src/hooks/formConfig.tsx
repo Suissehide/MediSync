@@ -294,7 +294,8 @@ function TextAreaField({
   className,
   inputClassName,
   description,
-}: FieldComponentProps & { description?: string }) {
+  placeholder,
+}: FieldComponentProps & { description?: string; placeholder?: string }) {
   const field = useFieldContext<string>()
   const value = field.state.value ?? ''
   const descriptionId = `${field.name}-description`
@@ -305,6 +306,7 @@ function TextAreaField({
       <TextArea
         id={field.name}
         value={value}
+        placeholder={placeholder}
         className={inputClassName}
         aria-describedby={description ? descriptionId : undefined}
         onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>

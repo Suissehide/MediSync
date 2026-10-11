@@ -1,6 +1,14 @@
 import { useStore } from '@tanstack/react-form'
 import dayjs, { type Dayjs } from 'dayjs'
-import { Check, X } from 'lucide-react'
+import {
+  ArrowLeft,
+  CalendarPlus,
+  Check,
+  ChevronRight,
+  ChevronsDown,
+  Users,
+  X,
+} from 'lucide-react'
 import type React from 'react'
 import { useMemo, useState } from 'react'
 
@@ -12,6 +20,7 @@ import {
   type FreeInterval,
   getUpcomingSlotSuggestions,
   type SlotSuggestion,
+  UPCOMING_SLOT_LIMIT,
 } from '../../../libs/slotAvailability.ts'
 import { cn, generateDurationOptions } from '../../../libs/utils.ts'
 import { useAppointmentMutations } from '../../../queries/useAppointment.ts'
@@ -33,11 +42,13 @@ import {
   PopupTitle,
   PopupTrigger,
 } from '../../ui/popup.tsx'
-import type { SelectOption } from '../../ui/select.tsx'
-import { AppointmentTimeFields } from '../appointmentDetailsFields.tsx'
+import { Select, type SelectOption } from '../../ui/select.tsx'
+import { TimePicker } from '../../ui/timePicker.tsx'
 
 interface AddPatientToSlotFormProps {
   trigger?: React.ReactNode
+  /** Patient présélectionné, depuis sa fiche. */
+  patientID?: string
 }
 
 /**
@@ -50,11 +61,7 @@ const EmptySlotList = ({ children }: { children: React.ReactNode }) => (
   </div>
 )
 
-/**
- * Une ligne de la liste des créneaux. Un créneau complet s'affiche en rouge et
- * un créneau déjà pris par le patient s'estompe ; ni l'un ni l'autre n'est
- * cliquable.
- */
+/** Une ligne de la liste ; complète ou déjà réservée, elle reste visible mais grisée. */
 const SlotSuggestionRow = ({
   suggestion,
   onSelect,
@@ -63,53 +70,174 @@ const SlotSuggestionRow = ({
   onSelect: (suggestion: SlotSuggestion) => void
 }) => {
   const isSelectable = !suggestion.alreadyBooked && !suggestion.isFull
+  const { slot } = suggestion
+  const location = slot.slotTemplate?.location?.name
+  const fill = suggestion.isIndividual
+    ? 0
+    : Math.min(1, suggestion.bookedCount / suggestion.capacity)
 
   return (
-    <li>
-      <button
-        type="button"
-        onClick={() => onSelect(suggestion)}
-        disabled={!isSelectable}
-        className={cn(
-          'flex items-center gap-3 w-full text-left px-3 py-2 transition-colors',
-          isSelectable ? 'cursor-pointer hover:bg-card' : 'cursor-not-allowed',
-          suggestion.isFull && 'text-destructive',
-          suggestion.alreadyBooked && !suggestion.isFull && 'opacity-50',
-        )}
-      >
-        <span
-          className="w-2.5 h-2.5 rounded-full shrink-0"
-          style={{
-            backgroundColor: suggestion.slot.slotTemplate?.color ?? '#2563eb',
-          }}
-        />
-        <span className="flex flex-col min-w-0 flex-1">
-          <span className="text-sm font-medium">
-            {`${formatSlotDate(suggestion.slot.startDate)} · ${formatSlotRange(suggestion.slot.startDate, suggestion.slot.endDate)}`}
-          </span>
-          <span
-            className={cn(
-              'text-xs truncate',
-              suggestion.isFull ? 'text-destructive/80' : 'text-text-light',
-            )}
-          >
-            {formatSoignants(suggestion.slot)}
-          </span>
+    <button
+      type="button"
+      onClick={() => onSelect(suggestion)}
+      disabled={!isSelectable}
+      className={cn(
+        'grid grid-cols-[104px_4px_minmax(0,1fr)_150px_16px] gap-3 items-center w-full text-left py-3 pl-4 pr-3.5 border-b border-muted bg-primary-foreground transition-colors',
+        isSelectable
+          ? 'cursor-pointer hover:bg-[#f8fafc]'
+          : 'cursor-not-allowed opacity-55',
+      )}
+    >
+      <span className="text-[15px] font-semibold text-foreground tabular-nums">
+        {formatSlotRange(slot.startDate, slot.endDate)}
+      </span>
+      <span
+        className="w-1 h-[34px] rounded-full"
+        style={{ backgroundColor: slot.slotTemplate?.color ?? '#2563eb' }}
+      />
+      <span className="flex flex-col gap-0.5 min-w-0">
+        <span className="text-sm font-medium text-foreground truncate">
+          {formatSoignants(slot)}
+          {location && (
+            <span className="font-normal text-text-light"> · {location}</span>
+          )}
         </span>
+        <span className="text-xs text-text-light">
+          {suggestion.isIndividual
+            ? 'Créneau individuel : horaire et durée à choisir'
+            : 'Séance collective'}
+        </span>
+      </span>
+      <span className="flex flex-col gap-1 items-end">
         <span
           className={cn(
-            'text-xs shrink-0',
-            suggestion.isFull
-              ? 'text-destructive font-medium'
-              : 'text-text-light',
+            'text-xs font-semibold whitespace-nowrap',
+            isSelectable ? 'text-[#15803d]' : 'text-text-light',
           )}
         >
-          {getSuggestionBadge(suggestion)}
+          {getCapacityLabel(suggestion)}
         </span>
-      </button>
-    </li>
+        <span className="w-[110px] h-[5px] rounded-full bg-muted overflow-hidden">
+          <span
+            className={cn(
+              'block h-full',
+              suggestion.isFull ? 'bg-[#94a3b8]' : 'bg-primary',
+            )}
+            style={{ width: `${fill * 100}%` }}
+          />
+        </span>
+      </span>
+      {isSelectable ? (
+        <ChevronRight className="w-4 h-4 text-[#94a3b8]" />
+      ) : (
+        <span />
+      )}
+    </button>
   )
 }
+
+/** Créneaux groupés par jour (en-tête collant), puis « Charger plus ». */
+const SlotList = ({
+  isReady,
+  suggestions,
+  hasMore,
+  onSelect,
+  onLoadMore,
+}: {
+  isReady: boolean
+  suggestions: SlotSuggestion[]
+  hasMore: boolean
+  onSelect: (suggestion: SlotSuggestion) => void
+  onLoadMore: () => void
+}) => {
+  if (!isReady) {
+    return (
+      <EmptySlotList>
+        Sélectionnez un patient et une thématique pour voir les créneaux à
+        venir.
+      </EmptySlotList>
+    )
+  }
+  if (suggestions.length === 0) {
+    return (
+      <EmptySlotList>
+        Aucun créneau à partir de cette date pour cette thématique.
+      </EmptySlotList>
+    )
+  }
+  return (
+    <div className="flex-1 min-h-0 overflow-auto border border-border rounded-[10px]">
+      {groupSuggestionsByDay(suggestions).map((group) => (
+        <section key={group.day}>
+          <h3 className="sticky top-0 z-[1] px-4 py-2 m-0 bg-[#f8fafc] border-b border-border text-[13px] font-semibold text-text-dark">
+            {formatSlotDate(group.suggestions[0].slot.startDate)}
+          </h3>
+          {group.suggestions.map((suggestion) => (
+            <SlotSuggestionRow
+              key={suggestion.slot.id}
+              suggestion={suggestion}
+              onSelect={onSelect}
+            />
+          ))}
+        </section>
+      ))}
+      {hasMore ? (
+        <button
+          type="button"
+          onClick={onLoadMore}
+          className="flex items-center justify-center gap-2 w-full h-11 cursor-pointer text-sm font-semibold text-primary hover:bg-[#f8fafc]"
+        >
+          <ChevronsDown className="w-4 h-4" />
+          Charger plus de créneaux
+        </button>
+      ) : (
+        <div className="flex items-center justify-center h-11 text-[13px] text-text-light">
+          Aucun autre créneau pour cette thématique
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Indicateur « ① Créneau — ② Détails », piloté par l'étape courante. */
+const StepIndicator = ({ step }: { step: number }) => (
+  <ol className="flex items-center gap-2 mt-1 ml-[60px] text-[13px]">
+    {['Créneau', 'Détails'].map((label, index) => {
+      const n = index + 1
+      const isActive = step === n
+      const isDone = step > n
+      return (
+        <li
+          key={label}
+          aria-current={isActive ? 'step' : undefined}
+          className="flex items-center gap-2"
+        >
+          {index > 0 && <span className="w-5 h-px bg-[#cbd5e1]" />}
+          <span
+            className={cn(
+              'flex items-center gap-1.5',
+              isActive && 'font-semibold text-foreground',
+              isDone && 'text-foreground',
+              !isActive && !isDone && 'text-[#94a3b8]',
+            )}
+          >
+            <span
+              className={cn(
+                'flex items-center justify-center w-[18px] h-[18px] rounded-full text-[11px] font-bold',
+                isActive && 'bg-primary text-white',
+                isDone && 'bg-green-600 text-white',
+                !isActive && !isDone && 'bg-border text-text-light',
+              )}
+            >
+              {isDone ? '✓' : n}
+            </span>
+            {label}
+          </span>
+        </li>
+      )
+    })}
+  </ol>
+)
 
 const formatSlotDate = (date: string) =>
   dayjs
@@ -118,7 +246,27 @@ const formatSlotDate = (date: string) =>
     .replace(/^./, (c) => c.toUpperCase())
 
 const formatSlotRange = (start: string, end: string) =>
-  `${dayjs.utc(start).format('HH[h]mm')} - ${dayjs.utc(end).format('HH[h]mm')}`
+  `${dayjs.utc(start).format('HH:mm')} – ${dayjs.utc(end).format('HH:mm')}`
+
+const formatSlotPlace = (slot: Slot) =>
+  [formatSoignants(slot), slot.slotTemplate?.location?.name]
+    .filter(Boolean)
+    .join(' · ')
+
+/** Suggestions consécutives d'un même jour (UTC), dans l'ordre reçu. */
+export const groupSuggestionsByDay = (suggestions: SlotSuggestion[]) => {
+  const days: { day: string; suggestions: SlotSuggestion[] }[] = []
+  for (const suggestion of suggestions) {
+    const day = dayjs.utc(suggestion.slot.startDate).format('YYYY-MM-DD')
+    const last = days.at(-1)
+    if (last?.day === day) {
+      last.suggestions.push(suggestion)
+    } else {
+      days.push({ day, suggestions: [suggestion] })
+    }
+  }
+  return days
+}
 
 const formatSoignants = (slot: Slot) =>
   slot.slotTemplate?.soignants?.length
@@ -183,19 +331,18 @@ const getSuggestionDefaults = (
   }
 }
 
-const getSuggestionBadge = (suggestion: SlotSuggestion) => {
+export const getCapacityLabel = (suggestion: SlotSuggestion) => {
   if (suggestion.alreadyBooked) {
-    return 'déjà inscrit'
+    return 'Déjà inscrit·e'
   }
   if (suggestion.isFull) {
-    return suggestion.isIndividual
-      ? 'complet'
-      : `complet · ${suggestion.bookedCount}/${suggestion.capacity}`
+    return 'Complet'
   }
   if (suggestion.isIndividual) {
-    return ''
+    return 'Individuel · libre'
   }
-  return `${suggestion.bookedCount}/${suggestion.capacity}`
+  const free = suggestion.capacity - suggestion.bookedCount
+  return `${free} ${free > 1 ? 'places libres' : 'place libre'} sur ${suggestion.capacity}`
 }
 
 /**
@@ -282,7 +429,10 @@ const buildJoinPayload = (target: Appointment, patientID: string) => ({
   ],
 })
 
-function AddPatientToSlotForm({ trigger }: AddPatientToSlotFormProps) {
+function AddPatientToSlotForm({
+  trigger,
+  patientID,
+}: AddPatientToSlotFormProps) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -300,29 +450,37 @@ function AddPatientToSlotForm({ trigger }: AddPatientToSlotFormProps) {
         )}
       </PopupTrigger>
 
-      <PopupContent size="lg">
-        <PopupHeader>
-          <PopupTitle>Ajouter un patient à un rendez-vous</PopupTitle>
-        </PopupHeader>
-
+      <PopupContent size="lg" className="w-[720px] h-[820px]">
         {/* Les hooks de données (créneaux, patients, thématiques) ne se
         montent qu'à l'ouverture de la popup, pas au chargement de la page. */}
-        {open && <AddPatientToSlotContent onClose={() => setOpen(false)} />}
+        {open && (
+          <AddPatientToSlotContent
+            initialPatientID={patientID}
+            onClose={() => setOpen(false)}
+          />
+        )}
       </PopupContent>
     </Popup>
   )
 }
 
 interface AddPatientToSlotContentProps {
+  initialPatientID?: string
   onClose: () => void
 }
 
-function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
+function AddPatientToSlotContent({
+  initialPatientID,
+  onClose,
+}: AddPatientToSlotContentProps) {
   // État d'interface : la navigation de l'assistant, le créneau retenu et le
   // filtre de recherche ne sont pas des valeurs envoyées au serveur.
   const [step, setStep] = useState(1)
   const [selected, setSelected] = useState<SlotSuggestion | null>(null)
   const [fromDate, setFromDate] = useState<Dayjs>(dayjs.utc().startOf('day'))
+  // Sans `to`, l'API renvoie tous les créneaux à venir : « Charger plus »
+  // n'élargit que la part affichée.
+  const [limit, setLimit] = useState(UPCOMING_SLOT_LIMIT)
 
   const { toast } = useToast()
   const { createAppointment, updateAppointment } = useAppointmentMutations()
@@ -342,7 +500,7 @@ function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
   // recréées à chaque fois (ici un Dayjs, donc une nouvelle identité) le font
   // boucler à l'infini. On ne les construit qu'une fois.
   const [defaultValues] = useState(() => ({
-    patientID: '',
+    patientID: initialPatientID ?? '',
     thematicID: '',
     startTime: dayjs.utc(),
     duration: '',
@@ -380,16 +538,22 @@ function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
     [thematics],
   )
 
-  const suggestions = useMemo(
+  const allSuggestions = useMemo(
     () =>
       getUpcomingSlotSuggestions(
         slots,
         thematicID,
         patientID,
         fromDate.toISOString(),
+        Number.POSITIVE_INFINITY,
       ),
     [slots, thematicID, patientID, fromDate],
   )
+  const suggestions = allSuggestions.slice(0, limit)
+  const hasMore = allSuggestions.length > limit
+  const freeCount = suggestions.filter(
+    (suggestion) => !suggestion.isFull && !suggestion.alreadyBooked,
+  ).length
 
   const selectedPatient = patients?.find((patient) => patient.id === patientID)
   const selectedThematic = thematics?.find(
@@ -519,11 +683,22 @@ function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
     )
   }
 
+  const patientLabel = selectedPatient
+    ? `${selectedPatient.lastName} ${selectedPatient.firstName}`
+    : ''
+
   return (
     <>
-      <PopupBody>
-        {step === 1 && (
-          <div className="flex flex-col gap-3">
+      <PopupHeader className="py-[18px]">
+        <PopupTitle icon={CalendarPlus}>
+          Ajouter un patient à un rendez-vous
+        </PopupTitle>
+        <StepIndicator step={step} />
+      </PopupHeader>
+
+      {step === 1 && (
+        <PopupBody className="flex flex-col pt-5 pb-0">
+          <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_150px] gap-3">
             <form.AppField name="patientID">
               {(field) => (
                 <field.Select
@@ -561,136 +736,149 @@ function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
                 minDate={dayjs.utc().startOf('day')}
               />
             </FormField>
-
-            <div className="flex flex-col gap-2">
-              <Label>Prochains créneaux</Label>
-
-              {!patientID || !thematicID ? (
-                <EmptySlotList>
-                  Sélectionnez un patient et une thématique pour voir les
-                  créneaux à venir.
-                </EmptySlotList>
-              ) : suggestions.length === 0 ? (
-                <EmptySlotList>
-                  Aucun créneau à partir de cette date pour cette thématique.
-                </EmptySlotList>
-              ) : (
-                <ul className="flex flex-col max-h-72 overflow-y-auto border border-border rounded-lg divide-y divide-border">
-                  {suggestions.map((suggestion) => (
-                    <SlotSuggestionRow
-                      key={suggestion.slot.id}
-                      suggestion={suggestion}
-                      onSelect={handleSelectSuggestion}
-                    />
-                  ))}
-                </ul>
-              )}
-            </div>
           </div>
-        )}
 
-        {step === 2 && selected && (
-          <div className="flex flex-col gap-2">
-            <div className="text-xs uppercase text-text-light">
-              Récapitulatif
-            </div>
-            <div className="text-sm">
-              <span className="text-text-light">Patient : </span>
-              {selectedPatient
-                ? `${selectedPatient.lastName} ${selectedPatient.firstName}`
-                : ''}
-            </div>
-            <div className="text-sm">
-              <span className="text-text-light">Thématique : </span>
-              {selectedThematic?.name ?? ''}
-            </div>
-            <div className="flex flex-wrap items-center gap-2 text-sm">
-              <span>
-                <span className="text-text-light">Créneau : </span>
-                {formatSlotDate(selected.slot.startDate)}{' '}
-                {formatSlotRange(
-                  selected.slot.startDate,
-                  selected.slot.endDate,
-                )}
+          <div className="flex items-baseline justify-between mt-3.5 mb-2.5">
+            <span className="text-[15px] font-semibold text-foreground">
+              Créneaux disponibles{' '}
+              <span className="font-normal text-text-light">({freeCount})</span>
+            </span>
+            <span className="text-xs text-text-light">
+              Cliquez sur un créneau pour continuer
+            </span>
+          </div>
+
+          <SlotList
+            isReady={!!patientID && !!thematicID}
+            suggestions={suggestions}
+            hasMore={hasMore}
+            onSelect={handleSelectSuggestion}
+            onLoadMore={() =>
+              setLimit((current) => current + UPCOMING_SLOT_LIMIT)
+            }
+          />
+        </PopupBody>
+      )}
+
+      {step === 2 && selected && (
+        <PopupBody className="flex flex-col gap-4 pt-5">
+          <div className="flex gap-3.5 px-4 py-3.5 border border-border rounded-[10px] bg-[#f8fafc]">
+            <span
+              className="w-1 rounded-full shrink-0"
+              style={{
+                backgroundColor: selected.slot.slotTemplate?.color ?? '#2563eb',
+              }}
+            />
+            <div className="flex flex-col flex-1 gap-1 min-w-0">
+              <span className="text-base font-semibold text-foreground">
+                {`${formatSlotDate(selected.slot.startDate)} · ${formatSlotRange(selected.slot.startDate, selected.slot.endDate)}`}
               </span>
-              <Button
-                type="button"
-                variant="transparent"
-                onClick={handleBack}
-                className="h-auto p-0 text-sm underline underline-offset-4 hover:no-underline"
-              >
-                Modifier
-              </Button>
+              <span className="text-sm text-text-dark">
+                {formatSlotPlace(selected.slot)}
+              </span>
+              <span className="text-[13px] text-text-light">
+                {`${patientLabel} · ${selectedThematic?.name ?? ''}`}
+              </span>
             </div>
-            <div className="text-sm">
-              <span className="text-text-light">Soignants : </span>
-              {formatSoignants(selected.slot)}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleBack}
+              className="self-start h-[30px] px-2.5 text-[13px]"
+            >
+              Changer
+            </Button>
+          </div>
+
+          {isJoining && (
+            <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg bg-blue-50 text-sm text-blue-800">
+              <Users className="w-4 h-4 shrink-0" />
+              <span>
+                {`Rejoint un rendez-vous existant (${selected.bookedCount}/${selected.capacity} patients). L'horaire est celui du créneau.`}
+              </span>
             </div>
+          )}
 
-            {isJoining && (
-              <p className="text-sm text-text-light">
-                Ajout à un rendez-vous existant ({selected.bookedCount}/
-                {selected.capacity} patients).
-              </p>
-            )}
-
-            {/* Sur un créneau collectif, l'horaire est celui du créneau : les
-            champs seraient figés et répéteraient le récapitulatif. On ne les
-            montre que là où ils servent, sur un créneau individuel. Ils gardent
-            le composant partagé plutôt que `field.*` pour conserver la mise en
-            page en ligne (« à 09h00 pendant 30min »), que des champs empilés
-            sous un libellé chacun casseraient. */}
-            {!areTimeFieldsDisabled && (
-              <form.Subscribe selector={(state) => state.values.duration}>
-                {(duration) => (
-                  <AppointmentTimeFields
-                    date={selected.slot.startDate}
-                    showDate={false}
-                    startTime={startTime}
-                    onStartTimeChange={handleStartTimeChange}
-                    duration={duration}
-                    onDurationChange={(next) =>
-                      form.setFieldValue('duration', next)
+          {/* Sur un créneau collectif, l'horaire est celui du créneau : seuls
+          les créneaux individuels exposent début, durée et motif. */}
+          {!areTimeFieldsDisabled && (
+            <>
+              <div className="grid grid-cols-3 gap-3">
+                <FormField>
+                  <Label>Début</Label>
+                  <TimePicker
+                    value={startTime}
+                    onChange={(time) =>
+                      handleStartTimeChange(time ?? dayjs.utc())
                     }
-                    durationOptions={durationOptions}
-                    durationFieldId="appointment-duration"
                     minTime={minTime}
                     maxTime={maxTime}
                   />
-                )}
-              </form.Subscribe>
-            )}
+                </FormField>
+                <form.Subscribe selector={(state) => state.values.duration}>
+                  {(duration) => (
+                    <FormField>
+                      <Label htmlFor="appointment-duration">Durée</Label>
+                      <Select
+                        id="appointment-duration"
+                        options={durationOptions}
+                        value={duration}
+                        onValueChange={(next) =>
+                          form.setFieldValue('duration', next)
+                        }
+                        clearable={false}
+                      />
+                    </FormField>
+                  )}
+                </form.Subscribe>
+                <form.AppField name="appointmentType">
+                  {(field) => (
+                    <field.Select
+                      label="Type"
+                      options={APPOINTMENT_TYPE_OPTIONS}
+                    />
+                  )}
+                </form.AppField>
+              </div>
 
-            <form.AppField name="appointmentType">
-              {(field) => (
-                <field.Select
-                  label="Type"
-                  options={APPOINTMENT_TYPE_OPTIONS}
-                  disabled={isJoining}
-                />
-              )}
-            </form.AppField>
-
-            {/* Le motif porte sur le rendez-vous d'un seul patient : il n'a de
-            sens que sur un créneau individuel, où chaque patient a son propre
-            rendez-vous. */}
-            {selected.isIndividual && (
               <form.AppField name="motif">
                 {(field) => (
-                  <field.Input label="Motif" placeholder="Saisir le motif..." />
+                  <field.TextArea
+                    label="Motif · facultatif"
+                    placeholder="Recopié dans les notes de transmission"
+                  />
                 )}
               </form.AppField>
-            )}
-          </div>
-        )}
-      </PopupBody>
+            </>
+          )}
 
-      <PopupFooter>
-        <Button variant="outline" onClick={onClose}>
-          <X className="w-4 h-4" />
-          Annuler
-        </Button>
-        {step === 2 && (
+          {/* Collectif encore vide : seul le type reste à choisir. */}
+          {areTimeFieldsDisabled && !isJoining && (
+            <form.AppField name="appointmentType">
+              {(field) => (
+                <field.Select label="Type" options={APPOINTMENT_TYPE_OPTIONS} />
+              )}
+            </form.AppField>
+          )}
+        </PopupBody>
+      )}
+
+      {step === 1 ? (
+        <PopupFooter className="items-center justify-between mt-auto">
+          <span className="text-[13px] text-text-light">
+            Les créneaux complets ou déjà réservés restent affichés, grisés.
+          </span>
+          <Button variant="outline" onClick={onClose}>
+            <X className="w-4 h-4" />
+            Annuler
+          </Button>
+        </PopupFooter>
+      ) : (
+        <PopupFooter className="mt-auto">
+          <Button variant="outline" onClick={handleBack}>
+            <ArrowLeft className="w-4 h-4" />
+            Retour
+          </Button>
           <Button
             variant="default"
             onClick={() => form.handleSubmit()}
@@ -699,10 +887,10 @@ function AddPatientToSlotContent({ onClose }: AddPatientToSlotContentProps) {
             }
           >
             <Check className="w-4 h-4" />
-            Ajouter
+            {isJoining ? 'Ajouter au rendez-vous' : 'Créer le rendez-vous'}
           </Button>
-        )}
-      </PopupFooter>
+        </PopupFooter>
+      )}
     </>
   )
 }
