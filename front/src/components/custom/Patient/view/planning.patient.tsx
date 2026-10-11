@@ -30,10 +30,19 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
   const savedDate = usePlanningStore((state) => state.viewStart)
 
   const { pathwayTemplates } = usePathwayTemplateQueries()
-  const allTags = useMemo(
-    () => [...new Set((pathwayTemplates ?? []).map((t) => t.mainTag))],
-    [pathwayTemplates],
-  )
+  // Un tag par entree, avec la couleur du premier modele qui le porte : c'est cette couleur que
+  // le calendrier donne aux creneaux du tag choisi.
+  const allTags = useMemo(() => {
+    const couleurParTag = new Map<string, string | undefined>()
+    for (const template of pathwayTemplates ?? []) {
+      if (!couleurParTag.has(template.mainTag)) {
+        couleurParTag.set(template.mainTag, template.color)
+      }
+    }
+    return [...couleurParTag]
+      .map(([tag, color]) => ({ tag, color }))
+      .sort((a, b) => a.tag.localeCompare(b.tag))
+  }, [pathwayTemplates])
 
   const [selectedTag, setSelectedTag] = useState('')
   const [visibleRange, setVisibleRange] = useState<SlotDateRange | null>(null)
@@ -296,9 +305,12 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
             placeholder="Afficher les créneaux par tag"
             options={[
               { value: '__all__', label: 'Tout afficher', group: 'all' },
-              ...allTags
-                .sort((a, b) => a.localeCompare(b))
-                .map((tag) => ({ value: tag, label: tag, group: 'tags' })),
+              ...allTags.map(({ tag, color }) => ({
+                value: tag,
+                label: tag,
+                color,
+                group: 'tags',
+              })),
             ]}
           />
         </div>
