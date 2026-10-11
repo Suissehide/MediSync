@@ -48,4 +48,11 @@ describe('composants des écrans de configuration', () => {
     await userEvent.type(champ, 'Suivi 2{enter}')
     expect(onRename).toHaveBeenCalledWith('Suivi 2')
   })
+
+  it('SettingsCard : la racine ne rétrécit pas dans la colonne qui défile', () => {
+    render(<SettingsCard title="Suivi" />)
+    expect(screen.getByRole('region', { name: 'Suivi' })).toHaveClass(
+      'shrink-0',
+    )
+  })
 })
