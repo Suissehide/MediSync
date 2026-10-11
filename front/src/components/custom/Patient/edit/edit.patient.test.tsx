@@ -1261,10 +1261,10 @@ describe('EditPatient — champs configurables du service', () => {
     expect(screen.queryByText('ancien')).not.toBeInTheDocument()
   })
 
-  it('montre une valeur archivée sans proposer les autres choix archivés', async () => {
+  it('montre une valeur supprimée sans proposer les autres choix supprimés', async () => {
     renderConfigured()
     const orientation = await screen.findByLabelText('Orientation')
-    expect(orientation).toHaveTextContent('VIEUX (archivé)')
+    expect(orientation).toHaveTextContent('VIEUX (supprimé)')
 
     await userEvent.click(orientation)
     const options = (await screen.findAllByRole('option')).map(
@@ -1272,7 +1272,7 @@ describe('EditPatient — champs configurables du service', () => {
     )
     expect(options).toContain('Choix A')
     expect(options).not.toContain('Autre ancien')
-    expect(options).not.toContain('Autre ancien (archivé)')
+    expect(options).not.toContain('Autre ancien (supprimé)')
   })
 
   it('ne rend pas un champ clinique sans clinical:read', async () => {

@@ -110,7 +110,7 @@ function SoignantSettings() {
                 checked={showArchived}
                 onCheckedChange={setShowArchived}
               />
-              <Label htmlFor="soignants-archives">Archivés</Label>
+              <Label htmlFor="soignants-archives">Supprimés</Label>
             </div>
             {canManage && !showArchived && <AddSoignantForm />}
           </div>
@@ -140,6 +140,8 @@ function SoignantSettings() {
           loading={deleteForeverSoignant.isPending}
           title="Supprimer définitivement"
           description="Ce soignant disparaîtra pour de bon. L'opération est refusée tant qu'il figure au planning, porte une tâche ou est incarné par un membre."
+          confirmLabel="Supprimer définitivement"
+          confirmLoadingLabel="Suppression..."
         />
       </div>
     </DashboardLayout>

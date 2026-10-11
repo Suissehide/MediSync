@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import { Archive, Search } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import { getThematicColumns } from '@/columns/thematic.column.tsx'
@@ -99,7 +99,7 @@ function ThematicSettings() {
                 checked={showArchived}
                 onCheckedChange={setShowArchived}
               />
-              <Label htmlFor="thematiques-archivees">Archivées</Label>
+              <Label htmlFor="thematiques-archivees">Supprimées</Label>
             </div>
             {canManage && !showArchived && <AddThematicForm />}
           </div>
@@ -127,11 +127,8 @@ function ThematicSettings() {
             setArchiveTargetId(null)
           }}
           loading={archiveThematic.isPending}
-          title="Archiver la thématique"
-          description="Elle sort des listes de choix. Les rendez-vous et créneaux qui la portent la conservent, et elle se restaure depuis le filtre « Archivées »."
-          confirmLabel="Archiver"
-          confirmLoadingLabel="Archivage..."
-          confirmIcon={<Archive className="w-4 h-4" />}
+          title="Supprimer la thématique"
+          description="Elle sort des listes de choix. Les rendez-vous et créneaux qui la portent la conservent, et elle se restaure depuis le filtre « Supprimées »."
         />
 
         <ConfirmDeleteForm
@@ -150,6 +147,8 @@ function ThematicSettings() {
           loading={deleteForeverThematic.isPending}
           title="Supprimer définitivement"
           description="Cette thématique disparaîtra pour de bon. L'opération est refusée tant que la thématique est utilisée quelque part."
+          confirmLabel="Supprimer définitivement"
+          confirmLoadingLabel="Suppression..."
         />
       </div>
     </DashboardLayout>

@@ -270,7 +270,7 @@ export const useSlotMutations = () => {
     },
     onError: (error) => {
       toast({
-        title: 'Erreur lors de l’archivage des créneaux',
+        title: 'Erreur lors de la suppression des créneaux',
         message: error.message,
         severity: TOAST_SEVERITY.ERROR,
       })

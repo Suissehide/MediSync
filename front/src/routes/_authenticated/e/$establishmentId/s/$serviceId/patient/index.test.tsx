@@ -11,6 +11,7 @@ import {
   RouterProvider,
 } from '@tanstack/react-router'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useAuthStore } from '@/store/useAuthStore.ts'
@@ -218,4 +219,71 @@ describe('liste des patients, premier chargement', () => {
       await attendreColonneOrientationFiltree()
     })
   }
+})
+
+// Monte la liste avec `/service-fields` en échec au premier appel, puis au succès dès le second
+// (le bouton « Réessayer » appelle `refetch`) ; les autres lectures répondent normalement.
+const monterAvecEchecPuisSucces = () => {
+  let appels = 0
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((input: RequestInfo | URL) => {
+      const url = input.toString()
+      if (url.endsWith('/service-fields')) {
+        appels += 1
+        if (appels === 1) {
+          return { ok: false, status: 500, url, json: async () => ({}) }
+        }
+        return { ok: true, status: 200, url, json: async () => [orientation] }
+      }
+      if (url.endsWith('/service-field-categories')) {
+        return { ok: true, status: 200, url, json: async () => categories }
+      }
+      if (url.includes('/patient/with-tags')) {
+        return { ok: true, status: 200, url, json: async () => patients }
+      }
+      return { ok: true, status: 200, url, json: async () => [] }
+    }),
+  )
+
+  const router = createRouter({
+    routeTree,
+    history: createMemoryHistory({ initialEntries: ['/e/e1/s/s1/patient'] }),
+    context: { authState: { isAuthenticated: true, user } },
+  })
+  render(
+    <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="fr">
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <RouterProvider router={router} />
+      </QueryClientProvider>
+    </LocalizationProvider>,
+  )
+}
+
+describe('liste des patients, lecture des champs en echec', () => {
+  it("ne touche pas la visibilite/le filtre sauves quand /service-fields echoue, et affiche la colonne apres Réessayer", async () => {
+    memoriserColonneOrientation()
+    monterAvecEchecPuisSucces()
+
+    await screen.findByText('Liste des patients')
+    expect(
+      await screen.findByText('Impossible de charger les champs du service.'),
+    ).toBeInTheDocument()
+
+    // Pas de table montee, donc pas d ecrasement des valeurs sauvees.
+    expect(
+      JSON.parse(localStorage.getItem(`column-visibility/${TABLE}`) ?? '{}'),
+    ).toMatchObject({ orientation: true })
+    expect(JSON.parse(localStorage.getItem(`filters/${TABLE}`) ?? '[]')).toEqual([
+      { id: 'orientation', value: ['A'] },
+    ])
+
+    await userEvent.click(screen.getByRole('button', { name: 'Réessayer' }))
+
+    await attendreColonneOrientationFiltree()
+  })
 })

@@ -846,7 +846,7 @@ describe('écran d un jeu d indicateurs', () => {
       avec([
         {
           ...calcule('1.3', 'Entrée', 4),
-          warnings: ['Filtre sur un champ archivé : Orientation'],
+          warnings: ['Filtre sur un champ supprimé : Orientation'],
         },
         calcule('1.4', 'Entrée', 6),
       ]),
@@ -858,7 +858,7 @@ describe('écran d un jeu d indicateurs', () => {
     ).toHaveLength(1)
     fireEvent.focus(icone)
     expect(await screen.findByRole('tooltip')).toHaveTextContent(
-      'Filtre sur un champ archivé : Orientation',
+      'Filtre sur un champ supprimé : Orientation',
     )
   })
 

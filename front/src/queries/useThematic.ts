@@ -131,7 +131,7 @@ export const useThematicMutations = () => {
       // L'archivage est deja reversible cote serveur : « Annuler » rejoue une
       // restauration, il n'y a rien a rattraper dans un delai.
       toast({
-        title: 'Thématique archivée',
+        title: 'Thématique supprimée',
         message: 'Les rendez-vous existants la conservent.',
         severity: TOAST_SEVERITY.SUCCESS,
         action: undoToastAction(() => restoreThematic.mutate(thematicID)),
@@ -141,7 +141,7 @@ export const useThematicMutations = () => {
       restoreForTenant(queryClient, context?.previousThematics)
 
       toast({
-        title: 'Erreur lors de l’archivage de la thématique',
+        title: 'Erreur lors de la suppression de la thématique',
         message: error.message,
         severity: TOAST_SEVERITY.ERROR,
       })

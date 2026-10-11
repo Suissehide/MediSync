@@ -1,5 +1,5 @@
 import { createColumnHelper } from '@tanstack/react-table'
-import { Archive, Trash2, Undo2 } from 'lucide-react'
+import { Trash, Trash2, Undo2 } from 'lucide-react'
 
 import EditLocationForm from '../components/custom/popup/editLocationForm.tsx'
 import { Button } from '../components/ui/button.tsx'
@@ -74,10 +74,10 @@ export const getLocationColumns = ({
             <Button
               variant="outline"
               size="icon"
-              title="Archiver"
+              title="Supprimer"
               onClick={() => onArchive(location.id)}
             >
-              <Archive className="w-3 h-3 text-destructive" />
+              <Trash className="w-3 h-3 text-destructive" />
             </Button>
           </div>
         )

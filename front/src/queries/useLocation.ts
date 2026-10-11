@@ -126,7 +126,7 @@ export const useLocationMutations = () => {
     },
     onSuccess: (_, locationID) => {
       toast({
-        title: 'Salle archivée',
+        title: 'Salle supprimée',
         message: 'Les créneaux existants la conservent.',
         severity: TOAST_SEVERITY.SUCCESS,
         action: undoToastAction(() => restoreLocation.mutate(locationID)),
@@ -136,7 +136,7 @@ export const useLocationMutations = () => {
       restoreForTenant(queryClient, context?.previousLocations)
 
       toast({
-        title: 'Erreur lors de l’archivage de la salle',
+        title: 'Erreur lors de la suppression de la salle',
         message: error.message,
         severity: TOAST_SEVERITY.ERROR,
       })

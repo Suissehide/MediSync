@@ -57,9 +57,18 @@ function PatientList() {
   const { establishmentId, serviceId } = Route.useParams()
   const { patients, isPending } = usePatientWithTagsQuery()
   const { pathwayTemplates } = usePathwayTemplateQueries()
-  const { fields, isPending: isFieldsPending } = useServiceFieldsQuery()
-  const { categories, isPending: isCategoriesPending } =
-    useServiceFieldCategoriesQuery()
+  const {
+    fields,
+    isPending: isFieldsPending,
+    isError: isFieldsError,
+    refetch: refetchFields,
+  } = useServiceFieldsQuery()
+  const {
+    categories,
+    isPending: isCategoriesPending,
+    isError: isCategoriesError,
+    refetch: refetchCategories,
+  } = useServiceFieldCategoriesQuery()
   const canReadClinical = useCan('clinical:read')
   const [searchTerm, setSearchTerm] = useState('')
   const [storedFilters] = useState(() =>
@@ -208,83 +217,104 @@ function PatientList() {
         </div>
 
         <div className="flex-1 min-h-0 flex flex-col">
-          {/* Monté une fois champs et catégories connus : ReactTable lit visibilité et filtres sauvés au montage. */}
-          {!isFieldsPending && !isCategoriesPending && (
-            <ReactTable<PatientWithTags>
-              key={tableId}
-              data={filteredPatients}
-              columns={columns}
-              filterId={tableId}
-              pagination
-              isLoading={isPending}
-              isRowMuted={(patient) => Boolean(patient.exitDate)}
-              onRowClick={(patient) => handleRedirectPatient(patient.id)}
-              resetSignal={resetSignal}
-              onColumnFiltersActiveChange={setColumnFiltersActive}
-              toolbar={
-                <>
-                  <Input
-                    id="patient-search"
-                    iconLeft={<Search className="w-4 h-4" />}
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Nom, prénom..."
-                    className="w-72"
-                  />
-                  <ToggleGroup
-                    value={status}
-                    onValueChange={(v) => v && setStatus(v as Status)}
-                  >
-                    {(Object.keys(STATUSES) as Status[]).map((key) => (
-                      <ToggleGroupItem key={key} value={key}>
-                        {STATUSES[key]}
-                      </ToggleGroupItem>
-                    ))}
-                  </ToggleGroup>
-                  {tagFilters.length > 0 && (
-                    <DropdownFilter
-                      filters={tagFilters}
-                      onFilterChange={handleTagChange}
-                      triggerLabel={
-                        selectedTags.length
-                          ? `Parcours · ${selectedTags.length}`
-                          : 'Parcours'
-                      }
-                      TriggerIcon={RouteIcon}
-                      headerAction={
-                        selectedTags.length
-                          ? {
-                              label: 'Tout effacer',
-                              icon: RotateCcw,
-                              onSelect: () => setSelectedTags([]),
-                            }
-                          : undefined
-                      }
-                    />
-                  )}
-                  {(status !== DEFAULT_STATUS ||
-                    selectedTags.length > 0 ||
-                    columnFiltersActive) && (
-                    <Button variant="ghost" onClick={resetFilters}>
-                      <X className="w-4 h-4" />
-                      Réinitialiser
-                    </Button>
-                  )}
-                </>
-              }
-              toolbarEnd={
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={handleExport}
-                  isLoading={isExporting}
-                >
-                  <Download className="w-4 h-4" />
-                </Button>
-              }
-            />
+          {/* Une erreur compte comme "réglée" pour React Query : sans cette garde, ReactTable monterait
+              sans champs configurables et écraserait la visibilité/les filtres déjà sauvés. */}
+          {(isFieldsError || isCategoriesError) && (
+            <div className="flex flex-col gap-2">
+              <p role="alert" className="text-text-light">
+                Impossible de charger les champs du service.
+              </p>
+              <Button
+                className="self-start"
+                onClick={() => {
+                  refetchFields()
+                  refetchCategories()
+                }}
+              >
+                Réessayer
+              </Button>
+            </div>
           )}
+          {/* Monté une fois champs et catégories connus : ReactTable lit visibilité et filtres sauvés au montage. */}
+          {!isFieldsPending &&
+            !isCategoriesPending &&
+            !isFieldsError &&
+            !isCategoriesError && (
+              <ReactTable<PatientWithTags>
+                key={tableId}
+                data={filteredPatients}
+                columns={columns}
+                filterId={tableId}
+                pagination
+                isLoading={isPending}
+                isRowMuted={(patient) => Boolean(patient.exitDate)}
+                onRowClick={(patient) => handleRedirectPatient(patient.id)}
+                resetSignal={resetSignal}
+                onColumnFiltersActiveChange={setColumnFiltersActive}
+                toolbar={
+                  <>
+                    <Input
+                      id="patient-search"
+                      iconLeft={<Search className="w-4 h-4" />}
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Nom, prénom..."
+                      className="w-72"
+                    />
+                    <ToggleGroup
+                      value={status}
+                      onValueChange={(v) => v && setStatus(v as Status)}
+                    >
+                      {(Object.keys(STATUSES) as Status[]).map((key) => (
+                        <ToggleGroupItem key={key} value={key}>
+                          {STATUSES[key]}
+                        </ToggleGroupItem>
+                      ))}
+                    </ToggleGroup>
+                    {tagFilters.length > 0 && (
+                      <DropdownFilter
+                        filters={tagFilters}
+                        onFilterChange={handleTagChange}
+                        triggerLabel={
+                          selectedTags.length
+                            ? `Parcours · ${selectedTags.length}`
+                            : 'Parcours'
+                        }
+                        TriggerIcon={RouteIcon}
+                        headerAction={
+                          selectedTags.length
+                            ? {
+                                label: 'Tout effacer',
+                                icon: RotateCcw,
+                                onSelect: () => setSelectedTags([]),
+                              }
+                            : undefined
+                        }
+                      />
+                    )}
+                    {(status !== DEFAULT_STATUS ||
+                      selectedTags.length > 0 ||
+                      columnFiltersActive) && (
+                      <Button variant="ghost" onClick={resetFilters}>
+                        <X className="w-4 h-4" />
+                        Réinitialiser
+                      </Button>
+                    )}
+                  </>
+                }
+                toolbarEnd={
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={handleExport}
+                    isLoading={isExporting}
+                  >
+                    <Download className="w-4 h-4" />
+                  </Button>
+                }
+              />
+            )}
         </div>
       </div>
     </DashboardLayout>

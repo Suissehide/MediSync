@@ -138,7 +138,7 @@ export const useSoignantMutations = () => {
     },
     onSuccess: (_, soignantID) => {
       toast({
-        title: 'Soignant archivé',
+        title: 'Soignant supprimé',
         message: 'Les créneaux et thématiques existants le conservent.',
         severity: TOAST_SEVERITY.SUCCESS,
         action: undoToastAction(() => restoreSoignant.mutate(soignantID)),
@@ -148,7 +148,7 @@ export const useSoignantMutations = () => {
       restoreForTenant(queryClient, context?.previousSoignants)
 
       toast({
-        title: 'Erreur lors de l’archivage du soignant',
+        title: 'Erreur lors de la suppression du soignant',
         message: error.message,
         severity: TOAST_SEVERITY.ERROR,
       })

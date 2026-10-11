@@ -1,8 +1,8 @@
 import {
-  Archive,
   LayoutTemplate,
   Loader2Icon,
   Plus,
+  Trash,
   Trash2,
   Undo2,
 } from 'lucide-react'
@@ -53,7 +53,7 @@ function SidebarDiagnosticTemplate() {
             onCheckedChange={setShowArchived}
           />
           <Label htmlFor="modeles-archives" className="text-text-sidebar">
-            Archivés
+            Supprimés
           </Label>
           {canManage && !showArchived && (
             <Button variant="gradient" size="icon" onClick={handleCreate}>
@@ -73,7 +73,7 @@ function SidebarDiagnosticTemplate() {
             {(!templates || templates.length === 0) && (
               <li className="bg-sidebar rounded-xl text-xs text-text-sidebar text-center py-36 flex flex-col items-center gap-2">
                 <LayoutTemplate className="w-6 h-6 opacity-40" />
-                {showArchived ? 'Aucun modèle archivé' : 'Aucun modèle'}
+                {showArchived ? 'Aucun modèle supprimé' : 'Aucun modèle'}
               </li>
             )}
             {templates?.map((t) => {
@@ -131,7 +131,7 @@ function SidebarDiagnosticTemplate() {
                       <Button
                         variant="none"
                         size="icon-sm"
-                        aria-label={`Archiver ${t.name}`}
+                        aria-label={`Supprimer ${t.name}`}
                         className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
                         onClick={() => {
                           archiveTemplate.mutate(t.id, {
@@ -143,7 +143,7 @@ function SidebarDiagnosticTemplate() {
                           })
                         }}
                       >
-                        <Archive className="w-4 h-4 text-destructive" />
+                        <Trash className="w-4 h-4 text-destructive" />
                       </Button>
                     )}
                   </div>
@@ -170,6 +170,8 @@ function SidebarDiagnosticTemplate() {
         loading={deleteForeverTemplate.isPending}
         title="Supprimer définitivement"
         description="Ce modèle disparaîtra pour de bon. L'opération est refusée tant que des diagnostics déjà remplis le portent."
+        confirmLabel="Supprimer définitivement"
+        confirmLoadingLabel="Suppression..."
       />
     </>
   )
