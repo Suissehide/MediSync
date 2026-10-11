@@ -67,10 +67,10 @@ class PathwayDomain implements PathwayDomainInterface {
   }
 
   regenerate(
-    pathwayTemplateID: string,
+    pathwayTemplateIDs: string[],
     fromDate: Date,
   ): Promise<RegeneratePathwaysResultDomain> {
-    return this.pathwayRepository.regenerate(pathwayTemplateID, fromDate)
+    return this.pathwayRepository.regenerate(pathwayTemplateIDs, fromDate)
   }
 }
 

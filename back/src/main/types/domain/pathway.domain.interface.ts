@@ -49,7 +49,7 @@ export interface PathwayDomainInterface {
   ) => Promise<PathwayEntityDomain>
   delete: (pathwayID: string) => Promise<PathwayEntityDomain>
   regenerate: (
-    pathwayTemplateID: string,
+    pathwayTemplateIDs: string[],
     fromDate: Date,
   ) => Promise<RegeneratePathwaysResultDomain>
 }

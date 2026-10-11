@@ -24,7 +24,7 @@ export type InstantiatePathwayParams = Pick<
 export type UpdatePathwayParams = Pick<Pathway, 'id' | 'startDate'>
 
 export type RegeneratePathwaysParams = {
-  pathwayTemplateID: string
+  pathwayTemplateIDs: string[]
   fromDate: string
 }
 

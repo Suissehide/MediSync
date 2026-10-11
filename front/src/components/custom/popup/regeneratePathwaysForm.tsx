@@ -33,14 +33,14 @@ export function RegeneratePathwaysForm({
   }))
 
   const form = useAppForm({
-    defaultValues: { templateID: '', fromDate: '' },
+    defaultValues: { templateIDs: [] as string[], fromDate: '' },
     onSubmit: ({ value }) => {
-      if (!value.templateID || !value.fromDate) {
+      if (value.templateIDs.length === 0 || !value.fromDate) {
         return
       }
       regeneratePathways.mutate(
         {
-          pathwayTemplateID: value.templateID,
+          pathwayTemplateIDs: value.templateIDs,
           fromDate: value.fromDate,
         },
         {
@@ -64,20 +64,18 @@ export function RegeneratePathwaysForm({
 
         <PopupBody>
           <p className="text-sm text-text-light mb-4">
-            Les créneaux vides des parcours de ce modèle démarrant à partir de
+            Les créneaux vides des parcours de ces modèles démarrant à partir de
             la date choisie seront régénérés selon le modèle théorique actuel.
             Les créneaux ayant déjà des rendez-vous sont conservés.
           </p>
 
           <div className="flex flex-col gap-4 max-w-md">
-            <form.AppField name="templateID">
+            <form.AppField name="templateIDs">
               {(field) => (
-                <field.Select
-                  label="Modèle de parcours"
+                <field.MultiSelect
+                  label="Modèles de parcours"
                   options={options}
-                  placeholder="Choisir un modèle..."
-                  searchable
-                  clearable={false}
+                  placeholder="Choisir des modèles..."
                 />
               )}
             </form.AppField>
@@ -95,16 +93,18 @@ export function RegeneratePathwaysForm({
           </Button>
           <form.Subscribe
             selector={(state) => ({
-              templateID: state.values.templateID,
+              templateIDs: state.values.templateIDs,
               fromDate: state.values.fromDate,
             })}
           >
-            {({ templateID, fromDate }) => (
+            {({ templateIDs, fromDate }) => (
               <Button
                 variant="default"
                 onClick={() => form.handleSubmit()}
                 disabled={
-                  !templateID || !fromDate || regeneratePathways.isPending
+                  templateIDs.length === 0 ||
+                  !fromDate ||
+                  regeneratePathways.isPending
                 }
               >
                 <RefreshCw className="w-4 h-4" />
