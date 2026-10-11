@@ -20,7 +20,6 @@ import {
   type FreeInterval,
   getUpcomingSlotSuggestions,
   type SlotSuggestion,
-  UPCOMING_SLOT_LIMIT,
 } from '../../../libs/slotAvailability.ts'
 import { cn, generateDurationOptions } from '../../../libs/utils.ts'
 import { useAppointmentMutations } from '../../../queries/useAppointment.ts'
@@ -32,6 +31,7 @@ import type { Slot } from '../../../types/slot.ts'
 import { Button } from '../../ui/button.tsx'
 import { DatePicker } from '../../ui/datePicker.tsx'
 import { FormField } from '../../ui/formField.tsx'
+import { TextArea } from '../../ui/input.tsx'
 import { Label } from '../../ui/label.tsx'
 import {
   Popup,
@@ -44,6 +44,45 @@ import {
 } from '../../ui/popup.tsx'
 import { Select, type SelectOption } from '../../ui/select.tsx'
 import { TimePicker } from '../../ui/timePicker.tsx'
+
+/** Largeur de la fenêtre de créneaux demandée au serveur, et de chaque extension. */
+const RANGE_WEEKS = 4
+
+/**
+ * Fenêtre [from, to) demandée au serveur : à partir de la date choisie (jamais
+ * avant aujourd'hui), sur `weeks` semaines. `until` est son dernier jour inclus.
+ */
+const getSlotWindow = (fromDate: Dayjs, weeks: number) => {
+  const today = dayjs.utc().startOf('day')
+  const from = fromDate.isAfter(today) ? fromDate : today
+  const to = from.add(weeks, 'week')
+  return {
+    from: from.format('YYYY-MM-DD'),
+    to: to.format('YYYY-MM-DD'),
+    until: to.subtract(1, 'day').format('D MMMM YYYY'),
+  }
+}
+
+/**
+ * Le dernier élargissement, pour la même thématique, n'a rien ajouté.
+ * ponytail: une fenêtre vide de RANGE_WEEKS (vacances) suffit à conclure ;
+ * changer « À partir du » relance la recherche plus loin.
+ */
+export const isWindowExhausted = (
+  beforeLoad: { thematicID: string; count: number } | null,
+  thematicID: string,
+  isFetching: boolean,
+  count: number,
+) =>
+  beforeLoad?.thematicID === thematicID &&
+  !isFetching &&
+  count === beforeLoad.count
+
+/** Comme dans les parcours, le motif d'un rendez-vous individuel est obligatoire. */
+export const isMotifMissing = (
+  selected: SlotSuggestion | null,
+  motif: string,
+) => !!selected?.isIndividual && !motif.trim()
 
 interface AddPatientToSlotFormProps {
   trigger?: React.ReactNode
@@ -140,13 +179,17 @@ const SlotSuggestionRow = ({
 const SlotList = ({
   isReady,
   suggestions,
+  until,
   hasMore,
+  isLoading,
   onSelect,
   onLoadMore,
 }: {
   isReady: boolean
   suggestions: SlotSuggestion[]
+  until: string
   hasMore: boolean
+  isLoading: boolean
   onSelect: (suggestion: SlotSuggestion) => void
   onLoadMore: () => void
 }) => {
@@ -158,7 +201,7 @@ const SlotList = ({
       </EmptySlotList>
     )
   }
-  if (suggestions.length === 0) {
+  if (suggestions.length === 0 && !hasMore) {
     return (
       <EmptySlotList>
         Aucun créneau à partir de cette date pour cette thématique.
@@ -181,14 +224,20 @@ const SlotList = ({
           ))}
         </section>
       ))}
+      {suggestions.length === 0 && (
+        <div className="px-4 py-8 text-sm text-center text-text-light">
+          Aucun créneau d'ici le {until}.
+        </div>
+      )}
       {hasMore ? (
         <button
           type="button"
           onClick={onLoadMore}
-          className="flex items-center justify-center gap-2 w-full h-11 cursor-pointer text-sm font-semibold text-primary hover:bg-[#f8fafc]"
+          disabled={isLoading}
+          className="flex items-center justify-center gap-2 w-full h-11 cursor-pointer text-sm font-semibold text-primary hover:bg-[#f8fafc] disabled:cursor-wait disabled:opacity-60"
         >
           <ChevronsDown className="w-4 h-4" />
-          Charger plus de créneaux
+          {isLoading ? 'Chargement…' : 'Charger plus de créneaux'}
         </button>
       ) : (
         <div className="flex items-center justify-center h-11 text-[13px] text-text-light">
@@ -201,7 +250,7 @@ const SlotList = ({
 
 /** Indicateur « ① Créneau — ② Détails », piloté par l'étape courante. */
 const StepIndicator = ({ step }: { step: number }) => (
-  <ol className="flex items-center gap-2 mt-1 ml-[60px] text-[13px]">
+  <ol className="flex items-center gap-2 mt-1 ml-11 text-[13px]">
     {['Créneau', 'Détails'].map((label, index) => {
       const n = index + 1
       const isActive = step === n
@@ -478,21 +527,24 @@ function AddPatientToSlotContent({
   const [step, setStep] = useState(1)
   const [selected, setSelected] = useState<SlotSuggestion | null>(null)
   const [fromDate, setFromDate] = useState<Dayjs>(dayjs.utc().startOf('day'))
-  // Sans `to`, l'API renvoie tous les créneaux à venir : « Charger plus »
-  // n'élargit que la part affichée.
-  const [limit, setLimit] = useState(UPCOMING_SLOT_LIMIT)
+  // Fenêtre bornée côté serveur, élargie de RANGE_WEEKS à chaque « Charger plus ».
+  const [weeks, setWeeks] = useState(RANGE_WEEKS)
+  // Nombre de créneaux avant le dernier élargissement, par thématique : s'il
+  // n'a rien ajouté, on considère qu'il n'y a plus rien à charger.
+  const [beforeLoad, setBeforeLoad] = useState<{
+    thematicID: string
+    count: number
+  } | null>(null)
 
   const { toast } = useToast()
   const { createAppointment, updateAppointment } = useAppointmentMutations()
 
   // Seuls les créneaux à venir à partir de la date de recherche sont proposés.
-  const upcomingRange = useMemo(() => {
-    const today = dayjs.utc().startOf('day')
-    return {
-      from: (fromDate.isAfter(today) ? fromDate : today).format('YYYY-MM-DD'),
-    }
-  }, [fromDate])
-  const { slots } = useSlotsInRangeQuery(upcomingRange)
+  const upcomingRange = useMemo(
+    () => getSlotWindow(fromDate, weeks),
+    [fromDate, weeks],
+  )
+  const { slots, isFetching } = useSlotsInRangeQuery(upcomingRange)
   const { patients } = usePatientQueries()
   const { thematics } = useThematicQueries()
 
@@ -516,6 +568,7 @@ function AddPatientToSlotContent({
   const patientID = useStore(form.store, (state) => state.values.patientID)
   const thematicID = useStore(form.store, (state) => state.values.thematicID)
   const startTime = useStore(form.store, (state) => state.values.startTime)
+  const motif = useStore(form.store, (state) => state.values.motif)
 
   const patientOptions = useMemo(
     () =>
@@ -538,7 +591,7 @@ function AddPatientToSlotContent({
     [thematics],
   )
 
-  const allSuggestions = useMemo(
+  const suggestions = useMemo(
     () =>
       getUpcomingSlotSuggestions(
         slots,
@@ -549,8 +602,16 @@ function AddPatientToSlotContent({
       ),
     [slots, thematicID, patientID, fromDate],
   )
-  const suggestions = allSuggestions.slice(0, limit)
-  const hasMore = allSuggestions.length > limit
+  const hasMore = !isWindowExhausted(
+    beforeLoad,
+    thematicID,
+    isFetching,
+    suggestions.length,
+  )
+  const handleLoadMore = () => {
+    setBeforeLoad({ thematicID, count: suggestions.length })
+    setWeeks((current) => current + RANGE_WEEKS)
+  }
   const freeCount = suggestions.filter(
     (suggestion) => !suggestion.isFull && !suggestion.alreadyBooked,
   ).length
@@ -567,6 +628,7 @@ function AddPatientToSlotContent({
     : undefined
 
   const isJoining = !!joinedAppointment
+  const missingMotif = isMotifMissing(selected, motif)
   const areTimeFieldsDisabled = isJoining || !selected?.isIndividual
 
   const {
@@ -638,7 +700,7 @@ function AddPatientToSlotContent({
     appointmentType: string
     motif: string
   }) {
-    if (!selected || !value.patientID) {
+    if (!selected || !value.patientID || missingMotif) {
       return
     }
 
@@ -676,7 +738,7 @@ function AddPatientToSlotContent({
         type: value.appointmentType,
         // Le motif ne concerne que les créneaux individuels ; ailleurs le
         // champ n'est pas affiché et rien ne doit être enregistré.
-        motif: selected.isIndividual ? value.motif.trim() || null : null,
+        motif: selected.isIndividual ? value.motif.trim() : null,
         patientIDs: [value.patientID],
       },
       { onSuccess: onClose },
@@ -731,6 +793,8 @@ function AddPatientToSlotContent({
                 onChange={(value) => {
                   if (value?.isValid()) {
                     setFromDate(value.startOf('day'))
+                    setWeeks(RANGE_WEEKS)
+                    setBeforeLoad(null)
                   }
                 }}
                 minDate={dayjs.utc().startOf('day')}
@@ -751,11 +815,11 @@ function AddPatientToSlotContent({
           <SlotList
             isReady={!!patientID && !!thematicID}
             suggestions={suggestions}
+            until={upcomingRange.until}
             hasMore={hasMore}
+            isLoading={isFetching}
             onSelect={handleSelectSuggestion}
-            onLoadMore={() =>
-              setLimit((current) => current + UPCOMING_SLOT_LIMIT)
-            }
+            onLoadMore={handleLoadMore}
           />
         </PopupBody>
       )}
@@ -794,7 +858,7 @@ function AddPatientToSlotContent({
             <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg bg-blue-50 text-sm text-blue-800">
               <Users className="w-4 h-4 shrink-0" />
               <span>
-                {`Rejoint un rendez-vous existant (${selected.bookedCount}/${selected.capacity} patients). L'horaire est celui du créneau.`}
+                {`Rejoint un rendez-vous existant (${selected.bookedCount}/${selected.capacity} patients).`}
               </span>
             </div>
           )}
@@ -841,14 +905,26 @@ function AddPatientToSlotContent({
                 </form.AppField>
               </div>
 
-              <form.AppField name="motif">
+              <form.Field name="motif">
                 {(field) => (
-                  <field.TextArea
-                    label="Motif · facultatif"
-                    placeholder="Recopié dans les notes de transmission"
-                  />
+                  <FormField>
+                    <Label htmlFor="appointment-motif">
+                      Motif <span className="text-red-600">*</span>{' '}
+                      <span className="font-normal text-text-light">
+                        · recopié dans les notes de transmission
+                      </span>
+                    </Label>
+                    <TextArea
+                      id="appointment-motif"
+                      value={field.state.value}
+                      onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                        field.handleChange(e.target.value)
+                      }
+                      onBlur={field.handleBlur}
+                    />
+                  </FormField>
                 )}
-              </form.AppField>
+              </form.Field>
             </>
           )}
 
@@ -882,6 +958,7 @@ function AddPatientToSlotContent({
           <Button
             variant="default"
             onClick={() => form.handleSubmit()}
+            disabled={missingMotif}
             isLoading={
               createAppointment.isPending || updateAppointment.isPending
             }
