@@ -10,6 +10,7 @@ import OverviewPatient from '@/components/custom/Patient/view/overview.patient.t
 import PlanningPatient from '@/components/custom/Patient/view/planning.patient.tsx'
 import AddPatientForm from '@/components/custom/popup/addPatientForm.tsx'
 import { AddPatientToPathwayForm } from '@/components/custom/popup/addPatientToPathwayForm.tsx'
+import AddPatientToSlotForm from '@/components/custom/popup/addPatientToSlotForm.tsx'
 import { ConfirmDeleteForm } from '@/components/custom/popup/confirmDeleteForm.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
 import { Button } from '@/components/ui/button.tsx'
@@ -111,7 +112,13 @@ function PatientDetails() {
   return (
     <DashboardLayout
       components={['diagnostic']}
-      quickActions={[<AddPatientForm key="add-patient" />]}
+      quickActions={[
+        <AddPatientForm key="add-patient" />,
+        <AddPatientToSlotForm
+          key="add-patient-to-slot"
+          patientID={patientID}
+        />,
+      ]}
     >
       <div className="flex-1 bg-background p-2 rounded flex flex-col w-full">
         <div className="flex-1 bg-background p-6 rounded-lg flex flex-col w-full gap-4 min-h-0">
