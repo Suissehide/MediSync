@@ -91,7 +91,7 @@ const champ = (
   key,
   label,
   type,
-  section: 'pathway',
+  categoryId: 'cat-parcours',
   order: 0,
   clinical: false,
   unit: null,

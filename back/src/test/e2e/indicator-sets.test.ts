@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx'
 import { buildTestApp, type TestApp } from './setup/app'
 import { testDb, truncateAll } from './setup/db'
 import {
+  createDateCategories,
   createEstablishment,
   createService,
   createUser,
@@ -52,6 +53,7 @@ describe('configuration des jeux d indicateurs', () => {
   let testApp: TestApp
   let establishmentId: string
   let serviceId: string
+  let entryId: string
   let coordinateurCookies: Cookies
   let intervenantCookies: Cookies
   let lectureCookies: Cookies
@@ -63,7 +65,7 @@ describe('configuration des jeux d indicateurs', () => {
       method: 'POST',
       url: url('/service-fields'),
       cookies: coordinateurCookies,
-      payload: { section: 'pathway', ...payload } as never,
+      payload: { categoryId: entryId, ...payload } as never,
     })
     expect(res.statusCode).toBe(201)
     return res.json() as ServiceFieldResponse
@@ -80,6 +82,7 @@ describe('configuration des jeux d indicateurs', () => {
     establishmentId = establishment.id
     const service = await createService(establishmentId, 'S-INDICATEURS')
     serviceId = service.id
+    ;({ entryId } = await createDateCategories(establishmentId, serviceId))
 
     for (const [email, role] of [
       ['coordinateur@indicateurs.fr', 'COORDINATEUR'],
