@@ -122,7 +122,7 @@ function Apercu({
         Valeur sur {ANNEE} : {data.value ?? '—'}
       </p>
       {data.warnings.map((w) => (
-        <p key={w} className="text-xs text-amber-700">
+        <p key={w} className="text-xs text-a-saisir-texte">
           {w}
         </p>
       ))}

@@ -836,6 +836,36 @@ describe('aperçu', () => {
     ).toBeInTheDocument()
     expect(useToastStore.getState().toasts).toEqual([])
   })
+
+  // Le back refuse une valeur de filtre absente (le NaN part en null) : vider le nombre ne filtre pas « = 0 ».
+  it('un nombre vidé laisse le filtre incomplet', async () => {
+    const corps: unknown[] = []
+    monter([
+      ...lecture(),
+      route('POST', '/indicator-sets/j1/preview', (body) => {
+        corps.push(body)
+        return JSON.stringify(body).includes('"value":null')
+          ? { ok: false, status: 400, json: async () => ({}) }
+          : ok({ value: 1, breakdown: null, warnings: [] })
+      }),
+    ])
+    await ouvrirAjout()
+    await choisir('Mesure', 'Patients entrés')
+    await userEvent.click(
+      screen.getByRole('button', { name: /ajouter un filtre/i }),
+    )
+    await choisir('Champ', 'Âge')
+    await userEvent.clear(screen.getByRole('spinbutton', { name: 'Valeur' }))
+    expect(
+      await screen.findByText('Configuration incomplète', undefined, {
+        timeout: 2000,
+      }),
+    ).toBeInTheDocument()
+    expect(corps.at(-1)).toMatchObject({
+      indicator: { filters: [{ field: 'age', op: 'eq', value: null }] },
+    })
+    expect(screen.getByRole('spinbutton', { name: 'Valeur' })).toHaveValue(null)
+  })
 })
 
 describe('aperçu indisponible', () => {

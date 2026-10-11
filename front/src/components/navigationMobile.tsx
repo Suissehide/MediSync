@@ -22,7 +22,7 @@ export function TeteDuTiroir() {
     <Link
       key={cle(item)}
       to={item.to}
-      params={{ ...params, ...item.params } as never}
+      params={{ ...params, ...item.params }}
       activeOptions={{ exact: true }}
       aria-current={estActif(item) ? 'page' : undefined}
       className={lien(estActif(item))}

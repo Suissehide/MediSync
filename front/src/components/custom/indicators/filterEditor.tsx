@@ -191,9 +191,9 @@ function ValeurNombre({ id, field, cond, onChange }: ValeurProps) {
       <Input
         type="number"
         aria-label="Valeur"
-        value={n}
+        value={Number.isNaN(n) ? '' : n}
         onChange={(e) =>
-          onChange({ field: field.key, op, value: Number(e.target.value) })
+          onChange({ field: field.key, op, value: e.target.valueAsNumber })
         }
       />
     </div>

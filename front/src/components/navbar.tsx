@@ -76,7 +76,7 @@ function MenuAdministration({
             <PopoverClose asChild key={cle(item)}>
               <Link
                 to={item.to}
-                params={{ ...params, ...item.params } as never}
+                params={{ ...params, ...item.params }}
                 className="flex flex-col gap-0.5 rounded-md px-3 py-2 hover:bg-primary/10 focus-visible:bg-primary/10 outline-none"
                 activeProps={{
                   'aria-current': 'page',
@@ -129,7 +129,7 @@ function MenuOnglet({
           <PopoverClose asChild key={cle(item)}>
             <Link
               to={item.to}
-              params={{ ...params, ...item.params } as never}
+              params={{ ...params, ...item.params }}
               className="flex flex-col gap-0.5 rounded-md px-3 py-2 hover:bg-primary/10 focus-visible:bg-primary/10 outline-none"
               activeProps={{
                 'aria-current': 'page',
@@ -214,7 +214,7 @@ export function useOnglets() {
   const estActif = (item: NavItem) =>
     !!matchRoute({
       to: item.to,
-      params: { ...params, ...item.params } as never,
+      params: { ...params, ...item.params },
       fuzzy: item.matchPrefix ?? false,
     }) || (item.activeAlso ?? []).some((to) => to === feuille)
 
@@ -309,7 +309,7 @@ function Navbar({ toggleSidebar }: NavbarProps) {
                     <Link
                       key={cle(item)}
                       to={item.to}
-                      params={{ ...params, ...item.params } as never}
+                      params={{ ...params, ...item.params }}
                       // Sans `exact`, le Link s'estime actif par prefixe et pose lui-meme
                       // `aria-current` : `estActif` en decide seul.
                       activeOptions={{ exact: true }}
