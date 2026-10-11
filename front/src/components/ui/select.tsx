@@ -94,6 +94,9 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
                   'inline-flex w-full h-9 items-center justify-between rounded-md border border-border bg-background px-3 py-2 text-sm cursor-pointer',
                   'focus:outline-none focus:ring-1 focus:ring-inset focus:ring-ring',
                   disabled ? 'opacity-50 cursor-not-allowed' : 'text-text-dark',
+                  // La croix d'effacement se pose PAR-DESSUS le libelle : sans cette reserve, un
+                  // libelle long lui passe dessous.
+                  clearable && value && 'pr-11',
                   className,
                 )}
               >
@@ -210,6 +213,7 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
               disabled
                 ? 'opacity-50 cursor-not-allowed'
                 : 'cursor-pointer text-text-dark',
+              clearable && value !== '' && value !== undefined && 'pr-11',
               className,
             )}
           >
