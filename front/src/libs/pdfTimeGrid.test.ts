@@ -2,8 +2,8 @@ import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
 import { describe, expect, it } from 'vitest'
 
-import type { Slot } from '../../../../types/slot.ts'
-import { layoutDay } from './planning-pdf.utils.ts'
+import type { Slot } from '../types/slot.ts'
+import { layoutDay } from './pdfTimeGrid.ts'
 
 dayjs.extend(utc)
 

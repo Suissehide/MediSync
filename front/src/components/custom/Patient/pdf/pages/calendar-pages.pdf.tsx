@@ -1,5 +1,10 @@
 import { Page, StyleSheet, Text, View } from '@react-pdf/renderer'
 
+import {
+  formatMinute,
+  formatTimeRange,
+  type PlacedSlot,
+} from '../../../../../libs/pdfTimeGrid.ts'
 import type { Slot } from '../../../../../types/slot.ts'
 import {
   buildCalendarEntries,
@@ -9,27 +14,17 @@ import {
 } from '../programme-pdf.utils.ts'
 
 const PAGE_PADDING = 28
-const A4_HEIGHT = 841.89
-const PAGE_CONTENT_HEIGHT = A4_HEIGHT - PAGE_PADDING * 2
-
-// Majorants de hauteur : l'en-tête d'une semaine, une ligne d'horaire (le
-// libellé d'un créneau peut passer à la ligne et dépasser le `minHeight` de 36)
-// et la marge basse d'un bloc.
-const WEEK_HEADER_MAX_HEIGHT = 30
-const TIME_ROW_MAX_HEIGHT = 60
 const WEEK_BLOCK_MARGIN_BOTTOM = 14
-
-// Sans `wrap={false}`, react-pdf coupe volontiers la page juste après la ligne
-// d'en-tête et laisse le titre du tableau orphelin en bas de page. On garde
-// donc chaque semaine d'un seul tenant, sauf si elle est trop haute pour tenir
-// sur une page : `wrap={false}` la ferait alors tronquer.
-function weekFitsOnOnePage(rowCount: number) {
-  const height =
-    WEEK_HEADER_MAX_HEIGHT +
-    rowCount * TIME_ROW_MAX_HEIGHT +
-    WEEK_BLOCK_MARGIN_BOTTOM
-  return height <= PAGE_CONTENT_HEIGHT
-}
+const LABEL_COLUMN_WIDTH = 52
+// Une demi-heure garde ainsi la place de son horaire et de sa thématique.
+const HOUR_HEIGHT = 44
+// Hauteurs de ligne (police × ~1,2) et marges d'un rendez-vous, pour n'y
+// écrire que ce qui tient : au-delà, react-pdf superpose les lignes.
+const SLOT_TIME_LINE = 7.2
+const SLOT_THEMATIC_LINE = 8.4
+const SLOT_LOCATION_LINE = 7.2
+const SLOT_CHROME = 5
+const TIME_LABEL_SIZE = 7
 
 const styles = StyleSheet.create({
   calendarPage: {
@@ -81,7 +76,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   weekLabelCell: {
-    width: 52,
+    width: LABEL_COLUMN_WIDTH,
     backgroundColor: '#f9a8d4',
     padding: 4,
     borderWidth: 0.5,
@@ -114,39 +109,56 @@ const styles = StyleSheet.create({
     color: '#5b21b6',
     textAlign: 'center',
   },
-  timeRow: {
+  timeBody: {
     flexDirection: 'row',
-    minHeight: 36,
   },
-  timeLabelCell: {
-    width: 52,
+  timeAxis: {
+    width: LABEL_COLUMN_WIDTH,
     backgroundColor: '#fce7f3',
-    padding: 4,
     borderWidth: 0.5,
     borderColor: '#e5e7eb',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   timeLabelText: {
-    fontSize: 7,
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    fontSize: TIME_LABEL_SIZE,
     fontFamily: 'Helvetica-Bold',
     color: '#be185d',
     textAlign: 'center',
   },
-  slotCell: {
+  dayColumn: {
     flex: 1,
-    padding: 4,
+    backgroundColor: '#f9fafb',
     borderWidth: 0.5,
     borderColor: '#e5e7eb',
-    justifyContent: 'center',
   },
-  slotCellFilled: {
+  hourLine: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    borderTopWidth: 0.5,
+    borderColor: '#e5e7eb',
+  },
+  slotFrame: {
+    position: 'absolute',
+    padding: 0.75,
+  },
+  slotBlock: {
+    flexGrow: 1,
+    padding: 2,
     backgroundColor: '#fdf4ff',
+    borderWidth: 0.5,
+    borderColor: '#f0abfc',
+    overflow: 'hidden',
   },
-  slotCellEmpty: {
-    backgroundColor: '#f9fafb',
+  slotTime: {
+    fontSize: 6,
+    fontFamily: 'Helvetica-Bold',
+    color: '#be185d',
   },
   slotThematic: {
+    textOverflow: 'ellipsis',
     fontSize: 7,
     fontFamily: 'Helvetica-Bold',
     color: '#1f2937',
@@ -161,12 +173,19 @@ const styles = StyleSheet.create({
 const DAY_NAMES = ['LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI']
 
 function WeekBlock({ weekData }: { weekData: WeekData }) {
+  const { startMinute, endMinute } = weekData
+  const bodyHeight = ((endMinute - startMinute) / 60) * HOUR_HEIGHT
+  const topOf = (minute: number) => ((minute - startMinute) / 60) * HOUR_HEIGHT
+  const hours = Array.from(
+    { length: (endMinute - startMinute) / 60 + 1 },
+    (_, index) => startMinute + index * 60,
+  )
+
   return (
-    <View
-      style={styles.weekBlock}
-      wrap={!weekFitsOnOnePage(weekData.timeRows.length)}
-    >
-      <View style={styles.weekHeaderRow} wrap={false}>
+    // Sans `wrap={false}`, react-pdf coupe volontiers la page juste après la
+    // ligne d'en-tête et laisse le titre du tableau orphelin en bas de page.
+    <View style={styles.weekBlock} wrap={false}>
+      <View style={styles.weekHeaderRow}>
         <View style={styles.weekLabelCell}>
           <Text style={styles.weekLabelText}>{weekData.weekLabel}</Text>
         </View>
@@ -181,35 +200,78 @@ function WeekBlock({ weekData }: { weekData: WeekData }) {
         })}
       </View>
 
-      {weekData.timeRows.map((row) => (
-        <View key={row.timeLabel} style={styles.timeRow} wrap={false}>
-          <View style={styles.timeLabelCell}>
-            <Text style={styles.timeLabelText}>{row.timeLabel}</Text>
-          </View>
-          {row.cells.map((slot, dayIdx) => (
-            <View
-              key={DAY_NAMES[dayIdx]}
+      <View style={[styles.timeBody, { height: bodyHeight }]}>
+        <View style={styles.timeAxis}>
+          {hours.slice(1, -1).map((minute) => (
+            <Text
+              key={minute}
               style={[
-                styles.slotCell,
-                slot ? styles.slotCellFilled : styles.slotCellEmpty,
+                styles.timeLabelText,
+                { top: topOf(minute) - TIME_LABEL_SIZE / 2 },
               ]}
             >
-              {slot && (
-                <>
-                  <Text style={styles.slotThematic}>
-                    {slot.slotTemplate?.thematic ?? ''}
-                  </Text>
-                  {slot.slotTemplate?.location?.name && (
-                    <Text style={styles.slotLocation}>
-                      {slot.slotTemplate.location.name}
-                    </Text>
-                  )}
-                </>
-              )}
-            </View>
+              {formatMinute(minute)}
+            </Text>
           ))}
         </View>
-      ))}
+        {weekData.days.map((day, dayIdx) => (
+          <View key={DAY_NAMES[dayIdx]} style={styles.dayColumn}>
+            {hours.slice(1, -1).map((minute) => (
+              <View
+                key={minute}
+                style={[styles.hourLine, { top: topOf(minute) }]}
+              />
+            ))}
+            {day.map((placed) => (
+              <SlotFrame key={placed.slot.id} placed={placed} topOf={topOf} />
+            ))}
+          </View>
+        ))}
+      </View>
+    </View>
+  )
+}
+
+function SlotFrame({
+  placed,
+  topOf,
+}: {
+  placed: PlacedSlot
+  topOf: (minute: number) => number
+}) {
+  const height = ((placed.end - placed.start) / 60) * HOUR_HEIGHT
+  // Au-delà de deux colonnes, l'horaire passe sur deux lignes.
+  const free =
+    height - SLOT_CHROME - (placed.laneCount > 2 ? 2 : 1) * SLOT_TIME_LINE
+  const location = placed.slot.slotTemplate?.location?.name
+  const showLocation =
+    location && free >= SLOT_THEMATIC_LINE + SLOT_LOCATION_LINE
+  const thematicLines = Math.max(
+    1,
+    Math.floor(
+      (free - (showLocation ? SLOT_LOCATION_LINE : 0)) / SLOT_THEMATIC_LINE,
+    ),
+  )
+
+  return (
+    <View
+      style={[
+        styles.slotFrame,
+        {
+          top: topOf(placed.start),
+          height,
+          left: `${(placed.lane / placed.laneCount) * 100}%`,
+          width: `${100 / placed.laneCount}%`,
+        },
+      ]}
+    >
+      <View style={styles.slotBlock}>
+        <Text style={styles.slotTime}>{formatTimeRange(placed)}</Text>
+        <Text style={[styles.slotThematic, { maxLines: thematicLines }]}>
+          {placed.slot.slotTemplate?.thematic ?? ''}
+        </Text>
+        {showLocation && <Text style={styles.slotLocation}>{location}</Text>}
+      </View>
     </View>
   )
 }

@@ -1,15 +1,20 @@
 import dayjs from 'dayjs'
 
+import {
+  hourBounds,
+  layoutDay,
+  type PlacedSlot,
+} from '../../../../libs/pdfTimeGrid.ts'
 import { getSlotDisplayRange } from '../../../../libs/slotAvailability.ts'
 import type { Slot } from '../../../../types/slot.ts'
 
 export type WeekData = {
   weekLabel: string
   weekStart: dayjs.Dayjs
-  timeRows: {
-    timeLabel: string
-    cells: (Slot | null)[] // index 0=lundi..4=vendredi
-  }[]
+  /** Bornes de l'axe horaire, arrondies à l'heure (minutes depuis minuit). */
+  startMinute: number
+  endMinute: number
+  days: PlacedSlot[][] // index 0=lundi..4=vendredi
 }
 
 // Période de fermeture du service intercalée entre deux semaines du programme.
@@ -198,36 +203,19 @@ export function buildCalendarEntries(
     })
 
     const weekdaySlots = weekSlots.filter(isWeekday)
-    const timeKeys = Array.from(
-      new Set(
-        weekdaySlots.map((s) => {
-          const { start, end } = getSlotDisplayRange(s, patientId)
-          return `${dayjs.utc(start).format('HH:mm')}-${dayjs.utc(end).format('HH:mm')}`
-        }),
+    const days = Array.from({ length: 5 }, (_, i) =>
+      layoutDay(
+        weekdaySlots.filter((s) =>
+          dayjs.utc(s.startDate).isSame(current.add(i, 'day'), 'day'),
+        ),
+        (s) => getSlotDisplayRange(s, patientId),
       ),
-    ).sort()
-
-    const timeRows = timeKeys.map((timeKey) => {
-      const [start, end] = timeKey.split('-')
-      const cells: (Slot | null)[] = Array.from({ length: 5 }, (_, i) => {
-        const day = current.add(i, 'day')
-        return (
-          weekdaySlots.find((s) => {
-            const range = getSlotDisplayRange(s, patientId)
-            return (
-              dayjs.utc(range.start).isSame(day, 'day') &&
-              dayjs.utc(range.start).format('HH:mm') === start &&
-              dayjs.utc(range.end).format('HH:mm') === end
-            )
-          }) ?? null
-        )
-      })
-      return { timeLabel: timeKey.replace('-', '\n'), cells }
-    })
+    )
+    const [startMinute, endMinute] = hourBounds(days)
 
     const isForbidden = forbiddenWeekKeys.has(current.format('YYYY-MM-DD'))
 
-    if (timeRows.length > 0) {
+    if (weekdaySlots.length > 0) {
       flushClosure()
       const notices = collectWeekNotices(
         weekdaySlots,
@@ -247,7 +235,9 @@ export function buildCalendarEntries(
         // Rendez-vous maintenus pendant une fermeture : semaine hors numérotation.
         weekLabel: isForbidden ? 'Semaine bonus' : `Semaine ${weekIndex}`,
         weekStart: current,
-        timeRows,
+        startMinute,
+        endMinute,
+        days,
       })
       // La numérotation ne compte que les semaines affichées : une semaine
       // interdite ne crée pas de trou entre « Semaine 2 » et « Semaine 4 ».
