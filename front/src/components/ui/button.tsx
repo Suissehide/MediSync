@@ -28,6 +28,9 @@ const buttonVariants = cva(
           'text-primary bg-transparent border-none shadow-none p-0 focus-visible:ring-0',
         absolute:
           'absolute right-2 text-primary bg-transparent border-none shadow-none p-0 hover:bg-background/20',
+        icon: 'bg-transparent text-[#475569] hover:bg-[#e2e8f0] disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent',
+        'icon-danger':
+          'bg-transparent text-[#dc2626] hover:bg-red-50 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent',
       },
       size: {
         default: 'h-9 px-4 py-2',
@@ -35,6 +38,7 @@ const buttonVariants = cva(
         lg: 'h-10 rounded-md px-8',
         icon: 'h-9 w-9 rounded-lg',
         'icon-sm': 'h-6 w-6 p-1 rounded-lg',
+        'icon-md': 'h-8 w-8 shrink-0 rounded-md',
       },
     },
     defaultVariants: {
