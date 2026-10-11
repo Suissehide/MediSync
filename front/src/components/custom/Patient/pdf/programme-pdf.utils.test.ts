@@ -69,3 +69,20 @@ describe('buildCalendarEntries, consignes à jeton %dates%', () => {
     ])
   })
 })
+
+describe('buildCalendarEntries, semaines interdites', () => {
+  it('une semaine interdite avec rendez-vous est une semaine bonus, hors numérotation', () => {
+    const entries = buildCalendarEntries(
+      [
+        slot('s1', '2026-05-11T09:00:00.000Z', 't1'),
+        slot('s2', '2026-05-18T09:00:00.000Z', 't1'),
+        slot('s3', '2026-06-01T09:00:00.000Z', 't1'),
+      ],
+      undefined,
+      ['2026-05-18', '2026-05-25'],
+    )
+    expect(
+      entries.map((e) => (e.kind === 'week' ? e.weekLabel : e.kind)),
+    ).toEqual(['Semaine 1', 'Semaine bonus', 'closure', 'Semaine 2'])
+  })
+})

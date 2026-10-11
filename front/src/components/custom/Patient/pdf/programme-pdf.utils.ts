@@ -225,6 +225,8 @@ export function buildCalendarEntries(
       return { timeLabel: timeKey.replace('-', '\n'), cells }
     })
 
+    const isForbidden = forbiddenWeekKeys.has(current.format('YYYY-MM-DD'))
+
     if (timeRows.length > 0) {
       flushClosure()
       const notices = collectWeekNotices(
@@ -236,20 +238,23 @@ export function buildCalendarEntries(
       notices.forEach((text, noticeIndex) => {
         entries.push({
           kind: 'notice',
-          id: `semaine-${weekIndex}-${noticeIndex}`,
+          id: `${current.format('YYYY-MM-DD')}-${noticeIndex}`,
           text,
         })
       })
       entries.push({
         kind: 'week',
-        weekLabel: `Semaine ${weekIndex}`,
+        // Rendez-vous maintenus pendant une fermeture : semaine hors numérotation.
+        weekLabel: isForbidden ? 'Semaine bonus' : `Semaine ${weekIndex}`,
         weekStart: current,
         timeRows,
       })
       // La numérotation ne compte que les semaines affichées : une semaine
       // interdite ne crée pas de trou entre « Semaine 2 » et « Semaine 4 ».
-      weekIndex++
-    } else if (forbiddenWeekKeys.has(current.format('YYYY-MM-DD'))) {
+      if (!isForbidden) {
+        weekIndex++
+      }
+    } else if (isForbidden) {
       const closureEnd = current.add(CLOSURE_LAST_WEEKDAY_OFFSET, 'day')
       // Des semaines interdites qui se suivent ne donnent qu'une seule mention.
       if (pendingClosure?.end.add(3, 'day').isSame(current, 'day')) {
