@@ -119,13 +119,7 @@ export default function PlanningExportModal({
 
   const lastWeekEnd = weekStart.add(weekCount * 7 - 3, 'day')
   const slotCount = weeks.reduce(
-    (total, week) =>
-      total +
-      week.timeRows.reduce(
-        (weekTotal, row) =>
-          weekTotal + row.cells.reduce((sum, cell) => sum + cell.length, 0),
-        0,
-      ),
+    (total, week) => total + week.days.flat().length,
     0,
   )
 
