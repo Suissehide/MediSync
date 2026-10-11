@@ -301,16 +301,8 @@ const appels = (
     )
     .map(([, init]) => JSON.parse(String(init?.body)))
 
-const ligneDuJeu = async (nom: string) => {
-  const bouton = await screen.findByRole('button', {
-    name: new RegExp(`^${nom}`),
-  })
-  const li = bouton.closest('li')
-  if (!li) {
-    throw new Error(`Ligne du jeu ${nom} introuvable`)
-  }
-  return within(li)
-}
+const carteDuJeu = async (nom: string) =>
+  within(await screen.findByRole('region', { name: nom }))
 
 const ligneIndicateur = async (texte: string) => {
   const li = (await screen.findByText(texte, { exact: false })).closest('li')
@@ -325,9 +317,10 @@ const choisir = async (label: string | RegExp, option: string | RegExp) => {
   await userEvent.click(await screen.findByRole('option', { name: option }))
 }
 
-const ouvrirAjout = async () => {
+const ouvrirAjout = async (jeu = 'Grille ARS') => {
+  const carte = await carteDuJeu(jeu)
   await userEvent.click(
-    await screen.findByRole('button', { name: /ajouter un indicateur/i }),
+    carte.getByRole('button', { name: /ajouter un indicateur/i }),
   )
   return screen.findByRole('dialog')
 }
@@ -382,8 +375,8 @@ describe('garde', () => {
 describe('liste des jeux', () => {
   it('montre les jeux actifs, pas les supprimés', async () => {
     monter(lecture())
-    await ligneDuJeu('Grille ARS')
-    expect(screen.getByRole('button', { name: /^Qualité/ })).toBeVisible()
+    await carteDuJeu('Grille ARS')
+    expect(screen.getByRole('region', { name: 'Qualité' })).toBeVisible()
     expect(screen.queryByText('Ancien jeu')).not.toBeInTheDocument()
   })
 
@@ -409,15 +402,14 @@ describe('liste des jeux', () => {
       ...lecture(),
       route('PATCH', '/indicator-sets/j1', () => ok(grille)),
     ])
-    const ligne = await ligneDuJeu('Grille ARS')
-    await userEvent.click(ligne.getByRole('button', { name: /renommer/i }))
-    const nom = screen.getByLabelText('Nom')
+    const carte = await carteDuJeu('Grille ARS')
+    await userEvent.click(
+      carte.getByRole('button', { name: 'Renommer le jeu' }),
+    )
+    const nom = carte.getByRole('textbox', { name: 'Nom du jeu' })
     expect(nom).toHaveValue('Grille ARS')
     await userEvent.clear(nom)
-    await userEvent.type(nom, 'Grille 2027')
-    await userEvent.click(
-      screen.getByRole('button', { name: /^enregistrer$/i }),
-    )
+    await userEvent.type(nom, 'Grille 2027{enter}')
     await waitFor(() =>
       expect(appels(fetchMock, 'PATCH', '/indicator-sets/j1')).toEqual([
         { name: 'Grille 2027' },
@@ -430,8 +422,10 @@ describe('liste des jeux', () => {
       ...lecture(),
       route('PATCH', '/indicator-sets/j1', () => ok(grille)),
     ])
-    const ligne = await ligneDuJeu('Grille ARS')
-    await userEvent.click(ligne.getByRole('button', { name: /^supprimer$/i }))
+    const carte = await carteDuJeu('Grille ARS')
+    await userEvent.click(
+      carte.getByRole('button', { name: /^supprimer le jeu$/i }),
+    )
     const dialogue = await screen.findByRole('dialog')
     expect(dialogue).toHaveTextContent('restaurable depuis « Supprimés »')
     expect(appels(fetchMock, 'PATCH', '/indicator-sets/j1')).toEqual([])
@@ -450,10 +444,12 @@ describe('liste des jeux', () => {
       ...lecture(),
       route('PATCH', '/indicator-sets/j3', () => ok(ancien)),
     ])
-    await ligneDuJeu('Grille ARS')
+    await carteDuJeu('Grille ARS')
     await userEvent.click(screen.getByLabelText('Supprimés'))
-    const ligne = await ligneDuJeu('Ancien jeu')
-    await userEvent.click(ligne.getByRole('button', { name: /^restaurer$/i }))
+    const carte = await carteDuJeu('Ancien jeu')
+    await userEvent.click(
+      carte.getByRole('button', { name: /^restaurer le jeu$/i }),
+    )
     await waitFor(() =>
       expect(appels(fetchMock, 'PATCH', '/indicator-sets/j3')).toEqual([
         { archived: false },
@@ -466,9 +462,11 @@ describe('liste des jeux', () => {
       ...lecture(),
       route('PUT', '/indicator-sets/order'),
     ])
-    const ligne = await ligneDuJeu('Grille ARS')
-    expect(ligne.getByRole('button', { name: 'Monter' })).toBeDisabled()
-    await userEvent.click(ligne.getByRole('button', { name: 'Descendre' }))
+    const carte = await carteDuJeu('Grille ARS')
+    expect(carte.getByRole('button', { name: 'Monter le jeu' })).toBeDisabled()
+    await userEvent.click(
+      carte.getByRole('button', { name: 'Descendre le jeu' }),
+    )
     await waitFor(() =>
       expect(appels(fetchMock, 'PUT', '/indicator-sets/order')).toEqual([
         { ids: ['j2', 'j1', 'j3'] },
@@ -485,8 +483,8 @@ describe('liste des jeux', () => {
       ...lecture(),
       route('PUT', '/indicator-sets/order', () => enAttente.then(() => ok({}))),
     ])
-    const ligne = await ligneDuJeu('Grille ARS')
-    const descendre = ligne.getByRole('button', { name: 'Descendre' })
+    const carte = await carteDuJeu('Grille ARS')
+    const descendre = carte.getByRole('button', { name: 'Descendre le jeu' })
     await userEvent.click(descendre)
     await userEvent.click(descendre)
     liberer()
@@ -524,7 +522,7 @@ describe('un jeu', () => {
       ...lecture(),
       route('PATCH', '/indicator-sets/j1/indicators/i4', () => ok({})),
     ])
-    await ligneDuJeu('Grille ARS')
+    await carteDuJeu('Grille ARS')
     await userEvent.click(screen.getByLabelText('Supprimés'))
     const ligne = await ligneIndicateur('Ancien indicateur')
     await userEvent.click(ligne.getByRole('button', { name: /^restaurer$/i }))
@@ -579,6 +577,47 @@ describe('un jeu', () => {
       expect(
         appels(fetchMock, 'PATCH', '/indicator-sets/j1/indicators/i2'),
       ).toEqual([{ archived: true }]),
+    )
+  })
+})
+
+describe('cartes', () => {
+  it('le compteur « Supprimés » additionne jeux et indicateurs supprimés', async () => {
+    monter(lecture())
+    await carteDuJeu('Grille ARS')
+    expect(screen.getByTestId('compteur-supprimes')).toHaveTextContent(/^2$/)
+  })
+
+  it('le pied « Ajouter un indicateur » est masqué en mode Supprimés', async () => {
+    monter(lecture())
+    await carteDuJeu('Grille ARS')
+    expect(
+      screen.getAllByRole('button', { name: /ajouter un indicateur/i }),
+    ).toHaveLength(2)
+    await userEvent.click(screen.getByLabelText('Supprimés'))
+    expect(
+      screen.queryByRole('button', { name: /ajouter un indicateur/i }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('le pied « Ajouter un indicateur » crée dans le jeu de sa carte', async () => {
+    const fetchMock = monter([
+      ...lecture(),
+      route('POST', '/indicator-sets/j2/preview', () =>
+        ok({ value: 0, breakdown: null, warnings: [] }),
+      ),
+      route('POST', '/indicator-sets/j2/indicators', () => ok({})),
+    ])
+    const dialogue = await ouvrirAjout('Qualité')
+    await userEvent.type(within(dialogue).getByLabelText('Code'), 'Q1')
+    await userEvent.type(within(dialogue).getByLabelText('Libellé'), 'Avis')
+    await userEvent.type(within(dialogue).getByLabelText('Groupe'), 'Qualité')
+    await choisir('Nature', 'Non disponible')
+    await userEvent.click(screen.getByRole('button', { name: /^ajouter$/i }))
+    await waitFor(() =>
+      expect(
+        appels(fetchMock, 'POST', '/indicator-sets/j2/indicators'),
+      ).toHaveLength(1),
     )
   })
 })
