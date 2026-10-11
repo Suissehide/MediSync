@@ -16,12 +16,12 @@ const DAY_HEADER_HEIGHT = 24
 // c'est cette hauteur explicite qui garantit une semaine par page.
 const AVAILABLE_ROWS_HEIGHT = 496
 
-// Tailles de police à densité confortable, et hauteur qu'occupent les
-// trois lignes d'un créneau à cette échelle (interligne ~1,25, marges et bordures).
-const BASE_FONT_SIZES = { thematic: 8.5, details: 7.5 }
-const BASE_BLOCK_HEIGHT = 38
+// Même police pour tous les créneaux ; un créneau trop court perd ses
+// dernières lignes plutôt que de rapetisser. Hauteurs de ligne = police × 1,2.
+const SLOT_FONT_SIZES = { time: 5.5, thematic: 7, details: 6 }
+const SLOT_LINE_HEIGHTS = { time: 6.6, thematic: 8.4, details: 7.2 }
+const SLOT_CHROME = 4.5
 const TIME_LABEL_SIZE = 7
-const MIN_FONT_SCALE = 0.55
 
 const DAY_NAMES = ['LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI']
 
@@ -144,11 +144,15 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   slotThematic: {
+    fontSize: SLOT_FONT_SIZES.thematic,
     fontFamily: 'Helvetica-Bold',
     textOverflow: 'ellipsis',
   },
+  slotTime: {
+    fontSize: SLOT_FONT_SIZES.time,
+  },
   slotDetails: {
-    marginTop: 1,
+    fontSize: SLOT_FONT_SIZES.details,
     // Une seule ligne, tronquée proprement : sans cela le texte repart à la
     // ligne et `overflow: 'hidden'` le coupe en plein milieu d'un mot.
     maxLines: 1,
@@ -156,15 +160,8 @@ const styles = StyleSheet.create({
   },
 })
 
-/** Plus un créneau est court, plus sa police est petite, pour que ses deux lignes y tiennent. */
-function computeFontScale(height: number) {
-  return Math.max(MIN_FONT_SCALE, Math.min(1, height / BASE_BLOCK_HEIGHT))
-}
-
 function SlotBlock({ placed, height }: { placed: PlacedSlot; height: number }) {
   const { slot } = placed
-  const fontScale = computeFontScale(height)
-  const thematicMaxLines = height >= BASE_BLOCK_HEIGHT * 1.5 ? 2 : 1
   const background =
     slot.slotTemplate?.color ??
     slot.pathway?.template?.color ??
@@ -174,35 +171,36 @@ function SlotBlock({ placed, height }: { placed: PlacedSlot; height: number }) {
     ?.map((soignant) => soignant.name)
     .join(', ')
   const location = slot.slotTemplate?.location?.name
-  // Soignants et salle sur une seule ligne : en hauteur, chaque ligne gagnée
-  // permet une police plus grande sur une semaine dense.
-  const details = [soignants, location].filter(Boolean).join(' - ')
-  const detailsFontSize = BASE_FONT_SIZES.details * fontScale
+
+  // Au-delà de trois colonnes, l'horaire passe sur deux lignes.
+  let free =
+    height -
+    SLOT_CHROME -
+    (placed.laneCount > 3 ? 2 : 1) * SLOT_LINE_HEIGHTS.time -
+    SLOT_LINE_HEIGHTS.thematic
+  // Les soignants passent avant la salle quand la place manque.
+  const details = [soignants, location].filter((line) => {
+    if (!line || free < SLOT_LINE_HEIGHTS.details) {
+      return false
+    }
+    free -= SLOT_LINE_HEIGHTS.details
+    return true
+  })
+  const thematicLines = 1 + Math.floor(free / SLOT_LINE_HEIGHTS.thematic)
 
   return (
     <View style={[styles.slotBlock, { backgroundColor: background }]}>
-      <Text style={{ color, fontSize: detailsFontSize }}>
+      <Text style={[styles.slotTime, { color }]}>
         {formatTimeRange(placed)}
       </Text>
-      <Text
-        style={[
-          styles.slotThematic,
-          {
-            color,
-            fontSize: BASE_FONT_SIZES.thematic * fontScale,
-            maxLines: thematicMaxLines,
-          },
-        ]}
-      >
+      <Text style={[styles.slotThematic, { color, maxLines: thematicLines }]}>
         {slot.slotTemplate?.thematic ?? 'Sans thématique'}
       </Text>
-      {details && height >= BASE_BLOCK_HEIGHT * 0.8 && (
-        <Text
-          style={[styles.slotDetails, { color, fontSize: detailsFontSize }]}
-        >
-          {details}
+      {details.map((line) => (
+        <Text key={line} style={[styles.slotDetails, { color }]}>
+          {line}
         </Text>
-      )}
+      ))}
     </View>
   )
 }
