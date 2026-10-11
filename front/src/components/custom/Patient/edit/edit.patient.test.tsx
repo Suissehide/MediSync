@@ -946,11 +946,9 @@ describe('EditPatient — la barre « Modifications non sauvegardées »', () =>
   })
 })
 
-// Décision 2.3 de la spec : chaque écran qui affiche des champs
-// de `Patient` ou de `PatientServiceFile` doit dire à quelle portée ils appartiennent — pas
-// seulement l'onglet « Profil & Contexte ».
-describe('EditPatient — la portée est nommée sur chaque onglet', () => {
-  it('« Informations générales » et « Contact » disent qu’ils sont partagés entre les services', async () => {
+// Les blocs de la fiche portent un titre court, sans mention de portée.
+describe('EditPatient — titres des blocs', () => {
+  it('affiche les titres « Informations générales » et « Contact »', async () => {
     vi.stubGlobal(
       'fetch',
       buildFetchMock([
@@ -965,13 +963,9 @@ describe('EditPatient — la portée est nommée sur chaque onglet', () => {
     renderEditPatient()
 
     expect(
-      await screen.findByText(
-        /Informations générales — partagées entre les services/,
-      ),
+      await screen.findByRole('heading', { name: 'Informations générales' }),
     ).toBeInTheDocument()
-    expect(
-      screen.getByText(/Contact — partagé entre les services/),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Contact' })).toBeInTheDocument()
   })
 
   it('chaque onglet de catégorie dit qu’il est propre au service', async () => {
@@ -993,12 +987,10 @@ describe('EditPatient — la portée est nommée sur chaque onglet', () => {
     renderEditPatient()
 
     expect(
-      await screen.findByText(
-        /Parcours & Inclusion — dossier de ce service, non visible/,
-      ),
+      await screen.findByRole('heading', { name: 'Parcours & Inclusion' }),
     ).toBeInTheDocument()
     expect(
-      screen.getByText(/Sortie & Bilan — dossier de ce service, non visible/),
+      screen.getByRole('heading', { name: 'Sortie & Bilan' }),
     ).toBeInTheDocument()
   })
 })
@@ -1487,7 +1479,7 @@ describe('EditPatient — un onglet par catégorie', () => {
       'Motif',
     ])
     expect(
-      screen.getByText(/Admission — dossier de ce service, non visible/),
+      screen.getByRole('heading', { name: 'Admission' }),
     ).toBeInTheDocument()
   })
 

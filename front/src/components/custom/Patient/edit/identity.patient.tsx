@@ -14,8 +14,7 @@ export const IdentityFields = withForm({
         <div className="h-fit flex-1 flex flex-col gap-2">
           <div className="flex items-center gap-2 mt-2">
             <h4 className="relative text-sm font-semibold">
-              Informations générales — partagées entre les services de
-              l'établissement
+              Informations générales
             </h4>
             <div className="mt-1 ml-1 flex-1 border-t border-border" />
           </div>
@@ -44,9 +43,7 @@ export const IdentityFields = withForm({
 
         <div className="h-fit flex-1 flex flex-col gap-2">
           <div className="flex items-center gap-2 mt-2">
-            <h4 className="relative text-sm font-semibold">
-              Contact — partagé entre les services de l'établissement
-            </h4>
+            <h4 className="relative text-sm font-semibold">Contact</h4>
             <div className="mt-1 ml-1 flex-1 border-t border-border" />
           </div>
 
