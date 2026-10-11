@@ -41,6 +41,18 @@ PopoverContent.displayName = Popover.Content.displayName
 
 // ─── Menu item ────────────────────────────────────────────────────────────────
 
+const ITEM_BASE =
+  'flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm outline-none transition-colors'
+const ITEM_DEFAULT =
+  'text-text-dark hover:bg-primary/20 focus-visible:bg-primary/20'
+const ITEM_DESTRUCTIVE =
+  'text-destructive hover:bg-destructive/10 focus-visible:bg-destructive/10'
+
+// Pour une entree de menu qui doit etre un VRAI lien (`<a>`, donc role `link`) et non un bouton :
+// `PopoverMenuItem` rend un `<button>`, et `asChild` sur lui buterait sur le Slot de Radix, qui
+// n'accepte qu'un seul enfant alors que l'entree en porte deux (icone + libelle).
+export const POPOVER_MENU_ITEM_CLASS = `${ITEM_BASE} ${ITEM_DEFAULT}`
+
 type PopoverMenuItemProps = {
   icon?: React.ReactNode
   children: React.ReactNode
@@ -65,11 +77,9 @@ function PopoverMenuItem({
       onClick={onClick}
       aria-current={ariaCurrent ? 'true' : undefined}
       className={cn(
-        'flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm outline-none transition-colors',
-        variant === 'default' &&
-          'text-text-dark hover:bg-primary/20 focus-visible:bg-primary/20',
-        variant === 'destructive' &&
-          'text-destructive hover:bg-destructive/10 focus-visible:bg-destructive/10',
+        ITEM_BASE,
+        variant === 'default' && ITEM_DEFAULT,
+        variant === 'destructive' && ITEM_DESTRUCTIVE,
         className,
       )}
     >

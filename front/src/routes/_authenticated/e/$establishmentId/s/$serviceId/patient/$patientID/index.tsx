@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, useParams } from '@tanstack/react-router'
-import { ArrowLeft, FileDown, Trash2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { ArrowLeft, Ellipsis, FileDown, Trash2 } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 
 import EditPatient from '@/components/custom/Patient/edit/edit.patient.tsx'
 import { PatientAccessLogButton } from '@/components/custom/Patient/patientAccessLogButton.tsx'
@@ -14,16 +14,26 @@ import { ConfirmDeleteForm } from '@/components/custom/popup/confirmDeleteForm.t
 import DashboardLayout from '@/components/dashboard.layout.tsx'
 import { Button } from '@/components/ui/button.tsx'
 import {
+  PopoverContent,
+  PopoverMenuItem,
+  PopoverRoot,
+  PopoverSeparator,
+  PopoverTrigger,
+} from '@/components/ui/popover.tsx'
+import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
 } from '@/components/ui/tabs.tsx'
 import { useCan } from '@/hooks/useCan.ts'
+import { splitPatientSlots } from '@/libs/slotAvailability.ts'
 import {
   usePatientByIDQuery,
   usePatientMutations,
+  usePatientPathwaysQuery,
 } from '@/queries/usePatient.tsx'
+import { usePatientSlotsQuery } from '@/queries/useSlot.ts'
 import { useDiagnosticStore } from '@/store/useDiagnosticStore.ts'
 
 // CE FICHIER A ÉTÉ DÉPLACÉ (`$patientID.tsx` → `$patientID/index.tsx`),
@@ -55,6 +65,7 @@ function PatientDetails() {
   // (export généré dans le navigateur), gardée ici, seul endroit où elle
   // s'utilise.
   const canExportPdf = useCan('pdf:export')
+  const canReadAccessLog = useCan('consultations:read')
   const [selected, setSelected] = useState<string>('overview')
   const [showPDF, setShowPDF] = useState(false)
   const [showDelete, setShowDelete] = useState(false)
@@ -67,6 +78,15 @@ function PatientDetails() {
     from: '/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/',
   })
   const { patient, isError, isFetched } = usePatientByIDQuery(patientID)
+
+  // Résumé sous le nom. Les deux lectures sont déjà en cache : l'aperçu les monte avec les mêmes
+  // clés, et le découpage à venir/passés est la fonction qu'il utilise lui-même.
+  const { slots } = usePatientSlotsQuery(patientID)
+  const { pathways = [] } = usePatientPathwaysQuery(patientID)
+  const aVenir = useMemo(
+    () => splitPatientSlots(slots, patientID).upcoming.length,
+    [slots, patientID],
+  )
 
   useEffect(() => {
     if (diagnosticSelectedId) {
@@ -95,10 +115,12 @@ function PatientDetails() {
     >
       <div className="flex-1 bg-background p-2 rounded flex flex-col w-full">
         <div className="flex-1 bg-background p-6 rounded-lg flex flex-col w-full gap-4 min-h-0">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3.5">
             <Button
               variant="outline"
               size="icon"
+              className="size-10 flex-shrink-0"
+              aria-label="Retour à la liste des patients"
               onClick={() =>
                 navigate({
                   to: '/e/$establishmentId/s/$serviceId/patient',
@@ -108,16 +130,17 @@ function PatientDetails() {
             >
               <ArrowLeft className="w-4 h-4" />
             </Button>
-            <h2 className="text-text-foreground text-xl font-semibold">
-              {patient?.lastName} {patient?.firstName}
-            </h2>
+            <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+              <h2 className="text-foreground text-2xl font-bold truncate">
+                <span className="uppercase">{patient?.lastName}</span>{' '}
+                {patient?.firstName}
+              </h2>
+              <span className="text-sm text-text-light">
+                {pathways.length} parcours en cours · {aVenir} rendez-vous à
+                venir
+              </span>
+            </div>
             <div className="ml-auto flex items-center gap-2">
-              {patient && <AddPatientToPathwayForm patient={patient} />}
-              <PatientAccessLogButton
-                establishmentId={establishmentId}
-                serviceId={serviceId}
-                patientID={patientID}
-              />
               {canExportPdf && (
                 <Button
                   variant="outline"
@@ -129,15 +152,33 @@ function PatientDetails() {
                   Générer le programme
                 </Button>
               )}
-              <Button
-                variant="outline"
-                size="default"
-                className="font-normal leading-tight"
-                onClick={() => setShowDelete(true)}
-              >
-                <Trash2 className="w-4 h-4 text-destructive" />
-                Supprimer le patient
-              </Button>
+              {patient && <AddPatientToPathwayForm patient={patient} />}
+              <PopoverRoot>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    aria-label="Plus d'actions"
+                  >
+                    <Ellipsis className="w-4 h-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-[250px]">
+                  <PatientAccessLogButton
+                    establishmentId={establishmentId}
+                    serviceId={serviceId}
+                    patientID={patientID}
+                  />
+                  {canReadAccessLog && <PopoverSeparator />}
+                  <PopoverMenuItem
+                    variant="destructive"
+                    icon={<Trash2 className="w-4 h-4" />}
+                    onClick={() => setShowDelete(true)}
+                  >
+                    Supprimer le patient
+                  </PopoverMenuItem>
+                </PopoverContent>
+              </PopoverRoot>
             </div>
           </div>
 
@@ -156,7 +197,10 @@ function PatientDetails() {
             {patient && (
               <>
                 <TabsContent value="overview">
-                  <OverviewPatient patient={patient} />
+                  <OverviewPatient
+                    patient={patient}
+                    onOpenPlanning={() => setSelected('planning')}
+                  />
                 </TabsContent>
                 <TabsContent value="information" forceMount>
                   <EditPatient patient={patient} />
