@@ -444,3 +444,12 @@ describe('pagination du journal des acces', () => {
     })
   })
 })
+
+// Livré sans aucun retour : depuis la fiche patient, cet écran était un cul-de-sac.
+describe('retour au dossier', () => {
+  it('propose un lien de retour vers la fiche du patient consulté', async () => {
+    monter([routeGetAcces([ligne])])
+    const retour = await screen.findByTitle('Retour au dossier')
+    expect(retour).toHaveAttribute('href', '/e/e1/s/s1/patient/p1')
+  })
+})

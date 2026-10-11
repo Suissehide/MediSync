@@ -1,9 +1,16 @@
-import { createFileRoute, redirect, useParams } from '@tanstack/react-router'
+import {
+  createFileRoute,
+  Link,
+  redirect,
+  useParams,
+} from '@tanstack/react-router'
+import { ArrowLeft } from 'lucide-react'
 import { useState } from 'react'
 
 import { getAccessLogColumns } from '@/columns/accessLog.column.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
 import { ReactTable } from '@/components/table/reactTable.tsx'
+import { Button } from '@/components/ui/button.tsx'
 import { can } from '@/hooks/useCan.ts'
 import { queryState } from '@/libs/queryState.ts'
 import { usePatientAccessLogQuery } from '@/queries/useAccessLog.ts'
@@ -38,7 +45,7 @@ export const Route = createFileRoute(
 const PREMIERE_PAGE = { pageIndex: 0, pageSize: 25 }
 
 function PatientAccessLogPage() {
-  const { establishmentId, patientID } = useParams({
+  const { establishmentId, serviceId, patientID } = useParams({
     from: '/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/acces',
   })
   const [pagination, setPagination] = useState(PREMIERE_PAGE)
@@ -63,7 +70,20 @@ function PatientAccessLogPage() {
   return (
     <DashboardLayout>
       <div className="flex-1 min-h-0 bg-background p-6 rounded-lg flex flex-col w-full gap-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Button
+            asChild
+            variant="outline"
+            size="icon"
+            title="Retour au dossier"
+          >
+            <Link
+              to="/e/$establishmentId/s/$serviceId/patient/$patientID"
+              params={{ establishmentId, serviceId, patientID }}
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </Link>
+          </Button>
           <h1 className="h-9 flex items-center text-text-dark text-xl font-semibold">
             Consultations du dossier
           </h1>
