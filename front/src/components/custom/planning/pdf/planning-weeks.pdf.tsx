@@ -1,7 +1,12 @@
 import { Document, Page, StyleSheet, Text, View } from '@react-pdf/renderer'
 
 import { getContrastTextColor } from '../../../../libs/color.ts'
-import type { PlacedSlot, PlanningWeek } from './planning-pdf.utils.ts'
+import {
+  formatMinute,
+  formatTimeRange,
+  type PlacedSlot,
+} from '../../../../libs/pdfTimeGrid.ts'
+import type { PlanningWeek } from './planning-pdf.utils.ts'
 
 const PAGE_PADDING = 22
 const DAY_HEADER_HEIGHT = 24
@@ -11,10 +16,10 @@ const DAY_HEADER_HEIGHT = 24
 // c'est cette hauteur explicite qui garantit une semaine par page.
 const AVAILABLE_ROWS_HEIGHT = 496
 
-// Tailles de police à densité confortable, et hauteur qu'occupent les deux
-// lignes d'un créneau à cette échelle (interligne ~1,25, marges et bordures).
+// Tailles de police à densité confortable, et hauteur qu'occupent les
+// trois lignes d'un créneau à cette échelle (interligne ~1,25, marges et bordures).
 const BASE_FONT_SIZES = { thematic: 8.5, details: 7.5 }
-const BASE_BLOCK_HEIGHT = 28
+const BASE_BLOCK_HEIGHT = 38
 const TIME_LABEL_SIZE = 7
 const MIN_FONT_SCALE = 0.55
 
@@ -156,9 +161,6 @@ function computeFontScale(height: number) {
   return Math.max(MIN_FONT_SCALE, Math.min(1, height / BASE_BLOCK_HEIGHT))
 }
 
-const formatMinute = (minute: number) =>
-  `${String(Math.floor(minute / 60)).padStart(2, '0')}:${String(minute % 60).padStart(2, '0')}`
-
 function SlotBlock({ placed, height }: { placed: PlacedSlot; height: number }) {
   const { slot } = placed
   const fontScale = computeFontScale(height)
@@ -174,13 +176,14 @@ function SlotBlock({ placed, height }: { placed: PlacedSlot; height: number }) {
   const location = slot.slotTemplate?.location?.name
   // Soignants et salle sur une seule ligne : en hauteur, chaque ligne gagnée
   // permet une police plus grande sur une semaine dense.
-  const time = `${formatMinute(placed.start)}–${formatMinute(placed.end)}`
-  const details = [time, [soignants, location].filter(Boolean).join(' - ')]
-    .filter(Boolean)
-    .join(' · ')
+  const details = [soignants, location].filter(Boolean).join(' - ')
+  const detailsFontSize = BASE_FONT_SIZES.details * fontScale
 
   return (
     <View style={[styles.slotBlock, { backgroundColor: background }]}>
+      <Text style={{ color, fontSize: detailsFontSize }}>
+        {formatTimeRange(placed)}
+      </Text>
       <Text
         style={[
           styles.slotThematic,
@@ -193,12 +196,9 @@ function SlotBlock({ placed, height }: { placed: PlacedSlot; height: number }) {
       >
         {slot.slotTemplate?.thematic ?? 'Sans thématique'}
       </Text>
-      {height >= BASE_BLOCK_HEIGHT * 0.6 && (
+      {details && height >= BASE_BLOCK_HEIGHT * 0.8 && (
         <Text
-          style={[
-            styles.slotDetails,
-            { color, fontSize: BASE_FONT_SIZES.details * fontScale },
-          ]}
+          style={[styles.slotDetails, { color, fontSize: detailsFontSize }]}
         >
           {details}
         </Text>
