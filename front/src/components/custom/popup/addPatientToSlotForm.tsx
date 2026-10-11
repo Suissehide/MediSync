@@ -88,6 +88,8 @@ interface AddPatientToSlotFormProps {
   trigger?: React.ReactNode
   /** Patient présélectionné, depuis sa fiche. */
   patientID?: string
+  /** Jour du rendez-vous créé, pour suivre la page vers cette date. */
+  onBooked?: (day: Dayjs) => void
 }
 
 /**
@@ -481,6 +483,7 @@ const buildJoinPayload = (target: Appointment, patientID: string) => ({
 function AddPatientToSlotForm({
   trigger,
   patientID,
+  onBooked,
 }: AddPatientToSlotFormProps) {
   const [open, setOpen] = useState(false)
 
@@ -505,6 +508,7 @@ function AddPatientToSlotForm({
         {open && (
           <AddPatientToSlotContent
             initialPatientID={patientID}
+            onBooked={onBooked}
             onClose={() => setOpen(false)}
           />
         )}
@@ -515,11 +519,13 @@ function AddPatientToSlotForm({
 
 interface AddPatientToSlotContentProps {
   initialPatientID?: string
+  onBooked?: (day: Dayjs) => void
   onClose: () => void
 }
 
 function AddPatientToSlotContent({
   initialPatientID,
+  onBooked,
   onClose,
 }: AddPatientToSlotContentProps) {
   // État d'interface : la navigation de l'assistant, le créneau retenu et le
@@ -704,6 +710,11 @@ function AddPatientToSlotContent({
       return
     }
 
+    const booked = () => {
+      onBooked?.(dayjs.utc(selected.slot.startDate).startOf('day'))
+      onClose()
+    }
+
     if (selected.joinableAppointmentID) {
       const target = resolveLiveJoinTarget(slots, selected)
 
@@ -717,7 +728,7 @@ function AddPatientToSlotContent({
       }
 
       updateAppointment.mutate(buildJoinPayload(target, value.patientID), {
-        onSuccess: onClose,
+        onSuccess: booked,
       })
       return
     }
@@ -741,7 +752,7 @@ function AddPatientToSlotContent({
         motif: selected.isIndividual ? value.motif.trim() : null,
         patientIDs: [value.patientID],
       },
-      { onSuccess: onClose },
+      { onSuccess: booked },
     )
   }
 
