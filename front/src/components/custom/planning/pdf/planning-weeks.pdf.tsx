@@ -1,19 +1,13 @@
 import { Document, Page, StyleSheet, Text, View } from '@react-pdf/renderer'
 
 import { getContrastTextColor } from '../../../../libs/color.ts'
-import type { Slot } from '../../../../types/slot.ts'
-import type { PlanningWeek } from './planning-pdf.utils.ts'
+import type { PlacedSlot, PlanningWeek } from './planning-pdf.utils.ts'
 
 const PAGE_PADDING = 22
 const DAY_HEADER_HEIGHT = 24
 
-// Plafond de hauteur d'une ligne, pour éviter la bande géante quand la semaine
-// n'en compte qu'une ou deux.
-const MAX_ROW_HEIGHT = 170
-
-// Hauteur restant aux lignes une fois l'en-tête et la ligne des jours posés,
-// mesurée sur un rendu réel (16 lignes de 31 pt tenaient tout juste). react-pdf
-// pagine avant de résoudre flexbox : `flexShrink` ne comprime donc rien, et
+// Hauteur de l'axe horaire une fois l'en-tête et la ligne des jours posés,
+// mesurée sur un rendu réel. react-pdf pagine avant de résoudre flexbox :
 // c'est cette hauteur explicite qui garantit une semaine par page.
 const AVAILABLE_ROWS_HEIGHT = 496
 
@@ -21,7 +15,7 @@ const AVAILABLE_ROWS_HEIGHT = 496
 // lignes d'un créneau à cette échelle (interligne ~1,25, marges et bordures).
 const BASE_FONT_SIZES = { thematic: 8.5, details: 7.5 }
 const BASE_BLOCK_HEIGHT = 28
-const BASE_TIME_LABEL_SIZE = 8
+const TIME_LABEL_SIZE = 7
 const MIN_FONT_SCALE = 0.55
 
 const DAY_NAMES = ['LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI']
@@ -103,49 +97,45 @@ const styles = StyleSheet.create({
     fontSize: 7.5,
     color: '#4338ca',
   },
-  timeRow: {
+  timeBody: {
     flexDirection: 'row',
-    // La hauteur exacte est posée à l'affichage (`computeRowHeight`) : elle
-    // dépend du nombre de lignes de la semaine. `overflow: 'hidden'` garde un
-    // texte trop long à l'intérieur de sa case plutôt que par-dessus la
-    // voisine.
-    flexShrink: 0,
-    overflow: 'hidden',
+    height: AVAILABLE_ROWS_HEIGHT,
   },
-  timeLabelCell: {
+  timeAxis: {
     width: 54,
     backgroundColor: '#f9fafb',
     borderWidth: 0.5,
     borderColor: '#d1d5db',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   timeLabelText: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    fontSize: TIME_LABEL_SIZE,
     fontFamily: 'Helvetica-Bold',
     color: '#374151',
     textAlign: 'center',
   },
-  dayCell: {
-    // En paysage la largeur abonde et la hauteur manque : deux parcours en
-    // parallèle se placent côte à côte, chacun gardant toute la hauteur de la
-    // ligne, au lieu de se partager une demi-hauteur illisible.
-    flexDirection: 'row',
+  dayColumn: {
     flex: 1,
     borderWidth: 0.5,
     borderColor: '#d1d5db',
-    padding: 1.5,
-    overflow: 'hidden',
+  },
+  hourLine: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    borderTopWidth: 0.5,
+    borderColor: '#e5e7eb',
+  },
+  slotFrame: {
+    position: 'absolute',
+    padding: 0.75,
   },
   slotBlock: {
-    // `flexBasis: 'auto'` — avec une base à 0, react-pdf mesure le bloc avant
-    // son contenu et le texte disparaît dès qu'une case porte deux créneaux.
     flexGrow: 1,
-    flexShrink: 1,
-    flexBasis: 'auto',
-    justifyContent: 'center',
-    paddingVertical: 2,
+    paddingVertical: 1.5,
     paddingHorizontal: 3,
-    marginRight: 1.5,
     overflow: 'hidden',
   },
   slotThematic: {
@@ -161,34 +151,18 @@ const styles = StyleSheet.create({
   },
 })
 
-/** Les lignes de la semaine se partagent à parts égales la hauteur restante. */
-function computeRowHeight(rowCount: number) {
-  return Math.min(MAX_ROW_HEIGHT, AVAILABLE_ROWS_HEIGHT / rowCount)
+/** Plus un créneau est court, plus sa police est petite, pour que ses deux lignes y tiennent. */
+function computeFontScale(height: number) {
+  return Math.max(MIN_FONT_SCALE, Math.min(1, height / BASE_BLOCK_HEIGHT))
 }
 
-/**
- * Plus la semaine compte de lignes, plus chacune est basse : on réduit la
- * police d'autant pour que les deux lignes d'un créneau continuent d'y tenir
- * sans être rognées.
- */
-function computeFontScale(rowHeight: number) {
-  return Math.max(MIN_FONT_SCALE, Math.min(1, rowHeight / BASE_BLOCK_HEIGHT))
-}
+const formatMinute = (minute: number) =>
+  `${String(Math.floor(minute / 60)).padStart(2, '0')}:${String(minute % 60).padStart(2, '0')}`
 
-/** La thématique ne s'autorise deux lignes que si la ligne est assez haute. */
-function computeThematicMaxLines(rowHeight: number) {
-  return rowHeight >= BASE_BLOCK_HEIGHT * 1.5 ? 2 : 1
-}
-
-function SlotBlock({
-  slot,
-  fontScale,
-  thematicMaxLines,
-}: {
-  slot: Slot
-  fontScale: number
-  thematicMaxLines: number
-}) {
+function SlotBlock({ placed, height }: { placed: PlacedSlot; height: number }) {
+  const { slot } = placed
+  const fontScale = computeFontScale(height)
+  const thematicMaxLines = height >= BASE_BLOCK_HEIGHT * 1.5 ? 2 : 1
   const background =
     slot.slotTemplate?.color ??
     slot.pathway?.template?.color ??
@@ -200,7 +174,10 @@ function SlotBlock({
   const location = slot.slotTemplate?.location?.name
   // Soignants et salle sur une seule ligne : en hauteur, chaque ligne gagnée
   // permet une police plus grande sur une semaine dense.
-  const details = [soignants, location].filter(Boolean).join(' - ')
+  const time = `${formatMinute(placed.start)}–${formatMinute(placed.end)}`
+  const details = [time, [soignants, location].filter(Boolean).join(' - ')]
+    .filter(Boolean)
+    .join(' · ')
 
   return (
     <View style={[styles.slotBlock, { backgroundColor: background }]}>
@@ -216,7 +193,7 @@ function SlotBlock({
       >
         {slot.slotTemplate?.thematic ?? 'Sans thématique'}
       </Text>
-      {details && (
+      {height >= BASE_BLOCK_HEIGHT * 0.6 && (
         <Text
           style={[
             styles.slotDetails,
@@ -231,9 +208,13 @@ function SlotBlock({
 }
 
 function WeekPage({ week }: { week: PlanningWeek }) {
-  const rowHeight = computeRowHeight(week.timeRows.length)
-  const fontScale = computeFontScale(rowHeight)
-  const thematicMaxLines = computeThematicMaxLines(rowHeight)
+  const minuteHeight =
+    AVAILABLE_ROWS_HEIGHT / (week.endMinute - week.startMinute)
+  const topOf = (minute: number) => (minute - week.startMinute) * minuteHeight
+  const hours = Array.from(
+    { length: (week.endMinute - week.startMinute) / 60 + 1 },
+    (_, index) => week.startMinute + index * 60,
+  )
 
   return (
     <Page size="A4" orientation="landscape" style={styles.page}>
@@ -253,7 +234,7 @@ function WeekPage({ week }: { week: PlanningWeek }) {
         </View>
       )}
 
-      {week.timeRows.length === 0 ? (
+      {week.days.every((day) => day.length === 0) ? (
         // Sur une semaine fermée, la mention de fermeture dit déjà tout.
         !week.isClosed && (
           <Text style={styles.emptyMessage}>Aucun créneau cette semaine.</Text>
@@ -272,36 +253,58 @@ function WeekPage({ week }: { week: PlanningWeek }) {
             ))}
           </View>
 
-          {week.timeRows.map((row) => (
-            <View
-              key={row.timeLabel}
-              style={[styles.timeRow, { height: rowHeight }]}
-              wrap={false}
-            >
-              <View style={styles.timeLabelCell}>
+          <View style={styles.timeBody} wrap={false}>
+            <View style={styles.timeAxis}>
+              {hours.map((minute, index) => (
                 <Text
+                  key={minute}
                   style={[
                     styles.timeLabelText,
-                    { fontSize: BASE_TIME_LABEL_SIZE * fontScale },
+                    // Le libellé est centré sur son trait, sauf aux deux bouts de l'axe.
+                    {
+                      top: Math.min(
+                        Math.max(topOf(minute) - TIME_LABEL_SIZE / 2, 1),
+                        AVAILABLE_ROWS_HEIGHT - TIME_LABEL_SIZE - 3,
+                      ),
+                    },
                   ]}
                 >
-                  {row.timeLabel}
+                  {index === 0 || index === hours.length - 1
+                    ? ''
+                    : formatMinute(minute)}
                 </Text>
-              </View>
-              {row.cells.map((slots, dayIndex) => (
-                <View key={DAY_NAMES[dayIndex]} style={styles.dayCell}>
-                  {slots.map((slot) => (
-                    <SlotBlock
-                      key={slot.id}
-                      slot={slot}
-                      fontScale={fontScale}
-                      thematicMaxLines={thematicMaxLines}
-                    />
-                  ))}
-                </View>
               ))}
             </View>
-          ))}
+            {week.days.map((day, dayIndex) => (
+              <View key={DAY_NAMES[dayIndex]} style={styles.dayColumn}>
+                {hours.slice(1, -1).map((minute) => (
+                  <View
+                    key={minute}
+                    style={[styles.hourLine, { top: topOf(minute) }]}
+                  />
+                ))}
+                {day.map((placed) => {
+                  const height = (placed.end - placed.start) * minuteHeight
+                  return (
+                    <View
+                      key={placed.slot.id}
+                      style={[
+                        styles.slotFrame,
+                        {
+                          top: topOf(placed.start),
+                          height,
+                          left: `${(placed.lane / placed.laneCount) * 100}%`,
+                          width: `${100 / placed.laneCount}%`,
+                        },
+                      ]}
+                    >
+                      <SlotBlock placed={placed} height={height} />
+                    </View>
+                  )
+                })}
+              </View>
+            ))}
+          </View>
         </View>
       )}
     </Page>
