@@ -1464,7 +1464,10 @@ describe('scoping pathwayTemplate et pathway', () => {
         where: {
           serviceId: 's1',
           templateID: 'pt1',
-          startDate: { gte: expect.any(Date) },
+          OR: [
+            { startDate: { gte: expect.any(Date) } },
+            { slots: { some: { startDate: { gte: expect.any(Date) } } } },
+          ],
         },
       },
     })

@@ -64,9 +64,10 @@ export function RegeneratePathwaysForm({
 
         <PopupBody>
           <p className="text-sm text-text-light mb-4">
-            Les créneaux vides des parcours de ces modèles démarrant à partir de
-            la date choisie seront régénérés selon le modèle théorique actuel.
-            Les créneaux ayant déjà des rendez-vous sont conservés.
+            À partir de la date choisie, les créneaux vides des parcours de ces
+            modèles, y compris ceux déjà commencés, seront régénérés selon le
+            modèle théorique actuel. Les créneaux ayant déjà des rendez-vous et
+            ceux antérieurs à la date sont conservés.
           </p>
 
           <div className="flex flex-col gap-4 max-w-md">
