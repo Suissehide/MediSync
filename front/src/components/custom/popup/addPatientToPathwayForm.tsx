@@ -52,12 +52,9 @@ export function AddPatientToPathwayForm({
   return (
     <Popup modal open={open} onOpenChange={handleOpenChange}>
       <PopupTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          size="default"
-          className="font-normal leading-tight"
-        >
+        {/* Seule action primaire de l'en-tete de la fiche (handoff « fiche patient, apercu
+            general ») : inscrire a un parcours est ce qu'on vient y faire. */}
+        <Button type="button" size="default" className="leading-tight">
           <CalendarPlus className="w-4 h-4" />
           Inscrire à un parcours
         </Button>

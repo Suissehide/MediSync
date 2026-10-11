@@ -1,10 +1,9 @@
 import dayjs from 'dayjs'
 import {
   AlertTriangle,
-  CalendarClock,
-  EyeIcon,
+  ChevronRight,
+  Eye,
   GripVertical,
-  Route,
   Siren,
   X,
 } from 'lucide-react'
@@ -13,8 +12,15 @@ import { useCallback, useMemo, useState } from 'react'
 
 import { PatientApi } from '../../../../api/patient.api.ts'
 import {
+  ecartEnJours,
+  getPathwayProgress,
   getPathwayStartDates,
   getSlotDisplayRange,
+  groupSlotsByDay,
+  jourRelatif,
+  MAX_JOURS_RELATIFS,
+  type PathwayProgress,
+  splitPatientSlots,
 } from '../../../../libs/slotAvailability.ts'
 import {
   usePatientMutations,
@@ -27,75 +33,89 @@ import type {
   PatientPathway,
 } from '../../../../types/patient.ts'
 import type { Slot } from '../../../../types/slot.ts'
-import { Etiquette } from '../../../table/etiquette.tsx'
-import { ColorLegend } from '../../colorLegend.tsx'
-import { PastillePresence } from '../../pastillePresence.tsx'
+import { Button } from '../../../ui/button.tsx'
+import { StatutPresence } from '../../pastillePresence.tsx'
 import { ConfirmDeleteForm } from '../../popup/confirmDeleteForm.tsx'
 import AppointmentSheet from '../../sheet/appointmentSheet.tsx'
 
 interface OverviewPatientProps {
   patient?: Patient
+  /** Bascule vers l'onglet Planning : il appartient à la fiche, pas à l'aperçu. */
+  onOpenPlanning?: () => void
 }
 
-function AppointmentCard({
+/** Journées montrées avant « Voir plus de rendez-vous ». */
+const JOURS_VISIBLES = 3
+
+const HORS_PARCOURS = '#cbd5e1'
+
+type Parcours = { nom: string; couleur: string }
+
+const majuscule = (texte: string) => texte.replace(/^./, (c) => c.toUpperCase())
+
+function ProchainRendezVous({
   slot,
   patientID,
+  parcours,
   onOpen,
 }: {
   slot: Slot
   patientID?: string
+  parcours: Parcours | null
   onOpen: (slot: Slot) => void
 }) {
-  const color = slot.slotTemplate?.color ?? '#6b7280'
-  const thematic = slot.slotTemplate?.thematic || 'Rendez-vous'
-  const location = slot.slotTemplate?.location?.name
-  const soignant = slot.slotTemplate?.soignants?.length
-    ? slot.slotTemplate.soignants.map((s) => s.name).join(', ')
-    : undefined
-
-  // Sur un créneau individuel, l'horaire affiché est celui du rendez-vous du
-  // patient, pas celui du créneau entier.
   const { start, end } = getSlotDisplayRange(slot, patientID)
-  const formattedDate = dayjs
-    .utc(start)
-    .format('dddd D MMMM YYYY [de] HH:mm')
-    .replace(/^./, (c) => c.toUpperCase())
-  const endTime = dayjs.utc(end).format('HH:mm')
-  const status = slot.appointments
-    ?.flatMap((a) => a.appointmentPatients ?? [])
-    .find((ap) => ap.patient.id === patientID)?.status
+  const debut = dayjs.utc(start)
+  const lieu = slot.slotTemplate?.location?.name
+  const soignants = slot.slotTemplate?.soignants
+  const intitule = soignants?.length
+    ? soignants.map((s) => s.name).join(', ')
+    : slot.slotTemplate?.thematic || 'Rendez-vous'
 
   return (
-    <button
-      type="button"
-      onClick={() => onOpen(slot)}
-      className="cursor-pointer flex items-center gap-3 rounded-lg px-3 py-3 border border-border text-left transition-colors hover:border-text-light"
-      style={{ backgroundColor: `${color}18` }}
-    >
-      <div
-        className="w-1 self-stretch rounded-full flex-shrink-0"
-        style={{ backgroundColor: color }}
-      />
-      <div className="flex flex-col gap-1 min-w-0 flex-1">
-        <span className="font-medium text-sm truncate flex items-center gap-2">
-          <PastillePresence status={status} />
-          {soignant ?? thematic}
-          {location && (
-            <span className="text-text-light font-normal">
-              {' · '}
-              {location}
-            </span>
-          )}
+    <div className="flex items-center gap-5 px-5 py-4 rounded-[10px] border border-blue-200 bg-blue-50">
+      <div className="flex flex-col items-center justify-center w-16 h-16 flex-shrink-0 rounded-[10px] bg-background border border-blue-200">
+        <span className="text-[11px] font-semibold uppercase text-primary">
+          {debut.format('ddd')}
         </span>
-        <span className="text-text-sidebar text-xs">
-          {formattedDate} – {endTime}
+        <span className="text-2xl font-bold leading-none text-foreground">
+          {debut.format('D')}
+        </span>
+        <span className="text-[11px] text-text-light">
+          {debut.format('MMM')}
         </span>
       </div>
-      <EyeIcon
-        className="h-4 w-4 flex-shrink-0 text-text-light"
-        aria-label="Voir le rendez-vous"
-      />
-    </button>
+
+      <div className="flex flex-col gap-1 flex-1 min-w-0">
+        <span className="text-xs font-semibold uppercase tracking-wide text-primary">
+          Prochain rendez-vous · {jourRelatif(ecartEnJours(start))}
+        </span>
+        <span className="text-[17px] font-semibold text-foreground truncate">
+          {debut.format('HH:mm')} – {dayjs.utc(end).format('HH:mm')} ·{' '}
+          {intitule}
+        </span>
+        <span className="flex items-center gap-2 text-sm text-muted-foreground min-w-0">
+          <span
+            aria-hidden="true"
+            className="size-2.5 flex-shrink-0 rounded-sm"
+            style={{ backgroundColor: parcours?.couleur ?? HORS_PARCOURS }}
+          />
+          <span className="truncate">
+            {parcours?.nom ?? 'Hors parcours'}
+            {lieu && ` · ${lieu}`}
+          </span>
+        </span>
+      </div>
+
+      <Button
+        variant="outline"
+        onClick={() => onOpen(slot)}
+        className="flex-shrink-0 border-blue-200 bg-background text-primary"
+      >
+        <Eye className="w-4 h-4" />
+        Ouvrir
+      </Button>
+    </div>
   )
 }
 
@@ -131,9 +151,10 @@ function EnrollmentIssueRow({
   )
 }
 
-function PathwayCard({
+function PathwayRow({
   pathway,
   startDate,
+  progress,
   index,
   isDragged,
   onDragStart,
@@ -143,6 +164,7 @@ function PathwayCard({
 }: {
   pathway: PatientPathway
   startDate: string
+  progress?: PathwayProgress
   index: number
   isDragged: boolean
   onDragStart: (index: number) => void
@@ -150,13 +172,9 @@ function PathwayCard({
   onDragEnd: () => void
   onRemove: (pathwayID: string) => void
 }) {
-  const color = pathway.templateColor ?? '#6b7280'
-  const formattedDate = dayjs
-    .utc(startDate)
-    .format('D MMMM YYYY')
-    .replace(/^./, (c) => c.toUpperCase())
-
+  const couleur = pathway.templateColor ?? HORS_PARCOURS
   const label = pathway.templateMainTag ?? pathway.templateName ?? 'Parcours'
+  const debut = majuscule(dayjs.utc(startDate).format('D MMM YYYY'))
 
   return (
     <li
@@ -164,21 +182,51 @@ function PathwayCard({
       onDragStart={() => onDragStart(index)}
       onDragOver={(e) => onDragOver(e, index)}
       onDragEnd={onDragEnd}
-      className={`flex items-center gap-2 rounded-lg px-3 py-2 border border-border bg-white transition-all ${
+      className={`grid grid-cols-[16px_minmax(0,1fr)_28px] gap-3 items-center p-3.5 border-b border-muted last:border-b-0 transition-opacity ${
         isDragged ? 'opacity-50' : 'opacity-100'
       }`}
     >
-      <GripVertical className="h-4 w-4 text-text-light flex-shrink-0 cursor-move" />
-      <div className="flex flex-wrap gap-1 flex-1 min-w-0">
-        <Etiquette couleur={color}>{label}</Etiquette>
+      <GripVertical className="h-4 w-4 text-border-dark cursor-grab" />
+
+      <div className="flex flex-col gap-2 min-w-0">
+        <div className="flex items-center justify-between gap-2.5">
+          <span className="flex items-center gap-2 min-w-0">
+            <span
+              aria-hidden="true"
+              className="size-2.5 flex-shrink-0 rounded-sm"
+              style={{ backgroundColor: couleur }}
+            />
+            <span className="text-[15px] font-semibold text-foreground truncate">
+              {label}
+            </span>
+          </span>
+          <span className="flex-shrink-0 text-[13px] text-muted-foreground">
+            Début {debut}
+          </span>
+        </div>
+
+        {progress && (
+          <div className="flex items-center gap-2.5">
+            <span className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+              <span
+                className="block h-full rounded-full"
+                style={{
+                  backgroundColor: couleur,
+                  width: `${progress.total ? (progress.done / progress.total) * 100 : 0}%`,
+                }}
+              />
+            </span>
+            <span className="flex-shrink-0 text-xs text-text-light tabular-nums">
+              {progress.done} / {progress.total} réalisés
+            </span>
+          </div>
+        )}
       </div>
-      <span className="text-xs text-text-sidebar flex-shrink-0">
-        Début : {formattedDate}
-      </span>
+
       <button
         type="button"
         onClick={() => onRemove(pathway.pathwayID)}
-        className="cursor-pointer flex-shrink-0 rounded p-1 text-text-light hover:bg-destructive/10 hover:text-destructive transition-colors"
+        className="cursor-pointer size-7 flex items-center justify-center rounded-md text-text-light hover:bg-red-50 hover:text-destructive transition-colors"
         aria-label="Retirer du parcours"
       >
         <X className="h-3.5 w-3.5" />
@@ -187,7 +235,71 @@ function PathwayCard({
   )
 }
 
-export default function OverviewPatient({ patient }: OverviewPatientProps) {
+function AppointmentRow({
+  slot,
+  patientID,
+  parcours,
+  aVenir,
+  onOpen,
+}: {
+  slot: Slot
+  patientID?: string
+  parcours: Parcours | null
+  aVenir: boolean
+  onOpen: (slot: Slot) => void
+}) {
+  const { start, end } = getSlotDisplayRange(slot, patientID)
+  const lieu = slot.slotTemplate?.location?.name
+  const soignants = slot.slotTemplate?.soignants
+  const intitule = soignants?.length
+    ? soignants.map((s) => s.name).join(', ')
+    : slot.slotTemplate?.thematic || 'Rendez-vous'
+  const status = slot.appointments
+    ?.flatMap((a) => a.appointmentPatients ?? [])
+    .find((ap) => ap.patient.id === patientID)?.status
+
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(slot)}
+      className="cursor-pointer grid grid-cols-[92px_4px_minmax(0,1fr)_auto_28px] gap-3 items-center py-2.5 pl-4 pr-3 border-b border-muted last:border-b-0 text-left hover:bg-input transition-colors"
+    >
+      <span className="text-sm font-semibold text-foreground tabular-nums">
+        {dayjs.utc(start).format('HH:mm')} – {dayjs.utc(end).format('HH:mm')}
+      </span>
+
+      <span
+        aria-hidden="true"
+        className="w-1 h-8 rounded-full"
+        style={{ backgroundColor: parcours?.couleur ?? HORS_PARCOURS }}
+      />
+
+      <span className="flex flex-col gap-0.5 min-w-0">
+        <span className="text-sm font-medium text-foreground truncate">
+          {intitule}
+          {lieu && (
+            <span className="font-normal text-text-light"> · {lieu}</span>
+          )}
+        </span>
+        <span className="text-xs text-text-light truncate">
+          {parcours?.nom ?? 'Hors parcours'}
+        </span>
+      </span>
+
+      <StatutPresence status={status} aVenir={aVenir} />
+
+      <ChevronRight
+        className="h-4 w-4 text-text-sidebar justify-self-end"
+        aria-hidden="true"
+      />
+    </button>
+  )
+}
+
+export default function OverviewPatient({
+  patient,
+  onOpenPlanning,
+}: OverviewPatientProps) {
   const { slots } = usePatientSlotsQuery(patient?.id)
   const { dismissEnrollmentIssue, removeFromPathway, reorderPathways } =
     usePatientMutations()
@@ -195,44 +307,58 @@ export default function OverviewPatient({ patient }: OverviewPatientProps) {
     patient?.id ?? '',
   )
 
-  const patientSlots = useMemo(() => {
-    if (!slots || !patient) {
-      return { upcoming: [], past: [] }
-    }
-
-    const now = dayjs()
-    // Le classement suit l'horaire affiché : sur un créneau individuel, celui
-    // du rendez-vous du patient et non celui du créneau entier.
-    const filtered = slots
-      .filter((slot) =>
-        slot.appointments?.some((appointment) =>
-          appointment.appointmentPatients?.some(
-            (ap) => ap.patient.id === patient.id,
-          ),
-        ),
-      )
-      .map((slot) => ({
-        slot,
-        start: dayjs(getSlotDisplayRange(slot, patient.id).start),
-      }))
-
-    const upcoming = filtered
-      .filter((s) => s.start.isAfter(now))
-      .sort((a, b) => a.start.diff(b.start))
-      .map((s) => s.slot)
-
-    const past = filtered
-      .filter((s) => s.start.isBefore(now))
-      .sort((a, b) => b.start.diff(a.start))
-      .map((s) => s.slot)
-
-    return { upcoming, past }
-  }, [slots, patient])
+  const patientSlots = useMemo(
+    () => splitPatientSlots(slots, patient?.id),
+    [slots, patient],
+  )
 
   const pathwayStartDates = useMemo(
     () => getPathwayStartDates(slots, patient?.id),
     [slots, patient],
   )
+
+  const pathwayProgress = useMemo(
+    () => getPathwayProgress(slots, patient?.id),
+    [slots, patient],
+  )
+
+  // Nom et couleur du parcours d'un créneau : les parcours DU PATIENT les portent déjà, le
+  // créneau ne porte que l'identifiant.
+  const parcoursParID = useMemo(
+    () =>
+      new Map<string, Parcours>(
+        patientPathways.map((pathway) => [
+          pathway.pathwayID,
+          {
+            nom: pathway.templateMainTag ?? pathway.templateName ?? 'Parcours',
+            couleur: pathway.templateColor ?? HORS_PARCOURS,
+          },
+        ]),
+      ),
+    [patientPathways],
+  )
+
+  const parcoursDuSlot = useCallback(
+    (slot: Slot) => parcoursParID.get(slot.pathway?.id ?? '') ?? null,
+    [parcoursParID],
+  )
+
+  const [onglet, setOnglet] = useState<'upcoming' | 'past'>('upcoming')
+  const [toutDeplie, setToutDeplie] = useState(false)
+
+  const liste =
+    onglet === 'upcoming' ? patientSlots.upcoming : patientSlots.past
+  const jours = useMemo(
+    () => groupSlotsByDay(liste, patient?.id),
+    [liste, patient],
+  )
+  const joursAffiches = toutDeplie ? jours : jours.slice(0, JOURS_VISIBLES)
+  const resteAVoir = jours.length > joursAffiches.length
+
+  const changerOnglet = (prochain: 'upcoming' | 'past') => {
+    setOnglet(prochain)
+    setToutDeplie(false)
+  }
 
   const [removeTarget, setRemoveTarget] = useState<{
     pathwayID: string
@@ -325,11 +451,13 @@ export default function OverviewPatient({ patient }: OverviewPatientProps) {
     dismissEnrollmentIssue.mutate({ patientID: patient.id, issueID: issue.id })
   }
 
+  const prochain = patientSlots.upcoming[0]
+
   return (
     <div className="mt-4">
-      <div className="relative h-fit flex-1 flex flex-col gap-4">
+      <div className="relative h-fit flex-1 flex flex-col gap-5">
         {enrollmentIssues && enrollmentIssues.length > 0 && (
-          <>
+          <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
               <Siren className="h-4 w-4 flex-shrink-0" />
               <h4 className="text-sm font-semibold text-text-dark">
@@ -348,39 +476,147 @@ export default function OverviewPatient({ patient }: OverviewPatientProps) {
                 />
               ))}
             </div>
-          </>
+          </div>
         )}
 
-        {patientPathways.length > 0 && (
-          <>
-            <div className="flex items-center gap-2">
-              <Route className="h-4 w-4 flex-shrink-0" />
-              <h4 className="text-sm font-semibold text-text-dark">
-                Parcours ({patientPathways.length})
+        {prochain && (
+          <ProchainRendezVous
+            slot={prochain}
+            patientID={patient?.id}
+            parcours={parcoursDuSlot(prochain)}
+            onOpen={handleOpenAppointment}
+          />
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-[5fr_7fr] gap-6 items-start">
+          <section className="flex flex-col gap-3 min-w-0">
+            <div className="flex items-baseline justify-between gap-3">
+              <h4 className="text-base font-semibold text-foreground">
+                Parcours{' '}
+                <span className="font-normal text-text-light">
+                  ({patientPathways.length})
+                </span>
               </h4>
-              <div className="flex-1 border-t border-border" />
+              {patientPathways.length > 1 && (
+                <span className="text-xs text-text-light">
+                  Glisser pour changer la priorité
+                </span>
+              )}
             </div>
 
-            <ul className="flex flex-col gap-1.5">
-              {patientPathways.map((pathway, index) => (
-                <PathwayCard
-                  key={pathway.pathwayID}
-                  pathway={pathway}
-                  startDate={
-                    pathwayStartDates.get(pathway.pathwayID) ??
-                    pathway.startDate
-                  }
-                  index={index}
-                  isDragged={draggedIndex === index}
-                  onDragStart={handleDragStart}
-                  onDragOver={handleDragOver}
-                  onDragEnd={handleDragEnd}
-                  onRemove={handleRemoveClick}
-                />
-              ))}
+            <ul className="flex flex-col border border-border rounded-[10px] overflow-hidden">
+              {patientPathways.length > 0 ? (
+                patientPathways.map((pathway, index) => (
+                  <PathwayRow
+                    key={pathway.pathwayID}
+                    pathway={pathway}
+                    startDate={
+                      pathwayStartDates.get(pathway.pathwayID) ??
+                      pathway.startDate
+                    }
+                    progress={pathwayProgress.get(pathway.pathwayID)}
+                    index={index}
+                    isDragged={draggedIndex === index}
+                    onDragStart={handleDragStart}
+                    onDragOver={handleDragOver}
+                    onDragEnd={handleDragEnd}
+                    onRemove={handleRemoveClick}
+                  />
+                ))
+              ) : (
+                <li className="p-5 text-sm text-text-light">
+                  Aucun parcours. Inscrivez le patient à un parcours pour
+                  planifier ses rendez-vous.
+                </li>
+              )}
             </ul>
-          </>
-        )}
+          </section>
+
+          <section className="flex flex-col gap-3 min-w-0">
+            <div className="flex items-center justify-between gap-3">
+              <h4 className="text-base font-semibold text-foreground">
+                Rendez-vous
+              </h4>
+              <div
+                role="tablist"
+                aria-label="Rendez-vous à venir ou passés"
+                className="flex gap-0.5 p-[3px] bg-muted rounded-lg"
+              >
+                {(
+                  [
+                    ['upcoming', 'À venir', patientSlots.upcoming.length],
+                    ['past', 'Passés', patientSlots.past.length],
+                  ] as const
+                ).map(([valeur, label, total]) => (
+                  <button
+                    key={valeur}
+                    type="button"
+                    role="tab"
+                    aria-selected={onglet === valeur}
+                    onClick={() => changerOnglet(valeur)}
+                    className={`cursor-pointer h-7 px-3 rounded-md text-[13px] transition-colors ${
+                      onglet === valeur
+                        ? 'bg-background font-semibold text-foreground shadow-sm'
+                        : 'text-text-light'
+                    }`}
+                  >
+                    {label} · {total}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-col border border-border rounded-[10px] overflow-hidden">
+              {joursAffiches.map(({ day, slots: slotsDuJour }) => {
+                const ecart = ecartEnJours(day)
+                return (
+                  <div key={day} className="flex flex-col">
+                    <div className="flex items-center gap-2 px-4 py-2 bg-input border-b border-border text-[13px] font-semibold text-text-dark">
+                      {majuscule(dayjs.utc(day).format('dddd D MMMM'))}
+                      {Math.abs(ecart) <= MAX_JOURS_RELATIFS && (
+                        <span className="font-normal text-text-light">
+                          · {jourRelatif(ecart)}
+                        </span>
+                      )}
+                    </div>
+                    {slotsDuJour.map((slot) => (
+                      <AppointmentRow
+                        key={slot.id}
+                        slot={slot}
+                        patientID={patient?.id}
+                        parcours={parcoursDuSlot(slot)}
+                        aVenir={onglet === 'upcoming'}
+                        onOpen={handleOpenAppointment}
+                      />
+                    ))}
+                  </div>
+                )
+              })}
+
+              {jours.length === 0 && (
+                <p className="p-5 text-sm text-text-light">
+                  {onglet === 'upcoming'
+                    ? 'Aucun rendez-vous à venir'
+                    : 'Aucun rendez-vous passé'}
+                </p>
+              )}
+
+              {jours.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    resteAVoir ? setToutDeplie(true) : onOpenPlanning?.()
+                  }
+                  className="cursor-pointer h-11 text-sm font-semibold text-primary hover:bg-input transition-colors"
+                >
+                  {resteAVoir
+                    ? 'Voir plus de rendez-vous'
+                    : 'Ouvrir le planning complet'}
+                </button>
+              )}
+            </div>
+          </section>
+        </div>
 
         <ConfirmDeleteForm
           open={removeTarget !== null}
@@ -398,63 +634,6 @@ export default function OverviewPatient({ patient }: OverviewPatientProps) {
               : ''
           }
         />
-
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-2">
-            <CalendarClock className="h-4 w-4 flex-shrink-0" />
-            <h4 className="text-sm font-semibold text-text-dark">
-              Rendez-vous
-            </h4>
-            <div className="flex-1 border-t border-border" />
-            <ColorLegend />
-          </div>
-
-          <div className="flex flex-col gap-3">
-            <div className="bg-input rounded-lg p-4 flex flex-col gap-4">
-              <h5 className="text-xs text-text-light uppercase font-semibold tracking-wide">
-                À venir ({patientSlots.upcoming.length})
-              </h5>
-              <div className="flex flex-col gap-1.5 max-h-64 overflow-y-auto">
-                {patientSlots.upcoming.length > 0 ? (
-                  patientSlots.upcoming.map((slot) => (
-                    <AppointmentCard
-                      key={slot.id}
-                      slot={slot}
-                      patientID={patient?.id}
-                      onOpen={handleOpenAppointment}
-                    />
-                  ))
-                ) : (
-                  <p className="text-text-sidebar text-sm py-2">
-                    Aucun rendez-vous à venir
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="bg-input rounded-lg p-4 flex flex-col gap-4">
-              <h5 className="text-xs text-text-light uppercase font-semibold tracking-wide">
-                Passés ({patientSlots.past.length})
-              </h5>
-              <div className="flex flex-col gap-1.5 max-h-64 overflow-y-auto">
-                {patientSlots.past.length > 0 ? (
-                  patientSlots.past.map((slot) => (
-                    <AppointmentCard
-                      key={slot.id}
-                      slot={slot}
-                      patientID={patient?.id}
-                      onOpen={handleOpenAppointment}
-                    />
-                  ))
-                ) : (
-                  <p className="text-text-sidebar text-sm py-2">
-                    Aucun rendez-vous passé
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
       <AppointmentSheet

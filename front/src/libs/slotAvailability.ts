@@ -202,3 +202,125 @@ export const getPathwayStartDates = (
 
   return startDates
 }
+
+/**
+ * Rendez-vous d'un patient, séparés entre à venir et passés. Le classement suit
+ * l'horaire affiché : sur un créneau individuel, celui du rendez-vous du
+ * patient et non celui du créneau entier.
+ *
+ * Partagé entre l'aperçu (qui les liste) et l'en-tête de la fiche (qui n'en
+ * compte que les à venir) : deux comptes dérivés séparément auraient fini par
+ * se contredire.
+ */
+export const splitPatientSlots = (
+  slots: Slot[] | undefined,
+  patientID?: string,
+): { upcoming: Slot[]; past: Slot[] } => {
+  if (!slots || !patientID) {
+    return { upcoming: [], past: [] }
+  }
+
+  const now = dayjs()
+  const dated = slots
+    .filter((slot) => isPatientBookedOnSlot(slot, patientID))
+    .map((slot) => ({
+      slot,
+      start: dayjs(getSlotDisplayRange(slot, patientID).start),
+    }))
+
+  return {
+    upcoming: dated
+      .filter((s) => s.start.isAfter(now))
+      .sort((a, b) => a.start.diff(b.start))
+      .map((s) => s.slot),
+    past: dated
+      .filter((s) => s.start.isBefore(now))
+      .sort((a, b) => b.start.diff(a.start))
+      .map((s) => s.slot),
+  }
+}
+
+export type PathwayProgress = { done: number; total: number }
+
+/**
+ * Avancement de chaque parcours POUR UN PATIENT : ses présences notées sur
+ * `done`, tous ses rendez-vous du parcours sur `total`, indexés par parcours.
+ *
+ * Dérivé des créneaux déjà chargés (`usePatientSlotsQuery` les rend TOUS, sans
+ * fenêtre de dates) plutôt que demandé au back : le lien créneau → parcours est
+ * celui que `getPathwayStartDates` utilise déjà. Un parcours sans aucun créneau
+ * est absent de la carte, pas à zéro — « 0 / 0 réalisés » dirait un avancement
+ * là où il n'y a rien à mesurer.
+ */
+export const getPathwayProgress = (
+  slots: Slot[] | undefined,
+  patientID?: string,
+): Map<string, PathwayProgress> => {
+  const progress = new Map<string, PathwayProgress>()
+  if (!slots || !patientID) {
+    return progress
+  }
+
+  for (const slot of slots) {
+    const pathwayID = slot.pathway?.id
+    if (!pathwayID || !isPatientBookedOnSlot(slot, patientID)) {
+      continue
+    }
+    const current = progress.get(pathwayID) ?? { done: 0, total: 0 }
+    const present = (slot.appointments ?? [])
+      .flatMap((appointment) => appointment.appointmentPatients ?? [])
+      .some((ap) => ap.patient.id === patientID && ap.status === 'yes')
+    progress.set(pathwayID, {
+      done: current.done + (present ? 1 : 0),
+      total: current.total + 1,
+    })
+  }
+
+  return progress
+}
+
+/**
+ * Créneaux déjà triés, regroupés par journée affichée (UTC, comme tout
+ * l'affichage des horaires ici). Les groupes gardent l'ordre reçu.
+ */
+export const groupSlotsByDay = (
+  slots: Slot[],
+  patientID?: string,
+): { day: string; slots: Slot[] }[] => {
+  const days: { day: string; slots: Slot[] }[] = []
+  for (const slot of slots) {
+    const day = dayjs
+      .utc(getSlotDisplayRange(slot, patientID).start)
+      .format('YYYY-MM-DD')
+    const last = days.at(-1)
+    if (last?.day === day) {
+      last.slots.push(slot)
+    } else {
+      days.push({ day, slots: [slot] })
+    }
+  }
+  return days
+}
+
+/** Au-delà, un écart relatif (« dans 23 jours ») n'aide plus personne. */
+export const MAX_JOURS_RELATIFS = 14
+
+/** Écart en journées entières (UTC) entre une date et maintenant. */
+export const ecartEnJours = (
+  date: string,
+  now: dayjs.ConfigType = dayjs(),
+): number =>
+  dayjs.utc(date).startOf('day').diff(dayjs.utc(now).startOf('day'), 'day')
+
+export const jourRelatif = (ecart: number): string => {
+  if (ecart === 0) {
+    return "aujourd'hui"
+  }
+  if (ecart === 1) {
+    return 'demain'
+  }
+  if (ecart === -1) {
+    return 'hier'
+  }
+  return ecart > 0 ? `dans ${ecart} jours` : `il y a ${-ecart} jours`
+}
