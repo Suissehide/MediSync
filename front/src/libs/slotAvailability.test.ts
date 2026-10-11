@@ -177,54 +177,50 @@ describe('splitPatientSlots', () => {
 })
 
 describe('getPathwayProgress', () => {
-  const avec = (pathwayID: string, jour: string, status?: string) =>
-    slot({
+  const avec = (pathwayID: string, decalage: number, status?: string) => {
+    const { start, end } = dansNJours(decalage)
+    return slot({
       pathwayID,
-      start: `${jour}T09:00:00.000Z`,
-      end: `${jour}T10:00:00.000Z`,
-      appointment: {
-        start: `${jour}T09:00:00.000Z`,
-        end: `${jour}T10:00:00.000Z`,
-        patientID: 'p1',
-        status,
-      },
+      start,
+      end,
+      appointment: { start, end, patientID: 'p1', status },
     })
+  }
 
   it('compte les présences notées sur le total des rendez-vous du parcours', () => {
     const progress = getPathwayProgress(
-      [
-        avec('ri', '2026-09-28', 'yes'),
-        avec('ri', '2026-10-05', 'no'),
-        avec('ri', '2026-10-12'),
-        avec('ssr', '2026-10-14', 'yes'),
-      ],
+      [avec('ri', -13, 'yes'), avec('ri', -6, 'no'), avec('ri', 1)],
       'p1',
     )
 
     // « Non venu » et « non renseigné » comptent dans le total, jamais dans les réalisés.
     expect(progress.get('ri')).toEqual({ done: 1, total: 3 })
-    expect(progress.get('ssr')).toEqual({ done: 1, total: 1 })
+  })
+
+  it('ne compte pas comme réalisé un rendez-vous À VENIR déjà noté présent', () => {
+    // La base en porte (service Cardiologie) : « 1 / 1 réalisés » s'affichait sur un parcours qui
+    // commence le mois suivant.
+    const progress = getPathwayProgress([avec('psy', 23, 'yes')], 'p1')
+
+    expect(progress.get('psy')).toEqual({ done: 0, total: 1 })
   })
 
   it("n'invente pas un parcours à zéro : un parcours sans créneau est absent de la carte", () => {
-    const progress = getPathwayProgress([avec('ri', '2026-10-05', 'yes')], 'p1')
+    const progress = getPathwayProgress([avec('ri', -6, 'yes')], 'p1')
 
     expect(progress.has('psy')).toBe(false)
     expect(getPathwayProgress(undefined, 'p1').size).toBe(0)
   })
 
   it("ignore la présence d'un AUTRE patient sur le même créneau collectif", () => {
+    const passe = dansNJours(-6)
     const collectif = {
-      ...slot({
-        pathwayID: 'ri',
-        start: '2026-10-05T09:00:00.000Z',
-        end: '2026-10-05T10:00:00.000Z',
-      }),
+      ...slot({ pathwayID: 'ri', ...passe }),
       appointments: [
         {
           id: 'apt',
-          startDate: '2026-10-05T09:00:00.000Z',
-          endDate: '2026-10-05T10:00:00.000Z',
+          startDate: passe.start,
+          endDate: passe.end,
           appointmentPatients: [
             { patient: { id: 'autre' }, status: 'yes' },
             { patient: { id: 'p1' }, status: 'no' },
