@@ -11,7 +11,7 @@ import type { Slot } from '../../../../types/slot.ts'
 export type WeekData = {
   weekLabel: string
   weekStart: dayjs.Dayjs
-  /** Bornes de l'axe horaire, arrondies à l'heure (minutes depuis minuit). */
+  /** Bornes de l'axe horaire (minutes depuis minuit). */
   startMinute: number
   endMinute: number
   days: PlacedSlot[][] // index 0=lundi..4=vendredi

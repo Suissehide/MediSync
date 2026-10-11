@@ -3,7 +3,7 @@ import utc from 'dayjs/plugin/utc'
 import { describe, expect, it } from 'vitest'
 
 import type { Slot } from '../types/slot.ts'
-import { layoutDay } from './pdfTimeGrid.ts'
+import { innerHours, layoutDay } from './pdfTimeGrid.ts'
 
 dayjs.extend(utc)
 
@@ -36,5 +36,12 @@ describe('layoutDay', () => {
       ['c', 0, 2],
       ['d', 0, 1],
     ])
+  })
+})
+
+describe('innerHours', () => {
+  it('ne garde que les heures pleines strictement dans l’axe', () => {
+    expect(innerHours(8 * 60 + 30, 12 * 60 + 15)).toEqual([540, 600, 660, 720])
+    expect(innerHours(9 * 60, 11 * 60)).toEqual([600])
   })
 })

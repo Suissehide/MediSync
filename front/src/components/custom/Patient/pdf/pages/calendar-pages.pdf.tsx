@@ -3,6 +3,7 @@ import { Page, StyleSheet, Text, View } from '@react-pdf/renderer'
 import {
   formatMinute,
   formatTimeRange,
+  innerHours,
   type PlacedSlot,
 } from '../../../../../libs/pdfTimeGrid.ts'
 import type { Slot } from '../../../../../types/slot.ts'
@@ -176,10 +177,7 @@ function WeekBlock({ weekData }: { weekData: WeekData }) {
   const { startMinute, endMinute } = weekData
   const bodyHeight = ((endMinute - startMinute) / 60) * HOUR_HEIGHT
   const topOf = (minute: number) => ((minute - startMinute) / 60) * HOUR_HEIGHT
-  const hours = Array.from(
-    { length: (endMinute - startMinute) / 60 + 1 },
-    (_, index) => startMinute + index * 60,
-  )
+  const hours = innerHours(startMinute, endMinute)
 
   return (
     // Sans `wrap={false}`, react-pdf coupe volontiers la page juste après la
@@ -202,12 +200,18 @@ function WeekBlock({ weekData }: { weekData: WeekData }) {
 
       <View style={[styles.timeBody, { height: bodyHeight }]}>
         <View style={styles.timeAxis}>
-          {hours.slice(1, -1).map((minute) => (
+          {hours.map((minute) => (
             <Text
               key={minute}
               style={[
                 styles.timeLabelText,
-                { top: topOf(minute) - TIME_LABEL_SIZE / 2 },
+                // Centré sur son trait, sans déborder de l'axe.
+                {
+                  top: Math.min(
+                    Math.max(topOf(minute) - TIME_LABEL_SIZE / 2, 1),
+                    bodyHeight - TIME_LABEL_SIZE - 3,
+                  ),
+                },
               ]}
             >
               {formatMinute(minute)}
@@ -216,7 +220,7 @@ function WeekBlock({ weekData }: { weekData: WeekData }) {
         </View>
         {weekData.days.map((day, dayIdx) => (
           <View key={DAY_NAMES[dayIdx]} style={styles.dayColumn}>
-            {hours.slice(1, -1).map((minute) => (
+            {hours.map((minute) => (
               <View
                 key={minute}
                 style={[styles.hourLine, { top: topOf(minute) }]}
