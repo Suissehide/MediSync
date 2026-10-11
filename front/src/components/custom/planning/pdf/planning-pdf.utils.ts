@@ -16,7 +16,7 @@ export type PlanningWeek = {
   weekLabel: string
   /** Semaine interdite : le service est fermé. */
   isClosed: boolean
-  /** Bornes de l'axe horaire, arrondies à l'heure (minutes depuis minuit). */
+  /** Bornes de l'axe horaire (minutes depuis minuit). */
   startMinute: number
   endMinute: number
   /** Index 0 = lundi … 4 = vendredi. */

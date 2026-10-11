@@ -4,6 +4,7 @@ import { getContrastTextColor } from '../../../../libs/color.ts'
 import {
   formatMinute,
   formatTimeRange,
+  innerHours,
   type PlacedSlot,
 } from '../../../../libs/pdfTimeGrid.ts'
 import type { PlanningWeek } from './planning-pdf.utils.ts'
@@ -233,10 +234,7 @@ function WeekPage({ week }: { week: PlanningWeek }) {
   const minuteHeight =
     AVAILABLE_ROWS_HEIGHT / (week.endMinute - week.startMinute)
   const topOf = (minute: number) => (minute - week.startMinute) * minuteHeight
-  const hours = Array.from(
-    { length: (week.endMinute - week.startMinute) / 60 + 1 },
-    (_, index) => week.startMinute + index * 60,
-  )
+  const hours = innerHours(week.startMinute, week.endMinute)
 
   return (
     <Page size="A4" orientation="landscape" style={styles.page}>
@@ -277,12 +275,12 @@ function WeekPage({ week }: { week: PlanningWeek }) {
 
           <View style={styles.timeBody} wrap={false}>
             <View style={styles.timeAxis}>
-              {hours.map((minute, index) => (
+              {hours.map((minute) => (
                 <Text
                   key={minute}
                   style={[
                     styles.timeLabelText,
-                    // Le libellé est centré sur son trait, sauf aux deux bouts de l'axe.
+                    // Le libellé est centré sur son trait, sans déborder de l'axe.
                     {
                       top: Math.min(
                         Math.max(topOf(minute) - TIME_LABEL_SIZE / 2, 1),
@@ -291,15 +289,13 @@ function WeekPage({ week }: { week: PlanningWeek }) {
                     },
                   ]}
                 >
-                  {index === 0 || index === hours.length - 1
-                    ? ''
-                    : formatMinute(minute)}
+                  {formatMinute(minute)}
                 </Text>
               ))}
             </View>
             {week.days.map((day, dayIndex) => (
               <View key={DAY_NAMES[dayIndex]} style={styles.dayColumn}>
-                {hours.slice(1, -1).map((minute) => (
+                {hours.map((minute) => (
                   <View
                     key={minute}
                     style={[styles.hourLine, { top: topOf(minute) }]}

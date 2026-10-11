@@ -71,16 +71,29 @@ export function layoutDay(
   return sorted
 }
 
-/** Bornes de l'axe horaire, arrondies à l'heure : `[0, 0]` sans créneau. */
+/** Bornes de l'axe horaire : du premier début au dernier fin, `[0, 0]` sans créneau. */
 export function hourBounds(days: PlacedSlot[][]): [number, number] {
   const placed = days.flat()
   if (placed.length === 0) {
     return [0, 0]
   }
   return [
-    Math.floor(Math.min(...placed.map((p) => p.start)) / 60) * 60,
-    Math.ceil(Math.max(...placed.map((p) => p.end)) / 60) * 60,
+    Math.min(...placed.map((p) => p.start)),
+    Math.max(...placed.map((p) => p.end)),
   ]
+}
+
+/** Heures pleines strictement comprises dans l'axe : un trait et un libellé chacune. */
+export function innerHours(startMinute: number, endMinute: number): number[] {
+  const hours: number[] = []
+  for (
+    let minute = Math.floor(startMinute / 60) * 60 + 60;
+    minute < endMinute;
+    minute += 60
+  ) {
+    hours.push(minute)
+  }
+  return hours
 }
 
 export const formatMinute = (minute: number) =>
