@@ -282,8 +282,12 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
   }
 
   return (
-    <div className="flex-1 min-h-0 overflow-hidden flex flex-col gap-3 mt-4">
-      <div className="flex justify-end items-center gap-2">
+    <div className="relative flex-1 min-h-0 overflow-hidden flex flex-col mt-4">
+      {/* Pose sur la ligne de la barre d'outils du calendrier, qui lui reserve sa largeur a
+          droite (16rem de Select + 0.5rem) : FullCalendar rend cette barre lui-meme, et greffer
+          le Select dans son DOM — ou reecrire titre et navigation a la main — couterait bien plus
+          que ces deux regles. */}
+      <div className="absolute top-0 right-0 z-10 flex items-center gap-2">
         <div className="w-64">
           <Select
             searchable
@@ -300,7 +304,7 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-hidden [&_.fc_.fc-header-toolbar]:!p-0">
+      <div className="flex-1 min-h-0 overflow-hidden [&_.fc_.fc-header-toolbar]:!p-0 [&_.fc_.fc-header-toolbar]:!pr-[16.5rem]">
         {slots && (
           <Calendar
             key={selectedTag}
