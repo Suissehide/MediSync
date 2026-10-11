@@ -42,6 +42,7 @@ export function SettingsPageHeader({
             className="text-xs px-[7px] rounded-full bg-border text-[#475569] tabular-nums"
           >
             {deletedCount}
+            <span className="sr-only"> éléments supprimés</span>
           </span>
         </div>
         {action}

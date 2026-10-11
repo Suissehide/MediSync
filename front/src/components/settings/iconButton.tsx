@@ -3,22 +3,24 @@ import { ArrowDown, ArrowUp, Undo2 } from 'lucide-react'
 import { Button, type ButtonProps } from '@/components/ui/button.tsx'
 import { cn } from '@/libs/utils.ts'
 
-type IconButtonProps = Omit<
-  ButtonProps,
-  'variant' | 'size' | 'aria-label' | 'title'
-> & {
+type IconButtonProps = Omit<ButtonProps, 'variant' | 'size' | 'aria-label'> & {
   label: string
   danger?: boolean
 }
 
-// Bouton icône 32×32 : le libellé sert à la fois d'aria-label et de title.
-export function IconButton({ label, danger, ...props }: IconButtonProps) {
+// Bouton icône 32×32 : le libellé sert d'aria-label, et de title sauf surcharge.
+export function IconButton({
+  label,
+  danger,
+  title,
+  ...props
+}: IconButtonProps) {
   return (
     <Button
       variant={danger ? 'icon-danger' : 'icon'}
       size="icon-md"
       aria-label={label}
-      title={label}
+      title={title ?? label}
       {...props}
     />
   )

@@ -525,6 +525,9 @@ describe('un jeu', () => {
     await carteDuJeu('Grille ARS')
     await userEvent.click(screen.getByLabelText('Supprimés'))
     const ligne = await ligneIndicateur('Ancien indicateur')
+    expect(
+      ligne.queryByRole('button', { name: /^modifier$/i }),
+    ).not.toBeInTheDocument()
     await userEvent.click(ligne.getByRole('button', { name: /^restaurer$/i }))
     await waitFor(() =>
       expect(
@@ -585,7 +588,9 @@ describe('cartes', () => {
   it('le compteur « Supprimés » additionne jeux et indicateurs supprimés', async () => {
     monter(lecture())
     await carteDuJeu('Grille ARS')
-    expect(screen.getByTestId('compteur-supprimes')).toHaveTextContent(/^2$/)
+    expect(screen.getByTestId('compteur-supprimes')).toHaveTextContent(
+      /^2 éléments supprimés$/,
+    )
   })
 
   it('le pied « Ajouter un indicateur » est masqué en mode Supprimés', async () => {

@@ -76,20 +76,21 @@ function EditableTitle({
     <>
       <h2
         data-testid="carte-titre"
-        className={cn(
-          'truncate text-base font-semibold text-foreground',
-          onRename && 'cursor-pointer',
-        )}
-        tabIndex={onRename ? 0 : undefined}
-        onClick={() => onRename && start()}
-        onKeyDown={(e) => {
-          if (onRename && (e.key === 'Enter' || e.key === ' ')) {
-            e.preventDefault()
-            start()
-          }
-        }}
+        className="truncate text-base font-semibold text-foreground"
       >
-        {title}
+        {onRename ? (
+          // Hors tabulation : le crayon est le chemin clavier.
+          <button
+            type="button"
+            tabIndex={-1}
+            className="max-w-full truncate text-left cursor-pointer"
+            onClick={start}
+          >
+            {title}
+          </button>
+        ) : (
+          title
+        )}
       </h2>
       {onRename && (
         <button

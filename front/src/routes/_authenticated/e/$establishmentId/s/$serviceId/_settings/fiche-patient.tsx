@@ -180,22 +180,19 @@ function CategoryActions({
       {category.dateField === null && (
         <>
           <ActionSeparator />
-          <span
+          <IconButton
+            danger
+            label="Supprimer la catégorie"
             title={
               hasActiveFields
                 ? "Déplacez ou supprimez d'abord ses champs"
                 : undefined
             }
+            disabled={hasActiveFields || isCategoryMutationPending}
+            onClick={onDelete}
           >
-            <IconButton
-              danger
-              label="Supprimer la catégorie"
-              disabled={hasActiveFields || isCategoryMutationPending}
-              onClick={onDelete}
-            >
-              <Trash2 className="w-4 h-4" />
-            </IconButton>
-          </span>
+            <Trash2 className="w-4 h-4" />
+          </IconButton>
         </>
       )}
     </>
@@ -230,29 +227,13 @@ function FieldRowActions({
   onDelete,
   onRestore,
 }: Omit<FieldRowProps, 'canManage'>) {
-  const modifier = (
-    <ServiceFieldForm
-      categoryId={categoryId}
-      field={field}
-      trigger={
-        <IconButton label="Modifier">
-          <Pencil className="w-4 h-4 text-text-dark" />
-        </IconButton>
-      }
-    />
-  )
   if (field.archived) {
-    return (
-      <>
-        {modifier}
-        {categoryArchived ? (
-          <span title="Restaurez d'abord sa catégorie">
-            <RestoreButton disabled />
-          </span>
-        ) : (
-          <RestoreButton disabled={isUpdatePending} onClick={onRestore} />
-        )}
-      </>
+    return categoryArchived ? (
+      <span title="Restaurez d'abord sa catégorie">
+        <RestoreButton disabled />
+      </span>
+    ) : (
+      <RestoreButton disabled={isUpdatePending} onClick={onRestore} />
     )
   }
   return (
@@ -264,7 +245,15 @@ function FieldRowActions({
         onDown={onMoveDown}
       />
       <ActionSeparator />
-      {modifier}
+      <ServiceFieldForm
+        categoryId={categoryId}
+        field={field}
+        trigger={
+          <IconButton label="Modifier">
+            <Pencil className="w-4 h-4 text-text-dark" />
+          </IconButton>
+        }
+      />
       <IconButton danger label="Supprimer" onClick={onDelete}>
         <Trash2 className="w-4 h-4" />
       </IconButton>

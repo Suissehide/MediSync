@@ -453,29 +453,12 @@ function IndicateurLigne({
   onDelete: () => void
 }) {
   const NatureIcon = NATURE_ICONS[i.nature]
-  const modifier = (
-    <IndicatorForm
-      setId={jeu.id}
-      indicators={jeu.indicators}
-      catalog={catalog}
-      fields={fields}
-      indicator={i}
-      trigger={
-        <IconButton label="Modifier">
-          <Pencil className="w-4 h-4 text-text-dark" />
-        </IconButton>
-      }
-    />
-  )
   return (
     <SettingsRow
       deleted={i.archived}
       actions={
         i.archived ? (
-          <>
-            {modifier}
-            <RestoreButton disabled={restorePending} onClick={onRestore} />
-          </>
+          <RestoreButton disabled={restorePending} onClick={onRestore} />
         ) : (
           <>
             <MoveButtons
@@ -485,7 +468,18 @@ function IndicateurLigne({
               onDown={onDown}
             />
             <ActionSeparator />
-            {modifier}
+            <IndicatorForm
+              setId={jeu.id}
+              indicators={jeu.indicators}
+              catalog={catalog}
+              fields={fields}
+              indicator={i}
+              trigger={
+                <IconButton label="Modifier">
+                  <Pencil className="w-4 h-4 text-text-dark" />
+                </IconButton>
+              }
+            />
             <IconButton danger label="Supprimer" onClick={onDelete}>
               <Trash2 className="w-4 h-4" />
             </IconButton>

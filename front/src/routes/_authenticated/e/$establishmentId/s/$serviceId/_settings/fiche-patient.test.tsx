@@ -579,7 +579,16 @@ describe('ecran de configuration — blocs de catégories', () => {
     await userEvent.click(screen.getByLabelText('Supprimés'))
 
     expect(await screen.findByText('Comorbidité')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /^restaurer$/i })).toBeDisabled()
+    const restaurer = screen.getByRole('button', { name: /^restaurer$/i })
+    expect(restaurer).toBeDisabled()
+    // Bouton outline désactivé sans événements pointeur : le title porte sur l'élément englobant.
+    expect(restaurer.parentElement).toHaveAttribute(
+      'title',
+      "Restaurez d'abord sa catégorie",
+    )
+    expect(
+      screen.queryByRole('button', { name: /^modifier$/i }),
+    ).not.toBeInTheDocument()
   })
 
   it('le titre d’une catégorie se renomme en place : Entrée enregistre', async () => {
@@ -894,8 +903,7 @@ describe('ecran de configuration — blocs de catégories', () => {
       name: /^supprimer la catégorie$/i,
     })
     expect(supprimer).toBeDisabled()
-    // Le titre porte sur l'élément englobant : certains navigateurs ne le montrent pas sur un bouton désactivé.
-    expect(supprimer.parentElement).toHaveAttribute(
+    expect(supprimer).toHaveAttribute(
       'title',
       "Déplacez ou supprimez d'abord ses champs",
     )
@@ -1009,7 +1017,9 @@ describe('ecran de configuration — cartes', () => {
     ])
 
     await screen.findByText('Orientation')
-    expect(screen.getByTestId('compteur-supprimes')).toHaveTextContent(/^2$/)
+    expect(screen.getByTestId('compteur-supprimes')).toHaveTextContent(
+      /^2 éléments supprimés$/,
+    )
   })
 
   it('le pied « Ajouter un champ » est masqué en mode Supprimés', async () => {
