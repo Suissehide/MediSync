@@ -21,6 +21,12 @@ const AVAILABLE_ROWS_HEIGHT = 496
 const SLOT_FONT_SIZES = { time: 5.5, thematic: 7, details: 6 }
 const SLOT_LINE_HEIGHTS = { time: 6.6, thematic: 8.4, details: 7.2 }
 const SLOT_CHROME = 4.5
+// Largeur utile d'un jour : page A4 paysage moins marges et colonne des heures.
+const DAY_COLUMN_WIDTH = (841.89 - 2 * PAGE_PADDING - 54) / 5
+const SLOT_HORIZONTAL_CHROME = 7.5
+// Largeur moyenne d'un caractère Helvetica, arrondie haut : surestimer ne fait
+// que réserver une ligne de trop.
+const CHAR_WIDTH_RATIO = 0.55
 const TIME_LABEL_SIZE = 7
 
 const DAY_NAMES = ['LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI']
@@ -153,12 +159,19 @@ const styles = StyleSheet.create({
   },
   slotDetails: {
     fontSize: SLOT_FONT_SIZES.details,
-    // Une seule ligne, tronquée proprement : sans cela le texte repart à la
-    // ligne et `overflow: 'hidden'` le coupe en plein milieu d'un mot.
-    maxLines: 1,
+    // `maxLines` posé par créneau : au-delà, troncature propre plutôt qu'un
+    // texte coupé en plein milieu par `overflow: 'hidden'`.
     textOverflow: 'ellipsis',
   },
 })
+
+function estimateLines(text: string, fontSize: number, laneCount: number) {
+  const width = DAY_COLUMN_WIDTH / laneCount - SLOT_HORIZONTAL_CHROME
+  return Math.max(
+    1,
+    Math.ceil((text.length * fontSize * CHAR_WIDTH_RATIO) / width),
+  )
+}
 
 function SlotBlock({ placed, height }: { placed: PlacedSlot; height: number }) {
   const { slot } = placed
@@ -178,14 +191,20 @@ function SlotBlock({ placed, height }: { placed: PlacedSlot; height: number }) {
     SLOT_CHROME -
     (placed.laneCount > 3 ? 2 : 1) * SLOT_LINE_HEIGHTS.time -
     SLOT_LINE_HEIGHTS.thematic
-  // Les soignants passent avant la salle quand la place manque.
-  const details = [soignants, location].filter((line) => {
-    if (!line || free < SLOT_LINE_HEIGHTS.details) {
-      return false
-    }
-    free -= SLOT_LINE_HEIGHTS.details
-    return true
-  })
+  const takeLines = (wanted: number, lineHeight: number) => {
+    const lines = Math.min(wanted, Math.floor(free / lineHeight))
+    free -= lines * lineHeight
+    return lines
+  }
+  // Priorité quand la place manque : soignants, puis salle, puis la suite de
+  // la thématique. La salle passe à la ligne au lieu d'être tronquée.
+  const soignantsLines = soignants ? takeLines(1, SLOT_LINE_HEIGHTS.details) : 0
+  const locationLines = location
+    ? takeLines(
+        estimateLines(location, SLOT_FONT_SIZES.details, placed.laneCount),
+        SLOT_LINE_HEIGHTS.details,
+      )
+    : 0
   const thematicLines = 1 + Math.floor(free / SLOT_LINE_HEIGHTS.thematic)
 
   return (
@@ -196,11 +215,16 @@ function SlotBlock({ placed, height }: { placed: PlacedSlot; height: number }) {
       <Text style={[styles.slotThematic, { color, maxLines: thematicLines }]}>
         {slot.slotTemplate?.thematic ?? 'Sans thématique'}
       </Text>
-      {details.map((line) => (
-        <Text key={line} style={[styles.slotDetails, { color }]}>
-          {line}
+      {soignantsLines > 0 && (
+        <Text style={[styles.slotDetails, { color, maxLines: 1 }]}>
+          {soignants}
         </Text>
-      ))}
+      )}
+      {locationLines > 0 && (
+        <Text style={[styles.slotDetails, { color, maxLines: locationLines }]}>
+          {location}
+        </Text>
+      )}
     </View>
   )
 }
