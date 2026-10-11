@@ -10,8 +10,6 @@ import { cycleWeekNumber } from '../../../../utils/weekCycle.ts'
  * case porte donc une liste de créneaux, pas un créneau unique.
  */
 export type PlanningTimeRow = {
-  /** Plage `HH:mm-HH:mm` couvrant tous les créneaux de la ligne. */
-  timeKey: string
   timeLabel: string
   /** Index 0 = lundi … 4 = vendredi. */
   cells: Slot[][]
@@ -32,31 +30,14 @@ const WEEKDAY_COUNT = 5
 
 const dayKeyOf = (date: string) => dayjs.utc(date).format('YYYY-MM-DD')
 
-export const timeKeyOf = (slot: Slot) =>
+const timeKeyOf = (slot: Slot) =>
   `${dayjs.utc(slot.startDate).format('HH:mm')}-${dayjs.utc(slot.endDate).format('HH:mm')}`
 
 const isWeekday = (slot: Slot) =>
   dayjs.utc(slot.startDate).isoWeekday() <= WEEKDAY_COUNT
 
-const byStartThenThematic = (a: Slot, b: Slot) =>
-  timeKeyOf(a).localeCompare(timeKeyOf(b)) ||
+const byThematic = (a: Slot, b: Slot) =>
   (a.slotTemplate?.thematic ?? '').localeCompare(b.slotTemplate?.thematic ?? '')
-
-/** Plages horaires de la semaine : les créneaux qui se chevauchent, tous jours confondus, partagent une ligne. */
-function groupIntoBands(slots: Slot[]) {
-  const bands: { start: string; end: string }[] = []
-  // `HH:mm` zéro-paddé : l'ordre alphabétique est l'ordre chronologique.
-  for (const key of slots.map(timeKeyOf).sort()) {
-    const [start, end] = key.split('-')
-    const last = bands.at(-1)
-    if (last && start < last.end) {
-      last.end = end > last.end ? end : last.end
-    } else {
-      bands.push({ start, end })
-    }
-  }
-  return bands
-}
 
 /**
  * Découpe les créneaux en `weekCount` semaines consécutives à partir de
@@ -88,20 +69,20 @@ export function buildPlanningWeeks(
       dayKeys.includes(dayKeyOf(slot.startDate)),
     )
 
-    const timeRows = groupIntoBands(weekSlots).map(({ start, end }) => ({
-      timeKey: `${start}-${end}`,
-      timeLabel: `${start}\n${end}`,
+    // Les horaires sont zéro-paddés (`09:00-10:30`) : l'ordre alphabétique est
+    // aussi l'ordre chronologique.
+    const timeKeys = Array.from(new Set(weekSlots.map(timeKeyOf))).sort()
+
+    const timeRows = timeKeys.map((timeKey) => ({
+      timeLabel: timeKey.replace('-', '\n'),
       cells: dayKeys.map((dayKey) =>
         weekSlots
-          .filter((slot) => {
-            const slotStart = timeKeyOf(slot).split('-')[0]
-            return (
-              dayKeyOf(slot.startDate) === dayKey &&
-              slotStart >= start &&
-              slotStart < end
-            )
-          })
-          .sort(byStartThenThematic),
+          .filter(
+            (slot) =>
+              timeKeyOf(slot) === timeKey &&
+              dayKeyOf(slot.startDate) === dayKey,
+          )
+          .sort(byThematic),
       ),
     }))
 
