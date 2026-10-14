@@ -6,7 +6,6 @@ import type { PostgresOrm } from '../infra/orm/postgres-client'
 import type { IocContainer } from '../types/application/ioc'
 import type { AccessLinkDomainInterface } from '../types/domain/accessLink.domain.interface'
 import type {
-  MembershipAddByEmailDomain,
   MembershipCreateAccountDomain,
   MembershipCreateAccountResult,
   MembershipDomainInterface,

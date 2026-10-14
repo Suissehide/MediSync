@@ -67,9 +67,7 @@ describe('permissions', () => {
   // sans service courant l'obtiendrait alors sur une route DE SERVICE), et `members:manage` ne
   // doit jamais s'obtenir par un role de service.
   it('reserve l equipe du service au coordinateur, sans toucher a members:manage', () => {
-    expect(SERVICE_PERMISSIONS.COORDINATEUR).toContain(
-      'service-members:manage',
-    )
+    expect(SERVICE_PERMISSIONS.COORDINATEUR).toContain('service-members:manage')
     for (const role of ['INTERVENANT', 'SECRETARIAT', 'LECTURE'] as const) {
       expect(SERVICE_PERMISSIONS[role]).not.toContain('service-members:manage')
     }

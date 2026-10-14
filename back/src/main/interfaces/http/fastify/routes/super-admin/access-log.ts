@@ -56,9 +56,8 @@ const accessLogRouter: FastifyPluginAsync = (fastify) => {
       // d'ailleurs pourrait diverger de ce qui a reellement ete lu. `total`, lui, ne peut venir
       // que du depot -- c'est le decompte du meme `where`, hors page.
       if (source === 'activite') {
-        const { data, total } = await activityLogDomain.findAllPlatformWide(
-          filters,
-        )
+        const { data, total } =
+          await activityLogDomain.findAllPlatformWide(filters)
         const entries = data.map((row) => ({
           id: row.id,
           source: 'activite' as const,

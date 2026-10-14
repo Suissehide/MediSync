@@ -172,8 +172,9 @@ const buildDomain = (
           return Promise.resolve(appointment)
         },
       ),
+      // Pas `async` sans `await` : meme forme que `addPatientToAppointment` juste en dessous.
       findLastEndDateForPatient: jest.fn(
-        async (patientID: string, templateIDs: string[]) => {
+        (patientID: string, templateIDs: string[]) => {
           const ends = created
             .filter(
               (a) =>
@@ -183,7 +184,9 @@ const buildDomain = (
                 ),
             )
             .map((a) => a.endDate.getTime())
-          return ends.length ? new Date(Math.max(...ends)) : null
+          return Promise.resolve(
+            ends.length ? new Date(Math.max(...ends)) : null,
+          )
         },
       ),
       addPatientToAppointment: jest.fn(

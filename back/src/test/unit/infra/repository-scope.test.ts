@@ -203,8 +203,9 @@ describe('scoping des repositories d etablissement', () => {
       args: { where: { id_serviceId: { id: 'l1', serviceId: 's1' } } },
     })
     expect(calls[2]?.args).not.toHaveProperty('data.archived')
-    expect((calls[2]?.args as { data: { archivedAt: Date } }).data.archivedAt)
-      .toBeInstanceOf(Date)
+    expect(
+      (calls[2]?.args as { data: { archivedAt: Date } }).data.archivedAt,
+    ).toBeInstanceOf(Date)
   })
 
   it('ActivityLogRepository pose le contexte du tenant a l ecriture, null hors requete', async () => {
@@ -1175,8 +1176,9 @@ describe('scoping des repositories de diagnostic', () => {
       args: { where: { id_serviceId: { id: 'dt1', serviceId: 's1' } } },
     })
     expect(calls[4]?.args).not.toHaveProperty('data.archived')
-    expect((calls[4]?.args as { data: { archivedAt: Date } }).data.archivedAt)
-      .toBeInstanceOf(Date)
+    expect(
+      (calls[4]?.args as { data: { archivedAt: Date } }).data.archivedAt,
+    ).toBeInstanceOf(Date)
   })
 })
 

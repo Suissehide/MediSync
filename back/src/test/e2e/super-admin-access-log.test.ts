@@ -21,7 +21,7 @@ import {
 // `{ data, total, page, pageSize }` (§8 de docs/multi-tenant/decisions-etape-4b.md, fermee ce
 // jour-la). Ce raccourci evite de recopier `.data` dans quarante assertions dont le sujet est le
 // FILTRE, pas la pagination ; les tests de pagination, eux, lisent `total`/`page` explicitement.
-const lignes = <T,>(res: { json: () => unknown }): T[] =>
+const lignes = <T>(res: { json: () => unknown }): T[] =>
   (res.json() as { data: T[] }).data
 
 describe('GET /super-admin/access-log', () => {

@@ -3,6 +3,7 @@ import dayjs from 'dayjs'
 
 import type { Slot, SlotTemplate, Soignant } from '../../../../generated/client'
 import type { IocContainer } from '../../../types/application/ioc'
+import type { PrimaTransactionClient } from '../../../types/infra/orm/client'
 import type { AppointmentWithPatientsRepo } from '../../../types/infra/orm/repositories/appointment.repository.interface'
 import type {
   PathwayCreateEntityRepo,
@@ -26,6 +27,11 @@ import {
   soignantLinksInclude,
 } from '../includes/slot-template.include'
 import type { PostgresPrismaClient } from '../postgres-client'
+
+// Ce que `soignantLinksInclude` ramene avec un creneau modele.
+type SlotTemplateAvecSoignants = SlotTemplate & {
+  soignantLinks: { soignantId: string }[]
+}
 
 // Include partagé : un parcours embarque ses créneaux, chacun avec son
 // modèle de créneau (liens soignants aplatis par flattenSlot) et ses
@@ -144,6 +150,103 @@ class PathwayRepository implements PathwayRepositoryInterface {
     }
   }
 
+  // Extraites de `regeneratePathways` : son rappel de transaction empilait trois boucles et
+  // depassait la complexite cognitive du linter. Decoupage SANS changement de comportement.
+
+  // Retire les creneaux vides d'un parcours, et les modeles CLONES qu'ils portaient.
+  async #supprimerCreneauxVides(
+    tx: PrimaTransactionClient,
+    emptySlots: Slot[],
+  ): Promise<number> {
+    if (emptySlots.length === 0) {
+      return 0
+    }
+    await tx.slot.deleteMany({
+      where: {
+        id: { in: emptySlots.map((slot) => slot.id) },
+        serviceId: this.scope.serviceId,
+      },
+    })
+    // Guard: only cloned slot templates (templateID null) are ever
+    // deleted — never a master template shared by a PathwayTemplate.
+    await tx.slotTemplate.deleteMany({
+      where: {
+        id: { in: emptySlots.map((slot) => slot.slotTemplateID) },
+        templateID: null,
+        serviceId: this.scope.serviceId,
+      },
+    })
+    return emptySlots.length
+  }
+
+  // Recree les creneaux d'un parcours depuis les creneaux modeles, en sautant ceux qu'un
+  // creneau conserve couvre deja et ceux qui tomberaient avant la date choisie.
+  async #recreerCreneaux(
+    tx: PrimaTransactionClient,
+    params: {
+      slotTemplates: SlotTemplateAvecSoignants[]
+      pathwayID: string
+      pathwayStartDate: Date
+      occupiedSlots: Slot[]
+      weekMapping: ReturnType<typeof buildWeekMapping>
+      startOfDay: Date
+    },
+  ): Promise<number> {
+    let crees = 0
+    for (const slotTemplate of params.slotTemplates) {
+      const effectiveOffset = computeEffectiveOffset(
+        slotTemplate.offsetDays ?? 0,
+        params.weekMapping,
+      )
+      const base = dayjs(params.pathwayStartDate)
+        .add(effectiveOffset, 'day')
+        .toISOString()
+      const start = combineDateAndTime(base, slotTemplate.startTime)
+      const end = combineDateAndTime(base, slotTemplate.endTime)
+
+      // Skip regenerating a step already covered by a kept slot.
+      const alreadyCovered = params.occupiedSlots.some(
+        (slot) => slot.startDate.getTime() === start.getTime(),
+      )
+      if (alreadyCovered || start < params.startOfDay) {
+        continue
+      }
+
+      const clonedSlotTemplate = await tx.slotTemplate.create({
+        data: {
+          ...this.scope,
+          startTime: slotTemplate.startTime,
+          endTime: slotTemplate.endTime,
+          offsetDays: effectiveOffset,
+          isIndividual: slotTemplate.isIndividual,
+          capacity: slotTemplate.capacity,
+          thematicId: slotTemplate.thematicId,
+          locationID: slotTemplate.locationID,
+          description: slotTemplate.description,
+          color: slotTemplate.color,
+          soignantLinks: {
+            create: slotTemplate.soignantLinks.map((l) => ({
+              soignantId: l.soignantId,
+              establishmentId: this.scope.establishmentId,
+            })),
+          },
+        },
+      })
+
+      await tx.slot.create({
+        data: {
+          ...this.scope,
+          startDate: start,
+          endDate: end,
+          slotTemplateID: clonedSlotTemplate.id,
+          pathwayID: params.pathwayID,
+        },
+      })
+      crees += 1
+    }
+    return crees
+  }
+
   async regenerate(
     pathwayTemplateIDs: string[],
     fromDate: Date,
@@ -209,29 +312,7 @@ class PathwayRepository implements PathwayRepositoryInterface {
               (slot) => !occupiedSlots.includes(slot),
             )
 
-            // Remove empty slots and their cloned slot templates.
-            if (emptySlots.length > 0) {
-              const emptySlotIDs = emptySlots.map((slot) => slot.id)
-              const emptyTemplateIDs = emptySlots.map(
-                (slot) => slot.slotTemplateID,
-              )
-              await tx.slot.deleteMany({
-                where: {
-                  id: { in: emptySlotIDs },
-                  serviceId: this.scope.serviceId,
-                },
-              })
-              // Guard: only cloned slot templates (templateID null) are ever
-              // deleted — never a master template shared by a PathwayTemplate.
-              await tx.slotTemplate.deleteMany({
-                where: {
-                  id: { in: emptyTemplateIDs },
-                  templateID: null,
-                  serviceId: this.scope.serviceId,
-                },
-              })
-              slotsDeleted += emptySlots.length
-            }
+            slotsDeleted += await this.#supprimerCreneauxVides(tx, emptySlots)
 
             slotsKept += occupiedSlots.length
 
@@ -241,57 +322,14 @@ class PathwayRepository implements PathwayRepositoryInterface {
               forbiddenWeeks,
             )
 
-            for (const slotTemplate of template.slotTemplates) {
-              const effectiveOffset = computeEffectiveOffset(
-                slotTemplate.offsetDays ?? 0,
-                weekMapping,
-              )
-              const base = dayjs(pathway.startDate)
-                .add(effectiveOffset, 'day')
-                .toISOString()
-              const start = combineDateAndTime(base, slotTemplate.startTime)
-              const end = combineDateAndTime(base, slotTemplate.endTime)
-
-              // Skip regenerating a step already covered by a kept slot.
-              const alreadyCovered = occupiedSlots.some(
-                (slot) => slot.startDate.getTime() === start.getTime(),
-              )
-              if (alreadyCovered || start < startOfDay) {
-                continue
-              }
-
-              const clonedSlotTemplate = await tx.slotTemplate.create({
-                data: {
-                  ...this.scope,
-                  startTime: slotTemplate.startTime,
-                  endTime: slotTemplate.endTime,
-                  offsetDays: effectiveOffset,
-                  isIndividual: slotTemplate.isIndividual,
-                  capacity: slotTemplate.capacity,
-                  thematicId: slotTemplate.thematicId,
-                  locationID: slotTemplate.locationID,
-                  description: slotTemplate.description,
-                  color: slotTemplate.color,
-                  soignantLinks: {
-                    create: slotTemplate.soignantLinks.map((l) => ({
-                      soignantId: l.soignantId,
-                      establishmentId: this.scope.establishmentId,
-                    })),
-                  },
-                },
-              })
-
-              await tx.slot.create({
-                data: {
-                  ...this.scope,
-                  startDate: start,
-                  endDate: end,
-                  slotTemplateID: clonedSlotTemplate.id,
-                  pathwayID: pathway.id,
-                },
-              })
-              slotsCreated += 1
-            }
+            slotsCreated += await this.#recreerCreneaux(tx, {
+              slotTemplates: template.slotTemplates,
+              pathwayID: pathway.id,
+              pathwayStartDate: pathway.startDate,
+              occupiedSlots,
+              weekMapping,
+              startOfDay,
+            })
           }
         }
 

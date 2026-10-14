@@ -5,8 +5,8 @@ import {
   type FieldDefinitionForValidation,
   fieldKeyFromLabel,
   mergeFieldPatch,
-  readChoice,
   RESERVED_FIELD_KEYS,
+  readChoice,
   toJsonObject,
 } from '../../../main/utils/service-field-types'
 

@@ -3,12 +3,12 @@ import Boom from '@hapi/boom'
 import type { PostgresOrm } from '../infra/orm/postgres-client'
 import type { IocContainer } from '../types/application/ioc'
 import type { AccessLinkDomainInterface } from '../types/domain/accessLink.domain.interface'
-import type { PlatformAccessLogPage } from '../types/infra/orm/repositories/activityLog.repository.interface'
 import type {
   CreateEstablishmentInput,
   CreateEstablishmentResult,
   EstablishmentDomainInterface,
 } from '../types/domain/establishment.domain.interface'
+import type { PlatformAccessLogPage } from '../types/infra/orm/repositories/activityLog.repository.interface'
 import type {
   EstablishmentDetail,
   EstablishmentListRow,
