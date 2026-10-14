@@ -67,20 +67,60 @@ PdfPage            { kind: 'canvas', id, background, elements: PdfElement[] }
 
 PdfElement         { id, x, y, w, h, rotation? } + l'un de :
 
-  text     texte fixe    text, fontSize, fontFamily, bold, italic,
-                         color, align, lineHeight
-  field    donnée        field: PdfFieldKey, + le même style que `text`
+  text     texte         runs: TextRun[], fontSize, fontFamily, bold, italic,
+                         color, align, vAlign, lineHeight
   rect     rectangle     fill, radius
   ellipse  ellipse       fill
-  line     filet         color, thickness
   image    image         source: { builtin: PdfBuiltinImage } | { assetId: string },
                          fit
 
-PdfFieldKey        'patient.name' | 'pathway.name' | 'program.dates'
-                 | 'service.name' | 'service.phone'
+TextRun            { text: string,          bold?, italic? }
+                 | { field: PdfFieldKey,   bold?, italic? }
+
+PdfFieldKey        'patient.name' | 'pathway.name' | 'program.dates' | 'service.name'
+
+PdfFill            '#rrggbb' | { token: 'pathway.color', fallback: '#rrggbb' }
 
 PdfBuiltinImage    'logo-chu' | 'lines'
 ```
+
+### Trois corrections apportées par la transcription des pages réelles
+
+En transcrivant `cover-page.pdf.tsx` et `tips-page.pdf.tsx` en données, trois défauts du modèle
+ci-dessus sont apparus. Ils sont corrigés ci-dessus et expliqués ici.
+
+**Il n'y a pas d'élément `field` : une donnée est un `TextRun`.** L'encadré de fin de la page
+conseils enchaîne, dans un seul paragraphe, une phrase en gras puis une phrase normale — le code
+actuel le fait par des `<Text>` imbriqués. Un style unique par boîte ne peut pas le reproduire
+sans couper le paragraphe en deux boîtes, ce qui briserait l'enchaînement des lignes. Le texte
+porte donc une suite de `runs`, et un run est soit du texte, soit une donnée. Un texte simple est
+un run unique : une seule forme à rendre, pas une union.
+
+Ce n'est pas un retour aux jetons `{{ }}` dans une chaîne, écartés pendant la conception : un run
+de donnée est un objet typé, et l'inspecteur de l'éditeur propose « insérer une donnée » plutôt
+que de laisser saisir un jeton. Le gain est que la donnée peut vivre **au milieu** d'une phrase,
+ce dont l'encadré de fin a besoin pour le numéro de téléphone.
+
+**`service.phone` n'existe pas et sort du jeu de données.** `Service` ne porte que `name`,
+`stopReasonFieldKey` et `completedChoiceKey` : aucune colonne de téléphone. Plutôt que d'ajouter
+une colonne, le numéro est du **texte** dans le design — il appartient à la copie que le service
+édite de toute façon. Les quatre données restantes se résolvent toutes à partir de ce que la
+modale a déjà en main.
+
+**Les textes portent un `vAlign`.** Le nom du patient est aujourd'hui ancré en bas
+(`bottom: 48`) et peut passer sur deux lignes ; sur une toile libre, une boîte de hauteur fixe
+grandit vers le bas. Sans alignement vertical, un nom sur deux lignes descendrait sous la position
+d'aujourd'hui. `vAlign` se rend par le `justifyContent` d'un `View` englobant, des deux côtés.
+
+### Ce que le preset de référence n'utilise pas
+
+« SMCV » reste du **texte littéral** dans le preset de référence, en couverture comme dans
+l'encadré de fin, alors que `service.name` existe. C'est délibéré : la non-régression de l'étape 1
+est l'objectif, et le nom exact du service en production n'est pas vérifiable d'ici. Un service
+qui duplique le preset remplace le texte par la donnée s'il le souhaite.
+
+`fill` accepte une couleur fixe ou `{ token: 'pathway.color', fallback: '#e6aff6' }` — le repli
+reproduit `DEFAULT_CIRCLE_COLOR`, la couleur du rond quand le patient n'a pas de parcours.
 
 ### Décisions de forme
 
@@ -88,11 +128,10 @@ PdfBuiltinImage    'logo-chu' | 'lines'
   L'éditeur rend à l'échelle `largeurDuCadre / 595,28`. Une conversion, dans un seul sens.
 - **L'ordre dans le tableau est l'ordre de peinture.** Pas de champ `z` à garder cohérent avec
   l'ordre du tableau : « mettre au premier plan » déplace l'élément dans le tableau.
-- **Un élément `field` rend sa phrase complète.** `program.dates` produit
-  « Du 12/05 au 28/06/2026 » en un seul élément, `patient.name` produit « NOM Prénom » — comme
-  aujourd'hui. Pas trois éléments à aligner à la main pour une plage de dates.
-- **`fill` accepte un hex ou le jeton `@pathway.color`.** Sans ça on perdrait le rond coloré par
-  le parcours du patient, qui existe déjà.
+- **Un run de donnée rend sa phrase complète.** `program.dates` produit
+  « Du 12/05 au 28/06/2026 », `patient.name` produit « NOM Prénom » — comme aujourd'hui. Pas
+  trois éléments à aligner à la main pour une plage de dates. `pathway.name` reprend la chaîne de
+  replis du code actuel : `templateName`, sinon `templateMainTag`, sinon « Programme ».
 - Un seul endroit résout les données : `resolveField(key, ctx)`, une table clé → fonction, avec
   son test. Une donnée nouvelle = une entrée plus son cas de test, la convention de `MEASURES`
   (`utils/indicators/measures.ts`).
@@ -130,10 +169,10 @@ model PdfDesign {              // SERVICE_MODELS — la copie modifiable du serv
   service Service @relation(fields: [serviceId, establishmentId], references: [id, establishmentId])
 
   @@unique([id, serviceId])
-  @@unique([serviceId, name])
+  @@index([serviceId])
 }
 
-model PdfAsset {               // SERVICE_MODELS — les images déposées par le service
+model PdfAsset {               // SERVICE_MODELS — les images déposées par le service (étape 4)
   id              String   @id @default(cuid())
   establishmentId String
   serviceId       String
@@ -145,6 +184,7 @@ model PdfAsset {               // SERVICE_MODELS — les images déposées par l
   service Service @relation(fields: [serviceId, establishmentId], references: [id, establishmentId])
 
   @@unique([id, serviceId])
+  @@index([serviceId])
 }
 ```
 
@@ -160,15 +200,29 @@ dépôt. Dupliquer un preset n'a donc aucun asset à recopier.
 **Archivage, pas suppression**, comme les quatre référentiels : `archivedAt`, et l'UI dit
 « Supprimer » / « Supprimés » / « Restaurer ».
 
-`@@unique([serviceId, name])` et `archivedAt` reproduisent à l'identique `Thematic` et
-`Location`. Conséquence assumée, la même que pour eux : **un design supprimé continue de réserver
-son nom**, et recréer un design homonyme demande d'abord de restaurer ou de renommer l'ancien.
+**Le nom d'un design n'est pas unique**, et c'est délibéré. `Thematic` et `Location` portent un
+`@@unique([serviceId, name])`, mais `IndicatorSet` — le précédent le plus proche, un jeu nommé,
+par service, archivable, posé en 2026-10 — ne le porte pas. Un design suit `IndicatorSet` pour
+deux raisons : dupliquer deux fois le même preset produirait naturellement deux homonymes, qu'une
+contrainte transformerait en 409 à résoudre à la main ; et une contrainte d'unicité couplée à
+`archivedAt` fait qu'un design **supprimé continue de réserver son nom**. La duplication suffixe
+donc le nom (« Programme SMCV (copie) », puis « (copie 2) ») au lieu d'échouer.
 
 `Service` gagne deux relations, `pdfDesigns` et `pdfAssets`. Elles doivent entrer dans
 `MODEL_RELATIONS` **des deux côtés** — sur les nouveaux modèles et sur `Service` — sinon le guard
 refuse chaque requête qui les traverse (`tenant-guard-schema.test.ts` tient les deux sens).
 `PdfDesignPreset`, global, n'a aucune relation : son entrée dans `MODEL_RELATIONS` est vide, et
 il ne va ni dans `SERVICE_MODELS` ni dans `ESTABLISHMENT_MODELS`.
+
+Deux comportements du guard, vérifiés, qui décident de deux étapes :
+
+- **Sous contexte de tenant, un modèle global est lisible sans filtre.** `assertTenantScope`
+  sort par `assertGlobalScope` dès que `family === 'global'`, avant la porte de permission. Un
+  soignant peut donc lister les presets — c'est ce qui rend l'étape 1 possible.
+- **Sous contexte super-admin, un modèle global absent de `SUPERADMIN_GLOBAL_OPERATIONS` est
+  refusé en entier, lecture comprise.** L'étape 5 doit donc y déclarer `PdfDesignPreset` couple
+  par couple (`findMany`, `findUnique`, `create`, `update`). Oublier cette déclaration rend
+  l'écran super-admin inerte, sans que rien d'autre ne rougisse.
 
 **Aucune nouvelle permission.** Un design est un référentiel de service : `referentials:write`
 pour éditer (COORDINATEUR), `referentials:read` pour lister (accordée à tous les rôles par
@@ -194,15 +248,18 @@ front/src/components/custom/pdf-design/
 
 | élément | react-pdf | HTML |
 |---|---|---|
-| `text` / `field` | `<Text>` positionné en absolu | `<div>` positionné en absolu |
+| `text` | `<View>` (`justifyContent` = `vAlign`) + `<Text>`, un `<Text>` imbriqué par run | `<div>` en flex + `<span>` par run |
 | `rect` | `<View>` + `backgroundColor` + `borderRadius` | idem en CSS |
-| `line` | `<View>` de hauteur `thickness` | idem |
 | `ellipse` | `<Svg><Ellipse/></Svg>` | `border-radius: 50%` |
 | `image` | `<Image src>` | `<img src>` |
 
-Les trois premiers sont déjà prouvés dans `cover-page.pdf.tsx` : le rond est un `View` à
-`borderRadius`, le filet sous le titre est un `View` de 4 pt. Seule l'ellipse non circulaire
-réclame le `Svg`.
+**Il n'y a pas d'élément « filet ».** Le trait sous le titre de la couverture est, dans le code
+actuel, un `View` de 4 pt de haut — c'est-à-dire un `rect` sans rayon. Un quatrième type pour ça
+n'achèterait qu'une branche de plus dans chaque moteur et un formulaire de plus dans
+l'inspecteur.
+
+`text` et `rect` sont déjà prouvés dans `cover-page.pdf.tsx` : le rond est un `View` à
+`borderRadius`, le filet un `View` de 4 pt. Seule l'ellipse non circulaire réclame le `Svg`.
 
 **Pourquoi l'approximation reste honnête.** Les coordonnées sont en points et l'éditeur applique
 un seul facteur d'échelle : positions et tailles sont exactes. Le seul écart réel est **les
@@ -229,7 +286,7 @@ dans l'ordre de peinture, le pousser aux flèches (1 pt, 10 pt avec Maj), l'aima
 page, aux axes médians et aux arêtes des voisins, annuler et rétablir. L'annulation est une pile
 d'instantanés du JSON : le document est petit, les patches inversibles ne se justifient pas.
 
-**Les éléments `field` affichent un échantillon** dans l'éditeur (`DUPONT Jean`,
+**Les runs de donnée affichent un échantillon** dans l'éditeur (`DUPONT Jean`,
 « Du 12/05 au 28/06/2026 »), jamais un vrai patient.
 
 ## Le contrat front/back
@@ -354,20 +411,25 @@ côte à côte dans le navigateur, une fois, à l'étape 1.
 
 ## Déploiement
 
-Une migration, trois tables, purement additive. **Aucune donnée à reprendre** : le PDF actuel est
-du code, le preset le reproduit.
+Deux migrations, purement additives, **aucune donnée à reprendre** : le PDF actuel est du code,
+le preset le reproduit.
+
+`PdfDesignPreset` et `PdfDesign` arrivent à l'étape 1 ; `PdfAsset` à l'étape 4, avec sa propre
+migration. Créer une table trois étapes avant son premier usage n'achète rien — une migration
+additive coûte le même prix plus tard.
 
 Les presets arrivent par le seed (`prisma/seed/pdfDesignPreset.ts`) depuis une constante du back.
-**Insertion si absent, jamais `upsert`** : un `upsert` écraserait à chaque déploiement les
-retouches du super-admin sur un preset. C'est le genre de détail qui détruit du travail sans
-bruit.
+L'insertion doit être **sans écrasement** : un seed qui réécrirait le `content` à chaque
+déploiement effacerait les retouches du super-admin, sans bruit. L'idiome du dépôt le fait déjà —
+`seed/location.ts` utilise `upsert({ where, update: {}, create })`, dont l'`update` vide ne touche
+pas une ligne existante. Le seed des presets reprend cette forme, sur un identifiant stable.
 
 Aucune variable d'environnement, aucun credential, aucun plugin Fastify de plus.
 
 ## Découpage, cinq étapes livrables
 
 **Étape 1 — le socle de rendu, sans éditeur.** Schéma Zod, types, `render-pdf.tsx`,
-`resolveField`, les trois tables, le preset de référence seedé, `ProgrammePDF` qui boucle sur les
+`resolveField`, les deux tables `PdfDesignPreset` et `PdfDesign`, le preset de référence seedé, `ProgrammePDF` qui boucle sur les
 pages, le sélecteur de design dans la modale. L'élément `image` existe dès cette étape, en source
 `builtin` seulement — le logo et les lignes en ont besoin. `cover-page.pdf.tsx` et
 `tips-page.pdf.tsx` sont supprimés : le PDF d'aujourd'hui est produit par le moteur de données.
@@ -383,7 +445,8 @@ couverture.
 **Étape 3 — le multi-pages.** Ajouter, supprimer, réordonner des pages, insérer la page
 calendrier, la bande de vignettes.
 
-**Étape 4 — les images du service.** `PdfAsset`, l'upload base64, la source `assetId`.
+**Étape 4 — les images du service.** La migration `PdfAsset`, l'upload base64, la source
+`assetId`.
 
 **Étape 5 — l'écran super-admin des presets.** Le même éditeur, monté sur les routes hors tenant.
 
