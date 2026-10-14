@@ -165,6 +165,10 @@ export const GRANT_ESTABLISHMENT = {
   GET_ALL: 'get_all_establishment_grants',
 }
 
+export const PDF_DESIGN = {
+  GET_ALL: 'get_all_pdf_designs',
+}
+
 export const LOCATION = {
   GET_ALL: 'get_all_locations',
   CREATE: 'create_location',
