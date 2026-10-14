@@ -3,12 +3,14 @@ import type { ReactElement } from 'react'
 
 import lines from '../../../assets/images/pdf/lines.png'
 import logoCHU from '../../../assets/images/pdf/logo_chx-bdx.png'
-import type {
-  PdfBuiltinImage,
-  PdfDesignContent,
-  PdfElement,
-  PdfFill,
-  PdfTextElement,
+import {
+  A4_HEIGHT,
+  A4_WIDTH,
+  type PdfBuiltinImage,
+  type PdfDesignContent,
+  type PdfElement,
+  type PdfFill,
+  type PdfTextElement,
 } from '../../../types/pdfDesign.ts'
 import CalendarPages from '../Patient/pdf/pages/calendar-pages.pdf.tsx'
 import { type PdfFieldContext, resolveField } from './fields.ts'
@@ -50,14 +52,35 @@ const resolveFill = (fill: PdfFill, ctx: PdfFieldContext): string => {
 
 const fontOf = (bold: boolean) => (bold ? 'Helvetica-Bold' : 'Helvetica')
 
-const box = (element: PdfElement) => ({
-  position: 'absolute' as const,
-  left: element.x,
-  top: element.y,
-  width: element.w,
-  height: element.h,
-  ...(element.rotation ? { transform: `rotate(${element.rotation}deg)` } : {}),
-})
+// Un element dont la boite finirait SOUS le bas de la page (ou a droite du bord droit) est
+// ancre depuis ce bord-la, par un decalage negatif, au lieu de l'etre depuis le haut/gauche.
+//
+// Ce n'est pas cosmetique : avec `top` + `height`, la boite du decor qui deborde volontairement
+// (le rond, les lignes en diagonale) finit a 1001 pt sur une page de 842, react-pdf cherche
+// alors une coupure de page pour la faire tenir, n'en trouve jamais, et BOUCLE SANS FIN — le
+// document ne sort pas du tout. L'ancrage par le bord ne cree aucune boite sous la page.
+//
+// La regle retombe sur les valeurs du code d'origine : le rond donne bottom -180, les lignes
+// -160, exactement ce que `cover-page.pdf.tsx` ecrivait a la main.
+const anchor = (start: number, size: number, extent: number) =>
+  start + size > extent
+    ? { end: extent - (start + size) }
+    : { start }
+
+const box = (element: PdfElement) => {
+  const vertical = anchor(element.y, element.h, A4_HEIGHT)
+  const horizontal = anchor(element.x, element.w, A4_WIDTH)
+  return {
+    position: 'absolute' as const,
+    ...('start' in horizontal
+      ? { left: horizontal.start }
+      : { right: horizontal.end }),
+    ...('start' in vertical ? { top: vertical.start } : { bottom: vertical.end }),
+    width: element.w,
+    height: element.h,
+    ...(element.rotation ? { transform: `rotate(${element.rotation}deg)` } : {}),
+  }
+}
 
 export function renderElement(
   element: PdfElement,
@@ -103,7 +126,9 @@ export function renderElement(
         </View>
       )
 
-    // Un filet est un rect sans rayon : pas de type d'element dedie.
+    // Un filet est un rect sans rayon : pas de type d'element dedie. Le rayon n'est emis que
+    // s'il est non nul — react-pdf resout `borderRadius: 0` en `undefined` (son resolveur fait
+    // `value ? transformUnit(value) : undefined`) puis jette, ce qui abat tout le document.
     case 'rect':
       return (
         <View
@@ -111,7 +136,7 @@ export function renderElement(
           style={{
             ...box(element),
             backgroundColor: resolveFill(element.fill, ctx),
-            borderRadius: element.radius,
+            ...(element.radius ? { borderRadius: element.radius } : {}),
           }}
         />
       )

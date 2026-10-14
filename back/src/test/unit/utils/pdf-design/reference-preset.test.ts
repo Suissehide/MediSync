@@ -63,7 +63,8 @@ describe('preset de reference', () => {
     expect(titre.fontSize).toBe(72)
     expect(titre.color).toBe('#e05a5a')
     expect(titre.align).toBe('center')
-    expect(titre.y).toBe(327)
+    // Releve au point pres sur le rendu d'origine (tache 9), pas estime.
+    expect(titre.y).toBe(342)
   })
 
   it('garde le filet sous le titre, centre et de 4 points', () => {

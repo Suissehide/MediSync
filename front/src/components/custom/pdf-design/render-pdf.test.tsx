@@ -17,6 +17,7 @@ const geometry = { id: 'e1', x: 10, y: 20, w: 100, h: 30, rotation: 0 }
 // test de quoi lire le style et les enfants sans parsemer le fichier d'assertions non typees.
 type Sonde = {
   props: {
+    wrap?: boolean
     style?: Record<string, unknown>
     children?: { props: { hyphenationCallback: (word: string) => string[] } }
   }
@@ -80,6 +81,44 @@ const textesDe = (node: unknown): string[] => {
 }
 
 describe('renderElement', () => {
+  // Un element dont la boite finirait sous le bas de la page est ancre depuis ce bord.
+  // Sans ca, react-pdf cherche une coupure de page pour faire tenir le decor qui deborde
+  // volontairement (le rond, les lignes), n'en trouve jamais, et BOUCLE SANS FIN : le
+  // document ne sort pas du tout. La regle retombe sur les valeurs du code d'origine.
+  it('ancre par le BAS un element qui deborde sous la page', () => {
+    // Le rond de la couverture : y 641.89, h 380 -> finit a 1021.89 pour une page de 841.89.
+    const rond: PdfElement = {
+      ...ellipse('#e6aff6'),
+      x: -60,
+      y: 641.89,
+      w: 380,
+      h: 380,
+    }
+    const style = sonde(renderElement(rond, ctx())).props.style
+    expect(style).not.toHaveProperty('top')
+    // 841.89 - (641.89 + 380) : exactement le `bottom: -180` que la couverture ecrivait.
+    expect(style?.bottom).toBeCloseTo(-180, 2)
+  })
+
+  it('ancre par la DROITE un element qui deborde du bord droit', () => {
+    // Les lignes en haut a droite : x 475.28, w 280 -> finissent a 755.28 pour 595.28.
+    const lignes: PdfElement = {
+      ...geometry,
+      kind: 'image',
+      source: { builtin: 'lines' },
+      fit: 'contain',
+      x: 475.28,
+      y: -160,
+      w: 280,
+      h: 343.56,
+    }
+    const style = sonde(renderElement(lignes, ctx())).props.style
+    expect(style).not.toHaveProperty('left')
+    expect(style?.right).toBeCloseTo(-160, 2)
+    // Le haut deborde aussi, mais vers le HAUT : aucune coupure de page a craindre, on garde `top`.
+    expect(style?.top).toBe(-160)
+  })
+
   it('place un element a ses coordonnees, en points', () => {
     const node = sonde(renderElement(texte, ctx()))
     expect(node.props.style).toMatchObject({
@@ -146,6 +185,21 @@ describe('renderElement', () => {
       backgroundColor: '#fce7f3',
       borderRadius: 6,
     })
+  })
+
+  // react-pdf REFUSE un borderRadius de zero : son resolveur fait
+  // `value ? transformUnit(value) : undefined` et jette sur undefined. Un filet est un rect de
+  // rayon zero, donc tout le document tombait.
+  it('n emet aucun borderRadius pour un rect de rayon zero', () => {
+    const filet: PdfRectElement = {
+      ...geometry,
+      kind: 'rect',
+      fill: '#e05a5a',
+      radius: 0,
+    }
+    expect(sonde(renderElement(filet, ctx())).props.style).not.toHaveProperty(
+      'borderRadius',
+    )
   })
 
   it('ignore une image dont la source est un asset, l upload arrivant plus tard', () => {

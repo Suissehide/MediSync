@@ -12,31 +12,33 @@ const CONTENT_W = PAGE_W - MARGIN * 2
 const LOGO_RATIO = 1.9488
 const LINES_RATIO = 0.815
 
-// Ces hauteurs remplacent des hauteurs automatiques : un texte rallonge debordera de son
-// pave, et l'apercu le montre. Mesurees sur le rendu actuel.
-const TIP_BOXES = [
-  { y: 221, h: 79 },
-  { y: 312, h: 92 },
-  { y: 416, h: 66 },
-  { y: 494, h: 66 },
-]
+const CLOSING_H = 66
 
-const CLOSING_H = 91
-
+// `y` et `h` remplacent des hauteurs automatiques : un texte rallonge debordera de son pave,
+// et l'apercu le montre. Portes par le conseil lui-meme plutot que par un second tableau a
+// garder aligne par index.
 const TIPS = [
   {
+    y: 221,
+    h: 65,
     title: 'Soyez ponctuel·le',
     text: "La ponctualité est essentielle au bon déroulement des séances. Cela permet de respecter le travail de l'équipe soignante, mais aussi celui des autres patients. Merci d'arriver à l'heure indiquée pour chaque activité.",
   },
   {
+    y: 298,
+    h: 78,
     title: "Ce qu'il faut apporter chaque jour",
     text: "Pour pratiquer une activité physique en toute sécurité et dans de bonnes conditions, il est important de porter des vêtements et des chaussures confortables et adaptés à l'effort. Des casiers sont à votre disposition dans les vestiaires. Merci d'apporter un cadenas ! Pensez à prendre une gourde d'eau pour vous hydrater pendant et après l'effort.",
   },
   {
+    y: 388,
+    h: 65,
     title: 'Prenez un petit-déjeuner avant de venir',
     text: "Il est essentiel de manger le matin avant votre venue. Un petit-déjeuner équilibré vous donnera l'énergie nécessaire pour participer activement à votre programme.",
   },
   {
+    y: 465,
+    h: 65,
     title: 'Soyez reposé·e',
     text: "Un bon repos est indispensable pour votre récupération et pour profiter pleinement de chaque activité. Essayez de venir reposé·e, en forme, et l'écoute de votre corps.",
   },
@@ -57,7 +59,6 @@ const linesTopRight = (id: string) => ({
 
 const tipElements = () =>
   TIPS.flatMap((tip, index) => {
-    const box = TIP_BOXES[index]
     const n = index + 1
     // Le contenu commence apres le padding du pave (12), la puce (10) et sa marge (10).
     const contentX = MARGIN + 32
@@ -67,9 +68,9 @@ const tipElements = () =>
         id: `tip-${n}-box`,
         kind: 'rect' as const,
         x: MARGIN,
-        y: box.y,
+        y: tip.y,
         w: CONTENT_W,
-        h: box.h,
+        h: tip.h,
         fill: '#fce7f3',
         radius: 6,
       },
@@ -77,7 +78,7 @@ const tipElements = () =>
         id: `tip-${n}-dot`,
         kind: 'ellipse' as const,
         x: MARGIN + 12,
-        y: box.y + 14,
+        y: tip.y + 14,
         w: 10,
         h: 10,
         fill: '#ec4899',
@@ -86,7 +87,7 @@ const tipElements = () =>
         id: `tip-${n}-title`,
         kind: 'text' as const,
         x: contentX,
-        y: box.y + 12,
+        y: tip.y + 12,
         w: contentW,
         h: 14,
         runs: [{ text: tip.title }],
@@ -98,9 +99,9 @@ const tipElements = () =>
         id: `tip-${n}-body`,
         kind: 'text' as const,
         x: contentX,
-        y: box.y + 29,
+        y: tip.y + 28,
         w: contentW,
-        h: box.h - 41,
+        h: tip.h - 28,
         runs: [{ text: tip.text }],
         fontSize: 9,
         color: '#4b5563',
@@ -152,7 +153,7 @@ export const REFERENCE_PRESET_CONTENT: PdfDesignContentInput = {
           id: 'cover-title',
           kind: 'text',
           x: 0,
-          y: 327,
+          y: 342,
           w: PAGE_W,
           h: 86,
           runs: [{ text: 'SMCV' }],
@@ -165,7 +166,7 @@ export const REFERENCE_PRESET_CONTENT: PdfDesignContentInput = {
           id: 'cover-underline',
           kind: 'rect',
           x: (PAGE_W - 120) / 2,
-          y: 417,
+          y: 432,
           w: 120,
           h: 4,
           fill: '#e05a5a',
@@ -174,7 +175,7 @@ export const REFERENCE_PRESET_CONTENT: PdfDesignContentInput = {
           id: 'cover-program',
           kind: 'text',
           x: 0,
-          y: 437,
+          y: 445,
           w: PAGE_W,
           h: 34,
           runs: [{ field: 'pathway.name' }],
@@ -187,7 +188,7 @@ export const REFERENCE_PRESET_CONTENT: PdfDesignContentInput = {
           id: 'cover-dates',
           kind: 'text',
           x: 0,
-          y: 495,
+          y: 503,
           w: PAGE_W,
           h: 20,
           runs: [{ field: 'program.dates' }],
@@ -247,9 +248,9 @@ export const REFERENCE_PRESET_CONTENT: PdfDesignContentInput = {
           id: 'closing-text',
           kind: 'text',
           x: MARGIN + 12,
-          y: PAGE_H - MARGIN - 79,
+          y: PAGE_H - MARGIN - CLOSING_H + 12,
           w: CONTENT_W - 24,
-          h: 38,
+          h: 26,
           runs: [
             {
               text: "Souvenez-vous que ce programme est fait pour vous, et que chaque effort vous fait vous rapprocher d'un meilleur équilibre de vie. ",
@@ -265,9 +266,9 @@ export const REFERENCE_PRESET_CONTENT: PdfDesignContentInput = {
           id: 'closing-contact',
           kind: 'text',
           x: MARGIN + 12,
-          y: PAGE_H - MARGIN - 37,
+          y: PAGE_H - MARGIN - CLOSING_H + 42,
           w: CONTENT_W - 24,
-          h: 25,
+          h: 14,
           runs: [
             {
               text: "En cas de doute ou d'absence, merci de contacter le service au ",

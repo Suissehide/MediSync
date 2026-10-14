@@ -1,4 +1,4 @@
-import type { PdfDesign, PdfDesignPreset } from '../../../../generated/client'
+import type { PdfDesign, PdfDesignPreset } from '../../../../../generated/client'
 
 export type PdfDesignEntityRepo = PdfDesign
 export type PdfDesignPresetEntityRepo = PdfDesignPreset
