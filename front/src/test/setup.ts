@@ -1,7 +1,19 @@
 /// <reference types="vitest/jsdom" />
 import '@testing-library/jest-dom/vitest'
-import { cleanup } from '@testing-library/react'
+import { cleanup, configure } from '@testing-library/react'
 import { afterEach, beforeEach } from 'vitest'
+
+// Budget d'attente des utilitaires asynchrones (`waitFor`, `findBy*`), par defaut 1000 ms.
+//
+// POURQUOI L'AUGMENTER N'EST PAS MASQUER UN DEFAUT. La suite monte 93 fichiers qui rendent
+// chacun un arbre React, en parallele : l'horloge dit 37 s la ou le temps-test cumule en dit
+// 237. Sur une machine ainsi saturee, un rendu qui prend 80 ms a vide en prend plus de 1000, et
+// des tests dont l'assertion est JUSTE echouaient — des tests DIFFERENTS a chaque execution,
+// jamais les memes. En serie, les memes 93 fichiers passaient tous.
+// Ce reglage ne relache aucune assertion : un test reellement casse echoue toujours, seulement
+// plus tard. Il ne fait qu'arreter de confondre « l'ecran n'affiche pas ca » avec « la machine
+// n'a pas eu le temps ».
+configure({ asyncUtilTimeout: 5000 })
 
 // Depuis Node 25, Node expose son propre `localStorage`/`sessionStorage`
 // globaux (non fonctionnels sans l'option --localstorage-file). Comme ces

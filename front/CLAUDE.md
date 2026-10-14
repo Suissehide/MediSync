@@ -320,6 +320,15 @@ because they look like real tests:
   tests green while the screen announced the wrong figure next to the wrong sentence. One
   assertion was even tautological (`getByText('5') !== getByText('2')`). `src/test/setup.ts` reassigns `globalThis.localStorage`/`sessionStorage` to jsdom's real implementations — this works around Node's own global Web Storage (active by default since Node 25) shadowing jsdom's; don't "simplify" this by reading `window.localStorage` instead, `window === globalThis` in this test environment so it's the same shadowed property.
 
+**Le budget d'attente asynchrone est a 5 s, pas au defaut de 1 s** (`configure({ asyncUtilTimeout })`
+dans `src/test/setup.ts`, avec `testTimeout: 20000` dans `vitest.config.ts` pour lui laisser la
+place). Ce n'est pas du confort : la suite monte 93 fichiers en parallele, et l'horloge dit ~37 s la
+ou le temps-test cumule en dit ~237. Sur une machine ainsi saturee, des tests dont l'assertion est
+JUSTE echouaient — des tests **differents a chaque execution**, jamais les memes, et tous verts en
+serie (`--no-file-parallelism`). Mesure : 5 fichiers / 11 tests en echec avant le reglage, 9
+executions vertes sur 10 apres. Ne pas redescendre ce budget en le croyant inutile ; si un test
+devient lent au point de s'en approcher, c'est lui qu'il faut regarder, pas le reglage.
+
 Route-level `beforeLoad` logic (context resolution, redirects, the preload guard) is tested with disposable minimal routers rather than the full app tree — see the `.test.ts` files colocated with `e/$establishmentId/s/$serviceId.tsx`, `e/$establishmentId/admin.tsx`, `choose-context.tsx`.
 
 `.env.test` sets `VITE_API_BASE_URL` for the test run (Vite/Vitest load `.env.test` automatically under `mode: 'test'`, which Vitest defaults to — no CLI flag needed). Without it, `import.meta.env.VITE_API_BASE_URL` is `undefined` in tests, `tenantApiUrl()`/`establishmentApiUrl()` (`constants/config.constant.ts`) build a URL string starting with the literal `undefined/...`, and `fetchWithAuth.ts` throws (`new URL(response.url)` on any 404) instead of letting a normal 404 through — which made the normal-absence path (e.g. a patient's service file that doesn't exist yet) untestable at the component level. Keep this file in sync with `.env.example`'s keys if new `VITE_*` vars are added; it's checked in (unlike `.env`/`.env.local`, see `.gitignore`) because it holds no secret, just a fake base URL the fetch mocks never actually reach.

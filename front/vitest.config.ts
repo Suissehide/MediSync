@@ -14,5 +14,9 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+    // Doit laisser la place au budget d'attente de Testing Library (5 s, voir
+    // src/test/setup.ts) plus le montage : a 5 s, le timeout du test se declenchait AVANT
+    // le waitFor et masquait la vraie cause.
+    testTimeout: 20000,
   },
 })
