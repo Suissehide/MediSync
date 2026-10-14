@@ -15,6 +15,7 @@ import { EstablishmentDomain } from '../../../domain/establishment.domain'
 import { ForbiddenWeekDomain } from '../../../domain/forbiddenWeek.domain'
 import { IndicatorSetDomain } from '../../../domain/indicatorSet.domain'
 import { LocationDomain } from '../../../domain/location.domain'
+import { PdfDesignDomain } from '../../../domain/pdf-design.domain'
 import { MembershipDomain } from '../../../domain/membership.domain'
 import { PathwayDomain } from '../../../domain/pathway.domain'
 import { PathwayTemplateDomain } from '../../../domain/pathwayTemplate.domain'
@@ -48,6 +49,7 @@ import { ForbiddenWeekRepository } from '../../../infra/orm/repositories/forbidd
 import { IndicatorCohortRepository } from '../../../infra/orm/repositories/indicatorCohort.repository'
 import { IndicatorSetRepository } from '../../../infra/orm/repositories/indicatorSet.repository'
 import { LocationRepository } from '../../../infra/orm/repositories/location.repository'
+import { PdfDesignRepository } from '../../../infra/orm/repositories/pdf-design.repository'
 import { MembershipRepository } from '../../../infra/orm/repositories/membership.repository'
 import { PathwayRepository } from '../../../infra/orm/repositories/pathway.repository'
 import { PathwayTemplateRepository } from '../../../infra/orm/repositories/pathwayTemplate.repository'
@@ -390,9 +392,14 @@ class AwilixIocContainer {
   // Location
   #registerLocationDomain(): void {
     this.register('locationDomain', asClass(LocationDomain).singleton())
+    this.register('pdfDesignDomain', asClass(PdfDesignDomain).singleton())
   }
   #registerLocationRepository(): void {
     this.register('locationRepository', asClass(LocationRepository).singleton())
+    this.register(
+      'pdfDesignRepository',
+      asClass(PdfDesignRepository).singleton(),
+    )
   }
 
   // Service
