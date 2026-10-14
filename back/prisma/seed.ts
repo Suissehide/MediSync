@@ -9,6 +9,7 @@ import { seedArsIndicatorSet } from './seed/indicators'
 import seedLocations from './seed/location'
 import seedPathwayTemplates from './seed/pathwayTemplate'
 import seedPatients, { seedEtpFields } from './seed/patient'
+import seedPdfDesignPresets from './seed/pdfDesignPreset'
 import seedSoignants from './seed/soignant'
 import seedTenant from './seed/tenant'
 import seedThematics from './seed/thematic'
@@ -85,6 +86,9 @@ async function main() {
   console.log('🌱 Starting database seeding...')
 
   const { establishment, serviceA, serviceB } = await seedTenant(prisma)
+
+  // Hors de la boucle des services : un preset est global, il n'appartient a aucun service.
+  await seedPdfDesignPresets(prisma)
 
   const soignantsA = await seedService(
     prisma,

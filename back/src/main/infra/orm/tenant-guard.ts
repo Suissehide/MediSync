@@ -35,6 +35,7 @@ export const SERVICE_MODELS: readonly string[] = [
   'IndicatorSet',
   'Indicator',
   'IndicatorAnswer',
+  'PdfDesign',
 ]
 
 // Modèles rattachés à un établissement : portent establishmentId.
@@ -315,6 +316,7 @@ export const MODEL_RELATIONS: Record<string, Record<string, ModelRelation>> = {
     fieldDefinitions: many('ServiceFieldDefinition'),
     fieldCategories: many('ServiceFieldCategory'),
     indicatorSets: many('IndicatorSet'),
+    pdfDesigns: many('PdfDesign'),
   },
   EstablishmentMembership: {
     user: one('User'),
@@ -390,6 +392,11 @@ export const MODEL_RELATIONS: Record<string, Record<string, ModelRelation>> = {
     todos: many('Todo'),
     serviceMemberships: many('ServiceMembership'),
   },
+  PdfDesign: {
+    service: one('Service'),
+  },
+  // Global, et sans aucune relation.
+  PdfDesignPreset: {},
   Location: {
     slotTemplates: many('SlotTemplate'),
   },

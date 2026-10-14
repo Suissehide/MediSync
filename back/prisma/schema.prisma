@@ -71,6 +71,7 @@ model Service {
   fieldDefinitions    ServiceFieldDefinition[]
   fieldCategories     ServiceFieldCategory[]
   indicatorSets       IndicatorSet[]
+  pdfDesigns          PdfDesign[]
 
   @@unique([establishmentId, name])
   @@unique([id, establishmentId])
@@ -856,6 +857,40 @@ model IndicatorAnswer {
   indicator Indicator @relation(fields: [indicatorId, serviceId], references: [id, serviceId])
 
   @@unique([indicatorId, year])
+}
+
+// Design livre en lecture seule, visible par tous les services, gere par le super-admin.
+// Modele GLOBAL : ni dans SERVICE_MODELS ni dans ESTABLISHMENT_MODELS.
+model PdfDesignPreset {
+  id         String    @id @default(cuid())
+  name       String
+  content    Json
+  sortOrder  Int       @default(0)
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+
+// La copie modifiable d'un service. Le nom n'est pas unique, comme IndicatorSet et
+// contrairement a Thematic/Location : dupliquer deux fois le meme preset produit deux
+// homonymes, et une unicite couplee a archivedAt reserverait le nom d'un design supprime.
+model PdfDesign {
+  id              String    @id @default(cuid())
+  establishmentId String
+  serviceId       String
+  name            String
+  content         Json
+  // Le preset copie, pour memoire : aucune synchronisation, la copie est figee.
+  sourcePresetId  String?
+  isDefault       Boolean   @default(false)
+  archivedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  service Service @relation(fields: [serviceId, establishmentId], references: [id, establishmentId])
+
+  @@unique([id, serviceId])
+  @@index([serviceId])
 }
 
 model PlanningCycle {
