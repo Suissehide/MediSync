@@ -59,7 +59,11 @@ const rectElement = z.object({
   radius: z.number().min(0).default(0),
 })
 
-const ellipseElement = z.object({ ...geometry, kind: z.literal('ellipse'), fill })
+const ellipseElement = z.object({
+  ...geometry,
+  kind: z.literal('ellipse'),
+  fill,
+})
 
 const imageElement = z.object({
   ...geometry,
@@ -86,11 +90,16 @@ const canvasPage = z.object({
 })
 
 // Les creneaux du patient, rendus par CalendarPages : de la donnee, pas de la mise en page.
-const calendarPage = z.object({ kind: z.literal('calendar'), id: z.string().min(1) })
+const calendarPage = z.object({
+  kind: z.literal('calendar'),
+  id: z.string().min(1),
+})
 
 export const pdfDesignContentSchema = z.object({
   version: z.literal(1),
-  pages: z.array(z.discriminatedUnion('kind', [canvasPage, calendarPage])).min(1),
+  pages: z
+    .array(z.discriminatedUnion('kind', [canvasPage, calendarPage]))
+    .min(1),
 })
 
 // Forme APRES application des defauts : ce que rend une lecture, et ce que lit le front.

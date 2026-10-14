@@ -6,9 +6,7 @@ import { tenantUrl, twoServicesScenario } from './setup/fixtures'
 
 const CONTENT = {
   version: 1,
-  pages: [
-    { kind: 'canvas', id: 'p1', background: '#ffffff', elements: [] },
-  ],
+  pages: [{ kind: 'canvas', id: 'p1', background: '#ffffff', elements: [] }],
 }
 
 // Cloisonnement : a cette etape la seule route est la LISTE, il n'existe pas de lecture par
@@ -106,6 +104,35 @@ describe('GET /pdf-designs', () => {
     expect(res.json().designs.map((d: { name: string }) => d.name)).toEqual([
       'Design de B',
     ])
+  })
+
+  // Un contenu invalide en base — un preset retouche a la main, une version future du schema —
+  // ne doit faire tomber QUE sa ligne. Les presets etant GLOBAUX, le faire remonter en erreur
+  // de reponse eteindrait l'export PDF de tous les services a la fois.
+  it('ecarte un design au contenu invalide sans faire tomber la liste', async () => {
+    await testDb.pdfDesignPreset.create({
+      data: {
+        name: 'Preset casse',
+        content: {
+          version: 1,
+          pages: [
+            {
+              kind: 'canvas',
+              id: 'p1',
+              elements: [{ id: 'e1', kind: 'qrcode', x: 0, y: 0, w: 1, h: 1 }],
+            },
+          ],
+        },
+        sortOrder: 9,
+      },
+    })
+
+    const res = await lire(scenario.serviceA.id, scenario.cookiesA)
+
+    expect(res.statusCode).toBe(200)
+    const noms = res.json().presets.map((p: { name: string }) => p.name)
+    expect(noms).toContain('Programme de reference')
+    expect(noms).not.toContain('Preset casse')
   })
 
   it('refuse a un membre du service A de lire sous le service B', async () => {

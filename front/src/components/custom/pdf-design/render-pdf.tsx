@@ -47,7 +47,8 @@ const resolveFill = (fill: PdfFill, ctx: PdfFieldContext): string => {
   if (typeof fill === 'string') {
     return fill
   }
-  return ctx.pathways[0]?.templateColor ?? fill.fallback
+  // `||` et non `??` : une couleur vide en base doit aussi tomber sur le repli.
+  return ctx.pathways[0]?.templateColor || fill.fallback
 }
 
 const fontOf = (bold: boolean) => (bold ? 'Helvetica-Bold' : 'Helvetica')
@@ -63,22 +64,34 @@ const fontOf = (bold: boolean) => (bold ? 'Helvetica-Bold' : 'Helvetica')
 // La regle retombe sur les valeurs du code d'origine : le rond donne bottom -180, les lignes
 // -160, exactement ce que `cover-page.pdf.tsx` ecrivait a la main.
 const anchor = (start: number, size: number, extent: number) =>
-  start + size > extent
-    ? { end: extent - (start + size) }
-    : { start }
+  start + size > extent ? { end: extent - (start + size) } : { start }
 
-const box = (element: PdfElement) => {
-  const vertical = anchor(element.y, element.h, A4_HEIGHT)
+// `grow` : la hauteur devient un MINIMUM au lieu d'un plafond. Sans ca react-pdf TRONQUE le
+// texte qui depasse, et remplace la fin par une ellipse — un nom de patient de trois lignes
+// dans une boite de deux perdait son prenom, en silence.
+// `anchorBottom` : un texte aligne en bas grandit alors vers le HAUT, comme le `bottom: 48`
+// qu'ecrivait la couverture d'origine, au lieu de descendre sous la page.
+const box = (
+  element: PdfElement,
+  options: { grow?: boolean; anchorBottom?: boolean } = {},
+) => {
+  const vertical = options.anchorBottom
+    ? { end: A4_HEIGHT - (element.y + element.h) }
+    : anchor(element.y, element.h, A4_HEIGHT)
   const horizontal = anchor(element.x, element.w, A4_WIDTH)
   return {
     position: 'absolute' as const,
     ...('start' in horizontal
       ? { left: horizontal.start }
       : { right: horizontal.end }),
-    ...('start' in vertical ? { top: vertical.start } : { bottom: vertical.end }),
+    ...('start' in vertical
+      ? { top: vertical.start }
+      : { bottom: vertical.end }),
     width: element.w,
-    height: element.h,
-    ...(element.rotation ? { transform: `rotate(${element.rotation}deg)` } : {}),
+    ...(options.grow ? { minHeight: element.h } : { height: element.h }),
+    ...(element.rotation
+      ? { transform: `rotate(${element.rotation}deg)` }
+      : {}),
   }
 }
 
@@ -94,7 +107,10 @@ export function renderElement(
         <View
           key={element.id}
           style={{
-            ...box(element),
+            ...box(element, {
+              grow: true,
+              anchorBottom: element.vAlign === 'bottom',
+            }),
             display: 'flex',
             flexDirection: 'column',
             justifyContent: V_ALIGN[element.vAlign],
@@ -107,6 +123,7 @@ export function renderElement(
               fontFamily: fontOf(element.bold),
               color: element.color,
               textAlign: element.align,
+              ...(element.italic ? { fontStyle: 'italic' } : {}),
               ...(element.lineHeight ? { lineHeight: element.lineHeight } : {}),
             }}
           >
@@ -116,7 +133,9 @@ export function renderElement(
                 key={`${element.id}-${index}`}
                 style={{
                   fontFamily: fontOf(element.bold || run.bold),
-                  ...(run.italic ? { fontStyle: 'italic' } : {}),
+                  ...(element.italic || run.italic
+                    ? { fontStyle: 'italic' }
+                    : {}),
                 }}
               >
                 {'field' in run ? resolveField(run.field, ctx) : run.text}

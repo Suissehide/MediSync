@@ -9,7 +9,11 @@ export const PdfDesignApi = {
       method: 'GET',
     })
     if (!response.ok) {
-      handleHttpError(response, {}, 'Impossible de récupérer les designs de PDF')
+      handleHttpError(
+        response,
+        {},
+        'Impossible de récupérer les designs de PDF',
+      )
     }
     return response.json()
   },

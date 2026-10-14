@@ -170,6 +170,31 @@ describe('preset de reference', () => {
     }
   })
 
+  // Epinglage elargi : la spec promet qu'« une edition ulterieure ne peut pas le deplacer en
+  // silence ». Les y/h ci-dessous sont RELEVES sur le rendu d'origine (tache 9) et ne se
+  // deduisent d'aucun style ; sans eux, seul le titre etait tenu.
+  it('garde la geometrie relevee du bloc centre de la couverture', () => {
+    expect(element(0, 'cover-underline').y).toBe(432)
+    expect(texte(0, 'cover-program').y).toBe(445)
+    expect(texte(0, 'cover-dates').y).toBe(503)
+  })
+
+  it('garde la geometrie relevee des quatre paves de conseils', () => {
+    const paves = [1, 2, 3, 4].map((n) => element(2, `tip-${n}-box`))
+    expect(paves.map((p) => [p.y, p.h])).toEqual([
+      [221, 65],
+      [298, 78],
+      [388, 65],
+      [465, 65],
+    ])
+  })
+
+  it('cale l encadre de fin sur la marge basse de la page', () => {
+    const encadre = element(2, 'closing-box')
+    expect(encadre.y + encadre.h).toBeCloseTo(PAGE_H - 36, 2)
+    expect(texte(2, 'closing-text').y).toBeCloseTo(encadre.y + 12, 2)
+  })
+
   it('ne laisse aucun pave de conseil chevaucher le suivant', () => {
     const paves = [1, 2, 3, 4].map((n) => element(2, `tip-${n}-box`))
     for (const [index, pave] of paves.slice(0, -1).entries()) {

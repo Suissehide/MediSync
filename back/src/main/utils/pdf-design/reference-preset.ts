@@ -12,11 +12,22 @@ const CONTENT_W = PAGE_W - MARGIN * 2
 const LOGO_RATIO = 1.9488
 const LINES_RATIO = 0.815
 
+// D'OU VIENNENT LES COORDONNEES DE CE FICHIER, puisqu'on ne peut pas les recalculer de tete.
+//
+// Le decor porte la sienne en commentaire, ligne a ligne : ce sont les offsets CSS de
+// `cover-page.pdf.tsx`, convertis depuis le coin haut-gauche. On les verifie a la lecture.
+//
+// Les valeurs qui remplacent une mise en page EN FLUX — les `y`/`h` des quatre conseils,
+// `CLOSING_H`, et les quatre `y` du bloc centre de la couverture — ne se deduisent d'aucun
+// style : elles ont ete RELEVEES sur le rendu d'origine, en rendant l'ancien document et en
+// extrayant la position de chaque ligne de texte (`pdftotext -bbox`). Voir la tache 9 du plan.
+// Les toucher sans refaire cette mesure fait deriver le document, en silence.
 const CLOSING_H = 66
 
-// `y` et `h` remplacent des hauteurs automatiques : un texte rallonge debordera de son pave,
-// et l'apercu le montre. Portes par le conseil lui-meme plutot que par un second tableau a
-// garder aligne par index.
+// `y` et `h` remplacent des hauteurs automatiques : un texte rallonge pousse desormais vers le
+// bas sans etre tronque (le moteur rend une hauteur MINIMALE), mais il mordra sur le pave
+// suivant. Portes par le conseil lui-meme plutot que par un second tableau a garder aligne
+// par index.
 const TIPS = [
   {
     y: 221,
@@ -149,6 +160,9 @@ export const REFERENCE_PRESET_CONTENT: PdfDesignContentInput = {
           w: 140,
           h: 140 / LOGO_RATIO,
         },
+        // Les quatre `y` qui suivent remplacent le centrage vertical en flux de l'original.
+        // Consequence assumee du passage a une toile : le bloc ne se RECENTRE plus quand son
+        // contenu grandit — un nom de parcours sur deux lignes le laissait remonter de 15 pt.
         {
           id: 'cover-title',
           kind: 'text',

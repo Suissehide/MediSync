@@ -61,7 +61,9 @@ describe('pdfDesignContentSchema', () => {
 
   it('refuse un kind inconnu', () => {
     expect(() =>
-      pdfDesignContentSchema.parse(pageAvecUnTexte({ ...texte, kind: 'qrcode' })),
+      pdfDesignContentSchema.parse(
+        pageAvecUnTexte({ ...texte, kind: 'qrcode' }),
+      ),
     ).toThrow()
   })
 
@@ -78,7 +80,9 @@ describe('pdfDesignContentSchema', () => {
 
   it('refuse une couleur qui n est pas un hex a six chiffres', () => {
     expect(() =>
-      pdfDesignContentSchema.parse(pageAvecUnTexte({ ...texte, color: 'rouge' })),
+      pdfDesignContentSchema.parse(
+        pageAvecUnTexte({ ...texte, color: 'rouge' }),
+      ),
     ).toThrow()
   })
 
@@ -91,14 +95,20 @@ describe('pdfDesignContentSchema', () => {
   it('refuse un run qui porte a la fois du texte et une donnee', () => {
     expect(() =>
       pdfDesignContentSchema.parse(
-        pageAvecUnTexte({ ...texte, runs: [{ text: 'a', field: 'patient.name' }] }),
+        pageAvecUnTexte({
+          ...texte,
+          runs: [{ text: 'a', field: 'patient.name' }],
+        }),
       ),
     ).toThrow()
   })
 
   it('accepte un run de donnee', () => {
     const element = premierElement(
-      pageAvecUnTexte({ ...texte, runs: [{ field: 'patient.name', bold: true }] }),
+      pageAvecUnTexte({
+        ...texte,
+        runs: [{ field: 'patient.name', bold: true }],
+      }),
     )
     if (element.kind !== 'text') {
       throw new Error('forme inattendue')

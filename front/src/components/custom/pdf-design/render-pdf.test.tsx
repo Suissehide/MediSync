@@ -124,10 +124,36 @@ describe('renderElement', () => {
     expect(node.props.style).toMatchObject({
       position: 'absolute',
       left: 10,
-      top: 20,
       width: 100,
-      height: 30,
     })
+  })
+
+  // La hauteur d'un TEXTE est un minimum, jamais un plafond : react-pdf tronque a une hauteur
+  // fixee, et un nom de patient trop long y perdait son prenom.
+  it('donne au texte une hauteur minimale, pas une hauteur fixe', () => {
+    const style = sonde(renderElement(texte, ctx())).props.style
+    expect(style).toMatchObject({ minHeight: 30 })
+    expect(style).not.toHaveProperty('height')
+  })
+
+  it('garde en revanche une hauteur fixe pour une forme', () => {
+    const pave: PdfRectElement = {
+      ...geometry,
+      kind: 'rect',
+      fill: '#fce7f3',
+      radius: 6,
+    }
+    const style = sonde(renderElement(pave, ctx())).props.style
+    expect(style).toMatchObject({ height: 30 })
+    expect(style).not.toHaveProperty('minHeight')
+  })
+
+  // Un texte aligne en bas est ancre depuis le bas : il grandit alors vers le HAUT, comme le
+  // `bottom: 48` qu'ecrivait la couverture d'origine.
+  it('ancre par le bas un texte aligne en bas, meme s il ne deborde pas', () => {
+    const style = sonde(renderElement(texte, ctx())).props.style
+    expect(style).not.toHaveProperty('top')
+    expect(style?.bottom).toBeCloseTo(841.89 - (20 + 30), 2)
   })
 
   it('traduit vAlign en justifyContent', () => {
@@ -158,8 +184,12 @@ describe('renderElement', () => {
 
   it('rend un remplissage par jeton avec la couleur du parcours', () => {
     const rond = ellipse({ token: 'pathway.color', fallback: '#e6aff6' })
-    const avecParcours = ctx({ pathways: [pathway({ templateColor: '#123456' })] })
-    expect(JSON.stringify(renderElement(rond, avecParcours))).toContain('#123456')
+    const avecParcours = ctx({
+      pathways: [pathway({ templateColor: '#123456' })],
+    })
+    expect(JSON.stringify(renderElement(rond, avecParcours))).toContain(
+      '#123456',
+    )
   })
 
   // Review Focus 2 : sans parcours, le repli du preset.
@@ -171,7 +201,24 @@ describe('renderElement', () => {
   it('se replie aussi quand le parcours existe mais sans couleur', () => {
     const rond = ellipse({ token: 'pathway.color', fallback: '#e6aff6' })
     const sansCouleur = ctx({ pathways: [pathway({ templateColor: null })] })
-    expect(JSON.stringify(renderElement(rond, sansCouleur))).toContain('#e6aff6')
+    expect(JSON.stringify(renderElement(rond, sansCouleur))).toContain(
+      '#e6aff6',
+    )
+  })
+
+  // L'italique porte par l'ELEMENT etait mort : seul `run.italic` produisait un style, alors
+  // que le gras est honore aux deux niveaux. Un design en italique rendait du romain, en
+  // silence, et l'editeur de l'etape 2 aurait expose un bouton sans effet.
+  it('applique l italique pose sur l element, pas seulement sur un run', () => {
+    const italique: PdfElement = { ...texte, italic: true }
+    expect(JSON.stringify(renderElement(italique, ctx()))).toContain('italic')
+  })
+
+  // `??` laissait passer une couleur vide : seul null et undefined retombaient sur le repli.
+  it('se replie aussi quand la couleur du parcours est une chaine vide', () => {
+    const rond = ellipse({ token: 'pathway.color', fallback: '#e6aff6' })
+    const vide = ctx({ pathways: [pathway({ templateColor: '' })] })
+    expect(JSON.stringify(renderElement(rond, vide))).toContain('#e6aff6')
   })
 
   it('rend une couleur fixe telle quelle', () => {
@@ -228,10 +275,7 @@ describe('renderElement', () => {
     expect(callback('Vandenbossche')).toEqual(['Vandenbossche'])
     expect(callback('Dupont')).toEqual(['Dupont'])
     // 19 caracteres : au-dela de la limite de 18, coupe en deux.
-    expect(callback('Aaaaaaaaaabbbbbbbbb')).toEqual([
-      'Aaaaaaaaaa',
-      'bbbbbbbbb',
-    ])
+    expect(callback('Aaaaaaaaaabbbbbbbbb')).toEqual(['Aaaaaaaaaa', 'bbbbbbbbb'])
   })
 })
 
@@ -275,7 +319,9 @@ describe('pagesOf', () => {
     const colore = design([
       { kind: 'canvas', id: 'p1', background: '#fce7f3', elements: [] },
     ])
-    expect(sonde(pagesOf(colore, ctx(), calendar)[0]).props.style).toMatchObject({
+    expect(
+      sonde(pagesOf(colore, ctx(), calendar)[0]).props.style,
+    ).toMatchObject({
       backgroundColor: '#fce7f3',
     })
   })
