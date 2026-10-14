@@ -47,6 +47,7 @@ describe('resolveTenantContext', () => {
       establishmentRole: 'ADMIN',
       serviceRole: 'LECTURE',
       soignantId: null,
+      serviceName: 'Pneumo',
     })
   })
 
@@ -117,6 +118,7 @@ describe('defaultTenantContext', () => {
       establishmentRole: 'ADMIN',
       serviceRole: 'COORDINATEUR',
       soignantId: 'so1',
+      serviceName: 'Cardio',
     })
   })
 

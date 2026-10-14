@@ -44,6 +44,11 @@ export type User = {
 export type TenantContext = {
   establishmentId: string
   serviceId: string | null
+  // Le nom du service courant, pour les rendus qui l'affichent (le PDF patient). Optionnel
+  // plutot que requis, et pour la meme raison que `services[].soignantId` et `origine`
+  // ci-dessus : une quinzaine de fixtures de test construisent un TenantContext a la main, et
+  // une absence se lit exactement comme un contexte sans service.
+  serviceName?: string | null
   establishmentRole: EstablishmentRole
   serviceRole: ServiceRole | null
   soignantId: string | null

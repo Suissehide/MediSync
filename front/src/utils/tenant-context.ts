@@ -63,6 +63,7 @@ export const resolveTenantContext = (
     serviceRole: service.role,
     // Porté par l'affectation de service depuis le 2026-09-29 (soignants propres à chaque service).
     soignantId: service.soignantId ?? null,
+    serviceName: service.name,
   }
 }
 

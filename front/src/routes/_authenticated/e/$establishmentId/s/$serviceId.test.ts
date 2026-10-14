@@ -69,6 +69,7 @@ describe('beforeLoad du layout de service — effets de bord reserves a la navig
       establishmentRole: 'ADMIN',
       serviceRole: 'COORDINATEUR',
       soignantId: 'so1',
+      serviceName: 'Cardio',
     })
     expect(localStorage.getItem(LAST_CONTEXT_KEY(user.id))).toBe(
       JSON.stringify({ establishmentId: 'e1', serviceId: 's1' }),

@@ -1,19 +1,17 @@
 import { PDFDownloadLink, PDFViewer } from '@react-pdf/renderer'
 import dayjs from 'dayjs'
-import { Download, FilePlus, X } from 'lucide-react'
+import { Download, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import { useForbiddenWeekQueries } from '../../../../queries/useForbiddenWeek.ts'
 import { usePatientPathwaysQuery } from '../../../../queries/usePatient.tsx'
+import { usePdfDesignQueries } from '../../../../queries/usePdfDesign.ts'
 import { usePatientSlotsQuery } from '../../../../queries/useSlot.ts'
 import { useThematicQueries } from '../../../../queries/useThematic.ts'
+import { useAuthStore } from '../../../../store/useAuthStore.ts'
 import type { Patient } from '../../../../types/patient.ts'
+import type { PdfDesignSummary } from '../../../../types/pdfDesignList.ts'
 import { Button } from '../../../ui/button.tsx'
-import DropdownFilter from '../../../ui/dropdownFilter.tsx'
-import {
-  getDefaultEnabledOptionalPageIds,
-  OPTIONAL_PAGES,
-} from './optional-pages.ts'
 import ProgrammePDF from './programme.pdf.tsx'
 
 interface ProgrammePDFModalProps {
@@ -31,29 +29,26 @@ export default function ProgrammePDFModal({
   const { pathways = [] } = usePatientPathwaysQuery(patient.id)
   const { forbiddenWeeks } = useForbiddenWeekQueries()
   const { thematics } = useThematicQueries()
+  const { presets, designs } = usePdfDesignQueries()
 
-  const [enabledOptionalPageIds, setEnabledOptionalPageIds] = useState<
-    string[]
-  >(() => getDefaultEnabledOptionalPageIds())
+  // Le nom du service vient du contexte de tenant, pose par le layout de route.
+  const serviceName = useAuthStore((state) => state.context?.serviceName) ?? ''
 
-  const handleOptionalPageChange = (id: string, checked: boolean) => {
-    setEnabledOptionalPageIds((prev) =>
-      checked
-        ? prev.includes(id)
-          ? prev
-          : [...prev, id]
-        : prev.filter((existingId) => existingId !== id),
-    )
-  }
+  const [selectedDesignId, setSelectedDesignId] = useState<string | null>(null)
 
-  const optionalPageFilters = useMemo(
+  // Ceux du service d'abord, puis les presets.
+  const availableDesigns = useMemo<PdfDesignSummary[]>(
+    () => [...designs, ...presets],
+    [designs, presets],
+  )
+
+  // Le choix explicite, sinon le design par defaut du service, sinon le premier disponible.
+  const selectedDesign = useMemo(
     () =>
-      OPTIONAL_PAGES.map((page) => ({
-        id: page.id,
-        label: page.label,
-        checked: enabledOptionalPageIds.includes(page.id),
-      })),
-    [enabledOptionalPageIds],
+      availableDesigns.find((design) => design.id === selectedDesignId) ??
+      availableDesigns.find((design) => design.isDefault) ??
+      availableDesigns[0],
+    [availableDesigns, selectedDesignId],
   )
 
   const patientSlots = useMemo(() => {
@@ -96,21 +91,24 @@ export default function ProgrammePDFModal({
   const fileName = `programme-${patient.lastName}-${patient.firstName}-${dayjs.utc().format('YYYY-MM-DD')}.pdf`
 
   const pdfDocument = useMemo(
-    () => (
-      <ProgrammePDF
-        patient={patient}
-        upcomingSlots={patientSlots}
-        pathways={pathways}
-        enabledOptionalPageIds={enabledOptionalPageIds}
-        forbiddenWeekStarts={forbiddenWeekStarts}
-        noticeByThematicId={noticeByThematicId}
-      />
-    ),
+    () =>
+      selectedDesign ? (
+        <ProgrammePDF
+          patient={patient}
+          upcomingSlots={patientSlots}
+          pathways={pathways}
+          design={selectedDesign.content}
+          serviceName={serviceName}
+          forbiddenWeekStarts={forbiddenWeekStarts}
+          noticeByThematicId={noticeByThematicId}
+        />
+      ) : null,
     [
       patient,
       patientSlots,
       pathways,
-      enabledOptionalPageIds,
+      selectedDesign,
+      serviceName,
       forbiddenWeekStarts,
       noticeByThematicId,
     ],
@@ -125,22 +123,30 @@ export default function ProgrammePDFModal({
             Aperçu du programme - {patient.lastName} {patient.firstName}
           </h2>
           <div className="flex items-center gap-4">
-            {OPTIONAL_PAGES.length > 0 && (
-              <DropdownFilter
-                filters={optionalPageFilters}
-                onFilterChange={handleOptionalPageChange}
-                triggerLabel="Pages additionnelles"
-                TriggerIcon={FilePlus}
-              />
+            {availableDesigns.length > 1 && (
+              <select
+                className="border border-border rounded-md px-2 py-1 text-sm bg-background text-foreground"
+                value={selectedDesign?.id ?? ''}
+                onChange={(event) => setSelectedDesignId(event.target.value)}
+                aria-label="Design du document"
+              >
+                {availableDesigns.map((design) => (
+                  <option key={design.id} value={design.id}>
+                    {design.name}
+                  </option>
+                ))}
+              </select>
             )}
-            <PDFDownloadLink document={pdfDocument} fileName={fileName}>
-              {({ loading }) => (
-                <Button variant="default" size="default" disabled={loading}>
-                  <Download className="h-4 w-4" />
-                  {loading ? 'Génération...' : 'Télécharger'}
-                </Button>
-              )}
-            </PDFDownloadLink>
+            {pdfDocument && (
+              <PDFDownloadLink document={pdfDocument} fileName={fileName}>
+                {({ loading }) => (
+                  <Button variant="default" size="default" disabled={loading}>
+                    <Download className="h-4 w-4" />
+                    {loading ? 'Génération...' : 'Télécharger'}
+                  </Button>
+                )}
+              </PDFDownloadLink>
+            )}
             <Button variant="outline" size="icon" onClick={onClose}>
               <X className="h-4 w-4" />
             </Button>
@@ -150,9 +156,15 @@ export default function ProgrammePDFModal({
         {/* PDF Viewer */}
         {previewMode && (
           <div className="flex-1 overflow-hidden">
-            <PDFViewer width="100%" height="100%" showToolbar={false}>
-              {pdfDocument}
-            </PDFViewer>
+            {pdfDocument ? (
+              <PDFViewer width="100%" height="100%" showToolbar={false}>
+                {pdfDocument}
+              </PDFViewer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-muted-foreground">
+                Aucun design de document disponible pour ce service.
+              </div>
+            )}
           </div>
         )}
       </div>
