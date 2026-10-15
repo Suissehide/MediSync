@@ -12,3 +12,16 @@ export type PdfDesignList = {
   presets: PdfDesignSummary[]
   designs: PdfDesignSummary[]
 }
+
+export type CreatePdfDesignParams = {
+  sourcePresetId?: string
+  name?: string
+}
+
+export type UpdatePdfDesignParams = {
+  id: string
+  name?: string
+  content?: PdfDesignContent
+  isDefault?: boolean
+  archived?: boolean
+}

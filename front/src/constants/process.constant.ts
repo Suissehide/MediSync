@@ -167,6 +167,10 @@ export const GRANT_ESTABLISHMENT = {
 
 export const PDF_DESIGN = {
   GET_ALL: 'get_all_pdf_designs',
+  CREATE: 'create_pdf_design',
+  UPDATE: 'update_pdf_design',
+  ARCHIVE: 'archive_pdf_design',
+  RESTORE: 'restore_pdf_design',
 }
 
 export const LOCATION = {
