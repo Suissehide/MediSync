@@ -1,18 +1,24 @@
+import type { Prisma } from '../../../../generated/client'
 import type { IocContainer } from '../../../types/application/ioc'
 import type {
+  PdfDesignCreateEntityRepo,
   PdfDesignEntityRepo,
   PdfDesignPresetEntityRepo,
   PdfDesignRepositoryInterface,
+  PdfDesignUpdateEntityRepo,
 } from '../../../types/infra/orm/repositories/pdf-design.repository.interface'
+import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { TenantContextInterface } from '../../../types/utils/tenant-context'
 import type { PostgresPrismaClient } from '../postgres-client'
 
 class PdfDesignRepository implements PdfDesignRepositoryInterface {
   private readonly prisma: PostgresPrismaClient
+  private readonly errorHandler: ErrorHandlerInterface
   private readonly tenantContext: TenantContextInterface
 
-  constructor({ postgresOrm, tenantContext }: IocContainer) {
+  constructor({ postgresOrm, errorHandler, tenantContext }: IocContainer) {
     this.prisma = postgresOrm.prisma
+    this.errorHandler = errorHandler
     this.tenantContext = tenantContext
   }
 
@@ -21,9 +27,9 @@ class PdfDesignRepository implements PdfDesignRepositoryInterface {
     return this.tenantContext.scope()
   }
 
-  findAllForService(): Promise<PdfDesignEntityRepo[]> {
+  findAllForService(archived = false): Promise<PdfDesignEntityRepo[]> {
     return this.prisma.pdfDesign.findMany({
-      where: { ...this.scope, archivedAt: null },
+      where: { ...this.scope, archivedAt: archived ? { not: null } : null },
       orderBy: { createdAt: 'asc' },
     })
   }
@@ -35,6 +41,78 @@ class PdfDesignRepository implements PdfDesignRepositoryInterface {
       where: { archivedAt: null },
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
     })
+  }
+
+  findPresetByID(presetID: string): Promise<PdfDesignPresetEntityRepo | null> {
+    return this.prisma.pdfDesignPreset.findUnique({ where: { id: presetID } })
+  }
+
+  async namesInService(): Promise<string[]> {
+    const lignes = await this.prisma.pdfDesign.findMany({
+      where: this.scope,
+      select: { name: true },
+    })
+    return lignes.map((ligne) => ligne.name)
+  }
+
+  async create(
+    params: PdfDesignCreateEntityRepo,
+  ): Promise<PdfDesignEntityRepo> {
+    try {
+      return await this.prisma.pdfDesign.create({
+        data: {
+          ...this.scope,
+          name: params.name,
+          content: params.content as Prisma.InputJsonValue,
+          sourcePresetId: params.sourcePresetId,
+        },
+      })
+    } catch (err) {
+      throw this.errorHandler.boomErrorFromPrismaError({
+        entityName: 'PdfDesign',
+        error: err,
+      })
+    }
+  }
+
+  // Un seul design par defaut par service : le poser decroche les autres, dans la MEME
+  // transaction. Deux `isDefault` a vrai feraient choisir la modale au hasard, sans bruit.
+  // Le decrochage est borne au service courant — un autre service garde le sien.
+  async update(
+    designID: string,
+    params: PdfDesignUpdateEntityRepo,
+  ): Promise<PdfDesignEntityRepo> {
+    const scope = this.scope
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        if (params.isDefault === true) {
+          await tx.pdfDesign.updateMany({
+            where: { ...scope, isDefault: true },
+            data: { isDefault: false },
+          })
+        }
+        return tx.pdfDesign.update({
+          where: { id_serviceId: { id: designID, serviceId: scope.serviceId } },
+          data: {
+            ...(params.name === undefined ? {} : { name: params.name }),
+            ...(params.content === undefined
+              ? {}
+              : { content: params.content as Prisma.InputJsonValue }),
+            ...(params.isDefault === undefined
+              ? {}
+              : { isDefault: params.isDefault }),
+            ...(params.archived === undefined
+              ? {}
+              : { archivedAt: params.archived ? new Date() : null }),
+          },
+        })
+      })
+    } catch (err) {
+      throw this.errorHandler.boomErrorFromPrismaError({
+        entityName: 'PdfDesign',
+        error: err,
+      })
+    }
   }
 }
 

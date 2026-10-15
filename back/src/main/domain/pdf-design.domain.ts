@@ -1,9 +1,16 @@
-import { pdfDesignContentSchema } from '../interfaces/http/fastify/schemas/pdf-design-content.schema'
+import Boom from '@hapi/boom'
+
+import {
+  type PdfDesignContentInput,
+  pdfDesignContentSchema,
+} from '../interfaces/http/fastify/schemas/pdf-design-content.schema'
 import type { IocContainer } from '../types/application/ioc'
 import type {
+  PdfDesignCreateDomain,
   PdfDesignDomainInterface,
   PdfDesignListDomain,
   PdfDesignSummaryDomain,
+  PdfDesignUpdateDomain,
 } from '../types/domain/pdf-design.domain.interface'
 import type { PdfDesignRepositoryInterface } from '../types/infra/orm/repositories/pdf-design.repository.interface'
 import type { Logger } from '../types/utils/logger'
@@ -13,6 +20,33 @@ type LigneDeDesign = {
   name: string
   content: unknown
   isDefault?: boolean
+}
+
+// Une toile vide et la page calendrier : le point de depart d'un design parti de rien.
+const CONTENU_VIERGE: PdfDesignContentInput = {
+  version: 1,
+  pages: [
+    { kind: 'canvas', id: 'page-1', elements: [] },
+    { kind: 'calendar', id: 'calendrier' },
+  ],
+}
+
+// « X (copie) », puis « X (copie 2) », « X (copie 3) »... Le nom d'un design n'est pas unique
+// en base (choix de la spec, aligne sur IndicatorSet), mais deux entrees identiques dans une
+// liste sont illisibles. Les noms pris incluent les designs SUPPRIMES : sans cela la
+// numerotation se remettrait a 2 apres une suppression, et restaurer l'ancien ferait deux
+// lignes du meme nom.
+export const nomDeCopie = (base: string, pris: string[]): string => {
+  const premier = `${base} (copie)`
+  if (!pris.includes(premier)) {
+    return premier
+  }
+  for (let n = 2; ; n += 1) {
+    const candidat = `${base} (copie ${n})`
+    if (!pris.includes(candidat)) {
+      return candidat
+    }
+  }
 }
 
 class PdfDesignDomain implements PdfDesignDomainInterface {
@@ -49,12 +83,23 @@ class PdfDesignDomain implements PdfDesignDomainInterface {
     return retenus
   }
 
+  // Un contenu deja en base peut ne plus passer le schema. Sur une ligne PRECISE — celle qu'on
+  // vient d'ecrire ou de lire par id — c'est une erreur serveur, pas une ligne a ecarter.
+  #resume(ligne: LigneDeDesign): PdfDesignSummaryDomain {
+    const [retenu] = this.#valides([ligne], 'design')
+    if (!retenu) {
+      throw Boom.internal('Le contenu de ce design ne passe pas le schema')
+    }
+    return retenu
+  }
+
   // Les deux listes d'un coup : l'ecran d'administration et la modale de generation ont tous
-  // deux besoin des presets ET des designs du service.
-  async findAllForService(): Promise<PdfDesignListDomain> {
+  // deux besoin des presets ET des designs du service. Les supprimes ne concernent que les
+  // designs : un preset archive n'est jamais propose, et c'est le super-admin qui les gere.
+  async findAllForService(archived = false): Promise<PdfDesignListDomain> {
     const [presets, designs] = await Promise.all([
-      this.pdfDesignRepository.findAllPresets(),
-      this.pdfDesignRepository.findAllForService(),
+      archived ? [] : this.pdfDesignRepository.findAllPresets(),
+      this.pdfDesignRepository.findAllForService(archived),
     ])
     return {
       presets: this.#valides(
@@ -63,6 +108,46 @@ class PdfDesignDomain implements PdfDesignDomainInterface {
       ),
       designs: this.#valides(designs, 'design'),
     }
+  }
+
+  async create(params: PdfDesignCreateDomain): Promise<PdfDesignSummaryDomain> {
+    const pris = await this.pdfDesignRepository.namesInService()
+
+    if (!params.sourcePresetId) {
+      return this.#resume(
+        await this.pdfDesignRepository.create({
+          name: params.name ?? nomDeCopie('Nouveau design', pris),
+          content: CONTENU_VIERGE,
+          sourcePresetId: null,
+        }),
+      )
+    }
+
+    const preset = await this.pdfDesignRepository.findPresetByID(
+      params.sourcePresetId,
+    )
+    if (!preset) {
+      throw Boom.notFound('PdfDesignPreset not found')
+    }
+    // Copie FIGEE : modifier le preset ensuite ne touche aucune copie deja faite.
+    return this.#resume(
+      await this.pdfDesignRepository.create({
+        name: params.name ?? nomDeCopie(preset.name, pris),
+        content: preset.content,
+        sourcePresetId: preset.id,
+      }),
+    )
+  }
+
+  async update(
+    designID: string,
+    params: PdfDesignUpdateDomain,
+  ): Promise<PdfDesignSummaryDomain> {
+    return this.#resume(await this.pdfDesignRepository.update(designID, params))
+  }
+
+  async archive(designID: string): Promise<void> {
+    await this.pdfDesignRepository.update(designID, { archived: true })
   }
 }
 

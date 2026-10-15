@@ -25,7 +25,7 @@ import { pathwayTemplateRouter } from './pathwayTemplate'
 import { patientRouter } from './patient'
 import { patientAccessLogRouter } from './patientAccessLog'
 import { patientServiceFileRouter } from './patientServiceFile'
-import { pdfDesignReadRouter } from './pdfDesign'
+import { pdfDesignReadRouter, pdfDesignWriteRouter } from './pdfDesign'
 import { planningCycleRouter } from './planningCycle'
 import { serviceFieldRouter } from './serviceField'
 import { serviceFieldCategoryRouter } from './serviceFieldCategory'
@@ -206,6 +206,7 @@ const tenantRoutes: FastifyPluginAsyncZod = async (fastify) => {
   await fastify.register(activityReportRouter, { prefix: '/activite' })
   await fastify.register(indicatorSetRouter, { prefix: '/indicator-sets' })
   await fastify.register(pdfDesignReadRouter, { prefix: '/pdf-designs' })
+  await fastify.register(pdfDesignWriteRouter, { prefix: '/pdf-designs' })
   await fastify.register(indicatorCatalogRouter, {
     prefix: '/indicator-catalog',
   })

@@ -15,6 +15,24 @@ export type PdfDesignListDomain = {
   designs: PdfDesignSummaryDomain[]
 }
 
+export type PdfDesignCreateDomain = {
+  sourcePresetId?: string
+  name?: string
+}
+
+export type PdfDesignUpdateDomain = {
+  name?: string
+  content?: PdfDesignContent
+  isDefault?: boolean
+  archived?: boolean
+}
+
 export interface PdfDesignDomainInterface {
-  findAllForService: () => Promise<PdfDesignListDomain>
+  findAllForService: (archived?: boolean) => Promise<PdfDesignListDomain>
+  create: (params: PdfDesignCreateDomain) => Promise<PdfDesignSummaryDomain>
+  update: (
+    designID: string,
+    params: PdfDesignUpdateDomain,
+  ) => Promise<PdfDesignSummaryDomain>
+  archive: (designID: string) => Promise<void>
 }
