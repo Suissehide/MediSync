@@ -1,12 +1,18 @@
 import { Document, PDFViewer } from '@react-pdf/renderer'
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
-import { ArrowLeft, Eye, PencilRuler, Save } from 'lucide-react'
+import { ArrowLeft, Eye, PencilRuler, Redo2, Save, Undo2 } from 'lucide-react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 import Inspecteur from '@/components/custom/pdf-design/editor/inspecteur.tsx'
 import Palette from '@/components/custom/pdf-design/editor/palette.tsx'
+import {
+  type ActionClavier,
+  actionDuClavier,
+  CHAMPS_DE_SAISIE,
+} from '@/components/custom/pdf-design/editor/raccourcis.ts'
 import ToileEditable from '@/components/custom/pdf-design/editor/toile-editable.tsx'
 import { useEdition } from '@/components/custom/pdf-design/editor/use-edition.ts'
+import { useHistorique } from '@/components/custom/pdf-design/editor/use-historique.ts'
 import {
   SAMPLE_FIELD_CONTEXT,
   SAMPLE_FIELD_VALUES,
@@ -71,12 +77,78 @@ function PdfDesignEditor() {
     supprimerSelection,
     dupliquerSelection,
     changerOrdre,
+    remplacerContenu,
     marquerEnregistre,
     modifie,
   } = useEdition(design?.content ?? CONTENU_VIDE)
 
+  const { synchroniser, annuler, retablir, peutAnnuler, peutRetablir } =
+    useHistorique(remplacerContenu)
+
+  // L'historique se branche ici, sur le contenu lui-meme : il regroupe les rafales d'un
+  // geste et ignore ce qu'il vient de restaurer.
+  useEffect(() => {
+    synchroniser(contenu)
+  }, [contenu, synchroniser])
+
   const elementSelectionne =
     pageCourante?.elements.find((e) => e.id === selection) ?? null
+
+  // La decision est dans `actionDuClavier`, pure et testee ; ici ne reste que l'execution.
+  const appliquer = (action: ActionClavier) => {
+    if (action.type === 'annuler') {
+      annuler()
+      return
+    }
+    if (action.type === 'retablir') {
+      retablir()
+      return
+    }
+    if (action.type === 'deselectionner') {
+      choisirElement(null)
+      return
+    }
+    if (!selection || !elementSelectionne) {
+      return
+    }
+    if (action.type === 'supprimer') {
+      supprimerSelection()
+      return
+    }
+    modifierElement(selection, {
+      x: elementSelectionne.x + action.dx,
+      y: elementSelectionne.y + action.dy,
+    })
+  }
+
+  // Sur la FENETRE, pas sur un conteneur : la toile fait `preventDefault` sur pointerdown
+  // pour ne pas lancer de selection de texte, donc aucun conteneur ne recoit jamais le
+  // focus et aucun raccourci ne partirait. L'editeur occupe l'ecran, et la garde
+  // `dansUnChamp` suffit a ne pas voler les frappes de l'inspecteur.
+  useEffect(() => {
+    if (apercu) {
+      return
+    }
+    const ecouter = (evenement: KeyboardEvent) => {
+      const cible = evenement.target
+      const action = actionDuClavier({
+        key: evenement.key,
+        shiftKey: evenement.shiftKey,
+        metaKey: evenement.metaKey,
+        ctrlKey: evenement.ctrlKey,
+        dansUnChamp:
+          cible instanceof HTMLElement &&
+          CHAMPS_DE_SAISIE.includes(cible.tagName),
+      })
+      if (!action) {
+        return
+      }
+      evenement.preventDefault()
+      appliquer(action)
+    }
+    addEventListener('keydown', ecouter)
+    return () => removeEventListener('keydown', ecouter)
+  })
 
   const [apercu, setApercu] = useState(false)
   const cadre = useRef<HTMLDivElement>(null)
@@ -152,6 +224,24 @@ function PdfDesignEditor() {
             )}
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              aria-label="Annuler"
+              disabled={!peutAnnuler}
+              onClick={annuler}
+            >
+              <Undo2 className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              aria-label="Rétablir"
+              disabled={!peutRetablir}
+              onClick={retablir}
+            >
+              <Redo2 className="w-4 h-4" />
+            </Button>
             <Button variant="outline" onClick={() => setApercu(!apercu)}>
               {apercu ? (
                 <PencilRuler className="w-4 h-4" />
@@ -202,7 +292,15 @@ function PdfDesignEditor() {
             </PDFViewer>
           </div>
         ) : (
-          <div className="flex-1 min-h-0 flex gap-4">
+          // Le clavier vit sur le conteneur : les raccourcis valent pour toute la zone
+          // d'edition, pas pour un element en particulier.
+          <div
+            className="flex-1 min-h-0 flex gap-4"
+            // `application` dit aux lecteurs d'ecran de passer les touches a la page plutot
+            // que de les intercepter : c'est le role d'un editeur de toile.
+            role="application"
+            aria-label="Éditeur de mise en page"
+          >
             <aside className="w-40 flex-shrink-0 overflow-auto">
               <Palette onAjouter={ajouterElement} />
             </aside>
