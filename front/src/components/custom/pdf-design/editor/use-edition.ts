@@ -1,15 +1,24 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useState } from 'react'
 
 import type {
-  PdfCanvasPage,
   PdfDesignContent,
   PdfElement,
+  PdfPage,
 } from '../../../../types/pdfDesign.ts'
 import {
   dupliquerElement,
   type KindElement,
   nouvelElement,
 } from './elements.ts'
+import {
+  ajouterPage,
+  aUnCalendrier,
+  deplacerPage,
+  pageCalendrier,
+  pageVierge,
+  type SensDePage,
+  supprimerPage,
+} from './pages.ts'
 
 export function useEdition(contenuInitial: PdfDesignContent) {
   const [contenu, setContenu] = useState(contenuInitial)
@@ -31,14 +40,19 @@ export function useEdition(contenuInitial: PdfDesignContent) {
     setSelection(null)
   }
 
-  const pagesEditables = useMemo(
-    () => contenu.pages.filter((p): p is PdfCanvasPage => p.kind === 'canvas'),
-    [contenu],
-  )
+  // Toutes les pages, dans l'ordre : la bande les montre toutes, y compris le calendrier,
+  // qu'on deplace et qu'on supprime comme les autres meme s'il ne se compose pas.
+  const pages = contenu.pages
 
-  // Le calendrier n'est pas composable : l'editeur ouvre sur la premiere TOILE.
+  // L'editeur OUVRE sur la premiere toile : le calendrier n'a rien a composer. Une fois
+  // ouvert, la page courante peut etre n'importe laquelle — c'est la bande qui mene. Le
+  // dernier repli sert au design dont la seule page EST le calendrier.
+  const premiereToile = pages.find((page) => page.kind === 'canvas')
   const pageCourante =
-    pagesEditables.find((p) => p.id === pageId) ?? pagesEditables[0] ?? null
+    pages.find((page) => page.id === pageId) ??
+    premiereToile ??
+    pages[0] ??
+    null
 
   const choisirPage = useCallback((id: string) => {
     setPageId(id)
@@ -46,6 +60,8 @@ export function useEdition(contenuInitial: PdfDesignContent) {
     // element absent de la toile affichee.
     setSelection(null)
   }, [])
+
+  const peutAjouterCalendrier = !aUnCalendrier(pages)
 
   // Point d'entree UNIQUE de toute modification, avec `remplacerContenu` : tout passe par
   // `majElements`, y compris les operations de liste, et l'historique (tache 8) s'y branche
@@ -93,11 +109,64 @@ export function useEdition(contenuInitial: PdfDesignContent) {
     setSelection(null)
   }, [majElements, selection])
 
+  // Meme discipline que `majElements` : un seul endroit modifie la liste des pages, et
+  // l'historique de l'etape 2 continue de s'y brancher sans rien savoir de plus.
+  const majPages = useCallback(
+    (transformer: (pages: PdfPage[]) => PdfPage[]) => {
+      setContenu((avant) => ({ ...avant, pages: transformer(avant.pages) }))
+    },
+    [],
+  )
+
+  const ajouterToile = useCallback(() => {
+    const page = pageVierge()
+    majPages((avant) => ajouterPage(avant, page))
+    setPageId(page.id)
+    setSelection(null)
+  }, [majPages])
+
+  const ajouterCalendrier = useCallback(() => {
+    if (!peutAjouterCalendrier) {
+      return
+    }
+    const page = pageCalendrier()
+    majPages((avant) => ajouterPage(avant, page))
+    setPageId(page.id)
+    setSelection(null)
+  }, [majPages, peutAjouterCalendrier])
+
+  // La page courante peut disparaitre sous les pieds de l'editeur : on repasse sur la
+  // premiere toile plutot que de garder un identifiant qui ne designe plus rien.
+  const supprimerUnePage = useCallback(
+    (id: string) => {
+      if (pages.length <= 1) {
+        return
+      }
+      majPages((avant) => supprimerPage(avant, id))
+      if (pageId === id) {
+        setPageId(null)
+        setSelection(null)
+      }
+    },
+    [majPages, pageId, pages.length],
+  )
+
+  const deplacerUnePage = useCallback(
+    (id: string, sens: SensDePage) => {
+      majPages((avant) => deplacerPage(avant, id, sens))
+    },
+    [majPages],
+  )
+
   // La copie se fabrique AVANT la mise a jour, jamais dans l'updater : React y appelle la
   // fonction au rendu suivant, donc un identifiant pris la-dedans arriverait trop tard pour
   // la selection — et deux fois en mode strict.
   const dupliquerSelection = useCallback(() => {
-    const original = pageCourante?.elements.find((e) => e.id === selection)
+    // La page courante peut etre le calendrier, qui n'a pas d'elements.
+    const original =
+      pageCourante?.kind === 'canvas'
+        ? pageCourante.elements.find((e) => e.id === selection)
+        : undefined
     if (!original) {
       return
     }
@@ -139,9 +208,14 @@ export function useEdition(contenuInitial: PdfDesignContent) {
 
   return {
     contenu,
-    pagesEditables,
+    pages,
     pageCourante,
+    peutAjouterCalendrier,
     choisirPage,
+    ajouterToile,
+    ajouterCalendrier,
+    supprimerPage: supprimerUnePage,
+    deplacerPage: deplacerUnePage,
     selection,
     choisirElement: setSelection,
     modifierElement,

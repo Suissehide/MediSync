@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
-import type { PdfDesignContent } from '../../../../types/pdfDesign.ts'
+import type { PdfDesignContent, PdfPage } from '../../../../types/pdfDesign.ts'
 import { useEdition } from './use-edition.ts'
 
 const CONTENU: PdfDesignContent = {
@@ -36,10 +36,13 @@ describe('useEdition', () => {
     expect(result.current.pageCourante?.id).toBe('cover')
   })
 
-  it('ne propose a l edition que les pages composables', () => {
+  // Etape 3 : la bande montre TOUTES les pages, calendrier compris — on le deplace et on le
+  // supprime comme les autres, meme s'il ne se compose pas.
+  it('propose TOUTES les pages, calendrier compris', () => {
     const { result } = renderHook(() => useEdition(CONTENU))
-    expect(result.current.pagesEditables.map((p) => p.id)).toEqual([
+    expect(result.current.pages.map((p) => p.id)).toEqual([
       'cover',
+      'calendrier',
       'tips',
     ])
   })
@@ -232,5 +235,97 @@ describe('useEdition, operations de liste', () => {
     act(() => result.current.supprimerSelection())
     expect(elementsDe(result.current.contenu)).toHaveLength(1)
     expect(result.current.modifie).toBe(false)
+  })
+})
+
+describe('useEdition, operations sur les pages', () => {
+  it('ajoute une toile a la fin et s y place', () => {
+    const { result } = renderHook(() => useEdition(CONTENU))
+    act(() => result.current.ajouterToile())
+    expect(result.current.pages).toHaveLength(4)
+    expect(result.current.pageCourante?.id).toBe(result.current.pages[3]?.id)
+  })
+
+  it('ajoute la page calendrier quand il n y en a pas', () => {
+    const sansCalendrier: PdfDesignContent = {
+      version: 1,
+      pages: [CONTENU.pages[0] as PdfPage],
+    }
+    const { result } = renderHook(() => useEdition(sansCalendrier))
+    expect(result.current.peutAjouterCalendrier).toBe(true)
+    act(() => result.current.ajouterCalendrier())
+    expect(result.current.pages.map((p) => p.kind)).toEqual([
+      'canvas',
+      'calendar',
+    ])
+  })
+
+  // Review Focus 3 : deux calendriers repeteraient le meme planning.
+  it('ne propose pas une seconde page calendrier', () => {
+    const { result } = renderHook(() => useEdition(CONTENU))
+    expect(result.current.peutAjouterCalendrier).toBe(false)
+    act(() => result.current.ajouterCalendrier())
+    expect(result.current.pages).toHaveLength(3)
+  })
+
+  it('supprime une page', () => {
+    const { result } = renderHook(() => useEdition(CONTENU))
+    act(() => result.current.supprimerPage('tips'))
+    expect(result.current.pages.map((p) => p.id)).toEqual([
+      'cover',
+      'calendrier',
+    ])
+  })
+
+  // Review Focus 1 : la page courante disparait sous les pieds de l'editeur.
+  it('se replace sur une page existante quand on supprime la courante', () => {
+    const { result } = renderHook(() => useEdition(CONTENU))
+    act(() => result.current.choisirPage('tips'))
+    act(() => result.current.supprimerPage('tips'))
+    expect(result.current.pageCourante?.id).toBe('cover')
+    expect(result.current.pages.some((p) => p.id === 'tips')).toBe(false)
+  })
+
+  // Review Focus 2 : le schema exige au moins une page.
+  it('refuse de supprimer la derniere page', () => {
+    const uneSeule: PdfDesignContent = {
+      version: 1,
+      pages: [CONTENU.pages[0] as PdfPage],
+    }
+    const { result } = renderHook(() => useEdition(uneSeule))
+    act(() => result.current.supprimerPage(result.current.pages[0]?.id ?? ''))
+    expect(result.current.pages).toHaveLength(1)
+    expect(result.current.modifie).toBe(false)
+  })
+
+  it('deplace une page dans la bande', () => {
+    const { result } = renderHook(() => useEdition(CONTENU))
+    act(() => result.current.deplacerPage('tips', 'avant'))
+    expect(result.current.pages.map((p) => p.id)).toEqual([
+      'cover',
+      'tips',
+      'calendrier',
+    ])
+  })
+
+  // Review Focus 4 : l'element selectionne appartient a sa page, pas a son rang.
+  it('garde l element selectionne quand sa page change de rang', () => {
+    const { result } = renderHook(() => useEdition(CONTENU))
+    act(() => result.current.choisirElement('titre'))
+    act(() => result.current.deplacerPage('cover', 'arriere'))
+    expect(result.current.selection).toBe('titre')
+    expect(result.current.pageCourante?.id).toBe('cover')
+  })
+
+  // Review Focus 5 : il n'y a aucune toile sur laquelle ouvrir. Le hook doit quand meme
+  // designer une page courante, sinon l'ecran n'a rien a afficher et ne sait pas pourquoi.
+  it('ouvre sur le calendrier quand c est la seule page', () => {
+    const calendrierSeul: PdfDesignContent = {
+      version: 1,
+      pages: [{ kind: 'calendar', id: 'calendrier' }],
+    }
+    const { result } = renderHook(() => useEdition(calendrierSeul))
+    expect(result.current.pageCourante?.id).toBe('calendrier')
+    expect(result.current.pageCourante?.kind).toBe('calendar')
   })
 })
