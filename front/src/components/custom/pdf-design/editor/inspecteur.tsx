@@ -422,7 +422,10 @@ export default function Inspecteur({
               <Input
                 id="insp-depot"
                 type="file"
-                accept="image/png,image/jpeg,image/webp"
+                // PNG et JPEG seulement : react-pdf ne decode rien d'autre, et le back
+                // refuse le reste. Proposer un WebP ici serait promettre une image qui ne
+                // sortirait pas du PDF.
+                accept="image/png,image/jpeg"
                 onChange={(e) => {
                   const fichier = e.target.files?.[0]
                   if (!fichier) {

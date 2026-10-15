@@ -265,7 +265,11 @@ describe('renderElement', () => {
   })
 
   // L'image a ete supprimee en base, ou le design vient d'un autre service : le document doit
-  // sortir sans elle. Sans cette garde, react-pdf recevrait `src=undefined` et jetterait.
+  // sortir sans elle. MESURE (sabotage de la garde) : react-pdf n'abat PAS le document, il
+  // journalise « Image should receive either a "src" or "source" prop » et saute l'image. Ce
+  // test est l'endroit ou la garde se tient — c'est lui qui rougit sous ce sabotage, pas celui
+  // du vrai moteur. Ce qu'elle vaut : pas de bruit d'erreur a chaque export, et la toile qui
+  // afficherait sinon une icone de fichier casse.
   it('rend null pour une image deposee dont les octets manquent', () => {
     expect(renderElement(imageDeposee, ctx(), {})).toBeNull()
     expect(renderElement(imageDeposee, ctx())).toBeNull()

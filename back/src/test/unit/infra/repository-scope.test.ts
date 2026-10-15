@@ -10,6 +10,7 @@ import { PathwayTemplateRepository } from '../../../main/infra/orm/repositories/
 import { PatientRepository } from '../../../main/infra/orm/repositories/patient.repository'
 import { PatientAccessLogRepository } from '../../../main/infra/orm/repositories/patientAccessLog.repository'
 import { PatientServiceFileRepository } from '../../../main/infra/orm/repositories/patientServiceFile.repository'
+import { PdfAssetRepository } from '../../../main/infra/orm/repositories/pdf-asset.repository'
 import { PlanningCycleRepository } from '../../../main/infra/orm/repositories/planningCycle.repository'
 import { SlotRepository } from '../../../main/infra/orm/repositories/slot.repository'
 import { SlotTemplateRepository } from '../../../main/infra/orm/repositories/slotTemplate.repository'
@@ -2275,5 +2276,64 @@ describe('MembershipRepository.soignantDuService', () => {
         { kind: 'system' },
       ),
     ).not.toThrow()
+  })
+})
+
+// REVUE DE BRANCHE. Les assertions e2e « la liste ne porte pas les octets » etaient vraies par
+// le SCHEMA DE REPONSE, pas par la requete : `fastify-type-provider-zod` depouille les cles
+// inconnues, donc `pdfAssetSummarySchema` retire `bytes` quoi qu'il arrive. Retirer le
+// `select` du repository les laissait vertes, et chaque ouverture de l'inspecteur tirait
+// N x 2 Mo de Postgres pour les jeter au moment de serialiser. La propriete n'est observable
+// qu'ICI, dans les arguments reellement envoyes a Prisma.
+describe('PdfAssetRepository, ce qui part vers Postgres', () => {
+  it('ne lit pas les octets pour lister les images', async () => {
+    const { prisma, calls } = buildFakePrisma()
+    const ctx = new TenantContext()
+    const repo = new PdfAssetRepository(buildContainer(prisma, ctx))
+
+    await ctx.run(tenant, () => repo.findAllForService())
+
+    expect(calls).toHaveLength(1)
+    const select = calls[0]?.args.select as Record<string, unknown>
+    expect(select).toBeDefined()
+    expect(select.bytes).toBeUndefined()
+    expect(select).toMatchObject({ id: true, fileName: true, mimeType: true })
+  })
+
+  // Meme raison : le depot rendait la ligne ENTIERE, octets compris, pour n'en garder que
+  // trois champs — 2 Mo relus de Postgres a chaque televersement, pour rien.
+  it('ne relit pas les octets qu elle vient d ecrire', async () => {
+    const { prisma, calls } = buildFakePrisma()
+    const ctx = new TenantContext()
+    const repo = new PdfAssetRepository(buildContainer(prisma, ctx))
+
+    await ctx.run(tenant, () =>
+      repo.create({
+        fileName: 'logo.png',
+        mimeType: 'image/png',
+        bytes: new Uint8Array([0x89, 0x50, 0x4e, 0x47]),
+      }),
+    )
+
+    const select = calls[0]?.args.select as Record<string, unknown>
+    expect(select).toBeDefined()
+    expect(select.bytes).toBeUndefined()
+  })
+
+  // Meme raison encore : la suppression n'a besoin que de savoir si la ligne existe. Passer
+  // par `findByID` chargeait 2 Mo pour les jeter, y compris quand le 409 refuse de supprimer.
+  it('ne charge pas les octets pour savoir si une image existe', async () => {
+    const { prisma, calls } = buildFakePrisma({ 'pdfAsset.count': 1 })
+    const ctx = new TenantContext()
+    const repo = new PdfAssetRepository(buildContainer(prisma, ctx))
+
+    await expect(ctx.run(tenant, () => repo.existe('a1'))).resolves.toBe(true)
+
+    expect(calls).toHaveLength(1)
+    expect(calls[0]).toMatchObject({
+      model: 'pdfAsset',
+      op: 'count',
+      args: { where: { id: 'a1', serviceId: 's1', establishmentId: 'e1' } },
+    })
   })
 })

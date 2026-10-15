@@ -103,6 +103,24 @@ describe('routes des images de PDF', () => {
     expect(res.statusCode).toBe(400)
   })
 
+  // REVUE DE BRANCHE, CRITIQUE. Un WebP parfaitement valide etait accepte, et le commentaire du
+  // schema affirmait que « les deux moteurs » savaient le lire. Mesure dans le node_modules de
+  // la branche : `@react-pdf/image` n'accepte que jpg, jpeg et png
+  // (`isValidFormat`) — il journalise « Base64 image invalid format: webp » et PRODUIT le
+  // document sans l'image. Un service deposait donc son logo, le voyait sur la toile, et
+  // chaque programme patient sortait sans lui, en silence. C'est exactement l'ecart entre les
+  // deux moteurs que cette etape existe pour supprimer.
+  it('refuse un WebP, que react-pdf ne sait pas decoder', async () => {
+    const res = await deposer({
+      fileName: 'logo.webp',
+      mimeType: 'image/webp',
+      // RIFF + taille + WEBP + VP8 : un en-tete valide, pas un fichier tronque.
+      base64: 'UklGRhYAAABXRUJQVlA4IAoAAAAAAAAAAAAAAAAA',
+    })
+
+    expect(res.statusCode).toBe(400)
+  })
+
   it('refuse des octets qui ne sont pas ceux du type annonce', async () => {
     const res = await deposer({
       fileName: 'menteur.png',
@@ -135,6 +153,24 @@ describe('routes des images de PDF', () => {
 
   // 2 Mo d'image, soit la borne du schema, exprimee en caracteres de base64.
   const BORNE_BASE64 = Math.ceil((2 * 1024 * 1024 * 4) / 3)
+
+  // REVUE DE BRANCHE. Le sommet de la bande autorisee n'etait exerce nulle part : la plus
+  // grosse image de toute la suite etait un PNG 1x1. La borne se calculait `ceil(4n / 3)` la ou
+  // la longueur d'un base64 vaut `4 * ceil(n / 3)` — une image de 2 Mo PILE etait donc refusee,
+  // avec un message affirmant qu'elle depassait 2 Mo.
+  it('accepte une image de 2 Mo pile', async () => {
+    // Un PNG de 2 Mo pile : l'en-tete fait foi, le reste est du remplissage.
+    const octets = Buffer.alloc(2 * 1024 * 1024)
+    Buffer.from([0x89, 0x50, 0x4e, 0x47]).copy(octets)
+
+    const res = await deposer({
+      fileName: 'pile.png',
+      mimeType: 'image/png',
+      base64: octets.toString('base64'),
+    })
+
+    expect(res.statusCode).toBe(201)
+  })
 
   // Le refus doit venir de l'APPLICATION et nommer la limite : sans `bodyLimit` releve sur la
   // route, Fastify repondrait 413 des 1 Mo, sans dire laquelle des deux limites a saute.

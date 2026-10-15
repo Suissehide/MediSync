@@ -174,16 +174,20 @@ describe('Inspecteur', () => {
     expect(vus.at(-1)).toEqual({ source: { assetId: 'a1' } })
   })
 
-  // Un nom de fichier qui ressemble a une image livree ne doit pas se faire passer pour elle :
-  // le prefixe de la valeur dit de quelle famille vient le choix.
-  it('ne confond pas une image deposee nommee comme une image livree', async () => {
+  // CE QUE CE TEST MESURE, exactement : que `sourceDepuisChoix` lit le prefixe et rend bien un
+  // `assetId`. Il ne reproduit PAS une collision — il ne le peut pas : la valeur d'une option
+  // deposee est `asset:<cuid>`, jamais son nom de fichier, qui n'est que l'etiquette. Le
+  // prefixe reste justifie pour une autre raison : sans lui, `sourceDepuisChoix` devrait
+  // deviner la famille d'un choix.
+  it('lit le prefixe plutot que le nom pour choisir la famille de l image', async () => {
     const vus = monter(image, {
       assets: [{ id: 'a2', fileName: 'logo-chu', mimeType: 'image/png' }],
     })
 
     await userEvent.click(screen.getByLabelText('Image'))
-    const options = await screen.findAllByRole('option', { name: 'logo-chu' })
-    await userEvent.click(options[0])
+    await userEvent.click(
+      await screen.findByRole('option', { name: 'logo-chu' }),
+    )
 
     expect(vus.at(-1)).toEqual({ source: { assetId: 'a2' } })
   })

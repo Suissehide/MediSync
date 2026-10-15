@@ -16,15 +16,17 @@ import type { PdfDesignRepositoryInterface } from '../types/infra/orm/repositori
 const SIGNATURES: Record<string, number[]> = {
   'image/png': [0x89, 0x50, 0x4e, 0x47],
   'image/jpeg': [0xff, 0xd8, 0xff],
-  // WebP : « RIFF », puis la taille sur quatre octets, puis « WEBP ».
-  'image/webp': [0x52, 0x49, 0x46, 0x46],
 }
+
+// CE QUE CETTE VERIFICATION NE DIT PAS : elle dit la FAMILLE du fichier, pas qu'il est
+// decodable. Un PNG tronque garde ses quatre octets magiques et passe ; react-pdf journalise
+// alors et saute l'image, sans abattre le document (mesure). Aller plus loin demanderait un
+// decodeur, ce que l'etape n'a pas demande.
 
 // Le type tel qu'un humain le nomme : « une image image/png » se lit mal dans un message.
 const NOMS: Record<string, string> = {
   'image/png': 'PNG',
   'image/jpeg': 'JPEG',
-  'image/webp': 'WebP',
 }
 
 const signatureCorrespond = (bytes: Uint8Array, mimeType: string): boolean => {
@@ -114,8 +116,7 @@ class PdfAssetDomain implements PdfAssetDomainInterface {
   // ne bloque pas: il n'est plus proposable, et le restaurer avec une image manquante tombe
   // dans le cas deja couvert — le PDF sort sans cette image.
   async remove(assetID: string): Promise<void> {
-    const asset = await this.pdfAssetRepository.findByID(assetID)
-    if (!asset) {
+    if (!(await this.pdfAssetRepository.existe(assetID))) {
       throw Boom.notFound('PdfAsset not found')
     }
     const designs = await this.pdfDesignRepository.findAllForService()

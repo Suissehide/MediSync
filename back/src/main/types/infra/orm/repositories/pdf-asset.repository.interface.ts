@@ -16,9 +16,14 @@ export type PdfAssetCreateEntityRepo = {
 }
 
 export interface PdfAssetRepositoryInterface {
-  create: (params: PdfAssetCreateEntityRepo) => Promise<PdfAssetEntityRepo>
+  // Rend le resume, pas la ligne : relire les octets qu'on vient d'ecrire ne sert a rien.
+  create: (
+    params: PdfAssetCreateEntityRepo,
+  ) => Promise<PdfAssetSummaryEntityRepo>
   // Sans les octets : cette liste nourrit un selecteur, pas un rendu.
   findAllForService: () => Promise<PdfAssetSummaryEntityRepo[]>
   findByID: (assetID: string) => Promise<PdfAssetEntityRepo | null>
+  // Existence dans le service courant, sans charger les octets.
+  existe: (assetID: string) => Promise<boolean>
   remove: (assetID: string) => Promise<void>
 }

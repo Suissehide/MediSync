@@ -107,7 +107,7 @@ function PdfDesignEditor() {
   const { deposerImage } = usePdfAssetMutations()
   // Les octets des images que CE contenu reclame, resolus une fois et donnes aux deux
   // moteurs : la toile, les vignettes de la bande et l'apercu PDF.
-  const sources = useSourcesImages(assetIdsDe(contenu))
+  const { sources } = useSourcesImages(assetIdsDe(contenu))
 
   // L'historique se branche ici, sur le contenu lui-meme : il regroupe les rafales d'un
   // geste et ignore ce qu'il vient de restaurer.

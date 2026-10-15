@@ -39,7 +39,16 @@ const requeteDOctets = (assetID: string) => ({
 // appeler un hook dans une boucle violerait les regles des hooks. Une image dont les octets
 // manquent (supprimee, venue d'un autre service) est simplement absente du dictionnaire — les
 // deux moteurs savent deja ne rien rendre dans ce cas.
-export const useSourcesImages = (assetIDs: string[]): SourcesImages => {
+//
+// `enAttente` distingue « pas encore arrive » de « n'arrivera jamais », et cette distinction
+// porte un defaut reel : sans elle, le bouton de telechargement d'un programme patient
+// s'active des le premier blob — rapide PRECISEMENT parce qu'il n'a aucune image a decoder —
+// et le document remis au patient sort sans le logo du service. `isPending` seulement, jamais
+// `isError` : une image disparue ou etrangere ne doit pas bloquer le document, elle doit en
+// sortir absente.
+export const useSourcesImages = (
+  assetIDs: string[],
+): { sources: SourcesImages; enAttente: boolean } => {
   const resultats = useQueries({
     queries: assetIDs.map(requeteDOctets),
   })
@@ -50,7 +59,10 @@ export const useSourcesImages = (assetIDs: string[]): SourcesImages => {
       sources[id] = dataUri(resultat.data)
     }
   })
-  return sources
+  return {
+    sources,
+    enAttente: resultats.some((resultat) => resultat.isPending),
+  }
 }
 
 // * MUTATIONS

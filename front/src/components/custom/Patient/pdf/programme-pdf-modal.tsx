@@ -101,7 +101,7 @@ export default function ProgrammePDFModal({
   }, [thematics])
 
   // Les octets des images deposees du design choisi : c'est ici que sort le VRAI PDF.
-  const sources = useSourcesImages(
+  const { sources, enAttente: imagesEnAttente } = useSourcesImages(
     selectedDesign ? assetIdsDe(selectedDesign.content) : [],
   )
 
@@ -159,9 +159,19 @@ export default function ProgrammePDFModal({
             {pdfDocument && (
               <PDFDownloadLink document={pdfDocument} fileName={fileName}>
                 {({ loading }) => (
-                  <Button variant="default" size="default" disabled={loading}>
+                  // `loading` ne parle que du blob, jamais des octets des images en vol — et
+                  // le premier blob est rapide PRECISEMENT parce qu'il n'a aucune image a
+                  // decoder. Sans `imagesEnAttente`, un clic dans la seconde remet au patient
+                  // un programme sans le logo du service, sans aucun signe.
+                  <Button
+                    variant="default"
+                    size="default"
+                    disabled={loading || imagesEnAttente}
+                  >
                     <Download className="h-4 w-4" />
-                    {loading ? 'Génération...' : 'Télécharger'}
+                    {loading || imagesEnAttente
+                      ? 'Génération...'
+                      : 'Télécharger'}
                   </Button>
                 )}
               </PDFDownloadLink>

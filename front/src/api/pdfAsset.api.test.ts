@@ -185,7 +185,10 @@ describe('lireEnBase64', () => {
     await expect(lireEnBase64(enorme)).rejects.toThrow(/2 Mo/)
   })
 
-  it('accepte un fichier juste sous la limite', async () => {
+  // A la limite EXACTE, pas « juste sous » : 2 Mo pile doivent passer, et le back les accepte
+  // aussi depuis que sa borne en base64 se calcule `4 * ceil(n / 3)`. Les deux cotes
+  // s'accordent sur le meme octet.
+  it('accepte un fichier a la limite exacte', async () => {
     const limite = new File([new Uint8Array(TAILLE_MAXIMALE_IMAGE)], 'j.png', {
       type: 'image/png',
     })

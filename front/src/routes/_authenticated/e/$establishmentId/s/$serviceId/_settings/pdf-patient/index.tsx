@@ -44,7 +44,7 @@ function PdfPatientSettings() {
   // image deposee manquerait ici alors qu'elle s'affiche dans l'editeur. On resout la REUNION
   // des images de tous les designs affiches — la liste est courte, et les octets sont mis en
   // cache par identifiant, donc une image partagee n'est demandee qu'une fois.
-  const sources = useSourcesImages([
+  const { sources } = useSourcesImages([
     ...new Set(designs.flatMap((design) => assetIdsDe(design.content))),
   ])
   const {
