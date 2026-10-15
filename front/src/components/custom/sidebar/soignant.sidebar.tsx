@@ -10,7 +10,6 @@ function SidebarSoignant() {
 
   return (
     <SoignantFilterSection
-      canDelete={isAdmin}
       title={<p>Soignants</p>}
       addAction={
         isAdmin && (

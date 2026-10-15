@@ -1,15 +1,11 @@
-import { CheckCheck, Stethoscope, Trash, X } from 'lucide-react'
-import { type ReactNode, useState } from 'react'
+import { CheckCheck, Stethoscope, X } from 'lucide-react'
+import type { ReactNode } from 'react'
 
 import { useSoignantQueries } from '../../../queries/useSoignant.ts'
 import { useSoignantStore } from '../../../store/useSoignantStore.ts'
-import { Button } from '../../ui/button.tsx'
-import ArchiveSoignantForm from '../popup/archiveSoignantForm.tsx'
 import { selectionPillClass } from './sidebarFilter.styles.ts'
 
 interface SoignantFilterSectionProps {
-  /** Affiche la suppression au survol (référentiel uniquement). */
-  canDelete?: boolean
   /** Titre de la section : texte simple ou sélecteur de mode. */
   title: ReactNode
   /** Bouton d'ajout facultatif, aligné à droite du titre. */
@@ -17,7 +13,6 @@ interface SoignantFilterSectionProps {
 }
 
 function SoignantFilterSection({
-  canDelete = false,
   title,
   addAction,
 }: SoignantFilterSectionProps) {
@@ -32,8 +27,6 @@ function SoignantFilterSection({
   const selectedSoignantIDs = useSoignantStore(
     (state) => state.selectedSoignantIDs,
   )
-
-  const [isHovered, setIsHovered] = useState('')
 
   return (
     <>
@@ -69,14 +62,12 @@ function SoignantFilterSection({
           return (
             <li
               key={soignant.id}
-              onMouseEnter={() => setIsHovered(soignant.id)}
-              onMouseLeave={() => setIsHovered('')}
-              className={`relative w-full flex justify-between items-center gap-2 rounded-lg text-white ${isSelected ? 'bg-[#ffffff10]' : ''} hover:bg-[#ffffff20]`}
+              className={`w-full flex justify-between items-center gap-2 rounded-lg text-white ${isSelected ? 'bg-[#ffffff10]' : ''} hover:bg-[#ffffff20]`}
             >
               <button
                 type="button"
                 onClick={() => toggleSoignant(soignant.id)}
-                className={`cursor-pointer w-full py-2 pl-2 ${canDelete ? 'pr-8' : 'pr-2'}`}
+                className="cursor-pointer w-full py-2 px-2"
               >
                 <span className="flex items-center gap-2">
                   <span className="w-5 h-5 shrink-0">
@@ -85,17 +76,6 @@ function SoignantFilterSection({
                   <span className="truncate">{soignant.name}</span>
                 </span>
               </button>
-
-              {canDelete && isHovered === soignant.id && (
-                <ArchiveSoignantForm
-                  soignant={soignant}
-                  trigger={
-                    <Button variant="absolute" size="icon">
-                      <Trash className="w-4 h-4 text-red-500" />
-                    </Button>
-                  }
-                />
-              )}
             </li>
           )
         })}
