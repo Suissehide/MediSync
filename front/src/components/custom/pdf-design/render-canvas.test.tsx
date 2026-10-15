@@ -142,7 +142,16 @@ describe('CanvasPage', () => {
   it('ne rend aucun bouton quand elle n est pas interactive', () => {
     render(<CanvasPage page={page([texte])} echelle={0.2} interactif={false} />)
     expect(screen.queryAllByRole('button')).toHaveLength(0)
-    expect(screen.getByTestId('element-e1')).toBeInTheDocument()
+    expect(screen.getByTestId('apercu-element-e1')).toBeInTheDocument()
+  })
+
+  // Revue de branche, I3 : la page courante est rendue DEUX fois dans l'editeur — par la
+  // toile et par sa vignette dans la bande. Un testid commun armait un piege : le prochain
+  // `getByTestId('element-titre')` tomberait sur « Found multiple elements », et une lecture
+  // de `data-selectionne` pouvait viser la copie inerte, toujours « false ».
+  it('prefixe ses identifiants de test quand elle n est pas interactive', () => {
+    render(<CanvasPage page={page([texte])} echelle={0.2} interactif={false} />)
+    expect(screen.queryByTestId('element-e1')).not.toBeInTheDocument()
   })
 
   it('rend des boutons par defaut', () => {

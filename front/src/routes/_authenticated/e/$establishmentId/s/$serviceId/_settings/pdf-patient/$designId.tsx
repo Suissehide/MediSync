@@ -301,19 +301,6 @@ function PdfDesignEditor() {
           </p>
         )}
 
-        {!apercu && (
-          <BandePages
-            pages={pages}
-            courantId={pageCourante?.id ?? null}
-            peutAjouterCalendrier={peutAjouterCalendrier}
-            onChoisir={choisirPage}
-            onAjouterToile={ajouterToile}
-            onAjouterCalendrier={ajouterCalendrier}
-            onSupprimer={supprimerPage}
-            onDeplacer={deplacerPage}
-          />
-        )}
-
         {apercu ? (
           // La reponse a l'ecart de metriques entre les deux moteurs : le vrai document.
           <div className="flex-1 min-h-0">
@@ -370,6 +357,24 @@ function PdfDesignEditor() {
               />
             </aside>
           </div>
+        )}
+
+        {/* `design &&` comme l'effet d'historique plus haut, et pour la meme raison :
+            tant que la requete est en vol, `useEdition` tourne sur un contenu VIDE. Un clic
+            ici y ajoutait une page, et comme la resynchronisation ne se declenche que
+            `!modifie`, le design arrive ensuite sans jamais s'afficher — l'enregistrement
+            remplacait alors toutes ses pages par la page vierge. */}
+        {!apercu && design && (
+          <BandePages
+            pages={pages}
+            courantId={pageCourante?.id ?? null}
+            peutAjouterCalendrier={peutAjouterCalendrier}
+            onChoisir={choisirPage}
+            onAjouterToile={ajouterToile}
+            onAjouterCalendrier={ajouterCalendrier}
+            onSupprimer={supprimerPage}
+            onDeplacer={deplacerPage}
+          />
         )}
 
         <p className="text-xs text-text-light">

@@ -317,6 +317,41 @@ describe('useEdition, operations sur les pages', () => {
     expect(result.current.pageCourante?.id).toBe('cover')
   })
 
+  // Revue de branche, I1 : le cas ci-dessus etait vrai par vacuite. Il deplace « cover »
+  // derriere le CALENDRIER, donc `premiereToile` la retrouve quand meme. Le cas vraiment
+  // atteignable est celui-ci : une AUTRE toile passe devant la page affichee, sans qu'on ait
+  // jamais clique dans la bande — `pageId` vaut alors `null` et rien n'epingle la page
+  // courante implicite.
+  it('reste sur la page affichee quand une autre toile passe devant', () => {
+    // Deux toiles ADJACENTES : avec le calendrier entre les deux, `premiereToile`
+    // retrouverait « cover » par accident et le test ne prouverait rien.
+    const deuxToiles: PdfDesignContent = {
+      version: 1,
+      pages: [
+        CONTENU.pages[0] as PdfPage,
+        { kind: 'canvas', id: 'tips', background: '#ffffff', elements: [] },
+      ],
+    }
+    const { result } = renderHook(() => useEdition(deuxToiles))
+    act(() => result.current.choisirElement('titre'))
+
+    act(() => result.current.deplacerPage('tips', 'avant'))
+
+    expect(result.current.pageCourante?.id).toBe('cover')
+    expect(result.current.selection).toBe('titre')
+  })
+
+  // Meme racine : `supprimerUnePage` comparait a `pageId`, nul tant qu'on n'a pas clique.
+  // Supprimer la page implicitement affichee laissait donc une selection orpheline.
+  it('vide la selection en supprimant la page affichee sans clic prealable', () => {
+    const { result } = renderHook(() => useEdition(CONTENU))
+    act(() => result.current.choisirElement('titre'))
+
+    act(() => result.current.supprimerPage('cover'))
+
+    expect(result.current.selection).toBeNull()
+  })
+
   // Review Focus 5 : il n'y a aucune toile sur laquelle ouvrir. Le hook doit quand meme
   // designer une page courante, sinon l'ecran n'a rien a afficher et ne sait pas pourquoi.
   it('ouvre sur le calendrier quand c est la seule page', () => {

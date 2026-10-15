@@ -118,7 +118,9 @@ const design = (x: number, avecCalendrier = false) => ({
 
 // Le serveur garde ce qu'on lui ecrit : c'est ce qui permet de distinguer « l'ecran est revenu
 // a la version du serveur » de « l'ecran a garde la mienne ».
-const monter = (avecCalendrier = false) => {
+// `delaiGet` reproduit la fenetre de chargement : la requete repond apres un temps, et
+// l'ecran est deja monte sans design.
+const monter = (avecCalendrier = false, delaiGet = 0) => {
   let enBase = design(10, avecCalendrier)
   const ecritures: PdfDesignContent[] = []
   const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
@@ -133,7 +135,12 @@ const monter = (avecCalendrier = false) => {
         ok: true,
         status: 200,
         url,
-        json: async () => ({ presets: [], designs: [enBase] }),
+        json: async () => {
+          if (delaiGet > 0) {
+            await new Promise((r) => setTimeout(r, delaiGet))
+          }
+          return { presets: [], designs: [enBase] }
+        },
       }
     }
     const corps = JSON.parse(String(init?.body)) as {
@@ -330,5 +337,46 @@ describe('editeur de design, les pages', () => {
     expect(
       screen.queryByRole('button', { name: /Ajouter le calendrier/ }),
     ).not.toBeInTheDocument()
+  })
+
+  // Revue de branche, C1 : PERTE DE DONNEE. Pendant que la requete est en vol, `useEdition`
+  // tourne sur un contenu VIDE. La bande etait montee sans garde, donc « Ajouter une page »
+  // repondait — et comme la resynchronisation ne se declenche que `!modifie`, ce geste la
+  // condamnait : le design arrive, l'ecran garde la page vierge, et l'enregistrement ecrase
+  // toutes les pages du design par celle-la.
+  it('ne montre pas la bande tant que le design n est pas arrive', async () => {
+    monter(false, 600)
+
+    // On attend que l'ECRAN soit monte — sinon on mesurerait seulement que le routeur n'a
+    // pas encore rendu le composant, ce qui ne prouve rien de la garde.
+    await screen.findByRole('button', { name: /Aperçu PDF/ })
+    expect(screen.queryByTestId('page-cover')).not.toBeInTheDocument()
+
+    expect(
+      screen.queryByRole('button', { name: /Ajouter une page/ }),
+    ).not.toBeInTheDocument()
+
+    // Et elle arrive bien une fois le design charge.
+    expect(await screen.findByTestId('page-cover')).toBeInTheDocument()
+  })
+
+  it('garde les pages du design quand on clique pendant le chargement', async () => {
+    const { ecritures } = monter(false, 600)
+
+    await screen.findByRole('button', { name: /Aperçu PDF/ })
+    // Le geste le plus banal, au pire moment : on clique avant que le design soit la.
+    const ajouter = screen.queryByRole('button', { name: /Ajouter une page/ })
+    if (ajouter) {
+      await userEvent.click(ajouter)
+    }
+    await screen.findByTestId('page-cover')
+
+    await userEvent.click(screen.getByRole('button', { name: /Enregistrer/ }))
+    await new Promise((r) => setTimeout(r, 200))
+
+    // Rien n'est enregistre : il n'y avait rien a enregistrer.
+    for (const ecrit of ecritures) {
+      expect(ecrit.pages.map((p) => p.id)).toContain('cover')
+    }
   })
 })

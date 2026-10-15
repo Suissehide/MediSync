@@ -26,6 +26,18 @@ type NoeudMisEnPage = {
   children?: NoeudMisEnPage[]
 }
 
+// Combien de PAGES l'arbre mis en page porte reellement : une page sans element ne laisse
+// aucune ligne, donc compter les lignes ne dit rien de son existence.
+const nombreDePages = (noeud: NoeudMisEnPage | undefined): number => {
+  if (!noeud) {
+    return 0
+  }
+  const sienne = noeud.type === 'PAGE' ? 1 : 0
+  return (
+    sienne + (noeud.children ?? []).reduce((n, e) => n + nombreDePages(e), 0)
+  )
+}
+
 const lignesDe = (noeud: NoeudMisEnPage | undefined): string[] => {
   if (!noeud) {
     return []
@@ -71,7 +83,7 @@ const rendre = async (elements: PdfElement[], c = ctx()): Promise<string[]> => {
 // une donnee que le service manipule.
 const rendreDocument = async (
   pages: PdfDesignContent['pages'],
-): Promise<string[]> => {
+): Promise<{ lignes: string[]; pages: number }> => {
   let miseEnPage: NoeudMisEnPage | undefined
   const flux = await pdf(
     <Document
@@ -87,7 +99,7 @@ const rendreDocument = async (
   await new Promise((resolve, reject) => {
     flux.on('end', resolve).on('error', reject).resume()
   })
-  return lignesDe(miseEnPage)
+  return { lignes: lignesDe(miseEnPage), pages: nombreDePages(miseEnPage) }
 }
 
 const texte = (over: Partial<PdfTextElement>): PdfTextElement => ({
@@ -280,7 +292,7 @@ describe('rendu reel', () => {
   // produire une page blanche, pas disparaitre du document ni faire echouer le rendu —
   // c'est le geste le plus banal de la bande, « Ajouter une page » puis on verra plus tard.
   it('rend un document dont une page est vide', async () => {
-    const lignes = await rendreDocument([
+    const rendu = await rendreDocument([
       { kind: 'canvas', id: 'vide', background: '#ffffff', elements: [] },
       {
         kind: 'canvas',
@@ -289,6 +301,10 @@ describe('rendu reel', () => {
         elements: [texte({})],
       },
     ])
-    expect(lignes).toContain('Bonjour')
+    // DEUX pages, pas seulement « le moteur ne leve pas » : une implementation qui laisserait
+    // tomber les pages sans element resterait verte sur la seule assertion de contenu
+    // (constat I2 de la revue de branche).
+    expect(rendu.pages).toBe(2)
+    expect(rendu.lignes).toContain('Bonjour')
   }, 30000)
 })

@@ -172,8 +172,13 @@ export default function CanvasPage({
             ? { background: 'transparent' }
             : {}),
         }
+        // Prefixe quand la page est inerte : l'editeur rend la MEME page deux fois, en
+        // grand et en vignette. Sans cela, `getByTestId('element-x')` trouve deux noeuds et
+        // une lecture de `data-selectionne` peut viser la copie, toujours « false ».
         const commun = {
-          'data-testid': `element-${element.id}`,
+          'data-testid': interactif
+            ? `element-${element.id}`
+            : `apercu-element-${element.id}`,
           'data-selectionne': selectionne ? 'true' : 'false',
         }
         if (!interactif) {

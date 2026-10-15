@@ -135,27 +135,34 @@ export function useEdition(contenuInitial: PdfDesignContent) {
     setSelection(null)
   }, [majPages, peutAjouterCalendrier])
 
-  // La page courante peut disparaitre sous les pieds de l'editeur : on repasse sur la
-  // premiere toile plutot que de garder un identifiant qui ne designe plus rien.
+  // On compare a `idCourant`, PAS a `pageId` : tant qu'on n'a pas clique dans la bande,
+  // `pageId` est nul et la page affichee est implicite. Supprimer celle-la laissait sinon
+  // une selection pointant sur un element qui n'existe plus nulle part.
   const supprimerUnePage = useCallback(
     (id: string) => {
       if (pages.length <= 1) {
         return
       }
       majPages((avant) => supprimerPage(avant, id))
-      if (pageId === id) {
+      if (idCourant === id) {
         setPageId(null)
         setSelection(null)
       }
     },
-    [majPages, pageId, pages.length],
+    [majPages, idCourant, pages.length],
   )
 
+  // La page affichee est EPINGLEE avant de toucher a l'ordre : sans cela, une autre toile
+  // qui passe devant devient « la premiere toile », et la zone centrale saute sur une page
+  // que personne n'a demandee, en laissant la selection sur un element de l'ancienne.
   const deplacerUnePage = useCallback(
     (id: string, sens: SensDePage) => {
+      if (idCourant) {
+        setPageId(idCourant)
+      }
       majPages((avant) => deplacerPage(avant, id, sens))
     },
-    [majPages],
+    [majPages, idCourant],
   )
 
   // La copie se fabrique AVANT la mise a jour, jamais dans l'updater : React y appelle la

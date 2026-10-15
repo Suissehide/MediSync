@@ -24,9 +24,11 @@ const toile: PdfPage = {
 }
 
 describe('Vignette', () => {
+  // Le prefixe `apercu-` distingue la miniature de la toile editable : l'editeur rend la
+  // meme page deux fois, et deux noeuds de meme testid se marcheraient dessus.
   it('dessine le contenu de la toile', () => {
     render(<Vignette page={toile} largeur={72} />)
-    expect(screen.getByTestId('element-e1')).toBeInTheDocument()
+    expect(screen.getByTestId('apercu-element-e1')).toBeInTheDocument()
   })
 
   it('garde le rapport de la page A4', () => {

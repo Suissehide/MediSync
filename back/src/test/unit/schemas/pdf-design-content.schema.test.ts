@@ -197,4 +197,36 @@ describe('pdfDesignContentSchema', () => {
       }),
     ).toThrow()
   })
+
+  // Etape 3 : deux exemplaires rendraient deux fois les memes creneaux, le document
+  // repeterait le planning a l'identique sans que rien ne le signale. L'ecran l'empeche
+  // deja, mais une regle d'UI n'est pas une garantie.
+  it('refuse deux pages calendrier', () => {
+    expect(() =>
+      pdfDesignContentSchema.parse({
+        version: 1,
+        pages: [
+          { kind: 'calendar', id: 'c1' },
+          { kind: 'canvas', id: 'a', elements: [] },
+          { kind: 'calendar', id: 'c2' },
+        ],
+      }),
+    ).toThrow()
+  })
+
+  it('accepte une seule page calendrier parmi des toiles', () => {
+    const parsed = pdfDesignContentSchema.parse({
+      version: 1,
+      pages: [
+        { kind: 'canvas', id: 'a', elements: [] },
+        { kind: 'calendar', id: 'c' },
+        { kind: 'canvas', id: 'b', elements: [] },
+      ],
+    })
+    expect(parsed.pages.map((page) => page.kind)).toEqual([
+      'canvas',
+      'calendar',
+      'canvas',
+    ])
+  })
 })
