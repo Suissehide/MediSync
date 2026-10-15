@@ -2,6 +2,7 @@ import { Copy, Pencil, RotateCcw, Star, Trash2 } from 'lucide-react'
 
 import type { PdfDesignSummary } from '../../../types/pdfDesignList.ts'
 import { Button } from '../../ui/button.tsx'
+import Vignette from './vignette.tsx'
 
 type DesignCardProps = {
   design: PdfDesignSummary
@@ -28,22 +29,27 @@ export default function DesignCard({
   onRestaurer,
 }: DesignCardProps) {
   const pages = design.content.pages.length
+  // La premiere page en miniature : le nombre de pages ne dit pas a quoi le design ressemble.
+  const premierePage = design.content.pages[0]
   return (
     <article className="border border-border rounded-lg p-4 flex flex-col gap-3">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h3 className="font-semibold text-foreground truncate">
-            {design.name}
-          </h3>
-          <p className="text-sm text-text-light">
-            {pages} page{pages > 1 ? 's' : ''}
-          </p>
+      <div className="flex items-start gap-3">
+        {premierePage && <Vignette page={premierePage} largeur={64} />}
+        <div className="flex items-start justify-between gap-2 flex-1 min-w-0">
+          <div className="min-w-0">
+            <h3 className="font-semibold text-foreground truncate">
+              {design.name}
+            </h3>
+            <p className="text-sm text-text-light">
+              {pages} page{pages > 1 ? 's' : ''}
+            </p>
+          </div>
+          {design.isDefault && (
+            <span className="text-xs font-medium px-2 py-1 rounded bg-primary/10 text-primary whitespace-nowrap">
+              Par défaut
+            </span>
+          )}
         </div>
-        {design.isDefault && (
-          <span className="text-xs font-medium px-2 py-1 rounded bg-primary/10 text-primary whitespace-nowrap">
-            Par défaut
-          </span>
-        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-2">

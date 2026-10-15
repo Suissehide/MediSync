@@ -198,6 +198,13 @@ describe('ecran des designs de PDF patient', () => {
     ).not.toBeInTheDocument()
   })
 
+  // Etape 3 : la carte montrait « 1 page » ; elle montre maintenant ce que le design donne.
+  it('montre une vignette de la premiere page sur chaque carte', async () => {
+    monter({ presets: [design('p1', 'Programme SMCV')], designs: [] })
+    const carte = await carteDe('Programme SMCV')
+    expect(carte.getByTestId('vignette-p1')).toBeInTheDocument()
+  })
+
   it('invite a dupliquer un modele quand le service n a encore aucun design', async () => {
     monter({ presets: [design('p1', 'Programme SMCV')], designs: [] })
 

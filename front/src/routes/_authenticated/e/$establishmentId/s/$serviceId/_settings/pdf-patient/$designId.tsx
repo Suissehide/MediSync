@@ -9,6 +9,7 @@ import {
   useState,
 } from 'react'
 
+import BandePages from '@/components/custom/pdf-design/editor/bande-pages.tsx'
 import Inspecteur from '@/components/custom/pdf-design/editor/inspecteur.tsx'
 import Palette from '@/components/custom/pdf-design/editor/palette.tsx'
 import {
@@ -73,9 +74,14 @@ function PdfDesignEditor() {
 
   const {
     contenu,
-    pagesEditables,
+    pages,
     pageCourante,
+    peutAjouterCalendrier,
     choisirPage,
+    ajouterToile,
+    ajouterCalendrier,
+    supprimerPage,
+    deplacerPage,
     selection,
     choisirElement,
     modifierElement,
@@ -104,8 +110,10 @@ function PdfDesignEditor() {
     synchroniser(contenu)
   }, [contenu, synchroniser, design])
 
+  // La page courante peut etre le calendrier : il n'a ni toile, ni elements, ni inspecteur.
+  const toileCourante = pageCourante?.kind === 'canvas' ? pageCourante : null
   const elementSelectionne =
-    pageCourante?.elements.find((e) => e.id === selection) ?? null
+    toileCourante?.elements.find((e) => e.id === selection) ?? null
 
   const [apercu, setApercu] = useState(false)
   const cadre = useRef<HTMLDivElement>(null)
@@ -293,19 +301,17 @@ function PdfDesignEditor() {
           </p>
         )}
 
-        {pagesEditables.length > 1 && !apercu && (
-          <div className="flex items-center gap-2">
-            {pagesEditables.map((page, rang) => (
-              <Button
-                key={page.id}
-                variant={page.id === pageCourante?.id ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => choisirPage(page.id)}
-              >
-                Page {rang + 1}
-              </Button>
-            ))}
-          </div>
+        {!apercu && (
+          <BandePages
+            pages={pages}
+            courantId={pageCourante?.id ?? null}
+            peutAjouterCalendrier={peutAjouterCalendrier}
+            onChoisir={choisirPage}
+            onAjouterToile={ajouterToile}
+            onAjouterCalendrier={ajouterCalendrier}
+            onSupprimer={supprimerPage}
+            onDeplacer={deplacerPage}
+          />
         )}
 
         {apercu ? (
@@ -328,21 +334,27 @@ function PdfDesignEditor() {
             aria-label="Éditeur de mise en page"
           >
             <aside className="w-40 flex-shrink-0 overflow-auto">
-              <Palette onAjouter={ajouterElement} />
+              {toileCourante && <Palette onAjouter={ajouterElement} />}
             </aside>
 
             <div
               ref={cadre}
               className="flex-1 min-w-0 overflow-hidden flex items-start justify-center"
             >
-              {pageCourante && (
+              {toileCourante ? (
                 <ToileEditable
-                  page={pageCourante}
+                  page={toileCourante}
                   echelle={echelle}
                   selection={selection}
                   onSelect={choisirElement}
                   onModifier={modifierElement}
                 />
+              ) : (
+                <p className="text-sm text-text-light self-center max-w-md text-center">
+                  Cette page est produite à partir des rendez-vous du patient :
+                  son contenu change d'un patient à l'autre, il ne se compose
+                  pas ici. L'aperçu PDF la montre telle qu'elle sortira.
+                </p>
               )}
             </div>
 

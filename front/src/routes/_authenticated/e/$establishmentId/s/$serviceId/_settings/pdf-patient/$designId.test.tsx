@@ -8,7 +8,7 @@ import {
   Outlet,
   RouterProvider,
 } from '@tanstack/react-router'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
@@ -82,7 +82,7 @@ const routeTree = rootRoute.addChildren([
   ]),
 ])
 
-const contenu = (x: number): PdfDesignContent => ({
+const contenu = (x: number, avecCalendrier = false): PdfDesignContent => ({
   version: 1,
   pages: [
     {
@@ -103,20 +103,23 @@ const contenu = (x: number): PdfDesignContent => ({
         },
       ],
     },
+    ...(avecCalendrier
+      ? [{ kind: 'calendar' as const, id: 'calendrier' }]
+      : []),
   ],
 })
 
-const design = (x: number) => ({
+const design = (x: number, avecCalendrier = false) => ({
   id: 'd1',
   name: 'Mon programme',
-  content: contenu(x),
+  content: contenu(x, avecCalendrier),
   isDefault: false,
 })
 
 // Le serveur garde ce qu'on lui ecrit : c'est ce qui permet de distinguer « l'ecran est revenu
 // a la version du serveur » de « l'ecran a garde la mienne ».
-const monter = () => {
-  let enBase = design(10)
+const monter = (avecCalendrier = false) => {
+  let enBase = design(10, avecCalendrier)
   const ecritures: PdfDesignContent[] = []
   const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = input.toString()
@@ -284,5 +287,48 @@ describe('editeur de design', () => {
     await waitFor(() => {
       expect(champX().value).not.toBe(apresUn)
     })
+  })
+})
+
+describe('editeur de design, les pages', () => {
+  it('montre une vignette par page', async () => {
+    monter(true)
+    expect(await screen.findByTestId('page-cover')).toBeInTheDocument()
+    expect(screen.getByTestId('page-calendrier')).toBeInTheDocument()
+  })
+
+  it('ajoute une page et s y place', async () => {
+    monter()
+    await screen.findByTestId('page-cover')
+
+    await userEvent.click(
+      screen.getByRole('button', { name: /Ajouter une page/ }),
+    )
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId(/^page-/)).toHaveLength(2)
+    })
+  })
+
+  // Review Focus 5 : une page calendrier n'a pas de toile. L'editeur doit le dire.
+  it('explique qu une page calendrier ne se compose pas', async () => {
+    monter(true)
+    await userEvent.click(
+      within(await screen.findByTestId('page-calendrier')).getByRole('button', {
+        name: 'Afficher Calendrier',
+      }),
+    )
+
+    expect(
+      screen.getByText(/produite à partir des rendez-vous/i),
+    ).toBeInTheDocument()
+  })
+
+  it('ne propose pas une seconde page calendrier', async () => {
+    monter(true)
+    await screen.findByTestId('page-cover')
+    expect(
+      screen.queryByRole('button', { name: /Ajouter le calendrier/ }),
+    ).not.toBeInTheDocument()
   })
 })
