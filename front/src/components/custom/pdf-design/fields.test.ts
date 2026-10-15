@@ -3,8 +3,14 @@ import utc from 'dayjs/plugin/utc'
 import { describe, expect, it } from 'vitest'
 
 import type { Patient, PatientPathway } from '../../../types/patient.ts'
+import { PDF_FIELD_KEYS } from '../../../types/pdfDesign.ts'
 import type { Slot } from '../../../types/slot.ts'
-import { type PdfFieldContext, resolveField } from './fields.ts'
+import {
+  type PdfFieldContext,
+  resolveField,
+  SAMPLE_FIELD_CONTEXT,
+  SAMPLE_FIELD_VALUES,
+} from './fields.ts'
 
 dayjs.extend(utc)
 
@@ -88,5 +94,16 @@ describe('resolveField', () => {
   // Review Focus 1 : aucun creneau a venir -> rien, jamais « Du Invalid Date ».
   it('rend une chaine vide quand le patient n a aucun creneau a venir', () => {
     expect(resolveField('program.dates', ctx())).toBe('')
+  })
+})
+
+// Les deux faces de l'echantillon : le dictionnaire que la toile HTML affiche, et le contexte
+// que l'apercu PDF resout. Elles doivent dire la meme chose, sinon basculer entre les deux
+// change le texte sous les yeux de l'utilisateur.
+describe('echantillon', () => {
+  it.each(PDF_FIELD_KEYS)('rend la meme valeur pour %s', (key) => {
+    expect(resolveField(key, SAMPLE_FIELD_CONTEXT)).toBe(
+      SAMPLE_FIELD_VALUES[key],
+    )
   })
 })

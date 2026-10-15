@@ -81,6 +81,17 @@ describe('CanvasPage', () => {
     expect(screen.getByText(/Bonjour/)).toBeInTheDocument()
   })
 
+  // Trouve a l'ecran : les runs s'empilaient verticalement, un par ligne, la ou react-pdf les
+  // imbrique dans un SEUL <Text> donc en ligne. Le conteneur est en colonne pour `vAlign` ;
+  // les runs doivent donc vivre dans un bloc a eux, ou ils redeviennent en ligne.
+  it('met les runs en ligne, comme le PDF, et non un par ligne', () => {
+    render(<CanvasPage page={page([texte])} echelle={1} />)
+    const premier = screen.getByText(/Bonjour/)
+    const second = screen.getByText(/DUPONT Jean/)
+    expect(premier.parentElement).toBe(second.parentElement)
+    expect(premier.parentElement?.style.display).not.toBe('flex')
+  })
+
   it('signale l element selectionne', () => {
     render(<CanvasPage page={page([texte])} echelle={1} selectionId="e1" />)
     expect(screen.getByTestId('element-e1')).toHaveAttribute(

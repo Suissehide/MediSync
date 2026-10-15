@@ -40,3 +40,16 @@ export const SAMPLE_FIELD_VALUES: Record<PdfFieldKey, string> = {
   'program.dates': 'Du 12/05 au 28/06/2026',
   'service.name': 'SMCV',
 }
+
+// Le MEME echantillon, sous la forme d'un contexte : l'apercu PDF de l'editeur passe par
+// `pagesOf`, qui resout les donnees plutot que de lire le dictionnaire ci-dessus. Les deux
+// doivent dire la meme chose, et `fields.test.ts` le tient.
+export const SAMPLE_FIELD_CONTEXT: PdfFieldContext = {
+  patient: { firstName: 'Jean', lastName: 'DUPONT' } as Patient,
+  pathways: [{ templateName: 'Réadaptation cardiaque' }] as PatientPathway[],
+  upcomingSlots: [
+    { startDate: '2026-05-12T08:00:00.000Z' },
+    { startDate: '2026-06-28T08:00:00.000Z' },
+  ] as Slot[],
+  serviceName: 'SMCV',
+}

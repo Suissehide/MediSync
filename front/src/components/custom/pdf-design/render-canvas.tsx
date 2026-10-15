@@ -86,18 +86,25 @@ export function elementStyle(
 const contenu = (element: PdfElement) => {
   switch (element.kind) {
     case 'text':
-      return element.runs.map((run, rang) => (
-        <span
-          // Un run n'a pas d'identite propre : son rang est sa cle, comme dans render-pdf.
-          key={`${element.id}-${rang}`}
-          style={{
-            fontWeight: run.bold ? 700 : undefined,
-            fontStyle: run.italic ? 'italic' : undefined,
-          }}
-        >
-          {'field' in run ? SAMPLE_FIELD_VALUES[run.field] : run.text}
+      // Un bloc qui porte tous les runs : le conteneur est en colonne pour `vAlign`, et sans
+      // ce bloc chaque run deviendrait une ligne, la ou react-pdf les imbrique dans un SEUL
+      // <Text>, donc en ligne.
+      return (
+        <span style={{ display: 'block' }}>
+          {element.runs.map((run, rang) => (
+            <span
+              // Un run n'a pas d'identite propre : son rang est sa cle, comme dans render-pdf.
+              key={`${element.id}-${rang}`}
+              style={{
+                fontWeight: run.bold ? 700 : undefined,
+                fontStyle: run.italic ? 'italic' : undefined,
+              }}
+            >
+              {'field' in run ? SAMPLE_FIELD_VALUES[run.field] : run.text}
+            </span>
+          ))}
         </span>
-      ))
+      )
     case 'image':
       return 'builtin' in element.source ? (
         <img

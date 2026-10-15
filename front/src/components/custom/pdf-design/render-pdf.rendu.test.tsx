@@ -181,4 +181,44 @@ describe('rendu reel', () => {
     }
     await expect(rendre([rond, texte({})])).resolves.toContain('Bonjour')
   }, 30000)
+
+  // L'editeur de l'etape 2 rend ces positions atteignables d'un seul glissement : rien ne
+  // borne la toile a la page, c'est le propre d'un canvas libre. Un design ainsi compose est
+  // enregistre, puis rejoue a CHAQUE export du service — un blocage ici eteindrait le PDF
+  // patient pour tout le monde, pas seulement pour qui l'a compose.
+  it('rend un element entierement sous le bas de la page', async () => {
+    const perdu: PdfElement = {
+      id: 'perdu',
+      kind: 'rect',
+      x: 100,
+      y: A4_HEIGHT + 200,
+      w: 120,
+      h: 40,
+      rotation: 0,
+      fill: '#e05a5a',
+      radius: 0,
+    }
+    await expect(rendre([perdu, texte({})])).resolves.toContain('Bonjour')
+  }, 30000)
+
+  it('rend un element entierement a gauche de la page', async () => {
+    const perdu: PdfElement = {
+      id: 'perdu',
+      kind: 'rect',
+      x: -400,
+      y: 100,
+      w: 120,
+      h: 40,
+      rotation: 0,
+      fill: '#e05a5a',
+      radius: 0,
+    }
+    await expect(rendre([perdu, texte({})])).resolves.toContain('Bonjour')
+  }, 30000)
+
+  it('rend un texte plus large que la page', async () => {
+    await expect(
+      rendre([texte({ x: 40, y: 40, w: A4_WIDTH + 300, h: 60 })]),
+    ).resolves.toContain('Bonjour')
+  }, 30000)
 })
