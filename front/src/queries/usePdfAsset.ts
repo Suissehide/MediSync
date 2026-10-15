@@ -5,7 +5,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query'
 
-import { dataUri, PdfAssetApi } from '../api/pdfAsset.api.ts'
+import { dataUri, lireEnBase64, PdfAssetApi } from '../api/pdfAsset.api.ts'
 import { PDF_ASSET } from '../constants/process.constant.ts'
 import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
@@ -63,9 +63,18 @@ export const usePdfAssetMutations = () => {
     await queryClient.invalidateQueries({ queryKey: [PDF_ASSET.GET_ALL] })
   }
 
+  // La mutation prend le FICHIER, pas le base64 : la lecture echoue elle aussi (fichier trop
+  // gros, illisible), et son message doit passer par le meme rapport d'erreur. Lire avant
+  // d'appeler la mutation renverrait un rejet que l'appelant devrait rattraper lui-meme —
+  // c'est ainsi que le message « 2 Mo » se perdait en silence.
   const deposerImage = useMutation({
     mutationKey: [PDF_ASSET.CREATE],
-    mutationFn: PdfAssetApi.create,
+    mutationFn: async (fichier: File) =>
+      PdfAssetApi.create({
+        fileName: fichier.name,
+        mimeType: fichier.type,
+        base64: await lireEnBase64(fichier),
+      }),
     onError: (error: Error) => {
       toast({
         title: "Erreur lors du dépôt de l'image",

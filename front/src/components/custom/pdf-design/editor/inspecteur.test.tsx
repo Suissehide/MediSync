@@ -1,8 +1,9 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
+import type { PdfAssetSummary } from '../../../../types/pdfAsset.ts'
 import {
   A4_HEIGHT,
   A4_WIDTH,
@@ -30,13 +31,21 @@ const texte: PdfElement = {
 // L'inspecteur est monte avec un ETAT qui applique vraiment les modifications : sans cela les
 // champs restent a leur valeur d'origine et chaque frappe se concatene a elle, ce qui mesure
 // l'artefact du harnais et non le composant.
-const monter = (depart: PdfElement = texte) => {
+const monter = (
+  depart: PdfElement = texte,
+  options: {
+    assets?: PdfAssetSummary[]
+    onDeposer?: (fichier: File) => Promise<PdfAssetSummary>
+  } = {},
+) => {
   const vus: Partial<PdfElement>[] = []
   const Harnais = () => {
     const [element, setElement] = useState(depart)
     return (
       <Inspecteur
         element={element}
+        assets={options.assets}
+        onDeposer={options.onDeposer}
         onModifier={(champs) => {
           vus.push(champs)
           setElement((avant) => ({ ...avant, ...champs }) as PdfElement)
@@ -49,6 +58,18 @@ const monter = (depart: PdfElement = texte) => {
   }
   render(<Harnais />)
   return vus
+}
+
+const image: PdfElement = {
+  id: 'e1',
+  kind: 'image',
+  x: 10,
+  y: 20,
+  w: 100,
+  h: 80,
+  rotation: 0,
+  source: { builtin: 'logo-chu' },
+  fit: 'contain',
 }
 
 const valeurs = (vus: Partial<PdfElement>[], champ: 'h' | 'w' | 'x') =>
@@ -125,6 +146,84 @@ describe('Inspecteur', () => {
     await userEvent.type(champ, '-60')
 
     expect(valeurs(vus, 'x')).toContain(-60)
+  })
+
+  it('propose les images du service a cote des images livrees', async () => {
+    monter(image, {
+      assets: [{ id: 'a1', fileName: 'mon-logo.png', mimeType: 'image/png' }],
+    })
+
+    await userEvent.click(screen.getByLabelText('Image'))
+
+    expect(
+      await screen.findByRole('option', { name: 'mon-logo.png' }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Logo' })).toBeInTheDocument()
+  })
+
+  it('pose l image choisie comme source de l element', async () => {
+    const vus = monter(image, {
+      assets: [{ id: 'a1', fileName: 'mon-logo.png', mimeType: 'image/png' }],
+    })
+
+    await userEvent.click(screen.getByLabelText('Image'))
+    await userEvent.click(
+      await screen.findByRole('option', { name: 'mon-logo.png' }),
+    )
+
+    expect(vus.at(-1)).toEqual({ source: { assetId: 'a1' } })
+  })
+
+  // Un nom de fichier qui ressemble a une image livree ne doit pas se faire passer pour elle :
+  // le prefixe de la valeur dit de quelle famille vient le choix.
+  it('ne confond pas une image deposee nommee comme une image livree', async () => {
+    const vus = monter(image, {
+      assets: [{ id: 'a2', fileName: 'logo-chu', mimeType: 'image/png' }],
+    })
+
+    await userEvent.click(screen.getByLabelText('Image'))
+    const options = await screen.findAllByRole('option', { name: 'logo-chu' })
+    await userEvent.click(options[0])
+
+    expect(vus.at(-1)).toEqual({ source: { assetId: 'a2' } })
+  })
+
+  it('depose un fichier et pose l image deposee', async () => {
+    const deposer = vi.fn().mockResolvedValue({
+      id: 'a2',
+      fileName: 'fond.png',
+      mimeType: 'image/png',
+    })
+    const vus = monter(image, { onDeposer: deposer })
+
+    const fichier = new File([new Uint8Array([1, 2, 3])], 'fond.png', {
+      type: 'image/png',
+    })
+    await userEvent.upload(screen.getByLabelText(/Déposer une image/), fichier)
+
+    await waitFor(() => {
+      expect(deposer).toHaveBeenCalledWith(fichier)
+    })
+    await waitFor(() => {
+      expect(vus.at(-1)).toEqual({ source: { assetId: 'a2' } })
+    })
+  })
+
+  // Un depot refuse (trop gros, pas une image) ne doit pas poser une source inventee : le
+  // message vient de la mutation, l'element reste sur son image precedente.
+  it('ne change pas la source quand le depot echoue', async () => {
+    const deposer = vi.fn().mockRejectedValue(new Error('trop gros'))
+    const vus = monter(image, { onDeposer: deposer })
+
+    const fichier = new File([new Uint8Array([1])], 'trop.png', {
+      type: 'image/png',
+    })
+    await userEvent.upload(screen.getByLabelText(/Déposer une image/), fichier)
+
+    await waitFor(() => {
+      expect(deposer).toHaveBeenCalled()
+    })
+    expect(vus).toHaveLength(0)
   })
 
   it('insere deux fois la meme donnee', async () => {

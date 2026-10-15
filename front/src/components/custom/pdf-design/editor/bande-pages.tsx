@@ -1,5 +1,6 @@
 import { CalendarPlus, FilePlus, Trash2 } from 'lucide-react'
 
+import type { SourcesImages } from '../../../../types/pdfAsset.ts'
 import type { PdfPage } from '../../../../types/pdfDesign.ts'
 import { MoveButtons } from '../../../settings/iconButton.tsx'
 import { Button } from '../../../ui/button.tsx'
@@ -17,6 +18,7 @@ type BandePagesProps = {
   onAjouterCalendrier: () => void
   onSupprimer: (id: string) => void
   onDeplacer: (id: string, sens: SensDePage) => void
+  sources?: SourcesImages
 }
 
 // Le calendrier porte son nom plutot qu'un numero : il n'est pas une page qu'on compose, et
@@ -33,6 +35,7 @@ export default function BandePages({
   onAjouterCalendrier,
   onSupprimer,
   onDeplacer,
+  sources,
 }: BandePagesProps) {
   // Les toiles sont numerotees entre elles : inserer le calendrier au milieu ne doit pas
   // faire sauter la couverture de « Page 1 » a « Page 2 ».
@@ -65,7 +68,11 @@ export default function BandePages({
                   : 'rounded-xs outline outline-1 outline-transparent'
               }
             >
-              <Vignette page={page} largeur={LARGEUR_VIGNETTE} />
+              <Vignette
+                page={page}
+                largeur={LARGEUR_VIGNETTE}
+                sources={sources}
+              />
             </button>
             <span className="text-[11px] text-text-light" aria-hidden="true">
               {nom}

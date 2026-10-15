@@ -1,5 +1,6 @@
 import { Copy, Pencil, RotateCcw, Star, Trash2 } from 'lucide-react'
 
+import type { SourcesImages } from '../../../types/pdfAsset.ts'
 import type { PdfDesignSummary } from '../../../types/pdfDesignList.ts'
 import { Button } from '../../ui/button.tsx'
 import Vignette from './vignette.tsx'
@@ -15,6 +16,7 @@ type DesignCardProps = {
   onParDefaut?: () => void
   onSupprimer?: () => void
   onRestaurer?: () => void
+  sources?: SourcesImages
 }
 
 export default function DesignCard({
@@ -27,6 +29,7 @@ export default function DesignCard({
   onParDefaut,
   onSupprimer,
   onRestaurer,
+  sources,
 }: DesignCardProps) {
   const pages = design.content.pages.length
   // La premiere page en miniature : le nombre de pages ne dit pas a quoi le design ressemble.
@@ -34,7 +37,9 @@ export default function DesignCard({
   return (
     <article className="border border-border rounded-lg p-4 flex flex-col gap-3">
       <div className="flex items-start gap-3">
-        {premierePage && <Vignette page={premierePage} largeur={64} />}
+        {premierePage && (
+          <Vignette page={premierePage} largeur={64} sources={sources} />
+        )}
         <div className="flex items-start justify-between gap-2 flex-1 min-w-0">
           <div className="min-w-0">
             <h3 className="font-semibold text-foreground truncate">

@@ -1,6 +1,7 @@
 import { Document } from '@react-pdf/renderer'
 
 import type { Patient, PatientPathway } from '../../../../types/patient.ts'
+import type { SourcesImages } from '../../../../types/pdfAsset.ts'
 import type { PdfDesignContent } from '../../../../types/pdfDesign.ts'
 import type { Slot } from '../../../../types/slot.ts'
 import { pagesOf } from '../../pdf-design/render-pdf.tsx'
@@ -13,6 +14,9 @@ interface ProgrammePDFProps {
   serviceName: string
   forbiddenWeekStarts: string[]
   noticeByThematicId: Map<string, string>
+  // Les octets des images deposees que ce design reclame. Sans eux, une image deposee ne sort
+  // pas du PDF du patient — alors qu'elle s'affiche dans l'editeur.
+  sources?: SourcesImages
 }
 
 export default function ProgrammePDF({
@@ -23,6 +27,7 @@ export default function ProgrammePDF({
   serviceName,
   forbiddenWeekStarts,
   noticeByThematicId,
+  sources,
 }: ProgrammePDFProps) {
   return (
     <Document>
@@ -35,6 +40,7 @@ export default function ProgrammePDF({
           forbiddenWeekStarts,
           noticeByThematicId,
         },
+        sources,
       )}
     </Document>
   )

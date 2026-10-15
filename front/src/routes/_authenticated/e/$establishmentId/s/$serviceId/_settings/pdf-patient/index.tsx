@@ -2,6 +2,7 @@ import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { FilePlus } from 'lucide-react'
 import { useState } from 'react'
 
+import { assetIdsDe } from '@/components/custom/pdf-design/assets.ts'
 import DesignCard from '@/components/custom/pdf-design/design-card.tsx'
 import { ConfirmDeleteForm } from '@/components/custom/popup/confirmDeleteForm.tsx'
 import RenamePdfDesignForm from '@/components/custom/popup/renamePdfDesignForm.tsx'
@@ -10,6 +11,7 @@ import { Button } from '@/components/ui/button.tsx'
 import { Label } from '@/components/ui/label.tsx'
 import { Switch } from '@/components/ui/switch.tsx'
 import { can } from '@/hooks/useCan.ts'
+import { useSourcesImages } from '@/queries/usePdfAsset.ts'
 import {
   usePdfDesignMutations,
   usePdfDesignQueries,
@@ -37,6 +39,14 @@ function PdfPatientSettings() {
   const { establishmentId, serviceId } = Route.useParams()
   const [montrerSupprimes, setMontrerSupprimes] = useState(false)
   const { presets, designs, isPending } = usePdfDesignQueries(montrerSupprimes)
+
+  // Les vignettes des cartes passent par le meme moteur que la toile : sans les octets, une
+  // image deposee manquerait ici alors qu'elle s'affiche dans l'editeur. On resout la REUNION
+  // des images de tous les designs affiches — la liste est courte, et les octets sont mis en
+  // cache par identifiant, donc une image partagee n'est demandee qu'une fois.
+  const sources = useSourcesImages([
+    ...new Set(designs.flatMap((design) => assetIdsDe(design.content))),
+  ])
   const {
     duplicateDesign,
     createBlankDesign,
@@ -115,6 +125,7 @@ function PdfPatientSettings() {
                 design={design}
                 lectureSeule={false}
                 supprime={montrerSupprimes}
+                sources={sources}
                 onModifier={() =>
                   navigate({
                     to: '/e/$establishmentId/s/$serviceId/pdf-patient/$designId',

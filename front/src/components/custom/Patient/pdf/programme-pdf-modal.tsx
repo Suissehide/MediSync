@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react'
 
 import { useForbiddenWeekQueries } from '../../../../queries/useForbiddenWeek.ts'
 import { usePatientPathwaysQuery } from '../../../../queries/usePatient.tsx'
+import { useSourcesImages } from '../../../../queries/usePdfAsset.ts'
 import { usePdfDesignQueries } from '../../../../queries/usePdfDesign.ts'
 import { usePatientSlotsQuery } from '../../../../queries/useSlot.ts'
 import { useThematicQueries } from '../../../../queries/useThematic.ts'
@@ -12,6 +13,7 @@ import { useAuthStore } from '../../../../store/useAuthStore.ts'
 import type { Patient } from '../../../../types/patient.ts'
 import type { PdfDesignSummary } from '../../../../types/pdfDesignList.ts'
 import { Button } from '../../../ui/button.tsx'
+import { assetIdsDe } from '../../pdf-design/assets.ts'
 import ProgrammePDF from './programme.pdf.tsx'
 
 // Le choix explicite, sinon le design par defaut du service, sinon le premier disponible —
@@ -98,6 +100,11 @@ export default function ProgrammePDFModal({
     return new Map(entries)
   }, [thematics])
 
+  // Les octets des images deposees du design choisi : c'est ici que sort le VRAI PDF.
+  const sources = useSourcesImages(
+    selectedDesign ? assetIdsDe(selectedDesign.content) : [],
+  )
+
   const fileName = `programme-${patient.lastName}-${patient.firstName}-${dayjs.utc().format('YYYY-MM-DD')}.pdf`
 
   const pdfDocument = useMemo(
@@ -111,6 +118,7 @@ export default function ProgrammePDFModal({
           serviceName={serviceName}
           forbiddenWeekStarts={forbiddenWeekStarts}
           noticeByThematicId={noticeByThematicId}
+          sources={sources}
         />
       ) : null,
     [
@@ -121,6 +129,7 @@ export default function ProgrammePDFModal({
       serviceName,
       forbiddenWeekStarts,
       noticeByThematicId,
+      sources,
     ],
   )
 

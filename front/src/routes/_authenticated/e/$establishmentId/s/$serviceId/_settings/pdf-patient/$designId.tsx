@@ -9,6 +9,7 @@ import {
   useState,
 } from 'react'
 
+import { assetIdsDe } from '@/components/custom/pdf-design/assets.ts'
 import BandePages from '@/components/custom/pdf-design/editor/bande-pages.tsx'
 import Inspecteur from '@/components/custom/pdf-design/editor/inspecteur.tsx'
 import Palette from '@/components/custom/pdf-design/editor/palette.tsx'
@@ -28,6 +29,11 @@ import { pagesOf } from '@/components/custom/pdf-design/render-pdf.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
 import { Button } from '@/components/ui/button.tsx'
 import { can } from '@/hooks/useCan.ts'
+import {
+  usePdfAssetMutations,
+  usePdfAssetQueries,
+  useSourcesImages,
+} from '@/queries/usePdfAsset.ts'
 import {
   usePdfDesignMutations,
   usePdfDesignQueries,
@@ -96,6 +102,12 @@ function PdfDesignEditor() {
 
   const { synchroniser, annuler, retablir, peutAnnuler, peutRetablir } =
     useHistorique(remplacerContenu)
+
+  const { assets } = usePdfAssetQueries()
+  const { deposerImage } = usePdfAssetMutations()
+  // Les octets des images que CE contenu reclame, resolus une fois et donnes aux deux
+  // moteurs : la toile, les vignettes de la bande et l'apercu PDF.
+  const sources = useSourcesImages(assetIdsDe(contenu))
 
   // L'historique se branche ici, sur le contenu lui-meme : il regroupe les rafales d'un
   // geste et ignore ce qu'il vient de restaurer.
@@ -306,7 +318,12 @@ function PdfDesignEditor() {
           <div className="flex-1 min-h-0">
             <PDFViewer width="100%" height="100%">
               <Document>
-                {pagesOf(contenu, SAMPLE_FIELD_CONTEXT, CALENDRIER_ECHANTILLON)}
+                {pagesOf(
+                  contenu,
+                  SAMPLE_FIELD_CONTEXT,
+                  CALENDRIER_ECHANTILLON,
+                  sources,
+                )}
               </Document>
             </PDFViewer>
           </div>
@@ -335,6 +352,7 @@ function PdfDesignEditor() {
                   selection={selection}
                   onSelect={choisirElement}
                   onModifier={modifierElement}
+                  sources={sources}
                 />
               ) : (
                 <p className="text-sm text-text-light self-center max-w-md text-center">
@@ -348,6 +366,8 @@ function PdfDesignEditor() {
             <aside className="w-64 flex-shrink-0 overflow-auto">
               <Inspecteur
                 element={elementSelectionne}
+                assets={assets}
+                onDeposer={(fichier) => deposerImage.mutateAsync(fichier)}
                 onModifier={(champs) =>
                   selection && modifierElement(selection, champs)
                 }
@@ -374,6 +394,7 @@ function PdfDesignEditor() {
             onAjouterCalendrier={ajouterCalendrier}
             onSupprimer={supprimerPage}
             onDeplacer={deplacerPage}
+            sources={sources}
           />
         )}
 

@@ -1,14 +1,17 @@
 import { ArrowDownToLine, ArrowUpToLine, Copy, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 
+import type { PdfAssetSummary } from '../../../../types/pdfAsset.ts'
 import {
   A4_HEIGHT,
   A4_WIDTH,
   PDF_BUILTIN_IMAGES,
   PDF_FIELD_KEYS,
+  type PdfBuiltinImage,
   type PdfElement,
   type PdfFieldKey,
   type PdfFill,
+  type PdfImageElement,
   type PdfTextElement,
 } from '../../../../types/pdfDesign.ts'
 import { Button } from '../../../ui/button.tsx'
@@ -25,12 +28,29 @@ const ETIQUETTES_DONNEES: Record<PdfFieldKey, string> = {
 
 const COULEUR_PARCOURS = 'pathway.color'
 
+const ETIQUETTES_LIVREES: Record<string, string> = {
+  'logo-chu': 'Logo',
+  lines: 'Lignes',
+}
+
+// Une seule liste pour les deux familles, et un PREFIXE qui dit laquelle : sans lui, une image
+// deposee nommee « logo-chu » se ferait passer pour l'image livree du meme nom.
+const sourceDepuisChoix = (choix: string): PdfImageElement['source'] =>
+  choix.startsWith('asset:')
+    ? { assetId: choix.slice('asset:'.length) }
+    : { builtin: choix.slice('builtin:'.length) as PdfBuiltinImage }
+
 type InspecteurProps = {
   element: PdfElement | null
   onModifier: (champs: Partial<PdfElement>) => void
   onSupprimer: () => void
   onDupliquer: () => void
   onOrdre: (sens: 'avant' | 'arriere') => void
+  // Les images deposees par le service, a cote des deux livrees.
+  assets?: PdfAssetSummary[]
+  // Depose un fichier et rend l'image creee, pour que l'inspecteur la pose aussitot comme
+  // source. Absent, le champ de depot n'est pas rendu.
+  onDeposer?: (fichier: File) => Promise<PdfAssetSummary>
 }
 
 // La SAISIE est locale, seules les valeurs valides remontent. Deux raisons, et il faut les
@@ -292,6 +312,8 @@ export default function Inspecteur({
   onSupprimer,
   onDupliquer,
   onOrdre,
+  assets,
+  onDeposer,
 }: InspecteurProps) {
   if (!element) {
     return (
@@ -366,24 +388,57 @@ export default function Inspecteur({
       {element.kind === 'image' && (
         <>
           <div className="flex flex-col gap-1">
-            <Label className="text-xs">Image</Label>
+            <Label htmlFor="insp-image" className="text-xs">
+              Image
+            </Label>
             <Select
-              options={PDF_BUILTIN_IMAGES.map((nom) => ({
-                value: nom,
-                label: nom === 'logo-chu' ? 'Logo' : 'Lignes',
-              }))}
+              id="insp-image"
+              options={[
+                ...PDF_BUILTIN_IMAGES.map((nom) => ({
+                  value: `builtin:${nom}`,
+                  label: ETIQUETTES_LIVREES[nom] ?? nom,
+                })),
+                ...(assets ?? []).map((asset) => ({
+                  value: `asset:${asset.id}`,
+                  label: asset.fileName,
+                })),
+              ]}
               value={
-                'builtin' in element.source ? element.source.builtin : undefined
+                'builtin' in element.source
+                  ? `builtin:${element.source.builtin}`
+                  : `asset:${element.source.assetId}`
               }
-              onValueChange={(builtin) =>
-                onModifier({
-                  source: {
-                    builtin: builtin as (typeof PDF_BUILTIN_IMAGES)[number],
-                  },
-                })
+              onValueChange={(choix) =>
+                onModifier({ source: sourceDepuisChoix(choix) })
               }
             />
           </div>
+
+          {onDeposer && (
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="insp-depot" className="text-xs">
+                Déposer une image
+              </Label>
+              <Input
+                id="insp-depot"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={(e) => {
+                  const fichier = e.target.files?.[0]
+                  if (!fichier) {
+                    return
+                  }
+                  // Un depot refuse ne pose aucune source : le message vient de la mutation,
+                  // et l'element reste sur son image precedente.
+                  onDeposer(fichier)
+                    .then((asset) =>
+                      onModifier({ source: { assetId: asset.id } }),
+                    )
+                    .catch(() => undefined)
+                }}
+              />
+            </div>
+          )}
           <div className="flex flex-col gap-1">
             <Label className="text-xs">Cadrage</Label>
             <Select

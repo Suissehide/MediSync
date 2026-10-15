@@ -109,6 +109,32 @@ const contenu = (x: number, avecCalendrier = false): PdfDesignContent => ({
   ],
 })
 
+// Etape 4 : un design qui porte une image DEPOSEE. Ses octets ne sont pas dans le bundle,
+// il faut les demander au serveur — c'est tout le chemin que ce contenu exerce.
+const contenuAvecImage = (): PdfDesignContent => ({
+  version: 1,
+  pages: [
+    {
+      kind: 'canvas',
+      id: 'cover',
+      background: '#ffffff',
+      elements: [
+        {
+          id: 'fond',
+          kind: 'image',
+          x: 0,
+          y: 0,
+          w: 200,
+          h: 100,
+          rotation: 0,
+          source: { assetId: 'a1' },
+          fit: 'cover',
+        },
+      ],
+    },
+  ],
+})
+
 const design = (x: number, avecCalendrier = false) => ({
   id: 'd1',
   name: 'Mon programme',
@@ -120,14 +146,34 @@ const design = (x: number, avecCalendrier = false) => ({
 // a la version du serveur » de « l'ecran a garde la mienne ».
 // `delaiGet` reproduit la fenetre de chargement : la requete repond apres un temps, et
 // l'ecran est deja monte sans design.
-const monter = (avecCalendrier = false, delaiGet = 0) => {
-  let enBase = design(10, avecCalendrier)
+const monter = (avecCalendrier = false, delaiGet = 0, avecImage = false) => {
+  let enBase = avecImage
+    ? { ...design(10), content: contenuAvecImage() }
+    : design(10, avecCalendrier)
   const ecritures: PdfDesignContent[] = []
   const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = input.toString()
     const method = init?.method ?? 'GET'
     const chemin = new URL(url).pathname
     if (method === 'GET') {
+      if (chemin.endsWith('/pdf-assets/a1')) {
+        return {
+          ok: true,
+          status: 200,
+          url,
+          json: async () => ({ mimeType: 'image/png', base64: 'AAAA' }),
+        }
+      }
+      if (chemin.endsWith('/pdf-assets')) {
+        return {
+          ok: true,
+          status: 200,
+          url,
+          json: async () => [
+            { id: 'a1', fileName: 'fond.png', mimeType: 'image/png' },
+          ],
+        }
+      }
       if (!chemin.endsWith('/pdf-designs')) {
         return { ok: true, status: 200, url, json: async () => [] }
       }
@@ -378,5 +424,62 @@ describe('editeur de design, les pages', () => {
     for (const ecrit of ecritures) {
       expect(ecrit.pages.map((p) => p.id)).toContain('cover')
     }
+  })
+
+  // Etape 4 : les octets d'une image deposee sont demandes au serveur et donnes aux deux
+  // moteurs. Sans ce chemin, l'image s'affiche dans l'inspecteur mais nulle part sur la page.
+  it('montre une image deposee sur la toile', async () => {
+    monter(false, 0, true)
+
+    // DEUX occurrences, et c'est le fait interessant : la toile et sa vignette dans la bande
+    // rendent la meme page par le meme moteur, donc les deux doivent porter les octets.
+    const images = await screen.findAllByRole('presentation')
+    expect(images).toHaveLength(2)
+    for (const image of images) {
+      expect(image).toHaveAttribute('src', 'data:image/png;base64,AAAA')
+    }
+  })
+
+  it('propose les images du service dans l inspecteur', async () => {
+    monter(false, 0, true)
+
+    const poignee = await screen.findByTestId('poignee-deplacement-fond')
+    await userEvent.click(poignee)
+    await userEvent.click(screen.getByLabelText('Image'))
+
+    expect(
+      await screen.findByRole('option', { name: 'fond.png' }),
+    ).toBeInTheDocument()
+  })
+
+  // Un fichier au-dela de 2 Mo n'est pas envoye : au-dela de la limite de corps du back,
+  // Fastify refuse avant le schema et l'utilisateur recevrait un 413 nu. Le message doit
+  // donc venir d'ici, et NOMMER la limite.
+  it('refuse un fichier trop gros en nommant la limite, sans l envoyer', async () => {
+    monter(false, 0, true)
+
+    const poignee = await screen.findByTestId('poignee-deplacement-fond')
+    await userEvent.click(poignee)
+    const trop = new File([new Uint8Array(3 * 1024 * 1024)], 'trop.png', {
+      type: 'image/png',
+    })
+    await userEvent.upload(screen.getByLabelText(/Déposer une image/), trop)
+
+    await waitFor(() => {
+      expect(
+        useToastStore
+          .getState()
+          // `message` est un ReactNode : on le lit comme du texte, c'est tout ce qu'on veut.
+          .toasts.some((t) => /2 Mo/.test(String(t.message ?? ''))),
+      ).toBe(true)
+    })
+    // Et rien n'est parti sur le reseau.
+    const fetchMock = globalThis.fetch as unknown as {
+      mock: { calls: [RequestInfo | URL, RequestInit?][] }
+    }
+    const depots = fetchMock.mock.calls.filter(
+      ([, init]) => (init?.method ?? 'GET') === 'POST',
+    )
+    expect(depots).toHaveLength(0)
   })
 })

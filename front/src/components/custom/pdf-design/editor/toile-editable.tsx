@@ -1,5 +1,6 @@
 import { type CSSProperties, type PointerEvent, useState } from 'react'
 
+import type { SourcesImages } from '../../../../types/pdfAsset.ts'
 import type { PdfCanvasPage, PdfElement } from '../../../../types/pdfDesign.ts'
 import CanvasPage from '../render-canvas.tsx'
 import {
@@ -43,6 +44,7 @@ type ToileEditableProps = {
   selection: string | null
   onSelect: (id: string | null) => void
   onModifier: (elementId: string, champs: Partial<PdfElement>) => void
+  sources?: SourcesImages
 }
 
 export default function ToileEditable({
@@ -51,6 +53,7 @@ export default function ToileEditable({
   selection,
   onSelect,
   onModifier,
+  sources,
 }: ToileEditableProps) {
   // Pointer events natifs plutot qu'une bibliotheque : @dnd-kit vise les listes triables, et
   // react-rnd se bat avec le facteur d'echelle — qui doit de toute facon diviser chaque delta.
@@ -115,6 +118,7 @@ export default function ToileEditable({
       onPointerCancel={finir}
     >
       <CanvasPage
+        sources={sources}
         page={page}
         echelle={echelle}
         selectionId={selection}

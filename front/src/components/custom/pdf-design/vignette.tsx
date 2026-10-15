@@ -1,5 +1,6 @@
 import { CalendarDays } from 'lucide-react'
 
+import type { SourcesImages } from '../../../types/pdfAsset.ts'
 import { A4_HEIGHT, A4_WIDTH, type PdfPage } from '../../../types/pdfDesign.ts'
 import CanvasPage from './render-canvas.tsx'
 
@@ -8,9 +9,11 @@ import CanvasPage from './render-canvas.tsx'
 export default function Vignette({
   page,
   largeur,
+  sources,
 }: {
   page: PdfPage
   largeur: number
+  sources?: SourcesImages
 }) {
   const hauteur = (largeur * A4_HEIGHT) / A4_WIDTH
 
@@ -35,7 +38,12 @@ export default function Vignette({
       className="overflow-hidden border border-border rounded-xs bg-white"
       style={{ width: largeur, height: hauteur }}
     >
-      <CanvasPage page={page} echelle={largeur / A4_WIDTH} interactif={false} />
+      <CanvasPage
+        page={page}
+        echelle={largeur / A4_WIDTH}
+        interactif={false}
+        sources={sources}
+      />
     </div>
   )
 }
