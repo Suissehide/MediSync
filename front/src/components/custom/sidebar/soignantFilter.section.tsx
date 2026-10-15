@@ -8,7 +8,8 @@ import ArchiveSoignantForm from '../popup/archiveSoignantForm.tsx'
 import { selectionPillClass } from './sidebarFilter.styles.ts'
 
 interface SoignantFilterSectionProps {
-  isAdmin: boolean
+  /** Affiche la suppression au survol (référentiel uniquement). */
+  canDelete?: boolean
   /** Titre de la section : texte simple ou sélecteur de mode. */
   title: ReactNode
   /** Bouton d'ajout facultatif, aligné à droite du titre. */
@@ -16,7 +17,7 @@ interface SoignantFilterSectionProps {
 }
 
 function SoignantFilterSection({
-  isAdmin,
+  canDelete = false,
   title,
   addAction,
 }: SoignantFilterSectionProps) {
@@ -75,7 +76,7 @@ function SoignantFilterSection({
               <button
                 type="button"
                 onClick={() => toggleSoignant(soignant.id)}
-                className={`cursor-pointer w-full py-2 pl-2 ${isAdmin ? 'pr-8' : 'pr-2'}`}
+                className={`cursor-pointer w-full py-2 pl-2 ${canDelete ? 'pr-8' : 'pr-2'}`}
               >
                 <span className="flex items-center gap-2">
                   <span className="w-5 h-5 shrink-0">
@@ -85,7 +86,7 @@ function SoignantFilterSection({
                 </span>
               </button>
 
-              {isAdmin && isHovered === soignant.id && (
+              {canDelete && isHovered === soignant.id && (
                 <ArchiveSoignantForm
                   soignant={soignant}
                   trigger={

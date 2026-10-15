@@ -1,7 +1,6 @@
 import { ChevronDown, DoorOpen, Route, Stethoscope } from 'lucide-react'
 import { useState } from 'react'
 
-import { useCan } from '../../../hooks/useCan.ts'
 import {
   type DashboardFilterMode,
   useDashboardFilterStore,
@@ -23,7 +22,6 @@ const modeLabels: Record<DashboardFilterMode, string> = {
 }
 
 function SidebarDashboardFilter() {
-  const isAdmin = useCan('referentials:write')
   const mode = useDashboardFilterStore((state) => state.mode)
   const setMode = useDashboardFilterStore((state) => state.setMode)
   const [isOpen, setIsOpen] = useState(false)
@@ -72,7 +70,7 @@ function SidebarDashboardFilter() {
     return <LocationFilterSection title={title} />
   }
 
-  return <SoignantFilterSection isAdmin={isAdmin} title={title} />
+  return <SoignantFilterSection title={title} />
 }
 
 export default SidebarDashboardFilter
