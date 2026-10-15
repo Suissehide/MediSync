@@ -111,6 +111,8 @@ describe('routes des images de PDF', () => {
       base64: Buffer.from('%PDF-1.4 faux document').toString('base64'),
     })
     expect(res.statusCode).toBe(400)
+    // Le message nomme le type attendu comme un humain l'ecrit, pas « une image image/png ».
+    expect(JSON.stringify(res.json())).toContain('PNG')
   })
 
   it('refuse un base64 qui n est pas du base64', async () => {

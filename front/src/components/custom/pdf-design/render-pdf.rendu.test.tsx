@@ -38,6 +38,19 @@ const nombreDePages = (noeud: NoeudMisEnPage | undefined): number => {
   )
 }
 
+// Combien de noeuds d'un type donne l'arbre mis en page porte. Pour une IMAGE, c'est la seule
+// facon de distinguer « react-pdf a dessine l'image » de « il a journalise et saute » : il ne
+// jette pas sur un `src` manquant, il produit le document sans elle.
+const nombreDe = (type: string, noeud: NoeudMisEnPage | undefined): number => {
+  if (!noeud) {
+    return 0
+  }
+  const sien = noeud.type === type ? 1 : 0
+  return (
+    sien + (noeud.children ?? []).reduce((n, e) => n + nombreDe(type, e), 0)
+  )
+}
+
 const lignesDe = (noeud: NoeudMisEnPage | undefined): string[] => {
   if (!noeud) {
     return []
@@ -83,7 +96,8 @@ const rendre = async (elements: PdfElement[], c = ctx()): Promise<string[]> => {
 // une donnee que le service manipule.
 const rendreDocument = async (
   pages: PdfDesignContent['pages'],
-): Promise<{ lignes: string[]; pages: number }> => {
+  sources?: Record<string, string>,
+): Promise<{ lignes: string[]; pages: number; images: number }> => {
   let miseEnPage: NoeudMisEnPage | undefined
   const flux = await pdf(
     <Document
@@ -93,13 +107,17 @@ const rendreDocument = async (
         )._INTERNAL__LAYOUT__DATA_
       }}
     >
-      {pagesOf({ version: 1, pages }, ctx(), {} as never)}
+      {pagesOf({ version: 1, pages }, ctx(), {} as never, sources)}
     </Document>,
   ).toBuffer()
   await new Promise((resolve, reject) => {
     flux.on('end', resolve).on('error', reject).resume()
   })
-  return { lignes: lignesDe(miseEnPage), pages: nombreDePages(miseEnPage) }
+  return {
+    lignes: lignesDe(miseEnPage),
+    pages: nombreDePages(miseEnPage),
+    images: nombreDe('IMAGE', miseEnPage),
+  }
 }
 
 const texte = (over: Partial<PdfTextElement>): PdfTextElement => ({
@@ -119,6 +137,11 @@ const texte = (over: Partial<PdfTextElement>): PdfTextElement => ({
   vAlign: 'top',
   ...over,
 })
+
+// Un vrai PNG : 120x120 d'un vert franc. Le moteur decode reellement les octets, un base64
+// invente ne donnerait pas de noeud IMAGE.
+const CARRE_VERT =
+  'iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAIAAAC2BqGFAAAA60lEQVR4nO3QAQkAIADAMJvYy7RGs4XCHTzA2Zh76ULj+cEngQbdCjToVqBBtwINuhVo0K1Ag24FGnQr0KBbgQbdCjToVqBBtwINuhVo0K1Ag24FGnQr0KBbgQbdCjToVqBBtwINuhVo0K1Ag24FGnQr0KBbgQbdCjToVqBBtwINuhVo0K1Ag24FGnQr0KBbgQbdCjToVqBBtwINuhVo0K1Ag24FGnQr0KBbgQbdCjToVqBBtwINuhVo0K1Ag24FGnQr0KBbgQbdCjToVqBBtwINuhVo0K1Ag24FGnQr0KBbgQbdCjToVqBBtzqJGso938rZ6QAAAABJRU5ErkJggg=='
 
 describe('rendu reel', () => {
   // Le nom du patient tient sur deux lignes dans le preset. Un nom plus long en demandait
@@ -341,6 +364,43 @@ describe('rendu reel', () => {
       },
     ])
     expect(rendu.pages).toBe(1)
+    expect(rendu.lignes).toContain('Bonjour')
+    // ET aucune image dessinee : c'est la difference avec le cas d'a cote.
+    expect(rendu.images).toBe(0)
+  }, 30000)
+
+  // Le pendant du precedent, et la preuve qui manquait : avec ses octets, l'image est
+  // reellement DESSINEE par le vrai moteur. Sans cette assertion, les deux cas seraient
+  // indiscernables — react-pdf ne jette pas sur un `src` manquant, il journalise et saute,
+  // donc « le document sort » ne dit rien de l'image.
+  it('dessine une image deposee quand ses octets sont fournis', async () => {
+    const rendu = await rendreDocument(
+      [
+        {
+          kind: 'canvas',
+          id: 'p1',
+          background: '#ffffff',
+          elements: [
+            {
+              id: 'fond',
+              kind: 'image',
+              x: 0,
+              y: 0,
+              w: A4_WIDTH,
+              h: 200,
+              rotation: 0,
+              source: { assetId: 'presente' },
+              fit: 'cover',
+            },
+            texte({}),
+          ],
+        },
+      ],
+      { presente: `data:image/png;base64,${CARRE_VERT}` },
+    )
+
+    expect(rendu.pages).toBe(1)
+    expect(rendu.images).toBe(1)
     expect(rendu.lignes).toContain('Bonjour')
   }, 30000)
 })

@@ -20,6 +20,13 @@ const SIGNATURES: Record<string, number[]> = {
   'image/webp': [0x52, 0x49, 0x46, 0x46],
 }
 
+// Le type tel qu'un humain le nomme : « une image image/png » se lit mal dans un message.
+const NOMS: Record<string, string> = {
+  'image/png': 'PNG',
+  'image/jpeg': 'JPEG',
+  'image/webp': 'WebP',
+}
+
 const signatureCorrespond = (bytes: Uint8Array, mimeType: string): boolean => {
   const attendue = SIGNATURES[mimeType]
   if (!attendue) {
@@ -73,7 +80,7 @@ class PdfAssetDomain implements PdfAssetDomainInterface {
     }
     if (!signatureCorrespond(bytes, params.mimeType)) {
       throw Boom.badRequest(
-        `Ce fichier ne ressemble pas à une image ${params.mimeType}`,
+        `Ce fichier ne ressemble pas à une image ${NOMS[params.mimeType] ?? params.mimeType}`,
       )
     }
     const cree = await this.pdfAssetRepository.create({

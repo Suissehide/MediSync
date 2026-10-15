@@ -105,13 +105,44 @@ describe('PdfAssetApi', () => {
         ok: false,
         status: 409,
         url: 'http://localhost/e/e1/s/s1/pdf-assets/a1',
+        clone() {
+          return this
+        },
         json: async () => ({
           message: 'Cette image est utilisée par : Programme cardio',
         }),
       }),
     )
 
-    await expect(PdfAssetApi.remove('a1')).rejects.toThrow()
+    await expect(PdfAssetApi.remove('a1')).rejects.toThrow(/Programme cardio/)
+  })
+
+  // Trouve a l'ecran : le gestionnaire d'erreurs remplace le corps par un libelle generique
+  // (« Le serveur n'a pas pu traiter la requete »), qui ne dit NI la taille NI le type en
+  // cause. Le serveur, lui, le dit — il faut lire son message.
+  it('remonte le message du serveur quand le depot est refuse', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 400,
+        url: 'http://localhost/e/e1/s/s1/pdf-assets',
+        clone() {
+          return this
+        },
+        json: async () => ({
+          message: 'Ce fichier ne ressemble pas à une image image/png',
+        }),
+      }),
+    )
+
+    await expect(
+      PdfAssetApi.create({
+        fileName: 'faux.png',
+        mimeType: 'image/png',
+        base64: 'AAAA',
+      }),
+    ).rejects.toThrow(/ne ressemble pas à une image/)
   })
 })
 

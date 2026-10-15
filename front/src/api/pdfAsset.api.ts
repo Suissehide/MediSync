@@ -1,5 +1,5 @@
 import { tenantApiUrl } from '../constants/config.constant.ts'
-import { handleHttpError } from '../libs/httpErrorHandler.ts'
+import { handleHttpError, messageDuServeur } from '../libs/httpErrorHandler.ts'
 import type {
   CreatePdfAssetParams,
   PdfAssetBytes,
@@ -66,7 +66,15 @@ export const PdfAssetApi = {
       body: JSON.stringify(params),
     })
     if (!response.ok) {
-      handleHttpError(response, {}, "Impossible de déposer l'image")
+      // Le serveur dit CE QUI bloque (« dépasse 2 Mo », « ne ressemble pas à une image
+      // image/png ») ; sans ce passage, l'utilisateur ne lit que « le serveur n'a pas pu
+      // traiter la requête », qui ne nomme ni la taille ni le type.
+      const message = await messageDuServeur(response)
+      handleHttpError(
+        response,
+        message ? { 400: { title: 'Dépôt impossible', message } } : {},
+        "Impossible de déposer l'image",
+      )
     }
     return response.json()
   },
@@ -77,7 +85,14 @@ export const PdfAssetApi = {
       { method: 'DELETE' },
     )
     if (!response.ok) {
-      handleHttpError(response, {}, "Impossible de supprimer l'image")
+      // Le 409 NOMME les designs qui utilisent l'image : c'est toute la valeur du refus, et
+      // un libelle generique le perdrait.
+      const message = await messageDuServeur(response)
+      handleHttpError(
+        response,
+        message ? { 409: { title: 'Suppression impossible', message } } : {},
+        "Impossible de supprimer l'image",
+      )
     }
   },
 }
