@@ -556,6 +556,12 @@ export const SUPERADMIN_GLOBAL_OPERATIONS: Readonly<
     'create',
     'update',
   ],
+  // Les modeles livres de l'ecran super-admin (etape 5) : lister, ouvrir, creer, renommer,
+  // enregistrer, archiver, restaurer, reordonner. PAS de `delete` ni de `deleteMany` — un
+  // modele s'ARCHIVE, comme les quatre referentiels, et une ligne effacee casserait le seed,
+  // qui la recree par `upsert` avec un identifiant stable. PAS d'`upsert` non plus : le seed
+  // tourne hors de ce contexte.
+  PdfDesignPreset: [...LECTURES_GLOBALES_SANS_MUTATION, 'create', 'update'],
 }
 
 // L'ABSENCE DE CONTEXTE EST UN QUATRIÈME CONTEXTE DÉCLARÉ, plus un

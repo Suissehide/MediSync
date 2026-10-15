@@ -2642,6 +2642,52 @@ describe('ecritures declarees sur un modele global sous superadmin', () => {
     },
   )
 
+  // LA BOUCLE EXHAUSTIVE CI-DESSOUS NE PEUT PAS VOIR CE CAS : elle est pilotee PAR la table,
+  // donc un modele absent de la table n'y est jamais sonde. Or c'est precisement le defaut que
+  // la spec de l'etape 5 nomme comme invisible — « un modele global absent est refuse en
+  // entier, lecture comprise », l'ecran super-admin est inerte, et aucune autre suite ne
+  // rougit. Ce test-ci nomme donc le modele a la main.
+  describe('PdfDesignPreset, les modeles livres de l ecran super-admin', () => {
+    const argsDe = (operation: string): Record<string, unknown> => {
+      if (operation === 'create') {
+        return { data: {} }
+      }
+      if (operation === 'update') {
+        return { where: { id: 'p1' }, data: {} }
+      }
+      if (operation === 'findUnique') {
+        return { where: { id: 'p1' } }
+      }
+      return {}
+    }
+    const sonder = (operation: string) =>
+      assertTenantScope(
+        { model: 'PdfDesignPreset', operation, args: argsDe(operation) },
+        store,
+      )
+
+    it.each([
+      'findMany',
+      'findFirst',
+      'findUnique',
+      'count',
+      'create',
+      'update',
+    ])('laisse passer %s', (operation) => {
+      expect(() => sonder(operation)).not.toThrow()
+    })
+
+    // Le contrepoint, qui empeche de « reparer » ce test en ouvrant le modele en grand : une
+    // suppression dure n'est declaree nulle part. Un modele livre s'archive, comme les quatre
+    // referentiels, et une ligne effacee casserait le seed qui la recree par `upsert`.
+    it.each(['delete', 'deleteMany', 'updateMany', 'upsert'])(
+      'refuse %s',
+      (operation) => {
+        expect(() => sonder(operation)).toThrow(TenantScopeMissingError)
+      },
+    )
+  })
+
   // Toute la table, sans exception ecrite a la main : ce que la declaration promet, le garde-fou
   // doit le tenir couple par couple. `count`/`aggregate`/`groupBy` et les ecritures prennent des
   // arguments differents, d'ou la forme minimale construite par operation.

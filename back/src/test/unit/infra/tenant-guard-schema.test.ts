@@ -595,6 +595,9 @@ describe('SUPERADMIN_GLOBAL_OPERATIONS reflete le schema', () => {
       Establishment: [...lectures, 'create', 'update'],
       AccessLink: [...lectures, 'create', 'updateMany'],
       SuperAdminAccessGrant: [...lectures, 'create', 'update'],
+      // Les modeles livres de l'ecran super-admin (etape 5). Ni `delete` ni `deleteMany` : un
+      // modele s'archive, et une ligne effacee casserait le seed qui la recree par `upsert`.
+      PdfDesignPreset: [...lectures, 'create', 'update'],
     })
   })
 })
