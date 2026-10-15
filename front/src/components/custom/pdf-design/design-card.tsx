@@ -91,9 +91,13 @@ export default function DesignCard({
                   <Pencil className="w-4 h-4" />
                   Modifier
                 </Button>
-                <Button variant="outline" size="sm" onClick={onRenommer}>
-                  Renommer
-                </Button>
+                {/* Gate sur le geste : rendre ce bouton sans `onRenommer` donnait un
+                    bouton MORT, qui ne disait pas pourquoi il ne faisait rien. */}
+                {onRenommer && (
+                  <Button variant="outline" size="sm" onClick={onRenommer}>
+                    Renommer
+                  </Button>
+                )}
                 {/* « Definir par defaut », jamais « Par defaut » : le badge porte deja ce
                     mot, et deux libelles identiques pour un etat et une action se lisent mal.
                     Absent de la carte qui est deja le defaut. */}

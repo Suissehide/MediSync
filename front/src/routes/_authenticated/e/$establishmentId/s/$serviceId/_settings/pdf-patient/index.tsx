@@ -50,6 +50,7 @@ function PdfPatientSettings() {
   const {
     duplicateDesign,
     createBlankDesign,
+    renameDesign,
     setDefaultDesign,
     archiveDesign,
     restoreDesign,
@@ -144,6 +145,8 @@ function PdfPatientSettings() {
         <RenamePdfDesignForm
           design={aRenommer}
           onClose={() => setARenommer(null)}
+          onRenommer={(params) => renameDesign.mutateAsync(params)}
+          enCours={renameDesign.isPending}
         />
 
         <ConfirmDeleteForm

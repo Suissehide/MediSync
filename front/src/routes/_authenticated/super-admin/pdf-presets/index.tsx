@@ -4,6 +4,7 @@ import { useState } from 'react'
 
 import DesignCard from '@/components/custom/pdf-design/design-card.tsx'
 import { ConfirmDeleteForm } from '@/components/custom/popup/confirmDeleteForm.tsx'
+import RenamePdfDesignForm from '@/components/custom/popup/renamePdfDesignForm.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
 import { Button } from '@/components/ui/button.tsx'
 import { Label } from '@/components/ui/label.tsx'
@@ -29,11 +30,16 @@ function SuperAdminPdfPresets() {
   const {
     createBlankPreset,
     duplicatePreset,
+    renamePreset,
     archivePreset,
     restorePreset,
     reorderPresets,
   } = usePdfDesignPresetMutations()
   const [aSupprimer, setASupprimer] = useState<string | null>(null)
+  const [aRenommer, setARenommer] = useState<{
+    id: string
+    name: string
+  } | null>(null)
 
   // La liste ENTIERE dans le nouvel ordre : le back refuse tout ce qui ne decrit pas
   // exactement l'ensemble existant.
@@ -103,6 +109,7 @@ function SuperAdminPdfPresets() {
                   params: { presetId: preset.id },
                 })
               }
+              onRenommer={() => setARenommer(preset)}
               onDupliquer={() => duplicatePreset.mutate(preset.id)}
               onSupprimer={() => setASupprimer(preset.id)}
               onRestaurer={() => restorePreset.mutate(preset.id)}
@@ -113,6 +120,15 @@ function SuperAdminPdfPresets() {
             />
           ))}
         </div>
+
+        <RenamePdfDesignForm
+          design={aRenommer}
+          onClose={() => setARenommer(null)}
+          onRenommer={(params) => renamePreset.mutateAsync(params)}
+          enCours={renamePreset.isPending}
+          titre="Renommer le modèle"
+          libelle="Nom du modèle"
+        />
 
         <ConfirmDeleteForm
           open={!!aSupprimer}

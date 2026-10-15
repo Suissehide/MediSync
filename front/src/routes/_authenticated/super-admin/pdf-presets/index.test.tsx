@@ -218,6 +218,30 @@ describe('liste des modeles livres', () => {
     })
   })
 
+  // TROUVE A L'ECRAN : la carte rendait un bouton « Renommer » sans geste derriere — un
+  // bouton mort, qui ne disait pas pourquoi il ne faisait rien. Un modele duplique s'appelle
+  // « (copie) » ; sans renommage, c'est le seul nom qu'il pourra jamais porter.
+  it('renomme un modele', async () => {
+    const { ecritures } = monter()
+
+    const boutons = await screen.findAllByRole('button', { name: 'Renommer' })
+    await userEvent.click(boutons[0])
+
+    const champ = await screen.findByLabelText(/Nom du mod/)
+    await userEvent.clear(champ)
+    await userEvent.type(champ, 'Programme cardio')
+    await userEvent.click(screen.getByRole('button', { name: /Enregistrer/ }))
+
+    await waitFor(() => {
+      expect(ecritures).toContainEqual(
+        expect.objectContaining({
+          method: 'PATCH',
+          body: { name: 'Programme cardio' },
+        }),
+      )
+    })
+  })
+
   // Les fleches envoient la liste ENTIERE, dans le nouvel ordre : le back refuse tout ce qui
   // ne decrit pas exactement l'ensemble existant, et un delta le laisserait deviner.
   it('reordonne par les fleches, en envoyant la liste entiere', async () => {

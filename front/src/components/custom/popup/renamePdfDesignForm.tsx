@@ -2,8 +2,6 @@ import { Check, X } from 'lucide-react'
 import { useEffect } from 'react'
 
 import { useAppForm } from '@/hooks/formConfig.tsx'
-import { usePdfDesignMutations } from '@/queries/usePdfDesign.ts'
-import type { PdfDesignSummary } from '@/types/pdfDesignList.ts'
 import { Button } from '../../ui/button.tsx'
 import {
   Popup,
@@ -15,24 +13,35 @@ import {
 } from '../../ui/popup.tsx'
 
 interface RenamePdfDesignFormProps {
-  design: PdfDesignSummary | null
+  design: { id: string; name: string } | null
   onClose: () => void
+  // LA MUTATION VIENT DE L'ECRAN : un design de service et un modele livre ne passent pas
+  // par la meme route, et souder celle du tenant ici rendait cette popup inutilisable hors
+  // tenant — le bouton « Renommer » de l'ecran super-admin etait un bouton MORT.
+  onRenommer: (params: { id: string; name: string }) => Promise<unknown>
+  enCours: boolean
+  titre?: string
+  libelle?: string
 }
 
 // `design` vaut `null` tant qu'aucune carte n'est choisie, ce qui ferme la popup.
-function RenamePdfDesignForm({ design, onClose }: RenamePdfDesignFormProps) {
-  const { renameDesign } = usePdfDesignMutations()
-
+function RenamePdfDesignForm({
+  design,
+  onClose,
+  onRenommer,
+  enCours,
+  titre = 'Renommer le design',
+  libelle = 'Nom du design',
+}: RenamePdfDesignFormProps) {
   const form = useAppForm({
     defaultValues: { name: design?.name ?? '' },
     onSubmit: ({ value }) => {
       if (!design) {
         return
       }
-      renameDesign.mutate(
-        { id: design.id, name: value.name },
-        { onSuccess: () => onClose() },
-      )
+      onRenommer({ id: design.id, name: value.name })
+        .then(() => onClose())
+        .catch(() => undefined)
     },
   })
 
@@ -50,9 +59,7 @@ function RenamePdfDesignForm({ design, onClose }: RenamePdfDesignFormProps) {
     >
       <PopupContent>
         <PopupHeader>
-          <PopupTitle className="font-bold text-xl">
-            Renommer le design
-          </PopupTitle>
+          <PopupTitle className="font-bold text-xl">{titre}</PopupTitle>
         </PopupHeader>
 
         <PopupBody>
@@ -70,7 +77,7 @@ function RenamePdfDesignForm({ design, onClose }: RenamePdfDesignFormProps) {
                   value.trim() ? undefined : 'Le nom est nécessaire',
               }}
             >
-              {(field) => <field.Input label="Nom du design" />}
+              {(field) => <field.Input label={libelle} />}
             </form.AppField>
           </form>
         </PopupBody>
@@ -83,7 +90,7 @@ function RenamePdfDesignForm({ design, onClose }: RenamePdfDesignFormProps) {
           <Button
             variant="default"
             onClick={() => form.handleSubmit()}
-            isLoading={renameDesign.isPending}
+            isLoading={enCours}
           >
             <Check className="w-4 h-4" />
             Enregistrer

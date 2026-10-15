@@ -73,14 +73,12 @@ describe('PdfDesignPresetApi', () => {
   })
 
   it('supprime par DELETE', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue({
-        ok: true,
-        status: 204,
-        url: '',
-        json: async () => null,
-      })
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 204,
+      url: '',
+      json: async () => null,
+    })
     vi.stubGlobal('fetch', fetchMock)
 
     await PdfDesignPresetApi.archive('p1')
@@ -93,14 +91,12 @@ describe('PdfDesignPresetApi', () => {
   // La liste ENTIERE, dans le nouvel ordre : le back refuse tout ce qui ne decrit pas
   // exactement l'ensemble existant, et il a raison — un delta le laisserait deviner.
   it('reordonne en envoyant la liste entiere', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue({
-        ok: true,
-        status: 204,
-        url: '',
-        json: async () => null,
-      })
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 204,
+      url: '',
+      json: async () => null,
+    })
     vi.stubGlobal('fetch', fetchMock)
 
     await PdfDesignPresetApi.reorder(['b', 'a'])
