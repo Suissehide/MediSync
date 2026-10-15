@@ -78,6 +78,27 @@ const pdfAssetWriteRouter: FastifyPluginAsync = (fastify) => {
     },
   )
 
+  // Une vraie suppression, pas un archivage : une image n'est pas un referentiel, et le
+  // design qui l'utilise est protege par le 409 plutot que par une colonne de date.
+  fastify.delete<{ Params: PdfAssetIdParams }>(
+    '/:assetID',
+    {
+      schema: {
+        params: pdfAssetIdParamsSchema,
+        response: {
+          204: z.null(),
+          404: z.object({ message: z.string() }),
+          409: z.object({ message: z.string() }),
+        },
+      },
+      config: { permission: 'referentials:write' },
+    },
+    async (request, reply) => {
+      await pdfAssetDomain.remove(request.params.assetID)
+      reply.code(204).send()
+    },
+  )
+
   return Promise.resolve()
 }
 

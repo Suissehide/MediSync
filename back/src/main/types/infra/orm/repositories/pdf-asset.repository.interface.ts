@@ -20,4 +20,5 @@ export interface PdfAssetRepositoryInterface {
   // Sans les octets : cette liste nourrit un selecteur, pas un rendu.
   findAllForService: () => Promise<PdfAssetSummaryEntityRepo[]>
   findByID: (assetID: string) => Promise<PdfAssetEntityRepo | null>
+  remove: (assetID: string) => Promise<void>
 }

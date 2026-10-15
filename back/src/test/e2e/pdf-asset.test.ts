@@ -147,6 +147,84 @@ describe('routes des images de PDF', () => {
     expect(JSON.stringify(res.json())).toMatch(/2\s?Mo/)
   })
 
+  const supprimer = (id: string) =>
+    app.inject({
+      method: 'DELETE',
+      url: tenantUrl(
+        scenario.est.id,
+        scenario.serviceA.id,
+        `/pdf-assets/${id}`,
+      ),
+      cookies: scenario.cookiesA,
+    })
+
+  it('supprime une image que personne n utilise', async () => {
+    const depot = await deposer({
+      fileName: 'jetable.png',
+      mimeType: 'image/png',
+      base64: PNG_1x1,
+    })
+    const id = depot.json().id
+
+    const res = await supprimer(id)
+
+    expect(res.statusCode).toBe(204)
+    expect((await lire(id)).statusCode).toBe(404)
+  })
+
+  // Sinon un design perd son fond sans que personne ne l'ait demande, et il faudrait le
+  // rouvrir pour s'en apercevoir.
+  it('refuse de supprimer une image qu un design utilise, et nomme le design', async () => {
+    const depot = await deposer({
+      fileName: 'utilisee.png',
+      mimeType: 'image/png',
+      base64: PNG_1x1,
+    })
+    const assetId = depot.json().id
+    await testDb.pdfDesign.create({
+      data: {
+        name: 'Programme avec fond',
+        establishmentId: scenario.est.id,
+        serviceId: scenario.serviceA.id,
+        content: {
+          version: 1,
+          pages: [
+            {
+              kind: 'canvas',
+              id: 'p1',
+              background: '#ffffff',
+              elements: [
+                {
+                  id: 'fond',
+                  kind: 'image',
+                  x: 0,
+                  y: 0,
+                  w: 100,
+                  h: 100,
+                  rotation: 0,
+                  source: { assetId },
+                  fit: 'cover',
+                },
+              ],
+            },
+          ],
+        },
+      },
+    })
+
+    const res = await supprimer(assetId)
+
+    expect(res.statusCode).toBe(409)
+    expect(JSON.stringify(res.json())).toContain('Programme avec fond')
+    // Et l'image est toujours la.
+    expect((await lire(assetId)).statusCode).toBe(200)
+  })
+
+  it('refuse de supprimer une image inconnue', async () => {
+    const res = await supprimer('clv00000000000000000000z')
+    expect(res.statusCode).toBe(404)
+  })
+
   // LA LIMITE DE CE DISPOSITIF, nommee plutot que sous-entendue : au-dela de `bodyLimit`,
   // Fastify refuse le corps AVANT le schema, donc sans le message. Un fichier vraiment enorme
   // recoit un 413 nu, et c'est le front qui doit l'eviter en refusant d'envoyer.

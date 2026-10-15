@@ -54,6 +54,20 @@ class PdfAssetRepository implements PdfAssetRepositoryInterface {
       where: { id_serviceId: { id: assetID, serviceId: scope.serviceId } },
     })
   }
+
+  async remove(assetID: string): Promise<void> {
+    const scope = this.scope
+    try {
+      await this.prisma.pdfAsset.delete({
+        where: { id_serviceId: { id: assetID, serviceId: scope.serviceId } },
+      })
+    } catch (err) {
+      throw this.errorHandler.boomErrorFromPrismaError({
+        entityName: 'PdfAsset',
+        error: err,
+      })
+    }
+  }
 }
 
 export { PdfAssetRepository }
