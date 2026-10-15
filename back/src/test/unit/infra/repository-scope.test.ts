@@ -11,6 +11,7 @@ import { PatientRepository } from '../../../main/infra/orm/repositories/patient.
 import { PatientAccessLogRepository } from '../../../main/infra/orm/repositories/patientAccessLog.repository'
 import { PatientServiceFileRepository } from '../../../main/infra/orm/repositories/patientServiceFile.repository'
 import { PdfAssetRepository } from '../../../main/infra/orm/repositories/pdf-asset.repository'
+import { PdfDesignPresetRepository } from '../../../main/infra/orm/repositories/pdf-design-preset.repository'
 import { PlanningCycleRepository } from '../../../main/infra/orm/repositories/planningCycle.repository'
 import { SlotRepository } from '../../../main/infra/orm/repositories/slot.repository'
 import { SlotTemplateRepository } from '../../../main/infra/orm/repositories/slotTemplate.repository'
@@ -2274,6 +2275,46 @@ describe('MembershipRepository.soignantDuService', () => {
       assertTenantScope(
         { model: 'Soignant', operation: 'count', args },
         { kind: 'system' },
+      ),
+    ).not.toThrow()
+  })
+})
+
+// Les modeles livres sont GLOBAUX, et les routes `/super-admin` s'executent SANS AUCUN STORE.
+// Sans l'encadrement par `runAsSuperAdmin`, ces lectures tomberaient donc sous
+// `NO_CONTEXT_GLOBAL_OPERATIONS` — qui ne declare pas ce modele — et seraient refusees. Ce
+// test tient les deux moities : que l'encadrement a lieu, et qu'il est NECESSAIRE.
+describe('PdfDesignPresetRepository, sous quel contexte', () => {
+  it('encadre sa lecture par runAsSuperAdmin', async () => {
+    const { prisma, calls } = buildFakePrisma()
+    const ctx = new TenantContext()
+    const spy = jest.spyOn(ctx, 'runAsSuperAdmin')
+    const repo = new PdfDesignPresetRepository(buildContainer(prisma, ctx))
+
+    await repo.findAll()
+
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(calls[0]).toMatchObject({
+      model: 'pdfDesignPreset',
+      op: 'findMany',
+    })
+  })
+
+  // LA MOITIE QUI COMPTE : l'encadrement n'est pas decoratif. La meme requete sans contexte
+  // est refusee, et c'est pour cela que la declaration dans SUPERADMIN_GLOBAL_OPERATIONS
+  // existe.
+  it('la meme lecture est refusee sans contexte, et permise sous superadmin', () => {
+    const args = { where: { archivedAt: null } }
+    expect(() =>
+      assertTenantScope(
+        { model: 'PdfDesignPreset', operation: 'findMany', args },
+        undefined,
+      ),
+    ).toThrow(TenantScopeMissingError)
+    expect(() =>
+      assertTenantScope(
+        { model: 'PdfDesignPreset', operation: 'findMany', args },
+        { kind: 'superadmin' },
       ),
     ).not.toThrow()
   })

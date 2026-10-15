@@ -6,6 +6,7 @@ import { assertRoutePermission } from '../plugins/tenant.plugin'
 import { accessLogRouter } from './super-admin/access-log'
 import { establishmentsRouter } from './super-admin/establishments'
 import { grantsRouter } from './super-admin/grants'
+import { pdfDesignPresetsRouter } from './super-admin/pdf-design-presets'
 import { usersRouter } from './super-admin/users'
 
 // Partagée avec le garde-fou racine ci-dessous et l'enregistrement du plugin (routes/index.ts),
@@ -65,6 +66,9 @@ const superAdminRoutes: FastifyPluginAsyncZod = async (fastify) => {
   await fastify.register(usersRouter, { prefix: '/users' })
   await fastify.register(grantsRouter, { prefix: '/grants' })
   await fastify.register(accessLogRouter, { prefix: '/access-log' })
+  await fastify.register(pdfDesignPresetsRouter, {
+    prefix: '/pdf-design-presets',
+  })
 }
 
 export { superAdminRoutes }

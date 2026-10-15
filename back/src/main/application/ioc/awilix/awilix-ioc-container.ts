@@ -23,6 +23,7 @@ import { PatientAccessLogDomain } from '../../../domain/patientAccessLog.domain'
 import { PatientServiceFileDomain } from '../../../domain/patientServiceFile.domain'
 import { PdfAssetDomain } from '../../../domain/pdf-asset.domain'
 import { PdfDesignDomain } from '../../../domain/pdf-design.domain'
+import { PdfDesignPresetDomain } from '../../../domain/pdf-design-preset.domain'
 import { PlanningCycleDomain } from '../../../domain/planningCycle.domain'
 import { ServiceDomain } from '../../../domain/service.domain'
 import { ServiceFieldDomain } from '../../../domain/serviceField.domain'
@@ -58,6 +59,7 @@ import { PatientAccessLogRepository } from '../../../infra/orm/repositories/pati
 import { PatientServiceFileRepository } from '../../../infra/orm/repositories/patientServiceFile.repository'
 import { PdfAssetRepository } from '../../../infra/orm/repositories/pdf-asset.repository'
 import { PdfDesignRepository } from '../../../infra/orm/repositories/pdf-design.repository'
+import { PdfDesignPresetRepository } from '../../../infra/orm/repositories/pdf-design-preset.repository'
 import { PlanningCycleRepository } from '../../../infra/orm/repositories/planningCycle.repository'
 import { ServiceRepository } from '../../../infra/orm/repositories/service.repository'
 import { ServiceFieldRepository } from '../../../infra/orm/repositories/serviceField.repository'
@@ -396,6 +398,10 @@ class AwilixIocContainer {
     this.register('locationDomain', asClass(LocationDomain).singleton())
     this.register('pdfDesignDomain', asClass(PdfDesignDomain).singleton())
     this.register('pdfAssetDomain', asClass(PdfAssetDomain).singleton())
+    this.register(
+      'pdfDesignPresetDomain',
+      asClass(PdfDesignPresetDomain).singleton(),
+    )
   }
   #registerLocationRepository(): void {
     this.register('locationRepository', asClass(LocationRepository).singleton())
@@ -404,6 +410,10 @@ class AwilixIocContainer {
       asClass(PdfDesignRepository).singleton(),
     )
     this.register('pdfAssetRepository', asClass(PdfAssetRepository).singleton())
+    this.register(
+      'pdfDesignPresetRepository',
+      asClass(PdfDesignPresetRepository).singleton(),
+    )
   }
 
   // Service

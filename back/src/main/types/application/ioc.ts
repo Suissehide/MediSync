@@ -21,6 +21,7 @@ import type { PatientAccessLogDomainInterface } from '../domain/patientAccessLog
 import type { PatientServiceFileDomainInterface } from '../domain/patientServiceFile.domain.interface'
 import type { PdfAssetDomainInterface } from '../domain/pdf-asset.domain.interface'
 import type { PdfDesignDomainInterface } from '../domain/pdf-design.domain.interface'
+import type { PdfDesignPresetDomainInterface } from '../domain/pdf-design-preset.domain.interface'
 import type { PlanningCycleDomainInterface } from '../domain/planningCycle.domain.interface'
 import type { ServiceDomainInterface } from '../domain/service.domain.interface'
 import type { ServiceFieldDomainInterface } from '../domain/serviceField.domain.interface'
@@ -57,6 +58,7 @@ import type { PatientAccessLogRepositoryInterface } from '../infra/orm/repositor
 import type { PatientServiceFileRepositoryInterface } from '../infra/orm/repositories/patientServiceFile.repository.interface'
 import type { PdfAssetRepositoryInterface } from '../infra/orm/repositories/pdf-asset.repository.interface'
 import type { PdfDesignRepositoryInterface } from '../infra/orm/repositories/pdf-design.repository.interface'
+import type { PdfDesignPresetRepositoryInterface } from '../infra/orm/repositories/pdf-design-preset.repository.interface'
 import type { PlanningCycleRepositoryInterface } from '../infra/orm/repositories/planningCycle.repository.interface'
 import type { ServiceRepositoryInterface } from '../infra/orm/repositories/service.repository.interface'
 import type { ServiceFieldRepositoryInterface } from '../infra/orm/repositories/serviceField.repository.interface'
@@ -131,9 +133,11 @@ export interface IocContainer {
   readonly locationDomain: LocationDomainInterface
   readonly pdfDesignDomain: PdfDesignDomainInterface
   readonly pdfAssetDomain: PdfAssetDomainInterface
+  readonly pdfDesignPresetDomain: PdfDesignPresetDomainInterface
   readonly locationRepository: LocationRepositoryInterface
   readonly pdfDesignRepository: PdfDesignRepositoryInterface
   readonly pdfAssetRepository: PdfAssetRepositoryInterface
+  readonly pdfDesignPresetRepository: PdfDesignPresetRepositoryInterface
   // Todo
   readonly todoDomain: TodoDomainInterface
   readonly todoRepository: TodoRepositoryInterface

@@ -23,7 +23,7 @@ type LigneDeDesign = {
 }
 
 // Une toile vide et la page calendrier : le point de depart d'un design parti de rien.
-const CONTENU_VIERGE: PdfDesignContentInput = {
+export const CONTENU_VIERGE: PdfDesignContentInput = {
   version: 1,
   pages: [
     { kind: 'canvas', id: 'page-1', elements: [] },
@@ -35,7 +35,9 @@ const CONTENU_VIERGE: PdfDesignContentInput = {
 // mais deux entrees identiques dans une liste sont illisibles. Les noms pris incluent les
 // designs SUPPRIMES : sans cela la numerotation se remettrait a 2 apres une suppression, et
 // restaurer l'ancien ferait deux lignes du meme nom.
-const premierLibre = (
+// Exporte pour le domaine des modeles livres, qui numerote « Nouveau modèle » sur la meme
+// regle : recopier cette boucle ferait deux verites a tenir en phase.
+export const premierLibre = (
   candidat: (rang: number) => string,
   pris: string[],
 ): string => {
