@@ -254,6 +254,24 @@ describe('routes super-admin des modeles livres', () => {
     ).toEqual(['p-un'])
   })
 
+  // Un modele restaure rend son ANCIEN rang, qui peut avoir ete repris entre-temps : deux
+  // modeles au meme `sortOrder`, et l'ordre affiche retombe sur le tri secondaire. Le
+  // super-admin voit alors un ordre qu'il n'a pas demande, sans rien pour l'expliquer.
+  it('range un modele restaure apres les autres, sans doublon de rang', async () => {
+    await creerPreset('p-a', 'A', 0)
+    await creerPreset('p-b', 'B', 1)
+    await supprimer('p-a')
+    // B remonte a 0 : le rang 0 est desormais pris.
+    await reordonner(['p-b'])
+
+    await modifier('p-a', { archived: false })
+
+    const rangs = (
+      (await lister()).json() as { id: string; sortOrder: number }[]
+    ).map((p) => p.sortOrder)
+    expect(new Set(rangs).size).toBe(rangs.length)
+  })
+
   it('refuse de supprimer un modele inconnu', async () => {
     expect((await supprimer('inconnu')).statusCode).toBe(404)
   })

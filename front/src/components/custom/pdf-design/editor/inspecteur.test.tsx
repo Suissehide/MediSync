@@ -192,6 +192,23 @@ describe('Inspecteur', () => {
     expect(vus.at(-1)).toEqual({ source: { assetId: 'a2' } })
   })
 
+  // Une image supprimee, ou un design venu d'un autre service : son `assetId` n'est dans
+  // aucune option, et Radix affiche alors un champ VIDE — indiscernable de « aucune image
+  // choisie ». Le reste de l'etape prend soin de nommer ce qui manque ; ici aussi.
+  it('dit qu une image a disparu au lieu de laisser le champ vide', async () => {
+    const disparue: PdfElement = {
+      ...image,
+      kind: 'image',
+      source: { assetId: 'a-disparue' },
+      fit: 'contain',
+    }
+    monter(disparue, {
+      assets: [{ id: 'a1', fileName: 'mon-logo.png', mimeType: 'image/png' }],
+    })
+
+    expect(screen.getByText(/Image supprimée/)).toBeInTheDocument()
+  })
+
   it('depose un fichier et pose l image deposee', async () => {
     const deposer = vi.fn().mockResolvedValue({
       id: 'a2',
@@ -210,6 +227,30 @@ describe('Inspecteur', () => {
     })
     await waitFor(() => {
       expect(vus.at(-1)).toEqual({ source: { assetId: 'a2' } })
+    })
+  })
+
+  // L'input de fichier garde sa valeur : rechoisir LE MEME fichier n'emet aucun `change`,
+  // donc il ne se passe rien — et rien ne dit pourquoi. C'est le cas apres un refus (trop
+  // gros, mauvais type) : on corrige le fichier, on le rechoisit, et l'ecran reste muet.
+  it('accepte deux fois de suite le meme fichier', async () => {
+    const deposer = vi
+      .fn()
+      .mockResolvedValue({ id: 'a2', fileName: 'f.png', mimeType: 'image/png' })
+    monter(image, { onDeposer: deposer })
+
+    const champ = screen.getByLabelText(/Déposer une image/)
+    const fichier = new File([new Uint8Array([1])], 'f.png', {
+      type: 'image/png',
+    })
+    await userEvent.upload(champ, fichier)
+    await waitFor(() => {
+      expect(deposer).toHaveBeenCalledTimes(1)
+    })
+    await userEvent.upload(champ, fichier)
+
+    await waitFor(() => {
+      expect(deposer).toHaveBeenCalledTimes(2)
     })
   })
 

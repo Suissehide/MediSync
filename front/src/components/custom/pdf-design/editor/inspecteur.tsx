@@ -323,6 +323,15 @@ export default function Inspecteur({
     )
   }
 
+  // L'identifiant d'une image deposee qui n'est PLUS dans la liste du service — supprimee,
+  // ou venue d'un autre service. `null` dans tous les autres cas.
+  const assetIdDisparu =
+    element.kind === 'image' && 'assetId' in element.source
+      ? ((id) => ((assets ?? []).some((asset) => asset.id === id) ? null : id))(
+          element.source.assetId,
+        )
+      : null
+
   return (
     <div className="flex flex-col gap-3">
       <h2 className="text-sm font-semibold text-foreground">Propriétés</h2>
@@ -402,6 +411,17 @@ export default function Inspecteur({
                   value: `asset:${asset.id}`,
                   label: asset.fileName,
                 })),
+                // Une image supprimee, ou venue d'un autre service : sans cette option son
+                // identifiant ne correspond a rien et le champ s'affiche VIDE, donc
+                // indiscernable de « aucune image choisie ». On nomme ce qui manque.
+                ...(assetIdDisparu
+                  ? [
+                      {
+                        value: `asset:${assetIdDisparu}`,
+                        label: 'Image supprimée',
+                      },
+                    ]
+                  : []),
               ]}
               value={
                 'builtin' in element.source
@@ -428,6 +448,10 @@ export default function Inspecteur({
                 accept="image/png,image/jpeg"
                 onChange={(e) => {
                   const fichier = e.target.files?.[0]
+                  // L'input est remis a zero AUSSITOT : sans cela, rechoisir le meme fichier
+                  // n'emet aucun `change` et il ne se passe rien, sans que rien ne le dise.
+                  // C'est exactement le geste qui suit un refus — on corrige, on rechoisit.
+                  e.target.value = ''
                   if (!fichier) {
                     return
                   }

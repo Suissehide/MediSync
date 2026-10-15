@@ -85,6 +85,9 @@ class PdfDesignPresetRepository implements PdfDesignPresetRepositoryInterface {
             ...(params.content === undefined
               ? {}
               : { content: params.content as Prisma.InputJsonValue }),
+            ...(params.sortOrder === undefined
+              ? {}
+              : { sortOrder: params.sortOrder }),
             ...(params.archived === undefined
               ? {}
               : params.archived

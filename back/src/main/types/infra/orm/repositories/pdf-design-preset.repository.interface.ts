@@ -11,6 +11,7 @@ export type PdfDesignPresetCreateEntityRepo = {
 export type PdfDesignPresetUpdateEntityRepo = {
   name?: string
   content?: unknown
+  sortOrder?: number
   // `true` archive, `false` restaure.
   archived?: boolean
 }

@@ -136,8 +136,17 @@ class PdfDesignPresetDomain implements PdfDesignPresetDomainInterface {
     if (!existant) {
       throw Boom.notFound('PdfDesignPreset not found')
     }
+    // Une RESTAURATION rend son ancien rang au modele, et ce rang a pu etre repris : deux
+    // modeles au meme `sortOrder` laissent le tri secondaire decider, donc un ordre que le
+    // super-admin n'a pas demande. Il repart donc apres les autres, comme une creation.
+    const rang =
+      params.archived === false ? { sortOrder: await this.#rangSuivant() } : {}
+
     return this.#resume(
-      await this.pdfDesignPresetRepository.update(presetID, params),
+      await this.pdfDesignPresetRepository.update(presetID, {
+        ...params,
+        ...rang,
+      }),
     )
   }
 

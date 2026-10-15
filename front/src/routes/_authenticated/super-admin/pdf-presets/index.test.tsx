@@ -91,8 +91,11 @@ const preset = (id: string, name: string, sortOrder: number) => ({
   sortOrder,
 })
 
+// `delaiEcriture` tient la fenetre d'envoi ouverte : avec un mock instantane, `isPending`
+// est deja retombe quand on observe, et le test serait vrai par vacuite.
 const monter = (
   actifs = [preset('p-a', 'Alpha', 0), preset('p-b', 'Beta', 1)],
+  delaiEcriture = 0,
 ) => {
   const ecritures: { url: string; method: string; body: unknown }[] = []
   const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
@@ -104,7 +107,10 @@ const monter = (
         method,
         body: init?.body ? JSON.parse(String(init.body)) : undefined,
       })
-      return { ok: true, status: 204, url, json: async () => null }
+      const reponse = { ok: true, status: 204, url, json: async () => null }
+      return delaiEcriture > 0
+        ? new Promise((r) => setTimeout(() => r(reponse), delaiEcriture))
+        : reponse
     }
     const archived = url.includes('archived=true')
     return {
@@ -256,6 +262,19 @@ describe('liste des modeles livres', () => {
           body: { ids: ['p-b', 'p-a'] },
         }),
       )
+    })
+  })
+
+  // Deux clics rapides : le second lit une liste encore PERIMEE (pas de mise a jour
+  // optimiste, l'invalidation n'a pas encore rendu), recalcule le meme deplacement, et
+  // l'ordre obtenu n'est pas celui demande. Les fleches se desarment pendant l'envoi.
+  it('desarme les fleches pendant un reordonnancement en vol', async () => {
+    monter(undefined, 3000)
+
+    await userEvent.click(await screen.findByLabelText('Monter Beta'))
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Descendre Alpha')).toBeDisabled()
     })
   })
 

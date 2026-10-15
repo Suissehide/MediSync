@@ -115,8 +115,10 @@ function SuperAdminPdfPresets() {
               onRestaurer={() => restorePreset.mutate(preset.id)}
               onMonter={() => deplacer(rang, rang - 1)}
               onDescendre={() => deplacer(rang, rang + 1)}
-              monterImpossible={rang === 0}
-              descendreImpossible={rang === presets.length - 1}
+              monterImpossible={rang === 0 || reorderPresets.isPending}
+              descendreImpossible={
+                rang === presets.length - 1 || reorderPresets.isPending
+              }
             />
           ))}
         </div>
