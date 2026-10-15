@@ -67,6 +67,29 @@ const rendre = async (elements: PdfElement[], c = ctx()): Promise<string[]> => {
   return lignesDe(miseEnPage)
 }
 
+// Variante multi-pages : `rendre` n'en compose qu'une, et l'etape 3 fait du nombre de pages
+// une donnee que le service manipule.
+const rendreDocument = async (
+  pages: PdfDesignContent['pages'],
+): Promise<string[]> => {
+  let miseEnPage: NoeudMisEnPage | undefined
+  const flux = await pdf(
+    <Document
+      onRender={(p) => {
+        miseEnPage = (
+          p as unknown as { _INTERNAL__LAYOUT__DATA_?: NoeudMisEnPage }
+        )._INTERNAL__LAYOUT__DATA_
+      }}
+    >
+      {pagesOf({ version: 1, pages }, ctx(), {} as never)}
+    </Document>,
+  ).toBuffer()
+  await new Promise((resolve, reject) => {
+    flux.on('end', resolve).on('error', reject).resume()
+  })
+  return lignesDe(miseEnPage)
+}
+
 const texte = (over: Partial<PdfTextElement>): PdfTextElement => ({
   id: 'txt',
   kind: 'text',
@@ -252,4 +275,20 @@ describe('rendu reel', () => {
     },
     40000,
   )
+
+  // Etape 3 : le service ajoute des pages et les reordonne. Une page laissee VIDE doit
+  // produire une page blanche, pas disparaitre du document ni faire echouer le rendu —
+  // c'est le geste le plus banal de la bande, « Ajouter une page » puis on verra plus tard.
+  it('rend un document dont une page est vide', async () => {
+    const lignes = await rendreDocument([
+      { kind: 'canvas', id: 'vide', background: '#ffffff', elements: [] },
+      {
+        kind: 'canvas',
+        id: 'pleine',
+        background: '#ffffff',
+        elements: [texte({})],
+      },
+    ])
+    expect(lignes).toContain('Bonjour')
+  }, 30000)
 })
