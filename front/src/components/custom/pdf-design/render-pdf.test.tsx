@@ -249,14 +249,26 @@ describe('renderElement', () => {
     )
   })
 
-  it('ignore une image dont la source est un asset, l upload arrivant plus tard', () => {
-    const image = {
-      ...geometry,
-      kind: 'image',
-      source: { assetId: 'cm0000000000000000000000' },
-      fit: 'contain',
-    } as PdfElement
-    expect(renderElement(image, ctx())).toBeNull()
+  const imageDeposee = {
+    ...geometry,
+    kind: 'image',
+    source: { assetId: 'cm0000000000000000000000' },
+    fit: 'contain',
+  } as PdfElement
+
+  it('rend une image deposee a partir des octets fournis', () => {
+    const rendu = renderElement(imageDeposee, ctx(), {
+      cm0000000000000000000000: 'data:image/png;base64,AAAA',
+    })
+    expect(rendu).not.toBeNull()
+    expect(sonde(rendu).props.style).toMatchObject({ objectFit: 'contain' })
+  })
+
+  // L'image a ete supprimee en base, ou le design vient d'un autre service : le document doit
+  // sortir sans elle. Sans cette garde, react-pdf recevrait `src=undefined` et jetterait.
+  it('rend null pour une image deposee dont les octets manquent', () => {
+    expect(renderElement(imageDeposee, ctx(), {})).toBeNull()
+    expect(renderElement(imageDeposee, ctx())).toBeNull()
   })
 
   // Review Focus 4 : un kind inconnu n abat pas le PDF entier.

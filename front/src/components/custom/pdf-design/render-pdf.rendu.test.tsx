@@ -307,4 +307,40 @@ describe('rendu reel', () => {
     expect(rendu.pages).toBe(2)
     expect(rendu.lignes).toContain('Bonjour')
   }, 30000)
+
+  // Etape 4 : un design qui reference une image disparue (supprimee en base, ou venue d'un
+  // autre service) sort quand meme, avec le reste de son contenu.
+  //
+  // CE QUE CE TEST NE PROUVE PAS, mesure plutot que supposee : la garde `if (!src)` de
+  // `renderElement`. Sabotage fait — en la retirant, react-pdf journalise « Image should
+  // receive either a "src" or "source" prop » et PRODUIT quand meme le document, donc ce test
+  // reste vert. La garde elle-meme est tenue par « rend null pour une image deposee dont les
+  // octets manquent » (render-pdf.test.tsx), qui rougit sous le meme sabotage. Celui-ci garde
+  // sa valeur propre : il verifie sur le VRAI moteur qu'une image absente ne coute ni la page
+  // ni le texte qui l'accompagne.
+  it('rend un document dont une image deposee a disparu', async () => {
+    const rendu = await rendreDocument([
+      {
+        kind: 'canvas',
+        id: 'p1',
+        background: '#ffffff',
+        elements: [
+          {
+            id: 'fond',
+            kind: 'image',
+            x: 0,
+            y: 0,
+            w: A4_WIDTH,
+            h: 200,
+            rotation: 0,
+            source: { assetId: 'disparue' },
+            fit: 'cover',
+          },
+          texte({}),
+        ],
+      },
+    ])
+    expect(rendu.pages).toBe(1)
+    expect(rendu.lignes).toContain('Bonjour')
+  }, 30000)
 })

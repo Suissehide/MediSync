@@ -159,6 +159,47 @@ describe('CanvasPage', () => {
     expect(screen.getAllByRole('button')).toHaveLength(1)
   })
 
+  const imageDeposee: PdfElement = {
+    ...geometrie,
+    kind: 'image',
+    source: { assetId: 'a1' },
+    fit: 'contain',
+  }
+
+  it('rend une image deposee a partir des octets fournis', () => {
+    render(
+      <CanvasPage
+        page={page([imageDeposee])}
+        echelle={1}
+        sources={{ a1: 'data:image/png;base64,AAAA' }}
+      />,
+    )
+    expect(screen.getByRole('presentation')).toHaveAttribute(
+      'src',
+      'data:image/png;base64,AAAA',
+    )
+  })
+
+  // L'image a ete supprimee, ou le design vient d'un autre service : la page sort sans elle,
+  // plutot qu'avec l'icone de fichier casse d'un `src` vide.
+  it('ne rend rien pour une image dont les octets manquent', () => {
+    render(<CanvasPage page={page([imageDeposee])} echelle={1} sources={{}} />)
+    expect(screen.queryByRole('presentation')).not.toBeInTheDocument()
+    expect(screen.getByTestId('element-e1')).toBeInTheDocument()
+  })
+
+  // Une image livree est dans le bundle : elle n'a besoin d'aucune source.
+  it('rend une image livree sans avoir besoin de sources', () => {
+    const livree: PdfElement = {
+      ...geometrie,
+      kind: 'image',
+      source: { builtin: 'logo-chu' },
+      fit: 'contain',
+    }
+    render(<CanvasPage page={page([livree])} echelle={1} />)
+    expect(screen.getByRole('presentation')).toBeInTheDocument()
+  })
+
   // Un contenu d'une version future peut porter un `kind` que ce front ne connait pas : il
   // manque a l'ecran, il ne fait pas tomber l'editeur.
   it('ignore un element de type inconnu au lieu de planter', () => {

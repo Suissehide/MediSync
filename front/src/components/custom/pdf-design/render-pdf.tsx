@@ -3,6 +3,7 @@ import type { ReactElement } from 'react'
 
 import lines from '../../../assets/images/pdf/lines.png'
 import logoCHU from '../../../assets/images/pdf/logo_chx-bdx.png'
+import type { SourcesImages } from '../../../types/pdfAsset.ts'
 import {
   A4_HEIGHT,
   A4_WIDTH,
@@ -115,6 +116,7 @@ const box = (
 export function renderElement(
   element: PdfElement,
   ctx: PdfFieldContext,
+  sources?: SourcesImages,
 ): ReactElement | null {
   switch (element.kind) {
     // Le View englobant porte l'alignement vertical : une boite de hauteur fixe grandit vers
@@ -194,19 +196,29 @@ export function renderElement(
         </View>
       )
 
-    case 'image':
-      // Les images deposees par un service arrivent a l'etape 4 : une source `assetId` est
-      // ignoree plutot que rendue vide.
-      if (!('builtin' in element.source)) {
+    case 'image': {
+      const src =
+        'builtin' in element.source
+          ? BUILTIN_IMAGES[element.source.builtin]
+          : sources?.[element.source.assetId]
+      // Une image deposee puis supprimee, ou un design venu d'un autre service : le document
+      // sort sans elle. MESURE (sabotage de cette garde) : react-pdf n'abat PAS le document
+      // pour autant — il journalise « Image should receive either a "src" or "source" prop »
+      // et saute l'image. Ce que la garde vaut est donc plus modeste que la catastrophe qu'on
+      // pourrait imaginer, et reste reel : pas de bruit d'erreur a chaque export, et les deux
+      // moteurs lisent le meme JSON de la meme facon — la toile, elle, afficherait sans garde
+      // une icone de fichier casse.
+      if (!src) {
         return null
       }
       return (
         <Image
           key={element.id}
-          src={BUILTIN_IMAGES[element.source.builtin]}
+          src={src}
           style={{ ...box(element), objectFit: element.fit }}
         />
       )
+    }
 
     // Un kind inconnu (preset retouche a la main, version future du schema) est ignore : le
     // reste du document s'imprime quand meme.
@@ -221,6 +233,7 @@ export function pagesOf(
   design: PdfDesignContent,
   ctx: PdfFieldContext,
   calendar: CalendarProps,
+  sources?: SourcesImages,
 ): ReactElement[] {
   return design.pages.map((page) =>
     page.kind === 'calendar' ? (
@@ -231,7 +244,7 @@ export function pagesOf(
         size="A4"
         style={{ backgroundColor: page.background, padding: 0 }}
       >
-        {page.elements.map((element) => renderElement(element, ctx))}
+        {page.elements.map((element) => renderElement(element, ctx, sources))}
       </Page>
     ),
   )

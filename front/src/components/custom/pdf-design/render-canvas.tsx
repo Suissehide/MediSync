@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react'
 
 import lines from '../../../assets/images/pdf/lines.png'
 import logoCHU from '../../../assets/images/pdf/logo_chx-bdx.png'
+import type { SourcesImages } from '../../../types/pdfAsset.ts'
 import {
   A4_HEIGHT,
   A4_WIDTH,
@@ -91,7 +92,7 @@ export function elementStyle(
   }
 }
 
-const contenu = (element: PdfElement) => {
+const contenu = (element: PdfElement, sources?: SourcesImages) => {
   switch (element.kind) {
     case 'text':
       // Un bloc qui porte tous les runs : le conteneur est en colonne pour `vAlign`, et sans
@@ -113,15 +114,22 @@ const contenu = (element: PdfElement) => {
           ))}
         </span>
       )
-    case 'image':
-      return 'builtin' in element.source ? (
+    case 'image': {
+      const src =
+        'builtin' in element.source
+          ? IMAGES[element.source.builtin]
+          : sources?.[element.source.assetId]
+      // Une image deposee puis supprimee, ou venue d'un autre service : la page sort sans
+      // elle, plutot qu'avec l'icone de fichier casse d'un `src` vide.
+      return src ? (
         <img
-          src={IMAGES[element.source.builtin]}
+          src={src}
           alt=""
           className="w-full h-full"
           style={{ objectFit: element.fit }}
         />
       ) : null
+    }
     default:
       return null
   }
@@ -135,6 +143,9 @@ type CanvasPageProps = {
   // `false` pour une miniature : les elements deviennent de simples boites, sans clic ni
   // arret de tabulation.
   interactif?: boolean
+  // Les octets des images deposees, deja resolus. Optionnel : un design qui n'en porte pas
+  // n'a rien a fournir.
+  sources?: SourcesImages
 }
 
 export default function CanvasPage({
@@ -143,6 +154,7 @@ export default function CanvasPage({
   selectionId,
   onSelect,
   interactif = true,
+  sources,
 }: CanvasPageProps) {
   return (
     <div
@@ -184,7 +196,7 @@ export default function CanvasPage({
         if (!interactif) {
           return (
             <div key={element.id} {...commun} style={style}>
-              {contenu(element)}
+              {contenu(element, sources)}
             </div>
           )
         }
@@ -196,7 +208,7 @@ export default function CanvasPage({
             onClick={() => onSelect?.(element.id)}
             style={{ ...style, cursor: 'move' }}
           >
-            {contenu(element)}
+            {contenu(element, sources)}
           </button>
         )
       })}
