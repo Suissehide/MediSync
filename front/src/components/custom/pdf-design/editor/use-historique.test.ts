@@ -155,4 +155,34 @@ describe('useHistorique, synchronisation groupee', () => {
     act(() => result.current.retablir())
     expect(remplacer).toHaveBeenLastCalledWith(etat(2))
   })
+
+  // Revue de branche, I2 : annuler PENDANT une rafale en attente. Le minuteur restant
+  // deposait apres coup l'etat qu'on venait d'annuler et tronquait le futur — le second
+  // « Annuler » ne bougeait plus rien, et « Retablir » etait perdu.
+  it('oublie la rafale en attente quand on annule au milieu', () => {
+    const { result, remplacer } = monter()
+    act(() => result.current.synchroniser(etat(1)))
+    act(() => {
+      vi.advanceTimersByTime(REGROUPEMENT + 10)
+    })
+    act(() => result.current.synchroniser(etat(2)))
+    act(() => {
+      vi.advanceTimersByTime(REGROUPEMENT + 10)
+    })
+    // Une troisieme rafale, pas encore deposee.
+    act(() => result.current.synchroniser(etat(3)))
+    act(() => {
+      vi.advanceTimersByTime(50)
+    })
+
+    act(() => result.current.annuler())
+    act(() => {
+      vi.advanceTimersByTime(REGROUPEMENT + 10)
+    })
+
+    // L'etat 3 n'a jamais ete empile : on remonte de 2 vers 1, puis plus rien.
+    expect(remplacer).toHaveBeenLastCalledWith(etat(1))
+    expect(result.current.peutAnnuler).toBe(false)
+    expect(result.current.peutRetablir).toBe(true)
+  })
 })

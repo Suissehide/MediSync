@@ -325,17 +325,29 @@ describe('routes des designs de PDF', () => {
   })
 
   // Review Focus 3 : supprimer le design par defaut ne doit pas laisser le service sans rien.
-  it('laisse les presets disponibles apres suppression du design par defaut', async () => {
+  //
+  // La premiere version de ce test n'assertait que « il reste des presets », ce qui etait
+  // deja vrai AVANT la suppression et serait reste vrai si l'archivage ne faisait rien : il
+  // ne pouvait pas rougir (constat I5 de la revue de branche). Ce qu'il doit montrer, c'est
+  // que la ligne a bien quitte la liste ET qu'il reste de quoi generer. Le repli lui-meme
+  // vit cote front, ou il est tenu par `programme-pdf-modal.test.ts` — le back ne sait rien
+  // de l'ordre dans lequel la modale pioche.
+  it('sort le design par defaut de la liste et laisse de quoi generer', async () => {
     const design = await testDb.pdfDesign.findFirstOrThrow({
       where: { serviceId: scenario.serviceA.id, archivedAt: null },
     })
     await modifier(scenario.serviceA.id, scenario.cookiesA, design.id, {
       isDefault: true,
     })
+
     await supprimer(scenario.serviceA.id, scenario.cookiesA, design.id)
 
     const res = await lire(scenario.serviceA.id, scenario.cookiesA)
-    expect(res.json().presets.length).toBeGreaterThan(0)
+    const corps = res.json()
+    expect(corps.designs.map((d: { id: string }) => d.id)).not.toContain(
+      design.id,
+    )
+    expect(corps.presets.length + corps.designs.length).toBeGreaterThan(0)
   })
 
   // Trouve a l'ecran : la corbeille affichait un design supprime portant encore le badge

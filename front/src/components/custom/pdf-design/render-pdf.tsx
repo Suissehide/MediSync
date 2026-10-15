@@ -66,6 +66,22 @@ const fontOf = (bold: boolean) => (bold ? 'Helvetica-Bold' : 'Helvetica')
 const anchor = (start: number, size: number, extent: number) =>
   start + size > extent ? { end: extent - (start + size) } : { start }
 
+// L'ancrage ci-dessus ne suffit QUE tant que le debordement reste modeste. Mesure sur le vrai
+// moteur : une boite dont le bord bas depasse DEUX pages (1683,8 pt) fait a nouveau chercher
+// une coupure sans fin — `y=800 h=1000` ne termine pas, `y=800 h=870` sort en 23 ms. Depuis
+// l'etape 2 un service compose ces valeurs a la main et les ENREGISTRE : un seul design ainsi
+// fait eteindrait l'export PDF de tout le service, y compris pour les patients deja suivis.
+//
+// On borne donc la boite RENDUE, pas le contenu : ce qui est deja en base est protege aussi,
+// et le decor qui deborde volontairement (le rond de couverture finit a 1022 pt) passe sans
+// etre touche. Une page et demie laisse une demi-page de marge sous le seuil mesure.
+const BAS_MAXIMAL = A4_HEIGHT * 1.5
+
+const borner = (y: number, h: number) => {
+  const yBorne = Math.min(y, A4_HEIGHT)
+  return { y: yBorne, h: Math.max(1, Math.min(h, BAS_MAXIMAL - yBorne)) }
+}
+
 // `grow` : la hauteur devient un MINIMUM au lieu d'un plafond. Sans ca react-pdf TRONQUE le
 // texte qui depasse, et remplace la fin par une ellipse — un nom de patient de trois lignes
 // dans une boite de deux perdait son prenom, en silence.
@@ -75,9 +91,10 @@ const box = (
   element: PdfElement,
   options: { grow?: boolean; anchorBottom?: boolean } = {},
 ) => {
+  const { y, h } = borner(element.y, element.h)
   const vertical = options.anchorBottom
-    ? { end: A4_HEIGHT - (element.y + element.h) }
-    : anchor(element.y, element.h, A4_HEIGHT)
+    ? { end: A4_HEIGHT - (y + h) }
+    : anchor(y, h, A4_HEIGHT)
   const horizontal = anchor(element.x, element.w, A4_WIDTH)
   return {
     position: 'absolute' as const,
@@ -88,7 +105,7 @@ const box = (
       ? { top: vertical.start }
       : { bottom: vertical.end }),
     width: element.w,
-    ...(options.grow ? { minHeight: element.h } : { height: element.h }),
+    ...(options.grow ? { minHeight: h } : { height: h }),
     ...(element.rotation
       ? { transform: `rotate(${element.rotation}deg)` }
       : {}),

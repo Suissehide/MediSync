@@ -1,6 +1,9 @@
 import { ArrowDownToLine, ArrowUpToLine, Copy, Trash2 } from 'lucide-react'
+import { useState } from 'react'
 
 import {
+  A4_HEIGHT,
+  A4_WIDTH,
   PDF_BUILTIN_IMAGES,
   PDF_FIELD_KEYS,
   type PdfElement,
@@ -30,30 +33,68 @@ type InspecteurProps = {
   onOrdre: (sens: 'avant' | 'arriere') => void
 }
 
+// La SAISIE est locale, seules les valeurs valides remontent. Deux raisons, et il faut les
+// deux : un champ vide donne `Number('') === 0`, donc une hauteur nulle et un element disparu
+// de la toile ; et un champ entierement controle par la valeur de l'element se reecrit sous
+// les doigts, ce qui interdit de l'effacer pour retaper ou de commencer par un « - ».
 const Nombre = ({
   label,
   value,
   onChange,
+  min,
+  max,
   step = 1,
 }: {
   label: string
   value: number
   onChange: (v: number) => void
+  min?: number
+  max?: number
   step?: number
-}) => (
-  <div className="flex flex-col gap-1">
-    <Label htmlFor={`insp-${label}`} className="text-xs">
-      {label}
-    </Label>
-    <Input
-      id={`insp-${label}`}
-      type="number"
-      step={step}
-      value={value}
-      onChange={(e) => onChange(Number(e.target.value))}
-    />
-  </div>
-)
+}) => {
+  const [brouillon, setBrouillon] = useState(String(value))
+
+  // La valeur a change ailleurs (glissement sur la toile, annulation) : le champ suit.
+  const [vue, setVue] = useState(value)
+  if (vue !== value) {
+    setVue(value)
+    setBrouillon(String(value))
+  }
+
+  const saisir = (texte: string) => {
+    setBrouillon(texte)
+    const nombre = Number(texte)
+    if (
+      texte.trim() === '' ||
+      Number.isNaN(nombre) ||
+      (min !== undefined && nombre < min) ||
+      (max !== undefined && nombre > max)
+    ) {
+      return
+    }
+    onChange(nombre)
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <Label htmlFor={`insp-${label}`} className="text-xs">
+        {label}
+      </Label>
+      <Input
+        id={`insp-${label}`}
+        type="number"
+        step={step}
+        min={min}
+        max={max}
+        value={brouillon}
+        onChange={(e) => saisir(e.target.value)}
+        // Au depart du curseur, un champ laisse invalide reprend la valeur retenue : on ne
+        // laisse pas une boite de saisie mentir sur l'etat de l'element.
+        onBlur={() => setBrouillon(String(value))}
+      />
+    </div>
+  )
+}
 
 // Le remplissage est soit une couleur fixe, soit la couleur du parcours avec son repli : ce
 // second cas est le seul moyen d'obtenir le rond colore de la couverture.
@@ -181,6 +222,8 @@ const Texte = ({
       <Nombre
         label="Taille"
         value={element.fontSize}
+        min={1}
+        max={400}
         onChange={(fontSize) => onModifier({ fontSize })}
       />
       <div className="flex flex-col gap-1">
@@ -273,19 +316,28 @@ export default function Inspecteur({
           value={element.y}
           onChange={(y) => onModifier({ y })}
         />
+        {/* Bornees au format de la page : au-dela, le rendu PDF doit se defendre seul
+            (`borner`, render-pdf.tsx). Mieux vaut que l'ecran le dise avant. X et Y, eux,
+            restent libres et negatifs : c'est ainsi qu'un decor deborde. */}
         <Nombre
           label="Largeur"
           value={element.w}
+          min={1}
+          max={A4_WIDTH}
           onChange={(w) => onModifier({ w })}
         />
         <Nombre
           label="Hauteur"
           value={element.h}
+          min={1}
+          max={A4_HEIGHT}
           onChange={(h) => onModifier({ h })}
         />
         <Nombre
           label="Rotation"
           value={element.rotation}
+          min={-360}
+          max={360}
           onChange={(rotation) => onModifier({ rotation })}
         />
       </div>
@@ -305,6 +357,8 @@ export default function Inspecteur({
         <Nombre
           label="Rayon"
           value={element.radius}
+          min={0}
+          max={200}
           onChange={(radius) => onModifier({ radius })}
         />
       )}

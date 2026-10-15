@@ -14,6 +14,20 @@ import type { PdfDesignSummary } from '../../../../types/pdfDesignList.ts'
 import { Button } from '../../../ui/button.tsx'
 import ProgrammePDF from './programme.pdf.tsx'
 
+// Le choix explicite, sinon le design par defaut du service, sinon le premier disponible —
+// et les presets viennent apres les designs, donc « le premier disponible » est un preset des
+// que le service n'a plus de design a lui. C'est ce qui fait qu'un service dont le design par
+// defaut vient d'etre supprime continue de produire un PDF au lieu d'afficher « aucun design ».
+// Exporte pour etre tenu par un test : ce repli est le Review Focus 3 de l'etape 2, et il ne
+// se prouve pas depuis le back, qui ne sait rien de l'ordre de cette liste.
+export const chooseDesign = (
+  disponibles: PdfDesignSummary[],
+  choisiId: string | null,
+): PdfDesignSummary | undefined =>
+  disponibles.find((design) => design.id === choisiId) ??
+  disponibles.find((design) => design.isDefault) ??
+  disponibles[0]
+
 interface ProgrammePDFModalProps {
   patient: Patient
   onClose: () => void
@@ -42,12 +56,8 @@ export default function ProgrammePDFModal({
     [designs, presets],
   )
 
-  // Le choix explicite, sinon le design par defaut du service, sinon le premier disponible.
   const selectedDesign = useMemo(
-    () =>
-      availableDesigns.find((design) => design.id === selectedDesignId) ??
-      availableDesigns.find((design) => design.isDefault) ??
-      availableDesigns[0],
+    () => chooseDesign(availableDesigns, selectedDesignId),
     [availableDesigns, selectedDesignId],
   )
 

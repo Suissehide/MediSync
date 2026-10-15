@@ -221,4 +221,35 @@ describe('rendu reel', () => {
       rendre([texte({ x: 40, y: 40, w: A4_WIDTH + 300, h: 60 })]),
     ).resolves.toContain('Bonjour')
   }, 30000)
+
+  // Constat C1 de la revue de branche. Les trois cas ci-dessus ne debordaient que de 200 pt ;
+  // au-dela de DEUX pages (1683,8 pt), react-pdf cherchait a nouveau une coupure sans fin.
+  // Mesure avant le correctif : `y=800 h=1000` ne terminait pas en 40 s, `y=800 h=870` sortait
+  // en 23 ms. L'editeur rend ces valeurs saisissables ET enregistrables, donc un seul design
+  // eteignait l'export de tout le service.
+  //
+  // Comme les trois precedents, ces tests PENDENT au lieu de rougir si le garde-fou casse.
+  it.each([
+    ['sous deux pages, cas qui passait deja', 800, 870],
+    ['au-dela de deux pages depuis le milieu', 800, 1000],
+    ['au-dela de deux pages depuis le haut', 0, 1690],
+    ['entierement sous la page', 5000, 400],
+  ])(
+    'rend une boite %s',
+    async (_nom, y, h) => {
+      const enorme: PdfElement = {
+        id: 'enorme',
+        kind: 'rect',
+        x: 100,
+        y,
+        w: 120,
+        h,
+        rotation: 0,
+        fill: '#e05a5a',
+        radius: 0,
+      }
+      await expect(rendre([enorme, texte({})])).resolves.toContain('Bonjour')
+    },
+    40000,
+  )
 })

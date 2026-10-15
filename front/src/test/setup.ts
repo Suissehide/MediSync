@@ -65,6 +65,19 @@ if (!Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = () => undefined
 }
 
+// jsdom ne connait pas `ResizeObserver`, et un composant qui en construit un plante au
+// montage — l'editeur de design en pose un pour calculer son echelle. Ce bouchon n'emet
+// aucune mesure : jsdom ne met rien en page, un chiffre invente serait un mensonge. Les
+// composants doivent donc garder une echelle de depart utilisable sans lui.
+const sansEffet = () => undefined
+if (!('ResizeObserver' in globalThis)) {
+  globalThis.ResizeObserver = class {
+    observe = sansEffet
+    unobserve = sansEffet
+    disconnect = sansEffet
+  }
+}
+
 afterEach(() => {
   cleanup()
 })

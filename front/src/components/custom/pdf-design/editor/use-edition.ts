@@ -128,9 +128,13 @@ export function useEdition(contenuInitial: PdfDesignContent) {
     setContenu(suivant)
   }, [])
 
+  // On ne touche PAS a `vu` ici : la requete n'est invalidee qu'apres (`onSettled`), donc la
+  // source est encore l'ancien objet du cache. Se dire a jour reveillerait la
+  // resynchronisation ci-dessus et ramenerait la version d'avant l'enregistrement — avec,
+  // dans la fenetre qui suit, le risque que le geste suivant reparte de la et annule en
+  // silence ce qu'on vient d'ecrire.
   const marquerEnregistre = useCallback(() => {
     setEnregistre(contenu)
-    setVu(contenu)
   }, [contenu])
 
   return {

@@ -32,6 +32,15 @@ export function useHistorique(
     })
   }, [])
 
+  // Declare avant `annuler`/`retablir` : ils doivent pouvoir oublier une rafale en attente.
+  const attente = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const oublierAttente = useCallback(() => {
+    if (attente.current) {
+      clearTimeout(attente.current)
+      attente.current = null
+    }
+  }, [])
+
   const pousser = useCallback(
     (contenu: PdfDesignContent) => {
       // Le futur est oublie : sans cela « Retablir » ramenerait un etat qui n'a jamais suivi
@@ -45,7 +54,10 @@ export function useHistorique(
     [publier],
   )
 
+  // La rafale en attente est oubliee : sinon elle deposerait apres coup l'etat qu'on vient
+  // d'annuler et tronquerait le futur — le second « Annuler » ne bougerait plus rien.
   const annuler = useCallback(() => {
+    oublierAttente()
     if (curseur.current <= 0) {
       return
     }
@@ -55,9 +67,10 @@ export function useHistorique(
       remplacerContenu(cible)
     }
     publier()
-  }, [remplacerContenu, publier])
+  }, [remplacerContenu, publier, oublierAttente])
 
   const retablir = useCallback(() => {
+    oublierAttente()
     if (curseur.current >= pile.current.length - 1) {
       return
     }
@@ -67,21 +80,18 @@ export function useHistorique(
       remplacerContenu(cible)
     }
     publier()
-  }, [remplacerContenu, publier])
+  }, [remplacerContenu, publier, oublierAttente])
 
   // Le point de branchement de l'editeur : appele a chaque rendu, il ne retient qu'un
   // instantane par rafale, et jamais celui qu'`annuler`/`retablir` vient de restaurer —
   // sinon l'etat annule reviendrait aussitot dans la pile et « Annuler » ne remonterait
   // jamais plus d'un cran.
-  const attente = useRef<ReturnType<typeof setTimeout> | null>(null)
   const synchroniser = useCallback(
     (contenu: PdfDesignContent) => {
       if (contenu === pile.current[curseur.current]) {
         return
       }
-      if (attente.current) {
-        clearTimeout(attente.current)
-      }
+      oublierAttente()
       // Le tout premier etat entre sans attendre : c'est le point de retour.
       if (pile.current.length === 0) {
         pousser(contenu)
@@ -89,7 +99,7 @@ export function useHistorique(
       }
       attente.current = setTimeout(() => pousser(contenu), REGROUPEMENT)
     },
-    [pousser],
+    [pousser, oublierAttente],
   )
 
   return { pousser, synchroniser, annuler, retablir, ...bornes }

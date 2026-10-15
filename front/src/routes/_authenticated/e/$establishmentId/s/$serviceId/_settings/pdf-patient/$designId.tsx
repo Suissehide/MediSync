@@ -87,9 +87,16 @@ function PdfDesignEditor() {
 
   // L'historique se branche ici, sur le contenu lui-meme : il regroupe les rafales d'un
   // geste et ignore ce qu'il vient de restaurer.
+  //
+  // Rien tant que le design n'est pas arrive : sinon le contenu VIDE du montage devient le
+  // point de retour, et 400 ms apres l'ouverture « Annuler » vide la toile — « Enregistrer »
+  // repond alors 400 (le schema exige au moins une page) et quitter reveille le beforeunload.
   useEffect(() => {
+    if (!design) {
+      return
+    }
     synchroniser(contenu)
-  }, [contenu, synchroniser])
+  }, [contenu, synchroniser, design])
 
   const elementSelectionne =
     pageCourante?.elements.find((e) => e.id === selection) ?? null

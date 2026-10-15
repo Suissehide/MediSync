@@ -107,6 +107,49 @@ describe('useEdition', () => {
     expect(result.current.modifie).toBe(false)
   })
 
+  // Revue de branche, I1 : `marquerEnregistre` ne doit PAS declarer avoir vu le contenu
+  // courant. L'invalidation de la requete arrive apres (`onSettled`), donc la source est
+  // encore l'ancien objet du cache ; se dire a jour reveille la resynchronisation, et
+  // l'editeur revient a la version d'avant l'enregistrement.
+  it('ne revient pas a la version du serveur juste apres un enregistrement', () => {
+    const { result, rerender } = renderHook(
+      ({ c }: { c: PdfDesignContent }) => useEdition(c),
+      { initialProps: { c: CONTENU } },
+    )
+    act(() => result.current.modifierElement('titre', { x: 42 }))
+    act(() => result.current.marquerEnregistre())
+
+    // Le cache n'a pas encore ete rafraichi : le rendu suivant repasse le MEME ancien objet.
+    rerender({ c: CONTENU })
+
+    const page = result.current.contenu.pages[0]
+    if (page?.kind !== 'canvas') {
+      throw new Error('forme inattendue')
+    }
+    expect(page.elements[0]?.x).toBe(42)
+  })
+
+  // Revue de branche, I5 : le Ruling 11 affirmait que la garde `!modifie` etait couverte.
+  // Elle ne l'etait pas — aucun test n'exercait une resynchronisation AVEC du travail en
+  // cours. La voici.
+  it('ne jette pas un travail en cours quand la source change', () => {
+    const autre: PdfDesignContent = { version: 1, pages: CONTENU.pages }
+    const { result, rerender } = renderHook(
+      ({ c }: { c: PdfDesignContent }) => useEdition(c),
+      { initialProps: { c: CONTENU } },
+    )
+    act(() => result.current.modifierElement('titre', { x: 99 }))
+
+    rerender({ c: autre })
+
+    const page = result.current.contenu.pages[0]
+    if (page?.kind !== 'canvas') {
+      throw new Error('forme inattendue')
+    }
+    expect(page.elements[0]?.x).toBe(99)
+    expect(result.current.modifie).toBe(true)
+  })
+
   // Le point d'entree unique de l'historique (tache 8) : tout passe par la, y compris un
   // remplacement complet, qui ne doit pas passer pour « deja enregistre ».
   it('marque modifie apres un remplacement complet du contenu', () => {
