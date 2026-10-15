@@ -721,11 +721,18 @@ const familyOf = (model: string): Family => {
 }
 
 type Dict = Record<string, unknown>
+// Une valeur de colonne n'est jamais un dictionnaire d'arguments Prisma, et deux types le
+// prouvent par l'absurde : une `Date`, et un tampon d'octets (`Bytes`). Ce dernier porte une
+// methode `set`, qui est AUSSI un verbe d'ecriture imbriquee — sans cette exclusion, les octets
+// d'une image sont pris pour une relation « bytes » non declaree et toute ecriture sur une
+// colonne binaire est refusee.
 const isDict = (value: unknown): value is Dict =>
   typeof value === 'object' &&
   value !== null &&
   !Array.isArray(value) &&
-  !(value instanceof Date)
+  !(value instanceof Date) &&
+  !ArrayBuffer.isView(value) &&
+  !(value instanceof ArrayBuffer)
 
 // Lit `field` au premier niveau du where, ou dans une clé composite (convention Prisma : les
 // clés uniques composées concatènent leurs champs avec `_`, ex. `id_serviceId`,

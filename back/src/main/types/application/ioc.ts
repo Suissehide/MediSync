@@ -19,6 +19,7 @@ import type { PathwayTemplateDomainInterface } from '../domain/pathwayTemplate.d
 import type { PatientDomainInterface } from '../domain/patient.domain.interface'
 import type { PatientAccessLogDomainInterface } from '../domain/patientAccessLog.domain.interface'
 import type { PatientServiceFileDomainInterface } from '../domain/patientServiceFile.domain.interface'
+import type { PdfAssetDomainInterface } from '../domain/pdf-asset.domain.interface'
 import type { PdfDesignDomainInterface } from '../domain/pdf-design.domain.interface'
 import type { PlanningCycleDomainInterface } from '../domain/planningCycle.domain.interface'
 import type { ServiceDomainInterface } from '../domain/service.domain.interface'
@@ -54,6 +55,7 @@ import type { PathwayTemplateRepositoryInterface } from '../infra/orm/repositori
 import type { PatientRepositoryInterface } from '../infra/orm/repositories/patient.repository.interface'
 import type { PatientAccessLogRepositoryInterface } from '../infra/orm/repositories/patientAccessLog.repository.interface'
 import type { PatientServiceFileRepositoryInterface } from '../infra/orm/repositories/patientServiceFile.repository.interface'
+import type { PdfAssetRepositoryInterface } from '../infra/orm/repositories/pdf-asset.repository.interface'
 import type { PdfDesignRepositoryInterface } from '../infra/orm/repositories/pdf-design.repository.interface'
 import type { PlanningCycleRepositoryInterface } from '../infra/orm/repositories/planningCycle.repository.interface'
 import type { ServiceRepositoryInterface } from '../infra/orm/repositories/service.repository.interface'
@@ -128,8 +130,10 @@ export interface IocContainer {
   // Location
   readonly locationDomain: LocationDomainInterface
   readonly pdfDesignDomain: PdfDesignDomainInterface
+  readonly pdfAssetDomain: PdfAssetDomainInterface
   readonly locationRepository: LocationRepositoryInterface
   readonly pdfDesignRepository: PdfDesignRepositoryInterface
+  readonly pdfAssetRepository: PdfAssetRepositoryInterface
   // Todo
   readonly todoDomain: TodoDomainInterface
   readonly todoRepository: TodoRepositoryInterface

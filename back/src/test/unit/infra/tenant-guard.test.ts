@@ -439,6 +439,51 @@ describe('assertTenantScope', () => {
     ).not.toThrow()
   })
 
+  // Une colonne binaire (`Bytes`) n'est pas une ecriture imbriquee. `Uint8Array.prototype.set`
+  // existe, et `set` est un des verbes d'ecriture : sans exclusion explicite, les octets d'une
+  // image de PDF sont pris pour une relation « bytes » non declaree et le depot repond 500.
+  it('ne prend pas une colonne d octets pour une relation imbriquee', () => {
+    expect(() =>
+      assertTenantScope(
+        {
+          model: 'PdfAsset',
+          operation: 'create',
+          args: {
+            data: {
+              fileName: 'logo.png',
+              mimeType: 'image/png',
+              bytes: new Uint8Array([0x89, 0x50, 0x4e, 0x47]),
+              serviceId: 's1',
+              establishmentId: 'e1',
+            },
+          },
+        },
+        store,
+      ),
+    ).not.toThrow()
+
+    // Contrepoint : une vraie ecriture imbriquee non declaree reste refusee, octets ou pas.
+    expect(() =>
+      assertTenantScope(
+        {
+          model: 'PdfAsset',
+          operation: 'create',
+          args: {
+            data: {
+              fileName: 'logo.png',
+              mimeType: 'image/png',
+              bytes: new Uint8Array([0x89]),
+              serviceId: 's1',
+              establishmentId: 'e1',
+              service: { create: { name: 'ailleurs' } },
+            },
+          },
+        },
+        store,
+      ),
+    ).toThrow(TenantScopeMissingError)
+  })
+
   it('verifie connect et connectOrCreate, laisse passer un update imbrique', () => {
     const base = {
       startDate: new Date(),
