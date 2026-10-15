@@ -520,8 +520,13 @@ Key cross-cutting concerns:
   `e2e` ; les tests unitaires, eux, restent a 5 s). **Pas par `testTimeout` dans la configuration du
   projet — ca ne marche pas, et ca a ete cru pendant une etape entiere** : mesure du 2026-10-15, un
   `beforeAll` de 7 s echoue a 5,1 s avec `testTimeout: 30000` pose sur le projet, le message d'echec
-  disant toujours « Exceeded timeout of 5000 ms for a hook ». Les deux executions completes vertes qui
-  avaient semble valider ce reglage l'etaient par la charge du moment. Ce n'est pas du confort : le defaut
+  disant toujours « Exceeded timeout of 5000 ms for a hook ». Cause racine, lue dans la source :
+  `jest-circus/build/jestAdapterInit.js` ne consulte `testTimeout` que dans **`globalConfig`**
+  (`if (globalConfig.testTimeout) getState().testTimeout = …`) — le champ existe pourtant dans le
+  type `ProjectConfig`, ce qui explique que le reglage ait paru legitime. Le seul autre chemin est
+  `jest.setTimeout`, et les hooks relisent `getState().testTimeout` a l'execution. Les deux executions
+  completes vertes qui avaient semble valider ce reglage l'etaient par la charge du moment.
+  Ce n'est pas du confort : le defaut
   de Jest vaut aussi pour les HOOKS, et un `beforeAll` e2e vide la base, monte l'application et seme ses
   fixtures. Mesure du 2026-10-15 sur une machine chargee (load average 9, WebStorm et Chrome ouverts) : trois
   executions completes d'affilee ont rendu **15, puis 28, puis 50** echecs, tous
