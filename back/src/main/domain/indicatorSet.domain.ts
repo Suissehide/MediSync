@@ -28,17 +28,7 @@ import {
   type IndicatorDefinition,
   validateIndicator,
 } from '../utils/indicators/compute'
-
-// Vrai si `ids` contient exactement les mêmes éléments que `reference`, sans doublon ni oubli.
-const sameIds = (reference: string[], ids: string[]): boolean => {
-  const refSet = new Set(reference)
-  const idSet = new Set(ids)
-  return (
-    refSet.size === reference.length &&
-    refSet.size === idSet.size &&
-    [...refSet].every((id) => idSet.has(id))
-  )
-}
+import { sameIds } from '../utils/service-field-types'
 
 type Sibling = { id: string; code: string; parentId: string | null }
 

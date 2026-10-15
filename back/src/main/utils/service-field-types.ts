@@ -27,12 +27,21 @@ export const DEFAULT_CATEGORIES: readonly {
   { label: 'Sortie & Bilan', dateField: 'exitDate', order: 1 },
 ]
 
-// Vrai si `ids` contient exactement les mêmes éléments que `reference`, sans doublon ni oubli.
+// Vrai si `ids` decrit EXACTEMENT `reference` : memes elements, aucun oubli, aucun doublon.
+//
+// LA DERNIERE CONDITION A ETE AJOUTEE APRES COUP, et le commentaire d'origine promettait deja
+// ce qu'elle apporte : sans elle la fonction comparait des ENSEMBLES, donc `['a','b','b']`
+// contre `['a','b']` lui convenait. Les cinq appelants ecrivent `sortOrder: index` dans
+// l'ordre recu — un doublon donnait donc son DERNIER rang a l'element repete, et laissait un
+// trou dans la suite. Aucun ecran n'envoie ca (tous construisent la liste par `splice` sur
+// leur propre tableau), mais un commentaire faux sur un utilitaire partage par cinq
+// reordonnancements est pire que le defaut lui-meme.
 export const sameIds = (reference: string[], ids: string[]): boolean => {
   const refSet = new Set(reference)
   const idSet = new Set(ids)
   return (
     refSet.size === reference.length &&
+    idSet.size === ids.length &&
     refSet.size === idSet.size &&
     [...refSet].every((id) => idSet.has(id))
   )

@@ -1,4 +1,5 @@
 import seedPdfDesignPresets from '../../../prisma/seed/pdfDesignPreset'
+import { pdfDesignPresetSummarySchema } from '../../main/interfaces/http/fastify/schemas/pdf-design-preset.schema'
 import {
   REFERENCE_PRESET_CONTENT,
   REFERENCE_PRESET_ID,
@@ -12,8 +13,12 @@ import { createUser, signIn } from './setup/fixtures'
 // vit sous aucun tenant, et c'est `requireSuperAdmin` qui garde, jamais une permission de la
 // matrice.
 //
-// LE COMPTE ORDINAIRE EST DANS CHAQUE CAS, pas seulement dans un test de garde : un 404 sans
-// contrepoint est indiscernable d'un 404 de route inexistante.
+// LES CINQ ROUTES sont sondees avec un compte ORDINAIRE, pas seulement la lecture : le
+// garde-fou de demarrage (`assertSuperAdminShapedRoute`) exige une permission DECLAREE, mais
+// son propre commentaire dit qu'il ne PROUVE pas que `requireSuperAdmin` a ete cable sur la
+// route — Fastify n'expose pas la chaine de crochets a `onRoute`. Les quatre ecritures
+// n'avaient donc aucune preuve. Et chaque 404 a son contrepoint en 200/201 plus bas, sans
+// quoi il serait indiscernable d'un 404 de route inexistante.
 const CONTENU = {
   version: 1,
   pages: [{ kind: 'canvas', id: 'p1', background: '#ffffff', elements: [] }],
@@ -88,9 +93,15 @@ describe('routes super-admin des modeles livres', () => {
     expect(res.json()).toMatchObject([
       { id: 'p-un', name: 'Programme de reference', sortOrder: 0 },
     ])
-    // Un modele livre n'est le defaut de personne : `isDefault` appartient aux designs de
-    // service, et le promettre ici laisserait croire a un reglage qui n'existe pas.
-    expect(res.json()[0].isDefault).toBeUndefined()
+    // `isDefault` n'est NI dans le schema de reponse NI dans la table : l'asserter sur le
+    // corps serait vrai deux fois sans rien mesurer — exactement la vacuite relevee a
+    // l'etape 4. On le dit donc sur le schema lui-meme, qui est ce qu'on veut tenir.
+    expect(Object.keys(pdfDesignPresetSummarySchema.shape)).toEqual([
+      'id',
+      'name',
+      'content',
+      'sortOrder',
+    ])
   })
 
   // 404, jamais 403 : ne pas reveler une zone qu'on n'a pas le droit de voir. Le 200 du cas
@@ -102,6 +113,33 @@ describe('routes super-admin des modeles livres', () => {
 
     expect(res.statusCode).toBe(404)
   })
+
+  it.each([
+    ['POST', '/super-admin/pdf-design-presets', {}],
+    ['PATCH', '/super-admin/pdf-design-presets/p-un', { name: 'X' }],
+    ['DELETE', '/super-admin/pdf-design-presets/p-un', undefined],
+    ['PUT', '/super-admin/pdf-design-presets/reorder', { ids: [] }],
+  ])(
+    'rend 404 a un compte sans le drapeau sur %s %s',
+    async (method, url, payload) => {
+      await creerPreset('p-un', 'Un modele')
+
+      const res = await testApp.app.inject({
+        method: method as 'POST' | 'PATCH' | 'DELETE' | 'PUT',
+        url,
+        cookies: cookiesOrdinaire,
+        ...(payload ? { payload } : {}),
+      })
+
+      expect(res.statusCode).toBe(404)
+      // Et rien n'a bouge : un 404 qui aurait quand meme ecrit serait pire qu'un 403.
+      expect(await testDb.pdfDesignPreset.count()).toBe(1)
+      expect(
+        (await testDb.pdfDesignPreset.findUnique({ where: { id: 'p-un' } }))
+          ?.name,
+      ).toBe('Un modele')
+    },
+  )
 
   it('cree un modele vierge et le nomme tout seul', async () => {
     const res = await creer({})

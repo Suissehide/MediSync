@@ -78,8 +78,10 @@ export default function DesignCard({
           </Button>
         ) : (
           <>
-            {/* Dupliquer n'est propose que sur un modele livre : la route n'accepte qu'un
-                `sourcePresetId`, et dupliquer un design du service repondrait 404. */}
+            {/* `lectureSeule` ne veut PAS dire « c'est un modele livre » : il veut dire
+                « on ne le modifie pas d'ici ». Un modele livre vu par un SERVICE est en
+                lecture seule — il ne peut que le dupliquer — alors que le meme modele, vu
+                par le super-admin, ne l'est pas. */}
             {lectureSeule ? (
               <Button variant="outline" size="sm" onClick={onDupliquer}>
                 <Copy className="w-4 h-4" />
@@ -98,17 +100,16 @@ export default function DesignCard({
                     Renommer
                   </Button>
                 )}
-                {/* « Definir par defaut », jamais « Par defaut » : le badge porte deja ce
-                    mot, et deux libelles identiques pour un etat et une action se lisent mal.
-                    Absent de la carte qui est deja le defaut. */}
                 {onDupliquer && (
                   <Button variant="outline" size="sm" onClick={onDupliquer}>
                     <Copy className="w-4 h-4" />
                     Dupliquer
                   </Button>
                 )}
-                {/* Gate sur `onParDefaut` autant que sur l'etat : un modele livre n'a pas de
-                    defaut a definir, et le bouton n'a rien a faire sur sa carte. */}
+                {/* « Definir par defaut », jamais « Par defaut » : le badge porte deja
+                    ce mot, et deux libelles identiques pour un etat et une action se lisent
+                    mal. Gate sur le GESTE autant que sur l'etat : un modele livre n'a pas de
+                    defaut a definir. */}
                 {onParDefaut && !design.isDefault && (
                   <Button variant="outline" size="sm" onClick={onParDefaut}>
                     <Star className="w-4 h-4" />

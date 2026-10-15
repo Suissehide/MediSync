@@ -404,7 +404,10 @@ Key cross-cutting concerns:
   assertions were right, the prose had drifted — it mixed two units of count (six declared
   *entries*, eight *calls*) and had never taken in task 7's site, which `AUTORISES` had carried
   since its commit.
-  `runAsSuperAdmin`'s own call sites (twelve before étape 4b task 6, **fourteen today** — that
+  `runAsSuperAdmin`'s own call sites (twelve before étape 4b task 6, fourteen after it,
+  **twenty today** — étape 5 added five, all in `pdf-design-preset.repository.ts`, and the
+  re-count showed the figure had ALREADY drifted by one before that: the hand-kept number is
+  itself an instance of the failure mode this paragraph names — that
   task added two, in `activityLog.repository.ts` and `patientAccessLog.repository.ts`, both for
   `findAllPlatformWide`, the read behind `GET /super-admin/access-log` — and said so rather than letting the
   count drift silently) are not enumerated by name anywhere — a fifteenth call added anywhere in `src/main`

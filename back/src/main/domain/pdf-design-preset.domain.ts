@@ -156,13 +156,13 @@ class PdfDesignPresetDomain implements PdfDesignPresetDomainInterface {
   // absents a leur ancien rang, entremeles avec les nouveaux ; une liste qui repete un modele
   // lui donnerait son dernier rang. On refuse en entier plutot que d'ecrire a moitie.
   //
-  // `sameIds` ne suffit PAS : il compare des ENSEMBLES, donc `['a','b','b']` contre
-  // `['a','b']` lui convient. D'ou la comparaison des longueurs, ici et pas dans l'utilitaire
-  // partage — le corriger la-bas changerait le comportement des champs et des categories.
+  // `sameIds` refuse aussi un identifiant REPETE depuis la revue de l'etape 5 : il comparait
+  // des ensembles, et un doublon donnait son dernier rang a l'element repete. Corrige dans
+  // l'utilitaire partage, donc pour les cinq reordonnancements a la fois.
   async reorder(ids: string[]): Promise<void> {
     const existants = await this.pdfDesignPresetRepository.findAll(false)
     const attendus = existants.map((p) => p.id)
-    if (ids.length !== attendus.length || !sameIds(attendus, ids)) {
+    if (!sameIds(attendus, ids)) {
       throw Boom.badRequest(
         'La liste ne correspond pas exactement aux modèles livrés.',
       )

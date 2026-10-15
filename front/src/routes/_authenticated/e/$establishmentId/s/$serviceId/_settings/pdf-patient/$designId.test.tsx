@@ -111,7 +111,9 @@ const contenu = (x: number, avecCalendrier = false): PdfDesignContent => ({
 
 // Etape 4 : un design qui porte une image DEPOSEE. Ses octets ne sont pas dans le bundle,
 // il faut les demander au serveur — c'est tout le chemin que ce contenu exerce.
-const contenuAvecImage = (): PdfDesignContent => ({
+const contenuAvecImage = (
+  source: { assetId: string } | { builtin: 'logo-chu' } = { assetId: 'a1' },
+): PdfDesignContent => ({
   version: 1,
   pages: [
     {
@@ -127,7 +129,7 @@ const contenuAvecImage = (): PdfDesignContent => ({
           w: 200,
           h: 100,
           rotation: 0,
-          source: { assetId: 'a1' },
+          source,
           fit: 'cover',
         },
       ],
@@ -146,9 +148,22 @@ const design = (x: number, avecCalendrier = false) => ({
 // a la version du serveur » de « l'ecran a garde la mienne ».
 // `delaiGet` reproduit la fenetre de chargement : la requete repond apres un temps, et
 // l'ecran est deja monte sans design.
-const monter = (avecCalendrier = false, delaiGet = 0, avecImage = false) => {
+// `avecImage` : `'asset'` pour un design dont le contenu SERVEUR porte deja l'image deposee,
+// `'livree'` pour un design qui part d'une image de l'application — c'est ce second cas qui
+// distingue « les octets du serveur » de « les octets de ce que l'utilisateur vient de
+// choisir ».
+const monter = (
+  avecCalendrier = false,
+  delaiGet = 0,
+  avecImage: false | 'asset' | 'livree' = false,
+) => {
   let enBase = avecImage
-    ? { ...design(10), content: contenuAvecImage() }
+    ? {
+        ...design(10),
+        content: contenuAvecImage(
+          avecImage === 'livree' ? { builtin: 'logo-chu' } : { assetId: 'a1' },
+        ),
+      }
     : design(10, avecCalendrier)
   const ecritures: PdfDesignContent[] = []
   const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
@@ -429,7 +444,7 @@ describe('editeur de design, les pages', () => {
   // Etape 4 : les octets d'une image deposee sont demandes au serveur et donnes aux deux
   // moteurs. Sans ce chemin, l'image s'affiche dans l'inspecteur mais nulle part sur la page.
   it('montre une image deposee sur la toile', async () => {
-    monter(false, 0, true)
+    monter(false, 0, 'asset')
 
     // DEUX occurrences, et c'est le fait interessant : la toile et sa vignette dans la bande
     // rendent la meme page par le meme moteur, donc les deux doivent porter les octets.
@@ -440,8 +455,31 @@ describe('editeur de design, les pages', () => {
     }
   })
 
+  // REVUE DE BRANCHE, CRITIQUE. L'extraction de l'editeur avait fait resoudre les octets sur
+  // `design.content` — la version du SERVEUR — au lieu de `contenu`, l'etat vivant. Choisir
+  // une image dans l'inspecteur n'ecrit que dans `contenu` : son `assetId` n'etait donc pas
+  // demande, `sources` restait vide, et la toile rendait `null`. L'utilisateur posait et
+  // redimensionnait un element INVISIBLE, qui n'apparaissait qu'apres « Enregistrer ».
+  it('montre une image choisie dans l inspecteur, avant tout enregistrement', async () => {
+    monter(false, 0, 'livree')
+
+    // L'element part d'une image LIVREE : on bascule vers l'image deposee du service.
+    const poignee = await screen.findByTestId('poignee-deplacement-fond')
+    await userEvent.click(poignee)
+    await userEvent.click(screen.getByLabelText('Image'))
+    await userEvent.click(await screen.findByRole('option', { name: 'fond.png' }))
+
+    await waitFor(() => {
+      const images = screen.getAllByRole('presentation')
+      expect(images.length).toBeGreaterThan(0)
+      for (const image of images) {
+        expect(image).toHaveAttribute('src', 'data:image/png;base64,AAAA')
+      }
+    })
+  })
+
   it('propose les images du service dans l inspecteur', async () => {
-    monter(false, 0, true)
+    monter(false, 0, 'asset')
 
     const poignee = await screen.findByTestId('poignee-deplacement-fond')
     await userEvent.click(poignee)
@@ -456,7 +494,7 @@ describe('editeur de design, les pages', () => {
   // Fastify refuse avant le schema et l'utilisateur recevrait un 413 nu. Le message doit
   // donc venir d'ici, et NOMMER la limite.
   it('refuse un fichier trop gros en nommant la limite, sans l envoyer', async () => {
-    monter(false, 0, true)
+    monter(false, 0, 'asset')
 
     const poignee = await screen.findByTestId('poignee-deplacement-fond')
     await userEvent.click(poignee)

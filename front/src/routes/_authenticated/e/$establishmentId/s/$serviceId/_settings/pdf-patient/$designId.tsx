@@ -1,18 +1,15 @@
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 
-import { assetIdsDe } from '@/components/custom/pdf-design/assets.ts'
 import EditeurDeDesign from '@/components/custom/pdf-design/editor/editeur-de-design.tsx'
 import { can } from '@/hooks/useCan.ts'
 import {
   usePdfAssetMutations,
   usePdfAssetQueries,
-  useSourcesImages,
 } from '@/queries/usePdfAsset.ts'
 import {
   usePdfDesignMutations,
   usePdfDesignQueries,
 } from '@/queries/usePdfDesign.ts'
-import type { PdfDesignContent } from '@/types/pdfDesign.ts'
 import { resolveTenantContext } from '@/utils/tenant-context.ts'
 
 export const Route = createFileRoute(
@@ -30,8 +27,6 @@ export const Route = createFileRoute(
   component: PdfDesignEditor,
 })
 
-const CONTENU_VIDE: PdfDesignContent = { version: 1, pages: [] }
-
 // Cet ecran ne fait que RESOUDRE les donnees : l'edition elle-meme vit dans
 // `EditeurDeDesign`, que l'ecran super-admin des modeles livres monte aussi.
 function PdfDesignEditor() {
@@ -43,11 +38,6 @@ function PdfDesignEditor() {
 
   const { assets } = usePdfAssetQueries()
   const { deposerImage } = usePdfAssetMutations()
-  // Les octets des images que CE design reclame, resolus une fois et donnes aux deux moteurs :
-  // la toile, les vignettes de la bande et l'apercu PDF.
-  const { sources } = useSourcesImages(
-    assetIdsDe(design?.content ?? CONTENU_VIDE),
-  )
 
   return (
     <EditeurDeDesign
@@ -65,7 +55,6 @@ function PdfDesignEditor() {
       }
       assets={assets}
       onDeposer={(fichier) => deposerImage.mutateAsync(fichier)}
-      sources={sources}
       messageAbsent="Ce design n'existe plus, ou appartient à un autre service."
     />
   )

@@ -8,10 +8,8 @@ import {
   useState,
 } from 'react'
 
-import type {
-  PdfAssetSummary,
-  SourcesImages,
-} from '../../../../types/pdfAsset.ts'
+import { useSourcesImages } from '../../../../queries/usePdfAsset.ts'
+import type { PdfAssetSummary } from '../../../../types/pdfAsset.ts'
 import {
   A4_HEIGHT,
   A4_WIDTH,
@@ -20,6 +18,7 @@ import {
 import DashboardLayout from '../../../dashboard.layout.tsx'
 import { Button } from '../../../ui/button.tsx'
 import { SAMPLE_FIELD_CONTEXT, SAMPLE_FIELD_VALUES } from '../fields.ts'
+import { assetIdsDe } from '../assets.ts'
 import { pagesOf } from '../render-pdf.tsx'
 import BandePages from './bande-pages.tsx'
 import Inspecteur from './inspecteur.tsx'
@@ -51,7 +50,6 @@ type EditeurDeDesignProps = {
   // un depot afficherait un champ dont le resultat ne pourrait jamais y etre pose.
   assets?: PdfAssetSummary[]
   onDeposer?: (fichier: File) => Promise<PdfAssetSummary>
-  sources?: SourcesImages
   // La phrase quand il n'y a pas de design : elle differe d'un ecran a l'autre.
   messageAbsent: string
 }
@@ -75,7 +73,6 @@ export default function EditeurDeDesign({
   onRetour,
   assets,
   onDeposer,
-  sources,
   messageAbsent,
 }: EditeurDeDesignProps) {
   const {
@@ -102,6 +99,13 @@ export default function EditeurDeDesign({
 
   const { synchroniser, annuler, retablir, peutAnnuler, peutRetablir } =
     useHistorique(remplacerContenu)
+
+  // Sur le contenu VIVANT, et c'est tout l'enjeu : resoudre sur `design.content` — la version
+  // du serveur — rendait INVISIBLE toute image que l'utilisateur vient de choisir, jusqu'au
+  // prochain enregistrement. Il posait et redimensionnait un element que rien n'affichait.
+  // Pour un modele livre, `assetIdsDe` rend un tableau vide (il ne collecte que `assetId`,
+  // jamais `builtin`) : aucune requete ne part, et l'ecran super-admin reste hors tenant.
+  const { sources } = useSourcesImages(assetIdsDe(contenu))
 
   // L'historique se branche ici, sur le contenu lui-meme : il regroupe les rafales d'un
   // geste et ignore ce qu'il vient de restaurer.
