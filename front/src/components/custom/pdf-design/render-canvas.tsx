@@ -35,16 +35,18 @@ export function elementStyle(
   element: PdfElement,
   echelle: number,
 ): CSSProperties {
+  // `base` ne porte PAS la hauteur : le texte la veut en minimum, les formes en hauteur
+  // ferme. Chaque branche pose la sienne.
   const base: CSSProperties = {
     position: 'absolute',
     left: element.x * echelle,
     top: element.y * echelle,
     width: element.w * echelle,
-    height: element.h * echelle,
     ...(element.rotation
       ? { transform: `rotate(${element.rotation}deg)` }
       : {}),
   }
+  const hauteurFerme = { height: element.h * echelle }
   switch (element.kind) {
     case 'text':
       return {
@@ -60,26 +62,32 @@ export function elementStyle(
         color: element.color,
         textAlign: element.align,
         lineHeight: element.lineHeight ?? 'normal',
-        overflow: 'hidden',
+        // La hauteur est un MINIMUM, comme le `grow` de render-pdf : un texte trop long
+        // POUSSE au lieu d'etre coupe. Couper ici cacherait dans l'editeur du texte que le
+        // PDF imprime — un ecart de regle, pas le simple ecart de metriques que la spec
+        // assume entre les deux moteurs.
+        minHeight: element.h * echelle,
       }
     case 'rect':
       // Pas de `borderRadius` nul : react-pdf le refuse, et les deux moteurs doivent lire le
       // meme JSON de la meme facon.
       return {
         ...base,
+        ...hauteurFerme,
         backgroundColor: remplissage(element.fill),
         ...(element.radius ? { borderRadius: element.radius * echelle } : {}),
       }
     case 'ellipse':
       return {
         ...base,
+        ...hauteurFerme,
         backgroundColor: remplissage(element.fill),
         borderRadius: '50%',
       }
     case 'image':
-      return { ...base, objectFit: element.fit }
+      return { ...base, ...hauteurFerme, objectFit: element.fit }
     default:
-      return base
+      return { ...base, ...hauteurFerme }
   }
 }
 

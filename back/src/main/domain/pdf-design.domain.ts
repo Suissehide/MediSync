@@ -31,23 +31,36 @@ const CONTENU_VIERGE: PdfDesignContentInput = {
   ],
 }
 
-// « X (copie) », puis « X (copie 2) », « X (copie 3) »... Le nom d'un design n'est pas unique
-// en base (choix de la spec, aligne sur IndicatorSet), mais deux entrees identiques dans une
-// liste sont illisibles. Les noms pris incluent les designs SUPPRIMES : sans cela la
-// numerotation se remettrait a 2 apres une suppression, et restaurer l'ancien ferait deux
-// lignes du meme nom.
-export const nomDeCopie = (base: string, pris: string[]): string => {
-  const premier = `${base} (copie)`
-  if (!pris.includes(premier)) {
-    return premier
-  }
-  for (let n = 2; ; n += 1) {
-    const candidat = `${base} (copie ${n})`
-    if (!pris.includes(candidat)) {
-      return candidat
+// Le nom d'un design n'est pas unique en base (choix de la spec, aligne sur IndicatorSet),
+// mais deux entrees identiques dans une liste sont illisibles. Les noms pris incluent les
+// designs SUPPRIMES : sans cela la numerotation se remettrait a 2 apres une suppression, et
+// restaurer l'ancien ferait deux lignes du meme nom.
+const premierLibre = (
+  candidat: (rang: number) => string,
+  pris: string[],
+): string => {
+  for (let rang = 1; ; rang += 1) {
+    const nom = candidat(rang)
+    if (!pris.includes(nom)) {
+      return nom
     }
   }
 }
+
+// « X (copie) », puis « X (copie 2) », « X (copie 3) »...
+export const nomDeCopie = (base: string, pris: string[]): string =>
+  premierLibre(
+    (rang) => (rang === 1 ? `${base} (copie)` : `${base} (copie ${rang})`),
+    pris,
+  )
+
+// « Nouveau design », puis « Nouveau design 2 ». Jamais « (copie) » : un design parti de rien
+// n'est la copie de rien.
+export const nomVierge = (pris: string[]): string =>
+  premierLibre(
+    (rang) => (rang === 1 ? 'Nouveau design' : `Nouveau design ${rang}`),
+    pris,
+  )
 
 class PdfDesignDomain implements PdfDesignDomainInterface {
   private readonly pdfDesignRepository: PdfDesignRepositoryInterface
@@ -116,7 +129,7 @@ class PdfDesignDomain implements PdfDesignDomainInterface {
     if (!params.sourcePresetId) {
       return this.#resume(
         await this.pdfDesignRepository.create({
-          name: params.name ?? nomDeCopie('Nouveau design', pris),
+          name: params.name ?? nomVierge(pris),
           content: CONTENU_VIERGE,
           sourcePresetId: null,
         }),

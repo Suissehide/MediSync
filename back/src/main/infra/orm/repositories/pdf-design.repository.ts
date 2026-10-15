@@ -43,8 +43,12 @@ class PdfDesignRepository implements PdfDesignRepositoryInterface {
     })
   }
 
+  // `archivedAt: null` : un preset retire n'est plus propose, il ne doit pas rester
+  // duplicable par qui connait son id. Une route ne se garde pas sur la foi de son ecran.
   findPresetByID(presetID: string): Promise<PdfDesignPresetEntityRepo | null> {
-    return this.prisma.pdfDesignPreset.findUnique({ where: { id: presetID } })
+    return this.prisma.pdfDesignPreset.findFirst({
+      where: { id: presetID, archivedAt: null },
+    })
   }
 
   async namesInService(): Promise<string[]> {

@@ -35,7 +35,7 @@ describe('elementStyle', () => {
       left: 5,
       top: 10,
       width: 50,
-      height: 15,
+      minHeight: 15,
     })
   })
 
@@ -45,6 +45,29 @@ describe('elementStyle', () => {
 
   it('traduit vAlign en justifyContent', () => {
     expect(elementStyle(texte, 1)).toMatchObject({ justifyContent: 'flex-end' })
+  })
+
+  // Revue de branche, minor 4 : la toile COUPAIT le texte trop long (hauteur fixe + overflow
+  // hidden) la ou render-pdf le fait GRANDIR (`minHeight`). L'editeur cachait donc du texte
+  // que le PDF imprime — ce n'est pas l'ecart de metriques que la spec assume, c'est une
+  // regle differente. Les deux moteurs grandissent maintenant pareil.
+  it('laisse le texte grandir au lieu de le couper, comme le PDF', () => {
+    const style = elementStyle(texte, 1)
+    expect(style).toMatchObject({ minHeight: 30 })
+    expect(style).not.toHaveProperty('height')
+    expect(style.overflow).not.toBe('hidden')
+  })
+
+  // Les formes, elles, gardent une hauteur ferme : un rectangle qui grandirait tout seul ne
+  // voudrait rien dire.
+  it('garde une hauteur ferme sur une forme', () => {
+    const filet: PdfElement = {
+      ...geometrie,
+      kind: 'rect',
+      fill: '#e05a5a',
+      radius: 0,
+    }
+    expect(elementStyle(filet, 1)).toMatchObject({ height: 30 })
   })
 
   // react-pdf refuse un borderRadius nul ; le moteur HTML tient la meme regle, pour que les

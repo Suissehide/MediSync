@@ -98,7 +98,10 @@ const colle = (
       }
     }
   }
-  return meilleur ? meilleur.debut : debut
+  // Arrondi comme partout ailleurs : un design ne porte pas de coordonnees a deux decimales.
+  // L'axe median d'une page de 595,28 pt tombe sur 257,64 ; coller a 258 decale d'un tiers de
+  // point, ce qui ne se voit pas, la ou la decimale se lit dans le JSON et dans l'inspecteur.
+  return auPoint(meilleur ? meilleur.debut : debut)
 }
 
 export const aimanter = (

@@ -97,17 +97,27 @@ describe('aimanter', () => {
     expect(aimanter(boite({ x: 2 }), []).x).toBe(0)
   })
 
-  it('colle au bord droit de la page', () => {
+  // Revue de branche, minor 2 : l'aimantation rendait des coordonnees fractionnaires
+  // (257,64) la ou `auPoint` existe justement pour n'en jamais ecrire. Le bord et l'axe sont
+  // desormais rejoints au point pres — un demi-point d'ecart ne se voit pas, une coordonnee a
+  // deux decimales dans le JSON se lit.
+  it('colle au bord droit de la page, au point pres', () => {
     const b = boite({ x: A4_WIDTH - 80 - 3, w: 80 })
-    expect(aimanter(b, []).x + 80).toBeCloseTo(A4_WIDTH, 5)
+    expect(aimanter(b, []).x).toBe(Math.round(A4_WIDTH - 80))
   })
 
-  it('colle a l axe median horizontal', () => {
+  it('colle a l axe median horizontal, au point pres', () => {
     const centre = (A4_WIDTH - 80) / 2
-    expect(aimanter(boite({ x: centre + 2, w: 80 }), []).x).toBeCloseTo(
-      centre,
-      5,
+    expect(aimanter(boite({ x: centre + 2, w: 80 }), []).x).toBe(
+      Math.round(centre),
     )
+  })
+
+  it('ne rend jamais de coordonnee fractionnaire', () => {
+    const centre = (A4_WIDTH - 80) / 2
+    const r = aimanter(boite({ x: centre + 2, w: 80, y: 3 }), [])
+    expect(Number.isInteger(r.x)).toBe(true)
+    expect(Number.isInteger(r.y)).toBe(true)
   })
 
   it('colle au bord d un voisin', () => {

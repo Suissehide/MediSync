@@ -28,11 +28,13 @@ export const pdfDesignIdParamsSchema = z.object({
 // la main. `name` reste optionnel, le domaine suffixe « (copie) » tout seul.
 export const createPdfDesignSchema = z.object({
   sourcePresetId: z.string().min(1).optional(),
-  name: z.string().min(1).optional(),
+  // `trim()` AVANT `min(1)` : « Mon design   » se stockait avec ses espaces, et un nom fait
+  // d'espaces seuls passait pour un nom.
+  name: z.string().trim().min(1).optional(),
 })
 
 export const updatePdfDesignSchema = z.object({
-  name: z.string().min(1).optional(),
+  name: z.string().trim().min(1).optional(),
   content: pdfDesignContentSchema.optional(),
   isDefault: z.boolean().optional(),
   // `false` restaure un design supprime ; la suppression passe par DELETE.

@@ -515,6 +515,18 @@ Key cross-cutting concerns:
   isn't exactly `medisync_test`, so a misconfigured `.env.test` can't truncate the wrong database. Run against
   `medisync_test` (`.env.test`, `.env.test.local` for a machine-specific override) via `npm run test:e2e`; the
   pre-commit hook runs unit tests only.
+- **Le budget d'un test e2e est de 30 s, pas les 5 s par defaut de Jest** (`testTimeout` sur le projet `e2e`
+  de `src/test/jest.config.ts` ; les tests unitaires, eux, restent a 5 s). Ce n'est pas du confort : le defaut
+  de Jest vaut aussi pour les HOOKS, et un `beforeAll` e2e vide la base, monte l'application et seme ses
+  fixtures. Mesure du 2026-10-15 sur une machine chargee (load average 9, WebStorm et Chrome ouverts) : trois
+  executions completes d'affilee ont rendu **15, puis 28, puis 50** echecs, tous
+  « Exceeded timeout of 5000 ms for a hook » dans des `beforeAll`, sur six suites sans rapport entre elles
+  (`creneau-archivage`, `referentiels-archivage`, `super-admin-grants`, `activity-log-detail`, `isolation`,
+  `service-field-categories`) ; les memes suites relancees SEULES passaient 55/55, et la base de test faisait
+  11 Mo avec 6 connexions sur 100 — ce n'est donc ni la donnee ni le pool, c'est l'horloge. Deux executions
+  completes vertes d'affilee apres le reglage, sous la meme charge. Meme diagnostic et meme remede que le
+  budget d'attente du front (`front/src/test/setup.ts`). Un test e2e qui s'approcherait vraiment de 30 s est
+  un test a regarder, pas un reglage a relever.
 
 ## Configurable patient-file fields (fiche configurable)
 

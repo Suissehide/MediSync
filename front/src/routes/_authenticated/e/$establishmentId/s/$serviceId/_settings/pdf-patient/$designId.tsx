@@ -1,7 +1,13 @@
 import { Document, PDFViewer } from '@react-pdf/renderer'
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { ArrowLeft, Eye, PencilRuler, Redo2, Save, Undo2 } from 'lucide-react'
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react'
 
 import Inspecteur from '@/components/custom/pdf-design/editor/inspecteur.tsx'
 import Palette from '@/components/custom/pdf-design/editor/palette.tsx'
@@ -101,32 +107,49 @@ function PdfDesignEditor() {
   const elementSelectionne =
     pageCourante?.elements.find((e) => e.id === selection) ?? null
 
+  const [apercu, setApercu] = useState(false)
+  const cadre = useRef<HTMLDivElement>(null)
+  const [echelle, setEchelle] = useState(0.6)
+
   // La decision est dans `actionDuClavier`, pure et testee ; ici ne reste que l'execution.
-  const appliquer = (action: ActionClavier) => {
-    if (action.type === 'annuler') {
-      annuler()
-      return
-    }
-    if (action.type === 'retablir') {
-      retablir()
-      return
-    }
-    if (action.type === 'deselectionner') {
-      choisirElement(null)
-      return
-    }
-    if (!selection || !elementSelectionne) {
-      return
-    }
-    if (action.type === 'supprimer') {
-      supprimerSelection()
-      return
-    }
-    modifierElement(selection, {
-      x: elementSelectionne.x + action.dx,
-      y: elementSelectionne.y + action.dy,
-    })
-  }
+  // Memorise pour que l'effet du clavier ci-dessous ait des dependances honnetes au lieu de
+  // se reabonner a chaque rendu — donc soixante fois par seconde pendant un glissement.
+  const appliquer = useCallback(
+    (action: ActionClavier) => {
+      if (action.type === 'annuler') {
+        annuler()
+        return
+      }
+      if (action.type === 'retablir') {
+        retablir()
+        return
+      }
+      if (action.type === 'deselectionner') {
+        choisirElement(null)
+        return
+      }
+      if (!selection || !elementSelectionne) {
+        return
+      }
+      if (action.type === 'supprimer') {
+        supprimerSelection()
+        return
+      }
+      modifierElement(selection, {
+        x: elementSelectionne.x + action.dx,
+        y: elementSelectionne.y + action.dy,
+      })
+    },
+    [
+      annuler,
+      retablir,
+      choisirElement,
+      selection,
+      elementSelectionne,
+      supprimerSelection,
+      modifierElement,
+    ],
+  )
 
   // Sur la FENETRE, pas sur un conteneur : la toile fait `preventDefault` sur pointerdown
   // pour ne pas lancer de selection de texte, donc aucun conteneur ne recoit jamais le
@@ -155,11 +178,7 @@ function PdfDesignEditor() {
     }
     addEventListener('keydown', ecouter)
     return () => removeEventListener('keydown', ecouter)
-  })
-
-  const [apercu, setApercu] = useState(false)
-  const cadre = useRef<HTMLDivElement>(null)
-  const [echelle, setEchelle] = useState(0.6)
+  }, [apercu, appliquer])
 
   // L'echelle fait entrer la page ENTIERE dans le cadre : largeur ET hauteur, plafonnees a 1
   // (on n'agrandit pas au-dela de la taille reelle). On voit ainsi la page d'un coup d'oeil,

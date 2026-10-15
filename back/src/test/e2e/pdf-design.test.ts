@@ -231,6 +231,79 @@ describe('routes des designs de PDF', () => {
     expect(
       res.json().content.pages.map((p: { kind: string }) => p.kind),
     ).toEqual(['canvas', 'calendar'])
+    // Revue de branche, minor 1 : il s'appelait « Nouveau design (copie) », copie de rien.
+    expect(res.json().name).toBe('Nouveau design')
+  })
+
+  it('numerote le second design vierge au lieu de le dire copie', async () => {
+    const res = await creer(scenario.serviceA.id, scenario.cookiesA, {})
+
+    expect(res.statusCode).toBe(201)
+    expect(res.json().name).toBe('Nouveau design 2')
+  })
+
+  // Revue de branche, minor 5 : un preset archive restait duplicable par qui connaissait son
+  // id. Aucun chemin d'UI n'y menait, mais une route ne se garde pas sur la foi de son ecran.
+  it('refuse de dupliquer un preset archive', async () => {
+    const archive = await testDb.pdfDesignPreset.create({
+      data: {
+        name: 'Preset retire',
+        content: CONTENT,
+        sortOrder: 50,
+        archivedAt: new Date(),
+      },
+    })
+
+    const res = await creer(scenario.serviceA.id, scenario.cookiesA, {
+      sourcePresetId: archive.id,
+    })
+
+    expect(res.statusCode).toBe(404)
+  })
+
+  // Revue de branche, minor 6 : « Mon design   » se stockait avec ses espaces, et deux noms
+  // qui se lisent pareil cohabitaient dans la liste.
+  it('rogne les espaces autour du nom', async () => {
+    // Son propre design : les cas de ce fichier partagent la base, et renommer celui d'un
+    // voisin le ferait tomber sans rapport avec ce qu'il teste.
+    const design = await testDb.pdfDesign.create({
+      data: {
+        name: 'A rogner',
+        content: CONTENT,
+        establishmentId: scenario.est.id,
+        serviceId: scenario.serviceA.id,
+      },
+    })
+
+    const res = await modifier(
+      scenario.serviceA.id,
+      scenario.cookiesA,
+      design.id,
+      { name: '  Programme du coeur  ' },
+    )
+
+    expect(res.statusCode).toBe(200)
+    expect(res.json().name).toBe('Programme du coeur')
+  })
+
+  it('refuse un nom qui n est fait que d espaces', async () => {
+    const design = await testDb.pdfDesign.create({
+      data: {
+        name: 'A ne pas vider',
+        content: CONTENT,
+        establishmentId: scenario.est.id,
+        serviceId: scenario.serviceA.id,
+      },
+    })
+
+    const res = await modifier(
+      scenario.serviceA.id,
+      scenario.cookiesA,
+      design.id,
+      { name: '   ' },
+    )
+
+    expect(res.statusCode).toBe(400)
   })
 
   it('renomme un design du service', async () => {
