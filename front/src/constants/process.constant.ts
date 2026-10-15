@@ -173,6 +173,14 @@ export const PDF_DESIGN = {
   RESTORE: 'restore_pdf_design',
 }
 
+export const PDF_DESIGN_PRESET = {
+  GET_ALL: 'get_all_pdf_design_presets',
+  CREATE: 'create_pdf_design_preset',
+  UPDATE: 'update_pdf_design_preset',
+  ARCHIVE: 'archive_pdf_design_preset',
+  REORDER: 'reorder_pdf_design_presets',
+}
+
 export const PDF_ASSET = {
   GET_ALL: 'get_all_pdf_assets',
   GET_BYTES: 'get_pdf_asset_bytes',
