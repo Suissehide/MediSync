@@ -489,4 +489,35 @@ describe('routes des designs de PDF', () => {
     )
     expect(res.statusCode).toBe(400)
   })
+
+  // Etape 3, Review Focus 3 : l'ecran fait disparaitre le bouton, mais la route se garde
+  // elle-meme. Deux calendriers repeteraient le meme planning dans le document.
+  it('refuse un contenu portant deux pages calendrier', async () => {
+    const design = await testDb.pdfDesign.create({
+      data: {
+        name: 'A deux calendriers',
+        content: CONTENT,
+        establishmentId: scenario.est.id,
+        serviceId: scenario.serviceA.id,
+      },
+    })
+
+    const res = await modifier(
+      scenario.serviceA.id,
+      scenario.cookiesA,
+      design.id,
+      {
+        content: {
+          version: 1,
+          pages: [
+            { kind: 'calendar', id: 'c1' },
+            { kind: 'canvas', id: 'p1', elements: [] },
+            { kind: 'calendar', id: 'c2' },
+          ],
+        },
+      },
+    )
+
+    expect(res.statusCode).toBe(400)
+  })
 })

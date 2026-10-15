@@ -99,7 +99,14 @@ export const pdfDesignContentSchema = z.object({
   version: z.literal(1),
   pages: z
     .array(z.discriminatedUnion('kind', [canvasPage, calendarPage]))
-    .min(1),
+    .min(1)
+    // Une seule page calendrier : elle rend les creneaux du patient, deux exemplaires
+    // repeteraient le meme planning. L'ecran l'empeche deja, mais une regle d'UI n'est pas
+    // une garantie — c'est ici que ca se tient.
+    .refine(
+      (pages) => pages.filter((page) => page.kind === 'calendar').length <= 1,
+      { message: 'Un design ne porte qu une seule page calendrier' },
+    ),
 })
 
 // Forme APRES application des defauts : ce que rend une lecture, et ce que lit le front.
