@@ -103,14 +103,12 @@ describe('PdfDesignApi', () => {
 
   it('supprime un design par un DELETE', async () => {
     // 204 : rien a lire, `archive` ne rend rien.
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue({
-        ok: true,
-        status: 204,
-        url: '',
-        json: async () => null,
-      })
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 204,
+      url: '',
+      json: async () => null,
+    })
     vi.stubGlobal('fetch', fetchMock)
 
     await PdfDesignApi.archive('d1')
