@@ -136,6 +136,20 @@ describe('CanvasPage', () => {
     expect(vus).toEqual(['e1'])
   })
 
+  // Une miniature n'est pas un editeur : ses elements ne doivent etre ni cliquables ni
+  // atteignables au clavier, sinon une bande de quatre vignettes ajoute des dizaines
+  // d'arrets de tabulation vers des boutons qui ne font rien.
+  it('ne rend aucun bouton quand elle n est pas interactive', () => {
+    render(<CanvasPage page={page([texte])} echelle={0.2} interactif={false} />)
+    expect(screen.queryAllByRole('button')).toHaveLength(0)
+    expect(screen.getByTestId('element-e1')).toBeInTheDocument()
+  })
+
+  it('rend des boutons par defaut', () => {
+    render(<CanvasPage page={page([texte])} echelle={1} />)
+    expect(screen.getAllByRole('button')).toHaveLength(1)
+  })
+
   // Un contenu d'une version future peut porter un `kind` que ce front ne connait pas : il
   // manque a l'ecran, il ne fait pas tomber l'editeur.
   it('ignore un element de type inconnu au lieu de planter', () => {

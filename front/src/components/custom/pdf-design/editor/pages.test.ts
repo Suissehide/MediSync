@@ -31,6 +31,16 @@ describe('pageVierge', () => {
   })
 })
 
+describe('pageCalendrier', () => {
+  it('rend une page calendrier', () => {
+    expect(pageCalendrier().kind).toBe('calendar')
+  })
+
+  it('donne un identifiant unique a chaque appel', () => {
+    expect(pageCalendrier().id).not.toBe(pageCalendrier().id)
+  })
+})
+
 describe('aUnCalendrier', () => {
   it('voit la page calendrier', () => {
     expect(aUnCalendrier([toile('a'), calendrier('c')])).toBe(true)

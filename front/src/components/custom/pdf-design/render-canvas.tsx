@@ -132,6 +132,9 @@ type CanvasPageProps = {
   echelle: number
   selectionId?: string | null
   onSelect?: (id: string) => void
+  // `false` pour une miniature : les elements deviennent de simples boites, sans clic ni
+  // arret de tabulation.
+  interactif?: boolean
 }
 
 export default function CanvasPage({
@@ -139,6 +142,7 @@ export default function CanvasPage({
   echelle,
   selectionId,
   onSelect,
+  interactif = true,
 }: CanvasPageProps) {
   return (
     <div
@@ -157,25 +161,35 @@ export default function CanvasPage({
           return null
         }
         const selectionne = selectionId === element.id
+        const style = {
+          ...elementStyle(element, echelle),
+          outline: selectionne ? '1px solid var(--color-primary)' : 'none',
+          padding: 0,
+          border: 'none',
+          // Les formes gardent leur remplissage : seuls le texte et l'image laissent
+          // voir la page a travers.
+          ...(element.kind === 'text' || element.kind === 'image'
+            ? { background: 'transparent' }
+            : {}),
+        }
+        const commun = {
+          'data-testid': `element-${element.id}`,
+          'data-selectionne': selectionne ? 'true' : 'false',
+        }
+        if (!interactif) {
+          return (
+            <div key={element.id} {...commun} style={style}>
+              {contenu(element)}
+            </div>
+          )
+        }
         return (
           <button
             type="button"
             key={element.id}
-            data-testid={`element-${element.id}`}
-            data-selectionne={selectionne ? 'true' : 'false'}
+            {...commun}
             onClick={() => onSelect?.(element.id)}
-            style={{
-              ...elementStyle(element, echelle),
-              outline: selectionne ? '1px solid var(--color-primary)' : 'none',
-              cursor: 'move',
-              padding: 0,
-              border: 'none',
-              // Les formes gardent leur remplissage : seuls le texte et l'image laissent
-              // voir la page a travers.
-              ...(element.kind === 'text' || element.kind === 'image'
-                ? { background: 'transparent' }
-                : {}),
-            }}
+            style={{ ...style, cursor: 'move' }}
           >
             {contenu(element)}
           </button>
