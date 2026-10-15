@@ -617,6 +617,75 @@ describe('isolation par tenant', () => {
       expect(readFromB.statusCode).toBe(200)
       expect(readFromB.json().title).toBe('TITRE-SECRET-B')
     })
+
+    // PdfDesign (etape 2 du document patient). Pas de lecture par identifiant : la fuite se
+    // prouve par la LISTE et par les deux ecritures, qui sont les seules routes a prendre un
+    // identifiant. Les presets, eux, sont GLOBAUX et visibles de partout — c'est leur raison
+    // d'etre, pas une fuite.
+    it('un design de PDF d un autre service ne se lit, ne se modifie ni ne se supprime', async () => {
+      const { est, serviceA, serviceB, cookiesA, cookiesB } = scenario
+      const contenu = {
+        version: 1,
+        pages: [
+          { kind: 'canvas', id: 'p1', background: '#ffffff', elements: [] },
+        ],
+      }
+      const sien = await testDb.pdfDesign.create({
+        data: {
+          name: 'DESIGN-DE-A',
+          content: contenu,
+          establishmentId: est.id,
+          serviceId: serviceA.id,
+        },
+      })
+      const etranger = await testDb.pdfDesign.create({
+        data: {
+          name: 'DESIGN-SECRET-B',
+          content: contenu,
+          establishmentId: est.id,
+          serviceId: serviceB.id,
+        },
+      })
+
+      const listeDepuisA = await t.app.inject({
+        method: 'GET',
+        url: tenantUrl(est.id, serviceA.id, '/pdf-designs'),
+        cookies: cookiesA,
+      })
+      expect(listeDepuisA.statusCode).toBe(200)
+      const ids = (listeDepuisA.json().designs as { id: string }[]).map(
+        (d) => d.id,
+      )
+      expect(ids).toContain(sien.id)
+      expect(ids).not.toContain(etranger.id)
+
+      const chemin = `/pdf-designs/${etranger.id}`
+      const patchDepuisA = await t.app.inject({
+        method: 'PATCH',
+        url: tenantUrl(est.id, serviceA.id, chemin),
+        cookies: cookiesA,
+        payload: { name: 'ECRASE-DEPUIS-A' },
+      })
+      expect(patchDepuisA.statusCode).toBe(404)
+
+      const suppressionDepuisA = await t.app.inject({
+        method: 'DELETE',
+        url: tenantUrl(est.id, serviceA.id, chemin),
+        cookies: cookiesA,
+      })
+      expect(suppressionDepuisA.statusCode).toBe(404)
+
+      // Contrepoint : la ligne n'a ni change de nom ni disparu pour son proprietaire.
+      const listeDepuisB = await t.app.inject({
+        method: 'GET',
+        url: tenantUrl(est.id, serviceB.id, '/pdf-designs'),
+        cookies: cookiesB,
+      })
+      const vuDeB = (
+        listeDepuisB.json().designs as { id: string; name: string }[]
+      ).find((d) => d.id === etranger.id)
+      expect(vuDeB?.name).toBe('DESIGN-SECRET-B')
+    })
   })
 
   // Le patient est un modèle d'établissement (pas de service) : le cas
