@@ -1,3 +1,9 @@
+import seedPdfDesignPresets from '../../../prisma/seed/pdfDesignPreset'
+import {
+  REFERENCE_PRESET_CONTENT,
+  REFERENCE_PRESET_ID,
+  REFERENCE_PRESET_NAME,
+} from '../../main/utils/pdf-design/reference-preset'
 import { buildTestApp, type TestApp } from './setup/app'
 import { testDb, truncateAll } from './setup/db'
 import { createUser, signIn } from './setup/fixtures'
@@ -36,7 +42,10 @@ describe('routes super-admin des modeles livres', () => {
   })
 
   afterEach(async () => {
+    await testDb.pdfDesign.deleteMany()
     await testDb.pdfDesignPreset.deleteMany()
+    await testDb.service.deleteMany()
+    await testDb.establishment.deleteMany()
   })
 
   afterAll(async () => {
@@ -164,6 +173,127 @@ describe('routes super-admin des modeles livres', () => {
     const res = await modifier('inconnu', { name: 'Apres' })
 
     expect(res.statusCode).toBe(404)
+  })
+
+  const supprimer = (id: string) =>
+    testApp.app.inject({
+      method: 'DELETE',
+      url: `/super-admin/pdf-design-presets/${id}`,
+      cookies: cookiesSuperAdmin,
+    })
+
+  const reordonner = (ids: string[]) =>
+    testApp.app.inject({
+      method: 'PUT',
+      url: '/super-admin/pdf-design-presets/reorder',
+      cookies: cookiesSuperAdmin,
+      payload: { ids },
+    })
+
+  it('supprime un modele, qui sort de la liste active et entre dans les supprimes', async () => {
+    await creerPreset('p-un', 'Un modele')
+
+    const res = await supprimer('p-un')
+
+    expect(res.statusCode).toBe(204)
+    expect((await lister()).json()).toEqual([])
+    expect(
+      ((await lister(cookiesSuperAdmin, true)).json() as { id: string }[]).map(
+        (p) => p.id,
+      ),
+    ).toEqual(['p-un'])
+  })
+
+  it('restaure un modele supprime', async () => {
+    await creerPreset('p-un', 'Un modele')
+    await supprimer('p-un')
+
+    const res = await modifier('p-un', { archived: false })
+
+    expect(res.statusCode).toBe(200)
+    expect(
+      ((await lister()).json() as { id: string }[]).map((p) => p.id),
+    ).toEqual(['p-un'])
+  })
+
+  it('refuse de supprimer un modele inconnu', async () => {
+    expect((await supprimer('inconnu')).statusCode).toBe(404)
+  })
+
+  // Une copie deja faite par un service est FIGEE (spec) : supprimer le modele dont elle vient
+  // ne doit rien lui faire. Sans cette assertion, archiver un modele pourrait passer pour une
+  // operation anodine alors qu'elle toucherait les documents de tous les services.
+  it('une copie deja faite par un service survit a la suppression de son modele', async () => {
+    await creerPreset('p-source', 'Modele source')
+    const etab = await testDb.establishment.create({ data: { name: 'CHU' } })
+    const service = await testDb.service.create({
+      data: { name: 'Cardio', establishmentId: etab.id },
+    })
+    const copie = await testDb.pdfDesign.create({
+      data: {
+        name: 'Modele source (copie)',
+        content: CONTENU,
+        sourcePresetId: 'p-source',
+        establishmentId: etab.id,
+        serviceId: service.id,
+      },
+    })
+
+    await supprimer('p-source')
+
+    const apres = await testDb.pdfDesign.findUnique({ where: { id: copie.id } })
+    expect(apres?.archivedAt).toBeNull()
+    expect(apres?.content).toEqual(CONTENU)
+  })
+
+  // Le modele de REFERENCE est celui dont le seed depend. Son `upsert` porte `update: {}`
+  // (seed/pdfDesignPreset.ts) : un rejeu trouve la ligne archivee et n'y touche pas. La
+  // suppression tient donc au deploiement suivant, ce qui est le comportement voulu — un
+  // modele retire par le super-admin ne doit pas revenir tout seul.
+  it('un modele supprime reste supprime apres un rejeu du seed', async () => {
+    await testDb.pdfDesignPreset.create({
+      data: {
+        id: REFERENCE_PRESET_ID,
+        name: REFERENCE_PRESET_NAME,
+        content: REFERENCE_PRESET_CONTENT,
+        sortOrder: 0,
+      },
+    })
+    await supprimer(REFERENCE_PRESET_ID)
+
+    await seedPdfDesignPresets(testDb)
+
+    const apres = await testDb.pdfDesignPreset.findUnique({
+      where: { id: REFERENCE_PRESET_ID },
+    })
+    expect(apres?.archivedAt).not.toBeNull()
+    expect((await lister()).json()).toEqual([])
+  })
+
+  it('reordonne les modeles', async () => {
+    await creerPreset('p-a', 'A', 0)
+    await creerPreset('p-b', 'B', 1)
+
+    const res = await reordonner(['p-b', 'p-a'])
+
+    expect(res.statusCode).toBe(204)
+    expect(
+      ((await lister()).json() as { id: string }[]).map((p) => p.id),
+    ).toEqual(['p-b', 'p-a'])
+  })
+
+  // Une liste partielle laisserait les absents a leur ancien rang, entremeles avec les
+  // nouveaux. Refuser en entier, et ne rien ecrire.
+  it('refuse un reordonnancement partiel sans rien changer', async () => {
+    await creerPreset('p-a', 'A', 0)
+    await creerPreset('p-b', 'B', 1)
+
+    const res = await reordonner(['p-b'])
+
+    expect(res.statusCode).toBe(400)
+    expect(
+      ((await lister()).json() as { id: string }[]).map((p) => p.id),
+    ).toEqual(['p-a', 'p-b'])
   })
 
   // Un contenu d'une version future, ou retouche a la main en base : il est ECARTE avec sa

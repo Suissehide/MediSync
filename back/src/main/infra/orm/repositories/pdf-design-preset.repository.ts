@@ -100,6 +100,22 @@ class PdfDesignPresetRepository implements PdfDesignPresetRepositoryInterface {
       }
     })
   }
+
+  // Une transaction d'`update` indexes, et non un `updateMany` : la table de capacites
+  // declare `update`, pas `updateMany` — et ici chaque ligne recoit un rang DIFFERENT, ce
+  // qu'un `updateMany` ne saurait pas faire de toute facon.
+  reorder(ids: string[]): Promise<void> {
+    return this.tenantContext.runAsSuperAdmin(async () => {
+      await this.prisma.$transaction(
+        ids.map((id, index) =>
+          this.prisma.pdfDesignPreset.update({
+            where: { id },
+            data: { sortOrder: index },
+          }),
+        ),
+      )
+    })
+  }
 }
 
 export { PdfDesignPresetRepository }

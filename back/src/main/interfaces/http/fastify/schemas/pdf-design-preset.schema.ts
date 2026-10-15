@@ -37,6 +37,16 @@ export const updatePdfDesignPresetSchema = z.object({
   archived: z.literal(false).optional(),
 })
 
+// La liste ENTIERE, dans le nouvel ordre : envoyer deux identifiants ou un delta laisserait
+// le serveur deviner ce qu'il advient des autres.
+export const reorderPdfDesignPresetsSchema = z.object({
+  ids: z.array(z.string().min(1)),
+})
+
+export type ReorderPdfDesignPresetsBody = z.infer<
+  typeof reorderPdfDesignPresetsSchema
+>
+
 export type ListPdfDesignPresetsQuery = z.infer<
   typeof listPdfDesignPresetsQuerySchema
 >

@@ -10,6 +10,7 @@ import type {
 } from '../types/domain/pdf-design-preset.domain.interface'
 import type { PdfDesignPresetRepositoryInterface } from '../types/infra/orm/repositories/pdf-design-preset.repository.interface'
 import type { Logger } from '../types/utils/logger'
+import { sameIds } from '../utils/service-field-types'
 import { CONTENU_VIERGE, nomDeCopie, premierLibre } from './pdf-design.domain'
 
 type LigneDePreset = {
@@ -138,6 +139,35 @@ class PdfDesignPresetDomain implements PdfDesignPresetDomainInterface {
     return this.#resume(
       await this.pdfDesignPresetRepository.update(presetID, params),
     )
+  }
+
+  // Suppression = archivage, comme les quatre referentiels. Les copies deja faites par les
+  // services ne bougent pas : elles sont FIGEES depuis l'etape 2, et c'est ce qui permet
+  // d'archiver un modele sans toucher aux documents de qui que ce soit.
+  async archive(presetID: string): Promise<void> {
+    const existant = await this.pdfDesignPresetRepository.findByID(presetID)
+    if (!existant) {
+      throw Boom.notFound('PdfDesignPreset not found')
+    }
+    await this.pdfDesignPresetRepository.update(presetID, { archived: true })
+  }
+
+  // La liste doit decrire EXACTEMENT l'ensemble existant. Une liste incomplete laisserait les
+  // absents a leur ancien rang, entremeles avec les nouveaux ; une liste qui repete un modele
+  // lui donnerait son dernier rang. On refuse en entier plutot que d'ecrire a moitie.
+  //
+  // `sameIds` ne suffit PAS : il compare des ENSEMBLES, donc `['a','b','b']` contre
+  // `['a','b']` lui convient. D'ou la comparaison des longueurs, ici et pas dans l'utilitaire
+  // partage — le corriger la-bas changerait le comportement des champs et des categories.
+  async reorder(ids: string[]): Promise<void> {
+    const existants = await this.pdfDesignPresetRepository.findAll(false)
+    const attendus = existants.map((p) => p.id)
+    if (ids.length !== attendus.length || !sameIds(attendus, ids)) {
+      throw Boom.badRequest(
+        'La liste ne correspond pas exactement aux modèles livrés.',
+      )
+    }
+    await this.pdfDesignPresetRepository.reorder(ids)
   }
 }
 

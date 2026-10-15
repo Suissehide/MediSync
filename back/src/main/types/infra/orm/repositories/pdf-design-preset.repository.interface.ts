@@ -25,4 +25,7 @@ export interface PdfDesignPresetRepositoryInterface {
     presetID: string,
     params: PdfDesignPresetUpdateEntityRepo,
   ) => Promise<PdfDesignPresetEntityRepo>
+  // Ecrit `sortOrder: index` pour chacun, dans l'ordre recu. Le domaine a deja verifie que la
+  // liste decrit exactement l'ensemble existant.
+  reorder: (ids: string[]) => Promise<void>
 }

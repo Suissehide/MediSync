@@ -10,6 +10,8 @@ import {
   pdfDesignPresetIdParamsSchema,
   pdfDesignPresetListResponseSchema,
   pdfDesignPresetSummarySchema,
+  type ReorderPdfDesignPresetsBody,
+  reorderPdfDesignPresetsSchema,
   type UpdatePdfDesignPresetBody,
   updatePdfDesignPresetSchema,
 } from '../../schemas/pdf-design-preset.schema'
@@ -53,6 +55,23 @@ const pdfDesignPresetsRouter: FastifyPluginAsync = (fastify) => {
     },
   )
 
+  // Posee AVANT `/:presetID` : Fastify fait gagner le litteral sur le parametre, mais l'ordre
+  // de declaration rend l'intention lisible.
+  fastify.put<{ Body: ReorderPdfDesignPresetsBody }>(
+    '/reorder',
+    {
+      schema: {
+        body: reorderPdfDesignPresetsSchema,
+        response: { 204: z.null(), 400: z.object({ message: z.string() }) },
+      },
+      config: { permission: 'establishments:manage' },
+    },
+    async (request, reply) => {
+      await pdfDesignPresetDomain.reorder(request.body.ids)
+      reply.code(204).send()
+    },
+  )
+
   fastify.patch<{
     Params: PdfDesignPresetIdParams
     Body: UpdatePdfDesignPresetBody
@@ -71,6 +90,22 @@ const pdfDesignPresetsRouter: FastifyPluginAsync = (fastify) => {
     },
     (request) =>
       pdfDesignPresetDomain.update(request.params.presetID, request.body),
+  )
+
+  // Suppression = archivage ; la restauration passe par PATCH { archived: false }.
+  fastify.delete<{ Params: PdfDesignPresetIdParams }>(
+    '/:presetID',
+    {
+      schema: {
+        params: pdfDesignPresetIdParamsSchema,
+        response: { 204: z.null(), 404: z.object({ message: z.string() }) },
+      },
+      config: { permission: 'establishments:manage' },
+    },
+    async (request, reply) => {
+      await pdfDesignPresetDomain.archive(request.params.presetID)
+      reply.code(204).send()
+    },
   )
 
   return Promise.resolve()

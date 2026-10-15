@@ -30,4 +30,8 @@ export interface PdfDesignPresetDomainInterface {
     presetID: string,
     params: PdfDesignPresetUpdateDomain,
   ) => Promise<PdfDesignPresetSummaryDomain>
+  archive: (presetID: string) => Promise<void>
+  // La liste doit decrire EXACTEMENT l'ensemble existant, sans manque, sans intrus et sans
+  // repetition — sinon 400, et rien n'est ecrit.
+  reorder: (ids: string[]) => Promise<void>
 }
