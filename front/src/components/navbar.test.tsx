@@ -398,11 +398,18 @@ describe('onglets de la barre de navigation', () => {
     expect(onglets()).not.toContain("Journal d'activité")
   })
 
-  it('montre les trois onglets de la plateforme a un super-admin', async () => {
+  it('montre les onglets de la plateforme a un super-admin', async () => {
     monterNavbar('/super-admin/users', avecRoles('MEMBER', null, true))
 
+    // La liste EXACTE, dans l'ordre : ajouter un onglet de plateforme doit etre un geste
+    // delibere, pas un effet de bord. « Documents patient » arrive avec l'etape 5.
     await waitFor(() => {
-      expect(onglets()).toEqual(['Établissements', 'Comptes', 'Journaux'])
+      expect(onglets()).toEqual([
+        'Établissements',
+        'Comptes',
+        'Journaux',
+        'Documents patient',
+      ])
     })
     expect(screen.getByRole('link', { name: 'Plateforme' })).toHaveAttribute(
       'aria-current',

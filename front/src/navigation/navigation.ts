@@ -208,6 +208,7 @@ export const NAVIGATION: Record<Scale, readonly NavItem[]> = {
     },
     { label: 'Comptes', to: '/super-admin/users', group: '' },
     { label: 'Journaux', to: '/super-admin/access-log', group: '' },
+    { label: 'Documents patient', to: '/super-admin/pdf-presets', group: '' },
   ],
 }
 
@@ -225,6 +226,8 @@ export const HORS_ONGLETS: Readonly<Partial<Record<RoutePath, string>>> = {
     'ancienne adresse de la grille ARS, redirige vers son jeu',
   '/e/$establishmentId/s/$serviceId/pdf-patient/$designId':
     "éditeur d'un design, depuis la liste Document patient",
+  '/super-admin/pdf-presets/$presetId':
+    "éditeur d'un modèle livré, depuis la liste Documents patient",
 }
 
 export type CurrentScale =

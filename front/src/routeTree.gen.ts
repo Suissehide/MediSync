@@ -36,6 +36,8 @@ import { Route as AuthenticatedSettingsLocationImport } from './routes/_authenti
 import { Route as AuthenticatedSettingsDiagnosticTemplateImport } from './routes/_authenticated/settings/diagnostic-template'
 import { Route as AuthenticatedSettingsActivityLogImport } from './routes/_authenticated/settings/activity-log'
 import { Route as AuthenticatedPatientPatientIDImport } from './routes/_authenticated/patient/$patientID'
+import { Route as AuthenticatedSuperAdminPdfPresetsIndexImport } from './routes/_authenticated/super-admin/pdf-presets/index'
+import { Route as AuthenticatedSuperAdminPdfPresetsPresetIdImport } from './routes/_authenticated/super-admin/pdf-presets/$presetId'
 import { Route as AuthenticatedEEstablishmentIdAdminImport } from './routes/_authenticated/e/$establishmentId/admin'
 import { Route as AuthenticatedEEstablishmentIdAdminIndexImport } from './routes/_authenticated/e/$establishmentId/admin/index'
 import { Route as AuthenticatedEEstablishmentIdSServiceIdImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId'
@@ -228,6 +230,20 @@ const AuthenticatedPatientPatientIDRoute =
     id: '/patient/$patientID',
     path: '/patient/$patientID',
     getParentRoute: () => AuthenticatedRoute,
+  } as any)
+
+const AuthenticatedSuperAdminPdfPresetsIndexRoute =
+  AuthenticatedSuperAdminPdfPresetsIndexImport.update({
+    id: '/pdf-presets/',
+    path: '/pdf-presets/',
+    getParentRoute: () => AuthenticatedSuperAdminRoute,
+  } as any)
+
+const AuthenticatedSuperAdminPdfPresetsPresetIdRoute =
+  AuthenticatedSuperAdminPdfPresetsPresetIdImport.update({
+    id: '/pdf-presets/$presetId',
+    path: '/pdf-presets/$presetId',
+    getParentRoute: () => AuthenticatedSuperAdminRoute,
   } as any)
 
 const AuthenticatedEEstablishmentIdAdminRoute =
@@ -624,6 +640,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEEstablishmentIdAdminImport
       parentRoute: typeof AuthenticatedImport
     }
+    '/_authenticated/super-admin/pdf-presets/$presetId': {
+      id: '/_authenticated/super-admin/pdf-presets/$presetId'
+      path: '/pdf-presets/$presetId'
+      fullPath: '/super-admin/pdf-presets/$presetId'
+      preLoaderRoute: typeof AuthenticatedSuperAdminPdfPresetsPresetIdImport
+      parentRoute: typeof AuthenticatedSuperAdminImport
+    }
+    '/_authenticated/super-admin/pdf-presets/': {
+      id: '/_authenticated/super-admin/pdf-presets/'
+      path: '/pdf-presets'
+      fullPath: '/super-admin/pdf-presets'
+      preLoaderRoute: typeof AuthenticatedSuperAdminPdfPresetsIndexImport
+      parentRoute: typeof AuthenticatedSuperAdminImport
+    }
     '/_authenticated/e/$establishmentId/admin/activity-log': {
       id: '/_authenticated/e/$establishmentId/admin/activity-log'
       path: '/activity-log'
@@ -830,6 +860,8 @@ interface AuthenticatedSuperAdminRouteChildren {
   AuthenticatedSuperAdminAccessLogRoute: typeof AuthenticatedSuperAdminAccessLogRoute
   AuthenticatedSuperAdminUsersRoute: typeof AuthenticatedSuperAdminUsersRoute
   AuthenticatedSuperAdminIndexRoute: typeof AuthenticatedSuperAdminIndexRoute
+  AuthenticatedSuperAdminPdfPresetsPresetIdRoute: typeof AuthenticatedSuperAdminPdfPresetsPresetIdRoute
+  AuthenticatedSuperAdminPdfPresetsIndexRoute: typeof AuthenticatedSuperAdminPdfPresetsIndexRoute
 }
 
 const AuthenticatedSuperAdminRouteChildren: AuthenticatedSuperAdminRouteChildren =
@@ -840,6 +872,10 @@ const AuthenticatedSuperAdminRouteChildren: AuthenticatedSuperAdminRouteChildren
       AuthenticatedSuperAdminAccessLogRoute,
     AuthenticatedSuperAdminUsersRoute: AuthenticatedSuperAdminUsersRoute,
     AuthenticatedSuperAdminIndexRoute: AuthenticatedSuperAdminIndexRoute,
+    AuthenticatedSuperAdminPdfPresetsPresetIdRoute:
+      AuthenticatedSuperAdminPdfPresetsPresetIdRoute,
+    AuthenticatedSuperAdminPdfPresetsIndexRoute:
+      AuthenticatedSuperAdminPdfPresetsIndexRoute,
   }
 
 const AuthenticatedSuperAdminRouteWithChildren =
@@ -1040,6 +1076,8 @@ export interface FileRoutesByFullPath {
   '/patient': typeof AuthenticatedPatientIndexRoute
   '/super-admin/': typeof AuthenticatedSuperAdminIndexRoute
   '/e/$establishmentId/admin': typeof AuthenticatedEEstablishmentIdAdminRouteWithChildren
+  '/super-admin/pdf-presets/$presetId': typeof AuthenticatedSuperAdminPdfPresetsPresetIdRoute
+  '/super-admin/pdf-presets': typeof AuthenticatedSuperAdminPdfPresetsIndexRoute
   '/e/$establishmentId/admin/activity-log': typeof AuthenticatedEEstablishmentIdAdminActivityLogRoute
   '/e/$establishmentId/admin/grants': typeof AuthenticatedEEstablishmentIdAdminGrantsRoute
   '/e/$establishmentId/admin/members': typeof AuthenticatedEEstablishmentIdAdminMembersRoute
@@ -1093,6 +1131,8 @@ export interface FileRoutesByTo {
   '/user/settings': typeof AuthenticatedUserSettingsRoute
   '/patient': typeof AuthenticatedPatientIndexRoute
   '/super-admin': typeof AuthenticatedSuperAdminIndexRoute
+  '/super-admin/pdf-presets/$presetId': typeof AuthenticatedSuperAdminPdfPresetsPresetIdRoute
+  '/super-admin/pdf-presets': typeof AuthenticatedSuperAdminPdfPresetsIndexRoute
   '/e/$establishmentId/admin/activity-log': typeof AuthenticatedEEstablishmentIdAdminActivityLogRoute
   '/e/$establishmentId/admin/grants': typeof AuthenticatedEEstablishmentIdAdminGrantsRoute
   '/e/$establishmentId/admin/members': typeof AuthenticatedEEstablishmentIdAdminMembersRoute
@@ -1149,6 +1189,8 @@ export interface FileRoutesById {
   '/_authenticated/patient/': typeof AuthenticatedPatientIndexRoute
   '/_authenticated/super-admin/': typeof AuthenticatedSuperAdminIndexRoute
   '/_authenticated/e/$establishmentId/admin': typeof AuthenticatedEEstablishmentIdAdminRouteWithChildren
+  '/_authenticated/super-admin/pdf-presets/$presetId': typeof AuthenticatedSuperAdminPdfPresetsPresetIdRoute
+  '/_authenticated/super-admin/pdf-presets/': typeof AuthenticatedSuperAdminPdfPresetsIndexRoute
   '/_authenticated/e/$establishmentId/admin/activity-log': typeof AuthenticatedEEstablishmentIdAdminActivityLogRoute
   '/_authenticated/e/$establishmentId/admin/grants': typeof AuthenticatedEEstablishmentIdAdminGrantsRoute
   '/_authenticated/e/$establishmentId/admin/members': typeof AuthenticatedEEstablishmentIdAdminMembersRoute
@@ -1208,6 +1250,8 @@ export interface FileRouteTypes {
     | '/patient'
     | '/super-admin/'
     | '/e/$establishmentId/admin'
+    | '/super-admin/pdf-presets/$presetId'
+    | '/super-admin/pdf-presets'
     | '/e/$establishmentId/admin/activity-log'
     | '/e/$establishmentId/admin/grants'
     | '/e/$establishmentId/admin/members'
@@ -1260,6 +1304,8 @@ export interface FileRouteTypes {
     | '/user/settings'
     | '/patient'
     | '/super-admin'
+    | '/super-admin/pdf-presets/$presetId'
+    | '/super-admin/pdf-presets'
     | '/e/$establishmentId/admin/activity-log'
     | '/e/$establishmentId/admin/grants'
     | '/e/$establishmentId/admin/members'
@@ -1314,6 +1360,8 @@ export interface FileRouteTypes {
     | '/_authenticated/patient/'
     | '/_authenticated/super-admin/'
     | '/_authenticated/e/$establishmentId/admin'
+    | '/_authenticated/super-admin/pdf-presets/$presetId'
+    | '/_authenticated/super-admin/pdf-presets/'
     | '/_authenticated/e/$establishmentId/admin/activity-log'
     | '/_authenticated/e/$establishmentId/admin/grants'
     | '/_authenticated/e/$establishmentId/admin/members'
@@ -1427,7 +1475,9 @@ export const routeTree = rootRoute
         "/_authenticated/super-admin/$establishmentId",
         "/_authenticated/super-admin/access-log",
         "/_authenticated/super-admin/users",
-        "/_authenticated/super-admin/"
+        "/_authenticated/super-admin/",
+        "/_authenticated/super-admin/pdf-presets/$presetId",
+        "/_authenticated/super-admin/pdf-presets/"
       ]
     },
     "/auth/access-link": {
@@ -1509,6 +1559,14 @@ export const routeTree = rootRoute
         "/_authenticated/e/$establishmentId/admin/services",
         "/_authenticated/e/$establishmentId/admin/"
       ]
+    },
+    "/_authenticated/super-admin/pdf-presets/$presetId": {
+      "filePath": "_authenticated/super-admin/pdf-presets/$presetId.tsx",
+      "parent": "/_authenticated/super-admin"
+    },
+    "/_authenticated/super-admin/pdf-presets/": {
+      "filePath": "_authenticated/super-admin/pdf-presets/index.tsx",
+      "parent": "/_authenticated/super-admin"
     },
     "/_authenticated/e/$establishmentId/admin/activity-log": {
       "filePath": "_authenticated/e/$establishmentId/admin/activity-log.tsx",
