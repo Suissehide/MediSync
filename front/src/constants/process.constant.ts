@@ -173,6 +173,13 @@ export const PDF_DESIGN = {
   RESTORE: 'restore_pdf_design',
 }
 
+export const PDF_ASSET = {
+  GET_ALL: 'get_all_pdf_assets',
+  GET_BYTES: 'get_pdf_asset_bytes',
+  CREATE: 'create_pdf_asset',
+  DELETE: 'delete_pdf_asset',
+}
+
 export const LOCATION = {
   GET_ALL: 'get_all_locations',
   CREATE: 'create_location',
