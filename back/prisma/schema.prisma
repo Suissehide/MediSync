@@ -72,6 +72,7 @@ model Service {
   fieldCategories     ServiceFieldCategory[]
   indicatorSets       IndicatorSet[]
   pdfDesigns          PdfDesign[]
+  pdfAssets           PdfAsset[]
 
   @@unique([establishmentId, name])
   @@unique([id, establishmentId])
@@ -886,6 +887,24 @@ model PdfDesign {
   archivedAt      DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+
+  service Service @relation(fields: [serviceId, establishmentId], references: [id, establishmentId])
+
+  @@unique([id, serviceId])
+  @@index([serviceId])
+}
+
+// Les images deposees par un service : logo, fond de page. Les octets vivent en base plutot
+// qu'en stockage objet — l'indirection par `assetId` dans le JSON des designs laisse un
+// adaptateur possible plus tard sans toucher aux contenus deja enregistres.
+model PdfAsset {
+  id              String   @id @default(cuid())
+  establishmentId String
+  serviceId       String
+  fileName        String
+  mimeType        String
+  bytes           Bytes
+  createdAt       DateTime @default(now())
 
   service Service @relation(fields: [serviceId, establishmentId], references: [id, establishmentId])
 

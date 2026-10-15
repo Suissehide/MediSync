@@ -686,6 +686,57 @@ describe('isolation par tenant', () => {
       ).find((d) => d.id === etranger.id)
       expect(vuDeB?.name).toBe('DESIGN-SECRET-B')
     })
+
+    // PdfAsset (etape 4). Les octets d'un service ne sortent pas plus que ses lignes : la
+    // lecture par identifiant est la seule route qui les rend, c'est donc elle qu'on sonde.
+    it('une image de PDF d un autre service ne se lit ni ne se supprime', async () => {
+      const { est, serviceA, serviceB, cookiesA, cookiesB } = scenario
+      const etrangere = await testDb.pdfAsset.create({
+        data: {
+          fileName: 'SECRET-B.png',
+          mimeType: 'image/png',
+          bytes: Buffer.from('octets-de-b'),
+          establishmentId: est.id,
+          serviceId: serviceB.id,
+        },
+      })
+
+      const chemin = `/pdf-assets/${etrangere.id}`
+      const lectureDepuisA = await t.app.inject({
+        method: 'GET',
+        url: tenantUrl(est.id, serviceA.id, chemin),
+        cookies: cookiesA,
+      })
+      expect(lectureDepuisA.statusCode).toBe(404)
+
+      const suppressionDepuisA = await t.app.inject({
+        method: 'DELETE',
+        url: tenantUrl(est.id, serviceA.id, chemin),
+        cookies: cookiesA,
+      })
+      expect(suppressionDepuisA.statusCode).toBe(404)
+
+      // La liste de A ne la nomme pas non plus.
+      const listeDepuisA = await t.app.inject({
+        method: 'GET',
+        url: tenantUrl(est.id, serviceA.id, '/pdf-assets'),
+        cookies: cookiesA,
+      })
+      expect(listeDepuisA.statusCode).toBe(200)
+      expect(
+        (listeDepuisA.json() as { id: string }[]).map((a) => a.id),
+      ).not.toContain(etrangere.id)
+
+      // Contrepoint : son proprietaire la lit toujours. Sans lui, les trois 404 ci-dessus
+      // seraient aussi ceux d'une route inexistante.
+      const lectureDepuisB = await t.app.inject({
+        method: 'GET',
+        url: tenantUrl(est.id, serviceB.id, chemin),
+        cookies: cookiesB,
+      })
+      expect(lectureDepuisB.statusCode).toBe(200)
+      expect(lectureDepuisB.json().mimeType).toBe('image/png')
+    })
   })
 
   // Le patient est un modèle d'établissement (pas de service) : le cas
