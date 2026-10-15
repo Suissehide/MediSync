@@ -338,6 +338,25 @@ describe('routes des designs de PDF', () => {
     expect(res.json().presets.length).toBeGreaterThan(0)
   })
 
+  // Trouve a l'ecran : la corbeille affichait un design supprime portant encore le badge
+  // « Par defaut ». Un design hors de la liste n'est le defaut de rien, et le laisser marque
+  // ferait DEUX defauts des qu'un autre est pose puis celui-la restaure.
+  it('decroche le defaut en supprimant le design qui le portait', async () => {
+    const design = await testDb.pdfDesign.findFirstOrThrow({
+      where: { serviceId: scenario.serviceA.id, archivedAt: null },
+    })
+    await modifier(scenario.serviceA.id, scenario.cookiesA, design.id, {
+      isDefault: true,
+    })
+
+    await supprimer(scenario.serviceA.id, scenario.cookiesA, design.id)
+
+    const apres = await testDb.pdfDesign.findUniqueOrThrow({
+      where: { id: design.id },
+    })
+    expect(apres.isDefault).toBe(false)
+  })
+
   // Deplace ici depuis la tache 2 (Ruling 1) : c'est une route, elle se teste avec les routes.
   it('rend les designs supprimes quand on les demande, et aucun preset', async () => {
     const res = await app.inject({

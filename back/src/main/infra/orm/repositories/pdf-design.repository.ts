@@ -101,9 +101,14 @@ class PdfDesignRepository implements PdfDesignRepositoryInterface {
             ...(params.isDefault === undefined
               ? {}
               : { isDefault: params.isDefault }),
+            // Supprimer decroche le defaut : un design hors de la liste n'est le defaut de
+            // rien, et le laisser marque ferait DEUX defauts des qu'un autre est pose puis
+            // celui-la restaure.
             ...(params.archived === undefined
               ? {}
-              : { archivedAt: params.archived ? new Date() : null }),
+              : params.archived
+                ? { archivedAt: new Date(), isDefault: false }
+                : { archivedAt: null }),
           },
         })
       })

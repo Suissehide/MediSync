@@ -140,6 +140,13 @@ export const NAVIGATION: Record<Scale, readonly NavItem[]> = {
       description: 'Modèles de bilan du service',
     },
     {
+      label: 'Document patient',
+      to: '/e/$establishmentId/s/$serviceId/pdf-patient',
+      permission: 'referentials:write',
+      group: 'Administration',
+      description: 'Mise en page du programme remis au patient',
+    },
+    {
       label: 'Fiche patient',
       to: '/e/$establishmentId/s/$serviceId/fiche-patient',
       permission: 'referentials:write',
@@ -216,6 +223,8 @@ export const HORS_ONGLETS: Readonly<Partial<Record<RoutePath, string>>> = {
     "fiche d'établissement, depuis la liste Établissements",
   '/e/$establishmentId/s/$serviceId/indicateurs-ars':
     'ancienne adresse de la grille ARS, redirige vers son jeu',
+  '/e/$establishmentId/s/$serviceId/pdf-patient/$designId':
+    "éditeur d'un design, depuis la liste Document patient",
 }
 
 export type CurrentScale =

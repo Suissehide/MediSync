@@ -62,7 +62,9 @@ import { Route as AuthenticatedEEstablishmentIdSServiceIdSettingsFichePatientImp
 import { Route as AuthenticatedEEstablishmentIdSServiceIdSettingsDiagnosticTemplateImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/_settings/diagnostic-template'
 import { Route as AuthenticatedEEstablishmentIdSServiceIdSettingsActivityLogImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/_settings/activity-log'
 import { Route as AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDIndexImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/index'
+import { Route as AuthenticatedEEstablishmentIdSServiceIdSettingsPdfPatientIndexImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/_settings/pdf-patient/index'
 import { Route as AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDAccesImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/acces'
+import { Route as AuthenticatedEEstablishmentIdSServiceIdSettingsPdfPatientDesignIdImport } from './routes/_authenticated/e/$establishmentId/s/$serviceId/_settings/pdf-patient/$designId'
 
 // Create/Update Routes
 
@@ -412,12 +414,29 @@ const AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDIndexRoute =
     getParentRoute: () => AuthenticatedEEstablishmentIdSServiceIdRoute,
   } as any)
 
+const AuthenticatedEEstablishmentIdSServiceIdSettingsPdfPatientIndexRoute =
+  AuthenticatedEEstablishmentIdSServiceIdSettingsPdfPatientIndexImport.update({
+    id: '/pdf-patient/',
+    path: '/pdf-patient/',
+    getParentRoute: () => AuthenticatedEEstablishmentIdSServiceIdSettingsRoute,
+  } as any)
+
 const AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDAccesRoute =
   AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDAccesImport.update({
     id: '/patient/$patientID/acces',
     path: '/patient/$patientID/acces',
     getParentRoute: () => AuthenticatedEEstablishmentIdSServiceIdRoute,
   } as any)
+
+const AuthenticatedEEstablishmentIdSServiceIdSettingsPdfPatientDesignIdRoute =
+  AuthenticatedEEstablishmentIdSServiceIdSettingsPdfPatientDesignIdImport.update(
+    {
+      id: '/pdf-patient/$designId',
+      path: '/pdf-patient/$designId',
+      getParentRoute: () =>
+        AuthenticatedEEstablishmentIdSServiceIdSettingsRoute,
+    } as any,
+  )
 
 // Populate the FileRoutesByPath interface
 
@@ -773,12 +792,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEEstablishmentIdSServiceIdPatientIndexImport
       parentRoute: typeof AuthenticatedEEstablishmentIdSServiceIdImport
     }
+    '/_authenticated/e/$establishmentId/s/$serviceId/_settings/pdf-patient/$designId': {
+      id: '/_authenticated/e/$establishmentId/s/$serviceId/_settings/pdf-patient/$designId'
+      path: '/pdf-patient/$designId'
+      fullPath: '/e/$establishmentId/s/$serviceId/pdf-patient/$designId'
+      preLoaderRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsPdfPatientDesignIdImport
+      parentRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsImport
+    }
     '/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/acces': {
       id: '/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/acces'
       path: '/patient/$patientID/acces'
       fullPath: '/e/$establishmentId/s/$serviceId/patient/$patientID/acces'
       preLoaderRoute: typeof AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDAccesImport
       parentRoute: typeof AuthenticatedEEstablishmentIdSServiceIdImport
+    }
+    '/_authenticated/e/$establishmentId/s/$serviceId/_settings/pdf-patient/': {
+      id: '/_authenticated/e/$establishmentId/s/$serviceId/_settings/pdf-patient/'
+      path: '/pdf-patient'
+      fullPath: '/e/$establishmentId/s/$serviceId/pdf-patient'
+      preLoaderRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsPdfPatientIndexImport
+      parentRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsImport
     }
     '/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/': {
       id: '/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/'
@@ -851,6 +884,8 @@ interface AuthenticatedEEstablishmentIdSServiceIdSettingsRouteChildren {
   AuthenticatedEEstablishmentIdSServiceIdSettingsPlanningRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsPlanningRoute
   AuthenticatedEEstablishmentIdSServiceIdSettingsSoignantRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsSoignantRoute
   AuthenticatedEEstablishmentIdSServiceIdSettingsThematicRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsThematicRoute
+  AuthenticatedEEstablishmentIdSServiceIdSettingsPdfPatientDesignIdRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsPdfPatientDesignIdRoute
+  AuthenticatedEEstablishmentIdSServiceIdSettingsPdfPatientIndexRoute: typeof AuthenticatedEEstablishmentIdSServiceIdSettingsPdfPatientIndexRoute
 }
 
 const AuthenticatedEEstablishmentIdSServiceIdSettingsRouteChildren: AuthenticatedEEstablishmentIdSServiceIdSettingsRouteChildren =
@@ -873,6 +908,10 @@ const AuthenticatedEEstablishmentIdSServiceIdSettingsRouteChildren: Authenticate
       AuthenticatedEEstablishmentIdSServiceIdSettingsSoignantRoute,
     AuthenticatedEEstablishmentIdSServiceIdSettingsThematicRoute:
       AuthenticatedEEstablishmentIdSServiceIdSettingsThematicRoute,
+    AuthenticatedEEstablishmentIdSServiceIdSettingsPdfPatientDesignIdRoute:
+      AuthenticatedEEstablishmentIdSServiceIdSettingsPdfPatientDesignIdRoute,
+    AuthenticatedEEstablishmentIdSServiceIdSettingsPdfPatientIndexRoute:
+      AuthenticatedEEstablishmentIdSServiceIdSettingsPdfPatientIndexRoute,
   }
 
 const AuthenticatedEEstablishmentIdSServiceIdSettingsRouteWithChildren =
@@ -1024,7 +1063,9 @@ export interface FileRoutesByFullPath {
   '/e/$establishmentId/s/$serviceId/thematic': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsThematicRoute
   '/e/$establishmentId/s/$serviceId/indicateurs/$setId': typeof AuthenticatedEEstablishmentIdSServiceIdIndicateursSetIdRoute
   '/e/$establishmentId/s/$serviceId/patient': typeof AuthenticatedEEstablishmentIdSServiceIdPatientIndexRoute
+  '/e/$establishmentId/s/$serviceId/pdf-patient/$designId': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsPdfPatientDesignIdRoute
   '/e/$establishmentId/s/$serviceId/patient/$patientID/acces': typeof AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDAccesRoute
+  '/e/$establishmentId/s/$serviceId/pdf-patient': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsPdfPatientIndexRoute
   '/e/$establishmentId/s/$serviceId/patient/$patientID': typeof AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDIndexRoute
 }
 
@@ -1074,7 +1115,9 @@ export interface FileRoutesByTo {
   '/e/$establishmentId/s/$serviceId/thematic': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsThematicRoute
   '/e/$establishmentId/s/$serviceId/indicateurs/$setId': typeof AuthenticatedEEstablishmentIdSServiceIdIndicateursSetIdRoute
   '/e/$establishmentId/s/$serviceId/patient': typeof AuthenticatedEEstablishmentIdSServiceIdPatientIndexRoute
+  '/e/$establishmentId/s/$serviceId/pdf-patient/$designId': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsPdfPatientDesignIdRoute
   '/e/$establishmentId/s/$serviceId/patient/$patientID/acces': typeof AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDAccesRoute
+  '/e/$establishmentId/s/$serviceId/pdf-patient': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsPdfPatientIndexRoute
   '/e/$establishmentId/s/$serviceId/patient/$patientID': typeof AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDIndexRoute
 }
 
@@ -1130,7 +1173,9 @@ export interface FileRoutesById {
   '/_authenticated/e/$establishmentId/s/$serviceId/_settings/thematic': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsThematicRoute
   '/_authenticated/e/$establishmentId/s/$serviceId/indicateurs/$setId': typeof AuthenticatedEEstablishmentIdSServiceIdIndicateursSetIdRoute
   '/_authenticated/e/$establishmentId/s/$serviceId/patient/': typeof AuthenticatedEEstablishmentIdSServiceIdPatientIndexRoute
+  '/_authenticated/e/$establishmentId/s/$serviceId/_settings/pdf-patient/$designId': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsPdfPatientDesignIdRoute
   '/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/acces': typeof AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDAccesRoute
+  '/_authenticated/e/$establishmentId/s/$serviceId/_settings/pdf-patient/': typeof AuthenticatedEEstablishmentIdSServiceIdSettingsPdfPatientIndexRoute
   '/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/': typeof AuthenticatedEEstablishmentIdSServiceIdPatientPatientIDIndexRoute
 }
 
@@ -1186,7 +1231,9 @@ export interface FileRouteTypes {
     | '/e/$establishmentId/s/$serviceId/thematic'
     | '/e/$establishmentId/s/$serviceId/indicateurs/$setId'
     | '/e/$establishmentId/s/$serviceId/patient'
+    | '/e/$establishmentId/s/$serviceId/pdf-patient/$designId'
     | '/e/$establishmentId/s/$serviceId/patient/$patientID/acces'
+    | '/e/$establishmentId/s/$serviceId/pdf-patient'
     | '/e/$establishmentId/s/$serviceId/patient/$patientID'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -1235,7 +1282,9 @@ export interface FileRouteTypes {
     | '/e/$establishmentId/s/$serviceId/thematic'
     | '/e/$establishmentId/s/$serviceId/indicateurs/$setId'
     | '/e/$establishmentId/s/$serviceId/patient'
+    | '/e/$establishmentId/s/$serviceId/pdf-patient/$designId'
     | '/e/$establishmentId/s/$serviceId/patient/$patientID/acces'
+    | '/e/$establishmentId/s/$serviceId/pdf-patient'
     | '/e/$establishmentId/s/$serviceId/patient/$patientID'
   id:
     | '__root__'
@@ -1289,7 +1338,9 @@ export interface FileRouteTypes {
     | '/_authenticated/e/$establishmentId/s/$serviceId/_settings/thematic'
     | '/_authenticated/e/$establishmentId/s/$serviceId/indicateurs/$setId'
     | '/_authenticated/e/$establishmentId/s/$serviceId/patient/'
+    | '/_authenticated/e/$establishmentId/s/$serviceId/_settings/pdf-patient/$designId'
     | '/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/acces'
+    | '/_authenticated/e/$establishmentId/s/$serviceId/_settings/pdf-patient/'
     | '/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/'
   fileRoutesById: FileRoutesById
 }
@@ -1508,7 +1559,9 @@ export const routeTree = rootRoute
         "/_authenticated/e/$establishmentId/s/$serviceId/_settings/members",
         "/_authenticated/e/$establishmentId/s/$serviceId/_settings/planning",
         "/_authenticated/e/$establishmentId/s/$serviceId/_settings/soignant",
-        "/_authenticated/e/$establishmentId/s/$serviceId/_settings/thematic"
+        "/_authenticated/e/$establishmentId/s/$serviceId/_settings/thematic",
+        "/_authenticated/e/$establishmentId/s/$serviceId/_settings/pdf-patient/$designId",
+        "/_authenticated/e/$establishmentId/s/$serviceId/_settings/pdf-patient/"
       ]
     },
     "/_authenticated/e/$establishmentId/s/$serviceId/activite": {
@@ -1579,9 +1632,17 @@ export const routeTree = rootRoute
       "filePath": "_authenticated/e/$establishmentId/s/$serviceId/patient/index.tsx",
       "parent": "/_authenticated/e/$establishmentId/s/$serviceId"
     },
+    "/_authenticated/e/$establishmentId/s/$serviceId/_settings/pdf-patient/$designId": {
+      "filePath": "_authenticated/e/$establishmentId/s/$serviceId/_settings/pdf-patient/$designId.tsx",
+      "parent": "/_authenticated/e/$establishmentId/s/$serviceId/_settings"
+    },
     "/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/acces": {
       "filePath": "_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/acces.tsx",
       "parent": "/_authenticated/e/$establishmentId/s/$serviceId"
+    },
+    "/_authenticated/e/$establishmentId/s/$serviceId/_settings/pdf-patient/": {
+      "filePath": "_authenticated/e/$establishmentId/s/$serviceId/_settings/pdf-patient/index.tsx",
+      "parent": "/_authenticated/e/$establishmentId/s/$serviceId/_settings"
     },
     "/_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/": {
       "filePath": "_authenticated/e/$establishmentId/s/$serviceId/patient/$patientID/index.tsx",
